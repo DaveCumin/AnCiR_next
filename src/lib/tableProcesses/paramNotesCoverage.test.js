@@ -49,17 +49,67 @@ function componentSource(node) {
  * The `args.` scoping still matters: a component also has selects bound to LOCAL editor state
  * (TrendFit's permutation-statistic dropdown binds to a `let`, not `p.args`), which a session
  * can't carry, so requiring a note for it would document a knob the model can't turn.
+ *
+ * `options` may be an inline literal (`options={['a','b']}`) OR an imported constant
+ * (`options={PADJUST_METHODS}`), and the constant form must be followed rather than skipped:
+ * FDRCorrection and SurrogateTest both shipped with NO note because the old literal-only regex
+ * silently ignored them — the very hole this file exists to prevent, reopened by a different
+ * markup shape. An options expression that cannot be resolved now THROWS instead of being
+ * skipped, so a new unresolvable shape fails loudly rather than quietly reducing coverage.
  */
+
+/** Resolve `export const NAME = ['a', 'b']` from a module imported by `source`. */
+function resolveImportedOptions(source, ident) {
+	const importRe = new RegExp(
+		`import\\s*\\{[^}]*\\b${ident}\\b[^}]*\\}\\s*from\\s*['"]([^'"]+)['"]`
+	);
+	const m = importRe.exec(source);
+	if (!m) return null;
+	// Only $lib specifiers appear here; map to the repo's src/lib.
+	const spec = m[1];
+	if (!spec.startsWith('$lib/')) return null;
+	const file = join(repo, 'src/lib', spec.slice('$lib/'.length));
+	if (!existsSync(file)) return null;
+	const mod = readFileSync(file, 'utf8');
+	const constRe = new RegExp(`export\\s+const\\s+${ident}\\s*=\\s*\\[([^\\]]*)\\]`);
+	const cm = constRe.exec(mod);
+	if (!cm) return null;
+	return [...cm[1].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]);
+}
+
 function enumOptions(source, schemaParams) {
 	const values = new Set();
 	for (const el of source.matchAll(/<AttributeSelect\b[\s\S]*?\/>/g)) {
 		const block = el[0];
-		const optsM = /options=\{?\[([^\]]*)\]/.exec(block);
-		if (!optsM) continue;
 		const bindM = /bind:value=\{([^}]*)\}/.exec(block);
 		const param = bindM && /\bargs\.([A-Za-z0-9_]+)/.exec(bindM[1])?.[1];
+		// Not an emittable arg (local editor state) — genuinely out of scope.
 		if (!param || !schemaParams.includes(param)) continue;
-		for (const lit of optsM[1].matchAll(/['"]([^'"]+)['"]/g)) values.add(lit[1]);
+
+		const literalM = /options=\{?\[([^\]]*)\]/.exec(block);
+		if (literalM) {
+			for (const lit of literalM[1].matchAll(/['"]([^'"]+)['"]/g)) values.add(lit[1]);
+			continue;
+		}
+
+		const identM = /options=\{([A-Za-z0-9_$]+)\}/.exec(block);
+		if (identM) {
+			const resolved = resolveImportedOptions(source, identM[1]);
+			if (!resolved?.length) {
+				throw new Error(
+					`options={${identM[1]}} on the '${param}' select could not be resolved to a list of ` +
+						`string literals. Coverage for this param would be silently skipped — either ` +
+						`inline the options or export them as a plain array literal.`
+				);
+			}
+			for (const v of resolved) values.add(v);
+			continue;
+		}
+
+		throw new Error(
+			`the '${param}' select has an options expression this extractor cannot read. ` +
+				`Skipping it would silently drop coverage; inline the options as a literal array.`
+		);
 	}
 	return [...values];
 }

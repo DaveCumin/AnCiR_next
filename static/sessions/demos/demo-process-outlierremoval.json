@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "541": [
+    "549": [
       0,
       1,
       2,
@@ -53,7 +53,7 @@
       49,
       50
     ],
-    "542": [
+    "550": [
       0,
       1,
       2,
@@ -109,20 +109,20 @@
   },
   "data": [
     {
-      "id": 541,
+      "id": 549,
       "name": "x",
-      "data": 541,
+      "data": 549,
       "type": "number",
-      "tableProcessGUId": "66ebb2a5-aca7-468b-b6f2-22aadcc93ab1",
+      "tableProcessGUId": "fafdc994-56fe-4551-a429-7a29ed814363",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 542,
+      "id": 550,
       "name": "y",
-      "data": 542,
+      "data": 550,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,20 +131,20 @@
       "processes": []
     },
     {
-      "id": 543,
+      "id": 551,
       "name": "Remove Outliers result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_5",
-      "producerPort": "out_542",
+      "producerPort": "out_550",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 85,
+      "id": 86,
       "name": "Remove Outliers: before vs after",
       "x": 60,
       "y": 60,
@@ -201,9 +201,9 @@
         "data": [
           {
             "x": {
-              "id": 544,
+              "id": 552,
               "name": "x",
-              "refId": 541,
+              "refId": 549,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -212,9 +212,9 @@
               "processes": []
             },
             "y": {
-              "id": 545,
+              "id": 553,
               "name": "y",
-              "refId": 542,
+              "refId": 550,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -240,9 +240,9 @@
           },
           {
             "x": {
-              "id": 546,
+              "id": 554,
               "name": "x",
-              "refId": 541,
+              "refId": 549,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -251,9 +251,9 @@
               "processes": []
             },
             "y": {
-              "id": 547,
+              "id": 555,
               "name": "Remove Outliers result",
-              "refId": 543,
+              "refId": 551,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -293,7 +293,7 @@
       }
     },
     {
-      "id": 86,
+      "id": 87,
       "name": "Remove Outliers: values",
       "x": 630,
       "y": 60,
@@ -309,8 +309,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          542,
-          543
+          550,
+          551
         ],
         "showCol": [
           true,
@@ -325,7 +325,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 36,
+      "id": 38,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -335,7 +335,7 @@
         "count": 51,
         "end": 50,
         "out": {
-          "result": 541
+          "result": 549
         }
       },
       "refTPId": null
@@ -346,7 +346,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_38",
+      "id": "note_39",
       "text": "Flags extreme values and replaces them with blanks, using either a z-score threshold (default |z| > 3) or Tukey's IQR fence (Q1 - k·IQR, Q3 + k·IQR, default k = 1.5). Use it to stop a handful of spikes dominating fits and spectra. The demo shows the flagged points removed while the rest of the series is preserved.\n\nTukey, J.W. (1977) Exploratory Data Analysis.",
       "x": 40,
       "y": 24,
@@ -365,17 +365,17 @@
         "iqrMultiplier": 1.5,
         "zThreshold": 3,
         "inIN": [
-          542
+          550
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_542": {
+    "data_550": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_36": {
+    "tableprocess_38": {
       "x": 60,
       "y": 814
     },
@@ -383,15 +383,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_85": {
+    "plot_86": {
       "x": 820,
       "y": 314
     },
-    "plot_86": {
+    "plot_87": {
       "x": 820,
       "y": 814
     },
-    "note_38": {
+    "note_39": {
       "x": 40,
       "y": 24
     }
@@ -453,5 +453,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

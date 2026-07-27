@@ -1032,6 +1032,74 @@ const WORKFLOWS = [
 		}
 	},
 	{
+		id: 'stats-fisher-exact',
+		summary: 'A table too small for chi-squared.',
+		name: "Workflow — small samples (Fisher's exact test)",
+		family: 'Workflows',
+		description:
+			"The same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted. Both tests are run on the SAME 18 animals so you can compare them directly. The chi-squared node reports its own warning that expected counts fall below 5, which is the conventional line at which its large-sample approximation stops being reliable; Fisher's exact test makes no such approximation, conditioning on the margins and summing the exact probability of every table at least as extreme as the one observed. Read the two p-values side by side: they answer the same question, and the exact one is the one to quote here. Note that Fisher's mode reports no statistic and no degrees of freedom — an exact test enumerates the distribution instead of referring a statistic to one — and gives the odds ratio as its effect size instead.",
+		showcases: ['ChiSquared'],
+		async build() {
+			// Hand-built rather than sampled, so the table is EXACTLY [[8,1],[2,7]]:
+			// n = 18, expected counts 5/4/5/4, so TWO fall below 5 and the chi-squared
+			// node's own warning fires — which is the whole point of the demo. A
+			// sampled version would drift and sometimes fail to show it. (An earlier
+			// draft used [[9,3],[3,9]], where every expected count is 6 and the
+			// warning never appears.)
+			const treatment = [];
+			const outcome = [];
+			const add = (t, o, n) => {
+				for (let i = 0; i < n; i++) {
+					treatment.push(t);
+					outcome.push(o);
+				}
+			};
+			add('Treated', 'Entrained', 8);
+			add('Treated', 'Free-running', 1);
+			add('Control', 'Entrained', 2);
+			add('Control', 'Free-running', 7);
+
+			const tId = mkCol('category', treatment, 'group');
+			const oId = mkCol('category', outcome, 'rhythm');
+
+			const chi = new TableProcess(
+				{
+					name: 'ChiSquared',
+					args: {
+						testType: 'independence',
+						xIN: tId,
+						yIN: oId,
+						correction: true,
+						out: { statistic: -1, pvalue: -1, df: -1 }
+					}
+				},
+				null
+			);
+			chi.displayName = 'Chi-squared (approximate)';
+			pushObj(chi);
+			await chi.doProcess();
+
+			const fisher = new TableProcess(
+				{
+					name: 'ChiSquared',
+					args: {
+						testType: 'fisher',
+						xIN: tId,
+						yIN: oId,
+						alternative: 'two-sided',
+						out: { statistic: -1, pvalue: -1, df: -1 }
+					}
+				},
+				null
+			);
+			fisher.displayName = "Fisher's exact (exact)";
+			pushObj(fisher);
+			await fisher.doProcess();
+
+			tablePlot('Chi-squared vs Fisher (p-values)', [chi.args.out.pvalue, fisher.args.out.pvalue]);
+		}
+	},
+	{
 		id: 'stats-anscombe',
 		summary: 'Four datasets, identical statistics, four different stories.',
 		name: 'Workflow — Anscombe’s quartet (always plot your data)',

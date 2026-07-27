@@ -2595,6 +2595,180 @@
 				"r2",
 				"rmse"
 			]
+		},
+		{
+			"id": "util-fisher-exact-two-sided-0",
+			"kind": "pureUtil",
+			"jsFn": "fisherExact",
+			"pyFunc": "fisher_exact_test",
+			"input": {
+				"table": [
+					[
+						3,
+						1
+					],
+					[
+						1,
+						3
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				"two-sided"
+			],
+			"pyArgs": [
+				"two-sided"
+			],
+			"compareScalars": [
+				"pvalue",
+				"oddsRatio"
+			]
+		},
+		{
+			"id": "util-fisher-exact-greater-1",
+			"kind": "pureUtil",
+			"jsFn": "fisherExact",
+			"pyFunc": "fisher_exact_test",
+			"input": {
+				"table": [
+					[
+						3,
+						1
+					],
+					[
+						1,
+						3
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				"greater"
+			],
+			"pyArgs": [
+				"greater"
+			],
+			"compareScalars": [
+				"pvalue",
+				"oddsRatio"
+			]
+		},
+		{
+			"id": "util-fisher-exact-less-2",
+			"kind": "pureUtil",
+			"jsFn": "fisherExact",
+			"pyFunc": "fisher_exact_test",
+			"input": {
+				"table": [
+					[
+						1,
+						9
+					],
+					[
+						11,
+						3
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				"less"
+			],
+			"pyArgs": [
+				"less"
+			],
+			"compareScalars": [
+				"pvalue",
+				"oddsRatio"
+			]
+		},
+		{
+			"id": "util-fisher-exact-two-sided-3",
+			"kind": "pureUtil",
+			"jsFn": "fisherExact",
+			"pyFunc": "fisher_exact_test",
+			"input": {
+				"table": [
+					[
+						8,
+						2
+					],
+					[
+						1,
+						5
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				"two-sided"
+			],
+			"pyArgs": [
+				"two-sided"
+			],
+			"compareScalars": [
+				"pvalue",
+				"oddsRatio"
+			]
+		},
+		{
+			"id": "util-fisher-exact-two-sided-4",
+			"kind": "pureUtil",
+			"jsFn": "fisherExact",
+			"pyFunc": "fisher_exact_test",
+			"input": {
+				"table": [
+					[
+						100,
+						50
+					],
+					[
+						40,
+						110
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				"two-sided"
+			],
+			"pyArgs": [
+				"two-sided"
+			],
+			"compareScalars": [
+				"pvalue",
+				"oddsRatio"
+			]
+		},
+		{
+			"id": "util-fisher-exact-two-sided-5",
+			"kind": "pureUtil",
+			"jsFn": "fisherExact",
+			"pyFunc": "fisher_exact_test",
+			"input": {
+				"table": [
+					[
+						10,
+						0
+					],
+					[
+						0,
+						10
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				"two-sided"
+			],
+			"pyArgs": [
+				"two-sided"
+			],
+			"compareScalars": [
+				"pvalue"
+			],
+			"note": "oddsRatio is Infinity here; JSON cannot represent it, so only the p-value is compared. The Infinity case is covered by the JS unit test."
 		}
 	]
 }

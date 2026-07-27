@@ -50,6 +50,7 @@ import { crossCorrelation } from '$lib/utils/crossCorrelation.js';
 import { chiSquareGoodnessOfFit, chiSquareIndependence } from '$lib/utils/chisquare.js';
 import { logisticRegression } from '$lib/utils/logistic.js';
 import { pAdjust } from '$lib/utils/pAdjust.js';
+import { fisherExact } from '$lib/utils/fisherExact.js';
 import { cwt } from '$lib/utils/cwt.js';
 import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
 
@@ -114,7 +115,8 @@ const PURE_UTIL_FNS = {
 	logisticRegression: logisticRegressionAdapter,
 	pAdjust: pAdjustAdapter,
 	cwtPeakScaleIndex: cwtPeakScaleIndexAdapter,
-	movingWindows: movingWindowsAdapter
+	movingWindows: movingWindowsAdapter,
+	fisherExact
 };
 
 /**

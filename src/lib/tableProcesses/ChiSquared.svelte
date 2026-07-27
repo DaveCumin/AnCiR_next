@@ -2,13 +2,22 @@
 	// @ts-nocheck
 	// Chi-squared test — goodness-of-fit or test of independence.
 	//
-	// Two modes (testType):
+	// Three modes (testType):
 	//   • independence: two categorical columns (xIN = rows, yIN = columns). Cross-tabulated into
 	//     a contingency table, then Pearson's χ² tests whether the two variables are associated.
 	//     Yates' continuity correction is applied to 2×2 tables (matching scipy's default).
 	//   • goodness: one column (xIN). A categorical column is tabulated into category counts and
 	//     tested against a uniform expectation ("are the categories equally frequent?"); a numeric
 	//     column is read directly as observed counts.
+	//   • fisher: Fisher's EXACT test on a 2x2 table (xIN = rows, yIN = columns). Same question as
+	//     independence, but exact at any sample size rather than relying on a large-sample
+	//     approximation — which is what the independence mode's own "expected count below 5"
+	//     warning has always been pointing at. Reports a p-value and the sample odds ratio; df is
+	//     NaN because an exact test has no degrees of freedom.
+	//
+	// Fisher's lives here rather than in its own node because it answers the SAME question as the
+	// independence mode and you pick between them on sample size — the same reason Watson-Williams
+	// sits inside the Rayleigh node.
 	// Outputs three metric columns (statistic, pvalue, df). Maths is the pure, scipy-parity-checked
 	// utils/chisquare.js. The contingency / observed-vs-expected table is shown in-node.
 	import { getColumnById } from '$lib/core/Column.svelte';
@@ -16,41 +25,124 @@
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { fillDefaults } from '$lib/tableProcesses/tpArgHelpers.js';
-	import { chiSquareGoodnessOfFit, chiSquareIndependence, contingencyTable } from '$lib/utils/chisquare.js';
+	import {
+		chiSquareGoodnessOfFit,
+		chiSquareIndependence,
+		contingencyTable
+	} from '$lib/utils/chisquare.js';
+	import { fisherExactFromColumns } from '$lib/utils/fisherExact.js';
 
 	const displayName = 'Chi-squared test';
 
 	const defaults = new Map([
-		['testType', { val: 'independence' }], // independence | goodness
+		['testType', { val: 'independence' }], // independence | goodness | fisher
 		['xIN', { val: -1 }], // rows (independence) / the tested column (goodness)
 		['yIN', { val: -1 }], // columns (independence only)
 		['correction', { val: true }], // Yates' correction for 2×2 independence
+		['alternative', { val: 'two-sided' }], // Fisher only: two-sided | less | greater
 		['out', { statistic: { val: -1 }, pvalue: { val: -1 }, df: { val: -1 } }],
+		// oddsRatio is Fisher-only and stays NaN in the two chi-squared modes.
 		['valid', { val: false }]
 	]);
 
 	const isRef = (id) => id != null && id !== -1 && getColumnById(id);
-	const isNumericCol = (data) => data.length > 0 && data.every((v) => v === null || v === '' || Number.isFinite(Number(v)));
+	const isNumericCol = (data) =>
+		data.length > 0 && data.every((v) => v === null || v === '' || Number.isFinite(Number(v)));
 
 	export function chisquared(argsIN) {
 		fillDefaults(argsIN, defaults);
-		const testType = argsIN.testType === 'goodness' ? 'goodness' : 'independence';
+		const testType = ['goodness', 'fisher'].includes(argsIN.testType)
+			? argsIN.testType
+			: 'independence';
 		const warnings = [];
+
+		if (testType === 'fisher') {
+			if (!isRef(argsIN.xIN) || !isRef(argsIN.yIN)) return [null, false];
+			const rowVar = getColumnById(argsIN.xIN);
+			const colVar = getColumnById(argsIN.yIN);
+			const fx = fisherExactFromColumns(
+				rowVar.getData() ?? [],
+				colVar.getData() ?? [],
+				argsIN.alternative ?? 'two-sided'
+			);
+			if (!fx.valid) {
+				return [
+					{
+						testType,
+						warnings: [fx.reason],
+						rowLabels: fx.rowLabels,
+						colLabels: fx.colLabels,
+						table: fx.table,
+						statistic: NaN,
+						pvalue: NaN,
+						df: NaN,
+						oddsRatio: NaN
+					},
+					true
+				];
+			}
+			if (fx.n < 2) warnings.push('Too few complete pairs to test.');
+			const result = {
+				testType,
+				rowLabels: fx.rowLabels,
+				colLabels: fx.colLabels,
+				table: fx.table,
+				n: fx.n,
+				// An exact test has no test statistic and no degrees of freedom; the
+				// odds ratio is the effect size that goes with it.
+				statistic: NaN,
+				pvalue: fx.pvalue,
+				df: NaN,
+				oddsRatio: fx.oddsRatio,
+				alternative: fx.alternative,
+				warnings
+			};
+			writeChiOutputs(argsIN, result);
+			return [result, true];
+		}
 
 		if (testType === 'independence') {
 			if (!isRef(argsIN.xIN) || !isRef(argsIN.yIN)) return [null, false];
 			const rowVar = getColumnById(argsIN.xIN);
 			const colVar = getColumnById(argsIN.yIN);
-			const { rowLabels, colLabels, table } = contingencyTable(rowVar.getData() ?? [], colVar.getData() ?? []);
+			const { rowLabels, colLabels, table } = contingencyTable(
+				rowVar.getData() ?? [],
+				colVar.getData() ?? []
+			);
 			if (rowLabels.length < 2 || colLabels.length < 2) {
-				return [{ testType, warnings: ['Independence needs at least two categories in each variable.'], rowLabels, colLabels, table: [], statistic: NaN, pvalue: NaN, df: NaN }, true];
+				return [
+					{
+						testType,
+						warnings: ['Independence needs at least two categories in each variable.'],
+						rowLabels,
+						colLabels,
+						table: [],
+						statistic: NaN,
+						pvalue: NaN,
+						df: NaN
+					},
+					true
+				];
 			}
 			const res = chiSquareIndependence(table, !!argsIN.correction);
 			// Expected-count assumption check (Cochran's rule).
 			const small = res.expected.flat().filter((e) => e < 5).length;
-			if (small) warnings.push(`${small} of ${res.expected.flat().length} expected counts are below 5; the χ² approximation is unreliable (consider Fisher's exact test).`);
+			if (small)
+				warnings.push(
+					`${small} of ${res.expected.flat().length} expected counts are below 5; the χ² approximation is unreliable (consider Fisher's exact test).`
+				);
 			{
-				const result = { testType, rowLabels, colLabels, table, expected: res.expected, statistic: res.statistic, pvalue: res.pvalue, df: res.df, warnings };
+				const result = {
+					testType,
+					rowLabels,
+					colLabels,
+					table,
+					expected: res.expected,
+					statistic: res.statistic,
+					pvalue: res.pvalue,
+					df: res.df,
+					warnings
+				};
 				writeChiOutputs(argsIN, result); // write from the func so doProcess() bakes real columns
 				return [result, true];
 			}
@@ -66,7 +158,10 @@
 			// Drop missing cells BEFORE coercion: Number(null) and Number('') are both 0, which
 			// Number.isFinite keeps — so a partially-missing count vector would gain phantom
 			// zero-count bins, inflating k/df and shifting the expected counts and p-value.
-			observed = raw.filter((v) => v != null && v !== '').map(Number).filter(Number.isFinite);
+			observed = raw
+				.filter((v) => v != null && v !== '')
+				.map(Number)
+				.filter(Number.isFinite);
 			labels = observed.map((_, i) => `bin ${i + 1}`);
 		} else {
 			const counts = new Map();
@@ -78,17 +173,44 @@
 			labels = [...counts.keys()];
 			observed = [...counts.values()];
 		}
-		if (observed.length < 2) return [{ testType, warnings: ['Goodness-of-fit needs at least two categories / counts.'], labels, observed, statistic: NaN, pvalue: NaN, df: NaN }, true];
+		if (observed.length < 2)
+			return [
+				{
+					testType,
+					warnings: ['Goodness-of-fit needs at least two categories / counts.'],
+					labels,
+					observed,
+					statistic: NaN,
+					pvalue: NaN,
+					df: NaN
+				},
+				true
+			];
 		const res = chiSquareGoodnessOfFit(observed, null);
 		const expected = observed.map(() => observed.reduce((s, v) => s + v, 0) / observed.length);
-		if (expected.some((e) => e < 5)) warnings.push('Some expected counts are below 5; the χ² approximation is unreliable at these counts.');
-		const result = { testType, labels, observed, expected, statistic: res.statistic, pvalue: res.pvalue, df: res.df, warnings };
+		if (expected.some((e) => e < 5))
+			warnings.push(
+				'Some expected counts are below 5; the χ² approximation is unreliable at these counts.'
+			);
+		const result = {
+			testType,
+			labels,
+			observed,
+			expected,
+			statistic: res.statistic,
+			pvalue: res.pvalue,
+			df: res.df,
+			warnings
+		};
 		writeChiOutputs(argsIN, result); // write from the func so doProcess() bakes real columns
 		return [result, true];
 	}
 
 	function writeChiOutputs(argsIN, result) {
-		if (!result || Number.isNaN(result.statistic)) return;
+		// Gate on the P-VALUE, not the statistic: Fisher's exact has no test
+		// statistic (statistic is NaN by design), so gating on it would silently
+		// write nothing for that whole mode.
+		if (!result || Number.isNaN(result.pvalue)) return;
 		const processHash = crypto.randomUUID();
 		writeOutputColumn(argsIN.out?.statistic, [result.statistic], { processHash });
 		writeOutputColumn(argsIN.out?.pvalue, [result.pvalue], { processHash });
@@ -114,7 +236,12 @@
 		}
 	};
 
-	const fmt = (v) => (v == null || Number.isNaN(v) ? '—' : Number(v).toPrecision(4).replace(/\.?0+$/, ''));
+	const fmt = (v) =>
+		v == null || Number.isNaN(v)
+			? '—'
+			: Number(v)
+					.toPrecision(4)
+					.replace(/\.?0+$/, '');
 </script>
 
 <script>
@@ -132,8 +259,10 @@
 	}
 
 	let getHash = $derived.by(() => {
-		let h = String(p.args.testType) + ':' + String(p.args.correction);
-		for (const id of [p.args.xIN, p.args.yIN]) h += ':' + (id >= 0 ? getColumnById(id)?.getDataHash ?? '' : '');
+		let h =
+			String(p.args.testType) + ':' + String(p.args.correction) + ':' + String(p.args.alternative);
+		for (const id of [p.args.xIN, p.args.yIN])
+			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
 	});
 	onMount(() => {
@@ -153,23 +282,47 @@
 	<ControlInput label="Test">
 		<AttributeSelect
 			bind:value={p.args.testType}
-			options={['independence', 'goodness']}
-			optionsDisplay={['Independence (2 categories)', 'Goodness-of-fit (vs uniform)']}
+			options={['independence', 'goodness', 'fisher']}
+			optionsDisplay={[
+				'Independence (2 categories)',
+				'Goodness-of-fit (vs uniform)',
+				"Fisher's exact (2x2, small samples)"
+			]}
 		/>
 	</ControlInput>
 	{#if p.args.testType === 'independence'}
 		<ControlInput label="Yates' correction (2×2)">
 			<input type="checkbox" bind:checked={p.args.correction} />
 		</ControlInput>
+	{:else if p.args.testType === 'fisher'}
+		<ControlInput label="Alternative">
+			<AttributeSelect
+				bind:value={p.args.alternative}
+				options={['two-sided', 'less', 'greater']}
+				optionsDisplay={['Two-sided', 'One-sided (less)', 'One-sided (greater)']}
+			/>
+		</ControlInput>
 	{/if}
-	{#if Number.isFinite(result.statistic)}
-		<p class="hint">χ² = <strong>{fmt(result.statistic)}</strong>, df = {result.df}, p = <strong>{fmt(result.pvalue)}</strong>.</p>
-		{#if result.testType === 'independence' && result.table?.length}
+	{#if Number.isFinite(result.pvalue)}
+		{#if result.testType === 'fisher'}
+			<p class="hint">
+				p = <strong>{fmt(result.pvalue)}</strong> ({result.alternative}), odds ratio =
+				<strong>{result.oddsRatio === Infinity ? '∞' : fmt(result.oddsRatio)}</strong>, n = {result.n}.
+			</p>
+		{:else}
+			<p class="hint">
+				χ² = <strong>{fmt(result.statistic)}</strong>, df = {result.df}, p =
+				<strong>{fmt(result.pvalue)}</strong>.
+			</p>
+		{/if}
+		{#if (result.testType === 'independence' || result.testType === 'fisher') && result.table?.length}
 			<details class="tp-output-panel" open>
 				<summary class="tp-output-summary">Contingency table</summary>
 				<table class="d-table">
 					<thead>
-						<tr><th></th>{#each result.colLabels as c (c)}<th>{c}</th>{/each}</tr>
+						<tr
+							><th></th>{#each result.colLabels as c (c)}<th>{c}</th>{/each}</tr
+						>
 					</thead>
 					<tbody>
 						{#each result.table as row, r (result.rowLabels[r])}

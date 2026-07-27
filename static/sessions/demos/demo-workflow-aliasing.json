@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "414": [
+    "422": [
       0,
       0.5,
       1,
@@ -962,7 +962,7 @@
       479,
       479.5
     ],
-    "415": [
+    "423": [
       48.966306363653274,
       49.096711872280295,
       60.90169077251696,
@@ -1924,7 +1924,7 @@
       32.46872874992678,
       47.55083612219273
     ],
-    "416": [
+    "424": [
       0,
       13,
       26,
@@ -1962,7 +1962,7 @@
       442,
       455
     ],
-    "417": [
+    "425": [
       62.35529502422068,
       36.88470052103294,
       74.36922993287054,
@@ -2000,13 +2000,13 @@
       72.28578404746555,
       44.616560416462306
     ],
-    "422": [
+    "430": [
       28.35
     ],
-    "423": [
+    "431": [
       16.618955412638837
     ],
-    "424": [
+    "432": [
       0.00012256825458495239,
       0.009421858738587847,
       0.03499125130618224,
@@ -2612,55 +2612,11 @@
   },
   "data": [
     {
-      "id": 414,
-      "name": "hour (30 min epochs)",
-      "data": 414,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 415,
-      "name": "activity (30 min)",
-      "data": 415,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 416,
-      "name": "hour (13 h epochs)",
-      "data": 416,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 417,
-      "name": "activity (13 h)",
-      "data": 417,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 422,
-      "name": "stat_peak_period_29",
+      "name": "hour (30 min epochs)",
       "data": 422,
       "type": "number",
-      "tableProcessGUId": "c279c742-a06a-47ae-a440-29d1f988fa52",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2668,10 +2624,10 @@
     },
     {
       "id": 423,
-      "name": "stat_peak_power_29",
+      "name": "activity (30 min)",
       "data": 423,
       "type": "number",
-      "tableProcessGUId": "c279c742-a06a-47ae-a440-29d1f988fa52",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2679,10 +2635,54 @@
     },
     {
       "id": 424,
-      "name": "rhythmicityy_417_29",
+      "name": "hour (13 h epochs)",
       "data": 424,
       "type": "number",
-      "tableProcessGUId": "c279c742-a06a-47ae-a440-29d1f988fa52",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 425,
+      "name": "activity (13 h)",
+      "data": 425,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 430,
+      "name": "stat_peak_period_31",
+      "data": 430,
+      "type": "number",
+      "tableProcessGUId": "622e3814-084c-4306-a30f-953d9b3ac579",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 431,
+      "name": "stat_peak_power_31",
+      "data": 431,
+      "type": "number",
+      "tableProcessGUId": "622e3814-084c-4306-a30f-953d9b3ac579",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 432,
+      "name": "rhythmicityy_425_31",
+      "data": 432,
+      "type": "number",
+      "tableProcessGUId": "622e3814-084c-4306-a30f-953d9b3ac579",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2691,7 +2691,7 @@
   ],
   "plots": [
     {
-      "id": 54,
+      "id": 55,
       "name": "Periodogram — 30 min epochs",
       "x": 60,
       "y": 60,
@@ -2736,9 +2736,9 @@
         "data": [
           {
             "x": {
-              "id": 418,
+              "id": 426,
               "name": "hour (30 min epochs)",
-              "refId": 414,
+              "refId": 422,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2747,9 +2747,9 @@
               "processes": []
             },
             "y": {
-              "id": 419,
+              "id": 427,
               "name": "activity (30 min)",
-              "refId": 415,
+              "refId": 423,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2785,7 +2785,7 @@
       }
     },
     {
-      "id": 55,
+      "id": 56,
       "name": "Periodogram — 13 h epochs",
       "x": 630,
       "y": 60,
@@ -2830,9 +2830,9 @@
         "data": [
           {
             "x": {
-              "id": 420,
+              "id": 428,
               "name": "hour (13 h epochs)",
-              "refId": 416,
+              "refId": 424,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2841,9 +2841,9 @@
               "processes": []
             },
             "y": {
-              "id": 421,
+              "id": 429,
               "name": "activity (13 h)",
-              "refId": 417,
+              "refId": 425,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2879,7 +2879,7 @@
       }
     },
     {
-      "id": 56,
+      "id": 57,
       "name": "What the slow record reports",
       "x": 60,
       "y": 440,
@@ -2895,8 +2895,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          422,
-          423
+          430,
+          431
         ],
         "showCol": [
           true,
@@ -2911,13 +2911,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 29,
+      "id": 31,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis — the undersampled record",
       "args": {
-        "xIN": 416,
+        "xIN": 424,
         "yIN": [
-          417
+          425
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -2928,9 +2928,9 @@
         "pgAlpha": 0.05,
         "preProcesses": [],
         "out": {
-          "stat_peak_period": 422,
-          "stat_peak_power": 423,
-          "rhythmicityy_417": 424
+          "stat_peak_period": 430,
+          "stat_peak_power": 431,
+          "rhythmicityy_425": 432
         }
       },
       "refTPId": null
@@ -2941,7 +2941,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_20",
+      "id": "note_21",
       "text": "WORKFLOW: sampling rate and aliasing. The same 24 h rhythm, recorded at 30-minute epochs and then re-sampled once every 13 hours. The fine record recovers 24 h cleanly. The slow one cannot: to resolve a period you need samples at intervals shorter than HALF that period (the Nyquist limit), and 13 h intervals can only resolve periods longer than 26 h. So the rhythm is not merely noisy in the slow record, it is unrecoverable, and the periodogram peaks somewhere else entirely with no warning that anything is wrong. Before concluding a rhythm is absent, check your epoch length against the period you were hoping to find.",
       "x": 40,
       "y": 24,
@@ -2953,39 +2953,39 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_414": {
+    "data_422": {
       "x": 60,
       "y": 314
     },
-    "data_415": {
+    "data_423": {
       "x": 60,
       "y": 814
     },
-    "data_416": {
+    "data_424": {
       "x": 60,
       "y": 1314
     },
-    "data_417": {
+    "data_425": {
       "x": 60,
       "y": 1814
     },
-    "tableprocess_29": {
+    "tableprocess_31": {
       "x": 440,
       "y": 314
     },
-    "note_20": {
+    "note_21": {
       "x": 40,
       "y": 24
     },
-    "plot_54": {
+    "plot_55": {
       "x": 820,
       "y": 314
     },
-    "plot_55": {
+    "plot_56": {
       "x": 820,
       "y": 814
     },
-    "plot_56": {
+    "plot_57": {
       "x": 820,
       "y": 1314
     }
@@ -3047,5 +3047,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

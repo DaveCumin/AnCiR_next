@@ -5053,3 +5053,23 @@ def moving_windows(times, values, opts):
 
     out['starts'] = starts
     return out
+
+
+def fisher_exact_test(table, alternative='two-sided'):
+    """Fisher's exact test for a 2x2 table.
+
+    Delegates to scipy.stats.fisher_exact — a real reference implementation
+    rather than a second copy of the JS, per the D13 parity policy. The JS side
+    enumerates the hypergeometric distribution itself (utils/fisherExact.js);
+    this is what pins it.
+
+    Returns the sample odds ratio ad/bc (scipy's first return value), NOT the
+    conditional MLE that scipy exposes separately as `odds_ratio`.
+    """
+    from scipy.stats import fisher_exact as _fisher
+    odds, p = _fisher(table, alternative=alternative)
+    return {
+        'pvalue': float(p),
+        'oddsRatio': float(odds),
+        'alternative': alternative,
+    }

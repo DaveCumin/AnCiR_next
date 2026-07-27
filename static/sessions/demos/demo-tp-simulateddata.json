@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "753": [
+    "761": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-01-02T22:00:00.000Z",
       "2024-01-02T23:00:00.000Z"
     ],
-    "754": [
+    "762": [
       100,
       100,
       100,
@@ -103,23 +103,23 @@
   },
   "data": [
     {
-      "id": 753,
-      "name": "time_75",
-      "data": 753,
+      "id": 761,
+      "name": "time_77",
+      "data": 761,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "875a4826-d0c1-44ba-aff9-f89c43897fbc",
+      "tableProcessGUId": "464520ed-3ca7-43d1-b3ca-d6263e28d557",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 754,
-      "name": "values_75",
-      "data": 754,
+      "id": 762,
+      "name": "values_77",
+      "data": 762,
       "type": "number",
-      "tableProcessGUId": "875a4826-d0c1-44ba-aff9-f89c43897fbc",
+      "tableProcessGUId": "464520ed-3ca7-43d1-b3ca-d6263e28d557",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -128,7 +128,7 @@
   ],
   "plots": [
     {
-      "id": 130,
+      "id": 131,
       "name": "Simulate Data result",
       "x": 60,
       "y": 60,
@@ -144,8 +144,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          753,
-          754
+          761,
+          762
         ],
         "showCol": [
           true,
@@ -160,7 +160,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 75,
+      "id": 77,
       "name": "SimulatedData",
       "displayName": "Simulate Data",
       "args": {
@@ -178,8 +178,8 @@
         ],
         "samplingPeriod_hours": 1,
         "out": {
-          "time": 753,
-          "values": 754
+          "time": 761,
+          "values": 762
         }
       },
       "refTPId": null
@@ -190,7 +190,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_70",
+      "id": "note_71",
       "text": "Generates a synthetic time-series from one or more cosine sections (each with its own period, phase, amplitude, and optional additive or multiplicative noise) at a chosen sampling interval. Use it to create test data with a known ground truth for learning, demonstrating, or validating the analysis nodes.",
       "x": 40,
       "y": 24,
@@ -202,15 +202,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_75": {
+    "tableprocess_77": {
       "x": 60,
       "y": 314
     },
-    "plot_130": {
+    "plot_131": {
       "x": 820,
       "y": 314
     },
-    "note_70": {
+    "note_71": {
       "x": 40,
       "y": 24
     }
@@ -272,5 +272,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

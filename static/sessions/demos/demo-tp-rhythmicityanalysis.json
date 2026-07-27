@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "730": [
+    "738": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "731": [
+    "739": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "732": [
+    "740": [
       20,
       20.5,
       21,
@@ -695,7 +695,7 @@
       27.5,
       28
     ],
-    "733": [
+    "741": [
       0.8924933333937438,
       3.0510601083632705,
       6.090118581951634e-28,
@@ -714,7 +714,7 @@
       1.8553714388763858,
       1.1781833223509954e-29
     ],
-    "734": [
+    "742": [
       0.8924933333937438,
       3.0510601083632705,
       6.090118581951634e-28,
@@ -736,20 +736,20 @@
   },
   "data": [
     {
-      "id": 730,
+      "id": 738,
       "name": "x",
-      "data": 730,
+      "data": 738,
       "type": "number",
-      "tableProcessGUId": "41ef0ac7-4e58-4b5c-957a-a1296996c7a8",
+      "tableProcessGUId": "8a01d661-8891-4361-82cb-b314029662ba",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 731,
+      "id": 739,
       "name": "y",
-      "data": 731,
+      "data": 739,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -758,33 +758,33 @@
       "processes": []
     },
     {
-      "id": 732,
-      "name": "731_period_72",
-      "data": 732,
+      "id": 740,
+      "name": "739_period_74",
+      "data": 740,
       "type": "number",
-      "tableProcessGUId": "bf8e37d2-6246-4754-983f-a868cfea49fb",
+      "tableProcessGUId": "ea33778d-e874-4cb5-8faf-edb336b7131c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 733,
-      "name": "731_power_72",
-      "data": 733,
+      "id": 741,
+      "name": "739_power_74",
+      "data": 741,
       "type": "number",
-      "tableProcessGUId": "bf8e37d2-6246-4754-983f-a868cfea49fb",
+      "tableProcessGUId": "ea33778d-e874-4cb5-8faf-edb336b7131c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 734,
-      "name": "rhythmicityy_731_72",
-      "data": 734,
+      "id": 742,
+      "name": "rhythmicityy_739_74",
+      "data": 742,
       "type": "number",
-      "tableProcessGUId": "bf8e37d2-6246-4754-983f-a868cfea49fb",
+      "tableProcessGUId": "ea33778d-e874-4cb5-8faf-edb336b7131c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -793,7 +793,7 @@
   ],
   "plots": [
     {
-      "id": 125,
+      "id": 126,
       "name": "Rhythmicity Analysis: signal",
       "x": 60,
       "y": 60,
@@ -850,9 +850,9 @@
         "data": [
           {
             "x": {
-              "id": 735,
+              "id": 743,
               "name": "x",
-              "refId": 730,
+              "refId": 738,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -861,9 +861,9 @@
               "processes": []
             },
             "y": {
-              "id": 736,
+              "id": 744,
               "name": "y",
-              "refId": 731,
+              "refId": 739,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -903,7 +903,7 @@
       }
     },
     {
-      "id": 126,
+      "id": 127,
       "name": "Rhythmicity Analysis: periodogram",
       "x": 630,
       "y": 60,
@@ -960,9 +960,9 @@
         "data": [
           {
             "x": {
-              "id": 737,
-              "name": "731_period_72",
-              "refId": 732,
+              "id": 745,
+              "name": "739_period_74",
+              "refId": 740,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -971,9 +971,9 @@
               "processes": []
             },
             "y": {
-              "id": 738,
-              "name": "731_power_72",
-              "refId": 733,
+              "id": 746,
+              "name": "739_power_74",
+              "refId": 741,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1015,7 +1015,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 71,
+      "id": 73,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -1025,19 +1025,19 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 730
+          "result": 738
         }
       },
       "refTPId": null
     },
     {
-      "id": 72,
+      "id": 74,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis",
       "args": {
-        "xIN": 730,
+        "xIN": 738,
         "yIN": [
-          731
+          739
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -1051,9 +1051,9 @@
         "corrMaxLag": 0,
         "preProcesses": [],
         "out": {
-          "731_period": 732,
-          "731_power": 733,
-          "rhythmicityy_731": 734
+          "739_period": 740,
+          "739_power": 741,
+          "rhythmicityy_739": 742
         }
       },
       "refTPId": null
@@ -1064,7 +1064,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_67",
+      "id": "note_68",
       "text": "Runs a spectral / periodicity analysis over the series and reports the dominant period and its strength. Choose the method: a periodogram (Lomb-Scargle by default, which tolerates uneven sampling and gaps; chi-squared or Enright also available), a Fourier transform (FFT), or an autocorrelogram. Use it to detect whether a rhythm is present and to estimate its period without assuming a waveform. In the demo, read the output spectrum: a clear peak marks the dominant period, its height is the power/magnitude, and (for chi-squared) the significance line shows whether it exceeds chance. Lomb-Scargle periodogram (Lomb 1976; Scargle 1982).",
       "x": 40,
       "y": 24,
@@ -1076,27 +1076,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_731": {
+    "data_739": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_71": {
+    "tableprocess_73": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_72": {
+    "tableprocess_74": {
       "x": 440,
-      "y": 314
-    },
-    "plot_125": {
-      "x": 820,
       "y": 314
     },
     "plot_126": {
       "x": 820,
+      "y": 314
+    },
+    "plot_127": {
+      "x": 820,
       "y": 814
     },
-    "note_67": {
+    "note_68": {
       "x": 40,
       "y": 24
     }
@@ -1158,5 +1158,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

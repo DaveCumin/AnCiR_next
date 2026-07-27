@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "273": [
+    "281": [
       3.3800054665307684,
       1.717056100204708,
       2.876850966913842,
@@ -27,7 +27,7 @@
       1.0631604087962871,
       2.550309992871841
     ],
-    "274": [
+    "282": [
       10.160420803366648,
       9.176633638551664,
       10.260613582492812,
@@ -54,15 +54,15 @@
       8.111668311513892,
       10.230140904440052
     ],
-    "275": [
+    "283": [
       0.8547573489507105,
       3.3800054665307684
     ],
-    "276": [
+    "284": [
       8.98000850073285,
       11.067680875713645
     ],
-    "277": [
+    "285": [
       4.855849207743793,
       3.964466745570264,
       4.634479958279894,
@@ -89,7 +89,7 @@
       4.712164476312455,
       5.201770970343005
     ],
-    "278": [
+    "286": [
       7.8491766835661725,
       6.903056457576056,
       9.86469948640929,
@@ -116,15 +116,15 @@
       7.33611123090232,
       8.925225735855147
     ],
-    "279": [
+    "287": [
       3.595729501637659,
       6.4358443944871055
     ],
-    "280": [
+    "288": [
       7.198920800491048,
       10.465956322959471
     ],
-    "281": [
+    "289": [
       8.134878417181017,
       8.148195897307705,
       7.417012250828425,
@@ -151,7 +151,7 @@
       8.03237002255853,
       8.601298101701852
     ],
-    "282": [
+    "290": [
       8.294485789538449,
       9.283505386538394,
       6.809500287634497,
@@ -178,15 +178,15 @@
       8.754711293139916,
       9.084197438238663
     ],
-    "283": [
+    "291": [
       6.894649577938323,
       9.336029613627328
     ],
-    "284": [
+    "292": [
       6.735419158479484,
       9.692034999793616
     ],
-    "285": [
+    "293": [
       3.3800054665307684,
       1.717056100204708,
       2.876850966913842,
@@ -263,7 +263,7 @@
       8.03237002255853,
       8.601298101701852
     ],
-    "286": [
+    "294": [
       10.160420803366648,
       9.176633638551664,
       10.260613582492812,
@@ -340,122 +340,34 @@
       8.754711293139916,
       9.084197438238663
     ],
-    "287": [
+    "295": [
       0.8547573489507105,
       9.336029613627328
     ],
-    "288": [
+    "296": [
       9.98080938597198,
       7.916465078622005
     ],
-    "289": [
+    "297": [
       "dose (pooled)"
     ],
-    "290": [
+    "298": [
       "activity (pooled)"
     ],
-    "291": [
+    "299": [
       -0.4736242101093664
     ],
-    "292": [
+    "300": [
       0.000017726124556527445
     ],
-    "293": [
+    "301": [
       75
     ]
   },
   "data": [
     {
-      "id": 273,
-      "name": "Ward A dose",
-      "data": 273,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 274,
-      "name": "Ward A activity",
-      "data": 274,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 275,
-      "name": "Ward A fit x",
-      "data": 275,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 276,
-      "name": "Ward A fit y",
-      "data": 276,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 277,
-      "name": "Ward B dose",
-      "data": 277,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 278,
-      "name": "Ward B activity",
-      "data": 278,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 279,
-      "name": "Ward B fit x",
-      "data": 279,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 280,
-      "name": "Ward B fit y",
-      "data": 280,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 281,
-      "name": "Ward C dose",
+      "name": "Ward A dose",
       "data": 281,
       "type": "number",
       "tableProcessGUId": "",
@@ -466,7 +378,7 @@
     },
     {
       "id": 282,
-      "name": "Ward C activity",
+      "name": "Ward A activity",
       "data": 282,
       "type": "number",
       "tableProcessGUId": "",
@@ -477,7 +389,7 @@
     },
     {
       "id": 283,
-      "name": "Ward C fit x",
+      "name": "Ward A fit x",
       "data": 283,
       "type": "number",
       "tableProcessGUId": "",
@@ -488,7 +400,7 @@
     },
     {
       "id": 284,
-      "name": "Ward C fit y",
+      "name": "Ward A fit y",
       "data": 284,
       "type": "number",
       "tableProcessGUId": "",
@@ -499,7 +411,7 @@
     },
     {
       "id": 285,
-      "name": "dose (pooled)",
+      "name": "Ward B dose",
       "data": 285,
       "type": "number",
       "tableProcessGUId": "",
@@ -510,7 +422,7 @@
     },
     {
       "id": 286,
-      "name": "activity (pooled)",
+      "name": "Ward B activity",
       "data": 286,
       "type": "number",
       "tableProcessGUId": "",
@@ -521,7 +433,7 @@
     },
     {
       "id": 287,
-      "name": "pooled fit x",
+      "name": "Ward B fit x",
       "data": 287,
       "type": "number",
       "tableProcessGUId": "",
@@ -532,7 +444,7 @@
     },
     {
       "id": 288,
-      "name": "pooled fit y",
+      "name": "Ward B fit y",
       "data": 288,
       "type": "number",
       "tableProcessGUId": "",
@@ -543,10 +455,10 @@
     },
     {
       "id": 289,
-      "name": "var_i_22",
+      "name": "Ward C dose",
       "data": 289,
-      "type": "category",
-      "tableProcessGUId": "dbecfeac-14fe-4c1a-8c6a-44eccc0bf79f",
+      "type": "number",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -554,10 +466,10 @@
     },
     {
       "id": 290,
-      "name": "var_j_22",
+      "name": "Ward C activity",
       "data": 290,
-      "type": "category",
-      "tableProcessGUId": "dbecfeac-14fe-4c1a-8c6a-44eccc0bf79f",
+      "type": "number",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -565,10 +477,10 @@
     },
     {
       "id": 291,
-      "name": "r_22",
+      "name": "Ward C fit x",
       "data": 291,
       "type": "number",
-      "tableProcessGUId": "dbecfeac-14fe-4c1a-8c6a-44eccc0bf79f",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -576,10 +488,10 @@
     },
     {
       "id": 292,
-      "name": "pvalue_22",
+      "name": "Ward C fit y",
       "data": 292,
       "type": "number",
-      "tableProcessGUId": "dbecfeac-14fe-4c1a-8c6a-44eccc0bf79f",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -587,10 +499,98 @@
     },
     {
       "id": 293,
-      "name": "n_22",
+      "name": "dose (pooled)",
       "data": 293,
       "type": "number",
-      "tableProcessGUId": "dbecfeac-14fe-4c1a-8c6a-44eccc0bf79f",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 294,
+      "name": "activity (pooled)",
+      "data": 294,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 295,
+      "name": "pooled fit x",
+      "data": 295,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 296,
+      "name": "pooled fit y",
+      "data": 296,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 297,
+      "name": "var_i_24",
+      "data": 297,
+      "type": "category",
+      "tableProcessGUId": "71fd1fd4-abef-4093-a8a8-661cf6b64685",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 298,
+      "name": "var_j_24",
+      "data": 298,
+      "type": "category",
+      "tableProcessGUId": "71fd1fd4-abef-4093-a8a8-661cf6b64685",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 299,
+      "name": "r_24",
+      "data": 299,
+      "type": "number",
+      "tableProcessGUId": "71fd1fd4-abef-4093-a8a8-661cf6b64685",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 300,
+      "name": "pvalue_24",
+      "data": 300,
+      "type": "number",
+      "tableProcessGUId": "71fd1fd4-abef-4093-a8a8-661cf6b64685",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 301,
+      "name": "n_24",
+      "data": 301,
+      "type": "number",
+      "tableProcessGUId": "71fd1fd4-abef-4093-a8a8-661cf6b64685",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -599,7 +599,7 @@
   ],
   "plots": [
     {
-      "id": 32,
+      "id": 33,
       "name": "Within wards (climbing) vs pooled (falling)",
       "x": 60,
       "y": 60,
@@ -656,9 +656,9 @@
         "data": [
           {
             "x": {
-              "id": 294,
+              "id": 302,
               "name": "Ward A dose",
-              "refId": 273,
+              "refId": 281,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -667,9 +667,9 @@
               "processes": []
             },
             "y": {
-              "id": 295,
+              "id": 303,
               "name": "Ward A activity",
-              "refId": 274,
+              "refId": 282,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -695,9 +695,9 @@
           },
           {
             "x": {
-              "id": 296,
+              "id": 304,
               "name": "Ward B dose",
-              "refId": 277,
+              "refId": 285,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -706,9 +706,9 @@
               "processes": []
             },
             "y": {
-              "id": 297,
+              "id": 305,
               "name": "Ward B activity",
-              "refId": 278,
+              "refId": 286,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -734,9 +734,9 @@
           },
           {
             "x": {
-              "id": 298,
+              "id": 306,
               "name": "Ward C dose",
-              "refId": 281,
+              "refId": 289,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -745,9 +745,9 @@
               "processes": []
             },
             "y": {
-              "id": 299,
+              "id": 307,
               "name": "Ward C activity",
-              "refId": 282,
+              "refId": 290,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -773,9 +773,9 @@
           },
           {
             "x": {
-              "id": 300,
+              "id": 308,
               "name": "Ward A fit x",
-              "refId": 275,
+              "refId": 283,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -784,9 +784,9 @@
               "processes": []
             },
             "y": {
-              "id": 301,
+              "id": 309,
               "name": "Ward A fit y",
-              "refId": 276,
+              "refId": 284,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -812,9 +812,9 @@
           },
           {
             "x": {
-              "id": 302,
+              "id": 310,
               "name": "Ward B fit x",
-              "refId": 279,
+              "refId": 287,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -823,9 +823,9 @@
               "processes": []
             },
             "y": {
-              "id": 303,
+              "id": 311,
               "name": "Ward B fit y",
-              "refId": 280,
+              "refId": 288,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -851,9 +851,9 @@
           },
           {
             "x": {
-              "id": 304,
+              "id": 312,
               "name": "Ward C fit x",
-              "refId": 283,
+              "refId": 291,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -862,9 +862,9 @@
               "processes": []
             },
             "y": {
-              "id": 305,
+              "id": 313,
               "name": "Ward C fit y",
-              "refId": 284,
+              "refId": 292,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -890,9 +890,9 @@
           },
           {
             "x": {
-              "id": 306,
+              "id": 314,
               "name": "pooled fit x",
-              "refId": 287,
+              "refId": 295,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -901,9 +901,9 @@
               "processes": []
             },
             "y": {
-              "id": 307,
+              "id": 315,
               "name": "pooled fit y",
-              "refId": 288,
+              "refId": 296,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -943,7 +943,7 @@
       }
     },
     {
-      "id": 33,
+      "id": 34,
       "name": "Pooled correlation (negative)",
       "x": 630,
       "y": 60,
@@ -959,10 +959,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          289,
-          290,
-          291,
-          292
+          297,
+          298,
+          299,
+          300
         ],
         "showCol": [
           true,
@@ -979,22 +979,22 @@
   ],
   "tableProcesses": [
     {
-      "id": 22,
+      "id": 24,
       "name": "Correlation",
       "displayName": "Correlation (pooled)",
       "args": {
         "yIN": [
-          285,
-          286
+          293,
+          294
         ],
         "method": "pearson",
         "alpha": 0.05,
         "out": {
-          "var_i": 289,
-          "var_j": 290,
-          "r": 291,
-          "pvalue": 292,
-          "n": 293
+          "var_i": 297,
+          "var_j": 298,
+          "r": 299,
+          "pvalue": 300,
+          "n": 301
         },
         "valid": false
       },
@@ -1006,7 +1006,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_12",
+      "id": "note_13",
       "text": "WORKFLOW: Simpson's paradox. A relationship that is positive inside every group can turn negative once the groups are pooled — the direction of the effect literally reverses. Here three hospital wards each show activity rising with dose (each coloured trend line climbs), but the wards are staggered so that the ward running the highest dose also has the lowest baseline activity. Pool all the points and the cloud slopes DOWN: the Correlation node on the combined data reports a negative coefficient (about r = −0.5, and significant), flatly contradicting every within-ward trend. This is not an error or an artefact of noise; it is a real feature of the data caused by a lurking third variable (the ward) that is correlated with both dose and baseline. The uncomfortable part is that neither answer is automatically 'right'. If the wards are just noise you'd pool; if they differ systematically (as here) the pooled number is misleading and the per-group analysis is the honest one. This is exactly why 'controlling for' a covariate can flip a published result, and why you should always ask what groups sit underneath an aggregate correlation before you believe it. Named for E.H. Simpson (1951); the effect was noted earlier by Yule and Pearson.",
       "x": 40,
       "y": 24,
@@ -1018,83 +1018,83 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_273": {
-      "x": 60,
-      "y": 314
-    },
-    "data_274": {
-      "x": 60,
-      "y": 814
-    },
-    "data_275": {
-      "x": 60,
-      "y": 1314
-    },
-    "data_276": {
-      "x": 60,
-      "y": 1814
-    },
-    "data_277": {
-      "x": 60,
-      "y": 2314
-    },
-    "data_278": {
-      "x": 60,
-      "y": 2814
-    },
-    "data_279": {
-      "x": 60,
-      "y": 3314
-    },
-    "data_280": {
-      "x": 60,
-      "y": 3814
-    },
     "data_281": {
       "x": 60,
-      "y": 4314
+      "y": 314
     },
     "data_282": {
       "x": 60,
-      "y": 4814
+      "y": 814
     },
     "data_283": {
       "x": 60,
-      "y": 5314
+      "y": 1314
     },
     "data_284": {
       "x": 60,
-      "y": 5814
+      "y": 1814
     },
     "data_285": {
       "x": 60,
-      "y": 6314
+      "y": 2314
     },
     "data_286": {
       "x": 60,
-      "y": 6814
+      "y": 2814
     },
     "data_287": {
       "x": 60,
-      "y": 7314
+      "y": 3314
     },
     "data_288": {
       "x": 60,
+      "y": 3814
+    },
+    "data_289": {
+      "x": 60,
+      "y": 4314
+    },
+    "data_290": {
+      "x": 60,
+      "y": 4814
+    },
+    "data_291": {
+      "x": 60,
+      "y": 5314
+    },
+    "data_292": {
+      "x": 60,
+      "y": 5814
+    },
+    "data_293": {
+      "x": 60,
+      "y": 6314
+    },
+    "data_294": {
+      "x": 60,
+      "y": 6814
+    },
+    "data_295": {
+      "x": 60,
+      "y": 7314
+    },
+    "data_296": {
+      "x": 60,
       "y": 7814
     },
-    "tableprocess_22": {
+    "tableprocess_24": {
       "x": 440,
       "y": 314
     },
-    "note_12": {
+    "note_13": {
       "x": 40,
       "y": 24
     },
-    "plot_32": {
+    "plot_33": {
       "x": 820,
       "y": 314
     },
-    "plot_33": {
+    "plot_34": {
       "x": 820,
       "y": 814
     }
@@ -1156,5 +1156,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

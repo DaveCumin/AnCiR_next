@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "711": [
+    "719": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "712": [
+    "720": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "713": [
+    "721": [
       84,
       108,
       132,
@@ -685,7 +685,7 @@
       204,
       228
     ],
-    "714": [
+    "722": [
       24,
       24,
       24,
@@ -694,7 +694,7 @@
       24,
       24
     ],
-    "715": [
+    "723": [
       83.49999999999999,
       83.49999999999999,
       83.50000000000003,
@@ -706,20 +706,20 @@
   },
   "data": [
     {
-      "id": 711,
+      "id": 719,
       "name": "x",
-      "data": 711,
+      "data": 719,
       "type": "number",
-      "tableProcessGUId": "94fbe294-9276-4cbe-96da-c011da0a22c1",
+      "tableProcessGUId": "0f742756-21c0-423c-9935-7832348acc00",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 712,
+      "id": 720,
       "name": "y",
-      "data": 712,
+      "data": 720,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -728,33 +728,33 @@
       "processes": []
     },
     {
-      "id": 713,
-      "name": "movex_67",
-      "data": 713,
+      "id": 721,
+      "name": "movex_69",
+      "data": 721,
       "type": "number",
-      "tableProcessGUId": "b757c67c-9844-468e-a5d2-072f229a8d45",
+      "tableProcessGUId": "531dc1fb-acc1-41ec-8e34-9ab327fdb853",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 714,
-      "name": "712_peak_period_67",
-      "data": 714,
+      "id": 722,
+      "name": "720_peak_period_69",
+      "data": 722,
       "type": "number",
-      "tableProcessGUId": "b757c67c-9844-468e-a5d2-072f229a8d45",
+      "tableProcessGUId": "531dc1fb-acc1-41ec-8e34-9ab327fdb853",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 715,
-      "name": "712_peak_power_67",
-      "data": 715,
+      "id": 723,
+      "name": "720_peak_power_69",
+      "data": 723,
       "type": "number",
-      "tableProcessGUId": "b757c67c-9844-468e-a5d2-072f229a8d45",
+      "tableProcessGUId": "531dc1fb-acc1-41ec-8e34-9ab327fdb853",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -763,7 +763,7 @@
   ],
   "plots": [
     {
-      "id": 120,
+      "id": 121,
       "name": "Moving Analysis: signal + moving period",
       "x": 60,
       "y": 60,
@@ -820,9 +820,9 @@
         "data": [
           {
             "x": {
-              "id": 716,
+              "id": 724,
               "name": "x",
-              "refId": 711,
+              "refId": 719,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -831,9 +831,9 @@
               "processes": []
             },
             "y": {
-              "id": 717,
+              "id": 725,
               "name": "y",
-              "refId": 712,
+              "refId": 720,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -859,9 +859,9 @@
           },
           {
             "x": {
-              "id": 718,
-              "name": "movex_67",
-              "refId": 713,
+              "id": 726,
+              "name": "movex_69",
+              "refId": 721,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -870,9 +870,9 @@
               "processes": []
             },
             "y": {
-              "id": 719,
-              "name": "712_peak_period_67",
-              "refId": 714,
+              "id": 727,
+              "name": "720_peak_period_69",
+              "refId": 722,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -912,7 +912,7 @@
       }
     },
     {
-      "id": 121,
+      "id": 122,
       "name": "Moving Analysis: result",
       "x": 630,
       "y": 60,
@@ -928,9 +928,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          713,
-          714,
-          715
+          721,
+          722,
+          723
         ],
         "showCol": [
           true,
@@ -946,7 +946,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 66,
+      "id": 68,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -956,19 +956,19 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 711
+          "result": 719
         }
       },
       "refTPId": null
     },
     {
-      "id": 67,
+      "id": 69,
       "name": "MovingAnalysis",
       "displayName": "Moving Analysis",
       "args": {
-        "xIN": 711,
+        "xIN": 719,
         "yIN": [
-          712
+          720
         ],
         "windowSize": 168,
         "stepSize": 24,
@@ -987,9 +987,9 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "movex": 713,
-          "712_peak_period": 714,
-          "712_peak_power": 715
+          "movex": 721,
+          "720_peak_period": 722,
+          "720_peak_power": 723
         }
       },
       "refTPId": null
@@ -1000,7 +1000,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_64",
+      "id": "note_65",
       "text": "Slides a window along the record and runs a chosen analysis (periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
@@ -1012,27 +1012,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_712": {
+    "data_720": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_66": {
+    "tableprocess_68": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_67": {
+    "tableprocess_69": {
       "x": 440,
-      "y": 314
-    },
-    "plot_120": {
-      "x": 820,
       "y": 314
     },
     "plot_121": {
       "x": 820,
+      "y": 314
+    },
+    "plot_122": {
+      "x": 820,
       "y": 814
     },
-    "note_64": {
+    "note_65": {
       "x": 40,
       "y": 24
     }
@@ -1094,5 +1094,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

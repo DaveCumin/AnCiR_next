@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "332": [
+    "340": [
       0,
       0.5,
       1,
@@ -290,7 +290,7 @@
       143,
       143.5
     ],
-    "333": [
+    "341": [
       87.91045655730272,
       68.2207254416709,
       73.45755721165827,
@@ -580,13 +580,13 @@
       4.334845526603337,
       7.706329588134112
     ],
-    "338": [
+    "346": [
       12.440000000000001
     ],
-    "339": [
+    "347": [
       92.68853479700368
     ],
-    "340": [
+    "348": [
       0.4036352035405945,
       0.8157127086980744,
       1.439257280085533,
@@ -1792,55 +1792,55 @@
   },
   "data": [
     {
-      "id": 332,
-      "name": "hour",
-      "data": 332,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 333,
-      "name": "activity",
-      "data": 333,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 338,
-      "name": "stat_peak_period_25",
-      "data": 338,
-      "type": "number",
-      "tableProcessGUId": "f59dbee9-194a-48d5-9532-3fc18acc9869",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 339,
-      "name": "stat_peak_power_25",
-      "data": 339,
-      "type": "number",
-      "tableProcessGUId": "f59dbee9-194a-48d5-9532-3fc18acc9869",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 340,
-      "name": "rhythmicityy_333_25",
+      "name": "hour",
       "data": 340,
       "type": "number",
-      "tableProcessGUId": "f59dbee9-194a-48d5-9532-3fc18acc9869",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 341,
+      "name": "activity",
+      "data": 341,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 346,
+      "name": "stat_peak_period_27",
+      "data": 346,
+      "type": "number",
+      "tableProcessGUId": "25b05535-d1d7-457c-8347-636031d8aab5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 347,
+      "name": "stat_peak_power_27",
+      "data": 347,
+      "type": "number",
+      "tableProcessGUId": "25b05535-d1d7-457c-8347-636031d8aab5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 348,
+      "name": "rhythmicityy_341_27",
+      "data": 348,
+      "type": "number",
+      "tableProcessGUId": "25b05535-d1d7-457c-8347-636031d8aab5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1849,7 +1849,7 @@
   ],
   "plots": [
     {
-      "id": 40,
+      "id": 41,
       "name": "Actogram (24 h grid)",
       "x": 60,
       "y": 60,
@@ -1893,9 +1893,9 @@
         "data": [
           {
             "x": {
-              "id": 334,
+              "id": 342,
               "name": "hour",
-              "refId": 332,
+              "refId": 340,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1904,9 +1904,9 @@
               "processes": []
             },
             "y": {
-              "id": 335,
+              "id": 343,
               "name": "activity",
-              "refId": 333,
+              "refId": 341,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1922,7 +1922,7 @@
       }
     },
     {
-      "id": 41,
+      "id": 42,
       "name": "Periodogram — 6 to 30 h",
       "x": 630,
       "y": 60,
@@ -1967,9 +1967,9 @@
         "data": [
           {
             "x": {
-              "id": 336,
+              "id": 344,
               "name": "hour",
-              "refId": 332,
+              "refId": 340,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1978,9 +1978,9 @@
               "processes": []
             },
             "y": {
-              "id": 337,
+              "id": 345,
               "name": "activity",
-              "refId": 333,
+              "refId": 341,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2016,7 +2016,7 @@
       }
     },
     {
-      "id": 42,
+      "id": 43,
       "name": "Dominant period",
       "x": 630,
       "y": 440,
@@ -2032,8 +2032,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          338,
-          339
+          346,
+          347
         ],
         "showCol": [
           true,
@@ -2048,13 +2048,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 25,
+      "id": 27,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis — tidal peak",
       "args": {
-        "xIN": 332,
+        "xIN": 340,
         "yIN": [
-          333
+          341
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -2065,9 +2065,9 @@
         "pgAlpha": 0.05,
         "preProcesses": [],
         "out": {
-          "stat_peak_period": 338,
-          "stat_peak_power": 339,
-          "rhythmicityy_333": 340
+          "stat_peak_period": 346,
+          "stat_peak_power": 347,
+          "rhythmicityy_341": 348
         }
       },
       "refTPId": null
@@ -2078,7 +2078,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_15",
+      "id": "note_16",
       "text": "WORKFLOW: circatidal rhythm (12.4 h). Rhythm analysis is not circadian-only. A coastal invertebrate timed to the tides runs at the lunar semi-diurnal period, 12.42 h, and because successive tides are unequal there is a weaker component near 24.8 h as well. The thing to notice is the SEARCH WINDOW. AnCiR's periodogram defaults to 20-28 h, which is right for circadian work and wrong here: it would find the 24.8 h component, report it confidently, and miss the dominant tidal peak entirely. Widening the window to 6-30 h shows both. Whenever you analyse a system you have not analysed before, set the window from the biology, not from the default.",
       "x": 40,
       "y": 24,
@@ -2090,31 +2090,31 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_332": {
+    "data_340": {
       "x": 60,
       "y": 314
     },
-    "data_333": {
+    "data_341": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_25": {
+    "tableprocess_27": {
       "x": 440,
       "y": 314
     },
-    "note_15": {
+    "note_16": {
       "x": 40,
       "y": 24
     },
-    "plot_40": {
+    "plot_41": {
       "x": 820,
       "y": 314
     },
-    "plot_41": {
+    "plot_42": {
       "x": 820,
       "y": 814
     },
-    "plot_42": {
+    "plot_43": {
       "x": 820,
       "y": 1314
     }
@@ -2176,5 +2176,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

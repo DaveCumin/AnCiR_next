@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "452": [
+    "460": [
       1,
       1,
       1,
@@ -170,7 +170,7 @@
       7,
       7
     ],
-    "453": [
+    "461": [
       16.291076892469444,
       20.29554398487714,
       9.51596332468565,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 452,
+      "id": 460,
       "name": "day",
-      "data": 452,
+      "data": 460,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 453,
+      "id": 461,
       "name": "activity",
-      "data": 453,
+      "data": 461,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 65,
+      "id": 66,
       "name": "Activity by day",
       "x": 60,
       "y": 60,
@@ -411,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 454,
+              "id": 462,
               "name": "day",
-              "refId": 452,
+              "refId": 460,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 455,
+              "id": 463,
               "name": "activity",
-              "refId": 453,
+              "refId": 461,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -481,7 +481,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_25",
+      "id": "note_26",
       "text": "Summarises the distribution of a y-column within each group defined by an x-column: the box spans the interquartile range, the line is the median, and whiskers reach the data extent (points beyond are outliers). Use it to compare spread and central tendency across days, conditions, or subjects. The demo shows one box per group.",
       "x": 40,
       "y": 24,
@@ -493,19 +493,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_452": {
+    "data_460": {
       "x": 60,
       "y": 314
     },
-    "data_453": {
+    "data_461": {
       "x": 60,
       "y": 814
     },
-    "note_25": {
+    "note_26": {
       "x": 40,
       "y": 24
     },
-    "plot_65": {
+    "plot_66": {
       "x": 820,
       "y": 314
     }
@@ -567,5 +567,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

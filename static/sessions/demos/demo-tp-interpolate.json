@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "577": [
+    "585": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "578": [
+    "586": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "579": [
+    "587": [
       0,
       2,
       4,
@@ -131,7 +131,7 @@
       46,
       48
     ],
-    "580": [
+    "588": [
       10,
       15.35898384862245,
       30,
@@ -161,9 +161,9 @@
   },
   "data": [
     {
-      "id": 577,
+      "id": 585,
       "name": "Interpolate input 1",
-      "data": 577,
+      "data": 585,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -172,9 +172,9 @@
       "processes": []
     },
     {
-      "id": 578,
+      "id": 586,
       "name": "Interpolate input 2",
-      "data": 578,
+      "data": 586,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -183,22 +183,22 @@
       "processes": []
     },
     {
-      "id": 579,
-      "name": "interpx_42",
-      "data": 579,
+      "id": 587,
+      "name": "interpx_44",
+      "data": 587,
       "type": "number",
-      "tableProcessGUId": "bac496ee-670d-414f-92a1-ba8307b1d3b8",
+      "tableProcessGUId": "3152db57-4a5b-4263-91c4-d6570248efd5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 580,
-      "name": "interpy_578_42",
-      "data": 580,
+      "id": 588,
+      "name": "interpy_586_44",
+      "data": 588,
       "type": "number",
-      "tableProcessGUId": "bac496ee-670d-414f-92a1-ba8307b1d3b8",
+      "tableProcessGUId": "3152db57-4a5b-4263-91c4-d6570248efd5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -207,7 +207,7 @@
   ],
   "plots": [
     {
-      "id": 95,
+      "id": 96,
       "name": "Interpolate result",
       "x": 60,
       "y": 60,
@@ -223,10 +223,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          577,
-          578,
-          579,
-          580
+          585,
+          586,
+          587,
+          588
         ],
         "showCol": [
           true,
@@ -243,13 +243,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 42,
+      "id": 44,
       "name": "Interpolate",
       "displayName": "Interpolate",
       "args": {
-        "xIN": 577,
+        "xIN": 585,
         "yIN": [
-          578
+          586
         ],
         "mode": "resample",
         "method": "linear",
@@ -257,8 +257,8 @@
         "start": null,
         "end": null,
         "out": {
-          "interpx": 579,
-          "interpy_578": 580
+          "interpx": 587,
+          "interpy_586": 588
         }
       },
       "refTPId": null
@@ -269,7 +269,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_43",
+      "id": "note_44",
       "text": "Fills gaps or resamples a series onto a regular time grid using linear, nearest-neighbour, or natural cubic-spline interpolation. Use it to repair missing values or to make unevenly sampled data evenly spaced before methods that assume regular sampling (e.g. FFT).",
       "x": 40,
       "y": 24,
@@ -281,23 +281,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_577": {
+    "data_585": {
       "x": 60,
       "y": 314
     },
-    "data_578": {
+    "data_586": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_42": {
+    "tableprocess_44": {
       "x": 440,
       "y": 314
     },
-    "plot_95": {
+    "plot_96": {
       "x": 820,
       "y": 314
     },
-    "note_43": {
+    "note_44": {
       "x": 40,
       "y": 24
     }
@@ -359,5 +359,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

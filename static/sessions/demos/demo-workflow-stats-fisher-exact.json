@@ -1,0 +1,324 @@
+{
+  "rawData": {
+    "233": [
+      "Treated",
+      "Treated",
+      "Treated",
+      "Treated",
+      "Treated",
+      "Treated",
+      "Treated",
+      "Treated",
+      "Treated",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control",
+      "Control"
+    ],
+    "234": [
+      "Entrained",
+      "Entrained",
+      "Entrained",
+      "Entrained",
+      "Entrained",
+      "Entrained",
+      "Entrained",
+      "Entrained",
+      "Free-running",
+      "Entrained",
+      "Entrained",
+      "Free-running",
+      "Free-running",
+      "Free-running",
+      "Free-running",
+      "Free-running",
+      "Free-running",
+      "Free-running"
+    ],
+    "235": [
+      5.625
+    ],
+    "236": [
+      0.017706065807366667
+    ],
+    "237": [
+      1
+    ],
+    "238": [
+      null
+    ],
+    "239": [
+      0.015220074043603454
+    ],
+    "240": [
+      null
+    ]
+  },
+  "data": [
+    {
+      "id": 233,
+      "name": "group",
+      "data": 233,
+      "type": "category",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 234,
+      "name": "rhythm",
+      "data": 234,
+      "type": "category",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 235,
+      "name": "statistic_19",
+      "data": 235,
+      "type": "number",
+      "tableProcessGUId": "ff4b857b-5369-4830-9d1a-dd0f1a7d1784",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 236,
+      "name": "pvalue_19",
+      "data": 236,
+      "type": "number",
+      "tableProcessGUId": "ff4b857b-5369-4830-9d1a-dd0f1a7d1784",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 237,
+      "name": "df_19",
+      "data": 237,
+      "type": "number",
+      "tableProcessGUId": "ff4b857b-5369-4830-9d1a-dd0f1a7d1784",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 238,
+      "name": "statistic_20",
+      "data": 238,
+      "type": "number",
+      "tableProcessGUId": "943c8407-7017-437b-86d9-ea0b46c2d5cd",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 239,
+      "name": "pvalue_20",
+      "data": 239,
+      "type": "number",
+      "tableProcessGUId": "943c8407-7017-437b-86d9-ea0b46c2d5cd",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 240,
+      "name": "df_20",
+      "data": 240,
+      "type": "number",
+      "tableProcessGUId": "943c8407-7017-437b-86d9-ea0b46c2d5cd",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 26,
+      "name": "Chi-squared vs Fisher (p-values)",
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "columnRefs": [
+          236,
+          239
+        ],
+        "showCol": [
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 19,
+      "name": "ChiSquared",
+      "displayName": "Chi-squared (approximate)",
+      "args": {
+        "testType": "independence",
+        "xIN": 233,
+        "yIN": 234,
+        "correction": true,
+        "out": {
+          "statistic": 235,
+          "pvalue": 236,
+          "df": 237
+        },
+        "alternative": "two-sided",
+        "valid": false
+      },
+      "refTPId": null
+    },
+    {
+      "id": 20,
+      "name": "ChiSquared",
+      "displayName": "Fisher's exact (exact)",
+      "args": {
+        "testType": "fisher",
+        "xIN": 233,
+        "yIN": 234,
+        "alternative": "two-sided",
+        "out": {
+          "statistic": 238,
+          "pvalue": 239,
+          "df": 240
+        },
+        "correction": true,
+        "valid": false
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "chainRefs": [],
+  "nodeNotes": {},
+  "notes": [
+    {
+      "id": "note_11",
+      "text": "WORKFLOW: small samples (Fisher's exact test). Same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted, and both tests are run on the SAME 18 animals so you can compare them directly. The table is 8/1 against 2/7: a strong association (odds ratio 28), but with only 18 observations two of the four expected counts are 4, below 5. That is the conventional line, due to Cochran, at which the chi-squared statistic stops following a chi-squared distribution closely enough to trust — and the node says so in its own warning. Fisher's exact test makes no such approximation: it conditions on both sets of margins, under which the count in one cell follows a hypergeometric distribution, and adds up the exact probability of every table at least as extreme as the one observed. That is valid at ANY sample size, which is why it is the standard choice for small tables, and it converges on the chi-squared answer as counts grow. Read the two p-values side by side and quote the exact one here. Two things to notice about Fisher's mode: it reports NO statistic and NO degrees of freedom, because an exact test enumerates the distribution rather than referring a statistic to one, and it gives the sample odds ratio as its effect size instead. The two-sided p-value is the total probability of all tables no more likely than the one observed — not double the smaller tail, which would disagree here because the hypergeometric distribution is asymmetric. One honest caveat: conditioning on the margins makes Fisher's test somewhat conservative, so a non-significant result on a very small table is weak evidence of no association rather than evidence of none. Fisher (1935); Cochran (1954); Agresti (1992).",
+      "x": 40,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
+  "groups": [],
+  "composites": [],
+  "orphanProcesses": [],
+  "nodeLayout": {
+    "data_233": {
+      "x": 60,
+      "y": 314
+    },
+    "data_234": {
+      "x": 60,
+      "y": 814
+    },
+    "tableprocess_19": {
+      "x": 440,
+      "y": 314
+    },
+    "tableprocess_20": {
+      "x": 440,
+      "y": 814
+    },
+    "note_11": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_26": {
+      "x": 820,
+      "y": 314
+    }
+  },
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "importModalOpen": false,
+    "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.65.1"
+}

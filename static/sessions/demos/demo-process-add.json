@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "505": [
+    "513": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "506": [
+    "514": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 505,
+      "id": 513,
       "name": "x",
-      "data": 505,
+      "data": 513,
       "type": "number",
-      "tableProcessGUId": "2862639f-9292-4075-baed-4dad9a54feed",
+      "tableProcessGUId": "977b0e87-5d03-4ca6-bba7-f66a310397b8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 506,
+      "id": 514,
       "name": "y",
-      "data": 506,
+      "data": 514,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 507,
+      "id": 515,
       "name": "Add result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_0",
-      "producerPort": "out_506",
+      "producerPort": "out_514",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 75,
+      "id": 76,
       "name": "Add: before vs after",
       "x": 60,
       "y": 60,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 508,
+              "id": 516,
               "name": "x",
-              "refId": 505,
+              "refId": 513,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 509,
+              "id": 517,
               "name": "y",
-              "refId": 506,
+              "refId": 514,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 510,
+              "id": 518,
               "name": "x",
-              "refId": 505,
+              "refId": 513,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 511,
+              "id": 519,
               "name": "Add result",
-              "refId": 507,
+              "refId": 515,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 76,
+      "id": 77,
       "name": "Add: values",
       "x": 630,
       "y": 60,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          506,
-          507
+          514,
+          515
         ],
         "showCol": [
           true,
@@ -323,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 31,
+      "id": 33,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 505
+          "result": 513
         }
       },
       "refTPId": null
@@ -344,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_33",
+      "id": "note_34",
       "text": "Adds a constant (or another column) to every value in the input column, element-by-element. Use it to apply an offset, shift a baseline, or combine two columns. The demo shows the output column sitting above the input with each value raised by the set amount.",
       "x": 40,
       "y": 24,
@@ -361,17 +361,17 @@
       "args": {
         "value": 5,
         "inIN": [
-          506
+          514
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_506": {
+    "data_514": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_31": {
+    "tableprocess_33": {
       "x": 60,
       "y": 814
     },
@@ -379,15 +379,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_75": {
+    "plot_76": {
       "x": 820,
       "y": 314
     },
-    "plot_76": {
+    "plot_77": {
       "x": 820,
       "y": 814
     },
-    "note_33": {
+    "note_34": {
       "x": 40,
       "y": 24
     }
@@ -449,5 +449,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

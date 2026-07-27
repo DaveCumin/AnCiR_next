@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 104,
+  "count": 106,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -159,6 +159,20 @@
         "ChiSquared"
       ],
       "keywords": "workflow — categorical association (chi-square) are two categorical variables related? the chi-squared test of independence cross-tabulates them into a contingency table and tests whether the row and column variables are associated (yates’ correction on 2×2 tables). read the statistic / df / p and the table; the node warns when any expected count falls below 5, where the χ² approximation breaks down and fisher’s exact test is preferable. workflows chisquared"
+    },
+    {
+      "id": "workflow-stats-fisher-exact",
+      "name": "Workflow — small samples (Fisher's exact test)",
+      "family": "Workflows",
+      "description": "The same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted. Both tests are run on the SAME 18 animals so you can compare them directly. The chi-squared node reports its own warning that expected counts fall below 5, which is the conventional line at which its large-sample approximation stops being reliable; Fisher's exact test makes no such approximation, conditioning on the margins and summing the exact probability of every table at least as extreme as the one observed. Read the two p-values side by side: they answer the same question, and the exact one is the one to quote here. Note that Fisher's mode reports no statistic and no degrees of freedom — an exact test enumerates the distribution instead of referring a statistic to one — and gives the odds ratio as its effect size instead.",
+      "summary": "A table too small for chi-squared.",
+      "group": "General statistics",
+      "url": "sessions/demos/demo-workflow-stats-fisher-exact.json",
+      "kind": "workflow",
+      "showcases": [
+        "ChiSquared"
+      ],
+      "keywords": "workflow — small samples (fisher's exact test) the same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted. both tests are run on the same 18 animals so you can compare them directly. the chi-squared node reports its own warning that expected counts fall below 5, which is the conventional line at which its large-sample approximation stops being reliable; fisher's exact test makes no such approximation, conditioning on the margins and summing the exact probability of every table at least as extreme as the one observed. read the two p-values side by side: they answer the same question, and the exact one is the one to quote here. note that fisher's mode reports no statistic and no degrees of freedom — an exact test enumerates the distribution instead of referring a statistic to one — and gives the odds ratio as its effect size instead. workflows chisquared"
     },
     {
       "id": "workflow-stats-anscombe",
@@ -475,6 +489,18 @@
       "kind": "dataset",
       "showcases": [],
       "keywords": "categorical association (chi-square) are two categorical variables related? data only — 2 columns × 120 rows, no analysis. sources"
+    },
+    {
+      "id": "dataset-workflow-stats-fisher-exact",
+      "name": "Small samples (Fisher's exact test)",
+      "family": "Sources",
+      "description": "A table too small for chi-squared. Data only — 2 columns × 18 rows, no analysis.",
+      "summary": "A table too small for chi-squared.",
+      "group": "General statistics",
+      "url": "sessions/demos/small-samples-fisher-s-exact-test.csv",
+      "kind": "dataset",
+      "showcases": [],
+      "keywords": "small samples (fisher's exact test) a table too small for chi-squared. data only — 2 columns × 18 rows, no analysis. sources"
     },
     {
       "id": "dataset-workflow-stats-anscombe",

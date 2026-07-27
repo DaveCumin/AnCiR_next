@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "233": [
+    "241": [
       10,
       8,
       13,
@@ -13,7 +13,7 @@
       7,
       5
     ],
-    "234": [
+    "242": [
       8.04,
       6.95,
       7.58,
@@ -26,7 +26,7 @@
       4.82,
       5.68
     ],
-    "235": [
+    "243": [
       9.14,
       8.14,
       8.74,
@@ -39,7 +39,7 @@
       7.26,
       4.74
     ],
-    "236": [
+    "244": [
       7.46,
       6.77,
       12.74,
@@ -52,7 +52,7 @@
       6.42,
       5.73
     ],
-    "237": [
+    "245": [
       8,
       8,
       8,
@@ -65,7 +65,7 @@
       8,
       8
     ],
-    "238": [
+    "246": [
       6.58,
       5.76,
       7.71,
@@ -78,43 +78,43 @@
       7.91,
       6.89
     ],
-    "239": [
+    "247": [
       "Set I",
       "Set II",
       "Set III",
       "Set IV"
     ],
-    "240": [
+    "248": [
       11,
       11,
       11,
       11
     ],
-    "241": [
+    "249": [
       7.500909090909093,
       7.500909090909091,
       7.500000000000001,
       7.50090909090909
     ],
-    "242": [
+    "250": [
       2.031568135925815,
       2.0316567355016177,
       2.030423601123667,
       2.0305785113876023
     ],
-    "243": [
+    "251": [
       4.26,
       3.1,
       5.39,
       5.25
     ],
-    "244": [
+    "252": [
       10.84,
       9.26,
       12.74,
       12.5
     ],
-    "245": [
+    "253": [
       10,
       8,
       13,
@@ -127,7 +127,7 @@
       7,
       5
     ],
-    "246": [
+    "254": [
       8.001,
       7.000818181818184,
       9.50127272727272,
@@ -140,7 +140,7 @@
       6.500727272727277,
       5.5005454545454615
     ],
-    "247": [
+    "255": [
       8.00090909090909,
       7.000909090909092,
       9.500909090909088,
@@ -153,7 +153,7 @@
       6.500909090909094,
       5.5009090909090945
     ],
-    "248": [
+    "256": [
       7.999727272727273,
       7.000272727272727,
       9.498909090909091,
@@ -166,22 +166,22 @@
       6.500545454545454,
       5.501090909090909
     ],
-    "249": [
+    "257": [
       0.666542459508775,
       0.6662420337274841,
       0.6663240410665592
     ],
-    "250": [
+    "258": [
       0.5000909090909074,
       0.4999999999999992,
       0.4997272727272728
     ],
-    "251": [
+    "259": [
       3.000090909090925,
       3.0009090909090985,
       3.002454545454545
     ],
-    "252": [
+    "260": [
       8,
       8,
       8,
@@ -194,7 +194,7 @@
       8,
       8
     ],
-    "253": [
+    "261": [
       7.001,
       7.001,
       7.001,
@@ -207,111 +207,23 @@
       7.001,
       7.001
     ],
-    "254": [
+    "262": [
       0.6667072568984653
     ],
-    "255": [
+    "263": [
       0.4999090909090912
     ],
-    "256": [
+    "264": [
       3.001727272727271
     ]
   },
   "data": [
     {
-      "id": 233,
-      "name": "x (sets I–III)",
-      "data": 233,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 234,
-      "name": "Set I",
-      "data": 234,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 235,
-      "name": "Set II",
-      "data": 235,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 236,
-      "name": "Set III",
-      "data": 236,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 237,
-      "name": "x (set IV)",
-      "data": 237,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 238,
-      "name": "Set IV",
-      "data": 238,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 239,
-      "name": "variable_19",
-      "data": 239,
-      "type": "category",
-      "tableProcessGUId": "fbc4a478-4063-4842-9ad3-be3b7c296ea8",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 240,
-      "name": "n_19",
-      "data": 240,
-      "type": "number",
-      "tableProcessGUId": "fbc4a478-4063-4842-9ad3-be3b7c296ea8",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 241,
-      "name": "mean_19",
+      "name": "x (sets I–III)",
       "data": 241,
       "type": "number",
-      "tableProcessGUId": "fbc4a478-4063-4842-9ad3-be3b7c296ea8",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -319,10 +231,10 @@
     },
     {
       "id": 242,
-      "name": "sd_19",
+      "name": "Set I",
       "data": 242,
       "type": "number",
-      "tableProcessGUId": "fbc4a478-4063-4842-9ad3-be3b7c296ea8",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -330,10 +242,10 @@
     },
     {
       "id": 243,
-      "name": "min_19",
+      "name": "Set II",
       "data": 243,
       "type": "number",
-      "tableProcessGUId": "fbc4a478-4063-4842-9ad3-be3b7c296ea8",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -341,10 +253,10 @@
     },
     {
       "id": 244,
-      "name": "max_19",
+      "name": "Set III",
       "data": 244,
       "type": "number",
-      "tableProcessGUId": "fbc4a478-4063-4842-9ad3-be3b7c296ea8",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -352,10 +264,10 @@
     },
     {
       "id": 245,
-      "name": "trendx_20",
+      "name": "x (set IV)",
       "data": 245,
       "type": "number",
-      "tableProcessGUId": "624074b8-de91-4074-8dc1-83498a02ec60",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -363,10 +275,10 @@
     },
     {
       "id": 246,
-      "name": "trendy_234_20",
+      "name": "Set IV",
       "data": 246,
       "type": "number",
-      "tableProcessGUId": "624074b8-de91-4074-8dc1-83498a02ec60",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -374,10 +286,10 @@
     },
     {
       "id": 247,
-      "name": "trendy_235_20",
+      "name": "variable_21",
       "data": 247,
-      "type": "number",
-      "tableProcessGUId": "624074b8-de91-4074-8dc1-83498a02ec60",
+      "type": "category",
+      "tableProcessGUId": "39bb2fc3-4c56-4a01-a27f-594f39044634",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -385,10 +297,10 @@
     },
     {
       "id": 248,
-      "name": "trendy_236_20",
+      "name": "n_21",
       "data": 248,
       "type": "number",
-      "tableProcessGUId": "624074b8-de91-4074-8dc1-83498a02ec60",
+      "tableProcessGUId": "39bb2fc3-4c56-4a01-a27f-594f39044634",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -396,10 +308,10 @@
     },
     {
       "id": 249,
-      "name": "r2_20",
+      "name": "mean_21",
       "data": 249,
       "type": "number",
-      "tableProcessGUId": "624074b8-de91-4074-8dc1-83498a02ec60",
+      "tableProcessGUId": "39bb2fc3-4c56-4a01-a27f-594f39044634",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -407,10 +319,10 @@
     },
     {
       "id": 250,
-      "name": "coef_slope_20",
+      "name": "sd_21",
       "data": 250,
       "type": "number",
-      "tableProcessGUId": "624074b8-de91-4074-8dc1-83498a02ec60",
+      "tableProcessGUId": "39bb2fc3-4c56-4a01-a27f-594f39044634",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -418,10 +330,10 @@
     },
     {
       "id": 251,
-      "name": "coef_intercept_20",
+      "name": "min_21",
       "data": 251,
       "type": "number",
-      "tableProcessGUId": "624074b8-de91-4074-8dc1-83498a02ec60",
+      "tableProcessGUId": "39bb2fc3-4c56-4a01-a27f-594f39044634",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -429,10 +341,10 @@
     },
     {
       "id": 252,
-      "name": "trendx_21",
+      "name": "max_21",
       "data": 252,
       "type": "number",
-      "tableProcessGUId": "527bd52f-c40c-4755-9d9a-a7d6a99979d7",
+      "tableProcessGUId": "39bb2fc3-4c56-4a01-a27f-594f39044634",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -440,10 +352,10 @@
     },
     {
       "id": 253,
-      "name": "trendy_238_21",
+      "name": "trendx_22",
       "data": 253,
       "type": "number",
-      "tableProcessGUId": "527bd52f-c40c-4755-9d9a-a7d6a99979d7",
+      "tableProcessGUId": "54f17c0d-ae5b-4734-937e-ef27a5096545",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -451,10 +363,10 @@
     },
     {
       "id": 254,
-      "name": "r2_21",
+      "name": "trendy_242_22",
       "data": 254,
       "type": "number",
-      "tableProcessGUId": "527bd52f-c40c-4755-9d9a-a7d6a99979d7",
+      "tableProcessGUId": "54f17c0d-ae5b-4734-937e-ef27a5096545",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -462,10 +374,10 @@
     },
     {
       "id": 255,
-      "name": "coef_slope_21",
+      "name": "trendy_243_22",
       "data": 255,
       "type": "number",
-      "tableProcessGUId": "527bd52f-c40c-4755-9d9a-a7d6a99979d7",
+      "tableProcessGUId": "54f17c0d-ae5b-4734-937e-ef27a5096545",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -473,10 +385,98 @@
     },
     {
       "id": 256,
-      "name": "coef_intercept_21",
+      "name": "trendy_244_22",
       "data": 256,
       "type": "number",
-      "tableProcessGUId": "527bd52f-c40c-4755-9d9a-a7d6a99979d7",
+      "tableProcessGUId": "54f17c0d-ae5b-4734-937e-ef27a5096545",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 257,
+      "name": "r2_22",
+      "data": 257,
+      "type": "number",
+      "tableProcessGUId": "54f17c0d-ae5b-4734-937e-ef27a5096545",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 258,
+      "name": "coef_slope_22",
+      "data": 258,
+      "type": "number",
+      "tableProcessGUId": "54f17c0d-ae5b-4734-937e-ef27a5096545",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 259,
+      "name": "coef_intercept_22",
+      "data": 259,
+      "type": "number",
+      "tableProcessGUId": "54f17c0d-ae5b-4734-937e-ef27a5096545",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 260,
+      "name": "trendx_23",
+      "data": 260,
+      "type": "number",
+      "tableProcessGUId": "34ce8de2-730a-4f10-b61b-a05ffe044de0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 261,
+      "name": "trendy_246_23",
+      "data": 261,
+      "type": "number",
+      "tableProcessGUId": "34ce8de2-730a-4f10-b61b-a05ffe044de0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 262,
+      "name": "r2_23",
+      "data": 262,
+      "type": "number",
+      "tableProcessGUId": "34ce8de2-730a-4f10-b61b-a05ffe044de0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 263,
+      "name": "coef_slope_23",
+      "data": 263,
+      "type": "number",
+      "tableProcessGUId": "34ce8de2-730a-4f10-b61b-a05ffe044de0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 264,
+      "name": "coef_intercept_23",
+      "data": 264,
+      "type": "number",
+      "tableProcessGUId": "34ce8de2-730a-4f10-b61b-a05ffe044de0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -485,7 +485,7 @@
   ],
   "plots": [
     {
-      "id": 26,
+      "id": 27,
       "name": "Set I — a real linear relationship",
       "x": 60,
       "y": 60,
@@ -542,9 +542,9 @@
         "data": [
           {
             "x": {
-              "id": 257,
+              "id": 265,
               "name": "x (sets I–III)",
-              "refId": 233,
+              "refId": 241,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -553,9 +553,9 @@
               "processes": []
             },
             "y": {
-              "id": 258,
+              "id": 266,
               "name": "Set I",
-              "refId": 234,
+              "refId": 242,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -581,9 +581,9 @@
           },
           {
             "x": {
-              "id": 259,
-              "name": "trendx_20",
-              "refId": 245,
+              "id": 267,
+              "name": "trendx_22",
+              "refId": 253,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -592,9 +592,9 @@
               "processes": []
             },
             "y": {
-              "id": 260,
-              "name": "trendy_234_20",
-              "refId": 246,
+              "id": 268,
+              "name": "trendy_242_22",
+              "refId": 254,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -634,7 +634,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 28,
       "name": "Set II — actually a curve",
       "x": 630,
       "y": 60,
@@ -691,9 +691,9 @@
         "data": [
           {
             "x": {
-              "id": 261,
+              "id": 269,
               "name": "x (sets I–III)",
-              "refId": 233,
+              "refId": 241,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -702,9 +702,9 @@
               "processes": []
             },
             "y": {
-              "id": 262,
+              "id": 270,
               "name": "Set II",
-              "refId": 235,
+              "refId": 243,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -730,9 +730,9 @@
           },
           {
             "x": {
-              "id": 263,
-              "name": "trendx_20",
-              "refId": 245,
+              "id": 271,
+              "name": "trendx_22",
+              "refId": 253,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -741,9 +741,9 @@
               "processes": []
             },
             "y": {
-              "id": 264,
-              "name": "trendy_235_20",
-              "refId": 247,
+              "id": 272,
+              "name": "trendy_243_22",
+              "refId": 255,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -783,7 +783,7 @@
       }
     },
     {
-      "id": 28,
+      "id": 29,
       "name": "Set III — a line, plus one outlier",
       "x": 60,
       "y": 440,
@@ -840,9 +840,9 @@
         "data": [
           {
             "x": {
-              "id": 265,
+              "id": 273,
               "name": "x (sets I–III)",
-              "refId": 233,
+              "refId": 241,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -851,9 +851,9 @@
               "processes": []
             },
             "y": {
-              "id": 266,
+              "id": 274,
               "name": "Set III",
-              "refId": 236,
+              "refId": 244,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -879,9 +879,9 @@
           },
           {
             "x": {
-              "id": 267,
-              "name": "trendx_20",
-              "refId": 245,
+              "id": 275,
+              "name": "trendx_22",
+              "refId": 253,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -890,9 +890,9 @@
               "processes": []
             },
             "y": {
-              "id": 268,
-              "name": "trendy_236_20",
-              "refId": 248,
+              "id": 276,
+              "name": "trendy_244_22",
+              "refId": 256,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -932,7 +932,7 @@
       }
     },
     {
-      "id": 29,
+      "id": 30,
       "name": "Set IV — one high-leverage point",
       "x": 630,
       "y": 440,
@@ -989,9 +989,9 @@
         "data": [
           {
             "x": {
-              "id": 269,
+              "id": 277,
               "name": "x (set IV)",
-              "refId": 237,
+              "refId": 245,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1000,9 +1000,9 @@
               "processes": []
             },
             "y": {
-              "id": 270,
+              "id": 278,
               "name": "Set IV",
-              "refId": 238,
+              "refId": 246,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1028,9 +1028,9 @@
           },
           {
             "x": {
-              "id": 271,
-              "name": "trendx_21",
-              "refId": 252,
+              "id": 279,
+              "name": "trendx_23",
+              "refId": 260,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1039,9 +1039,9 @@
               "processes": []
             },
             "y": {
-              "id": 272,
-              "name": "trendy_238_21",
-              "refId": 253,
+              "id": 280,
+              "name": "trendy_246_23",
+              "refId": 261,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1081,7 +1081,7 @@
       }
     },
     {
-      "id": 30,
+      "id": 31,
       "name": "Identical summaries",
       "x": 60,
       "y": 820,
@@ -1097,9 +1097,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          239,
-          241,
-          242
+          247,
+          249,
+          250
         ],
         "showCol": [
           true,
@@ -1113,7 +1113,7 @@
       }
     },
     {
-      "id": 31,
+      "id": 32,
       "name": "Identical fits (sets I–III)",
       "x": 630,
       "y": 820,
@@ -1129,9 +1129,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          250,
-          251,
-          249
+          258,
+          259,
+          257
         ],
         "showCol": [
           true,
@@ -1147,70 +1147,70 @@
   ],
   "tableProcesses": [
     {
-      "id": 19,
+      "id": 21,
       "name": "DescribeData",
       "displayName": "Describe the four y-columns",
       "args": {
         "yIN": [
-          234,
-          235,
-          236,
-          238
+          242,
+          243,
+          244,
+          246
         ],
         "out": {
-          "variable": 239,
-          "n": 240,
-          "mean": 241,
-          "sd": 242,
-          "min": 243,
-          "max": 244
+          "variable": 247,
+          "n": 248,
+          "mean": 249,
+          "sd": 250,
+          "min": 251,
+          "max": 252
         },
         "valid": false
       },
       "refTPId": null
     },
     {
-      "id": 20,
+      "id": 22,
       "name": "TrendFit",
       "displayName": "Linear fit (sets I–III)",
       "args": {
-        "xIN": 233,
+        "xIN": 241,
         "yIN": [
-          234,
-          235,
-          236
+          242,
+          243,
+          244
         ],
         "model": "linear",
         "outputX": -1,
         "out": {
-          "trendx": 245,
-          "trendy_234": 246,
-          "trendy_235": 247,
-          "trendy_236": 248,
-          "r2": 249,
-          "coef_slope": 250,
-          "coef_intercept": 251
+          "trendx": 253,
+          "trendy_242": 254,
+          "trendy_243": 255,
+          "trendy_244": 256,
+          "r2": 257,
+          "coef_slope": 258,
+          "coef_intercept": 259
         }
       },
       "refTPId": null
     },
     {
-      "id": 21,
+      "id": 23,
       "name": "TrendFit",
       "displayName": "Linear fit (set IV)",
       "args": {
-        "xIN": 237,
+        "xIN": 245,
         "yIN": [
-          238
+          246
         ],
         "model": "linear",
         "outputX": -1,
         "out": {
-          "trendx": 252,
-          "trendy_238": 253,
-          "r2": 254,
-          "coef_slope": 255,
-          "coef_intercept": 256
+          "trendx": 260,
+          "trendy_246": 261,
+          "r2": 262,
+          "coef_slope": 263,
+          "coef_intercept": 264
         }
       },
       "refTPId": null
@@ -1221,7 +1221,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_11",
+      "id": "note_12",
       "text": "WORKFLOW: Anscombe's quartet. Four datasets, built by Frank Anscombe in 1973, that are statistically almost indistinguishable and visually nothing alike. To two decimals all four share the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares regression line: y = 3.00 + 0.50x, R² = 0.67. Describe Data shows the summaries lining up; Fit Trend Curves draws the SAME line through every one. Now look at the four scatterplots. Set I is a genuine straight-line relationship — the one you'd assume from the numbers. Set II is a clean curve, so a straight line is simply the wrong model. Set III is a perfect line with a single outlier that drags the fit off it. Set IV is a vertical stack of points at one x-value, the entire slope determined by a single far-away leverage point — pull that point and the line has nothing to stand on. The moral is the oldest in the trade: plot the data before you trust the statistic. Identical summaries are consistent with completely different structure, so a graph is not decoration, it is part of the analysis. Reference: Anscombe, F.J. (1973), Graphs in Statistical Analysis, The American Statistician 27(1):17-21.",
       "x": 40,
       "y": 24,
@@ -1233,67 +1233,67 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_233": {
+    "data_241": {
       "x": 60,
       "y": 314
     },
-    "data_234": {
+    "data_242": {
       "x": 60,
       "y": 814
     },
-    "data_235": {
+    "data_243": {
       "x": 60,
       "y": 1314
     },
-    "data_236": {
+    "data_244": {
       "x": 60,
       "y": 1814
     },
-    "data_237": {
+    "data_245": {
       "x": 60,
       "y": 2314
     },
-    "data_238": {
+    "data_246": {
       "x": 60,
       "y": 2814
     },
-    "tableprocess_19": {
+    "tableprocess_21": {
       "x": 440,
       "y": 314
     },
-    "tableprocess_20": {
+    "tableprocess_22": {
       "x": 440,
       "y": 814
     },
-    "tableprocess_21": {
+    "tableprocess_23": {
       "x": 440,
       "y": 1314
     },
-    "note_11": {
+    "note_12": {
       "x": 40,
       "y": 24
     },
-    "plot_26": {
+    "plot_27": {
       "x": 820,
       "y": 314
     },
-    "plot_27": {
+    "plot_28": {
       "x": 820,
       "y": 814
     },
-    "plot_28": {
+    "plot_29": {
       "x": 820,
       "y": 1314
     },
-    "plot_29": {
+    "plot_30": {
       "x": 820,
       "y": 1814
     },
-    "plot_30": {
+    "plot_31": {
       "x": 820,
       "y": 2314
     },
-    "plot_31": {
+    "plot_32": {
       "x": 820,
       "y": 2814
     }
@@ -1355,5 +1355,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

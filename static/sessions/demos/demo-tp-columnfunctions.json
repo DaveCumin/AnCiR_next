@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "592": [
+    "600": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "593": [
+    "601": [
       1,
       3,
       5,
@@ -104,7 +104,7 @@
       97,
       99
     ],
-    "594": [
+    "602": [
       1,
       4,
       7,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 592,
+      "id": 600,
       "name": "Column Function input 1",
-      "data": 592,
+      "data": 600,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 593,
+      "id": 601,
       "name": "Column Function input 2",
-      "data": 593,
+      "data": 601,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,11 +181,11 @@
       "processes": []
     },
     {
-      "id": 594,
-      "name": "result_47",
-      "data": 594,
+      "id": 602,
+      "name": "result_49",
+      "data": 602,
       "type": "category",
-      "tableProcessGUId": "c5c7ba18-656c-41e6-a4d5-607ba1f93cba",
+      "tableProcessGUId": "842fe565-2a17-47b9-a12a-164d29cd4ab9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -194,7 +194,7 @@
   ],
   "plots": [
     {
-      "id": 100,
+      "id": 101,
       "name": "Column Function result",
       "x": 60,
       "y": 60,
@@ -210,9 +210,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          592,
-          593,
-          594
+          600,
+          601,
+          602
         ],
         "showCol": [
           true,
@@ -228,17 +228,17 @@
   ],
   "tableProcesses": [
     {
-      "id": 47,
+      "id": 49,
       "name": "ColumnFunctions",
       "displayName": "Column Function",
       "args": {
         "func": "add",
         "xsIN": [
-          592,
-          593
+          600,
+          601
         ],
         "out": {
-          "result": 594
+          "result": 602
         }
       },
       "refTPId": null
@@ -249,7 +249,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_48",
+      "id": "note_49",
       "text": "Combines several input columns into one result by applying a per-row function across them: element-wise Add, or the row-wise Mean, Min, Max, or Std Dev over the selected columns. Use it to compute, e.g., the average of replicate series or a per-timepoint spread.",
       "x": 40,
       "y": 24,
@@ -261,23 +261,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_592": {
+    "data_600": {
       "x": 60,
       "y": 314
     },
-    "data_593": {
+    "data_601": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_47": {
+    "tableprocess_49": {
       "x": 440,
       "y": 314
     },
-    "plot_100": {
+    "plot_101": {
       "x": 820,
       "y": 314
     },
-    "note_48": {
+    "note_49": {
       "x": 40,
       "y": 24
     }
@@ -339,5 +339,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

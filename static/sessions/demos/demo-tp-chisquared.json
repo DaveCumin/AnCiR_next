@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "679": [
+    "687": [
       "ctrl",
       "drug",
       "ctrl",
@@ -92,7 +92,7 @@
       "ctrl",
       "drug"
     ],
-    "680": [
+    "688": [
       "responder",
       "non-responder",
       "non-responder",
@@ -184,21 +184,21 @@
       "non-responder",
       "non-responder"
     ],
-    "681": [
+    "689": [
       0
     ],
-    "682": [
+    "690": [
       1
     ],
-    "683": [
+    "691": [
       1
     ]
   },
   "data": [
     {
-      "id": 679,
+      "id": 687,
       "name": "Chi-squared test input 1",
-      "data": 679,
+      "data": 687,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -207,9 +207,9 @@
       "processes": []
     },
     {
-      "id": 680,
+      "id": 688,
       "name": "Chi-squared test input 2",
-      "data": 680,
+      "data": 688,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -218,33 +218,33 @@
       "processes": []
     },
     {
-      "id": 681,
-      "name": "statistic_61",
-      "data": 681,
+      "id": 689,
+      "name": "statistic_63",
+      "data": 689,
       "type": "number",
-      "tableProcessGUId": "b2d0441a-4aa4-413c-84dc-cb38dc43d35e",
+      "tableProcessGUId": "64e6dc0e-72be-4542-8000-d91b6c2295fb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 682,
-      "name": "pvalue_61",
-      "data": 682,
+      "id": 690,
+      "name": "pvalue_63",
+      "data": 690,
       "type": "number",
-      "tableProcessGUId": "b2d0441a-4aa4-413c-84dc-cb38dc43d35e",
+      "tableProcessGUId": "64e6dc0e-72be-4542-8000-d91b6c2295fb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 683,
-      "name": "df_61",
-      "data": 683,
+      "id": 691,
+      "name": "df_63",
+      "data": 691,
       "type": "number",
-      "tableProcessGUId": "b2d0441a-4aa4-413c-84dc-cb38dc43d35e",
+      "tableProcessGUId": "64e6dc0e-72be-4542-8000-d91b6c2295fb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -253,7 +253,7 @@
   ],
   "plots": [
     {
-      "id": 115,
+      "id": 116,
       "name": "Chi-squared test result",
       "x": 60,
       "y": 60,
@@ -269,11 +269,11 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          679,
-          680,
-          681,
-          682,
-          683
+          687,
+          688,
+          689,
+          690,
+          691
         ],
         "showCol": [
           true,
@@ -291,19 +291,20 @@
   ],
   "tableProcesses": [
     {
-      "id": 61,
+      "id": 63,
       "name": "ChiSquared",
       "displayName": "Chi-squared test",
       "args": {
         "testType": "independence",
-        "xIN": 679,
-        "yIN": 680,
+        "xIN": 687,
+        "yIN": 688,
         "correction": true,
         "out": {
-          "statistic": 681,
-          "pvalue": 682,
-          "df": 683
+          "statistic": 689,
+          "pvalue": 690,
+          "df": 691
         },
+        "alternative": "two-sided",
         "valid": false
       },
       "refTPId": null
@@ -314,7 +315,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_59",
+      "id": "note_60",
       "text": "Pearson's chi-squared test in two modes. Independence: cross-tabulate two categorical columns into a contingency table and test whether the two variables are associated (Yates' continuity correction is applied to 2×2 tables). Goodness-of-fit: take one column and test whether its category counts (or the raw counts, if numeric) depart from a uniform expectation. Reports the statistic, degrees of freedom and p-value, and shows the table in the node. It warns when expected cell counts fall below 5, where the χ² approximation breaks down (prefer Fisher's exact test). Matches scipy (chisquare / chi2_contingency). Pearson 1900.",
       "x": 40,
       "y": 24,
@@ -326,23 +327,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_679": {
+    "data_687": {
       "x": 60,
       "y": 314
     },
-    "data_680": {
+    "data_688": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_61": {
+    "tableprocess_63": {
       "x": 440,
       "y": 314
     },
-    "plot_115": {
+    "plot_116": {
       "x": 820,
       "y": 314
     },
-    "note_59": {
+    "note_60": {
       "x": 40,
       "y": 24
     }
@@ -404,5 +405,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "435": [
+    "443": [
       0,
       1,
       2,
@@ -674,7 +674,7 @@
       670,
       671
     ],
-    "436": [
+    "444": [
       74.38339133861564,
       68.56303678479824,
       73.09521092794711,
@@ -1348,7 +1348,7 @@
       55.57862443302926,
       6.372601270891893
     ],
-    "437": [
+    "445": [
       62.68647799571342,
       79.14535611595966,
       61.70328466261387,
@@ -2025,9 +2025,9 @@
   },
   "data": [
     {
-      "id": 435,
+      "id": 443,
       "name": "hour",
-      "data": 435,
+      "data": 443,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2036,9 +2036,9 @@
       "processes": []
     },
     {
-      "id": 436,
+      "id": 444,
       "name": "entrained",
-      "data": 436,
+      "data": 444,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2047,9 +2047,9 @@
       "processes": []
     },
     {
-      "id": 437,
+      "id": 445,
       "name": "masked",
-      "data": 437,
+      "data": 445,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2060,7 +2060,7 @@
   ],
   "plots": [
     {
-      "id": 60,
+      "id": 61,
       "name": "Actogram — truly entrained",
       "x": 60,
       "y": 60,
@@ -2104,9 +2104,9 @@
         "data": [
           {
             "x": {
-              "id": 438,
+              "id": 446,
               "name": "hour",
-              "refId": 435,
+              "refId": 443,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2115,9 +2115,9 @@
               "processes": []
             },
             "y": {
-              "id": 439,
+              "id": 447,
               "name": "entrained",
-              "refId": 436,
+              "refId": 444,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2133,7 +2133,7 @@
       }
     },
     {
-      "id": 61,
+      "id": 62,
       "name": "Actogram — masked only",
       "x": 630,
       "y": 60,
@@ -2177,9 +2177,9 @@
         "data": [
           {
             "x": {
-              "id": 440,
+              "id": 448,
               "name": "hour",
-              "refId": 435,
+              "refId": 443,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2188,9 +2188,9 @@
               "processes": []
             },
             "y": {
-              "id": 441,
+              "id": 449,
               "name": "masked",
-              "refId": 437,
+              "refId": 445,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2212,7 +2212,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_22",
+      "id": "note_23",
       "text": "WORKFLOW: masking versus true entrainment. Two records that look identical while the light cycle is running, and diverge the moment it stops. Both animals appear to follow a 6 h advance of the light cycle, and if the experiment ended there you would call both of them entrained. Released into constant darkness, the entrained animal keeps the new phase because its clock genuinely moved, while the masked animal snaps straight back to its original phase because light was only suppressing its behaviour, never resetting its clock. This is why a shift under a light cycle is not by itself evidence of entrainment: the release into constant conditions is the test, and the transients in the re-entrainment card are the other half of the same story.",
       "x": 40,
       "y": 24,
@@ -2224,27 +2224,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_435": {
+    "data_443": {
       "x": 60,
       "y": 314
     },
-    "data_436": {
+    "data_444": {
       "x": 60,
       "y": 814
     },
-    "data_437": {
+    "data_445": {
       "x": 60,
       "y": 1314
     },
-    "note_22": {
+    "note_23": {
       "x": 40,
       "y": 24
     },
-    "plot_60": {
+    "plot_61": {
       "x": 820,
       "y": 314
     },
-    "plot_61": {
+    "plot_62": {
       "x": 820,
       "y": 814
     }
@@ -2306,5 +2306,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "696": [
+    "704": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "697": [
+    "705": [
       25,
       26.192596079882613,
       29.689110867544645,
@@ -104,7 +104,7 @@
       25,
       26.192596079882605
     ],
-    "698": [
+    "706": [
       100,
       98,
       96,
@@ -156,27 +156,27 @@
       4,
       2
     ],
-    "699": [
+    "707": [
       "Correlation input 1",
       "Correlation input 1",
       "Correlation input 2"
     ],
-    "700": [
+    "708": [
       "Correlation input 2",
       "Correlation input 3",
       "Correlation input 3"
     ],
-    "701": [
+    "709": [
       1,
       0.044645731583387575,
       0.04464573158338759
     ],
-    "702": [
+    "710": [
       0,
       0.7581875239105604,
       0.7581875239105604
     ],
-    "703": [
+    "711": [
       50,
       50,
       50
@@ -184,9 +184,9 @@
   },
   "data": [
     {
-      "id": 696,
+      "id": 704,
       "name": "Correlation input 1",
-      "data": 696,
+      "data": 704,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -195,9 +195,9 @@
       "processes": []
     },
     {
-      "id": 697,
+      "id": 705,
       "name": "Correlation input 2",
-      "data": 697,
+      "data": 705,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -206,9 +206,9 @@
       "processes": []
     },
     {
-      "id": 698,
+      "id": 706,
       "name": "Correlation input 3",
-      "data": 698,
+      "data": 706,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -217,55 +217,55 @@
       "processes": []
     },
     {
-      "id": 699,
-      "name": "var_i_64",
-      "data": 699,
+      "id": 707,
+      "name": "var_i_66",
+      "data": 707,
       "type": "category",
-      "tableProcessGUId": "0ee1428b-5c94-4b1b-865a-9f33f733730d",
+      "tableProcessGUId": "3553abce-cf03-4b80-9b4e-43ccd8e4e0b9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 700,
-      "name": "var_j_64",
-      "data": 700,
+      "id": 708,
+      "name": "var_j_66",
+      "data": 708,
       "type": "category",
-      "tableProcessGUId": "0ee1428b-5c94-4b1b-865a-9f33f733730d",
+      "tableProcessGUId": "3553abce-cf03-4b80-9b4e-43ccd8e4e0b9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 701,
-      "name": "r_64",
-      "data": 701,
+      "id": 709,
+      "name": "r_66",
+      "data": 709,
       "type": "number",
-      "tableProcessGUId": "0ee1428b-5c94-4b1b-865a-9f33f733730d",
+      "tableProcessGUId": "3553abce-cf03-4b80-9b4e-43ccd8e4e0b9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 702,
-      "name": "pvalue_64",
-      "data": 702,
+      "id": 710,
+      "name": "pvalue_66",
+      "data": 710,
       "type": "number",
-      "tableProcessGUId": "0ee1428b-5c94-4b1b-865a-9f33f733730d",
+      "tableProcessGUId": "3553abce-cf03-4b80-9b4e-43ccd8e4e0b9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 703,
-      "name": "n_64",
-      "data": 703,
+      "id": 711,
+      "name": "n_66",
+      "data": 711,
       "type": "number",
-      "tableProcessGUId": "0ee1428b-5c94-4b1b-865a-9f33f733730d",
+      "tableProcessGUId": "3553abce-cf03-4b80-9b4e-43ccd8e4e0b9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -274,7 +274,7 @@
   ],
   "plots": [
     {
-      "id": 118,
+      "id": 119,
       "name": "Correlation result",
       "x": 60,
       "y": 60,
@@ -290,14 +290,14 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          696,
-          697,
-          698,
-          699,
-          700,
-          701,
-          702,
-          703
+          704,
+          705,
+          706,
+          707,
+          708,
+          709,
+          710,
+          711
         ],
         "showCol": [
           true,
@@ -318,23 +318,23 @@
   ],
   "tableProcesses": [
     {
-      "id": 64,
+      "id": 66,
       "name": "Correlation",
       "displayName": "Correlation",
       "args": {
         "yIN": [
-          696,
-          697,
-          698
+          704,
+          705,
+          706
         ],
         "method": "auto",
         "alpha": 0.05,
         "out": {
-          "var_i": 699,
-          "var_j": 700,
-          "r": 701,
-          "pvalue": 702,
-          "n": 703
+          "var_i": 707,
+          "var_j": 708,
+          "r": 709,
+          "pvalue": 710,
+          "n": 711
         },
         "valid": false
       },
@@ -346,7 +346,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_62",
+      "id": "note_63",
       "text": "Computes every pairwise correlation among the wired columns and reports them one row per pair: var_i, var_j, r, p-value and n. Choose Pearson (linear) or Spearman (rank / monotonic), or leave it on Auto — which uses Spearman if any column fails a Jarque-Bera normality check, so the whole matrix stays on one comparable method. Uses pairwise-complete rows (a missing value drops only that pair-row), and warns on small samples and, for Spearman, on ties. Quick-plot draws the correlation heatmap.",
       "x": 40,
       "y": 24,
@@ -358,27 +358,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_696": {
+    "data_704": {
       "x": 60,
       "y": 314
     },
-    "data_697": {
+    "data_705": {
       "x": 60,
       "y": 814
     },
-    "data_698": {
+    "data_706": {
       "x": 60,
       "y": 1314
     },
-    "tableprocess_64": {
+    "tableprocess_66": {
       "x": 440,
       "y": 314
     },
-    "plot_118": {
+    "plot_119": {
       "x": 820,
       "y": 314
     },
-    "note_62": {
+    "note_63": {
       "x": 40,
       "y": 24
     }
@@ -440,5 +440,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.64.2"
+  "version": "β.65.1"
 }
