@@ -1,7 +1,7 @@
 <script module>
 	import { appConsts, appState, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
-	import { sessionToPython } from '$lib/utils/pythonExport.js';
+	import { loadPythonExporter } from '$lib/utils/pythonExportLoader.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -43,13 +43,19 @@
 	}
 
 	// EXPERIMENTAL: export the current session as a self-contained Python script
-	// (ports tools/ancir_to_python.py). The ~3.5k-line Python runtime is pulled in
-	// lazily via a `?raw` import so it only loads when this is used.
+	// (ports tools/ancir_to_python.py).
+	//
+	// The exporter and its ~198 KB Python runtime live in a SIDECAR file rather than in the
+	// bundle. A `?raw` import used to look lazy but was not: the app inlines everything into
+	// one index.html, so every visitor downloaded the runtime whether or not they ever
+	// exported Python — about 7% of the page, raw and gzipped, for an experimental feature.
+	// The sidecar may legitimately be absent (a single-file copy of AnCiR), so a failure to
+	// load is reported as such instead of surfacing as an opaque error.
 	export async function exportPython() {
 		try {
 			const session = JSON.parse(outputCoreAsJson());
-			const { default: runtimeSrc } = await import('$tools/ancir_runtime.py?raw');
-			const pySrc = sessionToPython(session, runtimeSrc);
+			const { buildPythonScript } = await loadPythonExporter();
+			const pySrc = buildPythonScript(session);
 
 			const blob = new Blob([pySrc], { type: 'text/x-python' });
 			const url = URL.createObjectURL(blob);

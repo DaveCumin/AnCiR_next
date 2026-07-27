@@ -1,6 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
+import { writeSidecar } from './scripts/buildPythonExport.mjs';
 
 export default defineConfig({
 	build: {
@@ -57,6 +58,17 @@ export default defineConfig({
 	},
 
 	plugins: [
+		// Regenerate static/ancir-python-export.js from its two canonical sources before
+		// anything is served or bundled. A plugin rather than a package.json step so dev and
+		// build agree: the file is gitignored (it is derived), so a fresh checkout running
+		// `pnpm dev` would otherwise have no sidecar and a dead "export Python" menu item.
+		{
+			name: 'ancir-python-export-sidecar',
+			buildStart() {
+				const { path, bytes, changed } = writeSidecar();
+				if (changed) console.log(`  ↳ ${path} (${(bytes / 1024).toFixed(0)} KB, regenerated)`);
+			}
+		},
 		sveltekit(),
 		visualizer({
 			emitFile: true,
@@ -67,7 +79,9 @@ export default defineConfig({
 	test: {
 		environment: 'happy-dom',
 		setupFiles: ['./src/test/setup.js'],
-		include: ['src/**/*.{test,spec}.{js,svelte}'],
+		// scripts/ is included so the build tooling (e.g. the Python-export sidecar
+		// generator) is covered by the same suite as the app.
+		include: ['src/**/*.{test,spec}.{js,svelte}', 'scripts/**/*.{test,spec}.{js,mjs}'],
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'json', 'html'],

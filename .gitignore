@@ -20,6 +20,11 @@ node_modules
 # not source — regenerated every build — so it must not be tracked (it's a 780 KB
 # binary that would churn on every build).
 /static/handbook.html
+
+# The Python-export sidecar is assembled at build time from src/lib/utils/pythonExport.js
+# and tools/ancir_runtime.py (both tracked). Derived, ~208 KB, and it would churn on every
+# build, so it is generated rather than committed — see scripts/buildPythonExport.mjs.
+/static/ancir-python-export.js
 /.svelte-kit
 tools/.svelte-kit/
 
