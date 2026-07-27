@@ -29,7 +29,9 @@
 		chiSquareGoodnessOfFit,
 		chiSquareIndependence,
 		contingencyTable,
-		isMissingCategory
+		isMissingCategory,
+		cohensW,
+		effectSizeLabel
 	} from '$lib/utils/chisquare.js';
 	import { fisherExactFromColumns } from '$lib/utils/fisherExact.js';
 
@@ -41,7 +43,12 @@
 		['yIN', { val: -1 }], // columns (independence only)
 		['correction', { val: true }], // Yates' correction for 2×2 independence
 		['alternative', { val: 'two-sided' }], // Fisher only: two-sided | less | greater
-		['out', { statistic: { val: -1 }, pvalue: { val: -1 }, df: { val: -1 } }],
+		// effectSize: Cramer's V (independence), Cohen's w (goodness-of-fit), or the
+		// odds ratio (Fisher). One port, because only one is ever meaningful at a time.
+		[
+			'out',
+			{ statistic: { val: -1 }, pvalue: { val: -1 }, df: { val: -1 }, effectSize: { val: -1 } }
+		],
 		// oddsRatio is Fisher-only and stays NaN in the two chi-squared modes.
 		['valid', { val: false }]
 	]);
@@ -95,6 +102,8 @@
 				pvalue: fx.pvalue,
 				df: NaN,
 				oddsRatio: fx.oddsRatio,
+				effectSize: fx.oddsRatio,
+				effectSizeName: 'odds ratio',
 				alternative: fx.alternative,
 				warnings
 			};
@@ -133,6 +142,7 @@
 					`${small} of ${res.expected.flat().length} expected counts are below 5; the χ² approximation is unreliable (consider Fisher's exact test).`
 				);
 			{
+				const is2x2 = rowLabels.length === 2 && colLabels.length === 2;
 				const result = {
 					testType,
 					rowLabels,
@@ -142,6 +152,13 @@
 					statistic: res.statistic,
 					pvalue: res.pvalue,
 					df: res.df,
+					// Cramer's V on any table. phi is reported additionally on a 2x2,
+					// where it carries a SIGN that V cannot (V is a square root).
+					effectSize: res.cramersV,
+					effectSizeName: is2x2 ? "Cramer's V (= |phi|)" : "Cramer's V",
+					phi: res.phi,
+					effectSizeLabel: effectSizeLabel(res.cramersV),
+					n: res.n,
 					warnings
 				};
 				writeChiOutputs(argsIN, result); // write from the func so doProcess() bakes real columns
@@ -193,6 +210,8 @@
 			warnings.push(
 				'Some expected counts are below 5; the χ² approximation is unreliable at these counts.'
 			);
+		const nTotal = observed.reduce((a, b) => a + b, 0);
+		const w = cohensW(res.statistic, nTotal);
 		const result = {
 			testType,
 			labels,
@@ -201,6 +220,10 @@
 			statistic: res.statistic,
 			pvalue: res.pvalue,
 			df: res.df,
+			effectSize: w,
+			effectSizeName: "Cohen's w",
+			effectSizeLabel: effectSizeLabel(w),
+			n: nTotal,
 			warnings
 		};
 		writeChiOutputs(argsIN, result); // write from the func so doProcess() bakes real columns
@@ -216,6 +239,7 @@
 		writeOutputColumn(argsIN.out?.statistic, [result.statistic], { processHash });
 		writeOutputColumn(argsIN.out?.pvalue, [result.pvalue], { processHash });
 		writeOutputColumn(argsIN.out?.df, [result.df], { processHash });
+		writeOutputColumn(argsIN.out?.effectSize, [result.effectSize ?? NaN], { processHash });
 	}
 
 	export const definition = {
@@ -232,7 +256,8 @@
 			outputs: [
 				{ name: 'statistic', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
-				{ name: 'df', kind: 'column', cardinality: 'one', metric: true }
+				{ name: 'df', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'effectSize', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};
@@ -314,6 +339,13 @@
 			<p class="hint">
 				χ² = <strong>{fmt(result.statistic)}</strong>, df = {result.df}, p =
 				<strong>{fmt(result.pvalue)}</strong>.
+				{#if Number.isFinite(result.effectSize)}
+					<br />
+					{result.effectSizeName} = <strong>{fmt(result.effectSize)}</strong>
+					{#if result.effectSizeLabel}({result.effectSizeLabel}){/if}{#if Number.isFinite(result.phi)},
+						φ =
+						<strong>{fmt(result.phi)}</strong>{/if}, n = {result.n}.
+				{/if}
 			</p>
 		{/if}
 		{#if (result.testType === 'independence' || result.testType === 'fisher') && result.table?.length}

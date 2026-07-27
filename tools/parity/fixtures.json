@@ -2769,6 +2769,140 @@
 				"pvalue"
 			],
 			"note": "oddsRatio is Infinity here; JSON cannot represent it, so only the p-value is compared. The Infinity case is covered by the JS unit test."
+		},
+		{
+			"id": "util-cramers-v-2x2",
+			"kind": "pureUtil",
+			"jsFn": "chiSquareIndependence",
+			"pyFunc": "chi_square_independence_effects",
+			"input": {
+				"table": [
+					[
+						10,
+						20
+					],
+					[
+						30,
+						15
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				false
+			],
+			"pyArgs": [
+				false
+			],
+			"compareScalars": [
+				"statistic",
+				"pvalue",
+				"df",
+				"cramersV",
+				"phi"
+			]
+		},
+		{
+			"id": "util-cramers-v-2x2-yates",
+			"kind": "pureUtil",
+			"jsFn": "chiSquareIndependence",
+			"pyFunc": "chi_square_independence_effects",
+			"input": {
+				"table": [
+					[
+						8,
+						1
+					],
+					[
+						2,
+						7
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				true
+			],
+			"pyArgs": [
+				true
+			],
+			"compareScalars": [
+				"statistic",
+				"pvalue",
+				"df",
+				"cramersV",
+				"phi"
+			]
+		},
+		{
+			"id": "util-cramers-v-3x3",
+			"kind": "pureUtil",
+			"jsFn": "chiSquareIndependence",
+			"pyFunc": "chi_square_independence_effects",
+			"input": {
+				"table": [
+					[
+						10,
+						20,
+						30
+					],
+					[
+						6,
+						9,
+						17
+					],
+					[
+						8,
+						12,
+						25
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				false
+			],
+			"pyArgs": [
+				false
+			],
+			"compareScalars": [
+				"statistic",
+				"pvalue",
+				"df",
+				"cramersV"
+			]
+		},
+		{
+			"id": "util-cramers-v-large",
+			"kind": "pureUtil",
+			"jsFn": "chiSquareIndependence",
+			"pyFunc": "chi_square_independence_effects",
+			"input": {
+				"table": [
+					[
+						100,
+						50
+					],
+					[
+						40,
+						110
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				false
+			],
+			"pyArgs": [
+				false
+			],
+			"compareScalars": [
+				"statistic",
+				"pvalue",
+				"df",
+				"cramersV",
+				"phi"
+			]
 		}
 	]
 }

@@ -5073,3 +5073,36 @@ def fisher_exact_test(table, alternative='two-sided'):
         'oddsRatio': float(odds),
         'alternative': alternative,
     }
+
+
+def chi_square_independence_effects(table, correction=True):
+    """chi2 independence PLUS effect sizes.
+
+    Cramer's V comes from scipy.stats.contingency.association — a real reference
+    implementation rather than a second copy of the JS formula. phi is the signed
+    2x2 special case, which scipy does not expose directly.
+
+    Note the JS computes V from the UNCORRECTED statistic even when Yates is on
+    (the correction is a p-value device, not an effect-size one), and scipy's
+    `association` likewise uses correction=False internally.
+    """
+    import numpy as np
+    from scipy.stats.contingency import association
+    a = np.asarray(table, dtype=float)
+    base = chi_square_independence(table, correction)
+    # scipy's association() insists on an INTEGER array (counts), so pass a
+    # rounded integer copy; the float view is kept for the phi arithmetic below.
+    v = float(association(np.rint(a).astype(np.int64), method='cramer'))
+    phi = float('nan')
+    if a.shape == (2, 2):
+        (aa, bb), (cc, dd) = a
+        denom = math.sqrt((aa + bb) * (cc + dd) * (aa + cc) * (bb + dd))
+        phi = (aa * dd - bb * cc) / denom if denom > 0 else float('nan')
+    return {**base, 'cramersV': v, 'phi': phi, 'n': float(a.sum())}
+
+
+def cohens_w(statistic, n):
+    """Cohen's w = sqrt(chi2 / n)."""
+    if not (math.isfinite(statistic) and math.isfinite(n)) or n <= 0:
+        return float('nan')
+    return math.sqrt(statistic / n)

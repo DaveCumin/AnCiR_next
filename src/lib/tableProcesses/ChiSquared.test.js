@@ -233,3 +233,47 @@ describe('chisquared — NaN padding (reported crash)', () => {
 		expect(res.observed).toEqual([2, 1]);
 	});
 });
+
+describe('chisquared — effect sizes', () => {
+	it('independence reports Cramér’s V with a verbal band', () => {
+		const [res] = chisquared(args());
+		expect(Number.isFinite(res.effectSize)).toBe(true);
+		expect(res.effectSizeName).toMatch(/Cramer's V/);
+		expect(res.effectSizeLabel).toBeTruthy();
+	});
+
+	it('a 2x2 also reports the signed phi, and |phi| equals V', () => {
+		const [res] = chisquared(args());
+		expect(Math.abs(res.phi)).toBeCloseTo(res.effectSize, 10);
+		expect(res.effectSizeName).toMatch(/phi/);
+	});
+
+	it('a larger table reports V but no phi', () => {
+		mockColumns[30] = { name: 'r', getData: () => ['a', 'b', 'c', 'a', 'b', 'c', 'a', 'b', 'c'] };
+		mockColumns[31] = { name: 'c', getData: () => ['x', 'y', 'z', 'y', 'z', 'x', 'z', 'x', 'y'] };
+		const [res] = chisquared(args({ xIN: 30, yIN: 31 }));
+		expect(Number.isFinite(res.effectSize)).toBe(true);
+		expect(Number.isNaN(res.phi)).toBe(true);
+		expect(res.effectSizeName).toBe("Cramer's V");
+	});
+
+	it('goodness-of-fit reports Cohen’s w', () => {
+		const [res] = chisquared(args({ testType: 'goodness', xIN: 3 }));
+		expect(res.effectSizeName).toBe("Cohen's w");
+		// counts are [10,10,10,10] → perfectly uniform → chi2 = 0 → w = 0
+		expect(res.effectSize).toBeCloseTo(0, 12);
+	});
+
+	it('Fisher mode reports the odds ratio as its effect size', () => {
+		const [res] = chisquared(args({ testType: 'fisher' }));
+		expect(res.effectSizeName).toBe('odds ratio');
+		expect(res.effectSize).toBeCloseTo(res.oddsRatio, 12);
+	});
+
+	it('writes the effect size to its output column', () => {
+		const args2 = args({ out: { statistic: -1, pvalue: -1, df: -1, effectSize: 500 } });
+		mockColumns[500] = { id: 500 };
+		const [res] = chisquared(args2);
+		expect(Number.isFinite(res.effectSize)).toBe(true);
+	});
+});

@@ -119,5 +119,75 @@ export function chiSquareIndependence(table, correction = true) {
 		}
 	}
 	const df = (rows - 1) * (cols - 1);
-	return { statistic: stat, pvalue: pUpperFromChiSq(stat, df), df, expected };
+
+	// Effect size. Reported from the UNCORRECTED statistic even when Yates is
+	// applied: the correction is a device for making the p-value less liberal on a
+	// 2x2 table, not an estimate of association strength, and shrinking the effect
+	// size with it would understate the association. So recompute without it.
+	let uncorrected = stat;
+	if (useYates) {
+		uncorrected = 0;
+		for (let r = 0; r < rows; r++) {
+			for (let c = 0; c < cols; c++) {
+				const e = expected[r][c];
+				if (e <= 0) continue;
+				const d = table[r][c] - e;
+				uncorrected += (d * d) / e;
+			}
+		}
+	}
+	// Cramer's V (Cramer 1946): chi2 scaled to [0, 1] by n and the smaller
+	// dimension, so tables of different sizes are comparable. On a 2x2 the
+	// min(r-1, c-1) term is 1, so V reduces exactly to the phi coefficient.
+	const k = Math.min(rows - 1, cols - 1);
+	const cramersV = total > 0 && k > 0 ? Math.sqrt(uncorrected / (total * k)) : NaN;
+	// phi carries a SIGN on a 2x2 (which diagonal dominates); V never can, because
+	// it is a square root. Only defined for 2x2.
+	let phi = NaN;
+	if (rows === 2 && cols === 2) {
+		const [[a, b], [c2, d2]] = table;
+		const denom = Math.sqrt((a + b) * (c2 + d2) * (a + c2) * (b + d2));
+		phi = denom > 0 ? (a * d2 - b * c2) / denom : NaN;
+	}
+
+	return {
+		statistic: stat,
+		pvalue: pUpperFromChiSq(stat, df),
+		df,
+		expected,
+		cramersV,
+		phi,
+		n: total
+	};
+}
+
+/**
+ * Cohen's w for a goodness-of-fit test: sqrt(chi2 / n).
+ *
+ * Cohen's (1988) conventional landmarks are 0.1 small, 0.3 medium, 0.5 large.
+ * Unlike Cramer's V it is not bounded by 1 — with many categories and a strong
+ * departure it can exceed 1 — so it is not a correlation and should not be read
+ * as one.
+ */
+export function cohensW(statistic, n) {
+	if (!Number.isFinite(statistic) || !Number.isFinite(n) || n <= 0) return NaN;
+	return Math.sqrt(statistic / n);
+}
+
+/**
+ * Conventional verbal label for a Cramer's V / phi magnitude, following Cohen
+ * (1988) as adapted for contingency tables by Rea & Parker (1992).
+ *
+ * Deliberately coarse and clearly labelled as a convention: these cutoffs are a
+ * rule of thumb, not a property of the data, and a "small" effect can matter
+ * enormously depending on the question.
+ */
+export function effectSizeLabel(v) {
+	const x = Math.abs(Number(v));
+	if (!Number.isFinite(x)) return '';
+	if (x < 0.1) return 'negligible';
+	if (x < 0.2) return 'small';
+	if (x < 0.4) return 'moderate';
+	if (x < 0.6) return 'relatively strong';
+	return 'strong';
 }

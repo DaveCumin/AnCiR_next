@@ -4,7 +4,9 @@ import {
 	chiSquareIndependence,
 	contingencyTable,
 	pUpperFromChiSq,
-	isMissingCategory
+	isMissingCategory,
+	cohensW,
+	effectSizeLabel
 } from './chisquare.js';
 
 // Reference values from scipy 1.x: stats.chisquare / stats.chi2_contingency.
@@ -151,5 +153,147 @@ describe('isMissingCategory', () => {
 	});
 	it('keeps real categories, including 0 and false', () => {
 		for (const v of ['a', 0, 1, false, 'nan', ' ']) expect(isMissingCategory(v)).toBe(false);
+	});
+});
+
+describe('effect sizes', () => {
+	// Cramér's V is checked against scipy.stats.contingency.association(method='cramer').
+	it("Cramér's V matches scipy on a 2x2", () => {
+		const r = chiSquareIndependence(
+			[
+				[10, 20],
+				[30, 15]
+			],
+			false
+		);
+		expect(r.cramersV).toBeCloseTo(0.327326835, 9);
+	});
+
+	it("Cramér's V matches scipy on a 3x3", () => {
+		const r = chiSquareIndependence(
+			[
+				[10, 20, 30],
+				[6, 9, 17],
+				[8, 12, 25]
+			],
+			false
+		);
+		expect(r.cramersV).toBeCloseTo(0.048143072, 9);
+	});
+
+	it('is UNCHANGED by Yates’ correction', () => {
+		// The correction makes the p-value less liberal on a 2x2; it is not an
+		// estimate of association strength, so the effect size must not shrink
+		// with it. (The statistic itself does change.)
+		const t = [
+			[10, 20],
+			[30, 15]
+		];
+		const withY = chiSquareIndependence(t, true);
+		const without = chiSquareIndependence(t, false);
+		expect(withY.statistic).not.toBeCloseTo(without.statistic, 6);
+		expect(withY.cramersV).toBeCloseTo(without.cramersV, 12);
+	});
+
+	it('on a 2x2, V equals |phi|, and phi carries the sign', () => {
+		const t = [
+			[10, 20],
+			[30, 15]
+		];
+		const r = chiSquareIndependence(t, false);
+		expect(Math.abs(r.phi)).toBeCloseTo(r.cramersV, 12);
+		// ad - bc = 150 - 600 < 0, so the anti-diagonal dominates.
+		expect(r.phi).toBeLessThan(0);
+	});
+
+	it('phi flips sign when the table is mirrored', () => {
+		const a = chiSquareIndependence(
+			[
+				[10, 20],
+				[30, 15]
+			],
+			false
+		);
+		const b = chiSquareIndependence(
+			[
+				[20, 10],
+				[15, 30]
+			],
+			false
+		);
+		expect(b.phi).toBeCloseTo(-a.phi, 12);
+		expect(b.cramersV).toBeCloseTo(a.cramersV, 12); // V cannot show direction
+	});
+
+	it('phi is NaN for anything larger than 2x2', () => {
+		const r = chiSquareIndependence(
+			[
+				[10, 20, 30],
+				[6, 9, 17],
+				[8, 12, 25]
+			],
+			false
+		);
+		expect(Number.isNaN(r.phi)).toBe(true);
+		expect(Number.isFinite(r.cramersV)).toBe(true);
+	});
+
+	it('V is 0 for a table with no association and ~1 for perfect separation', () => {
+		const none = chiSquareIndependence(
+			[
+				[10, 10],
+				[10, 10]
+			],
+			false
+		);
+		expect(none.cramersV).toBeCloseTo(0, 12);
+		const perfect = chiSquareIndependence(
+			[
+				[20, 0],
+				[0, 20]
+			],
+			false
+		);
+		expect(perfect.cramersV).toBeCloseTo(1, 12);
+	});
+
+	it('V is invariant to scaling the whole table up', () => {
+		// The statistic scales with n; the effect size must not.
+		const small = chiSquareIndependence(
+			[
+				[8, 2],
+				[2, 8]
+			],
+			false
+		);
+		const big = chiSquareIndependence(
+			[
+				[80, 20],
+				[20, 80]
+			],
+			false
+		);
+		expect(big.statistic).toBeGreaterThan(small.statistic * 5);
+		expect(big.cramersV).toBeCloseTo(small.cramersV, 12);
+	});
+
+	it("Cohen's w is sqrt(chi2 / n)", () => {
+		expect(cohensW(12.5, 100)).toBeCloseTo(Math.sqrt(0.125), 12);
+		expect(cohensW(0, 50)).toBe(0);
+	});
+
+	it("Cohen's w is NaN on unusable input rather than Infinity", () => {
+		expect(Number.isNaN(cohensW(5, 0))).toBe(true);
+		expect(Number.isNaN(cohensW(NaN, 10))).toBe(true);
+	});
+
+	it('effectSizeLabel uses the conventional bands', () => {
+		expect(effectSizeLabel(0.05)).toBe('negligible');
+		expect(effectSizeLabel(0.15)).toBe('small');
+		expect(effectSizeLabel(0.3)).toBe('moderate');
+		expect(effectSizeLabel(0.5)).toBe('relatively strong');
+		expect(effectSizeLabel(0.8)).toBe('strong');
+		expect(effectSizeLabel(-0.8)).toBe('strong'); // sign-insensitive
+		expect(effectSizeLabel(NaN)).toBe('');
 	});
 });
