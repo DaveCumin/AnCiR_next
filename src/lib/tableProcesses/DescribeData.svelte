@@ -20,9 +20,43 @@
 		['valid', { val: false }]
 	]);
 
+	// Skewness and kurtosis are third and fourth moments, so their sampling error
+	// is large in small samples: SE(skew) ~ sqrt(6/n), SE(kurt) ~ sqrt(24/n). At
+	// n = 10 that is an SE of 0.77 and 1.55 respectively — bigger than most of the
+	// values people read off them. The usual teaching threshold is n >= 20 before
+	// shape statistics carry information (Cramer 1946; Joanes & Gill 1998 on the
+	// estimators themselves).
+	const SHAPE_MIN_N = 20;
+	// Below this even the mean and SD are barely constrained.
+	const BASIC_MIN_N = 5;
+
+	function describeSampleWarnings(rows) {
+		const warnings = [];
+		const tiny = rows.filter((r) => Number.isFinite(r.n) && r.n < BASIC_MIN_N);
+		const smallShape = rows.filter(
+			(r) => Number.isFinite(r.n) && r.n >= BASIC_MIN_N && r.n < SHAPE_MIN_N
+		);
+
+		if (tiny.length) {
+			warnings.push(
+				`Very small samples: ${tiny.map((r) => `${r.variable} (n = ${r.n})`).join(', ')}. Every summary here, including the mean and SD, is poorly determined.`
+			);
+		}
+		if (tiny.length || smallShape.length) {
+			const all = [...tiny, ...smallShape];
+			const worst = Math.min(...all.map((r) => r.n));
+			warnings.push(
+				`Skewness and kurtosis need about n ≥ ${SHAPE_MIN_N} to be informative (smallest here is ${worst}; the standard error of skewness is roughly √(6/n) ≈ ${Math.sqrt(6 / worst).toFixed(2)}). Read the shape columns as indicative only.`
+			);
+		}
+		return warnings;
+	}
+
 	export function describedata(argsIN) {
 		fillDefaults(argsIN, defaults);
-		const yIds = normalizeYInputs(argsIN.yIN).filter((id) => id != null && id !== -1 && getColumnById(id));
+		const yIds = normalizeYInputs(argsIN.yIN).filter(
+			(id) => id != null && id !== -1 && getColumnById(id)
+		);
 		if (yIds.length === 0) return [null, false];
 
 		const rows = yIds.map((id) => {
@@ -33,7 +67,7 @@
 		// doProcess() — used by the MCP engine and the demo generator — bakes real output columns
 		// rather than empty ones. writeOutputColumn no-ops on unwired (-1) keys, so the pure-result
 		// callers (tests) are unaffected. Function declaration is hoisted, so calling it here is fine.
-		const result = { rows };
+		const result = { rows, warnings: describeSampleWarnings(rows) };
 		writeDescribeOutputs(argsIN, result);
 		return [result, true];
 	}
@@ -62,7 +96,12 @@
 		}
 	};
 
-	const fmt = (v) => (v == null || Number.isNaN(v) ? '—' : Math.abs(v) >= 1000 || (Math.abs(v) < 0.01 && v !== 0) ? Number(v).toExponential(2) : Number(v).toFixed(2));
+	const fmt = (v) =>
+		v == null || Number.isNaN(v)
+			? '—'
+			: Math.abs(v) >= 1000 || (Math.abs(v) < 0.01 && v !== 0)
+				? Number(v).toExponential(2)
+				: Number(v).toFixed(2);
 </script>
 
 <script>
@@ -86,13 +125,15 @@
 		// describedata() writes its own output columns; recompute only mirrors the result to state.
 		const [res, valid] = describedata(p.args);
 		p.args.valid = valid;
-		result = res ?? { rows: [] };
+		result = res ?? { rows: [], warnings: [] };
+		p.warnings = result.warnings ?? [];
 	}
 
 	// Recompute when input DATA changes, not just when the ref list changes.
 	let getHash = $derived.by(() => {
 		let h = '';
-		for (const id of p.args.yIN ?? []) h += ':' + (id >= 0 ? getColumnById(id)?.getDataHash ?? '' : '');
+		for (const id of p.args.yIN ?? [])
+			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
 	});
 	onMount(() => {
@@ -126,12 +167,16 @@
 
 <div class="control-input-vertical">
 	{#if result.rows.length}
-		<p class="hint">{result.rows.length} variable{result.rows.length === 1 ? '' : 's'}. Quick-plot for histograms.</p>
+		<p class="hint">
+			{result.rows.length} variable{result.rows.length === 1 ? '' : 's'}. Quick-plot for histograms.
+		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Summary</summary>
 			<table class="d-table">
 				<thead>
-					<tr><th>var</th>{#each PREVIEW_STATS as s (s)}<th>{s}</th>{/each}</tr>
+					<tr
+						><th>var</th>{#each PREVIEW_STATS as s (s)}<th>{s}</th>{/each}</tr
+					>
 				</thead>
 				<tbody>
 					{#each result.rows as row (row.variable)}
@@ -154,9 +199,21 @@
 			</div>
 		</details>
 	{/if}
+	{#each result.warnings ?? [] as w (w)}
+		<p class="warn">{w}</p>
+	{/each}
 </div>
 
 <style>
+	/* Matches the other analysis nodes. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.hint {
 		font-size: var(--font-xs);
 		color: var(--color-text-muted);

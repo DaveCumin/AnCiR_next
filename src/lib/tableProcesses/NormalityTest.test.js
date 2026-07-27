@@ -9,7 +9,10 @@ import { normalitytest } from './NormalityTest.svelte';
 const OUT = { variable: -1, statistic: -1, pvalue: -1, n: -1, normal: -1 };
 const args = (over) => ({ yIN: [1, 2], out: { ...OUT }, method: 'shapiro', alpha: 0.05, ...over });
 
-const NORMALISH = [2.1, -0.3, 1.4, 0.2, -1.1, 0.8, 0.05, 1.9, -0.7, 0.4, 1.2, -0.9, 0.6, -0.2, 0.9, 1.5, -1.3, 0.3, 0.7, -0.5, 0.1, -0.4, 1.1, -0.8, 0.5];
+const NORMALISH = [
+	2.1, -0.3, 1.4, 0.2, -1.1, 0.8, 0.05, 1.9, -0.7, 0.4, 1.2, -0.9, 0.6, -0.2, 0.9, 1.5, -1.3, 0.3,
+	0.7, -0.5, 0.1, -0.4, 1.1, -0.8, 0.5
+];
 const SKEWED = [1, 1, 1, 1, 2, 2, 3, 10, 4, 5, 6, 7, 3, 2, 8, 1, 1, 9, 2, 1, 1, 2, 3, 1, 15];
 
 beforeEach(() => {

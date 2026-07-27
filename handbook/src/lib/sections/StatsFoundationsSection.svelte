@@ -6,6 +6,7 @@
   import DemoLink from "$lib/components/DemoLink.svelte";
   import PermutationAnim from "$lib/animations/PermutationAnim.svelte";
   import FDRAnim from "$lib/animations/FDRAnim.svelte";
+  import ChiSquaredAnim from "$lib/animations/ChiSquaredAnim.svelte";
 </script>
 
 <ChapterSection id="stats" num="Foundations" title="Statistical Foundations">
@@ -140,6 +141,33 @@
       <strong>goodness</strong> (observed against expected proportions).
     </p>
   </AnCiRBox>
+
+  <p>
+    The chi-squared test is worth understanding mechanically, because the same
+    machinery reappears inside the periodogram. It asks a single question: how
+    far are the <strong>observed</strong> counts from what the null predicts,
+    measured in units of what the null expects? For each category it takes the
+    gap, squares it (so overs and unders both count), and divides by the expected
+    value (so a gap of 5 matters more when only 10 were expected than when 100
+    were). Add those up and you have &chi;&sup2;.
+  </p>
+  <ChiSquaredAnim stage="test" />
+  <NoteBox title="The p-value is an area, not a number you look up">
+    <p>
+      The right-hand panel is the &chi;&sup2; distribution &mdash; the range of
+      totals you would get if nothing were going on. As each category's
+      contribution is added, the red line marching rightwards is your statistic,
+      and the shaded region beyond it is the probability of landing that far out
+      by chance. That shaded area <em>is</em> the p-value.
+    </p>
+    <p>
+      Note the <strong>degrees of freedom</strong>: three categories give df = 2,
+      because once you know the total and two of the counts, the third is fixed.
+      The shape of the reference curve depends on df, which is why the same
+      statistic means different things in different tests &mdash; a point that
+      matters a great deal in <a href="#ch6">Chapter 6</a>.
+    </p>
+  </NoteBox>
 
   <h4 class="sub-head">Report an effect size, not just a p-value</h4>
 

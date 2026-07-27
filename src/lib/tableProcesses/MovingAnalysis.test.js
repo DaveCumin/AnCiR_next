@@ -48,7 +48,9 @@ vi.mock('$lib/utils/cosinor.js', () => ({
 	})),
 	fitCosinorFixed: vi.fn(() => ({
 		M: 1.5,
-		harmonics: [{ k: 1, amplitude: 3, acrophase_hrs: 6.25, phi_rad: 0, CI_A: [0, 0], CI_acrophase: [0, 0] }],
+		harmonics: [
+			{ k: 1, amplitude: 3, acrophase_hrs: 6.25, phi_rad: 0, CI_A: [0, 0], CI_acrophase: [0, 0] }
+		],
 		R2: 0.9,
 		RMSE: 0.15,
 		pF: 0.001,
@@ -207,7 +209,11 @@ describe('movinganalysis', async () => {
 		mockColumns[1] = { type: 'number', getData: () => [0, 100] };
 		mockColumns[2] = { getData: () => [1, 2] };
 		const [, valid] = await movinganalysis({
-			...baseArgs, xIN: 1, yIN: [2], windowSize: 48, stepSize: 24
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			windowSize: 48,
+			stepSize: 24
 		});
 		expect(valid).toBe(false);
 	});
@@ -221,7 +227,11 @@ describe('movinganalysis', async () => {
 			movinganalysis({ ...baseArgs, xIN: 1, yIN: [999], windowSize: 48, stepSize: 24 })
 		).resolves.toBeDefined();
 		const [, valid] = await movinganalysis({
-			...baseArgs, xIN: 1, yIN: [999], windowSize: 48, stepSize: 24
+			...baseArgs,
+			xIN: 1,
+			yIN: [999],
+			windowSize: 48,
+			stepSize: 24
 		});
 		expect(valid).toBe(false);
 	});
@@ -233,7 +243,12 @@ describe('movinganalysis', async () => {
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 		const [result, valid] = await movinganalysis({
-			...baseArgs, xIN: 1, yIN: 2, windowSize: 48, stepSize: 24, analysis: 'periodogram'
+			...baseArgs,
+			xIN: 1,
+			yIN: 2,
+			windowSize: 48,
+			stepSize: 24,
+			analysis: 'periodogram'
 		});
 		expect(valid).toBe(true);
 		expect(result.y_results[2]).toBeDefined();
@@ -246,7 +261,12 @@ describe('movinganalysis', async () => {
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 		const [result] = await movinganalysis({
-			...baseArgs, xIN: 1, yIN: [2], windowSize: 48, stepSize: 24, binLabel: 'end'
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			windowSize: 48,
+			stepSize: 24,
+			binLabel: 'end'
 		});
 		expect(result.bins[0]).toBeCloseTo(48, 6); // first window 0..48 labelled at end
 	});
@@ -260,7 +280,12 @@ describe('movinganalysis', async () => {
 		mockColumns[2] = { getData: () => y1 };
 		mockColumns[3] = { getData: () => y2 };
 		const [result, valid] = await movinganalysis({
-			...baseArgs, xIN: 1, yIN: [2, 3], windowSize: 48, stepSize: 24, analysis: 'periodogram'
+			...baseArgs,
+			xIN: 1,
+			yIN: [2, 3],
+			windowSize: 48,
+			stepSize: 24,
+			analysis: 'periodogram'
 		});
 		expect(valid).toBe(true);
 		expect(result.y_results[2].peak_period.length).toBe(result.bins.length);
@@ -274,7 +299,12 @@ describe('movinganalysis', async () => {
 		mockColumns[1] = { type: 'number', getData: () => t };
 		mockColumns[2] = { getData: () => y };
 		const [result, valid] = await movinganalysis({
-			...baseArgs, xIN: 1, yIN: [2], windowSize: 24, stepSize: 24, analysis: 'periodogram'
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			windowSize: 24,
+			stepSize: 24,
+			analysis: 'periodogram'
 		});
 		expect(valid).toBe(true);
 		// At least one window (over the gap) should have produced NaN peak_period

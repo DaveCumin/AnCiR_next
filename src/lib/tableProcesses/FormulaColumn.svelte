@@ -568,11 +568,7 @@ return _r;`
 	onclick={(e) => {
 		// .ac-dropdown is portalled to <body> (outside .formula-editor-wrap), so exclude
 		// it here or selecting an item would close the list before the click registers.
-		if (
-			ac.show &&
-			!e.target.closest('.formula-editor-wrap') &&
-			!e.target.closest('.ac-dropdown')
-		)
+		if (ac.show && !e.target.closest('.formula-editor-wrap') && !e.target.closest('.ac-dropdown'))
 			closeAc();
 	}}
 />

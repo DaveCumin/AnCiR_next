@@ -43,7 +43,8 @@
 	/** Auto-select one method for the whole matrix, and gather the assumption warnings. */
 	function chooseMethod(requested, columns, names) {
 		const warnings = [];
-		let method = requested === 'spearman' ? 'spearman' : requested === 'pearson' ? 'pearson' : 'pearson';
+		let method =
+			requested === 'spearman' ? 'spearman' : requested === 'pearson' ? 'pearson' : 'pearson';
 
 		if (requested === 'auto') {
 			const nonNormal = [];
@@ -63,7 +64,9 @@
 
 	export function correlation(argsIN) {
 		fillDefaults(argsIN, defaults);
-		const yIds = normalizeYInputs(argsIN.yIN).filter((id) => id != null && id !== -1 && getColumnById(id));
+		const yIds = normalizeYInputs(argsIN.yIN).filter(
+			(id) => id != null && id !== -1 && getColumnById(id)
+		);
 		if (yIds.length < 2) return [null, false];
 
 		const columns = yIds.map((id) => getColumnById(id).getData() ?? []);
@@ -75,13 +78,19 @@
 		// Aggregate, deduplicated result-quality warnings.
 		const minN = Math.min(...rows.map((row) => row.n));
 		if (Number.isFinite(minN) && minN < 10) {
-			warnings.push(`Small sample: at least one pair has only n = ${minN} usable points; p-values are unreliable below ~10.`);
+			warnings.push(
+				`Small sample: at least one pair has only n = ${minN} usable points; p-values are unreliable below ~10.`
+			);
 		}
 		if (method === 'spearman' && rows.some((row) => row.tiesX || row.tiesY)) {
-			warnings.push('Tied values are present; the Spearman p-value is approximate when there are many ties.');
+			warnings.push(
+				'Tied values are present; the Spearman p-value is approximate when there are many ties.'
+			);
 		}
 		if (rows.some((row) => Number.isNaN(row.r))) {
-			warnings.push('Some pairs could not be computed (a column with no variance, or too few overlapping points) and are reported as NaN.');
+			warnings.push(
+				'Some pairs could not be computed (a column with no variance, or too few overlapping points) and are reported as NaN.'
+			);
 		}
 
 		// Write outputs from the func so doProcess() (MCP engine + demo generator) bakes real
@@ -149,7 +158,12 @@
 	// matrix so the numbers are readable without wiring a plot, plus the shared Open-full-table
 	// / Download-CSV actions. The output PORTS still carry the same data for downstream wiring.
 	const HEADERS = ['var_i', 'var_j', 'r', 'pvalue', 'n'];
-	const fmt = (v) => (v == null || Number.isNaN(v) ? '—' : Number(v).toPrecision(4).replace(/\.?0+$/, ''));
+	const fmt = (v) =>
+		v == null || Number.isNaN(v)
+			? '—'
+			: Number(v)
+					.toPrecision(4)
+					.replace(/\.?0+$/, '');
 	// getStaticData() rebuilds full-precision rows for the table/CSV helpers.
 	const getTableData = () => ({
 		headers: HEADERS,
@@ -157,9 +171,7 @@
 	});
 	// Preview is sorted by |r| descending — the strongest relationships first.
 	let previewRows = $derived(
-		[...(result.rows ?? [])]
-			.sort((a, b) => (Math.abs(b.r) || 0) - (Math.abs(a.r) || 0))
-			.slice(0, 8)
+		[...(result.rows ?? [])].sort((a, b) => (Math.abs(b.r) || 0) - (Math.abs(a.r) || 0)).slice(0, 8)
 	);
 
 	function recompute() {
@@ -206,8 +218,8 @@
 	</ControlInput>
 	{#if result.rows.length}
 		<p class="hint">
-			{result.rows.length} pair{result.rows.length === 1 ? '' : 's'}, method: <strong>{result.methodUsed}</strong>.
-			Quick-plot for the heatmap.
+			{result.rows.length} pair{result.rows.length === 1 ? '' : 's'}, method:
+			<strong>{result.methodUsed}</strong>. Quick-plot for the heatmap.
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Correlations</summary>
@@ -222,7 +234,9 @@
 				</thead>
 				<tbody>
 					{#each previewRows as row (row.var_i + ' ' + row.var_j)}
-						<tr title={`${row.var_i} ~ ${row.var_j}: r=${fmt(row.r)}, p=${fmt(row.pvalue)}, n=${row.n}`}>
+						<tr
+							title={`${row.var_i} ~ ${row.var_j}: r=${fmt(row.r)}, p=${fmt(row.pvalue)}, n=${row.n}`}
+						>
 							<td class="pair">{row.var_i} ~ {row.var_j}</td>
 							<td class="num">{fmt(row.r)}</td>
 							<td class="num">{fmt(row.pvalue)}</td>

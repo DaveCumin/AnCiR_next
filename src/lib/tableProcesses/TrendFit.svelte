@@ -77,6 +77,41 @@
 	 * The metric out-keys for the current model: the per-model fit coefficients.
 	 * `coeffs[i]` multiplies x^i for polynomial fits, so keys are c0..cN.
 	 */
+
+	// Self-contained sample-size check for this node. A fit needs meaningfully
+	// more usable points than it has free parameters before its R² and p-value
+	// mean anything; at n = nParams the model interpolates exactly and R² = 1.
+	function fitSampleWarnings(argsIN) {
+		const warnings = [];
+		const xId = argsIN.xIN;
+		const xCol = xId != null && xId !== -1 ? getColumnById(xId) : null;
+		const yIds = Array.isArray(argsIN.yIN) ? argsIN.yIN : [argsIN.yIN];
+		const yCol = yIds?.[0] != null && yIds[0] !== -1 ? getColumnById(yIds[0]) : null;
+		if (!xCol || !yCol) return warnings;
+		const xs = (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) ?? [];
+		const ys = yCol.getData() ?? [];
+		let nUsable = 0;
+		for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
+			const a = Number(xs[i]);
+			const b = Number(ys[i]);
+			if (xs[i] != null && ys[i] != null && Number.isFinite(a) && Number.isFinite(b)) nUsable++;
+		}
+		const model = argsIN.model ?? 'linear';
+		const nParams =
+			model === 'polynomial' ? Math.max(0, Math.floor(argsIN.polyDegree ?? 2)) + 1 : 2;
+		if (!Number.isFinite(nUsable) || nUsable <= 0) return warnings;
+		if (nUsable <= nParams) {
+			warnings.push(
+				`Only ${nUsable} usable points for a trend model with ${nParams} free parameters — the fit is interpolating, not estimating. R² here is meaningless.`
+			);
+		} else if (nUsable < nParams * 3) {
+			warnings.push(
+				`Small sample: ${nUsable} usable points for ${nParams} free parameters. A trend fitted to barely more points than it has parameters will follow the noise; R² is inflated and the slope CI is wide.`
+			);
+		}
+		return warnings;
+	}
+
 	export function getCoefKeys(args) {
 		const model = args?.model ?? 'linear';
 		if (model === 'linear') return ['coef_slope', 'coef_intercept'];
@@ -247,6 +282,8 @@
 			writeTrendMetricOutputs(argsIN, result, processHash);
 		}
 
+		// Not gated on anyValid: when a fit fails, the point count is the explanation.
+		result.warnings = fitSampleWarnings(argsIN);
 		return [result, anyValid];
 	}
 </script>
@@ -457,6 +494,7 @@
 			p.args._fitHash = lastHash;
 		} else {
 			[trendData, p.args.valid] = await trendfit(p.args);
+			p.warnings = trendData?.warnings ?? [];
 			for (const yId of p.args.yIN ?? []) {
 				// Clear stale permutation stats (no processHash — GUId untouched).
 				writeOutputColumn(p.args.out['permstats_' + yId], []);
@@ -803,7 +841,8 @@
 				<button
 					class="tp-stat-btn"
 					onclick={() => plotResiduals(yId, yName)}
-					title="Scatter the residuals (observed − fitted) against the input x to check the fit">Plot residuals</button
+					title="Scatter the residuals (observed − fitted) against the input x to check the fit"
+					>Plot residuals</button
 				>
 			{/if}
 			{#if Array.isArray(yResult?.fittedData?.permutedStats) && yResult.fittedData.permutedStats.length > 0 && Number.isFinite(yResult?.fittedData?.pValue)}
@@ -1008,7 +1047,13 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getTrendStatsData();
-				showStaticDataAsTable('Trend fit stats', headers, rows, getTrendStatsData, `tableprocess_${p.id}`);
+				showStaticDataAsTable(
+					'Trend fit stats',
+					headers,
+					rows,
+					getTrendStatsData,
+					`tableprocess_${p.id}`
+				);
 			}}>View stats</button
 		>
 		<button

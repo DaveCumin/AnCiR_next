@@ -298,7 +298,11 @@
 
 		// Full input x (in the fit's hour space), for residuals evaluated at every input row.
 		const residTCol = getColumnById(argsIN.xIN);
-		const tFull = residTCol ? (residTCol.type === 'time' ? residTCol.hoursSinceStart : residTCol.getData()) : [];
+		const tFull = residTCol
+			? residTCol.type === 'time'
+				? residTCol.hoursSinceStart
+				: residTCol.getData()
+			: [];
 
 		for (const yId of yINs) {
 			const yOUT = argsIN.out['cosinory_' + yId];
@@ -412,11 +416,60 @@
 		writeScalarOut('phase_angle', phaseAngleArr);
 	}
 
+	// A cosinor needs enough of the cycle sampled AND enough cycles observed, and
+	// they fail in different ways. Too few points per cycle and the waveform is
+	// undersampled; too few CYCLES and the fit is essentially interpolating one
+	// bump, which produces a confident amplitude and acrophase that no repetition
+	// supports. Nelson et al. (1979) and the standard cosinor guidance ask for
+	// several cycles before a period-fixed fit is interpretable.
+	const COSINOR_MIN_CYCLES = 2;
+	const COSINOR_MIN_POINTS_PER_CYCLE = 4; // Nyquist-ish floor for a sinusoid + harmonics
+
+	function cosinorSampleWarnings(t, argsIN, nHarmonics) {
+		const warnings = [];
+		const finite = (t ?? []).filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
+		if (finite.length < 2) return warnings;
+
+		const period = Number(argsIN.fixedPeriod) || 24;
+		const span = Math.max(...finite) - Math.min(...finite);
+		const cycles = span / period;
+		const perCycle = finite.length / Math.max(cycles, 1e-9);
+
+		if (argsIN.useFixedPeriod && cycles < COSINOR_MIN_CYCLES) {
+			warnings.push(
+				`Short record: ${cycles.toFixed(1)} cycles at a ${period} h period. A cosinor fitted to fewer than ${COSINOR_MIN_CYCLES} cycles is close to interpolating a single bump — the amplitude and acrophase will look precise but no repetition supports them.`
+			);
+		}
+
+		// Harmonics need more points than the fundamental does.
+		const needed = COSINOR_MIN_POINTS_PER_CYCLE * Math.max(1, nHarmonics);
+		if (Number.isFinite(perCycle) && perCycle < needed) {
+			warnings.push(
+				`Sparse sampling: about ${perCycle.toFixed(1)} points per ${period} h cycle, and ${nHarmonics} harmonic${nHarmonics > 1 ? 's' : ''} needs at least ~${needed}. The waveform is undersampled, so amplitude is biased low and acrophase is unstable.`
+			);
+		}
+
+		// The F-test needs residual degrees of freedom to mean anything.
+		const nParams = 1 + 2 * Math.max(1, nHarmonics);
+		if (finite.length <= nParams + 1) {
+			warnings.push(
+				`Only ${finite.length} usable points for a model with ${nParams} parameters. R² is inflated and the p-value is not trustworthy with this little residual freedom.`
+			);
+		}
+		return warnings;
+	}
+
 	export async function cosinor(argsIN) {
 		const [result, anyValid] = await evaluateCosinor(argsIN);
 		if (anyValid && argsIN?.out?.cosinorx !== -1) {
 			writeCosinorOutputs(argsIN, result);
 		}
+		const xCol = argsIN.xIN != null && argsIN.xIN !== -1 ? getColumnById(argsIN.xIN) : null;
+		const t = xCol ? (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) : null;
+		// Deliberately NOT gated on anyValid: when the fit fails, "1.1 points per
+		// 24 h cycle" is the most useful thing we can say, and suppressing it would
+		// leave the user with a silent failure and no explanation.
+		result.warnings = cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1));
 		return [result, anyValid];
 	}
 </script>
@@ -508,6 +561,7 @@
 				if (token !== _calcToken) return; // re-check after await
 				cosinorData = data;
 				p.args.valid = valid;
+				p.warnings = cosinorData?.warnings ?? [];
 				calculating = false;
 			}, 0);
 		}
@@ -540,6 +594,7 @@
 			if (token !== _calcToken) return; // re-check after await
 			cosinorData = data;
 			p.args.valid = valid;
+			p.warnings = cosinorData?.warnings ?? [];
 			calculating = false;
 			lastHash = getHash;
 			p.args._fitHash = lastHash;
@@ -625,6 +680,7 @@
 						y_results
 					};
 					p.args.valid = true;
+					p.warnings = cosinorData?.warnings ?? [];
 					// NOTE: lastHash is deliberately NOT set here. The rehydrated
 					// cosinorData only holds the fitted curve (from the saved output
 					// column), not the derived stats, so we let the $effect fire once
@@ -879,7 +935,8 @@
 				<button
 					class="tp-stat-btn"
 					onclick={() => plotResiduals(yId, yName)}
-					title="Scatter the residuals (observed − fitted) against the input x to check the fit">Plot residuals</button
+					title="Scatter the residuals (observed − fitted) against the input x to check the fit"
+					>Plot residuals</button
 				>
 			{/if}
 			{#if yResult?.fittedData?.rSquared != null}
@@ -1085,7 +1142,13 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getCosinorStatsData();
-				showStaticDataAsTable('Cosinor stats', headers, rows, getCosinorStatsData, `tableprocess_${p.id}`);
+				showStaticDataAsTable(
+					'Cosinor stats',
+					headers,
+					rows,
+					getCosinorStatsData,
+					`tableprocess_${p.id}`
+				);
 			}}>View stats</button
 		>
 		<button
@@ -1098,7 +1161,20 @@
 	</div>
 {/if}
 
+{#each cosinorData?.warnings ?? [] as w (w)}
+	<p class="warn">{w}</p>
+{/each}
+
 <style>
+	/* Matches ChiSquared / Rayleigh / NPCRA. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.tp-stat-actions {
 		display: flex;
 		gap: 0.4rem;

@@ -6,7 +6,21 @@ vi.mock('$lib/core/Column.svelte', () => ({ getColumnById: (id) => mockColumns[i
 
 import { describedata } from './DescribeData.svelte';
 
-const OUT = { variable: -1, n: -1, mean: -1, median: -1, sd: -1, min: -1, max: -1, range: -1, q1: -1, q3: -1, iqr: -1, skewness: -1, kurtosis: -1 };
+const OUT = {
+	variable: -1,
+	n: -1,
+	mean: -1,
+	median: -1,
+	sd: -1,
+	min: -1,
+	max: -1,
+	range: -1,
+	q1: -1,
+	q3: -1,
+	iqr: -1,
+	skewness: -1,
+	kurtosis: -1
+};
 const args = (over) => ({ yIN: [1, 2], out: { ...OUT }, ...over });
 
 beforeEach(() => {

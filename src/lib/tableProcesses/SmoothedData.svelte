@@ -193,7 +193,11 @@
 
 	// Residual diagnostic: scatter raw − smoothed against the smoothed x output for this Y.
 	function plotResiduals(yId, yName) {
-		spawnResidualPlot(p, { xId: p.args.out?.smoothedx, residId: p.args.out?.['resid_' + yId], label: yName });
+		spawnResidualPlot(p, {
+			xId: p.args.out?.smoothedx,
+			residId: p.args.out?.['resid_' + yId],
+			label: yName
+		});
 	}
 
 	// Reactivity
@@ -458,7 +462,8 @@
 										<button
 											class="resid-btn"
 											onclick={() => plotResiduals(yId, getColumnById(Number(yId))?.name ?? yId)}
-											title="Scatter the residuals (raw − smoothed) against x to see what smoothing removed">Plot residuals</button
+											title="Scatter the residuals (raw − smoothed) against x to see what smoothing removed"
+											>Plot residuals</button
 										>
 									{/if}
 								</div>

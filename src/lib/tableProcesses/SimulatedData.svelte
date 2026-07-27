@@ -78,9 +78,7 @@
 			const noiseAmplitude = section.noiseAmplitude ?? 1;
 
 			for (let i = 0; i < duration; i += step) {
-				simulatedTime.push(
-					new Date(startMs + (currentTime + i) * 3600000).toISOString()
-				);
+				simulatedTime.push(new Date(startMs + (currentTime + i) * 3600000).toISOString());
 
 				// Apply phase shift to the rhythm calculation
 				const phaseShiftedTime = i + phase;

@@ -13,7 +13,12 @@ vi.mock('$lib/core/core.svelte', () => ({
 vi.mock('$lib/core/Column.svelte', () => ({
 	getColumnById: (id) => mockColumns[id],
 	removeColumn: vi.fn(),
-	Column: class { constructor() { this.id = -1; this.name = ''; } }
+	Column: class {
+		constructor() {
+			this.id = -1;
+			this.name = '';
+		}
+	}
 }));
 vi.mock('$lib/components/inputs/ColumnSelector.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/inputs/NumberWithUnits.svelte', () => ({ default: {} }));
@@ -27,18 +32,27 @@ beforeEach(() => {
 
 describe('longtowide', () => {
 	it('returns invalid when inputs are -1', () => {
-		const [, valid] = longtowide({ categoryIN: -1, timeIN: -1, valueIN: -1, out: { time: -1 }, preProcesses: [] });
+		const [, valid] = longtowide({
+			categoryIN: -1,
+			timeIN: -1,
+			valueIN: -1,
+			out: { time: -1 },
+			preProcesses: []
+		});
 		expect(valid).toBe(false);
 	});
 
 	it('pivots long-format category/time/value columns to wide format', () => {
-		mockColumns[1] = { getData: () => ['A', 'A', 'B', 'B'] };          // category
-		mockColumns[2] = { getData: () => [0, 1, 0, 1] };                   // time
-		mockColumns[3] = { getData: () => [10, 20, 30, 40] };               // value
+		mockColumns[1] = { getData: () => ['A', 'A', 'B', 'B'] }; // category
+		mockColumns[2] = { getData: () => [0, 1, 0, 1] }; // time
+		mockColumns[3] = { getData: () => [10, 20, 30, 40] }; // value
 
 		const [result, valid] = longtowide({
-			categoryIN: 1, timeIN: 2, valueIN: 3,
-			out: { time: -1 }, preProcesses: []
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 
 		expect(valid).toBe(true);
@@ -54,8 +68,11 @@ describe('longtowide', () => {
 		mockColumns[3] = { getData: () => [10, 20] };
 
 		const [result] = longtowide({
-			categoryIN: 1, timeIN: 2, valueIN: 3,
-			out: { time: -1 }, preProcesses: []
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 
 		expect(isNaN(result.value_A[1])).toBe(true); // A has no value at time 1
@@ -68,8 +85,11 @@ describe('longtowide', () => {
 		mockColumns[3] = { getData: () => [] };
 
 		const [, valid] = longtowide({
-			categoryIN: 1, timeIN: 2, valueIN: 3,
-			out: { time: -1 }, preProcesses: []
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 
 		expect(valid).toBe(false);
@@ -85,7 +105,11 @@ describe('longtowide', () => {
 			longtowide({ categoryIN: -1, timeIN: 2, valueIN: 3, out: { time: -1 }, preProcesses: [] })
 		).not.toThrow();
 		const [, valid] = longtowide({
-			categoryIN: -1, timeIN: 2, valueIN: 3, out: { time: -1 }, preProcesses: []
+			categoryIN: -1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 		expect(valid).toBe(false);
 	});
@@ -102,7 +126,11 @@ describe('longtowide', () => {
 		mockColumns[3] = { getData: () => [22, 0, 11] };
 
 		const [result] = longtowide({
-			categoryIN: 1, timeIN: 2, valueIN: 3, out: { time: -1 }, preProcesses: []
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 
 		expect(result.time).toEqual([0, 1, 2]);
@@ -115,10 +143,17 @@ describe('longtowide', () => {
 		mockColumns[3] = { getData: () => [10, 99, 99, 30] };
 
 		const [result] = longtowide({
-			categoryIN: 1, timeIN: 2, valueIN: 3, out: { time: -1 }, preProcesses: []
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 
-		expect(Object.keys(result).filter((k) => k.startsWith('value_'))).toEqual(['value_A', 'value_B']);
+		expect(Object.keys(result).filter((k) => k.startsWith('value_'))).toEqual([
+			'value_A',
+			'value_B'
+		]);
 		expect(result.value_A[0]).toBe(10);
 		expect(result.value_B[0]).toBe(30);
 	});
@@ -129,7 +164,11 @@ describe('longtowide', () => {
 		mockColumns[3] = { getData: () => [1, 2, 3, 4] };
 
 		const [result] = longtowide({
-			categoryIN: 1, timeIN: 2, valueIN: 3, out: { time: -1 }, preProcesses: []
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 
 		const valueKeys = Object.keys(result).filter((k) => k.startsWith('value_'));
@@ -142,7 +181,11 @@ describe('longtowide', () => {
 		mockColumns[3] = { getData: () => [42] };
 
 		const [result, valid] = longtowide({
-			categoryIN: 1, timeIN: 2, valueIN: 3, out: { time: -1 }, preProcesses: []
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 
 		expect(valid).toBe(true);
@@ -156,7 +199,11 @@ describe('longtowide', () => {
 		mockColumns[3] = { getData: () => [10, 20] };
 
 		const [result] = longtowide({
-			categoryIN: 1, timeIN: 2, valueIN: 3, out: { time: -1 }, preProcesses: []
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 
 		expect(result.time).toEqual([0]);
@@ -170,7 +217,11 @@ describe('longtowide', () => {
 		mockColumns[3] = { getData: () => [10, 11, 12, 21] };
 
 		const [result] = longtowide({
-			categoryIN: 1, timeIN: 2, valueIN: 3, out: { time: -1 }, preProcesses: []
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 
 		expect(result.time).toEqual([0, 1, 2]);
@@ -189,7 +240,11 @@ describe('longtowide', () => {
 		mockColumns[3] = { getData: () => vals };
 
 		const [result] = longtowide({
-			categoryIN: 1, timeIN: 2, valueIN: 3, out: { time: -1 }, preProcesses: []
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
 		});
 
 		// Reconstruct long form from wide and compare to the original mapping.

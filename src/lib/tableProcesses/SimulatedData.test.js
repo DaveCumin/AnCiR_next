@@ -9,7 +9,9 @@ import { simulateddata } from './SimulatedData.svelte';
 
 const previewArgs = {
 	startTime: new Date('2024-01-01T00:00:00Z').toISOString(),
-	sections: [{ duration_hours: 48, rhythmPeriod_hours: 24, rhythmPhase_hours: 0, rhythmAmplitude: 100 }],
+	sections: [
+		{ duration_hours: 48, rhythmPeriod_hours: 24, rhythmPhase_hours: 0, rhythmAmplitude: 100 }
+	],
 	samplingPeriod_hours: 1,
 	out: { time: -1, values: -1 }
 };

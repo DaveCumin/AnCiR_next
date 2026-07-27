@@ -139,7 +139,8 @@
 	function syncYColumns() {
 		const newIds = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
 		const newSet = new Set(newIds);
-		if (newIds.length === prevYIds.length && newIds.every((id) => prevYIds.includes(id))) return false;
+		if (newIds.length === prevYIds.length && newIds.every((id) => prevYIds.includes(id)))
+			return false;
 		if (isCommitted()) {
 			for (const oldId of prevYIds) {
 				if (!newSet.has(oldId)) {
@@ -321,7 +322,9 @@
 								{@const yout = getColumnById(yOutId)}
 								{#if yout}
 									<div class="tp-output-row">
-										<span class="tp-output-label">{getColumnById(Number(yId))?.name ?? yId} sorted</span>
+										<span class="tp-output-label"
+											>{getColumnById(Number(yId))?.name ?? yId} sorted</span
+										>
 										<ColumnComponent col={yout} />
 									</div>
 								{/if}

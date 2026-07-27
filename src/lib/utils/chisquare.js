@@ -39,7 +39,7 @@ export function chiSquareGoodnessOfFit(observed, expected = null, ddof = 0) {
 	}
 	if (E.some((v) => v <= 0)) return { statistic: NaN, pvalue: NaN, df: NaN, k };
 	let stat = 0;
-	for (let i = 0; i < k; i++) stat += ((O[i] - E[i]) ** 2) / E[i];
+	for (let i = 0; i < k; i++) stat += (O[i] - E[i]) ** 2 / E[i];
 	const df = k - 1 - ddof;
 	return { statistic: stat, pvalue: pUpperFromChiSq(stat, df), df, k };
 }
@@ -48,6 +48,16 @@ export function chiSquareGoodnessOfFit(observed, expected = null, ddof = 0) {
  * Build a contingency table (counts of co-occurring categories) from two equal-length arrays.
  * @returns {{rowLabels:string[], colLabels:string[], table:number[][]}}
  */
+/**
+ * True for a cell that carries no category: null/undefined, blank, or NaN in
+ * either numeric or stringified form.
+ */
+export function isMissingCategory(v) {
+	if (v == null || v === '') return true;
+	if (typeof v === 'number' && Number.isNaN(v)) return true;
+	return String(v) === 'NaN';
+}
+
 export function contingencyTable(rowVar, colVar) {
 	const n = Math.min(rowVar?.length ?? 0, colVar?.length ?? 0);
 	const rowLabels = [];
@@ -58,7 +68,12 @@ export function contingencyTable(rowVar, colVar) {
 	for (let i = 0; i < n; i++) {
 		const r = rowVar[i];
 		const c = colVar[i];
-		if (r == null || c == null || r === '' || c === '') continue; // skip incomplete rows
+		// Skip incomplete rows. NaN counts as MISSING, not as a category called
+		// "NaN": the data grid renders an empty/invalid cell as NaN, so admitting it
+		// would silently add a phantom row AND column to the table, inflating df
+		// (a 2x2 test reported df = 4) and changing the p-value. Categorical values
+		// must not be coerced with Number() — Number('a') is NaN too.
+		if (isMissingCategory(r) || isMissingCategory(c)) continue;
 		const rk = String(r);
 		const ck = String(c);
 		if (!rowIdx.has(rk)) {

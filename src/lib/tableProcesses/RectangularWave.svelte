@@ -55,6 +55,38 @@
 		}
 	};
 
+	// Self-contained sample-size check for this node. A fit needs meaningfully
+	// more usable points than it has free parameters before its R² and p-value
+	// mean anything; at n = nParams the model interpolates exactly and R² = 1.
+	function fitSampleWarnings(argsIN) {
+		const warnings = [];
+		const xId = argsIN.xIN;
+		const xCol = xId != null && xId !== -1 ? getColumnById(xId) : null;
+		const yIds = Array.isArray(argsIN.yIN) ? argsIN.yIN : [argsIN.yIN];
+		const yCol = yIds?.[0] != null && yIds[0] !== -1 ? getColumnById(yIds[0]) : null;
+		if (!xCol || !yCol) return warnings;
+		const xs = (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) ?? [];
+		const ys = yCol.getData() ?? [];
+		let nUsable = 0;
+		for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
+			const a = Number(xs[i]);
+			const b = Number(ys[i]);
+			if (xs[i] != null && ys[i] != null && Number.isFinite(a) && Number.isFinite(b)) nUsable++;
+		}
+		const nParams = 5; // mesor, amplitude, period, phase, kappa (fewer when pinned)
+		if (!Number.isFinite(nUsable) || nUsable <= 0) return warnings;
+		if (nUsable <= nParams) {
+			warnings.push(
+				`Only ${nUsable} usable points for a rectangular-wave model with ${nParams} free parameters — the fit is interpolating, not estimating. R² here is meaningless.`
+			);
+		} else if (nUsable < nParams * 3) {
+			warnings.push(
+				`Small sample: ${nUsable} usable points for ${nParams} free parameters. A rectangular-wave fit has ~5 free parameters; with this few points the duty cycle and kappa are essentially unconstrained.`
+			);
+		}
+		return warnings;
+	}
+
 	export function rectangularwave(argsIN) {
 		const xIN = argsIN.xIN;
 		const yINs = normalizeYInputs(argsIN.yIN);
@@ -210,6 +242,8 @@
 			);
 		}
 
+		// Not gated on anyValid: when a fit fails, the point count is the explanation.
+		result.warnings = fitSampleWarnings(argsIN);
 		return [result, anyValid];
 	}
 </script>
@@ -306,6 +340,7 @@
 				untrack(() => {
 					previewStart = 1;
 					[rwave, p.args.valid] = rectangularwave(p.args);
+					p.warnings = rwave?.warnings ?? [];
 					calculating = false;
 				});
 			}, 0);
@@ -324,6 +359,7 @@
 		setTimeout(() => {
 			if (token !== _calcToken) return;
 			[rwave, p.args.valid] = rectangularwave(p.args);
+			p.warnings = rwave?.warnings ?? [];
 			calculating = false;
 			lastHash = getHash;
 		}, 0);
@@ -658,7 +694,8 @@
 					<button
 						class="tp-stat-btn"
 						onclick={() => plotResiduals(yId, yName)}
-						title="Scatter the residuals (observed − fitted) against the input x to check the fit">Plot residuals</button
+						title="Scatter the residuals (observed − fitted) against the input x to check the fit"
+						>Plot residuals</button
 					>
 				{/if}
 			</div>
@@ -755,7 +792,13 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getRwaveStatsData();
-				showStaticDataAsTable('Rectangular wave stats', headers, rows, getRwaveStatsData, `tableprocess_${p.id}`);
+				showStaticDataAsTable(
+					'Rectangular wave stats',
+					headers,
+					rows,
+					getRwaveStatsData,
+					`tableprocess_${p.id}`
+				);
 			}}>View stats</button
 		>
 		<button

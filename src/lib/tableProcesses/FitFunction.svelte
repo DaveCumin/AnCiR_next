@@ -11,7 +11,10 @@
 		fillDefaults
 	} from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
-	import { residualColumn as computeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
+	import {
+		residualColumn as computeResidual,
+		spawnResidualPlot
+	} from '$lib/tableProcesses/residualSupport.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	const displayName = 'Fit Function';
@@ -244,13 +247,53 @@
 				const residOUT = argsIN.out?.['resid_' + yId];
 				if (residOUT != null && residOUT !== -1 && yResult) {
 					const yCol = getColumnById(yId);
-					const resid = residualColumn(yResult, argsIN.model ?? 'cosinor', t, yCol?.getData() ?? []);
+					const resid = residualColumn(
+						yResult,
+						argsIN.model ?? 'cosinor',
+						t,
+						yCol?.getData() ?? []
+					);
 					if (resid) writeOutputColumn(residOUT, resid, { processHash });
 				}
 			}
 		}
 
+		// Not gated on anyValid: when a fit fails, the point count is the explanation.
+		result.warnings = fitSampleWarnings(argsIN);
 		return [result, anyValid];
+	}
+
+	// Self-contained sample-size check for this node. A fit needs meaningfully
+	// more usable points than it has free parameters before its R² and p-value
+	// mean anything; at n = nParams the model interpolates exactly and R² = 1.
+	function fitSampleWarnings(argsIN) {
+		const warnings = [];
+		const xId = argsIN.xIN;
+		const xCol = xId != null && xId !== -1 ? getColumnById(xId) : null;
+		const yIds = Array.isArray(argsIN.yIN) ? argsIN.yIN : [argsIN.yIN];
+		const yCol = yIds?.[0] != null && yIds[0] !== -1 ? getColumnById(yIds[0]) : null;
+		if (!xCol || !yCol) return warnings;
+		const xs = (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) ?? [];
+		const ys = yCol.getData() ?? [];
+		let nUsable = 0;
+		for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
+			const a = Number(xs[i]);
+			const b = Number(ys[i]);
+			if (xs[i] != null && ys[i] != null && Number.isFinite(a) && Number.isFinite(b)) nUsable++;
+		}
+		const model = argsIN.model ?? 'cosinor';
+		const nParams = model === 'doublelogistic' ? 6 : model === 'rectangular' ? 5 : 3;
+		if (!Number.isFinite(nUsable) || nUsable <= 0) return warnings;
+		if (nUsable <= nParams) {
+			warnings.push(
+				`Only ${nUsable} usable points for a fit model with ${nParams} free parameters — the fit is interpolating, not estimating. R² here is meaningless.`
+			);
+		} else if (nUsable < nParams * 3) {
+			warnings.push(
+				`Small sample: ${nUsable} usable points for ${nParams} free parameters. A nonlinear fit with barely more points than parameters will follow the noise; R² is inflated and the p-value is not trustworthy.`
+			);
+		}
+		return warnings;
 	}
 
 	export async function fitFunction(argsIN) {
@@ -506,6 +549,7 @@
 		if (token !== _calcToken) return;
 		fitData = result;
 		p.args.valid = anyValid;
+		p.warnings = result?.warnings ?? [];
 		if (anyValid && p.args.out?.fitx !== -1) {
 			const processHash = crypto.randomUUID();
 			const firstYId = Object.keys(result.y_results)[0];
@@ -523,15 +567,18 @@
 				const residOUT = p.args.out['resid_' + yId];
 				if (residOUT != null && residOUT !== -1 && yResult) {
 					const yCol = getColumnById(yId);
-					const resid = residualColumn(yResult, p.args.model ?? 'cosinor', t, yCol?.getData() ?? []);
+					const resid = residualColumn(
+						yResult,
+						p.args.model ?? 'cosinor',
+						t,
+						yCol?.getData() ?? []
+					);
 					if (resid) writeOutputColumn(residOUT, resid, { processHash });
 				}
 
 				writeOutputColumn(
 					p.args.out['permstats_' + yId],
-					Array.isArray(yResult?.fitResult?.permutedStats)
-						? yResult.fitResult.permutedStats
-						: [],
+					Array.isArray(yResult?.fitResult?.permutedStats) ? yResult.fitResult.permutedStats : [],
 					{ processHash }
 				);
 			}
@@ -554,7 +601,10 @@
 		const ids = [p.args.xIN];
 		if (p.args.out.fitx >= 0) ids.push(p.args.out.fitx);
 		for (const key of Object.keys(p.args.out)) {
-			if ((key.startsWith('fity_') || key.startsWith('resid_') || key.startsWith('permstats_')) && p.args.out[key] >= 0)
+			if (
+				(key.startsWith('fity_') || key.startsWith('resid_') || key.startsWith('permstats_')) &&
+				p.args.out[key] >= 0
+			)
 				ids.push(p.args.out[key]);
 		}
 		return ids;
@@ -1060,13 +1110,19 @@
 				/>
 			</p>
 			{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
-				<button class="resid-btn" onclick={() => plotResiduals(yId, yName)} title="Scatter the residuals (observed − fitted) against the input x to check the fit">
+				<button
+					class="resid-btn"
+					onclick={() => plotResiduals(yId, yName)}
+					title="Scatter the residuals (observed − fitted) against the input x to check the fit"
+				>
 					Plot residuals
 				</button>
 			{/if}
 			{#if Array.isArray(yResult?.fitResult?.permutedStats) && yResult.fitResult.permutedStats.length > 0 && Number.isFinite(yResult?.fitResult?.pValue)}
 				<p
-					style="color: {yResult.fitResult.significant ? 'var(--color-success)' : 'var(--color-warning)'}; font-weight: 600;"
+					style="color: {yResult.fitResult.significant
+						? 'var(--color-success)'
+						: 'var(--color-warning)'}; font-weight: 600;"
 				>
 					Perm p-value: {yResult.fitResult.pValue.toFixed(4)}
 					{#if yResult.fitResult.significant}
@@ -1228,7 +1284,13 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getFitStatsData();
-				showStaticDataAsTable('Fit function stats', headers, rows, getFitStatsData, `tableprocess_${p.id}`);
+				showStaticDataAsTable(
+					'Fit function stats',
+					headers,
+					rows,
+					getFitStatsData,
+					`tableprocess_${p.id}`
+				);
 			}}>View stats</button
 		>
 		<button

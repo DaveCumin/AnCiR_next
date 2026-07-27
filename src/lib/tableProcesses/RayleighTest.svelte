@@ -147,6 +147,44 @@
 		return { perY, anyValid, yINs };
 	}
 
+	// Smallest n at which the Rayleigh p-value's series approximation is
+	// considered dependable. Zar (1999, ch. 27) and Batschelet (1981) both put the
+	// usable range at roughly n >= 8-10 and refer smaller samples to published
+	// critical values. Below it the node still computes — refusing would be worse,
+	// since the mean direction is still informative — but says so.
+	const RAYLEIGH_MIN_N = 8;
+
+	/**
+	 * Sample-size warnings for the Rayleigh results.
+	 *
+	 * Two separate things are worth saying, and they are NOT the same warning:
+	 *  - a SIGNIFICANT result from very few angles rests on an approximation
+	 *    outside its recommended range;
+	 *  - a NON-significant result from very few angles is uninformative, because
+	 *    the test has almost no power there. Reporting only the first would let a
+	 *    user read "p = 0.4, n = 4" as evidence of no rhythm.
+	 */
+	function rayleighSampleWarnings(perY) {
+		const warnings = [];
+		const small = Object.entries(perY).filter(
+			([, r]) => Number.isFinite(r.n) && r.n > 0 && r.n < RAYLEIGH_MIN_N
+		);
+		if (!small.length) return warnings;
+
+		const describe = small
+			.map(([yId, r]) => `${getColumnById(Number(yId))?.name ?? yId} (n = ${r.n})`)
+			.join(', ');
+		warnings.push(
+			`Small sample: ${describe}. The Rayleigh p-value uses a series approximation recommended for n ≥ ${RAYLEIGH_MIN_N} (Zar 1999); below that, published critical values are the correct reference.`
+		);
+		if (small.some(([, r]) => Number.isFinite(r.pValue) && r.pValue >= 0.05)) {
+			warnings.push(
+				`With fewer than ${RAYLEIGH_MIN_N} angles the test has very little power, so a non-significant result here is NOT evidence that the angles are uniformly distributed — it mostly reflects the sample size.`
+			);
+		}
+		return warnings;
+	}
+
 	// Watson-Williams: the Y columns are the groups. Returns { ...stats, valid }.
 	export function evaluateWatsonWilliams(argsIN) {
 		const yINs = normalizeYInputs(argsIN.yIN);
@@ -164,6 +202,10 @@
 		}
 
 		const result = watsonWilliams(groups, pUpperFromF);
+		// Watson-Williams assumes concentrated von Mises groups; its F approximation
+		// is unreliable when any GROUP is tiny, independently of the total N.
+		const tiny = groups.filter((g) => g.length > 0 && g.length < 5).length;
+		result.smallGroups = tiny;
 		return { ...result, groupNames };
 	}
 
@@ -188,7 +230,13 @@
 		// in timed mode, where yIN holds amplitude values, not angles.
 		const timed = isTimeWired(argsIN);
 		const ww = argsIN.showWatsonWilliams && !timed ? evaluateWatsonWilliams(argsIN) : null;
-		const result = { ...rayleighRes, ww };
+		const warnings = rayleighSampleWarnings(rayleighRes.perY ?? {});
+		if (ww?.valid && ww.smallGroups > 0) {
+			warnings.push(
+				`Watson-Williams: ${ww.smallGroups} group${ww.smallGroups > 1 ? 's have' : ' has'} fewer than 5 angles. The F approximation assumes reasonably sized, concentrated groups, so treat this p-value cautiously.`
+			);
+		}
+		const result = { ...rayleighRes, ww, warnings };
 		if (rayleighRes.anyValid) writeMetrics(argsIN, result);
 		return [result, rayleighRes.anyValid];
 	}
@@ -216,7 +264,7 @@
 	if (p.args.unit === undefined) p.args.unit = 'radians';
 	if (p.args.period === undefined) p.args.period = 24;
 
-	let rayleighData = $state({ perY: {}, anyValid: false, yINs: [], ww: null });
+	let rayleighData = $state({ perY: {}, anyValid: false, yINs: [], ww: null, warnings: [] });
 	let mounted = $state(false);
 	let lastHash = '';
 
@@ -247,6 +295,8 @@
 
 	function recompute() {
 		[rayleighData, p.args.valid] = rayleigh(p.args);
+		// Surfaces on the canvas node too (CompactNode / TableProcessNode read tp.warnings).
+		p.warnings = rayleighData?.warnings ?? [];
 		lastHash = getHash;
 	}
 
@@ -393,14 +443,17 @@
 				{/each}
 			</tbody>
 		</table>
+		{#each rayleighData.warnings ?? [] as w (w)}
+			<p class="warn">{w}</p>
+		{/each}
 		<p class="rayleigh-hint">
 			R is the mean resultant length (0 = uniform, 1 = perfectly clustered). A small p rejects
 			uniformity: the angles have a preferred direction. Wire any port into <em>Compare groups</em>
 			or a boxplot.
 			{#if isWeighted}
 				With a time column wired, each Y value weights its timestamp's angle (amplitude-weighted
-				mean direction) — <em>Unit</em> is ignored, and <em>Acrophase</em> reports the weighted mean
-				time-of-peak in period units.
+				mean direction) — <em>Unit</em> is ignored, and <em>Acrophase</em> reports the weighted mean time-of-peak
+				in period units.
 			{/if}
 		</p>
 	</div>
@@ -449,6 +502,16 @@
 {/if}
 
 <style>
+	/* Same treatment as ChiSquared / GroupComparison so a warning reads the same
+	   wherever it appears. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.rayleigh-results {
 		margin-top: var(--space-2, 0.5rem);
 		overflow-x: auto;

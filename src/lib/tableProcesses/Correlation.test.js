@@ -9,7 +9,13 @@ vi.mock('$lib/components/inputs/AttributeSelect.svelte', () => ({ default: {} })
 import { correlation } from './Correlation.svelte';
 
 const OUT = { var_i: -1, var_j: -1, r: -1, pvalue: -1, n: -1 };
-const args = (over) => ({ yIN: [1, 2, 3], method: 'pearson', alpha: 0.05, out: { ...OUT }, ...over });
+const args = (over) => ({
+	yIN: [1, 2, 3],
+	method: 'pearson',
+	alpha: 0.05,
+	out: { ...OUT },
+	...over
+});
 
 beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);

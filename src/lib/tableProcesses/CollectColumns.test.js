@@ -37,15 +37,30 @@ describe('collectcolumns', () => {
 	it('collects data from each column in preview mode', () => {
 		mockColumns[1] = { getData: () => [1, 2, 3], type: 'number' };
 		mockColumns[2] = { getData: () => [4, 5, 6], type: 'number' };
-		const [result, valid] = collectcolumns({ colIds: [1, 2], out: {}, preProcesses: [], aggregates: [] });
+		const [result, valid] = collectcolumns({
+			colIds: [1, 2],
+			out: {},
+			preProcesses: [],
+			aggregates: []
+		});
 		expect(valid).toBe(true);
 		expect(result[1]).toEqual([1, 2, 3]);
 		expect(result[2]).toEqual([4, 5, 6]);
 	});
 
 	it('computes mean aggregate and writes to core.rawData', () => {
-		mockColumns[1] = { getData: () => [2, 4, 6], type: 'number', data: null, tableProcessGUId: null };
-		mockColumns[2] = { getData: () => [4, 8, 12], type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[1] = {
+			getData: () => [2, 4, 6],
+			type: 'number',
+			data: null,
+			tableProcessGUId: null
+		};
+		mockColumns[2] = {
+			getData: () => [4, 8, 12],
+			type: 'number',
+			data: null,
+			tableProcessGUId: null
+		};
 		// Output column stubs — getData returns the same data (no column-level processes)
 		mockColumns[10] = { getData: () => [2, 4, 6], data: null, type: null, tableProcessGUId: null };
 		mockColumns[11] = { getData: () => [4, 8, 12], data: null, type: null, tableProcessGUId: null };
@@ -109,7 +124,12 @@ describe('collectcolumns', () => {
 
 	it('excludes columns listed in excludedColIds from the aggregate', () => {
 		mockColumns[1] = { getData: () => [2, 2], type: 'number', data: null, tableProcessGUId: null };
-		mockColumns[2] = { getData: () => [100, 100], type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[2] = {
+			getData: () => [100, 100],
+			type: 'number',
+			data: null,
+			tableProcessGUId: null
+		};
 		mockColumns[20] = { data: null, type: null, tableProcessGUId: null };
 
 		collectcolumns({
@@ -124,7 +144,12 @@ describe('collectcolumns', () => {
 	});
 
 	it('skips null/NaN values when aggregating a row', () => {
-		mockColumns[1] = { getData: () => [2, NaN], type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[1] = {
+			getData: () => [2, NaN],
+			type: 'number',
+			data: null,
+			tableProcessGUId: null
+		};
 		mockColumns[2] = { getData: () => [4, 8], type: 'number', data: null, tableProcessGUId: null };
 		mockColumns[20] = { data: null, type: null, tableProcessGUId: null };
 
@@ -179,7 +204,12 @@ describe('collectcolumns', () => {
 
 	it('single column collection works', () => {
 		mockColumns[1] = { getData: () => [7], type: 'number' };
-		const [result, valid] = collectcolumns({ colIds: [1], out: {}, preProcesses: [], aggregates: [] });
+		const [result, valid] = collectcolumns({
+			colIds: [1],
+			out: {},
+			preProcesses: [],
+			aggregates: []
+		});
 		expect(valid).toBe(true);
 		expect(result[1]).toEqual([7]);
 	});

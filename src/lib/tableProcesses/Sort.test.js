@@ -79,7 +79,12 @@ describe('sortdata (single multi-input + sort-on picker)', () => {
 	it('sorts descending', () => {
 		mockColumns[1] = { type: 'number', getData: () => [3, 1, 2] };
 		mockColumns[100] = outCol();
-		const [result] = sortdata({ yIN: [1], sortOnId: 1, direction: 'desc', out: { sortedy_1: 100 } });
+		const [result] = sortdata({
+			yIN: [1],
+			sortOnId: 1,
+			direction: 'desc',
+			out: { sortedy_1: 100 }
+		});
 		expect(result.y_results[1]).toEqual([3, 2, 1]);
 	});
 

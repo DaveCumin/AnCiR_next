@@ -2,7 +2,10 @@
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { core } from '$lib/core/core.svelte';
-	import { min as arrayMin, max as arrayMax } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import {
+		min as arrayMin,
+		max as arrayMax
+	} from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { interpolate, knownPoints, makeGrid, isFiniteNum } from '$lib/utils/interpolate.js';
 
 	const displayName = 'Interpolate';
@@ -231,7 +234,10 @@
 		const headers = ['x', ...yIds.map((id) => getColumnById(Number(id))?.name ?? id)];
 		const rows = [];
 		for (let i = previewStart - 1; i < Math.min(previewStart - 1 + 8, result.x.length); i++) {
-			rows.push([fmt(result.x[i], true), ...yIds.map((id) => fmt(result.y_results[id]?.[i], false))]);
+			rows.push([
+				fmt(result.x[i], true),
+				...yIds.map((id) => fmt(result.y_results[id]?.[i], false))
+			]);
 		}
 		return { headers, rows };
 	});
@@ -276,8 +282,10 @@
 					<NumberWithUnits step="0.1" bind:value={p.args.step} onInput={recompute} />
 				</ControlInput>
 			</div>
-			<p class="hint">Grid spans the data range (min→max of X). Step is in X units{' '}
-				{xIN_col?.type === 'time' ? '(hours)' : ''}.</p>
+			<p class="hint">
+				Grid spans the data range (min→max of X). Step is in X units{' '}
+				{xIN_col?.type === 'time' ? '(hours)' : ''}.
+			</p>
 		{/if}
 	</div>
 </div>
@@ -289,11 +297,15 @@
 		<div class="tableProcess-label"><span>Preview ({result.mode})</span></div>
 		<table class="interp-preview">
 			<thead>
-				<tr>{#each previewRows.headers as h}<th>{h}</th>{/each}</tr>
+				<tr
+					>{#each previewRows.headers as h}<th>{h}</th>{/each}</tr
+				>
 			</thead>
 			<tbody>
 				{#each previewRows.rows as row}
-					<tr>{#each row as cell}<td>{cell}</td>{/each}</tr>
+					<tr
+						>{#each row as cell}<td>{cell}</td>{/each}</tr
+					>
 				{/each}
 			</tbody>
 		</table>

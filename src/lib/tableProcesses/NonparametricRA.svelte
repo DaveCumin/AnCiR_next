@@ -104,7 +104,49 @@
 				}
 			}
 		}
-		return { perY, binCentres, anyValid, yINs };
+		return { perY, binCentres, anyValid, yINs, warnings: npcraSampleWarnings(t, perY, opts) };
+	}
+
+	// IS and IV are DAY-based statistics, so the sample size that matters is the
+	// number of cycles recorded, not the number of rows. A week is the usual
+	// minimum quoted for a stable interdaily stability estimate (Van Someren et
+	// al. 1999; Witting et al. 1990 use 7+ days), because IS is essentially a
+	// between-day ANOVA and a handful of days leaves it very noisy.
+	const NPCRA_MIN_DAYS = 7;
+	// IV is a lag-1 difference over epochs; too few epochs per cycle and it is
+	// dominated by the binning rather than the behaviour.
+	const NPCRA_MIN_EPOCHS_PER_CYCLE = 8;
+
+	function npcraSampleWarnings(t, perY, opts) {
+		const warnings = [];
+		if (!t || !t.length || !Object.keys(perY).length) return warnings;
+
+		const finite = t.filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
+		if (finite.length < 2) return warnings;
+		const spanHours = Math.max(...finite) - Math.min(...finite);
+		const period = opts.period || 24;
+		const days = spanHours / period;
+
+		if (days < NPCRA_MIN_DAYS) {
+			warnings.push(
+				`Short recording: ${days.toFixed(1)} cycles of data (about ${days.toFixed(1)} days at a ${period} h period). Interdaily stability is a between-day statistic and is very noisy below ~${NPCRA_MIN_DAYS} days; IS and RA here should be read as indicative, not quantitative.`
+			);
+		}
+
+		const epochsPerCycle = period / (opts.epochHours || 1);
+		if (epochsPerCycle < NPCRA_MIN_EPOCHS_PER_CYCLE) {
+			warnings.push(
+				`Coarse epochs: only ${epochsPerCycle.toFixed(1)} bins per ${period} h cycle at a ${opts.epochHours} h epoch. Intradaily variability measures hour-to-hour fragmentation, so with this few bins it mostly reflects the binning rather than the behaviour — shorten the epoch if the data allow.`
+			);
+		}
+
+		// L5/M10 windows cannot both be estimated if they do not fit in the cycle.
+		if ((opts.mWindow ?? 10) + (opts.lWindow ?? 5) > period) {
+			warnings.push(
+				`The M (${opts.mWindow} h) and L (${opts.lWindow} h) windows together exceed the ${period} h period, so they necessarily overlap and RA is not interpretable as a peak-to-trough contrast.`
+			);
+		}
+		return warnings;
 	}
 
 	// Write the profile curve + scalar-metric columns for a committed TP.
@@ -216,6 +258,8 @@
 			const [data, valid] = await untrack(() => nonparametricRA(p.args));
 			if (token !== _calcToken) return;
 			npcraData = data;
+			// Surfaces on the canvas node too (CompactNode / TableProcessNode read tp.warnings).
+			p.warnings = data?.warnings ?? [];
 			p.args.valid = valid;
 			calculating = false;
 		}, 0);
@@ -356,6 +400,9 @@
 				{/each}
 			</tbody>
 		</table>
+		{#each npcraData?.warnings ?? [] as w (w)}
+			<p class="warn">{w}</p>
+		{/each}
 		<p class="npcra-hint">
 			IS = coupling to the day (0–1), IV = fragmentation (~0 rhythmic, ~2 noise), RA = relative
 			amplitude. Wire any output port into <em>Compare groups</em> or a boxplot to test across conditions.
@@ -366,6 +413,15 @@
 {/if}
 
 <style>
+	/* Matches ChiSquared / Rayleigh so a warning reads the same wherever it appears. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.npcra-results {
 		margin-top: var(--space-2, 0.5rem);
 		overflow-x: auto;

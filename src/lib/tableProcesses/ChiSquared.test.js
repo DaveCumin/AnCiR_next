@@ -172,3 +172,64 @@ describe("chisquared — Fisher's exact mode", () => {
 		expect(Number.isFinite(res.pvalue)).toBe(true);
 	});
 });
+
+describe('chisquared — NaN padding (reported crash)', () => {
+	// Two Enter Data columns padded with NaN. Before the fix this produced a 3x3
+	// table with a phantom "NaN" category, which (a) crashed the contingency-table
+	// render with each_key_duplicate `0_2` — two zero cells in the NaN row shared
+	// a key built from the cell VALUE — and (b) reported df 4 and a significant p
+	// for what is really a null 2x2 result.
+	beforeEach(() => {
+		mockColumns[20] = {
+			name: 'group',
+			getData: () => ['a', 'b', 'a', 'b', 'a', 'b', NaN, NaN, NaN]
+		};
+		mockColumns[21] = {
+			name: 'outcome',
+			getData: () => ['a', 'a', 'a', 'b', 'b', 'b', NaN, NaN, NaN]
+		};
+	});
+
+	it('builds a 2x2 table, not 3x3', () => {
+		const [res] = chisquared(args({ xIN: 20, yIN: 21 }));
+		expect(res.rowLabels).toEqual(['a', 'b']);
+		expect(res.colLabels).toEqual(['a', 'b']);
+		expect(res.table).toEqual([
+			[2, 1],
+			[1, 2]
+		]);
+	});
+
+	it('reports df 1 and a non-significant p', () => {
+		const [res] = chisquared(args({ xIN: 20, yIN: 21 }));
+		expect(res.df).toBe(1);
+		expect(res.pvalue).toBeCloseTo(1, 10);
+	});
+
+	it('produces no row whose cells could collide in a keyed each', () => {
+		// The render keys on the column index now, but a table with repeated
+		// counts in a row is the shape that used to crash — assert it renders as
+		// data without a phantom third row.
+		const [res] = chisquared(args({ xIN: 20, yIN: 21 }));
+		expect(res.table).toHaveLength(2);
+		expect(res.table.every((row) => row.length === 2)).toBe(true);
+	});
+
+	it('Fisher mode also works on the same NaN-padded data', () => {
+		// It previously refused with "needs exactly 2 categories (found 3 and 3)".
+		const [res, valid] = chisquared(args({ xIN: 20, yIN: 21, testType: 'fisher' }));
+		expect(valid).toBe(true);
+		expect(Number.isFinite(res.pvalue)).toBe(true);
+		expect(res.table).toEqual([
+			[2, 1],
+			[1, 2]
+		]);
+	});
+
+	it('goodness-of-fit ignores NaN cells too', () => {
+		mockColumns[22] = { name: 'cat', getData: () => ['x', 'x', 'y', NaN, NaN] };
+		const [res] = chisquared(args({ testType: 'goodness', xIN: 22 }));
+		expect(res.labels).toEqual(['x', 'y']);
+		expect(res.observed).toEqual([2, 1]);
+	});
+});

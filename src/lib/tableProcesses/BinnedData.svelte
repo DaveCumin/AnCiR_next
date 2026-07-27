@@ -497,7 +497,6 @@
 		<div class="control-input-horizontal">
 			{#if p.args.diffStep}
 				<ControlInput label="Step size (hrs)">
-
 					<NumberWithUnits
 						bind:value={p.args.stepSize}
 						onInput={getBinnedData}
@@ -521,29 +520,13 @@
 
 	{#if binnedData?.droppedCount > 0}
 		<div class="data-warning">
-			<p>⚠ {binnedData.droppedCount} value{binnedData.droppedCount === 1 ? '' : 's'} dropped (outside bin range)</p>
+			<p>
+				⚠ {binnedData.droppedCount} value{binnedData.droppedCount === 1 ? '' : 's'} dropped (outside bin
+				range)
+			</p>
 		</div>
 	{/if}
 </div>
-
-<style>
-	.cuts-summary {
-		font-size: 0.85em;
-		color: var(--color-text-muted);
-		margin: 0.2rem 0 0;
-	}
-	.data-warning {
-		margin-top: 0.4rem;
-		padding: 0.45rem 0.6rem;
-		border-radius: 0.375rem;
-		background: color-mix(in srgb, #f5c76a 18%, white);
-		border: 1px solid color-mix(in srgb, #d89c1b 35%, white);
-	}
-	.data-warning p {
-		margin: 0.15rem 0;
-		font-size: 0.92em;
-	}
-</style>
 
 <!-- Output / Preview -->
 <details open>
@@ -622,3 +605,22 @@
 		</div>
 	</div>
 </details>
+
+<style>
+	.cuts-summary {
+		font-size: 0.85em;
+		color: var(--color-text-muted);
+		margin: 0.2rem 0 0;
+	}
+	.data-warning {
+		margin-top: 0.4rem;
+		padding: 0.45rem 0.6rem;
+		border-radius: 0.375rem;
+		background: color-mix(in srgb, #f5c76a 18%, white);
+		border: 1px solid color-mix(in srgb, #d89c1b 35%, white);
+	}
+	.data-warning p {
+		margin: 0.15rem 0;
+		font-size: 0.92em;
+	}
+</style>

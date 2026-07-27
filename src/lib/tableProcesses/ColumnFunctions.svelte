@@ -204,8 +204,7 @@
 		</select>
 	</ControlInput>
 	{#if !hideInputs}
-		<ControlInput label="Columns">
-		</ControlInput>
+		<ControlInput label="Columns"></ControlInput>
 		<ColumnSelector
 			value={p.args.xsIN}
 			onChange={(val) => {

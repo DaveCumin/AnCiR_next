@@ -627,7 +627,4 @@
 		font-size: var(--font-sm);
 		font-weight: 600;
 	}
-
-
-
 </style>

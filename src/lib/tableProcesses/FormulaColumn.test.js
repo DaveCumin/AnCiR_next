@@ -69,7 +69,10 @@ describe('formulacolumn', () => {
 
 	it('returns invalid for a syntax-error expression', () => {
 		mockColumns[1] = { getData: () => [1, 2] };
-		const tokens = [{ type: 'col', id: 1 }, { type: 'text', value: ' @@@ invalid' }];
+		const tokens = [
+			{ type: 'col', id: 1 },
+			{ type: 'text', value: ' @@@ invalid' }
+		];
 		const [, valid] = formulacolumn({ tokens, out: preview });
 		expect(valid).toBe(false);
 	});
@@ -78,7 +81,10 @@ describe('formulacolumn', () => {
 
 	it('fails safe (no throw, invalid) when a referenced column is missing', () => {
 		// col 99 absent from mockColumns
-		const tokens = [{ type: 'col', id: 99 }, { type: 'text', value: ' + 1' }];
+		const tokens = [
+			{ type: 'col', id: 99 },
+			{ type: 'text', value: ' + 1' }
+		];
 		expect(() => formulacolumn({ tokens, out: preview })).not.toThrow();
 		const [, valid] = formulacolumn({ tokens, out: preview });
 		expect(valid).toBe(false);
@@ -97,7 +103,10 @@ describe('formulacolumn', () => {
 
 	it('divide-by-zero yields Infinity rather than throwing', () => {
 		mockColumns[1] = { getData: () => [1, 2, 3] };
-		const tokens = [{ type: 'col', id: 1 }, { type: 'text', value: ' / 0' }];
+		const tokens = [
+			{ type: 'col', id: 1 },
+			{ type: 'text', value: ' / 0' }
+		];
 		const [result, valid] = formulacolumn({ tokens, out: preview });
 		expect(valid).toBe(true);
 		expect(result).toEqual([Infinity, Infinity, Infinity]);
@@ -105,7 +114,11 @@ describe('formulacolumn', () => {
 
 	it('supports Math functions in the expression', () => {
 		mockColumns[1] = { getData: () => [1, 4, 9] };
-		const tokens = [{ type: 'text', value: 'Math.sqrt(' }, { type: 'col', id: 1 }, { type: 'text', value: ')' }];
+		const tokens = [
+			{ type: 'text', value: 'Math.sqrt(' },
+			{ type: 'col', id: 1 },
+			{ type: 'text', value: ')' }
+		];
 		const [result, valid] = formulacolumn({ tokens, out: preview });
 		expect(valid).toBe(true);
 		expect(result).toEqual([1, 2, 3]);
@@ -113,14 +126,20 @@ describe('formulacolumn', () => {
 
 	it('returns invalid for an empty source column', () => {
 		mockColumns[1] = { getData: () => [] };
-		const tokens = [{ type: 'col', id: 1 }, { type: 'text', value: ' + 1' }];
+		const tokens = [
+			{ type: 'col', id: 1 },
+			{ type: 'text', value: ' + 1' }
+		];
 		const [, valid] = formulacolumn({ tokens, out: preview });
 		expect(valid).toBe(false);
 	});
 
 	it('propagates NaN from NaN source cells', () => {
 		mockColumns[1] = { getData: () => [1, NaN, 3] };
-		const tokens = [{ type: 'col', id: 1 }, { type: 'text', value: ' + 1' }];
+		const tokens = [
+			{ type: 'col', id: 1 },
+			{ type: 'text', value: ' + 1' }
+		];
 		const [result, valid] = formulacolumn({ tokens, out: preview });
 		expect(valid).toBe(true);
 		expect(result[0]).toBe(2);
@@ -160,7 +179,10 @@ describe('formulacolumn', () => {
 		core.rawData.set.mockClear();
 		mockColumns[1] = { getData: () => [1, 2] };
 		mockColumns[5] = { data: null, type: null, tableProcessGUId: null };
-		const tokens = [{ type: 'col', id: 1 }, { type: 'text', value: ' + 10' }];
+		const tokens = [
+			{ type: 'col', id: 1 },
+			{ type: 'text', value: ' + 10' }
+		];
 
 		const [, valid] = formulacolumn({ tokens, out: { result: 5 } });
 		expect(valid).toBe(true);

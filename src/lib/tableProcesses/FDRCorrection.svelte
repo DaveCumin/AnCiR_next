@@ -15,6 +15,9 @@
 
 	const displayName = 'FDR Correction';
 
+	// Below this the correction is dominated by the family being tiny.
+	const SMALL_FAMILY = 5;
+
 	const defaults = new Map([
 		['xIN', { val: -1 }], // the column of raw p-values
 		['method', { val: 'benjamini-hochberg' }],
@@ -53,7 +56,21 @@
 		writeOut(argsIN.out?.padj, padj, 'number');
 		writeOut(argsIN.out?.reject, reject, 'number');
 
-		return [{ padj, reject, nTested, nSignificant }, nTested > 0];
+		const warnings = [];
+		// With a handful of tests the FDR machinery barely bites, and the user
+		// should see the family size rather than assume the column was the family.
+		if (nTested > 0 && nTested < SMALL_FAMILY) {
+			warnings.push(
+				`Only ${nTested} p-value${nTested > 1 ? 's' : ''} in this family. FDR control is an expected-proportion guarantee and means little across so few tests — and if these are part of a larger set of comparisons, correct them together (combine the columns first) rather than one column at a time.`
+			);
+		}
+		if (padj.length !== nTested) {
+			warnings.push(
+				`${padj.length - nTested} of ${padj.length} entries were not usable p-values and were excluded from the correction (they stay blank rather than counting towards n).`
+			);
+		}
+
+		return [{ padj, reject, nTested, nSignificant, warnings }, nTested > 0];
 	}
 
 	function writeOut(outId, values, type) {
@@ -95,6 +112,7 @@
 
 	let mounted = $state(false);
 	let summary = $state({ nTested: 0, nSignificant: 0 });
+	let warnings = $state([]);
 
 	let ownOutputIds = $derived(
 		[p.args.out?.padj, p.args.out?.reject].filter((id) => id != null && id >= 0)
@@ -112,6 +130,8 @@
 		const [res, valid] = fdrcorrection(p.args);
 		p.args.valid = valid;
 		summary = { nTested: res.nTested, nSignificant: res.nSignificant };
+		p.warnings = res.warnings ?? [];
+		warnings = res.warnings ?? [];
 	}
 
 	$effect(() => {
@@ -201,10 +221,23 @@
 	<p>Select a column of p-values to correct.</p>
 {/if}
 
+{#each warnings as w (w)}
+	<p class="warn">{w}</p>
+{/each}
+
 <style>
 	.tp-hint {
 		font-size: var(--font-size-small, 0.8rem);
 		color: var(--color-text-muted);
 		margin: var(--space-2) 0;
+	}
+	/* Matches the other analysis nodes. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
 	}
 </style>

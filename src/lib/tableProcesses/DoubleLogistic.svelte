@@ -58,6 +58,38 @@
 		}
 	};
 
+	// Self-contained sample-size check for this node. A fit needs meaningfully
+	// more usable points than it has free parameters before its R² and p-value
+	// mean anything; at n = nParams the model interpolates exactly and R² = 1.
+	function fitSampleWarnings(argsIN) {
+		const warnings = [];
+		const xId = argsIN.xIN;
+		const xCol = xId != null && xId !== -1 ? getColumnById(xId) : null;
+		const yIds = Array.isArray(argsIN.yIN) ? argsIN.yIN : [argsIN.yIN];
+		const yCol = yIds?.[0] != null && yIds[0] !== -1 ? getColumnById(yIds[0]) : null;
+		if (!xCol || !yCol) return warnings;
+		const xs = (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) ?? [];
+		const ys = yCol.getData() ?? [];
+		let nUsable = 0;
+		for (let i = 0; i < Math.min(xs.length, ys.length); i++) {
+			const a = Number(xs[i]);
+			const b = Number(ys[i]);
+			if (xs[i] != null && ys[i] != null && Number.isFinite(a) && Number.isFinite(b)) nUsable++;
+		}
+		const nParams = 6; // mesor, amplitude, onset, offset, k1, k2
+		if (!Number.isFinite(nUsable) || nUsable <= 0) return warnings;
+		if (nUsable <= nParams) {
+			warnings.push(
+				`Only ${nUsable} usable points for a double-logistic model with ${nParams} free parameters — the fit is interpolating, not estimating. R² here is meaningless.`
+			);
+		} else if (nUsable < nParams * 3) {
+			warnings.push(
+				`Small sample: ${nUsable} usable points for ${nParams} free parameters. A double-logistic fit has ~6 free parameters; with this few points onset/offset and the slopes are essentially unconstrained.`
+			);
+		}
+		return warnings;
+	}
+
 	export async function doublelogistic(argsIN) {
 		const xIN = argsIN.xIN;
 		const yINraw = argsIN.yIN;
@@ -163,7 +195,11 @@
 				// Residual = observed − model evaluated at every input x (full length).
 				const residId = argsIN.out['resid_' + yId];
 				if (residId != null && residId !== -1) {
-					const predicted = evaluateDoubleLogisticAtPoints(y_results[yId].fitResult.parameters, true, t);
+					const predicted = evaluateDoubleLogisticAtPoints(
+						y_results[yId].fitResult.parameters,
+						true,
+						t
+					);
 					writeResidual(residId, predicted, getColumnById(yId)?.getData() ?? [], t, processHash);
 				}
 			}
@@ -176,7 +212,10 @@
 			{ processHash: crypto.randomUUID() }
 		);
 
-		return [{ t: sharedT, outputXData, y_results, originTime_ms }, true];
+		return [
+			{ t: sharedT, outputXData, y_results, originTime_ms, warnings: fitSampleWarnings(argsIN) },
+			true
+		];
 	}
 </script>
 
@@ -311,6 +350,7 @@
 			if (token !== _calcToken) return; // re-check after await (analysis is async now)
 			dlData = data;
 			p.args.valid = valid;
+			p.warnings = data?.warnings ?? [];
 			calculating = false;
 			lastHash = getHash;
 		}, 0);
@@ -627,7 +667,8 @@
 					<button
 						class="tp-stat-btn"
 						onclick={() => plotResiduals(yId, yName)}
-						title="Scatter the residuals (observed − fitted) against the input x to check the fit">Plot residuals</button
+						title="Scatter the residuals (observed − fitted) against the input x to check the fit"
+						>Plot residuals</button
 					>
 				{/if}
 			</div>
@@ -724,7 +765,13 @@
 			class="tp-stat-btn"
 			onclick={() => {
 				const { headers, rows } = getDlogStatsData();
-				showStaticDataAsTable('Double logistic stats', headers, rows, getDlogStatsData, `tableprocess_${p.id}`);
+				showStaticDataAsTable(
+					'Double logistic stats',
+					headers,
+					rows,
+					getDlogStatsData,
+					`tableprocess_${p.id}`
+				);
 			}}>View stats</button
 		>
 		<button

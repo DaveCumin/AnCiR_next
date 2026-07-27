@@ -33,7 +33,17 @@ const preview = { cosinorx: -1, cosinory: -1 };
 
 describe('cosinor', () => {
 	it('returns invalid when inputs are -1', async () => {
-		const [, valid] = await cosinor({ xIN: -1, yIN: -1, Ncurves: 1, outputX: -1, out: preview, useFixedPeriod: false, fixedPeriod: 24, nHarmonics: 1, alpha: 0.05 });
+		const [, valid] = await cosinor({
+			xIN: -1,
+			yIN: -1,
+			Ncurves: 1,
+			outputX: -1,
+			out: preview,
+			useFixedPeriod: false,
+			fixedPeriod: 24,
+			nHarmonics: 1,
+			alpha: 0.05
+		});
 		expect(valid).toBe(false);
 	});
 
@@ -44,9 +54,15 @@ describe('cosinor', () => {
 		mockColumns[2] = { getData: () => y };
 
 		const [, valid] = await cosinor({
-			xIN: 1, yIN: 2, Ncurves: 1, outputX: -1,
-			out: preview, useFixedPeriod: false,
-			fixedPeriod: 24, nHarmonics: 1, alpha: 0.05
+			xIN: 1,
+			yIN: 2,
+			Ncurves: 1,
+			outputX: -1,
+			out: preview,
+			useFixedPeriod: false,
+			fixedPeriod: 24,
+			nHarmonics: 1,
+			alpha: 0.05
 		});
 		expect(valid).toBe(true);
 	});
@@ -58,9 +74,15 @@ describe('cosinor', () => {
 		mockColumns[2] = { getData: () => y };
 
 		const [, valid] = await cosinor({
-			xIN: 1, yIN: 2, Ncurves: 0, outputX: -1,
-			out: preview, useFixedPeriod: true,
-			fixedPeriod: 24, nHarmonics: 1, alpha: 0.05
+			xIN: 1,
+			yIN: 2,
+			Ncurves: 0,
+			outputX: -1,
+			out: preview,
+			useFixedPeriod: true,
+			fixedPeriod: 24,
+			nHarmonics: 1,
+			alpha: 0.05
 		});
 		expect(valid).toBe(true);
 	});

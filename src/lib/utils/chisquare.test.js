@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { chiSquareGoodnessOfFit, chiSquareIndependence, contingencyTable, pUpperFromChiSq } from './chisquare.js';
+import {
+	chiSquareGoodnessOfFit,
+	chiSquareIndependence,
+	contingencyTable,
+	pUpperFromChiSq,
+	isMissingCategory
+} from './chisquare.js';
 
 // Reference values from scipy 1.x: stats.chisquare / stats.chi2_contingency.
 describe('chiSquareGoodnessOfFit (scipy chisquare parity)', () => {
@@ -28,19 +34,38 @@ describe('chiSquareGoodnessOfFit (scipy chisquare parity)', () => {
 
 describe('chiSquareIndependence (scipy chi2_contingency parity)', () => {
 	it('matches scipy on a 2×2 table with Yates correction', () => {
-		const r = chiSquareIndependence([[10, 20], [30, 40]], true);
+		const r = chiSquareIndependence(
+			[
+				[10, 20],
+				[30, 40]
+			],
+			true
+		);
 		expect(r.statistic).toBeCloseTo(0.446429, 5);
 		expect(r.pvalue).toBeCloseTo(0.504036, 5);
 		expect(r.df).toBe(1);
 	});
 	it('matches scipy on a 3×3 table without correction', () => {
-		const r = chiSquareIndependence([[10, 20, 30], [6, 9, 17], [8, 12, 25]], false);
+		const r = chiSquareIndependence(
+			[
+				[10, 20, 30],
+				[6, 9, 17],
+				[8, 12, 25]
+			],
+			false
+		);
 		expect(r.statistic).toBeCloseTo(0.635065, 5);
 		expect(r.pvalue).toBeCloseTo(0.959089, 5);
 		expect(r.df).toBe(4);
 	});
 	it('computes the expected counts (row×col/total)', () => {
-		const r = chiSquareIndependence([[10, 20], [30, 40]], false);
+		const r = chiSquareIndependence(
+			[
+				[10, 20],
+				[30, 40]
+			],
+			false
+		);
 		// row sums 30,70; col sums 40,60; total 100 → expected[0][0] = 30*40/100 = 12
 		expect(r.expected[0][0]).toBeCloseTo(12, 9);
 	});
@@ -57,7 +82,10 @@ describe('contingencyTable', () => {
 		expect(rowLabels).toEqual(['a', 'b']);
 		expect(colLabels).toEqual(['x', 'y']);
 		// a: x×3 (i=0,4,8), y×2 (i=1,7); b: x×2 (i=2,5), y×2 (i=3,9); i=6 skipped (null row)
-		expect(table).toEqual([[3, 2], [2, 2]]);
+		expect(table).toEqual([
+			[3, 2],
+			[2, 2]
+		]);
 	});
 });
 
@@ -67,5 +95,61 @@ describe('pUpperFromChiSq', () => {
 	});
 	it('is NaN for non-positive df', () => {
 		expect(Number.isNaN(pUpperFromChiSq(4, 0))).toBe(true);
+	});
+});
+
+describe('contingencyTable — NaN is missing data, not a category', () => {
+	// Reported from the app: two Enter Data columns padded with NaN produced a
+	// 3x3 table with a phantom "NaN" row and column. Consequences were BOTH a
+	// crash (two zero cells in the NaN row collided in a keyed each) and, worse,
+	// a wrong answer: df 4 and p = 0.04 where the real 2x2 test gives df 1, p = 1.
+	const rowVar = ['a', 'b', 'a', 'b', 'a', 'b', NaN, NaN, NaN];
+	const colVar = ['a', 'a', 'a', 'b', 'b', 'b', NaN, NaN, NaN];
+
+	it('excludes NaN-padded rows entirely', () => {
+		const { rowLabels, colLabels, table } = contingencyTable(rowVar, colVar);
+		expect(rowLabels).toEqual(['a', 'b']);
+		expect(colLabels).toEqual(['a', 'b']);
+		expect(table).toEqual([
+			[2, 1],
+			[1, 2]
+		]);
+	});
+
+	it('gives the correct degrees of freedom (the bug reported df 4 for a 2x2)', () => {
+		const { table } = contingencyTable(rowVar, colVar);
+		expect(chiSquareIndependence(table, true).df).toBe(1);
+	});
+
+	it('no longer turns a null result into a false positive', () => {
+		const { table } = contingencyTable(rowVar, colVar);
+		expect(chiSquareIndependence(table, true).pvalue).toBeCloseTo(1, 10);
+	});
+
+	it('treats the string "NaN" as missing too', () => {
+		// The data grid renders an empty/invalid cell as the text NaN, so a value
+		// that stringifies to "NaN" is missing data in this app.
+		const { rowLabels } = contingencyTable(['a', 'b', 'NaN'], ['x', 'y', 'x']);
+		expect(rowLabels).toEqual(['a', 'b']);
+	});
+
+	it('still drops null and blank as before', () => {
+		const { rowLabels, colLabels } = contingencyTable(['a', null, '', 'b'], ['x', 'y', 'x', 'y']);
+		expect(rowLabels).toEqual(['a', 'b']);
+		expect(colLabels).toEqual(['x', 'y']);
+	});
+
+	it('does NOT drop legitimate categories that merely look numeric', () => {
+		const { rowLabels } = contingencyTable([0, 1, 0, 1], ['x', 'y', 'x', 'y']);
+		expect(rowLabels).toEqual(['0', '1']);
+	});
+});
+
+describe('isMissingCategory', () => {
+	it('flags the missing forms', () => {
+		for (const v of [null, undefined, '', NaN, 'NaN']) expect(isMissingCategory(v)).toBe(true);
+	});
+	it('keeps real categories, including 0 and false', () => {
+		for (const v of ['a', 0, 1, false, 'nan', ' ']) expect(isMissingCategory(v)).toBe(false);
 	});
 });

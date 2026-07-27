@@ -35,12 +35,20 @@
 		const levels = [...new Set(present.map(String))];
 		// Already numeric 0/1?
 		if (levels.every((l) => l === '0' || l === '1')) {
-			return { y: raw.map((v) => (v == null || v === '' ? NaN : Number(v))), positiveClass: '1', levels: ['0', '1'] };
+			return {
+				y: raw.map((v) => (v == null || v === '' ? NaN : Number(v))),
+				positiveClass: '1',
+				levels: ['0', '1']
+			};
 		}
 		if (levels.length !== 2) return { y: raw.map(() => NaN), positiveClass: null, levels };
 		const sorted = [...levels].sort();
 		const positiveClass = sorted[1];
-		return { y: raw.map((v) => (v == null || v === '' ? NaN : String(v) === positiveClass ? 1 : 0)), positiveClass, levels: sorted };
+		return {
+			y: raw.map((v) => (v == null || v === '' ? NaN : String(v) === positiveClass ? 1 : 0)),
+			positiveClass,
+			levels: sorted
+		};
 	}
 
 	export function logisticregression(argsIN) {
@@ -52,7 +60,9 @@
 		const { y, positiveClass, levels } = coerceBinary(outCol.getData() ?? []);
 		const warnings = [];
 		if (!positiveClass) {
-			warnings.push(`The outcome "${outCol.name}" is not binary (found ${levels.length} distinct values). Logistic regression needs exactly two outcome levels.`);
+			warnings.push(
+				`The outcome "${outCol.name}" is not binary (found ${levels.length} distinct values). Logistic regression needs exactly two outcome levels.`
+			);
 			return [{ rows: [], warnings, converged: false }, true];
 		}
 
@@ -61,13 +71,26 @@
 		const fit = logisticRegression(y, predictorCols, names);
 
 		if (!fit.coefficients.length) {
-			warnings.push('Too few complete rows to fit the model (need more observations than predictors + 1).');
+			warnings.push(
+				'Too few complete rows to fit the model (need more observations than predictors + 1).'
+			);
 			return [{ rows: [], warnings, converged: false }, true];
 		}
 		if (!fit.converged) {
-			warnings.push('The fit did not converge — often a sign of perfect or quasi-perfect separation (a predictor splits the outcome cleanly). Estimates and standard errors are unreliable.');
+			warnings.push(
+				'The fit did not converge — often a sign of perfect or quasi-perfect separation (a predictor splits the outcome cleanly). Estimates and standard errors are unreliable.'
+			);
 		}
-		const rows = fit.coefficients.map((c) => ({ term: c.name, coef: c.coef, se: c.se, z: c.z, pvalue: c.pvalue, oddsRatio: c.oddsRatio, ciLow: c.ciLow, ciHigh: c.ciHigh }));
+		const rows = fit.coefficients.map((c) => ({
+			term: c.name,
+			coef: c.coef,
+			se: c.se,
+			z: c.z,
+			pvalue: c.pvalue,
+			oddsRatio: c.oddsRatio,
+			ciLow: c.ciLow,
+			ciHigh: c.ciHigh
+		}));
 
 		const result = {
 			rows,
@@ -121,7 +144,14 @@
 		}
 	};
 
-	const fmt = (v) => (v == null || Number.isNaN(v) ? '—' : Math.abs(v) >= 1000 || (Math.abs(v) < 0.001 && v !== 0) ? Number(v).toExponential(2) : Number(v).toPrecision(4).replace(/\.?0+$/, ''));
+	const fmt = (v) =>
+		v == null || Number.isNaN(v)
+			? '—'
+			: Math.abs(v) >= 1000 || (Math.abs(v) < 0.001 && v !== 0)
+				? Number(v).toExponential(2)
+				: Number(v)
+						.toPrecision(4)
+						.replace(/\.?0+$/, '');
 </script>
 
 <script>
@@ -148,8 +178,9 @@
 	}
 
 	let getHash = $derived.by(() => {
-		let h = String(p.args.yIN >= 0 ? getColumnById(p.args.yIN)?.getDataHash ?? '' : '');
-		for (const id of p.args.xIN ?? []) h += ':' + (id >= 0 ? getColumnById(id)?.getDataHash ?? '' : '');
+		let h = String(p.args.yIN >= 0 ? (getColumnById(p.args.yIN)?.getDataHash ?? '') : '');
+		for (const id of p.args.xIN ?? [])
+			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
 	});
 	onMount(() => {
@@ -166,7 +197,8 @@
 					const col = new Column({});
 					col.name = key + '_' + p.id;
 					pushObj(col);
-					if (p.parent && Array.isArray(p.parent.columnRefs)) p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
+					if (p.parent && Array.isArray(p.parent.columnRefs))
+						p.parent.columnRefs = [col.id, ...p.parent.columnRefs];
 					p.args.out[key] = col.id;
 				}
 			}
@@ -212,7 +244,9 @@
 				</thead>
 				<tbody>
 					{#each result.rows as row (row.term)}
-						<tr title={`${row.term}: coef=${fmt(row.coef)} (SE ${fmt(row.se)}), OR=${fmt(row.oddsRatio)} [${fmt(row.ciLow)}, ${fmt(row.ciHigh)}], p=${fmt(row.pvalue)}`}>
+						<tr
+							title={`${row.term}: coef=${fmt(row.coef)} (SE ${fmt(row.se)}), OR=${fmt(row.oddsRatio)} [${fmt(row.ciLow)}, ${fmt(row.ciHigh)}], p=${fmt(row.pvalue)}`}
+						>
 							<td class="term">{row.term}</td>
 							<td class="num">{fmt(row.coef)}</td>
 							<td class="num">{fmt(row.oddsRatio)}</td>

@@ -28,7 +28,8 @@
 	import {
 		chiSquareGoodnessOfFit,
 		chiSquareIndependence,
-		contingencyTable
+		contingencyTable,
+		isMissingCategory
 	} from '$lib/utils/chisquare.js';
 	import { fisherExactFromColumns } from '$lib/utils/fisherExact.js';
 
@@ -166,7 +167,7 @@
 		} else {
 			const counts = new Map();
 			for (const v of raw) {
-				if (v == null || v === '') continue;
+				if (isMissingCategory(v)) continue; // NaN is missing, not a category
 				const k = String(v);
 				counts.set(k, (counts.get(k) ?? 0) + 1);
 			}
@@ -328,7 +329,10 @@
 						{#each result.table as row, r (result.rowLabels[r])}
 							<tr>
 								<td class="rowlab">{result.rowLabels[r]}</td>
-								{#each row as cell (cell + '_' + r)}<td class="num">{cell}</td>{/each}
+								<!-- Key on the COLUMN INDEX, not the cell value: two equal counts in
+								     one row (very common — a table with two zeros) produced the same
+								     key and crashed the render with each_key_duplicate. -->
+								{#each row as cell, c (c)}<td class="num">{cell}</td>{/each}
 							</tr>
 						{/each}
 					</tbody>

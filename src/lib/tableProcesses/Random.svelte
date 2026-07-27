@@ -178,7 +178,13 @@
 		{#if p.args.distribution === 'bernoulli'}
 			<!-- Bernoulli is a single-parameter draw: P(1). offset/multiply don't apply. -->
 			<ControlInput label="Probability (P of 1)">
-				<NumberWithUnits bind:value={p.args.probability} onInput={doRandom} step={0.05} min={0} max={1} />
+				<NumberWithUnits
+					bind:value={p.args.probability}
+					onInput={doRandom}
+					step={0.05}
+					min={0}
+					max={1}
+				/>
 			</ControlInput>
 		{:else}
 			<ControlInput label={offsetLabel}>

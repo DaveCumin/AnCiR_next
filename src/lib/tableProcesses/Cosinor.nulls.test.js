@@ -120,9 +120,7 @@ describe('cosinor with null rows (a Split segment)', () => {
 		// Third instance of the same trap, on the permuteTest path: the p-value was measured
 		// against a series padded with zeros, i.e. for a fit nobody made. A cosine this clean
 		// must come out significant; a fit dominated by a block of zeros need not.
-		const [r, valid] = await cosinor(
-			args(2, { permuteTest: true, permutations: 50, permSeed: 1 })
-		);
+		const [r, valid] = await cosinor(args(2, { permuteTest: true, permutations: 50, permSeed: 1 }));
 		expect(valid).toBe(true);
 		const p = r.y_results[2].pValue ?? r.y_results[2].fixedStats?.stats?.pValue;
 		// Not asserting an exact p (it's a permutation test) — only that the path ran and the

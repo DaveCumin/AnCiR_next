@@ -27,7 +27,12 @@ describe('thresholddata', () => {
 	it('binarises with >= (default), inclusive of the cutoff', () => {
 		mockColumns[1] = { type: 'number', getData: () => [-2, 0, 1, 5] };
 		mockColumns[9] = outCol();
-		const [result, valid] = thresholddata({ xIN: 1, threshold: 0, comparison: '>=', out: { binary: 9 } });
+		const [result, valid] = thresholddata({
+			xIN: 1,
+			threshold: 0,
+			comparison: '>=',
+			out: { binary: 9 }
+		});
 		expect(valid).toBe(true);
 		expect(result).toEqual([0, 1, 1, 1]); // 0 satisfies >= 0
 		expect(core.rawData.get(9)).toEqual([0, 1, 1, 1]);
@@ -55,7 +60,12 @@ describe('thresholddata', () => {
 	it('an unknown comparison falls back to >=', () => {
 		mockColumns[1] = { type: 'number', getData: () => [-1, 0, 1] };
 		mockColumns[9] = outCol();
-		const [result] = thresholddata({ xIN: 1, threshold: 0, comparison: 'nonsense', out: { binary: 9 } });
+		const [result] = thresholddata({
+			xIN: 1,
+			threshold: 0,
+			comparison: 'nonsense',
+			out: { binary: 9 }
+		});
 		expect(result).toEqual([0, 1, 1]);
 	});
 });

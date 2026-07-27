@@ -8,6 +8,7 @@
   import NoteBox from "$lib/components/NoteBox.svelte";
   import Formula from "$lib/components/Formula.svelte";
   import PeriodogramAnim from "$lib/animations/PeriodogramAnim.svelte";
+  import ChiSquaredAnim from "$lib/animations/ChiSquaredAnim.svelte";
 
   const contextEntries = [
     {
@@ -61,6 +62,46 @@
       the Lomb<sup class="cite"><a href="#ref-3">[3]</a></sup
       >-Scargle<sup class="cite"><a href="#ref-4">[4]</a></sup> periodogram
       instead.
+    </p>
+  </WarnBox>
+
+  <h4 class="sub-head">Where the &chi;&sup2; actually comes from</h4>
+  <p>
+    The name is not an analogy. Fold the record at a trial period and average
+    each bin across cycles. If there is no rhythm at that period, the folding
+    scrambles the cycles and every bin mean should sit near the grand mean,
+    differing only by sampling noise. Each bin mean has variance
+    &sigma;&sup2;/K for K cycles, so
+  </p>
+  <p style="text-align:center">
+    <strong>Q<sub>p</sub> = &Sigma;<sub>h</sub> (x̄<sub>h</sub> &minus; x̄)&sup2; &divide; (&sigma;&sup2;/K)</strong>
+  </p>
+  <p>
+    is a sum of <em>squared standardised deviations</em> &mdash; which is exactly
+    what a chi-squared statistic is, here with <strong>df = P &minus; 1</strong>
+    for P bins per cycle.
+  </p>
+  <p>
+    The animation runs it end to end. First the fold at 24 h, with every cycle
+    overlaid and each bin's departure from the grand mean added in. Then the
+    comparison against the &chi;&sup2; curve. Then the payoff: sweep the trial
+    period and watch Q<sub>p</sub> collapse wherever the fold scrambles the
+    cycles and leap where they align &mdash; <strong>drawing the periodogram
+    itself</strong>.
+  </p>
+  <ChiSquaredAnim stage="periodogram" />
+
+  <WarnBox title="Bin count is a user choice that moves the significance bar">
+    <p>
+      Watch the red threshold line in the final panel: it <strong>rises</strong>
+      with the trial period. That is because df = P &minus; 1, and more bins per
+      cycle means more degrees of freedom, which means a higher bar to clear.
+    </p>
+    <p>
+      So your choice of <strong>bin size</strong> changes the significance
+      threshold, not just the resolution. Finer bins buy detail and cost
+      sensitivity. Report the bin size alongside the period range and step; a
+      &ldquo;&chi;&sup2; periodogram&rdquo; without them is not reproducible.
     </p>
   </WarnBox>
 

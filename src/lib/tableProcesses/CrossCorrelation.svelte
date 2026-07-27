@@ -44,7 +44,9 @@
 		const warnings = [];
 		const minN = Math.min(...res.n.filter(Number.isFinite));
 		if (Number.isFinite(minN) && minN < 10) {
-			warnings.push(`The most-shifted lags overlap in only ${minN} points; their correlations are noisy. Reduce the max lag for steadier tails.`);
+			warnings.push(
+				`The most-shifted lags overlap in only ${minN} points; their correlations are noisy. Reduce the max lag for steadier tails.`
+			);
 		}
 
 		const result = {
@@ -89,7 +91,12 @@
 		}
 	};
 
-	const fmt = (v) => (v == null || Number.isNaN(v) ? '—' : Number(v).toPrecision(4).replace(/\.?0+$/, ''));
+	const fmt = (v) =>
+		v == null || Number.isNaN(v)
+			? '—'
+			: Number(v)
+					.toPrecision(4)
+					.replace(/\.?0+$/, '');
 </script>
 
 <script>
@@ -104,7 +111,12 @@
 
 	const getTableData = () => ({
 		headers: ['lag', 'correlation', 'pvalue', 'n'],
-		rows: (result.lag ?? []).map((_, i) => [result.lag[i], result.correlation[i], result.pvalue[i], result.n?.[i]])
+		rows: (result.lag ?? []).map((_, i) => [
+			result.lag[i],
+			result.correlation[i],
+			result.pvalue[i],
+			result.n?.[i]
+		])
 	});
 
 	function recompute() {
@@ -117,7 +129,8 @@
 	// Recompute when either input's DATA changes, not just the refs.
 	let getHash = $derived.by(() => {
 		let h = String(p.args.method) + ':' + String(p.args.maxLag);
-		for (const id of [p.args.xIN, p.args.yIN]) h += ':' + (id >= 0 ? getColumnById(id)?.getDataHash ?? '' : '');
+		for (const id of [p.args.xIN, p.args.yIN])
+			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
 	});
 	onMount(() => {

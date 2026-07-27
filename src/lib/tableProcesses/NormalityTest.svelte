@@ -29,10 +29,17 @@
 
 	export function normalitytest(argsIN) {
 		fillDefaults(argsIN, defaults);
-		const yIds = normalizeYInputs(argsIN.yIN).filter((id) => id != null && id !== -1 && getColumnById(id));
+		const yIds = normalizeYInputs(argsIN.yIN).filter(
+			(id) => id != null && id !== -1 && getColumnById(id)
+		);
 		if (yIds.length === 0) return [null, false];
 
-		const method = argsIN.method === 'jarquebera' ? 'jarquebera' : argsIN.method === 'dagostino' ? 'dagostino' : 'shapiro';
+		const method =
+			argsIN.method === 'jarquebera'
+				? 'jarquebera'
+				: argsIN.method === 'dagostino'
+					? 'dagostino'
+					: 'shapiro';
 		const alpha = Number(argsIN.alpha) || 0.05;
 
 		const warnings = [];
@@ -47,17 +54,25 @@
 		const minN = Math.min(...rows.map((r) => r.n).filter(Number.isFinite));
 		const maxN = Math.max(...rows.map((r) => r.n).filter(Number.isFinite));
 		if (method === 'dagostino' && Number.isFinite(minN) && minN < 20) {
-			warnings.push(`Small sample: D'Agostino's kurtosis term is unreliable below n ≈ 20 (smallest here is ${minN}). Consider Shapiro-Wilk or treat the p-value cautiously.`);
+			warnings.push(
+				`Small sample: D'Agostino's kurtosis term is unreliable below n ≈ 20 (smallest here is ${minN}). Consider Shapiro-Wilk or treat the p-value cautiously.`
+			);
 		}
 		if (method === 'shapiro' && Number.isFinite(maxN) && maxN > 5000) {
-			warnings.push(`Large sample: Shapiro-Wilk is only defined up to n = 5000 (largest here is ${maxN}) and becomes over-sensitive to trivial departures. Use D'Agostino for large n.`);
+			warnings.push(
+				`Large sample: Shapiro-Wilk is only defined up to n = 5000 (largest here is ${maxN}) and becomes over-sensitive to trivial departures. Use D'Agostino for large n.`
+			);
 		}
 		if (rows.some((r) => Number.isNaN(r.pvalue))) {
-			warnings.push('Some columns could not be tested (too few points, or no variance) and are reported as NaN.');
+			warnings.push(
+				'Some columns could not be tested (too few points, or no variance) and are reported as NaN.'
+			);
 		}
 		const nonNormal = rows.filter((r) => r.normal === 0).map((r) => r.variable);
 		if (nonNormal.length) {
-			warnings.push(`Non-normal at α=${alpha}: ${nonNormal.join(', ')}. Prefer rank / non-parametric methods for ${nonNormal.length === 1 ? 'this variable' : 'these variables'}.`);
+			warnings.push(
+				`Non-normal at α=${alpha}: ${nonNormal.join(', ')}. Prefer rank / non-parametric methods for ${nonNormal.length === 1 ? 'this variable' : 'these variables'}.`
+			);
 		}
 
 		// Write outputs from the func so doProcess() (MCP engine + demo generator) bakes real
@@ -90,8 +105,19 @@
 		}
 	};
 
-	const METHOD_LABEL = { shapiro: 'Shapiro-Wilk', dagostino: "D'Agostino-Pearson", jarquebera: 'Jarque-Bera' };
-	const fmt = (v) => (v == null || Number.isNaN(v) ? '—' : Math.abs(v) >= 1000 || (Math.abs(v) < 0.001 && v !== 0) ? Number(v).toExponential(2) : Number(v).toPrecision(4).replace(/\.?0+$/, ''));
+	const METHOD_LABEL = {
+		shapiro: 'Shapiro-Wilk',
+		dagostino: "D'Agostino-Pearson",
+		jarquebera: 'Jarque-Bera'
+	};
+	const fmt = (v) =>
+		v == null || Number.isNaN(v)
+			? '—'
+			: Math.abs(v) >= 1000 || (Math.abs(v) < 0.001 && v !== 0)
+				? Number(v).toExponential(2)
+				: Number(v)
+						.toPrecision(4)
+						.replace(/\.?0+$/, '');
 </script>
 
 <script>
@@ -119,7 +145,8 @@
 	// Recompute when input DATA changes (getDataHash), not just when the ref list changes.
 	let getHash = $derived.by(() => {
 		let h = String(p.args.method) + ':' + String(p.args.alpha);
-		for (const id of p.args.yIN ?? []) h += ':' + (id >= 0 ? getColumnById(id)?.getDataHash ?? '' : '');
+		for (const id of p.args.yIN ?? [])
+			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
 	});
 	onMount(() => {
@@ -155,14 +182,21 @@
 		<AttributeSelect
 			bind:value={p.args.method}
 			options={['shapiro', 'dagostino', 'jarquebera']}
-			optionsDisplay={['Shapiro-Wilk (3 ≤ n ≤ 5000)', "D'Agostino-Pearson (n ≥ 8)", 'Jarque-Bera (n ≥ 3)']}
+			optionsDisplay={[
+				'Shapiro-Wilk (3 ≤ n ≤ 5000)',
+				"D'Agostino-Pearson (n ≥ 8)",
+				'Jarque-Bera (n ≥ 3)'
+			]}
 		/>
 	</ControlInput>
 	<ControlInput label="Significance (α)">
 		<NumberWithUnits bind:value={p.args.alpha} min="0.0001" max="0.9999" step="0.01" />
 	</ControlInput>
 	{#if result.rows.length}
-		<p class="hint">{result.rows.length} variable{result.rows.length === 1 ? '' : 's'}, test: <strong>{METHOD_LABEL[result.methodUsed]}</strong>.</p>
+		<p class="hint">
+			{result.rows.length} variable{result.rows.length === 1 ? '' : 's'}, test:
+			<strong>{METHOD_LABEL[result.methodUsed]}</strong>.
+		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Results</summary>
 			<table class="d-table">
@@ -171,7 +205,9 @@
 				</thead>
 				<tbody>
 					{#each result.rows as row (row.variable)}
-						<tr title={`${row.variable}: statistic=${fmt(row.statistic)}, p=${fmt(row.pvalue)}, n=${row.n}`}>
+						<tr
+							title={`${row.variable}: statistic=${fmt(row.statistic)}, p=${fmt(row.pvalue)}, n=${row.n}`}
+						>
 							<td class="var">{row.variable}</td>
 							<td class="num">{fmt(row.statistic)}</td>
 							<td class="num">{fmt(row.pvalue)}</td>

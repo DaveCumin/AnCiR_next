@@ -9,7 +9,14 @@ import { crosscorrelation } from './CrossCorrelation.svelte';
 const X = [0, 1, 2, 1, 0, -1, -2, -1, 0, 1, 2, 1, 0, -1, -2, -1, 0, 1, 2, 1];
 const Y = [2, 1, 0, 1, 2, 1, 0, -1, -2, -1, 0, 1, 2, 1, 0, -1, -2, -1, 0, 1];
 
-const args = (over) => ({ xIN: 1, yIN: 2, maxLag: 4, method: 'pearson', out: { lag: -1, correlation: -1, pvalue: -1 }, ...over });
+const args = (over) => ({
+	xIN: 1,
+	yIN: 2,
+	maxLag: 4,
+	method: 'pearson',
+	out: { lag: -1, correlation: -1, pvalue: -1 },
+	...over
+});
 
 beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
