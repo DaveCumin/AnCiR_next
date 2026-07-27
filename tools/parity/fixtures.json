@@ -1386,7 +1386,8 @@
 				"r",
 				"pvalue",
 				"n"
-			]
+			],
+			"rFunc": "correlate"
 		},
 		{
 			"id": "util-correlate-spearman",
@@ -1453,7 +1454,8 @@
 				"r",
 				"pvalue",
 				"n"
-			]
+			],
+			"rFunc": "correlate"
 		},
 		{
 			"id": "util-describe-stats",
@@ -1496,7 +1498,8 @@
 				"iqr",
 				"skewness",
 				"kurtosis"
-			]
+			],
+			"rFunc": "describe_stats"
 		},
 		{
 			"id": "util-normality-shapiro",
@@ -1537,7 +1540,10 @@
 				"statistic",
 				"pvalue",
 				"n"
-			]
+			],
+			"rFunc": "shapiro_wilk",
+			"rTolerance": 1e-06,
+			"rToleranceWhy": "R's shapiro.test and the JS port both implement Royston AS R94 and agree on W to 2.8e-11; only the p-value's normalising transform differs, by 5.4e-8. That is a tail-approximation coefficient difference, not a disagreement about the statistic, so R is held to 1e-6 here while Python stays at the default."
 		},
 		{
 			"id": "util-normality-dagostino",
@@ -1578,7 +1584,8 @@
 				"statistic",
 				"pvalue",
 				"n"
-			]
+			],
+			"rFunc": "d_agostino"
 		},
 		{
 			"id": "util-normality-jarquebera",
@@ -1619,7 +1626,8 @@
 				"statistic",
 				"pvalue",
 				"n"
-			]
+			],
+			"rFunc": "jarque_bera"
 		},
 		{
 			"id": "util-crosscorrelation-pearson",
@@ -2248,7 +2256,8 @@
 			],
 			"compareArrays": [
 				"adjusted"
-			]
+			],
+			"rFunc": "p_adjust"
 		},
 		{
 			"id": "util-padjust-by",
@@ -2272,7 +2281,8 @@
 			],
 			"compareArrays": [
 				"adjusted"
-			]
+			],
+			"rFunc": "p_adjust"
 		},
 		{
 			"id": "util-padjust-holm",
@@ -2296,7 +2306,8 @@
 			],
 			"compareArrays": [
 				"adjusted"
-			]
+			],
+			"rFunc": "p_adjust"
 		},
 		{
 			"id": "util-padjust-bonferroni",
@@ -2320,7 +2331,8 @@
 			],
 			"compareArrays": [
 				"adjusted"
-			]
+			],
+			"rFunc": "p_adjust"
 		},
 		{
 			"id": "util-cwt-peak-scale",

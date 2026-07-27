@@ -1,8 +1,8 @@
-# JS ↔ Python parity harness
+# JS ↔ Python ↔ R parity harness
 
 Cross-checks the AnCiR **JavaScript engine** against the **Python port**
-(`ancir_runtime.py`): the same analysis, run on the same input in both languages,
-must produce the same numbers. This guards against the "two sources of truth"
+(`ancir_runtime.py`) and the **R port** (`ancir_runtime.R`): the same analysis, run on the
+same input in every language, must produce the same numbers. This guards against the "two sources of truth"
 drift risk — if someone changes a JS analysis without matching the Python port
 (or vice versa), a fixture starts failing.
 
@@ -17,7 +17,38 @@ parity through `ancir_to_python.py` is a separate, not-yet-built layer (see
 | `tools/parity/fixtures.json` | Language-neutral cases: process + args + input data + which outputs to compare. The single source both sides read. |
 | `src/lib/_parity/emitParity.svelte.test.js` | JS side. Runs each fixture through the real JS engine, writes `tools/parity/js_results.json`. Gated by `GEN_PARITY=1`. |
 | `tools/test_parity.py` | Python side. Runs each fixture through `ancir_runtime.py` and asserts it matches `js_results.json` within `tolerance`. |
-| `tools/parity/js_results.json` | Generated JS outputs (git-ignored; regenerate with the emitter). |
+| `tools/parity/js_results.json` | Generated JS **inputs and outputs** (git-ignored; regenerate with the emitter). |
+| `tools/test_parity.R` | R side. Runs each fixture tagged with an `rFunc` through `ancir_runtime.R` and asserts it matches `js_results.json`. |
+
+Run all three legs with `npm run parity` (or `parity:emit` / `parity:py` / `parity:r`
+individually).
+
+### Why an R leg was cheap to add
+
+`js_results.json` records each fixture's **inputs** as well as its outputs, so every language
+consumes the exact seeded inputs the JS emitter used rather than regenerating them. R
+therefore needs no port of mulberry32 or the rhythm generator, and the three languages cannot
+silently disagree about their *inputs* instead of their maths.
+
+A fixture opts into the R leg by gaining an `rFunc` key beside its `pyFunc`. Untagged
+fixtures are reported as "not claimed by the R port" rather than passing silently.
+
+### `rTolerance`
+
+A fixture may set `rTolerance` to loosen the comparison **for R alone**. Widening the shared
+`tolerance` would quietly weaken the Python leg too. The one use so far is Shapiro-Wilk:
+R's `shapiro.test` and the JS port both implement Royston AS R94 and agree on *W* to 2.8e-11,
+but the p-value's normalising transform differs by 5.4e-8 — a tail-approximation coefficient
+difference, not a disagreement about the statistic.
+
+### Runtime coverage guard
+
+`src/lib/_parity/runtimeCoverage.test.js` runs in the normal vitest suite (no Python or R
+toolchain needed) and checks each port against the JS analyses. It exists because
+`tools/check_tp_coverage.py` had always exited non-zero on a missing Python implementation
+but was wired into *nothing* — no npm script, no test, no CI step — so nobody ran it and the
+Python port silently fell eight analyses behind. Those eight are recorded in `PYTHON_GAPS`,
+which may shrink but never grow.
 
 ## Running it
 

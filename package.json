@@ -8,10 +8,10 @@
 		"dev": "vite dev",
 		"build": "node src/lib/utils/generateBuild.js && npm run mcp:schema && npm run manifest:gen && pnpm --filter chronobiology-handbook build && cp handbook/build/handbook.html static/handbook.html && vite build",
 		"postbuild": "npm run mcp:deploy && npm run deploy:ftp && pnpm --filter chronobiology-handbook run deploy:ftp",
-		"deploy:ftp": "node --env-file=.env -e \"const {execSync}=require('child_process'); const cmd=process.env.DEPLOY_COMMAND; if(cmd){console.log('🚀 Uploading to FTP...'); execSync(cmd,{stdio:'inherit',cwd:process.cwd()}); console.log('✅ FTP upload completed!');} else {console.warn('⚠️ No DEPLOY_COMMAND in .env');}\" || echo '⚠️ FTP upload skipped.'",
+		"deploy:ftp": "node --env-file=.env -e \"const {execSync}=require('child_process'); const cmd=process.env.DEPLOY_COMMAND; if(cmd){console.log('\ud83d\ude80 Uploading to FTP...'); execSync(cmd,{stdio:'inherit',cwd:process.cwd()}); console.log('\u2705 FTP upload completed!');} else {console.warn('\u26a0\ufe0f No DEPLOY_COMMAND in .env');}\" || echo '\u26a0\ufe0f FTP upload skipped.'",
 		"mcp:schema": "node scripts/mcpRelease.mjs schema",
 		"mcp:deploy": "node scripts/mcpRelease.mjs deploy",
-		"uploadall": "node --env-file=.env -e \"const {execSync}=require('child_process'); const cmd=process.env.FULL_DEPLOY_COMMAND; if(cmd){console.log('🚀 Uploading ALL FILES to FTP...'); execSync(cmd,{stdio:'inherit',cwd:process.cwd()}); console.log('✅ FTP upload completed!');} else {console.warn('⚠️ No FULL_DEPLOY_COMMAND in .env');}\" || echo '⚠️ FTP upload skipped.'",
+		"uploadall": "node --env-file=.env -e \"const {execSync}=require('child_process'); const cmd=process.env.FULL_DEPLOY_COMMAND; if(cmd){console.log('\ud83d\ude80 Uploading ALL FILES to FTP...'); execSync(cmd,{stdio:'inherit',cwd:process.cwd()}); console.log('\u2705 FTP upload completed!');} else {console.warn('\u26a0\ufe0f No FULL_DEPLOY_COMMAND in .env');}\" || echo '\u26a0\ufe0f FTP upload skipped.'",
 		"testbuild": "vitest run && node src/lib/utils/generateBuild.js && vite build",
 		"buildonly": "vite build",
 		"preview": "vite preview",
@@ -27,7 +27,11 @@
 		"test:all": "npm test && npm run test:e2e",
 		"build:handbook": "pnpm --filter chronobiology-handbook build",
 		"handbook:check": "pnpm --filter chronobiology-handbook check:manifest",
-		"manifest:gen": "node scripts/genManifest.mjs"
+		"manifest:gen": "node scripts/genManifest.mjs",
+		"parity:emit": "GEN_PARITY=1 vitest run src/lib/_parity/emitParity.svelte.test.js",
+		"parity:py": "tools/.venv/bin/python -m pytest tools/test_parity.py -q",
+		"parity:r": "Rscript tools/test_parity.R",
+		"parity": "npm run parity:emit && npm run parity:py && npm run parity:r"
 	},
 	"devDependencies": {
 		"@ancir/design": "workspace:*",
