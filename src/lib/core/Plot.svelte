@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { reportUnknownNode } from '$lib/core/unknownNode.js';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import { selectedColumnIds, setSelection } from '$lib/tableProcesses/columnSet.js';
@@ -156,7 +157,11 @@
 	// only rewrites the series when they actually differ.
 	function childSeriesSig(child) {
 		return (child.plot?.data ?? [])
-			.map((dp) => (dp?.column?.refId != null ? `c${dp.column.refId}` : `${dp?.x?.refId ?? -1}:${dp?.y?.refId ?? -1}`))
+			.map((dp) =>
+				dp?.column?.refId != null
+					? `c${dp.column.refId}`
+					: `${dp?.x?.refId ?? -1}:${dp?.y?.refId ?? -1}`
+			)
 			.join(',');
 	}
 
@@ -183,9 +188,7 @@
 			const row = Math.floor(i / nCols);
 			// Lay children out below the generator's position.
 			const x = snapToGrid((gen.x ?? 0) + col * stepX);
-			const y = snapToGrid(
-				(gen.y ?? 0) + height + PLOT_CHROME.y + 2 * padding + row * stepY
-			);
+			const y = snapToGrid((gen.y ?? 0) + height + PLOT_CHROME.y + 2 * padding + row * stepY);
 
 			let child = core.plots.find((p) => p.facetParent === gen.id && p.facetKey === key);
 			if (!child) {
@@ -559,13 +562,33 @@
 
 <script>
 	let { plot } = $props();
-	const Plot = appConsts.plotMap.get(plot.type).plot ?? null;
+	// Optional chaining: an unknown plot type used to throw a bare
+	// "Cannot read properties of undefined" from the render.
+	const Plot = appConsts.plotMap.get(plot.type)?.plot ?? null;
+	const unknownPlotMessage = Plot ? '' : reportUnknownNode('plot', plot.type);
 </script>
 
 <div>
-	<Plot bind:theData={plot} which="plot" />
+	{#if !Plot}
+		<p class="unknown-node">{unknownPlotMessage}</p>
+	{:else}
+		<Plot bind:theData={plot} which="plot" />
+	{/if}
 </div>
 
 <div>
-	<Plot theData={plot.plot} which="controls" />
+	{#if Plot}
+		<Plot theData={plot.plot} which="controls" />
+	{/if}
 </div>
+
+<style>
+	.unknown-node {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-2);
+		margin: 0;
+	}
+</style>

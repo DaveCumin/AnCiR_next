@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { appConsts, core } from '$lib/core/core.svelte';
+	import { reportUnknownNode } from '$lib/core/unknownNode.js';
 
 	let _counter = 0;
 	let _linkedGroupCounter = 0;
@@ -46,7 +47,9 @@
 
 			//return an error if the function doesn't exist
 			if (!appConsts.processMap.has(this.name)) {
-				this.args = { error: `no function ${this.name}` };
+				// Was marked in args but never logged, so a session referring to a
+				// removed column process looked merely inert.
+				this.args = { error: reportUnknownNode('column process', this.name) };
 				this.displayName = this.name;
 			} else {
 				const processInfo = appConsts.processMap.get(this.name);
@@ -57,10 +60,7 @@
 				// a palette-spawned Add passing only { inIN } would otherwise have no
 				// `value` and compute NaN.)
 				const defaults = Object.fromEntries(
-					Array.from(processInfo.defaults?.entries() ?? []).map(([key, value]) => [
-						key,
-						value.val
-					])
+					Array.from(processInfo.defaults?.entries() ?? []).map(([key, value]) => [key, value.val])
 				);
 				this.args = { ...defaults, ...(dataIN.args ?? {}) };
 			}
@@ -89,7 +89,10 @@
 		// Perform processes (add/filer etc)
 		doProcess(data) {
 			const proc = appConsts.processMap.get(this.name);
-			if (!proc) return data;
+			if (!proc) {
+				reportUnknownNode('column process', this.name);
+				return data;
+			}
 			return proc.func(data, this.args);
 		}
 

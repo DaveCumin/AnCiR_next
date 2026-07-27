@@ -3,6 +3,7 @@
 	import { removeColumnFromPlots, detachColumnSetFromPlot } from '$lib/core/Plot.svelte';
 	import { Column, removeColumn, getColumnById } from '$lib/core/Column.svelte';
 	import { setSelection } from '$lib/tableProcesses/columnSet.js';
+	import { reportUnknownNode } from '$lib/core/unknownNode.js';
 	let _tableprocessidCounter = 0;
 
 	// --- Live Column Set → table-process inputs --------------------------------
@@ -249,7 +250,12 @@
 
 		async doProcess() {
 			const entry = appConsts.tableProcessMap.get(this.name);
-			if (!entry?.func) return null;
+			if (!entry?.func) {
+				// Loudly, not silently: this used to return null with no output at
+				// all, which is indistinguishable from an unwired node.
+				reportUnknownNode('table process', this.name);
+				return null;
+			}
 			return await entry.func(this.args);
 		}
 
@@ -320,29 +326,41 @@
 {#if p}
 	{@const TheTableProcess = appConsts.tableProcessMap.get(p.name)?.component}
 	<TableProcessShell {p} onDelete={doDeleteTableProcess}>
-		{#if showChainSelector && chainablePrecedingTPs.length > 0}
-			<div class="chain-selector">
-				<label for="chain-{p.id}">Chain from:</label>
-				<select
-					id="chain-{p.id}"
-					value={p.refTPId ?? ''}
-					onchange={(e) => {
-						const val = e.target.value;
-						p.refTPId = val === '' ? null : Number(val);
-					}}
-				>
-					<option value="">— none —</option>
-					{#each chainablePrecedingTPs as upstream}
-						<option value={upstream.id}>{upstream.displayName} #{upstream.id}</option>
-					{/each}
-				</select>
-			</div>
+		{#if !TheTableProcess}
+			<p class="unknown-node">{reportUnknownNode('table process', p.name)}</p>
+		{:else}
+			{#if showChainSelector && chainablePrecedingTPs.length > 0}
+				<div class="chain-selector">
+					<label for="chain-{p.id}">Chain from:</label>
+					<select
+						id="chain-{p.id}"
+						value={p.refTPId ?? ''}
+						onchange={(e) => {
+							const val = e.target.value;
+							p.refTPId = val === '' ? null : Number(val);
+						}}
+					>
+						<option value="">— none —</option>
+						{#each chainablePrecedingTPs as upstream}
+							<option value={upstream.id}>{upstream.displayName} #{upstream.id}</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
+			<TheTableProcess bind:p hideInputs={p.refTPId != null} />
 		{/if}
-		<TheTableProcess bind:p hideInputs={p.refTPId != null} />
 	</TableProcessShell>
 {/if}
 
 <style>
+	.unknown-node {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-2);
+		margin: 0;
+	}
 	.chain-selector {
 		display: flex;
 		align-items: center;
