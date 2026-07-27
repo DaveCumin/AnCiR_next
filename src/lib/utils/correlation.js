@@ -99,8 +99,15 @@ export function correlationPValue(r, n) {
  * @returns {{r:number, pvalue:number, n:number, tiesX:boolean, tiesY:boolean}}
  */
 export function correlate(x, y, method = 'pearson') {
-	const res = method === 'spearman' ? spearman(x, y) : { ...pearson(x, y), tiesX: false, tiesY: false };
-	return { r: res.r, pvalue: correlationPValue(res.r, res.n), n: res.n, tiesX: res.tiesX, tiesY: res.tiesY };
+	const res =
+		method === 'spearman' ? spearman(x, y) : { ...pearson(x, y), tiesX: false, tiesY: false };
+	return {
+		r: res.r,
+		pvalue: correlationPValue(res.r, res.n),
+		n: res.n,
+		tiesX: res.tiesX,
+		tiesY: res.tiesY
+	};
 }
 
 /**
@@ -111,6 +118,87 @@ export function correlate(x, y, method = 'pearson') {
  * @param {'pearson'|'spearman'} method
  * @returns {Array<{i:number, j:number, var_i:string, var_j:string, r:number, pvalue:number, n:number, tiesX:boolean, tiesY:boolean}>}
  */
+/**
+ * Confidence interval for a correlation coefficient, via the Fisher z
+ * transform (Fisher 1921).
+ *
+ * r is bounded and its sampling distribution is skewed near +/-1, so an
+ * interval built directly on r would run off the end of the scale. atanh(r) is
+ * approximately normal with a variance that depends only on n, so the interval
+ * is built there and mapped back with tanh — which is why the result is
+ * asymmetric about r, and correctly so.
+ *
+ * For SPEARMAN the same transform is used with the Bonett & Wright (2000)
+ * standard error, sqrt((1 + r^2/2)/(n-3)), which accounts for the extra
+ * variability of a rank coefficient. Using the Pearson SE for Spearman gives an
+ * interval that is too narrow.
+ *
+ * @param {number} r
+ * @param {number} n number of complete pairs
+ * @param {string} [method='pearson'] 'pearson' | 'spearman'
+ * @param {number} [confidence=0.95]
+ * @returns {[number, number]} [low, high]; [NaN, NaN] when n is too small
+ */
+export function correlationCI(r, n, method = 'pearson', confidence = 0.95) {
+	if (!Number.isFinite(r) || !Number.isFinite(n) || n < 4) return [NaN, NaN];
+	// |r| = 1 gives an infinite z; the interval collapses onto the point.
+	if (Math.abs(r) >= 1) return [r, r];
+
+	const z = Math.atanh(r);
+	// Two-sided normal quantile. 1.959963985 at 95%; derived rather than hard-coded
+	// so other confidence levels work.
+	const zCrit = normalQuantile(1 - (1 - confidence) / 2);
+	const se =
+		method === 'spearman'
+			? Math.sqrt((1 + (r * r) / 2) / (n - 3)) // Bonett & Wright
+			: 1 / Math.sqrt(n - 3);
+	return [Math.tanh(z - zCrit * se), Math.tanh(z + zCrit * se)];
+}
+
+/**
+ * Standard-normal quantile (inverse CDF), Acklam's rational approximation.
+ * Accurate to ~1.15e-9 across the range, which is far beyond what a confidence
+ * bound needs. Kept local: the D13 policy reserves @stdlib for distributions
+ * the app leans on heavily, and this is one scalar in one place.
+ */
+function normalQuantile(p) {
+	if (!(p > 0 && p < 1)) return NaN;
+	const a = [
+		-3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.38357751867269e2,
+		-3.066479806614716e1, 2.506628277459239
+	];
+	const b = [
+		-5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2, 6.680131188771972e1,
+		-1.328068155288572e1
+	];
+	const c = [
+		-7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838, -2.549732539343734,
+		4.374664141464968, 2.938163982698783
+	];
+	const d = [7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996, 3.754408661907416];
+	const pLow = 0.02425;
+	let q;
+	let x;
+	if (p < pLow) {
+		q = Math.sqrt(-2 * Math.log(p));
+		x =
+			(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+			((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+	} else if (p <= 1 - pLow) {
+		q = p - 0.5;
+		const r2 = q * q;
+		x =
+			((((((a[0] * r2 + a[1]) * r2 + a[2]) * r2 + a[3]) * r2 + a[4]) * r2 + a[5]) * q) /
+			(((((b[0] * r2 + b[1]) * r2 + b[2]) * r2 + b[3]) * r2 + b[4]) * r2 + 1);
+	} else {
+		q = Math.sqrt(-2 * Math.log(1 - p));
+		x =
+			-(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+			((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+	}
+	return x;
+}
+
 export function correlationMatrix(columns, names, method = 'pearson') {
 	const cols = columns ?? [];
 	if (cols.length < 2) return [];
@@ -127,6 +215,8 @@ export function correlationMatrix(columns, names, method = 'pearson') {
 				r: c.r,
 				pvalue: c.pvalue,
 				n: c.n,
+				ciLow: correlationCI(c.r, c.n, method)[0],
+				ciHigh: correlationCI(c.r, c.n, method)[1],
 				tiesX: c.tiesX,
 				tiesY: c.tiesY
 			});

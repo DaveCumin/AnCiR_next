@@ -32,6 +32,7 @@ function mkProcess(over = {}) {
 		warnings: [],
 		args: {
 			testType: 'independence',
+			dataFormat: 'paired',
 			xIN: 1,
 			yIN: 2,
 			correction: true,
@@ -78,5 +79,57 @@ describe('ChiSquared contingency table renders without duplicate keys', () => {
 		expect(() =>
 			render(ChiSquared, { props: { p: mkProcess({ testType: 'fisher' }) } })
 		).not.toThrow();
+	});
+});
+
+describe('ChiSquared exposes the Input format control', () => {
+	// Reported: with a column of 10 and a column of 25 the node still showed a
+	// 10-row contingency table and there was no way to change it. The dataFormat
+	// LOGIC had landed but the selector had not — an edit script died before
+	// writing the markup — so the control existed only in the warning text.
+	// A pure-function test cannot see that; this mounts the component.
+	function twoGroups() {
+		mkCol(1, 'treated', [...Array(7).fill('arrhythmic'), ...Array(3).fill('rhythmic')]);
+		mkCol(2, 'control', [...Array(2).fill('arrhythmic'), ...Array(23).fill('rhythmic')]);
+	}
+
+	it('renders an Input format selector for the independence test', () => {
+		twoGroups();
+		const { container } = render(ChiSquared, { props: { p: mkProcess() } });
+		expect(container.textContent).toMatch(/Input format/);
+	});
+
+	it('renders it for Fisher mode as well', () => {
+		twoGroups();
+		const { container } = render(ChiSquared, {
+			props: { p: mkProcess({ testType: 'fisher' }) }
+		});
+		expect(container.textContent).toMatch(/Input format/);
+	});
+
+	it('hides it for goodness-of-fit, which takes a single column', () => {
+		mkCol(1, 'counts', [10, 10, 10, 10]);
+		const { container } = render(ChiSquared, {
+			props: { p: mkProcess({ testType: 'goodness' }) }
+		});
+		expect(container.textContent).not.toMatch(/Input format/);
+	});
+
+	it('offers both layouts as options', () => {
+		twoGroups();
+		const { container } = render(ChiSquared, { props: { p: mkProcess() } });
+		const opts = [...container.querySelectorAll('option')].map((o) => o.textContent.trim());
+		expect(opts).toContain('Paired (one row per subject)');
+		expect(opts).toContain('Two independent groups');
+	});
+
+	it('groups mode renders the full 35-observation table, not a 10-row one', () => {
+		twoGroups();
+		const { container } = render(ChiSquared, {
+			props: { p: mkProcess({ dataFormat: 'groups' }) }
+		});
+		const cells = [...container.querySelectorAll('tbody td.num')].map((c) => c.textContent.trim());
+		expect(cells).toEqual(['7', '3', '2', '23']);
+		expect(container.textContent).toMatch(/n = 35/);
 	});
 });

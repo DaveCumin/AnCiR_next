@@ -39,6 +39,14 @@
 				mesor: { val: -1 },
 				amplitude: { val: -1 },
 				acrophase: { val: -1 },
+				// Confidence intervals for the first harmonic's amplitude and acrophase.
+				// fitCosinorFixed already computes both (CI_A / CI_acrophase) and the
+				// panel shows them; these ports make them wireable. Fixed-period mode
+				// only — the free-period fit has no closed-form interval.
+				amplitude_ciLow: { val: -1 },
+				amplitude_ciHigh: { val: -1 },
+				acrophase_ciLow: { val: -1 },
+				acrophase_ciHigh: { val: -1 },
 				rsquared: { val: -1 },
 				pvalue: { val: -1 },
 				// Cheap add-on metrics derived from the fitted acrophase (one value
@@ -93,6 +101,10 @@
 				{ name: 'period', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'mesor', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'amplitude', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'amplitude_ciLow', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'amplitude_ciHigh', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'acrophase_ciLow', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'acrophase_ciHigh', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'acrophase', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'rsquared', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
@@ -345,6 +357,10 @@
 		const mesorArr = [];
 		const amplitudeArr = [];
 		const acrophaseArr = [];
+		const ampCiLowArr = [];
+		const ampCiHighArr = [];
+		const acroCiLowArr = [];
+		const acroCiHighArr = [];
 		const rsquaredArr = [];
 		const pvalueArr = [];
 		const bathyphaseArr = [];
@@ -384,6 +400,15 @@
 			periodArr.push(period);
 			mesorArr.push(mesor);
 			amplitudeArr.push(amplitude);
+			// CIs come from the fixed-period linear fit only; the free-period
+			// nonlinear fit has no closed-form interval, so those stay NaN.
+			const h1 = useFixed ? yr?.fixedStats?.harmonics?.[0] : null;
+			ampCiLowArr.push(h1?.CI_A?.[0] ?? NaN);
+			ampCiHighArr.push(h1?.CI_A?.[1] ?? NaN);
+			// The acrophase CI is reported on the same peak-time convention as
+			// `acrophase` itself, so the interval brackets the value shown.
+			acroCiLowArr.push(h1?.CI_acrophase ? wrapToPeriod(-h1.CI_acrophase[1], period) : NaN);
+			acroCiHighArr.push(h1?.CI_acrophase ? wrapToPeriod(-h1.CI_acrophase[0], period) : NaN);
 			// Report acrophase as the peak time wrapped into [0, period), matching the
 			// convention bathyphase/phase_angle already use.
 			acrophaseArr.push(wrapToPeriod(acrophase, period));
@@ -409,6 +434,10 @@
 		writeScalarOut('period', periodArr);
 		writeScalarOut('mesor', mesorArr);
 		writeScalarOut('amplitude', amplitudeArr);
+		writeScalarOut('amplitude_ciLow', ampCiLowArr);
+		writeScalarOut('amplitude_ciHigh', ampCiHighArr);
+		writeScalarOut('acrophase_ciLow', acroCiLowArr);
+		writeScalarOut('acrophase_ciHigh', acroCiHighArr);
 		writeScalarOut('acrophase', acrophaseArr);
 		writeScalarOut('rsquared', rsquaredArr);
 		writeScalarOut('pvalue', pvalueArr);

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "510": [
+    "522": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "511": [
+    "523": [
       50,
       60,
       70,
@@ -100,7 +100,7 @@
       30,
       40
     ],
-    "512": [
+    "524": [
       30,
       30,
       29,
@@ -153,9 +153,9 @@
   },
   "data": [
     {
-      "id": 510,
+      "id": 522,
       "name": "hour",
-      "data": 510,
+      "data": 522,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -164,9 +164,9 @@
       "processes": []
     },
     {
-      "id": 511,
+      "id": 523,
       "name": "signalA",
-      "data": 511,
+      "data": 523,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -175,9 +175,9 @@
       "processes": []
     },
     {
-      "id": 512,
+      "id": 524,
       "name": "signalB",
-      "data": 512,
+      "data": 524,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -188,7 +188,7 @@
   ],
   "plots": [
     {
-      "id": 75,
+      "id": 76,
       "name": "Signal table",
       "x": 60,
       "y": 60,
@@ -204,9 +204,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          510,
-          511,
-          512
+          522,
+          523,
+          524
         ],
         "showCol": [
           true,
@@ -226,7 +226,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_33",
+      "id": "note_34",
       "text": "Renders selected columns (or their summary statistics) as a plain data table for inspection and export. Use it to read exact values, sanity-check a transform's output, or present computed metrics. The demo shows the chosen columns laid out in rows and columns.",
       "x": 40,
       "y": 24,
@@ -238,23 +238,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_510": {
+    "data_522": {
       "x": 60,
       "y": 314
     },
-    "data_511": {
+    "data_523": {
       "x": 60,
       "y": 814
     },
-    "data_512": {
+    "data_524": {
       "x": 60,
       "y": 1314
     },
-    "note_33": {
+    "note_34": {
       "x": 40,
       "y": 24
     },
-    "plot_75": {
+    "plot_76": {
       "x": 820,
       "y": 314
     }
@@ -316,5 +316,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

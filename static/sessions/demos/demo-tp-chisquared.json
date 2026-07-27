@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "687": [
+    "699": [
       "ctrl",
       "drug",
       "ctrl",
@@ -92,7 +92,7 @@
       "ctrl",
       "drug"
     ],
-    "688": [
+    "700": [
       "responder",
       "non-responder",
       "non-responder",
@@ -184,21 +184,24 @@
       "non-responder",
       "non-responder"
     ],
-    "689": [
+    "701": [
       0
     ],
-    "690": [
+    "702": [
       1
     ],
-    "691": [
+    "703": [
       1
+    ],
+    "704": [
+      0
     ]
   },
   "data": [
     {
-      "id": 687,
+      "id": 699,
       "name": "Chi-squared test input 1",
-      "data": 687,
+      "data": 699,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -207,9 +210,9 @@
       "processes": []
     },
     {
-      "id": 688,
+      "id": 700,
       "name": "Chi-squared test input 2",
-      "data": 688,
+      "data": 700,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -218,33 +221,44 @@
       "processes": []
     },
     {
-      "id": 689,
-      "name": "statistic_63",
-      "data": 689,
+      "id": 701,
+      "name": "statistic_65",
+      "data": 701,
       "type": "number",
-      "tableProcessGUId": "64e6dc0e-72be-4542-8000-d91b6c2295fb",
+      "tableProcessGUId": "be3d6c21-89a8-4696-8824-9cd2047fc8f5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 690,
-      "name": "pvalue_63",
-      "data": 690,
+      "id": 702,
+      "name": "pvalue_65",
+      "data": 702,
       "type": "number",
-      "tableProcessGUId": "64e6dc0e-72be-4542-8000-d91b6c2295fb",
+      "tableProcessGUId": "be3d6c21-89a8-4696-8824-9cd2047fc8f5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 691,
-      "name": "df_63",
-      "data": 691,
+      "id": 703,
+      "name": "df_65",
+      "data": 703,
       "type": "number",
-      "tableProcessGUId": "64e6dc0e-72be-4542-8000-d91b6c2295fb",
+      "tableProcessGUId": "be3d6c21-89a8-4696-8824-9cd2047fc8f5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 704,
+      "name": "effectSize_65",
+      "data": 704,
+      "type": "number",
+      "tableProcessGUId": "be3d6c21-89a8-4696-8824-9cd2047fc8f5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -253,7 +267,7 @@
   ],
   "plots": [
     {
-      "id": 116,
+      "id": 117,
       "name": "Chi-squared test result",
       "x": 60,
       "y": 60,
@@ -269,13 +283,15 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          687,
-          688,
-          689,
-          690,
-          691
+          699,
+          700,
+          701,
+          702,
+          703,
+          704
         ],
         "showCol": [
+          true,
           true,
           true,
           true,
@@ -291,18 +307,20 @@
   ],
   "tableProcesses": [
     {
-      "id": 63,
+      "id": 65,
       "name": "ChiSquared",
       "displayName": "Chi-squared test",
       "args": {
         "testType": "independence",
-        "xIN": 687,
-        "yIN": 688,
+        "dataFormat": "paired",
+        "xIN": 699,
+        "yIN": 700,
         "correction": true,
         "out": {
-          "statistic": 689,
-          "pvalue": 690,
-          "df": 691
+          "statistic": 701,
+          "pvalue": 702,
+          "df": 703,
+          "effectSize": 704
         },
         "alternative": "two-sided",
         "valid": false
@@ -315,7 +333,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_60",
+      "id": "note_61",
       "text": "Pearson's chi-squared test in two modes. Independence: cross-tabulate two categorical columns into a contingency table and test whether the two variables are associated (Yates' continuity correction is applied to 2×2 tables). Goodness-of-fit: take one column and test whether its category counts (or the raw counts, if numeric) depart from a uniform expectation. Reports the statistic, degrees of freedom and p-value, and shows the table in the node. It warns when expected cell counts fall below 5, where the χ² approximation breaks down (prefer Fisher's exact test). Matches scipy (chisquare / chi2_contingency). Pearson 1900.",
       "x": 40,
       "y": 24,
@@ -327,23 +345,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_687": {
+    "data_699": {
       "x": 60,
       "y": 314
     },
-    "data_688": {
+    "data_700": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_63": {
+    "tableprocess_65": {
       "x": 440,
       "y": 314
     },
-    "plot_116": {
+    "plot_117": {
       "x": 820,
       "y": 314
     },
-    "note_60": {
+    "note_61": {
       "x": 40,
       "y": 24
     }
@@ -405,5 +423,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

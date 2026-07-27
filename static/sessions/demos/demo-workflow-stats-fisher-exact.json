@@ -50,13 +50,19 @@
       1
     ],
     "238": [
-      null
+      0.6708203932499369
     ],
     "239": [
-      0.015220074043603454
+      null
     ],
     "240": [
+      0.015220074043603454
+    ],
+    "241": [
       null
+    ],
+    "242": [
+      28
     ]
   },
   "data": [
@@ -87,7 +93,7 @@
       "name": "statistic_19",
       "data": 235,
       "type": "number",
-      "tableProcessGUId": "ff4b857b-5369-4830-9d1a-dd0f1a7d1784",
+      "tableProcessGUId": "765bb724-dd9b-4ebd-ad20-5d9d223b97f4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -98,7 +104,7 @@
       "name": "pvalue_19",
       "data": 236,
       "type": "number",
-      "tableProcessGUId": "ff4b857b-5369-4830-9d1a-dd0f1a7d1784",
+      "tableProcessGUId": "765bb724-dd9b-4ebd-ad20-5d9d223b97f4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -109,7 +115,7 @@
       "name": "df_19",
       "data": 237,
       "type": "number",
-      "tableProcessGUId": "ff4b857b-5369-4830-9d1a-dd0f1a7d1784",
+      "tableProcessGUId": "765bb724-dd9b-4ebd-ad20-5d9d223b97f4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -117,10 +123,10 @@
     },
     {
       "id": 238,
-      "name": "statistic_20",
+      "name": "effectSize_19",
       "data": 238,
       "type": "number",
-      "tableProcessGUId": "943c8407-7017-437b-86d9-ea0b46c2d5cd",
+      "tableProcessGUId": "765bb724-dd9b-4ebd-ad20-5d9d223b97f4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -128,10 +134,10 @@
     },
     {
       "id": 239,
-      "name": "pvalue_20",
+      "name": "statistic_20",
       "data": 239,
       "type": "number",
-      "tableProcessGUId": "943c8407-7017-437b-86d9-ea0b46c2d5cd",
+      "tableProcessGUId": "39e982a3-46b3-45f0-9747-11158ee20ea0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -139,10 +145,32 @@
     },
     {
       "id": 240,
-      "name": "df_20",
+      "name": "pvalue_20",
       "data": 240,
       "type": "number",
-      "tableProcessGUId": "943c8407-7017-437b-86d9-ea0b46c2d5cd",
+      "tableProcessGUId": "39e982a3-46b3-45f0-9747-11158ee20ea0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 241,
+      "name": "df_20",
+      "data": 241,
+      "type": "number",
+      "tableProcessGUId": "39e982a3-46b3-45f0-9747-11158ee20ea0",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 242,
+      "name": "effectSize_20",
+      "data": 242,
+      "type": "number",
+      "tableProcessGUId": "39e982a3-46b3-45f0-9747-11158ee20ea0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -168,7 +196,7 @@
       "plot": {
         "columnRefs": [
           236,
-          239
+          240
         ],
         "showCol": [
           true,
@@ -188,13 +216,15 @@
       "displayName": "Chi-squared (approximate)",
       "args": {
         "testType": "independence",
+        "dataFormat": "paired",
         "xIN": 233,
         "yIN": 234,
         "correction": true,
         "out": {
           "statistic": 235,
           "pvalue": 236,
-          "df": 237
+          "df": 237,
+          "effectSize": 238
         },
         "alternative": "two-sided",
         "valid": false
@@ -207,13 +237,15 @@
       "displayName": "Fisher's exact (exact)",
       "args": {
         "testType": "fisher",
+        "dataFormat": "paired",
         "xIN": 233,
         "yIN": 234,
         "alternative": "two-sided",
         "out": {
-          "statistic": 238,
-          "pvalue": 239,
-          "df": 240
+          "statistic": 239,
+          "pvalue": 240,
+          "df": 241,
+          "effectSize": 242
         },
         "correction": true,
         "valid": false
@@ -320,5 +352,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

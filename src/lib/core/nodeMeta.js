@@ -121,7 +121,7 @@ const meta = new Map([
 			family: 'Analysis',
 			nodeIcon: 'node-surrogate',
 			description:
-				'Test rhythm strength against a surrogate null that PRESERVES the series\' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked.'
+				"Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked."
 		}
 	],
 	[
@@ -273,7 +273,8 @@ const meta = new Map([
 		{
 			family: 'Analysis',
 			nodeIcon: 'table',
-			description: 'Per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis).'
+			description:
+				'Per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis).'
 		}
 	],
 	[
@@ -291,7 +292,7 @@ const meta = new Map([
 			family: 'Analysis',
 			nodeIcon: 'group-comp',
 			description:
-				'Chi-squared test: independence of two categorical variables (contingency table), or goodness-of-fit of counts against a uniform expectation.'
+				"Tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or Fisher's exact test for small 2x2 tables. Reports an effect size (Cramer's V, Cohen's w, or the odds ratio with a confidence interval) alongside the p-value."
 		}
 	],
 	[
@@ -484,7 +485,8 @@ const meta = new Map([
 			// computed download data); it has no meaning added blank from the palette,
 			// so keep it out of the palette. The Table node covers manual tables.
 			hideFromPalette: true,
-			description: "Inspector for a plot's computed data (bins, spectra, fitted values); opened from a plot's View data action."
+			description:
+				"Inspector for a plot's computed data (bins, spectra, fitted values); opened from a plot's View data action."
 		}
 	],
 	[

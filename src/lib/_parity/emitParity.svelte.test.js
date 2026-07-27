@@ -43,14 +43,14 @@ import {
 	phaseAngleOfEntrainment,
 	circadianFunctionIndex
 } from '$lib/utils/cosinorAddons.js';
-import { correlate } from '$lib/utils/correlation.js';
+import { correlate, correlationCI } from '$lib/utils/correlation.js';
 import { describeStats } from '$lib/utils/describeStats.js';
 import { shapiroWilk, dAgostino, jarqueBera } from '$lib/utils/normality.js';
 import { crossCorrelation } from '$lib/utils/crossCorrelation.js';
 import { chiSquareGoodnessOfFit, chiSquareIndependence } from '$lib/utils/chisquare.js';
 import { logisticRegression } from '$lib/utils/logistic.js';
 import { pAdjust } from '$lib/utils/pAdjust.js';
-import { fisherExact } from '$lib/utils/fisherExact.js';
+import { fisherExact, conditionalOddsRatio, oddsRatioCI } from '$lib/utils/fisherExact.js';
 import { cwt } from '$lib/utils/cwt.js';
 import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
 
@@ -105,6 +105,11 @@ const PURE_UTIL_FNS = {
 	phaseAngleOfEntrainment,
 	circadianFunctionIndex,
 	correlate,
+	// values = [r, n]; the harness passes arrays, so unpack here.
+	correlationCI: (values, method, confidence) => {
+		const [lo, hi] = correlationCI(values[0], values[1], method, confidence);
+		return { ciLow: lo, ciHigh: hi };
+	},
 	describeStats: describeStatsAdapter,
 	shapiroWilk,
 	dAgostino,
@@ -116,7 +121,11 @@ const PURE_UTIL_FNS = {
 	pAdjust: pAdjustAdapter,
 	cwtPeakScaleIndex: cwtPeakScaleIndexAdapter,
 	movingWindows: movingWindowsAdapter,
-	fisherExact
+	fisherExact,
+	fisherConditionalOR: (table, confidence) => {
+		const ci = oddsRatioCI(table, confidence);
+		return { conditionalOddsRatio: conditionalOddsRatio(table), ciLow: ci[0], ciHigh: ci[1] };
+	}
 };
 
 /**

@@ -92,6 +92,50 @@ export function contingencyTable(rowVar, colVar) {
 }
 
 /**
+ * Build a contingency table from INDEPENDENT GROUPS — one column per group,
+ * each holding that group's own outcome values.
+ *
+ * This is the other natural way categorical data arrives, and it is NOT
+ * interchangeable with contingencyTable(). There, each ROW is one subject with
+ * two variables recorded, so the columns must be the same length and are paired
+ * by index. Here the columns are separate samples that have no row-wise
+ * relationship at all and are usually different lengths — "7 of 10 responded vs
+ * 2 of 25" is two columns of 10 and 25.
+ *
+ * Feeding independent groups to the paired builder silently produces nonsense:
+ * it pairs group-A row i with group-B row i, truncates to the shorter column,
+ * and cross-tabulates two unrelated series. On the 7/10 vs 2/25 example that
+ * reports p = 0.86 (n = 10) where the correct answer is p = 0.0008 (n = 35).
+ *
+ * Groups become the ROWS of the table; the union of their categories (in
+ * first-seen order across the groups) becomes the columns.
+ *
+ * @param {Array<Array<any>>} columns one array of values per group
+ * @param {string[]} [names] row labels; defaults to "Group 1", "Group 2", …
+ * @returns {{rowLabels:string[], colLabels:string[], table:number[][]}}
+ */
+export function groupsToTable(columns, names = []) {
+	const groups = (columns ?? []).filter(Array.isArray);
+	if (groups.length < 2) return { rowLabels: [], colLabels: [], table: [] };
+
+	const colLabels = [];
+	const perGroup = groups.map((vals) => {
+		const counts = new Map();
+		for (const v of vals) {
+			if (isMissingCategory(v)) continue;
+			const k = String(v);
+			if (!colLabels.includes(k)) colLabels.push(k);
+			counts.set(k, (counts.get(k) ?? 0) + 1);
+		}
+		return counts;
+	});
+
+	const rowLabels = groups.map((_, i) => names[i] ?? `Group ${i + 1}`);
+	const table = perGroup.map((counts) => colLabels.map((c) => counts.get(c) ?? 0));
+	return { rowLabels, colLabels, table };
+}
+
+/**
  * Pearson χ² test of independence on a contingency table.
  * @param {number[][]} table  r×c observed counts
  * @param {boolean} [correction]  Yates' continuity correction (only applied to 2×2, as in scipy)

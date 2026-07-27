@@ -1,0 +1,357 @@
+{
+  "rawData": {
+    "243": [
+      "arrhythmic",
+      "arrhythmic",
+      "arrhythmic",
+      "arrhythmic",
+      "arrhythmic",
+      "arrhythmic",
+      "arrhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic"
+    ],
+    "244": [
+      "arrhythmic",
+      "arrhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic",
+      "rhythmic"
+    ],
+    "245": [
+      11.311431623931625
+    ],
+    "246": [
+      0.0007703135639254288
+    ],
+    "247": [
+      1
+    ],
+    "248": [
+      0.6408461287109103
+    ],
+    "249": [
+      null
+    ],
+    "250": [
+      0.0005259359280166693
+    ],
+    "251": [
+      null
+    ],
+    "252": [
+      26.833333333333332
+    ]
+  },
+  "data": [
+    {
+      "id": 243,
+      "name": "treated (n=10)",
+      "data": 243,
+      "type": "category",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 244,
+      "name": "control (n=25)",
+      "data": 244,
+      "type": "category",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 245,
+      "name": "statistic_21",
+      "data": 245,
+      "type": "number",
+      "tableProcessGUId": "93f67697-5813-42a9-8153-7b523e86994d",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 246,
+      "name": "pvalue_21",
+      "data": 246,
+      "type": "number",
+      "tableProcessGUId": "93f67697-5813-42a9-8153-7b523e86994d",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 247,
+      "name": "df_21",
+      "data": 247,
+      "type": "number",
+      "tableProcessGUId": "93f67697-5813-42a9-8153-7b523e86994d",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 248,
+      "name": "effectSize_21",
+      "data": 248,
+      "type": "number",
+      "tableProcessGUId": "93f67697-5813-42a9-8153-7b523e86994d",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 249,
+      "name": "statistic_22",
+      "data": 249,
+      "type": "number",
+      "tableProcessGUId": "5243f698-dc13-4f3f-9016-62da0f9187fc",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 250,
+      "name": "pvalue_22",
+      "data": 250,
+      "type": "number",
+      "tableProcessGUId": "5243f698-dc13-4f3f-9016-62da0f9187fc",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 251,
+      "name": "df_22",
+      "data": 251,
+      "type": "number",
+      "tableProcessGUId": "5243f698-dc13-4f3f-9016-62da0f9187fc",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 252,
+      "name": "effectSize_22",
+      "data": 252,
+      "type": "number",
+      "tableProcessGUId": "5243f698-dc13-4f3f-9016-62da0f9187fc",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    }
+  ],
+  "plots": [
+    {
+      "id": 27,
+      "name": "Chi-squared vs Fisher",
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 260,
+      "type": "tableplot",
+      "selected": false,
+      "facet": false,
+      "facetParent": null,
+      "facetKey": null,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "plot": {
+        "columnRefs": [
+          246,
+          248,
+          250
+        ],
+        "showCol": [
+          true,
+          true,
+          true
+        ],
+        "colWidths": {},
+        "colCurrent": 1,
+        "showColNumber": false,
+        "decimalPlaces": 2
+      }
+    }
+  ],
+  "tableProcesses": [
+    {
+      "id": 21,
+      "name": "ChiSquared",
+      "displayName": "Chi-squared (two groups)",
+      "args": {
+        "testType": "independence",
+        "dataFormat": "groups",
+        "xIN": 243,
+        "yIN": 244,
+        "correction": true,
+        "out": {
+          "statistic": 245,
+          "pvalue": 246,
+          "df": 247,
+          "effectSize": 248
+        },
+        "alternative": "two-sided",
+        "valid": false
+      },
+      "refTPId": null
+    },
+    {
+      "id": 22,
+      "name": "ChiSquared",
+      "displayName": "Fisher's exact (two groups)",
+      "args": {
+        "testType": "fisher",
+        "dataFormat": "groups",
+        "xIN": 243,
+        "yIN": 244,
+        "alternative": "two-sided",
+        "out": {
+          "statistic": 249,
+          "pvalue": 250,
+          "df": 251,
+          "effectSize": 252
+        },
+        "correction": true,
+        "valid": false
+      },
+      "refTPId": null
+    }
+  ],
+  "storedValues": {},
+  "chainRefs": [],
+  "nodeNotes": {},
+  "notes": [
+    {
+      "id": "note_12",
+      "text": "WORKFLOW: comparing two independent groups (counts). Two groups of DIFFERENT sizes, each with its own outcomes: 7 of 10 treated animals became arrhythmic against 2 of 25 controls. This is how categorical data usually arrives, and it is NOT the paired layout. In the paired layout each row is one subject with both variables recorded, so the columns are the same length and correspond row by row. Here the columns are separate samples of 10 and 25 rows, and there is no meaningful pairing between the third treated animal and the third control. The node's Input format control is on its default, 'Two independent groups', which tabulates each column on its own and assembles the 2x2 table [[7,3],[2,23]]. Read the p-value together with the effect size: Cramer's V = 0.64 says the association is strong, not merely detectable, which a p-value alone never tells you. A second node runs Fisher's exact test on the same table, and it is the better choice here because two of the four expected counts fall below 5. Now switch Input format to 'Paired' and watch what happens: the rows get matched arbitrarily, 25 of the 35 observations are discarded, and the test reports p = 0.86 - no association at all - where the correct answer is p = 0.0008. A real effect disappears silently, which is why the layout is an explicit choice rather than something the node guesses. The node also warns whenever the two columns differ markedly in length, since that is the usual sign the wrong layout is selected.",
+      "x": 40,
+      "y": 24,
+      "width": 360,
+      "height": 190
+    }
+  ],
+  "groups": [],
+  "composites": [],
+  "orphanProcesses": [],
+  "nodeLayout": {
+    "data_243": {
+      "x": 60,
+      "y": 314
+    },
+    "data_244": {
+      "x": 60,
+      "y": 814
+    },
+    "tableprocess_21": {
+      "x": 440,
+      "y": 314
+    },
+    "tableprocess_22": {
+      "x": 440,
+      "y": 814
+    },
+    "note_12": {
+      "x": 40,
+      "y": 24
+    },
+    "plot_27": {
+      "x": 820,
+      "y": 314
+    }
+  },
+  "appState": {
+    "currentTab": "null",
+    "currentControlTab": "properties",
+    "loadingState": {
+      "isLoading": true,
+      "loadingMsg": "Warming up..."
+    },
+    "showNavbar": true,
+    "showDisplayPanel": false,
+    "showControlPanel": false,
+    "importModalOpen": false,
+    "tidyLayoutRequest": 0,
+    "spawnNodeRequest": null,
+    "windowWidth": 1024,
+    "windowHeight": 768,
+    "widthNavBar": 56,
+    "widthDisplayPanel": 250,
+    "widthControlPanel": 250,
+    "gridSize": 15,
+    "canvasOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
+    "view": "canvas",
+    "displayTimezone": "utc",
+    "invisiblePlotIds": [],
+    "canvasSelectedNodeId": null,
+    "canvasMultiSelectedCount": 0,
+    "canvasMultiSelectedNodeIds": [],
+    "appColours": [
+      "#234154",
+      "#BE796B",
+      "#3E7295",
+      "#EDADAD",
+      "#A6ACD5",
+      "#83422A",
+      "#6B9FD5",
+      "#4A1E0E",
+      "#fbe67280"
+    ],
+    "showColourPicker": false,
+    "showAYSModal": false,
+    "AYStext": "",
+    "AYScallback": null,
+    "AYSoptions": [
+      "Yes",
+      "No"
+    ],
+    "showWorkflow": false
+  },
+  "version": "β.67.0"
+}

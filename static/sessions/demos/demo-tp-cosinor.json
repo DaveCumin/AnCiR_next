@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "612": [
+    "624": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "613": [
+    "625": [
       13.207454141807316,
       16.42781352939983,
       10.122969242111294,
@@ -104,7 +104,7 @@
       14.406414185367264,
       9.386678383637214
     ],
-    "614": [
+    "626": [
       0,
       1,
       2,
@@ -156,31 +156,31 @@
       48,
       49
     ],
-    "615": [
+    "627": [
       24
     ],
-    "616": [
+    "628": [
       50.06903731465636
     ],
-    "617": [
+    "629": [
       41.73678030222172
     ],
-    "618": [
+    "630": [
       11.746213264705368
     ],
-    "619": [
+    "631": [
       0.953927037241878
     ],
-    "620": [
+    "632": [
       null
     ],
-    "621": [
+    "633": [
       23.746213264705368
     ],
-    "622": [
+    "634": [
       11.746213264705368
     ],
-    "623": [
+    "635": [
       8.424345272914458,
       10.560541959544327,
       15.38917731374945,
@@ -235,20 +235,20 @@
   },
   "data": [
     {
-      "id": 612,
+      "id": 624,
       "name": "x",
-      "data": 612,
+      "data": 624,
       "type": "number",
-      "tableProcessGUId": "d69c2f63-08f9-4760-a9e6-43853b1d6a59",
+      "tableProcessGUId": "f86151c3-9cb7-4656-868d-5a3428f11a88",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 613,
+      "id": 625,
       "name": "y",
-      "data": 613,
+      "data": 625,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -257,110 +257,110 @@
       "processes": []
     },
     {
-      "id": 614,
-      "name": "cosinorx_54",
-      "data": 614,
+      "id": 626,
+      "name": "cosinorx_56",
+      "data": 626,
       "type": "number",
-      "tableProcessGUId": "ca478602-0471-4ed3-9972-395badb09581",
+      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 615,
-      "name": "period_54",
-      "data": 615,
+      "id": 627,
+      "name": "period_56",
+      "data": 627,
       "type": "number",
-      "tableProcessGUId": "ca478602-0471-4ed3-9972-395badb09581",
+      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 616,
-      "name": "mesor_54",
-      "data": 616,
+      "id": 628,
+      "name": "mesor_56",
+      "data": 628,
       "type": "number",
-      "tableProcessGUId": "ca478602-0471-4ed3-9972-395badb09581",
+      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 617,
-      "name": "amplitude_54",
-      "data": 617,
+      "id": 629,
+      "name": "amplitude_56",
+      "data": 629,
       "type": "number",
-      "tableProcessGUId": "ca478602-0471-4ed3-9972-395badb09581",
+      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 618,
-      "name": "acrophase_54",
-      "data": 618,
+      "id": 630,
+      "name": "acrophase_56",
+      "data": 630,
       "type": "number",
-      "tableProcessGUId": "ca478602-0471-4ed3-9972-395badb09581",
+      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 619,
-      "name": "rsquared_54",
-      "data": 619,
+      "id": 631,
+      "name": "rsquared_56",
+      "data": 631,
       "type": "number",
-      "tableProcessGUId": "ca478602-0471-4ed3-9972-395badb09581",
+      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 620,
-      "name": "pvalue_54",
-      "data": 620,
+      "id": 632,
+      "name": "pvalue_56",
+      "data": 632,
       "type": "number",
-      "tableProcessGUId": "ca478602-0471-4ed3-9972-395badb09581",
+      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 621,
-      "name": "bathyphase_54",
-      "data": 621,
+      "id": 633,
+      "name": "bathyphase_56",
+      "data": 633,
       "type": "number",
-      "tableProcessGUId": "ca478602-0471-4ed3-9972-395badb09581",
+      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 622,
-      "name": "phase_angle_54",
-      "data": 622,
+      "id": 634,
+      "name": "phase_angle_56",
+      "data": 634,
       "type": "number",
-      "tableProcessGUId": "ca478602-0471-4ed3-9972-395badb09581",
+      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 623,
-      "name": "cosinory_613_54",
-      "data": 623,
+      "id": 635,
+      "name": "cosinory_625_56",
+      "data": 635,
       "type": "number",
-      "tableProcessGUId": "ca478602-0471-4ed3-9972-395badb09581",
+      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -369,7 +369,7 @@
   ],
   "plots": [
     {
-      "id": 105,
+      "id": 106,
       "name": "Cosinor: data + fit",
       "x": 60,
       "y": 60,
@@ -426,9 +426,9 @@
         "data": [
           {
             "x": {
-              "id": 624,
+              "id": 636,
               "name": "x",
-              "refId": 612,
+              "refId": 624,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -437,9 +437,9 @@
               "processes": []
             },
             "y": {
-              "id": 625,
+              "id": 637,
               "name": "y",
-              "refId": 613,
+              "refId": 625,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -465,9 +465,9 @@
           },
           {
             "x": {
-              "id": 626,
-              "name": "cosinorx_54",
-              "refId": 614,
+              "id": 638,
+              "name": "cosinorx_56",
+              "refId": 626,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -476,9 +476,9 @@
               "processes": []
             },
             "y": {
-              "id": 627,
-              "name": "cosinory_613_54",
-              "refId": 623,
+              "id": 639,
+              "name": "cosinory_625_56",
+              "refId": 635,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -518,7 +518,7 @@
       }
     },
     {
-      "id": 106,
+      "id": 107,
       "name": "Cosinor: values",
       "x": 630,
       "y": 60,
@@ -534,8 +534,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          613,
-          623
+          625,
+          635
         ],
         "showCol": [
           true,
@@ -550,7 +550,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 53,
+      "id": 55,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -560,19 +560,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 612
+          "result": 624
         }
       },
       "refTPId": null
     },
     {
-      "id": 54,
+      "id": 56,
       "name": "Cosinor",
       "displayName": "Cosinor",
       "args": {
-        "xIN": 612,
+        "xIN": 624,
         "yIN": [
-          613
+          625
         ],
         "Ncurves": 1,
         "outputX": -1,
@@ -582,16 +582,16 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "cosinorx": 614,
-          "period": 615,
-          "mesor": 616,
-          "amplitude": 617,
-          "acrophase": 618,
-          "rsquared": 619,
-          "pvalue": 620,
-          "bathyphase": 621,
-          "phase_angle": 622,
-          "cosinory_613": 623
+          "cosinorx": 626,
+          "period": 627,
+          "mesor": 628,
+          "amplitude": 629,
+          "acrophase": 630,
+          "rsquared": 631,
+          "pvalue": 632,
+          "bathyphase": 633,
+          "phase_angle": 634,
+          "cosinory_625": 635
         }
       },
       "refTPId": null
@@ -602,7 +602,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_53",
+      "id": "note_54",
       "text": "Fits a cosine model to a rhythmic series by least squares, returning MESOR (rhythm-adjusted mean), amplitude, acrophase and period, with an F-test / R² and optional permutation p-value. Use it for approximately sinusoidal rhythms when you want interpretable rhythm parameters and a significance test; a fixed period (e.g. 24 h) turns it into linear single/multi-harmonic cosinor, while leaving the period free fits it. In the demo, read the fitted smooth cosine overlaid on the raw points: peak height is the amplitude, the peak's time-of-day is the acrophase, and the horizontal midline is the MESOR. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. Method: cosinor rhythmometry (Cornélissen 2014).",
       "x": 40,
       "y": 24,
@@ -614,27 +614,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_613": {
+    "data_625": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_53": {
+    "tableprocess_55": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_54": {
+    "tableprocess_56": {
       "x": 440,
-      "y": 314
-    },
-    "plot_105": {
-      "x": 820,
       "y": 314
     },
     "plot_106": {
       "x": 820,
+      "y": 314
+    },
+    "plot_107": {
+      "x": 820,
       "y": 814
     },
-    "note_53": {
+    "note_54": {
       "x": 40,
       "y": 24
     }
@@ -696,5 +696,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

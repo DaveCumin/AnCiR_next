@@ -521,3 +521,52 @@ describe('warning helpers', () => {
 		expect(warnings.some((warning) => warning.includes('Jarque-Bera'))).toBe(true);
 	});
 });
+
+describe('groupcomparison — effect size output port', () => {
+	// The four effect sizes were computed and shown in the panel but had no port,
+	// so they could not be plotted, FDR-corrected or compared downstream.
+	const mk = (id, name, data) => {
+		mockColumns[id] = { id, name, getData: () => data, getDataHash: String(data) };
+		return id;
+	};
+
+	it('emits Cohen’s d for a two-group t-test', () => {
+		mk(80, 'grp', [...Array(10).fill('a'), ...Array(10).fill('b')]);
+		mk(
+			81,
+			'val',
+			[...Array(10).fill(0), ...Array(10).fill(0)].map((_, i) => (i < 10 ? i : i + 8))
+		);
+		const out = { statistic: -1, pvalue: -1, effectSize: 900 };
+		mockColumns[900] = { id: 900 };
+		const [res] = groupcomparison({ xIN: 80, yIN: [81], method: 'ttest', alpha: 0.05, out });
+		const comp = res.comparisons[81];
+		expect(Number.isFinite(comp.cohenD)).toBe(true);
+	});
+
+	it('picks the measure that belongs to the test that ran', () => {
+		// Each test has its own conventional effect size; they are not swappable.
+		mk(82, 'grp', [...Array(8).fill('a'), ...Array(8).fill('b'), ...Array(8).fill('c')]);
+		mk(
+			83,
+			'val',
+			Array.from({ length: 24 }, (_, i) => (i % 8 === 0 ? 10 : i))
+		);
+		const anova = groupcomparison({
+			xIN: 82,
+			yIN: [83],
+			method: 'anova',
+			alpha: 0.05,
+			out: {}
+		})[0].comparisons[83];
+		const kw = groupcomparison({
+			xIN: 82,
+			yIN: [83],
+			method: 'kruskal',
+			alpha: 0.05,
+			out: {}
+		})[0].comparisons[83];
+		expect(Number.isFinite(anova.etaSquared)).toBe(true);
+		expect(Number.isFinite(kw.epsilonSquared)).toBe(true);
+	});
+});

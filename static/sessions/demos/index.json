@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 106,
+  "count": 108,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -173,6 +173,20 @@
         "ChiSquared"
       ],
       "keywords": "workflow — small samples (fisher's exact test) the same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted. both tests are run on the same 18 animals so you can compare them directly. the chi-squared node reports its own warning that expected counts fall below 5, which is the conventional line at which its large-sample approximation stops being reliable; fisher's exact test makes no such approximation, conditioning on the margins and summing the exact probability of every table at least as extreme as the one observed. read the two p-values side by side: they answer the same question, and the exact one is the one to quote here. note that fisher's mode reports no statistic and no degrees of freedom — an exact test enumerates the distribution instead of referring a statistic to one — and gives the odds ratio as its effect size instead. workflows chisquared"
+    },
+    {
+      "id": "workflow-stats-two-groups-counts",
+      "name": "Workflow — comparing two independent groups (counts)",
+      "family": "Workflows",
+      "description": "Two groups of DIFFERENT sizes, each with its own outcomes: 7 of 10 treated animals became arrhythmic against 2 of 25 controls. This is the layout categorical data usually arrives in, and it is not the paired one — there is no meaningful pairing between the third treated animal and the third control, and the columns are 10 and 25 rows long. The Chi-squared node's Input format is set to \"Two independent groups\", which tabulates each column separately and builds the 2x2 table [[7,3],[2,23]]. Read the p-value with Cramer's V beside it: the association is strong (V = 0.64), not merely detectable. A second node runs Fisher's exact test on the same data, which is the right choice here because two of the four expected counts fall below 5. Set Input format to \"Paired\" to see why it matters — the paired reading pairs rows arbitrarily, discards 25 of the 35 observations and reports p = 0.86, hiding a real effect entirely.",
+      "summary": "Two independent groups, different sizes.",
+      "group": "General statistics",
+      "url": "sessions/demos/demo-workflow-stats-two-groups-counts.json",
+      "kind": "workflow",
+      "showcases": [
+        "ChiSquared"
+      ],
+      "keywords": "workflow — comparing two independent groups (counts) two groups of different sizes, each with its own outcomes: 7 of 10 treated animals became arrhythmic against 2 of 25 controls. this is the layout categorical data usually arrives in, and it is not the paired one — there is no meaningful pairing between the third treated animal and the third control, and the columns are 10 and 25 rows long. the chi-squared node's input format is set to \"two independent groups\", which tabulates each column separately and builds the 2x2 table [[7,3],[2,23]]. read the p-value with cramer's v beside it: the association is strong (v = 0.64), not merely detectable. a second node runs fisher's exact test on the same data, which is the right choice here because two of the four expected counts fall below 5. set input format to \"paired\" to see why it matters — the paired reading pairs rows arbitrarily, discards 25 of the 35 observations and reports p = 0.86, hiding a real effect entirely. workflows chisquared"
     },
     {
       "id": "workflow-stats-anscombe",
@@ -501,6 +515,18 @@
       "kind": "dataset",
       "showcases": [],
       "keywords": "small samples (fisher's exact test) a table too small for chi-squared. data only — 2 columns × 18 rows, no analysis. sources"
+    },
+    {
+      "id": "dataset-workflow-stats-two-groups-counts",
+      "name": "Comparing two independent groups (counts)",
+      "family": "Sources",
+      "description": "Two independent groups, different sizes. Data only — 2 columns × 25 rows, no analysis.",
+      "summary": "Two independent groups, different sizes.",
+      "group": "General statistics",
+      "url": "sessions/demos/comparing-two-independent-groups-counts.csv",
+      "kind": "dataset",
+      "showcases": [],
+      "keywords": "comparing two independent groups (counts) two independent groups, different sizes. data only — 2 columns × 25 rows, no analysis. sources"
     },
     {
       "id": "dataset-workflow-stats-anscombe",

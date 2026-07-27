@@ -28,7 +28,16 @@
 		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
 		['permutationSeed', { val: PERMUTATION_DEFAULTS.permutationSeed }],
 		['permutationStatistic', { val: PERMUTATION_DEFAULTS.permutationStatistic }],
-		['out', { dlogx: { val: -1 }, pvalue: { val: -1 } }],
+		[
+			'out',
+			{
+				dlogx: { val: -1 },
+				pvalue: { val: -1 },
+				// Fit quality, matching TrendFit / RectangularWave.
+				r2: { val: -1 },
+				rmse: { val: -1 }
+			}
+		],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
 		['collectedType', { val: 'dlog' }],
@@ -53,7 +62,9 @@
 				{ name: 'dlogx', kind: 'column', cardinality: 'one' },
 				{ name: 'dlogy_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'dlogy_' },
 				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' },
-				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true }
+				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'r2', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'rmse', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};
@@ -206,10 +217,21 @@
 		}
 
 		// Scalar p-value output: one value per y input, in yIN order.
+		const fitHash = crypto.randomUUID();
 		writeOutputColumn(
 			argsIN.out.pvalue,
 			yINs.map((yId) => y_results[yId]?.pValue ?? NaN),
-			{ processHash: crypto.randomUUID() }
+			{ processHash: fitHash }
+		);
+		writeOutputColumn(
+			argsIN.out.r2,
+			yINs.map((yId) => y_results[yId]?.fitResult?.rSquared ?? NaN),
+			{ processHash: fitHash }
+		);
+		writeOutputColumn(
+			argsIN.out.rmse,
+			yINs.map((yId) => y_results[yId]?.fitResult?.rmse ?? NaN),
+			{ processHash: fitHash }
 		);
 
 		return [

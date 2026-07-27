@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "563": [
+    "575": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "564": [
+    "576": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 563,
+      "id": 575,
       "name": "x",
-      "data": 563,
+      "data": 575,
       "type": "number",
-      "tableProcessGUId": "b017779c-eed9-4722-a8cc-b009bd62b8fb",
+      "tableProcessGUId": "748109d6-5dfa-4392-b8b4-2f6687c303b6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 564,
+      "id": 576,
       "name": "y",
-      "data": 564,
+      "data": 576,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 565,
+      "id": 577,
       "name": "Normalize result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_7",
-      "producerPort": "out_564",
+      "producerPort": "out_576",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 90,
+      "id": 91,
       "name": "Normalize: before vs after",
       "x": 60,
       "y": 60,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 566,
+              "id": 578,
               "name": "x",
-              "refId": 563,
+              "refId": 575,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 567,
+              "id": 579,
               "name": "y",
-              "refId": 564,
+              "refId": 576,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 568,
+              "id": 580,
               "name": "x",
-              "refId": 563,
+              "refId": 575,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 569,
+              "id": 581,
               "name": "Normalize result",
-              "refId": 565,
+              "refId": 577,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 91,
+      "id": 92,
       "name": "Normalize: values",
       "x": 630,
       "y": 60,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          564,
-          565
+          576,
+          577
         ],
         "showCol": [
           true,
@@ -323,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 40,
+      "id": 42,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 563
+          "result": 575
         }
       },
       "refTPId": null
@@ -344,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_41",
+      "id": "note_42",
       "text": "Rescales a column so different series are comparable. Z-score centres to mean 0 / SD 1; Min-Max rescales into a chosen range; Robust uses median and MAD (outlier-resistant); Unit-vector scales by the column's magnitude. The demo shows the input rescaled onto the new scale with its shape preserved. Choose z-score/robust when comparing rhythms of different amplitudes.",
       "x": 40,
       "y": 24,
@@ -363,17 +363,17 @@
         "customMin": 0,
         "customMax": 1,
         "inIN": [
-          564
+          576
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_564": {
+    "data_576": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_40": {
+    "tableprocess_42": {
       "x": 60,
       "y": 814
     },
@@ -381,15 +381,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_90": {
+    "plot_91": {
       "x": 820,
       "y": 314
     },
-    "plot_91": {
+    "plot_92": {
       "x": 820,
       "y": 814
     },
-    "note_41": {
+    "note_42": {
       "x": 40,
       "y": 24
     }
@@ -451,5 +451,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "494": [
+    "506": [
       44.3132288681365,
       38.02749002917909,
       32.23815015678512,
@@ -26,7 +26,7 @@
       71.82317245605728,
       63.91433345733487
     ],
-    "495": [
+    "507": [
       44.16901032234467,
       49.67899523857719,
       68.33293316979652,
@@ -52,7 +52,7 @@
       31.313470249919096,
       46.829055850071825
     ],
-    "496": [
+    "508": [
       33.79302678973565,
       49.025375163032415,
       43.55278442510142,
@@ -78,7 +78,7 @@
       20.54160241457355,
       40.19452287317554
     ],
-    "497": [
+    "509": [
       36.606484373713165,
       36.484052656931645,
       37.12766938356504,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 494,
+      "id": 506,
       "name": "sleep",
-      "data": 494,
+      "data": 506,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,9 +118,9 @@
       "processes": []
     },
     {
-      "id": 495,
+      "id": 507,
       "name": "activity",
-      "data": 495,
+      "data": 507,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,9 +129,9 @@
       "processes": []
     },
     {
-      "id": 496,
+      "id": 508,
       "name": "light",
-      "data": 496,
+      "data": 508,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -140,9 +140,9 @@
       "processes": []
     },
     {
-      "id": 497,
+      "id": 509,
       "name": "temp",
-      "data": 497,
+      "data": 509,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -153,7 +153,7 @@
   ],
   "plots": [
     {
-      "id": 73,
+      "id": 74,
       "name": "Correlation matrix",
       "x": 60,
       "y": 60,
@@ -180,9 +180,9 @@
         "data": [
           {
             "column": {
-              "id": 498,
+              "id": 510,
               "name": "sleep",
-              "refId": 494,
+              "refId": 506,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -193,9 +193,9 @@
           },
           {
             "column": {
-              "id": 499,
+              "id": 511,
               "name": "activity",
-              "refId": 495,
+              "refId": 507,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -206,9 +206,9 @@
           },
           {
             "column": {
-              "id": 500,
+              "id": 512,
               "name": "light",
-              "refId": 496,
+              "refId": 508,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -219,9 +219,9 @@
           },
           {
             "column": {
-              "id": 501,
+              "id": 513,
               "name": "temp",
-              "refId": 497,
+              "refId": 509,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -300,5 +300,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

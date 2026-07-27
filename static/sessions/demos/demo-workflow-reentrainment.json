@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "349": [
+    "361": [
       0,
       1,
       2,
@@ -602,7 +602,7 @@
       598,
       599
     ],
-    "350": [
+    "362": [
       84.11775492610997,
       99.6946320251103,
       45.764874963118814,
@@ -1207,9 +1207,9 @@
   },
   "data": [
     {
-      "id": 349,
+      "id": 361,
       "name": "hour",
-      "data": 349,
+      "data": 361,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1218,9 +1218,9 @@
       "processes": []
     },
     {
-      "id": 350,
+      "id": 362,
       "name": "activity",
-      "data": 350,
+      "data": 362,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1231,7 +1231,7 @@
   ],
   "plots": [
     {
-      "id": 44,
+      "id": 45,
       "name": "Actogram — transients visible",
       "x": 60,
       "y": 60,
@@ -1275,9 +1275,9 @@
         "data": [
           {
             "x": {
-              "id": 351,
+              "id": 363,
               "name": "hour",
-              "refId": 349,
+              "refId": 361,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1286,9 +1286,9 @@
               "processes": []
             },
             "y": {
-              "id": 352,
+              "id": 364,
               "name": "activity",
-              "refId": 350,
+              "refId": 362,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1304,7 +1304,7 @@
       }
     },
     {
-      "id": 45,
+      "id": 46,
       "name": "Periodogram (whole record)",
       "x": 630,
       "y": 60,
@@ -1349,9 +1349,9 @@
         "data": [
           {
             "x": {
-              "id": 353,
+              "id": 365,
               "name": "hour",
-              "refId": 349,
+              "refId": 361,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1360,9 +1360,9 @@
               "processes": []
             },
             "y": {
-              "id": 354,
+              "id": 366,
               "name": "activity",
-              "refId": 350,
+              "refId": 362,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1404,7 +1404,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_17",
+      "id": "note_18",
       "text": "WORKFLOW: re-entrainment after a time-zone shift. Compare this card with an abrupt schedule change: the contrast IS the lesson. The zeitgeber here moves 8 hours in a single step, but the rhythm does not follow in a single step. It runs at a transient period of about 25.3 h for a week, gaining roughly 1.3 h a day, which draws the slow diagonal crawl you can see in the middle of the actogram before the band locks on at the new phase. Those transients are diagnostic: a record that simply jumps to the new schedule is being DRIVEN by it (see the masking card), whereas a record that crawls is a real oscillator being re-entrained. The crawl is also, roughly, why jet lag lasts about a day per time zone.",
       "x": 40,
       "y": 24,
@@ -1416,23 +1416,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_349": {
+    "data_361": {
       "x": 60,
       "y": 314
     },
-    "data_350": {
+    "data_362": {
       "x": 60,
       "y": 814
     },
-    "note_17": {
+    "note_18": {
       "x": 40,
       "y": 24
     },
-    "plot_44": {
+    "plot_45": {
       "x": 820,
       "y": 314
     },
-    "plot_45": {
+    "plot_46": {
       "x": 820,
       "y": 814
     }
@@ -1494,5 +1494,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

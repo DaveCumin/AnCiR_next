@@ -282,7 +282,7 @@
       "name": "statistic_18",
       "data": 230,
       "type": "number",
-      "tableProcessGUId": "f2ece75d-15f2-4776-bc6c-022cc72a6a29",
+      "tableProcessGUId": "895709a0-2473-43bc-86c6-cd593fe47727",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -293,7 +293,7 @@
       "name": "pvalue_18",
       "data": 231,
       "type": "number",
-      "tableProcessGUId": "f2ece75d-15f2-4776-bc6c-022cc72a6a29",
+      "tableProcessGUId": "895709a0-2473-43bc-86c6-cd593fe47727",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -304,7 +304,7 @@
       "name": "df_18",
       "data": 232,
       "type": "number",
-      "tableProcessGUId": "f2ece75d-15f2-4776-bc6c-022cc72a6a29",
+      "tableProcessGUId": "895709a0-2473-43bc-86c6-cd593fe47727",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -352,6 +352,7 @@
       "displayName": "Chi-squared (independence)",
       "args": {
         "testType": "independence",
+        "dataFormat": "paired",
         "xIN": 228,
         "yIN": 229,
         "correction": true,
@@ -461,5 +462,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

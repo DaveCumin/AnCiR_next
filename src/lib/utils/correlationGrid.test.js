@@ -43,7 +43,14 @@ describe('correlationGrid', () => {
 	});
 
 	it('a zero-variance column yields NaN r for its off-diagonal pairs', () => {
-		const g = correlationGrid([[1, 1, 1, 1], [1, 2, 3, 4]], ['flat', 'ramp'], 'pearson');
+		const g = correlationGrid(
+			[
+				[1, 1, 1, 1],
+				[1, 2, 3, 4]
+			],
+			['flat', 'ramp'],
+			'pearson'
+		);
 		expect(Number.isNaN(g.r[0][1])).toBe(true);
 		expect(g.r[0][0]).toBe(1); // its own diagonal is still 1
 	});

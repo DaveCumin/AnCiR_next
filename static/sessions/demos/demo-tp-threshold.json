@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "603": [
+    "615": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "604": [
+    "616": [
       1,
       1,
       1,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 603,
+      "id": 615,
       "name": "Threshold input",
-      "data": 603,
+      "data": 615,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,11 +118,11 @@
       "processes": []
     },
     {
-      "id": 604,
-      "name": "binary_50",
-      "data": 604,
+      "id": 616,
+      "name": "binary_52",
+      "data": 616,
       "type": "number",
-      "tableProcessGUId": "9f1f17c0-f10c-4e7c-999a-16f59ff9069f",
+      "tableProcessGUId": "88b4acec-3e8e-45ff-bd14-7985c85890b0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -131,7 +131,7 @@
   ],
   "plots": [
     {
-      "id": 102,
+      "id": 103,
       "name": "Threshold result",
       "x": 60,
       "y": 60,
@@ -147,8 +147,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          603,
-          604
+          615,
+          616
         ],
         "showCol": [
           true,
@@ -163,15 +163,15 @@
   ],
   "tableProcesses": [
     {
-      "id": 50,
+      "id": 52,
       "name": "Threshold",
       "displayName": "Threshold",
       "args": {
-        "xIN": 603,
+        "xIN": 615,
         "threshold": 0,
         "comparison": ">=",
         "out": {
-          "binary": 604
+          "binary": 616
         }
       },
       "refTPId": null
@@ -182,7 +182,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_50",
+      "id": "note_51",
       "text": "Turns a continuous column into a 0/1 (binary) column at a cutoff you set, choosing which side of the threshold counts as 1 (>, ≥, <, ≤). Missing values stay missing. The usual use is making a binary outcome for logistic regression, but it also flags events (e.g. \"activity above baseline\").",
       "x": 40,
       "y": 24,
@@ -194,19 +194,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_603": {
+    "data_615": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_50": {
+    "tableprocess_52": {
       "x": 440,
       "y": 314
     },
-    "plot_102": {
+    "plot_103": {
       "x": 820,
       "y": 314
     },
-    "note_50": {
+    "note_51": {
       "x": 40,
       "y": 24
     }
@@ -268,5 +268,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "355": [
+    "367": [
       0,
       1,
       2,
@@ -674,7 +674,7 @@
       670,
       671
     ],
-    "356": [
+    "368": [
       78.96369964212614,
       72.61422194705264,
       77.55841192139685,
@@ -1348,7 +1348,7 @@
       0.6123521180988902,
       6.372601270891893
     ],
-    "357": [
+    "369": [
       76.75130900080427,
       66.76947540282119,
       79.7685115286549,
@@ -2022,7 +2022,7 @@
       50.83827407643966,
       80.50652349446891
     ],
-    "362": [
+    "374": [
       0,
       1,
       2,
@@ -2052,7 +2052,7 @@
       26,
       27
     ],
-    "363": [
+    "375": [
       18,
       18.3,
       18.6,
@@ -2082,7 +2082,7 @@
       25.80000000000002,
       26.10000000000002
     ],
-    "364": [
+    "376": [
       18,
       18.3,
       18.6,
@@ -2112,7 +2112,7 @@
       33.80000000000002,
       34.10000000000002
     ],
-    "365": [
+    "377": [
       18,
       18.3,
       18.6,
@@ -2145,9 +2145,9 @@
   },
   "data": [
     {
-      "id": 355,
+      "id": 367,
       "name": "hour",
-      "data": 355,
+      "data": 367,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2156,9 +2156,9 @@
       "processes": []
     },
     {
-      "id": 356,
+      "id": 368,
       "name": "activity_delay",
-      "data": 356,
+      "data": 368,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2167,9 +2167,9 @@
       "processes": []
     },
     {
-      "id": 357,
+      "id": 369,
       "name": "activity_advance",
-      "data": 357,
+      "data": 369,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2178,9 +2178,9 @@
       "processes": []
     },
     {
-      "id": 362,
+      "id": 374,
       "name": "day",
-      "data": 362,
+      "data": 374,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2189,9 +2189,9 @@
       "processes": []
     },
     {
-      "id": 363,
+      "id": 375,
       "name": "onset_freerun",
-      "data": 363,
+      "data": 375,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2200,9 +2200,9 @@
       "processes": []
     },
     {
-      "id": 364,
+      "id": 376,
       "name": "onset_delay",
-      "data": 364,
+      "data": 376,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2211,9 +2211,9 @@
       "processes": []
     },
     {
-      "id": 365,
+      "id": 377,
       "name": "onset_advance",
-      "data": 365,
+      "data": 377,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2224,7 +2224,7 @@
   ],
   "plots": [
     {
-      "id": 46,
+      "id": 47,
       "name": "Delay 8 h — immediate, no transients",
       "x": 60,
       "y": 60,
@@ -2268,9 +2268,9 @@
         "data": [
           {
             "x": {
-              "id": 358,
+              "id": 370,
               "name": "hour",
-              "refId": 355,
+              "refId": 367,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2279,9 +2279,9 @@
               "processes": []
             },
             "y": {
-              "id": 359,
+              "id": 371,
               "name": "activity_delay",
-              "refId": 356,
+              "refId": 368,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2297,7 +2297,7 @@
       }
     },
     {
-      "id": 47,
+      "id": 48,
       "name": "Advance 8 h — about 8 transient cycles",
       "x": 630,
       "y": 60,
@@ -2341,9 +2341,9 @@
         "data": [
           {
             "x": {
-              "id": 360,
+              "id": 372,
               "name": "hour",
-              "refId": 355,
+              "refId": 367,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2352,9 +2352,9 @@
               "processes": []
             },
             "y": {
-              "id": 361,
+              "id": 373,
               "name": "activity_advance",
-              "refId": 357,
+              "refId": 369,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2370,7 +2370,7 @@
       }
     },
     {
-      "id": 48,
+      "id": 49,
       "name": "Onset vs day — immediate delay versus advance transients",
       "x": 60,
       "y": 580,
@@ -2427,9 +2427,9 @@
         "data": [
           {
             "x": {
-              "id": 366,
+              "id": 378,
               "name": "day",
-              "refId": 362,
+              "refId": 374,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2438,9 +2438,9 @@
               "processes": []
             },
             "y": {
-              "id": 367,
+              "id": 379,
               "name": "onset_freerun",
-              "refId": 363,
+              "refId": 375,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2466,9 +2466,9 @@
           },
           {
             "x": {
-              "id": 368,
+              "id": 380,
               "name": "day",
-              "refId": 362,
+              "refId": 374,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2477,9 +2477,9 @@
               "processes": []
             },
             "y": {
-              "id": 369,
+              "id": 381,
               "name": "onset_delay",
-              "refId": 364,
+              "refId": 376,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2505,9 +2505,9 @@
           },
           {
             "x": {
-              "id": 370,
+              "id": 382,
               "name": "day",
-              "refId": 362,
+              "refId": 374,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2516,9 +2516,9 @@
               "processes": []
             },
             "y": {
-              "id": 371,
+              "id": 383,
               "name": "onset_advance",
-              "refId": 365,
+              "refId": 377,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2564,7 +2564,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_18",
+      "id": "note_19",
       "text": "WORKFLOW: transients after a phase shift. A transient is one of the intermediate cycles a rhythm passes through between a phase-shifting stimulus and the re-attainment of a steady-state phase. Start with the baseline: both records FREE-RUN at 24.3 h, so the activity band slides about 0.3 h later each cycle and drifts steadily RIGHTWARD across the actogram even before anything is done to it. That diagonal is the signature of a clock running on its own period rather than being held by a zeitgeber. Each record then gets one 8 h phase shift, and the point is that the same shift can be taken up in two quite different ways. The DELAY is IMMEDIATE: the band steps RIGHT in a single cycle and simply resumes its drift from the new phase, with no intermediate cycles at all — strong (Type 0) resetting, where the stimulus throws the pacemaker straight onto a new isochron and the overt rhythm follows at once. The ADVANCE instead crawls LEFTWARD through transients, and note their SHAPE: not a straight ramp but a decelerating curve. Each cycle closes a fraction of whatever phase difference is left, so the biggest increment comes right after the stimulus and the rhythm creeps the last hour or so over several cycles, settling after about eight. The reason is the discrete entrainment model: a light pulse shifts the clock by an amount set by WHERE it strikes the PRC, and equilibrium is reached only when that evoked shift equals FRP − T. Straight after a large shift the pulse lands where the PRC response is big; as the rhythm nears its new phase relationship the pulse slides toward the equilibrium phase and the increment it wins shrinks. That transients are commoner after ADVANCES than delays is the classical generalisation (Johnson, Elliott & Foster 2003), and the same asymmetry shows up in re-entrainment experiments where an advance leaves the animal in transients while a delay is taken up almost at once (Yamanaka et al. 2008) — and in why eastward travel costs more days than westward. On the onset plot, grey is where the rhythm would have gone had nothing been done to it, so the gap between grey and each coloured trace IS the phase shift: closed in one cycle by the delay, over several by the advance. Two consequences. First, only the phase reached after transients subside is the steady-state shift, so a PRC must be scored from post-transient cycles. Second, an immediate jump is not by itself proof that a clock was reset: masking can produce the same picture (see the masking card), and only release into constant conditions tells them apart. Classically (Pittendrigh) the pacemaker resets within about a cycle, so transients reflect a lag between the overt rhythm and the pacemaker in a hierarchical, multi-oscillator system; the modern counterpart is the SCN resetting quickly while peripheral clocks in liver, lung and muscle take several cycles (Yamazaki et al. 2000; Reddy et al. 2002).",
       "x": 40,
       "y": 24,
@@ -2576,47 +2576,47 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_355": {
+    "data_367": {
       "x": 60,
       "y": 314
     },
-    "data_356": {
+    "data_368": {
       "x": 60,
       "y": 814
     },
-    "data_357": {
+    "data_369": {
       "x": 60,
       "y": 1314
     },
-    "data_362": {
+    "data_374": {
       "x": 60,
       "y": 1814
     },
-    "data_363": {
+    "data_375": {
       "x": 60,
       "y": 2314
     },
-    "data_364": {
+    "data_376": {
       "x": 60,
       "y": 2814
     },
-    "data_365": {
+    "data_377": {
       "x": 60,
       "y": 3314
     },
-    "note_18": {
+    "note_19": {
       "x": 40,
       "y": 24
     },
-    "plot_46": {
+    "plot_47": {
       "x": 820,
       "y": 314
     },
-    "plot_47": {
+    "plot_48": {
       "x": 820,
       "y": 814
     },
-    "plot_48": {
+    "plot_49": {
       "x": 820,
       "y": 1314
     }
@@ -2678,5 +2678,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

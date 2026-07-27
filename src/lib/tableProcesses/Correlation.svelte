@@ -21,7 +21,7 @@
 
 	const displayName = 'Correlation';
 
-	const OUT_KEYS = ['var_i', 'var_j', 'r', 'pvalue', 'n'];
+	const OUT_KEYS = ['var_i', 'var_j', 'r', 'pvalue', 'n', 'ciLow', 'ciHigh'];
 
 	const defaults = new Map([
 		['yIN', { val: [] }],
@@ -34,7 +34,11 @@
 				var_j: { val: -1 },
 				r: { val: -1 },
 				pvalue: { val: -1 },
-				n: { val: -1 }
+				n: { val: -1 },
+				// Fisher z interval for r. Asymmetric about r by construction, which
+				// is correct: r is bounded, so a symmetric interval would run past 1.
+				ciLow: { val: -1 },
+				ciHigh: { val: -1 }
 			}
 		],
 		['valid', { val: false }]
@@ -109,6 +113,8 @@
 		writeOutputColumn(argsIN.out?.r, col('r'), { processHash });
 		writeOutputColumn(argsIN.out?.pvalue, col('pvalue'), { processHash });
 		writeOutputColumn(argsIN.out?.n, col('n'), { processHash });
+		writeOutputColumn(argsIN.out?.ciLow, col('ciLow'), { processHash });
+		writeOutputColumn(argsIN.out?.ciHigh, col('ciHigh'), { processHash });
 	}
 
 	export const definition = {

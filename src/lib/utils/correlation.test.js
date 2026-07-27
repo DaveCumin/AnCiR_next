@@ -5,7 +5,8 @@ import {
 	spearman,
 	correlationPValue,
 	correlate,
-	correlationMatrix
+	correlationMatrix,
+	correlationCI
 } from './correlation.js';
 
 describe('rankAverage', () => {
@@ -125,5 +126,73 @@ describe('correlationMatrix', () => {
 	});
 	it('returns [] for fewer than 2 columns', () => {
 		expect(correlationMatrix([[1, 2, 3]], ['a'], 'pearson')).toEqual([]);
+	});
+});
+
+describe('correlationCI — Fisher z interval', () => {
+	// Values checked against a numpy/scipy reference:
+	//   z = arctanh(r); se = 1/sqrt(n-3) (pearson) or sqrt((1+r^2/2)/(n-3)) (spearman);
+	//   CI = tanh(z +/- z_crit * se)
+	it('matches the reference for Pearson', () => {
+		expect(correlationCI(0.5, 30)).toEqual([
+			expect.closeTo(0.170431, 6),
+			expect.closeTo(0.728959, 6)
+		]);
+		expect(correlationCI(-0.3, 50)).toEqual([
+			expect.closeTo(-0.533775, 6),
+			expect.closeTo(-0.023625, 6)
+		]);
+	});
+
+	it('matches the reference for Spearman (Bonett-Wright SE)', () => {
+		expect(correlationCI(0.5, 30, 'spearman')).toEqual([
+			expect.closeTo(0.148132, 6),
+			expect.closeTo(0.739503, 6)
+		]);
+	});
+
+	it('is WIDER for Spearman than Pearson at the same r and n', () => {
+		// The rank coefficient carries extra variability; using the Pearson SE
+		// would give an interval that is too narrow.
+		const [pLo, pHi] = correlationCI(0.5, 30);
+		const [sLo, sHi] = correlationCI(0.5, 30, 'spearman');
+		expect(sHi - sLo).toBeGreaterThan(pHi - pLo);
+	});
+
+	it('is ASYMMETRIC about r, and never leaves [-1, 1]', () => {
+		const r = 0.9;
+		const [lo, hi] = correlationCI(r, 12);
+		expect(r - lo).toBeGreaterThan(hi - r); // skewed, correctly
+		expect(lo).toBeGreaterThan(-1);
+		expect(hi).toBeLessThan(1);
+	});
+
+	it('narrows as n grows', () => {
+		const small = correlationCI(0.5, 10);
+		const big = correlationCI(0.5, 200);
+		expect(big[1] - big[0]).toBeLessThan(small[1] - small[0]);
+	});
+
+	it('brackets r, and excludes 0 exactly when the correlation is clear', () => {
+		const [lo, hi] = correlationCI(0.5, 30);
+		expect(lo).toBeLessThan(0.5);
+		expect(hi).toBeGreaterThan(0.5);
+		expect(lo).toBeGreaterThan(0);
+	});
+
+	it('collapses onto r at |r| = 1 rather than returning infinities', () => {
+		expect(correlationCI(1, 20)).toEqual([1, 1]);
+		expect(correlationCI(-1, 20)).toEqual([-1, -1]);
+	});
+
+	it('is NaN when n is too small for the transform', () => {
+		expect(correlationCI(0.5, 3).every(Number.isNaN)).toBe(true);
+		expect(correlationCI(NaN, 30).every(Number.isNaN)).toBe(true);
+	});
+
+	it('a 99% interval is wider than a 95% one', () => {
+		const a = correlationCI(0.5, 30, 'pearson', 0.95);
+		const b = correlationCI(0.5, 30, 'pearson', 0.99);
+		expect(b[1] - b[0]).toBeGreaterThan(a[1] - a[0]);
 	});
 });

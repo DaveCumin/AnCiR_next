@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "628": [
+    "640": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "629": [
+    "641": [
       24.784209286216505,
       27.918238427560844,
       26.60093560817605,
@@ -104,7 +104,7 @@
       24.95424537696588,
       27.973731986697846
     ],
-    "630": [
+    "642": [
       0,
       1,
       2,
@@ -156,10 +156,10 @@
       48,
       49
     ],
-    "631": [
+    "643": [
       null
     ],
-    "632": [
+    "644": [
       25.756894538862465,
       24.742714374366138,
       24.385024124035308,
@@ -214,20 +214,20 @@
   },
   "data": [
     {
-      "id": 628,
+      "id": 640,
       "name": "x",
-      "data": 628,
+      "data": 640,
       "type": "number",
-      "tableProcessGUId": "f59b5d5b-0a26-48fa-b363-f970f8005406",
+      "tableProcessGUId": "f25a20a1-4b61-4eda-b784-a481da446bc9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 629,
+      "id": 641,
       "name": "y",
-      "data": 629,
+      "data": 641,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -236,33 +236,33 @@
       "processes": []
     },
     {
-      "id": 630,
-      "name": "dlogx_56",
-      "data": 630,
+      "id": 642,
+      "name": "dlogx_58",
+      "data": 642,
       "type": "number",
-      "tableProcessGUId": "a3308daa-6f95-47ef-9ff6-9c80a04233dc",
+      "tableProcessGUId": "87458e99-27f2-4064-8286-879f8678a3a2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 631,
-      "name": "pvalue_56",
-      "data": 631,
+      "id": 643,
+      "name": "pvalue_58",
+      "data": 643,
       "type": "number",
-      "tableProcessGUId": "138b142c-0c99-4107-a731-4e4cb7180ea7",
+      "tableProcessGUId": "f7e05757-2c6a-4a4f-96f3-4aa7f054c51e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 632,
-      "name": "dlogy_629_56",
-      "data": 632,
+      "id": 644,
+      "name": "dlogy_641_58",
+      "data": 644,
       "type": "number",
-      "tableProcessGUId": "a3308daa-6f95-47ef-9ff6-9c80a04233dc",
+      "tableProcessGUId": "87458e99-27f2-4064-8286-879f8678a3a2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -271,7 +271,7 @@
   ],
   "plots": [
     {
-      "id": 107,
+      "id": 108,
       "name": "Double Logistic: data + fit",
       "x": 60,
       "y": 60,
@@ -328,9 +328,9 @@
         "data": [
           {
             "x": {
-              "id": 633,
+              "id": 645,
               "name": "x",
-              "refId": 628,
+              "refId": 640,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -339,9 +339,9 @@
               "processes": []
             },
             "y": {
-              "id": 634,
+              "id": 646,
               "name": "y",
-              "refId": 629,
+              "refId": 641,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -367,9 +367,9 @@
           },
           {
             "x": {
-              "id": 635,
-              "name": "dlogx_56",
-              "refId": 630,
+              "id": 647,
+              "name": "dlogx_58",
+              "refId": 642,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -378,9 +378,9 @@
               "processes": []
             },
             "y": {
-              "id": 636,
-              "name": "dlogy_629_56",
-              "refId": 632,
+              "id": 648,
+              "name": "dlogy_641_58",
+              "refId": 644,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -420,7 +420,7 @@
       }
     },
     {
-      "id": 108,
+      "id": 109,
       "name": "Double Logistic: values",
       "x": 630,
       "y": 60,
@@ -436,8 +436,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          629,
-          632
+          641,
+          644
         ],
         "showCol": [
           true,
@@ -452,7 +452,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 55,
+      "id": 57,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -462,19 +462,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 628
+          "result": 640
         }
       },
       "refTPId": null
     },
     {
-      "id": 56,
+      "id": 58,
       "name": "DoubleLogistic",
       "displayName": "Double Logistic",
       "args": {
-        "xIN": 628,
+        "xIN": 640,
         "yIN": [
-          629
+          641
         ],
         "outputX": -1,
         "fixK1": false,
@@ -484,9 +484,9 @@
         "fixPeriod": false,
         "fixedPeriod": 24,
         "out": {
-          "dlogx": 630,
-          "pvalue": 631,
-          "dlogy_629": 632
+          "dlogx": 642,
+          "pvalue": 643,
+          "dlogy_641": 644
         }
       },
       "refTPId": null
@@ -497,7 +497,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_54",
+      "id": "note_55",
       "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. Double-logistic phenology model (Zhang et al. 2003).",
       "x": 40,
       "y": 24,
@@ -509,27 +509,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_629": {
+    "data_641": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_55": {
+    "tableprocess_57": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_56": {
+    "tableprocess_58": {
       "x": 440,
-      "y": 314
-    },
-    "plot_107": {
-      "x": 820,
       "y": 314
     },
     "plot_108": {
       "x": 820,
+      "y": 314
+    },
+    "plot_109": {
+      "x": 820,
       "y": 814
     },
-    "note_54": {
+    "note_55": {
       "x": 40,
       "y": 24
     }
@@ -591,5 +591,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

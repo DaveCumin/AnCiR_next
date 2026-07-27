@@ -6,8 +6,12 @@ vi.mock('$lib/core/Column.svelte', () => ({ getColumnById: (id) => mockColumns[i
 
 import { chisquared } from './ChiSquared.svelte';
 
+// These fixtures are tidy PAIRED data (one row per subject, both variables
+// recorded), so they state dataFormat explicitly. The node's default is
+// 'groups' — see the "input format" block for the tests that cover that.
 const args = (over) => ({
 	testType: 'independence',
+	dataFormat: 'paired',
 	xIN: 1,
 	yIN: 2,
 	correction: true,
@@ -264,10 +268,13 @@ describe('chisquared — effect sizes', () => {
 		expect(res.effectSize).toBeCloseTo(0, 12);
 	});
 
-	it('Fisher mode reports the odds ratio as its effect size', () => {
+	it('Fisher mode reports the CONDITIONAL MLE odds ratio as its effect size', () => {
+		// R's fisher.test reports the conditional MLE, not the sample ad/bc, and it
+		// is the estimate the confidence interval belongs to. Both are exposed.
 		const [res] = chisquared(args({ testType: 'fisher' }));
-		expect(res.effectSizeName).toBe('odds ratio');
-		expect(res.effectSize).toBeCloseTo(res.oddsRatio, 12);
+		expect(res.effectSizeName).toBe('odds ratio (conditional MLE)');
+		expect(res.effectSize).toBeCloseTo(res.conditionalOddsRatio, 12);
+		expect(Number.isFinite(res.oddsRatio)).toBe(true); // sample OR still available
 	});
 
 	it('writes the effect size to its output column', () => {
@@ -275,5 +282,174 @@ describe('chisquared — effect sizes', () => {
 		mockColumns[500] = { id: 500 };
 		const [res] = chisquared(args2);
 		expect(Number.isFinite(res.effectSize)).toBe(true);
+	});
+});
+
+describe('chisquared — input format (paired vs independent groups)', () => {
+	// Reported: "shouldn't the inputs be two independent groups?" — e.g. 7/10
+	// vs 2/25, which is two columns of DIFFERENT lengths. Read as paired, that
+	// pairs A[i] with B[i], truncates to 10 rows and reports p = 0.86; the
+	// correct test on the full 35 observations gives p = 0.00077.
+	beforeEach(() => {
+		mockColumns[40] = {
+			name: 'treated',
+			getData: () => [...Array(7).fill('success'), ...Array(3).fill('failure')]
+		};
+		mockColumns[41] = {
+			name: 'control',
+			getData: () => [...Array(2).fill('success'), ...Array(23).fill('failure')]
+		};
+	});
+
+	it('groups mode builds the intended 2x2 from unequal-length columns', () => {
+		const [res] = chisquared(args({ xIN: 40, yIN: 41, dataFormat: 'groups' }));
+		expect(res.table).toEqual([
+			[7, 3],
+			[2, 23]
+		]);
+		expect(res.rowLabels).toEqual(['treated', 'control']);
+		expect(res.colLabels).toEqual(['success', 'failure']);
+		expect(res.n).toBe(35);
+	});
+
+	it('groups mode gives the statistically correct answer', () => {
+		const [res] = chisquared(args({ xIN: 40, yIN: 41, dataFormat: 'groups' }));
+		expect(res.pvalue).toBeCloseTo(0.00077, 5);
+		expect(res.effectSize).toBeCloseTo(0.6408, 4);
+	});
+
+	it('paired mode WARNS when the columns are very different lengths', () => {
+		// The guard that would have caught the reported confusion.
+		const [res] = chisquared(args({ xIN: 40, yIN: 41, dataFormat: 'paired' }));
+		expect(res.warnings.some((w) => /very different lengths/.test(w))).toBe(true);
+		expect(res.warnings.some((w) => /Two independent groups/.test(w))).toBe(true);
+	});
+
+	it('paired mode stays silent on genuinely paired data', () => {
+		const [res] = chisquared(args({ dataFormat: 'paired' }));
+		expect(res.warnings.some((w) => /very different lengths/.test(w))).toBe(false);
+	});
+
+	it('defaults to paired, preserving existing sessions', () => {
+		const a = chisquared(args())[0];
+		const b = chisquared(args({ dataFormat: 'paired' }))[0];
+		expect(a.table).toEqual(b.table);
+	});
+
+	it('Fisher mode honours the group format too', () => {
+		const [res, valid] = chisquared(
+			args({ xIN: 40, yIN: 41, dataFormat: 'groups', testType: 'fisher' })
+		);
+		expect(valid).toBe(true);
+		expect(res.table).toEqual([
+			[7, 3],
+			[2, 23]
+		]);
+		// scipy.stats.fisher_exact([[7,3],[2,23]]) two-sided
+		expect(res.pvalue).toBeCloseTo(0.0005259359280167, 12);
+	});
+
+	it('groups mode tolerates a third category by widening the table', () => {
+		mockColumns[42] = { name: 'g2', getData: () => ['success', 'failure', 'unknown'] };
+		const [res] = chisquared(args({ xIN: 40, yIN: 42, dataFormat: 'groups' }));
+		expect(res.colLabels).toContain('unknown');
+		expect(res.table[0]).toHaveLength(res.colLabels.length);
+	});
+});
+
+describe('chisquared — the default input format', () => {
+	it("defaults to 'groups', because a column here is a data series", () => {
+		// Reported twice: two columns of 10 and 25 were read as paired, silently
+		// truncating to 10 rows. Groups is the shape this app's data actually takes.
+		mockColumns[60] = {
+			name: 'treated',
+			getData: () => [...Array(7).fill('d'), ...Array(3).fill('a')]
+		};
+		mockColumns[61] = {
+			name: 'control',
+			getData: () => [...Array(2).fill('d'), ...Array(23).fill('a')]
+		};
+		// NOTE: no dataFormat passed — this is what a fresh node does.
+		const [res] = chisquared({
+			testType: 'independence',
+			xIN: 60,
+			yIN: 61,
+			correction: true,
+			out: {}
+		});
+		expect(res.table).toEqual([
+			[7, 3],
+			[2, 23]
+		]);
+		expect(res.n).toBe(35);
+		expect(res.pvalue).toBeCloseTo(0.00077, 5);
+	});
+
+	it('a session saved before dataFormat existed gets the group reading', () => {
+		mockColumns[62] = { name: 'a', getData: () => ['x', 'x', 'y'] };
+		mockColumns[63] = { name: 'b', getData: () => ['x', 'y', 'y', 'y'] };
+		const legacy = { testType: 'independence', xIN: 62, yIN: 63, correction: true, out: {} };
+		const [res] = chisquared(legacy);
+		expect(legacy.dataFormat).toBe('groups'); // fillDefaults supplied it
+		expect(res.n).toBe(7); // all 3 + 4 observations used, not truncated to 3
+	});
+});
+
+describe("chisquared — Fisher's odds ratio and its confidence interval", () => {
+	// Reported: R gives OR = 22.94 with a 95% CI, the app gave 26.83 and no CI.
+	// Both numbers are correct — they are DIFFERENT ESTIMATORS. 26.83 is the
+	// sample ad/bc (what scipy.stats.fisher_exact returns); 22.93 is the
+	// conditional MLE (what R reports, and what the CI is inverted from).
+	beforeEach(() => {
+		mockColumns[70] = {
+			name: 'A',
+			getData: () => [...Array(7).fill('death'), ...Array(3).fill('survived')]
+		};
+		mockColumns[71] = {
+			name: 'B',
+			getData: () => [...Array(2).fill('death'), ...Array(23).fill('survived')]
+		};
+	});
+
+	const fisherArgs = () => args({ testType: 'fisher', dataFormat: 'groups', xIN: 70, yIN: 71 });
+
+	it('matches R on the p-value', () => {
+		const [res] = chisquared(fisherArgs());
+		expect(res.pvalue).toBeCloseTo(0.0005259359280167, 12);
+	});
+
+	it('reports the conditional MLE, matching scipy (R prints 22.93777)', () => {
+		const [res] = chisquared(fisherArgs());
+		expect(res.conditionalOddsRatio).toBeCloseTo(22.92535, 4);
+	});
+
+	it('still exposes the sample odds ratio ad/bc separately', () => {
+		const [res] = chisquared(fisherArgs());
+		// (7*23)/(3*2)
+		expect(res.oddsRatio).toBeCloseTo(26.833333333333332, 10);
+	});
+
+	it('reports a 95% confidence interval that brackets the estimate', () => {
+		const [res] = chisquared(fisherArgs());
+		const [lo, hi] = res.oddsRatioCI;
+		expect(lo).toBeCloseTo(2.8316, 3); // R: 2.831634
+		expect(hi).toBeGreaterThan(300); // R: 329.3, scipy: 330.3
+		expect(lo).toBeLessThan(res.conditionalOddsRatio);
+		expect(hi).toBeGreaterThan(res.conditionalOddsRatio);
+	});
+
+	it('the CI excludes 1 exactly when the test is significant', () => {
+		const [res] = chisquared(fisherArgs());
+		expect(res.pvalue).toBeLessThan(0.05);
+		expect(res.oddsRatioCI[0]).toBeGreaterThan(1);
+	});
+
+	it('handles perfect separation with an open-ended interval', () => {
+		mockColumns[72] = { name: 'A', getData: () => Array(10).fill('death') };
+		mockColumns[73] = { name: 'B', getData: () => Array(10).fill('survived') };
+		const [res] = chisquared(args({ testType: 'fisher', dataFormat: 'groups', xIN: 72, yIN: 73 }));
+		expect(res.conditionalOddsRatio).toBe(Infinity);
+		expect(res.oddsRatioCI[1]).toBe(Infinity);
+		expect(res.oddsRatioCI[0]).toBeGreaterThan(1);
 	});
 });

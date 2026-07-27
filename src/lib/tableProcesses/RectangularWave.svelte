@@ -25,7 +25,17 @@
 		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
 		['permutationSeed', { val: PERMUTATION_DEFAULTS.permutationSeed }],
 		['permutationStatistic', { val: PERMUTATION_DEFAULTS.permutationStatistic }],
-		['out', { rectwavex: { val: -1 }, pvalue: { val: -1 } }],
+		[
+			'out',
+			{
+				rectwavex: { val: -1 },
+				pvalue: { val: -1 },
+				// Fit quality, matching what TrendFit already exposes. Shown in the
+				// panel before this; now wireable so it can be filtered or plotted.
+				r2: { val: -1 },
+				rmse: { val: -1 }
+			}
+		],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
 		['collectedType', { val: 'rectwave' }],
@@ -50,7 +60,9 @@
 				{ name: 'rectwavex', kind: 'column', cardinality: 'one' },
 				{ name: 'rectwavey_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'rectwavey_' },
 				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' },
-				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true }
+				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'r2', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'rmse', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};
@@ -238,6 +250,16 @@
 			writeOutputColumn(
 				argsIN.out.pvalue,
 				yINs.map((yId) => result.y_results[yId]?.pValue ?? NaN),
+				{ processHash }
+			);
+			writeOutputColumn(
+				argsIN.out.r2,
+				yINs.map((yId) => result.y_results[yId]?.fitResult?.rSquared ?? NaN),
+				{ processHash }
+			);
+			writeOutputColumn(
+				argsIN.out.rmse,
+				yINs.map((yId) => result.y_results[yId]?.fitResult?.rmse ?? NaN),
 				{ processHash }
 			);
 		}

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "372": [
+    "384": [
       0,
       1,
       2,
@@ -626,7 +626,7 @@
       622,
       623
     ],
-    "373": [
+    "385": [
       35.88509115111157,
       43.54983939945321,
       34.789867007719174,
@@ -1252,7 +1252,7 @@
       40.2212022597924,
       44.47959791995979
     ],
-    "374": [
+    "386": [
       33.90302889086043,
       44.18635658690842,
       37.01813711983115,
@@ -1878,7 +1878,7 @@
       0.599029339603051,
       0
     ],
-    "375": [
+    "387": [
       69.78812004197201,
       87.73619598636162,
       71.80800412755033,
@@ -2504,13 +2504,13 @@
       40.82023159939545,
       44.47959791995979
     ],
-    "384": [
+    "396": [
       23.42
     ],
-    "385": [
+    "397": [
       102.4627357897153
     ],
-    "386": [
+    "398": [
       0.6885974683549608,
       0.5820058241815844,
       0.4847372528355866,
@@ -2816,55 +2816,11 @@
   },
   "data": [
     {
-      "id": 372,
-      "name": "hour",
-      "data": 372,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 373,
-      "name": "component A (24.8 h)",
-      "data": 373,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 374,
-      "name": "component B (23.4 h)",
-      "data": 374,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 375,
-      "name": "recorded activity",
-      "data": 375,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 384,
-      "name": "stat_peak_period_28",
+      "name": "hour",
       "data": 384,
       "type": "number",
-      "tableProcessGUId": "1007a526-e316-4871-bea2-f985a0979253",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2872,10 +2828,10 @@
     },
     {
       "id": 385,
-      "name": "stat_peak_power_28",
+      "name": "component A (24.8 h)",
       "data": 385,
       "type": "number",
-      "tableProcessGUId": "1007a526-e316-4871-bea2-f985a0979253",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2883,10 +2839,54 @@
     },
     {
       "id": 386,
-      "name": "rhythmicityy_375_28",
+      "name": "component B (23.4 h)",
       "data": 386,
       "type": "number",
-      "tableProcessGUId": "1007a526-e316-4871-bea2-f985a0979253",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 387,
+      "name": "recorded activity",
+      "data": 387,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 396,
+      "name": "stat_peak_period_30",
+      "data": 396,
+      "type": "number",
+      "tableProcessGUId": "5c1e65b6-8b92-4fff-be4c-4c26907748b6",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 397,
+      "name": "stat_peak_power_30",
+      "data": 397,
+      "type": "number",
+      "tableProcessGUId": "5c1e65b6-8b92-4fff-be4c-4c26907748b6",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 398,
+      "name": "rhythmicityy_387_30",
+      "data": 398,
+      "type": "number",
+      "tableProcessGUId": "5c1e65b6-8b92-4fff-be4c-4c26907748b6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2895,7 +2895,7 @@
   ],
   "plots": [
     {
-      "id": 49,
+      "id": 50,
       "name": "Actogram — the recorded sum",
       "x": 60,
       "y": 60,
@@ -2939,9 +2939,9 @@
         "data": [
           {
             "x": {
-              "id": 376,
+              "id": 388,
               "name": "hour",
-              "refId": 372,
+              "refId": 384,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2950,9 +2950,9 @@
               "processes": []
             },
             "y": {
-              "id": 377,
+              "id": 389,
               "name": "recorded activity",
-              "refId": 375,
+              "refId": 387,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2968,7 +2968,7 @@
       }
     },
     {
-      "id": 50,
+      "id": 51,
       "name": "Actogram — the two components",
       "x": 630,
       "y": 60,
@@ -3012,9 +3012,9 @@
         "data": [
           {
             "x": {
-              "id": 378,
+              "id": 390,
               "name": "hour",
-              "refId": 372,
+              "refId": 384,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3023,9 +3023,9 @@
               "processes": []
             },
             "y": {
-              "id": 379,
+              "id": 391,
               "name": "component A (24.8 h)",
-              "refId": 373,
+              "refId": 385,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3039,9 +3039,9 @@
           },
           {
             "x": {
-              "id": 380,
+              "id": 392,
               "name": "hour",
-              "refId": 372,
+              "refId": 384,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3050,9 +3050,9 @@
               "processes": []
             },
             "y": {
-              "id": 381,
+              "id": 393,
               "name": "component B (23.4 h)",
-              "refId": 374,
+              "refId": 386,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3068,7 +3068,7 @@
       }
     },
     {
-      "id": 51,
+      "id": 52,
       "name": "Periodogram — two peaks",
       "x": 60,
       "y": 580,
@@ -3113,9 +3113,9 @@
         "data": [
           {
             "x": {
-              "id": 382,
+              "id": 394,
               "name": "hour",
-              "refId": 372,
+              "refId": 384,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3124,9 +3124,9 @@
               "processes": []
             },
             "y": {
-              "id": 383,
+              "id": 395,
               "name": "recorded activity",
-              "refId": 375,
+              "refId": 387,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -3162,7 +3162,7 @@
       }
     },
     {
-      "id": 52,
+      "id": 53,
       "name": "Dominant component",
       "x": 630,
       "y": 580,
@@ -3178,8 +3178,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          384,
-          385
+          396,
+          397
         ],
         "showCol": [
           true,
@@ -3194,13 +3194,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 28,
+      "id": 30,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis — dominant component",
       "args": {
-        "xIN": 372,
+        "xIN": 384,
         "yIN": [
-          375
+          387
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -3211,9 +3211,9 @@
         "pgAlpha": 0.05,
         "preProcesses": [],
         "out": {
-          "stat_peak_period": 384,
-          "stat_peak_power": 385,
-          "rhythmicityy_375": 386
+          "stat_peak_period": 396,
+          "stat_peak_power": 397,
+          "rhythmicityy_387": 398
         }
       },
       "refTPId": null
@@ -3224,7 +3224,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_19",
+      "id": "note_20",
       "text": "WORKFLOW: split rhythm under constant light. Under constant light the circadian system can bifurcate: two oscillator components decouple, run at slightly different periods, and re-stabilise roughly 12 h apart. Here the two components are supplied separately (24.8 h and 23.4 h) and the actograph record is their SUM, so the split you see emerges from the two oscillators drifting apart rather than being drawn in. Read the component actogram alongside the recorded one to see where the second band comes from. The periodogram gives the numeric signature: two peaks rather than one, which is what should make you suspect splitting in a real record even before it is obvious by eye.",
       "x": 40,
       "y": 24,
@@ -3236,43 +3236,43 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_372": {
+    "data_384": {
       "x": 60,
       "y": 314
     },
-    "data_373": {
+    "data_385": {
       "x": 60,
       "y": 814
     },
-    "data_374": {
+    "data_386": {
       "x": 60,
       "y": 1314
     },
-    "data_375": {
+    "data_387": {
       "x": 60,
       "y": 1814
     },
-    "tableprocess_28": {
+    "tableprocess_30": {
       "x": 440,
       "y": 314
     },
-    "note_19": {
+    "note_20": {
       "x": 40,
       "y": 24
     },
-    "plot_49": {
+    "plot_50": {
       "x": 820,
       "y": 314
     },
-    "plot_50": {
+    "plot_51": {
       "x": 820,
       "y": 814
     },
-    "plot_51": {
+    "plot_52": {
       "x": 820,
       "y": 1314
     },
-    "plot_52": {
+    "plot_53": {
       "x": 820,
       "y": 1814
     }
@@ -3334,5 +3334,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

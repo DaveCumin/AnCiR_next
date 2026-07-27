@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "316": [
+    "328": [
       0,
       1,
       2,
@@ -1154,7 +1154,7 @@
       1150,
       1151
     ],
-    "317": [
+    "329": [
       0.7314083870924497,
       0,
       0.7387579407618872,
@@ -2308,13 +2308,13 @@
       88.78922816483362,
       29.92852459171903
     ],
-    "322": [
+    "334": [
       24.5
     ],
-    "323": [
+    "335": [
       336.9560518035151
     ],
-    "324": [
+    "336": [
       0.6513843470303095,
       0.5350646903909049,
       0.40652323097718013,
@@ -2570,9 +2570,9 @@
   },
   "data": [
     {
-      "id": 316,
+      "id": 328,
       "name": "hour",
-      "data": 316,
+      "data": 328,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2581,9 +2581,9 @@
       "processes": []
     },
     {
-      "id": 317,
+      "id": 329,
       "name": "activity",
-      "data": 317,
+      "data": 329,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -2592,33 +2592,33 @@
       "processes": []
     },
     {
-      "id": 322,
-      "name": "stat_peak_period_25",
-      "data": 322,
+      "id": 334,
+      "name": "stat_peak_period_27",
+      "data": 334,
       "type": "number",
-      "tableProcessGUId": "c771ea14-ce27-444d-99ea-db1fb07961c3",
+      "tableProcessGUId": "21efee83-6afd-4992-ae5a-8f19401b245b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 323,
-      "name": "stat_peak_power_25",
-      "data": 323,
+      "id": 335,
+      "name": "stat_peak_power_27",
+      "data": 335,
       "type": "number",
-      "tableProcessGUId": "c771ea14-ce27-444d-99ea-db1fb07961c3",
+      "tableProcessGUId": "21efee83-6afd-4992-ae5a-8f19401b245b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 324,
-      "name": "rhythmicityy_317_25",
-      "data": 324,
+      "id": 336,
+      "name": "rhythmicityy_329_27",
+      "data": 336,
       "type": "number",
-      "tableProcessGUId": "c771ea14-ce27-444d-99ea-db1fb07961c3",
+      "tableProcessGUId": "21efee83-6afd-4992-ae5a-8f19401b245b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2627,7 +2627,7 @@
   ],
   "plots": [
     {
-      "id": 35,
+      "id": 36,
       "name": "Actogram (double-plotted)",
       "x": 60,
       "y": 60,
@@ -2671,9 +2671,9 @@
         "data": [
           {
             "x": {
-              "id": 318,
+              "id": 330,
               "name": "hour",
-              "refId": 316,
+              "refId": 328,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2682,9 +2682,9 @@
               "processes": []
             },
             "y": {
-              "id": 319,
+              "id": 331,
               "name": "activity",
-              "refId": 317,
+              "refId": 329,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2700,7 +2700,7 @@
       }
     },
     {
-      "id": 36,
+      "id": 37,
       "name": "Lomb-Scargle periodogram",
       "x": 630,
       "y": 60,
@@ -2745,9 +2745,9 @@
         "data": [
           {
             "x": {
-              "id": 320,
+              "id": 332,
               "name": "hour",
-              "refId": 316,
+              "refId": 328,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2756,9 +2756,9 @@
               "processes": []
             },
             "y": {
-              "id": 321,
+              "id": 333,
               "name": "activity",
-              "refId": 317,
+              "refId": 329,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2794,7 +2794,7 @@
       }
     },
     {
-      "id": 37,
+      "id": 38,
       "name": "Estimated tau",
       "x": 630,
       "y": 440,
@@ -2810,8 +2810,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          322,
-          323
+          334,
+          335
         ],
         "showCol": [
           true,
@@ -2826,13 +2826,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 25,
+      "id": 27,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis — tau",
       "args": {
-        "xIN": 316,
+        "xIN": 328,
         "yIN": [
-          317
+          329
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -2843,9 +2843,9 @@
         "pgAlpha": 0.05,
         "preProcesses": [],
         "out": {
-          "stat_peak_period": 322,
-          "stat_peak_power": 323,
-          "rhythmicityy_317": 324
+          "stat_peak_period": 334,
+          "stat_peak_power": 335,
+          "rhythmicityy_329": 336
         }
       },
       "refTPId": null
@@ -2856,7 +2856,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_14",
+      "id": "note_15",
       "text": "WORKFLOW: non-24 sleep-wake (blind participant). The human counterpart to the free-running mouse. With no light input reaching the clock, the rhythm runs at its OWN period (tau = 24.5 h here) rather than the day's, so it drifts about half an hour later every day and the sleep window walks all the way around the clock over roughly seven weeks. Read the double-plotted actogram first: a rhythm at exactly 24 h would sit vertical, and this one leans. Then read the periodogram peak, which recovers tau numerically. Free-running is not a rodent-only phenomenon; this is a recognised clinical presentation, and the drift is why sleep complaints in these patients come and go on a cycle.",
       "x": 40,
       "y": 24,
@@ -2868,31 +2868,31 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_316": {
+    "data_328": {
       "x": 60,
       "y": 314
     },
-    "data_317": {
+    "data_329": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_25": {
+    "tableprocess_27": {
       "x": 440,
       "y": 314
     },
-    "note_14": {
+    "note_15": {
       "x": 40,
       "y": 24
     },
-    "plot_35": {
+    "plot_36": {
       "x": 820,
       "y": 314
     },
-    "plot_36": {
+    "plot_37": {
       "x": 820,
       "y": 814
     },
-    "plot_37": {
+    "plot_38": {
       "x": 820,
       "y": 1314
     }
@@ -2954,5 +2954,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

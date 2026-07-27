@@ -5106,3 +5106,40 @@ def cohens_w(statistic, n):
     if not (math.isfinite(statistic) and math.isfinite(n)) or n <= 0:
         return float('nan')
     return math.sqrt(statistic / n)
+
+
+def fisher_odds_ratio_ci(table, confidence=0.95):
+    """Conditional MLE odds ratio + its confidence interval.
+
+    Delegates to scipy.stats.contingency.odds_ratio(kind='conditional'), which is
+    the same quantity R's fisher.test prints - a real reference rather than a
+    second copy of the JS root-finding.
+    """
+    from scipy.stats.contingency import odds_ratio as _or
+    import numpy as np
+    r = _or(np.rint(np.asarray(table, dtype=float)).astype(np.int64), kind='conditional')
+    ci = r.confidence_interval(confidence_level=confidence)
+    return {
+        'conditionalOddsRatio': float(r.statistic),
+        'ciLow': float(ci.low),
+        'ciHigh': float(ci.high),
+    }
+
+
+def correlation_ci(values, method='pearson', confidence=0.95):
+    """Fisher z confidence interval for a correlation coefficient.
+
+    `values` is [r, n]. The normal quantile comes from scipy; the transform
+    itself is three lines and is the thing being checked.
+    """
+    import numpy as np
+    from scipy.stats import norm
+    r, n = float(values[0]), float(values[1])
+    if not np.isfinite(r) or n < 4:
+        return {'ciLow': float('nan'), 'ciHigh': float('nan')}
+    if abs(r) >= 1:
+        return {'ciLow': r, 'ciHigh': r}
+    z = np.arctanh(r)
+    zc = norm.ppf(1 - (1 - confidence) / 2)
+    se = np.sqrt((1 + r ** 2 / 2) / (n - 3)) if method == 'spearman' else 1 / np.sqrt(n - 3)
+    return {'ciLow': float(np.tanh(z - zc * se)), 'ciHigh': float(np.tanh(z + zc * se))}

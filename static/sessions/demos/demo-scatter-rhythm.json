@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "450": [
+    "462": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "451": [
+    "463": [
       15.795844354091358,
       18.101592110952595,
       15.063616671903457,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 450,
+      "id": 462,
       "name": "hour",
-      "data": 450,
+      "data": 462,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 451,
+      "id": 463,
       "name": "activity",
-      "data": 451,
+      "data": 463,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 63,
+      "id": 64,
       "name": "Activity vs hour",
       "x": 60,
       "y": 60,
@@ -424,9 +424,9 @@
         "data": [
           {
             "x": {
-              "id": 452,
+              "id": 464,
               "name": "hour",
-              "refId": 450,
+              "refId": 462,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -435,9 +435,9 @@
               "processes": []
             },
             "y": {
-              "id": 453,
+              "id": 465,
               "name": "activity",
-              "refId": 451,
+              "refId": 463,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -483,7 +483,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_24",
+      "id": "note_25",
       "text": "Plots one column against another as points, most often a value against time to view a raw time-series. Wire x (e.g. time) and y (values); multiple y-columns overlay as separate series. Supports zoom/pan and an optional facet mode (one small plot per series). Use it as your first look at the data before any analysis.",
       "x": 40,
       "y": 24,
@@ -495,19 +495,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_450": {
+    "data_462": {
       "x": 60,
       "y": 314
     },
-    "data_451": {
+    "data_463": {
       "x": 60,
       "y": 814
     },
-    "note_24": {
+    "note_25": {
       "x": 40,
       "y": 24
     },
-    "plot_63": {
+    "plot_64": {
       "x": 820,
       "y": 314
     }
@@ -569,5 +569,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "478": [
+    "490": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "479": [
+    "491": [
       0,
       0,
       0,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 478,
+      "id": 490,
       "name": "hour",
-      "data": 478,
+      "data": 490,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 479,
+      "id": 491,
       "name": "activity",
-      "data": 479,
+      "data": 491,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 69,
+      "id": 70,
       "name": "Activity actogram",
       "x": 60,
       "y": 60,
@@ -411,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 480,
+              "id": 492,
               "name": "hour",
-              "refId": 478,
+              "refId": 490,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 481,
+              "id": 493,
               "name": "activity",
-              "refId": 479,
+              "refId": 491,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -446,7 +446,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_29",
+      "id": "note_30",
       "text": "The classic chronobiology display: activity plotted against time of day, one row per day and double-plotted (each day shown twice, side by side) so rhythms crossing midnight stay visible and drift reads as a diagonal band. Use it to eyeball period, phase, and entrainment. The demo shows a clear daily activity band.\n\nRefinetti, Cornélissen & Halberg (2007), Biol. Rhythm Res.",
       "x": 40,
       "y": 24,
@@ -458,19 +458,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_478": {
+    "data_490": {
       "x": 60,
       "y": 314
     },
-    "data_479": {
+    "data_491": {
       "x": 60,
       "y": 814
     },
-    "note_29": {
+    "note_30": {
       "x": 40,
       "y": 24
     },
-    "plot_69": {
+    "plot_70": {
       "x": 820,
       "y": 314
     }
@@ -532,5 +532,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

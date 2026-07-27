@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "468": [
+    "480": [
       6.18357552489177,
       6.690160198983765,
       6.40983903409247,
@@ -20,7 +20,7 @@
       6.904606497153116,
       6.724803937778721
     ],
-    "469": [
+    "481": [
       19.014500468166084,
       18.801938822626926,
       19.76336577355189,
@@ -40,7 +40,7 @@
       17.62649422349815,
       18.725213322863656
     ],
-    "470": [
+    "482": [
       0,
       1,
       2,
@@ -114,7 +114,7 @@
       70,
       71
     ],
-    "471": [
+    "483": [
       9.9588044378405,
       19.66502222794372,
       31.191998858939304,
@@ -191,9 +191,9 @@
   },
   "data": [
     {
-      "id": 468,
+      "id": 480,
       "name": "Group A phase",
-      "data": 468,
+      "data": 480,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -202,9 +202,9 @@
       "processes": []
     },
     {
-      "id": 469,
+      "id": 481,
       "name": "Group B phase",
-      "data": 469,
+      "data": 481,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -213,9 +213,9 @@
       "processes": []
     },
     {
-      "id": 470,
+      "id": 482,
       "name": "hour",
-      "data": 470,
+      "data": 482,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -224,9 +224,9 @@
       "processes": []
     },
     {
-      "id": 471,
+      "id": 483,
       "name": "activity",
-      "data": 471,
+      "data": 483,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -237,7 +237,7 @@
   ],
   "plots": [
     {
-      "id": 68,
+      "id": 69,
       "name": "Circular phase plot",
       "x": 60,
       "y": 60,
@@ -269,7 +269,7 @@
         "data": [
           {
             "x": {
-              "id": 472,
+              "id": 484,
               "name": "col",
               "refId": -1,
               "tableProcessGUId": "",
@@ -279,9 +279,9 @@
               "processes": []
             },
             "y": {
-              "id": 473,
+              "id": 485,
               "name": "Group A phase",
-              "refId": 468,
+              "refId": 480,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -297,7 +297,7 @@
           },
           {
             "x": {
-              "id": 474,
+              "id": 486,
               "name": "col",
               "refId": -1,
               "tableProcessGUId": "",
@@ -307,9 +307,9 @@
               "processes": []
             },
             "y": {
-              "id": 475,
+              "id": 487,
               "name": "Group B phase",
-              "refId": 469,
+              "refId": 481,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -325,9 +325,9 @@
           },
           {
             "x": {
-              "id": 476,
+              "id": 488,
               "name": "hour",
-              "refId": 470,
+              "refId": 482,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -336,9 +336,9 @@
               "processes": []
             },
             "y": {
-              "id": 477,
+              "id": 489,
               "name": "activity",
-              "refId": 471,
+              "refId": 483,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -373,7 +373,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_28",
+      "id": "note_29",
       "text": "Plots one or more phase/angle columns (e.g. acrophases, activity onsets) as points around a clock face on an adjustable period, each column a coloured group with its Rayleigh mean-resultant vector — the arrow's length is R (0 = dispersed, 1 = tightly clustered) (Batschelet 1981). Wiring an optional time column to a series turns it into a value-radius clock plot instead: each row is placed at its time-of-day with radius proportional to its value, and the vector becomes an amplitude-weighted acrophase. Toggle rose wedges for a circular histogram of an untimed group, or the Watson-Williams test (the circular analogue of one-way ANOVA) to ask whether untimed groups share a common mean direction (Watson & Williams 1956) — timed series sit outside that comparison, since WW compares discrete event angles, not a continuous weighted rhythm. The demo shows both modes: two untimed onset-phase groups (near 7 h and 19 h) with a significant Watson-Williams test, plus a timed activity series rendered as a value-radius clock.",
       "x": 40,
       "y": 24,
@@ -385,27 +385,27 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_468": {
+    "data_480": {
       "x": 60,
       "y": 314
     },
-    "data_469": {
+    "data_481": {
       "x": 60,
       "y": 814
     },
-    "data_470": {
+    "data_482": {
       "x": 60,
       "y": 1314
     },
-    "data_471": {
+    "data_483": {
       "x": 60,
       "y": 1814
     },
-    "note_28": {
+    "note_29": {
       "x": 40,
       "y": 24
     },
-    "plot_68": {
+    "plot_69": {
       "x": 820,
       "y": 314
     }
@@ -467,5 +467,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

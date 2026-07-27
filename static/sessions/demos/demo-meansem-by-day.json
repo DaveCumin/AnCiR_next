@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "464": [
+    "476": [
       1,
       1,
       1,
@@ -170,7 +170,7 @@
       7,
       7
     ],
-    "465": [
+    "477": [
       16.291076892469444,
       20.29554398487714,
       9.51596332468565,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 464,
+      "id": 476,
       "name": "day",
-      "data": 464,
+      "data": 476,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 465,
+      "id": 477,
       "name": "activity",
-      "data": 465,
+      "data": 477,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 67,
+      "id": 68,
       "name": "Activity by day (mean ± SEM)",
       "x": 60,
       "y": 60,
@@ -411,9 +411,9 @@
         "data": [
           {
             "x": {
-              "id": 466,
+              "id": 478,
               "name": "day",
-              "refId": 464,
+              "refId": 476,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +422,9 @@
               "processes": []
             },
             "y": {
-              "id": 467,
+              "id": 479,
               "name": "activity",
-              "refId": 465,
+              "refId": 477,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -472,7 +472,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_27",
+      "id": "note_28",
       "text": "Overlays each group's mean as a marker with whiskers showing ± one standard error of the mean (SEM = s/√n), grouped by the x-column. Use it to compare average levels across conditions or time bins while showing the precision of each mean. The demo shows per-group means with error bars.",
       "x": 40,
       "y": 24,
@@ -484,19 +484,19 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_464": {
+    "data_476": {
       "x": 60,
       "y": 314
     },
-    "data_465": {
+    "data_477": {
       "x": 60,
       "y": 814
     },
-    "note_27": {
+    "note_28": {
       "x": 40,
       "y": 24
     },
-    "plot_67": {
+    "plot_68": {
       "x": 820,
       "y": 314
     }
@@ -558,5 +558,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

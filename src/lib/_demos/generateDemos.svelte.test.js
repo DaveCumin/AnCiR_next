@@ -736,18 +736,60 @@ const WORKFLOWS = [
 				mkCol('number', noise, 'noise')
 			];
 
-			const describeKeys = ['variable', 'n', 'mean', 'median', 'sd', 'min', 'max', 'range', 'q1', 'q3', 'iqr', 'skewness', 'kurtosis'];
-			const describe = new TableProcess({ name: 'DescribeData', args: { yIN: [...ids], out: Object.fromEntries(describeKeys.map((k) => [k, -1])) } }, null);
+			const describeKeys = [
+				'variable',
+				'n',
+				'mean',
+				'median',
+				'sd',
+				'min',
+				'max',
+				'range',
+				'q1',
+				'q3',
+				'iqr',
+				'skewness',
+				'kurtosis'
+			];
+			const describe = new TableProcess(
+				{
+					name: 'DescribeData',
+					args: { yIN: [...ids], out: Object.fromEntries(describeKeys.map((k) => [k, -1])) }
+				},
+				null
+			);
 			describe.displayName = 'Describe data';
 			pushObj(describe);
 			await describe.doProcess();
 
-			const norm = new TableProcess({ name: 'NormalityTest', args: { yIN: [...ids], method: 'shapiro', alpha: 0.05, out: { variable: -1, statistic: -1, pvalue: -1, n: -1, normal: -1 } } }, null);
+			const norm = new TableProcess(
+				{
+					name: 'NormalityTest',
+					args: {
+						yIN: [...ids],
+						method: 'shapiro',
+						alpha: 0.05,
+						out: { variable: -1, statistic: -1, pvalue: -1, n: -1, normal: -1 }
+					}
+				},
+				null
+			);
 			norm.displayName = 'Normality test';
 			pushObj(norm);
 			await norm.doProcess();
 
-			const corr = new TableProcess({ name: 'Correlation', args: { yIN: [...ids], method: 'auto', alpha: 0.05, out: { var_i: -1, var_j: -1, r: -1, pvalue: -1, n: -1 } } }, null);
+			const corr = new TableProcess(
+				{
+					name: 'Correlation',
+					args: {
+						yIN: [...ids],
+						method: 'auto',
+						alpha: 0.05,
+						out: { var_i: -1, var_j: -1, r: -1, pvalue: -1, n: -1 }
+					}
+				},
+				null
+			);
 			corr.displayName = 'Correlation matrix';
 			pushObj(corr);
 			await corr.doProcess();
@@ -765,8 +807,14 @@ const WORKFLOWS = [
 			for (const id of ids) pairs.plot.addData({ column: { refId: id } });
 			pushObj(pairs);
 
-			tablePlot('Summary statistics', ['variable', 'mean', 'sd', 'skewness', 'kurtosis'].map((k) => describe.args.out[k]));
-			tablePlot('Normality', ['variable', 'statistic', 'pvalue', 'normal'].map((k) => norm.args.out[k]));
+			tablePlot(
+				'Summary statistics',
+				['variable', 'mean', 'sd', 'skewness', 'kurtosis'].map((k) => describe.args.out[k])
+			);
+			tablePlot(
+				'Normality',
+				['variable', 'statistic', 'pvalue', 'normal'].map((k) => norm.args.out[k])
+			);
 		}
 	},
 	{
@@ -793,7 +841,20 @@ const WORKFLOWS = [
 			const groupId = mkCol('category', groups, 'group');
 			const valueId = mkCol('number', values, 'response');
 
-			const gc = new TableProcess({ name: 'GroupComparison', args: { xIN: groupId, yIN: [valueId], method: 'auto', alpha: 0.05, postHocEnabled: true, out: { statistic: -1, pvalue: -1 } } }, null);
+			const gc = new TableProcess(
+				{
+					name: 'GroupComparison',
+					args: {
+						xIN: groupId,
+						yIN: [valueId],
+						method: 'auto',
+						alpha: 0.05,
+						postHocEnabled: true,
+						out: { statistic: -1, pvalue: -1 }
+					}
+				},
+				null
+			);
 			gc.displayName = 'Compare groups';
 			pushObj(gc);
 			await gc.doProcess();
@@ -830,7 +891,20 @@ const WORKFLOWS = [
 			const groupId = mkCol('category', groups, 'condition');
 			const valueId = mkCol('number', values, 'measure');
 
-			const gc = new TableProcess({ name: 'GroupComparison', args: { xIN: groupId, yIN: [valueId], method: 'auto', alpha: 0.05, postHocEnabled: true, out: { statistic: -1, pvalue: -1 } } }, null);
+			const gc = new TableProcess(
+				{
+					name: 'GroupComparison',
+					args: {
+						xIN: groupId,
+						yIN: [valueId],
+						method: 'auto',
+						alpha: 0.05,
+						postHocEnabled: true,
+						out: { statistic: -1, pvalue: -1 }
+					}
+				},
+				null
+			);
 			gc.displayName = 'One-way ANOVA + post-hoc';
 			pushObj(gc);
 			await gc.doProcess();
@@ -873,12 +947,29 @@ const WORKFLOWS = [
 				mkCol('number', x5, 'x5')
 			];
 
-			const describe = new TableProcess({ name: 'DescribeData', args: { yIN: [...ids], out: { variable: -1, n: -1, mean: -1, sd: -1, skewness: -1 } } }, null);
+			const describe = new TableProcess(
+				{
+					name: 'DescribeData',
+					args: { yIN: [...ids], out: { variable: -1, n: -1, mean: -1, sd: -1, skewness: -1 } }
+				},
+				null
+			);
 			describe.displayName = 'Describe data';
 			pushObj(describe);
 			await describe.doProcess();
 
-			const corr = new TableProcess({ name: 'Correlation', args: { yIN: [...ids], method: 'auto', alpha: 0.05, out: { var_i: -1, var_j: -1, r: -1, pvalue: -1, n: -1 } } }, null);
+			const corr = new TableProcess(
+				{
+					name: 'Correlation',
+					args: {
+						yIN: [...ids],
+						method: 'auto',
+						alpha: 0.05,
+						out: { var_i: -1, var_j: -1, r: -1, pvalue: -1, n: -1 }
+					}
+				},
+				null
+			);
 			corr.displayName = 'Correlation matrix';
 			pushObj(corr);
 			await corr.doProcess();
@@ -891,7 +982,10 @@ const WORKFLOWS = [
 			for (const id of ids) pairs.plot.addData({ column: { refId: id } });
 			pushObj(pairs);
 
-			tablePlot('Correlations', ['var_i', 'var_j', 'r', 'pvalue'].map((k) => corr.args.out[k]));
+			tablePlot(
+				'Correlations',
+				['var_i', 'var_j', 'r', 'pvalue'].map((k) => corr.args.out[k])
+			);
 		}
 	},
 	{
@@ -923,7 +1017,15 @@ const WORKFLOWS = [
 						outputX: -1,
 						// Seed the per-Y curve + residual keys so the constructor allocates them and the
 						// func writes them at build time (fitted line + residuals are baked, not on-load).
-						out: { trendx: -1, [`trendy_${yId}`]: -1, [`resid_${yId}`]: -1, r2: -1, rmse: -1, coef_slope: -1, coef_intercept: -1 }
+						out: {
+							trendx: -1,
+							[`trendy_${yId}`]: -1,
+							[`resid_${yId}`]: -1,
+							r2: -1,
+							rmse: -1,
+							coef_slope: -1,
+							coef_intercept: -1
+						}
 					}
 				},
 				null
@@ -935,7 +1037,18 @@ const WORKFLOWS = [
 			const trendyId = tf.args.out[`trendy_${yId}`];
 			const trendxId = tf.args.out.trendx;
 
-			const norm = new TableProcess({ name: 'NormalityTest', args: { yIN: [residId], method: 'shapiro', alpha: 0.05, out: { variable: -1, statistic: -1, pvalue: -1, n: -1, normal: -1 } } }, null);
+			const norm = new TableProcess(
+				{
+					name: 'NormalityTest',
+					args: {
+						yIN: [residId],
+						method: 'shapiro',
+						alpha: 0.05,
+						out: { variable: -1, statistic: -1, pvalue: -1, n: -1, normal: -1 }
+					}
+				},
+				null
+			);
 			norm.displayName = 'Residual normality';
 			pushObj(norm);
 			await norm.doProcess();
@@ -948,8 +1061,17 @@ const WORKFLOWS = [
 				],
 				{ x: 'x', y: 'y' }
 			);
-			scatterPlot('Residuals vs x', [{ x: xId, y: residId, label: 'residuals', kind: 'points', colour: FIT }], { x: 'x', y: 'residual' });
-			tablePlot('Fit statistics', [tf.args.out.r2, tf.args.out.rmse, tf.args.out.coef_slope, tf.args.out.coef_intercept]);
+			scatterPlot(
+				'Residuals vs x',
+				[{ x: xId, y: residId, label: 'residuals', kind: 'points', colour: FIT }],
+				{ x: 'x', y: 'residual' }
+			);
+			tablePlot('Fit statistics', [
+				tf.args.out.r2,
+				tf.args.out.rmse,
+				tf.args.out.coef_slope,
+				tf.args.out.coef_intercept
+			]);
 		}
 	},
 	{
@@ -980,7 +1102,21 @@ const WORKFLOWS = [
 					args: {
 						yIN: yId,
 						xIN: [x1Id, x2Id],
-						out: Object.fromEntries(['term', 'coef', 'se', 'z', 'pvalue', 'oddsRatio', 'ciLow', 'ciHigh', 'outcome', 'eta', 'fitted'].map((k) => [k, -1]))
+						out: Object.fromEntries(
+							[
+								'term',
+								'coef',
+								'se',
+								'z',
+								'pvalue',
+								'oddsRatio',
+								'ciLow',
+								'ciHigh',
+								'outcome',
+								'eta',
+								'fitted'
+							].map((k) => [k, -1])
+						)
 					}
 				},
 				null
@@ -993,12 +1129,27 @@ const WORKFLOWS = [
 			scatterPlot(
 				'Logistic fit',
 				[
-					{ x: lr.args.out.eta, y: lr.args.out.outcome, label: 'observed outcome', kind: 'points', colour: RAW },
-					{ x: lr.args.out.eta, y: lr.args.out.fitted, label: 'fitted P(y=1)', kind: 'points', colour: FIT }
+					{
+						x: lr.args.out.eta,
+						y: lr.args.out.outcome,
+						label: 'observed outcome',
+						kind: 'points',
+						colour: RAW
+					},
+					{
+						x: lr.args.out.eta,
+						y: lr.args.out.fitted,
+						label: 'fitted P(y=1)',
+						kind: 'points',
+						colour: FIT
+					}
 				],
 				{ x: 'linear predictor (η)', y: 'P(y=1)' }
 			);
-			tablePlot('Coefficients', ['term', 'coef', 'oddsRatio', 'pvalue'].map((k) => lr.args.out[k]));
+			tablePlot(
+				'Coefficients',
+				['term', 'coef', 'oddsRatio', 'pvalue'].map((k) => lr.args.out[k])
+			);
 		}
 	},
 	{
@@ -1023,12 +1174,31 @@ const WORKFLOWS = [
 			const tId = mkCol('category', treatment, 'treatment');
 			const oId = mkCol('category', outcome, 'outcome');
 
-			const chi = new TableProcess({ name: 'ChiSquared', args: { testType: 'independence', xIN: tId, yIN: oId, correction: true, out: { statistic: -1, pvalue: -1, df: -1 } } }, null);
+			const chi = new TableProcess(
+				{
+					name: 'ChiSquared',
+					args: {
+						testType: 'independence',
+						// 120 rows of tidy PAIRED data (one row per subject), so state it:
+						// the node now defaults to independent groups.
+						dataFormat: 'paired',
+						xIN: tId,
+						yIN: oId,
+						correction: true,
+						out: { statistic: -1, pvalue: -1, df: -1 }
+					}
+				},
+				null
+			);
 			chi.displayName = 'Chi-squared (independence)';
 			pushObj(chi);
 			await chi.doProcess();
 
-			tablePlot('Chi-squared result', [chi.args.out.statistic, chi.args.out.pvalue, chi.args.out.df]);
+			tablePlot('Chi-squared result', [
+				chi.args.out.statistic,
+				chi.args.out.pvalue,
+				chi.args.out.df
+			]);
 		}
 	},
 	{
@@ -1067,10 +1237,11 @@ const WORKFLOWS = [
 					name: 'ChiSquared',
 					args: {
 						testType: 'independence',
+						dataFormat: 'paired',
 						xIN: tId,
 						yIN: oId,
 						correction: true,
-						out: { statistic: -1, pvalue: -1, df: -1 }
+						out: { statistic: -1, pvalue: -1, df: -1, effectSize: -1 }
 					}
 				},
 				null
@@ -1084,10 +1255,11 @@ const WORKFLOWS = [
 					name: 'ChiSquared',
 					args: {
 						testType: 'fisher',
+						dataFormat: 'paired',
 						xIN: tId,
 						yIN: oId,
 						alternative: 'two-sided',
-						out: { statistic: -1, pvalue: -1, df: -1 }
+						out: { statistic: -1, pvalue: -1, df: -1, effectSize: -1 }
 					}
 				},
 				null
@@ -1097,6 +1269,64 @@ const WORKFLOWS = [
 			await fisher.doProcess();
 
 			tablePlot('Chi-squared vs Fisher (p-values)', [chi.args.out.pvalue, fisher.args.out.pvalue]);
+		}
+	},
+	{
+		id: 'stats-two-groups-counts',
+		summary: 'Two independent groups, different sizes.',
+		name: 'Workflow — comparing two independent groups (counts)',
+		family: 'Workflows',
+		description:
+			'Two groups of DIFFERENT sizes, each with its own outcomes: 7 of 10 treated animals became arrhythmic against 2 of 25 controls. This is the layout categorical data usually arrives in, and it is not the paired one — there is no meaningful pairing between the third treated animal and the third control, and the columns are 10 and 25 rows long. The Chi-squared node\'s Input format is set to "Two independent groups", which tabulates each column separately and builds the 2x2 table [[7,3],[2,23]]. Read the p-value with Cramer\'s V beside it: the association is strong (V = 0.64), not merely detectable. A second node runs Fisher\'s exact test on the same data, which is the right choice here because two of the four expected counts fall below 5. Set Input format to "Paired" to see why it matters — the paired reading pairs rows arbitrarily, discards 25 of the 35 observations and reports p = 0.86, hiding a real effect entirely.',
+		showcases: ['ChiSquared'],
+		async build() {
+			// Deliberately unequal columns — that is the whole point of the layout.
+			const treated = [...Array(7).fill('arrhythmic'), ...Array(3).fill('rhythmic')];
+			const control = [...Array(2).fill('arrhythmic'), ...Array(23).fill('rhythmic')];
+			const tId = mkCol('category', treated, 'treated (n=10)');
+			const cId = mkCol('category', control, 'control (n=25)');
+
+			const chi = new TableProcess(
+				{
+					name: 'ChiSquared',
+					args: {
+						testType: 'independence',
+						dataFormat: 'groups',
+						xIN: tId,
+						yIN: cId,
+						correction: true,
+						out: { statistic: -1, pvalue: -1, df: -1, effectSize: -1 }
+					}
+				},
+				null
+			);
+			chi.displayName = 'Chi-squared (two groups)';
+			pushObj(chi);
+			await chi.doProcess();
+
+			const fisher = new TableProcess(
+				{
+					name: 'ChiSquared',
+					args: {
+						testType: 'fisher',
+						dataFormat: 'groups',
+						xIN: tId,
+						yIN: cId,
+						alternative: 'two-sided',
+						out: { statistic: -1, pvalue: -1, df: -1, effectSize: -1 }
+					}
+				},
+				null
+			);
+			fisher.displayName = "Fisher's exact (two groups)";
+			pushObj(fisher);
+			await fisher.doProcess();
+
+			tablePlot('Chi-squared vs Fisher', [
+				chi.args.out.pvalue,
+				chi.args.out.effectSize,
+				fisher.args.out.pvalue
+			]);
 		}
 	},
 	{
@@ -1131,7 +1361,13 @@ const WORKFLOWS = [
 
 			// Identical summary statistics across the four y-columns.
 			const describe = new TableProcess(
-				{ name: 'DescribeData', args: { yIN: [y1Id, y2Id, y3Id, y4Id], out: { variable: -1, n: -1, mean: -1, sd: -1, min: -1, max: -1 } } },
+				{
+					name: 'DescribeData',
+					args: {
+						yIN: [y1Id, y2Id, y3Id, y4Id],
+						out: { variable: -1, n: -1, mean: -1, sd: -1, min: -1, max: -1 }
+					}
+				},
 				null
 			);
 			describe.displayName = 'Describe the four y-columns';
@@ -1202,14 +1438,19 @@ const WORKFLOWS = [
 			// except set IV's leverage point at (19, 12.5), so the bottom-right corner is
 			// empty in all four panels — the one legend position that never covers a mark.
 			const panel = (name, series, col, row) => {
-				const p = scatterPlot(name, series, { x: 'x', y: 'y' }, {
-					x: COL_X[col],
-					y: ROW_Y[row],
-					width: PANEL_W,
-					height: PANEL_H,
-					xlims: XLIMS,
-					ylims: YLIMS
-				});
+				const p = scatterPlot(
+					name,
+					series,
+					{ x: 'x', y: 'y' },
+					{
+						x: COL_X[col],
+						y: ROW_Y[row],
+						width: PANEL_W,
+						height: PANEL_H,
+						xlims: XLIMS,
+						ylims: YLIMS
+					}
+				);
 				p.plot.legend.position = 'bottomright';
 				return p;
 			};
@@ -1252,12 +1493,16 @@ const WORKFLOWS = [
 			);
 
 			// The two summary tables sit below the grid, so the four panels read as one figure.
-			tablePlot('Identical summaries', [describe.args.out.variable, describe.args.out.mean, describe.args.out.sd], {
-				x: COL_X[0],
-				y: 1005,
-				width: PANEL_W,
-				height: 240
-			});
+			tablePlot(
+				'Identical summaries',
+				[describe.args.out.variable, describe.args.out.mean, describe.args.out.sd],
+				{
+					x: COL_X[0],
+					y: 1005,
+					width: PANEL_W,
+					height: 240
+				}
+			);
 			tablePlot(
 				'Identical fits (sets I–III)',
 				[tf123.args.out.coef_slope, tf123.args.out.coef_intercept, tf123.args.out.r2],
@@ -1328,7 +1573,13 @@ const WORKFLOWS = [
 				const ln = fitLine(gx, gy);
 				const lxId = mkCol('number', ln.x, `${w.name} fit x`);
 				const lyId = mkCol('number', ln.y, `${w.name} fit y`);
-				lineSeries.push({ x: lxId, y: lyId, label: `${w.name} trend`, kind: 'line', colour: w.colour });
+				lineSeries.push({
+					x: lxId,
+					y: lyId,
+					label: `${w.name} trend`,
+					kind: 'line',
+					colour: w.colour
+				});
 			}
 
 			const xAllId = mkCol('number', xAll, 'dose (pooled)');
@@ -1345,7 +1596,15 @@ const WORKFLOWS = [
 			};
 
 			const corr = new TableProcess(
-				{ name: 'Correlation', args: { yIN: [xAllId, yAllId], method: 'pearson', alpha: 0.05, out: { var_i: -1, var_j: -1, r: -1, pvalue: -1, n: -1 } } },
+				{
+					name: 'Correlation',
+					args: {
+						yIN: [xAllId, yAllId],
+						method: 'pearson',
+						alpha: 0.05,
+						out: { var_i: -1, var_j: -1, r: -1, pvalue: -1, n: -1 }
+					}
+				},
 				null
 			);
 			corr.displayName = 'Correlation (pooled)';
@@ -1357,7 +1616,12 @@ const WORKFLOWS = [
 				[...pointSeries, ...lineSeries, aggLine],
 				{ x: 'Dose', y: 'Activity' }
 			);
-			tablePlot('Pooled correlation (negative)', [corr.args.out.var_i, corr.args.out.var_j, corr.args.out.r, corr.args.out.pvalue]);
+			tablePlot('Pooled correlation (negative)', [
+				corr.args.out.var_i,
+				corr.args.out.var_j,
+				corr.args.out.r,
+				corr.args.out.pvalue
+			]);
 		}
 	},
 	{
@@ -1633,8 +1897,7 @@ const WORKFLOWS = [
 			// how many cycles it takes to come within SETTLE hours of the new phase.
 			const SETTLE = 0.5; // h — residual small enough to read as "settled"
 			const K_ADV = 8 / Math.log(SHIFT / SETTLE); // ~8 transient cycles
-			const closed = (day) =>
-				day < STIM ? 0 : SHIFT * (1 - Math.exp(-(day - STIM + 1) / K_ADV));
+			const closed = (day) => (day < STIM ? 0 : SHIFT * (1 - Math.exp(-(day - STIM + 1) / K_ADV)));
 			const onsetAdvance = (day) => freeRun(day) - closed(day);
 
 			// 11 h of activity from onset. mod24 rather than a fixed offset because
@@ -1762,10 +2025,7 @@ const WORKFLOWS = [
 			ra.displayName = 'Rhythmicity Analysis — dominant component';
 			pushObj(ra);
 			await ra.doProcess();
-			tablePlot('Dominant component', [
-				ra.args.out.stat_peak_period,
-				ra.args.out.stat_peak_power
-			]);
+			tablePlot('Dominant component', [ra.args.out.stat_peak_period, ra.args.out.stat_peak_power]);
 		}
 	},
 	{
@@ -2004,7 +2264,8 @@ const WORKFLOWS = [
 					const day = Math.floor(h / 24);
 					let onset;
 					if (day < BASE) onset = ONSET_BASE;
-					else if (day < BASE + SHIFTED) onset = ONSET_NEW; // both follow the light
+					else if (day < BASE + SHIFTED)
+						onset = ONSET_NEW; // both follow the light
 					// In DD the difference appears: a shifted clock stays shifted;
 					// a masked animal was never shifted at all.
 					else onset = trulyEntrained ? ONSET_NEW : ONSET_BASE;
@@ -2028,7 +2289,7 @@ const WORKFLOWS = [
 			a2.plot.doublePlot = 2;
 			pushObj(a2);
 		}
-	},
+	}
 ];
 
 // Reset core to a clean slate between demos.
@@ -2122,7 +2383,6 @@ function prewarmWrapperNames() {
 		}
 	}
 }
-
 
 /**
  * Grid the session's plots before it is written.
@@ -2254,7 +2514,8 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 					family: 'Sources',
 					description: `${wf.summary} Data only — ${cols} columns × ${rows} rows, no analysis.`,
 					summary: wf.summary,
-					group: wf.group ?? (wf.id.startsWith('stats-') ? 'General statistics' : 'Rhythm & circadian'),
+					group:
+						wf.group ?? (wf.id.startsWith('stats-') ? 'General statistics' : 'Rhythm & circadian'),
 					file: csvFile,
 					kind: 'dataset',
 					showcases: []
@@ -2271,7 +2532,8 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 					summary: wf.summary,
 					// Sub-heading for the start screen. Explicit when a workflow declares one,
 					// otherwise derived from the id convention.
-					group: wf.group ?? (wf.id.startsWith('stats-') ? 'General statistics' : 'Rhythm & circadian'),
+					group:
+						wf.group ?? (wf.id.startsWith('stats-') ? 'General statistics' : 'Rhythm & circadian'),
 					file,
 					kind: 'workflow',
 					showcases: wf.showcases

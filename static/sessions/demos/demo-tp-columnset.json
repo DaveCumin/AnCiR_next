@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "598": [
+    "610": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "599": [
+    "611": [
       1,
       3,
       5,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 598,
+      "id": 610,
       "name": "Column Set input 1",
-      "data": 598,
+      "data": 610,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,9 +118,9 @@
       "processes": []
     },
     {
-      "id": 599,
+      "id": 611,
       "name": "Column Set input 2",
-      "data": 599,
+      "data": 611,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,7 +131,7 @@
   ],
   "plots": [
     {
-      "id": 100,
+      "id": 101,
       "name": "Column Set result",
       "x": 60,
       "y": 60,
@@ -147,8 +147,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          598,
-          599
+          610,
+          611
         ],
         "showCol": [
           true,
@@ -163,13 +163,13 @@
   ],
   "tableProcesses": [
     {
-      "id": 48,
+      "id": 50,
       "name": "ColumnSet",
       "displayName": "Column Set",
       "args": {
         "colsIN": [
-          598,
-          599
+          610,
+          611
         ],
         "pattern": "",
         "matchField": "either",
@@ -183,7 +183,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_48",
+      "id": "note_49",
       "text": "Curates a live, named subset of columns by matching their name and/or label against a pattern, and exposes it as a single wire you can plug into any many-input port. The set updates automatically as matching columns are added or removed, so downstream analyses and plots stay in sync without rewiring.",
       "x": 40,
       "y": 24,
@@ -195,23 +195,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_598": {
+    "data_610": {
       "x": 60,
       "y": 314
     },
-    "data_599": {
+    "data_611": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_48": {
+    "tableprocess_50": {
       "x": 440,
       "y": 314
     },
-    "plot_100": {
+    "plot_101": {
       "x": 820,
       "y": 314
     },
-    "note_48": {
+    "note_49": {
       "x": 40,
       "y": 24
     }
@@ -273,5 +273,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

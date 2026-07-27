@@ -2903,6 +2903,226 @@
 				"cramersV",
 				"phi"
 			]
+		},
+		{
+			"id": "util-fisher-conditional-or-0",
+			"kind": "pureUtil",
+			"jsFn": "fisherConditionalOR",
+			"pyFunc": "fisher_odds_ratio_ci",
+			"input": {
+				"table": [
+					[
+						7,
+						3
+					],
+					[
+						2,
+						23
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				0.95
+			],
+			"pyArgs": [
+				0.95
+			],
+			"compareScalars": [
+				"conditionalOddsRatio",
+				"ciLow",
+				"ciHigh"
+			]
+		},
+		{
+			"id": "util-fisher-conditional-or-1",
+			"kind": "pureUtil",
+			"jsFn": "fisherConditionalOR",
+			"pyFunc": "fisher_odds_ratio_ci",
+			"input": {
+				"table": [
+					[
+						8,
+						2
+					],
+					[
+						1,
+						5
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				0.95
+			],
+			"pyArgs": [
+				0.95
+			],
+			"compareScalars": [
+				"conditionalOddsRatio",
+				"ciLow",
+				"ciHigh"
+			]
+		},
+		{
+			"id": "util-fisher-conditional-or-2",
+			"kind": "pureUtil",
+			"jsFn": "fisherConditionalOR",
+			"pyFunc": "fisher_odds_ratio_ci",
+			"input": {
+				"table": [
+					[
+						3,
+						1
+					],
+					[
+						1,
+						3
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				0.95
+			],
+			"pyArgs": [
+				0.95
+			],
+			"compareScalars": [
+				"conditionalOddsRatio",
+				"ciLow",
+				"ciHigh"
+			]
+		},
+		{
+			"id": "util-fisher-conditional-or-3",
+			"kind": "pureUtil",
+			"jsFn": "fisherConditionalOR",
+			"pyFunc": "fisher_odds_ratio_ci",
+			"input": {
+				"table": [
+					[
+						100,
+						50
+					],
+					[
+						40,
+						110
+					]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [
+				0.95
+			],
+			"pyArgs": [
+				0.95
+			],
+			"compareScalars": [
+				"conditionalOddsRatio",
+				"ciLow",
+				"ciHigh"
+			]
+		},
+		{
+			"id": "util-correlation-ci-0",
+			"kind": "pureUtil",
+			"jsFn": "correlationCI",
+			"pyFunc": "correlation_ci",
+			"input": {
+				"values": [
+					0.5,
+					30
+				]
+			},
+			"valuesRef": "values",
+			"jsArgs": [
+				"pearson",
+				0.95
+			],
+			"pyArgs": [
+				"pearson",
+				0.95
+			],
+			"compareScalars": [
+				"ciLow",
+				"ciHigh"
+			]
+		},
+		{
+			"id": "util-correlation-ci-1",
+			"kind": "pureUtil",
+			"jsFn": "correlationCI",
+			"pyFunc": "correlation_ci",
+			"input": {
+				"values": [
+					-0.3,
+					50
+				]
+			},
+			"valuesRef": "values",
+			"jsArgs": [
+				"pearson",
+				0.95
+			],
+			"pyArgs": [
+				"pearson",
+				0.95
+			],
+			"compareScalars": [
+				"ciLow",
+				"ciHigh"
+			]
+		},
+		{
+			"id": "util-correlation-ci-2",
+			"kind": "pureUtil",
+			"jsFn": "correlationCI",
+			"pyFunc": "correlation_ci",
+			"input": {
+				"values": [
+					0.8,
+					20
+				]
+			},
+			"valuesRef": "values",
+			"jsArgs": [
+				"pearson",
+				0.95
+			],
+			"pyArgs": [
+				"pearson",
+				0.95
+			],
+			"compareScalars": [
+				"ciLow",
+				"ciHigh"
+			]
+		},
+		{
+			"id": "util-correlation-ci-3",
+			"kind": "pureUtil",
+			"jsFn": "correlationCI",
+			"pyFunc": "correlation_ci",
+			"input": {
+				"values": [
+					0.5,
+					30
+				]
+			},
+			"valuesRef": "values",
+			"jsArgs": [
+				"spearman",
+				0.95
+			],
+			"pyArgs": [
+				"spearman",
+				0.95
+			],
+			"compareScalars": [
+				"ciLow",
+				"ciHigh"
+			]
 		}
 	]
 }

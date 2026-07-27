@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "799": [
+    "812": [
       0.75,
       0.4936245900186056,
       0.10008893632086846,
@@ -22,7 +22,7 @@
       0.34356671248653514,
       0.7177368592146683
     ],
-    "800": [
+    "813": [
       2.5500000000000003,
       2.293624590018606,
       1.9000889363208686,
@@ -44,34 +44,34 @@
       2.1435667124865354,
       2.5177368592146685
     ],
-    "801": [
+    "814": [
       0.9685941696997769,
       0.9685941696997767
     ],
-    "802": [
+    "815": [
       18.763493311528006,
       18.763493311528
     ],
-    "803": [
+    "816": [
       1.9826460939624246e-8,
       1.982646093962434e-8
     ],
-    "804": [
+    "817": [
       453.7366669407144
     ],
-    "805": [
+    "818": [
       0
     ],
-    "806": [
+    "819": [
       1.5736813608355367,
       8.449174902405415
     ]
   },
   "data": [
     {
-      "id": 799,
+      "id": 812,
       "name": "Rayleigh test input 1",
-      "data": 799,
+      "data": 812,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -80,9 +80,9 @@
       "processes": []
     },
     {
-      "id": 800,
+      "id": 813,
       "name": "Rayleigh test input 2",
-      "data": 800,
+      "data": 813,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -91,66 +91,66 @@
       "processes": []
     },
     {
-      "id": 801,
-      "name": "R_86",
-      "data": 801,
+      "id": 814,
+      "name": "R_88",
+      "data": 814,
       "type": "number",
-      "tableProcessGUId": "9a356e78-ad14-4344-8dfd-8713105a4372",
+      "tableProcessGUId": "6a110643-ec9d-454b-8ed2-2b729ccb131c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 802,
-      "name": "z_86",
-      "data": 802,
+      "id": 815,
+      "name": "z_88",
+      "data": 815,
       "type": "number",
-      "tableProcessGUId": "9a356e78-ad14-4344-8dfd-8713105a4372",
+      "tableProcessGUId": "6a110643-ec9d-454b-8ed2-2b729ccb131c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 803,
-      "name": "pvalue_86",
-      "data": 803,
+      "id": 816,
+      "name": "pvalue_88",
+      "data": 816,
       "type": "number",
-      "tableProcessGUId": "9a356e78-ad14-4344-8dfd-8713105a4372",
+      "tableProcessGUId": "6a110643-ec9d-454b-8ed2-2b729ccb131c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 804,
-      "name": "F_86",
-      "data": 804,
+      "id": 817,
+      "name": "F_88",
+      "data": 817,
       "type": "number",
-      "tableProcessGUId": "9a356e78-ad14-4344-8dfd-8713105a4372",
+      "tableProcessGUId": "6a110643-ec9d-454b-8ed2-2b729ccb131c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 805,
-      "name": "ww_pvalue_86",
-      "data": 805,
+      "id": 818,
+      "name": "ww_pvalue_88",
+      "data": 818,
       "type": "number",
-      "tableProcessGUId": "9a356e78-ad14-4344-8dfd-8713105a4372",
+      "tableProcessGUId": "6a110643-ec9d-454b-8ed2-2b729ccb131c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 806,
-      "name": "acrophase_86",
-      "data": 806,
+      "id": 819,
+      "name": "acrophase_88",
+      "data": 819,
       "type": "number",
-      "tableProcessGUId": "9a356e78-ad14-4344-8dfd-8713105a4372",
+      "tableProcessGUId": "6a110643-ec9d-454b-8ed2-2b729ccb131c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -159,7 +159,7 @@
   ],
   "plots": [
     {
-      "id": 140,
+      "id": 141,
       "name": "Rayleigh test result",
       "x": 60,
       "y": 60,
@@ -175,14 +175,14 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          799,
-          800,
-          801,
-          802,
-          803,
-          804,
-          805,
-          806
+          812,
+          813,
+          814,
+          815,
+          816,
+          817,
+          818,
+          819
         ],
         "showCol": [
           true,
@@ -203,24 +203,24 @@
   ],
   "tableProcesses": [
     {
-      "id": 86,
+      "id": 88,
       "name": "RayleighTest",
       "displayName": "Rayleigh test",
       "args": {
         "yIN": [
-          799,
-          800
+          812,
+          813
         ],
         "unit": "radians",
         "period": 24,
         "showWatsonWilliams": true,
         "out": {
-          "R": 801,
-          "z": 802,
-          "pvalue": 803,
-          "F": 804,
-          "ww_pvalue": 805,
-          "acrophase": 806
+          "R": 814,
+          "z": 815,
+          "pvalue": 816,
+          "F": 817,
+          "ww_pvalue": 818,
+          "acrophase": 819
         }
       },
       "refTPId": null
@@ -231,7 +231,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_78",
+      "id": "note_79",
       "text": "Circular-statistics tests for phase/angle columns (radians, degrees, or clock-hours on a chosen period). The Rayleigh test always runs: for each column it asks whether the phases (e.g. acrophases, activity-onset times) point in a preferred direction rather than scattering uniformly, reporting the mean resultant length R (0 = dispersed, 1 = tightly clustered), Rayleigh's z = nR², a p-value, and an acrophase (Batschelet 1981). Wiring an optional time column — numeric hours or an actual timestamp, folded modulo the period to a clock phase — switches every column to an amplitude-weighted mode: each value weights its own measurement time's angle, giving an amplitude-weighted mean resultant vector and acrophase (the weighted mean time-of-peak) instead of treating the column as a set of raw angles; the unit setting is then ignored. An optional Watson-Williams test (toggle it on, like the boxplot's pairwise comparisons) adds the circular analogue of one-way ANOVA across the columns (each a group of raw angles), reporting an F statistic and p-value for whether the groups share a common mean direction; it assumes reasonably concentrated, similarly-dispersed samples and applies a von Mises concentration correction (Watson & Williams 1956) — it only applies to untimed columns, since it compares discrete event angles, not a continuous weighted rhythm. In the demo the two angle columns each cluster tightly (small Rayleigh p) but around different mean directions, so the Watson-Williams test is significant.",
       "x": 40,
       "y": 24,
@@ -243,23 +243,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_799": {
+    "data_812": {
       "x": 60,
       "y": 314
     },
-    "data_800": {
+    "data_813": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_86": {
+    "tableprocess_88": {
       "x": 440,
       "y": 314
     },
-    "plot_140": {
+    "plot_141": {
       "x": 820,
       "y": 314
     },
-    "note_78": {
+    "note_79": {
       "x": 40,
       "y": 24
     }
@@ -321,5 +321,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

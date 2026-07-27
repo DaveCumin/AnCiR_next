@@ -31,23 +31,54 @@
 		contingencyTable,
 		isMissingCategory,
 		cohensW,
-		effectSizeLabel
+		effectSizeLabel,
+		groupsToTable
 	} from '$lib/utils/chisquare.js';
-	import { fisherExactFromColumns } from '$lib/utils/fisherExact.js';
+	import { fisherExact, fisherExactFromColumns } from '$lib/utils/fisherExact.js';
 
-	const displayName = 'Chi-squared test';
+	// User-facing name only. The registry key is the FILENAME (ChiSquared), and
+	// saved sessions store that key in `name`, so the file is deliberately NOT
+	// renamed — doing so would fail to load every existing session. The node now
+	// runs three tests (chi-squared independence, goodness-of-fit and Fisher's
+	// exact), so "Chi-squared test" undersold it.
+	const displayName = 'Categorical tests';
 
 	const defaults = new Map([
 		['testType', { val: 'independence' }], // independence | goodness | fisher
 		['xIN', { val: -1 }], // rows (independence) / the tested column (goodness)
 		['yIN', { val: -1 }], // columns (independence only)
+		// How the two wired columns should be READ. This is orthogonal to testType
+		// and it changes the answer completely, so it is an explicit choice rather
+		// than something inferred:
+		//   'paired' — one row per subject, two variables recorded (the classic
+		//              tidy layout). Columns are the same length and pair by index.
+		//   'groups' — two INDEPENDENT samples, each column holding that group's
+		//              own outcomes. Usually different lengths ("7 of 10 vs 2 of 25").
+		// DEFAULT IS 'groups'. In this app a column IS a data series, so two groups
+		// in two columns is the natural shape, and the ports give no hint that
+		// anything is paired. The paired reading also fails catastrophically and
+		// SILENTLY when it is wrong (it truncates to the shorter column and
+		// cross-tabulates unrelated rows), whereas a mis-set 'groups' at least uses
+		// all the data and produces an interpretable table. Sessions saved before
+		// this param existed therefore switch to the group reading; the demos that
+		// genuinely are paired pin dataFormat: 'paired' explicitly.
+		['dataFormat', { val: 'groups' }],
 		['correction', { val: true }], // Yates' correction for 2×2 independence
 		['alternative', { val: 'two-sided' }], // Fisher only: two-sided | less | greater
 		// effectSize: Cramer's V (independence), Cohen's w (goodness-of-fit), or the
 		// odds ratio (Fisher). One port, because only one is ever meaningful at a time.
 		[
 			'out',
-			{ statistic: { val: -1 }, pvalue: { val: -1 }, df: { val: -1 }, effectSize: { val: -1 } }
+			{
+				statistic: { val: -1 },
+				pvalue: { val: -1 },
+				df: { val: -1 },
+				effectSize: { val: -1 },
+				// Fisher only: the exact confidence interval for the odds ratio.
+				// NaN in the two chi-squared modes, which have no interval.
+				ciLow: { val: -1 },
+				ciHigh: { val: -1 }
+			}
 		],
 		// oddsRatio is Fisher-only and stays NaN in the two chi-squared modes.
 		['valid', { val: false }]
@@ -56,6 +87,38 @@
 	const isRef = (id) => id != null && id !== -1 && getColumnById(id);
 	const isNumericCol = (data) =>
 		data.length > 0 && data.every((v) => v === null || v === '' || Number.isFinite(Number(v)));
+
+	/**
+	 * Turn the two wired columns into a contingency table, honouring dataFormat.
+	 *
+	 * Also returns any format warnings. The one that matters: in 'paired' mode the
+	 * columns pair BY INDEX, so two columns of very different lengths are almost
+	 * always independent groups wired into the paired reading — which silently
+	 * truncates to the shorter column and cross-tabulates unrelated rows.
+	 */
+	function buildTable(argsIN) {
+		const rowVar = getColumnById(argsIN.xIN);
+		const colVar = getColumnById(argsIN.yIN);
+		const a = rowVar?.getData() ?? [];
+		const b = colVar?.getData() ?? [];
+		const warnings = [];
+
+		if (argsIN.dataFormat === 'groups') {
+			const built = groupsToTable([a, b], [rowVar?.name ?? 'Group 1', colVar?.name ?? 'Group 2']);
+			return { ...built, warnings, format: 'groups' };
+		}
+
+		const built = contingencyTable(a, b);
+		// Length mismatch is the tell-tale of the wrong format being chosen.
+		const nA = a.filter((v) => !isMissingCategory(v)).length;
+		const nB = b.filter((v) => !isMissingCategory(v)).length;
+		if (nA > 0 && nB > 0 && Math.abs(nA - nB) > 0.1 * Math.max(nA, nB)) {
+			warnings.push(
+				`"Paired" reads the two columns one row per subject and pairs them BY INDEX, but they have very different lengths (${nA} vs ${nB}), so that pairing cannot be right — the extra rows are discarded and the pairing is arbitrary. If these are two INDEPENDENT groups (e.g. 7 of 10 vs 2 of 25), switch Input format back to "Two independent groups".`
+			);
+		}
+		return { ...built, warnings, format: 'paired' };
+	}
 
 	export function chisquared(argsIN) {
 		fillDefaults(argsIN, defaults);
@@ -68,11 +131,28 @@
 			if (!isRef(argsIN.xIN) || !isRef(argsIN.yIN)) return [null, false];
 			const rowVar = getColumnById(argsIN.xIN);
 			const colVar = getColumnById(argsIN.yIN);
-			const fx = fisherExactFromColumns(
-				rowVar.getData() ?? [],
-				colVar.getData() ?? [],
-				argsIN.alternative ?? 'two-sided'
-			);
+			const builtF = buildTable(argsIN);
+			warnings.push(...builtF.warnings);
+			const fx =
+				builtF.table.length === 2 && builtF.table[0]?.length === 2
+					? {
+							...fisherExact(builtF.table, argsIN.alternative ?? 'two-sided'),
+							table: builtF.table,
+							rowLabels: builtF.rowLabels,
+							colLabels: builtF.colLabels,
+							n: builtF.table.flat().reduce((x, y) => x + y, 0)
+						}
+					: {
+							valid: false,
+							reason: `Fisher's exact test needs exactly 2 categories in each variable (found ${builtF.rowLabels.length} and ${builtF.colLabels.length}).`,
+							table: builtF.table,
+							rowLabels: builtF.rowLabels,
+							colLabels: builtF.colLabels,
+							n: 0,
+							pvalue: NaN,
+							oddsRatio: NaN,
+							alternative: argsIN.alternative ?? 'two-sided'
+						};
 			if (!fx.valid) {
 				return [
 					{
@@ -102,8 +182,12 @@
 				pvalue: fx.pvalue,
 				df: NaN,
 				oddsRatio: fx.oddsRatio,
-				effectSize: fx.oddsRatio,
-				effectSizeName: 'odds ratio',
+				conditionalOddsRatio: fx.conditionalOddsRatio,
+				oddsRatioCI: fx.oddsRatioCI,
+				// The conditional MLE is the headline effect size: it is what R's
+				// fisher.test reports and it is the estimate the CI belongs to.
+				effectSize: fx.conditionalOddsRatio,
+				effectSizeName: 'odds ratio (conditional MLE)',
 				alternative: fx.alternative,
 				warnings
 			};
@@ -113,12 +197,9 @@
 
 		if (testType === 'independence') {
 			if (!isRef(argsIN.xIN) || !isRef(argsIN.yIN)) return [null, false];
-			const rowVar = getColumnById(argsIN.xIN);
-			const colVar = getColumnById(argsIN.yIN);
-			const { rowLabels, colLabels, table } = contingencyTable(
-				rowVar.getData() ?? [],
-				colVar.getData() ?? []
-			);
+			const built = buildTable(argsIN);
+			const { rowLabels, colLabels, table } = built;
+			warnings.push(...built.warnings);
 			if (rowLabels.length < 2 || colLabels.length < 2) {
 				return [
 					{
@@ -240,6 +321,8 @@
 		writeOutputColumn(argsIN.out?.pvalue, [result.pvalue], { processHash });
 		writeOutputColumn(argsIN.out?.df, [result.df], { processHash });
 		writeOutputColumn(argsIN.out?.effectSize, [result.effectSize ?? NaN], { processHash });
+		writeOutputColumn(argsIN.out?.ciLow, [result.oddsRatioCI?.[0] ?? NaN], { processHash });
+		writeOutputColumn(argsIN.out?.ciHigh, [result.oddsRatioCI?.[1] ?? NaN], { processHash });
 	}
 
 	export const definition = {
@@ -257,7 +340,9 @@
 				{ name: 'statistic', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'df', kind: 'column', cardinality: 'one', metric: true },
-				{ name: 'effectSize', kind: 'column', cardinality: 'one', metric: true }
+				{ name: 'effectSize', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'ciLow', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'ciHigh', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};
@@ -286,7 +371,13 @@
 
 	let getHash = $derived.by(() => {
 		let h =
-			String(p.args.testType) + ':' + String(p.args.correction) + ':' + String(p.args.alternative);
+			String(p.args.testType) +
+			':' +
+			String(p.args.correction) +
+			':' +
+			String(p.args.alternative) +
+			':' +
+			String(p.args.dataFormat);
 		for (const id of [p.args.xIN, p.args.yIN])
 			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
@@ -316,6 +407,26 @@
 			]}
 		/>
 	</ControlInput>
+	{#if p.args.testType !== 'goodness'}
+		<ControlInput label="Input format">
+			<AttributeSelect
+				bind:value={p.args.dataFormat}
+				options={['paired', 'groups']}
+				optionsDisplay={['Paired (one row per subject)', 'Two independent groups']}
+			/>
+		</ControlInput>
+		{#if p.args.dataFormat === 'groups'}
+			<p class="hint">
+				Each column is one group's own outcomes; the columns may be different lengths (e.g. 7 of 10
+				vs 2 of 25).
+			</p>
+		{:else}
+			<p class="hint">
+				Each row is one subject with both variables recorded; the columns pair by row and must be
+				the same length.
+			</p>
+		{/if}
+	{/if}
 	{#if p.args.testType === 'independence'}
 		<ControlInput label="Yates' correction (2×2)">
 			<input type="checkbox" bind:checked={p.args.correction} />
@@ -332,8 +443,32 @@
 	{#if Number.isFinite(result.pvalue)}
 		{#if result.testType === 'fisher'}
 			<p class="hint">
-				p = <strong>{fmt(result.pvalue)}</strong> ({result.alternative}), odds ratio =
-				<strong>{result.oddsRatio === Infinity ? '∞' : fmt(result.oddsRatio)}</strong>, n = {result.n}.
+				p = <strong>{fmt(result.pvalue)}</strong> ({result.alternative}), n = {result.n}.
+				<br />
+				<span class="muted"
+					>An exact test enumerates the distribution rather than referring a statistic to one, so
+					there is no test statistic and no degrees of freedom — the statistic and df ports stay
+					empty in this mode.</span
+				>
+				<br />
+				Odds ratio =
+				<strong
+					>{result.conditionalOddsRatio === Infinity
+						? '∞'
+						: fmt(result.conditionalOddsRatio)}</strong
+				>
+				{#if result.oddsRatioCI}
+					(95% CI {result.oddsRatioCI[0] === 0 ? '0' : fmt(result.oddsRatioCI[0])} to {result
+						.oddsRatioCI[1] === Infinity
+						? '∞'
+						: fmt(result.oddsRatioCI[1])})
+				{/if}
+				<br />
+				<span class="muted"
+					>conditional MLE; the sample odds ratio ad/bc is {result.oddsRatio === Infinity
+						? '∞'
+						: fmt(result.oddsRatio)}</span
+				>
 			</p>
 		{:else}
 			<p class="hint">

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { fisherExact, fisherExactFromColumns } from './fisherExact.js';
+import {
+	fisherExact,
+	fisherExactFromColumns,
+	conditionalOddsRatio,
+	oddsRatioCI
+} from './fisherExact.js';
 
 // Every p-value and odds ratio below was checked against
 // scipy.stats.fisher_exact. A 180-comparison sweep (all three alternatives over
@@ -318,5 +323,108 @@ describe('fisherExactFromColumns', () => {
 	it('tolerates columns of different lengths by using the shorter', () => {
 		const r = fisherExactFromColumns(treated, outcome.slice(0, 6));
 		expect(r.n).toBe(6);
+	});
+});
+
+describe('conditionalOddsRatio and oddsRatioCI', () => {
+	// Checked against scipy.stats.contingency.odds_ratio(kind='conditional') and
+	// its confidence_interval(). R's fisher.test prints the same quantities;
+	// small last-digit differences from R are its own root-finding tolerance.
+	const T = [
+		[7, 3],
+		[2, 23]
+	];
+
+	it('matches scipy on the conditional MLE (R prints 22.93777)', () => {
+		expect(conditionalOddsRatio(T)).toBeCloseTo(22.925349960050752, 6);
+	});
+
+	it('is NOT the sample odds ratio', () => {
+		// The whole point of the distinction: ad/bc = 26.83 here.
+		expect(conditionalOddsRatio(T)).toBeLessThan(26.8);
+	});
+
+	it('matches scipy on the confidence interval', () => {
+		const [lo, hi] = oddsRatioCI(T);
+		expect(lo).toBeCloseTo(2.831609489743858, 5);
+		expect(hi).toBeCloseTo(330.2511114617492, 2);
+	});
+
+	it('brackets the estimate', () => {
+		const [lo, hi] = oddsRatioCI(T);
+		expect(lo).toBeLessThan(conditionalOddsRatio(T));
+		expect(hi).toBeGreaterThan(conditionalOddsRatio(T));
+	});
+
+	it('a wider confidence level gives a wider interval', () => {
+		const [lo95, hi95] = oddsRatioCI(T, 0.95);
+		const [lo99, hi99] = oddsRatioCI(T, 0.99);
+		expect(lo99).toBeLessThan(lo95);
+		expect(hi99).toBeGreaterThan(hi95);
+	});
+
+	it('a null table gives an interval containing 1 and an estimate near 1', () => {
+		const balanced = [
+			[5, 5],
+			[5, 5]
+		];
+		expect(conditionalOddsRatio(balanced)).toBeCloseTo(1, 6);
+		const [lo, hi] = oddsRatioCI(balanced);
+		expect(lo).toBeLessThan(1);
+		expect(hi).toBeGreaterThan(1);
+	});
+
+	it('perfect separation gives an infinite estimate and an open interval', () => {
+		const sep = [
+			[10, 0],
+			[0, 10]
+		];
+		expect(conditionalOddsRatio(sep)).toBe(Infinity);
+		expect(oddsRatioCI(sep)[1]).toBe(Infinity);
+		expect(oddsRatioCI(sep)[0]).toBeGreaterThan(1);
+	});
+
+	it('the reverse separation gives zero and a bounded upper limit', () => {
+		const sep = [
+			[0, 10],
+			[10, 0]
+		];
+		expect(conditionalOddsRatio(sep)).toBe(0);
+		expect(oddsRatioCI(sep)[0]).toBe(0);
+		expect(oddsRatioCI(sep)[1]).toBeLessThan(1);
+	});
+
+	it('is symmetric under transposition, like the p-value', () => {
+		const a = conditionalOddsRatio([
+			[7, 3],
+			[2, 23]
+		]);
+		const b = conditionalOddsRatio([
+			[7, 2],
+			[3, 23]
+		]);
+		expect(a).toBeCloseTo(b, 6);
+	});
+
+	it('returns NaN on degenerate margins rather than a number', () => {
+		expect(
+			Number.isNaN(
+				conditionalOddsRatio([
+					[0, 0],
+					[3, 5]
+				])
+			)
+		).toBe(true);
+		expect(
+			oddsRatioCI([
+				[0, 0],
+				[3, 5]
+			]).every(Number.isNaN)
+		).toBe(true);
+	});
+
+	it('is safe on malformed input', () => {
+		expect(Number.isNaN(conditionalOddsRatio(null))).toBe(true);
+		expect(oddsRatioCI('x').every(Number.isNaN)).toBe(true);
 	});
 });

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "594": [
+    "606": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "595": [
+    "607": [
       1,
       3,
       5,
@@ -104,7 +104,7 @@
       97,
       99
     ],
-    "596": [
+    "608": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "597": [
+    "609": [
       1,
       3,
       5,
@@ -211,9 +211,9 @@
   },
   "data": [
     {
-      "id": 594,
+      "id": 606,
       "name": "Collect Columns input 1",
-      "data": 594,
+      "data": 606,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -222,9 +222,9 @@
       "processes": []
     },
     {
-      "id": 595,
+      "id": 607,
       "name": "Collect Columns input 2",
-      "data": 595,
+      "data": 607,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 596,
-      "name": "col_594_47",
-      "data": 596,
+      "id": 608,
+      "name": "col_606_49",
+      "data": 608,
       "type": "number",
-      "tableProcessGUId": "74b8593d-13bc-4e60-8469-34413064caf9",
+      "tableProcessGUId": "3e2fc8ee-34cd-45e9-9969-98ea5512c150",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 597,
-      "name": "col_595_47",
-      "data": 597,
+      "id": 609,
+      "name": "col_607_49",
+      "data": 609,
       "type": "number",
-      "tableProcessGUId": "74b8593d-13bc-4e60-8469-34413064caf9",
+      "tableProcessGUId": "3e2fc8ee-34cd-45e9-9969-98ea5512c150",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 99,
+      "id": 100,
       "name": "Collect Columns result",
       "x": 60,
       "y": 60,
@@ -273,10 +273,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          594,
-          595,
-          596,
-          597
+          606,
+          607,
+          608,
+          609
         ],
         "showCol": [
           true,
@@ -293,19 +293,19 @@
   ],
   "tableProcesses": [
     {
-      "id": 47,
+      "id": 49,
       "name": "CollectColumns",
       "displayName": "Collect Columns",
       "args": {
         "colIds": [
-          594,
-          595
+          606,
+          607
         ],
         "preProcesses": [],
         "aggregates": [],
         "out": {
-          "col_594": 596,
-          "col_595": 597
+          "col_606": 608,
+          "col_607": 609
         }
       },
       "refTPId": null
@@ -316,7 +316,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_47",
+      "id": "note_48",
       "text": "Concatenates several columns end-to-end into a single combined column. Use it to pool values from multiple series or segments into one column for a combined summary or plot.",
       "x": 40,
       "y": 24,
@@ -328,23 +328,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_594": {
+    "data_606": {
       "x": 60,
       "y": 314
     },
-    "data_595": {
+    "data_607": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_47": {
+    "tableprocess_49": {
       "x": 440,
       "y": 314
     },
-    "plot_99": {
+    "plot_100": {
       "x": 820,
       "y": 314
     },
-    "note_47": {
+    "note_48": {
       "x": 40,
       "y": 24
     }
@@ -406,5 +406,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

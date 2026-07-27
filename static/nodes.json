@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.67.0",
+  "generatedFromVersion": "β.68.0",
   "count": 60,
   "nodes": [
     {
@@ -738,10 +738,10 @@
     },
     {
       "id": "ChiSquared",
-      "displayName": "Chi-squared test",
+      "displayName": "Categorical tests",
       "kind": "tableProcess",
       "family": "Analysis",
-      "description": "Chi-squared test: independence of two categorical variables (contingency table), or goodness-of-fit of counts against a uniform expectation.",
+      "description": "Tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or Fisher's exact test for small 2x2 tables. Reports an effect size (Cramer's V, Cohen's w, or the odds ratio with a confidence interval) alongside the p-value.",
       "hideFromPalette": false,
       "inputs": [
         {
@@ -759,6 +759,10 @@
         {
           "name": "testType",
           "default": "independence"
+        },
+        {
+          "name": "dataFormat",
+          "default": "groups"
         },
         {
           "name": "correction",
@@ -790,6 +794,18 @@
         },
         {
           "name": "effectSize",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "ciLow",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "ciHigh",
           "kind": "column",
           "cardinality": "one",
           "metric": true
@@ -1005,6 +1021,16 @@
           "name": "n",
           "kind": "column",
           "cardinality": "one"
+        },
+        {
+          "name": "ciLow",
+          "kind": "column",
+          "cardinality": "one"
+        },
+        {
+          "name": "ciHigh",
+          "kind": "column",
+          "cardinality": "one"
         }
       ],
       "demo": "sessions/demos/demo-workflow-stats-eda.json"
@@ -1106,6 +1132,30 @@
         },
         {
           "name": "amplitude",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "amplitude_ciLow",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "amplitude_ciHigh",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "acrophase_ciLow",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "acrophase_ciHigh",
           "kind": "column",
           "cardinality": "one",
           "metric": true
@@ -1363,6 +1413,18 @@
           "kind": "column",
           "cardinality": "one",
           "metric": true
+        },
+        {
+          "name": "r2",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "rmse",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
         }
       ],
       "demo": "sessions/demos/demo-tp-doublelogistic.json"
@@ -1607,6 +1669,12 @@
         },
         {
           "name": "pvalue",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "effectSize",
           "kind": "column",
           "cardinality": "one",
           "metric": true
@@ -2305,6 +2373,18 @@
         },
         {
           "name": "pvalue",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "r2",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "rmse",
           "kind": "column",
           "cardinality": "one",
           "metric": true

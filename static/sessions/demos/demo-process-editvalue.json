@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "534": [
+    "546": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "535": [
+    "547": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 534,
+      "id": 546,
       "name": "x",
-      "data": 534,
+      "data": 546,
       "type": "number",
-      "tableProcessGUId": "673f02e0-21e7-4bee-8abc-a9c184029998",
+      "tableProcessGUId": "4b2d5cb8-62ba-4d2f-a449-dd53110c6b22",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 535,
+      "id": 547,
       "name": "y",
-      "data": 535,
+      "data": 547,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 536,
+      "id": 548,
       "name": "Edit value result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_3",
-      "producerPort": "out_535",
+      "producerPort": "out_547",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 82,
+      "id": 83,
       "name": "Edit value: before vs after",
       "x": 60,
       "y": 60,
@@ -199,9 +199,9 @@
         "data": [
           {
             "x": {
-              "id": 537,
+              "id": 549,
               "name": "x",
-              "refId": 534,
+              "refId": 546,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +210,9 @@
               "processes": []
             },
             "y": {
-              "id": 538,
+              "id": 550,
               "name": "y",
-              "refId": 535,
+              "refId": 547,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -238,9 +238,9 @@
           },
           {
             "x": {
-              "id": 539,
+              "id": 551,
               "name": "x",
-              "refId": 534,
+              "refId": 546,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +249,9 @@
               "processes": []
             },
             "y": {
-              "id": 540,
+              "id": 552,
               "name": "Edit value result",
-              "refId": 536,
+              "refId": 548,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,7 +291,7 @@
       }
     },
     {
-      "id": 83,
+      "id": 84,
       "name": "Edit value: values",
       "x": 630,
       "y": 60,
@@ -307,8 +307,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          535,
-          536
+          547,
+          548
         ],
         "showCol": [
           true,
@@ -323,7 +323,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 36,
+      "id": 38,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -333,7 +333,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 534
+          "result": 546
         }
       },
       "refTPId": null
@@ -344,7 +344,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_37",
+      "id": "note_38",
       "text": "Overwrites individual cells at specific row positions with values you type in, leaving the rest of the column unchanged. Use it for hand-correcting a few known-bad points without touching the source data. The demo shows the edited positions differing from the input.",
       "x": 40,
       "y": 24,
@@ -366,17 +366,17 @@
           }
         ],
         "inIN": [
-          535
+          547
         ]
       }
     }
   ],
   "nodeLayout": {
-    "data_535": {
+    "data_547": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_36": {
+    "tableprocess_38": {
       "x": 60,
       "y": 814
     },
@@ -384,15 +384,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_82": {
+    "plot_83": {
       "x": 820,
       "y": 314
     },
-    "plot_83": {
+    "plot_84": {
       "x": 820,
       "y": 814
     },
-    "note_37": {
+    "note_38": {
       "x": 40,
       "y": 24
     }
@@ -454,5 +454,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

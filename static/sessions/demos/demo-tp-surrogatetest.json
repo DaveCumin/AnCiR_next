@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "608": [
+    "620": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "609": [
+    "621": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,18 +104,18 @@
       10,
       11.362966948437261
     ],
-    "610": [
+    "622": [
       0.05
     ],
-    "611": [
+    "623": [
       29.733079043901952
     ]
   },
   "data": [
     {
-      "id": 608,
+      "id": 620,
       "name": "Surrogate Test input 1",
-      "data": 608,
+      "data": 620,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -124,9 +124,9 @@
       "processes": []
     },
     {
-      "id": 609,
+      "id": 621,
       "name": "Surrogate Test input 2",
-      "data": 609,
+      "data": 621,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -135,22 +135,22 @@
       "processes": []
     },
     {
-      "id": 610,
-      "name": "pvalue_52",
-      "data": 610,
+      "id": 622,
+      "name": "pvalue_54",
+      "data": 622,
       "type": "number",
-      "tableProcessGUId": "63b5ac1d-bb2b-498b-bffa-664925979136",
+      "tableProcessGUId": "0b28e129-6eff-4cfa-a54d-edef5153ec4b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 611,
-      "name": "observed_52",
-      "data": 611,
+      "id": 623,
+      "name": "observed_54",
+      "data": 623,
       "type": "number",
-      "tableProcessGUId": "43c91cf2-b6cb-4b8d-8d2b-52d1894e85b2",
+      "tableProcessGUId": "6eca3766-5b2e-406e-a183-4e43ca0dfb53",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -159,7 +159,7 @@
   ],
   "plots": [
     {
-      "id": 104,
+      "id": 105,
       "name": "Surrogate Test result",
       "x": 60,
       "y": 60,
@@ -175,10 +175,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          608,
-          609,
-          610,
-          611
+          620,
+          621,
+          622,
+          623
         ],
         "showCol": [
           true,
@@ -195,12 +195,12 @@
   ],
   "tableProcesses": [
     {
-      "id": 52,
+      "id": 54,
       "name": "SurrogateTest",
       "displayName": "Surrogate Test",
       "args": {
-        "xIN": 608,
-        "yIN": 609,
+        "xIN": 620,
+        "yIN": 621,
         "method": "block",
         "nSurrogates": 19,
         "seed": 12345,
@@ -208,8 +208,8 @@
         "periodMin": 20,
         "periodMax": 28,
         "out": {
-          "pvalue": 610,
-          "observed": 611
+          "pvalue": 622,
+          "observed": 623
         }
       },
       "refTPId": null
@@ -220,7 +220,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_52",
+      "id": "note_53",
       "text": "Asks whether a rhythm is stronger than you would expect from a series with the same character but no real rhythm. The catch it exists to solve: shuffling the values destroys the smooth run-to-run structure that every biological recording has, so a shuffled null is far too easy to beat and almost anything looks rhythmic. The block bootstrap instead resamples whole chunks (a day at a time by default) and the AR(1) option simulates matched \"red noise\", so both keep that structure. Phase-randomised and AAFT surrogates are offered too, but they preserve the spectrum — and therefore the rhythm itself — so they cannot test for rhythmicity; the node says so when you pick one. Results are reproducible from the seed, and the smallest p it can report is 1/(surrogates + 1).",
       "x": 40,
       "y": 24,
@@ -232,23 +232,23 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_608": {
+    "data_620": {
       "x": 60,
       "y": 314
     },
-    "data_609": {
+    "data_621": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_52": {
+    "tableprocess_54": {
       "x": 440,
       "y": 314
     },
-    "plot_104": {
+    "plot_105": {
       "x": 820,
       "y": 314
     },
-    "note_52": {
+    "note_53": {
       "x": 40,
       "y": 24
     }
@@ -310,5 +310,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

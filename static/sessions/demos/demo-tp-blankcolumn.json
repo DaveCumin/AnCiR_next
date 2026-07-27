@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "593": [
+    "605": [
       null,
       null,
       null,
@@ -15,11 +15,11 @@
   },
   "data": [
     {
-      "id": 593,
-      "name": "result_46",
-      "data": 593,
+      "id": 605,
+      "name": "result_48",
+      "data": 605,
       "type": "category",
-      "tableProcessGUId": "eab276fb-d0ec-4634-921c-e550610c4530",
+      "tableProcessGUId": "0872cf71-a700-407a-a967-5dc2325b6303",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -28,7 +28,7 @@
   ],
   "plots": [
     {
-      "id": 98,
+      "id": 99,
       "name": "Enter Data result",
       "x": 60,
       "y": 60,
@@ -44,7 +44,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          593
+          605
         ],
         "showCol": [
           true
@@ -58,14 +58,14 @@
   ],
   "tableProcesses": [
     {
-      "id": 46,
+      "id": 48,
       "name": "BlankColumn",
       "displayName": "Enter Data",
       "args": {
         "N": 10,
         "storedValueRefs": {},
         "out": {
-          "result": 593
+          "result": 605
         }
       },
       "refTPId": null
@@ -76,7 +76,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_46",
+      "id": "note_47",
       "text": "Lets you enter data by hand or paste CSV/JSON to create a column (or table) directly on the canvas. Use it for small manual datasets, quick tests, or pasting values from another program.",
       "x": 40,
       "y": 24,
@@ -88,15 +88,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_46": {
+    "tableprocess_48": {
       "x": 60,
       "y": 314
     },
-    "plot_98": {
+    "plot_99": {
       "x": 820,
       "y": 314
     },
-    "note_46": {
+    "note_47": {
       "x": 40,
       "y": 24
     }
@@ -158,5 +158,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "776": [
+    "789": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 776,
-      "name": "group_g1_81",
-      "data": 776,
+      "id": 789,
+      "name": "group_g1_83",
+      "data": 789,
       "type": "number",
-      "tableProcessGUId": "c167b7a2-f225-46ea-99bf-717a3e218ce6",
+      "tableProcessGUId": "04fe8c2b-225d-4c39-9981-856d287857be",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -20,7 +20,7 @@
   ],
   "plots": [
     {
-      "id": 135,
+      "id": 136,
       "name": "Stored Value Group result",
       "x": 60,
       "y": 60,
@@ -36,7 +36,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          776
+          789
         ],
         "showCol": [
           true
@@ -50,7 +50,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 81,
+      "id": 83,
       "name": "StoredValueGroup",
       "displayName": "Stored Value Group",
       "args": {
@@ -65,7 +65,7 @@
           }
         ],
         "out": {
-          "group_g1": 776
+          "group_g1": 789
         }
       },
       "refTPId": null
@@ -85,7 +85,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_74",
+      "id": "note_75",
       "text": "Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting a category column and a value column. Use it to assemble stored metrics into a tidy table for group comparison or plotting.",
       "x": 40,
       "y": 24,
@@ -97,15 +97,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "tableprocess_81": {
+    "tableprocess_83": {
       "x": 60,
       "y": 314
     },
-    "plot_135": {
+    "plot_136": {
       "x": 820,
       "y": 314
     },
-    "note_74": {
+    "note_75": {
       "x": 40,
       "y": 24
     }
@@ -167,5 +167,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

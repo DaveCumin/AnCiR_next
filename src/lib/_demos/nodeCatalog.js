@@ -414,10 +414,7 @@ export const TP_SPECS = [
 	},
 	{
 		name: 'DescribeData',
-		inputs: [
-			T('number', () => SAMPLE.rhythm(24, 40, 50)),
-			T('number', () => SAMPLE.linear(2, 1))
-		],
+		inputs: [T('number', () => SAMPLE.rhythm(24, 40, 50)), T('number', () => SAMPLE.linear(2, 1))],
 		args: ([a, b]) => ({ yIN: [a, b], out: {} }),
 		noOutputs: true
 	},
@@ -447,7 +444,16 @@ export const TP_SPECS = [
 			T('category', () => seq(90, (i) => ['ctrl', 'drug'][i % 2])),
 			T('category', () => seq(90, (i) => (i % 5 === 0 ? 'responder' : 'non-responder')))
 		],
-		args: ([g, o]) => ({ testType: 'independence', xIN: g, yIN: o, correction: true, out: {} }),
+		// Tidy PAIRED sample data (one row per subject, two variables), so state the
+		// format: the node defaults to reading two columns as INDEPENDENT GROUPS.
+		args: ([g, o]) => ({
+			testType: 'independence',
+			dataFormat: 'paired',
+			xIN: g,
+			yIN: o,
+			correction: true,
+			out: {}
+		}),
 		noOutputs: true
 	},
 	{

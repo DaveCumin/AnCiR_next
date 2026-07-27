@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "669": [
+    "681": [
       1,
       8,
       4,
@@ -62,7 +62,7 @@
       11,
       7
     ],
-    "670": [
+    "682": [
       1,
       6,
       2,
@@ -124,7 +124,7 @@
       3,
       8
     ],
-    "671": [
+    "683": [
       1,
       1,
       1,
@@ -186,47 +186,47 @@
       1,
       0
     ],
-    "672": [
+    "684": [
       "(intercept)",
       "Logistic regression input 1",
       "Logistic regression input 2"
     ],
-    "673": [
+    "685": [
       -0.09738779753723972,
       0.4617193426262954,
       -0.4947573937381111
     ],
-    "674": [
+    "686": [
       0.8551995934204939,
       0.12905177127721507,
       0.15685044885923716
     ],
-    "675": [
+    "687": [
       -0.11387727296235398,
       3.577783846410599,
       -3.154325648007058
     ],
-    "676": [
+    "688": [
       0.9093350818990842,
       0.0003465198254309909,
       0.0016086946927440504
     ],
-    "677": [
+    "689": [
       0.9072041263826472,
       1.5867998936340344,
       0.6097188109559362
     ],
-    "678": [
+    "690": [
       0.16972968423018736,
       1.232176994034704,
       0.4483511106194381
     ],
-    "679": [
+    "691": [
       4.849000519022492,
       2.043483943156681,
       0.8291649549387852
     ],
-    "680": [
+    "692": [
       1,
       1,
       1,
@@ -288,7 +288,7 @@
       1,
       0
     ],
-    "681": [
+    "693": [
       -0.1304258486490555,
       0.6278225810444567,
       0.7599747854917196,
@@ -350,7 +350,7 @@
       3.4972527901376758,
       -0.8234115490580609
     ],
-    "682": [
+    "694": [
       0.46743968145589154,
       0.6519955752635468,
       0.6813482594213426,
@@ -415,143 +415,11 @@
   },
   "data": [
     {
-      "id": 669,
-      "name": "Logistic regression input 1",
-      "data": 669,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 670,
-      "name": "Logistic regression input 2",
-      "data": 670,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 671,
-      "name": "Logistic regression input 3",
-      "data": 671,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 672,
-      "name": "term_62",
-      "data": 672,
-      "type": "category",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 673,
-      "name": "coef_62",
-      "data": 673,
-      "type": "number",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 674,
-      "name": "se_62",
-      "data": 674,
-      "type": "number",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 675,
-      "name": "z_62",
-      "data": 675,
-      "type": "number",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 676,
-      "name": "pvalue_62",
-      "data": 676,
-      "type": "number",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 677,
-      "name": "oddsRatio_62",
-      "data": 677,
-      "type": "number",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 678,
-      "name": "ciLow_62",
-      "data": 678,
-      "type": "number",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 679,
-      "name": "ciHigh_62",
-      "data": 679,
-      "type": "number",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 680,
-      "name": "outcome_62",
-      "data": 680,
-      "type": "number",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 681,
-      "name": "eta_62",
+      "name": "Logistic regression input 1",
       "data": 681,
       "type": "number",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -559,10 +427,142 @@
     },
     {
       "id": 682,
-      "name": "fitted_62",
+      "name": "Logistic regression input 2",
       "data": 682,
       "type": "number",
-      "tableProcessGUId": "4b1b2dd9-d7c9-492f-8829-61da3444d80f",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 683,
+      "name": "Logistic regression input 3",
+      "data": 683,
+      "type": "number",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 684,
+      "name": "term_64",
+      "data": 684,
+      "type": "category",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 685,
+      "name": "coef_64",
+      "data": 685,
+      "type": "number",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 686,
+      "name": "se_64",
+      "data": 686,
+      "type": "number",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 687,
+      "name": "z_64",
+      "data": 687,
+      "type": "number",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 688,
+      "name": "pvalue_64",
+      "data": 688,
+      "type": "number",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 689,
+      "name": "oddsRatio_64",
+      "data": 689,
+      "type": "number",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 690,
+      "name": "ciLow_64",
+      "data": 690,
+      "type": "number",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 691,
+      "name": "ciHigh_64",
+      "data": 691,
+      "type": "number",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 692,
+      "name": "outcome_64",
+      "data": 692,
+      "type": "number",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 693,
+      "name": "eta_64",
+      "data": 693,
+      "type": "number",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 694,
+      "name": "fitted_64",
+      "data": 694,
+      "type": "number",
+      "tableProcessGUId": "ce9219ba-e82e-497b-ac54-e850a85653bf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -571,7 +571,7 @@
   ],
   "plots": [
     {
-      "id": 114,
+      "id": 115,
       "name": "Logistic regression: fit",
       "x": 60,
       "y": 60,
@@ -628,9 +628,9 @@
         "data": [
           {
             "x": {
-              "id": 683,
-              "name": "eta_62",
-              "refId": 681,
+              "id": 695,
+              "name": "eta_64",
+              "refId": 693,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -639,9 +639,9 @@
               "processes": []
             },
             "y": {
-              "id": 684,
-              "name": "outcome_62",
-              "refId": 680,
+              "id": 696,
+              "name": "outcome_64",
+              "refId": 692,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -667,9 +667,9 @@
           },
           {
             "x": {
-              "id": 685,
-              "name": "eta_62",
-              "refId": 681,
+              "id": 697,
+              "name": "eta_64",
+              "refId": 693,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -678,9 +678,9 @@
               "processes": []
             },
             "y": {
-              "id": 686,
-              "name": "fitted_62",
-              "refId": 682,
+              "id": 698,
+              "name": "fitted_64",
+              "refId": 694,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -720,7 +720,7 @@
       }
     },
     {
-      "id": 115,
+      "id": 116,
       "name": "Logistic regression: coefficients",
       "x": 630,
       "y": 60,
@@ -736,10 +736,10 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          672,
-          673,
-          677,
-          676
+          684,
+          685,
+          689,
+          688
         ],
         "showCol": [
           true,
@@ -756,27 +756,27 @@
   ],
   "tableProcesses": [
     {
-      "id": 62,
+      "id": 64,
       "name": "LogisticRegression",
       "displayName": "Logistic regression",
       "args": {
-        "yIN": 671,
+        "yIN": 683,
         "xIN": [
-          669,
-          670
+          681,
+          682
         ],
         "out": {
-          "term": 672,
-          "coef": 673,
-          "se": 674,
-          "z": 675,
-          "pvalue": 676,
-          "oddsRatio": 677,
-          "ciLow": 678,
-          "ciHigh": 679,
-          "outcome": 680,
-          "eta": 681,
-          "fitted": 682
+          "term": 684,
+          "coef": 685,
+          "se": 686,
+          "z": 687,
+          "pvalue": 688,
+          "oddsRatio": 689,
+          "ciLow": 690,
+          "ciHigh": 691,
+          "outcome": 692,
+          "eta": 693,
+          "fitted": 694
         },
         "valid": false
       },
@@ -788,7 +788,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_59",
+      "id": "note_60",
       "text": "Models a binary outcome (yIN) from one or more predictors (xIN) by iteratively-reweighted least squares. The outcome may be numeric 0/1 or a two-level category (the second level, alphabetically, is taken as the positive class = 1). Reports one row per term: the coefficient (log-odds), standard error, Wald z and p-value, odds ratio and its 95% confidence interval, plus the model log-likelihood, likelihood-ratio test against the null and McFadden pseudo-R². It warns on non-convergence, which usually signals separation (a predictor splits the outcome cleanly). Estimates match statsmodels. Alongside the coefficient table it emits three per-observation columns, outcome, eta (the linear predictor Xβ) and fitted (the predicted probability), so the quick-plot draws fitted probability against the linear predictor (the S-curve, for any number of predictors) with the observed 0/1 outcomes overlaid, and you can rebuild that plot by hand from the columns. Cox 1958.",
       "x": 40,
       "y": 24,
@@ -800,31 +800,31 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_669": {
+    "data_681": {
       "x": 60,
       "y": 314
     },
-    "data_670": {
+    "data_682": {
       "x": 60,
       "y": 814
     },
-    "data_671": {
+    "data_683": {
       "x": 60,
       "y": 1314
     },
-    "tableprocess_62": {
+    "tableprocess_64": {
       "x": 440,
-      "y": 314
-    },
-    "plot_114": {
-      "x": 820,
       "y": 314
     },
     "plot_115": {
       "x": 820,
+      "y": 314
+    },
+    "plot_116": {
+      "x": 820,
       "y": 814
     },
-    "note_59": {
+    "note_60": {
       "x": 40,
       "y": 24
     }
@@ -886,5 +886,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.65.1"
+  "version": "β.67.0"
 }

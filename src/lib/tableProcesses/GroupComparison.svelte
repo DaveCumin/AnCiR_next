@@ -18,7 +18,12 @@
 		// Scalar-metric output ports (one value per y input, in yIN order; a
 		// single value in the no-group multi-Y fallback mode). `statistic` is the
 		// chosen test's statistic (t / F / U / H), `pvalue` its p-value.
-		['out', { statistic: { val: -1 }, pvalue: { val: -1 } }],
+		// effectSize: the effect size belonging to whichever test ran — Cohen's d
+		// (Welch t), eta-squared (ANOVA), r = |z|/sqrt(n) (Mann-Whitney) or
+		// epsilon-squared (Kruskal-Wallis). All four were already computed and shown
+		// in the panel; without a port they could not be plotted, corrected or
+		// compared downstream.
+		['out', { statistic: { val: -1 }, pvalue: { val: -1 }, effectSize: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: false }],
 		['collectedType', { val: 'groupcomparison' }]
@@ -38,7 +43,8 @@
 			outputs: [
 				// Scalar-metric ports (one value per y input).
 				{ name: 'statistic', kind: 'column', cardinality: 'one', metric: true },
-				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true }
+				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'effectSize', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};
@@ -555,29 +561,47 @@
 	 * in the no-group multi-Y fallback mode, where all selected Y columns form
 	 * one comparison). Values match the stats shown in the editor panel.
 	 */
+	/**
+	 * The effect size that belongs with the test that actually ran. Each test has
+	 * its own conventional measure and they are not interchangeable, so this is a
+	 * lookup rather than one shared number.
+	 */
+	function effectSizeOf(comp) {
+		if (!comp) return NaN;
+		if (Number.isFinite(comp.cohenD)) return comp.cohenD; // Welch t
+		if (Number.isFinite(comp.etaSquared)) return comp.etaSquared; // one-way ANOVA
+		if (Number.isFinite(comp.rEffect)) return comp.rEffect; // Mann-Whitney
+		if (Number.isFinite(comp.epsilonSquared)) return comp.epsilonSquared; // Kruskal-Wallis
+		return NaN;
+	}
+
 	function writeGroupComparisonMetrics(argsIN, result) {
 		const outStat = argsIN.out?.statistic;
 		const outP = argsIN.out?.pvalue;
-		const statWired = outStat != null && outStat !== -1;
-		const pWired = outP != null && outP !== -1;
-		if (!statWired && !pWired) return;
+		const outE = argsIN.out?.effectSize;
+		const wired = (id) => id != null && id !== -1;
+		if (!wired(outStat) && !wired(outP) && !wired(outE)) return;
 
 		const statArr = [];
 		const pArr = [];
+		const eArr = [];
 		if (result.comparisons.multiY) {
 			statArr.push(statisticOf(result.comparisons.multiY));
 			pArr.push(result.comparisons.multiY?.pValue ?? NaN);
+			eArr.push(effectSizeOf(result.comparisons.multiY));
 		} else {
 			for (const yId of normalizeYInputs(argsIN.yIN)) {
 				const comp = result.comparisons[yId];
 				statArr.push(statisticOf(comp));
 				pArr.push(comp?.pValue ?? NaN);
+				eArr.push(effectSizeOf(comp));
 			}
 		}
 
 		const processHash = crypto.randomUUID();
 		writeOutputColumn(outStat, statArr, { processHash });
 		writeOutputColumn(outP, pArr, { processHash });
+		writeOutputColumn(outE, eArr, { processHash });
 	}
 
 	export function groupcomparison(argsIN) {
