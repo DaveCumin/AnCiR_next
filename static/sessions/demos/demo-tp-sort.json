@@ -237,7 +237,7 @@
       "name": "sortedy_601_47",
       "data": 603,
       "type": "number",
-      "tableProcessGUId": "5aa745c4-1ba9-438b-9875-0e6b1ea9b31c",
+      "tableProcessGUId": "7a6612f4-0efc-4115-93be-fde19b058ccf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "sortedy_602_47",
       "data": 604,
       "type": "number",
-      "tableProcessGUId": "5aa745c4-1ba9-438b-9875-0e6b1ea9b31c",
+      "tableProcessGUId": "7a6612f4-0efc-4115-93be-fde19b058ccf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -407,5 +407,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

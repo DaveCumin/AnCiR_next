@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "773": [
+    "787": [
       0,
       1,
       2,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 773,
+      "id": 787,
       "name": "result_78",
-      "data": 773,
+      "data": 787,
       "type": "number",
-      "tableProcessGUId": "de9a5cbc-8eae-42db-adf1-33bf4f13f5c6",
+      "tableProcessGUId": "998e491e-b045-4b17-9f66-df42d27cd00d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -84,7 +84,7 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          773
+          787
         ],
         "showCol": [
           true
@@ -108,7 +108,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 773
+          "result": 787
         }
       },
       "refTPId": null
@@ -201,5 +201,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

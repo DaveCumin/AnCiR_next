@@ -167,7 +167,7 @@
       "name": "x",
       "data": 589,
       "type": "number",
-      "tableProcessGUId": "1e9b1dd8-c55a-42ef-a3ac-e8e142530604",
+      "tableProcessGUId": "7ad57066-9300-43a3-a89a-91e491e1ec30",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -190,7 +190,7 @@
       "data": 591,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "48e13ddd-3877-4ccb-b02f-3b1e0a97e520",
+      "tableProcessGUId": "ec2a95c5-ca0d-4cae-8da0-f65dd60663f4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -201,7 +201,7 @@
       "name": "binnedy_590_45",
       "data": 592,
       "type": "number",
-      "tableProcessGUId": "48e13ddd-3877-4ccb-b02f-3b1e0a97e520",
+      "tableProcessGUId": "ec2a95c5-ca0d-4cae-8da0-f65dd60663f4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -531,5 +531,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

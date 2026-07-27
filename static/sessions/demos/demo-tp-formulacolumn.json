@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "657": [
+    "663": [
       1,
       2,
       3,
@@ -52,7 +52,7 @@
       49,
       50
     ],
-    "658": [
+    "664": [
       10,
       20,
       30,
@@ -104,7 +104,7 @@
       490,
       500
     ],
-    "659": [
+    "665": [
       11,
       22,
       33,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 657,
+      "id": 663,
       "name": "Formula Column input 1",
-      "data": 657,
+      "data": 663,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 658,
+      "id": 664,
       "name": "Formula Column input 2",
-      "data": 658,
+      "data": 664,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,11 +181,11 @@
       "processes": []
     },
     {
-      "id": 659,
+      "id": 665,
       "name": "result_61",
-      "data": 659,
+      "data": 665,
       "type": "number",
-      "tableProcessGUId": "04bc77a8-b673-4219-ab9a-9aa0a5e80e6a",
+      "tableProcessGUId": "ae2a7f6f-4558-4321-b8e2-b2e172093ac8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -210,9 +210,9 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          657,
-          658,
-          659
+          663,
+          664,
+          665
         ],
         "showCol": [
           true,
@@ -235,7 +235,7 @@
         "tokens": [
           {
             "type": "col",
-            "id": 657
+            "id": 663
           },
           {
             "type": "text",
@@ -243,11 +243,11 @@
           },
           {
             "type": "col",
-            "id": 658
+            "id": 664
           }
         ],
         "out": {
-          "result": 659
+          "result": 665
         }
       },
       "refTPId": null
@@ -270,11 +270,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_657": {
+    "data_663": {
       "x": 60,
       "y": 314
     },
-    "data_658": {
+    "data_664": {
       "x": 60,
       "y": 814
     },
@@ -348,5 +348,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

@@ -1,0 +1,820 @@
+{
+	"demo-tp-chisquared.json": {
+		"ChiSquared.df": [
+			1
+		],
+		"ChiSquared.effectSize": [
+			0
+		],
+		"ChiSquared.pvalue": [
+			1
+		],
+		"ChiSquared.statistic": [
+			0
+		]
+	},
+	"demo-tp-circadianfunctionindex.json": {
+		"CircadianFunctionIndex.CFI": [
+			0.942686567
+		],
+		"CircadianFunctionIndex.IS": [
+			1
+		],
+		"CircadianFunctionIndex.IV": [
+			0.343880597
+		],
+		"CircadianFunctionIndex.RA": [
+			1
+		]
+	},
+	"demo-tp-correlation.json": {
+		"Correlation.ciHigh": [
+			1,
+			0.319028867,
+			0.319028867
+		],
+		"Correlation.ciLow": [
+			1,
+			-0.236642756,
+			-0.236642756
+		],
+		"Correlation.n": [
+			50,
+			50,
+			50
+		],
+		"Correlation.pvalue": [
+			0,
+			0.758187524,
+			0.758187524
+		],
+		"Correlation.r": [
+			1,
+			0.044645732,
+			0.044645732
+		],
+		"Correlation.significant": [
+			1,
+			0,
+			0
+		]
+	},
+	"demo-tp-cosinor.json": {
+		"Cosinor.acrophase": [
+			11.746213265
+		],
+		"Cosinor.acrophase_ciHigh": [
+			12.001318761
+		],
+		"Cosinor.acrophase_ciLow": [
+			11.491107769
+		],
+		"Cosinor.amplitude": [
+			41.736780302
+		],
+		"Cosinor.amplitude_ciHigh": [
+			44.426861229
+		],
+		"Cosinor.amplitude_ciLow": [
+			39.046699376
+		],
+		"Cosinor.bathyphase": [
+			23.746213265
+		],
+		"Cosinor.mesor": [
+			50.069037315
+		],
+		"Cosinor.period": [
+			24
+		],
+		"Cosinor.phase_angle": [
+			11.746213265
+		],
+		"Cosinor.rsquared": [
+			0.953927037
+		]
+	},
+	"demo-tp-describedata.json": {
+		"DescribeData.iqr": [
+			56.568542495,
+			49
+		],
+		"DescribeData.kurtosis": [
+			-1.551452824,
+			-1.2
+		],
+		"DescribeData.max": [
+			90,
+			99
+		],
+		"DescribeData.mean": [
+			48.427259339,
+			50
+		],
+		"DescribeData.median": [
+			50,
+			50
+		],
+		"DescribeData.min": [
+			10,
+			1
+		],
+		"DescribeData.n": [
+			50,
+			50
+		],
+		"DescribeData.q1": [
+			21.715728753,
+			25.5
+		],
+		"DescribeData.q3": [
+			78.284271247,
+			74.5
+		],
+		"DescribeData.range": [
+			80,
+			98
+		],
+		"DescribeData.sd": [
+			29.056294644,
+			29.154759474
+		],
+		"DescribeData.skewness": [
+			0.063871916,
+			0
+		]
+	},
+	"demo-tp-doublelogistic.json": {
+		"DoubleLogistic.r2": [
+			0.985528802
+		],
+		"DoubleLogistic.rmse": [
+			2.815332973
+		]
+	},
+	"demo-tp-fdrcorrection.json": {
+		"FDRCorrection.padj": [
+			0.008,
+			0.032,
+			0.0672,
+			0.0672,
+			0.0672,
+			0.266666667,
+			0.685714286,
+			0.9
+		],
+		"FDRCorrection.reject": [
+			1,
+			1,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0
+		]
+	},
+	"demo-tp-groupcomparison.json": {
+		"GroupComparison.effectSize": [
+			0.803607976
+		],
+		"GroupComparison.pvalue": [
+			0
+		],
+		"GroupComparison.statistic": [
+			96.158627066
+		]
+	},
+	"demo-tp-logisticregression.json": {
+		"LogisticRegression.ciHigh": [
+			4.849000519,
+			2.043483943,
+			0.829164955
+		],
+		"LogisticRegression.ciLow": [
+			0.169729684,
+			1.232176994,
+			0.448351111
+		],
+		"LogisticRegression.coef": [
+			-0.097387798,
+			0.461719343,
+			-0.494757394
+		],
+		"LogisticRegression.oddsRatio": [
+			0.907204126,
+			1.586799894,
+			0.609718811
+		],
+		"LogisticRegression.pvalue": [
+			0.909335082,
+			0.00034652,
+			0.001608695
+		],
+		"LogisticRegression.se": [
+			0.855199593,
+			0.129051771,
+			0.156850449
+		],
+		"LogisticRegression.z": [
+			-0.113877273,
+			3.577783846,
+			-3.154325648
+		]
+	},
+	"demo-tp-movinganalysis.json": {
+		"MovingAnalysis.745_peak_period": [
+			24,
+			24,
+			24,
+			24,
+			24,
+			24,
+			24
+		],
+		"MovingAnalysis.745_peak_power": [
+			83.5,
+			83.5,
+			83.5,
+			83.5,
+			83.5,
+			83.5,
+			83.5
+		],
+		"MovingAnalysis.movex": [
+			84,
+			108,
+			132,
+			156,
+			180,
+			204,
+			228
+		]
+	},
+	"demo-tp-nonparametricra.json": {
+		"NonparametricRA.IS": [
+			1
+		],
+		"NonparametricRA.IV": [
+			0.343880597
+		],
+		"NonparametricRA.L5": [
+			0
+		],
+		"NonparametricRA.L5onset": [
+			0
+		],
+		"NonparametricRA.M10": [
+			100
+		],
+		"NonparametricRA.M10onset": [
+			8
+		],
+		"NonparametricRA.RA": [
+			1
+		]
+	},
+	"demo-tp-normalitytest.json": {
+		"NormalityTest.n": [
+			50,
+			50
+		],
+		"NormalityTest.normal": [
+			0,
+			0
+		],
+		"NormalityTest.pvalue": [
+			0.000204724,
+			0.000001249
+		],
+		"NormalityTest.statistic": [
+			0.888494077,
+			0.806580279
+		]
+	},
+	"demo-tp-rayleightest.json": {
+		"RayleighTest.F": [
+			453.736666941
+		],
+		"RayleighTest.R": [
+			0.96859417,
+			0.96859417
+		],
+		"RayleighTest.acrophase": [
+			1.573681361,
+			8.449174902
+		],
+		"RayleighTest.pvalue": [
+			2e-8,
+			2e-8
+		],
+		"RayleighTest.ww_pvalue": [
+			0
+		],
+		"RayleighTest.z": [
+			18.763493312,
+			18.763493312
+		]
+	},
+	"demo-tp-rectangularwave.json": {
+		"RectangularWave.r2": [
+			0.956158404
+		],
+		"RectangularWave.rmse": [
+			5.518597286
+		]
+	},
+	"demo-tp-storedvaluegroup.json": {
+		"StoredValueGroup.group_g1": [
+			12,
+			34
+		]
+	},
+	"demo-tp-surrogatetest.json": {
+		"SurrogateTest.observed": [
+			29.733079044
+		],
+		"SurrogateTest.pvalue": [
+			0.05
+		]
+	},
+	"demo-tp-trendfit.json": {
+		"TrendFit.coef_intercept": [
+			4.350114419
+		],
+		"TrendFit.coef_slope": [
+			1.80930382
+		],
+		"TrendFit.r2": [
+			0.957955577
+		],
+		"TrendFit.rmse": [
+			5.469977223
+		]
+	},
+	"demo-workflow-aliasing.json": {
+		"RhythmicityAnalysis.stat_peak_period": [
+			28.35
+		],
+		"RhythmicityAnalysis.stat_peak_power": [
+			16.618955413
+		]
+	},
+	"demo-workflow-arrhythmic.json": {
+		"RhythmicityAnalysis.stat_peak_period": [
+			24,
+			20.25
+		],
+		"RhythmicityAnalysis.stat_peak_power": [
+			125.431957924,
+			2.460837554
+		]
+	},
+	"demo-workflow-circatidal.json": {
+		"RhythmicityAnalysis.stat_peak_period": [
+			12.44
+		],
+		"RhythmicityAnalysis.stat_peak_power": [
+			92.688534797
+		]
+	},
+	"demo-workflow-crepuscular.json": {
+		"RayleighTest.R": [
+			0.345620921
+		],
+		"RayleighTest.pvalue": [
+			0
+		],
+		"RayleighTest.z": [
+			40.136483923
+		]
+	},
+	"demo-workflow-free-running.json": {
+		"RhythmicityAnalysis.stat_peak_period": [
+			24.85
+		],
+		"RhythmicityAnalysis.stat_peak_power": [
+			126.571891515
+		]
+	},
+	"demo-workflow-non24-blind.json": {
+		"RhythmicityAnalysis.stat_peak_period": [
+			24.5
+		],
+		"RhythmicityAnalysis.stat_peak_power": [
+			336.956051804
+		]
+	},
+	"demo-workflow-phase-groups.json": {
+		"Cosinor.acrophase": [
+			14.605863589,
+			14.187510726,
+			14.892569974,
+			14.445628575,
+			14.122634679,
+			14.570428098,
+			13.692753485,
+			13.165575013
+		],
+		"RayleighTest.F": [
+			291.662516124
+		],
+		"RayleighTest.R": [
+			0.973653581,
+			0.99072221
+		],
+		"RayleighTest.acrophase": [
+			7.389674796,
+			14.211576843
+		],
+		"RayleighTest.pvalue": [
+			0,
+			0
+		],
+		"RayleighTest.ww_pvalue": [
+			0
+		],
+		"RayleighTest.z": [
+			7.584010363,
+			7.852243982
+		]
+	},
+	"demo-workflow-rest-activity.json": {
+		"NonparametricRA.IS": [
+			0.478562555,
+			0.427768357,
+			0.457843418,
+			0.405273295,
+			0.444078627,
+			0.427099349
+		],
+		"NonparametricRA.IV": [
+			1.252310814,
+			1.280130937,
+			1.57131416,
+			1.440202098,
+			1.331282063,
+			1.322379089
+		],
+		"NonparametricRA.L5": [
+			7.60357734,
+			10.936099863,
+			9.823361648,
+			11.153514075,
+			11.988295267,
+			11.378462192
+		],
+		"NonparametricRA.M10": [
+			35.575157201,
+			36.672391905,
+			34.524534104,
+			36.29055958,
+			38.457230502,
+			36.948553903
+		],
+		"NonparametricRA.RA": [
+			0.647809163,
+			0.540581965,
+			0.556986347,
+			0.529824772,
+			0.524703328,
+			0.529105535
+		],
+		"GroupComparison.pvalue": [
+			0.000003842
+		],
+		"GroupComparison.statistic": [
+			20.86809753
+		]
+	},
+	"demo-workflow-split-rhythm.json": {
+		"RhythmicityAnalysis.stat_peak_period": [
+			23.42
+		],
+		"RhythmicityAnalysis.stat_peak_power": [
+			102.46273579
+		]
+	},
+	"demo-workflow-stats-anova.json": {
+		"GroupComparison.pvalue": [
+			0
+		],
+		"GroupComparison.statistic": [
+			19.202926953
+		]
+	},
+	"demo-workflow-stats-anscombe.json": {
+		"DescribeData.max": [
+			10.84,
+			9.26,
+			12.74,
+			12.5
+		],
+		"DescribeData.mean": [
+			7.500909091,
+			7.500909091,
+			7.5,
+			7.500909091
+		],
+		"DescribeData.min": [
+			4.26,
+			3.1,
+			5.39,
+			5.25
+		],
+		"DescribeData.n": [
+			11,
+			11,
+			11,
+			11
+		],
+		"DescribeData.sd": [
+			2.031568136,
+			2.031656736,
+			2.030423601,
+			2.030578511
+		],
+		"TrendFit.coef_intercept": [
+			3.001727273
+		],
+		"TrendFit.coef_slope": [
+			0.499909091
+		],
+		"TrendFit.r2": [
+			0.666707257
+		]
+	},
+	"demo-workflow-stats-chi-square.json": {
+		"ChiSquared.df": [
+			1
+		],
+		"ChiSquared.pvalue": [
+			0.000116502
+		],
+		"ChiSquared.statistic": [
+			14.848484848
+		]
+	},
+	"demo-workflow-stats-correlation.json": {
+		"DescribeData.mean": [
+			0.190039497,
+			0.25000924,
+			-0.283511906,
+			0.107370287,
+			0.243158991
+		],
+		"DescribeData.n": [
+			70,
+			70,
+			70,
+			70,
+			70
+		],
+		"DescribeData.sd": [
+			1.069330315,
+			1.015946196,
+			1.007570124,
+			1.028836887,
+			1.720602969
+		],
+		"DescribeData.skewness": [
+			-0.24678446,
+			-0.176979803,
+			-0.193065503,
+			-0.038981551,
+			-0.089383069
+		]
+	},
+	"demo-workflow-stats-eda.json": {
+		"DescribeData.iqr": [
+			11.950179991,
+			12.07387966,
+			25,
+			1.506917481
+		],
+		"DescribeData.kurtosis": [
+			-0.534029438,
+			-0.594361357,
+			0.003291645,
+			-0.705063485
+		],
+		"DescribeData.max": [
+			188.395860136,
+			79.85282433,
+			90,
+			1.772892872
+		],
+		"DescribeData.mean": [
+			170.538794181,
+			64.484409475,
+			36,
+			-0.161135667
+		],
+		"DescribeData.median": [
+			170.684898814,
+			65.193438829,
+			32,
+			-0.138770342
+		],
+		"DescribeData.min": [
+			152.148086052,
+			45.916286413,
+			7,
+			-2.447863586
+		],
+		"DescribeData.n": [
+			80,
+			80,
+			80,
+			80
+		],
+		"DescribeData.q1": [
+			165.296531673,
+			58.500543404,
+			24,
+			-0.946468135
+		],
+		"DescribeData.q3": [
+			177.246711664,
+			70.574423064,
+			49,
+			0.560449346
+		],
+		"DescribeData.range": [
+			36.247774084,
+			33.936537917,
+			83,
+			4.220756458
+		],
+		"DescribeData.sd": [
+			8.057792481,
+			7.606328647,
+			17.905518561,
+			1.012845889
+		],
+		"DescribeData.skewness": [
+			-0.202269677,
+			-0.26381819,
+			0.68118104,
+			-0.00965216
+		],
+		"NormalityTest.n": [
+			80,
+			80,
+			80,
+			80
+		],
+		"NormalityTest.normal": [
+			1,
+			1,
+			0,
+			1
+		],
+		"NormalityTest.pvalue": [
+			0.414980948,
+			0.337352759,
+			0.00912776,
+			0.291173907
+		],
+		"NormalityTest.statistic": [
+			0.983930996,
+			0.982355412,
+			0.957216707,
+			0.981274643
+		],
+		"Correlation.n": [
+			80,
+			80,
+			80,
+			80,
+			80,
+			80
+		],
+		"Correlation.pvalue": [
+			0,
+			0.7466732,
+			0.770763494,
+			0.35339455,
+			0.531291244,
+			0.561135685
+		],
+		"Correlation.r": [
+			0.774888027,
+			-0.036680898,
+			0.033088714,
+			-0.10512298,
+			0.071022281,
+			0.065942205
+		]
+	},
+	"demo-workflow-stats-fisher-exact.json": {
+		"ChiSquared.df": [
+			1
+		],
+		"ChiSquared.effectSize": [
+			21.3997999
+		],
+		"ChiSquared.pvalue": [
+			0.015220074
+		],
+		"ChiSquared.statistic": [
+			5.625
+		]
+	},
+	"demo-workflow-stats-logistic.json": {
+		"LogisticRegression.ciHigh": [
+			4.849000519,
+			2.043483943,
+			0.829164955
+		],
+		"LogisticRegression.ciLow": [
+			0.169729684,
+			1.232176994,
+			0.448351111
+		],
+		"LogisticRegression.coef": [
+			-0.097387798,
+			0.461719343,
+			-0.494757394
+		],
+		"LogisticRegression.oddsRatio": [
+			0.907204126,
+			1.586799894,
+			0.609718811
+		],
+		"LogisticRegression.pvalue": [
+			0.909335082,
+			0.00034652,
+			0.001608695
+		],
+		"LogisticRegression.se": [
+			0.855199593,
+			0.129051771,
+			0.156850449
+		],
+		"LogisticRegression.z": [
+			-0.113877273,
+			3.577783846,
+			-3.154325648
+		]
+	},
+	"demo-workflow-stats-regression.json": {
+		"TrendFit.coef_intercept": [
+			2.200562801
+		],
+		"TrendFit.coef_slope": [
+			1.482322044
+		],
+		"TrendFit.r2": [
+			0.821382872
+		],
+		"TrendFit.rmse": [
+			5.98551607
+		],
+		"NormalityTest.n": [
+			60
+		],
+		"NormalityTest.normal": [
+			1
+		],
+		"NormalityTest.pvalue": [
+			0.833163326
+		],
+		"NormalityTest.statistic": [
+			0.988252167
+		]
+	},
+	"demo-workflow-stats-simpson.json": {
+		"Correlation.n": [
+			75
+		],
+		"Correlation.pvalue": [
+			0.000017726
+		],
+		"Correlation.r": [
+			-0.47362421
+		]
+	},
+	"demo-workflow-stats-two-group.json": {
+		"GroupComparison.pvalue": [
+			0.000681034
+		],
+		"GroupComparison.statistic": [
+			-3.522579853
+		]
+	},
+	"demo-workflow-stats-two-groups-counts.json": {
+		"ChiSquared.df": [
+			1
+		],
+		"ChiSquared.effectSize": [
+			22.92534996
+		],
+		"ChiSquared.pvalue": [
+			0.000525936
+		],
+		"ChiSquared.statistic": [
+			11.311431624
+		]
+	}
+}

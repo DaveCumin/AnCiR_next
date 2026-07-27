@@ -169,18 +169,30 @@
       11.746213264705368
     ],
     "631": [
-      0.953927037241878
+      39.046699375823
     ],
     "632": [
-      null
+      44.42686122862043
     ],
     "633": [
-      23.746213264705368
+      11.491107768615112
     ],
     "634": [
-      11.746213264705368
+      12.00131876079562
     ],
     "635": [
+      0.953927037241878
+    ],
+    "636": [
+      null
+    ],
+    "637": [
+      23.746213264705368
+    ],
+    "638": [
+      11.746213264705368
+    ],
+    "639": [
       8.424345272914458,
       10.560541959544327,
       15.38917731374945,
@@ -239,7 +251,7 @@
       "name": "x",
       "data": 624,
       "type": "number",
-      "tableProcessGUId": "f86151c3-9cb7-4656-868d-5a3428f11a88",
+      "tableProcessGUId": "1ea0d345-dafc-4ecd-94fb-a30f41882aae",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -261,7 +273,7 @@
       "name": "cosinorx_56",
       "data": 626,
       "type": "number",
-      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -272,7 +284,7 @@
       "name": "period_56",
       "data": 627,
       "type": "number",
-      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -283,7 +295,7 @@
       "name": "mesor_56",
       "data": 628,
       "type": "number",
-      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -294,7 +306,7 @@
       "name": "amplitude_56",
       "data": 629,
       "type": "number",
-      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -305,7 +317,7 @@
       "name": "acrophase_56",
       "data": 630,
       "type": "number",
-      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -313,10 +325,10 @@
     },
     {
       "id": 631,
-      "name": "rsquared_56",
+      "name": "amplitude_ciLow_56",
       "data": 631,
       "type": "number",
-      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -324,10 +336,10 @@
     },
     {
       "id": 632,
-      "name": "pvalue_56",
+      "name": "amplitude_ciHigh_56",
       "data": 632,
       "type": "number",
-      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -335,10 +347,10 @@
     },
     {
       "id": 633,
-      "name": "bathyphase_56",
+      "name": "acrophase_ciLow_56",
       "data": 633,
       "type": "number",
-      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -346,10 +358,10 @@
     },
     {
       "id": 634,
-      "name": "phase_angle_56",
+      "name": "acrophase_ciHigh_56",
       "data": 634,
       "type": "number",
-      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -357,10 +369,54 @@
     },
     {
       "id": 635,
-      "name": "cosinory_625_56",
+      "name": "rsquared_56",
       "data": 635,
       "type": "number",
-      "tableProcessGUId": "e53d1e3d-69f7-4e5e-b1bb-bf3300a1c77e",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 636,
+      "name": "pvalue_56",
+      "data": 636,
+      "type": "number",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 637,
+      "name": "bathyphase_56",
+      "data": 637,
+      "type": "number",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 638,
+      "name": "phase_angle_56",
+      "data": 638,
+      "type": "number",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 639,
+      "name": "cosinory_625_56",
+      "data": 639,
+      "type": "number",
+      "tableProcessGUId": "1947eca8-4d1b-47ac-b749-d1c7c7537ece",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -426,7 +482,7 @@
         "data": [
           {
             "x": {
-              "id": 636,
+              "id": 640,
               "name": "x",
               "refId": 624,
               "type": "number",
@@ -437,7 +493,7 @@
               "processes": []
             },
             "y": {
-              "id": 637,
+              "id": 641,
               "name": "y",
               "refId": 625,
               "type": "number",
@@ -465,7 +521,7 @@
           },
           {
             "x": {
-              "id": 638,
+              "id": 642,
               "name": "cosinorx_56",
               "refId": 626,
               "type": "number",
@@ -476,9 +532,9 @@
               "processes": []
             },
             "y": {
-              "id": 639,
+              "id": 643,
               "name": "cosinory_625_56",
-              "refId": 635,
+              "refId": 639,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -535,7 +591,7 @@
       "plot": {
         "columnRefs": [
           625,
-          635
+          639
         ],
         "showCol": [
           true,
@@ -587,11 +643,15 @@
           "mesor": 628,
           "amplitude": 629,
           "acrophase": 630,
-          "rsquared": 631,
-          "pvalue": 632,
-          "bathyphase": 633,
-          "phase_angle": 634,
-          "cosinory_625": 635
+          "amplitude_ciLow": 631,
+          "amplitude_ciHigh": 632,
+          "acrophase_ciLow": 633,
+          "acrophase_ciHigh": 634,
+          "rsquared": 635,
+          "pvalue": 636,
+          "bathyphase": 637,
+          "phase_angle": 638,
+          "cosinory_625": 639
         }
       },
       "refTPId": null
@@ -696,5 +756,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "774": [
+    "788": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-01-02T22:00:00.000Z",
       "2024-01-02T23:00:00.000Z"
     ],
-    "775": [
+    "789": [
       100,
       100,
       100,
@@ -103,23 +103,23 @@
   },
   "data": [
     {
-      "id": 774,
+      "id": 788,
       "name": "time_79",
-      "data": 774,
+      "data": 788,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "728f7d50-645c-4a21-b96b-7c3e3a769c5d",
+      "tableProcessGUId": "1056d01b-b48d-40dd-8375-af8be73d7fee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 775,
+      "id": 789,
       "name": "values_79",
-      "data": 775,
+      "data": 789,
       "type": "number",
-      "tableProcessGUId": "728f7d50-645c-4a21-b96b-7c3e3a769c5d",
+      "tableProcessGUId": "1056d01b-b48d-40dd-8375-af8be73d7fee",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -144,8 +144,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          774,
-          775
+          788,
+          789
         ],
         "showCol": [
           true,
@@ -178,8 +178,8 @@
         ],
         "samplingPeriod_hours": 1,
         "out": {
-          "time": 774,
-          "values": 775
+          "time": 788,
+          "values": 789
         }
       },
       "refTPId": null
@@ -272,5 +272,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

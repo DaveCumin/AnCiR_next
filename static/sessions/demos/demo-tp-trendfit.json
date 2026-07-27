@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "790": [
+    "804": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "791": [
+    "805": [
       7.673945782302198,
       -1.879285133127806,
       10.089269516954142,
@@ -104,7 +104,7 @@
       95.32890446343086,
       89.84737077710555
     ],
-    "792": [
+    "806": [
       0,
       1,
       2,
@@ -156,19 +156,19 @@
       48,
       49
     ],
-    "793": [
+    "807": [
       0.9579555770898015
     ],
-    "794": [
+    "808": [
       5.469977223339452
     ],
-    "795": [
+    "809": [
       1.809303819828578
     ],
-    "796": [
+    "810": [
       4.350114419162737
     ],
-    "797": [
+    "811": [
       4.350114419162737,
       6.159418238991315,
       7.968722058819893,
@@ -223,20 +223,20 @@
   },
   "data": [
     {
-      "id": 790,
+      "id": 804,
       "name": "x",
-      "data": 790,
+      "data": 804,
       "type": "number",
-      "tableProcessGUId": "216d26d7-833b-4e55-81c2-7b0d01521dab",
+      "tableProcessGUId": "aacacc86-d15a-482c-ace1-2500bdd075b4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 791,
+      "id": 805,
       "name": "y",
-      "data": 791,
+      "data": 805,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -245,66 +245,66 @@
       "processes": []
     },
     {
-      "id": 792,
+      "id": 806,
       "name": "trendx_85",
-      "data": 792,
+      "data": 806,
       "type": "number",
-      "tableProcessGUId": "56b91ec9-9aed-45f1-a055-555fa1d3b7dc",
+      "tableProcessGUId": "bcf6cbd1-b8f7-41af-ba67-7d367a9e8066",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 793,
+      "id": 807,
       "name": "r2_85",
-      "data": 793,
+      "data": 807,
       "type": "number",
-      "tableProcessGUId": "56b91ec9-9aed-45f1-a055-555fa1d3b7dc",
+      "tableProcessGUId": "bcf6cbd1-b8f7-41af-ba67-7d367a9e8066",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 794,
+      "id": 808,
       "name": "rmse_85",
-      "data": 794,
+      "data": 808,
       "type": "number",
-      "tableProcessGUId": "56b91ec9-9aed-45f1-a055-555fa1d3b7dc",
+      "tableProcessGUId": "bcf6cbd1-b8f7-41af-ba67-7d367a9e8066",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 795,
+      "id": 809,
       "name": "coef_slope_85",
-      "data": 795,
+      "data": 809,
       "type": "number",
-      "tableProcessGUId": "56b91ec9-9aed-45f1-a055-555fa1d3b7dc",
+      "tableProcessGUId": "bcf6cbd1-b8f7-41af-ba67-7d367a9e8066",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 796,
+      "id": 810,
       "name": "coef_intercept_85",
-      "data": 796,
+      "data": 810,
       "type": "number",
-      "tableProcessGUId": "56b91ec9-9aed-45f1-a055-555fa1d3b7dc",
+      "tableProcessGUId": "bcf6cbd1-b8f7-41af-ba67-7d367a9e8066",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 797,
-      "name": "trendy_791_85",
-      "data": 797,
+      "id": 811,
+      "name": "trendy_805_85",
+      "data": 811,
       "type": "number",
-      "tableProcessGUId": "56b91ec9-9aed-45f1-a055-555fa1d3b7dc",
+      "tableProcessGUId": "bcf6cbd1-b8f7-41af-ba67-7d367a9e8066",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -370,9 +370,9 @@
         "data": [
           {
             "x": {
-              "id": 798,
+              "id": 812,
               "name": "x",
-              "refId": 790,
+              "refId": 804,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -381,9 +381,9 @@
               "processes": []
             },
             "y": {
-              "id": 799,
+              "id": 813,
               "name": "y",
-              "refId": 791,
+              "refId": 805,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -409,9 +409,9 @@
           },
           {
             "x": {
-              "id": 800,
+              "id": 814,
               "name": "trendx_85",
-              "refId": 792,
+              "refId": 806,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -420,9 +420,9 @@
               "processes": []
             },
             "y": {
-              "id": 801,
-              "name": "trendy_791_85",
-              "refId": 797,
+              "id": 815,
+              "name": "trendy_805_85",
+              "refId": 811,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -478,8 +478,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          791,
-          797
+          805,
+          811
         ],
         "showCol": [
           true,
@@ -504,7 +504,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 790
+          "result": 804
         }
       },
       "refTPId": null
@@ -514,21 +514,21 @@
       "name": "TrendFit",
       "displayName": "Fit Trend Curves",
       "args": {
-        "xIN": 790,
+        "xIN": 804,
         "yIN": [
-          791
+          805
         ],
         "model": "linear",
         "polyDegree": 2,
         "outputX": -1,
         "preProcesses": [],
         "out": {
-          "trendx": 792,
-          "r2": 793,
-          "rmse": 794,
-          "coef_slope": 795,
-          "coef_intercept": 796,
-          "trendy_791": 797
+          "trendx": 806,
+          "r2": 807,
+          "rmse": 808,
+          "coef_slope": 809,
+          "coef_intercept": 810,
+          "trendy_805": 811
         }
       },
       "refTPId": null
@@ -551,7 +551,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_791": {
+    "data_805": {
       "x": 60,
       "y": 314
     },
@@ -633,5 +633,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

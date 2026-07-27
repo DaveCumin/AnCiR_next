@@ -14,6 +14,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
+	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { fillDefaults, normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { correlationMatrix } from '$lib/utils/correlation.js';
@@ -21,7 +22,7 @@
 
 	const displayName = 'Correlation';
 
-	const OUT_KEYS = ['var_i', 'var_j', 'r', 'pvalue', 'n', 'ciLow', 'ciHigh'];
+	const OUT_KEYS = ['var_i', 'var_j', 'r', 'pvalue', 'n', 'ciLow', 'ciHigh', 'significant'];
 
 	const defaults = new Map([
 		['yIN', { val: [] }],
@@ -38,7 +39,11 @@
 				// Fisher z interval for r. Asymmetric about r by construction, which
 				// is correct: r is bounded, so a symmetric interval would run past 1.
 				ciLow: { val: -1 },
-				ciHigh: { val: -1 }
+				ciHigh: { val: -1 },
+				// 1/0 per pair at `alpha`. Until now `alpha` was declared and
+				// documented but never read — a knob the MCP advertised and nothing
+				// used. Matches FDRCorrection's `reject` and NormalityTest's `normal`.
+				significant: { val: -1 }
 			}
 		],
 		['valid', { val: false }]
@@ -77,7 +82,11 @@
 		const names = yIds.map((id) => getColumnById(id).name ?? String(id));
 
 		const { method, warnings } = chooseMethod(argsIN.method ?? 'auto', columns, names);
-		const rows = correlationMatrix(columns, names, method);
+		const alpha = Number.isFinite(Number(argsIN.alpha)) ? Number(argsIN.alpha) : 0.05;
+		const rows = correlationMatrix(columns, names, method).map((row) => ({
+			...row,
+			significant: Number.isFinite(row.pvalue) ? (row.pvalue < alpha ? 1 : 0) : null
+		}));
 
 		// Aggregate, deduplicated result-quality warnings.
 		const minN = Math.min(...rows.map((row) => row.n));
@@ -115,6 +124,7 @@
 		writeOutputColumn(argsIN.out?.n, col('n'), { processHash });
 		writeOutputColumn(argsIN.out?.ciLow, col('ciLow'), { processHash });
 		writeOutputColumn(argsIN.out?.ciHigh, col('ciHigh'), { processHash });
+		writeOutputColumn(argsIN.out?.significant, col('significant'), { processHash });
 	}
 
 	export const definition = {
@@ -221,6 +231,9 @@
 			options={['auto', 'pearson', 'spearman']}
 			optionsDisplay={['Auto (normality-based)', 'Pearson (linear)', 'Spearman (rank / monotonic)']}
 		/>
+	</ControlInput>
+	<ControlInput label="alpha">
+		<NumberWithUnits bind:value={p.args.alpha} onInput={recompute} min="0" max="1" step="0.01" />
 	</ControlInput>
 	{#if result.rows.length}
 		<p class="hint">

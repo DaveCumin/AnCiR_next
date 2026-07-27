@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "710": [
+    "719": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "711": [
+    "720": [
       1,
       21.831051418620845,
       7.38905609893065,
@@ -104,32 +104,32 @@
       8.729138363720132,
       2.9545115270921065
     ],
-    "712": [
+    "721": [
       "Normality Test input 1",
       "Normality Test input 2"
     ],
-    "713": [
+    "722": [
       0.8884940768269717,
       0.8065802789114069
     ],
-    "714": [
+    "723": [
       0.00020472387230596745,
       0.000001248621988914067
     ],
-    "715": [
+    "724": [
       50,
       50
     ],
-    "716": [
+    "725": [
       0,
       0
     ]
   },
   "data": [
     {
-      "id": 710,
+      "id": 719,
       "name": "Normality Test input 1",
-      "data": 710,
+      "data": 719,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -138,9 +138,9 @@
       "processes": []
     },
     {
-      "id": 711,
+      "id": 720,
       "name": "Normality Test input 2",
-      "data": 711,
+      "data": 720,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -149,55 +149,55 @@
       "processes": []
     },
     {
-      "id": 712,
+      "id": 721,
       "name": "variable_67",
-      "data": 712,
+      "data": 721,
       "type": "category",
-      "tableProcessGUId": "63cc6d4b-ce0e-480c-93b9-b2637a3ab2ad",
+      "tableProcessGUId": "2259cb2e-1f8d-4265-8bc7-62e05bea1d73",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 713,
+      "id": 722,
       "name": "statistic_67",
-      "data": 713,
+      "data": 722,
       "type": "number",
-      "tableProcessGUId": "63cc6d4b-ce0e-480c-93b9-b2637a3ab2ad",
+      "tableProcessGUId": "2259cb2e-1f8d-4265-8bc7-62e05bea1d73",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 714,
+      "id": 723,
       "name": "pvalue_67",
-      "data": 714,
+      "data": 723,
       "type": "number",
-      "tableProcessGUId": "63cc6d4b-ce0e-480c-93b9-b2637a3ab2ad",
+      "tableProcessGUId": "2259cb2e-1f8d-4265-8bc7-62e05bea1d73",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 715,
+      "id": 724,
       "name": "n_67",
-      "data": 715,
+      "data": 724,
       "type": "number",
-      "tableProcessGUId": "63cc6d4b-ce0e-480c-93b9-b2637a3ab2ad",
+      "tableProcessGUId": "2259cb2e-1f8d-4265-8bc7-62e05bea1d73",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 716,
+      "id": 725,
       "name": "normal_67",
-      "data": 716,
+      "data": 725,
       "type": "number",
-      "tableProcessGUId": "63cc6d4b-ce0e-480c-93b9-b2637a3ab2ad",
+      "tableProcessGUId": "2259cb2e-1f8d-4265-8bc7-62e05bea1d73",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -222,13 +222,13 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          710,
-          711,
-          712,
-          713,
-          714,
-          715,
-          716
+          719,
+          720,
+          721,
+          722,
+          723,
+          724,
+          725
         ],
         "showCol": [
           true,
@@ -253,17 +253,17 @@
       "displayName": "Normality Test",
       "args": {
         "yIN": [
-          710,
-          711
+          719,
+          720
         ],
         "method": "shapiro",
         "alpha": 0.05,
         "out": {
-          "variable": 712,
-          "statistic": 713,
-          "pvalue": 714,
-          "n": 715,
-          "normal": 716
+          "variable": 721,
+          "statistic": 722,
+          "pvalue": 723,
+          "n": 724,
+          "normal": 725
         },
         "valid": false
       },
@@ -287,11 +287,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_710": {
+    "data_719": {
       "x": 60,
       "y": 314
     },
-    "data_711": {
+    "data_720": {
       "x": 60,
       "y": 814
     },
@@ -365,5 +365,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

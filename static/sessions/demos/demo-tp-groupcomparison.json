@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "660": [
+    "666": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "661": [
+    "667": [
       0,
       6,
       12,
@@ -104,18 +104,21 @@
       6,
       5
     ],
-    "662": [
+    "668": [
       96.15862706579921
     ],
-    "663": [
+    "669": [
       0
+    ],
+    "670": [
+      0.8036079756532927
     ]
   },
   "data": [
     {
-      "id": 660,
+      "id": 666,
       "name": "Compare groups (stats) input 1",
-      "data": 660,
+      "data": 666,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -124,9 +127,9 @@
       "processes": []
     },
     {
-      "id": 661,
+      "id": 667,
       "name": "Compare groups (stats) input 2",
-      "data": 661,
+      "data": 667,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -135,22 +138,33 @@
       "processes": []
     },
     {
-      "id": 662,
+      "id": 668,
       "name": "statistic_62",
-      "data": 662,
+      "data": 668,
       "type": "number",
-      "tableProcessGUId": "e0394788-4ad5-404e-885a-1d0a432d08d2",
+      "tableProcessGUId": "f826c3b7-1712-4cae-aba7-ea70dd33f180",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 663,
+      "id": 669,
       "name": "pvalue_62",
-      "data": 663,
+      "data": 669,
       "type": "number",
-      "tableProcessGUId": "e0394788-4ad5-404e-885a-1d0a432d08d2",
+      "tableProcessGUId": "f826c3b7-1712-4cae-aba7-ea70dd33f180",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 670,
+      "name": "effectSize_62",
+      "data": 670,
+      "type": "number",
+      "tableProcessGUId": "f826c3b7-1712-4cae-aba7-ea70dd33f180",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -203,9 +217,9 @@
         "data": [
           {
             "x": {
-              "id": 664,
+              "id": 671,
               "name": "Compare groups (stats) input 1",
-              "refId": 660,
+              "refId": 666,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -214,9 +228,9 @@
               "processes": []
             },
             "y": {
-              "id": 665,
+              "id": 672,
               "name": "Compare groups (stats) input 2",
-              "refId": 661,
+              "refId": 667,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -273,16 +287,17 @@
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 660,
+        "xIN": 666,
         "yIN": [
-          661
+          667
         ],
         "method": "auto",
         "alpha": 0.05,
         "postHocEnabled": true,
         "out": {
-          "statistic": 662,
-          "pvalue": 663
+          "statistic": 668,
+          "pvalue": 669,
+          "effectSize": 670
         }
       },
       "refTPId": null
@@ -305,11 +320,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_660": {
+    "data_666": {
       "x": 60,
       "y": 314
     },
-    "data_661": {
+    "data_667": {
       "x": 60,
       "y": 814
     },
@@ -383,5 +398,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

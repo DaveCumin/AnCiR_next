@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "699": [
+    "706": [
       "ctrl",
       "drug",
       "ctrl",
@@ -92,7 +92,7 @@
       "ctrl",
       "drug"
     ],
-    "700": [
+    "707": [
       "responder",
       "non-responder",
       "non-responder",
@@ -184,24 +184,30 @@
       "non-responder",
       "non-responder"
     ],
-    "701": [
+    "708": [
       0
     ],
-    "702": [
+    "709": [
       1
     ],
-    "703": [
+    "710": [
       1
     ],
-    "704": [
+    "711": [
       0
+    ],
+    "712": [
+      null
+    ],
+    "713": [
+      null
     ]
   },
   "data": [
     {
-      "id": 699,
-      "name": "Chi-squared test input 1",
-      "data": 699,
+      "id": 706,
+      "name": "Categorical tests input 1",
+      "data": 706,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -210,9 +216,9 @@
       "processes": []
     },
     {
-      "id": 700,
-      "name": "Chi-squared test input 2",
-      "data": 700,
+      "id": 707,
+      "name": "Categorical tests input 2",
+      "data": 707,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -221,44 +227,66 @@
       "processes": []
     },
     {
-      "id": 701,
+      "id": 708,
       "name": "statistic_65",
-      "data": 701,
+      "data": 708,
       "type": "number",
-      "tableProcessGUId": "be3d6c21-89a8-4696-8824-9cd2047fc8f5",
+      "tableProcessGUId": "03f9d5e4-e3d6-4610-95d3-96fc893dde82",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 702,
+      "id": 709,
       "name": "pvalue_65",
-      "data": 702,
+      "data": 709,
       "type": "number",
-      "tableProcessGUId": "be3d6c21-89a8-4696-8824-9cd2047fc8f5",
+      "tableProcessGUId": "03f9d5e4-e3d6-4610-95d3-96fc893dde82",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 703,
+      "id": 710,
       "name": "df_65",
-      "data": 703,
+      "data": 710,
       "type": "number",
-      "tableProcessGUId": "be3d6c21-89a8-4696-8824-9cd2047fc8f5",
+      "tableProcessGUId": "03f9d5e4-e3d6-4610-95d3-96fc893dde82",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 704,
+      "id": 711,
       "name": "effectSize_65",
-      "data": 704,
+      "data": 711,
       "type": "number",
-      "tableProcessGUId": "be3d6c21-89a8-4696-8824-9cd2047fc8f5",
+      "tableProcessGUId": "03f9d5e4-e3d6-4610-95d3-96fc893dde82",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 712,
+      "name": "ciLow_65",
+      "data": 712,
+      "type": "number",
+      "tableProcessGUId": "03f9d5e4-e3d6-4610-95d3-96fc893dde82",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 713,
+      "name": "ciHigh_65",
+      "data": 713,
+      "type": "number",
+      "tableProcessGUId": "03f9d5e4-e3d6-4610-95d3-96fc893dde82",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -268,7 +296,7 @@
   "plots": [
     {
       "id": 117,
-      "name": "Chi-squared test result",
+      "name": "Categorical tests result",
       "x": 60,
       "y": 60,
       "width": 520,
@@ -283,14 +311,18 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          699,
-          700,
-          701,
-          702,
-          703,
-          704
+          706,
+          707,
+          708,
+          709,
+          710,
+          711,
+          712,
+          713
         ],
         "showCol": [
+          true,
+          true,
           true,
           true,
           true,
@@ -309,18 +341,20 @@
     {
       "id": 65,
       "name": "ChiSquared",
-      "displayName": "Chi-squared test",
+      "displayName": "Categorical tests",
       "args": {
         "testType": "independence",
         "dataFormat": "paired",
-        "xIN": 699,
-        "yIN": 700,
+        "xIN": 706,
+        "yIN": 707,
         "correction": true,
         "out": {
-          "statistic": 701,
-          "pvalue": 702,
-          "df": 703,
-          "effectSize": 704
+          "statistic": 708,
+          "pvalue": 709,
+          "df": 710,
+          "effectSize": 711,
+          "ciLow": 712,
+          "ciHigh": 713
         },
         "alternative": "two-sided",
         "valid": false
@@ -345,11 +379,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_699": {
+    "data_706": {
       "x": 60,
       "y": 314
     },
-    "data_700": {
+    "data_707": {
       "x": 60,
       "y": 814
     },
@@ -423,5 +457,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

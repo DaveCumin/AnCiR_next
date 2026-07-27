@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "649": [
+    "655": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "650": [
+    "656": [
       12.642866859481796,
       18.907413440058953,
       8.02083029948017,
@@ -104,7 +104,7 @@
       23.83732580196522,
       -2.4027680620561576
     ],
-    "651": [
+    "657": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "652": [
+    "658": [
       9.094870359876616,
       10.003419446394657,
       13.579734705384766,
@@ -211,20 +211,20 @@
   },
   "data": [
     {
-      "id": 649,
+      "id": 655,
       "name": "x",
-      "data": 649,
+      "data": 655,
       "type": "number",
-      "tableProcessGUId": "0052cfde-cf17-41d4-944d-ece585ba2f62",
+      "tableProcessGUId": "9fb14776-b7d9-4df9-bf1d-b87dbd9f0efd",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 650,
+      "id": 656,
       "name": "y",
-      "data": 650,
+      "data": 656,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 651,
+      "id": 657,
       "name": "fitx_60",
-      "data": 651,
+      "data": 657,
       "type": "number",
-      "tableProcessGUId": "6a2eba8c-d33e-4b5e-8774-674a51e8821b",
+      "tableProcessGUId": "34f3b4e4-3c90-4441-a60c-b5cf48747f6c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 652,
-      "name": "fity_650_60",
-      "data": 652,
+      "id": 658,
+      "name": "fity_656_60",
+      "data": 658,
       "type": "number",
-      "tableProcessGUId": "6a2eba8c-d33e-4b5e-8774-674a51e8821b",
+      "tableProcessGUId": "34f3b4e4-3c90-4441-a60c-b5cf48747f6c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -314,9 +314,9 @@
         "data": [
           {
             "x": {
-              "id": 653,
+              "id": 659,
               "name": "x",
-              "refId": 649,
+              "refId": 655,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -325,9 +325,9 @@
               "processes": []
             },
             "y": {
-              "id": 654,
+              "id": 660,
               "name": "y",
-              "refId": 650,
+              "refId": 656,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -353,9 +353,9 @@
           },
           {
             "x": {
-              "id": 655,
+              "id": 661,
               "name": "fitx_60",
-              "refId": 651,
+              "refId": 657,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -364,9 +364,9 @@
               "processes": []
             },
             "y": {
-              "id": 656,
-              "name": "fity_650_60",
-              "refId": 652,
+              "id": 662,
+              "name": "fity_656_60",
+              "refId": 658,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,8 +422,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          650,
-          652
+          656,
+          658
         ],
         "showCol": [
           true,
@@ -448,7 +448,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 649
+          "result": 655
         }
       },
       "refTPId": null
@@ -458,9 +458,9 @@
       "name": "FitFunction",
       "displayName": "Fit Function",
       "args": {
-        "xIN": 649,
+        "xIN": 655,
         "yIN": [
-          650
+          656
         ],
         "model": "cosinor",
         "outputX": -1,
@@ -486,8 +486,8 @@
         "permutationStatistic": "rSquared",
         "preProcesses": [],
         "out": {
-          "fitx": 651,
-          "fity_650": 652
+          "fitx": 657,
+          "fity_656": 658
         }
       },
       "refTPId": null
@@ -510,7 +510,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_650": {
+    "data_656": {
       "x": 60,
       "y": 314
     },
@@ -592,5 +592,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

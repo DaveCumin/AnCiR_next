@@ -1051,16 +1051,16 @@
     },
     {
       "id": "tp-chisquared",
-      "name": "Chi-squared test",
+      "name": "Categorical tests",
       "family": "Analysis",
-      "description": "Chi-squared test: independence of two categorical variables (contingency table), or goodness-of-fit of counts against a uniform expectation.",
-      "summary": "Chi-squared test: independence of two categorical variables (contingency table), or goodness-of-fit of counts against a uniform expectation.",
+      "description": "Tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or Fisher's exact test for small 2x2 tables. Reports an effect size (Cramer's V, Cohen's w, or the odds ratio with a confidence interval) alongside the p-value.",
+      "summary": "Tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or Fisher's exact test for small 2x2 tables.",
       "url": "sessions/demos/demo-tp-chisquared.json",
       "kind": "tableProcess",
       "showcases": [
         "ChiSquared"
       ],
-      "keywords": "chi-squared test chi-squared test: independence of two categorical variables (contingency table), or goodness-of-fit of counts against a uniform expectation. analysis chisquared"
+      "keywords": "categorical tests tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or fisher's exact test for small 2x2 tables. reports an effect size (cramer's v, cohen's w, or the odds ratio with a confidence interval) alongside the p-value. analysis chisquared"
     },
     {
       "id": "tp-crosscorrelation",

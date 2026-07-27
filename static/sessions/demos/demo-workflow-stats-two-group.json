@@ -219,7 +219,7 @@
       "name": "statistic_11",
       "data": 153,
       "type": "number",
-      "tableProcessGUId": "8e0175e7-df50-43d3-ad5a-856ebb9b6321",
+      "tableProcessGUId": "f45853ef-c210-4c75-93f7-ba674bd18f4f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -230,7 +230,7 @@
       "name": "pvalue_11",
       "data": 154,
       "type": "number",
-      "tableProcessGUId": "8e0175e7-df50-43d3-ad5a-856ebb9b6321",
+      "tableProcessGUId": "f45853ef-c210-4c75-93f7-ba674bd18f4f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -497,5 +497,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

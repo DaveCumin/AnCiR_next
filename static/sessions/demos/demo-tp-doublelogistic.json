@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "640": [
+    "644": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "641": [
+    "645": [
       24.784209286216505,
       27.918238427560844,
       26.60093560817605,
@@ -104,7 +104,7 @@
       24.95424537696588,
       27.973731986697846
     ],
-    "642": [
+    "646": [
       0,
       1,
       2,
@@ -156,10 +156,16 @@
       48,
       49
     ],
-    "643": [
+    "647": [
       null
     ],
-    "644": [
+    "648": [
+      0.9855288017634882
+    ],
+    "649": [
+      2.8153329730899084
+    ],
+    "650": [
       25.756894538862465,
       24.742714374366138,
       24.385024124035308,
@@ -214,20 +220,20 @@
   },
   "data": [
     {
-      "id": 640,
+      "id": 644,
       "name": "x",
-      "data": 640,
+      "data": 644,
       "type": "number",
-      "tableProcessGUId": "f25a20a1-4b61-4eda-b784-a481da446bc9",
+      "tableProcessGUId": "5fba9b6c-4fd3-4b81-aa3f-2341b4cda1bf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 641,
+      "id": 645,
       "name": "y",
-      "data": 641,
+      "data": 645,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -236,33 +242,55 @@
       "processes": []
     },
     {
-      "id": 642,
+      "id": 646,
       "name": "dlogx_58",
-      "data": 642,
+      "data": 646,
       "type": "number",
-      "tableProcessGUId": "87458e99-27f2-4064-8286-879f8678a3a2",
+      "tableProcessGUId": "19cf439b-37b7-48a6-ad3e-3804266e7e41",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 643,
+      "id": 647,
       "name": "pvalue_58",
-      "data": 643,
+      "data": 647,
       "type": "number",
-      "tableProcessGUId": "f7e05757-2c6a-4a4f-96f3-4aa7f054c51e",
+      "tableProcessGUId": "e29f441e-b137-480d-ac25-77a3b20d00ca",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 644,
-      "name": "dlogy_641_58",
-      "data": 644,
+      "id": 648,
+      "name": "r2_58",
+      "data": 648,
       "type": "number",
-      "tableProcessGUId": "87458e99-27f2-4064-8286-879f8678a3a2",
+      "tableProcessGUId": "e29f441e-b137-480d-ac25-77a3b20d00ca",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 649,
+      "name": "rmse_58",
+      "data": 649,
+      "type": "number",
+      "tableProcessGUId": "e29f441e-b137-480d-ac25-77a3b20d00ca",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 650,
+      "name": "dlogy_645_58",
+      "data": 650,
+      "type": "number",
+      "tableProcessGUId": "19cf439b-37b7-48a6-ad3e-3804266e7e41",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -328,9 +356,9 @@
         "data": [
           {
             "x": {
-              "id": 645,
+              "id": 651,
               "name": "x",
-              "refId": 640,
+              "refId": 644,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -339,9 +367,9 @@
               "processes": []
             },
             "y": {
-              "id": 646,
+              "id": 652,
               "name": "y",
-              "refId": 641,
+              "refId": 645,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -367,9 +395,9 @@
           },
           {
             "x": {
-              "id": 647,
+              "id": 653,
               "name": "dlogx_58",
-              "refId": 642,
+              "refId": 646,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -378,9 +406,9 @@
               "processes": []
             },
             "y": {
-              "id": 648,
-              "name": "dlogy_641_58",
-              "refId": 644,
+              "id": 654,
+              "name": "dlogy_645_58",
+              "refId": 650,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -436,8 +464,8 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          641,
-          644
+          645,
+          650
         ],
         "showCol": [
           true,
@@ -462,7 +490,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 640
+          "result": 644
         }
       },
       "refTPId": null
@@ -472,9 +500,9 @@
       "name": "DoubleLogistic",
       "displayName": "Double Logistic",
       "args": {
-        "xIN": 640,
+        "xIN": 644,
         "yIN": [
-          641
+          645
         ],
         "outputX": -1,
         "fixK1": false,
@@ -484,9 +512,11 @@
         "fixPeriod": false,
         "fixedPeriod": 24,
         "out": {
-          "dlogx": 642,
-          "pvalue": 643,
-          "dlogy_641": 644
+          "dlogx": 646,
+          "pvalue": 647,
+          "r2": 648,
+          "rmse": 649,
+          "dlogy_645": 650
         }
       },
       "refTPId": null
@@ -509,7 +539,7 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_641": {
+    "data_645": {
       "x": 60,
       "y": 314
     },
@@ -591,5 +621,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

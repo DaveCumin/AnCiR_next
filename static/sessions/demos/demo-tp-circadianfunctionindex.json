@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "820": [
+    "834": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "821": [
+    "835": [
       0,
       0,
       0,
@@ -676,24 +676,24 @@
       0,
       0
     ],
-    "822": [
+    "836": [
       0.9426865671641792
     ],
-    "823": [
+    "837": [
       1.0000000000000004
     ],
-    "824": [
+    "838": [
       0.34388059701492557
     ],
-    "825": [
+    "839": [
       1
     ]
   },
   "data": [
     {
-      "id": 820,
+      "id": 834,
       "name": "Circadian Function Index input 1",
-      "data": 820,
+      "data": 834,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -702,9 +702,9 @@
       "processes": []
     },
     {
-      "id": 821,
+      "id": 835,
       "name": "Circadian Function Index input 2",
-      "data": 821,
+      "data": 835,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -713,44 +713,44 @@
       "processes": []
     },
     {
-      "id": 822,
+      "id": 836,
       "name": "CFI_89",
-      "data": 822,
+      "data": 836,
       "type": "number",
-      "tableProcessGUId": "20bf7cd8-d961-449c-bca8-3ba1074d7bd1",
+      "tableProcessGUId": "f7a89411-712a-4607-84a9-b5bb2e2cd008",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 823,
+      "id": 837,
       "name": "IS_89",
-      "data": 823,
+      "data": 837,
       "type": "number",
-      "tableProcessGUId": "20bf7cd8-d961-449c-bca8-3ba1074d7bd1",
+      "tableProcessGUId": "f7a89411-712a-4607-84a9-b5bb2e2cd008",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 824,
+      "id": 838,
       "name": "IV_89",
-      "data": 824,
+      "data": 838,
       "type": "number",
-      "tableProcessGUId": "20bf7cd8-d961-449c-bca8-3ba1074d7bd1",
+      "tableProcessGUId": "f7a89411-712a-4607-84a9-b5bb2e2cd008",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 825,
+      "id": 839,
       "name": "RA_89",
-      "data": 825,
+      "data": 839,
       "type": "number",
-      "tableProcessGUId": "20bf7cd8-d961-449c-bca8-3ba1074d7bd1",
+      "tableProcessGUId": "f7a89411-712a-4607-84a9-b5bb2e2cd008",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -775,12 +775,12 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          820,
-          821,
-          822,
-          823,
-          824,
-          825
+          834,
+          835,
+          836,
+          837,
+          838,
+          839
         ],
         "showCol": [
           true,
@@ -803,9 +803,9 @@
       "name": "CircadianFunctionIndex",
       "displayName": "Circadian Function Index",
       "args": {
-        "xIN": 820,
+        "xIN": 834,
         "yIN": [
-          821
+          835
         ],
         "epochHours": 1,
         "period": 24,
@@ -813,10 +813,10 @@
         "lWindow": 5,
         "preProcesses": [],
         "out": {
-          "CFI": 822,
-          "IS": 823,
-          "IV": 824,
-          "RA": 825
+          "CFI": 836,
+          "IS": 837,
+          "IV": 838,
+          "RA": 839
         }
       },
       "refTPId": null
@@ -839,11 +839,11 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_820": {
+    "data_834": {
       "x": 60,
       "y": 314
     },
-    "data_821": {
+    "data_835": {
       "x": 60,
       "y": 814
     },
@@ -917,5 +917,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }

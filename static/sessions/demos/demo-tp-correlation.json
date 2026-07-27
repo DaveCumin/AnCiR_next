@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "717": [
+    "726": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "718": [
+    "727": [
       25,
       26.192596079882613,
       29.689110867544645,
@@ -104,7 +104,7 @@
       25,
       26.192596079882605
     ],
-    "719": [
+    "728": [
       100,
       98,
       96,
@@ -156,37 +156,52 @@
       4,
       2
     ],
-    "720": [
+    "729": [
       "Correlation input 1",
       "Correlation input 1",
       "Correlation input 2"
     ],
-    "721": [
+    "730": [
       "Correlation input 2",
       "Correlation input 3",
       "Correlation input 3"
     ],
-    "722": [
+    "731": [
       1,
       0.044645731583387575,
       0.04464573158338759
     ],
-    "723": [
+    "732": [
       0,
       0.7581875239105604,
       0.7581875239105604
     ],
-    "724": [
+    "733": [
       50,
       50,
       50
+    ],
+    "734": [
+      1,
+      -0.2366427555642181,
+      -0.2366427555642181
+    ],
+    "735": [
+      1,
+      0.3190288666233962,
+      0.31902886662339625
+    ],
+    "736": [
+      1,
+      0,
+      0
     ]
   },
   "data": [
     {
-      "id": 717,
+      "id": 726,
       "name": "Correlation input 1",
-      "data": 717,
+      "data": 726,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -195,9 +210,9 @@
       "processes": []
     },
     {
-      "id": 718,
+      "id": 727,
       "name": "Correlation input 2",
-      "data": 718,
+      "data": 727,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -206,9 +221,9 @@
       "processes": []
     },
     {
-      "id": 719,
+      "id": 728,
       "name": "Correlation input 3",
-      "data": 719,
+      "data": 728,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -217,55 +232,88 @@
       "processes": []
     },
     {
-      "id": 720,
+      "id": 729,
       "name": "var_i_68",
-      "data": 720,
+      "data": 729,
       "type": "category",
-      "tableProcessGUId": "d2dcdad3-513b-4c5e-96a8-10fa81fa4716",
+      "tableProcessGUId": "cf016da7-335f-406f-86ed-9edd8d079aeb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 721,
+      "id": 730,
       "name": "var_j_68",
-      "data": 721,
+      "data": 730,
       "type": "category",
-      "tableProcessGUId": "d2dcdad3-513b-4c5e-96a8-10fa81fa4716",
+      "tableProcessGUId": "cf016da7-335f-406f-86ed-9edd8d079aeb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 722,
+      "id": 731,
       "name": "r_68",
-      "data": 722,
+      "data": 731,
       "type": "number",
-      "tableProcessGUId": "d2dcdad3-513b-4c5e-96a8-10fa81fa4716",
+      "tableProcessGUId": "cf016da7-335f-406f-86ed-9edd8d079aeb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 723,
+      "id": 732,
       "name": "pvalue_68",
-      "data": 723,
+      "data": 732,
       "type": "number",
-      "tableProcessGUId": "d2dcdad3-513b-4c5e-96a8-10fa81fa4716",
+      "tableProcessGUId": "cf016da7-335f-406f-86ed-9edd8d079aeb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 724,
+      "id": 733,
       "name": "n_68",
-      "data": 724,
+      "data": 733,
       "type": "number",
-      "tableProcessGUId": "d2dcdad3-513b-4c5e-96a8-10fa81fa4716",
+      "tableProcessGUId": "cf016da7-335f-406f-86ed-9edd8d079aeb",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 734,
+      "name": "ciLow_68",
+      "data": 734,
+      "type": "number",
+      "tableProcessGUId": "cf016da7-335f-406f-86ed-9edd8d079aeb",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 735,
+      "name": "ciHigh_68",
+      "data": 735,
+      "type": "number",
+      "tableProcessGUId": "cf016da7-335f-406f-86ed-9edd8d079aeb",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 736,
+      "name": "significant_68",
+      "data": 736,
+      "type": "number",
+      "tableProcessGUId": "cf016da7-335f-406f-86ed-9edd8d079aeb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -290,16 +338,22 @@
       "sourceNodeId": null,
       "plot": {
         "columnRefs": [
-          717,
-          718,
-          719,
-          720,
-          721,
-          722,
-          723,
-          724
+          726,
+          727,
+          728,
+          729,
+          730,
+          731,
+          732,
+          733,
+          734,
+          735,
+          736
         ],
         "showCol": [
+          true,
+          true,
+          true,
           true,
           true,
           true,
@@ -323,18 +377,21 @@
       "displayName": "Correlation",
       "args": {
         "yIN": [
-          717,
-          718,
-          719
+          726,
+          727,
+          728
         ],
         "method": "auto",
         "alpha": 0.05,
         "out": {
-          "var_i": 720,
-          "var_j": 721,
-          "r": 722,
-          "pvalue": 723,
-          "n": 724
+          "var_i": 729,
+          "var_j": 730,
+          "r": 731,
+          "pvalue": 732,
+          "n": 733,
+          "ciLow": 734,
+          "ciHigh": 735,
+          "significant": 736
         },
         "valid": false
       },
@@ -358,15 +415,15 @@
   "composites": [],
   "orphanProcesses": [],
   "nodeLayout": {
-    "data_717": {
+    "data_726": {
       "x": 60,
       "y": 314
     },
-    "data_718": {
+    "data_727": {
       "x": 60,
       "y": 814
     },
-    "data_719": {
+    "data_728": {
       "x": 60,
       "y": 1314
     },
@@ -440,5 +497,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.67.0"
+  "version": "β.68.0"
 }
