@@ -796,7 +796,8 @@
 				"z",
 				"pvalue",
 				"acrophase"
-			]
+			],
+			"rFunc": "rayleightest"
 		},
 		{
 			"id": "tp-rayleigh-timed",
@@ -930,7 +931,8 @@
 				"R",
 				"pvalue",
 				"acrophase"
-			]
+			],
+			"rFunc": "rayleightest"
 		},
 		{
 			"id": "tp-rayleigh-timed-ww-off",
@@ -1063,7 +1065,8 @@
 			"compareOutputs": [
 				"F",
 				"ww_pvalue"
-			]
+			],
+			"rFunc": "rayleightest"
 		},
 		{
 			"id": "tp-watsonwilliams-2groups",
@@ -1140,7 +1143,8 @@
 			"compareOutputs": [
 				"F",
 				"ww_pvalue"
-			]
+			],
+			"rFunc": "rayleightest"
 		},
 		{
 			"id": "tp-cosinor-addons-fixed24",
@@ -1229,7 +1233,8 @@
 				"IS",
 				"IV",
 				"RA"
-			]
+			],
+			"rFunc": "circadianfunctionindex"
 		},
 		{
 			"id": "util-weighted-circmean",
@@ -1261,7 +1266,8 @@
 				"R",
 				"n",
 				"W"
-			]
+			],
+			"rFunc": "weighted_circular_mean"
 		},
 		{
 			"id": "util-weighted-rayleigh",
@@ -1294,7 +1300,8 @@
 				"z",
 				"pValue",
 				"meanAngle"
-			]
+			],
+			"rFunc": "weighted_rayleigh"
 		},
 		{
 			"id": "util-weighted-circmean-gaps",
@@ -1326,7 +1333,8 @@
 				"R",
 				"meanAngle",
 				"W"
-			]
+			],
+			"rFunc": "weighted_circular_mean"
 		},
 		{
 			"id": "util-correlate-pearson",
@@ -2413,7 +2421,8 @@
 			"compareOutputs": [
 				"padj",
 				"reject"
-			]
+			],
+			"rFunc": "fdrcorrection"
 		},
 		{
 			"id": "tp-fdr-benjamini-yekutieli",
@@ -2440,7 +2449,8 @@
 			"compareOutputs": [
 				"padj",
 				"reject"
-			]
+			],
+			"rFunc": "fdrcorrection"
 		},
 		{
 			"id": "tp-fdr-holm",
@@ -2467,7 +2477,8 @@
 			"compareOutputs": [
 				"padj",
 				"reject"
-			]
+			],
+			"rFunc": "fdrcorrection"
 		},
 		{
 			"id": "tp-surrogate-observed-statistic",

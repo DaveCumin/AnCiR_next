@@ -1513,6 +1513,330 @@ tp_interpolate <- function(args, env) {
   wrote
 }
 
+# ---------------------------------------------------------------------------
+# Circular (directional) statistics
+# ---------------------------------------------------------------------------
+
+# Drop non-finite angles. Absent is not zero: a missing phase must not be counted as
+# pointing at 0 rad, which would drag the mean direction toward it.
+clean_angles <- function(angles_rad) {
+  v <- suppressWarnings(as.numeric(unlist(angles_rad, use.names = FALSE)))
+  v[is.finite(v)]
+}
+
+to_radians <- function(v, unit = "radians", period = 24) {
+  vv <- suppressWarnings(as.numeric(v))
+  if (length(vv) != 1 || !is.finite(vv)) return(NA_real_)
+  if (identical(unit, "degrees")) return(vv * pi / 180)
+  if (identical(unit, "hours")) {
+    p <- if (is.finite(period) && period > 0) period else 24
+    return((vv / p) * 2 * pi)
+  }
+  vv
+}
+
+angles_col_to_radians <- function(data, unit, period) {
+  vapply(data, function(v) {
+    if (is.null(v) || length(v) != 1) return(NA_real_)
+    if (is.character(v) && !nzchar(trimws(v))) return(NA_real_)
+    to_radians(v, unit, period)
+  }, numeric(1), USE.NAMES = FALSE)
+}
+
+circular_mean <- function(angles_rad) {
+  a <- clean_angles(angles_rad)
+  n <- length(a)
+  if (!n) return(list(meanAngle = NA_real_, R = NA_real_, n = 0, C = NA_real_, S = NA_real_))
+  C <- mean(cos(a)); S <- mean(sin(a))
+  ma <- atan2(S, C)
+  # Wrapped into [0, 2pi) rather than left in atan2's (-pi, pi]: the acrophase is reported
+  # as a time of day, and a negative one reads as the previous day.
+  if (ma < 0) ma <- ma + 2 * pi
+  list(meanAngle = ma, R = sqrt(C * C + S * S), n = n, C = C, S = S)
+}
+
+# Rayleigh test of uniformity, with the standard second-order p-value expansion.
+rayleigh_test <- function(angles_rad) {
+  cm <- circular_mean(angles_rad)
+  n <- cm$n
+  if (!n) return(list(n = 0, R = NA_real_, meanAngle = NA_real_, z = NA_real_, pValue = NA_real_))
+  R <- cm$R
+  z <- n * R * R
+  inner <- (1 + (2 * z - z * z) / (4 * n)
+            - (24 * z - 132 * z * z + 76 * z^3 - 9 * z^4) / (288 * n * n))
+  p <- exp(-z) * inner
+  # The expansion can overshoot outside its useful range; fall back to the leading term and
+  # clamp, exactly as the JS and Python do, so a p-value is never negative or above 1.
+  if (!is.finite(p)) p <- exp(-z)
+  p <- min(1, max(0, p))
+  list(n = n, R = R, meanAngle = cm$meanAngle, z = z, pValue = p)
+}
+
+resultant <- function(angles_rad) {
+  a <- clean_angles(angles_rad)
+  n <- length(a)
+  C <- sum(cos(a)); S <- sum(sin(a))
+  r <- sqrt(C * C + S * S)
+  list(n = n, C = C, S = S, r = r, rBar = if (n > 0) r / n else NA_real_)
+}
+
+# Concentration parameter from the mean resultant length (Fisher 1993, piecewise approx).
+kappa_from_rbar <- function(r_bar) {
+  if (!is.finite(r_bar) || r_bar <= 0) return(0)
+  if (r_bar >= 1) return(Inf)
+  if (r_bar < 0.53) return(2 * r_bar + r_bar^3 + (5 * r_bar^5) / 6)
+  if (r_bar < 0.85) return(-0.4 + 1.39 * r_bar + 0.43 / (1 - r_bar))
+  1 / (r_bar^3 - 4 * r_bar^2 + 3 * r_bar)
+}
+
+p_upper_from_f <- function(F, df1, df2) {
+  if (!is.finite(F) || !is.finite(df1) || !is.finite(df2)) return(NA_real_)
+  if (df1 <= 0 || df2 <= 0 || F < 0) return(NA_real_)
+  pf(F, df1, df2, lower.tail = FALSE)
+}
+
+# Watson-Williams test for equal mean directions across groups.
+watson_williams <- function(groups_of_angles) {
+  groups <- Filter(function(g) g$n > 0, lapply(groups_of_angles, resultant))
+  k <- length(groups)
+  invalid <- list(k = k, N = 0, F = NA_real_, df1 = NA_real_, df2 = NA_real_,
+                  kappa = NA_real_, beta = NA_real_, Rsum = NA_real_, r = NA_real_,
+                  pValue = NA_real_, valid = FALSE)
+  if (k < 2) return(invalid)
+  N <- sum(vapply(groups, function(g) g$n, numeric(1)))
+  if (N <= k) { invalid$N <- N; return(invalid) }
+  Rsum <- sum(vapply(groups, function(g) g$r, numeric(1)))
+  Cp <- sum(vapply(groups, function(g) g$C, numeric(1)))
+  Sp <- sum(vapply(groups, function(g) g$S, numeric(1)))
+  r <- sqrt(Cp * Cp + Sp * Sp)
+  kappa <- kappa_from_rbar(Rsum / N)
+  beta <- if (kappa == 0) Inf else 1 + 3 / (8 * kappa)
+  denom <- (k - 1) * (N - Rsum)
+  F <- if (denom == 0) {
+    if ((Rsum - r) == 0) 0 else Inf
+  } else beta * (N - k) * (Rsum - r) / denom
+  df1 <- k - 1; df2 <- N - k
+  p <- if (is.finite(F)) p_upper_from_f(F, df1, df2) else if (is.infinite(F)) 0 else NA_real_
+  list(k = k, N = N, F = F, df1 = df1, df2 = df2, kappa = kappa, beta = beta,
+       Rsum = Rsum, r = r, pValue = p, valid = TRUE)
+}
+
+
+# Weighted-mode helpers for RayleighTest, when a time column supplies the angle and the Y
+# value supplies the weight.
+
+# Hours for the weighted-mode time input. A 'time' column is epoch-ms -> ABSOLUTE hours with
+# NO baseline subtraction, which is deliberately NOT col_hours(): the phase is a time of day,
+# so shifting it by the recording start would rotate every point.
+column_to_phase_hours <- function(data, col_type) {
+  vapply(data, function(v) {
+    if (is.null(v) || length(v) != 1) return(NA_real_)
+    if (is.character(v) && !nzchar(trimws(v))) return(NA_real_)
+    n <- suppressWarnings(as.numeric(v))
+    if (length(n) != 1 || !is.finite(n)) return(NA_real_)
+    if (identical(col_type, "time")) n / 3600000 else n
+  }, numeric(1), USE.NAMES = FALSE)
+}
+
+# Fold hours modulo the period and map onto the circle. The double modulo keeps a negative
+# hour (a phase before the origin) on the circle rather than off it.
+time_to_angle_rad <- function(hours, period) {
+  if (!is.finite(hours)) return(NA_real_)
+  p <- if (is.finite(period) && period > 0) period else 24
+  ((hours %% p + p) %% p) / p * (2 * pi)
+}
+
+weighted_circular_mean <- function(angles_rad, weights) {
+  a <- suppressWarnings(as.numeric(unlist(angles_rad, use.names = FALSE)))
+  w <- suppressWarnings(as.numeric(unlist(weights, use.names = FALSE)))
+  m <- min(length(a), length(w))
+  a <- a[seq_len(m)]; w <- w[seq_len(m)]
+  ok <- is.finite(a) & is.finite(w)
+  n <- sum(ok)
+  if (!n) return(list(meanAngle = NA_real_, R = NA_real_, n = 0, W = NA_real_,
+                      C = NA_real_, S = NA_real_))
+  C <- sum(w[ok] * cos(a[ok])); S <- sum(w[ok] * sin(a[ok])); W <- sum(w[ok])
+  if (W <= 0) return(list(meanAngle = NA_real_, R = NA_real_, n = n, W = W,
+                          C = NA_real_, S = NA_real_))
+  mean_a <- atan2(S, C)
+  if (mean_a < 0) mean_a <- mean_a + 2 * pi
+  list(meanAngle = mean_a, R = sqrt(C * C + S * S) / W, n = n, W = W, C = C, S = S)
+}
+
+# Rayleigh on weighted data. The EFFECTIVE n is W^2 / sum(w^2) (Kish), not the row count:
+# a handful of large weights carries less evidence than the same number of equal ones, and
+# using n would overstate significance.
+weighted_rayleigh <- function(angles_rad, weights) {
+  cm <- weighted_circular_mean(angles_rad, weights)
+  a <- suppressWarnings(as.numeric(unlist(angles_rad, use.names = FALSE)))
+  w <- suppressWarnings(as.numeric(unlist(weights, use.names = FALSE)))
+  m <- min(length(a), length(w))
+  ok <- is.finite(a[seq_len(m)]) & is.finite(w[seq_len(m)])
+  sum_sq <- sum(w[seq_len(m)][ok]^2)
+  n <- cm$n; R <- cm$R; W <- cm$W
+  if (!n || !is.finite(W) || W <= 0 || sum_sq <= 0 || !is.finite(R)) {
+    return(list(n = n, nEff = NA_real_, R = NA_real_, meanAngle = NA_real_,
+                z = NA_real_, pValue = NA_real_,
+                W = if (is.finite(W)) W else NA_real_))
+  }
+  n_eff <- (W * W) / sum_sq
+  z <- n_eff * R * R
+  inner <- (1 + (2 * z - z * z) / (4 * n_eff)
+            - (24 * z - 132 * z * z + 76 * z^3 - 9 * z^4) / (288 * n_eff * n_eff))
+  p <- exp(-z) * inner
+  if (!is.finite(p)) p <- exp(-z)
+  p <- min(1, max(0, p))
+  list(n = n, nEff = n_eff, R = R, meanAngle = cm$meanAngle, z = z, pValue = p, W = W)
+}
+
+# ---------------------------------------------------------------------------
+# Circadian Function Index
+# ---------------------------------------------------------------------------
+
+clamp01 <- function(v) {
+  if (!is.finite(v)) return(NA_real_)
+  min(1, max(0, v))
+}
+
+# CFI = mean of IS, the COMPLEMENT of IV (rescaled so higher is better), and RA.
+# Ortiz-Tudela et al. IV runs 0..2 with LOW meaning consolidated, so (2 - IV) / 2 flips it
+# into the same "higher is better" 0..1 sense as the other two before averaging.
+circadian_function_index <- function(IS = NA_real_, IV = NA_real_, RA = NA_real_) {
+  is_c <- clamp01(IS)
+  iv_c <- if (is.finite(IV)) clamp01((2 - IV) / 2) else NA_real_
+  ra_c <- clamp01(RA)
+  comps <- list(IS = is_c, IVcomplement = iv_c, RA = ra_c)
+  if (!is.finite(is_c) || !is.finite(iv_c) || !is.finite(ra_c)) {
+    return(list(CFI = NA_real_, components = comps))
+  }
+  list(CFI = (is_c + iv_c + ra_c) / 3, components = comps)
+}
+
+# --- the analyses ----------------------------------------------------------
+
+tp_fdrcorrection <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  k <- as.character(x_in)
+  if (x_in == -1 || is.null(env$cols[[k]])) return(FALSE)
+  data <- col_data(env$cols[[k]], env$cols, env$raw_data)
+  if (!length(data)) return(FALSE)
+  method <- if (is.null(args$method)) "benjamini-hochberg" else args$method
+  if (!(method %in% c("none", "bonferroni", "holm",
+                      "benjamini-hochberg", "benjamini-yekutieli"))) {
+    method <- "benjamini-hochberg"
+  }
+  alpha <- suppressWarnings(as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha))
+  if (length(alpha) != 1 || !is.finite(alpha)) alpha <- 0.05
+  padj <- p_adjust(data, method)$adjusted
+  # A test that could not run stays NA rather than becoming "not rejected": absence of a
+  # p-value is not evidence against the hypothesis.
+  reject <- ifelse(is.finite(padj), as.numeric(padj < alpha), NA_real_)
+  set_col(env, env$cols, out_id(args, "padj"), padj, type = "number")
+  set_col(env, env$cols, out_id(args, "reject"), reject, type = "number")
+  sum(is.finite(padj)) > 0
+}
+
+tp_circadianfunctionindex <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  epoch <- as.numeric(if (is.null(args$epochHours)) 1 else args$epochHours)
+  period <- as.numeric(if (is.null(args$period)) 24 else args$period)
+  m_window <- as.numeric(if (is.null(args$mWindow)) 10 else args$mWindow)
+  l_window <- as.numeric(if (is.null(args$lWindow)) 5 else args$lWindow)
+  t <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
+  if (!length(t)) return(FALSE)
+  per_y <- list(); any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    y <- col_data(env$cols[[yk]], env$cols, env$raw_data)
+    if (!length(y)) next
+    res <- compute_npcra(t, y, epoch, period, m_window, l_window)
+    if (is.null(res)) next
+    per_y[[yk]] <- list(CFI = circadian_function_index(res$IS, res$IV, res$RA)$CFI,
+                        IS = res$IS, IV = res$IV, RA = res$RA)
+    any_valid <- TRUE
+  }
+  if (!any_valid) return(FALSE)
+  for (key in c("CFI", "IS", "IV", "RA")) {
+    arr <- vapply(y_ins, function(y) {
+      r <- per_y[[as.character(y)]]
+      if (is.null(r)) NA_real_ else as.numeric(r[[key]])
+    }, numeric(1))
+    set_col(env, env$cols, out_id(args, key), arr, type = "number")
+  }
+  TRUE
+}
+
+tp_rayleightest <- function(args, env) {
+  y_ins <- id_list(args$yIN)
+  if (!length(y_ins)) return(FALSE)
+  unit <- if (is.null(args$unit)) "radians" else args$unit
+  period <- suppressWarnings(as.numeric(if (is.null(args$period)) 24 else args$period))
+  if (length(period) != 1 || !is.finite(period)) period <- 24
+
+  # `timeIN`, when wired, switches the node to amplitude-weighted mode: the time column
+  # supplies the angle, the Y value is the weight, and `unit` is ignored.
+  time_in <- if (is.null(args$timeIN)) -1 else args$timeIN
+  time_col <- if (time_in != -1) env$cols[[as.character(time_in)]] else NULL
+
+  per_y <- list(); any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    y_col <- env$cols[[yk]]
+    if (!is.null(time_col)) {
+      angles <- vapply(column_to_phase_hours(col_data(time_col, env$cols, env$raw_data),
+                                             time_col$type),
+                       time_to_angle_rad, numeric(1), period)
+      st <- weighted_rayleigh(angles, col_data(y_col, env$cols, env$raw_data))
+      if (st$n > 0) {
+        # Scaled by the DISPLAY period, which falls back to 24 when period <= 0 — the same
+        # fallback time_to_angle_rad already applies, so the angle and its label agree.
+        dp <- if (is.finite(period) && period > 0) period else 24
+        mv <- if (is.finite(st$meanAngle)) (st$meanAngle / (2 * pi)) * dp else NA_real_
+        per_y[[yk]] <- list(R = st$R, z = st$z, pValue = st$pValue,
+                            meanAngle = st$meanAngle, meanValue = mv)
+        any_valid <- TRUE
+      }
+      next
+    }
+    angles <- angles_col_to_radians(col_data(y_col, env$cols, env$raw_data), unit, period)
+    res <- rayleigh_test(angles)
+    if (res$n > 0) {
+      mean_value <- if (is.finite(res$meanAngle)) (res$meanAngle / (2 * pi)) * period else NA_real_
+      per_y[[yk]] <- c(res, list(meanValue = mean_value))
+      any_valid <- TRUE
+    }
+  }
+  if (!any_valid) return(FALSE)
+  fields <- c(R = "R", z = "z", pvalue = "pValue", acrophase = "meanValue")
+  for (key in names(fields)) {
+    arr <- vapply(y_ins, function(y) {
+      r <- per_y[[as.character(y)]]
+      if (is.null(r)) NA_real_ else as.numeric(r[[fields[[key]]]])
+    }, numeric(1))
+    set_col(env, env$cols, out_id(args, key), arr, type = "number")
+  }
+  # Watson-Williams is a SINGLE F/p across the groups, and is meaningless in timed mode
+  # (yIN then holds amplitudes, not event angles). The ports are always written so they stay
+  # numeric and present; NaN means "not run", not "no difference".
+  ww_F <- NA_real_; ww_p <- NA_real_
+  if (isTRUE(args$showWatsonWilliams) && is.null(time_col)) {
+    groups <- lapply(y_ins, function(y) {
+      yk <- as.character(y)
+      if (is.null(env$cols[[yk]])) return(numeric(0))
+      angles_col_to_radians(col_data(env$cols[[yk]], env$cols, env$raw_data), unit, period)
+    })
+    result <- watson_williams(groups)
+    if (isTRUE(result$valid)) { ww_F <- result$F; ww_p <- result$pValue }
+  }
+  set_col(env, env$cols, out_id(args, "F"), ww_F, type = "number")
+  set_col(env, env$cols, out_id(args, "ww_pvalue"), ww_p, type = "number")
+  TRUE
+}
+
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
 # sits beside the existing `pyFunc`, so both legs read one fixture file).
 #
@@ -1521,6 +1845,9 @@ tp_interpolate <- function(args, env) {
 # — so the harness assembles positional arguments the same way for every kernel. Per-kernel
 # adapters would be a second, hand-maintained copy of that contract, and would drift.
 PURE_UTIL_MAP <- list(
+  circular_mean = circular_mean,
+  weighted_circular_mean = weighted_circular_mean,
+  weighted_rayleigh = weighted_rayleigh,
   correlation_ci = correlation_ci,
   cross_correlation = cross_correlation,
   describe_stats = describe_stats,
@@ -1528,7 +1855,8 @@ PURE_UTIL_MAP <- list(
   d_agostino     = d_agostino,
   shapiro_wilk   = shapiro_wilk,
   correlate      = correlate,
-  p_adjust       = p_adjust
+  p_adjust       = p_adjust,
+  rayleigh_test  = rayleigh_test
 )
 
 # Analyses this runtime implements. Kept in step with R_IMPLEMENTED in
@@ -1541,7 +1869,9 @@ TABLE_PROCESS_MAP = list(
   columnfunctions = tp_columnfunctions,
   cosinor = tp_cosinor,
   describedata = tp_describedata,
+  fdrcorrection = tp_fdrcorrection,
   chisquared = tp_chisquared,
+  circadianfunctionindex = tp_circadianfunctionindex,
   correlation = tp_correlation,
   crosscorrelation = tp_crosscorrelation,
   interpolate = tp_interpolate,
@@ -1549,6 +1879,7 @@ TABLE_PROCESS_MAP = list(
   longtowide = tp_longtowide,
   nonparametricra = tp_nonparametricra,
   normalitytest = tp_normalitytest,
+  rayleightest = tp_rayleightest,
   smootheddata = tp_smootheddata,
   sort = tp_sort,
   split = tp_split,

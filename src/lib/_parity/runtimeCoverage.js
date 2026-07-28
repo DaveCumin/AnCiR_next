@@ -76,6 +76,7 @@ export const PYTHON_ORPHANS = ['duplicate'];
 export const R_IMPLEMENTED = [
 	'averageprofile',
 	'chisquared',
+	'circadianfunctionindex',
 	'collectcolumns',
 	'columnfunctions',
 	'correlation',
@@ -83,11 +84,13 @@ export const R_IMPLEMENTED = [
 	'cosinor',
 	'crosscorrelation',
 	'describedata',
+	'fdrcorrection',
 	'interpolate',
 	'logisticregression',
 	'longtowide',
 	'nonparametricra',
 	'normalitytest',
+	'rayleightest',
 	'smootheddata',
 	'sort',
 	'split',
@@ -138,6 +141,7 @@ export const HARNESS_BLIND = ['collectcolumns', 'longtowide', 'movinganalysis', 
  * against a third implementation rather than assuming.
  */
 export const R_PURE_UTILS = [
+	'circular_mean',
 	'correlate',
 	'correlation_ci',
 	'cross_correlation',
@@ -145,7 +149,10 @@ export const R_PURE_UTILS = [
 	'describe_stats',
 	'jarque_bera',
 	'p_adjust',
-	'shapiro_wilk'
+	'rayleigh_test',
+	'shapiro_wilk',
+	'weighted_circular_mean',
+	'weighted_rayleigh'
 ];
 
 export function tpKey(filename) {
