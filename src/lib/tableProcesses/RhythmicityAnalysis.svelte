@@ -3,6 +3,7 @@
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -384,12 +385,21 @@
 			currentOutputKeys.join(',');
 		return out;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
+
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (result !== undefined) memo.payload = result;
+	});
 
 	$effect(() => {
 		const h = getHash;
 		if (!mounted) return;
-		if (lastHash !== h) {
+		if (memo.hash !== h) {
 			untrack(() => recompute());
 		}
 	});
@@ -421,7 +431,7 @@
 			result = data;
 			p.args.valid = valid;
 			calculating = false;
-			lastHash = getHash;
+			memo.hash = getHash;
 		}, 0);
 	}
 
@@ -585,6 +595,9 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) result = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		const needsCompute = syncOutputColumns();
 		if (needsCompute) {

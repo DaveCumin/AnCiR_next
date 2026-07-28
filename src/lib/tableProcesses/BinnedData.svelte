@@ -2,6 +2,7 @@
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { min as arrayMin } from '$lib/components/plotbits/helpers/wrangleData.js';
@@ -275,6 +276,13 @@
 	// Reset binStart to 0 when x column switches between time and non-time,
 	// so the hours offset is always relative to the new column's reference point.
 	let prevXIsTime = false;
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (binnedData !== undefined) memo.payload = binnedData;
+	});
+
 	$effect(() => {
 		const nowIsTime = xIsTime;
 		if (nowIsTime !== prevXIsTime) {
@@ -297,19 +305,21 @@
 		h += '|' + p.args.binMode + '|' + JSON.stringify(p.args.cuts ?? []);
 		return h;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	// Single data effect — mirrors original pattern
 	// Only recomputes when data or params change; does NOT create/remove columns
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (dataHash !== lastHash) {
+		if (dataHash !== memo.hash) {
 			untrack(() => {
 				previewStart = 1;
 				[binnedData, p.args.valid] = binneddata(p.args, p.args.diffStep);
 			});
-			lastHash = dataHash;
+			memo.hash = dataHash;
 		}
 	});
 
@@ -320,7 +330,7 @@
 	function getBinnedData() {
 		previewStart = 1;
 		[binnedData, p.args.valid] = binneddata(p.args, p.args.diffStep);
-		lastHash = getHash;
+		memo.hash = getHash;
 	}
 
 	// Own output column IDs — selecting any of these as an input creates a
@@ -348,6 +358,9 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) binnedData = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		// Ensure X output column exists (created by TableProcess.svelte in standalone;
 		// must be created here in collected mode)
@@ -382,7 +395,7 @@
 					binnedData = { bins: core.rawData.get(xKey), y_results };
 					p.args.valid = true;
 				}
-				// Note: lastHash is NOT set here, so $effect will always fire after mount
+				// Note: memo.hash is NOT set here, so $effect will always fire after mount
 				// and recompute from current inputs regardless of staleness
 			}
 		}

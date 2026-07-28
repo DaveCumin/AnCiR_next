@@ -2,6 +2,7 @@
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { core } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	const displayName = 'Split data';
@@ -223,13 +224,22 @@
 		out += p.args.splitTimes.join(',');
 		return out;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
+
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (splitResult !== undefined) memo.payload = splitResult;
+	});
 
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash) {
-			lastHash = getHash;
+		if (memo.hash !== dataHash) {
+			memo.hash = getHash;
 			calculating = true;
 			const token = ++_calcToken;
 			setTimeout(() => {
@@ -339,7 +349,7 @@
 			if (token !== _calcToken) return;
 			[splitResult, p.args.valid] = split(p.args);
 			calculating = false;
-			lastHash = getHash;
+			memo.hash = getHash;
 		}, 0);
 	}
 
@@ -382,12 +392,15 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) splitResult = memo.payload;
 		// Initialize / materialise output columns on mount (creates them for the
 		// free-standing node, which has no parent table).
 		const needsCompute = reconcileOutputs();
 
 		// Did we end up with real segment data? Stays false unless the load branch below finds
-		// populated output columns. Gates whether we pin `lastHash` — the difference between a
+		// populated output columns. Gates whether we pin `memo.hash` — the difference between a
 		// session that computes on load and one that stays blank forever.
 		let loaded = false;
 
@@ -434,11 +447,11 @@
 				(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0));
 		// Pin the hash ONLY when we actually loaded current data — that legitimately suppresses a
 		// redundant recompute. When the output columns exist but are EMPTY (a freshly-normalized
-		// AI session pre-allocates them without values), we must NOT pin it: leaving lastHash
+		// AI session pre-allocates them without values), we must NOT pin it: leaving memo.hash
 		// unset lets the post-mount $effect fire and compute, exactly as BinnedData does. Pinning
 		// here regardless was why a Split loaded from such a session — and every analysis
 		// downstream of it — stayed permanently blank.
-		if (loaded && !inputsAreStale) lastHash = getHash;
+		if (loaded && !inputsAreStale) memo.hash = getHash;
 		mounted = true;
 	});
 </script>

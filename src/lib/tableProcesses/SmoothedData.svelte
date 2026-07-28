@@ -3,6 +3,7 @@
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -222,14 +223,23 @@
 		out += p.args.movingAvgType;
 		return out;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 	let _calcToken = 0;
+
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (smoothedResult !== undefined) memo.payload = smoothedResult;
+	});
 
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (dataHash !== lastHash) {
-			lastHash = dataHash; // read before untrack so it's tracked
+		if (dataHash !== memo.hash) {
+			memo.hash = dataHash; // read before untrack so it's tracked
 			const token = ++_calcToken;
 			setTimeout(async () => {
 				if (token !== _calcToken) return; // superseded by a newer request
@@ -257,7 +267,7 @@
 			if (token !== _calcToken) return; // re-check after await
 			smoothedResult = data;
 			p.args.valid = valid;
-			lastHash = getHash;
+			memo.hash = getHash;
 		}, 0);
 	}
 
@@ -282,6 +292,9 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) smoothedResult = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		// Ensure X output column exists
 		if ((p.args.out.smoothedx == null || p.args.out.smoothedx < 0) && p.parent) {
@@ -308,7 +321,7 @@
 				}
 				smoothedResult = { x_out: core.rawData.get(xKey), y_results };
 				p.args.valid = true;
-				lastHash = getHash;
+				memo.hash = getHash;
 			}
 		}
 		mounted = true;

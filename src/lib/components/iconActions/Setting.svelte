@@ -68,7 +68,10 @@
 				document.body.removeChild(a);
 				URL.revokeObjectURL(url);
 			}, 10);
-			addNotification('Exported session.py — run it with Python (needs numpy, pandas, scipy).', 'info');
+			addNotification(
+				'Exported session.py — run it with Python (needs numpy, pandas, scipy).',
+				'info'
+			);
 		} catch (error) {
 			console.error('Failed to export Python:', error?.message ?? error);
 			addNotification('Error exporting Python: ' + (error?.message ?? error));
@@ -84,6 +87,10 @@
 
 	export async function importJson(jsonData, onProgress) {
 		//reset existing workflow
+		// Node ids restart from 1 in the incoming session, so any cached compute
+		// result from the previous one would be served to a completely unrelated
+		// node. Must happen before the new nodes mount.
+		memoClear();
 		core.data = [];
 		core.tableProcesses = [];
 		core.plots = [];
@@ -380,6 +387,7 @@
 	import { Plot, reservePlotIds } from '$lib/core/Plot.svelte';
 	import { Process } from '$lib/core/Process.svelte';
 	import { migrateAllInlineProcesses } from '$lib/core/dataflowMigration.js';
+	import { memoClear } from '$lib/core/computeMemo.js';
 	import { tick } from 'svelte';
 
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';

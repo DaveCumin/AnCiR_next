@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -358,17 +359,27 @@
 		out += outputX_col?.getDataHash;
 		return out;
 	});
-	// Init '' every mount so the $effect recomputes once after mount. The derived
-	// fit stats live only in transient state and aren't persisted with the session,
-	// so a mount that skipped the fit would leave the stats panel blank until a
-	// param change. Mirrors RectangularWave / NonparametricRA.
-	let lastHash = '';
+	// The fit stats live only in transient state and aren't persisted with the
+	// session, which used to force a recompute on every mount — skipping the fit
+	// left the stats panel blank. The memo carries the stats alongside the hash, so
+	// the mount above restores them and the fit can be skipped. Mirrors
+	// RectangularWave / NonparametricRA.
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (trendData !== undefined) memo.payload = trendData;
+	});
+
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash) {
-			lastHash = getHash;
-			p.args._fitHash = lastHash;
+		if (memo.hash !== dataHash) {
+			memo.hash = getHash;
+			p.args._fitHash = memo.hash;
 			previewStart = 1;
 			const token = ++_calcToken;
 			// trendfit is async now; apply when it resolves (token guards staleness).
@@ -490,8 +501,8 @@
 			trendData = result;
 			p.args.valid = Object.keys(result.y_results).length > 0;
 			permutationInProgress = false;
-			lastHash = getHash;
-			p.args._fitHash = lastHash;
+			memo.hash = getHash;
+			p.args._fitHash = memo.hash;
 		} else {
 			[trendData, p.args.valid] = await trendfit(p.args);
 			p.warnings = trendData?.warnings ?? [];
@@ -499,8 +510,8 @@
 				// Clear stale permutation stats (no processHash — GUId untouched).
 				writeOutputColumn(p.args.out['permstats_' + yId], []);
 			}
-			lastHash = getHash;
-			p.args._fitHash = lastHash;
+			memo.hash = getHash;
+			p.args._fitHash = memo.hash;
 		}
 	}
 
@@ -550,6 +561,9 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) trendData = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		// Ensure X output column exists
 		if ((p.args.out.trendx == null || p.args.out.trendx < 0) && p.parent) {
@@ -595,7 +609,7 @@
 					y_results
 				};
 				p.args.valid = true;
-				// NOTE: lastHash deliberately NOT set here — the rehydrated trendData
+				// NOTE: memo.hash deliberately NOT set here — the rehydrated trendData
 				// holds only the fitted curve, not the derived stats, so let the
 				// $effect recompute them once after mount (curve above is a placeholder).
 			}

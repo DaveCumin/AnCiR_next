@@ -8,6 +8,7 @@
 	// p-value, odds ratio and its 95% CI, plus the model log-likelihood, likelihood-ratio test and
 	// McFadden pseudo-R². Output is one row per term (long form), so it composes with a table.
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { fillDefaults, normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { logisticRegression } from '$lib/utils/logistic.js';
@@ -175,6 +176,10 @@
 		p.args.valid = valid;
 		result = res ?? { rows: [], warnings: [], converged: false };
 		p.warnings = result.warnings ?? [];
+		// Record the result so a remount (a view switch rebuilds this component)
+		// can restore it instead of running the analysis again.
+		memo.hash = getHash;
+		memo.payload = result;
 	}
 
 	let getHash = $derived.by(() => {
@@ -204,13 +209,26 @@
 			}
 		}
 		mounted = true;
-		recompute();
+		// Nothing changed since this node last ran? Put the previous result back
+		// rather than recomputing: result lives only in this component, so it
+		// was lost when the view switch destroyed the last instance.
+		restoreOrCompute(
+			memo,
+			getHash,
+			(cached) => {
+				result = cached;
+				p.warnings = cached?.warnings ?? [];
+			},
+			recompute
+		);
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 	$effect(() => {
 		const hash = getHash;
-		if (!mounted || hash === lastHash) return;
-		lastHash = hash;
+		if (!mounted || hash === memo.hash) return;
+		memo.hash = hash;
 		queueMicrotask(() => untrack(() => recompute()));
 	});
 

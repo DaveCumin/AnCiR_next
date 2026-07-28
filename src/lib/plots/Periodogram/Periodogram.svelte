@@ -17,6 +17,11 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
+	// Side-effect import: registers 'periodogram.compute' on the main thread so the
+	// sync fallback works when there is no Worker (tests, older browsers).
+	import '$lib/utils/periodogram.worker-task.js';
+	import { runComputeTask } from '$lib/workers/workerPool.js';
+	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import { argMax, argMaxAmong } from '$lib/components/plotbits/helpers/peakFinder.js';
 	import { minMaxAcross } from '$lib/utils/stats.js';
 
@@ -120,6 +125,11 @@
 		// Debounce timer for calculations
 		_debounceTimer = null;
 		_debounceDelay = 250; // ms
+		// Bumped per calculation so a result that arrives after its inputs changed
+		// is discarded rather than overwriting newer data. Needed on both paths, but
+		// especially off-thread: a worker cannot be cancelled, so the superseded
+		// result still comes back.
+		_calcToken = 0;
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
@@ -288,26 +298,74 @@
 			}, this._debounceDelay);
 		}
 
+		/**
+		 * Compute the spectrum, off the main thread when it is big enough to be
+		 * worth the dispatch.
+		 *
+		 * This is the plot that made panning freeze: the periodogram is the most
+		 * expensive spectrum here, and it used to run entirely on the main thread.
+		 * The `setTimeout(…, 0)` below yields ONCE before the work starts, which
+		 * lets the spinner paint but does nothing for the seconds that follow —
+		 * pointermove (and therefore pan and zoom) cannot run while it grinds.
+		 *
+		 * The worker task already existed ('periodogram.compute', used by
+		 * RhythmicityAnalysis); the plot simply never called it.
+		 *
+		 * Two deliberate trade-offs:
+		 *  - PROGRESS. postMessage cannot carry a callback, so the off-thread path
+		 *    reports indeterminate progress (total 0) rather than a percentage. The
+		 *    main-thread path keeps its per-step callback. The spinner already
+		 *    handles total === 0, so this degrades rather than breaks.
+		 *  - CANCELLATION. A worker cannot be interrupted, so a superseded result
+		 *    still arrives; `token` makes it a no-op instead of overwriting newer
+		 *    data. The sync path is guarded the same way.
+		 */
 		startCalculation(params, cacheOnSuccess = null) {
 			this.calculating = true;
 			this.progress = { current: 0, total: 0 };
+			const token = ++this._calcToken;
+
+			const commit = (result) => {
+				// Discard a stale result: the inputs changed while this was in flight.
+				if (token !== this._calcToken) return;
+				this.periodData = result;
+				// Commit the cache only now that the result actually landed.
+				if (cacheOnSuccess) {
+					this._cache.dataFingerprint = cacheOnSuccess.dataFingerprint;
+					this._cache.calcMin = cacheOnSuccess.calcMin;
+					this._cache.calcMax = cacheOnSuccess.calcMax;
+				}
+			};
+			const done = () => {
+				if (token !== this._calcToken) return;
+				this.calculating = false;
+				this.progress = { current: 0, total: 0 };
+			};
+			const fail = (e) => {
+				console.error('Periodogram calculation error:', e);
+			};
+
+			// `periodSteps` is the number of trial periods, i.e. the actual size of
+			// the job — the input series length alone would understate a fine sweep
+			// over a short record.
+			if (
+				shouldUseWorkers({ inputLen: params.xData?.length ?? 0, work: params.periodSteps ?? 0 })
+			) {
+				runComputeTask('periodogram.compute', params).then(commit).catch(fail).finally(done);
+				return;
+			}
 
 			setTimeout(() => {
 				try {
-					this.periodData = runPeriodogramCalculation(params, (current, total) => {
-						this.progress = { current, total };
-					});
-					// Commit the cache only now that the result actually landed.
-					if (cacheOnSuccess) {
-						this._cache.dataFingerprint = cacheOnSuccess.dataFingerprint;
-						this._cache.calcMin = cacheOnSuccess.calcMin;
-						this._cache.calcMax = cacheOnSuccess.calcMax;
-					}
+					commit(
+						runPeriodogramCalculation(params, (current, total) => {
+							if (token === this._calcToken) this.progress = { current, total };
+						})
+					);
 				} catch (e) {
-					console.error('Periodogram calculation error:', e);
+					fail(e);
 				} finally {
-					this.calculating = false;
-					this.progress = { current: 0, total: 0 };
+					done();
 				}
 			}, 0);
 		}
@@ -327,8 +385,8 @@
 
 		static fromJSON(json, parent) {
 			return new PeriodogramDataclass(parent, {
-			// `?? json.time` / `?? json.values`: this re-map runs BEFORE the constructor, so
-			// without it the constructor's port-name fallback would never see them.
+				// `?? json.time` / `?? json.values`: this re-map runs BEFORE the constructor, so
+				// without it the constructor's port-name fallback would never see them.
 				x: json.x ?? json.time,
 				y: json.y ?? json.values,
 				line: LineClass.fromJSON(json.line),

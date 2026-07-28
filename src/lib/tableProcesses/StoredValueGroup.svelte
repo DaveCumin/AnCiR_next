@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { core, getStoredValue } from '$lib/core/core.svelte';
+	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	const displayName = 'Stored Value Group';
@@ -95,7 +96,9 @@
 	let result = $state({ groups: {}, category: [], value: [] });
 	let mounted = $state(false);
 	let previewStart = $state(1);
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	function cleanupLegacyCombinedOutputs() {
 		for (const key of ['value', 'category']) {
@@ -145,6 +148,10 @@
 		previewStart = 1;
 		for (const g of p.args.groups ?? []) ensureGroupOutputColumn(g);
 		[result, p.args.valid] = storedvaluegroup(p.args);
+		// Record the result so a remount (a view switch rebuilds this component)
+		// can restore it instead of running the analysis again.
+		memo.hash = getHash;
+		memo.payload = result;
 	}
 
 	let sourceGroups = $derived.by(() => {
@@ -185,12 +192,12 @@
 	$effect(() => {
 		const h = getHash;
 		if (!mounted) return;
-		if (h !== lastHash) {
+		if (h !== memo.hash) {
 			// Defer reconcile out of the effect: doGroup() creates per-group output columns
 			// via `new Column()`, whose $derived fields go inert if created while this effect
 			// is the active reaction (Svelte derived_inert). A microtask → root-owned.
 			queueMicrotask(() => untrack(() => doGroup()));
-			lastHash = h;
+			memo.hash = h;
 		}
 	});
 
@@ -265,8 +272,17 @@
 			ensureGroupOutputColumn(group);
 		}
 		mounted = true;
-		doGroup();
-		lastHash = getHash;
+		// Nothing changed since this node last ran? Put the previous result back
+		// rather than recomputing: result lives only in this component, so it
+		// was lost when the view switch destroyed the last instance.
+		restoreOrCompute(
+			memo,
+			getHash,
+			(cached) => {
+				result = cached;
+			},
+			doGroup
+		);
 	});
 </script>
 

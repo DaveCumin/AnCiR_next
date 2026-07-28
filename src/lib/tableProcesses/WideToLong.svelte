@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { core as coreForTransform } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById as getColumnByIdForTransform } from '$lib/core/Column.svelte';
 
 	const displayName = 'Wide To Long';
@@ -152,7 +153,9 @@
 		}
 		return hash;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	let outputIds = $derived.by(() => {
 		const ids = [];
@@ -170,14 +173,21 @@
 	});
 	let previewTotalRows = $derived(wideToLongResult?.time?.length ?? 0);
 
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (wideToLongResult !== undefined) memo.payload = wideToLongResult;
+	});
+
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (dataHash !== lastHash) {
+		if (dataHash !== memo.hash) {
 			untrack(() => {
 				doWideToLong();
 			});
-			lastHash = dataHash;
+			memo.hash = dataHash;
 		}
 	});
 
@@ -264,6 +274,9 @@
 	}
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) wideToLongResult = memo.payload;
 		if (p.args.timeIN === undefined) p.args.timeIN = -1;
 		if (!p.args.valueColIds) p.args.valueColIds = [];
 		if (!p.args.out) p.args.out = { time: -1, category: -1, value: -1 };
@@ -287,7 +300,7 @@
 				value: coreState.rawData.get(p.args.out.value)
 			};
 			p.args.valid = true;
-			lastHash = getHash;
+			memo.hash = getHash;
 		}
 
 		timeIN_local = p.args.timeIN;

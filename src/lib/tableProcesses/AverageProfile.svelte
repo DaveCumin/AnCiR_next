@@ -7,6 +7,7 @@
 	// fold used inside NonparametricRA, exposed as a standalone node so it can be
 	// run without a full NPCRA pass and its profile wired into plots/comparisons.
 	import { core } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { averageDailyProfile } from '$lib/utils/averageProfile.js';
@@ -156,14 +157,16 @@
 		out += p.args.nBins;
 		return out;
 	});
-	let lastHash = p.args._fitHash ?? '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash) {
-			lastHash = getHash;
-			p.args._fitHash = lastHash;
+		if (memo.hash !== dataHash) {
+			memo.hash = getHash;
+			p.args._fitHash = memo.hash;
 			recalculate();
 		}
 	});

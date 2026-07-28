@@ -12,6 +12,7 @@
 	// assumption-aware auto-selection GroupComparison uses. Maths lives in utils/correlation.js
 	// (pure, Python-parity-checked); this file is wiring + the warnings surface.
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -195,6 +196,10 @@
 		p.args.valid = valid;
 		result = res ?? { rows: [], methodUsed: p.args.method, warnings: [] };
 		p.warnings = result.warnings ?? [];
+		// Record the result so a remount (a view switch rebuilds this component)
+		// can restore it instead of running the analysis again.
+		memo.hash = getHash;
+		memo.payload = result;
 	}
 
 	// Track the DATA of every wired column, not just its id. Editing an upstream value changes
@@ -211,15 +216,28 @@
 
 	onMount(() => {
 		mounted = true;
-		recompute();
+		// Nothing changed since this node last ran? Put the previous result back
+		// rather than recomputing: result lives only in this component, so it
+		// was lost when the view switch destroyed the last instance.
+		restoreOrCompute(
+			memo,
+			getHash,
+			(cached) => {
+				result = cached;
+				p.warnings = cached?.warnings ?? [];
+			},
+			recompute
+		);
 	});
 
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 	$effect(() => {
 		const hash = getHash;
 		if (!mounted) return;
-		if (hash === lastHash) return;
-		lastHash = hash;
+		if (hash === memo.hash) return;
+		memo.hash = hash;
 		queueMicrotask(() => untrack(() => recompute()));
 	});
 </script>

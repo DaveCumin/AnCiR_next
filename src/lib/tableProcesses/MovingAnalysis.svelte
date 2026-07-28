@@ -3,6 +3,7 @@
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -304,12 +305,21 @@
 			currentStatKeys.join(',');
 		return out;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
+
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (result !== undefined) memo.payload = result;
+	});
 
 	$effect(() => {
 		const h = getHash;
 		if (!mounted) return;
-		if (lastHash !== h) {
+		if (memo.hash !== h) {
 			untrack(() => recompute());
 		}
 	});
@@ -340,7 +350,7 @@
 			result = data;
 			p.args.valid = valid;
 			calculating = false;
-			lastHash = getHash;
+			memo.hash = getHash;
 		}, 0);
 	}
 
@@ -452,6 +462,9 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) result = memo.payload;
 		if (!p.args.out) p.args.out = { movex: -1 };
 		// Initial sync creates movex + per-(Y,stat) columns if they don't exist
 		const needsCompute = syncStatColumns();
@@ -486,7 +499,7 @@
 				const inputsAreStale =
 					(p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
 					(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0);
-				if (!inputsAreStale) lastHash = getHash;
+				if (!inputsAreStale) memo.hash = getHash;
 			}
 		}
 		mounted = true;

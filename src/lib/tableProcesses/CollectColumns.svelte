@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { min as arrMin, max as arrMax } from '$lib/utils/stats.js';
 
@@ -160,9 +161,18 @@
 		return h;
 	});
 
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	// Sync preProcessProcs args back to p.args for session persistence
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (collectResult !== undefined) memo.payload = collectResult;
+	});
+
 	$effect(() => {
 		const snapshots = preProcessProcs.map((proc) => JSON.stringify(proc?.args ?? {}));
 		untrack(() => {
@@ -177,11 +187,11 @@
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (dataHash !== lastHash) {
+		if (dataHash !== memo.hash) {
 			untrack(() => {
 				doCollect();
 			});
-			lastHash = dataHash;
+			memo.hash = dataHash;
 		}
 	});
 
@@ -279,6 +289,9 @@
 	}
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) collectResult = memo.payload;
 		if (!p.args.preProcesses) p.args.preProcesses = [];
 		if (!p.args.colIds) p.args.colIds = [];
 		if (!p.args.out) p.args.out = {};
@@ -307,7 +320,7 @@
 					.map((colId) => p.args.out['col_' + colId])
 					.filter((id) => id !== undefined && id >= 0);
 			}
-			if (!inputsAreStale) lastHash = getHash;
+			if (!inputsAreStale) memo.hash = getHash;
 		}
 
 		preProcessProcs = p.args.preProcesses.map((pp) =>

@@ -2,6 +2,7 @@
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
@@ -348,13 +349,22 @@
 		out += p.args.permutationStatistic;
 		return out;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
+
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (rwave !== undefined) memo.payload = rwave;
+	});
 
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash) {
-			lastHash = getHash;
+		if (memo.hash !== dataHash) {
+			memo.hash = getHash;
 			calculating = true;
 			const token = ++_calcToken;
 			setTimeout(() => {
@@ -383,7 +393,7 @@
 			[rwave, p.args.valid] = rectangularwave(p.args);
 			p.warnings = rwave?.warnings ?? [];
 			calculating = false;
-			lastHash = getHash;
+			memo.hash = getHash;
 		}, 0);
 	}
 
@@ -406,6 +416,9 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) rwave = memo.payload;
 		// Create X output column if not present (needed in collected mode)
 		let needsCompute = false;
 		if (p.args.out.rectwavex == null || p.args.out.rectwavex < 0) {
@@ -452,7 +465,7 @@
 					};
 					p.args.valid = true;
 				}
-				// Note: lastHash is NOT set here, so $effect will always fire after mount
+				// Note: memo.hash is NOT set here, so $effect will always fire after mount
 				// and recompute from current inputs regardless of staleness
 			}
 		}

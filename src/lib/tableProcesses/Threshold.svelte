@@ -3,6 +3,7 @@
 	// The main use is making a BINARY outcome for LogisticRegression, but it's general: "flag
 	// every value above 100", "mark the active hours", etc. One input column, one 0/1 output.
 	import { core } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 
 	const displayName = 'Threshold';
@@ -91,7 +92,9 @@
 	let getHash = $derived.by(
 		() => (xCol?.getDataHash ?? '') + '|t:' + p.args.threshold + '|c:' + p.args.comparison
 	);
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	function recompute() {
 		p.args.valid = thresholddata(p.args)[1];
@@ -100,9 +103,9 @@
 	$effect(() => {
 		const h = getHash;
 		if (!mounted) return;
-		if (h !== lastHash) {
+		if (h !== memo.hash) {
 			untrack(() => recompute());
-			lastHash = h;
+			memo.hash = h;
 		}
 	});
 
@@ -113,7 +116,7 @@
 		if (outKey >= 0 && core.rawData.has(outKey) && core.rawData.get(outKey).length > 0) {
 			p.args.valid = true;
 			const stale = (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0;
-			if (!stale) lastHash = getHash; // don't recompute valid, current data
+			if (!stale) memo.hash = getHash; // don't recompute valid, current data
 		} else {
 			recompute();
 		}

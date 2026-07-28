@@ -10,6 +10,7 @@
 	// question — the pairing matters, and the node surfaces a warning when it is
 	// wrong (surrogateAdvice).
 	import { core } from '$lib/core/core.svelte';
+	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { surrogateTest, surrogateAdvice, SURROGATE_METHODS } from '$lib/utils/surrogates.js';
 	import { computeFFT } from '$lib/utils/fft.js';
@@ -168,26 +169,42 @@
 				p.args.periodMax
 			].join(':')
 	);
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	function recompute() {
 		const [res, valid] = surrogatetest(p.args);
 		p.args.valid = valid;
 		result = res;
+		// Record the result so a remount (a view switch rebuilds this component)
+		// can restore it instead of running the analysis again.
+		memo.hash = getHash;
+		memo.payload = result;
 	}
 
 	$effect(() => {
 		const h = getHash;
 		if (!mounted) return;
-		if (h !== lastHash) {
+		if (h !== memo.hash) {
 			untrack(() => recompute());
-			lastHash = h;
+			memo.hash = h;
 		}
 	});
 
 	onMount(() => {
 		if (!p.args.out) p.args.out = {};
-		recompute();
+		// Nothing changed since this node last ran? Put the previous result back
+		// rather than recomputing: result lives only in this component, so it
+		// was lost when the view switch destroyed the last instance.
+		restoreOrCompute(
+			memo,
+			getHash,
+			(cached) => {
+				result = cached;
+			},
+			recompute
+		);
 		mounted = true;
 	});
 

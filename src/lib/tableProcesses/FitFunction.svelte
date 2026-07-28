@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { fitCurveModel, evaluateCurveModelAtPoints } from '$lib/utils/fitFunction.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
@@ -382,11 +383,14 @@
 		out += p.args.permutationStatistic;
 		return out;
 	});
-	// Init '' every mount so the $effect recomputes once after mount. The derived
-	// fit stats live only in transient state and aren't persisted with the session,
-	// so a mount that skipped the fit would leave the stats panel blank until a
-	// param change. Mirrors RectangularWave / NonparametricRA.
-	let lastHash = '';
+	// The fit stats live only in transient state and aren't persisted with the
+	// session, which used to force a recompute on every mount — skipping the fit
+	// left the stats panel blank. The memo carries the stats alongside the hash, so
+	// the mount above restores them and the fit can be skipped. Mirrors
+	// RectangularWave / NonparametricRA.
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	function onYSelectionChange() {
 		const fitColsChanged = syncYColumns();
@@ -592,8 +596,8 @@
 		}
 
 		if (token === _calcToken) calculating = false;
-		lastHash = getHash;
-		p.args._fitHash = lastHash;
+		memo.hash = getHash;
+		p.args._fitHash = memo.hash;
 	}
 
 	let yExcludeIds = $derived.by(() => {
@@ -610,16 +614,23 @@
 		return ids;
 	});
 
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (fitData !== undefined) memo.payload = fitData;
+	});
+
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash && !calculating) {
+		if (memo.hash !== dataHash && !calculating) {
 			// Mark this hash as handled BEFORE the async getFit runs so the
 			// effect can't re-enter while getFit is suspended on `await tick()`.
-			// Mirrors the Cosinor pattern; getFit's bail-out paths leave lastHash
+			// Mirrors the Cosinor pattern; getFit's bail-out paths leave memo.hash
 			// alone, so without this guard a no-op getFit can be called repeatedly
 			// (xIN=-1, yIN=[]) and never settle the hash.
-			lastHash = dataHash;
+			memo.hash = dataHash;
 			untrack(() => {
 				getFit();
 			});
@@ -643,6 +654,9 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) fitData = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		if ((p.args.out.fitx == null || p.args.out.fitx < 0) && p.parent) {
 			const xCol = new Column({});
@@ -686,7 +700,7 @@
 					originTime_ms: null
 				};
 				p.args.valid = true;
-				// NOTE: lastHash deliberately NOT set here — the rehydrated fitData
+				// NOTE: memo.hash deliberately NOT set here — the rehydrated fitData
 				// holds only the fitted curve, not the derived stats, so let the
 				// $effect recompute them once after mount (curve above is a placeholder).
 			}

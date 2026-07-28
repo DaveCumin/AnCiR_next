@@ -1,5 +1,6 @@
 <script module>
 	import { core, getStoredValue } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 
 	const displayName = 'Formula Column';
 	const defaults = new Map([
@@ -130,16 +131,25 @@ return _r;`
 		);
 	});
 
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 	let mounted = $state(false);
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (result !== undefined) memo.payload = result;
+	});
+
 	$effect(() => {
 		const h = getHash;
 		if (!mounted) return;
-		if (lastHash !== h) {
+		if (memo.hash !== h) {
 			untrack(() => {
 				doFormula();
 			});
-			lastHash = h;
+			memo.hash = h;
 		}
 	});
 
@@ -550,6 +560,9 @@ return _r;`
 	}
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) result = memo.payload;
 		const outKey = p.args.out.result;
 		if (outKey >= 0 && core.rawData.has(outKey) && core.rawData.get(outKey).length > 0) {
 			result = core.rawData.get(outKey);
@@ -557,7 +570,7 @@ return _r;`
 			const inputsAreStale = (p.args.tokens ?? [])
 				.filter((t) => t.type === 'col')
 				.some((t) => (getColumnById(t.id)?.rawDataVersion ?? 0) > 0);
-			if (!inputsAreStale) lastHash = getHash;
+			if (!inputsAreStale) memo.hash = getHash;
 		}
 		mounted = true;
 	});

@@ -1,5 +1,6 @@
 <script module>
 	import { core } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	const displayName = 'Column Function';
 	const defaults = new Map([
 		['func', { val: 'add' }],
@@ -130,16 +131,25 @@
 		out += xIN_cols.map((c) => c?.getDataHash).join('|');
 		return out;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 	let mounted = $state(false);
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (result !== undefined) memo.payload = result;
+	});
+
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash) {
+		if (memo.hash !== dataHash) {
 			untrack(() => {
 				doColumnFunction();
 			});
-			lastHash = dataHash;
+			memo.hash = dataHash;
 		}
 	});
 	//------------
@@ -162,6 +172,9 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) result = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		// In collected mode, create the output column here (TableProcess.svelte won't do it)
 		if ((p.args.out.result == null || p.args.out.result < 0) && p.parent) {
@@ -183,7 +196,7 @@
 			const inputsAreStale = (p.args.xsIN ?? []).some(
 				(id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0
 			);
-			if (!inputsAreStale) lastHash = getHash; // prevent $effect from recalculating
+			if (!inputsAreStale) memo.hash = getHash; // prevent $effect from recalculating
 		}
 		mounted = true;
 	});

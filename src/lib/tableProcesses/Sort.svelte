@@ -1,6 +1,7 @@
 <script module>
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { core } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
 
 	const displayName = 'Sort';
@@ -190,6 +191,13 @@
 	);
 
 	// Keep sortOnId valid: default to the first input when unset/removed.
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (sortResult !== undefined) memo.payload = sortResult;
+	});
+
 	$effect(() => {
 		const ids = keyOptions.map((o) => o.id);
 		if (mounted && ids.length > 0 && !ids.includes(p.args.sortOnId)) {
@@ -206,22 +214,24 @@
 		h += '|on:' + p.args.sortOnId + '|dir:' + p.args.direction;
 		return h;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (dataHash !== lastHash) {
+		if (dataHash !== memo.hash) {
 			untrack(() => {
 				[sortResult, p.args.valid] = sortdata(p.args);
 			});
-			lastHash = dataHash;
+			memo.hash = dataHash;
 		}
 	});
 
 	function recompute() {
 		[sortResult, p.args.valid] = sortdata(p.args);
-		lastHash = getHash;
+		memo.hash = getHash;
 	}
 
 	function onYSelectionChange() {
@@ -243,6 +253,9 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) sortResult = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		const needsCompute = initYColumns();
 		if (p.args.sortOnId === -1 && (p.args.yIN ?? []).length > 0) {

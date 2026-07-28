@@ -10,6 +10,7 @@
 	// column first (CollectColumns); correcting each column separately and calling
 	// the result "the" FDR would understate the true multiplicity.
 	import { core } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { pAdjust, PADJUST_METHODS } from '$lib/utils/pAdjust.js';
 
@@ -124,7 +125,9 @@
 	let getHash = $derived.by(
 		() => (xCol?.getDataHash ?? '') + '|m:' + p.args.method + '|a:' + p.args.alpha
 	);
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	function recompute() {
 		const [res, valid] = fdrcorrection(p.args);
@@ -134,22 +137,32 @@
 		warnings = res.warnings ?? [];
 	}
 
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (summary !== undefined) memo.payload = summary;
+	});
+
 	$effect(() => {
 		const h = getHash;
 		if (!mounted) return;
-		if (h !== lastHash) {
+		if (h !== memo.hash) {
 			untrack(() => recompute());
-			lastHash = h;
+			memo.hash = h;
 		}
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) summary = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		const baked = p.args.out.padj >= 0 && core.rawData.get(p.args.out.padj)?.length > 0;
 		if (baked) {
 			p.args.valid = true;
 			const stale = (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0;
-			if (!stale) lastHash = getHash;
+			if (!stale) memo.hash = getHash;
 			const padj = core.rawData.get(p.args.out.padj) ?? [];
 			const rej = core.rawData.get(p.args.out.reject) ?? [];
 			summary = {

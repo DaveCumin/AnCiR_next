@@ -2,6 +2,7 @@
 	import { migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
@@ -339,13 +340,22 @@
 		out += p.args.permutationStatistic;
 		return out;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
+
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (dlData !== undefined) memo.payload = dlData;
+	});
 
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash) {
-			lastHash = getHash;
+		if (memo.hash !== dataHash) {
+			memo.hash = getHash;
 			calculating = true;
 			const token = ++_calcToken;
 			setTimeout(async () => {
@@ -374,7 +384,7 @@
 			p.args.valid = valid;
 			p.warnings = data?.warnings ?? [];
 			calculating = false;
-			lastHash = getHash;
+			memo.hash = getHash;
 		}, 0);
 	}
 
@@ -385,6 +395,9 @@
 	});
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) dlData = memo.payload;
 		// Create X output column if not present (needed in collected mode)
 		let needsCompute = false;
 		if (p.args.out.dlogx == null || p.args.out.dlogx < 0) {
@@ -426,7 +439,7 @@
 				}
 			}
 		}
-		// NOTE: lastHash deliberately NOT set here — rehydrated dlData holds only the
+		// NOTE: memo.hash deliberately NOT set here — rehydrated dlData holds only the
 		// fitted curve (fitResult: null), not the derived stats, so let the $effect
 		// recompute them once after mount.
 		mounted = true;

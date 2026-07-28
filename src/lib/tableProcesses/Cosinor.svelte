@@ -1,5 +1,6 @@
 <script module>
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { evaluateCosinorAtPoints } from '$lib/utils/cosinor.js';
@@ -567,19 +568,29 @@
 		out += p.args.permutationStatistic;
 		return out;
 	});
-	// Starts empty every mount so the $effect below always recomputes once after
-	// mount. The derived stats (MESOR / amplitude / phase / CIs / F-stat / RMSE)
-	// live only in the transient `cosinorData` and are NOT persisted with the
-	// session, so a mount that skipped the fit (seeding lastHash from a persisted
-	// hash) would leave the stats panel blank until a param change forced a
-	// recompute. Mirrors RectangularWave / NonparametricRA.
-	let lastHash = '';
+	// The stats (MESOR / amplitude / phase / CIs / F-stat / RMSE) live only in the
+	// transient `cosinorData` and are NOT persisted with the session. That used to
+	// force a recompute on every mount: seeding the hash from a persisted
+	// `_fitHash` would skip the fit and leave the stats panel blank. The memo
+	// carries the stats themselves alongside the hash, so the mount above puts them
+	// back and the fit can safely be skipped. Mirrors RectangularWave /
+	// NonparametricRA.
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (cosinorData !== undefined) memo.payload = cosinorData;
+	});
+
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash) {
-			lastHash = getHash; // read before untrack so it's tracked
-			p.args._fitHash = lastHash;
+		if (memo.hash !== dataHash) {
+			memo.hash = getHash; // read before untrack so it's tracked
+			p.args._fitHash = memo.hash;
 			calculating = true;
 			const token = ++_calcToken;
 			setTimeout(async () => {
@@ -625,8 +636,8 @@
 			p.args.valid = valid;
 			p.warnings = cosinorData?.warnings ?? [];
 			calculating = false;
-			lastHash = getHash;
-			p.args._fitHash = lastHash;
+			memo.hash = getHash;
+			p.args._fitHash = memo.hash;
 		}, 0);
 	}
 
@@ -657,6 +668,9 @@
 	];
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) cosinorData = memo.payload;
 		// Create X output column if not present (needed in collected mode)
 		let needsCompute = false;
 		// Backfill scalar-metric out-columns for sessions saved before they existed.
@@ -710,7 +724,7 @@
 					};
 					p.args.valid = true;
 					p.warnings = cosinorData?.warnings ?? [];
-					// NOTE: lastHash is deliberately NOT set here. The rehydrated
+					// NOTE: memo.hash is deliberately NOT set here. The rehydrated
 					// cosinorData only holds the fitted curve (from the saved output
 					// column), not the derived stats, so we let the $effect fire once
 					// after mount to recompute them. The curve above is just an instant

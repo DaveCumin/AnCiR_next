@@ -7,6 +7,7 @@
 	// column per statistic), tidy long form. Quick-plot draws a histogram of each input column.
 	// Maths is the pure, unit-tested utils/describeStats.js (scipy-matched moments).
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { fillDefaults, normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { describeStats, DESCRIBE_KEYS } from '$lib/utils/describeStats.js';
@@ -127,6 +128,10 @@
 		p.args.valid = valid;
 		result = res ?? { rows: [], warnings: [] };
 		p.warnings = result.warnings ?? [];
+		// Record the result so a remount (a view switch rebuilds this component)
+		// can restore it instead of running the analysis again.
+		memo.hash = getHash;
+		memo.payload = result;
 	}
 
 	// Recompute when input DATA changes, not just when the ref list changes.
@@ -138,13 +143,26 @@
 	});
 	onMount(() => {
 		mounted = true;
-		recompute();
+		// Nothing changed since this node last ran? Put the previous result back
+		// rather than recomputing: result lives only in this component, so it
+		// was lost when the view switch destroyed the last instance.
+		restoreOrCompute(
+			memo,
+			getHash,
+			(cached) => {
+				result = cached;
+				p.warnings = cached?.warnings ?? [];
+			},
+			recompute
+		);
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 	$effect(() => {
 		const hash = getHash;
-		if (!mounted || hash === lastHash) return;
-		lastHash = hash;
+		if (!mounted || hash === memo.hash) return;
+		memo.hash = hash;
 		queueMicrotask(() => untrack(() => recompute()));
 	});
 

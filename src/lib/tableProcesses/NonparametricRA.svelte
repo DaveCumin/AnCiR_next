@@ -7,6 +7,7 @@
 	// Robust to the highly non-sinusoidal rest-activity rhythm where cosinor is
 	// insensitive (Van Someren et al. 1999, Chronobiol Int 16(4):505-518).
 	import { core } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { computeNPCRA } from '$lib/utils/npcra.js';
@@ -224,14 +225,23 @@
 		out += p.args.lWindow;
 		return out;
 	});
-	let lastHash = p.args._fitHash ?? '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
+
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (npcraData !== undefined) memo.payload = npcraData;
+	});
 
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash) {
-			lastHash = getHash;
-			p.args._fitHash = lastHash;
+		if (memo.hash !== dataHash) {
+			memo.hash = getHash;
+			p.args._fitHash = memo.hash;
 			recalculate();
 		}
 	});
@@ -279,6 +289,9 @@
 	let yExcludeIds = $derived([p.args.xIN, ...outIds]);
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) npcraData = memo.payload;
 		let needsCompute = false;
 		if (p.args.out.npcrax == null || p.args.out.npcrax < 0) {
 			if (p.parent) {

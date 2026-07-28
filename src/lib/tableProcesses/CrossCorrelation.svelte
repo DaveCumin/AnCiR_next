@@ -8,6 +8,7 @@
 	// lag/r reported in-node. A peak at k>0 means B leads A by k samples. Maths is the pure,
 	// numpy-parity-checked utils/crossCorrelation.js. Quick-plot draws the correlogram (lag vs r).
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -124,6 +125,10 @@
 		p.args.valid = valid;
 		result = res ?? { lag: [], correlation: [], pvalue: [], warnings: [] };
 		p.warnings = result.warnings ?? [];
+		// Record the result so a remount (a view switch rebuilds this component)
+		// can restore it instead of running the analysis again.
+		memo.hash = getHash;
+		memo.payload = result;
 	}
 
 	// Recompute when either input's DATA changes, not just the refs.
@@ -135,13 +140,26 @@
 	});
 	onMount(() => {
 		mounted = true;
-		recompute();
+		// Nothing changed since this node last ran? Put the previous result back
+		// rather than recomputing: result lives only in this component, so it
+		// was lost when the view switch destroyed the last instance.
+		restoreOrCompute(
+			memo,
+			getHash,
+			(cached) => {
+				result = cached;
+				p.warnings = cached?.warnings ?? [];
+			},
+			recompute
+		);
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 	$effect(() => {
 		const hash = getHash;
-		if (!mounted || hash === lastHash) return;
-		lastHash = hash;
+		if (!mounted || hash === memo.hash) return;
+		memo.hash = hash;
 		queueMicrotask(() => untrack(() => recompute()));
 	});
 

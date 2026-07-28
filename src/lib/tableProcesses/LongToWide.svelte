@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 
 	const displayName = 'Long To Wide';
 	const defaults = new Map([
@@ -245,9 +246,18 @@
 			.join('|');
 		return h;
 	});
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	// Sync preProcess args back to p.args for session persistence
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (longToWideResult !== undefined) memo.payload = longToWideResult;
+	});
+
 	$effect(() => {
 		const snapshots = preProcessProcs.map((proc) => JSON.stringify(proc?.args ?? {}));
 		untrack(() => {
@@ -262,18 +272,18 @@
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (dataHash !== lastHash) {
+		if (dataHash !== memo.hash) {
 			// Defer reconcile out of the effect: doLongToWide() creates per-category output
 			// columns via `new Column()`, whose $derived fields go inert if created while
 			// this effect is the active reaction (Svelte derived_inert). A microtask has no
-			// active effect → root-owned. lastHash is set synchronously so the guard still
+			// active effect → root-owned. memo.hash is set synchronously so the guard still
 			// coalesces rapid re-runs.
 			queueMicrotask(() =>
 				untrack(() => {
 					doLongToWide();
 				})
 			);
-			lastHash = dataHash;
+			memo.hash = dataHash;
 		}
 	});
 
@@ -426,6 +436,9 @@
 	}
 
 	onMount(() => {
+		// Put the previous result back before anything else: the compute effect
+		// skips when nothing changed, and this state died with the last instance.
+		if (memo.payload !== undefined && memo.hash === getHash) longToWideResult = memo.payload;
 		// Migrate: remove any null/empty-string phantom categories persisted from old sessions
 		if (Array.isArray(p.args.categories)) {
 			const nullCats = p.args.categories.filter((c) => c == null || c === '');
@@ -484,7 +497,7 @@
 				(getColumnById(p.args.timeIN)?.rawDataVersion ?? 0) > 0 ||
 				(getColumnById(p.args.valueIN)?.rawDataVersion ?? 0) > 0;
 			if (!inputsReimported) {
-				lastHash = getHash;
+				memo.hash = getHash;
 			}
 		}
 

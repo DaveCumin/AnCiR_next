@@ -15,6 +15,7 @@
 	// ww_pvalue are the optional Watson-Williams metrics (a single value; NaN when
 	// the test is off), like Cosinor's mode-specific ports.
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import {
 		rayleighTest,
 		circularMean,
@@ -266,7 +267,9 @@
 
 	let rayleighData = $state({ perY: {}, anyValid: false, yINs: [], ww: null, warnings: [] });
 	let mounted = $state(false);
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	let yCols = $derived.by(() =>
 		(p.args.yIN ?? []).map((id) => getColumnByIdLocal(id)).filter(Boolean)
@@ -297,13 +300,16 @@
 		[rayleighData, p.args.valid] = rayleigh(p.args);
 		// Surfaces on the canvas node too (CompactNode / TableProcessNode read tp.warnings).
 		p.warnings = rayleighData?.warnings ?? [];
-		lastHash = getHash;
+		// Record the result so a remount (a view switch rebuilds this component)
+		// can restore it instead of running the analysis again.
+		memo.hash = getHash;
+		memo.payload = rayleighData;
 	}
 
 	$effect(() => {
 		const h = getHash;
 		if (!mounted) return;
-		if (h !== lastHash) untrack(() => recompute());
+		if (h !== memo.hash) untrack(() => recompute());
 	});
 
 	// Backfill + reconcile the fixed metric-key set (R/z/pvalue/F/ww_pvalue). F and
@@ -323,7 +329,18 @@
 	onMount(() => {
 		if (!p.args.out) p.args.out = {};
 		syncMetricOutColumns(p, METRIC_KEYS, (k) => METRIC_KEYS.includes(k));
-		recompute();
+		// Nothing changed since this node last ran? Put the previous result back
+		// rather than recomputing: rayleighData lives only in this component, so it
+		// was lost when the view switch destroyed the last instance.
+		restoreOrCompute(
+			memo,
+			getHash,
+			(cached) => {
+				rayleighData = cached;
+				p.warnings = cached?.warnings ?? [];
+			},
+			recompute
+		);
 		mounted = true;
 	});
 

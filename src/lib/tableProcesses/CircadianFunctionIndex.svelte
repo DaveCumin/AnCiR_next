@@ -113,6 +113,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import { onMount, untrack } from 'svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
@@ -141,14 +142,16 @@
 		out += p.args.lWindow;
 		return out;
 	});
-	let lastHash = p.args._fitHash ?? '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (lastHash !== dataHash) {
-			lastHash = getHash;
-			p.args._fitHash = lastHash;
+		if (memo.hash !== dataHash) {
+			memo.hash = getHash;
+			p.args._fitHash = memo.hash;
 			recalculate();
 		}
 	});

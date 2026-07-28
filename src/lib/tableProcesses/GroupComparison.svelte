@@ -4,6 +4,7 @@
 	// @ts-nocheck
 	import { mean, sampleVariance, sampleStd, median } from '$lib/utils/sampleStats.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import cdf_f from '@stdlib/stats-base-dists-f-cdf';
 	import cdf_chisq from '@stdlib/stats-base-dists-chisquare-cdf';
 	import tQuantile from '@stdlib/stats-base-dists-t-quantile';
@@ -772,7 +773,9 @@
 
 	let comparisonData = $state({ comparisons: {}, warnings: [] });
 	let mounted = $state(false);
-	let lastHash = '';
+	// Backed by the session-lifetime compute memo, so a view switch (which destroys
+	// and rebuilds this component) does not recompute unchanged inputs.
+	const memo = nodeMemo(p, 'tableprocess');
 
 	let groupCol = $derived.by(() => (p.args.xIN >= 0 ? getColumnByIdLocal(p.args.xIN) : null));
 	let yCols = $derived.by(() =>
@@ -804,13 +807,16 @@
 		// can surface them without the control panel being open. See the node
 		// warning badge in TableProcessNode/CompactNode.
 		p.warnings = comparisonData?.warnings ?? [];
-		lastHash = getHash;
+		// Record the result so a remount (a view switch rebuilds this component)
+		// can restore it instead of running the analysis again.
+		memo.hash = getHash;
+		memo.payload = comparisonData;
 	}
 
 	$effect(() => {
 		const h = getHash;
 		if (!mounted) return;
-		if (h !== lastHash) {
+		if (h !== memo.hash) {
 			untrack(() => doComparison());
 		}
 	});
@@ -819,7 +825,18 @@
 		if (!p.args.out) p.args.out = {};
 		// Backfill metric out-columns for sessions saved before they existed.
 		syncMetricOutColumns(p, ['statistic', 'pvalue'], (k) => k === 'statistic' || k === 'pvalue');
-		doComparison();
+		// Nothing changed since this node last ran? Put the previous result back
+		// rather than recomputing: comparisonData lives only in this component, so it
+		// was lost when the view switch destroyed the last instance.
+		restoreOrCompute(
+			memo,
+			getHash,
+			(cached) => {
+				comparisonData = cached;
+				p.warnings = cached?.warnings ?? [];
+			},
+			doComparison
+		);
 		mounted = true;
 	});
 
