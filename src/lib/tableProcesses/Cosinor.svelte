@@ -566,6 +566,10 @@
 		out += p.args.nPermutations;
 		out += p.args.permutationSeed;
 		out += p.args.permutationStatistic;
+		// These change the result but were missing from this hash. While the memo
+		// was component-local a view switch recomputed anyway and hid it; now that
+		// the memo survives a remount, an omission here means an edit is ignored.
+		out += '|' + p.args.fixedPeriod + '|' + p.args.nHarmonics + '|' + p.args.alpha + '|' + p.args.Ncurves;
 		return out;
 	});
 	// The stats (MESOR / amplitude / phase / CIs / F-stat / RMSE) live only in the

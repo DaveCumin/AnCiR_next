@@ -338,6 +338,10 @@
 		out += p.args.nPermutations;
 		out += p.args.permutationSeed;
 		out += p.args.permutationStatistic;
+		// These change the result but were missing from this hash. While the memo
+		// was component-local a view switch recomputed anyway and hid it; now that
+		// the memo survives a remount, an omission here means an edit is ignored.
+		out += '|' + p.args.fixedK1 + '|' + p.args.fixedK2 + '|' + p.args.fixedPeriod;
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys

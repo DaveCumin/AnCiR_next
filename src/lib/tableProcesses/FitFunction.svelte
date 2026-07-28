@@ -381,6 +381,10 @@
 		out += p.args.nPermutations;
 		out += p.args.permutationSeed;
 		out += p.args.permutationStatistic;
+		// These change the result but were missing from this hash. While the memo
+		// was component-local a view switch recomputed anyway and hid it; now that
+		// the memo survives a remount, an omission here means an edit is ignored.
+		out += '|' + p.args.alpha + '|' + p.args.fixedDutyCycle + '|' + p.args.fixedK1 + '|' + p.args.fixedK2 + '|' + p.args.fixedKappa;
 		return out;
 	});
 	// The fit stats live only in transient state and aren't persisted with the

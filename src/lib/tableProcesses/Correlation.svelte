@@ -211,6 +211,10 @@
 			const col = yId >= 0 ? getColumnById(yId) : null;
 			out += ':' + (col?.getDataHash ?? '');
 		}
+		// These change the result but were missing from this hash. While the memo
+		// was component-local a view switch recomputed anyway and hid it; now that
+		// the memo survives a remount, an omission here means an edit is ignored.
+		out += '|' + p.args.alpha;
 		return out;
 	});
 

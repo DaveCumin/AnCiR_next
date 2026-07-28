@@ -303,6 +303,10 @@
 			(p.args.trendPolyDegree ?? '') +
 			'|' +
 			currentStatKeys.join(',');
+		// These change the result but were missing from this hash. While the memo
+		// was component-local a view switch recomputed anyway and hid it; now that
+		// the memo survives a remount, an omission here means an edit is ignored.
+		out += '|' + p.args.alpha + '|' + p.args.npcraEpochHours + '|' + p.args.npcraLWindow + '|' + p.args.npcraMWindow + '|' + p.args.npcraPeriod + '|' + p.args.pgAlpha;
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
