@@ -148,6 +148,37 @@ run_tp_fixture <- function(fx, rec) {
   outs
 }
 
+# A `tableProcessResult` fixture checks a RESULT OBJECT rather than output columns: the node
+# feeds the UI and writes no columns. The emitter records the JS result under `result`, and
+# the fixture names the fields to compare.
+run_tpr_fixture <- function(fx, rec) {
+  env <- new.env(); env$raw_data <- list(); env$cols <- list()
+  ref_to_id <- list(); next_id <- 1
+  for (nm in names(rec$inputs)) {
+    spec <- rec$inputs[[nm]]
+    id <- next_id; next_id <- next_id + 1
+    ref_to_id[[nm]] <- id
+    env$raw_data[[as.character(id)]] <- if (identical(spec$type, "category"))
+      unlist(spec$values, use.names = FALSE) else unwrap_input(spec)
+    env$cols[[as.character(id)]] <- new_column(
+      id = id, name = nm,
+      type = if (!is.null(spec$type)) spec$type else "number", data = id)
+  }
+  resolve <- function(v) {
+    if (is.character(v) && length(v) == 1 && startsWith(v, "@")) {
+      r <- substring(v, 2)
+      return(if (!is.null(ref_to_id[[r]])) ref_to_id[[r]] else -1)
+    }
+    if (is.list(v)) return(lapply(v, resolve))
+    v
+  }
+  args <- lapply(fx$args, resolve)
+  res <- compute_group_comparison(args, env)$result
+  # One Y column produces one comparison; take the first, as the Python leg does.
+  if (!length(res)) return(list())
+  res[[1]]
+}
+
 results <- list()
 n_pass <- 0; n_fail <- 0; n_skip <- 0
 
@@ -158,9 +189,10 @@ for (fx in fixtures) {
   # uncovered set from being forgotten.
   if (is.null(rfunc)) { n_skip <- n_skip + 1; next }
 
+  is_tpr <- identical(fx$kind, "tableProcessResult")
   is_tp <- identical(fx$kind, "tableProcess")
   is_cp <- identical(fx$kind, "columnProcess")
-  fn <- if (is_tp) TABLE_PROCESS_MAP[[rfunc]]
+  fn <- if (is_tp || is_tpr) TABLE_PROCESS_MAP[[rfunc]]
         else if (is_cp) COLUMN_PROCESS_MAP[[rfunc]]
         else PURE_UTIL_MAP[[rfunc]]
   if (is.null(fn)) {
@@ -199,7 +231,8 @@ for (fx in fixtures) {
   call_args <- c(lapply(refs, function(nm) unwrap_input(rec$inputs[[nm]])),
                  if (is.null(extra)) list() else extra)
 
-  got <- if (is_tp) tryCatch(run_tp_fixture(fx, rec), error = function(e) e)
+  got <- if (is_tpr) tryCatch(run_tpr_fixture(fx, rec), error = function(e) e)
+         else if (is_tp) tryCatch(run_tp_fixture(fx, rec), error = function(e) e)
          # A column process is a bare array -> array; the emitter records the input at the
          # TOP level (rec$input, not rec$inputs) and names the result "value".
          else if (is_cp) tryCatch(

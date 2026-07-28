@@ -249,7 +249,8 @@
 				"t",
 				"df",
 				"pValue"
-			]
+			],
+			"rFunc": "groupcomparison"
 		},
 		{
 			"id": "tp-groupcomparison-anova",
@@ -303,7 +304,8 @@
 				"dfWithin",
 				"etaSquared",
 				"pValue"
-			]
+			],
+			"rFunc": "groupcomparison"
 		},
 		{
 			"id": "plot-fft-rhythm-noisy",
@@ -2577,7 +2579,8 @@
 				"L5",
 				"M10",
 				"M10onset"
-			]
+			],
+			"rFunc": "moving_windows"
 		},
 		{
 			"id": "util-movingwindows-cosinor-relamp",
@@ -2632,7 +2635,8 @@
 				"rel_amplitude",
 				"r2",
 				"rmse"
-			]
+			],
+			"rFunc": "moving_windows"
 		},
 		{
 			"id": "util-fisher-exact-two-sided-0",

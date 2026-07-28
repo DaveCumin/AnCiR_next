@@ -2817,6 +2817,408 @@ tp_storedvaluegroup <- function(args, env) {
   any_valid
 }
 
+# ---------------------------------------------------------------------------
+# MovingAnalysis
+# ---------------------------------------------------------------------------
+
+# Slide a window along the record and run one of the rhythm analyses inside each, emitting a
+# per-window series for every statistic that analysis produces. Everything here is plumbing
+# over kernels already ported; the only real decisions are the window edges and the labels.
+tp_movinganalysis <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  win <- as.numeric(if (is.null(args$windowSize)) 48 else args$windowSize)
+  step <- as.numeric(if (is.null(args$stepSize)) 12 else args$stepSize)
+  label <- if (is.null(args$binLabel)) "center" else args$binLabel
+  analysis <- if (is.null(args$analysis)) "periodogram" else args$analysis
+  x_col <- env$cols[[as.character(x_in)]]
+  t_full <- t_for_col(x_col, env$cols, env$raw_data)
+  pick <- function(a, b, d) if (!is.null(args[[a]])) args[[a]]
+                            else if (!is.null(args[[b]])) args[[b]] else d
+
+  movex <- NULL; any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    ya <- suppressWarnings(as.numeric(unlist(col_data(env$cols[[yk]], env$cols, env$raw_data),
+                                             use.names = FALSE)))
+    n0 <- min(length(t_full), length(ya))
+    ta <- t_full[seq_len(n0)]; ya <- ya[seq_len(n0)]
+    ok <- is.finite(ta) & is.finite(ya)
+    ta <- ta[ok]; ya <- ya[ok]
+    if (length(ta) < 4) next
+
+    # The 1e-9 slack decides whether a window ending exactly at the last sample is emitted;
+    # without it floating-point drift drops the final window on tidy inputs.
+    starts <- seq(min(ta), max(ta) - win + 1e-9, by = step)
+    if (!length(starts) || is.na(starts[1])) next
+    per_stat <- list(); x_labels <- c()
+
+    for (s in starts) {
+      e <- s + win
+      # Half-open [s, e): a sample on the boundary belongs to exactly one window.
+      m <- ta >= s & ta < e
+      tw <- ta[m]; yw <- ya[m]
+      if (length(tw) < 4) next
+      x_labels <- c(x_labels, switch(label, start = s, end = e, (s + e) / 2))
+      stats <- list()
+
+      if (identical(analysis, "periodogram")) {
+        pg <- run_periodogram_calculation(list(
+          t = tw, y = yw,
+          method = pick("pgMethod", "method", "Lomb-Scargle"),
+          minPeriod = pick("periodMin", "minPeriod", 1),
+          maxPeriod = pick("periodMax", "maxPeriod", win),
+          stepSize = pick("periodStep", "stepPg", 0.1)))
+        if (length(pg$y)) {
+          i <- which.max(pg$y)
+          stats$peak_period <- pg$x[i]; stats$peak_power <- pg$y[i]
+        }
+      } else if (identical(analysis, "cosinor")) {
+        if (!identical(args$useFixedPeriod, FALSE)) {
+          res <- fit_cosinor_fixed(tw, yw,
+                                   as.numeric(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod),
+                                   as.integer(if (is.null(args$nHarmonics)) 1 else args$nHarmonics))
+          if (!is.null(res)) {
+            stats$mesor <- res$M; stats$r2 <- res$R2
+            stats$rmse <- res$RMSE; stats$pvalue <- res$pF
+            for (h in res$harmonics) {
+              stats[[paste0("H", h$k, "_amplitude")]] <- h$amplitude
+              stats[[paste0("H", h$k, "_acrophase")]] <- h$acrophase_hrs
+            }
+            # rel_amplitude is NaN when the MESOR is ~0: a mean-centred signal has no
+            # meaningful relative amplitude, and +/-Inf would poison every downstream plot.
+            amp1 <- if (length(res$harmonics)) res$harmonics[[1]]$amplitude else NA_real_
+            stats$rel_amplitude <- if (is.finite(res$M) && abs(res$M) > 1e-12 && is.finite(amp1))
+              amp1 / res$M else NA_real_
+          }
+        } else {
+          res <- fit_cosine_curves(tw, yw,
+                                   as.integer(if (is.null(args$Ncurves)) 1 else args$Ncurves))
+          if (!is.null(res)) {
+            stats$r2 <- res$rSquared; stats$rmse <- res$rmse
+            cs <- res$parameters$cosines
+            for (k in seq_along(cs)) {
+              stats[[paste0("C", k, "_period")]] <-
+                if (cs[[k]]$frequency != 0) 1 / cs[[k]]$frequency else Inf
+              stats[[paste0("C", k, "_amplitude")]] <- cs[[k]]$amplitude
+              stats[[paste0("C", k, "_phase")]] <- cs[[k]]$phase
+            }
+          }
+        }
+      } else if (identical(analysis, "npcra")) {
+        npc <- compute_npcra(tw, yw,
+                             as.numeric(if (is.null(args$npcraEpochHours)) 1 else args$npcraEpochHours),
+                             as.numeric(if (is.null(args$npcraPeriod)) 24 else args$npcraPeriod),
+                             as.numeric(if (is.null(args$npcraMWindow)) 10 else args$npcraMWindow),
+                             as.numeric(if (is.null(args$npcraLWindow)) 5 else args$npcraLWindow))
+        if (!is.null(npc)) {
+          for (k in c("IS", "IV", "RA", "L5", "M10", "M10onset")) {
+            stats[[k]] <- if (is.null(npc[[k]])) NA_real_ else npc[[k]]
+          }
+        }
+      } else if (identical(analysis, "fft")) {
+        f <- compute_fft(tw, yw)
+        if (length(f$magnitudes)) {
+          # Skip bin 1 when picking the peak: it is the lowest resolvable frequency and on a
+          # short window it carries the residual trend, not a rhythm.
+          i <- if (length(f$magnitudes) > 1) which.max(f$magnitudes[-1]) + 1 else 1
+          fr <- f$frequencies[i]
+          stats$peak_frequency <- fr
+          stats$peak_period <- if (fr != 0) 1 / fr else Inf
+          stats$peak_magnitude <- f$magnitudes[i]
+        }
+      } else if (identical(analysis, "correlogram")) {
+        ac <- compute_autocorrelation(
+          tw, yw,
+          min_lag = as.numeric(if (is.null(args$corrMinLag)) 0 else args$corrMinLag),
+          max_lag = if (is.null(args$corrMaxLag)) NULL else args$corrMaxLag)
+        if (length(ac$correlations)) {
+          i <- which.max(ac$correlations)
+          stats$peak_lag <- ac$lags[i]; stats$peak_correlation <- ac$correlations[i]
+        }
+      }
+
+      for (k in names(stats)) {
+        per_stat[[k]] <- c(per_stat[[k]], as.numeric(stats[[k]]))
+      }
+    }
+
+    if (is.null(movex) && length(x_labels)) {
+      movex <- x_labels
+      set_col(env, env$cols, out_id(args, "movex"), movex,
+              type = if (identical(x_col$type, "time")) "time" else "number")
+    }
+    for (k in names(per_stat)) {
+      oid <- out_id(args, paste0(y_id, "_", k))
+      if (oid != -1) {
+        set_col(env, env$cols, oid, per_stat[[k]], type = "number")
+        any_valid <- TRUE
+      }
+    }
+  }
+  any_valid
+}
+
+
+# Rolling-window statistics as flat arrays, one per stat key.
+#
+# Targets the pure windowing rather than tp_movinganalysis, because the JS node's per-stat
+# output COLUMNS are created by its component reconcile and not by its `func` — so the
+# table-process parity path cannot reach them. This is where the windowing and the per-window
+# maths actually live, so checking it checks the thing that could be wrong.
+#
+# Note the window minimum here is 3 samples, NOT the 4 that tp_movinganalysis uses: the two
+# were written against different call sites and the fixtures pin this one. Kept faithful
+# rather than harmonised, since changing it would move the first window.
+moving_windows <- function(times, values, opts = list()) {
+  window <- as.numeric(if (is.null(opts$windowSize)) 168 else opts$windowSize)
+  step <- as.numeric(if (is.null(opts$stepSize)) 24 else opts$stepSize)
+  analysis <- if (is.null(opts$analysis)) "npcra" else opts$analysis
+  ta <- suppressWarnings(as.numeric(unlist(times, use.names = FALSE)))
+  ya <- suppressWarnings(as.numeric(unlist(values, use.names = FALSE)))
+  n0 <- min(length(ta), length(ya))
+  ta <- ta[seq_len(n0)]; ya <- ya[seq_len(n0)]
+  ok <- is.finite(ta) & is.finite(ya)
+  ta <- ta[ok]; ya <- ya[ok]
+
+  starts <- c(); s <- min(ta); hi <- max(ta)
+  while (s <= hi - window + 1e-9) { starts <- c(starts, s); s <- s + step }
+
+  n_h <- as.integer(if (is.null(opts$nHarmonics)) 1 else opts$nHarmonics)
+  keys <- if (identical(analysis, "npcra")) {
+    c("IS", "IV", "RA", "L5", "M10", "M10onset")
+  } else if (identical(analysis, "cosinor")) {
+    c("mesor", as.vector(rbind(paste0("H", seq_len(n_h), "_amplitude"),
+                               paste0("H", seq_len(n_h), "_acrophase"))),
+      "rel_amplitude", "r2", "rmse", "pvalue")
+  } else {
+    stop(sprintf("moving_windows: unsupported analysis '%s'", analysis))
+  }
+
+  out <- setNames(lapply(keys, function(k) numeric(0)), keys)
+  for (st in starts) {
+    m <- ta >= st & ta < st + window
+    tw <- ta[m]; yw <- ya[m]
+    stats <- setNames(as.list(rep(NA_real_, length(keys))), keys)
+    if (length(tw) >= 3) {
+      if (identical(analysis, "npcra")) {
+        npc <- compute_npcra(tw, yw,
+                             as.numeric(if (is.null(opts$npcraEpochHours)) 1 else opts$npcraEpochHours),
+                             as.numeric(if (is.null(opts$npcraPeriod)) 24 else opts$npcraPeriod),
+                             as.numeric(if (is.null(opts$npcraMWindow)) 10 else opts$npcraMWindow),
+                             as.numeric(if (is.null(opts$npcraLWindow)) 5 else opts$npcraLWindow))
+        if (!is.null(npc)) for (k in keys) {
+          stats[[k]] <- if (is.null(npc[[k]])) NA_real_ else as.numeric(npc[[k]])
+        }
+      } else {
+        res <- fit_cosinor_fixed(tw, yw,
+                                 as.numeric(if (is.null(opts$fixedPeriod)) 24 else opts$fixedPeriod),
+                                 n_h)
+        if (!is.null(res)) {
+          stats$mesor <- res$M; stats$r2 <- res$R2
+          stats$rmse <- res$RMSE; stats$pvalue <- res$pF
+          for (h in res$harmonics) {
+            stats[[paste0("H", h$k, "_amplitude")]] <- h$amplitude
+            stats[[paste0("H", h$k, "_acrophase")]] <- h$acrophase_hrs
+          }
+          amp1 <- if (length(res$harmonics)) res$harmonics[[1]]$amplitude else NA_real_
+          stats$rel_amplitude <- if (is.finite(res$M) && abs(res$M) > 1e-12 && is.finite(amp1))
+            amp1 / res$M else NA_real_
+        }
+      }
+    }
+    for (k in keys) out[[k]] <- c(out[[k]], stats[[k]])
+  }
+  out$starts <- starts
+  out
+}
+
+# ---------------------------------------------------------------------------
+# GroupComparison
+# ---------------------------------------------------------------------------
+#
+# Returns a RESULT OBJECT rather than writing output columns — the node feeds the UI, and
+# nodeSpec.outputs is empty. The parity harness compares named fields instead of arrays,
+# which is why its fixtures use the `tableProcessResult` kind.
+
+gc_mean <- function(a) if (!length(a)) NA_real_ else mean(a)
+
+gc_sample_variance <- function(a) {
+  if (length(a) < 2) return(NA_real_)
+  sum((a - mean(a))^2) / (length(a) - 1)
+}
+
+gc_sample_std <- function(a) {
+  v <- gc_sample_variance(a)
+  if (is.finite(v)) sqrt(v) else NA_real_
+}
+
+gc_p_upper_from_f <- function(f, df1, df2) {
+  if (!is.finite(f) || !is.finite(df1) || !is.finite(df2)) return(NA_real_)
+  if (df1 <= 0 || df2 <= 0 || f < 0) return(NA_real_)
+  pf(f, df1, df2, lower.tail = FALSE)
+}
+
+# Bucket y by group label, keeping FIRST-APPEARANCE order (the JS builds a Map, which
+# preserves insertion order). Sorting instead would silently relabel "group 1" and "group 2"
+# in the reported difference, flipping its sign.
+gc_build_groups <- function(group_data, y_data) {
+  n <- length(y_data)
+  order_ <- character(0); buckets <- list()
+  for (i in seq_len(n)) {
+    g_raw <- if (i <= length(group_data)) group_data[[i]] else NULL
+    y_raw <- y_data[[i]]
+    if (is.null(g_raw) || is.null(y_raw)) next
+    if (length(g_raw) != 1 || length(y_raw) != 1) next
+    if (is.atomic(g_raw) && is.na(g_raw)) next
+    yv <- suppressWarnings(as.numeric(y_raw))
+    if (!is.finite(yv)) next
+    g <- as.character(g_raw)
+    if (!(g %in% order_)) { order_ <- c(order_, g); buckets[[g]] <- numeric(0) }
+    buckets[[g]] <- c(buckets[[g]], yv)
+  }
+  lapply(order_, function(nm) {
+    v <- buckets[[nm]]
+    list(name = nm, values = v, n = length(v), mean = gc_mean(v), sd = gc_sample_std(v))
+  })
+}
+
+# Welch's t-test: unequal variances assumed, with the Welch-Satterthwaite df. NOT Student's
+# pooled test — using the pooled form here would report a different df and p on unequal ns,
+# which is the common case for group comparisons.
+gc_welch_t_test <- function(a, b, alpha = 0.05) {
+  n1 <- a$n; n2 <- b$n
+  if (n1 < 2 || n2 < 2) {
+    return(list(valid = FALSE, reason = "Each group needs at least 2 valid values for a t-test."))
+  }
+  v1 <- gc_sample_variance(a$values); v2 <- gc_sample_variance(b$values)
+  aa <- v1 / n1; bb <- v2 / n2
+  se <- sqrt(aa + bb)
+  diff <- a$mean - b$mean
+  if (!is.finite(se) || se < 0) {
+    return(list(valid = FALSE, reason = "Unable to compute standard error for t-test."))
+  }
+  t <- if (se == 0) { if (diff == 0) 0 else Inf } else diff / se
+  df_den <- (aa * aa) / (n1 - 1) + (bb * bb) / (n2 - 1)
+  df <- if (df_den == 0) (n1 + n2 - 2) else (aa + bb)^2 / df_den
+  # p from t^2 on F(1, df): identical to the two-sided t p-value, and matches the JS, which
+  # has an F CDF to hand but not a t one.
+  p_value <- if (is.finite(t)) gc_p_upper_from_f(t * t, 1, df) else 0
+  t_crit <- if (is.finite(df)) qt(1 - alpha / 2, df) else NA_real_
+  ci_half <- if (is.finite(t_crit) && is.finite(se)) t_crit * se else NA_real_
+  list(valid = TRUE, difference = diff, t = t, df = df, pValue = p_value,
+       se = se, ciLow = diff - ci_half, ciHigh = diff + ci_half)
+}
+
+gc_one_way_anova <- function(groups) {
+  usable <- Filter(function(g) g$n > 0, groups)
+  k <- length(usable)
+  if (k < 2) return(list(valid = FALSE, reason = "ANOVA needs at least 2 non-empty groups."))
+  n_total <- sum(vapply(usable, function(g) g$n, numeric(1)))
+  if (n_total <= k) {
+    return(list(valid = FALSE,
+                reason = "ANOVA needs at least one group with more than 1 value."))
+  }
+  grand_mean <- sum(vapply(usable, function(g) g$mean * g$n, numeric(1))) / n_total
+  ss_between <- sum(vapply(usable, function(g) g$n * (g$mean - grand_mean)^2, numeric(1)))
+  ss_within <- sum(vapply(usable, function(g) sum((g$values - g$mean)^2), numeric(1)))
+  df_between <- k - 1
+  df_within <- n_total - k
+  ms_between <- ss_between / df_between
+  ms_within <- ss_within / df_within
+  f <- if (ms_within == 0) { if (ms_between == 0) 0 else Inf } else ms_between / ms_within
+  list(valid = TRUE, f = f, ssBetween = ss_between, ssWithin = ss_within,
+       dfBetween = df_between, dfWithin = df_within,
+       msBetween = ms_between, msWithin = ms_within,
+       etaSquared = if ((ss_between + ss_within) > 0) ss_between / (ss_between + ss_within) else NA_real_,
+       pValue = gc_p_upper_from_f(f, df_between, df_within))
+}
+
+# 'auto' picks by GROUP COUNT, not by a normality test: two groups get a t-test, more get
+# ANOVA. An explicitly requested method that does not suit the group count returns NULL
+# rather than silently falling back to one that does.
+gc_resolve_method <- function(requested, groups_count) {
+  if (identical(requested, "ttest")) return(if (groups_count == 2) "ttest" else NULL)
+  if (identical(requested, "anova")) return(if (groups_count >= 2) "anova" else NULL)
+  if (identical(requested, "mannwhitney")) return(if (groups_count == 2) "mannwhitney" else NULL)
+  if (identical(requested, "kruskal")) return(if (groups_count >= 2) "kruskal" else NULL)
+  if (groups_count == 2) "ttest" else if (groups_count > 2) "anova" else NULL
+}
+
+gc_run_selected <- function(groups, chosen, alpha) {
+  if (is.null(chosen)) {
+    return(list(valid = FALSE, groups = groups,
+                reason = "Need at least 2 groups with data for comparison."))
+  }
+  if (identical(chosen, "ttest")) {
+    r <- gc_welch_t_test(groups[[1]], groups[[2]], alpha)
+    return(c(list(test = "Welch t-test", groupCount = length(groups),
+                  nTotal = groups[[1]]$n + groups[[2]]$n, groups = list(groups)), r))
+  }
+  if (identical(chosen, "anova")) {
+    r <- gc_one_way_anova(groups)
+    return(c(list(test = "One-way ANOVA", groupCount = length(groups),
+                  nTotal = sum(vapply(groups, function(g) g$n, numeric(1))),
+                  groups = list(groups)), r))
+  }
+  # The rank-based tests are not ported. Refusing beats returning a parametric answer under a
+  # nonparametric label, which is what a silent fallback would do.
+  stop(sprintf(paste0("ancir: GroupComparison method '%s' is not implemented by the R ",
+                      "runtime (only Welch t-test and one-way ANOVA are). Export this ",
+                      "session as Python instead."), chosen))
+}
+
+compute_group_comparison <- function(args, env) {
+  x_in <- args$xIN
+  y_ins <- args$yIN
+  if (!is.list(y_ins)) y_ins <- if (!is.null(y_ins) && y_ins != -1) list(y_ins) else list()
+  y_ins <- unlist(y_ins, use.names = FALSE)
+  group_col <- if (!is.null(x_in) && x_in != -1) env$cols[[as.character(x_in)]] else NULL
+  mode <- if (is.null(args$method)) "auto" else args$method
+  alpha <- suppressWarnings(as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha))
+  if (length(alpha) != 1 || !is.finite(alpha)) alpha <- 0.05
+
+  # Boxplot-like fallback: several Y columns and NO group column means each column IS a group.
+  if (is.null(group_col) && length(y_ins) > 1) {
+    groups <- lapply(y_ins, function(y) {
+      c1 <- env$cols[[as.character(y)]]
+      v <- suppressWarnings(as.numeric(unlist(col_data(c1, env$cols, env$raw_data),
+                                              use.names = FALSE)))
+      v <- v[is.finite(v)]
+      list(name = if (is.null(c1$name)) as.character(y) else c1$name,
+           values = v, n = length(v), mean = gc_mean(v), sd = gc_sample_std(v))
+    })
+    comp <- gc_run_selected(groups, gc_resolve_method(mode, length(groups)), alpha)
+    return(list(result = list(multiY = comp), anyValid = isTRUE(comp$valid)))
+  }
+  if (is.null(group_col) || !length(y_ins)) {
+    return(list(result = list(), anyValid = FALSE))
+  }
+
+  group_data <- col_data(group_col, env$cols, env$raw_data)
+  out <- list(); any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    groups <- gc_build_groups(group_data, col_data(env$cols[[yk]], env$cols, env$raw_data))
+    groups <- Filter(function(g) g$n > 0, groups)
+    comp <- gc_run_selected(groups, gc_resolve_method(mode, length(groups)), alpha)
+    nm <- env$cols[[yk]]$name
+    out[[yk]] <- c(list(columnName = if (is.null(nm)) yk else nm), comp)
+    if (isTRUE(comp$valid)) any_valid <- TRUE
+  }
+  list(result = out, anyValid = any_valid)
+}
+
+# The node writes no output columns; the pipeline only needs the anyValid flag. The numbers
+# are still computed so the algorithm is exercised, and compute_group_comparison is what the
+# parity harness calls for the detail.
+tp_groupcomparison <- function(args, env) {
+  isTRUE(compute_group_comparison(args, env)$anyValid)
+}
+
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
 # sits beside the existing `pyFunc`, so both legs read one fixture file).
 #
@@ -2832,6 +3234,7 @@ PURE_UTIL_MAP <- list(
   cross_correlation = cross_correlation,
   describe_stats = describe_stats,
   jarque_bera    = jarque_bera,
+  moving_windows = moving_windows,
   compute_autocorrelation = compute_autocorrelation,
   compute_fft    = compute_fft,
   d_agostino     = d_agostino,
@@ -2854,6 +3257,7 @@ TABLE_PROCESS_MAP = list(
   doublelogistic = tp_doublelogistic,
   fdrcorrection = tp_fdrcorrection,
   fitfunction = tp_fitfunction,
+  groupcomparison = tp_groupcomparison,
   chisquared = tp_chisquared,
   circadianfunctionindex = tp_circadianfunctionindex,
   correlation = tp_correlation,
@@ -2861,6 +3265,7 @@ TABLE_PROCESS_MAP = list(
   interpolate = tp_interpolate,
   logisticregression = tp_logisticregression,
   longtowide = tp_longtowide,
+  movinganalysis = tp_movinganalysis,
   nonparametricra = tp_nonparametricra,
   normalitytest = tp_normalitytest,
   rayleightest = tp_rayleightest,
