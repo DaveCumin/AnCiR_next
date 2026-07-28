@@ -257,7 +257,7 @@
 		>
 			<Icon name={collapsed ? 'caret-right' : 'caret-down'} width={12} height={12} />
 		</button>
-		<div class="group-title" onpointerdown={stopPointer} role="presentation">
+		<div class="group-title" role="presentation">
 			<Editable
 				value={group?.name ?? 'Group'}
 				placeholder="Group"

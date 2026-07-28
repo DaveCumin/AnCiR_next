@@ -291,16 +291,14 @@
 		<!-- Note button sits on the LEFT with the warning (status indicators), so it
 		     doesn't shift when the collapse/delete buttons reveal on the right. Shown
 		     when a note exists, or on hover/selection. -->
-		<div
-			class="note-slot"
-			class:has-note={hasNote}
-			class:sel={selected}
-			onpointerdown={stopPointer}
-			role="presentation"
-		>
+		<div class="note-slot" class:has-note={hasNote} class:sel={selected} role="presentation">
 			<NodeNoteButton nodeId={node.id} />
 		</div>
-		<div class="tp-title" onpointerdown={stopPointer} role="presentation">
+		<!-- No stopPropagation here: the header is the natural drag handle, and
+		     onCardMouseDown's NO_DRAG_SELECTOR already excludes the buttons and the
+		     rename input. Dragging is lazy-captured past 3px, so a plain click still
+		     reaches Editable and renames. -->
+		<div class="tp-title" role="presentation">
 			<Editable
 				value={getNodeName(node)}
 				placeholder="Process"

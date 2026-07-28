@@ -68,7 +68,7 @@
 				document.body.removeChild(a);
 				URL.revokeObjectURL(url);
 			}, 10);
-			addNotification('Exported session.py — run it with Python (needs numpy, pandas, scipy).');
+			addNotification('Exported session.py — run it with Python (needs numpy, pandas, scipy).', 'info');
 		} catch (error) {
 			console.error('Failed to export Python:', error?.message ?? error);
 			addNotification('Error exporting Python: ' + (error?.message ?? error));
