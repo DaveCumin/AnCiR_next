@@ -75,11 +75,16 @@ export const PYTHON_ORPHANS = ['duplicate'];
  */
 export const R_IMPLEMENTED = [
 	'averageprofile',
+	'chisquared',
 	'collectcolumns',
 	'columnfunctions',
+	'correlation',
 	'binneddata',
 	'cosinor',
+	'crosscorrelation',
 	'describedata',
+	'interpolate',
+	'logisticregression',
 	'longtowide',
 	'nonparametricra',
 	'normalitytest',
@@ -134,6 +139,8 @@ export const HARNESS_BLIND = ['collectcolumns', 'longtowide', 'movinganalysis', 
  */
 export const R_PURE_UTILS = [
 	'correlate',
+	'correlation_ci',
+	'cross_correlation',
 	'd_agostino',
 	'describe_stats',
 	'jarque_bera',

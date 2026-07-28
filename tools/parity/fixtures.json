@@ -1706,7 +1706,8 @@
 				"r",
 				"pvalue",
 				"n"
-			]
+			],
+			"rFunc": "cross_correlation"
 		},
 		{
 			"id": "util-chisquare-gof",
@@ -3066,7 +3067,8 @@
 			"compareScalars": [
 				"ciLow",
 				"ciHigh"
-			]
+			],
+			"rFunc": "correlation_ci"
 		},
 		{
 			"id": "util-correlation-ci-1",
@@ -3091,7 +3093,8 @@
 			"compareScalars": [
 				"ciLow",
 				"ciHigh"
-			]
+			],
+			"rFunc": "correlation_ci"
 		},
 		{
 			"id": "util-correlation-ci-2",
@@ -3116,7 +3119,8 @@
 			"compareScalars": [
 				"ciLow",
 				"ciHigh"
-			]
+			],
+			"rFunc": "correlation_ci"
 		},
 		{
 			"id": "util-correlation-ci-3",
@@ -3141,7 +3145,8 @@
 			"compareScalars": [
 				"ciLow",
 				"ciHigh"
-			]
+			],
+			"rFunc": "correlation_ci"
 		},
 		{
 			"id": "tp-describedata",
@@ -3283,7 +3288,8 @@
 				"ciLow",
 				"ciHigh",
 				"significant"
-			]
+			],
+			"rFunc": "correlation"
 		},
 		{
 			"id": "tp-crosscorrelation",
@@ -3317,7 +3323,8 @@
 				"lag",
 				"correlation",
 				"pvalue"
-			]
+			],
+			"rFunc": "crosscorrelation"
 		},
 		{
 			"id": "tp-logisticregression",
@@ -3358,7 +3365,10 @@
 				"z",
 				"pvalue",
 				"oddsRatio"
-			]
+			],
+			"rFunc": "logisticregression",
+			"rTolerance": 1e-06,
+			"rToleranceWhy": "R fits with glm(family = binomial), an independent IRLS from the JS and statsmodels ones. Coefficients and odds ratios agree exactly; the standard errors, built from the final iteration's weights, differ by ~5e-9 once glm's epsilon is tightened to 1e-12 (at its 1e-8 default the gap is ~5e-5). That is the convergence limit of two separate implementations, not a formula disagreement. Python stays at the default tolerance."
 		},
 		{
 			"id": "tp-interpolate-resample",
@@ -3393,7 +3403,8 @@
 			},
 			"compareOutputs": [
 				"interpx"
-			]
+			],
+			"rFunc": "interpolate"
 		},
 		{
 			"id": "tp-cosinor-free-period",

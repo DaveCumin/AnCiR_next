@@ -326,22 +326,6 @@ fit_cosine_curves <- function(t, x, n_curves = 1) {
 # Parity entry point
 # ---------------------------------------------------------------------------
 
-# Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
-# sits beside the existing `pyFunc`, so both legs read one fixture file).
-#
-# Referenced directly rather than wrapped in adapters: the fixtures already describe how to
-# build the call — `argRefs`/`valuesRef` name the inputs and `pyArgs`/`rArgs` supply the rest
-# — so the harness assembles positional arguments the same way for every kernel. Per-kernel
-# adapters would be a second, hand-maintained copy of that contract, and would drift.
-PURE_UTIL_MAP <- list(
-  describe_stats = describe_stats,
-  jarque_bera    = jarque_bera,
-  d_agostino     = d_agostino,
-  shapiro_wilk   = shapiro_wilk,
-  correlate      = correlate,
-  p_adjust       = p_adjust
-)
-
 # ---------------------------------------------------------------------------
 # Table processes
 # ---------------------------------------------------------------------------
@@ -1200,6 +1184,353 @@ tp_longtowide <- function(args, env) {
   TRUE
 }
 
+# ---------------------------------------------------------------------------
+# Correlation CI, cross-correlation, chi-square, logistic regression, interpolation
+# ---------------------------------------------------------------------------
+
+# Fisher z interval for a correlation coefficient. `values` is c(r, n), matching the Python.
+correlation_ci <- function(values, method = "pearson", confidence = 0.95) {
+  r <- suppressWarnings(as.numeric(values[[1]]))
+  n <- suppressWarnings(as.numeric(values[[2]]))
+  if (!is.finite(r) || !is.finite(n) || n < 4) return(list(ciLow = NA_real_, ciHigh = NA_real_))
+  if (abs(r) >= 1) return(list(ciLow = r, ciHigh = r))
+  z <- atanh(r)
+  # Spearman's z variance is the Bonett-Wright form, (1 + r^2/2)/(n-3) — NOT the Fieller
+  # 1.06/(n-3) inflation, which is the other common choice and gives visibly different
+  # bounds (0.160 vs 0.148 at r = 0.5, n = 30).
+  se <- if (identical(method, "spearman")) sqrt((1 + r^2 / 2) / (n - 3)) else 1 / sqrt(n - 3)
+  zc <- qnorm(1 - (1 - confidence) / 2)
+  list(ciLow = tanh(z - zc * se), ciHigh = tanh(z + zc * se))
+}
+
+cross_correlation <- function(x, y, max_lag = 0, method = "pearson") {
+  xa <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
+  ya <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  nx <- length(xa); ny <- length(ya)
+  if (is.null(max_lag) || max_lag <= 0) max_lag <- max(1, min(nx, ny) %/% 4)
+  max_lag <- min(as.integer(max_lag), min(nx, ny) - 1)
+  lags <- c(); rs <- c(); ps <- c(); ns <- c()
+  for (k in (-max_lag):max_lag) {
+    # Index arithmetic is kept 0-based as in the Python and shifted by 1 only at the
+    # subscript, so the overlap window is identical rather than merely similar.
+    i0 <- max(0, -k); i1 <- min(nx - 1, ny - 1 - k)
+    if (i1 < i0) {
+      lags <- c(lags, k); rs <- c(rs, NA_real_); ps <- c(ps, NA_real_); ns <- c(ns, 0); next
+    }
+    idx <- i0:i1
+    c1 <- correlate(xa[idx + 1], ya[idx + k + 1], method)
+    lags <- c(lags, k); rs <- c(rs, c1$r); ps <- c(ps, c1$pvalue); ns <- c(ns, c1$n)
+  }
+  list(lags = lags, r = rs, pvalue = ps, n = ns)
+}
+
+chi_square_goodness_of_fit <- function(observed, expected = NULL, ddof = 0) {
+  o <- suppressWarnings(as.numeric(unlist(observed, use.names = FALSE)))
+  k <- length(o)
+  if (k < 2) return(list(statistic = NA_real_, pvalue = NA_real_, df = NA_real_, k = k))
+  e <- if (is.null(expected)) rep(sum(o) / k, k)
+       else suppressWarnings(as.numeric(unlist(expected, use.names = FALSE)))
+  stat <- sum((o - e)^2 / e)
+  df <- k - 1 - ddof
+  list(statistic = stat, pvalue = pchisq(stat, df, lower.tail = FALSE), df = df, k = k)
+}
+
+chi_square_independence <- function(table, correction = TRUE) {
+  a <- as.matrix(table)
+  n <- sum(a)
+  expected <- outer(rowSums(a), colSums(a)) / n
+  df <- (nrow(a) - 1) * (ncol(a) - 1)
+  # Yates' correction applies only to the 2x2 case, matching scipy.
+  use_yates <- correction && nrow(a) == 2 && ncol(a) == 2
+  d <- abs(a - expected)
+  if (use_yates) d <- pmax(0, d - 0.5)
+  stat <- sum(d^2 / expected)
+  list(statistic = stat, pvalue = pchisq(stat, df, lower.tail = FALSE), df = df, n = n)
+}
+
+chi_square_independence_effects <- function(table, correction = TRUE) {
+  base <- chi_square_independence(table, correction)
+  a <- as.matrix(table)
+  n <- sum(a)
+  # Cramer's V uses the UNCORRECTED statistic even when Yates is on: the correction is a
+  # p-value device, not an effect-size one, and both the JS and scipy's association() do the
+  # same. Using the corrected statistic would shrink V on every 2x2 table.
+  uncorrected <- chi_square_independence(table, FALSE)$statistic
+  k <- min(nrow(a), ncol(a))
+  v <- if (n > 0 && k > 1) sqrt(uncorrected / (n * (k - 1))) else NA_real_
+  phi <- NA_real_
+  if (nrow(a) == 2 && ncol(a) == 2) {
+    den <- sqrt(prod(rowSums(a)) * prod(colSums(a)))
+    if (den > 0) phi <- (a[1, 1] * a[2, 2] - a[1, 2] * a[2, 1]) / den
+  }
+  c(base, list(cramersV = v, phi = phi, n = as.numeric(n)))
+}
+
+# Logistic regression via base R's glm(family = binomial): a genuine third implementation
+# rather than a re-derivation of the JS IRLS, the same reasoning as using shapiro.test.
+logistic_regression <- function(y, predictor_cols, names = NULL) {
+  yv <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  preds <- lapply(predictor_cols,
+                  function(cc) suppressWarnings(as.numeric(unlist(cc, use.names = FALSE))))
+  n <- min(c(length(yv), vapply(preds, length, integer(1))))
+  if (n < 2) return(NULL)
+  yv <- yv[seq_len(n)]
+  preds <- lapply(preds, function(v) v[seq_len(n)])
+  df <- as.data.frame(preds)
+  colnames(df) <- paste0("v", seq_along(preds))
+  df$.y <- yv
+  df <- df[stats::complete.cases(df), , drop = FALSE]
+  if (!nrow(df) || length(unique(df$.y)) < 2) return(NULL)
+  # epsilon = 1e-12, not glm's default 1e-8. The default stops one IRLS iteration early:
+  # the coefficients are already converged by then, but the standard errors (built from the
+  # final iteration's weights) are still off in the 5th significant figure, which shows up as
+  # a visible disagreement in z and p. One extra iteration closes it to ~5e-9.
+  fit <- tryCatch(
+    suppressWarnings(glm(.y ~ ., data = df, family = binomial(),
+                         control = glm.control(epsilon = 1e-12, maxit = 200))),
+    error = function(e) NULL)
+  if (is.null(fit)) return(NULL)
+  sm <- summary(fit)$coefficients
+  labels <- c("(intercept)",
+              if (is.null(names)) paste0("x", seq_along(preds))
+              else unlist(names, use.names = FALSE))
+  coefs <- unname(sm[, 1])
+  list(term = labels, coef = coefs, se = unname(sm[, 2]), z = unname(sm[, 3]),
+       pvalue = unname(sm[, 4]), oddsRatio = exp(coefs), n = nrow(df),
+       logLik = as.numeric(logLik(fit)),
+       eta = as.vector(predict(fit, type = "link")),
+       fitted = as.vector(predict(fit, type = "response")),
+       outcome = df$.y)
+}
+
+# Interpolate ys(xs) at `grid`, or fill ys' own gaps when grid is NULL.
+# Extrapolation is deliberately NOT attempted: a target outside the observed x range comes
+# back NA rather than a straight-line guess, because a fabricated value beyond the end of the
+# recording is worse than an honest gap.
+interp_series <- function(xs, ys, grid = NULL, method = "linear") {
+  x <- suppressWarnings(as.numeric(unlist(xs, use.names = FALSE)))
+  y <- suppressWarnings(as.numeric(unlist(ys, use.names = FALSE)))
+  n <- min(length(x), length(y))
+  x <- x[seq_len(n)]; y <- y[seq_len(n)]
+  ok <- is.finite(x) & is.finite(y)
+  px <- x[ok]; py <- y[ok]
+  o <- order(px); px <- px[o]; py <- py[o]
+  if (length(px) < 2) {
+    return(rep(NA_real_, if (is.null(grid)) length(y) else length(grid)))
+  }
+  at <- function(v) {
+    if (!is.finite(v) || v < px[1] || v > px[length(px)]) return(NA_real_)
+    if (identical(method, "nearest")) return(py[which.min(abs(px - v))])
+    approx(px, py, xout = v, method = "linear")$y
+  }
+  if (!is.null(grid)) return(vapply(grid, at, numeric(1)))
+  vapply(seq_along(y), function(i) if (is.finite(y[i])) y[i] else at(x[i]), numeric(1))
+}
+
+# --- the analyses ----------------------------------------------------------
+
+tp_correlation <- function(args, env) {
+  y_ins <- id_list(args$yIN)
+  y_ins <- y_ins[vapply(y_ins, function(i) !is.null(env$cols[[as.character(i)]]), logical(1))]
+  if (length(y_ins) < 2) return(FALSE)
+  method <- if (is.null(args$method)) "auto" else args$method
+  alpha <- as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha)
+  rows <- list(var_i = c(), var_j = c(), r = c(), pvalue = c(), n = c(),
+               ciLow = c(), ciHigh = c(), significant = c())
+  for (a in seq_len(length(y_ins) - 1)) for (b in (a + 1):length(y_ins)) {
+    ca <- env$cols[[as.character(y_ins[a])]]
+    cb <- env$cols[[as.character(y_ins[b])]]
+    xs <- col_data(ca, env$cols, env$raw_data)
+    ys <- col_data(cb, env$cols, env$raw_data)
+    use <- method
+    if (identical(method, "auto")) {
+      # Shapiro on both; Spearman if EITHER looks non-normal, matching the JS.
+      pa <- shapiro_wilk(xs)$pvalue
+      pb <- shapiro_wilk(ys)$pvalue
+      non_normal <- (!is.na(pa) && pa <= 0.05) || (!is.na(pb) && pb <= 0.05)
+      use <- if (non_normal) "spearman" else "pearson"
+    }
+    res <- correlate(xs, ys, use)
+    ci <- correlation_ci(c(res$r, res$n), use, 1 - alpha)
+    rows$var_i <- c(rows$var_i, if (is.null(ca$name)) as.character(y_ins[a]) else ca$name)
+    rows$var_j <- c(rows$var_j, if (is.null(cb$name)) as.character(y_ins[b]) else cb$name)
+    rows$r <- c(rows$r, res$r)
+    rows$pvalue <- c(rows$pvalue, res$pvalue)
+    rows$n <- c(rows$n, res$n)
+    rows$ciLow <- c(rows$ciLow, ci$ciLow)
+    rows$ciHigh <- c(rows$ciHigh, ci$ciHigh)
+    rows$significant <- c(rows$significant,
+                          if (is.na(res$pvalue)) NA_real_ else as.numeric(res$pvalue < alpha))
+  }
+  .write_result_rows(args, env, rows)
+}
+
+tp_crosscorrelation <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_in <- args$yIN
+  if (is.list(y_in)) y_in <- if (length(y_in)) y_in[[1]] else -1
+  if (is.null(y_in)) y_in <- -1
+  if (x_in == -1 || y_in == -1) return(FALSE)
+  if (is.null(env$cols[[as.character(x_in)]]) || is.null(env$cols[[as.character(y_in)]])) {
+    return(FALSE)
+  }
+  res <- cross_correlation(col_data(env$cols[[as.character(x_in)]], env$cols, env$raw_data),
+                           col_data(env$cols[[as.character(y_in)]], env$cols, env$raw_data),
+                           as.integer(if (is.null(args$maxLag)) 0 else args$maxLag),
+                           if (is.null(args$method)) "pearson" else args$method)
+  .write_result_rows(args, env,
+                     list(lag = res$lags, correlation = res$r, pvalue = res$pvalue))
+}
+
+# Counts of (x, y) category pairs, with rows and columns ordered by FIRST APPEARANCE rather
+# than sorted: chi-square's statistic is order-invariant, but phi's SIGN is not, so the row
+# and column order has to match the JS.
+contingency <- function(xs, ys) {
+  xs <- as.character(unlist(xs, use.names = FALSE))
+  ys <- as.character(unlist(ys, use.names = FALSE))
+  n <- min(length(xs), length(ys))
+  rows <- character(0); cols <- character(0)
+  pairs_a <- character(0); pairs_b <- character(0)
+  for (i in seq_len(n)) {
+    a <- xs[i]; b <- ys[i]
+    if (is.na(a) || is.na(b) || !nzchar(a) || !nzchar(b)) next
+    if (!(a %in% rows)) rows <- c(rows, a)
+    if (!(b %in% cols)) cols <- c(cols, b)
+    pairs_a <- c(pairs_a, a); pairs_b <- c(pairs_b, b)
+  }
+  if (!length(rows) || !length(cols)) return(NULL)
+  m <- matrix(0, nrow = length(rows), ncol = length(cols))
+  for (i in seq_along(pairs_a)) {
+    m[match(pairs_a[i], rows), match(pairs_b[i], cols)] <-
+      m[match(pairs_a[i], rows), match(pairs_b[i], cols)] + 1
+  }
+  m
+}
+
+tp_chisquared <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_in <- args$yIN
+  if (is.list(y_in)) y_in <- if (length(y_in)) y_in[[1]] else -1
+  if (is.null(y_in)) y_in <- -1
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]])) return(FALSE)
+  test_type <- if (is.null(args$testType)) "independence" else args$testType
+  correction <- !identical(args$correction, FALSE)
+  xs <- col_data(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
+
+  if (identical(test_type, "goodnessoffit")) {
+    counts <- clean_numeric(xs)
+    if (!length(counts)) return(FALSE)
+    res <- chi_square_goodness_of_fit(counts)
+    return(.write_result_rows(args, env, list(
+      statistic = res$statistic, pvalue = res$pvalue, df = res$df,
+      effectSize = NA_real_, ciLow = NA_real_, ciHigh = NA_real_)))
+  }
+
+  if (y_in == -1 || is.null(env$cols[[as.character(y_in)]])) return(FALSE)
+  tab <- contingency(xs, col_data(env$cols[[as.character(y_in)]], env$cols, env$raw_data))
+  if (is.null(tab) || nrow(tab) < 2 || ncol(tab) < 2) return(FALSE)
+  res <- chi_square_independence_effects(tab, correction)
+  .write_result_rows(args, env, list(
+    statistic = res$statistic, pvalue = res$pvalue, df = res$df,
+    effectSize = res$cramersV, ciLow = NA_real_, ciHigh = NA_real_))
+}
+
+tp_logisticregression <- function(args, env) {
+  y_in <- args$yIN
+  if (is.list(y_in)) y_in <- if (length(y_in)) y_in[[1]] else -1
+  if (is.null(y_in)) y_in <- -1
+  x_ins <- id_list(args$xIN)
+  x_ins <- x_ins[vapply(x_ins, function(i) !is.null(env$cols[[as.character(i)]]), logical(1))]
+  if (y_in == -1 || is.null(env$cols[[as.character(y_in)]]) || !length(x_ins)) return(FALSE)
+  y <- col_data(env$cols[[as.character(y_in)]], env$cols, env$raw_data)
+  preds <- lapply(x_ins, function(i) col_data(env$cols[[as.character(i)]], env$cols, env$raw_data))
+  nms <- vapply(x_ins, function(i) {
+    nm <- env$cols[[as.character(i)]]$name
+    if (is.null(nm)) as.character(i) else nm
+  }, character(1))
+  res <- logistic_regression(y, preds, nms)
+  if (is.null(res) || !length(res$coef)) return(FALSE)
+  # Wald CI on the ODDS RATIO, matching logistic.js:164 — exp(coef +/- 1.96*se), and NA
+  # rather than a bogus interval when the standard error is not finite.
+  z975 <- 1.959963984540054
+  ci_low <- ifelse(is.finite(res$se), exp(res$coef - z975 * res$se), NA_real_)
+  ci_high <- ifelse(is.finite(res$se), exp(res$coef + z975 * res$se), NA_real_)
+  wrote <- .write_result_rows(args, env, list(
+    term = res$term, coef = res$coef, se = res$se, z = res$z,
+    pvalue = res$pvalue, oddsRatio = res$oddsRatio, ciLow = ci_low, ciHigh = ci_high))
+  # Per-observation columns have a DIFFERENT length from the coefficient rows, so they go out
+  # separately rather than as extra columns of the same table.
+  for (key in c("outcome", "eta", "fitted")) {
+    oid <- out_id(args, key)
+    if (oid != -1 && !is.null(res[[key]])) {
+      set_col(env, env$cols, oid, res[[key]], type = "number")
+      wrote <- TRUE
+    }
+  }
+  wrote
+}
+
+tp_interpolate <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  mode <- if (is.null(args$mode)) "fill" else args$mode
+  method <- if (is.null(args$method)) "linear" else args$method
+  x_col <- env$cols[[as.character(x_in)]]
+  xs_raw <- t_for_col(x_col, env$cols, env$raw_data)
+
+  target <- NULL
+  if (identical(mode, "resample")) {
+    finite <- xs_raw[is.finite(xs_raw)]
+    if (!length(finite)) return(FALSE)
+    step <- as.numeric(if (is.null(args$step)) 1 else args$step)
+    start <- if (is.null(args$start)) min(finite) else as.numeric(args$start)
+    end <- if (is.null(args$end)) max(finite) else as.numeric(args$end)
+    if (step <= 0 || end < start) return(FALSE)
+    # The 1e-9 slack matches the Python: without it a range that is an exact multiple of the
+    # step loses its final point to floating-point drift.
+    target <- seq(start, end + 1e-9, by = step)
+  }
+
+  wrote <- FALSE
+  ox <- out_id(args, "interpx")
+  if (ox != -1) {
+    set_col(env, env$cols, ox, if (identical(mode, "resample")) target else xs_raw,
+            type = x_col$type, time_format = x_col$time_format)
+    wrote <- TRUE
+  }
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    ys <- interp_series(xs_raw, col_data(env$cols[[yk]], env$cols, env$raw_data), target, method)
+    oy <- out_id(args, paste0("interpy_", y_id))
+    if (oy == -1) oy <- out_id(args, "interpy")
+    if (oy != -1) {
+      set_col(env, env$cols, oy, ys, type = "number")
+      wrote <- TRUE
+    }
+  }
+  wrote
+}
+
+# Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
+# sits beside the existing `pyFunc`, so both legs read one fixture file).
+#
+# Referenced directly rather than wrapped in adapters: the fixtures already describe how to
+# build the call — `argRefs`/`valuesRef` name the inputs and `pyArgs`/`rArgs` supply the rest
+# — so the harness assembles positional arguments the same way for every kernel. Per-kernel
+# adapters would be a second, hand-maintained copy of that contract, and would drift.
+PURE_UTIL_MAP <- list(
+  correlation_ci = correlation_ci,
+  cross_correlation = cross_correlation,
+  describe_stats = describe_stats,
+  jarque_bera    = jarque_bera,
+  d_agostino     = d_agostino,
+  shapiro_wilk   = shapiro_wilk,
+  correlate      = correlate,
+  p_adjust       = p_adjust
+)
+
 # Analyses this runtime implements. Kept in step with R_IMPLEMENTED in
 # src/lib/_parity/runtimeCoverage.js by a test, in BOTH directions, so the declared reach and
 # the real reach cannot drift apart the way the Python port's did.
@@ -1210,6 +1541,11 @@ TABLE_PROCESS_MAP = list(
   columnfunctions = tp_columnfunctions,
   cosinor = tp_cosinor,
   describedata = tp_describedata,
+  chisquared = tp_chisquared,
+  correlation = tp_correlation,
+  crosscorrelation = tp_crosscorrelation,
+  interpolate = tp_interpolate,
+  logisticregression = tp_logisticregression,
   longtowide = tp_longtowide,
   nonparametricra = tp_nonparametricra,
   normalitytest = tp_normalitytest,
