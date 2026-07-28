@@ -125,7 +125,12 @@ run_tp_fixture <- function(fx, rec) {
     dyn_id <- 2000 + next_id
     next_id <- next_id + 1
     args$out[[k]] <- static_id
-    for (yid in y_ids) args$out[[paste0(k, "_", yid)]] <- dyn_id
+    for (yid in y_ids) {
+      args$out[[paste0(k, "_", yid)]] <- dyn_id
+      # Split names its outputs the other way round, "<yId>_<segment>"
+      # (Split.svelte:103), so register that form too or it is untestable.
+      args$out[[paste0(yid, "_", k)]] <- dyn_id
+    }
     env$cols[[as.character(static_id)]] <- new_column(id = static_id, name = k, data = static_id)
     env$cols[[as.character(dyn_id)]] <- new_column(id = dyn_id, name = paste0(k, "_dyn"),
                                                    data = dyn_id)

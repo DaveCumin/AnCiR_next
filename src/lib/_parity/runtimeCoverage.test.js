@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	PYTHON_GAPS,
+	PYTHON_ORPHANS,
 	NOT_APPLICABLE,
 	R_IMPLEMENTED,
 	R_PURE_UTILS,
@@ -82,6 +83,17 @@ describe('python runtime coverage', () => {
 		// Python fell 8 behind because nothing watched. It is now level with the JS engine,
 		// and this is what keeps it there.
 		expect(PYTHON_GAPS).toEqual([]);
+	});
+
+	it('implements nothing the app does not have', () => {
+		// The reverse direction, which nothing checked: an entry left behind by a REMOVED node
+		// is invisible to a "does every JS analysis have a port?" test.
+		const orphans = keys.filter((k) => !jsKeys.includes(k) && !PYTHON_ORPHANS.includes(k));
+		expect(
+			orphans,
+			`ancir_runtime.py dispatches analyses the app does not have: ${orphans}`
+		).toEqual([]);
+		expect(PYTHON_ORPHANS.length, 'the orphan list must not grow').toBeLessThanOrEqual(1);
 	});
 
 	it('treats a not-applicable analysis as done, not as debt', () => {

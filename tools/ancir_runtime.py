@@ -1820,32 +1820,68 @@ def tp_collectcolumns(args, cols, raw_data, _sv):
 # --- ColumnFunctions ---
 
 def tp_columnfunctions(args, cols, raw_data, _sv):
-    op = args.get('operation', 'add')
-    ids = args.get('colIds', _id_list(args.get('yIN')))
-    arrs = [cols[i].get_data() for i in ids if i in cols]
-    if not arrs:
+    """Element-wise combination of several columns. Mirrors ColumnFunctions.svelte:20-85.
+
+    Rewritten 2026-07-28 after a fixture showed the port disagreeing with the JS in four
+    ways at once, all silent:
+
+      - it read args['operation']; the node writes args['func'], so EVERY export used the
+        default 'add' no matter what the user picked,
+      - it read args['colIds']/args['yIN']; the node reads args['xsIN'],
+      - 'sd' divided by n; the JS uses the SAMPLE sd (n-1), and returns 0 for a single column,
+      - it skipped missing values per row, so 'average' divided by the count PRESENT while the
+        JS divides by the column count.
+
+    'add' also concatenates with a space when either operand column is categorical, which is
+    how the node builds compound labels.
+    """
+    func = args.get('func', args.get('operation', 'add'))
+    ids = args.get('xsIN')
+    if ids is None:
+        ids = args.get('colIds', _id_list(args.get('yIN')))
+    ids = [i for i in _id_list(ids) if i in cols]
+    if not ids:
         return False
-    n = max(len(a) for a in arrs)
-    rows = []
-    for i in range(n):
-        vals = [a[i] for a in arrs if i < len(a) and a[i] is not None
-                and not (isinstance(a[i], float) and math.isnan(a[i]))]
-        if not vals:
-            rows.append(None); continue
-        if op == 'add':       rows.append(sum(vals))
-        elif op == 'average': rows.append(sum(vals) / len(vals))
-        elif op == 'min':     rows.append(min(vals))
-        elif op == 'max':     rows.append(max(vals))
-        elif op == 'sd':
-            m = sum(vals) / len(vals)
-            rows.append(math.sqrt(sum((v - m) ** 2 for v in vals) / len(vals)))
-        else:                  rows.append(None)
-    out_id = _out_id(args, 'result')
-    _set_col(raw_data, cols, out_id, rows, type_='number')
-    return True
+    columns = [cols[i].get_data() for i in ids]
+    types = [cols[i].type for i in ids]
+    n = len(columns[0])
+    n_cols = len(columns)
 
+    def _num(v):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return float('nan')
 
-# --- Threshold ---
+    if func == 'add':
+        result = list(columns[0])
+        for i in range(1, n_cols):
+            cat = types[0] == 'category' or types[i] == 'category'
+            result = [(f"{result[j]} {columns[i][j]}" if cat
+                       else _num(result[j]) + _num(columns[i][j]))
+                      for j in range(n)]
+    elif func == 'average':
+        result = [sum(_num(c[j]) for c in columns) / n_cols for j in range(n)]
+    elif func == 'min':
+        result = [min(_num(c[j]) for c in columns) for j in range(n)]
+    elif func == 'max':
+        result = [max(_num(c[j]) for c in columns) for j in range(n)]
+    elif func == 'sd':
+        result = []
+        for j in range(n):
+            if n_cols < 2:
+                result.append(0)
+                continue
+            vals = [_num(c[j]) for c in columns]
+            mean = sum(vals) / n_cols
+            var = sum((v - mean) ** 2 for v in vals) / (n_cols - 1)
+            result.append(math.sqrt(var))
+    else:
+        return False
+
+    _set_col(raw_data, cols, _out_id(args, 'result'), result, type_='number')
+    return len(result) > 0
+
 
 def tp_threshold(args, cols, raw_data, _sv):
     # Binarise xIN at `threshold` by `comparison`; missing/non-numeric stay None.

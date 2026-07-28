@@ -45,6 +45,20 @@ export const NOT_APPLICABLE = ['columnset'];
 export const PYTHON_GAPS = [];
 
 /**
+ * Dispatch entries the Python port has for analyses the app does NOT have.
+ *
+ * The coverage check only ever ran one way — "does every JS analysis have a port?" — so an
+ * entry left behind by a REMOVED node was invisible. `duplicate` is one: there is no
+ * Duplicate.svelte, and hunting for it is how this was found. Dead rather than dangerous, but
+ * it costs bundle-free maintenance effort and misleads anyone reading the map as the list of
+ * what AnCiR can do.
+ *
+ * Recorded rather than deleted, because removing runtime code is the owner's call. The guard
+ * stops the list growing.
+ */
+export const PYTHON_ORPHANS = ['duplicate'];
+
+/**
  * Table processes the R port implements.
  *
  * Checked in both directions so it cannot lie. R is being ported deliberately rather than
@@ -61,14 +75,20 @@ export const PYTHON_GAPS = [];
  */
 export const R_IMPLEMENTED = [
 	'averageprofile',
+	'collectcolumns',
+	'columnfunctions',
 	'binneddata',
 	'cosinor',
 	'describedata',
+	'longtowide',
 	'nonparametricra',
 	'normalitytest',
 	'smootheddata',
+	'sort',
+	'split',
 	'threshold',
-	'trendfit'
+	'trendfit',
+	'widetolong'
 ];
 
 /**
@@ -85,6 +105,24 @@ export const R_COLUMN_PROCESSES = [
 	'sub',
 	'substitute'
 ];
+
+/**
+ * Analyses that are IMPLEMENTED but cannot be checked by the parity harness.
+ *
+ * These nodes decide their output-column KEYS at runtime — from a category value, a source
+ * column id, or a segment index — and create the columns in the Svelte component's reconcile
+ * rather than in `func`. Running `func` headlessly therefore produces nothing to compare: the
+ * harness sees an empty result and cannot tell a correct port from a broken one.
+ *
+ * MovingAnalysis was already known to have this shape (its fixture targets the pure windowing
+ * function instead). Split, LongToWide and CollectColumns turned out to be the same when
+ * fixtures were attempted for them.
+ *
+ * Listed so that "implemented" is never silently read as "verified". Closing this properly
+ * means moving output-column creation out of the components, which is a bigger change than
+ * the port.
+ */
+export const HARNESS_BLIND = ['collectcolumns', 'longtowide', 'movinganalysis', 'split'];
 
 /**
  * Pure numeric kernels the R port implements, keyed as the parity fixtures name them.

@@ -113,6 +113,9 @@ def run_table_process(fx, js):
         args["out"][k] = static_id
         for yid in y_ids:
             args["out"][f"{k}_{yid}"] = dyn_id
+            # Split names its outputs the other way round, "<yId>_<segment>"
+            # (Split.svelte:103), so register that form too or it is untestable.
+            args["out"][f"{yid}_{k}"] = dyn_id
         for oid, nm in ((static_id, k), (dyn_id, f"{k}_dyn")):
             cols[oid] = rt.Column(id=oid, name=nm, type="number", data=oid, raw_data=raw_data)
         out_ids[k] = (static_id, dyn_id)

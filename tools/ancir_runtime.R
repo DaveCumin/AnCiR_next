@@ -951,19 +951,274 @@ tp_nonparametricra <- function(args, env) {
   any_valid
 }
 
+# ---------------------------------------------------------------------------
+# Structural analyses (reshaping, ordering, combining)
+# ---------------------------------------------------------------------------
+
+# Mirror of sortRows.js::sortPermutation. Three rules that all matter:
+#   - missing values sort LAST whatever the direction (so "descending" does not surface
+#     gaps at the top),
+#   - a value that is not numeric compares as a STRING,
+#   - ties keep their original order.
+# R's order() cannot express the first rule directly, so the permutation is built by hand.
+sort_permutation <- function(key_values, direction = "asc") {
+  dir <- if (identical(direction, "desc")) -1 else 1
+  n <- length(key_values)
+  if (!n) return(integer(0))
+  miss <- logical(n); num <- rep(NA_real_, n); str <- rep(NA_character_, n)
+  for (i in seq_len(n)) {
+    v <- key_values[[i]]
+    if (is.null(v) || length(v) != 1 || (is.atomic(v) && is.na(v))) { miss[i] <- TRUE; next }
+    nv <- suppressWarnings(as.numeric(v))
+    if (is.na(nv)) str[i] <- as.character(v) else num[i] <- nv
+  }
+  any_str <- any(!is.na(str))
+  idx <- seq_len(n)
+  cmp <- function(a, b) {
+    if (miss[a] && miss[b]) return(a - b)
+    if (miss[a]) return(1)
+    if (miss[b]) return(-1)
+    c <- if (any_str) {
+      sa <- if (is.na(str[a])) format(num[a]) else str[a]
+      sb <- if (is.na(str[b])) format(num[b]) else str[b]
+      if (sa > sb) 1 else if (sa < sb) -1 else 0
+    } else {
+      if (num[a] > num[b]) 1 else if (num[a] < num[b]) -1 else 0
+    }
+    if (c != 0) return(dir * c)
+    a - b
+  }
+  # Insertion sort: n is a column length, and an explicit comparator keeps the three rules
+  # above readable and provably stable.
+  out <- integer(0)
+  for (i in idx) {
+    placed <- FALSE
+    if (length(out)) {
+      for (j in seq_along(out)) {
+        if (cmp(i, out[j]) < 0) {
+          out <- append(out, i, after = j - 1); placed <- TRUE; break
+        }
+      }
+    }
+    if (!placed) out <- c(out, i)
+  }
+  out
+}
+
+tp_sort <- function(args, env) {
+  y_ins <- id_list(args$yIN)
+  if (!length(y_ins)) return(FALSE)
+  direction <- if (identical(args$direction, "desc")) "desc" else "asc"
+  sort_on <- args$sortOnId
+  if (is.null(sort_on) || sort_on == -1 || !(sort_on %in% y_ins)) sort_on <- y_ins[1]
+  key_col <- env$cols[[as.character(sort_on)]]
+  if (is.null(key_col)) return(FALSE)
+  key_data <- col_data(key_col, env$cols, env$raw_data)
+  n <- length(key_data)
+  if (!n) return(FALSE)
+  ord <- sort_permutation(key_data, direction)
+  any_written <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    oid <- out_id(args, paste0("sortedy_", y_id))
+    if (oid == -1) next
+    yd <- col_data(env$cols[[yk]], env$cols, env$raw_data)
+    # Only columns row-aligned with the key are reordered; anything else passes through
+    # untouched rather than being scrambled against a key it does not share rows with.
+    reordered <- if (length(yd) == n) yd[ord] else yd
+    set_col(env, env$cols, oid, reordered,
+            type = env$cols[[yk]]$type, time_format = env$cols[[yk]]$time_format)
+    any_written <- TRUE
+  }
+  any_written
+}
+
+tp_collectcolumns <- function(args, env) {
+  ids <- if (!is.null(args$colIds)) unlist(args$colIds, use.names = FALSE) else id_list(args$yIN)
+  any_valid <- FALSE
+  for (cid in ids) {
+    ck <- as.character(cid)
+    if (is.null(env$cols[[ck]])) next
+    oid <- out_id(args, paste0("col_", cid))
+    if (oid == -1) next
+    set_col(env, env$cols, oid, col_data(env$cols[[ck]], env$cols, env$raw_data),
+            type = env$cols[[ck]]$type)
+    any_valid <- TRUE
+  }
+  any_valid
+}
+
+tp_split <- function(args, env) {
+  y_ins <- id_list(args$yIN)
+  if (!length(y_ins)) return(FALSE)
+  splits <- sort(suppressWarnings(as.numeric(unlist(args$splitTimes, use.names = FALSE))))
+  splits <- splits[is.finite(splits)]
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  x_data <- if (!is.null(env$cols[[as.character(x_in)]]))
+    t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data) else NULL
+  any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    y <- col_data(env$cols[[yk]], env$cols, env$raw_data)
+    x <- if (!is.null(x_data)) x_data else seq_along(y) - 1
+    # Segments are FULL LENGTH: each output keeps the array length and holds NA outside its
+    # own time window, so every segment stays row-aligned with the original x.
+    bounds <- c(-Inf, splits, Inf)
+    for (k in seq_len(length(splits) + 1)) {
+      lo <- bounds[k]; hi <- bounds[k + 1]
+      xv <- suppressWarnings(as.numeric(x))
+      seg <- ifelse(is.finite(xv) & xv >= lo & xv < hi,
+                    suppressWarnings(as.numeric(y)), NA_real_)
+      # Key is "<yId>_<segment>", matching Split.svelte:103 — NOT "segment<n>_<yId>".
+      oid <- out_id(args, paste0(y_id, "_", k))
+      if (oid == -1) next
+      set_col(env, env$cols, oid, seg, type = "number")
+      any_valid <- TRUE
+    }
+  }
+  any_valid
+}
+
+# Element-wise combination of several columns. Mirrors ColumnFunctions.svelte:20-85.
+#
+# The param is `func` and the inputs are `xsIN` — NOT `operation`/`colIds`, which is what the
+# Python port read until a fixture caught it (and so silently summed no matter what the user
+# chose). `sd` is the SAMPLE sd across columns (n-1), 0 for a single column, and `add`
+# concatenates with a space when either column is categorical.
+tp_columnfunctions <- function(args, env) {
+  func <- if (!is.null(args$func)) args$func
+          else if (!is.null(args$operation)) args$operation else "add"
+  ids <- if (!is.null(args$xsIN)) id_list(args$xsIN)
+         else if (!is.null(args$colIds)) id_list(args$colIds)
+         else id_list(args$yIN)
+  ids <- ids[vapply(ids, function(i) !is.null(env$cols[[as.character(i)]]), logical(1))]
+  if (!length(ids)) return(FALSE)
+  columns <- lapply(ids, function(i) col_data(env$cols[[as.character(i)]], env$cols, env$raw_data))
+  types <- vapply(ids, function(i) env$cols[[as.character(i)]]$type, character(1))
+  n <- length(columns[[1]])
+  n_cols <- length(columns)
+  num <- function(col, j) suppressWarnings(as.numeric(col[[j]]))
+
+  result <- if (identical(func, "add")) {
+    acc <- columns[[1]]
+    if (n_cols > 1) for (i in 2:n_cols) {
+      cat_mode <- types[1] == "category" || types[i] == "category"
+      acc <- lapply(seq_len(n), function(j) {
+        if (cat_mode) paste(acc[[j]], columns[[i]][[j]])
+        else suppressWarnings(as.numeric(acc[[j]])) + num(columns[[i]], j)
+      })
+    }
+    acc
+  } else if (identical(func, "average")) {
+    lapply(seq_len(n), function(j) sum(vapply(columns, num, numeric(1), j)) / n_cols)
+  } else if (identical(func, "min")) {
+    lapply(seq_len(n), function(j) min(vapply(columns, num, numeric(1), j)))
+  } else if (identical(func, "max")) {
+    lapply(seq_len(n), function(j) max(vapply(columns, num, numeric(1), j)))
+  } else if (identical(func, "sd")) {
+    lapply(seq_len(n), function(j) {
+      if (n_cols < 2) return(0)
+      v <- vapply(columns, num, numeric(1), j)
+      sqrt(sum((v - mean(v))^2) / (n_cols - 1))
+    })
+  } else return(FALSE)
+
+  set_col(env, env$cols, out_id(args, "result"), unlist(result, use.names = FALSE),
+          type = "number")
+  length(result) > 0
+}
+
+tp_widetolong <- function(args, env) {
+  x_in <- if (!is.null(args$timeIN)) args$timeIN else if (!is.null(args$xIN)) args$xIN else -1
+  y_ins <- id_list(if (!is.null(args$valueColIds)) args$valueColIds else args$yIN)
+  if (!length(y_ins)) return(FALSE)
+  times <- list(); cats <- character(0); vals <- list()
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    y_col <- env$cols[[yk]]
+    yd <- col_data(y_col, env$cols, env$raw_data)
+    xd <- if (x_in != -1 && !is.null(env$cols[[as.character(x_in)]]))
+      col_data(env$cols[[as.character(x_in)]], env$cols, env$raw_data) else as.list(seq_along(yd) - 1)
+    for (i in seq_along(yd)) {
+      xi <- if (i <= length(xd)) xd[[i]] else NULL
+      yi <- yd[[i]]
+      if (is.null(xi) || is.null(yi)) next
+      if (length(xi) != 1 || length(yi) != 1) next
+      if ((is.character(xi) && !nzchar(xi)) || (is.character(yi) && !nzchar(yi))) next
+      if (is.atomic(xi) && is.na(xi)) next
+      if (is.atomic(yi) && is.na(yi)) next
+      times[[length(times) + 1]] <- xi
+      cats <- c(cats, if (is.null(y_col$name)) yk else y_col$name)
+      vals[[length(vals) + 1]] <- yi
+    }
+  }
+  x_col <- if (x_in != -1) env$cols[[as.character(x_in)]] else NULL
+  set_col(env, env$cols, out_id(args, "time"), unlist(times, use.names = FALSE),
+          type = if (!is.null(x_col)) x_col$type else "number",
+          time_format = if (!is.null(x_col)) x_col$time_format else NULL)
+  set_col(env, env$cols, out_id(args, "category"), cats, type = "category")
+  set_col(env, env$cols, out_id(args, "value"), unlist(vals, use.names = FALSE), type = "number")
+  TRUE
+}
+
+tp_longtowide <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  cat_in <- if (!is.null(args$categoryColId)) args$categoryColId
+            else if (!is.null(args$catIN)) args$catIN else -1
+  val_in <- if (!is.null(args$valueColId)) args$valueColId
+            else if (!is.null(args$valIN)) args$valIN else -1
+  if (x_in == -1 || cat_in == -1 || val_in == -1) return(FALSE)
+  xk <- as.character(x_in)
+  if (is.null(env$cols[[xk]])) return(FALSE)
+  xd <- unlist(col_data(env$cols[[xk]], env$cols, env$raw_data), use.names = FALSE)
+  cd <- as.character(unlist(col_data(env$cols[[as.character(cat_in)]], env$cols, env$raw_data),
+                            use.names = FALSE))
+  vd <- suppressWarnings(as.numeric(unlist(col_data(env$cols[[as.character(val_in)]],
+                                                    env$cols, env$raw_data), use.names = FALSE)))
+  n <- min(length(xd), length(cd), length(vd))
+  xd <- xd[seq_len(n)]; cd <- cd[seq_len(n)]; vd <- vd[seq_len(n)]
+  # pandas pivot_table SORTS both the index and the columns, and aggregates duplicates with
+  # the mean. Matching that ordering matters: the output columns are addressed by name, so a
+  # different order would pair the wrong values with the wrong ids.
+  ux <- sort(unique(xd))
+  uc <- sort(unique(cd))
+  set_col(env, env$cols, out_id(args, "time"), ux,
+          type = env$cols[[xk]]$type, time_format = env$cols[[xk]]$time_format)
+  for (cc in uc) {
+    oid <- out_id(args, paste0("value_", cc))
+    if (oid == -1) next
+    vals <- vapply(ux, function(xx) {
+      sel <- vd[xd == xx & cd == cc]
+      sel <- sel[is.finite(sel)]
+      if (!length(sel)) NA_real_ else mean(sel)
+    }, numeric(1))
+    set_col(env, env$cols, oid, vals, type = "number")
+  }
+  TRUE
+}
+
 # Analyses this runtime implements. Kept in step with R_IMPLEMENTED in
 # src/lib/_parity/runtimeCoverage.js by a test, in BOTH directions, so the declared reach and
 # the real reach cannot drift apart the way the Python port's did.
 TABLE_PROCESS_MAP = list(
   averageprofile = tp_averageprofile,
   binneddata = tp_binneddata,
+  collectcolumns = tp_collectcolumns,
+  columnfunctions = tp_columnfunctions,
   cosinor = tp_cosinor,
   describedata = tp_describedata,
+  longtowide = tp_longtowide,
   nonparametricra = tp_nonparametricra,
   normalitytest = tp_normalitytest,
   smootheddata = tp_smootheddata,
+  sort = tp_sort,
+  split = tp_split,
   threshold = tp_threshold,
-  trendfit = tp_trendfit
+  trendfit = tp_trendfit,
+  widetolong = tp_widetolong
 )
 
 # Column processes. Strict for the same reason analyses are: a column silently missing its
