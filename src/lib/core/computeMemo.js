@@ -89,20 +89,25 @@ export function nodeMemo(p, kind) {
 	// the loop, cache or no cache.
 	let local = '';
 	let localPayload;
-	let counted;
 	const usable = () => key != null && memoEnabled;
 	return {
 		get hash() {
 			return usable() ? (cache.get(key)?.hash ?? '') : local;
 		},
 		set hash(v) {
-			// Count each distinct compute once. Several nodes mark the hash twice for
-			// one run (the effect claims it before dispatching, the compute function
-			// records it on completion), which would otherwise inflate the figure.
-			if (DEV && v !== counted) {
-				counted = v;
-				countCompute(label);
-			}
+			// Count a compute only when this write actually CHANGES the recorded
+			// hash. Two things would otherwise be counted as work that is not work.
+			// Several nodes mark the hash twice for a single run (the effect claims
+			// it before dispatching, the compute function records it on completion).
+			// And the nodes with a bespoke mount-time load branch — Split,
+			// SmoothedData, LongToWide, CollectColumns — re-pin the unchanged hash on
+			// every mount to say "the baked data is still current"; comparing against
+			// a per-instance variable made each of those remounts look like a
+			// recompute, which is exactly the false positive this metric exists to
+			// detect. Compare against what is stored, not against what this instance
+			// happens to have seen.
+			const prev = usable() ? cache.get(key)?.hash : local;
+			if (DEV && v !== prev) countCompute(label);
 			local = v;
 			if (key == null) return;
 			const entry = cache.get(key);
@@ -173,6 +178,16 @@ export function _memoSize() {
 /** Test seam: force the A/B switch. */
 export function _setMemoEnabled(v) {
 	memoEnabled = v;
+}
+
+/** Test seam: total computes counted since the last reset. DEV builds only. */
+export function _computeCount() {
+	return [...computeCounts.values()].reduce((n, c) => n + c, 0);
+}
+
+/** Test seam: clear the counter. */
+export function _resetComputeCount() {
+	computeCounts.clear();
 }
 
 // --- Dev-only instrumentation ----------------------------------------------

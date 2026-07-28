@@ -1,5 +1,6 @@
 <script module>
 	import { core } from '$lib/core/core.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import minstd from '@stdlib/random-base-minstd-shuffle';
 	import uniform from '@stdlib/random-base-uniform';
 	import normal from '@stdlib/random-base-normal';
@@ -90,17 +91,10 @@
 		for (let i = 0; i < n; i++) {
 			result.push(Number(generator().toFixed(2)));
 		}
-		if (argsIN.out.result != null && argsIN.out.result >= 0) {
-			core.rawData.set(argsIN.out.result, result);
-			const outCol = /** @type {any} */ (getColumnById(argsIN.out.result));
-			if (outCol) {
-				outCol.data = argsIN.out.result;
-				outCol.type = typeof result[0] != 'number' ? 'category' : 'number';
-
-				const processHash = crypto.randomUUID();
-				outCol.tableProcessGUId = processHash;
-			}
-		}
+		writeOutputColumn(argsIN.out.result, result, {
+			type: typeof result[0] != 'number' ? 'category' : 'number',
+			processHash: crypto.randomUUID()
+		});
 
 		return [result, result.length > 0];
 	}

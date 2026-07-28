@@ -1,5 +1,6 @@
 <script module>
 	import { core, getStoredValue } from '$lib/core/core.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 
 	const displayName = 'Formula Column';
@@ -72,13 +73,10 @@ return _r;`
 			return [[], false];
 		}
 
-		if (argsIN.out.result !== -1) {
-			core.rawData.set(argsIN.out.result, result);
-			getColumnById(argsIN.out.result).data = argsIN.out.result;
-			getColumnById(argsIN.out.result).type = typeof result[0] === 'string' ? 'category' : 'number';
-			const processHash = crypto.randomUUID();
-			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
-		}
+		writeOutputColumn(argsIN.out.result, result, {
+			type: typeof result[0] === 'string' ? 'category' : 'number',
+			processHash: crypto.randomUUID()
+		});
 
 		return [result, result.length > 0];
 	}
@@ -167,12 +165,20 @@ return _r;`
 			p.args.valid = false;
 		}
 
-		// Clear the output column whenever the formula is invalid
+		// Clear the output column whenever the formula is invalid.
+		//
+		// This used to be a bare `core.rawData.set(outId, [])`, which cleared
+		// nothing as far as anyone downstream was concerned: getDataHash does not
+		// read rawData, so the hash was unchanged, Column.getData() returned its
+		// cached array, and every consumer went on plotting the values from the
+		// last formula that worked. Going through the writer stamps a hash, so the
+		// clear actually propagates.
 		if (!p.args.valid) {
 			const outId = p.args.out?.result;
-			if (outId !== undefined && outId !== -1) {
-				core.rawData.set(outId, []);
-			}
+			writeOutputColumn(outId, [], {
+				type: getColumnById(outId)?.type ?? 'number',
+				processHash: crypto.randomUUID()
+			});
 		}
 	}
 

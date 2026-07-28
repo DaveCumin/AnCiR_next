@@ -10,6 +10,7 @@
 	// column first (CollectColumns); correcting each column separately and calling
 	// the result "the" FDR would understate the true multiplicity.
 	import { core } from '$lib/core/core.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { pAdjust, PADJUST_METHODS } from '$lib/utils/pAdjust.js';
@@ -75,14 +76,7 @@
 	}
 
 	function writeOut(outId, values, type) {
-		if (outId == null || outId < 0) return;
-		core.rawData.set(outId, values);
-		const outCol = /** @type {any} */ (getColumnById(outId));
-		if (outCol) {
-			outCol.data = outId;
-			outCol.type = type;
-			outCol.tableProcessGUId = crypto.randomUUID();
-		}
+		writeOutputColumn(outId, values, { type, processHash: crypto.randomUUID() });
 	}
 
 	export const definition = {

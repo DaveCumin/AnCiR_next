@@ -1,5 +1,6 @@
 <script module>
 	import { core } from '$lib/core/core.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	const displayName = 'Column Function';
 	const defaults = new Map([
@@ -75,12 +76,13 @@
 				return [[], false];
 		}
 
-		if (argsIN.out.result != null && argsIN.out.result >= 0) {
-			core.rawData.set(argsIN.out.result, result);
-			getColumnById(argsIN.out.result).data = argsIN.out.result;
-			getColumnById(argsIN.out.result).type = typeof result[0] !== 'string' ? 'category' : 'number';
-			getColumnById(argsIN.out.result).tableProcessGUId = crypto.randomUUID();
-		}
+		// The type test used to be inverted (`!== 'string' ? 'category' : 'number'`),
+		// so this node's output — always numeric, every branch above returns numbers —
+		// was tagged 'category'. Matches FormulaColumn's test, which was correct.
+		writeOutputColumn(argsIN.out.result, result, {
+			type: typeof result[0] === 'string' ? 'category' : 'number',
+			processHash: crypto.randomUUID()
+		});
 
 		return [result, result.length > 0];
 	}

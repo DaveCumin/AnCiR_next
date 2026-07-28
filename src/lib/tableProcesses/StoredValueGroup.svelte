@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { core, getStoredValue } from '$lib/core/core.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -54,13 +55,8 @@
 				const outKey = `group_${groupId}`;
 				const outId = Number(argsIN.out?.[outKey]);
 				if (outId < 0) continue;
-				const outCol = getColumnById(outId);
-				if (!outCol) continue;
 				const vals = result.groups[groupId]?.values ?? [];
-				core.rawData.set(outId, vals);
-				outCol.data = outId;
-				outCol.type = 'number';
-				outCol.tableProcessGUId = processHash;
+				writeOutputColumn(outId, vals, { processHash });
 			}
 		}
 

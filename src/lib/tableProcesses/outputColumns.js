@@ -54,20 +54,30 @@ function sameColumnData(a, b) {
  *   consumers' hashes change; share one hash across all of a run's outputs
  * @param {any} [opts.timeFormat] - set col.timeFormat when provided (pass null
  *   for raw-ms time columns); omitted = leave untouched
+ * @param {number|null} [opts.originTime_ms] - set col.originTime_ms when
+ *   provided; omitted = leave untouched. Binned/sorted time outputs carry the
+ *   baseline their hours are measured from, and it must take part in the
+ *   comparison below: identical numbers against a different origin are a
+ *   different instant.
  * @returns {boolean} true if the column exists and now holds `data` — including
  *   when the write was skipped as redundant. Callers use it to tell a wired port
  *   from an unwired one, not to detect that bytes moved.
  */
-export function writeOutputColumn(colId, data, { type = 'number', processHash, timeFormat } = {}) {
+export function writeOutputColumn(
+	colId,
+	data,
+	{ type = 'number', processHash, timeFormat, originTime_ms } = {}
+) {
 	if (colId == null || colId === -1) return false;
 	const col = getColumnById(colId);
 	if (!col) return false;
 	// Every field the write would touch must already match, not just the data:
-	// a type or timeFormat change alters how the same numbers are read.
+	// a type, timeFormat or origin change alters how the same numbers are read.
 	if (
 		col.data === colId &&
 		col.type === type &&
 		(timeFormat === undefined || col.timeFormat === timeFormat) &&
+		(originTime_ms === undefined || col.originTime_ms === originTime_ms) &&
 		sameColumnData(core.rawData.get(colId), data)
 	) {
 		return true;
@@ -76,6 +86,7 @@ export function writeOutputColumn(colId, data, { type = 'number', processHash, t
 	col.data = colId;
 	col.type = type;
 	if (timeFormat !== undefined) col.timeFormat = timeFormat;
+	if (originTime_ms !== undefined) col.originTime_ms = originTime_ms;
 	if (processHash != null) col.tableProcessGUId = processHash;
 	return true;
 }

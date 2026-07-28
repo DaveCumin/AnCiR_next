@@ -10,6 +10,7 @@
 	// question — the pairing matters, and the node surfaces a warning when it is
 	// wrong (surrogateAdvice).
 	import { core } from '$lib/core/core.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { surrogateTest, surrogateAdvice, SURROGATE_METHODS } from '$lib/utils/surrogates.js';
@@ -111,14 +112,7 @@
 	}
 
 	function writeOut(outId, values) {
-		if (outId == null || outId < 0) return;
-		core.rawData.set(outId, values);
-		const outCol = /** @type {any} */ (getColumnById(outId));
-		if (outCol) {
-			outCol.data = outId;
-			outCol.type = 'number';
-			outCol.tableProcessGUId = crypto.randomUUID();
-		}
+		writeOutputColumn(outId, values, { processHash: crypto.randomUUID() });
 	}
 
 	export const definition = {

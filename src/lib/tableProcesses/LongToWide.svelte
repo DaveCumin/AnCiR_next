@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 
 	const displayName = 'Long To Wide';
@@ -125,27 +126,26 @@
 		// Store raw strings when available so that getData() (which re-parses via getUNIXDate)
 		// produces correct UNIX ms. When raw strings are unavailable, store UNIX ms directly
 		// and clear timeFormat so getUNIXDate short-circuits and returns them unchanged.
-		core.rawData.set(timeColId, unionTimesForStorage);
-		getColumnById(timeColId).data = timeColId;
-		getColumnById(timeColId).type = getColumnById(timeIN).type;
-		if (rawTimeInput != null && getColumnById(timeIN).timeFormat) {
-			getColumnById(timeColId).timeFormat = getColumnById(timeIN).timeFormat;
-		} else if (rawTimeInput == null) {
-			getColumnById(timeColId).timeFormat = '';
-		}
-
 		const processHash = crypto.randomUUID();
-		getColumnById(timeColId).tableProcessGUId = processHash;
+		const timeInCol = getColumnById(timeIN);
+		// Three cases, preserved exactly: adopt the source format when raw strings
+		// were kept, blank it when only ms are stored (so getUNIXDate passes them
+		// straight through), and otherwise leave whatever the column had.
+		let timeFormat;
+		if (rawTimeInput != null && timeInCol.timeFormat) timeFormat = timeInCol.timeFormat;
+		else if (rawTimeInput == null) timeFormat = '';
+		writeOutputColumn(timeColId, unionTimesForStorage, {
+			type: timeInCol.type,
+			timeFormat,
+			processHash
+		});
 
+		const valueType = getColumnById(valueIN).type;
 		for (const cat of categories) {
-			const outKey = 'value_' + cat;
-			const outColId = argsIN.out[outKey];
-			if (outColId !== undefined && outColId !== -1) {
-				core.rawData.set(outColId, result[outKey]);
-				getColumnById(outColId).data = outColId;
-				getColumnById(outColId).type = getColumnById(valueIN).type;
-				getColumnById(outColId).tableProcessGUId = processHash;
-			}
+			writeOutputColumn(argsIN.out['value_' + cat], result['value_' + cat], {
+				type: valueType,
+				processHash
+			});
 		}
 	}
 

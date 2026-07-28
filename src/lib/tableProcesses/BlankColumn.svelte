@@ -1,5 +1,17 @@
 <script module>
 	import { core, getStoredValue } from '$lib/core/core.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
+
+	/**
+	 * The numeric-data detection every entry path in this node shares: treat the
+	 * column as numeric when nothing is non-numeric AND at least one cell has been
+	 * filled in, so an untouched column stays categorical rather than becoming a
+	 * column of NaN. The three call sites shape their data slightly differently
+	 * afterwards, so only the test is shared.
+	 */
+	function looksNumeric(vals) {
+		return vals.every((v) => v === '' || !isNaN(Number(v))) && vals.some((v) => v !== '');
+	}
 
 	const displayName = 'Enter Data';
 	const defaults = new Map([
@@ -34,11 +46,10 @@
 				}
 			}
 
-			core.rawData.set(argsIN.out.result, result);
-			getColumnById(argsIN.out.result).data = argsIN.out.result;
-			getColumnById(argsIN.out.result).type = 'category';
-			const processHash = crypto.randomUUID();
-			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
+			writeOutputColumn(argsIN.out.result, result, {
+				type: 'category',
+				processHash: crypto.randomUUID()
+			});
 		}
 
 		return [result, true];
@@ -175,25 +186,13 @@
 	});
 
 	function commitExtra(colId) {
-		const col = getColumnById(colId);
-		if (!col) return;
 		const vals = extraData[colId] ?? [];
-		const allNumeric = vals.every((v) => v === '' || !isNaN(Number(v)));
-		if (allNumeric && vals.some((v) => v !== '')) {
-			core.rawData.set(
-				colId,
-				vals.map((v) => (v === '' ? NaN : Number(v)))
-			);
-			col.type = 'number';
-		} else {
-			core.rawData.set(
-				colId,
-				vals.map((v) => String(v))
-			);
-			col.type = 'category';
-		}
-		col.data = colId;
-		col.tableProcessGUId = crypto.randomUUID();
+		const numeric = looksNumeric(vals);
+		writeOutputColumn(
+			colId,
+			numeric ? vals.map((v) => (v === '' ? NaN : Number(v))) : vals.map((v) => String(v)),
+			{ type: numeric ? 'number' : 'category', processHash: crypto.randomUUID() }
+		);
 	}
 
 	function handleExtraInput(colId, i, val) {
@@ -349,19 +348,16 @@
 				}
 			}
 
-			// Try to detect numeric data
-			const allNumeric = editableData.every((v) => v === '' || !isNaN(Number(v)));
-			const col = getColumnById(p.args.out.result);
-			if (allNumeric && editableData.some((v) => v !== '')) {
-				const numData = editableData.map((v) => (v === '' ? NaN : Number(v)));
-				core.rawData.set(p.args.out.result, numData);
-				col.type = 'number';
-			} else {
-				core.rawData.set(p.args.out.result, [...editableData]);
-				col.type = 'category';
-			}
-			const processHash = crypto.randomUUID();
-			col.tableProcessGUId = processHash;
+			// Note the categorical branch keeps the entered values as-is rather than
+			// stringifying them (unlike commitExtra/setColData): a stored-value ref
+			// substitutes a real number into editableData, and that should stay a
+			// number. Preserved deliberately.
+			const numeric = looksNumeric(editableData);
+			writeOutputColumn(
+				p.args.out.result,
+				numeric ? editableData.map((v) => (v === '' ? NaN : Number(v))) : [...editableData],
+				{ type: numeric ? 'number' : 'category', processHash: crypto.randomUUID() }
+			);
 			result = [...editableData];
 		}
 	}
@@ -467,25 +463,13 @@
 
 	// Write a column's data + type (numeric detection mirrors commitData()).
 	function setColData(colId, values) {
-		const col = getColumnById(colId);
-		if (!col) return;
 		const vals = values.map((v) => (v == null ? '' : v));
-		const allNumeric = vals.every((v) => v === '' || !isNaN(Number(v)));
-		if (allNumeric && vals.some((v) => v !== '')) {
-			core.rawData.set(
-				colId,
-				vals.map((v) => (v === '' ? NaN : Number(v)))
-			);
-			col.type = 'number';
-		} else {
-			core.rawData.set(
-				colId,
-				vals.map((v) => String(v))
-			);
-			col.type = 'category';
-		}
-		col.data = colId;
-		col.tableProcessGUId = crypto.randomUUID();
+		const numeric = looksNumeric(vals);
+		writeOutputColumn(
+			colId,
+			numeric ? vals.map((v) => (v === '' ? NaN : Number(v))) : vals.map((v) => String(v)),
+			{ type: numeric ? 'number' : 'category', processHash: crypto.randomUUID() }
+		);
 	}
 
 	// Materialise parsed tabular data as the node's output columns: column 0 reuses

@@ -1,5 +1,6 @@
 <script module>
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { core } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
@@ -83,16 +84,15 @@
 			const yData = yCol.getData();
 			// Only reorder columns row-aligned with the key; others pass through.
 			const reordered = yData.length === n ? applyPermutation(yData, order) : yData;
-			core.rawData.set(yOUT, reordered);
-			/** @type {any} */
-			const yOutCol = getColumnById(yOUT);
-			yOutCol.data = yOUT;
-			yOutCol.type = yCol.type;
-			if (yCol.type === 'time') {
-				yOutCol.timeFormat = null;
-				yOutCol.originTime_ms = yCol.originTime_ms ?? null;
-			}
-			yOutCol.tableProcessGUId = processHash;
+			const isTime = yCol.type === 'time';
+			writeOutputColumn(yOUT, reordered, {
+				type: yCol.type,
+				// Sorted time data is already parsed ms, so clear timeFormat to stop
+				// getData() re-parsing it. Non-time columns leave both fields alone.
+				timeFormat: isTime ? null : undefined,
+				originTime_ms: isTime ? (yCol.originTime_ms ?? null) : undefined,
+				processHash
+			});
 			result.y_results[yId] = reordered;
 			anyWritten = true;
 		}

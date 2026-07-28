@@ -1,5 +1,6 @@
 <script module>
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import minstd from '@stdlib/random-base-minstd-shuffle';
 
 	import { core } from '$lib/core/core.svelte';
@@ -103,21 +104,15 @@
 		if (timeOUT == -1 || valuesOUT == -1) {
 			//this is just for preview, when no column is made
 		} else {
-			//this is for making and updating; set everything for the given columns
-
-			core.rawData.set(timeOUT, simulatedTime);
-			getColumnById(timeOUT).data = timeOUT;
-			getColumnById(timeOUT).type = 'time';
-			getColumnById(timeOUT).timeFormat = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
-
-			core.rawData.set(valuesOUT, simulatedValues);
-			getColumnById(valuesOUT).data = valuesOUT;
-			getColumnById(valuesOUT).type = 'number';
-
-			//update for reactivity
+			// One hash across both outputs so a consumer reading time and values sees
+			// a single coherent change rather than two.
 			const processHash = crypto.randomUUID();
-			getColumnById(timeOUT).tableProcessGUId = processHash;
-			getColumnById(valuesOUT).tableProcessGUId = processHash;
+			writeOutputColumn(timeOUT, simulatedTime, {
+				type: 'time',
+				timeFormat: 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]',
+				processHash
+			});
+			writeOutputColumn(valuesOUT, simulatedValues, { processHash });
 		}
 
 		return [simulatedTime, simulatedValues, simulatedValues.length > 0];

@@ -3,7 +3,15 @@
 // reported a hit would make every "did it skip?" test pass while quietly serving
 // stale results, which is exactly the failure this change risks.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { nodeMemo, memoForget, memoClear, _memoSize, _setMemoEnabled } from './computeMemo.js';
+import {
+	nodeMemo,
+	memoForget,
+	memoClear,
+	_memoSize,
+	_setMemoEnabled,
+	_computeCount,
+	_resetComputeCount
+} from './computeMemo.js';
 
 const tp = (id, name = 'Cosinor') => ({ id, name });
 
@@ -84,6 +92,47 @@ describe('identity', () => {
 		m.hash = 'h1';
 		expect(_memoSize()).toBe(0);
 		expect(wouldCompute(nodeMemo({ name: 'X' }, 'tableprocess'), 'h1')).toBe(true);
+	});
+});
+
+describe('the compute metric counts work, not bookkeeping', () => {
+	// This measures the change it is meant to prove, so a false positive here
+	// sends you hunting a performance bug that does not exist. It did: four nodes
+	// (Split, SmoothedData, LongToWide, CollectColumns) re-pin their unchanged
+	// hash on every mount to say "the baked data is still current", and counting
+	// that as a compute made each remount look like a full recompute. Logging
+	// inside Split showed its compute effect never fired at all.
+	beforeEach(() => _resetComputeCount());
+
+	it('counts a hash that actually changed', () => {
+		const m = nodeMemo({ id: 1, name: 'Split' }, 'tableprocess');
+		m.hash = 'h1';
+		expect(_computeCount()).toBe(1);
+	});
+
+	it('does NOT count a remount re-pinning the same hash', () => {
+		nodeMemo({ id: 1, name: 'Split' }, 'tableprocess').hash = 'h1';
+		_resetComputeCount();
+		// A fresh handle for the same node is exactly what a remount produces.
+		nodeMemo({ id: 1, name: 'Split' }, 'tableprocess').hash = 'h1';
+		expect(_computeCount()).toBe(0);
+	});
+
+	it('does NOT double-count one run that marks the hash twice', () => {
+		// The effect claims the hash before dispatching; the compute function
+		// records it again on completion. That is one compute, not two.
+		const m = nodeMemo({ id: 1, name: 'Cosinor' }, 'tableprocess');
+		m.hash = 'h1';
+		m.hash = 'h1';
+		expect(_computeCount()).toBe(1);
+	});
+
+	it('counts again once the inputs really change', () => {
+		const m = nodeMemo({ id: 1, name: 'Cosinor' }, 'tableprocess');
+		m.hash = 'h1';
+		_resetComputeCount();
+		m.hash = 'h2';
+		expect(_computeCount()).toBe(1);
 	});
 });
 

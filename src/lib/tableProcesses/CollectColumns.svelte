@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { min as arrMin, max as arrMax } from '$lib/utils/stats.js';
@@ -43,19 +44,14 @@
 			const processHash = crypto.randomUUID();
 			for (const colId of colIds) {
 				const outColId = argsIN.out['col_' + colId];
-				if (outColId !== undefined && Number(outColId) >= 0) {
-					core.rawData.set(outColId, result[colId]);
-					const outCol = getColumnById(outColId);
-					const inCol = getColumnById(colId);
-					outCol.data = outColId;
-					outCol.type = inCol?.type ?? 'number';
+				const type = getColumnById(colId)?.type ?? 'number';
+				writeOutputColumn(outColId, result[colId], {
+					type,
 					// For time columns: the collected data is already parsed UNIX ms,
 					// so clear timeFormat to prevent getData() from re-parsing.
-					if (outCol.type === 'time') {
-						outCol.timeFormat = null;
-					}
-					outCol.tableProcessGUId = processHash;
-				}
+					timeFormat: type === 'time' ? null : undefined,
+					processHash
+				});
 			}
 		}
 
@@ -87,13 +83,7 @@
 				aggData.push(aggVal);
 			}
 
-			core.rawData.set(outColId, aggData);
-			const aggCol = getColumnById(outColId);
-			if (aggCol) {
-				aggCol.data = outColId;
-				aggCol.type = 'number';
-				aggCol.tableProcessGUId = crypto.randomUUID();
-			}
+			writeOutputColumn(outColId, aggData, { processHash: crypto.randomUUID() });
 		}
 
 		return [result, colIds.length > 0];

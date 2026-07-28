@@ -3,6 +3,7 @@
 	// The main use is making a BINARY outcome for LogisticRegression, but it's general: "flag
 	// every value above 100", "mark the active hours", etc. One input column, one 0/1 output.
 	import { core } from '$lib/core/core.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 
@@ -44,16 +45,7 @@
 			return cmp(n, t) ? 1 : 0;
 		});
 
-		const outId = argsIN.out?.binary;
-		if (outId != null && outId >= 0) {
-			core.rawData.set(outId, result);
-			const outCol = /** @type {any} */ (getColumnById(outId));
-			if (outCol) {
-				outCol.data = outId;
-				outCol.type = 'number';
-				outCol.tableProcessGUId = crypto.randomUUID();
-			}
-		}
+		writeOutputColumn(argsIN.out?.binary, result, { processHash: crypto.randomUUID() });
 
 		return [result, result.length > 0];
 	}

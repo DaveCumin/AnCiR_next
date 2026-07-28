@@ -1,5 +1,6 @@
 <script module>
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { core } from '$lib/core/core.svelte';
 
 	const displayName = 'Sequence Column';
@@ -44,18 +45,15 @@
 			if (result.length > 100000) result = result.slice(0, 100000);
 		}
 
-		if (argsIN.out.result == null || argsIN.out.result < 0) {
-			// preview only (output column not allocated yet)
-		} else {
-			core.rawData.set(argsIN.out.result, result);
-			getColumnById(argsIN.out.result).data = argsIN.out.result;
-			getColumnById(argsIN.out.result).type = argsIN.seqType === 'time' ? 'time' : 'number';
-			if (argsIN.seqType === 'time') {
-				getColumnById(argsIN.out.result).timeFormat = 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]';
-			}
-			const processHash = crypto.randomUUID();
-			getColumnById(argsIN.out.result).tableProcessGUId = processHash;
-		}
+		// An unallocated out column (preview) is a no-op inside the helper.
+		const isTime = argsIN.seqType === 'time';
+		writeOutputColumn(argsIN.out.result, result, {
+			type: isTime ? 'time' : 'number',
+			// Only touch timeFormat for a time sequence; a numeric one leaves
+			// whatever the column already carried, as before.
+			timeFormat: isTime ? 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]' : undefined,
+			processHash: crypto.randomUUID()
+		});
 
 		return [result, result.length > 0];
 	}

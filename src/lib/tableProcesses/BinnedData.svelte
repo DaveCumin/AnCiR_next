@@ -169,19 +169,24 @@
 				const baseline = arrayMin(xInCol.getData());
 				const origin = baseline ?? 0;
 				// Store ms timestamps so the column reads as real time data.
-				core.rawData.set(
+				writeOutputColumn(
 					xOUT,
-					result.bins.map((h) => origin + h * 3600000)
+					result.bins.map((h) => origin + h * 3600000),
+					{
+						type: 'time',
+						timeFormat: null,
+						// Left untouched when there is no baseline, as before.
+						originTime_ms: baseline ?? undefined,
+						processHash
+					}
 				);
-				xOutCol.type = 'time';
-				xOutCol.timeFormat = null;
-				if (baseline != null) xOutCol.originTime_ms = baseline;
 			} else {
-				core.rawData.set(xOUT, result.bins);
-				xOutCol.type = 'bin';
-				xOutCol.originTime_ms = null;
+				writeOutputColumn(xOUT, result.bins, {
+					type: 'bin',
+					originTime_ms: null,
+					processHash
+				});
 			}
-			xOutCol.tableProcessGUId = processHash;
 
 			for (const yId of yINs) {
 				const yOUT = argsIN.out['binnedy_' + yId];
