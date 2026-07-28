@@ -3636,6 +3636,47 @@
 				"value"
 			],
 			"rFunc": "widetolong"
+		},
+		{
+			"id": "tp-rectangularwave-phase14",
+			"kind": "tableProcess",
+			"jsName": "RectangularWave",
+			"pyFunc": "rectangularwave",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 25,
+				"mesor": 40,
+				"phase": 14,
+				"noise": 2,
+				"seed": 701,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"outputX": -1,
+				"out": {
+					"rectwavex": -1,
+					"r2": -1,
+					"rmse": -1
+				}
+			},
+			"compareOutputs": [
+				"rectwavex",
+				"rectwavey",
+				"r2",
+				"rmse"
+			],
+			"tolerance": 0.001,
+			"toleranceWhy": "Measured, not guessed. The model is M + A*tanh(k*(sin(wt+phi) - cos(pi*d))): tanh SATURATES, so over most of the cycle the curve is pinned near +/-1 and the surface is flat \u2014 many parameter sets give near-identical curves and the last digits are not resolvable by any optimiser. JS and Python land on the SAME optimum (RSS 699.5074 vs 699.4420, 9e-5 relative, Python's marginally lower); the fitted values agree to 3.8e-4 relative at worst. 1e-3 bounds that with room to spare, and is tight enough that a real divergence would still fail. This is a pre-existing JS<->Python property of the model, not a regression.",
+			"rFunc": "rectangularwave"
 		}
 	]
 }

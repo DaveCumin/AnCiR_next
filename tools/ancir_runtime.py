@@ -1516,6 +1516,18 @@ def tp_cosinor(args, cols, raw_data, _sv):
     # (rhythm-adjusted mean) and acrophase (peak time, wrapped into [0, period)).
     mesor_by_y = {}
     acro_by_y = {}
+    # Declared metric ports that had no writer until 2026-07-28. A session wiring any of
+    # these downstream got an EMPTY column from the export — and these are the headline
+    # numbers of a cosinor, not incidental extras. Found by seeding every declared output
+    # and checking which came back written, rather than by reading the code.
+    period_by_y = {}
+    amp_by_y = {}
+    amp_lo_by_y = {}
+    amp_hi_by_y = {}
+    acro_lo_by_y = {}
+    acro_hi_by_y = {}
+    r2_by_y = {}
+    pval_by_y = {}
 
     any_valid = False
     first_x_out = None
@@ -1546,6 +1558,18 @@ def tp_cosinor(args, cols, raw_data, _sv):
             acrophase = wrap_to_period(-phi / omega, fixed_period)
             period_used = fixed_period
             mesor = res.get('M', float('nan'))
+            h0 = res['harmonics'][0] if res.get('harmonics') else {}
+            amp_by_y[y_id] = h0.get('amplitude', float('nan'))
+            ci_a = h0.get('CI_A') or [float('nan'), float('nan')]
+            amp_lo_by_y[y_id], amp_hi_by_y[y_id] = ci_a[0], ci_a[1]
+            # The acrophase CI is computed on the CLASSICAL convention, so it is re-wrapped
+            # onto the peak-time convention the acrophase port uses; otherwise the interval
+            # would sit half a period away from the estimate it is supposed to bracket.
+            ci_p = h0.get('CI_acrophase') or [float('nan'), float('nan')]
+            acro_lo_by_y[y_id] = wrap_to_period(-ci_p[1], fixed_period)
+            acro_hi_by_y[y_id] = wrap_to_period(-ci_p[0], fixed_period)
+            r2_by_y[y_id] = res.get('R2', float('nan'))
+            pval_by_y[y_id] = res.get('pF', float('nan'))
         else:
             res = fit_cosine_curves(tt, yy, n_curves)
             if res is None:
@@ -1562,6 +1586,14 @@ def tp_cosinor(args, cols, raw_data, _sv):
             period_used = (1.0 / w) if w else float('nan')
             acrophase = (-c['phase'] / (2 * math.pi * w)) if (c and w) else float('nan')
             mesor = res['parameters'].get('O', float('nan'))
+            amp_by_y[y_id] = c['amplitude'] if c else float('nan')
+            # The free multi-cosine fit reports no parameter CIs and no F test, so these
+            # stay NaN rather than being invented. NaN means "not available for this model".
+            amp_lo_by_y[y_id] = amp_hi_by_y[y_id] = float('nan')
+            acro_lo_by_y[y_id] = acro_hi_by_y[y_id] = float('nan')
+            r2_by_y[y_id] = res.get('rSquared', float('nan'))
+            pval_by_y[y_id] = float('nan')
+        period_by_y[y_id] = period_used
         bathy_by_y[y_id] = bathyphase(acrophase, period_used)
         phase_by_y[y_id] = phase_angle_of_entrainment(acrophase, reference_hrs, period_used)
         mesor_by_y[y_id] = mesor
@@ -1590,6 +1622,12 @@ def tp_cosinor(args, cols, raw_data, _sv):
         _set_col(raw_data, cols, _out_id(args, 'acrophase'), acro_arr, type_='number')
         _set_col(raw_data, cols, _out_id(args, 'bathyphase'), bathy_arr, type_='number')
         _set_col(raw_data, cols, _out_id(args, 'phase_angle'), phase_arr, type_='number')
+        for key, src in (('period', period_by_y), ('amplitude', amp_by_y),
+                         ('amplitude_ciLow', amp_lo_by_y), ('amplitude_ciHigh', amp_hi_by_y),
+                         ('acrophase_ciLow', acro_lo_by_y), ('acrophase_ciHigh', acro_hi_by_y),
+                         ('rsquared', r2_by_y), ('pvalue', pval_by_y)):
+            _set_col(raw_data, cols, _out_id(args, key),
+                     [src.get(y, nan) for y in y_ins], type_='number')
     return any_valid
 
 
@@ -2030,6 +2068,7 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
         output_x_data = _t_for_col(cols[output_x_id])
     first_xs = None
     any_valid = False
+    stats_by_y = {}
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -2049,7 +2088,20 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
         if y_out == -1:
             y_out = _out_id(args, 'dlogy')
         _set_col(raw_data, cols, y_out, ys, type_='number')
+        stats_by_y[y_id] = res
         any_valid = True
+    if any_valid:
+        nan = float('nan')
+        # Declared ports that had no writer until 2026-07-28: a session wiring r2 or rmse
+        # downstream got an EMPTY column from the export. `pvalue` belongs to the optional
+        # permutation test, which this port does not run, so it stays NaN — "not computed",
+        # not "not significant".
+        for key, getter in (('r2', lambda r: r.get('rSquared', nan)),
+                            ('rmse', lambda r: r.get('rmse', nan)),
+                            ('pvalue', lambda r: nan)):
+            _set_col(raw_data, cols, _out_id(args, key),
+                     [getter(stats_by_y[y]) if y in stats_by_y else nan for y in y_ins],
+                     type_='number')
     return any_valid
 
 
@@ -2321,6 +2373,7 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
         output_x_data = _t_for_col(cols[output_x_id])
     first_xs = None
     any_valid = False
+    stats_by_y = {}
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -2340,7 +2393,20 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
         if y_out == -1:
             y_out = _out_id(args, 'rectwavey')
         _set_col(raw_data, cols, y_out, ys, type_='number')
+        stats_by_y[y_id] = res
         any_valid = True
+    if any_valid:
+        nan = float('nan')
+        # Declared ports that had no writer until 2026-07-28: a session wiring r2 or rmse
+        # downstream got an EMPTY column from the export. `pvalue` belongs to the optional
+        # permutation test, which this port does not run, so it stays NaN — "not computed",
+        # not "not significant".
+        for key, getter in (('r2', lambda r: r.get('rSquared', nan)),
+                            ('rmse', lambda r: r.get('rmse', nan)),
+                            ('pvalue', lambda r: nan)):
+            _set_col(raw_data, cols, _out_id(args, key),
+                     [getter(stats_by_y[y]) if y in stats_by_y else nan for y in y_ins],
+                     type_='number')
     return any_valid
 
 
@@ -2619,6 +2685,7 @@ def tp_trendfit(args, cols, raw_data, _sv):
         output_x_data = _t_for_col(cols[output_x_id])
     xs = None
     any_valid = False
+    stats_by_y = {}
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -2632,12 +2699,28 @@ def tp_trendfit(args, cols, raw_data, _sv):
             # JS evaluates the fit at the (finite) input t, not a dense grid.
             xs = output_x_data if output_x_data else t_arr.tolist()
             _set_col(raw_data, cols, _out_id(args, 'trendx'), xs, type_='number')
+        # Fit-quality ports, previously declared but never written.
+        stats_by_y[y_id] = res
         ys = evaluate_trend_at_points(res['parameters'], model, xs)
         y_out = _out_id(args, f'trendy_{y_id}')
         if y_out == -1:
             y_out = _out_id(args, 'trendy')
         _set_col(raw_data, cols, y_out, ys, type_='number')
         any_valid = True
+    if any_valid:
+        nan = float('nan')
+        def _pick(getter):
+            return [getter(stats_by_y[y]) if y in stats_by_y else nan for y in y_ins]
+        _set_col(raw_data, cols, _out_id(args, 'r2'),
+                 _pick(lambda r: r.get('rSquared', nan)), type_='number')
+        _set_col(raw_data, cols, _out_id(args, 'rmse'),
+                 _pick(lambda r: r.get('rmse', nan)), type_='number')
+        # Slope/intercept only exist for the linear model; other models leave them NaN
+        # rather than reporting a coefficient that does not mean what the name says.
+        _set_col(raw_data, cols, _out_id(args, 'coef_slope'),
+                 _pick(lambda r: r['parameters'].get('slope', nan)), type_='number')
+        _set_col(raw_data, cols, _out_id(args, 'coef_intercept'),
+                 _pick(lambda r: r['parameters'].get('intercept', nan)), type_='number')
     return any_valid
 
 

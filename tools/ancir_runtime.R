@@ -1837,6 +1837,162 @@ tp_rayleightest <- function(args, env) {
   TRUE
 }
 
+# ---------------------------------------------------------------------------
+# Rectangular-wave fit
+# ---------------------------------------------------------------------------
+
+# M + A*tanh(k*(sin(wt + phi) - cos(pi*d))). The tanh squares off the cosine: large k gives
+# a near-rectangular wave, and d sets the duty cycle through the offset it subtracts.
+rectwave_model <- function(p, t) {
+  p[1] + p[2] * tanh(p[3] * (sin(p[4] * t + p[5]) - cos(pi * p[6])))
+}
+
+evaluate_rectwave_at_points <- function(parameters, x_points) {
+  xa <- suppressWarnings(as.numeric(unlist(x_points, use.names = FALSE)))
+  rectwave_model(c(parameters$M, parameters$A, parameters$kappa,
+                   parameters$omega, parameters$phi, parameters$dutyCycle), xa)
+}
+
+# Multi-start over PERIOD seeds, mirroring fit_rectangular_wave. Parameters are
+# [M, A, kappa, omega, phi, dutyCycle]; `fix*` options hold individual ones at their seed by
+# excluding them from the free set rather than by bounding them tightly.
+fit_rectangular_wave <- function(t, x, options = list()) {
+  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
+  x <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
+  ok <- is.finite(t) & is.finite(x)
+  t <- t[ok]; x <- x[ok]
+  if (length(t) < 6) return(NULL)
+  g <- function(k, d) if (!is.null(options[[k]])) options[[k]] else d
+
+  fix_kappa <- isTRUE(g("fixKappa", FALSE))
+  fix_omega <- isTRUE(g("fixOmega", FALSE))
+  fix_d <- isTRUE(g("fixD", FALSE))
+  kappa0 <- as.numeric(g("kappa", 5))
+  omega0 <- as.numeric(g("omega", 2 * pi / 24))
+  d0 <- as.numeric(g("dutyCycle", 0.5))
+
+  free_idx <- c(1, 2, 5)
+  if (!fix_kappa) free_idx <- c(free_idx, 3)
+  if (!fix_omega) free_idx <- c(free_idx, 4)
+  if (!fix_d) free_idx <- c(free_idx, 6)
+  free_idx <- sort(free_idx)
+
+  m0 <- mean(x)
+  a0 <- (max(x) - min(x)) / 2
+  if (a0 == 0) a0 <- 1
+  full0 <- c(m0, a0, kappa0, omega0, 0, d0)
+  lb_full <- c(-Inf, -Inf, 1e-3, 1e-3, -Inf, 0.01)
+  ub_full <- c(Inf, Inf, Inf, 100, Inf, 0.99)
+
+  timespan <- if (t[length(t)] > t[1]) t[length(t)] - t[1] else 1
+  best <- NULL; best_full <- NULL
+  for (p_seed in c(24, 12, 6, max(timespan, 1))) {
+    f0 <- full0
+    if (!fix_omega) f0[4] <- 2 * pi / p_seed
+    cost <- function(pf) {
+      full <- f0
+      full[free_idx] <- pf
+      0.5 * sum((rectwave_model(full, t) - x)^2)
+    }
+    # Analytic gradient. tanh SATURATES, so over most of the cycle a differenced gradient is
+    # numerically zero and L-BFGS-B stalls: with the default numerical one R reached only
+    # R^2 = 0.89 where scipy's trust-region got 0.99 on the same data. sech^2 = 1 - tanh^2 is
+    # the factor that carries the (tiny but real) slope through the flat region.
+    grad <- function(pf) {
+      full <- f0
+      full[free_idx] <- pf
+      M <- full[1]; A <- full[2]; k <- full[3]; w <- full[4]; phi <- full[5]; d <- full[6]
+      th <- w * t + phi
+      u <- k * (sin(th) - cos(pi * d))
+      tu <- tanh(u)
+      sech2 <- 1 - tu * tu
+      r <- M + A * tu - x
+      g_full <- c(
+        sum(r),                                        # dM
+        sum(r * tu),                                   # dA
+        sum(r * A * sech2 * (sin(th) - cos(pi * d))),  # dkappa
+        sum(r * A * sech2 * k * t * cos(th)),          # domega
+        sum(r * A * sech2 * k * cos(th)),              # dphi
+        sum(r * A * sech2 * k * pi * sin(pi * d))      # dduty
+      )
+      g_full[free_idx]
+    }
+    fit <- tryCatch(
+      optim(f0[free_idx], cost, grad, method = "L-BFGS-B",
+            lower = lb_full[free_idx], upper = ub_full[free_idx],
+            control = list(factr = 1, pgtol = 0, maxit = 5000)),
+      error = function(e) NULL)
+    if (!is.null(fit) && (is.null(best) || fit$value < best$value)) {
+      best <- fit; best_full <- f0
+    }
+  }
+  if (is.null(best)) return(NULL)
+  full <- best_full
+  full[free_idx] <- best$par
+  pred <- rectwave_model(full, t)
+  rss <- sum((x - pred)^2)
+  ss_tot <- sum((x - mean(x))^2)
+  w <- full[4]
+  period <- if (w != 0) 2 * pi / w else Inf
+  acrophase <- if (w != 0) ((pi / 2 - full[5]) / w) %% period else 0
+  list(parameters = list(M = full[1], A = full[2], kappa = full[3],
+                         omega = w, phi = full[5], dutyCycle = full[6]),
+       period = period, acrophase = acrophase, fitted = pred,
+       rmse = sqrt(rss / length(t)),
+       rSquared = if (ss_tot > 0) 1 - rss / ss_tot else 0,
+       rss = rss)
+}
+
+tp_rectangularwave <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  x_col <- env$cols[[as.character(x_in)]]
+  t <- t_for_col(x_col, env$cols, env$raw_data)
+  opts <- list(fixKappa = args$fixKappa, fixOmega = args$fixOmega, fixD = args$fixD,
+               kappa = if (is.null(args$kappa)) 5 else args$kappa,
+               omega = if (is.null(args$omega)) 2 * pi / 24 else args$omega,
+               dutyCycle = if (is.null(args$dutyCycle)) 0.5 else args$dutyCycle)
+  output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
+  output_x <- if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]]))
+    t_for_col(env$cols[[as.character(output_x_id)]], env$cols, env$raw_data) else NULL
+
+  first_xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    res <- fit_rectangular_wave(t, col_data(env$cols[[yk]], env$cols, env$raw_data), opts)
+    if (is.null(res)) next
+    if (is.null(first_xs)) {
+      # The JS evaluates the fit at the (finite) input t, not on a dense grid.
+      first_xs <- if (!is.null(output_x)) output_x else t[is.finite(t)]
+      set_col(env, env$cols, out_id(args, "rectwavex"), first_xs, type = "number")
+    }
+    ys <- evaluate_rectwave_at_points(res$parameters, first_xs)
+    y_out <- out_id(args, paste0("rectwavey_", y_id))
+    if (y_out == -1) y_out <- out_id(args, "rectwavey")
+    set_col(env, env$cols, y_out, ys, type = "number")
+    stats_by_y[[yk]] <- res
+    any_valid <- TRUE
+  }
+  if (any_valid) {
+    # r2/rmse are declared ports that the Python port never wrote until 2026-07-28; `pvalue`
+    # belongs to the optional permutation test, which is not run here, so it stays NA —
+    # "not computed", not "not significant".
+    for (key in c("r2", "rmse", "pvalue")) {
+      arr <- vapply(y_ins, function(y) {
+        r <- stats_by_y[[as.character(y)]]
+        if (is.null(r)) NA_real_
+        else if (key == "r2") r$rSquared
+        else if (key == "rmse") r$rmse
+        else NA_real_
+      }, numeric(1))
+      set_col(env, env$cols, out_id(args, key), arr, type = "number")
+    }
+  }
+  any_valid
+}
+
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
 # sits beside the existing `pyFunc`, so both legs read one fixture file).
 #
@@ -1880,6 +2036,7 @@ TABLE_PROCESS_MAP = list(
   nonparametricra = tp_nonparametricra,
   normalitytest = tp_normalitytest,
   rayleightest = tp_rayleightest,
+  rectangularwave = tp_rectangularwave,
   smootheddata = tp_smootheddata,
   sort = tp_sort,
   split = tp_split,

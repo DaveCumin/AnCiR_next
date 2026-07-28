@@ -91,6 +91,7 @@ export const R_IMPLEMENTED = [
 	'nonparametricra',
 	'normalitytest',
 	'rayleightest',
+	'rectangularwave',
 	'smootheddata',
 	'sort',
 	'split',
