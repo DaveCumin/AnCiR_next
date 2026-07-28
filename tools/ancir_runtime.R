@@ -2334,6 +2334,161 @@ tp_fitfunction <- function(args, env) {
   any_valid
 }
 
+# ---------------------------------------------------------------------------
+# Spectrum
+# ---------------------------------------------------------------------------
+
+# Magnitude/phase spectrum. Mirrors src/lib/utils/fft.js computeFFT step for step:
+# mean-detrend ONLY (no linear detrend), assume approximately uniform sampling (no
+# resampling), zero-pad to the next power of two, and report the one-sided spectrum for bins
+# 1..N/2-1 with magnitude = |X| * 2 / N. The DC bin is dropped, which is why the loop starts
+# at 1 — including it would put the series mean in the spectrum as a spurious huge peak.
+compute_fft <- function(times, values, freq_step = NULL) {
+  t <- suppressWarnings(as.numeric(unlist(times, use.names = FALSE)))
+  y <- suppressWarnings(as.numeric(unlist(values, use.names = FALSE)))
+  n0 <- min(length(t), length(y))
+  t <- t[seq_len(n0)]; y <- y[seq_len(n0)]
+  ok <- is.finite(t) & is.finite(y)
+  t <- t[ok]; y <- y[ok]
+  if (length(t) < 2) {
+    return(list(frequencies = numeric(0), magnitudes = numeric(0), phases = numeric(0),
+                samplingRate = 0, nyquistFreq = 0, minPeriod = 0))
+  }
+  y <- y - mean(y)
+  dt <- (t[length(t)] - t[1]) / (length(t) - 1)
+  sampling_rate <- 1 / dt
+  nyquist <- sampling_rate / 2
+  n <- if (!is.null(freq_step) && freq_step > 0) {
+    2^ceiling(log2(max(ceiling(sampling_rate / freq_step), 1)))
+  } else 2^ceiling(log2(length(y)))
+  if (n < length(y)) n <- 2^ceiling(log2(length(y)))
+  y_pad <- c(y, rep(0, n - length(y)))
+  spec <- fft(y_pad)
+  half_n <- n %/% 2
+  freqs <- c(); mags <- c(); phases <- c()
+  for (i in seq_len(max(half_n - 1, 0))) {
+    freq <- i * sampling_rate / n
+    if (freq > nyquist) break
+    z <- spec[i + 1]
+    freqs <- c(freqs, freq)
+    mags <- c(mags, Mod(z) * 2 / n)
+    phases <- c(phases, Arg(z))
+  }
+  list(frequencies = freqs, magnitudes = mags, phases = phases,
+       samplingRate = sampling_rate, nyquistFreq = nyquist, minPeriod = 2 * dt)
+}
+
+# ---------------------------------------------------------------------------
+# Remaining column processes
+# ---------------------------------------------------------------------------
+
+cp_editvalue <- function(x, args, cols, raw_data) {
+  out <- as.list(x)
+  for (edit in args$edits) {
+    # Positions are 1-based in the UI and stay 1-based in R, unlike the Python which
+    # subtracts 1 for its 0-based lists.
+    pos <- as.integer(edit$position)
+    if (!is.na(pos) && pos >= 1 && pos <= length(out)) out[[pos]] <- edit$value
+  }
+  out
+}
+
+cp_outlierremoval <- function(x, args, cols, raw_data) {
+  method <- if (is.null(args$method)) "iqr" else args$method
+  arr <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
+  sub <- arr[is.finite(arr)]
+  if (!length(sub)) return(arr)
+  if (identical(method, "iqr")) {
+    q <- unname(quantile(sub, c(0.25, 0.75), type = 7))
+    iqr <- q[2] - q[1]
+    mult <- as.numeric(if (is.null(args$multiplier)) 1.5 else args$multiplier)
+    lo <- q[1] - mult * iqr; hi <- q[2] + mult * iqr
+  } else {
+    mu <- mean(sub)
+    # Population sd (ddof = 0), matching numpy's default and the Python port.
+    sd0 <- sqrt(sum((sub - mu)^2) / length(sub))
+    if (sd0 == 0) sd0 <- 1
+    thr <- as.numeric(if (is.null(args$threshold)) 3 else args$threshold)
+    lo <- mu - thr * sd0; hi <- mu + thr * sd0
+  }
+  # Outliers become NA rather than being dropped: the column stays row-aligned with every
+  # other column in the table, which removal would break.
+  ifelse(is.finite(arr) & (arr < lo | arr > hi), NA_real_, arr)
+}
+
+cp_filterbyothercol <- function(x, args, cols, raw_data) {
+  conditions <- args$conditions
+  if (is.null(conditions) || !length(conditions)) return(x)
+  n <- length(x)
+  mask <- rep(TRUE, n)
+  parent <- args$parentColId
+  for (cond in conditions) {
+    by_id <- if (is.null(cond$byColId)) -1 else cond$byColId
+    if (by_id == -1) next
+    by <- if (!is.null(parent) && identical(by_id, parent)) {
+      suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
+    } else {
+      bc <- cols[[as.character(by_id)]]
+      if (is.null(bc)) next
+      suppressWarnings(as.numeric(unlist(col_data(bc, cols, raw_data), use.names = FALSE)))
+    }
+    op <- cond$operator
+    val <- suppressWarnings(as.numeric(cond$value))
+    cmp <- switch(as.character(op),
+      ">" = by > val, "<" = by < val, ">=" = by >= val, "<=" = by <= val,
+      "!=" = by != val, by == val)
+    cmp[is.na(cmp)] <- FALSE
+    mask <- mask & c(cmp, rep(FALSE, max(0, n - length(cmp))))[seq_len(n)]
+  }
+  # Values are KEPT where the mask holds and blanked elsewhere — again preserving row
+  # alignment rather than compacting the column.
+  ifelse(mask, suppressWarnings(as.numeric(unlist(x, use.names = FALSE))), NA_real_)
+}
+
+# ---------------------------------------------------------------------------
+# SurrogateTest
+# ---------------------------------------------------------------------------
+
+# PARITY SCOPE, deliberately limited and identical to the Python port's.
+#
+# `observed` — the peak FFT magnitude inside the period band — is fully deterministic and IS
+# checked across languages. `pvalue` is NOT: it is a Monte Carlo quantity whose value depends
+# on the exact sequence drawn from the JS's seeded @stdlib minstd-shuffle PRNG, which this
+# runtime does not reproduce. It is emitted as NaN rather than as a number that would look
+# comparable and could not be. Same boundary as the generator nodes.
+tp_surrogatetest <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_in <- args$yIN
+  if (is.list(y_in)) y_in <- if (length(y_in)) y_in[[1]] else -1
+  if (is.null(y_in)) y_in <- -1
+  if (x_in == -1 || y_in == -1) return(FALSE)
+  if (is.null(env$cols[[as.character(x_in)]]) || is.null(env$cols[[as.character(y_in)]])) {
+    return(FALSE)
+  }
+  times <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
+  values <- suppressWarnings(as.numeric(unlist(
+    col_data(env$cols[[as.character(y_in)]], env$cols, env$raw_data), use.names = FALSE)))
+  if (length(times) < 8 || length(values) < 8) return(FALSE)
+  n <- min(length(times), length(values))
+  ok <- is.finite(times[seq_len(n)]) & is.finite(values[seq_len(n)])
+  ta <- times[seq_len(n)][ok]; ya <- values[seq_len(n)][ok]
+  if (length(ta) < 8) return(FALSE)
+
+  period_min <- as.numeric(if (is.null(args$periodMin)) 20 else args$periodMin)
+  period_max <- as.numeric(if (is.null(args$periodMax)) 28 else args$periodMax)
+  f <- compute_fft(ta, ya)
+  best <- 0
+  for (i in seq_along(f$frequencies)) {
+    fr <- f$frequencies[i]
+    if (fr == 0) next
+    p <- 1 / fr
+    if (p >= period_min && p <= period_max && f$magnitudes[i] > best) best <- f$magnitudes[i]
+  }
+  set_col(env, env$cols, out_id(args, "observed"), best, type = "number")
+  set_col(env, env$cols, out_id(args, "pvalue"), NA_real_, type = "number")
+  TRUE
+}
+
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
 # sits beside the existing `pyFunc`, so both legs read one fixture file).
 #
@@ -2349,6 +2504,7 @@ PURE_UTIL_MAP <- list(
   cross_correlation = cross_correlation,
   describe_stats = describe_stats,
   jarque_bera    = jarque_bera,
+  compute_fft    = compute_fft,
   d_agostino     = d_agostino,
   shapiro_wilk   = shapiro_wilk,
   correlate      = correlate,
@@ -2381,6 +2537,7 @@ TABLE_PROCESS_MAP = list(
   rayleightest = tp_rayleightest,
   rectangularwave = tp_rectangularwave,
   smootheddata = tp_smootheddata,
+  surrogatetest = tp_surrogatetest,
   sort = tp_sort,
   split = tp_split,
   threshold = tp_threshold,
@@ -2392,8 +2549,11 @@ TABLE_PROCESS_MAP = list(
 # transform is WRONG data, not partial data.
 COLUMN_PROCESS_MAP = list(
   add = cp_add,
+  editvalue = cp_editvalue,
+  filterbyothercol = cp_filterbyothercol,
   multiply = cp_multiply,
   normalize = cp_normalize,
+  outlierremoval = cp_outlierremoval,
   removetrend = cp_removetrend,
   sub = cp_substitute,
   substitute = cp_substitute

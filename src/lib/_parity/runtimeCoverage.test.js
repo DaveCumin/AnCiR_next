@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import {
 	PYTHON_GAPS,
 	PYTHON_ORPHANS,
+	PYTHON_COLUMN_ORPHANS,
 	NOT_APPLICABLE,
 	R_IMPLEMENTED,
 	R_PURE_UTILS,
@@ -94,6 +95,23 @@ describe('python runtime coverage', () => {
 			`ancir_runtime.py dispatches analyses the app does not have: ${orphans}`
 		).toEqual([]);
 		expect(PYTHON_ORPHANS.length, 'the orphan list must not grow').toBeLessThanOrEqual(1);
+	});
+
+	it('dispatches no COLUMN process the app does not have either', () => {
+		// Same blind spot as the analyses, one level down: `sort` was registered as a column
+		// process, but Sort is a TABLE process and no Sort.svelte exists under processes/.
+		const cps = parseDispatchKeys(src, 'COLUMN_PROCESS_MAP');
+		expect(cps, 'COLUMN_PROCESS_MAP not found in ancir_runtime.py').not.toBeNull();
+		const jsCps = readdirSync(join(ROOT, 'src/lib/processes'))
+			.filter((f) => f.endsWith('.svelte'))
+			.map(tpKey);
+		// `substitute` is an ALIAS, not an orphan: the file is Sub.svelte but the display name
+		// (which is what a session stores) is "Substitute".
+		const aliases = ['substitute'];
+		const orphans = cps.filter(
+			(k) => !jsCps.includes(k) && !PYTHON_COLUMN_ORPHANS.includes(k) && !aliases.includes(k)
+		);
+		expect(orphans, `ancir_runtime.py dispatches column processes that do not exist: ${orphans}`).toEqual([]);
 	});
 
 	it('treats a not-applicable analysis as done, not as debt', () => {

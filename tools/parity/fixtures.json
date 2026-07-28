@@ -332,7 +332,8 @@
 			"compareArrays": [
 				"frequencies",
 				"magnitudes"
-			]
+			],
+			"rFunc": "compute_fft"
 		},
 		{
 			"id": "plot-correlogram-rhythm-noisy",
@@ -2516,7 +2517,8 @@
 			},
 			"compareOutputs": [
 				"observed"
-			]
+			],
+			"rFunc": "surrogatetest"
 		},
 		{
 			"id": "util-movingwindows-npcra",
@@ -3721,6 +3723,60 @@
 			],
 			"tolerance": 0.001,
 			"toleranceWhy": "Compares the x axis and the FIT QUALITY, not the fitted curve pointwise. The double logistic has near-vertical edges, so a sub-1% shift in t1/t2 moves a point sitting ON an edge by several percent while barely changing RSS: at index 0 the three engines differ by 0.76 on ~19, yet agree on R^2 to 1.6e-5 (0.982226 / 0.982210) and on RMSE to 4.5e-4 (2.9168 / 2.9181). Pointwise equality is therefore not the property worth checking here; 'did all three find an equally good fit' is, and a gross divergence (the pre-fix Python scored R^2 = 0.008) still fails loudly."
+		},
+		{
+			"id": "col-outlierremoval-iqr",
+			"kind": "columnProcess",
+			"jsName": "OutlierRemoval",
+			"pyFunc": "outlierremoval",
+			"rFunc": "outlierremoval",
+			"input": [
+				10,
+				11,
+				9,
+				12,
+				10,
+				11,
+				95,
+				10,
+				9,
+				11,
+				-40,
+				10,
+				12,
+				11,
+				9
+			],
+			"args": {
+				"method": "iqr",
+				"multiplier": 1.5
+			}
+		},
+		{
+			"id": "col-editvalue",
+			"kind": "columnProcess",
+			"jsName": "EditValue",
+			"pyFunc": "editvalue",
+			"rFunc": "editvalue",
+			"input": [
+				1,
+				2,
+				3,
+				4,
+				5
+			],
+			"args": {
+				"edits": [
+					{
+						"position": 2,
+						"value": 99
+					},
+					{
+						"position": 5,
+						"value": -1
+					}
+				]
+			}
 		}
 	]
 }

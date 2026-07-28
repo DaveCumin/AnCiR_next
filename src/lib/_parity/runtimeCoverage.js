@@ -59,6 +59,19 @@ export const PYTHON_GAPS = [];
 export const PYTHON_ORPHANS = ['duplicate'];
 
 /**
+ * COLUMN processes the Python port dispatches that the app does not have.
+ *
+ * `sort` is one: there is no Sort.svelte under processes/ — Sort is a TABLE process, so a
+ * column-process entry for it can never be reached. Found the same way as `duplicate`, by
+ * checking the map against the filesystem in the direction nobody had checked.
+ *
+ * NOT included: `substitute`, which looks like an orphan and is not. The JS file is
+ * Sub.svelte but the node's display name is "Substitute", and a session stores the display
+ * name, so the alias is load-bearing.
+ */
+export const PYTHON_COLUMN_ORPHANS = ['sort'];
+
+/**
  * Table processes the R port implements.
  *
  * Checked in both directions so it cannot lie. R is being ported deliberately rather than
@@ -98,6 +111,7 @@ export const R_IMPLEMENTED = [
 	'sort',
 	'split',
 	'threshold',
+	'surrogatetest',
 	'trendfit',
 	'widetolong'
 ];
@@ -110,8 +124,11 @@ export const R_IMPLEMENTED = [
  */
 export const R_COLUMN_PROCESSES = [
 	'add',
+	'editvalue',
+	'filterbyothercol',
 	'multiply',
 	'normalize',
+	'outlierremoval',
 	'removetrend',
 	'sub',
 	'substitute'
@@ -145,6 +162,7 @@ export const HARNESS_BLIND = ['collectcolumns', 'longtowide', 'movinganalysis', 
  */
 export const R_PURE_UTILS = [
 	'circular_mean',
+	'compute_fft',
 	'correlate',
 	'correlation_ci',
 	'cross_correlation',

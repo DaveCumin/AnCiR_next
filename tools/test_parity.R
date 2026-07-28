@@ -188,8 +188,14 @@ for (fx in fixtures) {
   # Build the call the way the fixture describes it, exactly as the Python leg does:
   # `argRefs` (or the single `valuesRef`) name inputs to pass positionally, then `rArgs`
   # (falling back to `pyArgs`, since the two ports take the same arguments) supply the rest.
-  refs <- if (!is.null(fx$argRefs)) unlist(fx$argRefs) else fx$valuesRef
-  extra <- if (!is.null(fx$rArgs)) fx$rArgs else fx$pyArgs
+  # A `plotCompute` fixture names its two series with xRef/yRef instead of argRefs, because
+  # the plot compute functions all take (times, values) rather than a single array.
+  refs <- if (!is.null(fx$xRef) || !is.null(fx$yRef)) c(fx$xRef, fx$yRef)
+          else if (!is.null(fx$argRefs)) unlist(fx$argRefs)
+          else fx$valuesRef
+  extra <- if (!is.null(fx$rArgs)) fx$rArgs
+           else if (!is.null(fx$extraArgs)) fx$extraArgs
+           else fx$pyArgs
   call_args <- c(lapply(refs, function(nm) unwrap_input(rec$inputs[[nm]])),
                  if (is.null(extra)) list() else extra)
 
