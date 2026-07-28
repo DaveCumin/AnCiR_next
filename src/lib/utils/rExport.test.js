@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { toRLiteral, sessionToR } from './rExport.js';
 import { checkRSupport, explainRSupport, runtimeKey } from './rExportSupport.js';
 
@@ -75,6 +76,40 @@ describe('sessionToR', () => {
 	});
 });
 
+describe('baked generator nodes', () => {
+	const gen = (name) => ({
+		rawData: { 7: [1, 2, 3] },
+		data: [{ id: 7, name: 'v', type: 'number', data: 7, processes: [] }],
+		tableProcesses: [{ name, args: { out: { result: 7 } } }]
+	});
+
+	it('does NOT emit Random, so the embedded values survive', () => {
+		// Re-running it would overwrite the session's real data with a fresh draw. The Python
+		// export did exactly that, silently, on every run.
+		expect(sessionToR(gen('Random'), '#')).not.toContain('"Random"');
+	});
+
+	it('does not emit SimulatedData either, however it is spelled', () => {
+		expect(sessionToR(gen('Simulate Data'), '#')).not.toContain('Simulate Data');
+	});
+
+	it('still emits deterministic sources, which re-run identically', () => {
+		expect(sessionToR(gen('SequenceColumn'), '#')).toContain('"SequenceColumn"');
+	});
+
+	it('keeps all three copies of the list in step', () => {
+		// The two generators are inlined verbatim into their sidecars and so may import
+		// nothing; the support check runs in the bundle and must agree with both. Three
+		// copies, one test to stop them drifting.
+		const grab = (p) =>
+			/const BAKED_NODES = \[(.*?)\]/s.exec(readFileSync(p, 'utf8'))?.[1]?.replace(/\s/g, '');
+		const r = grab('src/lib/utils/rExport.js');
+		expect(r).toBeTruthy();
+		expect(grab('src/lib/utils/pythonExport.js')).toBe(r);
+		expect(grab('src/lib/utils/rExportSupport.js')).toBe(r);
+	});
+});
+
 describe('checkRSupport', () => {
 	const withTps = (...names) => ({ tableProcesses: names.map((name) => ({ name })), data: [] });
 
@@ -95,13 +130,11 @@ describe('checkRSupport', () => {
 		expect(explainRSupport(r)).toContain('FormulaColumn');
 	});
 
-	it('reports a generator node separately from a missing one', () => {
-		// "cannot reproduce random data" and "not implemented" are different problems and
-		// deserve different sentences.
-		const r = checkRSupport(withTps('SimulatedData'));
-		expect(r.generators).toEqual(['SimulatedData']);
-		expect(r.missingAnalyses).toEqual([]);
-		expect(explainRSupport(r)).toMatch(/random data/);
+	it('no longer refuses a generator node, now that its output is baked', () => {
+		// It used to be refused because R could not reproduce the draw. Nothing reproduces it
+		// any more — the values travel with the session — so the export just works.
+		expect(checkRSupport(withTps('SimulatedData')).ok).toBe(true);
+		expect(checkRSupport(withTps('Random')).ok).toBe(true);
 	});
 
 	it('accepts every column transform the app currently has', () => {

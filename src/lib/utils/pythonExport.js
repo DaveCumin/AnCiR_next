@@ -192,6 +192,39 @@ function embed(name, value) {
 }
 
 /**
+ * Nodes whose output is BAKED rather than re-run.
+ *
+ * Random and SimulatedData draw from the JS engine's seeded PRNG. Re-running them in another
+ * language cannot reproduce that draw, so the exported script used to OVERWRITE the session's
+ * real values with fresh ones — silently, on every run, with no warning. Measured on
+ * demo-tp-random: the session holds 9.23, 3.33, 1.98, 9.49; two Python runs gave
+ * 6.54/8.67/0.06/4.43 and 7.86/4.87/2.24/0.69.
+ *
+ * The session already carries what they produced — `rawData` holds each generated column
+ * under its output id, which is how the app redraws it on load. So the fix is simply not to
+ * run them again: the embedded data IS the result, and the script reproduces the session
+ * exactly.
+ *
+ * `simulatedata` (one d) is the DISPLAY name "Simulate Data" with its space removed. Sessions
+ * normally store the registry key, but the Python runtime keeps a display-name map because
+ * some store the label instead — so both spellings are listed rather than assumed.
+ *
+ * Deterministic sources (SequenceColumn, BlankColumn) are NOT here. They re-run identically,
+ * and leaving them in keeps the script showing how the column was built.
+ *
+ * Kept in sync with the R exporter by a test — neither file may import the other, because
+ * both are inlined verbatim into their sidecars.
+ */
+const BAKED_NODES = ['random', 'simulateddata', 'simulatedata'];
+
+/** Node name as stored ("Simulate Data", "SimulatedData") to its runtime key. */
+function nodeKey(name) {
+	return String(name ?? '')
+		.toLowerCase()
+		.replace(/\s+/g, '');
+}
+
+/**
  * Build a self-contained Python script reproducing `session`.
  * @param {any} session - parsed session object (as from outputCoreAsJson()).
  * @param {string} runtimeSrc - verbatim source of tools/ancir_runtime.py.
@@ -225,10 +258,12 @@ export function sessionToPython(session, runtimeSrc) {
 
 	const tpsClean = [];
 	for (const tp of tableProcesses) {
+		if (BAKED_NODES.includes(nodeKey(tp.name))) continue;
 		tpsClean.push({ name: tp.name ?? null, args: tp.args ?? {} });
 	}
 	for (const t of legacyTables) {
 		for (const p of t.processes ?? []) {
+			if (BAKED_NODES.includes(nodeKey(p.name))) continue;
 			tpsClean.push({ name: p.name ?? null, args: p.args ?? {} });
 		}
 	}

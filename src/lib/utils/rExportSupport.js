@@ -18,20 +18,27 @@
 import { R_IMPLEMENTED, R_COLUMN_PROCESSES } from '$lib/_parity/runtimeCoverage.js';
 
 /**
- * Nodes that produce data from a seeded PRNG.
+ * Nodes that would need a PRNG to re-run — and no longer need one.
  *
- * Excluded from R by decision, not by omission: reproducing them means reimplementing
- * mulberry32 and every generator's draw order bit-exactly, and the failure mode of getting
- * it subtly wrong is silently different data. They get their own message because "not
- * implemented" and "deliberately not implemented, and here is the alternative" are different
- * things to tell someone.
+ * EMPTY since the exporters started BAKING generated output instead of re-running it. The
+ * session already carries what Random and SimulatedData produced (`rawData` holds each
+ * generated column under its output id), so the exported script embeds those values and skips
+ * the node. Nothing has to reproduce a draw, in any language.
  *
- * SequenceColumn and BlankColumn are deliberately NOT here, though they look like they
- * belong: a sequence is start + i*step and a blank column is a constant fill, so neither
- * touches a PRNG and both reproduce exactly. Listing them cost 20 of the 84 demo sessions
- * their R export for no reason — measured, which is how the mistake surfaced.
+ * That also fixed a real defect on the Python side, which had been re-running the generators
+ * against an UNSEEDED RNG and silently writing different data on every run.
+ *
+ * Kept as an empty list rather than deleted: it is the natural home for a future node that
+ * genuinely cannot be baked, and its absence would make that node's exclusion look accidental.
  */
-export const R_GENERATOR_NODES = ['random', 'simulateddata'];
+export const R_GENERATOR_NODES = [];
+
+/**
+ * Nodes the exporter BAKES rather than emitting, so the runtime never sees them and does not
+ * need to implement them. Duplicated from the two generators (neither may be imported here —
+ * both are inlined verbatim into their sidecars) and kept in step by a test.
+ */
+const BAKED_NODES = ['random', 'simulateddata', 'simulatedata'];
 
 /** ColumnSet emits no columns and is resolved before export, so it never reaches a runtime. */
 const RESOLVED_BEFORE_EXPORT = ['columnset'];
@@ -59,7 +66,7 @@ export function checkRSupport(session) {
 	];
 	for (const tp of tps) {
 		const key = runtimeKey(tp?.name);
-		if (!key || RESOLVED_BEFORE_EXPORT.includes(key)) continue;
+		if (!key || RESOLVED_BEFORE_EXPORT.includes(key) || BAKED_NODES.includes(key)) continue;
 		if (R_GENERATOR_NODES.includes(key)) generators.add(tp.name);
 		else if (!R_IMPLEMENTED.includes(key)) missingAnalyses.add(tp.name);
 	}
