@@ -47,16 +47,25 @@ export const PYTHON_GAPS = [];
 /**
  * Table processes the R port implements.
  *
- * EMPTY, deliberately, and the guard checks it in both directions so it cannot lie. R is
- * being ported deliberately rather than all at once, and the pure numeric kernels come
- * first: they are the shared foundation every table process sits on, and they are what the
- * fixtures actually exercise (43 of 68). Session plumbing follows.
+ * Checked in both directions so it cannot lie. R is being ported deliberately rather than
+ * all at once: the pure numeric kernels came first (they are the shared foundation every
+ * analysis sits on), then the session plumbing, and analyses are added in verified batches.
+ *
+ * The R runtime is STRICT — an analysis absent from this list aborts the exported script
+ * rather than being skipped — so this list is also the contract the export button checks
+ * before it will produce a script at all.
  *
  * The list GROWS as analyses are ported. Every entry must be a real JS analysis (so a typo
  * fails loudly rather than silently exempting something) and must actually be present in
  * ancir_runtime.R (so claiming one you have not written fails).
  */
-export const R_IMPLEMENTED = [];
+export const R_IMPLEMENTED = [
+	'describedata',
+	'normalitytest',
+	'smootheddata',
+	'threshold',
+	'trendfit'
+];
 
 /**
  * Pure numeric kernels the R port implements, keyed as the parity fixtures name them.

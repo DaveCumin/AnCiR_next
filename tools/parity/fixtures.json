@@ -3188,7 +3188,8 @@
 				"iqr",
 				"skewness",
 				"kurtosis"
-			]
+			],
+			"rFunc": "describedata"
 		},
 		{
 			"id": "tp-normalitytest-shapiro",
@@ -3228,7 +3229,10 @@
 				"pvalue",
 				"n",
 				"normal"
-			]
+			],
+			"rFunc": "normalitytest",
+			"rTolerance": 1e-06,
+			"rToleranceWhy": "Same cause as util-normality-shapiro: R's shapiro.test and the JS port both implement Royston AS R94 and agree on W, but the p-value's normalising transform differs in the 8th significant figure. Surfaces here because the analysis reports the p-value. Python stays at the default tolerance."
 		},
 		{
 			"id": "tp-correlation-pair",

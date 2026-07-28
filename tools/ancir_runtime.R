@@ -325,15 +325,444 @@ PURE_UTIL_MAP <- list(
   p_adjust       = p_adjust
 )
 
-# Session-level analyses (table processes) this runtime implements.
+# ---------------------------------------------------------------------------
+# Table processes
+# ---------------------------------------------------------------------------
 #
-# EMPTY ON PURPOSE, and it must stay honest. The pure kernels above are the shared numeric
-# foundation every table process sits on, and they are what the parity fixtures actually
-# exercise (43 of 68), so they are ported and verified first. Wiring a table process needs
-# the Column/session plumbing as well, which is the next piece of work.
+# Each takes (args, env) and returns TRUE if it wrote anything. `env` carries `cols` and
+# `raw_data` so writes are visible to later analyses, mirroring the Python port where
+# raw_data is a shared dict.
+
+tp_threshold <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  key <- as.character(x_in)
+  if (x_in == -1 || is.null(env$cols[[key]])) return(FALSE)
+  d <- unlist(col_data(env$cols[[key]], env$cols, env$raw_data), use.names = FALSE)
+  th <- as.numeric(if (is.null(args$threshold)) 0 else args$threshold)
+  comp <- if (is.null(args$comparison)) ">=" else args$comparison
+  cmp <- switch(comp,
+                ">"  = function(v) v > th,
+                "<"  = function(v) v < th,
+                "<=" = function(v) v <= th,
+                function(v) v >= th)      # ">=" and any unknown value
+  out <- vapply(d, function(v) {
+    n <- suppressWarnings(as.numeric(v))
+    if (length(n) != 1 || is.na(n)) NA_real_ else as.numeric(cmp(n))
+  }, numeric(1), USE.NAMES = FALSE)
+  set_col(env, env$cols, out_id(args, "binary"), out, type = "number")
+  length(out) > 0
+}
+
+tp_trendfit <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  model <- if (is.null(args$model)) "linear" else args$model
+  deg <- as.integer(if (is.null(args$polyDegree)) 2 else args$polyDegree)
+  x_col <- env$cols[[as.character(x_in)]]
+  t <- t_for_col(x_col, env$cols, env$raw_data)
+  output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
+  output_x <- NULL
+  if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]])) {
+    output_x <- t_for_col(env$cols[[as.character(output_x_id)]], env$cols, env$raw_data)
+  }
+  xs <- NULL; any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    ys_raw <- col_data(env$cols[[yk]], env$cols, env$raw_data)
+    res <- fit_trend(t, ys_raw, model, deg)
+    if (is.null(res)) next
+    if (is.null(xs)) {
+      # The JS evaluates the fit at the FINITE input t, not on a dense grid.
+      xs <- if (!is.null(output_x)) output_x else t[is.finite(t)]
+      set_col(env, env$cols, out_id(args, "trendx"), xs, type = "number")
+    }
+    yy <- evaluate_trend_at_points(res$parameters, model, xs)
+    y_out <- out_id(args, paste0("trendy_", y_id))
+    if (y_out == -1) y_out <- out_id(args, "trendy")
+    set_col(env, env$cols, y_out, yy, type = "number")
+    any_valid <- TRUE
+  }
+  any_valid
+}
+
+tp_smootheddata <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  smoother <- if (!is.null(args$smootherType)) args$smootherType
+              else if (!is.null(args$smoother)) args$smoother else "whittaker"
+  x_col <- env$cols[[as.character(x_in)]]
+  x_data <- t_for_col(x_col, env$cols, env$raw_data)
+  sx <- NULL; any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    r <- smooth_arrays(x_data, col_data(env$cols[[yk]], env$cols, env$raw_data), smoother, args)
+    if (is.null(sx)) {
+      sx <- r$x
+      set_col(env, env$cols, out_id(args, "smoothedx"), r$x,
+              type = x_col$type, time_format = x_col$time_format)
+    }
+    y_out <- out_id(args, paste0("smoothedy_", y_id))
+    if (y_out == -1) y_out <- out_id(args, "smoothedy")
+    set_col(env, env$cols, y_out, r$y, type = "number")
+    any_valid <- TRUE
+  }
+  any_valid
+}
+
+tp_describedata <- function(args, env) {
+  y_ins <- id_list(args$yIN)
+  if (!length(y_ins)) return(FALSE)
+  keys <- c("n", "mean", "median", "sd", "min", "max", "range",
+            "q1", "q3", "iqr", "skewness", "kurtosis")
+  rows <- setNames(vector("list", length(keys) + 1), c("variable", keys))
+  for (k in names(rows)) rows[[k]] <- c()
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    st <- describe_stats(col_data(env$cols[[yk]], env$cols, env$raw_data))
+    nm <- env$cols[[yk]]$name
+    rows$variable <- c(rows$variable, if (is.null(nm)) yk else nm)
+    for (k in keys) rows[[k]] <- c(rows[[k]], st[[k]])
+  }
+  .write_result_rows(args, env, rows)
+}
+
+tp_normalitytest <- function(args, env) {
+  y_ins <- id_list(args$yIN)
+  if (!length(y_ins)) return(FALSE)
+  method <- if (is.null(args$method)) "shapiro" else args$method
+  alpha <- as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha)
+  fn <- switch(method, dagostino = d_agostino, jarquebera = jarque_bera, shapiro_wilk)
+  rows <- list(variable = c(), statistic = c(), pvalue = c(), n = c(), normal = c())
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    res <- fn(col_data(env$cols[[yk]], env$cols, env$raw_data))
+    nm <- env$cols[[yk]]$name
+    rows$variable <- c(rows$variable, if (is.null(nm)) yk else nm)
+    rows$statistic <- c(rows$statistic, res$statistic)
+    rows$pvalue <- c(rows$pvalue, res$pvalue)
+    rows$n <- c(rows$n, res$n)
+    # A NaN p (the test could not run) is NOT evidence of normality, so it stays NA
+    # rather than collapsing to 0/1.
+    rows$normal <- c(rows$normal,
+                     if (is.na(res$pvalue)) NA_real_ else as.numeric(res$pvalue > alpha))
+  }
+  .write_result_rows(args, env, rows)
+}
+
+# Write a result TABLE: `rows` is a named list of equal-length vectors, one column each.
+.write_result_rows <- function(args, env, rows) {
+  wrote <- FALSE
+  for (k in names(rows)) {
+    oid <- out_id(args, k)
+    if (oid == -1) next
+    v <- rows[[k]]
+    set_col(env, env$cols, oid, v,
+            type = if (is.character(v)) "category" else "number")
+    wrote <- TRUE
+  }
+  wrote
+}
+
+# Analyses this runtime implements. Kept in step with R_IMPLEMENTED in
+# src/lib/_parity/runtimeCoverage.js by a test, in BOTH directions, so the declared reach and
+# the real reach cannot drift apart the way the Python port's did.
+TABLE_PROCESS_MAP = list(
+  describedata = tp_describedata,
+  normalitytest = tp_normalitytest,
+  smootheddata = tp_smootheddata,
+  threshold = tp_threshold,
+  trendfit = tp_trendfit
+)
+
+# Column processes are not ported yet; declared so the dispatcher can be strict about them
+# rather than silently ignoring a column that had a transform attached.
+COLUMN_PROCESS_MAP = list()
+
+run_column_process <- function(key, data, args, cols, raw_data) {
+  fn <- COLUMN_PROCESS_MAP[[key]]
+  if (is.null(fn)) {
+    stop(sprintf(paste0("ancir: column process '%s' is not implemented by the R runtime. ",
+                        "Re-export from AnCiR without it, or use the Python export."), key))
+  }
+  fn(data, args, cols, raw_data)
+}
+
+# STRICT by design. An analysis the R port does not implement ABORTS rather than being
+# skipped: a script that quietly omits a step still writes a columns.csv, and a plausible
+# file with a missing analysis is far more dangerous than no file. The export button refuses
+# unsupported sessions up front, so reaching this error means the script was re-run after the
+# runtime changed, or hand-edited.
+run_table_process <- function(name, args, env) {
+  key <- tolower(gsub(" ", "", name))
+  fn <- TABLE_PROCESS_MAP[[key]]
+  if (is.null(fn)) {
+    stop(sprintf(paste0("ancir: analysis '%s' is not implemented by the R runtime.\n",
+                        "  Implemented: %s\n",
+                        "  Export this session as Python instead, which is complete."),
+                 name, paste(sort(names(TABLE_PROCESS_MAP)), collapse = ", ")))
+  }
+  fn(args, env)
+}
+
+# ---------------------------------------------------------------------------
+# Session plumbing
+# ---------------------------------------------------------------------------
 #
-# Listing a key here that has no implementation behind it would pass the coverage guard
-# while doing nothing — exactly the silent-gap failure that let the Python port fall eight
-# analyses behind. The guard in runtimeCoverage.test.js checks this list against
-# R_IMPLEMENTED in both directions for that reason.
-TABLE_PROCESS_MAP = list()
+# A Column is a list, not an R5/S4 class: the exported script is meant to be readable by
+# someone who wants to see what their analysis did, and a plain list prints usefully.
+#
+# `raw_data` is shared by reference through an environment so that a table process writing an
+# output column is visible to every later one, which is how the Python port behaves and what
+# the dependency-ordered pipeline relies on.
+
+new_column <- function(id, name, type = "number", data = NULL, time_format = NULL,
+                       bin_width = 1, compression = NULL, ref_id = NULL,
+                       group_label = NULL, processes = list()) {
+  list(id = id, name = name, type = type, data = data, time_format = time_format,
+       bin_width = bin_width, compression = compression, ref_id = ref_id,
+       group_label = group_label, processes = processes)
+}
+
+col_is_ref <- function(col) !is.null(col$ref_id)
+
+.decompress <- function(col, raw) {
+  # AWD records store a regular grid as {start, step, length} rather than every value.
+  if (identical(col$compression, "awd") && is.list(raw) && !is.null(raw$start)) {
+    return(raw$start + seq_len(as.integer(raw$length)) * raw$step - raw$step)
+  }
+  raw
+}
+
+# Values of a column, with referencing, decompression, time parsing, bin centring and any
+# column processes applied — mirroring Column.get_data().
+col_data <- function(col, cols, raw_data) {
+  if (is.null(col)) return(list())
+  if (col_is_ref(col)) {
+    ref <- cols[[as.character(col$ref_id)]]
+    return(if (is.null(ref)) list() else col_data(ref, cols, raw_data))
+  }
+  key <- as.character(col$data)
+  raw <- if (!is.null(col$data) && !is.null(raw_data[[key]])) raw_data[[key]] else list()
+  d <- .decompress(col, raw)
+  if (identical(col$type, "time") && !identical(col$compression, "awd")) {
+    v <- unlist(d, use.names = FALSE)
+    # Already-numeric (UNIX ms, e.g. written by SimulatedData) is left alone; only strings
+    # need parsing. as.POSIXct handles ISO 8601, which is what sessions store.
+    if (length(v) && is.character(v)) {
+      parsed <- suppressWarnings(as.POSIXct(v, tz = "UTC",
+                                            tryFormats = c("%Y-%m-%dT%H:%M:%OSZ",
+                                                           "%Y-%m-%dT%H:%M:%OS",
+                                                           "%Y-%m-%d %H:%M:%OS",
+                                                           "%Y-%m-%d")))
+      d <- as.numeric(parsed) * 1000
+    }
+  }
+  if (identical(col$type, "bin")) {
+    d <- unlist(d, use.names = FALSE) + col$bin_width / 2
+  }
+  for (entry in col$processes) {
+    fname <- if (!is.null(entry$funcname)) entry$funcname else entry$name
+    if (!is.null(fname)) {
+      d <- run_column_process(tolower(gsub(" ", "", fname)), d, entry$args, cols, raw_data)
+    }
+  }
+  d
+}
+
+# Hours since the column's own start. Time columns hold epoch ms; everything else is already
+# in whatever unit the user chose, so only the offset is removed.
+col_hours <- function(col, cols, raw_data) {
+  d <- suppressWarnings(as.numeric(unlist(col_data(col, cols, raw_data), use.names = FALSE)))
+  if (!length(d)) return(numeric(0))
+  baseline <- min(d, na.rm = TRUE)
+  if (identical(col$type, "time")) (d - baseline) / 3600000 else d - baseline
+}
+
+# x-axis values for a column: hours-since-start for time columns, raw otherwise.
+t_for_col <- function(col, cols, raw_data) {
+  if (is.null(col)) return(numeric(0))
+  if (identical(col$type, "time")) col_hours(col, cols, raw_data)
+  else suppressWarnings(as.numeric(unlist(col_data(col, cols, raw_data), use.names = FALSE)))
+}
+
+# args$out[[key]], tolerating the legacy {val: id} form.
+out_id <- function(args, key) {
+  o <- args$out
+  if (is.null(o) || is.null(o[[key]])) return(-1)
+  v <- o[[key]]
+  if (is.list(v) && !is.null(v$val)) v$val else v
+}
+
+# Normalise yIN: scalar -> list(scalar), NULL/-1 -> empty, list -> list.
+id_list <- function(y) {
+  if (is.null(y)) return(integer(0))
+  v <- unlist(y, use.names = FALSE)
+  v <- v[!is.na(v) & v != -1]
+  as.integer(v)
+}
+
+# Write values into raw_data (an environment, so later processes see them) and update meta.
+set_col <- function(env, cols, id, values, type = NULL, time_format = NULL) {
+  if (is.null(id) || id == -1) return(invisible(FALSE))
+  env$raw_data[[as.character(id)]] <- values
+  key <- as.character(id)
+  if (!is.null(env$cols[[key]])) {
+    env$cols[[key]]$data <- id
+    env$cols[[key]]$compression <- NULL
+    if (!is.null(type)) env$cols[[key]]$type <- type
+    if (!is.null(time_format)) env$cols[[key]]$time_format <- time_format
+  }
+  invisible(TRUE)
+}
+
+# ---------------------------------------------------------------------------
+# Trend fitting
+# ---------------------------------------------------------------------------
+
+# Ordinary least squares via qr.solve, which is what np.polyfit and linear_regression reduce
+# to. Returned coefficients are ASCENDING in power, matching the Python's `coeffs`.
+linear_regression <- function(x, y) {
+  ok <- is.finite(x) & is.finite(y)
+  x <- x[ok]; y <- y[ok]
+  n <- length(x)
+  if (n < 2) return(list(slope = NA_real_, intercept = NA_real_,
+                         rmse = NA_real_, rSquared = NA_real_))
+  fit <- qr.solve(cbind(1, x), y)
+  pred <- fit[1] + fit[2] * x
+  rss <- sum((y - pred)^2)
+  ss_tot <- sum((y - mean(y))^2)
+  list(slope = fit[2], intercept = fit[1],
+       rmse = sqrt(rss / n),
+       rSquared = if (ss_tot > 0) 1 - rss / ss_tot else 0)
+}
+
+fit_trend <- function(x, y, model = "linear", poly_degree = 2) {
+  xa <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
+  ya <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  ok <- is.finite(xa) & is.finite(ya)
+  xa <- xa[ok]; ya <- ya[ok]
+  if (!length(xa)) return(NULL)
+  fin <- function(pred) {
+    rss <- sum((ya - pred)^2)
+    ss_tot <- sum((ya - mean(ya))^2)
+    list(rmse = sqrt(rss / length(xa)),
+         rSquared = if (ss_tot > 0) 1 - rss / ss_tot else 0)
+  }
+  if (identical(model, "linear")) {
+    reg <- linear_regression(xa, ya)
+    pred <- reg$slope * xa + reg$intercept
+    return(list(parameters = list(slope = reg$slope, intercept = reg$intercept),
+                fitted = pred, rmse = reg$rmse, rSquared = reg$rSquared))
+  }
+  if (identical(model, "exponential")) {
+    reg <- linear_regression(xa, log(ya))
+    a <- exp(reg$intercept); b <- reg$slope
+    pred <- a * exp(b * xa); m <- fin(pred)
+    return(list(parameters = list(a = a, b = b), fitted = pred,
+                rmse = m$rmse, rSquared = m$rSquared))
+  }
+  if (identical(model, "logarithmic")) {
+    reg <- linear_regression(log(xa), ya)
+    a <- reg$intercept; b <- reg$slope
+    pred <- a + b * log(xa); m <- fin(pred)
+    return(list(parameters = list(a = a, b = b), fitted = pred,
+                rmse = m$rmse, rSquared = m$rSquared))
+  }
+  if (identical(model, "polynomial")) {
+    deg <- as.integer(poly_degree)
+    des <- outer(xa, 0:deg, `^`)
+    coeffs <- qr.solve(des, ya)          # ascending powers, as the Python stores them
+    pred <- as.vector(des %*% coeffs); m <- fin(pred)
+    return(list(parameters = list(coeffs = coeffs), fitted = pred,
+                rmse = m$rmse, rSquared = m$rSquared))
+  }
+  NULL
+}
+
+evaluate_trend_at_points <- function(parameters, model, x_points) {
+  xa <- suppressWarnings(as.numeric(unlist(x_points, use.names = FALSE)))
+  if (identical(model, "linear")) return(parameters$slope * xa + parameters$intercept)
+  if (identical(model, "exponential")) return(parameters$a * exp(parameters$b * xa))
+  if (identical(model, "logarithmic")) return(parameters$a + parameters$b * log(xa))
+  if (identical(model, "polynomial")) {
+    co <- unlist(parameters$coeffs, use.names = FALSE)
+    return(as.vector(outer(xa, seq_along(co) - 1, `^`) %*% co))
+  }
+  rep(NA_real_, length(xa))
+}
+
+# ---------------------------------------------------------------------------
+# Smoothing
+# ---------------------------------------------------------------------------
+
+moving_average <- function(y, window = 5, type = "simple") {
+  v <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  n <- length(v)
+  if (n == 0 || window < 2) return(v)
+  half <- window %/% 2
+  out <- numeric(n)
+  for (i in seq_len(n)) {
+    # Window is CLAMPED at the edges rather than shortened symmetrically, matching the JS:
+    # the first and last points keep a full-width average over whatever data exists.
+    lo <- max(1, i - half); hi <- min(n, i + half)
+    seg <- v[lo:hi]
+    seg <- seg[is.finite(seg)]
+    out[i] <- if (length(seg)) mean(seg) else NA_real_
+  }
+  out
+}
+
+# Whittaker-Eilers: minimise ||y - z||^2 + lambda * ||D_order z||^2. Solved directly; the
+# system is small and banded, and base R's solve() is exact here.
+whittaker_eilers <- function(y, lambda = 100, order = 2) {
+  v <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  n <- length(v)
+  if (n < order + 1) return(v)
+  ok <- is.finite(v)
+  if (!any(ok)) return(v)
+  filled <- v
+  filled[!ok] <- mean(v[ok])
+  d <- diag(n)
+  for (k in seq_len(order)) d <- diff(d)
+  w <- diag(as.numeric(ok))
+  as.vector(solve(w + lambda * crossprod(d), w %*% filled))
+}
+
+savitzky_golay <- function(y, window = 5, poly_order = 2) {
+  v <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  n <- length(v)
+  if (window %% 2 == 0) window <- window + 1
+  if (n < window || window <= poly_order) return(v)
+  half <- window %/% 2
+  z <- -half:half
+  des <- outer(z, 0:poly_order, `^`)
+  # Row 1 of the pseudo-inverse gives the smoothing weights for the window centre.
+  wts <- solve(crossprod(des), t(des))[1, ]
+  out <- v
+  for (i in (half + 1):(n - half)) out[i] <- sum(wts * v[(i - half):(i + half)])
+  out
+}
+
+smooth_arrays <- function(x_vals, y_vals, smoother_type, options = list()) {
+  g <- function(k, d) if (!is.null(options[[k]])) options[[k]] else d
+  if (identical(smoother_type, "whittaker")) {
+    return(list(x = x_vals, y = whittaker_eilers(y_vals, g("lambda", 100), g("order", 2))))
+  }
+  if (smoother_type %in% c("savitzky-golay", "savitzky")) {
+    return(list(x = x_vals, y = savitzky_golay(
+      y_vals, as.integer(g("savitzkyWindowSize", g("windowSize", 5))),
+      as.integer(g("savitzkyPolyOrder", g("polyOrder", 2))))))
+  }
+  if (smoother_type %in% c("moving-average", "moving")) {
+    return(list(x = x_vals, y = moving_average(
+      y_vals, as.integer(g("movingAvgWindowSize", g("windowSize", 5))),
+      g("movingAvgType", g("type", "simple")))))
+  }
+  list(x = x_vals, y = y_vals)
+}

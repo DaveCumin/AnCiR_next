@@ -61,6 +61,58 @@ cmp_scalar <- function(got, want, tol) {
   abs(got - want) <= tol + tol * abs(want)
 }
 
+# Run a table-process fixture: build the columns its `inputs` describe, run the analysis
+# through the real dispatcher, and read back the output columns. Mirrors what
+# tools/test_parity.py does, so the two legs exercise the same path rather than R getting an
+# easier one through a bespoke shortcut.
+run_tp_fixture <- function(fx, rec) {
+  env <- new.env()
+  env$raw_data <- list()
+  env$cols <- list()
+  ref_to_id <- list()
+  next_id <- 1
+
+  for (nm in names(rec$inputs)) {
+    spec <- rec$inputs[[nm]]
+    vals <- unwrap_input(spec)
+    id <- next_id; next_id <- next_id + 1
+    ref_to_id[[nm]] <- id
+    env$raw_data[[as.character(id)]] <- vals
+    env$cols[[as.character(id)]] <- new_column(
+      id = id, name = nm,
+      type = if (!is.null(spec$type)) spec$type else "number",
+      data = id)
+  }
+
+  # Resolve "@ref" argument tokens to the column ids just created, and mint a real column
+  # for every declared `out` key so the analysis has somewhere to write.
+  resolve <- function(v) {
+    if (is.character(v) && length(v) == 1 && startsWith(v, "@")) {
+      r <- substring(v, 2)
+      return(if (!is.null(ref_to_id[[r]])) ref_to_id[[r]] else -1)
+    }
+    if (is.list(v)) return(lapply(v, resolve))
+    v
+  }
+  args <- lapply(fx$args, resolve)
+  out_ids <- list()
+  if (!is.null(fx$args$out)) {
+    for (k in names(fx$args$out)) {
+      id <- next_id; next_id <- next_id + 1
+      out_ids[[k]] <- id
+      env$cols[[as.character(id)]] <- new_column(id = id, name = k, data = id)
+    }
+    args$out <- out_ids
+  }
+
+  ok <- run_table_process(fx$jsName, args, env)
+  outs <- list()
+  for (k in names(out_ids)) {
+    outs[[k]] <- unlist(env$raw_data[[as.character(out_ids[[k]])]], use.names = FALSE)
+  }
+  outs
+}
+
 results <- list()
 n_pass <- 0; n_fail <- 0; n_skip <- 0
 
@@ -71,7 +123,8 @@ for (fx in fixtures) {
   # uncovered set from being forgotten.
   if (is.null(rfunc)) { n_skip <- n_skip + 1; next }
 
-  fn <- PURE_UTIL_MAP[[rfunc]]
+  is_tp <- identical(fx$kind, "tableProcess")
+  fn <- if (is_tp) TABLE_PROCESS_MAP[[rfunc]] else PURE_UTIL_MAP[[rfunc]]
   if (is.null(fn)) {
     n_fail <- n_fail + 1
     results[[length(results) + 1]] <- list(id = fx$id, ok = FALSE,
@@ -102,7 +155,8 @@ for (fx in fixtures) {
   call_args <- c(lapply(refs, function(nm) unwrap_input(rec$inputs[[nm]])),
                  if (is.null(extra)) list() else extra)
 
-  got <- tryCatch(do.call(fn, call_args), error = function(e) e)
+  got <- if (is_tp) tryCatch(run_tp_fixture(fx, rec), error = function(e) e)
+         else tryCatch(do.call(fn, call_args), error = function(e) e)
   if (inherits(got, "error")) {
     n_fail <- n_fail + 1
     results[[length(results) + 1]] <- list(id = fx$id, ok = FALSE,
