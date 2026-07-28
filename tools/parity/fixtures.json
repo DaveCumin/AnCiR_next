@@ -3135,6 +3135,254 @@
 				"ciLow",
 				"ciHigh"
 			]
+		},
+		{
+			"id": "tp-describedata",
+			"kind": "tableProcess",
+			"jsName": "DescribeData",
+			"pyFunc": "describedata",
+			"generate": {
+				"type": "rhythm",
+				"n": 120,
+				"period": 24,
+				"amp": 20,
+				"mesor": 50,
+				"phase": 3,
+				"noise": 9,
+				"seed": 501,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"yIN": [
+					"@y"
+				],
+				"out": {
+					"variable": -1,
+					"n": -1,
+					"mean": -1,
+					"median": -1,
+					"sd": -1,
+					"min": -1,
+					"max": -1,
+					"range": -1,
+					"q1": -1,
+					"q3": -1,
+					"iqr": -1,
+					"skewness": -1,
+					"kurtosis": -1
+				}
+			},
+			"compareOutputs": [
+				"n",
+				"mean",
+				"median",
+				"sd",
+				"min",
+				"max",
+				"range",
+				"q1",
+				"q3",
+				"iqr",
+				"skewness",
+				"kurtosis"
+			]
+		},
+		{
+			"id": "tp-normalitytest-shapiro",
+			"kind": "tableProcess",
+			"jsName": "NormalityTest",
+			"pyFunc": "normalitytest",
+			"generate": {
+				"type": "rhythm",
+				"n": 80,
+				"period": 24,
+				"amp": 0,
+				"mesor": 10,
+				"phase": 0,
+				"noise": 4,
+				"seed": 502,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"yIN": [
+					"@y"
+				],
+				"method": "shapiro",
+				"alpha": 0.05,
+				"out": {
+					"variable": -1,
+					"statistic": -1,
+					"pvalue": -1,
+					"n": -1,
+					"normal": -1
+				}
+			},
+			"compareOutputs": [
+				"statistic",
+				"pvalue",
+				"n",
+				"normal"
+			]
+		},
+		{
+			"id": "tp-correlation-pair",
+			"kind": "tableProcess",
+			"jsName": "Correlation",
+			"pyFunc": "correlation",
+			"generate": {
+				"type": "linear",
+				"n": 60,
+				"slope": 1.4,
+				"intercept": 3,
+				"noise": 5,
+				"seed": 503,
+				"refs": {
+					"x": "a",
+					"y": "b"
+				}
+			},
+			"args": {
+				"yIN": [
+					"@a",
+					"@b"
+				],
+				"method": "pearson",
+				"alpha": 0.05,
+				"out": {
+					"var_i": -1,
+					"var_j": -1,
+					"r": -1,
+					"pvalue": -1,
+					"n": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
+					"significant": -1
+				}
+			},
+			"compareOutputs": [
+				"r",
+				"pvalue",
+				"n",
+				"ciLow",
+				"ciHigh",
+				"significant"
+			]
+		},
+		{
+			"id": "tp-crosscorrelation",
+			"kind": "tableProcess",
+			"jsName": "CrossCorrelation",
+			"pyFunc": "crosscorrelation",
+			"generate": {
+				"type": "linear",
+				"n": 80,
+				"slope": 0.9,
+				"intercept": 1,
+				"noise": 6,
+				"seed": 504,
+				"refs": {
+					"x": "a",
+					"y": "b"
+				}
+			},
+			"args": {
+				"xIN": "@a",
+				"yIN": "@b",
+				"maxLag": 5,
+				"method": "pearson",
+				"out": {
+					"lag": -1,
+					"correlation": -1,
+					"pvalue": -1
+				}
+			},
+			"compareOutputs": [
+				"lag",
+				"correlation",
+				"pvalue"
+			]
+		},
+		{
+			"id": "tp-logisticregression",
+			"kind": "tableProcess",
+			"jsName": "LogisticRegression",
+			"pyFunc": "logisticregression",
+			"generate": {
+				"type": "logistic",
+				"n": 120,
+				"seed": 505,
+				"refs": {
+					"x": "pred",
+					"y": "out"
+				}
+			},
+			"args": {
+				"yIN": "@out",
+				"xIN": [
+					"@pred"
+				],
+				"out": {
+					"term": -1,
+					"coef": -1,
+					"se": -1,
+					"z": -1,
+					"pvalue": -1,
+					"oddsRatio": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
+					"outcome": -1,
+					"eta": -1,
+					"fitted": -1
+				}
+			},
+			"compareOutputs": [
+				"coef",
+				"se",
+				"z",
+				"pvalue",
+				"oddsRatio"
+			]
+		},
+		{
+			"id": "tp-interpolate-resample",
+			"kind": "tableProcess",
+			"jsName": "Interpolate",
+			"pyFunc": "interpolate",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 15,
+				"mesor": 30,
+				"phase": 2,
+				"noise": 3,
+				"seed": 506,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"mode": "resample",
+				"method": "linear",
+				"step": 2,
+				"out": {
+					"interpx": -1
+				}
+			},
+			"compareOutputs": [
+				"interpx"
+			]
 		}
 	]
 }

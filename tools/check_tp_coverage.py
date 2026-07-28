@@ -125,6 +125,19 @@ def regenerate(mapping: dict[str, str]) -> bool:
     return False
 
 
+# Analyses with nothing for a runtime to do.
+#
+# ColumnSet curates a live subset of columns and emits NO output columns of its own. Its
+# selection is materialised into each consumer's real inputs by syncTPSets while the session
+# is being edited, so by export time consumers already hold concrete column ids and a runtime
+# never sees a Column Set that still needs resolving.
+#
+# Excluded from `missing` rather than left to report forever: a guard that is permanently red
+# gets ignored, which is how this checker came to be run by nobody while the Python port fell
+# eight analyses behind.
+NOT_APPLICABLE = {'columnset'}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
@@ -135,7 +148,7 @@ def main(argv=None) -> int:
     impl = runtime_keys()
 
     expected = {tp_key(fk) for fk in js}
-    missing = sorted(k for k in expected if k not in impl)
+    missing = sorted(k for k in expected if k not in impl and k not in NOT_APPLICABLE)
 
     print(f"[tp-coverage] JS table processes: {len(js)}")
     print(f"[tp-coverage] runtime TABLE_PROCESS_MAP keys: {len(impl)}")

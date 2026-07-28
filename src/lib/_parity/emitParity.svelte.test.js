@@ -250,6 +250,16 @@ function generateInputs(spec) {
 		const y = t.map((x) => slope * x + intercept + (noise ? normal(rng, 0, noise) : 0));
 		return { [refs.x]: { type: 'number', values: t }, [refs.y]: { type: 'number', values: y } };
 	}
+	if (spec.type === 'logistic') {
+		// A separable-but-not-perfectly-separable binary outcome. Perfect separation makes
+		// the MLE diverge, and the coefficient then depends on where each implementation
+		// stops iterating rather than on the data — which would compare optimiser
+		// stopping rules across three languages instead of the regression itself.
+		const { n, slope = 1.2, intercept = -3, refs } = spec;
+		const x = seq(n, (i) => (i / (n - 1)) * 6 - 3);
+		const y = x.map((v) => (rng() < 1 / (1 + Math.exp(-(intercept + slope * v))) ? 1 : 0));
+		return { [refs.x]: { type: 'number', values: x }, [refs.y]: { type: 'number', values: y } };
+	}
 	if (spec.type === 'groups') {
 		const g = [];
 		const v = [];
@@ -455,5 +465,10 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 		writeFileSync(join(PARITY_DIR, 'js_results.json'), JSON.stringify(results, null, 2), 'utf8');
 		// eslint-disable-next-line no-console
 		console.log(`PARITY: wrote js_results.json (${Object.keys(results).length} fixtures)`);
-	});
+		// Generous timeout: this runs EVERY fixture through the real engine, including the
+		// multi-start nonlinear fits, and it grows with the fixture set. It had no explicit
+		// timeout and inherited vitest's 5s default, which the suite quietly outgrew — the
+		// emitter then failed and left js_results.json stale, so the Python and R legs were
+		// comparing against yesterday's numbers rather than reporting a problem.
+	}, 300_000);
 });

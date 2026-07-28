@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	PYTHON_GAPS,
+	NOT_APPLICABLE,
 	R_IMPLEMENTED,
 	R_PURE_UTILS,
 	tpKey,
@@ -55,7 +56,9 @@ describe('python runtime coverage', () => {
 	});
 
 	it('implements every JS analysis except the recorded gaps', () => {
-		const missing = jsKeys.filter((k) => !keys.includes(k) && !PYTHON_GAPS.includes(k));
+		const missing = jsKeys.filter(
+			(k) => !keys.includes(k) && !PYTHON_GAPS.includes(k) && !NOT_APPLICABLE.includes(k)
+		);
 		expect(
 			missing,
 			`These JS analyses have no Python port and are not in PYTHON_GAPS.\n` +
@@ -74,9 +77,17 @@ describe('python runtime coverage', () => {
 		).toEqual([]);
 	});
 
-	it('does not let the gap list grow', () => {
-		// The whole point: Python fell 8 behind because nothing watched. 8 is the ceiling.
-		expect(PYTHON_GAPS.length).toBeLessThanOrEqual(8);
+	it('has no gaps left', () => {
+		// Python fell 8 behind because nothing watched. It is now level with the JS engine,
+		// and this is what keeps it there.
+		expect(PYTHON_GAPS).toEqual([]);
+	});
+
+	it('treats a not-applicable analysis as done, not as debt', () => {
+		// ColumnSet emits no columns and is resolved before export, so a runtime entry for it
+		// would be dead code. It must still name a REAL analysis.
+		const notReal = NOT_APPLICABLE.filter((k) => !jsKeys.includes(k));
+		expect(notReal, `NOT_APPLICABLE names analyses that do not exist: ${notReal}`).toEqual([]);
 	});
 });
 

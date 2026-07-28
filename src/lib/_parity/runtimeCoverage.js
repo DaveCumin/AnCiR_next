@@ -17,22 +17,32 @@
  */
 
 /**
- * Analyses with no Python port, as of 2026-07-28.
+ * Analyses that no language runtime implements because there is nothing to implement.
  *
- * This list may SHRINK, never grow: the guard fails if a JS analysis is missing from Python
- * and is not listed here, which is what stops a ninth from being added by accident. Each
- * entry is a real gap someone should close, not a decision that Python need not have it.
+ * ColumnSet curates a live subset of columns and emits NO output columns of its own
+ * (nodeSpec.outputs is empty). Its selection is materialised into each consumer's real
+ * inputs by syncTPSets while the session is being edited, so by the time a session is saved
+ * or exported the consumers already hold concrete column ids. A runtime never sees a
+ * Column Set that still needs resolving.
+ *
+ * Kept separate from PYTHON_GAPS on purpose: "nothing to do" and "somebody still has to do
+ * this" are different states, and merging them is how real debt gets forgotten.
  */
-export const PYTHON_GAPS = [
-	'chisquared',
-	'columnset',
-	'correlation',
-	'crosscorrelation',
-	'describedata',
-	'interpolate',
-	'logisticregression',
-	'normalitytest'
-];
+export const NOT_APPLICABLE = ['columnset'];
+
+/**
+ * Analyses with no Python port.
+ *
+ * EMPTY as of 2026-07-28. It was eight — ChiSquared, Correlation, CrossCorrelation,
+ * DescribeData, Interpolate, LogisticRegression, NormalityTest and ColumnSet — because
+ * `tools/check_tp_coverage.py` exited non-zero on exactly this condition but was wired into
+ * nothing, so nobody ran it. Seven have since been ported and the eighth (ColumnSet) turned
+ * out to be NOT_APPLICABLE rather than missing.
+ *
+ * This list may grow only with a deliberate decision, never by accident: the guard fails on
+ * any JS analysis that is absent from both this list and the runtime.
+ */
+export const PYTHON_GAPS = [];
 
 /**
  * Table processes the R port implements.

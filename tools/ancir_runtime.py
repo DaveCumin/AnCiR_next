@@ -3282,27 +3282,45 @@ def _isnan(v):
 
 # >>> AUTO-GENERATED DISPLAY_TO_TP (do not edit by hand) >>>
 DISPLAY_TO_TP = {
+    'Average Profile': 'averageprofile',
+    'AverageProfile': 'averageprofile',
     'Bin Data': 'binneddata',
     'Binned Data': 'binneddata',
     'BinnedData': 'binneddata',
     'Blank Column': 'blankcolumn',
     'BlankColumn': 'blankcolumn',
+    'Categorical tests': 'chisquared',
+    'ChiSquared': 'chisquared',
+    'Circadian Function Index': 'circadianfunctionindex',
+    'CircadianFunctionIndex': 'circadianfunctionindex',
     'Collect Columns': 'collectcolumns',
     'CollectColumns': 'collectcolumns',
     'Column Function': 'columnfunctions',
     'Column Functions': 'columnfunctions',
+    'Column Set': 'columnset',
     'ColumnFunctions': 'columnfunctions',
+    'ColumnSet': 'columnset',
     'Compare groups (stats)': 'groupcomparison',
+    'Correlation': 'correlation',
     'Cosinor': 'cosinor',
+    'Cross-correlation': 'crosscorrelation',
+    'CrossCorrelation': 'crosscorrelation',
+    'Describe Data': 'describedata',
+    'DescribeData': 'describedata',
     'Double Logistic': 'doublelogistic',
     'DoubleLogistic': 'doublelogistic',
     'Enter Data': 'blankcolumn',
+    'FDR Correction': 'fdrcorrection',
+    'FDRCorrection': 'fdrcorrection',
     'Fit Function': 'fitfunction',
     'Fit Trend Curves': 'trendfit',
     'FitFunction': 'fitfunction',
     'Formula Column': 'formulacolumn',
     'FormulaColumn': 'formulacolumn',
     'GroupComparison': 'groupcomparison',
+    'Interpolate': 'interpolate',
+    'Logistic regression': 'logisticregression',
+    'LogisticRegression': 'logisticregression',
     'Long To Wide': 'longtowide',
     'Long to Wide': 'longtowide',
     'LongToWide': 'longtowide',
@@ -3310,7 +3328,11 @@ DISPLAY_TO_TP = {
     'MovingAnalysis': 'movinganalysis',
     'Nonparametric RA': 'nonparametricra',
     'NonparametricRA': 'nonparametricra',
+    'Normality Test': 'normalitytest',
+    'NormalityTest': 'normalitytest',
     'Random': 'random',
+    'Rayleigh test': 'rayleightest',
+    'RayleighTest': 'rayleightest',
     'Rectangular Wave': 'rectangularwave',
     'RectangularWave': 'rectangularwave',
     'Rhythmicity Analysis': 'rhythmicityanalysis',
@@ -3324,15 +3346,13 @@ DISPLAY_TO_TP = {
     'Smoothed Data': 'smootheddata',
     'SmoothedData': 'smootheddata',
     'Sort': 'sort',
-    'Threshold': 'threshold',
-    'FDR Correction': 'fdrcorrection',
-    'FDRCorrection': 'fdrcorrection',
-    'Surrogate Test': 'surrogatetest',
-    'SurrogateTest': 'surrogatetest',
     'Split': 'split',
     'Split data': 'split',
     'Stored Value Group': 'storedvaluegroup',
     'StoredValueGroup': 'storedvaluegroup',
+    'Surrogate Test': 'surrogatetest',
+    'SurrogateTest': 'surrogatetest',
+    'Threshold': 'threshold',
     'Trend Fit': 'trendfit',
     'TrendFit': 'trendfit',
     'Wide To Long': 'widetolong',
@@ -3940,7 +3960,332 @@ def tp_circadianfunctionindex(args, cols, raw_data, _sv):
     return True
 
 
+# --- DescribeData / NormalityTest / Correlation / CrossCorrelation ------------
+# --- ChiSquared / LogisticRegression / Interpolate ---------------------------
+#
+# These seven were the PYTHON_GAPS: analyses the JS engine had and the Python port
+# did not. Their numeric kernels already existed here (describe_stats, correlate,
+# cross_correlation, chi_square_*, logistic_regression, shapiro_wilk/d_agostino/
+# jarque_bera) and were parity-checked; only the table-process wrappers that write
+# their results into output columns were missing. That is precisely why the gap was
+# invisible: no wrapper means no fixture, so nothing failed.
+#
+# ColumnSet is NOT here and is not a gap. It emits no columns (nodeSpec.outputs is
+# empty) and its selection is materialised into each consumer's real inputs by
+# syncTPSets before a session is ever saved, so by export time consumers already
+# hold concrete column ids and there is nothing for a runtime to do.
+
+
+def _result_rows(raw_data, cols, args, columns):
+    """Write a result TABLE: `columns` is {out_key: [values]}, one row per entry."""
+    wrote = False
+    for key, values in columns.items():
+        out_id = _out_id(args, key)
+        if out_id == -1:
+            continue
+        is_text = any(isinstance(v, str) for v in values)
+        _set_col(raw_data, cols, out_id, values,
+                 type_='category' if is_text else 'number')
+        wrote = True
+    return wrote
+
+
+def tp_describedata(args, cols, raw_data, _sv):
+    """One row per wired column: n, centre, spread, shape."""
+    y_ins = _id_list(args.get('yIN'))
+    if not y_ins:
+        return False
+    keys = ('n', 'mean', 'median', 'sd', 'min', 'max', 'range',
+            'q1', 'q3', 'iqr', 'skewness', 'kurtosis')
+    rows = {'variable': []}
+    for k in keys:
+        rows[k] = []
+    for y_id in y_ins:
+        if y_id not in cols:
+            continue
+        col = cols[y_id]
+        st = describe_stats(col.get_data())
+        rows['variable'].append(col.name or str(y_id))
+        for k in keys:
+            rows[k].append(st[k])
+    return _result_rows(raw_data, cols, args, rows)
+
+
+def tp_normalitytest(args, cols, raw_data, _sv):
+    """One row per wired column. Default is Shapiro-Wilk, matching the JS."""
+    y_ins = _id_list(args.get('yIN'))
+    if not y_ins:
+        return False
+    method = args.get('method', 'shapiro')
+    alpha = float(args.get('alpha', 0.05))
+    fn = {'shapiro': shapiro_wilk,
+          'dagostino': d_agostino,
+          'jarquebera': jarque_bera}.get(method, shapiro_wilk)
+    rows = {'variable': [], 'statistic': [], 'pvalue': [], 'n': [], 'normal': []}
+    for y_id in y_ins:
+        if y_id not in cols:
+            continue
+        col = cols[y_id]
+        res = fn(col.get_data())
+        p = res['pvalue']
+        rows['variable'].append(col.name or str(y_id))
+        rows['statistic'].append(res['statistic'])
+        rows['pvalue'].append(p)
+        rows['n'].append(res['n'])
+        # NaN p (test could not run) is NOT evidence of normality, so it stays NaN
+        # rather than collapsing to 0/1.
+        rows['normal'].append(float('nan') if _isnan(p) else (1 if p > alpha else 0))
+    return _result_rows(raw_data, cols, args, rows)
+
+
+def tp_correlation(args, cols, raw_data, _sv):
+    """Pairwise correlation matrix over the wired columns, one row per pair."""
+    y_ins = [y for y in _id_list(args.get('yIN')) if y in cols]
+    if len(y_ins) < 2:
+        return False
+    method = args.get('method', 'auto')
+    alpha = float(args.get('alpha', 0.05))
+    rows = {'var_i': [], 'var_j': [], 'r': [], 'pvalue': [], 'n': [],
+            'ciLow': [], 'ciHigh': [], 'significant': []}
+    for a in range(len(y_ins)):
+        for b in range(a + 1, len(y_ins)):
+            ca, cb = cols[y_ins[a]], cols[y_ins[b]]
+            xs, ys = ca.get_data(), cb.get_data()
+            use = method
+            if method == 'auto':
+                # Mirrors the JS: Shapiro on both, Spearman if either looks non-normal.
+                pa = shapiro_wilk(xs)['pvalue']
+                pb = shapiro_wilk(ys)['pvalue']
+                non_normal = ((not _isnan(pa) and pa <= 0.05)
+                              or (not _isnan(pb) and pb <= 0.05))
+                use = 'spearman' if non_normal else 'pearson'
+            res = correlate(xs, ys, use)
+            ci = correlation_ci([res['r'], res['n']], use, 1 - alpha)
+            p = res['pvalue']
+            rows['var_i'].append(ca.name or str(y_ins[a]))
+            rows['var_j'].append(cb.name or str(y_ins[b]))
+            rows['r'].append(res['r'])
+            rows['pvalue'].append(p)
+            rows['n'].append(res['n'])
+            rows['ciLow'].append(ci['ciLow'])
+            rows['ciHigh'].append(ci['ciHigh'])
+            rows['significant'].append(
+                float('nan') if _isnan(p) else (1 if p < alpha else 0))
+    return _result_rows(raw_data, cols, args, rows)
+
+
+def tp_crosscorrelation(args, cols, raw_data, _sv):
+    """Correlation at each lag between two series; one row per lag."""
+    x_in = args.get('xIN', -1)
+    y_in = args.get('yIN', -1)
+    if isinstance(y_in, list):
+        y_in = y_in[0] if y_in else -1
+    if x_in == -1 or y_in == -1 or x_in not in cols or y_in not in cols:
+        return False
+    res = cross_correlation(cols[x_in].get_data(), cols[y_in].get_data(),
+                            int(args.get('maxLag', 0) or 0),
+                            args.get('method', 'pearson'))
+    return _result_rows(raw_data, cols, args, {
+        'lag': res['lags'], 'correlation': res['r'], 'pvalue': res['pvalue']})
+
+
+def tp_chisquared(args, cols, raw_data, _sv):
+    """Independence / goodness-of-fit / Fisher's exact on two categorical columns."""
+    x_in = args.get('xIN', -1)
+    y_in = args.get('yIN', -1)
+    if isinstance(y_in, list):
+        y_in = y_in[0] if y_in else -1
+    if x_in == -1 or x_in not in cols:
+        return False
+    test_type = args.get('testType', 'independence')
+    correction = bool(args.get('correction', True))
+    xs = cols[x_in].get_data()
+
+    if test_type == 'goodnessoffit':
+        counts = _clean_numeric(xs)
+        if not counts:
+            return False
+        res = chi_square_goodness_of_fit(counts)
+        return _result_rows(raw_data, cols, args, {
+            'statistic': [res['statistic']], 'pvalue': [res['pvalue']],
+            'df': [res['df']], 'effectSize': [float('nan')],
+            'ciLow': [float('nan')], 'ciHigh': [float('nan')]})
+
+    if y_in == -1 or y_in not in cols:
+        return False
+    table = _contingency(xs, cols[y_in].get_data())
+    if not table or len(table) < 2 or len(table[0]) < 2:
+        return False
+    res = chi_square_independence_effects(table, correction)
+    return _result_rows(raw_data, cols, args, {
+        'statistic': [res['statistic']], 'pvalue': [res['pvalue']],
+        'df': [res['df']], 'effectSize': [res.get('cramersV', float('nan'))],
+        'ciLow': [float('nan')], 'ciHigh': [float('nan')]})
+
+
+def _isfinite(v):
+    return v is not None and isinstance(v, (int, float)) and math.isfinite(v)
+
+
+def _contingency(xs, ys):
+    """Counts of (x, y) category pairs, rows ordered by first appearance."""
+    rows, colnames, counts = [], [], {}
+    n = min(len(xs), len(ys))
+    for i in range(n):
+        a, b = xs[i], ys[i]
+        if a is None or b is None or a == '' or b == '':
+            continue
+        a, b = str(a), str(b)
+        if a not in rows:
+            rows.append(a)
+        if b not in colnames:
+            colnames.append(b)
+        counts[(a, b)] = counts.get((a, b), 0) + 1
+    return [[counts.get((r, c), 0) for c in colnames] for r in rows]
+
+
+def tp_logisticregression(args, cols, raw_data, _sv):
+    """Binary outcome ~ predictors: coefficients, odds ratios, and per-observation fit."""
+    y_in = args.get('yIN', -1)
+    if isinstance(y_in, list):
+        y_in = y_in[0] if y_in else -1
+    x_ins = [x for x in _id_list(args.get('xIN')) if x in cols]
+    if y_in == -1 or y_in not in cols or not x_ins:
+        return False
+    y = cols[y_in].get_data()
+    predictors = [cols[x].get_data() for x in x_ins]
+    names = [cols[x].name or str(x) for x in x_ins]
+    res = logistic_regression(y, predictors, names)
+    if not res or not res.get('coef'):
+        return False
+    # The kernel returns PARALLEL ARRAYS (term/coef/se/...), not a list of term objects.
+    coef, se = res['coef'], res['se']
+    # Wald CI on the ODDS RATIO, matching logistic.js:164 — exp(coef +/- 1.96*se), and NaN
+    # rather than a bogus interval when the standard error did not come back finite.
+    z975 = 1.959963984540054
+    ci_low = [math.exp(c - z975 * s) if _isfinite(s) else float('nan')
+              for c, s in zip(coef, se)]
+    ci_high = [math.exp(c + z975 * s) if _isfinite(s) else float('nan')
+               for c, s in zip(coef, se)]
+    wrote = _result_rows(raw_data, cols, args, {
+        'term': res['term'], 'coef': coef, 'se': se, 'z': res['z'],
+        'pvalue': res['pvalue'], 'oddsRatio': res['oddsRatio'],
+        'ciLow': ci_low, 'ciHigh': ci_high})
+    # Per-observation columns are a different LENGTH from the coefficient rows, so
+    # they are written separately rather than as extra columns of the same table.
+    for key in ('outcome', 'eta', 'fitted'):
+        out_id = _out_id(args, key)
+        if out_id != -1 and res.get(key) is not None:
+            _set_col(raw_data, cols, out_id, res[key], type_='number')
+            wrote = True
+    return wrote
+
+
+def tp_interpolate(args, cols, raw_data, _sv):
+    """Fill gaps in place, or resample onto a regular grid."""
+    x_in = args.get('xIN', -1)
+    y_ins = _id_list(args.get('yIN'))
+    if x_in == -1 or x_in not in cols or not y_ins:
+        return False
+    mode = args.get('mode', 'fill')
+    method = args.get('method', 'linear')
+    x_col = cols[x_in]
+    xs_raw = _t_for_col(x_col)
+
+    if mode == 'resample':
+        finite = [float(v) for v in xs_raw
+                  if v is not None and not _isnan(v)]
+        if not finite:
+            return False
+        step = float(args.get('step', 1) or 1)
+        start = args.get('start')
+        end = args.get('end')
+        start = float(start) if start is not None else min(finite)
+        end = float(end) if end is not None else max(finite)
+        if step <= 0 or end < start:
+            return False
+        grid, v = [], start
+        while v <= end + 1e-9:
+            grid.append(v)
+            v += step
+        target = grid
+    else:
+        target = [None if v is None or _isnan(v) else float(v) for v in xs_raw]
+
+    wrote = False
+    out_x = _out_id(args, 'interpx')
+    if out_x != -1:
+        _set_col(raw_data, cols, out_x,
+                 target if mode == 'resample' else xs_raw,
+                 type_=x_col.type, time_format=x_col.time_format)
+        wrote = True
+    for y_id in y_ins:
+        if y_id not in cols:
+            continue
+        ys = _interp_series(xs_raw, cols[y_id].get_data(),
+                            target if mode == 'resample' else None, method)
+        out_y = _out_id(args, f'interpy_{y_id}')
+        if out_y == -1:
+            out_y = _out_id(args, 'interpy')
+        if out_y != -1:
+            _set_col(raw_data, cols, out_y, ys, type_='number')
+            wrote = True
+    return wrote
+
+
+def _interp_series(xs, ys, grid, method='linear'):
+    """Interpolate ys(xs) at `grid`, or fill ys' own gaps when grid is None.
+
+    Extrapolation is deliberately NOT attempted: targets outside the observed x
+    range come back as None rather than a straight-line guess, because a fabricated
+    value beyond the recording is worse than an honest gap.
+    """
+    pts = [(float(x), float(y)) for x, y in zip(xs, ys)
+           if x is not None and y is not None
+           and not _isnan(x) and not _isnan(y)]
+    pts.sort(key=lambda p: p[0])
+    if len(pts) < 2:
+        return [None] * (len(grid) if grid is not None else len(ys))
+    px = [p[0] for p in pts]
+    py = [p[1] for p in pts]
+
+    def at(x):
+        if x is None or _isnan(x) or x < px[0] or x > px[-1]:
+            return None
+        if method == 'nearest':
+            j = min(range(len(px)), key=lambda k: abs(px[k] - x))
+            return py[j]
+        lo, hi = 0, len(px) - 1
+        while hi - lo > 1:
+            mid = (lo + hi) // 2
+            if px[mid] <= x:
+                lo = mid
+            else:
+                hi = mid
+        if px[hi] == px[lo]:
+            return py[lo]
+        f = (x - px[lo]) / (px[hi] - px[lo])
+        return py[lo] + f * (py[hi] - py[lo])
+
+    if grid is not None:
+        return [at(x) for x in grid]
+    out = []
+    for x, y in zip(xs, ys):
+        if y is not None and not _isnan(y):
+            out.append(float(y))
+        else:
+            out.append(at(None if x is None else float(x)))
+    return out
+
+
 TABLE_PROCESS_MAP = {
+    'describedata': tp_describedata,
+    'normalitytest': tp_normalitytest,
+    'correlation': tp_correlation,
+    'crosscorrelation': tp_crosscorrelation,
+    'chisquared': tp_chisquared,
+    'logisticregression': tp_logisticregression,
+    'interpolate': tp_interpolate,
     'averageprofile': tp_averageprofile,
     'circadianfunctionindex': tp_circadianfunctionindex,
     'rayleightest': tp_rayleightest,
