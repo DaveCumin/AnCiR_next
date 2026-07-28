@@ -761,13 +761,205 @@ tp_cosinor <- function(args, env) {
   any_valid
 }
 
+# ---------------------------------------------------------------------------
+# Non-parametric rest-activity variables and the average daily profile
+# ---------------------------------------------------------------------------
+
+# JS Math.round rounds half toward +Inf; R's round() is banker's rounding (half to even).
+# The difference decides an epoch count at exactly .5 and shifts every bin after it.
+js_round <- function(v) floor(v + 0.5)
+
+# Fold a series onto one period and take the per-bin mean and SEM.
+# Mirrors src/lib/utils/averageProfile.js::averageDailyProfile.
+compute_average_profile <- function(t, y, period = 24, n_bins = 24) {
+  n_bins <- as.integer(n_bins)
+  if (!(period > 0) || !(n_bins >= 1)) {
+    return(list(bin_centres = numeric(0), profile = numeric(0),
+                sem = numeric(0), n = integer(0)))
+  }
+  bin_width <- period / n_bins
+  bin_centres <- (seq_len(n_bins) - 1) * bin_width + bin_width / 2
+  len <- min(length(t), length(y))
+  ti <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE))[seq_len(len)])
+  yi <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE))[seq_len(len)])
+  ok <- is.finite(ti) & is.finite(yi)
+  ti <- ti[ok]; yi <- yi[ok]
+  profile <- rep(NA_real_, n_bins); sem <- rep(NA_real_, n_bins); n <- integer(n_bins)
+  if (!length(ti)) return(list(bin_centres = bin_centres, profile = profile,
+                               sem = sem, n = n))
+  t0 <- min(ti)
+  # Double modulo, as the JS does: a negative remainder would otherwise index backwards.
+  tod <- ((ti - t0) %% period + period) %% period
+  b <- pmin(pmax(floor(tod / bin_width), 0), n_bins - 1) + 1
+  for (k in seq_len(n_bins)) {
+    vals <- yi[b == k]
+    n[k] <- length(vals)
+    if (!length(vals)) next
+    m <- mean(vals)
+    profile[k] <- m
+    if (length(vals) >= 2) sem[k] <- sqrt(sum((vals - m)^2) / (length(vals) - 1)) / sqrt(length(vals))
+  }
+  list(bin_centres = bin_centres, profile = profile, sem = sem, n = n)
+}
+
+# IS, IV, RA, M10/L5 and their onsets. Port of src/lib/utils/npcra.js
+# (van Someren et al. 1999, Chronobiol Int 16(4):505-518).
+compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
+                          m_window = 10, l_window = 5) {
+  if (!(epoch_hours > 0) || !(period > 0)) return(NULL)
+  len <- min(length(t), length(y))
+  tf <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE))[seq_len(len)])
+  yf <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE))[seq_len(len)])
+  keep <- is.finite(tf)          # y may be NA and still contribute an epoch slot
+  tf <- tf[keep]; yf <- yf[keep]
+  if (!length(tf)) return(NULL)
+  ord <- order(tf); tf <- tf[ord]; yf <- yf[ord]
+
+  t0 <- tf[1]; t_end <- tf[length(tf)]
+  e <- epoch_hours
+  # The 1e-9 slack matches the Python: without it a span that is an exact multiple of the
+  # epoch gains a spurious final epoch through floating-point drift.
+  n_epochs <- max(1, ceiling((t_end - t0) / e + 1e-9))
+  ssum <- numeric(n_epochs); cnt <- integer(n_epochs)
+  k <- pmin(pmax(floor((tf - t0) / e), 0), n_epochs - 1) + 1
+  for (i in seq_along(tf)) {
+    if (!is.finite(yf[i])) next
+    ssum[k[i]] <- ssum[k[i]] + yf[i]
+    cnt[k[i]] <- cnt[k[i]] + 1
+  }
+  x <- ifelse(cnt > 0, ssum / cnt, NA_real_)
+
+  valid <- x[is.finite(x)]
+  nn <- length(valid)
+  if (!nn) return(NULL)
+  xbar <- mean(valid)
+  overall_ss <- sum((valid - xbar)^2)
+
+  p <- max(1, js_round(period / e))
+  p_sum <- numeric(p); p_cnt <- integer(p)
+  for (kk in seq_len(n_epochs)) {
+    if (!is.finite(x[kk])) next
+    tod <- (((kk - 1) * e) %% period + period) %% period
+    h <- floor(tod / e) %% p
+    p_sum[h + 1] <- p_sum[h + 1] + x[kk]
+    p_cnt[h + 1] <- p_cnt[h + 1] + 1
+  }
+  profile <- ifelse(p_cnt > 0, p_sum / p_cnt, NA_real_)
+
+  prof_ss <- sum((profile[is.finite(profile)] - xbar)^2)
+  IS <- if (overall_ss > 0) (nn * prof_ss) / (p * overall_ss) else NA_real_
+
+  d <- diff(x)
+  diff_ss <- sum(d[is.finite(d)]^2)
+  IV <- if (overall_ss > 0 && nn > 1) (nn * diff_ss) / ((nn - 1) * overall_ss) else NA_real_
+
+  # Circular rolling window over the folded profile: M10 is the highest-mean 10 h block,
+  # L5 the lowest 5 h, and the onset is where that block starts.
+  roll <- function(width_hours, better) {
+    w <- min(p, max(1, js_round(width_hours / e)))
+    best_val <- NA_real_; best_start <- 0
+    for (st in seq_len(p) - 1) {
+      idx <- ((st + seq_len(w) - 1) %% p) + 1
+      v <- profile[idx]
+      v <- v[is.finite(v)]
+      if (!length(v)) next
+      m <- mean(v)
+      if (is.na(best_val) || better(m, best_val)) { best_val <- m; best_start <- st }
+    }
+    list(value = best_val, onset = best_start * e)
+  }
+  m10 <- roll(m_window, function(a, b) a > b)
+  l5 <- roll(l_window, function(a, b) a < b)
+  denom <- m10$value + l5$value
+  RA <- if (is.finite(denom) && denom != 0) (m10$value - l5$value) / denom else NA_real_
+
+  list(IS = IS, IV = IV, RA = RA, M10 = m10$value, L5 = l5$value,
+       M10onset = m10$onset, L5onset = l5$onset,
+       profile = profile, bin_centres = (seq_len(p) - 1) * e + e / 2,
+       n = nn, p = p, n_epochs = n_epochs)
+}
+
+tp_averageprofile <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  period <- as.numeric(if (is.null(args$period)) 24 else args$period)
+  n_bins <- as.integer(if (is.null(args$nBins)) 24 else args$nBins)
+  x_data <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
+  centres <- NULL; any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    res <- compute_average_profile(x_data, col_data(env$cols[[yk]], env$cols, env$raw_data),
+                                   period, n_bins)
+    if (!length(res$bin_centres)) next
+    if (is.null(centres)) {
+      centres <- res$bin_centres
+      set_col(env, env$cols, out_id(args, "avgprofx"), centres, type = "number")
+    }
+    y_out <- out_id(args, paste0("avgprof_", y_id))
+    if (y_out == -1) y_out <- out_id(args, "avgprof")
+    set_col(env, env$cols, y_out, res$profile, type = "number")
+    sem_out <- out_id(args, paste0("avgprofsem_", y_id))
+    if (sem_out == -1) sem_out <- out_id(args, "avgprofsem")
+    set_col(env, env$cols, sem_out, res$sem, type = "number")
+    if (any(res$n > 0)) any_valid <- TRUE
+  }
+  any_valid
+}
+
+tp_nonparametricra <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  epoch <- as.numeric(if (is.null(args$epochHours)) 1 else args$epochHours)
+  period <- as.numeric(if (is.null(args$period)) 24 else args$period)
+  m_window <- as.numeric(if (is.null(args$mWindow)) 10 else args$mWindow)
+  l_window <- as.numeric(if (is.null(args$lWindow)) 5 else args$lWindow)
+  x_data <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
+
+  scalar_keys <- c("IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset")
+  per_y <- list(); centres <- NULL; any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    res <- compute_npcra(x_data, col_data(env$cols[[yk]], env$cols, env$raw_data),
+                         epoch, period, m_window, l_window)
+    if (is.null(res)) next
+    per_y[[yk]] <- res
+    if (is.null(centres)) {
+      centres <- res$bin_centres
+      set_col(env, env$cols, out_id(args, "npcrax"), centres, type = "number")
+    }
+    y_out <- out_id(args, paste0("npcray_", y_id))
+    if (y_out == -1) y_out <- out_id(args, "npcray")
+    set_col(env, env$cols, y_out, res$profile, type = "number")
+    any_valid <- TRUE
+  }
+  if (!any_valid) return(FALSE)
+  # One value per y input, in yIN order — the scalar-metric-port contract. A y that failed
+  # contributes NA rather than being dropped, or the positions would no longer line up.
+  for (key in scalar_keys) {
+    oid <- out_id(args, key)
+    if (oid == -1) next
+    arr <- vapply(y_ins, function(y) {
+      r <- per_y[[as.character(y)]]
+      if (is.null(r)) NA_real_ else as.numeric(r[[key]])
+    }, numeric(1))
+    set_col(env, env$cols, oid, arr, type = "number")
+  }
+  any_valid
+}
+
 # Analyses this runtime implements. Kept in step with R_IMPLEMENTED in
 # src/lib/_parity/runtimeCoverage.js by a test, in BOTH directions, so the declared reach and
 # the real reach cannot drift apart the way the Python port's did.
 TABLE_PROCESS_MAP = list(
+  averageprofile = tp_averageprofile,
   binneddata = tp_binneddata,
   cosinor = tp_cosinor,
   describedata = tp_describedata,
+  nonparametricra = tp_nonparametricra,
   normalitytest = tp_normalitytest,
   smootheddata = tp_smootheddata,
   threshold = tp_threshold,

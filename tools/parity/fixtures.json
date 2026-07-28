@@ -202,7 +202,8 @@
 				"L5",
 				"M10onset",
 				"L5onset"
-			]
+			],
+			"rFunc": "nonparametricra"
 		},
 		{
 			"id": "tp-groupcomparison-ttest",
@@ -502,7 +503,8 @@
 			"compareOutputs": [
 				"avgprofx",
 				"avgprof"
-			]
+			],
+			"rFunc": "averageprofile"
 		},
 		{
 			"id": "col-frequencyfilter-low",

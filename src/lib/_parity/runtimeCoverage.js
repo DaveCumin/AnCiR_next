@@ -60,9 +60,11 @@ export const PYTHON_GAPS = [];
  * ancir_runtime.R (so claiming one you have not written fails).
  */
 export const R_IMPLEMENTED = [
+	'averageprofile',
 	'binneddata',
 	'cosinor',
 	'describedata',
+	'nonparametricra',
 	'normalitytest',
 	'smootheddata',
 	'threshold',
