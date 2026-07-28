@@ -60,11 +60,28 @@ export const PYTHON_GAPS = [];
  * ancir_runtime.R (so claiming one you have not written fails).
  */
 export const R_IMPLEMENTED = [
+	'binneddata',
+	'cosinor',
 	'describedata',
 	'normalitytest',
 	'smootheddata',
 	'threshold',
 	'trendfit'
+];
+
+/**
+ * Column processes the R port implements, keyed as the runtime registers them.
+ *
+ * Ported early on purpose: a column carrying ANY transform hits the strict dispatcher, so
+ * without these the runtime refuses most real sessions however many analyses it has.
+ */
+export const R_COLUMN_PROCESSES = [
+	'add',
+	'multiply',
+	'normalize',
+	'removetrend',
+	'sub',
+	'substitute'
 ];
 
 /**

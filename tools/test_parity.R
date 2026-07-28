@@ -44,8 +44,22 @@ DEFAULT_TOL <- 1e-9
 # here; the wrapper is metadata for the JS side.
 unwrap_input <- function(v) {
   if (is.null(v)) return(NULL)
-  if (is.list(v) && !is.null(v$values)) return(unlist(v$values, use.names = FALSE))
-  unlist(v, use.names = FALSE)
+  if (is.list(v) && !is.null(v$values)) return(as_num_vec(v$values))
+  as_num_vec(v)
+}
+
+# unlist() DROPS NULL elements, so a JSON array containing nulls comes back SHORTER than it
+# was. A trailing empty bin (JS null) then made a 41-element result look like 40, and a null
+# in the middle would have shifted every later index and compared the wrong pairs. Nulls are
+# real results here — "this bin had no data" — so they must survive as NA.
+as_num_vec <- function(v) {
+  if (is.null(v)) return(numeric(0))
+  if (!is.list(v)) return(v)
+  vapply(v, function(e) {
+    if (is.null(e) || length(e) != 1) return(NA_real_)
+    n <- suppressWarnings(as.numeric(e))
+    if (length(n) != 1) NA_real_ else n
+  }, numeric(1), USE.NAMES = FALSE)
 }
 
 # Compare one scalar. Two NaNs agree — "this statistic is undefined here" is a real,
@@ -95,20 +109,36 @@ run_tp_fixture <- function(fx, rec) {
     v
   }
   args <- lapply(fx$args, resolve)
-  out_ids <- list()
-  if (!is.null(fx$args$out)) {
-    for (k in names(fx$args$out)) {
-      id <- next_id; next_id <- next_id + 1
-      out_ids[[k]] <- id
-      env$cols[[as.character(id)]] <- new_column(id = id, name = k, data = id)
-    }
-    args$out <- out_ids
+
+  # The JS engine auto-allocates output columns; the runtimes read ids from args$out. So
+  # register BOTH a static key (e.g. "cosinorx") and a per-y dynamic key (e.g.
+  # "cosinory_<yid>") for every compared output, and read back whichever the analysis chose
+  # to write. This mirrors run_table_process() in test_parity.py exactly — R must be put
+  # through the same path as Python, not an easier one that happens to suit its port.
+  y_ids <- args$yIN
+  if (is.null(y_ids)) y_ids <- list()
+  if (!is.list(y_ids)) y_ids <- as.list(y_ids)
+  if (is.null(args$out)) args$out <- list()
+  out_pairs <- list()
+  for (k in unlist(fx$compareOutputs, use.names = FALSE)) {
+    static_id <- 1000 + next_id
+    dyn_id <- 2000 + next_id
+    next_id <- next_id + 1
+    args$out[[k]] <- static_id
+    for (yid in y_ids) args$out[[paste0(k, "_", yid)]] <- dyn_id
+    env$cols[[as.character(static_id)]] <- new_column(id = static_id, name = k, data = static_id)
+    env$cols[[as.character(dyn_id)]] <- new_column(id = dyn_id, name = paste0(k, "_dyn"),
+                                                   data = dyn_id)
+    out_pairs[[k]] <- c(static_id, dyn_id)
   }
 
   ok <- run_table_process(fx$jsName, args, env)
   outs <- list()
-  for (k in names(out_ids)) {
-    outs[[k]] <- unlist(env$raw_data[[as.character(out_ids[[k]])]], use.names = FALSE)
+  for (k in names(out_pairs)) {
+    dyn <- env$raw_data[[as.character(out_pairs[[k]][2])]]
+    outs[[k]] <- unlist(if (!is.null(dyn) && length(dyn)) dyn
+                        else env$raw_data[[as.character(out_pairs[[k]][1])]],
+                        use.names = FALSE)
   }
   outs
 }
@@ -124,7 +154,10 @@ for (fx in fixtures) {
   if (is.null(rfunc)) { n_skip <- n_skip + 1; next }
 
   is_tp <- identical(fx$kind, "tableProcess")
-  fn <- if (is_tp) TABLE_PROCESS_MAP[[rfunc]] else PURE_UTIL_MAP[[rfunc]]
+  is_cp <- identical(fx$kind, "columnProcess")
+  fn <- if (is_tp) TABLE_PROCESS_MAP[[rfunc]]
+        else if (is_cp) COLUMN_PROCESS_MAP[[rfunc]]
+        else PURE_UTIL_MAP[[rfunc]]
   if (is.null(fn)) {
     n_fail <- n_fail + 1
     results[[length(results) + 1]] <- list(id = fx$id, ok = FALSE,
@@ -156,6 +189,12 @@ for (fx in fixtures) {
                  if (is.null(extra)) list() else extra)
 
   got <- if (is_tp) tryCatch(run_tp_fixture(fx, rec), error = function(e) e)
+         # A column process is a bare array -> array; the emitter records the input at the
+         # TOP level (rec$input, not rec$inputs) and names the result "value".
+         else if (is_cp) tryCatch(
+           list(value = run_column_process(rfunc, unlist(rec$input, use.names = FALSE),
+                                           fx$args, list(), list())),
+           error = function(e) e)
          else tryCatch(do.call(fn, call_args), error = function(e) e)
   if (inherits(got, "error")) {
     n_fail <- n_fail + 1
@@ -169,8 +208,8 @@ for (fx in fixtures) {
   for (k in names(want)) {
     w <- want[[k]]
     g <- got[[k]]
-    if (is.list(w) || length(unlist(w)) > 1) {
-      wv <- unlist(w); gv <- unlist(g)
+    if (is.list(w) || length(as_num_vec(w)) > 1) {
+      wv <- as_num_vec(w); gv <- as_num_vec(g)
       if (length(gv) != length(wv)) {
         bad <- c(bad, sprintf("%s: length %d, expected %d", k, length(gv), length(wv)))
         next

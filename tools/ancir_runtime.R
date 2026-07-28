@@ -277,7 +277,24 @@ fit_cosine_curves <- function(t, x, n_curves = 1) {
   for (fs in c(1 / 24, 1 / 12, 1 / 6, 1 / max(timespan, 1))) {
     p0 <- c(); lb <- c(); ub <- c()
     for (i in seq_len(n_curves)) {
-      p0 <- c(p0, span_amp / max(1, n_curves), fs * i, 0)
+      # Seed amplitude and phase by SOLVING for them at this frequency: with w fixed the
+      # model is linear in (B cos o, B sin o) and the offset, so the best pair has a closed
+      # form. Seeding phase at 0 instead leaves the starting cosine anti-correlated whenever
+      # the true acrophase is far from 0, and an optimiser can then shrink the AMPLITUDE
+      # toward zero rather than rotate the phase. The Python port did exactly that and
+      # returned amplitude 3.3 against a true 38; this seeding is what fixed it, and both
+      # ports now seed identically so neither can drift into that basin.
+      w <- fs * i
+      th <- 2 * pi * w * t
+      design <- cbind(1, cos(th), sin(th))
+      coef <- tryCatch(qr.solve(design, x), error = function(e) NULL)
+      if (is.null(coef)) {
+        amp0 <- span_amp / max(1, n_curves); pha0 <- 0
+      } else {
+        amp0 <- sqrt(coef[2]^2 + coef[3]^2)
+        pha0 <- atan2(-coef[3], coef[2])
+      }
+      p0 <- c(p0, amp0, w, pha0)
       lb <- c(lb, -Inf, 0.001, -Inf); ub <- c(ub, Inf, 100, Inf)
     }
     p0 <- c(p0, mean(x)); lb <- c(lb, -Inf); ub <- c(ub, Inf)
@@ -469,10 +486,287 @@ tp_normalitytest <- function(args, env) {
   wrote
 }
 
+# ---------------------------------------------------------------------------
+# Column processes
+# ---------------------------------------------------------------------------
+#
+# Ported before most analyses on purpose: a column carrying ANY transform hits the strict
+# dispatcher, so without these the R runtime refuses most real sessions regardless of how
+# many analyses it implements.
+
+cp_add <- function(x, args, cols, raw_data) {
+  v <- as.numeric(if (is.null(args$value)) 0 else args$value)
+  vapply(x, function(xi) {
+    n <- suppressWarnings(as.numeric(xi))
+    if (length(n) != 1 || is.na(n)) NA_real_ else n + v
+  }, numeric(1), USE.NAMES = FALSE)
+}
+
+cp_multiply <- function(x, args, cols, raw_data) {
+  v <- as.numeric(if (is.null(args$value)) 1 else args$value)
+  vapply(x, function(xi) {
+    n <- suppressWarnings(as.numeric(xi))
+    if (length(n) != 1 || is.na(n)) NA_real_ else n * v
+  }, numeric(1), USE.NAMES = FALSE)
+}
+
+# "Substitute", not "subtract" — the JS registry key `Sub` is find-and-replace. Guessing
+# subtraction here would silently corrupt every column that used it.
+cp_substitute <- function(x, args, cols, raw_data) {
+  find <- args$find; replace <- args$replace
+  lapply(x, function(xi) if (identical(xi, find)) replace else xi)
+}
+
+cp_normalize <- function(x, args, cols, raw_data) {
+  method <- if (is.null(args$method)) "z-score" else args$method
+  arr <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
+  ok <- is.finite(arr)
+  if (!any(ok)) return(arr)
+  sub <- arr[ok]
+  out_sub <- switch(method,
+    "z-score" = {
+      # numpy std(ddof = 0) is the POPULATION sd; R's sd() is the sample one.
+      s <- sqrt(sum((sub - mean(sub))^2) / length(sub))
+      (sub - mean(sub)) / (if (s > 0) s else 1)
+    },
+    "min-max" = {
+      lo <- min(sub); hi <- max(sub)
+      (sub - lo) / (if (hi > lo) hi - lo else 1)
+    },
+    "robust" = {
+      med <- median(sub)
+      mad <- median(abs(sub - med))
+      (sub - med) / (if (mad != 0) mad else 1)
+    },
+    "unit-vector" = {
+      nrm <- sqrt(sum(sub * sub))
+      sub / (if (nrm != 0) nrm else 1)
+    },
+    sub)
+  arr[ok] <- out_sub
+  arr
+}
+
+cp_removetrend <- function(x, args, cols, raw_data) {
+  x_col_id <- if (is.null(args$xColId)) -1 else args$xColId
+  x_col <- if (x_col_id != -1) cols[[as.character(x_col_id)]] else NULL
+  t <- if (!is.null(x_col)) t_for_col(x_col, cols, raw_data) else seq_along(x) - 1
+  y <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
+  ok <- is.finite(t) & is.finite(y)
+  if (sum(ok) < 2) return(y)
+  fit <- fit_trend(t[ok], y[ok], if (is.null(args$model)) "linear" else args$model,
+                   as.integer(if (is.null(args$polyDegree)) 2 else args$polyDegree))
+  if (is.null(fit)) return(y)
+  out <- y
+  out[ok] <- y[ok] - fit$fitted
+  out
+}
+
+# ---------------------------------------------------------------------------
+# Binning
+# ---------------------------------------------------------------------------
+
+# Port of plotbits/helpers/wrangleData.js::binData. The loop pushes the bin and THEN checks
+# the end condition, so there is always one trailing bin past the last datum — matching the
+# JS exactly rather than the more obvious pre-check, which would drop it.
+bin_data <- function(x_values, y_values, bin_size, bin_start = 0, step_size = NULL,
+                     agg_func = "mean") {
+  if (is.null(step_size)) step_size <- bin_size
+  xa <- suppressWarnings(as.numeric(unlist(x_values, use.names = FALSE)))
+  ya <- suppressWarnings(as.numeric(unlist(y_values, use.names = FALSE)))
+  ok <- is.finite(xa) & is.finite(ya)
+  xa <- xa[ok]; ya <- ya[ok]
+  if (!length(xa)) return(list(bins = numeric(0), y_out = numeric(0)))
+  end <- max(xa)
+  bins <- c(); y_out <- c(); cur <- bin_start
+  repeat {
+    in_bin <- ya[xa >= cur & xa < cur + bin_size]
+    v <- if (!length(in_bin)) NA_real_ else switch(agg_func,
+      min = min(in_bin), max = max(in_bin), median = median(in_bin),
+      # numpy std(ddof = 0): population, not sample.
+      stddev = sqrt(sum((in_bin - mean(in_bin))^2) / length(in_bin)),
+      mean(in_bin))
+    bins <- c(bins, cur); y_out <- c(y_out, v)
+    if (cur >= end) break
+    cur <- cur + step_size
+  }
+  list(bins = bins, y_out = y_out)
+}
+
+tp_binneddata <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  bin_size <- as.numeric(if (is.null(args$binSize)) 1 else args$binSize)
+  bin_start <- as.numeric(if (is.null(args$binStart)) 0 else args$binStart)
+  step <- as.numeric(if (is.null(args$stepSize)) bin_size else args$stepSize)
+  agg <- if (is.null(args$aggFunc)) "mean" else args$aggFunc
+  x_col <- env$cols[[as.character(x_in)]]
+  x_data <- t_for_col(x_col, env$cols, env$raw_data)
+  bins_x <- NULL; any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    b <- bin_data(x_data, col_data(env$cols[[yk]], env$cols, env$raw_data),
+                  bin_size, bin_start, step, agg)
+    if (is.null(bins_x)) {
+      # The JS emits bin CENTRES (start + binSize/2), not bin starts.
+      bins_x <- b$bins + bin_size / 2
+      set_col(env, env$cols, out_id(args, "binnedx"), bins_x,
+              type = x_col$type, time_format = x_col$time_format)
+    }
+    y_out <- out_id(args, paste0("binnedy_", y_id))
+    if (y_out == -1) y_out <- out_id(args, "binnedy")
+    set_col(env, env$cols, y_out, b$y_out, type = "number")
+    any_valid <- TRUE
+  }
+  any_valid
+}
+
+# ---------------------------------------------------------------------------
+# Cosinor (Halberg fixed-period)
+# ---------------------------------------------------------------------------
+
+# Fixed-period cosinor is LINEAR in its parameters: regress on cos/sin of each harmonic and
+# solve by least squares. No optimiser, and no risk of landing in a different basin from the
+# other ports — unlike the free-period fit, which is why that one needed the analytic
+# Jacobian treatment.
+fit_cosinor_fixed <- function(t, y, period = 24, n_harmonics = 1, alpha = 0.05) {
+  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
+  y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  ok <- is.finite(t) & is.finite(y)
+  t <- t[ok]; y <- y[ok]
+  n <- length(t)
+  if (n < 2 * n_harmonics + 2) return(NULL)
+  omega <- 2 * pi / period
+  X <- matrix(1, nrow = n, ncol = 1)
+  for (k in seq_len(n_harmonics)) X <- cbind(X, cos(k * omega * t), sin(k * omega * t))
+  beta <- tryCatch(qr.solve(X, y), error = function(e) NULL)
+  if (is.null(beta)) return(NULL)
+  fitted <- as.vector(X %*% beta)
+  resid <- y - fitted
+  p <- ncol(X)
+  df_resid <- n - p
+  if (df_resid <= 0) return(NULL)
+  rss <- sum(resid^2)
+  mse <- rss / df_resid
+  # sqrt(MSE), i.e. over the residual DF — matching cosinor.js. Dividing by n instead gives
+  # a ~0.9% low RMSE on a 168-point window, which went unnoticed in the Python port until a
+  # fixture finally compared rmse.
+  rmse <- sqrt(mse)
+  ss_tot <- sum((y - mean(y))^2)
+  r2 <- if (ss_tot > 0) 1 - rss / ss_tot else 0
+  cov <- tryCatch(mse * solve(crossprod(X)), error = function(e) matrix(0, p, p))
+  M <- beta[1]
+  se_m <- sqrt(max(cov[1, 1], 0))
+  tcrit <- qt(1 - alpha / 2, df_resid)
+  harmonics <- list()
+  for (k in seq_len(n_harmonics)) {
+    ib <- 1 + 2 * (k - 1) + 1
+    ig <- ib + 1
+    b <- beta[ib]; g <- beta[ig]
+    amp <- sqrt(b^2 + g^2)
+    phi <- atan2(-g, b)                      # JS: atan2(-gamma, beta)
+    acro <- (-phi / (k * omega)) %% (period / k)
+    var_b <- max(cov[ib, ib], 0); var_g <- max(cov[ig, ig], 0); cov_bg <- cov[ib, ig]
+    se_a <- if (amp > 0) sqrt(max((b^2 * var_b + g^2 * var_g + 2 * b * g * cov_bg) / amp^2, 0)) else 0
+    den <- b^2 + g^2
+    se_phi <- if (den > 0) sqrt(max((g^2 * var_b + b^2 * var_g - 2 * b * g * cov_bg) / den^2, 0)) else 0
+    se_acro <- se_phi / (k * omega)
+    harmonics[[k]] <- list(k = k, beta = b, gamma = g, amplitude = amp,
+                           acrophase_hrs = acro, phi_rad = phi,
+                           SE_A = se_a, SE_acrophase_hrs = se_acro,
+                           CI_A = c(amp - tcrit * se_a, amp + tcrit * se_a),
+                           CI_acrophase = c(acro - tcrit * se_acro, acro + tcrit * se_acro))
+  }
+  df1 <- p - 1
+  f_stat <- if (rss > 0) ((ss_tot - rss) / df1) / (rss / df_resid) else Inf
+  pf_val <- if (is.finite(f_stat)) pf(f_stat, df1, df_resid, lower.tail = FALSE) else 0
+  list(M = M, SE_M = se_m, CI_M = c(M - tcrit * se_m, M + tcrit * se_m),
+       harmonics = harmonics, F_stat = f_stat, df = c(df1, df_resid), pF = pf_val,
+       R2 = r2, RMSE = rmse, fitted = fitted, n = n,
+       period = period, nHarmonics = n_harmonics, alpha = alpha)
+}
+
+evaluate_cosinor_at_points <- function(parameters, x_points) {
+  xa <- suppressWarnings(as.numeric(unlist(x_points, use.names = FALSE)))
+  if (!is.null(parameters$harmonics)) {
+    omega <- 2 * pi / parameters$period
+    y <- rep(parameters$M, length(xa))
+    for (h in parameters$harmonics) {
+      y <- y + h$beta * cos(h$k * omega * xa) + h$gamma * sin(h$k * omega * xa)
+    }
+    return(y)
+  }
+  y <- rep(if (is.null(parameters$O)) 0 else parameters$O, length(xa))
+  for (cc in parameters$cosines) {
+    y <- y + cc$amplitude * cos(2 * pi * cc$frequency * xa + cc$phase)
+  }
+  y
+}
+
+tp_cosinor <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  n_curves <- as.integer(if (is.null(args$Ncurves)) 0 else args$Ncurves)
+  use_fixed <- isTRUE(args$useFixedPeriod)
+  fixed_period <- as.numeric(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod)
+  n_h <- as.integer(if (is.null(args$nHarmonics)) 1 else args$nHarmonics)
+  alpha <- as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha)
+  output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
+  x_col <- env$cols[[as.character(x_in)]]
+  t <- t_for_col(x_col, env$cols, env$raw_data)
+
+  output_x <- NULL
+  if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]])) {
+    ox <- t_for_col(env$cols[[as.character(output_x_id)]], env$cols, env$raw_data)
+    output_x <- ox[is.finite(ox)]
+  }
+
+  any_valid <- FALSE; first_x <- NULL
+  mesor <- c(); acro <- c()
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) { mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); next }
+    y <- suppressWarnings(as.numeric(unlist(col_data(env$cols[[yk]], env$cols, env$raw_data),
+                                            use.names = FALSE)))
+    ok <- is.finite(t) & is.finite(y)
+    tt <- t[ok]; yy <- y[ok]
+    res <- if (use_fixed || n_curves == 0) {
+      fit_cosinor_fixed(tt, yy, fixed_period, n_h, alpha)
+    } else {
+      fit_cosine_curves(tt, yy, n_curves)
+    }
+    if (is.null(res)) { mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); next }
+    params <- if (!is.null(res$harmonics)) res else res$parameters
+    if (is.null(first_x)) {
+      first_x <- if (!is.null(output_x)) output_x else tt
+      set_col(env, env$cols, out_id(args, "cosinorx"), first_x, type = "number")
+    }
+    set_col(env, env$cols,
+            {
+              yo <- out_id(args, paste0("cosinory_", y_id))
+              if (yo == -1) out_id(args, "cosinory") else yo
+            },
+            evaluate_cosinor_at_points(params, first_x), type = "number")
+    mesor <- c(mesor, if (!is.null(res$M)) res$M else NA_real_)
+    acro <- c(acro, if (!is.null(res$harmonics)) res$harmonics[[1]]$acrophase_hrs else NA_real_)
+    any_valid <- TRUE
+  }
+  # Scalar metric ports carry ONE value per y input, in yIN order — the contract the whole
+  # "one analysis node per group" idiom depends on.
+  set_col(env, env$cols, out_id(args, "mesor"), mesor, type = "number")
+  set_col(env, env$cols, out_id(args, "acrophase"), acro, type = "number")
+  any_valid
+}
+
 # Analyses this runtime implements. Kept in step with R_IMPLEMENTED in
 # src/lib/_parity/runtimeCoverage.js by a test, in BOTH directions, so the declared reach and
 # the real reach cannot drift apart the way the Python port's did.
 TABLE_PROCESS_MAP = list(
+  binneddata = tp_binneddata,
+  cosinor = tp_cosinor,
   describedata = tp_describedata,
   normalitytest = tp_normalitytest,
   smootheddata = tp_smootheddata,
@@ -480,9 +774,16 @@ TABLE_PROCESS_MAP = list(
   trendfit = tp_trendfit
 )
 
-# Column processes are not ported yet; declared so the dispatcher can be strict about them
-# rather than silently ignoring a column that had a transform attached.
-COLUMN_PROCESS_MAP = list()
+# Column processes. Strict for the same reason analyses are: a column silently missing its
+# transform is WRONG data, not partial data.
+COLUMN_PROCESS_MAP = list(
+  add = cp_add,
+  multiply = cp_multiply,
+  normalize = cp_normalize,
+  removetrend = cp_removetrend,
+  sub = cp_substitute,
+  substitute = cp_substitute
+)
 
 run_column_process <- function(key, data, args, cols, raw_data) {
   fn <- COLUMN_PROCESS_MAP[[key]]

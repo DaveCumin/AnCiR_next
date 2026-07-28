@@ -6,6 +6,7 @@ import {
 	NOT_APPLICABLE,
 	R_IMPLEMENTED,
 	R_PURE_UTILS,
+	R_COLUMN_PROCESSES,
 	tpKey,
 	parseDispatchKeys
 } from './runtimeCoverage.js';
@@ -125,6 +126,15 @@ describe('R runtime coverage', () => {
 			undeclared,
 			`ancir_runtime.R defines kernels missing from R_PURE_UTILS: ${undeclared}`
 		).toEqual([]);
+	});
+
+	it('declares its column processes in both directions too', () => {
+		const cps = parseDispatchKeys(src, 'COLUMN_PROCESS_MAP');
+		expect(cps, 'COLUMN_PROCESS_MAP not found in ancir_runtime.R').not.toBeNull();
+		const missing = R_COLUMN_PROCESSES.filter((k) => !cps.includes(k));
+		const undeclared = cps.filter((k) => !R_COLUMN_PROCESSES.includes(k));
+		expect(missing, `declared but absent from the runtime: ${missing}`).toEqual([]);
+		expect(undeclared, `in the runtime but undeclared: ${undeclared}`).toEqual([]);
 	});
 
 	it('does not implement anything it forgot to declare', () => {

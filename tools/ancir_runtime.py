@@ -262,14 +262,58 @@ def fit_cosine_curves(t, x, n_curves, options=None):
             y = y + B * np.cos(2 * math.pi * w * t_ + o)
         return y - x_
 
+    def jacobian(p, t_, _x):
+        """Analytic Jacobian of `residuals`.
+
+        Supplied for accuracy and speed rather than as a bug fix. Without it least_squares
+        differences the Jacobian, and the frequency column is the one that suffers: d/dw is
+        -B * 2*pi*t * sin(...), which over a week-long t is both large and rapidly
+        oscillating, so a differenced estimate is poorest exactly where the fit relies on it.
+
+        It is NOT what fixed the near-zero-amplitude collapse this function used to show —
+        that was the phase seeding below, and adding this Jacobian alone left the wrong
+        answer unchanged.
+        """
+        m = (len(p) - 1) // 3
+        j = np.zeros((t_.size, len(p)))
+        for i in range(m):
+            B = p[3 * i]
+            w = p[3 * i + 1]
+            o = p[3 * i + 2]
+            th = 2 * math.pi * w * t_ + o
+            j[:, 3 * i] = np.cos(th)
+            j[:, 3 * i + 1] = -B * 2 * math.pi * t_ * np.sin(th)
+            j[:, 3 * i + 2] = -B * np.sin(th)
+        j[:, -1] = 1.0
+        return j
+
     timespan = float(t[-1] - t[0]) if t[-1] > t[0] else 1.0
     span_amp = float(np.std(x))
     seed_freqs = [1.0 / 24.0, 1.0 / 12.0, 1.0 / 6.0, 1.0 / max(timespan, 1.0)]
     best = None
     for f_seed in seed_freqs:
+        # Seed amplitude and phase by SOLVING for them, rather than starting every fit at
+        # amplitude = sd(x) and phase = 0.
+        #
+        # At a fixed frequency the model is linear in (B*cos o, B*sin o) and the offset, so
+        # the best amplitude/phase for that frequency has a closed form. Starting from
+        # phase 0 instead means the seed cosine is anti-correlated with the data whenever the
+        # true acrophase is far from 0, and the trust-region step then shrinks the AMPLITUDE
+        # toward zero rather than rotating the phase — a basin it does not escape. On a clean
+        # 23.7 h rhythm every one of the four seeds collapsed that way, returning amplitude
+        # 3.3 against a true 38 (R^2 = 0.09) while the JS engine recovered it correctly.
         p0 = []
         for i in range(n_curves):
-            p0 += [span_amp / max(1, n_curves), f_seed * (i + 1), 0.0]
+            w = f_seed * (i + 1)
+            th = 2 * math.pi * w * t
+            design = np.column_stack([np.ones(t.size), np.cos(th), np.sin(th)])
+            try:
+                coef, *_ = np.linalg.lstsq(design, x, rcond=None)
+                amp0 = float(math.hypot(coef[1], coef[2]))
+                pha0 = float(math.atan2(-coef[2], coef[1]))
+            except np.linalg.LinAlgError:
+                amp0, pha0 = span_amp / max(1, n_curves), 0.0
+            p0 += [amp0, w, pha0]
         p0.append(float(np.mean(x)))
         lb = []
         ub = []
@@ -279,7 +323,7 @@ def fit_cosine_curves(t, x, n_curves, options=None):
         lb.append(-np.inf)
         ub.append(np.inf)
         try:
-            res = sp_optimize.least_squares(residuals, p0, args=(t, x),
+            res = sp_optimize.least_squares(residuals, p0, jac=jacobian, args=(t, x),
                                             bounds=(lb, ub), max_nfev=2000)
         except Exception:
             continue

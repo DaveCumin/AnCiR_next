@@ -18,7 +18,8 @@
 			],
 			"args": {
 				"value": 5
-			}
+			},
+			"rFunc": "add"
 		},
 		{
 			"id": "col-multiply-3",
@@ -36,7 +37,8 @@
 			],
 			"args": {
 				"value": 3
-			}
+			},
+			"rFunc": "multiply"
 		},
 		{
 			"id": "col-sub-2",
@@ -54,7 +56,8 @@
 			],
 			"args": {
 				"value": 2
-			}
+			},
+			"rFunc": "sub"
 		},
 		{
 			"id": "col-normalize",
@@ -68,7 +71,8 @@
 				40,
 				50
 			],
-			"args": {}
+			"args": {},
+			"rFunc": "normalize"
 		},
 		{
 			"id": "tp-cosinor-fixed24-noisy",
@@ -108,7 +112,8 @@
 			"compareOutputs": [
 				"cosinorx",
 				"cosinory"
-			]
+			],
+			"rFunc": "cosinor"
 		},
 		{
 			"id": "tp-fitfunction-cosinor-noisy",
@@ -3386,6 +3391,82 @@
 			},
 			"compareOutputs": [
 				"interpx"
+			]
+		},
+		{
+			"id": "tp-cosinor-free-period",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 23.7,
+				"amp": 38,
+				"mesor": 52,
+				"phase": 8,
+				"noise": 6,
+				"seed": 601,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"Ncurves": 1,
+				"useFixedPeriod": false,
+				"outputX": -1,
+				"out": {
+					"cosinorx": -1
+				}
+			},
+			"compareOutputs": [
+				"cosinorx",
+				"cosinory"
+			],
+			"rTolerance": 1e-06,
+			"rToleranceWhy": "Nonlinear fit: R reaches the optimum with optim(L-BFGS-B) + an analytic Jacobian, scipy with trust-region least_squares. They agree to ~1e-8 on the fitted parameters, which is inside 1e-6 but not the 1e-9 default."
+		},
+		{
+			"id": "tp-binneddata",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 25,
+				"mesor": 40,
+				"phase": 4,
+				"noise": 7,
+				"seed": 602,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"binSize": 6,
+				"binStart": 0,
+				"aggFunc": "mean",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": [
+				"binnedx",
+				"binnedy"
 			]
 		}
 	]
