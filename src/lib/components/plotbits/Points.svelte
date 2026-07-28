@@ -1,5 +1,6 @@
 <script module>
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import { colourForSeries, seriesColumnId } from '$lib/plots/seriesColour.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -27,10 +28,15 @@
 			// the series exists, so `parent` can legitimately be undefined. Guard it, or a
 			// series with no explicit colour throws "Cannot read properties of undefined
 			// (reading 'parentPlot')" — and importJson then silently drops the whole plot.
+			// Colour follows the COLUMN, not this series' position in this plot, so the
+			// same hive is the same colour in every plot that draws it. An explicit
+			// colour (a saved session, or a user override) always wins.
 			this.colour =
-				dataIN?.colour ??
-				getPaletteColor(parent?.parentPlot?.data?.length ?? 0) ??
-				getPaletteColor(0);
+				colourForSeries(
+					dataIN?.colour,
+					seriesColumnId(parent),
+					parent?.parentPlot?.data?.length ?? 0
+				) ?? getPaletteColor(0);
 			this.radius = dataIN?.radius ?? 4;
 			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
 			this.draw = dataIN?.draw ?? true;

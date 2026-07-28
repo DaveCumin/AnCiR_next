@@ -158,6 +158,14 @@
 		// reconcileChainRefs prunes entries whose via-plot is missing, so restoring
 		// while core.plots is still empty would wipe them mid-import.
 		core.chainRefs = [];
+		// Per-column series colours. Cleared before the new plots are built so a series
+		// cannot inherit the previous session's colour for an unrelated column id, then
+		// restored below (absent in sessions saved before this existed, which simply
+		// claim fresh colours as their plots are constructed).
+		core.seriesColours =
+			jsonData.seriesColours && typeof jsonData.seriesColours === 'object'
+				? { ...jsonData.seriesColours }
+				: {};
 		// Stored values: clear the previous session's registry, then restore from
 		// the JSON. Ref entries (metric-port refs) come back live; getter-based
 		// entries (StoreValueButton) resolve to their exported static snapshot —

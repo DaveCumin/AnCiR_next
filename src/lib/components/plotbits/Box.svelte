@@ -1,5 +1,6 @@
 <script module>
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import { colourForSeries, seriesColumnId } from '$lib/plots/seriesColour.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -35,8 +36,13 @@
 
 		constructor(dataIN, parent) {
 			this.parentData = parent;
+			// Colour follows the COLUMN (see plots/seriesColour.js).
 			this.colour =
-				dataIN?.colour ?? getPaletteColor(parent.parentPlot.data.length) ?? getPaletteColor(0);
+				colourForSeries(
+					dataIN?.colour,
+					seriesColumnId(parent),
+					parent.parentPlot.data.length
+				) ?? getPaletteColor(0);
 			this.fillColour =
 				dataIN?.fillColour ?? getPaletteColor(parent.parentPlot.data.length) ?? getPaletteColor(0);
 			this.fillOpacity = dataIN?.fillOpacity ?? 0.3;

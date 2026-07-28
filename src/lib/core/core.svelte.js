@@ -49,6 +49,13 @@ export const core = $state({
 	// port; dragging a wire from any column output to that port attaches the
 	// process to that column (moves it out of this list into col.processes).
 	orphanProcesses: [],
+	// seriesColours — one colour per COLUMN, `{ [columnId]: '#rrggbb' }`, so the same
+	// data is drawn the same colour in every plot that shows it. Series colour used to
+	// come from a series' position in its own plot, so nothing recorded that two series
+	// in different plots were the same thing. Keyed on the column because after a
+	// Long-to-wide each subject IS its own column, which makes column identity the
+	// identity the user means, with no labelling step. See plots/seriesColour.js.
+	seriesColours: {},
 	// nodeLayout — workflow-canvas layout snapshot keyed by canvas node id
 	// (`data_<colId>`, `process_<id>`, `tableprocess_<id>`, `plot_<id>`, group/
 	// composite/note ids): `{ [id]: { x, y, collapsed? } }`. Maintained by
@@ -397,7 +404,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.70.2',
+	version: 'β.70.3',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),

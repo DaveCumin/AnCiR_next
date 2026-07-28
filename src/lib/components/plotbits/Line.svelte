@@ -1,6 +1,7 @@
 <script module>
 	import { line } from 'd3-shape';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
+	import { colourForSeries, seriesColumnId } from '$lib/plots/seriesColour.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -33,10 +34,14 @@
 			// the series exists, so `parent` can legitimately be undefined. Guard it, or a
 			// series with no explicit colour throws "Cannot read properties of undefined
 			// (reading 'parentPlot')" — and importJson then silently drops the whole plot.
+			// Colour follows the COLUMN (see plots/seriesColour.js), so a series keeps
+			// its identity across plots. An explicit colour always wins.
 			this.colour =
-				dataIN?.colour ??
-				getPaletteColor(parent?.parentPlot?.data?.length ?? 0) ??
-				getPaletteColor(0);
+				colourForSeries(
+					dataIN?.colour,
+					seriesColumnId(parent),
+					parent?.parentPlot?.data?.length ?? 0
+				) ?? getPaletteColor(0);
 			this.strokeWidth = dataIN?.strokeWidth ?? 3;
 			this.stroke = dataIN?.stroke ?? 'solid';
 			this.draw = dataIN?.draw ?? true;
