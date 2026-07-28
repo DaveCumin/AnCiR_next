@@ -708,8 +708,28 @@ def fit_double_logistic(t, x, options=None):
     # lets the optimizer collapse to a degenerate many-tile fit. With this init
     # the fit matches JS exactly for the aperiodic-pulse case.
     T0 = float(options.get('T', 24.0 if fix_T else timespan))
-    t1_0 = float(t[0]) + timespan * 0.25
-    t2_0 = float(t[0]) + timespan * 0.75
+
+    if periodic:
+        # PERIODIC mode seeds the two edges from the PHASE-FOLDED data, inside a single
+        # cycle — mirroring generateInitialGuessP in doubleLogistic.js.
+        #
+        # Seeding them at 25% and 75% of the whole RECORD (which is what this did until
+        # 2026-07-28, and is still right for the aperiodic case) puts them ~83 h apart in a
+        # 24 h model. The tiled sum is then nonsense and the optimiser never recovers: on a
+        # clean daily bout it returned R^2 = 0.008 where the JS engine got 0.982.
+        t_min = float(t[0])
+        mean_x = float(x.mean())
+        phases = [((float(ti) - t_min) % T0 + T0) % T0 for ti in t]
+        above = sorted(ph for ph, xi in zip(phases, x) if float(xi) > mean_x)
+        if len(above) > 2:
+            onset_phase, offset_phase = above[0], above[-1]
+        else:
+            onset_phase, offset_phase = T0 * 0.25, T0 * 0.75
+        t1_0 = t_min + onset_phase
+        t2_0 = t1_0 + max(0.01, offset_phase - onset_phase)
+    else:
+        t1_0 = float(t[0]) + timespan * 0.25
+        t2_0 = float(t[0]) + timespan * 0.75
 
     if periodic:
         full0 = [M0, A0, k1_0, t1_0, k2_0, t2_0, T0]

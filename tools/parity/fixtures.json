@@ -151,7 +151,8 @@
 			"compareOutputs": [
 				"fitx",
 				"fity"
-			]
+			],
+			"rFunc": "fitfunction"
 		},
 		{
 			"id": "tp-npcra-rhythm-noisy",
@@ -3677,6 +3678,49 @@
 			"tolerance": 0.001,
 			"toleranceWhy": "Measured, not guessed. The model is M + A*tanh(k*(sin(wt+phi) - cos(pi*d))): tanh SATURATES, so over most of the cycle the curve is pinned near +/-1 and the surface is flat \u2014 many parameter sets give near-identical curves and the last digits are not resolvable by any optimiser. JS and Python land on the SAME optimum (RSS 699.5074 vs 699.4420, 9e-5 relative, Python's marginally lower); the fitted values agree to 3.8e-4 relative at worst. 1e-3 bounds that with room to spare, and is tight enough that a real divergence would still fail. This is a pre-existing JS<->Python property of the model, not a regression.",
 			"rFunc": "rectangularwave"
+		},
+		{
+			"id": "tp-doublelogistic-periodic",
+			"kind": "tableProcess",
+			"jsName": "DoubleLogistic",
+			"pyFunc": "doublelogistic",
+			"rFunc": "doublelogistic",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 30,
+				"mesor": 35,
+				"phase": 16,
+				"noise": 3,
+				"seed": 801,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"periodic": true,
+				"fixPeriod": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"out": {
+					"dlogx": -1,
+					"r2": -1,
+					"rmse": -1
+				}
+			},
+			"compareOutputs": [
+				"dlogx",
+				"r2",
+				"rmse"
+			],
+			"tolerance": 0.001,
+			"toleranceWhy": "Compares the x axis and the FIT QUALITY, not the fitted curve pointwise. The double logistic has near-vertical edges, so a sub-1% shift in t1/t2 moves a point sitting ON an edge by several percent while barely changing RSS: at index 0 the three engines differ by 0.76 on ~19, yet agree on R^2 to 1.6e-5 (0.982226 / 0.982210) and on RMSE to 4.5e-4 (2.9168 / 2.9181). Pointwise equality is therefore not the property worth checking here; 'did all three find an equally good fit' is, and a gross divergence (the pre-fix Python scored R^2 = 0.008) still fails loudly."
 		}
 	]
 }

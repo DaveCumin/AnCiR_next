@@ -1993,6 +1993,347 @@ tp_rectangularwave <- function(args, env) {
   any_valid
 }
 
+# ---------------------------------------------------------------------------
+# Double-logistic fit
+# ---------------------------------------------------------------------------
+
+sigmoid <- function(z) 1 / (1 + exp(-z))
+
+# M + A*(rise - fall): two sigmoids, one turning activity on at t1 and one off at t2.
+# In PERIODIC mode the pair is tiled at every multiple of T and summed, so one parameter set
+# describes a repeating daily bout rather than a single episode. The tile range runs from -1
+# so the bout starting BEFORE the window still contributes to its leading edge.
+dl_model <- function(p, t, periodic) {
+  if (periodic) {
+    M <- p[1]; A <- p[2]; k1 <- p[3]; t1 <- p[4]; k2 <- p[5]; t2 <- p[6]; T <- p[7]
+    n_tiles <- max(1, ceiling((max(t) - min(t)) / T) + 2)
+    j <- seq(-1, n_tiles)
+    acc <- numeric(length(t))
+    for (off in j * T) {
+      acc <- acc + sigmoid(k1 * (t - t1 - off)) - sigmoid(k2 * (t - t2 - off))
+    }
+    return(M + A * acc)
+  }
+  p[1] + p[2] * (sigmoid(p[3] * (t - p[4])) - sigmoid(p[5] * (t - p[6])))
+}
+
+evaluate_dl_at_points <- function(parameters, x_points, periodic = FALSE) {
+  xa <- suppressWarnings(as.numeric(unlist(x_points, use.names = FALSE)))
+  p <- c(parameters$M, parameters$A, parameters$k1, parameters$t1,
+         parameters$k2, parameters$t2)
+  if (periodic) p <- c(p, parameters$T)
+  dl_model(p, xa, periodic)
+}
+
+fit_double_logistic <- function(t, x, options = list()) {
+  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
+  x <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
+  ok <- is.finite(t) & is.finite(x)
+  t <- t[ok]; x <- x[ok]
+  if (length(t) < 6) return(NULL)
+  g <- function(k, d) if (!is.null(options[[k]])) options[[k]] else d
+
+  periodic <- isTRUE(g("periodic", FALSE))
+  fix_k1 <- isTRUE(g("fixK1", FALSE))
+  fix_k2 <- isTRUE(g("fixK2", FALSE))
+  fix_T <- isTRUE(g("fixT", FALSE))
+
+  m0 <- min(x)
+  a0 <- max(x) - min(x)
+  if (a0 == 0) a0 <- 1
+  k1_0 <- as.numeric(g("k1", 1))
+  k2_0 <- as.numeric(g("k2", 1))
+  timespan <- t[length(t)] - t[1]
+  if (timespan == 0) timespan <- 1
+  # A FREE period inits from the data TIMESPAN, not from 24: seeding it small lets the
+  # optimiser collapse into a degenerate many-tile fit that scores well and means nothing.
+  T0 <- as.numeric(g("T", if (fix_T) 24 else timespan))
+
+  if (periodic) {
+    # PERIODIC mode seeds both edges from the PHASE-FOLDED data, inside ONE cycle, mirroring
+    # generateInitialGuessP in doubleLogistic.js. Seeding at 25% and 75% of the whole record
+    # (correct for the aperiodic case) puts them ~83 h apart in a 24 h model; the tiled sum
+    # is then nonsense and no optimiser recovers. The Python port did exactly that and
+    # returned R^2 = 0.008 against the JS engine's 0.982.
+    t_min <- t[1]
+    mean_x <- mean(x)
+    phases <- ((t - t_min) %% T0 + T0) %% T0
+    above <- sort(phases[x > mean_x])
+    if (length(above) > 2) {
+      onset_phase <- above[1]; offset_phase <- above[length(above)]
+    } else {
+      onset_phase <- T0 * 0.25; offset_phase <- T0 * 0.75
+    }
+    t1_0 <- t_min + onset_phase
+    t2_0 <- t1_0 + max(0.01, offset_phase - onset_phase)
+  } else {
+    t1_0 <- t[1] + timespan * 0.25
+    t2_0 <- t[1] + timespan * 0.75
+  }
+
+  if (periodic) {
+    full0 <- c(m0, a0, k1_0, t1_0, k2_0, t2_0, T0)
+    free <- c(1, 2, 4, 6)
+    if (!fix_k1) free <- c(free, 3)
+    if (!fix_k2) free <- c(free, 5)
+    if (!fix_T) free <- c(free, 7)
+    lb_full <- c(-Inf, -Inf, 1e-4, -Inf, 1e-4, -Inf, 0.1)
+    ub_full <- c(Inf, Inf, Inf, Inf, Inf, Inf, Inf)
+  } else {
+    full0 <- c(m0, a0, k1_0, t1_0, k2_0, t2_0)
+    free <- c(1, 2, 4, 6)
+    if (!fix_k1) free <- c(free, 3)
+    if (!fix_k2) free <- c(free, 5)
+    lb_full <- c(-Inf, -Inf, 1e-4, -Inf, 1e-4, -Inf)
+    ub_full <- c(Inf, Inf, Inf, Inf, Inf, Inf)
+  }
+  free <- sort(free)
+
+  # t2 > t1 is ENFORCED inside the objective rather than by a bound, because the constraint
+  # couples two parameters. Without it the fit can swap the on and off edges and report a
+  # negative-duration bout.
+  expand <- function(pf) {
+    full <- full0
+    full[free] <- pf
+    if (full[6] <= full[4] + 0.01) full[6] <- full[4] + 0.01
+    full
+  }
+  cost <- function(pf) 0.5 * sum((dl_model(expand(pf), t, periodic) - x)^2)
+
+  # Analytic gradient. The sigmoid saturates the same way tanh does, so a differenced
+  # gradient is numerically zero wherever the curve is flat — which for a square-ish bout is
+  # most of the cycle. s' = s(1-s) is what carries the slope through.
+  grad <- function(pf) {
+    full <- expand(pf)
+    M <- full[1]; A <- full[2]; k1 <- full[3]; t1 <- full[4]; k2 <- full[5]; t2 <- full[6]
+    offs <- if (periodic) {
+      T <- full[7]
+      (seq(-1, max(1, ceiling((max(t) - min(t)) / T) + 2))) * T
+    } else 0
+    on_sum <- numeric(length(t)); off_sum <- numeric(length(t))
+    dk1 <- numeric(length(t)); dt1 <- numeric(length(t))
+    dk2 <- numeric(length(t)); dt2 <- numeric(length(t)); dT <- numeric(length(t))
+    for (off in offs) {
+      a1 <- k1 * (t - t1 - off); s1 <- sigmoid(a1); d1 <- s1 * (1 - s1)
+      a2 <- k2 * (t - t2 - off); s2 <- sigmoid(a2); d2 <- s2 * (1 - s2)
+      on_sum <- on_sum + s1; off_sum <- off_sum + s2
+      dk1 <- dk1 + d1 * (t - t1 - off)
+      dt1 <- dt1 - d1 * k1
+      dk2 <- dk2 - d2 * (t - t2 - off)
+      dt2 <- dt2 + d2 * k2
+      if (periodic) dT <- dT - d1 * k1 * (off / full[7]) + d2 * k2 * (off / full[7])
+    }
+    r <- M + A * (on_sum - off_sum) - x
+    g_full <- c(sum(r), sum(r * (on_sum - off_sum)),
+                sum(r * A * dk1), sum(r * A * dt1),
+                sum(r * A * dk2), sum(r * A * dt2))
+    if (periodic) g_full <- c(g_full, sum(r * A * dT))
+    g_full[free]
+  }
+
+  fit <- tryCatch(
+    optim(full0[free], cost, grad, method = "L-BFGS-B",
+          lower = lb_full[free], upper = ub_full[free],
+          control = list(factr = 1, pgtol = 0, maxit = 8000)),
+    error = function(e) NULL)
+  if (is.null(fit)) return(NULL)
+
+  full <- expand(fit$par)
+  pred <- dl_model(full, t, periodic)
+  rss <- sum((x - pred)^2)
+  ss_tot <- sum((x - mean(x))^2)
+  params <- list(M = full[1], A = full[2], k1 = full[3], t1 = full[4],
+                 k2 = full[5], t2 = full[6])
+  if (periodic) params$T <- full[7]
+  duration <- full[6] - full[4]
+  period <- if (periodic) full[7] else max(timespan, 1)
+  list(parameters = params, duration = duration,
+       onsetPhase = (full[4] %% period) / period,
+       offsetPhase = (full[6] %% period) / period,
+       dutyCycle = if (period > 0) duration / period else 0,
+       fitted = pred, rmse = sqrt(rss / length(t)),
+       rSquared = if (ss_tot > 0) 1 - rss / ss_tot else 0, rss = rss)
+}
+
+tp_doublelogistic <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  periodic <- !identical(args$periodic, FALSE)
+  # The JS keys the fixed period as fixPeriod/fixedPeriod, not fixT/T.
+  fix_period <- isTRUE(args$fixPeriod) || isTRUE(args$fixT)
+  opts <- list(periodic = periodic, fixK1 = args$fixK1, fixK2 = args$fixK2,
+               fixT = fix_period,
+               k1 = if (is.null(args$fixedK1)) 0.5 else args$fixedK1,
+               k2 = if (is.null(args$fixedK2)) 0.5 else args$fixedK2,
+               T = if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod)
+  x_col <- env$cols[[as.character(x_in)]]
+  t <- t_for_col(x_col, env$cols, env$raw_data)
+  output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
+  output_x <- if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]]))
+    t_for_col(env$cols[[as.character(output_x_id)]], env$cols, env$raw_data) else NULL
+
+  first_xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    res <- fit_double_logistic(t, col_data(env$cols[[yk]], env$cols, env$raw_data), opts)
+    if (is.null(res)) next
+    if (is.null(first_xs)) {
+      first_xs <- if (!is.null(output_x)) output_x else t[is.finite(t)]
+      set_col(env, env$cols, out_id(args, "dlogx"), first_xs, type = "number")
+    }
+    ys <- evaluate_dl_at_points(res$parameters, first_xs, periodic)
+    y_out <- out_id(args, paste0("dlogy_", y_id))
+    if (y_out == -1) y_out <- out_id(args, "dlogy")
+    set_col(env, env$cols, y_out, ys, type = "number")
+    stats_by_y[[yk]] <- res
+    any_valid <- TRUE
+  }
+  if (any_valid) {
+    # r2/rmse were declared but unwritten in the Python port until 2026-07-28; `pvalue`
+    # belongs to the optional permutation test, not run here, so it stays NA.
+    for (key in c("r2", "rmse", "pvalue")) {
+      arr <- vapply(y_ins, function(y) {
+        r <- stats_by_y[[as.character(y)]]
+        if (is.null(r)) NA_real_
+        else if (key == "r2") r$rSquared else if (key == "rmse") r$rmse else NA_real_
+      }, numeric(1))
+      set_col(env, env$cols, out_id(args, key), arr, type = "number")
+    }
+  }
+  any_valid
+}
+
+# ---------------------------------------------------------------------------
+# FitFunction: one node, several models
+# ---------------------------------------------------------------------------
+
+# Dispatches to whichever curve family the user picked. Mirrors fitFunction.js
+# fitCurveModel + the per-model option plumbing.
+ff_fit_curve_model <- function(tt, yy, model, args) {
+  if (identical(model, "cosinor")) {
+    if (isTRUE(args$useFixedPeriod)) {
+      fp <- as.numeric(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod)
+      nh <- max(1, as.integer(if (is.null(args$nHarmonics)) 1 else args$nHarmonics))
+      alpha <- as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha)
+      res <- fit_cosinor_fixed(tt, yy, fp, nh, alpha)
+      if (is.null(res)) return(NULL)
+      return(list(model = "cosinor", mode = "fixed",
+                  parameters = list(mode = "fixed", period = fp, M = res$M,
+                                    harmonics = res$harmonics),
+                  fitted = res$fitted))
+    }
+    nc <- max(1, as.integer(if (is.null(args$Ncurves)) 1 else args$Ncurves))
+    res <- fit_cosine_curves(tt, yy, nc)
+    if (is.null(res)) return(NULL)
+    return(list(model = "cosinor", mode = "free",
+                parameters = c(list(mode = "free"), res$parameters),
+                fitted = res$fitted))
+  }
+  if (identical(model, "rectangular")) {
+    res <- fit_rectangular_wave(tt, yy, list(
+      fixKappa = args$fixKappa, fixOmega = args$fixOmega, fixD = args$fixDutyCycle,
+      kappa = if (is.null(args$fixedKappa)) 5 else args$fixedKappa,
+      omega = 2 * pi / as.numeric(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod),
+      dutyCycle = if (is.null(args$fixedDutyCycle)) 0.5 else args$fixedDutyCycle))
+    if (is.null(res)) return(NULL)
+    return(list(model = "rectangular", parameters = res$parameters, fitted = res$fitted))
+  }
+  if (identical(model, "doublelogistic")) {
+    periodic <- !identical(args$periodic, FALSE)
+    res <- fit_double_logistic(tt, yy, list(
+      periodic = periodic, fixK1 = args$fixK1, fixK2 = args$fixK2,
+      fixT = isTRUE(args$fixPeriod),
+      k1 = if (is.null(args$fixedK1)) 0.5 else args$fixedK1,
+      k2 = if (is.null(args$fixedK2)) 0.5 else args$fixedK2,
+      T = if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod))
+    if (is.null(res)) return(NULL)
+    return(list(model = "doublelogistic", periodic = periodic,
+                parameters = res$parameters, fitted = res$fitted))
+  }
+  NULL
+}
+
+ff_evaluate_at_points <- function(fit_result, model, t_points) {
+  if (is.null(fit_result) || is.null(fit_result$parameters)) {
+    return(rep(NA_real_, length(t_points)))
+  }
+  if (identical(model, "cosinor")) {
+    if (identical(fit_result$mode, "fixed")) {
+      p <- fit_result$parameters
+      omega <- 2 * pi / p$period
+      xa <- suppressWarnings(as.numeric(unlist(t_points, use.names = FALSE)))
+      val <- rep(p$M, length(xa))
+      hs <- p$harmonics
+      for (i in seq_along(hs)) {
+        h <- hs[[i]]
+        ki <- if (is.null(h$k)) i else h$k
+        val <- val + h$beta * cos(ki * omega * xa) + h$gamma * sin(ki * omega * xa)
+      }
+      return(val)
+    }
+    return(evaluate_cosinor_at_points(fit_result$parameters, t_points))
+  }
+  if (identical(model, "rectangular")) {
+    return(evaluate_rectwave_at_points(fit_result$parameters, t_points))
+  }
+  if (identical(model, "doublelogistic")) {
+    return(evaluate_dl_at_points(fit_result$parameters, t_points,
+                                 !identical(fit_result$periodic, FALSE)))
+  }
+  rep(NA_real_, length(t_points))
+}
+
+tp_fitfunction <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  model <- if (is.null(args$model)) "cosinor" else args$model
+  x_out <- out_id(args, "fitx")
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  t_col <- env$cols[[as.character(x_in)]]
+  t <- t_for_col(t_col, env$cols, env$raw_data)
+
+  output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
+  output_x <- NULL
+  if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]])) {
+    ox <- t_for_col(env$cols[[as.character(output_x_id)]], env$cols, env$raw_data)
+    output_x <- ox[is.finite(ox)]
+  }
+
+  y_results <- list(); any_valid <- FALSE
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    y <- suppressWarnings(as.numeric(unlist(col_data(env$cols[[yk]], env$cols, env$raw_data),
+                                            use.names = FALSE)))
+    n <- min(length(t), length(y))
+    ok <- is.finite(t[seq_len(n)]) & is.finite(y[seq_len(n)])
+    tt <- t[seq_len(n)][ok]; yy <- y[seq_len(n)][ok]
+    if (!length(tt)) next
+    fr <- ff_fit_curve_model(tt, yy, model, args)
+    if (is.null(fr)) next
+    y_out_data <- if (!is.null(output_x)) ff_evaluate_at_points(fr, model, output_x)
+                  else fr$fitted
+    y_results[[yk]] <- list(xOutData = if (!is.null(output_x)) output_x else tt,
+                            yOutData = y_out_data)
+    if (length(fr$fitted)) any_valid <- TRUE
+  }
+
+  if (any_valid && x_out != -1) {
+    first <- y_results[[1]]
+    set_col(env, env$cols, x_out, first$xOutData, type = "number")
+    for (y_id in y_ins) {
+      yr <- y_results[[as.character(y_id)]]
+      y_out <- out_id(args, paste0("fity_", y_id))
+      if (y_out != -1 && !is.null(yr)) {
+        set_col(env, env$cols, y_out, yr$yOutData, type = "number")
+      }
+    }
+  }
+  any_valid
+}
+
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
 # sits beside the existing `pyFunc`, so both legs read one fixture file).
 #
@@ -2025,7 +2366,9 @@ TABLE_PROCESS_MAP = list(
   columnfunctions = tp_columnfunctions,
   cosinor = tp_cosinor,
   describedata = tp_describedata,
+  doublelogistic = tp_doublelogistic,
   fdrcorrection = tp_fdrcorrection,
+  fitfunction = tp_fitfunction,
   chisquared = tp_chisquared,
   circadianfunctionindex = tp_circadianfunctionindex,
   correlation = tp_correlation,
