@@ -383,9 +383,28 @@ def _lomb_scargle(t, y, periods):
     y = y - y.mean()
     omegas = 2 * math.pi / np.asarray(periods, dtype=float)
     powers = np.empty_like(omegas)
+    # SAMPLE variance (ddof=1), matching periodogram.js:38. numpy's y.var() default is the
+    # POPULATION variance, which was used here until 2026-07-28 and inflated every power by
+    # n/(n-1): 0.4% at n = 240 but 2% at n = 50. Periodogram power is read against a
+    # significance threshold, so that bias pushed toward declaring a rhythm — and pushed
+    # hardest on short records, where the call is already marginal.
+    var = float(y.var(ddof=1)) or 1.0
     for k, w in enumerate(omegas):
-        s2 = math.sin(2 * w * t).sum() if False else float(np.sin(2 * w * t).sum())
-        c2 = float(np.cos(2 * w * t).sum())
+        # tau is computed from the SINGLE-omega sums, matching periodogram.js:50-57.
+        #
+        # The standard definition (Lomb 1976; Scargle 1982, ApJ 263:835) is
+        # tan(2*w*tau) = sum(sin(2*w*t)) / sum(cos(2*w*t)) — the sums run over 2*w, not w.
+        # The JS engine sums over w, so its tau is not the offset that makes the cosine and
+        # sine bases orthogonal, which is the entire purpose of tau.
+        #
+        # This port deliberately REPRODUCES that, because its job is to give the user the
+        # same numbers the app showed them; an export that silently "corrected" a published
+        # figure would be worse than one that matches. The JS bug is recorded separately in
+        # the vault TODOs. Measured impact: on evenly sampled data the peak period is
+        # unchanged and powers differ by ~1%; on unevenly sampled data (the case
+        # Lomb-Scargle exists for) the peak can move by a grid step and powers by ~4%.
+        s2 = float(np.sin(w * t).sum())
+        c2 = float(np.cos(w * t).sum())
         tau = math.atan2(s2, c2) / (2 * w) if w != 0 else 0.0
         cwt = np.cos(w * (t - tau))
         swt = np.sin(w * (t - tau))
@@ -393,7 +412,6 @@ def _lomb_scargle(t, y, periods):
         den1 = float((cwt ** 2).sum())
         num2 = float((y * swt).sum()) ** 2
         den2 = float((swt ** 2).sum())
-        var = float(y.var()) or 1.0
         powers[k] = (num1 / den1 + num2 / den2) / (2 * var) if den1 > 0 and den2 > 0 else 0.0
     return powers.tolist()
 

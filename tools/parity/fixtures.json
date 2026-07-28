@@ -364,7 +364,8 @@
 			"compareArrays": [
 				"lags",
 				"correlations"
-			]
+			],
+			"rFunc": "compute_autocorrelation"
 		},
 		{
 			"id": "util-kde-gaussian-fixed-bw",
@@ -582,7 +583,8 @@
 			"args": {
 				"type": "low",
 				"high": 0.2
-			}
+			},
+			"rFunc": "frequencyfilter"
 		},
 		{
 			"id": "col-frequencyfilter-high",
@@ -658,7 +660,8 @@
 			"args": {
 				"type": "high",
 				"low": 0.3
-			}
+			},
+			"rFunc": "frequencyfilter"
 		},
 		{
 			"id": "col-frequencyfilter-band",
@@ -735,7 +738,8 @@
 				"type": "band",
 				"low": 0.15,
 				"high": 0.5
-			}
+			},
+			"rFunc": "frequencyfilter"
 		},
 		{
 			"id": "tp-rayleigh-clustered",
@@ -3777,6 +3781,46 @@
 					}
 				]
 			}
+		},
+		{
+			"id": "tp-rhythmicity-periodogram",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 23.7,
+				"amp": 30,
+				"mesor": 45,
+				"phase": 9,
+				"noise": 5,
+				"seed": 901,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": [
+					"@y"
+				],
+				"analysis": "periodogram",
+				"pgMethod": "Lomb-Scargle",
+				"periodMin": 20,
+				"periodMax": 28,
+				"periodStep": 0.1,
+				"hideInputs": true,
+				"out": {
+					"rhythmicityx": -1
+				}
+			},
+			"compareOutputs": [
+				"rhythmicityx",
+				"rhythmicityy"
+			]
 		}
 	]
 }

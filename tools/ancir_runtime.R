@@ -2489,6 +2489,334 @@ tp_surrogatetest <- function(args, env) {
   TRUE
 }
 
+# ---------------------------------------------------------------------------
+# Periodograms and autocorrelation
+# ---------------------------------------------------------------------------
+
+make_seq_array <- function(start, end, step) {
+  if (step <= 0 || end < start) return(numeric(0))
+  # The 1e-9 slack keeps the final point when (end - start) is an exact multiple of the step
+  # and floating-point division lands just under it.
+  n <- floor((end - start) / step + 1e-9) + 1
+  start + (seq_len(n) - 1) * step
+}
+
+median_dt <- function(t) {
+  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
+  if (length(t) < 2) return(1)
+  d <- diff(t)
+  d <- d[d > 0]
+  if (!length(d)) 1 else median(d)
+}
+
+next_pow2 <- function(n) if (n <= 1) 1 else 2^ceiling(log2(n))
+
+# Lomb-Scargle: the classical form with the tau time-offset that makes the sine and cosine
+# terms orthogonal on UNEVENLY sampled data. That offset is the whole point of the method —
+# without it an uneven series leaks power between neighbouring periods.
+lomb_scargle <- function(t, y, periods) {
+  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
+  y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  y <- y - mean(y)
+  # SAMPLE variance (n-1), matching periodogram.js:38 — R's var() default is already this.
+  # The Python port used the POPULATION form until 2026-07-28 and inflated every power by
+  # n/(n-1); the chi-squared periodogram below legitimately DOES use the population form
+  # (periodogram.js:155), so the two methods differ on purpose and neither follows the other.
+  vary <- var(y)
+  if (!is.finite(vary) || vary == 0) vary <- 1
+  vapply(periods, function(P) {
+    w <- 2 * pi / P
+    # tau from the SINGLE-omega sums, matching periodogram.js:50-57. The standard
+    # definition (Lomb 1976; Scargle 1982) sums over 2*w, so the JS tau is not the
+    # orthogonalising offset it is meant to be. Reproduced deliberately: the export must
+    # give the user the numbers the app showed them. See the vault TODO.
+    tau <- if (w != 0) atan2(sum(sin(w * t)), sum(cos(w * t))) / (2 * w) else 0
+    cwt <- cos(w * (t - tau)); swt <- sin(w * (t - tau))
+    den1 <- sum(cwt^2); den2 <- sum(swt^2)
+    if (den1 > 0 && den2 > 0) {
+      (sum(y * cwt)^2 / den1 + sum(y * swt)^2 / den2) / (2 * vary)
+    } else 0
+  }, numeric(1))
+}
+
+# Folding chi-squared periodogram, with the p = 0.05 threshold taken at a typical bin count.
+chi_squared_pgram <- function(t, y, periods, dt) {
+  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
+  y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  n <- length(y)
+  ymean <- mean(y)
+  vary <- sum((y - ymean)^2) / n
+  if (vary == 0) vary <- 1
+  powers <- vapply(periods, function(P) {
+    nbins <- max(2, js_round(P / dt))
+    b <- as.integer(t / dt) %% nbins
+    sums <- numeric(nbins); counts <- numeric(nbins)
+    for (i in seq_along(y)) {
+      k <- b[i] + 1
+      sums[k] <- sums[k] + y[i]; counts[k] <- counts[k] + 1
+    }
+    means <- ifelse(counts > 0, sums / pmax(counts, 1), 0)
+    n * (sum((means - ymean)^2 * counts) / n) / vary
+  }, numeric(1))
+  df_mid <- max(2, js_round(median(periods) / dt)) - 1
+  list(powers = powers, threshold = qchisq(0.95, df_mid))
+}
+
+# Binned-autocorrelation Enright periodogram (the simplified form the app uses).
+enright_pgram <- function(t, y, periods, dt) {
+  y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  y <- y - mean(y)
+  vapply(periods, function(P) {
+    lag <- js_round(P / dt)
+    if (lag <= 0 || lag >= length(y)) return(0)
+    a <- y[seq_len(length(y) - lag)]
+    b <- y[(lag + 1):length(y)]
+    den <- sqrt(sum(a * a) * sum(b * b))
+    if (den > 0) sum(a * b) / den else 0
+  }, numeric(1))
+}
+
+run_periodogram_calculation <- function(params) {
+  t <- suppressWarnings(as.numeric(unlist(params$t, use.names = FALSE)))
+  y <- suppressWarnings(as.numeric(unlist(params$y, use.names = FALSE)))
+  method <- if (is.null(params$method)) "Lomb-Scargle" else params$method
+  p_min <- as.numeric(if (is.null(params$minPeriod)) 1 else params$minPeriod)
+  p_max <- as.numeric(if (is.null(params$maxPeriod)) 48 else params$maxPeriod)
+  step <- as.numeric(if (is.null(params$stepSize)) 0.1 else params$stepSize)
+  periods <- make_seq_array(p_min, p_max, step)
+  dt <- if (!is.null(params$dt) && is.finite(params$dt) && params$dt > 0) params$dt
+        else median_dt(t)
+  if (identical(method, "Lomb-Scargle")) {
+    list(x = periods, y = lomb_scargle(t, y, periods), threshold = NULL)
+  } else if (identical(method, "Chi-squared")) {
+    r <- chi_squared_pgram(t, y, periods, dt)
+    list(x = periods, y = r$powers, threshold = r$threshold)
+  } else {
+    list(x = periods, y = enright_pgram(t, y, periods, dt), threshold = NULL)
+  }
+}
+
+compute_autocorrelation <- function(times, values, bin_size = NULL,
+                                    max_lag = NULL, min_lag = 0) {
+  t <- suppressWarnings(as.numeric(unlist(times, use.names = FALSE)))
+  y <- suppressWarnings(as.numeric(unlist(values, use.names = FALSE)))
+  n0 <- min(length(t), length(y))
+  t <- t[seq_len(n0)]; y <- y[seq_len(n0)]
+  ok <- is.finite(t) & is.finite(y)
+  t <- t[ok]; y <- y[ok]
+  n <- length(y)
+  if (n < 2) return(list(lags = numeric(0), correlations = numeric(0), dt = 1))
+  dt <- if (!is.null(bin_size)) as.numeric(bin_size) else median_dt(t)
+  timespan <- t[length(t)] - t[1]
+  max_lag_t <- if (!is.null(max_lag) && is.finite(max_lag) && max_lag > 0) as.numeric(max_lag)
+               else timespan / 2
+  min_lag_t <- if (!is.null(min_lag) && is.finite(min_lag) && min_lag > 0) as.numeric(min_lag)
+               else 0
+  if (min_lag_t >= max_lag_t) return(list(lags = numeric(0), correlations = numeric(0), dt = dt))
+  n_lags <- min(floor(max_lag_t / dt), n %/% 2)
+  start_idx <- ceiling(min_lag_t / dt)
+  ymean <- mean(y)
+  yvar <- sum((y - ymean)^2) / n
+  if (yvar == 0) return(list(lags = numeric(0), correlations = numeric(0), dt = dt))
+  diffs <- diff(t)
+  med <- median(diffs)
+  # "Uniform enough" within 10% of the median spacing takes the fast index-shift path; the
+  # uneven path is O(n^2) and pairs samples by TIME difference instead, so a gappy record
+  # still gets the right lags rather than lags that silently mean "index offset".
+  is_uniform <- max(abs(diffs - med)) < med * 0.1
+  lags <- c(); corrs <- c()
+  ydem <- y - ymean
+  if (is_uniform) {
+    for (lag in seq(start_idx, n_lags)) {
+      if (lag >= n) break
+      a <- ydem[seq_len(n - lag)]; b <- ydem[(lag + 1):n]
+      corrs <- c(corrs, if (length(a) > 0) sum(a * b) / (length(a) * yvar) else 0)
+      lags <- c(lags, lag * dt)
+    }
+  } else {
+    tol <- dt / 2
+    for (li in seq(start_idx, n_lags)) {
+      target <- li * dt
+      s <- 0; count <- 0
+      for (i in seq_len(n)) {
+        for (j in seq_len(n)[-seq_len(i)]) {
+          td <- t[j] - t[i]
+          if (abs(td - target) <= tol) { s <- s + ydem[i] * ydem[j]; count <- count + 1 }
+          if (td > target + tol) break
+        }
+      }
+      corrs <- c(corrs, if (count > 0) s / (count * yvar) else 0)
+      lags <- c(lags, target)
+    }
+  }
+  list(lags = lags, correlations = corrs, dt = dt)
+}
+
+# ---------------------------------------------------------------------------
+# Frequency filter
+# ---------------------------------------------------------------------------
+
+dc_in_band <- function(type_, low, high) {
+  if (identical(type_, "high")) return(0 >= low)
+  if (identical(type_, "band")) return(0 >= low && 0 <= high)
+  0 <= high
+}
+
+# Zero out spectral bins outside the band and transform back. Gaps are filled with the MEAN
+# before the transform (so they do not ring) and restored as NA afterwards, and the mean is
+# added back only when the band actually contains DC — otherwise a high-pass would
+# reintroduce the offset it just removed.
+fft_filter <- function(y, type_ = "low", low = 0, high = 1) {
+  raw <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  n <- length(raw)
+  if (!n) return(numeric(0))
+  valid <- is.finite(raw)
+  if (sum(valid) < 2) return(ifelse(valid, raw, NA_real_))
+  m <- mean(raw[valid])
+  M <- next_pow2(n)
+  re <- numeric(M)
+  re[seq_len(n)] <- ifelse(valid, raw, m) - m
+  spec <- fft(re)
+  for (k in seq_len(M)) {
+    kk <- min(k - 1, M - (k - 1))
+    norm_freq <- (2 * kk) / M
+    keep <- if (identical(type_, "high")) norm_freq >= low
+            else if (identical(type_, "band")) norm_freq >= low && norm_freq <= high
+            else norm_freq <= high
+    if (!keep) spec[k] <- 0
+  }
+  inv <- Re(fft(spec, inverse = TRUE)) / M
+  add_back <- if (dc_in_band(type_, low, high)) m else 0
+  ifelse(valid, inv[seq_len(n)] + add_back, NA_real_)
+}
+
+cp_frequencyfilter <- function(x, args, cols, raw_data) {
+  type_ <- if (is.null(args$type)) "low" else args$type
+  low <- as.numeric(if (is.null(args$low)) 0 else args$low)
+  high <- as.numeric(if (is.null(args$high)) 1 else args$high)
+  fft_filter(x, type_, low, high)
+}
+
+# ---------------------------------------------------------------------------
+# RhythmicityAnalysis
+# ---------------------------------------------------------------------------
+
+# One node, three spectra. `hideInputs` switches the output SHAPE: on, every y shares one
+# x column (rhythmicityx) plus a per-y series; off, each y gets its own fully named set.
+tp_rhythmicityanalysis <- function(args, env) {
+  x_in <- if (is.null(args$xIN)) -1 else args$xIN
+  y_ins <- id_list(args$yIN)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
+  analysis <- if (is.null(args$analysis)) "periodogram" else args$analysis
+  hide_inputs <- isTRUE(args$hideInputs)
+  t <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
+  shared_x <- NULL; any_valid <- FALSE
+  pick <- function(a, b, d) if (!is.null(args[[a]])) args[[a]]
+                            else if (!is.null(args[[b]])) args[[b]] else d
+
+  for (y_id in y_ins) {
+    yk <- as.character(y_id)
+    if (is.null(env$cols[[yk]])) next
+    y <- col_data(env$cols[[yk]], env$cols, env$raw_data)
+
+    if (identical(analysis, "periodogram")) {
+      pg <- run_periodogram_calculation(list(
+        t = t, y = y,
+        method = pick("pgMethod", "method", "Lomb-Scargle"),
+        minPeriod = pick("periodMin", "minPeriod", 1),
+        maxPeriod = pick("periodMax", "maxPeriod", 48),
+        stepSize = pick("periodStep", "stepSize", 0.1)))
+      if (hide_inputs) {
+        if (is.null(shared_x)) {
+          shared_x <- pg$x
+          set_col(env, env$cols, out_id(args, "rhythmicityx"), pg$x, type = "number")
+        }
+        set_col(env, env$cols, out_id(args, paste0("rhythmicityy_", y_id)), pg$y, type = "number")
+      } else {
+        set_col(env, env$cols, out_id(args, paste0(y_id, "_period")), pg$x, type = "number")
+        set_col(env, env$cols, out_id(args, paste0(y_id, "_power")), pg$y, type = "number")
+        if (!is.null(pg$threshold)) {
+          set_col(env, env$cols, out_id(args, paste0(y_id, "_threshold")),
+                  rep(pg$threshold, length(pg$x)), type = "number")
+        }
+      }
+    } else if (identical(analysis, "fft")) {
+      f <- compute_fft(t, y)
+      periods <- ifelse(f$frequencies != 0, 1 / f$frequencies, NA_real_)
+      if (hide_inputs) {
+        if (is.null(shared_x)) {
+          shared_x <- periods
+          set_col(env, env$cols, out_id(args, "rhythmicityx"), periods, type = "number")
+        }
+        set_col(env, env$cols, out_id(args, paste0("rhythmicityy_", y_id)),
+                f$magnitudes, type = "number")
+      } else {
+        set_col(env, env$cols, out_id(args, paste0(y_id, "_frequency")),
+                f$frequencies, type = "number")
+        set_col(env, env$cols, out_id(args, paste0(y_id, "_period")), periods, type = "number")
+        set_col(env, env$cols, out_id(args, paste0(y_id, "_magnitude")),
+                f$magnitudes, type = "number")
+        set_col(env, env$cols, out_id(args, paste0(y_id, "_phase")), f$phases, type = "number")
+      }
+    } else if (identical(analysis, "correlogram")) {
+      ac <- compute_autocorrelation(
+        t, y,
+        min_lag = as.numeric(if (is.null(args$corrMinLag)) 0 else args$corrMinLag),
+        max_lag = if (is.null(args$corrMaxLag)) NULL else args$corrMaxLag)
+      if (hide_inputs) {
+        if (is.null(shared_x)) {
+          shared_x <- ac$lags
+          set_col(env, env$cols, out_id(args, "rhythmicityx"), ac$lags, type = "number")
+        }
+        set_col(env, env$cols, out_id(args, paste0("rhythmicityy_", y_id)),
+                ac$correlations, type = "number")
+      } else {
+        set_col(env, env$cols, out_id(args, paste0(y_id, "_lag")), ac$lags, type = "number")
+        set_col(env, env$cols, out_id(args, paste0(y_id, "_correlation")),
+                ac$correlations, type = "number")
+      }
+    }
+    any_valid <- TRUE
+  }
+  any_valid
+}
+
+# ---------------------------------------------------------------------------
+# StoredValueGroup
+# ---------------------------------------------------------------------------
+
+# Gathers named stored values into per-group columns. Only FINITE numbers are collected: a
+# stored value that never resolved is skipped rather than entering the group as NA, because
+# the group's length is what downstream comparisons treat as its n.
+tp_storedvaluegroup <- function(args, env) {
+  groups <- args$groups
+  if (!is.list(groups)) groups <- list()
+  any_valid <- FALSE
+  sv <- if (is.null(env$stored_values)) list() else env$stored_values
+  for (i in seq_along(groups)) {
+    group <- groups[[i]]
+    if (is.null(group)) group <- list()
+    group_id <- if (!is.null(group$id)) group$id else paste0("idx_", i - 1)
+    keys <- group$keys
+    if (!is.list(keys) && !is.character(keys)) keys <- list()
+    vals <- c()
+    for (key in unlist(keys, use.names = FALSE)) {
+      if (is.null(sv[[key]])) next
+      v <- sv[[key]]
+      # Stored values are held as {source, staticValue}; unwrap before testing.
+      if (is.list(v)) v <- v$staticValue
+      if (is.null(v) || is.logical(v)) next
+      nv <- suppressWarnings(as.numeric(v))
+      if (length(nv) == 1 && is.finite(nv)) vals <- c(vals, nv)
+    }
+    if (length(vals)) {
+      set_col(env, env$cols, out_id(args, paste0("group_", group_id)), vals, type = "number")
+      any_valid <- TRUE
+    }
+  }
+  any_valid
+}
+
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
 # sits beside the existing `pyFunc`, so both legs read one fixture file).
 #
@@ -2504,6 +2832,7 @@ PURE_UTIL_MAP <- list(
   cross_correlation = cross_correlation,
   describe_stats = describe_stats,
   jarque_bera    = jarque_bera,
+  compute_autocorrelation = compute_autocorrelation,
   compute_fft    = compute_fft,
   d_agostino     = d_agostino,
   shapiro_wilk   = shapiro_wilk,
@@ -2535,8 +2864,10 @@ TABLE_PROCESS_MAP = list(
   nonparametricra = tp_nonparametricra,
   normalitytest = tp_normalitytest,
   rayleightest = tp_rayleightest,
+  rhythmicityanalysis = tp_rhythmicityanalysis,
   rectangularwave = tp_rectangularwave,
   smootheddata = tp_smootheddata,
+  storedvaluegroup = tp_storedvaluegroup,
   surrogatetest = tp_surrogatetest,
   sort = tp_sort,
   split = tp_split,
@@ -2551,6 +2882,7 @@ COLUMN_PROCESS_MAP = list(
   add = cp_add,
   editvalue = cp_editvalue,
   filterbyothercol = cp_filterbyothercol,
+  frequencyfilter = cp_frequencyfilter,
   multiply = cp_multiply,
   normalize = cp_normalize,
   outlierremoval = cp_outlierremoval,
