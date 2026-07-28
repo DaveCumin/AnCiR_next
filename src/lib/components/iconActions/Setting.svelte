@@ -1,7 +1,8 @@
 <script module>
 	import { appConsts, appState, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
-	import { loadPythonExporter } from '$lib/utils/pythonExportLoader.js';
+	import { loadPythonExporter, loadRExporter } from '$lib/utils/pythonExportLoader.js';
+	import { checkRSupport, explainRSupport } from '$lib/utils/rExportSupport.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -75,6 +76,47 @@
 		} catch (error) {
 			console.error('Failed to export Python:', error?.message ?? error);
 			addNotification('Error exporting Python: ' + (error?.message ?? error));
+		}
+	}
+
+	/**
+	 * EXPERIMENTAL: export the current session as a self-contained R script.
+	 *
+	 * Same sidecar arrangement as the Python export, plus one thing the Python export does not
+	 * need: a COVERAGE CHECK before anything is downloaded.
+	 *
+	 * The R runtime is strict — an analysis it does not implement aborts the generated script
+	 * rather than being skipped, because a script that quietly drops a step still writes a
+	 * plausible columns.csv. That protects whoever RUNS the script. Checking here protects
+	 * whoever EXPORTS it: the refusal arrives while they are still looking at the session that
+	 * caused it, naming the nodes, instead of later in a terminal.
+	 */
+	export async function exportR() {
+		try {
+			const session = JSON.parse(outputCoreAsJson());
+			const report = checkRSupport(session);
+			if (!report.ok) {
+				addNotification(`Cannot export this session as R. ${explainRSupport(report)}`);
+				return;
+			}
+			const { buildRScript } = await loadRExporter();
+			const rSrc = buildRScript(session);
+
+			const blob = new Blob([rSrc], { type: 'text/x-r-source' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'session.R';
+			document.body.appendChild(a);
+			a.click();
+			setTimeout(() => {
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+			}, 10);
+			addNotification('Exported session.R — run it with Rscript (needs no extra packages).', 'info');
+		} catch (error) {
+			console.error('Failed to export R:', error?.message ?? error);
+			addNotification('Error exporting R: ' + (error?.message ?? error));
 		}
 	}
 

@@ -8,7 +8,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { appConsts, appState } from '$lib/core/core.svelte';
 	import ColourPaletteSelect from '$lib/components/inputs/ColourPaletteSelect.svelte';
-	import { exportPython } from '$lib/components/iconActions/Setting.svelte';
+	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
 	let { showModal = $bindable(false) } = $props();
 
 	// Build the IANA zone list once on first render. `supportedValuesOf` is in
@@ -140,6 +140,15 @@
 				Downloads a standalone Python script that reproduces this session's analyses. Requires
 				<code>numpy</code>, <code>pandas</code> and <code>scipy</code>. Some processes may not yet
 				be implemented in the Python runtime — the script prints a warning when run.
+			</p>
+			<button class="export-py-btn" type="button" onclick={exportR}>
+				Export session as R
+			</button>
+			<p class="experimental-note">
+				Downloads a standalone R script that reproduces this session's analyses. Needs
+				<strong>no extra packages</strong> — base R only. The R runtime does not cover every
+				node yet, so a session using one it lacks is refused here, naming the node, rather
+				than exported as a script that would stop partway.
 			</p>
 		</div>
 	{/snippet}

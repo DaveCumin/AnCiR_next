@@ -3219,6 +3219,49 @@ tp_groupcomparison <- function(args, env) {
   isTRUE(compute_group_comparison(args, env)$anyValid)
 }
 
+# ---------------------------------------------------------------------------
+# Deterministic source nodes
+# ---------------------------------------------------------------------------
+#
+# SequenceColumn and BlankColumn look like "generator" nodes and are NOT: neither draws from
+# a PRNG. A sequence is start + i*step and a blank column is a constant fill, so both
+# reproduce exactly in any language. Only Random and SimulatedData need the JS PRNG, and only
+# those are out of scope for R.
+
+tp_sequencecolumn <- function(args, env) {
+  kind <- if (!is.null(args$seqType)) args$seqType
+          else if (!is.null(args$kind)) args$kind else "number"
+  n <- as.integer(if (!is.null(args$count)) args$count
+                  else if (!is.null(args$rows)) args$rows else 100)
+  if (is.na(n) || n <= 0) return(FALSE)
+  oid <- out_id(args, "result")
+  if (identical(kind, "time")) {
+    base_ms <- as.numeric(if (!is.null(args$startTime)) args$startTime
+                          else if (!is.null(args$startMs)) args$startMs else 0)
+    step_h <- as.numeric(if (!is.null(args$stepHours)) args$stepHours
+                         else if (!is.null(args$step)) args$step else 1)
+    set_col(env, env$cols, oid, base_ms + (seq_len(n) - 1) * step_h * 3600000, type = "time")
+  } else {
+    start <- as.numeric(if (is.null(args$start)) 0 else args$start)
+    step <- as.numeric(if (!is.null(args$step)) args$step
+                       else if (!is.null(args$stepHours)) args$stepHours else 1)
+    set_col(env, env$cols, oid, start + (seq_len(n) - 1) * step, type = "number")
+  }
+  TRUE
+}
+
+tp_blankcolumn <- function(args, env) {
+  n <- as.integer(if (!is.null(args$N)) args$N
+                  else if (!is.null(args$rows)) args$rows
+                  else if (!is.null(args$length)) args$length else 0)
+  if (is.na(n) || n <= 0) return(FALSE)
+  # An empty cell reads back as NULL in the JS engine (a category column maps "" -> null), so
+  # the default fill is NA to match. An explicit fillValue is still honoured.
+  fill <- if (is.null(args$fillValue)) NA else args$fillValue
+  set_col(env, env$cols, out_id(args, "result"), rep(fill, n), type = "category")
+  TRUE
+}
+
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
 # sits beside the existing `pyFunc`, so both legs read one fixture file).
 #
@@ -3250,6 +3293,7 @@ PURE_UTIL_MAP <- list(
 TABLE_PROCESS_MAP = list(
   averageprofile = tp_averageprofile,
   binneddata = tp_binneddata,
+  blankcolumn = tp_blankcolumn,
   collectcolumns = tp_collectcolumns,
   columnfunctions = tp_columnfunctions,
   cosinor = tp_cosinor,
@@ -3271,6 +3315,7 @@ TABLE_PROCESS_MAP = list(
   rayleightest = tp_rayleightest,
   rhythmicityanalysis = tp_rhythmicityanalysis,
   rectangularwave = tp_rectangularwave,
+  sequencecolumn = tp_sequencecolumn,
   smootheddata = tp_smootheddata,
   storedvaluegroup = tp_storedvaluegroup,
   surrogatetest = tp_surrogatetest,

@@ -1,7 +1,8 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
-import { writeSidecar } from './scripts/buildPythonExport.mjs';
+import { writeSidecar as writePythonSidecar } from './scripts/buildPythonExport.mjs';
+import { writeSidecar as writeRSidecar } from './scripts/buildRExport.mjs';
 
 export default defineConfig({
 	build: {
@@ -58,15 +59,17 @@ export default defineConfig({
 	},
 
 	plugins: [
-		// Regenerate static/ancir-python-export.js from its two canonical sources before
-		// anything is served or bundled. A plugin rather than a package.json step so dev and
-		// build agree: the file is gitignored (it is derived), so a fresh checkout running
-		// `pnpm dev` would otherwise have no sidecar and a dead "export Python" menu item.
+		// Regenerate the export sidecars from their canonical sources before anything is served
+		// or bundled. A plugin rather than a package.json step so dev and build agree: they are
+		// gitignored (derived), so a fresh checkout running `pnpm dev` would otherwise have no
+		// sidecars and two dead export buttons.
 		{
-			name: 'ancir-python-export-sidecar',
+			name: 'ancir-export-sidecars',
 			buildStart() {
-				const { path, bytes, changed } = writeSidecar();
-				if (changed) console.log(`  ↳ ${path} (${(bytes / 1024).toFixed(0)} KB, regenerated)`);
+				for (const write of [writePythonSidecar, writeRSidecar]) {
+					const { path, bytes, changed } = write();
+					if (changed) console.log(`  ↳ ${path} (${(bytes / 1024).toFixed(0)} KB, regenerated)`);
+				}
 			}
 		},
 		sveltekit(),

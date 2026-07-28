@@ -18,19 +18,26 @@ describe('sidecarUrl', () => {
 	it('resolves next to the page, not the site root', () => {
 		// The FTP builds are served from a subdirectory, where "/ancir-python-export.js"
 		// would miss. Everything hangs off the document, so it has to follow it.
-		expect(sidecarUrl('https://example.org/apps/ancir/index.html')).toBe(
+		expect(sidecarUrl('ancir-python-export.js', 'https://example.org/apps/ancir/index.html')).toBe(
 			'https://example.org/apps/ancir/ancir-python-export.js'
 		);
 	});
 
 	it('ignores the hash router fragment', () => {
-		expect(sidecarUrl('https://example.org/ancir/index.html#/workspace')).toBe(
+		expect(sidecarUrl('ancir-python-export.js', 'https://example.org/ancir/index.html#/workspace')).toBe(
 			'https://example.org/ancir/ancir-python-export.js'
 		);
 	});
 
 	it('still yields a URL when there is no document', () => {
-		expect(() => sidecarUrl(undefined)).not.toThrow();
+		expect(() => sidecarUrl('ancir-python-export.js', undefined)).not.toThrow();
+	});
+
+	it('resolves each language sidecar beside the page', () => {
+		const base = 'https://example.org/apps/ancir/index.html';
+		expect(sidecarUrl('ancir-r-export.js', base)).toBe(
+			'https://example.org/apps/ancir/ancir-r-export.js'
+		);
 	});
 });
 
