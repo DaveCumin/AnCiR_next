@@ -48,7 +48,7 @@
       "name": "padj_53",
       "data": 618,
       "type": "number",
-      "tableProcessGUId": "5c1c75d6-bb76-4d99-a325-a4f8fcd65b78",
+      "tableProcessGUId": "eaab6b66-5c0b-4820-ab45-5f4ea87f76b6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -59,7 +59,7 @@
       "name": "reject_53",
       "data": 619,
       "type": "number",
-      "tableProcessGUId": "de151819-28f1-4758-9b63-e3158755b533",
+      "tableProcessGUId": "5839b8ca-e888-46f2-933c-1724b87f5eb5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -208,5 +208,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

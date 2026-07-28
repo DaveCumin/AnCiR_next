@@ -158,6 +158,30 @@ def run_pure_util(fx, js):
     return fn(*pos, *fx.get("pyArgs", []))
 
 
+def run_time_column(fx, js):
+    """Build one time column exactly as the JS emitter did and read it back.
+
+    No analysis in between: this checks the parser and the hours-since-start
+    baseline on their own. It matters because the three languages do not share an
+    approach here — JS parses strictly against the stored `timeFormat`, Python
+    ignores that format (a Luxon format string is not valid Python) and lets
+    pandas auto-detect, and R tries a short list of formats. Agreement between
+    three different parsers is an assumption until something checks it.
+    """
+    spec = js["column"]
+    raw_data = {}
+    # AWD columns store {start, step, length}; the expansion is under test, so the
+    # raw payload goes in untouched rather than being pre-expanded here.
+    raw_data[1] = spec["awd"] if spec.get("awd") is not None else list(spec["values"])
+    col = rt.Column(id=1, name=fx["id"], type=spec.get("type", "time"), data=1,
+                    raw_data=raw_data, time_format=spec.get("timeFormat"),
+                    compression=spec.get("compression"))
+    out = {}
+    for k in fx.get("compareArrays", []):
+        out[k] = list(col.hours_since_start if k == "hoursSinceStart" else col.get_data())
+    return out
+
+
 def run_table_process_result(fx, js):
     raw_data, cols, id_map, _ = _build_cols(js)
     args = resolve_tokens(fx["args"], id_map)
@@ -183,6 +207,12 @@ def _check_fixture(fx, js_results):
 
     elif fx["kind"] == "plotCompute":
         py = run_plot_compute(fx, js)
+        for key in fx.get("compareArrays", []):
+            ok, why = arrays_match(py.get(key), js["outputs"].get(key), tol)
+            assert ok, f"{fx['id']} array '{key}' differs: {why}"
+
+    elif fx["kind"] == "timeColumn":
+        py = run_time_column(fx, js)
         for key in fx.get("compareArrays", []):
             ok, why = arrays_match(py.get(key), js["outputs"].get(key), tol)
             assert ok, f"{fx['id']} array '{key}' differs: {why}"

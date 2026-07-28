@@ -11,7 +11,7 @@
       "name": "group_g1_83",
       "data": 803,
       "type": "number",
-      "tableProcessGUId": "8367da4f-2830-4a81-95e4-92a7d6f0341d",
+      "tableProcessGUId": "5d1a10cd-dba2-4cbf-b96d-3ebbe2ee6af4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -167,5 +167,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

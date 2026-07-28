@@ -122,7 +122,7 @@
       "name": "binary_52",
       "data": 616,
       "type": "number",
-      "tableProcessGUId": "2226bd0f-b97a-45a5-bd94-6a2fc566912a",
+      "tableProcessGUId": "6f0a97ef-8ac8-4ef5-a52b-780c39f559a1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -268,5 +268,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

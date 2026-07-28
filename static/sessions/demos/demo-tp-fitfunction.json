@@ -215,7 +215,7 @@
       "name": "x",
       "data": 655,
       "type": "number",
-      "tableProcessGUId": "9fb14776-b7d9-4df9-bf1d-b87dbd9f0efd",
+      "tableProcessGUId": "e150c1e2-6fc8-4ce3-827f-3c0fdef9500a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -237,7 +237,7 @@
       "name": "fitx_60",
       "data": 657,
       "type": "number",
-      "tableProcessGUId": "34f3b4e4-3c90-4441-a60c-b5cf48747f6c",
+      "tableProcessGUId": "60015caa-6978-4baa-995f-b86681d73193",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "fity_656_60",
       "data": 658,
       "type": "number",
-      "tableProcessGUId": "34f3b4e4-3c90-4441-a60c-b5cf48747f6c",
+      "tableProcessGUId": "60015caa-6978-4baa-995f-b86681d73193",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -592,5 +592,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

@@ -79,6 +79,50 @@ cmp_scalar <- function(got, want, tol) {
 # through the real dispatcher, and read back the output columns. Mirrors what
 # tools/test_parity.py does, so the two legs exercise the same path rather than R getting an
 # easier one through a bespoke shortcut.
+# Time values must reach the port as the TYPE the session stored, which is the one thing
+# `unwrap_input` cannot do: it coerces everything through as_num_vec, so an ISO-8601 string
+# arrives as NA and the parser under test is never reached. (That produced six confident
+# "R cannot parse ISO-8601" failures that were entirely this harness's doing.) Strings stay
+# strings, numbers stay numbers — a stored epoch-ms column must NOT become character, or
+# col_data would try to date-parse "3600000".
+unwrap_time_values <- function(vals) {
+  if (is.null(vals)) return(character(0))
+  if (!is.list(vals)) return(vals)
+  numeric_like <- all(vapply(vals, function(e) is.null(e) || is.numeric(e), logical(1)))
+  if (numeric_like) {
+    return(vapply(vals, function(e) if (is.null(e)) NA_real_ else as.numeric(e), numeric(1)))
+  }
+  vapply(vals, function(e) {
+    if (is.null(e) || length(e) != 1) return(NA_character_)
+    as.character(e)
+  }, character(1))
+}
+
+# Build one time column exactly as the JS emitter did and read it back, with no analysis in
+# between. The time path is where the three languages genuinely differ: JS parses strictly
+# against the stored `timeFormat`, Python ignores it and lets pandas auto-detect, and R
+# ignores it too and walks a short `tryFormats` list. Three parsers agreeing was an
+# assumption until this fixture kind existed.
+run_time_column_fixture <- function(fx, rec) {
+  spec <- rec$column
+  raw_data <- list()
+  # AWD columns store {start, step, length}; the expansion is under test, so the raw payload
+  # goes in as-is rather than being pre-expanded here.
+  raw_data[["1"]] <- if (!is.null(spec$awd)) spec$awd else unwrap_time_values(spec$values)
+  col <- new_column(id = 1, name = fx$id,
+                    type = if (!is.null(spec$type)) spec$type else "time",
+                    data = 1,
+                    time_format = spec$timeFormat,
+                    compression = spec$compression)
+  cols <- list("1" = col)
+  out <- list()
+  for (k in names(rec$outputs)) {
+    out[[k]] <- if (identical(k, "hoursSinceStart")) col_hours(col, cols, raw_data)
+                else col_data(col, cols, raw_data)
+  }
+  out
+}
+
 run_tp_fixture <- function(fx, rec) {
   env <- new.env()
   env$raw_data <- list()
@@ -192,7 +236,11 @@ for (fx in fixtures) {
   is_tpr <- identical(fx$kind, "tableProcessResult")
   is_tp <- identical(fx$kind, "tableProcess")
   is_cp <- identical(fx$kind, "columnProcess")
-  fn <- if (is_tp || is_tpr) TABLE_PROCESS_MAP[[rfunc]]
+  is_tc <- identical(fx$kind, "timeColumn")
+  # A timeColumn fixture exercises col_data/col_hours directly rather than any entry in the
+  # analysis maps, so it needs no lookup — the parser IS the thing under test.
+  fn <- if (is_tc) TRUE
+        else if (is_tp || is_tpr) TABLE_PROCESS_MAP[[rfunc]]
         else if (is_cp) COLUMN_PROCESS_MAP[[rfunc]]
         else PURE_UTIL_MAP[[rfunc]]
   if (is.null(fn)) {
@@ -231,7 +279,8 @@ for (fx in fixtures) {
   call_args <- c(lapply(refs, function(nm) unwrap_input(rec$inputs[[nm]])),
                  if (is.null(extra)) list() else extra)
 
-  got <- if (is_tpr) tryCatch(run_tpr_fixture(fx, rec), error = function(e) e)
+  got <- if (is_tc) tryCatch(run_time_column_fixture(fx, rec), error = function(e) e)
+         else if (is_tpr) tryCatch(run_tpr_fixture(fx, rec), error = function(e) e)
          else if (is_tp) tryCatch(run_tp_fixture(fx, rec), error = function(e) e)
          # A column process is a bare array -> array; the emitter records the input at the
          # TOP level (rec$input, not rec$inputs) and names the result "value".

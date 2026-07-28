@@ -695,12 +695,12 @@
       24
     ],
     "748": [
+      83.5,
       83.49999999999999,
       83.49999999999999,
-      83.50000000000003,
-      83.5,
-      83.5,
-      83.50000000000001,
+      83.49999999999997,
+      83.49999999999999,
+      83.49999999999999,
       83.49999999999999
     ]
   },
@@ -710,7 +710,7 @@
       "name": "x",
       "data": 744,
       "type": "number",
-      "tableProcessGUId": "07cf9f80-684e-44b5-bb76-306d40cbe3ce",
+      "tableProcessGUId": "060bd127-0a5e-497e-aa34-82d6ec734d47",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -732,7 +732,7 @@
       "name": "movex_71",
       "data": 746,
       "type": "number",
-      "tableProcessGUId": "9e3ef4a5-9173-4df0-8944-70bdb7b9bc49",
+      "tableProcessGUId": "1c6bc4a8-055e-471e-8735-4145c8df465d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -743,7 +743,7 @@
       "name": "745_peak_period_71",
       "data": 747,
       "type": "number",
-      "tableProcessGUId": "9e3ef4a5-9173-4df0-8944-70bdb7b9bc49",
+      "tableProcessGUId": "1c6bc4a8-055e-471e-8735-4145c8df465d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -754,7 +754,7 @@
       "name": "745_peak_power_71",
       "data": 748,
       "type": "number",
-      "tableProcessGUId": "9e3ef4a5-9173-4df0-8944-70bdb7b9bc49",
+      "tableProcessGUId": "1c6bc4a8-055e-471e-8735-4145c8df465d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1094,5 +1094,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

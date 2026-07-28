@@ -2526,11 +2526,14 @@ lomb_scargle <- function(t, y, periods) {
   if (!is.finite(vary) || vary == 0) vary <- 1
   vapply(periods, function(P) {
     w <- 2 * pi / P
-    # tau from the SINGLE-omega sums, matching periodogram.js:50-57. The standard
-    # definition (Lomb 1976; Scargle 1982) sums over 2*w, so the JS tau is not the
-    # orthogonalising offset it is meant to be. Reproduced deliberately: the export must
-    # give the user the numbers the app showed them. See the vault TODO.
-    tau <- if (w != 0) atan2(sum(sin(w * t)), sum(cos(w * t))) / (2 * w) else 0
+    # tau, the offset that makes the sine and cosine bases orthogonal on unevenly sampled
+    # data. Lomb (1976, Ap&SS 39:447) and Scargle (1982, ApJ 263:835):
+    #     tan(2*w*tau) = sum(sin(2*w*t)) / sum(cos(2*w*t))
+    # The sums run over 2*w. This port and the JS engine both previously summed over w while
+    # still dividing by 2*w, which is some other offset that does not orthogonalise the
+    # bases. Fixed in all three languages together; tp-rhythmicity-periodogram enforces it.
+    two_w <- 2 * w
+    tau <- if (w != 0) atan2(sum(sin(two_w * t)), sum(cos(two_w * t))) / two_w else 0
     cwt <- cos(w * (t - tau)); swt <- sin(w * (t - tau))
     den1 <- sum(cwt^2); den2 <- sum(swt^2)
     if (den1 > 0 && den2 > 0) {
@@ -3388,6 +3391,59 @@ new_column <- function(id, name, type = "number", data = NULL, time_format = NUL
 
 col_is_ref <- function(col) !is.null(col$ref_id)
 
+# Translate the session's stored dayjs format into an R strptime format.
+#
+# The app stores a dayjs format string and parses STRICTLY against it. This port used to
+# ignore it and walk a short tryFormats list, which is fine for unambiguous ISO-8601 and
+# wrong for anything else: the app's own guesser returns BOTH candidates for an ambiguous
+# day/month pair and asks the user to choose, so a session can legitimately carry
+# DD/MM/YYYY. Re-guessing here then disagrees with the app by two months, silently, on data
+# the user already disambiguated.
+#
+# Returns NULL when there is no format (epoch-ms columns, older sessions), leaving the
+# caller on the tryFormats path it used before.
+.strptime_from_dayjs <- function(fmt) {
+  if (is.null(fmt) || !is.character(fmt) || !nzchar(fmt)) return(NULL)
+  # Longest token first: MMMM must not be eaten by MM. %OS takes the seconds AND any
+  # fractional part, so SSS is folded into it below rather than mapped separately.
+  toks <- list(
+    c("YYYY", "%Y"), c("YY", "%y"),
+    c("MMMM", "%B"), c("MMM", "%b"), c("MM", "%m"), c("M", "%m"),
+    c("DD", "%d"), c("D", "%d"),
+    c("HH", "%H"), c("H", "%H"),
+    c("hh", "%I"), c("h", "%I"),
+    c("mm", "%M"), c("m", "%M"),
+    c("ss", "%S"), c("s", "%S"),
+    c("SSS", "%OS"),
+    c("A", "%p"), c("a", "%p"),
+    c("ZZ", "%z"), c("Z", "%z")
+  )
+  out <- character(0)
+  i <- 1
+  n <- nchar(fmt)
+  while (i <= n) {
+    ch <- substr(fmt, i, i)
+    if (identical(ch, "[")) {
+      end <- regexpr("]", substr(fmt, i, n), fixed = TRUE)
+      if (end == -1) { out <- c(out, ch); i <- i + 1; next }
+      out <- c(out, substr(fmt, i + 1, i + end - 2))
+      i <- i + end
+      next
+    }
+    matched <- FALSE
+    for (t in toks) {
+      if (identical(substr(fmt, i, i + nchar(t[1]) - 1), t[1])) {
+        out <- c(out, t[2]); i <- i + nchar(t[1]); matched <- TRUE; break
+      }
+    }
+    if (!matched) { out <- c(out, ch); i <- i + 1 }
+  }
+  res <- paste(out, collapse = "")
+  # "%S.%OS" would demand the seconds twice; R's %OS already consumes "30.500".
+  res <- gsub("%S.%OS", "%OS", res, fixed = TRUE)
+  res
+}
+
 .decompress <- function(col, raw) {
   # AWD records store a regular grid as {start, step, length} rather than every value.
   if (identical(col$compression, "awd") && is.list(raw) && !is.null(raw$start)) {
@@ -3412,12 +3468,34 @@ col_data <- function(col, cols, raw_data) {
     # Already-numeric (UNIX ms, e.g. written by SimulatedData) is left alone; only strings
     # need parsing. as.POSIXct handles ISO 8601, which is what sessions store.
     if (length(v) && is.character(v)) {
-      parsed <- suppressWarnings(as.POSIXct(v, tz = "UTC",
-                                            tryFormats = c("%Y-%m-%dT%H:%M:%OSZ",
-                                                           "%Y-%m-%dT%H:%M:%OS",
-                                                           "%Y-%m-%d %H:%M:%OS",
-                                                           "%Y-%m-%d")))
-      d <- as.numeric(parsed) * 1000
+      # Gaps must be excluded BEFORE parsing, not parsed and discarded after. An empty
+      # string makes as.POSIXct ERROR ("character string is not in a standard unambiguous
+      # format") rather than return NA — and an error is not a warning, so suppressWarnings
+      # does not catch it and the whole generated script aborts. A blank cell is what a CSV
+      # with a missing epoch looks like, i.e. the normal case for actigraphy, so this was an
+      # abort on ordinary data. Plain NA parses fine; it is specifically "" that throws.
+      # Gaps stay NA, matching the JS engine, which maps null/'' to null for the same reason.
+      parsed <- rep(NA_real_, length(v))
+      ok <- !is.na(v) & nzchar(v)
+      if (any(ok)) {
+        fmt <- .strptime_from_dayjs(col$time_format)
+        p <- NULL
+        if (!is.null(fmt)) {
+          p <- suppressWarnings(as.POSIXct(v[ok], tz = "UTC", format = fmt))
+          # All-NA means the translation was wrong, not that the data is bad; fall back
+          # rather than return a column of NA.
+          if (all(is.na(p))) p <- NULL
+        }
+        if (is.null(p)) {
+          p <- suppressWarnings(as.POSIXct(v[ok], tz = "UTC",
+                                           tryFormats = c("%Y-%m-%dT%H:%M:%OSZ",
+                                                          "%Y-%m-%dT%H:%M:%OS",
+                                                          "%Y-%m-%d %H:%M:%OS",
+                                                          "%Y-%m-%d")))
+        }
+        parsed[ok] <- as.numeric(p) * 1000
+      }
+      d <- parsed
     }
   }
   if (identical(col$type, "bin")) {

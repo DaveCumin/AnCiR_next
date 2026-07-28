@@ -19,7 +19,7 @@
       "name": "result_48",
       "data": 605,
       "type": "category",
-      "tableProcessGUId": "aeafe1a0-504e-46dc-8f9f-8a6f4d8356d1",
+      "tableProcessGUId": "83a1e285-2302-4186-9ea2-aec318b01f5c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -158,5 +158,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

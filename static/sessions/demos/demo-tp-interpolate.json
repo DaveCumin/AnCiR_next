@@ -187,7 +187,7 @@
       "name": "interpx_46",
       "data": 599,
       "type": "number",
-      "tableProcessGUId": "cbe36ee3-363f-4dca-b452-de3479ea3440",
+      "tableProcessGUId": "4bca9159-bb4b-4a63-948b-1c1b593e3283",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -198,7 +198,7 @@
       "name": "interpy_598_46",
       "data": 600,
       "type": "number",
-      "tableProcessGUId": "cbe36ee3-363f-4dca-b452-de3479ea3440",
+      "tableProcessGUId": "4bca9159-bb4b-4a63-948b-1c1b593e3283",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -359,5 +359,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

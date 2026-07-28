@@ -390,22 +390,19 @@ def _lomb_scargle(t, y, periods):
     # hardest on short records, where the call is already marginal.
     var = float(y.var(ddof=1)) or 1.0
     for k, w in enumerate(omegas):
-        # tau is computed from the SINGLE-omega sums, matching periodogram.js:50-57.
+        # tau, the offset that makes the cosine and sine bases orthogonal on unevenly
+        # sampled data. Lomb (1976, Ap&SS 39:447) and Scargle (1982, ApJ 263:835):
         #
-        # The standard definition (Lomb 1976; Scargle 1982, ApJ 263:835) is
-        # tan(2*w*tau) = sum(sin(2*w*t)) / sum(cos(2*w*t)) — the sums run over 2*w, not w.
-        # The JS engine sums over w, so its tau is not the offset that makes the cosine and
-        # sine bases orthogonal, which is the entire purpose of tau.
+        #     tan(2*w*tau) = sum(sin(2*w*t)) / sum(cos(2*w*t))
         #
-        # This port deliberately REPRODUCES that, because its job is to give the user the
-        # same numbers the app showed them; an export that silently "corrected" a published
-        # figure would be worse than one that matches. The JS bug is recorded separately in
-        # the vault TODOs. Measured impact: on evenly sampled data the peak period is
-        # unchanged and powers differ by ~1%; on unevenly sampled data (the case
-        # Lomb-Scargle exists for) the peak can move by a grid step and powers by ~4%.
-        s2 = float(np.sin(w * t).sum())
-        c2 = float(np.cos(w * t).sum())
-        tau = math.atan2(s2, c2) / (2 * w) if w != 0 else 0.0
+        # The sums run over 2*w. Both this port and the JS engine previously summed over w
+        # while still dividing by 2*w, which is some other offset that does not
+        # orthogonalise the bases. Fixed in JS and here together — they must agree, and the
+        # tp-rhythmicity-periodogram fixture is what enforces that.
+        two_w = 2 * w
+        s2 = float(np.sin(two_w * t).sum())
+        c2 = float(np.cos(two_w * t).sum())
+        tau = math.atan2(s2, c2) / two_w if w != 0 else 0.0
         cwt = np.cos(w * (t - tau))
         swt = np.sin(w * (t - tau))
         num1 = float((y * cwt).sum()) ** 2
@@ -1016,6 +1013,62 @@ def evaluate_trend_at_points(parameters, model, x_points):
 # Column model
 # ----------------------------------------------------------------------
 
+# dayjs token -> strptime directive. Longest first: MMMM must not be eaten by MM.
+_DAYJS_TO_STRPTIME = [
+    ('YYYY', '%Y'), ('YY', '%y'),
+    ('MMMM', '%B'), ('MMM', '%b'), ('MM', '%m'), ('M', '%m'),
+    ('DD', '%d'), ('D', '%d'),
+    ('HH', '%H'), ('H', '%H'),
+    ('hh', '%I'), ('h', '%I'),
+    ('mm', '%M'), ('m', '%M'),
+    ('ss', '%S'), ('s', '%S'),
+    # %f reads 1-6 digits zero-padded on the RIGHT, so ".500" is 500000us = 500ms.
+    ('SSS', '%f'),
+    ('A', '%p'), ('a', '%p'),
+    ('ZZ', '%z'), ('Z', '%z'),
+]
+
+
+def strptime_from_dayjs(fmt):
+    """Translate the session's stored dayjs format into a strptime format.
+
+    The app stores a dayjs format string (normalizeTimeFormat in TimeUtils.js) and
+    parses STRICTLY against it. Both ports used to ignore it and auto-detect, which
+    is fine for unambiguous ISO-8601 and wrong for anything else: the app's own
+    format guesser returns BOTH candidates for an ambiguous day/month pair and asks
+    the user to choose, so a session can legitimately carry DD/MM/YYYY. Re-guessing
+    in the export then disagrees with the app by two months, silently, on data the
+    user already disambiguated.
+
+    Returns None when there is no format (epoch-ms columns, and older sessions),
+    which leaves the caller on the auto-detect path it used before.
+    """
+    if not fmt or not isinstance(fmt, str):
+        return None
+    out, i = [], 0
+    while i < len(fmt):
+        ch = fmt[i]
+        # [literal] — dayjs's escape. Emit verbatim, and protect any % inside it.
+        if ch == '[':
+            end = fmt.find(']', i)
+            if end == -1:
+                out.append(ch.replace('%', '%%'))
+                i += 1
+                continue
+            out.append(fmt[i + 1:end].replace('%', '%%'))
+            i = end + 1
+            continue
+        for token, directive in _DAYJS_TO_STRPTIME:
+            if fmt.startswith(token, i):
+                out.append(directive)
+                i += len(token)
+                break
+        else:
+            out.append('%%' if ch == '%' else ch)
+            i += 1
+    return ''.join(out)
+
+
 @dataclass
 class Column:
     id: int
@@ -1047,19 +1100,37 @@ class Column:
         raw = self.raw_data.get(self.data, [])
         data = self._decompress(raw)
         if self.type == 'time' and self.compression != 'awd':
-            # Already-numeric (UNIX ms, e.g. written by SimulatedData TP):
-            # leave alone. Otherwise parse with pandas (auto-detects ISO
-            # 8601; the JS Luxon format string is not valid Python).
+            # Already-numeric (UNIX ms, e.g. written by SimulatedData TP): leave alone.
             if data and not isinstance(data[0], (int, float)):
-                try:
-                    parsed = pd.to_datetime(data, errors='coerce', utc=True)
+                fmt = strptime_from_dayjs(self.time_format)
+                parsed = None
+                if fmt:
+                    # Honour the session's OWN format when there is one. Auto-detection
+                    # is not a safe substitute: "01/03/2026" under DD/MM/YYYY is 1 March
+                    # and under MM/DD/YYYY is 3 January, and the app deliberately asks
+                    # the user which they meant (guessTimeFormat returns both candidates
+                    # for an ambiguous pair). Guessing again here can silently disagree
+                    # with the app by two months on data the user already disambiguated.
+                    try:
+                        parsed = pd.to_datetime(data, format=fmt, errors='coerce', utc=True)
+                        # A format that matches nothing means the translation was wrong,
+                        # not that the data is bad — fall back rather than return all-NaT.
+                        if parsed.isna().all() and any(
+                                v not in (None, '') for v in data):
+                            parsed = None
+                    except Exception:
+                        parsed = None
+                if parsed is None:
+                    try:
+                        parsed = pd.to_datetime(data, errors='coerce', utc=True)
+                    except Exception:
+                        parsed = None
+                if parsed is not None:
                     # Epoch MS, tz-safe and resolution-independent (pandas >=2
                     # datetime resolution varies, so a fixed //10**6 from ns and
                     # a tz-aware datetime64[ms] cast are both unreliable).
                     epoch = pd.Timestamp('1970-01-01', tz='UTC')
                     data = ((parsed - epoch) // pd.Timedelta('1ms')).tolist()
-                except Exception:
-                    pass
         if self.type == 'bin':
             data = [v + self.bin_width / 2 for v in data]
         # Apply column processes (entries are dicts with funcname/name + args)

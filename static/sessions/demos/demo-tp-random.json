@@ -59,7 +59,7 @@
       "name": "result_72",
       "data": 753,
       "type": "number",
-      "tableProcessGUId": "f1476b55-1623-40ed-800d-b39338e141e7",
+      "tableProcessGUId": "78754b67-3ca6-4f99-941d-c76b3ca7e726",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -201,5 +201,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

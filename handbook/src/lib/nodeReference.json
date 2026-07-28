@@ -373,11 +373,14 @@
 		]
 	},
 	"periodogram": {
-		"description": "A periodogram evaluates how strongly a time-series oscillates at each of many trial periods and plots that power (or a test statistic) against period, together with a significance line. A peak rising above the threshold identifies a candidate rhythm and its period. The Lomb-Scargle method is well suited to unevenly sampled data and gaps, while the chi-squared (Sokolove-Bushell) periodogram is a classic choice for activity records.\n\nRead the position of the highest significant peak as the estimated period and its height as rhythmic strength; multiple peaks can indicate harmonics or several rhythms. Detrend and, if needed, evenly sample the input first, as drift and sampling artefacts add spurious low-frequency power. The Periodograms chapter covers method choice and interpretation in full.",
+		"description": "A periodogram evaluates how strongly a time-series oscillates at each of many trial periods and plots that power (or a test statistic) against period, together with a significance line. A peak rising above the threshold identifies a candidate rhythm and its period. The Lomb-Scargle method is well suited to unevenly sampled data and gaps, while the chi-squared (Sokolove-Bushell) periodogram is a classic choice for activity records.\n\nRead the position of the highest significant peak as the estimated period and its height as rhythmic strength; multiple peaks can indicate harmonics or several rhythms. Detrend and, if needed, evenly sample the input first, as drift and sampling artefacts add spurious low-frequency power. The Periodograms chapter covers method choice and interpretation in full.\n\nA note on version comparability: from v70.2 the Lomb-Scargle time offset (tau) is computed from the sums over 2ω, as Lomb (1976) and Scargle (1982) define it. Earlier versions summed over ω, so tau was not the offset that makes the sine and cosine bases orthogonal on unevenly spaced samples. Reported powers therefore shift slightly between versions — by about 1% on evenly sampled records and up to roughly 4% as sampling becomes irregular, which is where the method is most often chosen. Peak periods are usually unchanged, but on gappy records a peak can move by one grid step. If you are comparing a figure produced before v70.2 with one produced after, re-run the analysis rather than comparing the numbers directly.",
 		"maths": [],
 		"references": [
 			{
 				"cite": "Sokolove, P.G. & Bushell, W.N. (1978). The chi-square periodogram: its utility for analysis of circadian rhythms. Journal of Theoretical Biology 72(1):131-160."
+			},
+			{
+				"cite": "Lomb, N.R. (1976). Least-squares frequency analysis of unequally spaced data. Astrophysics and Space Science 39(2):447-462."
 			},
 			{
 				"cite": "Scargle, J.D. (1982). Studies in astronomical time series analysis. II. Statistical aspects of spectral analysis of unevenly spaced data. The Astrophysical Journal 263:835-853."

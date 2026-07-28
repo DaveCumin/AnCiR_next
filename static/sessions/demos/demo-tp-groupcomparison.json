@@ -142,7 +142,7 @@
       "name": "statistic_62",
       "data": 668,
       "type": "number",
-      "tableProcessGUId": "f826c3b7-1712-4cae-aba7-ea70dd33f180",
+      "tableProcessGUId": "5eaa7718-668c-4fc0-825c-82f48c7c3bf6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -153,7 +153,7 @@
       "name": "pvalue_62",
       "data": 669,
       "type": "number",
-      "tableProcessGUId": "f826c3b7-1712-4cae-aba7-ea70dd33f180",
+      "tableProcessGUId": "5eaa7718-668c-4fc0-825c-82f48c7c3bf6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -164,7 +164,7 @@
       "name": "effectSize_62",
       "data": 670,
       "type": "number",
-      "tableProcessGUId": "f826c3b7-1712-4cae-aba7-ea70dd33f180",
+      "tableProcessGUId": "5eaa7718-668c-4fc0-825c-82f48c7c3bf6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -398,5 +398,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

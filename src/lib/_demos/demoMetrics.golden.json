@@ -357,7 +357,7 @@
 			28.35
 		],
 		"RhythmicityAnalysis.stat_peak_power": [
-			16.618955413
+			16.620602669
 		]
 	},
 	"demo-workflow-arrhythmic.json": {
@@ -367,7 +367,7 @@
 		],
 		"RhythmicityAnalysis.stat_peak_power": [
 			125.431957924,
-			2.460837554
+			2.462969077
 		]
 	},
 	"demo-workflow-circatidal.json": {
@@ -375,7 +375,7 @@
 			12.44
 		],
 		"RhythmicityAnalysis.stat_peak_power": [
-			92.688534797
+			93.068710489
 		]
 	},
 	"demo-workflow-crepuscular.json": {
@@ -394,7 +394,7 @@
 			24.85
 		],
 		"RhythmicityAnalysis.stat_peak_power": [
-			126.571891515
+			126.740600204
 		]
 	},
 	"demo-workflow-non24-blind.json": {
@@ -402,7 +402,7 @@
 			24.5
 		],
 		"RhythmicityAnalysis.stat_peak_power": [
-			336.956051804
+			336.964087741
 		]
 	},
 	"demo-workflow-phase-groups.json": {
@@ -492,7 +492,7 @@
 			23.42
 		],
 		"RhythmicityAnalysis.stat_peak_power": [
-			102.46273579
+			102.546498931
 		]
 	},
 	"demo-workflow-stats-anova.json": {

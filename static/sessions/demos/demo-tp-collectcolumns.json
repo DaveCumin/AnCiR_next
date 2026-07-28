@@ -237,7 +237,7 @@
       "name": "col_606_49",
       "data": 608,
       "type": "number",
-      "tableProcessGUId": "7affca68-4456-4ec8-8c58-46fa15212388",
+      "tableProcessGUId": "92c1f4fd-db0b-4612-9ba2-2122b5f5240d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "col_607_49",
       "data": 609,
       "type": "number",
-      "tableProcessGUId": "7affca68-4456-4ec8-8c58-46fa15212388",
+      "tableProcessGUId": "92c1f4fd-db0b-4612-9ba2-2122b5f5240d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -406,5 +406,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

@@ -214,7 +214,7 @@
       "name": "lag_66",
       "data": 716,
       "type": "number",
-      "tableProcessGUId": "98daff01-ffe8-4322-8f45-8e142fc453cf",
+      "tableProcessGUId": "a6ce4a9a-2f83-42d6-810a-77949060b1f9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -225,7 +225,7 @@
       "name": "correlation_66",
       "data": 717,
       "type": "number",
-      "tableProcessGUId": "98daff01-ffe8-4322-8f45-8e142fc453cf",
+      "tableProcessGUId": "a6ce4a9a-2f83-42d6-810a-77949060b1f9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -236,7 +236,7 @@
       "name": "pvalue_66",
       "data": 718,
       "type": "number",
-      "tableProcessGUId": "98daff01-ffe8-4322-8f45-8e142fc453cf",
+      "tableProcessGUId": "a6ce4a9a-2f83-42d6-810a-77949060b1f9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -396,5 +396,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

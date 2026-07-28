@@ -443,6 +443,41 @@ function runPureUtil(fx) {
 	return { inputs, outputs };
 }
 
+// Build one time column and read it back, with no analysis in between.
+//
+// The time path is the least-verified part of the ports and the one most likely
+// to be quietly wrong, because a wrong timezone or unit shifts every downstream
+// result without ever throwing. It is also the one place the three languages do
+// NOT share an approach: JS parses strictly against the stored `timeFormat`,
+// Python ignores that format (a Luxon format string is not valid Python) and
+// auto-detects with pandas, and R ignores it too and tries a short list of
+// formats. Three different parsers agreeing is an assumption, not a fact, and
+// until now nothing checked it — every other fixture generates plain numeric `t`.
+//
+// `data` is the parsed epoch-ms column; `hoursSinceStart` is what every analysis
+// actually consumes, so a disagreement about the baseline shows up there even
+// when the instants themselves match.
+function runTimeColumn(fx) {
+	const spec = fx.column;
+	const c = new Column({ type: spec.type ?? 'time', data: -1 });
+	c.customName = fx.id;
+	if (spec.timeFormat !== undefined) c.timeFormat = spec.timeFormat;
+	if (spec.compression) c.compression = spec.compression;
+	// AWD columns store {start, step, length} rather than an array; the expansion
+	// is the thing under test, so hand the raw object over untouched.
+	core.rawData.set(c.id, spec.awd ?? spec.values);
+	c.data = c.id;
+	core.data.push(c);
+
+	const outputs = {};
+	for (const k of fx.compareArrays ?? []) {
+		outputs[k] = safeArray(k === 'hoursSinceStart' ? c.hoursSinceStart : c.getData());
+	}
+	// Echo the column spec so the Python and R legs rebuild the identical column
+	// rather than re-reading the fixture and drifting from what JS actually ran.
+	return { column: spec, outputs };
+}
+
 describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 	it('runs every fixture through the JS engine', async () => {
 		appConsts.processMap = await loadProcesses();
@@ -458,6 +493,7 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 			else if (fx.kind === 'tableProcessResult') results[fx.id] = await runTableProcessResult(fx);
 			else if (fx.kind === 'plotCompute') results[fx.id] = runPlotCompute(fx);
 			else if (fx.kind === 'pureUtil') results[fx.id] = runPureUtil(fx);
+			else if (fx.kind === 'timeColumn') results[fx.id] = runTimeColumn(fx);
 			else results[fx.id] = await runTableProcess(fx);
 		}
 

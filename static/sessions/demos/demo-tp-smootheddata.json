@@ -215,7 +215,7 @@
       "name": "x",
       "data": 790,
       "type": "number",
-      "tableProcessGUId": "60f81f45-e887-4f24-9361-96b2796d2caf",
+      "tableProcessGUId": "31ac6737-6032-4266-8dc3-0244d9f90b63",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -237,7 +237,7 @@
       "name": "smoothedx_81",
       "data": 792,
       "type": "number",
-      "tableProcessGUId": "1ba64152-0d0f-4133-94aa-b6ef514bd4cb",
+      "tableProcessGUId": "0e2dfcfe-a9ce-4e83-b55a-82e81ca4ee11",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "smoothedy_791_81",
       "data": 793,
       "type": "number",
-      "tableProcessGUId": "1ba64152-0d0f-4133-94aa-b6ef514bd4cb",
+      "tableProcessGUId": "0e2dfcfe-a9ce-4e83-b55a-82e81ca4ee11",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -578,5 +578,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

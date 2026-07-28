@@ -33,6 +33,35 @@ silently disagree about their *inputs* instead of their maths.
 A fixture opts into the R leg by gaining an `rFunc` key beside its `pyFunc`. Untagged
 fixtures are reported as "not claimed by the R port" rather than passing silently.
 
+### The `timeColumn` fixture kind
+
+Builds one time column and reads back its parsed epoch-ms (`data`) and
+`hoursSinceStart`, with no analysis in between.
+
+It exists because the time path was the least-verified part of both ports and the most
+likely to be quietly wrong: a wrong timezone or unit shifts every downstream result
+without ever throwing. Every other fixture generates plain numeric `t` (0, 1, 2, …), so
+`type: 'time'` — ISO parsing, epoch-ms storage, hours-since-start, AWD `{start, step,
+length}` — was exercised by nothing, in any language.
+
+It is also the one place the three languages did not share an approach. JS parses
+strictly against the session's stored dayjs `timeFormat`; both ports ignored it and
+guessed. That is fine for unambiguous ISO-8601 and wrong for anything else — the app's
+own guesser returns BOTH candidates for an ambiguous day/month pair and asks the user to
+choose, so a session can legitimately carry `DD/MM/YYYY`, and a port that re-guesses
+disagrees with the app **by two months**, silently, on data the user already
+disambiguated. Both ports now translate the stored format
+(`strptime_from_dayjs` / `.strptime_from_dayjs`) and fall back to auto-detection only
+when there is no format, which is the epoch-ms and legacy-session case.
+
+Two bugs this kind found immediately:
+
+- **R aborted on any gap.** An empty string (a blank cell in a CSV — the normal shape of
+  an actigraphy gap) makes `as.POSIXct` *error* rather than return NA, and an error is
+  not a warning, so `suppressWarnings` did not catch it and the whole generated script
+  died. Plain `NA` was fine; it was specifically `""`.
+- **Both ports ignored the stored format**, as above.
+
 ### `rTolerance`
 
 A fixture may set `rTolerance` to loosen the comparison **for R alone**. Widening the shared

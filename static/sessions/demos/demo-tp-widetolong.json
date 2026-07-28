@@ -504,7 +504,7 @@
       "data": 819,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "c8bfe742-3137-4b3e-b297-67dd8b0bc66a",
+      "tableProcessGUId": "4a084efe-626d-4115-8250-50522cd9d546",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -515,7 +515,7 @@
       "name": "category_86",
       "data": 820,
       "type": "category",
-      "tableProcessGUId": "c8bfe742-3137-4b3e-b297-67dd8b0bc66a",
+      "tableProcessGUId": "4a084efe-626d-4115-8250-50522cd9d546",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -526,7 +526,7 @@
       "name": "value_86",
       "data": 821,
       "type": "number",
-      "tableProcessGUId": "c8bfe742-3137-4b3e-b297-67dd8b0bc66a",
+      "tableProcessGUId": "4a084efe-626d-4115-8250-50522cd9d546",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -692,5 +692,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

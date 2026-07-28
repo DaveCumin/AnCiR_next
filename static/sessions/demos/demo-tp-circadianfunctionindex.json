@@ -717,7 +717,7 @@
       "name": "CFI_89",
       "data": 836,
       "type": "number",
-      "tableProcessGUId": "f7a89411-712a-4607-84a9-b5bb2e2cd008",
+      "tableProcessGUId": "b94cc187-27ee-4a86-bc67-d26757d1cf63",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -728,7 +728,7 @@
       "name": "IS_89",
       "data": 837,
       "type": "number",
-      "tableProcessGUId": "f7a89411-712a-4607-84a9-b5bb2e2cd008",
+      "tableProcessGUId": "b94cc187-27ee-4a86-bc67-d26757d1cf63",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -739,7 +739,7 @@
       "name": "IV_89",
       "data": 838,
       "type": "number",
-      "tableProcessGUId": "f7a89411-712a-4607-84a9-b5bb2e2cd008",
+      "tableProcessGUId": "b94cc187-27ee-4a86-bc67-d26757d1cf63",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -750,7 +750,7 @@
       "name": "RA_89",
       "data": 839,
       "type": "number",
-      "tableProcessGUId": "f7a89411-712a-4607-84a9-b5bb2e2cd008",
+      "tableProcessGUId": "b94cc187-27ee-4a86-bc67-d26757d1cf63",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -917,5 +917,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }

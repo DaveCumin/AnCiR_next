@@ -108,7 +108,7 @@
       "data": 788,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "1056d01b-b48d-40dd-8375-af8be73d7fee",
+      "tableProcessGUId": "786b5d3f-55f3-4f08-a602-d99f89d88fa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -119,7 +119,7 @@
       "name": "values_79",
       "data": 789,
       "type": "number",
-      "tableProcessGUId": "1056d01b-b48d-40dd-8375-af8be73d7fee",
+      "tableProcessGUId": "786b5d3f-55f3-4f08-a602-d99f89d88fa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -272,5 +272,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.68.0"
+  "version": "β.70.1"
 }
