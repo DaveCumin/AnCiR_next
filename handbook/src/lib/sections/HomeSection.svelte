@@ -21,7 +21,8 @@
                 href="mailto:d.cumin@auckland.ac.nz?subject=AnCiR Handbook"
                 >d.cumin@auckland.ac.nz</a
             > for any errors, omissions, or feedback.
-        </p>DOI for this handbook: 10.5281/zenodo.19340642</p>
+        </p>
+        <p>DOI for this handbook: 10.5281/zenodo.19340642</p>
     </div>
 
     <p class="chapter-intro">
