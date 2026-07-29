@@ -16,6 +16,7 @@
 	} from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
+	import { attachPermutation } from '$lib/tableProcesses/permutationSupport.js';
 	import { bathyphase, phaseAngleOfEntrainment, wrapToPeriod } from '$lib/utils/cosinorAddons.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 
@@ -124,6 +125,16 @@
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
 		const nHarmonics = argsIN.nHarmonics ?? 1;
 		const alpha = argsIN.alpha ?? 0.05;
+
+		// The permutation fit must match this node's fit, or the null distribution
+		// is not the null for the model being reported.
+		const permOptions = {
+			useFixedPeriod,
+			fixedPeriod,
+			nHarmonics,
+			Ncurves: Ncurves ?? 1,
+			alpha
+		};
 
 		async function fitOne(tt, yy) {
 			const payload = {
@@ -272,6 +283,13 @@
 				}
 			}
 
+			// Permutation test: model-vs-chance significance for THIS fit. Computed
+			// here (not in the output-writing pass) so the panel and the stats table
+			// can show it even when nothing downstream is wired to the `pvalue` port.
+			if (argsIN.permuteTest) {
+				attachPermutation(yResult, fitPermutationPValue(tt, yy, 'cosinor', permOptions, argsIN));
+			}
+
 			result.y_results[yId] = yResult;
 			if (result.t.length === 0) result.t = tt;
 		}
@@ -338,21 +356,6 @@
 		// match what users previously stored by name.
 		const useFixed = argsIN.useFixedPeriod ?? false;
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
-		// Permutation-test inputs (only computed when enabled): the x grid and the
-		// fit options, so the permutation fit matches this node's fit.
-		const permOptions = {
-			useFixedPeriod: useFixed,
-			fixedPeriod,
-			nHarmonics: argsIN.nHarmonics ?? 1,
-			Ncurves: argsIN.Ncurves ?? 1,
-			alpha: argsIN.alpha ?? 0.05
-		};
-		const xColForPerm = argsIN.permuteTest ? getColumnById(argsIN.xIN) : null;
-		const tAll = xColForPerm
-			? xColForPerm.type === 'time'
-				? xColForPerm.hoursSinceStart
-				: xColForPerm.getData()
-			: [];
 		const referenceHrs = argsIN.referenceHrs ?? 0;
 		const periodArr = [];
 		const mesorArr = [];
@@ -417,19 +420,8 @@
 			bathyphaseArr.push(bathyphase(acrophase, period));
 			phaseAngleArr.push(phaseAngleOfEntrainment(acrophase, referenceHrs, period));
 
-			let pValue = NaN;
-			if (argsIN.permuteTest && yr) {
-				const yAll = getColumnById(yId)?.getData() ?? [];
-				// Null-aware, like the fit's own pair filter: otherwise the permutation test ran
-				// against a series padded with zeros and reported a p-value for a fit nobody made.
-				const valid = tAll
-					.map((v, i) => (isInvalidValue(v) || isInvalidValue(yAll[i]) ? -1 : i))
-					.filter((i) => i !== -1);
-				const tt = valid.map((i) => tAll[i]);
-				const yy = valid.map((i) => yAll[i]);
-				pValue = fitPermutationPValue(tt, yy, 'cosinor', permOptions, argsIN).pValue;
-			}
-			pvalueArr.push(pValue);
+			// Already computed against the same null-filtered pairs the fit used.
+			pvalueArr.push(yr?.pValue ?? NaN);
 		}
 		const writeScalarOut = (key, arr) => writeOutputColumn(argsIN.out[key], arr, { processHash });
 		writeScalarOut('period', periodArr);
@@ -521,6 +513,7 @@
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -535,6 +528,14 @@
 	let previewStart = $state(1);
 	let calculating = $state(false);
 	let _calcToken = 0;
+
+	// One entry per fitted y series, for the permutation readout under the test's controls.
+	let permEntries = $derived(
+		Object.entries(cosinorData?.y_results ?? {}).map(([yId, result]) => ({
+			name: getColumnById(Number(yId))?.name ?? String(yId),
+			result
+		}))
+	);
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'cosinory_', 'cosinor_');
 	const { syncYColumns: syncResidColumns, initYColumns: initResidColumns } = useMultiYTP(
@@ -569,7 +570,15 @@
 		// These change the result but were missing from this hash. While the memo
 		// was component-local a view switch recomputed anyway and hid it; now that
 		// the memo survives a remount, an omission here means an edit is ignored.
-		out += '|' + p.args.fixedPeriod + '|' + p.args.nHarmonics + '|' + p.args.alpha + '|' + p.args.Ncurves;
+		out +=
+			'|' +
+			p.args.fixedPeriod +
+			'|' +
+			p.args.nHarmonics +
+			'|' +
+			p.args.alpha +
+			'|' +
+			p.args.Ncurves;
 		return out;
 	});
 	// The stats (MESOR / amplitude / phase / CIs / F-stat / RMSE) live only in the
@@ -754,6 +763,11 @@
 			([, r]) => (r.fittedData?.fitted?.length ?? 0) > 0
 		);
 		if (!validEntries.length) return { headers: [], rows: [] };
+		// The permutation p is a different test from the fixed-period F-test, so it
+		// gets its own column (and only appears when the test was actually run).
+		const withPerm = validEntries.some(([, r]) => Number.isFinite(r.pValue));
+		const permHeader = withPerm ? ['perm_p_value'] : [];
+		const permCell = (r) => (withPerm ? [r.pValue ?? null] : []);
 
 		if (useFixed) {
 			const maxH = Math.max(...validEntries.map(([, r]) => r.fixedStats?.harmonics?.length ?? 0));
@@ -765,7 +779,8 @@
 				'mesor_ci_lo',
 				'mesor_ci_hi',
 				'F_stat',
-				'p_value'
+				'F_p_value',
+				...permHeader
 			];
 			for (let h = 1; h <= maxH; h++) {
 				headers.push(
@@ -788,7 +803,8 @@
 					s?.CI_M?.[0] ?? null,
 					s?.CI_M?.[1] ?? null,
 					s?.F_stat ?? null,
-					s?.pF ?? null
+					s?.pF ?? null,
+					...permCell(r)
 				];
 				for (let h = 0; h < maxH; h++) {
 					const hd = s?.harmonics?.[h];
@@ -808,13 +824,13 @@
 			const maxC = Math.max(
 				...validEntries.map(([, r]) => r.fittedData?.parameters?.cosines?.length ?? 0)
 			);
-			const headers = ['column', 'rmse', 'r2'];
+			const headers = ['column', 'rmse', 'r2', ...permHeader];
 			for (let c = 1; c <= maxC; c++) {
 				headers.push(`curve${c}_period`, `curve${c}_amplitude`, `curve${c}_phase`);
 			}
 			const rows = validEntries.map(([yId, r]) => {
 				const name = getColumnById(Number(yId))?.name ?? String(yId);
-				const row = [name, r.fittedData.rmse, r.fittedData.rSquared];
+				const row = [name, r.fittedData.rmse, r.fittedData.rSquared, ...permCell(r)];
 				for (let c = 0; c < maxC; c++) {
 					const cd = r.fittedData.parameters?.cosines?.[c];
 					const period = cd?.frequency ? (2 * Math.PI) / cd.frequency : null;
@@ -941,6 +957,7 @@
 				/>
 			</ControlInput>
 		</div>
+		<PermutationSummary entries={permEntries} nodeId={p.id} label="Cosinor" />
 	{/if}
 
 	<div class="control-input-horizontal">
@@ -994,6 +1011,26 @@
 						getter={() => yResult?.fittedData?.rSquared}
 						defaultName={`cosinor_r2_${yName}`}
 						source="Cosinor"
+					/>
+				</p>
+			{/if}
+			{#if Number.isFinite(yResult?.pValue)}
+				<p
+					style="color: {yResult.significant
+						? 'var(--color-success)'
+						: 'var(--color-warning-text)'}; font-weight: 600;"
+				>
+					Permutation p: {yResult.pValue.toFixed(4)}
+					{#if yResult.significant}
+						✓ Significant (p &lt; 0.05)
+					{:else}
+						⚠ Not significant (p ≥ 0.05)
+					{/if}
+					<StoreValueButton
+						label="Permutation p"
+						getter={() => yResult?.pValue}
+						defaultName={`cosinor_perm_p_${yName}`}
+						source="Cosinor (permutation)"
 					/>
 				</p>
 			{/if}

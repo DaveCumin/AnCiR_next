@@ -1140,7 +1140,7 @@
 				<p
 					style="color: {yResult.fitResult.significant
 						? 'var(--color-success)'
-						: 'var(--color-warning)'}; font-weight: 600;"
+						: 'var(--color-warning-text)'}; font-weight: 600;"
 				>
 					Perm p-value: {yResult.fitResult.pValue.toFixed(4)}
 					{#if yResult.fitResult.significant}

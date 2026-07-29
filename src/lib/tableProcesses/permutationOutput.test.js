@@ -113,3 +113,82 @@ describe('dedicated fit nodes — permutation pvalue output', () => {
 		expect(p).toBeLessThan(0.05);
 	});
 });
+
+// The panel and the "View stats" table read the fit RESULT, not the output
+// column, so a p-value that only reaches the port is invisible to the user who
+// ticked the box. Assert it rides along on each y result too.
+describe('dedicated fit nodes — permutation pvalue on the fit result', () => {
+	async function fitResultFor(name, args, yValues) {
+		const xId = mkCol(seq(yValues.length, (i) => i));
+		const yId = mkCol(yValues);
+		const func = appConsts.tableProcessMap.get(name).func;
+		const [result] = await func({
+			...args,
+			xIN: xId,
+			yIN: [yId],
+			permuteTest: true,
+			nPermutations: 99,
+			permutationSeed: 7,
+			permutationStatistic: 'rSquared'
+		});
+		return result.y_results[yId];
+	}
+
+	it('Cosinor puts pValue/significant on the y result', { timeout: 60000 }, async () => {
+		const y = seq(96, (i) => 5 + 10 * Math.cos((2 * Math.PI * i) / 24));
+		const yr = await fitResultFor(
+			'Cosinor',
+			{
+				Ncurves: 1,
+				outputX: -1,
+				useFixedPeriod: true,
+				fixedPeriod: 24,
+				nHarmonics: 1,
+				alpha: 0.05,
+				out: { cosinorx: -1, pvalue: -1 }
+			},
+			y
+		);
+		expect(Number.isFinite(yr.pValue)).toBe(true);
+		expect(yr.pValue).toBeLessThan(0.05);
+		expect(yr.significant).toBe(true);
+	});
+
+	it('Rectangular wave puts pValue/significant on the y result', { timeout: 60000 }, async () => {
+		const y = seq(96, (i) => (i % 24 < 12 ? 80 : 20));
+		const yr = await fitResultFor(
+			'RectangularWave',
+			{
+				outputX: -1,
+				fixOmega: true,
+				fixedPeriod: 24,
+				fixKappa: false,
+				fixDutyCycle: false,
+				out: { rectwavex: -1, pvalue: -1 }
+			},
+			y
+		);
+		expect(Number.isFinite(yr.pValue)).toBe(true);
+		expect(yr.significant).toBe(true);
+	});
+
+	it('Double logistic puts pValue/significant on the y result', { timeout: 60000 }, async () => {
+		const y = seq(48, (i) => 25 + 50 / (1 + Math.exp(-(i - 12))) - 50 / (1 + Math.exp(-(i - 36))));
+		const yr = await fitResultFor(
+			'DoubleLogistic',
+			{
+				outputX: -1,
+				fixK1: false,
+				fixedK1: 0.5,
+				fixK2: false,
+				fixedK2: 0.5,
+				fixPeriod: false,
+				fixedPeriod: 24,
+				out: { dlogx: -1, pvalue: -1 }
+			},
+			y
+		);
+		expect(Number.isFinite(yr.pValue)).toBe(true);
+		expect(yr.significant).toBe(true);
+	});
+});

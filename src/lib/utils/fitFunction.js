@@ -163,18 +163,36 @@ export function evaluateCurveModelAtPoints(fitResult, model, tPoints) {
 /**
  * Permutation-test p-value for a fit of `model` (with `options`) on (tt, yy).
  * Uses fitCurveModel as the fit, so the observed and permuted statistics are
- * computed the same way. Returns { pValue, significant } — NaN/false when the
- * test is disabled or there are too few points.
+ * computed the same way.
+ *
+ * Returns { pValue, significant, observedStat, permutedStats, statistic } — the
+ * whole null distribution, not just its tail probability, so the nodes can show
+ * and export it. `permutedStats` is empty and pValue NaN when the test is
+ * disabled or there are too few points.
  */
 export function fitPermutationPValue(tt, yy, model, options, args) {
+	const statistic = args?.permutationStatistic ?? 'rSquared';
 	const n = Array.isArray(tt) ? tt.length : 0;
-	if (!args?.permuteTest || n < 4) return { pValue: NaN, significant: false };
+	if (!args?.permuteTest || n < 4)
+		return {
+			pValue: NaN,
+			significant: false,
+			observedStat: NaN,
+			permutedStats: [],
+			statistic
+		};
 	const res = permutationTest(tt, yy, (x, y) => fitCurveModel(x, y, model, options), {
-		statistic: args.permutationStatistic ?? 'rSquared',
+		statistic,
 		nPermutations: Math.max(1, Math.trunc(Number(args.nPermutations ?? 999))),
 		seed: args.permutationSeed ?? 12345
 	});
-	return { pValue: res.pValue, significant: res.significant };
+	return {
+		pValue: res.pValue,
+		significant: res.significant,
+		observedStat: res.observedStat,
+		permutedStats: res.permutedStats ?? [],
+		statistic
+	};
 }
 
 export function getFitModelDisplayName(model) {

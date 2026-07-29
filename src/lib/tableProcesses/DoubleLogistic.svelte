@@ -7,6 +7,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
+	import { attachPermutation } from '$lib/tableProcesses/permutationSupport.js';
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
@@ -173,11 +174,10 @@
 					? evaluateDoubleLogisticAtPoints(fitResult.parameters, true, outputXData)
 					: fitResult.fitted;
 
-				const pValue = argsIN.permuteTest
-					? fitPermutationPValue(tt, yy, 'doublelogistic', dlOpts, argsIN).pValue
-					: NaN;
-
-				y_results[yId] = { fitResult, fitted: yOutData, t: tt, xOutData, yOutData, pValue };
+				y_results[yId] = attachPermutation(
+					{ fitResult, fitted: yOutData, t: tt, xOutData, yOutData },
+					argsIN.permuteTest ? fitPermutationPValue(tt, yy, 'doublelogistic', dlOpts, argsIN) : null
+				);
 			}
 		}
 
@@ -249,6 +249,7 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
 
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
@@ -287,6 +288,14 @@
 		p.args.permutationStatistic = PERMUTATION_DEFAULTS.permutationStatistic;
 
 	let dlData = $state(null);
+
+	// One entry per fitted y series, for the permutation readout under the test's controls.
+	let permEntries = $derived(
+		Object.entries(dlData?.y_results ?? {}).map(([yId, result]) => ({
+			name: getColumnById(Number(yId))?.name ?? String(yId),
+			result
+		}))
+	);
 	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
 	let previewStart = $state(1);
@@ -463,7 +472,21 @@
 		if (!dlData?.y_results) return { headers: [], rows: [] };
 		const validEntries = Object.entries(dlData.y_results).filter(([, r]) => r.fitResult);
 		if (!validEntries.length) return { headers: [], rows: [] };
-		const headers = ['column', 'rmse', 'r2', 'period', 'M', 'A', 'k1', 'onset', 'k2', 'offset'];
+		// The permutation p only appears when the test was actually run.
+		const withPerm = validEntries.some(([, r]) => Number.isFinite(r.pValue));
+		const headers = [
+			'column',
+			'rmse',
+			'r2',
+			...(withPerm ? ['perm_p_value'] : []),
+			'period',
+			'M',
+			'A',
+			'k1',
+			'onset',
+			'k2',
+			'offset'
+		];
 		const rows = validEntries.map(([yId, r]) => {
 			const name = getColumnById(Number(yId))?.name ?? String(yId);
 			const fr = r.fitResult;
@@ -471,6 +494,7 @@
 				name,
 				fr.rmse,
 				fr.rSquared,
+				...(withPerm ? [r.pValue ?? null] : []),
 				fr.parameters?.T,
 				fr.parameters?.M,
 				fr.parameters?.A,
@@ -581,6 +605,7 @@
 				<NumberWithUnits bind:value={p.args.permutationSeed} min="0" step="1" onInput={getFit} />
 			</ControlInput>
 		</div>
+		<PermutationSummary entries={permEntries} nodeId={p.id} label="Double logistic" />
 	{/if}
 
 	{#if !hideInputs}
@@ -702,6 +727,26 @@
 						source="Double Logistic"
 					/>
 				</p>
+				{#if Number.isFinite(yResult?.pValue)}
+					<p
+						style="color: {yResult.significant
+							? 'var(--color-success)'
+							: 'var(--color-warning-text)'}; font-weight: 600;"
+					>
+						Permutation p: {yResult.pValue.toFixed(4)}
+						{#if yResult.significant}
+							✓ Significant (p &lt; 0.05)
+						{:else}
+							⚠ Not significant (p ≥ 0.05)
+						{/if}
+						<StoreValueButton
+							label="Permutation p"
+							getter={() => yResult?.pValue}
+							defaultName={`dlog_perm_p_${yName}`}
+							source="Double Logistic (permutation)"
+						/>
+					</p>
+				{/if}
 				{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
 					<button
 						class="tp-stat-btn"
