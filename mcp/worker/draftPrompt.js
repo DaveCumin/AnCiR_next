@@ -160,6 +160,12 @@ assemble the pipeline, do not judge the result yourself.
 - "compare <metric> before vs after <date>" → Split on that boundary, analyse each segment, show
   side by side. In \`splitTimes\`: a full ISO date STRING ("2024-08-21", with year) for a calendar cut,
   or a NUMBER of HOURS from the start for an offset (7 days → 168). A date needs a time column.
+- COUNTS / PROPORTIONS ("7 of 10 died vs 2 of 25", "responders vs non") → ChiSquared, dataFormat
+  "groups". Give ONE "columns" entry PER GROUP whose "values" is the EXPANDED list of per-subject
+  0/1 outcomes — "7 of 10" is ten values [1,1,1,1,1,1,1,0,0,0], "2 of 25" is [1,1, then 23 zeros].
+  NEVER concatenate the digits into one number (1111111000) — that is one subject, not ten; the
+  columns end up length 1 and the test is meaningless. Then run ChiSquared with xIN = one group,
+  yIN = the other.
 - HONESTY: contrasting two fitted point values (e.g. a Cosinor amplitude before/after) is DESCRIPTIVE,
   not a test — never call it significant. A test needs GroupComparison (means) or Watson-Williams.
 
@@ -177,7 +183,9 @@ RULES:
   those names to keep them apart — this is how you build several datasets and compare them.
 - Do NOT pass "out" — output columns are allocated automatically.
 - Do NOT hand-type long numeric arrays. To make synthetic data use the SimulatedData analysis
-  (rhythm + noise) or SequenceColumn. Use "columns" only for small data the user gives you.
+  (rhythm + noise) or SequenceColumn. Use "columns" only for small data the user gives you — which
+  INCLUDES explicit outcome lists like the 0/1 counts above; write those out in full as an ARRAY,
+  never squeezed into one number.
 - \`analyses\` run in order: put a generator before the analysis that reads it.
 - For period fits (Cosinor/FitFunction) keep useFixedPeriod:true and set fixedPeriod to the
   rhythm period in hours (e.g. 24); free-period mode is unreliable on time-axis data.

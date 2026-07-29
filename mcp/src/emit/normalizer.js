@@ -313,6 +313,23 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 			}
 		}
 
+		// A group's outcomes must be one row PER SUBJECT — a single-row input to a ChiSquared
+		// comparison is the "1111111000" bug: the model squeezed "7 of 10" into one concatenated
+		// number instead of ten 0/1 values, so the test runs on one degenerate row. Catch it even if
+		// the prompt guidance didn't (models still slip); warn rather than block.
+		if (name === 'ChiSquared') {
+			for (const id of [args.xIN, args.yIN]) {
+				if (id == null || id === -1) continue;
+				const raw = rawData[id];
+				if (Array.isArray(raw) && raw.length === 1) {
+					const col = data.find((c) => c.id === id);
+					warnings.push(
+						`ChiSquared: column "${col?.name ?? id}" has only ONE value — a group's outcomes must be one row per subject (e.g. "7 of 10" is ten values [1,1,1,1,1,1,1,0,0,0]), not the digits concatenated into a single number.`
+					);
+				}
+			}
+		}
+
 		// semantic validation (the guards the engine gets for free by executing the node).
 		const vErr = nodeSchema.validate ? nodeSchema.validate(args) : null;
 		if (vErr) {

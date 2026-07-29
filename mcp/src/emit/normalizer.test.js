@@ -267,6 +267,35 @@ test('Split warns and declines an absolute date on a non-time (relative) column'
 	);
 });
 
+// The "1111111000" bug: a model asked to compare "7 of 10 vs 2 of 25 deaths" squeezed each group's
+// per-subject 0/1 outcomes into ONE concatenated number, so every group column was length 1 and the
+// ChiSquared ran on a degenerate single row. The prompt now steers away from this; the normalizer
+// warns if it still happens.
+test('ChiSquared warns when a group column has a single (concatenated) value', () => {
+	const { warnings } = normalizeSession({
+		columns: [
+			{ name: 'groupA', values: [1111111000] }, // "7 of 10" concatenated — WRONG
+			{ name: 'groupB', values: [1, 1, 0, 0, 0] } // a legitimate small group
+		],
+		analyses: [{ name: 'ChiSquared', args: { xIN: 'groupA', yIN: 'groupB' } }]
+	});
+	assert.ok(
+		warnings.some((w) => /ChiSquared/.test(w) && /one value|ONE value/i.test(w) && /groupA/.test(w)),
+		`expected a single-value ChiSquared warning naming groupA, got: ${JSON.stringify(warnings)}`
+	);
+});
+
+test('ChiSquared does NOT warn when both groups are proper per-subject outcome columns', () => {
+	const { warnings } = normalizeSession({
+		columns: [
+			{ name: 'groupA', values: [1, 1, 1, 1, 1, 1, 1, 0, 0, 0] }, // 7 of 10
+			{ name: 'groupB', values: [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } // 2 of 25
+		],
+		analyses: [{ name: 'ChiSquared', args: { xIN: 'groupA', yIN: 'groupB' } }]
+	});
+	assert.ok(!warnings.some((w) => /ChiSquared/.test(w)), `unexpected ChiSquared warning: ${JSON.stringify(warnings)}`);
+});
+
 test('Split rejects a yearless date, asking for a full one', () => {
 	const start = Date.parse('2024-08-18T00:00:00.000Z');
 	const times = Array.from({ length: 8 }, (_, i) => new Date(start + i * 86400000).toISOString());
