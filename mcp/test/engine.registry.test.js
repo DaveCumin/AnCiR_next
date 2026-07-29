@@ -2,7 +2,12 @@
 // the hand-wired Cosinor run through the real `definition` registry, write their
 // output columns into the session, and survive a round-trip through export.
 import { beforeAll, describe, expect, it } from 'vitest';
-import { AncirSession, ensureRegistry, describeCapabilities } from '../src/engine/session.js';
+import {
+	AncirSession,
+	ensureRegistry,
+	describeCapabilities,
+	filterCapabilities
+} from '../src/engine/session.js';
 
 const N = 96;
 const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
@@ -25,6 +30,53 @@ describe('capability catalogue (derived from the registry)', () => {
 		expect(cosinor.inputs.array).toContain('yIN');
 		expect(cosinor.params).toHaveProperty('fixedPeriod');
 		expect(cosinor.params).not.toHaveProperty('out');
+	});
+});
+
+describe('filterCapabilities — the discovery projection that keeps list_capabilities small', () => {
+	const full = () => describeCapabilities();
+
+	it('defaults to a compact summary: names + one-liner + param NAMES, no defaults', () => {
+		const out = filterCapabilities(full()); // detail defaults to "summary"
+		const cos = out.analyses.find((a) => a.id === 'Cosinor');
+		expect(cos.summary, 'keeps the one-line summary').toBeTruthy();
+		expect(cos.inputs.scalar, 'keeps input field names').toContain('xIN');
+		// params are NAMES only — the defaults (the bulky part) are dropped
+		expect(Array.isArray(cos.params)).toBe(true);
+		expect(cos.params).toContain('fixedPeriod');
+		// and the summary is genuinely smaller than the full dump
+		expect(JSON.stringify(out).length).toBeLessThan(JSON.stringify(full()).length);
+	});
+
+	it('"names" is ids + families only', () => {
+		const out = filterCapabilities(full(), { detail: 'names' });
+		const cos = out.analyses.find((a) => a.id === 'Cosinor');
+		expect(Object.keys(cos).sort()).toEqual(['family', 'id']);
+	});
+
+	it('"full" is byte-identical to the unprojected catalogue', () => {
+		const out = filterCapabilities(full(), { detail: 'full' });
+		expect(out.analyses).toEqual(full().analyses);
+	});
+
+	it('name: returns the ONE capability at full detail, with defaults', () => {
+		const out = filterCapabilities(full(), { name: 'Cosinor' });
+		expect(out.kind).toBe('analysis');
+		expect(out.capability.id).toBe('Cosinor');
+		expect(out.capability.params).toHaveProperty('fixedPeriod'); // full detail = defaults present
+	});
+
+	it('name: an unknown capability reports it rather than dumping everything', () => {
+		const out = filterCapabilities(full(), { name: 'NoSuchThing' });
+		expect(out.capability).toBeNull();
+		expect(out.error).toMatch(/No capability named/);
+	});
+
+	it('family: narrows to one family and drops the family-less plots', () => {
+		const out = filterCapabilities(full(), { family: 'Fitting' });
+		expect(out.analyses.length).toBeGreaterThan(0);
+		expect(out.analyses.every((a) => a.family === 'Fitting')).toBe(true);
+		expect(out.plots).toEqual([]);
 	});
 });
 

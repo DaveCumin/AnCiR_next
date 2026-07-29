@@ -19,7 +19,8 @@
 
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -36,7 +37,9 @@ process.on('unhandledRejection', (reason) => {
 });
 
 await ensureDom();
-const { AncirSession, ensureRegistry, describeCapabilities } = await import('./engine/session.js');
+const { AncirSession, ensureRegistry, describeCapabilities, filterCapabilities } = await import(
+	'./engine/session.js'
+);
 
 // Load the node registry up-front. This must happen during the initial top-level
 // run so vite-node's transform server is still alive to compile the Svelte modules
@@ -64,11 +67,24 @@ const ok = (data) => ({
 function registerTools(server) {
 	server.tool(
 		'list_capabilities',
-		'List every AnCiR analysis (table process), column transform, and plot type — derived live from the engine registry, with input fields, parameters (and defaults), output keys, and status.',
-		{},
-		async () => {
+		'Discover AnCiR analyses (table processes), column transforms, and plot types — live from the engine registry. Returns a COMPACT summary by default (ids, families, one-line summaries, input fields, param names). For the exact params/defaults/output keys needed to hand-write a run_table_process call, pass detail:"full" or name:"Cosinor"; narrow with family.',
+		{
+			detail: z
+				.enum(['names', 'summary', 'full'])
+				.optional()
+				.describe('names | summary (default) | full'),
+			family: z
+				.string()
+				.optional()
+				.describe('Filter analyses/transforms to one family, e.g. "Fitting", "Analysis"'),
+			name: z
+				.string()
+				.optional()
+				.describe('Return just the ONE named capability, at full detail, e.g. "Cosinor"')
+		},
+		async ({ detail, family, name }) => {
 			await ensureRegistry();
-			return ok(describeCapabilities());
+			return ok(filterCapabilities(describeCapabilities(), { detail, family, name }));
 		}
 	);
 
@@ -188,16 +204,36 @@ function registerTools(server) {
 
 	server.tool(
 		'export_session',
-		'Export the active session as an AnCiR-compatible JSON string (and optionally write it to a file). The file opens directly in the AnCiR GUI.',
-		{ path: z.string().optional().describe('Optional file path to write the session JSON to') },
-		async ({ path }) => {
-			const json = requireSession().exportSession();
-			if (path) {
-				const abs = resolve(process.cwd(), path);
-				await writeFile(abs, json, 'utf8');
-				return ok({ written: abs, bytes: json.length });
+		'Export the active session as AnCiR JSON. By DEFAULT writes it to a file (opens directly in the AnCiR GUI) and returns {written, bytes, summary} — the full session JSON is large and rarely needed in-context. Pass a `path` to choose the location, or inline:true to get the JSON back as text instead.',
+		{
+			path: z
+				.string()
+				.optional()
+				.describe('Where to write the JSON (default: a temp file). Ignored when inline:true.'),
+			inline: z
+				.boolean()
+				.optional()
+				.describe('Return the full session JSON as text instead of writing a file (large).')
+		},
+		async ({ path, inline }) => {
+			const s = requireSession();
+			const json = s.exportSession();
+			if (inline) return { content: [{ type: 'text', text: json }] };
+			const abs = resolve(process.cwd(), path ?? join(tmpdir(), `ancir-session-${s.id}.json`));
+			await writeFile(abs, json, 'utf8');
+			// Counts, not the blob — enough for the caller to confirm what it exported.
+			let summary = {};
+			try {
+				const o = JSON.parse(json);
+				summary = {
+					columns: o.data?.length ?? 0,
+					plots: o.plots?.length ?? 0,
+					analyses: o.tableProcesses?.length ?? 0
+				};
+			} catch {
+				/* summary is best-effort */
 			}
-			return { content: [{ type: 'text', text: json }] };
+			return ok({ written: abs, bytes: json.length, summary });
 		}
 	);
 

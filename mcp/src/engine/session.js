@@ -192,6 +192,70 @@ export function describeCapabilities() {
 	return { analyses, transforms, plots };
 }
 
+/**
+ * Project a full describeCapabilities() result down to what a caller actually asked for, so the
+ * discovery tool doesn't return the entire schema (37 analyses × params/defaults/outputs + plots)
+ * on every call — it was the single largest payload a session sees. Pure; the server passes the
+ * tool args straight through.
+ *
+ *   detail: "names"   → id (+ family) only — pure discovery.
+ *           "summary" → id, family, one-line summary, input FIELD NAMES, param NAMES (no defaults).
+ *                       The DEFAULT: enough to pick a node and know what it needs; the engine fills
+ *                       param defaults at run time, so a caller rarely needs the values to run.
+ *           "full"    → everything (params + defaults, outKeys, dynamicOutputs) — what you need to
+ *                       hand-write a run_table_process call.
+ *   family: narrow analyses/transforms to one family (e.g. "Fitting"); plots have none, so drop them.
+ *   name:   return the ONE matching capability at FULL detail (the describe-one case) — cheaper than
+ *           a full dump when you know the node and just need its exact schema.
+ */
+export function filterCapabilities(full, { detail = 'summary', family = null, name = null } = {}) {
+	const fam = family ? String(family).toLowerCase() : null;
+	const nm = name ? String(name).toLowerCase() : null;
+
+	if (nm) {
+		const all = [
+			...full.analyses.map((x) => ['analysis', x]),
+			...full.transforms.map((x) => ['transform', x]),
+			...full.plots.map((x) => ['plot', x])
+		];
+		const hit = all.find(([, x]) => x.id.toLowerCase() === nm);
+		return hit
+			? { kind: hit[0], capability: hit[1] }
+			: { capability: null, error: `No capability named "${name}". Call list_capabilities for names.` };
+	}
+
+	const projAnalysis = (x) =>
+		detail === 'names'
+			? { id: x.id, family: x.family }
+			: detail === 'full'
+				? x
+				: {
+						id: x.id,
+						family: x.family,
+						summary: x.summary,
+						inputs: x.inputs,
+						params: Object.keys(x.params),
+						dynamicOutputs: x.dynamicOutputs
+					};
+	const projTransform = (x) =>
+		detail === 'names'
+			? { id: x.id, family: x.family }
+			: detail === 'full'
+				? x
+				: { id: x.id, family: x.family, summary: x.summary, params: Object.keys(x.params) };
+	const projPlot = (x) => (detail === 'names' ? { id: x.id } : detail === 'full' ? x : { id: x.id, inputs: x.inputs });
+
+	let A = full.analyses,
+		T = full.transforms,
+		P = full.plots;
+	if (fam) {
+		A = A.filter((x) => (x.family || '').toLowerCase() === fam);
+		T = T.filter((x) => (x.family || '').toLowerCase() === fam);
+		P = []; // plots carry no family, so a family filter excludes them
+	}
+	return { detail, analyses: A.map(projAnalysis), transforms: T.map(projTransform), plots: P.map(projPlot) };
+}
+
 function resetCore() {
 	// Mirror the slices the GUI's importJson resets. NB: the `Table` class /
 	// `core.tables` was removed in the 2026-06 migration — columns are now a flat
