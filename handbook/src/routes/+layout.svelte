@@ -83,7 +83,7 @@
   <img src={logo} alt="Chronobiology Handbook Logo" class="site-logo" />
   <div class="site-title">
     Chronobiology Handbook
-    <span>Student Guide to Data Analysis</span>
+    <span>A Guide to Data Analysis</span>
   </div>
   <button id="menu-toggle" aria-label="Toggle menu" onclick={toggleSidebar}>
     <svg

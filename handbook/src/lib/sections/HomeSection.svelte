@@ -16,12 +16,12 @@
 
     <div class="box box-history">
         <p class="chapter-intro">
-            Note, this handbook is a work in progress. It is currently a draft!
+            Note, this handbook is a work in progress. It is currently a draft.
             Please email <a
                 href="mailto:d.cumin@auckland.ac.nz?subject=AnCiR Handbook"
                 >d.cumin@auckland.ac.nz</a
             > for any errors, omissions, or feedback.
-        </p>
+        </p>DOI for this handbook: 10.5281/zenodo.19340642</p>
     </div>
 
     <p class="chapter-intro">
