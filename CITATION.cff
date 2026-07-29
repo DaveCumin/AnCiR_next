@@ -1,0 +1,50 @@
+cff-version: 1.2.0
+message: "If you use AnCiR or the Chronobiological Data Analysis Handbook, please cite this record."
+title: "AnCiR: Analysis of Chronobiological Rhythms"
+abstract: >-
+  AnCiR is a graphical, no-coding tool for the analysis of chronobiological
+  rhythms and other time-series data. It provides periodicity detection
+  (Sokolove-Bushell chi-squared, Enright, Lomb-Scargle, FFT), cosinor and
+  harmonic-cosinor fitting, non-parametric circadian rhythm analysis
+  (IS, IV, RA, M10, L5), circular statistics, continuous wavelet transforms,
+  smoothing, and inferential statistics with multiple-comparison correction
+  and surrogate or permutation nulls.
+
+  This repository also contains the Chronobiological Data Analysis Handbook,
+  an interactive companion text with worked examples and animations that
+  explains the methods and shows how to carry them out in AnCiR. The handbook
+  is published at https://ancir.pages.dev/handbook.html and its source is
+  archived here under handbook/.
+type: software
+authors:
+  - family-names: Cumin
+    given-names: David
+    email: d.cumin@auckland.ac.nz
+    affiliation: "University of Auckland"
+    orcid: "https://orcid.org/0000-0003-2685-4779"
+repository-code: "https://github.com/DaveCumin/AnCiR_next"
+url: "https://ancir.pages.dev"
+license:
+  - Apache-2.0
+  - CC-BY-4.0
+version: "70.8"
+doi: 10.5281/zenodo.19340642
+keywords:
+  - chronobiology
+  - circadian rhythms
+  - time-series analysis
+  - actigraphy
+  - actogram
+  - periodogram
+  - cosinor
+  - wavelet
+  - Lomb-Scargle
+  - open-source software
+references:
+  - type: generic
+    title: "Chronobiological Data Analysis: Handbook"
+    authors:
+      - family-names: Cumin
+        given-names: David
+    url: "https://ancir.pages.dev/handbook.html"
+    notes: "Interactive companion handbook; source archived in this repository under handbook/."
