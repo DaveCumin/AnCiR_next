@@ -2454,6 +2454,12 @@
 			const raw = target.tpObj.args?.[portName];
 			if (Array.isArray(raw)) target.tpObj.args[portName] = raw.filter((id) => id !== colId);
 			else if (raw === colId) target.tpObj.args[portName] = -1;
+			// Third removal path into the same node (after removeEdge and
+			// disconnectInputPort), and it owes the same cleanup. Found by
+			// inputMutationsReconcile.test.js rather than by looking, which is the point
+			// of that test — this bug had already been "fixed" twice by patching the
+			// sites someone happened to think of.
+			reconcileOutputs(target.tpObj, removeColumn);
 			return;
 		}
 		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && portName === 'series') {
@@ -3095,6 +3101,13 @@
 			} else if (tp.args[port] === colId) {
 				tp.args[port] = -1;
 			}
+			// Deleting ONE wire is a separate path from clearing a whole port
+			// (disconnectInputPort), and it has the same obligation: the per-input output
+			// columns describing the input that just went are now orphaned. Missing this
+			// is why v70.5 did not fix the reported case — that commit covered the
+			// clear-the-port path and the delete-the-column path, but a single wire comes
+			// through here.
+			reconcileOutputs(tp, removeColumn);
 			return;
 		}
 
