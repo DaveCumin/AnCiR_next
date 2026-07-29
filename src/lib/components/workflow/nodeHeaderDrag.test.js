@@ -122,3 +122,50 @@ function readSource() {
 	const here = dirname(fileURLToPath(import.meta.url));
 	return readFileSync(join(here, 'TableProcessNode.svelte'), 'utf8');
 }
+
+function readFile(name) {
+	const here = dirname(fileURLToPath(import.meta.url));
+	return readFileSync(join(here, name), 'utf8');
+}
+
+// The v69.1 fix covered TableProcessNode and GroupNode, and the tests above covered
+// TableProcessNode only. WorkflowNode — which renders PLOT, data and note nodes — kept the
+// same blanket stop on its title, so plot nodes stayed undraggable by their header and
+// nothing failed. Reported 2026-07-29.
+//
+// WorkflowNode has no card handler of its own: its drag comes from .workflow-node-wrapper
+// in WorkflowEditor. So the contract to pin is at BOTH ends — the title must not swallow
+// pointerdown, and the wrapper handler must be the thing that excludes the rename input.
+describe('the plot/data node header is a drag handle too', () => {
+	it('no .node-label wrapper swallows pointerdown', () => {
+		// This exact markup is the bug: it stops the press before the wrapper's drag
+		// handler ever sees it.
+		const src = readFile('WorkflowNode.svelte');
+		expect(src).not.toMatch(/class="node-label"[^>]*onpointerdown/);
+	});
+
+	it('the parts that genuinely must not drag still stop it', () => {
+		// Removing the title stop must not turn into removing every stop: the note
+		// button, the type dropdown, the note body and the resize handle all own their
+		// gestures.
+		const src = readFile('WorkflowNode.svelte');
+		for (const cls of ['note-slot', 'node-type', 'note-body', 'note-resize-handle']) {
+			expect(src, `${cls} lost its pointerdown guard`).toMatch(
+				new RegExp(`class="${cls}"[\\s\\S]{0,200}?onpointerdown`)
+			);
+		}
+	});
+
+	it('the wrapper handler excludes the controls a press must not drag', () => {
+		// What makes dropping the title stop safe. If this guard goes, clicking a rename
+		// field or a button starts dragging the node instead.
+		const src = readFile('WorkflowEditor.svelte');
+		expect(src).toMatch(/NODE_NO_DRAG_SELECTOR\s*=/);
+		for (const part of ['button', 'input', 'textarea', '.port-dot', '.editable-input']) {
+			expect(src, `${part} missing from NODE_NO_DRAG_SELECTOR`).toMatch(
+				new RegExp(`NODE_NO_DRAG_SELECTOR\\s*=\\s*'[^']*${part.replace('.', '\\.')}`)
+			);
+		}
+		expect(src).toMatch(/e\.target\?\.closest\?\.\(NODE_NO_DRAG_SELECTOR\)/);
+	});
+});

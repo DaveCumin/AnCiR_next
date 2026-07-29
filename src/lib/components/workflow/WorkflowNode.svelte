@@ -138,7 +138,7 @@
 					<TypeSelector bind:value={liveCol.type} onChange={onColumnTypeChange} />
 				</div>
 			{/if}
-			<div class="node-label" onpointerdown={(e) => e.stopPropagation()}>
+			<div class="node-label">
 				<Editable
 					value={getNodeName(node)}
 					placeholder="column name"
@@ -149,7 +149,7 @@
 				/>
 			</div>
 		{:else if isNodeNameEditable(node)}
-			<div class="node-label" onpointerdown={(e) => e.stopPropagation()}>
+			<div class="node-label">
 				<Editable
 					value={getNodeName(node)}
 					placeholder="name"

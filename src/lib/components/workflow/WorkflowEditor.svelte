@@ -1423,10 +1423,22 @@
 		capturePointer(e);
 	}
 
+	// The controls a press must NEVER turn into a node drag. Same list TableProcessNode
+	// applies in its own card handler; it lives here too so EVERY node type gets it,
+	// including the ones (plot, data, note) that have no card handler of their own and
+	// reach this straight from the wrapper.
+	//
+	// Without it, those components had to defend themselves by stopping pointerdown on
+	// the whole title wrapper — which also stopped the drag, so a plot node could not be
+	// dragged by its header at all. Guarding the interactive elements here is what lets
+	// the header stay a drag handle while the rename field still takes a click.
+	const NODE_NO_DRAG_SELECTOR = 'button, input, textarea, select, .port-dot, .editable-input';
+
 	function handleNodeWrapperMouseDown(e, node) {
 		// Always prevent the canvas pan handler from firing
 		e.stopPropagation();
 		if (e.button !== 0) return;
+		if (e.target?.closest?.(NODE_NO_DRAG_SELECTOR)) return;
 		// Capture to the editor root (which owns pointermove/up) so the node keeps following the
 		// finger even when it strays off the node. pointerdown here stopped propagation, so the
 		// editor never saw it — capture is set explicitly rather than via the bubbled event.

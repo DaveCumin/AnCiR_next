@@ -228,6 +228,23 @@
 	const memo = nodeMemo(p, 'tableprocess');
 	let _calcToken = 0;
 
+	// What THIS instance has computed or restored.
+	//
+	// The memo is shared by node id, and a node can be mounted TWICE at once: the card
+	// on the canvas, and the control panel when it is selected. Guarding the compute on
+	// the SHARED hash alone meant whichever instance claimed the hash first left the
+	// other with nothing — it saw "already computed", skipped, and its own
+	// `smoothedResult` (which is per-instance) stayed undefined, so the panel was blank.
+	// A saved session hid this, because the baked-data branch in onMount fills
+	// `smoothedResult` from core.rawData; a freshly added node has nothing baked, so
+	// only the racing instance showed it.
+	//
+	// So the skip decision is per-instance, and the shared memo's job is to let a NEW
+	// instance reach the up-to-date state without recomputing — via the payload restore
+	// in onMount, which sets this. Restoring is what makes the memo work across a view
+	// switch; this is what stops it starving a co-mounted twin.
+	let computedHash = '';
+
 	// Mirror the panel state into the memo so the next mount can restore it.
 	// Guarded on undefined: a fresh instance that has not computed yet must not
 	// wipe a cached result another instance is still showing.
@@ -238,7 +255,8 @@
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (dataHash !== memo.hash) {
+		if (dataHash !== computedHash) {
+			computedHash = dataHash;
 			memo.hash = dataHash; // read before untrack so it's tracked
 			const token = ++_calcToken;
 			setTimeout(async () => {
@@ -267,6 +285,7 @@
 			if (token !== _calcToken) return; // re-check after await
 			smoothedResult = data;
 			p.args.valid = valid;
+			computedHash = getHash;
 			memo.hash = getHash;
 		}, 0);
 	}
@@ -294,7 +313,12 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) smoothedResult = memo.payload;
+		// Marking computedHash here is what makes the restore count AS the compute —
+		// without it this instance would recompute and the memo would buy nothing.
+		if (memo.payload !== undefined && memo.hash === getHash) {
+			smoothedResult = memo.payload;
+			computedHash = getHash;
+		}
 		if (!p.args.out) p.args.out = {};
 		// Ensure X output column exists
 		if ((p.args.out.smoothedx == null || p.args.out.smoothedx < 0) && p.parent) {
@@ -321,6 +345,7 @@
 				}
 				smoothedResult = { x_out: core.rawData.get(xKey), y_results };
 				p.args.valid = true;
+				computedHash = getHash;
 				memo.hash = getHash;
 			}
 		}
@@ -420,7 +445,7 @@
 			<ControlInput label="Bandwidth">
 				<NumberWithUnits
 					step="0.01"
-					min={0.01}
+					min={0.00001}
 					max={1.0}
 					bind:value={p.args.loessBandwidth}
 					onInput={() => getSmoothedData()}
