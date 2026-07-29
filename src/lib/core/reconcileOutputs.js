@@ -46,31 +46,60 @@ export function liveInputIds(tp) {
 }
 
 /**
+ * Output-key prefixes that really are per-input, i.e. `<prefix><columnId>`.
+ *
+ * A CLOSED LIST, not a shape rule. Inferring "ends in _<digits>" from the key alone
+ * looked general and was wrong in a way that destroys data: LongToWide builds its
+ * keys as `value_<category>`, where the category is a DATA VALUE. Numeric categories
+ * are entirely normal — hive 1, 2, 3 — so `value_1` would be read as "column 1's
+ * output", found not to be one of LongToWide's inputs (categoryIN/timeIN/valueIN),
+ * and deleted.
+ *
+ * Split is excluded for the opposite reason: it names outputs `<yId>_<segment>`, so
+ * the id is the PREFIX. Nothing here matches it, which is the intent.
+ *
+ * Kept in step with the useMultiYTP call sites by perYPrefixes.test.js — the same
+ * enumeration that found removeInputColumn, rather than trusting anyone to
+ * remember.
+ */
+export const PER_INPUT_PREFIXES = [
+	'avgprof_',
+	'avgprofsem_',
+	'binnedy_',
+	'col_',
+	'cosinory_',
+	'dlogy_',
+	'fity_',
+	'interpy_',
+	'npcray_',
+	'permstats_',
+	'rectwavey_',
+	'resid_',
+	'smoothedy_',
+	'sortedy_',
+	'trendy_'
+];
+
+/**
  * `args.out` keys whose per-input id is no longer an input.
  *
- * A key counts as per-input when it ends in `_<digits>` AND the part before
- * contains a non-digit — "smoothedy_12", "resid_12", "permstats_12", "col_12".
- *
- * The non-digit requirement is load-bearing. Split names its outputs the other way
- * round, `<yId>_<segment>` (Split.svelte), so "799_1" would otherwise read as
- * "column 1's output" and be deleted whenever column 1 went away, taking another
- * series' first segment with it.
- *
- * Keys with no id at all (`smoothedx`, `time`) are shared across inputs and are
- * never orphaned by this rule — clearing them is the owning node's business.
+ * Only keys carrying a known per-input prefix are considered. Anything else —
+ * a shared output (`smoothedx`, `time`), a category-keyed output (`value_hiveA`),
+ * a Split segment (`799_1`) — is never orphaned by this rule; clearing those is the
+ * owning node's business.
  */
 export function orphanedOutputKeys(tp) {
 	const out = tp?.args?.out;
 	if (!out) return [];
 	const live = liveInputIds(tp);
 	return Object.keys(out).filter((key) => {
-		const m = /^(.*)_(\d+)$/.exec(key);
-		if (!m) return false;
-		// The PREFIX must contain a letter. Testing the whole key is not enough — "_"
-		// is itself a non-digit, so "799_1" would pass and Split's segment outputs
-		// would be read as "column 1's output".
-		if (!/[A-Za-z]/.test(m[1])) return false;
-		return !live.has(Number(m[2]));
+		const prefix = PER_INPUT_PREFIXES.find((p) => key.startsWith(p));
+		if (!prefix) return false;
+		const rest = key.slice(prefix.length);
+		// The remainder must be exactly a column id. "value_12a" or "resid_1_2" are
+		// not this node's per-input outputs however much they look like it.
+		if (!/^\d+$/.test(rest)) return false;
+		return !live.has(Number(rest));
 	});
 }
 

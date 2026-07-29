@@ -8,7 +8,15 @@
 // These are pure-function tests on purpose — the whole point of centralising this is
 // that the rule holds without any component being alive to run it.
 import { describe, it, expect } from 'vitest';
-import { liveInputIds, orphanedOutputKeys, reconcileOutputs } from './reconcileOutputs.js';
+import {
+	liveInputIds,
+	orphanedOutputKeys,
+	reconcileOutputs,
+	PER_INPUT_PREFIXES
+} from './reconcileOutputs.js';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 const tp = (args) => ({ id: 1, name: 'SmoothedData', args });
 
@@ -99,5 +107,59 @@ describe('reconcileOutputs', () => {
 		const seenDuringRemoval = [];
 		reconcileOutputs(node, () => seenDuringRemoval.push(Object.keys(node.args.out).length));
 		expect(seenDuringRemoval).toEqual([0, 0]);
+	});
+});
+
+describe('the prefix list is closed, and stays in step with the nodes', () => {
+	// Inferring "ends in _<digits>" from the key alone looked general and was wrong in
+	// a way that destroys data. These pin both halves of the correction.
+	it("does NOT touch LongToWide's category-keyed outputs", () => {
+		// value_<category>, and categories are DATA. Numeric ones are entirely normal —
+		// hive 1, 2, 3 — and the old shape rule read "value_1" as column 1's output,
+		// found it was not an input, and deleted it.
+		const node = {
+			args: { categoryIN: 5, timeIN: 6, valueIN: 7, out: { value_1: 90, value_2: 91 } }
+		};
+		expect(orphanedOutputKeys(node)).toEqual([]);
+	});
+
+	it("still does not touch Split's <yId>_<segment> keys", () => {
+		expect(orphanedOutputKeys({ args: { yIN: [], out: { '799_1': 50 } } })).toEqual([]);
+	});
+
+	it('ignores a key whose remainder is not purely an id', () => {
+		const node = { args: { yIN: [], out: { resid_1_2: 5, smoothedy_12a: 6 } } };
+		expect(orphanedOutputKeys(node)).toEqual([]);
+	});
+
+	it('every useMultiYTP prefix in the codebase is listed', () => {
+		// The enumeration, rather than trusting anyone to remember. A node that gains a
+		// per-Y output whose prefix is missing here would silently keep its orphans.
+		const dir = join(dirname(fileURLToPath(import.meta.url)), '..', 'tableProcesses');
+		const used = new Set();
+		for (const f of readdirSync(dir).filter((f) => f.endsWith('.svelte'))) {
+			const src = readFileSync(join(dir, f), 'utf8');
+			for (const m of src.matchAll(/useMultiYTP\(\s*p\s*,\s*'([^']+)'/g)) used.add(m[1]);
+		}
+		expect(used.size, 'found no useMultiYTP call sites — the scanner went blind').toBeGreaterThan(
+			10
+		);
+		const missing = [...used].filter((p) => !PER_INPUT_PREFIXES.includes(p));
+		expect(
+			missing,
+			`these per-Y prefixes are used by a node but missing from PER_INPUT_PREFIXES: ` +
+				`${missing.join(', ')}. Their outputs would survive the input being removed.`
+		).toEqual([]);
+	});
+
+	it('every listed prefix is still used by something', () => {
+		// A stale entry is a licence to delete keys nothing produces any more.
+		const dir = join(dirname(fileURLToPath(import.meta.url)), '..', 'tableProcesses');
+		const all = readdirSync(dir)
+			.filter((f) => f.endsWith('.svelte'))
+			.map((f) => readFileSync(join(dir, f), 'utf8'))
+			.join('\n');
+		const unused = PER_INPUT_PREFIXES.filter((p) => !all.includes(`'${p}'`));
+		expect(unused, `listed but no node produces them: ${unused.join(', ')}`).toEqual([]);
 	});
 });

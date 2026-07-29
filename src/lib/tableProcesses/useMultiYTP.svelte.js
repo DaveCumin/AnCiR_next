@@ -25,6 +25,7 @@
 
 import { core } from '$lib/core/core.svelte';
 import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
+import { reconcileOutputs } from '$lib/core/reconcileOutputs.js';
 import { pushObj } from '$lib/core/core.svelte.js';
 
 /**
@@ -122,6 +123,13 @@ export function useMultiYTP(p, yPrefix, yColNamePrefix) {
 				}
 			}
 		}
+
+		// Self-heal against args.out rather than trusting the prevYIds transition.
+		// prevYIds is seeded from the CURRENT args.yIN when an instance is created, so a
+		// component mounted AFTER something else scrubbed the inputs sees no transition
+		// and would leave that scrub's orphans in place for good. Idempotent, and the
+		// same rule the removal paths in WorkflowEditor use.
+		reconcileOutputs(p, removeColumn);
 
 		prevYIds = [...newIds];
 		return true;
