@@ -51,7 +51,14 @@ function requireSession() {
 	if (!session) throw new Error('No active session. Call create_session first.');
 	return session;
 }
-const ok = (data) => ({ content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] });
+// Tool results are JSON text, returned on EVERY call, so pretty-printing them taxes the client's
+// context on every turn — the indentation alone is ~25-35% of a large payload (list_capabilities,
+// export_session). Default to COMPACT; set ANCIR_MCP_VERBOSE=1 to pretty-print for human-readable
+// debugging. A human reading raw tool output opts in; an agent never pays for whitespace it ignores.
+const VERBOSE = process.env.ANCIR_MCP_VERBOSE === '1';
+const ok = (data) => ({
+	content: [{ type: 'text', text: VERBOSE ? JSON.stringify(data, null, 2) : JSON.stringify(data) }]
+});
 
 /** Register every AnCiR tool on a fresh McpServer (one per stdio process / HTTP request). */
 function registerTools(server) {
