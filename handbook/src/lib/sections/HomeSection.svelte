@@ -22,7 +22,6 @@
                 >d.cumin@auckland.ac.nz</a
             > for any errors, omissions, or feedback.
         </p>
-        <p>DOI for this handbook: 10.5281/zenodo.19340642</p>
     </div>
 
     <p class="chapter-intro">

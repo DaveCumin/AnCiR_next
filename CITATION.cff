@@ -27,7 +27,7 @@ url: "https://ancir.pages.dev"
 license:
   - Apache-2.0
   - CC-BY-4.0
-version: "71.1"
+version: "71.2"
 doi: 10.5281/zenodo.19340642
 keywords:
   - chronobiology

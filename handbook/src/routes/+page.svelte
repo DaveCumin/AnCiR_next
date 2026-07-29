@@ -24,6 +24,7 @@
   import NodeReferenceSection from "../lib/sections/NodeReferenceSection.svelte";
   import ExampleGallerySection from "../lib/sections/ExampleGallerySection.svelte";
   import ReferencesSection from "../lib/sections/ReferencesSection.svelte";
+  import ColophonSection from "../lib/sections/ColophonSection.svelte";
 </script>
 
 <svelte:head>
@@ -77,6 +78,8 @@
 <ExampleGallerySection />
 <hr class="section-divider" />
 <ReferencesSection />
+<hr class="section-divider" />
+<ColophonSection />
 
 <style>
   :global(.section-divider) {

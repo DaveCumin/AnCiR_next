@@ -1,0 +1,13 @@
+AnCiR: Analysis of Chronobiological Rhythms
+Copyright 2026 David Cumin, University of Auckland
+
+This product includes software developed at the University of Auckland,
+financially supported by a University of Auckland Teaching and Learning
+Development and Innovation Grant (2024).
+
+The software in this repository is licensed under the Apache License,
+Version 2.0; see LICENSE.
+
+EXCEPTION: the Chronobiological Data Analysis Handbook, in the handbook/
+directory, is licensed under the Creative Commons Attribution 4.0
+International licence (CC BY 4.0); see handbook/LICENSE.

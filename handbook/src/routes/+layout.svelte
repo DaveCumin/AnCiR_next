@@ -2,6 +2,10 @@
   import { onMount } from "svelte";
   import "../app.css";
   import logo from "$lib/logo.svg";
+  import { VERSION } from "$lib/version.js";
+
+  const DOI = "10.5281/zenodo.19340642";
+  const DOI_URL = `https://doi.org/${DOI}`;
 
   let { children } = $props();
 
@@ -34,6 +38,7 @@
     { label: "Node Reference (searchable)", id: "node-reference" },
     { label: "Example Gallery", id: "example-gallery" },
     { label: "References", id: "references" },
+    { label: "Citation & Licence", id: "colophon" },
   ];
 
   onMount(() => {
@@ -128,6 +133,19 @@
           onclick={closeSidebar}>{item.label}</a
         >
       {/each}
+
+      <div class="sidebar-footer">
+        <a href="#colophon" onclick={closeSidebar}>Cite this handbook</a>
+        <a href={DOI_URL} target="_blank" rel="noopener">doi:{DOI}</a>
+        <span>
+          Handbook {VERSION} &middot;
+          <a
+            href="https://creativecommons.org/licenses/by/4.0/"
+            target="_blank"
+            rel="noopener">CC BY 4.0</a
+          >
+        </span>
+      </div>
     </div>
   </nav>
 
@@ -152,5 +170,29 @@
     border: none;
     border-top: 1px solid var(--border);
     margin: 2rem 0;
+  }
+
+  .sidebar-footer {
+    margin-top: 20px;
+    /* 20px sides to line up with .sidebar-label, the other non-link text in
+       the sidebar. */
+    padding: 12px 20px 0;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.74rem;
+    line-height: 1.4;
+    color: var(--muted);
+  }
+
+  .sidebar-footer a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .sidebar-footer a:hover {
+    color: var(--blue);
+    text-decoration: underline;
   }
 </style>
