@@ -20,6 +20,7 @@
 		pushObj
 	} from '$lib/core/core.svelte.js';
 	import { untrack, tick } from 'svelte';
+	import { reconcileOutputs } from '$lib/core/reconcileOutputs.js';
 	import { computeInterface, flattenMembers } from '$lib/core/composite.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
@@ -2208,6 +2209,12 @@
 			// materialised ids) so the reconcile doesn't rebuild them after the clear.
 			for (const csId of [...(tp.args.setRefs?.[portName] ?? [])]) detachColumnSetFromTP(tp, csId);
 			tp.args[portName] = isManyInputPort(target, portName) ? [] : -1;
+			// Clearing the port used to be the whole of it, so the node kept the output
+			// columns describing the input that had just gone — ports, data, and any plot
+			// drawn from them. The node's own syncYColumns() could not cover this: it runs
+			// from an $effect, so a collapsed node (CompactNode, editor never mounted)
+			// never reconciled, and re-expanding did not help either.
+			reconcileOutputs(tp, removeColumn);
 			return;
 		}
 

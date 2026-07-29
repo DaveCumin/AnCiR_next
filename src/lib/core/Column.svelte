@@ -3,6 +3,7 @@
 
 	import { Process, nextLinkedGroupId, getLinkedProcesses } from '$lib/core/Process.svelte';
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
+	import { reconcileAllOutputs } from '$lib/core/reconcileOutputs.js';
 	import {
 		resolveProducer,
 		touchProducerDeps,
@@ -136,7 +137,25 @@
 			col.refId = -1;
 		});
 
-		// Step 3: Scrub refs from every table process.
+		// Step 3: Scrub refs from every table process, and drop the per-Y outputs whose
+		// Y input has just gone.
+		//
+		// The orphaned outputs used to be left to each node's own syncYColumns(), which
+		// runs from an $effect on args.yIN — so it only fired if that node's component
+		// happened to be MOUNTED. A collapsed node renders through CompactNode and does
+		// not mount its editor, so deleting a dataset left its outputs behind, still
+		// holding data and still drawn by any plot reading them.
+		//
+		// Re-expanding did not heal it either: useMultiYTP seeds prevYIds from the
+		// CURRENT args.yIN, so a fresh instance mounted after the scrub sees no
+		// transition, concludes nothing changed, and never cleans up. The staleness was
+		// therefore permanent, which is what made it look like the outputs "don't
+		// disappear".
+		//
+		// Ownership belongs here, with the deletion, not with whichever component is
+		// alive to notice — the same model deleteTableProcess already uses for its own
+		// outputs. Collected first and removed after the sweep, because removing a
+		// column re-enters this function.
 		function scrubTP(process) {
 			const args = process.args;
 			if (args.xIN === columnId) args.xIN = -1;
@@ -154,6 +173,14 @@
 			}
 		}
 		core.tableProcesses.forEach(scrubTP);
+		// Now that the inputs are scrubbed, drop the per-input outputs that describe a
+		// column this node no longer takes. Shared with the wire-deletion and load paths
+		// (core/reconcileOutputs.js) so the invariant holds however the input went away —
+		// it used to depend on the owning node's component being mounted, which a
+		// collapsed node never is.
+		reconcileAllOutputs(core.tableProcesses, (id) => {
+			if (getColumnById(id)) removeColumn(id);
+		});
 
 		// Step 3b: Drop from any group's source list
 		core.groups.forEach((g) => {
