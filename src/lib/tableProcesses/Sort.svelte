@@ -255,7 +255,13 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) sortResult = memo.payload;
+		// Whether the cached result came back. The placeholder branch below must not
+		// overwrite it: that placeholder is rebuilt from the baked output columns alone
+		// and carries none of the derived stats, and since the memo already holds this
+		// hash the compute effect will not fire to replace it — so the panel would stay
+		// stat-less until an input changed.
+		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
+		if (restoredFromMemo) sortResult = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		const needsCompute = initYColumns();
 		if (p.args.sortOnId === -1 && (p.args.yIN ?? []).length > 0) {
@@ -263,7 +269,7 @@
 		}
 		if (needsCompute) {
 			recompute();
-		} else {
+		} else if (!restoredFromMemo) {
 			const anyOut = Object.values(p.args.out).some((v) => typeof v === 'number' && v >= 0);
 			if (anyOut) {
 				const inputsAreStale = (p.args.yIN ?? []).some(

@@ -384,7 +384,17 @@
 		// These change the result but were missing from this hash. While the memo
 		// was component-local a view switch recomputed anyway and hid it; now that
 		// the memo survives a remount, an omission here means an edit is ignored.
-		out += '|' + p.args.alpha + '|' + p.args.fixedDutyCycle + '|' + p.args.fixedK1 + '|' + p.args.fixedK2 + '|' + p.args.fixedKappa;
+		out +=
+			'|' +
+			p.args.alpha +
+			'|' +
+			p.args.fixedDutyCycle +
+			'|' +
+			p.args.fixedK1 +
+			'|' +
+			p.args.fixedK2 +
+			'|' +
+			p.args.fixedKappa;
 		return out;
 	});
 	// The fit stats live only in transient state and aren't persisted with the
@@ -660,7 +670,12 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) fitData = memo.payload;
+		// Whether the cached result came back. The placeholder branch below must not
+		// overwrite it: that placeholder carries no stats (rmse NaN, no parameters), and
+		// since the memo already holds this hash the compute effect will not fire to
+		// replace it — so the panel would stay stat-less until an input changed.
+		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
+		if (restoredFromMemo) fitData = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		if ((p.args.out.fitx == null || p.args.out.fitx < 0) && p.parent) {
 			const xCol = new Column({});
@@ -677,7 +692,7 @@
 		const needsCompute = fitInit || permInit || residInit;
 		if (needsCompute) {
 			getFit();
-		} else {
+		} else if (!restoredFromMemo) {
 			const xKey = p.args.out.fitx;
 			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
 				const y_results = {};

@@ -394,7 +394,13 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) splitResult = memo.payload;
+		// Whether the cached result came back. The placeholder branch below must not
+		// overwrite it: that placeholder is rebuilt from the baked output columns alone
+		// and carries none of the derived stats, and since the memo already holds this
+		// hash the compute effect will not fire to replace it — so the panel would stay
+		// stat-less until an input changed.
+		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
+		if (restoredFromMemo) splitResult = memo.payload;
 		// Initialize / materialise output columns on mount (creates them for the
 		// free-standing node, which has no parent table).
 		const needsCompute = reconcileOutputs();
@@ -406,7 +412,7 @@
 
 		if (needsCompute) {
 			recalculate();
-		} else {
+		} else if (!restoredFromMemo) {
 			// Try to load existing data
 			const hasData = Object.entries(p.args.out).some(([, colId]) => {
 				return colId >= 0 && core.rawData.has(colId) && core.rawData.get(colId).length > 0;

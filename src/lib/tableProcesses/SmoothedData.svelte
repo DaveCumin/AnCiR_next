@@ -315,7 +315,11 @@
 		// skips when nothing changed, and this state died with the last instance.
 		// Marking computedHash here is what makes the restore count AS the compute —
 		// without it this instance would recompute and the memo would buy nothing.
-		if (memo.payload !== undefined && memo.hash === getHash) {
+		// Whether the cached result came back. The placeholder branch below must not
+		// overwrite it: that placeholder holds only the baked output columns, and since
+		// the memo already holds this hash the compute effect will not fire to replace it.
+		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
+		if (restoredFromMemo) {
 			smoothedResult = memo.payload;
 			computedHash = getHash;
 		}
@@ -332,7 +336,7 @@
 
 		if (needsCompute) {
 			getSmoothedData();
-		} else {
+		} else if (!restoredFromMemo) {
 			const xKey = p.args.out.smoothedx;
 			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
 				const y_results = {};

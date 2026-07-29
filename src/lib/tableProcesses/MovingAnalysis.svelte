@@ -306,7 +306,19 @@
 		// These change the result but were missing from this hash. While the memo
 		// was component-local a view switch recomputed anyway and hid it; now that
 		// the memo survives a remount, an omission here means an edit is ignored.
-		out += '|' + p.args.alpha + '|' + p.args.npcraEpochHours + '|' + p.args.npcraLWindow + '|' + p.args.npcraMWindow + '|' + p.args.npcraPeriod + '|' + p.args.pgAlpha;
+		out +=
+			'|' +
+			p.args.alpha +
+			'|' +
+			p.args.npcraEpochHours +
+			'|' +
+			p.args.npcraLWindow +
+			'|' +
+			p.args.npcraMWindow +
+			'|' +
+			p.args.npcraPeriod +
+			'|' +
+			p.args.pgAlpha;
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -468,14 +480,20 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) result = memo.payload;
+		// Whether the cached result came back. The placeholder branch below must not
+		// overwrite it: that placeholder is rebuilt from the baked output columns alone
+		// and carries none of the derived stats, and since the memo already holds this
+		// hash the compute effect will not fire to replace it — so the panel would stay
+		// stat-less until an input changed.
+		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
+		if (restoredFromMemo) result = memo.payload;
 		if (!p.args.out) p.args.out = { movex: -1 };
 		// Initial sync creates movex + per-(Y,stat) columns if they don't exist
 		const needsCompute = syncStatColumns();
 
 		if (needsCompute) {
 			recompute();
-		} else {
+		} else if (!restoredFromMemo) {
 			// Try to load existing data from rawData
 			const xKey = p.args.out.movex;
 			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {

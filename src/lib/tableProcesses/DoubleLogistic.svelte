@@ -410,7 +410,12 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) dlData = memo.payload;
+		// Whether the cached result came back. The placeholder branch below must not
+		// overwrite it: that placeholder carries no stats (rmse NaN, no parameters), and
+		// since the memo already holds this hash the compute effect will not fire to
+		// replace it — so the panel would stay stat-less until an input changed.
+		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
+		if (restoredFromMemo) dlData = memo.payload;
 		// Create X output column if not present (needed in collected mode)
 		let needsCompute = false;
 		if (p.args.out.dlogx == null || p.args.out.dlogx < 0) {
@@ -429,7 +434,7 @@
 
 		if (needsCompute) {
 			getFit();
-		} else {
+		} else if (!restoredFromMemo) {
 			const xKey = p.args.out.dlogx;
 			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
 				const y_results = {};

@@ -369,7 +369,13 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) binnedData = memo.payload;
+		// Whether the cached result came back. The placeholder branch below must not
+		// overwrite it: that placeholder is rebuilt from the baked output columns alone
+		// and carries none of the derived stats, and since the memo already holds this
+		// hash the compute effect will not fire to replace it — so the panel would stay
+		// stat-less until an input changed.
+		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
+		if (restoredFromMemo) binnedData = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		// Ensure X output column exists (created by TableProcess.svelte in standalone;
 		// must be created here in collected mode)
@@ -385,7 +391,7 @@
 
 		if (needsCompute) {
 			getBinnedData();
-		} else {
+		} else if (!restoredFromMemo) {
 			const xKey = p.args.out.binnedx;
 			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
 				// Check if any input columns have been replaced since session was saved

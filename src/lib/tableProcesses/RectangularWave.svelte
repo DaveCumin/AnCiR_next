@@ -426,7 +426,12 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) rwave = memo.payload;
+		// Whether the cached result came back. The placeholder branch below must not
+		// overwrite it: that placeholder carries no stats (rmse NaN, no parameters), and
+		// since the memo already holds this hash the compute effect will not fire to
+		// replace it — so the panel would stay stat-less until an input changed.
+		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
+		if (restoredFromMemo) rwave = memo.payload;
 		// Create X output column if not present (needed in collected mode)
 		let needsCompute = false;
 		if (p.args.out.rectwavex == null || p.args.out.rectwavex < 0) {
@@ -445,7 +450,7 @@
 
 		if (needsCompute) {
 			getRwave();
-		} else {
+		} else if (!restoredFromMemo) {
 			const xKey = p.args.out.rectwavex;
 			if (xKey >= 0 && core.rawData.has(xKey) && core.rawData.get(xKey).length > 0) {
 				// Check if any input columns have been replaced since session was saved

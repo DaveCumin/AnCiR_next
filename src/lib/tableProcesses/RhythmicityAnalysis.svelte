@@ -597,12 +597,18 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) result = memo.payload;
+		// Whether the cached result came back. The placeholder branch below must not
+		// overwrite it: that placeholder is rebuilt from the baked output columns alone
+		// and carries none of the derived stats, and since the memo already holds this
+		// hash the compute effect will not fire to replace it — so the panel would stay
+		// stat-less until an input changed.
+		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
+		if (restoredFromMemo) result = memo.payload;
 		if (!p.args.out) p.args.out = {};
 		const needsCompute = syncOutputColumns();
 		if (needsCompute) {
 			recompute();
-		} else {
+		} else if (!restoredFromMemo) {
 			// Try to load existing data from rawData (mode-aware)
 			const y_results = {};
 			let loadedAny = false;
