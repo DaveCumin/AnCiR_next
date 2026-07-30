@@ -1,7 +1,6 @@
 <script module>
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import {
-		colourForSeries,
 		seriesColumnId,
 		colourForCategory,
 		colourForCategoryLabel

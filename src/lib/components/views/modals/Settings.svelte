@@ -8,12 +8,15 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { appConsts, appState, core } from '$lib/core/core.svelte';
 	import ColourPaletteSelect from '$lib/components/inputs/ColourPaletteSelect.svelte';
-	import { pinnedColourSnapshot, repaintPinnedSeries } from '$lib/plots/seriesColour.js';
 	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
 	import { applyStyleToAll, applyFigureWidthToAll } from '$lib/plots/figureStyle.js';
 	import { clearSeriesColourOverrides } from '$lib/plots/appearanceIdentity.js';
 	import AppearanceMapEditor from '$lib/components/inputs/AppearanceMapEditor.svelte';
-	import { applyAppearanceToAll } from '$lib/plots/seriesAppearance.js';
+	import {
+		applyAppearanceToAll,
+		pinnedColourSnapshot,
+		repaintPinnedSeries
+	} from '$lib/plots/seriesAppearance.js';
 	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
 	import { privacy, setEphemeral, clearLocalData } from '$lib/core/localData.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
@@ -98,8 +101,8 @@
 		// user had overridden — see repaintPinnedSeries.
 		const before = pinnedColourSnapshot();
 		appState.appColours = appConsts.colourPalettes[palette];
-		// Series resolve their colour once, at construction, so the new palette would
-		// otherwise reach only series created from now on.
+		// Most series resolve their colour on READ and so follow the palette unaided; this
+		// reaches the values derived from it once and stored (Box's fillColour).
 		repaintPinnedSeries(before);
 		//update the favicon
 		const link = document.querySelector('link[rel="icon"]');

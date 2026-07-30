@@ -565,10 +565,8 @@
 		// are gone their entries are garbage that still CLAIM palette slots. Leaving them made
 		// each successive cmd-shift-S start further down the palette — run two began at colour
 		// 3, run three at colour 5 — which is why the demo plots looked randomly coloured.
-		core.seriesColours = {};
+		core.seriesAppearance = {};
 		core.categoryColours = {};
-		core.seriesShapes = {};
-		core.seriesDashes = {};
 		// This builds a brand-new session from scratch, so drop any AI provenance the previous
 		// one carried — leaving it would stamp hand-made data as AI-built, and a wrong
 		// fingerprint is worse than none.

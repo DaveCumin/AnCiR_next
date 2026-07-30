@@ -34,7 +34,9 @@ import {
 	DASH_ORDER,
 	mappedColour,
 	mappedShape,
-	mappedDash
+	mappedDash,
+	pinAppearance,
+	releaseAppearance
 } from '$lib/plots/appearanceIdentity.js';
 
 /**
@@ -97,41 +99,6 @@ function enumerableKeys(obj) {
 		proto = Object.getPrototypeOf(proto);
 	}
 	return keys;
-}
-
-function shapeMap() {
-	return (core.seriesShapes ??= {});
-}
-function dashMap() {
-	return (core.seriesDashes ??= {});
-}
-
-/** Claim (or recall) a marker shape for a column. */
-export function shapeForColumn(columnId, fallbackIndex = 0) {
-	const key = String(columnId);
-	const map = shapeMap();
-	if (typeof map[key] === 'string' && POINT_SHAPES.includes(map[key])) return map[key];
-	const taken = new Set(Object.values(map));
-	let i = ((fallbackIndex % POINT_SHAPES.length) + POINT_SHAPES.length) % POINT_SHAPES.length;
-	for (let n = 0; n < POINT_SHAPES.length && taken.has(POINT_SHAPES[i]); n++) {
-		i = (i + 1) % POINT_SHAPES.length;
-	}
-	map[key] = POINT_SHAPES[i];
-	return map[key];
-}
-
-/** Claim (or recall) a dash pattern for a column. */
-export function dashForColumn(columnId, fallbackIndex = 0) {
-	const key = String(columnId);
-	const map = dashMap();
-	if (typeof map[key] === 'string' && DASH_ORDER.includes(map[key])) return map[key];
-	const taken = new Set(Object.values(map));
-	let i = ((fallbackIndex % DASH_ORDER.length) + DASH_ORDER.length) % DASH_ORDER.length;
-	for (let n = 0; n < DASH_ORDER.length && taken.has(DASH_ORDER[i]); n++) {
-		i = (i + 1) % DASH_ORDER.length;
-	}
-	map[key] = DASH_ORDER[i];
-	return map[key];
 }
 
 /**
@@ -201,8 +168,7 @@ function applyColormap(plot, mono) {
 
 /** Forget a column's pinned marker/dash (column deleted). */
 export function releaseSeriesAppearance(columnId) {
-	if (core.seriesShapes) delete core.seriesShapes[String(columnId)];
-	if (core.seriesDashes) delete core.seriesDashes[String(columnId)];
+	releaseAppearance(columnId);
 }
 
 /**
@@ -241,9 +207,12 @@ export function applyFigureAppearance(plot) {
 		// colour identity had already moved and colourForColumn returned null for every
 		// column, and it meant vary-markers kept claiming into a second, divergent map.
 		const colour = mono ? greyForIndex(i, data.length) : colId == null ? null : mappedColour(colId);
-		const shape =
-			vary && colId != null ? (mappedShape(colId) ?? shapeForColumn(colId, i)) : 'circle';
-		const dash = vary && colId != null ? (mappedDash(colId) ?? dashForColumn(colId, i)) : 'solid';
+		// Claim into the merged map for a column nothing has pinned yet — "apply to all" can
+		// run before the pinning effect has seen a newly wired series. Idempotent, and this is
+		// an event handler rather than a render, so writing here is safe.
+		if (vary && colId != null) pinAppearance(colId, i);
+		const shape = vary && colId != null ? (mappedShape(colId) ?? 'circle') : 'circle';
+		const dash = vary && colId != null ? (mappedDash(colId) ?? 'solid') : 'solid';
 
 		for (const s of appearanceTargets(datum)) {
 			if (colour && s.colour !== colour) {
@@ -271,5 +240,60 @@ export function applyFigureAppearance(plot) {
 export function applyAppearanceToAll(plots) {
 	let n = 0;
 	for (const plot of plots ?? []) n += applyFigureAppearance(plot);
+	return n;
+}
+
+/**
+ * What each pinned column resolves to right now, taken BEFORE a palette swap.
+ *
+ * @returns {Record<string, string>} columnId → hex
+ */
+export function pinnedColourSnapshot() {
+	const out = {};
+	for (const colId of Object.keys(core.seriesAppearance ?? {})) {
+		const hex = mappedColour(colId);
+		if (hex) out[colId] = hex;
+	}
+	return out;
+}
+
+/**
+ * Push a palette change through to colours that were resolved ONCE and stored.
+ *
+ * Most of a series resolves its colour on read now, so it follows the palette with no help.
+ * What does not is anything derived from that colour at construction — Box's `fillColour` is
+ * the live example. This reaches those.
+ *
+ * `before` is the discriminator: a stored colour still equal to its column's OLD resolved
+ * colour was following the palette and is updated; anything else was deliberately chosen and
+ * is left alone. Without that check a palette switch would overwrite hand-picked colours.
+ *
+ * @param {Record<string, string>} before from pinnedColourSnapshot(), taken pre-change
+ * @returns {number} how many values were repainted
+ */
+export function repaintPinnedSeries(before) {
+	if (!before) return 0;
+	let n = 0;
+	for (const plot of core.plots ?? []) {
+		for (const datum of plot?.plot?.data ?? []) {
+			const colId = seriesColumnId(datum);
+			if (colId == null) continue;
+			const was = before[colId];
+			const now = was ? mappedColour(colId) : null;
+			if (!was || !now || now === was) continue;
+			for (const style of appearanceTargets(datum)) {
+				if (style.colour === was) {
+					style.colour = now;
+					n++;
+				}
+				// Box's fill tracks its stroke, so move them together or a repainted box keeps
+				// its old fill.
+				if (style.fillColour === was) {
+					style.fillColour = now;
+					n++;
+				}
+			}
+		}
+	}
 	return n;
 }

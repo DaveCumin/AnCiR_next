@@ -6,12 +6,8 @@
 // appearance until asked.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { core, appState } from '$lib/core/core.svelte';
-import { colourForSeries } from './seriesColour.js';
 import { pinAppearance, mappedColour } from './appearanceIdentity.js';
 import {
-	DASH_ORDER,
-	shapeForColumn,
-	dashForColumn,
 	greyForIndex,
 	releaseSeriesAppearance,
 	applyFigureAppearance,
@@ -24,11 +20,6 @@ const PAL = ['#aa0000', '#00aa00', '#0000aa', '#aaaa00'];
 
 beforeEach(() => {
 	appState.appColours = [...PAL];
-	core.seriesColours = {};
-	core.seriesShapes = {};
-	core.seriesDashes = {};
-	// The merged identity map is what applyFigureAppearance reads now; the three above are
-	// only still cleared so the legacy-map helpers under test start from a known state.
 	core.seriesAppearance = {};
 	core.plots = [];
 });
@@ -46,38 +37,6 @@ function mkPlot(colIds, style = {}) {
 		}
 	};
 }
-
-describe('pinned shapes and dashes', () => {
-	it('claims a shape and recalls the same one', () => {
-		const first = shapeForColumn(7, 0);
-		expect(POINT_SHAPES).toContain(first);
-		expect(shapeForColumn(7, 3)).toBe(first);
-	});
-
-	it('gives different columns different shapes', () => {
-		expect(shapeForColumn(1, 0)).not.toBe(shapeForColumn(2, 0));
-	});
-
-	it('solid is the FIRST dash, so series one looks unchanged', () => {
-		// Deliberate: turning on varying markers must not restyle the first series.
-		expect(DASH_ORDER[0]).toBe('solid');
-		expect(dashForColumn(1, 0)).toBe('solid');
-	});
-
-	it('terminates when every shape is taken', () => {
-		for (let i = 0; i < POINT_SHAPES.length + 2; i++) {
-			expect(shapeForColumn(i, 0)).toBeTruthy();
-		}
-	});
-
-	it('release unpins both', () => {
-		shapeForColumn(7, 0);
-		dashForColumn(7, 0);
-		releaseSeriesAppearance(7);
-		expect(core.seriesShapes['7']).toBeUndefined();
-		expect(core.seriesDashes['7']).toBeUndefined();
-	});
-});
 
 describe('greyForIndex', () => {
 	it('spreads greys between a dark and a mid tone', () => {
@@ -102,8 +61,6 @@ describe('greyForIndex', () => {
 describe('applyFigureAppearance', () => {
 	it('does nothing while both flags are off', () => {
 		const plot = mkPlot([1, 2]);
-		colourForSeries(null, 1, 0);
-		colourForSeries(null, 2, 1);
 		applyFigureAppearance(plot);
 		expect(plot.plot.data[0].points.shape).toBe('circle');
 		expect(plot.plot.data[0].line.stroke).toBe('solid');
@@ -168,7 +125,6 @@ describe('applyFigureAppearance', () => {
 	it('leaves other figures alone (monochrome is per figure)', () => {
 		const a = mkPlot([1], { monochrome: true });
 		const b = mkPlot([1]);
-		colourForSeries(null, 1, 0);
 		applyFigureAppearance(a);
 		applyFigureAppearance(b);
 		expect(a.plot.data[0].points.colour).not.toBe(b.plot.data[0].points.colour);

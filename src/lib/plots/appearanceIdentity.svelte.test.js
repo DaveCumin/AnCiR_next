@@ -37,6 +37,8 @@ const PAL_B = ['#ff1111', '#11ff11', '#1111ff', '#ffff11'];
 beforeEach(() => {
 	appState.appColours = [...PAL_A];
 	core.seriesAppearance = {};
+	// Slot claiming only counts records whose column still exists.
+	core.data = Array.from({ length: 20 }, (_, id) => ({ id }));
 });
 
 describe('wiring order (the reported bug)', () => {
@@ -322,5 +324,40 @@ describe('appearanceRows', () => {
 	it('tolerates an empty or junk map', () => {
 		expect(appearanceRows(null, () => 'x')).toEqual([]);
 		expect(appearanceRows({ 1: null, 2: 'nope' }, () => 'x')).toEqual([]);
+	});
+});
+
+// Carried over from the map this replaced (v72.3). Nothing releases a record when its column
+// is deleted, so without a liveness check a dead record goes on holding its palette slot and
+// every later series starts further down the palette.
+describe('slots held by columns that no longer exist', () => {
+	const live = (...ids) => (core.data = ids.map((id) => ({ id })));
+
+	it('does not let a deleted column keep its slot', () => {
+		live(1);
+		pinAppearance(1, 0);
+		const first = mappedColour(1);
+		core.data = [];
+		live(2);
+		pinAppearance(2, 0);
+		expect(mappedColour(2)).toBe(first);
+	});
+
+	it('still gives two live columns different slots', () => {
+		live(1, 2);
+		pinAppearance(1, 0);
+		pinAppearance(2, 0);
+		expect(mappedColour(1)).not.toBe(mappedColour(2));
+	});
+
+	it('hands a returning column the colour it had', () => {
+		live(1);
+		pinAppearance(1, 0);
+		const had = mappedColour(1);
+		core.data = [];
+		live(2);
+		pinAppearance(2, 0);
+		live(1, 2);
+		expect(mappedColour(1)).toBe(had);
 	});
 });

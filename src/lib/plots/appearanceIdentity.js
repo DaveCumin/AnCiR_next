@@ -138,9 +138,9 @@ export function normaliseRecord(entry) {
  * Fold the three v72.1 maps into one.
  *
  * @param {any} appearance an already-merged map (newer sessions)
- * @param {any} colours    legacy core.seriesColours
- * @param {any} shapes     legacy core.seriesShapes
- * @param {any} dashes     legacy core.seriesDashes
+ * @param {any} colours    a v72.1 session's seriesColours (read from the FILE; not in core)
+ * @param {any} shapes     a v72.1 session's seriesShapes
+ * @param {any} dashes     a v72.1 session's seriesDashes
  */
 export function migrateAppearanceMaps(appearance, colours, shapes, dashes) {
 	/** @type {Record<string, any>} */
@@ -201,9 +201,22 @@ function nextUnclaimed(order, claimed, startIndex) {
 	return order[i];
 }
 
+/**
+ * Slots claimed by a column that STILL EXISTS.
+ *
+ * The liveness check is the point, and it carries over from the map this replaced (v72.3).
+ * Nothing releases a record when its column goes, so a deleted column went on holding its
+ * palette slot for the rest of the session and every later series started further down the
+ * palette — a fresh set of figures came out mid-palette instead of at colour 0.
+ *
+ * Records are IGNORED here, not deleted: a column can come back (undo, re-import) and should
+ * find the colour it had rather than be reassigned.
+ */
 function claimedSlots() {
+	const live = new Set((core.data ?? []).map((c) => String(c.id)));
 	const taken = new Set();
-	for (const entry of Object.values(appearanceMap())) {
+	for (const [colId, entry] of Object.entries(appearanceMap())) {
+		if (!live.has(String(colId))) continue;
 		const slot = normaliseRecord(entry)?.colour?.slot;
 		if (slot != null) taken.add(slot);
 	}

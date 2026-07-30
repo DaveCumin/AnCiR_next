@@ -4,10 +4,7 @@
 	import { loadPythonExporter, loadRExporter } from '$lib/utils/pythonExportLoader.js';
 	import { checkRSupport, explainRSupport } from '$lib/utils/rExportSupport.js';
 	import { normaliseFigureStyle, transitionalFigureStyle } from '$lib/plots/figureStyle.js';
-	import {
-		migrateSeriesColourMap,
-		migrateCategoryColourMap
-	} from '$lib/plots/seriesColour.js';
+	import { migrateCategoryColourMap } from '$lib/plots/seriesColour.js';
 	import { migrateAppearanceMaps } from '$lib/plots/appearanceIdentity.js';
 	export function exportJson() {
 		try {
@@ -119,7 +116,10 @@
 				document.body.removeChild(a);
 				URL.revokeObjectURL(url);
 			}, 10);
-			addNotification('Exported session.R — run it with Rscript (needs no extra packages).', 'info');
+			addNotification(
+				'Exported session.R — run it with Rscript (needs no extra packages).',
+				'info'
+			);
 		} catch (error) {
 			console.error('Failed to export R:', error?.message ?? error);
 			addNotification('Error exporting R: ' + (error?.message ?? error));
@@ -183,20 +183,11 @@
 			jsonData.seriesShapes,
 			jsonData.seriesDashes
 		);
-		core.seriesColours = migrateSeriesColourMap(jsonData.seriesColours);
+		// The three v72.1 maps are READ above, to migrate, and then dropped: they are no
+		// longer part of core. Keeping them would mean two sources of truth for what a
+		// column looks like, which is exactly how monochrome came to be one-way.
 		// Per-category colours, same shape and same reason to migrate rather than spread.
 		core.categoryColours = migrateCategoryColourMap(jsonData.categoryColours);
-		// Pinned marker shapes and dashes. Plain string maps, so a shallow copy is
-		// enough; absent in any session saved before they existed, which simply claim
-		// fresh pins the first time a figure varies its markers.
-		core.seriesShapes =
-			jsonData.seriesShapes && typeof jsonData.seriesShapes === 'object'
-				? { ...jsonData.seriesShapes }
-				: {};
-		core.seriesDashes =
-			jsonData.seriesDashes && typeof jsonData.seriesDashes === 'object'
-				? { ...jsonData.seriesDashes }
-				: {};
 		// Figure style template. Normalised rather than spread: a session file is data
 		// from outside the app, and one saved by an older version is missing whatever
 		// fields did not exist yet. normaliseFigureStyle fills those from the registry

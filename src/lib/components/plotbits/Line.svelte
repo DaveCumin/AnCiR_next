@@ -1,7 +1,7 @@
 <script module>
 	import { line } from 'd3-shape';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { colourForSeries, seriesColumnId } from '$lib/plots/seriesColour.js';
+	import { seriesColumnId } from '$lib/plots/seriesColour.js';
 	import { resolveColour } from '$lib/plots/appearanceIdentity.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';

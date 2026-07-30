@@ -50,32 +50,18 @@ export const core = $state({
 	// port; dragging a wire from any column output to that port attaches the
 	// process to that column (moves it out of this list into col.processes).
 	orphanProcesses: [],
-	// seriesColours — one colour per COLUMN, `{ [columnId]: '#rrggbb' }`, so the same
-	// data is drawn the same colour in every plot that shows it. Series colour used to
-	// come from a series' position in its own plot, so nothing recorded that two series
-	// in different plots were the same thing. Keyed on the column because after a
-	// Long-to-wide each subject IS its own column, which makes column identity the
-	// identity the user means, with no labelling step. See plots/seriesColour.js.
-	seriesColours: {},
-	// categoryColours — one colour per CATEGORY LABEL, the sibling of seriesColours
-	// for categorical plots. A boxplot's boxes come from unique VALUES of an x column,
-	// and one y column split across three categories is ONE series, so the
-	// column-keyed map above resolves all three boxes to a single colour and cannot
-	// express "control is always grey, treatment always red". There is no column per
-	// category to key on, so here the label IS the identity. Same { slot } | { hex }
-	// shape. See plots/seriesColour.js.
+	// categoryColours — one colour per CATEGORY LABEL. A boxplot's boxes come from unique
+	// VALUES of an x column, and one y column split across three categories is ONE series, so
+	// a column-keyed map resolves all three boxes to a single colour and cannot express
+	// "control is always grey, treatment always red". There is no column per category to key
+	// on, so here the label IS the identity. See plots/seriesColour.js.
 	categoryColours: {},
-	// seriesShapes / seriesDashes — one marker shape and one dash pattern per COLUMN,
-	// the redundant channels that survive a greyscale print and a colourblind reader.
-	// Same pinning principle as seriesColours: claimed lazily, then STICKY, so toggling
-	// "vary markers" off and back on returns the same shapes rather than reshuffling.
-	// Plain string values ('triangle', '6 3'). See plots/seriesAppearance.js.
-	// seriesAppearance — ONE record per column: { colour, shape, dash, edited }.
-	// Supersedes the three maps below, which are still read on import so a v72.1
-	// session loads. See plots/appearanceIdentity.js for the precedence chain.
+	// seriesAppearance — ONE record per column: { colour, shape, dash, edited }. The whole of
+	// "what this data looks like", in one place. It replaced three parallel maps
+	// (seriesColours / seriesShapes / seriesDashes), which are still READ from a saved session
+	// so a v72.1 file loads, and then dropped — two sources of truth for a column's colour is
+	// how monochrome came to be one-way. See plots/appearanceIdentity.js.
 	seriesAppearance: {},
-	seriesShapes: {},
-	seriesDashes: {},
 	// plotColormaps — the colour map a heatmap-style plot (CWT, CorrelationHeatmap,
 	// PairsPlot, Actogram in heatmap mode) had before monochrome switched it to greys,
 	// keyed by plot id. Remembered so turning monochrome off restores the user's own
@@ -94,7 +80,7 @@ export const core = $state({
 	// Session-scoped so a paper's figures travel with the session that produced
 	// them. Serialised automatically by outputCoreAsJson (which stringifies core
 	// wholesale); the import side must reset and re-normalise it explicitly, the
-	// same as seriesColours.
+	// same as seriesAppearance.
 	figureStyle: transitionalFigureStyle(),
 	// nodeLayout — workflow-canvas layout snapshot keyed by canvas node id
 	// (`data_<colId>`, `process_<id>`, `tableprocess_<id>`, `plot_<id>`, group/
@@ -444,7 +430,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.72.6',
+	version: 'β.72.7',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),
