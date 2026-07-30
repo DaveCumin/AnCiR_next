@@ -12,6 +12,7 @@
 	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
 	import { applyStyleToAll, applyFigureWidthToAll } from '$lib/plots/figureStyle.js';
 	import { clearSeriesColourOverrides } from '$lib/plots/appearanceIdentity.js';
+	import AppearanceMapEditor from '$lib/components/inputs/AppearanceMapEditor.svelte';
 	import { applyAppearanceToAll } from '$lib/plots/seriesAppearance.js';
 	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
 	import { privacy, setEphemeral, clearLocalData } from '$lib/core/localData.svelte.js';
@@ -145,6 +146,13 @@
 			}}
 			title="Figure defaults"
 		/>
+
+		<div class="div-line"></div>
+
+		<!-- The identity map, made visible. Session-scoped like the template above, and
+		     the reason it sits here rather than in a plot's panel: it governs every
+		     figure, not one. -->
+		<AppearanceMapEditor />
 
 		<div class="div-line"></div>
 

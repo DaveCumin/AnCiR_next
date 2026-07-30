@@ -69,8 +69,23 @@ export function paletteIndexOf(hex) {
  * Accepts the three legacy forms as well, so a v72.1 session loads: a bare hex
  * string, `{ slot }` and `{ hex }` all came from `seriesColours`.
  */
+/**
+ * Whether a stored string is plausibly a colour.
+ *
+ * The legacy form was a bare hex string, so `normaliseRecord` accepts strings — but
+ * it accepted ANY non-empty one, which turned a corrupt or hand-edited value into
+ * `{ colour: { hex: 'nope' } }` and then painted a series with it. 3/4/6/8 hex digits
+ * covers the palettes (some carry an alpha pair) plus rgb()/rgba() and named colours
+ * the ColourPicker can emit.
+ */
+function looksLikeColour(v) {
+	if (typeof v !== 'string' || !v) return false;
+	if (/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v)) return true;
+	return /^(rgb|hsl)a?\(/i.test(v);
+}
+
 export function normaliseRecord(entry) {
-	if (typeof entry === 'string' && entry) {
+	if (typeof entry === 'string' && looksLikeColour(entry)) {
 		const slot = paletteIndexOf(entry);
 		return slot >= 0 ? { colour: { slot } } : { colour: { hex: entry } };
 	}
@@ -81,7 +96,7 @@ export function normaliseRecord(entry) {
 	// auto), so an unusable colour is dropped rather than failing the whole record.
 	const c = entry.colour ?? entry;
 	if (Number.isInteger(c?.slot) && c.slot >= 0) out.colour = { slot: c.slot };
-	else if (typeof c?.hex === 'string' && c.hex) out.colour = { hex: c.hex };
+	else if (looksLikeColour(c?.hex)) out.colour = { hex: c.hex };
 
 	if (typeof entry.shape === 'string' && POINT_SHAPES.includes(entry.shape)) {
 		out.shape = entry.shape;
@@ -333,4 +348,41 @@ export function clearSeriesColourOverrides(plots) {
 		}
 	}
 	return n;
+}
+
+/** Human-readable labels for the dash patterns, parallel to DASH_ORDER. */
+export const DASH_LABELS = ['Solid', 'Dashed', 'Dotted', 'Dash-dot', 'Fine dots'];
+
+/**
+ * The rows the appearance editor shows: one per column that has a record.
+ *
+ * After the pinning effect has run, that is every plotted column — which is what
+ * makes the editor a view of "the data this session draws" rather than a list of
+ * every column that has ever existed.
+ *
+ * Pure over its arguments so it can be tested without a session: `nameFor` is
+ * injected rather than reaching for getColumnById.
+ *
+ * @param {Record<string, any>} map core.seriesAppearance
+ * @param {(id: number) => string} nameFor
+ */
+export function appearanceRows(map, nameFor) {
+	const rows = [];
+	for (const key of Object.keys(map ?? {})) {
+		const record = normaliseRecord(map[key]);
+		if (!record) continue;
+		const id = Number(key);
+		rows.push({
+			columnId: id,
+			// A column can be deleted while its record lingers; showing the id keeps the
+			// row identifiable and resettable instead of blank.
+			name: nameFor(id) || `column ${key}`,
+			colour: record.colour?.hex ?? null,
+			slot: record.colour?.slot ?? null,
+			shape: record.shape ?? 'circle',
+			dash: record.dash ?? '',
+			edited: record.edited === true
+		});
+	}
+	return rows.sort((a, b) => a.name.localeCompare(b.name));
 }

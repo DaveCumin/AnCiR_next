@@ -26,7 +26,8 @@ import {
 	resolveColour,
 	resolveShape,
 	resolveDash,
-	clearSeriesColourOverrides
+	clearSeriesColourOverrides,
+	appearanceRows
 } from './appearanceIdentity.js';
 import { POINT_SHAPES } from '$lib/components/plotbits/pointShapes.js';
 
@@ -260,5 +261,66 @@ describe('clearSeriesColourOverrides', () => {
 	it('tolerates junk without throwing', () => {
 		expect(clearSeriesColourOverrides(null)).toBe(0);
 		expect(clearSeriesColourOverrides([null, {}, { plot: {} }])).toBe(0);
+	});
+});
+
+// Slice 3: the rows the editor shows.
+describe('appearanceRows', () => {
+	it('one row per record, with the resolved values', () => {
+		pinAppearance(5, 0);
+		const rows = appearanceRows(core.seriesAppearance, () => 'hive A');
+		expect(rows).toHaveLength(1);
+		expect(rows[0].columnId).toBe(5);
+		expect(rows[0].name).toBe('hive A');
+		expect(POINT_SHAPES).toContain(rows[0].shape);
+		expect(DASH_ORDER).toContain(rows[0].dash);
+		expect(rows[0].edited).toBe(false);
+	});
+
+	it('marks an edited record and keeps its hex', () => {
+		setEditedAppearance(5, { colour: { hex: '#ff00ff' } });
+		const [row] = appearanceRows(core.seriesAppearance, () => 'x');
+		expect(row.edited).toBe(true);
+		expect(row.colour).toBe('#ff00ff');
+	});
+
+	it('still lists a column that no longer exists, so the row can be reset', () => {
+		// A record can outlive its column. A blank row would be unidentifiable and the
+		// stale entry unreachable.
+		pinAppearance(42, 0);
+		const [row] = appearanceRows(core.seriesAppearance, () => '');
+		expect(row.name).toContain('42');
+	});
+
+	it('sorts by name so rows do not jump around as columns are added', () => {
+		setEditedAppearance(1, { colour: { hex: '#111111' } });
+		setEditedAppearance(2, { colour: { hex: '#222222' } });
+		const names = { 1: 'zebra', 2: 'alpha' };
+		expect(appearanceRows(core.seriesAppearance, (id) => names[id]).map((r) => r.name)).toEqual([
+			'alpha',
+			'zebra'
+		]);
+	});
+
+	it('an edit MERGES rather than replacing the record', () => {
+		// Setting a shape must not wipe the colour, or editing one channel would silently
+		// reset the others.
+		pinAppearance(5, 2);
+		const slotBefore = recordFor(5).colour.slot;
+		setEditedAppearance(5, { shape: 'star' });
+		expect(recordFor(5).shape).toBe('star');
+		expect(recordFor(5).colour.slot).toBe(slotBefore);
+	});
+
+	it('reset removes the record so pinning re-derives it', () => {
+		setEditedAppearance(5, { colour: { hex: '#ff00ff' } });
+		releaseAppearance(5);
+		expect(appearanceRows(core.seriesAppearance, () => 'x')).toHaveLength(0);
+		expect(pinAppearance(5, 0)).toBe(true);
+	});
+
+	it('tolerates an empty or junk map', () => {
+		expect(appearanceRows(null, () => 'x')).toEqual([]);
+		expect(appearanceRows({ 1: null, 2: 'nope' }, () => 'x')).toEqual([]);
 	});
 });
