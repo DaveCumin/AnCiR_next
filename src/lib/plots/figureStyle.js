@@ -180,7 +180,12 @@ export function transitionalFigureStyle() {
 	return newFigureStyle({
 		fontSize: 'custom',
 		fontSizePt: TRANSITIONAL_PT,
-		roleScale: { ...TRANSITIONAL_ROLE_SCALE }
+		roleScale: { ...TRANSITIONAL_ROLE_SCALE },
+		// 'custom' with no mm means "whatever size this figure already is", so loading a
+		// session does not resize anything. A named preset is an ACTION the user takes;
+		// see physicalWidthPx.
+		widthPreset: 'custom',
+		widthMm: null
 	});
 }
 
@@ -288,6 +293,66 @@ export function resolveStyle(style) {
 		backgroundColour:
 			typeof style?.backgroundColour === 'string' ? style.backgroundColour : 'transparent'
 	};
+}
+
+/**
+ * The width this style FIXES the figure to, in px, or null when it fixes nothing.
+ *
+ * This is the whole migration answer for physical sizing. A named preset (single /
+ * double column) is an instruction: "this figure is 85 mm wide", and the figure is
+ * resized to match. `custom` with no millimetres is the absence of an instruction:
+ * "whatever size it already is", so the figure keeps its pixels.
+ *
+ * That distinction is what avoids needing to know whether a plot was just created or
+ * loaded from a session. The alternative considered was deriving mm from each plot's
+ * pixel width at construction, which preserves appearance too but silently makes the
+ * template's width preset meaningless for new plots.
+ *
+ * Consequence worth stating: every existing session loads with `custom` (see
+ * transitionalFigureStyle), so nothing reflows until a preset is chosen.
+ */
+export function physicalWidthPx(style) {
+	if (style?.widthPreset === 'custom') {
+		const mm = style.widthMm;
+		if (!(typeof mm === 'number' && Number.isFinite(mm) && mm > 0)) return null;
+		return mm * PX_PER_MM;
+	}
+	const mm = WIDTH_PRESET_MM[style?.widthPreset];
+	return mm ? mm * PX_PER_MM : null;
+}
+
+/**
+ * Resize a figure to the width its style fixes, keeping its aspect ratio.
+ *
+ * Writes plot.width / plot.height, which is what every layout path already reads, so
+ * no layout code needs to know about millimetres. Height scales by the same factor:
+ * changing width alone would silently restretch the figure.
+ *
+ * Idempotent (a sub-pixel difference is not a change), and a no-op when the style
+ * fixes nothing.
+ *
+ * @param {{width?: number, height?: number, style?: Record<string, any>}} plot
+ * @returns {boolean} whether anything moved
+ */
+export function applyFigureWidth(plot) {
+	const target = physicalWidthPx(plot?.style);
+	if (target == null) return false;
+	const current = plot?.width;
+	if (!(typeof current === 'number' && current > 0)) return false;
+	if (Math.abs(current - target) < 0.5) return false;
+	const ratio = target / current;
+	plot.width = Math.round(target);
+	if (typeof plot.height === 'number' && plot.height > 0) {
+		plot.height = Math.round(plot.height * ratio);
+	}
+	return true;
+}
+
+/** Apply to every plot. Used by the template's "Apply to all". */
+export function applyFigureWidthToAll(plots) {
+	let n = 0;
+	for (const plot of plots ?? []) if (applyFigureWidth(plot)) n++;
+	return n;
 }
 
 /**

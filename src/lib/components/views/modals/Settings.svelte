@@ -10,7 +10,7 @@
 	import ColourPaletteSelect from '$lib/components/inputs/ColourPaletteSelect.svelte';
 	import { pinnedColourSnapshot, repaintPinnedSeries } from '$lib/plots/seriesColour.js';
 	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
-	import { applyStyleToAll } from '$lib/plots/figureStyle.js';
+	import { applyStyleToAll, applyFigureWidthToAll } from '$lib/plots/figureStyle.js';
 	import { applyAppearanceToAll } from '$lib/plots/seriesAppearance.js';
 	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
 	let { showModal = $bindable(false) } = $props();
@@ -105,6 +105,7 @@
 				// that already exist, so push those too or "Apply to all" would leave the
 				// two flags visibly ignored.
 				applyAppearanceToAll(core.plots);
+				applyFigureWidthToAll(core.plots);
 				return n;
 			}}
 			title="Figure defaults"

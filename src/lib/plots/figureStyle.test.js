@@ -15,7 +15,10 @@ import {
 	basePt,
 	widthMm,
 	resolveStyle,
-	exportScale
+	exportScale,
+	physicalWidthPx,
+	applyFigureWidth,
+	applyFigureWidthToAll
 } from './figureStyle.js';
 
 // THE RATCHET.
@@ -325,15 +328,22 @@ describe('transitionalFigureStyle', () => {
 		expect(Object.keys(transitionalFigureStyle()).sort()).toEqual([...FIGURE_STYLE_KEYS].sort());
 	});
 
-	it('leaves everything except type size at the registry default', () => {
-		// It is a TYPE SIZE stopgap only. If it started overriding width or DPI it
-		// would quietly hold back the rest of the feature.
+	it('overrides ONLY type size and width, nothing else', () => {
+		// Two jobs, both about not changing existing work:
+		//   - type size, so the legacy pixel sizes are reproduced exactly;
+		//   - width as 'custom' with no mm, so loading a session resizes nothing.
+		// Anything else drifting into here would quietly hold back the rest of the
+		// feature, so the exclusion list is deliberately explicit and short.
+		const LOAD_SAFE = new Set(['fontSize', 'fontSizePt', 'roleScale', 'widthPreset', 'widthMm']);
 		const t = transitionalFigureStyle();
 		const d = newFigureStyle();
 		for (const key of FIGURE_STYLE_KEYS) {
-			if (key === 'fontSize' || key === 'fontSizePt' || key === 'roleScale') continue;
+			if (LOAD_SAFE.has(key)) continue;
 			expect(t[key], key).toEqual(d[key]);
 		}
+		// And the registry default is still the publication one, so flipping the default
+		// later gives journal sizing without further edits.
+		expect(d.widthPreset).toBe('single');
 	});
 
 	it('differs from the journal step, which is the whole reason it exists', () => {
@@ -383,5 +393,70 @@ describe('transitional sizes for legend and sig bars', () => {
 		// `m` is the default and roleScale goes away, the legend matches the axis label.
 		const { sizes } = resolveStyle(newFigureStyle({ fontSize: 'm' }));
 		expect(sizes.legend).toBeCloseTo(sizes.axisLabel, 6);
+	});
+});
+
+// Slice 5: physical width becomes authoritative — but only when the style says so.
+//
+// The migration problem: making widthMm authoritative unconditionally would resize
+// every existing plot (transitional default 85 mm = 321 px; saved plots ~520 px). The
+// answer is that a named PRESET is an instruction and `custom` with no millimetres is
+// the absence of one, which avoids needing to know whether a plot was created or
+// loaded.
+describe('physicalWidthPx', () => {
+	it('a named preset fixes a width', () => {
+		expect(physicalWidthPx({ widthPreset: 'single' })).toBeCloseTo(WIDTH_PRESET_MM.single * PX_PER_MM, 6);
+		expect(physicalWidthPx({ widthPreset: 'double' })).toBeCloseTo(WIDTH_PRESET_MM.double * PX_PER_MM, 6);
+	});
+
+	it('custom with millimetres fixes that width', () => {
+		expect(physicalWidthPx({ widthPreset: 'custom', widthMm: 100 })).toBeCloseTo(100 * PX_PER_MM, 6);
+	});
+
+	it('custom with NO millimetres fixes nothing', () => {
+		// The load-safe state. Distinct from widthMm(), which falls back to single-column
+		// for its own arithmetic — relying on that here would resize every saved figure.
+		expect(physicalWidthPx({ widthPreset: 'custom', widthMm: null })).toBeNull();
+		expect(physicalWidthPx({ widthPreset: 'custom', widthMm: 0 })).toBeNull();
+		expect(physicalWidthPx(null)).toBeNull();
+	});
+
+	it('the shipped default fixes nothing, so loading a session cannot reflow it', () => {
+		expect(physicalWidthPx(transitionalFigureStyle())).toBeNull();
+	});
+});
+
+describe('applyFigureWidth', () => {
+	it('resizes to a preset and keeps the aspect ratio', () => {
+		const plot = { width: 520, height: 300, style: newFigureStyle({ widthPreset: 'single' }) };
+		expect(applyFigureWidth(plot)).toBe(true);
+		expect(plot.width).toBe(Math.round(WIDTH_PRESET_MM.single * PX_PER_MM));
+		// 321/520 of 300. Changing width alone would restretch the figure.
+		expect(plot.height).toBe(Math.round(300 * (plot.width / 520)));
+	});
+
+	it('leaves a figure alone when the style fixes nothing', () => {
+		const plot = { width: 520, height: 300, style: transitionalFigureStyle() };
+		expect(applyFigureWidth(plot)).toBe(false);
+		expect(plot.width).toBe(520);
+	});
+
+	it('is idempotent', () => {
+		const plot = { width: 520, height: 300, style: newFigureStyle({ widthPreset: 'single' }) };
+		applyFigureWidth(plot);
+		expect(applyFigureWidth(plot)).toBe(false);
+	});
+
+	it('tolerates a plot with no usable size', () => {
+		expect(applyFigureWidth({ width: 0, style: newFigureStyle({ widthPreset: 'single' }) })).toBe(false);
+		expect(applyFigureWidth(null)).toBe(false);
+		expect(applyFigureWidthToAll(null)).toBe(0);
+	});
+
+	it('applyFigureWidthToAll counts only the figures it moved', () => {
+		const fixed = { width: 520, height: 300, style: newFigureStyle({ widthPreset: 'double' }) };
+		const free = { width: 520, height: 300, style: transitionalFigureStyle() };
+		expect(applyFigureWidthToAll([fixed, free])).toBe(1);
+		expect(free.width).toBe(520);
 	});
 });

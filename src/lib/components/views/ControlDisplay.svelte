@@ -92,6 +92,7 @@
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
 	import { applyFigureAppearance } from '$lib/plots/seriesAppearance.js';
+	import { applyFigureWidth } from '$lib/plots/figureStyle.js';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
@@ -851,7 +852,10 @@
 				<FigureStyleControls
 					style={plot.style}
 					title="Figure"
-					onAppearanceChange={() => applyFigureAppearance(plot)}
+					onFigureChange={() => {
+						applyFigureAppearance(plot);
+						applyFigureWidth(plot);
+					}}
 				/>
 
 				<Plot theData={plot.plot} which="controls" />

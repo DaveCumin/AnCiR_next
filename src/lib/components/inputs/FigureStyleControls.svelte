@@ -19,7 +19,12 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
-	import { resolveStyle, WIDTH_PRESET_MM, BASE_PT } from '$lib/plots/figureStyle.js';
+	import {
+		resolveStyle,
+		physicalWidthPx,
+		WIDTH_PRESET_MM,
+		BASE_PT
+	} from '$lib/plots/figureStyle.js';
 
 	let {
 		style,
@@ -28,11 +33,12 @@
 		/** Called when that button is pressed. */
 		onApplyToAll = null,
 		/**
-		 * Called when a flag that needs pushing into existing series changes
-		 * (monochrome, varyMarkers). Those are resolved once into each series' own
-		 * state, so a toggle has to be applied rather than merely stored.
+		 * Called when a field changes that has to be PUSHED into the figure rather than
+		 * merely stored: monochrome and varyMarkers (resolved once into each series' own
+		 * state) and the width (which resizes the plot). The caller decides what that
+		 * means for one figure versus all of them.
 		 */
-		onAppearanceChange = null,
+		onFigureChange = null,
 		title = 'Figure'
 	} = $props();
 
@@ -63,6 +69,11 @@
 
 	/** One decimal, so the pt -> px relationship is readable without being noisy. */
 	const round1 = (n) => Math.round(n * 10) / 10;
+
+	// Whether the style actually FIXES a width. `custom` with no millimetres does not,
+	// and the readout must not claim a size it is not enforcing — resolveStyle falls
+	// back to single-column for its own arithmetic, which would read as a promise.
+	const fixedWidthPx = $derived(physicalWidthPx(style));
 </script>
 
 <div class="control-component">
@@ -107,6 +118,7 @@
 			<p>Figure width</p>
 			<AttributeSelect
 				bind:value={style.widthPreset}
+				onChange={() => onFigureChange?.()}
 				options={['single', 'double', 'custom']}
 				optionsDisplay={[
 					`Single column (${WIDTH_PRESET_MM.single} mm)`,
@@ -117,7 +129,13 @@
 		</div>
 		{#if style.widthPreset === 'custom'}
 			<ControlInput label="Width (mm)">
-				<NumberWithUnits bind:value={style.widthMm} min={1} max={500} step={1} />
+				<NumberWithUnits
+					bind:value={style.widthMm}
+					min={1}
+					max={500}
+					step={1}
+					onInput={() => onFigureChange?.()}
+				/>
 			</ControlInput>
 		{/if}
 	</div>
@@ -155,7 +173,7 @@
 			<input
 				type="checkbox"
 				bind:checked={style.varyMarkers}
-				onchange={() => onAppearanceChange?.()}
+				onchange={() => onFigureChange?.()}
 			/>
 			<p>Vary marker shape per series</p>
 		</div>
@@ -163,7 +181,7 @@
 			<input
 				type="checkbox"
 				bind:checked={style.monochrome}
-				onchange={() => onAppearanceChange?.()}
+				onchange={() => onFigureChange?.()}
 			/>
 			<p>Monochrome (print-safe)</p>
 		</div>
@@ -186,7 +204,11 @@
 	     instead of leaving the user to guess why 8.5 pt is not 8.5 px. -->
 	<div class="style-readout">
 		<p>
-			{round1(resolved.widthMm)} mm wide ({Math.round(resolved.widthPx)} px) ·
+			{#if fixedWidthPx == null}
+				Width follows the figure's own size ·
+			{:else}
+				{round1(resolved.widthMm)} mm wide ({Math.round(fixedWidthPx)} px) ·
+			{/if}
 			{round1(resolved.basePt)} pt base · axis {round1(resolved.sizes.axisLabel)} px, ticks
 			{round1(resolved.sizes.tick)} px, legend {round1(resolved.sizes.legend)} px
 		</p>
