@@ -43,8 +43,12 @@
 					seriesColumnId(parent),
 					parent.parentPlot.data.length
 				) ?? getPaletteColor(0);
-			this.fillColour =
-				dataIN?.fillColour ?? getPaletteColor(parent.parentPlot.data.length) ?? getPaletteColor(0);
+			// Fill follows the STROKE, which is already pinned to the column above. It used
+			// to be getPaletteColor(parent.parentPlot.data.length): positional, so it shifted
+			// as series were added and differed between plots showing the same data — exactly
+			// the bug the pinning was built to remove, missed in the fill. fill-opacity
+			// already separates fill from stroke visually, so they can share a colour.
+			this.fillColour = dataIN?.fillColour ?? this.colour ?? getPaletteColor(0);
 			this.fillOpacity = dataIN?.fillOpacity ?? 0.3;
 			this.strokeWidth = dataIN?.strokeWidth ?? 2;
 			this.stroke = dataIN?.stroke ?? 'solid';

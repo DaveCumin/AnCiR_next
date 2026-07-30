@@ -4,6 +4,7 @@
 	import { loadPythonExporter, loadRExporter } from '$lib/utils/pythonExportLoader.js';
 	import { checkRSupport, explainRSupport } from '$lib/utils/rExportSupport.js';
 	import { normaliseFigureStyle, transitionalFigureStyle } from '$lib/plots/figureStyle.js';
+	import { migrateSeriesColourMap } from '$lib/plots/seriesColour.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -163,10 +164,13 @@
 		// cannot inherit the previous session's colour for an unrelated column id, then
 		// restored below (absent in sessions saved before this existed, which simply
 		// claim fresh colours as their plots are constructed).
-		core.seriesColours =
-			jsonData.seriesColours && typeof jsonData.seriesColours === 'object'
-				? { ...jsonData.seriesColours }
-				: {};
+		// Migrated, not spread: entries used to be a plain '#rrggbb' and are now
+		// { slot } (follows the palette) or { hex } (locked). migrateSeriesColourMap
+		// converts a legacy hex to a slot only when that hex is actually in the active
+		// palette, and locks it otherwise — a hex it cannot place was either
+		// user-chosen or assigned under a different palette, and re-mapping it would
+		// change a saved figure's colours.
+		core.seriesColours = migrateSeriesColourMap(jsonData.seriesColours);
 		// Figure style template. Normalised rather than spread: a session file is data
 		// from outside the app, and one saved by an older version is missing whatever
 		// fields did not exist yet. normaliseFigureStyle fills those from the registry
