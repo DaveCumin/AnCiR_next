@@ -20,6 +20,13 @@
 		pushObj
 	} from '$lib/core/core.svelte.js';
 	import { untrack, tick } from 'svelte';
+	import { store } from '$lib/core/localData.svelte.js';
+	import {
+		encodeEnvelope,
+		parseEnvelope,
+		partitionEntries,
+		writeToSystemClipboard
+	} from '$lib/core/nodeClipboard.js';
 	import { reconcileOutputs } from '$lib/core/reconcileOutputs.js';
 	import { computeInterface, flattenMembers } from '$lib/core/composite.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
@@ -261,14 +268,21 @@
 			if (node.plotObj?.type === 'dataview') {
 				const srcId = node.plotObj?.plot?.sourcePlotId;
 				const fromId = srcId != null ? `plot_${srcId}` : null;
-				if (fromId && ids.has(fromId)) out.push({ fromId, toId: node.id, type: 'reference', fromPort: null, toPort: null });
+				if (fromId && ids.has(fromId))
+					out.push({ fromId, toId: node.id, type: 'reference', fromPort: null, toPort: null });
 			}
 			// Quick plot → its source node.
 			// A plot is either a Data View (sourcePlotId) or a quick plot (sourceNodeId), never both.
 			else if (node.plotObj?.sourceNodeId) {
 				const srcNode = node.plotObj.sourceNodeId;
 				if (ids.has(srcNode)) {
-					out.push({ fromId: srcNode, toId: node.id, type: 'reference', fromPort: null, toPort: null });
+					out.push({
+						fromId: srcNode,
+						toId: node.id,
+						type: 'reference',
+						fromPort: null,
+						toPort: null
+					});
 				}
 			}
 		}
@@ -394,8 +408,7 @@
 	/** Parse the localStorage layout cache into {positions, collapsedIds, sizes}. */
 	function loadStoredLayout() {
 		try {
-			const raw =
-				typeof localStorage !== 'undefined' && localStorage.getItem(NODE_POSITIONS_STORAGE_KEY);
+			const raw = typeof localStorage !== 'undefined' && store.getItem(NODE_POSITIONS_STORAGE_KEY);
 			if (!raw) return parseNodeLayout(null);
 			return parseNodeLayout(JSON.parse(raw));
 		} catch {
@@ -547,7 +560,7 @@
 		if (_pendingLayoutSnapshot == null) return;
 		try {
 			if (typeof localStorage !== 'undefined') {
-				localStorage.setItem(NODE_POSITIONS_STORAGE_KEY, JSON.stringify(_pendingLayoutSnapshot));
+				store.setItem(NODE_POSITIONS_STORAGE_KEY, JSON.stringify(_pendingLayoutSnapshot));
 			}
 		} catch {
 			/* private mode / quota — ignore */
@@ -1068,7 +1081,7 @@
 	let pathFocusEnabled = $state(
 		(() => {
 			try {
-				return localStorage?.getItem(PATH_FOCUS_KEY) === 'true';
+				return store.getItem(PATH_FOCUS_KEY) === 'true';
 			} catch {
 				return false;
 			}
@@ -1076,7 +1089,7 @@
 	);
 	$effect(() => {
 		try {
-			localStorage?.setItem(PATH_FOCUS_KEY, String(pathFocusEnabled));
+			store.setItem(PATH_FOCUS_KEY, String(pathFocusEnabled));
 		} catch {
 			/* private mode / quota — ignore */
 		}
@@ -1547,7 +1560,11 @@
 			}
 		}
 		// Ignore stray pointers that aren't the one driving the current single-finger gesture.
-		if (activePointerId != null && e.pointerId !== activePointerId && !activePointers.has(e.pointerId))
+		if (
+			activePointerId != null &&
+			e.pointerId !== activePointerId &&
+			!activePointers.has(e.pointerId)
+		)
 			return;
 		takeCaptureIfMoved(e);
 		mouseCanvas = toCanvasCoords(e.clientX, e.clientY);
@@ -3275,6 +3292,21 @@
 	// paste branch needs to recreate the node. Module-scoped (per workflow
 	// instance) so it survives ControlPanel re-renders.
 	let _clipboard = [];
+	// Handshake between the Cmd+V keydown and the browser's `paste` event: the keydown bumps
+	// the sequence, the paste handler stamps it, and the keydown's fallback timer only fires
+	// when the stamp never arrived. A counter rather than a timestamp so a slow frame can't
+	// make a handled paste look unhandled.
+	let _pasteKeySeq = 0;
+	let _pasteHandledSeq = -1;
+	// Which copy the SYSTEM clipboard currently represents.
+	//
+	// A copy that produces no config entries — a data column, or a group carrying columns —
+	// writes nothing to the system clipboard, so the envelope from some EARLIER copy is still
+	// sitting there. Without this the next paste would find that stale envelope and paste the
+	// last config node instead of what was just copied. Comparing generations makes "the most
+	// recent copy in THIS tab" win over a system clipboard this tab did not just write.
+	let _copySeq = 0;
+	let _envelopeSeq = -1;
 
 	// Dev-only diagnostic. Vite statically replaces import.meta.env.DEV with
 	// `false` in production builds, so this whole helper is dropped from the
@@ -3384,34 +3416,50 @@
 			return { ...base, type: 'note', text: node.noteObj.text ?? '' };
 		}
 		if (node.type === 'group' && node.groupObj) {
+			// A group is its contents. Copying one and getting an empty box back was the
+			// surprising part — the columns it had absorbed are what the user means by "this
+			// group". Carry them, which also makes a group with members a DATA-carrying node,
+			// so it stays in this tab like a bare data column does.
+			const columns = (node.groupObj.sourceColumnIds ?? [])
+				.map((cid) => snapshotColumnById(cid, { rename: false }))
+				.filter(Boolean);
 			return {
 				...base,
 				type: 'group',
 				name: node.groupObj.name,
 				width: node.groupObj.width,
-				height: node.groupObj.height
+				height: node.groupObj.height,
+				columns
 			};
 		}
 		if (node.type === 'data' && node.refId != null) {
-			// Skip TP-output columns — those are derived; copying them as
-			// standalone columns would orphan the data from its producer.
-			const col = core.data.find((c) => c.id === node.refId);
-			if (!col || typeof col.toJSON !== 'function') return null;
-			const isTPOutput = (core.tableProcesses ?? []).some((tp) =>
-				Object.values(tp.args?.out ?? {}).some((cid) => cid === col.id)
-			);
-			if (isTPOutput) return null;
-			const cloned = jsonClone(col.toJSON());
-			if (!cloned) return null;
-			delete cloned.id;
-			// Strip processes so the cloned column starts as a plain data
-			// carrier; the source column's processes carry stale ids that
-			// would collide on import.
-			cloned.processes = [];
-			cloned.name = `${cloned.name ?? 'column'} copy`;
-			return { ...base, type: 'data', columnData: cloned };
+			const columnData = snapshotColumnById(node.refId, { rename: true });
+			if (!columnData) return null;
+			return { ...base, type: 'data', columnData };
 		}
 		return null;
+	}
+
+	/** Clone one column for the clipboard, or null when it must not be copied.
+	 *  `rename` appends " copy" — wanted for a standalone paste, but not for the members of a
+	 *  copied group, where the point is that the group comes back looking the same. */
+	function snapshotColumnById(colId, { rename = true } = {}) {
+		// Skip TP-output columns — those are derived; copying them as standalone
+		// columns would orphan the data from its producer.
+		const col = core.data.find((c) => c.id === colId);
+		if (!col || typeof col.toJSON !== 'function') return null;
+		const isTPOutput = (core.tableProcesses ?? []).some((tp) =>
+			Object.values(tp.args?.out ?? {}).some((cid) => cid === col.id)
+		);
+		if (isTPOutput) return null;
+		const cloned = jsonClone(col.toJSON());
+		if (!cloned) return null;
+		delete cloned.id;
+		// Strip processes so the cloned column starts as a plain data carrier; the source
+		// column's processes carry stale ids that would collide on import.
+		cloned.processes = [];
+		if (rename) cloned.name = `${cloned.name ?? 'column'} copy`;
+		return cloned;
 	}
 
 	function copySelection() {
@@ -3449,6 +3497,29 @@
 			if (skipped.length > 0) {
 				console.warn('[canvas copy] some nodes skipped (not copyable):', skipped);
 			}
+			// Config nodes also go to the SYSTEM clipboard, which is what lets them be pasted
+			// into another tab. Data columns deliberately do not travel (see core/nodeClipboard.js),
+			// so say that plainly at the moment of copying rather than letting the user discover
+			// it as an empty column in the other tab.
+			const { config, local } = partitionEntries(snapshots);
+			const envelope = encodeEnvelope(snapshots);
+			const seq = ++_copySeq;
+			writeToSystemClipboard(envelope).then((wrote) => {
+				// Only claim the system clipboard when this copy actually wrote to it.
+				if (wrote) _envelopeSeq = seq;
+				const n = (arr) => `${arr.length} node${arr.length === 1 ? '' : 's'}`;
+				if (local.length > 0) {
+					addNotification(
+						`Copied ${n(snapshots)}. ${local.length} data column${local.length === 1 ? '' : 's'} ` +
+							`can only be pasted in this tab — data does not travel between tabs.`,
+						'warning'
+					);
+				} else if (wrote && config.length > 0) {
+					addNotification(`Copied ${n(config)}. You can paste into another AnCiR tab.`, 'info');
+				} else {
+					addNotification(`Copied ${n(snapshots)}. Paste in this tab.`, 'info');
+				}
+			});
 		} else {
 			console.warn(
 				'[canvas copy] nothing copyable in selection (TP-output data columns are skipped)'
@@ -3462,9 +3533,51 @@
 			console.warn('[canvas paste] clipboard is empty — nothing to paste');
 			return;
 		}
+		pasteEntries(_clipboard);
+	}
+
+	/**
+	 * The real `paste` event, which is the only way to read the system clipboard without a
+	 * permission prompt. Anything that is not an AnCiR envelope falls through to this tab's own
+	 * snapshots, so ordinary same-tab paste behaves exactly as before.
+	 */
+	function handlePaste(e) {
+		// Never hijack a paste aimed at a text field inside an expanded node panel.
+		if (isEditableTarget(e.target)) return;
+		_pasteHandledSeq = _pasteKeySeq; // claim this keystroke from the keydown fallback
+		const text = e.clipboardData?.getData('text/plain') ?? '';
+		const parsed = parseEnvelope(text);
+		// This tab copied something the system clipboard could not carry, so whatever envelope
+		// is on the clipboard predates that copy. Honour the more recent local intent.
+		if (_copySeq !== _envelopeSeq && _clipboard.length > 0) {
+			_dbg('paste: local copy is newer than the system clipboard — using this tab’s snapshots');
+			e.preventDefault();
+			pasteClipboard();
+			return;
+		}
+		if (parsed === null) {
+			// Not ours. Use whatever this tab copied, if anything.
+			if (_clipboard.length > 0) {
+				e.preventDefault();
+				pasteClipboard();
+			}
+			return;
+		}
+		e.preventDefault();
+		if (!parsed.ok) {
+			addNotification(parsed.reason, 'warning');
+			return;
+		}
+		_dbg('paste: envelope from another tab,', parsed.entries.length, 'entries');
+		pasteEntries(parsed.entries);
+	}
+
+	/** Create nodes from clipboard entries — either this tab's own snapshots or an envelope
+	 *  pasted from another tab. Both are the same shape by construction. */
+	function pasteEntries(entries) {
 		const PASTE_OFFSET = 40;
 		const newIds = new Set();
-		for (const entry of _clipboard) {
+		for (const entry of entries) {
 			const newPos = {
 				x: (entry.pos?.x ?? 80) + PASTE_OFFSET,
 				y: (entry.pos?.y ?? 80) + PASTE_OFFSET
@@ -3497,8 +3610,14 @@
 					if (g) {
 						if (entry.width) g.width = entry.width;
 						if (entry.height) g.height = entry.height;
+						// Recreate the absorbed columns and re-absorb them, so the pasted group
+						// arrives with its contents rather than as an empty box.
+						for (const columnData of entry.columns ?? []) {
+							const col = mutationService.addColumn(columnData);
+							if (col) g.sourceColumnIds.push(col.id);
+						}
 					}
-					_dbg('paste: createGroup →', id);
+					_dbg('paste: createGroup →', id, 'with', entry.columns?.length ?? 0, 'columns');
 					newCanvasId = id;
 				} else if (entry.type === 'data') {
 					const col = mutationService.addColumn(entry.columnData);
@@ -3521,7 +3640,13 @@
 		if (newIds.size === 0) {
 			console.warn(
 				'[canvas paste] nothing created. Clipboard entries:',
-				_clipboard.map((e) => e.type)
+				entries.map((e) => e.type)
+			);
+			// A node type the SOURCE build had and this one does not is the likely cause, and it is
+			// worth naming rather than leaving the paste to look like it did nothing.
+			addNotification(
+				`Nothing could be pasted (${entries.map((e) => e.tpType ?? e.processType ?? e.type).join(', ')}).`,
+				'warning'
 			);
 			return;
 		}
@@ -3702,18 +3827,22 @@
 			return;
 		}
 		if (mod && (e.key === 'v' || e.key === 'V')) {
-			_dbg('keydown: Cmd/Ctrl+V', {
-				editable: isEditableTarget(e.target),
-				clipboardLen: _clipboard.length,
-				target: e.target?.tagName
-			});
+			// Does NOT preventDefault: the browser's own `paste` event carries the system
+			// clipboard, and it only fires if the default action is allowed to run.
+			//
+			// But it cannot be RELIED on to fire — a headless/automated context, a locked-down
+			// browser policy or a focus state with no paste target all suppress it, and without
+			// this fallback Cmd+V would then do nothing at all, which would be a regression on
+			// same-tab paste. So: give the paste event a moment to claim the keystroke, and if
+			// it doesn't, use this tab's own snapshots.
 			if (isEditableTarget(e.target)) return;
-			if (_clipboard.length > 0) {
-				e.preventDefault();
+			const at = ++_pasteKeySeq;
+			setTimeout(() => {
+				if (_pasteHandledSeq === at) return; // the paste event got there first
+				if (_clipboard.length === 0) return;
+				_dbg('keydown: no paste event arrived — falling back to this tab’s clipboard');
 				pasteClipboard();
-			} else {
-				_dbg('keydown: Cmd/Ctrl+V ignored — clipboard empty');
-			}
+			}, 60);
 			return;
 		}
 		if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -3806,7 +3935,7 @@
 <!-- Window-level keydown so Cmd/Ctrl+C/V, Delete, Backspace, and Escape work
      without first clicking inside the canvas. handleKeyDown already guards
      against typing into inputs/textareas via isEditableTarget. -->
-<svelte:window onkeydown={handleKeyDown} />
+<svelte:window onkeydown={handleKeyDown} onpaste={handlePaste} />
 
 <div
 	class="workflow-editor"

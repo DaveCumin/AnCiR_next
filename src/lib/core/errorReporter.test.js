@@ -4,7 +4,14 @@
 // These tests are mostly about it surviving: no storage, a full quota, no network, a session
 // that won't serialise.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { reportError, saveCrashSnapshot, readCrashSnapshot, clearCrashSnapshot, CRASH_SNAPSHOT_KEY } from './errorReporter.js';
+import {
+	reportError,
+	saveCrashSnapshot,
+	readCrashSnapshot,
+	takeCrashSnapshot,
+	clearCrashSnapshot,
+	CRASH_SNAPSHOT_KEY
+} from './errorReporter.js';
 import { notifications } from './notifications.svelte.js';
 import { core } from './core.svelte.js';
 
@@ -12,6 +19,7 @@ let fetchCalls;
 beforeEach(() => {
 	notifications.list.length = 0;
 	localStorage.clear();
+	sessionStorage.clear();
 	core.data.length = 0;
 	core.plots.length = 0;
 	core.tableProcesses.length = 0;
@@ -37,7 +45,10 @@ afterEach(() => {
 describe('reportError', () => {
 	it('tells the user, saves the session, and reports it', () => {
 		core.data.push({ id: 0, name: 'time' });
-		reportError(new Error('boom-unique-1'), { source: 'render', context: 'rendering the actogram plot' });
+		reportError(new Error('boom-unique-1'), {
+			source: 'render',
+			context: 'rendering the actogram plot'
+		});
 
 		// 1. the user hears about it, and hears their work is safe
 		expect(notifications.list).toHaveLength(1);
@@ -97,9 +108,10 @@ describe('reportError', () => {
 	});
 
 	it('says so honestly when the session could NOT be saved', () => {
-		// Restored by hand: an instance spy on localStorage survives restoreAllMocks and would
-		// break every later test that stores anything.
-		const spy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+		// sessionStorage, not localStorage: that is where the snapshot lives now.
+		// Restored by hand — an instance spy survives restoreAllMocks and would break every
+		// later test that stores anything.
+		const spy = vi.spyOn(sessionStorage, 'setItem').mockImplementation(() => {
 			throw new Error('QuotaExceededError');
 		});
 		try {
@@ -142,7 +154,29 @@ describe('crash snapshot', () => {
 	});
 
 	it('survives a corrupt snapshot rather than throwing on read', () => {
-		localStorage.setItem(CRASH_SNAPSHOT_KEY, 'not json{');
+		sessionStorage.setItem(CRASH_SNAPSHOT_KEY, 'not json{');
 		expect(readCrashSnapshot()).toBeNull();
+	});
+
+	// The whole point of the move: a snapshot holds an entire session, imported data included,
+	// and localStorage kept it after the tab closed, on whatever machine the crash happened on.
+	it('parks the session in sessionStorage, never localStorage', () => {
+		core.data.push({ id: 0, name: 'time' });
+		expect(saveCrashSnapshot()).toBe(true);
+		expect(sessionStorage.getItem(CRASH_SNAPSHOT_KEY)).toBeTruthy();
+		expect(localStorage.getItem(CRASH_SNAPSHOT_KEY)).toBeNull();
+	});
+
+	it('takeCrashSnapshot hands the session back and leaves nothing behind', () => {
+		core.data.push({ id: 0, name: 'time' });
+		saveCrashSnapshot();
+		expect(takeCrashSnapshot()?.session?.data).toHaveLength(1);
+		expect(readCrashSnapshot()).toBeNull();
+	});
+
+	it('clearing also sweeps a snapshot left in localStorage by an older build', () => {
+		localStorage.setItem(CRASH_SNAPSHOT_KEY, JSON.stringify({ session: { data: [] } }));
+		clearCrashSnapshot();
+		expect(localStorage.getItem(CRASH_SNAPSHOT_KEY)).toBeNull();
 	});
 });

@@ -21,6 +21,28 @@ import { NL_URL, NL_CONFIGURED } from '$lib/utils/nlSession.js';
 /** Where a crashed session is parked. One slot: the latest crash is the one being debugged. */
 export const CRASH_SNAPSHOT_KEY = 'ancir:last-crash-session';
 
+/**
+ * sessionStorage, NOT localStorage — and this is a privacy decision, not a technical one.
+ *
+ * This slot holds a WHOLE session: every imported column, which for actigraphy is often
+ * identifiable in practice. In localStorage it outlived the tab, the browser restart and the
+ * user, sitting in the profile of whatever shared lab machine the crash happened on, with
+ * nothing in the app that ever deleted it.
+ *
+ * sessionStorage gives up nothing that matters here. It is scoped to the tab and cleared by the
+ * BROWSER when that tab closes — no unload handler, which could not be made reliable anyway —
+ * and a tab restored after a crash keeps its sessionStorage, which is the only case this
+ * snapshot exists for.
+ */
+function snapshotStore() {
+	if (typeof window === 'undefined') return null;
+	try {
+		return window.sessionStorage ?? null;
+	} catch {
+		return null;
+	}
+}
+
 // A broken render doesn't throw once — an effect retries, the boundary re-runs, and the same
 // error arrives dozens of times a second. Without this the user gets a wall of toasts and the
 // Worker gets a stampede, both describing one bug.
@@ -29,7 +51,8 @@ const REPEAT_WINDOW_MS = 30_000;
 let installed = false;
 
 /** Identify an error by what it IS, not when it happened, so repeats collapse. */
-const fingerprintOf = (message, stack) => `${message}\n${(stack ?? '').split('\n').slice(0, 3).join('\n')}`;
+const fingerprintOf = (message, stack) =>
+	`${message}\n${(stack ?? '').split('\n').slice(0, 3).join('\n')}`;
 
 function isRepeat(key) {
 	const now = Date.now();
@@ -43,16 +66,18 @@ function isRepeat(key) {
 /**
  * Park a copy of the session so a crash can't cost the user their work.
  *
- * localStorage rather than the network: it's THEIR data, it may be unpublished, and this is a
+ * Local storage rather than the network: it's THEIR data, it may be unpublished, and this is a
  * recovery aid, not telemetry. Quota is the interesting failure — a session carrying real
  * imported data can exceed it — so a failed save is reported honestly rather than pretended.
+ * See snapshotStore() above for why that local store is the tab-scoped one.
  *
  * @returns {boolean} whether a copy was actually written
  */
 export function saveCrashSnapshot() {
-	if (typeof localStorage === 'undefined') return false;
+	const s = snapshotStore();
+	if (!s) return false;
 	try {
-		localStorage.setItem(
+		s.setItem(
 			CRASH_SNAPSHOT_KEY,
 			JSON.stringify({ savedAt: new Date().toISOString(), session: JSON.parse(outputCoreAsJson()) })
 		);
@@ -66,17 +91,34 @@ export function saveCrashSnapshot() {
 
 /** The saved session from the last crash, or null. */
 export function readCrashSnapshot() {
-	if (typeof localStorage === 'undefined') return null;
+	const s = snapshotStore();
+	if (!s) return null;
 	try {
-		return JSON.parse(localStorage.getItem(CRASH_SNAPSHOT_KEY) ?? 'null');
+		return JSON.parse(s.getItem(CRASH_SNAPSHOT_KEY) ?? 'null');
 	} catch {
 		return null;
 	}
 }
 
+/**
+ * Read the snapshot and delete it in the same breath, for the recovery path.
+ *
+ * A recovered session is IN the app; leaving the copy behind means a second, invisible copy of
+ * the user's data persisting for no further benefit. Read-and-forget is the only access a
+ * recovery flow should need.
+ */
+export function takeCrashSnapshot() {
+	const snap = readCrashSnapshot();
+	clearCrashSnapshot();
+	return snap;
+}
+
 export function clearCrashSnapshot() {
 	try {
-		localStorage?.removeItem(CRASH_SNAPSHOT_KEY);
+		snapshotStore()?.removeItem(CRASH_SNAPSHOT_KEY);
+		// Also sweep the old localStorage slot: sessions crashed before this change left a full
+		// copy there that nothing else will ever delete.
+		if (typeof window !== 'undefined') window.localStorage?.removeItem(CRASH_SNAPSHOT_KEY);
 	} catch {
 		/* nothing to do */
 	}
@@ -90,7 +132,14 @@ export function clearCrashSnapshot() {
 function isLocalHost() {
 	if (typeof location === 'undefined') return false; // SSR / no DOM ⇒ not a user's browser
 	const h = location.hostname;
-	return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]' || h === '' || h.endsWith('.local');
+	return (
+		h === 'localhost' ||
+		h === '127.0.0.1' ||
+		h === '::1' ||
+		h === '[::1]' ||
+		h === '' ||
+		h.endsWith('.local')
+	);
 }
 
 /** Fire-and-forget to the Worker's /report. Never throws, never blocks, never waits. */
@@ -175,6 +224,15 @@ export function reportError(error, { source = 'unknown', context } = {}) {
 export function installErrorReporter() {
 	if (installed || typeof window === 'undefined') return;
 	installed = true;
+
+	// One-time sweep of the pre-sessionStorage slot. Anyone who crashed before this change has a
+	// whole session — imported data included — sitting in localStorage that nothing would ever
+	// remove. Moving the snapshot only helps future crashes; the old copies have to be collected.
+	try {
+		window.localStorage?.removeItem(CRASH_SNAPSHOT_KEY);
+	} catch {
+		/* private mode */
+	}
 
 	window.addEventListener('error', (e) => {
 		// Resource load failures (a missing image) also fire 'error' but carry no `error` object

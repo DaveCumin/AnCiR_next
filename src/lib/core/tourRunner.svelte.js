@@ -40,11 +40,13 @@ export function toggleLessons() {
 	tourState.pickerOpen = true;
 }
 
+import { store } from '$lib/core/localData.svelte.js';
+
 const DONE_KEY = 'ancir.tours.completed';
 
 export function completedSet() {
 	try {
-		return new Set(JSON.parse(localStorage.getItem(DONE_KEY) || '[]'));
+		return new Set(JSON.parse(store.getItem(DONE_KEY) || '[]'));
 	} catch {
 		return new Set();
 	}
@@ -55,7 +57,7 @@ function markCompleted(id) {
 	try {
 		const s = completedSet();
 		s.add(id);
-		localStorage.setItem(DONE_KEY, JSON.stringify([...s]));
+		store.setItem(DONE_KEY, JSON.stringify([...s]));
 	} catch {
 		/* private mode / quota — ignore */
 	}

@@ -16,6 +16,8 @@
 // index stays a few kB. Where there is no handle (Firefox/Safari today) the row degrades to
 // "re-select file", which is honest about what the browser will actually let us do.
 
+import { store, privacy } from '$lib/core/localData.svelte.js';
+
 const INDEX_KEY = 'ancir.recents.v1';
 const DB_NAME = 'ancir-recents';
 const DB_VERSION = 1;
@@ -39,7 +41,7 @@ export function loadRecents() {
 	if (!hasWindow()) return [];
 	let parsed = [];
 	try {
-		parsed = JSON.parse(window.localStorage.getItem(INDEX_KEY) ?? '[]');
+		parsed = JSON.parse(store.getItem(INDEX_KEY) ?? '[]');
 	} catch {
 		parsed = [];
 	}
@@ -55,7 +57,7 @@ function persist(items) {
 	recents.items = items;
 	if (!hasWindow()) return;
 	try {
-		window.localStorage.setItem(INDEX_KEY, JSON.stringify(items));
+		store.setItem(INDEX_KEY, JSON.stringify(items));
 	} catch {
 		// Quota or private-mode failure: the app must keep working without recents.
 	}
@@ -104,7 +106,7 @@ export async function clearRecents() {
 	persist([]);
 	if (hasWindow()) {
 		try {
-			window.localStorage.removeItem(INDEX_KEY);
+			store.removeItem(INDEX_KEY);
 		} catch {
 			/* ignore */
 		}
@@ -149,6 +151,9 @@ function tx(db, mode, fn) {
 }
 
 async function putHandle(id, handle) {
+	// A handle is not data, but it is file identity plus the capability to re-open that file.
+	// On a shared machine that is exactly what ephemeral mode is for, so don't write one.
+	if (privacy.ephemeral) return;
 	const db = await openDb();
 	if (!db) return;
 	await tx(db, 'readwrite', (s) => s.put({ handle }, id));

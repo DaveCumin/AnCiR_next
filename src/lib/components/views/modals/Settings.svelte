@@ -13,7 +13,39 @@
 	import { applyStyleToAll, applyFigureWidthToAll } from '$lib/plots/figureStyle.js';
 	import { applyAppearanceToAll } from '$lib/plots/seriesAppearance.js';
 	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
+	import { privacy, setEphemeral, clearLocalData } from '$lib/core/localData.svelte.js';
+	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { loadRecents } from '$lib/start/recentSessions.svelte.js';
 	let { showModal = $bindable(false) } = $props();
+
+	// --- Privacy -------------------------------------------------------------
+	let clearing = $state(false);
+
+	async function toggleEphemeral(on) {
+		await setEphemeral(on);
+		loadRecents(); // the list on the start screen must reflect what is actually stored now
+		addNotification(
+			on
+				? 'Ephemeral mode on. Nothing is written to this browser, and what was there has been cleared.'
+				: 'Ephemeral mode off. Recent sessions will be remembered on this browser again.',
+			'info'
+		);
+	}
+
+	async function clearNow() {
+		clearing = true;
+		try {
+			const { keys } = await clearLocalData();
+			loadRecents();
+			// Report the count rather than a bare "done": a number is checkable, and zero is a
+			// meaningful answer the user is entitled to see.
+			addNotification(
+				`Cleared ${keys} stored item${keys === 1 ? '' : 's'} and the saved file handles.`
+			);
+		} finally {
+			clearing = false;
+		}
+	}
 
 	// Build the IANA zone list once on first render. `supportedValuesOf` is in
 	// every modern browser; if it's missing we fall back to UTC + browser-local
@@ -162,6 +194,32 @@
 		<div class="div-line"></div>
 
 		<div class="control-component">
+			<div class="control-component-title"><p>Privacy</p></div>
+			<label class="privacy-row">
+				<input
+					type="checkbox"
+					checked={privacy.ephemeral}
+					onchange={(e) => toggleEphemeral(e.currentTarget.checked)}
+				/>
+				<span>Ephemeral mode (shared or clinic machine)</span>
+			</label>
+			<p class="privacy-note">
+				Keeps everything in the tab: no recent-session list, no saved file handles, nothing left in
+				this browser once the tab is closed. Your data itself is never uploaded in either mode; this
+				is about what stays behind on the machine.
+			</p>
+			<button class="export-py-btn" type="button" disabled={clearing} onclick={clearNow}>
+				{clearing ? 'Clearing…' : 'Clear data stored in this browser'}
+			</button>
+			<p class="privacy-note">
+				Removes the recent-session list, the saved file handles and the remembered canvas layout.
+				Your saved session files on disk are untouched.
+			</p>
+		</div>
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
 			<div class="control-component-title">
 				<p>Experimental <span class="exp-badge">experimental</span></p>
 			</div>
@@ -173,20 +231,29 @@
 				<code>numpy</code>, <code>pandas</code> and <code>scipy</code>. Some processes may not yet
 				be implemented in the Python runtime — the script prints a warning when run.
 			</p>
-			<button class="export-py-btn" type="button" onclick={exportR}>
-				Export session as R
-			</button>
+			<button class="export-py-btn" type="button" onclick={exportR}> Export session as R </button>
 			<p class="experimental-note">
 				Downloads a standalone R script that reproduces this session's analyses. Needs
-				<strong>no extra packages</strong> — base R only. The R runtime does not cover every
-				node yet, so a session using one it lacks is refused here, naming the node, rather
-				than exported as a script that would stop partway.
+				<strong>no extra packages</strong> — base R only. The R runtime does not cover every node yet,
+				so a session using one it lacks is refused here, naming the node, rather than exported as a script
+				that would stop partway.
 			</p>
 		</div>
 	{/snippet}
 </Modal>
 
 <style>
+	.privacy-row {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		cursor: pointer;
+	}
+	.privacy-note {
+		color: var(--color-text-muted);
+		font-size: 0.85rem;
+		margin: var(--space-1) 0 var(--space-2);
+	}
 	.settings-heading h2 {
 		margin: 0 0 var(--space-5);
 		padding-bottom: var(--space-3);
