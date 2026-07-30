@@ -39,6 +39,16 @@
 		 * means for one figure versus all of them.
 		 */
 		onFigureChange = null,
+		/**
+		 * Optional extra controls rendered at the top of the section.
+		 *
+		 * Exists for the colour palette, which belongs with these defaults from the
+		 * user's point of view but is NOT a figure-style field: it lives on appState and
+		 * is app-wide, so a copy of it on every plot's panel would be a control that
+		 * silently changed all the others. Passing it in from the template caller keeps
+		 * it in one place without pretending it is per-figure.
+		 */
+		topControls = null,
 		title = 'Figure'
 	} = $props();
 
@@ -80,6 +90,10 @@
 	<div class="control-component-title">
 		<p>{title}</p>
 	</div>
+
+	{#if topControls}
+		{@render topControls()}
+	{/if}
 
 	<div class="control-input-horizontal">
 		<div class="control-input">

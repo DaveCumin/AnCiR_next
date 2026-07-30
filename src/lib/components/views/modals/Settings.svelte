@@ -83,20 +83,21 @@
 	{#snippet children()}
 		<!-- Reuses the control-panel patterns (control-component / control-input /
 		     div-line) so the modal matches the rest of the app. -->
-		<div class="control-component">
-			<div class="control-component-title"><p>Appearance</p></div>
+		<!-- The session TEMPLATE. Copied into each new plot; existing plots are only
+		     changed by the button inside these controls. FigureStyleControls already
+		     renders its own control-component wrapper, matching the sections below.
+		     The palette rides along as a top control: it reads as one of these defaults,
+		     but it is app-wide state rather than a per-figure field, so it is passed in
+		     here rather than living in the component. -->
+		{#snippet paletteControl()}
 			<div class="control-input">
 				<p>Default colour palette</p>
 				<ColourPaletteSelect onSelect={(palette) => changeDefaultPalette(palette)} />
 			</div>
-		</div>
+		{/snippet}
 
-		<div class="div-line"></div>
-
-		<!-- The session TEMPLATE. Copied into each new plot; existing plots are only
-		     changed by the button inside these controls. FigureStyleControls already
-		     renders its own control-component wrapper, matching the sections above. -->
 		<FigureStyleControls
+			topControls={paletteControl}
 			style={core.figureStyle}
 			showApplyToAll={true}
 			onApplyToAll={() => {
