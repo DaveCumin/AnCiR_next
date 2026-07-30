@@ -8,6 +8,7 @@
 		migrateSeriesColourMap,
 		migrateCategoryColourMap
 	} from '$lib/plots/seriesColour.js';
+	import { migrateAppearanceMaps } from '$lib/plots/appearanceIdentity.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -173,6 +174,15 @@
 		// palette, and locks it otherwise — a hex it cannot place was either
 		// user-chosen or assigned under a different palette, and re-mapping it would
 		// change a saved figure's colours.
+		// One merged appearance record per column, folding the three v72.1 maps. The
+		// legacy fields are still read so a v72.1 session loads, but are no longer
+		// written; see plots/appearanceIdentity.js.
+		core.seriesAppearance = migrateAppearanceMaps(
+			jsonData.seriesAppearance,
+			jsonData.seriesColours,
+			jsonData.seriesShapes,
+			jsonData.seriesDashes
+		);
 		core.seriesColours = migrateSeriesColourMap(jsonData.seriesColours);
 		// Per-category colours, same shape and same reason to migrate rather than spread.
 		core.categoryColours = migrateCategoryColourMap(jsonData.categoryColours);

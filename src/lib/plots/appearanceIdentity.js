@@ -267,3 +267,26 @@ export function resolveDash(explicit, columnId, varyMarkers = false) {
 	if (!varyMarkers) return '';
 	return mappedDash(columnId) ?? '';
 }
+
+/**
+ * Pin every wired-but-unpinned column across all figures.
+ *
+ * Called from ONE `$effect` in the app shell, never from a render. Pure over its
+ * argument and idempotent, so a repeating effect settles instead of thrashing.
+ *
+ * @param {Array<any>} plots core.plots
+ * @returns {number} how many columns were newly pinned
+ */
+export function pinAllSeriesAppearance(plots) {
+	let n = 0;
+	for (const plot of plots ?? []) {
+		const data = plot?.plot?.data;
+		if (!Array.isArray(data)) continue;
+		data.forEach((datum, i) => {
+			const ref = datum?.y?.refId ?? datum?.column?.refId ?? null;
+			if (typeof ref !== 'number' || ref < 0) return;
+			if (pinAppearance(ref, i)) n++;
+		});
+	}
+	return n;
+}

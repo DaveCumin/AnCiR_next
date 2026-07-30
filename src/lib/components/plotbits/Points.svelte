@@ -1,6 +1,7 @@
 <script module>
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import { colourForSeries, seriesColumnId } from '$lib/plots/seriesColour.js';
+	import { resolveColour } from '$lib/plots/appearanceIdentity.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -17,7 +18,23 @@
 			shape: { input: 'select', options: POINT_SHAPES, label: 'Shape', group: 'Points' },
 			draw: { label: 'Show', group: 'Points' }
 		};
-		colour = $state(getPaletteColor(0));
+		// Resolved at READ time, not stored. A series is constructed with y.refId === -1
+		// and wired afterwards, so resolving in the constructor pinned nothing and the
+		// identity map never engaged on the interactive path. `#explicitColour` is null
+		// while the colour is automatic, which is also what toJSON writes.
+		#explicitColour = $state(null);
+
+		get colour() {
+			const parent = this.parentData;
+			const ref = parent?.y?.refId ?? parent?.column?.refId ?? null;
+			const colId = typeof ref === 'number' && ref >= 0 ? ref : null;
+			const siblings = parent?.parentPlot?.data;
+			const index = Array.isArray(siblings) ? Math.max(0, siblings.indexOf(parent)) : 0;
+			return resolveColour(this.#explicitColour, colId, index);
+		}
+		set colour(v) {
+			this.#explicitColour = v;
+		}
 		radius = $state(4);
 		shape = $state('circle');
 		draw = $state(true);
@@ -31,12 +48,20 @@
 			// Colour follows the COLUMN, not this series' position in this plot, so the
 			// same hive is the same colour in every plot that draws it. An explicit
 			// colour (a saved session, or a user override) always wins.
-			this.colour =
-				colourForSeries(
-					dataIN?.colour,
-					seriesColumnId(parent),
-					parent?.parentPlot?.data?.length ?? 0
-				) ?? getPaletteColor(0);
+			// ADOPTION, narrowly. A saved colour is treated as auto-assigned only when it
+			// is EXACTLY what the old positional rule would have produced for this
+			// series' position — getPaletteColor(index) — and is then released to the
+			// identity map. Anything else is a deliberate choice and kept as an override.
+			//
+			// "Matches any palette entry" was the first rule and was too broad: it also
+			// swallowed a colour someone had deliberately set to a different palette
+			// entry, which is how a series legitimately gets a line and points of
+			// different colours. A test caught that.
+			const autoIndex = parent?.parentPlot?.data?.length ?? 0;
+			this.#explicitColour =
+				typeof dataIN?.colour === 'string' && dataIN.colour !== getPaletteColor(autoIndex)
+					? dataIN.colour
+					: null;
 			this.radius = dataIN?.radius ?? 4;
 			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
 			this.draw = dataIN?.draw ?? true;
@@ -44,7 +69,7 @@
 
 		toJSON() {
 			return {
-				colour: this.colour,
+				colour: this.#explicitColour,
 				radius: this.radius,
 				shape: this.shape,
 				draw: this.draw

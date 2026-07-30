@@ -70,6 +70,10 @@ export const core = $state({
 	// Same pinning principle as seriesColours: claimed lazily, then STICKY, so toggling
 	// "vary markers" off and back on returns the same shapes rather than reshuffling.
 	// Plain string values ('triangle', '6 3'). See plots/seriesAppearance.js.
+	// seriesAppearance — ONE record per column: { colour, shape, dash, edited }.
+	// Supersedes the three maps below, which are still read on import so a v72.1
+	// session loads. See plots/appearanceIdentity.js for the precedence chain.
+	seriesAppearance: {},
 	seriesShapes: {},
 	seriesDashes: {},
 	// plotColormaps — the colour map a heatmap-style plot (CWT, CorrelationHeatmap,

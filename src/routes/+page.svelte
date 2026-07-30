@@ -60,6 +60,7 @@
 
 	import WorkflowEditor from '$lib/components/workflow/WorkflowEditor.svelte';
 	import NodeComputeHost from '$lib/components/views/NodeComputeHost.svelte';
+	import { pinAllSeriesAppearance } from '$lib/plots/appearanceIdentity.js';
 	import StartScreen from '$lib/components/views/StartScreen.svelte';
 
 	// --- start screen -------------------------------------------------------
@@ -75,6 +76,18 @@
 	const showStartScreen = $derived(sessionIsEmpty && !startDismissed && !deepLinkPending);
 	// Re-arm the start screen whenever the session goes back to empty (e.g. "New session"), so
 	// dismissing it once doesn't hide it forever.
+	// Claim a stable colour/shape/dash for every wired column, ONCE each.
+	//
+	// Resolution itself happens at read time (appearanceIdentity.js), which is what
+	// makes it independent of when a column is wired. Recording the level-3 fallback
+	// cannot happen there: writing to core from a getter a template reached is
+	// state_unsafe_mutation. So it happens here, in the one component that is always
+	// mounted — the same reasoning as NodeComputeHost above. Idempotent, so this
+	// settles rather than thrashing.
+	$effect(() => {
+		pinAllSeriesAppearance(core.plots);
+	});
+
 	$effect(() => {
 		if (!sessionIsEmpty) startDismissed = false;
 	});
