@@ -18,6 +18,35 @@
 	// deliberately pale grey: the ColourPicker writes a hex literal, never this
 	// token reference, so a user's choice is always distinguishable from the default
 	// even when the two resolve to the same colour.
+	/**
+	 * Inset the corner presets sit at, and the span the custom fractions map onto.
+	 *
+	 * Shared deliberately: because custom placement runs over the SAME inset area,
+	 * fraction 0 lands exactly where a left preset does and fraction 1 exactly where a
+	 * right preset does. That is what lets switching to Custom keep the legend
+	 * precisely where it already was instead of nudging it by the margin.
+	 */
+	export const LEGEND_MARGIN = 10;
+
+	/**
+	 * The custom fraction equivalent to each corner preset.
+	 *
+	 * Used when the user switches position to Custom: seeding from the corner the
+	 * legend is currently in means Custom starts as "where it is now" and becomes an
+	 * adjustment, rather than throwing the placement away and starting at a default.
+	 */
+	export const CORNER_FRACTIONS = {
+		topleft: { x: 0, y: 0 },
+		topright: { x: 1, y: 0 },
+		bottomleft: { x: 0, y: 1 },
+		bottomright: { x: 1, y: 1 }
+	};
+
+	/** @param {string} position */
+	export function cornerFraction(position) {
+		return CORNER_FRACTIONS[position] ?? { x: 0, y: 0 };
+	}
+
 	const LEGACY_PALE_BORDER = 'var(--color-lightness-80)';
 	const DEFAULT_BORDER = 'var(--color-lightness-25)';
 
@@ -137,6 +166,21 @@
 	// but going through a mirror is the right shape regardless: the box always shows
 	// the size actually being drawn (inherited or overridden), and only a real edit
 	// writes an override.
+	// The last corner preset the legend sat in, so switching to Custom can seed the
+	// fractions from where it already is. Tracked rather than read at change time
+	// because bind:value has already written 'custom' by the time onChange fires.
+	let lastCorner = $state('topright');
+	$effect(() => {
+		if (legendData.position !== 'custom') lastCorner = legendData.position;
+	});
+
+	function onPositionChange(next) {
+		if (next !== 'custom') return;
+		const f = cornerFraction(lastCorner);
+		legendData.customX = f.x;
+		legendData.customY = f.y;
+	}
+
 	let legendSizeInput = $state(0);
 	$effect(() => {
 		legendSizeInput = Math.round(legendFontSize * 10) / 10;
@@ -207,18 +251,18 @@
 		if (!legendData.show) return { x: 0, y: 0 };
 
 		const { width, height } = legendDimensions;
-		const margin = 10;
+		const margin = LEGEND_MARGIN;
 
 		switch (legendData.position) {
 			case 'custom': {
-				// Clamped so a legend can never be dragged or typed entirely off the figure,
-				// which would look like it had vanished.
+				// Runs over the same inset area the presets use, so fraction 0 and 1 coincide
+				// exactly with the left/right and top/bottom presets. Clamped, so a legend
+				// can never be typed entirely off the figure and appear to have vanished.
 				const fx = Math.min(1, Math.max(0, legendData.customX ?? 0));
 				const fy = Math.min(1, Math.max(0, legendData.customY ?? 0));
-				return {
-					x: Math.max(0, (plotWidth - width) * fx),
-					y: Math.max(0, (plotHeight - height) * fy)
-				};
+				const spanX = Math.max(0, plotWidth - width - margin * 2);
+				const spanY = Math.max(0, plotHeight - height - margin * 2);
+				return { x: margin + spanX * fx, y: margin + spanY * fy };
 			}
 			case 'topright':
 				return {
@@ -287,6 +331,7 @@
 						bind:value={legendData.position}
 						options={['topright', 'topleft', 'bottomright', 'bottomleft', 'custom']}
 						optionsDisplay={['Top Right', 'Top Left', 'Bottom Right', 'Bottom Left', 'Custom']}
+					onChange={(v) => onPositionChange(v)}
 					/>
 				</div>
 				<div class="control-input">

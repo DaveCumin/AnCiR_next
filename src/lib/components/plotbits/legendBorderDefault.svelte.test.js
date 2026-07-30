@@ -11,7 +11,7 @@
 // actually picked must survive, and the picker writes a hex literal rather than a
 // token reference, which is what makes the two cases distinguishable.
 import { describe, it, expect } from 'vitest';
-import { LegendClass } from './Legend.svelte';
+import { LegendClass, cornerFraction, LEGEND_MARGIN } from './Legend.svelte';
 
 const LEGACY = 'var(--color-lightness-80)';
 const EXPECTED = 'var(--color-lightness-25)';
@@ -89,5 +89,36 @@ describe('legend custom placement', () => {
 		const l = LegendClass.fromJSON({ position: 'custom', customX: 'left', customY: null });
 		expect(Number.isFinite(l.customX)).toBe(true);
 		expect(Number.isFinite(l.customY)).toBe(true);
+	});
+});
+
+// Switching to Custom must keep the legend where it already is.
+//
+// Custom placement and the corner presets run over the SAME inset area, so the
+// fractions below coincide exactly with the presets rather than landing a margin
+// away. That shared coordinate space is what makes the switch lossless; if the two
+// ever drift apart, choosing Custom will visibly nudge every legend.
+describe('custom placement starts from the current corner', () => {
+	it('maps each corner to the fraction that reproduces it', () => {
+		expect(cornerFraction('topleft')).toEqual({ x: 0, y: 0 });
+		expect(cornerFraction('topright')).toEqual({ x: 1, y: 0 });
+		expect(cornerFraction('bottomleft')).toEqual({ x: 0, y: 1 });
+		expect(cornerFraction('bottomright')).toEqual({ x: 1, y: 1 });
+	});
+
+	it('falls back to the top-left corner for anything unknown', () => {
+		expect(cornerFraction('custom')).toEqual({ x: 0, y: 0 });
+		expect(cornerFraction(undefined)).toEqual({ x: 0, y: 0 });
+	});
+
+	it('a fraction of 0 or 1 reproduces the preset position exactly', () => {
+		// The invariant the seeding depends on, expressed as the arithmetic both paths
+		// use: preset x is `margin` on the left and `plotWidth - width - margin` on the
+		// right, and the custom span is inset by margin at both ends.
+		const plotWidth = 400;
+		const width = 120;
+		const spanX = plotWidth - width - LEGEND_MARGIN * 2;
+		expect(LEGEND_MARGIN + spanX * 0).toBe(LEGEND_MARGIN);
+		expect(LEGEND_MARGIN + spanX * 1).toBe(plotWidth - width - LEGEND_MARGIN);
 	});
 });
