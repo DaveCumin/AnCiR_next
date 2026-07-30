@@ -109,6 +109,37 @@
 		return plotObj.height * (PLOT_PREVIEW_DEFAULT_W / plotObj.width);
 	}
 
+	/**
+	 * height ÷ width of the real plot, or 1 when it has no usable size yet.
+	 *
+	 * The preview box is LOCKED to this. EmbeddedPlot fits the plot into the box with a uniform
+	 * `Math.min(w/plotW, h/plotH)` scale — aspect-preserving, so whichever axis is the tighter
+	 * fit wins and the other is left with slack. The box starts at the plot's own ratio, so a
+	 * fresh node fits exactly; the empty space only appeared once the resize handle moved the two
+	 * dimensions independently. Keeping the box on the plot's ratio removes the slack at the
+	 * source, without the alternative of a non-uniform scale, which would fill the panel by
+	 * stretching the glyphs and turning round markers into ellipses.
+	 */
+	function plotAspect(plotObj) {
+		const w = Number(plotObj?.width);
+		const h = Number(plotObj?.height);
+		return w > 0 && h > 0 ? h / w : 1;
+	}
+
+	/** A preview box of the plot's shape, honouring both minimums. */
+	function previewBoxFor(plotObj, width) {
+		const aspect = plotAspect(plotObj);
+		let w = Math.max(MIN_PREVIEW_W, width);
+		let h = w * aspect;
+		// A very wide plot can hit the height floor first; widen back out so the ratio holds
+		// rather than silently letterboxing again at small sizes.
+		if (h < MIN_PREVIEW_H) {
+			h = MIN_PREVIEW_H;
+			w = Math.max(MIN_PREVIEW_W, h / aspect);
+		}
+		return { w: Math.round(w), h: Math.round(h) };
+	}
+
 	// Per-plot preview size overrides keyed by node id
 	const plotPreviewSizes = $state({});
 
@@ -493,7 +524,13 @@
 			// adopt-layout effect has run, so without this a resized plot would
 			// snap back to the default box on session load.
 			if (!plotPreviewSizes[node.id] && Number(saved?.w) > 0 && Number(saved?.h) > 0) {
-				plotPreviewSizes[node.id] = { w: Number(saved.w), h: Number(saved.h) };
+				// Keep the WIDTH the session chose and re-derive the height. Sessions saved
+				// before the box was aspect-locked carry whatever shape the old free resize
+				// left, and honouring that verbatim would reproduce the very gap this change
+				// removes — on exactly the sessions that already have it.
+				plotPreviewSizes[node.id] = node.plotObj
+					? previewBoxFor(node.plotObj, Number(saved.w))
+					: { w: Number(saved.w), h: Number(saved.h) };
 			}
 		}
 
@@ -506,6 +543,24 @@
 		}
 
 		_knownNodeIds = currentIds;
+	});
+
+	// Hold the preview box on the plot's aspect ratio when the PLOT changes shape.
+	//
+	// The box and the real plot are independently sized on purpose — a workflow resize must not
+	// touch the workspace layout — but the dependency runs one way: the box is a thumbnail OF the
+	// plot, so resizing the plot in the workspace has to bring its thumbnail along or the slack
+	// reappears the moment the user switches views. Width is what the user chose; height follows.
+	$effect(() => {
+		for (const node of allNodes) {
+			if (node.type !== 'plot' || !node.plotObj) continue;
+			const cur = plotPreviewSizes[node.id];
+			if (!cur) continue; // not yet sized — the default already uses the plot's ratio
+			const want = previewBoxFor(node.plotObj, cur.w);
+			// Converges in one pass: previewBoxFor is a pure function of (aspect, width), and
+			// width is carried through unchanged unless the height floor forced it wider.
+			if (cur.w !== want.w || cur.h !== want.h) plotPreviewSizes[node.id] = want;
+		}
 	});
 
 	// Mirror stablePositions[group.id] → group.x/y so that resize / drag of a
@@ -1582,12 +1637,17 @@
 				resizeInfo.noteObj.height = Math.max(MIN_NOTE_H, Math.round(resizeInfo.startH + dy));
 				return;
 			}
-			const nw = Math.max(MIN_PREVIEW_W, resizeInfo.startW + dx);
-			const nh = Math.max(MIN_PREVIEW_H, resizeInfo.startH + dy);
+			// Aspect-locked: the drag picks a SIZE, not a shape. Whichever axis the pointer moved
+			// further along drives, so a mostly-vertical drag still feels like it is doing
+			// something rather than ignoring dy.
+			const width =
+				Math.abs(dy) > Math.abs(dx)
+					? (resizeInfo.startH + dy) / plotAspect(resizeInfo.plotObj)
+					: resizeInfo.startW + dx;
 			// Resize ONLY the workflow node's own preview box. The real plot
 			// (plotObj.width/height) is owned by the workspace view and is left
 			// untouched, so a workflow resize never changes the workspace layout.
-			plotPreviewSizes[resizeInfo.nodeId] = { w: nw, h: nh };
+			plotPreviewSizes[resizeInfo.nodeId] = previewBoxFor(resizeInfo.plotObj, width);
 			return;
 		}
 		if (dragInfo) {
