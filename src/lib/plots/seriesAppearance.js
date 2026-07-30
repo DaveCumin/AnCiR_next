@@ -38,8 +38,29 @@ import { colourForColumn, seriesColumnId } from '$lib/plots/seriesColour.js';
  */
 export const DASH_ORDER = ['', '6 3', '2 2', '8 3 2 3', '1 3'];
 
-/** Style sub-objects on a series that carry appearance. */
-const STYLE_KEYS = ['points', 'line', 'box'];
+/**
+ * Every object on a series that carries appearance.
+ *
+ * DISCOVERED, not listed. The first version hardcoded ['points', 'line', 'box'] and
+ * silently did nothing for two of the three plot shapes in the app:
+ *   - a boxplot series keeps its style in `boxPlot`, not `box`;
+ *   - an actogram series has `colour` directly on the datum, with no sub-object.
+ * Only the scatterplot's points/line shape matched, which is also the only shape the
+ * original test fixture used — so the tests passed while monochrome did nothing on
+ * two plot types. Structural detection cannot fall out of step with the plots the
+ * way a hand-maintained list did.
+ */
+function appearanceTargets(datum) {
+	if (!datum || typeof datum !== 'object') return [];
+	const out = [];
+	if ('colour' in datum) out.push(datum);
+	for (const value of Object.values(datum)) {
+		if (value && typeof value === 'object' && !Array.isArray(value) && 'colour' in value) {
+			out.push(value);
+		}
+	}
+	return out;
+}
 
 function shapeMap() {
 	return (core.seriesShapes ??= {});
@@ -128,9 +149,7 @@ export function applyFigureAppearance(plot) {
 		const shape = vary && colId != null ? shapeForColumn(colId, i) : 'circle';
 		const dash = vary && colId != null ? dashForColumn(colId, i) : '';
 
-		for (const key of STYLE_KEYS) {
-			const s = datum[key];
-			if (!s) continue;
+		for (const s of appearanceTargets(datum)) {
 			if (colour && s.colour !== colour) {
 				s.colour = colour;
 				n++;

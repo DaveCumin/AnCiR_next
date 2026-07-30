@@ -6,6 +6,7 @@
 		colourForCategory,
 		colourForCategoryLabel
 	} from '$lib/plots/seriesColour.js';
+	import { greyForIndex } from '$lib/plots/seriesAppearance.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -178,6 +179,10 @@
 		// position distinguishes the category, which is the standard reading of a
 		// grouped boxplot. The host plot decides — see seriesColour.js.
 		useCategoryColour = false,
+		// Greyscale for print. Applied per CATEGORY when the boxes are category-coloured:
+		// greying by series position would give a single-series boxplot one grey for all
+		// its boxes, i.e. four indistinguishable boxes, which defeats the point.
+		monochrome = false,
 		seriesIndex = 0,
 		totalSeries = 1,
 		dodgeEnabled = true,
@@ -402,12 +407,13 @@
 			{#each groupedStats as group}
 				{@const categoryIdx = getCategoryIndex(group.category)}
 				{@const xCenter = xscale(categoryIdx) + dodgeOffset}
-				{@const boxColour =
-					(useCategoryColour ? colourForCategoryLabel(group.category) : null) ??
-					boxPlotData.colour}
-				{@const boxFill =
-					(useCategoryColour ? colourForCategoryLabel(group.category) : null) ??
-					boxPlotData.fillColour}
+				{@const categoryColour = useCategoryColour
+					? monochrome
+						? greyForIndex(categoryIdx, uniqueXValues.length)
+						: colourForCategoryLabel(group.category)
+					: null}
+				{@const boxColour = categoryColour ?? boxPlotData.colour}
+				{@const boxFill = categoryColour ?? boxPlotData.fillColour}
 
 				<!-- Lower whisker -->
 				<line

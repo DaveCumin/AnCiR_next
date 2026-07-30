@@ -172,3 +172,55 @@ describe('applyFigureAppearance', () => {
 		expect(applyAppearanceToAll(null)).toBe(0);
 	});
 });
+
+// REAL PLOT SHAPES. The original fixture used points/line only — the scatterplot's
+// shape — so it could not catch that monochrome did nothing on a boxplot (style lives
+// in `boxPlot`, not `box`) or an actogram (colour sits directly on the datum). Both
+// were reported as broken while this file was green. These fixtures mirror what the
+// plot classes actually build.
+describe('every plot shape in the app', () => {
+	it('greys a BOXPLOT series (style in `boxPlot`)', () => {
+		const plot = {
+			style: newFigureStyle({ monochrome: true }),
+			plot: {
+				data: [
+					{ y: { refId: 1 }, boxPlot: { colour: '#ff0000', fillColour: '#ff0000' } },
+					{ y: { refId: 2 }, boxPlot: { colour: '#00ff00', fillColour: '#00ff00' } }
+				]
+			}
+		};
+		expect(applyFigureAppearance(plot)).toBeGreaterThan(0);
+		for (const d of plot.plot.data) {
+			expect(d.boxPlot.colour).toMatch(/^#([0-9a-f]{2})\1\1$/);
+			expect(d.boxPlot.fillColour).toBe(d.boxPlot.colour);
+		}
+	});
+
+	it('greys an ACTOGRAM series (colour directly on the datum)', () => {
+		const plot = {
+			style: newFigureStyle({ monochrome: true }),
+			plot: { data: [{ y: { refId: 1 }, colour: '#ff0000' }, { y: { refId: 2 }, colour: '#00ff00' }] }
+		};
+		expect(applyFigureAppearance(plot)).toBeGreaterThan(0);
+		for (const d of plot.plot.data) expect(d.colour).toMatch(/^#([0-9a-f]{2})\1\1$/);
+	});
+
+	it('greys a SCATTERPLOT series (points + line), the shape that always worked', () => {
+		const plot = mkPlot([1, 2], { monochrome: true });
+		applyFigureAppearance(plot);
+		expect(plot.plot.data[0].points.colour).toMatch(/^#([0-9a-f]{2})\1\1$/);
+		expect(plot.plot.data[0].line.colour).toMatch(/^#([0-9a-f]{2})\1\1$/);
+	});
+
+	it('does not mistake a column reference for a style object', () => {
+		// x/y are Column refs sitting on the same datum. Detection is by the presence of
+		// a `colour` field, so they must be left alone.
+		const plot = {
+			style: newFigureStyle({ monochrome: true }),
+			plot: { data: [{ x: { refId: 0 }, y: { refId: 1 }, points: { colour: '#ff0000' } }] }
+		};
+		applyFigureAppearance(plot);
+		expect(plot.plot.data[0].y).toEqual({ refId: 1 });
+		expect(plot.plot.data[0].x).toEqual({ refId: 0 });
+	});
+});
