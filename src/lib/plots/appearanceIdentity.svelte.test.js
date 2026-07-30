@@ -25,7 +25,8 @@ import {
 	releaseAppearance,
 	resolveColour,
 	resolveShape,
-	resolveDash
+	resolveDash,
+	clearSeriesColourOverrides
 } from './appearanceIdentity.js';
 import { POINT_SHAPES } from '$lib/components/plotbits/pointShapes.js';
 
@@ -210,5 +211,54 @@ describe('helpers', () => {
 		expect(mappedColour(999)).toBeNull();
 		expect(mappedShape(999)).toBeNull();
 		expect(mappedDash(999)).toBeNull();
+	});
+});
+
+// Slice 2: "reset data colours" — the CLEAR half of apply-to-all.
+//
+// Typography is copied into each figure; colour is cleared so each figure reveals the
+// shared map. One button cannot do both. This only became possible once colour
+// resolved at read time: before, clearing an override left the series with nothing.
+describe('clearSeriesColourOverrides', () => {
+	/** A series whose style object behaves like the real accessor-backed ones. */
+	const mkSeries = (colId, override) => {
+		let explicit = override ?? null;
+		const parent = { y: { refId: colId } };
+		parent.points = {
+			get colour() {
+				return resolveColour(explicit, colId, 0);
+			},
+			set colour(v) {
+				explicit = v;
+			}
+		};
+		return parent;
+	};
+
+	it('drops an override so the series falls back to the map', () => {
+		pinAppearance(5, 0);
+		const s = mkSeries(5, '#ff00ff');
+		const plots = [{ plot: { data: [s] } }];
+		expect(s.points.colour).toBe('#ff00ff');
+		expect(clearSeriesColourOverrides(plots)).toBe(1);
+		expect(s.points.colour).toBe(mappedColour(5));
+	});
+
+	it('reports nothing when there was no override to drop', () => {
+		pinAppearance(5, 0);
+		const plots = [{ plot: { data: [mkSeries(5, null)] } }];
+		expect(clearSeriesColourOverrides(plots)).toBe(0);
+	});
+
+	it('is idempotent', () => {
+		pinAppearance(5, 0);
+		const plots = [{ plot: { data: [mkSeries(5, '#ff00ff')] } }];
+		clearSeriesColourOverrides(plots);
+		expect(clearSeriesColourOverrides(plots)).toBe(0);
+	});
+
+	it('tolerates junk without throwing', () => {
+		expect(clearSeriesColourOverrides(null)).toBe(0);
+		expect(clearSeriesColourOverrides([null, {}, { plot: {} }])).toBe(0);
 	});
 });

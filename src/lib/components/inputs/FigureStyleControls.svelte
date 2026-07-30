@@ -33,6 +33,13 @@
 		/** Called when that button is pressed. */
 		onApplyToAll = null,
 		/**
+		 * Called by "Reset data appearance". Separate from onApplyToAll because the two
+		 * are different operations: typography is COPIED into each figure, colour is
+		 * CLEARED so each figure reveals the shared identity map. One button cannot mean
+		 * both without lying about one of them.
+		 */
+		onResetToMap = null,
+		/**
 		 * Called when a field changes that has to be PUSHED into the figure rather than
 		 * merely stored: monochrome and varyMarkers (resolved once into each series' own
 		 * state) and the width (which resizes the plot). The caller decides what that
@@ -85,6 +92,11 @@
 	let applied = $state(0);
 	function apply() {
 		applied = onApplyToAll ? (onApplyToAll() ?? 0) : 0;
+	}
+
+	let reset = $state(-1);
+	function resetToMap() {
+		reset = onResetToMap ? (onResetToMap() ?? 0) : 0;
 	}
 
 	/** One decimal, so the pt -> px relationship is readable without being noisy. */
@@ -262,6 +274,17 @@
 					<strong>Applied to {applied} plot{applied === 1 ? '' : 's'}.</strong>
 				{/if}
 			</p>
+			{#if onResetToMap}
+				<button class="apply-btn" onclick={resetToMap}>Reset data colours</button>
+				<p class="apply-hint">
+					Drops per-figure colour choices so every figure shows the colour recorded for
+					that data. Hand-picked colours are what get cleared, so this is the action to
+					use after tidying the colour map.
+					{#if reset >= 0}
+						<strong>{reset} series reset.</strong>
+					{/if}
+				</p>
+			{/if}
 		</div>
 	{/if}
 </div>

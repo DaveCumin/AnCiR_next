@@ -290,3 +290,47 @@ export function pinAllSeriesAppearance(plots) {
 	}
 	return n;
 }
+
+/**
+ * Drop every per-series colour override, so all figures fall back to the map.
+ *
+ * This is what "apply the defaults to all" MEANS for colour, and it is why the
+ * action had to be split in two. Typography is a COPY (the template's values are
+ * written into each figure); colour is a CLEAR (each figure stops overriding and
+ * reveals the shared source of truth). One button cannot do both without lying
+ * about one of them.
+ *
+ * Only possible now that colour resolves at read time: setting the override to null
+ * is enough, because the getter then falls through to the map. Before, clearing it
+ * would have left the series with no colour at all.
+ *
+ * Shape and dash are untouched: they still resolve imperatively through
+ * applyFigureAppearance, which already derives them from the figure's flags rather
+ * than storing an override.
+ *
+ * @param {Array<any>} plots core.plots
+ * @returns {number} how many overrides were dropped
+ */
+export function clearSeriesColourOverrides(plots) {
+	let n = 0;
+	for (const plot of plots ?? []) {
+		const data = plot?.plot?.data;
+		if (!Array.isArray(data)) continue;
+		for (const datum of data) {
+			if (!datum || typeof datum !== 'object') continue;
+			const targets = [];
+			if ('colour' in datum) targets.push(datum);
+			for (const v of Object.values(datum)) {
+				if (v && typeof v === 'object' && !Array.isArray(v) && 'colour' in v) targets.push(v);
+			}
+			for (const t of targets) {
+				// The setter writes the private override; reading back tells us whether the
+				// resolved colour actually came from an override or already from the map.
+				const before = t.colour;
+				t.colour = null;
+				if (t.colour !== before) n++;
+			}
+		}
+	}
+	return n;
+}

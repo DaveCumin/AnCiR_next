@@ -11,6 +11,7 @@
 	import { pinnedColourSnapshot, repaintPinnedSeries } from '$lib/plots/seriesColour.js';
 	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
 	import { applyStyleToAll, applyFigureWidthToAll } from '$lib/plots/figureStyle.js';
+	import { clearSeriesColourOverrides } from '$lib/plots/appearanceIdentity.js';
 	import { applyAppearanceToAll } from '$lib/plots/seriesAppearance.js';
 	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
 	import { privacy, setEphemeral, clearLocalData } from '$lib/core/localData.svelte.js';
@@ -130,6 +131,7 @@
 
 		<FigureStyleControls
 			topControls={paletteControl}
+			onResetToMap={() => clearSeriesColourOverrides(core.plots)}
 			style={core.figureStyle}
 			showApplyToAll={true}
 			onApplyToAll={() => {
