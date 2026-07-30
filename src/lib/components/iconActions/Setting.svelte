@@ -3,6 +3,7 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { loadPythonExporter, loadRExporter } from '$lib/utils/pythonExportLoader.js';
 	import { checkRSupport, explainRSupport } from '$lib/utils/rExportSupport.js';
+	import { normaliseFigureStyle } from '$lib/plots/figureStyle.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -166,6 +167,14 @@
 			jsonData.seriesColours && typeof jsonData.seriesColours === 'object'
 				? { ...jsonData.seriesColours }
 				: {};
+		// Figure style template. Normalised rather than spread: a session file is data
+		// from outside the app, and one saved by an older version is missing whatever
+		// fields did not exist yet. normaliseFigureStyle fills those from the registry
+		// defaults and rejects any value of the wrong type or outside its enum, so a
+		// hand-edited or stale session cannot put the style into a state the plots
+		// cannot render. Absent entirely (every session saved before this existed)
+		// yields the defaults.
+		core.figureStyle = normaliseFigureStyle(jsonData.figureStyle);
 		// Stored values: clear the previous session's registry, then restore from
 		// the JSON. Ref entries (metric-port refs) come back live; getter-based
 		// entries (StoreValueButton) resolve to their exported static snapshot —

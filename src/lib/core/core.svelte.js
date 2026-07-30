@@ -5,6 +5,7 @@ import { Plot } from '$lib/core/Plot.svelte';
 import { Process } from '$lib/core/Process.svelte';
 import { TableProcess, deleteTableProcess } from '$lib/core/TableProcess.svelte';
 import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
+import { newFigureStyle } from '$lib/plots/figureStyle.js';
 
 export const core = $state({
 	rawData: new Map(),
@@ -56,6 +57,20 @@ export const core = $state({
 	// Long-to-wide each subject IS its own column, which makes column identity the
 	// identity the user means, with no labelling step. See plots/seriesColour.js.
 	seriesColours: {},
+	// figureStyle — the session's figure style TEMPLATE: typeface, base type size,
+	// physical figure width, export DPI, background, and the marker/monochrome
+	// flags. See plots/figureStyle.js for the field registry and the pt/mm to px
+	// derivation.
+	//
+	// A template, not a live global: it is COPIED into a plot when the plot is
+	// created, and existing plots change only when the user asks ("Apply to all
+	// plots"). So editing this never silently restyles work already done.
+	//
+	// Session-scoped so a paper's figures travel with the session that produced
+	// them. Serialised automatically by outputCoreAsJson (which stringifies core
+	// wholesale); the import side must reset and re-normalise it explicitly, the
+	// same as seriesColours.
+	figureStyle: newFigureStyle(),
 	// nodeLayout — workflow-canvas layout snapshot keyed by canvas node id
 	// (`data_<colId>`, `process_<id>`, `tableprocess_<id>`, `plot_<id>`, group/
 	// composite/note ids): `{ [id]: { x, y, collapsed? } }`. Maintained by
