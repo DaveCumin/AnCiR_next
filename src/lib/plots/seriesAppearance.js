@@ -115,6 +115,53 @@ export function greyForIndex(i, n) {
 	return `#${hex}${hex}${hex}`;
 }
 
+/**
+ * COLORMAP PLOTS. Four plots draw through a colormap rather than per-series colours:
+ * CWT, CorrelationHeatmap, PairsPlot, and Actogram in heatmap mode. They have no
+ * `colour` field for the appearance pass to touch, which is why monochrome appeared to
+ * do nothing to the wavelet plot in particular.
+ *
+ * A greyscale map already exists, so monochrome just selects it. Switched on the plot
+ * rather than resolved at each of the seven render sites, for the same reason the
+ * series colours are: it reaches every consumer at once and needs no render code to
+ * learn about the flag.
+ *
+ * The user's own choice is remembered per plot so turning monochrome off restores it,
+ * rather than dumping every heatmap on the default. Kept on core so it survives a save
+ * (core is serialised wholesale) — otherwise reloading a monochrome session would lose
+ * the colour map it should go back to.
+ */
+const MONO_COLORMAP = 'greys';
+
+function colormapMemory() {
+	return (core.plotColormaps ??= {});
+}
+
+/**
+ * Point a colormap plot at greys, or back at whatever the user had.
+ * @returns {boolean} whether it changed
+ */
+function applyColormap(plot, mono) {
+	const inner = plot?.plot;
+	if (!inner || typeof inner.colormap !== 'string') return false;
+	const memory = colormapMemory();
+	const key = String(plot.id);
+
+	if (mono) {
+		if (inner.colormap === MONO_COLORMAP) return false;
+		memory[key] = inner.colormap;
+		inner.colormap = MONO_COLORMAP;
+		return true;
+	}
+	const restore = memory[key];
+	// Nothing remembered means monochrome never changed it, so leave the user's
+	// current choice alone rather than forcing a default on them.
+	if (typeof restore !== 'string' || inner.colormap !== MONO_COLORMAP) return false;
+	inner.colormap = restore;
+	delete memory[key];
+	return true;
+}
+
 /** Forget a column's pinned marker/dash (column deleted). */
 export function releaseSeriesAppearance(columnId) {
 	if (core.seriesShapes) delete core.seriesShapes[String(columnId)];
@@ -133,12 +180,18 @@ export function releaseSeriesAppearance(columnId) {
  */
 export function applyFigureAppearance(plot) {
 	const style = plot?.style;
+	if (!style) return 0;
 	const data = plot?.plot?.data;
-	if (!style || !Array.isArray(data)) return 0;
 
 	const mono = style.monochrome === true;
 	const vary = style.varyMarkers === true;
 	let n = 0;
+
+	// Colormap plots first: they have no per-series colour, so the loop below never
+	// touches them.
+	if (applyColormap(plot, mono)) n++;
+
+	if (!Array.isArray(data)) return n;
 
 	data.forEach((datum, i) => {
 		const colId = seriesColumnId(datum);

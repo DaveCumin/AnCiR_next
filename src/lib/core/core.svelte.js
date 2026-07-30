@@ -72,6 +72,12 @@ export const core = $state({
 	// Plain string values ('triangle', '6 3'). See plots/seriesAppearance.js.
 	seriesShapes: {},
 	seriesDashes: {},
+	// plotColormaps — the colour map a heatmap-style plot (CWT, CorrelationHeatmap,
+	// PairsPlot, Actogram in heatmap mode) had before monochrome switched it to greys,
+	// keyed by plot id. Remembered so turning monochrome off restores the user's own
+	// choice instead of dumping every heatmap on the default, and persisted so that
+	// still holds after a reload. See plots/seriesAppearance.js.
+	plotColormaps: {},
 	// figureStyle — the session's figure style TEMPLATE: typeface, base type size,
 	// physical figure width, export DPI, background, and the marker/monochrome
 	// flags. See plots/figureStyle.js for the field registry and the pt/mm to px

@@ -224,3 +224,62 @@ describe('every plot shape in the app', () => {
 		expect(plot.plot.data[0].x).toEqual({ refId: 0 });
 	});
 });
+
+// COLORMAP PLOTS. CWT, CorrelationHeatmap, PairsPlot and Actogram-in-heatmap-mode draw
+// through a colormap and have no per-series `colour`, so the appearance loop never
+// touched them — reported as "the wavelet plot is the only one that doesn't change".
+describe('colormap plots', () => {
+	beforeEach(() => {
+		core.plotColormaps = {};
+	});
+
+	const mkHeatmap = (colormap = 'viridis', style = {}) => ({
+		id: 3,
+		style: newFigureStyle(style),
+		plot: { colormap }
+	});
+
+	it('monochrome switches the map to greys', () => {
+		const plot = mkHeatmap('viridis', { monochrome: true });
+		expect(applyFigureAppearance(plot)).toBeGreaterThan(0);
+		expect(plot.plot.colormap).toBe('greys');
+	});
+
+	it('turning it off restores the user’s own map, not a default', () => {
+		const plot = mkHeatmap('magma', { monochrome: true });
+		applyFigureAppearance(plot);
+		expect(plot.plot.colormap).toBe('greys');
+		plot.style.monochrome = false;
+		applyFigureAppearance(plot);
+		expect(plot.plot.colormap).toBe('magma');
+	});
+
+	it('leaves a hand-picked greys alone when monochrome goes off', () => {
+		// Nothing was remembered because monochrome never changed it, so the user's
+		// choice must survive rather than being replaced by a default.
+		const plot = mkHeatmap('greys');
+		applyFigureAppearance(plot);
+		expect(plot.plot.colormap).toBe('greys');
+	});
+
+	it('is idempotent', () => {
+		const plot = mkHeatmap('viridis', { monochrome: true });
+		applyFigureAppearance(plot);
+		expect(applyFigureAppearance(plot)).toBe(0);
+	});
+
+	it('works on a colormap plot with no series data at all', () => {
+		// CWT has no `data` array in the series sense; the old code bailed out before
+		// doing anything for exactly that reason.
+		const plot = { id: 9, style: newFigureStyle({ monochrome: true }), plot: { colormap: 'viridis' } };
+		expect(applyFigureAppearance(plot)).toBeGreaterThan(0);
+		expect(plot.plot.colormap).toBe('greys');
+	});
+
+	it('ignores a plot with no colormap', () => {
+		const plot = mkPlot([1], { monochrome: true });
+		plot.id = 4;
+		applyFigureAppearance(plot);
+		expect(core.plotColormaps['4']).toBeUndefined();
+	});
+});
