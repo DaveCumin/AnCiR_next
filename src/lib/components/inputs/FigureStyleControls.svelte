@@ -49,6 +49,16 @@
 		 * it in one place without pretending it is per-figure.
 		 */
 		topControls = null,
+		/**
+		 * The wrapper plot, when these controls belong to one figure.
+		 *
+		 * Only needed for its pixel width/height, which used to live in a separate
+		 * "Dimension" section in every plot's own controls. Two controls for one property
+		 * in adjacent sections, in different units, where picking a preset silently
+		 * rewrote the other one — so they are merged here. Omitted for the Settings
+		 * template, which has no single figure to size.
+		 */
+		plot = null,
 		title = 'Figure'
 	} = $props();
 
@@ -127,22 +137,25 @@
 		</div>
 	{/if}
 
+	<!-- SIZE. The preset is an instruction ("this figure is 85 mm wide") and the pixel
+	     fields are the size it currently is. They were two separate sections in
+	     different units, where choosing a preset silently rewrote the other. -->
 	<div class="control-input-horizontal">
 		<div class="control-input">
-			<p>Figure width</p>
+			<p>Fixed width</p>
 			<AttributeSelect
 				bind:value={style.widthPreset}
 				onChange={() => onFigureChange?.()}
-				options={['single', 'double', 'custom']}
+				options={['custom', 'single', 'double']}
 				optionsDisplay={[
+					'Not fixed (use pixels below)',
 					`Single column (${WIDTH_PRESET_MM.single} mm)`,
-					`Double column (${WIDTH_PRESET_MM.double} mm)`,
-					'Custom'
+					`Double column (${WIDTH_PRESET_MM.double} mm)`
 				]}
 			/>
 		</div>
 		{#if style.widthPreset === 'custom'}
-			<ControlInput label="Width (mm)">
+			<ControlInput label="or exact mm">
 				<NumberWithUnits
 					bind:value={style.widthMm}
 					min={1}
@@ -153,6 +166,17 @@
 			</ControlInput>
 		{/if}
 	</div>
+
+	{#if plot}
+		<div class="control-input-horizontal">
+			<ControlInput label="Width (px)">
+				<NumberWithUnits bind:value={plot.width} min={40} />
+			</ControlInput>
+			<ControlInput label="Height (px)">
+				<NumberWithUnits bind:value={plot.height} min={40} />
+			</ControlInput>
+		</div>
+	{/if}
 
 	<div class="control-input-horizontal">
 		<div class="control-input">

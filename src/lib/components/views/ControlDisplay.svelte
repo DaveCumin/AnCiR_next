@@ -850,6 +850,7 @@
 				<!-- This plot's own style. Editing it never touches the session template or
 				     any other figure. -->
 				<FigureStyleControls
+					{plot}
 					style={plot.style}
 					title="Figure"
 					onFigureChange={() => {

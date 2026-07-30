@@ -56,3 +56,38 @@ describe('legend border default', () => {
 		expect(legend.borderColor).toBeTruthy();
 	});
 });
+
+// Free legend placement (position: 'custom').
+//
+// The four corner presets could not put a legend in a gap in the data, which on a
+// crowded figure is the only place it fits. Stored as a FRACTION of the plot area
+// rather than pixels, so the legend keeps its place when the figure is resized — which
+// now happens whenever a width preset is chosen.
+describe('legend custom placement', () => {
+	it('defaults to a corner, so nothing changes for existing legends', () => {
+		expect(new LegendClass().position).toBe('topright');
+	});
+
+	it('round-trips the custom fraction', () => {
+		const l = LegendClass.fromJSON({ position: 'custom', customX: 0.4, customY: 0.75 });
+		expect(l.position).toBe('custom');
+		expect(l.customX).toBe(0.4);
+		expect(l.customY).toBe(0.75);
+		const again = LegendClass.fromJSON(l.toJSON());
+		expect(again.customX).toBe(0.4);
+		expect(again.customY).toBe(0.75);
+	});
+
+	it('supplies a default fraction for a legend saved before this existed', () => {
+		// Must be a number, not undefined: it feeds placement arithmetic.
+		const l = LegendClass.fromJSON({ position: 'custom' });
+		expect(typeof l.customX).toBe('number');
+		expect(typeof l.customY).toBe('number');
+	});
+
+	it('ignores a non-numeric fraction rather than producing NaN placement', () => {
+		const l = LegendClass.fromJSON({ position: 'custom', customX: 'left', customY: null });
+		expect(Number.isFinite(l.customX)).toBe(true);
+		expect(Number.isFinite(l.customY)).toBe(true);
+	});
+});

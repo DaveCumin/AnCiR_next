@@ -47,7 +47,13 @@
 
 	export class LegendClass {
 		show = $state(true);
-		position = $state('topright'); // topright, topleft, bottomright, bottomleft
+		// topright | topleft | bottomright | bottomleft | custom
+		position = $state('topright');
+		// Free placement, used only when position === 'custom'. Stored as a FRACTION of
+		// the plot area (0..1) rather than pixels, so a legend keeps its place when the
+		// figure is resized — which now happens whenever a width preset is chosen.
+		customX = $state(0.02);
+		customY = $state(0.02);
 		orientation = $state('vertical'); // vertical, horizontal
 		backgroundColor = $state('rgba(255, 255, 255, 0.9)');
 		// Matches the ink of the type it encloses, which is the convention for a
@@ -65,6 +71,8 @@
 			if (dataIN) {
 				this.show = dataIN.show ?? true;
 				this.position = dataIN.position ?? 'topright';
+				this.customX = typeof dataIN.customX === 'number' ? dataIN.customX : 0.02;
+				this.customY = typeof dataIN.customY === 'number' ? dataIN.customY : 0.02;
 				this.orientation = dataIN.orientation ?? 'vertical';
 				this.backgroundColor = dataIN.backgroundColor ?? 'rgba(255, 255, 255, 0.9)';
 				this.borderColor = resolveBorderColour(dataIN.borderColor);
@@ -79,6 +87,8 @@
 			return {
 				show: this.show,
 				position: this.position,
+				customX: this.customX,
+				customY: this.customY,
 				orientation: this.orientation,
 				backgroundColor: this.backgroundColor,
 				borderColor: this.borderColor,
@@ -200,6 +210,16 @@
 		const margin = 10;
 
 		switch (legendData.position) {
+			case 'custom': {
+				// Clamped so a legend can never be dragged or typed entirely off the figure,
+				// which would look like it had vanished.
+				const fx = Math.min(1, Math.max(0, legendData.customX ?? 0));
+				const fy = Math.min(1, Math.max(0, legendData.customY ?? 0));
+				return {
+					x: Math.max(0, (plotWidth - width) * fx),
+					y: Math.max(0, (plotHeight - height) * fy)
+				};
+			}
 			case 'topright':
 				return {
 					x: plotWidth - width - margin,
@@ -265,8 +285,8 @@
 					<p>Position</p>
 					<AttributeSelect
 						bind:value={legendData.position}
-						options={['topright', 'topleft', 'bottomright', 'bottomleft']}
-						optionsDisplay={['Top Right', 'Top Left', 'Bottom Right', 'Bottom Left']}
+						options={['topright', 'topleft', 'bottomright', 'bottomleft', 'custom']}
+						optionsDisplay={['Top Right', 'Top Left', 'Bottom Right', 'Bottom Left', 'Custom']}
 					/>
 				</div>
 				<div class="control-input">
@@ -280,6 +300,14 @@
 			</div>
 
 			<div class="control-input-horizontal">
+				{#if legendData.position === 'custom'}
+					<ControlInput label="X (0-1)">
+						<NumberWithUnits bind:value={legendData.customX} min={0} max={1} step={0.01} />
+					</ControlInput>
+					<ControlInput label="Y (0-1)">
+						<NumberWithUnits bind:value={legendData.customY} min={0} max={1} step={0.01} />
+					</ControlInput>
+				{/if}
 				<ControlInput label="Font Size">
 					<NumberWithUnits
 						bind:value={legendSizeInput}

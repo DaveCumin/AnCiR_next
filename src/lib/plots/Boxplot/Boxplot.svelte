@@ -861,24 +861,14 @@ export class Boxplotclass {
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>Dimension</p>
-			</div>
-			<div class="control-input-horizontal">
-				<ControlInput label="Width">
-					<NumberWithUnits bind:value={theData.parentBox.width} />
-				</ControlInput>
-
-				<ControlInput label="Height">
-					<NumberWithUnits bind:value={theData.parentBox.height} />
-				</ControlInput>
-			</div>
-		</div>
 
 		<div class="div-line"></div>
 
-		<Legend legendData={theData.legend} which="controls" />
+		<Legend
+			legendData={theData.legend}
+			figureStyle={theData.parentBox?.style}
+			which="controls"
+		/>
 
 		<div class="control-component">
 			<div class="control-component-title">
