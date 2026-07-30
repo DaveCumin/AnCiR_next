@@ -1158,6 +1158,7 @@
 		onwheel={brushable ? zoomCtl.handleWheelZoom : null}
 	>
 		<Axis
+			figureStyle={theData.plot.parentBox?.style}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
@@ -1169,6 +1170,7 @@
 			which="plot"
 		/>
 		<Axis
+			figureStyle={theData.plot.parentBox?.style}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()

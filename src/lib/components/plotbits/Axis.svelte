@@ -61,6 +61,7 @@
 
 <script>
 	// @ts-nocheck
+	import { resolveStyle } from '$lib/plots/figureStyle.js';
 	import { select, selectAll } from 'd3-selection';
 	import { axisBottom, axisLeft, axisTop, axisRight } from 'd3-axis';
 
@@ -77,16 +78,26 @@
 		scale, //the d3s scale to use
 		tickFormat = null, // optional custom tick formatter, e.g. (d) => String(d)
 		which,
-		title = 'Axis'
+		title = 'Axis',
+		// This figure's style (core/Plot.svelte -> Plot.style), passed by the plot that
+		// renders this axis. A PROP rather than context on purpose: Axis is rendered from
+		// four different host components, and a facet child carries its OWN style, so
+		// "nearest ancestor" is not the same thing as "the figure this axis belongs to".
+		// Absent in the controls branch and in tests, where the defaults apply.
+		figureStyle = null
 	} = $props();
 
 	let axisGroup;
 
 	let ticklength = 6;
 	let tickspace = 4; // space between the ticks and the numbers
-	let tickfontsize = 15;
-	let labelfontsize = 16;
 	let labelBuffer = 16; // Additional spacing between largest tick label and axis label
+
+	// resolveStyle tolerates null and returns the defaults, so an axis with no style
+	// still renders rather than coming out unstyled.
+	const resolved = $derived(resolveStyle(figureStyle));
+	const tickfontsize = $derived(resolved.sizes.tick);
+	const labelfontsize = $derived(resolved.sizes.axisLabel);
 
 	// Inner ticks only, applied in one place for all four positions.
 	//
@@ -170,7 +181,7 @@
 			// .transition(t)
 			.call(axis)
 			.style('font-size', `${tickfontsize}px`)
-			.style('font-family', 'system-ui, sans-serif');
+			.style('font-family', resolved.fontFamily);
 
 		// DO GRIDLINES
 		if (axisData.gridlines) {
@@ -237,7 +248,7 @@
 			.append('text')
 			.attr('class', 'axis-label')
 			.style('font-size', `${labelfontsize}px`)
-			.style('font-family', 'system-ui, sans-serif')
+			.style('font-family', resolved.fontFamily)
 			.style('text-anchor', 'middle')
 			.style('fill', 'black')
 			.text(axisData.label);

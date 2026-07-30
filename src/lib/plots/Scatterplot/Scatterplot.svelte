@@ -1127,6 +1127,7 @@
 		<!-- The Left Y-axis -->
 		{#if theData.plot.hasLeftAxisData}
 			<Axis
+			figureStyle={theData.plot.parentBox?.style}
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={theData.plot.YScaleLeft}
@@ -1140,6 +1141,7 @@
 		<!-- The Right Y-axis (only if there's data on right axis) -->
 		{#if theData.plot.hasRightAxisData}
 			<Axis
+			figureStyle={theData.plot.parentBox?.style}
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={theData.plot.YScaleRight}
@@ -1152,6 +1154,7 @@
 
 		<!-- The X-axis -->
 		<Axis
+			figureStyle={theData.plot.parentBox?.style}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={theData.plot.XScale}
@@ -1269,6 +1272,7 @@
 			</g>
 		{/if}
 		<Legend
+			figureStyle={theData.plot.parentBox?.style}
 			legendData={theData.plot.legend}
 			items={theData.plot.getLegendItems}
 			plotWidth={theData.plot.plotwidth}

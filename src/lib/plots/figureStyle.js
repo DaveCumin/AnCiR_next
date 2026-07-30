@@ -64,6 +64,33 @@ export const FONT_STACKS = {
 	serif: 'Georgia, "Times New Roman", Times, serif'
 };
 
+/**
+ * TRANSITIONAL DEFAULT, and why it is not `m`.
+ *
+ * Before this system existed, Axis.svelte hardcoded 16px axis labels and 15px
+ * tick labels. The named steps above are point sizes at FINAL PRINTED WIDTH, and
+ * `m` (8.5 pt) resolves to 11.3px, so adopting `m` as the default would shrink
+ * the type on every existing figure by about 30% the moment Axis started reading
+ * this module.
+ *
+ * That shrink is not wrong once a figure declares a physical width: a 500px-wide
+ * plot rendered at 85mm is 321px, and the type scales with it. But the physical
+ * width work lands later, so in between the two are not comparable and adopting
+ * `m` now would just make every plot in every saved session look smaller for no
+ * benefit.
+ *
+ * So the shipped default reproduces the historical pixels exactly:
+ *   12 pt * 96/72          = 16px  axis label  (was 16)
+ *   12 pt * 0.9375 * 96/72 = 15px  tick label  (was 15)
+ *
+ * This is a default, not a constraint. The named steps are fully available from
+ * the control, and the intended change once physical width exists is to make `m`
+ * the default and delete this. Kept as one named function so that is a one-line
+ * change rather than a hunt.
+ */
+export const TRANSITIONAL_PT = 12;
+export const TRANSITIONAL_TICK_RATIO = 0.9375;
+
 /** Smallest type we will emit, in points. Guards a hand-typed 0 or negative. */
 const MIN_PT = 1;
 /** Smallest figure width we will emit, in mm. */
@@ -137,6 +164,18 @@ export function newFigureStyle(template = null) {
 		else out[field.key] = isValid(candidate, field) ? candidate : field.default;
 	}
 	return out;
+}
+
+/**
+ * The shipped default: a style whose resolved sizes match the pre-feature
+ * hardcoded pixels. See TRANSITIONAL_PT for why this is not simply `m`.
+ */
+export function transitionalFigureStyle() {
+	return newFigureStyle({
+		fontSize: 'custom',
+		fontSizePt: TRANSITIONAL_PT,
+		roleScale: { tick: TRANSITIONAL_TICK_RATIO }
+	});
 }
 
 /**
@@ -234,7 +273,14 @@ export function resolveStyle(style) {
 		basePt: pt,
 		widthMm: mm,
 		widthPx: mm * PX_PER_MM,
-		sizes
+		sizes,
+		// Pass-through, not derived. Components consume ONLY this object, so a flag
+		// they need has to appear here or they would have to reach for the raw style
+		// as well and there would be two ways in. Defaulted here too, so a component
+		// handed a partial style still gets the documented behaviour.
+		legendBox: style?.legendBox !== false,
+		backgroundColour:
+			typeof style?.backgroundColour === 'string' ? style.backgroundColour : 'transparent'
 	};
 }
 

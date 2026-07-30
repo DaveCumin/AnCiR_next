@@ -887,6 +887,7 @@
 	>
 		<!-- Y Axis -->
 		<Axis
+			figureStyle={theData.plot.parentBox?.style}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
@@ -900,6 +901,7 @@
 
 		<!-- X Axis -->
 		<Axis
+			figureStyle={theData.plot.parentBox?.style}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()

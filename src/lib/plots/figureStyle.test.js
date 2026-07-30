@@ -10,6 +10,7 @@ import {
 	PX_PER_PT,
 	newFigureStyle,
 	normaliseFigureStyle,
+	transitionalFigureStyle,
 	applyStyleToAll,
 	basePt,
 	widthMm,
@@ -306,5 +307,52 @@ describe('exportScale', () => {
 		for (const dpi of [0, -300, NaN, '300', null, undefined]) {
 			expect(exportScale({ exportDpi: dpi })).toBe(1);
 		}
+	});
+});
+
+// The transitional default exists to keep every existing figure looking the same
+// when Axis started reading this module. The exact pixel values are the contract.
+describe('transitionalFigureStyle', () => {
+	it('reproduces the historical 16px axis label and 15px tick', () => {
+		// These were hardcoded in Axis.svelte as labelfontsize = 16, tickfontsize = 15.
+		// If this drifts, every figure in every saved session changes size on load.
+		const { sizes } = resolveStyle(transitionalFigureStyle());
+		expect(sizes.axisLabel).toBeCloseTo(16, 6);
+		expect(sizes.tick).toBeCloseTo(15, 6);
+	});
+
+	it('is a complete, valid style like any other', () => {
+		expect(Object.keys(transitionalFigureStyle()).sort()).toEqual([...FIGURE_STYLE_KEYS].sort());
+	});
+
+	it('leaves everything except type size at the registry default', () => {
+		// It is a TYPE SIZE stopgap only. If it started overriding width or DPI it
+		// would quietly hold back the rest of the feature.
+		const t = transitionalFigureStyle();
+		const d = newFigureStyle();
+		for (const key of FIGURE_STYLE_KEYS) {
+			if (key === 'fontSize' || key === 'fontSizePt' || key === 'roleScale') continue;
+			expect(t[key], key).toEqual(d[key]);
+		}
+	});
+
+	it('differs from the journal step, which is the whole reason it exists', () => {
+		expect(resolveStyle(transitionalFigureStyle()).sizes.axisLabel).toBeGreaterThan(
+			resolveStyle(newFigureStyle({ fontSize: 'm' })).sizes.axisLabel
+		);
+	});
+});
+
+describe('resolveStyle pass-through flags', () => {
+	it('surfaces legendBox and backgroundColour', () => {
+		const r = resolveStyle(newFigureStyle({ legendBox: false, backgroundColour: '#ffffff' }));
+		expect(r.legendBox).toBe(false);
+		expect(r.backgroundColour).toBe('#ffffff');
+	});
+
+	it('defaults them for a partial style, so a component never sees undefined', () => {
+		const r = resolveStyle(null);
+		expect(r.legendBox).toBe(true);
+		expect(r.backgroundColour).toBe('transparent');
 	});
 });

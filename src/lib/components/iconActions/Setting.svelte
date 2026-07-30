@@ -3,7 +3,7 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { loadPythonExporter, loadRExporter } from '$lib/utils/pythonExportLoader.js';
 	import { checkRSupport, explainRSupport } from '$lib/utils/rExportSupport.js';
-	import { normaliseFigureStyle } from '$lib/plots/figureStyle.js';
+	import { normaliseFigureStyle, transitionalFigureStyle } from '$lib/plots/figureStyle.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -172,9 +172,16 @@
 		// fields did not exist yet. normaliseFigureStyle fills those from the registry
 		// defaults and rejects any value of the wrong type or outside its enum, so a
 		// hand-edited or stale session cannot put the style into a state the plots
-		// cannot render. Absent entirely (every session saved before this existed)
-		// yields the defaults.
-		core.figureStyle = normaliseFigureStyle(jsonData.figureStyle);
+		// cannot render.
+		//
+		// Absent entirely (every session saved before this existed) gets the
+		// transitional default rather than the registry default, so an old session's
+		// figures look exactly as they did instead of shrinking to the journal step.
+		// See TRANSITIONAL_PT. Must be set BEFORE the plots are rebuilt below, because
+		// each Plot copies this template in its constructor.
+		core.figureStyle = jsonData.figureStyle
+			? normaliseFigureStyle(jsonData.figureStyle)
+			: transitionalFigureStyle();
 		// Stored values: clear the previous session's registry, then restore from
 		// the JSON. Ref entries (metric-port refs) come back live; getter-based
 		// entries (StoreValueButton) resolve to their exported static snapshot —

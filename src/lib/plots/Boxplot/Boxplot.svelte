@@ -1099,6 +1099,7 @@
 	>
 		<!-- Y-axis -->
 		<Axis
+			figureStyle={theData.plot.parentBox?.style}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
@@ -1112,6 +1113,7 @@
 
 		<!-- X-axis with custom categorical labels -->
 		<Axis
+			figureStyle={theData.plot.parentBox?.style}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
@@ -1152,6 +1154,7 @@
 		{/each}
 
 		<Legend
+			figureStyle={theData.plot.parentBox?.style}
 			legendData={theData.plot.legend}
 			items={theData.plot.getLegendItems}
 			plotWidth={theData.plot.plotwidth}

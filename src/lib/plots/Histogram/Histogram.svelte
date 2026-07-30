@@ -699,6 +699,7 @@
 		style={`background: var(--surface-card); position: absolute;`}
 	>
 		<Axis
+			figureStyle={theData.plot.parentBox?.style}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={yScale}
@@ -708,6 +709,7 @@
 			which="plot"
 		/>
 		<Axis
+			figureStyle={theData.plot.parentBox?.style}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={xScale}
@@ -774,6 +776,7 @@
 		{/each}
 
 		<Legend
+			figureStyle={theData.plot.parentBox?.style}
 			legendData={theData.plot.legend}
 			items={theData.plot.getLegendItems}
 			plotWidth={theData.plot.plotwidth}

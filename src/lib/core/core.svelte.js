@@ -5,7 +5,7 @@ import { Plot } from '$lib/core/Plot.svelte';
 import { Process } from '$lib/core/Process.svelte';
 import { TableProcess, deleteTableProcess } from '$lib/core/TableProcess.svelte';
 import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
-import { newFigureStyle } from '$lib/plots/figureStyle.js';
+import { transitionalFigureStyle } from '$lib/plots/figureStyle.js';
 
 export const core = $state({
 	rawData: new Map(),
@@ -70,7 +70,7 @@ export const core = $state({
 	// them. Serialised automatically by outputCoreAsJson (which stringifies core
 	// wholesale); the import side must reset and re-normalise it explicitly, the
 	// same as seriesColours.
-	figureStyle: newFigureStyle(),
+	figureStyle: transitionalFigureStyle(),
 	// nodeLayout — workflow-canvas layout snapshot keyed by canvas node id
 	// (`data_<colId>`, `process_<id>`, `tableprocess_<id>`, `plot_<id>`, group/
 	// composite/note ids): `{ [id]: { x, y, collapsed? } }`. Maintained by

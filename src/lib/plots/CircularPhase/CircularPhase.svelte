@@ -482,6 +482,7 @@
 		{/if}
 
 		<Legend
+			figureStyle={plot.parentBox?.style}
 			legendData={plot.legend}
 			items={plot.getLegendItems}
 			plotWidth={size}

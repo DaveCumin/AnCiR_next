@@ -1034,6 +1034,7 @@
 		<LightBand bind:bands={theData.plot.lightBands} which="plot" />
 		<!-- The X-axis -->
 		<Axis
+			figureStyle={theData.plot.parentBox?.style}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()

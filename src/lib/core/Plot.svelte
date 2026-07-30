@@ -7,6 +7,7 @@
 	import { selectedColumnIds, setSelection } from '$lib/tableProcesses/columnSet.js';
 	import { PLOT_CHROME } from '$lib/core/workspaceLayout.js';
 	import { removePlotMetricColumns } from '$lib/plots/plotMetricOutputs.svelte.js';
+	import { newFigureStyle, normaliseFigureStyle } from '$lib/plots/figureStyle.js';
 	let _counter = 0;
 	function getNextId() {
 		let id = _counter++;
@@ -447,6 +448,14 @@
 		// analysis plots — see plots/plotMetricOutputs.js. Persisted so wiring
 		// from a plot's metric ports survives reload.
 		metricOut = $state({});
+		// style — this figure's own copy of the figure style (typeface, base type
+		// size, physical width, export DPI, background, marker flags). See
+		// plots/figureStyle.js.
+		//
+		// A COPY, taken from core.figureStyle at creation, not a live reference to it.
+		// That is the whole model: editing the session template must not restyle
+		// figures already finished, so retrofitting is an explicit "Apply to all".
+		style = $state();
 
 		constructor(plotData = {}, id = null) {
 			// console.log('new plot: ', plotData);
@@ -497,6 +506,12 @@
 			// Quick-Plot: the canvas node this plot was spawned from (for the reference
 			// edge + re-click focus). null for normal user-created plots.
 			this.sourceNodeId = plotData.sourceNodeId ?? null;
+			// A saved style wins; otherwise copy the session template. Normalised either
+			// way, so a plot from an older session (no style at all) or a hand-edited one
+			// still ends up with every field present and valid.
+			this.style = plotData.style
+				? normaliseFigureStyle(plotData.style)
+				: newFigureStyle(core.figureStyle);
 		}
 
 		toJSON() {
@@ -515,6 +530,7 @@
 				setRefs: this.setRefs,
 				metricOut: this.metricOut,
 				sourceNodeId: this.sourceNodeId,
+				style: this.style,
 				plot: this.plot
 			};
 		}
@@ -535,7 +551,8 @@
 				facetKey,
 				setRefs,
 				metricOut,
-				sourceNodeId
+				sourceNodeId,
+				style
 			} = json;
 			return new Plot(
 				{
@@ -552,7 +569,8 @@
 					facetKey,
 					setRefs,
 					metricOut,
-					sourceNodeId
+					sourceNodeId,
+					style
 				},
 				id
 			);
@@ -566,6 +584,7 @@
 	// "Cannot read properties of undefined" from the render.
 	const Plot = appConsts.plotMap.get(plot.type)?.plot ?? null;
 	const unknownPlotMessage = Plot ? '' : reportUnknownNode('plot', plot.type);
+
 </script>
 
 <div>

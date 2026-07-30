@@ -76,9 +76,26 @@
 </script>
 
 <script>
+	import { resolveStyle } from '$lib/plots/figureStyle.js';
 	import { getPointPath } from './pointShapes.js';
 
-	let { legendData, items = [], plotWidth, plotHeight, padding, which = 'plot' } = $props();
+	let {
+		legendData,
+		items = [],
+		plotWidth,
+		plotHeight,
+		padding,
+		which = 'plot',
+		// This figure's style, passed by the plot that renders this legend. See the
+		// note in Axis.svelte for why this is a prop and not context.
+		figureStyle = null
+	} = $props();
+
+	// Tolerates null and returns the defaults.
+	const resolved = $derived(resolveStyle(figureStyle));
+	// Whether to draw the box at all. The border colour and width stay on
+	// legendData: this flag is house style, those are per-legend refinements.
+	const showBox = $derived(resolved.legendBox !== false);
 
 	let labelWidths = $state([]); // width of each <text> element
 	let measuringCanvas = $state(null); // hidden <canvas> for text metrics
@@ -98,7 +115,11 @@
 			labelWidths = [];
 			return;
 		}
-		measuringCanvas.font = `${legendData.fontSize}px sans-serif`;
+		// Family from the figure style, NOT a hardcoded 'sans-serif'. The legend box is
+		// sized from these measured widths, so measuring in the wrong family makes the
+		// border not fit the text it encloses — invisible while the figure is sans,
+		// wrong the moment it is switched to serif.
+		measuringCanvas.font = `${legendData.fontSize}px ${resolved.fontFamily}`;
 		labelWidths = items.map((it) => measuringCanvas.measureText(it.label).width);
 	});
 
@@ -247,15 +268,16 @@
 {#snippet legendPlot()}
 	{#if legendData.show && items.length > 0}
 		<g transform="translate({legendPosition.x + padding.left}, {legendPosition.y + padding.top})">
-			<!-- background -->
+			<!-- background + box. `legendBox: false` drops the stroke but keeps the fill,
+			     so an unboxed legend over data is still readable. -->
 			<rect
 				x={0}
 				y={0}
 				width={legendDimensions.width}
 				height={legendDimensions.height}
 				fill={legendData.backgroundColor}
-				stroke={legendData.borderColor}
-				stroke-width={legendData.borderWidth}
+				stroke={showBox ? legendData.borderColor : 'none'}
+				stroke-width={showBox ? legendData.borderWidth : 0}
 				rx={3}
 			/>
 
@@ -296,7 +318,7 @@
 								/>
 							{/if}
 						{/each}
-						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} fill="black">
+						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} font-family={resolved.fontFamily} fill="black">
 							{item.label}
 						</text>
 					</g>
@@ -332,7 +354,7 @@
 								/>
 							{/if}
 						{/each}
-						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} fill="black">
+						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} font-family={resolved.fontFamily} fill="black">
 							{item.label}
 						</text>
 					</g>

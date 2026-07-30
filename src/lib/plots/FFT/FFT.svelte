@@ -1136,6 +1136,7 @@
 				.range([0, theData.plot.plotwidth])}
 			<!-- Y Axis (Magnitude) -->
 			<Axis
+			figureStyle={theData.plot.parentBox?.style}
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={yScale}
@@ -1148,6 +1149,7 @@
 			<!-- Y Axis (Phase) - on right side if any data shows phase -->
 			{#if hasPhase}
 				<Axis
+			figureStyle={theData.plot.parentBox?.style}
 					height={theData.plot.plotheight}
 					width={theData.plot.plotwidth}
 					scale={phaseYScale}
@@ -1160,6 +1162,7 @@
 
 			<!-- X Axis -->
 			<Axis
+			figureStyle={theData.plot.parentBox?.style}
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={xScale}
