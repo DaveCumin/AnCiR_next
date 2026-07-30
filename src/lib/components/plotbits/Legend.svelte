@@ -5,12 +5,37 @@
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
+	// Legend border defaults.
+	//
+	// The old default was too pale to read as a box, so legends looked unboxed even
+	// though the rect was always drawn. Bumping the default alone would have fixed
+	// only NEW legends: borderColor is persisted, so every saved session (including
+	// all the shipped examples) would keep the faint value forever.
+	//
+	// So this exact string is treated as "never deliberately chosen" and upgraded on
+	// load, on the same principle as an auto-assigned series colour: it was a
+	// default, not a decision. Any other value is left untouched, including a
+	// deliberately pale grey: the ColourPicker writes a hex literal, never this
+	// token reference, so a user's choice is always distinguishable from the default
+	// even when the two resolve to the same colour.
+	const LEGACY_PALE_BORDER = 'var(--color-lightness-80)';
+	const DEFAULT_BORDER = 'var(--color-lightness-25)';
+
+	/** @param {string | undefined | null} saved */
+	function resolveBorderColour(saved) {
+		if (!saved || saved === LEGACY_PALE_BORDER) return DEFAULT_BORDER;
+		return saved;
+	}
+
 	export class LegendClass {
 		show = $state(true);
 		position = $state('topright'); // topright, topleft, bottomright, bottomleft
 		orientation = $state('vertical'); // vertical, horizontal
 		backgroundColor = $state('rgba(255, 255, 255, 0.9)');
-		borderColor = $state('var(--color-lightness-80)');
+		// Matches the ink of the type it encloses, which is the convention for a
+		// figure legend. See LEGACY_PALE_BORDER above for why saved sessions are
+		// migrated rather than left on the old value.
+		borderColor = $state(DEFAULT_BORDER);
 		borderWidth = $state(1);
 		padding = $state(8);
 		itemSpacing = $state(4);
@@ -22,7 +47,7 @@
 				this.position = dataIN.position ?? 'topright';
 				this.orientation = dataIN.orientation ?? 'vertical';
 				this.backgroundColor = dataIN.backgroundColor ?? 'rgba(255, 255, 255, 0.9)';
-				this.borderColor = dataIN.borderColor ?? 'var(--color-lightness-80)';
+				this.borderColor = resolveBorderColour(dataIN.borderColor);
 				this.borderWidth = dataIN.borderWidth ?? 1;
 				this.padding = dataIN.padding ?? 8;
 				this.itemSpacing = dataIN.itemSpacing ?? 4;

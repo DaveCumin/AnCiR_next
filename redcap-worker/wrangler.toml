@@ -1,0 +1,37 @@
+name = "ancir-redcap"
+main = "index.js"
+compatibility_date = "2026-07-02"
+
+# Deliberately a SEPARATE Worker from ancir-nl. A REDCap incident must not be able to take the
+# AI button down, and a credential-accepting route wants its own CORS rules and rate limit.
+#
+# No KV, no D1, no cache bindings — on purpose. This Worker holds no state, because the only
+# interesting thing passing through it is a token that must not be stored anywhere.
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[vars]
+# Hosts this Worker may POST to. Matched on a DOT BOUNDARY (see hostAllowed), so
+# "auckland.ac.nz" permits redcap.auckland.ac.nz but NOT evil-auckland.ac.nz.
+#
+# Add institutions as a comma-separated list, e.g.
+#   REDCAP_ALLOWED_HOSTS = "auckland.ac.nz,otago.ac.nz"
+# Every host added widens an SSRF surface, so add them one at a time and deliberately. Do NOT
+# put a bare TLD here, and do not use a wildcard: there isn't one.
+REDCAP_ALLOWED_HOSTS = "auckland.ac.nz"
+
+# Origins allowed to call /redcap. Unlike ancir-nl this is NOT '*': a token flows from the
+# client here. An unlisted origin gets no Access-Control-Allow-Origin at all.
+ALLOWED_ORIGINS = "https://ancir.pages.dev,http://localhost:5173,http://localhost:4173"
+
+# Largest CSV we will relay. A REDCap record export over this should become a saved report.
+REDCAP_MAX_BYTES = "26214400"
+
+# 10 requests per minute per IP, matching ancir-nl. A REDCap pull is a deliberate act, not
+# something a user does in a loop.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "2001"
+simple = { limit = 10, period = 60 }

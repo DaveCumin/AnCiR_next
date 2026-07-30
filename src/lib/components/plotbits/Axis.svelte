@@ -88,6 +88,22 @@
 	let labelfontsize = 16;
 	let labelBuffer = 16; // Additional spacing between largest tick label and axis label
 
+	// Inner ticks only, applied in one place for all four positions.
+	//
+	// d3's `tickSize` sets the OUTER tick size as well as the inner one, and the
+	// outer size is what makes the domain path turn a stub in at each end:
+	// a bottom axis rendered `M0,6V0H446V6`, i.e. a 6px vertical at x=0 and
+	// another at x=446. Those two stubs read as ticks but belong to the domain
+	// line, so no tick-scale setting removes them. It shows up worst on a
+	// categorical axis, where the real ticks sit one per category (`manualTicks`)
+	// and the end stubs mark nothing at all.
+	//
+	// `tickSizeOuter(0)` leaves a plain domain line with ticks only where there
+	// is something to tick. Kept as a single helper because the previous
+	// duplicate-per-branch version is exactly why the outer size went unnoticed.
+	const configureTicks = (a) =>
+		a.tickSizeInner(ticklength).tickSizeOuter(0).tickPadding(tickspace);
+
 	$effect(() => {
 		height;
 		width;
@@ -106,7 +122,7 @@
 			} else {
 				axis = axisBottom(scale).ticks(axisData.nticks);
 			}
-			axis = axis.tickSize(ticklength).tickPadding(tickspace);
+			axis = configureTicks(axis);
 			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
 				.call(axis)
@@ -118,7 +134,7 @@
 			} else {
 				axis = axisTop(scale).ticks(axisData.nticks);
 			}
-			axis = axis.tickSize(ticklength).tickPadding(tickspace);
+			axis = configureTicks(axis);
 			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
 				.call(axis)
@@ -130,7 +146,7 @@
 			} else {
 				axis = axisLeft(scale).ticks(axisData.nticks);
 			}
-			axis = axis.tickSize(ticklength).tickPadding(tickspace);
+			axis = configureTicks(axis);
 			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
 				.call(axis)
@@ -142,7 +158,7 @@
 			} else {
 				axis = axisRight(scale).ticks(axisData.nticks);
 			}
-			axis = axis.tickSize(ticklength).tickPadding(tickspace);
+			axis = configureTicks(axis);
 			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
 				.call(axis)

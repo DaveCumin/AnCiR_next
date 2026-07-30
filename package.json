@@ -31,7 +31,10 @@
 		"parity:emit": "GEN_PARITY=1 vitest run src/lib/_parity/emitParity.svelte.test.js",
 		"parity:py": "tools/.venv/bin/python -m pytest tools/test_parity.py -q",
 		"parity:r": "Rscript tools/test_parity.R",
-		"parity": "npm run parity:emit && npm run parity:py && npm run parity:r"
+		"parity": "npm run parity:emit && npm run parity:py && npm run parity:r",
+		"redcap:test": "node --test redcap-worker/redcap.test.js",
+		"redcap:dev": "wrangler dev --config redcap-worker/wrangler.toml --local",
+		"redcap:deploy": "wrangler deploy --config redcap-worker/wrangler.toml"
 	},
 	"devDependencies": {
 		"@ancir/design": "workspace:*",
