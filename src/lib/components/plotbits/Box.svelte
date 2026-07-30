@@ -1,6 +1,11 @@
 <script module>
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { colourForSeries, seriesColumnId } from '$lib/plots/seriesColour.js';
+	import {
+		colourForSeries,
+		seriesColumnId,
+		colourForCategory,
+		colourForCategoryLabel
+	} from '$lib/plots/seriesColour.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -168,6 +173,11 @@
 		yoffset = 0,
 		which,
 		uniqueXValues = [],
+		// Colour each box by its CATEGORY rather than by the series. Only meaningful
+		// with a single series: with several, colour distinguishes the series and x
+		// position distinguishes the category, which is the standard reading of a
+		// grouped boxplot. The host plot decides — see seriesColour.js.
+		useCategoryColour = false,
 		seriesIndex = 0,
 		totalSeries = 1,
 		dodgeEnabled = true,
@@ -179,6 +189,16 @@
 	let clipKey = $derived(`boxplot-${seriesIndex}-${xoffset}-${yoffset}`);
 
 	// Group y-values by unique x category
+	// Claim a palette slot for each category, ONCE, off the render path. Calling
+	// colourForCategory while rendering would mutate $state mid-render and throw
+	// state_unsafe_mutation; the template therefore only READS
+	// (colourForCategoryLabel), falling back to the series colour for the frame
+	// before this effect has pinned.
+	$effect(() => {
+		if (!useCategoryColour) return;
+		groupedStats.forEach((group, i) => colourForCategory(group.category, i));
+	});
+
 	let groupedStats = $derived.by(() => {
 		if (!boxPlotData?.draw || !Array.isArray(x) || !Array.isArray(y)) {
 			return [];
@@ -382,6 +402,12 @@
 			{#each groupedStats as group}
 				{@const categoryIdx = getCategoryIndex(group.category)}
 				{@const xCenter = xscale(categoryIdx) + dodgeOffset}
+				{@const boxColour =
+					(useCategoryColour ? colourForCategoryLabel(group.category) : null) ??
+					boxPlotData.colour}
+				{@const boxFill =
+					(useCategoryColour ? colourForCategoryLabel(group.category) : null) ??
+					boxPlotData.fillColour}
 
 				<!-- Lower whisker -->
 				<line
@@ -389,7 +415,7 @@
 					y1={yscale(group.lowerWhisker)}
 					x2={xCenter}
 					y2={yscale(group.q1)}
-					stroke={boxPlotData.colour}
+					stroke={boxColour}
 					stroke-width={boxPlotData.strokeWidth}
 					stroke-dasharray={boxPlotData.stroke}
 				/>
@@ -398,7 +424,7 @@
 					y1={yscale(group.lowerWhisker)}
 					x2={xCenter + whiskerHalfWidth}
 					y2={yscale(group.lowerWhisker)}
-					stroke={boxPlotData.colour}
+					stroke={boxColour}
 					stroke-width={boxPlotData.strokeWidth}
 				/>
 
@@ -408,8 +434,8 @@
 					y={yscale(group.q3)}
 					width={boxHalfWidth * 2}
 					height={yscale(group.q1) - yscale(group.q3)}
-					fill={boxPlotData.fillColour}
-					stroke={boxPlotData.colour}
+					fill={boxFill}
+					stroke={boxColour}
 					stroke-width={boxPlotData.strokeWidth}
 					stroke-dasharray={boxPlotData.stroke}
 				/>
@@ -430,7 +456,7 @@
 					y1={yscale(group.q3)}
 					x2={xCenter}
 					y2={yscale(group.upperWhisker)}
-					stroke={boxPlotData.colour}
+					stroke={boxColour}
 					stroke-width={boxPlotData.strokeWidth}
 					stroke-dasharray={boxPlotData.stroke}
 				/>
@@ -439,7 +465,7 @@
 					y1={yscale(group.upperWhisker)}
 					x2={xCenter + whiskerHalfWidth}
 					y2={yscale(group.upperWhisker)}
-					stroke={boxPlotData.colour}
+					stroke={boxColour}
 					stroke-width={boxPlotData.strokeWidth}
 				/>
 
@@ -451,7 +477,7 @@
 							cy={yscale(outlier)}
 							r={boxPlotData.outlierSize}
 							fill="none"
-							stroke={boxPlotData.colour}
+							stroke={boxColour}
 							stroke-width={boxPlotData.strokeWidth}
 						/>
 					{/each}

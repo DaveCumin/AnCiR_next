@@ -175,6 +175,80 @@ export function releaseSeriesColour(columnId) {
 	if (core.seriesColours) delete core.seriesColours[columnId];
 }
 
+// ---------------------------------------------------------------------------
+// CATEGORY colours: the sibling map, for the case the column map cannot express.
+//
+// The reasoning above is about SERIES, and keying those on the column is right.
+// It does not extend to categorical plots. A boxplot's boxes come from unique
+// VALUES of an x column, and one y column split across three categories is ONE
+// series, so all three boxes resolve to a single colour and there is no way to say
+// "control is always grey, treatment always red". There is no column per category
+// to key on: here the label genuinely IS the identity.
+//
+// So this is keyed on the label, with the same slot machinery. It does not replace
+// the column map; it covers what the column map structurally cannot.
+//
+// Deliberately NOT applied when a plot has several series. There, colour
+// distinguishes the series and x position distinguishes the category, which is the
+// standard reading of a grouped boxplot; recolouring per category would destroy
+// that. The caller decides (see `useCategoryColour` in Box.svelte).
+// ---------------------------------------------------------------------------
+
+function catMap() {
+	return (core.categoryColours ??= {});
+}
+
+/** Migrate/normalise a saved category map. Same accepted shapes as the column map. */
+export function migrateCategoryColourMap(saved) {
+	return migrateSeriesColourMap(saved);
+}
+
+/** The colour a pinned category currently resolves to, or null when unpinned. */
+export function colourForCategoryLabel(label) {
+	const entry = normaliseEntry(catMap()[String(label)]);
+	if (!entry) return null;
+	return entry.hex ?? getPaletteColor(entry.slot);
+}
+
+/**
+ * The colour this category should use, pinning a slot on first sight.
+ *
+ * @param {any} label the category value, as it appears in the x column
+ * @param {number} fallbackIndex position among the categories, used only to pick a
+ *   starting slot; the pin is what makes it stable afterwards
+ */
+export function colourForCategory(label, fallbackIndex = 0) {
+	const key = String(label);
+	const existing = colourForCategoryLabel(key);
+	if (existing) return existing;
+
+	const taken = new Set();
+	for (const entry of Object.values(catMap())) {
+		const norm = normaliseEntry(entry);
+		if (norm && norm.slot != null) taken.add(norm.slot);
+	}
+	const size = Math.max(1, (appState.appColours ?? []).length);
+	let slot = ((fallbackIndex % size) + size) % size;
+	for (let i = 0; i < size && taken.has(slot); i++) slot = (slot + 1) % size;
+	catMap()[key] = { slot };
+	return getPaletteColor(slot);
+}
+
+/** Forget a pinned category colour. */
+export function releaseCategoryColour(label) {
+	if (core.categoryColours) delete core.categoryColours[String(label)];
+}
+
+/** What every pinned category resolves to right now: `{ [label]: hex }`. */
+export function pinnedCategorySnapshot() {
+	const out = {};
+	for (const label of Object.keys(catMap())) {
+		const hex = colourForCategoryLabel(label);
+		if (hex) out[label] = hex;
+	}
+	return out;
+}
+
 /**
  * What every pinned column resolves to right now: `{ [columnId]: hex }`.
  *

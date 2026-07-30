@@ -1141,6 +1141,9 @@
 					x={xDataForDatum(datum, i)}
 					y={datum.y.getData() ?? []}
 					uniqueXValues={theData.plot.uniqueXValues}
+					useCategoryColour={theData.plot.data.length === 1 &&
+						theData.plot.uniqueXValues.length > 1 &&
+						hasCategoryXData(datum)}
 					seriesIndex={i}
 					totalSeries={theData.plot.data.length}
 					dodgeEnabled={hasCategoryXData(datum)}

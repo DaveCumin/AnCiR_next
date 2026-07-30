@@ -57,6 +57,14 @@ export const core = $state({
 	// Long-to-wide each subject IS its own column, which makes column identity the
 	// identity the user means, with no labelling step. See plots/seriesColour.js.
 	seriesColours: {},
+	// categoryColours — one colour per CATEGORY LABEL, the sibling of seriesColours
+	// for categorical plots. A boxplot's boxes come from unique VALUES of an x column,
+	// and one y column split across three categories is ONE series, so the
+	// column-keyed map above resolves all three boxes to a single colour and cannot
+	// express "control is always grey, treatment always red". There is no column per
+	// category to key on, so here the label IS the identity. Same { slot } | { hex }
+	// shape. See plots/seriesColour.js.
+	categoryColours: {},
 	// figureStyle — the session's figure style TEMPLATE: typeface, base type size,
 	// physical figure width, export DPI, background, and the marker/monochrome
 	// flags. See plots/figureStyle.js for the field registry and the pt/mm to px

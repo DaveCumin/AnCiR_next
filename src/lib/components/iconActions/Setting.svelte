@@ -4,7 +4,10 @@
 	import { loadPythonExporter, loadRExporter } from '$lib/utils/pythonExportLoader.js';
 	import { checkRSupport, explainRSupport } from '$lib/utils/rExportSupport.js';
 	import { normaliseFigureStyle, transitionalFigureStyle } from '$lib/plots/figureStyle.js';
-	import { migrateSeriesColourMap } from '$lib/plots/seriesColour.js';
+	import {
+		migrateSeriesColourMap,
+		migrateCategoryColourMap
+	} from '$lib/plots/seriesColour.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -171,6 +174,8 @@
 		// user-chosen or assigned under a different palette, and re-mapping it would
 		// change a saved figure's colours.
 		core.seriesColours = migrateSeriesColourMap(jsonData.seriesColours);
+		// Per-category colours, same shape and same reason to migrate rather than spread.
+		core.categoryColours = migrateCategoryColourMap(jsonData.categoryColours);
 		// Figure style template. Normalised rather than spread: a session file is data
 		// from outside the app, and one saved by an older version is missing whatever
 		// fields did not exist yet. normaliseFigureStyle fills those from the registry
