@@ -11,6 +11,7 @@
 	import { pinnedColourSnapshot, repaintPinnedSeries } from '$lib/plots/seriesColour.js';
 	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
 	import { applyStyleToAll } from '$lib/plots/figureStyle.js';
+	import { applyAppearanceToAll } from '$lib/plots/seriesAppearance.js';
 	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
 	let { showModal = $bindable(false) } = $props();
 
@@ -98,7 +99,14 @@
 		<FigureStyleControls
 			style={core.figureStyle}
 			showApplyToAll={true}
-			onApplyToAll={() => applyStyleToAll(core.plots, core.figureStyle)}
+			onApplyToAll={() => {
+				const n = applyStyleToAll(core.plots, core.figureStyle);
+				// The style fields alone do not move monochrome/marker state into series
+				// that already exist, so push those too or "Apply to all" would leave the
+				// two flags visibly ignored.
+				applyAppearanceToAll(core.plots);
+				return n;
+			}}
 			title="Figure defaults"
 		/>
 

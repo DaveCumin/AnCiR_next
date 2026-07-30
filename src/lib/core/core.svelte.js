@@ -65,6 +65,13 @@ export const core = $state({
 	// category to key on, so here the label IS the identity. Same { slot } | { hex }
 	// shape. See plots/seriesColour.js.
 	categoryColours: {},
+	// seriesShapes / seriesDashes — one marker shape and one dash pattern per COLUMN,
+	// the redundant channels that survive a greyscale print and a colourblind reader.
+	// Same pinning principle as seriesColours: claimed lazily, then STICKY, so toggling
+	// "vary markers" off and back on returns the same shapes rather than reshuffling.
+	// Plain string values ('triangle', '6 3'). See plots/seriesAppearance.js.
+	seriesShapes: {},
+	seriesDashes: {},
 	// figureStyle — the session's figure style TEMPLATE: typeface, base type size,
 	// physical figure width, export DPI, background, and the marker/monochrome
 	// flags. See plots/figureStyle.js for the field registry and the pt/mm to px

@@ -176,6 +176,17 @@
 		core.seriesColours = migrateSeriesColourMap(jsonData.seriesColours);
 		// Per-category colours, same shape and same reason to migrate rather than spread.
 		core.categoryColours = migrateCategoryColourMap(jsonData.categoryColours);
+		// Pinned marker shapes and dashes. Plain string maps, so a shallow copy is
+		// enough; absent in any session saved before they existed, which simply claim
+		// fresh pins the first time a figure varies its markers.
+		core.seriesShapes =
+			jsonData.seriesShapes && typeof jsonData.seriesShapes === 'object'
+				? { ...jsonData.seriesShapes }
+				: {};
+		core.seriesDashes =
+			jsonData.seriesDashes && typeof jsonData.seriesDashes === 'object'
+				? { ...jsonData.seriesDashes }
+				: {};
 		// Figure style template. Normalised rather than spread: a session file is data
 		// from outside the app, and one saved by an older version is missing whatever
 		// fields did not exist yet. normaliseFigureStyle fills those from the registry

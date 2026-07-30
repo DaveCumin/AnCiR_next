@@ -27,6 +27,12 @@
 		showApplyToAll = false,
 		/** Called when that button is pressed. */
 		onApplyToAll = null,
+		/**
+		 * Called when a flag that needs pushing into existing series changes
+		 * (monochrome, varyMarkers). Those are resolved once into each series' own
+		 * state, so a toggle has to be applied rather than merely stored.
+		 */
+		onAppearanceChange = null,
 		title = 'Figure'
 	} = $props();
 
@@ -146,11 +152,19 @@
 			<p>Box around legend</p>
 		</div>
 		<div class="control-input-checkbox">
-			<input type="checkbox" bind:checked={style.varyMarkers} />
+			<input
+				type="checkbox"
+				bind:checked={style.varyMarkers}
+				onchange={() => onAppearanceChange?.()}
+			/>
 			<p>Vary marker shape per series</p>
 		</div>
 		<div class="control-input-checkbox">
-			<input type="checkbox" bind:checked={style.monochrome} />
+			<input
+				type="checkbox"
+				bind:checked={style.monochrome}
+				onchange={() => onAppearanceChange?.()}
+			/>
 			<p>Monochrome (print-safe)</p>
 		</div>
 	</div>

@@ -91,6 +91,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
+	import { applyFigureAppearance } from '$lib/plots/seriesAppearance.js';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
@@ -847,7 +848,11 @@
 
 				<!-- This plot's own style. Editing it never touches the session template or
 				     any other figure. -->
-				<FigureStyleControls style={plot.style} title="Figure" />
+				<FigureStyleControls
+					style={plot.style}
+					title="Figure"
+					onAppearanceChange={() => applyFigureAppearance(plot)}
+				/>
 
 				<Plot theData={plot.plot} which="controls" />
 			{/if}
