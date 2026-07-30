@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { core, appState } from '$lib/core/core.svelte';
 import { colourForSeries } from './seriesColour.js';
+import { pinAppearance, mappedColour } from './appearanceIdentity.js';
 import {
 	DASH_ORDER,
 	shapeForColumn,
@@ -26,6 +27,9 @@ beforeEach(() => {
 	core.seriesColours = {};
 	core.seriesShapes = {};
 	core.seriesDashes = {};
+	// The merged identity map is what applyFigureAppearance reads now; the three above are
+	// only still cleared so the legacy-map helpers under test start from a known state.
+	core.seriesAppearance = {};
 	core.plots = [];
 });
 
@@ -56,8 +60,8 @@ describe('pinned shapes and dashes', () => {
 
 	it('solid is the FIRST dash, so series one looks unchanged', () => {
 		// Deliberate: turning on varying markers must not restyle the first series.
-		expect(DASH_ORDER[0]).toBe('');
-		expect(dashForColumn(1, 0)).toBe('');
+		expect(DASH_ORDER[0]).toBe('solid');
+		expect(dashForColumn(1, 0)).toBe('solid');
 	});
 
 	it('terminates when every shape is taken', () => {
@@ -102,7 +106,7 @@ describe('applyFigureAppearance', () => {
 		colourForSeries(null, 2, 1);
 		applyFigureAppearance(plot);
 		expect(plot.plot.data[0].points.shape).toBe('circle');
-		expect(plot.plot.data[0].line.stroke).toBe('');
+		expect(plot.plot.data[0].line.stroke).toBe('solid');
 	});
 
 	it('varies shape and dash when varyMarkers is on', () => {
@@ -125,7 +129,12 @@ describe('applyFigureAppearance', () => {
 		// The toggles have to be toggles. A one-way transformation would strand a figure
 		// in greyscale with no way back.
 		const plot = mkPlot([1, 2], { monochrome: true, varyMarkers: true });
-		const pinned = colourForSeries(null, 1, 0);
+		// Pin through the MERGED map, which is where colour identity lives now. Pinning via
+		// the retired seriesColours map is what made this assertion pass while the restore
+		// was broken in the browser: mappedColour returned null for every column, so
+		// monochrome-off wrote nothing and the figure stayed grey.
+		pinAppearance(1, 0);
+		const pinned = mappedColour(1);
 		applyFigureAppearance(plot);
 		expect(plot.plot.data[0].points.colour).not.toBe(pinned);
 
@@ -134,7 +143,7 @@ describe('applyFigureAppearance', () => {
 		applyFigureAppearance(plot);
 		expect(plot.plot.data[0].points.colour).toBe(pinned);
 		expect(plot.plot.data[0].points.shape).toBe('circle');
-		expect(plot.plot.data[0].line.stroke).toBe('');
+		expect(plot.plot.data[0].line.stroke).toBe('solid');
 	});
 
 	it('shapes are STICKY across a toggle, not reshuffled', () => {
@@ -199,7 +208,12 @@ describe('every plot shape in the app', () => {
 	it('greys an ACTOGRAM series (colour directly on the datum)', () => {
 		const plot = {
 			style: newFigureStyle({ monochrome: true }),
-			plot: { data: [{ y: { refId: 1 }, colour: '#ff0000' }, { y: { refId: 2 }, colour: '#00ff00' }] }
+			plot: {
+				data: [
+					{ y: { refId: 1 }, colour: '#ff0000' },
+					{ y: { refId: 2 }, colour: '#00ff00' }
+				]
+			}
 		};
 		expect(applyFigureAppearance(plot)).toBeGreaterThan(0);
 		for (const d of plot.plot.data) expect(d.colour).toMatch(/^#([0-9a-f]{2})\1\1$/);
@@ -271,7 +285,11 @@ describe('colormap plots', () => {
 	it('works on a colormap plot with no series data at all', () => {
 		// CWT has no `data` array in the series sense; the old code bailed out before
 		// doing anything for exactly that reason.
-		const plot = { id: 9, style: newFigureStyle({ monochrome: true }), plot: { colormap: 'viridis' } };
+		const plot = {
+			id: 9,
+			style: newFigureStyle({ monochrome: true }),
+			plot: { colormap: 'viridis' }
+		};
 		expect(applyFigureAppearance(plot)).toBeGreaterThan(0);
 		expect(plot.plot.colormap).toBe('greys');
 	});
@@ -281,5 +299,56 @@ describe('colormap plots', () => {
 		plot.id = 4;
 		applyFigureAppearance(plot);
 		expect(core.plotColormaps['4']).toBeUndefined();
+	});
+});
+
+// THE GAP THAT LET MONOCHROME SHIP BROKEN.
+//
+// Every fixture above builds a series as a plain object literal, where Object.values()
+// returns points/line exactly as expected. A REAL series is a Svelte class, and Svelte 5
+// compiles a `$state` field into a private field plus a getter/setter pair on the
+// PROTOTYPE — so `Object.keys(datum)` on a real ScatterDataclass returns []. The
+// structural target search found nothing, applyFigureAppearance reported zero changes on
+// every figure, and both toggles were inert while the suite stayed green.
+//
+// This fixture models the accessor shape rather than the value shape.
+describe('a series whose fields are prototype accessors (the real Svelte 5 shape)', () => {
+	class Style {
+		#colour = '#aa0000';
+		get colour() {
+			return this.#colour;
+		}
+		set colour(v) {
+			this.#colour = v;
+		}
+		shape = 'circle';
+	}
+	class Series {
+		#points = new Style();
+		#line = new Style();
+		#y = { refId: 1 };
+		get points() {
+			return this.#points;
+		}
+		get line() {
+			return this.#line;
+		}
+		get y() {
+			return this.#y;
+		}
+	}
+
+	it('has no own enumerable keys — the condition the old code assumed away', () => {
+		expect(Object.keys(new Series())).toHaveLength(0);
+	});
+
+	it('is still greyed by monochrome', () => {
+		const plot = {
+			style: { ...newFigureStyle(), monochrome: true },
+			plot: { data: [new Series()] }
+		};
+		expect(applyFigureAppearance(plot)).toBeGreaterThan(0);
+		expect(plot.plot.data[0].points.colour).toBe(greyForIndex(0, 1));
+		expect(plot.plot.data[0].line.colour).toBe(greyForIndex(0, 1));
 	});
 });

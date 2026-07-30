@@ -9,6 +9,18 @@
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { isValidStroke } from '$lib/components/plotbits/helpers/misc.js';
 
+	/**
+	 * The dash vocabulary, and the only one. `stroke` is written straight into
+	 * `stroke-dasharray`, so these are real dasharray values ('solid' is not one, which is
+	 * why the browser renders it as an unbroken line).
+	 *
+	 * It lives here because this is where the user picks from it. The appearance system used
+	 * to carry its OWN list ('', '6 3', '2 2', …) that shared not one entry with this select,
+	 * so turning on "vary marker shape" wrote a dash no option matched and the Style dropdown
+	 * went blank — a control that shows nothing and appears to reject what you choose.
+	 */
+	export const STROKE_STYLES = ['solid', '5, 5', '2, 2', '5, 2'];
+
 	export class LineClass {
 		// A style object reused by every line/points plot, so it opts ITSELF into the shared-
 		// options panel and the AI editor (sharedControls.js) — no per-plot `descend` needed.
@@ -17,7 +29,7 @@
 		static descriptors = {
 			colour: { input: 'color', label: 'Colour', group: 'Line' },
 			strokeWidth: { label: 'Width', step: 0.5, group: 'Line' },
-			stroke: { input: 'select', options: ['solid', '5, 5', '2, 2', '5, 2'], label: 'Style', group: 'Line' },
+			stroke: { input: 'select', options: STROKE_STYLES, label: 'Style', group: 'Line' },
 			draw: { label: 'Show', group: 'Line' },
 			joinGaps: { input: 'boolean', label: 'Join gaps', group: 'Line' }
 		};

@@ -29,14 +29,19 @@
 // Design spec: docs/superpowers/specs/2026-07-30-figure-style-system-design.md
 import { core } from '$lib/core/core.svelte';
 import { POINT_SHAPES } from '$lib/components/plotbits/pointShapes.js';
-import { colourForColumn, seriesColumnId } from '$lib/plots/seriesColour.js';
+import { seriesColumnId } from '$lib/plots/seriesColour.js';
+import {
+	DASH_ORDER,
+	mappedColour,
+	mappedShape,
+	mappedDash
+} from '$lib/plots/appearanceIdentity.js';
 
 /**
- * Dash patterns, in claim order. The empty string is solid, and is deliberately
- * FIRST so the first series in a figure keeps the appearance it had before markers
- * were varied.
+ * Re-exported, not redefined. Two copies of this list existed and had drifted from the
+ * dash values the Line control actually offers; one vocabulary, owned by Line.svelte.
  */
-export const DASH_ORDER = ['', '6 3', '2 2', '8 3 2 3', '1 3'];
+export { DASH_ORDER };
 
 /**
  * Every object on a series that carries appearance.
@@ -54,12 +59,44 @@ function appearanceTargets(datum) {
 	if (!datum || typeof datum !== 'object') return [];
 	const out = [];
 	if ('colour' in datum) out.push(datum);
-	for (const value of Object.values(datum)) {
+	for (const key of enumerableKeys(datum)) {
+		let value;
+		try {
+			value = datum[key];
+		} catch {
+			continue; // a getter that throws is not a style object
+		}
 		if (value && typeof value === 'object' && !Array.isArray(value) && 'colour' in value) {
 			out.push(value);
 		}
 	}
 	return out;
+}
+
+/**
+ * Property names to look at on a series — own keys PLUS inherited getters.
+ *
+ * `Object.values(datum)` was the obvious way to do this and was wrong, which is why
+ * monochrome and vary-markers silently stopped working. Svelte 5 compiles a `$state`
+ * class field into a private field with a getter/setter pair ON THE PROTOTYPE, so a
+ * series' `points` and `line` are not own enumerable properties of the instance:
+ * `Object.keys(datum)` on a real ScatterDataclass returns []. Every plot series in the
+ * app is such a class, so the structural search found nothing at all and
+ * applyFigureAppearance reported zero changes on every figure.
+ *
+ * It passed the suite because the fixtures are plain object literals, where
+ * Object.values works perfectly. That is the gap worth remembering: a fixture that
+ * models a Svelte class as a plain object cannot see this class of bug.
+ */
+function enumerableKeys(obj) {
+	const keys = new Set(Object.keys(obj));
+	for (let proto = Object.getPrototypeOf(obj); proto && proto !== Object.prototype; ) {
+		for (const [key, desc] of Object.entries(Object.getOwnPropertyDescriptors(proto))) {
+			if (key !== 'constructor' && typeof desc.get === 'function') keys.add(key);
+		}
+		proto = Object.getPrototypeOf(proto);
+	}
+	return keys;
 }
 
 function shapeMap() {
@@ -198,9 +235,15 @@ export function applyFigureAppearance(plot) {
 		// Monochrome is per FIGURE, so the grey depends on the series' position in this
 		// plot, not on the session-wide slot. Colour identity across plots is a
 		// colour-palette property; in greyscale the shape carries identity instead.
-		const colour = mono ? greyForIndex(i, data.length) : colId == null ? null : colourForColumn(colId);
-		const shape = vary && colId != null ? shapeForColumn(colId, i) : 'circle';
-		const dash = vary && colId != null ? dashForColumn(colId, i) : '';
+		// The identity map is the single source of truth for what a column looks like.
+		// These read the MERGED record (core.seriesAppearance), not the three v72.1 maps —
+		// reading the old ones meant turning monochrome off restored nothing, because the
+		// colour identity had already moved and colourForColumn returned null for every
+		// column, and it meant vary-markers kept claiming into a second, divergent map.
+		const colour = mono ? greyForIndex(i, data.length) : colId == null ? null : mappedColour(colId);
+		const shape =
+			vary && colId != null ? (mappedShape(colId) ?? shapeForColumn(colId, i)) : 'circle';
+		const dash = vary && colId != null ? (mappedDash(colId) ?? dashForColumn(colId, i)) : 'solid';
 
 		for (const s of appearanceTargets(datum)) {
 			if (colour && s.colour !== colour) {

@@ -45,12 +45,36 @@
 import { core, appState } from '$lib/core/core.svelte';
 import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 import { POINT_SHAPES } from '$lib/components/plotbits/pointShapes.js';
+import { STROKE_STYLES } from '$lib/components/plotbits/Line.svelte';
 
 /**
  * Dash patterns, in claim order. Solid is FIRST so the first series in a figure
  * keeps the appearance it had before markers were varied.
  */
-export const DASH_ORDER = ['', '6 3', '2 2', '8 3 2 3', '1 3'];
+export const DASH_ORDER = STROKE_STYLES;
+
+/**
+ * The v72.1 dash vocabulary → this one.
+ *
+ * That list ('', '6 3', '2 2', '8 3 2 3', '1 3') shared no entry with the dash values the
+ * Line control offers, so it is being retired. Sessions saved against it must not silently
+ * lose their dashes on load, so translate to the nearest equivalent instead of dropping
+ * anything the new list does not contain.
+ */
+const LEGACY_DASH = {
+	'': 'solid',
+	'6 3': '5, 5',
+	'2 2': '2, 2',
+	'8 3 2 3': '5, 2',
+	'1 3': '2, 2'
+};
+
+/** A dash in this build's vocabulary, translating a v72.1 value, or null. */
+export function canonicalDash(dash) {
+	if (typeof dash !== 'string') return null;
+	if (DASH_ORDER.includes(dash)) return dash;
+	return LEGACY_DASH[dash] ?? null;
+}
 
 export function appearanceMap() {
 	return (core.seriesAppearance ??= {});
@@ -101,9 +125,8 @@ export function normaliseRecord(entry) {
 	if (typeof entry.shape === 'string' && POINT_SHAPES.includes(entry.shape)) {
 		out.shape = entry.shape;
 	}
-	if (typeof entry.dash === 'string' && DASH_ORDER.includes(entry.dash)) {
-		out.dash = entry.dash;
-	}
+	const dash = canonicalDash(entry.dash);
+	if (dash) out.dash = dash;
 	// `edited` marks a record the user set in the editor. Auto-assignment must never
 	// overwrite one, so it has to survive a round trip.
 	if (entry.edited === true) out.edited = true;
@@ -143,7 +166,8 @@ export function migrateAppearanceMaps(appearance, colours, shapes, dashes) {
 	}
 	for (const [colId, dash] of Object.entries(dashes ?? {})) {
 		if (out[String(colId)]?.dash) continue;
-		if (typeof dash === 'string' && DASH_ORDER.includes(dash)) put(colId, { dash });
+		const canonical = canonicalDash(dash);
+		if (canonical) put(colId, { dash: canonical });
 	}
 	return out;
 }
@@ -278,9 +302,9 @@ export function resolveShape(explicit, columnId, varyMarkers = false) {
 
 /** LEVEL 1 → 2 → default, for line dash. */
 export function resolveDash(explicit, columnId, varyMarkers = false) {
-	if (typeof explicit === 'string' && explicit !== '') return explicit;
-	if (!varyMarkers) return '';
-	return mappedDash(columnId) ?? '';
+	if (typeof explicit === 'string' && explicit !== '' && explicit !== 'solid') return explicit;
+	if (!varyMarkers) return 'solid';
+	return mappedDash(columnId) ?? 'solid';
 }
 
 /**
@@ -351,7 +375,7 @@ export function clearSeriesColourOverrides(plots) {
 }
 
 /** Human-readable labels for the dash patterns, parallel to DASH_ORDER. */
-export const DASH_LABELS = ['Solid', 'Dashed', 'Dotted', 'Dash-dot', 'Fine dots'];
+export const DASH_LABELS = ['Solid', 'Dashed', 'Dotted', 'Dash-dot'];
 
 /**
  * The rows the appearance editor shows: one per column that has a record.

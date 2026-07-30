@@ -82,7 +82,9 @@ describe('precedence', () => {
 		pinAppearance(5, 2);
 		expect(resolveShape(null, 5, false)).toBe('circle');
 		expect(resolveShape(null, 5, true)).toBe(mappedShape(5));
-		expect(resolveDash(null, 5, false)).toBe('');
+		// 'solid' is this build's spelling for an unbroken line — the same value the Line
+		// control offers, so the Style dropdown can actually show it.
+		expect(resolveDash(null, 5, false)).toBe('solid');
 		expect(resolveDash(null, 5, true)).toBe(mappedDash(5));
 		// An override still wins even with the gate off.
 		expect(resolveShape('star', 5, false)).toBe('star');
@@ -144,13 +146,9 @@ describe('slots follow the palette', () => {
 
 describe('migration from the three v72.1 maps', () => {
 	it('folds colours, shapes and dashes into one record', () => {
-		const merged = migrateAppearanceMaps(
-			null,
-			{ 5: { slot: 2 } },
-			{ 5: 'triangle' },
-			{ 5: '6 3' }
-		);
-		expect(merged['5']).toEqual({ colour: { slot: 2 }, shape: 'triangle', dash: '6 3' });
+		const merged = migrateAppearanceMaps(null, { 5: { slot: 2 } }, { 5: 'triangle' }, { 5: '6 3' });
+		// '6 3' was the v72.1 spelling; it is translated rather than dropped.
+		expect(merged['5']).toEqual({ colour: { slot: 2 }, shape: 'triangle', dash: '5, 5' });
 	});
 
 	it('accepts the legacy bare-hex form, converting a palette match to a slot', () => {
@@ -185,7 +183,9 @@ describe('migration from the three v72.1 maps', () => {
 	});
 
 	it('drops junk rather than storing something unusable', () => {
-		expect(migrateAppearanceMaps({ 1: null, 2: {}, 3: 7 }, { 4: '' }, { 5: 'blob' }, { 6: 'nope' })).toEqual({});
+		expect(
+			migrateAppearanceMaps({ 1: null, 2: {}, 3: 7 }, { 4: '' }, { 5: 'blob' }, { 6: 'nope' })
+		).toEqual({});
 		expect(migrateAppearanceMaps(null, null, null, null)).toEqual({});
 	});
 
