@@ -39,7 +39,13 @@ beforeEach(() => {
 	appState.appColours = [...PAL_A];
 	core.seriesColours = {};
 	core.plots = [];
+	core.data = [];
 });
+
+/** Register column ids as live, since slot claiming only counts pins for existing columns. */
+function liveColumns(...ids) {
+	core.data = ids.map((id) => ({ id }));
+}
 
 /** A minimal plot series shaped the way the real ones are. */
 function mkSeries(colId, styleColour, extra = {}) {
@@ -61,6 +67,8 @@ describe('slot assignment', () => {
 	});
 
 	it('different columns claim different slots', () => {
+		// Both must be LIVE columns: a pin only holds its slot while its column exists.
+		liveColumns(1, 2);
 		colourForSeries(null, 1, 0);
 		colourForSeries(null, 2, 0);
 		expect(core.seriesColours[1].slot).not.toBe(core.seriesColours[2].slot);
@@ -296,5 +304,37 @@ describe('category colours', () => {
 		colourForCategory('control', 0);
 		releaseCategoryColour('control');
 		expect(colourForCategoryLabel('control')).toBeNull();
+	});
+});
+
+// A pin is keyed on a column id and nothing removes it when the column goes. If a dead pin
+// still counted as claiming its slot, every later series started further down the palette —
+// which is what made the cmd-shift-S demo come back mid-palette on its second run.
+describe('slots held by columns that no longer exist', () => {
+	it('does not let a deleted column keep its slot', () => {
+		liveColumns(1);
+		expect(colourForSeries(null, 1, 0)).toBe(PAL_A[0]);
+
+		// Column 1 is deleted; its pin stays behind.
+		core.data = [];
+		liveColumns(2);
+		expect(colourForSeries(null, 2, 0)).toBe(PAL_A[0]);
+	});
+
+	it('still gives a live column its own slot rather than a duplicate', () => {
+		liveColumns(1, 2);
+		expect(colourForSeries(null, 1, 0)).toBe(PAL_A[0]);
+		expect(colourForSeries(null, 2, 0)).toBe(PAL_A[1]);
+	});
+
+	it('hands a returning column the colour it had, not a new one', () => {
+		liveColumns(1);
+		expect(colourForSeries(null, 1, 0)).toBe(PAL_A[0]);
+		core.data = [];
+		liveColumns(2);
+		colourForSeries(null, 2, 0); // takes slot 0 while 1 is away
+		// 1 comes back (undo, re-import): the pin survived, so it keeps its colour.
+		liveColumns(1, 2);
+		expect(colourForColumn(1)).toBe(PAL_A[0]);
 	});
 });

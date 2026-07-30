@@ -15,6 +15,9 @@ const { colourForSeries, seriesColumnId, releaseSeriesColour } = await import('.
 
 beforeEach(() => {
 	core.seriesColours = {};
+	// Slot claiming only counts pins whose column still exists, so the columns these tests
+	// name have to be present. Register a generous range rather than per-test bookkeeping.
+	core.data = Array.from({ length: 20 }, (_, id) => ({ id }));
 });
 
 describe('a column keeps its colour across plots', () => {

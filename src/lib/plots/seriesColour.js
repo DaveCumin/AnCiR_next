@@ -119,10 +119,25 @@ export function colourForColumn(columnId) {
 	return entry.hex ?? getPaletteColor(entry.slot);
 }
 
-/** Slots already claimed by some column. */
+/**
+ * Slots already claimed by a column that STILL EXISTS.
+ *
+ * The liveness check is the point. A pin is keyed on a column id, and nothing removes the entry
+ * when the column goes — so a deleted column went on holding its slot for the rest of the
+ * session. Every later series then started further down the palette, and the first plot in a
+ * fresh set came out mid-palette instead of at colour 0. Clearing the whole session made it
+ * worse rather than better: cmd-shift-S rebuilds everything with new column ids while the old
+ * pins stay, so the demo's second run started at slot 2, the third at slot 4, and so on. That is
+ * what "random colours" looks like from the outside.
+ *
+ * Entries are NOT deleted here, only ignored. A column can come back — an undo, a re-import —
+ * and if it does it should find the colour it had rather than be reassigned.
+ */
 function takenSlots() {
+	const live = new Set((core.data ?? []).map((c) => String(c.id)));
 	const taken = new Set();
-	for (const entry of Object.values(map())) {
+	for (const [colId, entry] of Object.entries(map())) {
+		if (!live.has(String(colId))) continue;
 		const norm = normaliseEntry(entry);
 		if (norm && norm.slot != null) taken.add(norm.slot);
 	}

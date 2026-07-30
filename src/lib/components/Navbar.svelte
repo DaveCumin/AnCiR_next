@@ -20,6 +20,17 @@
 	let showAi = $state(false);
 	let helpAnchor;
 
+	let exists = $state(false);
+
+    async function checkFile() {
+      try {
+        const res = await fetch('/handbook.html', { method: 'HEAD' });
+        exists = res.ok;
+      } catch {
+        exists = false;
+      }
+    }
+
 	// The AI button needs a reachable Worker, so ask it rather than trusting
 	// `navigator.onLine` (which only reports a link, not that our service is up — it would
 	// happily show the button while the Worker is down or blocked). Offline/unconfigured ⇒ the
@@ -33,6 +44,8 @@
 		});
 		return () => (cancelled = true);
 	});
+
+
 
 	// The Data panel is independent of the canvas mode — it overlays either the
 	// workflow or the workspace canvas. So it's a plain toggle.
@@ -191,7 +204,11 @@
 			<button
 				class="rail-btn"
 				data-testid="nav-help"
-				onclick={() => (showHelpMenu = !showHelpMenu)}
+				onclick={() => {
+                  				  checkFile();
+                                  showHelpMenu = !showHelpMenu
+                  				}
+    				    }
 				aria-haspopup="menu"
 				aria-expanded={showHelpMenu}
 				{@attach tooltip('Help — take a tour or about AnCiR')}
@@ -209,6 +226,16 @@
 							openPicker();
 						}}>Take a tour…</button
 					>
+					{#if exists}
+    					<button
+    						type="button"
+    						role="menuitem"
+    						data-testid="open-handbook"
+    						onclick={() => {
+    							window.open('/handbook.html', '_blank');
+    						}}>Open handbook</button
+    					>
+					{/if}
 					<button
 						type="button"
 						role="menuitem"

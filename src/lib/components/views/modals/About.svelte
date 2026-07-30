@@ -79,7 +79,7 @@
 		</p>
 		<p>
 			<strong
-				>Please feel free to send any bug reports, feature requests, or offers of support to <a
+				>Please send any bug reports, feature requests, or offers of support to <a
 					href="mailto:d.cumin@auckland.ac.nz?subject=AnCiR">d.cumin@auckland.ac.nz</a
 				></strong
 			>
