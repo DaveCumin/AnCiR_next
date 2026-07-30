@@ -356,3 +356,32 @@ describe('resolveStyle pass-through flags', () => {
 		expect(r.backgroundColour).toBe('transparent');
 	});
 });
+
+// Slice 4: the legend and significance bars joined the type system. Their legacy
+// hardcoded pixel sizes are part of the transitional contract, for the same reason
+// as the axis sizes: drift changes every figure in every saved session.
+describe('transitional sizes for legend and sig bars', () => {
+	it('reproduces the legacy legend 12px and sig bar 11px', () => {
+		const { sizes } = resolveStyle(transitionalFigureStyle());
+		expect(sizes.legend).toBeCloseTo(12, 6);
+		expect(sizes.sigBar).toBeCloseTo(11, 6);
+	});
+
+	it('all four legacy sizes together', () => {
+		// The complete pre-feature appearance, in one assertion.
+		const { sizes } = resolveStyle(transitionalFigureStyle());
+		expect({
+			axisLabel: Math.round(sizes.axisLabel),
+			tick: Math.round(sizes.tick),
+			legend: Math.round(sizes.legend),
+			sigBar: Math.round(sizes.sigBar)
+		}).toEqual({ axisLabel: 16, tick: 15, legend: 12, sigBar: 11 });
+	});
+
+	it('the publication ratios put the legend AT the base, unlike the transitional ones', () => {
+		// Confirms the transitional scale is a stopgap and not the intended design: once
+		// `m` is the default and roleScale goes away, the legend matches the axis label.
+		const { sizes } = resolveStyle(newFigureStyle({ fontSize: 'm' }));
+		expect(sizes.legend).toBeCloseTo(sizes.axisLabel, 6);
+	});
+});

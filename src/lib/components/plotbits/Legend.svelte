@@ -21,6 +21,24 @@
 	const LEGACY_PALE_BORDER = 'var(--color-lightness-80)';
 	const DEFAULT_BORDER = 'var(--color-lightness-25)';
 
+	// Legend type size.
+	//
+	// It used to be a hardcoded 12, persisted on every legend. Same problem as the
+	// border colour: leaving a saved 12 in place would pin every existing legend
+	// outside the type system forever, so a saved value EQUAL to that old default is
+	// treated as "never deliberately chosen" and released to follow the figure. Any
+	// other number is a real override and kept.
+	//
+	// Appearance does not change: the transitional style's legend ratio resolves to
+	// exactly 12px (see TRANSITIONAL_ROLE_SCALE).
+	const LEGACY_FONT_SIZE = 12;
+
+	/** @param {number | undefined | null} saved */
+	function resolveFontSize(saved) {
+		if (typeof saved !== 'number' || !Number.isFinite(saved)) return null;
+		return saved === LEGACY_FONT_SIZE ? null : saved;
+	}
+
 	/** @param {string | undefined | null} saved */
 	function resolveBorderColour(saved) {
 		if (!saved || saved === LEGACY_PALE_BORDER) return DEFAULT_BORDER;
@@ -39,7 +57,9 @@
 		borderWidth = $state(1);
 		padding = $state(8);
 		itemSpacing = $state(4);
-		fontSize = $state(12);
+		// null = follow the figure's base type size. A number is a deliberate override.
+		// The old default was a hardcoded 12; see LEGACY_FONT_SIZE.
+		fontSize = $state(null);
 
 		constructor(dataIN) {
 			if (dataIN) {
@@ -51,7 +71,7 @@
 				this.borderWidth = dataIN.borderWidth ?? 1;
 				this.padding = dataIN.padding ?? 8;
 				this.itemSpacing = dataIN.itemSpacing ?? 4;
-				this.fontSize = dataIN.fontSize ?? 12;
+				this.fontSize = resolveFontSize(dataIN.fontSize);
 			}
 		}
 
@@ -93,6 +113,11 @@
 
 	// Tolerates null and returns the defaults.
 	const resolved = $derived(resolveStyle(figureStyle));
+	// The size actually drawn: a deliberate per-legend override, else the figure's
+	// legend size. Every use goes through this — the box is sized from measured text
+	// widths and line heights, so a null leaking into that maths would become NaN and
+	// collapse the legend rather than merely mis-size it.
+	const legendFontSize = $derived(legendData.fontSize ?? resolved.sizes.legend);
 	// Whether to draw the box at all. The border colour and width stay on
 	// legendData: this flag is house style, those are per-legend refinements.
 	const showBox = $derived(resolved.legendBox !== false);
@@ -119,7 +144,7 @@
 		// sized from these measured widths, so measuring in the wrong family makes the
 		// border not fit the text it encloses — invisible while the figure is sans,
 		// wrong the moment it is switched to serif.
-		measuringCanvas.font = `${legendData.fontSize}px ${resolved.fontFamily}`;
+		measuringCanvas.font = `${legendFontSize}px ${resolved.fontFamily}`;
 		labelWidths = items.map((it) => measuringCanvas.measureText(it.label).width);
 	});
 
@@ -135,13 +160,13 @@
 		const maxLabelW = Math.max(...labelWidths, 0) + 2 + legendData.padding / 2;
 		const contentW = iconW + gap + maxLabelW;
 
-		const lineH = legendData.fontSize + legendData.itemSpacing + 4; // +4 for possible overlap
+		const lineH = legendFontSize + legendData.itemSpacing + 4; // +4 for possible overlap
 
 		if (legendData.orientation === 'vertical') {
 			return {
 				width: contentW + padding * 2,
 				height: items.length * lineH + padding * 2,
-				contentHeight: legendData.fontSize
+				contentHeight: legendFontSize
 			};
 		} else {
 			// horizontal: each entry gets its own width + a little extra spacing
@@ -149,7 +174,7 @@
 			return {
 				width: totalContentW + padding * 2,
 				height: lineH + padding * 2,
-				contentHeight: legendData.fontSize
+				contentHeight: legendFontSize
 			};
 		}
 	});
@@ -283,7 +308,7 @@
 
 			<!-- items -->
 			{#each items as item, i}
-				{@const lineH = legendData.fontSize + legendData.itemSpacing + 4}
+				{@const lineH = legendFontSize + legendData.itemSpacing + 4}
 				{@const iconW = 25}
 				{@const gap = 4}
 				{@const labelW = labelWidths[i] ?? 0}
@@ -318,7 +343,7 @@
 								/>
 							{/if}
 						{/each}
-						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} font-family={resolved.fontFamily} fill="black">
+						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendFontSize} font-family={resolved.fontFamily} fill="black">
 							{item.label}
 						</text>
 					</g>
@@ -354,7 +379,7 @@
 								/>
 							{/if}
 						{/each}
-						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendData.fontSize} font-family={resolved.fontFamily} fill="black">
+						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendFontSize} font-family={resolved.fontFamily} fill="black">
 							{item.label}
 						</text>
 					</g>

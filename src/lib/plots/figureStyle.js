@@ -80,8 +80,14 @@ export const FONT_STACKS = {
  * benefit.
  *
  * So the shipped default reproduces the historical pixels exactly:
- *   12 pt * 96/72          = 16px  axis label  (was 16)
- *   12 pt * 0.9375 * 96/72 = 15px  tick label  (was 15)
+ *   12 pt * 96/72           = 16px  axis label  (was 16)
+ *   12 pt * 0.9375 * 96/72  = 15px  tick label  (was 15)
+ *   12 pt * 0.75   * 96/72  = 12px  legend      (was LegendClass.fontSize 12)
+ *   12 pt * 0.6875 * 96/72  = 11px  sig bar     (was sigBarFontSize 11)
+ *
+ * The legend and significance-bar ratios exist only to hold those two legacy
+ * numbers. The publication ratios in ROLE_RATIOS (legend AT the base, sig bars just
+ * below) are what should apply once `m` becomes the default and this goes away.
  *
  * This is a default, not a constraint. The named steps are fully available from
  * the control, and the intended change once physical width exists is to make `m`
@@ -89,7 +95,7 @@ export const FONT_STACKS = {
  * change rather than a hunt.
  */
 export const TRANSITIONAL_PT = 12;
-export const TRANSITIONAL_TICK_RATIO = 0.9375;
+export const TRANSITIONAL_ROLE_SCALE = { tick: 0.9375, legend: 0.75, sigBar: 0.6875 };
 
 /** Smallest type we will emit, in points. Guards a hand-typed 0 or negative. */
 const MIN_PT = 1;
@@ -174,7 +180,7 @@ export function transitionalFigureStyle() {
 	return newFigureStyle({
 		fontSize: 'custom',
 		fontSizePt: TRANSITIONAL_PT,
-		roleScale: { tick: TRANSITIONAL_TICK_RATIO }
+		roleScale: { ...TRANSITIONAL_ROLE_SCALE }
 	});
 }
 

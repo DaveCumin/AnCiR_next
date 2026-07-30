@@ -269,7 +269,19 @@
 		}
 	}
 
-	export class Boxplotclass {
+	// Significance-bar type size used to be a hardcoded 11, persisted on every plot.
+// Same treatment as the legend size: a saved value EQUAL to that old default was
+// never deliberately chosen, so it is released to follow the figure. Any other
+// number is a real override and kept.
+const LEGACY_SIG_BAR_FONT_SIZE = 11;
+
+/** @param {number | undefined | null} saved */
+function releaseLegacySigBarFontSize(saved) {
+	if (typeof saved !== 'number' || !Number.isFinite(saved)) return null;
+	return saved === LEGACY_SIG_BAR_FONT_SIZE ? null : saved;
+}
+
+export class Boxplotclass {
 		static descriptors = {
 			padding: { group: 'Padding' },
 			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
@@ -310,7 +322,11 @@
 		showNs = $state(false);
 		sigBarThickness = $state(1);
 		sigBarColor = $state('#000000');
-		sigBarFontSize = $state(11);
+		// null = follow the figure's sig-bar type size. A number is a deliberate
+		// override. The old default was a hardcoded 11; a saved 11 is released to follow
+		// the figure (see LEGACY_SIG_BAR_FONT_SIZE), and the transitional style's
+		// sigBar ratio resolves to exactly 11px, so nothing changes appearance.
+		sigBarFontSize = $state(null);
 		sigBarYOffset = $state(0);
 		sigBarSpacing = $state(1);
 
@@ -738,7 +754,7 @@
 			chart.showNs = json.showNs ?? false;
 			chart.sigBarThickness = json.sigBarThickness ?? 1;
 			chart.sigBarColor = json.sigBarColor ?? '#000000';
-			chart.sigBarFontSize = json.sigBarFontSize ?? 11;
+			chart.sigBarFontSize = releaseLegacySigBarFontSize(json.sigBarFontSize);
 			chart.sigBarYOffset = json.sigBarYOffset ?? 0;
 			chart.sigBarSpacing = json.sigBarSpacing ?? 1;
 			return chart;
@@ -759,6 +775,7 @@
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
+	import { resolveStyle } from '$lib/plots/figureStyle.js';
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
@@ -1208,11 +1225,14 @@
 					stroke={theData.plot.sigBarColor}
 					stroke-width={theData.plot.sigBarThickness}
 				/>
+				{@const sigFont =
+					theData.plot.sigBarFontSize ??
+					resolveStyle(theData.plot.parentBox?.style).sizes.sigBar}
 				<text
 					x={(xi + xj) / 2}
-					y={barY + theData.plot.sigBarFontSize / 3 - 2}
+					y={barY + sigFont / 3 - 2}
 					text-anchor="middle"
-					font-size={theData.plot.sigBarFontSize}
+					font-size={sigFont}
 					fill={theData.plot.sigBarColor}
 				>
 					{formatSigLabel(entry.pair.pAdjusted)}</text
