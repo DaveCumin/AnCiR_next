@@ -6,9 +6,11 @@
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
-	import { appConsts, appState } from '$lib/core/core.svelte';
+	import { appConsts, appState, core } from '$lib/core/core.svelte';
 	import ColourPaletteSelect from '$lib/components/inputs/ColourPaletteSelect.svelte';
 	import { pinnedColourSnapshot, repaintPinnedSeries } from '$lib/plots/seriesColour.js';
+	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
+	import { applyStyleToAll } from '$lib/plots/figureStyle.js';
 	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
 	let { showModal = $bindable(false) } = $props();
 
@@ -87,6 +89,18 @@
 				<ColourPaletteSelect onSelect={(palette) => changeDefaultPalette(palette)} />
 			</div>
 		</div>
+
+		<div class="div-line"></div>
+
+		<!-- The session TEMPLATE. Copied into each new plot; existing plots are only
+		     changed by the button inside these controls. FigureStyleControls already
+		     renders its own control-component wrapper, matching the sections above. -->
+		<FigureStyleControls
+			style={core.figureStyle}
+			showApplyToAll={true}
+			onApplyToAll={() => applyStyleToAll(core.plots, core.figureStyle)}
+			title="Figure defaults"
+		/>
 
 		<div class="div-line"></div>
 

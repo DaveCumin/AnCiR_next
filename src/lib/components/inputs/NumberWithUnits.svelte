@@ -23,9 +23,16 @@
 	// 		sec: 1 / (60 * 60)
 	// 		}
 
-	// Clamp initial value to min/max
+	// Clamp initial value to min/max.
+	//
+	// Only a real number is clamped. A null/undefined value means "not set" for the
+	// fields that support inheriting (a legend or sig-bar size that follows the
+	// figure), and clamp(null, min, max) returns `min` — so clamping unconditionally
+	// wrote `min` back through $bindable and silently converted "follow the figure"
+	// into a hard override just because the control had been rendered. Merely opening
+	// the control panel changed the figure.
 	onMount(() => {
-		value = clamp(value, min, max);
+		if (typeof value === 'number' && Number.isFinite(value)) value = clamp(value, min, max);
 		if (selectedUnitStart != 'default') {
 			selectedUnit = selectedUnitStart;
 		}

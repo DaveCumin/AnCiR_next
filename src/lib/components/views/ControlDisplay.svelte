@@ -90,6 +90,7 @@
 	// @ts-nocheck
 	import Icon from '$lib/icons/Icon.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
+	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
@@ -843,6 +844,10 @@
 						</div>
 					</div>
 				{/if}
+
+				<!-- This plot's own style. Editing it never touches the session template or
+				     any other figure. -->
+				<FigureStyleControls style={plot.style} title="Figure" />
 
 				<Plot theData={plot.plot} which="controls" />
 			{/if}

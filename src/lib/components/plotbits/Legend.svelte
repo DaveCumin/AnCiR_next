@@ -118,6 +118,19 @@
 	// widths and line heights, so a null leaking into that maths would become NaN and
 	// collapse the legend rather than merely mis-size it.
 	const legendFontSize = $derived(legendData.fontSize ?? resolved.sizes.legend);
+
+	// The control edits a LOCAL mirror, not legendData.fontSize directly.
+	//
+	// Binding the nullable field straight to NumberWithUnits meant its mount-time
+	// clamp wrote `min` back into it, so opening the control panel turned "follow the
+	// figure" into a hard 8px override. NumberWithUnits no longer clamps non-numbers,
+	// but going through a mirror is the right shape regardless: the box always shows
+	// the size actually being drawn (inherited or overridden), and only a real edit
+	// writes an override.
+	let legendSizeInput = $state(0);
+	$effect(() => {
+		legendSizeInput = Math.round(legendFontSize * 10) / 10;
+	});
 	// Whether to draw the box at all. The border colour and width stay on
 	// legendData: this flag is house style, those are per-legend refinements.
 	const showBox = $derived(resolved.legendBox !== false);
@@ -268,7 +281,13 @@
 
 			<div class="control-input-horizontal">
 				<ControlInput label="Font Size">
-					<NumberWithUnits bind:value={legendData.fontSize} min={8} max={24} />
+					<NumberWithUnits
+						bind:value={legendSizeInput}
+						min={4}
+						max={48}
+						step={0.5}
+						onInput={() => (legendData.fontSize = legendSizeInput)}
+					/>
 				</ControlInput>
 				<ControlInput label="Padding">
 					<NumberWithUnits bind:value={legendData.padding} min={0} max={20} />

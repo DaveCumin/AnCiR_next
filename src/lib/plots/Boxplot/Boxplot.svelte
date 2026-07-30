@@ -776,6 +776,18 @@ export class Boxplotclass {
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import { resolveStyle } from '$lib/plots/figureStyle.js';
+
+	// Mirror for the sig-bar size control: shows the size actually drawn (inherited
+	// from the figure, or overridden) and only writes an override on a real edit. See
+	// the matching note in Legend.svelte for why binding the nullable field directly
+	// was unsafe.
+	let sigBarSizeInput = $state(0);
+	$effect(() => {
+		const eff =
+			theData?.sigBarFontSize ??
+			resolveStyle(theData?.parentBox?.style ?? theData?.plot?.parentBox?.style).sizes.sigBar;
+		sigBarSizeInput = Math.round(eff * 10) / 10;
+	});
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
@@ -974,7 +986,13 @@ export class Boxplotclass {
 					</div>
 					<div class="control-input-horizontal">
 						<ControlInput label="Font Size">
-							<NumberWithUnits bind:value={theData.sigBarFontSize} step={1} min={1} />
+							<NumberWithUnits
+								bind:value={sigBarSizeInput}
+								step={0.5}
+								min={4}
+								max={48}
+								onInput={() => (theData.sigBarFontSize = sigBarSizeInput)}
+							/>
 						</ControlInput>
 						<ControlInput label="Spread">
 							<NumberWithUnits bind:value={theData.sigBarSpacing} step={0.1} min={0.1} />
