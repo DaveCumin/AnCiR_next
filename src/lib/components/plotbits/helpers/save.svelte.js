@@ -3,6 +3,8 @@ import { core } from '$lib/core/core.svelte';
 import { addNotification } from '$lib/core/notifications.svelte.js';
 import { mutationService } from '$lib/core/mutationService.js';
 import { tick } from 'svelte';
+import { prepareSvgForExport } from '$lib/plots/exportStyle.js';
+import { exportScale, resolveStyle } from '$lib/plots/figureStyle.js';
 
 /**
  * Convert headers and rows to a CSV string and trigger a download.
@@ -120,6 +122,17 @@ function escapeCSV(value) {
 	return str;
 }
 
+/**
+ * The figure style behind a `plotN` svg id, or null.
+ *
+ * Both export paths need it: the raster path for DPI and the background fill, the
+ * vector path for the physical size declaration.
+ */
+function styleForSvgId(svgId) {
+	const plotId = Number(String(svgId).replace('plot', ''));
+	return core.plots.find((p) => p.id === plotId)?.style ?? null;
+}
+
 export async function convertToImage(svgId, filetype = 'png') {
 	//RESET THE ZOOM
 	const Zoom = appState.canvasScale;
@@ -130,8 +143,10 @@ export async function convertToImage(svgId, filetype = 'png') {
 	const plotId = Number(svgId.replace('plot', ''));
 	const plotName = core.plots.find((p) => p.id === plotId)?.name ?? svgId;
 
+	const style = styleForSvgId(svgId);
+
 	if (filetype == 'svg') {
-		exportSVG(svgId, plotName);
+		exportSVG(svgId, plotName, style);
 		//reset the zoom
 		appState.canvasScale = Zoom;
 		return;
@@ -166,9 +181,17 @@ export async function convertToImage(svgId, filetype = 'png') {
 		}
 	}
 
-	// Serialize the SVG to a string
+	// Serialise a PREPARED COPY, not the live element: var() paints resolved to
+	// literals (they resolve in neither export path), plus the background rect when the
+	// figure is not transparent. The live tree is untouched.
+	const prepared =
+		prepareSvgForExport(svg, {
+			width: svgWidth,
+			height: svgHeight,
+			backgroundColour: resolveStyle(style).backgroundColour
+		}) ?? svg;
 	const serializer = new XMLSerializer();
-	const svgString = serializer.serializeToString(svg);
+	const svgString = serializer.serializeToString(prepared);
 
 	// Create an image to hold the SVG
 	const img = new Image();
@@ -180,8 +203,14 @@ export async function convertToImage(svgId, filetype = 'png') {
 	img.onload = function () {
 		// Create a canvas with proper sizing
 		const canvas = document.createElement('canvas');
-		const scaledWidth = svgWidth;
-		const scaledHeight = svgHeight;
+		// The canvas was sized to the SVG's PIXEL dimensions, so a PNG came out at
+		// roughly screen resolution however the figure was specified. Scaling the
+		// backing store by dpi/96 is what makes "half page at 300 dpi" mean what it
+		// says: the SVG is a vector source, so drawImage at the larger size rasterises
+		// it at that resolution rather than upscaling a small bitmap.
+		const scale = exportScale(style);
+		const scaledWidth = svgWidth * scale;
+		const scaledHeight = svgHeight * scale;
 
 		canvas.width = Math.round(scaledWidth);
 		canvas.height = Math.round(scaledHeight);
@@ -216,8 +245,22 @@ export async function convertToImage(svgId, filetype = 'png') {
 	appState.canvasScale = Zoom;
 }
 
-function exportSVG(svgId, plotName) {
-	const svgString = document.getElementById(svgId).outerHTML;
+function exportSVG(svgId, plotName, style = null) {
+	const svg = document.getElementById(svgId);
+	const width = parseFloat(svg?.getAttribute('width')) || svg?.getBoundingClientRect().width || 0;
+	const height =
+		parseFloat(svg?.getAttribute('height')) || svg?.getBoundingClientRect().height || 0;
+	// Same preparation as the raster path, plus width/height in mm alongside the px
+	// viewBox so the file lands at true physical size in Illustrator or InDesign
+	// instead of being read at 96 dpi.
+	const prepared =
+		prepareSvgForExport(svg, {
+			width,
+			height,
+			backgroundColour: resolveStyle(style).backgroundColour,
+			physical: true
+		}) ?? svg;
+	const svgString = prepared.outerHTML;
 	const svgBlob = new Blob([svgString], {
 		type: 'image/svg+xml;charset=utf-8'
 	});
