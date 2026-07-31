@@ -17,7 +17,24 @@
 //
 //   1. a per-series override — what the user set on that figure; always wins
 //   2. this map's record for the column — the house style for that data
+//   2b. the record of the column this one was DERIVED from (see ANCESTRY below)
 //   3. the next unused index — unique within the session, and RECORDED here
+//
+// ANCESTRY ADOPTION (tier 2b)
+//
+// A processed column is a new column with a new id, so `a → Detrend` had no record
+// and took a fresh palette index: it came out a different colour from `a`, which is
+// almost never wanted. When a column has no record of its own, the walk in
+// core/columnAncestry.js goes up its input chain and the nearest ancestor that HAS a
+// record answers instead.
+//
+// It TRACKS rather than copies, and that is the whole point. Nothing is written for
+// the derived column, so recolouring `a` recolours everything derived from `a`, an
+// explicit later choice on the derived column still wins (tier 2 is checked first),
+// and the map editor keeps showing only records that were actually made.
+//
+// A node with several distinct inputs has no single ancestor and adopts nothing; see
+// the fork rule in columnAncestry.js.
 //
 // WHY READ TIME, NOT CONSTRUCTION
 //
@@ -43,6 +60,7 @@
 //
 // Spec: docs/superpowers/specs/2026-07-30-figure-style-system-design.md (Revision)
 import { core, appState } from '$lib/core/core.svelte';
+import { ancestorColumnIds, sourceColumnId } from '$lib/core/columnAncestry.js';
 import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 import { POINT_SHAPES } from '$lib/components/plotbits/pointShapes.js';
 import { STROKE_STYLES } from '$lib/components/plotbits/Line.svelte';
@@ -172,10 +190,36 @@ export function migrateAppearanceMaps(appearance, colours, shapes, dashes) {
 	return out;
 }
 
-/** The record for a column, or null. */
-export function recordFor(columnId) {
+/** The record stored AGAINST this column id, ignoring ancestry. */
+function ownRecord(columnId) {
 	if (columnId == null) return null;
 	return normaliseRecord(appearanceMap()[String(columnId)]);
+}
+
+/**
+ * TIER 2b. The record of the nearest ancestor that has one, or null.
+ *
+ * Nearest rather than root: if the user has styled `a → Detrend` explicitly, anything
+ * derived from THAT should follow it rather than jumping back past it to `a`.
+ *
+ * A pure read. Nothing is written here or anywhere on this path — see the header note
+ * on `state_unsafe_mutation`.
+ */
+export function adoptedRecord(columnId) {
+	for (const ancestorId of ancestorColumnIds(columnId)) {
+		const record = ownRecord(ancestorId);
+		// Returned verbatim, `edited` included: it is the ancestor's record, and saying
+		// otherwise would misreport where the value came from. Nothing keys automatic
+		// assignment off this (pinAppearance reads the map directly), so it is safe.
+		if (record) return record;
+	}
+	return null;
+}
+
+/** The record a column resolves to: its own, else its ancestor's, else null. */
+export function recordFor(columnId) {
+	if (columnId == null) return null;
+	return ownRecord(columnId) ?? adoptedRecord(columnId);
 }
 
 /** The colour a column resolves to right now, or null when it has no record. */
@@ -233,10 +277,45 @@ function claimedOf(field, order) {
 }
 
 /**
+ * The column a claim should actually be written against: this one, or the root it
+ * derives from. See `pinAppearance` for why the claim moves upstream.
+ *
+ * Iterative rather than recursive, and it keeps its own `seen` set. `sourceColumnId`
+ * is cycle-guarded per call, so on a cyclic graph (`1` refers to `2`, `2` refers to
+ * `1`) it answers `2` for `1` and `1` for `2` — both correct in isolation, and a
+ * mutual recursion between them that blew the stack. The first repeat stops the walk
+ * and whichever column it stopped on takes the record for the family; a cycle has no
+ * root to prefer, and the only requirement is that it settles somewhere stable.
+ */
+function pinTarget(columnId) {
+	let target = columnId;
+	const seen = new Set([String(columnId)]);
+	while (!ownRecord(target)) {
+		const root = sourceColumnId(target);
+		if (root == null || seen.has(String(root))) break;
+		seen.add(String(root));
+		target = root;
+	}
+	return target;
+}
+
+/**
  * LEVEL 3, recorded. Claim whatever this column still lacks.
  *
  * Idempotent, and never called from a render: see the header note. `edited` records
  * are left completely alone.
+ *
+ * A DERIVED column is never pinned. Writing a concrete record for it would turn
+ * adoption into a one-time copy that stops tracking its source, which is the one
+ * behaviour tier 2b exists to provide, and would fill the map editor with rows the
+ * user never made. Instead the claim is made against the ROOT the column derives
+ * from, so the whole family shares one record.
+ *
+ * Pinning the derived column when the root happens to have no record yet was the
+ * obvious alternative and is wrong: it makes the result depend on which figure was
+ * built first. Plot `a → Detrend` before `a` and the derived column would take slot
+ * 0, then `a` would be handed a different slot — exactly the bug being fixed, just
+ * harder to see. Claiming against the root is order-independent.
  *
  * @param {number} columnId
  * @param {number} fallbackIndex position among the series, only a starting point
@@ -244,7 +323,7 @@ function claimedOf(field, order) {
  */
 export function pinAppearance(columnId, fallbackIndex = 0) {
 	if (columnId == null) return false;
-	const key = String(columnId);
+	const key = String(pinTarget(columnId));
 	const map = appearanceMap();
 	const current = normaliseRecord(map[key]) ?? {};
 	if (current.edited) return false;
@@ -325,6 +404,10 @@ export function resolveDash(explicit, columnId, varyMarkers = false) {
  *
  * Called from ONE `$effect` in the app shell, never from a render. Pure over its
  * argument and idempotent, so a repeating effect settles instead of thrashing.
+ *
+ * A derived series pins nothing of its own: `pinAppearance` redirects the claim to
+ * the column it came from, so the second pass finds the family already pinned and
+ * writes nothing.
  *
  * @param {Array<any>} plots core.plots
  * @returns {number} how many columns were newly pinned

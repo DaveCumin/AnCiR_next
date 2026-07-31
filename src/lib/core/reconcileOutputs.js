@@ -58,9 +58,14 @@ export function liveInputIds(tp) {
  * Split is excluded for the opposite reason: it names outputs `<yId>_<segment>`, so
  * the id is the PREFIX. Nothing here matches it, which is the intent.
  *
- * Kept in step with the useMultiYTP call sites by perYPrefixes.test.js — the same
- * enumeration that found removeInputColumn, rather than trusting anyone to
- * remember.
+ * Kept in step with the useMultiYTP call sites by the "per-Y prefixes" block in
+ * reconcileOutputs.test.js — the same enumeration that found removeInputColumn,
+ * rather than trusting anyone to remember. It guards both directions: a prefix a
+ * node uses but this list omits, and a prefix listed here that nothing produces.
+ *
+ * columnAncestry.js also reads this list, to recover which input column a TP output
+ * describes. That makes the list load-bearing twice over, so it is imported there
+ * rather than copied.
  */
 export const PER_INPUT_PREFIXES = [
 	'avgprof_',

@@ -27,7 +27,9 @@ import {
 	resolveShape,
 	resolveDash,
 	clearSeriesColourOverrides,
-	appearanceRows
+	appearanceRows,
+	pinAllSeriesAppearance,
+	adoptedRecord
 } from './appearanceIdentity.js';
 import { POINT_SHAPES } from '$lib/components/plotbits/pointShapes.js';
 
@@ -39,6 +41,9 @@ beforeEach(() => {
 	core.seriesAppearance = {};
 	// Slot claiming only counts records whose column still exists.
 	core.data = Array.from({ length: 20 }, (_, id) => ({ id }));
+	// No ancestry unless a test builds some: every column above is a root.
+	core.orphanProcesses = [];
+	core.tableProcesses = [];
 });
 
 describe('wiring order (the reported bug)', () => {
@@ -324,6 +329,270 @@ describe('appearanceRows', () => {
 	it('tolerates an empty or junk map', () => {
 		expect(appearanceRows(null, () => 'x')).toEqual([]);
 		expect(appearanceRows({ 1: null, 2: 'nope' }, () => 'x')).toEqual([]);
+	});
+});
+
+// TIER 2b: a column with no record of its own adopts its source column's.
+//
+// THE ANNOYANCE THIS FIXES. A processed column is a NEW column with a NEW id, so
+// `a → Detrend` had no record, took the next palette index, and came out a different
+// colour from `a`.
+//
+// The two mechanisms (refId, producerNodeId) are exercised separately here for the
+// same reason columnAncestry.test.js does it: they share no code, so one fixture
+// cannot speak for both. Adoption must also TRACK rather than copy — the tests that
+// change the source afterwards are the ones that would catch a regression to a
+// one-time copy.
+describe('ancestry adoption', () => {
+	/** A free process node, as producerRuntime finds it. */
+	const node = (id, args) => ({ id, args });
+	const setGraph = (columns, processes = []) => {
+		core.data = columns;
+		core.orphanProcesses = processes;
+	};
+
+	it('a referential column adopts colour, shape and dash from its referent', () => {
+		setGraph([{ id: 1 }, { id: 2, refId: 1 }]);
+		pinAppearance(1, 0);
+		expect(mappedColour(2)).toBe(mappedColour(1));
+		expect(mappedShape(2)).toBe(mappedShape(1));
+		expect(mappedDash(2)).toBe(mappedDash(1));
+	});
+
+	it('a produced column adopts from the column it was made from', () => {
+		setGraph(
+			[{ id: 1 }, { id: 10, producerNodeId: 'process_5', producerPort: 'out_1' }],
+			[node(5, { inIN: [1] })]
+		);
+		pinAppearance(1, 0);
+		expect(mappedColour(10)).toBe(mappedColour(1));
+	});
+
+	it('adopts through two hops', () => {
+		setGraph(
+			[
+				{ id: 1 },
+				{ id: 2, producerNodeId: 'process_5', producerPort: 'out_1' },
+				{ id: 3, producerNodeId: 'process_6', producerPort: 'out_2' }
+			],
+			[node(5, { inIN: [1] }), node(6, { inIN: [2] })]
+		);
+		pinAppearance(1, 0);
+		expect(mappedColour(3)).toBe(mappedColour(1));
+	});
+
+	it('prefers the NEAREST ancestor that has a record', () => {
+		// The user styled the intermediate deliberately; jumping past it back to the
+		// original would ignore that.
+		setGraph(
+			[
+				{ id: 1 },
+				{ id: 2, producerNodeId: 'process_5', producerPort: 'out_1' },
+				{ id: 3, producerNodeId: 'process_6', producerPort: 'out_2' }
+			],
+			[node(5, { inIN: [1] }), node(6, { inIN: [2] })]
+		);
+		pinAppearance(1, 0);
+		setEditedAppearance(2, { colour: { hex: '#abcdef' } });
+		expect(mappedColour(3)).toBe('#abcdef');
+	});
+
+	it('each output of a FAN-OUT node adopts its own input', () => {
+		setGraph(
+			[
+				{ id: 1 },
+				{ id: 2 },
+				{ id: 10, producerNodeId: 'process_5', producerPort: 'out_1' },
+				{ id: 11, producerNodeId: 'process_5', producerPort: 'out_2' }
+			],
+			[node(5, { inIN: [1, 2] })]
+		);
+		pinAppearance(1, 0);
+		pinAppearance(2, 1);
+		expect(mappedColour(10)).toBe(mappedColour(1));
+		expect(mappedColour(11)).toBe(mappedColour(2));
+		expect(mappedColour(10)).not.toBe(mappedColour(11));
+	});
+
+	it('a two-input node adopts NOTHING and falls back to the index', () => {
+		// Cross-correlating a and b makes something new. Painting it as a would be a
+		// confident lie; a fresh palette index at least reads as "this is new".
+		setGraph(
+			[{ id: 1 }, { id: 2 }, { id: 10, producerNodeId: 'process_5' }],
+			[node(5, { xIN: 1, yIN: 2 })]
+		);
+		pinAppearance(1, 0);
+		expect(mappedColour(10)).toBeNull();
+		expect(resolveColour(null, 10, 2)).toBe(PAL_A[2]);
+	});
+
+	it('a reference cycle resolves rather than hanging', () => {
+		setGraph([
+			{ id: 1, refId: 2 },
+			{ id: 2, refId: 1 }
+		]);
+		// Pinning either one settles the family; the read must terminate whichever way
+		// the walk goes round.
+		pinAppearance(1, 0);
+		expect(resolveColour(null, 1, 0)).toBeTruthy();
+		expect(resolveColour(null, 2, 0)).toBeTruthy();
+	});
+
+	it('creates no record for the adopting column', () => {
+		// The editor must not fill with rows the user never made, and a stored copy
+		// would stop tracking the source.
+		setGraph([{ id: 1 }, { id: 2, refId: 1 }]);
+		pinAppearance(1, 0);
+		mappedColour(2);
+		resolveColour(null, 2, 0);
+		expect(Object.keys(core.seriesAppearance)).toEqual(['1']);
+		expect(appearanceRows(core.seriesAppearance, () => 'x')).toHaveLength(1);
+	});
+
+	it('pinning leaves an adopting column alone', () => {
+		setGraph([{ id: 1 }, { id: 2, refId: 1 }]);
+		pinAppearance(1, 0);
+		expect(pinAppearance(2, 1)).toBe(false);
+		expect(core.seriesAppearance['2']).toBeUndefined();
+	});
+
+	it('pins the ROOT when a derived column is plotted first', () => {
+		// Order-independence. Pinning the derived column here would give it slot 0 and
+		// leave `1` to take a different one later — the original bug, one step removed.
+		setGraph([{ id: 1 }, { id: 2, refId: 1 }]);
+		expect(pinAppearance(2, 0)).toBe(true);
+		expect(core.seriesAppearance['2']).toBeUndefined();
+		expect(core.seriesAppearance['1']).toBeTruthy();
+		expect(mappedColour(2)).toBe(mappedColour(1));
+	});
+
+	it('tracks the source instead of copying it', () => {
+		// The whole point. Recolour `1` and everything derived from it follows.
+		setGraph([{ id: 1 }, { id: 2, refId: 1 }]);
+		pinAppearance(1, 0);
+		const before = mappedColour(2);
+		setEditedAppearance(1, { colour: { hex: '#ff00ff' }, shape: 'star' });
+		expect(mappedColour(2)).toBe('#ff00ff');
+		expect(mappedColour(2)).not.toBe(before);
+		expect(mappedShape(2)).toBe('star');
+	});
+
+	it('follows the palette through an adopted slot', () => {
+		setGraph([{ id: 1 }, { id: 2, refId: 1 }]);
+		pinAppearance(1, 1);
+		appState.appColours = [...PAL_B];
+		expect(mappedColour(2)).toBe(mappedColour(1));
+		expect(PAL_B).toContain(mappedColour(2));
+	});
+
+	it('an explicit record on the derived column beats its ancestor', () => {
+		setGraph([{ id: 1 }, { id: 2, refId: 1 }]);
+		setEditedAppearance(1, { colour: { hex: '#111111' } });
+		setEditedAppearance(2, { colour: { hex: '#222222' } });
+		expect(mappedColour(2)).toBe('#222222');
+		// The ancestor's record is still what it would fall back to.
+		expect(adoptedRecord(2).colour).toEqual({ hex: '#111111' });
+	});
+
+	it('does not double-claim a palette slot for the family', () => {
+		// The derived column holds no record, so `3` must be free to take the slot the
+		// derived column would otherwise have consumed.
+		setGraph([{ id: 1 }, { id: 2, refId: 1 }, { id: 3 }]);
+		pinAppearance(1, 0);
+		pinAppearance(2, 1);
+		pinAppearance(3, 1);
+		expect(recordFor(3).colour.slot).toBe(1);
+	});
+
+	it('pinAllSeriesAppearance settles with a derived series', () => {
+		setGraph([{ id: 1 }, { id: 2, refId: 1 }]);
+		const plots = [{ plot: { data: [{ y: { refId: 2 } }, { y: { refId: 1 } }] } }];
+		expect(pinAllSeriesAppearance(plots)).toBe(1);
+		expect(pinAllSeriesAppearance(plots)).toBe(0);
+		expect(Object.keys(core.seriesAppearance)).toEqual(['1']);
+	});
+});
+
+// The case adoption matters MOST in, and the one it used to miss. A Cosinor or
+// FitFunction output has neither refId nor producerNodeId, so it took a fresh palette
+// index; Quick-plot then drew the data and the fit it belongs to on one figure in two
+// different colours, which reads as two different things.
+describe('ancestry adoption for analysis outputs', () => {
+	/** A TableProcess as core.tableProcesses holds it. */
+	const tp = (id, args) => ({ id, args });
+
+	/** The Cosinor shape: one Y in, a fitted Y and a residual out. */
+	const cosinorOn = (yId, fitId, residId) => {
+		core.data = [{ id: yId }, { id: fitId }, { id: residId }];
+		core.tableProcesses = [
+			tp(1, { yIN: [yId], out: { [`cosinory_${yId}`]: fitId, [`resid_${yId}`]: residId } })
+		];
+	};
+
+	it('a fit column takes the colour of the column it was fitted to', () => {
+		cosinorOn(7, 20, 21);
+		pinAppearance(7, 0);
+		expect(mappedColour(20)).toBe(mappedColour(7));
+		expect(mappedShape(20)).toBe(mappedShape(7));
+		expect(mappedDash(20)).toBe(mappedDash(7));
+		// The residual is the same data too, so it follows as well.
+		expect(mappedColour(21)).toBe(mappedColour(7));
+	});
+
+	it('TRACKS the source rather than copying it', () => {
+		cosinorOn(7, 20, 21);
+		pinAppearance(7, 0);
+		const before = mappedColour(20);
+		setEditedAppearance(7, { colour: { hex: '#ff00ff' }, shape: 'star' });
+		expect(mappedColour(20)).toBe('#ff00ff');
+		expect(mappedColour(20)).not.toBe(before);
+		expect(mappedShape(20)).toBe('star');
+	});
+
+	it('creates no record for the fit column', () => {
+		cosinorOn(7, 20, 21);
+		pinAppearance(7, 0);
+		mappedColour(20);
+		resolveColour(null, 20, 1);
+		expect(Object.keys(core.seriesAppearance)).toEqual(['7']);
+	});
+
+	it('pins the ROOT when the fit is plotted before the data', () => {
+		// Quick-plot's actual order: the fit series is often built first.
+		cosinorOn(7, 20, 21);
+		expect(pinAppearance(20, 0)).toBe(true);
+		expect(core.seriesAppearance['20']).toBeUndefined();
+		expect(core.seriesAppearance['7']).toBeTruthy();
+		expect(mappedColour(20)).toBe(mappedColour(7));
+		// And the second pass finds the family already pinned.
+		expect(pinAppearance(7, 0)).toBe(false);
+	});
+
+	it('each Y of a multi-Y analysis keeps its own colour', () => {
+		core.data = [{ id: 7 }, { id: 8 }, { id: 20 }, { id: 21 }];
+		core.tableProcesses = [tp(1, { yIN: [7, 8], out: { cosinory_7: 20, cosinory_8: 21 } })];
+		pinAppearance(7, 0);
+		pinAppearance(8, 1);
+		expect(mappedColour(20)).toBe(mappedColour(7));
+		expect(mappedColour(21)).toBe(mappedColour(8));
+		expect(mappedColour(20)).not.toBe(mappedColour(21));
+	});
+
+	it('a multi-input analysis output adopts NOTHING and falls back to the index', () => {
+		core.data = [{ id: 1 }, { id: 2 }, { id: 50 }];
+		core.tableProcesses = [tp(1, { xIN: 1, yIN: [2], out: { period: 50 } })];
+		pinAppearance(1, 0);
+		pinAppearance(2, 1);
+		expect(mappedColour(50)).toBeNull();
+		expect(resolveColour(null, 50, 2)).toBe(PAL_A[2]);
+	});
+
+	it('pinAllSeriesAppearance settles on a data + fit figure', () => {
+		cosinorOn(7, 20, 21);
+		const plots = [{ plot: { data: [{ y: { refId: 20 } }, { y: { refId: 7 } }] } }];
+		expect(pinAllSeriesAppearance(plots)).toBe(1);
+		expect(pinAllSeriesAppearance(plots)).toBe(0);
+		expect(Object.keys(core.seriesAppearance)).toEqual(['7']);
 	});
 });
 
