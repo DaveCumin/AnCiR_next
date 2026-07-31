@@ -20,6 +20,8 @@ import {
 	resolvePalette,
 	applyStyleToSession,
 	currentPaletteName,
+	choosePalette,
+	takePendingPalette,
 	STYLE_CONFIG_VERSION
 } from './styleConfig.js';
 
@@ -442,5 +444,70 @@ describe('styles and the privacy controls', () => {
 		expect(forgetAllStyles()).toBe(2);
 		expect(listStyles()).toEqual([]);
 		expect(localStorage.getItem('ancir.style.configs.v1')).toBeNull();
+	});
+});
+
+// The reported bug: picking a palette in Settings repainted every existing figure at once,
+// because a {slot} record resolves against appState.appColours on read. Every other field in
+// that panel waits for "Apply to all plots", so the palette had to as well.
+describe('the pending palette', () => {
+	const OTHER = 'devon';
+
+	beforeEach(() => {
+		appState.pendingPalette = null;
+	});
+
+	it('records the choice WITHOUT touching the live palette', () => {
+		const before = [...appState.appColours];
+		expect(choosePalette(OTHER)).toBe(true);
+		// The whole point. If this ever fails, existing figures repaint on click again.
+		expect(appState.appColours).toEqual(before);
+		expect(appState.pendingPalette.name).toBe(OTHER);
+		expect(appState.pendingPalette.colours).toEqual(appConsts.colourPalettes[OTHER]);
+	});
+
+	it('copies the palette rather than aliasing the constant', () => {
+		choosePalette(OTHER);
+		appState.pendingPalette.colours[0] = '#000000';
+		expect(appConsts.colourPalettes[OTHER][0]).not.toBe('#000000');
+	});
+
+	it('treats choosing the palette already in use as a cancel', () => {
+		choosePalette(OTHER);
+		expect(appState.pendingPalette).not.toBeNull();
+		// Same colours, so there is nothing to apply and the pending choice is dropped.
+		expect(choosePalette(KNOWN_PALETTE)).toBe(false);
+		expect(appState.pendingPalette).toBeNull();
+	});
+
+	it('compares by value, not identity, so a copied palette still cancels', () => {
+		appState.appColours = [...appConsts.colourPalettes[KNOWN_PALETTE]];
+		expect(choosePalette(KNOWN_PALETTE)).toBe(false);
+	});
+
+	it('ignores a palette this build does not have, and keeps any pending choice', () => {
+		choosePalette(OTHER);
+		expect(choosePalette('no-such-palette')).toBe(true);
+		expect(appState.pendingPalette.name).toBe(OTHER);
+	});
+
+	it('take returns the colours and clears the choice', () => {
+		choosePalette(OTHER);
+		expect(takePendingPalette()).toEqual(appConsts.colourPalettes[OTHER]);
+		expect(appState.pendingPalette).toBeNull();
+	});
+
+	it('take is null when nothing is pending, and stays null on a second call', () => {
+		expect(takePendingPalette()).toBeNull();
+		choosePalette(OTHER);
+		takePendingPalette();
+		// A second Apply must not re-apply: the choice was consumed.
+		expect(takePendingPalette()).toBeNull();
+	});
+
+	it('take clears a malformed pending value rather than handing it on', () => {
+		appState.pendingPalette = { name: 'x', colours: [] };
+		expect(takePendingPalette()).toBeNull();
+		expect(appState.pendingPalette).toBeNull();
 	});
 });

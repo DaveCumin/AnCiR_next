@@ -82,9 +82,13 @@
 	// Plot types that support faceting (small multiples). Most use an x/y series model;
 	// the histogram is column-based (one `column` ref per series), which the engine also
 	// handles (see facetUnits below) — one child histogram per wired column.
+	//
+	// The boxplot is NOT here, and neither is the mean/SEM plot, for the same reason: a box
+	// already IS the summary of one group, so the comparison between groups is the whole
+	// point of the figure. Faceting it puts one box in each panel and takes the comparison
+	// away. Every type below draws a distribution or a series that stays readable alone.
 	export const FACETABLE_PLOT_TYPES = new Set([
 		'scatterplot',
-		'boxplot',
 		'actogram',
 		'correlogram',
 		'periodogram',

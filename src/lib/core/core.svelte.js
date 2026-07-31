@@ -418,6 +418,13 @@ export const appState = $state({
 	// (which signal back through this same field).
 	canvasMultiSelectedNodeIds: [],
 
+	// pendingPalette — a palette picked in Settings but not yet pushed to the session:
+	// `{ name, colours }`, or null. Slot records resolve against `appColours` on read, so
+	// writing a new palette there repaints every existing figure immediately; holding the
+	// choice here until "Apply to all plots" makes the palette behave like every other
+	// default in that panel. Not persisted: it is an unfinished action, not a setting.
+	pendingPalette: null,
+
 	appColours: [
 		'#234154',
 		'#BE796B',
@@ -440,7 +447,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.72.8',
+	version: 'β.72.9',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),

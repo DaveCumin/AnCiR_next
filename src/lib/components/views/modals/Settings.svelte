@@ -29,7 +29,9 @@
 		applyStyleToSession,
 		getActiveStyleName,
 		setActiveStyleName,
-		forgetAllStyles
+		forgetAllStyles,
+		choosePalette,
+		takePendingPalette
 	} from '$lib/plots/styleConfig.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { loadRecents } from '$lib/start/recentSessions.svelte.js';
@@ -218,14 +220,32 @@
 		applyZone(local);
 	}
 
-	function changeDefaultPalette(palette) {
-		setPalette(appConsts.colourPalettes[palette]);
+	/**
+	 * The palette chosen here but not yet pushed to the session, or null.
+	 *
+	 * Picking a palette used to repaint every existing figure the instant it was clicked,
+	 * because a slot record resolves against `appState.appColours` on READ. That made the
+	 * palette the one control in this panel that reached back into work already done, while
+	 * every field beside it waits for "Apply to all plots". Holding the choice here restores
+	 * the rule that a default is a default.
+	 *
+	 * On appState rather than a local, so it survives the modal being closed and reopened;
+	 * a pending choice that quietly forgot itself would be worse than not deferring at all.
+	 */
+	const pendingPalette = $derived(appState.pendingPalette);
+
+	/** Push a pending palette to the session. Called from "Apply to all plots". */
+	function applyPendingPalette() {
+		const colours = takePendingPalette();
+		if (!colours) return false;
+		setPalette(colours);
+		return true;
 	}
 
 	/**
 	 * Swap the app-wide palette to a resolved array of colours.
 	 *
-	 * Split out of changeDefaultPalette so a saved style can set the palette by its COLOURS
+	 * Kept separate from the choice above so a saved style can set the palette by its COLOURS
 	 * rather than by a name this build might not have (see resolvePalette): a preset naming a
 	 * palette that has since been renamed would otherwise put `undefined` into appColours and
 	 * break every palette-slot colour in the session.
@@ -265,7 +285,16 @@
 		{#snippet paletteControl()}
 			<div class="control-input">
 				<p>Default colour palette</p>
-				<ColourPaletteSelect onSelect={(palette) => changeDefaultPalette(palette)} />
+				<ColourPaletteSelect
+					colours={pendingPalette?.colours}
+					onSelect={(palette) => choosePalette(palette)}
+				/>
+				{#if pendingPalette}
+					<p class="pending-note">
+						{pendingPalette.name} is chosen but not in use yet. Existing figures keep their colours
+						until you apply.
+					</p>
+				{/if}
 			</div>
 		{/snippet}
 
@@ -275,6 +304,10 @@
 			style={core.figureStyle}
 			showApplyToAll={true}
 			onApplyToAll={() => {
+				// The palette first: it is what the slot records below resolve against, so
+				// swapping it after the style pass would leave the repaint working from the
+				// colours the figures had a moment ago.
+				applyPendingPalette();
 				const n = applyStyleToAll(core.plots, core.figureStyle);
 				// The style fields alone do not move monochrome/marker state into series
 				// that already exist, so push those too or "Apply to all" would leave the
@@ -484,6 +517,13 @@
 		color: var(--color-text-muted);
 		font-size: 0.85rem;
 		margin: var(--space-1) 0 var(--space-2);
+	}
+	/* Same muted treatment as .privacy-note: this states what is about to happen, and is
+	   not a warning. It only exists while a palette choice is pending. */
+	.pending-note {
+		color: var(--color-text-muted);
+		font-size: 0.85rem;
+		margin: var(--space-1) 0 0;
 	}
 	.settings-heading h2 {
 		margin: 0 0 var(--space-5);

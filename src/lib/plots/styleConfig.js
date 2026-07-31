@@ -529,6 +529,58 @@ export function captureStyle(name, { includeNames = true } = {}) {
 	return { name: String(name), style: config ? config.styles[String(name)] : style };
 }
 
+// --- The pending palette ----------------------------------------------------------------
+//
+// Picking a palette used to repaint every existing figure the moment it was clicked, because
+// a `{slot}` record resolves against `appState.appColours` on READ. That made the palette the
+// one control in the Figure defaults panel that reached back into work already done, while
+// every field beside it waits for "Apply to all plots".
+//
+// So the choice is HELD instead. `appState.pendingPalette` is the chosen palette; nothing
+// resolves against it, so no figure moves until the choice is taken and pushed.
+//
+// These live here rather than in Settings.svelte because the rule (what a choice means, when
+// it is a cancel, what "take" leaves behind) is worth testing without mounting a modal.
+
+/**
+ * Record a palette choice, without applying it.
+ *
+ * Choosing the palette already in use CANCELS a pending choice rather than storing a no-op:
+ * it is how a user backs out without having to remember which palette they started from.
+ *
+ * @param {string} name a key of appConsts.colourPalettes
+ * @returns {boolean} whether anything is now pending
+ */
+export function choosePalette(name) {
+	const colours = appConsts.colourPalettes?.[name];
+	if (!Array.isArray(colours) || colours.length === 0) return !!appState.pendingPalette;
+
+	const active = appState.appColours ?? [];
+	const same =
+		colours.length === active.length &&
+		colours.every((c, i) => String(c).toLowerCase() === String(active[i]).toLowerCase());
+
+	appState.pendingPalette = same ? null : { name, colours: [...colours] };
+	return !!appState.pendingPalette;
+}
+
+/**
+ * Take the pending palette, clearing it. The CALLER applies it, because pushing a palette
+ * into the session has to be bracketed by pinnedColourSnapshot/repaintPinnedSeries and
+ * updates the favicon, which belong to Settings.
+ *
+ * @returns {string[]|null} the colours to apply, or null when nothing was pending
+ */
+export function takePendingPalette() {
+	const pending = appState.pendingPalette;
+	if (!pending?.colours?.length) {
+		appState.pendingPalette = null;
+		return null;
+	}
+	appState.pendingPalette = null;
+	return pending.colours;
+}
+
 // --- Applying --------------------------------------------------------------------------
 
 /**

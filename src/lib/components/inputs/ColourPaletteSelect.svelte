@@ -2,7 +2,12 @@
 	import { appConsts, appState } from '$lib/core/core.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 
-	let { onSelect = () => {} } = $props();
+	// `colours` overrides what the swatches show. Settings passes a palette that has been
+	// chosen but not yet applied, so the row previews the choice while the figures still
+	// draw with the palette in `appState.appColours`.
+	let { onSelect = () => {}, colours = undefined } = $props();
+
+	const shown = $derived(colours ?? appState.appColours);
 
 	let showDropdown = $state(false);
 	let dropdownLabel = $state();
@@ -29,7 +34,7 @@
 
 <div class="palette-control">
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -- colours are app constants -->
-	<div class="palette-swatches">{@html swatches(appState.appColours)}</div>
+	<div class="palette-swatches">{@html swatches(shown)}</div>
 	<button type="button" class="palette-trigger" onclick={openList} bind:this={dropdownLabel}>
 		Change<span class="palette-caret" aria-hidden="true">▾</span>
 	</button>
