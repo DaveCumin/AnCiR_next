@@ -19,6 +19,18 @@
 	} from '$lib/plots/seriesAppearance.js';
 	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
 	import { privacy, setEphemeral, clearLocalData } from '$lib/core/localData.svelte.js';
+	import {
+		listStyles,
+		getStyle,
+		saveStyle,
+		deleteStyle,
+		styleExists,
+		captureStyle,
+		applyStyleToSession,
+		getActiveStyleName,
+		setActiveStyleName,
+		forgetAllStyles
+	} from '$lib/plots/styleConfig.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { loadRecents } from '$lib/start/recentSessions.svelte.js';
 	let { showModal = $bindable(false) } = $props();
@@ -45,12 +57,123 @@
 			// Report the count rather than a bare "done": a number is checkable, and zero is a
 			// meaningful answer the user is entitled to see.
 			addNotification(
-				`Cleared ${keys} stored item${keys === 1 ? '' : 's'} and the saved file handles.`
+				// 'info': addNotification defaults to 'error', which painted this success red.
+				`Cleared ${keys} stored item${keys === 1 ? '' : 's'} and the saved file handles.`,
+				'info'
 			);
 		} finally {
 			clearing = false;
 		}
 	}
+
+	// --- Figure styles -------------------------------------------------------
+	// Named presets, held per browser (plots/styleConfig.js). Read into local state rather
+	// than derived from storage on every render: localStorage is not reactive, so the list
+	// is refreshed after each action and whenever the panel opens.
+	let savedStyles = $state([]);
+	let browserActiveStyle = $state(null);
+	let newStyleName = $state('');
+	// The safe default on a shared machine. Column names and group labels are the one part
+	// of a style that can identify anything, so keeping them is opt-in.
+	let templateOnly = $state(true);
+
+	function refreshStyles() {
+		savedStyles = listStyles();
+		browserActiveStyle = getActiveStyleName();
+	}
+	$effect(() => {
+		if (showModal) refreshStyles();
+	});
+
+	/** The app's own confirm, so a destructive style action looks like every other one. */
+	function confirmThen(text, run) {
+		appState.AYStext = text;
+		appState.AYScallback = (option) => {
+			if (option === 'Yes') run();
+		};
+		appState.showAYSModal = true;
+	}
+
+	function writeStyle(name) {
+		const { style } = captureStyle(name, { includeNames: !templateOnly });
+		if (!saveStyle(name, style)) {
+			addNotification('Could not save the style; this browser refused to store it.', 'error');
+			return;
+		}
+		setActiveStyleName(name);
+		core.activeStyleName = name;
+		newStyleName = '';
+		refreshStyles();
+		addNotification(
+			templateOnly
+				? `Saved "${name}" (figure defaults and palette only).`
+				: `Saved "${name}", including the column and group rules.`,
+			'info'
+		);
+	}
+
+	function saveCurrentStyle() {
+		const name = newStyleName.trim();
+		if (!name) {
+			addNotification('Give the style a name before saving it.', 'warning');
+			return;
+		}
+		if (styleExists(name)) {
+			confirmThen(`Overwrite the saved style "${name}"?`, () => writeStyle(name));
+			return;
+		}
+		writeStyle(name);
+	}
+
+	/**
+	 * Make a saved style the active one and apply what it can carry.
+	 *
+	 * The figure TEMPLATE and the PALETTE only. The column, group and category rules are
+	 * stored and travel with the style, but applying them to the session map is a later
+	 * slice: it has to mark each record as deliberately edited, undo as one step, and report
+	 * which rules matched nothing. Saying so here is better than half-applying them.
+	 */
+	function useStyle(name) {
+		const style = getStyle(name);
+		if (!style) {
+			addNotification(`"${name}" is no longer saved on this browser.`, 'warning');
+			refreshStyles();
+			return;
+		}
+		const result = applyStyleToSession(style, { setPalette });
+		setActiveStyleName(name);
+		core.activeStyleName = name;
+		refreshStyles();
+		for (const note of result.notes) addNotification(note, 'warning');
+		addNotification(`Figure defaults and palette set from "${name}".`, 'info');
+	}
+
+	function removeStyle(name) {
+		confirmThen(`Delete the saved style "${name}"? This cannot be undone.`, () => {
+			deleteStyle(name);
+			if (core.activeStyleName === name) core.activeStyleName = null;
+			refreshStyles();
+			addNotification(`Deleted "${name}".`, 'info');
+		});
+	}
+
+	function forgetStyles() {
+		confirmThen(
+			'Remove every saved figure style from this browser? Presets are not stored in your session files, so they cannot be recovered from one.',
+			() => {
+				const n = forgetAllStyles();
+				refreshStyles();
+				addNotification(`Forgot ${n} saved figure style${n === 1 ? '' : 's'}.`, 'info');
+			}
+		);
+	}
+
+	// The session records the style it was saved with; the styles themselves live per
+	// browser. A session opened on another machine can therefore name a style that is not
+	// here, which is shown as missing rather than quietly replaced with something else.
+	let sessionStyleMissing = $derived(
+		!!core.activeStyleName && !savedStyles.includes(core.activeStyleName)
+	);
 
 	// Build the IANA zone list once on first render. `supportedValuesOf` is in
 	// every modern browser; if it's missing we fall back to UTC + browser-local
@@ -96,11 +219,24 @@
 	}
 
 	function changeDefaultPalette(palette) {
+		setPalette(appConsts.colourPalettes[palette]);
+	}
+
+	/**
+	 * Swap the app-wide palette to a resolved array of colours.
+	 *
+	 * Split out of changeDefaultPalette so a saved style can set the palette by its COLOURS
+	 * rather than by a name this build might not have (see resolvePalette): a preset naming a
+	 * palette that has since been renamed would otherwise put `undefined` into appColours and
+	 * break every palette-slot colour in the session.
+	 */
+	function setPalette(colours) {
+		if (!Array.isArray(colours) || colours.length === 0) return;
 		// Snapshot what each pinned column resolves to BEFORE the swap. That is the only
 		// way to tell, afterwards, which series were following the palette and which the
 		// user had overridden — see repaintPinnedSeries.
 		const before = pinnedColourSnapshot();
-		appState.appColours = appConsts.colourPalettes[palette];
+		appState.appColours = colours;
 		// Most series resolve their colour on READ and so follow the palette unaided; this
 		// reaches the values derived from it once and stored (Box's fillColour).
 		repaintPinnedSeries(before);
@@ -156,6 +292,75 @@
 		     the reason it sits here rather than in a plot's panel: it governs every
 		     figure, not one. -->
 		<AppearanceMapEditor />
+
+		<div class="div-line"></div>
+
+		<!-- Named presets of the two sections above: the figure defaults and the palette,
+		     plus the appearance map re-keyed onto column names and group labels so it can
+		     leave this session. Stored per browser, not in the session file. -->
+		<div class="control-component">
+			<div class="control-component-title"><p>Figure styles</p></div>
+
+			{#if savedStyles.length === 0}
+				<p class="privacy-note">No saved styles on this browser yet.</p>
+			{:else}
+				<div class="style-list">
+					{#each savedStyles as name (name)}
+						<div class="style-row">
+							<span class="style-name">
+								{name}
+								{#if name === browserActiveStyle}<span class="style-tag">active</span>{/if}
+							</span>
+							<div class="style-actions">
+								<button class="export-py-btn" type="button" onclick={() => useStyle(name)}>
+									Use
+								</button>
+								<button class="export-py-btn" type="button" onclick={() => removeStyle(name)}>
+									Delete
+								</button>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
+			<div class="style-save-row">
+				<input
+					type="text"
+					bind:value={newStyleName}
+					placeholder="Style name"
+					onkeydown={(e) => {
+						if (e.key === 'Enter') saveCurrentStyle();
+					}}
+				/>
+				<button class="export-py-btn" type="button" onclick={saveCurrentStyle}>
+					Save current settings as…
+				</button>
+			</div>
+			<label class="privacy-row">
+				<input type="checkbox" bind:checked={templateOnly} />
+				<span>Template and palette only</span>
+			</label>
+			<p class="privacy-note">
+				A style keeps the figure defaults above (typeface, type size, figure width, export DPI,
+				background, legend box) and the colour palette. Unticking the box also keeps the appearance
+				rules, re-keyed onto your column names and group labels; those names leave this session with
+				the style, so leave the box ticked on a shared machine. Using a style sets the figure
+				defaults and the palette; the name and group rules are stored but not yet applied to
+				existing figures.
+			</p>
+			<p class="privacy-note">
+				Styles are saved in this browser only, so they do not follow you to another machine, and
+				they are deliberately kept when ephemeral mode is switched on.
+			</p>
+			{#if core.activeStyleName}
+				<p class="privacy-note">
+					This session was styled with <strong>{core.activeStyleName}</strong>{sessionStyleMissing
+						? ' — not saved on this browser, so nothing was substituted for it.'
+						: '.'} Loading a session never re-applies a style; it shows what it was saved with.
+				</p>
+			{/if}
+		</div>
 
 		<div class="div-line"></div>
 
@@ -227,6 +432,19 @@
 			<p class="privacy-note">
 				Removes the recent-session list, the saved file handles and the remembered canvas layout.
 				Your saved session files on disk are untouched.
+			</p>
+			<!-- Separate from the button above on purpose. That one clears things the app can
+			     rebuild; a style is authored work and is NOT recoverable from a session file, so
+			     one button doing both would either destroy presets by surprise or leave them
+			     behind silently. -->
+			<button class="export-py-btn" type="button" onclick={forgetStyles}>
+				Forget saved figure styles
+			</button>
+			<p class="privacy-note">
+				Removes the named figure styles above, including any column names and group labels they
+				carry. Saved styles are kept by the button above and by ephemeral mode, so this is the only
+				thing that forgets them. They are not stored in your session files, so they cannot be
+				recovered from one.
 			</p>
 		</div>
 
@@ -339,6 +557,62 @@
 	}
 	.export-py-btn:hover {
 		border-color: var(--color-lightness-35);
+	}
+
+	/* Saved-style list. Rows reuse .export-py-btn for their actions so the buttons match
+	   the ones in Privacy and Experimental rather than introducing a third look. */
+	.style-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		margin-bottom: var(--space-3);
+		/* The enclosing .control-component aligns its children to flex-start, so the list
+		   would otherwise shrink to its widest row and the actions would not reach the
+		   right-hand edge. */
+		width: 100%;
+	}
+	.style-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+		/* The section is a flex COLUMN, so without this the row shrinks to its content and
+		   the actions sit against the name instead of at the right-hand edge. */
+		width: 100%;
+	}
+	.style-name {
+		font-size: var(--font-md);
+		color: var(--color-lightness-25);
+		overflow-wrap: anywhere;
+	}
+	.style-tag {
+		margin-left: var(--space-2);
+		padding: 1px 6px;
+		font-size: var(--font-xs);
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--color-lightness-35);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: 999px;
+		vertical-align: middle;
+	}
+	.style-actions {
+		display: flex;
+		flex: 0 0 auto;
+		gap: var(--space-2);
+	}
+	.style-save-row {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		width: 100%;
+		margin-bottom: var(--space-2);
+	}
+	.style-save-row > input {
+		flex: 1;
+		width: auto;
+		min-width: 0;
 	}
 
 	.experimental-note {
