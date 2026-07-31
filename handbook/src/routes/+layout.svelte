@@ -4,7 +4,8 @@
   import logo from "$lib/logo.svg";
   import { VERSION } from "$lib/version.js";
 
-  const DOI = "10.5281/zenodo.19340642";
+  // The handbook's own Zenodo record, not AnCiR's. See ColophonSection.svelte.
+  const DOI = "10.5281/zenodo.21727169";
   const DOI_URL = `https://doi.org/${DOI}`;
 
   let { children } = $props();

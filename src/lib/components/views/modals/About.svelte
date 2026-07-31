@@ -64,7 +64,11 @@
 			A handbook for chronobiological analysis that includes steps in AnCiR is <a
 				href="./handbook.html"
 				target="_blank">here</a
-			>. There is also a video introduction available
+			>. It is a separate, citable work with its own DOI (<a
+				href="https://doi.org/10.5281/zenodo.21727169"
+				target="_blank">10.5281/zenodo.21727169</a
+			>); please cite it rather than AnCiR when citing the text. There is also a video
+			introduction available
 			<a href="https://youtu.be/3FZSJZrKF_M" target="_blank">here</a>.
 		</p>
 
@@ -132,8 +136,14 @@
 		</p>
 		<p>
 			<a href="https://doi.org/10.5281/zenodo.19340642"
-				><img src="https://zenodo.org/badge/967164279.svg" alt="DOI" /></a
+				><img src="https://zenodo.org/badge/967164279.svg" alt="AnCiR DOI" /></a
 			>
+		</p>
+		<p style="font-size:var(--font-sm);">
+			Cite the software: <a href="https://doi.org/10.5281/zenodo.19340642"
+				>10.5281/zenodo.19340642</a
+			>. Cite the handbook:
+			<a href="https://doi.org/10.5281/zenodo.21727169">10.5281/zenodo.21727169</a>.
 		</p>
 
 		<p style="font-size:var(--font-sm);">Build Number: {buildInfo.buildNumber}</p>

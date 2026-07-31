@@ -4,33 +4,40 @@
   import { VERSION } from "$lib/version.js";
   import manifest from "$ancir/static/nodes.json";
 
-  const DOI = "10.5281/zenodo.19340642";
+  // The handbook and AnCiR are archived as two separate Zenodo records, so that
+  // the handbook can be cited at its own version rather than at whichever AnCiR
+  // release happened to ship alongside it.
+  const DOI = "10.5281/zenodo.21727169"; // this handbook
   const DOI_URL = `https://doi.org/${DOI}`;
+  const ANCIR_DOI = "10.5281/zenodo.19340642"; // the AnCiR software
+  const ANCIR_DOI_URL = `https://doi.org/${ANCIR_DOI}`;
   const REPO = "https://github.com/DaveCumin/AnCiR_next";
   const YEAR = 2026;
 
   // The AnCiR release is stamped into nodes.json by the manifest generator, so
   // the version shown here follows a version bump automatically. The display
-  // form carries a prefix ("β.71.1"); the citation wants the plain, tag-matching
-  // form ("71.1").
+  // form carries a prefix ("β.72.8"); the citation wants the plain, tag-matching
+  // form ("72.8").
   const ancirDisplay = manifest.generatedFromVersion ?? "unknown";
   const ancirVersion = ancirDisplay.replace(/^[^0-9]*/, "");
 
   const citation =
-    `Cumin D. AnCiR: Analysis of Chronobiological Rhythms, with the ` +
-    `Chronobiological Data Analysis Handbook. Version ${ancirVersion}. ` +
-    `Zenodo; ${YEAR}. doi:${DOI}`;
+    `Cumin D. A Handbook of Chronobiological Data Analysis. ` +
+    `Version ${VERSION}. Zenodo; ${YEAR}. doi:${DOI}`;
 
-  const bibtex = `@software{ancir,
+  const bibtex = `@book{cumin_handbook,
   author    = {Cumin, David},
-  title     = {{AnCiR}: Analysis of Chronobiological Rhythms, with the
-               Chronobiological Data Analysis Handbook},
-  version   = {${ancirVersion}},
+  title     = {A Handbook of Chronobiological Data Analysis},
+  version   = {${VERSION}},
   year      = {${YEAR}},
   publisher = {Zenodo},
   doi       = {${DOI}},
   url       = {${DOI_URL}}
 }`;
+
+  const ancirCitation =
+    `Cumin D. AnCiR: Analysis of Chronobiological Rhythms. ` +
+    `Version ${ancirVersion}. Zenodo; ${YEAR}. doi:${ANCIR_DOI}`;
 
   let copied = $state("");
 
@@ -56,12 +63,13 @@
 
 <ChapterSection id="colophon" num="Colophon" title="Citation, Licence, and Versions">
   <p class="chapter-intro">
-    This handbook is archived and citable. It is deposited on Zenodo together
-    with AnCiR itself, so a citation resolves to a fixed, preserved snapshot
-    rather than to whatever the website happens to serve today.
+    This handbook is archived and citable. It has its own Zenodo record, separate
+    from AnCiR, so a citation resolves to a fixed, preserved snapshot of the text
+    rather than to whatever the website happens to serve today, and its version
+    reflects changes to the handbook rather than to the software.
   </p>
 
-  <SectionHead text="How to cite" />
+  <SectionHead text="How to cite the handbook" />
 
   <p>
     Cite the Zenodo record. The DOI below is a <em>concept</em> DOI: it always
@@ -89,11 +97,30 @@
     </button>
   </div>
 
+  <SectionHead text="How to cite AnCiR" />
+
+  <p>
+    If your analysis was carried out in AnCiR, cite the software as well. It is a
+    separate record with its own DOI and its own version history.
+  </p>
+
+  <div class="cite-block">
+    <div class="cite-text">{ancirCitation}</div>
+    <button class="copy-btn" onclick={() => copy(ancirCitation, "ancir")}>
+      {label("ancir")}
+    </button>
+  </div>
+
+  <p class="doi-line">
+    AnCiR DOI:
+    <a href={ANCIR_DOI_URL} target="_blank" rel="noopener">{ANCIR_DOI_URL}</a>
+  </p>
+
   <SectionHead text="Licence" />
 
   <p>
-    The repository carries two licences, because it holds two different kinds of
-    work.
+    The two works carry different licences, because they are different kinds of
+    thing. They share one source repository.
   </p>
 
   <table class="licence-table">
@@ -129,8 +156,8 @@
   </table>
 
   <p class="small-note">
-    If you reuse a figure or an animation from this handbook, the citation above
-    is the attribution CC BY 4.0 asks for.
+    If you reuse a figure or an animation from this handbook, the handbook
+    citation above is the attribution CC BY 4.0 asks for.
   </p>
 
   <SectionHead text="Versions" />
@@ -143,10 +170,9 @@
   </table>
 
   <p class="small-note">
-    Source: <a href={REPO} target="_blank" rel="noopener">{REPO}</a>. The
-    handbook source lives under <code>handbook/</code> and is archived in the
-    Zenodo deposit from AnCiR v63.0 onwards; earlier releases archive the
-    application only.
+    Source: <a href={REPO} target="_blank" rel="noopener">{REPO}</a>, with the
+    handbook under <code>handbook/</code>. The two Zenodo records are linked to
+    each other, so either one leads to the other.
   </p>
 </ChapterSection>
 

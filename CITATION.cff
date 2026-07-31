@@ -1,5 +1,9 @@
 cff-version: 1.2.0
-message: "If you use AnCiR or the Chronobiological Data Analysis Handbook, please cite this record."
+message: >-
+  If you use AnCiR, please cite this record. The companion handbook is a
+  separate work with its own DOI (10.5281/zenodo.21727169); if you are citing
+  the handbook rather than the software, cite that instead. See the references
+  section below.
 title: "AnCiR: Analysis of Chronobiological Rhythms"
 abstract: >-
   AnCiR is a graphical, no-coding tool for the analysis of chronobiological
@@ -10,11 +14,12 @@ abstract: >-
   smoothing, and inferential statistics with multiple-comparison correction
   and surrogate or permutation nulls.
 
-  This repository also contains the Chronobiological Data Analysis Handbook,
-  an interactive companion text with worked examples and animations that
-  explains the methods and shows how to carry them out in AnCiR. The handbook
-  is published at https://ancir.pages.dev/handbook.html and its source is
-  archived here under handbook/.
+  This repository also holds the source of A Handbook of Chronobiological Data
+  Analysis, an interactive companion text with worked examples and animations
+  that explains the methods and shows how to carry them out in AnCiR. The
+  handbook is archived as a separate Zenodo record (10.5281/zenodo.21727169)
+  so that it can be cited at its own version, and is published at
+  https://ancir.pages.dev/handbook.html.
 type: software
 authors:
   - family-names: Cumin
@@ -41,10 +46,18 @@ keywords:
   - Lomb-Scargle
   - open-source software
 references:
-  - type: generic
-    title: "Chronobiological Data Analysis: Handbook"
+  - type: book
+    title: "A Handbook of Chronobiological Data Analysis"
     authors:
       - family-names: Cumin
         given-names: David
+        orcid: "https://orcid.org/0000-0003-2685-4779"
+    publisher:
+      name: Zenodo
+    year: 2026
+    doi: 10.5281/zenodo.21727169
     url: "https://ancir.pages.dev/handbook.html"
-    notes: "Interactive companion handbook; source archived in this repository under handbook/."
+    notes: >-
+      The companion handbook. A separate Zenodo record with its own DOI and
+      version history; its source lives in this repository under handbook/.
+      Cite this rather than the software when citing the text.

@@ -1,6 +1,6 @@
 {
-  "title": "AnCiR: Analysis of Chronobiological Rhythms, with the Chronobiological Data Analysis Handbook",
-  "description": "<p><strong>AnCiR</strong> is a graphical, no-coding tool for the analysis of chronobiological rhythms and other time-series data. It provides periodicity detection (Sokolove&ndash;Bushell &chi;<sup>2</sup>, Enright, Lomb&ndash;Scargle, FFT), cosinor and harmonic-cosinor fitting, non-parametric circadian rhythm analysis (IS, IV, RA, M10, L5), circular statistics, continuous wavelet transforms, smoothing, and inferential statistics with multiple-comparison correction and surrogate or permutation nulls.</p><p>This deposit also contains the <strong>Chronobiological Data Analysis Handbook</strong>, an interactive companion text with worked examples and animations that explains each method and shows how to carry it out in AnCiR. The handbook source is archived here under <code>handbook/</code> and is published at <a href=\"https://ancir.pages.dev/handbook.html\">https://ancir.pages.dev/handbook.html</a>.</p><p>AnCiR was financially supported by a University of Auckland Teaching and Learning Development and Innovation Grant (2024). It is written in Svelte, with help from AI models.</p><p>Bug reports, feature requests, and offers of support: <a href=\"mailto:d.cumin@auckland.ac.nz?subject=AnCiR\">d.cumin@auckland.ac.nz</a></p>",
+  "title": "AnCiR: Analysis of Chronobiological Rhythms",
+  "description": "<p><strong>AnCiR</strong> is a graphical, no-coding tool for the analysis of chronobiological rhythms and other time-series data. It provides periodicity detection (Sokolove&ndash;Bushell &chi;<sup>2</sup>, Enright, Lomb&ndash;Scargle, FFT), cosinor and harmonic-cosinor fitting, non-parametric circadian rhythm analysis (IS, IV, RA, M10, L5), circular statistics, continuous wavelet transforms, smoothing, and inferential statistics with multiple-comparison correction and surrogate or permutation nulls.</p><p><strong>A Handbook of Chronobiological Data Analysis</strong> is the companion text: an interactive guide with worked examples and animations that explains each method and shows how to carry it out in AnCiR. It is archived as a separate record, <a href=\"https://doi.org/10.5281/zenodo.21727169\">doi:10.5281/zenodo.21727169</a>, and published at <a href=\"https://ancir.pages.dev/handbook.html\">https://ancir.pages.dev/handbook.html</a>. Please cite that record when citing the handbook. Its source is included in this deposit under <code>handbook/</code>.</p><p>AnCiR was financially supported by a University of Auckland Teaching and Learning Development and Innovation Grant (2024). It is written in Svelte, with help from AI models.</p><p>Bug reports, feature requests, and offers of support: <a href=\"mailto:d.cumin@auckland.ac.nz?subject=AnCiR\">d.cumin@auckland.ac.nz</a></p>",
   "upload_type": "software",
   "license": "apache-2.0",
   "access_right": "open",
@@ -29,11 +29,11 @@
       "scheme": "url"
     },
     {
-      "identifier": "https://ancir.pages.dev/handbook.html",
-      "relation": "isIdenticalTo",
+      "identifier": "10.5281/zenodo.21727169",
+      "relation": "isDocumentedBy",
       "resource_type": "publication-book",
-      "scheme": "url"
+      "scheme": "doi"
     }
   ],
-  "notes": "The Chronobiological Data Analysis Handbook is included in this deposit under handbook/ from release v63.0 onwards. Releases up to and including v61.3 archive the AnCiR application only. Licensing: the AnCiR software is Apache-2.0 (see LICENSE); the handbook under handbook/ is CC BY 4.0 (see handbook/LICENSE)."
+  "notes": "A Handbook of Chronobiological Data Analysis is the companion text to this software. It is archived as its own Zenodo record (10.5281/zenodo.21727169) with its own version history, and should be cited separately when citing the text rather than the software; its source is included in this deposit under handbook/ from release v63.0 onwards. Licensing: the AnCiR software is Apache-2.0 (see LICENSE); the handbook under handbook/ is CC BY 4.0 (see handbook/LICENSE)."
 }
