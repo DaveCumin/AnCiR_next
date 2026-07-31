@@ -15,6 +15,10 @@
 //   ancir.workflow.nodePositions  node coordinates
 //   ancir.canvas.pathFocus      one node id
 //   ancir.tours.completed       which tours are done
+//   ancir.style.configs.v1      named figure-style presets: typeface, size, palette, and
+//                               rules keyed on column NAMES and GROUP LABELS. Written
+//                               directly to localStorage and exempt from the clear below;
+//                               see STYLE_KEY for why, and for the caveat about names.
 //   IndexedDB `ancir-recents`   FileSystemFileHandles — no data, but file identity and the
 //                               capability to re-open
 //
@@ -46,6 +50,23 @@ const PREFIX = 'ancir';
  * worse than none — and exempted from clearLocalData() for the same reason.
  */
 const MODE_KEY = 'ancir.privacy.ephemeral';
+
+/**
+ * Saved figure-style presets (plots/styleConfig.js).
+ *
+ * Declared here rather than there so the exemption below cannot drift from the key it is
+ * meant to exempt, and so this file keeps its property of listing everything AnCiR writes.
+ *
+ * Exempt for the same reason as MODE_KEY, and stated in the spec: a style holds a typeface,
+ * a size, some hex colours and some names, none of it a measurement, and a privacy mode that
+ * also forgot your house style is a privacy mode people turn off. The caveat is that a
+ * preset CAN carry column names and group labels, so Settings offers a separate "forget
+ * saved styles" button rather than sweeping them silently from either place.
+ */
+export const STYLE_KEY = 'ancir.style.configs.v1';
+
+/** Keys `clearLocalData()` leaves alone. A set, so a third one is a one-line addition. */
+const EXEMPT = new Set([MODE_KEY, STYLE_KEY]);
 
 const hasWindow = () => typeof window !== 'undefined';
 
@@ -125,13 +146,13 @@ export const store = {
 	}
 };
 
-/** Every `ancir`-prefixed key currently in `s`, snapshotted before deletion (mutating while iterating shifts indices). */
+/** Every `ancir`-prefixed key currently in `s` bar the exempt ones, snapshotted before deletion (mutating while iterating shifts indices). */
 function ancirKeys(s) {
 	const keys = [];
 	try {
 		for (let i = 0; i < s.length; i++) {
 			const k = s.key(i);
-			if (k && k.startsWith(PREFIX) && k !== MODE_KEY) keys.push(k);
+			if (k && k.startsWith(PREFIX) && !EXEMPT.has(k)) keys.push(k);
 		}
 	} catch {
 		/* ignore */
@@ -163,7 +184,9 @@ const OWNED_DATABASES = ['ancir-recents'];
 
 /**
  * Remove everything AnCiR has stored in this browser: both Storage areas and the IndexedDB
- * handle store. The privacy setting itself survives, deliberately.
+ * handle store. The privacy setting and the saved figure styles both survive, deliberately;
+ * styles are forgotten by their own button (forgetAllStyles) so neither outcome is a
+ * surprise.
  *
  * @returns {Promise<{keys: number, databases: number}>} what was actually removed, so the UI can
  *   report a number instead of an unfalsifiable "done".

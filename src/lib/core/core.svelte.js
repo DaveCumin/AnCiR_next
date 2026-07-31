@@ -82,6 +82,16 @@ export const core = $state({
 	// wholesale); the import side must reset and re-normalise it explicitly, the
 	// same as seriesAppearance.
 	figureStyle: transitionalFigureStyle(),
+	// activeStyleName — the NAME of the saved figure-style preset this session was styled
+	// with, or null. The styles themselves live per browser (plots/styleConfig.js); only the
+	// name travels with the session, because a preset is a rule set and the session already
+	// holds the RESULT of applying it.
+	//
+	// Displayed on load, never applied: applying a config when a session loads would override
+	// what that session saved, which is the property that makes a paper's figures travel with
+	// the session. If this browser holds no style of that name, Settings says so rather than
+	// substituting one; a silently different style is worse than an honestly missing one.
+	activeStyleName: null,
 	// nodeLayout — workflow-canvas layout snapshot keyed by canvas node id
 	// (`data_<colId>`, `process_<id>`, `tableprocess_<id>`, `plot_<id>`, group/
 	// composite/note ids): `{ [id]: { x, y, collapsed? } }`. Maintained by

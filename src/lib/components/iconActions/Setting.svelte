@@ -203,6 +203,16 @@
 		core.figureStyle = jsonData.figureStyle
 			? normaliseFigureStyle(jsonData.figureStyle)
 			: transitionalFigureStyle();
+		// The NAME of the figure-style preset this session was styled with. Reset
+		// explicitly, exactly as figureStyle is above: importing a session that carries no
+		// name must not leave the previous session's name attached to it.
+		//
+		// Displayed, never applied. Applying the named style here would override what this
+		// session actually saved, which is the one trap the style-config spec calls out.
+		core.activeStyleName =
+			typeof jsonData.activeStyleName === 'string' && jsonData.activeStyleName
+				? jsonData.activeStyleName
+				: null;
 		// Stored values: clear the previous session's registry, then restore from
 		// the JSON. Ref entries (metric-port refs) come back live; getter-based
 		// entries (StoreValueButton) resolve to their exported static snapshot —
