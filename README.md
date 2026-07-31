@@ -4,7 +4,7 @@ This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for an
 
 This repository also holds the source of **A Handbook of Chronobiological Data Analysis**, an interactive companion text with worked examples and animations that explains the methods and shows how to carry them out in AnCiR. It is published at https://ancir.pages.dev/handbook.html and its source lives under `handbook/`. The handbook is a separate, citable work with its own DOI and its own version history.
 
-AnCiR was financially supported by a University of Auckland Teaching and Learning Development and Innovation Grant (2024) and is written in [Svelte](https://svelte.dev/) by [DaveCumin](https://github.com/davecumin) and [Yuxing (Starr) Zhang](https://github.com/yz-329), with help from AI models.
+AnCiR was financially supported by a University of Auckland Teaching and Learning Development and Innovation Grant (2024) and is written in [Svelte](https://svelte.dev/) by [David Cumin](https://github.com/davecumin) and [Yuxing (Starr) Zhang](https://github.com/yz-329), with help from AI models.
 
 **Please send any bug reports, feature requests, or offers of support to [d.cumin@auckland.ac.nz](mailto:d.cumin@auckland.ac.nz?subject=AnCiR)**
 

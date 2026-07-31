@@ -78,7 +78,7 @@
 				>Svelte</a
 			>
 			by
-			<a href="https://github.com/davecumin">DaveCumin</a>
+			<a href="https://github.com/davecumin">David Cumin</a>
 			and <a href="https://github.com/yz-329">Yuxing (Starr) Zhang</a>, with help from AI models.
 		</p>
 		<p>
