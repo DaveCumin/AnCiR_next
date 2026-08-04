@@ -11,6 +11,15 @@ export function getDisplayZone() {
 	return appState.displayTimezone ?? 'utc';
 }
 
+/**
+ * The format offered wherever a user can override a date label: the actogram's row labels
+ * and a scatterplot's x ticks. Lives here so the two cannot drift apart, and so a future
+ * third caller inherits the same suggestion rather than inventing one.
+ *
+ * 'DD MMM' ⇒ "05 Aug".
+ */
+export const DEFAULT_DATE_FORMAT = 'DD MMM';
+
 // Build a dayjs instance from a millisecond timestamp anchored to the
 // configured display zone. Kept private so callers don't have to remember
 // the utc-vs-tz dance themselves.

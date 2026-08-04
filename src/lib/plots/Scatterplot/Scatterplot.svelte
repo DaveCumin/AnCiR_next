@@ -177,6 +177,7 @@
 			padding: { group: 'Padding' },
 			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
 			xLogScale: { group: 'X-axis', label: 'X log scale' },
+			xTickFormat: { group: 'X-axis', label: 'Date tick format' },
 			ylimsLeftIN: {
 				group: 'Y-axis (left)',
 				_children: { 0: { label: 'Y min (left)' }, 1: { label: 'Y max (left)' } }
@@ -205,6 +206,16 @@
 
 		xlimsIN = $state([null, null]);
 		xLogScale = $state(false);
+		// An override for the x tick labels when x is a TIME column. Empty means automatic,
+		// which is `formatTimeAxisTick`'s multi-resolution cascade: it picks HH:mm, D MMM,
+		// MMM or YYYY per tick according to what the tick actually is.
+		//
+		// Empty is the DEFAULT rather than 'DD MMM', and that is a deliberate choice worth
+		// stating. A fixed date format is right for a record spanning weeks and wrong for one
+		// spanning hours, where every tick would read the same date. So the box is prefilled
+		// with DD MMM as a suggestion and applies only once the user puts something in it;
+		// existing figures keep the behaviour they were built with.
+		xTickFormat = $state('');
 		XScale = $derived.by(() => {
 			if (this.anyXdataTime) {
 				return scaleUtc().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth]);
@@ -560,6 +571,7 @@
 			return {
 				xlimsIN: this.xlimsIN,
 				xLogScale: this.xLogScale,
+				xTickFormat: this.xTickFormat,
 				ylimsLeftIN: this.ylimsLeftIN,
 				ylimsRightIN: this.ylimsRightIN,
 				yLogScaleLeft: this.yLogScaleLeft,
@@ -585,6 +597,9 @@
 			scatter.padding = json.padding ?? scatter.padding;
 			scatter.xlimsIN = json.xlimsIN ?? scatter.xlimsIN;
 			scatter.xLogScale = json.xLogScale ?? false;
+			// '' is meaningful (automatic), so `??` rather than `||`: a saved empty string
+			// must not fall through to a default and start forcing a format.
+			scatter.xTickFormat = json.xTickFormat ?? scatter.xTickFormat;
 			scatter.ylimsLeftIN = json.ylimsLeftIN || [null, null];
 			scatter.ylimsRightIN = json.ylimsRightIN || [null, null];
 			scatter.yLogScaleLeft = json.yLogScaleLeft ?? false;
@@ -647,7 +662,11 @@
 	import Toggle from '$lib/components/inputs/Toggle.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState, core } from '$lib/core/core.svelte';
-	import { formatTimeAxisTick } from '$lib/utils/time/displayTime.js';
+	import {
+		formatTimeAxisTick,
+		formatDateTime,
+		DEFAULT_DATE_FORMAT
+	} from '$lib/utils/time/displayTime.js';
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
@@ -668,6 +687,21 @@
 	// the selection toolbar; only then do brush + plain-wheel zoom engage, so plain
 	// scroll keeps panning the canvas otherwise. Shift+wheel always zooms.
 	let { theData, which, brushable = false, zoomMode = false } = $props();
+
+	/**
+	 * An x tick label for a TIME x axis.
+	 *
+	 * Empty `xTickFormat` keeps `formatTimeAxisTick`'s multi-resolution cascade, which picks
+	 * a format per tick from what that tick actually is. A non-empty one overrides every tick
+	 * with the user's dayjs pattern, which is what a figure spanning days usually wants and
+	 * what a figure spanning hours usually does not; hence override rather than default.
+	 *
+	 * Both paths format in the display zone, so switching timezone still moves every label.
+	 */
+	function xTick(d) {
+		const fmt = theData.plot.xTickFormat;
+		return fmt && fmt.trim() ? formatDateTime(d, fmt) : formatTimeAxisTick(d);
+	}
 
 	// --- Brush-to-zoom (view only; writes the same *IN limit overrides the axis
 	// control inputs use, so it's fully reversible and serialises with the plot). ---
@@ -995,6 +1029,16 @@
 						<input type="checkbox" bind:checked={theData.xLogScale} />
 						<p>Log Scale</p>
 					</div>
+				{:else}
+					<!-- Only meaningful for a time x axis; a number axis has no date to format. -->
+					<ControlInput label="Date tick format:">
+						<input
+							type="text"
+							bind:value={theData.xTickFormat}
+							placeholder="Automatic"
+							title="A date format such as {DEFAULT_DATE_FORMAT}. Leave empty to let each tick choose its own resolution."
+						/>
+					</ControlInput>
 				{/if}
 			</div>
 		</div>
@@ -1154,7 +1198,7 @@
 			tickFormat={theData.plot.anyXCategoryData
 				? (/** @type {any} */ d) => String(d)
 				: theData.plot.anyXdataTime
-					? (/** @type {any} */ d) => formatTimeAxisTick(d)
+					? (/** @type {any} */ d) => xTick(d)
 					: null}
 			which="plot"
 		/>

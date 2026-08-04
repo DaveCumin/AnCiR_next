@@ -441,3 +441,70 @@ describe('parentColumnId', () => {
 		expect(sourceColumnId(3)).toBe(1);
 	});
 });
+
+// The gap this rule was widened to close.
+//
+// The id-as-prefix rule originally required BOTH halves to be digits, which covered Split
+// (`400_1`) and silently missed the two nodes whose suffix is a WORD. The unit tests passed
+// throughout, because their fixtures were all `fity_7`-shaped; it took reading a real
+// session's `args.out` in the browser to see that a Rhythmicity node emits `400_period`.
+// Fixtures that mirror one case are exactly how this project has lost time before.
+describe('the id-as-prefix family, with word suffixes', () => {
+	it('resolves a RhythmicityAnalysis output (`<yId>_period`, `<yId>_power`)', () => {
+		// RhythmicityAnalysis.svelte:269 builds `${yId}_${k}` where k is 'period' | 'power'.
+		setup({
+			columns: [{ id: 400 }, { id: 401 }, { id: 434 }, { id: 435 }, { id: 436 }],
+			tableProcesses: [
+				tp(1, {
+					xIN: 399,
+					yIN: [400, 401],
+					out: { '400_period': 434, '400_power': 435, '401_period': 436 }
+				})
+			]
+		});
+		// A multi-input node, so the single-input fallback cannot be what answers here.
+		expect(sourceColumnId(434)).toBe(400);
+		expect(sourceColumnId(435)).toBe(400);
+		expect(sourceColumnId(436)).toBe(401);
+	});
+
+	it('resolves a MovingAnalysis stat output (`<yId>_mean`)', () => {
+		setup({
+			columns: [{ id: 10 }, { id: 11 }, { id: 20 }, { id: 21 }],
+			tableProcesses: [tp(1, { yIN: [10, 11], out: { '10_mean': 20, '11_sd': 21 } })]
+		});
+		expect(sourceColumnId(20)).toBe(10);
+		expect(sourceColumnId(21)).toBe(11);
+	});
+
+	it('still refuses a LongToWide `value_<numericCategory>` key', () => {
+		// The trap, re-asserted against the WIDER rule. `value_1` means "the column for
+		// category 1", a DATA VALUE. It survives because rule 2 reads digits from the FRONT
+		// and this key begins with the literal `value_`.
+		setup({
+			columns: [{ id: 1 }, { id: 40 }],
+			tableProcesses: [
+				tp(1, { categoryIN: 5, timeIN: 6, valueIN: 7, out: { value_1: 40 } })
+			]
+		});
+		expect(sourceColumnId(40)).toBeNull();
+	});
+
+	it('refuses an id-prefixed key whose leading id is not a live input', () => {
+		// A stale key left by a removed input must not invent an ancestor.
+		setup({
+			columns: [{ id: 10 }, { id: 11 }, { id: 30 }],
+			tableProcesses: [tp(1, { yIN: [10, 11], out: { '99_period': 30 } })]
+		});
+		expect(sourceColumnId(30)).toBeNull();
+	});
+
+	it('does not treat a bare numeric key as id-prefixed', () => {
+		// No underscore, so nothing to split on; it falls to the whole-node rule.
+		setup({
+			columns: [{ id: 10 }, { id: 30 }],
+			tableProcesses: [tp(1, { yIN: [10], out: { 400: 30 } })]
+		});
+		expect(sourceColumnId(30)).toBe(10);
+	});
+});

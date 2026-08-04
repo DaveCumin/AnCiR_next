@@ -63,10 +63,10 @@
 //                  input, so each names its own ancestor; this is the TP equivalent of
 //                  a free process's `out_<id>` fan-out port, and the fork rule below
 //                  never applies to it.
-//   2. Split       `<inputColumnId>_<segment>` (Split.svelte:263 builds the key as
-//                  `${yId}_${seg}`, so here the id is the PREFIX). Both halves must be
-//                  digits and the first must be a live input, which is what keeps this
-//                  from swallowing anything else.
+//   2. id-prefixed `<inputColumnId>_<suffix>`, the shape where the id comes FIRST. Split
+//                  writes `400_1`, MovingAnalysis `400_mean`, RhythmicityAnalysis
+//                  `400_period`. The suffix is unconstrained; the leading id must be a
+//                  live input, which is what keeps this from swallowing anything else.
 //   3. whole node  any other key, when the node has exactly ONE input. A periodogram's
 //                  `period`/`power` pair is not per-input, but with one Y wired there
 //                  is still only one column it can have come from.
@@ -79,8 +79,9 @@
 // Inferring per-input-ness from the shape of the key (`ends in _<digits>`) once caused
 // data loss in reconcileOutputs; here it would only mis-colour a series, but it would
 // be the same wrong inference from the same wrong reasoning, so it is refused the same
-// way. `value_` is not a per-input prefix, `value_1` is not two digit groups, and
-// LongToWide wires three inputs, so all three cases decline and the answer is null.
+// way. `value_` is not a per-input prefix, `value_1` does not START with digits (rule 2
+// reads the id from the FRONT, which is the direction that matters here), and LongToWide
+// wires three inputs, so all three cases decline and the answer is null.
 //
 // THE FORK RULE
 //
@@ -211,11 +212,28 @@ function tableProcessParentId(columnId) {
 		if (/^\d+$/.test(rest) && live.has(Number(rest))) return Number(rest);
 	}
 
-	// (b) Split: `<inputColumnId>_<segment>`, the one shape where the id is the prefix.
-	// Both groups must be digits AND the first must be a live input, so a
-	// category-keyed or otherwise underscored key cannot fall in here by accident.
-	const split = /^(\d+)_(\d+)$/.exec(key);
-	if (split && live.has(Number(split[1]))) return Number(split[1]);
+	// (b) ID-AS-PREFIX: `<inputColumnId>_<suffix>`. Three nodes build keys this way and the
+	// suffix is not always a number:
+	//
+	//   Split               `${yId}_${seg + 1}`   → "400_1"
+	//   MovingAnalysis      `${yId}_${k}`         → "400_mean"
+	//   RhythmicityAnalysis `${yId}_${k}`         → "400_period", "400_power"
+	//
+	// This rule first required BOTH halves to be digits, which covered Split and missed the
+	// other two entirely. The tests passed because their fixtures were `fity_7`-shaped; the
+	// gap only showed up when a real session's `args.out` was read in the browser. So the
+	// suffix is now unconstrained.
+	//
+	// That does NOT reopen the LongToWide trap, and the direction is the whole reason. The
+	// inference that destroys data is "ends in _<digits>", which reads `value_1` (category
+	// 1, a DATA VALUE) as column 1's output. This reads LEADING digits, and `value_<x>`
+	// always begins with the literal `value_`. The two shapes cannot collide.
+	//
+	// The leading id must still be a LIVE INPUT of this node, which is what stops a key that
+	// merely looks like this shape from inventing an ancestor. Checked against the whole
+	// registry: no fixed output key in nodes.json begins with digits followed by `_`.
+	const idPrefixed = /^(\d+)_/.exec(key);
+	if (idPrefixed && live.has(Number(idPrefixed[1]))) return Number(idPrefixed[1]);
 
 	// (c) whole-node output on a single-input node. Not per-input, but with one column
 	// wired in there is only one thing it can descend from.

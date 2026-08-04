@@ -30,6 +30,12 @@
 	import { core } from '$lib/core/core.svelte.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
+	import {
+		rowLabelText,
+		rowLabelGutter as computeRowLabelGutter,
+		migrateRowLabels,
+		DEFAULT_DATE_FORMAT
+	} from '$lib/plots/Actogram/rowLabels.js';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
 	export const Actogram_controlHeaders = ['Properties', 'Data', 'Annotations'];
@@ -326,7 +332,6 @@
 		static descriptors = {
 			paddingIN: { group: 'Padding' },
 			spaceBetween: { group: 'Padding', label: 'Space between' },
-			showDayNumbers: { group: 'Padding', label: 'Show period numbers' },
 			periodHrs: { group: 'Time', label: 'Period (h)', step: 0.1 },
 			doublePlot: { group: 'Time', label: 'Repeat' },
 			ylimsOption: {
@@ -335,7 +340,16 @@
 				input: 'select',
 				options: ['overall', 'byperiod', 'manual']
 			},
-			ylimsIN: { group: 'Y-lims', _children: { 0: { label: 'Y min' }, 1: { label: 'Y max' } } }
+			ylimsIN: { group: 'Y-lims', _children: { 0: { label: 'Y min' }, 1: { label: 'Y max' } } },
+			// The row labels sit with the Y-lims controls rather than with Padding: they are a
+			// statement about the y axis (what each row IS), not about the space around the plot.
+			rowLabels: {
+				group: 'Y-lims',
+				label: 'Row labels',
+				input: 'select',
+				options: ['none', 'period', 'date']
+			},
+			dateFormat: { group: 'Y-lims', label: 'Date format' }
 		};
 
 		parentBox = $state();
@@ -343,6 +357,15 @@
 		annotations = $state([]);
 		isAddingMarkerTo = $state(-1);
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 20 });
+		// Room for the row labels, ADDED to the user's left padding the same way the light
+		// bands add to the top; see rowLabels.js for why it is estimated rather than measured.
+		rowLabelGutter = $derived(
+			computeRowLabelGutter({
+				mode: this.rowLabels,
+				dateFormat: this.dateFormat,
+				nRows: this.Ndays
+			})
+		);
 		padding = $derived.by(() => {
 			const allTopPadding =
 				this.lightBands.length > 0
@@ -353,7 +376,7 @@
 				top: allTopPadding,
 				right: this.paddingIN.right,
 				bottom: this.paddingIN.bottom,
-				left: this.paddingIN.left
+				left: this.paddingIN.left + this.rowLabelGutter
 			};
 		});
 		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
@@ -402,7 +425,15 @@
 		spaceBetween = $state(2);
 		doublePlot = $state(2);
 		periodHrs = $state(24);
-		showDayNumbers = $state(false);
+		// What sits beside each row: nothing, the period's ordinal (1, 2, 3 …), or the date
+		// that period begins on. ONE field rather than an on/off plus a mode; see
+		// ROW_LABEL_MODES in rowLabels.js for why, and migrateRowLabels for how the two
+		// older shapes load.
+		rowLabels = $state('none');
+		// A dayjs format string. 'DD MMM' ⇒ "05 Aug". Free text rather than a fixed list:
+		// what a figure needs varies by journal, and dayjs already validates by simply
+		// echoing anything it does not recognise.
+		dateFormat = $state(DEFAULT_DATE_FORMAT);
 		// Render style: 'bars' (traditional line/bar actogram) or 'heatmap'
 		// (each bin drawn as an intensity-coloured cell). Heatmap uses a global
 		// (across-days) intensity domain per series so days are comparable.
@@ -548,7 +579,8 @@
 				paddingIN: this.paddingIN,
 				doublePlot: this.doublePlot,
 				periodHrs: this.periodHrs,
-				showDayNumbers: this.showDayNumbers,
+				rowLabels: this.rowLabels,
+				dateFormat: this.dateFormat,
 				renderMode: this.renderMode,
 				colormap: this.colormap,
 				lightBands: this.lightBands,
@@ -573,7 +605,11 @@
 			actogram.ylimsIN = json.ylimsIN ?? actogram.ylimsIN;
 			actogram.doublePlot = json.doublePlot ?? actogram.doublePlot;
 			actogram.periodHrs = json.periodHrs ?? actogram.periodHrs;
-			if (json.showDayNumbers != null) actogram.showDayNumbers = json.showDayNumbers;
+			// Reads `rowLabels`, or the two older shapes it replaced. A session that had the
+			// labels switched OFF must not come back with them on, which is what makes the old
+			// boolean authoritative rather than merely a hint.
+			actogram.rowLabels = migrateRowLabels(json);
+			actogram.dateFormat = json.dateFormat ?? actogram.dateFormat;
 			// ?? default: older sessions predate these fields, so keep the class default
 			// rather than clobbering it with undefined.
 			actogram.renderMode = json.renderMode ?? actogram.renderMode;
@@ -622,6 +658,17 @@
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 
 	let { theData, which } = $props();
+
+	/** The label beside one actogram row. The decisions live in rowLabels.js. */
+	function rowLabel(day) {
+		return rowLabelText(day, {
+			mode: theData.plot.rowLabels,
+			startTime: theData.plot.startTime,
+			periodHrs: theData.plot.periodHrs,
+			dateFormat: theData.plot.dateFormat,
+			zone: getDisplayZone()
+		});
+	}
 
 	// Format an absolute-hours-since-plot-start value as a date/time string
 	// in the configured display zone (e.g. "24 Apr, 11:48").
@@ -740,10 +787,6 @@
 				</ControlInput>
 			</div>
 
-			<div class="control-input-checkbox">
-				<input type="checkbox" bind:checked={theData.showDayNumbers} />
-				<p>Show period numbers</p>
-			</div>
 		</div>
 
 		<div class="div-line"></div>
@@ -819,6 +862,26 @@
 						<option value="manual">Manual</option>
 					</select>
 				</ControlInput>
+			</div>
+
+			<div class="control-input-vertical">
+				<ControlInput label="Row labels:">
+					<select bind:value={theData.rowLabels}>
+						<option value="none">None</option>
+						<option value="period">Period number</option>
+						<option value="date">Date</option>
+					</select>
+				</ControlInput>
+
+				{#if theData.rowLabels === 'date'}
+					<ControlInput label="Date format:">
+						<input
+							type="text"
+							bind:value={theData.dateFormat}
+							placeholder={DEFAULT_DATE_FORMAT}
+						/>
+					</ControlInput>
+				{/if}
 			</div>
 		</div>
 
@@ -1106,7 +1169,7 @@
 			<Annotation {which} {annotation} />
 		{/each}
 		<!-- DAY/PERIOD NUMBERS -->
-		{#if theData.plot.showDayNumbers && theData.plot.Ndays > 0}
+		{#if theData.plot.rowLabels !== 'none' && theData.plot.Ndays > 0}
 			{@const dayScale = scaleLinear()
 				.domain([0, theData.plot.Ndays])
 				.range([0, theData.plot.Ndays])}
@@ -1122,7 +1185,7 @@
 						text-anchor="end"
 						dominant-baseline="central"
 						font-size="10"
-						fill="#555">{day + 1}</text
+						fill="#555">{rowLabel(day)}</text
 					>
 				{/if}
 			{/each}
