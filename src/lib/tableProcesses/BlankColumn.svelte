@@ -91,6 +91,9 @@
 	// Persisted on p.args so it survives save/load (args is a freeform bag).
 	let tableHeight = $state(Math.max(120, Number(p.args.editorHeight) || 300));
 	let resizing = false;
+	// Set while an editor-height drag is live, so an unmount mid-drag can still
+	// release the window listeners the drag installed.
+	let releaseHeightDrag = null;
 	function onResizeDown(e) {
 		e.preventDefault();
 		e.stopPropagation();
@@ -103,13 +106,20 @@
 		};
 		const up = () => {
 			resizing = false;
-			p.args.editorHeight = tableHeight;
+			// p is the node this editor belongs to; it outlives the component, so the
+			// height the user dragged to is persisted even if the unmount ends the drag.
+			if (p?.args) p.args.editorHeight = tableHeight;
 			window.removeEventListener('mousemove', move);
 			window.removeEventListener('mouseup', up);
+			releaseHeightDrag = null;
 		};
 		window.addEventListener('mousemove', move);
 		window.addEventListener('mouseup', up);
+		releaseHeightDrag = up;
 	}
+
+	// Drop any dangling drag listeners if this unmounts mid-gesture.
+	$effect(() => () => releaseHeightDrag?.());
 
 	function doBlank() {
 		// Clean up stored value refs for rows beyond the new count

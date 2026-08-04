@@ -38,6 +38,9 @@
 		window.removeEventListener('mouseup', handleMouseUp);
 	}
 
+	// Drop any dangling drag listeners if this unmounts mid-gesture.
+	$effect(() => handleMouseUp);
+
 	let oldVal;
 </script>
 

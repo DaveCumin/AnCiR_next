@@ -97,6 +97,9 @@
 		window.removeEventListener('pointermove', onPointerMove);
 		window.removeEventListener('pointerup', onPointerUp);
 	}
+
+	// Drop any dangling drag listeners if this unmounts mid-gesture.
+	$effect(() => onPointerUp);
 </script>
 
 <div

@@ -44,6 +44,9 @@
 		window.removeEventListener('mouseup', stopResize);
 	}
 
+	// Drop any dangling drag listeners if this unmounts mid-gesture.
+	$effect(() => stopResize);
+
 	function startResize() {
 		resizing = true;
 		document.body.style.userSelect = 'none';

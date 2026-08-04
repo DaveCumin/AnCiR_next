@@ -1,6 +1,8 @@
 <script>
 	// @ts-nocheck
-	let width = 200; // starting width if parent reference unspecified
+	// $state, not a plain let: the unmount guard below is a rune, which puts this
+	// component in runes mode, where a plain let would no longer be reactive.
+	let width = $state(200); // starting width if parent reference unspecified
 	const minWidth = 100;
 	let resizing = false;
 
@@ -17,6 +19,9 @@
 		window.removeEventListener('mouseup', handleMouseUp);
 	}
 
+	// Drop any dangling drag listeners if this unmounts mid-gesture.
+	$effect(() => handleMouseUp);
+
 	function startResize() {
 		resizing = true;
 		window.addEventListener('mousemove', handleMouseMove);
@@ -30,7 +35,7 @@
 	<p class="content" title="This is some long text that might be truncated.">
 		This is some long text that might be truncated.
 	</p>
-	<div class="resizer" on:mousedown={startResize}></div>
+	<div class="resizer" onmousedown={startResize}></div>
 </div>
 
 <style>

@@ -345,6 +345,10 @@
 			visibleColumns.reduce((sum, vc) => sum + widthFor(vc.colId), 0)
 	);
 
+	// Set while a column-resize drag is live, so an unmount mid-drag can still
+	// release the window listeners the drag installed.
+	let releaseColResize = null;
+
 	// Drag a column header's right edge to resize that column.
 	function startColResize(e, colId) {
 		e.preventDefault();
@@ -358,10 +362,15 @@
 		const onUp = () => {
 			window.removeEventListener('pointermove', onMove);
 			window.removeEventListener('pointerup', onUp);
+			releaseColResize = null;
 		};
 		window.addEventListener('pointermove', onMove);
 		window.addEventListener('pointerup', onUp);
+		releaseColResize = onUp;
 	}
+
+	// Drop any dangling drag listeners if this unmounts mid-gesture.
+	$effect(() => () => releaseColResize?.());
 
 	// Format one cell (column, absolute row index) — mirrors the per-type logic the
 	// class used to bake into `tableData`, but one cell at a time.

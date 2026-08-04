@@ -104,7 +104,13 @@
 	function stopResize() {
 		resizing = null;
 		window.removeEventListener('pointermove', onResizeMove);
+		// The pointerup listener is `once`, so it is already gone on the normal
+		// path; this only matters when an unmount ends the drag before release.
+		window.removeEventListener('pointerup', stopResize);
 	}
+
+	// Drop any dangling drag listeners if this unmounts mid-gesture.
+	$effect(() => stopResize);
 
 	// Port-position publishing — measure rendered DOM and emit Y per port.
 	let cardEl = $state();
