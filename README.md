@@ -22,6 +22,37 @@ Default colours for the plots are taken from the [maps designed and curated by F
 
 As such, this software is licensed under the stricter of the above - the [Apache-2.0 license](http://www.apache.org/licenses/).
 
+## Why `.git` is a file, not a directory
+
+On this machine the repository's git directory lives OUTSIDE the working tree, at
+`~/gitdirs/AnCiR_next.git`. What sits here is a one-line pointer file
+(`gitdir: /Users/dcum007/gitdirs/AnCiR_next.git`), created with:
+
+```bash
+git init --separate-git-dir ~/gitdirs/AnCiR_next.git
+```
+
+The reason is that `~/Documents/Circadian` is a pCloud sync folder, so pCloud was syncing
+`.git` along with the source. Git assumes it owns that directory exclusively; pCloud does
+not, and on a conflict it renames the loser to `<name> [conflicted]`. It renamed
+`.git/config` at least six times between February and August 2026, which is why the git
+remote kept "disappearing", and it had also written into `.git/index` and `.git/objects`,
+which risks a corrupt repository rather than merely a lost remote.
+
+Moving the git directory out of every synced path fixes it. The pointer file left behind is
+still synced, but it is one line of text: if pCloud ever mangles it, retype it.
+
+Two consequences worth knowing:
+
+- **Push regularly.** The git directory is no longer covered by pCloud, so GitHub is the
+  only backup of your history. For a repository that is the better arrangement anyway.
+- `git worktree list` labels the main worktree with the git-directory path rather than this
+  one. Cosmetic: `git rev-parse --show-toplevel` and every normal command are correct.
+
+If you clone this repository elsewhere, none of the above applies; a normal clone gets a
+normal `.git` directory. Only put the git directory outside the synced folders, or the
+problem comes straight back.
+
 ## Citation
 
 The software and the handbook are archived separately, so please cite whichever you are actually referring to.
