@@ -60,7 +60,8 @@ const INTENTIONAL_GLOBAL = {
  * `<path relative to src/>:<eventType>`; the path never contains a colon. Delete
  * each entry in the task that fixes it. This list must reach [] by Task 6.
  */
-const KNOWN_OFFENDERS = ['routes/+page.svelte:keydown'];
+// Empty, and it must stay that way. A new entry here is a regression, not a TODO.
+const KNOWN_OFFENDERS = [];
 
 const isComment = (line) => /^\s*(\/\/|\*|\/\*)/.test(line);
 

@@ -326,7 +326,8 @@
 		};
 		window.addEventListener('resize', updateWidth);
 
-		document.addEventListener('keydown', (event) => {
+		// Named rather than inline so the cleanup below can actually remove it.
+		const onKeyDown = (event) => {
 			const ISMAC =
 				navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||
 				navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
@@ -452,7 +453,8 @@
 					}
 				}
 			}
-		});
+		};
+		document.addEventListener('keydown', onKeyDown);
 
 		//Check for query url
 		// Get query string from URL - for fetching external data
@@ -478,7 +480,10 @@
 		//remove the listeners on close
 		return () => {
 			window.removeEventListener('resize', updateWidth);
-			document.removeEventListener('keydown');
+			// Was `removeEventListener('keydown')` with no handler: that throws a
+			// TypeError (two arguments are required), so it removed nothing AND
+			// aborted the rest of this cleanup.
+			document.removeEventListener('keydown', onKeyDown);
 		};
 	});
 
