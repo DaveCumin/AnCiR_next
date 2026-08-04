@@ -5,6 +5,7 @@
 // plotbit dispatches this event from its hover handlers; helpers here
 // handle formatting, value lookup across sibling series, and positioning.
 
+import { onDestroy } from 'svelte';
 import { formatDateTime } from '$lib/utils/time/displayTime.js';
 
 /**
@@ -125,6 +126,44 @@ export function hideTooltip(target) {
 	dispatchTooltip(target, { visible: false });
 }
 
+// --- Alt-key tracking -------------------------------------------------------
+//
+// ONE pair of document listeners for the whole app, installed on first use and
+// deliberately never removed: that is a fixed cost, not a growing one.
+//
+// This used to be per call. Every plot mount added two listeners whose closures
+// captured that plot's reactive state, and the binder returned no teardown
+// handle, so they could not be removed even in principle. The old header
+// justified it with "plot components are long-lived"; core/computeMemo.js
+// documents the opposite in its own header, and exists because of it. A view
+// switch destroys one whole component tree and rebuilds the other, and
+// NodeComputeHost deliberately mounts every analysis node.
+
+/** @type {Set<{onDown: () => void, onUp: () => void}>} */
+const altSubscribers = new Set();
+let altDown = false;
+let altListenersInstalled = false;
+
+function installAltListeners() {
+	if (altListenersInstalled || typeof document === 'undefined') return;
+	altListenersInstalled = true;
+	document.addEventListener('keydown', (e) => {
+		if (e.key !== 'Alt' || altDown) return;
+		altDown = true;
+		for (const s of altSubscribers) s.onDown();
+	});
+	document.addEventListener('keyup', (e) => {
+		if (e.key !== 'Alt') return;
+		altDown = false;
+		for (const s of altSubscribers) s.onUp();
+	});
+}
+
+/** Test seam: how many plots are currently subscribed. Must return to 0. */
+export function _altSubscriberCount() {
+	return altSubscribers.size;
+}
+
 /**
  * Wire up Alt-toggle behaviour for a plot's tooltip state. Holding Alt hides
  * the tooltip immediately; releasing Alt restores the last visible tooltip,
@@ -138,28 +177,36 @@ export function hideTooltip(target) {
  *   );
  *   // then: <svg ontooltip={handleTooltip} />
  *
- * Returns the ontooltip handler. Document keydown/keyup listeners are added
- * once per call; they are not removed (plot components are long-lived).
+ * Returns the ontooltip handler. The subscription is released automatically on
+ * component teardown, so call sites need no cleanup of their own.
  */
 export function bindAltTooltipToggle(getTooltip, setTooltip) {
 	let stashed = null;
-	let altDown = false;
 
-	document.addEventListener('keydown', (e) => {
-		if (e.key === 'Alt' && !altDown) {
-			altDown = true;
+	installAltListeners();
+	const subscriber = {
+		onDown() {
 			const t = getTooltip();
 			if (t?.visible) setTooltip({ ...t, visible: false });
-		}
-	});
-	document.addEventListener('keyup', (e) => {
-		if (e.key === 'Alt') {
-			altDown = false;
+		},
+		onUp() {
 			if (stashed?.visible) setTooltip(stashed);
 		}
-	});
+	};
+	altSubscribers.add(subscriber);
+	const destroy = () => altSubscribers.delete(subscriber);
 
-	return (event) => {
+	// onDestroy only works during component initialisation, which every plot call
+	// site is (top level of its <script>). A non-component caller such as a test
+	// gets no automatic cleanup and uses handleTooltip.destroy() instead, rather
+	// than crashing on lifecycle_outside_component.
+	try {
+		onDestroy(destroy);
+	} catch {
+		/* not in component init; the caller owns destroy() */
+	}
+
+	function handleTooltip(event) {
 		const detail = event.detail;
 		if (detail?.visible) {
 			stashed = detail;
@@ -168,5 +215,7 @@ export function bindAltTooltipToggle(getTooltip, setTooltip) {
 			stashed = null;
 		}
 		setTooltip(detail);
-	};
+	}
+	handleTooltip.destroy = destroy;
+	return handleTooltip;
 }
