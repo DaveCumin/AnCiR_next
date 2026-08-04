@@ -233,6 +233,8 @@ function applyForward(op) {
 			return op_removeStoredValue(op);
 		case 'renameStoredValue':
 			return op_renameStoredValue(op);
+		case 'setAppearanceMaps':
+			return op_setAppearanceMaps(op);
 		case 'replaceColumnRefs':
 			return op_replaceColumnRefs(op);
 		case 'swapColumnRefs':
@@ -544,6 +546,33 @@ function op_renameStoredValue(op) {
 	// pointing at the new name; the inverse op propagates back on undo.
 	propagateStoredValueRename(op.oldName, op.newName);
 	return pair(op, { kind: 'renameStoredValue', oldName: op.newName, newName: op.oldName });
+}
+
+/**
+ * Replace the two appearance maps wholesale.
+ *
+ * A SNAPSHOT op rather than a per-record one, deliberately. Applying a saved style rewrites
+ * an unknown number of records across two maps in one gesture, and the user's expectation is
+ * that one undo puts the session back. Recording a record-at-a-time op would either bury the
+ * user under N undo steps or need a batch whose size the caller has to know in advance.
+ *
+ * Both maps move together because a style writes both, and a half-undone restyle (columns
+ * reverted, categories not) is a state the user never asked for.
+ *
+ * The maps are plain data: `{colId: {colour, shape, dash, edited}}` and `{label: {slot|hex}}`.
+ * Cloning is enough; there is nothing live to preserve.
+ */
+function op_setAppearanceMaps(op) {
+	const before = {
+		series: JSON.parse(JSON.stringify(core.seriesAppearance ?? {})),
+		categories: JSON.parse(JSON.stringify(core.categoryColours ?? {}))
+	};
+	if (op.series) core.seriesAppearance = JSON.parse(JSON.stringify(op.series));
+	if (op.categories) core.categoryColours = JSON.parse(JSON.stringify(op.categories));
+	return pair(
+		{ kind: 'setAppearanceMaps', series: op.series, categories: op.categories },
+		{ kind: 'setAppearanceMaps', series: before.series, categories: before.categories }
+	);
 }
 
 function op_replaceColumnRefs(op) {

@@ -6,6 +6,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { core, appState, appConsts } from '$lib/core/core.svelte.js';
 import { privacy, setEphemeral } from '$lib/core/localData.svelte.js';
+import { history } from '$lib/core/opHistory.svelte.js';
+import { pinAppearance } from '$lib/plots/appearanceIdentity.js';
 import {
 	normaliseStyleConfig,
 	captureStyle,
@@ -22,6 +24,8 @@ import {
 	currentPaletteName,
 	choosePalette,
 	takePendingPalette,
+	planStyleRules,
+	applyStyleRules,
 	STYLE_CONFIG_VERSION
 } from './styleConfig.js';
 
@@ -509,5 +513,173 @@ describe('the pending palette', () => {
 		appState.pendingPalette = { name: 'x', colours: [] };
 		expect(takePendingPalette()).toBeNull();
 		expect(appState.pendingPalette).toBeNull();
+	});
+});
+
+// Slice 3: applying a style's rules to the session map.
+//
+// Matching by NAME is fuzzy in two directions, and both have to be visible. These assert the
+// REPORT as much as the result: a rule that matched nothing looks exactly like a rule that
+// worked, and the count is the only thing that separates them.
+describe('planStyleRules', () => {
+	const cols = (...defs) =>
+		defs.map(([id, name, groupLabel = null]) => ({ id, name, groupLabel }));
+
+	const style = {
+		columns: { activity: { colour: { hex: '#c0392b' }, shape: 'square' } },
+		groups: { WT: { colour: { hex: '#8a8a8a' } }, KO: { colour: { hex: '#111111' } } },
+		categories: { treatment: { colour: { hex: '#00ff00' } } }
+	};
+
+	it('applies a name rule and marks the record edited', () => {
+		const plan = planStyleRules(style, cols([1, 'activity']));
+		expect(plan.series['1']).toEqual({
+			colour: { hex: '#c0392b' },
+			shape: 'square',
+			edited: true
+		});
+		expect(plan.columnsTouched).toBe(1);
+	});
+
+	it('applies one rule to EVERY column sharing that name', () => {
+		// Ids are unique; names are not. Two nodes can both output `activity`.
+		const plan = planStyleRules(style, cols([1, 'activity'], [2, 'activity']));
+		expect(plan.columnsTouched).toBe(2);
+		expect(plan.series['2'].colour).toEqual({ hex: '#c0392b' });
+		expect(plan.matched).toEqual([{ key: 'activity', count: 2 }]);
+	});
+
+	it('reports a rule that matched nothing rather than staying silent', () => {
+		const plan = planStyleRules(style, cols([1, 'Activity (counts)']));
+		expect(plan.columnsTouched).toBe(0);
+		expect(plan.unmatched).toContain('activity');
+		expect(plan.summary).toMatch(/matched nothing/);
+		expect(plan.summary).toMatch(/activity/);
+	});
+
+	it('applies a group rule to every column in that group', () => {
+		const plan = planStyleRules(style, cols([1, 'a', 'WT'], [2, 'b', 'WT'], [3, 'c', 'KO']));
+		expect(plan.columnsTouched).toBe(3);
+		expect(plan.series['1'].colour).toEqual({ hex: '#8a8a8a' });
+		expect(plan.series['3'].colour).toEqual({ hex: '#111111' });
+	});
+
+	it('lets a NAME rule beat a group rule on the same column', () => {
+		// Naming a column is the more specific statement.
+		const plan = planStyleRules(style, cols([1, 'activity', 'WT']));
+		expect(plan.series['1'].colour).toEqual({ hex: '#c0392b' });
+		// The group rule still counts as matched by its other columns only.
+		expect(plan.unmatched).toContain('WT');
+	});
+
+	it('merges onto an existing record rather than replacing it', () => {
+		// A rule stating only a colour must not wipe the marker the session chose.
+		const plan = planStyleRules(
+			{ columns: { a: { colour: { hex: '#c0392b' } } } },
+			cols([1, 'a']),
+			{ 1: { colour: { slot: 4 }, shape: 'star', dash: '5, 5' } }
+		);
+		expect(plan.series['1']).toEqual({
+			colour: { hex: '#c0392b' },
+			shape: 'star',
+			dash: '5, 5',
+			edited: true
+		});
+	});
+
+	it('leaves columns no rule names completely alone', () => {
+		const plan = planStyleRules(style, cols([1, 'activity'], [2, 'untouched']));
+		expect(plan.series['2']).toBeUndefined();
+	});
+
+	it('writes category rules as a bare colour, not a record', () => {
+		// core.categoryColours stores {slot}|{hex}; a rule is a full record, so it is unwrapped.
+		const plan = planStyleRules(style, cols([1, 'x']));
+		expect(plan.categories.treatment).toEqual({ hex: '#00ff00' });
+		expect(plan.categoriesTouched).toEqual(['treatment']);
+	});
+
+	it('does not mutate the maps it was given', () => {
+		const before = { 1: { colour: { slot: 2 } } };
+		planStyleRules(style, cols([1, 'activity']), before);
+		expect(before['1']).toEqual({ colour: { slot: 2 } });
+	});
+
+	it('says so plainly when a style carries no rules at all', () => {
+		const plan = planStyleRules({ figureStyle: {} }, cols([1, 'a']));
+		expect(plan.columnsTouched).toBe(0);
+		expect(plan.summary).toMatch(/no data rules/);
+	});
+
+	it('ignores a malformed rule instead of writing a broken record', () => {
+		const plan = planStyleRules({ columns: { a: { colour: 'nope' } } }, cols([1, 'a']));
+		expect(plan.series['1']).toBeUndefined();
+		expect(plan.columnsTouched).toBe(0);
+	});
+
+	it('ignores an empty group label rather than matching every ungrouped column', () => {
+		const plan = planStyleRules({ groups: { '': { colour: { hex: '#c0392b' } } } }, cols([1, 'a', '']));
+		expect(plan.columnsTouched).toBe(0);
+	});
+});
+
+// Applying rules must reverse in ONE step. A style can rewrite dozens of records, and undoing
+// that record by record is not an undo anyone would recognise.
+describe('applyStyleRules — one undoable step', () => {
+	beforeEach(() => {
+		history.clear();
+		history.init();
+		core.data = [
+			{ id: 1, name: 'activity', groupLabel: 'WT' },
+			{ id: 2, name: 'temp', groupLabel: 'WT' }
+		];
+		core.seriesAppearance = { 1: { colour: { slot: 0 } } };
+		core.categoryColours = {};
+	});
+
+	const style = {
+		columns: { activity: { colour: { hex: '#c0392b' } } },
+		groups: { WT: { colour: { hex: '#8a8a8a' } } },
+		categories: { treatment: { colour: { hex: '#00ff00' } } }
+	};
+
+	it('writes both maps and reports what it did', () => {
+		const plan = applyStyleRules(style);
+		expect(plan.columnsTouched).toBe(2);
+		expect(core.seriesAppearance['1'].colour).toEqual({ hex: '#c0392b' });
+		expect(core.seriesAppearance['2'].colour).toEqual({ hex: '#8a8a8a' });
+		expect(core.categoryColours.treatment).toEqual({ hex: '#00ff00' });
+	});
+
+	it('reverses the whole application with a SINGLE undo', () => {
+		const before = JSON.parse(JSON.stringify(core.seriesAppearance));
+		applyStyleRules(style);
+		expect(history.undoCount).toBe(1);
+		history.undo();
+		expect(core.seriesAppearance).toEqual(before);
+		expect(core.categoryColours).toEqual({});
+	});
+
+	it('redoes it again', () => {
+		applyStyleRules(style);
+		history.undo();
+		history.redo();
+		expect(core.seriesAppearance['2'].colour).toEqual({ hex: '#8a8a8a' });
+		expect(core.categoryColours.treatment).toEqual({ hex: '#00ff00' });
+	});
+
+	it('pushes NO undo entry when nothing matched', () => {
+		// An undo step that reverses nothing is worse than none: it silently eats the user's
+		// real previous action when they press undo.
+		const plan = applyStyleRules({ columns: { nosuchcolumn: { colour: { hex: '#c0392b' } } } });
+		expect(plan.columnsTouched).toBe(0);
+		expect(history.undoCount).toBe(0);
+	});
+
+	it('marks applied records edited, so auto-assignment leaves them alone', () => {
+		applyStyleRules(style);
+		expect(core.seriesAppearance['1'].edited).toBe(true);
+		expect(pinAppearance(1, 3)).toBe(false);
+		expect(core.seriesAppearance['1'].colour).toEqual({ hex: '#c0392b' });
 	});
 });

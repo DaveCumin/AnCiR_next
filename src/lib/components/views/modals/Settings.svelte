@@ -6,7 +6,7 @@
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
-	import { appConsts, appState, core } from '$lib/core/core.svelte';
+	import { appState, core } from '$lib/core/core.svelte';
 	import ColourPaletteSelect from '$lib/components/inputs/ColourPaletteSelect.svelte';
 	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
 	import { applyStyleToAll, applyFigureWidthToAll } from '$lib/plots/figureStyle.js';
@@ -27,6 +27,7 @@
 		styleExists,
 		captureStyle,
 		applyStyleToSession,
+		applyStyleRules,
 		getActiveStyleName,
 		setActiveStyleName,
 		forgetAllStyles,
@@ -130,10 +131,11 @@
 	/**
 	 * Make a saved style the active one and apply what it can carry.
 	 *
-	 * The figure TEMPLATE and the PALETTE only. The column, group and category rules are
-	 * stored and travel with the style, but applying them to the session map is a later
-	 * slice: it has to mark each record as deliberately edited, undo as one step, and report
-	 * which rules matched nothing. Saying so here is better than half-applying them.
+	 * The figure TEMPLATE, the PALETTE, and the column / group / category RULES.
+	 *
+	 * The rules report what they matched and what they did not, because matching by name is
+	 * fuzzy: a renamed column silently stops matching, and a rule that hit nothing looks
+	 * exactly like a rule that worked. The count is the only thing that tells them apart.
 	 */
 	function useStyle(name) {
 		const style = getStyle(name);
@@ -143,11 +145,17 @@
 			return;
 		}
 		const result = applyStyleToSession(style, { setPalette });
+		const plan = applyStyleRules(style);
 		setActiveStyleName(name);
 		core.activeStyleName = name;
 		refreshStyles();
 		for (const note of result.notes) addNotification(note, 'warning');
 		addNotification(`Figure defaults and palette set from "${name}".`, 'info');
+		if (plan.columnsTouched || plan.categoriesTouched.length || plan.unmatched.length) {
+			// A rule that matched nothing is the case worth interrupting for: the style looks
+			// applied, and the figure it was written for does not change.
+			addNotification(plan.summary, plan.unmatched.length ? 'warning' : 'info');
+		}
 	}
 
 	function removeStyle(name) {
@@ -379,8 +387,10 @@
 				background, legend box) and the colour palette. Unticking the box also keeps the appearance
 				rules, re-keyed onto your column names and group labels; those names leave this session with
 				the style, so leave the box ticked on a shared machine. Using a style sets the figure
-				defaults and the palette; the name and group rules are stored but not yet applied to
-				existing figures.
+				defaults and the palette, and applies the rules to any column whose name or group label
+				matches. Matching is by name, so a renamed column stops matching; the notification says
+				how many columns were reached and names any rule that matched nothing. One undo reverses
+				the whole thing.
 			</p>
 			<p class="privacy-note">
 				Styles are saved in this browser only, so they do not follow you to another machine, and

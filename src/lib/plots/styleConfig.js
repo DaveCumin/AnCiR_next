@@ -42,6 +42,7 @@ import { newFigureStyle, normaliseFigureStyle, FIGURE_STYLE_KEYS } from '$lib/pl
 import { normaliseRecord } from '$lib/plots/appearanceIdentity.js';
 import { getColumnById } from '$lib/core/Column.svelte';
 import { STYLE_KEY } from '$lib/core/localData.svelte.js';
+import { mutationService } from '$lib/core/mutationService.js';
 
 /** Current on-disk shape. Bumped only when an old file would otherwise be misread. */
 export const STYLE_CONFIG_VERSION = 1;
@@ -642,4 +643,125 @@ export function applyStyleToSession(style, { setPalette } = {}) {
 	if (resolved.note) notes.push(resolved.note);
 
 	return { ok: true, palette: resolved.source, notes };
+}
+
+// --- Applying the rules (slice 3) ---------------------------------------------------------
+//
+// A style's rules are keyed on column NAME, column GROUP LABEL and category LABEL. The session
+// map is keyed on column ID. Applying is therefore a MATCH, and matching by name is fuzzy in
+// two directions that both have to be reported rather than hidden:
+//
+//   • Many matches. Two nodes can both output `value`; two files can both carry `activity`.
+//     A rule then hits several columns at once, which is what a rule MEANS, so it applies to
+//     every match. Refusing would make the common case fail.
+//   • Silent misses. A rule written for `activity` stops matching the moment the column is
+//     renamed to `Activity (counts)`. Nothing errors; the style just does not arrive.
+//
+// So `applyStyleRules` reports what it matched AND what it did not. Without that, name-keyed
+// rules are a mechanism that appears to have worked, which is worse than one that fails loudly.
+//
+// A name rule BEATS a group rule on the same column: naming a column is the more specific
+// statement. Category rules are a separate table and cannot collide with either.
+//
+// Everything written here is marked `edited`, because a config rule is a deliberate choice.
+// That is what stops automatic index assignment from overwriting it later (`pinAppearance`
+// returns early on an edited record), and what makes the row read as deliberate in the map
+// editor. It also means an applied rule blocks ancestry adoption for that column, which is
+// correct: an explicit statement about a column outranks what it inherited.
+
+/**
+ * Work out what applying a style's rules WOULD do, without doing it.
+ *
+ * Pure over `columns`, so the preview a user is shown and the change that is made cannot
+ * disagree: the caller applies exactly this plan.
+ *
+ * @param {object} style a validated style
+ * @param {Array<{id: number, name: string, groupLabel: string|null}>} columns the session's
+ *   columns, injected rather than read off `core` so this is testable without a session
+ * @param {Record<string, any>} [seriesMap] the current map, so untouched records survive
+ * @param {Record<string, any>} [categoryMap] the current category map
+ */
+export function planStyleRules(style, columns, seriesMap = {}, categoryMap = {}) {
+	const series = JSON.parse(JSON.stringify(seriesMap ?? {}));
+	const categories = JSON.parse(JSON.stringify(categoryMap ?? {}));
+
+	const byName = isPlainObject(style?.columns) ? style.columns : {};
+	const byGroup = isPlainObject(style?.groups) ? style.groups : {};
+	const byCategory = isPlainObject(style?.categories) ? style.categories : {};
+
+	/** Rule key → how many columns it hit. Every rule starts at zero so misses are visible. */
+	const hits = new Map();
+	for (const key of [...Object.keys(byName), ...Object.keys(byGroup)]) hits.set(key, 0);
+
+	let columnsTouched = 0;
+	for (const col of columns ?? []) {
+		if (col?.id == null) continue;
+		// Name first: the more specific statement wins.
+		const name = typeof col.name === 'string' ? col.name : null;
+		const group = typeof col.groupLabel === 'string' && col.groupLabel ? col.groupLabel : null;
+		const ruleKey = name != null && byName[name] ? name : group != null && byGroup[group] ? group : null;
+		if (ruleKey == null) continue;
+
+		const rule = normaliseRecord(byName[ruleKey] ?? byGroup[ruleKey]);
+		if (!rule) continue;
+
+		hits.set(ruleKey, (hits.get(ruleKey) ?? 0) + 1);
+		// Merged onto whatever the column already had, so a rule that states only a colour
+		// leaves the marker the session had chosen rather than resetting it.
+		const key = String(col.id);
+		series[key] = { ...(normaliseRecord(series[key]) ?? {}), ...rule, edited: true };
+		columnsTouched++;
+	}
+
+	const categoriesTouched = [];
+	for (const [label, entry] of Object.entries(byCategory)) {
+		const rule = normaliseRecord(entry);
+		if (!rule?.colour) continue;
+		// The session's category map stores a bare {slot}|{hex}, not a record.
+		categories[label] = rule.colour;
+		categoriesTouched.push(label);
+	}
+
+	const unmatched = [...hits.entries()].filter(([, n]) => n === 0).map(([key]) => key);
+	return {
+		series,
+		categories,
+		columnsTouched,
+		categoriesTouched,
+		unmatched,
+		matched: [...hits.entries()].filter(([, n]) => n > 0).map(([key, n]) => ({ key, count: n })),
+		summary: describeRuleApplication(hits.size, columnsTouched, categoriesTouched, unmatched)
+	};
+}
+
+/** One line, safe to show in a notification. Says what did NOT match as well as what did. */
+function describeRuleApplication(ruleCount, columnsTouched, categoriesTouched, unmatched) {
+	if (ruleCount === 0 && categoriesTouched.length === 0) return 'This style carries no data rules.';
+	const parts = [`${ruleCount} rule${ruleCount === 1 ? '' : 's'} → ${columnsTouched} column${columnsTouched === 1 ? '' : 's'}`];
+	if (categoriesTouched.length) parts.push(`${categoriesTouched.length} categor${categoriesTouched.length === 1 ? 'y' : 'ies'}`);
+	if (unmatched.length) parts.push(`${unmatched.length} matched nothing: ${unmatched.join(', ')}`);
+	return parts.join('; ') + '.';
+}
+
+/**
+ * Apply a style's rules to the session maps, as ONE undoable step.
+ *
+ * The write goes through mutationService so a single undo puts the session back; applying a
+ * style can rewrite dozens of records, and reversing that record by record is not an undo a
+ * user would recognise.
+ *
+ * @param {object} style a validated style
+ * @returns the plan that was applied, so the caller can report it
+ */
+export function applyStyleRules(style) {
+	const columns = (core.data ?? []).map((c) => ({
+		id: c.id,
+		name: c.name,
+		groupLabel: c.groupLabel ?? null
+	}));
+	const plan = planStyleRules(style, columns, core.seriesAppearance, core.categoryColours);
+	// Nothing to do: do not push an undo entry for a no-op.
+	if (plan.columnsTouched === 0 && plan.categoriesTouched.length === 0) return plan;
+	mutationService.setAppearanceMaps(plan.series, plan.categories);
+	return plan;
 }

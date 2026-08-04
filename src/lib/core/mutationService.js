@@ -86,6 +86,13 @@ export const mutationService = {
         applyOp({ kind: 'renameStoredValue', oldName, newName });
     },
 
+    // --- Appearance maps ---
+    // Replace both maps in one undoable step. Used by "Apply style", which rewrites an
+    // unknown number of records at once and must reverse as a single gesture.
+    setAppearanceMaps(series, categories) {
+        applyOp({ kind: 'setAppearanceMaps', series, categories });
+    },
+
     // --- Column refs ---
     replaceColumnRefs(newColId, oldColId) {
         applyOp({ kind: 'replaceColumnRefs', newColId, oldColId });
