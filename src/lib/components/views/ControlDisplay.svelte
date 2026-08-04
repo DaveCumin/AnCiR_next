@@ -164,9 +164,15 @@
 	function openDropdown() {
 		recalculateDropdownPosition();
 		showSavePlot = true;
-
-		window.addEventListener('resize', recalculateDropdownPosition);
 	}
+
+	// SavePlot owns the close through `bind:showDropdown`, so key the listener on
+	// the flag: it then covers the close and an unmount while open.
+	$effect(() => {
+		if (!showSavePlot) return;
+		window.addEventListener('resize', recalculateDropdownPosition);
+		return () => window.removeEventListener('resize', recalculateDropdownPosition);
+	});
 
 	// Schema-driven shared properties. Discovered by reflecting on each selected
 	// plot's class (mixed-type selections still see common fields like width/height).

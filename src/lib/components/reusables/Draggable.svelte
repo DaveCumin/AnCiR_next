@@ -414,9 +414,16 @@
 	function openDropdown() {
 		recalculateDropdownPosition();
 		showDropdown = true;
-
-		window.addEventListener('resize', recalculateDropdownPosition);
 	}
+
+	// Keyed on the flag rather than added in openDropdown, because this component
+	// never closes its own dropdown: SinglePlotAction owns the close through
+	// `bind:showDropdown`. An effect covers the close AND an unmount while open.
+	$effect(() => {
+		if (!showDropdown) return;
+		window.addEventListener('resize', recalculateDropdownPosition);
+		return () => window.removeEventListener('resize', recalculateDropdownPosition);
+	});
 </script>
 
 <svelte:window

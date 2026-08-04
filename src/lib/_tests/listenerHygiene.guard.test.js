@@ -60,13 +60,7 @@ const INTENTIONAL_GLOBAL = {
  * `<path relative to src/>:<eventType>`; the path never contains a colon. Delete
  * each entry in the task that fixes it. This list must reach [] by Task 6.
  */
-const KNOWN_OFFENDERS = [
-	'lib/components/reusables/Draggable.svelte:resize',
-	'lib/components/views/WorksheetDisplay.svelte:resize',
-	'lib/components/views/ControlDisplay.svelte:resize',
-	'lib/components/inputs/ColourPaletteSelect.svelte:resize',
-	'routes/+page.svelte:keydown'
-];
+const KNOWN_OFFENDERS = ['routes/+page.svelte:keydown'];
 
 const isComment = (line) => /^\s*(\/\/|\*|\/\*)/.test(line);
 

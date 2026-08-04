@@ -17,8 +17,16 @@
 		const labelPos = dropdownLabel.getBoundingClientRect();
 		listPos = { left: labelPos.left, top: labelPos.bottom };
 		showDropdown = true;
-		window.addEventListener('resize', recalculateDropdownPosition);
 	}
+
+	// Dropdown owns the close through `bind:showDropdown`, so key the listener on
+	// the flag: it then covers the close and an unmount while open.
+	$effect(() => {
+		if (!showDropdown) return;
+		window.addEventListener('resize', recalculateDropdownPosition);
+		return () => window.removeEventListener('resize', recalculateDropdownPosition);
+	});
+
 	function recalculateDropdownPosition() {
 		if (!dropdownLabel) return;
 		const labelPos = dropdownLabel.getBoundingClientRect();

@@ -41,8 +41,15 @@
 	function openDropdown() {
 		recalculateDropdownPosition();
 		requestAnimationFrame(() => (showAddPalette = true));
-		window.addEventListener('resize', recalculateDropdownPosition);
 	}
+
+	// WorksheetAddPalette owns the close through `bind:open`, so key the listener
+	// on the flag: it then covers the close and an unmount while open.
+	$effect(() => {
+		if (!showAddPalette) return;
+		window.addEventListener('resize', recalculateDropdownPosition);
+		return () => window.removeEventListener('resize', recalculateDropdownPosition);
+	});
 
 	function viewToModelIndex(i) {
 		return core.plots.length - 1 - i;
