@@ -665,6 +665,7 @@
 	import {
 		formatTimeAxisTick,
 		formatDateTime,
+		dominantTickPattern,
 		DEFAULT_DATE_FORMAT
 	} from '$lib/utils/time/displayTime.js';
 	import { onMount } from 'svelte';
@@ -1030,13 +1031,19 @@
 						<p>Log Scale</p>
 					</div>
 				{:else}
-					<!-- Only meaningful for a time x axis; a number axis has no date to format. -->
+					<!-- Only meaningful for a time x axis; a number axis has no date to format.
+					     The placeholder is the format the ticks are ACTUALLY using right now, so
+					     the box shows something to edit rather than the word "Automatic". -->
+					{@const autoPattern =
+						dominantTickPattern(
+							theData.XScale?.ticks?.(theData.xAxis?.nticks ?? 5) ?? []
+						) ?? DEFAULT_DATE_FORMAT}
 					<ControlInput label="Date tick format:">
 						<input
 							type="text"
 							bind:value={theData.xTickFormat}
-							placeholder="Automatic"
-							title="A date format such as {DEFAULT_DATE_FORMAT}. Leave empty to let each tick choose its own resolution."
+							placeholder={autoPattern}
+							title="Empty lets each tick pick its own resolution (currently {autoPattern}). Type a date format to use one for every tick."
 						/>
 					</ControlInput>
 				{/if}

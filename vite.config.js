@@ -47,6 +47,22 @@ export default defineConfig({
 		]
 	},
 
+	// A dev server started with PORT set (the preview harness / an agent session) gets its
+	// OWN dep cache.
+	//
+	// `server.port` is part of the config Vite hashes to name the optimised-dep URLs
+	// (`?v=<hash>`), so a harness server on a different port re-optimises into the SHARED
+	// node_modules/.vite and hands the deps a new hash. Any OTHER dev server already running
+	// against this repo then keeps requesting the old hash and gets `504 (Outdated Optimize
+	// Dep)` on dayjs, d3 and friends, which SvelteKit surfaces as a bare "500 Internal
+	// Error" — the page's dynamic import of the route module fails and there is nothing
+	// left to render.
+	//
+	// It cost two debugging sessions, and the tell is that the deps 504 while every source
+	// module still serves 200. Isolating the cache means a second server can come and go
+	// without touching the one a person is using.
+	cacheDir: process.env.PORT ? `node_modules/.vite-port-${process.env.PORT}` : undefined,
+
 	// Honour a PORT injected by the environment (e.g. the preview harness) so the
 	// dev server listens where the proxy expects. Falls back to Vite's default.
 	server: {

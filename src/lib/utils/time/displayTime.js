@@ -59,15 +59,66 @@ export function parseDateTimeLocalInput(str) {
 // in the configured displayTimezone. Mirrors d3-scale's scaleUtc auto-formatter
 // — we override d3's default purely to honour the user's chosen zone.
 export function formatTimeAxisTick(ms) {
-	const n = Number(ms);
-	if (ms == null || Number.isNaN(n)) return '';
-	const dt = dtAt(n);
-	if (!dt.isValid()) return '';
-
-	if (dt.millisecond() !== 0) return dt.format('[.]SSS');
-	if (dt.second() !== 0) return dt.format('[:]ss');
-	if (dt.minute() !== 0 || dt.hour() !== 0) return dt.format('HH:mm');
-	if (dt.date() !== 1) return dt.format('D MMM');
-	if (dt.month() !== 0) return dt.format('MMM');
-	return dt.format('YYYY');
+	const pattern = autoTickPattern(ms);
+	return pattern ? dtAt(Number(ms)).format(pattern) : '';
 }
+
+/**
+ * The format string `formatTimeAxisTick` would use for this tick, or null when there is no
+ * usable instant.
+ *
+ * Split out so the UI can SHOW the format in use rather than the word "Automatic". A user
+ * who wants to nudge the labels needs somewhere to start, and "D MMM" is a far better
+ * starting point than a blank box. Because the formatter now runs off this same table, the
+ * pattern shown and the pattern drawn cannot drift apart.
+ */
+export function autoTickPattern(ms) {
+	const n = Number(ms);
+	if (ms == null || Number.isNaN(n)) return null;
+	const dt = dtAt(n);
+	if (!dt.isValid()) return null;
+
+	if (dt.millisecond() !== 0) return '[.]SSS';
+	if (dt.second() !== 0) return '[:]ss';
+	if (dt.minute() !== 0 || dt.hour() !== 0) return 'HH:mm';
+	if (dt.date() !== 1) return 'D MMM';
+	if (dt.month() !== 0) return 'MMM';
+	return 'YYYY';
+}
+
+/**
+ * The pattern most of an axis's ticks are using.
+ *
+ * The cascade is per-tick, so an axis genuinely can mix formats: midnight on the 1st of a
+ * month reads "MMM" while its neighbours read "D MMM". There is therefore no single true
+ * answer, and the most common one is the honest approximation — it is a starting point
+ * offered to the user, not a claim about every label.
+ *
+ * @param {Iterable<number|Date>} values the tick values
+ * @returns {string|null}
+ */
+export function dominantTickPattern(values) {
+	const counts = new Map();
+	for (const v of values ?? []) {
+		const pattern = autoTickPattern(v instanceof Date ? v.getTime() : v);
+		if (pattern) counts.set(pattern, (counts.get(pattern) ?? 0) + 1);
+	}
+	let best = null;
+	let bestN = 0;
+	for (const [pattern, n] of counts) {
+		// Ties go to the COARSER pattern. A half-daily axis splits exactly evenly between
+		// 'HH:mm' (the noons) and 'D MMM' (the midnights), and "5 Aug" is what such an axis
+		// reads as; resolving by insertion order instead picked whichever tick came first,
+		// which is how the box once said HH:mm under an axis labelled 5 Aug … 8 Aug.
+		const better =
+			n > bestN || (n === bestN && PATTERN_COARSENESS.indexOf(pattern) > PATTERN_COARSENESS.indexOf(best));
+		if (better) {
+			best = pattern;
+			bestN = n;
+		}
+	}
+	return best;
+}
+
+/** The cascade's patterns, finest first. Used only to break a tie deterministically. */
+const PATTERN_COARSENESS = ['[.]SSS', '[:]ss', 'HH:mm', 'D MMM', 'MMM', 'YYYY'];
