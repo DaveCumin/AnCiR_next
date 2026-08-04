@@ -4,6 +4,7 @@
 	import { Column, removeColumn, getColumnById } from '$lib/core/Column.svelte';
 	import { setSelection } from '$lib/tableProcesses/columnSet.js';
 	import { reportUnknownNode } from '$lib/core/unknownNode.js';
+	import { memoForget } from '$lib/core/computeMemo.js';
 	let _tableprocessidCounter = 0;
 
 	// --- Live Column Set → table-process inputs --------------------------------
@@ -91,6 +92,11 @@
 		if (!tableProcess) {
 			return { success: false, message: 'Invalid analysis provided' };
 		}
+
+		// Release the compute memo's cached payload. Tied to DELETION, not unmount:
+		// a node unmounts on every view switch without being deleted, and surviving
+		// that is the entire point of the memo.
+		memoForget(tableProcess, 'tableprocess');
 
 		const removedColumns = [];
 		const affectedProcesses = [];

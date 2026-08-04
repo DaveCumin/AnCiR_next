@@ -12,6 +12,7 @@ import { Plot } from './Plot.svelte';
 import { Column } from './Column.svelte';
 import { Process } from './Process.svelte';
 import { TableProcess } from './TableProcess.svelte';
+import { memoForget } from './computeMemo.js';
 
 /**
  * @typedef {Object} OpAddFreeTableProcess
@@ -372,6 +373,7 @@ function op_removeProcess(op) {
 	const procIdx = col.processes.findIndex((p) => p.id === op.processId);
 	if (procIdx < 0) return null;
 	const before = col.processes[procIdx];
+	memoForget(before, 'process');
 	const snap = {
 		processType: before.name,
 		processId: before.id,
@@ -444,6 +446,9 @@ function op_removeFreeTableProcess(op) {
 	const idx = core.tableProcesses.findIndex((tp) => tp.id === op.tpId);
 	if (idx < 0) return null;
 	const before = core.tableProcesses[idx];
+	// Undo re-adds the node with the same id and an empty memo, so it recomputes on
+	// mount. That is the same work a fresh mount does, and correct.
+	memoForget(before, 'tableprocess');
 	const snap = {
 		tpType: before.name,
 		tpId: before.id,

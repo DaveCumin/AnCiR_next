@@ -12,6 +12,8 @@ import {
 	_computeCount,
 	_resetComputeCount
 } from './computeMemo.js';
+import { applyOp } from './operations.js';
+import { appConsts, core } from './core.svelte.js';
 
 const tp = (id, name = 'Cosinor') => ({ id, name });
 
@@ -194,5 +196,88 @@ describe('the A/B switch reproduces the unmemoised behaviour exactly', () => {
 		expect(off.payload).toBeUndefined();
 		_setMemoEnabled(true);
 		expect(wouldCompute(nodeMemo(tp(1), 'tableprocess'), 'h1')).toBe(false);
+	});
+});
+
+describe('a deleted node releases its cached payload', () => {
+	it('forgets the deleted node', () => {
+		const memo = nodeMemo(tp(7), 'tableprocess');
+		memo.hash = 'h';
+		memo.payload = { fitted: [1, 2, 3] };
+		expect(_memoSize()).toBe(1);
+
+		memoForget(tp(7), 'tableprocess');
+		expect(_memoSize()).toBe(0);
+	});
+
+	it('leaves every other node alone', () => {
+		nodeMemo(tp(7), 'tableprocess').hash = 'a';
+		nodeMemo(tp(8), 'tableprocess').hash = 'b';
+
+		memoForget(tp(7), 'tableprocess');
+		expect(_memoSize()).toBe(1);
+		expect(nodeMemo(tp(8), 'tableprocess').hash).toBe('b');
+	});
+
+	it('does not collide across node kinds with the same id', () => {
+		nodeMemo(tp(7), 'tableprocess').hash = 'tp';
+		nodeMemo(tp(7), 'process').hash = 'proc';
+
+		memoForget(tp(7), 'tableprocess');
+		expect(nodeMemo(tp(7), 'process').hash).toBe('proc');
+	});
+
+	it('an UNMOUNT (no deletion) still keeps the entry', () => {
+		// The property the memo exists for. A fix that forgot on unmount rather than
+		// on deletion would pass every test above and undo the whole optimisation.
+		const first = nodeMemo(tp(9), 'tableprocess');
+		first.hash = 'h';
+		first.payload = { fitted: [1] };
+
+		const remounted = nodeMemo(tp(9), 'tableprocess');
+		expect(remounted.hash).toBe('h');
+		expect(remounted.payload).toEqual({ fitted: [1] });
+	});
+});
+
+// The tests above pin memoForget's contract; this one pins the WIRING, which is
+// the part that was missing. memoForget was exported and documented for a year
+// with zero callers, so a test that only calls it directly would have passed the
+// whole time the leak was live. This goes through applyOp, the real undoable
+// deletion path, and never touches memoForget itself.
+describe('the real deletion path releases the memo', () => {
+	beforeEach(() => {
+		core.tableProcesses.length = 0;
+		if (!appConsts.tableProcessMap.has('BinnedData')) {
+			appConsts.tableProcessMap.set('BinnedData', {
+				displayName: 'BinnedData (test stub)',
+				defaults: new Map([['binSize', { val: 60 }]]),
+				func: () => null,
+				columnIdFields: { scalar: [], array: [] }
+			});
+		}
+	});
+
+	it('removeFreeTableProcess drops the node entry and only that entry', () => {
+		const inv = applyOp({
+			kind: 'addFreeTableProcess',
+			tpType: 'BinnedData',
+			args: { binSize: 60, out: {} }
+		});
+		const tpId = core.tableProcesses.at(-1).id;
+		const doomed = core.tableProcesses.at(-1);
+
+		const memo = nodeMemo(doomed, 'tableprocess');
+		memo.hash = 'h';
+		memo.payload = { binned: [1, 2, 3] };
+		nodeMemo(tp(999), 'tableprocess').hash = 'bystander';
+		expect(_memoSize()).toBe(2);
+
+		applyOp({ kind: 'removeFreeTableProcess', tpId });
+
+		expect(_memoSize()).toBe(1);
+		expect(nodeMemo(tp(999), 'tableprocess').hash).toBe('bystander');
+		expect(nodeMemo({ id: tpId }, 'tableprocess').payload).toBeUndefined();
+		expect(inv).toBeTruthy();
 	});
 });
