@@ -127,6 +127,13 @@
 	}
 
 	/** A preview box of the plot's shape, honouring both minimums. */
+	// Whether this plot can lay out to an arbitrary box (see Scatterplot's `renderBox`).
+	// Feature-detected, so migrating another plot type is a change in that plot alone.
+	function laysOutToBox(plotObj) {
+		// plotObj is the Plot WRAPPER; the geometry (and `renderBox`) lives on plotObj.plot.
+		return plotObj?.plot != null && 'renderBox' in plotObj.plot;
+	}
+
 	function previewBoxFor(plotObj, width) {
 		const aspect = plotAspect(plotObj);
 		let w = Math.max(MIN_PREVIEW_W, width);
@@ -528,9 +535,10 @@
 				// before the box was aspect-locked carry whatever shape the old free resize
 				// left, and honouring that verbatim would reproduce the very gap this change
 				// removes — on exactly the sessions that already have it.
-				plotPreviewSizes[node.id] = node.plotObj
-					? previewBoxFor(node.plotObj, Number(saved.w))
-					: { w: Number(saved.w), h: Number(saved.h) };
+				plotPreviewSizes[node.id] =
+					node.plotObj && !laysOutToBox(node.plotObj)
+						? previewBoxFor(node.plotObj, Number(saved.w))
+						: { w: Number(saved.w), h: Number(saved.h) };
 			}
 		}
 
@@ -556,6 +564,10 @@
 			if (node.type !== 'plot' || !node.plotObj) continue;
 			const cur = plotPreviewSizes[node.id];
 			if (!cur) continue; // not yet sized — the default already uses the plot's ratio
+			// A plot that lays out to its box has no ratio to hold it to: the user's shape IS
+			// the answer, and re-deriving it here would undo every free resize on the next
+			// change to the figure.
+			if (laysOutToBox(node.plotObj)) continue;
 			const want = previewBoxFor(node.plotObj, cur.w);
 			// Converges in one pass: previewBoxFor is a pure function of (aspect, width), and
 			// width is carried through unchanged unless the height floor forced it wider.
@@ -1637,16 +1649,27 @@
 				resizeInfo.noteObj.height = Math.max(MIN_NOTE_H, Math.round(resizeInfo.startH + dy));
 				return;
 			}
-			// Aspect-locked: the drag picks a SIZE, not a shape. Whichever axis the pointer moved
-			// further along drives, so a mostly-vertical drag still feels like it is doing
-			// something rather than ignoring dy.
+			// Resize ONLY the workflow node's own preview box. The real plot
+			// (plotObj.width/height) is owned by the workspace view and is left
+			// untouched, so a workflow resize never changes the workspace layout.
+			if (laysOutToBox(resizeInfo.plotObj)) {
+				// FREE resize. The plot lays out to whatever box it is given, so any shape is a
+				// real plot rather than a letterboxed thumbnail, and both axes of the drag mean
+				// what they look like they mean.
+				plotPreviewSizes[resizeInfo.nodeId] = {
+					w: Math.round(Math.max(MIN_PREVIEW_W, resizeInfo.startW + dx)),
+					h: Math.round(Math.max(MIN_PREVIEW_H, resizeInfo.startH + dy))
+				};
+				return;
+			}
+			// Aspect-locked: a scaled thumbnail can only be one shape without letterboxing, so
+			// the drag picks a SIZE, not a shape. Whichever axis the pointer moved further
+			// along drives, so a mostly-vertical drag still feels like it is doing something
+			// rather than ignoring dy.
 			const width =
 				Math.abs(dy) > Math.abs(dx)
 					? (resizeInfo.startH + dy) / plotAspect(resizeInfo.plotObj)
 					: resizeInfo.startW + dx;
-			// Resize ONLY the workflow node's own preview box. The real plot
-			// (plotObj.width/height) is owned by the workspace view and is left
-			// untouched, so a workflow resize never changes the workspace layout.
 			plotPreviewSizes[resizeInfo.nodeId] = previewBoxFor(resizeInfo.plotObj, width);
 			return;
 		}

@@ -460,3 +460,41 @@ describe('applyFigureWidth', () => {
 		expect(free.width).toBe(520);
 	});
 });
+
+// A view-local multiplier on every text size, used by a workflow node drawing the plot at the
+// node's size rather than the figure's.
+describe('resolveStyle fontScale', () => {
+	it('defaults to 1, so a style without one resolves exactly as before', () => {
+		const base = resolveStyle({ fontSize: 'm' });
+		const explicit = resolveStyle({ fontSize: 'm', fontScale: 1 });
+		expect(explicit.sizes).toEqual(base.sizes);
+	});
+
+	it('scales every role together, so proportions hold', () => {
+		const base = resolveStyle({ fontSize: 'm' });
+		const half = resolveStyle({ fontSize: 'm', fontScale: 0.5 });
+		for (const role of Object.keys(base.sizes)) {
+			expect(half.sizes[role]).toBeCloseTo(base.sizes[role] * 0.5, 6);
+		}
+	});
+
+	it('scales BELOW the minimum point size, deliberately', () => {
+		// MIN_PT protects a figure from being typeset unreadably small. A thumbnail is not
+		// being typeset, and clamping here would stop the text shrinking with the box.
+		const tiny = resolveStyle({ fontSize: 's', fontScale: 0.25 });
+		const full = resolveStyle({ fontSize: 's' });
+		expect(tiny.sizes.tick).toBeLessThan(full.sizes.tick);
+	});
+
+	it('ignores a nonsense scale rather than collapsing the type', () => {
+		const base = resolveStyle({ fontSize: 'm' });
+		for (const bad of [0, -1, NaN, Infinity, 'big', null]) {
+			expect(resolveStyle({ fontSize: 'm', fontScale: bad }).sizes).toEqual(base.sizes);
+		}
+	});
+
+	it('is not a persisted style field, so it can never reach a saved session', () => {
+		expect(FIGURE_STYLE_FIELDS.some((f) => f.key === 'fontScale')).toBe(false);
+		expect('fontScale' in normaliseFigureStyle({ fontSize: 'm', fontScale: 0.5 })).toBe(false);
+	});
+});

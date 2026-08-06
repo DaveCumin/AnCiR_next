@@ -6,6 +6,27 @@
 	let { plot, size, onResizeMouseDown } = $props();
 
 	const PlotComp = $derived(appConsts.plotMap.get(plot?.type)?.plot);
+
+	// A plot whose class exposes `renderBox` can LAY OUT at the node's size instead of being
+	// drawn at its own size and scaled down. Feature-detected rather than listed by type, so
+	// migrating another plot is a change in that plot and nowhere else.
+	// `plot` is the Plot WRAPPER; the geometry lives on its inner class (`plot.plot`), which
+	// is where `renderBox` is declared. Detecting on the wrapper silently found nothing and
+	// left every plot on the old scaled path.
+	const laysOutToBox = $derived(plot?.plot != null && 'renderBox' in plot.plot);
+
+	// Hand the plot this view's size while the canvas owns the render, and TAKE IT BACK on
+	// teardown. The two views never render at once (+page.svelte mounts WorkflowEditor or
+	// PlotDisplay, never both), so a single field is enough — but only if it is cleared, or
+	// the workspace would inherit the node's shape the moment the user switches back.
+	$effect(() => {
+		if (!laysOutToBox) return;
+		const target = plot.plot;
+		target.renderBox = { w: size.w, h: size.h };
+		return () => {
+			target.renderBox = null;
+		};
+	});
 	// Fit the real plot into the (independently-sized) preview box, preserving the
 	// plot's aspect ratio. The workflow box size is owned by the canvas
 	// (plotPreviewSizes); the plot's real width/height belong to the workspace and
@@ -61,9 +82,15 @@
 			     node vanishes and the app looks like it lost the session. Contain it here: the
 			     broken plot shows why, everything else keeps working, and undo still exists. -->
 			<svelte:boundary onerror={(e) => reportError(e, { source: 'render', context: `rendering the ${plot.type} plot` })}>
+				<!-- Two ways to fill the box. A plot that lays out to `renderBox` is drawn at
+				     the node's real size, so its axes and legend arrange for that shape and its
+				     text stays at full size. Everything else is still drawn at the figure's own
+				     size and scaled to fit, which shrinks the text along with the plot. -->
 				<div
 					class="plot-preview-inner"
-					style="transform:scale({previewScale}); transform-origin:top left; width:{plot.width}px; height:{plot.height}px;"
+					style={laysOutToBox
+						? `width:${size.w}px; height:${size.h}px;`
+						: `transform:scale(${previewScale}); transform-origin:top left; width:${plot.width}px; height:${plot.height}px;`}
 				>
 					<PlotComp theData={plot} which="plot" />
 				</div>

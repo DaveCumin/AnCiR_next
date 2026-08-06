@@ -271,12 +271,29 @@ export function resolveStyle(style) {
 	const mm = widthMm(style);
 	const overrides = style?.roleScale && typeof style.roleScale === 'object' ? style.roleScale : {};
 
+	// A VIEW multiplier on every text size. 1 everywhere except a workflow-canvas node, which
+	// draws the plot at the node's size rather than the figure's: without this the type stays
+	// at its printed size while the plot around it shrinks, so a small node is mostly axis
+	// labels. Scaling the text by the same factor keeps a node looking like the figure.
+	//
+	// Applied AFTER the MIN_PT floor, deliberately. That floor protects a figure from being
+	// typeset unreadably small; a thumbnail is not being typeset, and clamping here would stop
+	// the text shrinking with the box, which is the whole point.
+	//
+	// Transient: it rides on the style object a view passes down, and is not one of
+	// FIGURE_STYLE_FIELDS, so `normaliseFigureStyle` drops it and it can never reach a saved
+	// session or a style preset.
+	const fontScale =
+		typeof style?.fontScale === 'number' && Number.isFinite(style.fontScale) && style.fontScale > 0
+			? style.fontScale
+			: 1;
+
 	/** @type {Record<string, number>} */
 	const sizes = {};
 	for (const [role, ratio] of Object.entries(ROLE_RATIOS)) {
 		const override = overrides[role];
 		const effective = typeof override === 'number' && Number.isFinite(override) ? override : ratio;
-		sizes[role] = Math.max(MIN_PT, pt * effective) * PX_PER_PT;
+		sizes[role] = Math.max(MIN_PT, pt * effective) * PX_PER_PT * fontScale;
 	}
 
 	return {

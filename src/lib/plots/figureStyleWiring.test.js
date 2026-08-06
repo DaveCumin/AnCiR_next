@@ -102,11 +102,28 @@ describe('figure style is wired to every plotbit that draws text', () => {
 			// The style lives on the WRAPPER (core/Plot.svelte's Plot class), reachable as
 			// parentBox from any inner plot class. Reading it from anywhere else (say the
 			// inner class directly) would silently be undefined and fall back to defaults.
+			//
+			// `viewStyle` is also allowed: a plot that lays out to a view-local box (see
+			// Scatterplot's renderBox) passes the figure style PLUS a font multiplier. It is
+			// still the figure's style, so the guard's purpose holds — but only if that derived
+			// really is built from parentBox.style, which the next assertion checks rather than
+			// taking on trust. Widening this without that check would be a hole, since any
+			// `somethingStyle` would then pass.
 			for (const tag of tags) {
 				const m = /figureStyle=\{([^}]+)\}/.exec(tag);
 				expect(m, `figureStyle missing in ${rel}`).toBeTruthy();
-				expect(m[1], `${rel}: ${m[1]}`).toMatch(/parentBox\?*\.style$/);
+				expect(m[1], `${rel}: ${m[1]}`).toMatch(/(parentBox\?*\.style|\.viewStyle)$/);
 			}
+		});
+
+		it(`${rel} defines any viewStyle in terms of the figure's own style`, () => {
+			// Only meaningful for a file that uses viewStyle; a no-op elsewhere.
+			if (!tags.some((t) => /figureStyle=\{[^}]*\.viewStyle\}/.test(t))) return;
+			const decl = /viewStyle\s*=\s*\$derived\(([\s\S]*?)\n\t\t\);/.exec(src);
+			expect(decl, `${rel}: viewStyle is passed but not declared as a $derived`).toBeTruthy();
+			expect(decl[1], `${rel}: viewStyle must derive from parentBox?.style`).toMatch(
+				/parentBox\?*\.style/
+			);
 		});
 	}
 });

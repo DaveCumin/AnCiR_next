@@ -199,10 +199,58 @@
 		data = $state([]);
 		legend = $state();
 
-		padding = $state({ top: 15, right: 30, bottom: 30, left: 30 });
-		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
+		// A VIEW-LOCAL size, or null to use the plot's own (`parentBox`).
+		//
+		// The workflow canvas draws a plot inside a node box whose shape the user sets there,
+		// and that box has nothing to do with the figure's published dimensions. Until now the
+		// canvas rendered the real plot at `parentBox` size and CSS-scaled it down, which is
+		// why a node could only be resized on the plot's aspect ratio: anything else
+		// letterboxed. Setting `renderBox` instead makes the plot LAY OUT at the node's size,
+		// so axes, ticks and the legend arrange themselves for that shape.
+		//
+		// Safe as shared state ONLY because the two views are mutually exclusive: +page.svelte
+		// mounts either WorkflowEditor or PlotDisplay, never both. EmbeddedPlot therefore sets
+		// this while it owns the render and CLEARS it on teardown, so switching back to the
+		// workspace finds the plot at its own size again. If a preview is ever shown beside the
+		// workspace, this has to become a render-time prop instead.
+		//
+		// Deliberately NOT serialised: it describes a view, not the figure. The node box size
+		// is already persisted separately, in core.nodeLayout.
+		renderBox = $state(null);
+		viewWidth = $derived(this.renderBox?.w ?? this.parentBox.width);
+		viewHeight = $derived(this.renderBox?.h ?? this.parentBox.height);
 
-		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
+		// How much smaller this view is than the figure, used to scale the TYPE with it.
+		//
+		// The SMALLER of the two ratios, so text never overflows the tighter dimension: a wide,
+		// short node is short on height, and sizing type off the width would fill it with
+		// labels. This also matches what the old scaled thumbnail did (`Math.min`), so a node
+		// that has not been reshaped looks the same as it did before it could lay out.
+		//
+		// Capped at 1: a node bigger than the figure draws the figure's own type size rather
+		// than inflating it, because the point of a large node is to see more plot, not bigger
+		// words. Floored well above zero so the text degrades to a hint of itself rather than
+		// vanishing, which would read as a rendering fault.
+		fontScale = $derived.by(() => {
+			const box = this.renderBox;
+			const fw = this.parentBox?.width;
+			const fh = this.parentBox?.height;
+			if (!box || !(fw > 0) || !(fh > 0)) return 1;
+			return Math.min(1, Math.max(0.2, Math.min(box.w / fw, box.h / fh)));
+		});
+
+		// The figure style as THIS view needs it. Untouched when drawing at figure size, so the
+		// workspace passes exactly the object it always did.
+		viewStyle = $derived(
+			this.fontScale === 1
+				? this.parentBox?.style
+				: { ...this.parentBox?.style, fontScale: this.fontScale }
+		);
+
+		padding = $state({ top: 15, right: 30, bottom: 30, left: 30 });
+		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
+
+		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
 
 		xlimsIN = $state([null, null]);
 		xLogScale = $state(false);
@@ -439,7 +487,10 @@
 			// this the padding grows with zoom and visibly "jumps" whenever it's
 			// re-measured at a different zoom — e.g. when opening the control panel
 			// mounts a second copy of the plot and recomputes padding.
-			const scale = this.parentBox.width > 0 ? root.getBoundingClientRect().width / this.parentBox.width : 1;
+			// viewWidth, not parentBox.width: the SVG's user-unit width is whatever this VIEW
+			// rendered at, which differs from the figure's own width inside a canvas node.
+			const scale =
+				this.viewWidth > 0 ? root.getBoundingClientRect().width / this.viewWidth : 1;
 
 			// side → which rect edge to pick the "outer-most" axis by, and the
 			// direction (outer-most = smallest for left/top, largest for right/bottom).
@@ -738,9 +789,11 @@
 		const p = theData.plot;
 		const rect = svgEl?.getBoundingClientRect();
 		if (!rect) return;
-		// Rendered px per user-unit (the SVG is CSS-scaled inside the workspace).
-		const sx = rect.width > 0 ? rect.width / p.parentBox.width : 1;
-		const sy = rect.height > 0 ? rect.height / p.parentBox.height : 1;
+		// Rendered px per user-unit (the SVG is CSS-scaled inside the workspace). Measured
+		// against the size THIS view drew at, so a pointer lands on the same data point in a
+		// canvas node as in the workspace.
+		const sx = rect.width > 0 ? rect.width / p.viewWidth : 1;
+		const sy = rect.height > 0 ? rect.height / p.viewHeight : 1;
 		const localX = (e.clientX - rect.left) / sx - p.padding.left;
 		const localY = (e.clientY - rect.top) / sy - p.padding.top;
 		// Outside the plotting region → let the workspace handle the wheel.
@@ -1156,9 +1209,9 @@
 	<svg
 		bind:this={svgEl}
 		id={'plot' + theData.plot.parentBox.id}
-		width={theData.plot.parentBox.width}
-		height={theData.plot.parentBox.height}
-		viewBox="0 0 {theData.plot.parentBox.width} {theData.plot.parentBox.height}"
+		width={theData.plot.viewWidth}
+		height={theData.plot.viewHeight}
+		viewBox="0 0 {theData.plot.viewWidth} {theData.plot.viewHeight}"
 		style={`background: var(--surface-card); position: absolute;${
 			brushable && zoomMode ? ' cursor: crosshair;' : ''
 		}`}
@@ -1168,7 +1221,7 @@
 		<!-- The Left Y-axis -->
 		{#if theData.plot.hasLeftAxisData}
 			<Axis
-			figureStyle={theData.plot.parentBox?.style}
+			figureStyle={theData.plot.viewStyle}
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={theData.plot.YScaleLeft}
@@ -1182,7 +1235,7 @@
 		<!-- The Right Y-axis (only if there's data on right axis) -->
 		{#if theData.plot.hasRightAxisData}
 			<Axis
-			figureStyle={theData.plot.parentBox?.style}
+			figureStyle={theData.plot.viewStyle}
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={theData.plot.YScaleRight}
@@ -1195,7 +1248,7 @@
 
 		<!-- The X-axis -->
 		<Axis
-			figureStyle={theData.plot.parentBox?.style}
+			figureStyle={theData.plot.viewStyle}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={theData.plot.XScale}
@@ -1313,7 +1366,7 @@
 			</g>
 		{/if}
 		<Legend
-			figureStyle={theData.plot.parentBox?.style}
+			figureStyle={theData.plot.viewStyle}
 			legendData={theData.plot.legend}
 			items={theData.plot.getLegendItems}
 			plotWidth={theData.plot.plotwidth}
