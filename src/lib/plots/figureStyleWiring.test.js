@@ -119,7 +119,10 @@ describe('figure style is wired to every plotbit that draws text', () => {
 		it(`${rel} defines any viewStyle in terms of the figure's own style`, () => {
 			// Only meaningful for a file that uses viewStyle; a no-op elsewhere.
 			if (!tags.some((t) => /figureStyle=\{[^}]*\.viewStyle\}/.test(t))) return;
-			const decl = /viewStyle\s*=\s*\$derived\(([\s\S]*?)\n\t\t\);/.exec(src);
+			// Capture to the end of the STATEMENT. An earlier version scanned to the next
+			// `\n\t\t);`, which on a one-line declaration ran past it and matched some later
+			// derived entirely — passing for the wrong reason.
+			const decl = /viewStyle\s*=\s*\$derived\(([^;]*)\);/.exec(src);
 			expect(decl, `${rel}: viewStyle is passed but not declared as a $derived`).toBeTruthy();
 			expect(decl[1], `${rel}: viewStyle must derive from parentBox?.style`).toMatch(
 				/parentBox\?*\.style/

@@ -1,5 +1,6 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
@@ -306,12 +307,19 @@ export class Boxplotclass {
 		};
 
 		parentBox = $state();
+		// Draw at the VIEW's size when one is given (a workflow node), else the figure's own.
+		// See plots/viewBox.js for the whole story and why type scales with it.
+		renderBox = $state(null);
+		viewWidth = $derived(this.renderBox?.w ?? this.parentBox.width);
+		viewHeight = $derived(this.renderBox?.h ?? this.parentBox.height);
+		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
+		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		data = $state([]);
 		legend = $state();
 
 		padding = $state({ top: 15, right: 30, bottom: 30, left: 50 });
-		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
+		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
+		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
 
 		xlimsIN = $state([null, null]);
 		ylimsIN = $state([null, null]);
@@ -480,8 +488,8 @@ export class Boxplotclass {
 			// scale — otherwise padding grows with zoom and jumps when re-measured at
 			// a different zoom (e.g. when the control panel opens). See Scatterplot.
 			const scale =
-				this.parentBox.width > 0
-					? plotRoot.getBoundingClientRect().width / this.parentBox.width
+				this.viewWidth > 0
+					? plotRoot.getBoundingClientRect().width / this.viewWidth
 					: 1;
 
 			const allLeftAxes = document
@@ -1116,15 +1124,15 @@ export class Boxplotclass {
 {#snippet plot(theData)}
 	<svg
 		id={'plot' + theData.plot.parentBox.id}
-		width={theData.plot.parentBox.width}
-		height={theData.plot.parentBox.height}
-		viewBox="0 0 {theData.plot.parentBox.width} {theData.plot.parentBox.height}"
+		width={theData.plot.viewWidth}
+		height={theData.plot.viewHeight}
+		viewBox="0 0 {theData.plot.viewWidth} {theData.plot.viewHeight}"
 		style={`background: var(--surface-card); position: absolute;`}
 		ontooltip={handleTooltip}
 	>
 		<!-- Y-axis -->
 		<Axis
-			figureStyle={theData.plot.parentBox?.style}
+			figureStyle={theData.plot.viewStyle}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
@@ -1138,7 +1146,7 @@ export class Boxplotclass {
 
 		<!-- X-axis with custom categorical labels -->
 		<Axis
-			figureStyle={theData.plot.parentBox?.style}
+			figureStyle={theData.plot.viewStyle}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
 			scale={scaleLinear()
@@ -1183,7 +1191,7 @@ export class Boxplotclass {
 		{/each}
 
 		<Legend
-			figureStyle={theData.plot.parentBox?.style}
+			figureStyle={theData.plot.viewStyle}
 			legendData={theData.plot.legend}
 			items={theData.plot.getLegendItems}
 			plotWidth={theData.plot.plotwidth}

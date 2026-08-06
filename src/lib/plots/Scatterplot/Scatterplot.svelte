@@ -15,6 +15,7 @@
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import NightBand, { NightBandClass } from './NightBand.svelte';
+	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 	export const Scatterplot_controlHeaders = ['Properties', 'Data', 'Bands'];
@@ -220,32 +221,10 @@
 		viewWidth = $derived(this.renderBox?.w ?? this.parentBox.width);
 		viewHeight = $derived(this.renderBox?.h ?? this.parentBox.height);
 
-		// How much smaller this view is than the figure, used to scale the TYPE with it.
-		//
-		// The SMALLER of the two ratios, so text never overflows the tighter dimension: a wide,
-		// short node is short on height, and sizing type off the width would fill it with
-		// labels. This also matches what the old scaled thumbnail did (`Math.min`), so a node
-		// that has not been reshaped looks the same as it did before it could lay out.
-		//
-		// Capped at 1: a node bigger than the figure draws the figure's own type size rather
-		// than inflating it, because the point of a large node is to see more plot, not bigger
-		// words. Floored well above zero so the text degrades to a hint of itself rather than
-		// vanishing, which would read as a rendering fault.
-		fontScale = $derived.by(() => {
-			const box = this.renderBox;
-			const fw = this.parentBox?.width;
-			const fh = this.parentBox?.height;
-			if (!box || !(fw > 0) || !(fh > 0)) return 1;
-			return Math.min(1, Math.max(0.2, Math.min(box.w / fw, box.h / fh)));
-		});
-
-		// The figure style as THIS view needs it. Untouched when drawing at figure size, so the
-		// workspace passes exactly the object it always did.
-		viewStyle = $derived(
-			this.fontScale === 1
-				? this.parentBox?.style
-				: { ...this.parentBox?.style, fontScale: this.fontScale }
-		);
+		// Type scales with the box; the policy lives in plots/viewBox.js so eleven plots
+		// cannot drift into eleven slightly different answers.
+		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
+		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 
 		padding = $state({ top: 15, right: 30, bottom: 30, left: 30 });
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);

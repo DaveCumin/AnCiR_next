@@ -16,6 +16,7 @@
 	// <image> element; axes, COI, ridge and legend stay ordinary SVG on top. One
 	// element regardless of resolution, and SVG/PNG export still works.
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
 	import { cwtFromSeries, waveletRidge, WAVELETS } from '$lib/utils/cwt.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
 
@@ -49,6 +50,13 @@
 		static descriptors = { padding: { group: 'Padding' } };
 
 		parentBox = $state();
+		// Draw at the VIEW's size when one is given (a workflow node), else the figure's own.
+		// See plots/viewBox.js for the whole story and why type scales with it.
+		renderBox = $state(null);
+		viewWidth = $derived(this.renderBox?.w ?? this.parentBox.width);
+		viewHeight = $derived(this.renderBox?.h ?? this.parentBox.height);
+		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
+		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		data = $state([]);
 		padding = $state({ top: 20, right: 70, bottom: 46, left: 62 });
 
@@ -63,8 +71,8 @@
 		showRidge = $state(false);
 		logScale = $state(true);
 
-		plotheight = $derived(this.parentBox.height - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.parentBox.width - this.padding.left - this.padding.right);
+		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
+		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
 
 		transform = $derived.by(() => {
 			const d = this.data[0];
@@ -270,9 +278,9 @@
 	{@const H = plot.plotheight}
 	<svg
 		id={'plot' + plot.parentBox.id}
-		width={plot.parentBox.width}
-		height={plot.parentBox.height}
-		viewBox="0 0 {plot.parentBox.width} {plot.parentBox.height}"
+		width={plot.viewWidth}
+		height={plot.viewHeight}
+		viewBox="0 0 {plot.viewWidth} {plot.viewHeight}"
 		style="background: var(--surface-card); position: absolute;"
 	>
 		{#if !tr.valid}

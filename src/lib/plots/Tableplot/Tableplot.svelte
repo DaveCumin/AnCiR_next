@@ -1,6 +1,7 @@
 <script module>
 	// @ts-nocheck
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { core } from '$lib/core/core.svelte';
@@ -20,6 +21,13 @@
 		};
 
 		parentBox = $state();
+		// Draw at the VIEW's size when one is given (a workflow node), else the figure's own.
+		// See plots/viewBox.js for the whole story and why type scales with it.
+		renderBox = $state(null);
+		viewWidth = $derived(this.renderBox?.w ?? this.parentBox.width);
+		viewHeight = $derived(this.renderBox?.h ?? this.parentBox.height);
+		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
+		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		columnRefs = $state([]);
 		showCol = $state([]);
 		colWidths = $state({}); // colId -> px width (missing → default); user-resizable
