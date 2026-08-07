@@ -12,7 +12,7 @@
 	// Maths is the pure, unit-tested utils/pairsLayout.js (scipy-pinned correlations, shared
 	// least-squares fit). Diverging colormap for the lower triangle, centred at 0.
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
+	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { pairsLayout } from '$lib/utils/pairsLayout.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
 	import { gaussianKDE } from '$lib/utils/kde.js';
@@ -48,7 +48,17 @@
 		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
 		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		data = $state([]);
-		padding = $state({ top: 24, right: 16, bottom: 16, left: 60 });
+		// Stored padding belongs to the FIGURE. A view that draws the type smaller needs
+		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
+		// set; the raw value is what gets saved. See plots/viewBox.js.
+		#padding = $state({ top: 24, right: 16, bottom: 16, left: 60 });
+		paddingScaled = $derived(scalePadding(this.#padding, this.fontScale));
+		get padding() {
+			return this.renderBox ? this.paddingScaled : this.#padding;
+		}
+		set padding(v) {
+			this.#padding = v;
+		}
 		colormap = $state('rdbu');
 		method = $state('pearson'); // 'pearson' | 'spearman'
 		pointColour = $state('#234154');
@@ -84,7 +94,7 @@
 
 		toJSON() {
 			return {
-				padding: this.padding,
+				padding: this.#padding,
 				colormap: this.colormap,
 				method: this.method,
 				pointColour: this.pointColour,

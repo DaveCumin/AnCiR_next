@@ -30,18 +30,22 @@ describe('renderBox', () => {
 		expect(plot.plotheight).toBe(400 - 15 - 30);
 	});
 
-	it('lays out to the box when one is set', () => {
+	it('lays out to the box when one is set, with padding scaled to match the type', () => {
+		// 600x400 figure, 240x200 box ⇒ fontScale 0.4, so the 30px side padding that exists to
+		// hold full-size labels becomes 12px for labels drawn at 0.4.
 		plot.renderBox = { w: 240, h: 200 };
 		expect(plot.viewWidth).toBe(240);
-		expect(plot.plotwidth).toBe(240 - 30 - 30);
-		expect(plot.plotheight).toBe(200 - 15 - 30);
+		expect(plot.fontScale).toBeCloseTo(0.4, 6);
+		expect(plot.plotwidth).toBeCloseTo(240 - 12 - 12, 6);
+		expect(plot.plotheight).toBeCloseTo(200 - 6 - 12, 6);
 	});
 
 	it('takes ANY shape, which is the whole point', () => {
 		// A 3:1 box on a 3:2 figure. Under the old scale-to-fit this letterboxed; now the
-		// drawing area really is that shape.
+		// drawing area really is that shape. fontScale 0.5 halves the padding too.
 		plot.renderBox = { w: 600, h: 200 };
-		expect(plot.plotwidth / plot.plotheight).toBeCloseTo(540 / 155, 5);
+		expect(plot.plotwidth).toBeCloseTo(600 - 15 - 15, 6);
+		expect(plot.plotheight).toBeCloseTo(200 - 7.5 - 15, 6);
 	});
 
 	it('leaves the FIGURE untouched, so the workspace layout is unaffected', () => {
@@ -63,7 +67,7 @@ describe('renderBox', () => {
 		// The scales are what actually place the data; a width that changed without them
 		// would draw the old layout at a new size.
 		plot.renderBox = { w: 240, h: 200 };
-		expect(plot.XScale.range()).toEqual([0, 240 - 60]);
+		expect(plot.XScale.range()[1]).toBeCloseTo(240 - 12 - 12, 6);
 	});
 
 	it('is not serialised — it describes a view, not the figure', () => {
@@ -122,5 +126,50 @@ describe('fontScale', () => {
 		plot.renderBox = { w: 300, h: 200 };
 		plot.renderBox = null;
 		expect(plot.fontScale).toBe(1);
+	});
+});
+
+// Padding exists to make room for TEXT, so it has to travel with the type size. Left alone, a
+// 240px node spent ~40% of its width on margins holding labels drawn at half size.
+describe('padding in a view', () => {
+	let plot;
+	beforeEach(() => {
+		plot = plotOfSize(600, 400);
+		plot.padding = { top: 20, right: 40, bottom: 60, left: 80 };
+	});
+
+	it("is the figure's own when drawing at figure size", () => {
+		expect(plot.padding).toEqual({ top: 20, right: 40, bottom: 60, left: 80 });
+	});
+
+	it('scales with the type when drawing to a box', () => {
+		plot.renderBox = { w: 300, h: 200 };
+		expect(plot.fontScale).toBeCloseTo(0.5, 6);
+		expect(plot.padding).toEqual({ top: 10, right: 20, bottom: 30, left: 40 });
+	});
+
+	it("SAVES the figure's padding, never the view's", () => {
+		// A session saved while the canvas is showing must not bake a node's margins into the
+		// figure. This is the one that would quietly ruin a paper's figures.
+		plot.renderBox = { w: 300, h: 200 };
+		expect(plot.toJSON().padding).toEqual({ top: 20, right: 40, bottom: 60, left: 80 });
+	});
+
+	it("returns to the figure's padding when the box is cleared", () => {
+		plot.renderBox = { w: 300, h: 200 };
+		plot.renderBox = null;
+		expect(plot.padding).toEqual({ top: 20, right: 40, bottom: 60, left: 80 });
+	});
+
+	it('keeps object identity at figure size, so nothing re-renders on every read', () => {
+		expect(plot.padding).toBe(plot.padding);
+	});
+
+	it('refuses to auto-measure while drawing to a box', () => {
+		// Padding is a FIGURE property; a node measures its own smaller render, so letting it
+		// write would redefine the figure's margins from whichever view mounted last.
+		plot.renderBox = { w: 300, h: 200 };
+		plot.autoScalePadding('all');
+		expect(plot.toJSON().padding).toEqual({ top: 20, right: 40, bottom: 60, left: 80 });
 	});
 });

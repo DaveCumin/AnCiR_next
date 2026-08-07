@@ -1,6 +1,6 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
+	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
@@ -218,7 +218,17 @@
 		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
 		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		data = $state([]);
-		padding = $state({ top: 15, right: 20, bottom: 30, left: 50 });
+		// Stored padding belongs to the FIGURE. A view that draws the type smaller needs
+		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
+		// set; the raw value is what gets saved. See plots/viewBox.js.
+		#padding = $state({ top: 15, right: 20, bottom: 30, left: 50 });
+		paddingScaled = $derived(scalePadding(this.#padding, this.fontScale));
+		get padding() {
+			return this.renderBox ? this.paddingScaled : this.#padding;
+		}
+		set padding(v) {
+			this.#padding = v;
+		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
 
@@ -401,7 +411,7 @@
 			return {
 				laglimsIN: this.laglimsIN,
 				ylimsIN: this.ylimsIN,
-				padding: this.padding,
+				padding: this.#padding,
 				xAxis: this.xAxis.toJSON(),
 				yAxis: this.yAxis.toJSON(),
 				data: this.data

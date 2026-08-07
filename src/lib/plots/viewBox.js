@@ -63,3 +63,28 @@ export function viewStyleFor(style, fontScale) {
 	if (!(fontScale > 0) || fontScale === 1) return style;
 	return { ...style, fontScale };
 }
+
+/**
+ * The figure's padding as a VIEW needs it.
+ *
+ * Padding is stored in the figure's own units, and it exists to make room for text: axis
+ * labels, tick labels, a title. When a view draws the type at `fontScale`, the room that text
+ * needs scales with it. Leaving padding alone made a 240px node spend ~40% of its width on
+ * margins for labels drawn at half size.
+ *
+ * Multiplied, not re-measured. Re-measuring per view would be more exact but would mean a node
+ * writing a figure property (see the `renderBox` guard in `autoScalePadding`), and the whole
+ * point is that a node describes itself, not the figure.
+ *
+ * Returns the SAME object at scale 1, so the workspace path allocates nothing and no downstream
+ * `$derived` sees a fresh identity on every read.
+ */
+export function scalePadding(padding, fontScale) {
+	if (!padding || !(fontScale > 0) || fontScale === 1) return padding;
+	return {
+		top: padding.top * fontScale,
+		right: padding.right * fontScale,
+		bottom: padding.bottom * fontScale,
+		left: padding.left * fontScale
+	};
+}

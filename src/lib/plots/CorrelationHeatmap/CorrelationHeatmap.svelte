@@ -12,7 +12,7 @@
 	// Diverging colormap centred at 0 (correlation ∈ [-1, +1]): negative → blue, 0 → white,
 	// positive → red.
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
+	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { correlationGrid } from '$lib/utils/correlationGrid.js';
 	import {
 		colormapRGB,
@@ -52,7 +52,17 @@
 		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
 		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		data = $state([]); // one HeatmapColumn per wired variable
-		padding = $state({ top: 20, right: 20, bottom: 70, left: 70 });
+		// Stored padding belongs to the FIGURE. A view that draws the type smaller needs
+		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
+		// set; the raw value is what gets saved. See plots/viewBox.js.
+		#padding = $state({ top: 20, right: 20, bottom: 70, left: 70 });
+		paddingScaled = $derived(scalePadding(this.#padding, this.fontScale));
+		get padding() {
+			return this.renderBox ? this.paddingScaled : this.#padding;
+		}
+		set padding(v) {
+			this.#padding = v;
+		}
 		colormap = $state('rdbu');
 		showValues = $state(true);
 		method = $state('pearson'); // 'pearson' | 'spearman'
@@ -90,7 +100,7 @@
 
 		toJSON() {
 			return {
-				padding: this.padding,
+				padding: this.#padding,
 				colormap: this.colormap,
 				showValues: this.showValues,
 				method: this.method,

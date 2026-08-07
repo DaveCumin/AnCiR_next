@@ -16,7 +16,7 @@
 	// <image> element; axes, COI, ridge and legend stay ordinary SVG on top. One
 	// element regardless of resolution, and SVG/PNG export still works.
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
+	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { cwtFromSeries, waveletRidge, WAVELETS } from '$lib/utils/cwt.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
 
@@ -58,7 +58,17 @@
 		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
 		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		data = $state([]);
-		padding = $state({ top: 20, right: 70, bottom: 46, left: 62 });
+		// Stored padding belongs to the FIGURE. A view that draws the type smaller needs
+		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
+		// set; the raw value is what gets saved. See plots/viewBox.js.
+		#padding = $state({ top: 20, right: 70, bottom: 46, left: 62 });
+		paddingScaled = $derived(scalePadding(this.#padding, this.fontScale));
+		get padding() {
+			return this.renderBox ? this.paddingScaled : this.#padding;
+		}
+		set padding(v) {
+			this.#padding = v;
+		}
 
 		wavelet = $state('morlet');
 		waveletParam = $state(6);
@@ -143,7 +153,7 @@
 
 		toJSON() {
 			return {
-				padding: this.padding,
+				padding: this.#padding,
 				wavelet: this.wavelet,
 				waveletParam: this.waveletParam,
 				dj: this.dj,

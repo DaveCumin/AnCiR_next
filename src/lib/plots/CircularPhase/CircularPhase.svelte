@@ -1,6 +1,6 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
+	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -137,7 +137,17 @@
 		showWedges = $state(false);
 		wedgeBinWidth = $state(2);
 		showWatsonWilliams = $state(false);
-		padding = $state({ top: 24, right: 20, bottom: 30, left: 20 });
+		// Stored padding belongs to the FIGURE. A view that draws the type smaller needs
+		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
+		// set; the raw value is what gets saved. See plots/viewBox.js.
+		#padding = $state({ top: 24, right: 20, bottom: 30, left: 20 });
+		paddingScaled = $derived(scalePadding(this.#padding, this.fontScale));
+		get padding() {
+			return this.renderBox ? this.paddingScaled : this.#padding;
+		}
+		set padding(v) {
+			this.#padding = v;
+		}
 
 		// True when any series has a wired time column (value-radius clock mode).
 		// A timed series' angles are always expressed in period-space HOURS
@@ -269,7 +279,7 @@
 				showWedges: this.showWedges,
 				wedgeBinWidth: this.wedgeBinWidth,
 				showWatsonWilliams: this.showWatsonWilliams,
-				padding: this.padding,
+				padding: this.#padding,
 				data: this.data,
 				legend: this.legend.toJSON()
 			};
