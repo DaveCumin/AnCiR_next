@@ -1212,18 +1212,25 @@
 	}
 
 	/* The marker goes before the section NAME rather than at the end of the row: titles often
-	   carry their own buttons on the right, and a chevron after those reads as belonging to
-	   them. */
+	   carry their own buttons on the right, and a caret after those reads as belonging to them.
+
+	   It is the SAME caret the rest of the app collapses with (icons/caret-down.svg, used by
+	   Column.svelte's row chevrons at 12px), drawn as a mask so it takes the muted text colour
+	   and can rotate. A text glyph was tried first and read as a dot at this size. */
 	:global(.control-component-title[role='button'] > p::before) {
-		content: '▾';
+		content: '';
 		display: inline-block;
-		width: 0.9em;
-		margin-right: var(--space-2);
-		font-size: 0.75em;
-		color: var(--color-text-muted);
+		width: 12px;
+		height: 12px;
+		margin-right: var(--space-3);
+		vertical-align: -1px;
+		background-color: var(--color-text-muted);
+		-webkit-mask: var(--caret-down-mask) center / contain no-repeat;
+		mask: var(--caret-down-mask) center / contain no-repeat;
 		transition: transform 0.12s ease;
 	}
 
+	/* Collapsed points right, matching caret-right without a second asset. */
 	:global(.control-component[data-collapsed='true'] > .control-component-title > p::before) {
 		transform: rotate(-90deg);
 	}

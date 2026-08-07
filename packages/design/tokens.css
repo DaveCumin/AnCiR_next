@@ -83,6 +83,11 @@
 	   lightness-* greys remain for borders / icons (non-text, 3:1). */
 	--color-text-muted: #666666;
 
+	/* The app's collapse caret (icons/caret-down.svg, Font Awesome). Held as a token because it
+	   is used as a CSS mask in +page.svelte's control-panel styles, where an <Icon> component
+	   cannot reach: those sections are collapsed by a delegated action rather than by markup. */
+	--caret-down-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 640'%3E%3Cpath d='M480 224C492.9 224 504.6 231.8 509.6 243.8C514.6 255.8 511.8 269.5 502.7 278.7L342.7 438.7C330.2 451.2 309.9 451.2 297.4 438.7L137.4 278.7C128.2 269.5 125.5 255.8 130.5 243.8C135.5 231.8 147.1 224 160 224L480 224z'/%3E%3C/svg%3E");
+
 	/* keyboard focus ring — shared by all interactive controls via the global
 	   :focus-visible rule below. Brand accent, matching the rings already used in
 	   Editable / NodePalette / WorksheetAddPalette. */
