@@ -65,12 +65,29 @@ export function viewStyleFor(style, fontScale) {
 }
 
 /**
+ * Axis chrome that does NOT scale with the type: the tick marks and the gap between a tick and
+ * its label. Axis.svelte draws these at fixed pixel sizes (`ticklength = 6`, `tickspace = 4`),
+ * so they take the same room whatever size the text is.
+ *
+ * Left and bottom carry ticks and labels; top and right normally carry neither, so they get a
+ * token amount for a stroke and a little air.
+ */
+const AXIS_CHROME = { top: 4, right: 4, bottom: 10, left: 10 };
+
+/**
  * The figure's padding as a VIEW needs it.
  *
- * Padding is stored in the figure's own units, and it exists to make room for text: axis
+ * Padding is stored in the figure's own units and exists mostly to make room for TEXT: axis
  * labels, tick labels, a title. When a view draws the type at `fontScale`, the room that text
  * needs scales with it. Leaving padding alone made a 240px node spend ~40% of its width on
  * margins for labels drawn at half size.
+ *
+ * ONLY THE TEXT-DEPENDENT PART SCALES. Scaling the whole thing was the first attempt and it
+ * clipped: at fontScale 0.48 a "20,000" tick label measured 25.4px and the axis needed 35.4px
+ * of room (label + 6px tick + 4px gap), but a figure padding of 72 scaled to 34.56. The tick
+ * and the gap are fixed pixels, so squeezing them proportionally leaves the labels hanging off
+ * the left edge, where the node's `overflow: hidden` cuts them in half. Holding the chrome back
+ * and scaling only the remainder gives 10 + 62 × 0.48 = 39.8, which fits.
  *
  * Multiplied, not re-measured. Re-measuring per view would be more exact but would mean a node
  * writing a figure property (see the `renderBox` guard in `autoScalePadding`), and the whole
@@ -81,10 +98,13 @@ export function viewStyleFor(style, fontScale) {
  */
 export function scalePadding(padding, fontScale) {
 	if (!padding || !(fontScale > 0) || fontScale === 1) return padding;
-	return {
-		top: padding.top * fontScale,
-		right: padding.right * fontScale,
-		bottom: padding.bottom * fontScale,
-		left: padding.left * fontScale
+	const side = (name) => {
+		const chrome = AXIS_CHROME[name];
+		const value = padding[name] ?? 0;
+		// A padding already smaller than the chrome is left alone rather than grown: the caller
+		// asked for less room than the ticks need, and this is not the place to overrule them.
+		if (value <= chrome) return value;
+		return chrome + (value - chrome) * fontScale;
 	};
+	return { top: side('top'), right: side('right'), bottom: side('bottom'), left: side('left') };
 }

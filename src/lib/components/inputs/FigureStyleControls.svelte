@@ -19,6 +19,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
+	import { appState } from '$lib/core/core.svelte';
 	import {
 		resolveStyle,
 		physicalWidthPx,
@@ -190,6 +191,19 @@
 		</div>
 	{/if}
 
+	<!-- Size is the one group that does nothing you can SEE from the workflow canvas: a node is
+	     drawn at the size of its own box, deliberately, so that resizing a node never touches
+	     the figure. Everything else here (typeface, type size, background, legend box,
+	     monochrome, markers) does show in a node, so the note is scoped to size rather than
+	     covering the whole section. Said plainly beats leaving a working control looking
+	     broken. -->
+	{#if plot && appState.view === 'canvas'}
+		<p class="figure-note">
+			Width and height change the figure itself, which you see in the workspace and in
+			exports. They do not change this node: a node is sized by its own handle.
+		</p>
+	{/if}
+
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Background</p>
@@ -290,6 +304,13 @@
 </div>
 
 <style>
+	/* Same muted, small treatment the Settings panel uses for its explanatory lines. */
+	.figure-note {
+		color: var(--color-text-muted);
+		font-size: 0.8rem;
+		margin: var(--space-2) 0 var(--space-3);
+	}
+
 	.style-readout p,
 	.apply-hint {
 		margin: var(--space-2) 0 0;

@@ -31,21 +31,22 @@ describe('renderBox', () => {
 	});
 
 	it('lays out to the box when one is set, with padding scaled to match the type', () => {
-		// 600x400 figure, 240x200 box ⇒ fontScale 0.4, so the 30px side padding that exists to
-		// hold full-size labels becomes 12px for labels drawn at 0.4.
+		// 600x400 figure, 240x200 box ⇒ fontScale 0.4. Only the TEXT-dependent part of the
+		// padding shrinks; the fixed tick chrome (10px on left/bottom, 4px top/right) is held
+		// back, so left becomes 10 + (30-10)*0.4 = 18 rather than 12.
 		plot.renderBox = { w: 240, h: 200 };
 		expect(plot.viewWidth).toBe(240);
 		expect(plot.fontScale).toBeCloseTo(0.4, 6);
-		expect(plot.plotwidth).toBeCloseTo(240 - 12 - 12, 6);
-		expect(plot.plotheight).toBeCloseTo(200 - 6 - 12, 6);
+		expect(plot.plotwidth).toBeCloseTo(240 - 18 - 14.4, 6);
+		expect(plot.plotheight).toBeCloseTo(200 - 8.4 - 18, 6);
 	});
 
 	it('takes ANY shape, which is the whole point', () => {
 		// A 3:1 box on a 3:2 figure. Under the old scale-to-fit this letterboxed; now the
 		// drawing area really is that shape. fontScale 0.5 halves the padding too.
 		plot.renderBox = { w: 600, h: 200 };
-		expect(plot.plotwidth).toBeCloseTo(600 - 15 - 15, 6);
-		expect(plot.plotheight).toBeCloseTo(200 - 7.5 - 15, 6);
+		expect(plot.plotwidth).toBeCloseTo(600 - 20 - 17, 6);
+		expect(plot.plotheight).toBeCloseTo(200 - 9.5 - 20, 6);
 	});
 
 	it('leaves the FIGURE untouched, so the workspace layout is unaffected', () => {
@@ -67,7 +68,7 @@ describe('renderBox', () => {
 		// The scales are what actually place the data; a width that changed without them
 		// would draw the old layout at a new size.
 		plot.renderBox = { w: 240, h: 200 };
-		expect(plot.XScale.range()[1]).toBeCloseTo(240 - 12 - 12, 6);
+		expect(plot.XScale.range()[1]).toBeCloseTo(240 - 18 - 14.4, 6);
 	});
 
 	it('is not serialised — it describes a view, not the figure', () => {
@@ -145,7 +146,8 @@ describe('padding in a view', () => {
 	it('scales with the type when drawing to a box', () => {
 		plot.renderBox = { w: 300, h: 200 };
 		expect(plot.fontScale).toBeCloseTo(0.5, 6);
-		expect(plot.padding).toEqual({ top: 10, right: 20, bottom: 30, left: 40 });
+		// chrome + (figure - chrome) * 0.5, per side.
+		expect(plot.padding).toEqual({ top: 12, right: 22, bottom: 35, left: 45 });
 	});
 
 	it("SAVES the figure's padding, never the view's", () => {
@@ -171,5 +173,41 @@ describe('padding in a view', () => {
 		plot.renderBox = { w: 300, h: 200 };
 		plot.autoScalePadding('all');
 		expect(plot.toJSON().padding).toEqual({ top: 20, right: 40, bottom: 60, left: 80 });
+	});
+});
+
+// The clipping this scaling had to be corrected for.
+describe('padding keeps room for the fixed axis chrome', () => {
+	let plot;
+	beforeEach(() => {
+		plot = plotOfSize(600, 400);
+	});
+
+	it('holds back the tick mark and gap, which do not scale with the type', () => {
+		// The measured case: a 500x320 figure in a 240x153.6 node, fontScale 0.48. Axis.svelte
+		// draws ticks at 6px and the tick gap at 4px whatever the font size. Scaling the WHOLE
+		// padding squeezed those out: a "20,000" label measured 25.4px and the axis needed
+		// 35.4px, but a figure padding of 72 scaled to 34.56 — so the labels hung off the left
+		// edge and the node's overflow:hidden cut them in half. 10 + 62 x 0.48 = 39.76 fits.
+		const p = plotOfSize(500, 320);
+		p.padding = { top: 15, right: 30, bottom: 36, left: 72 };
+		p.renderBox = { w: 240, h: 153.6 };
+		expect(p.fontScale).toBeCloseTo(0.48, 6);
+		expect(p.padding.left).toBeGreaterThan(35.4);
+	});
+
+	it('never returns less room than the chrome needs', () => {
+		plot.padding = { top: 15, right: 30, bottom: 36, left: 72 };
+		plot.renderBox = { w: 24, h: 16 }; // absurdly small: fontScale floors at 0.2
+		expect(plot.padding.left).toBeGreaterThanOrEqual(10);
+		expect(plot.padding.bottom).toBeGreaterThanOrEqual(10);
+	});
+
+	it('leaves a padding already smaller than the chrome alone', () => {
+		// The caller asked for less room than the ticks need; scaling is not the place to
+		// overrule them, and growing it would move the plot on them.
+		plot.padding = { top: 2, right: 2, bottom: 3, left: 3 };
+		plot.renderBox = { w: 300, h: 200 };
+		expect(plot.padding).toEqual({ top: 2, right: 2, bottom: 3, left: 3 });
 	});
 });
