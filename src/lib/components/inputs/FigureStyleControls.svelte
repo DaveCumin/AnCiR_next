@@ -199,8 +199,8 @@
 	     broken. -->
 	{#if plot && appState.view === 'canvas'}
 		<p class="figure-note">
-			Width and height change the figure itself, which you see in the workspace and in
-			exports. They do not change this node: a node is sized by its own handle.
+			Width and height change the figure, not this node. You will see it in the workspace
+			and in exports; a node is sized by its own handle.
 		</p>
 	{/if}
 
@@ -304,11 +304,18 @@
 </div>
 
 <style>
-	/* Same muted, small treatment the Settings panel uses for its explanatory lines. */
+	/* The app's warning-box pattern, as used by ImportData's mismatch and binning notices.
+	   Text takes --color-warning-text, not --color-warning: the token file records that the
+	   bright one is only 2:1 on its own tint and must never be used for text, while this one
+	   is 5.05:1 (AA). */
 	.figure-note {
-		color: var(--color-text-muted);
-		font-size: 0.8rem;
 		margin: var(--space-2) 0 var(--space-3);
+		padding: 0.4em 0.6em;
+		border: 1px solid var(--color-warning);
+		border-radius: var(--radius-xs);
+		background: var(--color-warning-bg);
+		color: var(--color-warning-text);
+		font-size: 0.78em;
 	}
 
 	.style-readout p,
