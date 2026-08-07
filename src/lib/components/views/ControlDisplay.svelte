@@ -91,6 +91,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
+	import { collapsibleSections } from '$lib/components/views/collapsibleSections.svelte.js';
 	import { applyFigureAppearance } from '$lib/plots/seriesAppearance.js';
 	import { applyFigureWidth } from '$lib/plots/figureStyle.js';
 
@@ -410,6 +411,16 @@
 	});
 
 	let tempTab = 'properties';
+	/**
+	 * The tab a plot's whole-plot properties belong on: its FIRST control header, lowercased.
+	 * Every plot leads with 'Properties' except Tableplot, whose single tab is
+	 * 'Properties and Data'.
+	 */
+	function propertiesTabFor(type) {
+		const headers = appConsts.plotMap.get(type)?.controlHeaders ?? [];
+		return (headers[0] ?? 'properties').toLowerCase();
+	}
+
 	function updateCurrentControlTab(tab, type) {
 		if (type === 'actogram') {
 			appState.currentControlTab = tab;
@@ -425,7 +436,7 @@
 	}
 </script>
 
-<div class="control-display">
+<div class="control-display" use:collapsibleSections>
 	<!-- This is only for the first selected plot - need an #if to take care of multiple selections -->
 
 	{#if hasCanvasMultiSelection}
@@ -840,30 +851,39 @@
 					Id={'plot' + plot.plot.parentBox.id}
 				/>
 
-				{#if FACETABLE_PLOT_TYPES.has(plot.type)}
-					<div class="control-component">
-						<div class="control-input-checkbox">
-							<input
-								type="checkbox"
-								bind:checked={plot.facet}
-								onchange={() => syncFacetChildren(plot)}
-							/>
-							<p>One plot per series (facet)</p>
+				<!-- Faceting and the figure style describe the WHOLE plot, so they live on the
+				     first tab with the rest of its properties. They used to render outside the
+				     tab switch entirely, which put them under Data and Bands as well.
+				     Compared against the plot's own first header rather than the literal
+				     'properties', because Tableplot names its single tab
+				     'Properties and Data'. -->
+				{#if appState.currentControlTab === propertiesTabFor(plot.type)}
+					{#if FACETABLE_PLOT_TYPES.has(plot.type)}
+						<div class="control-component">
+							<div class="control-input-checkbox">
+								<input
+									type="checkbox"
+									bind:checked={plot.facet}
+									onchange={() => syncFacetChildren(plot)}
+								/>
+								<p>One plot per series (facet)</p>
+							</div>
 						</div>
-					</div>
-				{/if}
+					{/if}
 
-				<!-- This plot's own style. Editing it never touches the session template or
-				     any other figure. -->
-				<FigureStyleControls
-					{plot}
-					style={plot.style}
-					title="Figure"
-					onFigureChange={() => {
-						applyFigureAppearance(plot);
-						applyFigureWidth(plot);
-					}}
-				/>
+					<!-- This plot's own style. Editing it never touches the session template or
+					     any other figure. Starts collapsed (see collapsibleSections.svelte.js):
+					     it is long, and rarely what the panel was opened for. -->
+					<FigureStyleControls
+						{plot}
+						style={plot.style}
+						title="Figure"
+						onFigureChange={() => {
+							applyFigureAppearance(plot);
+							applyFigureWidth(plot);
+						}}
+					/>
+				{/if}
 
 				<Plot theData={plot.plot} which="controls" />
 			{/if}

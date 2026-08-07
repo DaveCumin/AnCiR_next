@@ -1203,6 +1203,36 @@
 		/* font-weight: 600; */
 	}
 
+	/* Collapsible sections. The attribute is written by the delegated action in
+	   views/collapsibleSections.svelte.js; everything visual is here, next to the rest of the
+	   control-panel styling, so a section anywhere in the app collapses the same way. */
+	:global(.control-component-title[role='button']) {
+		cursor: pointer;
+		user-select: none;
+	}
+
+	/* The marker goes before the section NAME rather than at the end of the row: titles often
+	   carry their own buttons on the right, and a chevron after those reads as belonging to
+	   them. */
+	:global(.control-component-title[role='button'] > p::before) {
+		content: '▾';
+		display: inline-block;
+		width: 0.9em;
+		margin-right: var(--space-2);
+		font-size: 0.75em;
+		color: var(--color-text-muted);
+		transition: transform 0.12s ease;
+	}
+
+	:global(.control-component[data-collapsed='true'] > .control-component-title > p::before) {
+		transform: rotate(-90deg);
+	}
+
+	/* Hide everything in the section EXCEPT its title. */
+	:global(.control-component[data-collapsed='true'] > *:not(.control-component-title)) {
+		display: none;
+	}
+
 	:global(.control-component-title button) {
 		margin: 0;
 		margin-left: var(--space-4);
