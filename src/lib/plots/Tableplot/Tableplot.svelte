@@ -335,8 +335,9 @@
 					(c.col.type === 'time' && !c.col.isReferencial()))
 		)
 	);
-	// Row height tracks the 1.5rem (~24px) cell font: ~44px for one line, more for
-	// the two-line time cells (value + "computed hrs" sub-line).
+	// Row height for the 0.85rem cell font: ~44px for one line, more for the two-line time
+	// cells (value + "computed hrs" sub-line). It used to be described as tracking 1.5rem,
+	// which was only ever true inside a workflow node, and that override is gone.
 	let rowH = $derived(hasTwoLineCol ? 64 : 44);
 	const DEFAULT_COL_W = 130;
 	const MIN_COL_W = 56;
@@ -875,9 +876,9 @@
 		border: 1px solid var(--color-lightness-85);
 		border-radius: var(--radius-sm);
 		background: var(--surface-card);
-		/* Workspace renders the table at native 1:1, so use a normal table font.
-		   The workflow node preview (.plot-preview-inner) scales the whole plot
-		   down, so it restores the larger design font below. */
+		/* One font everywhere. The node preview used to CSS-scale the whole plot down, so
+		   this was compensated for below with a 1.5rem override; now the table lays out to
+		   the node's own size (see plots/viewBox.js) and that override just made it huge. */
 		font-size: 0.85rem;
 		/* On the workflow canvas the plot preview wrapper sets pointer-events:none
 		   (so the node stays draggable); re-enable it here so the table can be
@@ -971,12 +972,6 @@
 		font-size: 0.8em;
 		text-align: center;
 		justify-content: center;
-	}
-
-	/* Workflow node preview scales the whole plot down, so keep the original
-	   design font there (it reads fine once scaled). */
-	:global(.plot-preview-inner) .tp-scroll {
-		font-size: 1.5rem;
 	}
 
 	.tp-th:last-child,

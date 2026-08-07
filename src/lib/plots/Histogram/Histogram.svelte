@@ -298,8 +298,8 @@
 			// SVG user units, so divide the measured deltas back out by the effective
 			// scale — otherwise padding grows with zoom and jumps when re-measured at
 			// a different zoom (e.g. when the control panel opens). See Scatterplot.
-			const scale =
-				this.viewWidth > 0 ? root.getBoundingClientRect().width / this.viewWidth : 1;
+			const userWidth = Number(root.getAttribute('width')) || this.viewWidth;
+			const scale = userWidth > 0 ? root.getBoundingClientRect().width / userWidth : 1;
 
 			const allLeftAxes = root.getElementsByClassName('axis-left');
 			if (allLeftAxes && allLeftAxes.length > 0) {
@@ -324,6 +324,11 @@
 		}
 
 		autoScalePadding(side) {
+			// Never from a NODE. `padding` is a property of the FIGURE, and a node draws the
+			// plot smaller with type scaled to match, so margins measured there describe the
+			// node, not the figure. Letting it write would redefine the figure's margins from
+			// whichever view happened to mount last.
+			if (this.renderBox) return;
 			const v = this.getAutoScaleValues();
 			if (side === 'all') {
 				['top', 'left', 'right', 'bottom'].forEach((s) => {

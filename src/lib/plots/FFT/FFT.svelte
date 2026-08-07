@@ -333,8 +333,8 @@
 			// scale — otherwise padding grows with zoom and jumps when re-measured at
 			// a different zoom (e.g. when the control panel opens). See Scatterplot.
 			const scale =
-				this.viewWidth > 0
-					? plotElem.getBoundingClientRect().width / this.viewWidth
+				Number(plotElem.getAttribute('width')) > 0
+					? plotElem.getBoundingClientRect().width / Number(plotElem.getAttribute('width'))
 					: 1;
 
 			const allLeftAxes = plotElem.getElementsByClassName('axis-left');
@@ -410,6 +410,11 @@
 		}
 
 		autoScalePadding(side) {
+			// Never from a NODE. `padding` is a property of the FIGURE, and a node draws the
+			// plot smaller with type scaled to match, so margins measured there describe the
+			// node, not the figure. Letting it write would redefine the figure's margins from
+			// whichever view happened to mount last.
+			if (this.renderBox) return;
 			if (side == 'all') {
 				['top', 'left', 'right', 'bottom'].forEach((theSide) => {
 					this.padding[theSide] = this.getAutoScaleValues()[theSide] || this.padding[theSide];

@@ -277,7 +277,9 @@
 		border-right: none;
 	}
 
-	/* Workflow node preview scales the whole plot down, so keep a larger font there. */
+	/* DataView has no layout of its own (it never reads its box size), so unlike Tableplot it
+	   is still drawn at figure size and CSS-scaled down in a node. The compensation therefore
+	   stays here. If DataView ever gains a renderBox, delete this. */
 	:global(.plot-preview-inner) .tp-scroll {
 		font-size: 1.5rem;
 	}

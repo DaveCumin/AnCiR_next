@@ -466,10 +466,15 @@
 			// this the padding grows with zoom and visibly "jumps" whenever it's
 			// re-measured at a different zoom — e.g. when opening the control panel
 			// mounts a second copy of the plot and recomputes padding.
-			// viewWidth, not parentBox.width: the SVG's user-unit width is whatever this VIEW
-			// rendered at, which differs from the figure's own width inside a canvas node.
-			const scale =
-				this.viewWidth > 0 ? root.getBoundingClientRect().width / this.viewWidth : 1;
+			// BOTH halves of this ratio come from the DOM, deliberately. Taking the user-unit
+			// width from the MODEL (`viewWidth`) instead skews the moment the two disagree:
+			// switching a canvas node back to the workspace clears `renderBox` (so viewWidth
+			// jumps 240 → 500) before the SVG has re-rendered, giving scale ≈ 0.48 and padding
+			// inflated by ~2x. The figure then opened with visibly too much margin until
+			// something re-measured it. The `width` attribute is what this SVG was actually
+			// drawn at, so it cannot disagree with its own rect.
+			const userWidth = Number(root.getAttribute('width')) || this.viewWidth;
+			const scale = userWidth > 0 ? root.getBoundingClientRect().width / userWidth : 1;
 
 			// side → which rect edge to pick the "outer-most" axis by, and the
 			// direction (outer-most = smallest for left/top, largest for right/bottom).
@@ -529,6 +534,11 @@
 		}
 
 		autoScalePadding(side) {
+			// Never from a NODE. `padding` is a property of the FIGURE, and a node draws the
+			// plot smaller with type scaled to match, so margins measured there describe the
+			// node, not the figure. Letting it write would redefine the figure's margins from
+			// whichever view happened to mount last.
+			if (this.renderBox) return;
 			if (side == 'all') {
 				['top', 'left', 'right', 'bottom'].forEach((theSide) => {
 					this.padding[theSide] = this.getAutoScaleValues()[theSide] || this.padding[theSide];
