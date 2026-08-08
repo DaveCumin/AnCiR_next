@@ -186,6 +186,47 @@ const DEMOS = [
 		}
 	},
 	{
+		id: 'violinplot-groups',
+		name: 'Violin plot — shapes a box hides',
+		family: 'Plots',
+		description:
+			'A violin plot (boxplot with the violin overlay and jittered data points turned on). Three groups: the two outer ones have near-identical boxes — same median, similar spread — but the violin reveals one is unimodal and the other bimodal, a difference the box alone cannot show; the middle group is right-skewed. The violin is a kernel-density outline mirrored around each box; hide the box for a pure violin plot.',
+		// The violin-specific note, not the generic boxplot one.
+		noteId: 'boxplot-violin',
+		build(mk) {
+			const rng = mulberry32(21);
+			const group = [];
+			const value = [];
+			// Unimodal: one hump centred at 52.
+			for (let i = 0; i < 60; i++) {
+				group.push('Unimodal');
+				value.push(normal(rng, 52, 8));
+			}
+			// Skewed: lognormal-ish tail to the right.
+			for (let i = 0; i < 60; i++) {
+				group.push('Skewed');
+				value.push(28 + 18 * Math.exp(normal(rng, 0, 0.55)));
+			}
+			// Bimodal: two humps at 32 and 72 → its box (median ≈ 52, similar IQR)
+			// looks just like the unimodal group's; only the violin tells them apart.
+			for (let i = 0; i < 60; i++) {
+				group.push('Bimodal');
+				value.push(i % 2 === 0 ? normal(rng, 32, 5) : normal(rng, 72, 5));
+			}
+			const xId = mk.col('group', 'category', group);
+			const yId = mk.col('value', 'number', value);
+			const p = mk.plot(
+				'boxplot',
+				'Value by group (violin)',
+				{ x: xId, y: yId },
+				{ x: 'Group', y: 'Value' }
+			);
+			p.plot.showViolin = true;
+			p.plot.showPoints = true;
+			// showBox stays true: the full box + violin + points combo.
+		}
+	},
+	{
 		id: 'meansem-by-day',
 		name: 'Mean ± SEM — activity by day',
 		family: 'Plots',
@@ -356,6 +397,26 @@ const DEMOS = [
 			];
 			const p = mk.plot('pairsplot', 'Pairs matrix', { column: ids[0] });
 			ids.slice(1).forEach((id) => p.plot.addData({ column: { refId: id } }));
+		}
+	},
+	{
+		id: 'qqplot-normality',
+		name: 'Q-Q plot',
+		family: 'Plots',
+		description:
+			'Normal Q-Q plots of a normal and a right-skewed sample: the normal series hugs the quartile line inside the confidence envelope, the skewed one bends away in the tails.',
+		build(mk) {
+			const rng = mulberry32(13);
+			const n = 60;
+			const normalSample = Array.from({ length: n }, () => normal(rng, 50, 8));
+			// Right-skewed (lognormal-ish): departs from the line in the upper tail.
+			const skewed = Array.from({ length: n }, () => 40 + Math.exp(normal(rng, 2, 0.6)));
+			const ids = [
+				mk.col('normal sample', 'number', normalSample),
+				mk.col('skewed sample', 'number', skewed)
+			];
+			const p = mk.plot('qqplot', 'Normal Q-Q', { column: ids[0] });
+			p.plot.addData({ column: { refId: ids[1] } });
 		}
 	},
 	{
@@ -2563,8 +2624,11 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 			};
 			demo.build(mk);
 			// Explanatory note for the showcased plot type (first non-facet plot).
+			// A demo may name a variant note (e.g. the violin demo showcases the
+			// boxplot node but wants the violin-specific note) via `noteId`.
 			const showcasedType = core.plots.find((p) => p.facetParent == null)?.type;
-			if (showcasedType) addDemoNote(showcasedType);
+			const noteId = demo.noteId ?? showcasedType;
+			if (noteId) addDemoNote(noteId);
 			prewarmWrapperNames();
 			tidyPlots();
 			write(

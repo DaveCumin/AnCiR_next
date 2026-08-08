@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "754": [
+    "762": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "755": [
+    "763": [
       80.74815343291546,
       74.1026647241765,
       67.34975964373878,
@@ -100,7 +100,7 @@
       25.36953942083682,
       31.225353920755683
     ],
-    "756": [
+    "764": [
       0,
       1,
       2,
@@ -150,16 +150,16 @@
       46,
       47
     ],
-    "757": [
+    "765": [
       null
     ],
-    "758": [
+    "766": [
       0.9561584036481966
     ],
-    "759": [
+    "767": [
       5.518597286094135
     ],
-    "760": [
+    "768": [
       75.31550624457671,
       75.31550624457671,
       75.31550624457671,
@@ -212,20 +212,20 @@
   },
   "data": [
     {
-      "id": 754,
+      "id": 762,
       "name": "x",
-      "data": 754,
+      "data": 762,
       "type": "number",
-      "tableProcessGUId": "fb19bb92-912e-4dce-bdf8-a45e17d37ae4",
+      "tableProcessGUId": "2fb2afde-861b-4834-86d6-161800d00e38",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 755,
+      "id": 763,
       "name": "y",
-      "data": 755,
+      "data": 763,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -234,55 +234,55 @@
       "processes": []
     },
     {
-      "id": 756,
+      "id": 764,
       "name": "rectwavex_74",
-      "data": 756,
+      "data": 764,
       "type": "number",
-      "tableProcessGUId": "93839e32-4fb4-4b38-93c1-3ad7f5e7337c",
+      "tableProcessGUId": "ed7238b7-147d-499c-a5d5-5b3f1c421bed",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 757,
+      "id": 765,
       "name": "pvalue_74",
-      "data": 757,
+      "data": 765,
       "type": "number",
-      "tableProcessGUId": "93839e32-4fb4-4b38-93c1-3ad7f5e7337c",
+      "tableProcessGUId": "ed7238b7-147d-499c-a5d5-5b3f1c421bed",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 758,
+      "id": 766,
       "name": "r2_74",
-      "data": 758,
+      "data": 766,
       "type": "number",
-      "tableProcessGUId": "93839e32-4fb4-4b38-93c1-3ad7f5e7337c",
+      "tableProcessGUId": "ed7238b7-147d-499c-a5d5-5b3f1c421bed",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 759,
+      "id": 767,
       "name": "rmse_74",
-      "data": 759,
+      "data": 767,
       "type": "number",
-      "tableProcessGUId": "93839e32-4fb4-4b38-93c1-3ad7f5e7337c",
+      "tableProcessGUId": "ed7238b7-147d-499c-a5d5-5b3f1c421bed",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 760,
-      "name": "rectwavey_755_74",
-      "data": 760,
+      "id": 768,
+      "name": "rectwavey_763_74",
+      "data": 768,
       "type": "number",
-      "tableProcessGUId": "93839e32-4fb4-4b38-93c1-3ad7f5e7337c",
+      "tableProcessGUId": "ed7238b7-147d-499c-a5d5-5b3f1c421bed",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -291,7 +291,7 @@
   ],
   "plots": [
     {
-      "id": 125,
+      "id": 127,
       "name": "Rectangular Wave: data + fit",
       "x": 60,
       "y": 60,
@@ -305,12 +305,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -348,9 +367,9 @@
         "data": [
           {
             "x": {
-              "id": 761,
+              "id": 769,
               "name": "x",
-              "refId": 754,
+              "refId": 762,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -359,9 +378,9 @@
               "processes": []
             },
             "y": {
-              "id": 762,
+              "id": 770,
               "name": "y",
-              "refId": 755,
+              "refId": 763,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -372,14 +391,14 @@
             "label": "Data",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -387,9 +406,9 @@
           },
           {
             "x": {
-              "id": 763,
+              "id": 771,
               "name": "rectwavex_74",
-              "refId": 756,
+              "refId": 764,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -398,9 +417,9 @@
               "processes": []
             },
             "y": {
-              "id": 764,
-              "name": "rectwavey_755_74",
-              "refId": 760,
+              "id": 772,
+              "name": "rectwavey_763_74",
+              "refId": 768,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -411,14 +430,14 @@
             "label": "Rectangular Wave",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -428,19 +447,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 126,
+      "id": 128,
       "name": "Rectangular Wave: values",
       "x": 630,
       "y": 60,
@@ -454,10 +475,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          755,
-          760
+          763,
+          768
         ],
         "showCol": [
           true,
@@ -482,7 +521,7 @@
         "count": 48,
         "end": 47,
         "out": {
-          "result": 754
+          "result": 762
         }
       },
       "refTPId": null
@@ -492,9 +531,9 @@
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 754,
+        "xIN": 762,
         "yIN": [
-          755
+          763
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -505,11 +544,11 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 756,
-          "pvalue": 757,
-          "r2": 758,
-          "rmse": 759,
-          "rectwavey_755": 760
+          "rectwavex": 764,
+          "pvalue": 765,
+          "r2": 766,
+          "rmse": 767,
+          "rectwavey_763": 768
         }
       },
       "refTPId": null
@@ -520,7 +559,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_68",
+      "id": "note_69",
       "text": "Fits a smooth rectangular (square) wave with an adjustable duty cycle to the series, capturing on/off activity rhythms that a sinusoid fits poorly. The model is a tanh-approximated square wave whose duty cycle sets the fraction of each cycle spent 'on'; period, phase, sharpness (kappa) and duty cycle can be fixed or fitted. Use it for clearly bimodal activity (e.g. nocturnal animals switching between rest and activity) where you want an explicit active-phase width. In the demo, read the flat high plateau as the active phase, the flat low level as rest, and the plateau width as the duty cycle. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. Nonlinear least-squares waveform fitting (Marquardt 1963).",
       "x": 40,
       "y": 24,
@@ -531,8 +570,30 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_755": {
+    "data_763": {
       "x": 60,
       "y": 314
     },
@@ -544,15 +605,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_125": {
+    "plot_127": {
       "x": 820,
       "y": 314
     },
-    "plot_126": {
+    "plot_128": {
       "x": 820,
       "y": 814
     },
-    "note_68": {
+    "note_69": {
       "x": 40,
       "y": 24
     }
@@ -593,6 +654,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -614,5 +676,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

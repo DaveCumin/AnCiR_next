@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "597": [
+    "605": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "598": [
+    "606": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "599": [
+    "607": [
       0,
       2,
       4,
@@ -131,7 +131,7 @@
       46,
       48
     ],
-    "600": [
+    "608": [
       10,
       15.35898384862245,
       30,
@@ -161,9 +161,9 @@
   },
   "data": [
     {
-      "id": 597,
+      "id": 605,
       "name": "Interpolate input 1",
-      "data": 597,
+      "data": 605,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -172,9 +172,9 @@
       "processes": []
     },
     {
-      "id": 598,
+      "id": 606,
       "name": "Interpolate input 2",
-      "data": 598,
+      "data": 606,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -183,22 +183,22 @@
       "processes": []
     },
     {
-      "id": 599,
+      "id": 607,
       "name": "interpx_46",
-      "data": 599,
+      "data": 607,
       "type": "number",
-      "tableProcessGUId": "4bca9159-bb4b-4a63-948b-1c1b593e3283",
+      "tableProcessGUId": "e93a407f-3120-471b-9d8d-43b8e4a19271",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 600,
-      "name": "interpy_598_46",
-      "data": 600,
+      "id": 608,
+      "name": "interpy_606_46",
+      "data": 608,
       "type": "number",
-      "tableProcessGUId": "4bca9159-bb4b-4a63-948b-1c1b593e3283",
+      "tableProcessGUId": "e93a407f-3120-471b-9d8d-43b8e4a19271",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -207,7 +207,7 @@
   ],
   "plots": [
     {
-      "id": 97,
+      "id": 99,
       "name": "Interpolate result",
       "x": 60,
       "y": 60,
@@ -221,12 +221,30 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          597,
-          598,
-          599,
-          600
+          605,
+          606,
+          607,
+          608
         ],
         "showCol": [
           true,
@@ -247,9 +265,9 @@
       "name": "Interpolate",
       "displayName": "Interpolate",
       "args": {
-        "xIN": 597,
+        "xIN": 605,
         "yIN": [
-          598
+          606
         ],
         "mode": "resample",
         "method": "linear",
@@ -257,8 +275,8 @@
         "start": null,
         "end": null,
         "out": {
-          "interpx": 599,
-          "interpy_598": 600
+          "interpx": 607,
+          "interpy_606": 608
         }
       },
       "refTPId": null
@@ -269,7 +287,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_45",
+      "id": "note_46",
       "text": "Fills gaps or resamples a series onto a regular time grid using linear, nearest-neighbour, or natural cubic-spline interpolation. Use it to repair missing values or to make unevenly sampled data evenly spaced before methods that assume regular sampling (e.g. FFT).",
       "x": 40,
       "y": 24,
@@ -280,12 +298,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_597": {
+    "data_605": {
       "x": 60,
       "y": 314
     },
-    "data_598": {
+    "data_606": {
       "x": 60,
       "y": 814
     },
@@ -293,11 +333,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_97": {
+    "plot_99": {
       "x": 820,
       "y": 314
     },
-    "note_45": {
+    "note_46": {
       "x": 40,
       "y": 24
     }
@@ -338,6 +378,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -359,5 +400,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

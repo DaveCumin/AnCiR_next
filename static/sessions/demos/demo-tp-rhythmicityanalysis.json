@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "765": [
+    "773": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "766": [
+    "774": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "767": [
+    "775": [
       20,
       20.5,
       21,
@@ -695,7 +695,7 @@
       27.5,
       28
     ],
-    "768": [
+    "776": [
       0.8956207800972891,
       3.0349473209438744,
       5.304476138254576e-29,
@@ -714,7 +714,7 @@
       1.845509009872076,
       9.439856176943119e-29
     ],
-    "769": [
+    "777": [
       0.8956207800972891,
       3.0349473209438744,
       5.304476138254576e-29,
@@ -736,20 +736,20 @@
   },
   "data": [
     {
-      "id": 765,
+      "id": 773,
       "name": "x",
-      "data": 765,
+      "data": 773,
       "type": "number",
-      "tableProcessGUId": "77cc8637-21c6-4bd2-8b64-8b0cc28f91a8",
+      "tableProcessGUId": "1b72a52e-3148-4e49-acf5-a155fb8436a7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 766,
+      "id": 774,
       "name": "y",
-      "data": 766,
+      "data": 774,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -758,33 +758,33 @@
       "processes": []
     },
     {
-      "id": 767,
-      "name": "766_period_76",
-      "data": 767,
+      "id": 775,
+      "name": "774_period_76",
+      "data": 775,
       "type": "number",
-      "tableProcessGUId": "6b18db16-87d0-472a-8682-1e5d26031593",
+      "tableProcessGUId": "5cac9d6a-7266-480e-a7f1-823845d34d68",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 768,
-      "name": "766_power_76",
-      "data": 768,
+      "id": 776,
+      "name": "774_power_76",
+      "data": 776,
       "type": "number",
-      "tableProcessGUId": "6b18db16-87d0-472a-8682-1e5d26031593",
+      "tableProcessGUId": "5cac9d6a-7266-480e-a7f1-823845d34d68",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 769,
-      "name": "rhythmicityy_766_76",
-      "data": 769,
+      "id": 777,
+      "name": "rhythmicityy_774_76",
+      "data": 777,
       "type": "number",
-      "tableProcessGUId": "6b18db16-87d0-472a-8682-1e5d26031593",
+      "tableProcessGUId": "5cac9d6a-7266-480e-a7f1-823845d34d68",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -793,7 +793,7 @@
   ],
   "plots": [
     {
-      "id": 127,
+      "id": 129,
       "name": "Rhythmicity Analysis: signal",
       "x": 60,
       "y": 60,
@@ -807,12 +807,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -850,9 +869,9 @@
         "data": [
           {
             "x": {
-              "id": 770,
+              "id": 778,
               "name": "x",
-              "refId": 765,
+              "refId": 773,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -861,9 +880,9 @@
               "processes": []
             },
             "y": {
-              "id": 771,
+              "id": 779,
               "name": "y",
-              "refId": 766,
+              "refId": 774,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -874,14 +893,14 @@
             "label": "Signal",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -891,19 +910,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 128,
+      "id": 130,
       "name": "Rhythmicity Analysis: periodogram",
       "x": 630,
       "y": 60,
@@ -917,12 +938,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -960,9 +1000,9 @@
         "data": [
           {
             "x": {
-              "id": 772,
-              "name": "766_period_76",
-              "refId": 767,
+              "id": 780,
+              "name": "774_period_76",
+              "refId": 775,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -971,9 +1011,9 @@
               "processes": []
             },
             "y": {
-              "id": 773,
-              "name": "766_power_76",
-              "refId": 768,
+              "id": 781,
+              "name": "774_power_76",
+              "refId": 776,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1001,13 +1041,15 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
@@ -1025,7 +1067,7 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 765
+          "result": 773
         }
       },
       "refTPId": null
@@ -1035,9 +1077,9 @@
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis",
       "args": {
-        "xIN": 765,
+        "xIN": 773,
         "yIN": [
-          766
+          774
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -1051,9 +1093,9 @@
         "corrMaxLag": 0,
         "preProcesses": [],
         "out": {
-          "766_period": 767,
-          "766_power": 768,
-          "rhythmicityy_766": 769
+          "774_period": 775,
+          "774_power": 776,
+          "rhythmicityy_774": 777
         }
       },
       "refTPId": null
@@ -1064,7 +1106,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_69",
+      "id": "note_70",
       "text": "Runs a spectral / periodicity analysis over the series and reports the dominant period and its strength. Choose the method: a periodogram (Lomb-Scargle by default, which tolerates uneven sampling and gaps; chi-squared or Enright also available), a Fourier transform (FFT), or an autocorrelogram. Use it to detect whether a rhythm is present and to estimate its period without assuming a waveform. In the demo, read the output spectrum: a clear peak marks the dominant period, its height is the power/magnitude, and (for chi-squared) the significance line shows whether it exceeds chance. Lomb-Scargle periodogram (Lomb 1976; Scargle 1982).",
       "x": 40,
       "y": 24,
@@ -1075,8 +1117,30 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_766": {
+    "data_774": {
       "x": 60,
       "y": 314
     },
@@ -1088,15 +1152,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_127": {
+    "plot_129": {
       "x": 820,
       "y": 314
     },
-    "plot_128": {
+    "plot_130": {
       "x": 820,
       "y": 814
     },
-    "note_69": {
+    "note_70": {
       "x": 40,
       "y": 24
     }
@@ -1137,6 +1201,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -1158,5 +1223,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

@@ -5370,6 +5370,59 @@ def shapiro_wilk(values):
     return {"statistic": float(res.statistic), "pvalue": float(res.pvalue), "n": n}
 
 
+def qq_points(values, confidence=0.95):
+    """scipy reference for utils/qq.js qqPoints (normal Q-Q computation).
+
+    Positions are computed EXPLICITLY as Blom, (i - 3/8)/(n + 1/4) —
+    scipy.stats.probplot defaults to Filliben, which is deliberately NOT what
+    the JS uses (Blom matches the Shapiro-Wilk m-value convention in
+    utils/normality.js). Theoretical quantiles via scipy's norm.ppf, quartiles
+    via np.quantile's default linear (type-7) interpolation, reference line
+    through the quartile pair (R's qqline), pointwise envelope per car::qqPlot:
+    SE_i = (slope / pdf(z_i)) * sqrt(p_i (1 - p_i) / n).
+    """
+    x = sorted(_clean_numeric(values))
+    n = len(x)
+    if n < 3:
+        return {"theoretical": [], "sample": [], "linePar": [float("nan")] * 2,
+                "bandLo": [], "bandHi": []}
+    i = np.arange(1, n + 1)
+    positions = (i - 0.375) / (n + 0.25)
+    theoretical = sp_stats.norm.ppf(positions)
+    sample = np.asarray(x, dtype=float)
+    z_q1, z_q3 = sp_stats.norm.ppf([0.25, 0.75])
+    s_q1, s_q3 = np.quantile(sample, [0.25, 0.75])  # linear / type-7 default
+    slope = (s_q3 - s_q1) / (z_q3 - z_q1)
+    intercept = s_q1 - slope * z_q1
+    z_crit = sp_stats.norm.ppf(1 - (1 - confidence) / 2)
+    fit = intercept + slope * theoretical
+    se = (slope / sp_stats.norm.pdf(theoretical)) * np.sqrt(positions * (1 - positions) / n)
+    return {
+        "theoretical": theoretical.tolist(),
+        "sample": sample.tolist(),
+        "linePar": [float(slope), float(intercept)],
+        "bandLo": (fit - z_crit * se).tolist(),
+        "bandHi": (fit + z_crit * se).tolist(),
+    }
+
+
+def qq_correlation(values):
+    """scipy.stats.pearsonr reference for utils/qq.js qqCorrelation — the
+    probability-plot correlation the Q-Q plot displays (and its qq_r metric
+    column). Filliben's statistic computed on BLOM positions, (i - 3/8)/(n +
+    1/4), NOT Filliben's own positions: deliberately the same quantiles the
+    plot draws (see qq_points). Undefined cases (n < 3, constant data) return
+    r = None, matching the JS null."""
+    x = sorted(_clean_numeric(values))
+    n = len(x)
+    if n < 3 or len(set(x)) < 2:
+        return {"r": None, "n": n}
+    i = np.arange(1, n + 1)
+    theoretical = sp_stats.norm.ppf((i - 0.375) / (n + 0.25))
+    r = sp_stats.pearsonr(theoretical, np.asarray(x, dtype=float)).statistic
+    return {"r": float(r), "n": n}
+
+
 def d_agostino(values):
     """scipy.stats.normaltest reference for utils/normality.js dAgostino."""
     x = _clean_numeric(values)

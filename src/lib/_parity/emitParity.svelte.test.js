@@ -46,6 +46,7 @@ import {
 import { correlate, correlationCI } from '$lib/utils/correlation.js';
 import { describeStats } from '$lib/utils/describeStats.js';
 import { shapiroWilk, dAgostino, jarqueBera } from '$lib/utils/normality.js';
+import { qqPoints } from '$lib/utils/qq.js';
 import { crossCorrelation } from '$lib/utils/crossCorrelation.js';
 import { chiSquareGoodnessOfFit, chiSquareIndependence } from '$lib/utils/chisquare.js';
 import { logisticRegression } from '$lib/utils/logistic.js';
@@ -114,6 +115,24 @@ const PURE_UTIL_FNS = {
 	shapiroWilk,
 	dAgostino,
 	jarqueBera,
+	// Flatten the nested {line, band} shape into named arrays for compareArrays.
+	// jsArgs = [confidence].
+	qqPoints: (values, confidence) => {
+		const q = qqPoints(values, { confidence });
+		return {
+			theoretical: q.theoretical,
+			sample: q.sample,
+			linePar: [q.line.slope, q.line.intercept],
+			bandLo: q.band.lo,
+			bandHi: q.band.hi
+		};
+	},
+	// The probability-plot correlation r the Q-Q plot displays (and emits as its
+	// qq_r metric column), plus the clean-value count n it was computed on.
+	qqCorrelation: (values) => {
+		const q = qqPoints(values);
+		return { r: q.r, n: q.n };
+	},
 	crossCorrelation: crossCorrelationAdapter,
 	chiSquareGoodnessOfFit,
 	chiSquareIndependence,

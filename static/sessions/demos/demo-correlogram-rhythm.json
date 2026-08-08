@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "498": [
+    "502": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "499": [
+    "503": [
       96.80303970146284,
       90.24703944100128,
       90.63500417308552,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 498,
+      "id": 502,
       "name": "hour",
-      "data": 498,
+      "data": 502,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 499,
+      "id": 503,
       "name": "activity",
-      "data": 499,
+      "data": 503,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 72,
+      "id": 73,
       "name": "Activity correlogram",
       "x": 60,
       "y": 60,
@@ -381,6 +381,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "laglimsIN": [
           null,
@@ -411,9 +429,9 @@
         "data": [
           {
             "x": {
-              "id": 500,
+              "id": 504,
               "name": "hour",
-              "refId": 498,
+              "refId": 502,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +440,9 @@
               "processes": []
             },
             "y": {
-              "id": 501,
+              "id": 505,
               "name": "activity",
-              "refId": 499,
+              "refId": 503,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -433,21 +451,21 @@
               "processes": []
             },
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 3,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "confidenceLine": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 1,
               "stroke": "5,5",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 4,
               "shape": "circle",
               "draw": true
@@ -467,7 +485,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_32",
+      "id": "note_33",
       "text": "Plots the autocorrelation of a series against lag (or the cross-correlation between two series). A rhythmic signal produces a decaying wave whose first strong positive peak away from zero lag estimates the period. Use it as a robust complement to the periodogram. See the Correlograms chapter.",
       "x": 40,
       "y": 24,
@@ -478,20 +496,42 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_498": {
+    "data_502": {
       "x": 60,
       "y": 314
     },
-    "data_499": {
+    "data_503": {
       "x": 60,
       "y": 814
     },
-    "note_32": {
+    "note_33": {
       "x": 40,
       "y": 24
     },
-    "plot_72": {
+    "plot_73": {
       "x": 820,
       "y": 314
     }
@@ -532,6 +572,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -553,5 +594,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

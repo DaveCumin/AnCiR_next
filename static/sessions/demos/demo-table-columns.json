@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "522": [
+    "530": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "523": [
+    "531": [
       50,
       60,
       70,
@@ -100,7 +100,7 @@
       30,
       40
     ],
-    "524": [
+    "532": [
       30,
       30,
       29,
@@ -153,9 +153,9 @@
   },
   "data": [
     {
-      "id": 522,
+      "id": 530,
       "name": "hour",
-      "data": 522,
+      "data": 530,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -164,9 +164,9 @@
       "processes": []
     },
     {
-      "id": 523,
+      "id": 531,
       "name": "signalA",
-      "data": 523,
+      "data": 531,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -175,9 +175,9 @@
       "processes": []
     },
     {
-      "id": 524,
+      "id": 532,
       "name": "signalB",
-      "data": 524,
+      "data": 532,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -188,7 +188,7 @@
   ],
   "plots": [
     {
-      "id": 76,
+      "id": 78,
       "name": "Signal table",
       "x": 60,
       "y": 60,
@@ -202,11 +202,29 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          522,
-          523,
-          524
+          530,
+          531,
+          532
         ],
         "showCol": [
           true,
@@ -226,7 +244,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_34",
+      "id": "note_35",
       "text": "Renders selected columns (or their summary statistics) as a plain data table for inspection and export. Use it to read exact values, sanity-check a transform's output, or present computed metrics. The demo shows the chosen columns laid out in rows and columns.",
       "x": 40,
       "y": 24,
@@ -237,24 +255,46 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_522": {
+    "data_530": {
       "x": 60,
       "y": 314
     },
-    "data_523": {
+    "data_531": {
       "x": 60,
       "y": 814
     },
-    "data_524": {
+    "data_532": {
       "x": 60,
       "y": 1314
     },
-    "note_34": {
+    "note_35": {
       "x": 40,
       "y": 24
     },
-    "plot_76": {
+    "plot_78": {
       "x": 820,
       "y": 314
     }
@@ -295,6 +335,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -316,5 +357,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

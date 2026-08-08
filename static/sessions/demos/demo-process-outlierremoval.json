@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "561": [
+    "569": [
       0,
       1,
       2,
@@ -53,7 +53,7 @@
       49,
       50
     ],
-    "562": [
+    "570": [
       0,
       1,
       2,
@@ -109,20 +109,20 @@
   },
   "data": [
     {
-      "id": 561,
+      "id": 569,
       "name": "x",
-      "data": 561,
+      "data": 569,
       "type": "number",
-      "tableProcessGUId": "b5288d5f-965b-43ec-b7bf-31f4ed10fa87",
+      "tableProcessGUId": "9d29fa33-be04-486f-b658-17597ddd4072",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 562,
+      "id": 570,
       "name": "y",
-      "data": 562,
+      "data": 570,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,20 +131,20 @@
       "processes": []
     },
     {
-      "id": 563,
+      "id": 571,
       "name": "Remove Outliers result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_5",
-      "producerPort": "out_562",
+      "producerPort": "out_570",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 87,
+      "id": 89,
       "name": "Remove Outliers: before vs after",
       "x": 60,
       "y": 60,
@@ -158,12 +158,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -201,9 +220,9 @@
         "data": [
           {
             "x": {
-              "id": 564,
+              "id": 572,
               "name": "x",
-              "refId": 561,
+              "refId": 569,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -212,9 +231,9 @@
               "processes": []
             },
             "y": {
-              "id": 565,
+              "id": 573,
               "name": "y",
-              "refId": 562,
+              "refId": 570,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -225,14 +244,14 @@
             "label": "Before",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -240,9 +259,9 @@
           },
           {
             "x": {
-              "id": 566,
+              "id": 574,
               "name": "x",
-              "refId": 561,
+              "refId": 569,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -251,9 +270,9 @@
               "processes": []
             },
             "y": {
-              "id": 567,
+              "id": 575,
               "name": "Remove Outliers result",
-              "refId": 563,
+              "refId": 571,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -264,14 +283,14 @@
             "label": "After",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -281,19 +300,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 88,
+      "id": 90,
       "name": "Remove Outliers: values",
       "x": 630,
       "y": 60,
@@ -307,10 +328,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          562,
-          563
+          570,
+          571
         ],
         "showCol": [
           true,
@@ -335,7 +374,7 @@
         "count": 51,
         "end": 50,
         "out": {
-          "result": 561
+          "result": 569
         }
       },
       "refTPId": null
@@ -346,7 +385,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_40",
+      "id": "note_41",
       "text": "Flags extreme values and replaces them with blanks, using either a z-score threshold (default |z| > 3) or Tukey's IQR fence (Q1 - k·IQR, Q3 + k·IQR, default k = 1.5). Use it to stop a handful of spikes dominating fits and spectra. The demo shows the flagged points removed while the rest of the series is preserved.\n\nTukey, J.W. (1977) Exploratory Data Analysis.",
       "x": 40,
       "y": 24,
@@ -365,13 +404,35 @@
         "iqrMultiplier": 1.5,
         "zThreshold": 3,
         "inIN": [
-          562
+          570
         ]
       }
     }
   ],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_562": {
+    "data_570": {
       "x": 60,
       "y": 314
     },
@@ -383,15 +444,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_87": {
+    "plot_89": {
       "x": 820,
       "y": 314
     },
-    "plot_88": {
+    "plot_90": {
       "x": 820,
       "y": 814
     },
-    "note_40": {
+    "note_41": {
       "x": 40,
       "y": 24
     }
@@ -432,6 +493,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -453,5 +515,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

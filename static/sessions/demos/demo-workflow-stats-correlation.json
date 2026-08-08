@@ -517,7 +517,7 @@
       "name": "variable_13",
       "data": 170,
       "type": "category",
-      "tableProcessGUId": "7453163c-a53b-4a5a-a6f1-0a3ab5e9032b",
+      "tableProcessGUId": "cde1c05b-1b08-4c8c-830c-5f23f9734ad4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -528,7 +528,7 @@
       "name": "n_13",
       "data": 171,
       "type": "number",
-      "tableProcessGUId": "7453163c-a53b-4a5a-a6f1-0a3ab5e9032b",
+      "tableProcessGUId": "cde1c05b-1b08-4c8c-830c-5f23f9734ad4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -539,7 +539,7 @@
       "name": "mean_13",
       "data": 172,
       "type": "number",
-      "tableProcessGUId": "7453163c-a53b-4a5a-a6f1-0a3ab5e9032b",
+      "tableProcessGUId": "cde1c05b-1b08-4c8c-830c-5f23f9734ad4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -550,7 +550,7 @@
       "name": "sd_13",
       "data": 173,
       "type": "number",
-      "tableProcessGUId": "7453163c-a53b-4a5a-a6f1-0a3ab5e9032b",
+      "tableProcessGUId": "cde1c05b-1b08-4c8c-830c-5f23f9734ad4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -561,7 +561,7 @@
       "name": "skewness_13",
       "data": 174,
       "type": "number",
-      "tableProcessGUId": "7453163c-a53b-4a5a-a6f1-0a3ab5e9032b",
+      "tableProcessGUId": "cde1c05b-1b08-4c8c-830c-5f23f9734ad4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -572,7 +572,7 @@
       "name": "var_i_14",
       "data": 175,
       "type": "category",
-      "tableProcessGUId": "fe99b87e-c2f2-4fac-a709-4f340c94e7dc",
+      "tableProcessGUId": "5e9cc932-893b-4f00-81f8-935ce30f245f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -583,7 +583,7 @@
       "name": "var_j_14",
       "data": 176,
       "type": "category",
-      "tableProcessGUId": "fe99b87e-c2f2-4fac-a709-4f340c94e7dc",
+      "tableProcessGUId": "5e9cc932-893b-4f00-81f8-935ce30f245f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -594,7 +594,7 @@
       "name": "r_14",
       "data": 177,
       "type": "number",
-      "tableProcessGUId": "fe99b87e-c2f2-4fac-a709-4f340c94e7dc",
+      "tableProcessGUId": "5e9cc932-893b-4f00-81f8-935ce30f245f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -605,7 +605,7 @@
       "name": "pvalue_14",
       "data": 178,
       "type": "number",
-      "tableProcessGUId": "fe99b87e-c2f2-4fac-a709-4f340c94e7dc",
+      "tableProcessGUId": "5e9cc932-893b-4f00-81f8-935ce30f245f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -616,7 +616,7 @@
       "name": "n_14",
       "data": 179,
       "type": "number",
-      "tableProcessGUId": "fe99b87e-c2f2-4fac-a709-4f340c94e7dc",
+      "tableProcessGUId": "5e9cc932-893b-4f00-81f8-935ce30f245f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -639,6 +639,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "padding": {
           "top": 20,
@@ -733,6 +751,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "padding": {
           "top": 24,
@@ -828,6 +864,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
           175,
@@ -914,6 +968,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "data_165": {
       "x": 60,
@@ -996,6 +1072,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -1017,5 +1094,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

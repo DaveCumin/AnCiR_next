@@ -15,6 +15,7 @@
 // result and must never stand in for "couldn't compute".
 import { pUpperFromF } from './fdist.js';
 import { validPairs } from './validPairs.js';
+import { normalQuantile } from './qq.js';
 
 /**
  * Average (fractional) ranks, 1-based. Ties share the mean of the ranks they span, which is
@@ -155,49 +156,9 @@ export function correlationCI(r, n, method = 'pearson', confidence = 0.95) {
 	return [Math.tanh(z - zCrit * se), Math.tanh(z + zCrit * se)];
 }
 
-/**
- * Standard-normal quantile (inverse CDF), Acklam's rational approximation.
- * Accurate to ~1.15e-9 across the range, which is far beyond what a confidence
- * bound needs. Kept local: the D13 policy reserves @stdlib for distributions
- * the app leans on heavily, and this is one scalar in one place.
- */
-function normalQuantile(p) {
-	if (!(p > 0 && p < 1)) return NaN;
-	const a = [
-		-3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.38357751867269e2,
-		-3.066479806614716e1, 2.506628277459239
-	];
-	const b = [
-		-5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2, 6.680131188771972e1,
-		-1.328068155288572e1
-	];
-	const c = [
-		-7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838, -2.549732539343734,
-		4.374664141464968, 2.938163982698783
-	];
-	const d = [7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996, 3.754408661907416];
-	const pLow = 0.02425;
-	let q;
-	let x;
-	if (p < pLow) {
-		q = Math.sqrt(-2 * Math.log(p));
-		x =
-			(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-			((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
-	} else if (p <= 1 - pLow) {
-		q = p - 0.5;
-		const r2 = q * q;
-		x =
-			((((((a[0] * r2 + a[1]) * r2 + a[2]) * r2 + a[3]) * r2 + a[4]) * r2 + a[5]) * q) /
-			(((((b[0] * r2 + b[1]) * r2 + b[2]) * r2 + b[3]) * r2 + b[4]) * r2 + 1);
-	} else {
-		q = Math.sqrt(-2 * Math.log(1 - p));
-		x =
-			-(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-			((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
-	}
-	return x;
-}
+// Standard-normal quantile (inverse CDF): the single shared Acklam
+// implementation lives in utils/qq.js (imported at top); it used to be a
+// module-private duplicate here.
 
 export function correlationMatrix(columns, names, method = 'pearson') {
 	const cols = columns ?? [];

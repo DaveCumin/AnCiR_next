@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "822": [
+    "830": [
       0,
       1,
       2,
@@ -98,7 +98,7 @@
       94,
       95
     ],
-    "823": [
+    "831": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -196,7 +196,7 @@
       15.358983848622422,
       11.362966948437233
     ],
-    "824": [
+    "832": [
       0.5,
       1.5,
       2.5,
@@ -222,7 +222,7 @@
       22.5,
       23.5
     ],
-    "825": [
+    "833": [
       10,
       11.362966948437267,
       15.358983848622461,
@@ -251,9 +251,9 @@
   },
   "data": [
     {
-      "id": 822,
+      "id": 830,
       "name": "Average Profile input 1",
-      "data": 822,
+      "data": 830,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -262,9 +262,9 @@
       "processes": []
     },
     {
-      "id": 823,
+      "id": 831,
       "name": "Average Profile input 2",
-      "data": 823,
+      "data": 831,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -273,22 +273,22 @@
       "processes": []
     },
     {
-      "id": 824,
+      "id": 832,
       "name": "avgprofx_87",
-      "data": 824,
+      "data": 832,
       "type": "number",
-      "tableProcessGUId": "5ff781a8-d2f4-402b-bb6b-958787f9aae1",
+      "tableProcessGUId": "7aaa5d2f-f50b-46b4-a5f3-da91c3711c09",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 825,
-      "name": "avgprof_823_87",
-      "data": 825,
+      "id": 833,
+      "name": "avgprof_831_87",
+      "data": 833,
       "type": "number",
-      "tableProcessGUId": "5ff781a8-d2f4-402b-bb6b-958787f9aae1",
+      "tableProcessGUId": "7aaa5d2f-f50b-46b4-a5f3-da91c3711c09",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -297,7 +297,7 @@
   ],
   "plots": [
     {
-      "id": 140,
+      "id": 142,
       "name": "Average Profile result",
       "x": 60,
       "y": 60,
@@ -311,12 +311,30 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          822,
-          823,
-          824,
-          825
+          830,
+          831,
+          832,
+          833
         ],
         "showCol": [
           true,
@@ -337,16 +355,16 @@
       "name": "AverageProfile",
       "displayName": "Average Profile",
       "args": {
-        "xIN": 822,
+        "xIN": 830,
         "yIN": [
-          823
+          831
         ],
         "period": 24,
         "nBins": 24,
         "preProcesses": [],
         "out": {
-          "avgprofx": 824,
-          "avgprof_823": 825
+          "avgprofx": 832,
+          "avgprof_831": 833
         }
       },
       "refTPId": null
@@ -357,7 +375,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_78",
+      "id": "note_79",
       "text": "Folds a series onto one period (default 24 h) and reports the mean value in each phase bin with its standard error, giving the 'average day' or mean waveform of the record. Use it to visualise the typical shape and timing of a rhythm across many cycles and to smooth out day-to-day noise before or alongside a parametric fit. In the demo, read each point as the across-days mean at that time-of-day and the error bars as the SEM: a clear peak-and-trough shape marks a robust rhythm, while flat bins with wide bars indicate weak or noisy rhythmicity. Mean-waveform folding (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
@@ -368,12 +386,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_822": {
+    "data_830": {
       "x": 60,
       "y": 314
     },
-    "data_823": {
+    "data_831": {
       "x": 60,
       "y": 814
     },
@@ -381,11 +421,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_140": {
+    "plot_142": {
       "x": 820,
       "y": 314
     },
-    "note_78": {
+    "note_79": {
       "x": 40,
       "y": 24
     }
@@ -426,6 +466,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -447,5 +488,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

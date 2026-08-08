@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "553": [
+    "561": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "554": [
+    "562": [
       0,
       1,
       2,
@@ -104,7 +104,7 @@
       48,
       49
     ],
-    "555": [
+    "563": [
       0,
       1,
       2,
@@ -159,20 +159,20 @@
   },
   "data": [
     {
-      "id": 553,
+      "id": 561,
       "name": "x",
-      "data": 553,
+      "data": 561,
       "type": "number",
-      "tableProcessGUId": "64af0fa0-c590-4799-8ca8-13f271b77971",
+      "tableProcessGUId": "25aff5fd-0941-47ca-825a-8d73a5ab3d74",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 554,
+      "id": 562,
       "name": "y",
-      "data": 554,
+      "data": 562,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,9 +181,9 @@
       "processes": []
     },
     {
-      "id": 555,
+      "id": 563,
       "name": "reference",
-      "data": 555,
+      "data": 563,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -192,20 +192,20 @@
       "processes": []
     },
     {
-      "id": 556,
+      "id": 564,
       "name": "Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_4",
-      "producerPort": "out_554",
+      "producerPort": "out_562",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 85,
+      "id": 87,
       "name": "Filter: before vs after",
       "x": 60,
       "y": 60,
@@ -219,12 +219,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -262,9 +281,9 @@
         "data": [
           {
             "x": {
-              "id": 557,
+              "id": 565,
               "name": "x",
-              "refId": 553,
+              "refId": 561,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -273,9 +292,9 @@
               "processes": []
             },
             "y": {
-              "id": 558,
+              "id": 566,
               "name": "y",
-              "refId": 554,
+              "refId": 562,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -286,14 +305,14 @@
             "label": "Before",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -301,9 +320,9 @@
           },
           {
             "x": {
-              "id": 559,
+              "id": 567,
               "name": "x",
-              "refId": 553,
+              "refId": 561,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -312,9 +331,9 @@
               "processes": []
             },
             "y": {
-              "id": 560,
+              "id": 568,
               "name": "Filter result",
-              "refId": 556,
+              "refId": 564,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -325,14 +344,14 @@
             "label": "After",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -342,19 +361,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 86,
+      "id": 88,
       "name": "Filter: values",
       "x": 630,
       "y": 60,
@@ -368,10 +389,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          554,
-          556
+          562,
+          564
         ],
         "showCol": [
           true,
@@ -396,7 +435,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 553
+          "result": 561
         }
       },
       "refTPId": null
@@ -407,7 +446,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_39",
+      "id": "note_40",
       "text": "Keeps or drops rows according to conditions tested on another column (==, !=, >, <, includes, etc.), so you can subset one column using a grouping or flag column. Combine several conditions to narrow the selection. The demo shows the output retaining only the rows that satisfy the condition.",
       "x": 40,
       "y": 24,
@@ -424,24 +463,46 @@
       "args": {
         "conditions": [
           {
-            "byColId": 555,
+            "byColId": 563,
             "isOperator": ">",
             "byColValue": 2
           }
         ],
         "inIN": [
-          554
+          562
         ],
-        "parentColId": 554
+        "parentColId": 562
       }
     }
   ],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_554": {
+    "data_562": {
       "x": 60,
       "y": 314
     },
-    "data_555": {
+    "data_563": {
       "x": 60,
       "y": 814
     },
@@ -453,15 +514,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_85": {
+    "plot_87": {
       "x": 820,
       "y": 314
     },
-    "plot_86": {
+    "plot_88": {
       "x": 820,
       "y": 814
     },
-    "note_39": {
+    "note_40": {
       "x": 40,
       "y": 24
     }
@@ -502,6 +563,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -523,5 +585,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

@@ -452,7 +452,7 @@
       "name": "term_17",
       "data": 213,
       "type": "category",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -463,7 +463,7 @@
       "name": "coef_17",
       "data": 214,
       "type": "number",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -474,7 +474,7 @@
       "name": "se_17",
       "data": 215,
       "type": "number",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -485,7 +485,7 @@
       "name": "z_17",
       "data": 216,
       "type": "number",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -496,7 +496,7 @@
       "name": "pvalue_17",
       "data": 217,
       "type": "number",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -507,7 +507,7 @@
       "name": "oddsRatio_17",
       "data": 218,
       "type": "number",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -518,7 +518,7 @@
       "name": "ciLow_17",
       "data": 219,
       "type": "number",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -529,7 +529,7 @@
       "name": "ciHigh_17",
       "data": 220,
       "type": "number",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -540,7 +540,7 @@
       "name": "outcome_17",
       "data": 221,
       "type": "number",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -551,7 +551,7 @@
       "name": "eta_17",
       "data": 222,
       "type": "number",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -562,7 +562,7 @@
       "name": "fitted_17",
       "data": 223,
       "type": "number",
-      "tableProcessGUId": "ebf71665-9baf-4424-b1d0-a52599dc6100",
+      "tableProcessGUId": "9cf65110-7d4f-496f-8fa4-604e07f5caa2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -585,12 +585,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -652,14 +671,14 @@
             "label": "observed outcome",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -691,14 +710,14 @@
             "label": "fitted P(y=1)",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -708,13 +727,15 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
@@ -734,6 +755,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
           213,
@@ -799,6 +838,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "data_210": {
       "x": 60,
@@ -865,6 +926,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -886,5 +948,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

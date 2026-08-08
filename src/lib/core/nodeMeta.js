@@ -448,7 +448,8 @@ const meta = new Map([
 		{
 			family: 'Plots',
 			nodeIcon: 'boxplot',
-			description: 'Boxplot summarising the distribution of a column by group.'
+			description:
+				'Boxplot summarising the distribution of a column by group, with optional violin (kernel density) overlay and jittered data points; the box can be hidden for a pure violin plot.'
 		}
 	],
 	[
@@ -474,6 +475,15 @@ const meta = new Map([
 			nodeIcon: 'heatmap',
 			description:
 				'Scatterplot matrix (pairs.panels): histograms on the diagonal, scatter + fit above, correlation below.'
+		}
+	],
+	[
+		'qqplot',
+		{
+			family: 'Plots',
+			nodeIcon: 'scatterplot',
+			description:
+				'Normal Q-Q plot: sample vs theoretical quantiles, with a quartile reference line and confidence envelope.'
 		}
 	],
 	[

@@ -802,7 +802,10 @@
 </script>
 
 <svelte:head>
-	<title>AnCiR {appConsts.version}</title>
+	<!-- Keep this in step with the static <title> in src/app.html: once the bundle
+	     boots this replaces it, so it must stay descriptive (and not shrink back to
+	     the bare product name) for JS-rendering crawlers. -->
+	<title>AnCiR {appConsts.version}: Circadian Rhythm and Time-Series Data Analysis</title>
 </svelte:head>
 
 {#if appState.showWorkflow}

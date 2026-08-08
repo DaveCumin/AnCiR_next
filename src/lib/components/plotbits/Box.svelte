@@ -18,6 +18,8 @@
 		outlierRemovalMethodDisplay,
 		outlierRemovalMethodOptions
 	} from '$lib/processes/OutlierRemoval.svelte';
+	import { jitterOffset } from '$lib/components/plotbits/helpers/jitter.js';
+	import { darkenColour } from '$lib/components/plotbits/helpers/colourShade.js';
 
 	export const boxplotDefaultOutlierMethod = 'iqr';
 	const boxplotOutlierMethodOptions = [...outlierRemovalMethodOptions];
@@ -41,7 +43,15 @@
 		set colour(v) {
 			this.#explicitColour = v;
 		}
-		fillColour = $state(getPaletteColor(0));
+		// Fill: same read-time resolution as `colour` above — resolving it in the
+		// constructor snapshotted the pre-wiring fallback (palette colour 0) for EVERY series.
+		#explicitFill = $state(null);
+		get fillColour() {
+			return this.#explicitFill ?? this.colour;
+		}
+		set fillColour(v) {
+			this.#explicitFill = v;
+		}
 		fillOpacity = $state(0.3);
 		strokeWidth = $state(2);
 		stroke = $state('solid');
@@ -73,12 +83,17 @@
 				typeof dataIN?.colour === 'string' && dataIN.colour !== getPaletteColor(autoIndex)
 					? dataIN.colour
 					: null;
-			// Fill follows the STROKE, which is already pinned to the column above. It used
-			// to be getPaletteColor(parent.parentPlot.data.length): positional, so it shifted
-			// as series were added and differed between plots showing the same data — exactly
-			// the bug the pinning was built to remove, missed in the fill. fill-opacity
-			// already separates fill from stroke visually, so they can share a colour.
-			this.fillColour = dataIN?.fillColour ?? this.colour ?? getPaletteColor(0);
+			// Fill follows the STROKE, which is already pinned to the column above.
+			// ADOPTION mirrors the stroke's rule: a saved fill equal to what the old bug
+			// (`palette[0]`, frozen in the constructor pre-wiring) or the old positional
+			// rule would have produced is released to track the column; anything else is
+			// a deliberate override and kept.
+			this.#explicitFill =
+				typeof dataIN?.fillColour === 'string' &&
+				dataIN.fillColour !== getPaletteColor(0) &&
+				dataIN.fillColour !== getPaletteColor(autoIndex)
+					? dataIN.fillColour
+					: null;
 			this.fillOpacity = dataIN?.fillOpacity ?? 0.3;
 			this.strokeWidth = dataIN?.strokeWidth ?? 2;
 			this.stroke = dataIN?.stroke ?? 'solid';
@@ -210,6 +225,18 @@
 		seriesIndex = 0,
 		totalSeries = 1,
 		dodgeEnabled = true,
+		// Overlay the raw data points on each box, horizontally jittered. Plot-level
+		// options (Boxplotclass.showPoints / pointJitter / pointSize / pointOpacity)
+		// passed down as props.
+		showPoints = false,
+		pointJitter = 0.35,
+		pointSize = 2.5,
+		pointOpacity = 0.6,
+		pointColour = null,
+		// Plot-level toggle (Boxplotclass.showBox): with the violin overlay on, a
+		// violin-only display needs the box geometry (whiskers, box, median,
+		// outlier rings) to hide while the jittered points can stay.
+		showBox = true,
 		title = 'Box Plot'
 	} = $props();
 
@@ -254,7 +281,8 @@
 					zThreshold: boxPlotData?.zThreshold
 				});
 				if (!stats) return null;
-				return { category, ...stats };
+				// Keep the raw (valid) values so the showPoints overlay can draw them.
+				return { category, values: values.filter((v) => v != null && !isNaN(v)), ...stats };
 			})
 			.filter(Boolean);
 	});
@@ -439,6 +467,7 @@
 				{@const boxColour = categoryColour ?? boxPlotData.colour}
 				{@const boxFill = categoryColour ?? boxPlotData.fillColour}
 
+				{#if showBox}
 				<!-- Lower whisker -->
 				<line
 					x1={xCenter}
@@ -509,6 +538,27 @@
 							fill="none"
 							stroke={boxColour}
 							stroke-width={boxPlotData.strokeWidth}
+						/>
+					{/each}
+				{/if}
+				{/if}
+
+				<!-- Raw data points, horizontally jittered. Deterministic per point (see
+				     helpers/jitter.js) so re-renders and reloaded sessions draw identically.
+				     Inside the clipped <g>, so they respect the y limits exactly as the
+				     boxes do. Drawn LAST in the group — above the box fill, median line
+				     and outlier rings — with a darker same-hue stroke so semi-transparent
+				     points still read against a fill of the same colour. -->
+				{#if showPoints}
+					{#each group.values as value, vi}
+						<circle
+							cx={xCenter + jitterOffset(seriesIndex, categoryIdx, vi) * boxHalfWidth * pointJitter}
+							cy={yscale(value)}
+							r={pointSize}
+							fill={pointColour ?? boxColour}
+							fill-opacity={pointOpacity}
+							stroke={darkenColour(pointColour ?? boxColour, 0.35)}
+							stroke-width={0.8}
 						/>
 					{/each}
 				{/if}

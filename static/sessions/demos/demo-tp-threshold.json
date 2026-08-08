@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "615": [
+    "623": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "616": [
+    "624": [
       1,
       1,
       1,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 615,
+      "id": 623,
       "name": "Threshold input",
-      "data": 615,
+      "data": 623,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,11 +118,11 @@
       "processes": []
     },
     {
-      "id": 616,
+      "id": 624,
       "name": "binary_52",
-      "data": 616,
+      "data": 624,
       "type": "number",
-      "tableProcessGUId": "6f0a97ef-8ac8-4ef5-a52b-780c39f559a1",
+      "tableProcessGUId": "7e1bd635-805c-417d-b8c7-732723796c47",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -131,7 +131,7 @@
   ],
   "plots": [
     {
-      "id": 103,
+      "id": 105,
       "name": "Threshold result",
       "x": 60,
       "y": 60,
@@ -145,10 +145,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          615,
-          616
+          623,
+          624
         ],
         "showCol": [
           true,
@@ -167,11 +185,11 @@
       "name": "Threshold",
       "displayName": "Threshold",
       "args": {
-        "xIN": 615,
+        "xIN": 623,
         "threshold": 0,
         "comparison": ">=",
         "out": {
-          "binary": 616
+          "binary": 624
         }
       },
       "refTPId": null
@@ -182,7 +200,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_51",
+      "id": "note_52",
       "text": "Turns a continuous column into a 0/1 (binary) column at a cutoff you set, choosing which side of the threshold counts as 1 (>, ≥, <, ≤). Missing values stay missing. The usual use is making a binary outcome for logistic regression, but it also flags events (e.g. \"activity above baseline\").",
       "x": 40,
       "y": 24,
@@ -193,8 +211,30 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_615": {
+    "data_623": {
       "x": 60,
       "y": 314
     },
@@ -202,11 +242,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_103": {
+    "plot_105": {
       "x": 820,
       "y": 314
     },
-    "note_51": {
+    "note_52": {
       "x": 40,
       "y": 24
     }
@@ -247,6 +287,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -268,5 +309,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

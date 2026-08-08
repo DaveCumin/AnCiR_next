@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "539": [
+    "547": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "540": [
+    "548": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 539,
+      "id": 547,
       "name": "x",
-      "data": 539,
+      "data": 547,
       "type": "number",
-      "tableProcessGUId": "b49e4f47-a39e-4b62-b3d0-307f60b00205",
+      "tableProcessGUId": "80dd76a8-d122-48e5-816b-a6cd3341150a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 540,
+      "id": 548,
       "name": "y",
-      "data": 540,
+      "data": 548,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 541,
+      "id": 549,
       "name": "Multiply result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_2",
-      "producerPort": "out_540",
+      "producerPort": "out_548",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 81,
+      "id": 83,
       "name": "Multiply: before vs after",
       "x": 60,
       "y": 60,
@@ -156,12 +156,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -199,9 +218,9 @@
         "data": [
           {
             "x": {
-              "id": 542,
+              "id": 550,
               "name": "x",
-              "refId": 539,
+              "refId": 547,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +229,9 @@
               "processes": []
             },
             "y": {
-              "id": 543,
+              "id": 551,
               "name": "y",
-              "refId": 540,
+              "refId": 548,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -223,14 +242,14 @@
             "label": "Before",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -238,9 +257,9 @@
           },
           {
             "x": {
-              "id": 544,
+              "id": 552,
               "name": "x",
-              "refId": 539,
+              "refId": 547,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +268,9 @@
               "processes": []
             },
             "y": {
-              "id": 545,
+              "id": 553,
               "name": "Multiply result",
-              "refId": 541,
+              "refId": 549,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -262,14 +281,14 @@
             "label": "After",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -279,19 +298,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 82,
+      "id": 84,
       "name": "Multiply: values",
       "x": 630,
       "y": 60,
@@ -305,10 +326,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          540,
-          541
+          548,
+          549
         ],
         "showCol": [
           true,
@@ -333,7 +372,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 539
+          "result": 547
         }
       },
       "refTPId": null
@@ -344,7 +383,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_37",
+      "id": "note_38",
       "text": "Multiplies every value in the input column by a constant (or another column), element-by-element. Use it for unit conversions, scaling, or rescaling a signal. The demo shows the output column scaled relative to the input.",
       "x": 40,
       "y": 24,
@@ -361,13 +400,35 @@
       "args": {
         "value": 2,
         "inIN": [
-          540
+          548
         ]
       }
     }
   ],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_540": {
+    "data_548": {
       "x": 60,
       "y": 314
     },
@@ -379,15 +440,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_81": {
+    "plot_83": {
       "x": 820,
       "y": 314
     },
-    "plot_82": {
+    "plot_84": {
       "x": 820,
       "y": 814
     },
-    "note_37": {
+    "note_38": {
       "x": 40,
       "y": 24
     }
@@ -428,6 +489,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -449,5 +511,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

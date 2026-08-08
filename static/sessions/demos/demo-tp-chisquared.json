@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "706": [
+    "714": [
       "ctrl",
       "drug",
       "ctrl",
@@ -92,7 +92,7 @@
       "ctrl",
       "drug"
     ],
-    "707": [
+    "715": [
       "responder",
       "non-responder",
       "non-responder",
@@ -184,30 +184,30 @@
       "non-responder",
       "non-responder"
     ],
-    "708": [
+    "716": [
       0
     ],
-    "709": [
+    "717": [
       1
     ],
-    "710": [
+    "718": [
       1
     ],
-    "711": [
+    "719": [
       0
     ],
-    "712": [
+    "720": [
       null
     ],
-    "713": [
+    "721": [
       null
     ]
   },
   "data": [
     {
-      "id": 706,
+      "id": 714,
       "name": "Categorical tests input 1",
-      "data": 706,
+      "data": 714,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -216,9 +216,9 @@
       "processes": []
     },
     {
-      "id": 707,
+      "id": 715,
       "name": "Categorical tests input 2",
-      "data": 707,
+      "data": 715,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -227,66 +227,66 @@
       "processes": []
     },
     {
-      "id": 708,
+      "id": 716,
       "name": "statistic_65",
-      "data": 708,
+      "data": 716,
       "type": "number",
-      "tableProcessGUId": "f244cd7f-3724-4b63-b39f-c9b7e731366e",
+      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 709,
+      "id": 717,
       "name": "pvalue_65",
-      "data": 709,
+      "data": 717,
       "type": "number",
-      "tableProcessGUId": "f244cd7f-3724-4b63-b39f-c9b7e731366e",
+      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 710,
+      "id": 718,
       "name": "df_65",
-      "data": 710,
+      "data": 718,
       "type": "number",
-      "tableProcessGUId": "f244cd7f-3724-4b63-b39f-c9b7e731366e",
+      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 711,
+      "id": 719,
       "name": "effectSize_65",
-      "data": 711,
+      "data": 719,
       "type": "number",
-      "tableProcessGUId": "f244cd7f-3724-4b63-b39f-c9b7e731366e",
+      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 712,
+      "id": 720,
       "name": "ciLow_65",
-      "data": 712,
+      "data": 720,
       "type": "number",
-      "tableProcessGUId": "f244cd7f-3724-4b63-b39f-c9b7e731366e",
+      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 713,
+      "id": 721,
       "name": "ciHigh_65",
-      "data": 713,
+      "data": 721,
       "type": "number",
-      "tableProcessGUId": "f244cd7f-3724-4b63-b39f-c9b7e731366e",
+      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -295,7 +295,7 @@
   ],
   "plots": [
     {
-      "id": 117,
+      "id": 119,
       "name": "Categorical tests result",
       "x": 60,
       "y": 60,
@@ -309,16 +309,34 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          706,
-          707,
-          708,
-          709,
-          710,
-          711,
-          712,
-          713
+          714,
+          715,
+          716,
+          717,
+          718,
+          719,
+          720,
+          721
         ],
         "showCol": [
           true,
@@ -345,16 +363,16 @@
       "args": {
         "testType": "independence",
         "dataFormat": "paired",
-        "xIN": 706,
-        "yIN": 707,
+        "xIN": 714,
+        "yIN": 715,
         "correction": true,
         "out": {
-          "statistic": 708,
-          "pvalue": 709,
-          "df": 710,
-          "effectSize": 711,
-          "ciLow": 712,
-          "ciHigh": 713
+          "statistic": 716,
+          "pvalue": 717,
+          "df": 718,
+          "effectSize": 719,
+          "ciLow": 720,
+          "ciHigh": 721
         },
         "alternative": "two-sided",
         "valid": false
@@ -367,7 +385,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_61",
+      "id": "note_62",
       "text": "Pearson's chi-squared test in two modes. Independence: cross-tabulate two categorical columns into a contingency table and test whether the two variables are associated (Yates' continuity correction is applied to 2×2 tables). Goodness-of-fit: take one column and test whether its category counts (or the raw counts, if numeric) depart from a uniform expectation. Reports the statistic, degrees of freedom and p-value, and shows the table in the node. It warns when expected cell counts fall below 5, where the χ² approximation breaks down (prefer Fisher's exact test). Matches scipy (chisquare / chi2_contingency). Pearson 1900.",
       "x": 40,
       "y": 24,
@@ -378,12 +396,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_706": {
+    "data_714": {
       "x": 60,
       "y": 314
     },
-    "data_707": {
+    "data_715": {
       "x": 60,
       "y": 814
     },
@@ -391,11 +431,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_117": {
+    "plot_119": {
       "x": 820,
       "y": 314
     },
-    "note_61": {
+    "note_62": {
       "x": 40,
       "y": 24
     }
@@ -436,6 +476,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -457,5 +498,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

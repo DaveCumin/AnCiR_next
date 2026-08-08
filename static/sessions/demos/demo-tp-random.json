@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "753": [
+    "761": [
       9.23,
       3.33,
       1.98,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 753,
+      "id": 761,
       "name": "result_72",
-      "data": 753,
+      "data": 761,
       "type": "number",
-      "tableProcessGUId": "78754b67-3ca6-4f99-941d-c76b3ca7e726",
+      "tableProcessGUId": "d8a5502c-3a22-4d25-afea-e0fc06a067c7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 124,
+      "id": 126,
       "name": "Random result",
       "x": 60,
       "y": 60,
@@ -82,9 +82,27 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          753
+          761
         ],
         "showCol": [
           true
@@ -108,7 +126,7 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 753
+          "result": 761
         }
       },
       "refTPId": null
@@ -119,7 +137,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_67",
+      "id": "note_68",
       "text": "Generates a column of pseudo-random values from a uniform, Gaussian, or exponential distribution, scaled by an offset and multiplier, with a fixed seed for reproducibility. Use it to add controlled noise or to create random test data.",
       "x": 40,
       "y": 24,
@@ -130,16 +148,38 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "tableprocess_72": {
       "x": 60,
       "y": 314
     },
-    "plot_124": {
+    "plot_126": {
       "x": 820,
       "y": 314
     },
-    "note_67": {
+    "note_68": {
       "x": 40,
       "y": 24
     }
@@ -180,6 +220,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -201,5 +242,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

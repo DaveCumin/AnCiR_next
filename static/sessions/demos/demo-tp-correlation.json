@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "726": [
+    "734": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "727": [
+    "735": [
       25,
       26.192596079882613,
       29.689110867544645,
@@ -104,7 +104,7 @@
       25,
       26.192596079882605
     ],
-    "728": [
+    "736": [
       100,
       98,
       96,
@@ -156,42 +156,42 @@
       4,
       2
     ],
-    "729": [
+    "737": [
       "Correlation input 1",
       "Correlation input 1",
       "Correlation input 2"
     ],
-    "730": [
+    "738": [
       "Correlation input 2",
       "Correlation input 3",
       "Correlation input 3"
     ],
-    "731": [
+    "739": [
       1,
       0.044645731583387575,
       0.04464573158338759
     ],
-    "732": [
+    "740": [
       0,
       0.7581875239105604,
       0.7581875239105604
     ],
-    "733": [
+    "741": [
       50,
       50,
       50
     ],
-    "734": [
+    "742": [
       1,
       -0.2366427555642181,
       -0.2366427555642181
     ],
-    "735": [
+    "743": [
       1,
       0.3190288666233962,
       0.31902886662339625
     ],
-    "736": [
+    "744": [
       1,
       0,
       0
@@ -199,99 +199,11 @@
   },
   "data": [
     {
-      "id": 726,
-      "name": "Correlation input 1",
-      "data": 726,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 727,
-      "name": "Correlation input 2",
-      "data": 727,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 728,
-      "name": "Correlation input 3",
-      "data": 728,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 729,
-      "name": "var_i_68",
-      "data": 729,
-      "type": "category",
-      "tableProcessGUId": "bc6d92d5-e587-4e2e-a4f7-76f854ec8e53",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 730,
-      "name": "var_j_68",
-      "data": 730,
-      "type": "category",
-      "tableProcessGUId": "bc6d92d5-e587-4e2e-a4f7-76f854ec8e53",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 731,
-      "name": "r_68",
-      "data": 731,
-      "type": "number",
-      "tableProcessGUId": "bc6d92d5-e587-4e2e-a4f7-76f854ec8e53",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 732,
-      "name": "pvalue_68",
-      "data": 732,
-      "type": "number",
-      "tableProcessGUId": "bc6d92d5-e587-4e2e-a4f7-76f854ec8e53",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 733,
-      "name": "n_68",
-      "data": 733,
-      "type": "number",
-      "tableProcessGUId": "bc6d92d5-e587-4e2e-a4f7-76f854ec8e53",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 734,
-      "name": "ciLow_68",
+      "name": "Correlation input 1",
       "data": 734,
       "type": "number",
-      "tableProcessGUId": "bc6d92d5-e587-4e2e-a4f7-76f854ec8e53",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -299,10 +211,10 @@
     },
     {
       "id": 735,
-      "name": "ciHigh_68",
+      "name": "Correlation input 2",
       "data": 735,
       "type": "number",
-      "tableProcessGUId": "bc6d92d5-e587-4e2e-a4f7-76f854ec8e53",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -310,10 +222,98 @@
     },
     {
       "id": 736,
-      "name": "significant_68",
+      "name": "Correlation input 3",
       "data": 736,
       "type": "number",
-      "tableProcessGUId": "bc6d92d5-e587-4e2e-a4f7-76f854ec8e53",
+      "tableProcessGUId": "",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 737,
+      "name": "var_i_68",
+      "data": 737,
+      "type": "category",
+      "tableProcessGUId": "a591aaf1-c526-4636-934f-80099c21fe7a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 738,
+      "name": "var_j_68",
+      "data": 738,
+      "type": "category",
+      "tableProcessGUId": "a591aaf1-c526-4636-934f-80099c21fe7a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 739,
+      "name": "r_68",
+      "data": 739,
+      "type": "number",
+      "tableProcessGUId": "a591aaf1-c526-4636-934f-80099c21fe7a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 740,
+      "name": "pvalue_68",
+      "data": 740,
+      "type": "number",
+      "tableProcessGUId": "a591aaf1-c526-4636-934f-80099c21fe7a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 741,
+      "name": "n_68",
+      "data": 741,
+      "type": "number",
+      "tableProcessGUId": "a591aaf1-c526-4636-934f-80099c21fe7a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 742,
+      "name": "ciLow_68",
+      "data": 742,
+      "type": "number",
+      "tableProcessGUId": "a591aaf1-c526-4636-934f-80099c21fe7a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 743,
+      "name": "ciHigh_68",
+      "data": 743,
+      "type": "number",
+      "tableProcessGUId": "a591aaf1-c526-4636-934f-80099c21fe7a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 744,
+      "name": "significant_68",
+      "data": 744,
+      "type": "number",
+      "tableProcessGUId": "a591aaf1-c526-4636-934f-80099c21fe7a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -322,7 +322,7 @@
   ],
   "plots": [
     {
-      "id": 120,
+      "id": 122,
       "name": "Correlation result",
       "x": 60,
       "y": 60,
@@ -336,19 +336,37 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          726,
-          727,
-          728,
-          729,
-          730,
-          731,
-          732,
-          733,
           734,
           735,
-          736
+          736,
+          737,
+          738,
+          739,
+          740,
+          741,
+          742,
+          743,
+          744
         ],
         "showCol": [
           true,
@@ -377,21 +395,21 @@
       "displayName": "Correlation",
       "args": {
         "yIN": [
-          726,
-          727,
-          728
+          734,
+          735,
+          736
         ],
         "method": "auto",
         "alpha": 0.05,
         "out": {
-          "var_i": 729,
-          "var_j": 730,
-          "r": 731,
-          "pvalue": 732,
-          "n": 733,
-          "ciLow": 734,
-          "ciHigh": 735,
-          "significant": 736
+          "var_i": 737,
+          "var_j": 738,
+          "r": 739,
+          "pvalue": 740,
+          "n": 741,
+          "ciLow": 742,
+          "ciHigh": 743,
+          "significant": 744
         },
         "valid": false
       },
@@ -403,7 +421,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_64",
+      "id": "note_65",
       "text": "Computes every pairwise correlation among the wired columns and reports them one row per pair: var_i, var_j, r, p-value and n. Choose Pearson (linear) or Spearman (rank / monotonic), or leave it on Auto — which uses Spearman if any column fails a Jarque-Bera normality check, so the whole matrix stays on one comparable method. Uses pairwise-complete rows (a missing value drops only that pair-row), and warns on small samples and, for Spearman, on ties. Quick-plot draws the correlation heatmap.",
       "x": 40,
       "y": 24,
@@ -414,16 +432,38 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_726": {
+    "data_734": {
       "x": 60,
       "y": 314
     },
-    "data_727": {
+    "data_735": {
       "x": 60,
       "y": 814
     },
-    "data_728": {
+    "data_736": {
       "x": 60,
       "y": 1314
     },
@@ -431,11 +471,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_120": {
+    "plot_122": {
       "x": 820,
       "y": 314
     },
-    "note_64": {
+    "note_65": {
       "x": 40,
       "y": 24
     }
@@ -476,6 +516,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -497,5 +538,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

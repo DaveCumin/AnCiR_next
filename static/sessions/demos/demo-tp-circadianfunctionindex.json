@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "834": [
+    "842": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "835": [
+    "843": [
       0,
       0,
       0,
@@ -676,24 +676,24 @@
       0,
       0
     ],
-    "836": [
+    "844": [
       0.9426865671641792
     ],
-    "837": [
+    "845": [
       1.0000000000000004
     ],
-    "838": [
+    "846": [
       0.34388059701492557
     ],
-    "839": [
+    "847": [
       1
     ]
   },
   "data": [
     {
-      "id": 834,
+      "id": 842,
       "name": "Circadian Function Index input 1",
-      "data": 834,
+      "data": 842,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -702,9 +702,9 @@
       "processes": []
     },
     {
-      "id": 835,
+      "id": 843,
       "name": "Circadian Function Index input 2",
-      "data": 835,
+      "data": 843,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -713,44 +713,44 @@
       "processes": []
     },
     {
-      "id": 836,
+      "id": 844,
       "name": "CFI_89",
-      "data": 836,
+      "data": 844,
       "type": "number",
-      "tableProcessGUId": "b94cc187-27ee-4a86-bc67-d26757d1cf63",
+      "tableProcessGUId": "17f8c1b7-3d5b-40e2-a6cd-a7b3a50c59c3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 837,
+      "id": 845,
       "name": "IS_89",
-      "data": 837,
+      "data": 845,
       "type": "number",
-      "tableProcessGUId": "b94cc187-27ee-4a86-bc67-d26757d1cf63",
+      "tableProcessGUId": "17f8c1b7-3d5b-40e2-a6cd-a7b3a50c59c3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 838,
+      "id": 846,
       "name": "IV_89",
-      "data": 838,
+      "data": 846,
       "type": "number",
-      "tableProcessGUId": "b94cc187-27ee-4a86-bc67-d26757d1cf63",
+      "tableProcessGUId": "17f8c1b7-3d5b-40e2-a6cd-a7b3a50c59c3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 839,
+      "id": 847,
       "name": "RA_89",
-      "data": 839,
+      "data": 847,
       "type": "number",
-      "tableProcessGUId": "b94cc187-27ee-4a86-bc67-d26757d1cf63",
+      "tableProcessGUId": "17f8c1b7-3d5b-40e2-a6cd-a7b3a50c59c3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -759,7 +759,7 @@
   ],
   "plots": [
     {
-      "id": 142,
+      "id": 144,
       "name": "Circadian Function Index result",
       "x": 60,
       "y": 60,
@@ -773,14 +773,32 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          834,
-          835,
-          836,
-          837,
-          838,
-          839
+          842,
+          843,
+          844,
+          845,
+          846,
+          847
         ],
         "showCol": [
           true,
@@ -803,9 +821,9 @@
       "name": "CircadianFunctionIndex",
       "displayName": "Circadian Function Index",
       "args": {
-        "xIN": 834,
+        "xIN": 842,
         "yIN": [
-          835
+          843
         ],
         "epochHours": 1,
         "period": 24,
@@ -813,10 +831,10 @@
         "lWindow": 5,
         "preProcesses": [],
         "out": {
-          "CFI": 836,
-          "IS": 837,
-          "IV": 838,
-          "RA": 839
+          "CFI": 844,
+          "IS": 845,
+          "IV": 846,
+          "RA": 847
         }
       },
       "refTPId": null
@@ -827,7 +845,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_80",
+      "id": "note_81",
       "text": "Summarises rest-activity rhythm robustness as a single 0-1 index by combining three nonparametric variables: interdaily stability (IS), intradaily variability (IV) and relative amplitude (RA). Give it a time column and one or more activity columns; it reports CFI plus the raw IS/IV/RA per series. Higher CFI means a more stable, well-consolidated rhythm; useful for comparing individuals or conditions without assuming a sinusoidal shape (Ortiz-Tudela et al. 2010).",
       "x": 40,
       "y": 24,
@@ -838,12 +856,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_834": {
+    "data_842": {
       "x": 60,
       "y": 314
     },
-    "data_835": {
+    "data_843": {
       "x": 60,
       "y": 814
     },
@@ -851,11 +891,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_142": {
+    "plot_144": {
       "x": 820,
       "y": 314
     },
-    "note_80": {
+    "note_81": {
       "x": 40,
       "y": 24
     }
@@ -896,6 +936,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -917,5 +958,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

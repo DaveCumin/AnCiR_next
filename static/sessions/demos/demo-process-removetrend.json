@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "568": [
+    "576": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "569": [
+    "577": [
       1,
       3,
       5,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 568,
+      "id": 576,
       "name": "x",
-      "data": 568,
+      "data": 576,
       "type": "number",
-      "tableProcessGUId": "fbab5bb7-fa8a-4224-b94b-4d5264ee4299",
+      "tableProcessGUId": "6fbdd61a-b289-474b-a12f-8209f0ffdf7a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 569,
+      "id": 577,
       "name": "y",
-      "data": 569,
+      "data": 577,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 570,
+      "id": 578,
       "name": "Remove Trend result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_6",
-      "producerPort": "out_569",
+      "producerPort": "out_577",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 89,
+      "id": 91,
       "name": "Remove Trend: before vs after",
       "x": 60,
       "y": 60,
@@ -156,12 +156,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -199,9 +218,9 @@
         "data": [
           {
             "x": {
-              "id": 571,
+              "id": 579,
               "name": "x",
-              "refId": 568,
+              "refId": 576,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +229,9 @@
               "processes": []
             },
             "y": {
-              "id": 572,
+              "id": 580,
               "name": "y",
-              "refId": 569,
+              "refId": 577,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -223,14 +242,14 @@
             "label": "Before",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -238,9 +257,9 @@
           },
           {
             "x": {
-              "id": 573,
+              "id": 581,
               "name": "x",
-              "refId": 568,
+              "refId": 576,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +268,9 @@
               "processes": []
             },
             "y": {
-              "id": 574,
+              "id": 582,
               "name": "Remove Trend result",
-              "refId": 570,
+              "refId": 578,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -262,14 +281,14 @@
             "label": "After",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -279,19 +298,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 90,
+      "id": 92,
       "name": "Remove Trend: values",
       "x": 630,
       "y": 60,
@@ -305,10 +326,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          569,
-          570
+          577,
+          578
         ],
         "showCol": [
           true,
@@ -333,7 +372,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 568
+          "result": 576
         }
       },
       "refTPId": null
@@ -344,7 +383,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_41",
+      "id": "note_42",
       "text": "Fits a trend (linear, polynomial, exponential, or logarithmic) against a chosen x-column and subtracts it, leaving the residual (detrended) signal. Use it to remove baseline drift or sensor decay before rhythm analysis so a slow trend doesn't masquerade as a long period. An optional sliding window detrends locally. The demo shows the drifting input flattened around zero.",
       "x": 40,
       "y": 24,
@@ -365,13 +404,35 @@
         "slidingWindow": false,
         "windowSize": 10,
         "inIN": [
-          569
+          577
         ]
       }
     }
   ],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_569": {
+    "data_577": {
       "x": 60,
       "y": 314
     },
@@ -383,15 +444,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_89": {
+    "plot_91": {
       "x": 820,
       "y": 314
     },
-    "plot_90": {
+    "plot_92": {
       "x": 820,
       "y": 814
     },
-    "note_41": {
+    "note_42": {
       "x": 40,
       "y": 24
     }
@@ -432,6 +493,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -453,5 +515,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

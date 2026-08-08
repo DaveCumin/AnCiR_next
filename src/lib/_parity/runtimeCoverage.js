@@ -179,6 +179,8 @@ export const R_PURE_UTILS = [
 	'jarque_bera',
 	'moving_windows',
 	'p_adjust',
+	'qq_correlation',
+	'qq_points',
 	'rayleigh_test',
 	'shapiro_wilk',
 	'weighted_circular_mean',

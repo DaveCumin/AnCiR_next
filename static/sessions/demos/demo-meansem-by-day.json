@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "476": [
+    "480": [
       1,
       1,
       1,
@@ -170,7 +170,7 @@
       7,
       7
     ],
-    "477": [
+    "481": [
       16.291076892469444,
       20.29554398487714,
       9.51596332468565,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 476,
+      "id": 480,
       "name": "day",
-      "data": 476,
+      "data": 480,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 477,
+      "id": 481,
       "name": "activity",
-      "data": 477,
+      "data": 481,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 68,
+      "id": 69,
       "name": "Activity by day (mean ± SEM)",
       "x": 60,
       "y": 60,
@@ -381,6 +381,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
@@ -411,9 +429,9 @@
         "data": [
           {
             "x": {
-              "id": 478,
+              "id": 482,
               "name": "day",
-              "refId": 476,
+              "refId": 480,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +440,9 @@
               "processes": []
             },
             "y": {
-              "id": 479,
+              "id": 483,
               "name": "activity",
-              "refId": 477,
+              "refId": 481,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -434,13 +452,13 @@
             },
             "label": "Mean ± SEM 1",
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 4,
               "shape": "circle",
               "draw": true
             },
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 3,
               "stroke": "solid",
               "draw": false,
@@ -455,13 +473,15 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         }
       }
     }
@@ -472,7 +492,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_28",
+      "id": "note_29",
       "text": "Overlays each group's mean as a marker with whiskers showing ± one standard error of the mean (SEM = s/√n), grouped by the x-column. Use it to compare average levels across conditions or time bins while showing the precision of each mean. The demo shows per-group means with error bars.",
       "x": 40,
       "y": 24,
@@ -483,20 +503,42 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_476": {
+    "data_480": {
       "x": 60,
       "y": 314
     },
-    "data_477": {
+    "data_481": {
       "x": 60,
       "y": 814
     },
-    "note_28": {
+    "note_29": {
       "x": 40,
       "y": 24
     },
-    "plot_68": {
+    "plot_69": {
       "x": 820,
       "y": 314
     }
@@ -537,6 +579,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -558,5 +601,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

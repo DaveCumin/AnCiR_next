@@ -5,6 +5,8 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import Box, { BoxClass, calculateBoxPlotStats } from '$lib/components/plotbits/Box.svelte';
+	import Violin from '$lib/components/plotbits/Violin.svelte';
+	import { VIOLIN_MIN_N } from '$lib/components/plotbits/helpers/violin.js';
 	import { mean, calculateStandardDeviation } from '$lib/utils/MathsStats.js';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
@@ -287,6 +289,16 @@ export class Boxplotclass {
 			padding: { group: 'Padding' },
 			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
 			ylimsIN: { group: 'Y-axis', _children: { 0: { label: 'Y min' }, 1: { label: 'Y max' } } },
+			showPoints: { group: 'Data points', label: 'Show points' },
+			pointJitter: { group: 'Data points', label: 'Jitter', step: 0.05 },
+			pointSize: { group: 'Data points', label: 'Point size', step: 0.5 },
+			pointOpacity: { group: 'Data points', label: 'Point opacity', step: 0.05 },
+			pointColour: { group: 'Data points', label: 'Point colour' },
+			showViolin: { group: 'Violin', label: 'Show violin' },
+			showBox: { group: 'Violin', label: 'Show box' },
+			violinBandwidth: { group: 'Violin', label: 'Bandwidth', step: 0.1 },
+			violinWidth: { group: 'Violin', label: 'Width', step: 0.05 },
+			violinOpacity: { group: 'Violin', label: 'Opacity', step: 0.05 },
 			// Sig-test fields are writable on every Boxplot. Surfacing them in the
 			// multi-select panel is an intentional improvement over the old schema,
 			// which omitted them.
@@ -333,6 +345,26 @@ export class Boxplotclass {
 
 		xlimsIN = $state([null, null]);
 		ylimsIN = $state([null, null]);
+
+		// Overlay the raw data points on each box, with deterministic horizontal
+		// jitter (see plotbits/helpers/jitter.js). `pointJitter` is the spread as a
+		// fraction of the box half-width (0 = a centred column of points).
+		showPoints = $state(false);
+		pointJitter = $state(0.35);
+		pointSize = $state(2.5); // radius in px
+		pointOpacity = $state(0.6);
+		// null = auto: points take each box's own colour (per-category or per-series).
+		pointColour = $state(null);
+
+		// Violin overlay (see plotbits/Violin.svelte + helpers/violin.js). All
+		// defaults chosen so existing sessions render unchanged: violin off, box on.
+		// `showBox` false gives a violin-only display (whiskers/median/outliers hide
+		// with the box; jittered points and sig bars are independent and stay).
+		showViolin = $state(false);
+		showBox = $state(true);
+		violinBandwidth = $state(null); // null or 0 = Silverman auto
+		violinWidth = $state(0.8); // max width as a fraction of the category slot
+		violinOpacity = $state(0.3);
 
 		showSigBars = $state(false);
 		sigMethod = $state('auto'); // 'auto' | 'anova' | 'kruskal'
@@ -400,6 +432,43 @@ export class Boxplotclass {
 			const { pairs } = this.sigBarResult;
 			if (pairs.length === 0) return [];
 			return assignBracketLevels(pairs, this.uniqueXValues);
+		});
+
+		// Groups whose violin is gated (n < VIOLIN_MIN_N, or all values equal so no
+		// density exists). Mirrors the per-series grouping the Box/Violin renderers
+		// use — a series without category x data is one group named by its label —
+		// and feeds the same `.data-warning` pattern the sig bars use.
+		violinWarnings = $derived.by(() => {
+			if (!this.showViolin) return [];
+			const warnings = [];
+			this.data.forEach((d, i) => {
+				if (!d.boxPlot?.draw) return;
+				const xData = d.x.getData() ?? [];
+				const yData = d.y.getData() ?? [];
+				const groups = new Map();
+				if (xData.length > 0) {
+					xData.forEach((cat, j) => {
+						const val = yData[j];
+						if (cat == null || val == null || isNaN(val)) return;
+						if (!groups.has(cat)) groups.set(cat, []);
+						groups.get(cat).push(val);
+					});
+				} else {
+					const label = d.label || `Box Plot ${i + 1}`;
+					const vals = yData.filter((v) => v != null && !isNaN(v));
+					if (vals.length > 0) groups.set(label, vals);
+				}
+				groups.forEach((vals, cat) => {
+					if (vals.length < VIOLIN_MIN_N) {
+						warnings.push(
+							`No violin for "${cat}": only ${vals.length} point${vals.length === 1 ? '' : 's'} (needs at least ${VIOLIN_MIN_N}).`
+						);
+					} else if (vals.every((v) => v === vals[0])) {
+						warnings.push(`No violin for "${cat}": all values are identical.`);
+					}
+				});
+			});
+			return warnings;
 		});
 
 		sigBarWarnings = $derived.by(() => {
@@ -719,6 +788,16 @@ export class Boxplotclass {
 				yAxis: this.yAxis.toJSON(),
 				data: this.data,
 				legend: this.legend.toJSON(),
+				showPoints: this.showPoints,
+				pointJitter: this.pointJitter,
+				pointSize: this.pointSize,
+				pointOpacity: this.pointOpacity,
+				pointColour: this.pointColour,
+				showViolin: this.showViolin,
+				showBox: this.showBox,
+				violinBandwidth: this.violinBandwidth,
+				violinWidth: this.violinWidth,
+				violinOpacity: this.violinOpacity,
 				showSigBars: this.showSigBars,
 				sigMethod: this.sigMethod,
 				sigAlpha: this.sigAlpha,
@@ -771,6 +850,18 @@ export class Boxplotclass {
 			}
 
 			chart.legend = LegendClass.fromJSON(json.legend);
+			chart.showPoints = json.showPoints ?? false;
+			chart.pointJitter = json.pointJitter ?? 0.35;
+			chart.pointSize = json.pointSize ?? 2.5;
+			chart.pointOpacity = json.pointOpacity ?? 0.6;
+			chart.pointColour = json.pointColour ?? null;
+			chart.showViolin = json.showViolin ?? false;
+			chart.showBox = json.showBox ?? true;
+			// `??` keeps a saved 0 (explicit "auto"), while a missing field stays null;
+			// both mean Silverman auto at compute time but the user's entry round-trips.
+			chart.violinBandwidth = json.violinBandwidth ?? null;
+			chart.violinWidth = json.violinWidth ?? 0.8;
+			chart.violinOpacity = json.violinOpacity ?? 0.3;
 			chart.showSigBars = json.showSigBars ?? false;
 			chart.sigMethod = json.sigMethod ?? 'auto';
 			chart.sigAlpha = json.sigAlpha ?? 0.05;
@@ -961,6 +1052,118 @@ export class Boxplotclass {
 			<div class="control-input-vertical">
 				<ControlInput label="Label">
 					<input bind:value={theData.xAxis.label} />
+				</ControlInput>
+			</div>
+		</div>
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Data points</p>
+			</div>
+			<div class="control-input-vertical">
+				<ControlInput label="Show">
+					<input type="checkbox" bind:checked={theData.showPoints} />
+				</ControlInput>
+				{#if theData.showPoints}
+					<!-- Tuning knobs live behind a collapsed-by-default disclosure. The app's
+					     collapse system (views/collapsibleSections.svelte.js) folds whole
+					     sections by title and has no per-field advanced tier, so this reuses
+					     the panel's existing <details> pattern (see "Pairwise comparisons"
+					     below) as the advanced area. -->
+					<details class="tp-output-panel">
+						<summary class="tp-output-summary">Advanced</summary>
+						<ControlInput label="Jitter">
+							<NumberWithUnits bind:value={theData.pointJitter} step={0.05} min={0} max={1} />
+						</ControlInput>
+						<div class="control-input-horizontal">
+							<ControlInput label="Size">
+								<NumberWithUnits bind:value={theData.pointSize} step={0.5} min={1} max={6} />
+							</ControlInput>
+							<ControlInput label="Opacity">
+								<NumberWithUnits bind:value={theData.pointOpacity} step={0.05} min={0.1} max={1} />
+							</ControlInput>
+						</div>
+						<!-- null = auto: points take each box's own colour (per-category or
+						     per-series). An explicit pick applies to ALL points; the reset
+						     icon (same pattern as the axis-limit overrides above) restores
+						     auto. Function binding so the picker can show a neutral colour
+						     while the field is null without writing to it. -->
+						<ControlInput label="Colour">
+							<ColourPicker
+								bind:value={() => theData.pointColour ?? '#888888', (v) => (theData.pointColour = v)}
+							/>
+							{#if theData.pointColour != null}
+								<div class="control-component-input-icons">
+									<button class="icon" onclick={() => (theData.pointColour = null)}>
+										<Icon
+											name="reset"
+											width={14}
+											height={14}
+											className="control-component-input-icon"
+										/>
+									</button>
+								</div>
+							{/if}
+						</ControlInput>
+					</details>
+				{/if}
+			</div>
+		</div>
+
+		<div class="div-line"></div>
+
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Violin</p>
+			</div>
+			<div class="control-input-vertical">
+				<ControlInput label="Show violin">
+					<input type="checkbox" bind:checked={theData.showViolin} />
+				</ControlInput>
+				{#if theData.showViolin}
+					<!-- Warnings stay OUTSIDE the collapsed fine-tuning area: a gated group
+					     must be visible without expanding anything. -->
+					{#if theData.violinWarnings.length > 0}
+						<div class="data-warning">
+							{#each theData.violinWarnings as warning}
+								<p>⚠ {warning}</p>
+							{/each}
+						</div>
+					{/if}
+					<details class="tp-output-panel">
+						<summary class="tp-output-summary">Advanced</summary>
+						<ControlInput label="Bandwidth">
+							<!-- Empty / 0 means automatic (Silverman) — the Histogram's convention. -->
+							<input
+								type="number"
+								step="0.1"
+								min="0"
+								placeholder="auto"
+								value={theData.violinBandwidth ?? ''}
+								oninput={(e) => {
+									const n = parseFloat(e.currentTarget.value);
+									theData.violinBandwidth = isNaN(n) || n <= 0 ? null : n;
+								}}
+							/>
+						</ControlInput>
+						<div class="control-input-horizontal">
+							<ControlInput label="Width">
+								<NumberWithUnits bind:value={theData.violinWidth} step={0.05} min={0.1} max={1} />
+							</ControlInput>
+							<ControlInput label="Opacity">
+								<NumberWithUnits bind:value={theData.violinOpacity} step={0.05} min={0.05} max={1} />
+							</ControlInput>
+						</div>
+					</details>
+				{/if}
+				<!-- Plot-level box toggle: off + violin on = a violin-only display.
+				     Whiskers, median and outlier rings hide with the box; the jittered
+				     points and the sig bars (which key off group stats, not box
+				     geometry) keep working. -->
+				<ControlInput label="Show box">
+					<input type="checkbox" bind:checked={theData.showBox} />
 				</ControlInput>
 			</div>
 		</div>
@@ -1174,6 +1377,39 @@ export class Boxplotclass {
 			which="plot"
 		/>
 
+		<!-- Violin overlays: rendered BEFORE the boxes so every violin sits behind
+		     every box, median line, and jittered point. -->
+		{#if theData.plot.showViolin}
+			{#each theData.plot.data as datum, i}
+				{#if datum.y.getData()?.length > 0}
+					<Violin
+						boxPlotData={datum.boxPlot}
+						x={xDataForDatum(datum, i)}
+						y={datum.y.getData() ?? []}
+						uniqueXValues={theData.plot.uniqueXValues}
+						useCategoryColour={theData.plot.data.length === 1 &&
+							theData.plot.uniqueXValues.length > 1 &&
+							hasCategoryXData(datum)}
+						monochrome={theData.plot.parentBox?.style?.monochrome === true}
+						seriesIndex={i}
+						totalSeries={theData.plot.data.length}
+						dodgeEnabled={hasCategoryXData(datum)}
+						bandwidth={theData.plot.violinBandwidth}
+						violinWidth={theData.plot.violinWidth}
+						violinOpacity={theData.plot.violinOpacity}
+						xscale={scaleLinear()
+							.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
+							.range([0, theData.plot.plotwidth])}
+						yscale={scaleLinear()
+							.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
+							.range([theData.plot.plotheight, 0])}
+						xoffset={theData.plot.padding.left}
+						yoffset={theData.plot.padding.top}
+					/>
+				{/if}
+			{/each}
+		{/if}
+
 		<!-- Box plots -->
 		{#each theData.plot.data as datum, i}
 			{#if datum.y.getData()?.length > 0}
@@ -1196,6 +1432,12 @@ export class Boxplotclass {
 					seriesIndex={i}
 					totalSeries={theData.plot.data.length}
 					dodgeEnabled={hasCategoryXData(datum)}
+					showPoints={theData.plot.showPoints}
+					pointJitter={theData.plot.pointJitter}
+					pointSize={theData.plot.pointSize}
+					pointOpacity={theData.plot.pointOpacity}
+					pointColour={theData.plot.pointColour}
+					showBox={theData.plot.showBox}
 					xscale={xScale}
 					yscale={yScale}
 					xoffset={theData.plot.padding.left}

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "798": [
+    "806": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "799": [
+    "807": [
       0,
       10,
       20,
@@ -104,7 +104,7 @@
       480,
       490
     ],
-    "800": [
+    "808": [
       0,
       10,
       20,
@@ -156,7 +156,7 @@
       null,
       null
     ],
-    "801": [
+    "809": [
       null,
       null,
       null,
@@ -208,7 +208,7 @@
       null,
       null
     ],
-    "802": [
+    "810": [
       null,
       null,
       null,
@@ -263,9 +263,9 @@
   },
   "data": [
     {
-      "id": 798,
+      "id": 806,
       "name": "Split data input 1",
-      "data": 798,
+      "data": 806,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -274,9 +274,9 @@
       "processes": []
     },
     {
-      "id": 799,
+      "id": 807,
       "name": "Split data input 2",
-      "data": 799,
+      "data": 807,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -285,33 +285,33 @@
       "processes": []
     },
     {
-      "id": 800,
-      "name": "799_1_82",
-      "data": 800,
+      "id": 808,
+      "name": "807_1_82",
+      "data": 808,
       "type": "number",
-      "tableProcessGUId": "ac82833e-6c8d-4f48-b19e-1ce9cf493f01",
+      "tableProcessGUId": "034b9e9b-602d-43fd-8739-fa1f3d081e81",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 801,
-      "name": "799_2_82",
-      "data": 801,
+      "id": 809,
+      "name": "807_2_82",
+      "data": 809,
       "type": "number",
-      "tableProcessGUId": "ac82833e-6c8d-4f48-b19e-1ce9cf493f01",
+      "tableProcessGUId": "034b9e9b-602d-43fd-8739-fa1f3d081e81",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 802,
-      "name": "799_3_82",
-      "data": 802,
+      "id": 810,
+      "name": "807_3_82",
+      "data": 810,
       "type": "number",
-      "tableProcessGUId": "ac82833e-6c8d-4f48-b19e-1ce9cf493f01",
+      "tableProcessGUId": "034b9e9b-602d-43fd-8739-fa1f3d081e81",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -320,7 +320,7 @@
   ],
   "plots": [
     {
-      "id": 135,
+      "id": 137,
       "name": "Split data result",
       "x": 60,
       "y": 60,
@@ -334,13 +334,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          798,
-          799,
-          800,
-          801,
-          802
+          806,
+          807,
+          808,
+          809,
+          810
         ],
         "showCol": [
           true,
@@ -362,18 +380,18 @@
       "name": "Split",
       "displayName": "Split data",
       "args": {
-        "xIN": 798,
+        "xIN": 806,
         "yIN": [
-          799
+          807
         ],
         "splitTimes": [
           15,
           30
         ],
         "out": {
-          "799_1": 800,
-          "799_2": 801,
-          "799_3": 802
+          "807_1": 808,
+          "807_2": 809,
+          "807_3": 810
         }
       },
       "refTPId": null
@@ -384,7 +402,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_74",
+      "id": "note_75",
       "text": "Cuts a time-series into consecutive segments at the split times you specify, keeping the chosen columns aligned. Use it to separate, e.g., an entrainment stage from a free-run stage, or successive days, before analysing each part on its own.",
       "x": 40,
       "y": 24,
@@ -395,12 +413,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_798": {
+    "data_806": {
       "x": 60,
       "y": 314
     },
-    "data_799": {
+    "data_807": {
       "x": 60,
       "y": 814
     },
@@ -408,11 +448,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_135": {
+    "plot_137": {
       "x": 820,
       "y": 314
     },
-    "note_74": {
+    "note_75": {
       "x": 40,
       "y": 24
     }
@@ -453,6 +493,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -474,5 +515,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

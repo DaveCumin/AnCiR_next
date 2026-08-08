@@ -874,7 +874,7 @@
       "name": "Peak period (h)",
       "data": 62,
       "type": "number",
-      "tableProcessGUId": "bcab7c6a-fcb3-4fd6-8cb7-6614a48dc9cb",
+      "tableProcessGUId": "a0c1cef9-a072-4b80-b123-6761b72e536d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -885,7 +885,7 @@
       "name": "Peak power",
       "data": 63,
       "type": "number",
-      "tableProcessGUId": "bcab7c6a-fcb3-4fd6-8cb7-6614a48dc9cb",
+      "tableProcessGUId": "a0c1cef9-a072-4b80-b123-6761b72e536d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -896,7 +896,7 @@
       "name": "rhythmicityy_57_4",
       "data": 64,
       "type": "number",
-      "tableProcessGUId": "bcab7c6a-fcb3-4fd6-8cb7-6614a48dc9cb",
+      "tableProcessGUId": "a0c1cef9-a072-4b80-b123-6761b72e536d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -919,6 +919,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "ylimsOption": "overall",
         "ylimsIN": [
@@ -933,7 +951,8 @@
         },
         "doublePlot": 2,
         "periodHrs": 24,
-        "showDayNumbers": false,
+        "rowLabels": "none",
+        "dateFormat": "DD MMM",
         "renderMode": "bars",
         "colormap": "viridis",
         "lightBands": {
@@ -992,6 +1011,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "periodlimsIN": [
           20,
@@ -1045,21 +1082,21 @@
               "processes": []
             },
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 3,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "thresholdline": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 3,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 4,
               "shape": "circle",
               "draw": true
@@ -1086,6 +1123,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
           62,
@@ -1145,6 +1200,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "data_56": {
       "x": 60,
@@ -1211,6 +1288,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -1232,5 +1310,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

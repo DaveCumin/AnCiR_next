@@ -333,7 +333,7 @@
 		]
 	},
 	"boxplot": {
-		"description": "A boxplot condenses each group's distribution into five summaries: the median (centre line), the first and third quartiles (box edges spanning the interquartile range), and whiskers extending to the data range, with far points drawn individually as candidate outliers. Grouping is set by the x-column.\n\nUse it to compare groups side by side: the box position shows typical level, the box height shows spread, and asymmetry hints at skew. It is a compact companion to Compare groups (stats) and to Mean ± SEM when you want the full spread rather than just central tendency.",
+		"description": "A boxplot condenses each group's distribution into five summaries: the median (centre line), the first and third quartiles (box edges spanning the interquartile range), and whiskers extending to the data range, with far points drawn individually as candidate outliers. Grouping is set by the x-column.\n\nUse it to compare groups side by side: the box position shows typical level, the box height shows spread, and asymmetry hints at skew. It is a compact companion to Compare groups (stats) and to Mean ± SEM when you want the full spread rather than just central tendency.\n\nThe node can also draw a violin overlay: a mirrored kernel-density outline behind each box showing the full shape of the distribution, which reveals features the five-number summary hides (most notably bimodality — two groups with identical boxes can have completely different violins). Bandwidth defaults to Silverman's rule but is adjustable, as are the violin's width and opacity. Hiding the box gives a pure violin plot, and the raw observations can be shown as jittered data points on top, with adjustable jitter spread, size, opacity, and colour.",
 		"maths": [],
 		"references": [],
 		"crosslinks": [
@@ -886,6 +886,27 @@
 		],
 		"crosslinks": [
 			"ch4",
+			"ch9",
+			"glossary"
+		]
+	},
+	"qqplot": {
+		"description": "The Q-Q (quantile-quantile) plot is the picture behind the Normality Test's number: it shows HOW a sample departs from the normal distribution, not just whether it does. Each valid value is sorted and paired with the standard-normal quantile expected at its rank (using Blom plotting positions, (i − 3/8)/(n + 1/4) — the same convention as the Shapiro-Wilk expected order statistics, so the plot and the test agree about what 'expected' means). Normally distributed data fall on a straight line; systematic bends are diagnostic: both ends curving up-left/down-right means heavy tails, an overall bow means skew, and stair-steps mean granular or tied data.\n\nThe dashed reference line runs through the first and third quartile pair (R's qqline convention) rather than being a least-squares fit, so it is robust to exactly the tail departures the plot exists to reveal. The shaded confidence envelope (default 95%) turns 'the ends wiggle' into 'the ends wiggle more than chance allows': it is a POINTWISE band, giving each quantile's plausible range under normality — which means roughly 5% of points stray outside it even for perfectly normal data, so judge the pattern of excursions, not individual points.\n\nWire any numeric columns; each becomes an overlaid coloured series with its own line and envelope, and the sample axis stays in raw units. The classic use is residual checking: a fit node's resid_ output columns are ordinary columns, so wiring one in answers 'are my fit's residuals normal?' directly. The Normality Test node's Quick-plot spawns this plot wired to the same columns the test scored.",
+		"maths": [
+			"p_i = \\frac{i - 3/8}{n + 1/4}, \\qquad z_i = \\Phi^{-1}(p_i)",
+			"\\text{slope} = \\frac{Q_3 - Q_1}{\\Phi^{-1}(0.75) - \\Phi^{-1}(0.25)}",
+			"SE_i = \\frac{\\text{slope}}{\\varphi(z_i)} \\sqrt{\\frac{p_i (1 - p_i)}{n}}"
+		],
+		"references": [
+			{
+				"cite": "Wilk MB, Gnanadesikan R (1968) Probability plotting methods for the analysis of data. Biometrika 55:1-17.",
+				"doi": "10.1093/biomet/55.1.1"
+			},
+			{
+				"cite": "Fox J, Weisberg S (2019). An R Companion to Applied Regression, 3rd ed. Sage, Thousand Oaks CA."
+			}
+		],
+		"crosslinks": [
 			"ch9",
 			"glossary"
 		]

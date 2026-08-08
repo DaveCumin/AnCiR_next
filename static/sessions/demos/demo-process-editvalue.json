@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "546": [
+    "554": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "547": [
+    "555": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 546,
+      "id": 554,
       "name": "x",
-      "data": 546,
+      "data": 554,
       "type": "number",
-      "tableProcessGUId": "ef206955-011a-4803-a15b-ffdad2f4cb98",
+      "tableProcessGUId": "fa26f065-8a3a-4d9c-bce8-26d2a7dde0d6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 547,
+      "id": 555,
       "name": "y",
-      "data": 547,
+      "data": 555,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 548,
+      "id": 556,
       "name": "Edit value result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_3",
-      "producerPort": "out_547",
+      "producerPort": "out_555",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 83,
+      "id": 85,
       "name": "Edit value: before vs after",
       "x": 60,
       "y": 60,
@@ -156,12 +156,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -199,9 +218,9 @@
         "data": [
           {
             "x": {
-              "id": 549,
+              "id": 557,
               "name": "x",
-              "refId": 546,
+              "refId": 554,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -210,9 +229,9 @@
               "processes": []
             },
             "y": {
-              "id": 550,
+              "id": 558,
               "name": "y",
-              "refId": 547,
+              "refId": 555,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -223,14 +242,14 @@
             "label": "Before",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -238,9 +257,9 @@
           },
           {
             "x": {
-              "id": 551,
+              "id": 559,
               "name": "x",
-              "refId": 546,
+              "refId": 554,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -249,9 +268,9 @@
               "processes": []
             },
             "y": {
-              "id": 552,
+              "id": 560,
               "name": "Edit value result",
-              "refId": 548,
+              "refId": 556,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -262,14 +281,14 @@
             "label": "After",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -279,19 +298,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 84,
+      "id": 86,
       "name": "Edit value: values",
       "x": 630,
       "y": 60,
@@ -305,10 +326,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          547,
-          548
+          555,
+          556
         ],
         "showCol": [
           true,
@@ -333,7 +372,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 546
+          "result": 554
         }
       },
       "refTPId": null
@@ -344,7 +383,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_38",
+      "id": "note_39",
       "text": "Overwrites individual cells at specific row positions with values you type in, leaving the rest of the column unchanged. Use it for hand-correcting a few known-bad points without touching the source data. The demo shows the edited positions differing from the input.",
       "x": 40,
       "y": 24,
@@ -366,13 +405,35 @@
           }
         ],
         "inIN": [
-          547
+          555
         ]
       }
     }
   ],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_547": {
+    "data_555": {
       "x": 60,
       "y": 314
     },
@@ -384,15 +445,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_83": {
+    "plot_85": {
       "x": 820,
       "y": 314
     },
-    "plot_84": {
+    "plot_86": {
       "x": 820,
       "y": 814
     },
-    "note_38": {
+    "note_39": {
       "x": 40,
       "y": 24
     }
@@ -433,6 +494,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -454,5 +516,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "826": [
+    "834": [
       0.75,
       0.4936245900186056,
       0.10008893632086846,
@@ -22,7 +22,7 @@
       0.34356671248653514,
       0.7177368592146683
     ],
-    "827": [
+    "835": [
       2.5500000000000003,
       2.293624590018606,
       1.9000889363208686,
@@ -44,34 +44,34 @@
       2.1435667124865354,
       2.5177368592146685
     ],
-    "828": [
+    "836": [
       0.9685941696997769,
       0.9685941696997767
     ],
-    "829": [
+    "837": [
       18.763493311528006,
       18.763493311528
     ],
-    "830": [
+    "838": [
       1.9826460939624246e-8,
       1.982646093962434e-8
     ],
-    "831": [
+    "839": [
       453.7366669407144
     ],
-    "832": [
+    "840": [
       0
     ],
-    "833": [
+    "841": [
       1.5736813608355367,
       8.449174902405415
     ]
   },
   "data": [
     {
-      "id": 826,
+      "id": 834,
       "name": "Rayleigh test input 1",
-      "data": 826,
+      "data": 834,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -80,9 +80,9 @@
       "processes": []
     },
     {
-      "id": 827,
+      "id": 835,
       "name": "Rayleigh test input 2",
-      "data": 827,
+      "data": 835,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -91,66 +91,66 @@
       "processes": []
     },
     {
-      "id": 828,
+      "id": 836,
       "name": "R_88",
-      "data": 828,
+      "data": 836,
       "type": "number",
-      "tableProcessGUId": "96e3a56b-f265-4c08-a215-374c521de374",
+      "tableProcessGUId": "7afb1d98-c543-46fd-b040-040315e3fd22",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 829,
+      "id": 837,
       "name": "z_88",
-      "data": 829,
+      "data": 837,
       "type": "number",
-      "tableProcessGUId": "96e3a56b-f265-4c08-a215-374c521de374",
+      "tableProcessGUId": "7afb1d98-c543-46fd-b040-040315e3fd22",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 830,
+      "id": 838,
       "name": "pvalue_88",
-      "data": 830,
+      "data": 838,
       "type": "number",
-      "tableProcessGUId": "96e3a56b-f265-4c08-a215-374c521de374",
+      "tableProcessGUId": "7afb1d98-c543-46fd-b040-040315e3fd22",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 831,
+      "id": 839,
       "name": "F_88",
-      "data": 831,
+      "data": 839,
       "type": "number",
-      "tableProcessGUId": "96e3a56b-f265-4c08-a215-374c521de374",
+      "tableProcessGUId": "7afb1d98-c543-46fd-b040-040315e3fd22",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 832,
+      "id": 840,
       "name": "ww_pvalue_88",
-      "data": 832,
+      "data": 840,
       "type": "number",
-      "tableProcessGUId": "96e3a56b-f265-4c08-a215-374c521de374",
+      "tableProcessGUId": "7afb1d98-c543-46fd-b040-040315e3fd22",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 833,
+      "id": 841,
       "name": "acrophase_88",
-      "data": 833,
+      "data": 841,
       "type": "number",
-      "tableProcessGUId": "96e3a56b-f265-4c08-a215-374c521de374",
+      "tableProcessGUId": "7afb1d98-c543-46fd-b040-040315e3fd22",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -159,7 +159,7 @@
   ],
   "plots": [
     {
-      "id": 141,
+      "id": 143,
       "name": "Rayleigh test result",
       "x": 60,
       "y": 60,
@@ -173,16 +173,34 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          826,
-          827,
-          828,
-          829,
-          830,
-          831,
-          832,
-          833
+          834,
+          835,
+          836,
+          837,
+          838,
+          839,
+          840,
+          841
         ],
         "showCol": [
           true,
@@ -208,19 +226,19 @@
       "displayName": "Rayleigh test",
       "args": {
         "yIN": [
-          826,
-          827
+          834,
+          835
         ],
         "unit": "radians",
         "period": 24,
         "showWatsonWilliams": true,
         "out": {
-          "R": 828,
-          "z": 829,
-          "pvalue": 830,
-          "F": 831,
-          "ww_pvalue": 832,
-          "acrophase": 833
+          "R": 836,
+          "z": 837,
+          "pvalue": 838,
+          "F": 839,
+          "ww_pvalue": 840,
+          "acrophase": 841
         }
       },
       "refTPId": null
@@ -231,7 +249,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_79",
+      "id": "note_80",
       "text": "Circular-statistics tests for phase/angle columns (radians, degrees, or clock-hours on a chosen period). The Rayleigh test always runs: for each column it asks whether the phases (e.g. acrophases, activity-onset times) point in a preferred direction rather than scattering uniformly, reporting the mean resultant length R (0 = dispersed, 1 = tightly clustered), Rayleigh's z = nR², a p-value, and an acrophase (Batschelet 1981). Wiring an optional time column — numeric hours or an actual timestamp, folded modulo the period to a clock phase — switches every column to an amplitude-weighted mode: each value weights its own measurement time's angle, giving an amplitude-weighted mean resultant vector and acrophase (the weighted mean time-of-peak) instead of treating the column as a set of raw angles; the unit setting is then ignored. An optional Watson-Williams test (toggle it on, like the boxplot's pairwise comparisons) adds the circular analogue of one-way ANOVA across the columns (each a group of raw angles), reporting an F statistic and p-value for whether the groups share a common mean direction; it assumes reasonably concentrated, similarly-dispersed samples and applies a von Mises concentration correction (Watson & Williams 1956) — it only applies to untimed columns, since it compares discrete event angles, not a continuous weighted rhythm. In the demo the two angle columns each cluster tightly (small Rayleigh p) but around different mean directions, so the Watson-Williams test is significant.",
       "x": 40,
       "y": 24,
@@ -242,12 +260,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_826": {
+    "data_834": {
       "x": 60,
       "y": 314
     },
-    "data_827": {
+    "data_835": {
       "x": 60,
       "y": 814
     },
@@ -255,11 +295,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_141": {
+    "plot_143": {
       "x": 820,
       "y": 314
     },
-    "note_79": {
+    "note_80": {
       "x": 40,
       "y": 24
     }
@@ -300,6 +340,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -321,5 +362,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

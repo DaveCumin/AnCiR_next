@@ -527,7 +527,7 @@
       "name": "variable_8",
       "data": 116,
       "type": "category",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -538,7 +538,7 @@
       "name": "n_8",
       "data": 117,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -549,7 +549,7 @@
       "name": "mean_8",
       "data": 118,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -560,7 +560,7 @@
       "name": "median_8",
       "data": 119,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -571,7 +571,7 @@
       "name": "sd_8",
       "data": 120,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -582,7 +582,7 @@
       "name": "min_8",
       "data": 121,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -593,7 +593,7 @@
       "name": "max_8",
       "data": 122,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -604,7 +604,7 @@
       "name": "range_8",
       "data": 123,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -615,7 +615,7 @@
       "name": "q1_8",
       "data": 124,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -626,7 +626,7 @@
       "name": "q3_8",
       "data": 125,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -637,7 +637,7 @@
       "name": "iqr_8",
       "data": 126,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -648,7 +648,7 @@
       "name": "skewness_8",
       "data": 127,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -659,7 +659,7 @@
       "name": "kurtosis_8",
       "data": 128,
       "type": "number",
-      "tableProcessGUId": "a517b435-d038-466c-b797-9a424069a5f0",
+      "tableProcessGUId": "f54e2001-c3bd-4b5c-b626-f39b80955421",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -670,7 +670,7 @@
       "name": "variable_9",
       "data": 129,
       "type": "category",
-      "tableProcessGUId": "d89804f1-5a67-4cd3-85fb-b931baccd963",
+      "tableProcessGUId": "f27cd15e-138f-4889-9d76-2ce72723f358",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -681,7 +681,7 @@
       "name": "statistic_9",
       "data": 130,
       "type": "number",
-      "tableProcessGUId": "d89804f1-5a67-4cd3-85fb-b931baccd963",
+      "tableProcessGUId": "f27cd15e-138f-4889-9d76-2ce72723f358",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -692,7 +692,7 @@
       "name": "pvalue_9",
       "data": 131,
       "type": "number",
-      "tableProcessGUId": "d89804f1-5a67-4cd3-85fb-b931baccd963",
+      "tableProcessGUId": "f27cd15e-138f-4889-9d76-2ce72723f358",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -703,7 +703,7 @@
       "name": "n_9",
       "data": 132,
       "type": "number",
-      "tableProcessGUId": "d89804f1-5a67-4cd3-85fb-b931baccd963",
+      "tableProcessGUId": "f27cd15e-138f-4889-9d76-2ce72723f358",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -714,7 +714,7 @@
       "name": "normal_9",
       "data": 133,
       "type": "number",
-      "tableProcessGUId": "d89804f1-5a67-4cd3-85fb-b931baccd963",
+      "tableProcessGUId": "f27cd15e-138f-4889-9d76-2ce72723f358",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -725,7 +725,7 @@
       "name": "var_i_10",
       "data": 134,
       "type": "category",
-      "tableProcessGUId": "fddd5b29-ba69-42ed-a460-8de50b63544e",
+      "tableProcessGUId": "2b2fef35-dc4a-49a7-9a69-0691c456a664",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -736,7 +736,7 @@
       "name": "var_j_10",
       "data": 135,
       "type": "category",
-      "tableProcessGUId": "fddd5b29-ba69-42ed-a460-8de50b63544e",
+      "tableProcessGUId": "2b2fef35-dc4a-49a7-9a69-0691c456a664",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -747,7 +747,7 @@
       "name": "r_10",
       "data": 136,
       "type": "number",
-      "tableProcessGUId": "fddd5b29-ba69-42ed-a460-8de50b63544e",
+      "tableProcessGUId": "2b2fef35-dc4a-49a7-9a69-0691c456a664",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -758,7 +758,7 @@
       "name": "pvalue_10",
       "data": 137,
       "type": "number",
-      "tableProcessGUId": "fddd5b29-ba69-42ed-a460-8de50b63544e",
+      "tableProcessGUId": "2b2fef35-dc4a-49a7-9a69-0691c456a664",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -769,7 +769,7 @@
       "name": "n_10",
       "data": 138,
       "type": "number",
-      "tableProcessGUId": "fddd5b29-ba69-42ed-a460-8de50b63544e",
+      "tableProcessGUId": "2b2fef35-dc4a-49a7-9a69-0691c456a664",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -792,6 +792,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
@@ -932,13 +950,15 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         }
       }
     },
@@ -957,6 +977,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "padding": {
           "top": 20,
@@ -1038,6 +1076,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "padding": {
           "top": 24,
@@ -1120,6 +1176,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
           116,
@@ -1156,6 +1230,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
           129,
@@ -1272,6 +1364,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "data_112": {
       "x": 60,
@@ -1362,6 +1476,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -1383,5 +1498,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

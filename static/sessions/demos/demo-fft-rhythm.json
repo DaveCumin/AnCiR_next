@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "502": [
+    "506": [
       0,
       1,
       2,
@@ -194,7 +194,7 @@
       190,
       191
     ],
-    "503": [
+    "507": [
       61.037491948115374,
       64.99236592704621,
       74.20658521498542,
@@ -391,9 +391,9 @@
   },
   "data": [
     {
-      "id": 502,
+      "id": 506,
       "name": "hour",
-      "data": 502,
+      "data": 506,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -402,9 +402,9 @@
       "processes": []
     },
     {
-      "id": 503,
+      "id": 507,
       "name": "signal",
-      "data": 503,
+      "data": 507,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -415,7 +415,7 @@
   ],
   "plots": [
     {
-      "id": 73,
+      "id": 74,
       "name": "Signal FFT",
       "x": 60,
       "y": 60,
@@ -429,6 +429,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           4,
@@ -467,9 +485,9 @@
         "data": [
           {
             "x": {
-              "id": 504,
+              "id": 508,
               "name": "hour",
-              "refId": 502,
+              "refId": 506,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -478,9 +496,9 @@
               "processes": []
             },
             "y": {
-              "id": 505,
+              "id": 509,
               "name": "signal",
-              "refId": 503,
+              "refId": 507,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -489,27 +507,27 @@
               "processes": []
             },
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 3,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "phaseLine": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 3,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "phasePoints": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 4,
               "shape": "circle",
               "draw": true
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 4,
               "shape": "circle",
               "draw": true
@@ -527,7 +545,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_33",
+      "id": "note_34",
       "text": "Fourier analysis decomposes an evenly sampled series into sinusoidal components and plots amplitude (spectral power) against frequency; a peak at a given frequency corresponds to a rhythm of period 1/frequency. Use it to identify dominant frequencies and harmonics. See the Fourier Analysis chapter.",
       "x": 40,
       "y": 24,
@@ -538,20 +556,42 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_502": {
+    "data_506": {
       "x": 60,
       "y": 314
     },
-    "data_503": {
+    "data_507": {
       "x": 60,
       "y": 814
     },
-    "note_33": {
+    "note_34": {
       "x": 40,
       "y": 24
     },
-    "plot_73": {
+    "plot_74": {
       "x": 820,
       "y": 314
     }
@@ -592,6 +632,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -613,5 +654,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

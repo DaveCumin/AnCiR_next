@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "790": [
+    "798": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "791": [
+    "799": [
       11.229882793897886,
       37.29138111399729,
       35.47426005079059,
@@ -104,7 +104,7 @@
       20.999584523229,
       30.339018292668595
     ],
-    "792": [
+    "800": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "793": [
+    "801": [
       27.99850798622859,
       30.99958480957332,
       33.48990964443412,
@@ -211,20 +211,20 @@
   },
   "data": [
     {
-      "id": 790,
+      "id": 798,
       "name": "x",
-      "data": 790,
+      "data": 798,
       "type": "number",
-      "tableProcessGUId": "31ac6737-6032-4266-8dc3-0244d9f90b63",
+      "tableProcessGUId": "e6266dbc-f71b-46ff-9941-f2fccdeac4aa",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 791,
+      "id": 799,
       "name": "y",
-      "data": 791,
+      "data": 799,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 792,
+      "id": 800,
       "name": "smoothedx_81",
-      "data": 792,
+      "data": 800,
       "type": "number",
-      "tableProcessGUId": "0e2dfcfe-a9ce-4e83-b55a-82e81ca4ee11",
+      "tableProcessGUId": "8f88dbe8-8636-420b-8b9d-e454f618ce46",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 793,
-      "name": "smoothedy_791_81",
-      "data": 793,
+      "id": 801,
+      "name": "smoothedy_799_81",
+      "data": 801,
       "type": "number",
-      "tableProcessGUId": "0e2dfcfe-a9ce-4e83-b55a-82e81ca4ee11",
+      "tableProcessGUId": "8f88dbe8-8636-420b-8b9d-e454f618ce46",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 133,
+      "id": 135,
       "name": "Smooth Data: data + fit",
       "x": 60,
       "y": 60,
@@ -271,12 +271,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -314,9 +333,9 @@
         "data": [
           {
             "x": {
-              "id": 794,
+              "id": 802,
               "name": "x",
-              "refId": 790,
+              "refId": 798,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -325,9 +344,9 @@
               "processes": []
             },
             "y": {
-              "id": 795,
+              "id": 803,
               "name": "y",
-              "refId": 791,
+              "refId": 799,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -338,14 +357,14 @@
             "label": "Data",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -353,9 +372,9 @@
           },
           {
             "x": {
-              "id": 796,
+              "id": 804,
               "name": "smoothedx_81",
-              "refId": 792,
+              "refId": 800,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -364,9 +383,9 @@
               "processes": []
             },
             "y": {
-              "id": 797,
-              "name": "smoothedy_791_81",
-              "refId": 793,
+              "id": 805,
+              "name": "smoothedy_799_81",
+              "refId": 801,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -377,14 +396,14 @@
             "label": "Smooth Data",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -394,19 +413,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 134,
+      "id": 136,
       "name": "Smooth Data: values",
       "x": 630,
       "y": 60,
@@ -420,10 +441,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          791,
-          793
+          799,
+          801
         ],
         "showCol": [
           true,
@@ -448,7 +487,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 790
+          "result": 798
         }
       },
       "refTPId": null
@@ -458,9 +497,9 @@
       "name": "SmoothedData",
       "displayName": "Smooth Data",
       "args": {
-        "xIN": 790,
+        "xIN": 798,
         "yIN": [
-          791
+          799
         ],
         "smootherType": "moving",
         "whittakerLambda": 100,
@@ -472,8 +511,8 @@
         "movingAvgType": "simple",
         "preProcesses": [],
         "out": {
-          "smoothedx": 792,
-          "smoothedy_791": 793
+          "smoothedx": 800,
+          "smoothedy_799": 801
         }
       },
       "refTPId": null
@@ -484,7 +523,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_73",
+      "id": "note_74",
       "text": "Smooths a series to suppress noise while keeping the underlying shape. Choose Whittaker-Eilers (penalised least squares; λ sets stiffness), Savitzky-Golay (local polynomial, preserves peak height/width), LOESS (locally weighted regression; bandwidth sets span), or a moving average. Use a light hand: over-smoothing flattens real amplitude. It also emits a residual column per series (raw − smoothed) with a \"Plot residuals\" button, so you can see exactly what was removed and check you have not smoothed away real signal. The demo overlays the smoothed curve on the noisy input.\n\nSavitzky & Golay (1964); Cleveland (1979, LOESS); Eilers (2003, Whittaker).",
       "x": 40,
       "y": 24,
@@ -495,8 +534,30 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_791": {
+    "data_799": {
       "x": 60,
       "y": 314
     },
@@ -508,15 +569,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_133": {
+    "plot_135": {
       "x": 820,
       "y": 314
     },
-    "plot_134": {
+    "plot_136": {
       "x": 820,
       "y": 814
     },
-    "note_73": {
+    "note_74": {
       "x": 40,
       "y": 24
     }
@@ -557,6 +618,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -578,5 +640,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

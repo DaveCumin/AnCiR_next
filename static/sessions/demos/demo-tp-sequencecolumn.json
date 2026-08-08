@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "787": [
+    "795": [
       0,
       1,
       2,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 787,
+      "id": 795,
       "name": "result_78",
-      "data": 787,
+      "data": 795,
       "type": "number",
-      "tableProcessGUId": "d11e5fad-2be8-4e79-ad0b-120563c3863d",
+      "tableProcessGUId": "f020737c-fa11-47e1-92f4-c4bcb9ce3018",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 131,
+      "id": 133,
       "name": "Sequence Column result",
       "x": 60,
       "y": 60,
@@ -82,9 +82,27 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          787
+          795
         ],
         "showCol": [
           true
@@ -108,7 +126,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 787
+          "result": 795
         }
       },
       "refTPId": null
@@ -119,7 +137,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_71",
+      "id": "note_72",
       "text": "Creates a regular numeric or time sequence from a start, step, and count (or end). Use it to build an index or an evenly spaced time axis to pair with generated or pasted values.",
       "x": 40,
       "y": 24,
@@ -130,16 +148,38 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "tableprocess_78": {
       "x": 60,
       "y": 314
     },
-    "plot_131": {
+    "plot_133": {
       "x": 820,
       "y": 314
     },
-    "note_71": {
+    "note_72": {
       "x": 40,
       "y": 24
     }
@@ -180,6 +220,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -201,5 +242,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

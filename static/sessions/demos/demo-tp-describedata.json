@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "673": [
+    "681": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "674": [
+    "682": [
       1,
       3,
       5,
@@ -104,154 +104,66 @@
       97,
       99
     ],
-    "675": [
+    "683": [
       "Describe Data input 1",
       "Describe Data input 2"
     ],
-    "676": [
+    "684": [
       50,
       50
     ],
-    "677": [
+    "685": [
       48.42725933896873,
       50
     ],
-    "678": [
+    "686": [
       49.99999999999998,
       50
     ],
-    "679": [
+    "687": [
       29.056294644061907,
       29.154759474226502
     ],
-    "680": [
+    "688": [
       10,
       1
     ],
-    "681": [
+    "689": [
       90,
       99
     ],
-    "682": [
+    "690": [
       80,
       98
     ],
-    "683": [
+    "691": [
       21.715728752538084,
       25.5
     ],
-    "684": [
+    "692": [
       78.28427124746192,
       74.5
     ],
-    "685": [
+    "693": [
       56.56854249492383,
       49
     ],
-    "686": [
+    "694": [
       0.06387191582287348,
       0
     ],
-    "687": [
+    "695": [
       -1.5514528241552457,
       -1.2
     ]
   },
   "data": [
     {
-      "id": 673,
-      "name": "Describe Data input 1",
-      "data": 673,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 674,
-      "name": "Describe Data input 2",
-      "data": 674,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 675,
-      "name": "variable_63",
-      "data": 675,
-      "type": "category",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 676,
-      "name": "n_63",
-      "data": 676,
-      "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 677,
-      "name": "mean_63",
-      "data": 677,
-      "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 678,
-      "name": "median_63",
-      "data": 678,
-      "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 679,
-      "name": "sd_63",
-      "data": 679,
-      "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 680,
-      "name": "min_63",
-      "data": 680,
-      "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 681,
-      "name": "max_63",
+      "name": "Describe Data input 1",
       "data": 681,
       "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -259,10 +171,10 @@
     },
     {
       "id": 682,
-      "name": "range_63",
+      "name": "Describe Data input 2",
       "data": 682,
       "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -270,10 +182,10 @@
     },
     {
       "id": 683,
-      "name": "q1_63",
+      "name": "variable_63",
       "data": 683,
-      "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
+      "type": "category",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -281,10 +193,10 @@
     },
     {
       "id": 684,
-      "name": "q3_63",
+      "name": "n_63",
       "data": 684,
       "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -292,10 +204,10 @@
     },
     {
       "id": 685,
-      "name": "iqr_63",
+      "name": "mean_63",
       "data": 685,
       "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -303,10 +215,10 @@
     },
     {
       "id": 686,
-      "name": "skewness_63",
+      "name": "median_63",
       "data": 686,
       "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -314,10 +226,98 @@
     },
     {
       "id": 687,
-      "name": "kurtosis_63",
+      "name": "sd_63",
       "data": 687,
       "type": "number",
-      "tableProcessGUId": "37d562e5-c541-4e33-a4c8-26b10ab0cb29",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 688,
+      "name": "min_63",
+      "data": 688,
+      "type": "number",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 689,
+      "name": "max_63",
+      "data": 689,
+      "type": "number",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 690,
+      "name": "range_63",
+      "data": 690,
+      "type": "number",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 691,
+      "name": "q1_63",
+      "data": 691,
+      "type": "number",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 692,
+      "name": "q3_63",
+      "data": 692,
+      "type": "number",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 693,
+      "name": "iqr_63",
+      "data": 693,
+      "type": "number",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 694,
+      "name": "skewness_63",
+      "data": 694,
+      "type": "number",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 695,
+      "name": "kurtosis_63",
+      "data": 695,
+      "type": "number",
+      "tableProcessGUId": "aaeda87c-22af-4de7-9fa3-3b1ee262ccd5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -326,7 +326,7 @@
   ],
   "plots": [
     {
-      "id": 114,
+      "id": 116,
       "name": "Describe Data result",
       "x": 60,
       "y": 60,
@@ -340,23 +340,41 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          673,
-          674,
-          675,
-          676,
-          677,
-          678,
-          679,
-          680,
           681,
           682,
           683,
           684,
           685,
           686,
-          687
+          687,
+          688,
+          689,
+          690,
+          691,
+          692,
+          693,
+          694,
+          695
         ],
         "showCol": [
           true,
@@ -389,23 +407,23 @@
       "displayName": "Describe Data",
       "args": {
         "yIN": [
-          673,
-          674
+          681,
+          682
         ],
         "out": {
-          "variable": 675,
-          "n": 676,
-          "mean": 677,
-          "median": 678,
-          "sd": 679,
-          "min": 680,
-          "max": 681,
-          "range": 682,
-          "q1": 683,
-          "q3": 684,
-          "iqr": 685,
-          "skewness": 686,
-          "kurtosis": 687
+          "variable": 683,
+          "n": 684,
+          "mean": 685,
+          "median": 686,
+          "sd": 687,
+          "min": 688,
+          "max": 689,
+          "range": 690,
+          "q1": 691,
+          "q3": 692,
+          "iqr": 693,
+          "skewness": 694,
+          "kurtosis": 695
         },
         "valid": false
       },
@@ -417,7 +435,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_59",
+      "id": "note_60",
       "text": "Reports summary statistics for each wired column, one row per variable: n, mean, median, standard deviation, min, max, range, first and third quartiles, IQR, skewness and (excess) kurtosis. Skewness and kurtosis use the bias-corrected sample formulae (matching scipy). Quick-plot draws a histogram of each column so you can see the distribution behind the numbers.",
       "x": 40,
       "y": 24,
@@ -428,12 +446,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_673": {
+    "data_681": {
       "x": 60,
       "y": 314
     },
-    "data_674": {
+    "data_682": {
       "x": 60,
       "y": 814
     },
@@ -441,11 +481,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_114": {
+    "plot_116": {
       "x": 820,
       "y": 314
     },
-    "note_59": {
+    "note_60": {
       "x": 40,
       "y": 24
     }
@@ -486,6 +526,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -507,5 +548,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

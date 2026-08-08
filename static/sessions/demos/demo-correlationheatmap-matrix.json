@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "506": [
+    "510": [
       44.3132288681365,
       38.02749002917909,
       32.23815015678512,
@@ -26,7 +26,7 @@
       71.82317245605728,
       63.91433345733487
     ],
-    "507": [
+    "511": [
       44.16901032234467,
       49.67899523857719,
       68.33293316979652,
@@ -52,7 +52,7 @@
       31.313470249919096,
       46.829055850071825
     ],
-    "508": [
+    "512": [
       33.79302678973565,
       49.025375163032415,
       43.55278442510142,
@@ -78,7 +78,7 @@
       20.54160241457355,
       40.19452287317554
     ],
-    "509": [
+    "513": [
       36.606484373713165,
       36.484052656931645,
       37.12766938356504,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 506,
+      "id": 510,
       "name": "sleep",
-      "data": 506,
+      "data": 510,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,9 +118,9 @@
       "processes": []
     },
     {
-      "id": 507,
+      "id": 511,
       "name": "activity",
-      "data": 507,
+      "data": 511,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,9 +129,9 @@
       "processes": []
     },
     {
-      "id": 508,
+      "id": 512,
       "name": "light",
-      "data": 508,
+      "data": 512,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -140,9 +140,9 @@
       "processes": []
     },
     {
-      "id": 509,
+      "id": 513,
       "name": "temp",
-      "data": 509,
+      "data": 513,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -153,7 +153,7 @@
   ],
   "plots": [
     {
-      "id": 74,
+      "id": 75,
       "name": "Correlation matrix",
       "x": 60,
       "y": 60,
@@ -167,6 +167,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "padding": {
           "top": 20,
@@ -180,9 +198,9 @@
         "data": [
           {
             "column": {
-              "id": 510,
+              "id": 514,
               "name": "sleep",
-              "refId": 506,
+              "refId": 510,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -193,9 +211,9 @@
           },
           {
             "column": {
-              "id": 511,
+              "id": 515,
               "name": "activity",
-              "refId": 507,
+              "refId": 511,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -206,9 +224,9 @@
           },
           {
             "column": {
-              "id": 512,
+              "id": 516,
               "name": "light",
-              "refId": 508,
+              "refId": 512,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -219,9 +237,9 @@
           },
           {
             "column": {
-              "id": 513,
+              "id": 517,
               "name": "temp",
-              "refId": 509,
+              "refId": 513,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -242,6 +260,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {},
   "appState": {
     "currentTab": "null",
@@ -279,6 +319,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -300,5 +341,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

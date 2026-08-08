@@ -1,8 +1,9 @@
 // @ts-nocheck
 // Scalar-metric OUTPUT PORTS for analysis plots (Periodogram / FFT /
-// Correlogram): the peak stats each plot computes per series, exposed as real
-// columns (one value per series, in plot-data order) so they can be wired
-// downstream exactly like a table process's metric ports.
+// Correlogram / Q-Q): the stats each plot computes per series (spectral peaks,
+// or the Q-Q plot's probability-plot correlation), exposed as real columns
+// (one value per series, in plot-data order) so they can be wired downstream
+// exactly like a table process's metric ports.
 //
 // The columns are tracked in `plot.metricOut` ({ key → colId }, persisted with
 // the session). Reconcile + writes are driven by EACH PLOT COMPONENT's own
@@ -56,6 +57,19 @@ export const PLOT_METRIC_DEFS = {
 		statsFor(datum) {
 			const p = datum?.visiblePeak ?? datum?.peak;
 			return { peak_lag: p?.lag ?? NaN, peak_correlation: p?.correlation ?? NaN };
+		}
+	},
+	qqplot: {
+		keys: ['qq_r', 'qq_n'],
+		statsFor(datum) {
+			// datum.qq is the series' full Q-Q computation (utils/qq.js): r is the
+			// probability-plot correlation on the plotted Blom-position pairs, n the
+			// valid-value count. r is null when undefined (constant data / n < 3) —
+			// NaN in the column, like the other defs' missing stats. Deliberately NO
+			// p-value output: the Q-Q plot is descriptive, the NormalityTest node
+			// owns W/p (and the sample-size policy guard watches pvalue outputs).
+			const q = datum?.qq;
+			return { qq_r: q?.r ?? NaN, qq_n: q?.n ?? NaN };
 		}
 	}
 };

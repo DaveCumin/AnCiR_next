@@ -91,6 +91,16 @@ function tpViz(tp) {
 		}
 	}
 
+	// NormalityTest → the Q-Q plot. Like the heatmap it is self-contained (it computes the
+	// quantile pairs from the raw columns itself), so wire it to this node's OWN input
+	// columns — the picture of exactly the departure from normality the test scores.
+	if (tp.name === 'NormalityTest') {
+		const cols = yINs.filter(isRef);
+		if (cols.length) {
+			return { type: 'qqplot', title: `${tp.name}: Q-Q`, columns: cols };
+		}
+	}
+
 	// CrossCorrelation → the correlogram: lag (x) vs correlation (y) as a line.
 	if (tp.name === 'CrossCorrelation') {
 		const xOut = out.lag;
@@ -219,6 +229,7 @@ export function plotDataFromSpec(spec, { x, y, width = 420, height = 300, source
 	else if (spec.type === 'correlationheatmap')
 		inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
 	else if (spec.type === 'histogram') inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
+	else if (spec.type === 'qqplot') inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
 	else return null;
 	return { name: spec.title, type: spec.type, x, y, width, height, sourceNodeId, plot: inner };
 }

@@ -101,6 +101,49 @@ export function colourForCategory(label, fallbackIndex = 0) {
 	return getPaletteColor(slot);
 }
 
+/**
+ * Record a colour the USER chose for a category.
+ *
+ * Stored through `normaliseEntry`, so a hex that is in the current palette is kept as a
+ * SLOT (it follows a palette switch, like an auto-assigned colour) and anything else is
+ * locked as a hex. Returns whether anything was written; an unusable value writes
+ * nothing rather than corrupting the map.
+ */
+export function setCategoryColour(label, colour) {
+	const norm = normaliseEntry(colour);
+	if (!norm) return false;
+	catMap()[String(label)] = norm;
+	return true;
+}
+
+/**
+ * The category labels a plot draws with per-category colours, or [] when it does not.
+ *
+ * This is the panel-side statement of the `useCategoryColour` condition in
+ * plots/Boxplot/Boxplot.svelte: category colouring applies to a BOXPLOT with exactly
+ * one series whose x column carries data spanning more than one category. With several
+ * series, colour distinguishes the series (each series row already has its own picker)
+ * and this answers []. Monochrome figures draw greys per category, so a colour control
+ * would be a lie there and it answers [] too.
+ *
+ * Pure over the wrapper so it is testable without a browser.
+ *
+ * @param {{type?: string, style?: any, plot?: any}} plotWrapper a wrapper Plot
+ * @returns {string[]}
+ */
+export function categoryColourLabels(plotWrapper) {
+	if (plotWrapper?.type !== 'boxplot') return [];
+	if (plotWrapper?.style?.monochrome === true) return [];
+	const inner = plotWrapper.plot;
+	const data = inner?.data;
+	if (!Array.isArray(data) || data.length !== 1) return [];
+	const labels = inner.uniqueXValues ?? [];
+	if (labels.length <= 1) return [];
+	const xData = data[0]?.x?.getData?.() ?? [];
+	if (xData.length === 0) return [];
+	return labels.map(String);
+}
+
 /** Forget a pinned category colour. */
 export function releaseCategoryColour(label) {
 	if (core.categoryColours) delete core.categoryColours[String(label)];

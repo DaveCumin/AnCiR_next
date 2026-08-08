@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "620": [
+    "628": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "621": [
+    "629": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,18 +104,18 @@
       10,
       11.362966948437261
     ],
-    "622": [
+    "630": [
       0.05
     ],
-    "623": [
+    "631": [
       29.733079043901952
     ]
   },
   "data": [
     {
-      "id": 620,
+      "id": 628,
       "name": "Surrogate Test input 1",
-      "data": 620,
+      "data": 628,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -124,9 +124,9 @@
       "processes": []
     },
     {
-      "id": 621,
+      "id": 629,
       "name": "Surrogate Test input 2",
-      "data": 621,
+      "data": 629,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -135,22 +135,22 @@
       "processes": []
     },
     {
-      "id": 622,
+      "id": 630,
       "name": "pvalue_54",
-      "data": 622,
+      "data": 630,
       "type": "number",
-      "tableProcessGUId": "dafe52ee-ebb4-4ef9-85cf-95105cd6956b",
+      "tableProcessGUId": "6aad2a23-29b2-4900-ad3f-c88d80bff1b6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 623,
+      "id": 631,
       "name": "observed_54",
-      "data": 623,
+      "data": 631,
       "type": "number",
-      "tableProcessGUId": "6f281c8f-7fe5-44a3-a36c-143354f4fbbf",
+      "tableProcessGUId": "f193c0de-02e9-4ab0-b3ee-8a63b90535b8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -159,7 +159,7 @@
   ],
   "plots": [
     {
-      "id": 105,
+      "id": 107,
       "name": "Surrogate Test result",
       "x": 60,
       "y": 60,
@@ -173,12 +173,30 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          620,
-          621,
-          622,
-          623
+          628,
+          629,
+          630,
+          631
         ],
         "showCol": [
           true,
@@ -199,8 +217,8 @@
       "name": "SurrogateTest",
       "displayName": "Surrogate Test",
       "args": {
-        "xIN": 620,
-        "yIN": 621,
+        "xIN": 628,
+        "yIN": 629,
         "method": "block",
         "nSurrogates": 19,
         "seed": 12345,
@@ -208,8 +226,8 @@
         "periodMin": 20,
         "periodMax": 28,
         "out": {
-          "pvalue": 622,
-          "observed": 623
+          "pvalue": 630,
+          "observed": 631
         }
       },
       "refTPId": null
@@ -220,7 +238,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_53",
+      "id": "note_54",
       "text": "Asks whether a rhythm is stronger than you would expect from a series with the same character but no real rhythm. The catch it exists to solve: shuffling the values destroys the smooth run-to-run structure that every biological recording has, so a shuffled null is far too easy to beat and almost anything looks rhythmic. The block bootstrap instead resamples whole chunks (a day at a time by default) and the AR(1) option simulates matched \"red noise\", so both keep that structure. Phase-randomised and AAFT surrogates are offered too, but they preserve the spectrum — and therefore the rhythm itself — so they cannot test for rhythmicity; the node says so when you pick one. Results are reproducible from the seed, and the smallest p it can report is 1/(surrogates + 1).",
       "x": 40,
       "y": 24,
@@ -231,12 +249,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_620": {
+    "data_628": {
       "x": 60,
       "y": 314
     },
-    "data_621": {
+    "data_629": {
       "x": 60,
       "y": 814
     },
@@ -244,11 +284,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_105": {
+    "plot_107": {
       "x": 820,
       "y": 314
     },
-    "note_53": {
+    "note_54": {
       "x": 40,
       "y": 24
     }
@@ -289,6 +329,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -310,5 +351,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

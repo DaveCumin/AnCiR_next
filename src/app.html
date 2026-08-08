@@ -12,6 +12,33 @@
 		/>
 		<!-- ----- -->
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+		<!-- SEO / social. These live here (not in <svelte:head>) because the app is a
+		     hash-router SPA with no prerendering: %sveltekit.head% is empty in the
+		     shipped index.html, so head tags added in a component only appear after
+		     the JS bundle boots and are invisible to crawlers and link unfurlers. -->
+		<title>AnCiR: Circadian Rhythm and Time-Series Data Analysis</title>
+		<meta
+			name="description"
+			content="Analyse circadian and rhythmic time-series data in your browser: actograms, periodograms, cosinor fitting, statistics and plots. No install, no data upload."
+		/>
+		<meta name="theme-color" content="#4d9fe3" />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://ancir.pages.dev" />
+		<meta property="og:site_name" content="AnCiR" />
+		<meta property="og:title" content="AnCiR: Circadian Rhythm and Time-Series Data Analysis" />
+		<meta
+			property="og:description"
+			content="Analyse circadian and rhythmic time-series data in your browser: actograms, periodograms, cosinor fitting, statistics and plots. No install, no data upload."
+		/>
+		<!-- No og:image: static/ holds only logo.svg, and the major unfurlers do not
+		     render SVG cards. Add a raster (1200x630 PNG) later if a card is wanted. -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="AnCiR: Circadian Rhythm and Time-Series Data Analysis" />
+		<meta
+			name="twitter:description"
+			content="Analyse circadian and rhythmic time-series data in your browser: actograms, periodograms, cosinor fitting, statistics and plots. No install, no data upload."
+		/>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

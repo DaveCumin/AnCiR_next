@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "494": [
+    "498": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "495": [
+    "499": [
       50.73643610198167,
       52.88311387843814,
       58.853278502861286,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 494,
+      "id": 498,
       "name": "hour",
-      "data": 494,
+      "data": 498,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 495,
+      "id": 499,
       "name": "activity",
-      "data": 495,
+      "data": 499,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 71,
+      "id": 72,
       "name": "Activity periodogram",
       "x": 60,
       "y": 60,
@@ -381,6 +381,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "periodlimsIN": [
           1,
@@ -412,9 +430,9 @@
         "data": [
           {
             "x": {
-              "id": 496,
+              "id": 500,
               "name": "hour",
-              "refId": 494,
+              "refId": 498,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -423,9 +441,9 @@
               "processes": []
             },
             "y": {
-              "id": 497,
+              "id": 501,
               "name": "activity",
-              "refId": 495,
+              "refId": 499,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -434,21 +452,21 @@
               "processes": []
             },
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 3,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "thresholdline": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 3,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 4,
               "shape": "circle",
               "draw": true
@@ -467,7 +485,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_31",
+      "id": "note_32",
       "text": "Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
       "x": 40,
       "y": 24,
@@ -478,20 +496,42 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_494": {
+    "data_498": {
       "x": 60,
       "y": 314
     },
-    "data_495": {
+    "data_499": {
       "x": 60,
       "y": 814
     },
-    "note_31": {
+    "note_32": {
       "x": 40,
       "y": 24
     },
-    "plot_71": {
+    "plot_72": {
       "x": 820,
       "y": 314
     }
@@ -532,6 +572,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -553,5 +594,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

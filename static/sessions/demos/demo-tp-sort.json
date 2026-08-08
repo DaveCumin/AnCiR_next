@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "601": [
+    "609": [
       49,
       48,
       47,
@@ -52,7 +52,7 @@
       1,
       0
     ],
-    "602": [
+    "610": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "603": [
+    "611": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "604": [
+    "612": [
       11.362966948437261,
       10,
       11.362966948437276,
@@ -211,9 +211,9 @@
   },
   "data": [
     {
-      "id": 601,
+      "id": 609,
       "name": "Sort input 1",
-      "data": 601,
+      "data": 609,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -222,9 +222,9 @@
       "processes": []
     },
     {
-      "id": 602,
+      "id": 610,
       "name": "Sort input 2",
-      "data": 602,
+      "data": 610,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 603,
-      "name": "sortedy_601_47",
-      "data": 603,
+      "id": 611,
+      "name": "sortedy_609_47",
+      "data": 611,
       "type": "number",
-      "tableProcessGUId": "4cd4dc76-40bc-434d-88bb-23bc4882c37f",
+      "tableProcessGUId": "3a12bf68-541d-4077-9de2-8e6dddae588d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 604,
-      "name": "sortedy_602_47",
-      "data": 604,
+      "id": 612,
+      "name": "sortedy_610_47",
+      "data": 612,
       "type": "number",
-      "tableProcessGUId": "4cd4dc76-40bc-434d-88bb-23bc4882c37f",
+      "tableProcessGUId": "3a12bf68-541d-4077-9de2-8e6dddae588d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 98,
+      "id": 100,
       "name": "Sort result",
       "x": 60,
       "y": 60,
@@ -271,12 +271,30 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          601,
-          602,
-          603,
-          604
+          609,
+          610,
+          611,
+          612
         ],
         "showCol": [
           true,
@@ -298,15 +316,15 @@
       "displayName": "Sort",
       "args": {
         "yIN": [
-          601,
-          602
+          609,
+          610
         ],
-        "sortOnId": 601,
+        "sortOnId": 609,
         "direction": "asc",
         "preProcesses": [],
         "out": {
-          "sortedy_601": 603,
-          "sortedy_602": 604
+          "sortedy_609": 611,
+          "sortedy_610": 612
         }
       },
       "refTPId": null
@@ -317,7 +335,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_46",
+      "id": "note_47",
       "text": "Reorders rows by a chosen key column, ascending or descending, keeping the selected columns aligned. Use it to order data by time or magnitude before plotting or before methods that assume monotonic time.",
       "x": 40,
       "y": 24,
@@ -328,12 +346,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_601": {
+    "data_609": {
       "x": 60,
       "y": 314
     },
-    "data_602": {
+    "data_610": {
       "x": 60,
       "y": 814
     },
@@ -341,11 +381,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_98": {
+    "plot_100": {
       "x": 820,
       "y": 314
     },
-    "note_46": {
+    "note_47": {
       "x": 40,
       "y": 24
     }
@@ -386,6 +426,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -407,5 +448,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

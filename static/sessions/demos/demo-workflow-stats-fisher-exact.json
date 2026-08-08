@@ -93,7 +93,7 @@
       "name": "statistic_19",
       "data": 235,
       "type": "number",
-      "tableProcessGUId": "6c68574c-1a7c-43f8-8e99-1dab3afaeece",
+      "tableProcessGUId": "494c4a3b-2d00-4540-b589-9bd32a4d2be3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -104,7 +104,7 @@
       "name": "pvalue_19",
       "data": 236,
       "type": "number",
-      "tableProcessGUId": "6c68574c-1a7c-43f8-8e99-1dab3afaeece",
+      "tableProcessGUId": "494c4a3b-2d00-4540-b589-9bd32a4d2be3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -115,7 +115,7 @@
       "name": "df_19",
       "data": 237,
       "type": "number",
-      "tableProcessGUId": "6c68574c-1a7c-43f8-8e99-1dab3afaeece",
+      "tableProcessGUId": "494c4a3b-2d00-4540-b589-9bd32a4d2be3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -126,7 +126,7 @@
       "name": "effectSize_19",
       "data": 238,
       "type": "number",
-      "tableProcessGUId": "6c68574c-1a7c-43f8-8e99-1dab3afaeece",
+      "tableProcessGUId": "494c4a3b-2d00-4540-b589-9bd32a4d2be3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -137,7 +137,7 @@
       "name": "statistic_20",
       "data": 239,
       "type": "number",
-      "tableProcessGUId": "da52eed8-7200-4d0a-b40d-f3601327dac1",
+      "tableProcessGUId": "f3b16307-a0cd-4e28-b9de-5846dacfdce1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -148,7 +148,7 @@
       "name": "pvalue_20",
       "data": 240,
       "type": "number",
-      "tableProcessGUId": "da52eed8-7200-4d0a-b40d-f3601327dac1",
+      "tableProcessGUId": "f3b16307-a0cd-4e28-b9de-5846dacfdce1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -159,7 +159,7 @@
       "name": "df_20",
       "data": 241,
       "type": "number",
-      "tableProcessGUId": "da52eed8-7200-4d0a-b40d-f3601327dac1",
+      "tableProcessGUId": "f3b16307-a0cd-4e28-b9de-5846dacfdce1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -170,7 +170,7 @@
       "name": "effectSize_20",
       "data": 242,
       "type": "number",
-      "tableProcessGUId": "da52eed8-7200-4d0a-b40d-f3601327dac1",
+      "tableProcessGUId": "f3b16307-a0cd-4e28-b9de-5846dacfdce1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -193,6 +193,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
           236,
@@ -269,6 +287,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "data_233": {
       "x": 60,
@@ -331,6 +371,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -352,5 +393,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

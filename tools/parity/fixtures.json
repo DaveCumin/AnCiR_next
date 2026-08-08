@@ -1569,6 +1569,78 @@
 			"rToleranceWhy": "R's shapiro.test and the JS port both implement Royston AS R94 and agree on W to 2.8e-11; only the p-value's normalising transform differs, by 5.4e-8. That is a tail-approximation coefficient difference, not a disagreement about the statistic, so R is held to 1e-6 here while Python stays at the default."
 		},
 		{
+			"id": "util-qq-points-normal",
+			"kind": "pureUtil",
+			"jsFn": "qqPoints",
+			"pyFunc": "qq_points",
+			"input": {
+				"values": [
+					2.1,
+					-0.3,
+					1.4,
+					0.2,
+					-1.1,
+					0.8,
+					0.05,
+					1.9,
+					-0.7,
+					0.4,
+					1.2,
+					-0.9,
+					0.6,
+					null,
+					-0.2,
+					0.9
+				]
+			},
+			"valuesRef": "values",
+			"jsArgs": [0.95],
+			"pyArgs": [0.95],
+			"rFunc": "qq_points",
+			"compareArrays": [
+				"theoretical",
+				"sample",
+				"linePar",
+				"bandLo",
+				"bandHi"
+			],
+			"rTolerance": 1e-6,
+			"note": "Pins utils/qq.js qqPoints (Blom positions + Acklam quantile + quartile line + pointwise envelope) against scipy. scipy.stats.probplot defaults to Filliben positions, NOT Blom, so the Python side computes the positions explicitly — norm.ppf((arange(1,n+1)-0.375)/(n+0.25)) — matching the JS (and the Shapiro-Wilk m-value convention). Quartiles use np.quantile's default linear (type-7) interpolation, matching describeStats and utils/qq.js. The R side is a genuine third opinion: qnorm/dnorm rather than Acklam or ndtri, with the same explicit Blom positions (R's own ppoints() drops the 3/8 constant above n = 10) and quantile(type = 7). rTolerance 1e-6 (same order as the other Acklam-vs-exact fixtures, e.g. util-normality-shapiro): JS's normalQuantile is only accurate to ~1.15e-9, and dividing by dnorm(z) in the band SE amplifies that to ~1e-8 absolute in bandLo/bandHi — R's exact qnorm and scipy's exact ndtri agree with EACH OTHER far tighter than either does with JS's approximation, which is the expected shape of this disagreement, not a bug."
+		},
+		{
+			"id": "util-qq-correlation-normal",
+			"kind": "pureUtil",
+			"jsFn": "qqCorrelation",
+			"pyFunc": "qq_correlation",
+			"input": {
+				"values": [
+					2.1,
+					-0.3,
+					1.4,
+					0.2,
+					-1.1,
+					0.8,
+					0.05,
+					1.9,
+					-0.7,
+					0.4,
+					1.2,
+					-0.9,
+					0.6,
+					null,
+					-0.2,
+					0.9
+				]
+			},
+			"valuesRef": "values",
+			"rFunc": "qq_correlation",
+			"compareScalars": [
+				"r",
+				"n"
+			],
+			"note": "Pins the probability-plot correlation r the Q-Q plot displays (utils/qq.js qqCorrelation, also its qq_r metric column) against scipy.stats.pearsonr of the sorted sample vs norm.ppf at the same BLOM positions the plot draws. Filliben's original statistic uses Filliben positions; Blom is deliberate, matching the drawn quantiles (see util-qq-points-normal). Same 16-value input (one null) as that fixture, so n also pins the clean-count."
+		},
+		{
 			"id": "util-normality-dagostino",
 			"kind": "pureUtil",
 			"jsFn": "dAgostino",

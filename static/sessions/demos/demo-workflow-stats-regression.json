@@ -366,7 +366,7 @@
       "name": "trendx_15",
       "data": 192,
       "type": "number",
-      "tableProcessGUId": "d18120ec-183f-4744-b3a3-131bafc9ba1c",
+      "tableProcessGUId": "970126ef-a858-4d1c-8615-c2d6303432e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -377,7 +377,7 @@
       "name": "trendy_191_15",
       "data": 193,
       "type": "number",
-      "tableProcessGUId": "d18120ec-183f-4744-b3a3-131bafc9ba1c",
+      "tableProcessGUId": "970126ef-a858-4d1c-8615-c2d6303432e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -388,7 +388,7 @@
       "name": "resid_191_15",
       "data": 194,
       "type": "number",
-      "tableProcessGUId": "d18120ec-183f-4744-b3a3-131bafc9ba1c",
+      "tableProcessGUId": "970126ef-a858-4d1c-8615-c2d6303432e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -399,7 +399,7 @@
       "name": "r2_15",
       "data": 195,
       "type": "number",
-      "tableProcessGUId": "d18120ec-183f-4744-b3a3-131bafc9ba1c",
+      "tableProcessGUId": "970126ef-a858-4d1c-8615-c2d6303432e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -410,7 +410,7 @@
       "name": "rmse_15",
       "data": 196,
       "type": "number",
-      "tableProcessGUId": "d18120ec-183f-4744-b3a3-131bafc9ba1c",
+      "tableProcessGUId": "970126ef-a858-4d1c-8615-c2d6303432e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -421,7 +421,7 @@
       "name": "coef_slope_15",
       "data": 197,
       "type": "number",
-      "tableProcessGUId": "d18120ec-183f-4744-b3a3-131bafc9ba1c",
+      "tableProcessGUId": "970126ef-a858-4d1c-8615-c2d6303432e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -432,7 +432,7 @@
       "name": "coef_intercept_15",
       "data": 198,
       "type": "number",
-      "tableProcessGUId": "d18120ec-183f-4744-b3a3-131bafc9ba1c",
+      "tableProcessGUId": "970126ef-a858-4d1c-8615-c2d6303432e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -443,7 +443,7 @@
       "name": "variable_16",
       "data": 199,
       "type": "category",
-      "tableProcessGUId": "362eae43-73fd-4ba9-a62c-764c325446a7",
+      "tableProcessGUId": "19491cbf-bcce-421f-991b-1be25aed0adc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -454,7 +454,7 @@
       "name": "statistic_16",
       "data": 200,
       "type": "number",
-      "tableProcessGUId": "362eae43-73fd-4ba9-a62c-764c325446a7",
+      "tableProcessGUId": "19491cbf-bcce-421f-991b-1be25aed0adc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -465,7 +465,7 @@
       "name": "pvalue_16",
       "data": 201,
       "type": "number",
-      "tableProcessGUId": "362eae43-73fd-4ba9-a62c-764c325446a7",
+      "tableProcessGUId": "19491cbf-bcce-421f-991b-1be25aed0adc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -476,7 +476,7 @@
       "name": "n_16",
       "data": 202,
       "type": "number",
-      "tableProcessGUId": "362eae43-73fd-4ba9-a62c-764c325446a7",
+      "tableProcessGUId": "19491cbf-bcce-421f-991b-1be25aed0adc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -487,7 +487,7 @@
       "name": "normal_16",
       "data": 203,
       "type": "number",
-      "tableProcessGUId": "362eae43-73fd-4ba9-a62c-764c325446a7",
+      "tableProcessGUId": "19491cbf-bcce-421f-991b-1be25aed0adc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -510,12 +510,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -577,14 +596,14 @@
             "label": "data",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -616,14 +635,14 @@
             "label": "fit",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -633,13 +652,15 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
@@ -659,12 +680,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -743,13 +783,15 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
@@ -769,6 +811,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
           195,
@@ -852,6 +912,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "data_190": {
       "x": 60,
@@ -922,6 +1004,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -943,5 +1026,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "490": [
+    "494": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "491": [
+    "495": [
       0,
       0,
       0,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 490,
+      "id": 494,
       "name": "hour",
-      "data": 490,
+      "data": 494,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 491,
+      "id": 495,
       "name": "activity",
-      "data": 491,
+      "data": 495,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 70,
+      "id": 71,
       "name": "Activity actogram",
       "x": 60,
       "y": 60,
@@ -381,6 +381,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "ylimsOption": "overall",
         "ylimsIN": [
@@ -395,7 +413,8 @@
         },
         "doublePlot": 2,
         "periodHrs": 24,
-        "showDayNumbers": false,
+        "rowLabels": "none",
+        "dateFormat": "DD MMM",
         "renderMode": "bars",
         "colormap": "viridis",
         "lightBands": {
@@ -411,9 +430,9 @@
         "data": [
           {
             "x": {
-              "id": 492,
+              "id": 496,
               "name": "hour",
-              "refId": 490,
+              "refId": 494,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -422,9 +441,9 @@
               "processes": []
             },
             "y": {
-              "id": 493,
+              "id": 497,
               "name": "activity",
-              "refId": 491,
+              "refId": 495,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -446,7 +465,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_30",
+      "id": "note_31",
       "text": "The classic chronobiology display: activity plotted against time of day, one row per day and double-plotted (each day shown twice, side by side) so rhythms crossing midnight stay visible and drift reads as a diagonal band. Use it to eyeball period, phase, and entrainment. The demo shows a clear daily activity band.\n\nRefinetti, Cornélissen & Halberg (2007), Biol. Rhythm Res.",
       "x": 40,
       "y": 24,
@@ -457,20 +476,42 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_490": {
+    "data_494": {
       "x": 60,
       "y": 314
     },
-    "data_491": {
+    "data_495": {
       "x": 60,
       "y": 814
     },
-    "note_30": {
+    "note_31": {
       "x": 40,
       "y": 24
     },
-    "plot_70": {
+    "plot_71": {
       "x": 820,
       "y": 314
     }
@@ -511,6 +552,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -532,5 +574,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

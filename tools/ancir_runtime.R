@@ -168,6 +168,56 @@ shapiro_wilk <- function(values) {
 }
 
 # ---------------------------------------------------------------------------
+# Q-Q plot maths (utils/qq.js)
+# ---------------------------------------------------------------------------
+
+# Blom positions, (i - 3/8)/(n + 1/4), computed EXPLICITLY. R's own ppoints() is
+# deliberately NOT used: it switches its constant by n (a = 3/8 only for n <= 10,
+# then a = 1/2), whereas utils/qq.js uses Blom for ALL n — the house convention
+# shared with the Shapiro-Wilk m-values. qnorm is R's genuine inverse normal, a
+# third opinion against JS's Acklam approximation and scipy's ndtri.
+.blom_positions <- function(n) (seq_len(n) - 0.375) / (n + 0.25)
+
+# Mirror of utils/qq.js qqPoints, same flattened shape the emitter records:
+# theoretical / sample arrays, linePar = c(slope, intercept) of the quartile
+# reference line (R's qqline construction, but pinned to type-7 quantiles to
+# match the JS and numpy — quantile()'s own default), and the pointwise
+# car::qqPlot envelope SE_i = (slope / dnorm(z_i)) * sqrt(p_i (1 - p_i) / n).
+qq_points <- function(values, confidence = 0.95) {
+  x <- sort(clean_numeric(values))
+  n <- length(x)
+  if (n < 3) {
+    return(list(theoretical = numeric(0), sample = numeric(0),
+                linePar = c(NA_real_, NA_real_),
+                bandLo = numeric(0), bandHi = numeric(0)))
+  }
+  positions <- .blom_positions(n)
+  theoretical <- qnorm(positions)
+  z_q <- qnorm(c(0.25, 0.75))
+  s_q <- unname(quantile(x, c(0.25, 0.75), type = 7))
+  slope <- (s_q[2] - s_q[1]) / (z_q[2] - z_q[1])
+  intercept <- s_q[1] - slope * z_q[1]
+  z_crit <- qnorm(1 - (1 - confidence) / 2)
+  fit <- intercept + slope * theoretical
+  se <- (slope / dnorm(theoretical)) * sqrt(positions * (1 - positions) / n)
+  list(theoretical = theoretical, sample = x,
+       linePar = c(slope, intercept),
+       bandLo = fit - z_crit * se, bandHi = fit + z_crit * se)
+}
+
+# The probability-plot correlation r the Q-Q panel displays (and its qq_r metric
+# column): Pearson r of the sorted sample against qnorm at the SAME Blom
+# positions the plot draws. Undefined cases (n < 3, constant data) return NA,
+# matching the JS null.
+qq_correlation <- function(values) {
+  x <- sort(clean_numeric(values))
+  n <- length(x)
+  if (n < 3 || length(unique(x)) < 2) return(list(r = NA_real_, n = n))
+  theoretical <- qnorm(.blom_positions(n))
+  list(r = cor(theoretical, x), n = n)
+}
+
+# ---------------------------------------------------------------------------
 # Correlation
 # ---------------------------------------------------------------------------
 
@@ -3285,6 +3335,8 @@ PURE_UTIL_MAP <- list(
   compute_fft    = compute_fft,
   d_agostino     = d_agostino,
   shapiro_wilk   = shapiro_wilk,
+  qq_points      = qq_points,
+  qq_correlation = qq_correlation,
   correlate      = correlate,
   p_adjust       = p_adjust,
   rayleigh_test  = rayleigh_test

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "617": [
+    "625": [
       0.001,
       0.008,
       0.039,
@@ -10,7 +10,7 @@
       0.6,
       0.9
     ],
-    "618": [
+    "626": [
       0.008,
       0.032,
       0.06720000000000001,
@@ -20,7 +20,7 @@
       0.6857142857142857,
       0.9
     ],
-    "619": [
+    "627": [
       1,
       1,
       0,
@@ -33,9 +33,9 @@
   },
   "data": [
     {
-      "id": 617,
+      "id": 625,
       "name": "FDR Correction input",
-      "data": 617,
+      "data": 625,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -44,22 +44,22 @@
       "processes": []
     },
     {
-      "id": 618,
+      "id": 626,
       "name": "padj_53",
-      "data": 618,
+      "data": 626,
       "type": "number",
-      "tableProcessGUId": "eaab6b66-5c0b-4820-ab45-5f4ea87f76b6",
+      "tableProcessGUId": "2c75ca05-531f-49c8-b39a-92575a2a1418",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 619,
+      "id": 627,
       "name": "reject_53",
-      "data": 619,
+      "data": 627,
       "type": "number",
-      "tableProcessGUId": "5839b8ca-e888-46f2-933c-1724b87f5eb5",
+      "tableProcessGUId": "9d14b268-7ca4-45c0-b0c4-995a31e5796f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 104,
+      "id": 106,
       "name": "FDR Correction result",
       "x": 60,
       "y": 60,
@@ -82,11 +82,29 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          617,
-          618,
-          619
+          625,
+          626,
+          627
         ],
         "showCol": [
           true,
@@ -106,12 +124,12 @@
       "name": "FDRCorrection",
       "displayName": "FDR Correction",
       "args": {
-        "xIN": 617,
+        "xIN": 625,
         "method": "benjamini-hochberg",
         "alpha": 0.05,
         "out": {
-          "padj": 618,
-          "reject": 619
+          "padj": 626,
+          "reject": 627
         }
       },
       "refTPId": null
@@ -122,7 +140,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_52",
+      "id": "note_53",
       "text": "When you run many tests at once — one per animal, probe or condition — some will look significant by chance alone. This node takes the column of raw p-values a node like Cosinor produces (one row per input series) and returns adjusted p-values plus a 1/0 flag for which survive. Benjamini-Hochberg controls the false discovery rate, the expected FRACTION of your \"significant\" results that are false, which is usually what you want when screening many series; Benjamini-Yekutieli does the same but stays valid when the tests are dependent in awkward ways; Holm and Bonferroni instead control the chance of ANY false positive, which is stricter and finds less. Tests that failed to run stay missing and are left out of the count, so they never make the correction harsher for the tests that did run.",
       "x": 40,
       "y": 24,
@@ -133,8 +151,30 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_617": {
+    "data_625": {
       "x": 60,
       "y": 314
     },
@@ -142,11 +182,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_104": {
+    "plot_106": {
       "x": 820,
       "y": 314
     },
-    "note_52": {
+    "note_53": {
       "x": 40,
       "y": 24
     }
@@ -187,6 +227,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -208,5 +249,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

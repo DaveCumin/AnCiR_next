@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "605": [
+    "613": [
       null,
       null,
       null,
@@ -15,11 +15,11 @@
   },
   "data": [
     {
-      "id": 605,
+      "id": 613,
       "name": "result_48",
-      "data": 605,
+      "data": 613,
       "type": "category",
-      "tableProcessGUId": "83a1e285-2302-4186-9ea2-aec318b01f5c",
+      "tableProcessGUId": "3c0f8aea-2691-4134-8e16-4fd0abe51ae0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -28,7 +28,7 @@
   ],
   "plots": [
     {
-      "id": 99,
+      "id": 101,
       "name": "Enter Data result",
       "x": 60,
       "y": 60,
@@ -42,9 +42,27 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          605
+          613
         ],
         "showCol": [
           true
@@ -65,7 +83,7 @@
         "N": 10,
         "storedValueRefs": {},
         "out": {
-          "result": 605
+          "result": 613
         }
       },
       "refTPId": null
@@ -76,7 +94,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_47",
+      "id": "note_48",
       "text": "Lets you enter data by hand or paste CSV/JSON to create a column (or table) directly on the canvas. Use it for small manual datasets, quick tests, or pasting values from another program.",
       "x": 40,
       "y": 24,
@@ -87,16 +105,38 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "tableprocess_48": {
       "x": 60,
       "y": 314
     },
-    "plot_99": {
+    "plot_101": {
       "x": 820,
       "y": 314
     },
-    "note_47": {
+    "note_48": {
       "x": 40,
       "y": 24
     }
@@ -137,6 +177,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -158,5 +199,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

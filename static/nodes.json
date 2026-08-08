@@ -1,7 +1,7 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.72.16",
-  "count": 60,
+  "generatedFromVersion": "β.72.17",
+  "count": 61,
   "nodes": [
     {
       "id": "actogram",
@@ -31,7 +31,7 @@
       "displayName": "Boxplot",
       "kind": "plot",
       "family": "Plots",
-      "description": "Boxplot summarising the distribution of a column by group.",
+      "description": "Boxplot summarising the distribution of a column by group, with optional violin (kernel density) overlay and jittered data points; the box can be hidden for a pure violin plot.",
       "hideFromPalette": false,
       "inputs": [
         {
@@ -252,6 +252,24 @@
       "params": [],
       "outputs": [],
       "demo": "sessions/demos/demo-workflow-free-running.json"
+    },
+    {
+      "id": "qqplot",
+      "displayName": "Q-Q plot",
+      "kind": "plot",
+      "family": "Plots",
+      "description": "Normal Q-Q plot: sample vs theoretical quantiles, with a quartile reference line and confidence envelope.",
+      "hideFromPalette": false,
+      "inputs": [
+        {
+          "name": "column",
+          "kind": "column",
+          "cardinality": "many"
+        }
+      ],
+      "params": [],
+      "outputs": [],
+      "demo": "sessions/demos/demo-qqplot-normality.json"
     },
     {
       "id": "scatterplot",

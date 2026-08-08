@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 108,
+  "count": 110,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -1323,6 +1323,19 @@
       "keywords": "boxplot — activity by day boxplot of daily activity values grouped by day index (7 days × 24 hourly points). plots boxplot"
     },
     {
+      "id": "violinplot-groups",
+      "name": "Violin plot — shapes a box hides",
+      "family": "Plots",
+      "description": "A violin plot (boxplot with the violin overlay and jittered data points turned on). Three groups: the two outer ones have near-identical boxes — same median, similar spread — but the violin reveals one is unimodal and the other bimodal, a difference the box alone cannot show; the middle group is right-skewed. The violin is a kernel-density outline mirrored around each box; hide the box for a pure violin plot.",
+      "summary": "A violin plot (boxplot with the violin overlay and jittered data points turned on).",
+      "url": "sessions/demos/demo-violinplot-groups.json",
+      "kind": "plot",
+      "showcases": [
+        "boxplot"
+      ],
+      "keywords": "violin plot — shapes a box hides a violin plot (boxplot with the violin overlay and jittered data points turned on). three groups: the two outer ones have near-identical boxes — same median, similar spread — but the violin reveals one is unimodal and the other bimodal, a difference the box alone cannot show; the middle group is right-skewed. the violin is a kernel-density outline mirrored around each box; hide the box for a pure violin plot. plots boxplot"
+    },
+    {
       "id": "meansem-by-day",
       "name": "Mean ± SEM — activity by day",
       "family": "Plots",
@@ -1425,6 +1438,19 @@
         "pairsplot"
       ],
       "keywords": "pairs plot scatterplot matrix of four variables: histograms on the diagonal, scatter + linear fit above, correlation colour below. plots pairsplot"
+    },
+    {
+      "id": "qqplot-normality",
+      "name": "Q-Q plot",
+      "family": "Plots",
+      "description": "Normal Q-Q plots of a normal and a right-skewed sample: the normal series hugs the quartile line inside the confidence envelope, the skewed one bends away in the tails.",
+      "summary": "Normal Q-Q plots of a normal and a right-skewed sample: the normal series hugs the quartile line inside the confidence envelope, the skewed one bends away in the tails.",
+      "url": "sessions/demos/demo-qqplot-normality.json",
+      "kind": "plot",
+      "showcases": [
+        "qqplot"
+      ],
+      "keywords": "q-q plot normal q-q plots of a normal and a right-skewed sample: the normal series hugs the quartile line inside the confidence envelope, the skewed one bends away in the tails. plots qqplot"
     },
     {
       "id": "table-columns",

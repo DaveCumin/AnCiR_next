@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "655": [
+    "663": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "656": [
+    "664": [
       12.642866859481796,
       18.907413440058953,
       8.02083029948017,
@@ -104,7 +104,7 @@
       23.83732580196522,
       -2.4027680620561576
     ],
-    "657": [
+    "665": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "658": [
+    "666": [
       9.094870359876616,
       10.003419446394657,
       13.579734705384766,
@@ -211,20 +211,20 @@
   },
   "data": [
     {
-      "id": 655,
+      "id": 663,
       "name": "x",
-      "data": 655,
+      "data": 663,
       "type": "number",
-      "tableProcessGUId": "e150c1e2-6fc8-4ce3-827f-3c0fdef9500a",
+      "tableProcessGUId": "d7dfbc69-10d7-43cd-96f5-439bf7d1f949",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 656,
+      "id": 664,
       "name": "y",
-      "data": 656,
+      "data": 664,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 657,
+      "id": 665,
       "name": "fitx_60",
-      "data": 657,
+      "data": 665,
       "type": "number",
-      "tableProcessGUId": "60015caa-6978-4baa-995f-b86681d73193",
+      "tableProcessGUId": "1324d9b7-96b4-4583-a050-fbeff519dc50",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 658,
-      "name": "fity_656_60",
-      "data": 658,
+      "id": 666,
+      "name": "fity_664_60",
+      "data": 666,
       "type": "number",
-      "tableProcessGUId": "60015caa-6978-4baa-995f-b86681d73193",
+      "tableProcessGUId": "1324d9b7-96b4-4583-a050-fbeff519dc50",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 110,
+      "id": 112,
       "name": "Fit Function: data + fit",
       "x": 60,
       "y": 60,
@@ -271,12 +271,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -314,9 +333,9 @@
         "data": [
           {
             "x": {
-              "id": 659,
+              "id": 667,
               "name": "x",
-              "refId": 655,
+              "refId": 663,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -325,9 +344,9 @@
               "processes": []
             },
             "y": {
-              "id": 660,
+              "id": 668,
               "name": "y",
-              "refId": 656,
+              "refId": 664,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -338,14 +357,14 @@
             "label": "Data",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -353,9 +372,9 @@
           },
           {
             "x": {
-              "id": 661,
+              "id": 669,
               "name": "fitx_60",
-              "refId": 657,
+              "refId": 665,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -364,9 +383,9 @@
               "processes": []
             },
             "y": {
-              "id": 662,
-              "name": "fity_656_60",
-              "refId": 658,
+              "id": 670,
+              "name": "fity_664_60",
+              "refId": 666,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -377,14 +396,14 @@
             "label": "Fit Function",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -394,19 +413,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 111,
+      "id": 113,
       "name": "Fit Function: values",
       "x": 630,
       "y": 60,
@@ -420,10 +441,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          656,
-          658
+          664,
+          666
         ],
         "showCol": [
           true,
@@ -448,7 +487,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 655
+          "result": 663
         }
       },
       "refTPId": null
@@ -458,9 +497,9 @@
       "name": "FitFunction",
       "displayName": "Fit Function",
       "args": {
-        "xIN": 655,
+        "xIN": 663,
         "yIN": [
-          656
+          664
         ],
         "model": "cosinor",
         "outputX": -1,
@@ -486,8 +525,8 @@
         "permutationStatistic": "rSquared",
         "preProcesses": [],
         "out": {
-          "fitx": 657,
-          "fity_656": 658
+          "fitx": 665,
+          "fity_664": 666
         }
       },
       "refTPId": null
@@ -498,7 +537,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_56",
+      "id": "note_57",
       "text": "A general curve-fitting node that fits a chosen model, cosinor, rectangular wave, or double logistic, to the series by nonlinear least squares, giving one interface for all three parametric shapes plus a shared permutation test. It reports R² and RMSE, the model coefficients, and a residual column per series (observed − fitted, aligned to the input), with a \"Plot residuals\" button to scatter them against the input for a fit-diagnostic check (a good fit leaves residuals patternless around zero). Use it when you want to try and compare different waveform models on the same data, or need the permutation-based significance option in one place. In the demo, read the fitted curve over the raw points and compare fit quality (and the permutation p-value) across models to see which shape the data prefer. Nonlinear least-squares model fitting (Marquardt 1963).",
       "x": 40,
       "y": 24,
@@ -509,8 +548,30 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_656": {
+    "data_664": {
       "x": 60,
       "y": 314
     },
@@ -522,15 +583,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_110": {
+    "plot_112": {
       "x": 820,
       "y": 314
     },
-    "plot_111": {
+    "plot_113": {
       "x": 820,
       "y": 814
     },
-    "note_56": {
+    "note_57": {
       "x": 40,
       "y": 24
     }
@@ -571,6 +632,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -592,5 +654,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

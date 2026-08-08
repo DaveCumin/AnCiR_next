@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "737": [
+    "745": [
       "A",
       "B",
       "C",
@@ -62,7 +62,7 @@
       "B",
       "C"
     ],
-    "738": [
+    "746": [
       0,
       0,
       0,
@@ -124,7 +124,7 @@
       19,
       19
     ],
-    "739": [
+    "747": [
       0,
       100,
       200,
@@ -186,7 +186,7 @@
       119,
       219
     ],
-    "740": [
+    "748": [
       0,
       1,
       2,
@@ -208,7 +208,7 @@
       18,
       19
     ],
-    "741": [
+    "749": [
       0,
       1,
       2,
@@ -230,7 +230,7 @@
       18,
       19
     ],
-    "742": [
+    "750": [
       100,
       101,
       102,
@@ -252,7 +252,7 @@
       118,
       119
     ],
-    "743": [
+    "751": [
       200,
       201,
       202,
@@ -277,9 +277,9 @@
   },
   "data": [
     {
-      "id": 737,
+      "id": 745,
       "name": "Long To Wide input 1",
-      "data": 737,
+      "data": 745,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -288,9 +288,9 @@
       "processes": []
     },
     {
-      "id": 738,
+      "id": 746,
       "name": "Long To Wide input 2",
-      "data": 738,
+      "data": 746,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -299,9 +299,9 @@
       "processes": []
     },
     {
-      "id": 739,
+      "id": 747,
       "name": "Long To Wide input 3",
-      "data": 739,
+      "data": 747,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -310,44 +310,44 @@
       "processes": []
     },
     {
-      "id": 740,
+      "id": 748,
       "name": "time_69",
-      "data": 740,
+      "data": 748,
       "type": "number",
-      "tableProcessGUId": "7b04fc61-1b64-4922-aa86-aa1d9a723a8c",
+      "tableProcessGUId": "776edbcf-6019-45d2-b37e-6895f23acd37",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 741,
+      "id": 749,
       "name": "value_A_69",
-      "data": 741,
+      "data": 749,
       "type": "number",
-      "tableProcessGUId": "7b04fc61-1b64-4922-aa86-aa1d9a723a8c",
+      "tableProcessGUId": "776edbcf-6019-45d2-b37e-6895f23acd37",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 742,
+      "id": 750,
       "name": "value_B_69",
-      "data": 742,
+      "data": 750,
       "type": "number",
-      "tableProcessGUId": "7b04fc61-1b64-4922-aa86-aa1d9a723a8c",
+      "tableProcessGUId": "776edbcf-6019-45d2-b37e-6895f23acd37",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 743,
+      "id": 751,
       "name": "value_C_69",
-      "data": 743,
+      "data": 751,
       "type": "number",
-      "tableProcessGUId": "7b04fc61-1b64-4922-aa86-aa1d9a723a8c",
+      "tableProcessGUId": "776edbcf-6019-45d2-b37e-6895f23acd37",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -356,7 +356,7 @@
   ],
   "plots": [
     {
-      "id": 121,
+      "id": 123,
       "name": "Long To Wide result",
       "x": 60,
       "y": 60,
@@ -370,15 +370,33 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          737,
-          738,
-          739,
-          740,
-          741,
-          742,
-          743
+          745,
+          746,
+          747,
+          748,
+          749,
+          750,
+          751
         ],
         "showCol": [
           true,
@@ -402,15 +420,15 @@
       "name": "LongToWide",
       "displayName": "Long To Wide",
       "args": {
-        "categoryIN": 737,
-        "timeIN": 738,
-        "valueIN": 739,
+        "categoryIN": 745,
+        "timeIN": 746,
+        "valueIN": 747,
         "preProcesses": [],
         "out": {
-          "time": 740,
-          "value_A": 741,
-          "value_B": 742,
-          "value_C": 743
+          "time": 748,
+          "value_A": 749,
+          "value_B": 750,
+          "value_C": 751
         }
       },
       "refTPId": null
@@ -421,7 +439,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_65",
+      "id": "note_66",
       "text": "Pivots a long/tidy table (a category column, a time column and a value column) into wide format, producing one value-column per category sharing a common time column. Use it to turn a stacked per-subject table into side-by-side series ready for plotting or per-series analysis.",
       "x": 40,
       "y": 24,
@@ -432,16 +450,38 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_737": {
+    "data_745": {
       "x": 60,
       "y": 314
     },
-    "data_738": {
+    "data_746": {
       "x": 60,
       "y": 814
     },
-    "data_739": {
+    "data_747": {
       "x": 60,
       "y": 1314
     },
@@ -449,11 +489,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_121": {
+    "plot_123": {
       "x": 820,
       "y": 314
     },
-    "note_65": {
+    "note_66": {
       "x": 40,
       "y": 24
     }
@@ -494,6 +534,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -515,5 +556,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

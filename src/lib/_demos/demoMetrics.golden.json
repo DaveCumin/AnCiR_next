@@ -223,7 +223,7 @@
 		]
 	},
 	"demo-tp-movinganalysis.json": {
-		"MovingAnalysis.745_peak_period": [
+		"MovingAnalysis.753_peak_period": [
 			24,
 			24,
 			24,
@@ -232,7 +232,7 @@
 			24,
 			24
 		],
-		"MovingAnalysis.745_peak_power": [
+		"MovingAnalysis.753_peak_power": [
 			83.5,
 			83.5,
 			83.5,

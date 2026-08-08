@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "589": [
+    "597": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "590": [
+    "598": [
       52.522025082939734,
       68.09116741301771,
       73.44958693280898,
@@ -104,7 +104,7 @@
       47.59352161612626,
       59.5535187385039
     ],
-    "591": [
+    "599": [
       0,
       2,
       4,
@@ -132,7 +132,7 @@
       48,
       50
     ],
-    "592": [
+    "600": [
       60.306596247978725,
       80.40261868508753,
       84.47432056148014,
@@ -163,20 +163,20 @@
   },
   "data": [
     {
-      "id": 589,
+      "id": 597,
       "name": "x",
-      "data": 589,
+      "data": 597,
       "type": "number",
-      "tableProcessGUId": "9e13132c-50ce-4633-9017-d48079e85c77",
+      "tableProcessGUId": "899e8cfe-ecad-48fa-8f6a-35bd5115c1b4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 590,
+      "id": 598,
       "name": "y",
-      "data": 590,
+      "data": 598,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -185,23 +185,23 @@
       "processes": []
     },
     {
-      "id": 591,
+      "id": 599,
       "name": "binnedx_45",
-      "data": 591,
+      "data": 599,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "da17cefc-a111-4a33-ae84-8de152c4462f",
+      "tableProcessGUId": "dba835d7-130c-44a3-9157-1e83dcd8ff06",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 592,
-      "name": "binnedy_590_45",
-      "data": 592,
+      "id": 600,
+      "name": "binnedy_598_45",
+      "data": 600,
       "type": "number",
-      "tableProcessGUId": "da17cefc-a111-4a33-ae84-8de152c4462f",
+      "tableProcessGUId": "dba835d7-130c-44a3-9157-1e83dcd8ff06",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -210,7 +210,7 @@
   ],
   "plots": [
     {
-      "id": 95,
+      "id": 97,
       "name": "Bin Data: data + fit",
       "x": 60,
       "y": 60,
@@ -224,12 +224,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -267,9 +286,9 @@
         "data": [
           {
             "x": {
-              "id": 593,
+              "id": 601,
               "name": "x",
-              "refId": 589,
+              "refId": 597,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -278,9 +297,9 @@
               "processes": []
             },
             "y": {
-              "id": 594,
+              "id": 602,
               "name": "y",
-              "refId": 590,
+              "refId": 598,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,14 +310,14 @@
             "label": "Data",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -306,9 +325,9 @@
           },
           {
             "x": {
-              "id": 595,
+              "id": 603,
               "name": "binnedx_45",
-              "refId": 591,
+              "refId": 599,
               "type": "bin",
               "binWidth": 2,
               "tableProcessGUId": "",
@@ -318,9 +337,9 @@
               "processes": []
             },
             "y": {
-              "id": 596,
-              "name": "binnedy_590_45",
-              "refId": 592,
+              "id": 604,
+              "name": "binnedy_598_45",
+              "refId": 600,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -331,14 +350,14 @@
             "label": "Bin Data",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -348,19 +367,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 96,
+      "id": 98,
       "name": "Bin Data: values",
       "x": 630,
       "y": 60,
@@ -374,10 +395,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          590,
-          592
+          598,
+          600
         ],
         "showCol": [
           true,
@@ -402,7 +441,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 589
+          "result": 597
         }
       },
       "refTPId": null
@@ -412,9 +451,9 @@
       "name": "BinnedData",
       "displayName": "Bin Data",
       "args": {
-        "xIN": 589,
+        "xIN": 597,
         "yIN": [
-          590
+          598
         ],
         "binMode": "uniform",
         "binSize": 2,
@@ -425,8 +464,8 @@
         "aggFunction": "mean",
         "preProcesses": [],
         "out": {
-          "binnedx": 591,
-          "binnedy_590": 592
+          "binnedx": 599,
+          "binnedy_598": 600
         }
       },
       "refTPId": null
@@ -437,7 +476,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_44",
+      "id": "note_45",
       "text": "Aggregates time-series values into regular time bins (e.g. 15 min counts into hourly means or sums), choosing the aggregation function per bin. Use it to downsample high-resolution activity or to put irregular samples onto a regular grid before analysis.",
       "x": 40,
       "y": 24,
@@ -448,8 +487,30 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_590": {
+    "data_598": {
       "x": 60,
       "y": 314
     },
@@ -461,15 +522,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_95": {
+    "plot_97": {
       "x": 820,
       "y": 314
     },
-    "plot_96": {
+    "plot_98": {
       "x": 820,
       "y": 814
     },
-    "note_44": {
+    "note_45": {
       "x": 40,
       "y": 24
     }
@@ -510,6 +571,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -531,5 +593,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

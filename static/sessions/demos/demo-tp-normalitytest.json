@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "719": [
+    "727": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "720": [
+    "728": [
       1,
       21.831051418620845,
       7.38905609893065,
@@ -104,32 +104,32 @@
       8.729138363720132,
       2.9545115270921065
     ],
-    "721": [
+    "729": [
       "Normality Test input 1",
       "Normality Test input 2"
     ],
-    "722": [
+    "730": [
       0.8884940768269717,
       0.8065802789114069
     ],
-    "723": [
+    "731": [
       0.00020472387230596745,
       0.000001248621988914067
     ],
-    "724": [
+    "732": [
       50,
       50
     ],
-    "725": [
+    "733": [
       0,
       0
     ]
   },
   "data": [
     {
-      "id": 719,
+      "id": 727,
       "name": "Normality Test input 1",
-      "data": 719,
+      "data": 727,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -138,9 +138,9 @@
       "processes": []
     },
     {
-      "id": 720,
+      "id": 728,
       "name": "Normality Test input 2",
-      "data": 720,
+      "data": 728,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -149,55 +149,55 @@
       "processes": []
     },
     {
-      "id": 721,
+      "id": 729,
       "name": "variable_67",
-      "data": 721,
+      "data": 729,
       "type": "category",
-      "tableProcessGUId": "f250d5b7-59d6-4df1-b5eb-fb7465f4833f",
+      "tableProcessGUId": "7ae59256-f6eb-4eb1-a2e1-c71939d798dc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 722,
+      "id": 730,
       "name": "statistic_67",
-      "data": 722,
+      "data": 730,
       "type": "number",
-      "tableProcessGUId": "f250d5b7-59d6-4df1-b5eb-fb7465f4833f",
+      "tableProcessGUId": "7ae59256-f6eb-4eb1-a2e1-c71939d798dc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 723,
+      "id": 731,
       "name": "pvalue_67",
-      "data": 723,
+      "data": 731,
       "type": "number",
-      "tableProcessGUId": "f250d5b7-59d6-4df1-b5eb-fb7465f4833f",
+      "tableProcessGUId": "7ae59256-f6eb-4eb1-a2e1-c71939d798dc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 724,
+      "id": 732,
       "name": "n_67",
-      "data": 724,
+      "data": 732,
       "type": "number",
-      "tableProcessGUId": "f250d5b7-59d6-4df1-b5eb-fb7465f4833f",
+      "tableProcessGUId": "7ae59256-f6eb-4eb1-a2e1-c71939d798dc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 725,
+      "id": 733,
       "name": "normal_67",
-      "data": 725,
+      "data": 733,
       "type": "number",
-      "tableProcessGUId": "f250d5b7-59d6-4df1-b5eb-fb7465f4833f",
+      "tableProcessGUId": "7ae59256-f6eb-4eb1-a2e1-c71939d798dc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -206,7 +206,7 @@
   ],
   "plots": [
     {
-      "id": 119,
+      "id": 121,
       "name": "Normality Test result",
       "x": 60,
       "y": 60,
@@ -220,15 +220,33 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          719,
-          720,
-          721,
-          722,
-          723,
-          724,
-          725
+          727,
+          728,
+          729,
+          730,
+          731,
+          732,
+          733
         ],
         "showCol": [
           true,
@@ -253,17 +271,17 @@
       "displayName": "Normality Test",
       "args": {
         "yIN": [
-          719,
-          720
+          727,
+          728
         ],
         "method": "shapiro",
         "alpha": 0.05,
         "out": {
-          "variable": 721,
-          "statistic": 722,
-          "pvalue": 723,
-          "n": 724,
-          "normal": 725
+          "variable": 729,
+          "statistic": 730,
+          "pvalue": 731,
+          "n": 732,
+          "normal": 733
         },
         "valid": false
       },
@@ -275,7 +293,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_63",
+      "id": "note_64",
       "text": "Tests whether each wired column is drawn from a normal distribution, one row per variable: the test statistic, its p-value, n, and a yes/no verdict at your chosen alpha. Shapiro-Wilk (the default, and the most powerful test; valid for 3 ≤ n ≤ 5000) is recommended; D'Agostino-Pearson (an omnibus skewness + kurtosis K² test, n ≥ 8, better for very large samples) and Jarque-Bera are also available. A small p-value means the data depart from normality, so a rank / non-parametric method is safer downstream. All three match scipy (shapiro / normaltest / jarque_bera). Shapiro & Wilk 1965; Royston 1995.",
       "x": 40,
       "y": 24,
@@ -286,12 +304,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_719": {
+    "data_727": {
       "x": 60,
       "y": 314
     },
-    "data_720": {
+    "data_728": {
       "x": 60,
       "y": 814
     },
@@ -299,11 +339,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_119": {
+    "plot_121": {
       "x": 820,
       "y": 314
     },
-    "note_63": {
+    "note_64": {
       "x": 40,
       "y": 24
     }
@@ -344,6 +384,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -365,5 +406,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

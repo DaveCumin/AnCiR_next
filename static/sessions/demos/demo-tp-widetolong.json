@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "816": [
+    "824": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -52,7 +52,7 @@
       "2024-01-03T00:00:00.000Z",
       "2024-01-03T01:00:00.000Z"
     ],
-    "817": [
+    "825": [
       10,
       11,
       12,
@@ -104,7 +104,7 @@
       58,
       59
     ],
-    "818": [
+    "826": [
       100,
       99,
       98,
@@ -156,7 +156,7 @@
       52,
       51
     ],
-    "819": [
+    "827": [
       1704067200000,
       1704070800000,
       1704074400000,
@@ -258,7 +258,7 @@
       1704240000000,
       1704243600000
     ],
-    "820": [
+    "828": [
       "Wide To Long input 2",
       "Wide To Long input 2",
       "Wide To Long input 2",
@@ -360,7 +360,7 @@
       "Wide To Long input 3",
       "Wide To Long input 3"
     ],
-    "821": [
+    "829": [
       10,
       11,
       12,
@@ -465,9 +465,9 @@
   },
   "data": [
     {
-      "id": 816,
+      "id": 824,
       "name": "Wide To Long input 1",
-      "data": 816,
+      "data": 824,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
       "tableProcessGUId": "",
@@ -477,9 +477,9 @@
       "processes": []
     },
     {
-      "id": 817,
+      "id": 825,
       "name": "Wide To Long input 2",
-      "data": 817,
+      "data": 825,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -488,9 +488,9 @@
       "processes": []
     },
     {
-      "id": 818,
+      "id": 826,
       "name": "Wide To Long input 3",
-      "data": 818,
+      "data": 826,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -499,34 +499,34 @@
       "processes": []
     },
     {
-      "id": 819,
+      "id": 827,
       "name": "time_86",
-      "data": 819,
+      "data": 827,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "4a084efe-626d-4115-8250-50522cd9d546",
+      "tableProcessGUId": "702dce33-e88d-4470-923e-48a3052cce00",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 820,
+      "id": 828,
       "name": "category_86",
-      "data": 820,
+      "data": 828,
       "type": "category",
-      "tableProcessGUId": "4a084efe-626d-4115-8250-50522cd9d546",
+      "tableProcessGUId": "702dce33-e88d-4470-923e-48a3052cce00",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 821,
+      "id": 829,
       "name": "value_86",
-      "data": 821,
+      "data": 829,
       "type": "number",
-      "tableProcessGUId": "4a084efe-626d-4115-8250-50522cd9d546",
+      "tableProcessGUId": "702dce33-e88d-4470-923e-48a3052cce00",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -535,7 +535,7 @@
   ],
   "plots": [
     {
-      "id": 139,
+      "id": 141,
       "name": "Wide To Long result",
       "x": 60,
       "y": 60,
@@ -549,14 +549,32 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          816,
-          817,
-          818,
-          819,
-          820,
-          821
+          824,
+          825,
+          826,
+          827,
+          828,
+          829
         ],
         "showCol": [
           true,
@@ -579,15 +597,15 @@
       "name": "WideToLong",
       "displayName": "Wide To Long",
       "args": {
-        "timeIN": 816,
+        "timeIN": 824,
         "valueColIds": [
-          817,
-          818
+          825,
+          826
         ],
         "out": {
-          "time": 819,
-          "category": 820,
-          "value": 821
+          "time": 827,
+          "category": 828,
+          "value": 829
         }
       },
       "refTPId": null
@@ -598,7 +616,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_77",
+      "id": "note_78",
       "text": "Pivots several side-by-side value columns into long/tidy format: a single time, category, and value column. Use it to stack multiple series into one table for grouped statistics or long-format export.",
       "x": 40,
       "y": 24,
@@ -609,16 +627,38 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_816": {
+    "data_824": {
       "x": 60,
       "y": 314
     },
-    "data_817": {
+    "data_825": {
       "x": 60,
       "y": 814
     },
-    "data_818": {
+    "data_826": {
       "x": 60,
       "y": 1314
     },
@@ -626,11 +666,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_139": {
+    "plot_141": {
       "x": 820,
       "y": 314
     },
-    "note_77": {
+    "note_78": {
       "x": 40,
       "y": 24
     }
@@ -671,6 +711,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -692,5 +733,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

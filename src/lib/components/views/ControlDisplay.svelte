@@ -108,6 +108,7 @@
 	import Editable from '../inputs/Editable.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import CanvasNodeControls from './CanvasNodeControls.svelte';
+	import CategoryColourControls from './CategoryColourControls.svelte';
 	import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
 
 	// True when there's a non-plot canvas node selected. Plot nodes are
@@ -886,6 +887,14 @@
 				{/if}
 
 				<Plot theData={plot.plot} which="controls" />
+
+				<!-- A category-coloured boxplot (one series, categorical x) draws one box per
+				     x value in its own session-wide colour; those colours are editable here
+				     because the series' own stroke/fill pickers do not reach them. Renders
+				     nothing for every other plot shape. -->
+				{#if appState.currentControlTab === 'data'}
+					<CategoryColourControls {plot} />
+				{/if}
 			{/if}
 		{/if}
 	{:else if hasNonPlotCanvasSelection}

@@ -68,6 +68,18 @@ describe('canonicalNodeViz', () => {
 		expect(spec.columns).toEqual([1, 2, 3]);
 	});
 
+	it('NormalityTest → qqplot wired to its INPUT columns (the Q-Q plot is self-computing)', () => {
+		const node = fitNode('NormalityTest', { yIN: [1, 2], out: { variable: 30, statistic: 31, pvalue: 32, n: 33, normal: 34 } });
+		const spec = canonicalNodeViz(node);
+		expect(spec.type).toBe('qqplot');
+		expect(spec.columns).toEqual([1, 2]);
+	});
+
+	it('NormalityTest with no wired inputs → tableplot fallback (from outputs)', () => {
+		const node = fitNode('NormalityTest', { yIN: [-1], out: { variable: 30 } });
+		expect(canonicalNodeViz(node).type).toBe('tableplot');
+	});
+
 	it('returns null for a plot node', () => {
 		expect(canonicalNodeViz({ id: 'plot_1', type: 'plot', plotObj: {} })).toBeNull();
 	});
@@ -230,6 +242,12 @@ describe('plotDataFromSpec', () => {
 		expect(box.plot).toMatchObject({ data: [{ x: { refId: 1 }, y: { refId: 2 } }], showSigBars: true });
 		const tbl = plotDataFromSpec({ type: 'tableplot', title: 't', columnRefs: [1, 2, 3] }, { x: 0, y: 0 });
 		expect(tbl.plot).toMatchObject({ columnRefs: [1, 2, 3], showCol: [true, true, true] });
+	});
+
+	it('qqplot spec → one column-wired series per input column', () => {
+		const qq = plotDataFromSpec({ type: 'qqplot', title: 'NormalityTest: Q-Q', columns: [7, 8] }, { x: 0, y: 0 });
+		expect(qq.type).toBe('qqplot');
+		expect(qq.plot).toMatchObject({ data: [{ column: { refId: 7 } }, { column: { refId: 8 } }] });
 	});
 
 	it('circularphase spec → data series wired {x:time, y:phase}', () => {

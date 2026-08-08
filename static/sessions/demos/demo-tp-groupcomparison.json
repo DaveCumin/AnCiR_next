@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "666": [
+    "674": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "667": [
+    "675": [
       0,
       6,
       12,
@@ -104,21 +104,21 @@
       6,
       5
     ],
-    "668": [
+    "676": [
       96.15862706579921
     ],
-    "669": [
+    "677": [
       0
     ],
-    "670": [
+    "678": [
       0.8036079756532927
     ]
   },
   "data": [
     {
-      "id": 666,
+      "id": 674,
       "name": "Compare groups (stats) input 1",
-      "data": 666,
+      "data": 674,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -127,9 +127,9 @@
       "processes": []
     },
     {
-      "id": 667,
+      "id": 675,
       "name": "Compare groups (stats) input 2",
-      "data": 667,
+      "data": 675,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -138,33 +138,33 @@
       "processes": []
     },
     {
-      "id": 668,
+      "id": 676,
       "name": "statistic_62",
-      "data": 668,
+      "data": 676,
       "type": "number",
-      "tableProcessGUId": "5eaa7718-668c-4fc0-825c-82f48c7c3bf6",
+      "tableProcessGUId": "b5d98db3-d6e9-497f-a015-6b0a72537405",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 669,
+      "id": 677,
       "name": "pvalue_62",
-      "data": 669,
+      "data": 677,
       "type": "number",
-      "tableProcessGUId": "5eaa7718-668c-4fc0-825c-82f48c7c3bf6",
+      "tableProcessGUId": "b5d98db3-d6e9-497f-a015-6b0a72537405",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 670,
+      "id": 678,
       "name": "effectSize_62",
-      "data": 670,
+      "data": 678,
       "type": "number",
-      "tableProcessGUId": "5eaa7718-668c-4fc0-825c-82f48c7c3bf6",
+      "tableProcessGUId": "b5d98db3-d6e9-497f-a015-6b0a72537405",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -173,7 +173,7 @@
   ],
   "plots": [
     {
-      "id": 113,
+      "id": 115,
       "name": "Compare groups (stats): groups",
       "x": 60,
       "y": 60,
@@ -187,6 +187,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
@@ -217,9 +235,9 @@
         "data": [
           {
             "x": {
-              "id": 671,
+              "id": 679,
               "name": "Compare groups (stats) input 1",
-              "refId": 666,
+              "refId": 674,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -228,9 +246,9 @@
               "processes": []
             },
             "y": {
-              "id": 672,
+              "id": 680,
               "name": "Compare groups (stats) input 2",
-              "refId": 667,
+              "refId": 675,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -240,7 +258,7 @@
             },
             "label": "Box Plot 1",
             "boxPlot": {
-              "colour": "#234154",
+              "colour": null,
               "fillColour": "#234154",
               "fillOpacity": 0.3,
               "strokeWidth": 2,
@@ -261,21 +279,33 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
+        "showPoints": false,
+        "pointJitter": 0.35,
+        "pointSize": 2.5,
+        "pointOpacity": 0.6,
+        "pointColour": null,
+        "showViolin": false,
+        "showBox": true,
+        "violinBandwidth": null,
+        "violinWidth": 0.8,
+        "violinOpacity": 0.3,
         "showSigBars": true,
         "sigMethod": "auto",
         "sigAlpha": 0.05,
         "showNs": false,
         "sigBarThickness": 1,
         "sigBarColor": "#000000",
-        "sigBarFontSize": 11,
+        "sigBarFontSize": null,
         "sigBarYOffset": 0,
         "sigBarSpacing": 1
       }
@@ -287,17 +317,17 @@
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 666,
+        "xIN": 674,
         "yIN": [
-          667
+          675
         ],
         "method": "auto",
         "alpha": 0.05,
         "postHocEnabled": true,
         "out": {
-          "statistic": 668,
-          "pvalue": 669,
-          "effectSize": 670
+          "statistic": 676,
+          "pvalue": 677,
+          "effectSize": 678
         }
       },
       "refTPId": null
@@ -308,7 +338,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_58",
+      "id": "note_59",
       "text": "Compares a numeric measure across groups defined by a grouping column (or across several y-columns). Auto mode picks a Welch t-test for two groups and a one-way ANOVA for three or more; nonparametric Mann-Whitney U and Kruskal-Wallis are also available, with Tukey-Kramer / Holm-adjusted pairwise post-hoc tests and Jarque-Bera normality and variance-ratio warnings. Outputs the test statistic and p-value as metric ports you can wire onward. Reporting a significant group difference (Kruskal & Wallis 1952).",
       "x": 40,
       "y": 24,
@@ -319,12 +349,34 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_666": {
+    "data_674": {
       "x": 60,
       "y": 314
     },
-    "data_667": {
+    "data_675": {
       "x": 60,
       "y": 814
     },
@@ -332,11 +384,11 @@
       "x": 440,
       "y": 314
     },
-    "plot_113": {
+    "plot_115": {
       "x": 820,
       "y": 314
     },
-    "note_58": {
+    "note_59": {
       "x": 40,
       "y": 24
     }
@@ -377,6 +429,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -398,5 +451,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

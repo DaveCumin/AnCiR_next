@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "624": [
+    "632": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "625": [
+    "633": [
       13.207454141807316,
       16.42781352939983,
       10.122969242111294,
@@ -104,7 +104,7 @@
       14.406414185367264,
       9.386678383637214
     ],
-    "626": [
+    "634": [
       0,
       1,
       2,
@@ -156,43 +156,43 @@
       48,
       49
     ],
-    "627": [
+    "635": [
       24
     ],
-    "628": [
+    "636": [
       50.06903731465636
     ],
-    "629": [
-      41.73678030222172
-    ],
-    "630": [
-      11.746213264705368
-    ],
-    "631": [
-      39.046699375823
-    ],
-    "632": [
-      44.42686122862043
-    ],
-    "633": [
-      11.491107768615112
-    ],
-    "634": [
-      12.00131876079562
-    ],
-    "635": [
-      0.953927037241878
-    ],
-    "636": [
-      null
-    ],
     "637": [
-      23.746213264705368
+      41.73678030222172
     ],
     "638": [
       11.746213264705368
     ],
     "639": [
+      39.046699375823
+    ],
+    "640": [
+      44.42686122862043
+    ],
+    "641": [
+      11.491107768615112
+    ],
+    "642": [
+      12.00131876079562
+    ],
+    "643": [
+      0.953927037241878
+    ],
+    "644": [
+      null
+    ],
+    "645": [
+      23.746213264705368
+    ],
+    "646": [
+      11.746213264705368
+    ],
+    "647": [
       8.424345272914458,
       10.560541959544327,
       15.38917731374945,
@@ -247,20 +247,20 @@
   },
   "data": [
     {
-      "id": 624,
+      "id": 632,
       "name": "x",
-      "data": 624,
+      "data": 632,
       "type": "number",
-      "tableProcessGUId": "a1bd6b78-116f-4c34-80f8-dc1c3b9cae24",
+      "tableProcessGUId": "341615b5-4e18-4e7d-8fa8-47136a98b426",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 625,
+      "id": 633,
       "name": "y",
-      "data": 625,
+      "data": 633,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -269,99 +269,11 @@
       "processes": []
     },
     {
-      "id": 626,
-      "name": "cosinorx_56",
-      "data": 626,
-      "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 627,
-      "name": "period_56",
-      "data": 627,
-      "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 628,
-      "name": "mesor_56",
-      "data": 628,
-      "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 629,
-      "name": "amplitude_56",
-      "data": 629,
-      "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 630,
-      "name": "acrophase_56",
-      "data": 630,
-      "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 631,
-      "name": "amplitude_ciLow_56",
-      "data": 631,
-      "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 632,
-      "name": "amplitude_ciHigh_56",
-      "data": 632,
-      "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
-      "id": 633,
-      "name": "acrophase_ciLow_56",
-      "data": 633,
-      "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 634,
-      "name": "acrophase_ciHigh_56",
+      "name": "cosinorx_56",
       "data": 634,
       "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -369,10 +281,10 @@
     },
     {
       "id": 635,
-      "name": "rsquared_56",
+      "name": "period_56",
       "data": 635,
       "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -380,10 +292,10 @@
     },
     {
       "id": 636,
-      "name": "pvalue_56",
+      "name": "mesor_56",
       "data": 636,
       "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -391,10 +303,10 @@
     },
     {
       "id": 637,
-      "name": "bathyphase_56",
+      "name": "amplitude_56",
       "data": 637,
       "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -402,10 +314,10 @@
     },
     {
       "id": 638,
-      "name": "phase_angle_56",
+      "name": "acrophase_56",
       "data": 638,
       "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -413,10 +325,98 @@
     },
     {
       "id": 639,
-      "name": "cosinory_625_56",
+      "name": "amplitude_ciLow_56",
       "data": 639,
       "type": "number",
-      "tableProcessGUId": "8afd9c50-49d4-4b64-82c2-6fc28f871726",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 640,
+      "name": "amplitude_ciHigh_56",
+      "data": 640,
+      "type": "number",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 641,
+      "name": "acrophase_ciLow_56",
+      "data": 641,
+      "type": "number",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 642,
+      "name": "acrophase_ciHigh_56",
+      "data": 642,
+      "type": "number",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 643,
+      "name": "rsquared_56",
+      "data": 643,
+      "type": "number",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 644,
+      "name": "pvalue_56",
+      "data": 644,
+      "type": "number",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 645,
+      "name": "bathyphase_56",
+      "data": 645,
+      "type": "number",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 646,
+      "name": "phase_angle_56",
+      "data": 646,
+      "type": "number",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 647,
+      "name": "cosinory_633_56",
+      "data": 647,
+      "type": "number",
+      "tableProcessGUId": "6ac6a1d3-1a34-47df-89df-a9e5064bdbc1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -425,7 +425,7 @@
   ],
   "plots": [
     {
-      "id": 106,
+      "id": 108,
       "name": "Cosinor: data + fit",
       "x": 60,
       "y": 60,
@@ -439,12 +439,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -482,9 +501,9 @@
         "data": [
           {
             "x": {
-              "id": 640,
+              "id": 648,
               "name": "x",
-              "refId": 624,
+              "refId": 632,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -493,9 +512,9 @@
               "processes": []
             },
             "y": {
-              "id": 641,
+              "id": 649,
               "name": "y",
-              "refId": 625,
+              "refId": 633,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -506,14 +525,14 @@
             "label": "Data",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -521,9 +540,9 @@
           },
           {
             "x": {
-              "id": 642,
+              "id": 650,
               "name": "cosinorx_56",
-              "refId": 626,
+              "refId": 634,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -532,9 +551,9 @@
               "processes": []
             },
             "y": {
-              "id": 643,
-              "name": "cosinory_625_56",
-              "refId": 639,
+              "id": 651,
+              "name": "cosinory_633_56",
+              "refId": 647,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -545,14 +564,14 @@
             "label": "Cosinor",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -562,19 +581,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 107,
+      "id": 109,
       "name": "Cosinor: values",
       "x": 630,
       "y": 60,
@@ -588,10 +609,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          625,
-          639
+          633,
+          647
         ],
         "showCol": [
           true,
@@ -616,7 +655,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 624
+          "result": 632
         }
       },
       "refTPId": null
@@ -626,9 +665,9 @@
       "name": "Cosinor",
       "displayName": "Cosinor",
       "args": {
-        "xIN": 624,
+        "xIN": 632,
         "yIN": [
-          625
+          633
         ],
         "Ncurves": 1,
         "outputX": -1,
@@ -638,20 +677,20 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "cosinorx": 626,
-          "period": 627,
-          "mesor": 628,
-          "amplitude": 629,
-          "acrophase": 630,
-          "amplitude_ciLow": 631,
-          "amplitude_ciHigh": 632,
-          "acrophase_ciLow": 633,
-          "acrophase_ciHigh": 634,
-          "rsquared": 635,
-          "pvalue": 636,
-          "bathyphase": 637,
-          "phase_angle": 638,
-          "cosinory_625": 639
+          "cosinorx": 634,
+          "period": 635,
+          "mesor": 636,
+          "amplitude": 637,
+          "acrophase": 638,
+          "amplitude_ciLow": 639,
+          "amplitude_ciHigh": 640,
+          "acrophase_ciLow": 641,
+          "acrophase_ciHigh": 642,
+          "rsquared": 643,
+          "pvalue": 644,
+          "bathyphase": 645,
+          "phase_angle": 646,
+          "cosinory_633": 647
         }
       },
       "refTPId": null
@@ -662,7 +701,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_54",
+      "id": "note_55",
       "text": "Fits a cosine model to a rhythmic series by least squares, returning MESOR (rhythm-adjusted mean), amplitude, acrophase and period, with an F-test / R² and optional permutation p-value. Use it for approximately sinusoidal rhythms when you want interpretable rhythm parameters and a significance test; a fixed period (e.g. 24 h) turns it into linear single/multi-harmonic cosinor, while leaving the period free fits it. In the demo, read the fitted smooth cosine overlaid on the raw points: peak height is the amplitude, the peak's time-of-day is the acrophase, and the horizontal midline is the MESOR. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. Method: cosinor rhythmometry (Cornélissen 2014).",
       "x": 40,
       "y": 24,
@@ -673,8 +712,30 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_625": {
+    "data_633": {
       "x": 60,
       "y": 314
     },
@@ -686,15 +747,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_106": {
+    "plot_108": {
       "x": 820,
       "y": 314
     },
-    "plot_107": {
+    "plot_109": {
       "x": 820,
       "y": 814
     },
-    "note_54": {
+    "note_55": {
       "x": 40,
       "y": 24
     }
@@ -735,6 +796,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -756,5 +818,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

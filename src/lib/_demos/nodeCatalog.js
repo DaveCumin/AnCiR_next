@@ -152,6 +152,12 @@ export const PLOT_SPECS = [
 			{ type: 'number', data: () => SAMPLE.linear(-2, 100) }
 		],
 		wire: (p, ids) => ids.forEach((id) => p.plot.addData({ column: { refId: id } }))
+	},
+	{
+		// Normal Q-Q plot — self-computing, one `column` ref per series (like Histogram).
+		type: 'qqplot',
+		inputs: [{ type: 'number', data: SAMPLE.rhythm }],
+		wire: (p, [c]) => p.plot.addData({ column: { refId: c } })
 	}
 ];
 

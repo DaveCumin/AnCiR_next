@@ -8,7 +8,7 @@
   import NoteBox from "$lib/components/NoteBox.svelte";
   import Formula from "$lib/components/Formula.svelte";
   import PeriodogramAnim from "$lib/animations/PeriodogramAnim.svelte";
-  import ChiSquaredAnim from "$lib/animations/ChiSquaredAnim.svelte";
+  import FoldingPeriodogramAnim from "$lib/animations/FoldingPeriodogramAnim.svelte";
 
   const contextEntries = [
     {
@@ -82,14 +82,18 @@
     for P bins per cycle.
   </p>
   <p>
-    The animation runs it end to end. First the fold at 24 h, with every cycle
-    overlaid and each bin's departure from the grand mean added in. Then the
-    comparison against the &chi;&sup2; curve. Then the payoff: sweep the trial
-    period and watch Q<sub>p</sub> collapse wherever the fold scrambles the
-    cycles and leap where they align &mdash; <strong>drawing the periodogram
-    itself</strong>.
+    The animation runs it end to end. First the <strong>fold</strong> at 24 h,
+    with every cycle overlaid. Then each bin is <strong>averaged across
+    cycles</strong> to give the bin means, and each mean's departure from the
+    grand mean is added in. Those departures are summarised two ways from the
+    <em>same</em> sum of squares &mdash; Enright's amplitude A<sub>p</sub> (their
+    root-mean-square) and Sokolove&ndash;Bushell's Q<sub>p</sub> (that sum
+    rescaled to a &chi;&sup2;). Then the payoff: sweep the trial period and watch
+    both collapse wherever the fold scrambles the cycles and leap where they
+    align &mdash; <strong>drawing the periodogram itself</strong>. The two peak
+    at the same period; only Q<sub>p</sub> carries a significance line.
   </p>
-  <ChiSquaredAnim stage="periodogram" />
+  <FoldingPeriodogramAnim />
 
   <WarnBox title="Bin count is a user choice that moves the significance bar">
     <p>

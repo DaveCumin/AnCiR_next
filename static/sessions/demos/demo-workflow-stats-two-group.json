@@ -219,7 +219,7 @@
       "name": "statistic_11",
       "data": 153,
       "type": "number",
-      "tableProcessGUId": "94467217-c33a-47f5-8641-3f2830d9d00b",
+      "tableProcessGUId": "d991a52c-fd96-4ba3-8d15-022e06033a4e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -230,7 +230,7 @@
       "name": "pvalue_11",
       "data": 154,
       "type": "number",
-      "tableProcessGUId": "94467217-c33a-47f5-8641-3f2830d9d00b",
+      "tableProcessGUId": "d991a52c-fd96-4ba3-8d15-022e06033a4e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -253,6 +253,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
@@ -306,7 +324,7 @@
             },
             "label": "Box Plot 1",
             "boxPlot": {
-              "colour": "#234154",
+              "colour": null,
               "fillColour": "#234154",
               "fillOpacity": 0.3,
               "strokeWidth": 2,
@@ -327,21 +345,33 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
+        "showPoints": false,
+        "pointJitter": 0.35,
+        "pointSize": 2.5,
+        "pointOpacity": 0.6,
+        "pointColour": null,
+        "showViolin": false,
+        "showBox": true,
+        "violinBandwidth": null,
+        "violinWidth": 0.8,
+        "violinOpacity": 0.3,
         "showSigBars": true,
         "sigMethod": "auto",
         "sigAlpha": 0.05,
         "showNs": false,
         "sigBarThickness": 1,
         "sigBarColor": "#000000",
-        "sigBarFontSize": 11,
+        "sigBarFontSize": null,
         "sigBarYOffset": 0,
         "sigBarSpacing": 1
       }
@@ -361,6 +391,24 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
           153,
@@ -414,6 +462,28 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "data_151": {
       "x": 60,
@@ -476,6 +546,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -497,5 +568,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

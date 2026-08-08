@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "644": [
+    "652": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "645": [
+    "653": [
       24.784209286216505,
       27.918238427560844,
       26.60093560817605,
@@ -104,7 +104,7 @@
       24.95424537696588,
       27.973731986697846
     ],
-    "646": [
+    "654": [
       0,
       1,
       2,
@@ -156,16 +156,16 @@
       48,
       49
     ],
-    "647": [
+    "655": [
       null
     ],
-    "648": [
+    "656": [
       0.9855288017634882
     ],
-    "649": [
+    "657": [
       2.8153329730899084
     ],
-    "650": [
+    "658": [
       25.756894538862465,
       24.742714374366138,
       24.385024124035308,
@@ -220,20 +220,20 @@
   },
   "data": [
     {
-      "id": 644,
+      "id": 652,
       "name": "x",
-      "data": 644,
+      "data": 652,
       "type": "number",
-      "tableProcessGUId": "278673ac-a401-4072-9637-5b5b8a785261",
+      "tableProcessGUId": "3e18ea92-849a-42d5-ba25-799150cc4261",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 645,
+      "id": 653,
       "name": "y",
-      "data": 645,
+      "data": 653,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -242,55 +242,55 @@
       "processes": []
     },
     {
-      "id": 646,
+      "id": 654,
       "name": "dlogx_58",
-      "data": 646,
+      "data": 654,
       "type": "number",
-      "tableProcessGUId": "fe7daff5-0828-4fa1-b99b-57ba9bf802ae",
+      "tableProcessGUId": "7557a76e-ed5c-4a3f-afff-09200195cce5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 647,
+      "id": 655,
       "name": "pvalue_58",
-      "data": 647,
+      "data": 655,
       "type": "number",
-      "tableProcessGUId": "2198e440-d5e8-4f88-9b8d-800d67e17f62",
+      "tableProcessGUId": "979dde8e-2929-4f26-ae8b-f011571c1745",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 648,
+      "id": 656,
       "name": "r2_58",
-      "data": 648,
+      "data": 656,
       "type": "number",
-      "tableProcessGUId": "2198e440-d5e8-4f88-9b8d-800d67e17f62",
+      "tableProcessGUId": "979dde8e-2929-4f26-ae8b-f011571c1745",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 649,
+      "id": 657,
       "name": "rmse_58",
-      "data": 649,
+      "data": 657,
       "type": "number",
-      "tableProcessGUId": "2198e440-d5e8-4f88-9b8d-800d67e17f62",
+      "tableProcessGUId": "979dde8e-2929-4f26-ae8b-f011571c1745",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 650,
-      "name": "dlogy_645_58",
-      "data": 650,
+      "id": 658,
+      "name": "dlogy_653_58",
+      "data": 658,
       "type": "number",
-      "tableProcessGUId": "fe7daff5-0828-4fa1-b99b-57ba9bf802ae",
+      "tableProcessGUId": "7557a76e-ed5c-4a3f-afff-09200195cce5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -299,7 +299,7 @@
   ],
   "plots": [
     {
-      "id": 108,
+      "id": 110,
       "name": "Double Logistic: data + fit",
       "x": 60,
       "y": 60,
@@ -313,12 +313,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -356,9 +375,9 @@
         "data": [
           {
             "x": {
-              "id": 651,
+              "id": 659,
               "name": "x",
-              "refId": 644,
+              "refId": 652,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -367,9 +386,9 @@
               "processes": []
             },
             "y": {
-              "id": 652,
+              "id": 660,
               "name": "y",
-              "refId": 645,
+              "refId": 653,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -380,14 +399,14 @@
             "label": "Data",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -395,9 +414,9 @@
           },
           {
             "x": {
-              "id": 653,
+              "id": 661,
               "name": "dlogx_58",
-              "refId": 646,
+              "refId": 654,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -406,9 +425,9 @@
               "processes": []
             },
             "y": {
-              "id": 654,
-              "name": "dlogy_645_58",
-              "refId": 650,
+              "id": 662,
+              "name": "dlogy_653_58",
+              "refId": 658,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -419,14 +438,14 @@
             "label": "Double Logistic",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -436,19 +455,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 109,
+      "id": 111,
       "name": "Double Logistic: values",
       "x": 630,
       "y": 60,
@@ -462,10 +483,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          645,
-          650
+          653,
+          658
         ],
         "showCol": [
           true,
@@ -490,7 +529,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 644
+          "result": 652
         }
       },
       "refTPId": null
@@ -500,9 +539,9 @@
       "name": "DoubleLogistic",
       "displayName": "Double Logistic",
       "args": {
-        "xIN": 644,
+        "xIN": 652,
         "yIN": [
-          645
+          653
         ],
         "outputX": -1,
         "fixK1": false,
@@ -512,11 +551,11 @@
         "fixPeriod": false,
         "fixedPeriod": 24,
         "out": {
-          "dlogx": 646,
-          "pvalue": 647,
-          "r2": 648,
-          "rmse": 649,
-          "dlogy_645": 650
+          "dlogx": 654,
+          "pvalue": 655,
+          "r2": 656,
+          "rmse": 657,
+          "dlogy_653": 658
         }
       },
       "refTPId": null
@@ -527,7 +566,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_55",
+      "id": "note_56",
       "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. Double-logistic phenology model (Zhang et al. 2003).",
       "x": 40,
       "y": 24,
@@ -538,8 +577,30 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_645": {
+    "data_653": {
       "x": 60,
       "y": 314
     },
@@ -551,15 +612,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_108": {
+    "plot_110": {
       "x": 820,
       "y": 314
     },
-    "plot_109": {
+    "plot_111": {
       "x": 820,
       "y": 814
     },
-    "note_55": {
+    "note_56": {
       "x": 40,
       "y": 24
     }
@@ -600,6 +661,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -621,5 +683,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

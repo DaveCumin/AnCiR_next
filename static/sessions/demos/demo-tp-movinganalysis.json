@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "744": [
+    "752": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "745": [
+    "753": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "746": [
+    "754": [
       84,
       108,
       132,
@@ -685,7 +685,7 @@
       204,
       228
     ],
-    "747": [
+    "755": [
       24,
       24,
       24,
@@ -694,7 +694,7 @@
       24,
       24
     ],
-    "748": [
+    "756": [
       83.5,
       83.49999999999999,
       83.49999999999999,
@@ -706,20 +706,20 @@
   },
   "data": [
     {
-      "id": 744,
+      "id": 752,
       "name": "x",
-      "data": 744,
+      "data": 752,
       "type": "number",
-      "tableProcessGUId": "060bd127-0a5e-497e-aa34-82d6ec734d47",
+      "tableProcessGUId": "f36e23fc-5e48-4b2b-b659-e53e0098430e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 745,
+      "id": 753,
       "name": "y",
-      "data": 745,
+      "data": 753,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -728,33 +728,33 @@
       "processes": []
     },
     {
-      "id": 746,
+      "id": 754,
       "name": "movex_71",
-      "data": 746,
+      "data": 754,
       "type": "number",
-      "tableProcessGUId": "1c6bc4a8-055e-471e-8735-4145c8df465d",
+      "tableProcessGUId": "9c3fe7c6-333e-45fe-81af-4eff059dae47",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 747,
-      "name": "745_peak_period_71",
-      "data": 747,
+      "id": 755,
+      "name": "753_peak_period_71",
+      "data": 755,
       "type": "number",
-      "tableProcessGUId": "1c6bc4a8-055e-471e-8735-4145c8df465d",
+      "tableProcessGUId": "9c3fe7c6-333e-45fe-81af-4eff059dae47",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 748,
-      "name": "745_peak_power_71",
-      "data": 748,
+      "id": 756,
+      "name": "753_peak_power_71",
+      "data": 756,
       "type": "number",
-      "tableProcessGUId": "1c6bc4a8-055e-471e-8735-4145c8df465d",
+      "tableProcessGUId": "9c3fe7c6-333e-45fe-81af-4eff059dae47",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -763,7 +763,7 @@
   ],
   "plots": [
     {
-      "id": 122,
+      "id": 124,
       "name": "Moving Analysis: signal + moving period",
       "x": 60,
       "y": 60,
@@ -777,12 +777,31 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -820,9 +839,9 @@
         "data": [
           {
             "x": {
-              "id": 749,
+              "id": 757,
               "name": "x",
-              "refId": 744,
+              "refId": 752,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -831,9 +850,9 @@
               "processes": []
             },
             "y": {
-              "id": 750,
+              "id": 758,
               "name": "y",
-              "refId": 745,
+              "refId": 753,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -844,14 +863,14 @@
             "label": "Signal",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
               "draw": false,
               "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -859,9 +878,9 @@
           },
           {
             "x": {
-              "id": 751,
+              "id": 759,
               "name": "movex_71",
-              "refId": 746,
+              "refId": 754,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -870,9 +889,9 @@
               "processes": []
             },
             "y": {
-              "id": 752,
-              "name": "745_peak_period_71",
-              "refId": 747,
+              "id": 760,
+              "name": "753_peak_period_71",
+              "refId": 755,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -883,14 +902,14 @@
             "label": "Moving period",
             "yAxis": "right",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2.5,
               "stroke": "solid",
               "draw": true,
               "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -900,19 +919,21 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "var(--color-lightness-80)",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
         "nightBands": []
       }
     },
     {
-      "id": 123,
+      "id": 125,
       "name": "Moving Analysis: result",
       "x": 630,
       "y": 60,
@@ -926,11 +947,29 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          746,
-          747,
-          748
+          754,
+          755,
+          756
         ],
         "showCol": [
           true,
@@ -956,7 +995,7 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 744
+          "result": 752
         }
       },
       "refTPId": null
@@ -966,9 +1005,9 @@
       "name": "MovingAnalysis",
       "displayName": "Moving Analysis",
       "args": {
-        "xIN": 744,
+        "xIN": 752,
         "yIN": [
-          745
+          753
         ],
         "windowSize": 168,
         "stepSize": 24,
@@ -987,9 +1026,9 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "movex": 746,
-          "745_peak_period": 747,
-          "745_peak_power": 748
+          "movex": 754,
+          "753_peak_period": 755,
+          "753_peak_power": 756
         }
       },
       "refTPId": null
@@ -1000,7 +1039,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_66",
+      "id": "note_67",
       "text": "Slides a window along the record and runs a chosen analysis (periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
@@ -1011,8 +1050,30 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
-    "data_745": {
+    "data_753": {
       "x": 60,
       "y": 314
     },
@@ -1024,15 +1085,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_122": {
+    "plot_124": {
       "x": 820,
       "y": 314
     },
-    "plot_123": {
+    "plot_125": {
       "x": 820,
       "y": 814
     },
-    "note_66": {
+    "note_67": {
       "x": 40,
       "y": 24
     }
@@ -1073,6 +1134,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -1094,5 +1156,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }

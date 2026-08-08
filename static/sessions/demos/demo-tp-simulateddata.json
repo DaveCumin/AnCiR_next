@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "788": [
+    "796": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-01-02T22:00:00.000Z",
       "2024-01-02T23:00:00.000Z"
     ],
-    "789": [
+    "797": [
       100,
       100,
       100,
@@ -103,23 +103,23 @@
   },
   "data": [
     {
-      "id": 788,
+      "id": 796,
       "name": "time_79",
-      "data": 788,
+      "data": 796,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "786b5d3f-55f3-4f08-a602-d99f89d88fa2",
+      "tableProcessGUId": "2a5a241d-8aca-4796-8663-78ca1e744219",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 789,
+      "id": 797,
       "name": "values_79",
-      "data": 789,
+      "data": 797,
       "type": "number",
-      "tableProcessGUId": "786b5d3f-55f3-4f08-a602-d99f89d88fa2",
+      "tableProcessGUId": "2a5a241d-8aca-4796-8663-78ca1e744219",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -128,7 +128,7 @@
   ],
   "plots": [
     {
-      "id": 132,
+      "id": 134,
       "name": "Simulate Data result",
       "x": 60,
       "y": 60,
@@ -142,10 +142,28 @@
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "columnRefs": [
-          788,
-          789
+          796,
+          797
         ],
         "showCol": [
           true,
@@ -178,8 +196,8 @@
         ],
         "samplingPeriod_hours": 1,
         "out": {
-          "time": 788,
-          "values": 789
+          "time": 796,
+          "values": 797
         }
       },
       "refTPId": null
@@ -190,7 +208,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_72",
+      "id": "note_73",
       "text": "Generates a synthetic time-series from one or more cosine sections (each with its own period, phase, amplitude, and optional additive or multiplicative noise) at a chosen sampling interval. Use it to create test data with a known ground truth for learning, demonstrating, or validating the analysis nodes.",
       "x": 40,
       "y": 24,
@@ -201,16 +219,38 @@
   "groups": [],
   "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
   "nodeLayout": {
     "tableprocess_79": {
       "x": 60,
       "y": 314
     },
-    "plot_132": {
+    "plot_134": {
       "x": 820,
       "y": 314
     },
-    "note_72": {
+    "note_73": {
       "x": 40,
       "y": 24
     }
@@ -251,6 +291,7 @@
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -272,5 +313,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.70.1"
+  "version": "β.72.16"
 }
