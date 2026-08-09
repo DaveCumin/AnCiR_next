@@ -593,8 +593,11 @@
 		font-size: var(--font-sm);
 		padding: var(--space-2) var(--space-4);
 		border-radius: var(--radius-sm);
-		border: 1px solid var(--color-accent);
-		background: var(--color-accent);
+		/* Filled primary action with a near-white 12px label, so 4.5:1 applies:
+		   --color-accent-fill gives 5.15:1 where --color-accent was 2.77:1. The border
+		   tracks the fill so the darker button isn't ringed by the lighter accent. */
+		border: 1px solid var(--color-accent-fill);
+		background: var(--color-accent-fill);
 		color: var(--color-lightness-99);
 		cursor: pointer;
 	}

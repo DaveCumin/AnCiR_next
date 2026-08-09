@@ -698,15 +698,17 @@
 		background: var(--color-lightness-95);
 	}
 
+	/* Filled primary action with a white label, so 4.5:1 applies: --color-accent-fill
+	   gives 5.28:1 where --color-accent was 2.84:1. The border tracks the fill. */
 	.tour-primary {
-		border-color: var(--color-accent);
-		background: var(--color-accent);
+		border-color: var(--color-accent-fill);
+		background: var(--color-accent-fill);
 		color: #fff;
 	}
 
 	.tour-primary:hover {
 		filter: brightness(0.96);
-		background: var(--color-accent);
+		background: var(--color-accent-fill);
 	}
 
 	.tour-skip {

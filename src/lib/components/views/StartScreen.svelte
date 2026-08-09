@@ -665,9 +665,12 @@
 		font-weight: 600;
 		cursor: pointer;
 	}
+	/* Hover/focus turns this into a filled primary with a white 14px/600 label — under
+	   18.66px, so the 4.5:1 rule applies, not the large-text 3:1. --color-accent-fill
+	   is 5.28:1; --color-accent was 2.84:1. */
 	.tour-cta:hover,
 	.tour-cta:focus-visible {
-		background: var(--color-accent);
+		background: var(--color-accent-fill);
 		color: var(--surface-card);
 	}
 

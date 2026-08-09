@@ -127,7 +127,9 @@
 
 	.swap-btn {
 		padding: 6px 18px;
-		background: var(--color-accent);
+		/* Filled primary action carrying white 13px label, so 4.5:1 applies:
+		   --color-accent-fill gives 5.28:1 where the bright --color-accent was 2.84:1. */
+		background: var(--color-accent-fill);
 		color: white;
 		border: none;
 		border-radius: var(--radius-sm);
@@ -136,6 +138,6 @@
 	}
 
 	.swap-btn:hover {
-		background: #0260d4;
+		background: color-mix(in srgb, var(--color-accent-fill) 88%, black);
 	}
 </style>

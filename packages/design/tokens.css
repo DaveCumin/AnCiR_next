@@ -81,10 +81,18 @@
 	   Central knobs for surfaces, spacing, radii, fonts and dividers so the look
 	   can be retuned in one place. Components should prefer these over literals. */
 	--color-accent: #4d9fe3; /* focus ring / selection glow / borders / plot brush — all
-	   non-text. At 2.84:1 on white it must never be used as TEXT; use
-	   --color-accent-text instead. */
+	   non-text, and never a FILL behind light text. At 2.84:1 on white it must be used
+	   neither as TEXT (use --color-accent-text) nor as the background of a filled
+	   primary button (use --color-accent-fill). */
 	--color-accent-text: #1f6fb2; /* darkened accent for accent TEXT and links: 5.28:1
 	   on white (AA). Mirrors the --color-warning / --color-warning-text split above. */
+	--color-accent-fill: #1f6fb2; /* FILLED accent surfaces — primary buttons and other
+	   solid accent blocks that carry white / near-white content. White on it is 5.28:1
+	   (AA); white on the bright --color-accent is only 2.84:1. Same value as
+	   --color-accent-text today, but a separate knob: a button fill and a link colour
+	   answer to different constraints and should be retunable apart. Darken for hover
+	   with color-mix(in srgb, var(--color-accent-fill) 88%, black) — 6.40:1 — rather
+	   than lightening, which would drop the fill back below AA. */
 
 	/* secondary / muted text — accessible replacement for the mid lightness greys
 	   (45..60) when used as TEXT. #666 is ~5.7:1 on white / ~5.3:1 on surface-muted,

@@ -122,15 +122,18 @@
 		background: var(--color-lightness-90);
 	}
 
+	/* Filled primary action with a white label, so 4.5:1 applies. --color-hover is a
+	   hover TINT for dark text and only 2.79:1 under white; --color-accent-fill is
+	   5.28:1 and matches the app's other filled primaries. */
 	.dialog-button.primary {
-		background: var(--color-hover);
-		border-color: var(--color-hover);
+		background: var(--color-accent-fill);
+		border-color: var(--color-accent-fill);
 		color: white;
 	}
 
 	.dialog-button.primary:hover {
-		background: color-mix(in srgb, var(--color-hover) 92%, black);
-		border-color: color-mix(in srgb, var(--color-hover) 92%, black);
+		background: color-mix(in srgb, var(--color-accent-fill) 88%, black);
+		border-color: color-mix(in srgb, var(--color-accent-fill) 88%, black);
 	}
 
 	.dialog-button.destructive {
