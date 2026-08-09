@@ -2,7 +2,7 @@
    AnCiR app and the handbook (packages/design). Do not fork values here. */
 :root {
 	/* icon related */
-	--color-icon-selected: #525252;
+	--color-icon-selected: #424242;
 	--color-icon-unselected: #8f8f8f; /* idle icon fill: 3.23:1 on white / 3.04:1 on
 	   --surface-canvas, clearing the 3:1 graphical-object threshold. The previous
 	   #d9d9d9 was 1.41:1. Stays clearly lighter than --color-icon-selected (6.39:1)
