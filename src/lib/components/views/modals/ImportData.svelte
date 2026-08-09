@@ -3100,7 +3100,9 @@
 	.link-button {
 		background: none;
 		border: none;
-		color: var(--color-accent);
+		/* Accent as TEXT needs 4.5:1; --color-accent is 2.84:1 and stays for rings,
+		   borders and glows only. */
+		color: var(--color-accent-text);
 		cursor: pointer;
 		font-size: var(--font-sm);
 		text-decoration: underline;
@@ -3149,7 +3151,13 @@
 
 	.preview-table th.unselected,
 	.preview-table td.unselected {
-		opacity: 0.35;
+		/* Not a disabled control — leaving a column out is a user CHOICE, and the
+		   cell text still has to be readable to make that choice. At 0.35 the
+		   composite was 1.90:1, the worst text ratio in the app; 0.7 gives 4.95:1.
+		   The state signal was never the background tint (which composites to
+		   within a hair of .selected either way) — it is the text muting plus the
+		   header checkbox, both of which survive and read better at 0.7. */
+		opacity: 0.7;
 		background-color: var(--color-lightness-95);
 	}
 

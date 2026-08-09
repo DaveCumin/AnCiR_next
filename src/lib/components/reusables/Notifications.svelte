@@ -89,14 +89,15 @@
 		margin: 0;
 		cursor: pointer;
 		font-size: var(--font-sm);
-		opacity: 0.5;
 		flex-shrink: 0;
 		line-height: 1;
-		color: inherit;
+		/* De-emphasised relative to the toast's own type colour, but at full
+		   opacity so the glyph keeps a readable contrast ratio. */
+		color: var(--color-text-muted);
 		border-radius: 0;
 	}
 
 	.toast-close:hover {
-		opacity: 1;
+		color: inherit;
 	}
 </style>

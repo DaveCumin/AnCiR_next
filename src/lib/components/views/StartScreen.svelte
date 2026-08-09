@@ -415,9 +415,12 @@
 		color: var(--color-text-muted);
 		line-height: 1.4;
 	}
+	/* One step lighter than .primary-sub (--color-text-muted) on purpose: the card
+	   runs title → sub → hint as three levels of emphasis, and lightness-45 clears
+	   4.5:1 (4.74:1) without collapsing the ramp into two. */
 	.primary-hint {
 		font-size: var(--font-xs);
-		color: var(--color-lightness-60);
+		color: var(--color-lightness-45);
 	}
 
 	/* --- secondary (deliberately low weight) ------------------------------- */
@@ -436,7 +439,7 @@
 		font-weight: 600;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: var(--color-lightness-60);
+		color: var(--color-text-muted);
 	}
 	.empty-note {
 		margin: 0;
@@ -503,7 +506,7 @@
 		padding: 0;
 		font: inherit;
 		font-size: var(--font-sm);
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 		text-decoration: underline;
 		cursor: pointer;
 	}
@@ -537,7 +540,7 @@
 	}
 	.example-row:hover .example-name,
 	.example-open:focus-visible .example-name {
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 	}
 	.example-row.busy {
 		opacity: 0.6;
@@ -614,7 +617,7 @@
 		border: none;
 		font: inherit;
 		font-size: var(--font-xs);
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 		text-decoration: underline;
 		cursor: pointer;
 	}

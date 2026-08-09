@@ -491,7 +491,7 @@
 	.empty-hint {
 		padding: 8px 10px;
 		font-size: var(--font-xs);
-		color: rgba(0, 0, 0, 0.45);
+		color: rgba(0, 0, 0, 0.55);
 		text-align: center;
 	}
 
@@ -523,7 +523,7 @@
 		padding: 0;
 		font-size: 0.85rem;
 		line-height: 1;
-		color: rgba(0, 0, 0, 0.4);
+		color: rgba(0, 0, 0, 0.5);
 		background: transparent;
 		border: 0;
 		cursor: grab;
@@ -534,7 +534,7 @@
 		cursor: grabbing;
 	}
 	.row-grip:hover {
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 	}
 
 	.row-chev {
@@ -577,7 +577,7 @@
 		font-size: var(--font-2xs);
 		font-weight: 600;
 		line-height: 1.4;
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 		background: var(--color-accent-soft, #dbeafe);
 		vertical-align: middle;
 	}

@@ -563,7 +563,9 @@
 	}
 
 	.no-plot-prompt p {
-		color: var(--color-lightness-75);
+		/* 16px/600 is NOT WCAG "large text" (that needs >=18.66px bold), so this
+		   empty-state CTA is held to 4.5:1. The old grey was 1.97:1 on the canvas. */
+		color: var(--color-text-muted);
 	}
 
 	/* Grouped viewport toolbar — a card matching the workflow canvas + selection
@@ -612,7 +614,9 @@
 	}
 
 	.viewport-btn:hover {
-		color: var(--color-accent);
+		/* Icon paint, so 3:1 applies — and --color-accent is 2.84:1, which misses
+		   even that. --color-accent-text is the same hue, 5.28:1. */
+		color: var(--color-accent-text);
 	}
 
 	.viewport-btn:active {

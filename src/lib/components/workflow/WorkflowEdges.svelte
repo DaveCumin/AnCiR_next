@@ -114,7 +114,7 @@
 	/* Data View reference link: dashed + muted, to read as an association rather
 	   than a data wire. */
 	.edge-line.reference {
-		stroke: var(--color-lightness-70);
+		stroke: var(--color-lightness-50);
 		stroke-width: 1.5;
 		stroke-dasharray: 5 4;
 	}

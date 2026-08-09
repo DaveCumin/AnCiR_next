@@ -766,7 +766,7 @@
 		user-select: none;
 		font-size: var(--font-sm);
 		line-height: 1;
-		color: var(--color-lightness-65);
+		color: var(--color-lightness-50);
 		padding: 0 var(--space-1);
 		opacity: 0;
 		transition: opacity 0.15s ease;

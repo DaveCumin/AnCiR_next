@@ -776,7 +776,6 @@
 		right: 0;
 		bottom: 0;
 		cursor: nwse-resize;
-		/* background-color: #888; */
 		border-radius: 2px;
 	}
 </style>

@@ -4581,7 +4581,7 @@
 		color: var(--color-text-muted);
 	}
 	.composite-frame-collapse:hover {
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 	}
 
 	/* When a node's note popover is open, lift the whole wrapper above its
@@ -4675,7 +4675,7 @@
 		line-height: 16px;
 		text-align: center;
 		cursor: nwse-resize;
-		color: #888;
+		color: var(--color-lightness-45);
 		background: rgba(255, 255, 255, 0.8);
 		border-radius: 2px;
 		user-select: none;
@@ -4754,7 +4754,7 @@
 	}
 	.selection-action-btn:hover {
 		border-color: var(--color-accent);
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 	}
 
 	/* Most viewport icons (zoom, reset, paths) inherit their fill from the global
@@ -4762,7 +4762,7 @@
 	   fill="currentColor", so it follows `color` instead — match the two palettes
 	   here so all the buttons render the same shade idle and on hover. */
 	.viewport-btn {
-		color: var(--color-icon-unselected, var(--color-lightness-85));
+		color: var(--color-icon-unselected, var(--color-lightness-50));
 		transition:
 			color 0.18s ease,
 			transform 0.32s ease;

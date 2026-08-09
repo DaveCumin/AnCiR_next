@@ -373,7 +373,7 @@
 		gap: 0.4rem;
 		font-size: 0.8rem;
 		padding: 0.2rem var(--space-4);
-		color: var(--text-muted, #888);
+		color: var(--color-text-muted);
 	}
 	.chain-selector select {
 		font-size: 0.8rem;

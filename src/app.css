@@ -44,7 +44,17 @@
 	border-color: var(--color-accent);
 }
 .form-input::placeholder {
-	color: var(--color-lightness-60);
+	color: var(--color-text-muted);
+}
+
+/* Placeholder contrast, app-wide. Every text field in the app sits on a light
+   surface, and none of them styled ::placeholder, so they inherited the UA
+   default (~54% of the text colour) which fails 4.5:1 at these sizes. Pin it to
+   the muted token (5.74:1 on white). :where() keeps specificity at 0 so
+   any component can still override. */
+:where(input, textarea)::placeholder {
+	color: var(--color-text-muted);
+	opacity: 1; /* Firefox applies its own opacity on top of the colour. */
 }
 
 /* Canonical tab strip. Active tab = accent underline (the modal pattern), applied
@@ -99,7 +109,7 @@
 		background 0.15s ease;
 }
 .btn-add:hover {
-	color: var(--color-accent);
+	color: var(--color-accent-text);
 	border-color: var(--color-accent);
 	background: color-mix(in srgb, var(--color-accent) 6%, transparent);
 }
@@ -227,5 +237,5 @@ summary.section-details-summary:hover::after {
 	border-radius: 8px;
 	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 	font-weight: 600;
-	color: var(--color-accent);
+	color: var(--color-accent-text);
 }

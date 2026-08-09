@@ -111,7 +111,9 @@
 
 	.arrow {
 		font-size: 18px;
-		color: #888;
+		/* A font-rendered glyph (⇄) carrying the swap direction, so treat it as text
+		   at 4.5:1 rather than as a 3:1 decoration; the old grey was 3.54:1. */
+		color: var(--color-text-muted);
 		flex-shrink: 0;
 		cursor: default;
 	}

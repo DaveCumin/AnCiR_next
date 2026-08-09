@@ -142,13 +142,16 @@
 		border: none;
 		cursor: pointer;
 		font-weight: 600;
-		color: var(--color-lightness-75);
+		/* 16px/600 is NOT WCAG "large text" (that needs >=18.66px bold), so this
+		   empty-state CTA is held to 4.5:1. The old grey was 1.97:1 on the canvas. */
+		color: var(--color-text-muted);
 		transition: color 0.18s ease;
 	}
 
 	.add-data-cta:hover,
 	.add-data-cta.open {
-		color: var(--color-accent);
+		/* CTA label text, so 4.5:1: --color-accent is 2.84:1. */
+		color: var(--color-accent-text);
 	}
 
 	.add-data-cta-icon {
@@ -210,7 +213,8 @@
 	}
 
 	.add-data-choice:hover .add-data-choice-icon {
-		color: var(--color-accent);
+		/* Icon paint, 3:1 threshold; --color-accent is 2.84:1. */
+		color: var(--color-accent-text);
 	}
 
 	.add-data-choice-text {

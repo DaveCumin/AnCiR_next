@@ -113,7 +113,7 @@
 	}
 
 	.node-note-btn {
-		color: rgba(0, 0, 0, 0.45);
+		color: rgba(0, 0, 0, 0.55);
 		font-size: 0.68rem;
 		line-height: 1;
 		padding: 2px 5px;

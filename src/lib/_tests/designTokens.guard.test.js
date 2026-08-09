@@ -9,6 +9,10 @@
 // rule, so genuinely bespoke tints (status backgrounds, overlay rgba, etc.) stay
 // allowed. When you add a new token, add its old literal here.
 //
+// Scope: src/ and packages/design/ (the shared token package). The two files that
+// DEFINE the tokens — src/app.css and packages/design/tokens.css — are exempt from
+// the denylist and covered by the self-reference check instead.
+//
 // If this test fails: replace the flagged hex with the mapped var(--…) token.
 
 import { describe, it, expect } from 'vitest';
@@ -17,7 +21,14 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const SRC = join(HERE, '..', '..'); // src/
+const ROOT = join(HERE, '..', '..', '..'); // repo root
+const SRC = join(ROOT, 'src');
+const DESIGN = join(ROOT, 'packages', 'design'); // shared token package
+
+// Files that are allowed to contain raw hex because they DEFINE the tokens.
+// A token file whose job is to hold colour values obviously cannot be held to a
+// "use the token instead" rule; everything else that consumes them can.
+const TOKEN_DEFINITION_FILES = [join(SRC, 'app.css'), join(DESIGN, 'tokens.css')];
 
 // hex literal -> the token that should be used instead. Case-insensitive.
 const BANNED = {
@@ -37,6 +48,11 @@ const BANNED = {
 	'#808080': '--color-lightness-50',
 	'#d9d9d9': '--color-lightness-85',
 	'#b3b3b3': '--color-lightness-75',
+	'#737373': '--color-lightness-45',
+	'#8c8c8c': '--color-lightness-55',
+	'#b0b0b0': '--color-lightness-70',
+	// no exact ramp stop; the 2026-08 contrast pass replaces it with muted text
+	'#888888': '--color-text-muted',
 	'#e6e6e6': '--color-lightness-90',
 	'#f2f2f2': '--color-lightness-95',
 	'#f5f5f5': '--color-lightness-96',
@@ -50,7 +66,8 @@ const BANNED_SHORT = {
 	'#666': '--color-text-muted',
 	'#333': '--color-lightness-25',
 	'#999': '--color-lightness-60',
-	'#aaa': '--color-lightness-65'
+	'#aaa': '--color-lightness-65',
+	'#888': '--color-text-muted'
 };
 
 function collect(dir, out = []) {
@@ -59,13 +76,14 @@ function collect(dir, out = []) {
 		const full = join(dir, entry);
 		const st = statSync(full);
 		if (st.isDirectory()) collect(full, out);
-		else if (/\.(svelte|css)$/.test(entry) && !full.endsWith(join('src', 'app.css'))) out.push(full);
+		else if (/\.(svelte|css)$/.test(entry) && !TOKEN_DEFINITION_FILES.includes(full))
+			out.push(full);
 	}
 	return out;
 }
 
 describe('design-token guardrail', () => {
-	const files = collect(SRC);
+	const files = collect(SRC, collect(DESIGN));
 
 	it('has files to scan', () => {
 		expect(files.length).toBeGreaterThan(0);
@@ -76,13 +94,19 @@ describe('design-token guardrail', () => {
 	// `--color-lightness-25: var(--color-lightness-25);`). A self-referential
 	// custom property resolves to nothing, so every consumer silently fell back to
 	// the CSS initial value (icons went black). Catch it in CI instead of the eye.
-	it('app.css has no self-referential token definitions', () => {
-		const appCss = readFileSync(join(SRC, 'app.css'), 'utf8');
+	// The token-definition files are exempt from the denylist below (holding hex is
+	// their job), so this is the only check that reaches them — run it over both.
+	it('token definition files have no self-referential token definitions', () => {
 		const selfRefs = [];
-		appCss.split('\n').forEach((line, i) => {
-			const m = line.match(/^\s*(--[a-z0-9-]+)\s*:\s*var\(\s*(--[a-z0-9-]+)\s*[),]/i);
-			if (m && m[1] === m[2]) selfRefs.push(`app.css:${i + 1}  ${m[1]}: var(${m[1]})`);
-		});
+		for (const file of TOKEN_DEFINITION_FILES) {
+			const rel = relative(ROOT, file);
+			readFileSync(file, 'utf8')
+				.split('\n')
+				.forEach((line, i) => {
+					const m = line.match(/^\s*(--[a-z0-9-]+)\s*:\s*var\(\s*(--[a-z0-9-]+)\s*[),]/i);
+					if (m && m[1] === m[2]) selfRefs.push(`${rel}:${i + 1}  ${m[1]}: var(${m[1]})`);
+				});
+		}
 		expect(selfRefs, `Token defined as itself (resolves to nothing):\n${selfRefs.join('\n')}`).toEqual(
 			[]
 		);
@@ -99,14 +123,14 @@ describe('design-token guardrail', () => {
 				const lower = line.toLowerCase();
 				for (const hex of Object.keys(BANNED)) {
 					if (lower.includes(hex)) {
-						violations.push(`${relative(SRC, file)}:${i + 1}  ${hex} → var(${BANNED[hex]})`);
+						violations.push(`${relative(ROOT, file)}:${i + 1}  ${hex} → var(${BANNED[hex]})`);
 					}
 				}
 				// 3-digit greys: match only when not part of a 6-digit hex.
 				for (const [hex, token] of Object.entries(BANNED_SHORT)) {
 					const re = new RegExp(hex + '(?![0-9a-fA-F])', 'gi');
 					if (re.test(line)) {
-						violations.push(`${relative(SRC, file)}:${i + 1}  ${hex} → var(${token})`);
+						violations.push(`${relative(ROOT, file)}:${i + 1}  ${hex} → var(${token})`);
 					}
 				}
 			});

@@ -633,7 +633,7 @@
 	}
 
 	.expand-indicator:hover {
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 		background: rgba(0, 0, 0, 0.05);
 	}
 
@@ -744,7 +744,7 @@
 		font-size: var(--font-2xs);
 		font-weight: 600;
 		line-height: 1.4;
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 		background: var(--color-accent-soft, #dbeafe);
 		vertical-align: middle;
 	}
@@ -789,7 +789,7 @@
 	.empty-hint {
 		padding: 6px 8px;
 		font-size: var(--font-xs);
-		color: rgba(0, 0, 0, 0.45);
+		color: rgba(0, 0, 0, 0.55);
 		text-align: center;
 	}
 
@@ -835,7 +835,7 @@
 		justify-content: center;
 		font-size: var(--font-2xs);
 		font-weight: 700;
-		color: rgba(0, 0, 0, 0.45);
+		color: rgba(0, 0, 0, 0.55);
 		user-select: none;
 	}
 	.metric-value {
@@ -913,6 +913,6 @@
 		padding-left: 4px;
 		font-size: var(--font-xs);
 		font-weight: 600;
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 	}
 </style>

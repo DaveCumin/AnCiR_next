@@ -164,7 +164,7 @@
 	}
 	.tag-btn:hover {
 		opacity: 1;
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 	}
 	.tag-chip {
 		max-width: min(110px, 100%);
@@ -176,7 +176,7 @@
 		font-size: var(--font-2xs);
 		font-family: var(--font-mono, ui-monospace, SF Mono, monospace);
 		line-height: 1.5;
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 		cursor: pointer;
 		overflow: hidden;
 		text-overflow: ellipsis;

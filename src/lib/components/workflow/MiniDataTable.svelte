@@ -135,7 +135,7 @@
 	}
 	.mini-row.empty {
 		font-style: italic;
-		opacity: 0.6;
+		color: var(--color-text-muted);
 	}
 	.mini-footer {
 		font-size: 0.65rem;

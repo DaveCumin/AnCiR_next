@@ -164,7 +164,9 @@
 	}
 
 	.null-value {
-		color: var(--color-lightness-70);
+		/* "missing" vs "zero" is load-bearing in a data table, so this is real text
+		   at 4.5:1, not a decorative marker. The old grey was 2.17:1. */
+		color: var(--color-text-muted);
 	}
 
 	.resizer {

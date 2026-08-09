@@ -850,7 +850,7 @@
 			<p class="tableplot-row-bar">{rowCount} row{rowCount === 1 ? '' : 's'}</p>
 		</div>
 	{:else}
-		<p style="color: #888; font-style: italic;">No columns selected</p>
+		<p style="color: var(--color-text-muted); font-style: italic;">No columns selected</p>
 	{/if}
 {/snippet}
 
@@ -1000,7 +1000,9 @@
 	}
 
 	.null-value {
-		color: var(--color-lightness-70);
+		/* "missing" vs "zero" is load-bearing in a data table, so this is real text
+		   at 4.5:1, not a decorative marker. The old grey was 2.17:1. */
+		color: var(--color-text-muted);
 	}
 
 	.tableplot-row-bar {

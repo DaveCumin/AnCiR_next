@@ -185,7 +185,7 @@
 	.tick {
 		width: 1em;
 		flex: 0 0 auto;
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 		font-weight: 700;
 	}
 

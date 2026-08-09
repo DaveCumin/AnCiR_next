@@ -4,9 +4,9 @@
 		onChange = (v) => {},
 		Labels = ['On', 'Off'],
 		inactiveColor = 'var(--color-lightness-75)',
-		activeColor = '#737373',
+		activeColor = 'var(--color-lightness-45)',
 		untoggleColour = 'var(--color-lightness-75)',
-		toggleColour = '#737373',
+		toggleColour = 'var(--color-lightness-45)',
 		buttonColour = 'var(--color-lightness-98)'
 	} = $props();
 	let checked = $state(false);

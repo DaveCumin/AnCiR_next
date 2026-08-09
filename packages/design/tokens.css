@@ -3,7 +3,10 @@
 :root {
 	/* icon related */
 	--color-icon-selected: #5f5f5f;
-	--color-icon-unselected: #d9d9d9;
+	--color-icon-unselected: #808080; /* idle icon fill: 3.95:1 on white / 3.72:1 on
+	   --surface-canvas, clearing the 3:1 graphical-object threshold. The previous
+	   #d9d9d9 was 1.41:1. Stays clearly lighter than --color-icon-selected (6.39:1)
+	   so the selected/idle pair remains distinguishable. */
 
 	--color-icon-close-hover: #ecadac;
 
@@ -46,7 +49,9 @@
 	   bright --color-warning is only 2:1 on its own tint and must not be used as text */
 	--color-info: #4a90d9;
 	--color-info-bg: #eaf2fb;
-	--color-info-text: #1a73e8;
+	--color-info-text: #1660c8; /* dark blue for TEXT on -bg: 5.25:1 on the tint and
+	   5.93:1 on white. The former #1a73e8 was a bare 4.51:1 on white but only 3.99:1
+	   on its own --color-info-bg, which two sites genuinely pair. */
 	--color-success: #137333;
 	--color-success-bg: #e6f4ea;
 	--color-error: #c5221f;
@@ -75,7 +80,11 @@
 	/* ── Design tokens ───────────────────────────────────────────────────────
 	   Central knobs for surfaces, spacing, radii, fonts and dividers so the look
 	   can be retuned in one place. Components should prefer these over literals. */
-	--color-accent: #4d9fe3;
+	--color-accent: #4d9fe3; /* focus ring / selection glow / borders / plot brush — all
+	   non-text. At 2.84:1 on white it must never be used as TEXT; use
+	   --color-accent-text instead. */
+	--color-accent-text: #1f6fb2; /* darkened accent for accent TEXT and links: 5.28:1
+	   on white (AA). Mirrors the --color-warning / --color-warning-text split above. */
 
 	/* secondary / muted text — accessible replacement for the mid lightness greys
 	   (45..60) when used as TEXT. #666 is ~5.7:1 on white / ~5.3:1 on surface-muted,

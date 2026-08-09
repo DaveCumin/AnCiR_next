@@ -186,7 +186,7 @@
 	}
 	.in-label {
 		font-weight: 600;
-		opacity: 0.7;
+		color: var(--color-text-muted);
 		margin-right: 2px;
 	}
 	.node-outputs {

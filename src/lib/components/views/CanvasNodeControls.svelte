@@ -325,7 +325,7 @@
 		border-bottom: none;
 	}
 	.control-component.muted {
-		opacity: 0.65;
+		color: var(--color-text-muted);
 		font-size: 0.85rem;
 	}
 	.control-input {
@@ -346,7 +346,7 @@
 		margin: 0;
 	}
 	.muted {
-		opacity: 0.65;
+		color: var(--color-text-muted);
 		font-size: 0.85rem;
 	}
 	.multi-hint {

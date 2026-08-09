@@ -18,6 +18,26 @@
 		mannWhitneyTwoGroups,
 		pairwiseMannWhitney
 	} from '$lib/tableProcesses/GroupComparison.svelte';
+	import { resolveCssVar } from '$lib/plots/exportStyle.js';
+
+	/**
+	 * The neutral swatch the point-colour picker shows while `pointColour` is null
+	 * (auto). Read from the design token rather than written as a literal, so the
+	 * grey can't drift from the ramp.
+	 *
+	 * It has to resolve to a real hex, not a `var()` string: ColourPicker parses the
+	 * value with a hex regex, and — worse — its `drawPicker` assigns the current
+	 * value straight back through the binding, so a `var()` here would be persisted
+	 * into `pointColour` (and into saved sessions) the moment a user opens the
+	 * picker's advanced panel. Memoised because the token cannot change at runtime.
+	 */
+	let autoPointSwatch = '';
+	function neutralPointSwatch() {
+		if (!autoPointSwatch)
+			autoPointSwatch =
+				resolveCssVar('--color-lightness-55', globalThis.document?.documentElement) || 'gray';
+		return autoPointSwatch;
+	}
 
 	/**
 	 * Round a value outward to a "nice" axis limit.
@@ -1092,7 +1112,10 @@ export class Boxplotclass {
 						     while the field is null without writing to it. -->
 						<ControlInput label="Colour">
 							<ColourPicker
-								bind:value={() => theData.pointColour ?? '#888888', (v) => (theData.pointColour = v)}
+								bind:value={
+									() => theData.pointColour ?? neutralPointSwatch(),
+									(v) => (theData.pointColour = v)
+								}
 							/>
 							{#if theData.pointColour != null}
 								<div class="control-component-input-icons">

@@ -189,7 +189,7 @@
 		line-height: 16px;
 		text-align: center;
 		cursor: nwse-resize;
-		color: #888;
+		color: var(--color-lightness-45);
 		background: rgba(255, 255, 255, 0.8);
 		border-radius: 2px;
 		user-select: none;

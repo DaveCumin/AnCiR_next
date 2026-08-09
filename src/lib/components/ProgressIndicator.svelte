@@ -151,7 +151,7 @@
 	}
 
 	.step.active .step-label {
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 	}
 
 	.step-content {

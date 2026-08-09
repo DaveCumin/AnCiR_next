@@ -971,7 +971,7 @@
 	}
 
 	.muted {
-		opacity: 0.65;
+		color: var(--color-text-muted);
 	}
 
 	.value-pill {

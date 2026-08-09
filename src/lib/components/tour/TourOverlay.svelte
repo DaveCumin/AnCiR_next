@@ -721,7 +721,7 @@
 
 	.tour-hint {
 		font-size: var(--font-sm);
-		color: var(--color-accent);
+		color: var(--color-accent-text);
 		font-weight: 600;
 	}
 
