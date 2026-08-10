@@ -9,6 +9,8 @@
  * headlessly, and it is the obvious basis for a "tidy plots" action later.
  */
 
+import { facetGridDims } from './facetGrid.js';
+
 /** Two columns of this width fit a normal laptop workspace without horizontal scrolling. */
 const DEFAULT_SIZE = { width: 520, height: 300 };
 
@@ -48,14 +50,16 @@ export function plotSizeFor(type) {
 /**
  * Vertical space a faceted plot needs for the children it will spawn.
  *
- * Mirrors syncFacetChildren in Plot.svelte, which lays children out in a ceil(sqrt(n)) grid
- * starting one plot-height plus two paddings below the generator. Reserving it here is what stops
- * a facet's children from landing on top of whatever was packed beneath it.
+ * Mirrors syncFacetChildren in Plot.svelte, which lays children out one plot-height plus two
+ * paddings below the generator, on the grid facetGrid.js computes (automatic near-square, or the
+ * generator's chosen `facetRows`). Reserving it here is what stops a facet's children from landing
+ * on top of whatever was packed beneath it.
+ *
+ * @param facetRows the generator's chosen row count; 0 = automatic.
  */
-export function facetFootprint({ width, height }, childCount, padding = 15) {
+export function facetFootprint({ width, height }, childCount, padding = 15, facetRows = 0) {
 	if (!childCount) return { width: outerWidth(width), height: outerHeight(height) };
-	const cols = Math.max(1, Math.ceil(Math.sqrt(childCount)));
-	const rows = Math.ceil(childCount / cols);
+	const { rows, cols } = facetGridDims(childCount, facetRows);
 	const stepX = outerWidth(width) + padding;
 	const stepY = outerHeight(height) + padding;
 	return {
@@ -92,7 +96,11 @@ export function layoutWorkspacePlots(plots, opts = {}) {
 
 	// A faceted plot is as wide as its child grid, so it can need more than one column's width.
 	const colWidth = Math.max(
-		...top.map((p) => facetFootprint(plotSizeFor(p.type), facetChildCounts[p.id] ?? 0, padding).width),
+		...top.map(
+			(p) =>
+				facetFootprint(plotSizeFor(p.type), facetChildCounts[p.id] ?? 0, padding, p.facetRows ?? 0)
+					.width
+		),
 		DEFAULT_SIZE.width
 	);
 
@@ -103,7 +111,7 @@ export function layoutWorkspacePlots(plots, opts = {}) {
 		p.width = size.width;
 		p.height = size.height;
 
-		const foot = facetFootprint(size, facetChildCounts[p.id] ?? 0, padding);
+		const foot = facetFootprint(size, facetChildCounts[p.id] ?? 0, padding, p.facetRows ?? 0);
 		// Shortest column wins; ties go left so the reading order stays predictable.
 		let col = 0;
 		for (let i = 1; i < columns; i++) if (nextY[i] < nextY[col]) col = i;

@@ -437,6 +437,53 @@
 	}
 </script>
 
+<!-- Facet settings for one generator plot: the on/off toggle, and — once it IS faceting — how
+     many rows its small-multiples grid uses.
+
+     Rows, not columns, because that is the axis a reader thinks in ("put these six on two rows")
+     and it is what was asked for. The chosen count is honoured exactly — facetGrid.js spreads the
+     facets over that many rows as evenly as it can, remainder on the earliest rows (4 facets on 3
+     rows is [2, 1, 1]) — so the only cap is one facet per row, which is what the options offer.
+
+     It sits directly under the toggle rather than in an "Advanced" disclosure: it is not a tuning
+     knob, it is the shape of the figure, and it only appears once faceting is on and there is
+     more than one facet to arrange. -->
+{#snippet facetControls(p)}
+	{@const nFacets = core.plots.filter((c) => c.facetParent === p.id).length}
+	<div class="control-component">
+		<div class="control-input-checkbox">
+			<input
+				type="checkbox"
+				checked={p.facet}
+				onchange={(e) => {
+					p.facet = e.currentTarget.checked;
+					syncFacetChildren(p);
+				}}
+			/>
+			<p>One plot per series (facet)</p>
+		</div>
+		{#if p.facet && nFacets > 1}
+			<ControlInput label="Rows">
+				<select
+					value={String(p.facetRows ?? 0)}
+					onchange={(e) => {
+						p.facetRows = Number(e.currentTarget.value) || 0;
+						syncFacetChildren(p);
+					}}
+				>
+					<option value="0">Auto</option>
+					<!-- One option per possible row count, up to one facet per row. The saved value is
+					     included even when it now exceeds the facet count (a series was unwired since),
+					     so the select never renders blank on a value the plot really holds. -->
+					{#each Array.from({ length: Math.max(nFacets, p.facetRows ?? 0) }, (_, i) => i + 1) as r (r)}
+						<option value={String(r)}>{r}</option>
+					{/each}
+				</select>
+			</ControlInput>
+		{/if}
+	</div>
+{/snippet}
+
 <div class="control-display" use:collapsibleSections>
 	<!-- This is only for the first selected plot - need an #if to take care of multiple selections -->
 
@@ -471,16 +518,7 @@
 		</div>
 
 		{#if rawSelectedPlots.length === 1 && rawSelectedPlots[0]?.facet}
-			<div class="control-component">
-				<div class="control-input-checkbox">
-					<input
-						type="checkbox"
-						bind:checked={rawSelectedPlots[0].facet}
-						onchange={() => syncFacetChildren(rawSelectedPlots[0])}
-					/>
-					<p>One plot per series (facet)</p>
-				</div>
-			</div>
+			{@render facetControls(rawSelectedPlots[0])}
 		{/if}
 
 		<div class="control-component">
@@ -860,16 +898,7 @@
 				     'Properties and Data'. -->
 				{#if appState.currentControlTab === propertiesTabFor(plot.type)}
 					{#if FACETABLE_PLOT_TYPES.has(plot.type)}
-						<div class="control-component">
-							<div class="control-input-checkbox">
-								<input
-									type="checkbox"
-									bind:checked={plot.facet}
-									onchange={() => syncFacetChildren(plot)}
-								/>
-								<p>One plot per series (facet)</p>
-							</div>
-						</div>
+						{@render facetControls(plot)}
 					{/if}
 
 					<!-- This plot's own style. Editing it never touches the session template or

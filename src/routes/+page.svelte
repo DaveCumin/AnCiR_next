@@ -134,6 +134,11 @@
 			void g.width;
 			void g.height;
 			void g.type;
+			// The chosen row count changes only the child GRID, but it changes it the same way a
+			// resize does, so it has to be tracked here too — the control panel calls
+			// syncFacetChildren itself, but any other writer (session edit, AI, undo) would
+			// otherwise leave the children on the old grid until something else moved.
+			void g.facetRows;
 			for (const s of g.plot?.data ?? []) {
 				void s?.x?.refId;
 				void s?.y?.refId;

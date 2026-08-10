@@ -6,6 +6,7 @@
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import { selectedColumnIds, setSelection } from '$lib/tableProcesses/columnSet.js';
 	import { PLOT_CHROME } from '$lib/core/workspaceLayout.js';
+	import { facetGridCells } from '$lib/core/facetGrid.js';
 	import { removePlotMetricColumns } from '$lib/plots/plotMetricOutputs.svelte.js';
 	import { newFigureStyle, normaliseFigureStyle } from '$lib/plots/figureStyle.js';
 	let _counter = 0;
@@ -178,22 +179,31 @@
 		const padding = appState.gridSize ?? 15;
 		const width = snapToGrid(gen.width ?? 360);
 		const height = snapToGrid(gen.height ?? 220);
-		const nCols = Math.max(1, Math.ceil(Math.sqrt(units.length || 1)));
 		const keep = new Set();
 
 		// Step by the size of the WRAPPER, not the plot: Draggable adds side chrome and a header
 		// bar, so spacing on the bare width/height overlapped every row by the header's height.
-		const stepX = width + PLOT_CHROME.x + padding;
-		const stepY = height + PLOT_CHROME.y + padding;
+		// One step per axis for the whole grid, so every column lines up down the grid and the
+		// (possibly partial) last row keeps the column positions of the full rows above it.
+		//
+		// The step is snapped ONCE, and the origin once, rather than snapping each child's final
+		// coordinate: the raw step (a snapped width plus 20px of chrome plus the padding) is not
+		// itself a multiple of the grid, so per-child snapping rounded successive columns in
+		// different directions and the gaps alternated — visibly ragged axes across the grid.
+		const stepX = snapToGrid(width + PLOT_CHROME.x + padding);
+		const stepY = snapToGrid(height + PLOT_CHROME.y + padding);
+		// gen.facetRows: 0 = automatic (near-square, the original rule); see facetGrid.js.
+		const grid = facetGridCells(units.length, { rows: gen.facetRows ?? 0, stepX, stepY });
+		// Origin of the child grid: one generator-height plus two paddings below the generator.
+		const originX = snapToGrid(gen.x ?? 0);
+		const originY = snapToGrid((gen.y ?? 0) + height + PLOT_CHROME.y + 2 * padding);
 
 		units.forEach((unit, i) => {
 			const key = unit.key;
 			keep.add(key);
-			const col = i % nCols;
-			const row = Math.floor(i / nCols);
-			// Lay children out below the generator's position.
-			const x = snapToGrid((gen.x ?? 0) + col * stepX);
-			const y = snapToGrid((gen.y ?? 0) + height + PLOT_CHROME.y + 2 * padding + row * stepY);
+			const cell = grid.cells[i];
+			const x = originX + cell.dx;
+			const y = originY + cell.dy;
 
 			let child = core.plots.find((p) => p.facetParent === gen.id && p.facetKey === key);
 			if (!child) {
@@ -441,6 +451,10 @@
 		facet = $state(false);
 		facetParent = $state(null);
 		facetKey = $state(null);
+		// Rows the child grid uses. 0 = automatic (near-square), which is what every plot did
+		// before this option existed and what a session saved without the field loads as.
+		// Columns follow from the row count — see facetGrid.js.
+		facetRows = $state(0);
 		// Live Column Set inputs, keyed by channel: `series` (tableplot), `data`
 		// (single-input plots like Histogram), or `y` (x/y plots — one y-series per
 		// selected column, sharing the plot's primary x). Each value is a list of
@@ -501,6 +515,8 @@
 			this.facet = plotData.facet ?? false;
 			this.facetParent = plotData.facetParent ?? null;
 			this.facetKey = plotData.facetKey ?? null;
+			// `??` not `||`: 0 is the meaningful "automatic" value, not a missing one.
+			this.facetRows = plotData.facetRows ?? 0;
 			this.setRefs =
 				plotData.setRefs && typeof plotData.setRefs === 'object' ? { ...plotData.setRefs } : {};
 			this.metricOut =
@@ -531,6 +547,7 @@
 				facet: this.facet,
 				facetParent: this.facetParent,
 				facetKey: this.facetKey,
+				facetRows: this.facetRows,
 				setRefs: this.setRefs,
 				metricOut: this.metricOut,
 				sourceNodeId: this.sourceNodeId,
@@ -553,6 +570,7 @@
 				facet,
 				facetParent,
 				facetKey,
+				facetRows,
 				setRefs,
 				metricOut,
 				sourceNodeId,
@@ -571,6 +589,7 @@
 					facet,
 					facetParent,
 					facetKey,
+					facetRows,
 					setRefs,
 					metricOut,
 					sourceNodeId,

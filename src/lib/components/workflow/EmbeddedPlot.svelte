@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { appConsts, core } from '$lib/core/core.svelte.js';
 	import { reportError } from '$lib/core/errorReporter.js';
+	import { facetGridCells } from '$lib/core/facetGrid.js';
 
 	let { plot, size, onResizeMouseDown } = $props();
 
@@ -41,8 +42,17 @@
 		plot?.facet ? core.plots.filter((p) => p.facetParent === plot.id) : []
 	);
 	const isFacet = $derived(plot?.facet && facetChildren.length > 0);
-	const gridCols = $derived(Math.max(1, Math.ceil(Math.sqrt(facetChildren.length || 1))));
-	const gridRows = $derived(Math.max(1, Math.ceil(facetChildren.length / gridCols)));
+	// Same grid the worksheet lays the real children out on (automatic near-square, or the
+	// generator's chosen facetRows), so the node thumbnail is a faithful miniature of it.
+	//
+	// The cells are placed EXPLICITLY rather than left to CSS auto-flow: a chosen row count
+	// spreads the facets evenly and the rows can differ in length (4 on 3 rows is [2, 1, 1]),
+	// which auto-flow would repack into a full 2-column grid and show a shape the worksheet
+	// never draws. The track count still comes from the widest row, so rows stay left-aligned
+	// and short rows simply leave their trailing cells empty.
+	const facetGrid = $derived(facetGridCells(facetChildren.length, { rows: plot?.facetRows ?? 0 }));
+	const gridCols = $derived(facetGrid.cols);
+	const gridRows = $derived(facetGrid.rows);
 	// Cell size inside the preview panel, and the scale to fit each child into it.
 	const cellW = $derived(size.w / gridCols);
 	const cellH = $derived(size.h / gridRows);
@@ -59,9 +69,13 @@
 				class="facet-grid"
 				style="grid-template-columns:repeat({gridCols}, 1fr); grid-template-rows:repeat({gridRows}, 1fr);"
 			>
-				{#each facetChildren as child (child.id)}
+				{#each facetChildren as child, i (child.id)}
 					{@const CComp = appConsts.plotMap.get(child.type)?.plot}
-					<div class="facet-cell">
+					{@const cell = facetGrid.cells[i]}
+					<div
+						class="facet-cell"
+						style="grid-column:{(cell?.col ?? 0) + 1}; grid-row:{(cell?.row ?? 0) + 1};"
+					>
 						{#if CComp}
 							<div
 								class="plot-preview-inner"
