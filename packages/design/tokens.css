@@ -5,8 +5,10 @@
 	--color-icon-selected: #424242;
 	--color-icon-unselected: #8f8f8f; /* idle icon fill: 3.23:1 on white / 3.04:1 on
 	   --surface-canvas, clearing the 3:1 graphical-object threshold. The previous
-	   #d9d9d9 was 1.41:1. Stays clearly lighter than --color-icon-selected (6.39:1)
-	   so the selected/idle pair remains distinguishable. */
+	   #d9d9d9 was 1.41:1. Stays clearly lighter than --color-icon-selected (10.05:1)
+	   so the selected/idle pair remains distinguishable — the two are 3.11:1 apart,
+	   and both values sit at that edge: a lighter idle fails 3:1 on --surface-canvas,
+	   a lighter selected drops the pair below 3:1. */
 
 	--color-icon-close-hover: #ecadac;
 
