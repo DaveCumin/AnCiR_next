@@ -14,9 +14,13 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 		<!-- SEO / social. These live here (not in <svelte:head>) because the app is a
-		     hash-router SPA with no prerendering: %sveltekit.head% is empty in the
-		     shipped index.html, so head tags added in a component only appear after
-		     the JS bundle boots and are invisible to crawlers and link unfurlers. -->
+		     hash-router SPA with no prerendering: the SvelteKit head placeholder below
+		     is empty in the shipped index.html, so head tags added in a component only
+		     appear after the JS bundle boots and are invisible to crawlers and link
+		     unfurlers.
+		     NB: never write that placeholder token verbatim in this file. SvelteKit
+		     substitutes it with a replace() of the FIRST occurrence, so a copy inside a
+		     comment swallows the entire document head (see builtHtml.guard.test.js). -->
 		<title>AnCiR: Circadian Rhythm and Time-Series Data Analysis</title>
 		<meta
 			name="description"
