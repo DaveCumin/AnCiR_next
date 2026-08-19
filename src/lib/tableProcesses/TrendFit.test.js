@@ -199,6 +199,39 @@ describe('trendfit metric outputs (one value per y, in yIN order)', () => {
 	});
 });
 
+describe('trendfit — R² through the node data-prep path', () => {
+	// Through the REAL node func (not the pure util): a 'number' column's data is
+	// handed through verbatim, so numeric strings reach the fit. This used to make
+	// the exponential/polynomial R² exactly 0 while the fitted curve, the
+	// coefficients and the RMSE were all correct — see utils/trendfit.js.
+	const x = Array.from({ length: 30 }, (_, i) => i + 1);
+	const yNum = x.map((xi) => 2 * Math.exp(0.1 * xi));
+
+	async function fitWith(values, model) {
+		mockColumns[1] = { type: 'number', getData: () => x };
+		mockColumns[2] = { type: 'number', getData: () => values };
+		const [result] = await trendfit({
+			xIN: 1,
+			yIN: [2],
+			model,
+			polyDegree: 2,
+			out: preview,
+			outputX: -1
+		});
+		return result.y_results[2].fittedData;
+	}
+
+	for (const model of ['exponential', 'polynomial']) {
+		it(`${model}: string column values give the same R² as numeric ones`, async () => {
+			const num = await fitWith(yNum, model);
+			const str = await fitWith(yNum.map(String), model);
+			expect(str.rSquared).not.toBe(0);
+			expect(str.rSquared).toBeCloseTo(num.rSquared, 10);
+			expect(str.rSquared).toBeGreaterThan(0.9);
+		});
+	}
+});
+
 describe('getCoefKeys', () => {
 	it('maps model → metric coefficient keys', async () => {
 		const { getCoefKeys } = await import('./TrendFit.svelte');

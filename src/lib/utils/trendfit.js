@@ -64,10 +64,35 @@ function _evaluatePolynomial(coeffs, x) {
 	return coeffs.reduce((sum, c, i) => sum + c * Math.pow(x, i), 0);
 }
 
+/**
+ * R² on the ORIGINAL data scale: 1 - SSres/SStot against the observed y, never
+ * against a transformed y. The exponential and logarithmic branches fit by
+ * log-linearising, but the curve the user sees plotted lives on the original
+ * scale, so that is the scale the reported fraction-of-variance-explained must
+ * describe (a log-scale R² would flatter a fit that visibly misses the data).
+ *
+ * `y` may hold numeric STRINGS — a 'number' column's rawData is passed through
+ * verbatim (Column#computePipeline coerces only 'time' columns), so values from
+ * pastes, reshapes and hand-entered tables can arrive as strings. `+` would
+ * CONCATENATE those instead of adding them, which is why the sums coerce
+ * explicitly here.
+ */
 function _computeRSquared(y, fitted) {
-	const meanY = y.reduce((sum, val) => sum + val, 0) / y.length;
-	const ssTot = y.reduce((sum, val) => sum + Math.pow(val - meanY, 2), 0);
-	const ssRes = y.reduce((sum, val, i) => sum + Math.pow(val - fitted[i], 2), 0);
+	const n = y.length;
+	let sumY = 0;
+	for (let i = 0; i < n; i++) sumY += Number(y[i]);
+	const meanY = sumY / n;
+	let ssTot = 0;
+	let ssRes = 0;
+	for (let i = 0; i < n; i++) {
+		const yi = Number(y[i]);
+		ssTot += Math.pow(yi - meanY, 2);
+		ssRes += Math.pow(yi - Number(fitted[i]), 2);
+	}
+	// A non-finite SStot means R² is not computable (NaN/Infinity in y), which is
+	// NOT the same thing as "the model explains nothing". Only genuine zero
+	// variance — every y identical — earns the 0.
+	if (!Number.isFinite(ssTot)) return NaN;
 	return ssTot > 0 ? 1 - ssRes / ssTot : 0;
 }
 
@@ -76,6 +101,14 @@ function _computeRSquared(y, fitted) {
  * @private
  */
 function _fitTrendInternal(x, y, model, polyDegree = 2) {
+	// Coerce ONCE, up front: column data reaches here verbatim, so numeric
+	// strings are possible (see _computeRSquared). linearRegression happens to
+	// survive them because KahanSum.add subtracts before it adds, but every sum
+	// written with `+` in this module would concatenate instead — which silently
+	// produced R² = 0 for the exponential, logarithmic and polynomial fits while
+	// the coefficients, the fitted curve and the RMSE all came out correct.
+	x = Array.prototype.map.call(x, Number);
+	y = Array.prototype.map.call(y, Number);
 	let parameters, fitted, rSquared;
 	if (model === 'linear') {
 		const reg = linearRegression(x, y);

@@ -81,6 +81,43 @@ describe('fitTrendSync — polynomial', () => {
 	});
 });
 
+describe('fitTrendSync — numeric strings in y (column data is not coerced upstream)', () => {
+	// Regression: a 'number' column hands its rawData through verbatim, so values
+	// can arrive as numeric strings. The `+` in the old SStot sum concatenated
+	// them, NaN'd the total variance, and the guard reported R² = 0 — a plausible
+	// looking number, for a fit whose coefficients and RMSE were perfectly fine.
+	// Linear never showed it because KahanSum subtracts (and so coerces) first.
+	const x = Array.from({ length: 30 }, (_, i) => i + 1);
+	const yNum = x.map((xi) => 2 * Math.exp(0.1 * xi));
+	const yStr = yNum.map((v) => String(v));
+
+	for (const model of ['exponential', 'polynomial', 'logarithmic', 'linear']) {
+		it(`${model}: string y gives the same R² as number y`, () => {
+			const num = fitTrendSync(x, yNum, model, 2);
+			const str = fitTrendSync(x, yStr, model, 2);
+			expect(str.rSquared).toBeCloseTo(num.rSquared, 10);
+			expect(str.rSquared).not.toBe(0);
+			expect(str.rmse).toBeCloseTo(num.rmse, 10);
+		});
+	}
+
+	it('exponential on string y recovers the true R², not 0', () => {
+		const r = fitTrendSync(x, yStr, 'exponential');
+		expect(r.rSquared).toBeGreaterThan(0.99);
+	});
+
+	it('polynomial on string y recovers the true R², not 0', () => {
+		const r = fitTrendSync(x, yStr, 'polynomial', 2);
+		expect(r.rSquared).toBeGreaterThan(0.9);
+	});
+
+	it('reports NaN — not 0 — when y holds a value that makes SStot non-computable', () => {
+		// R² is not computable here; 0 would read as "the model explains nothing".
+		const r = fitTrendSync([1, 2, 3, 4], ['1', '2', 'not-a-number', '4'], 'polynomial', 1);
+		expect(r.rSquared).toBeNaN();
+	});
+});
+
 describe('evaluateTrendAtPoints', () => {
 	it('evaluates a linear model at new points', () => {
 		const params = { slope: 2, intercept: 1 };
