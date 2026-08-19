@@ -225,3 +225,49 @@ describe('binLabel: end — real-time availability', () => {
 		expect(binOffsetFor('start')).toBe(0);
 	});
 });
+
+// ─── analysis: 'trend' ────────────────────────────────────────────────────────
+// Regression guard. This path called the ASYNC `fitTrend` synchronously, so it
+// got a Promise back; `!r.parameters` was then true and every window silently
+// returned empty stats (all NaN). It now calls `fitTrendSync`. Without a test
+// here the failure is invisible: the node produced columns, they were just
+// entirely NaN.
+
+describe("computeMovingWindows — analysis: 'trend'", () => {
+	const run = (y, args) =>
+		computeMovingWindows({
+			tAll: y.map((_, i) => i),
+			ys: [y],
+			starts: [0],
+			windowSize: y.length,
+			statKeys: getStatKeys(args),
+			args
+		})[0];
+
+	it('reports the slope and intercept of a linear window', () => {
+		const args = { analysis: 'trend', trendModel: 'linear' };
+		const y = Array.from({ length: 20 }, (_, i) => 2 * i + 3);
+		const out = run(y, args);
+		expect(out.slope[0]).toBeCloseTo(2, 8);
+		expect(out.intercept[0]).toBeCloseTo(3, 8);
+		expect(out.r2[0]).toBeCloseTo(1, 8);
+		expect(out.rmse[0]).toBeCloseTo(0, 8);
+	});
+
+	it('reports polynomial coefficients', () => {
+		const args = { analysis: 'trend', trendModel: 'polynomial', trendPolyDegree: 2 };
+		const y = Array.from({ length: 20 }, (_, i) => 3 * i * i - i + 5);
+		const out = run(y, args);
+		expect(out.c2[0]).toBeCloseTo(3, 6);
+		expect(out.c1[0]).toBeCloseTo(-1, 6);
+		expect(out.c0[0]).toBeCloseTo(5, 6);
+	});
+
+	it('reports a and b for an exponential window', () => {
+		const args = { analysis: 'trend', trendModel: 'exponential' };
+		const y = Array.from({ length: 20 }, (_, i) => 2 * Math.exp(0.1 * i));
+		const out = run(y, args);
+		expect(out.a[0]).toBeCloseTo(2, 6);
+		expect(out.b[0]).toBeCloseTo(0.1, 6);
+	});
+});

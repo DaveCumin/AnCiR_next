@@ -1,7 +1,12 @@
 <script module>
 	// @ts-nocheck
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { linearRegression } from '$lib/components/plotbits/helpers/wrangleData.js';
+	// The trend maths lives in ONE place: $lib/utils/trendfit.js. RemoveTrend used
+	// to carry a verbatim copy, which meant fixes landed in only one of them (the
+	// v72.20 string-coercion fix for R² never reached this copy). fitTrendSync is
+	// the synchronous entry point — the async `fitTrend` exists only for the
+	// optional permutation test, which RemoveTrend does not use.
+	import { fitTrendSync } from '$lib/utils/trendfit.js';
 
 	const removetrend_defaults = new Map([
 		['xColId', { val: -1 }],
@@ -10,102 +15,6 @@
 		['slidingWindow', { val: false }],
 		['windowSize', { val: 10 }]
 	]);
-
-	// --- Trend fitting helpers ---
-	function multiplyMatrices(A, B) {
-		const rows = A.length;
-		const cols = B[0].length;
-		const common = B.length;
-		const result = Array.from({ length: rows }, () => Array(cols).fill(0));
-		for (let i = 0; i < rows; i++)
-			for (let j = 0; j < cols; j++)
-				for (let k = 0; k < common; k++) result[i][j] += A[i][k] * B[k][j];
-		return result;
-	}
-
-	function transpose(matrix) {
-		return matrix[0].map((_, c) => matrix.map((row) => row[c]));
-	}
-
-	function solveLinearSystem(A, b) {
-		const n = A.length;
-		const aug = A.map((row, i) => [...row, b[i]]);
-		for (let i = 0; i < n; i++) {
-			let mx = i;
-			for (let k = i + 1; k < n; k++) if (Math.abs(aug[k][i]) > Math.abs(aug[mx][i])) mx = k;
-			[aug[i], aug[mx]] = [aug[mx], aug[i]];
-			for (let k = i + 1; k < n; k++) {
-				const f = aug[k][i] / aug[i][i];
-				for (let j = i; j <= n; j++) aug[k][j] -= f * aug[i][j];
-			}
-		}
-		const res = new Array(n);
-		for (let i = n - 1; i >= 0; i--) {
-			res[i] = aug[i][n];
-			for (let j = i + 1; j < n; j++) res[i] -= aug[i][j] * res[j];
-			res[i] /= aug[i][i];
-		}
-		return res;
-	}
-
-	function polynomialFit(x, y, degree) {
-		const n = x.length;
-		const A = [];
-		for (let i = 0; i < n; i++) {
-			const row = [];
-			for (let j = 0; j <= degree; j++) row.push(Math.pow(x[i], j));
-			A.push(row);
-		}
-		const AT = transpose(A);
-		const ATA = multiplyMatrices(AT, A);
-		const ATy = multiplyMatrices(
-			AT,
-			y.map((v) => [v])
-		).map((r) => r[0]);
-		return solveLinearSystem(ATA, ATy);
-	}
-
-	function evaluatePolynomial(coeffs, x) {
-		return coeffs.reduce((sum, c, i) => sum + c * Math.pow(x, i), 0);
-	}
-
-	function computeRSquared(y, fitted) {
-		const meanY = y.reduce((s, v) => s + v, 0) / y.length;
-		const ssTot = y.reduce((s, v) => s + Math.pow(v - meanY, 2), 0);
-		const ssRes = y.reduce((s, v, i) => s + Math.pow(v - fitted[i], 2), 0);
-		return ssTot > 0 ? 1 - ssRes / ssTot : 0;
-	}
-
-	export function fitTrend(x, y, model, polyDegree = 2) {
-		let parameters, fitted, rSquared;
-		if (model === 'linear') {
-			const reg = linearRegression(x, y);
-			parameters = { slope: reg.slope, intercept: reg.intercept };
-			fitted = x.map((xi) => reg.slope * xi + reg.intercept);
-			rSquared = reg.rSquared;
-		} else if (model === 'exponential') {
-			const reg = linearRegression(x, y.map(Math.log));
-			const a = Math.exp(reg.intercept);
-			const b = reg.slope;
-			parameters = { a, b };
-			fitted = x.map((xi) => a * Math.exp(b * xi));
-			rSquared = computeRSquared(y, fitted);
-		} else if (model === 'logarithmic') {
-			const reg = linearRegression(x.map(Math.log), y);
-			const a = reg.intercept;
-			const b = reg.slope;
-			parameters = { a, b };
-			fitted = x.map((xi) => a + b * Math.log(xi));
-			rSquared = computeRSquared(y, fitted);
-		} else if (model === 'polynomial') {
-			const coeffs = polynomialFit(x, y, polyDegree);
-			parameters = { coeffs };
-			fitted = x.map((xi) => evaluatePolynomial(coeffs, xi));
-			rSquared = computeRSquared(y, fitted);
-		}
-		const rmse = Math.sqrt(fitted.reduce((s, fi, i) => s + Math.pow(y[i] - fi, 2), 0) / x.length);
-		return { parameters, fitted, rmse, rSquared };
-	}
 
 	function slidingStandardisation(data, windowSize) {
 		const half = Math.floor(windowSize / 2);
@@ -142,7 +51,7 @@
 
 		const tt = validIndices.map((i) => t[i]);
 		const yy = validIndices.map((i) => x[i]);
-		const fittedData = fitTrend(tt, yy, args.model, args.polyDegree);
+		const fittedData = fitTrendSync(tt, yy, args.model, args.polyDegree);
 		let detrended = yy.map((yi, k) => yi - fittedData.fitted[k]);
 
 		if (args.slidingWindow && args.windowSize > 1) {
@@ -231,7 +140,7 @@
 		if (validIndices.length < 2) return null;
 
 		try {
-			return fitTrend(
+			return fitTrendSync(
 				validIndices.map((i) => t[i]),
 				validIndices.map((i) => data[i]),
 				p.args.model,

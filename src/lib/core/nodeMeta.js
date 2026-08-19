@@ -213,7 +213,8 @@ const meta = new Map([
 		{
 			family: 'Fitting',
 			nodeIcon: 'fit-function',
-			description: 'Fit an arbitrary user-supplied function to the column.'
+			description:
+				'Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. Use it to compare different waveform shapes on the same series without rewiring; for one model with its own metric output ports, use the dedicated Cosinor, Rectangular Wave or Double Logistic node.'
 		}
 	],
 	[
@@ -231,7 +232,7 @@ const meta = new Map([
 			family: 'Fitting',
 			nodeIcon: 'linear-fit',
 			description:
-				'Fit and store a trend (linear, polynomial, exponential, logarithmic) over the column.'
+				'Fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its R2, RMSE and coefficients. Use it to describe or remove baseline drift, growth or decay before rhythm analysis.'
 		}
 	],
 	[

@@ -219,7 +219,7 @@
 	<!-- ─────────────────────────────────────────────────────────────────── -->
 	<h3 class="section-head">3. Association and Regression</h3>
 
-	<AnCiRBox title="Correlation, pairs plot, Fit Trend Curves, Logistic regression">
+	<AnCiRBox title="Correlation, pairs plot, Fit trend, Logistic regression">
 		<ul>
 			<li>
 				<strong>Correlation</strong> (Analysis) returns <strong>r</strong>,
@@ -230,7 +230,7 @@
 				&mdash; the fastest way to spot a relationship that is driven entirely by one outlier.
 			</li>
 			<li>
-				<strong>Fit Trend Curves</strong> (Fitting) fits linear, polynomial, exponential or
+				<strong>Fit trend</strong> (Fitting) fits linear, polynomial, exponential or
 				logarithmic models and returns <strong>trendy_*</strong>,
 				<strong>r2</strong>, <strong>rmse</strong>, coefficients, and crucially
 				<strong>resid_*</strong>.

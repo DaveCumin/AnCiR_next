@@ -17,8 +17,9 @@
 		spawnResidualPlot
 	} from '$lib/tableProcesses/residualSupport.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 
-	const displayName = 'Fit Function';
+	const displayName = 'Fit waveform model';
 	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
@@ -260,7 +261,18 @@
 		}
 
 		// Not gated on anyValid: when a fit fails, the point count is the explanation.
-		result.warnings = fitSampleWarnings(argsIN);
+		// A fit that RAN but produced NaN gets its own line: these are iterative
+		// optimisers with no convergence flag to read, so non-finite R²/RMSE is the
+		// only observable symptom, and dashes with no explanation is what the user
+		// otherwise sees.
+		const fitEntries = Object.entries(result?.y_results ?? {}).map(([yId, yr]) => ({
+			label: `"${getColumnById(Number(yId))?.name ?? yId}"`,
+			result: yr?.fitResult ?? null
+		}));
+		result.warnings = [
+			...checkFitResultsFinite(fitEntries, `The ${argsIN.model ?? 'cosinor'} fit`),
+			...fitSampleWarnings(argsIN)
+		];
 		return [result, anyValid];
 	}
 
@@ -1132,14 +1144,14 @@
 					label="R²"
 					getter={() => yResult?.fitResult?.rSquared}
 					defaultName={`fit_r2_${yName}`}
-					source={'Fit Function (' + p.args.model + ')'}
+					source={'Fit waveform model (' + p.args.model + ')'}
 				/>
 				&ensp;RMSE: {yResult?.fitResult?.rmse?.toFixed(3)}
 				<StoreValueButton
 					label="RMSE"
 					getter={() => yResult?.fitResult?.rmse}
 					defaultName={`fit_rmse_${yName}`}
-					source={'Fit Function (' + p.args.model + ')'}
+					source={'Fit waveform model (' + p.args.model + ')'}
 				/>
 			</p>
 			{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
@@ -1180,7 +1192,7 @@
 								label={`H${i + 1}`}
 								getter={() => h.amplitude}
 								defaultName={`fit_h${i + 1}_${yName}`}
-								source="Fit Function (cosinor)"
+								source="Fit waveform model (cosinor)"
 							/>
 						</p>
 					{/each}
@@ -1194,7 +1206,7 @@
 								label={`C${i + 1}`}
 								getter={() => c.amplitude}
 								defaultName={`fit_c${i + 1}_${yName}`}
-								source="Fit Function (cosinor)"
+								source="Fit waveform model (cosinor)"
 							/>
 						</p>
 					{/each}
@@ -1336,7 +1348,23 @@
 	</div>
 {/if}
 
+<!-- Fit-failure and sample-size cautions, inline as well as on the node badge
+     (the badge is a tooltip; the reason a fit shows dashes must be readable
+     without hovering). Same markup as Cosinor. -->
+{#each fitData?.warnings ?? [] as w (w)}
+	<p class="warn">{w}</p>
+{/each}
+
 <style>
+	/* Matches ChiSquared / Rayleigh / Cosinor / NPCRA. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.tp-stat-actions {
 		display: flex;
 		gap: 0.4rem;

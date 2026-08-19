@@ -9,7 +9,11 @@ import { computeFFT } from './fft.js';
 import { computeAutocorrelation } from './correlogram.js';
 import { fitRectangularWave } from './rectwave.js';
 import { fitDoubleLogistic } from './doublelogistic.js';
-import { fitTrend } from './trendfit.js';
+// fitTrendSync, NOT fitTrend: fitTrend is `async` (it awaits an optional
+// permutation test) so it always returns a Promise. This loop is synchronous,
+// and reading `.parameters` off a Promise gave undefined — every 'trend'
+// window silently returned empty stats.
+import { fitTrendSync } from './trendfit.js';
 import { computeNPCRA } from './npcra.js';
 import { wrapToPeriod } from './cosinorAddons.js';
 
@@ -259,7 +263,7 @@ function computeStatsForWindow(tt, yy, args) {
 		const model = args.trendModel ?? 'linear';
 		const polyDegree = Math.max(0, Math.floor(args.trendPolyDegree ?? 2));
 
-		// fitTrend's logarithmic branch takes log(x) and exponential branch
+		// fitTrendSync's logarithmic branch takes log(x) and exponential branch
 		// takes log(y); guard the windows where those would be NaN/-Infinity
 		// so a single bad sample doesn't corrupt the whole fit.
 		if (model === 'logarithmic' && tt.some((v) => !(v > 0))) return stats;
@@ -268,7 +272,7 @@ function computeStatsForWindow(tt, yy, args) {
 
 		let r;
 		try {
-			r = fitTrend(tt, yy, model, polyDegree);
+			r = fitTrendSync(tt, yy, model, polyDegree);
 		} catch {
 			return stats;
 		}

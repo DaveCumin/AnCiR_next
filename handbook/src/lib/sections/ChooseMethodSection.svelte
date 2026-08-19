@@ -183,7 +183,7 @@
         <tr>
           <td class="goal-cell">Does a predictor explain an outcome?</td>
           <td>Trend fit for continuous; logistic regression for binary. Check the residuals.</td>
-          <td class="need-cell">Fit Trend Curves, Logistic regression</td>
+          <td class="need-cell">Fit trend, Logistic regression</td>
           <td class="go-cell"><a href="#stats">Stats</a> &middot; <a href="#ch11">Ch 11</a></td>
         </tr>
         <tr>

@@ -3586,6 +3586,8 @@ DISPLAY_TO_TP = {
     'FDRCorrection': 'fdrcorrection',
     'Fit Function': 'fitfunction',
     'Fit Trend Curves': 'trendfit',
+    'Fit trend': 'trendfit',
+    'Fit waveform model': 'fitfunction',
     'FitFunction': 'fitfunction',
     'Formula Column': 'formulacolumn',
     'FormulaColumn': 'formulacolumn',

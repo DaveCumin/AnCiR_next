@@ -4,6 +4,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { evaluateCosinorAtPoints } from '$lib/utils/cosinor.js';
+	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
@@ -491,7 +492,17 @@
 		// Deliberately NOT gated on anyValid: when the fit fails, "1.1 points per
 		// 24 h cycle" is the most useful thing we can say, and suppressing it would
 		// leave the user with a silent failure and no explanation.
-		result.warnings = cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1));
+		// A cosinor that ran but produced NaN (the optimiser gave up, or the fixed-period
+		// design matrix was singular) has no convergence flag to read, so the non-finite
+		// R²/RMSE is the observable symptom — and worth a sentence rather than dashes.
+		const fitEntries = Object.entries(result?.y_results ?? {}).map(([yId, yr]) => ({
+			label: `"${getColumnById(Number(yId))?.name ?? yId}"`,
+			result: yr?.fittedData ?? null
+		}));
+		result.warnings = [
+			...checkFitResultsFinite(fitEntries, 'The cosinor fit'),
+			...cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1))
+		];
 		return [result, anyValid];
 	}
 </script>

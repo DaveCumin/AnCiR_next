@@ -1055,7 +1055,7 @@ const WORKFLOWS = [
 		name: 'Workflow — linear regression + residual diagnostics',
 		family: 'Workflows',
 		description:
-			'Predict Y from X, then check the model is honest. Fit Trend Curves fits the line (slope, intercept, R²), the fitted line is overlaid on the data, and the residuals are plotted against X and screened for normality. The lesson: R² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when R² looks high.',
+			'Predict Y from X, then check the model is honest. Fit trend fits the line (slope, intercept, R²), the fitted line is overlaid on the data, and the residuals are plotted against X and screened for normality. The lesson: R² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when R² looks high.',
 		showcases: ['TrendFit', 'NormalityTest', 'scatterplot'],
 		async build() {
 			const rng = mulberry32(105);
@@ -1399,7 +1399,7 @@ const WORKFLOWS = [
 		group: 'Reading the output',
 		family: 'Workflows',
 		description:
-			'Four small datasets constructed by Anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, R² = 0.67). Describe Data confirms the summaries are identical and Fit Trend Curves confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. The lesson is the oldest one in data analysis: look at the picture before you trust the number. The same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis.',
+			'Four small datasets constructed by Anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, R² = 0.67). Describe Data confirms the summaries are identical and Fit trend confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. The lesson is the oldest one in data analysis: look at the picture before you trust the number. The same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis.',
 		showcases: ['DescribeData', 'TrendFit', 'scatterplot'],
 		async build() {
 			const RAW = RAW_COLOUR;

@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.72.20",
+  "generatedFromVersion": "β.72.21",
   "count": 61,
   "nodes": [
     {
@@ -1492,10 +1492,10 @@
     },
     {
       "id": "FitFunction",
-      "displayName": "Fit Function",
+      "displayName": "Fit waveform model",
       "kind": "tableProcess",
       "family": "Fitting",
-      "description": "Fit an arbitrary user-supplied function to the column.",
+      "description": "Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. Use it to compare different waveform shapes on the same series without rewiring; for one model with its own metric output ports, use the dedicated Cosinor, Rectangular Wave or Double Logistic node.",
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2865,10 +2865,10 @@
     },
     {
       "id": "TrendFit",
-      "displayName": "Fit Trend Curves",
+      "displayName": "Fit trend",
       "kind": "tableProcess",
       "family": "Fitting",
-      "description": "Fit and store a trend (linear, polynomial, exponential, logarithmic) over the column.",
+      "description": "Fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its R2, RMSE and coefficients. Use it to describe or remove baseline drift, growth or decay before rhythm analysis.",
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2894,6 +2894,26 @@
         {
           "name": "outputX",
           "default": -1
+        },
+        {
+          "name": "permuteTest",
+          "default": false
+        },
+        {
+          "name": "autoPermutations",
+          "default": false
+        },
+        {
+          "name": "nPermutations",
+          "default": 999
+        },
+        {
+          "name": "permutationSeed",
+          "default": 12345
+        },
+        {
+          "name": "permutationStatistic",
+          "default": "rSquared"
         }
       ],
       "outputs": [

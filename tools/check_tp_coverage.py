@@ -50,6 +50,10 @@ MANUAL_ALIASES = {
     "Column Functions": "columnfunctions",
     "Smoothed Data": "smootheddata",
     "Trend Fit": "trendfit",
+    # Pre-v72.21 display names, kept so sessions saved under the old labels
+    # (including the shipped demo sessions) still resolve.
+    "Fit Function": "fitfunction",
+    "Fit Trend Curves": "trendfit",
     "Long to Wide": "longtowide",
     "Wide to Long": "widetolong",
 }

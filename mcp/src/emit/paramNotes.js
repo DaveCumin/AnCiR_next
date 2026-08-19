@@ -61,7 +61,7 @@ export const PARAM_NOTES = {
 	SmoothedData:
 		'`smootherType` is "whittaker" (`whittakerLambda`/`whittakerOrder`), "moving" (`movingAvgWindowSize`, `movingAvgType` = "simple"/"weighted"/"exponential"), "savitzky" (`savitzkyWindowSize`/`savitzkyPolyOrder`) or "loess" (`loessBandwidth`). Only the chosen smoother\'s params are used.',
 	TrendFit:
-		'`model` is "linear", "exponential", "logarithmic" or "polynomial" (last uses `polyDegree`). `outputX` -1 reuses the input x grid.',
+		'`model` is "linear", "exponential", "logarithmic" or "polynomial" (last uses `polyDegree`). `outputX` -1 reuses the input x grid. `permuteTest:true` enables the permutation test (then `nPermutations` — or `autoPermutations:true` to size it from the data — plus `permutationSeed` and `permutationStatistic` = "rSquared" or "rmse" apply). `permutationSeed` is saved with the session, so the same session reloads the same p-value.',
 	FitFunction:
 		'`model` is "cosinor", "rectangular" or "doublelogistic". For a periodic fit keep `useFixedPeriod:true`, `fixedPeriod` in HOURS. `permuteTest:true` enables the permutation test (then `nPermutations`/`permutationSeed`/`permutationStatistic` = "rSquared" or "rmse" apply). `fix*`/`fixed*` pairs pin a parameter (e.g. `fixKappa:true` → `fixedKappa`).',
 	Cosinor:

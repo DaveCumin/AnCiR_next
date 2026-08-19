@@ -6,6 +6,8 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { fitTrendSync, evaluateTrendAtPoints } from '$lib/utils/trendfit.js';
+	import { checkTrendFitDomain, shouldRefuse, issueMessages } from '$lib/utils/fitDomain.js';
+	import { PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
@@ -14,13 +16,22 @@
 	import '$lib/utils/trendfit.worker-task.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 
-	const displayName = 'Fit Trend Curves';
+	const displayName = 'Fit trend';
 	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
 		['model', { val: 'linear' }],
 		['polyDegree', { val: 2 }],
 		['outputX', { val: -1 }],
+		// Permutation test: a model-vs-chance significance test for each y fit.
+		// These live in `args` (not component-local state) so a saved session
+		// reloads with the SAME seed and therefore the SAME p-value; a random
+		// per-mount seed made the reported p unreproducible.
+		['permuteTest', { val: PERMUTATION_DEFAULTS.permuteTest }],
+		['autoPermutations', { val: false }],
+		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
+		['permutationSeed', { val: PERMUTATION_DEFAULTS.permutationSeed }],
+		['permutationStatistic', { val: PERMUTATION_DEFAULTS.permutationStatistic }],
 		// `trendx` + per-y `trendy_<id>` are the fitted-curve outputs. `r2`/`rmse`
 		// plus per-model `coef_*` keys are scalar metrics exposed as PORTS (one
 		// value per y input, in yIN order) — see metricOutputs.js. The coef keys
@@ -113,6 +124,24 @@
 		return warnings;
 	}
 
+	/**
+	 * Backfill the permutation args on a session saved before they were persisted.
+	 * Strictly `=== undefined`, never a truthiness test: seed 0 and `permuteTest:false`
+	 * are meaningful values that `||` would silently overwrite.
+	 * @param {object} args a TrendFit `p.args`
+	 */
+	export function applyPermutationDefaults(args) {
+		if (!args) return args;
+		if (args.permuteTest === undefined) args.permuteTest = PERMUTATION_DEFAULTS.permuteTest;
+		if (args.autoPermutations === undefined) args.autoPermutations = false;
+		if (args.nPermutations === undefined) args.nPermutations = PERMUTATION_DEFAULTS.nPermutations;
+		if (args.permutationSeed === undefined)
+			args.permutationSeed = PERMUTATION_DEFAULTS.permutationSeed;
+		if (args.permutationStatistic === undefined)
+			args.permutationStatistic = PERMUTATION_DEFAULTS.permutationStatistic;
+		return args;
+	}
+
 	export function getCoefKeys(args) {
 		const model = args?.model ?? 'linear';
 		if (model === 'linear') return ['coef_slope', 'coef_intercept'];
@@ -177,6 +206,8 @@
 			y_results: {}
 		};
 		let anyValid = false;
+		// Domain refusals collected per y column, surfaced as node warnings.
+		const domainWarnings = [];
 
 		if (xIN == -1 || !getColumnById(xIN) || yINs.length === 0) return [result, false];
 
@@ -221,6 +252,21 @@
 			const yy = validIndices.map((i) => y[i]);
 
 			if (tt.length === 0) continue;
+
+			// Domain check BEFORE fitting. The logarithmic model log-transforms x and
+			// the exponential model log-transforms y, so ONE non-positive value makes
+			// R², RMSE and every coefficient NaN — which the node used to render as
+			// four dashes with nothing to say why. Refuse the fit and say what is
+			// wrong instead; see utils/fitDomain.js for why refusing beats quietly
+			// dropping the offending points.
+			const domainIssues = checkTrendFitDomain(tt, yy, model, polyDegree, {
+				xLabel: tCol?.name ? `"${tCol.name}"` : 'x',
+				yLabel: yCol?.name ? `"${yCol.name}"` : 'y'
+			});
+			if (shouldRefuse(domainIssues)) {
+				domainWarnings.push(...issueMessages(domainIssues));
+				continue;
+			}
 
 			const fittedData = shouldUseWorkers({ inputLen: tt.length })
 				? await runComputeTask('trendfit.fit', { tt, yy, model, polyDegree })
@@ -283,8 +329,22 @@
 			writeTrendMetricOutputs(argsIN, result, processHash);
 		}
 
+		// A refused fit must not leave the PREVIOUS model's numbers sitting in the
+		// metric ports: switching from linear to logarithmic on an x that contains a
+		// zero would otherwise keep showing the linear R² beside the refusal. Blank
+		// them (NaN renders as a dash) — the warning says why they are blank.
+		if (!anyValid && domainWarnings.length > 0) {
+			const clearHash = crypto.randomUUID();
+			writeTrendMetricOutputs(argsIN, result, clearHash);
+			writeOutputColumn(xOUT, [], { processHash: clearHash });
+			for (const yId of yINs) {
+				writeOutputColumn(argsIN.out['trendy_' + yId], [], { processHash: clearHash });
+				writeOutputColumn(argsIN.out['resid_' + yId], [], { processHash: clearHash });
+			}
+		}
+
 		// Not gated on anyValid: when a fit fails, the point count is the explanation.
-		result.warnings = fitSampleWarnings(argsIN);
+		result.warnings = [...domainWarnings, ...fitSampleWarnings(argsIN)];
 		return [result, anyValid];
 	}
 </script>
@@ -313,6 +373,8 @@
 
 	// Backward compat: convert legacy single yIN to array
 	migrateLegacyYIN(p.args);
+	// Backwards compatibility — initialise any fields absent in older saved sessions
+	applyPermutationDefaults(p.args);
 
 	let trendData = $state();
 	let _calcToken = 0; // guards async fit results against stale overwrites
@@ -320,14 +382,10 @@
 	let mounted = $state(false);
 	let previewStart = $state(1);
 
-	// Permutation test state
-	let enablePermutation = $state(false);
-	let nPermutations = $state(999);
+	// Permutation test settings live in p.args (persisted); only the transient
+	// run state is component-local.
 	let permutationInProgress = $state(false);
 	let permutationProgress = $state(0);
-	let permutationSeed = $state(Math.floor(Math.random() * 2147483646));
-	let autoNPermutations = $state(false);
-	let permutationStatistic = $state('rSquared');
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'trendy_', 'trend_');
 	const { syncYColumns: syncPermColumns, initYColumns: initPermColumns } = useMultiYTP(
@@ -361,6 +419,11 @@
 		// was component-local a view switch recomputed anyway and hid it; now that
 		// the memo survives a remount, an omission here means an edit is ignored.
 		out += '|' + p.args.model + '|' + p.args.polyDegree;
+		// The permutation settings change the reported p-value, so an edit to any of
+		// them must invalidate the memo (they are persisted args now, not local state).
+		out += '|' + p.args.permuteTest + '|' + p.args.autoPermutations;
+		out += '|' + p.args.nPermutations + '|' + p.args.permutationSeed;
+		out += '|' + p.args.permutationStatistic;
 		return out;
 	});
 	// The fit stats live only in transient state and aren't persisted with the
@@ -408,7 +471,7 @@
 	async function getTrend() {
 		previewStart = 1;
 
-		if (enablePermutation && p.args.yIN && p.args.yIN.length > 0) {
+		if (p.args.permuteTest && p.args.yIN && p.args.yIN.length > 0) {
 			permutationInProgress = true;
 			permutationProgress = 0;
 
@@ -426,6 +489,9 @@
 				outputXData: null,
 				y_results: {}
 			};
+			// Same domain refusals as the non-permutation path; a permutation test
+			// over an all-NaN statistic is meaningless too.
+			const domainWarnings = [];
 
 			for (const yId of yINs) {
 				if (yId == null || yId === -1) continue;
@@ -441,15 +507,26 @@
 
 				if (tt.length === 0) continue;
 
+				const domainIssues = checkTrendFitDomain(tt, yy, model, polyDegree, {
+					xLabel: xCol?.name ? `"${xCol.name}"` : 'x',
+					yLabel: yCol?.name ? `"${yCol.name}"` : 'y'
+				});
+				if (shouldRefuse(domainIssues)) {
+					domainWarnings.push(...issueMessages(domainIssues));
+					continue;
+				}
+
 				// Determine recommended permutations if auto mode
-				const nPerms = autoNPermutations ? recommendPermutations(tt.length) : nPermutations;
+				const nPerms = p.args.autoPermutations
+					? recommendPermutations(tt.length)
+					: p.args.nPermutations;
 
 				// Run async fit with permutation test
 				const fittedData = await fitTrend(tt, yy, model, polyDegree, {
 					permuteTest: true,
 					nPermutations: nPerms,
-					testStatistic: permutationStatistic,
-					seed: permutationSeed,
+					testStatistic: p.args.permutationStatistic,
+					seed: p.args.permutationSeed,
 					onProgress: (current, total) => {
 						permutationProgress = Math.round((current / total) * 100);
 					}
@@ -502,7 +579,9 @@
 				writeTrendMetricOutputs(p.args, result, processHash);
 			}
 
+			result.warnings = [...domainWarnings, ...fitSampleWarnings(p.args)];
 			trendData = result;
+			p.warnings = result.warnings;
 			p.args.valid = Object.keys(result.y_results).length > 0;
 			permutationInProgress = false;
 			memo.hash = getHash;
@@ -752,13 +831,13 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<label>
-				<input type="checkbox" bind:checked={enablePermutation} disabled={permutationInProgress} />
+				<input type="checkbox" bind:checked={p.args.permuteTest} disabled={permutationInProgress} />
 				Permutation test (for significance)
 			</label>
 		</div>
 	</div>
 
-	{#if enablePermutation}
+	{#if p.args.permuteTest}
 		<div
 			class="control-input-vertical"
 			style="background-color: var(--color-lightness-95); padding: 10px; border-radius: var(--radius-sm); margin: 10px 0;"
@@ -767,17 +846,17 @@
 				<label>
 					<input
 						type="checkbox"
-						bind:checked={autoNPermutations}
+						bind:checked={p.args.autoPermutations}
 						disabled={permutationInProgress}
 					/>
 					Auto (based on data size)
 				</label>
 			</div>
 
-			{#if !autoNPermutations}
+			{#if !p.args.autoPermutations}
 				<ControlInput label="Permutations">
 					<NumberWithUnits
-						bind:value={nPermutations}
+						bind:value={p.args.nPermutations}
 						min="99"
 						max="9999"
 						step="100"
@@ -789,7 +868,7 @@
 			<div class="control-input">
 				<p>Statistic</p>
 				<AttributeSelect
-					bind:value={permutationStatistic}
+					bind:value={p.args.permutationStatistic}
 					options={['rSquared', 'rmse']}
 					optionsDisplay={['R²', 'RMSE']}
 					disabled={permutationInProgress}
@@ -798,8 +877,8 @@
 
 			<ControlInput label="Seed (for reproducibility)">
 				<NumberWithUnits
-					bind:value={permutationSeed}
-					min="1"
+					bind:value={p.args.permutationSeed}
+					min="0"
 					max="2147483646"
 					step="1"
 					disabled={permutationInProgress}
@@ -850,14 +929,14 @@
 					label="R²"
 					getter={() => yResult?.fittedData?.rSquared}
 					defaultName={`trend_r2_${yName}`}
-					source={'Trend Fit (' + p.args.model + ')'}
+					source={'Fit trend (' + p.args.model + ')'}
 				/>
 				&ensp;RMSE: {yResult?.fittedData?.rmse?.toFixed(3)}
 				<StoreValueButton
 					label="RMSE"
 					getter={() => yResult?.fittedData?.rmse}
 					defaultName={`trend_rmse_${yName}`}
-					source={'Trend Fit (' + p.args.model + ')'}
+					source={'Fit trend (' + p.args.model + ')'}
 				/>
 			</p>
 			{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
@@ -893,7 +972,7 @@
 						label="Slope"
 						getter={() => yResult?.fittedData?.parameters?.slope}
 						defaultName={`trend_slope_${yName}`}
-						source="Trend Fit (linear)"
+						source="Fit trend (linear)"
 					/>
 				</p>
 				<p>
@@ -902,7 +981,7 @@
 						label="Intercept"
 						getter={() => yResult?.fittedData?.parameters?.intercept}
 						defaultName={`trend_intercept_${yName}`}
-						source="Trend Fit (linear)"
+						source="Fit trend (linear)"
 					/>
 				</p>
 			{:else if p.args.model === 'exponential'}
@@ -912,7 +991,7 @@
 						label="a"
 						getter={() => yResult?.fittedData?.parameters?.a}
 						defaultName={`trend_a_${yName}`}
-						source="Trend Fit (exponential)"
+						source="Fit trend (exponential)"
 					/>
 				</p>
 				<p>
@@ -921,7 +1000,7 @@
 						label="b"
 						getter={() => yResult?.fittedData?.parameters?.b}
 						defaultName={`trend_b_${yName}`}
-						source="Trend Fit (exponential)"
+						source="Fit trend (exponential)"
 					/>
 				</p>
 			{:else if p.args.model === 'logarithmic'}
@@ -931,7 +1010,7 @@
 						label="a"
 						getter={() => yResult?.fittedData?.parameters?.a}
 						defaultName={`trend_a_${yName}`}
-						source="Trend Fit (logarithmic)"
+						source="Fit trend (logarithmic)"
 					/>
 				</p>
 				<p>
@@ -940,7 +1019,7 @@
 						label="b"
 						getter={() => yResult?.fittedData?.parameters?.b}
 						defaultName={`trend_b_${yName}`}
-						source="Trend Fit (logarithmic)"
+						source="Fit trend (logarithmic)"
 					/>
 				</p>
 			{:else if p.args.model === 'polynomial'}
@@ -951,7 +1030,7 @@
 							label={'c' + i}
 							getter={() => yResult?.fittedData?.parameters?.coeffs?.[i]}
 							defaultName={`trend_c${i}_${yName}`}
-							source="Trend Fit (polynomial)"
+							source="Fit trend (polynomial)"
 						/>
 					</p>
 				{/each}
@@ -1089,7 +1168,23 @@
 	</div>
 {/if}
 
+<!-- Domain refusals and sample-size cautions. Shown here as well as on the node
+     badge, because the badge is a tooltip and the reason a fit produced dashes
+     has to be readable without hovering. Same markup as Cosinor / ChiSquared. -->
+{#each trendData?.warnings ?? [] as w (w)}
+	<p class="warn">{w}</p>
+{/each}
+
 <style>
+	/* Matches ChiSquared / Rayleigh / Cosinor / NPCRA. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.tp-stat-actions {
 		display: flex;
 		gap: 0.4rem;

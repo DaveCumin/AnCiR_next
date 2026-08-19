@@ -1,12 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// fitTrend imports getColumnById at module level but never calls it.
-// removetrend DOES call it, but with xColId === -1 it short-circuits and uses
-// an index axis, so the mock (returning undefined) is fine for those tests.
+// removetrend calls getColumnById, but with xColId === -1 it short-circuits and
+// uses an index axis, so the mock (returning undefined) is fine for these tests.
 // Mock the whole Column.svelte to avoid Svelte reactive state initialisation.
 vi.mock('$lib/core/Column.svelte', () => ({ getColumnById: vi.fn(() => undefined) }));
 
-import { fitTrend, removetrend } from './RemoveTrend.svelte';
+import { removetrend } from './RemoveTrend.svelte';
+// RemoveTrend used to carry a VERBATIM COPY of the trend maths in its module
+// script. It now calls the shared fitTrendSync. The `fitTrend` describes below
+// are kept, retargeted at the shared implementation, because they document the
+// exact behaviours RemoveTrend's detrending depends on — if the shared code
+// ever drifts from them, RemoveTrend's output changes.
+import { fitTrendSync as fitTrend } from '$lib/utils/trendfit.js';
 
 // ─── linear ──────────────────────────────────────────────────────────────────
 
@@ -198,5 +203,52 @@ describe('removetrend — index axis, linear', () => {
 			windowSize: 4
 		});
 		out.forEach((v) => expect(Number.isFinite(v)).toBe(true));
+	});
+});
+
+// ─── de-duplication guard: RemoveTrend and trendfit.js are ONE implementation ──
+// RemoveTrend's module script used to define its own fitTrend/computeRSquared.
+// These tests pin the contract that removetrend's output is exactly
+// `y - fitTrendSync(...).fitted` at the valid indices, for every model.
+
+describe('removetrend shares trendfit.js', () => {
+	const models = ['linear', 'exponential', 'logarithmic', 'polynomial'];
+
+	it.each(models)('%s: residuals equal y − fitTrendSync().fitted exactly', (model) => {
+		// Positive, non-zero y so exponential's log(y) is defined; index axis
+		// starts at 0, so shift it for the logarithmic branch's log(x).
+		const y = [2.1, 3.4, 4.9, 6.1, 8.2, 9.9, 12.4, 15.1];
+		const idx = y.map((_, i) => i);
+		const expected = fitTrend(idx, y, model, 2).fitted.map((f, i) => y[i] - f);
+		const out = removetrend(y, { xColId: -1, model, polyDegree: 2 });
+		// logarithmic at x=0 is -Infinity; compare only the finite entries so the
+		// test still asserts equality where the model is defined.
+		for (let i = 0; i < y.length; i++) {
+			if (Number.isFinite(expected[i])) expect(out[i]).toBe(expected[i]);
+			else expect(Number.isFinite(out[i])).toBe(false);
+		}
+	});
+
+	// The v72.20 bug class: a 'number' column's rawData is passed through
+	// verbatim, so numeric STRINGS reach the fit after a CSV import or paste.
+	// The old copy summed them with `+`, which concatenated, so SStot was NaN and
+	// R² fell through to 0 for exponential / logarithmic / polynomial.
+	// BEFORE this de-duplication these three assertions returned rSquared === 0.
+	it.each(['exponential', 'logarithmic', 'polynomial'])(
+		'%s: string-valued y gives the true R², not 0',
+		(model) => {
+			const x = [1, 2, 3, 4, 5, 6];
+			const y = x.map((xi) => 2 * Math.exp(0.3 * xi));
+			const r = fitTrend(x.map(String), y.map(String), model, 2);
+			expect(r.rSquared).toBeGreaterThan(0.5);
+			expect(r.rSquared).toBeCloseTo(fitTrend(x, y, model, 2).rSquared, 12);
+		}
+	);
+
+	it('string-valued y detrends to the same numbers as numeric y', () => {
+		const y = [2.1, 3.4, 4.9, 6.1, 8.2, 9.9];
+		const fromNum = removetrend(y, { xColId: -1, model: 'polynomial', polyDegree: 2 });
+		const fromStr = removetrend(y.map(String), { xColId: -1, model: 'polynomial', polyDegree: 2 });
+		fromStr.forEach((v, i) => expect(v).toBeCloseTo(fromNum[i], 12));
 	});
 });

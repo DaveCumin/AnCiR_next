@@ -225,7 +225,11 @@ def test_non_strict_mode_records_instead_of_raising():
 def test_known_table_process_resolves_via_displayname():
     # 'Compare groups (stats)' is the GroupComparison displayName.
     assert rt.DISPLAY_TO_TP.get('Compare groups (stats)') == 'groupcomparison'
+    assert rt.DISPLAY_TO_TP.get('Fit waveform model') == 'fitfunction'
+    assert rt.DISPLAY_TO_TP.get('Fit trend') == 'trendfit'
+    # legacy display names (pre-v72.21) still resolve via MANUAL_ALIASES
     assert rt.DISPLAY_TO_TP.get('Fit Function') == 'fitfunction'
+    assert rt.DISPLAY_TO_TP.get('Fit Trend Curves') == 'trendfit'
     assert rt.DISPLAY_TO_TP.get('Stored Value Group') == 'storedvaluegroup'
 
 
@@ -237,7 +241,11 @@ def test_coverage_check_passes():
     import check_tp_coverage as cov
     js = cov.scan_js()
     impl = cov.runtime_keys()
-    missing = [k for k in {cov.tp_key(f) for f in js} if k not in impl]
+    # Mirror check_tp_coverage.main(): NOT_APPLICABLE analyses (e.g. ColumnSet,
+    # which emits no columns and is resolved away before export) have nothing
+    # for the runtime to implement.
+    missing = [k for k in {cov.tp_key(f) for f in js}
+               if k not in impl and k not in cov.NOT_APPLICABLE]
     assert not missing, f"missing TP implementations: {missing}"
 
 

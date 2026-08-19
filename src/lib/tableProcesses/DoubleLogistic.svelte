@@ -13,6 +13,7 @@
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/doublelogistic.worker-task.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 
 	const displayName = 'Double Logistic';
 	const defaults = new Map([
@@ -140,6 +141,9 @@
 
 		const y_results = {};
 		let sharedT = null;
+		// Per-column fit outcomes, so a fit that came back null or all-NaN can say so
+		// instead of leaving the panel showing dashes with no explanation.
+		const fitEntries = [];
 
 		for (const yId of yINs) {
 			const yCol = getColumnById(yId);
@@ -167,6 +171,8 @@
 			const fitResult = shouldUseWorkers({ inputLen: tt.length })
 				? await runComputeTask('doublelogistic.fit', { tt, yy, opts: dlOpts })
 				: fitDoubleLogistic(tt, yy, dlOpts);
+
+			fitEntries.push({ label: `"${yCol.name}"`, result: fitResult ?? null });
 
 			if (fitResult) {
 				const xOutData = outputXData ?? tt;
@@ -236,7 +242,16 @@
 		);
 
 		return [
-			{ t: sharedT, outputXData, y_results, originTime_ms, warnings: fitSampleWarnings(argsIN) },
+			{
+				t: sharedT,
+				outputXData,
+				y_results,
+				originTime_ms,
+				warnings: [
+					...checkFitResultsFinite(fitEntries, 'The double-logistic fit'),
+					...fitSampleWarnings(argsIN)
+				]
+			},
 			true
 		];
 	}
@@ -873,7 +888,23 @@
 	</div>
 {/if}
 
+<!-- Fit-failure and sample-size cautions. Shown inline as well as on the node's
+     warning badge, because the badge is a tooltip and the reason a fit shows
+     dashes must be readable without hovering. Same markup as Cosinor. -->
+{#each dlData?.warnings ?? [] as w (w)}
+	<p class="warn">{w}</p>
+{/each}
+
 <style>
+	/* Matches ChiSquared / Rayleigh / Cosinor / NPCRA. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.tp-stat-actions {
 		display: flex;
 		gap: 0.4rem;

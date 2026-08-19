@@ -246,3 +246,77 @@ describe('getCoefKeys', () => {
 		]);
 	});
 });
+
+describe('permutation settings persist with the session', () => {
+	// The permutation controls used to be component-local `$state` with a seed of
+	// Math.random(), so a saved session came back with a DIFFERENT seed and
+	// therefore a different p-value. They now live in the node's `defaults` map,
+	// which is what buildTableProcessDefaults() reads when a node is spawned and
+	// what TableProcess.toJSON() writes out verbatim.
+	async function nodeDefaults() {
+		const { definition } = await import('./TrendFit.svelte');
+		const { buildTableProcessDefaults } = await import('$lib/core/tpDefaults.js');
+		return buildTableProcessDefaults(definition);
+	}
+
+	it('a freshly spawned node carries the permutation params in its args', async () => {
+		const { PERMUTATION_DEFAULTS } = await import('$lib/utils/fitFunction.js');
+		const args = await nodeDefaults();
+		expect(args.permuteTest).toBe(PERMUTATION_DEFAULTS.permuteTest);
+		expect(args.autoPermutations).toBe(false);
+		expect(args.nPermutations).toBe(PERMUTATION_DEFAULTS.nPermutations);
+		expect(args.permutationSeed).toBe(PERMUTATION_DEFAULTS.permutationSeed);
+		expect(args.permutationStatistic).toBe(PERMUTATION_DEFAULTS.permutationStatistic);
+	});
+
+	it('the seed is a fixed default, not randomised per node', async () => {
+		const a = await nodeDefaults();
+		const b = await nodeDefaults();
+		expect(a.permutationSeed).toBe(b.permutationSeed);
+		expect(Number.isFinite(a.permutationSeed)).toBe(true);
+	});
+
+	it('survives the save/load round trip, including seed 0', async () => {
+		const { applyPermutationDefaults } = await import('./TrendFit.svelte');
+		const args = await nodeDefaults();
+		// A user configures the test and saves.
+		args.permuteTest = true;
+		args.autoPermutations = true;
+		args.nPermutations = 199;
+		args.permutationSeed = 0; // 0 is a legal seed — a `||` guard would eat it
+		args.permutationStatistic = 'rmse';
+
+		// Exactly what TableProcess.toJSON() persists, through a real JSON round trip.
+		const saved = JSON.parse(JSON.stringify({ id: 3, name: 'TrendFit', args }));
+		// ...and what the component does to the loaded args on mount.
+		const loaded = applyPermutationDefaults(saved.args);
+
+		expect(loaded.permutationSeed).toBe(0);
+		expect(loaded.permuteTest).toBe(true);
+		expect(loaded.autoPermutations).toBe(true);
+		expect(loaded.nPermutations).toBe(199);
+		expect(loaded.permutationStatistic).toBe('rmse');
+	});
+
+	it('backfills a pre-existing session that has no permutation keys, without touching set ones', async () => {
+		const { applyPermutationDefaults } = await import('./TrendFit.svelte');
+		const { PERMUTATION_DEFAULTS } = await import('$lib/utils/fitFunction.js');
+		const old = { xIN: 1, yIN: [2], model: 'linear', permutationSeed: 0, permuteTest: false };
+		applyPermutationDefaults(old);
+		expect(old.permutationSeed).toBe(0);
+		expect(old.permuteTest).toBe(false);
+		expect(old.nPermutations).toBe(PERMUTATION_DEFAULTS.nPermutations);
+		expect(old.permutationStatistic).toBe(PERMUTATION_DEFAULTS.permutationStatistic);
+		expect(old.autoPermutations).toBe(false);
+	});
+
+	it('the component no longer generates a random seed', async () => {
+		const { readFileSync } = await import('node:fs');
+		// import.meta.url is not a file: URL under this suite's environment, so
+		// resolve from the repo root (vitest's cwd) instead.
+		const src = readFileSync('src/lib/tableProcesses/TrendFit.svelte', 'utf8');
+		expect(src).not.toMatch(/Math\.random/);
+		// And the settings are read off args, not local state.
+		expect(src).toMatch(/seed: p\.args\.permutationSeed/);
+	});
+});

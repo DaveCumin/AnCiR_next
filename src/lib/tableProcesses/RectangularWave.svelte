@@ -10,6 +10,7 @@
 	import { attachPermutation } from '$lib/tableProcesses/permutationSupport.js';
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 
 	const displayName = 'Rectangular Wave';
 	const defaults = new Map([
@@ -150,6 +151,10 @@
 		result.outputXData = outputXData;
 		result.originTime_ms = originTime_ms;
 
+		// Per-column fit outcomes: a null or all-NaN fit is reported by name rather
+		// than shown as dashes with nothing to explain them.
+		const fitEntries = [];
+
 		const fixedOmega = fixOmega ? (2 * Math.PI) / fixedPeriod : null;
 		// Options for the permutation fit, matching this node's fit.
 		const permOptions = {
@@ -184,6 +189,8 @@
 				fixedOmega,
 				fixedDutyCycle
 			});
+
+			fitEntries.push({ label: `"${yCol.name}"`, result: fitResult ?? null });
 
 			if (fitResult) {
 				const xOutData = outputXData ?? tt;
@@ -261,7 +268,10 @@
 		}
 
 		// Not gated on anyValid: when a fit fails, the point count is the explanation.
-		result.warnings = fitSampleWarnings(argsIN);
+		result.warnings = [
+			...checkFitResultsFinite(fitEntries, 'The rectangular-wave fit'),
+			...fitSampleWarnings(argsIN)
+		];
 		return [result, anyValid];
 	}
 </script>
@@ -884,7 +894,23 @@
 	</div>
 {/if}
 
+<!-- Fit-failure and sample-size cautions. Shown inline as well as on the node's
+     warning badge, because the badge is a tooltip and the reason a fit shows
+     dashes must be readable without hovering. Same markup as Cosinor. -->
+{#each rwave?.warnings ?? [] as w (w)}
+	<p class="warn">{w}</p>
+{/each}
+
 <style>
+	/* Matches ChiSquared / Rayleigh / Cosinor / NPCRA. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.tp-stat-actions {
 		display: flex;
 		gap: 0.4rem;

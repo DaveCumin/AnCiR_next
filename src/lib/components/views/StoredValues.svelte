@@ -37,7 +37,7 @@
 <div class="stored-list">
 	{#if entries.length === 0}
 		<p class="empty-hint">
-			No stored values yet. Use the 💾 buttons in Cosinor, Trend Fit, or Actogram outputs to save
+			No stored values yet. Use the 💾 buttons in Cosinor, Fit trend, or Actogram outputs to save
 			computed values.
 		</p>
 	{:else}
