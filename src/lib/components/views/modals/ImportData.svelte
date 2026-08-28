@@ -2,6 +2,8 @@
 	// @ts-nocheck
 	import Papa from 'papaparse';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { sniffFile, looksLikeSession } from '$lib/utils/fileTypeSniff.js';
+	import { loadSessionFile as loadSessionFileViaRegistry } from '$lib/core/dataSourceActions.js';
 	import { isTrustedSessionUrl } from '$lib/utils/nlSession.js';
 	import * as XLSX from '$lib/utils/xlsxLite';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
@@ -149,6 +151,18 @@
 	let headers = $state([]);
 	let delimiter = $state('');
 	let targetFile = $state();
+	// Effective import kind of targetFile: 'csv' | 'awd' | 'excel'. Decided in
+	// doPreview() from the extension (firm for .csv/.awd/.xlsx/…) or by content
+	// sniffing for unknown extensions — see utils/fileTypeSniff.js. Every later
+	// branch (parseFile, countRows, loadData, checkAdditionalHeaders) reads this
+	// instead of re-checking the file NAME, so a wrong-extension file parses by
+	// what it IS. ('json' never reaches here: doPreview routes session JSON to
+	// the session loader and rejects data JSON before parsing.)
+	let targetKind = $state('csv');
+	// True when the kind could not be determined and we are ATTEMPTING csv as a
+	// fallback; drives the "check the columns look right" warning / garbage error.
+	let unknownFallback = $state(false);
+	let warnedFallbackFor = null; // File we already warned about (re-previews must not re-toast)
 	let previewIN = $state(50);
 	// Preview cap remembered across the AWD double-pass, because `previewIN`
 	// itself becomes PapaParse's "unlimited" (0) sentinel for the second pass.
@@ -287,7 +301,9 @@
 	let labelRowSuggestion = $state(null); // { rowIndex } when a label row is auto-detected
 	// Offer the "derive from names" chip only when names show a replicate pattern.
 	let namesLookLabelled = $derived(headers.length > 1 && hasReplicatePattern(headers));
-	let anyLabelsSet = $derived(Object.values(columnLabels).some((v) => v && String(v).trim() !== ''));
+	let anyLabelsSet = $derived(
+		Object.values(columnLabels).some((v) => v && String(v).trim() !== '')
+	);
 
 	// Date+Time column combination
 	let dateTimePairs = $state([]); // [{ dateCol, timeCol, dateFormat, timeFormat }]
@@ -556,6 +572,9 @@
 		delimiter = '';
 		targetFile = null;
 		targetFiles = [];
+		targetKind = 'csv';
+		unknownFallback = false;
+		warnedFallbackFor = null;
 		previewIN = 50;
 		previewDisplayStart = 1;
 		skipLines = 0;
@@ -861,7 +880,9 @@
 	}
 
 	async function tryParseEnspireMultiplate(file) {
-		if (!file || !file.name.toLowerCase().match(/\.(csv|txt)$/)) return null;
+		// Effective-kind gate (was a .csv/.txt name check): sniffed-as-CSV files
+		// with other extensions get the same EnSpire detection.
+		if (!file || targetKind !== 'csv') return null;
 
 		const text = await new Promise((resolve, reject) => {
 			const reader = new FileReader();
@@ -998,6 +1019,23 @@
 		}
 	}
 
+	/**
+	 * TEST SEAM: snapshot of the preview state after openImportModalWithFiles.
+	 * Read-only; integration tests use it to assert which parser the sniffed
+	 * kind routed a file to without reaching into component internals.
+	 */
+	export function _importPreviewState() {
+		return {
+			headers: [...headers],
+			targetKind,
+			unknownFallback,
+			errorInfile,
+			importReady,
+			showImportModal,
+			rowCount: headers.length > 0 ? (parsedData?.[headers[0]]?.length ?? 0) : 0
+		};
+	}
+
 	async function onFileChange(e) {
 		const files = [...e.target.files];
 		targetFiles = files;
@@ -1018,7 +1056,91 @@
 		loadProgress = { stage: 'Parsing', detail: 'Detecting format…' };
 		await tick();
 
+		// Decide WHAT this file is before deciding how to parse it. Firm
+		// extensions (.csv/.awd/.xlsx/…) resolve instantly; anything else is
+		// content-sniffed (cached per File, so re-previews cost nothing).
+		if (targetFile) {
+			const sniff = await sniffFile(targetFile);
+			if (sniff.kind === 'json') {
+				// "JSON" is two different things here. A SESSION file loads as a
+				// session (same as dropping it on the canvas); arbitrary data
+				// JSON has no importer, so say so instead of mangling it as CSV.
+				let parsed = null;
+				try {
+					parsed = JSON.parse(await targetFile.text());
+				} catch {
+					parsed = null;
+				}
+				if (parsed && looksLikeSession(parsed)) {
+					const sessionFile = targetFile;
+					resetValues();
+					showImportModal = false;
+					awaitingPreview = false;
+					loadProgress = { stage: '', detail: '' };
+					loadSessionFileViaRegistry(sessionFile);
+					return;
+				}
+				errorInfile = true;
+				importReady = false;
+				error = { reason: 'JSON file is not an AnCiR session' };
+				addNotification(
+					`"${targetFile.name}" is JSON but not an AnCiR session file. ` +
+						`JSON data import is not supported — recognised formats are CSV/TSV text, ` +
+						`Excel (.xlsx/.xls), AWD (Actiwatch), and AnCiR session .json files.`
+				);
+				awaitingPreview = false;
+				loadProgress = { stage: '', detail: '' };
+				return;
+			}
+			unknownFallback = sniff.kind === 'unknown';
+			// Unknown content: attempt the CSV path anyway (PapaParse copes with
+			// many delimited text files); doPreview warns or errors below once
+			// it can see what came out.
+			targetKind = unknownFallback ? 'csv' : sniff.kind;
+		}
+
 		await parseFile();
+
+		// Fallback verdict for unrecognised files: a plausible table imports
+		// with a visible warning; garbage gets a clear error naming the
+		// recognised formats. The verdict re-runs on every preview (delimiter /
+		// skip tweaks can rescue a file) but each toast fires once per file.
+		if (unknownFallback && targetFile) {
+			const rowCount = headers.length > 0 ? (parsedData?.[headers[0]]?.length ?? 0) : 0;
+			const firstCol = headers.length === 1 ? (parsedData?.[headers[0]] ?? []) : null;
+			const singleColNumeric =
+				firstCol &&
+				firstCol.length > 0 &&
+				firstCol.filter((v) => typeof v === 'number' && Number.isFinite(v)).length >=
+					firstCol.length * 0.8;
+			const plausible = rowCount >= 1 && (headers.length >= 2 || singleColNumeric);
+			const firstVerdict = warnedFallbackFor !== targetFile;
+			warnedFallbackFor = targetFile;
+			if (plausible) {
+				// Our plausibility check is the arbiter here: PapaParse flags e.g.
+				// UndetectableDelimiter on a single-column file, which must not
+				// block the fallback import the warning is telling the user about.
+				errorInfile = false;
+				error = {};
+				if (firstVerdict) {
+					addNotification(
+						`Unrecognised file type ("${targetFile.name}"); imported as CSV — check the columns look right.`,
+						'warning',
+						12000
+					);
+				}
+			} else {
+				errorInfile = true;
+				importReady = false;
+				error = { reason: 'Unrecognised file type' };
+				if (firstVerdict) {
+					addNotification(
+						`Could not recognise "${targetFile.name}". AnCiR can import CSV/TSV text, ` +
+							`Excel (.xlsx/.xls), AWD (Actiwatch), and AnCiR session .json files.`
+					);
+				}
+			}
+		}
 
 		if (headers.length > 0 && selectedColumns.size === 0) {
 			// Pre-select everything **only if nothing is selected yet**
@@ -1061,14 +1183,16 @@
 			await checkAdditionalHeaders(targetFiles.slice(1));
 		}
 
-		importReady = true;
+		// An unknown-type file whose CSV attempt produced garbage is NOT ready —
+		// the error notification above told the user why.
+		importReady = !errorInfile || !unknownFallback;
 	}
 
 	async function countRows() {
 		if (!targetFile) return;
 
-		const isExcel = targetFile.name.toLowerCase().match(/\.(xlsx|xls)$/);
-		const isAWD = targetFile.name.toLowerCase().endsWith('.awd');
+		const isExcel = targetKind === 'excel';
+		const isAWD = targetKind === 'awd';
 
 		if (isExcel) {
 			// For Excel, read the full workbook and count rows
@@ -1304,7 +1428,7 @@
 		errorInfile = false;
 		enspireMultiplatePayload = null;
 
-		const isExcel = targetFile.name.toLowerCase().match(/\.(xlsx|xls)$/);
+		const isExcel = targetKind === 'excel';
 
 		if (isExcel) {
 			return await parseXLSX(targetFile);
@@ -1355,8 +1479,8 @@
 
 						return lines.join('\n');
 					},
-					complete: async (results, file) => {
-						if (file.name.toLowerCase().endsWith('.awd')) {
+					complete: async (results) => {
+						if (targetKind === 'awd') {
 							results.errors = [];
 							if (parseAttempts === 0) {
 								// Re-parse: no header (AWD has its own 7-line header),
@@ -1447,8 +1571,9 @@
 
 	/** Parse just enough of a file to get its column headers. */
 	async function getFileHeaders(file) {
-		const isExcel = file.name.toLowerCase().match(/\.(xlsx|xls)$/);
-		const isAWD = file.name.toLowerCase().endsWith('.awd');
+		const kind = (await sniffFile(file)).kind;
+		const isExcel = kind === 'excel';
+		const isAWD = kind === 'awd';
 
 		if (isAWD) {
 			throw new Error('AWD format files cannot be combined with other files.');
@@ -1519,7 +1644,7 @@
 		mismatchedColumns = [];
 		commonColumns = [];
 
-		if (targetFile?.name.toLowerCase().endsWith('.awd')) {
+		if (targetKind === 'awd') {
 			extraFileErrors = additionalFiles.map((f) => ({
 				filename: f.name,
 				error: 'Multi-file concatenation is not supported for AWD files.'
@@ -1622,7 +1747,7 @@
 
 	/** Fully parse an additional file and return column-oriented data. */
 	async function parseAdditionalFileData(file) {
-		const isExcel = file.name.toLowerCase().match(/\.(xlsx|xls)$/);
+		const isExcel = (await sniffFile(file)).kind === 'excel';
 
 		if (isExcel) {
 			return new Promise((resolve, reject) => {
@@ -1717,7 +1842,7 @@
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms || 50));
 
-		const isAWD = targetFile.name.toLowerCase().endsWith('.awd');
+		const isAWD = targetKind === 'awd';
 
 		if (isAWD) {
 			// For AWD: force clean full parse (double-pass) and ensure awdMeta is set
@@ -2405,6 +2530,10 @@
 							{/if}
 						</p>
 					</div>
+					<p class="tab-hint">
+						Recognised formats: CSV / delimited text, Excel (.xlsx / .xls), AWD (Actiwatch), and
+						AnCiR session .json. Other files are inspected and imported by content.
+					</p>
 				{:else if sourceMode === 'url'}
 					<div
 						class="control-input-horizontal url-input-row"
@@ -2459,7 +2588,6 @@
 				bind:this={fileInput}
 				id="fileInput"
 				type="file"
-				accept=".csv,.awd,.txt,.xlsx,.xls"
 				multiple
 				onchange={onFileChange}
 				style="display: none;"
@@ -2640,8 +2768,8 @@
 								{#if labelRowSuggestion}
 									<div class="label-suggest">
 										<span
-											>Row {labelRowSuggestion.rowIndex + 1} looks like trace labels (text above
-											numeric data).</span
+											>Row {labelRowSuggestion.rowIndex + 1} looks like trace labels (text above numeric
+											data).</span
 										>
 										<button
 											class="dialog-button label-suggest-yes"
@@ -2649,9 +2777,8 @@
 											onclick={() => pickLabelRow(labelRowSuggestion.rowIndex)}
 											>Use as labels</button
 										>
-										<button
-											class="link-button"
-											onclick={() => (labelRowSuggestion = null)}>Dismiss</button
+										<button class="link-button" onclick={() => (labelRowSuggestion = null)}
+											>Dismiss</button
 										>
 									</div>
 								{/if}
@@ -2694,8 +2821,7 @@
 								</div>
 								{#if labelRowIndex != null}
 									<p class="label-note">
-										Row {labelRowIndex + 1} is used as labels and will be excluded from the imported
-										data.
+										Row {labelRowIndex + 1} is used as labels and will be excluded from the imported data.
 									</p>
 								{/if}
 							{/if}
@@ -2783,9 +2909,7 @@
 													{#if combinedTimeCols.has(col)}
 														<!-- skip: merged into date col -->
 													{:else if combinedDateCols.has(col)}
-														<th class="label-cell label-cell-muted" title="Time column"
-															>time</th
-														>
+														<th class="label-cell label-cell-muted" title="Time column">time</th>
 													{:else}
 														<th class="label-cell">
 															<input

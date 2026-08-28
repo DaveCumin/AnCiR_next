@@ -85,8 +85,9 @@ export function handleCanvasFileDrop(fileList) {
 		loadSessionFile(sessionFiles[0]);
 		return true;
 	}
-	// Unknown extension — fall back to the import modal (it can still parse many
-	// delimited text files regardless of extension).
+	// Unknown extension — hand it to the import modal, which content-sniffs the
+	// file (JSON session / AWD / delimited text; see utils/fileTypeSniff.js) and
+	// routes or falls back to a CSV attempt with a warning.
 	openImportDataFiles(files);
 	return true;
 }
