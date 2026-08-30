@@ -50,6 +50,23 @@ describe('buildSidecar', () => {
 		expect(sidecar).toMatch(/export function buildPythonScript\(session\)/);
 	});
 
+	it('exports the multi-file entry point with the app version baked in', () => {
+		expect(sidecar).toMatch(/export function buildPythonExportFiles\(session, opts\)/);
+		// Default 'dev' here (no version passed); writeSidecar passes package.json's.
+		expect(sidecar).toContain(`const ANCIR_APP_VERSION = "dev";`);
+	});
+
+	it('stamps the real package.json version when one is given', () => {
+		const stamped = buildSidecar(read(GENERATOR_SRC), '# rt', '72.99');
+		expect(stamped).toContain(`const ANCIR_APP_VERSION = "72.99";`);
+	});
+
+	it('refuses a generator that stopped exporting sessionToPythonFiles', () => {
+		expect(() => assertSelfContained('export function sessionToPython() {}')).toThrow(
+			/sessionToPythonFiles/
+		);
+	});
+
 	it('stays dependency-free, so a browser can load it straight from static/', () => {
 		const jsImport = /^\s*import\s+(?:[\w*{][^\n]*\sfrom\s+)?['"]/m;
 		expect(jsImport.test(sidecar)).toBe(false);

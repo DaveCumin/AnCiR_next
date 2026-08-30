@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sessionToPython } from './pythonExport.js';
+import { sessionToPython, sessionToPythonFiles } from './pythonExport.js';
 
 // A tiny stand-in for tools/ancir_runtime.py: enough to exercise the import
 // stripping and confirm the body is inlined verbatim.
@@ -23,7 +23,13 @@ const SESSION = {
 	data: [
 		{ id: 36, name: 'x', type: 'number', data: 36, processes: [] },
 		// A referential column with a null-valued field (compression) that must be dropped.
-		{ id: 37, name: 'y', type: 'number', refId: 37, processes: [{ funcname: 'add', name: 'Add', args: { n: 5 } }] }
+		{
+			id: 37,
+			name: 'y',
+			type: 'number',
+			refId: 37,
+			processes: [{ funcname: 'add', name: 'Add', args: { n: 5 } }]
+		}
 	],
 	tableProcesses: [{ name: 'Cosinor', args: { xIN: 36, yIN: [37], useFixedPeriod: true } }],
 	plots: [{ id: 1, type: 'scatterplot' }],
@@ -109,5 +115,116 @@ describe('sessionToPython', () => {
 	it('rejects bad input', () => {
 		expect(() => sessionToPython(null, FAKE_RUNTIME)).toThrow();
 		expect(() => sessionToPython({}, '')).toThrow();
+	});
+});
+
+describe('sessionToPythonFiles', () => {
+	it('with default options is exactly the single self-contained script', () => {
+		const files = sessionToPythonFiles(SESSION, FAKE_RUNTIME);
+		expect(files.map((f) => f.name)).toEqual(['session.py']);
+		expect(files[0].text).toBe(sessionToPython(SESSION, FAKE_RUNTIME));
+	});
+
+	it('split mode emits a version-stamped helper plus a slim analysis script', () => {
+		const files = sessionToPythonFiles(SESSION, FAKE_RUNTIME, { split: true, version: '9.9' });
+		expect(files.map((f) => f.name)).toEqual(['analysis.py', 'ancir_helpers.py']);
+		const analysis = files[0].text;
+		const helpers = files[1].text;
+
+		// The helper is the FULL runtime, verbatim, stamped at the end.
+		expect(helpers).toContain(FAKE_RUNTIME);
+		expect(helpers).toContain('ANCIR_HELPERS_VERSION = "9.9"');
+
+		// The analysis file imports it, checks the version, and holds NO runtime
+		// function definitions — only the data and the pipeline.
+		expect(analysis).toContain('from ancir_helpers import *');
+		expect(analysis).toContain('_EXPECTED_HELPERS_VERSION = "9.9"');
+		expect(analysis).not.toContain('class Column');
+		expect(analysis).not.toContain('def run_table_process');
+		expect(analysis.match(/^def /gm)).toEqual(['def ']); // only def main():
+		expect(analysis).toMatch(/def main\(\):/);
+		expect(analysis.trimEnd().endsWith('main()')).toBe(true);
+
+		// The session data still travels with the analysis, unchanged.
+		expect(extractEmbedded(analysis, 'RAW_DATA')).toEqual(SESSION.rawData);
+	});
+
+	it('keeps the helper importable: only comments precede the runtime', () => {
+		// Anything but comments before the runtime would demote its module
+		// docstring and make `from __future__` a SyntaxError.
+		const files = sessionToPythonFiles(SESSION, FAKE_RUNTIME, { split: true });
+		const helpers = files.find((f) => f.name === 'ancir_helpers.py').text;
+		const preamble = helpers.slice(0, helpers.indexOf('from __future__'));
+		for (const line of preamble.split('\n')) {
+			expect(line === '' || line.startsWith('#')).toBe(true);
+		}
+	});
+
+	it('stamps "dev" when no version is given', () => {
+		const files = sessionToPythonFiles(SESSION, FAKE_RUNTIME, { split: true });
+		expect(files[1].text).toContain('ANCIR_HELPERS_VERSION = "dev"');
+	});
+
+	it('rejects bad input', () => {
+		expect(() => sessionToPythonFiles(null, FAKE_RUNTIME)).toThrow();
+		expect(() => sessionToPythonFiles({}, '')).toThrow();
+	});
+});
+
+describe('CSV data sidecar (Python)', () => {
+	// One column of each classification: num (with a null), str (needing RFC-4180
+	// quoting), then everything the CSV cannot represent losslessly.
+	const CSV_SESSION = {
+		rawData: {
+			1: [0, 1.5, null],
+			2: ['a', 'b,c', 'd"e'],
+			3: [1, 'x'], // mixed types → inline
+			4: ['ok', ''], // empty string (≡ padding cell) → inline
+			5: [NaN], // non-finite → inline
+			6: [], // empty → inline
+			7: [9] // short num column → padded
+		},
+		data: [],
+		tableProcesses: []
+	};
+
+	it('moves finite-number and non-empty-string columns to the CSV, keeps the rest inline', () => {
+		const files = sessionToPythonFiles(CSV_SESSION, FAKE_RUNTIME, { dataAsCsv: true });
+		expect(files.map((f) => f.name)).toEqual(['session.py', 'session_data.csv']);
+		const script = files[0].text;
+		expect(Object.keys(extractEmbedded(script, 'RAW_DATA'))).toEqual(['3', '4', '5', '6']);
+		expect(extractEmbedded(script, 'CSV_COLUMNS')).toEqual([
+			{ id: 1, kind: 'num', length: 3 },
+			{ id: 2, kind: 'str', length: 3 },
+			{ id: 7, kind: 'num', length: 1 }
+		]);
+		expect(script).toContain('pd.read_csv(Path(__file__).with_name("session_data.csv")');
+	});
+
+	it('writes null as empty cell, quotes per RFC 4180, and pads short columns', () => {
+		const files = sessionToPythonFiles(CSV_SESSION, FAKE_RUNTIME, { dataAsCsv: true });
+		const csv = files.find((f) => f.name === 'session_data.csv').text;
+		expect(csv).toBe(
+			'col_1,col_2,col_7\n' + '0,a,9\n' + '1.5,"b,c",\n' + ',"d""e",\n' // null → '', quoted comma + doubled quote, col_7 padded
+		);
+	});
+
+	it('falls back to fully inline when no column qualifies (never ships an empty CSV)', () => {
+		const s = { rawData: { 3: [1, 'x'] }, data: [], tableProcesses: [] };
+		const files = sessionToPythonFiles(s, FAKE_RUNTIME, { dataAsCsv: true });
+		expect(files.map((f) => f.name)).toEqual(['session.py']);
+		expect(files[0].text).toBe(sessionToPython(s, FAKE_RUNTIME));
+	});
+
+	it('composes with split mode: helper + analysis + data', () => {
+		const files = sessionToPythonFiles(CSV_SESSION, FAKE_RUNTIME, {
+			split: true,
+			dataAsCsv: true
+		});
+		expect(files.map((f) => f.name)).toEqual([
+			'analysis.py',
+			'ancir_helpers.py',
+			'session_data.csv'
+		]);
 	});
 });

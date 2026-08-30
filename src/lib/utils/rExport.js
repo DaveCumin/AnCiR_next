@@ -197,20 +197,117 @@ function colMetaForColumn(col) {
 	return out;
 }
 
-/**
- * Build a self-contained R script reproducing `session`.
- * @param {any} session - parsed session object (as from outputCoreAsJson()).
- * @param {string} runtimeSrc - verbatim source of tools/ancir_runtime.R.
- * @returns {string} the R script text.
- */
-export function sessionToR(session, runtimeSrc) {
-	if (!session || typeof session !== 'object') {
-		throw new Error('sessionToR: invalid session object');
-	}
-	if (typeof runtimeSrc !== 'string' || !runtimeSrc) {
-		throw new Error('sessionToR: missing runtime source');
-	}
+// ----------------------------------------------------------------------
+// Optional CSV data sidecar ("Export data as separate CSV")
+//
+// KEEP IN SYNC with pythonExport.js: both exporters must write byte-identical
+// session_data.csv for the same session (one file serves either script), and
+// neither file may import the other because both are inlined verbatim into
+// their sidecars. A test compares their output.
+// ----------------------------------------------------------------------
 
+const DATA_CSV_NAME = 'session_data.csv';
+
+/**
+ * Classify a raw-data column for the CSV sidecar.
+ * - 'num': every value is a finite number or null. Nulls become empty cells.
+ * - 'str': every value is a NON-EMPTY string. (An empty string would be
+ *   indistinguishable from a null/padding cell, so such columns stay inline.)
+ * - null: anything else (mixed types, non-finite numbers, empty arrays) stays
+ *   embedded inline, where toRLiteral already round-trips it.
+ */
+function csvKindFor(values) {
+	if (!Array.isArray(values) || values.length === 0) return null;
+	let allNum = true;
+	let allStr = true;
+	for (const v of values) {
+		if (!(v === null || (typeof v === 'number' && Number.isFinite(v)))) allNum = false;
+		if (!(typeof v === 'string' && v !== '')) allStr = false;
+		if (!allNum && !allStr) return null;
+	}
+	return allNum ? 'num' : 'str';
+}
+
+/** One CSV cell. Numbers via JSON.stringify (shortest round-trip form, exactly
+ *  what the inline path embeds); null → empty; RFC-4180 quoting for text. */
+function csvCell(v) {
+	if (v === null || v === undefined) return '';
+	const s = typeof v === 'number' ? JSON.stringify(v) : String(v);
+	return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+/**
+ * Split rawData into CSV-able columns and an inline remainder.
+ * Returns { inline, specs, csvText }; csvText is null when nothing qualifies
+ * (the export then silently stays fully inline rather than shipping an empty CSV).
+ */
+function splitRawDataForCsv(rawData) {
+	const inline = {};
+	const specs = [];
+	const columns = [];
+	for (const [key, values] of Object.entries(rawData ?? {})) {
+		const kind = csvKindFor(values);
+		if (kind === null) {
+			inline[key] = values;
+			continue;
+		}
+		specs.push({ id: /^-?\d+$/.test(key) ? Number(key) : key, kind, length: values.length });
+		columns.push(values);
+	}
+	if (specs.length === 0) return { inline: rawData ?? {}, specs: [], csvText: null };
+	const nRows = Math.max(...specs.map((s) => s.length));
+	const lines = [specs.map((s) => csvCell(`col_${s.id}`)).join(',')];
+	for (let r = 0; r < nRows; r++) {
+		lines.push(columns.map((col) => (r < col.length ? csvCell(col[r]) : '')).join(','));
+	}
+	return { inline, specs, csvText: lines.join('\n') + '\n' };
+}
+
+// script_path(): the FOOTER defines the identical helper, but only right
+// before main() runs — the loaders below execute at source time, earlier, so
+// each block that needs it carries its own copy.
+const R_SCRIPT_PATH_FN = `script_path <- function() {
+  a <- commandArgs(trailingOnly = FALSE)
+  f <- sub("^--file=", "", grep("^--file=", a, value = TRUE))
+  if (length(f)) f[1] else "session"
+}`;
+
+// Reads the CSV sidecar back into RAW_DATA. Everything is read as character
+// first (na.strings = character(0), so a literal "NA" string survives), then
+// truncated to the recorded length — separating real trailing nulls from
+// rectangle padding — and converted per the column's kind: 'num' → numeric
+// vector with NA for empty cells (what the inline c(...) literal holds),
+// 'str' → list of strings (what the inline list(...) literal holds).
+const R_CSV_LOADER = `# Path of this script (the pipeline below defines the same helper; identical),
+# so ${DATA_CSV_NAME} resolves relative to it however the script is invoked.
+${R_SCRIPT_PATH_FN}
+
+# The column data lives in ${DATA_CSV_NAME}, exported alongside this script —
+# keep both files in the same folder. Cells hold exactly what the inline
+# export embeds: numbers at full precision, empty cells for missing values,
+# text verbatim.
+local({
+  df <- read.csv(file.path(dirname(script_path()), ${JSON.stringify(DATA_CSV_NAME)}),
+                 colClasses = "character", check.names = FALSE,
+                 na.strings = character(0))
+  for (spec in CSV_COLUMNS) {
+    cells <- df[[paste0("col_", spec$id)]][seq_len(spec$length)]
+    RAW_DATA[[as.character(spec$id)]] <<- if (identical(spec$kind, "num")) {
+      v <- suppressWarnings(as.numeric(cells)); v[!nzchar(cells)] <- NA; v
+    } else {
+      as.list(cells)
+    }
+  }
+})`;
+
+/**
+ * The "# ----- Session data (embedded) -----" block shared by every export
+ * shape. Returns { lines, csvText }; csvText is non-null only when dataAsCsv
+ * found at least one CSV-able column.
+ * @param {any} session
+ * @param {boolean} dataAsCsv
+ */
+function dataSectionLines(session, dataAsCsv) {
 	const rawData = session.rawData ?? {};
 	const columns = session.data ?? [];
 	// Analyses are free table-process nodes; legacy grouped `tables` are flattened in for
@@ -236,12 +333,131 @@ export function sessionToR(session, runtimeSrc) {
 		}
 	}
 
-	const parts = [HEADER, '', runtimeSrc, ''];
-	parts.push('# ----- Session data (embedded) -----');
-	parts.push(`RAW_DATA <- ${toRLiteral(rawData)}`);
-	parts.push(`COLUMN_META <- ${toRLiteral(colMeta)}`);
-	parts.push(`TABLE_PROCESSES <- ${toRLiteral(tpsClean)}`);
-	parts.push(FOOTER_RUN);
+	const { inline, specs, csvText } = dataAsCsv
+		? splitRawDataForCsv(rawData)
+		: { inline: rawData, specs: [], csvText: null };
 
-	return parts.join('\n');
+	const lines = ['# ----- Session data (embedded) -----'];
+	lines.push(`RAW_DATA <- ${toRLiteral(inline)}`);
+	if (csvText !== null) {
+		lines.push(`CSV_COLUMNS <- ${toRLiteral(specs)}`);
+		lines.push(R_CSV_LOADER);
+	}
+	lines.push(`COLUMN_META <- ${toRLiteral(colMeta)}`);
+	lines.push(`TABLE_PROCESSES <- ${toRLiteral(tpsClean)}`);
+	return { lines, csvText };
+}
+
+/**
+ * Header for the split-mode analysis script: sources ancir_helpers.R from its
+ * own directory, then checks the helper version — WARNING on skew rather than
+ * failing, so re-running old work still runs but a mismatch is visible.
+ * @param {string} version
+ */
+function analysisHeader(version) {
+	return `#!/usr/bin/env Rscript
+# Generated by AnCiR — session analysis (experimental). Do not edit by hand.
+#
+# Reproduces the analyses in an AnCiR session, in session order. The analysis
+# functions live in ancir_helpers.R, exported alongside this file — keep both
+# (and any ${DATA_CSV_NAME}) in the SAME folder. Requires nothing beyond base R.
+# Run it (\`Rscript this_file.R\`) to write <name>_output/ with columns.csv and
+# columns_after_analyses.csv.
+
+# Path of this script (the pipeline below defines the same helper; identical),
+# so ancir_helpers.R resolves relative to it however the script is invoked.
+${R_SCRIPT_PATH_FN}
+
+source(file.path(dirname(script_path()), "ancir_helpers.R"))
+
+.expected_helpers <- ${JSON.stringify(version)}
+if (!exists("ANCIR_HELPERS_VERSION") || !identical(ANCIR_HELPERS_VERSION, .expected_helpers)) {
+  message(sprintf(
+    "[ancir] WARNING: ancir_helpers.R is version %s but this script was exported with %s. Results may differ.",
+    if (exists("ANCIR_HELPERS_VERSION")) ANCIR_HELPERS_VERSION else "<missing>",
+    .expected_helpers))
+}`;
+}
+
+/**
+ * The helper file for split mode: the FULL runtime, verbatim, stamped with the
+ * exporting AnCiR version.
+ * @param {string} runtimeSrc
+ * @param {string} version
+ */
+function helpersFile(runtimeSrc, version) {
+	return `# Generated by AnCiR ${version} — analysis helper functions. Do not edit by hand.
+# This file is the complete AnCiR R runtime, identical for every session
+# exported by this AnCiR version. The matching analysis script sources it and
+# checks ANCIR_HELPERS_VERSION (defined at the end). Base R only.
+
+${runtimeSrc}
+
+# Version stamp checked by the analysis script exported with this file.
+ANCIR_HELPERS_VERSION <- ${JSON.stringify(version)}
+`;
+}
+
+/**
+ * Build a self-contained R script reproducing `session`.
+ * @param {any} session - parsed session object (as from outputCoreAsJson()).
+ * @param {string} runtimeSrc - verbatim source of tools/ancir_runtime.R.
+ * @returns {string} the R script text.
+ */
+export function sessionToR(session, runtimeSrc) {
+	if (!session || typeof session !== 'object') {
+		throw new Error('sessionToR: invalid session object');
+	}
+	if (typeof runtimeSrc !== 'string' || !runtimeSrc) {
+		throw new Error('sessionToR: missing runtime source');
+	}
+	const { lines } = dataSectionLines(session, false);
+	return [HEADER, '', runtimeSrc, '', ...lines, FOOTER_RUN].join('\n');
+}
+
+/**
+ * Build the R export as a set of files.
+ *
+ * Options (mirroring sessionToPythonFiles):
+ * - split: emit ancir_helpers.R (the full runtime, version-stamped) plus a
+ *   short analysis.R holding only the session's data and pipeline. Default
+ *   false → one self-contained session.R, identical to sessionToR.
+ * - dataAsCsv: move column data into session_data.csv, read back by the script
+ *   with read.csv. Columns the CSV cannot represent losslessly stay inline.
+ * - version: the exporting AnCiR version, stamped into the helper file and
+ *   checked by the analysis script ('dev' when absent).
+ *
+ * @param {any} session - parsed session object (as from outputCoreAsJson()).
+ * @param {string} runtimeSrc - verbatim source of tools/ancir_runtime.R.
+ * @param {{split?: boolean, dataAsCsv?: boolean, version?: string}} [options]
+ * @returns {{name: string, text: string}[]} files to deliver together.
+ */
+export function sessionToRFiles(session, runtimeSrc, options = {}) {
+	if (!session || typeof session !== 'object') {
+		throw new Error('sessionToRFiles: invalid session object');
+	}
+	if (typeof runtimeSrc !== 'string' || !runtimeSrc) {
+		throw new Error('sessionToRFiles: missing runtime source');
+	}
+	const opts = options ?? {};
+	const split = opts.split === true;
+	const dataAsCsv = opts.dataAsCsv === true;
+	const version = typeof opts.version === 'string' && opts.version ? opts.version : 'dev';
+
+	const { lines, csvText } = dataSectionLines(session, dataAsCsv);
+	const files = [];
+	if (!split) {
+		files.push({
+			name: 'session.R',
+			text: [HEADER, '', runtimeSrc, '', ...lines, FOOTER_RUN].join('\n')
+		});
+	} else {
+		files.push({
+			name: 'analysis.R',
+			text: [analysisHeader(version), '', ...lines, FOOTER_RUN].join('\n')
+		});
+		files.push({ name: 'ancir_helpers.R', text: helpersFile(runtimeSrc, version) });
+	}
+	if (csvText !== null) files.push({ name: DATA_CSV_NAME, text: csvText });
+	return files;
 }

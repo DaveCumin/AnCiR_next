@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { toRLiteral, sessionToR } from './rExport.js';
+import { toRLiteral, sessionToR, sessionToRFiles } from './rExport.js';
+import { sessionToPythonFiles } from './pythonExport.js';
 import { checkRSupport, explainRSupport, runtimeKey } from './rExportSupport.js';
 
 describe('toRLiteral', () => {
@@ -73,6 +74,95 @@ describe('sessionToR', () => {
 		const out = sessionToR(session, '#');
 		expect(out).not.toContain('jsonlite');
 		expect(out).not.toContain('fromJSON');
+	});
+});
+
+describe('sessionToRFiles', () => {
+	const session = {
+		rawData: { 1: [0, 1, 2] },
+		data: [{ id: 1, name: 't', type: 'number', data: 1, processes: [] }],
+		tableProcesses: []
+	};
+	const RT = 'fit_cosinor_fixed <- function(t, y) NULL\n# RUNTIME MARKER';
+
+	it('with default options is exactly the single self-contained script', () => {
+		const files = sessionToRFiles(session, RT);
+		expect(files.map((f) => f.name)).toEqual(['session.R']);
+		expect(files[0].text).toBe(sessionToR(session, RT));
+	});
+
+	it('split mode emits a version-stamped helper plus a slim analysis script', () => {
+		const files = sessionToRFiles(session, RT, { split: true, version: '9.9' });
+		expect(files.map((f) => f.name)).toEqual(['analysis.R', 'ancir_helpers.R']);
+		const analysis = files[0].text;
+		const helpers = files[1].text;
+
+		// The helper is the FULL runtime, verbatim, stamped at the end.
+		expect(helpers).toContain(RT);
+		expect(helpers).toContain('ANCIR_HELPERS_VERSION <- "9.9"');
+
+		// The analysis file sources it from its own directory, checks the version,
+		// and holds NO runtime function definitions — only data and pipeline.
+		expect(analysis).toContain('source(file.path(dirname(script_path()), "ancir_helpers.R"))');
+		expect(analysis).toContain('.expected_helpers <- "9.9"');
+		expect(analysis).not.toContain('fit_cosinor_fixed <- function');
+		expect(analysis).not.toContain('# RUNTIME MARKER');
+		expect(analysis).toContain('RAW_DATA <- ');
+		expect(analysis.trimEnd().endsWith('main()')).toBe(true);
+	});
+
+	it('stamps "dev" when no version is given', () => {
+		const files = sessionToRFiles(session, RT, { split: true });
+		expect(files[1].text).toContain('ANCIR_HELPERS_VERSION <- "dev"');
+	});
+
+	it('rejects bad input', () => {
+		expect(() => sessionToRFiles(null, RT)).toThrow();
+		expect(() => sessionToRFiles({}, '')).toThrow();
+	});
+});
+
+describe('CSV data sidecar (R)', () => {
+	const CSV_SESSION = {
+		rawData: {
+			1: [0, 1.5, null], // num with a null
+			2: ['a', 'b,c', 'd"e'], // str needing RFC-4180 quoting
+			3: [1, 'x'], // mixed → inline
+			4: ['ok', ''] // empty string (≡ padding cell) → inline
+		},
+		data: [],
+		tableProcesses: []
+	};
+
+	it('moves CSV-able columns out and reads them back with read.csv', () => {
+		const files = sessionToRFiles(CSV_SESSION, '#', { dataAsCsv: true });
+		expect(files.map((f) => f.name)).toEqual(['session.R', 'session_data.csv']);
+		const script = files[0].text;
+		// The inline remainder holds only the columns the CSV cannot represent.
+		expect(script).toContain('RAW_DATA <- list("3" = list(1, "x"), "4" = list("ok", ""))');
+		expect(script).toContain('CSV_COLUMNS <- ');
+		expect(script).toContain('read.csv(file.path(dirname(script_path()), "session_data.csv")');
+		// A literal "NA" string must survive the read, so nothing may map to NA.
+		expect(script).toContain('na.strings = character(0)');
+	});
+
+	it('falls back to fully inline when no column qualifies', () => {
+		const s = { rawData: { 3: [1, 'x'] }, data: [], tableProcesses: [] };
+		const files = sessionToRFiles(s, '#', { dataAsCsv: true });
+		expect(files.map((f) => f.name)).toEqual(['session.R']);
+		expect(files[0].text).toBe(sessionToR(s, '#'));
+	});
+
+	it('writes a byte-identical session_data.csv to the Python exporter', () => {
+		// One data file serves either script, and the duplicated CSV code in the two
+		// generators (which may not import each other) cannot drift silently.
+		const rCsv = sessionToRFiles(CSV_SESSION, '#', { dataAsCsv: true }).find(
+			(f) => f.name === 'session_data.csv'
+		);
+		const pyCsv = sessionToPythonFiles(CSV_SESSION, '# py runtime', { dataAsCsv: true }).find(
+			(f) => f.name === 'session_data.csv'
+		);
+		expect(rCsv.text).toBe(pyCsv.text);
 	});
 });
 

@@ -191,6 +191,91 @@ function embed(name, value) {
 	return `${name} = json.loads(${JSON.stringify(JSON.stringify(value))})`;
 }
 
+// ----------------------------------------------------------------------
+// Optional CSV data sidecar ("Export data as separate CSV")
+//
+// KEEP IN SYNC with rExport.js: both exporters must write byte-identical
+// session_data.csv for the same session (one file serves either script), and
+// neither file may import the other because both are inlined verbatim into
+// their sidecars. A test compares their output.
+// ----------------------------------------------------------------------
+
+const DATA_CSV_NAME = 'session_data.csv';
+
+/**
+ * Classify a raw-data column for the CSV sidecar.
+ * - 'num': every value is a finite number or null. Nulls become empty cells.
+ * - 'str': every value is a NON-EMPTY string. (An empty string would be
+ *   indistinguishable from a null/padding cell, so such columns stay inline.)
+ * - null: anything else (mixed types, non-finite numbers, empty arrays) stays
+ *   embedded inline, where the existing literal path already round-trips it.
+ */
+function csvKindFor(values) {
+	if (!Array.isArray(values) || values.length === 0) return null;
+	let allNum = true;
+	let allStr = true;
+	for (const v of values) {
+		if (!(v === null || (typeof v === 'number' && Number.isFinite(v)))) allNum = false;
+		if (!(typeof v === 'string' && v !== '')) allStr = false;
+		if (!allNum && !allStr) return null;
+	}
+	return allNum ? 'num' : 'str';
+}
+
+/** One CSV cell. Numbers via JSON.stringify (shortest round-trip form, exactly
+ *  what the inline path embeds); null → empty; RFC-4180 quoting for text. */
+function csvCell(v) {
+	if (v === null || v === undefined) return '';
+	const s = typeof v === 'number' ? JSON.stringify(v) : String(v);
+	return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+/**
+ * Split rawData into CSV-able columns and an inline remainder.
+ * Returns { inline, specs, csvText } where specs is [{id, kind, length}] in
+ * CSV column order and csvText is null when nothing qualifies (the export then
+ * silently stays fully inline rather than shipping an empty CSV).
+ */
+function splitRawDataForCsv(rawData) {
+	const inline = {};
+	const specs = [];
+	const columns = [];
+	for (const [key, values] of Object.entries(rawData ?? {})) {
+		const kind = csvKindFor(values);
+		if (kind === null) {
+			inline[key] = values;
+			continue;
+		}
+		specs.push({ id: /^-?\d+$/.test(key) ? Number(key) : key, kind, length: values.length });
+		columns.push(values);
+	}
+	if (specs.length === 0) return { inline: rawData ?? {}, specs: [], csvText: null };
+	const nRows = Math.max(...specs.map((s) => s.length));
+	const lines = [specs.map((s) => csvCell(`col_${s.id}`)).join(',')];
+	for (let r = 0; r < nRows; r++) {
+		lines.push(columns.map((col) => (r < col.length ? csvCell(col[r]) : '')).join(','));
+	}
+	return { inline, specs, csvText: lines.join('\n') + '\n' };
+}
+
+// Reads the CSV sidecar back into RAW_DATA. Truncating to the recorded length
+// separates real trailing nulls from rectangle padding; parsing 'num' cells as
+// JSON keeps integers integers and floats at full precision, exactly matching
+// what json.loads sees on the inline path.
+const PY_CSV_LOADER = `# The column data lives in ${DATA_CSV_NAME}, exported alongside this script —
+# keep both files in the same folder. Cells hold exactly what the inline
+# export embeds: numbers at full precision, empty cells for missing values,
+# text verbatim.
+_csv_df = pd.read_csv(Path(__file__).with_name(${JSON.stringify(DATA_CSV_NAME)}),
+                      dtype=str, keep_default_na=False)
+for _spec in CSV_COLUMNS:
+    _cells = list(_csv_df[f"col_{_spec['id']}"])[:_spec["length"]]
+    if _spec["kind"] == "num":
+        RAW_DATA[_spec["id"]] = [None if c == "" else json.loads(c) for c in _cells]
+    else:
+        RAW_DATA[_spec["id"]] = _cells
+del _csv_df, _spec, _cells`;
+
 /**
  * Nodes whose output is BAKED rather than re-run.
  *
@@ -225,21 +310,13 @@ function nodeKey(name) {
 }
 
 /**
- * Build a self-contained Python script reproducing `session`.
- * @param {any} session - parsed session object (as from outputCoreAsJson()).
- * @param {string} runtimeSrc - verbatim source of tools/ancir_runtime.py.
- * @returns {string} the Python script text.
+ * The "# ----- Session data (embedded) -----" block shared by every export
+ * shape. Returns { lines, csvText }; csvText is non-null only when dataAsCsv
+ * found at least one CSV-able column.
+ * @param {any} session
+ * @param {boolean} dataAsCsv
  */
-export function sessionToPython(session, runtimeSrc) {
-	if (!session || typeof session !== 'object') {
-		throw new Error('sessionToPython: invalid session object');
-	}
-	if (typeof runtimeSrc !== 'string' || !runtimeSrc) {
-		throw new Error('sessionToPython: missing runtime source');
-	}
-
-	const runtimeBlock = stripRuntimeImports(runtimeSrc);
-
+function dataSectionLines(session, dataAsCsv) {
 	const rawData = session.rawData ?? {};
 	const columns = session.data ?? [];
 	// Analyses are free table-process nodes; legacy grouped `tables` are flattened
@@ -268,18 +345,147 @@ export function sessionToPython(session, runtimeSrc) {
 		}
 	}
 
-	const parts = [HEADER, '', runtimeBlock, ''];
-	parts.push('# ----- Session data (embedded) -----');
-	parts.push(embed('RAW_DATA', rawData));
-	parts.push(
+	const { inline, specs, csvText } = dataAsCsv
+		? splitRawDataForCsv(rawData)
+		: { inline: rawData, specs: [], csvText: null };
+
+	const lines = ['# ----- Session data (embedded) -----'];
+	lines.push(embed('RAW_DATA', inline));
+	lines.push(
 		"RAW_DATA = {int(k) if k.lstrip('-').isdigit() else k: v for k, v in RAW_DATA.items()}"
 	);
-	parts.push(embed('_COL_META_RAW', colMeta));
-	parts.push('COLUMN_META = {int(k): v for k, v in _COL_META_RAW.items()}');
-	parts.push(embed('TABLE_PROCESSES', tpsClean));
-	parts.push(embed('PLOTS', plots));
-	parts.push(embed('STORED_VALUES', storedValues));
-	parts.push(FOOTER_RUN);
+	if (csvText !== null) {
+		lines.push(embed('CSV_COLUMNS', specs));
+		lines.push(PY_CSV_LOADER);
+	}
+	lines.push(embed('_COL_META_RAW', colMeta));
+	lines.push('COLUMN_META = {int(k): v for k, v in _COL_META_RAW.items()}');
+	lines.push(embed('TABLE_PROCESSES', tpsClean));
+	lines.push(embed('PLOTS', plots));
+	lines.push(embed('STORED_VALUES', storedValues));
+	return { lines, csvText };
+}
 
-	return parts.join('\n');
+/**
+ * Header for the split-mode analysis script: same imports as HEADER, plus the
+ * helper import and a version check that WARNS on skew rather than failing —
+ * re-running old work still runs, but a mismatch is visible.
+ * @param {string} version
+ */
+function analysisHeader(version) {
+	return `#!/usr/bin/env python3
+"""Generated by AnCiR — session analysis (experimental). Do not edit by hand.
+
+Reproduces the analyses in an AnCiR session, in session order. The analysis
+functions themselves live in ancir_helpers.py, exported alongside this file —
+keep both (and any ${DATA_CSV_NAME}) in the SAME folder.
+
+Requires: numpy, pandas, scipy. Run it (\`python this_file.py\`) to write
+<name>_output/ with columns.csv, columns_after_tables.csv, and any plots.
+"""
+from __future__ import annotations
+import json
+import math
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from scipy import optimize as sp_optimize, stats as sp_stats
+
+from ancir_helpers import *  # noqa: F401,F403 — the AnCiR runtime
+
+_EXPECTED_HELPERS_VERSION = ${JSON.stringify(version)}
+if str(globals().get("ANCIR_HELPERS_VERSION", "<missing>")) != _EXPECTED_HELPERS_VERSION:
+    print("[ancir] WARNING: ancir_helpers.py is version "
+          f"{globals().get('ANCIR_HELPERS_VERSION', '<missing>')} but this script "
+          f"was exported with {_EXPECTED_HELPERS_VERSION}. Results may differ.",
+          file=sys.stderr)`;
+}
+
+/**
+ * The helper file for split mode: the FULL runtime, verbatim (its own imports
+ * intact, so it stands alone), stamped with the exporting AnCiR version. Only
+ * comments go BEFORE the runtime — its module docstring and "from __future__"
+ * import must stay first — so the version constant lands at the end.
+ * @param {string} runtimeSrc
+ * @param {string} version
+ */
+function helpersFile(runtimeSrc, version) {
+	return `# Generated by AnCiR ${version} — analysis helper functions. Do not edit by hand.
+# This file is the complete AnCiR Python runtime, identical for every session
+# exported by this AnCiR version. The matching analysis script imports
+# everything from it and checks ANCIR_HELPERS_VERSION (defined at the end).
+# Requires: numpy, pandas, scipy.
+
+${runtimeSrc}
+
+# Version stamp checked by the analysis script exported with this file.
+ANCIR_HELPERS_VERSION = ${JSON.stringify(version)}
+`;
+}
+
+/**
+ * Build a self-contained Python script reproducing `session`.
+ * @param {any} session - parsed session object (as from outputCoreAsJson()).
+ * @param {string} runtimeSrc - verbatim source of tools/ancir_runtime.py.
+ * @returns {string} the Python script text.
+ */
+export function sessionToPython(session, runtimeSrc) {
+	if (!session || typeof session !== 'object') {
+		throw new Error('sessionToPython: invalid session object');
+	}
+	if (typeof runtimeSrc !== 'string' || !runtimeSrc) {
+		throw new Error('sessionToPython: missing runtime source');
+	}
+	const { lines } = dataSectionLines(session, false);
+	return [HEADER, '', stripRuntimeImports(runtimeSrc), '', ...lines, FOOTER_RUN].join('\n');
+}
+
+/**
+ * Build the Python export as a set of files.
+ *
+ * Options:
+ * - split: emit ancir_helpers.py (the full runtime, version-stamped) plus a
+ *   short analysis.py holding only the session's data and pipeline. Default
+ *   false → one self-contained session.py, identical to sessionToPython.
+ * - dataAsCsv: move column data into session_data.csv, read back by the script
+ *   with pandas.read_csv. Columns the CSV cannot represent losslessly stay
+ *   embedded inline.
+ * - version: the exporting AnCiR version, stamped into the helper file and
+ *   checked by the analysis script ('dev' when absent).
+ *
+ * @param {any} session - parsed session object (as from outputCoreAsJson()).
+ * @param {string} runtimeSrc - verbatim source of tools/ancir_runtime.py.
+ * @param {{split?: boolean, dataAsCsv?: boolean, version?: string}} [options]
+ * @returns {{name: string, text: string}[]} files to deliver together.
+ */
+export function sessionToPythonFiles(session, runtimeSrc, options = {}) {
+	if (!session || typeof session !== 'object') {
+		throw new Error('sessionToPythonFiles: invalid session object');
+	}
+	if (typeof runtimeSrc !== 'string' || !runtimeSrc) {
+		throw new Error('sessionToPythonFiles: missing runtime source');
+	}
+	const opts = options ?? {};
+	const split = opts.split === true;
+	const dataAsCsv = opts.dataAsCsv === true;
+	const version = typeof opts.version === 'string' && opts.version ? opts.version : 'dev';
+
+	const { lines, csvText } = dataSectionLines(session, dataAsCsv);
+	const files = [];
+	if (!split) {
+		files.push({
+			name: 'session.py',
+			text: [HEADER, '', stripRuntimeImports(runtimeSrc), '', ...lines, FOOTER_RUN].join('\n')
+		});
+	} else {
+		files.push({
+			name: 'analysis.py',
+			text: [analysisHeader(version), '', ...lines, FOOTER_RUN].join('\n')
+		});
+		files.push({ name: 'ancir_helpers.py', text: helpersFile(runtimeSrc, version) });
+	}
+	if (csvText !== null) files.push({ name: DATA_CSV_NAME, text: csvText });
+	return files;
 }

@@ -1,12 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-	buildSidecar,
-	assertSelfContained,
-	GENERATOR_SRC,
-	RUNTIME_SRC
-} from './buildRExport.mjs';
+import { buildSidecar, assertSelfContained, GENERATOR_SRC, RUNTIME_SRC } from './buildRExport.mjs';
 
 const ROOT = join(import.meta.dirname, '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
@@ -50,6 +45,21 @@ describe('buildSidecar', () => {
 
 	it('exports the baked-in entry point', () => {
 		expect(sidecar).toMatch(/export function buildRScript\(session\)/);
+	});
+
+	it('exports the multi-file entry point with the app version baked in', () => {
+		expect(sidecar).toMatch(/export function buildRExportFiles\(session, opts\)/);
+		// Default 'dev' here (no version passed); writeSidecar passes package.json's.
+		expect(sidecar).toContain(`const ANCIR_APP_VERSION = "dev";`);
+	});
+
+	it('stamps the real package.json version when one is given', () => {
+		const stamped = buildSidecar(read(GENERATOR_SRC), '# rt', '72.99');
+		expect(stamped).toContain(`const ANCIR_APP_VERSION = "72.99";`);
+	});
+
+	it('refuses a generator that stopped exporting sessionToRFiles', () => {
+		expect(() => assertSelfContained('export function sessionToR() {}')).toThrow(/sessionToRFiles/);
 	});
 
 	it('stays dependency-free, so a browser can load it straight from static/', () => {

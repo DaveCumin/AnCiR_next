@@ -79,6 +79,10 @@
 	// The safe default on a shared machine. Column names and group labels are the one part
 	// of a style that can identify anything, so keeping them is opt-in.
 	let templateOnly = $state(true);
+	// Script-export shape (Experimental section): helper/analysis split and CSV data
+	// sidecar. Session-local on purpose — the default export stays one plain file.
+	let exportSplitFiles = $state(false);
+	let exportDataAsCsv = $state(false);
 
 	function refreshStyles() {
 		savedStyles = listStyles();
@@ -299,8 +303,8 @@
 				/>
 				{#if pendingPalette}
 					<p class="pending-note">
-						{pendingPalette.name} is chosen but not in use yet. Existing figures keep their colours
-						until you apply.
+						{pendingPalette.name} is chosen but not in use yet. Existing figures keep their colours until
+						you apply.
 					</p>
 				{/if}
 			</div>
@@ -388,9 +392,9 @@
 				rules, re-keyed onto your column names and group labels; those names leave this session with
 				the style, so leave the box ticked on a shared machine. Using a style sets the figure
 				defaults and the palette, and applies the rules to any column whose name or group label
-				matches. Matching is by name, so a renamed column stops matching; the notification says
-				how many columns were reached and names any rule that matched nothing. One undo reverses
-				the whole thing.
+				matches. Matching is by name, so a renamed column stops matching; the notification says how
+				many columns were reached and names any rule that matched nothing. One undo reverses the
+				whole thing.
 			</p>
 			<p class="privacy-note">
 				Styles are saved in this browser only, so they do not follow you to another machine, and
@@ -497,7 +501,30 @@
 			<div class="control-component-title">
 				<p>Experimental <span class="exp-badge">experimental</span></p>
 			</div>
-			<button class="export-py-btn" type="button" onclick={exportPython}>
+			<label class="privacy-row">
+				<input type="checkbox" bind:checked={exportSplitFiles} />
+				<span>Split into helper + analysis files</span>
+			</label>
+			<p class="experimental-note">
+				Instead of one self-contained script, exports an <code>ancir_helpers</code> file holding all
+				the analysis functions and a short <code>analysis</code> script that reads like a methods section
+				— just your data and the steps performed. Keep the files in the same folder. Several files download
+				together as one zip.
+			</p>
+			<label class="privacy-row">
+				<input type="checkbox" bind:checked={exportDataAsCsv} />
+				<span>Export data as separate CSV</span>
+			</label>
+			<p class="experimental-note">
+				Moves the column data out of the script into <code>session_data.csv</code>, loaded back with
+				<code>read.csv</code>
+				/ <code>pandas.read_csv</code>. Keep the CSV next to the script.
+			</p>
+			<button
+				class="export-py-btn"
+				type="button"
+				onclick={() => exportPython({ split: exportSplitFiles, dataAsCsv: exportDataAsCsv })}
+			>
 				Export session as Python
 			</button>
 			<p class="experimental-note">
@@ -505,7 +532,13 @@
 				<code>numpy</code>, <code>pandas</code> and <code>scipy</code>. Some processes may not yet
 				be implemented in the Python runtime — the script prints a warning when run.
 			</p>
-			<button class="export-py-btn" type="button" onclick={exportR}> Export session as R </button>
+			<button
+				class="export-py-btn"
+				type="button"
+				onclick={() => exportR({ split: exportSplitFiles, dataAsCsv: exportDataAsCsv })}
+			>
+				Export session as R
+			</button>
 			<p class="experimental-note">
 				Downloads a standalone R script that reproduces this session's analyses. Needs
 				<strong>no extra packages</strong> — base R only. The R runtime does not cover every node yet,

@@ -2,6 +2,7 @@
 	import { appConsts, appState, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { loadPythonExporter, loadRExporter } from '$lib/utils/pythonExportLoader.js';
+	import { zipSync, strToU8 } from 'fflate';
 	import { checkRSupport, explainRSupport } from '$lib/utils/rExportSupport.js';
 	import { normaliseFigureStyle, transitionalFigureStyle } from '$lib/plots/figureStyle.js';
 	import { migrateCategoryColourMap } from '$lib/plots/seriesColour.js';
@@ -46,7 +47,55 @@
 		}
 	}
 
-	// EXPERIMENTAL: export the current session as a self-contained Python script
+	/** Anchor-dance download shared by the script exports. */
+	function downloadBlob(filename, blob) {
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = filename;
+		document.body.appendChild(a);
+		a.click();
+		setTimeout(() => {
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		}, 10);
+	}
+
+	/**
+	 * Deliver export files: one file downloads directly; several (split mode
+	 * and/or a data CSV) are bundled into ONE zip, because sequential downloads
+	 * trip most browsers' multiple-download blocking and the files only work
+	 * together in one folder anyway. fflate is already a dependency (the XLSX
+	 * importer unzips with it), so this adds nothing new.
+	 * Returns the delivered filename for the notification.
+	 */
+	function deliverExportFiles(files, zipName, singleMime) {
+		if (files.length === 1) {
+			downloadBlob(files[0].name, new Blob([files[0].text], { type: singleMime }));
+			return files[0].name;
+		}
+		const entries = {};
+		for (const f of files) entries[f.name] = strToU8(f.text);
+		downloadBlob(zipName, new Blob([zipSync(entries)], { type: 'application/zip' }));
+		return zipName;
+	}
+
+	/** Build export files via the sidecar, honouring {split, dataAsCsv}. The default
+	 *  (both off) keeps the original single-script path and entry point. */
+	function exportFilesFrom(mod, session, opts, buildScript, buildFiles, scriptName) {
+		const split = opts?.split === true;
+		const dataAsCsv = opts?.dataAsCsv === true;
+		if (!split && !dataAsCsv) {
+			return [{ name: scriptName, text: mod[buildScript](session) }];
+		}
+		if (typeof mod[buildFiles] !== 'function') {
+			// A stale cached sidecar from before split/CSV export existed.
+			throw new Error('the export module is out of date — reload the app and try again');
+		}
+		return mod[buildFiles](session, { split, dataAsCsv });
+	}
+
+	// EXPERIMENTAL: export the current session as a Python script
 	// (ports tools/ancir_to_python.py).
 	//
 	// The exporter and its ~198 KB Python runtime live in a SIDECAR file rather than in the
@@ -55,25 +104,26 @@
 	// exported Python — about 7% of the page, raw and gzipped, for an experimental feature.
 	// The sidecar may legitimately be absent (a single-file copy of AnCiR), so a failure to
 	// load is reported as such instead of surfacing as an opaque error.
-	export async function exportPython() {
+	//
+	// opts.split: helper file (full runtime) + short analysis script instead of one
+	// self-contained file. opts.dataAsCsv: column data in session_data.csv, read
+	// back with pandas.read_csv. Multi-file results download as one zip.
+	export async function exportPython(opts) {
 		try {
 			const session = JSON.parse(outputCoreAsJson());
-			const { buildPythonScript } = await loadPythonExporter();
-			const pySrc = buildPythonScript(session);
-
-			const blob = new Blob([pySrc], { type: 'text/x-python' });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = 'session.py';
-			document.body.appendChild(a);
-			a.click();
-			setTimeout(() => {
-				document.body.removeChild(a);
-				URL.revokeObjectURL(url);
-			}, 10);
+			const mod = await loadPythonExporter();
+			const files = exportFilesFrom(
+				mod,
+				session,
+				opts,
+				'buildPythonScript',
+				'buildPythonExportFiles',
+				'session.py'
+			);
+			const delivered = deliverExportFiles(files, 'session_python.zip', 'text/x-python');
+			const entry = opts?.split === true ? 'analysis.py' : 'session.py';
 			addNotification(
-				'Exported session.py — run it with Python (needs numpy, pandas, scipy).',
+				`Exported ${delivered} — run ${entry} with Python (needs numpy, pandas, scipy).`,
 				'info'
 			);
 		} catch (error) {
@@ -94,7 +144,7 @@
 	 * whoever EXPORTS it: the refusal arrives while they are still looking at the session that
 	 * caused it, naming the nodes, instead of later in a terminal.
 	 */
-	export async function exportR() {
+	export async function exportR(opts) {
 		try {
 			const session = JSON.parse(outputCoreAsJson());
 			const report = checkRSupport(session);
@@ -102,22 +152,19 @@
 				addNotification(`Cannot export this session as R. ${explainRSupport(report)}`);
 				return;
 			}
-			const { buildRScript } = await loadRExporter();
-			const rSrc = buildRScript(session);
-
-			const blob = new Blob([rSrc], { type: 'text/x-r-source' });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = 'session.R';
-			document.body.appendChild(a);
-			a.click();
-			setTimeout(() => {
-				document.body.removeChild(a);
-				URL.revokeObjectURL(url);
-			}, 10);
+			const mod = await loadRExporter();
+			const files = exportFilesFrom(
+				mod,
+				session,
+				opts,
+				'buildRScript',
+				'buildRExportFiles',
+				'session.R'
+			);
+			const delivered = deliverExportFiles(files, 'session_R.zip', 'text/x-r-source');
+			const entry = opts?.split === true ? 'analysis.R' : 'session.R';
 			addNotification(
-				'Exported session.R — run it with Rscript (needs no extra packages).',
+				`Exported ${delivered} — run ${entry} with Rscript (needs no extra packages).`,
 				'info'
 			);
 		} catch (error) {
