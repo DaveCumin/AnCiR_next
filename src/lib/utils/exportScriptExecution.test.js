@@ -169,3 +169,118 @@ describe.runIf(!HAVE_PYTHON || !HAVE_R)('export execution prerequisites', () => 
 		expect(true).toBe(true);
 	});
 });
+
+// ----------------------------------------------------------------------
+// v72.23 field bugs (David, RStudio): script_path() resolved ONLY via
+// commandArgs()/--file=, so source()-ing or pasting interactively broke; and
+// CSV_COLUMNS was one 9k-char line, past R's 4094-char console input limit.
+// These tests run the SAME split+CSV export through the invocation modes an
+// interactive R user actually uses, asserting the same key numbers.
+// ----------------------------------------------------------------------
+
+/** Write the split+CSV R export into a fresh temp dir; returns the dir. */
+function writeRSplitCsv(session) {
+	const dir = mkdtempSync(join(tmpdir(), 'ancir-export-exec-'));
+	tempDirs.push(dir);
+	const files = sessionToRFiles(session, R_RUNTIME, {
+		split: true,
+		dataAsCsv: true,
+		version: '72.23-test'
+	});
+	for (const f of files) writeFileSync(join(dir, f.name), f.text);
+	return dir;
+}
+
+function freshDir() {
+	const d = mkdtempSync(join(tmpdir(), 'ancir-export-cwd-'));
+	tempDirs.push(d);
+	return d;
+}
+
+function assertKeyNumbers(csvPath) {
+	const out = readFileSync(csvPath, 'utf8');
+	expect(scalarFromCsv(out, 'amplitude_56')).toBeCloseTo(SESSION_AMPLITUDE, 6);
+	expect(scalarFromCsv(out, 'mesor_56')).toBeCloseTo(SESSION_MESOR, 6);
+	expect(out.split('\n')[0]).toContain('label');
+	expect(out).toContain('setB');
+}
+
+describe.runIf(HAVE_R)('R split+CSV export under interactive invocation modes', () => {
+	it('source("<abs>/analysis.R") from a DIFFERENT working directory (sys.frames/ofile path)', () => {
+		const dir = writeRSplitCsv(fixtureSession());
+		const elsewhere = freshDir();
+		const res = spawnSync('Rscript', ['-e', `source(${JSON.stringify(join(dir, 'analysis.R'))})`], {
+			cwd: elsewhere,
+			encoding: 'utf8',
+			timeout: 180_000
+		});
+		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		// Output lands NEXT TO the script, not in the unrelated working directory.
+		expect(existsSync(join(elsewhere, 'analysis_output'))).toBe(false);
+		assertKeyNumbers(join(dir, 'analysis_output', 'columns_after_analyses.csv'));
+	}, 240_000);
+
+	it('ANCIR_DIR override: script copied AWAY from its companions still finds them', () => {
+		const dir = writeRSplitCsv(fixtureSession());
+		const scriptDir = freshDir(); // analysis.R alone, no helpers/CSV beside it
+		const analysis = readFileSync(join(dir, 'analysis.R'), 'utf8');
+		expect(analysis).toContain('ANCIR_DIR <- NULL');
+		writeFileSync(
+			join(scriptDir, 'analysis.R'),
+			analysis.replace('ANCIR_DIR <- NULL', `ANCIR_DIR <- ${JSON.stringify(dir)}`)
+		);
+		const res = spawnSync('Rscript', [join(scriptDir, 'analysis.R')], {
+			cwd: freshDir(), // and getwd() points somewhere unrelated too
+			encoding: 'utf8',
+			timeout: 180_000
+		});
+		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		// ANCIR_DIR wins for companions AND output.
+		assertKeyNumbers(join(dir, 'analysis_output', 'columns_after_analyses.csv'));
+	}, 240_000);
+
+	it('piped line-by-line into the R console (the 4094-char input limit) still works', () => {
+		// `R --no-echo` fed on stdin uses the console reader — the same path that
+		// truncated David's 9163-char CSV_COLUMNS line at 4094 chars in v72.23.
+		// No --file=, no source() frame: exercises the loud getwd() fallback.
+		const haveR = spawnSync('R', ['--version'], { encoding: 'utf8' }).status === 0;
+		if (!haveR) {
+			console.warn('[exportScriptExecution] SKIPPED console-pipe run: R not on PATH');
+			return;
+		}
+		const dir = writeRSplitCsv(fixtureSession());
+		const res = spawnSync('R', ['--vanilla', '--no-echo'], {
+			cwd: dir,
+			input: readFileSync(join(dir, 'analysis.R'), 'utf8'),
+			encoding: 'utf8',
+			timeout: 180_000
+		});
+		expect(res.stderr).not.toContain('Truncating console input');
+		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		expect(res.stderr).toContain("[ancir] Could not determine this script's location");
+		// With no detectable script name the output falls back to session_output/.
+		assertKeyNumbers(join(dir, 'session_output', 'columns_after_analyses.csv'));
+	}, 240_000);
+});
+
+describe.runIf(HAVE_PYTHON)('Python split+CSV export from a different working directory', () => {
+	it('python <abs>/analysis.py writes output next to the script, same numbers', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'ancir-export-exec-'));
+		tempDirs.push(dir);
+		const files = sessionToPythonFiles(fixtureSession(), PY_RUNTIME, {
+			split: true,
+			dataAsCsv: true,
+			version: '72.23-test'
+		});
+		for (const f of files) writeFileSync(join(dir, f.name), f.text);
+		const res = spawnSync(PYTHON, [join(dir, 'analysis.py')], {
+			cwd: freshDir(),
+			encoding: 'utf8',
+			timeout: 180_000
+		});
+		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+		const out = readFileSync(join(dir, 'analysis_output', 'columns_after_tables.csv'), 'utf8');
+		expect(scalarFromCsv(out, 'amplitude_56')).toBeCloseTo(SESSION_AMPLITUDE, 9);
+		expect(scalarFromCsv(out, 'mesor_56')).toBeCloseTo(SESSION_MESOR, 9);
+	}, 240_000);
+});

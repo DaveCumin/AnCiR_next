@@ -141,7 +141,12 @@ describe('sessionToPythonFiles', () => {
 		expect(analysis).toContain('_EXPECTED_HELPERS_VERSION = "9.9"');
 		expect(analysis).not.toContain('class Column');
 		expect(analysis).not.toContain('def run_table_process');
-		expect(analysis.match(/^def /gm)).toEqual(['def ']); // only def main():
+		// Only the path resolvers and main() — no analysis functions.
+		expect(analysis.match(/^def (\w+)/gm)).toEqual([
+			'def _script_file',
+			'def script_dir',
+			'def main'
+		]);
 		expect(analysis).toMatch(/def main\(\):/);
 		expect(analysis.trimEnd().endsWith('main()')).toBe(true);
 
@@ -198,7 +203,7 @@ describe('CSV data sidecar (Python)', () => {
 			{ id: 2, kind: 'str', length: 3 },
 			{ id: 7, kind: 'num', length: 1 }
 		]);
-		expect(script).toContain('pd.read_csv(Path(__file__).with_name("session_data.csv")');
+		expect(script).toContain('pd.read_csv(script_dir() / "session_data.csv"');
 	});
 
 	it('writes null as empty cell, quotes per RFC 4180, and pads short columns', () => {
@@ -226,5 +231,66 @@ describe('CSV data sidecar (Python)', () => {
 			'ancir_helpers.py',
 			'session_data.csv'
 		]);
+	});
+});
+
+// Mirror of the R exporter's v72.23 fixes: __file__ alone is undefined in a
+// pasted REPL/notebook, so the scripts carry an ANCIR_DIR override plus a
+// guarded fallback; and huge json.loads embeds are wrapped across lines.
+describe('script directory resolution and line wrapping (Python)', () => {
+	const session = {
+		rawData: { 1: [1, 2, 3] },
+		data: [{ id: 1, name: 'x', type: 'number', data: 1, processes: [] }],
+		tableProcesses: []
+	};
+
+	function allShapes(s) {
+		return [
+			sessionToPythonFiles(s, PY_RT),
+			sessionToPythonFiles(s, PY_RT, { split: true, version: '9.9' }),
+			sessionToPythonFiles(s, PY_RT, { split: true, dataAsCsv: true, version: '9.9' }),
+			sessionToPythonFiles(s, PY_RT, { dataAsCsv: true })
+		];
+	}
+	const PY_RT = 'def fit_cosinor_fixed(t, y):\n    return None\n# RUNTIME MARKER';
+
+	it('defines script_dir exactly ONCE per script, with the ANCIR_DIR override', () => {
+		for (const files of allShapes(session)) {
+			for (const f of files) {
+				if (!f.name.endsWith('.py')) continue;
+				const isEntry = f.name !== 'ancir_helpers.py';
+				const count = (re) => (f.text.match(re) ?? []).length;
+				expect(count(/def script_dir\(\):/g), f.name).toBe(isEntry ? 1 : 0);
+				expect(count(/def _script_file\(\):/g), f.name).toBe(isEntry ? 1 : 0);
+				expect(count(/^ANCIR_DIR = None$/gm), f.name).toBe(isEntry ? 1 : 0);
+				expect(f.text).not.toContain('Path(__file__).with_suffix');
+				expect(f.text).not.toContain('Path(__file__).with_name');
+			}
+		}
+	});
+
+	it('split mode makes the helper importable from the resolved directory', () => {
+		const analysis = sessionToPythonFiles(session, PY_RT, { split: true })[0].text;
+		expect(analysis.indexOf('def script_dir():')).toBeLessThan(
+			analysis.indexOf('from ancir_helpers import *')
+		);
+		expect(analysis).toContain('sys.path.insert(0, _helper_dir)');
+	});
+
+	it('wraps huge embedded literals so no emitted line exceeds 4000 chars', () => {
+		const wide = { rawData: {}, data: [], tableProcesses: [] };
+		for (let i = 1; i <= 400; i++) {
+			wide.rawData[String(i)] = [i, i + 0.5, null];
+			wide.data.push({ id: i, name: `col ${i}`, type: 'number', data: i, processes: [] });
+		}
+		wide.rawData['9999'] = Array.from({ length: 5000 }, (_, i) => i * 1.234567891234);
+		for (const files of allShapes(wide)) {
+			for (const f of files) {
+				if (!f.name.endsWith('.py')) continue;
+				for (const line of f.text.split('\n')) {
+					expect(line.length, `${f.name}: ${line.slice(0, 60)}...`).toBeLessThanOrEqual(4000);
+				}
+			}
+		}
 	});
 });

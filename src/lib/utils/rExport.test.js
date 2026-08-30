@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { toRLiteral, sessionToR, sessionToRFiles } from './rExport.js';
+import { toRLiteral, sessionToR, sessionToRFiles, wrapRLine } from './rExport.js';
 import { sessionToPythonFiles } from './pythonExport.js';
 import { checkRSupport, explainRSupport, runtimeKey } from './rExportSupport.js';
 
@@ -103,7 +103,7 @@ describe('sessionToRFiles', () => {
 
 		// The analysis file sources it from its own directory, checks the version,
 		// and holds NO runtime function definitions — only data and pipeline.
-		expect(analysis).toContain('source(file.path(dirname(script_path()), "ancir_helpers.R"))');
+		expect(analysis).toContain('source(file.path(script_dir(), "ancir_helpers.R"))');
 		expect(analysis).toContain('.expected_helpers <- "9.9"');
 		expect(analysis).not.toContain('fit_cosinor_fixed <- function');
 		expect(analysis).not.toContain('# RUNTIME MARKER');
@@ -141,7 +141,7 @@ describe('CSV data sidecar (R)', () => {
 		// The inline remainder holds only the columns the CSV cannot represent.
 		expect(script).toContain('RAW_DATA <- list("3" = list(1, "x"), "4" = list("ok", ""))');
 		expect(script).toContain('CSV_COLUMNS <- ');
-		expect(script).toContain('read.csv(file.path(dirname(script_path()), "session_data.csv")');
+		expect(script).toContain('read.csv(file.path(script_dir(), "session_data.csv")');
 		// A literal "NA" string must survive the read, so nothing may map to NA.
 		expect(script).toContain('na.strings = character(0)');
 	});
@@ -252,5 +252,104 @@ describe('checkRSupport', () => {
 
 	it('always points at the Python export, which is complete', () => {
 		expect(explainRSupport(checkRSupport(withTps('FormulaColumn')))).toMatch(/Python/);
+	});
+});
+
+// v72.23 field bugs: script_path() was defined twice in analysis.R, resolved
+// ONLY via commandArgs()/--file= (broken in RStudio and interactive consoles),
+// and CSV_COLUMNS was one 9k-char line — past R's 4094-char console input
+// limit, so stepping through the script interactively broke it.
+describe('script directory resolution and interactive-console safety (R)', () => {
+	const session = {
+		rawData: { 1: [1, 2, 3] },
+		data: [{ id: 1, name: 'x', type: 'number', data: 1, processes: [] }],
+		tableProcesses: []
+	};
+
+	/** Sessions in every export shape. */
+	function allShapes(s) {
+		return [
+			sessionToRFiles(s, '# runtime'),
+			sessionToRFiles(s, '# runtime', { split: true, version: '9.9' }),
+			sessionToRFiles(s, '# runtime', { split: true, dataAsCsv: true, version: '9.9' }),
+			sessionToRFiles(s, '# runtime', { dataAsCsv: true })
+		];
+	}
+
+	it('defines script_file/script_dir exactly ONCE per script, with the ANCIR_DIR override', () => {
+		for (const files of allShapes(session)) {
+			for (const f of files) {
+				if (!f.name.endsWith('.R')) continue;
+				const text = f.text;
+				const isEntry = f.name !== 'ancir_helpers.R';
+				const count = (re) => (text.match(re) ?? []).length;
+				expect(count(/script_dir <- function/g), f.name).toBe(isEntry ? 1 : 0);
+				expect(count(/script_file <- function/g), f.name).toBe(isEntry ? 1 : 0);
+				expect(count(/^ANCIR_DIR <- NULL$/gm), f.name).toBe(isEntry ? 1 : 0);
+				// The old commandArgs-only helper is gone entirely.
+				expect(text).not.toContain('script_path');
+			}
+		}
+	});
+
+	it('the entry script defines the resolver before first using it', () => {
+		for (const files of allShapes(session)) {
+			const entry = files[0].text;
+			expect(entry.indexOf('script_dir <- function')).toBeGreaterThan(-1);
+			expect(entry.indexOf('script_dir <- function')).toBeLessThan(entry.indexOf('script_dir()'));
+		}
+	});
+
+	it('emits the full fallback chain: ANCIR_DIR, --file=, source() frames, rstudioapi, getwd', () => {
+		const entry = sessionToRFiles(session, '# runtime', { split: true })[0].text;
+		for (const marker of [
+			'ANCIR_DIR <- NULL',
+			'--file=',
+			'sys.frames()',
+			'requireNamespace("rstudioapi", quietly = TRUE)',
+			'getwd()'
+		]) {
+			expect(entry).toContain(marker);
+		}
+	});
+
+	it('never emits a line longer than 4000 chars, even for wide/long sessions', () => {
+		// Wide: 400 CSV-able columns (the CSV_COLUMNS spec list alone is ~14k
+		// chars unwrapped). Long: one 5000-value inline numeric literal.
+		const wide = { rawData: {}, data: [], tableProcesses: [] };
+		for (let i = 1; i <= 400; i++) {
+			wide.rawData[String(i)] = [i, i + 0.5, null];
+			wide.data.push({ id: i, name: `col ${i}`, type: 'number', data: i, processes: [] });
+		}
+		wide.rawData['9999'] = Array.from({ length: 5000 }, (_, i) => i * 1.234567891234);
+		for (const files of allShapes(wide)) {
+			for (const f of files) {
+				if (!f.name.endsWith('.R')) continue;
+				for (const line of f.text.split('\n')) {
+					expect(line.length, `${f.name}: ${line.slice(0, 60)}...`).toBeLessThanOrEqual(4000);
+				}
+			}
+		}
+	});
+
+	it('wrapRLine never breaks inside a string literal and round-trips the text', () => {
+		const values = [];
+		for (let i = 0; i < 400; i++) values.push(`text, with "quoted, commas" ${i}`);
+		const line = `X <- ${toRLiteral(values)}`;
+		const wrapped = wrapRLine(line);
+		expect(wrapped).not.toBe(line);
+		for (const one of wrapped.split('\n')) {
+			expect(one.length).toBeLessThanOrEqual(4000);
+			// Every physical line holds balanced quotes: no break inside a string.
+			expect((one.match(/(?<!\\)"/g) ?? []).length % 2).toBe(0);
+		}
+		// Joining continuation lines back (undoing the 2-space indent) restores
+		// the exact expression text.
+		expect(
+			wrapped
+				.split('\n')
+				.map((l, i) => (i === 0 ? l : l.slice(2)))
+				.join('')
+		).toBe(line);
 	});
 });

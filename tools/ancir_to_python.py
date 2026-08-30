@@ -40,6 +40,36 @@ from scipy import optimize as sp_optimize, stats as sp_stats
 '''
 
 
+SCRIPT_DIR_BLOCK = """## If automatic detection fails (e.g. pasting into a console or notebook cell),
+## set this to the folder containing this script's companion files, e.g.
+## ANCIR_DIR = "/path/to/exported/files"
+ANCIR_DIR = None
+
+
+def _script_file():
+    \"\"\"Full path of this script when detectable (__file__ is undefined in a
+    pasted REPL/notebook cell), else None.\"\"\"
+    try:
+        return Path(__file__).resolve()
+    except NameError:
+        return None
+
+
+def script_dir():
+    \"\"\"Folder holding this script and its companion files. ANCIR_DIR (above)
+    wins; then the detected script location; last resort is the working
+    directory, announced loudly so a wrong guess is visible.\"\"\"
+    if ANCIR_DIR is not None:
+        return Path(ANCIR_DIR)
+    f = _script_file()
+    if f is not None:
+        return f.parent
+    print("[ancir] Could not determine this script's location; looking for its "
+          f"companion files in the current working directory ({Path.cwd()}). "
+          "If that is wrong, set ANCIR_DIR at the top of this script.")
+    return Path.cwd()"""
+
+
 FOOTER_RUN = '''
 
 # ----------------------------------------------------------------------
@@ -70,8 +100,11 @@ def main():
 
     stored = dict(STORED_VALUES)
 
-    output_dir = Path(__file__).with_suffix("").name + "_output"
-    out_path = Path(output_dir)
+    # Output goes NEXT TO the script (not the working directory), named after
+    # it, so running from another directory still puts results with the export.
+    _f = _script_file()
+    _base = _f.stem if _f is not None else "session"
+    out_path = script_dir() / (_base + "_output")
     out_path.mkdir(exist_ok=True)
 
     # Save column outputs (after processes applied)
@@ -218,7 +251,7 @@ def emit(session_path: Path, output_path: Path) -> None:
 
     # Embed as JSON strings parsed at startup so null/true/false stay valid.
     # Convert string keys back to int for COLUMN_META so column ids match.
-    parts = [HEADER, "", runtime_block, ""]
+    parts = [HEADER, SCRIPT_DIR_BLOCK, "", runtime_block, ""]
     parts.append("# ----- Session data (embedded) -----")
     parts.append(f"RAW_DATA = json.loads({json.dumps(json.dumps(raw_data))})")
     parts.append("RAW_DATA = {int(k) if k.lstrip('-').isdigit() else k: v "

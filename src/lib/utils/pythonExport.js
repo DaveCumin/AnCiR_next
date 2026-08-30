@@ -32,6 +32,43 @@ import pandas as pd
 from scipy import optimize as sp_optimize, stats as sp_stats
 `;
 
+// ----------------------------------------------------------------------
+// Script location. Emitted exactly ONCE per exported script, near the top:
+// the helper import (split mode), the CSV loader and the output directory all
+// resolve paths through it. `__file__` alone is undefined when the script is
+// pasted into a REPL or a notebook cell, hence the ANCIR_DIR user override
+// and the loud getcwd() fallback. Mirrors the R exporter's block.
+// ----------------------------------------------------------------------
+const PY_SCRIPT_DIR_BLOCK = `## If automatic detection fails (e.g. pasting into a console or notebook cell),
+## set this to the folder containing this script's companion files
+## (ancir_helpers.py and/or session_data.csv, where exported), e.g.
+## ANCIR_DIR = "/path/to/exported/files"
+ANCIR_DIR = None
+
+
+def _script_file():
+    """Full path of this script when detectable (__file__ is undefined in a
+    pasted REPL/notebook cell), else None."""
+    try:
+        return Path(__file__).resolve()
+    except NameError:
+        return None
+
+
+def script_dir():
+    """Folder holding this script and its companion files. ANCIR_DIR (above)
+    wins; then the detected script location; last resort is the working
+    directory, announced loudly so a wrong guess is visible."""
+    if ANCIR_DIR is not None:
+        return Path(ANCIR_DIR)
+    f = _script_file()
+    if f is not None:
+        return f.parent
+    print("[ancir] Could not determine this script's location; looking for its "
+          f"companion files in the current working directory ({Path.cwd()}). "
+          "If that is wrong, set ANCIR_DIR at the top of this script.")
+    return Path.cwd()`;
+
 // Mirrors FOOTER_RUN in ancir_to_python.py. Note: `\\n` below is a literal
 // backslash-n in the emitted script (a Python newline escape), matching the
 // CLI's `"\\n"` inside its triple-quoted constant.
@@ -65,8 +102,11 @@ def main():
 
     stored = dict(STORED_VALUES)
 
-    output_dir = Path(__file__).with_suffix("").name + "_output"
-    out_path = Path(output_dir)
+    # Output goes NEXT TO the script (not the working directory), named after
+    # it, so running from another directory still puts results with the export.
+    _f = _script_file()
+    _base = _f.stem if _f is not None else "session"
+    out_path = script_dir() / (_base + "_output")
     out_path.mkdir(exist_ok=True)
 
     # Save column outputs (after processes applied)
@@ -184,11 +224,28 @@ function colMetaForColumn(col) {
 	return out;
 }
 
+// Python itself has no console line-length limit (unlike R's 4094-char one),
+// but the same "one enormous line" problem makes the script hostile to read
+// and to paste, so long embeds are wrapped too. Chunks are measured on the
+// UNescaped JSON text; escaping can at most double a chunk, so 1900 keeps
+// every emitted physical line comfortably under 4000 characters.
+const PY_EMBED_CHUNK = 1900;
+
 // Embed a value the way the CLI does: `json.loads("<escaped json text>")`.
 // JSON.stringify of the JSON text yields a string literal valid in both JSON
-// and Python, mirroring the CLI's json.dumps(json.dumps(x)).
+// and Python, mirroring the CLI's json.dumps(json.dumps(x)). Long values are
+// split into adjacent string literals inside the call parentheses, which
+// Python concatenates back into the identical JSON text.
 function embed(name, value) {
-	return `${name} = json.loads(${JSON.stringify(JSON.stringify(value))})`;
+	const json = JSON.stringify(value);
+	if (json.length <= PY_EMBED_CHUNK) {
+		return `${name} = json.loads(${JSON.stringify(json)})`;
+	}
+	const parts = [];
+	for (let i = 0; i < json.length; i += PY_EMBED_CHUNK) {
+		parts.push(JSON.stringify(json.slice(i, i + PY_EMBED_CHUNK)));
+	}
+	return `${name} = json.loads(\n    ${parts.join('\n    ')}\n)`;
 }
 
 // ----------------------------------------------------------------------
@@ -263,10 +320,10 @@ function splitRawDataForCsv(rawData) {
 // JSON keeps integers integers and floats at full precision, exactly matching
 // what json.loads sees on the inline path.
 const PY_CSV_LOADER = `# The column data lives in ${DATA_CSV_NAME}, exported alongside this script —
-# keep both files in the same folder. Cells hold exactly what the inline
-# export embeds: numbers at full precision, empty cells for missing values,
-# text verbatim.
-_csv_df = pd.read_csv(Path(__file__).with_name(${JSON.stringify(DATA_CSV_NAME)}),
+# keep both files in the same folder (or point ANCIR_DIR, above, at it).
+# Cells hold exactly what the inline export embeds: numbers at full
+# precision, empty cells for missing values, text verbatim.
+_csv_df = pd.read_csv(script_dir() / ${JSON.stringify(DATA_CSV_NAME)},
                       dtype=str, keep_default_na=False)
 for _spec in CSV_COLUMNS:
     _cells = list(_csv_df[f"col_{_spec['id']}"])[:_spec["length"]]
@@ -393,7 +450,15 @@ import numpy as np
 import pandas as pd
 from scipy import optimize as sp_optimize, stats as sp_stats
 
-from ancir_helpers import *  # noqa: F401,F403 — the AnCiR runtime
+${PY_SCRIPT_DIR_BLOCK}
+
+# The helpers live NEXT TO this script; make them importable however the
+# script is run (python from another directory, pasted with ANCIR_DIR set...).
+_helper_dir = str(script_dir())
+if _helper_dir not in sys.path:
+    sys.path.insert(0, _helper_dir)
+
+from ancir_helpers import *  # noqa: F401,F403,E402 — the AnCiR runtime
 
 _EXPECTED_HELPERS_VERSION = ${JSON.stringify(version)}
 if str(globals().get("ANCIR_HELPERS_VERSION", "<missing>")) != _EXPECTED_HELPERS_VERSION:
@@ -439,7 +504,15 @@ export function sessionToPython(session, runtimeSrc) {
 		throw new Error('sessionToPython: missing runtime source');
 	}
 	const { lines } = dataSectionLines(session, false);
-	return [HEADER, '', stripRuntimeImports(runtimeSrc), '', ...lines, FOOTER_RUN].join('\n');
+	return [
+		HEADER,
+		PY_SCRIPT_DIR_BLOCK,
+		'',
+		stripRuntimeImports(runtimeSrc),
+		'',
+		...lines,
+		FOOTER_RUN
+	].join('\n');
 }
 
 /**
@@ -477,7 +550,15 @@ export function sessionToPythonFiles(session, runtimeSrc, options = {}) {
 	if (!split) {
 		files.push({
 			name: 'session.py',
-			text: [HEADER, '', stripRuntimeImports(runtimeSrc), '', ...lines, FOOTER_RUN].join('\n')
+			text: [
+				HEADER,
+				PY_SCRIPT_DIR_BLOCK,
+				'',
+				stripRuntimeImports(runtimeSrc),
+				'',
+				...lines,
+				FOOTER_RUN
+			].join('\n')
 		});
 	} else {
 		files.push({
