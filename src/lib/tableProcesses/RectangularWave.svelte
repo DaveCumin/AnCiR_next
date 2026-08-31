@@ -1,5 +1,9 @@
 <script module>
-	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
+	import {
+		normalizeYInputs,
+		migrateLegacyYIN,
+		migrateRenamedOutKey
+	} from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
@@ -32,7 +36,13 @@
 			'out',
 			{
 				rectwavex: { val: -1 },
-				pvalue: { val: -1 },
+				// The permutation test's empirical p — the ONLY p this node emits
+				// (no canonical analytic test exists for this nonlinear model), so
+				// the key says which test it is. Renamed from the bare `pvalue` in
+				// v72.25 when Cosinor's `pvalue` became the analytic F-test p:
+				// the same column name must not mean different tests on different
+				// nodes. Old sessions are migrated in place (same column id).
+				perm_pvalue: { val: -1 },
 				// Fit quality, matching what TrendFit already exposes. Shown in the
 				// panel before this; now wireable so it can be filtered or plotted.
 				r2: { val: -1 },
@@ -63,7 +73,7 @@
 				{ name: 'rectwavex', kind: 'column', cardinality: 'one' },
 				{ name: 'rectwavey_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'rectwavey_' },
 				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' },
-				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'perm_pvalue', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'r2', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'rmse', kind: 'column', cardinality: 'one', metric: true }
 			]
@@ -103,6 +113,10 @@
 	}
 
 	export function rectangularwave(argsIN) {
+		// Old sessions keyed this port `pvalue`; carry the same column across to
+		// the new key here too, so headless callers (MCP engine, doProcess) that
+		// never instantiate the component still write into the wired column.
+		migrateRenamedOutKey(argsIN, 'pvalue', 'perm_pvalue');
 		const xIN = argsIN.xIN;
 		const yINs = normalizeYInputs(argsIN.yIN);
 		const outputXId = argsIN.outputX;
@@ -249,9 +263,10 @@
 				}
 			}
 
-			// Scalar p-value output: one value per y input, in yIN order.
+			// Scalar permutation-p output: one value per y input, in yIN order.
+			// NaN when the test did not run — "not computed", not "not significant".
 			writeOutputColumn(
-				argsIN.out.pvalue,
+				argsIN.out.perm_pvalue,
 				yINs.map((yId) => result.y_results[yId]?.pValue ?? NaN),
 				{ processHash }
 			);
@@ -285,6 +300,7 @@
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
 
+	import { migrateRenamedMetricOut } from '$lib/tableProcesses/metricOutputs.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
@@ -299,6 +315,10 @@
 
 	// Backward compat: convert legacy single yIN to array
 	migrateLegacyYIN(p.args);
+	// v72.25: the permutation p's out-key renamed `pvalue` → `perm_pvalue`.
+	// Same column id under the new key (wires anchor on col_<id>, so downstream
+	// consumers survive); only the seeded default column name follows the key.
+	migrateRenamedMetricOut(p, 'pvalue', 'perm_pvalue');
 
 	// Backwards compatibility — initialise any fields absent in older saved sessions
 	if (p.args.fixKappa === undefined) p.args.fixKappa = false;

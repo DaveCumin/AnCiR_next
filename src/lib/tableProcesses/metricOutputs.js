@@ -13,6 +13,7 @@
 // (Svelte derived_inert).
 import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 import { core, pushObj } from '$lib/core/core.svelte.js';
+import { migrateRenamedOutKey } from '$lib/tableProcesses/tpArgHelpers.js';
 
 /** True when the process is committed to the graph (free nodes have no parent). */
 export function isCommittedTP(p) {
@@ -34,6 +35,30 @@ export function isCommittedTP(p) {
  * @param {(key: string) => boolean} managedPredicate - which keys this family owns
  * @returns {boolean} true if anything changed (caller should recompute)
  */
+/**
+ * Migrate a RENAMED metric out-key on session load: same column, new key.
+ *
+ * This is deliberately NOT syncMetricOutColumns with the new key list — that
+ * helper deletes stale columns and creates fresh ones, which is exactly the
+ * orphaning this exists to avoid. Here the column id is carried across to the
+ * new key (wires anchor on `col_<colId>`, so downstream consumers survive),
+ * and only the SEEDED default name (`<oldKey>_<id>`, from the TableProcess
+ * constructor / syncMetricOutColumns convention) is renamed to match — a
+ * user-chosen name is left alone.
+ *
+ * @param {object} p - the table process (`p.args.out` and the column mutated)
+ * @param {string} oldKey
+ * @param {string} newKey
+ * @returns {boolean} true when a migration happened
+ */
+export function migrateRenamedMetricOut(p, oldKey, newKey) {
+	if (!migrateRenamedOutKey(p.args, oldKey, newKey)) return false;
+	const colId = p.args.out[newKey];
+	const col = colId != null && colId >= 0 ? getColumnById(colId) : null;
+	if (col && col.name === `${oldKey}_${p.id}`) col.name = `${newKey}_${p.id}`;
+	return true;
+}
+
 export function syncMetricOutColumns(p, desiredKeys, managedPredicate) {
 	if (!isCommittedTP(p)) return false;
 	if (!p.args.out || typeof p.args.out !== 'object') p.args.out = {};

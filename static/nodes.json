@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.72.24",
+  "generatedFromVersion": "β.72.25",
   "count": 61,
   "nodes": [
     {
@@ -1202,6 +1202,12 @@
           "metric": true
         },
         {
+          "name": "perm_pvalue",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
           "name": "bathyphase",
           "kind": "column",
           "cardinality": "one",
@@ -1432,7 +1438,7 @@
           "dynamicPrefix": "resid_"
         },
         {
-          "name": "pvalue",
+          "name": "perm_pvalue",
           "kind": "column",
           "cardinality": "one",
           "metric": true
@@ -2395,7 +2401,7 @@
           "dynamicPrefix": "resid_"
         },
         {
-          "name": "pvalue",
+          "name": "perm_pvalue",
           "kind": "column",
           "cardinality": "one",
           "metric": true

@@ -106,12 +106,16 @@
 				"alpha": 0.05,
 				"preProcesses": [],
 				"out": {
-					"cosinorx": -1
+					"cosinorx": -1,
+					"pvalue": -1,
+					"perm_pvalue": -1
 				}
 			},
 			"compareOutputs": [
 				"cosinorx",
-				"cosinory"
+				"cosinory",
+				"pvalue",
+				"perm_pvalue"
 			],
 			"rFunc": "cosinor"
 		},

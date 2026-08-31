@@ -51,7 +51,16 @@
 				acrophase_ciLow: { val: -1 },
 				acrophase_ciHigh: { val: -1 },
 				rsquared: { val: -1 },
+				// `pvalue` is the ANALYTIC fit p: the zero-amplitude F-test of the
+				// fixed-period cosinor against the MESOR-only model (Cornelissen 2014).
+				// NaN for the free-period fit, which has no analytic test (the period
+				// is estimated, so the F null distribution does not hold).
+				// `perm_pvalue` is the OPTIONAL permutation test's empirical p — a
+				// different test, on its own port, populated only when the test runs.
+				// It used to overload `pvalue`, so the port silently changed meaning
+				// (and was NaN with the test off, despite a computed F-test).
 				pvalue: { val: -1 },
+				perm_pvalue: { val: -1 },
 				// Cheap add-on metrics derived from the fitted acrophase (one value
 				// per y input, like the other scalar ports). `bathyphase` is the
 				// trough time (acrophase + half-period); `phase_angle` is the phase
@@ -111,6 +120,7 @@
 				{ name: 'acrophase', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'rsquared', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'perm_pvalue', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'bathyphase', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'phase_angle', kind: 'column', cardinality: 'one', metric: true }
 			]
@@ -368,6 +378,7 @@
 		const acroCiHighArr = [];
 		const rsquaredArr = [];
 		const pvalueArr = [];
+		const permPvalueArr = [];
 		const bathyphaseArr = [];
 		const phaseAngleArr = [];
 		for (const yId of yINs) {
@@ -421,8 +432,17 @@
 			bathyphaseArr.push(bathyphase(acrophase, period));
 			phaseAngleArr.push(phaseAngleOfEntrainment(acrophase, referenceHrs, period));
 
-			// Already computed against the same null-filtered pairs the fit used.
-			pvalueArr.push(yr?.pValue ?? NaN);
+			// `pvalue` = the ANALYTIC zero-amplitude F-test p, straight off the
+			// fixed-period fit — the number the panel prints as "F(df1, df2) = …, p"
+			// and the one a user reading "p" next to R² expects. It used to carry the
+			// permutation p instead (NaN unless that optional test ran), so the port
+			// disagreed with both the handbook and the Python mirror. Free-period
+			// fits stay NaN: with the period estimated, no analytic test exists.
+			pvalueArr.push(useFixed ? (yr?.fixedStats?.pF ?? NaN) : NaN);
+			// The permutation p is a DIFFERENT test (model vs chance, empirical
+			// null), already computed against the same null-filtered pairs the fit
+			// used; it keeps its own port and is NaN when the test did not run.
+			permPvalueArr.push(yr?.pValue ?? NaN);
 		}
 		const writeScalarOut = (key, arr) => writeOutputColumn(argsIN.out[key], arr, { processHash });
 		writeScalarOut('period', periodArr);
@@ -435,6 +455,7 @@
 		writeScalarOut('acrophase', acrophaseArr);
 		writeScalarOut('rsquared', rsquaredArr);
 		writeScalarOut('pvalue', pvalueArr);
+		writeScalarOut('perm_pvalue', permPvalueArr);
 		writeScalarOut('bathyphase', bathyphaseArr);
 		writeScalarOut('phase_angle', phaseAngleArr);
 	}
@@ -677,9 +698,12 @@
 		return ids;
 	});
 
-	// Scalar-metric out-keys (one value per y input). bathyphase/phase_angle were
-	// added after the original period/amplitude/rsquared/pvalue ports, so old
-	// sessions lack their columns; syncMetricOutColumns backfills any missing ones.
+	// Scalar-metric out-keys (one value per y input). bathyphase/phase_angle and
+	// perm_pvalue were added after the original period/amplitude/rsquared/pvalue
+	// ports, so old sessions lack their columns; syncMetricOutColumns backfills
+	// any missing ones. `pvalue` KEEPS its key across the v72.x semantics fix
+	// (analytic F-test p, not the permutation p) so saved sessions wired to it
+	// stay wired — only what FEEDS the column changed.
 	const METRIC_KEYS = [
 		'period',
 		'mesor',
@@ -687,6 +711,7 @@
 		'acrophase',
 		'rsquared',
 		'pvalue',
+		'perm_pvalue',
 		'bathyphase',
 		'phase_angle'
 	];

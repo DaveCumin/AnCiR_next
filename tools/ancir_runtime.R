@@ -759,10 +759,12 @@ tp_cosinor <- function(args, env) {
   }
 
   any_valid <- FALSE; first_x <- NULL
-  mesor <- c(); acro <- c()
+  mesor <- c(); acro <- c(); pval <- c()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
-    if (is.null(env$cols[[yk]])) { mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); next }
+    if (is.null(env$cols[[yk]])) {
+      mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); pval <- c(pval, NA_real_); next
+    }
     y <- suppressWarnings(as.numeric(unlist(col_data(env$cols[[yk]], env$cols, env$raw_data),
                                             use.names = FALSE)))
     ok <- is.finite(t) & is.finite(y)
@@ -772,7 +774,9 @@ tp_cosinor <- function(args, env) {
     } else {
       fit_cosine_curves(tt, yy, n_curves)
     }
-    if (is.null(res)) { mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); next }
+    if (is.null(res)) {
+      mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); pval <- c(pval, NA_real_); next
+    }
     params <- if (!is.null(res$harmonics)) res else res$parameters
     if (is.null(first_x)) {
       first_x <- if (!is.null(output_x)) output_x else tt
@@ -786,12 +790,21 @@ tp_cosinor <- function(args, env) {
             evaluate_cosinor_at_points(params, first_x), type = "number")
     mesor <- c(mesor, if (!is.null(res$M)) res$M else NA_real_)
     acro <- c(acro, if (!is.null(res$harmonics)) res$harmonics[[1]]$acrophase_hrs else NA_real_)
+    # `pvalue` is the ANALYTIC zero-amplitude F-test p of the FIXED-period fit
+    # (fit_cosinor_fixed's pF), matching the JS and Python semantics fixed in
+    # v72.x. The free-period nonlinear fit has no analytic test, so NA there.
+    pval <- c(pval, if (!is.null(res$pF)) res$pF else NA_real_)
     any_valid <- TRUE
   }
   # Scalar metric ports carry ONE value per y input, in yIN order — the contract the whole
   # "one analysis node per group" idiom depends on.
   set_col(env, env$cols, out_id(args, "mesor"), mesor, type = "number")
   set_col(env, env$cols, out_id(args, "acrophase"), acro, type = "number")
+  set_col(env, env$cols, out_id(args, "pvalue"), pval, type = "number")
+  # The permutation p is a Monte Carlo quantity tied to the JS's seeded PRNG
+  # (same boundary as the Python runtime): emitted as NA, never a lookalike.
+  set_col(env, env$cols, out_id(args, "perm_pvalue"),
+          rep(NA_real_, length(pval)), type = "number")
   any_valid
 }
 
@@ -2026,10 +2039,11 @@ tp_rectangularwave <- function(args, env) {
     any_valid <- TRUE
   }
   if (any_valid) {
-    # r2/rmse are declared ports that the Python port never wrote until 2026-07-28; `pvalue`
-    # belongs to the optional permutation test, which is not run here, so it stays NA —
-    # "not computed", not "not significant".
-    for (key in c("r2", "rmse", "pvalue")) {
+    # r2/rmse are declared ports that the Python port never wrote until 2026-07-28;
+    # `perm_pvalue` (renamed from the bare `pvalue` in JS v72.25 — the permutation
+    # test's p, the only p this node emits) belongs to a Monte Carlo test not run
+    # here, so it stays NA — "not computed", not "not significant".
+    for (key in c("r2", "rmse", "perm_pvalue")) {
       arr <- vapply(y_ins, function(y) {
         r <- stats_by_y[[as.character(y)]]
         if (is.null(r)) NA_real_
@@ -2241,9 +2255,10 @@ tp_doublelogistic <- function(args, env) {
     any_valid <- TRUE
   }
   if (any_valid) {
-    # r2/rmse were declared but unwritten in the Python port until 2026-07-28; `pvalue`
-    # belongs to the optional permutation test, not run here, so it stays NA.
-    for (key in c("r2", "rmse", "pvalue")) {
+    # r2/rmse were declared but unwritten in the Python port until 2026-07-28;
+    # `perm_pvalue` (renamed from the bare `pvalue` in JS v72.25 — the permutation
+    # test's p, the only p this node emits) is Monte Carlo and not run here, so NA.
+    for (key in c("r2", "rmse", "perm_pvalue")) {
       arr <- vapply(y_ins, function(y) {
         r <- stats_by_y[[as.character(y)]]
         if (is.null(r)) NA_real_

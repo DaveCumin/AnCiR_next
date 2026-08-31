@@ -76,6 +76,11 @@ function isStructural(name) {
  */
 const CONCEPT = {
 	pvalue: /p-?value|significan/,
+	// The optional permutation test's empirical p. On Cosinor it split off
+	// `pvalue` in v72.x so the plainly-named port could carry the analytic
+	// F-test p; RectangularWave/DoubleLogistic then renamed their only p onto
+	// this key too (no analytic test exists for those nonlinear fits).
+	perm_pvalue: /permutation/,
 	ww_pvalue: /Watson-?Williams/,
 	statistic: /statistic|χ²|chi-?squared|\bF\b|\bU\b|\bH\b/,
 	df: /degrees of freedom|\bdf\b/,

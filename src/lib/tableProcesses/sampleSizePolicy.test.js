@@ -12,10 +12,13 @@
 // seventh from shipping the same way, which is how the first six happened: each was
 // individually reasonable, and no single place asked the question.
 //
-// So this is a registry, not a heuristic. A node emitting `pvalue` (or `padj`) must
-// appear below, either as CHECKED — and then it really must push a sample-size
-// warning — or as an exemption with a reason. Adding such a node without touching
-// this file fails, which makes the decision deliberate.
+// So this is a registry, not a heuristic. A node emitting `pvalue` (or `perm_pvalue`,
+// `padj`, `ww_pvalue`) must appear below, either as CHECKED — and then it really must
+// push a sample-size warning — or as an exemption with a reason. Adding such a node
+// without touching this file fails, which makes the decision deliberate.
+// `perm_pvalue` joined the extractor in v72.25, when RectangularWave/DoubleLogistic
+// renamed their permutation-p port off the bare `pvalue`: a rename must not silently
+// walk a node out of this registry's scope.
 //
 // This is the paramNotesCoverage pattern, and it follows its central lesson: a
 // guard whose failure mode is "skip what I don't recognise" degrades to green
@@ -63,7 +66,7 @@ const pvalueNodes = manifest.nodes
 	.filter((n) =>
 		(n.outputs ?? []).some((o) => {
 			const name = typeof o === 'string' ? o : o?.name;
-			return name === 'pvalue' || name === 'padj' || name === 'ww_pvalue';
+			return name === 'pvalue' || name === 'perm_pvalue' || name === 'padj' || name === 'ww_pvalue';
 		})
 	)
 	.map((n) => n.id);

@@ -1,6 +1,9 @@
 // Integration test: enabling the permutation test on the dedicated fit nodes
-// (Cosinor, Rectangular wave, Double logistic) populates their wireable `pvalue`
-// output column with a real p-value. Uses the actual classes + fits (no mocks).
+// (Cosinor, Rectangular wave, Double logistic) populates their wireable
+// permutation-p output column with a real p-value. Uses the actual classes +
+// fits (no mocks). Since v72.25 that port is `perm_pvalue` on all three nodes:
+// Cosinor's `pvalue` now carries the analytic F-test p (Cosinor.pvalue.test.js),
+// and RectangularWave/DoubleLogistic renamed their only p to match.
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { core, appConsts } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
@@ -50,7 +53,7 @@ async function runWithPermutation(name, args, yValues) {
 		null
 	);
 	await tp.doProcess();
-	const pId = tp.args.out.pvalue;
+	const pId = tp.args.out.perm_pvalue;
 	const pData = pId != null && pId >= 0 ? core.rawData.get(pId) : null;
 	return pData?.[0];
 }
@@ -67,7 +70,7 @@ describe('dedicated fit nodes — permutation pvalue output', () => {
 				fixedPeriod: 24,
 				nHarmonics: 1,
 				alpha: 0.05,
-				out: { cosinorx: -1, period: -1, amplitude: -1, rsquared: -1, pvalue: -1 }
+				out: { cosinorx: -1, period: -1, amplitude: -1, rsquared: -1, pvalue: -1, perm_pvalue: -1 }
 			},
 			y
 		);
@@ -85,7 +88,7 @@ describe('dedicated fit nodes — permutation pvalue output', () => {
 				fixedPeriod: 24,
 				fixKappa: false,
 				fixDutyCycle: false,
-				out: { rectwavex: -1, pvalue: -1 }
+				out: { rectwavex: -1, perm_pvalue: -1 }
 			},
 			y
 		);
@@ -105,7 +108,7 @@ describe('dedicated fit nodes — permutation pvalue output', () => {
 				fixedK2: 0.5,
 				fixPeriod: false,
 				fixedPeriod: 24,
-				out: { dlogx: -1, pvalue: -1 }
+				out: { dlogx: -1, perm_pvalue: -1 }
 			},
 			y
 		);
@@ -164,7 +167,7 @@ describe('dedicated fit nodes — permutation pvalue on the fit result', () => {
 				fixedPeriod: 24,
 				fixKappa: false,
 				fixDutyCycle: false,
-				out: { rectwavex: -1, pvalue: -1 }
+				out: { rectwavex: -1, perm_pvalue: -1 }
 			},
 			y
 		);
@@ -184,7 +187,7 @@ describe('dedicated fit nodes — permutation pvalue on the fit result', () => {
 				fixedK2: 0.5,
 				fixPeriod: false,
 				fixedPeriod: 24,
-				out: { dlogx: -1, pvalue: -1 }
+				out: { dlogx: -1, perm_pvalue: -1 }
 			},
 			y
 		);

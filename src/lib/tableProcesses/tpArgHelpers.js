@@ -28,6 +28,29 @@ export function migrateLegacyYIN(args) {
 }
 
 /**
+ * Rename an output KEY in `args.out` while keeping its column id — the
+ * anti-orphaning move for output REKEYING (metricOutputs.js names rekeying as
+ * the classic hazard): wires point at `col_<colId>` ports, so as long as the
+ * column id survives under the new key, every downstream consumer stays wired.
+ * Idempotent, and a no-op when the new key already exists (a session saved
+ * after the rename, or one that somehow carries both). Call it both where the
+ * component instantiates AND at the top of the engine func, so headless
+ * callers (MCP engine, doProcess) migrate old sessions too.
+ * @param {object} args - the table process's `p.args` (mutated in place)
+ * @param {string} oldKey
+ * @param {string} newKey
+ * @returns {boolean} true when a rename happened
+ */
+export function migrateRenamedOutKey(args, oldKey, newKey) {
+	const out = args?.out;
+	if (!out || typeof out !== 'object') return false;
+	if (out[newKey] !== undefined || out[oldKey] === undefined) return false;
+	out[newKey] = out[oldKey];
+	delete out[oldKey];
+	return true;
+}
+
+/**
  * Backfill args that are absent from `args` (a session saved before the field
  * existed) with the definition defaults. Only entries shaped `{ val }` are
  * filled — structured entries like `out` (seeded by the TableProcess

@@ -1737,6 +1737,13 @@ def tp_cosinor(args, cols, raw_data, _sv):
                          ('rsquared', r2_by_y), ('pvalue', pval_by_y)):
             _set_col(raw_data, cols, _out_id(args, key),
                      [src.get(y, nan) for y in y_ins], type_='number')
+        # `perm_pvalue` (JS v72.x) carries the optional permutation test's Monte
+        # Carlo p. Same parity boundary as SurrogateTest/DoubleLogistic: its value
+        # depends on the JS's seeded @stdlib PRNG, which this runtime does not
+        # reproduce, so it is NaN here — "not computed", not "not significant".
+        # The analytic F-test p stays on `pvalue`, matched against the JS.
+        _set_col(raw_data, cols, _out_id(args, 'perm_pvalue'),
+                 [nan for _ in y_ins], type_='number')
     return any_valid
 
 
@@ -2202,12 +2209,13 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
     if any_valid:
         nan = float('nan')
         # Declared ports that had no writer until 2026-07-28: a session wiring r2 or rmse
-        # downstream got an EMPTY column from the export. `pvalue` belongs to the optional
-        # permutation test, which this port does not run, so it stays NaN — "not computed",
-        # not "not significant".
+        # downstream got an EMPTY column from the export. `perm_pvalue` (renamed from the
+        # bare `pvalue` in JS v72.25 — it is the optional permutation test's p, the ONLY p
+        # this node emits) belongs to a Monte Carlo test this port does not run, so it
+        # stays NaN — "not computed", not "not significant".
         for key, getter in (('r2', lambda r: r.get('rSquared', nan)),
                             ('rmse', lambda r: r.get('rmse', nan)),
-                            ('pvalue', lambda r: nan)):
+                            ('perm_pvalue', lambda r: nan)):
             _set_col(raw_data, cols, _out_id(args, key),
                      [getter(stats_by_y[y]) if y in stats_by_y else nan for y in y_ins],
                      type_='number')
@@ -2507,12 +2515,13 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
     if any_valid:
         nan = float('nan')
         # Declared ports that had no writer until 2026-07-28: a session wiring r2 or rmse
-        # downstream got an EMPTY column from the export. `pvalue` belongs to the optional
-        # permutation test, which this port does not run, so it stays NaN — "not computed",
-        # not "not significant".
+        # downstream got an EMPTY column from the export. `perm_pvalue` (renamed from the
+        # bare `pvalue` in JS v72.25 — it is the optional permutation test's p, the ONLY p
+        # this node emits) belongs to a Monte Carlo test this port does not run, so it
+        # stays NaN — "not computed", not "not significant".
         for key, getter in (('r2', lambda r: r.get('rSquared', nan)),
                             ('rmse', lambda r: r.get('rmse', nan)),
-                            ('pvalue', lambda r: nan)):
+                            ('perm_pvalue', lambda r: nan)):
             _set_col(raw_data, cols, _out_id(args, key),
                      [getter(stats_by_y[y]) if y in stats_by_y else nan for y in y_ins],
                      type_='number')
