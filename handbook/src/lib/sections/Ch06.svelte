@@ -185,9 +185,12 @@
     <p>
       A periodogram scanning 16–32 h in 0.05 h steps performs several hundred
       simultaneous χ² tests, so an uncorrected α = 0.05 threshold will be exceeded
-      by chance in most pure-noise records. Apply a <strong>Bonferroni-type
-      correction</strong> over the number of trial periods tested (use α/m), or
-      better, derive the threshold by <strong>permuting the series</strong> and
+      by chance in most pure-noise records. AnCiR's drawn threshold line already
+      applies a <strong>Sidak correction</strong> over the number of trial periods
+      tested (the per-period confidence level is (1−α)<sup>1/m</sup>), so it does
+      not need a further Bonferroni adjustment; the per-period p-values it exports
+      are raw, uncorrected upper-tail values. For a still safer bar, derive the
+      threshold by <strong>permuting the series</strong> and
       taking the 95th percentile of the maximum Q_P — this handles both the
       multiplicity and the correlation between neighbouring trial periods. Two
       further cautions: the χ² null assumes <strong>independent observations</strong>,

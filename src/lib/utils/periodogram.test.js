@@ -274,6 +274,71 @@ describe('runPeriodogramCalculation — Chi-squared', () => {
 		).not.toThrow();
 	});
 
+	// The drawn significance line must be the Sidak-corrected UPPER chi-square
+	// quantile. It used to be computed as quantile(1 - correctedAlpha, df) — the
+	// LOWER tail — which for alpha 0.05 over a 25-period grid at df 23 gives 8.24
+	// instead of 47.31. Since noise-level Qp averages about df, the drawn line sat
+	// BELOW the noise floor and nearly every period looked significant.
+	// Reference values pinned against scipy.stats.chi2.ppf((1-0.05)**(1/25), df).
+	it('draws the Sidak-corrected upper-tail chi-square quantile as the threshold', () => {
+		const { t, y } = cosineTimeSeries(24, 24 * 10, 0.5);
+		const result = runPeriodogramCalculation({
+			method: 'Chi-squared',
+			xData: t,
+			yData: y,
+			binSize: 1,
+			periodMin: 18,
+			periodMax: 30,
+			periodSteps: 0.5,
+			chiSquaredAlpha: 0.05
+		});
+		// Grid is 18..30 step 0.5 → M = 25 trial periods; df = round(P/binSize) - 1.
+		const pinned = [
+			[18, 38.571630187617615],
+			[24, 47.30749996546788],
+			[30, 55.7022178391594]
+		];
+		for (const [period, expected] of pinned) {
+			const idx = result.x.findIndex((x) => Math.abs(x - period) < 1e-9);
+			expect(idx).toBeGreaterThanOrEqual(0);
+			expect(result.threshold[idx]).toBeCloseTo(expected, 6);
+		}
+	});
+
+	it('keeps the threshold above the noise floor for pure noise', () => {
+		// Deterministic pseudo-noise (mulberry32, the seeded generator the parity
+		// fixtures use) — no rhythm, so nothing should look significant.
+		let seed = 12345;
+		const rng = () => {
+			seed |= 0;
+			seed = (seed + 0x6d2b79f5) | 0;
+			let v = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+			v = (v + Math.imul(v ^ (v >>> 7), 61 | v)) ^ v;
+			return ((v ^ (v >>> 14)) >>> 0) / 4294967296;
+		};
+		const t = Array.from({ length: 336 }, (_, i) => i);
+		const y = t.map(() => rng());
+		const result = runPeriodogramCalculation({
+			method: 'Chi-squared',
+			xData: t,
+			yData: y,
+			binSize: 1,
+			periodMin: 18,
+			periodMax: 30,
+			periodSteps: 0.5,
+			chiSquaredAlpha: 0.05
+		});
+		// Under the null, Qp ~ chi-square(df) whose mean is df, so the Sidak
+		// upper quantile must sit ABOVE the mean noise power at every period.
+		const meanPower = result.y.reduce((a, b) => a + b, 0) / result.y.length;
+		for (const thr of result.threshold) {
+			expect(thr).toBeGreaterThan(meanPower * 0.9);
+		}
+		// And essentially nothing in a pure-noise record should cross the line.
+		const nAbove = result.y.filter((v, i) => v > result.threshold[i]).length;
+		expect(nAbove / result.y.length).toBeLessThan(0.1);
+	});
+
 	it('peaks at 24h for a 24h cosine and reports a low p-value there', () => {
 		const { t, y } = cosineTimeSeries(24, 24 * 10, 0.5);
 		const result = runPeriodogramCalculation({

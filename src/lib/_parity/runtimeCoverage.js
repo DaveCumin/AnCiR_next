@@ -168,6 +168,7 @@ export const HARNESS_BLIND = ['collectcolumns', 'longtowide', 'movinganalysis', 
  * against a third implementation rather than assuming.
  */
 export const R_PURE_UTILS = [
+	'chi_squared_periodogram',
 	'circular_mean',
 	'compute_autocorrelation',
 	'compute_fft',

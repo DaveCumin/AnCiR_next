@@ -413,7 +413,7 @@ def _lomb_scargle(t, y, periods):
     return powers.tolist()
 
 
-def _chi_squared_pgram(t, y, periods, dt):
+def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
     # Folding chi-squared periodogram
     t = np.asarray(t, dtype=float)
     y = np.asarray(y, dtype=float)
@@ -432,10 +432,22 @@ def _chi_squared_pgram(t, y, periods, dt):
             means = np.where(counts > 0, means / np.maximum(counts, 1), 0.0)
         bin_var = ((means - y.mean()) ** 2 * counts).sum() / n
         powers[k] = n * bin_var / var_y
-    # threshold at p=0.05 with df = nbins-1 (using a typical mid nbins)
-    df_mid = max(2, int(round(np.median(periods) / dt))) - 1
-    thr = float(sp_stats.chi2.ppf(0.95, df_mid))
-    return powers.tolist(), thr
+    # Per-period Sidak-corrected UPPER-tail threshold, matching periodogram.js:
+    # correctedAlpha = (1 - alpha)^(1/M) is the per-comparison CONFIDENCE level,
+    # so the quantile is evaluated at correctedAlpha (upper tail), with
+    # df = round(P/dt) - 1 per trial period (NaN below df 1). This replaced a
+    # single UNCORRECTED scalar taken at a mid-grid df — a third, different line
+    # from both the JS intent and the JS bug it mirrored; the
+    # pure-chisq-periodogram-threshold parity fixture now pins all three
+    # languages to the same array.
+    m = len(periods)
+    corrected = (1.0 - alpha) ** (1.0 / m) if m else float('nan')
+    thresholds = []
+    for P in periods:
+        df = _js_round(P / dt) - 1
+        thresholds.append(
+            float(sp_stats.chi2.ppf(corrected, df)) if df >= 1 else float('nan'))
+    return powers.tolist(), thresholds
 
 
 def _enright_pgram(t, y, periods, dt):
@@ -470,11 +482,30 @@ def run_periodogram_calculation(params, on_progress=None):
         powers = _lomb_scargle(t, y, periods)
         threshold = None
     elif method == 'Chi-squared':
-        powers, threshold = _chi_squared_pgram(t, y, periods, dt)
+        alpha = float(params.get('alpha', params.get('chiSquaredAlpha', 0.05)))
+        powers, threshold = _chi_squared_pgram(t, y, periods, dt, alpha)
     else:
         powers = _enright_pgram(t, y, periods, dt)
         threshold = None
     return {'x': periods, 'y': powers, 'threshold': threshold}
+
+
+def chi_squared_periodogram(t, y, opts):
+    """Pure-util parity surface for the chi-squared (Sokolove-Bushell)
+    periodogram. Only `period` and `threshold` are parity-compared: the
+    threshold depends solely on the period grid, bin size, and alpha, so it
+    must agree exactly across the three languages, while the POWERS from this
+    simplified mod-binning port differ from the JS binData-then-fold pipeline
+    and are deliberately not pinned (see the 2026-09-07 scoping note)."""
+    res = run_periodogram_calculation({
+        't': t, 'y': y, 'method': 'Chi-squared',
+        'minPeriod': opts.get('periodMin', 1.0),
+        'maxPeriod': opts.get('periodMax', 48.0),
+        'stepSize': opts.get('periodStep', 0.1),
+        'dt': opts.get('binSize', 0.25),
+        'alpha': opts.get('alpha', 0.05),
+    })
+    return {'period': res['x'], 'threshold': res['threshold']}
 
 
 def _median_dt(t):
@@ -2552,6 +2583,10 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
                 'minPeriod': args.get('periodMin', args.get('minPeriod', 1.0)),
                 'maxPeriod': args.get('periodMax', args.get('maxPeriod', 48.0)),
                 'stepSize': args.get('periodStep', args.get('stepSize', 0.1)),
+                # JS RhythmicityAnalysis passes binSize = pgBinSize ?? 0.25 and
+                # chiSquaredAlpha = pgAlpha ?? 0.05 (RhythmicityAnalysis.svelte:142).
+                'dt': args.get('pgBinSize', 0.25),
+                'alpha': args.get('pgAlpha', 0.05),
             })
             xs, ys = pg['x'], pg['y']
             if hide_inputs:
@@ -2569,7 +2604,7 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
                 if pg.get('threshold') is not None:
                     _set_col(raw_data, cols,
                              _out_id(args, f'{y_id}_threshold'),
-                             [pg['threshold']] * len(xs), type_='number')
+                             list(pg['threshold']), type_='number')
         elif analysis == 'fft':
             fft = compute_fft(t, y)
             xs = fft['frequencies']

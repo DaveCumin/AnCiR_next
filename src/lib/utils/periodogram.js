@@ -142,8 +142,8 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 
 			for (let i = 0; i < n - lag; i++) {
 				// isNaN-ok: centeredData is derived from binData output (number, or NaN for an empty
-			// bin) — never null.
-			if (!isNaN(centeredData[i]) && !isNaN(centeredData[i + lag])) {
+				// bin) — never null.
+				if (!isNaN(centeredData[i]) && !isNaN(centeredData[i + lag])) {
 					corrAcc.add(centeredData[i] * centeredData[i + lag]);
 					nPairs++;
 				}
@@ -250,7 +250,7 @@ export function runPeriodogramCalculation(params, onProgress) {
 		const denomAcc = new KahanSum();
 		for (let i = 0; i < data.length; i++) {
 			// isNaN-ok: binData output (number, or NaN for an empty bin) — never null.
-		if (!isNaN(data[i])) {
+			if (!isNaN(data[i])) {
 				const diff = data[i] - avgAll;
 				denomAcc.add(diff * diff);
 			}
@@ -270,7 +270,14 @@ export function runPeriodogramCalculation(params, onProgress) {
 					avgAll,
 					denomAcc.value
 				);
-				threshold[p] = quantile_chisq(1 - correctedAlpha, df);
+				// Sidak-corrected UPPER-tail quantile: correctedAlpha is the per-period
+				// CONFIDENCE level (1 - alpha)^(1/M), so the quantile is evaluated at
+				// correctedAlpha directly. Passing 1 - correctedAlpha (as this once did)
+				// lands on the LOWER tail, drawing the line below the noise floor so
+				// nearly every period looked significant. Mirrored in
+				// tools/ancir_runtime.py and tools/ancir_runtime.R; the
+				// pure-chisq-periodogram-threshold parity fixture pins all three.
+				threshold[p] = quantile_chisq(correctedAlpha, df);
 				pvalue[p] = 1 - cdf_chisq(power[p], df);
 			}
 

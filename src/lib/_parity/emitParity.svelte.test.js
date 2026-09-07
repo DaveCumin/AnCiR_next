@@ -54,6 +54,7 @@ import { pAdjust } from '$lib/utils/pAdjust.js';
 import { fisherExact, conditionalOddsRatio, oddsRatioCI } from '$lib/utils/fisherExact.js';
 import { cwt } from '$lib/utils/cwt.js';
 import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
+import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
 
@@ -141,6 +142,28 @@ const PURE_UTIL_FNS = {
 	cwtPeakScaleIndex: cwtPeakScaleIndexAdapter,
 	movingWindows: movingWindowsAdapter,
 	fisherExact,
+	// Chi-squared (Sokolove-Bushell) periodogram significance threshold. The
+	// fixture compares `period` and `threshold` ONLY: the threshold depends
+	// solely on the period grid, bin size, and alpha, so all three languages
+	// must produce the identical Sidak-corrected upper-tail quantile array,
+	// while the POWERS are deliberately not pinned — the Python/R chi-squared
+	// ports use a simplified mod-binning that diverges from the JS
+	// binData-then-fold pipeline (a known, separate gap; 2026-09-07 scoping
+	// note). This fixture exists because the drawn threshold was wrong in all
+	// three languages, differently, and nothing compared it.
+	chiSquaredPeriodogram: (t, y, opts) => {
+		const r = runPeriodogramCalculation({
+			method: 'Chi-squared',
+			xData: t,
+			yData: y,
+			binSize: opts.binSize ?? 0.25,
+			periodMin: opts.periodMin,
+			periodMax: opts.periodMax,
+			periodSteps: opts.periodStep,
+			chiSquaredAlpha: opts.alpha ?? 0.05
+		});
+		return { period: r.x, threshold: r.threshold };
+	},
 	fisherConditionalOR: (table, confidence) => {
 		const ci = oddsRatioCI(table, confidence);
 		return { conditionalOddsRatio: conditionalOddsRatio(table), ciLow: ci[0], ciHigh: ci[1] };

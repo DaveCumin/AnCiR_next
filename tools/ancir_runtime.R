@@ -2607,8 +2607,13 @@ lomb_scargle <- function(t, y, periods) {
   }, numeric(1))
 }
 
-# Folding chi-squared periodogram, with the p = 0.05 threshold taken at a typical bin count.
-chi_squared_pgram <- function(t, y, periods, dt) {
+# Folding chi-squared periodogram. The significance threshold is the per-period
+# Sidak-corrected UPPER-tail chi-square quantile, matching periodogram.js:
+# correctedAlpha = (1 - alpha)^(1/M) is the per-comparison CONFIDENCE level, so the
+# quantile is evaluated at correctedAlpha with df = round(P/dt) - 1 per trial period
+# (NA below df 1). This replaced a single uncorrected scalar taken at a mid-grid df;
+# the pure-chisq-periodogram-threshold parity fixture pins all three languages.
+chi_squared_pgram <- function(t, y, periods, dt, alpha = 0.05) {
   t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
   y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
   n <- length(y)
@@ -2626,8 +2631,13 @@ chi_squared_pgram <- function(t, y, periods, dt) {
     means <- ifelse(counts > 0, sums / pmax(counts, 1), 0)
     n * (sum((means - ymean)^2 * counts) / n) / vary
   }, numeric(1))
-  df_mid <- max(2, js_round(median(periods) / dt)) - 1
-  list(powers = powers, threshold = qchisq(0.95, df_mid))
+  m <- length(periods)
+  corrected <- if (m > 0) (1 - alpha)^(1 / m) else NA_real_
+  thresholds <- vapply(periods, function(P) {
+    df <- js_round(P / dt) - 1
+    if (df >= 1) qchisq(corrected, df) else NA_real_
+  }, numeric(1))
+  list(powers = powers, threshold = thresholds)
 }
 
 # Binned-autocorrelation Enright periodogram (the simplified form the app uses).
@@ -2657,7 +2667,10 @@ run_periodogram_calculation <- function(params) {
   if (identical(method, "Lomb-Scargle")) {
     list(x = periods, y = lomb_scargle(t, y, periods), threshold = NULL)
   } else if (identical(method, "Chi-squared")) {
-    r <- chi_squared_pgram(t, y, periods, dt)
+    alpha <- as.numeric(if (!is.null(params$alpha)) params$alpha
+                        else if (!is.null(params$chiSquaredAlpha)) params$chiSquaredAlpha
+                        else 0.05)
+    r <- chi_squared_pgram(t, y, periods, dt, alpha)
     list(x = periods, y = r$powers, threshold = r$threshold)
   } else {
     list(x = periods, y = enright_pgram(t, y, periods, dt), threshold = NULL)
@@ -2793,7 +2806,11 @@ tp_rhythmicityanalysis <- function(args, env) {
         method = pick("pgMethod", "method", "Lomb-Scargle"),
         minPeriod = pick("periodMin", "minPeriod", 1),
         maxPeriod = pick("periodMax", "maxPeriod", 48),
-        stepSize = pick("periodStep", "stepSize", 0.1)))
+        stepSize = pick("periodStep", "stepSize", 0.1),
+        # JS RhythmicityAnalysis passes binSize = pgBinSize ?? 0.25 and
+        # chiSquaredAlpha = pgAlpha ?? 0.05 (RhythmicityAnalysis.svelte:142).
+        dt = if (is.null(args$pgBinSize)) 0.25 else as.numeric(args$pgBinSize),
+        alpha = if (is.null(args$pgAlpha)) 0.05 else as.numeric(args$pgAlpha)))
       if (hide_inputs) {
         if (is.null(shared_x)) {
           shared_x <- pg$x
@@ -2805,7 +2822,7 @@ tp_rhythmicityanalysis <- function(args, env) {
         set_col(env, env$cols, out_id(args, paste0(y_id, "_power")), pg$y, type = "number")
         if (!is.null(pg$threshold)) {
           set_col(env, env$cols, out_id(args, paste0(y_id, "_threshold")),
-                  rep(pg$threshold, length(pg$x)), type = "number")
+                  pg$threshold, type = "number")
         }
       }
     } else if (identical(analysis, "fft")) {
@@ -3330,6 +3347,22 @@ tp_blankcolumn <- function(args, env) {
   TRUE
 }
 
+# Pure-util parity surface for the chi-squared (Sokolove-Bushell) periodogram. Only
+# `period` and `threshold` are parity-compared: the threshold depends solely on the period
+# grid, bin size, and alpha, so it must agree exactly across the three languages, while the
+# POWERS from this simplified mod-binning port differ from the JS binData-then-fold pipeline
+# and are deliberately not pinned (see the 2026-09-07 scoping note).
+chi_squared_periodogram <- function(t, y, opts) {
+  res <- run_periodogram_calculation(list(
+    t = t, y = y, method = "Chi-squared",
+    minPeriod = if (is.null(opts$periodMin)) 1 else as.numeric(opts$periodMin),
+    maxPeriod = if (is.null(opts$periodMax)) 48 else as.numeric(opts$periodMax),
+    stepSize = if (is.null(opts$periodStep)) 0.1 else as.numeric(opts$periodStep),
+    dt = if (is.null(opts$binSize)) 0.25 else as.numeric(opts$binSize),
+    alpha = if (is.null(opts$alpha)) 0.05 else as.numeric(opts$alpha)))
+  list(period = res$x, threshold = res$threshold)
+}
+
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
 # sits beside the existing `pyFunc`, so both legs read one fixture file).
 #
@@ -3348,6 +3381,7 @@ PURE_UTIL_MAP <- list(
   moving_windows = moving_windows,
   compute_autocorrelation = compute_autocorrelation,
   compute_fft    = compute_fft,
+  chi_squared_periodogram = chi_squared_periodogram,
   d_agostino     = d_agostino,
   shapiro_wilk   = shapiro_wilk,
   qq_points      = qq_points,

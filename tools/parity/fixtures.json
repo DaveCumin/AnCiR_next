@@ -3903,6 +3903,54 @@
 			]
 		},
 		{
+			"id": "pure-chisq-periodogram-threshold",
+			"kind": "pureUtil",
+			"jsFn": "chiSquaredPeriodogram",
+			"pyFunc": "chi_squared_periodogram",
+			"rFunc": "chi_squared_periodogram",
+			"tolerance": 1e-06,
+			"generate": {
+				"type": "rhythm",
+				"n": 336,
+				"period": 24,
+				"amp": 30,
+				"mesor": 45,
+				"phase": 6,
+				"noise": 8,
+				"seed": 907,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"argRefs": [
+				"t",
+				"y"
+			],
+			"jsArgs": [
+				{
+					"binSize": 1,
+					"periodMin": 18,
+					"periodMax": 30,
+					"periodStep": 0.5,
+					"alpha": 0.05
+				}
+			],
+			"pyArgs": [
+				{
+					"binSize": 1,
+					"periodMin": 18,
+					"periodMax": 30,
+					"periodStep": 0.5,
+					"alpha": 0.05
+				}
+			],
+			"compareArrays": [
+				"period",
+				"threshold"
+			]
+		},
+		{
 			"id": "time-iso-utc-z",
 			"kind": "timeColumn",
 			"pyFunc": "timecolumn",
