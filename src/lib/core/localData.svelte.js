@@ -15,6 +15,8 @@
 //   ancir.workflow.nodePositions  node coordinates
 //   ancir.canvas.pathFocus      one node id
 //   ancir.tours.completed       which tours are done
+//   ancir.firstRun.engaged      '1' once the new-user help hint has been engaged with
+//                               (dismissed, Help opened, or a tour started)
 //   ancir.style.configs.v1      named figure-style presets: typeface, size, palette, and
 //                               rules keyed on column NAMES and GROUP LABELS. Written
 //                               directly to localStorage and exempt from the clear below;

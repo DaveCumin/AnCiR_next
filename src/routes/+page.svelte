@@ -62,6 +62,8 @@
 	import NodeComputeHost from '$lib/components/views/NodeComputeHost.svelte';
 	import { pinAllSeriesAppearance } from '$lib/plots/appearanceIdentity.js';
 	import StartScreen from '$lib/components/views/StartScreen.svelte';
+	import { queueHelpHint } from '$lib/core/helpHint.svelte.js';
+	import { wasNewAtSessionStart } from '$lib/utils/firstRun.js';
 
 	// --- start screen -------------------------------------------------------
 	// Shown only when there is nothing to resume: an empty session, no deep-linked load in
@@ -90,6 +92,28 @@
 
 	$effect(() => {
 		if (!sessionIsEmpty) startDismissed = false;
+	});
+
+	// The start screen can also be SUMMONED from Help → "Welcome screen" at any time,
+	// including over a non-empty session. This flag is the note's "summoned-over-work"
+	// case: purely informational — dismissing it returns to the work untouched, and it
+	// never clears anything by itself.
+	let welcomeSummoned = $state(false);
+
+	// First-run help hint: when the start screen closes for a NEW user — their first
+	// real action, whether dismissing it or loading an example/session from it — draw
+	// attention to the ? Help button (Navbar renders the halo + callout; helpHint.svelte.js
+	// owns the ~500ms delay and the new-user gate). A deep-linked load suppresses the
+	// start screen without any user action, so that transition doesn't count.
+	// Judge freshness NOW, before the user's first action can write evidence (opening
+	// an example records a recent, which would make a new user look like a returning
+	// one by the time the start screen closes).
+	wasNewAtSessionStart();
+	let prevShowStart = null;
+	$effect(() => {
+		const now = showStartScreen;
+		if (prevShowStart === true && !now && !deepLinkPending) queueHelpHint();
+		prevShowStart = now;
 	});
 
 	// On a fresh page load, start both canvases at their default zoom + position
@@ -820,7 +844,7 @@
 {/if}
 {#if !appState.loadingState.isLoading || core.data.length > 0}
 	{#if appState.showNavbar}
-		<Navbar />
+		<Navbar onShowWelcome={() => (welcomeSummoned = true)} />
 	{/if}
 
 	<DisplayPanel />
@@ -839,8 +863,14 @@
 		<NodeComputeHost />
 	{/if}
 
-	{#if showStartScreen}
-		<StartScreen onDismiss={() => (startDismissed = true)} />
+	{#if showStartScreen || welcomeSummoned}
+		<StartScreen
+			summoned={welcomeSummoned && !showStartScreen}
+			onDismiss={() => {
+				startDismissed = true;
+				welcomeSummoned = false;
+			}}
+		/>
 	{/if}
 
 	<ControlPanel />

@@ -12,6 +12,10 @@
 	import LoadSessionModal from './workflow/LoadSessionModal.svelte';
 	import AiPrompt from './views/modals/AiPrompt.svelte';
 	import { NL_CONFIGURED, checkNlHealth } from '$lib/utils/nlSession.js';
+	import { helpHint, dismissHelpHint } from '$lib/core/helpHint.svelte.js';
+
+	// Callback from +page: summon the welcome/start screen (Help → "Welcome screen").
+	let { onShowWelcome = null } = $props();
 
 	let showSettings = $state(false);
 	let showAbout = $state(false);
@@ -203,8 +207,10 @@
 		<div class="help-anchor" bind:this={helpAnchor}>
 			<button
 				class="rail-btn"
+				class:hint-halo={helpHint.visible}
 				data-testid="nav-help"
 				onclick={() => {
+                  				  dismissHelpHint();
                   				  checkFile();
                                   showHelpMenu = !showHelpMenu
                   				}
@@ -226,6 +232,17 @@
 							openPicker();
 						}}>Take a tour…</button
 					>
+					{#if onShowWelcome}
+						<button
+							type="button"
+							role="menuitem"
+							data-testid="help-welcome"
+							onclick={() => {
+								showHelpMenu = false;
+								onShowWelcome();
+							}}>Welcome screen</button
+						>
+					{/if}
 					{#if exists}
     					<button
     						type="button"
@@ -244,6 +261,32 @@
 							showHelpMenu = false;
 							showAbout = true;
 						}}>About AnCiR</button
+					>
+				</div>
+			{/if}
+			{#if helpHint.visible && !showHelpMenu}
+				<!-- One-time coach mark for new users, anchored to the ? button. Shown by
+				     helpHint.svelte.js when the start screen closes; any engagement (the X,
+				     the tour button, or opening Help itself) ends it permanently. -->
+				<div class="help-callout" role="status" data-testid="help-callout">
+					<button
+						type="button"
+						class="callout-close"
+						aria-label="Dismiss"
+						onclick={dismissHelpHint}
+					>
+						<Icon name="close" width={12} height={12} />
+					</button>
+					<p class="callout-title">New here?</p>
+					<p class="callout-body">Take a tour, or find help and examples here any time.</p>
+					<button
+						type="button"
+						class="callout-cta"
+						data-testid="help-callout-tour"
+						onclick={() => {
+							dismissHelpHint();
+							openPicker();
+						}}>Take a tour</button
 					>
 				</div>
 			{/if}
@@ -381,5 +424,89 @@
 
 	.help-menu button:hover {
 		background: var(--color-lightness-95);
+	}
+
+	/* --- first-run help hint ------------------------------------------------ */
+	/* Pulsing halo on the ? button only. The animated shadow spread is ≤ 7px on a
+	   ~40px element — cheap. NEVER animate a full-screen-spread shadow (see the
+	   tour overlay's perf note: that repaints the whole viewport every frame). */
+	.rail-btn.hint-halo {
+		animation: hint-halo-pulse 2s ease-in-out infinite;
+	}
+	@keyframes hint-halo-pulse {
+		0%,
+		100% {
+			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 55%, transparent);
+		}
+		50% {
+			box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-accent) 18%, transparent);
+		}
+	}
+
+	/* The coach mark: same visual language as .help-menu (surface card, hairline
+	   border, --shadow-3), popped out to the right of the rail beside the ? button. */
+	.help-callout {
+		position: absolute;
+		left: calc(100% + 10px);
+		bottom: 0;
+		width: 220px;
+		padding: var(--space-5);
+		background: var(--surface-card);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-3);
+		z-index: 1001;
+	}
+	.callout-title {
+		margin: 0 0 var(--space-2);
+		font-size: var(--font-lg);
+		font-weight: 600;
+		color: var(--color-lightness-20);
+	}
+	.callout-body {
+		margin: 0 0 var(--space-4);
+		font-size: var(--font-sm);
+		line-height: 1.4;
+		color: var(--color-text-muted);
+	}
+	.callout-cta {
+		margin: 0;
+		padding: var(--space-3) var(--space-5);
+		background: var(--color-accent-fill);
+		color: var(--surface-card);
+		border: none;
+		border-radius: var(--radius-md);
+		font-size: var(--font-md);
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.callout-cta:hover,
+	.callout-cta:focus-visible {
+		background: var(--color-lightness-20);
+	}
+	.callout-close {
+		position: absolute;
+		top: var(--space-2);
+		right: var(--space-2);
+		margin: 0;
+		padding: var(--space-2);
+		background: transparent;
+		border: none;
+		border-radius: var(--radius-sm);
+		color: var(--color-text-muted);
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.callout-close:hover {
+		background: var(--color-lightness-95);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.rail-btn.hint-halo {
+			animation: none;
+			box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 55%, transparent);
+		}
 	}
 </style>

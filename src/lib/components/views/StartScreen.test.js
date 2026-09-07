@@ -252,6 +252,27 @@ describe('dismissing', () => {
 	});
 });
 
+describe('summoned over work (Help → Welcome screen)', () => {
+	it('adds an explicit close button that only dismisses', async () => {
+		const onDismiss = vi.fn();
+		render(StartScreen, { props: { onDismiss, summoned: true } });
+		await fireEvent.click(screen.getByTestId('start-close'));
+		expect(onDismiss).toHaveBeenCalledOnce();
+	});
+
+	it('rewords the blank-canvas card as the way back to the session', () => {
+		render(StartScreen, { props: { summoned: true } });
+		expect(screen.getByText('Back to your session')).toBeTruthy();
+		expect(screen.queryByText(/start with a blank canvas/i)).toBeNull();
+	});
+
+	it('keeps the ordinary first-visit wording (and no close button) when not summoned', () => {
+		render(StartScreen);
+		expect(screen.queryByTestId('start-close')).toBeNull();
+		expect(screen.getByText('Start with a blank canvas')).toBeTruthy();
+	});
+});
+
 describe('load session', () => {
 	it('falls back to the file-input modal when the browser has no handle picker', async () => {
 		render(StartScreen);

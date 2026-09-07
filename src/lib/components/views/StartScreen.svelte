@@ -30,7 +30,13 @@
 		notifyFailure
 	} from '$lib/start/startActions.js';
 
-	let { onDismiss = null } = $props();
+	// `summoned` = reopened from Help → "Welcome screen" OVER existing work (the TODO
+	// note's summoned-over-work case). Same overlay — it already has the full modal
+	// semantics (scrim, role=dialog + aria-modal, Escape) — but purely informational:
+	// it gets an explicit close button, and the blank-canvas card becomes "back to
+	// your session" since there is a session to go back to. Dismissing never clears
+	// anything either way.
+	let { onDismiss = null, summoned = false } = $props();
 
 
 	let dragActive = $state(false);
@@ -174,6 +180,17 @@
 		<header class="start-head">
 			<h1 id="start-heading">Start a session</h1>
 			<p>Bring in a recording, pick up where you left off, or open a worked example.</p>
+			{#if summoned}
+				<button
+					type="button"
+					class="start-close"
+					aria-label="Close and return to your session"
+					data-testid="start-close"
+					onclick={() => onDismiss?.()}
+				>
+					<Icon name="close" width={16} height={16} />
+				</button>
+			{/if}
 		</header>
 
 		<!-- 1. Actions: four cards of equal weight ------------------------------ -->
@@ -203,8 +220,10 @@
 				<!-- "workflow" was never a registered icon name, so this card rendered a blank box.
 				     "process" is the app's own icon for the workflow canvas, which is where this lands. -->
 				<span class="primary-icon"><Icon name="process" width={26} height={26} /></span>
-				<span class="primary-title">Start with a blank canvas</span>
-				<span class="primary-sub">Build it yourself, node by node</span>
+				<span class="primary-title">{summoned ? 'Back to your session' : 'Start with a blank canvas'}</span>
+				<span class="primary-sub"
+					>{summoned ? 'Close this screen — your work is untouched' : 'Build it yourself, node by node'}</span
+				>
 			</button>
 		</div>
 
@@ -351,6 +370,31 @@
 		background: var(--surface-card);
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-3);
+	}
+
+	.start-head {
+		position: relative;
+	}
+	/* Only rendered when summoned over work: an escape hatch that reads as "close",
+	   matching the rest of the app's icon buttons. */
+	.start-close {
+		position: absolute;
+		top: 0;
+		right: 0;
+		margin: 0;
+		padding: var(--space-3);
+		background: transparent;
+		border: none;
+		border-radius: var(--radius-md);
+		color: var(--color-text-muted);
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.start-close:hover {
+		background: var(--color-lightness-95);
+		color: var(--color-lightness-20);
 	}
 
 	.start-head h1 {

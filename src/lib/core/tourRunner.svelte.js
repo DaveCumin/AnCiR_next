@@ -41,6 +41,7 @@ export function toggleLessons() {
 }
 
 import { store } from '$lib/core/localData.svelte.js';
+import { dismissHelpHint } from '$lib/core/helpHint.svelte.js';
 
 const DONE_KEY = 'ancir.tours.completed';
 
@@ -86,6 +87,9 @@ export function closePicker() {
 
 export function startTour(def) {
 	if (!def?.steps?.length) return;
+	// Starting a tour is engagement: end the first-run "New here?" hint for good
+	// (and cancel one that is queued but not yet shown).
+	dismissHelpHint();
 	tourState.pickerOpen = false;
 	tourState.activeTour = def;
 	tourState.index = 0;
