@@ -1,5 +1,47 @@
 import { describe, it, expect } from 'vitest';
-import { min, max, minMax, mean, standardDeviation, minMaxAcross } from './stats.js';
+import {
+	min,
+	max,
+	minMax,
+	mean,
+	standardDeviation,
+	minMaxAcross,
+	isInvalidValue
+} from './stats.js';
+
+describe('isInvalidValue — the full validity matrix', () => {
+	it('rejects absence: null, undefined, NaN', () => {
+		expect(isInvalidValue(null)).toBe(true);
+		expect(isInvalidValue(undefined)).toBe(true);
+		expect(isInvalidValue(NaN)).toBe(true);
+	});
+
+	it('rejects blank strings — a blank CSV cell is a MISSING value, not 0', () => {
+		// isNaN('') === false because Number('') === 0; without the explicit clause a
+		// blank cell passed the filter and was then coerced into a fabricated zero.
+		expect(isInvalidValue('')).toBe(true);
+		expect(isInvalidValue(' ')).toBe(true);
+		expect(isInvalidValue('\t')).toBe(true);
+		expect(isInvalidValue('\n')).toBe(true);
+	});
+
+	it('rejects non-numeric strings', () => {
+		expect(isInvalidValue('abc')).toBe(true);
+	});
+
+	it('keeps genuine data: numbers, including 0, and numeric strings (v72.20)', () => {
+		expect(isInvalidValue(0)).toBe(false);
+		expect(isInvalidValue('0')).toBe(false);
+		expect(isInvalidValue(1.5)).toBe(false);
+		expect(isInvalidValue('1.5')).toBe(false);
+		expect(isInvalidValue(-3)).toBe(false);
+	});
+
+	it('keeps ±Infinity (unchanged contract — not this predicate’s job to reject)', () => {
+		expect(isInvalidValue(Infinity)).toBe(false);
+		expect(isInvalidValue(-Infinity)).toBe(false);
+	});
+});
 
 describe('stats.min / stats.max — null semantics', () => {
 	it('returns the extreme of a numeric array', () => {
@@ -20,6 +62,14 @@ describe('stats.min / stats.max — null semantics', () => {
 	it('skips null / undefined / NaN entries', () => {
 		expect(min([5, null, 2, undefined, NaN, 8])).toBe(2);
 		expect(max([5, null, 2, undefined, NaN, 8])).toBe(8);
+	});
+
+	it('skips blank strings — never returns ""-as-0 as an extreme', () => {
+		// Before the fix min([5, '', 8]) returned '' (the string!) because '' passed
+		// the isNaN check and '' < 5 coerces '' to 0.
+		expect(min([5, '', 2, ' ', 8])).toBe(2);
+		expect(max(['', ' ', -1])).toBe(-1);
+		expect(minMax([5, '', 2, ' ', 8])).toEqual({ min: 2, max: 8 });
 	});
 
 	it('handles negative numbers', () => {
@@ -95,7 +145,13 @@ describe('stats.standardDeviation', () => {
 
 describe('stats.minMaxAcross', () => {
 	it('reduces several arrays to a single extreme pair', () => {
-		expect(minMaxAcross([[3, 7], [1, 9], [4, 2]])).toEqual({ min: 1, max: 9 });
+		expect(
+			minMaxAcross([
+				[3, 7],
+				[1, 9],
+				[4, 2]
+			])
+		).toEqual({ min: 1, max: 9 });
 	});
 
 	it('skips null arrays in the iterable', () => {
@@ -103,7 +159,12 @@ describe('stats.minMaxAcross', () => {
 	});
 
 	it('skips invalid entries within each array', () => {
-		expect(minMaxAcross([[NaN, 3], [null, 9, undefined]])).toEqual({ min: 3, max: 9 });
+		expect(
+			minMaxAcross([
+				[NaN, 3],
+				[null, 9, undefined]
+			])
+		).toEqual({ min: 3, max: 9 });
 	});
 
 	it('returns {min:null,max:null} when there is no valid data', () => {

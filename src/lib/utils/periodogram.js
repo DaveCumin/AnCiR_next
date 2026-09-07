@@ -177,15 +177,40 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 	return powers;
 }
 
+// Sokolove & Bushell (1978, J Theor Biol 72:131) Qp for one trial period, on
+// already-binned data. Uniform-occupancy form: Qp = K·N·Σ_h(M_h − M̄)² / Σ_i(x_i − M̄)²
+// with P columns of K rows each and N = P·K observations; under the no-rhythm null
+// Qp ~ χ²(P − 1), so E[Qp] ≈ df.
+//
+// This generalises that to OCCUPANCY-WEIGHTED sums so that EMPTY bins (NaN in
+// binData output — a binSize smaller than the sampling interval leaves most bins
+// empty) carry no weight anywhere:
+//
+//     Qp = N_eff · Σ_h K_h·(M_h − M̄)² / Σ_i(x_i − M̄)²
+//
+// where the sums run over NON-EMPTY columns/bins only, K_h is the number of
+// non-empty bins folded into column h, and N_eff = Σ K_h. Each column mean M_h has
+// null variance σ²/K_h, so Σ K_h(M_h − M̄)² ≈ σ²·χ²(P_eff − 1) while the denominator
+// ≈ N_eff·σ², giving E[Qp] ≈ P_eff − 1 at ANY binSize. The old form multiplied the
+// unweighted column sum of squares by data.length·rowNum, which count empty bins:
+// with 0.25 h bins on hourly data that inflated noise Qp ~2.5-10x above the
+// chi-square null (and df counted the ~72 permanently-empty columns), so noise
+// crossed even the corrected threshold. With no empty bins and uniform occupancy
+// this reduces exactly to the Sokolove-Bushell form above.
+//
+// Returns { power, df } with df = P_eff − 1, the SAME df the caller must use for
+// the threshold quantile and the p-value — statistic, df, threshold and p only
+// calibrate together. Mirrored in tools/ancir_runtime.py and tools/ancir_runtime.R;
+// the pure-chisq-periodogram fixtures pin power, df and threshold across all three.
 function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 	const colNum = Math.round(period / binSize);
 	// A zero/non-finite binSize makes colNum Infinity/NaN, and a tiny binSize makes
 	// it huge-but-finite; either would blow up the `Array.from({length: colNum})`
 	// allocation below (RangeError: Invalid array length). Bins-per-period can't
 	// meaningfully exceed the sample count, so cap at data.length.
-	if (!Number.isFinite(colNum) || colNum < 1 || colNum > data.length) return NaN;
-
-	const rowNum = Math.ceil(data.length / colNum);
+	if (!Number.isFinite(colNum) || colNum < 1 || colNum > data.length) {
+		return { power: NaN, df: NaN };
+	}
 
 	// Use Kahan summation for column sums
 	const colSums = Array.from({ length: colNum }, () => new KahanSum());
@@ -200,28 +225,35 @@ function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 		}
 	}
 
-	const avgP = colSums.map((sum, i) => (colCounts[i] > 0 ? sum.value / colCounts[i] : avgAll));
-
-	// Calculate numerator sum using Kahan summation
+	// Occupancy-weighted between-column sum of squares over non-empty columns only.
 	const numAcc = new KahanSum();
+	let nonEmptyCols = 0;
+	let nonEmptyBins = 0;
 	for (let i = 0; i < colNum; i++) {
-		const diff = avgP[i] - avgAll;
-		numAcc.add(diff * diff);
+		if (colCounts[i] === 0) continue;
+		nonEmptyCols++;
+		nonEmptyBins += colCounts[i];
+		const diff = colSums[i].value / colCounts[i] - avgAll;
+		numAcc.add(colCounts[i] * diff * diff);
 	}
 
-	const result = (numAcc.value * data.length * rowNum) / denominator;
-	return isFinite(result) ? result : NaN;
+	const df = nonEmptyCols - 1;
+	// Fewer than two occupied columns leaves nothing to compare: no statistic.
+	if (df < 1) return { power: NaN, df: NaN };
+
+	const result = (numAcc.value * nonEmptyBins) / denominator;
+	return { power: isFinite(result) ? result : NaN, df };
 }
 
 // ========== Main Calculation Function ==========
 
 export function runPeriodogramCalculation(params, onProgress) {
-	let out = { x: [], y: [], threshold: [], pvalue: [] };
+	let out = { x: [], y: [], threshold: [], pvalue: [], df: [] };
 	let binnedData = { bins: [], y_out: [] };
 
 	if (params.method === 'Chi-squared') {
 		if (!params.yData) {
-			return { x: [], y: [], threshold: [], pvalue: [] };
+			return { x: [], y: [], threshold: [], pvalue: [], df: [] };
 		}
 		// Strip unusable rows before binning. Two reasons: a NaN last x makes binData's
 		// while(true) loop never break (currentStart >= NaN is always false), AND a null y
@@ -230,7 +262,7 @@ export function runPeriodogramCalculation(params, onProgress) {
 		const { tt: binX, yy: binY } = validPairs(params.xData, params.yData);
 		binnedData = binData(binX, binY, params.binSize, 0);
 		if (binnedData.bins.length === 0) {
-			return { x: [], y: [], threshold: [], pvalue: [] };
+			return { x: [], y: [], threshold: [], pvalue: [], df: [] };
 		}
 	}
 
@@ -241,6 +273,10 @@ export function runPeriodogramCalculation(params, onProgress) {
 	const power = new Array(periods.length);
 	const threshold = new Array(periods.length);
 	const pvalue = new Array(periods.length);
+	// Effective chi-square df per period (Chi-squared method only; NaN otherwise).
+	// Exposed so callers and the parity fixtures can verify that the statistic,
+	// threshold and p-value all used the SAME df.
+	const dfOut = new Array(periods.length).fill(NaN);
 
 	if (params.method === 'Chi-squared') {
 		const data = binnedData.y_out;
@@ -257,19 +293,26 @@ export function runPeriodogramCalculation(params, onProgress) {
 		}
 
 		for (let p = 0; p < periods.length; p++) {
-			const df = Math.round(periods[p] / params.binSize) - 1;
-			if (df < 1) {
+			// power and df come out of ONE fold: df is the EFFECTIVE bins-per-period
+			// (non-empty columns) minus 1, not round(period/binSize) - 1, so that the
+			// statistic, the threshold and the p-value all key off the same chi-square
+			// null even when binSize is smaller than the sampling interval and most
+			// bins are empty. With no empty bins the two df conventions coincide.
+			const { power: qp, df } = calculateChiSquaredPower(
+				data,
+				params.binSize,
+				periods[p],
+				avgAll,
+				denomAcc.value
+			);
+			if (!(df >= 1) || !Number.isFinite(qp)) {
 				power[p] = NaN;
 				threshold[p] = NaN;
 				pvalue[p] = NaN;
+				dfOut[p] = NaN;
 			} else {
-				power[p] = calculateChiSquaredPower(
-					data,
-					params.binSize,
-					periods[p],
-					avgAll,
-					denomAcc.value
-				);
+				power[p] = qp;
+				dfOut[p] = df;
 				// Sidak-corrected UPPER-tail quantile: correctedAlpha is the per-period
 				// CONFIDENCE level (1 - alpha)^(1/M), so the quantile is evaluated at
 				// correctedAlpha directly. Passing 1 - correctedAlpha (as this once did)
@@ -278,7 +321,7 @@ export function runPeriodogramCalculation(params, onProgress) {
 				// tools/ancir_runtime.py and tools/ancir_runtime.R; the
 				// pure-chisq-periodogram-threshold parity fixture pins all three.
 				threshold[p] = quantile_chisq(correctedAlpha, df);
-				pvalue[p] = 1 - cdf_chisq(power[p], df);
+				pvalue[p] = 1 - cdf_chisq(qp, df);
 			}
 
 			if (onProgress && p % 10 === 0) {
@@ -324,7 +367,8 @@ export function runPeriodogramCalculation(params, onProgress) {
 		x: periods.filter((v, i) => !idxsToRemove.includes(i)),
 		y: power.filter((v, i) => !idxsToRemove.includes(i)),
 		threshold: threshold.filter((v, i) => !idxsToRemove.includes(i)),
-		pvalue: pvalue.filter((v, i) => !idxsToRemove.includes(i))
+		pvalue: pvalue.filter((v, i) => !idxsToRemove.includes(i)),
+		df: dfOut.filter((v, i) => !idxsToRemove.includes(i))
 	};
 
 	return out;

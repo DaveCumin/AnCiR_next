@@ -1529,6 +1529,39 @@
 			"rFunc": "describe_stats"
 		},
 		{
+			"id": "util-describe-stats-blank-cells",
+			"kind": "pureUtil",
+			"jsFn": "describeStats",
+			"pyFunc": "describe_stats",
+			"input": {
+				"values": [
+					5,
+					"",
+					0,
+					" ",
+					7,
+					"3",
+					null,
+					2
+				]
+			},
+			"valuesRef": "values",
+			"compareScalars": [
+				"n",
+				"mean",
+				"median",
+				"sd",
+				"min",
+				"max",
+				"range",
+				"q1",
+				"q3",
+				"iqr"
+			],
+			"rFunc": "describe_stats",
+			"note": "Pins the cross-language cleaning rule for blank cells: '' and whitespace-only strings are MISSING data (skipped), never coerced to 0; the genuine 0 and the numeric string '3' are data. Python's float('') raises and R's as.numeric(' ') is NA, so both always treated blanks as absent - isNaN('')===false made JS the outlier until isInvalidValue closed the hole. Valid values are [5, 0, 7, 3, 2]: n=5, mean=3.4."
+		},
+		{
 			"id": "util-normality-shapiro",
 			"kind": "pureUtil",
 			"jsFn": "shapiroWilk",
@@ -3947,8 +3980,62 @@
 			],
 			"compareArrays": [
 				"period",
+				"power",
+				"df",
 				"threshold"
-			]
+			],
+			"note": "binSize equals the 1 h sampling interval, so every bin holds exactly one point and the Python/R mod-binning fold IS the JS binData-then-fold pipeline: period, power, effective df AND threshold must agree exactly. Powers and df were unpinned before the occupancy-weighted empty-bin fix; only the threshold was compared."
+		},
+		{
+			"id": "pure-chisq-periodogram-emptybins",
+			"kind": "pureUtil",
+			"jsFn": "chiSquaredPeriodogram",
+			"pyFunc": "chi_squared_periodogram",
+			"rFunc": "chi_squared_periodogram",
+			"tolerance": 1e-06,
+			"generate": {
+				"type": "rhythm",
+				"n": 336,
+				"period": 24,
+				"amp": 30,
+				"mesor": 45,
+				"phase": 6,
+				"noise": 8,
+				"seed": 907,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"argRefs": [
+				"t",
+				"y"
+			],
+			"jsArgs": [
+				{
+					"binSize": 0.25,
+					"periodMin": 18,
+					"periodMax": 30,
+					"periodStep": 0.5,
+					"alpha": 0.05
+				}
+			],
+			"pyArgs": [
+				{
+					"binSize": 0.25,
+					"periodMin": 18,
+					"periodMax": 30,
+					"periodStep": 0.5,
+					"alpha": 0.05
+				}
+			],
+			"compareArrays": [
+				"period",
+				"power",
+				"df",
+				"threshold"
+			],
+			"note": "The empty-bin regime: 0.25 h bins on HOURLY data leave 3 of every 4 bins permanently empty (the app's default binSize is 0.25 h, so this is the demo-default configuration). Pins the occupancy-weighted Sokolove-Bushell Qp with effective df = occupied-fold-columns - 1 across all three languages — the pre-fix code counted empty bins in the normalisation (Qp inflated ~2.5-10x above its chi-square null on pure noise) and in df (95 instead of 23 at period 24), so statistic, threshold and p disagreed with each other. At period 24 this fixture's power/df/threshold must equal the binSize-1 fixture's values at period 24 exactly (empty bins carry no information)."
 		},
 		{
 			"id": "time-iso-utc-z",

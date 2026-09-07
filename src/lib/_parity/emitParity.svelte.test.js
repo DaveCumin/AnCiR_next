@@ -142,15 +142,18 @@ const PURE_UTIL_FNS = {
 	cwtPeakScaleIndex: cwtPeakScaleIndexAdapter,
 	movingWindows: movingWindowsAdapter,
 	fisherExact,
-	// Chi-squared (Sokolove-Bushell) periodogram significance threshold. The
-	// fixture compares `period` and `threshold` ONLY: the threshold depends
-	// solely on the period grid, bin size, and alpha, so all three languages
-	// must produce the identical Sidak-corrected upper-tail quantile array,
-	// while the POWERS are deliberately not pinned — the Python/R chi-squared
-	// ports use a simplified mod-binning that diverges from the JS
-	// binData-then-fold pipeline (a known, separate gap; 2026-09-07 scoping
-	// note). This fixture exists because the drawn threshold was wrong in all
-	// three languages, differently, and nothing compared it.
+	// Chi-squared (Sokolove-Bushell) periodogram. The fixtures compare `period`,
+	// `power`, `df` AND `threshold`: with binSize at or below the sampling
+	// interval every bin holds at most one point, so the Python/R mod-binning
+	// ports and the JS binData-then-fold pipeline are the SAME fold and must
+	// agree exactly — including on grids where most bins are empty, which is the
+	// regime whose occupancy-weighted empty-bin handling (effective df =
+	// occupied columns - 1) the pure-chisq-periodogram-emptybins fixture pins.
+	// With several points per bin the pipelines still differ (grand mean over
+	// bin means vs raw points); that regime stays unpinned. These fixtures exist
+	// because the drawn threshold was wrong in all three languages, differently,
+	// and then the statistic itself was ~2.5-10x inflated on empty-bin grids,
+	// and nothing compared either.
 	chiSquaredPeriodogram: (t, y, opts) => {
 		const r = runPeriodogramCalculation({
 			method: 'Chi-squared',
@@ -162,7 +165,7 @@ const PURE_UTIL_FNS = {
 			periodSteps: opts.periodStep,
 			chiSquaredAlpha: opts.alpha ?? 0.05
 		});
-		return { period: r.x, threshold: r.threshold };
+		return { period: r.x, power: r.y, df: r.df, threshold: r.threshold };
 	},
 	fisherConditionalOR: (table, confidence) => {
 		const ci = oddsRatioCI(table, confidence);

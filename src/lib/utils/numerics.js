@@ -23,16 +23,23 @@ export class KahanSum {
 }
 
 /**
- * Compute the mean of an array, skipping NaN/undefined, using Kahan summation.
+ * Compute the mean of an array, skipping null/undefined/NaN and blank strings,
+ * using Kahan summation.
+ *
+ * The skip predicate is the same one as `isInvalidValue` in stats.js — inlined here
+ * because stats.js imports this module (importing it back would be circular). It used
+ * to be `!== undefined && !isNaN(v)`, which let null AND '' through: `isNaN(null)` and
+ * `isNaN('')` are both FALSE, so missing cells were summed as ZEROS and counted in the
+ * denominator, silently dragging the mean. Keep this in step with stats.js.
  */
 export function kahanMean(data) {
 	const k = new KahanSum();
 	let count = 0;
 	for (let i = 0; i < data.length; i++) {
-		if (data[i] !== undefined && !isNaN(data[i])) {
-			k.add(data[i]);
-			count++;
-		}
+		const v = data[i];
+		if (v == null || (typeof v === 'string' && v.trim() === '') || isNaN(v)) continue;
+		k.add(v);
+		count++;
 	}
 	return count > 0 ? k.value / count : 0;
 }

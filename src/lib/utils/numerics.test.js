@@ -171,10 +171,15 @@ describe('kahanMean — edge cases', () => {
 		expect(kahanMean([2, NaN, 4, undefined, 6])).toBeCloseTo(4, 12);
 	});
 
-	it('does NOT skip null (null coerces to 0 in arithmetic)', () => {
-		// Documents current behaviour: null passes the `!== undefined && !isNaN`
-		// guard because isNaN(null) === false, and null is summed as 0.
-		// mean of [2, null→0, 4] over count 3 = 2
-		expect(kahanMean([2, null, 4])).toBeCloseTo(2, 12);
+	it('skips null — a missing cell must not be summed as 0', () => {
+		// isNaN(null) === false, so the old `!== undefined && !isNaN` guard summed null
+		// as a zero AND counted it: mean of [2, null, 4] came out 2 instead of 3.
+		expect(kahanMean([2, null, 4])).toBeCloseTo(3, 12);
+	});
+
+	it('skips blank strings but keeps numeric strings and a genuine 0', () => {
+		// isNaN('') === false too (Number('') === 0) — the blank-CSV-cell trap.
+		expect(kahanMean([2, '', 4, ' ', 0])).toBeCloseTo(2, 12);
+		expect(kahanMean(['2', '4'])).toBeCloseTo(3, 12);
 	});
 });

@@ -414,14 +414,26 @@ def _lomb_scargle(t, y, periods):
 
 
 def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
-    # Folding chi-squared periodogram
+    # Folding chi-squared (Sokolove-Bushell 1978) periodogram. Occupancy-weighted:
+    # Qp = N_eff * sum_h K_h*(M_h - ybar)^2 / sum_i (y_i - ybar)^2 over NON-EMPTY
+    # fold columns only, and df = (occupied columns) - 1 per trial period — NOT
+    # the nominal round(P/dt) - 1, which counts columns the sampling never fills.
+    # Empty bins carry no information; counting them inflated noise Qp far above
+    # its chi-square null whenever dt (binSize) was below the sampling interval,
+    # and handed the threshold a too-large df. Matches periodogram.js exactly in
+    # the bins<=one-point regime (binSize <= sampling interval, the regime the
+    # empty-bin fixture pins); with several points per bin this simplified
+    # mod-binning port still differs from the JS binData-then-fold pipeline.
     t = np.asarray(t, dtype=float)
     y = np.asarray(y, dtype=float)
     n = y.size
     var_y = float(y.var()) or 1.0
     powers = np.empty(len(periods))
+    dfs = np.empty(len(periods))
     for k, P in enumerate(periods):
-        nbins = max(2, int(round(P / dt)))
+        # _js_round, not round(): Python rounds half to even, Math.round half up,
+        # and the period grid lands on half-integers (e.g. 18.5 h at 1 h bins).
+        nbins = max(2, _js_round(P / dt))
         bins = ((t / dt).astype(int)) % nbins
         means = np.zeros(nbins)
         counts = np.zeros(nbins)
@@ -430,24 +442,31 @@ def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
             counts[b] += 1
         with np.errstate(invalid='ignore', divide='ignore'):
             means = np.where(counts > 0, means / np.maximum(counts, 1), 0.0)
+        df = int((counts > 0).sum()) - 1
+        if df < 1:
+            powers[k] = float('nan')
+            dfs[k] = float('nan')
+            continue
+        # Empty columns contribute 0 to the weighted sum (counts == 0), so this
+        # already runs over occupied columns only.
         bin_var = ((means - y.mean()) ** 2 * counts).sum() / n
         powers[k] = n * bin_var / var_y
+        dfs[k] = df
     # Per-period Sidak-corrected UPPER-tail threshold, matching periodogram.js:
     # correctedAlpha = (1 - alpha)^(1/M) is the per-comparison CONFIDENCE level,
-    # so the quantile is evaluated at correctedAlpha (upper tail), with
-    # df = round(P/dt) - 1 per trial period (NaN below df 1). This replaced a
-    # single UNCORRECTED scalar taken at a mid-grid df — a third, different line
-    # from both the JS intent and the JS bug it mirrored; the
-    # pure-chisq-periodogram-threshold parity fixture now pins all three
-    # languages to the same array.
+    # so the quantile is evaluated at correctedAlpha (upper tail), with the SAME
+    # effective df the statistic used (NaN below df 1) — statistic, df and
+    # threshold only calibrate together. This replaced a single UNCORRECTED
+    # scalar taken at a mid-grid df — a third, different line from both the JS
+    # intent and the JS bug it mirrored; the pure-chisq-periodogram parity
+    # fixtures now pin power, df and threshold across all three languages.
     m = len(periods)
     corrected = (1.0 - alpha) ** (1.0 / m) if m else float('nan')
-    thresholds = []
-    for P in periods:
-        df = _js_round(P / dt) - 1
-        thresholds.append(
-            float(sp_stats.chi2.ppf(corrected, df)) if df >= 1 else float('nan'))
-    return powers.tolist(), thresholds
+    thresholds = [
+        float(sp_stats.chi2.ppf(corrected, df)) if df >= 1 else float('nan')
+        for df in dfs
+    ]
+    return powers.tolist(), dfs.tolist(), thresholds
 
 
 def _enright_pgram(t, y, periods, dt):
@@ -481,22 +500,26 @@ def run_periodogram_calculation(params, on_progress=None):
     if method == 'Lomb-Scargle':
         powers = _lomb_scargle(t, y, periods)
         threshold = None
+        dfs = None
     elif method == 'Chi-squared':
         alpha = float(params.get('alpha', params.get('chiSquaredAlpha', 0.05)))
-        powers, threshold = _chi_squared_pgram(t, y, periods, dt, alpha)
+        powers, dfs, threshold = _chi_squared_pgram(t, y, periods, dt, alpha)
     else:
         powers = _enright_pgram(t, y, periods, dt)
         threshold = None
-    return {'x': periods, 'y': powers, 'threshold': threshold}
+        dfs = None
+    return {'x': periods, 'y': powers, 'threshold': threshold, 'df': dfs}
 
 
 def chi_squared_periodogram(t, y, opts):
     """Pure-util parity surface for the chi-squared (Sokolove-Bushell)
-    periodogram. Only `period` and `threshold` are parity-compared: the
-    threshold depends solely on the period grid, bin size, and alpha, so it
-    must agree exactly across the three languages, while the POWERS from this
-    simplified mod-binning port differ from the JS binData-then-fold pipeline
-    and are deliberately not pinned (see the 2026-09-07 scoping note)."""
+    periodogram. `period`, `power`, `df` and `threshold` are all
+    parity-compared: with binSize at or below the sampling interval every bin
+    holds at most one point, so this mod-binning port and the JS
+    binData-then-fold pipeline are the SAME fold and must agree exactly —
+    including on grids where most bins are empty, the regime whose
+    empty-bin handling this pins. (With several points per bin the two
+    pipelines still differ — that regime stays unpinned.)"""
     res = run_periodogram_calculation({
         't': t, 'y': y, 'method': 'Chi-squared',
         'minPeriod': opts.get('periodMin', 1.0),
@@ -505,7 +528,8 @@ def chi_squared_periodogram(t, y, opts):
         'dt': opts.get('binSize', 0.25),
         'alpha': opts.get('alpha', 0.05),
     })
-    return {'period': res['x'], 'threshold': res['threshold']}
+    return {'period': res['x'], 'power': res['y'], 'df': res['df'],
+            'threshold': res['threshold']}
 
 
 def _median_dt(t):

@@ -206,28 +206,44 @@
 				if (nanYCount > 0) {
 					const yMsg =
 						method === 'Chi-squared'
-							? 'empty bins distort the chi-squared statistic'
+							? 'the bins they empty are excluded from the chi-squared statistic, reducing its degrees of freedom'
 							: 'empty bins are treated as zero and bias the Enright autocorrelation';
 					warnings.push(`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''} — ${yMsg}.`);
 				}
 
-				// Check for time gaps larger than the bin size
+				// Check for time gaps larger than the bin size, and for a bin size
+				// below the sampling interval (which leaves most bins empty).
 				const validX = xData
 					.filter((v) => v !== null && v !== undefined && !isNaN(v))
 					.sort((a, b) => a - b);
 				if (validX.length > 1) {
+					const gaps = [];
 					let maxGap = 0;
 					for (let i = 1; i < validX.length; i++) {
 						const gap = validX[i] - validX[i - 1];
+						gaps.push(gap);
 						if (gap > maxGap) maxGap = gap;
 					}
 					if (maxGap > binSize * 1.5) {
 						const gapMsg =
 							method === 'Chi-squared'
-								? 'inflate the chi-squared statistic and may produce false peaks'
+								? 'are excluded from the chi-squared statistic, so long gaps thin out the folded bins'
 								: 'are treated as zero and bias the Enright autocorrelation';
 						warnings.push(
 							`Data has gaps up to ${maxGap.toFixed(1)} h (bin size: ${binSize} h) — empty bins ${gapMsg}.`
+						);
+					}
+
+					gaps.sort((a, b) => a - b);
+					const mid = Math.floor(gaps.length / 2);
+					const medianGap = gaps.length % 2 === 0 ? (gaps[mid - 1] + gaps[mid]) / 2 : gaps[mid];
+					if (medianGap > 0 && binSize < medianGap * (1 - 1e-9)) {
+						const subMsg =
+							method === 'Chi-squared'
+								? 'Empty bins are excluded, so the result at aligned periods matches the coarser bin size exactly, but the degrees of freedom (and the significance line) then jump between neighbouring trial periods'
+								: 'The Enright method treats empty bins as zero, diluting the statistic';
+						warnings.push(
+							`Bin size ${binSize} h is smaller than the typical sampling interval (${medianGap.toFixed(2)} h), so most bins are empty. ${subMsg}. Set the bin size to the sampling interval (${medianGap.toFixed(2)} h) or larger.`
 						);
 					}
 				}
@@ -784,7 +800,6 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-
 		<div class="div-line"></div>
 
 		<div class="control-component">

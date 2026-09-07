@@ -2607,12 +2607,22 @@ lomb_scargle <- function(t, y, periods) {
   }, numeric(1))
 }
 
-# Folding chi-squared periodogram. The significance threshold is the per-period
+# Folding chi-squared (Sokolove-Bushell 1978) periodogram. Occupancy-weighted:
+# Qp = N_eff * sum_h K_h*(M_h - ybar)^2 / sum_i (y_i - ybar)^2 over NON-EMPTY fold
+# columns only, and df = (occupied columns) - 1 per trial period — NOT the nominal
+# round(P/dt) - 1, which counts columns the sampling never fills. Empty bins carry
+# no information; counting them inflated noise Qp far above its chi-square null
+# whenever dt (binSize) was below the sampling interval, and handed the threshold a
+# too-large df. Matches periodogram.js exactly in the one-point-per-bin regime
+# (binSize <= sampling interval — the regime the empty-bin fixture pins); with
+# several points per bin this simplified mod-binning port still differs from the JS
+# binData-then-fold pipeline. The significance threshold is the per-period
 # Sidak-corrected UPPER-tail chi-square quantile, matching periodogram.js:
 # correctedAlpha = (1 - alpha)^(1/M) is the per-comparison CONFIDENCE level, so the
-# quantile is evaluated at correctedAlpha with df = round(P/dt) - 1 per trial period
-# (NA below df 1). This replaced a single uncorrected scalar taken at a mid-grid df;
-# the pure-chisq-periodogram-threshold parity fixture pins all three languages.
+# quantile is evaluated at correctedAlpha with the SAME effective df the statistic
+# used (NA below df 1) — statistic, df and threshold only calibrate together. The
+# pure-chisq-periodogram parity fixtures pin power, df and threshold in all three
+# languages.
 chi_squared_pgram <- function(t, y, periods, dt, alpha = 0.05) {
   t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
   y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
@@ -2620,24 +2630,35 @@ chi_squared_pgram <- function(t, y, periods, dt, alpha = 0.05) {
   ymean <- mean(y)
   vary <- sum((y - ymean)^2) / n
   if (vary == 0) vary <- 1
-  powers <- vapply(periods, function(P) {
+  powers <- numeric(length(periods))
+  dfs <- numeric(length(periods))
+  for (k in seq_along(periods)) {
+    P <- periods[k]
     nbins <- max(2, js_round(P / dt))
     b <- as.integer(t / dt) %% nbins
     sums <- numeric(nbins); counts <- numeric(nbins)
     for (i in seq_along(y)) {
-      k <- b[i] + 1
-      sums[k] <- sums[k] + y[i]; counts[k] <- counts[k] + 1
+      j <- b[i] + 1
+      sums[j] <- sums[j] + y[i]; counts[j] <- counts[j] + 1
+    }
+    df <- sum(counts > 0) - 1
+    if (df < 1) {
+      powers[k] <- NA_real_
+      dfs[k] <- NA_real_
+      next
     }
     means <- ifelse(counts > 0, sums / pmax(counts, 1), 0)
-    n * (sum((means - ymean)^2 * counts) / n) / vary
-  }, numeric(1))
+    # Empty columns contribute 0 to the weighted sum (counts == 0), so this
+    # already runs over occupied columns only.
+    powers[k] <- n * (sum((means - ymean)^2 * counts) / n) / vary
+    dfs[k] <- df
+  }
   m <- length(periods)
   corrected <- if (m > 0) (1 - alpha)^(1 / m) else NA_real_
-  thresholds <- vapply(periods, function(P) {
-    df <- js_round(P / dt) - 1
-    if (df >= 1) qchisq(corrected, df) else NA_real_
+  thresholds <- vapply(dfs, function(df) {
+    if (!is.na(df) && df >= 1) qchisq(corrected, df) else NA_real_
   }, numeric(1))
-  list(powers = powers, threshold = thresholds)
+  list(powers = powers, dfs = dfs, threshold = thresholds)
 }
 
 # Binned-autocorrelation Enright periodogram (the simplified form the app uses).
@@ -2671,7 +2692,7 @@ run_periodogram_calculation <- function(params) {
                         else if (!is.null(params$chiSquaredAlpha)) params$chiSquaredAlpha
                         else 0.05)
     r <- chi_squared_pgram(t, y, periods, dt, alpha)
-    list(x = periods, y = r$powers, threshold = r$threshold)
+    list(x = periods, y = r$powers, threshold = r$threshold, df = r$dfs)
   } else {
     list(x = periods, y = enright_pgram(t, y, periods, dt), threshold = NULL)
   }
@@ -3347,11 +3368,12 @@ tp_blankcolumn <- function(args, env) {
   TRUE
 }
 
-# Pure-util parity surface for the chi-squared (Sokolove-Bushell) periodogram. Only
-# `period` and `threshold` are parity-compared: the threshold depends solely on the period
-# grid, bin size, and alpha, so it must agree exactly across the three languages, while the
-# POWERS from this simplified mod-binning port differ from the JS binData-then-fold pipeline
-# and are deliberately not pinned (see the 2026-09-07 scoping note).
+# Pure-util parity surface for the chi-squared (Sokolove-Bushell) periodogram. `period`,
+# `power`, `df` and `threshold` are all parity-compared: with binSize at or below the
+# sampling interval every bin holds at most one point, so this mod-binning port and the JS
+# binData-then-fold pipeline are the SAME fold and must agree exactly — including on grids
+# where most bins are empty, the regime whose empty-bin handling this pins. (With several
+# points per bin the two pipelines still differ — that regime stays unpinned.)
 chi_squared_periodogram <- function(t, y, opts) {
   res <- run_periodogram_calculation(list(
     t = t, y = y, method = "Chi-squared",
@@ -3360,7 +3382,7 @@ chi_squared_periodogram <- function(t, y, opts) {
     stepSize = if (is.null(opts$periodStep)) 0.1 else as.numeric(opts$periodStep),
     dt = if (is.null(opts$binSize)) 0.25 else as.numeric(opts$binSize),
     alpha = if (is.null(opts$alpha)) 0.05 else as.numeric(opts$alpha)))
-  list(period = res$x, threshold = res$threshold)
+  list(period = res$x, power = res$y, df = res$df, threshold = res$threshold)
 }
 
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which

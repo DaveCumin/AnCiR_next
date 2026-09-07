@@ -54,6 +54,12 @@
     are the source of the periodogram's well-documented discontinuity artefact.<sup class="cite"><a href="#ref-23">[23]</a></sup>
     Q_p is approximately χ²-distributed with (k−1) <a class="gloss" href="#gloss-degrees-of-freedom">degrees of freedom</a> under the
     <a class="gloss" href="#gloss-null-hypothesis">null hypothesis</a> of no rhythmicity.
+    In AnCiR, k counts only the bins the data actually occupies: bins the
+    sampling never fills (a bin size below the sampling interval, or gaps in
+    the record) carry no information and are excluded from Q_p, its degrees of
+    freedom, the significance line, and the p-value alike — so under the null
+    the statistic averages about its df at any bin size, which is what keeps
+    the drawn threshold meaningful.
   </p>
   <WarnBox title="Important Limitation">
     <p>
@@ -106,6 +112,16 @@
       threshold, not just the resolution. Finer bins buy detail and cost
       sensitivity. Report the bin size alongside the period range and step; a
       &ldquo;&chi;&sup2; periodogram&rdquo; without them is not reproducible.
+    </p>
+    <p>
+      And going <em>below the sampling interval</em> buys nothing: bins the
+      sampling never fills are empty, and empty bins are excluded from the
+      statistic and its degrees of freedom. A 0.25&nbsp;h bin on hourly data
+      therefore gives exactly the 1&nbsp;h-bin answer wherever the fold aligns
+      with the sampling grid, and in between it makes the effective bin count
+      &mdash; and with it the significance bar &mdash; jump from one trial
+      period to the next. Match the bin size to the sampling interval or
+      larger.
     </p>
   </WarnBox>
 

@@ -33,6 +33,23 @@ describe('validPairs', () => {
 		expect(validPairs(t, y).indices).toEqual([2, 3]);
 	});
 
+	it('drops blank strings — a blank CSV cell is absence, not zero', () => {
+		// isNaN('') === false (Number('') === 0), so '' used to pass the filter and the
+		// downstream Number() coercion fabricated a literal 0. Whitespace-only is the
+		// form PapaParse's dynamicTyping actually delivers for a " " cell.
+		const t = [0, 1, 2, 3];
+		const y = ['', ' ', 30, 40];
+		const { indices, yy } = validPairs(t, y);
+		expect(indices).toEqual([2, 3]);
+		expect(yy).not.toContain(0);
+	});
+
+	it('keeps numeric STRINGS — pastes and hand-entered tables deliver them (v72.20)', () => {
+		const { indices, yy } = validPairs([0, 1, 2], ['0', '1.5', 'abc']);
+		expect(indices).toEqual([0, 1]);
+		expect(yy).toEqual(['0', '1.5']);
+	});
+
 	it('keeps a legitimate ZERO — 0 is data, null is absence', () => {
 		// The failure mode being prevented is nulls BECOMING zeros; a real zero must survive.
 		const { yy } = validPairs([0, 1], [0, 5]);
