@@ -173,6 +173,21 @@
 		}
 	}
 
+	/**
+	 * Canvas node ids are STRINGS (`note_3`, `group_2`, composite ids), and every
+	 * selection predicate on the canvas calls `.startsWith` on them. The app itself
+	 * always mints strings, but a session written outside the app (script- or
+	 * AI-built) can carry a bare number here — and a numeric note id in a canvas
+	 * selection crashed the first click after load ("ue.startsWith is not a
+	 * function", WorkflowEditor's COMPOSABLE predicate). Coerce at the load
+	 * boundary, once, so `1` loads as the string "1" instead of being dropped or
+	 * left to crash every call site: same pattern as normaliseFigureStyle below.
+	 * `fallback` covers an id that is missing entirely (also foreign-file-only).
+	 */
+	function asNodeId(v, fallback) {
+		return v == null ? fallback : String(v);
+	}
+
 	/** Yield once: flush Svelte updates AND give the browser a frame to
 	 *  repaint (so the spinner stays visually responsive). */
 	async function yieldFrame() {
@@ -313,7 +328,7 @@
 		if (Array.isArray(jsonData.groups)) {
 			for (const g of jsonData.groups) {
 				core.groups.push({
-					id: g.id,
+					id: asNodeId(g.id, `group_${core.groups.length}`),
 					name: g.name ?? 'Group',
 					x: g.x ?? 80,
 					y: g.y ?? 80,
@@ -328,13 +343,14 @@
 		}
 		if (Array.isArray(jsonData.composites)) {
 			for (const c of jsonData.composites) {
+				const compId = asNodeId(c.id, `composite_${core.composites.length}`);
 				core.composites.push({
-					id: c.id,
+					id: compId,
 					name: c.name ?? 'Composite',
 					x: c.x ?? 80,
 					y: c.y ?? 80,
 					collapsed: c.collapsed !== false,
-					originId: c.originId ?? c.id,
+					originId: asNodeId(c.originId, compId),
 					memberIds: Array.isArray(c.memberIds) ? [...c.memberIds] : [],
 					interface: {
 						inputs: Array.isArray(c.interface?.inputs) ? [...c.interface.inputs] : [],
@@ -346,7 +362,7 @@
 		if (Array.isArray(jsonData.notes)) {
 			for (const n of jsonData.notes) {
 				core.notes.push({
-					id: n.id,
+					id: asNodeId(n.id, `note_${core.notes.length}`),
 					text: n.text ?? '',
 					x: n.x ?? 80,
 					y: n.y ?? 80,
