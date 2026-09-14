@@ -20,7 +20,7 @@ export const NODE_NOTES = {
 	CollectColumns:
 		'Concatenates several columns end-to-end into a single combined column. Use it to pool values from multiple series or segments into one column for a combined summary or plot.',
 	ColumnFunctions:
-		'Combines several input columns into one result by applying a per-row function across them: element-wise Add, or the row-wise Mean, Min, Max, or Std Dev over the selected columns. Use it to compute, e.g., the average of replicate series or a per-timepoint spread.',
+		'Combines several input columns into one result by applying a per-row function across them: element-wise Add, or the row-wise Mean, Min, Max, Std Dev, or Percentile (50 = median) over the selected columns. Use it to compute, e.g., the average of replicate series or a per-timepoint spread.',
 	ColumnSet:
 		'Curates a live, named subset of columns by matching their name and/or label against a pattern, and exposes it as a single wire you can plug into any many-input port. The set updates automatically as matching columns are added or removed, so downstream analyses and plots stay in sync without rewiring.',
 	Cosinor:
@@ -56,7 +56,7 @@ export const NODE_NOTES = {
 	LongToWide:
 		'Pivots a long/tidy table (a category column, a time column and a value column) into wide format, producing one value-column per category sharing a common time column. Use it to turn a stacked per-subject table into side-by-side series ready for plotting or per-series analysis.',
 	MovingAnalysis:
-		"Slides a window along the record and runs a chosen analysis (periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
+		"Slides a window along the record and runs a chosen analysis (summary statistics such as the mean, SD and a percentile; a periodogram, cosinor, FFT, correlogram, or a waveform fit) in each window, producing a time-course of the result. Use it to track how a rhythm parameter changes over the recording, for example period drift during a free run or amplitude decay after a lesion. In the demo, read the output as a trajectory: each point is one window's estimate (period, amplitude, or power) plotted against the window's centre time, so a rising or falling line shows the rhythm evolving. Sliding-window periodogram/cosinor analysis (Refinetti et al. 2007).",
 	Multiply:
 		'Multiplies every value in the input column by a constant (or another column), element-by-element. Use it for unit conversions, scaling, or rescaling a signal. The demo shows the output column scaled relative to the input.',
 	NonparametricRA:

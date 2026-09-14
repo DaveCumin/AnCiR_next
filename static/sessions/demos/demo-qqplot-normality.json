@@ -162,6 +162,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -188,6 +189,7 @@
         "showLine": true,
         "showBand": true,
         "confidence": 0.95,
+        "showStats": true,
         "xlimsIN": [
           null,
           null
@@ -227,7 +229,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Series 1",
+            "label": "",
             "colour": "#234154",
             "pointRadius": 3,
             "opacity": 0.85
@@ -244,7 +246,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Series 2",
+            "label": "",
             "colour": "#BE796B",
             "pointRadius": 3,
             "opacity": 0.85
@@ -355,5 +357,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

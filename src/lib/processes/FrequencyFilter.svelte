@@ -24,10 +24,31 @@
 		return fftFilter(x, { type, low, high });
 	}
 
+	/**
+	 * Empty-passband warning for the node's ⚠ badge (processWarnings.js). The
+	 * compute above is UNCHANGED — a band-pass whose low cutoff sits above its
+	 * high cutoff keeps no frequencies and emits all zeros — this message just
+	 * says so. Args-only (no input data needed), pure, unit-testable.
+	 */
+	export function frequencyfilterWarnings(args) {
+		if ((args.type ?? 'low') !== 'band') return [];
+		const low = Number(args.low ?? 0);
+		const high = Number(args.high ?? 1);
+		if (!(low > high)) return [];
+		return [
+			`A band-pass keeps the frequencies between its cutoffs, and here the low cutoff (${low}) ` +
+				`is above the high cutoff (${high}), so the passband is empty and the output is all ` +
+				`zeros. Swap or adjust the cutoffs so the low one is below the high one.`
+		];
+	}
+
 	export const definition = {
 		displayName: 'Frequency Filter',
 		func: frequencyfilter,
 		defaults: frequencyfilter_defaults,
+		// Free-process warnings channel: derived at render time by the node
+		// components (processWarnings.js), never stored, so it cannot go stale.
+		getWarnings: (p) => frequencyfilterWarnings(p.args ?? {}),
 		nodeSpec: {
 			id: 'process.frequencyfilter',
 			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],

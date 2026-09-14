@@ -529,6 +529,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -590,7 +591,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Histogram 1",
+            "label": "",
             "binMode": "uniform",
             "binSize": 1,
             "binStart": null,
@@ -733,5 +734,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "652": [
+    "653": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "653": [
+    "654": [
       24.784209286216505,
       27.918238427560844,
       26.60093560817605,
@@ -104,7 +104,7 @@
       24.95424537696588,
       27.973731986697846
     ],
-    "654": [
+    "655": [
       0,
       1,
       2,
@@ -156,16 +156,16 @@
       48,
       49
     ],
-    "655": [
+    "656": [
       null
     ],
-    "656": [
+    "657": [
       0.9855288017634882
     ],
-    "657": [
+    "658": [
       2.8153329730899084
     ],
-    "658": [
+    "659": [
       25.756894538862465,
       24.742714374366138,
       24.385024124035308,
@@ -220,20 +220,20 @@
   },
   "data": [
     {
-      "id": 652,
+      "id": 653,
       "name": "x",
-      "data": 652,
+      "data": 653,
       "type": "number",
-      "tableProcessGUId": "3e18ea92-849a-42d5-ba25-799150cc4261",
+      "tableProcessGUId": "4cccdecb-5400-4318-8f3b-35acfb1bdd74",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 653,
+      "id": 654,
       "name": "y",
-      "data": 653,
+      "data": 654,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -242,22 +242,11 @@
       "processes": []
     },
     {
-      "id": 654,
-      "name": "dlogx_58",
-      "data": 654,
-      "type": "number",
-      "tableProcessGUId": "7557a76e-ed5c-4a3f-afff-09200195cce5",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 655,
-      "name": "pvalue_58",
+      "name": "dlogx_58",
       "data": 655,
       "type": "number",
-      "tableProcessGUId": "979dde8e-2929-4f26-ae8b-f011571c1745",
+      "tableProcessGUId": "42898248-d643-4dcd-a89c-b5fc562f58a6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -265,10 +254,10 @@
     },
     {
       "id": 656,
-      "name": "r2_58",
+      "name": "perm_pvalue_58",
       "data": 656,
       "type": "number",
-      "tableProcessGUId": "979dde8e-2929-4f26-ae8b-f011571c1745",
+      "tableProcessGUId": "8cdae061-1395-4d2d-bcdf-07771468207b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -276,10 +265,10 @@
     },
     {
       "id": 657,
-      "name": "rmse_58",
+      "name": "r2_58",
       "data": 657,
       "type": "number",
-      "tableProcessGUId": "979dde8e-2929-4f26-ae8b-f011571c1745",
+      "tableProcessGUId": "8cdae061-1395-4d2d-bcdf-07771468207b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -287,10 +276,21 @@
     },
     {
       "id": 658,
-      "name": "dlogy_653_58",
+      "name": "rmse_58",
       "data": 658,
       "type": "number",
-      "tableProcessGUId": "7557a76e-ed5c-4a3f-afff-09200195cce5",
+      "tableProcessGUId": "8cdae061-1395-4d2d-bcdf-07771468207b",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 659,
+      "name": "dlogy_654_58",
+      "data": 659,
+      "type": "number",
+      "tableProcessGUId": "42898248-d643-4dcd-a89c-b5fc562f58a6",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -310,6 +310,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -375,9 +376,9 @@
         "data": [
           {
             "x": {
-              "id": 659,
+              "id": 660,
               "name": "x",
-              "refId": 652,
+              "refId": 653,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -386,9 +387,9 @@
               "processes": []
             },
             "y": {
-              "id": 660,
+              "id": 661,
               "name": "y",
-              "refId": 653,
+              "refId": 654,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -414,9 +415,9 @@
           },
           {
             "x": {
-              "id": 661,
+              "id": 662,
               "name": "dlogx_58",
-              "refId": 654,
+              "refId": 655,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -425,9 +426,9 @@
               "processes": []
             },
             "y": {
-              "id": 662,
-              "name": "dlogy_653_58",
-              "refId": 658,
+              "id": 663,
+              "name": "dlogy_654_58",
+              "refId": 659,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -480,6 +481,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -503,8 +505,8 @@
       },
       "plot": {
         "columnRefs": [
-          653,
-          658
+          654,
+          659
         ],
         "showCol": [
           true,
@@ -529,7 +531,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 652
+          "result": 653
         }
       },
       "refTPId": null
@@ -539,9 +541,9 @@
       "name": "DoubleLogistic",
       "displayName": "Double Logistic",
       "args": {
-        "xIN": 652,
+        "xIN": 653,
         "yIN": [
-          653
+          654
         ],
         "outputX": -1,
         "fixK1": false,
@@ -551,11 +553,11 @@
         "fixPeriod": false,
         "fixedPeriod": 24,
         "out": {
-          "dlogx": 654,
-          "pvalue": 655,
-          "r2": 656,
-          "rmse": 657,
-          "dlogy_653": 658
+          "dlogx": 655,
+          "perm_pvalue": 656,
+          "r2": 657,
+          "rmse": 658,
+          "dlogy_654": 659
         }
       },
       "refTPId": null
@@ -600,7 +602,7 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_653": {
+    "data_654": {
       "x": 60,
       "y": 314
     },
@@ -683,5 +685,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

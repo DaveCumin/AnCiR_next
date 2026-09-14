@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "671": [
+    "679": [
       1,
       2,
       3,
@@ -52,7 +52,7 @@
       49,
       50
     ],
-    "672": [
+    "680": [
       10,
       20,
       30,
@@ -104,7 +104,7 @@
       490,
       500
     ],
-    "673": [
+    "681": [
       11,
       22,
       33,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 671,
+      "id": 679,
       "name": "Formula Column input 1",
-      "data": 671,
+      "data": 679,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 672,
+      "id": 680,
       "name": "Formula Column input 2",
-      "data": 672,
+      "data": 680,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,11 +181,11 @@
       "processes": []
     },
     {
-      "id": 673,
+      "id": 681,
       "name": "result_61",
-      "data": 673,
+      "data": 681,
       "type": "number",
-      "tableProcessGUId": "3950cad2-db03-491b-9257-f4f8398fde64",
+      "tableProcessGUId": "aed052e0-e73d-4fa8-a228-a462407748ec",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -205,6 +205,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -228,9 +229,9 @@
       },
       "plot": {
         "columnRefs": [
-          671,
-          672,
-          673
+          679,
+          680,
+          681
         ],
         "showCol": [
           true,
@@ -253,7 +254,7 @@
         "tokens": [
           {
             "type": "col",
-            "id": 671
+            "id": 679
           },
           {
             "type": "text",
@@ -261,11 +262,11 @@
           },
           {
             "type": "col",
-            "id": 672
+            "id": 680
           }
         ],
         "out": {
-          "result": 673
+          "result": 681
         }
       },
       "refTPId": null
@@ -310,11 +311,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_671": {
+    "data_679": {
       "x": 60,
       "y": 314
     },
-    "data_672": {
+    "data_680": {
       "x": 60,
       "y": 814
     },
@@ -389,5 +390,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

@@ -42,4 +42,31 @@ describe('seriesDisplayLabel', () => {
 	it('falls back to Data 1 when the series is detached from any plot', () => {
 		expect(seriesDisplayLabel({ label: '' })).toBe('Data 1');
 	});
+
+	it('falls back to a single wired `column` name (PairsPlot / CorrelationHeatmap shape)', () => {
+		expect(seriesDisplayLabel({ column: { name: 'activity' } })).toBe('activity');
+	});
+
+	it('prefers y over column when both exist', () => {
+		expect(seriesDisplayLabel({ y: { name: 'yname' }, column: { name: 'cname' } })).toBe('yname');
+	});
+
+	it('a custom fallback replaces only the positional tier', () => {
+		expect(seriesDisplayLabel({ label: '' }, { fallback: 'Variable 2' })).toBe('Variable 2');
+		expect(
+			seriesDisplayLabel({ label: '', y: { name: 'activity' } }, { fallback: 'Variable 2' })
+		).toBe('activity');
+		expect(seriesDisplayLabel({ label: 'Mine' }, { fallback: 'Variable 2' })).toBe('Mine');
+		expect(seriesDisplayLabel(null, { fallback: 'Variable 2' })).toBe('Variable 2');
+	});
+
+	it('is reactive at the data level: re-reading after a rename answers the new name', () => {
+		// The helper reads datum.y.name each call, so a column rename needs no
+		// bookkeeping — the next read (Svelte re-render) sees the new name.
+		const y = { name: 'before' };
+		const datum = { label: '', y };
+		expect(seriesDisplayLabel(datum)).toBe('before');
+		y.name = 'after';
+		expect(seriesDisplayLabel(datum)).toBe('after');
+	});
 });

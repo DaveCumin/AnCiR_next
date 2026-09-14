@@ -723,7 +723,7 @@
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
-	import Editable from '$lib/components/inputs/Editable.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
 	import {
@@ -807,7 +807,11 @@
 			factor
 		);
 		const ylimsLeft = p.hasLeftAxisData
-			? zoomLimitsAroundPoint(p.YScaleLeft.domain(), toLimitNumber(p.YScaleLeft.invert(localY)), factor)
+			? zoomLimitsAroundPoint(
+					p.YScaleLeft.domain(),
+					toLimitNumber(p.YScaleLeft.invert(localY)),
+					factor
+				)
 			: null;
 		const ylimsRight = p.hasRightAxisData
 			? zoomLimitsAroundPoint(
@@ -837,7 +841,8 @@
 			const yArr = d.y?.getData();
 			if (!xArr?.length || !yArr?.length) continue;
 			const origin = theData.plot.xOriginFor(d.x);
-			const xD = origin != null ? xArr.map(/** @param {number} v */ (v) => origin + v * 3600000) : xArr;
+			const xD =
+				origin != null ? xArr.map(/** @param {number} v */ (v) => origin + v * 3600000) : xArr;
 			out.push({
 				label: d.displayLabel,
 				colour: d.points?.colour || d.line?.colour || 'black',
@@ -869,14 +874,9 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-
 		<div class="div-line"></div>
 
-		<Legend
-			legendData={theData.legend}
-			figureStyle={theData.parentBox?.style}
-			which="controls"
-		/>
+		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -1087,9 +1087,8 @@
 					     The placeholder is the format the ticks are ACTUALLY using right now, so
 					     the box shows something to edit rather than the word "Automatic". -->
 					{@const autoPattern =
-						dominantTickPattern(
-							theData.XScale?.ticks?.(theData.xAxis?.nticks ?? 5) ?? []
-						) ?? DEFAULT_DATE_FORMAT}
+						dominantTickPattern(theData.XScale?.ticks?.(theData.xAxis?.nticks ?? 5) ?? []) ??
+						DEFAULT_DATE_FORMAT}
 					<ControlInput label="Date tick format:">
 						<input
 							type="text"
@@ -1131,29 +1130,16 @@
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
-					<div class="control-component-title">
-						<p><Editable bind:value={datum.label} placeholder={datum.displayLabel} /></p>
-
-						<button class="icon" onclick={() => theData.removeData(i)}
-							><Icon
-								name="trash"
-								width={16}
-								height={16}
-								className="control-component-title-icon"
-							/></button
-						>
-					</div>
+					<SeriesBlockHeader inner={theData} {datum} index={i} />
 
 					<div class="data-wrapper">
 						<div class="x-select">
-							<ControlInput label="x">
-							</ControlInput>
+							<ControlInput label="x"></ControlInput>
 
 							<Column col={datum.x} canChange={true} />
 						</div>
 						<div class="y-select">
-							<ControlInput label="y">
-							</ControlInput>
+							<ControlInput label="y"></ControlInput>
 							<Column col={datum.y} canChange={true} />
 						</div>
 
@@ -1220,7 +1206,7 @@
 		<!-- The Left Y-axis -->
 		{#if theData.plot.hasLeftAxisData}
 			<Axis
-			figureStyle={theData.plot.viewStyle}
+				figureStyle={theData.plot.viewStyle}
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={theData.plot.YScaleLeft}
@@ -1234,7 +1220,7 @@
 		<!-- The Right Y-axis (only if there's data on right axis) -->
 		{#if theData.plot.hasRightAxisData}
 			<Axis
-			figureStyle={theData.plot.viewStyle}
+				figureStyle={theData.plot.viewStyle}
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={theData.plot.YScaleRight}
@@ -1349,10 +1335,7 @@
 		     Shift+drag zooms any plot, like Shift+wheel). Selection box renders here,
 		     above the data, translated to the plot area. -->
 		{#if brushable}
-			<g
-				style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding
-					.top}px);"
-			>
+			<g style="transform: translate({theData.plot.padding.left}px, {theData.plot.padding.top}px);">
 				<PlotBrush
 					{svgEl}
 					{zoomMode}

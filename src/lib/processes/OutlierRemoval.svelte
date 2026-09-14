@@ -3,6 +3,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
+	import { dataEnteringProcess } from '$lib/core/processInput.js';
 
 	const outlierremoval_defaults = new Map([
 		['method', { val: 'zscore' }],
@@ -83,10 +84,34 @@
 		return out;
 	}
 
+	/**
+	 * Too-few-points warning for the node's ⚠ badge (processWarnings.js). The
+	 * compute above is UNCHANGED — under 4 valid points it still passes the data
+	 * through with nothing removed — this message just says so. Pure, so it is
+	 * unit-testable without a session.
+	 */
+	export function outlierRemovalWarnings(x) {
+		if (x.length === 0) return [];
+		const validCount = x.reduce((n, v) => (v != null && !isNaN(v) ? n + 1 : n), 0);
+		if (validCount >= 4) return [];
+		return [
+			`Outlier detection needs at least 4 valid points to estimate what is typical, and this ` +
+				`input has ${validCount} (missing cells do not count), so the data passed through ` +
+				`unchanged with nothing removed. Wire in a longer column, or remove this node.`
+		];
+	}
+
 	export const definition = {
 		displayName: 'Remove Outliers',
 		func: outlierremoval,
 		defaults: outlierremoval_defaults,
+		// Free-process warnings channel: derived at render time by the node
+		// components (processWarnings.js), never stored, so it cannot go stale.
+		getWarnings: (p) => {
+			const inData = dataEnteringProcess(p);
+			if (!inData) return [];
+			return outlierRemovalWarnings(inData);
+		},
 		nodeSpec: {
 			id: 'process.outlierremoval',
 			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],

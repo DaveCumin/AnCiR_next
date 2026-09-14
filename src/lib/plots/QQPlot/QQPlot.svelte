@@ -17,6 +17,7 @@
 	// fit node's `resid_<y>` outputs are ordinary columns, so residual Q-Q needs nothing
 	// special — just wire the residual column.
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
@@ -47,7 +48,8 @@
 			} else {
 				this.column = new ColumnClass({ refId: -1 });
 			}
-			this.label = dataIN?.label ?? 'Series ' + (parent.data.length + 1);
+			// Blank by default; `displayLabel` falls back to the wired column's name.
+			this.label = dataIN?.label ?? '';
 			this.colour = dataIN?.colour ?? getPaletteColor(parent.data.length);
 			this.pointRadius = dataIN?.pointRadius ?? 3;
 			this.opacity = dataIN?.opacity ?? 0.85;
@@ -66,9 +68,13 @@
 			});
 		});
 
+		get displayLabel() {
+			return seriesDisplayLabel(this);
+		}
+
 		getLegendItem() {
 			return {
-				label: this.label,
+				label: this.displayLabel,
 				elements: [{ type: 'points', color: this.colour, shape: 'circle', size: 4 }]
 			};
 		}
@@ -196,7 +202,7 @@
 				const q = d.qq;
 				for (let i = 0; i < q.theoretical.length; i++) {
 					rows.push([
-						d.label,
+						d.displayLabel,
 						q.theoretical[i],
 						q.sample[i],
 						q.line.intercept + q.line.slope * q.theoretical[i],
@@ -339,7 +345,8 @@
 		if (theoretical.length < 2) return '';
 		let d = '';
 		for (let i = 0; i < theoretical.length; i++) {
-			d += (i === 0 ? 'M' : 'L') + (xScale(theoretical[i]) + xoff) + ',' + (yScale(band.hi[i]) + yoff);
+			d +=
+				(i === 0 ? 'M' : 'L') + (xScale(theoretical[i]) + xoff) + ',' + (yScale(band.hi[i]) + yoff);
 		}
 		for (let i = theoretical.length - 1; i >= 0; i--) {
 			d += 'L' + (xScale(theoretical[i]) + xoff) + ',' + (yScale(band.lo[i]) + yoff);
@@ -351,7 +358,7 @@
 <script>
 	// @ts-nocheck
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import Editable from '$lib/components/inputs/Editable.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import { onMount, tick } from 'svelte';
@@ -391,8 +398,12 @@
 	{#if appState.currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-component-title">Q-Q plot</div>
-			<ControlInput label="Width"><NumberWithUnits bind:value={theData.parentBox.width} /></ControlInput>
-			<ControlInput label="Height"><NumberWithUnits bind:value={theData.parentBox.height} /></ControlInput>
+			<ControlInput label="Width"
+				><NumberWithUnits bind:value={theData.parentBox.width} /></ControlInput
+			>
+			<ControlInput label="Height"
+				><NumberWithUnits bind:value={theData.parentBox.height} /></ControlInput
+			>
 			<div class="control-input-checkbox" style="margin-top: var(--space-2);">
 				<input type="checkbox" bind:checked={theData.showLine} />
 				<p title="Reference line through the first and third quartiles (robust to tail departures)">
@@ -402,7 +413,9 @@
 			<div class="control-input-checkbox" style="margin-top: var(--space-2);">
 				<input type="checkbox" bind:checked={theData.showBand} />
 				<p
-					title="Pointwise envelope: each quantile's plausible range under normality. About {Math.round((1 - theData.confidence) * 100)}% of points stray outside it even for perfectly normal data."
+					title="Pointwise envelope: each quantile's plausible range under normality. About {Math.round(
+						(1 - theData.confidence) * 100
+					)}% of points stray outside it even for perfectly normal data."
 				>
 					Show confidence envelope
 				</p>
@@ -528,8 +541,8 @@
 			</div>
 
 			<p class="qq-hint">
-				Wire any numeric column — e.g. a fit node's resid_ output to check whether its
-				residuals are normal.
+				Wire any numeric column — e.g. a fit node's resid_ output to check whether its residuals are
+				normal.
 			</p>
 
 			{#each theData.data as datum, i (datum.column.id)}
@@ -539,12 +552,7 @@
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
-					<div class="control-component-title">
-						<p><Editable bind:value={datum.label} /></p>
-						<button class="icon" onclick={() => theData.removeData(i)}>
-							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
-						</button>
-					</div>
+					<SeriesBlockHeader inner={theData} {datum} index={i} />
 
 					<div class="data-wrapper">
 						<div class="y-select">
@@ -569,9 +577,10 @@
 								class="qq-stats"
 								title="n: values used. dropped: missing / non-numeric values excluded. r: probability-plot correlation — how tightly the points follow a straight line (1 = shape matches the normal exactly). Descriptive only; use the Normality Test node for a formal test."
 							>
-								n = {datum.qq.n}{datum.qq.dropped > 0
-									? `, dropped ${datum.qq.dropped}`
-									: ''}, r = {datum.qq.r == null ? 'n/a' : datum.qq.r.toFixed(3)}
+								n = {datum.qq.n}{datum.qq.dropped > 0 ? `, dropped ${datum.qq.dropped}` : ''}, r = {datum
+									.qq.r == null
+									? 'n/a'
+									: datum.qq.r.toFixed(3)}
 							</p>
 						{:else if datum.qq.dropped > 0}
 							<div class="data-warning">

@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.72.29",
+  "generatedFromVersion": "β.72.30",
   "count": 61,
   "nodes": [
     {
@@ -940,6 +940,10 @@
           "default": "add"
         },
         {
+          "name": "percentile",
+          "default": 50
+        },
+        {
           "name": "yIN",
           "default": []
         },
@@ -1501,7 +1505,7 @@
       "displayName": "Fit waveform model",
       "kind": "tableProcess",
       "family": "Fitting",
-      "description": "Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. Use it to compare different waveform shapes on the same series without rewiring; for one model with its own metric output ports, use the dedicated Cosinor, Rectangular Wave or Double Logistic node.",
+      "description": "Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. Use it to compare different waveform shapes on the same series without rewiring; the fit quality (R2, RMSE, permutation p) and the chosen model’s parameters are wireable metric output ports, like the dedicated Cosinor, Rectangular Wave and Double Logistic nodes.",
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1628,6 +1632,84 @@
           "kind": "column",
           "cardinality": "many",
           "dynamicPrefix": "permstats_"
+        },
+        {
+          "name": "r2",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "rmse",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "perm_pvalue",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "period",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "mesor",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "amplitude",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "acrophase",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "duty_cycle",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "kappa",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "onset",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "offset",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "k1",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "k2",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
         }
       ],
       "demo": "sessions/demos/demo-tp-fitfunction.json"
@@ -1926,6 +2008,10 @@
         {
           "name": "analysis",
           "default": "periodogram"
+        },
+        {
+          "name": "summaryPercentile",
+          "default": 50
         },
         {
           "name": "npcraEpochHours",

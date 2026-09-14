@@ -7,6 +7,11 @@
 	// the synchronous entry point — the async `fitTrend` exists only for the
 	// optional permutation test, which RemoveTrend does not use.
 	import { fitTrendSync } from '$lib/utils/trendfit.js';
+	// Domain checks shared with the fit nodes (TrendFit et al). House rule:
+	// REFUSE-and-pass-through — a fit outside its model's domain must not
+	// silently emit an all-NaN column under the user's column name.
+	import { checkTrendFitDomain, shouldRefuse, issueMessages } from '$lib/utils/fitDomain.js';
+	import { dataEnteringProcess } from '$lib/core/processInput.js';
 
 	const removetrend_defaults = new Map([
 		['xColId', { val: -1 }],
@@ -34,7 +39,11 @@
 		});
 	}
 
-	export function removetrend(x, args) {
+	// The (t, y) pairs the fit actually sees: x-axis values (wired column, or the
+	// row index) paired with the input data, filtered to rows where both are
+	// usable. ONE copy, used by removetrend, the domain check, and the editor's
+	// stats display, so all three always agree about which points exist.
+	function trendPairs(x, args) {
 		const xColId = args.xColId;
 		const xCol = xColId != -1 ? getColumnById(xColId) : null;
 		const t = xCol
@@ -47,10 +56,43 @@
 			.map((v, i) => (!isNaN(v) && x[i] != null && !isNaN(x[i]) ? i : -1))
 			.filter((i) => i !== -1);
 
+		return {
+			validIndices,
+			tt: validIndices.map((i) => t[i]),
+			yy: validIndices.map((i) => x[i])
+		};
+	}
+
+	/**
+	 * Domain issues for this process's fit, given the data entering it. Pure
+	 * (data in → issue objects out) so it is unit-testable without a session.
+	 * All the trend checks are REFUSE-tier: when any fires, removetrend passes
+	 * the input through unchanged instead of detrending.
+	 */
+	export function removetrendIssues(x, args) {
+		const { validIndices, tt, yy } = trendPairs(x, args);
+		if (validIndices.length < 2) return [];
+		const xCol = args.xColId != -1 ? getColumnById(args.xColId) : null;
+		return checkTrendFitDomain(tt, yy, args.model, args.polyDegree, {
+			xLabel: xCol?.name ?? 'the row index',
+			yLabel: 'the input column'
+		});
+	}
+
+	export function removetrend(x, args) {
+		const { validIndices, tt, yy } = trendPairs(x, args);
+
 		if (validIndices.length < 2) return [...x];
 
-		const tt = validIndices.map((i) => t[i]);
-		const yy = validIndices.map((i) => x[i]);
+		// REFUSE-and-pass-through (fitDomain): a logarithmic model over x <= 0 (or
+		// exponential over y <= 0, an underdetermined polynomial, a constant x)
+		// used to write an ALL-NaN output column with no explanation. The fit
+		// cannot mean anything, so the data passes through UNCHANGED and the node
+		// surfaces the reason (removetrendIssues → definition.getWarnings).
+		if (shouldRefuse(checkTrendFitDomain(tt, yy, args.model, args.polyDegree))) {
+			return [...x];
+		}
+
 		const fittedData = fitTrendSync(tt, yy, args.model, args.polyDegree);
 		let detrended = yy.map((yi, k) => yi - fittedData.fitted[k]);
 
@@ -67,6 +109,15 @@
 		displayName: 'Remove Trend',
 		func: removetrend,
 		defaults: removetrend_defaults,
+		// Optional warnings hook for column-process nodes: called at RENDER time
+		// (TableProcessNode / CompactNode, via processNodeWarnings) with the live
+		// Process, returning message strings for the node's ⚠ badge. Derived from
+		// the same inputs the compute reads — never stored, so it cannot go stale.
+		getWarnings: (p) => {
+			const inData = dataEnteringProcess(p);
+			if (!inData) return [];
+			return issueMessages(removetrendIssues(inData, p.args));
+		},
 		nodeSpec: {
 			id: 'process.removetrend',
 			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],
@@ -82,50 +133,26 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import ProcessShell from '$lib/core/ProcessShell.svelte';
-	import { core } from '$lib/core/core.svelte.js';
-	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 
 	let { p = $bindable() } = $props();
 
+	// The data entering this process (input column for free nodes, reconstructed
+	// pipeline state for inline ones) — shared with definition.getWarnings via
+	// core/processInput.js, so the stats and the warnings see identical data.
+	let enteringData = $derived.by(() => dataEnteringProcess(p));
+
+	// Domain refusals for the CURRENT model over the current data. When any is
+	// present the process passes data through unchanged, so the stats display
+	// below is suppressed in favour of the explanation.
+	let domainIssues = $derived.by(() => {
+		if (!enteringData) return [];
+		return issueMessages(removetrendIssues(enteringData, p.args));
+	});
+
 	// Reactively compute trend fit stats for display
 	let trendStats = $derived.by(() => {
-		const col = p.parentCol;
-		let data;
-		if (!col) {
-			// Free dataflow node: data entering = the input column's data.
-			const inData = p.inputCol?.getData();
-			if (!inData) return null;
-			data = [...inData];
-		} else {
-			if (!col.processes) return null;
-			const processIndex = col.processes.findIndex((proc) => proc.id === p.id);
-			if (processIndex < 0) return null;
-
-			// Reconstruct data as it enters this process (legacy inline path)
-			if (col.isReferencial()) {
-				const refData = col.refColumn?.getData();
-				if (!refData) return null;
-				data = [...refData];
-			} else {
-				const rawData = core.rawData.get(col.data);
-				if (!rawData) return null;
-				if (col.compression === 'awd') {
-					data = new Array(rawData.length);
-					for (let i = 0; i < rawData.length; i++) data[i] = rawData.start + i * rawData.step;
-				} else {
-					data = [...rawData];
-				}
-				if (col.type === 'time' && col.compression !== 'awd') {
-					try {
-						data = data.map((v) => Number(getUNIXDate(v, col.timeFormat)));
-					} catch {
-						/* ignore */
-					}
-				}
-				if (col.type === 'bin') data = data.map((v) => v + col.binWidth / 2);
-			}
-			for (let i = 0; i < processIndex; i++) data = col.processes[i].doProcess(data);
-		}
+		if (!enteringData || domainIssues.length > 0) return null;
+		const data = enteringData;
 
 		const statsXCol = p.args.xColId != -1 ? getColumnById(p.args.xColId) : null;
 		const t = statsXCol
@@ -190,6 +217,14 @@
 		</ControlInput>
 	{/if}
 
+	<!-- Domain refusals: the fit was not computed and the data passed through
+	     unchanged. Shown here as well as on the node badge, because the badge is
+	     a tooltip and the reason has to be readable without hovering. Same
+	     markup as TrendFit / Cosinor / ChiSquared. -->
+	{#each domainIssues as w (w)}
+		<p class="warn">{w}</p>
+	{/each}
+
 	<!-- Trend fit stats -->
 	{#if trendStats}
 		<div class="info-text">
@@ -211,6 +246,15 @@
 </ProcessShell>
 
 <style>
+	/* Matches TrendFit / ChiSquared / Rayleigh / Cosinor. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.info-text {
 		font-size: var(--font-sm);
 		color: var(--text-secondary, var(--color-text-muted));

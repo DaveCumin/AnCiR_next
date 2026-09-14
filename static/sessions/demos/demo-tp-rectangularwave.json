@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "762": [
+    "770": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "763": [
+    "771": [
       80.74815343291546,
       74.1026647241765,
       67.34975964373878,
@@ -100,7 +100,7 @@
       25.36953942083682,
       31.225353920755683
     ],
-    "764": [
+    "772": [
       0,
       1,
       2,
@@ -150,16 +150,16 @@
       46,
       47
     ],
-    "765": [
+    "773": [
       null
     ],
-    "766": [
+    "774": [
       0.9561584036481966
     ],
-    "767": [
+    "775": [
       5.518597286094135
     ],
-    "768": [
+    "776": [
       75.31550624457671,
       75.31550624457671,
       75.31550624457671,
@@ -212,20 +212,20 @@
   },
   "data": [
     {
-      "id": 762,
+      "id": 770,
       "name": "x",
-      "data": 762,
+      "data": 770,
       "type": "number",
-      "tableProcessGUId": "2fb2afde-861b-4834-86d6-161800d00e38",
+      "tableProcessGUId": "2edce403-9e68-44ac-b0c8-86e4a0d589c4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 763,
+      "id": 771,
       "name": "y",
-      "data": 763,
+      "data": 771,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -234,55 +234,55 @@
       "processes": []
     },
     {
-      "id": 764,
+      "id": 772,
       "name": "rectwavex_74",
-      "data": 764,
+      "data": 772,
       "type": "number",
-      "tableProcessGUId": "ed7238b7-147d-499c-a5d5-5b3f1c421bed",
+      "tableProcessGUId": "1145255e-19e1-4371-a405-b5095aaef880",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 765,
-      "name": "pvalue_74",
-      "data": 765,
+      "id": 773,
+      "name": "perm_pvalue_74",
+      "data": 773,
       "type": "number",
-      "tableProcessGUId": "ed7238b7-147d-499c-a5d5-5b3f1c421bed",
+      "tableProcessGUId": "1145255e-19e1-4371-a405-b5095aaef880",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 766,
+      "id": 774,
       "name": "r2_74",
-      "data": 766,
+      "data": 774,
       "type": "number",
-      "tableProcessGUId": "ed7238b7-147d-499c-a5d5-5b3f1c421bed",
+      "tableProcessGUId": "1145255e-19e1-4371-a405-b5095aaef880",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 767,
+      "id": 775,
       "name": "rmse_74",
-      "data": 767,
+      "data": 775,
       "type": "number",
-      "tableProcessGUId": "ed7238b7-147d-499c-a5d5-5b3f1c421bed",
+      "tableProcessGUId": "1145255e-19e1-4371-a405-b5095aaef880",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 768,
-      "name": "rectwavey_763_74",
-      "data": 768,
+      "id": 776,
+      "name": "rectwavey_771_74",
+      "data": 776,
       "type": "number",
-      "tableProcessGUId": "ed7238b7-147d-499c-a5d5-5b3f1c421bed",
+      "tableProcessGUId": "1145255e-19e1-4371-a405-b5095aaef880",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -302,6 +302,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -367,9 +368,9 @@
         "data": [
           {
             "x": {
-              "id": 769,
+              "id": 777,
               "name": "x",
-              "refId": 762,
+              "refId": 770,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -378,9 +379,9 @@
               "processes": []
             },
             "y": {
-              "id": 770,
+              "id": 778,
               "name": "y",
-              "refId": 763,
+              "refId": 771,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -406,9 +407,9 @@
           },
           {
             "x": {
-              "id": 771,
+              "id": 779,
               "name": "rectwavex_74",
-              "refId": 764,
+              "refId": 772,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -417,9 +418,9 @@
               "processes": []
             },
             "y": {
-              "id": 772,
-              "name": "rectwavey_763_74",
-              "refId": 768,
+              "id": 780,
+              "name": "rectwavey_771_74",
+              "refId": 776,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -472,6 +473,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -495,8 +497,8 @@
       },
       "plot": {
         "columnRefs": [
-          763,
-          768
+          771,
+          776
         ],
         "showCol": [
           true,
@@ -521,7 +523,7 @@
         "count": 48,
         "end": 47,
         "out": {
-          "result": 762
+          "result": 770
         }
       },
       "refTPId": null
@@ -531,9 +533,9 @@
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 762,
+        "xIN": 770,
         "yIN": [
-          763
+          771
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -544,11 +546,11 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 764,
-          "pvalue": 765,
-          "r2": 766,
-          "rmse": 767,
-          "rectwavey_763": 768
+          "rectwavex": 772,
+          "perm_pvalue": 773,
+          "r2": 774,
+          "rmse": 775,
+          "rectwavey_771": 776
         }
       },
       "refTPId": null
@@ -593,7 +595,7 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_763": {
+    "data_771": {
       "x": 60,
       "y": 314
     },
@@ -676,5 +678,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

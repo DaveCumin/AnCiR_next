@@ -36,3 +36,23 @@ export function median(arr) {
 	const mid = Math.floor(sorted.length / 2);
 	return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
+
+/**
+ * Type-7 quantile (linear interpolation between order statistics) — R's default
+ * and numpy.percentile's default `method='linear'`; the house convention
+ * (describeStats quartiles and the Q-Q plot use the same rule). `q` is a
+ * FRACTION in [0, 1], not a percentage. NaN for empty input; q is clamped to
+ * [0, 1]. Assumes a pre-cleaned numeric array (filter with isInvalidValue
+ * first). quantileType7(arr, 0.5) equals median(arr) exactly.
+ */
+export function quantileType7(arr, q) {
+	const n = arr.length;
+	if (!n) return NaN;
+	const qq = Math.min(1, Math.max(0, q));
+	const sorted = [...arr].sort((a, b) => a - b);
+	if (n === 1) return sorted[0];
+	const pos = qq * (n - 1);
+	const lo = Math.floor(pos);
+	const frac = pos - lo;
+	return sorted[lo] + (sorted[Math.min(lo + 1, n - 1)] - sorted[lo]) * frac;
+}

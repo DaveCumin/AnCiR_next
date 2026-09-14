@@ -343,4 +343,186 @@ describe('movinganalysis', async () => {
 		expect(mockColumns[91].type).toBe('number');
 		expect(mockColumns[91].tableProcessGUId).toBe(mockColumns[90].tableProcessGUId);
 	});
+
+	// --- summary statistics (mean / SD / percentile) ---
+	// REAL maths through the node's func (no mocked fit): the trend mode was
+	// inert for months because a pure-util test with mocked maths stayed green,
+	// so these assert actual pinned numbers, not just array shapes.
+
+	describe('analysis: summary', () => {
+		it('getStatKeys returns fixed keys regardless of the percentile value', () => {
+			expect(getStatKeys({ analysis: 'summary', summaryPercentile: 30 })).toEqual([
+				'mean',
+				'sd',
+				'percentile'
+			]);
+			expect(getStatKeys({ analysis: 'summary', summaryPercentile: 90 })).toEqual([
+				'mean',
+				'sd',
+				'percentile'
+			]);
+		});
+
+		it('emits per-window mean, SAMPLE sd (n-1) and type-7 percentile (numpy pins)', async () => {
+			// One window [0,7): the 7 values below. Pinned against numpy:
+			//   mean = 3.5714285714285716, std(ddof=1) = 2.819996622760558,
+			//   percentile(…, 30) = 1.7999999999999998 (interpolated, n=7)
+			const t = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+			const y = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3];
+			mockColumns[1] = { type: 'number', getData: () => t };
+			mockColumns[2] = { getData: () => y };
+			const [result, valid] = await movinganalysis({
+				...baseArgs,
+				xIN: 1,
+				yIN: [2],
+				windowSize: 7,
+				stepSize: 7,
+				analysis: 'summary',
+				summaryPercentile: 30
+			});
+			expect(valid).toBe(true);
+			const per = result.y_results[2];
+			expect(per.mean.length).toBe(result.bins.length);
+			expect(per.mean[0]).toBeCloseTo(3.5714285714285716, 12);
+			expect(per.sd[0]).toBeCloseTo(2.819996622760558, 12);
+			expect(per.percentile[0]).toBeCloseTo(1.7999999999999998, 12);
+			// Real numbers, not NaN — the regression the trend mode shipped with.
+			for (const k of ['mean', 'sd', 'percentile']) {
+				expect(per[k].every((v) => Number.isFinite(v))).toBe(true);
+			}
+		});
+
+		it('percentile defaults to 50 and equals the window median exactly', async () => {
+			const t = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+			const y = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3];
+			mockColumns[1] = { type: 'number', getData: () => t };
+			mockColumns[2] = { getData: () => y };
+			const args = {
+				...baseArgs,
+				xIN: 1,
+				yIN: [2],
+				windowSize: 7,
+				stepSize: 7,
+				analysis: 'summary'
+			};
+			delete args.summaryPercentile;
+			const [result] = await movinganalysis(args);
+			// median of [3,1,4,1,5,9,2] is 3
+			expect(result.y_results[2].percentile[0]).toBe(3);
+		});
+
+		it('drops blank-string cells as missing data, not zeros (v72.28 rule)', async () => {
+			// y[3] is a blank cell; the window's stats must be those of the SIX
+			// remaining values [3,1,4,5,9,2] (numpy: mean 4, sd 2.8284271247461903,
+			// p30 2.5) — a fabricated 0 would drag the mean to 3.428…
+			const t = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+			const y = [3, 1, 4, '', 5, 9, 2, 6, 5, 3];
+			mockColumns[1] = { type: 'number', getData: () => t };
+			mockColumns[2] = { getData: () => y };
+			const [result, valid] = await movinganalysis({
+				...baseArgs,
+				xIN: 1,
+				yIN: [2],
+				windowSize: 7,
+				stepSize: 7,
+				analysis: 'summary',
+				summaryPercentile: 30
+			});
+			expect(valid).toBe(true);
+			const per = result.y_results[2];
+			expect(per.mean[0]).toBeCloseTo(4, 12);
+			expect(per.sd[0]).toBeCloseTo(2.8284271247461903, 12);
+			expect(per.percentile[0]).toBeCloseTo(2.5, 12);
+		});
+
+		it('a window with too few valid points stays NaN', async () => {
+			// Last window [6,9) holds only 2 samples (t=7 is missing) → below the
+			// 3-point minimum every analysis shares → NaN, not a 2-point stat.
+			const t = [0, 1, 2, 3, 4, 5, 6, 8, 9];
+			const y = [3, 1, 4, 1, 5, 9, 2, 6, 5];
+			mockColumns[1] = { type: 'number', getData: () => t };
+			mockColumns[2] = { getData: () => y };
+			const [result] = await movinganalysis({
+				...baseArgs,
+				xIN: 1,
+				yIN: [2],
+				windowSize: 3,
+				stepSize: 3,
+				analysis: 'summary'
+			});
+			const per = result.y_results[2];
+			expect(result.bins.length).toBe(3); // windows [0,3), [3,6), [6,9)
+			expect(Number.isFinite(per.mean[0])).toBe(true); // 3 pts
+			expect(Number.isFinite(per.mean[1])).toBe(true); // 3 pts
+			expect(Number.isNaN(per.mean[2])).toBe(true); // 2 pts (t=6, 8)
+		});
+	});
+
+	describe('skipped-window warnings', () => {
+		it('reports how many windows the logarithmic trend model skipped, and why', async () => {
+			// Window [0,10) contains t = 0, which ln() cannot take → skipped.
+			// Window [10,20) is clean → fitted. The user must be TOLD about the
+			// blank window rather than left to guess.
+			const t = Array.from({ length: 30 }, (_, i) => i);
+			const y = t.map((ti) => 3 + 2 * Math.log(ti + 1));
+			mockColumns[1] = { type: 'number', getData: () => t };
+			mockColumns[2] = { getData: () => y };
+			const [result, valid] = await movinganalysis({
+				...baseArgs,
+				xIN: 1,
+				yIN: [2],
+				windowSize: 10,
+				stepSize: 10,
+				analysis: 'trend',
+				trendModel: 'logarithmic'
+			});
+			expect(valid).toBe(true);
+			expect(result.warnings).toHaveLength(1);
+			expect(result.warnings[0]).toContain('1 of 2 windows');
+			expect(result.warnings[0]).toContain('logarithmic');
+			expect(result.warnings[0]).toContain('greater than 0');
+			// The clean window still produced a fit; the skipped one is blank.
+			const per = result.y_results[2];
+			expect(Number.isNaN(per.a[0])).toBe(true);
+			expect(Number.isFinite(per.a[1])).toBe(true);
+		});
+
+		it('names the series when several y inputs are wired', async () => {
+			const t = Array.from({ length: 30 }, (_, i) => i + 1); // all positive: x is fine
+			const yBad = t.map((ti) => ti - 5); // crosses 0 → exponential refusals
+			const yGood = t.map((ti) => 2 * Math.exp(0.05 * ti));
+			mockColumns[1] = { type: 'number', getData: () => t };
+			mockColumns[2] = { getData: () => yBad, name: 'activity' };
+			mockColumns[3] = { getData: () => yGood, name: 'temp' };
+			const [result] = await movinganalysis({
+				...baseArgs,
+				xIN: 1,
+				yIN: [2, 3],
+				windowSize: 10,
+				stepSize: 10,
+				analysis: 'trend',
+				trendModel: 'exponential'
+			});
+			expect(result.warnings).toHaveLength(1);
+			expect(result.warnings[0]).toContain('for activity');
+			expect(result.warnings[0]).toContain('exponential');
+		});
+
+		it('reports no warnings when every window computes', async () => {
+			const t = Array.from({ length: 30 }, (_, i) => i);
+			const y = t.map((ti) => 2 * ti + 1);
+			mockColumns[1] = { type: 'number', getData: () => t };
+			mockColumns[2] = { getData: () => y };
+			const [result] = await movinganalysis({
+				...baseArgs,
+				xIN: 1,
+				yIN: [2],
+				windowSize: 10,
+				stepSize: 10,
+				analysis: 'trend',
+				trendModel: 'linear'
+			});
+			expect(result.warnings).toEqual([]);
+		});
+	});
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalize } from './Normalize.svelte';
+import { normalize, normalizeWarnings, definition } from './Normalize.svelte';
 
 describe('normalize — z-score', () => {
 	it('produces mean≈0 and std≈1', () => {
@@ -109,7 +109,9 @@ describe('normalize — single value', () => {
 	});
 
 	it('min-max: single value has zero range → customMin', () => {
-		expect(normalize([5], { normalizationType: 'min-max', customMin: 0, customMax: 1 })).toEqual([0]);
+		expect(normalize([5], { normalizationType: 'min-max', customMin: 0, customMax: 1 })).toEqual([
+			0
+		]);
 	});
 
 	it('robust: single value has zero MAD → 0', () => {
@@ -150,7 +152,11 @@ describe('normalize — preserves null/NaN positions in every mode', () => {
 
 describe('normalize — min-max range mapping', () => {
 	it('maps to a negative custom range [-1, 1]', () => {
-		const out = normalize([0, 5, 10], { normalizationType: 'min-max', customMin: -1, customMax: 1 });
+		const out = normalize([0, 5, 10], {
+			normalizationType: 'min-max',
+			customMin: -1,
+			customMax: 1
+		});
 		expect(out[0]).toBeCloseTo(-1, 8);
 		expect(out[1]).toBeCloseTo(0, 8);
 		expect(out[2]).toBeCloseTo(1, 8);
@@ -166,7 +172,11 @@ describe('normalize — min-max range mapping', () => {
 	});
 
 	it('treats negative input values correctly', () => {
-		const out = normalize([-10, -5, 0], { normalizationType: 'min-max', customMin: 0, customMax: 1 });
+		const out = normalize([-10, -5, 0], {
+			normalizationType: 'min-max',
+			customMin: 0,
+			customMax: 1
+		});
 		expect(out[0]).toBeCloseTo(0, 8);
 		expect(out[1]).toBeCloseTo(0.5, 8);
 		expect(out[2]).toBeCloseTo(1, 8);
@@ -226,5 +236,69 @@ describe('normalize — z-score with large values', () => {
 		const std = Math.sqrt(out.reduce((s, v) => s + (v - m) ** 2, 0) / out.length);
 		expect(m).toBeCloseTo(0, 6);
 		expect(std).toBeCloseTo(1, 6);
+	});
+});
+
+// ─── degenerate-input warnings (free-process warnings channel) ───────────────
+// A constant input silently produced all zeros (z-score/robust/unit-vector) or
+// all customMin (min-max) with nothing on screen to say why. The compute is
+// unchanged; normalizeWarnings → definition.getWarnings explains it on the
+// node's ⚠ badge (processWarnings.js).
+
+describe('normalizeWarnings', () => {
+	it('warns that a constant input z-scores to all zeros', () => {
+		const w = normalizeWarnings([3, 3, 3, 3], { normalizationType: 'z-score' });
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('spread'); // the requirement
+		expect(w[0]).toContain('3'); // what the data contains
+		expect(w[0]).toContain('wired'); // a remedy
+	});
+
+	it('warns that a constant input min-maxes to the minimum everywhere', () => {
+		const w = normalizeWarnings([5, 5, 5], {
+			normalizationType: 'min-max',
+			customMin: 0,
+			customMax: 1
+		});
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('range');
+	});
+
+	it('warns when the MAD is 0 (robust) even though the input is not constant', () => {
+		// More than half the values equal the median → MAD 0 → all zeros out.
+		const w = normalizeWarnings([2, 2, 2, 2, 9], { normalizationType: 'robust' });
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('median');
+	});
+
+	it('warns when a unit-vector input is all zeros', () => {
+		const w = normalizeWarnings([0, 0, 0], { normalizationType: 'unit-vector' });
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('magnitude');
+	});
+
+	it('is silent for well-spread data and for empty/all-missing input', () => {
+		expect(normalizeWarnings([1, 2, 3, 4], { normalizationType: 'z-score' })).toEqual([]);
+		expect(normalizeWarnings([1, 2, 3, 4], { normalizationType: 'robust' })).toEqual([]);
+		expect(normalizeWarnings([], { normalizationType: 'z-score' })).toEqual([]);
+		expect(normalizeWarnings([null, NaN], { normalizationType: 'min-max' })).toEqual([]);
+	});
+});
+
+describe('definition.getWarnings — node warnings channel', () => {
+	const freeNode = (data, args) => ({
+		parentCol: null,
+		inputCol: data ? { getData: () => data } : null,
+		args
+	});
+
+	it('surfaces the constant-input message for a wired free node', () => {
+		const w = definition.getWarnings(freeNode([7, 7, 7], { normalizationType: 'z-score' }));
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('7');
+	});
+
+	it('returns [] when nothing is wired', () => {
+		expect(definition.getWarnings(freeNode(null, { normalizationType: 'z-score' }))).toEqual([]);
 	});
 });

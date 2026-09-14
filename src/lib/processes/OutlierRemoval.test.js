@@ -5,7 +5,13 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('$lib/components/inputs/NumberWithUnits.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/inputs/AttributeSelect.svelte', () => ({ default: {} }));
 
-import { outlierremoval, detectOutliersIQR, detectOutliersZScore } from './OutlierRemoval.svelte';
+import {
+	outlierremoval,
+	detectOutliersIQR,
+	detectOutliersZScore,
+	outlierRemovalWarnings,
+	definition
+} from './OutlierRemoval.svelte';
 
 // ─── Z-score method ──────────────────────────────────────────────────────────
 
@@ -178,5 +184,50 @@ describe('detectOutliersIQR — boundary', () => {
 
 	it('returns a boolean mask of the same length', () => {
 		expect(detectOutliersIQR([1, 2, 3, 4], 1.5)).toHaveLength(4);
+	});
+});
+
+// ─── too-few-points warning (free-process warnings channel) ──────────────────
+// Fewer than 4 valid points silently passed the data through with nothing
+// removed and nothing on screen to say why. The compute is unchanged;
+// outlierRemovalWarnings → definition.getWarnings explains it on the node's
+// ⚠ badge (processWarnings.js).
+
+describe('outlierRemovalWarnings', () => {
+	it('warns that too few valid points means nothing was removed', () => {
+		const w = outlierRemovalWarnings([1, 2, 900]);
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('4'); // the requirement
+		expect(w[0]).toContain('3'); // what the data contains
+		expect(w[0]).toContain('unchanged'); // what actually happened
+	});
+
+	it('does not count missing cells as points', () => {
+		const w = outlierRemovalWarnings([1, null, 2, NaN, 3]);
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('3');
+	});
+
+	it('is silent with 4+ valid points and for an empty input', () => {
+		expect(outlierRemovalWarnings([1, 2, 3, 4])).toEqual([]);
+		expect(outlierRemovalWarnings([])).toEqual([]);
+	});
+});
+
+describe('definition.getWarnings — node warnings channel', () => {
+	const freeNode = (data, args = {}) => ({
+		parentCol: null,
+		inputCol: data ? { getData: () => data } : null,
+		args
+	});
+
+	it('surfaces the too-few-points message for a wired free node', () => {
+		const w = definition.getWarnings(freeNode([5, 6]));
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('2');
+	});
+
+	it('returns [] when nothing is wired', () => {
+		expect(definition.getWarnings(freeNode(null))).toEqual([]);
 	});
 });

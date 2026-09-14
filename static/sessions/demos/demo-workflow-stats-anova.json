@@ -279,7 +279,7 @@
       "name": "statistic_12",
       "data": 159,
       "type": "number",
-      "tableProcessGUId": "ac39a13a-2d7b-4dc6-9adb-a718d4366f97",
+      "tableProcessGUId": "a8fc95a5-4a25-45cd-b6b4-62335d1e8c38",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -290,7 +290,7 @@
       "name": "pvalue_12",
       "data": 160,
       "type": "number",
-      "tableProcessGUId": "ac39a13a-2d7b-4dc6-9adb-a718d4366f97",
+      "tableProcessGUId": "a8fc95a5-4a25-45cd-b6b4-62335d1e8c38",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -310,6 +310,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -382,7 +383,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Mean ± SEM 1",
+            "label": "",
             "points": {
               "colour": null,
               "radius": 4,
@@ -429,6 +430,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -501,7 +503,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Box Plot 1",
+            "label": "",
             "boxPlot": {
               "colour": null,
               "fillColour": "#234154",
@@ -567,6 +569,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -751,5 +754,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

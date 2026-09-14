@@ -76,6 +76,56 @@ describe('columnfunctions — sd', () => {
 	});
 });
 
+describe('columnfunctions — percentile', () => {
+	it('computes the row-wise type-7 percentile across columns (numpy pins)', () => {
+		// Rows [1,10,100] and [2,20,200] at p=30 — numpy.percentile(..., 30):
+		// 6.4 and 12.8 (linear interpolation between the 1st and 2nd order stats).
+		mockColumns[1] = { getData: () => [1, 2], type: 'number' };
+		mockColumns[2] = { getData: () => [10, 20], type: 'number' };
+		mockColumns[3] = { getData: () => [100, 200], type: 'number' };
+		const [result, valid] = columnfunctions({
+			func: 'percentile',
+			percentile: 30,
+			xsIN: [1, 2, 3],
+			out: preview
+		});
+		expect(valid).toBe(true);
+		expect(result[0]).toBeCloseTo(6.4, 12);
+		expect(result[1]).toBeCloseTo(12.8, 12);
+	});
+
+	it('percentile 50 equals the row median exactly, and is the default', () => {
+		mockColumns[1] = { getData: () => [1, 2], type: 'number' };
+		mockColumns[2] = { getData: () => [10, 20], type: 'number' };
+		mockColumns[3] = { getData: () => [100, 200], type: 'number' };
+		const [at50] = columnfunctions({
+			func: 'percentile',
+			percentile: 50,
+			xsIN: [1, 2, 3],
+			out: preview
+		});
+		expect(at50).toEqual([10, 20]); // odd n → the middle value, exactly
+		const [byDefault] = columnfunctions({ func: 'percentile', xsIN: [1, 2, 3], out: preview });
+		expect(byDefault).toEqual(at50);
+	});
+
+	it('drops missing cells per row (blank string / null), NaN when none valid', () => {
+		// Row 0: [1, '', 100] → percentile over [1, 100]; p=30 → 30.7 (numpy pin
+		// on [1,100]: 1 + 0.3*99). Row 1: all missing → NaN.
+		mockColumns[1] = { getData: () => [1, null], type: 'number' };
+		mockColumns[2] = { getData: () => ['', ''], type: 'number' };
+		mockColumns[3] = { getData: () => [100, NaN], type: 'number' };
+		const [result] = columnfunctions({
+			func: 'percentile',
+			percentile: 30,
+			xsIN: [1, 2, 3],
+			out: preview
+		});
+		expect(result[0]).toBeCloseTo(30.7, 12);
+		expect(Number.isNaN(result[1])).toBe(true);
+	});
+});
+
 describe('columnfunctions — invalid inputs', () => {
 	it('returns invalid when no columns selected', () => {
 		const [result, valid] = columnfunctions({ func: 'add', xsIN: [], out: preview });

@@ -1,6 +1,7 @@
 <script module>
 	import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
 	import { min, max } from '$lib/utils/MathsStats.js';
+	import { dataEnteringProcess } from '$lib/core/processInput.js';
 
 	export function normalize(x, args) {
 		const type = args.normalizationType || 'z-score';
@@ -84,6 +85,66 @@
 		}
 	}
 
+	/**
+	 * Degenerate-input warnings for the node's ⚠ badge (processWarnings.js).
+	 * The compute above is UNCHANGED — a constant input still z-scores to all
+	 * zeros, min-maxes to all customMin, and a zero MAD/magnitude still yields
+	 * zeros — these messages just explain the silence. Pure (data in → strings
+	 * out) so it is unit-testable without a session. Each message follows the
+	 * fitDomain rule: the requirement, what the data contains, and a remedy.
+	 */
+	export function normalizeWarnings(x, args) {
+		const type = args.normalizationType || 'z-score';
+		const validData = x.filter((val) => val != null && !isNaN(val));
+		if (validData.length === 0) return [];
+		const constant = validData.every((v) => v === validData[0]);
+
+		if (type === 'z-score' && constant) {
+			return [
+				`Z-score normalization scales by the input's spread, and every valid value here is ` +
+					`${validData[0]} (no spread), so the output is all zeros rather than a normalized ` +
+					`signal. Check that the right column is wired in, or remove this node.`
+			];
+		}
+		if (type === 'min-max' && constant) {
+			// Same `|| 0` coercion as the compute, so the reported floor matches
+			// what is actually written.
+			return [
+				`Min-max normalization scales by the input's range, and every valid value here is ` +
+					`${validData[0]} (zero range), so every output value is the requested minimum ` +
+					`(${Number(args.customMin || 0)}). Check that the right column is wired in, or remove this node.`
+			];
+		}
+		if (type === 'robust') {
+			// Same median/MAD derivation as the compute; MAD can be 0 without the
+			// input being constant (over half the values equal to the median).
+			const sorted = [...validData].sort((a, b) => a - b);
+			const n = sorted.length;
+			const median =
+				n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
+			const deviations = validData.map((v) => Math.abs(v - median)).sort((a, b) => a - b);
+			const mad =
+				n % 2 === 0
+					? (deviations[n / 2 - 1] + deviations[n / 2]) / 2
+					: deviations[Math.floor(n / 2)];
+			if (mad === 0) {
+				return [
+					`Robust normalization scales by the median absolute deviation, and at least half of ` +
+						`this input's values equal the median (${median}), so the MAD is 0 and the output ` +
+						`is all zeros. Use z-score or min-max for data this concentrated, or check that the ` +
+						`right column is wired in.`
+				];
+			}
+		}
+		if (type === 'unit-vector' && validData.every((v) => v === 0)) {
+			return [
+				`Unit-vector normalization divides by the input's magnitude, and every valid value here ` +
+					`is 0 (zero magnitude), so the output is all zeros. Check that the right column is wired in.`
+			];
+		}
+		return [];
+	}
+
 	const normalize_defaults = new Map([
 		['normalizationType', { val: 'z-score' }],
 		['customMin', { val: 0 }],
@@ -94,6 +155,13 @@
 		displayName: 'Normalize',
 		func: normalize,
 		defaults: normalize_defaults,
+		// Free-process warnings channel: derived at render time by the node
+		// components (processWarnings.js), never stored, so it cannot go stale.
+		getWarnings: (p) => {
+			const inData = dataEnteringProcess(p);
+			if (!inData) return [];
+			return normalizeWarnings(inData, p.args);
+		},
 		nodeSpec: {
 			id: 'process.normalize',
 			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],

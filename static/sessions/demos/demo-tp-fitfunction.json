@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "663": [
+    "664": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "664": [
+    "665": [
       12.642866859481796,
       18.907413440058953,
       8.02083029948017,
@@ -104,7 +104,7 @@
       23.83732580196522,
       -2.4027680620561576
     ],
-    "665": [
+    "666": [
       0,
       1,
       2,
@@ -156,7 +156,28 @@
       48,
       49
     ],
-    "666": [
+    "667": [
+      0.9421144462997514
+    ],
+    "668": [
+      7.373734291701205
+    ],
+    "669": [
+      null
+    ],
+    "670": [
+      24
+    ],
+    "671": [
+      49.14987381245017
+    ],
+    "672": [
+      40.09378243532288
+    ],
+    "673": [
+      12.168012298528875
+    ],
+    "674": [
       9.094870359876616,
       10.003419446394657,
       13.579734705384766,
@@ -211,20 +232,20 @@
   },
   "data": [
     {
-      "id": 663,
+      "id": 664,
       "name": "x",
-      "data": 663,
+      "data": 664,
       "type": "number",
-      "tableProcessGUId": "d7dfbc69-10d7-43cd-96f5-439bf7d1f949",
+      "tableProcessGUId": "65f145f3-ff90-48f8-93df-ee078633f353",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 664,
+      "id": 665,
       "name": "y",
-      "data": 664,
+      "data": 665,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +254,99 @@
       "processes": []
     },
     {
-      "id": 665,
+      "id": 666,
       "name": "fitx_60",
-      "data": 665,
+      "data": 666,
       "type": "number",
-      "tableProcessGUId": "1324d9b7-96b4-4583-a050-fbeff519dc50",
+      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 666,
-      "name": "fity_664_60",
-      "data": 666,
+      "id": 667,
+      "name": "r2_60",
+      "data": 667,
       "type": "number",
-      "tableProcessGUId": "1324d9b7-96b4-4583-a050-fbeff519dc50",
+      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 668,
+      "name": "rmse_60",
+      "data": 668,
+      "type": "number",
+      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 669,
+      "name": "perm_pvalue_60",
+      "data": 669,
+      "type": "number",
+      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 670,
+      "name": "period_60",
+      "data": 670,
+      "type": "number",
+      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 671,
+      "name": "mesor_60",
+      "data": 671,
+      "type": "number",
+      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 672,
+      "name": "amplitude_60",
+      "data": 672,
+      "type": "number",
+      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 673,
+      "name": "acrophase_60",
+      "data": 673,
+      "type": "number",
+      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 674,
+      "name": "fity_665_60",
+      "data": 674,
+      "type": "number",
+      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -258,7 +356,7 @@
   "plots": [
     {
       "id": 112,
-      "name": "Fit Function: data + fit",
+      "name": "Fit waveform model: data + fit",
       "x": 60,
       "y": 60,
       "width": 520,
@@ -268,6 +366,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -333,9 +432,9 @@
         "data": [
           {
             "x": {
-              "id": 667,
+              "id": 675,
               "name": "x",
-              "refId": 663,
+              "refId": 664,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -344,9 +443,9 @@
               "processes": []
             },
             "y": {
-              "id": 668,
+              "id": 676,
               "name": "y",
-              "refId": 664,
+              "refId": 665,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -372,19 +471,8 @@
           },
           {
             "x": {
-              "id": 669,
+              "id": 677,
               "name": "fitx_60",
-              "refId": 665,
-              "type": "number",
-              "tableProcessGUId": "",
-              "producerNodeId": null,
-              "producerPort": null,
-              "producerArtifactKind": null,
-              "processes": []
-            },
-            "y": {
-              "id": 670,
-              "name": "fity_664_60",
               "refId": 666,
               "type": "number",
               "tableProcessGUId": "",
@@ -393,7 +481,18 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Fit Function",
+            "y": {
+              "id": 678,
+              "name": "fity_665_60",
+              "refId": 674,
+              "type": "number",
+              "tableProcessGUId": "",
+              "producerNodeId": null,
+              "producerPort": null,
+              "producerArtifactKind": null,
+              "processes": []
+            },
+            "label": "Fit waveform model",
             "yAxis": "left",
             "line": {
               "colour": null,
@@ -428,7 +527,7 @@
     },
     {
       "id": 113,
-      "name": "Fit Function: values",
+      "name": "Fit waveform model: values",
       "x": 630,
       "y": 60,
       "width": 520,
@@ -438,6 +537,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -461,8 +561,8 @@
       },
       "plot": {
         "columnRefs": [
-          664,
-          666
+          665,
+          674
         ],
         "showCol": [
           true,
@@ -487,7 +587,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 663
+          "result": 664
         }
       },
       "refTPId": null
@@ -495,11 +595,11 @@
     {
       "id": 60,
       "name": "FitFunction",
-      "displayName": "Fit Function",
+      "displayName": "Fit waveform model",
       "args": {
-        "xIN": 663,
+        "xIN": 664,
         "yIN": [
-          664
+          665
         ],
         "model": "cosinor",
         "outputX": -1,
@@ -525,8 +625,15 @@
         "permutationStatistic": "rSquared",
         "preProcesses": [],
         "out": {
-          "fitx": 665,
-          "fity_664": 666
+          "fitx": 666,
+          "r2": 667,
+          "rmse": 668,
+          "perm_pvalue": 669,
+          "period": 670,
+          "mesor": 671,
+          "amplitude": 672,
+          "acrophase": 673,
+          "fity_665": 674
         }
       },
       "refTPId": null
@@ -571,7 +678,7 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_664": {
+    "data_665": {
       "x": 60,
       "y": 314
     },
@@ -654,5 +761,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

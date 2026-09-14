@@ -219,7 +219,7 @@
       "name": "statistic_11",
       "data": 153,
       "type": "number",
-      "tableProcessGUId": "d991a52c-fd96-4ba3-8d15-022e06033a4e",
+      "tableProcessGUId": "465e6f8c-c4ee-48b1-9521-68e42c213bd9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -230,7 +230,7 @@
       "name": "pvalue_11",
       "data": 154,
       "type": "number",
-      "tableProcessGUId": "d991a52c-fd96-4ba3-8d15-022e06033a4e",
+      "tableProcessGUId": "465e6f8c-c4ee-48b1-9521-68e42c213bd9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -250,6 +250,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -322,7 +323,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Box Plot 1",
+            "label": "",
             "boxPlot": {
               "colour": null,
               "fillColour": "#234154",
@@ -388,6 +389,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -568,5 +570,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

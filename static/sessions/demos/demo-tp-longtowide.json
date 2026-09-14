@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "745": [
+    "753": [
       "A",
       "B",
       "C",
@@ -62,7 +62,7 @@
       "B",
       "C"
     ],
-    "746": [
+    "754": [
       0,
       0,
       0,
@@ -124,7 +124,7 @@
       19,
       19
     ],
-    "747": [
+    "755": [
       0,
       100,
       200,
@@ -186,7 +186,7 @@
       119,
       219
     ],
-    "748": [
+    "756": [
       0,
       1,
       2,
@@ -208,7 +208,7 @@
       18,
       19
     ],
-    "749": [
+    "757": [
       0,
       1,
       2,
@@ -230,7 +230,7 @@
       18,
       19
     ],
-    "750": [
+    "758": [
       100,
       101,
       102,
@@ -252,7 +252,7 @@
       118,
       119
     ],
-    "751": [
+    "759": [
       200,
       201,
       202,
@@ -277,9 +277,9 @@
   },
   "data": [
     {
-      "id": 745,
+      "id": 753,
       "name": "Long To Wide input 1",
-      "data": 745,
+      "data": 753,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -288,9 +288,9 @@
       "processes": []
     },
     {
-      "id": 746,
+      "id": 754,
       "name": "Long To Wide input 2",
-      "data": 746,
+      "data": 754,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -299,9 +299,9 @@
       "processes": []
     },
     {
-      "id": 747,
+      "id": 755,
       "name": "Long To Wide input 3",
-      "data": 747,
+      "data": 755,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -310,44 +310,44 @@
       "processes": []
     },
     {
-      "id": 748,
+      "id": 756,
       "name": "time_69",
-      "data": 748,
+      "data": 756,
       "type": "number",
-      "tableProcessGUId": "776edbcf-6019-45d2-b37e-6895f23acd37",
+      "tableProcessGUId": "fa808bf3-ae59-40ad-9c84-c1231ac89822",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 749,
+      "id": 757,
       "name": "value_A_69",
-      "data": 749,
+      "data": 757,
       "type": "number",
-      "tableProcessGUId": "776edbcf-6019-45d2-b37e-6895f23acd37",
+      "tableProcessGUId": "fa808bf3-ae59-40ad-9c84-c1231ac89822",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 750,
+      "id": 758,
       "name": "value_B_69",
-      "data": 750,
+      "data": 758,
       "type": "number",
-      "tableProcessGUId": "776edbcf-6019-45d2-b37e-6895f23acd37",
+      "tableProcessGUId": "fa808bf3-ae59-40ad-9c84-c1231ac89822",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 751,
+      "id": 759,
       "name": "value_C_69",
-      "data": 751,
+      "data": 759,
       "type": "number",
-      "tableProcessGUId": "776edbcf-6019-45d2-b37e-6895f23acd37",
+      "tableProcessGUId": "fa808bf3-ae59-40ad-9c84-c1231ac89822",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -367,6 +367,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -390,13 +391,13 @@
       },
       "plot": {
         "columnRefs": [
-          745,
-          746,
-          747,
-          748,
-          749,
-          750,
-          751
+          753,
+          754,
+          755,
+          756,
+          757,
+          758,
+          759
         ],
         "showCol": [
           true,
@@ -420,15 +421,15 @@
       "name": "LongToWide",
       "displayName": "Long To Wide",
       "args": {
-        "categoryIN": 745,
-        "timeIN": 746,
-        "valueIN": 747,
+        "categoryIN": 753,
+        "timeIN": 754,
+        "valueIN": 755,
         "preProcesses": [],
         "out": {
-          "time": 748,
-          "value_A": 749,
-          "value_B": 750,
-          "value_C": 751
+          "time": 756,
+          "value_A": 757,
+          "value_B": 758,
+          "value_C": 759
         }
       },
       "refTPId": null
@@ -473,15 +474,15 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_745": {
+    "data_753": {
       "x": 60,
       "y": 314
     },
-    "data_746": {
+    "data_754": {
       "x": 60,
       "y": 814
     },
-    "data_747": {
+    "data_755": {
       "x": 60,
       "y": 1314
     },
@@ -556,5 +557,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

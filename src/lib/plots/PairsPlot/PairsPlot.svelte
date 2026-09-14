@@ -26,7 +26,9 @@
 		column = $state();
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
-			this.column = dataIN?.column ? ColumnClass.fromJSON(dataIN.column) : new ColumnClass({ refId: -1 });
+			this.column = dataIN?.column
+				? ColumnClass.fromJSON(dataIN.column)
+				: new ColumnClass({ refId: -1 });
 		}
 		toJSON() {
 			return { column: this.column };
@@ -124,11 +126,14 @@
 	};
 
 	// --- pure cell helpers ---
-	const corrFill = (colormap, r) => (Number.isFinite(r) ? colormapRGB(colormap, normaliseTo01(r, -1, 1)) : 'transparent');
+	const corrFill = (colormap, r) =>
+		Number.isFinite(r) ? colormapRGB(colormap, normaliseTo01(r, -1, 1)) : 'transparent';
 	const fmtR = (r) => (Number.isFinite(r) ? (Math.abs(r) < 0.005 ? '0' : r.toFixed(2)) : '');
 	// Correlation value text scaled by strength — bigger for stronger, like pairs.panels.
-	const corrFontSize = (r, cell) => Math.max(9, Math.min(cell * 0.34, 11 + Math.abs(r ?? 0) * (cell * 0.22)));
-	const scaleTo = (v, min, max, lo, hi) => (max <= min ? (lo + hi) / 2 : lo + ((v - min) / (max - min)) * (hi - lo));
+	const corrFontSize = (r, cell) =>
+		Math.max(9, Math.min(cell * 0.34, 11 + Math.abs(r ?? 0) * (cell * 0.22)));
+	const scaleTo = (v, min, max, lo, hi) =>
+		max <= min ? (lo + hi) / 2 : lo + ((v - min) / (max - min)) * (hi - lo);
 
 	/**
 	 * SVG path for a kernel-density curve across a diagonal cell, scaled so its peak reaches the
@@ -201,6 +206,7 @@
 	import { appState } from '$lib/core/core.svelte';
 	import Column from '$lib/core/Column.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -228,7 +234,13 @@
 		style="background: var(--surface-card); position: absolute;"
 	>
 		{#if N < 2}
-			<text x={plot.parentBox.width / 2} y={plot.parentBox.height / 2} text-anchor="middle" fill="var(--color-text-muted)" font-size="12">
+			<text
+				x={plot.parentBox.width / 2}
+				y={plot.parentBox.height / 2}
+				text-anchor="middle"
+				fill="var(--color-text-muted)"
+				font-size="12"
+			>
 				Wire two or more columns to see the pairs matrix.
 			</text>
 		{:else}
@@ -238,24 +250,52 @@
 						{@const x0 = j * cell}
 						{@const y0 = i * cell}
 						<g transform="translate({x0}, {y0})">
-							<rect x="0" y="0" width={cell} height={cell} fill="none" stroke="var(--color-lightness-85)" stroke-width="0.75"><title>{rowLab} × {colLab}</title></rect>
+							<rect
+								x="0"
+								y="0"
+								width={cell}
+								height={cell}
+								fill="none"
+								stroke="var(--color-lightness-85)"
+								stroke-width="0.75"><title>{rowLab} × {colLab}</title></rect
+							>
 							{#if i === j}
 								<!-- diagonal: histogram of variable i -->
 								{@const h = L.hists[i]}
 								{#if h.counts.length}
 									{#each h.counts as ct, b (b)}
-										{@const bw = h.counts.length > 1 ? (cell - 2 * pad) / h.counts.length : cell - 2 * pad}
+										{@const bw =
+											h.counts.length > 1 ? (cell - 2 * pad) / h.counts.length : cell - 2 * pad}
 										{@const bh = h.maxCount ? (ct / h.maxCount) * (cell - 2 * pad) : 0}
-										<rect x={pad + b * bw} y={cell - pad - bh} width={Math.max(0, bw - 1)} height={bh} fill={plot.pointColour} opacity="0.55" />
+										<rect
+											x={pad + b * bw}
+											y={cell - pad - bh}
+											width={Math.max(0, bw - 1)}
+											height={bh}
+											fill={plot.pointColour}
+											opacity="0.55"
+										/>
 									{/each}
 								{/if}
 								{#if plot.showDensity}
 									{@const dPath = densityPath(L.cols[i], L.ranges[i], pad, cell)}
 									{#if dPath}
-										<path d={dPath} fill="none" stroke="#BE796B" stroke-width="1.25" stroke-linejoin="round" />
+										<path
+											d={dPath}
+											fill="none"
+											stroke="#BE796B"
+											stroke-width="1.25"
+											stroke-linejoin="round"
+										/>
 									{/if}
 								{/if}
-								<text x={pad} y={pad + 9} font-size="10" font-weight="600" fill="var(--color-lightness-25)">{rowLab}</text>
+								<text
+									x={pad}
+									y={pad + 9}
+									font-size="10"
+									font-weight="600"
+									fill="var(--color-lightness-25)">{rowLab}</text
+								>
 							{:else if i < j}
 								<!-- upper: scatter of var j (x) vs var i (y) + linear fit -->
 								{@const rx = plot.layout.ranges[j]}
@@ -275,13 +315,35 @@
 								{/each}
 								{@const fitLine = fitFor(xs, ys, rx, ry, pad, cell)}
 								{#if fitLine}
-									<line x1={fitLine.x1} y1={fitLine.y1} x2={fitLine.x2} y2={fitLine.y2} stroke="#BE796B" stroke-width="1.5" />
+									<line
+										x1={fitLine.x1}
+										y1={fitLine.y1}
+										x2={fitLine.x2}
+										y2={fitLine.y2}
+										stroke="#BE796B"
+										stroke-width="1.5"
+									/>
 								{/if}
 							{:else}
 								<!-- lower: correlation colour + value -->
 								{@const r = L.r[i][j]}
-								<rect x="1" y="1" width={cell - 2} height={cell - 2} fill={corrFill(plot.colormap, r)} opacity="0.85" />
-								<text x={cell / 2} y={cell / 2} text-anchor="middle" dominant-baseline="central" font-size={corrFontSize(r, cell)} font-weight="600" fill={Number.isFinite(r) && Math.abs(r) > 0.6 ? '#fff' : '#222'}>
+								<rect
+									x="1"
+									y="1"
+									width={cell - 2}
+									height={cell - 2}
+									fill={corrFill(plot.colormap, r)}
+									opacity="0.85"
+								/>
+								<text
+									x={cell / 2}
+									y={cell / 2}
+									text-anchor="middle"
+									dominant-baseline="central"
+									font-size={corrFontSize(r, cell)}
+									font-weight="600"
+									fill={Number.isFinite(r) && Math.abs(r) > 0.6 ? '#fff' : '#222'}
+								>
 									{fmtR(r)}
 								</text>
 							{/if}
@@ -290,7 +352,14 @@
 				{/each}
 				<!-- left-edge variable labels -->
 				{#each L.labels as lab, i (i)}
-					<text x={-6} y={i * cell + cell / 2} text-anchor="end" dominant-baseline="central" font-size="10" fill="var(--color-lightness-25)">{lab}</text>
+					<text
+						x={-6}
+						y={i * cell + cell / 2}
+						text-anchor="end"
+						dominant-baseline="central"
+						font-size="10"
+						fill="var(--color-lightness-25)">{lab}</text
+					>
 				{/each}
 			</g>
 		{/if}
@@ -301,15 +370,29 @@
 	{#if appState.currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-component-title">Pairs plot</div>
-			<ControlInput label="Width"><NumberWithUnits bind:value={theData.parentBox.width} /></ControlInput>
-			<ControlInput label="Height"><NumberWithUnits bind:value={theData.parentBox.height} /></ControlInput>
+			<ControlInput label="Width"
+				><NumberWithUnits bind:value={theData.parentBox.width} /></ControlInput
+			>
+			<ControlInput label="Height"
+				><NumberWithUnits bind:value={theData.parentBox.height} /></ControlInput
+			>
 			<ControlInput label="Method">
-				<AttributeSelect bind:value={theData.method} options={['pearson', 'spearman']} optionsDisplay={['Pearson (linear)', 'Spearman (rank)']} />
+				<AttributeSelect
+					bind:value={theData.method}
+					options={['pearson', 'spearman']}
+					optionsDisplay={['Pearson (linear)', 'Spearman (rank)']}
+				/>
 			</ControlInput>
 			<ControlInput label="Colour scale">
-				<AttributeSelect bind:value={theData.colormap} options={colormapOptions} optionsDisplay={colormapLabelList} />
+				<AttributeSelect
+					bind:value={theData.colormap}
+					options={colormapOptions}
+					optionsDisplay={colormapLabelList}
+				/>
 			</ControlInput>
-			<ControlInput label="Point colour"><ColourPicker bind:value={theData.pointColour} /></ControlInput>
+			<ControlInput label="Point colour"
+				><ColourPicker bind:value={theData.pointColour} /></ControlInput
+			>
 			<ControlInput label="Density curve">
 				<input type="checkbox" bind:checked={theData.showDensity} />
 			</ControlInput>
@@ -331,12 +414,14 @@
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
-					<div class="control-component-title">
-						<p>Variable {i + 1}</p>
-						<button class="icon" title="Remove this variable" onclick={() => theData.removeData(i)}>
-							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
-						</button>
-					</div>
+					<SeriesBlockHeader
+						inner={theData}
+						{datum}
+						index={i}
+						editable={false}
+						fallback={`Variable ${i + 1}`}
+						removeTooltip="Remove this variable"
+					/>
 					<div class="data-wrapper">
 						<div class="y-select">
 							<ControlInput label="Column"></ControlInput>

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "714": [
+    "722": [
       "ctrl",
       "drug",
       "ctrl",
@@ -92,7 +92,7 @@
       "ctrl",
       "drug"
     ],
-    "715": [
+    "723": [
       "responder",
       "non-responder",
       "non-responder",
@@ -184,30 +184,30 @@
       "non-responder",
       "non-responder"
     ],
-    "716": [
+    "724": [
       0
     ],
-    "717": [
+    "725": [
       1
     ],
-    "718": [
+    "726": [
       1
     ],
-    "719": [
+    "727": [
       0
     ],
-    "720": [
+    "728": [
       null
     ],
-    "721": [
+    "729": [
       null
     ]
   },
   "data": [
     {
-      "id": 714,
+      "id": 722,
       "name": "Categorical tests input 1",
-      "data": 714,
+      "data": 722,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -216,9 +216,9 @@
       "processes": []
     },
     {
-      "id": 715,
+      "id": 723,
       "name": "Categorical tests input 2",
-      "data": 715,
+      "data": 723,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -227,66 +227,66 @@
       "processes": []
     },
     {
-      "id": 716,
+      "id": 724,
       "name": "statistic_65",
-      "data": 716,
+      "data": 724,
       "type": "number",
-      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
+      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 717,
+      "id": 725,
       "name": "pvalue_65",
-      "data": 717,
+      "data": 725,
       "type": "number",
-      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
+      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 718,
+      "id": 726,
       "name": "df_65",
-      "data": 718,
+      "data": 726,
       "type": "number",
-      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
+      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 719,
+      "id": 727,
       "name": "effectSize_65",
-      "data": 719,
+      "data": 727,
       "type": "number",
-      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
+      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 720,
+      "id": 728,
       "name": "ciLow_65",
-      "data": 720,
+      "data": 728,
       "type": "number",
-      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
+      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 721,
+      "id": 729,
       "name": "ciHigh_65",
-      "data": 721,
+      "data": 729,
       "type": "number",
-      "tableProcessGUId": "63af8575-9cd3-4606-910c-c7b3508a44e6",
+      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -306,6 +306,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -329,14 +330,14 @@
       },
       "plot": {
         "columnRefs": [
-          714,
-          715,
-          716,
-          717,
-          718,
-          719,
-          720,
-          721
+          722,
+          723,
+          724,
+          725,
+          726,
+          727,
+          728,
+          729
         ],
         "showCol": [
           true,
@@ -363,16 +364,16 @@
       "args": {
         "testType": "independence",
         "dataFormat": "paired",
-        "xIN": 714,
-        "yIN": 715,
+        "xIN": 722,
+        "yIN": 723,
         "correction": true,
         "out": {
-          "statistic": 716,
-          "pvalue": 717,
-          "df": 718,
-          "effectSize": 719,
-          "ciLow": 720,
-          "ciHigh": 721
+          "statistic": 724,
+          "pvalue": 725,
+          "df": 726,
+          "effectSize": 727,
+          "ciLow": 728,
+          "ciHigh": 729
         },
         "alternative": "two-sided",
         "valid": false
@@ -419,11 +420,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_714": {
+    "data_722": {
       "x": 60,
       "y": 314
     },
-    "data_715": {
+    "data_723": {
       "x": 60,
       "y": 814
     },
@@ -498,5 +499,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

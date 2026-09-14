@@ -1329,6 +1329,24 @@ def _proc_outlierremoval(x, args, _cols):
     return out
 
 
+def _trend_domain_refused(tt, yy, model, degree):
+    """Mirrors utils/fitDomain.js checkTrendFitDomain + shouldRefuse for the
+    RemoveTrend column process: a fit outside its model's domain is REFUSED and
+    the input passes through unchanged (never a silent all-NaN column).
+    tt/yy are the already-paired, already-finite (t, y) values."""
+    if model == 'logarithmic' and any(v <= 0 for v in tt):
+        return True
+    if model == 'exponential' and any(v <= 0 for v in yy):
+        return True
+    if model == 'polynomial' and len(tt) <= degree:
+        return True
+    # Constant x: the slope is estimated against the spread of x, so it is
+    # undefined whatever the model.
+    if len(tt) >= 2 and all(v == tt[0] for v in tt):
+        return True
+    return False
+
+
 def _proc_removetrend(x, args, cols):
     x_col_id = args.get('xColId', -1)
     x_col = cols.get(x_col_id) if x_col_id != -1 else None
@@ -1343,8 +1361,11 @@ def _proc_removetrend(x, args, cols):
         return list(x)
     tt = [t[i] for i in valid]
     yy = [x[i] for i in valid]
-    fit = fit_trend(tt, yy, args.get('model', 'linear'),
-                    int(args.get('polyDegree', 2)))
+    model = args.get('model', 'linear')
+    degree = int(args.get('polyDegree', 2))
+    if _trend_domain_refused(tt, yy, model, degree):
+        return list(x)
+    fit = fit_trend(tt, yy, model, degree)
     detrended = [yy[k] - fit['fitted'][k] for k in range(len(yy))]
     if args.get('slidingWindow') and int(args.get('windowSize', 1)) > 1:
         ws = int(args['windowSize'])
@@ -2085,6 +2106,22 @@ def tp_columnfunctions(args, cols, raw_data, _sv):
             mean = sum(vals) / n_cols
             var = sum((v - mean) ** 2 for v in vals) / (n_cols - 1)
             result.append(math.sqrt(var))
+    elif func == 'percentile':
+        # Row-wise type-7 percentile across the columns; numpy IS the reference
+        # (method='linear' = type 7). Unlike the other branches this one drops
+        # missing values per row (the JS filters with isInvalidValue), so a
+        # blank cell shrinks the row's sample instead of poisoning it.
+        pct = _num(args.get('percentile', 50))
+        pct = min(100.0, max(0.0, pct)) if math.isfinite(pct) else 50.0
+
+        def _row_pct(j):
+            vals = [_num(c[j]) for c in columns]
+            vals = [v for v in vals if math.isfinite(v)]
+            if not vals:
+                return float('nan')
+            return float(np.percentile(vals, pct, method='linear'))
+
+        result = [_row_pct(j) for j in range(n)]
     else:
         return False
 
@@ -5731,8 +5768,18 @@ def moving_windows(times, values, opts):
     step = float(opts.get('stepSize', 24))
     analysis = opts.get('analysis', 'npcra')
 
-    ta = np.array([np.nan if v is None else v for v in times], dtype=float)
-    ya = np.array([np.nan if v is None else v for v in values], dtype=float)
+    def _f(v):
+        # House missing-value rule (v72.28): None, NaN and blank/whitespace
+        # strings are MISSING, never zeros. Numeric strings ('1.5') stay valid.
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return float('nan')
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return float('nan')
+
+    ta = np.array([_f(v) for v in times], dtype=float)
+    ya = np.array([_f(v) for v in values], dtype=float)
     finite = np.isfinite(ta) & np.isfinite(ya)
     ta, ya = ta[finite], ya[finite]
 
@@ -5743,7 +5790,9 @@ def moving_windows(times, values, opts):
         starts.append(s)
         s += step
 
-    if analysis == 'npcra':
+    if analysis == 'summary':
+        keys = ['mean', 'sd', 'percentile']
+    elif analysis == 'npcra':
         keys = ['IS', 'IV', 'RA', 'L5', 'M10', 'M10onset']
     elif analysis == 'cosinor':
         n_h = int(opts.get('nHarmonics', 1))
@@ -5760,7 +5809,15 @@ def moving_windows(times, values, opts):
         tw, yw = ta[mask], ya[mask]
         stats = {k: float('nan') for k in keys}
         if tw.size >= 3:
-            if analysis == 'npcra':
+            if analysis == 'summary':
+                # numpy IS the reference here (D13): mean, SAMPLE sd (ddof=1,
+                # matching DescribeData), type-7 percentile (method='linear').
+                pct = float(opts.get('summaryPercentile', 50))
+                pct = min(100.0, max(0.0, pct)) if math.isfinite(pct) else 50.0
+                stats['mean'] = float(np.mean(yw))
+                stats['sd'] = float(np.std(yw, ddof=1))
+                stats['percentile'] = float(np.percentile(yw, pct, method='linear'))
+            elif analysis == 'npcra':
                 npc = compute_npcra(tw.tolist(), yw.tolist(),
                                     epoch_hours=float(opts.get('npcraEpochHours', 1)),
                                     period=float(opts.get('npcraPeriod', 24)),

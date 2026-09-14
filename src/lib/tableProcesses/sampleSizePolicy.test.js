@@ -52,6 +52,7 @@ const SAMPLE_SIZE_POLICY = {
 	Cosinor: 'checked', // too few cycles, and too few points per cycle
 	DoubleLogistic: 'checked',
 	FDRCorrection: 'checked', // family size, and unusable entries excluded
+	FitFunction: 'checked', // usable points vs the chosen model's free-parameter count
 	GroupComparison: 'checked', // per-group n < 5 for rank tests; normality screen reports a skip
 	LogisticRegression: 'checked', // rows per predictor; separation
 	NormalityTest: 'checked', // D'Agostino below n ~ 20; Shapiro-Wilk's n <= 5000 ceiling

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "674": [
+    "682": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "675": [
+    "683": [
       0,
       6,
       12,
@@ -104,21 +104,21 @@
       6,
       5
     ],
-    "676": [
+    "684": [
       96.15862706579921
     ],
-    "677": [
+    "685": [
       0
     ],
-    "678": [
+    "686": [
       0.8036079756532927
     ]
   },
   "data": [
     {
-      "id": 674,
+      "id": 682,
       "name": "Compare groups (stats) input 1",
-      "data": 674,
+      "data": 682,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -127,9 +127,9 @@
       "processes": []
     },
     {
-      "id": 675,
+      "id": 683,
       "name": "Compare groups (stats) input 2",
-      "data": 675,
+      "data": 683,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -138,33 +138,33 @@
       "processes": []
     },
     {
-      "id": 676,
+      "id": 684,
       "name": "statistic_62",
-      "data": 676,
+      "data": 684,
       "type": "number",
-      "tableProcessGUId": "b5d98db3-d6e9-497f-a015-6b0a72537405",
+      "tableProcessGUId": "ba94c887-fda0-40d7-9c37-b34147074eb0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 677,
+      "id": 685,
       "name": "pvalue_62",
-      "data": 677,
+      "data": 685,
       "type": "number",
-      "tableProcessGUId": "b5d98db3-d6e9-497f-a015-6b0a72537405",
+      "tableProcessGUId": "ba94c887-fda0-40d7-9c37-b34147074eb0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 678,
+      "id": 686,
       "name": "effectSize_62",
-      "data": 678,
+      "data": 686,
       "type": "number",
-      "tableProcessGUId": "b5d98db3-d6e9-497f-a015-6b0a72537405",
+      "tableProcessGUId": "ba94c887-fda0-40d7-9c37-b34147074eb0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -184,6 +184,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -235,9 +236,9 @@
         "data": [
           {
             "x": {
-              "id": 679,
+              "id": 687,
               "name": "Compare groups (stats) input 1",
-              "refId": 674,
+              "refId": 682,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -246,9 +247,9 @@
               "processes": []
             },
             "y": {
-              "id": 680,
+              "id": 688,
               "name": "Compare groups (stats) input 2",
-              "refId": 675,
+              "refId": 683,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -256,7 +257,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Box Plot 1",
+            "label": "",
             "boxPlot": {
               "colour": null,
               "fillColour": "#234154",
@@ -317,17 +318,17 @@
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 674,
+        "xIN": 682,
         "yIN": [
-          675
+          683
         ],
         "method": "auto",
         "alpha": 0.05,
         "postHocEnabled": true,
         "out": {
-          "statistic": 676,
-          "pvalue": 677,
-          "effectSize": 678
+          "statistic": 684,
+          "pvalue": 685,
+          "effectSize": 686
         }
       },
       "refTPId": null
@@ -372,11 +373,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_674": {
+    "data_682": {
       "x": 60,
       "y": 314
     },
-    "data_675": {
+    "data_683": {
       "x": 60,
       "y": 814
     },
@@ -451,5 +452,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

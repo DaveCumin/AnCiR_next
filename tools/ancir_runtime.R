@@ -588,8 +588,18 @@ cp_removetrend <- function(x, args, cols, raw_data) {
   y <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
   ok <- is.finite(t) & is.finite(y)
   if (sum(ok) < 2) return(y)
-  fit <- fit_trend(t[ok], y[ok], if (is.null(args$model)) "linear" else args$model,
-                   as.integer(if (is.null(args$polyDegree)) 2 else args$polyDegree))
+  model <- if (is.null(args$model)) "linear" else args$model
+  deg <- as.integer(if (is.null(args$polyDegree)) 2 else args$polyDegree)
+  tt <- t[ok]; yy <- y[ok]
+  # Refuse-and-pass-through (mirrors utils/fitDomain.js checkTrendFitDomain +
+  # shouldRefuse in RemoveTrend.svelte): a fit outside its model's domain must
+  # not silently emit an all-NaN column, so the input passes through unchanged.
+  refused <- (identical(model, "logarithmic") && any(tt <= 0)) ||
+             (identical(model, "exponential") && any(yy <= 0)) ||
+             (identical(model, "polynomial") && length(tt) <= deg) ||
+             (length(tt) >= 2 && all(tt == tt[1]))
+  if (refused) return(y)
+  fit <- fit_trend(tt, yy, model, deg)
   if (is.null(fit)) return(y)
   out <- y
   out[ok] <- y[ok] - fit$fitted
@@ -1169,6 +1179,19 @@ tp_columnfunctions <- function(args, env) {
       if (n_cols < 2) return(0)
       v <- vapply(columns, num, numeric(1), j)
       sqrt(sum((v - mean(v))^2) / (n_cols - 1))
+    })
+  } else if (identical(func, "percentile")) {
+    # Row-wise type-7 percentile across the columns; R's quantile(type = 7) IS
+    # the reference. Missing values (blank cells → NA via as.numeric) are
+    # dropped per row, matching the JS isInvalidValue filter.
+    pct <- suppressWarnings(as.numeric(if (is.null(args$percentile)) 50 else args$percentile))
+    if (!is.finite(pct)) pct <- 50
+    pct <- min(100, max(0, pct))
+    lapply(seq_len(n), function(j) {
+      v <- vapply(columns, num, numeric(1), j)
+      v <- v[is.finite(v)]
+      if (!length(v)) return(NA_real_)
+      as.numeric(quantile(v, pct / 100, type = 7, names = FALSE))
     })
   } else return(FALSE)
 
@@ -3093,7 +3116,9 @@ moving_windows <- function(times, values, opts = list()) {
   while (s <= hi - window + 1e-9) { starts <- c(starts, s); s <- s + step }
 
   n_h <- as.integer(if (is.null(opts$nHarmonics)) 1 else opts$nHarmonics)
-  keys <- if (identical(analysis, "npcra")) {
+  keys <- if (identical(analysis, "summary")) {
+    c("mean", "sd", "percentile")
+  } else if (identical(analysis, "npcra")) {
     c("IS", "IV", "RA", "L5", "M10", "M10onset")
   } else if (identical(analysis, "cosinor")) {
     c("mesor", as.vector(rbind(paste0("H", seq_len(n_h), "_amplitude"),
@@ -3109,7 +3134,16 @@ moving_windows <- function(times, values, opts = list()) {
     tw <- ta[m]; yw <- ya[m]
     stats <- setNames(as.list(rep(NA_real_, length(keys))), keys)
     if (length(tw) >= 3) {
-      if (identical(analysis, "npcra")) {
+      if (identical(analysis, "summary")) {
+        # R IS the reference here (D13): mean, SAMPLE sd (n-1, matching
+        # DescribeData), and quantile(type = 7) — R's default quantile.
+        pct <- as.numeric(if (is.null(opts$summaryPercentile)) 50 else opts$summaryPercentile)
+        if (!is.finite(pct)) pct <- 50
+        pct <- min(100, max(0, pct))
+        stats$mean <- mean(yw)
+        stats$sd <- sd(yw)
+        stats$percentile <- as.numeric(quantile(yw, pct / 100, type = 7, names = FALSE))
+      } else if (identical(analysis, "npcra")) {
         npc <- compute_npcra(tw, yw,
                              as.numeric(if (is.null(opts$npcraEpochHours)) 1 else opts$npcraEpochHours),
                              as.numeric(if (is.null(opts$npcraPeriod)) 24 else opts$npcraPeriod),

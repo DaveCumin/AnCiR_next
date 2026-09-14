@@ -1,14 +1,19 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import Editable from '$lib/components/inputs/Editable.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
-	import { POINT_SHAPES, POINT_SHAPE_LABELS, getPointPath } from '$lib/components/plotbits/pointShapes.js';
+	import {
+		POINT_SHAPES,
+		POINT_SHAPE_LABELS,
+		getPointPath
+	} from '$lib/components/plotbits/pointShapes.js';
 	import { createPolar } from '$lib/components/plotbits/polar.js';
 	import { placeCircularPoints, maxStackHeight } from '$lib/components/plotbits/circularStack.js';
 	import PolarGrid from '$lib/components/plotbits/PolarGrid.svelte';
@@ -59,7 +64,8 @@
 			// `values` is also accepted directly (the untimed-only public wire shape).
 			const yJSON = dataIN?.y ?? dataIN?.values ?? dataIN?.column;
 			this.y = yJSON ? ColumnClass.fromJSON(yJSON) : new ColumnClass({ refId: -1 });
-			this.label = dataIN?.label ?? 'Phase ' + (parent.data.length + 1);
+			// Blank by default; `displayLabel` falls back to the wired column's name.
+			this.label = dataIN?.label ?? '';
 			this.colour = dataIN?.colour ?? getPaletteColor(parent.data.length) ?? getPaletteColor(0);
 			this.shape = POINT_SHAPES.includes(dataIN?.shape) ? dataIN.shape : 'circle';
 			this.radius = dataIN?.radius ?? 3.4;
@@ -90,11 +96,15 @@
 				: seriesStats(this.rawValues, this.parentPlot.unit, this.parentPlot.period)
 		);
 
+		get displayLabel() {
+			return seriesDisplayLabel(this);
+		}
+
 		getLegendItem() {
 			const s = this.stats;
 			const rTxt = Number.isFinite(s.R) ? ` (R=${s.R.toFixed(2)})` : '';
 			return {
-				label: this.label + rTxt,
+				label: this.displayLabel + rTxt,
 				elements: [{ type: 'points', color: this.colour, size: this.radius, shape: this.shape }]
 			};
 		}
@@ -157,7 +167,9 @@
 		// the timed data's hours, mis-scaling the clock.
 		hasTimed = $derived(this.data.some((d) => d.timeWired));
 		displayPeriod = $derived(
-			this.hasTimed ? displayPeriodFor('hours', this.period) : displayPeriodFor(this.unit, this.period)
+			this.hasTimed
+				? displayPeriodFor('hours', this.period)
+				: displayPeriodFor(this.unit, this.period)
 		);
 		plotSize = $derived(
 			Math.max(
@@ -169,7 +181,7 @@
 			)
 		);
 		perSeriesStats = $derived.by(() =>
-			this.data.map((d) => ({ label: d.label, colour: d.colour, ...d.stats }))
+			this.data.map((d) => ({ label: d.displayLabel, colour: d.colour, ...d.stats }))
 		);
 
 		// Shared radial value axis (timed series only): [floor(min(0,dataMin)), ceil(dataMax)].
@@ -193,7 +205,12 @@
 		untimedMaxStack = $derived.by(() =>
 			maxStackHeight(
 				this.data.filter((d) => !d.timeWired).map((d) => d.rawValues),
-				{ placement: this.placement, period: this.displayPeriod, binWidth: this.binWidth, quant: 0.5 }
+				{
+					placement: this.placement,
+					period: this.displayPeriod,
+					binWidth: this.binWidth,
+					quant: 0.5
+				}
 			)
 		);
 
@@ -298,7 +315,8 @@
 			c.padding = json.padding ?? c.padding;
 			c.legend = LegendClass.fromJSON(json.legend);
 			if (json.data) c.data = json.data.map((d) => CircularPhaseSeries.fromJSON(d, c));
-			else if (json.column) c.addData({ column: json.column }); // very old flat single-series sessions
+			else if (json.column)
+				c.addData({ column: json.column }); // very old flat single-series sessions
 			else if (json.dataIn) c.addData(json.dataIn); // creation-time hint (mirrors sibling plots)
 			return c;
 		}
@@ -331,7 +349,11 @@
 	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
 	const fmtP = (p) => (Number.isFinite(p) ? (p < 1e-4 ? '< 0.0001' : p.toFixed(4)) : '—');
 	const escapeHtml = (s) =>
-		String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+		String(s)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;');
 
 	// Value-unit suffix for the placement bin-width control.
 	const unitSuffix = (u) => (u === 'hours' ? 'h' : u === 'degrees' ? '°' : 'rad');
@@ -394,8 +416,8 @@
 
 		const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${d.colour};margin-right:4px;vertical-align:middle;"></span>`;
 		const content = d.timeWired
-			? `${dot}<strong>${escapeHtml(d.label)}</strong><br/><span style="opacity:0.7">time:</span> ${fmtPhase(d.angles[bestIdx], 'hours', plot.period)}<br/><span style="opacity:0.7">value:</span> ${fmt(d.rawValues[bestIdx])}`
-			: `${dot}<strong>${escapeHtml(d.label)}</strong><br/><span style="opacity:0.7">phase:</span> ${fmtPhase(d.rawValues[bestIdx], plot.unit, plot.period)}`;
+			? `${dot}<strong>${escapeHtml(d.displayLabel)}</strong><br/><span style="opacity:0.7">time:</span> ${fmtPhase(d.angles[bestIdx], 'hours', plot.period)}<br/><span style="opacity:0.7">value:</span> ${fmt(d.rawValues[bestIdx])}`
+			: `${dot}<strong>${escapeHtml(d.displayLabel)}</strong><br/><span style="opacity:0.7">phase:</span> ${fmtPhase(d.rawValues[bestIdx], plot.unit, plot.period)}`;
 
 		const { x: xPos, y: yPos } = computeTooltipPosition(evt.clientX, evt.clientY);
 		dispatchTooltip(evt.currentTarget, { visible: true, x: xPos, y: yPos, content });
@@ -432,7 +454,12 @@
 
 		{#each plot.data as d, i (d.x.id + '-' + d.y.id)}
 			{#if !d.timeWired && plot.showWedges}
-				<RoseWedges projection={P} values={d.rawValues} binWidth={plot.wedgeBinWidth} colour={d.colour} />
+				<RoseWedges
+					projection={P}
+					values={d.rawValues}
+					binWidth={plot.wedgeBinWidth}
+					colour={d.colour}
+				/>
 			{/if}
 			{#if d.draw}
 				{#if d.timeWired}
@@ -516,11 +543,7 @@
 	{#if appState.currentControlTab === 'properties'}
 		<div class="div-line"></div>
 
-		<Legend
-			legendData={theData.legend}
-			figureStyle={theData.parentBox?.style}
-			which="controls"
-		/>
+		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
 		<div class="div-line"></div>
 
 		<div class="control-component">
@@ -568,24 +591,35 @@
 		<div class="div-line"></div>
 
 		<div class="control-component">
-			<label class="cp-toggle"><input type="checkbox" bind:checked={theData.showMeanVectors} /> Mean resultant vectors</label>
-			<label class="cp-toggle"><input type="checkbox" bind:checked={theData.showWedges} /> Rose wedges (circular histogram)</label>
+			<label class="cp-toggle"
+				><input type="checkbox" bind:checked={theData.showMeanVectors} /> Mean resultant vectors</label
+			>
+			<label class="cp-toggle"
+				><input type="checkbox" bind:checked={theData.showWedges} /> Rose wedges (circular histogram)</label
+			>
 			{#if theData.showWedges}
 				<ControlInput label={`Wedge bin (${unitSuffix(theData.unit)})`}>
 					<NumberWithUnits bind:value={theData.wedgeBinWidth} min="0.05" step="0.5" />
 				</ControlInput>
 			{/if}
-			<label class="cp-toggle"><input type="checkbox" bind:checked={theData.showWatsonWilliams} /> Watson-Williams test (equal mean direction)</label>
+			<label class="cp-toggle"
+				><input type="checkbox" bind:checked={theData.showWatsonWilliams} /> Watson-Williams test (equal
+				mean direction)</label
+			>
 		</div>
 
 		{#if theData.showWatsonWilliams && theData.ww}
 			<div class="cp-ww">
 				{#if theData.ww.valid}
-					<p>F({theData.ww.df1}, {theData.ww.df2}) = {fmt(theData.ww.F, 3)}, p = {fmtP(theData.ww.pValue)}</p>
+					<p>
+						F({theData.ww.df1}, {theData.ww.df2}) = {fmt(theData.ww.F, 3)}, p = {fmtP(
+							theData.ww.pValue
+						)}
+					</p>
 				{:else}
 					<p class="cp-hint">
-						Wire two or more phase columns without a time (Watson-Williams compares untimed
-						groups' unweighted event angles) to compare mean directions.
+						Wire two or more phase columns without a time (Watson-Williams compares untimed groups'
+						unweighted event angles) to compare mean directions.
 					</p>
 				{/if}
 			</div>
@@ -594,20 +628,27 @@
 		<div id="dataSettings">
 			<div class="control-data-add">
 				<div class="add">
-					<button class="icon" onclick={async () => { theData.addData({}); await tick(); dataSettingsScrollTo('bottom'); }}>
+					<button
+						class="icon"
+						onclick={async () => {
+							theData.addData({});
+							await tick();
+							dataSettingsScrollTo('bottom');
+						}}
+					>
 						<Icon name="add" width={16} height={16} />
 					</button>
 				</div>
 			</div>
 
 			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
-				<div class="dataBlock" animate:flip={{ duration: 500 }} in:slide={{ duration: 500, axis: 'y' }} out:slide={{ duration: 500, axis: 'y' }}>
-					<div class="control-component-title">
-						<p><Editable bind:value={datum.label} /></p>
-						<button class="icon" onclick={() => theData.removeData(i)}>
-							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
-						</button>
-					</div>
+				<div
+					class="dataBlock"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+					out:slide={{ duration: 500, axis: 'y' }}
+				>
+					<SeriesBlockHeader inner={theData} {datum} index={i} />
 					<div class="data-wrapper">
 						<div class="y-select">
 							<ControlInput label="time (optional)"></ControlInput>
@@ -630,13 +671,14 @@
 						</div>
 						{#if datum.timeWired}
 							<p class="cp-hint">
-								Time wired: this series plots as a value-radius clock (point radius = value; angle
-								= time-of-day).
+								Time wired: this series plots as a value-radius clock (point radius = value; angle =
+								time-of-day).
 							</p>
 						{/if}
 						<div class="control-input-horizontal">
 							<div class="control-input" style="max-width: 1.5rem;">
-								<p>Col</p><ColourPicker bind:value={datum.colour} />
+								<p>Col</p>
+								<ColourPicker bind:value={datum.colour} />
 							</div>
 							<ControlInput label="Shape">
 								<select bind:value={datum.shape}>
@@ -654,7 +696,11 @@
 					{#if datum.stats}
 						<p class="cp-stat">
 							n {datum.stats.n} ·
-							{#if datum.timeWired}acrophase {fmtPhase(datum.stats.meanValue, 'hours', theData.period)} ·{/if}
+							{#if datum.timeWired}acrophase {fmtPhase(
+									datum.stats.meanValue,
+									'hours',
+									theData.period
+								)} ·{/if}
 							R {fmt(datum.stats.R, 3)} · z {fmt(datum.stats.z, 2)} · p {fmtP(datum.stats.pValue)}
 						</p>
 					{/if}

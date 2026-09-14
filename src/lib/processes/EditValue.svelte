@@ -1,6 +1,7 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
+	import { dataEnteringProcess } from '$lib/core/processInput.js';
 
 	export function editvalue(x, args) {
 		const edits = args.edits || [];
@@ -20,10 +21,40 @@
 
 	const editvalue_defaults = new Map([['edits', []]]);
 
+	/**
+	 * Out-of-range-edit warning for the node's ⚠ badge (processWarnings.js).
+	 * The compute above is UNCHANGED — an edit whose position is 0, fractional,
+	 * or past the end of the column still changes nothing — this message just
+	 * says which edits are dead. Pure, so it is unit-testable without a session.
+	 */
+	export function editvalueWarnings(x, args) {
+		const edits = args.edits ?? [];
+		if (edits.length === 0) return [];
+		const n = x.length;
+		const dead = edits.filter((edit) => {
+			const pos = Number(edit.position);
+			return !(Number.isInteger(pos) && pos >= 1 && pos <= n);
+		}).length;
+		if (dead === 0) return [];
+		return [
+			`${dead} of ${edits.length} edit${edits.length === 1 ? '' : 's'} point${dead === 1 ? 's' : ''} ` +
+				`outside the input column (positions are 1-based row numbers, and this column has ` +
+				`${n} rows), so ${dead === 1 ? 'it changes' : 'they change'} nothing. Set each position ` +
+				`between 1 and ${n}, or delete the unused edits.`
+		];
+	}
+
 	export const definition = {
 		displayName: 'Edit value',
 		func: editvalue,
 		defaults: editvalue_defaults,
+		// Free-process warnings channel: derived at render time by the node
+		// components (processWarnings.js), never stored, so it cannot go stale.
+		getWarnings: (p) => {
+			const inData = dataEnteringProcess(p);
+			if (!inData) return [];
+			return editvalueWarnings(inData, p.args);
+		},
 		nodeSpec: {
 			id: 'process.editvalue',
 			inputs: [{ name: 'input', kind: 'column', cardinality: 'one' }],

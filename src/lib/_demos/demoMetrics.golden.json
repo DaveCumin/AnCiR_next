@@ -90,6 +90,9 @@
 		"Cosinor.phase_angle": [
 			11.746213265
 		],
+		"Cosinor.pvalue": [
+			0
+		],
 		"Cosinor.rsquared": [
 			0.953927037
 		]
@@ -174,6 +177,26 @@
 			0
 		]
 	},
+	"demo-tp-fitfunction.json": {
+		"FitFunction.acrophase": [
+			12.168012299
+		],
+		"FitFunction.amplitude": [
+			40.093782435
+		],
+		"FitFunction.mesor": [
+			49.149873812
+		],
+		"FitFunction.period": [
+			24
+		],
+		"FitFunction.r2": [
+			0.942114446
+		],
+		"FitFunction.rmse": [
+			7.373734292
+		]
+	},
 	"demo-tp-groupcomparison.json": {
 		"GroupComparison.effectSize": [
 			0.803607976
@@ -223,7 +246,7 @@
 		]
 	},
 	"demo-tp-movinganalysis.json": {
-		"MovingAnalysis.753_peak_period": [
+		"MovingAnalysis.761_peak_period": [
 			24,
 			24,
 			24,
@@ -232,7 +255,7 @@
 			24,
 			24
 		],
-		"MovingAnalysis.753_peak_power": [
+		"MovingAnalysis.761_peak_power": [
 			83.5,
 			83.5,
 			83.5,

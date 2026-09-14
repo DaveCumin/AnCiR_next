@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "722": [
+    "730": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "723": [
+    "731": [
       49.99999999999999,
       39.64723819589918,
       29.999999999999986,
@@ -104,7 +104,7 @@
       50.000000000000014,
       39.64723819589919
     ],
-    "724": [
+    "732": [
       -12,
       -11,
       -10,
@@ -131,7 +131,7 @@
       11,
       12
     ],
-    "725": [
+    "733": [
       -0.02397460631115133,
       -0.28574860140576386,
       -0.5241981547253294,
@@ -158,7 +158,7 @@
       0.23409193418983582,
       -0.023974606311150955
     ],
-    "726": [
+    "734": [
       0.8863905887044223,
       0.07783048901336764,
       0.0005169344530367992,
@@ -188,9 +188,9 @@
   },
   "data": [
     {
-      "id": 722,
+      "id": 730,
       "name": "Cross-correlation input 1",
-      "data": 722,
+      "data": 730,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -199,9 +199,9 @@
       "processes": []
     },
     {
-      "id": 723,
+      "id": 731,
       "name": "Cross-correlation input 2",
-      "data": 723,
+      "data": 731,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -210,33 +210,33 @@
       "processes": []
     },
     {
-      "id": 724,
+      "id": 732,
       "name": "lag_66",
-      "data": 724,
+      "data": 732,
       "type": "number",
-      "tableProcessGUId": "a6d946e0-0ee6-4b33-b521-a33dea8c490b",
+      "tableProcessGUId": "c9941b07-d316-440e-909e-75a997a6c696",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 725,
+      "id": 733,
       "name": "correlation_66",
-      "data": 725,
+      "data": 733,
       "type": "number",
-      "tableProcessGUId": "a6d946e0-0ee6-4b33-b521-a33dea8c490b",
+      "tableProcessGUId": "c9941b07-d316-440e-909e-75a997a6c696",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 726,
+      "id": 734,
       "name": "pvalue_66",
-      "data": 726,
+      "data": 734,
       "type": "number",
-      "tableProcessGUId": "a6d946e0-0ee6-4b33-b521-a33dea8c490b",
+      "tableProcessGUId": "c9941b07-d316-440e-909e-75a997a6c696",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -256,6 +256,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -279,11 +280,11 @@
       },
       "plot": {
         "columnRefs": [
-          722,
-          723,
-          724,
-          725,
-          726
+          730,
+          731,
+          732,
+          733,
+          734
         ],
         "showCol": [
           true,
@@ -305,14 +306,14 @@
       "name": "CrossCorrelation",
       "displayName": "Cross-correlation",
       "args": {
-        "xIN": 722,
-        "yIN": 723,
+        "xIN": 730,
+        "yIN": 731,
         "maxLag": 12,
         "method": "pearson",
         "out": {
-          "lag": 724,
-          "correlation": 725,
-          "pvalue": 726
+          "lag": 732,
+          "correlation": 733,
+          "pvalue": 734
         },
         "valid": false
       },
@@ -358,11 +359,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_722": {
+    "data_730": {
       "x": 60,
       "y": 314
     },
-    "data_723": {
+    "data_731": {
       "x": 60,
       "y": 814
     },
@@ -437,5 +438,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

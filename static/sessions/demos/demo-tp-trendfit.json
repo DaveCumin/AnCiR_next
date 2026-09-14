@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "812": [
+    "820": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "813": [
+    "821": [
       7.673945782302198,
       -1.879285133127806,
       10.089269516954142,
@@ -104,7 +104,7 @@
       95.32890446343086,
       89.84737077710555
     ],
-    "814": [
+    "822": [
       0,
       1,
       2,
@@ -156,19 +156,19 @@
       48,
       49
     ],
-    "815": [
+    "823": [
       0.9579555770898015
     ],
-    "816": [
+    "824": [
       5.469977223339452
     ],
-    "817": [
+    "825": [
       1.809303819828578
     ],
-    "818": [
+    "826": [
       4.350114419162737
     ],
-    "819": [
+    "827": [
       4.350114419162737,
       6.159418238991315,
       7.968722058819893,
@@ -223,20 +223,20 @@
   },
   "data": [
     {
-      "id": 812,
+      "id": 820,
       "name": "x",
-      "data": 812,
+      "data": 820,
       "type": "number",
-      "tableProcessGUId": "a2487d7b-7d03-43c4-a43a-a0a8b98c97d7",
+      "tableProcessGUId": "285513c4-6d4c-4d25-9a9f-d2992ef27a3c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 813,
+      "id": 821,
       "name": "y",
-      "data": 813,
+      "data": 821,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -245,66 +245,66 @@
       "processes": []
     },
     {
-      "id": 814,
+      "id": 822,
       "name": "trendx_85",
-      "data": 814,
+      "data": 822,
       "type": "number",
-      "tableProcessGUId": "23adfe8c-80e9-4ab3-bfdc-4615f3d61086",
+      "tableProcessGUId": "1c885854-1d5c-4ae6-81fe-b9600ec191a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 815,
+      "id": 823,
       "name": "r2_85",
-      "data": 815,
+      "data": 823,
       "type": "number",
-      "tableProcessGUId": "23adfe8c-80e9-4ab3-bfdc-4615f3d61086",
+      "tableProcessGUId": "1c885854-1d5c-4ae6-81fe-b9600ec191a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 816,
+      "id": 824,
       "name": "rmse_85",
-      "data": 816,
+      "data": 824,
       "type": "number",
-      "tableProcessGUId": "23adfe8c-80e9-4ab3-bfdc-4615f3d61086",
+      "tableProcessGUId": "1c885854-1d5c-4ae6-81fe-b9600ec191a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 817,
+      "id": 825,
       "name": "coef_slope_85",
-      "data": 817,
+      "data": 825,
       "type": "number",
-      "tableProcessGUId": "23adfe8c-80e9-4ab3-bfdc-4615f3d61086",
+      "tableProcessGUId": "1c885854-1d5c-4ae6-81fe-b9600ec191a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 818,
+      "id": 826,
       "name": "coef_intercept_85",
-      "data": 818,
+      "data": 826,
       "type": "number",
-      "tableProcessGUId": "23adfe8c-80e9-4ab3-bfdc-4615f3d61086",
+      "tableProcessGUId": "1c885854-1d5c-4ae6-81fe-b9600ec191a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 819,
-      "name": "trendy_813_85",
-      "data": 819,
+      "id": 827,
+      "name": "trendy_821_85",
+      "data": 827,
       "type": "number",
-      "tableProcessGUId": "23adfe8c-80e9-4ab3-bfdc-4615f3d61086",
+      "tableProcessGUId": "1c885854-1d5c-4ae6-81fe-b9600ec191a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -314,7 +314,7 @@
   "plots": [
     {
       "id": 139,
-      "name": "Fit Trend Curves: data + fit",
+      "name": "Fit trend: data + fit",
       "x": 60,
       "y": 60,
       "width": 520,
@@ -324,6 +324,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -389,9 +390,9 @@
         "data": [
           {
             "x": {
-              "id": 820,
+              "id": 828,
               "name": "x",
-              "refId": 812,
+              "refId": 820,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -400,9 +401,9 @@
               "processes": []
             },
             "y": {
-              "id": 821,
+              "id": 829,
               "name": "y",
-              "refId": 813,
+              "refId": 821,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -428,9 +429,9 @@
           },
           {
             "x": {
-              "id": 822,
+              "id": 830,
               "name": "trendx_85",
-              "refId": 814,
+              "refId": 822,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -439,9 +440,9 @@
               "processes": []
             },
             "y": {
-              "id": 823,
-              "name": "trendy_813_85",
-              "refId": 819,
+              "id": 831,
+              "name": "trendy_821_85",
+              "refId": 827,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -449,7 +450,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Fit Trend Curves",
+            "label": "Fit trend",
             "yAxis": "left",
             "line": {
               "colour": null,
@@ -484,7 +485,7 @@
     },
     {
       "id": 140,
-      "name": "Fit Trend Curves: values",
+      "name": "Fit trend: values",
       "x": 630,
       "y": 60,
       "width": 520,
@@ -494,6 +495,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -517,8 +519,8 @@
       },
       "plot": {
         "columnRefs": [
-          813,
-          819
+          821,
+          827
         ],
         "showCol": [
           true,
@@ -543,7 +545,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 812
+          "result": 820
         }
       },
       "refTPId": null
@@ -551,23 +553,23 @@
     {
       "id": 85,
       "name": "TrendFit",
-      "displayName": "Fit Trend Curves",
+      "displayName": "Fit trend",
       "args": {
-        "xIN": 812,
+        "xIN": 820,
         "yIN": [
-          813
+          821
         ],
         "model": "linear",
         "polyDegree": 2,
         "outputX": -1,
         "preProcesses": [],
         "out": {
-          "trendx": 814,
-          "r2": 815,
-          "rmse": 816,
-          "coef_slope": 817,
-          "coef_intercept": 818,
-          "trendy_813": 819
+          "trendx": 822,
+          "r2": 823,
+          "rmse": 824,
+          "coef_slope": 825,
+          "coef_intercept": 826,
+          "trendy_821": 827
         }
       },
       "refTPId": null
@@ -612,7 +614,7 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_813": {
+    "data_821": {
       "x": 60,
       "y": 314
     },
@@ -695,5 +697,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

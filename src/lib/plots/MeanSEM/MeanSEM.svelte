@@ -1,5 +1,6 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
@@ -60,7 +61,8 @@
 				this.y = new ColumnClass({ refId: -1 });
 			}
 
-			this.label = dataIN?.label ?? 'Mean ± SEM ' + (parent.data.length + 1);
+			// Blank by default; `displayLabel` falls back to the wired y column's name.
+			this.label = dataIN?.label ?? '';
 
 			this.points = new PointsClass(dataIN?.points, this);
 			this.line = new LineClass(dataIN?.line, this);
@@ -73,12 +75,16 @@
 			this.showError = dataIN?.showError ?? true;
 		}
 
+		get displayLabel() {
+			return seriesDisplayLabel(this);
+		}
+
 		// Per-group mean ± SEM for this series (ignores null/NaN pairs).
 		stats = $derived.by(() => {
 			const yData = this.y.getData() ?? [];
 			const xRaw = this.x.getData() ?? [];
 			// No category column → treat the whole series as one group named by label.
-			const xData = xRaw.length > 0 ? xRaw : yData.map(() => this.label);
+			const xData = xRaw.length > 0 ? xRaw : yData.map(() => this.displayLabel);
 			return meanSemByGroup(xData, yData);
 		});
 
@@ -101,7 +107,7 @@
 				});
 			}
 			if (elements.length === 0) return null;
-			return { label: this.label, elements };
+			return { label: this.displayLabel, elements };
 		}
 
 		toJSON() {
@@ -318,7 +324,7 @@
 
 			const rows = [];
 			this.data.forEach((datum, d) => {
-				const label = datum.label || `Data ${d}`;
+				const label = datum.displayLabel;
 				const byX = new Map(datum.stats.map((s) => [String(s.x), s]));
 				statKeys.forEach((key) => {
 					const row = multiSeries ? [label, key] : [key];
@@ -396,7 +402,7 @@
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
-	import Editable from '$lib/components/inputs/Editable.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 
 	let { theData, which } = $props();
@@ -451,14 +457,9 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-
 		<div class="div-line"></div>
 
-		<Legend
-			legendData={theData.legend}
-			figureStyle={theData.parentBox?.style}
-			which="controls"
-		/>
+		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -550,12 +551,7 @@
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
-					<div class="control-component-title">
-						<p><Editable bind:value={datum.label} /></p>
-						<button class="icon" onclick={() => theData.removeData(i)}>
-							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
-						</button>
-					</div>
+					<SeriesBlockHeader inner={theData} {datum} index={i} />
 
 					<div class="data-wrapper">
 						<div class="y-select">

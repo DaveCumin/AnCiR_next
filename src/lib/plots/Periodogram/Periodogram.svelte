@@ -690,6 +690,7 @@
 	import { tick } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
@@ -1016,19 +1017,7 @@
 						in:slide={{ duration: 500, axis: 'y' }}
 						out:slide={{ duration: 500, axis: 'y' }}
 					>
-						<div class="control-component-title">
-							<p>
-								Data {i}
-							</p>
-							<button class="icon" onclick={() => theData.removeData(i)}
-								><Icon
-									name="trash"
-									width={16}
-									height={16}
-									className="control-component-title-icon"
-								/></button
-							>
-						</div>
+						<SeriesBlockHeader inner={theData} {datum} index={i} editable={false} />
 
 						<div class="control-data">
 							<ControlInput label="x"></ControlInput>

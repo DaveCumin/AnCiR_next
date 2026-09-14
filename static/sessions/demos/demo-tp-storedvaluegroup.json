@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "811": [
+    "819": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 811,
+      "id": 819,
       "name": "group_g1_83",
-      "data": 811,
+      "data": 819,
       "type": "number",
-      "tableProcessGUId": "6cbee4bc-5fbc-4373-ad1d-88caaed7127a",
+      "tableProcessGUId": "3675b509-ab99-406e-90a5-d9a5cff01b20",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -31,6 +31,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -54,7 +55,7 @@
       },
       "plot": {
         "columnRefs": [
-          811
+          819
         ],
         "showCol": [
           true
@@ -83,7 +84,7 @@
           }
         ],
         "out": {
-          "group_g1": 811
+          "group_g1": 819
         }
       },
       "refTPId": null
@@ -208,5 +209,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

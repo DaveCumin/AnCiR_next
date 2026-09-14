@@ -14,11 +14,7 @@
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { correlationGrid } from '$lib/utils/correlationGrid.js';
-	import {
-		colormapRGB,
-		normaliseTo01,
-		COLORMAP_LABELS
-	} from '$lib/plots/Actogram/colormaps.js';
+	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
 
 	export const CorrelationHeatmap_defaultDataInputs = ['column'];
 	export const CorrelationHeatmap_controlHeaders = ['Properties', 'Data'];
@@ -30,7 +26,9 @@
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
-			this.column = dataIN?.column ? ColumnClass.fromJSON(dataIN.column) : new ColumnClass({ refId: -1 });
+			this.column = dataIN?.column
+				? ColumnClass.fromJSON(dataIN.column)
+				: new ColumnClass({ refId: -1 });
 		}
 		toJSON() {
 			return { column: this.column };
@@ -146,6 +144,7 @@
 	import { appState } from '$lib/core/core.svelte';
 	import Column from '$lib/core/Column.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -174,7 +173,13 @@
 		style="background: var(--surface-card); position: absolute;"
 	>
 		{#if N < 2}
-			<text x={plot.parentBox.width / 2} y={plot.parentBox.height / 2} text-anchor="middle" fill="var(--color-text-muted)" font-size="12">
+			<text
+				x={plot.parentBox.width / 2}
+				y={plot.parentBox.height / 2}
+				text-anchor="middle"
+				fill="var(--color-text-muted)"
+				font-size="12"
+			>
 				Wire two or more columns to see their correlations.
 			</text>
 		{:else}
@@ -192,10 +197,21 @@
 							stroke="var(--surface-card)"
 							stroke-width="1"
 						>
-							<title>{rowLab} ~ {colLab}: r={fmtCell(v)}{i !== j && Number.isFinite(m.p[i][j]) ? `, p=${m.p[i][j] < 0.001 ? '<0.001' : m.p[i][j].toFixed(3)}` : ''}</title>
+							<title
+								>{rowLab} ~ {colLab}: r={fmtCell(v)}{i !== j && Number.isFinite(m.p[i][j])
+									? `, p=${m.p[i][j] < 0.001 ? '<0.001' : m.p[i][j].toFixed(3)}`
+									: ''}</title
+							>
 						</rect>
 						{#if plot.showValues && cell > 22}
-							<text x={j * cell + cell / 2} y={i * cell + cell / 2} text-anchor="middle" dominant-baseline="central" font-size={Math.min(12, cell / 3)} fill={cellText(v)}>
+							<text
+								x={j * cell + cell / 2}
+								y={i * cell + cell / 2}
+								text-anchor="middle"
+								dominant-baseline="central"
+								font-size={Math.min(12, cell / 3)}
+								fill={cellText(v)}
+							>
 								{fmtCell(v)}
 							</text>
 						{/if}
@@ -203,11 +219,24 @@
 				{/each}
 				<!-- y labels (left) -->
 				{#each m.labels as lab, i (i)}
-					<text x={-6} y={i * cell + cell / 2} text-anchor="end" dominant-baseline="central" font-size="11" fill="var(--color-lightness-25)">{lab}</text>
+					<text
+						x={-6}
+						y={i * cell + cell / 2}
+						text-anchor="end"
+						dominant-baseline="central"
+						font-size="11"
+						fill="var(--color-lightness-25)">{lab}</text
+					>
 				{/each}
 				<!-- x labels (bottom, rotated) -->
 				{#each m.labels as lab, j (j)}
-					<text transform="translate({j * cell + cell / 2}, {gridW + 6}) rotate(45)" text-anchor="start" dominant-baseline="hanging" font-size="11" fill="var(--color-lightness-25)">{lab}</text>
+					<text
+						transform="translate({j * cell + cell / 2}, {gridW + 6}) rotate(45)"
+						text-anchor="start"
+						dominant-baseline="hanging"
+						font-size="11"
+						fill="var(--color-lightness-25)">{lab}</text
+					>
 				{/each}
 			</g>
 			<!-- colour legend (-1 … +1) -->
@@ -216,11 +245,31 @@
 			{#if lx + 40 < plot.parentBox.width}
 				<g transform="translate({lx}, {plot.padding.top})">
 					{#each legendStops as t, k (k)}
-						<rect x={0} y={(1 - t) * lh - lh / legendStops.length} width={12} height={lh / legendStops.length + 1} fill={colormapRGB(plot.colormap, t)} />
+						<rect
+							x={0}
+							y={(1 - t) * lh - lh / legendStops.length}
+							width={12}
+							height={lh / legendStops.length + 1}
+							fill={colormapRGB(plot.colormap, t)}
+						/>
 					{/each}
-					<text x={16} y={0} dominant-baseline="hanging" font-size="10" fill="var(--color-text-muted)">+1</text>
-					<text x={16} y={lh / 2} dominant-baseline="central" font-size="10" fill="var(--color-text-muted)">0</text>
-					<text x={16} y={lh} dominant-baseline="auto" font-size="10" fill="var(--color-text-muted)">−1</text>
+					<text
+						x={16}
+						y={0}
+						dominant-baseline="hanging"
+						font-size="10"
+						fill="var(--color-text-muted)">+1</text
+					>
+					<text
+						x={16}
+						y={lh / 2}
+						dominant-baseline="central"
+						font-size="10"
+						fill="var(--color-text-muted)">0</text
+					>
+					<text x={16} y={lh} dominant-baseline="auto" font-size="10" fill="var(--color-text-muted)"
+						>−1</text
+					>
 				</g>
 			{/if}
 		{/if}
@@ -231,8 +280,12 @@
 	{#if appState.currentControlTab === 'properties'}
 		<div class="control-component">
 			<div class="control-component-title">Correlation heatmap</div>
-			<ControlInput label="Width"><NumberWithUnits bind:value={theData.parentBox.width} /></ControlInput>
-			<ControlInput label="Height"><NumberWithUnits bind:value={theData.parentBox.height} /></ControlInput>
+			<ControlInput label="Width"
+				><NumberWithUnits bind:value={theData.parentBox.width} /></ControlInput
+			>
+			<ControlInput label="Height"
+				><NumberWithUnits bind:value={theData.parentBox.height} /></ControlInput
+			>
 			<ControlInput label="Method">
 				<AttributeSelect
 					bind:value={theData.method}
@@ -241,7 +294,11 @@
 				/>
 			</ControlInput>
 			<ControlInput label="Colour scale">
-				<AttributeSelect bind:value={theData.colormap} options={colormapOptions} optionsDisplay={colormapLabelList} />
+				<AttributeSelect
+					bind:value={theData.colormap}
+					options={colormapOptions}
+					optionsDisplay={colormapLabelList}
+				/>
 			</ControlInput>
 			<ControlInput label="Show values">
 				<input type="checkbox" bind:checked={theData.showValues} />
@@ -264,12 +321,14 @@
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
-					<div class="control-component-title">
-						<p>Variable {i + 1}</p>
-						<button class="icon" title="Remove this variable" onclick={() => theData.removeData(i)}>
-							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
-						</button>
-					</div>
+					<SeriesBlockHeader
+						inner={theData}
+						{datum}
+						index={i}
+						editable={false}
+						fallback={`Variable ${i + 1}`}
+						removeTooltip="Remove this variable"
+					/>
 					<div class="data-wrapper">
 						<div class="y-select">
 							<ControlInput label="Column"></ControlInput>

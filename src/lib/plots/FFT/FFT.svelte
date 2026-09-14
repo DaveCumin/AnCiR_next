@@ -165,8 +165,8 @@
 
 		static fromJSON(json, parent) {
 			return new FFTDataclass(parent, {
-			// `?? json.time` / `?? json.values`: this re-map runs BEFORE the constructor, so
-			// without it the constructor's port-name fallback would never see them.
+				// `?? json.time` / `?? json.values`: this re-map runs BEFORE the constructor, so
+				// without it the constructor's port-name fallback would never see them.
 				x: json.x ?? json.time,
 				y: json.y ?? json.values,
 				line: LineClass.fromJSON(json.line),
@@ -566,6 +566,7 @@
 	import { tick } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
@@ -670,7 +671,6 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-
 		<div class="div-line"></div>
 
 		<div class="control-component">
@@ -958,17 +958,7 @@
 						in:slide={{ duration: 500, axis: 'y' }}
 						out:slide={{ duration: 500, axis: 'y' }}
 					>
-						<div class="control-component-title">
-							<p>Data {i}</p>
-							<button class="icon" onclick={() => theData.removeData(i)}>
-								<Icon
-									name="trash"
-									width={16}
-									height={16}
-									className="control-component-title-icon"
-								/>
-							</button>
-						</div>
+						<SeriesBlockHeader inner={theData} {datum} index={i} editable={false} />
 
 						<div class="control-data">
 							<ControlInput label="x (time)"></ControlInput>
@@ -1145,7 +1135,7 @@
 				.range([0, theData.plot.plotwidth])}
 			<!-- Y Axis (Magnitude) -->
 			<Axis
-			figureStyle={theData.plot.viewStyle}
+				figureStyle={theData.plot.viewStyle}
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={yScale}
@@ -1158,7 +1148,7 @@
 			<!-- Y Axis (Phase) - on right side if any data shows phase -->
 			{#if hasPhase}
 				<Axis
-			figureStyle={theData.plot.viewStyle}
+					figureStyle={theData.plot.viewStyle}
 					height={theData.plot.plotheight}
 					width={theData.plot.plotwidth}
 					scale={phaseYScale}
@@ -1171,7 +1161,7 @@
 
 			<!-- X Axis -->
 			<Axis
-			figureStyle={theData.plot.viewStyle}
+				figureStyle={theData.plot.viewStyle}
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={xScale}

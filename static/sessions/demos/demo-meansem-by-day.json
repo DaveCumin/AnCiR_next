@@ -378,6 +378,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -450,7 +451,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Mean ± SEM 1",
+            "label": "",
             "points": {
               "colour": null,
               "radius": 4,
@@ -601,5 +602,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

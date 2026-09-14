@@ -111,6 +111,14 @@ const CONCEPT = {
 	bathyphase: /bathyphase|trough/,
 	phase_angle: /phase angle|entrain/,
 	period: /period/,
+	// FitFunction's per-model parameter ports (v72.29): the rectangular wave's
+	// shape parameters and the double logistic's transition parameters.
+	duty_cycle: /duty.?cycle/i,
+	kappa: /kappa|κ|sharpness/,
+	onset: /onset/,
+	offset: /offset/,
+	k1: /\bk1\b|slope/,
+	k2: /\bk2\b|slope/,
 	R: /mean resultant|\bR\b/,
 	F: /Watson-?Williams|\bF\b/,
 	IS: /interdaily|\bIS\b/,

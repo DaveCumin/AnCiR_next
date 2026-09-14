@@ -185,7 +185,7 @@
       "name": "result_51",
       "data": 622,
       "type": "number",
-      "tableProcessGUId": "3ca96d17-39f7-4ccd-8b4b-f088a9c276c0",
+      "tableProcessGUId": "8f3cbc02-8703-4695-b7fa-464173a7a796",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -205,6 +205,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -268,7 +269,7 @@
   "notes": [
     {
       "id": "note_51",
-      "text": "Combines several input columns into one result by applying a per-row function across them: element-wise Add, or the row-wise Mean, Min, Max, or Std Dev over the selected columns. Use it to compute, e.g., the average of replicate series or a per-timepoint spread.",
+      "text": "Combines several input columns into one result by applying a per-row function across them: element-wise Add, or the row-wise Mean, Min, Max, Std Dev, or Percentile (50 = median) over the selected columns. Use it to compute, e.g., the average of replicate series or a per-timepoint spread.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -380,5 +381,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

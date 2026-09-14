@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getStatKeys, computeMovingWindows } from './movinganalysis.js';
+import { getStatKeys, computeMovingWindows, windowSkipMessages } from './movinganalysis.js';
 import { computeNPCRA } from './npcra.js';
 
 const DT = 5 / 60; // 5-minute sampling, as in the colony-monitoring design
@@ -269,5 +269,104 @@ describe("computeMovingWindows — analysis: 'trend'", () => {
 		const out = run(y, args);
 		expect(out.a[0]).toBeCloseTo(2, 6);
 		expect(out.b[0]).toBeCloseTo(0.1, 6);
+	});
+});
+
+// Skipped windows leave blank cells with nothing to say why. `__skips` is the
+// accounting the node turns into its warning badge; the NUMERIC outputs must
+// be unchanged (the same windows skipped for the same reasons as before).
+describe('computeMovingWindows — __skips accounting', () => {
+	const runFull = (tAll, ys, starts, windowSize, args) =>
+		computeMovingWindows({ tAll, ys, starts, windowSize, statKeys: getStatKeys(args), args });
+
+	it('counts logarithmic-domain skips and leaves those windows NaN', () => {
+		// Two windows: [0, 10) contains t = 0 (violates ln), [10, 20) is clean.
+		const args = { analysis: 'trend', trendModel: 'logarithmic' };
+		const t = Array.from({ length: 20 }, (_, i) => i);
+		const y = t.map((ti) => 3 + 2 * Math.log(ti + 1));
+		const [out] = runFull(t, [y], [0, 10], 10, args);
+		expect(out.__skips).toEqual({
+			total: 2,
+			fewPoints: 0,
+			logDomain: 1,
+			expDomain: 0,
+			polyDegree: 0
+		});
+		expect(Number.isNaN(out.a[0])).toBe(true); // skipped window stays blank
+		expect(Number.isFinite(out.a[1])).toBe(true); // clean window still fits
+	});
+
+	it('counts exponential-domain skips per y series independently', () => {
+		const args = { analysis: 'trend', trendModel: 'exponential' };
+		const t = Array.from({ length: 10 }, (_, i) => i + 1);
+		const yBad = t.map((ti) => ti - 3); // contains 0 and negatives
+		const yGood = t.map((ti) => 2 * Math.exp(0.1 * ti));
+		const [bad, good] = runFull(t, [yBad, yGood], [1], 10, args);
+		expect(bad.__skips.expDomain).toBe(1);
+		expect(good.__skips.expDomain).toBe(0);
+		expect(Number.isFinite(good.a[0])).toBe(true);
+	});
+
+	it('counts too-few-points and underdetermined-polynomial windows separately', () => {
+		const t = [0, 1, 2, 3, 4, 5, 20, 21];
+		const y = t.map((ti) => ti * 2);
+		// Window [20, 30) has 2 points → fewPoints. Window [0, 10) has 6 points
+		// but a degree-7 polynomial needs more → polyDegree.
+		const args = { analysis: 'trend', trendModel: 'polynomial', trendPolyDegree: 7 };
+		const [out] = runFull(t, [y], [0, 20], 10, args);
+		expect(out.__skips.fewPoints).toBe(1);
+		expect(out.__skips.polyDegree).toBe(1);
+	});
+
+	it('a clean run reports zero skips and __skips never shadows a stat key', () => {
+		const args = { analysis: 'summary', summaryPercentile: 50 };
+		const t = Array.from({ length: 30 }, (_, i) => i);
+		const y = t.map((ti) => ti % 7);
+		const [out] = runFull(t, [y], [0, 10], 10, args);
+		expect(out.__skips).toEqual({
+			total: 2,
+			fewPoints: 0,
+			logDomain: 0,
+			expDomain: 0,
+			polyDegree: 0
+		});
+		expect(getStatKeys(args)).not.toContain('__skips');
+	});
+});
+
+describe('windowSkipMessages', () => {
+	it('states the requirement, the count and a remedy for log-domain skips', () => {
+		const msgs = windowSkipMessages(
+			{ total: 8, fewPoints: 0, logDomain: 3, expDomain: 0, polyDegree: 0 },
+			'temp'
+		);
+		expect(msgs).toHaveLength(1);
+		expect(msgs[0]).toContain('3 of 8 windows for temp');
+		expect(msgs[0]).toContain('greater than 0');
+		expect(msgs[0]).toContain('linear or polynomial');
+	});
+
+	it('emits one sentence per skip reason and none when nothing was skipped', () => {
+		const none = windowSkipMessages(
+			{ total: 5, fewPoints: 0, logDomain: 0, expDomain: 0, polyDegree: 0 },
+			''
+		);
+		expect(none).toEqual([]);
+		const all = windowSkipMessages(
+			{ total: 5, fewPoints: 1, logDomain: 1, expDomain: 1, polyDegree: 1 },
+			'',
+			{ polyDegree: 4 }
+		);
+		expect(all).toHaveLength(4);
+		expect(all.join(' ')).toContain('degree-4');
+	});
+
+	it('handles a missing tally and singular grammar', () => {
+		expect(windowSkipMessages(null, 'x')).toEqual([]);
+		const one = windowSkipMessages(
+			{ total: 1, fewPoints: 1, logDomain: 0, expDomain: 0, polyDegree: 0 },
+			''
+		);
+		expect(one[0]).toContain('1 of 1 window was skipped');
 	});
 });

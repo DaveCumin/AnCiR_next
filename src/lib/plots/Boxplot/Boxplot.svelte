@@ -19,6 +19,7 @@
 		pairwiseMannWhitney
 	} from '$lib/tableProcesses/GroupComparison.svelte';
 	import { resolveCssVar } from '$lib/plots/exportStyle.js';
+	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 
 	/**
 	 * The neutral swatch the point-colour picker shows while `pointColour` is null
@@ -242,20 +243,22 @@
 				this.y = new ColumnClass({ refId: -1 });
 			}
 
-			if (dataIN?.label) {
-				this.label = dataIN.label;
-			} else {
-				this.label = 'Box Plot ' + (parent.data.length + 1);
-			}
+			// Blank by default; `displayLabel` falls back to the wired y column's
+			// name, so titles/legends follow a rename until the user types a label.
+			this.label = dataIN?.label ?? '';
 
 			this.boxPlot = new BoxClass(dataIN?.boxPlot, this);
+		}
+
+		get displayLabel() {
+			return seriesDisplayLabel(this);
 		}
 
 		getLegendItem() {
 			if (!this.boxPlot.draw) return null;
 
 			return {
-				label: this.label,
+				label: this.displayLabel,
 				elements: [
 					{
 						type: 'boxplot',
@@ -293,18 +296,18 @@
 	}
 
 	// Significance-bar type size used to be a hardcoded 11, persisted on every plot.
-// Same treatment as the legend size: a saved value EQUAL to that old default was
-// never deliberately chosen, so it is released to follow the figure. Any other
-// number is a real override and kept.
-const LEGACY_SIG_BAR_FONT_SIZE = 11;
+	// Same treatment as the legend size: a saved value EQUAL to that old default was
+	// never deliberately chosen, so it is released to follow the figure. Any other
+	// number is a real override and kept.
+	const LEGACY_SIG_BAR_FONT_SIZE = 11;
 
-/** @param {number | undefined | null} saved */
-function releaseLegacySigBarFontSize(saved) {
-	if (typeof saved !== 'number' || !Number.isFinite(saved)) return null;
-	return saved === LEGACY_SIG_BAR_FONT_SIZE ? null : saved;
-}
+	/** @param {number | undefined | null} saved */
+	function releaseLegacySigBarFontSize(saved) {
+		if (typeof saved !== 'number' || !Number.isFinite(saved)) return null;
+		return saved === LEGACY_SIG_BAR_FONT_SIZE ? null : saved;
+	}
 
-export class Boxplotclass {
+	export class Boxplotclass {
 		static descriptors = {
 			padding: { group: 'Padding' },
 			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
@@ -927,7 +930,8 @@ export class Boxplotclass {
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
-	import Editable from '$lib/components/inputs/Editable.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
+	import { categoryColourLabels } from '$lib/plots/seriesColour.js';
 	import { bindAltTooltipToggle } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 
@@ -995,14 +999,9 @@ export class Boxplotclass {
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-
 		<div class="div-line"></div>
 
-		<Legend
-			legendData={theData.legend}
-			figureStyle={theData.parentBox?.style}
-			which="controls"
-		/>
+		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -1176,7 +1175,12 @@ export class Boxplotclass {
 								<NumberWithUnits bind:value={theData.violinWidth} step={0.05} min={0.1} max={1} />
 							</ControlInput>
 							<ControlInput label="Opacity">
-								<NumberWithUnits bind:value={theData.violinOpacity} step={0.05} min={0.05} max={1} />
+								<NumberWithUnits
+									bind:value={theData.violinOpacity}
+									step={0.05}
+									min={0.05}
+									max={1}
+								/>
 							</ControlInput>
 						</div>
 					</details>
@@ -1305,18 +1309,11 @@ export class Boxplotclass {
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
-					<div class="control-component-title">
-						<p><Editable bind:value={datum.label} /></p>
-
-						<button class="icon" onclick={() => theData.removeData(i)}>
-							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
-						</button>
-					</div>
+					<SeriesBlockHeader inner={theData} {datum} index={i} />
 
 					<div class="data-wrapper">
 						<div class="y-select">
-							<ControlInput label="x (categories, optional)">
-							</ControlInput>
+							<ControlInput label="x (categories, optional)"></ControlInput>
 							<Column col={datum.x} canChange={true} />
 							{#if datum.x.refId >= 0}
 								<button
@@ -1331,8 +1328,7 @@ export class Boxplotclass {
 							{/if}
 						</div>
 						<div class="y-select">
-							<ControlInput label="y (values)">
-							</ControlInput>
+							<ControlInput label="y (values)"></ControlInput>
 							<Column col={datum.y} canChange={true} />
 						</div>
 
@@ -1353,6 +1349,7 @@ export class Boxplotclass {
 							xoffset={0}
 							yoffset={0}
 							which="controls"
+							categoryColoursActive={categoryColourLabels(theData.parentBox).length > 0}
 						/>
 					</div>
 					<div class="div-line"></div>
@@ -1523,8 +1520,7 @@ export class Boxplotclass {
 					stroke-width={theData.plot.sigBarThickness}
 				/>
 				{@const sigFont =
-					theData.plot.sigBarFontSize ??
-					resolveStyle(theData.plot.parentBox?.style).sizes.sigBar}
+					theData.plot.sigBarFontSize ?? resolveStyle(theData.plot.parentBox?.style).sizes.sigBar}
 				<text
 					x={(xi + xj) / 2}
 					y={barY + sigFont / 3 - 2}

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "773": [
+    "781": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "774": [
+    "782": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "775": [
+    "783": [
       20,
       20.5,
       21,
@@ -695,7 +695,7 @@
       27.5,
       28
     ],
-    "776": [
+    "784": [
       0.8956207800972891,
       3.0349473209438744,
       5.304476138254576e-29,
@@ -714,7 +714,7 @@
       1.845509009872076,
       9.439856176943119e-29
     ],
-    "777": [
+    "785": [
       0.8956207800972891,
       3.0349473209438744,
       5.304476138254576e-29,
@@ -736,20 +736,20 @@
   },
   "data": [
     {
-      "id": 773,
+      "id": 781,
       "name": "x",
-      "data": 773,
+      "data": 781,
       "type": "number",
-      "tableProcessGUId": "1b72a52e-3148-4e49-acf5-a155fb8436a7",
+      "tableProcessGUId": "b5780376-ca78-4f38-a54f-20452ab99321",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 774,
+      "id": 782,
       "name": "y",
-      "data": 774,
+      "data": 782,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -758,33 +758,33 @@
       "processes": []
     },
     {
-      "id": 775,
-      "name": "774_period_76",
-      "data": 775,
+      "id": 783,
+      "name": "782_period_76",
+      "data": 783,
       "type": "number",
-      "tableProcessGUId": "5cac9d6a-7266-480e-a7f1-823845d34d68",
+      "tableProcessGUId": "7b407b90-6687-415f-9ba4-76ec2c92c83b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 776,
-      "name": "774_power_76",
-      "data": 776,
+      "id": 784,
+      "name": "782_power_76",
+      "data": 784,
       "type": "number",
-      "tableProcessGUId": "5cac9d6a-7266-480e-a7f1-823845d34d68",
+      "tableProcessGUId": "7b407b90-6687-415f-9ba4-76ec2c92c83b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 777,
-      "name": "rhythmicityy_774_76",
-      "data": 777,
+      "id": 785,
+      "name": "rhythmicityy_782_76",
+      "data": 785,
       "type": "number",
-      "tableProcessGUId": "5cac9d6a-7266-480e-a7f1-823845d34d68",
+      "tableProcessGUId": "7b407b90-6687-415f-9ba4-76ec2c92c83b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -804,6 +804,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -869,9 +870,9 @@
         "data": [
           {
             "x": {
-              "id": 778,
+              "id": 786,
               "name": "x",
-              "refId": 773,
+              "refId": 781,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -880,9 +881,9 @@
               "processes": []
             },
             "y": {
-              "id": 779,
+              "id": 787,
               "name": "y",
-              "refId": 774,
+              "refId": 782,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -935,6 +936,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -1000,9 +1002,9 @@
         "data": [
           {
             "x": {
-              "id": 780,
-              "name": "774_period_76",
-              "refId": 775,
+              "id": 788,
+              "name": "782_period_76",
+              "refId": 783,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1011,9 +1013,9 @@
               "processes": []
             },
             "y": {
-              "id": 781,
-              "name": "774_power_76",
-              "refId": 776,
+              "id": 789,
+              "name": "782_power_76",
+              "refId": 784,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1067,7 +1069,7 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 773
+          "result": 781
         }
       },
       "refTPId": null
@@ -1077,9 +1079,9 @@
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis",
       "args": {
-        "xIN": 773,
+        "xIN": 781,
         "yIN": [
-          774
+          782
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -1093,9 +1095,9 @@
         "corrMaxLag": 0,
         "preProcesses": [],
         "out": {
-          "774_period": 775,
-          "774_power": 776,
-          "rhythmicityy_774": 777
+          "782_period": 783,
+          "782_power": 784,
+          "rhythmicityy_782": 785
         }
       },
       "refTPId": null
@@ -1140,7 +1142,7 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_774": {
+    "data_782": {
       "x": 60,
       "y": 314
     },
@@ -1223,5 +1225,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

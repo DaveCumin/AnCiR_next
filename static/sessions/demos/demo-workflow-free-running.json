@@ -874,7 +874,7 @@
       "name": "Peak period (h)",
       "data": 62,
       "type": "number",
-      "tableProcessGUId": "a0c1cef9-a072-4b80-b123-6761b72e536d",
+      "tableProcessGUId": "98fe4fb5-9902-420e-8a9f-48567dcfcfcb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -885,7 +885,7 @@
       "name": "Peak power",
       "data": 63,
       "type": "number",
-      "tableProcessGUId": "a0c1cef9-a072-4b80-b123-6761b72e536d",
+      "tableProcessGUId": "98fe4fb5-9902-420e-8a9f-48567dcfcfcb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -896,7 +896,7 @@
       "name": "rhythmicityy_57_4",
       "data": 64,
       "type": "number",
-      "tableProcessGUId": "a0c1cef9-a072-4b80-b123-6761b72e536d",
+      "tableProcessGUId": "98fe4fb5-9902-420e-8a9f-48567dcfcfcb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -916,6 +916,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -1008,6 +1009,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -1120,6 +1122,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -1310,5 +1313,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

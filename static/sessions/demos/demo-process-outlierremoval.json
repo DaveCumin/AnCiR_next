@@ -113,7 +113,7 @@
       "name": "x",
       "data": 569,
       "type": "number",
-      "tableProcessGUId": "9d29fa33-be04-486f-b658-17597ddd4072",
+      "tableProcessGUId": "5174e4df-08e4-444a-96bd-cf56f884ca3c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -155,6 +155,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -325,6 +326,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -515,5 +517,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

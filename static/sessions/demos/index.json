@@ -119,7 +119,7 @@
       "id": "workflow-stats-regression",
       "name": "Workflow — linear regression + residual diagnostics",
       "family": "Workflows",
-      "description": "Predict Y from X, then check the model is honest. Fit Trend Curves fits the line (slope, intercept, R²), the fitted line is overlaid on the data, and the residuals are plotted against X and screened for normality. The lesson: R² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when R² looks high.",
+      "description": "Predict Y from X, then check the model is honest. Fit trend fits the line (slope, intercept, R²), the fitted line is overlaid on the data, and the residuals are plotted against X and screened for normality. The lesson: R² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when R² looks high.",
       "summary": "Predict Y from X, then check the model is honest.",
       "group": "General statistics",
       "url": "sessions/demos/demo-workflow-stats-regression.json",
@@ -129,7 +129,7 @@
         "NormalityTest",
         "scatterplot"
       ],
-      "keywords": "workflow — linear regression + residual diagnostics predict y from x, then check the model is honest. fit trend curves fits the line (slope, intercept, r²), the fitted line is overlaid on the data, and the residuals are plotted against x and screened for normality. the lesson: r² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when r² looks high. workflows trendfit normalitytest scatterplot"
+      "keywords": "workflow — linear regression + residual diagnostics predict y from x, then check the model is honest. fit trend fits the line (slope, intercept, r²), the fitted line is overlaid on the data, and the residuals are plotted against x and screened for normality. the lesson: r² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when r² looks high. workflows trendfit normalitytest scatterplot"
     },
     {
       "id": "workflow-stats-logistic",
@@ -192,7 +192,7 @@
       "id": "workflow-stats-anscombe",
       "name": "Workflow — Anscombe’s quartet (always plot your data)",
       "family": "Workflows",
-      "description": "Four small datasets constructed by Anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, R² = 0.67). Describe Data confirms the summaries are identical and Fit Trend Curves confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. The lesson is the oldest one in data analysis: look at the picture before you trust the number. The same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis.",
+      "description": "Four small datasets constructed by Anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, R² = 0.67). Describe Data confirms the summaries are identical and Fit trend confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. The lesson is the oldest one in data analysis: look at the picture before you trust the number. The same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis.",
       "summary": "Four datasets, identical statistics, four different stories.",
       "group": "Reading the output",
       "url": "sessions/demos/demo-workflow-stats-anscombe.json",
@@ -202,7 +202,7 @@
         "TrendFit",
         "scatterplot"
       ],
-      "keywords": "workflow — anscombe’s quartet (always plot your data) four small datasets constructed by anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, r² = 0.67). describe data confirms the summaries are identical and fit trend curves confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. the lesson is the oldest one in data analysis: look at the picture before you trust the number. the same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis. workflows describedata trendfit scatterplot"
+      "keywords": "workflow — anscombe’s quartet (always plot your data) four small datasets constructed by anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, r² = 0.67). describe data confirms the summaries are identical and fit trend confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. the lesson is the oldest one in data analysis: look at the picture before you trust the number. the same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis. workflows describedata trendfit scatterplot"
     },
     {
       "id": "workflow-stats-simpson",
@@ -947,16 +947,16 @@
     },
     {
       "id": "tp-fitfunction",
-      "name": "Fit Function",
+      "name": "Fit waveform model",
       "family": "Fitting",
-      "description": "Fit an arbitrary user-supplied function to the column.",
-      "summary": "Fit an arbitrary user-supplied function to the column.",
+      "description": "Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. Use it to compare different waveform shapes on the same series without rewiring; the fit quality (R2, RMSE, permutation p) and the chosen model’s parameters are wireable metric output ports, like the dedicated Cosinor, Rectangular Wave and Double Logistic nodes.",
+      "summary": "Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic.",
       "url": "sessions/demos/demo-tp-fitfunction.json",
       "kind": "tableProcess",
       "showcases": [
         "FitFunction"
       ],
-      "keywords": "fit function fit an arbitrary user-supplied function to the column. fitting fitfunction"
+      "keywords": "fit waveform model fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. use it to compare different waveform shapes on the same series without rewiring; the fit quality (r2, rmse, permutation p) and the chosen model’s parameters are wireable metric output ports, like the dedicated cosinor, rectangular wave and double logistic nodes. fitting fitfunction"
     },
     {
       "id": "tp-rectangularwave",
@@ -973,16 +973,16 @@
     },
     {
       "id": "tp-trendfit",
-      "name": "Fit Trend Curves",
+      "name": "Fit trend",
       "family": "Fitting",
-      "description": "Fit and store a trend (linear, polynomial, exponential, logarithmic) over the column.",
-      "summary": "Fit and store a trend (linear, polynomial, exponential, logarithmic) over the column.",
+      "description": "Fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its R2, RMSE and coefficients. Use it to describe or remove baseline drift, growth or decay before rhythm analysis.",
+      "summary": "Fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its R2, RMSE and coefficients.",
       "url": "sessions/demos/demo-tp-trendfit.json",
       "kind": "tableProcess",
       "showcases": [
         "TrendFit"
       ],
-      "keywords": "fit trend curves fit and store a trend (linear, polynomial, exponential, logarithmic) over the column. fitting trendfit"
+      "keywords": "fit trend fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its r2, rmse and coefficients. use it to describe or remove baseline drift, growth or decay before rhythm analysis. fitting trendfit"
     },
     {
       "id": "tp-fdrcorrection",

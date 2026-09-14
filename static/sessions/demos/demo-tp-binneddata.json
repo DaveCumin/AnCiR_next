@@ -167,7 +167,7 @@
       "name": "x",
       "data": 597,
       "type": "number",
-      "tableProcessGUId": "899e8cfe-ecad-48fa-8f6a-35bd5115c1b4",
+      "tableProcessGUId": "715672fc-2379-49d8-8931-551027376239",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -190,7 +190,7 @@
       "data": 599,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "dba835d7-130c-44a3-9157-1e83dcd8ff06",
+      "tableProcessGUId": "8f3902e7-77d8-46dc-b3d8-bcd505094ac0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -201,7 +201,7 @@
       "name": "binnedy_598_45",
       "data": 600,
       "type": "number",
-      "tableProcessGUId": "dba835d7-130c-44a3-9157-1e83dcd8ff06",
+      "tableProcessGUId": "8f3902e7-77d8-46dc-b3d8-bcd505094ac0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -221,6 +221,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -392,6 +393,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -593,5 +595,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

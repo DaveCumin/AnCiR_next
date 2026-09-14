@@ -12,14 +12,21 @@
  * `datum.parentPlot.data` each track their reactive source, so the displayed
  * label follows a rewire or a column rename with no extra bookkeeping.
  *
- * @param {{ label?: string, y?: { name?: string }, parentPlot?: { data?: any[] } }} datum
+ * @param {{ label?: string, y?: { name?: string }, column?: { name?: string },
+ *   parentPlot?: { data?: any[] } }} datum
+ * @param {{ fallback?: string }} [options] `fallback` replaces the positional
+ *   "Data N" tier only — a wired name or user label still wins. PairsPlot and
+ *   CorrelationHeatmap call their series "Variable N".
  * @returns {string}
  */
-export function seriesDisplayLabel(datum) {
-	if (!datum) return '';
+export function seriesDisplayLabel(datum, options = {}) {
+	if (!datum) return options.fallback ?? '';
 	if (datum.label) return datum.label;
-	const yName = datum.y?.name;
+	// Most plots wire a `y` column per series; PairsPlot / CorrelationHeatmap /
+	// CircularPhase-style series bind a single `column` instead.
+	const yName = datum.y?.name ?? datum.column?.name;
 	if (yName) return yName;
+	if (options.fallback != null) return options.fallback;
 	const siblings = datum.parentPlot?.data;
 	const idx = Array.isArray(siblings) ? siblings.indexOf(datum) : -1;
 	return 'Data ' + (idx >= 0 ? idx + 1 : (siblings?.length ?? 0) + 1);

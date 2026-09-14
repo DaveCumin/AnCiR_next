@@ -2,9 +2,13 @@
 	import { core } from '$lib/core/core.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
+	import { quantileType7 } from '$lib/utils/sampleStats.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 	const displayName = 'Column Function';
 	const defaults = new Map([
 		['func', { val: 'add' }],
+		// percentile to report when func === 'percentile', 0-100 (50 = median)
+		['percentile', { val: 50 }],
 		['xsIN', { val: [] }],
 		['yIN', { val: [] }], //for collected mode: receives input columns from CollectColumns
 		['out', { result: { val: -1 } }], //needed to set up the output columns
@@ -59,6 +63,22 @@
 				for (let i = 1; i < nCols; i++) {
 					result = result.map((x, j) => Math.max(x, columns[i][j]));
 				}
+				break;
+			}
+			case 'percentile': {
+				// Row-wise type-7 percentile across the selected columns (the shared
+				// house quantile — R/numpy default — so 50 is exactly the row median).
+				// Missing values (null/NaN/blank strings, isInvalidValue) are dropped
+				// per row; a row with no valid value is NaN.
+				const pctRaw = Number(argsIN.percentile ?? 50);
+				const q = (Number.isFinite(pctRaw) ? Math.min(100, Math.max(0, pctRaw)) : 50) / 100;
+				result = new Array(n).fill(NaN).map((_, j) => {
+					const vals = columns
+						.map((col) => col[j])
+						.filter((v) => !isInvalidValue(v))
+						.map(Number);
+					return quantileType7(vals, q);
+				});
 				break;
 			}
 			case 'sd': {
@@ -118,8 +138,13 @@
 		{ value: 'average', label: 'Mean' },
 		{ value: 'min', label: 'Min' },
 		{ value: 'max', label: 'Max' },
-		{ value: 'sd', label: 'Std Dev' }
+		{ value: 'sd', label: 'Std Dev' },
+		{ value: 'percentile', label: 'Percentile' }
 	];
+
+	// Sessions saved before the percentile function existed have no percentile
+	// arg; `=== undefined` (not ??/||) so a saved 0 (the minimum) survives.
+	if (p.args.percentile === undefined) p.args.percentile = 50;
 
 	let separator = $derived(p.args.func === 'add' ? '+' : ',');
 
@@ -135,6 +160,7 @@
 		// was component-local a view switch recomputed anyway and hid it; now that
 		// the memo survives a remount, an omission here means an edit is ignored.
 		out += '|' + p.args.func;
+		out += '|' + (p.args.percentile ?? '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -222,6 +248,11 @@
 			{/each}
 		</select>
 	</ControlInput>
+	{#if p.args.func === 'percentile'}
+		<ControlInput label="Percentile (0–100; 50 = median)">
+			<NumberWithUnits bind:value={p.args.percentile} min="0" max="100" step="5" />
+		</ControlInput>
+	{/if}
 	{#if !hideInputs}
 		<ControlInput label="Columns"></ControlInput>
 		<ColumnSelector

@@ -2,7 +2,12 @@
 	// @ts-nocheck
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
-	import { fitCurveModel, evaluateCurveModelAtPoints } from '$lib/utils/fitFunction.js';
+	import {
+		fitCurveModel,
+		evaluateCurveModelAtPoints,
+		fitPermutationPValue
+	} from '$lib/utils/fitFunction.js';
+	import { wrapToPeriod } from '$lib/utils/cosinorAddons.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/fitFunction.worker-task.js';
@@ -25,7 +30,30 @@
 		['yIN', { val: [] }],
 		['model', { val: 'cosinor' }],
 		['outputX', { val: -1 }],
-		['out', { fitx: { val: -1 } }],
+		// `fitx` + per-y `fity_<id>` are the fitted-curve outputs. `r2`/`rmse`/
+		// `perm_pvalue` plus the per-model parameter keys are scalar metrics
+		// exposed as PORTS (one value per y input, in yIN order) — see
+		// metricOutputs.js. The keys seeded here match the default model
+		// ('cosinor'); the component reconciles them when the model changes,
+		// the TrendFit coef_* pattern.
+		[
+			'out',
+			{
+				fitx: { val: -1 },
+				r2: { val: -1 },
+				rmse: { val: -1 },
+				// The permutation test's empirical p — the ONLY p this node emits as a
+				// port (the cosinor fixed-period fit also computes an analytic F-test p,
+				// but that exists in one of five model modes only; the dedicated Cosinor
+				// node owns the analytic `pvalue` port). Named like RectangularWave /
+				// DoubleLogistic so the same column name means the same test everywhere.
+				perm_pvalue: { val: -1 },
+				period: { val: -1 },
+				mesor: { val: -1 },
+				amplitude: { val: -1 },
+				acrophase: { val: -1 }
+			}
+		],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
 		['collectedType', { val: 'fit' }],
@@ -70,7 +98,23 @@
 				{ name: 'fitx', kind: 'column', cardinality: 'one' },
 				{ name: 'fity_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'fity_' },
 				{ name: 'resid_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'resid_' },
-				{ name: 'permstats_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'permstats_' }
+				{ name: 'permstats_*', kind: 'column', cardinality: 'many', dynamicPrefix: 'permstats_' },
+				// Scalar-metric ports (one value per y input, in yIN order). The
+				// union across models; only the current model's set exists at any
+				// time (getFitMetricKeys), reconciled like TrendFit's coef_* keys.
+				{ name: 'r2', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'rmse', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'perm_pvalue', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'period', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'mesor', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'amplitude', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'acrophase', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'duty_cycle', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'kappa', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'onset', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'offset', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'k1', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'k2', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};
@@ -107,6 +151,141 @@
 			};
 		}
 		return {};
+	}
+
+	/**
+	 * Every metric out-key this node can own, across all three models. The
+	 * per-model set is getFitMetricKeys; this union drives the reconcile
+	 * predicate so a model switch DELETES keys that no longer mean anything
+	 * (metricOutputs.js: silently rebinding a consumer to a different quantity
+	 * would be worse than orphaning it).
+	 */
+	export const FIT_METRIC_KEYS_ALL = [
+		'r2',
+		'rmse',
+		'perm_pvalue',
+		'period',
+		'mesor',
+		'amplitude',
+		'acrophase',
+		'duty_cycle',
+		'kappa',
+		'onset',
+		'offset',
+		'k1',
+		'k2'
+	];
+
+	/**
+	 * The metric out-keys for the current model: the shared fit-quality core
+	 * (r2/rmse/perm_pvalue) plus the model's own parameters. Key names follow
+	 * the dedicated fit nodes where the quantity is identical (r2/rmse/
+	 * perm_pvalue as on RectangularWave/DoubleLogistic; period/mesor/amplitude/
+	 * acrophase as on Cosinor) so a downstream consumer finds the same shape
+	 * either way.
+	 */
+	export function getFitMetricKeys(args) {
+		const shared = ['r2', 'rmse', 'perm_pvalue'];
+		const model = args?.model ?? 'cosinor';
+		if (model === 'cosinor') return [...shared, 'period', 'mesor', 'amplitude', 'acrophase'];
+		if (model === 'rectangular')
+			return [...shared, 'period', 'mesor', 'amplitude', 'acrophase', 'duty_cycle', 'kappa'];
+		if (model === 'doublelogistic')
+			return [
+				...shared,
+				'period',
+				'mesor',
+				'amplitude',
+				'onset',
+				'offset',
+				'k1',
+				'k2',
+				'duty_cycle'
+			];
+		return shared;
+	}
+
+	/**
+	 * One metric value for `key` off a fit result. Mirrors the expressions the
+	 * panel prints (and Cosinor's port conventions for the cosinor model:
+	 * acrophase is the PEAK time wrapped into [0, period)). `perm_pvalue` is
+	 * strictly the permutation test's empirical p — gated on the null
+	 * distribution actually existing, so the cosinor fixed-period fit's analytic
+	 * pF (which also lands on fitResult.pValue) can never leak onto this port.
+	 */
+	export function fitMetricValue(key, model, fr) {
+		if (!fr) return NaN;
+		if (key === 'r2') return fr.rSquared ?? NaN;
+		if (key === 'rmse') return fr.rmse ?? NaN;
+		if (key === 'perm_pvalue') {
+			const ran = Array.isArray(fr.permutedStats) && fr.permutedStats.length > 0;
+			return ran && Number.isFinite(fr.pValue) ? fr.pValue : NaN;
+		}
+		if (model === 'cosinor') {
+			if (fr.mode === 'fixed') {
+				const period = fr.parameters?.period ?? NaN;
+				if (key === 'period') return period;
+				if (key === 'mesor') return fr.fixedStats?.M ?? fr.parameters?.M ?? NaN;
+				if (key === 'amplitude') return fr.fixedStats?.harmonics?.[0]?.amplitude ?? NaN;
+				if (key === 'acrophase') {
+					// fixedStats reports the CLASSICAL acrophase (wrap(-t_peak));
+					// convert to peak time, the convention Cosinor's port uses.
+					const classicalAcro = fr.fixedStats?.harmonics?.[0]?.acrophase_hrs;
+					return classicalAcro != null && Number.isFinite(period)
+						? wrapToPeriod(-classicalAcro, period)
+						: NaN;
+				}
+			} else {
+				const c = fr.parameters?.cosines?.[0];
+				const period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
+				if (key === 'period') return period;
+				if (key === 'mesor') return fr.parameters?.O ?? NaN;
+				if (key === 'amplitude') return c?.amplitude ?? NaN;
+				if (key === 'acrophase')
+					// A·cos(ωt + φ) peaks at t = −φ/ω, wrapped into [0, period).
+					return c?.frequency ? wrapToPeriod(-c.phase / c.frequency, period) : NaN;
+			}
+			return NaN;
+		}
+		if (model === 'rectangular') {
+			if (key === 'period') return fr.period ?? NaN;
+			if (key === 'acrophase') return fr.acrophase ?? NaN;
+			if (key === 'mesor') return fr.parameters?.M ?? NaN;
+			if (key === 'amplitude') return fr.parameters?.A ?? NaN;
+			if (key === 'duty_cycle') return fr.parameters?.dutyCycle ?? NaN;
+			if (key === 'kappa') return fr.parameters?.kappa ?? NaN;
+			return NaN;
+		}
+		if (model === 'doublelogistic') {
+			if (key === 'period') return fr.parameters?.T ?? NaN;
+			if (key === 'mesor') return fr.parameters?.M ?? NaN;
+			if (key === 'amplitude') return fr.parameters?.A ?? NaN;
+			if (key === 'onset') return fr.onsetPhase ?? fr.parameters?.t1 ?? NaN;
+			if (key === 'offset') return fr.offsetPhase ?? fr.parameters?.t2 ?? NaN;
+			if (key === 'k1') return fr.parameters?.k1 ?? NaN;
+			if (key === 'k2') return fr.parameters?.k2 ?? NaN;
+			if (key === 'duty_cycle') return fr.dutyCycle ?? NaN;
+			return NaN;
+		}
+		return NaN;
+	}
+
+	/**
+	 * Scalar-metric ports: one value per y input, in yIN order. Reuses the exact
+	 * expressions behind the panel readout so the wired values match what users
+	 * previously stored by hand with StoreValueButton. Shared by the module func
+	 * and the component's getFit, like TrendFit's writeTrendMetricOutputs.
+	 */
+	export function writeFitMetricOutputs(argsIN, result, processHash) {
+		const yINs = normalizeYInputs(argsIN.yIN);
+		const model = argsIN.model ?? 'cosinor';
+		for (const key of getFitMetricKeys(argsIN)) {
+			writeOutputColumn(
+				argsIN.out?.[key],
+				yINs.map((yId) => fitMetricValue(key, model, result.y_results?.[yId]?.fitResult)),
+				{ processHash }
+			);
+		}
 	}
 
 	function getXDataForColumn(col) {
@@ -212,6 +391,23 @@
 			const yResult = await buildYResult(tt, yy, argsIN, outputXData);
 			if (!yResult) continue;
 
+			// Permutation test on the HEADLESS path too (MCP engine, doProcess),
+			// so the perm_pvalue port and permstats_* hold real values without the
+			// component ever mounting. The component's getFit runs its own async,
+			// progress-reporting version instead of this one.
+			if (argsIN.permuteTest && yResult.fitResult) {
+				const permResult = fitPermutationPValue(
+					tt,
+					yy,
+					argsIN.model ?? 'cosinor',
+					getModelOptions(argsIN),
+					argsIN
+				);
+				yResult.fitResult.pValue = permResult.pValue;
+				yResult.fitResult.significant = permResult.significant;
+				yResult.fitResult.permutedStats = permResult.permutedStats;
+			}
+
 			result.y_results[yId] = yResult;
 			if (result.t.length === 0) result.t = tt;
 			if (yResult.fitResult?.fitted?.length > 0) anyValid = true;
@@ -257,7 +453,15 @@
 					);
 					if (resid) writeOutputColumn(residOUT, resid, { processHash });
 				}
+
+				writeOutputColumn(
+					argsIN.out?.['permstats_' + yId],
+					Array.isArray(yResult?.fitResult?.permutedStats) ? yResult.fitResult.permutedStats : [],
+					{ processHash }
+				);
 			}
+
+			writeFitMetricOutputs(argsIN, result, processHash);
 		}
 
 		// Not gated on anyValid: when a fit fails, the point count is the explanation.
@@ -328,6 +532,7 @@
 
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
+	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import {
@@ -417,6 +622,15 @@
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
 	// and rebuilds this component) does not recompute unchanged inputs.
 	const memo = nodeMemo(p, 'tableprocess');
+
+	// The metric keys this node owns: the shared core plus the current model's
+	// parameters (getFitMetricKeys). The predicate spans the UNION across models
+	// so a model switch deletes the keys that no longer apply.
+	function syncFitMetricColumns() {
+		return syncMetricOutColumns(p, getFitMetricKeys(p.args), (k) =>
+			FIT_METRIC_KEYS_ALL.includes(k)
+		);
+	}
 
 	function onYSelectionChange() {
 		const fitColsChanged = syncYColumns();
@@ -612,6 +826,8 @@
 					{ processHash }
 				);
 			}
+
+			writeFitMetricOutputs(p.args, result, processHash);
 		}
 
 		if (!p.args.permuteTest) {
@@ -679,6 +895,20 @@
 		);
 	});
 
+	// Reconcile the metric columns when the model changes (each model owns a
+	// different parameter set). Deferred out of the effect: syncMetricOutColumns
+	// constructs Columns, which must not happen under an active reaction
+	// (derived_inert). Mirrors TrendFit's coef_* reconcile.
+	$effect(() => {
+		void p.args.model;
+		if (!mounted) return;
+		queueMicrotask(() =>
+			untrack(() => {
+				if (syncFitMetricColumns()) getFit();
+			})
+		);
+	});
+
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
@@ -696,12 +926,14 @@
 			p.parent.columnRefs = [xCol.id, ...p.parent.columnRefs];
 			p.args.out.fitx = xCol.id;
 		}
-		// Evaluate all three separately — `||` would short-circuit and skip creating the resid /
-		// perm columns whenever an earlier init already reported a change.
+		// Evaluate all separately — `||` would short-circuit and skip creating the resid /
+		// perm / metric columns whenever an earlier init already reported a change.
 		const fitInit = initYColumns();
 		const permInit = initPermColumns();
 		const residInit = initResidColumns();
-		const needsCompute = fitInit || permInit || residInit;
+		// Backfill metric out-columns for sessions saved before the ports existed.
+		const metricInit = syncFitMetricColumns();
+		const needsCompute = fitInit || permInit || residInit || metricInit;
 		if (needsCompute) {
 			getFit();
 		} else if (!restoredFromMemo) {

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "795": [
+    "803": [
       0,
       1,
       2,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 795,
+      "id": 803,
       "name": "result_78",
-      "data": 795,
+      "data": 803,
       "type": "number",
-      "tableProcessGUId": "f020737c-fa11-47e1-92f4-c4bcb9ce3018",
+      "tableProcessGUId": "41c7e472-d7c0-44bf-a5ea-ba729c4f949a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -79,6 +79,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -102,7 +103,7 @@
       },
       "plot": {
         "columnRefs": [
-          795
+          803
         ],
         "showCol": [
           true
@@ -126,7 +127,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 795
+          "result": 803
         }
       },
       "refTPId": null
@@ -242,5 +243,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

@@ -11,12 +11,22 @@
 
 <div class="notifications-container">
 	{#each notifications.list as notif (notif.id)}
-		<div
-			class="toast toast--{notif.type}"
-			transition:fly={{ y: 20, duration: 260 }}
-		>
+		<div class="toast toast--{notif.type}" transition:fly={{ y: 20, duration: 260 }}>
 			<span class="toast-icon">{icons[notif.type] ?? icons.info}</span>
 			<span class="toast-message">{notif.message}</span>
+			{#if notif.action && (notif.action.enabled?.() ?? true)}
+				<!-- `enabled` is read during render, so any $state it consults (e.g. the
+				     undo stack) re-evaluates reactively and a stale action hides itself. -->
+				<button
+					class="toast-action"
+					onclick={() => {
+						notif.action.run();
+						removeNotification(notif.id);
+					}}
+				>
+					{notif.action.label}
+				</button>
+			{/if}
 			<button class="toast-close" onclick={() => removeNotification(notif.id)}>✕</button>
 		</div>
 	{/each}
@@ -80,6 +90,27 @@
 		flex: 1;
 		white-space: pre-wrap;
 		word-break: break-word;
+	}
+
+	.toast-action {
+		background: none;
+		border: none;
+		padding: 0;
+		margin: 0 0.2rem;
+		cursor: pointer;
+		font-size: var(--font-body);
+		font-weight: 600;
+		flex-shrink: 0;
+		line-height: 1.5;
+		/* Inherits the toast type's text colour so it reads as part of the toast;
+		   the underline is what marks it as actionable. */
+		color: inherit;
+		text-decoration: underline;
+		border-radius: 0;
+	}
+
+	.toast-action:hover {
+		opacity: 0.75;
 	}
 
 	.toast-close {

@@ -122,7 +122,7 @@
       "name": "binary_52",
       "data": 624,
       "type": "number",
-      "tableProcessGUId": "7e1bd635-805c-417d-b8c7-732723796c47",
+      "tableProcessGUId": "7ee7e46f-fda5-4f6a-b3b9-5e7713358a41",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -142,6 +142,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -309,5 +310,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "727": [
+    "735": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "728": [
+    "736": [
       1,
       21.831051418620845,
       7.38905609893065,
@@ -104,32 +104,32 @@
       8.729138363720132,
       2.9545115270921065
     ],
-    "729": [
+    "737": [
       "Normality Test input 1",
       "Normality Test input 2"
     ],
-    "730": [
+    "738": [
       0.8884940768269717,
       0.8065802789114069
     ],
-    "731": [
+    "739": [
       0.00020472387230596745,
       0.000001248621988914067
     ],
-    "732": [
+    "740": [
       50,
       50
     ],
-    "733": [
+    "741": [
       0,
       0
     ]
   },
   "data": [
     {
-      "id": 727,
+      "id": 735,
       "name": "Normality Test input 1",
-      "data": 727,
+      "data": 735,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -138,9 +138,9 @@
       "processes": []
     },
     {
-      "id": 728,
+      "id": 736,
       "name": "Normality Test input 2",
-      "data": 728,
+      "data": 736,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -149,55 +149,55 @@
       "processes": []
     },
     {
-      "id": 729,
+      "id": 737,
       "name": "variable_67",
-      "data": 729,
+      "data": 737,
       "type": "category",
-      "tableProcessGUId": "7ae59256-f6eb-4eb1-a2e1-c71939d798dc",
+      "tableProcessGUId": "5f2c4055-d098-4eec-aa08-dccab3ba4b50",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 730,
+      "id": 738,
       "name": "statistic_67",
-      "data": 730,
+      "data": 738,
       "type": "number",
-      "tableProcessGUId": "7ae59256-f6eb-4eb1-a2e1-c71939d798dc",
+      "tableProcessGUId": "5f2c4055-d098-4eec-aa08-dccab3ba4b50",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 731,
+      "id": 739,
       "name": "pvalue_67",
-      "data": 731,
+      "data": 739,
       "type": "number",
-      "tableProcessGUId": "7ae59256-f6eb-4eb1-a2e1-c71939d798dc",
+      "tableProcessGUId": "5f2c4055-d098-4eec-aa08-dccab3ba4b50",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 732,
+      "id": 740,
       "name": "n_67",
-      "data": 732,
+      "data": 740,
       "type": "number",
-      "tableProcessGUId": "7ae59256-f6eb-4eb1-a2e1-c71939d798dc",
+      "tableProcessGUId": "5f2c4055-d098-4eec-aa08-dccab3ba4b50",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 733,
+      "id": 741,
       "name": "normal_67",
-      "data": 733,
+      "data": 741,
       "type": "number",
-      "tableProcessGUId": "7ae59256-f6eb-4eb1-a2e1-c71939d798dc",
+      "tableProcessGUId": "5f2c4055-d098-4eec-aa08-dccab3ba4b50",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -217,6 +217,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -240,13 +241,13 @@
       },
       "plot": {
         "columnRefs": [
-          727,
-          728,
-          729,
-          730,
-          731,
-          732,
-          733
+          735,
+          736,
+          737,
+          738,
+          739,
+          740,
+          741
         ],
         "showCol": [
           true,
@@ -271,17 +272,17 @@
       "displayName": "Normality Test",
       "args": {
         "yIN": [
-          727,
-          728
+          735,
+          736
         ],
         "method": "shapiro",
         "alpha": 0.05,
         "out": {
-          "variable": 729,
-          "statistic": 730,
-          "pvalue": 731,
-          "n": 732,
-          "normal": 733
+          "variable": 737,
+          "statistic": 738,
+          "pvalue": 739,
+          "n": 740,
+          "normal": 741
         },
         "valid": false
       },
@@ -327,11 +328,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_727": {
+    "data_735": {
       "x": 60,
       "y": 314
     },
-    "data_728": {
+    "data_736": {
       "x": 60,
       "y": 814
     },
@@ -406,5 +407,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

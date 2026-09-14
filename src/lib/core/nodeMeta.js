@@ -214,7 +214,7 @@ const meta = new Map([
 			family: 'Fitting',
 			nodeIcon: 'fit-function',
 			description:
-				'Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. Use it to compare different waveform shapes on the same series without rewiring; for one model with its own metric output ports, use the dedicated Cosinor, Rectangular Wave or Double Logistic node.'
+				'Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. Use it to compare different waveform shapes on the same series without rewiring; the fit quality (R2, RMSE, permutation p) and the chosen model’s parameters are wireable metric output ports, like the dedicated Cosinor, Rectangular Wave and Double Logistic nodes.'
 		}
 	],
 	[

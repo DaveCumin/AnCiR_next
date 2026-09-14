@@ -4,7 +4,7 @@
 // Elementary descriptive stats, so bespoke + tested (D13 policy): mean/variance/sd/median
 // reuse sampleStats; skewness and kurtosis are added here. Every field is NaN for an empty /
 // all-invalid column rather than a throw. Uses pairwise-complete filtering (drop null/NaN).
-import { mean, sampleVariance, sampleStd, median } from './sampleStats.js';
+import { mean, sampleVariance, sampleStd, median, quantileType7 } from './sampleStats.js';
 import { isInvalidValue } from './stats.js';
 
 /**
@@ -53,17 +53,10 @@ export function describeStats(values) {
 	out.max = max;
 	out.range = max - min;
 
-	// Quartiles (linear interpolation, type-7 / numpy default).
-	const sorted = [...clean].sort((a, b) => a - b);
-	const quantile = (q) => {
-		if (n === 1) return sorted[0];
-		const pos = q * (n - 1);
-		const lo = Math.floor(pos);
-		const frac = pos - lo;
-		return sorted[lo] + (sorted[Math.min(lo + 1, n - 1)] - sorted[lo]) * frac;
-	};
-	out.q1 = quantile(0.25);
-	out.q3 = quantile(0.75);
+	// Quartiles (linear interpolation, type-7 / numpy default) — the shared
+	// house quantile, so every node interpolates the same way.
+	out.q1 = quantileType7(clean, 0.25);
+	out.q3 = quantileType7(clean, 0.75);
 	out.iqr = out.q3 - out.q1;
 
 	// Central moments for skewness / kurtosis.

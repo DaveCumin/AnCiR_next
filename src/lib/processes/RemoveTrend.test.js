@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 // Mock the whole Column.svelte to avoid Svelte reactive state initialisation.
 vi.mock('$lib/core/Column.svelte', () => ({ getColumnById: vi.fn(() => undefined) }));
 
-import { removetrend } from './RemoveTrend.svelte';
+import { removetrend, removetrendIssues, definition } from './RemoveTrend.svelte';
 // RemoveTrend used to carry a VERBATIM COPY of the trend maths in its module
 // script. It now calls the shared fitTrendSync. The `fitTrend` describes below
 // are kept, retargeted at the shared implementation, because they document the
@@ -219,13 +219,17 @@ describe('removetrend shares trendfit.js', () => {
 		// starts at 0, so shift it for the logarithmic branch's log(x).
 		const y = [2.1, 3.4, 4.9, 6.1, 8.2, 9.9, 12.4, 15.1];
 		const idx = y.map((_, i) => i);
-		const expected = fitTrend(idx, y, model, 2).fitted.map((f, i) => y[i] - f);
 		const out = removetrend(y, { xColId: -1, model, polyDegree: 2 });
-		// logarithmic at x=0 is -Infinity; compare only the finite entries so the
-		// test still asserts equality where the model is defined.
+		if (model === 'logarithmic') {
+			// The index axis contains x = 0, which is outside ln's domain →
+			// REFUSE-and-pass-through (fitDomain): the output is the input
+			// unchanged, not residuals with holes where ln(0) = -Infinity was.
+			expect(out).toEqual(y);
+			return;
+		}
+		const expected = fitTrend(idx, y, model, 2).fitted.map((f, i) => y[i] - f);
 		for (let i = 0; i < y.length; i++) {
-			if (Number.isFinite(expected[i])) expect(out[i]).toBe(expected[i]);
-			else expect(Number.isFinite(out[i])).toBe(false);
+			expect(out[i]).toBe(expected[i]);
 		}
 	});
 
@@ -250,5 +254,95 @@ describe('removetrend shares trendfit.js', () => {
 		const fromNum = removetrend(y, { xColId: -1, model: 'polynomial', polyDegree: 2 });
 		const fromStr = removetrend(y.map(String), { xColId: -1, model: 'polynomial', polyDegree: 2 });
 		fromStr.forEach((v, i) => expect(v).toBeCloseTo(fromNum[i], 12));
+	});
+});
+
+// ─── domain refusal: REFUSE-and-pass-through (fitDomain house rule) ──────────
+// Before this, a logarithmic model over an index axis (x starts at 0) wrote an
+// ALL-NaN output column with no explanation. Now the fit is refused, the data
+// passes through UNCHANGED, and the reason surfaces through removetrendIssues
+// → definition.getWarnings → the node's ⚠ badge.
+
+describe('removetrend — domain refusal passes data through', () => {
+	it('logarithmic model with index x (contains 0) returns the input unchanged', () => {
+		const y = [2.5, 3.1, 4.0, 4.6, 5.2];
+		const out = removetrend(y, { xColId: -1, model: 'logarithmic', polyDegree: 2 });
+		expect(out).toEqual(y);
+		expect(out).not.toBe(y); // still a copy, never the caller's array
+		expect(out.some((v) => Number.isNaN(v))).toBe(false);
+	});
+
+	it('exponential model with a non-positive y returns the input unchanged (was all-NaN)', () => {
+		const y = [1, 2, 0, 4, 5];
+		const out = removetrend(y, { xColId: -1, model: 'exponential', polyDegree: 2 });
+		expect(out).toEqual(y);
+	});
+
+	it('underdetermined polynomial (n <= degree) returns the input unchanged', () => {
+		const y = [1, 2, 3];
+		const out = removetrend(y, { xColId: -1, model: 'polynomial', polyDegree: 3 });
+		expect(out).toEqual(y);
+	});
+
+	it('exponential over all-positive y still detrends (no false refusal)', () => {
+		const y = Array.from({ length: 8 }, (_, i) => 2 * Math.exp(0.3 * i));
+		const out = removetrend(y, { xColId: -1, model: 'exponential', polyDegree: 2 });
+		out.forEach((v) => expect(Math.abs(v)).toBeLessThan(1e-6));
+	});
+});
+
+describe('removetrendIssues', () => {
+	it('states the requirement, what the data contains, and a remedy', () => {
+		const issues = removetrendIssues([2, 3, 4, 5], {
+			xColId: -1,
+			model: 'logarithmic',
+			polyDegree: 2
+		});
+		expect(issues).toHaveLength(1);
+		expect(issues[0].tier).toBe('refuse');
+		expect(issues[0].message).toContain('greater than 0'); // requirement
+		expect(issues[0].message).toContain('the row index'); // what the data is
+		expect(issues[0].message).toContain('Shift'); // remedy
+	});
+
+	it('is silent for a clean linear fit', () => {
+		expect(removetrendIssues([1, 2, 3, 4], { xColId: -1, model: 'linear', polyDegree: 2 })).toEqual(
+			[]
+		);
+	});
+
+	it('is silent below 2 valid points (the too-little-data path, not a domain issue)', () => {
+		expect(removetrendIssues([5], { xColId: -1, model: 'logarithmic', polyDegree: 2 })).toEqual([]);
+	});
+});
+
+// The free-process warnings channel: TableProcessNode / CompactNode derive the
+// node badge from definition.getWarnings(p) at render time (processWarnings.js).
+describe('definition.getWarnings — node warnings channel', () => {
+	const freeNode = (data, args) => ({
+		parentCol: null,
+		inputCol: data ? { getData: () => data } : null,
+		args
+	});
+
+	it('returns the domain message for a free node violating the log domain', () => {
+		const w = definition.getWarnings(
+			freeNode([2.5, 3.1, 4.0, 4.6], { xColId: -1, model: 'logarithmic', polyDegree: 2 })
+		);
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('logarithmic');
+		expect(w[0]).toContain('greater than 0');
+	});
+
+	it('returns [] when nothing is wired', () => {
+		expect(
+			definition.getWarnings(freeNode(null, { xColId: -1, model: 'logarithmic', polyDegree: 2 }))
+		).toEqual([]);
+	});
+
+	it('returns [] for a clean linear fit', () => {
+		expect(
+			definition.getWarnings(freeNode([1, 2, 3, 4], { xColId: -1, model: 'linear', polyDegree: 2 }))
+		).toEqual([]);
 	});
 });

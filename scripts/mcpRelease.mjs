@@ -41,6 +41,17 @@ if (process.env.CI) {
 	process.exit(0);
 }
 
+// The Worker deploy runs wrangler with cwd 'mcp', where wrangler cannot find the repo-root
+// .env on its own — without this it silently falls back to the shared OAuth session, which
+// keeps flipping to the wrong Cloudflare account. Load the root .env (CLOUDFLARE_API_TOKEN)
+// into process.env so the child wrangler inherits it. Absent .env (fresh clone) is fine:
+// wrangler then uses whatever auth the environment provides, as before.
+try {
+	process.loadEnvFile('.env');
+} catch {
+	// no .env — proceed with ambient auth
+}
+
 console.log(`▶ ${task.label}…`);
 try {
 	execSync(task.cmd, { cwd: 'mcp', stdio: 'inherit' });

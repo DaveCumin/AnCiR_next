@@ -21,6 +21,7 @@
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
+	import { processNodeWarnings } from '$lib/core/processWarnings.js';
 	import { normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
@@ -45,8 +46,14 @@
 
 	const tp = $derived(node.tpObj);
 	// Warnings published by the TP's editor (e.g. GroupComparison's normality /
-	// variance cautions). Shown as a yellow triangle next to the label.
-	const warnings = $derived(Array.isArray(tp?.warnings) ? tp.warnings : []);
+	// variance cautions), PLUS — for column-process nodes, which render through
+	// this component too — warnings derived at render time from the process
+	// definition's getWarnings hook (e.g. RemoveTrend's fit-domain refusals).
+	// Shown as a yellow triangle next to the label.
+	const warnings = $derived([
+		...(Array.isArray(tp?.warnings) ? tp.warnings : []),
+		...processNodeWarnings(node.processObj)
+	]);
 	const hasWarning = $derived(warnings.length > 0);
 	const warningText = $derived(warnings.join('\n'));
 	// Note flag: keeps the left-side note button visible whenever a note exists.

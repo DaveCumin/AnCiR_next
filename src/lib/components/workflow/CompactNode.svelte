@@ -5,6 +5,7 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { processNodeWarnings } from '$lib/core/processWarnings.js';
 	import {
 		COMPACT_W,
 		compactNodeHeight,
@@ -19,9 +20,14 @@
 	let outputs = $derived(node.ports?.outputs ?? []);
 	let height = $derived(compactNodeHeight(inputs.length, outputs.length));
 
-	// Warnings published by a TP's editor (e.g. GroupComparison normality caution).
-	// Shown as a yellow border on the collapsed square; details in the tooltip.
-	let warnings = $derived(Array.isArray(node.tpObj?.warnings) ? node.tpObj.warnings : []);
+	// Warnings published by a TP's editor (e.g. GroupComparison normality caution),
+	// plus render-derived column-process warnings (processWarnings.js — e.g.
+	// RemoveTrend's fit-domain refusals). Shown as a yellow border on the
+	// collapsed square; details in the tooltip.
+	let warnings = $derived([
+		...(Array.isArray(node.tpObj?.warnings) ? node.tpObj.warnings : []),
+		...processNodeWarnings(node.processObj)
+	]);
 	let hasWarning = $derived(warnings.length > 0);
 
 	// Icon name by kind, falling back to a neutral glyph.

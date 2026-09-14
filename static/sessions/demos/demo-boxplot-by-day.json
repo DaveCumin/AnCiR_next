@@ -378,6 +378,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -450,7 +451,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Box Plot 1",
+            "label": "",
             "boxPlot": {
               "colour": null,
               "fillColour": "#234154",
@@ -620,5 +621,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

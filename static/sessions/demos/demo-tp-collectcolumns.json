@@ -237,7 +237,7 @@
       "name": "col_614_49",
       "data": 616,
       "type": "number",
-      "tableProcessGUId": "c92d6267-6c26-4483-bd18-bdf6fdc70df9",
+      "tableProcessGUId": "7857c835-1ae6-44c5-b62f-f0797d0233cc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "col_615_49",
       "data": 617,
       "type": "number",
-      "tableProcessGUId": "c92d6267-6c26-4483-bd18-bdf6fdc70df9",
+      "tableProcessGUId": "7857c835-1ae6-44c5-b62f-f0797d0233cc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -268,6 +268,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -447,5 +448,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

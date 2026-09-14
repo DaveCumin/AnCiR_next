@@ -9,7 +9,7 @@
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
-	import Editable from '$lib/components/inputs/Editable.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
@@ -22,12 +22,7 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
-	import {
-		colormapRGB,
-		normaliseTo01,
-		COLORMAP_LABELS,
-		DEFAULT_COLORMAP
-	} from './colormaps.js';
+	import { colormapRGB, normaliseTo01, COLORMAP_LABELS, DEFAULT_COLORMAP } from './colormaps.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
@@ -291,8 +286,8 @@
 
 		static fromJSON(json, parent) {
 			const actClass = new ActogramDataclass(parent, {
-			// `?? json.time` / `?? json.values`: this re-map runs BEFORE the constructor, so
-			// without it the constructor's port-name fallback would never see them.
+				// `?? json.time` / `?? json.values`: this re-map runs BEFORE the constructor, so
+				// without it the constructor's port-name fallback would never see them.
 				x: json.x ?? json.time,
 				y: json.y ?? json.values,
 				draw: json.draw,
@@ -763,7 +758,6 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-
 		<div class="div-line"></div>
 
 		<div class="control-component">
@@ -794,7 +788,6 @@
 					<NumberWithUnits bind:value={theData.spaceBetween} />
 				</ControlInput>
 			</div>
-
 		</div>
 
 		<div class="div-line"></div>
@@ -883,11 +876,7 @@
 
 				{#if theData.rowLabels === 'date'}
 					<ControlInput label="Date format:">
-						<input
-							type="text"
-							bind:value={theData.dateFormat}
-							placeholder={DEFAULT_DATE_FORMAT}
-						/>
+						<input type="text" bind:value={theData.dateFormat} placeholder={DEFAULT_DATE_FORMAT} />
 					</ControlInput>
 				{/if}
 			</div>
@@ -931,24 +920,11 @@
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
-					<div class="control-component-title">
-						<div class="control-component-title-colour">
+					<SeriesBlockHeader inner={theData} {datum} index={i}>
+						{#snippet swatch()}
 							<ColourPicker bind:value={datum.colour} />
-							<p><Editable bind:value={datum.label} placeholder={datum.displayLabel} /></p>
-						</div>
-						<div class="control-component-title-icons">
-							<button
-								class="icon"
-								onclick={() => theData.removeData(i)}
-								{@attach attachTooltip('Remove this data series')}
-							>
-								<Icon
-									name="trash"
-									width={16}
-									height={16}
-									className="control-component-title-icon"
-								/>
-							</button>
+						{/snippet}
+						{#snippet icons()}
 							<button
 								class="icon"
 								onclick={(e) => {
@@ -965,8 +941,8 @@
 									<Icon name="eye" width={16} height={16} className="visible" />
 								{/if}
 							</button>
-						</div>
-					</div>
+						{/snippet}
+					</SeriesBlockHeader>
 
 					<div class="control-data-container">
 						<div class="control-data">

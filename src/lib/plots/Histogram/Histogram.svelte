@@ -5,6 +5,7 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import Hist from '$lib/components/plotbits/Hist.svelte';
+	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import Line from '$lib/components/plotbits/Line.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -44,7 +45,8 @@
 			} else {
 				this.column = new ColumnClass({ refId: -1 });
 			}
-			this.label = dataIN?.label ?? 'Histogram ' + (parent.data.length + 1);
+			// Blank by default; `displayLabel` falls back to the wired column's name.
+			this.label = dataIN?.label ?? '';
 			this.binMode = dataIN?.binMode === 'cuts' ? 'cuts' : 'uniform';
 			this.binSize = dataIN?.binSize ?? 1;
 			this.binStart = dataIN?.binStart ?? null;
@@ -130,9 +132,13 @@
 
 		density = $derived.by(() => (this.showDensity ? this.kdeCurve() : { x: [], y: [] }));
 
+		get displayLabel() {
+			return seriesDisplayLabel(this);
+		}
+
 		getLegendItem() {
 			return {
-				label: this.label,
+				label: this.displayLabel,
 				elements: [
 					{
 						type: 'boxplot',
@@ -394,7 +400,7 @@
 
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import Editable from '$lib/components/inputs/Editable.svelte';
+	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import { onMount, tick } from 'svelte';
@@ -429,14 +435,9 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
-
 		<div class="div-line"></div>
 
-		<Legend
-			legendData={theData.legend}
-			figureStyle={theData.parentBox?.style}
-			which="controls"
-		/>
+		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -534,12 +535,7 @@
 					in:slide={{ duration: 500, axis: 'y' }}
 					out:slide={{ duration: 500, axis: 'y' }}
 				>
-					<div class="control-component-title">
-						<p><Editable bind:value={datum.label} /></p>
-						<button class="icon" onclick={() => theData.removeData(i)}>
-							<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
-						</button>
-					</div>
+					<SeriesBlockHeader inner={theData} {datum} index={i} />
 
 					<div class="data-wrapper">
 						<div class="y-select">

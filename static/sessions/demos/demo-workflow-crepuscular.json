@@ -1063,7 +1063,7 @@
       "name": "R_34",
       "data": 452,
       "type": "number",
-      "tableProcessGUId": "c152dcc0-9265-4ce0-8700-14e7edbd69ec",
+      "tableProcessGUId": "7f242522-892e-4661-9a31-7a8d1013d0fd",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1074,7 +1074,7 @@
       "name": "z_34",
       "data": 453,
       "type": "number",
-      "tableProcessGUId": "c152dcc0-9265-4ce0-8700-14e7edbd69ec",
+      "tableProcessGUId": "7f242522-892e-4661-9a31-7a8d1013d0fd",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1085,7 +1085,7 @@
       "name": "pvalue_34",
       "data": 454,
       "type": "number",
-      "tableProcessGUId": "c152dcc0-9265-4ce0-8700-14e7edbd69ec",
+      "tableProcessGUId": "7f242522-892e-4661-9a31-7a8d1013d0fd",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1105,6 +1105,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -1197,6 +1198,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -1309,6 +1311,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -1500,5 +1503,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

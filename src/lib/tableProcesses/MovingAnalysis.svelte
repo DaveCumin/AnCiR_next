@@ -7,10 +7,14 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
-	import { min as arrayMin, minMax as arrayMinMax } from '$lib/utils/stats.js';
+	import { min as arrayMin, minMax as arrayMinMax, isInvalidValue } from '$lib/utils/stats.js';
 	// Pure compute (getStatKeys + the windowed loop) lives in utils/ so it can run
 	// in the compute worker; getStatKeys is re-exported for the component + tests.
-	import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
+	import {
+		getStatKeys,
+		computeMovingWindows,
+		windowSkipMessages
+	} from '$lib/utils/movinganalysis.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/movinganalysis.worker-task.js';
@@ -24,8 +28,11 @@
 		['stepSize', { val: 12 }], // hours
 		// 'start' | 'center' | 'end'
 		['binLabel', { val: 'center' }],
-		// 'periodogram' | 'cosinor' | 'fft' | 'correlogram' | 'rectfit' | 'doublelogistic' | 'trend'
+		// 'periodogram' | 'cosinor' | 'fft' | 'correlogram' | 'rectfit' | 'doublelogistic' | 'trend' | 'summary'
 		['analysis', { val: 'periodogram' }],
+		// summary-statistics params (analysis === 'summary'): the percentile to
+		// report per window, 0-100 (50 = median). Mean/SD have no params.
+		['summaryPercentile', { val: 50 }],
 		// nonparametric circadian rhythm analysis params (analysis === 'npcra')
 		['npcraEpochHours', { val: 1 }],
 		['npcraPeriod', { val: 24 }],
@@ -95,7 +102,7 @@
 		const stepSize = Number(argsIN.stepSize);
 		const xOUT = argsIN.out?.movex;
 
-		const empty = { bins: [], y_results: {}, statKeys: [], originTime_ms: null };
+		const empty = { bins: [], y_results: {}, statKeys: [], originTime_ms: null, warnings: [] };
 
 		if (
 			xIN == null ||
@@ -116,10 +123,10 @@
 		// when the data isn't sorted.
 		const originTime_ms = isTimeX ? (arrayMin(tCol.getData()) ?? null) : null;
 
-		// hoursSinceStart now preserves null for filtered rows; isNaN(null) is false,
-		// so we have to guard against null explicitly or Math.min/max coerce it to 0.
-		const isInvalid = (v) => v == null || isNaN(v);
-		const validX = tAll.filter((v) => !isInvalid(v));
+		// House missing-value rule (isInvalidValue): null, NaN AND blank strings are
+		// missing — hoursSinceStart preserves null for filtered rows, and a blank
+		// cell must not coerce to 0 (v72.28).
+		const validX = tAll.filter((v) => !isInvalidValue(v));
 		if (validX.length < 3) return [empty, false];
 		const { min: xMin, max: xMax } = arrayMinMax(validX);
 		if (xMin == null || xMax == null) return [empty, false];
@@ -166,6 +173,23 @@
 			anyValid = true;
 		}
 
+		// Skipped windows leave blank cells in the output columns with nothing on
+		// screen to say why (the silent case that prompted this: a logarithmic
+		// trend window containing x <= 0 was dropped without a word). Turn each
+		// per-y `__skips` tally into sentences for the node's warnings badge.
+		const warnings = [];
+		for (let i = 0; i < yEntries.length; i++) {
+			// Name the series only when there are several — a single-input node's
+			// warning reads cleaner without "for <column>" in every sentence.
+			const label =
+				yEntries.length > 1 ? (getColumnById(yEntries[i].yId)?.name ?? `y${i + 1}`) : '';
+			warnings.push(
+				...windowSkipMessages(perY[i]?.__skips, label, {
+					polyDegree: argsIN.trendPolyDegree
+				})
+			);
+		}
+
 		// Apply pre-processes to each stat array before writing
 		for (const pp of argsIN.preProcesses ?? []) {
 			if (!pp.processName) continue;
@@ -201,7 +225,7 @@
 			}
 		}
 
-		return [{ bins, y_results, statKeys, originTime_ms }, anyValid];
+		return [{ bins, y_results, statKeys, originTime_ms, warnings }, anyValid];
 	}
 </script>
 
@@ -227,6 +251,9 @@
 	// option existed.
 	if (p.args.trendModel === undefined) p.args.trendModel = 'linear';
 	if (p.args.trendPolyDegree === undefined) p.args.trendPolyDegree = 2;
+	// Initialise summary-statistics args for sessions saved before the summary
+	// analysis option existed. `=== undefined` (not falsy) so a saved 0 survives.
+	if (p.args.summaryPercentile === undefined) p.args.summaryPercentile = 50;
 
 	let result = $state();
 	let mounted = $state(false);
@@ -318,7 +345,9 @@
 			'|' +
 			p.args.npcraPeriod +
 			'|' +
-			p.args.pgAlpha;
+			p.args.pgAlpha +
+			'|' +
+			(p.args.summaryPercentile ?? '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -364,6 +393,10 @@
 			const [data, valid] = await movinganalysis(p.args);
 			if (token !== _calcToken) return; // re-check after await (analysis is async now)
 			result = data;
+			// Surfaces on the canvas node (CompactNode / TableProcessNode read
+			// tp.warnings) — derived from THIS compute, never persisted, so it
+			// cannot go stale.
+			p.warnings = data?.warnings ?? [];
 			p.args.valid = valid;
 			calculating = false;
 			memo.hash = getHash;
@@ -486,7 +519,12 @@
 		// hash the compute effect will not fire to replace it — so the panel would stay
 		// stat-less until an input changed.
 		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
-		if (restoredFromMemo) result = memo.payload;
+		if (restoredFromMemo) {
+			result = memo.payload;
+			// The memo carries the warnings the compute produced; the badge must
+			// come back with the panel (the compute effect won't fire to re-set it).
+			p.warnings = memo.payload?.warnings ?? [];
+		}
 		if (!p.args.out) p.args.out = { movex: -1 };
 		// Initial sync creates movex + per-(Y,stat) columns if they don't exist
 		const needsCompute = syncStatColumns();
@@ -586,6 +624,7 @@
 			<AttributeSelect
 				bind:value={p.args.analysis}
 				options={[
+					'summary',
 					'periodogram',
 					'cosinor',
 					'npcra',
@@ -596,6 +635,7 @@
 					'trend'
 				]}
 				optionsDisplay={[
+					'Summary (mean/SD/percentile)',
 					'Periodogram',
 					'Cosinor',
 					'Nonparametric (IS/IV/RA)',
@@ -609,7 +649,13 @@
 		</div>
 	</div>
 
-	{#if p.args.analysis === 'periodogram'}
+	{#if p.args.analysis === 'summary'}
+		<div class="control-input-horizontal">
+			<ControlInput label="Percentile (0–100; 50 = median)">
+				<NumberWithUnits bind:value={p.args.summaryPercentile} min="0" max="100" step="5" />
+			</ControlInput>
+		</div>
+	{:else if p.args.analysis === 'periodogram'}
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>Method</p>

@@ -237,6 +237,12 @@
 		// violin-only display needs the box geometry (whiskers, box, median,
 		// outlier rings) to hide while the jittered points can stay.
 		showBox = true,
+		// Controls-mode only: the host plot colours per CATEGORY (single series +
+		// categorical x — see categoryColourLabels in plots/seriesColour.js), which
+		// overrides the per-series Stroke/Fill. Showing those pickers live would be a
+		// lie, so they are replaced with a pointer to the "Box colours" section that
+		// actually owns the colours.
+		categoryColoursActive = false,
 		title = 'Box Plot'
 	} = $props();
 
@@ -343,16 +349,20 @@
 			</button>
 		</div>
 		{#if boxPlotData.draw}
-			<div class="control-input-horizontal">
-				<div class="control-input" style="max-width: 1.5rem;">
-					<p>Stroke</p>
-					<ColourPicker bind:value={boxPlotData.colour} />
+			{#if categoryColoursActive}
+				<p class="category-colour-note">Per-category colours are in use — see Box colours below.</p>
+			{:else}
+				<div class="control-input-horizontal">
+					<div class="control-input" style="max-width: 1.5rem;">
+						<p>Stroke</p>
+						<ColourPicker bind:value={boxPlotData.colour} />
+					</div>
+					<div class="control-input" style="max-width: 1.5rem;">
+						<p>Fill</p>
+						<ColourPicker bind:value={boxPlotData.fillColour} />
+					</div>
 				</div>
-				<div class="control-input" style="max-width: 1.5rem;">
-					<p>Fill</p>
-					<ColourPicker bind:value={boxPlotData.fillColour} />
-				</div>
-			</div>
+			{/if}
 			<div class="control-input-horizontal">
 				<ControlInput label="Stroke Width">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={boxPlotData.strokeWidth} />
@@ -468,79 +478,79 @@
 				{@const boxFill = categoryColour ?? boxPlotData.fillColour}
 
 				{#if showBox}
-				<!-- Lower whisker -->
-				<line
-					x1={xCenter}
-					y1={yscale(group.lowerWhisker)}
-					x2={xCenter}
-					y2={yscale(group.q1)}
-					stroke={boxColour}
-					stroke-width={boxPlotData.strokeWidth}
-					stroke-dasharray={boxPlotData.stroke}
-				/>
-				<line
-					x1={xCenter - whiskerHalfWidth}
-					y1={yscale(group.lowerWhisker)}
-					x2={xCenter + whiskerHalfWidth}
-					y2={yscale(group.lowerWhisker)}
-					stroke={boxColour}
-					stroke-width={boxPlotData.strokeWidth}
-				/>
+					<!-- Lower whisker -->
+					<line
+						x1={xCenter}
+						y1={yscale(group.lowerWhisker)}
+						x2={xCenter}
+						y2={yscale(group.q1)}
+						stroke={boxColour}
+						stroke-width={boxPlotData.strokeWidth}
+						stroke-dasharray={boxPlotData.stroke}
+					/>
+					<line
+						x1={xCenter - whiskerHalfWidth}
+						y1={yscale(group.lowerWhisker)}
+						x2={xCenter + whiskerHalfWidth}
+						y2={yscale(group.lowerWhisker)}
+						stroke={boxColour}
+						stroke-width={boxPlotData.strokeWidth}
+					/>
 
-				<!-- Box -->
-				<rect
-					x={xCenter - boxHalfWidth}
-					y={yscale(group.q3)}
-					width={boxHalfWidth * 2}
-					height={yscale(group.q1) - yscale(group.q3)}
-					fill={boxFill}
-					stroke={boxColour}
-					stroke-width={boxPlotData.strokeWidth}
-					stroke-dasharray={boxPlotData.stroke}
-				/>
+					<!-- Box -->
+					<rect
+						x={xCenter - boxHalfWidth}
+						y={yscale(group.q3)}
+						width={boxHalfWidth * 2}
+						height={yscale(group.q1) - yscale(group.q3)}
+						fill={boxFill}
+						stroke={boxColour}
+						stroke-width={boxPlotData.strokeWidth}
+						stroke-dasharray={boxPlotData.stroke}
+					/>
 
-				<!-- Median -->
-				<line
-					x1={xCenter - boxHalfWidth}
-					y1={yscale(group.q2)}
-					x2={xCenter + boxHalfWidth}
-					y2={yscale(group.q2)}
-					stroke={boxPlotData.medianColour}
-					stroke-width={boxPlotData.medianWidth}
-				/>
+					<!-- Median -->
+					<line
+						x1={xCenter - boxHalfWidth}
+						y1={yscale(group.q2)}
+						x2={xCenter + boxHalfWidth}
+						y2={yscale(group.q2)}
+						stroke={boxPlotData.medianColour}
+						stroke-width={boxPlotData.medianWidth}
+					/>
 
-				<!-- Upper whisker -->
-				<line
-					x1={xCenter}
-					y1={yscale(group.q3)}
-					x2={xCenter}
-					y2={yscale(group.upperWhisker)}
-					stroke={boxColour}
-					stroke-width={boxPlotData.strokeWidth}
-					stroke-dasharray={boxPlotData.stroke}
-				/>
-				<line
-					x1={xCenter - whiskerHalfWidth}
-					y1={yscale(group.upperWhisker)}
-					x2={xCenter + whiskerHalfWidth}
-					y2={yscale(group.upperWhisker)}
-					stroke={boxColour}
-					stroke-width={boxPlotData.strokeWidth}
-				/>
+					<!-- Upper whisker -->
+					<line
+						x1={xCenter}
+						y1={yscale(group.q3)}
+						x2={xCenter}
+						y2={yscale(group.upperWhisker)}
+						stroke={boxColour}
+						stroke-width={boxPlotData.strokeWidth}
+						stroke-dasharray={boxPlotData.stroke}
+					/>
+					<line
+						x1={xCenter - whiskerHalfWidth}
+						y1={yscale(group.upperWhisker)}
+						x2={xCenter + whiskerHalfWidth}
+						y2={yscale(group.upperWhisker)}
+						stroke={boxColour}
+						stroke-width={boxPlotData.strokeWidth}
+					/>
 
-				<!-- Outliers -->
-				{#if boxPlotData.showOutliers}
-					{#each group.outliers as outlier}
-						<circle
-							cx={xCenter}
-							cy={yscale(outlier)}
-							r={boxPlotData.outlierSize}
-							fill="none"
-							stroke={boxColour}
-							stroke-width={boxPlotData.strokeWidth}
-						/>
-					{/each}
-				{/if}
+					<!-- Outliers -->
+					{#if boxPlotData.showOutliers}
+						{#each group.outliers as outlier}
+							<circle
+								cx={xCenter}
+								cy={yscale(outlier)}
+								r={boxPlotData.outlierSize}
+								fill="none"
+								stroke={boxColour}
+								stroke-width={boxPlotData.strokeWidth}
+							/>
+						{/each}
+					{/if}
 				{/if}
 
 				<!-- Raw data points, horizontally jittered. Deterministic per point (see
@@ -574,6 +584,13 @@
 {/if}
 
 <style>
+	.category-colour-note {
+		margin: 0 0 var(--space-2);
+		font-size: var(--font-xs);
+		font-style: italic;
+		color: var(--color-text-muted);
+	}
+
 	.removed-values-list {
 		display: flex;
 		flex-direction: column;

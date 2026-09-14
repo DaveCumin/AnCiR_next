@@ -139,7 +139,7 @@
       "name": "pvalue_54",
       "data": 630,
       "type": "number",
-      "tableProcessGUId": "6aad2a23-29b2-4900-ad3f-c88d80bff1b6",
+      "tableProcessGUId": "0e6c07ad-84fa-439e-94cf-0438915daf0a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -150,7 +150,7 @@
       "name": "observed_54",
       "data": 631,
       "type": "number",
-      "tableProcessGUId": "f193c0de-02e9-4ab0-b3ee-8a63b90535b8",
+      "tableProcessGUId": "d04229a5-4f8b-4a9a-9d80-09acdf1847bc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -170,6 +170,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -351,5 +352,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

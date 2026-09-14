@@ -54,6 +54,7 @@ import { pAdjust } from '$lib/utils/pAdjust.js';
 import { fisherExact, conditionalOddsRatio, oddsRatioCI } from '$lib/utils/fisherExact.js';
 import { cwt } from '$lib/utils/cwt.js';
 import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
+import { isInvalidValue } from '$lib/utils/stats.js';
 import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
@@ -186,16 +187,21 @@ const PURE_UTIL_FNS = {
 function movingWindowsAdapter(t, y, opts) {
 	const windowSize = opts.windowSize ?? 168;
 	const step = opts.stepSize ?? 24;
-	const tt = t.map(Number);
-	const lo = Math.min(...tt);
-	const hi = Math.max(...tt);
+	// Preserve missing values (null / blank string) instead of Number()-coercing
+	// them to 0 — computeMovingWindows applies the house isInvalidValue filter,
+	// and the blank-cell fixture exists to pin exactly that (v72.28).
+	const coerce = (v) => (isInvalidValue(v) ? NaN : Number(v));
+	const tt = t.map(coerce);
+	const validT = tt.filter(Number.isFinite);
+	const lo = Math.min(...validT);
+	const hi = Math.max(...validT);
 	const starts = [];
 	for (let s = lo; s <= hi - windowSize + 1e-9; s += step) starts.push(s);
 
 	const statKeys = getStatKeys(opts);
 	const per = computeMovingWindows({
 		tAll: tt,
-		ys: [y.map(Number)],
+		ys: [y.map(coerce)],
 		starts,
 		windowSize,
 		statKeys,

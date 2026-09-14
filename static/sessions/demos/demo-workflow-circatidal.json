@@ -1818,7 +1818,7 @@
       "name": "stat_peak_period_29",
       "data": 358,
       "type": "number",
-      "tableProcessGUId": "fcfca9c2-7713-4cf3-aaa6-b4a2d89f6d67",
+      "tableProcessGUId": "dbba35cb-aa03-4b97-ba2f-e409788cf582",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1829,7 +1829,7 @@
       "name": "stat_peak_power_29",
       "data": 359,
       "type": "number",
-      "tableProcessGUId": "fcfca9c2-7713-4cf3-aaa6-b4a2d89f6d67",
+      "tableProcessGUId": "dbba35cb-aa03-4b97-ba2f-e409788cf582",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1840,7 +1840,7 @@
       "name": "rhythmicityy_353_29",
       "data": 360,
       "type": "number",
-      "tableProcessGUId": "fcfca9c2-7713-4cf3-aaa6-b4a2d89f6d67",
+      "tableProcessGUId": "dbba35cb-aa03-4b97-ba2f-e409788cf582",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1860,6 +1860,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -1952,6 +1953,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -2064,6 +2066,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -2254,5 +2257,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }

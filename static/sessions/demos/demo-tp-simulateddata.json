@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "796": [
+    "804": [
       "2024-01-01T00:00:00.000Z",
       "2024-01-01T01:00:00.000Z",
       "2024-01-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-01-02T22:00:00.000Z",
       "2024-01-02T23:00:00.000Z"
     ],
-    "797": [
+    "805": [
       100,
       100,
       100,
@@ -103,23 +103,23 @@
   },
   "data": [
     {
-      "id": 796,
+      "id": 804,
       "name": "time_79",
-      "data": 796,
+      "data": 804,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "2a5a241d-8aca-4796-8663-78ca1e744219",
+      "tableProcessGUId": "c5c38e18-ee70-4e28-a93f-3832f3e7299e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 797,
+      "id": 805,
       "name": "values_79",
-      "data": 797,
+      "data": 805,
       "type": "number",
-      "tableProcessGUId": "2a5a241d-8aca-4796-8663-78ca1e744219",
+      "tableProcessGUId": "c5c38e18-ee70-4e28-a93f-3832f3e7299e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -139,6 +139,7 @@
       "facet": false,
       "facetParent": null,
       "facetKey": null,
+      "facetRows": 0,
       "setRefs": {},
       "metricOut": {},
       "sourceNodeId": null,
@@ -162,8 +163,8 @@
       },
       "plot": {
         "columnRefs": [
-          796,
-          797
+          804,
+          805
         ],
         "showCol": [
           true,
@@ -196,8 +197,8 @@
         ],
         "samplingPeriod_hours": 1,
         "out": {
-          "time": 796,
-          "values": 797
+          "time": 804,
+          "values": 805
         }
       },
       "refTPId": null
@@ -313,5 +314,5 @@
     ],
     "showWorkflow": false
   },
-  "version": "β.72.16"
+  "version": "β.72.29"
 }
