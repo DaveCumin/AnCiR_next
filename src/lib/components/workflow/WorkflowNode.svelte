@@ -54,12 +54,16 @@
 	let outputPorts = $derived(node.ports?.outputs ?? []);
 	let portRows = $derived(Math.max(inputPorts.length, outputPorts.length));
 
-	// Plot nodes whose inputs carry series metadata (axis/series) render grouped
-	// under "Series N" headers with friendly x/y labels. plotNodeSlots() is the
-	// single source of truth for slot order on BOTH sides (inputs + outputs, so
-	// each passthrough output sits beside its own series) — WorkflowEditor's
-	// edge anchor uses the same helper so wires stay attached.
-	let isPlotGrouped = $derived(node.type === 'plot' && inputPorts.some((p) => p?.axis));
+	// Plot nodes whose inputs carry series metadata (axis/series) or overlay
+	// metadata (`overlay: { id, name }`, one group per reference line / band)
+	// render grouped under "Series N" / overlay-name headers with friendly
+	// labels. plotNodeSlots() is the single source of truth for slot order on
+	// BOTH sides (inputs + outputs, so each passthrough output sits beside its
+	// own series) — WorkflowEditor's edge anchor uses the same helper so wires
+	// stay attached.
+	let isPlotGrouped = $derived(
+		node.type === 'plot' && inputPorts.some((p) => p?.axis || p?.overlay)
+	);
 	let groupedSlots = $derived(
 		isPlotGrouped
 			? plotNodeSlots(inputPorts, outputPorts)

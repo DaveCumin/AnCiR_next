@@ -167,6 +167,11 @@
 				void s?.x?.refId;
 				void s?.y?.refId;
 			}
+			// Overlays (reference lines / bands) are replicated onto the children, so
+			// any change to one (form, wiring, typed values, style) must re-sync them.
+			for (const o of g.plot?.overlays ?? []) {
+				void JSON.stringify(typeof o?.toJSON === 'function' ? o.toJSON() : o);
+			}
 		}
 		// Also react to children being added/removed (membership changes).
 		void core.plots.length;
@@ -395,7 +400,7 @@
 					console.log($state.snapshot(appConsts));
 				}
 				// Create sample data quickly - FOR TESTING
-				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 's') {
+				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'x') {
 					refresh();
 				}
 

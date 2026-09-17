@@ -158,9 +158,56 @@ function registerTools(server) {
 			ok(requireSession().addColumnProcess(columnId, name, args ?? {}))
 	);
 
+	// Scatterplot overlays: reference lines and shaded bands, mirroring the GUI's
+	// Overlays tab. Channel values: a NUMBER is a typed value, a STRING is a column
+	// (by name or "id"), { column } is a column; lists of either for a line's `at`.
+	const overlayColumnRef = z.object({ column: z.union([z.number().int(), z.string()]) });
+	const overlayChannelValue = z.union([
+		z.number(),
+		z.string(),
+		overlayColumnRef,
+		z.array(z.union([z.number(), z.string(), overlayColumnRef]))
+	]);
+	const overlaysSchema = z
+		.array(
+			z.object({
+				kind: z.enum(['line', 'band']),
+				form: z
+					.string()
+					.optional()
+					.describe(
+						'line: vertical | horizontal (default vertical). band: ribbon | horizontal | vertical | repeating (default ribbon)'
+					),
+				name: z.string().optional(),
+				label: z.string().optional().describe('Legend entry when non-empty'),
+				enabled: z.boolean().optional(),
+				channels: z
+					.record(overlayChannelValue)
+					.optional()
+					.describe(
+						'Per form: line → { at }; band ribbon → { x, lower, upper }; band horizontal → { lower, upper }; band vertical → { start, end }; band repeating → none (use repeatEveryHours/nightDurationHours/startTimeHours/useDataMin). A number is a TYPED value; a string / { column } is a column WIRE (name or id). Only `at` takes several columns.'
+					),
+				colour: z.string().optional().describe('Line colour (#RRGGBB)'),
+				strokeWidth: z.number().optional(),
+				stroke: z.string().optional().describe("Line dash, e.g. '5, 5' (default) or 'none'"),
+				fill: z.string().optional().describe('Band fill with alpha (#RRGGBBAA)'),
+				edge: z.boolean().optional(),
+				edgeColour: z.string().optional(),
+				edgeWidth: z.number().optional(),
+				repeatEveryHours: z.number().optional(),
+				nightDurationHours: z.number().optional(),
+				startTimeHours: z.number().optional(),
+				useDataMin: z.boolean().optional()
+			})
+		)
+		.optional()
+		.describe(
+			'Scatterplot only: reference lines and shaded bands, e.g. [{ kind:"line", form:"vertical", channels:{ at:"crossing" }, label:"alert" }, { kind:"band", form:"horizontal", channels:{ lower: 1.5, upper: 3 } }]. See list_capabilities → plots[].overlays for the channel table.'
+		);
+
 	server.tool(
 		'add_plot',
-		'Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; tableplot → array of column ids).',
+		'Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; tableplot → array of column ids). A scatterplot may also carry `overlays` (reference lines / bands).',
 		{
 			type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
 			inputs: z
@@ -168,9 +215,10 @@ function registerTools(server) {
 					z.record(z.union([z.number().int(), z.string()])),
 					z.array(z.union([z.number().int(), z.string()]))
 				])
-				.describe('Map of input field → column id or NAME, or (tableplot) an array of ids/names')
+				.describe('Map of input field → column id or NAME, or (tableplot) an array of ids/names'),
+			overlays: overlaysSchema
 		},
-		async ({ type, inputs }) => ok(requireSession().addPlot(type, inputs))
+		async ({ type, inputs, overlays }) => ok(requireSession().addPlot(type, inputs, overlays))
 	);
 
 	server.tool(
@@ -184,16 +232,19 @@ function registerTools(server) {
 					z.array(z.union([z.number().int(), z.string()]))
 				])
 				.describe('Map of input field → column id or NAME, or (tableplot) an array of ids/names'),
+			overlays: overlaysSchema,
 			path: z
 				.string()
 				.describe('Output path prefix or .png path; .png and .svg are written alongside'),
 			width: z.number().int().optional().describe('Plot width px (default 700)'),
 			height: z.number().int().optional().describe('Plot height px (default 420)')
 		},
-		async ({ type, inputs, path, width, height }) => {
+		async ({ type, inputs, overlays, path, width, height }) => {
 			await ensureRegistry();
 			const outBase = resolve(process.cwd(), path).replace(/\.png$/i, '');
-			return ok(await requireSession().renderPlotToFiles(type, inputs, { outBase, width, height }));
+			return ok(
+				await requireSession().renderPlotToFiles(type, inputs, { outBase, width, height, overlays })
+			);
 		}
 	);
 

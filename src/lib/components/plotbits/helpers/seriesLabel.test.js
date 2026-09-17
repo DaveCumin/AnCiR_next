@@ -69,4 +69,60 @@ describe('seriesDisplayLabel', () => {
 		y.name = 'after';
 		expect(seriesDisplayLabel(datum)).toBe('after');
 	});
+
+	// A real plot wrapper is a REFERENTIAL Column: `Column.name` returns the
+	// referenced column's name with a `*` marker, which belongs in column lists
+	// and not in a legend. Session load hid this by pre-filling `customName`;
+	// any setPlotInner rebuild (a wire, a series delete) then flipped the legend
+	// from "activity" to "activity*". The label must read the wired column.
+	describe('referential wrapper columns (the real Column shape)', () => {
+		const wrapper = (refColumn, extra = {}) => ({
+			refId: refColumn?.id ?? -1,
+			refColumn,
+			customName: null,
+			isReferencial() {
+				return this.refId != null;
+			},
+			get name() {
+				if (this.customName != null) return this.customName;
+				return (this.refColumn?.name ?? '') + '*';
+			},
+			...extra
+		});
+
+		it('shows the referenced column name without the reference marker', () => {
+			const y = wrapper({ id: 7, name: 'activity' });
+			expect(y.name).toBe('activity*'); // what Column.name gives
+			expect(seriesDisplayLabel({ label: '', y })).toBe('activity');
+		});
+
+		it('is the same before and after a rebuild that clears customName', () => {
+			const real = { id: 7, name: 'activity' };
+			const loaded = wrapper(real, { customName: 'activity' }); // session-load prewarm
+			const rebuilt = wrapper(real); // fresh `new Column({ refId })`
+			expect(seriesDisplayLabel({ label: '', y: loaded })).toBe('activity');
+			expect(seriesDisplayLabel({ label: '', y: rebuilt })).toBe('activity');
+		});
+
+		it('a name the user gave the wrapper still wins', () => {
+			const y = wrapper({ id: 7, name: 'activity' }, { customName: 'my series' });
+			expect(seriesDisplayLabel({ label: '', y })).toBe('my series');
+		});
+
+		it('follows a rename of the referenced column', () => {
+			const real = { id: 7, name: 'before' };
+			const y = wrapper(real);
+			expect(seriesDisplayLabel({ label: '', y })).toBe('before');
+			real.name = 'after';
+			expect(seriesDisplayLabel({ label: '', y })).toBe('after');
+		});
+
+		it('a blank or broken reference falls back to Data N rather than a bare "*"', () => {
+			const plot = { data: [] };
+			const a = { label: '', y: wrapper(undefined), parentPlot: plot };
+			plot.data.push(a);
+			expect(a.y.name).toBe('*');
+			expect(seriesDisplayLabel(a)).toBe('Data 1');
+		});
+	});
 });

@@ -21,6 +21,13 @@ import { getStatKeys as movingStatKeys } from '$lib/tableProcesses/MovingAnalysi
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
+import {
+	normalizeOverlaySpecs,
+	applyOverlays,
+	overlayColumnIds,
+	remapOverlayColumnIds,
+	describeOverlayForms
+} from './overlays.js';
 
 // Column-id fields per arg (numeric or array of numerics) used to enumerate the Y
 // inputs that drive dynamic output keys.
@@ -179,12 +186,16 @@ export function describeCapabilities() {
 	// Plots: created with add_plot (wired into the session, renders in the GUI) and
 	// optionally rasterised to PNG/SVG with render_plot (needs a browser runtime).
 	const plots = [];
+	const overlayForms = describeOverlayForms();
 	for (const [id, entry] of appConsts.plotMap ?? new Map()) {
 		plots.push({
 			id,
 			displayName: entry.displayName,
 			inputs: entry.defaultInputs ?? [],
-			status: 'available — add_plot (session); render_plot for PNG/SVG'
+			status: 'available — add_plot (session); render_plot for PNG/SVG',
+			// Reference lines / shaded bands (add_plot / render_plot `overlays`), asked of the
+			// class so a plot that gains them is advertised without editing a list.
+			...(typeof entry.data?.prototype?.addOverlay === 'function' ? { overlays: overlayForms } : {})
 		});
 	}
 	plots.sort((a, b) => a.id.localeCompare(b.id));
@@ -748,9 +759,12 @@ export class AncirSession {
 	 * @param {string} type   Plot type id (e.g. 'scatterplot', 'actogram').
 	 * @param {Object<string,number>|number[]} inputs  Map of input field → column id.
 	 *   For tableplot, pass an array of column ids (no named fields).
-	 * @returns {{plotId:number, type:string, name:string, inputs:object}}
+	 * @param {Array<object>} [overlays]  Reference lines / bands (scatterplot); see
+	 *   engine/overlays.js for the spec shape. Numbers are typed values, strings /
+	 *   `{ column }` are wires.
+	 * @returns {{plotId:number, type:string, name:string, inputs:object, overlays?:object[]}}
 	 */
-	addPlot(type, inputs = {}) {
+	addPlot(type, inputs = {}, overlays = undefined) {
 		const entry = appConsts.plotMap?.get(type);
 		if (!entry) {
 			const known = [...(appConsts.plotMap?.keys() ?? [])].join(', ');
@@ -763,6 +777,10 @@ export class AncirSession {
 			if (!getColumnById(id)) throw new Error(`No column with id ${id}. Call list_columns.`);
 			return id;
 		};
+
+		// Validate overlays BEFORE committing the plot, like the inputs below: a bad
+		// overlay must not leave a half-built plot in the session.
+		const overlayJsons = normalizeOverlaySpecs(overlays, assertCol);
 
 		const p = new Plot({ name: type, type });
 
@@ -795,6 +813,8 @@ export class AncirSession {
 			if (Object.keys(dataIn).length) p.plot.addData(dataIn);
 		}
 
+		const overlaySummary = applyOverlays(p.plot, overlayJsons, type);
+
 		core.plots.push(p);
 
 		// Pre-set customName on the plot's data-wrapper columns. Reading a wrapper's
@@ -811,7 +831,13 @@ export class AncirSession {
 			}
 		}
 
-		return { plotId: p.id, type, name: p.name, inputs };
+		return {
+			plotId: p.id,
+			type,
+			name: p.name,
+			inputs,
+			...(overlaySummary.length ? { overlays: overlaySummary } : {})
+		};
 	}
 
 	/**
@@ -822,18 +848,32 @@ export class AncirSession {
 	 * @param {string} type   Plot type id (see list_capabilities → plots).
 	 * @param {Object<string,number>|number[]} inputs  Input field → column id (or, for
 	 *   tableplot, an array of column ids).
-	 * @param {{outBase:string, width?:number, height?:number}} opts
+	 * @param {{outBase:string, width?:number, height?:number, overlays?:object[]}} opts
+	 *   `overlays` as for addPlot (scatterplot reference lines / bands).
 	 * @returns {Promise<{png:string, svg:string, bytes:number, width:number, height:number}>}
 	 */
-	async renderPlotToFiles(type, inputs, { outBase, width = 700, height = 420 }) {
+	async renderPlotToFiles(type, inputs, { outBase, width = 700, height = 420, overlays } = {}) {
 		const entry = appConsts.plotMap?.get(type);
 		if (!entry) {
 			const known = [...(appConsts.plotMap?.keys() ?? [])].join(', ');
 			throw new Error(`Unknown plot type "${type}". Available: ${known || '(registry not loaded)'}.`);
 		}
 
-		// Gather referenced columns and renumber to compact ids the render page rebuilds.
-		const idList = Array.isArray(inputs) ? inputs : Object.values(inputs);
+		const overlayJsons = normalizeOverlaySpecs(overlays, (ref) => {
+			const id = resolveColRef(ref);
+			if (!getColumnById(id)) throw new Error(`No column with id ${id}. Call list_columns.`);
+			return id;
+		});
+		if (overlayJsons.length && typeof entry.data?.prototype?.addOverlay !== 'function') {
+			throw new Error(`Plot "${type}" does not support overlays (only scatterplot does).`);
+		}
+
+		// Gather referenced columns (series inputs + overlay wires) and renumber to
+		// compact ids the render page rebuilds.
+		const idList = [
+			...(Array.isArray(inputs) ? inputs : Object.values(inputs)),
+			...overlayColumnIds(overlayJsons)
+		];
 		const uniq = [...new Set(idList)];
 		const idMap = new Map(uniq.map((id, i) => [id, i]));
 		const columns = uniq.map((id) => {
@@ -851,7 +891,16 @@ export class AncirSession {
 			? inputs.map((id) => idMap.get(id))
 			: Object.fromEntries(Object.entries(inputs).map(([k, id]) => [k, idMap.get(id)]));
 
-		const payload = { columns, plot: { type, inputs: newInputs }, width, height };
+		const payload = {
+			columns,
+			plot: {
+				type,
+				inputs: newInputs,
+				...(overlayJsons.length ? { overlays: remapOverlayColumnIds(overlayJsons, idMap) } : {})
+			},
+			width,
+			height
+		};
 		const { renderPlot } = await import('./renderPlot.js');
 		return await renderPlot(payload, { outBase });
 	}

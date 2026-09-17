@@ -44,7 +44,14 @@
 		plotSetChannel,
 		detachColumnSetFromPlot
 	} from '$lib/core/Plot.svelte';
-	import { plotNodeSlots } from '$lib/core/ProcessNode.svelte.js';
+	import { plotNodeSlots, resolveOverlayPort } from '$lib/core/ProcessNode.svelte.js';
+	import {
+		applyOverlayWire,
+		clearOverlayPort,
+		removeOverlayWire,
+		rerouteOverlayWire,
+		overlayPortSelection
+	} from './overlayWiring.js';
 	import { recordChainRef } from '$lib/core/chainRefs.js';
 	import WorkflowNode from './WorkflowNode.svelte';
 	import GroupNode from './GroupNode.svelte';
@@ -203,7 +210,7 @@
 		// renderer so the anchor lines up exactly with the rendered dot.
 		if (node?.type === 'plot') {
 			const ins = node.ports?.inputs ?? [];
-			if (ins.some((p) => p?.axis)) {
+			if (ins.some((p) => p?.axis || p?.overlay)) {
 				const { inputRows, outputRows } = plotNodeSlots(ins, node.ports?.outputs ?? []);
 				const row =
 					direction === 'out'
@@ -268,7 +275,7 @@
 		if (node?.type === 'plot') {
 			const ins = node?.ports?.inputs ?? [];
 			const outs = node?.ports?.outputs ?? [];
-			if (ins.some((p) => p?.axis)) {
+			if (ins.some((p) => p?.axis || p?.overlay)) {
 				const { totalSlots } = plotNodeSlots(ins, outs);
 				return HEADER_H + Math.max(1, totalSlots) * PORT_H;
 			}
@@ -1873,6 +1880,17 @@
 		return !!port?.dynamic;
 	}
 
+	// Is this an overlay port (`ov<id>_<key>`, see ProcessNode.svelte.js) of this
+	// plot node? Every wire path below (connect, disconnect, picker, edge delete,
+	// edge reroute) gates on this and then writes through overlayWiring.js, so the
+	// overlay channel is only ever touched via the OverlayClass API.
+	function isOverlayPortOn(target, portName) {
+		if (target?.type !== 'plot' || !target.plotObj || target.plotObj.type === 'tableplot') {
+			return false;
+		}
+		return resolveOverlayPort(target.plotObj.plot, portName) != null;
+	}
+
 	/** Mirrors groupPlotData in ProcessNode.svelte.js. Keep in sync. */
 	function groupPlotData(data) {
 		const groups = [];
@@ -2229,6 +2247,15 @@
 			return;
 		}
 
+		// Overlay channel port (`ov<id>_<key>`): a single channel takes the column
+		// as its one wire (replacing any previous wire and clearing typed values);
+		// a dynamic channel (a line's `at`) appends it. Recorded through the same
+		// setPlotInner op as series wiring, so it is one undo step.
+		if (isOverlayPortOn(target, toPort)) {
+			recordPlotEdit(target.plotObj, () => applyOverlayWire(target.plotObj.plot, toPort, colId));
+			return;
+		}
+
 		// Non-tableplot plots: per-set {xN, ysN} ports. Existing sets reuse the
 		// pair; the trailing empty pair (one past the last group) appends a new
 		// set when a wire drops on it.
@@ -2336,6 +2363,13 @@
 				const plot = target.plotObj.plot;
 				if (plot) plot.data = [];
 			});
+			return;
+		}
+
+		// Overlay channel port: clearing the port removes every wire on that
+		// channel (typed values, if any, are untouched: a wired channel has none).
+		if (isOverlayPortOn(target, portName)) {
+			recordPlotEdit(target.plotObj, () => clearOverlayPort(target.plotObj.plot, portName));
 			return;
 		}
 
@@ -2517,6 +2551,10 @@
 		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && portName === 'series') {
 			return { many: true, ids: (target.plotObj.plot.columnRefs ?? []).filter((n) => n >= 0) };
 		}
+		// Overlay channel port: its wired columns; many only for a dynamic channel.
+		if (isOverlayPortOn(target, portName)) {
+			return overlayPortSelection(target.plotObj.plot, portName);
+		}
 		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
 			const plot = target.plotObj.plot;
 			if (portName === 'data') {
@@ -2571,6 +2609,11 @@
 			const plot = target.plotObj.plot;
 			const field = (appConsts.plotMap.get(target.plotObj.type)?.defaultInputs ?? [])[0];
 			if (plot?.data) plot.data = plot.data.filter((dp) => dp?.[field]?.refId !== colId);
+			return;
+		}
+		// Overlay channel port (picker un-tick on a dynamic `at`): drop that one wire.
+		if (isOverlayPortOn(target, portName)) {
+			recordPlotEdit(target.plotObj, () => removeOverlayWire(target.plotObj.plot, portName, colId));
 			return;
 		}
 		// Per-series removal from a plot set's y* port: drop the data point carrying
@@ -2979,6 +3022,15 @@
 			return;
 		}
 
+		// Overlay channel port: swap the one wire that matches, keeping its position
+		// among a dynamic channel's other wires.
+		if (isOverlayPortOn(target, edge.toPort)) {
+			recordPlotEdit(target.plotObj, () =>
+				rerouteOverlayWire(target.plotObj.plot, edge.toPort, oldColId, newColId)
+			);
+			return;
+		}
+
 		if (target.type === 'plot' && target.plotObj && target.plotObj.type !== 'tableplot') {
 			const plot = target.plotObj.plot;
 			if (!plot?.data) return;
@@ -3244,6 +3296,14 @@
 				if (idx < 0) return;
 				plot.data = plot.data.filter((_, i) => i !== idx);
 			});
+			return;
+		}
+
+		// Overlay channel port: deleting the wire drops that one column.
+		if (isOverlayPortOn(target, edge.toPort)) {
+			recordPlotEdit(target.plotObj, () =>
+				removeOverlayWire(target.plotObj.plot, edge.toPort, colId)
+			);
 			return;
 		}
 

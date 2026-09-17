@@ -93,6 +93,7 @@ export async function buildNodeManifest() {
 			kind,
 			family: entry.family ?? 'Other',
 			description: entry.description ?? '',
+			keywords: entry.keywords ?? [],
 			hideFromPalette: !!entry.hideFromPalette,
 			inputs,
 			params,
@@ -113,6 +114,7 @@ export async function buildNodeManifest() {
 			kind: 'plot',
 			family: entry.family ?? 'Plots',
 			description: entry.description ?? '',
+			keywords: entry.keywords ?? [],
 			hideFromPalette: !!entry.hideFromPalette,
 			inputs: (def.defaultDataInputs ?? entry.defaultInputs ?? []).map((n) => ({
 				name: n,

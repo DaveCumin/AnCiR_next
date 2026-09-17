@@ -30,6 +30,7 @@ export async function loadTableProcesses() {
 				family: nodeMeta.family,
 				nodeIcon: nodeMeta.nodeIcon,
 				description: nodeMeta.description,
+				keywords: nodeMeta.keywords,
 				hideFromPalette: nodeMeta.hideFromPalette ?? false,
 				kind: 'tableProcess'
 			}

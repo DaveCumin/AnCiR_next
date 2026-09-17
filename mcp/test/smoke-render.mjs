@@ -1,7 +1,7 @@
 // End-to-end smoke test for render_plot: drive the MCP server over stdio, build a
 // session, and rasterise a plot to PNG/SVG via the real headless-browser pipeline.
 // Run from mcp/:  node test/smoke-render.mjs
-import { statSync } from 'node:fs';
+import { statSync, readFileSync } from 'node:fs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
@@ -40,7 +40,51 @@ const out = JSON.parse(
 );
 console.log('RENDER:', JSON.stringify(out));
 
+// Overlays (plan 2026-09-13 B6): a wired vertical line, a typed horizontal line
+// and a ribbon band on the same plot, rendered through the same pipeline. The
+// SVG must carry one `overlay-rule` <line> per resolved position and the ribbon
+// <path>, or the tool advertises something the picture does not show.
+await call('import_data', {
+	columns: [
+		{ name: 'crossing', values: [6, 30] },
+		{ name: 'lower', values: y.map((v) => v - 2) },
+		{ name: 'upper', values: y.map((v) => v + 2) }
+	]
+});
+const outOv = JSON.parse(
+	await call('render_plot', {
+		type: 'scatterplot',
+		inputs: { x: 0, y: 1 },
+		overlays: [
+			{ kind: 'line', form: 'vertical', label: 'alert', channels: { at: ['crossing'] } },
+			{ kind: 'line', form: 'horizontal', label: 'threshold', channels: { at: [12] } },
+			{
+				kind: 'band',
+				form: 'ribbon',
+				label: 'band',
+				channels: { x: 'time_h', lower: 'lower', upper: 'upper' }
+			}
+		],
+		path: '/tmp/ancir-render-smoke-overlays'
+	})
+);
+console.log('RENDER (overlays):', JSON.stringify(outOv));
+
 await client.close();
+
+const svgOv = readFileSync(outOv.svg, 'utf8');
+const rules = (svgOv.match(/class="[^"]*overlay-rule[^"]*"/g) ?? []).length;
+if (rules !== 3)
+	throw new Error(
+		`expected 3 overlay-rule lines (2 wired crossings + 1 typed threshold), got ${rules}`
+	);
+if (!/<g class="[^"]*overlay-bands-layer[^"]*"[\s\S]*?<path/.test(svgOv))
+	throw new Error('ribbon band path missing from the SVG');
+for (const label of ['alert', 'threshold', 'band']) {
+	if (!svgOv.includes(`>${label}<`))
+		throw new Error(`legend entry "${label}" missing from the SVG`);
+}
+console.log(`OVERLAYS OK: ${rules} rule lines, ribbon path and 3 legend entries present`);
 
 const png = statSync(out.png);
 const svg = statSync(out.svg);

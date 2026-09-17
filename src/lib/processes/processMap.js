@@ -27,6 +27,7 @@ export async function loadProcesses() {
 				family: nodeMeta.family,
 				nodeIcon: nodeMeta.nodeIcon,
 				description: nodeMeta.description,
+				keywords: nodeMeta.keywords,
 				kind: 'process'
 			}
 		];

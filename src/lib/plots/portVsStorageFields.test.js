@@ -19,6 +19,8 @@
 //   0 inputs  -> no series at all (tableplot, dataview)
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadPlots } from './plotMap.js';
+import { OverlayClass } from './Scatterplot/Overlay.svelte';
+import { overlayPortName, resolveOverlayPort } from '$lib/core/ProcessNode.svelte.js';
 
 /** The field a plot stores its i-th input under, given its public port names. */
 export function storageFieldFor(ports, i) {
@@ -96,5 +98,96 @@ describe('plot port names vs stored field names', () => {
 		expect(storageFieldFor(['time', 'values'], 1)).toBe('y');
 		expect(storageFieldFor(['x', 'y'], 0)).toBe('x');
 		expect(storageFieldFor(['column'], 0)).toBe('column');
+	});
+});
+
+// The second port family on a plot node: OVERLAY ports (`ov<id>_<key>`, one per channel of a
+// reference line / band). Their storage is NOT a top-level field named after the port: a wire
+// lives at `overlays[i].channels[<key>].columns[j].refId`, and the `<id>` in the port name is
+// the overlay's id, not an index. Same trap as above (a tool writing the port name as a
+// storage key would silently produce an unwired overlay), so the same guard.
+describe('overlay port names vs stored channel fields', () => {
+	// Every (kind, form) with channels, with a distinct refId per channel.
+	const forms = Object.entries(OverlayClass.FORMS).flatMap(([kind, list]) =>
+		list.map((form) => [kind, form, OverlayClass.channelsFor(kind, form)])
+	);
+
+	it('the channel table is what the port family is built from', () => {
+		expect(forms.length).toBeGreaterThanOrEqual(6);
+		for (const [, , specs] of forms) {
+			for (const s of specs) {
+				expect(s.display).toBe(`${s.key} (${s.axis})`);
+				expect(['x', 'y']).toContain(s.axis);
+			}
+		}
+		// Only a line's `at` accepts many wires.
+		const dynamic = forms.flatMap(([kind, form, specs]) =>
+			specs.filter((s) => s.dynamic).map((s) => `${kind}/${form}/${s.key}`)
+		);
+		expect(dynamic.sort()).toEqual(['line/horizontal/at', 'line/vertical/at']);
+	});
+
+	it('an overlay written with STORAGE fields reads back on the matching ov<id>_<key> port', () => {
+		const failures = [];
+		for (const [kind, form, specs] of forms) {
+			if (specs.length === 0) continue; // repeating: no channels, no ports
+			const channels = {};
+			specs.forEach((s, i) => {
+				channels[s.key] = { columns: [{ refId: 200 + i }], typed: [] };
+			});
+			const inner = { data: [], overlays: [] };
+			const ov = OverlayClass.fromJSON(inner, { kind, form, channels });
+			inner.overlays.push(ov);
+			specs.forEach((s, i) => {
+				const r = resolveOverlayPort(inner, overlayPortName(ov.id, s.key));
+				const got = r?.overlay?.wiredRefIds(s.key);
+				if (!r || got?.[0] !== 200 + i) {
+					failures.push(
+						`${kind}/${form}.${s.key}: port resolves ${JSON.stringify(got)} (expected ${200 + i})`
+					);
+				}
+			});
+		}
+		expect(failures, failures.join('\n')).toEqual([]);
+	});
+
+	it('writing the PORT name as a storage key wires nothing (the trap is closed, not silent)', () => {
+		const inner = { data: [], overlays: [] };
+		const ov = OverlayClass.fromJSON(inner, {
+			kind: 'line',
+			form: 'vertical',
+			[overlayPortName(0, 'at')]: { refId: 5 }, // wrong: a port name, not a channel
+			channels: { at_port: { columns: [{ refId: 6 }] } } // wrong: not a channel key of the form
+		});
+		inner.overlays.push(ov);
+		expect(ov.wiredRefIds('at')).toEqual([]);
+		expect(Object.keys(ov.channels)).toEqual(['at']);
+		expect(resolveOverlayPort(inner, overlayPortName(ov.id, 'at_port'))).toBeNull();
+	});
+
+	it('every registered plot whose inner carries overlays reads them back from `overlays`', () => {
+		// Exercised by the scatterplot once its class serialises `overlays`; a plot type that
+		// has no overlays array is out of scope, not a failure.
+		const failures = [];
+		let covered = 0;
+		for (const [key, entry] of plotMap) {
+			const probe = entry.data.fromJSON(null, { data: [] });
+			if (!Array.isArray(probe?.overlays)) continue;
+			covered++;
+			const inst = entry.data.fromJSON(null, {
+				data: [],
+				overlays: [
+					{ kind: 'line', form: 'vertical', channels: { at: { columns: [{ refId: 300 }] } } }
+				]
+			});
+			const ov = inst?.overlays?.[0];
+			if (!(ov instanceof OverlayClass) || ov.wiredRefIds('at')[0] !== 300) {
+				failures.push(
+					`${key}: overlays[0].channels.at did not come back wired (got ${JSON.stringify(ov?.wiredRefIds?.('at'))})`
+				);
+			}
+		}
+		expect(failures, failures.join('\n')).toEqual([]);
+		if (covered === 0) console.warn('portVsStorageFields: no plot class carries `overlays` yet');
 	});
 });

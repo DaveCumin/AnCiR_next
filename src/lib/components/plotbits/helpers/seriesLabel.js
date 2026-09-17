@@ -19,12 +19,38 @@
  *   CorrelationHeatmap call their series "Variable N".
  * @returns {string}
  */
+/**
+ * The name to show for a series' wired column wrapper.
+ *
+ * A plot series holds a thin REFERENTIAL wrapper (`{ refId }`) around the real
+ * column, and `Column.name` marks such a wrapper as a reference by appending
+ * `*` to the referenced column's name. That marker is right in column lists,
+ * wrong in a legend: the user wired "activity", not "activity*". Session load
+ * used to hide this by pre-filling every wrapper's `customName`, but a wrapper
+ * rebuilt by any `setPlotInner` op (a wire, a series delete, an overlay edit)
+ * starts with no customName and the legend flipped to "activity*" mid-session.
+ * So read the referenced column's own name; a name the user gave the wrapper
+ * (`customName`) still wins, and a plain `{ name }` stand-in still works.
+ */
+function wiredName(col) {
+	if (!col) return undefined;
+	if (col.customName != null && col.customName !== '') return col.customName;
+	// A real Column tells us whether it is a reference; a referential wrapper
+	// with nothing behind it (a blank `{ refId: -1 }` slot, or a reference whose
+	// column was deleted) has no name to show: `Column.name` would give a bare
+	// "*", which is not a label. Plain stand-ins (tests, stub plots) keep `name`.
+	if (typeof col.isReferencial === 'function' && col.isReferencial()) {
+		return col.refColumn?.name || undefined;
+	}
+	return col.name;
+}
+
 export function seriesDisplayLabel(datum, options = {}) {
 	if (!datum) return options.fallback ?? '';
 	if (datum.label) return datum.label;
 	// Most plots wire a `y` column per series; PairsPlot / CorrelationHeatmap /
 	// CircularPhase-style series bind a single `column` instead.
-	const yName = datum.y?.name ?? datum.column?.name;
+	const yName = wiredName(datum.y) ?? wiredName(datum.column);
 	if (yName) return yName;
 	if (options.fallback != null) return options.fallback;
 	const siblings = datum.parentPlot?.data;

@@ -38,6 +38,8 @@
 export const PARAM_NOTES = {
 	Threshold:
 		'`threshold` is the cutoff; `comparison` is which side counts as 1: ">" (v>t), ">=" (v≥t), "<" (v<t) or "<=" (v≤t). Missing/non-numeric values stay missing.',
+	Crossing:
+		'`groups` is OR of AND-groups of conditions `{target, isOperator, source, value}`: `target` a wired yIN column id or "x" (a gate on the axis); `isOperator` ">" (above), ">=" (at or above), "<" (below) or "<=" (at or below); `source` a wired thresholdIN column id (its first finite value is the cutoff) or -1 to use the typed `value`. `persistence` is how long the rule must hold continuously before a crossing fires — X UNITS (e.g. hours) when xIN is wired, else consecutive samples; 0 = a single sample. After a crossing the rule must go false to re-arm; missing data breaks a run. All series referenced in one rule must be equal length.',
 	LogisticRegression:
 		'`yIN` is the BINARY outcome — one 0/1 (or two-level) column, NOT continuous (gaussian/uniform values fail with a "not binary" warning). Make one via Random distribution:"bernoulli" or a Threshold node. `xIN` is one or more continuous predictors (several → multivariable, one coefficient/odds-ratio each).',
 	FDRCorrection:

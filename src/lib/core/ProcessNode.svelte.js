@@ -1,5 +1,7 @@
 // @ts-nocheck
 
+import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+
 /**
  * ProcessNode: a normalized node model used by the workflow layer.
  * This is intentionally independent from Column/Process/TableProcess classes
@@ -33,6 +35,53 @@ function makeNodePort(name, direction, artifactKind = 'column', dynamic = false)
 	return { name, direction, artifactKind, dynamic };
 }
 
+// ---- Overlay ports (scatterplot reference lines / bands) ---------------------
+//
+// A plot's overlays (`plot.plot.overlays`, OverlayClass instances) each expose
+// one INPUT port per channel of their current (kind, form), named
+// `ov<overlayId>_<channelKey>` (e.g. `ov3_at`, `ov3_lower`). The channel list and
+// its order come from `OverlayClass.channelsFor`, so the port emitter, the
+// wire-apply paths in WorkflowEditor and the Overlays tab all read one table.
+// There are no passthrough OUTPUT ports for overlay columns: an overlay is a
+// reference mark, not a series to chain off.
+
+const OVERLAY_PORT_RE = /^ov(\d+)_([A-Za-z]\w*)$/;
+
+/** `ov<id>_<key>` for an overlay id and channel key. */
+export function overlayPortName(overlayId, key) {
+	return `ov${overlayId}_${key}`;
+}
+
+/** Parse an overlay port name into `{ id, key }`, or null for any other port. */
+export function parseOverlayPort(portName) {
+	const m = OVERLAY_PORT_RE.exec(portName ?? '');
+	return m ? { id: Number(m[1]), key: m[2] } : null;
+}
+
+/**
+ * Resolve an overlay port on a plot's inner data object to the overlay it
+ * belongs to: `{ overlay, key, spec }` where `spec` is the channel spec
+ * `{ key, axis, dynamic, display }` for the overlay's CURRENT form, or null
+ * when the port is not an overlay port, the overlay is gone, or the channel no
+ * longer exists (the form changed).
+ */
+export function resolveOverlayPort(inner, portName) {
+	const parsed = parseOverlayPort(portName);
+	if (!parsed) return null;
+	const overlay = (inner?.overlays ?? []).find((o) => o?.id === parsed.id);
+	if (!overlay) return null;
+	const spec = OverlayClass.channelsFor(overlay.kind, overlay.form).find(
+		(c) => c.key === parsed.key
+	);
+	return spec ? { overlay, key: parsed.key, spec } : null;
+}
+
+/** The refIds wired into an overlay channel (class instance or plain JSON). */
+function overlayWiredRefIds(overlay, key) {
+	if (typeof overlay?.wiredRefIds === 'function') return overlay.wiredRefIds(key);
+	return (overlay?.channels?.[key]?.columns ?? []).map((c) => c?.refId);
+}
+
 /**
  * Unified slot layout for a GROUPED plot node (inputs carrying axis/series
  * metadata): both the left (input) rows and right (output) rows are assigned
@@ -53,9 +102,20 @@ export function plotNodeSlots(inputs = [], outputs = []) {
 	const outputRows = [];
 
 	// Series structure from the input ports (x starts a series, ys joins it).
+	// Overlay ports (tagged `overlay: { id, name }`) are NOT series: they are
+	// collected per overlay and laid out after the series groups, each under a
+	// header carrying the overlay's name.
 	const series = [];
+	const overlayGroups = [];
 	for (const p of inputs) {
-		if (p?.axis === 'x') series.push({ n: p.series, x: p, ys: null });
+		if (p?.overlay) {
+			let g = overlayGroups.find((og) => og.id === p.overlay.id);
+			if (!g) {
+				g = { id: p.overlay.id, label: p.overlay.name, ports: [] };
+				overlayGroups.push(g);
+			}
+			g.ports.push(p);
+		} else if (p?.axis === 'x') series.push({ n: p.series, x: p, ys: null });
 		else if (p?.axis === 'y' && series.length > 0) series[series.length - 1].ys = p;
 	}
 
@@ -89,6 +149,12 @@ export function plotNodeSlots(inputs = [], outputs = []) {
 	for (const [n, entry] of Object.entries(outBySeries)) {
 		if (series.some((s) => String(s.n) === n)) continue;
 		for (const o of [entry.x, ...entry.ys]) if (o) tailOutputs.push(o);
+	}
+	// Overlay groups: header (the overlay's name) then one row per channel port.
+	// Nothing sits on the output side of these rows (no passthroughs for overlays).
+	for (const g of overlayGroups) {
+		inputRows.push({ slot: slot++, kind: 'header', label: g.label, overlayId: g.id });
+		for (const p of g.ports) inputRows.push({ slot: slot++, kind: 'port', port: p });
 	}
 	for (const o of tailOutputs) {
 		outputRows.push({ slot: slot++, port: o });
@@ -194,7 +260,11 @@ function makeProcessNodeHash(core) {
 		out += `tp:${tp.id}:${tp.name}:${tp.refTPId ?? ''}:${JSON.stringify(tp.args ?? {})}|`;
 	}
 	for (const plot of core.plots ?? []) {
-		out += `pl:${plot.id}:${plot.type}:${JSON.stringify(plot.plot ?? {})}:${JSON.stringify(plot.setRefs ?? {})}:${JSON.stringify(plot.metricOut ?? {})}|`;
+		// Overlays are listed explicitly as well as through plot.plot's own toJSON:
+		// their ports (`ov<id>_<key>`) depend on each overlay's form and wiring, so
+		// adding one, changing its form or wiring a channel must re-derive the graph
+		// whether or not the plot class serialises them.
+		out += `pl:${plot.id}:${plot.type}:${JSON.stringify(plot.plot ?? {})}:${JSON.stringify(plot.setRefs ?? {})}:${JSON.stringify(plot.metricOut ?? {})}:${JSON.stringify(plot.plot?.overlays ?? [])}|`;
 	}
 	// Chained wires re-route consumer edges (plot passthrough → consumer).
 	out += `cr:${JSON.stringify(core.chainRefs ?? [])}|`;
@@ -297,6 +367,15 @@ function buildNodeExecutionKey(core, node) {
 			for (const d of plot.plot?.data ?? []) {
 				for (const axis of ['x', 'y', 'z', 'column']) {
 					if (d?.[axis]?.refId != null) refs.push(_colDataHash(core, d[axis].refId));
+				}
+			}
+			// Overlay channels read columns too: a reference line wired to an
+			// analysis output must redraw when that output's data changes.
+			for (const ov of plot.plot?.overlays ?? []) {
+				for (const { key } of OverlayClass.channelsFor(ov?.kind, ov?.form)) {
+					for (const refId of overlayWiredRefIds(ov, key)) {
+						if (refId != null) refs.push(_colDataHash(core, refId));
+					}
 				}
 			}
 		}
@@ -704,6 +783,25 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				groups.forEach((_, i) => addSeriesPorts(i + 1, false));
 				addSeriesPorts(groups.length + 1, true);
 			}
+
+			// Overlays (reference lines / bands): one input port per channel of the
+			// overlay's current form, tagged `overlay: { id, name }` so plotNodeSlots /
+			// WorkflowNode render them as a group headed by the overlay's name beneath
+			// the series groups. `dynamic` only where the channel table says so (the
+			// line `at` channel takes many columns). No trailing empty overlay group:
+			// overlays are created in the panel or via MCP, and a form must be chosen
+			// before any port exists. No passthrough outputs (see addPassthrough).
+			for (const ov of plot.plot?.overlays ?? []) {
+				if (ov?.id == null) continue;
+				for (const spec of OverlayClass.channelsFor(ov.kind, ov.form)) {
+					inputs.push({
+						...makeNodePort(overlayPortName(ov.id, spec.key), 'input', 'column', !!spec.dynamic),
+						display: spec.display,
+						overlay: { id: ov.id, name: ov.name },
+						channel: spec.key
+					});
+				}
+			}
 		}
 
 		// Output ports, two families sharing the `col_<colId>` scheme (so
@@ -1008,6 +1106,17 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 						if (dp?.y?.refId != null && dp.y.refId >= 0) addPlotCol(dp.y.refId, portYs);
 					}
 				});
+			}
+
+			// Overlay wires: one edge per wired column into its `ov<id>_<key>` port,
+			// drawn from the column's true owner exactly like a series wire.
+			for (const ov of plot.plot?.overlays ?? []) {
+				if (ov?.id == null) continue;
+				for (const { key } of OverlayClass.channelsFor(ov.kind, ov.form)) {
+					for (const refId of overlayWiredRefIds(ov, key)) {
+						if (refId != null && refId >= 0) addPlotCol(refId, overlayPortName(ov.id, key));
+					}
+				}
 			}
 		}
 	}

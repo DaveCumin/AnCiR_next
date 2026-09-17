@@ -139,7 +139,12 @@ const CONCEPT = {
 	q3: /quartile|\bQ3\b/,
 	iqr: /interquartile|\bIQR\b/,
 	skewness: /skew/,
-	kurtosis: /kurtosis/
+	kurtosis: /kurtosis/,
+	// Crossing (plan 2026-09-13 A): the detection times, how many, and the
+	// per-sample rule state.
+	crossing: /crossing/,
+	count: /count|number of crossings/,
+	breach: /breach/
 };
 
 /** Ports deliberately left undescribed, each with its reason. */

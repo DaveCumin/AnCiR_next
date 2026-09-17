@@ -43,6 +43,7 @@ export async function loadPlots() {
 				family: nodeMeta.family,
 				nodeIcon: nodeMeta.nodeIcon,
 				description: nodeMeta.description,
+				keywords: nodeMeta.keywords,
 				kind: 'plot'
 			}
 		];

@@ -12,7 +12,7 @@ import { mutationService as M } from '$lib/core/mutationService.js';
 import { core, appConsts } from '$lib/core/core.svelte';
 import { notifications } from '$lib/core/notifications.svelte.js';
 import { pinAppearance, mappedColour } from './appearanceIdentity.js';
-import { removeSeriesWithUndo } from './seriesDelete.js';
+import { removeSeriesWithUndo, removeOverlayWithUndo } from './seriesDelete.js';
 
 // Stub plot type whose inner data object mirrors the real per-series contract:
 // a `data` array of series (each with wired refIds + styling), `removeData`,
@@ -26,11 +26,16 @@ function makeInner(parent, json) {
 			y: { refId: d.y?.refId ?? -1, name: d.y?.name ?? '' },
 			style: { colour: d.style?.colour ?? null, width: d.style?.width ?? 1 }
 		})),
+		// Overlays mirror the scatterplot's contract: an id-keyed list + removeOverlay(id).
+		overlays: (json?.overlays ?? []).map((o) => ({ ...o })),
 		removeData(idx) {
 			this.data.splice(idx, 1);
 		},
+		removeOverlay(id) {
+			this.overlays = this.overlays.filter((o) => o.id !== id);
+		},
 		toJSON() {
-			return { data: this.data };
+			return { data: this.data, overlays: this.overlays };
 		}
 	};
 }
@@ -173,6 +178,57 @@ describe('removeSeriesWithUndo', () => {
 		const plot = addStubPlot();
 		removeSeriesWithUndo(plot.plot, 5);
 		expect(plot.plot.data.length).toBe(2);
+		expect(history.undoCount).toBe(0);
+		expect(notifications.list.length).toBe(0);
+	});
+});
+
+// Overlays (scatterplot reference lines / bands) delete through the same
+// mechanism, so they get the same one-step undo and the same toast.
+describe('removeOverlayWithUndo', () => {
+	const WITH_OVERLAYS = {
+		...TWO_SERIES,
+		overlays: [
+			{ id: 3, kind: 'line', name: 'Line 1', colour: '#333333' },
+			{ id: 8, kind: 'band', name: 'Night', fill: '#2C2C2C30' }
+		]
+	};
+
+	function addOverlayPlot() {
+		const plot = M.addPlot({ type: 'stubseriesplot', name: 'p', plot: WITH_OVERLAYS });
+		history.clear();
+		notifications.list.length = 0;
+		return plot;
+	}
+
+	it('deletes by id as ONE history step; undo restores the overlay exactly', () => {
+		const plot = addOverlayPlot();
+		const before = JSON.parse(JSON.stringify(plot.plot.toJSON()));
+
+		removeOverlayWithUndo(plot.plot, 8);
+		expect(plot.plot.overlays.map((o) => o.id)).toEqual([3]);
+		expect(plot.plot.data.length).toBe(2); // series untouched
+		expect(history.undoCount).toBe(1);
+
+		history.undo();
+		expect(JSON.parse(JSON.stringify(plot.plot.toJSON()))).toEqual(before);
+		expect(plot.plot.overlays[1].fill).toBe('#2C2C2C30');
+	});
+
+	it('names the kind and the overlay in the toast, with a working Undo', () => {
+		const plot = addOverlayPlot();
+		removeOverlayWithUndo(plot.plot, 3);
+		expect(notifications.list[0].message).toBe('Line "Line 1" removed');
+		removeOverlayWithUndo(plot.plot, 8);
+		expect(notifications.list[1].message).toBe('Band "Night" removed');
+		notifications.list[1].action.run();
+		expect(plot.plot.overlays.map((o) => o.id)).toEqual([8]);
+	});
+
+	it('ignores an unknown id', () => {
+		const plot = addOverlayPlot();
+		removeOverlayWithUndo(plot.plot, 42);
+		expect(plot.plot.overlays.length).toBe(2);
 		expect(history.undoCount).toBe(0);
 		expect(notifications.list.length).toBe(0);
 	});

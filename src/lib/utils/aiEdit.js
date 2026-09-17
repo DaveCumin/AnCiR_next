@@ -30,6 +30,7 @@ import { applyOp } from '$lib/core/operations.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
 import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
 import { getByPath, setByPath } from '$lib/utils/objectPath.js';
+import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
 import dayjs from '$lib/utils/time/dayjsSetup.js';
 
 // Mirrors the emitted-session series colours (plots/canonicalNodeViz.js), so an AI-added plot
@@ -164,8 +165,9 @@ export function registryFacts(consts = appConsts) {
 	for (const [type, entry] of consts.plotMap ?? new Map()) {
 		plots[type] = {
 			inputs: entry.defaultInputs ?? [],
-			// Shading (light/dark bands) is a scatterplot feature today. Asked of the class
-			// rather than hardcoded, so a plot that gains bands is covered for free.
+			// Shading (light/dark bands) is a scatterplot feature today: a repeating band
+			// OVERLAY, added through the class's `addNightBand` wrapper. Asked of the class
+			// rather than hardcoded, so a plot that gains the wrapper is covered for free.
 			supportsBands: typeof entry.data?.prototype?.addNightBand === 'function'
 		};
 	}
@@ -780,21 +782,22 @@ export function applyEdit(plan) {
 			continue;
 		}
 		const inner = innerFor(plot);
-		inner.nightBands = [
-			...(inner.nightBands ?? []),
-			{
-				name: b.label,
-				mode: 'repeating',
-				enabled: true,
-				repeatEveryHours: 24,
-				nightDurationHours: b.durationHours,
-				startTimeHours: firstBandStart(plot.plot, b.fromHour, appState?.displayTimezone),
-				// The band starts at a clock time we computed, NOT at whenever the data happens
-				// to begin — which is what useDataMin would mean.
-				useDataMin: false,
-				customBands: []
-			}
-		];
+		// A shaded window is a REPEATING BAND OVERLAY (plan 2026-09-13 B5; `nightBands` is
+		// only a migration input now). The mapping from the night-band shape to an overlay
+		// lives in one place, OverlayClass.fromLegacyNightBand (what `addNightBand` calls),
+		// so this writes exactly the JSON the plot itself would have produced.
+		const overlay = OverlayClass.fromLegacyNightBand(plot.plot, {
+			name: b.label,
+			mode: 'repeating',
+			enabled: true,
+			repeatEveryHours: 24,
+			nightDurationHours: b.durationHours,
+			startTimeHours: firstBandStart(plot.plot, b.fromHour, appState?.displayTimezone),
+			// The band starts at a clock time we computed, NOT at whenever the data happens
+			// to begin — which is what useDataMin would mean.
+			useDataMin: false
+		});
+		inner.overlays = [...(inner.overlays ?? []), overlay.toJSON()];
 	}
 
 	for (const [id, inner] of inners) ops.push({ kind: 'setPlotInner', id, inner });

@@ -101,20 +101,6 @@ vi.mock('$lib/components/plotbits/Points.svelte', () => ({
 		}
 	}
 }));
-vi.mock('$lib/plots/Scatterplot/NightBand.svelte', () => ({
-	default: {},
-	NightBandClass: class {
-		constructor(parent, json) {
-			Object.assign(this, json ?? {});
-		}
-		toJSON() {
-			return {};
-		}
-		static fromJSON(parent, json) {
-			return new this(parent, json);
-		}
-	}
-}));
 vi.mock('$lib/components/plotbits/helpers/wrangleData.js', () => ({
 	min: (a) => Math.min(...a),
 	max: (a) => Math.max(...a)
@@ -139,7 +125,11 @@ beforeEach(() => {
 describe('Loading a saved scatter with time + number series (testJSON shape)', () => {
 	it('produces ms-typed wrapper data and a finite xlims-style range via xOriginFor fallback', () => {
 		// Underlying columns, mirroring testJSON.data shape.
-		const isoTimes = ['2020-01-01T00:00:00.000Z', '2020-01-01T01:00:00.000Z', '2020-01-01T02:00:00.000Z'];
+		const isoTimes = [
+			'2020-01-01T00:00:00.000Z',
+			'2020-01-01T01:00:00.000Z',
+			'2020-01-01T02:00:00.000Z'
+		];
 		fakeCore.rawData.set(0, isoTimes);
 		fakeCore.rawData.set(1, [10, 20, 30]);
 		fakeCore.rawData.set(34, [0, 1, 2]); // hours-since-start (legacy cosinor x output)
@@ -154,9 +144,7 @@ describe('Loading a saved scatter with time + number series (testJSON shape)', (
 				timeFormat: "YYYY-MM-DD'T'HH:mm:ss.S'Z'"
 			})
 		);
-		fakeCore.data.push(
-			ColumnClass.fromJSON({ id: 1, name: 'values_0', data: 1, type: 'number' })
-		);
+		fakeCore.data.push(ColumnClass.fromJSON({ id: 1, name: 'values_0', data: 1, type: 'number' }));
 		fakeCore.data.push(
 			ColumnClass.fromJSON({ id: 34, name: 'cosinor_x', data: 34, type: 'number' })
 		);
@@ -217,9 +205,7 @@ describe('Loading a saved scatter with time + number series (testJSON shape)', (
 describe('ScatterDataclass.fromJSON preserves serialised wrapper state', () => {
 	it('keeps the saved wrapper id so downstream references stay stable', () => {
 		fakeCore.rawData.set(0, [0, 1, 2]);
-		fakeCore.data.push(
-			ColumnClass.fromJSON({ id: 0, name: 'src', data: 0, type: 'number' })
-		);
+		fakeCore.data.push(ColumnClass.fromJSON({ id: 0, name: 'src', data: 0, type: 'number' }));
 
 		const parent = { data: [] };
 		const savedScatterData = {
@@ -239,9 +225,7 @@ describe('ScatterDataclass.fromJSON preserves serialised wrapper state', () => {
 	it('keeps wrapper-column processes that were attached in the plot', () => {
 		// Underlying source column the wrapper points at.
 		fakeCore.rawData.set(0, [1, 2, 3, 4]);
-		fakeCore.data.push(
-			ColumnClass.fromJSON({ id: 0, name: 'src', data: 0, type: 'number' })
-		);
+		fakeCore.data.push(ColumnClass.fromJSON({ id: 0, name: 'src', data: 0, type: 'number' }));
 
 		const parent = { data: [] };
 		const savedScatterData = {
@@ -250,9 +234,7 @@ describe('ScatterDataclass.fromJSON preserves serialised wrapper state', () => {
 				refId: 0,
 				name: 'src*',
 				type: 'number',
-				processes: [
-					{ id: 9001, name: 'normalize', args: { mode: 'zscore' } }
-				]
+				processes: [{ id: 9001, name: 'normalize', args: { mode: 'zscore' } }]
 			},
 			y: {
 				id: 301,

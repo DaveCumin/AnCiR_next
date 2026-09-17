@@ -1,7 +1,7 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.72.30",
-  "count": 61,
+  "generatedFromVersion": "β.73.1",
+  "count": 62,
   "nodes": [
     {
       "id": "actogram",
@@ -9,6 +9,13 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Actogram (double-plotted activity over days).",
+      "keywords": [
+        "double plot",
+        "raster",
+        "activity",
+        "days",
+        "circadian"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -32,6 +39,13 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Boxplot summarising the distribution of a column by group, with optional violin (kernel density) overlay and jittered data points; the box can be hidden for a pure violin plot.",
+      "keywords": [
+        "violin",
+        "distribution",
+        "quartiles",
+        "whiskers",
+        "groups"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -55,6 +69,14 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Circular phase plot: one or more phase columns on an adjustable-period clock, each a coloured group with its Rayleigh mean-resultant vector; optional rose wedges and a Watson-Williams equal-mean-direction test. Wiring an optional time column (hours or timestamp, folded by period) to a series plots it at its measurement time with radius = value instead, and the vector becomes an amplitude-weighted acrophase.",
+      "keywords": [
+        "clock",
+        "polar",
+        "rose",
+        "acrophase",
+        "rayleigh",
+        "angle"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -78,6 +100,13 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Coloured correlation matrix computed from the wired columns.",
+      "keywords": [
+        "matrix",
+        "pearson",
+        "spearman",
+        "colormap",
+        "pairwise"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -96,6 +125,12 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Autocorrelation / cross-correlation plot.",
+      "keywords": [
+        "autocorrelation",
+        "acf",
+        "lag",
+        "cross-correlation"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -119,6 +154,13 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Continuous wavelet transform (scalogram): power as a function of BOTH time and period, so a rhythm that changes period or strength over the record is visible where a periodogram would only show a time-average. Morlet/Paul/DOG wavelets, Torrence & Compo (1998) normalisation, with the cone of influence drawn (values outside it are edge artefacts) and an optional ridge showing the dominant period at each moment. Requires uniformly sampled data.",
+      "keywords": [
+        "wavelet",
+        "scalogram",
+        "time-frequency",
+        "morlet",
+        "spectrogram"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -142,6 +184,11 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Inspector for a plot's computed data (bins, spectra, fitted values); opened from a plot's View data action.",
+      "keywords": [
+        "table",
+        "inspect",
+        "values"
+      ],
       "hideFromPalette": false,
       "inputs": [],
       "params": [],
@@ -154,6 +201,13 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Fourier analysis (FFT) spectrum of a time-series.",
+      "keywords": [
+        "fourier",
+        "spectrum",
+        "frequency",
+        "power",
+        "harmonics"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -177,6 +231,13 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Histogram of a column.",
+      "keywords": [
+        "distribution",
+        "frequency",
+        "bins",
+        "density",
+        "counts"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -195,6 +256,12 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Mean ± SEM overlay: per-group mean marker with standard-error whiskers.",
+      "keywords": [
+        "error bars",
+        "standard error",
+        "average",
+        "whiskers"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -218,6 +285,13 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Scatterplot matrix (pairs.panels): histograms on the diagonal, scatter + fit above, correlation below.",
+      "keywords": [
+        "matrix",
+        "splom",
+        "panels",
+        "scatter",
+        "pairwise"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -236,6 +310,13 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Periodogram (Lomb-Scargle / chi-squared) of a time-series.",
+      "keywords": [
+        "spectrum",
+        "period",
+        "lomb-scargle",
+        "power",
+        "rhythm"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -259,6 +340,13 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Normal Q-Q plot: sample vs theoretical quantiles, with a quartile reference line and confidence envelope.",
+      "keywords": [
+        "quantile",
+        "normality",
+        "gaussian",
+        "distribution",
+        "residuals"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -276,7 +364,14 @@
       "displayName": "Scatterplot",
       "kind": "plot",
       "family": "Plots",
-      "description": "Scatterplot of one column versus another.",
+      "description": "Scatterplot of one column versus another, with reference lines and shaded bands (wired or typed) from its Overlays tab.",
+      "keywords": [
+        "xy",
+        "points",
+        "dots",
+        "correlation",
+        "relationship"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -300,6 +395,13 @@
       "kind": "plot",
       "family": "Plots",
       "description": "Tabular display of a table or its summary statistics.",
+      "keywords": [
+        "grid",
+        "spreadsheet",
+        "values",
+        "summary",
+        "display"
+      ],
       "hideFromPalette": false,
       "inputs": [],
       "params": [],
@@ -312,6 +414,14 @@
       "kind": "process",
       "family": "Arithmetic",
       "description": "Add a constant or column to the input column.",
+      "keywords": [
+        "plus",
+        "sum",
+        "offset",
+        "shift",
+        "subtract",
+        "constant"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -341,6 +451,13 @@
       "kind": "process",
       "family": "Transform",
       "description": "Edit or substitute individual values in a column.",
+      "keywords": [
+        "cell",
+        "fix",
+        "correct",
+        "replace",
+        "manual"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -369,6 +486,14 @@
       "kind": "process",
       "family": "Filtering",
       "description": "Filter rows based on the values of another column.",
+      "keywords": [
+        "subset",
+        "select",
+        "where",
+        "condition",
+        "exclude",
+        "mask"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -405,6 +530,13 @@
       "kind": "process",
       "family": "Filtering",
       "description": "FFT-based low-, high-, or band-pass filter over an evenly sampled series.",
+      "keywords": [
+        "bandpass",
+        "lowpass",
+        "highpass",
+        "fft",
+        "cutoff"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -442,6 +574,13 @@
       "kind": "process",
       "family": "Arithmetic",
       "description": "Multiply the input column by a constant or another column.",
+      "keywords": [
+        "times",
+        "scale",
+        "product",
+        "divide",
+        "factor"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -471,6 +610,14 @@
       "kind": "process",
       "family": "Arithmetic",
       "description": "Normalize the column to a chosen range or by a reference value.",
+      "keywords": [
+        "rescale",
+        "standardize",
+        "z-score",
+        "zscore",
+        "unit range",
+        "percent"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -508,6 +655,14 @@
       "kind": "process",
       "family": "Filtering",
       "description": "Detect and remove outliers from the column.",
+      "keywords": [
+        "clean",
+        "spike",
+        "artifact",
+        "despike",
+        "iqr",
+        "extreme values"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -545,6 +700,12 @@
       "kind": "process",
       "family": "Filtering",
       "description": "Remove a fitted trend (linear, polynomial, etc.) from the column.",
+      "keywords": [
+        "detrend",
+        "drift",
+        "baseline",
+        "flatten"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -590,6 +751,14 @@
       "kind": "process",
       "family": "Arithmetic",
       "description": "Find a specific value in the column and replace it with another (e.g. swap a missing-data code like −999 for a different value).",
+      "keywords": [
+        "substitute",
+        "replace",
+        "recode",
+        "swap",
+        "missing code",
+        "find"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -623,6 +792,14 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Average daily profile — fold a series onto one period and show the per-bin mean (± SEM).",
+      "keywords": [
+        "fold",
+        "waveform",
+        "mean",
+        "24h",
+        "diurnal",
+        "educed"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -673,6 +850,14 @@
       "kind": "tableProcess",
       "family": "Binning",
       "description": "Bin time-series values into regular intervals and aggregate per bin.",
+      "keywords": [
+        "downsample",
+        "resample",
+        "aggregate",
+        "bucket",
+        "epoch",
+        "interval"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -737,6 +922,14 @@
       "kind": "tableProcess",
       "family": "Sources",
       "description": "Enter data by hand, or paste CSV/JSON.",
+      "keywords": [
+        "manual",
+        "paste",
+        "empty",
+        "enter",
+        "new",
+        "type in"
+      ],
       "hideFromPalette": false,
       "inputs": [],
       "params": [
@@ -760,6 +953,13 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or Fisher's exact test for small 2x2 tables. Reports an effect size (Cramer's V, Cohen's w, or the odds ratio with a confidence interval) alongside the p-value.",
+      "keywords": [
+        "contingency",
+        "fisher",
+        "categorical",
+        "independence",
+        "counts"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -837,6 +1037,12 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Circadian Function Index (0–1) summarising rest-activity rhythm robustness from nonparametric IS, IV and RA (Ortiz-Tudela et al. 2010).",
+      "keywords": [
+        "CFI",
+        "robustness",
+        "rest-activity",
+        "rhythm quality"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -902,6 +1108,12 @@
       "kind": "tableProcess",
       "family": "Transform",
       "description": "Collect (concatenate) several columns into one.",
+      "keywords": [
+        "concatenate",
+        "combine",
+        "merge",
+        "gather"
+      ],
       "hideFromPalette": true,
       "inputs": [
         {
@@ -926,6 +1138,16 @@
       "kind": "tableProcess",
       "family": "Arithmetic",
       "description": "Apply a per-column aggregate function (mean, sum, etc.) across rows or groups.",
+      "keywords": [
+        "stats",
+        "mean",
+        "sd",
+        "average",
+        "aggregate",
+        "summary",
+        "sum",
+        "median"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -967,6 +1189,13 @@
       "kind": "tableProcess",
       "family": "Transform",
       "description": "Curate a live subset of columns by name/label and reuse it as one wire.",
+      "keywords": [
+        "subset",
+        "selection",
+        "bundle",
+        "wildcard",
+        "reuse"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1000,6 +1229,14 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Pairwise correlation matrix (Pearson or Spearman) across the wired columns, with normality-based auto method choice.",
+      "keywords": [
+        "pearson",
+        "spearman",
+        "association",
+        "matrix",
+        "relationship",
+        "r"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1068,6 +1305,15 @@
       "kind": "tableProcess",
       "family": "Fitting",
       "description": "Fit a cosinor model (period, amplitude, acrophase) to the column.",
+      "keywords": [
+        "rhythm",
+        "fit",
+        "acrophase",
+        "amplitude",
+        "mesor",
+        "sine",
+        "cosine"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1232,6 +1478,13 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Cross-correlogram of two series: the correlation at each lag, with the peak lag revealing the delay between them.",
+      "keywords": [
+        "lag",
+        "delay",
+        "xcorr",
+        "coupling",
+        "lead"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1275,11 +1528,91 @@
       "demo": "sessions/demos/demo-tp-crosscorrelation.json"
     },
     {
+      "id": "Crossing",
+      "displayName": "Crossing",
+      "kind": "tableProcess",
+      "family": "Analysis",
+      "description": "Find when a rule over one or more series becomes sustainedly true: conditions against typed values or wired scalar thresholds, combined as OR of AND-groups, with a persistence requirement. Outputs every crossing time, their count, and a 0/1 breach series.",
+      "keywords": [
+        "detection",
+        "alert",
+        "alarm",
+        "set-point",
+        "spc",
+        "control limits",
+        "persistence",
+        "event"
+      ],
+      "hideFromPalette": false,
+      "inputs": [
+        {
+          "name": "xIN",
+          "kind": "column",
+          "cardinality": "one"
+        },
+        {
+          "name": "yIN",
+          "kind": "column",
+          "cardinality": "many"
+        },
+        {
+          "name": "thresholdIN",
+          "kind": "column",
+          "cardinality": "many"
+        }
+      ],
+      "params": [
+        {
+          "name": "groups",
+          "default": [
+            [
+              {
+                "target": -1,
+                "isOperator": "<",
+                "source": -1,
+                "value": 0
+              }
+            ]
+          ]
+        },
+        {
+          "name": "persistence",
+          "default": 0
+        }
+      ],
+      "outputs": [
+        {
+          "name": "breach",
+          "kind": "column",
+          "cardinality": "one"
+        },
+        {
+          "name": "crossing",
+          "kind": "column",
+          "cardinality": "one"
+        },
+        {
+          "name": "count",
+          "kind": "column",
+          "cardinality": "one"
+        }
+      ],
+      "demo": "sessions/demos/demo-tp-crossing.json"
+    },
+    {
       "id": "DescribeData",
       "displayName": "Describe Data",
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis).",
+      "keywords": [
+        "summary",
+        "stats",
+        "mean",
+        "median",
+        "quartiles",
+        "descriptive"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1364,6 +1697,14 @@
       "kind": "tableProcess",
       "family": "Fitting",
       "description": "Fit a double-logistic curve to the column (useful for phenology / on-off transitions).",
+      "keywords": [
+        "sigmoid",
+        "phenology",
+        "transition",
+        "onset",
+        "offset",
+        "curve"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1468,6 +1809,15 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Adjust a column of p-values for multiple comparisons and flag which survive. Benjamini-Hochberg (FDR under independence or positive dependence), Benjamini-Yekutieli (FDR under arbitrary dependence), Holm and Bonferroni (family-wise error). Missing p-values stay missing and are excluded from the count, so a test that failed to run never tightens the correction on the ones that did.",
+      "keywords": [
+        "multiple comparisons",
+        "benjamini",
+        "hochberg",
+        "bonferroni",
+        "holm",
+        "p-value",
+        "adjust"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1506,6 +1856,13 @@
       "kind": "tableProcess",
       "family": "Fitting",
       "description": "Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. Use it to compare different waveform shapes on the same series without rewiring; the fit quality (R2, RMSE, permutation p) and the chosen model’s parameters are wireable metric output ports, like the dedicated Cosinor, Rectangular Wave and Double Logistic nodes.",
+      "keywords": [
+        "model",
+        "waveform",
+        "curve",
+        "regression",
+        "compare shapes"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1720,6 +2077,14 @@
       "kind": "tableProcess",
       "family": "Arithmetic",
       "description": "Compute a new column from a user-supplied formula referencing other columns.",
+      "keywords": [
+        "expression",
+        "equation",
+        "calculate",
+        "compute",
+        "math",
+        "custom"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1744,6 +2109,14 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Compare statistics between groups defined by another column.",
+      "keywords": [
+        "t-test",
+        "ttest",
+        "anova",
+        "mann-whitney",
+        "wilcoxon",
+        "significance"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1799,6 +2172,14 @@
       "kind": "tableProcess",
       "family": "Binning",
       "description": "Fill missing values or resample a series onto a regular grid by interpolation (linear, nearest, or cubic spline).",
+      "keywords": [
+        "resample",
+        "fill gaps",
+        "missing",
+        "spline",
+        "regular grid",
+        "upsample"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1855,6 +2236,13 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Model a binary outcome from one or more predictors: coefficients, odds ratios with 95% CIs, Wald p-values, and model fit (pseudo-R², LR test).",
+      "keywords": [
+        "binary outcome",
+        "odds ratio",
+        "classification",
+        "glm",
+        "predictor"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1934,6 +2322,12 @@
       "kind": "tableProcess",
       "family": "Transform",
       "description": "Pivot a long-format table into wide format.",
+      "keywords": [
+        "pivot",
+        "reshape",
+        "spread",
+        "unstack"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -1979,6 +2373,11 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Compute a rolling-window analysis across the column.",
+      "keywords": [
+        "rolling",
+        "sliding",
+        "window"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2146,6 +2545,15 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Nonparametric rest-activity variables (IS, IV, RA, M10/L5) — robust to non-sinusoidal rhythms.",
+      "keywords": [
+        "IS",
+        "IV",
+        "actigraphy",
+        "stability",
+        "fragmentation",
+        "M10",
+        "L5"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2240,6 +2648,13 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Test each wired column for normality (Shapiro-Wilk by default, or D’Agostino-Pearson / Jarque-Bera), reporting the statistic, p-value and a verdict.",
+      "keywords": [
+        "shapiro-wilk",
+        "gaussian",
+        "distribution",
+        "jarque-bera",
+        "dagostino"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2293,6 +2708,14 @@
       "kind": "tableProcess",
       "family": "Sources",
       "description": "Generate a column of random values.",
+      "keywords": [
+        "noise",
+        "uniform",
+        "gaussian",
+        "normal",
+        "rng",
+        "seed"
+      ],
       "hideFromPalette": false,
       "inputs": [],
       "params": [
@@ -2336,6 +2759,14 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p, acrophase) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns. Wiring an optional time column (hours or timestamp, folded by period) switches to an amplitude-weighted mean vector/acrophase; without it, values are treated as raw angles.",
+      "keywords": [
+        "circular",
+        "uniformity",
+        "phase",
+        "angle",
+        "acrophase",
+        "watson-williams"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2409,6 +2840,13 @@
       "kind": "tableProcess",
       "family": "Fitting",
       "description": "Fit a rectangular (square) wave model with adjustable duty cycle.",
+      "keywords": [
+        "square",
+        "duty cycle",
+        "on-off",
+        "step",
+        "pulse"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2513,6 +2951,14 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Run rhythmicity statistics over the column.",
+      "keywords": [
+        "period",
+        "periodogram",
+        "lomb-scargle",
+        "chi-squared",
+        "circadian",
+        "tau"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2596,6 +3042,14 @@
       "kind": "tableProcess",
       "family": "Sources",
       "description": "Create a numeric or time sequence column.",
+      "keywords": [
+        "range",
+        "ramp",
+        "index",
+        "timestamps",
+        "counter",
+        "time axis"
+      ],
       "hideFromPalette": false,
       "inputs": [],
       "params": [
@@ -2647,6 +3101,14 @@
       "kind": "tableProcess",
       "family": "Sources",
       "description": "Generate a synthetic time-series table from a cosine + noise model.",
+      "keywords": [
+        "synthetic",
+        "fake",
+        "cosine",
+        "noise",
+        "demo",
+        "generate"
+      ],
       "hideFromPalette": false,
       "inputs": [],
       "params": [
@@ -2697,6 +3159,15 @@
       "kind": "tableProcess",
       "family": "Smoothing",
       "description": "Smooth a column using LOESS, moving average, Savitzky-Golay, or Whittaker-Eilers.",
+      "keywords": [
+        "loess",
+        "lowess",
+        "moving average",
+        "savitzky-golay",
+        "denoise",
+        "rolling",
+        "filter"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2771,6 +3242,13 @@
       "kind": "tableProcess",
       "family": "Filtering",
       "description": "Sort rows by a chosen column, keeping the selected columns aligned (ascending or descending).",
+      "keywords": [
+        "order",
+        "ascending",
+        "descending",
+        "rank",
+        "arrange"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2805,6 +3283,13 @@
       "kind": "tableProcess",
       "family": "Transform",
       "description": "Split a column or table on a delimiter or group key.",
+      "keywords": [
+        "segment",
+        "separate",
+        "partition",
+        "chunk",
+        "by group"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2839,6 +3324,13 @@
       "kind": "tableProcess",
       "family": "Transform",
       "description": "Group derived stored values together for reuse.",
+      "keywords": [
+        "metrics",
+        "scalar",
+        "collect",
+        "bundle",
+        "results"
+      ],
       "hideFromPalette": false,
       "inputs": [],
       "params": [
@@ -2867,6 +3359,14 @@
       "kind": "tableProcess",
       "family": "Analysis",
       "description": "Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked.",
+      "keywords": [
+        "permutation",
+        "bootstrap",
+        "null",
+        "shuffle",
+        "significance",
+        "red noise"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2928,6 +3428,13 @@
       "kind": "tableProcess",
       "family": "Arithmetic",
       "description": "Turn a column into a 0/1 (binary) column at a user-set cutoff — e.g. to make a binary outcome for logistic regression.",
+      "keywords": [
+        "binarize",
+        "cutoff",
+        "binary",
+        "dichotomize",
+        "0/1"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -2961,6 +3468,14 @@
       "kind": "tableProcess",
       "family": "Fitting",
       "description": "Fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its R2, RMSE and coefficients. Use it to describe or remove baseline drift, growth or decay before rhythm analysis.",
+      "keywords": [
+        "regression",
+        "slope",
+        "linear",
+        "polynomial",
+        "drift",
+        "baseline"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {
@@ -3054,6 +3569,14 @@
       "kind": "tableProcess",
       "family": "Transform",
       "description": "Pivot a wide-format table into long format.",
+      "keywords": [
+        "pivot",
+        "reshape",
+        "melt",
+        "stack",
+        "gather",
+        "tidy"
+      ],
       "hideFromPalette": false,
       "inputs": [
         {

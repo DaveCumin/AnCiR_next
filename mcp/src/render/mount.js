@@ -6,12 +6,15 @@
 // mounts the real plot component, and signals readiness via `window.__ancirReady`.
 //
 // Payload shape (see src/engine/renderPlot.js):
-//   { columns:[{id,name,type,values[]}], plot:{type, inputs}, width, height }
+//   { columns:[{id,name,type,values[]}], plot:{type, inputs, overlays?}, width, height }
+// `overlays` (scatterplot reference lines / bands) is OverlayClass JSON with the
+// column refIds already renumbered to the payload's compact ids.
 import { mount, flushSync } from 'svelte';
 import { core, appConsts } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { loadPlots } from '$lib/plots/plotMap.js';
+import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
 import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
 
 async function run() {
@@ -66,6 +69,10 @@ async function run() {
 			if (id != null) dataIn[f] = { refId: id };
 		}
 		if (Object.keys(dataIn).length) p.plot.addData(dataIn);
+	}
+	for (const o of data.plot.overlays ?? []) {
+		if (!Array.isArray(p.plot.overlays)) throw new Error(`${data.plot.type} has no overlays`);
+		p.plot.overlays.push(OverlayClass.fromJSON(p.plot, o));
 	}
 	core.plots.push(p);
 

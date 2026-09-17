@@ -63,7 +63,7 @@ import { core, appState } from '$lib/core/core.svelte';
 import { ancestorColumnIds, sourceColumnId } from '$lib/core/columnAncestry.js';
 import { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 import { POINT_SHAPES } from '$lib/components/plotbits/pointShapes.js';
-import { STROKE_STYLES } from '$lib/components/plotbits/Line.svelte';
+import { STROKE_STYLES } from '$lib/components/plotbits/strokeStyles.js';
 
 /**
  * Dash patterns, in claim order. Solid is FIRST so the first series in a figure

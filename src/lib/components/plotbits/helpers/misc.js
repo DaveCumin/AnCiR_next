@@ -1,5 +1,4 @@
 export function isValidStroke(value) {
-	console.log('start isvalid with ', value);
 	// Handle null, undefined, or empty string
 	if (!value || typeof value !== 'string') {
 		return false;
@@ -15,7 +14,7 @@ export function isValidStroke(value) {
 
 	// Check if it matches the stroke-dasharray pattern
 	// Pattern: numbers separated by commas and/or spaces
-	const strokePattern = /^[\d\s,\.]+$/;
+	const strokePattern = /^[\d\s,.]+$/;
 
 	if (!strokePattern.test(trimmed)) {
 		return false;

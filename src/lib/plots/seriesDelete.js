@@ -40,29 +40,28 @@ function serializeInner(inner) {
 }
 
 /**
- * Remove series `index` from a plot's inner data object as ONE undoable step,
- * then toast the removal with an Undo action.
+ * The shared mechanism: apply `mutate(inner)` (a direct in-place removal) to a
+ * plot's inner data object as ONE undoable step, then toast `message` with an
+ * Undo action. Series and overlays both delete through here; only the mutation
+ * and the wording differ.
  *
  * @param {any} inner the plot's inner data object (`theData` in a plot's controls
- *   snippet) — must carry `parentBox` (the wrapper Plot) and `removeData(i)`
- * @param {number} index position of the series in `inner.data`
+ *   snippet) — must carry `parentBox` (the wrapper Plot)
+ * @param {(inner: any) => void} mutate performs the removal directly on `inner`
+ * @param {string} message the toast text, e.g. `Series "activity" removed`
  */
-export function removeSeriesWithUndo(inner, index) {
-	const datum = inner?.data?.[index];
-	if (!datum) return;
-	const name = seriesDisplayLabel(datum);
-
-	const plotObj = inner.parentBox;
+export function removeFromInnerWithUndo(inner, mutate, message) {
+	const plotObj = inner?.parentBox;
 	const entry = plotObj && appConsts.plotMap.get(plotObj.type);
 	if (typeof entry?.data?.fromJSON !== 'function' || plotObj.plot !== inner) {
 		// No round-trip contract to record through (or a stale inner): fall back to
 		// the old direct removal rather than corrupting history.
-		inner.removeData(index);
+		mutate(inner);
 		return;
 	}
 
 	const before = serializeInner(inner);
-	inner.removeData(index);
+	mutate(inner);
 	const after = serializeInner(plotObj.plot);
 	if (JSON.stringify(before) === JSON.stringify(after)) return; // nothing removed
 
@@ -79,11 +78,41 @@ export function removeSeriesWithUndo(inner, index) {
 	const isTop = () =>
 		recorded != null && history.undoStack[history.undoStack.length - 1] === recorded;
 
-	addNotification(`Series "${name}" removed`, 'info', TOAST_MS, {
+	addNotification(message, 'info', TOAST_MS, {
 		label: 'Undo',
 		enabled: isTop,
 		run: () => {
 			if (isTop()) history.undo();
 		}
 	});
+}
+
+/**
+ * Remove series `index` from a plot's inner data object as ONE undoable step,
+ * then toast the removal with an Undo action.
+ *
+ * @param {any} inner the plot's inner data object (`theData` in a plot's controls
+ *   snippet) — must carry `parentBox` (the wrapper Plot) and `removeData(i)`
+ * @param {number} index position of the series in `inner.data`
+ */
+export function removeSeriesWithUndo(inner, index) {
+	const datum = inner?.data?.[index];
+	if (!datum) return;
+	const name = seriesDisplayLabel(datum);
+	removeFromInnerWithUndo(inner, (i) => i.removeData(index), `Series "${name}" removed`);
+}
+
+/**
+ * Remove the overlay (reference line / band) with `id` from a scatterplot's
+ * inner data object as ONE undoable step, with the same toast + Undo.
+ *
+ * @param {any} inner the plot's inner data object — must carry `parentBox`,
+ *   `overlays` and `removeOverlay(id)`
+ * @param {number} id the overlay's `id`
+ */
+export function removeOverlayWithUndo(inner, id) {
+	const overlay = inner?.overlays?.find((o) => o.id === id);
+	if (!overlay) return;
+	const what = overlay.kind === 'band' ? 'Band' : 'Line';
+	removeFromInnerWithUndo(inner, (i) => i.removeOverlay(id), `${what} "${overlay.name}" removed`);
 }

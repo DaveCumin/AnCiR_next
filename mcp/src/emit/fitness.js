@@ -91,6 +91,9 @@ const PERIOD_OF = {
 	// Searches: the LONGEST period searched is the demanding one — resolving it is what needs
 	// the cycles. A 28 h search over 30 h of data cannot find what it's looking for.
 	RhythmicityAnalysis: (a) => a.periodMax,
+	// Peak band power between periodMin and periodMax against surrogates: the same
+	// yardstick as a periodogram search, so the longest period in the band rules.
+	SurrogateTest: (a) => a.periodMax,
 	// Nodes that fold data onto a known period.
 	NonparametricRA: (a) => a.period,
 	CircadianFunctionIndex: (a) => a.period,

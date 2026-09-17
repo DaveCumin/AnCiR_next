@@ -287,6 +287,20 @@ export const TP_SPECS = [
 		args: ([x]) => ({ xIN: x, threshold: 0, comparison: '>=', out: { binary: -1 } })
 	},
 	{
+		// Rule: activity below 20 sustained for 2 h — dips near each trough of
+		// the 24 h rhythm, so several crossings with re-arming in between.
+		name: 'Crossing',
+		inputs: [T('number', SAMPLE.hours), T('number', () => SAMPLE.rhythm(24))],
+		args: ([x, y]) => ({
+			xIN: x,
+			yIN: [y],
+			thresholdIN: [],
+			groups: [[{ target: y, isOperator: '<', source: -1, value: 20 }]],
+			persistence: 2,
+			out: { breach: -1, crossing: -1, count: -1 }
+		})
+	},
+	{
 		// A column of raw p-values is exactly what a metric out-key holds (one
 		// value per y input), so this is the realistic input shape.
 		name: 'FDRCorrection',

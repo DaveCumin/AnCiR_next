@@ -1,1469 +1,1482 @@
 {
-  "version": 1,
-  "count": 110,
-  "sessions": [
-    {
-      "id": "workflow-rest-activity",
-      "name": "Workflow — actigraphy rest-activity profile",
-      "family": "Workflows",
-      "description": "Characterise a rest-activity record without assuming a sine shape. Nonparametric RA reports IS / IV / RA / M10 / L5 per subject (one value per y-input, so each port is that group’s distribution), a Cosinor adds the model-based amplitude and acrophase, an actogram shows a consolidated vs a fragmented subject, and Compare groups tests whether rhythm robustness (RA) differs.",
-      "summary": "Characterise a rest-activity record without assuming a sine shape.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/demo-workflow-rest-activity.json",
-      "kind": "workflow",
-      "showcases": [
-        "NonparametricRA",
-        "Cosinor",
-        "GroupComparison",
-        "actogram"
-      ],
-      "keywords": "workflow — actigraphy rest-activity profile characterise a rest-activity record without assuming a sine shape. nonparametric ra reports is / iv / ra / m10 / l5 per subject (one value per y-input, so each port is that group’s distribution), a cosinor adds the model-based amplitude and acrophase, an actogram shows a consolidated vs a fragmented subject, and compare groups tests whether rhythm robustness (ra) differs. workflows nonparametricra cosinor groupcomparison actogram"
-    },
-    {
-      "id": "workflow-free-running",
-      "name": "Workflow — free-running period",
-      "family": "Workflows",
-      "description": "Measure the endogenous period (tau) of a rhythm running without a zeitgeber. A double-plotted actogram shows the rhythm drifting against the 24 h grid, a Lomb-Scargle periodogram estimates tau, and the Rhythmicity Analysis node reports the peak period as a wireable number. Includes the literature caveat to avoid the chi-square periodogram.",
-      "summary": "Measure the endogenous period (tau) of a rhythm with no zeitgeber.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/demo-workflow-free-running.json",
-      "kind": "workflow",
-      "showcases": [
-        "RhythmicityAnalysis",
-        "actogram",
-        "periodogram"
-      ],
-      "keywords": "workflow — free-running period measure the endogenous period (tau) of a rhythm running without a zeitgeber. a double-plotted actogram shows the rhythm drifting against the 24 h grid, a lomb-scargle periodogram estimates tau, and the rhythmicity analysis node reports the peak period as a wireable number. includes the literature caveat to avoid the chi-square periodogram. workflows rhythmicityanalysis actogram periodogram"
-    },
-    {
-      "id": "workflow-phase-groups",
-      "name": "Workflow — group phase comparison",
-      "family": "Workflows",
-      "description": "Do two groups peak at different times of day? Per-subject phase is extracted by Cosinor (its acrophase port emits one peak time per subject, i.e. the group’s phase distribution), shown on a 24 h circular plot with each group’s Rayleigh vector, and tested with Rayleigh (is each group clustered?) plus Watson-Williams (do the groups differ in mean phase?).",
-      "summary": "Test whether two groups peak at different times of day.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/demo-workflow-phase-groups.json",
-      "kind": "workflow",
-      "showcases": [
-        "Cosinor",
-        "RayleighTest",
-        "circularphase"
-      ],
-      "keywords": "workflow — group phase comparison do two groups peak at different times of day? per-subject phase is extracted by cosinor (its acrophase port emits one peak time per subject, i.e. the group’s phase distribution), shown on a 24 h circular plot with each group’s rayleigh vector, and tested with rayleigh (is each group clustered?) plus watson-williams (do the groups differ in mean phase?). workflows cosinor rayleightest circularphase"
-    },
-    {
-      "id": "workflow-stats-eda",
-      "name": "Workflow — exploratory data analysis (first look)",
-      "family": "Workflows",
-      "description": "The universal first pass over a new dataset. Describe Data reports centre / spread / skew, a normality test screens each variable, and a correlation matrix maps the relationships — visualised as faceted histograms, a correlation heatmap and a pairs plot. Read the distributions and the relationship map BEFORE running any inferential test.",
-      "summary": "Get to know a new dataset before running any test.",
-      "group": "General statistics",
-      "url": "sessions/demos/demo-workflow-stats-eda.json",
-      "kind": "workflow",
-      "showcases": [
-        "DescribeData",
-        "NormalityTest",
-        "Correlation",
-        "histogram"
-      ],
-      "keywords": "workflow — exploratory data analysis (first look) the universal first pass over a new dataset. describe data reports centre / spread / skew, a normality test screens each variable, and a correlation matrix maps the relationships — visualised as faceted histograms, a correlation heatmap and a pairs plot. read the distributions and the relationship map before running any inferential test. workflows describedata normalitytest correlation histogram"
-    },
-    {
-      "id": "workflow-stats-two-group",
-      "name": "Workflow — compare two groups",
-      "family": "Workflows",
-      "description": "The classic two-group question: is the treatment different from control? Compare groups auto-selects the test (Welch t when both groups look normal, Mann-Whitney when they do not) and surfaces the assumption check, and a boxplot with a significance bar shows the difference. Read: which test fired and why, the p-value, and the direction/size of the shift.",
-      "summary": "Is group A different from group B?",
-      "group": "General statistics",
-      "url": "sessions/demos/demo-workflow-stats-two-group.json",
-      "kind": "workflow",
-      "showcases": [
-        "GroupComparison",
-        "boxplot"
-      ],
-      "keywords": "workflow — compare two groups the classic two-group question: is the treatment different from control? compare groups auto-selects the test (welch t when both groups look normal, mann-whitney when they do not) and surfaces the assumption check, and a boxplot with a significance bar shows the difference. read: which test fired and why, the p-value, and the direction/size of the shift. workflows groupcomparison boxplot"
-    },
-    {
-      "id": "workflow-stats-anova",
-      "name": "Workflow — compare several groups (ANOVA)",
-      "family": "Workflows",
-      "description": "Three or more conditions: do they differ, and which pairs? Compare groups auto-runs a one-way ANOVA (or Kruskal-Wallis if non-normal) with Tukey/Holm post-hoc, a mean ± SEM plot shows the group means, and a boxplot with significance bars shows the pairwise differences. Read the omnibus test FIRST; only interpret the pairwise grid if it is significant.",
-      "summary": "Do three or more groups differ, and which pairs?",
-      "group": "General statistics",
-      "url": "sessions/demos/demo-workflow-stats-anova.json",
-      "kind": "workflow",
-      "showcases": [
-        "GroupComparison",
-        "meansem",
-        "boxplot"
-      ],
-      "keywords": "workflow — compare several groups (anova) three or more conditions: do they differ, and which pairs? compare groups auto-runs a one-way anova (or kruskal-wallis if non-normal) with tukey/holm post-hoc, a mean ± sem plot shows the group means, and a boxplot with significance bars shows the pairwise differences. read the omnibus test first; only interpret the pairwise grid if it is significant. workflows groupcomparison meansem boxplot"
-    },
-    {
-      "id": "workflow-stats-correlation",
-      "name": "Workflow — correlation & relationships",
-      "family": "Workflows",
-      "description": "What moves with what? Correlation computes every pairwise coefficient (auto-choosing Pearson vs Spearman by normality), shown as a heatmap and a pairs plot (scatter + linear fit above the diagonal, distributions on it). Read strength and direction, linear vs monotonic, and watch for multicollinearity — several strongly inter-correlated predictors.",
-      "summary": "Which variables move together, and how?",
-      "group": "General statistics",
-      "url": "sessions/demos/demo-workflow-stats-correlation.json",
-      "kind": "workflow",
-      "showcases": [
-        "Correlation",
-        "correlationheatmap",
-        "pairsplot"
-      ],
-      "keywords": "workflow — correlation & relationships what moves with what? correlation computes every pairwise coefficient (auto-choosing pearson vs spearman by normality), shown as a heatmap and a pairs plot (scatter + linear fit above the diagonal, distributions on it). read strength and direction, linear vs monotonic, and watch for multicollinearity — several strongly inter-correlated predictors. workflows correlation correlationheatmap pairsplot"
-    },
-    {
-      "id": "workflow-stats-regression",
-      "name": "Workflow — linear regression + residual diagnostics",
-      "family": "Workflows",
-      "description": "Predict Y from X, then check the model is honest. Fit trend fits the line (slope, intercept, R²), the fitted line is overlaid on the data, and the residuals are plotted against X and screened for normality. The lesson: R² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when R² looks high.",
-      "summary": "Predict Y from X, then check the model is honest.",
-      "group": "General statistics",
-      "url": "sessions/demos/demo-workflow-stats-regression.json",
-      "kind": "workflow",
-      "showcases": [
-        "TrendFit",
-        "NormalityTest",
-        "scatterplot"
-      ],
-      "keywords": "workflow — linear regression + residual diagnostics predict y from x, then check the model is honest. fit trend fits the line (slope, intercept, r²), the fitted line is overlaid on the data, and the residuals are plotted against x and screened for normality. the lesson: r² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when r² looks high. workflows trendfit normalitytest scatterplot"
-    },
-    {
-      "id": "workflow-stats-logistic",
-      "name": "Workflow — logistic regression (binary outcome)",
-      "family": "Workflows",
-      "description": "Model a yes/no outcome from predictors. Logistic regression reports each predictor’s odds ratio with a 95% CI and a Wald p-value, plus McFadden pseudo-R² and a likelihood-ratio test. The fit plot shows the predicted probability against the linear predictor (the S-curve, for any number of predictors) with the observed outcomes overlaid. Watch for a non-convergence warning — it usually means separation.",
-      "summary": "Model a yes/no outcome and read the odds ratios.",
-      "group": "General statistics",
-      "url": "sessions/demos/demo-workflow-stats-logistic.json",
-      "kind": "workflow",
-      "showcases": [
-        "LogisticRegression",
-        "scatterplot"
-      ],
-      "keywords": "workflow — logistic regression (binary outcome) model a yes/no outcome from predictors. logistic regression reports each predictor’s odds ratio with a 95% ci and a wald p-value, plus mcfadden pseudo-r² and a likelihood-ratio test. the fit plot shows the predicted probability against the linear predictor (the s-curve, for any number of predictors) with the observed outcomes overlaid. watch for a non-convergence warning — it usually means separation. workflows logisticregression scatterplot"
-    },
-    {
-      "id": "workflow-stats-chi-square",
-      "name": "Workflow — categorical association (chi-square)",
-      "family": "Workflows",
-      "description": "Are two categorical variables related? The chi-squared test of independence cross-tabulates them into a contingency table and tests whether the row and column variables are associated (Yates’ correction on 2×2 tables). Read the statistic / df / p and the table; the node warns when any expected count falls below 5, where the χ² approximation breaks down and Fisher’s exact test is preferable.",
-      "summary": "Are two categorical variables related?",
-      "group": "General statistics",
-      "url": "sessions/demos/demo-workflow-stats-chi-square.json",
-      "kind": "workflow",
-      "showcases": [
-        "ChiSquared"
-      ],
-      "keywords": "workflow — categorical association (chi-square) are two categorical variables related? the chi-squared test of independence cross-tabulates them into a contingency table and tests whether the row and column variables are associated (yates’ correction on 2×2 tables). read the statistic / df / p and the table; the node warns when any expected count falls below 5, where the χ² approximation breaks down and fisher’s exact test is preferable. workflows chisquared"
-    },
-    {
-      "id": "workflow-stats-fisher-exact",
-      "name": "Workflow — small samples (Fisher's exact test)",
-      "family": "Workflows",
-      "description": "The same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted. Both tests are run on the SAME 18 animals so you can compare them directly. The chi-squared node reports its own warning that expected counts fall below 5, which is the conventional line at which its large-sample approximation stops being reliable; Fisher's exact test makes no such approximation, conditioning on the margins and summing the exact probability of every table at least as extreme as the one observed. Read the two p-values side by side: they answer the same question, and the exact one is the one to quote here. Note that Fisher's mode reports no statistic and no degrees of freedom — an exact test enumerates the distribution instead of referring a statistic to one — and gives the odds ratio as its effect size instead.",
-      "summary": "A table too small for chi-squared.",
-      "group": "General statistics",
-      "url": "sessions/demos/demo-workflow-stats-fisher-exact.json",
-      "kind": "workflow",
-      "showcases": [
-        "ChiSquared"
-      ],
-      "keywords": "workflow — small samples (fisher's exact test) the same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted. both tests are run on the same 18 animals so you can compare them directly. the chi-squared node reports its own warning that expected counts fall below 5, which is the conventional line at which its large-sample approximation stops being reliable; fisher's exact test makes no such approximation, conditioning on the margins and summing the exact probability of every table at least as extreme as the one observed. read the two p-values side by side: they answer the same question, and the exact one is the one to quote here. note that fisher's mode reports no statistic and no degrees of freedom — an exact test enumerates the distribution instead of referring a statistic to one — and gives the odds ratio as its effect size instead. workflows chisquared"
-    },
-    {
-      "id": "workflow-stats-two-groups-counts",
-      "name": "Workflow — comparing two independent groups (counts)",
-      "family": "Workflows",
-      "description": "Two groups of DIFFERENT sizes, each with its own outcomes: 7 of 10 treated animals became arrhythmic against 2 of 25 controls. This is the layout categorical data usually arrives in, and it is not the paired one — there is no meaningful pairing between the third treated animal and the third control, and the columns are 10 and 25 rows long. The Chi-squared node's Input format is set to \"Two independent groups\", which tabulates each column separately and builds the 2x2 table [[7,3],[2,23]]. Read the p-value with Cramer's V beside it: the association is strong (V = 0.64), not merely detectable. A second node runs Fisher's exact test on the same data, which is the right choice here because two of the four expected counts fall below 5. Set Input format to \"Paired\" to see why it matters — the paired reading pairs rows arbitrarily, discards 25 of the 35 observations and reports p = 0.86, hiding a real effect entirely.",
-      "summary": "Two independent groups, different sizes.",
-      "group": "General statistics",
-      "url": "sessions/demos/demo-workflow-stats-two-groups-counts.json",
-      "kind": "workflow",
-      "showcases": [
-        "ChiSquared"
-      ],
-      "keywords": "workflow — comparing two independent groups (counts) two groups of different sizes, each with its own outcomes: 7 of 10 treated animals became arrhythmic against 2 of 25 controls. this is the layout categorical data usually arrives in, and it is not the paired one — there is no meaningful pairing between the third treated animal and the third control, and the columns are 10 and 25 rows long. the chi-squared node's input format is set to \"two independent groups\", which tabulates each column separately and builds the 2x2 table [[7,3],[2,23]]. read the p-value with cramer's v beside it: the association is strong (v = 0.64), not merely detectable. a second node runs fisher's exact test on the same data, which is the right choice here because two of the four expected counts fall below 5. set input format to \"paired\" to see why it matters — the paired reading pairs rows arbitrarily, discards 25 of the 35 observations and reports p = 0.86, hiding a real effect entirely. workflows chisquared"
-    },
-    {
-      "id": "workflow-stats-anscombe",
-      "name": "Workflow — Anscombe’s quartet (always plot your data)",
-      "family": "Workflows",
-      "description": "Four small datasets constructed by Anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, R² = 0.67). Describe Data confirms the summaries are identical and Fit trend confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. The lesson is the oldest one in data analysis: look at the picture before you trust the number. The same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis.",
-      "summary": "Four datasets, identical statistics, four different stories.",
-      "group": "Reading the output",
-      "url": "sessions/demos/demo-workflow-stats-anscombe.json",
-      "kind": "workflow",
-      "showcases": [
-        "DescribeData",
-        "TrendFit",
-        "scatterplot"
-      ],
-      "keywords": "workflow — anscombe’s quartet (always plot your data) four small datasets constructed by anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, r² = 0.67). describe data confirms the summaries are identical and fit trend confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. the lesson is the oldest one in data analysis: look at the picture before you trust the number. the same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis. workflows describedata trendfit scatterplot"
-    },
-    {
-      "id": "workflow-stats-simpson",
-      "name": "Workflow — Simpson’s paradox (the trend that flips)",
-      "family": "Workflows",
-      "description": "Within every group the relationship is positive; pool the groups and it turns negative. Here three hospital wards each show activity rising with dose (a clear within-ward positive trend), but the wards are offset — the ward that runs at the highest dose also has the lowest baseline — so the pooled cloud slopes the other way. The Correlation node run on the pooled data reports a negative coefficient, while the coloured per-ward trend lines all climb. The reversal is real, not a mistake: it means a lurking grouping variable is driving the aggregate, and which answer is correct depends on the question. Pool only when the groups are genuinely exchangeable; otherwise the honest analysis is per-group. This is why \"controlling for\" a variable can flip a headline result.",
-      "summary": "A trend that reverses direction when you pool the groups.",
-      "group": "Reading the output",
-      "url": "sessions/demos/demo-workflow-stats-simpson.json",
-      "kind": "workflow",
-      "showcases": [
-        "Correlation",
-        "scatterplot"
-      ],
-      "keywords": "workflow — simpson’s paradox (the trend that flips) within every group the relationship is positive; pool the groups and it turns negative. here three hospital wards each show activity rising with dose (a clear within-ward positive trend), but the wards are offset — the ward that runs at the highest dose also has the lowest baseline — so the pooled cloud slopes the other way. the correlation node run on the pooled data reports a negative coefficient, while the coloured per-ward trend lines all climb. the reversal is real, not a mistake: it means a lurking grouping variable is driving the aggregate, and which answer is correct depends on the question. pool only when the groups are genuinely exchangeable; otherwise the honest analysis is per-group. this is why \"controlling for\" a variable can flip a headline result. workflows correlation scatterplot"
-    },
-    {
-      "id": "workflow-non24-blind",
-      "name": "Workflow — non-24 sleep-wake (blind participant)",
-      "family": "Workflows",
-      "description": "The human counterpart to the free-running mouse. With no light reaching the clock, the rhythm runs at its own tau (here 24.5 h) and drifts steadily later, so the sleep window migrates all the way around the clock over about seven weeks. A double-plotted actogram shows the drift and a Lomb-Scargle periodogram recovers tau. The point is that free-running is not a rodent-only phenomenon: this is a recognised clinical presentation.",
-      "summary": "A human rhythm free-running through the day over weeks.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/demo-workflow-non24-blind.json",
-      "kind": "workflow",
-      "showcases": [
-        "RhythmicityAnalysis",
-        "actogram",
-        "periodogram"
-      ],
-      "keywords": "workflow — non-24 sleep-wake (blind participant) the human counterpart to the free-running mouse. with no light reaching the clock, the rhythm runs at its own tau (here 24.5 h) and drifts steadily later, so the sleep window migrates all the way around the clock over about seven weeks. a double-plotted actogram shows the drift and a lomb-scargle periodogram recovers tau. the point is that free-running is not a rodent-only phenomenon: this is a recognised clinical presentation. workflows rhythmicityanalysis actogram periodogram"
-    },
-    {
-      "id": "workflow-arrhythmic",
-      "name": "Workflow — arrhythmic record (negative control)",
-      "family": "Workflows",
-      "description": "The single most useful thing to see before over-interpreting your own data. An intact record and an arrhythmic one (as after SCN ablation) are analysed side by side with identical settings. The intact periodogram has an unmistakable peak at 24 h; the arrhythmic one still reports a \"peak period\", because a periodogram always returns its largest value, but the power is a fraction of the intact case and the actogram shows no band at all. Read the power and the picture, not just the number.",
-      "summary": "The negative control: what no rhythm actually looks like.",
-      "group": "Reading the output",
-      "url": "sessions/demos/demo-workflow-arrhythmic.json",
-      "kind": "workflow",
-      "showcases": [
-        "RhythmicityAnalysis",
-        "actogram",
-        "periodogram"
-      ],
-      "keywords": "workflow — arrhythmic record (negative control) the single most useful thing to see before over-interpreting your own data. an intact record and an arrhythmic one (as after scn ablation) are analysed side by side with identical settings. the intact periodogram has an unmistakable peak at 24 h; the arrhythmic one still reports a \"peak period\", because a periodogram always returns its largest value, but the power is a fraction of the intact case and the actogram shows no band at all. read the power and the picture, not just the number. workflows rhythmicityanalysis actogram periodogram"
-    },
-    {
-      "id": "workflow-circatidal",
-      "name": "Workflow — circatidal rhythm (12.4 h)",
-      "family": "Workflows",
-      "description": "Rhythm analysis is not circadian-only. A coastal invertebrate timed to the tides runs at 12.4 h, with a weaker 24.8 h component as successive tides differ. The periodogram search window is the thing to notice: the default 20-28 h window would find the 24.8 h component and miss the dominant tidal peak entirely. Widen the window and both appear.",
-      "summary": "A 12.4 h tidal rhythm, not a circadian one.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/demo-workflow-circatidal.json",
-      "kind": "workflow",
-      "showcases": [
-        "RhythmicityAnalysis",
-        "actogram",
-        "periodogram"
-      ],
-      "keywords": "workflow — circatidal rhythm (12.4 h) rhythm analysis is not circadian-only. a coastal invertebrate timed to the tides runs at 12.4 h, with a weaker 24.8 h component as successive tides differ. the periodogram search window is the thing to notice: the default 20-28 h window would find the 24.8 h component and miss the dominant tidal peak entirely. widen the window and both appear. workflows rhythmicityanalysis actogram periodogram"
-    },
-    {
-      "id": "workflow-reentrainment",
-      "name": "Workflow — re-entrainment after a time-zone shift",
-      "family": "Workflows",
-      "description": "The contrast with an abrupt shift is the lesson. The zeitgeber moves 8 h in one step, but the rhythm does not: it runs at a transient period near 25.3 h for about a week, crawling diagonally across the actogram, before locking on at the new phase. Compare this with a schedule change where the record simply jumps, and the transients are what tell you a real clock is involved rather than direct driving.",
-      "summary": "The slow diagonal crawl back into alignment after a time-zone shift.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/demo-workflow-reentrainment.json",
-      "kind": "workflow",
-      "showcases": [
-        "actogram",
-        "periodogram"
-      ],
-      "keywords": "workflow — re-entrainment after a time-zone shift the contrast with an abrupt shift is the lesson. the zeitgeber moves 8 h in one step, but the rhythm does not: it runs at a transient period near 25.3 h for about a week, crawling diagonally across the actogram, before locking on at the new phase. compare this with a schedule change where the record simply jumps, and the transients are what tell you a real clock is involved rather than direct driving. workflows actogram periodogram"
-    },
-    {
-      "id": "workflow-transients",
-      "name": "Workflow — transients (phase advance vs delay)",
-      "family": "Workflows",
-      "description": "Two free-running records, each given a single phase-shifting stimulus on the same day, showing the two ways a rhythm can take up a new phase. Both free-run at 24.3 h throughout, so the activity band drifts slowly RIGHTWARD (later) even before anything is done to it — the diagonal that marks a clock running on its own period rather than being held by a zeitgeber. The DELAY is immediate: the band steps right in a single cycle and simply resumes its drift from the new phase, which is what strong (Type 0) resetting looks like. The ADVANCE goes through TRANSIENTS: intermediate cycles between the stimulus and the re-attainment of a steady-state phase, crawling LEFTWARD over about eight cycles. Those cycles do not move at a constant rate — each closes a fraction of whatever phase difference is left, so the increment is largest right after the stimulus and shrinks as the rhythm nears its new phase, giving a curved, decelerating approach rather than a straight ramp. Transients being commoner after advances than delays is the classical generalisation. Only the phase reached AFTER they subside is the steady-state shift, which is why a PRC must be scored from post-transient cycles.",
-      "summary": "An immediate delay beside an advance that crawls through transients.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/demo-workflow-transients.json",
-      "kind": "workflow",
-      "showcases": [
-        "actogram",
-        "scatterplot"
-      ],
-      "keywords": "workflow — transients (phase advance vs delay) two free-running records, each given a single phase-shifting stimulus on the same day, showing the two ways a rhythm can take up a new phase. both free-run at 24.3 h throughout, so the activity band drifts slowly rightward (later) even before anything is done to it — the diagonal that marks a clock running on its own period rather than being held by a zeitgeber. the delay is immediate: the band steps right in a single cycle and simply resumes its drift from the new phase, which is what strong (type 0) resetting looks like. the advance goes through transients: intermediate cycles between the stimulus and the re-attainment of a steady-state phase, crawling leftward over about eight cycles. those cycles do not move at a constant rate — each closes a fraction of whatever phase difference is left, so the increment is largest right after the stimulus and shrinks as the rhythm nears its new phase, giving a curved, decelerating approach rather than a straight ramp. transients being commoner after advances than delays is the classical generalisation. only the phase reached after they subside is the steady-state shift, which is why a prc must be scored from post-transient cycles. workflows actogram scatterplot"
-    },
-    {
-      "id": "workflow-split-rhythm",
-      "name": "Workflow — split rhythm under constant light",
-      "family": "Workflows",
-      "description": "Under constant light the rhythm can bifurcate: two oscillator components decouple, run at slightly different periods, and re-stabilise roughly 12 h apart. Here the two components are supplied separately (24.8 h and 23.4 h) and their sum is what an actograph would record, so the split is emergent rather than drawn. The periodogram of the sum shows both components, which is the numeric signature of splitting.",
-      "summary": "Constant light splits the activity band into two components.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/demo-workflow-split-rhythm.json",
-      "kind": "workflow",
-      "showcases": [
-        "actogram",
-        "periodogram",
-        "RhythmicityAnalysis"
-      ],
-      "keywords": "workflow — split rhythm under constant light under constant light the rhythm can bifurcate: two oscillator components decouple, run at slightly different periods, and re-stabilise roughly 12 h apart. here the two components are supplied separately (24.8 h and 23.4 h) and their sum is what an actograph would record, so the split is emergent rather than drawn. the periodogram of the sum shows both components, which is the numeric signature of splitting. workflows actogram periodogram rhythmicityanalysis"
-    },
-    {
-      "id": "workflow-noise-peak",
-      "name": "Workflow — the multiple-comparison trap",
-      "family": "Workflows",
-      "description": "A periodogram always returns a largest value, whether or not there is a rhythm. Here twelve records of pure noise are analysed with identical settings. Every one reports a \"peak period\", scattered arbitrarily across the search window, and the most impressive of the twelve looks convincing on its own. Test enough series, or enough windows, and something will always look significant. Read this next to the arrhythmic negative control.",
-      "summary": "Twelve pure-noise records, and the peak that means nothing.",
-      "group": "Reading the output",
-      "url": "sessions/demos/demo-workflow-noise-peak.json",
-      "kind": "workflow",
-      "showcases": [
-        "RhythmicityAnalysis",
-        "periodogram",
-        "DescribeData"
-      ],
-      "keywords": "workflow — the multiple-comparison trap a periodogram always returns a largest value, whether or not there is a rhythm. here twelve records of pure noise are analysed with identical settings. every one reports a \"peak period\", scattered arbitrarily across the search window, and the most impressive of the twelve looks convincing on its own. test enough series, or enough windows, and something will always look significant. read this next to the arrhythmic negative control. workflows rhythmicityanalysis periodogram describedata"
-    },
-    {
-      "id": "workflow-aliasing",
-      "name": "Workflow — sampling rate and aliasing",
-      "family": "Workflows",
-      "description": "A data-literacy card. The same 24 h rhythm is recorded at 30-minute epochs and then re-sampled every 13 hours. Because 13 h is longer than half the period, the rhythm is below the Nyquist limit for that sampling rate and cannot be recovered: the periodogram of the slow record peaks in the wrong place entirely. Check your epoch length against the period you are hoping to find before you conclude anything is absent.",
-      "summary": "Sample too slowly and a 24 h rhythm disappears.",
-      "group": "Reading the output",
-      "url": "sessions/demos/demo-workflow-aliasing.json",
-      "kind": "workflow",
-      "showcases": [
-        "periodogram",
-        "RhythmicityAnalysis"
-      ],
-      "keywords": "workflow — sampling rate and aliasing a data-literacy card. the same 24 h rhythm is recorded at 30-minute epochs and then re-sampled every 13 hours. because 13 h is longer than half the period, the rhythm is below the nyquist limit for that sampling rate and cannot be recovered: the periodogram of the slow record peaks in the wrong place entirely. check your epoch length against the period you are hoping to find before you conclude anything is absent. workflows periodogram rhythmicityanalysis"
-    },
-    {
-      "id": "workflow-crepuscular",
-      "name": "Workflow — crepuscular (bimodal) activity",
-      "family": "Workflows",
-      "description": "Many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. The periodogram shows this directly: power at 12 h as well as 24 h. It also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. Look at the distribution before you summarise it with one number.",
-      "summary": "Two activity peaks a day, and why one mean phase misleads.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/demo-workflow-crepuscular.json",
-      "kind": "workflow",
-      "showcases": [
-        "periodogram",
-        "actogram",
-        "RayleighTest"
-      ],
-      "keywords": "workflow — crepuscular (bimodal) activity many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. the periodogram shows this directly: power at 12 h as well as 24 h. it also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. look at the distribution before you summarise it with one number. workflows periodogram actogram rayleightest"
-    },
-    {
-      "id": "workflow-masking",
-      "name": "Workflow — masking versus true entrainment",
-      "family": "Workflows",
-      "description": "Two records that look identical while the light is on, and diverge the moment it goes off. Both animals appear to follow a 6 h shift of the light cycle. Released into constant darkness, the entrained animal keeps the new phase because its clock actually moved, while the masked animal reverts immediately to its original phase because light was only suppressing its behaviour. This is why a shift under a light cycle is not by itself evidence of entrainment: the release is the test.",
-      "summary": "Light driving behaviour directly, versus a clock that has shifted.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/demo-workflow-masking.json",
-      "kind": "workflow",
-      "showcases": [
-        "actogram"
-      ],
-      "keywords": "workflow — masking versus true entrainment two records that look identical while the light is on, and diverge the moment it goes off. both animals appear to follow a 6 h shift of the light cycle. released into constant darkness, the entrained animal keeps the new phase because its clock actually moved, while the masked animal reverts immediately to its original phase because light was only suppressing its behaviour. this is why a shift under a light cycle is not by itself evidence of entrainment: the release is the test. workflows actogram"
-    },
-    {
-      "id": "dataset-testdata",
-      "name": "Test data",
-      "family": "Sources",
-      "description": "Data with two simulated rhythms and outliers",
-      "group": "Sample data",
-      "url": "sessions/demos/testData.csv",
-      "kind": "dataset",
-      "keywords": "test data data with two simulated rhythms and outliers sources csv url example"
-    },
-    {
-      "id": "dataset-workflow-rest-activity",
-      "name": "Actigraphy rest-activity profile",
-      "family": "Sources",
-      "description": "Characterise a rest-activity record without assuming a sine shape. Data only — 13 columns × 168 rows, no analysis.",
-      "summary": "Characterise a rest-activity record without assuming a sine shape.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/actigraphy-rest-activity-profile.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "actigraphy rest-activity profile characterise a rest-activity record without assuming a sine shape. data only — 13 columns × 168 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-free-running",
-      "name": "Free-running period",
-      "family": "Sources",
-      "description": "Measure the endogenous period (tau) of a rhythm with no zeitgeber. Data only — 2 columns × 336 rows, no analysis.",
-      "summary": "Measure the endogenous period (tau) of a rhythm with no zeitgeber.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/free-running-period.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "free-running period measure the endogenous period (tau) of a rhythm with no zeitgeber. data only — 2 columns × 336 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-phase-groups",
-      "name": "Group phase comparison",
-      "family": "Sources",
-      "description": "Test whether two groups peak at different times of day. Data only — 17 columns × 96 rows, no analysis.",
-      "summary": "Test whether two groups peak at different times of day.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/group-phase-comparison.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "group phase comparison test whether two groups peak at different times of day. data only — 17 columns × 96 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-eda",
-      "name": "Exploratory data analysis (first look)",
-      "family": "Sources",
-      "description": "Get to know a new dataset before running any test. Data only — 4 columns × 80 rows, no analysis.",
-      "summary": "Get to know a new dataset before running any test.",
-      "group": "General statistics",
-      "url": "sessions/demos/exploratory-data-analysis-first-look.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "exploratory data analysis (first look) get to know a new dataset before running any test. data only — 4 columns × 80 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-two-group",
-      "name": "Compare two groups",
-      "family": "Sources",
-      "description": "Is group A different from group B? Data only — 2 columns × 90 rows, no analysis.",
-      "summary": "Is group A different from group B?",
-      "group": "General statistics",
-      "url": "sessions/demos/compare-two-groups.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "compare two groups is group a different from group b? data only — 2 columns × 90 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-anova",
-      "name": "Compare several groups (ANOVA)",
-      "family": "Sources",
-      "description": "Do three or more groups differ, and which pairs? Data only — 2 columns × 120 rows, no analysis.",
-      "summary": "Do three or more groups differ, and which pairs?",
-      "group": "General statistics",
-      "url": "sessions/demos/compare-several-groups-anova.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "compare several groups (anova) do three or more groups differ, and which pairs? data only — 2 columns × 120 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-correlation",
-      "name": "Correlation & relationships",
-      "family": "Sources",
-      "description": "Which variables move together, and how? Data only — 5 columns × 70 rows, no analysis.",
-      "summary": "Which variables move together, and how?",
-      "group": "General statistics",
-      "url": "sessions/demos/correlation-relationships.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "correlation & relationships which variables move together, and how? data only — 5 columns × 70 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-regression",
-      "name": "Linear regression + residual diagnostics",
-      "family": "Sources",
-      "description": "Predict Y from X, then check the model is honest. Data only — 2 columns × 60 rows, no analysis.",
-      "summary": "Predict Y from X, then check the model is honest.",
-      "group": "General statistics",
-      "url": "sessions/demos/linear-regression-residual-diagnostics.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "linear regression + residual diagnostics predict y from x, then check the model is honest. data only — 2 columns × 60 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-logistic",
-      "name": "Logistic regression (binary outcome)",
-      "family": "Sources",
-      "description": "Model a yes/no outcome and read the odds ratios. Data only — 3 columns × 60 rows, no analysis.",
-      "summary": "Model a yes/no outcome and read the odds ratios.",
-      "group": "General statistics",
-      "url": "sessions/demos/logistic-regression-binary-outcome.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "logistic regression (binary outcome) model a yes/no outcome and read the odds ratios. data only — 3 columns × 60 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-chi-square",
-      "name": "Categorical association (chi-square)",
-      "family": "Sources",
-      "description": "Are two categorical variables related? Data only — 2 columns × 120 rows, no analysis.",
-      "summary": "Are two categorical variables related?",
-      "group": "General statistics",
-      "url": "sessions/demos/categorical-association-chi-square.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "categorical association (chi-square) are two categorical variables related? data only — 2 columns × 120 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-fisher-exact",
-      "name": "Small samples (Fisher's exact test)",
-      "family": "Sources",
-      "description": "A table too small for chi-squared. Data only — 2 columns × 18 rows, no analysis.",
-      "summary": "A table too small for chi-squared.",
-      "group": "General statistics",
-      "url": "sessions/demos/small-samples-fisher-s-exact-test.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "small samples (fisher's exact test) a table too small for chi-squared. data only — 2 columns × 18 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-two-groups-counts",
-      "name": "Comparing two independent groups (counts)",
-      "family": "Sources",
-      "description": "Two independent groups, different sizes. Data only — 2 columns × 25 rows, no analysis.",
-      "summary": "Two independent groups, different sizes.",
-      "group": "General statistics",
-      "url": "sessions/demos/comparing-two-independent-groups-counts.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "comparing two independent groups (counts) two independent groups, different sizes. data only — 2 columns × 25 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-anscombe",
-      "name": "Anscombe’s quartet (always plot your data)",
-      "family": "Sources",
-      "description": "Four datasets, identical statistics, four different stories. Data only — 6 columns × 11 rows, no analysis.",
-      "summary": "Four datasets, identical statistics, four different stories.",
-      "group": "Reading the output",
-      "url": "sessions/demos/anscombe-s-quartet-always-plot-your-data.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "anscombe’s quartet (always plot your data) four datasets, identical statistics, four different stories. data only — 6 columns × 11 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-stats-simpson",
-      "name": "Simpson’s paradox (the trend that flips)",
-      "family": "Sources",
-      "description": "A trend that reverses direction when you pool the groups. Data only — 16 columns × 75 rows, no analysis.",
-      "summary": "A trend that reverses direction when you pool the groups.",
-      "group": "Reading the output",
-      "url": "sessions/demos/simpson-s-paradox-the-trend-that-flips.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "simpson’s paradox (the trend that flips) a trend that reverses direction when you pool the groups. data only — 16 columns × 75 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-non24-blind",
-      "name": "Non-24 sleep-wake (blind participant)",
-      "family": "Sources",
-      "description": "A human rhythm free-running through the day over weeks. Data only — 2 columns × 1152 rows, no analysis.",
-      "summary": "A human rhythm free-running through the day over weeks.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/non-24-sleep-wake-blind-participant.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "non-24 sleep-wake (blind participant) a human rhythm free-running through the day over weeks. data only — 2 columns × 1152 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-arrhythmic",
-      "name": "Arrhythmic record (negative control)",
-      "family": "Sources",
-      "description": "The negative control: what no rhythm actually looks like. Data only — 3 columns × 336 rows, no analysis.",
-      "summary": "The negative control: what no rhythm actually looks like.",
-      "group": "Reading the output",
-      "url": "sessions/demos/arrhythmic-record-negative-control.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "arrhythmic record (negative control) the negative control: what no rhythm actually looks like. data only — 3 columns × 336 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-circatidal",
-      "name": "Circatidal rhythm (12.4 h)",
-      "family": "Sources",
-      "description": "A 12.4 h tidal rhythm, not a circadian one. Data only — 2 columns × 288 rows, no analysis.",
-      "summary": "A 12.4 h tidal rhythm, not a circadian one.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/circatidal-rhythm-12-4-h.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "circatidal rhythm (12.4 h) a 12.4 h tidal rhythm, not a circadian one. data only — 2 columns × 288 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-reentrainment",
-      "name": "Re-entrainment after a time-zone shift",
-      "family": "Sources",
-      "description": "The slow diagonal crawl back into alignment after a time-zone shift. Data only — 2 columns × 600 rows, no analysis.",
-      "summary": "The slow diagonal crawl back into alignment after a time-zone shift.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/re-entrainment-after-a-time-zone-shift.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "re-entrainment after a time-zone shift the slow diagonal crawl back into alignment after a time-zone shift. data only — 2 columns × 600 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-transients",
-      "name": "Transients (phase advance vs delay)",
-      "family": "Sources",
-      "description": "An immediate delay beside an advance that crawls through transients. Data only — 7 columns × 672 rows, no analysis.",
-      "summary": "An immediate delay beside an advance that crawls through transients.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/transients-phase-advance-vs-delay.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "transients (phase advance vs delay) an immediate delay beside an advance that crawls through transients. data only — 7 columns × 672 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-split-rhythm",
-      "name": "Split rhythm under constant light",
-      "family": "Sources",
-      "description": "Constant light splits the activity band into two components. Data only — 4 columns × 624 rows, no analysis.",
-      "summary": "Constant light splits the activity band into two components.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/split-rhythm-under-constant-light.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "split rhythm under constant light constant light splits the activity band into two components. data only — 4 columns × 624 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-noise-peak",
-      "name": "The multiple-comparison trap",
-      "family": "Sources",
-      "description": "Twelve pure-noise records, and the peak that means nothing. Data only — 13 columns × 240 rows, no analysis.",
-      "summary": "Twelve pure-noise records, and the peak that means nothing.",
-      "group": "Reading the output",
-      "url": "sessions/demos/the-multiple-comparison-trap.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "the multiple-comparison trap twelve pure-noise records, and the peak that means nothing. data only — 13 columns × 240 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-aliasing",
-      "name": "Sampling rate and aliasing",
-      "family": "Sources",
-      "description": "Sample too slowly and a 24 h rhythm disappears. Data only — 4 columns × 960 rows, no analysis.",
-      "summary": "Sample too slowly and a 24 h rhythm disappears.",
-      "group": "Reading the output",
-      "url": "sessions/demos/sampling-rate-and-aliasing.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "sampling rate and aliasing sample too slowly and a 24 h rhythm disappears. data only — 4 columns × 960 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-crepuscular",
-      "name": "Crepuscular (bimodal) activity",
-      "family": "Sources",
-      "description": "Two activity peaks a day, and why one mean phase misleads. Data only — 3 columns × 336 rows, no analysis.",
-      "summary": "Two activity peaks a day, and why one mean phase misleads.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/crepuscular-bimodal-activity.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "crepuscular (bimodal) activity two activity peaks a day, and why one mean phase misleads. data only — 3 columns × 336 rows, no analysis. sources"
-    },
-    {
-      "id": "dataset-workflow-masking",
-      "name": "Masking versus true entrainment",
-      "family": "Sources",
-      "description": "Light driving behaviour directly, versus a clock that has shifted. Data only — 3 columns × 672 rows, no analysis.",
-      "summary": "Light driving behaviour directly, versus a clock that has shifted.",
-      "group": "Rhythm & circadian",
-      "url": "sessions/demos/masking-versus-true-entrainment.csv",
-      "kind": "dataset",
-      "showcases": [],
-      "keywords": "masking versus true entrainment light driving behaviour directly, versus a clock that has shifted. data only — 3 columns × 672 rows, no analysis. sources"
-    },
-    {
-      "id": "tp-blankcolumn",
-      "name": "Enter Data",
-      "family": "Sources",
-      "description": "Enter data by hand, or paste CSV/JSON.",
-      "summary": "Enter data by hand, or paste CSV/JSON.",
-      "url": "sessions/demos/demo-tp-blankcolumn.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "BlankColumn"
-      ],
-      "keywords": "enter data enter data by hand, or paste csv/json. sources blankcolumn"
-    },
-    {
-      "id": "tp-random",
-      "name": "Random",
-      "family": "Sources",
-      "description": "Generate a column of random values.",
-      "summary": "Generate a column of random values.",
-      "url": "sessions/demos/demo-tp-random.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "Random"
-      ],
-      "keywords": "random generate a column of random values. sources random"
-    },
-    {
-      "id": "tp-sequencecolumn",
-      "name": "Sequence Column",
-      "family": "Sources",
-      "description": "Create a numeric or time sequence column.",
-      "summary": "Create a numeric or time sequence column.",
-      "url": "sessions/demos/demo-tp-sequencecolumn.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "SequenceColumn"
-      ],
-      "keywords": "sequence column create a numeric or time sequence column. sources sequencecolumn"
-    },
-    {
-      "id": "tp-simulateddata",
-      "name": "Simulate Data",
-      "family": "Sources",
-      "description": "Generate a synthetic time-series table from a cosine + noise model.",
-      "summary": "Generate a synthetic time-series table from a cosine + noise model.",
-      "url": "sessions/demos/demo-tp-simulateddata.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "SimulatedData"
-      ],
-      "keywords": "simulate data generate a synthetic time-series table from a cosine + noise model. sources simulateddata"
-    },
-    {
-      "id": "process-add",
-      "name": "Add",
-      "family": "Arithmetic",
-      "description": "Add a constant or column to the input column.",
-      "summary": "Add a constant or column to the input column.",
-      "url": "sessions/demos/demo-process-add.json",
-      "kind": "process",
-      "showcases": [
-        "Add"
-      ],
-      "keywords": "add add a constant or column to the input column. arithmetic add"
-    },
-    {
-      "id": "process-sub",
-      "name": "Substitute",
-      "family": "Arithmetic",
-      "description": "Find a specific value in the column and replace it with another (e.g. swap a missing-data code like −999 for a different value).",
-      "summary": "Find a specific value in the column and replace it with another (e.g.",
-      "url": "sessions/demos/demo-process-sub.json",
-      "kind": "process",
-      "showcases": [
-        "Sub"
-      ],
-      "keywords": "substitute find a specific value in the column and replace it with another (e.g. swap a missing-data code like −999 for a different value). arithmetic sub"
-    },
-    {
-      "id": "process-multiply",
-      "name": "Multiply",
-      "family": "Arithmetic",
-      "description": "Multiply the input column by a constant or another column.",
-      "summary": "Multiply the input column by a constant or another column.",
-      "url": "sessions/demos/demo-process-multiply.json",
-      "kind": "process",
-      "showcases": [
-        "Multiply"
-      ],
-      "keywords": "multiply multiply the input column by a constant or another column. arithmetic multiply"
-    },
-    {
-      "id": "process-normalize",
-      "name": "Normalize",
-      "family": "Arithmetic",
-      "description": "Normalize the column to a chosen range or by a reference value.",
-      "summary": "Normalize the column to a chosen range or by a reference value.",
-      "url": "sessions/demos/demo-process-normalize.json",
-      "kind": "process",
-      "showcases": [
-        "normalize"
-      ],
-      "keywords": "normalize normalize the column to a chosen range or by a reference value. arithmetic normalize"
-    },
-    {
-      "id": "tp-columnfunctions",
-      "name": "Column Function",
-      "family": "Arithmetic",
-      "description": "Apply a per-column aggregate function (mean, sum, etc.) across rows or groups.",
-      "summary": "Apply a per-column aggregate function (mean, sum, etc.) across rows or groups.",
-      "url": "sessions/demos/demo-tp-columnfunctions.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "ColumnFunctions"
-      ],
-      "keywords": "column function apply a per-column aggregate function (mean, sum, etc.) across rows or groups. arithmetic columnfunctions"
-    },
-    {
-      "id": "tp-threshold",
-      "name": "Threshold",
-      "family": "Arithmetic",
-      "description": "Turn a column into a 0/1 (binary) column at a user-set cutoff — e.g. to make a binary outcome for logistic regression.",
-      "summary": "Turn a column into a 0/1 (binary) column at a user-set cutoff — e.g.",
-      "url": "sessions/demos/demo-tp-threshold.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "Threshold"
-      ],
-      "keywords": "threshold turn a column into a 0/1 (binary) column at a user-set cutoff — e.g. to make a binary outcome for logistic regression. arithmetic threshold"
-    },
-    {
-      "id": "tp-formulacolumn",
-      "name": "Formula Column",
-      "family": "Arithmetic",
-      "description": "Compute a new column from a user-supplied formula referencing other columns.",
-      "summary": "Compute a new column from a user-supplied formula referencing other columns.",
-      "url": "sessions/demos/demo-tp-formulacolumn.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "FormulaColumn"
-      ],
-      "keywords": "formula column compute a new column from a user-supplied formula referencing other columns. arithmetic formulacolumn"
-    },
-    {
-      "id": "process-filterbyothercol",
-      "name": "Filter",
-      "family": "Filtering",
-      "description": "Filter rows based on the values of another column.",
-      "summary": "Filter rows based on the values of another column.",
-      "url": "sessions/demos/demo-process-filterbyothercol.json",
-      "kind": "process",
-      "showcases": [
-        "FilterByOtherCol"
-      ],
-      "keywords": "filter filter rows based on the values of another column. filtering filterbyothercol"
-    },
-    {
-      "id": "process-outlierremoval",
-      "name": "Remove Outliers",
-      "family": "Filtering",
-      "description": "Detect and remove outliers from the column.",
-      "summary": "Detect and remove outliers from the column.",
-      "url": "sessions/demos/demo-process-outlierremoval.json",
-      "kind": "process",
-      "showcases": [
-        "OutlierRemoval"
-      ],
-      "keywords": "remove outliers detect and remove outliers from the column. filtering outlierremoval"
-    },
-    {
-      "id": "process-removetrend",
-      "name": "Remove Trend",
-      "family": "Filtering",
-      "description": "Remove a fitted trend (linear, polynomial, etc.) from the column.",
-      "summary": "Remove a fitted trend (linear, polynomial, etc.) from the column.",
-      "url": "sessions/demos/demo-process-removetrend.json",
-      "kind": "process",
-      "showcases": [
-        "RemoveTrend"
-      ],
-      "keywords": "remove trend remove a fitted trend (linear, polynomial, etc.) from the column. filtering removetrend"
-    },
-    {
-      "id": "process-frequencyfilter",
-      "name": "Frequency Filter",
-      "family": "Filtering",
-      "description": "FFT-based low-, high-, or band-pass filter over an evenly sampled series.",
-      "summary": "FFT-based low-, high-, or band-pass filter over an evenly sampled series.",
-      "url": "sessions/demos/demo-process-frequencyfilter.json",
-      "kind": "process",
-      "showcases": [
-        "FrequencyFilter"
-      ],
-      "keywords": "frequency filter fft-based low-, high-, or band-pass filter over an evenly sampled series. filtering frequencyfilter"
-    },
-    {
-      "id": "tp-sort",
-      "name": "Sort",
-      "family": "Filtering",
-      "description": "Sort rows by a chosen column, keeping the selected columns aligned (ascending or descending).",
-      "summary": "Sort rows by a chosen column, keeping the selected columns aligned (ascending or descending).",
-      "url": "sessions/demos/demo-tp-sort.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "Sort"
-      ],
-      "keywords": "sort sort rows by a chosen column, keeping the selected columns aligned (ascending or descending). filtering sort"
-    },
-    {
-      "id": "tp-smootheddata",
-      "name": "Smooth Data",
-      "family": "Smoothing",
-      "description": "Smooth a column using LOESS, moving average, Savitzky-Golay, or Whittaker-Eilers.",
-      "summary": "Smooth a column using LOESS, moving average, Savitzky-Golay, or Whittaker-Eilers.",
-      "url": "sessions/demos/demo-tp-smootheddata.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "SmoothedData"
-      ],
-      "keywords": "smooth data smooth a column using loess, moving average, savitzky-golay, or whittaker-eilers. smoothing smootheddata"
-    },
-    {
-      "id": "tp-binneddata",
-      "name": "Bin Data",
-      "family": "Binning",
-      "description": "Bin time-series values into regular intervals and aggregate per bin.",
-      "summary": "Bin time-series values into regular intervals and aggregate per bin.",
-      "url": "sessions/demos/demo-tp-binneddata.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "BinnedData"
-      ],
-      "keywords": "bin data bin time-series values into regular intervals and aggregate per bin. binning binneddata"
-    },
-    {
-      "id": "tp-interpolate",
-      "name": "Interpolate",
-      "family": "Binning",
-      "description": "Fill missing values or resample a series onto a regular grid by interpolation (linear, nearest, or cubic spline).",
-      "summary": "Fill missing values or resample a series onto a regular grid by interpolation (linear, nearest, or cubic spline).",
-      "url": "sessions/demos/demo-tp-interpolate.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "Interpolate"
-      ],
-      "keywords": "interpolate fill missing values or resample a series onto a regular grid by interpolation (linear, nearest, or cubic spline). binning interpolate"
-    },
-    {
-      "id": "tp-cosinor",
-      "name": "Cosinor",
-      "family": "Fitting",
-      "description": "Fit a cosinor model (period, amplitude, acrophase) to the column.",
-      "summary": "Fit a cosinor model (period, amplitude, acrophase) to the column.",
-      "url": "sessions/demos/demo-tp-cosinor.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "Cosinor"
-      ],
-      "keywords": "cosinor fit a cosinor model (period, amplitude, acrophase) to the column. fitting cosinor"
-    },
-    {
-      "id": "tp-doublelogistic",
-      "name": "Double Logistic",
-      "family": "Fitting",
-      "description": "Fit a double-logistic curve to the column (useful for phenology / on-off transitions).",
-      "summary": "Fit a double-logistic curve to the column (useful for phenology / on-off transitions).",
-      "url": "sessions/demos/demo-tp-doublelogistic.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "DoubleLogistic"
-      ],
-      "keywords": "double logistic fit a double-logistic curve to the column (useful for phenology / on-off transitions). fitting doublelogistic"
-    },
-    {
-      "id": "tp-fitfunction",
-      "name": "Fit waveform model",
-      "family": "Fitting",
-      "description": "Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. Use it to compare different waveform shapes on the same series without rewiring; the fit quality (R2, RMSE, permutation p) and the chosen model’s parameters are wireable metric output ports, like the dedicated Cosinor, Rectangular Wave and Double Logistic nodes.",
-      "summary": "Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic.",
-      "url": "sessions/demos/demo-tp-fitfunction.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "FitFunction"
-      ],
-      "keywords": "fit waveform model fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. use it to compare different waveform shapes on the same series without rewiring; the fit quality (r2, rmse, permutation p) and the chosen model’s parameters are wireable metric output ports, like the dedicated cosinor, rectangular wave and double logistic nodes. fitting fitfunction"
-    },
-    {
-      "id": "tp-rectangularwave",
-      "name": "Rectangular Wave",
-      "family": "Fitting",
-      "description": "Fit a rectangular (square) wave model with adjustable duty cycle.",
-      "summary": "Fit a rectangular (square) wave model with adjustable duty cycle.",
-      "url": "sessions/demos/demo-tp-rectangularwave.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "RectangularWave"
-      ],
-      "keywords": "rectangular wave fit a rectangular (square) wave model with adjustable duty cycle. fitting rectangularwave"
-    },
-    {
-      "id": "tp-trendfit",
-      "name": "Fit trend",
-      "family": "Fitting",
-      "description": "Fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its R2, RMSE and coefficients. Use it to describe or remove baseline drift, growth or decay before rhythm analysis.",
-      "summary": "Fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its R2, RMSE and coefficients.",
-      "url": "sessions/demos/demo-tp-trendfit.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "TrendFit"
-      ],
-      "keywords": "fit trend fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its r2, rmse and coefficients. use it to describe or remove baseline drift, growth or decay before rhythm analysis. fitting trendfit"
-    },
-    {
-      "id": "tp-fdrcorrection",
-      "name": "FDR Correction",
-      "family": "Analysis",
-      "description": "Adjust a column of p-values for multiple comparisons and flag which survive. Benjamini-Hochberg (FDR under independence or positive dependence), Benjamini-Yekutieli (FDR under arbitrary dependence), Holm and Bonferroni (family-wise error). Missing p-values stay missing and are excluded from the count, so a test that failed to run never tightens the correction on the ones that did.",
-      "summary": "Adjust a column of p-values for multiple comparisons and flag which survive.",
-      "url": "sessions/demos/demo-tp-fdrcorrection.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "FDRCorrection"
-      ],
-      "keywords": "fdr correction adjust a column of p-values for multiple comparisons and flag which survive. benjamini-hochberg (fdr under independence or positive dependence), benjamini-yekutieli (fdr under arbitrary dependence), holm and bonferroni (family-wise error). missing p-values stay missing and are excluded from the count, so a test that failed to run never tightens the correction on the ones that did. analysis fdrcorrection"
-    },
-    {
-      "id": "tp-surrogatetest",
-      "name": "Surrogate Test",
-      "family": "Analysis",
-      "description": "Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked.",
-      "summary": "Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure.",
-      "url": "sessions/demos/demo-tp-surrogatetest.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "SurrogateTest"
-      ],
-      "keywords": "surrogate test test rhythm strength against a surrogate null that preserves the series' nuisance structure. plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and ar(1) red noise keep it. phase-randomised and aaft surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked. analysis surrogatetest"
-    },
-    {
-      "id": "tp-groupcomparison",
-      "name": "Compare groups (stats)",
-      "family": "Analysis",
-      "description": "Compare statistics between groups defined by another column.",
-      "summary": "Compare statistics between groups defined by another column.",
-      "url": "sessions/demos/demo-tp-groupcomparison.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "GroupComparison"
-      ],
-      "keywords": "compare groups (stats) compare statistics between groups defined by another column. analysis groupcomparison"
-    },
-    {
-      "id": "tp-describedata",
-      "name": "Describe Data",
-      "family": "Analysis",
-      "description": "Per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis).",
-      "summary": "Per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis).",
-      "url": "sessions/demos/demo-tp-describedata.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "DescribeData"
-      ],
-      "keywords": "describe data per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis). analysis describedata"
-    },
-    {
-      "id": "tp-logisticregression",
-      "name": "Logistic regression",
-      "family": "Analysis",
-      "description": "Model a binary outcome from one or more predictors: coefficients, odds ratios with 95% CIs, Wald p-values, and model fit (pseudo-R², LR test).",
-      "summary": "Model a binary outcome from one or more predictors: coefficients, odds ratios with 95% CIs, Wald p-values, and model fit (pseudo-R², LR test).",
-      "url": "sessions/demos/demo-tp-logisticregression.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "LogisticRegression"
-      ],
-      "keywords": "logistic regression model a binary outcome from one or more predictors: coefficients, odds ratios with 95% cis, wald p-values, and model fit (pseudo-r², lr test). analysis logisticregression"
-    },
-    {
-      "id": "tp-chisquared",
-      "name": "Categorical tests",
-      "family": "Analysis",
-      "description": "Tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or Fisher's exact test for small 2x2 tables. Reports an effect size (Cramer's V, Cohen's w, or the odds ratio with a confidence interval) alongside the p-value.",
-      "summary": "Tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or Fisher's exact test for small 2x2 tables.",
-      "url": "sessions/demos/demo-tp-chisquared.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "ChiSquared"
-      ],
-      "keywords": "categorical tests tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or fisher's exact test for small 2x2 tables. reports an effect size (cramer's v, cohen's w, or the odds ratio with a confidence interval) alongside the p-value. analysis chisquared"
-    },
-    {
-      "id": "tp-crosscorrelation",
-      "name": "Cross-correlation",
-      "family": "Analysis",
-      "description": "Cross-correlogram of two series: the correlation at each lag, with the peak lag revealing the delay between them.",
-      "summary": "Cross-correlogram of two series: the correlation at each lag, with the peak lag revealing the delay between them.",
-      "url": "sessions/demos/demo-tp-crosscorrelation.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "CrossCorrelation"
-      ],
-      "keywords": "cross-correlation cross-correlogram of two series: the correlation at each lag, with the peak lag revealing the delay between them. analysis crosscorrelation"
-    },
-    {
-      "id": "tp-normalitytest",
-      "name": "Normality Test",
-      "family": "Analysis",
-      "description": "Test each wired column for normality (Shapiro-Wilk by default, or D’Agostino-Pearson / Jarque-Bera), reporting the statistic, p-value and a verdict.",
-      "summary": "Test each wired column for normality (Shapiro-Wilk by default, or D’Agostino-Pearson / Jarque-Bera), reporting the statistic, p-value and a verdict.",
-      "url": "sessions/demos/demo-tp-normalitytest.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "NormalityTest"
-      ],
-      "keywords": "normality test test each wired column for normality (shapiro-wilk by default, or d’agostino-pearson / jarque-bera), reporting the statistic, p-value and a verdict. analysis normalitytest"
-    },
-    {
-      "id": "tp-correlation",
-      "name": "Correlation",
-      "family": "Analysis",
-      "description": "Pairwise correlation matrix (Pearson or Spearman) across the wired columns, with normality-based auto method choice.",
-      "summary": "Pairwise correlation matrix (Pearson or Spearman) across the wired columns, with normality-based auto method choice.",
-      "url": "sessions/demos/demo-tp-correlation.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "Correlation"
-      ],
-      "keywords": "correlation pairwise correlation matrix (pearson or spearman) across the wired columns, with normality-based auto method choice. analysis correlation"
-    },
-    {
-      "id": "tp-movinganalysis",
-      "name": "Moving Analysis",
-      "family": "Analysis",
-      "description": "Compute a rolling-window analysis across the column.",
-      "summary": "Compute a rolling-window analysis across the column.",
-      "url": "sessions/demos/demo-tp-movinganalysis.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "MovingAnalysis"
-      ],
-      "keywords": "moving analysis compute a rolling-window analysis across the column. analysis movinganalysis"
-    },
-    {
-      "id": "tp-rhythmicityanalysis",
-      "name": "Rhythmicity Analysis",
-      "family": "Analysis",
-      "description": "Run rhythmicity statistics over the column.",
-      "summary": "Run rhythmicity statistics over the column.",
-      "url": "sessions/demos/demo-tp-rhythmicityanalysis.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "RhythmicityAnalysis"
-      ],
-      "keywords": "rhythmicity analysis run rhythmicity statistics over the column. analysis rhythmicityanalysis"
-    },
-    {
-      "id": "tp-nonparametricra",
-      "name": "Nonparametric RA",
-      "family": "Analysis",
-      "description": "Nonparametric rest-activity variables (IS, IV, RA, M10/L5) — robust to non-sinusoidal rhythms.",
-      "summary": "Nonparametric rest-activity variables (IS, IV, RA, M10/L5) — robust to non-sinusoidal rhythms.",
-      "url": "sessions/demos/demo-tp-nonparametricra.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "NonparametricRA"
-      ],
-      "keywords": "nonparametric ra nonparametric rest-activity variables (is, iv, ra, m10/l5) — robust to non-sinusoidal rhythms. analysis nonparametricra"
-    },
-    {
-      "id": "tp-averageprofile",
-      "name": "Average Profile",
-      "family": "Analysis",
-      "description": "Average daily profile — fold a series onto one period and show the per-bin mean (± SEM).",
-      "summary": "Average daily profile — fold a series onto one period and show the per-bin mean (± SEM).",
-      "url": "sessions/demos/demo-tp-averageprofile.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "AverageProfile"
-      ],
-      "keywords": "average profile average daily profile — fold a series onto one period and show the per-bin mean (± sem). analysis averageprofile"
-    },
-    {
-      "id": "tp-rayleightest",
-      "name": "Rayleigh test",
-      "family": "Analysis",
-      "description": "Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p, acrophase) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns. Wiring an optional time column (hours or timestamp, folded by period) switches to an amplitude-weighted mean vector/acrophase; without it, values are treated as raw angles.",
-      "summary": "Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p, acrophase) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns.",
-      "url": "sessions/demos/demo-tp-rayleightest.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "RayleighTest"
-      ],
-      "keywords": "rayleigh test circular statistics on phase/angle columns: the rayleigh uniformity test (r, z, p, acrophase) per column, with an optional watson-williams equal-mean-direction test (f, p) across columns. wiring an optional time column (hours or timestamp, folded by period) switches to an amplitude-weighted mean vector/acrophase; without it, values are treated as raw angles. analysis rayleightest"
-    },
-    {
-      "id": "tp-circadianfunctionindex",
-      "name": "Circadian Function Index",
-      "family": "Analysis",
-      "description": "Circadian Function Index (0–1) summarising rest-activity rhythm robustness from nonparametric IS, IV and RA (Ortiz-Tudela et al. 2010).",
-      "summary": "Circadian Function Index (0–1) summarising rest-activity rhythm robustness from nonparametric IS, IV and RA (Ortiz-Tudela et al.",
-      "url": "sessions/demos/demo-tp-circadianfunctionindex.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "CircadianFunctionIndex"
-      ],
-      "keywords": "circadian function index circadian function index (0–1) summarising rest-activity rhythm robustness from nonparametric is, iv and ra (ortiz-tudela et al. 2010). analysis circadianfunctionindex"
-    },
-    {
-      "id": "process-editvalue",
-      "name": "Edit value",
-      "family": "Transform",
-      "description": "Edit or substitute individual values in a column.",
-      "summary": "Edit or substitute individual values in a column.",
-      "url": "sessions/demos/demo-process-editvalue.json",
-      "kind": "process",
-      "showcases": [
-        "EditValue"
-      ],
-      "keywords": "edit value edit or substitute individual values in a column. transform editvalue"
-    },
-    {
-      "id": "tp-collectcolumns",
-      "name": "Collect Columns",
-      "family": "Transform",
-      "description": "Collect (concatenate) several columns into one.",
-      "summary": "Collect (concatenate) several columns into one.",
-      "url": "sessions/demos/demo-tp-collectcolumns.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "CollectColumns"
-      ],
-      "keywords": "collect columns collect (concatenate) several columns into one. transform collectcolumns"
-    },
-    {
-      "id": "tp-columnset",
-      "name": "Column Set",
-      "family": "Transform",
-      "description": "Curate a live subset of columns by name/label and reuse it as one wire.",
-      "summary": "Curate a live subset of columns by name/label and reuse it as one wire.",
-      "url": "sessions/demos/demo-tp-columnset.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "ColumnSet"
-      ],
-      "keywords": "column set curate a live subset of columns by name/label and reuse it as one wire. transform columnset"
-    },
-    {
-      "id": "tp-longtowide",
-      "name": "Long To Wide",
-      "family": "Transform",
-      "description": "Pivot a long-format table into wide format.",
-      "summary": "Pivot a long-format table into wide format.",
-      "url": "sessions/demos/demo-tp-longtowide.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "LongToWide"
-      ],
-      "keywords": "long to wide pivot a long-format table into wide format. transform longtowide"
-    },
-    {
-      "id": "tp-split",
-      "name": "Split data",
-      "family": "Transform",
-      "description": "Split a column or table on a delimiter or group key.",
-      "summary": "Split a column or table on a delimiter or group key.",
-      "url": "sessions/demos/demo-tp-split.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "Split"
-      ],
-      "keywords": "split data split a column or table on a delimiter or group key. transform split"
-    },
-    {
-      "id": "tp-storedvaluegroup",
-      "name": "Stored Value Group",
-      "family": "Transform",
-      "description": "Group derived stored values together for reuse.",
-      "summary": "Group derived stored values together for reuse.",
-      "url": "sessions/demos/demo-tp-storedvaluegroup.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "StoredValueGroup"
-      ],
-      "keywords": "stored value group group derived stored values together for reuse. transform storedvaluegroup"
-    },
-    {
-      "id": "tp-widetolong",
-      "name": "Wide To Long",
-      "family": "Transform",
-      "description": "Pivot a wide-format table into long format.",
-      "summary": "Pivot a wide-format table into long format.",
-      "url": "sessions/demos/demo-tp-widetolong.json",
-      "kind": "tableProcess",
-      "showcases": [
-        "WideToLong"
-      ],
-      "keywords": "wide to long pivot a wide-format table into long format. transform widetolong"
-    },
-    {
-      "id": "scatter-rhythm",
-      "name": "Scatter — activity vs hour",
-      "family": "Plots",
-      "description": "A simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly).",
-      "summary": "A simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly).",
-      "url": "sessions/demos/demo-scatter-rhythm.json",
-      "kind": "plot",
-      "showcases": [
-        "scatterplot"
-      ],
-      "keywords": "scatter — activity vs hour a simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly). plots scatterplot"
-    },
-    {
-      "id": "cwt-period-change",
-      "name": "Wavelet — a period that changes",
-      "family": "Plots",
-      "description": "A scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second. A periodogram would show both peaks and say nothing about when each applied; the wavelet transform localises them in time. The dashed cone of influence marks the edges, where the transform runs out of data and the values are artefacts.",
-      "summary": "A scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second.",
-      "url": "sessions/demos/demo-cwt-period-change.json",
-      "kind": "plot",
-      "showcases": [
-        "cwt"
-      ],
-      "keywords": "wavelet — a period that changes a scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second. a periodogram would show both peaks and say nothing about when each applied; the wavelet transform localises them in time. the dashed cone of influence marks the edges, where the transform runs out of data and the values are artefacts. plots cwt"
-    },
-    {
-      "id": "histogram-normal",
-      "name": "Histogram — distribution",
-      "family": "Plots",
-      "description": "Histogram of 500 samples drawn from a normal distribution (mean 100, sd 15).",
-      "summary": "Histogram of 500 samples drawn from a normal distribution (mean 100, sd 15).",
-      "url": "sessions/demos/demo-histogram-normal.json",
-      "kind": "plot",
-      "showcases": [
-        "histogram"
-      ],
-      "keywords": "histogram — distribution histogram of 500 samples drawn from a normal distribution (mean 100, sd 15). plots histogram"
-    },
-    {
-      "id": "boxplot-by-day",
-      "name": "Boxplot — activity by day",
-      "family": "Plots",
-      "description": "Boxplot of daily activity values grouped by day index (7 days × 24 hourly points).",
-      "summary": "Boxplot of daily activity values grouped by day index (7 days × 24 hourly points).",
-      "url": "sessions/demos/demo-boxplot-by-day.json",
-      "kind": "plot",
-      "showcases": [
-        "boxplot"
-      ],
-      "keywords": "boxplot — activity by day boxplot of daily activity values grouped by day index (7 days × 24 hourly points). plots boxplot"
-    },
-    {
-      "id": "violinplot-groups",
-      "name": "Violin plot — shapes a box hides",
-      "family": "Plots",
-      "description": "A violin plot (boxplot with the violin overlay and jittered data points turned on). Three groups: the two outer ones have near-identical boxes — same median, similar spread — but the violin reveals one is unimodal and the other bimodal, a difference the box alone cannot show; the middle group is right-skewed. The violin is a kernel-density outline mirrored around each box; hide the box for a pure violin plot.",
-      "summary": "A violin plot (boxplot with the violin overlay and jittered data points turned on).",
-      "url": "sessions/demos/demo-violinplot-groups.json",
-      "kind": "plot",
-      "showcases": [
-        "boxplot"
-      ],
-      "keywords": "violin plot — shapes a box hides a violin plot (boxplot with the violin overlay and jittered data points turned on). three groups: the two outer ones have near-identical boxes — same median, similar spread — but the violin reveals one is unimodal and the other bimodal, a difference the box alone cannot show; the middle group is right-skewed. the violin is a kernel-density outline mirrored around each box; hide the box for a pure violin plot. plots boxplot"
-    },
-    {
-      "id": "meansem-by-day",
-      "name": "Mean ± SEM — activity by day",
-      "family": "Plots",
-      "description": "Per-day mean activity with standard-error whiskers (7 days × 24 hourly points).",
-      "summary": "Per-day mean activity with standard-error whiskers (7 days × 24 hourly points).",
-      "url": "sessions/demos/demo-meansem-by-day.json",
-      "kind": "plot",
-      "showcases": [
-        "meansem"
-      ],
-      "keywords": "mean ± sem — activity by day per-day mean activity with standard-error whiskers (7 days × 24 hourly points). plots meansem"
-    },
-    {
-      "id": "circular-phase-two-groups",
-      "name": "Circular phase plot — two groups",
-      "family": "Plots",
-      "description": "Two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its Rayleigh mean-resultant vector and a significant Watson-Williams test comparing mean directions — plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector.",
-      "summary": "Two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its Rayleigh mean-resultant vector and a significant Watson-Williams test comparing mean directions — plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector.",
-      "url": "sessions/demos/demo-circular-phase-two-groups.json",
-      "kind": "plot",
-      "showcases": [
-        "circularphase"
-      ],
-      "keywords": "circular phase plot — two groups two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its rayleigh mean-resultant vector and a significant watson-williams test comparing mean directions — plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector. plots circularphase"
-    },
-    {
-      "id": "actogram-rhythm",
-      "name": "Actogram — multi-day activity",
-      "family": "Plots",
-      "description": "Actogram of a noisy ~24 h rhythm over 7 days (hourly samples).",
-      "summary": "Actogram of a noisy ~24 h rhythm over 7 days (hourly samples).",
-      "url": "sessions/demos/demo-actogram-rhythm.json",
-      "kind": "plot",
-      "showcases": [
-        "actogram"
-      ],
-      "keywords": "actogram — multi-day activity actogram of a noisy ~24 h rhythm over 7 days (hourly samples). plots actogram"
-    },
-    {
-      "id": "periodogram-rhythm",
-      "name": "Periodogram — period detection",
-      "family": "Plots",
-      "description": "Lomb–Scargle periodogram of a ~24 h rhythm (7 days, hourly).",
-      "summary": "Lomb–Scargle periodogram of a ~24 h rhythm (7 days, hourly).",
-      "url": "sessions/demos/demo-periodogram-rhythm.json",
-      "kind": "plot",
-      "showcases": [
-        "periodogram"
-      ],
-      "keywords": "periodogram — period detection lomb–scargle periodogram of a ~24 h rhythm (7 days, hourly). plots periodogram"
-    },
-    {
-      "id": "correlogram-rhythm",
-      "name": "Correlogram — autocorrelation",
-      "family": "Plots",
-      "description": "Autocorrelogram of a ~24 h rhythm (7 days, hourly).",
-      "summary": "Autocorrelogram of a ~24 h rhythm (7 days, hourly).",
-      "url": "sessions/demos/demo-correlogram-rhythm.json",
-      "kind": "plot",
-      "showcases": [
-        "correlogram"
-      ],
-      "keywords": "correlogram — autocorrelation autocorrelogram of a ~24 h rhythm (7 days, hourly). plots correlogram"
-    },
-    {
-      "id": "fft-rhythm",
-      "name": "FFT — frequency spectrum",
-      "family": "Plots",
-      "description": "Fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly).",
-      "summary": "Fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly).",
-      "url": "sessions/demos/demo-fft-rhythm.json",
-      "kind": "plot",
-      "showcases": [
-        "fft"
-      ],
-      "keywords": "fft — frequency spectrum fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly). plots fft"
-    },
-    {
-      "id": "correlationheatmap-matrix",
-      "name": "Correlation heatmap",
-      "family": "Plots",
-      "description": "Self-contained correlation matrix of four variables — wire the raw columns and it computes and colours the pairwise correlations itself.",
-      "summary": "Self-contained correlation matrix of four variables — wire the raw columns and it computes and colours the pairwise correlations itself.",
-      "url": "sessions/demos/demo-correlationheatmap-matrix.json",
-      "kind": "plot",
-      "showcases": [
-        "correlationheatmap"
-      ],
-      "keywords": "correlation heatmap self-contained correlation matrix of four variables — wire the raw columns and it computes and colours the pairwise correlations itself. plots correlationheatmap"
-    },
-    {
-      "id": "pairsplot-matrix",
-      "name": "Pairs plot",
-      "family": "Plots",
-      "description": "Scatterplot matrix of four variables: histograms on the diagonal, scatter + linear fit above, correlation colour below.",
-      "summary": "Scatterplot matrix of four variables: histograms on the diagonal, scatter + linear fit above, correlation colour below.",
-      "url": "sessions/demos/demo-pairsplot-matrix.json",
-      "kind": "plot",
-      "showcases": [
-        "pairsplot"
-      ],
-      "keywords": "pairs plot scatterplot matrix of four variables: histograms on the diagonal, scatter + linear fit above, correlation colour below. plots pairsplot"
-    },
-    {
-      "id": "qqplot-normality",
-      "name": "Q-Q plot",
-      "family": "Plots",
-      "description": "Normal Q-Q plots of a normal and a right-skewed sample: the normal series hugs the quartile line inside the confidence envelope, the skewed one bends away in the tails.",
-      "summary": "Normal Q-Q plots of a normal and a right-skewed sample: the normal series hugs the quartile line inside the confidence envelope, the skewed one bends away in the tails.",
-      "url": "sessions/demos/demo-qqplot-normality.json",
-      "kind": "plot",
-      "showcases": [
-        "qqplot"
-      ],
-      "keywords": "q-q plot normal q-q plots of a normal and a right-skewed sample: the normal series hugs the quartile line inside the confidence envelope, the skewed one bends away in the tails. plots qqplot"
-    },
-    {
-      "id": "table-columns",
-      "name": "Table — raw columns",
-      "family": "Plots",
-      "description": "A tableplot listing an hour index alongside two derived signals.",
-      "summary": "A tableplot listing an hour index alongside two derived signals.",
-      "url": "sessions/demos/demo-table-columns.json",
-      "kind": "plot",
-      "showcases": [
-        "tableplot"
-      ],
-      "keywords": "table — raw columns a tableplot listing an hour index alongside two derived signals. plots tableplot"
-    }
-  ]
+ "version": 1,
+ "count": 111,
+ "sessions": [
+  {
+   "id": "workflow-rest-activity",
+   "name": "Workflow — actigraphy rest-activity profile",
+   "family": "Workflows",
+   "description": "Characterise a rest-activity record without assuming a sine shape. Nonparametric RA reports IS / IV / RA / M10 / L5 per subject (one value per y-input, so each port is that group’s distribution), a Cosinor adds the model-based amplitude and acrophase, an actogram shows a consolidated vs a fragmented subject, and Compare groups tests whether rhythm robustness (RA) differs.",
+   "summary": "Characterise a rest-activity record without assuming a sine shape.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/demo-workflow-rest-activity.json",
+   "kind": "workflow",
+   "showcases": [
+    "NonparametricRA",
+    "Cosinor",
+    "GroupComparison",
+    "actogram"
+   ],
+   "keywords": "workflow — actigraphy rest-activity profile characterise a rest-activity record without assuming a sine shape. nonparametric ra reports is / iv / ra / m10 / l5 per subject (one value per y-input, so each port is that group’s distribution), a cosinor adds the model-based amplitude and acrophase, an actogram shows a consolidated vs a fragmented subject, and compare groups tests whether rhythm robustness (ra) differs. workflows nonparametricra cosinor groupcomparison actogram"
+  },
+  {
+   "id": "workflow-free-running",
+   "name": "Workflow — free-running period",
+   "family": "Workflows",
+   "description": "Measure the endogenous period (tau) of a rhythm running without a zeitgeber. A double-plotted actogram shows the rhythm drifting against the 24 h grid, a Lomb-Scargle periodogram estimates tau, and the Rhythmicity Analysis node reports the peak period as a wireable number. Includes the literature caveat to avoid the chi-square periodogram.",
+   "summary": "Measure the endogenous period (tau) of a rhythm with no zeitgeber.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/demo-workflow-free-running.json",
+   "kind": "workflow",
+   "showcases": [
+    "RhythmicityAnalysis",
+    "actogram",
+    "periodogram"
+   ],
+   "keywords": "workflow — free-running period measure the endogenous period (tau) of a rhythm running without a zeitgeber. a double-plotted actogram shows the rhythm drifting against the 24 h grid, a lomb-scargle periodogram estimates tau, and the rhythmicity analysis node reports the peak period as a wireable number. includes the literature caveat to avoid the chi-square periodogram. workflows rhythmicityanalysis actogram periodogram"
+  },
+  {
+   "id": "workflow-phase-groups",
+   "name": "Workflow — group phase comparison",
+   "family": "Workflows",
+   "description": "Do two groups peak at different times of day? Per-subject phase is extracted by Cosinor (its acrophase port emits one peak time per subject, i.e. the group’s phase distribution), shown on a 24 h circular plot with each group’s Rayleigh vector, and tested with Rayleigh (is each group clustered?) plus Watson-Williams (do the groups differ in mean phase?).",
+   "summary": "Test whether two groups peak at different times of day.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/demo-workflow-phase-groups.json",
+   "kind": "workflow",
+   "showcases": [
+    "Cosinor",
+    "RayleighTest",
+    "circularphase"
+   ],
+   "keywords": "workflow — group phase comparison do two groups peak at different times of day? per-subject phase is extracted by cosinor (its acrophase port emits one peak time per subject, i.e. the group’s phase distribution), shown on a 24 h circular plot with each group’s rayleigh vector, and tested with rayleigh (is each group clustered?) plus watson-williams (do the groups differ in mean phase?). workflows cosinor rayleightest circularphase"
+  },
+  {
+   "id": "workflow-stats-eda",
+   "name": "Workflow — exploratory data analysis (first look)",
+   "family": "Workflows",
+   "description": "The universal first pass over a new dataset. Describe Data reports centre / spread / skew, a normality test screens each variable, and a correlation matrix maps the relationships — visualised as faceted histograms, a correlation heatmap and a pairs plot. Read the distributions and the relationship map BEFORE running any inferential test.",
+   "summary": "Get to know a new dataset before running any test.",
+   "group": "General statistics",
+   "url": "sessions/demos/demo-workflow-stats-eda.json",
+   "kind": "workflow",
+   "showcases": [
+    "DescribeData",
+    "NormalityTest",
+    "Correlation",
+    "histogram"
+   ],
+   "keywords": "workflow — exploratory data analysis (first look) the universal first pass over a new dataset. describe data reports centre / spread / skew, a normality test screens each variable, and a correlation matrix maps the relationships — visualised as faceted histograms, a correlation heatmap and a pairs plot. read the distributions and the relationship map before running any inferential test. workflows describedata normalitytest correlation histogram"
+  },
+  {
+   "id": "workflow-stats-two-group",
+   "name": "Workflow — compare two groups",
+   "family": "Workflows",
+   "description": "The classic two-group question: is the treatment different from control? Compare groups auto-selects the test (Welch t when both groups look normal, Mann-Whitney when they do not) and surfaces the assumption check, and a boxplot with a significance bar shows the difference. Read: which test fired and why, the p-value, and the direction/size of the shift.",
+   "summary": "Is group A different from group B?",
+   "group": "General statistics",
+   "url": "sessions/demos/demo-workflow-stats-two-group.json",
+   "kind": "workflow",
+   "showcases": [
+    "GroupComparison",
+    "boxplot"
+   ],
+   "keywords": "workflow — compare two groups the classic two-group question: is the treatment different from control? compare groups auto-selects the test (welch t when both groups look normal, mann-whitney when they do not) and surfaces the assumption check, and a boxplot with a significance bar shows the difference. read: which test fired and why, the p-value, and the direction/size of the shift. workflows groupcomparison boxplot"
+  },
+  {
+   "id": "workflow-stats-anova",
+   "name": "Workflow — compare several groups (ANOVA)",
+   "family": "Workflows",
+   "description": "Three or more conditions: do they differ, and which pairs? Compare groups auto-runs a one-way ANOVA (or Kruskal-Wallis if non-normal) with Tukey/Holm post-hoc, a mean ± SEM plot shows the group means, and a boxplot with significance bars shows the pairwise differences. Read the omnibus test FIRST; only interpret the pairwise grid if it is significant.",
+   "summary": "Do three or more groups differ, and which pairs?",
+   "group": "General statistics",
+   "url": "sessions/demos/demo-workflow-stats-anova.json",
+   "kind": "workflow",
+   "showcases": [
+    "GroupComparison",
+    "meansem",
+    "boxplot"
+   ],
+   "keywords": "workflow — compare several groups (anova) three or more conditions: do they differ, and which pairs? compare groups auto-runs a one-way anova (or kruskal-wallis if non-normal) with tukey/holm post-hoc, a mean ± sem plot shows the group means, and a boxplot with significance bars shows the pairwise differences. read the omnibus test first; only interpret the pairwise grid if it is significant. workflows groupcomparison meansem boxplot"
+  },
+  {
+   "id": "workflow-stats-correlation",
+   "name": "Workflow — correlation & relationships",
+   "family": "Workflows",
+   "description": "What moves with what? Correlation computes every pairwise coefficient (auto-choosing Pearson vs Spearman by normality), shown as a heatmap and a pairs plot (scatter + linear fit above the diagonal, distributions on it). Read strength and direction, linear vs monotonic, and watch for multicollinearity — several strongly inter-correlated predictors.",
+   "summary": "Which variables move together, and how?",
+   "group": "General statistics",
+   "url": "sessions/demos/demo-workflow-stats-correlation.json",
+   "kind": "workflow",
+   "showcases": [
+    "Correlation",
+    "correlationheatmap",
+    "pairsplot"
+   ],
+   "keywords": "workflow — correlation & relationships what moves with what? correlation computes every pairwise coefficient (auto-choosing pearson vs spearman by normality), shown as a heatmap and a pairs plot (scatter + linear fit above the diagonal, distributions on it). read strength and direction, linear vs monotonic, and watch for multicollinearity — several strongly inter-correlated predictors. workflows correlation correlationheatmap pairsplot"
+  },
+  {
+   "id": "workflow-stats-regression",
+   "name": "Workflow — linear regression + residual diagnostics",
+   "family": "Workflows",
+   "description": "Predict Y from X, then check the model is honest. Fit trend fits the line (slope, intercept, R²), the fitted line is overlaid on the data, and the residuals are plotted against X and screened for normality. The lesson: R² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when R² looks high.",
+   "summary": "Predict Y from X, then check the model is honest.",
+   "group": "General statistics",
+   "url": "sessions/demos/demo-workflow-stats-regression.json",
+   "kind": "workflow",
+   "showcases": [
+    "TrendFit",
+    "NormalityTest",
+    "scatterplot"
+   ],
+   "keywords": "workflow — linear regression + residual diagnostics predict y from x, then check the model is honest. fit trend fits the line (slope, intercept, r²), the fitted line is overlaid on the data, and the residuals are plotted against x and screened for normality. the lesson: r² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when r² looks high. workflows trendfit normalitytest scatterplot"
+  },
+  {
+   "id": "workflow-stats-logistic",
+   "name": "Workflow — logistic regression (binary outcome)",
+   "family": "Workflows",
+   "description": "Model a yes/no outcome from predictors. Logistic regression reports each predictor’s odds ratio with a 95% CI and a Wald p-value, plus McFadden pseudo-R² and a likelihood-ratio test. The fit plot shows the predicted probability against the linear predictor (the S-curve, for any number of predictors) with the observed outcomes overlaid. Watch for a non-convergence warning — it usually means separation.",
+   "summary": "Model a yes/no outcome and read the odds ratios.",
+   "group": "General statistics",
+   "url": "sessions/demos/demo-workflow-stats-logistic.json",
+   "kind": "workflow",
+   "showcases": [
+    "LogisticRegression",
+    "scatterplot"
+   ],
+   "keywords": "workflow — logistic regression (binary outcome) model a yes/no outcome from predictors. logistic regression reports each predictor’s odds ratio with a 95% ci and a wald p-value, plus mcfadden pseudo-r² and a likelihood-ratio test. the fit plot shows the predicted probability against the linear predictor (the s-curve, for any number of predictors) with the observed outcomes overlaid. watch for a non-convergence warning — it usually means separation. workflows logisticregression scatterplot"
+  },
+  {
+   "id": "workflow-stats-chi-square",
+   "name": "Workflow — categorical association (chi-square)",
+   "family": "Workflows",
+   "description": "Are two categorical variables related? The chi-squared test of independence cross-tabulates them into a contingency table and tests whether the row and column variables are associated (Yates’ correction on 2×2 tables). Read the statistic / df / p and the table; the node warns when any expected count falls below 5, where the χ² approximation breaks down and Fisher’s exact test is preferable.",
+   "summary": "Are two categorical variables related?",
+   "group": "General statistics",
+   "url": "sessions/demos/demo-workflow-stats-chi-square.json",
+   "kind": "workflow",
+   "showcases": [
+    "ChiSquared"
+   ],
+   "keywords": "workflow — categorical association (chi-square) are two categorical variables related? the chi-squared test of independence cross-tabulates them into a contingency table and tests whether the row and column variables are associated (yates’ correction on 2×2 tables). read the statistic / df / p and the table; the node warns when any expected count falls below 5, where the χ² approximation breaks down and fisher’s exact test is preferable. workflows chisquared"
+  },
+  {
+   "id": "workflow-stats-fisher-exact",
+   "name": "Workflow — small samples (Fisher's exact test)",
+   "family": "Workflows",
+   "description": "The same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted. Both tests are run on the SAME 18 animals so you can compare them directly. The chi-squared node reports its own warning that expected counts fall below 5, which is the conventional line at which its large-sample approximation stops being reliable; Fisher's exact test makes no such approximation, conditioning on the margins and summing the exact probability of every table at least as extreme as the one observed. Read the two p-values side by side: they answer the same question, and the exact one is the one to quote here. Note that Fisher's mode reports no statistic and no degrees of freedom — an exact test enumerates the distribution instead of referring a statistic to one — and gives the odds ratio as its effect size instead.",
+   "summary": "A table too small for chi-squared.",
+   "group": "General statistics",
+   "url": "sessions/demos/demo-workflow-stats-fisher-exact.json",
+   "kind": "workflow",
+   "showcases": [
+    "ChiSquared"
+   ],
+   "keywords": "workflow — small samples (fisher's exact test) the same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted. both tests are run on the same 18 animals so you can compare them directly. the chi-squared node reports its own warning that expected counts fall below 5, which is the conventional line at which its large-sample approximation stops being reliable; fisher's exact test makes no such approximation, conditioning on the margins and summing the exact probability of every table at least as extreme as the one observed. read the two p-values side by side: they answer the same question, and the exact one is the one to quote here. note that fisher's mode reports no statistic and no degrees of freedom — an exact test enumerates the distribution instead of referring a statistic to one — and gives the odds ratio as its effect size instead. workflows chisquared"
+  },
+  {
+   "id": "workflow-stats-two-groups-counts",
+   "name": "Workflow — comparing two independent groups (counts)",
+   "family": "Workflows",
+   "description": "Two groups of DIFFERENT sizes, each with its own outcomes: 7 of 10 treated animals became arrhythmic against 2 of 25 controls. This is the layout categorical data usually arrives in, and it is not the paired one — there is no meaningful pairing between the third treated animal and the third control, and the columns are 10 and 25 rows long. The Chi-squared node's Input format is set to \"Two independent groups\", which tabulates each column separately and builds the 2x2 table [[7,3],[2,23]]. Read the p-value with Cramer's V beside it: the association is strong (V = 0.64), not merely detectable. A second node runs Fisher's exact test on the same data, which is the right choice here because two of the four expected counts fall below 5. Set Input format to \"Paired\" to see why it matters — the paired reading pairs rows arbitrarily, discards 25 of the 35 observations and reports p = 0.86, hiding a real effect entirely.",
+   "summary": "Two independent groups, different sizes.",
+   "group": "General statistics",
+   "url": "sessions/demos/demo-workflow-stats-two-groups-counts.json",
+   "kind": "workflow",
+   "showcases": [
+    "ChiSquared"
+   ],
+   "keywords": "workflow — comparing two independent groups (counts) two groups of different sizes, each with its own outcomes: 7 of 10 treated animals became arrhythmic against 2 of 25 controls. this is the layout categorical data usually arrives in, and it is not the paired one — there is no meaningful pairing between the third treated animal and the third control, and the columns are 10 and 25 rows long. the chi-squared node's input format is set to \"two independent groups\", which tabulates each column separately and builds the 2x2 table [[7,3],[2,23]]. read the p-value with cramer's v beside it: the association is strong (v = 0.64), not merely detectable. a second node runs fisher's exact test on the same data, which is the right choice here because two of the four expected counts fall below 5. set input format to \"paired\" to see why it matters — the paired reading pairs rows arbitrarily, discards 25 of the 35 observations and reports p = 0.86, hiding a real effect entirely. workflows chisquared"
+  },
+  {
+   "id": "workflow-stats-anscombe",
+   "name": "Workflow — Anscombe’s quartet (always plot your data)",
+   "family": "Workflows",
+   "description": "Four small datasets constructed by Anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, R² = 0.67). Describe Data confirms the summaries are identical and Fit trend confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. The lesson is the oldest one in data analysis: look at the picture before you trust the number. The same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis.",
+   "summary": "Four datasets, identical statistics, four different stories.",
+   "group": "Reading the output",
+   "url": "sessions/demos/demo-workflow-stats-anscombe.json",
+   "kind": "workflow",
+   "showcases": [
+    "DescribeData",
+    "TrendFit",
+    "scatterplot"
+   ],
+   "keywords": "workflow — anscombe’s quartet (always plot your data) four small datasets constructed by anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, r² = 0.67). describe data confirms the summaries are identical and fit trend confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. the lesson is the oldest one in data analysis: look at the picture before you trust the number. the same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis. workflows describedata trendfit scatterplot"
+  },
+  {
+   "id": "workflow-stats-simpson",
+   "name": "Workflow — Simpson’s paradox (the trend that flips)",
+   "family": "Workflows",
+   "description": "Within every group the relationship is positive; pool the groups and it turns negative. Here three hospital wards each show activity rising with dose (a clear within-ward positive trend), but the wards are offset — the ward that runs at the highest dose also has the lowest baseline — so the pooled cloud slopes the other way. The Correlation node run on the pooled data reports a negative coefficient, while the coloured per-ward trend lines all climb. The reversal is real, not a mistake: it means a lurking grouping variable is driving the aggregate, and which answer is correct depends on the question. Pool only when the groups are genuinely exchangeable; otherwise the honest analysis is per-group. This is why \"controlling for\" a variable can flip a headline result.",
+   "summary": "A trend that reverses direction when you pool the groups.",
+   "group": "Reading the output",
+   "url": "sessions/demos/demo-workflow-stats-simpson.json",
+   "kind": "workflow",
+   "showcases": [
+    "Correlation",
+    "scatterplot"
+   ],
+   "keywords": "workflow — simpson’s paradox (the trend that flips) within every group the relationship is positive; pool the groups and it turns negative. here three hospital wards each show activity rising with dose (a clear within-ward positive trend), but the wards are offset — the ward that runs at the highest dose also has the lowest baseline — so the pooled cloud slopes the other way. the correlation node run on the pooled data reports a negative coefficient, while the coloured per-ward trend lines all climb. the reversal is real, not a mistake: it means a lurking grouping variable is driving the aggregate, and which answer is correct depends on the question. pool only when the groups are genuinely exchangeable; otherwise the honest analysis is per-group. this is why \"controlling for\" a variable can flip a headline result. workflows correlation scatterplot"
+  },
+  {
+   "id": "workflow-non24-blind",
+   "name": "Workflow — non-24 sleep-wake (blind participant)",
+   "family": "Workflows",
+   "description": "The human counterpart to the free-running mouse. With no light reaching the clock, the rhythm runs at its own tau (here 24.5 h) and drifts steadily later, so the sleep window migrates all the way around the clock over about seven weeks. A double-plotted actogram shows the drift and a Lomb-Scargle periodogram recovers tau. The point is that free-running is not a rodent-only phenomenon: this is a recognised clinical presentation.",
+   "summary": "A human rhythm free-running through the day over weeks.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/demo-workflow-non24-blind.json",
+   "kind": "workflow",
+   "showcases": [
+    "RhythmicityAnalysis",
+    "actogram",
+    "periodogram"
+   ],
+   "keywords": "workflow — non-24 sleep-wake (blind participant) the human counterpart to the free-running mouse. with no light reaching the clock, the rhythm runs at its own tau (here 24.5 h) and drifts steadily later, so the sleep window migrates all the way around the clock over about seven weeks. a double-plotted actogram shows the drift and a lomb-scargle periodogram recovers tau. the point is that free-running is not a rodent-only phenomenon: this is a recognised clinical presentation. workflows rhythmicityanalysis actogram periodogram"
+  },
+  {
+   "id": "workflow-arrhythmic",
+   "name": "Workflow — arrhythmic record (negative control)",
+   "family": "Workflows",
+   "description": "The single most useful thing to see before over-interpreting your own data. An intact record and an arrhythmic one (as after SCN ablation) are analysed side by side with identical settings. The intact periodogram has an unmistakable peak at 24 h; the arrhythmic one still reports a \"peak period\", because a periodogram always returns its largest value, but the power is a fraction of the intact case and the actogram shows no band at all. Read the power and the picture, not just the number.",
+   "summary": "The negative control: what no rhythm actually looks like.",
+   "group": "Reading the output",
+   "url": "sessions/demos/demo-workflow-arrhythmic.json",
+   "kind": "workflow",
+   "showcases": [
+    "RhythmicityAnalysis",
+    "actogram",
+    "periodogram"
+   ],
+   "keywords": "workflow — arrhythmic record (negative control) the single most useful thing to see before over-interpreting your own data. an intact record and an arrhythmic one (as after scn ablation) are analysed side by side with identical settings. the intact periodogram has an unmistakable peak at 24 h; the arrhythmic one still reports a \"peak period\", because a periodogram always returns its largest value, but the power is a fraction of the intact case and the actogram shows no band at all. read the power and the picture, not just the number. workflows rhythmicityanalysis actogram periodogram"
+  },
+  {
+   "id": "workflow-circatidal",
+   "name": "Workflow — circatidal rhythm (12.4 h)",
+   "family": "Workflows",
+   "description": "Rhythm analysis is not circadian-only. A coastal invertebrate timed to the tides runs at 12.4 h, with a weaker 24.8 h component as successive tides differ. The periodogram search window is the thing to notice: the default 20-28 h window would find the 24.8 h component and miss the dominant tidal peak entirely. Widen the window and both appear.",
+   "summary": "A 12.4 h tidal rhythm, not a circadian one.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/demo-workflow-circatidal.json",
+   "kind": "workflow",
+   "showcases": [
+    "RhythmicityAnalysis",
+    "actogram",
+    "periodogram"
+   ],
+   "keywords": "workflow — circatidal rhythm (12.4 h) rhythm analysis is not circadian-only. a coastal invertebrate timed to the tides runs at 12.4 h, with a weaker 24.8 h component as successive tides differ. the periodogram search window is the thing to notice: the default 20-28 h window would find the 24.8 h component and miss the dominant tidal peak entirely. widen the window and both appear. workflows rhythmicityanalysis actogram periodogram"
+  },
+  {
+   "id": "workflow-reentrainment",
+   "name": "Workflow — re-entrainment after a time-zone shift",
+   "family": "Workflows",
+   "description": "The contrast with an abrupt shift is the lesson. The zeitgeber moves 8 h in one step, but the rhythm does not: it runs at a transient period near 25.3 h for about a week, crawling diagonally across the actogram, before locking on at the new phase. Compare this with a schedule change where the record simply jumps, and the transients are what tell you a real clock is involved rather than direct driving.",
+   "summary": "The slow diagonal crawl back into alignment after a time-zone shift.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/demo-workflow-reentrainment.json",
+   "kind": "workflow",
+   "showcases": [
+    "actogram",
+    "periodogram"
+   ],
+   "keywords": "workflow — re-entrainment after a time-zone shift the contrast with an abrupt shift is the lesson. the zeitgeber moves 8 h in one step, but the rhythm does not: it runs at a transient period near 25.3 h for about a week, crawling diagonally across the actogram, before locking on at the new phase. compare this with a schedule change where the record simply jumps, and the transients are what tell you a real clock is involved rather than direct driving. workflows actogram periodogram"
+  },
+  {
+   "id": "workflow-transients",
+   "name": "Workflow — transients (phase advance vs delay)",
+   "family": "Workflows",
+   "description": "Two free-running records, each given a single phase-shifting stimulus on the same day, showing the two ways a rhythm can take up a new phase. Both free-run at 24.3 h throughout, so the activity band drifts slowly RIGHTWARD (later) even before anything is done to it — the diagonal that marks a clock running on its own period rather than being held by a zeitgeber. The DELAY is immediate: the band steps right in a single cycle and simply resumes its drift from the new phase, which is what strong (Type 0) resetting looks like. The ADVANCE goes through TRANSIENTS: intermediate cycles between the stimulus and the re-attainment of a steady-state phase, crawling LEFTWARD over about eight cycles. Those cycles do not move at a constant rate — each closes a fraction of whatever phase difference is left, so the increment is largest right after the stimulus and shrinks as the rhythm nears its new phase, giving a curved, decelerating approach rather than a straight ramp. Transients being commoner after advances than delays is the classical generalisation. Only the phase reached AFTER they subside is the steady-state shift, which is why a PRC must be scored from post-transient cycles.",
+   "summary": "An immediate delay beside an advance that crawls through transients.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/demo-workflow-transients.json",
+   "kind": "workflow",
+   "showcases": [
+    "actogram",
+    "scatterplot"
+   ],
+   "keywords": "workflow — transients (phase advance vs delay) two free-running records, each given a single phase-shifting stimulus on the same day, showing the two ways a rhythm can take up a new phase. both free-run at 24.3 h throughout, so the activity band drifts slowly rightward (later) even before anything is done to it — the diagonal that marks a clock running on its own period rather than being held by a zeitgeber. the delay is immediate: the band steps right in a single cycle and simply resumes its drift from the new phase, which is what strong (type 0) resetting looks like. the advance goes through transients: intermediate cycles between the stimulus and the re-attainment of a steady-state phase, crawling leftward over about eight cycles. those cycles do not move at a constant rate — each closes a fraction of whatever phase difference is left, so the increment is largest right after the stimulus and shrinks as the rhythm nears its new phase, giving a curved, decelerating approach rather than a straight ramp. transients being commoner after advances than delays is the classical generalisation. only the phase reached after they subside is the steady-state shift, which is why a prc must be scored from post-transient cycles. workflows actogram scatterplot"
+  },
+  {
+   "id": "workflow-split-rhythm",
+   "name": "Workflow — split rhythm under constant light",
+   "family": "Workflows",
+   "description": "Under constant light the rhythm can bifurcate: two oscillator components decouple, run at slightly different periods, and re-stabilise roughly 12 h apart. Here the two components are supplied separately (24.8 h and 23.4 h) and their sum is what an actograph would record, so the split is emergent rather than drawn. The periodogram of the sum shows both components, which is the numeric signature of splitting.",
+   "summary": "Constant light splits the activity band into two components.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/demo-workflow-split-rhythm.json",
+   "kind": "workflow",
+   "showcases": [
+    "actogram",
+    "periodogram",
+    "RhythmicityAnalysis"
+   ],
+   "keywords": "workflow — split rhythm under constant light under constant light the rhythm can bifurcate: two oscillator components decouple, run at slightly different periods, and re-stabilise roughly 12 h apart. here the two components are supplied separately (24.8 h and 23.4 h) and their sum is what an actograph would record, so the split is emergent rather than drawn. the periodogram of the sum shows both components, which is the numeric signature of splitting. workflows actogram periodogram rhythmicityanalysis"
+  },
+  {
+   "id": "workflow-noise-peak",
+   "name": "Workflow — the multiple-comparison trap",
+   "family": "Workflows",
+   "description": "A periodogram always returns a largest value, whether or not there is a rhythm. Here twelve records of pure noise are analysed with identical settings. Every one reports a \"peak period\", scattered arbitrarily across the search window, and the most impressive of the twelve looks convincing on its own. Test enough series, or enough windows, and something will always look significant. Read this next to the arrhythmic negative control.",
+   "summary": "Twelve pure-noise records, and the peak that means nothing.",
+   "group": "Reading the output",
+   "url": "sessions/demos/demo-workflow-noise-peak.json",
+   "kind": "workflow",
+   "showcases": [
+    "RhythmicityAnalysis",
+    "periodogram",
+    "DescribeData"
+   ],
+   "keywords": "workflow — the multiple-comparison trap a periodogram always returns a largest value, whether or not there is a rhythm. here twelve records of pure noise are analysed with identical settings. every one reports a \"peak period\", scattered arbitrarily across the search window, and the most impressive of the twelve looks convincing on its own. test enough series, or enough windows, and something will always look significant. read this next to the arrhythmic negative control. workflows rhythmicityanalysis periodogram describedata"
+  },
+  {
+   "id": "workflow-aliasing",
+   "name": "Workflow — sampling rate and aliasing",
+   "family": "Workflows",
+   "description": "A data-literacy card. The same 24 h rhythm is recorded at 30-minute epochs and then re-sampled every 13 hours. Because 13 h is longer than half the period, the rhythm is below the Nyquist limit for that sampling rate and cannot be recovered: the periodogram of the slow record peaks in the wrong place entirely. Check your epoch length against the period you are hoping to find before you conclude anything is absent.",
+   "summary": "Sample too slowly and a 24 h rhythm disappears.",
+   "group": "Reading the output",
+   "url": "sessions/demos/demo-workflow-aliasing.json",
+   "kind": "workflow",
+   "showcases": [
+    "periodogram",
+    "RhythmicityAnalysis"
+   ],
+   "keywords": "workflow — sampling rate and aliasing a data-literacy card. the same 24 h rhythm is recorded at 30-minute epochs and then re-sampled every 13 hours. because 13 h is longer than half the period, the rhythm is below the nyquist limit for that sampling rate and cannot be recovered: the periodogram of the slow record peaks in the wrong place entirely. check your epoch length against the period you are hoping to find before you conclude anything is absent. workflows periodogram rhythmicityanalysis"
+  },
+  {
+   "id": "workflow-crepuscular",
+   "name": "Workflow — crepuscular (bimodal) activity",
+   "family": "Workflows",
+   "description": "Many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. The periodogram shows this directly: power at 12 h as well as 24 h. It also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. Look at the distribution before you summarise it with one number.",
+   "summary": "Two activity peaks a day, and why one mean phase misleads.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/demo-workflow-crepuscular.json",
+   "kind": "workflow",
+   "showcases": [
+    "periodogram",
+    "actogram",
+    "RayleighTest"
+   ],
+   "keywords": "workflow — crepuscular (bimodal) activity many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. the periodogram shows this directly: power at 12 h as well as 24 h. it also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. look at the distribution before you summarise it with one number. workflows periodogram actogram rayleightest"
+  },
+  {
+   "id": "workflow-masking",
+   "name": "Workflow — masking versus true entrainment",
+   "family": "Workflows",
+   "description": "Two records that look identical while the light is on, and diverge the moment it goes off. Both animals appear to follow a 6 h shift of the light cycle. Released into constant darkness, the entrained animal keeps the new phase because its clock actually moved, while the masked animal reverts immediately to its original phase because light was only suppressing its behaviour. This is why a shift under a light cycle is not by itself evidence of entrainment: the release is the test.",
+   "summary": "Light driving behaviour directly, versus a clock that has shifted.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/demo-workflow-masking.json",
+   "kind": "workflow",
+   "showcases": [
+    "actogram"
+   ],
+   "keywords": "workflow — masking versus true entrainment two records that look identical while the light is on, and diverge the moment it goes off. both animals appear to follow a 6 h shift of the light cycle. released into constant darkness, the entrained animal keeps the new phase because its clock actually moved, while the masked animal reverts immediately to its original phase because light was only suppressing its behaviour. this is why a shift under a light cycle is not by itself evidence of entrainment: the release is the test. workflows actogram"
+  },
+  {
+   "id": "dataset-testdata",
+   "name": "Test data",
+   "family": "Sources",
+   "description": "Data with two simulated rhythms and outliers",
+   "group": "Sample data",
+   "url": "sessions/demos/testData.csv",
+   "kind": "dataset",
+   "keywords": "test data data with two simulated rhythms and outliers sources csv url example"
+  },
+  {
+   "id": "dataset-workflow-rest-activity",
+   "name": "Actigraphy rest-activity profile",
+   "family": "Sources",
+   "description": "Characterise a rest-activity record without assuming a sine shape. Data only — 13 columns × 168 rows, no analysis.",
+   "summary": "Characterise a rest-activity record without assuming a sine shape.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/actigraphy-rest-activity-profile.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "actigraphy rest-activity profile characterise a rest-activity record without assuming a sine shape. data only — 13 columns × 168 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-free-running",
+   "name": "Free-running period",
+   "family": "Sources",
+   "description": "Measure the endogenous period (tau) of a rhythm with no zeitgeber. Data only — 2 columns × 336 rows, no analysis.",
+   "summary": "Measure the endogenous period (tau) of a rhythm with no zeitgeber.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/free-running-period.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "free-running period measure the endogenous period (tau) of a rhythm with no zeitgeber. data only — 2 columns × 336 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-phase-groups",
+   "name": "Group phase comparison",
+   "family": "Sources",
+   "description": "Test whether two groups peak at different times of day. Data only — 17 columns × 96 rows, no analysis.",
+   "summary": "Test whether two groups peak at different times of day.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/group-phase-comparison.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "group phase comparison test whether two groups peak at different times of day. data only — 17 columns × 96 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-eda",
+   "name": "Exploratory data analysis (first look)",
+   "family": "Sources",
+   "description": "Get to know a new dataset before running any test. Data only — 4 columns × 80 rows, no analysis.",
+   "summary": "Get to know a new dataset before running any test.",
+   "group": "General statistics",
+   "url": "sessions/demos/exploratory-data-analysis-first-look.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "exploratory data analysis (first look) get to know a new dataset before running any test. data only — 4 columns × 80 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-two-group",
+   "name": "Compare two groups",
+   "family": "Sources",
+   "description": "Is group A different from group B? Data only — 2 columns × 90 rows, no analysis.",
+   "summary": "Is group A different from group B?",
+   "group": "General statistics",
+   "url": "sessions/demos/compare-two-groups.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "compare two groups is group a different from group b? data only — 2 columns × 90 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-anova",
+   "name": "Compare several groups (ANOVA)",
+   "family": "Sources",
+   "description": "Do three or more groups differ, and which pairs? Data only — 2 columns × 120 rows, no analysis.",
+   "summary": "Do three or more groups differ, and which pairs?",
+   "group": "General statistics",
+   "url": "sessions/demos/compare-several-groups-anova.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "compare several groups (anova) do three or more groups differ, and which pairs? data only — 2 columns × 120 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-correlation",
+   "name": "Correlation & relationships",
+   "family": "Sources",
+   "description": "Which variables move together, and how? Data only — 5 columns × 70 rows, no analysis.",
+   "summary": "Which variables move together, and how?",
+   "group": "General statistics",
+   "url": "sessions/demos/correlation-relationships.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "correlation & relationships which variables move together, and how? data only — 5 columns × 70 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-regression",
+   "name": "Linear regression + residual diagnostics",
+   "family": "Sources",
+   "description": "Predict Y from X, then check the model is honest. Data only — 2 columns × 60 rows, no analysis.",
+   "summary": "Predict Y from X, then check the model is honest.",
+   "group": "General statistics",
+   "url": "sessions/demos/linear-regression-residual-diagnostics.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "linear regression + residual diagnostics predict y from x, then check the model is honest. data only — 2 columns × 60 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-logistic",
+   "name": "Logistic regression (binary outcome)",
+   "family": "Sources",
+   "description": "Model a yes/no outcome and read the odds ratios. Data only — 3 columns × 60 rows, no analysis.",
+   "summary": "Model a yes/no outcome and read the odds ratios.",
+   "group": "General statistics",
+   "url": "sessions/demos/logistic-regression-binary-outcome.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "logistic regression (binary outcome) model a yes/no outcome and read the odds ratios. data only — 3 columns × 60 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-chi-square",
+   "name": "Categorical association (chi-square)",
+   "family": "Sources",
+   "description": "Are two categorical variables related? Data only — 2 columns × 120 rows, no analysis.",
+   "summary": "Are two categorical variables related?",
+   "group": "General statistics",
+   "url": "sessions/demos/categorical-association-chi-square.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "categorical association (chi-square) are two categorical variables related? data only — 2 columns × 120 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-fisher-exact",
+   "name": "Small samples (Fisher's exact test)",
+   "family": "Sources",
+   "description": "A table too small for chi-squared. Data only — 2 columns × 18 rows, no analysis.",
+   "summary": "A table too small for chi-squared.",
+   "group": "General statistics",
+   "url": "sessions/demos/small-samples-fisher-s-exact-test.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "small samples (fisher's exact test) a table too small for chi-squared. data only — 2 columns × 18 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-two-groups-counts",
+   "name": "Comparing two independent groups (counts)",
+   "family": "Sources",
+   "description": "Two independent groups, different sizes. Data only — 2 columns × 25 rows, no analysis.",
+   "summary": "Two independent groups, different sizes.",
+   "group": "General statistics",
+   "url": "sessions/demos/comparing-two-independent-groups-counts.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "comparing two independent groups (counts) two independent groups, different sizes. data only — 2 columns × 25 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-anscombe",
+   "name": "Anscombe’s quartet (always plot your data)",
+   "family": "Sources",
+   "description": "Four datasets, identical statistics, four different stories. Data only — 6 columns × 11 rows, no analysis.",
+   "summary": "Four datasets, identical statistics, four different stories.",
+   "group": "Reading the output",
+   "url": "sessions/demos/anscombe-s-quartet-always-plot-your-data.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "anscombe’s quartet (always plot your data) four datasets, identical statistics, four different stories. data only — 6 columns × 11 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-stats-simpson",
+   "name": "Simpson’s paradox (the trend that flips)",
+   "family": "Sources",
+   "description": "A trend that reverses direction when you pool the groups. Data only — 16 columns × 75 rows, no analysis.",
+   "summary": "A trend that reverses direction when you pool the groups.",
+   "group": "Reading the output",
+   "url": "sessions/demos/simpson-s-paradox-the-trend-that-flips.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "simpson’s paradox (the trend that flips) a trend that reverses direction when you pool the groups. data only — 16 columns × 75 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-non24-blind",
+   "name": "Non-24 sleep-wake (blind participant)",
+   "family": "Sources",
+   "description": "A human rhythm free-running through the day over weeks. Data only — 2 columns × 1152 rows, no analysis.",
+   "summary": "A human rhythm free-running through the day over weeks.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/non-24-sleep-wake-blind-participant.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "non-24 sleep-wake (blind participant) a human rhythm free-running through the day over weeks. data only — 2 columns × 1152 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-arrhythmic",
+   "name": "Arrhythmic record (negative control)",
+   "family": "Sources",
+   "description": "The negative control: what no rhythm actually looks like. Data only — 3 columns × 336 rows, no analysis.",
+   "summary": "The negative control: what no rhythm actually looks like.",
+   "group": "Reading the output",
+   "url": "sessions/demos/arrhythmic-record-negative-control.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "arrhythmic record (negative control) the negative control: what no rhythm actually looks like. data only — 3 columns × 336 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-circatidal",
+   "name": "Circatidal rhythm (12.4 h)",
+   "family": "Sources",
+   "description": "A 12.4 h tidal rhythm, not a circadian one. Data only — 2 columns × 288 rows, no analysis.",
+   "summary": "A 12.4 h tidal rhythm, not a circadian one.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/circatidal-rhythm-12-4-h.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "circatidal rhythm (12.4 h) a 12.4 h tidal rhythm, not a circadian one. data only — 2 columns × 288 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-reentrainment",
+   "name": "Re-entrainment after a time-zone shift",
+   "family": "Sources",
+   "description": "The slow diagonal crawl back into alignment after a time-zone shift. Data only — 2 columns × 600 rows, no analysis.",
+   "summary": "The slow diagonal crawl back into alignment after a time-zone shift.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/re-entrainment-after-a-time-zone-shift.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "re-entrainment after a time-zone shift the slow diagonal crawl back into alignment after a time-zone shift. data only — 2 columns × 600 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-transients",
+   "name": "Transients (phase advance vs delay)",
+   "family": "Sources",
+   "description": "An immediate delay beside an advance that crawls through transients. Data only — 7 columns × 672 rows, no analysis.",
+   "summary": "An immediate delay beside an advance that crawls through transients.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/transients-phase-advance-vs-delay.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "transients (phase advance vs delay) an immediate delay beside an advance that crawls through transients. data only — 7 columns × 672 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-split-rhythm",
+   "name": "Split rhythm under constant light",
+   "family": "Sources",
+   "description": "Constant light splits the activity band into two components. Data only — 4 columns × 624 rows, no analysis.",
+   "summary": "Constant light splits the activity band into two components.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/split-rhythm-under-constant-light.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "split rhythm under constant light constant light splits the activity band into two components. data only — 4 columns × 624 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-noise-peak",
+   "name": "The multiple-comparison trap",
+   "family": "Sources",
+   "description": "Twelve pure-noise records, and the peak that means nothing. Data only — 13 columns × 240 rows, no analysis.",
+   "summary": "Twelve pure-noise records, and the peak that means nothing.",
+   "group": "Reading the output",
+   "url": "sessions/demos/the-multiple-comparison-trap.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "the multiple-comparison trap twelve pure-noise records, and the peak that means nothing. data only — 13 columns × 240 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-aliasing",
+   "name": "Sampling rate and aliasing",
+   "family": "Sources",
+   "description": "Sample too slowly and a 24 h rhythm disappears. Data only — 4 columns × 960 rows, no analysis.",
+   "summary": "Sample too slowly and a 24 h rhythm disappears.",
+   "group": "Reading the output",
+   "url": "sessions/demos/sampling-rate-and-aliasing.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "sampling rate and aliasing sample too slowly and a 24 h rhythm disappears. data only — 4 columns × 960 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-crepuscular",
+   "name": "Crepuscular (bimodal) activity",
+   "family": "Sources",
+   "description": "Two activity peaks a day, and why one mean phase misleads. Data only — 3 columns × 336 rows, no analysis.",
+   "summary": "Two activity peaks a day, and why one mean phase misleads.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/crepuscular-bimodal-activity.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "crepuscular (bimodal) activity two activity peaks a day, and why one mean phase misleads. data only — 3 columns × 336 rows, no analysis. sources"
+  },
+  {
+   "id": "dataset-workflow-masking",
+   "name": "Masking versus true entrainment",
+   "family": "Sources",
+   "description": "Light driving behaviour directly, versus a clock that has shifted. Data only — 3 columns × 672 rows, no analysis.",
+   "summary": "Light driving behaviour directly, versus a clock that has shifted.",
+   "group": "Rhythm & circadian",
+   "url": "sessions/demos/masking-versus-true-entrainment.csv",
+   "kind": "dataset",
+   "showcases": [],
+   "keywords": "masking versus true entrainment light driving behaviour directly, versus a clock that has shifted. data only — 3 columns × 672 rows, no analysis. sources"
+  },
+  {
+   "id": "tp-blankcolumn",
+   "name": "Enter Data",
+   "family": "Sources",
+   "description": "Enter data by hand, or paste CSV/JSON.",
+   "summary": "Enter data by hand, or paste CSV/JSON.",
+   "url": "sessions/demos/demo-tp-blankcolumn.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "BlankColumn"
+   ],
+   "keywords": "enter data enter data by hand, or paste csv/json. sources blankcolumn"
+  },
+  {
+   "id": "tp-random",
+   "name": "Random",
+   "family": "Sources",
+   "description": "Generate a column of random values.",
+   "summary": "Generate a column of random values.",
+   "url": "sessions/demos/demo-tp-random.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "Random"
+   ],
+   "keywords": "random generate a column of random values. sources random"
+  },
+  {
+   "id": "tp-sequencecolumn",
+   "name": "Sequence Column",
+   "family": "Sources",
+   "description": "Create a numeric or time sequence column.",
+   "summary": "Create a numeric or time sequence column.",
+   "url": "sessions/demos/demo-tp-sequencecolumn.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "SequenceColumn"
+   ],
+   "keywords": "sequence column create a numeric or time sequence column. sources sequencecolumn"
+  },
+  {
+   "id": "tp-simulateddata",
+   "name": "Simulate Data",
+   "family": "Sources",
+   "description": "Generate a synthetic time-series table from a cosine + noise model.",
+   "summary": "Generate a synthetic time-series table from a cosine + noise model.",
+   "url": "sessions/demos/demo-tp-simulateddata.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "SimulatedData"
+   ],
+   "keywords": "simulate data generate a synthetic time-series table from a cosine + noise model. sources simulateddata"
+  },
+  {
+   "id": "process-add",
+   "name": "Add",
+   "family": "Arithmetic",
+   "description": "Add a constant or column to the input column.",
+   "summary": "Add a constant or column to the input column.",
+   "url": "sessions/demos/demo-process-add.json",
+   "kind": "process",
+   "showcases": [
+    "Add"
+   ],
+   "keywords": "add add a constant or column to the input column. arithmetic add"
+  },
+  {
+   "id": "process-sub",
+   "name": "Substitute",
+   "family": "Arithmetic",
+   "description": "Find a specific value in the column and replace it with another (e.g. swap a missing-data code like −999 for a different value).",
+   "summary": "Find a specific value in the column and replace it with another (e.g.",
+   "url": "sessions/demos/demo-process-sub.json",
+   "kind": "process",
+   "showcases": [
+    "Sub"
+   ],
+   "keywords": "substitute find a specific value in the column and replace it with another (e.g. swap a missing-data code like −999 for a different value). arithmetic sub"
+  },
+  {
+   "id": "process-multiply",
+   "name": "Multiply",
+   "family": "Arithmetic",
+   "description": "Multiply the input column by a constant or another column.",
+   "summary": "Multiply the input column by a constant or another column.",
+   "url": "sessions/demos/demo-process-multiply.json",
+   "kind": "process",
+   "showcases": [
+    "Multiply"
+   ],
+   "keywords": "multiply multiply the input column by a constant or another column. arithmetic multiply"
+  },
+  {
+   "id": "process-normalize",
+   "name": "Normalize",
+   "family": "Arithmetic",
+   "description": "Normalize the column to a chosen range or by a reference value.",
+   "summary": "Normalize the column to a chosen range or by a reference value.",
+   "url": "sessions/demos/demo-process-normalize.json",
+   "kind": "process",
+   "showcases": [
+    "normalize"
+   ],
+   "keywords": "normalize normalize the column to a chosen range or by a reference value. arithmetic normalize"
+  },
+  {
+   "id": "tp-columnfunctions",
+   "name": "Column Function",
+   "family": "Arithmetic",
+   "description": "Apply a per-column aggregate function (mean, sum, etc.) across rows or groups.",
+   "summary": "Apply a per-column aggregate function (mean, sum, etc.) across rows or groups.",
+   "url": "sessions/demos/demo-tp-columnfunctions.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "ColumnFunctions"
+   ],
+   "keywords": "column function apply a per-column aggregate function (mean, sum, etc.) across rows or groups. arithmetic columnfunctions"
+  },
+  {
+   "id": "tp-threshold",
+   "name": "Threshold",
+   "family": "Arithmetic",
+   "description": "Turn a column into a 0/1 (binary) column at a user-set cutoff — e.g. to make a binary outcome for logistic regression.",
+   "summary": "Turn a column into a 0/1 (binary) column at a user-set cutoff — e.g.",
+   "url": "sessions/demos/demo-tp-threshold.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "Threshold"
+   ],
+   "keywords": "threshold turn a column into a 0/1 (binary) column at a user-set cutoff — e.g. to make a binary outcome for logistic regression. arithmetic threshold"
+  },
+  {
+   "id": "tp-crossing",
+   "name": "Crossing",
+   "family": "Analysis",
+   "description": "Find when a rule over one or more series becomes sustainedly true: conditions against typed values or wired scalar thresholds, combined as OR of AND-groups, with a persistence requirement. Outputs every crossing time, their count, and a 0/1 breach series.",
+   "summary": "Find when a rule over one or more series becomes sustainedly true:",
+   "url": "sessions/demos/demo-tp-crossing.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "Crossing"
+   ],
+   "keywords": "crossing find when a rule over one or more series becomes sustainedly true: conditions against typed values or wired scalar thresholds, combined as or of and-groups, with a persistence requirement. outputs every crossing time, their count, and a 0/1 breach series. analysis detection alert threshold set-point spc control limits persistence"
+  },
+  {
+   "id": "tp-formulacolumn",
+   "name": "Formula Column",
+   "family": "Arithmetic",
+   "description": "Compute a new column from a user-supplied formula referencing other columns.",
+   "summary": "Compute a new column from a user-supplied formula referencing other columns.",
+   "url": "sessions/demos/demo-tp-formulacolumn.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "FormulaColumn"
+   ],
+   "keywords": "formula column compute a new column from a user-supplied formula referencing other columns. arithmetic formulacolumn"
+  },
+  {
+   "id": "process-filterbyothercol",
+   "name": "Filter",
+   "family": "Filtering",
+   "description": "Filter rows based on the values of another column.",
+   "summary": "Filter rows based on the values of another column.",
+   "url": "sessions/demos/demo-process-filterbyothercol.json",
+   "kind": "process",
+   "showcases": [
+    "FilterByOtherCol"
+   ],
+   "keywords": "filter filter rows based on the values of another column. filtering filterbyothercol"
+  },
+  {
+   "id": "process-outlierremoval",
+   "name": "Remove Outliers",
+   "family": "Filtering",
+   "description": "Detect and remove outliers from the column.",
+   "summary": "Detect and remove outliers from the column.",
+   "url": "sessions/demos/demo-process-outlierremoval.json",
+   "kind": "process",
+   "showcases": [
+    "OutlierRemoval"
+   ],
+   "keywords": "remove outliers detect and remove outliers from the column. filtering outlierremoval"
+  },
+  {
+   "id": "process-removetrend",
+   "name": "Remove Trend",
+   "family": "Filtering",
+   "description": "Remove a fitted trend (linear, polynomial, etc.) from the column.",
+   "summary": "Remove a fitted trend (linear, polynomial, etc.) from the column.",
+   "url": "sessions/demos/demo-process-removetrend.json",
+   "kind": "process",
+   "showcases": [
+    "RemoveTrend"
+   ],
+   "keywords": "remove trend remove a fitted trend (linear, polynomial, etc.) from the column. filtering removetrend"
+  },
+  {
+   "id": "process-frequencyfilter",
+   "name": "Frequency Filter",
+   "family": "Filtering",
+   "description": "FFT-based low-, high-, or band-pass filter over an evenly sampled series.",
+   "summary": "FFT-based low-, high-, or band-pass filter over an evenly sampled series.",
+   "url": "sessions/demos/demo-process-frequencyfilter.json",
+   "kind": "process",
+   "showcases": [
+    "FrequencyFilter"
+   ],
+   "keywords": "frequency filter fft-based low-, high-, or band-pass filter over an evenly sampled series. filtering frequencyfilter"
+  },
+  {
+   "id": "tp-sort",
+   "name": "Sort",
+   "family": "Filtering",
+   "description": "Sort rows by a chosen column, keeping the selected columns aligned (ascending or descending).",
+   "summary": "Sort rows by a chosen column, keeping the selected columns aligned (ascending or descending).",
+   "url": "sessions/demos/demo-tp-sort.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "Sort"
+   ],
+   "keywords": "sort sort rows by a chosen column, keeping the selected columns aligned (ascending or descending). filtering sort"
+  },
+  {
+   "id": "tp-smootheddata",
+   "name": "Smooth Data",
+   "family": "Smoothing",
+   "description": "Smooth a column using LOESS, moving average, Savitzky-Golay, or Whittaker-Eilers.",
+   "summary": "Smooth a column using LOESS, moving average, Savitzky-Golay, or Whittaker-Eilers.",
+   "url": "sessions/demos/demo-tp-smootheddata.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "SmoothedData"
+   ],
+   "keywords": "smooth data smooth a column using loess, moving average, savitzky-golay, or whittaker-eilers. smoothing smootheddata"
+  },
+  {
+   "id": "tp-binneddata",
+   "name": "Bin Data",
+   "family": "Binning",
+   "description": "Bin time-series values into regular intervals and aggregate per bin.",
+   "summary": "Bin time-series values into regular intervals and aggregate per bin.",
+   "url": "sessions/demos/demo-tp-binneddata.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "BinnedData"
+   ],
+   "keywords": "bin data bin time-series values into regular intervals and aggregate per bin. binning binneddata"
+  },
+  {
+   "id": "tp-interpolate",
+   "name": "Interpolate",
+   "family": "Binning",
+   "description": "Fill missing values or resample a series onto a regular grid by interpolation (linear, nearest, or cubic spline).",
+   "summary": "Fill missing values or resample a series onto a regular grid by interpolation (linear, nearest, or cubic spline).",
+   "url": "sessions/demos/demo-tp-interpolate.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "Interpolate"
+   ],
+   "keywords": "interpolate fill missing values or resample a series onto a regular grid by interpolation (linear, nearest, or cubic spline). binning interpolate"
+  },
+  {
+   "id": "tp-cosinor",
+   "name": "Cosinor",
+   "family": "Fitting",
+   "description": "Fit a cosinor model (period, amplitude, acrophase) to the column.",
+   "summary": "Fit a cosinor model (period, amplitude, acrophase) to the column.",
+   "url": "sessions/demos/demo-tp-cosinor.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "Cosinor"
+   ],
+   "keywords": "cosinor fit a cosinor model (period, amplitude, acrophase) to the column. fitting cosinor"
+  },
+  {
+   "id": "tp-doublelogistic",
+   "name": "Double Logistic",
+   "family": "Fitting",
+   "description": "Fit a double-logistic curve to the column (useful for phenology / on-off transitions).",
+   "summary": "Fit a double-logistic curve to the column (useful for phenology / on-off transitions).",
+   "url": "sessions/demos/demo-tp-doublelogistic.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "DoubleLogistic"
+   ],
+   "keywords": "double logistic fit a double-logistic curve to the column (useful for phenology / on-off transitions). fitting doublelogistic"
+  },
+  {
+   "id": "tp-fitfunction",
+   "name": "Fit waveform model",
+   "family": "Fitting",
+   "description": "Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. Use it to compare different waveform shapes on the same series without rewiring; the fit quality (R2, RMSE, permutation p) and the chosen model’s parameters are wireable metric output ports, like the dedicated Cosinor, Rectangular Wave and Double Logistic nodes.",
+   "summary": "Fit a named waveform model to the column: cosinor, rectangular wave, or double logistic.",
+   "url": "sessions/demos/demo-tp-fitfunction.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "FitFunction"
+   ],
+   "keywords": "fit waveform model fit a named waveform model to the column: cosinor, rectangular wave, or double logistic. use it to compare different waveform shapes on the same series without rewiring; the fit quality (r2, rmse, permutation p) and the chosen model’s parameters are wireable metric output ports, like the dedicated cosinor, rectangular wave and double logistic nodes. fitting fitfunction"
+  },
+  {
+   "id": "tp-rectangularwave",
+   "name": "Rectangular Wave",
+   "family": "Fitting",
+   "description": "Fit a rectangular (square) wave model with adjustable duty cycle.",
+   "summary": "Fit a rectangular (square) wave model with adjustable duty cycle.",
+   "url": "sessions/demos/demo-tp-rectangularwave.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "RectangularWave"
+   ],
+   "keywords": "rectangular wave fit a rectangular (square) wave model with adjustable duty cycle. fitting rectangularwave"
+  },
+  {
+   "id": "tp-trendfit",
+   "name": "Fit trend",
+   "family": "Fitting",
+   "description": "Fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its R2, RMSE and coefficients. Use it to describe or remove baseline drift, growth or decay before rhythm analysis.",
+   "summary": "Fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its R2, RMSE and coefficients.",
+   "url": "sessions/demos/demo-tp-trendfit.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "TrendFit"
+   ],
+   "keywords": "fit trend fit a slow, non-oscillatory trend by least squares (linear, polynomial, exponential or logarithmic) and store the fitted curve with its r2, rmse and coefficients. use it to describe or remove baseline drift, growth or decay before rhythm analysis. fitting trendfit"
+  },
+  {
+   "id": "tp-fdrcorrection",
+   "name": "FDR Correction",
+   "family": "Analysis",
+   "description": "Adjust a column of p-values for multiple comparisons and flag which survive. Benjamini-Hochberg (FDR under independence or positive dependence), Benjamini-Yekutieli (FDR under arbitrary dependence), Holm and Bonferroni (family-wise error). Missing p-values stay missing and are excluded from the count, so a test that failed to run never tightens the correction on the ones that did.",
+   "summary": "Adjust a column of p-values for multiple comparisons and flag which survive.",
+   "url": "sessions/demos/demo-tp-fdrcorrection.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "FDRCorrection"
+   ],
+   "keywords": "fdr correction adjust a column of p-values for multiple comparisons and flag which survive. benjamini-hochberg (fdr under independence or positive dependence), benjamini-yekutieli (fdr under arbitrary dependence), holm and bonferroni (family-wise error). missing p-values stay missing and are excluded from the count, so a test that failed to run never tightens the correction on the ones that did. analysis fdrcorrection"
+  },
+  {
+   "id": "tp-surrogatetest",
+   "name": "Surrogate Test",
+   "family": "Analysis",
+   "description": "Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked.",
+   "summary": "Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure.",
+   "url": "sessions/demos/demo-tp-surrogatetest.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "SurrogateTest"
+   ],
+   "keywords": "surrogate test test rhythm strength against a surrogate null that preserves the series' nuisance structure. plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and ar(1) red noise keep it. phase-randomised and aaft surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked. analysis surrogatetest"
+  },
+  {
+   "id": "tp-groupcomparison",
+   "name": "Compare groups (stats)",
+   "family": "Analysis",
+   "description": "Compare statistics between groups defined by another column.",
+   "summary": "Compare statistics between groups defined by another column.",
+   "url": "sessions/demos/demo-tp-groupcomparison.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "GroupComparison"
+   ],
+   "keywords": "compare groups (stats) compare statistics between groups defined by another column. analysis groupcomparison"
+  },
+  {
+   "id": "tp-describedata",
+   "name": "Describe Data",
+   "family": "Analysis",
+   "description": "Per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis).",
+   "summary": "Per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis).",
+   "url": "sessions/demos/demo-tp-describedata.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "DescribeData"
+   ],
+   "keywords": "describe data per-column summary statistics (mean, median, sd, min/max, quartiles, skewness, kurtosis). analysis describedata"
+  },
+  {
+   "id": "tp-logisticregression",
+   "name": "Logistic regression",
+   "family": "Analysis",
+   "description": "Model a binary outcome from one or more predictors: coefficients, odds ratios with 95% CIs, Wald p-values, and model fit (pseudo-R², LR test).",
+   "summary": "Model a binary outcome from one or more predictors: coefficients, odds ratios with 95% CIs, Wald p-values, and model fit (pseudo-R², LR test).",
+   "url": "sessions/demos/demo-tp-logisticregression.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "LogisticRegression"
+   ],
+   "keywords": "logistic regression model a binary outcome from one or more predictors: coefficients, odds ratios with 95% cis, wald p-values, and model fit (pseudo-r², lr test). analysis logisticregression"
+  },
+  {
+   "id": "tp-chisquared",
+   "name": "Categorical tests",
+   "family": "Analysis",
+   "description": "Tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or Fisher's exact test for small 2x2 tables. Reports an effect size (Cramer's V, Cohen's w, or the odds ratio with a confidence interval) alongside the p-value.",
+   "summary": "Tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or Fisher's exact test for small 2x2 tables.",
+   "url": "sessions/demos/demo-tp-chisquared.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "ChiSquared"
+   ],
+   "keywords": "categorical tests tests for categorical data: chi-squared independence of two variables (contingency table), chi-squared goodness-of-fit against a uniform expectation, or fisher's exact test for small 2x2 tables. reports an effect size (cramer's v, cohen's w, or the odds ratio with a confidence interval) alongside the p-value. analysis chisquared"
+  },
+  {
+   "id": "tp-crosscorrelation",
+   "name": "Cross-correlation",
+   "family": "Analysis",
+   "description": "Cross-correlogram of two series: the correlation at each lag, with the peak lag revealing the delay between them.",
+   "summary": "Cross-correlogram of two series: the correlation at each lag, with the peak lag revealing the delay between them.",
+   "url": "sessions/demos/demo-tp-crosscorrelation.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "CrossCorrelation"
+   ],
+   "keywords": "cross-correlation cross-correlogram of two series: the correlation at each lag, with the peak lag revealing the delay between them. analysis crosscorrelation"
+  },
+  {
+   "id": "tp-normalitytest",
+   "name": "Normality Test",
+   "family": "Analysis",
+   "description": "Test each wired column for normality (Shapiro-Wilk by default, or D’Agostino-Pearson / Jarque-Bera), reporting the statistic, p-value and a verdict.",
+   "summary": "Test each wired column for normality (Shapiro-Wilk by default, or D’Agostino-Pearson / Jarque-Bera), reporting the statistic, p-value and a verdict.",
+   "url": "sessions/demos/demo-tp-normalitytest.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "NormalityTest"
+   ],
+   "keywords": "normality test test each wired column for normality (shapiro-wilk by default, or d’agostino-pearson / jarque-bera), reporting the statistic, p-value and a verdict. analysis normalitytest"
+  },
+  {
+   "id": "tp-correlation",
+   "name": "Correlation",
+   "family": "Analysis",
+   "description": "Pairwise correlation matrix (Pearson or Spearman) across the wired columns, with normality-based auto method choice.",
+   "summary": "Pairwise correlation matrix (Pearson or Spearman) across the wired columns, with normality-based auto method choice.",
+   "url": "sessions/demos/demo-tp-correlation.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "Correlation"
+   ],
+   "keywords": "correlation pairwise correlation matrix (pearson or spearman) across the wired columns, with normality-based auto method choice. analysis correlation"
+  },
+  {
+   "id": "tp-movinganalysis",
+   "name": "Moving Analysis",
+   "family": "Analysis",
+   "description": "Compute a rolling-window analysis across the column.",
+   "summary": "Compute a rolling-window analysis across the column.",
+   "url": "sessions/demos/demo-tp-movinganalysis.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "MovingAnalysis"
+   ],
+   "keywords": "moving analysis compute a rolling-window analysis across the column. analysis movinganalysis"
+  },
+  {
+   "id": "tp-rhythmicityanalysis",
+   "name": "Rhythmicity Analysis",
+   "family": "Analysis",
+   "description": "Run rhythmicity statistics over the column.",
+   "summary": "Run rhythmicity statistics over the column.",
+   "url": "sessions/demos/demo-tp-rhythmicityanalysis.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "RhythmicityAnalysis"
+   ],
+   "keywords": "rhythmicity analysis run rhythmicity statistics over the column. analysis rhythmicityanalysis"
+  },
+  {
+   "id": "tp-nonparametricra",
+   "name": "Nonparametric RA",
+   "family": "Analysis",
+   "description": "Nonparametric rest-activity variables (IS, IV, RA, M10/L5) — robust to non-sinusoidal rhythms.",
+   "summary": "Nonparametric rest-activity variables (IS, IV, RA, M10/L5) — robust to non-sinusoidal rhythms.",
+   "url": "sessions/demos/demo-tp-nonparametricra.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "NonparametricRA"
+   ],
+   "keywords": "nonparametric ra nonparametric rest-activity variables (is, iv, ra, m10/l5) — robust to non-sinusoidal rhythms. analysis nonparametricra"
+  },
+  {
+   "id": "tp-averageprofile",
+   "name": "Average Profile",
+   "family": "Analysis",
+   "description": "Average daily profile — fold a series onto one period and show the per-bin mean (± SEM).",
+   "summary": "Average daily profile — fold a series onto one period and show the per-bin mean (± SEM).",
+   "url": "sessions/demos/demo-tp-averageprofile.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "AverageProfile"
+   ],
+   "keywords": "average profile average daily profile — fold a series onto one period and show the per-bin mean (± sem). analysis averageprofile"
+  },
+  {
+   "id": "tp-rayleightest",
+   "name": "Rayleigh test",
+   "family": "Analysis",
+   "description": "Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p, acrophase) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns. Wiring an optional time column (hours or timestamp, folded by period) switches to an amplitude-weighted mean vector/acrophase; without it, values are treated as raw angles.",
+   "summary": "Circular statistics on phase/angle columns: the Rayleigh uniformity test (R, z, p, acrophase) per column, with an optional Watson-Williams equal-mean-direction test (F, p) across columns.",
+   "url": "sessions/demos/demo-tp-rayleightest.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "RayleighTest"
+   ],
+   "keywords": "rayleigh test circular statistics on phase/angle columns: the rayleigh uniformity test (r, z, p, acrophase) per column, with an optional watson-williams equal-mean-direction test (f, p) across columns. wiring an optional time column (hours or timestamp, folded by period) switches to an amplitude-weighted mean vector/acrophase; without it, values are treated as raw angles. analysis rayleightest"
+  },
+  {
+   "id": "tp-circadianfunctionindex",
+   "name": "Circadian Function Index",
+   "family": "Analysis",
+   "description": "Circadian Function Index (0–1) summarising rest-activity rhythm robustness from nonparametric IS, IV and RA (Ortiz-Tudela et al. 2010).",
+   "summary": "Circadian Function Index (0–1) summarising rest-activity rhythm robustness from nonparametric IS, IV and RA (Ortiz-Tudela et al.",
+   "url": "sessions/demos/demo-tp-circadianfunctionindex.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "CircadianFunctionIndex"
+   ],
+   "keywords": "circadian function index circadian function index (0–1) summarising rest-activity rhythm robustness from nonparametric is, iv and ra (ortiz-tudela et al. 2010). analysis circadianfunctionindex"
+  },
+  {
+   "id": "process-editvalue",
+   "name": "Edit value",
+   "family": "Transform",
+   "description": "Edit or substitute individual values in a column.",
+   "summary": "Edit or substitute individual values in a column.",
+   "url": "sessions/demos/demo-process-editvalue.json",
+   "kind": "process",
+   "showcases": [
+    "EditValue"
+   ],
+   "keywords": "edit value edit or substitute individual values in a column. transform editvalue"
+  },
+  {
+   "id": "tp-collectcolumns",
+   "name": "Collect Columns",
+   "family": "Transform",
+   "description": "Collect (concatenate) several columns into one.",
+   "summary": "Collect (concatenate) several columns into one.",
+   "url": "sessions/demos/demo-tp-collectcolumns.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "CollectColumns"
+   ],
+   "keywords": "collect columns collect (concatenate) several columns into one. transform collectcolumns"
+  },
+  {
+   "id": "tp-columnset",
+   "name": "Column Set",
+   "family": "Transform",
+   "description": "Curate a live subset of columns by name/label and reuse it as one wire.",
+   "summary": "Curate a live subset of columns by name/label and reuse it as one wire.",
+   "url": "sessions/demos/demo-tp-columnset.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "ColumnSet"
+   ],
+   "keywords": "column set curate a live subset of columns by name/label and reuse it as one wire. transform columnset"
+  },
+  {
+   "id": "tp-longtowide",
+   "name": "Long To Wide",
+   "family": "Transform",
+   "description": "Pivot a long-format table into wide format.",
+   "summary": "Pivot a long-format table into wide format.",
+   "url": "sessions/demos/demo-tp-longtowide.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "LongToWide"
+   ],
+   "keywords": "long to wide pivot a long-format table into wide format. transform longtowide"
+  },
+  {
+   "id": "tp-split",
+   "name": "Split data",
+   "family": "Transform",
+   "description": "Split a column or table on a delimiter or group key.",
+   "summary": "Split a column or table on a delimiter or group key.",
+   "url": "sessions/demos/demo-tp-split.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "Split"
+   ],
+   "keywords": "split data split a column or table on a delimiter or group key. transform split"
+  },
+  {
+   "id": "tp-storedvaluegroup",
+   "name": "Stored Value Group",
+   "family": "Transform",
+   "description": "Group derived stored values together for reuse.",
+   "summary": "Group derived stored values together for reuse.",
+   "url": "sessions/demos/demo-tp-storedvaluegroup.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "StoredValueGroup"
+   ],
+   "keywords": "stored value group group derived stored values together for reuse. transform storedvaluegroup"
+  },
+  {
+   "id": "tp-widetolong",
+   "name": "Wide To Long",
+   "family": "Transform",
+   "description": "Pivot a wide-format table into long format.",
+   "summary": "Pivot a wide-format table into long format.",
+   "url": "sessions/demos/demo-tp-widetolong.json",
+   "kind": "tableProcess",
+   "showcases": [
+    "WideToLong"
+   ],
+   "keywords": "wide to long pivot a wide-format table into long format. transform widetolong"
+  },
+  {
+   "id": "scatter-rhythm",
+   "name": "Scatter — activity vs hour",
+   "family": "Plots",
+   "description": "A simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly).",
+   "summary": "A simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly).",
+   "url": "sessions/demos/demo-scatter-rhythm.json",
+   "kind": "plot",
+   "showcases": [
+    "scatterplot"
+   ],
+   "keywords": "scatter — activity vs hour a simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly). plots scatterplot"
+  },
+  {
+   "id": "cwt-period-change",
+   "name": "Wavelet — a period that changes",
+   "family": "Plots",
+   "description": "A scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second. A periodogram would show both peaks and say nothing about when each applied; the wavelet transform localises them in time. The dashed cone of influence marks the edges, where the transform runs out of data and the values are artefacts.",
+   "summary": "A scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second.",
+   "url": "sessions/demos/demo-cwt-period-change.json",
+   "kind": "plot",
+   "showcases": [
+    "cwt"
+   ],
+   "keywords": "wavelet — a period that changes a scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second. a periodogram would show both peaks and say nothing about when each applied; the wavelet transform localises them in time. the dashed cone of influence marks the edges, where the transform runs out of data and the values are artefacts. plots cwt"
+  },
+  {
+   "id": "histogram-normal",
+   "name": "Histogram — distribution",
+   "family": "Plots",
+   "description": "Histogram of 500 samples drawn from a normal distribution (mean 100, sd 15).",
+   "summary": "Histogram of 500 samples drawn from a normal distribution (mean 100, sd 15).",
+   "url": "sessions/demos/demo-histogram-normal.json",
+   "kind": "plot",
+   "showcases": [
+    "histogram"
+   ],
+   "keywords": "histogram — distribution histogram of 500 samples drawn from a normal distribution (mean 100, sd 15). plots histogram"
+  },
+  {
+   "id": "boxplot-by-day",
+   "name": "Boxplot — activity by day",
+   "family": "Plots",
+   "description": "Boxplot of daily activity values grouped by day index (7 days × 24 hourly points).",
+   "summary": "Boxplot of daily activity values grouped by day index (7 days × 24 hourly points).",
+   "url": "sessions/demos/demo-boxplot-by-day.json",
+   "kind": "plot",
+   "showcases": [
+    "boxplot"
+   ],
+   "keywords": "boxplot — activity by day boxplot of daily activity values grouped by day index (7 days × 24 hourly points). plots boxplot"
+  },
+  {
+   "id": "violinplot-groups",
+   "name": "Violin plot — shapes a box hides",
+   "family": "Plots",
+   "description": "A violin plot (boxplot with the violin overlay and jittered data points turned on). Three groups: the two outer ones have near-identical boxes — same median, similar spread — but the violin reveals one is unimodal and the other bimodal, a difference the box alone cannot show; the middle group is right-skewed. The violin is a kernel-density outline mirrored around each box; hide the box for a pure violin plot.",
+   "summary": "A violin plot (boxplot with the violin overlay and jittered data points turned on).",
+   "url": "sessions/demos/demo-violinplot-groups.json",
+   "kind": "plot",
+   "showcases": [
+    "boxplot"
+   ],
+   "keywords": "violin plot — shapes a box hides a violin plot (boxplot with the violin overlay and jittered data points turned on). three groups: the two outer ones have near-identical boxes — same median, similar spread — but the violin reveals one is unimodal and the other bimodal, a difference the box alone cannot show; the middle group is right-skewed. the violin is a kernel-density outline mirrored around each box; hide the box for a pure violin plot. plots boxplot"
+  },
+  {
+   "id": "meansem-by-day",
+   "name": "Mean ± SEM — activity by day",
+   "family": "Plots",
+   "description": "Per-day mean activity with standard-error whiskers (7 days × 24 hourly points).",
+   "summary": "Per-day mean activity with standard-error whiskers (7 days × 24 hourly points).",
+   "url": "sessions/demos/demo-meansem-by-day.json",
+   "kind": "plot",
+   "showcases": [
+    "meansem"
+   ],
+   "keywords": "mean ± sem — activity by day per-day mean activity with standard-error whiskers (7 days × 24 hourly points). plots meansem"
+  },
+  {
+   "id": "circular-phase-two-groups",
+   "name": "Circular phase plot — two groups",
+   "family": "Plots",
+   "description": "Two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its Rayleigh mean-resultant vector and a significant Watson-Williams test comparing mean directions — plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector.",
+   "summary": "Two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its Rayleigh mean-resultant vector and a significant Watson-Williams test comparing mean directions — plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector.",
+   "url": "sessions/demos/demo-circular-phase-two-groups.json",
+   "kind": "plot",
+   "showcases": [
+    "circularphase"
+   ],
+   "keywords": "circular phase plot — two groups two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its rayleigh mean-resultant vector and a significant watson-williams test comparing mean directions — plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector. plots circularphase"
+  },
+  {
+   "id": "actogram-rhythm",
+   "name": "Actogram — multi-day activity",
+   "family": "Plots",
+   "description": "Actogram of a noisy ~24 h rhythm over 7 days (hourly samples).",
+   "summary": "Actogram of a noisy ~24 h rhythm over 7 days (hourly samples).",
+   "url": "sessions/demos/demo-actogram-rhythm.json",
+   "kind": "plot",
+   "showcases": [
+    "actogram"
+   ],
+   "keywords": "actogram — multi-day activity actogram of a noisy ~24 h rhythm over 7 days (hourly samples). plots actogram"
+  },
+  {
+   "id": "periodogram-rhythm",
+   "name": "Periodogram — period detection",
+   "family": "Plots",
+   "description": "Lomb–Scargle periodogram of a ~24 h rhythm (7 days, hourly).",
+   "summary": "Lomb–Scargle periodogram of a ~24 h rhythm (7 days, hourly).",
+   "url": "sessions/demos/demo-periodogram-rhythm.json",
+   "kind": "plot",
+   "showcases": [
+    "periodogram"
+   ],
+   "keywords": "periodogram — period detection lomb–scargle periodogram of a ~24 h rhythm (7 days, hourly). plots periodogram"
+  },
+  {
+   "id": "correlogram-rhythm",
+   "name": "Correlogram — autocorrelation",
+   "family": "Plots",
+   "description": "Autocorrelogram of a ~24 h rhythm (7 days, hourly).",
+   "summary": "Autocorrelogram of a ~24 h rhythm (7 days, hourly).",
+   "url": "sessions/demos/demo-correlogram-rhythm.json",
+   "kind": "plot",
+   "showcases": [
+    "correlogram"
+   ],
+   "keywords": "correlogram — autocorrelation autocorrelogram of a ~24 h rhythm (7 days, hourly). plots correlogram"
+  },
+  {
+   "id": "fft-rhythm",
+   "name": "FFT — frequency spectrum",
+   "family": "Plots",
+   "description": "Fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly).",
+   "summary": "Fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly).",
+   "url": "sessions/demos/demo-fft-rhythm.json",
+   "kind": "plot",
+   "showcases": [
+    "fft"
+   ],
+   "keywords": "fft — frequency spectrum fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly). plots fft"
+  },
+  {
+   "id": "correlationheatmap-matrix",
+   "name": "Correlation heatmap",
+   "family": "Plots",
+   "description": "Self-contained correlation matrix of four variables — wire the raw columns and it computes and colours the pairwise correlations itself.",
+   "summary": "Self-contained correlation matrix of four variables — wire the raw columns and it computes and colours the pairwise correlations itself.",
+   "url": "sessions/demos/demo-correlationheatmap-matrix.json",
+   "kind": "plot",
+   "showcases": [
+    "correlationheatmap"
+   ],
+   "keywords": "correlation heatmap self-contained correlation matrix of four variables — wire the raw columns and it computes and colours the pairwise correlations itself. plots correlationheatmap"
+  },
+  {
+   "id": "pairsplot-matrix",
+   "name": "Pairs plot",
+   "family": "Plots",
+   "description": "Scatterplot matrix of four variables: histograms on the diagonal, scatter + linear fit above, correlation colour below.",
+   "summary": "Scatterplot matrix of four variables: histograms on the diagonal, scatter + linear fit above, correlation colour below.",
+   "url": "sessions/demos/demo-pairsplot-matrix.json",
+   "kind": "plot",
+   "showcases": [
+    "pairsplot"
+   ],
+   "keywords": "pairs plot scatterplot matrix of four variables: histograms on the diagonal, scatter + linear fit above, correlation colour below. plots pairsplot"
+  },
+  {
+   "id": "qqplot-normality",
+   "name": "Q-Q plot",
+   "family": "Plots",
+   "description": "Normal Q-Q plots of a normal and a right-skewed sample: the normal series hugs the quartile line inside the confidence envelope, the skewed one bends away in the tails.",
+   "summary": "Normal Q-Q plots of a normal and a right-skewed sample: the normal series hugs the quartile line inside the confidence envelope, the skewed one bends away in the tails.",
+   "url": "sessions/demos/demo-qqplot-normality.json",
+   "kind": "plot",
+   "showcases": [
+    "qqplot"
+   ],
+   "keywords": "q-q plot normal q-q plots of a normal and a right-skewed sample: the normal series hugs the quartile line inside the confidence envelope, the skewed one bends away in the tails. plots qqplot"
+  },
+  {
+   "id": "table-columns",
+   "name": "Table — raw columns",
+   "family": "Plots",
+   "description": "A tableplot listing an hour index alongside two derived signals.",
+   "summary": "A tableplot listing an hour index alongside two derived signals.",
+   "url": "sessions/demos/demo-table-columns.json",
+   "kind": "plot",
+   "showcases": [
+    "tableplot"
+   ],
+   "keywords": "table — raw columns a tableplot listing an hour index alongside two derived signals. plots tableplot"
+  }
+ ]
 }

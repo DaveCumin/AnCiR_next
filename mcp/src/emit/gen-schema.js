@@ -27,6 +27,7 @@ await ensureDom();
 const { ensureRegistry } = await import('../engine/session.js');
 await ensureRegistry();
 const { appConsts } = await import('$lib/core/core.svelte.js');
+const { describeOverlayForms } = await import('../engine/overlays.js');
 const { getOutputKeys: rhythmicityOutputKeys } = await import(
 	'$lib/tableProcesses/RhythmicityAnalysis.svelte'
 );
@@ -213,13 +214,18 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 // plot class's fromJSON is explicitly tested to accept without clobbering its defaults
 // (plots/plotFromJSONRobustness.test.js). tableplot is special-cased (columnRefs/showCol).
 const plots = {};
+const overlayForms = describeOverlayForms();
 for (const [id, entry] of appConsts.plotMap ?? new Map()) {
 	plots[id] = {
 		displayName: entry.displayName ?? id,
 		inputs: entry.defaultInputs ?? [],
 		// Can this plot shade a repeating time-of-day window (a light/dark cycle)? Asked of the
 		// class, so a plot that gains bands is advertised without anyone editing a list.
-		supportsBands: typeof entry.data?.prototype?.addNightBand === 'function'
+		supportsBands: typeof entry.data?.prototype?.addNightBand === 'function',
+		// Reference lines / shaded bands (add_plot / render_plot `overlays`): the channel table
+		// per (kind, form), read from OverlayClass so it cannot drift. Only on plots whose class
+		// has addOverlay (the scatterplot).
+		...(typeof entry.data?.prototype?.addOverlay === 'function' ? { overlays: overlayForms } : {})
 	};
 }
 

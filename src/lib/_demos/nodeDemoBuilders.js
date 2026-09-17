@@ -298,10 +298,8 @@ export async function buildProcessDemo(spec, display) {
 
 	// A second "reference" column for the rare cross-column process.
 	let otherId = -1;
-	let otherNode = null;
 	if (spec.needsOther) {
 		otherId = mkCol('number', SAMPLE.index(), 'reference');
-		otherNode = `data_${otherId}`;
 	}
 
 	// The process as a free/orphan node consuming y → result (a producer column).
@@ -393,7 +391,6 @@ export async function buildTPDemo(spec, entry, display) {
 	try {
 		await tp.doProcess();
 	} catch (err) {
-		// eslint-disable-next-line no-console
 		console.warn(`doProcess failed for ${spec.name}:`, err?.message ?? err);
 	}
 
@@ -497,6 +494,30 @@ export async function buildTPDemo(spec, entry, display) {
 			.map((k) => tp.args.out[k])
 			.filter((v) => typeof v === 'number' && v >= 0);
 		if (termIds.length) tablePlot(`${display}: coefficients`, termIds);
+	} else if (spec.name === 'Crossing') {
+		// The canonical wiring from plan 2026-09-13: the series with the rule's
+		// threshold as a horizontal reference line (typed, the same 20 the rule
+		// uses) and every detection as a vertical line wired to `crossing`, so
+		// what the node found is visible on the plot rather than only in a table.
+		const p = scatterPlot(
+			`${display}: signal + detections`,
+			[{ x: ids[0], y: ids[1], label: 'Signal', kind: 'points', colour: RAW_COLOUR }],
+			{ x: 'time (h)', y: 'activity' }
+		);
+		const threshold = spec.args(ids).groups?.[0]?.[0]?.value;
+		if (Number.isFinite(threshold)) {
+			const limit = p.plot.addOverlay('line', 'horizontal');
+			limit.setTyped('at', threshold);
+			limit.label = 'threshold';
+			limit.colour = OUT_COLOUR;
+		}
+		const crossing = tp.args.out.crossing;
+		if (crossing >= 0) {
+			const events = p.plot.addOverlay('line', 'vertical');
+			events.addWire('at', crossing);
+			events.label = 'crossing';
+		}
+		tablePlot(`${display} result`, [...ids, ...outIds]);
 	} else {
 		tablePlot(`${display} result`, [...ids, ...outIds]);
 	}

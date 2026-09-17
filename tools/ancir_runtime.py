@@ -2161,6 +2161,135 @@ def tp_threshold(args, cols, raw_data, _sv):
     return len(out) > 0
 
 
+# --- Crossing ---
+
+def tp_crossing(args, cols, raw_data, _sv):
+    # Rule-based crossing detection; mirrors Crossing.svelte crossingdata exactly.
+    # OR of AND-groups of conditions over yIN series (or x); persistence in x
+    # units when xIN wired, else samples; re-arm only after the rule goes false.
+    def _missing(v):
+        if v is None or v == '':
+            return True
+        try:
+            return math.isnan(float(v))
+        except (TypeError, ValueError):
+            return True
+
+    y_ins = [i for i in (args.get('yIN') or []) if i is not None and i != -1]
+    th_ins = [i for i in (args.get('thresholdIN') or []) if i is not None and i != -1]
+    groups = [g for g in (args.get('groups') or []) if isinstance(g, list) and len(g) > 0]
+    if not groups:
+        return False
+
+    x_in = args.get('xIN', -1)
+    x_wired = x_in is not None and x_in != -1
+    if x_wired and x_in not in cols:
+        return False
+    x_data = (cols[x_in].get_data() or []) if x_wired else None
+
+    comparators = {
+        '>': lambda v, t: v > t,
+        '>=': lambda v, t: v >= t,
+        '<': lambda v, t: v < t,
+        '<=': lambda v, t: v <= t,
+    }
+
+    n = len(x_data) if x_data is not None else -1
+    resolved = []
+    for g in groups:
+        rg = []
+        for c in g:
+            cmp_ = comparators.get(c.get('isOperator'))
+            if cmp_ is None:
+                return False
+            target = c.get('target')
+            if target == 'x':
+                if x_data is None:
+                    return False
+                series = x_data
+            else:
+                if target not in y_ins or target not in cols:
+                    return False
+                series = cols[target].get_data() or []
+            source = c.get('source', -1)
+            if source is not None and source != -1:
+                if source not in th_ins or source not in cols:
+                    return False
+                t = None
+                for v in (cols[source].get_data() or []):
+                    if not _missing(v):
+                        t = float(v)
+                        break
+                if t is None:
+                    return False
+            else:
+                try:
+                    t = float(c.get('value'))
+                except (TypeError, ValueError):
+                    return False
+                if math.isnan(t):
+                    return False
+            if n == -1:
+                n = len(series)
+            if len(series) != n:
+                return False
+            rg.append((series, cmp_, t))
+        resolved.append(rg)
+    if n <= 0:
+        return False
+
+    required = 1
+    persistence = float(args.get('persistence') or 0)
+    if persistence > 0:
+        if x_data is not None:
+            diffs = []
+            for i in range(1, len(x_data)):
+                a, b = x_data[i - 1], x_data[i]
+                if not _missing(a) and not _missing(b) and float(b) > float(a):
+                    diffs.append(float(b) - float(a))
+            if not diffs:
+                return False
+            diffs.sort()
+            dx = diffs[len(diffs) // 2]
+            required = max(1, round(persistence / dx))
+        else:
+            required = max(1, round(persistence))
+
+    breach = []
+    for i in range(n):
+        missing = any(_missing(series[i]) for g in resolved for (series, _c, _t) in g)
+        if missing:
+            breach.append(None)
+            continue
+        any_group = False
+        for g in resolved:
+            if all(cmp_(float(series[i]), t) for (series, cmp_, t) in g):
+                any_group = True
+                break
+        breach.append(1 if any_group else 0)
+
+    crossings = []
+    run = 0
+    armed = True
+    for i in range(n):
+        b = breach[i]
+        if b is None:
+            run = 0
+        elif b == 1:
+            run += 1
+            if armed and run >= required:
+                crossings.append(x_data[i] if x_data is not None else i)
+                armed = False
+        else:
+            run = 0
+            armed = True
+
+    _set_col(raw_data, cols, _out_id(args, 'breach'), breach, type_='number')
+    _set_col(raw_data, cols, _out_id(args, 'crossing'), crossings, type_='number')
+    _set_col(raw_data, cols, _out_id(args, 'count'), [len(crossings)], type_='number')
+    return True
+
+
 # --- FDRCorrection ---
 
 def tp_fdrcorrection(args, cols, raw_data, _sv):
@@ -3731,6 +3860,7 @@ DISPLAY_TO_TP = {
     'StoredValueGroup': 'storedvaluegroup',
     'Surrogate Test': 'surrogatetest',
     'SurrogateTest': 'surrogatetest',
+    'Crossing': 'crossing',
     'Threshold': 'threshold',
     'Trend Fit': 'trendfit',
     'TrendFit': 'trendfit',
@@ -4688,6 +4818,7 @@ TABLE_PROCESS_MAP = {
     'smootheddata': tp_smootheddata,
     'sort': tp_sort,
     'threshold': tp_threshold,
+    'crossing': tp_crossing,
     'fdrcorrection': tp_fdrcorrection,
     'surrogatetest': tp_surrogatetest,
     'split': tp_split,

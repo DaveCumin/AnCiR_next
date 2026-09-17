@@ -21,7 +21,7 @@
 //     (x: the series' new x; y: the series' sole remaining y), else drop
 import { core } from './core.svelte.js';
 import { getColumnById } from './Column.svelte';
-import { groupPlotData } from './ProcessNode.svelte.js';
+import { groupPlotData, resolveOverlayPort } from './ProcessNode.svelte.js';
 
 /** True while `plot` still shows `colId` on any input channel. */
 export function plotUsesColumn(plot, colId) {
@@ -86,6 +86,9 @@ function consumerPortCols(consumer, toPort) {
 			.map((dp) => dp?.y?.refId)
 			.filter((n) => typeof n === 'number' && n >= 0);
 	}
+	// Overlay channel port (`ov<id>_<key>`): the channel's wired columns.
+	const ov = resolveOverlayPort(inner, toPort);
+	if (ov) return ov.overlay.wiredRefIds(ov.key).filter((n) => typeof n === 'number' && n >= 0);
 	return [];
 }
 
@@ -132,6 +135,15 @@ function rewireConsumer(consumer, toPort, oldCol, nextCol) {
 			if (m[1] === 'x' && dp?.x?.refId === oldCol) dp.x.refId = nextCol;
 			if (m[1] === 'ys' && dp?.y?.refId === oldCol) dp.y.refId = nextCol;
 		}
+		return;
+	}
+	// Overlay channel port: swap the wire in place (order kept for a dynamic `at`).
+	const ov = resolveOverlayPort(inner, toPort);
+	if (ov) {
+		const ids = ov.overlay.wiredRefIds(ov.key);
+		if (!ids.includes(oldCol)) return;
+		for (const id of ids) ov.overlay.removeWire(ov.key, id);
+		for (const id of ids) ov.overlay.addWire(ov.key, id === oldCol ? nextCol : id);
 		return;
 	}
 	for (const dp of inner?.data ?? []) {

@@ -6,10 +6,11 @@
 	// modal; the user configures it inline. Notes/groups spawn directly too, and
 	// "Import file" opens the file picker.
 	import Icon from '$lib/icons/Icon.svelte';
-	import { core, appConsts, createNote, createGroup } from '$lib/core/core.svelte.js';
+	import { appConsts, createNote, createGroup } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { openImportData } from '$lib/core/dataSourceActions.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
+	import { filterPaletteItems } from './paletteSearch.js';
 	import { tick } from 'svelte';
 
 	// Icons known to exist on disk in src/lib/icons/. Used as the safety net
@@ -161,7 +162,8 @@
 			displayName: 'Import file',
 			family: 'Sources',
 			nodeIcon: resolveIcon('add-file'),
-			description: 'Import data from a CSV, Excel or AWD file on your computer.'
+			description: 'Import data from a CSV, Excel or AWD file on your computer.',
+			keywords: ['load', 'open', 'upload', 'csv', 'excel', 'awd', 'data']
 		});
 		for (const [key, entry] of appConsts.processMap.entries()) {
 			items.push({
@@ -170,7 +172,8 @@
 				displayName: entry.displayName || key,
 				family: entry.family || 'Other',
 				nodeIcon: resolveIcon(entry.nodeIcon),
-				description: entry.description || ''
+				description: entry.description || '',
+				keywords: entry.keywords || []
 			});
 		}
 		for (const [key, entry] of appConsts.tableProcessMap.entries()) {
@@ -181,7 +184,8 @@
 				displayName: entry.displayName || key,
 				family: entry.family || 'Other',
 				nodeIcon: resolveIcon(entry.nodeIcon),
-				description: entry.description || ''
+				description: entry.description || '',
+				keywords: entry.keywords || []
 			});
 		}
 		for (const [key, entry] of appConsts.plotMap.entries()) {
@@ -191,7 +195,8 @@
 				displayName: entry.displayName || key,
 				family: entry.family || 'Plots',
 				nodeIcon: resolveIcon(entry.nodeIcon),
-				description: entry.description || ''
+				description: entry.description || '',
+				keywords: entry.keywords || []
 			});
 		}
 		// Annotation node — pure-canvas Note, no data behaviour.
@@ -201,7 +206,8 @@
 			displayName: 'Note',
 			family: 'Other',
 			nodeIcon: resolveIcon('edit-value'),
-			description: 'Standalone canvas note. Free-form text annotation.'
+			description: 'Standalone canvas note. Free-form text annotation.',
+			keywords: ['comment', 'label', 'text', 'sticky', 'annotate']
 		});
 		// Visual-container node — group/box that data nodes can be dragged into.
 		items.push({
@@ -210,21 +216,18 @@
 			displayName: 'Group',
 			family: 'Other',
 			nodeIcon: resolveIcon('layer'),
-			description: 'A visual container. Drag data nodes into it to group them; drag out to release.'
+			description:
+				'A visual container. Drag data nodes into it to group them; drag out to release.',
+			keywords: ['container', 'box', 'organise', 'organize', 'frame']
 		});
 		return items.sort(
 			(a, b) => a.family.localeCompare(b.family) || a.displayName.localeCompare(b.displayName)
 		);
 	});
 
-	const filteredItems = $derived.by(() => {
-		const q = query.trim().toLowerCase();
-		if (!q) return allItems;
-		return allItems.filter((it) => {
-			const h = `${it.family} ${it.displayName} ${it.type} ${it.description}`.toLowerCase();
-			return h.includes(q);
-		});
-	});
+	// Matching lives in paletteSearch.js (testable in isolation). It includes the
+	// hidden per-node `keywords` from nodeMeta.js — search-only, never rendered.
+	const filteredItems = $derived(filterPaletteItems(allItems, query));
 
 	const FAMILY_ORDER = [
 		'Sources',

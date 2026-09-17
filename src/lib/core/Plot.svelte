@@ -9,6 +9,7 @@
 	import { facetGridCells } from '$lib/core/facetGrid.js';
 	import { removePlotMetricColumns } from '$lib/plots/plotMetricOutputs.svelte.js';
 	import { newFigureStyle, normaliseFigureStyle } from '$lib/plots/figureStyle.js';
+	import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
 	let _counter = 0;
 	function getNextId() {
 		let id = _counter++;
@@ -159,6 +160,40 @@
 		});
 	}
 
+	// Overlays (reference lines / bands) are replicated onto every facet child, so a
+	// reference mark drawn on the generator appears on all its small multiples.
+	// Ids copy through the JSON round trip (OverlayClass keeps a saved id), so a
+	// child's overlay carries the SAME id as the generator's: the child's ports are
+	// then `ov<id>_<key>` with the generator's ids, which is what a user who wired
+	// the generator expects to see on every small multiple. The signature still
+	// leaves `id` out: identity is decided by the generator, and comparing on ids
+	// would only add a way for a pre-persistence child (minted ids) to be rewritten
+	// on every reconcile.
+	const overlaysSig = (inner) =>
+		JSON.stringify(
+			(inner?.overlays ?? []).map((o) => {
+				const json = typeof o?.toJSON === 'function' ? o.toJSON() : o;
+				const { id: _id, ...rest } = json ?? {};
+				return rest;
+			})
+		);
+
+	/**
+	 * Copy the generator's overlays onto a child by JSON round-trip through
+	 * OverlayClass.fromJSON. Idempotent: rewrites only when the signatures differ.
+	 * A generator without an `overlays` array (a plot type that has none) leaves
+	 * the child alone.
+	 */
+	export function syncFacetOverlays(gen, child) {
+		const src = gen?.plot?.overlays;
+		const inner = child?.plot;
+		if (!Array.isArray(src) || !inner) return;
+		if (overlaysSig(inner) === overlaysSig(gen.plot)) return;
+		inner.overlays = src.map((o) =>
+			OverlayClass.fromJSON(inner, typeof o?.toJSON === 'function' ? o.toJSON() : o)
+		);
+	}
+
 	// Signature of a child's current series, in the same shape facetUnits emits, so syncing
 	// only rewrites the series when they actually differ.
 	function childSeriesSig(child) {
@@ -233,6 +268,9 @@
 					}
 				}
 			}
+
+			// Overlays follow the generator onto every child (idempotent, like series).
+			syncFacetOverlays(gen, child);
 		});
 
 		// Drop children that no longer correspond to a facet. Only reassign when
@@ -607,7 +645,6 @@
 	// "Cannot read properties of undefined" from the render.
 	const Plot = appConsts.plotMap.get(plot.type)?.plot ?? null;
 	const unknownPlotMessage = Plot ? '' : reportUnknownNode('plot', plot.type);
-
 </script>
 
 <div>

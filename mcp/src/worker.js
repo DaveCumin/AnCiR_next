@@ -31,9 +31,9 @@ const methods = {
 	run_table_process: ({ name, args }) => requireSession().runTableProcess(name, args ?? {}),
 	add_column_process: ({ columnId, name, args }) =>
 		requireSession().addColumnProcess(columnId, name, args ?? {}),
-	add_plot: ({ type, inputs }) => requireSession().addPlot(type, inputs),
-	render_plot: ({ type, inputs, outBase, width, height }) =>
-		requireSession().renderPlotToFiles(type, inputs, { outBase, width, height }),
+	add_plot: ({ type, inputs, overlays }) => requireSession().addPlot(type, inputs, overlays),
+	render_plot: ({ type, inputs, overlays, outBase, width, height }) =>
+		requireSession().renderPlotToFiles(type, inputs, { outBase, width, height, overlays }),
 	export_session: () => ({ json: requireSession().exportSession() })
 };
 

@@ -1,25 +1,17 @@
 <script module>
 	import { line } from 'd3-shape';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import { seriesColumnId } from '$lib/plots/seriesColour.js';
 	import { resolveColour } from '$lib/plots/appearanceIdentity.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { isValidStroke } from '$lib/components/plotbits/helpers/misc.js';
+	import { STROKE_STYLES as SHARED_STROKE_STYLES } from '$lib/components/plotbits/strokeStyles.js';
 
-	/**
-	 * The dash vocabulary, and the only one. `stroke` is written straight into
-	 * `stroke-dasharray`, so these are real dasharray values ('solid' is not one, which is
-	 * why the browser renders it as an unbroken line).
-	 *
-	 * It lives here because this is where the user picks from it. The appearance system used
-	 * to carry its OWN list ('', '6 3', '2 2', …) that shared not one entry with this select,
-	 * so turning on "vary marker shape" wrote a dash no option matched and the Style dropdown
-	 * went blank — a control that shows nothing and appears to reject what you choose.
-	 */
-	export const STROKE_STYLES = ['solid', '5, 5', '2, 2', '5, 2'];
+	// The dash vocabulary lives in strokeStyles.js (shared with appearanceIdentity.js
+	// without an import cycle); re-exported here for the plots that pick it up from Line.
+	export const STROKE_STYLES = SHARED_STROKE_STYLES;
 
 	export class LineClass {
 		// A style object reused by every line/points plot, so it opts ITSELF into the shared-
@@ -141,7 +133,11 @@
 		// When provided, the tooltip aggregates and displays the y value at the
 		// hovered x for every sibling series. Shape: [{label, colour, findYAt(x)}]
 		siblings = null,
-		hideOnAlt = false
+		hideOnAlt = false,
+		// `which="rules"` only: reference-line positions in DATA units, drawn as full-span
+		// vertical or horizontal <line>s with this line's colour/width/dash.
+		positions = [],
+		orientation = 'vertical'
 	} = $props();
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
@@ -254,39 +250,7 @@
 			</button>
 		</div>
 		{#if lineData.draw}
-			<div class="control-input-horizontal">
-				<div class="control-input" style="max-width: 1.5rem;">
-					<p style="color:white;">Col</p>
-					<ColourPicker bind:value={lineData.colour} />
-				</div>
-				<ControlInput label="Width">
-					<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.strokeWidth} />
-				</ControlInput>
-				<div class="control-input">
-					<p>Stroke</p>
-					<div class="stroke-field" class:invalid={lineData.stroke === -1}>
-						<AttributeSelect
-							onChange={(value) => {
-								if (isValidStroke(value)) {
-									lineData.stroke = value;
-								} else {
-									lineData.stroke = -1;
-								}
-							}}
-							options={['solid', '5, 5', '2, 2', '5, 2']}
-							optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
-							other={true}
-							placeholder="eg 5, 5"
-						/>
-					</div>
-					{#if lineData.stroke === -1}
-						<span class="field-error" role="alert">
-							<Icon name="alert-triangle" width={12} height={12} />
-							Invalid pattern
-						</span>
-					{/if}
-				</div>
-			</div>
+			{@render styleRow(lineData)}
 			<!-- Full-width row of its own: the long label would otherwise squish the
 			     colour/width/stroke inputs in the horizontal row above. -->
 			<div class="control-input-checkbox join-gaps-row" style="margin-top: var(--space-3);">
@@ -295,6 +259,89 @@
 			</div>
 		{/if}
 	</div>
+{/snippet}
+
+<!-- The Colour / Width / Stroke row on its own, so anything with a line style
+     (`colour`, `strokeWidth`, `stroke`: a series line or a scatterplot reference-line
+     overlay) edits it with the ONE set of controls. -->
+{#snippet styleRow(lineData)}
+	<div class="control-input-horizontal">
+		<div class="control-input" style="max-width: 1.5rem;">
+			<p style="color:white;">Col</p>
+			<ColourPicker bind:value={lineData.colour} />
+		</div>
+		<ControlInput label="Width">
+			<NumberWithUnits step="0.2" min={0.1} bind:value={lineData.strokeWidth} />
+		</ControlInput>
+		<div class="control-input">
+			<p>Stroke</p>
+			<div class="stroke-field" class:invalid={lineData.stroke === -1}>
+				<AttributeSelect
+					value={lineData.stroke}
+					onChange={(value) => {
+						if (isValidStroke(value)) {
+							lineData.stroke = value;
+						} else {
+							lineData.stroke = -1;
+						}
+					}}
+					options={STROKE_STYLES}
+					optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
+					other={true}
+					placeholder="eg 5, 5"
+				/>
+			</div>
+			{#if lineData.stroke === -1}
+				<span class="field-error" role="alert">
+					<Icon name="alert-triangle" width={12} height={12} />
+					Invalid pattern
+				</span>
+			{/if}
+		</div>
+	</div>
+{/snippet}
+
+<!-- Reference lines: one full-span <line> per position, sharing the series line's
+     colour/width/dasharray and clip. Coordinates are absolute (offsets folded in)
+     rather than a transform so tests and tooling can read them off the attributes. -->
+{#snippet rules(lineData)}
+	{#if positions?.length > 0}
+		{@const rulesKey = `rules-${xoffset}-${yoffset}-${width}-${height}`}
+		{@const dash =
+			typeof lineData.stroke === 'string' && lineData.stroke !== 'solid' ? lineData.stroke : null}
+		<clipPath id={rulesKey}>
+			<rect x={xoffset} y={yoffset} {width} {height} />
+		</clipPath>
+		<g clip-path="url(#{rulesKey})">
+			{#each positions as p, i (i)}
+				{#if orientation === 'horizontal'}
+					<line
+						class="overlay-rule"
+						x1={xoffset}
+						x2={xoffset + width}
+						y1={yscale(p) + yoffset}
+						y2={yscale(p) + yoffset}
+						stroke={lineData.colour}
+						stroke-width={lineData.strokeWidth}
+						stroke-dasharray={dash}
+						style="pointer-events: none;"
+					/>
+				{:else}
+					<line
+						class="overlay-rule"
+						x1={xscale(p) + xoffset}
+						x2={xscale(p) + xoffset}
+						y1={yoffset}
+						y2={yoffset + height}
+						stroke={lineData.colour}
+						stroke-width={lineData.strokeWidth}
+						stroke-dasharray={dash}
+						style="pointer-events: none;"
+					/>
+				{/if}
+			{/each}
+		</g>
+	{/if}
 {/snippet}
 
 {#snippet plot(lineData)}
@@ -320,8 +367,12 @@
 
 {#if which === 'plot'}
 	{@render plot(lineData)}
+{:else if which === 'rules'}
+	{@render rules(lineData)}
 {:else if which === 'controls'}
 	{@render controls(lineData)}
+{:else if which === 'styleRow'}
+	{@render styleRow(lineData)}
 {/if}
 
 <style>

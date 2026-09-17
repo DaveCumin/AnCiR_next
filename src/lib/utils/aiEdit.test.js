@@ -597,3 +597,58 @@ describe('fanOutSeriesColour — one colour reaches every slot the series draws 
 		expect(fanOutSeriesColour(null, '#ff0000')).toBe(false);
 	});
 });
+
+describe('applyEdit — shading lands as a repeating band OVERLAY on the live plot', () => {
+	// Night bands stopped being a field of their own (plan 2026-09-13 B5): a shaded window
+	// is an OverlayClass of form `repeating`. applyEdit used to write `inner.nightBands`,
+	// which only still worked because fromJSON migrates the legacy key; it now writes the
+	// same overlay JSON `addNightBand` would produce, through the setPlotInner op.
+	let applyEdit;
+	let core;
+	let appConsts;
+	let history;
+	beforeAll(async () => {
+		({ applyEdit } = await import('./aiEdit.js'));
+		({ core, appConsts } = await import('$lib/core/core.svelte.js'));
+		({ history } = await import('$lib/core/opHistory.svelte.js'));
+		appConsts.plotMap = await (await import('$lib/plots/plotMap.js')).loadPlots();
+		history.init();
+	}, 30000);
+
+	it('appends one repeating band overlay per planned band and undo removes it', async () => {
+		const { mutationService: M } = await import('$lib/core/mutationService.js');
+		core.plots.length = 0;
+		const plot = M.addPlot({ type: 'scatterplot', name: 'Raw', plot: { data: [] } });
+		history.clear();
+
+		const before = plot.plot.overlays.length;
+		const res = applyEdit({
+			analyses: [],
+			plots: [],
+			changes: [],
+			bands: [{ plotId: plot.id, fromHour: 18, durationHours: 12, label: 'Night' }],
+			errors: []
+		});
+		expect(res.ok).toBe(true);
+		expect(res.added.bands).toBe(1);
+
+		const live = core.plots.find((p) => p.id === plot.id);
+		expect(live.plot.overlays).toHaveLength(before + 1);
+		const band = live.plot.overlays.at(-1);
+		expect(band).toMatchObject({
+			kind: 'band',
+			form: 'repeating',
+			name: 'Night',
+			enabled: true,
+			repeatEveryHours: 24,
+			nightDurationHours: 12,
+			startTimeHours: 18, // numeric axis (no data): the clock hour IS the value
+			useDataMin: false
+		});
+		// Nothing legacy is written: the snapshot the op carried has no nightBands key.
+		expect('nightBands' in live.plot.toJSON()).toBe(false);
+
+		history.undo();
+		expect(core.plots.find((p) => p.id === plot.id).plot.overlays).toHaveLength(before);
+	});
+});
