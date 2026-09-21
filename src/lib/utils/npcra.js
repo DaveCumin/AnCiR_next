@@ -56,7 +56,9 @@ export function computeNPCRA(t, y, opts = {}) {
 	const cnt = new Float64Array(nEpochs);
 	for (const [ti, yi] of pairs) {
 		if (!Number.isFinite(yi)) continue;
-		let k = Math.floor((ti - t0) / e);
+		// Snap to the epoch grid before flooring: a non-integer epoch (1/24 for a
+		// day-unit axis) makes (ti - t0) / e land at 11.999999… for an exact bin edge.
+		let k = Math.floor((ti - t0) / e + 1e-9);
 		if (k < 0) k = 0;
 		else if (k >= nEpochs) k = nEpochs - 1;
 		sum[k] += yi;
@@ -81,9 +83,9 @@ export function computeNPCRA(t, y, opts = {}) {
 	const pCnt = new Float64Array(p);
 	for (let k = 0; k < nEpochs; k++) {
 		if (!Number.isFinite(x[k])) continue;
-		const timeOfDay = ((k * e) % period + period) % period;
-		let h = Math.floor(timeOfDay / e) % p;
-		if (h < 0) h += p;
+		// Epoch k sits at bin k mod p of the folded profile; computing it through
+		// (k*e) % period / e reintroduces floating-point error for non-integer e.
+		const h = ((k % p) + p) % p;
 		pSum[h] += x[k];
 		pCnt[h] += 1;
 	}

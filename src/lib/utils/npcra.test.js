@@ -85,6 +85,23 @@ describe('computeNPCRA', () => {
 		expect(r.RA).toBeCloseTo(1, 6);
 	});
 
+	// A time axis in DAYS (epoch 1/24, period 1) is the same rhythm as hours (epoch 1,
+	// period 24) and must give the same IS/IV. 1/24 is not exactly representable, so
+	// bin-of-day assignment must not rely on exact floating-point division.
+	it('gives identical IS/IV when time is in days (epoch 1/24, period 1) as in hours', () => {
+		const { t, y } = buildDays(7, 1, (hod) => 50 + 40 * Math.sin((2 * Math.PI * (hod - 8)) / 24) + (hod % 5));
+		const hours = computeNPCRA(t, y, { epochHours: 1, period: 24, mWindow: 10, lWindow: 5 });
+		const days = computeNPCRA(
+			t.map((h) => h / 24),
+			y,
+			{ epochHours: 1 / 24, period: 1, mWindow: 10 / 24, lWindow: 5 / 24 }
+		);
+		expect(days.p).toBe(24);
+		expect(days.IS).toBeCloseTo(hours.IS, 9);
+		expect(days.IV).toBeCloseTo(hours.IV, 9);
+		expect(days.RA).toBeCloseTo(hours.RA, 9);
+	});
+
 	// Non-time X axis (plain data values wired into the time port) with a large
 	// value range makes span/epoch enormous → new Float64Array(nEpochs) would OOM /
 	// throw. The cap bails to null instead of crashing.

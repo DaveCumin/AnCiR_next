@@ -878,7 +878,9 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
   # epoch gains a spurious final epoch through floating-point drift.
   n_epochs <- max(1, ceiling((t_end - t0) / e + 1e-9))
   ssum <- numeric(n_epochs); cnt <- integer(n_epochs)
-  k <- pmin(pmax(floor((tf - t0) / e), 0), n_epochs - 1) + 1
+  # Snap to the epoch grid before flooring: a non-integer epoch (1/24 for a
+  # day-unit axis) makes (tf - t0) / e land at 11.999999... for an exact bin edge.
+  k <- pmin(pmax(floor((tf - t0) / e + 1e-9), 0), n_epochs - 1) + 1
   for (i in seq_along(tf)) {
     if (!is.finite(yf[i])) next
     ssum[k[i]] <- ssum[k[i]] + yf[i]
@@ -896,8 +898,9 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
   p_sum <- numeric(p); p_cnt <- integer(p)
   for (kk in seq_len(n_epochs)) {
     if (!is.finite(x[kk])) next
-    tod <- (((kk - 1) * e) %% period + period) %% period
-    h <- floor(tod / e) %% p
+    # Epoch kk-1 sits at bin (kk-1) mod p of the folded profile; computing it through
+    # (k*e) %% period / e reintroduces floating-point error for non-integer e.
+    h <- (kk - 1) %% p
     p_sum[h + 1] <- p_sum[h + 1] + x[kk]
     p_cnt[h + 1] <- p_cnt[h + 1] + 1
   }

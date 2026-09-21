@@ -1896,7 +1896,7 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
     for (ti, yi) in pairs:
         if math.isnan(yi):
             continue
-        k = int(math.floor((ti - t0) / e))
+        k = int(math.floor((ti - t0) / e + 1e-9))  # snap to the epoch grid (non-integer e)
         if k < 0:
             k = 0
         elif k >= n_epochs:
@@ -1918,10 +1918,7 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
     for k in range(n_epochs):
         if math.isnan(x[k]):
             continue
-        tod = ((k * e) % period + period) % period
-        h = int(math.floor(tod / e)) % p
-        if h < 0:
-            h += p
+        h = ((k % p) + p) % p  # epoch k -> bin k mod p; avoids float error for non-integer e
         p_sum[h] += x[k]
         p_cnt[h] += 1
     profile = [(p_sum[h] / p_cnt[h]) if p_cnt[h] > 0 else float('nan') for h in range(p)]

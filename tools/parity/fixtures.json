@@ -211,6 +211,59 @@
    "rFunc": "nonparametricra"
   },
   {
+   "id": "tp-npcra-rhythm-day-units",
+   "kind": "tableProcess",
+   "jsName": "NonparametricRA",
+   "pyFunc": "npcra",
+   "generate": {
+    "type": "rhythm",
+    "n": 168,
+    "dt": 0.041666666666666664,
+    "period": 1,
+    "amp": 40,
+    "mesor": 50,
+    "phase": 0.3333333333333333,
+    "noise": 6,
+    "seed": 23,
+    "refs": {
+     "x": "t",
+     "y": "y"
+    }
+   },
+   "args": {
+    "xIN": "@t",
+    "yIN": [
+     "@y"
+    ],
+    "epochHours": 0.041666666666666664,
+    "period": 1,
+    "mWindow": 0.4166666666666667,
+    "lWindow": 0.20833333333333334,
+    "out": {
+     "npcrax": -1,
+     "IS": -1,
+     "IV": -1,
+     "RA": -1,
+     "M10": -1,
+     "L5": -1,
+     "M10onset": -1,
+     "L5onset": -1
+    }
+   },
+   "compareOutputs": [
+    "npcrax",
+    "npcray",
+    "IS",
+    "IV",
+    "RA",
+    "M10",
+    "L5",
+    "M10onset",
+    "L5onset"
+   ],
+   "rFunc": "nonparametricra"
+  },
+  {
    "id": "tp-groupcomparison-ttest",
    "kind": "tableProcessResult",
    "jsName": "GroupComparison",

@@ -273,8 +273,11 @@ const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 function generateInputs(spec) {
 	const rng = mulberry32(spec.seed ?? 1);
 	if (spec.type === 'rhythm') {
-		const { n, period, amp, mesor = 0, phase = 0, noise = 0, refs } = spec;
-		const t = seq(n, (i) => i);
+		// `dt` is the time step in x units (default 1). A fixture whose axis is in
+		// days sets dt: 1/24 (written as 0.041666… in JSON) so the time values are
+		// the same non-representable multiples a day-unit session would carry.
+		const { n, period, amp, mesor = 0, phase = 0, noise = 0, dt = 1, refs } = spec;
+		const t = seq(n, (i) => i * dt);
 		const y = t.map(
 			(h) =>
 				mesor +
