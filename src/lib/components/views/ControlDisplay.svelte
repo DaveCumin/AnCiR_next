@@ -150,31 +150,12 @@
 	);
 	const hasCanvasMultiSelection = $derived(canvasHasNonPlotMultiSelection);
 
-	let addBtnRef;
+	// The Save dialog (SavePlot) is a modal, so it needs no anchor position.
 	let showSavePlot = $state(false);
-	let dropdownTop = $state(0);
-	let dropdownLeft = $state(0);
-
-	function recalculateDropdownPosition() {
-		if (!addBtnRef) return;
-		const rect = addBtnRef.getBoundingClientRect();
-
-		dropdownTop = rect.top + window.scrollY;
-		dropdownLeft = rect.right + window.scrollX + 12;
-	}
 
 	function openDropdown() {
-		recalculateDropdownPosition();
 		showSavePlot = true;
 	}
-
-	// SavePlot owns the close through `bind:showDropdown`, so key the listener on
-	// the flag: it then covers the close and an unmount while open.
-	$effect(() => {
-		if (!showSavePlot) return;
-		window.addEventListener('resize', recalculateDropdownPosition);
-		return () => window.removeEventListener('resize', recalculateDropdownPosition);
-	});
 
 	// Schema-driven shared properties. Discovered by reflecting on each selected
 	// plot's class (mixed-type selections still see common fields like width/height).
@@ -501,7 +482,7 @@
 				</p>
 
 				<div class="control-banner-icons">
-					<button class="icon" bind:this={addBtnRef} onclick={openDropdown}>
+					<button class="icon" onclick={openDropdown} aria-label="Save plots">
 						<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
 					</button>
 					<button
@@ -668,7 +649,6 @@
 					<div class="control-input-vertical">
 						{#each fields as field (field.path)}
 							<ControlInput labelContent={fieldLabel}>
-
 								{#if field.input === 'number'}
 									<NumberWithUnits
 										value={field.allEqual ? field.value : (field.distinctValues[0] ?? 0)}
@@ -766,7 +746,8 @@
 										<input
 											type="color"
 											value={field.allEqual ? (field.value ?? '#000000') : '#000000'}
-											onchange={(e) => setSharedDataField(row.index, field.path, e.currentTarget.value)}
+											onchange={(e) =>
+												setSharedDataField(row.index, field.path, e.currentTarget.value)}
 										/>
 									{:else if field.input === 'boolean'}
 										<input
@@ -832,26 +813,20 @@
 				<div class="control-banner">
 					<div class="control-banner-title">
 						<p>
-						<Editable
-							bind:value={plot.name}
-							onCommit={(final, original) => {
-								// Live typing already mutated plot.name (bind). Revert to the
-								// pre-edit value, then apply through the op so the rename is a
-								// single undoable step (before → after captured correctly).
-								plot.name = original;
-								mutationService.setPlotProperty(plot.id, 'name', final);
-							}}
-						/>
-					</p>
+							<Editable
+								bind:value={plot.name}
+								onCommit={(final, original) => {
+									// Live typing already mutated plot.name (bind). Revert to the
+									// pre-edit value, then apply through the op so the rename is a
+									// single undoable step (before → after captured correctly).
+									plot.name = original;
+									mutationService.setPlotProperty(plot.id, 'name', final);
+								}}
+							/>
+						</p>
 
 						<div class="control-banner-icons">
-							<button
-								class="icon"
-								bind:this={addBtnRef}
-								onclick={(e) => {
-									openDropdown();
-								}}
-							>
+							<button class="icon" onclick={openDropdown} aria-label="Save plot">
 								<Icon name="disk" width={16} height={16} className="control-component-title-icon" />
 							</button>
 
@@ -882,13 +857,6 @@
 					</div>
 					<div class="div-line"></div>
 				</div>
-
-				<SavePlot
-					bind:showDropdown={showSavePlot}
-					{dropdownTop}
-					{dropdownLeft}
-					Id={'plot' + plot.plot.parentBox.id}
-				/>
 
 				<!-- Faceting and the figure style describe the WHOLE plot, so they live on the
 				     first tab with the rest of its properties. They used to render outside the
@@ -938,12 +906,8 @@
 	<div class="div-block"></div>
 </div>
 
-<SavePlot
-	bind:showDropdown={showSavePlot}
-	{dropdownTop}
-	{dropdownLeft}
-	Id={selectedPlots.map((p) => p.id)}
-/>
+<!-- One dialog serves both the single-plot and the multi-select banner. -->
+<SavePlot bind:open={showSavePlot} Id={selectedPlots.map((p) => p.id)} />
 
 <style>
 	.heading {

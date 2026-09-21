@@ -39,20 +39,27 @@ https://svelte.dev/playground/modal?version=5.33.7
 
 {#if showModal}
 	<div class="backdrop" transition:fade={{ duration: 360 }}>
+		<!-- The dialog is in the top layer visually but still a DOM descendant of
+		     wherever it was mounted, so its clicks, pointer-downs and wheel events would
+		     bubble into the host (a canvas that deselects on click, pans on pointerdown
+		     and zooms on wheel, unmounting the modal mid-interaction). A modal owns its
+		     input; stop them here. -->
 		<dialog
 			style="width: {width}; max-height: {max_height}"
 			bind:this={dialog}
 			onclose={() => (showModal = false)}
 			onclick={(e) => {
+				e.stopPropagation();
 				if (e.target === dialog) {
 					close();
 				}
 			}}
+			onpointerdown={(e) => e.stopPropagation()}
+			onwheel={(e) => e.stopPropagation()}
 			transition:fade={{ duration: 360 }}
 		>
 			{#if showCloseButton}
 				<div class="modalCloseBtn" style="position:fixed; left:{closeBtnLeft - 50}px;">
-					<!-- svelte-ignore a11y_autofocus -->
 					<button onclick={() => close()}>
 						<Icon name="close" width={16} height={16} className="close" />
 					</button>
@@ -73,6 +80,14 @@ https://svelte.dev/playground/modal?version=5.33.7
 		border-radius: var(--radius-lg);
 		border: 1px solid var(--color-lightness-85);
 		box-shadow: var(--shadow-3);
+	}
+	/* A modal owns its pointer events, whatever its host does with them. The plot
+	   toolbar mounts its Save dialog inside a `pointer-events: none` host (so the
+	   toolbar strip lets clicks fall through to the canvas), and without this the
+	   inherited value made the whole dialog unclickable. */
+	dialog,
+	.backdrop {
+		pointer-events: auto;
 	}
 	.backdrop {
 		position: fixed;

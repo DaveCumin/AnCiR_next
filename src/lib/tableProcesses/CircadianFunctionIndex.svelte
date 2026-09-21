@@ -146,6 +146,21 @@
 	// and rebuilds this component) does not recompute unchanged inputs.
 	const memo = nodeMemo(p, 'tableprocess');
 
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (cfiData !== undefined) memo.payload = cfiData;
+	});
+	function restore(cached) {
+		cfiData = cached;
+	}
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the compute effect claims the hash and computes (see
+	// computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
+
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
@@ -184,8 +199,13 @@
 		// fresh node; syncMetricOutColumns backfills any missing ones (e.g. older
 		// sessions) and is idempotent otherwise.
 		syncMetricOutColumns(p, METRIC_KEYS, (k) => METRIC_KEYS.includes(k));
+		// Put the previous result back rather than recomputing: cfiData lives only
+		// in this component, so it was lost when the view switch destroyed the
+		// last instance. The compute effect skips while the memo holds this hash.
+		const restoredFromMemo = memo.has(getHash);
+		if (restoredFromMemo) restore(memo.payload);
 		const hasInputs = p.args.xIN >= 0 && (p.args.yIN ?? []).some((id) => id >= 0);
-		if (hasInputs) recalculate();
+		if (hasInputs && !restoredFromMemo) recalculate();
 		mounted = true;
 	});
 

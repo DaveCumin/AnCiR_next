@@ -235,6 +235,14 @@
 	$effect(() => {
 		if (npcraData !== undefined) memo.payload = npcraData;
 	});
+	function restore(cached) {
+		npcraData = cached;
+	}
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the compute effect claims the hash and computes (see
+	// computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
 
 	$effect(() => {
 		const dataHash = getHash;
@@ -291,7 +299,7 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) npcraData = memo.payload;
+		if (memo.has(getHash)) restore(memo.payload);
 		let needsCompute = false;
 		if (p.args.out.npcrax == null || p.args.out.npcrax < 0) {
 			if (p.parent) {

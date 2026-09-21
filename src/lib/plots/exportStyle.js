@@ -79,12 +79,15 @@ export function resolveCssVar(name, el) {
 export function substituteVars(value, el) {
 	if (!isVarRef(value)) return null;
 	let changed = false;
-	const out = value.replace(/var\(\s*(--[\w-]+)\s*(?:,\s*([^()]*))?\)/g, (whole, name, fallback) => {
-		const resolved = resolveCssVar(name, el) || (fallback ?? '').trim();
-		if (!resolved) return whole;
-		changed = true;
-		return resolved;
-	});
+	const out = value.replace(
+		/var\(\s*(--[\w-]+)\s*(?:,\s*([^()]*))?\)/g,
+		(whole, name, fallback) => {
+			const resolved = resolveCssVar(name, el) || (fallback ?? '').trim();
+			if (!resolved) return whole;
+			changed = true;
+			return resolved;
+		}
+	);
 	return changed && !isVarRef(out) ? out : null;
 }
 
@@ -178,18 +181,179 @@ export function setPhysicalSize(clone, widthPx, heightPx) {
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
+// ---------------------------------------------------------------------------
+// Title band
+//
+// The on-canvas plot has no title: its name lives in the box header, which is UI, not
+// figure. On export the name is drawn INTO the file as a heading at the top-left, and
+// the figure is shifted down to make room, so nothing overlaps an axis or a legend
+// that already reaches the top edge. Layout is in multiples of the title font size so
+// it scales with the journal type-size presets.
+// ---------------------------------------------------------------------------
+
+/** Line height, as a multiple of the font size. */
+const TITLE_LINE_HEIGHT = 1.25;
+/** Padding around the band, as a multiple of the font size. */
+const TITLE_PAD = 0.6;
+/** Beyond this the title is ellipsised: a figure heading is not a paragraph. */
+const TITLE_MAX_LINES = 2;
 /**
- * A detached, export-ready copy of a plot's SVG.
+ * Average glyph advance for a bold sans face, as a fraction of the font size. An
+ * estimate: the clone is detached, so it cannot be measured, and the file is opened
+ * in software whose fonts we do not control anyway. Erring wide keeps the text inside
+ * the figure.
+ */
+const TITLE_CHAR_WIDTH = 0.58;
+
+/**
+ * Word-wrap `text` to at most `maxChars` per line and `maxLines` lines; the last line
+ * is ellipsised when there is more. A single word longer than a line is cut.
+ *
+ * @param {string} text
+ * @param {number} maxChars
+ * @param {number} [maxLines]
+ * @returns {string[]}
+ */
+export function wrapTitle(text, maxChars, maxLines = TITLE_MAX_LINES) {
+	const words = String(text ?? '')
+		.trim()
+		.split(/\s+/)
+		.filter(Boolean);
+	if (!words.length) return [];
+	const cap = Math.max(1, Math.floor(maxChars));
+	const lines = [];
+	let line = '';
+	for (const word of words) {
+		const next = line ? line + ' ' + word : word;
+		if (next.length <= cap) {
+			line = next;
+			continue;
+		}
+		if (line) lines.push(line);
+		line = word.length > cap ? word.slice(0, cap) : word;
+		if (lines.length === maxLines) break;
+	}
+	if (lines.length < maxLines) lines.push(line);
+	const overflow =
+		lines.length === maxLines && lines.join(' ').replace(/\s+/g, ' ') !== words.join(' ');
+	if (overflow) {
+		const last = lines[maxLines - 1];
+		lines[maxLines - 1] = (last.length >= cap ? last.slice(0, cap - 1) : last).trimEnd() + '\u2026';
+	}
+	return lines;
+}
+
+/**
+ * Draw a title (and/or a panel label) above the figure, shifting the content down.
+ *
+ * Everything already in the clone except top-level `<defs>` is wrapped in
+ * `<g class="export-content" transform="translate(0, band)">`; `<defs>` stay where
+ * they were so `url(#id)` references keep resolving. The svg's height and viewBox grow
+ * by the band.
+ *
+ * @param {SVGElement} clone a detached copy
+ * @param {{text?: string, label?: string, fontFamily: string, fontSize: number,
+ *          width: number, height: number}} opts
+ * @returns {{width: number, height: number}|null} the new size, or null when nothing was drawn
+ */
+export function addTitle(clone, { text = '', label = '', fontFamily, fontSize, width, height }) {
+	const title = String(text ?? '').trim();
+	const panel = String(label ?? '').trim();
+	if (!clone || (!title && !panel)) return null;
+	if (!(fontSize > 0) || !(width > 0)) return null;
+
+	const pad = fontSize * TITLE_PAD;
+	const lineHeight = fontSize * TITLE_LINE_HEIGHT;
+	// The label is bold and followed by a space, so budget it out of the first line.
+	const labelChars = panel ? panel.length + 1.5 : 0;
+	const maxChars = (width - 2 * pad) / (fontSize * TITLE_CHAR_WIDTH) - labelChars;
+	const lines = title ? wrapTitle(title, maxChars) : [''];
+	const band = Math.round(pad + lines.length * lineHeight + pad / 2);
+
+	const doc = clone.ownerDocument;
+	const ns = 'http://www.w3.org/2000/svg';
+
+	const content = doc.createElementNS(ns, 'g');
+	content.setAttribute('class', 'export-content');
+	content.setAttribute('transform', `translate(0, ${band})`);
+	for (const child of Array.from(clone.childNodes)) {
+		if (child.nodeType === 1 && child.tagName.toLowerCase() === 'defs') continue;
+		content.appendChild(child);
+	}
+	clone.appendChild(content);
+
+	const textEl = doc.createElementNS(ns, 'text');
+	textEl.setAttribute('class', 'export-title');
+	textEl.setAttribute('x', String(round2(pad)));
+	textEl.setAttribute('y', String(round2(pad + fontSize * 0.9)));
+	textEl.setAttribute('font-family', fontFamily);
+	textEl.setAttribute('font-size', String(fontSize));
+	textEl.setAttribute('font-weight', '600');
+	textEl.setAttribute('fill', '#000000');
+	lines.forEach((line, i) => {
+		const span = doc.createElementNS(ns, 'tspan');
+		span.setAttribute('x', String(round2(pad)));
+		if (i > 0) span.setAttribute('dy', String(round2(lineHeight)));
+		if (i === 0 && panel) {
+			const labelSpan = doc.createElementNS(ns, 'tspan');
+			labelSpan.setAttribute('class', 'export-panel-label');
+			labelSpan.setAttribute('font-weight', '700');
+			labelSpan.textContent = panel;
+			span.appendChild(labelSpan);
+			if (line) span.appendChild(doc.createTextNode('  ' + line));
+		} else {
+			span.textContent = line;
+		}
+		textEl.appendChild(span);
+	});
+	clone.appendChild(textEl);
+
+	const newHeight = height + band;
+	clone.setAttribute('width', String(width));
+	clone.setAttribute('height', String(newHeight));
+	clone.setAttribute('viewBox', `0 0 ${width} ${newHeight}`);
+	return { width, height: newHeight };
+}
+
+/**
+ * A detached, export-ready copy of a plot's SVG, with its final size.
+ *
+ * Order matters: the title enlarges the figure, so it goes before the background rect
+ * (which must cover the band too) and the physical size declaration.
+ *
+ * @param {SVGElement} svg the live element
+ * @param {{width:number, height:number, backgroundColour?:string, physical?:boolean,
+ *          title?: {text?: string, label?: string, fontFamily: string, fontSize: number}|null}} opts
+ * @returns {{svg: SVGElement, width: number, height: number}|null}
+ */
+export function prepareExport(
+	svg,
+	{ width, height, backgroundColour, physical = false, title = null }
+) {
+	if (!svg) return null;
+	const clone = svg.cloneNode(true);
+	resolveSvgVars(svg, clone);
+	let w = width;
+	let h = height;
+	if (title) {
+		const grown = addTitle(clone, { ...title, width, height });
+		if (grown) {
+			w = grown.width;
+			h = grown.height;
+		}
+	}
+	addBackgroundRect(clone, backgroundColour, w, h);
+	if (physical) setPhysicalSize(clone, w, h);
+	return { svg: clone, width: w, height: h };
+}
+
+/**
+ * `prepareExport` for callers that only want the element.
  *
  * @param {SVGElement} svg the live element
  * @param {{width:number, height:number, backgroundColour?:string, physical?:boolean}} opts
  * @returns {SVGElement|null}
  */
-export function prepareSvgForExport(svg, { width, height, backgroundColour, physical = false }) {
-	if (!svg) return null;
-	const clone = svg.cloneNode(true);
-	resolveSvgVars(svg, clone);
-	addBackgroundRect(clone, backgroundColour, width, height);
-	if (physical) setPhysicalSize(clone, width, height);
-	return clone;
+export function prepareSvgForExport(svg, opts) {
+	return prepareExport(svg, opts)?.svg ?? null;
 }

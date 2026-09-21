@@ -360,6 +360,17 @@
 	$effect(() => {
 		if (result !== undefined) memo.payload = result;
 	});
+	function restore(cached) {
+		result = cached;
+		// The memo carries the warnings the compute produced; the badge must
+		// come back with the panel (the compute effect won't fire to re-set it).
+		p.warnings = cached?.warnings ?? [];
+	}
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the compute effect claims the hash and computes (see
+	// computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
 
 	$effect(() => {
 		const h = getHash;
@@ -518,13 +529,8 @@
 		// and carries none of the derived stats, and since the memo already holds this
 		// hash the compute effect will not fire to replace it — so the panel would stay
 		// stat-less until an input changed.
-		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
-		if (restoredFromMemo) {
-			result = memo.payload;
-			// The memo carries the warnings the compute produced; the badge must
-			// come back with the panel (the compute effect won't fire to re-set it).
-			p.warnings = memo.payload?.warnings ?? [];
-		}
+		const restoredFromMemo = memo.has(getHash);
+		if (restoredFromMemo) restore(memo.payload);
 		if (!p.args.out) p.args.out = { movex: -1 };
 		// Initial sync creates movex + per-(Y,stat) columns if they don't exist
 		const needsCompute = syncStatColumns();

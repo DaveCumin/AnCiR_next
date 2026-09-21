@@ -257,6 +257,14 @@
 	$effect(() => {
 		if (longToWideResult !== undefined) memo.payload = longToWideResult;
 	});
+	function restore(cached) {
+		longToWideResult = cached;
+	}
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the compute effect claims the hash and computes (see
+	// computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
 
 	$effect(() => {
 		const snapshots = preProcessProcs.map((proc) => JSON.stringify(proc?.args ?? {}));
@@ -438,7 +446,7 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) longToWideResult = memo.payload;
+		if (memo.has(getHash)) restore(memo.payload);
 		// Migrate: remove any null/empty-string phantom categories persisted from old sessions
 		if (Array.isArray(p.args.categories)) {
 			const nullCats = p.args.categories.filter((c) => c == null || c === '');

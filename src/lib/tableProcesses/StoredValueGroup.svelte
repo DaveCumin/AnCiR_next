@@ -196,6 +196,13 @@
 			memo.hash = h;
 		}
 	});
+	function restore(cached) {
+		result = cached;
+	}
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the effect above computes (see computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
 
 	function addGroup() {
 		const idx = (p.args.groups?.length ?? 0) + 1;
@@ -271,14 +278,7 @@
 		// Nothing changed since this node last ran? Put the previous result back
 		// rather than recomputing: result lives only in this component, so it
 		// was lost when the view switch destroyed the last instance.
-		restoreOrCompute(
-			memo,
-			getHash,
-			(cached) => {
-				result = cached;
-			},
-			doGroup
-		);
+		restoreOrCompute(memo, getHash, restore, doGroup);
 	});
 </script>
 

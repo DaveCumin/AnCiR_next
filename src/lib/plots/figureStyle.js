@@ -39,14 +39,17 @@ export const BASE_PT = { s: 7, m: 8.5, l: 10 };
  *
  * Axis labels and the legend ARE the base (they are the figure's "body" text).
  * Tick labels and significance-bar text sit slightly below, annotations lower
- * still. Adding a role here is all that is needed for it to be sized.
+ * still. The title (drawn only on EXPORT, above the figure; see exportStyle.js)
+ * sits just above the base so it reads as a heading without dwarfing the axes.
+ * Adding a role here is all that is needed for it to be sized.
  */
 export const ROLE_RATIOS = {
 	axisLabel: 1,
 	legend: 1,
 	tick: 0.9,
 	sigBar: 0.9,
-	annotation: 0.8
+	annotation: 0.8,
+	title: 1.1
 };
 
 /**

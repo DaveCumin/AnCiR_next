@@ -162,6 +162,14 @@
 	$effect(() => {
 		if (collectResult !== undefined) memo.payload = collectResult;
 	});
+	function restore(cached) {
+		collectResult = cached;
+	}
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the compute effect claims the hash and computes (see
+	// computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
 
 	$effect(() => {
 		const snapshots = preProcessProcs.map((proc) => JSON.stringify(proc?.args ?? {}));
@@ -281,7 +289,7 @@
 	onMount(() => {
 		// Put the previous result back before anything else: the compute effect
 		// skips when nothing changed, and this state died with the last instance.
-		if (memo.payload !== undefined && memo.hash === getHash) collectResult = memo.payload;
+		if (memo.has(getHash)) restore(memo.payload);
 		if (!p.args.preProcesses) p.args.preProcesses = [];
 		if (!p.args.colIds) p.args.colIds = [];
 		if (!p.args.out) p.args.out = {};

@@ -161,6 +161,21 @@
 	// and rebuilds this component) does not recompute unchanged inputs.
 	const memo = nodeMemo(p, 'tableprocess');
 
+	// Mirror the panel state into the memo so the next mount can restore it.
+	// Guarded on undefined: a fresh instance that has not computed yet must not
+	// wipe a cached result another instance is still showing.
+	$effect(() => {
+		if (profData !== undefined) memo.payload = profData;
+	});
+	function restore(cached) {
+		profData = cached;
+	}
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the compute effect claims the hash and computes (see
+	// computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
+
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
@@ -220,8 +235,13 @@
 		}
 		if (profileY.initYColumns()) needsCompute = true;
 		if (semY.initYColumns()) needsCompute = true;
+		// Put the previous result back rather than recomputing: profData lives only
+		// in this component, so it was lost when the view switch destroyed the
+		// last instance. The compute effect skips while the memo holds this hash.
+		const restoredFromMemo = memo.has(getHash);
+		if (restoredFromMemo) restore(memo.payload);
 		const hasInputs = p.args.xIN >= 0 && (p.args.yIN ?? []).some((id) => id >= 0);
-		if (needsCompute || hasInputs) recalculate();
+		if (needsCompute || (hasInputs && !restoredFromMemo)) recalculate();
 		mounted = true;
 	});
 

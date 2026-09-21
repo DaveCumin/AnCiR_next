@@ -27,17 +27,9 @@
 		adapter?.reset();
 	}
 
-	// Save menu (reuses the control panel's SavePlot dropdown).
+	// Save dialog (the same SavePlot the control panel opens).
 	let showSave = $state(false);
-	let saveTop = $state(0);
-	let saveLeft = $state(0);
-	let saveBtn = $state(null);
 	function toggleSave() {
-		const r = saveBtn?.getBoundingClientRect();
-		if (r) {
-			saveTop = r.bottom + 4;
-			saveLeft = r.left;
-		}
 		showSave = !showSave;
 	}
 </script>
@@ -77,7 +69,6 @@
 	<button
 		type="button"
 		class="pt-btn"
-		bind:this={saveBtn}
 		class:active={showSave}
 		onclick={(e) => {
 			e.stopPropagation();
@@ -90,7 +81,7 @@
 	</button>
 </div>
 
-<SavePlot bind:showDropdown={showSave} dropdownTop={saveTop} dropdownLeft={saveLeft} Id={'plot' + plot.id} />
+<SavePlot bind:open={showSave} Id={plot.id} />
 
 <style>
 	.plot-toolbar {

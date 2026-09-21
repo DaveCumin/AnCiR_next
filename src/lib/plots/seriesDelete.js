@@ -40,33 +40,35 @@ function serializeInner(inner) {
 }
 
 /**
- * The shared mechanism: apply `mutate(inner)` (a direct in-place removal) to a
- * plot's inner data object as ONE undoable step, then toast `message` with an
- * Undo action. Series and overlays both delete through here; only the mutation
- * and the wording differ.
+ * The shared recording mechanism, with no toast: apply `mutate(inner)` (a direct
+ * in-place edit) to a plot's inner data object as ONE undoable history step.
+ * Series delete (here) and series reorder (seriesReorder.js) both record
+ * through this; only the mutation and the feedback differ.
  *
  * @param {any} inner the plot's inner data object (`theData` in a plot's controls
  *   snippet) — must carry `parentBox` (the wrapper Plot)
- * @param {(inner: any) => void} mutate performs the removal directly on `inner`
- * @param {string} message the toast text, e.g. `Series "activity" removed`
+ * @param {(inner: any) => void} mutate performs the edit directly on `inner`
+ * @returns {{ recorded: any } | null} the history entry the edit produced, or null
+ *   when nothing changed. When the plot type has no fromJSON contract (or the inner
+ *   is stale) the mutation is applied directly and `recorded` is null.
  */
-export function removeFromInnerWithUndo(inner, mutate, message) {
+export function recordInnerEdit(inner, mutate) {
 	const plotObj = inner?.parentBox;
 	const entry = plotObj && appConsts.plotMap.get(plotObj.type);
 	if (typeof entry?.data?.fromJSON !== 'function' || plotObj.plot !== inner) {
 		// No round-trip contract to record through (or a stale inner): fall back to
-		// the old direct removal rather than corrupting history.
+		// the old direct edit rather than corrupting history.
 		mutate(inner);
-		return;
+		return { recorded: null };
 	}
 
 	const before = serializeInner(inner);
 	mutate(inner);
 	const after = serializeInner(plotObj.plot);
-	if (JSON.stringify(before) === JSON.stringify(after)) return; // nothing removed
+	if (JSON.stringify(before) === JSON.stringify(after)) return null; // nothing changed
 
 	// Revert the direct mutation, then route the after-state through the op so the
-	// deletion lands on the undo stack as a single step. fromJSON rebuilds plot.plot
+	// edit lands on the undo stack as a single step. fromJSON rebuilds plot.plot
 	// (a $state field, so the swap is reactive and facet reconcile / metric outputs
 	// re-run off it exactly as they do for a wiring edit).
 	plotObj.plot = entry.data.fromJSON(plotObj, before);
@@ -74,7 +76,23 @@ export function removeFromInnerWithUndo(inner, mutate, message) {
 
 	// Read the entry back from the $state stack so later `===` checks compare the
 	// same proxy (state_proxy_equality_mismatch otherwise).
-	const recorded = history.undoStack[history.undoStack.length - 1];
+	return { recorded: history.undoStack[history.undoStack.length - 1] };
+}
+
+/**
+ * Apply `mutate(inner)` (a direct in-place removal) to a plot's inner data object
+ * as ONE undoable step, then toast `message` with an Undo action. Series and
+ * overlays both delete through here; only the mutation and the wording differ.
+ *
+ * @param {any} inner the plot's inner data object (`theData` in a plot's controls
+ *   snippet) — must carry `parentBox` (the wrapper Plot)
+ * @param {(inner: any) => void} mutate performs the removal directly on `inner`
+ * @param {string} message the toast text, e.g. `Series "activity" removed`
+ */
+export function removeFromInnerWithUndo(inner, mutate, message) {
+	const result = recordInnerEdit(inner, mutate);
+	if (!result || !result.recorded) return; // nothing removed, or the direct fallback
+	const { recorded } = result;
 	const isTop = () =>
 		recorded != null && history.undoStack[history.undoStack.length - 1] === recorded;
 

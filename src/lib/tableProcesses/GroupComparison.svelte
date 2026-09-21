@@ -820,6 +820,14 @@
 			untrack(() => doComparison());
 		}
 	});
+	function restore(cached) {
+		comparisonData = cached;
+		p.warnings = cached?.warnings ?? [];
+	}
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the effect above computes (see computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
 
 	onMount(() => {
 		if (!p.args.out) p.args.out = {};
@@ -828,15 +836,7 @@
 		// Nothing changed since this node last ran? Put the previous result back
 		// rather than recomputing: comparisonData lives only in this component, so it
 		// was lost when the view switch destroyed the last instance.
-		restoreOrCompute(
-			memo,
-			getHash,
-			(cached) => {
-				comparisonData = cached;
-				p.warnings = cached?.warnings ?? [];
-			},
-			doComparison
-		);
+		restoreOrCompute(memo, getHash, restore, doComparison);
 		mounted = true;
 	});
 

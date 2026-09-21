@@ -311,6 +311,14 @@
 		if (!mounted) return;
 		if (h !== memo.hash) untrack(() => recompute());
 	});
+	function restore(cached) {
+		rayleighData = cached;
+		p.warnings = cached?.warnings ?? [];
+	}
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the effect above computes (see computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
 
 	// Backfill + reconcile the fixed metric-key set (R/z/pvalue/F/ww_pvalue). F and
 	// ww_pvalue were added when the Watson-Williams test was folded in, so older
@@ -332,15 +340,7 @@
 		// Nothing changed since this node last ran? Put the previous result back
 		// rather than recomputing: rayleighData lives only in this component, so it
 		// was lost when the view switch destroyed the last instance.
-		restoreOrCompute(
-			memo,
-			getHash,
-			(cached) => {
-				rayleighData = cached;
-				p.warnings = cached?.warnings ?? [];
-			},
-			recompute
-		);
+		restoreOrCompute(memo, getHash, restore, recompute);
 		mounted = true;
 	});
 

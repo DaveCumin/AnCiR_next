@@ -12,7 +12,9 @@ import {
 	resolveSvgVars,
 	addBackgroundRect,
 	setPhysicalSize,
-	prepareSvgForExport
+	prepareSvgForExport,
+	prepareExport,
+	addTitle
 } from './exportStyle.js';
 import { PX_PER_MM } from './figureStyle.js';
 
@@ -166,5 +168,109 @@ describe('prepareSvgForExport', () => {
 
 	it('returns null for a missing element rather than throwing mid-export', () => {
 		expect(prepareSvgForExport(null, { width: 1, height: 1 })).toBeNull();
+	});
+});
+
+describe('addTitle', () => {
+	const font = { fontFamily: 'Georgia, serif', fontSize: 16 };
+
+	it('draws the title as a <text> at the top-left, inside the padding', () => {
+		const svg = mount('<circle r="5" />');
+		const clone = svg.cloneNode(true);
+		const out = addTitle(clone, { text: 'Activity by day', width: 200, height: 100, ...font });
+		const text = clone.querySelector('text.export-title');
+		expect(text).not.toBeNull();
+		expect(text.textContent).toBe('Activity by day');
+		expect(parseFloat(text.getAttribute('x'))).toBeGreaterThan(0);
+		expect(parseFloat(text.getAttribute('x'))).toBeLessThan(20);
+		expect(text.getAttribute('font-family')).toBe('Georgia, serif');
+		expect(text.getAttribute('font-size')).toBe('16');
+		expect(out.width).toBe(200);
+	});
+
+	it('shifts the existing content down by the band instead of overlaying it', () => {
+		const svg = mount('<circle r="5" />');
+		const clone = svg.cloneNode(true);
+		const { height } = addTitle(clone, { text: 'T', width: 200, height: 100, ...font });
+		const band = height - 100;
+		expect(band).toBeGreaterThan(16);
+		const wrapper = clone.querySelector('g.export-content');
+		expect(wrapper.getAttribute('transform')).toBe(`translate(0, ${band})`);
+		expect(wrapper.querySelector('circle')).not.toBeNull();
+		// The svg itself grew by the same amount, and the viewBox follows.
+		expect(parseFloat(clone.getAttribute('height'))).toBe(height);
+		expect(clone.getAttribute('viewBox')).toBe(`0 0 200 ${height}`);
+	});
+
+	it('wraps a long title onto a second line and ellipsises past that', () => {
+		const svg = mount('<circle r="5" />');
+		const clone = svg.cloneNode(true);
+		const long =
+			'A very long title that will not fit on a single line of this narrow figure at all';
+		const { height } = addTitle(clone, { text: long, width: 200, height: 100, ...font });
+		const spans = clone.querySelectorAll('text.export-title tspan');
+		expect(spans.length).toBe(2);
+		expect(spans[1].textContent.endsWith('…')).toBe(true);
+		// Two lines reserve a taller band than one.
+		const one = svg.cloneNode(true);
+		const short = addTitle(one, { text: 'Short', width: 200, height: 100, ...font });
+		expect(height).toBeGreaterThan(short.height);
+	});
+
+	it('draws a bold panel label ahead of the title, or alone', () => {
+		const svg = mount('<circle r="5" />');
+		const both = svg.cloneNode(true);
+		addTitle(both, { text: 'Title', label: 'a', width: 200, height: 100, ...font });
+		const label = both.querySelector('tspan.export-panel-label');
+		expect(label.textContent).toBe('a');
+		expect(label.getAttribute('font-weight')).toBe('700');
+		expect(both.querySelector('text.export-title').textContent).toContain('Title');
+
+		const alone = svg.cloneNode(true);
+		const out = addTitle(alone, { text: '', label: 'b', width: 200, height: 100, ...font });
+		expect(alone.querySelector('tspan.export-panel-label').textContent).toBe('b');
+		expect(out.height).toBeGreaterThan(100);
+	});
+
+	it('does nothing when there is neither a title nor a label', () => {
+		const svg = mount('<circle r="5" />');
+		const clone = svg.cloneNode(true);
+		expect(addTitle(clone, { text: '', width: 200, height: 100, ...font })).toBeNull();
+		expect(clone.querySelector('text.export-title')).toBeNull();
+		expect(clone.querySelector('g.export-content')).toBeNull();
+	});
+
+	it('leaves <defs> at the top level so clip paths keep resolving', () => {
+		const svg = mount('<defs><clipPath id="c"><rect /></clipPath></defs><circle r="5" />');
+		const clone = svg.cloneNode(true);
+		addTitle(clone, { text: 'T', width: 200, height: 100, ...font });
+		expect(clone.querySelector(':scope > defs')).not.toBeNull();
+		expect(clone.querySelector('g.export-content > defs')).toBeNull();
+	});
+});
+
+describe('prepareExport with a title', () => {
+	it('puts the background behind the enlarged figure and sizes it physically', () => {
+		const svg = mount('<circle r="5" />');
+		const { svg: clone, height } = prepareExport(svg, {
+			width: 200,
+			height: 100,
+			backgroundColour: '#ffffff',
+			physical: true,
+			title: { text: 'Hello', fontFamily: 'sans-serif', fontSize: 14 }
+		});
+		expect(height).toBeGreaterThan(100);
+		const bg = clone.firstChild;
+		expect(bg.tagName.toLowerCase()).toBe('rect');
+		expect(parseFloat(bg.getAttribute('height'))).toBe(height);
+		expect(clone.getAttribute('viewBox')).toBe(`0 0 200 ${height}`);
+		expect(clone.getAttribute('height').endsWith('mm')).toBe(true);
+	});
+
+	it('reports the original size when the title is off', () => {
+		const svg = mount('<circle r="5" />');
+		const out = prepareExport(svg, { width: 200, height: 100, title: null });
+		expect(out.height).toBe(100);
+		expect(out.svg.querySelector('text.export-title')).toBeNull();
 	});
 });

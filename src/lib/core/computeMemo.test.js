@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
 	nodeMemo,
+	restoreOrCompute,
 	memoForget,
 	memoClear,
 	_memoSize,
@@ -279,5 +280,189 @@ describe('the real deletion path releases the memo', () => {
 		expect(nodeMemo(tp(999), 'tableprocess').hash).toBe('bystander');
 		expect(nodeMemo({ id: tpId }, 'tableprocess').payload).toBeUndefined();
 		expect(inv).toBeTruthy();
+	});
+});
+
+// A payload published through the memo reaches every mounted instance of the
+// node, not just the one that computed it. A node has two instances whenever it
+// is expanded on the canvas and selected in the control panel; the compute must
+// still run once, and the second instance must still see the result.
+const drain = () => new Promise((r) => queueMicrotask(r));
+
+describe('following the shared payload across instances', () => {
+	it('two followers, one compute, both applied', async () => {
+		const applied = { a: [], b: [] };
+		const a = nodeMemo(tp(1), 'tableprocess');
+		const b = nodeMemo(tp(1), 'tableprocess');
+		a.follow('h1', (v) => applied.a.push(v));
+		b.follow('h1', (v) => applied.b.push(v));
+		// Nothing cached yet: neither is applied on subscribe.
+		expect(applied).toEqual({ a: [], b: [] });
+
+		// Instance A claims the hash and computes exactly once; B never computes.
+		let computes = 0;
+		const guardedCompute = (m) => {
+			if (m.hash === 'h1') return;
+			m.hash = 'h1';
+			computes++;
+			m.payload = { rows: 2 };
+		};
+		guardedCompute(a);
+		guardedCompute(b);
+		expect(computes).toBe(1);
+
+		await drain();
+		expect(applied.a).toEqual([{ rows: 2 }]);
+		expect(applied.b).toEqual([{ rows: 2 }]);
+	});
+
+	it('a follower that already holds the payload is not re-applied', async () => {
+		const m = nodeMemo(tp(1), 'tableprocess');
+		m.hash = 'h1';
+		const result = { rows: 2 };
+		m.payload = result;
+		const seen = [];
+		// Subscribing with a cached payload applies it once, synchronously...
+		const off = nodeMemo(tp(1), 'tableprocess').follow('h1', (v) => seen.push(v));
+		expect(seen).toEqual([result]);
+		// ...and mirroring the very same object back (what a node's
+		// `$effect(() => memo.payload = result)` does after apply) is no event.
+		m.payload = result;
+		await drain();
+		expect(seen).toEqual([result]);
+		off();
+	});
+
+	it('a hash change recomputes once and every follower moves with it', async () => {
+		const a = nodeMemo(tp(1), 'tableprocess');
+		const b = nodeMemo(tp(1), 'tableprocess');
+		let computes = 0;
+		const run = (m, h) => {
+			if (m.hash === h) return;
+			m.hash = h;
+			computes++;
+			m.payload = { for: h };
+		};
+		const gotA = [];
+		const gotB = [];
+		let offA = a.follow('h1', (v) => gotA.push(v));
+		let offB = b.follow('h1', (v) => gotB.push(v));
+		run(a, 'h1');
+		run(b, 'h1');
+		await drain();
+		expect(computes).toBe(1);
+
+		// Inputs change: each instance's $effect re-follows with the new hash.
+		offA();
+		offB();
+		offA = a.follow('h2', (v) => gotA.push(v));
+		offB = b.follow('h2', (v) => gotB.push(v));
+		run(b, 'h2'); // this time the OTHER instance gets there first
+		run(a, 'h2');
+		await drain();
+		expect(computes).toBe(2);
+		expect(gotA).toEqual([{ for: 'h1' }, { for: 'h2' }]);
+		expect(gotB).toEqual([{ for: 'h1' }, { for: 'h2' }]);
+		offA();
+		offB();
+	});
+
+	it('a payload published under another hash is not delivered', async () => {
+		// The inputs moved on to h2 while a compute for h1 was still in flight
+		// (the follower re-subscribed for h2); the late h1 result must not land
+		// in a panel that is waiting for h2.
+		const m = nodeMemo(tp(1), 'tableprocess');
+		m.hash = 'h1';
+		const seen = [];
+		m.follow('h2', (v) => seen.push(v));
+		m.payload = 'late h1 result';
+		await drain();
+		expect(seen).toEqual([]);
+		m.hash = 'h2';
+		m.payload = 'h2 result';
+		await drain();
+		expect(seen).toEqual(['h2 result']);
+	});
+
+	it('an unsubscribed follower hears nothing', async () => {
+		const m = nodeMemo(tp(1), 'tableprocess');
+		const seen = [];
+		const off = m.follow('h1', (v) => seen.push(v));
+		off();
+		m.hash = 'h1';
+		m.payload = 1;
+		await drain();
+		expect(seen).toEqual([]);
+	});
+
+	it("a follower for the new hash is not handed the previous hash's payload", async () => {
+		// The async nodes (Cosinor, the fits) claim the hash in their effect and
+		// deliver the result from a setTimeout. In that window the memo holds the
+		// NEW hash and the OLD payload, and neither has() nor a follower may treat
+		// that as a hit.
+		const m = nodeMemo(tp(1), 'tableprocess');
+		m.hash = 'h1';
+		m.payload = 'old';
+		m.hash = 'h2'; // claimed; compute in flight
+		const seen = [];
+		m.follow('h2', (v) => seen.push(v));
+		expect(m.has('h2')).toBe(false);
+		expect(m.has('h1')).toBe(false); // superseded
+		expect(seen).toEqual([]);
+		m.payload = 'new';
+		await drain();
+		expect(m.has('h2')).toBe(true);
+		expect(seen).toEqual(['new']);
+	});
+
+	it('followers are per node, and the id-less / memo-off fallbacks are per instance', async () => {
+		const other = [];
+		nodeMemo(tp(2), 'tableprocess').follow('h1', (v) => other.push(v));
+		const m = nodeMemo(tp(1), 'tableprocess');
+		m.hash = 'h1';
+		m.payload = 'one';
+		await drain();
+		expect(other).toEqual([]);
+
+		// Memo off: the two instances are independent, exactly like `let lastHash`.
+		_setMemoEnabled(false);
+		const a = nodeMemo(tp(3), 'tableprocess');
+		const b = nodeMemo(tp(3), 'tableprocess');
+		const gotB = [];
+		b.follow('h1', (v) => gotB.push(v));
+		a.hash = 'h1';
+		a.payload = 'a';
+		await drain();
+		expect(gotB).toEqual([]);
+		_setMemoEnabled(true);
+	});
+
+	it('a null payload is a hit, and a cleared memo is a miss', () => {
+		const m = nodeMemo(tp(1), 'tableprocess');
+		m.hash = 'h1';
+		m.payload = null;
+		expect(m.has('h1')).toBe(true);
+		let restored = 0;
+		let computed = 0;
+		expect(
+			restoreOrCompute(
+				m,
+				'h1',
+				() => restored++,
+				() => computed++
+			)
+		).toBe(false);
+		expect([restored, computed]).toEqual([1, 0]);
+		memoClear();
+		expect(nodeMemo(tp(1), 'tableprocess').has('h1')).toBe(false);
+		expect(
+			restoreOrCompute(
+				m,
+				'h1',
+				() => restored++,
+				() => computed++
+			)
+		).toBe(true);
+		expect([restored, computed]).toEqual([1, 1]);
 	});
 });

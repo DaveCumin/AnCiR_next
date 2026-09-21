@@ -174,6 +174,14 @@
 	$effect(() => {
 		if (result !== undefined) memo.payload = result;
 	});
+	function restore(cached) {
+		result = cached;
+	}
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the compute effect claims the hash and computes (see
+	// computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
 
 	$effect(() => {
 		const dataHash = getHash;
@@ -216,8 +224,8 @@
 		// and carries none of the derived stats, and since the memo already holds this
 		// hash the compute effect will not fire to replace it — so the panel would stay
 		// stat-less until an input changed.
-		const restoredFromMemo = memo.payload !== undefined && memo.hash === getHash;
-		if (restoredFromMemo) result = memo.payload;
+		const restoredFromMemo = memo.has(getHash);
+		if (restoredFromMemo) restore(memo.payload);
 		if (!p.args.out) p.args.out = {};
 		const needsCompute = initYColumns();
 		if (needsCompute) {

@@ -1,9 +1,12 @@
 <script>
 	// @ts-nocheck
+	// The per-plot action menu (box header / worksheet row): Save, View data,
+	// Download data, Delete. "Save" opens the Save dialog rather than a nested
+	// PNG/SVG submenu, so every image export in the app goes through one place.
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
-	import { core } from '$lib/core/core.svelte';
+	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 	import { removePlots } from '$lib/core/Plot.svelte';
-	import { convertToImage, saveDataAsCSV, showDataAsTable } from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { saveDataAsCSV, showDataAsTable } from '$lib/components/plotbits/helpers/save.svelte.js';
 
 	let {
 		showDropdown = $bindable(false),
@@ -12,14 +15,11 @@
 		plotId = $bindable(null)
 	} = $props();
 
-	let saveMenuItem = $state();
-	let activeSubmenu = $state(null);
+	let showSaveDialog = $state(false);
 
-	function handleSaveAction(type, closeDropdown) {
-		console.log('here');
-		convertToImage('plot' + plotId, type);
-
+	function handleSaveAction(closeDropdown) {
 		closeDropdown();
+		showSaveDialog = true;
 	}
 
 	function handleDeleteAction(closeDropdown) {
@@ -31,85 +31,35 @@
 		saveDataAsCSV(plotId);
 		closeDropdown();
 	}
-
-	// Clean up when dropdown closes
-	$effect(() => {
-		if (!showDropdown) {
-			activeSubmenu = null;
-		}
-	});
 </script>
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
-	{#snippet groups({
-		showSubmenu,
-		hideSubmenu,
-		keepSubmenuOpen,
-		activeSubmenu: dropdownActiveSubmenu,
-		closeDropdown
-	})}
-		<!-- Save option with submenu -->
-		<div
-			class="dropdown-item has-submenu"
-			bind:this={saveMenuItem}
-			onmouseenter={() => showSubmenu('save')}
-			onmouseleave={() => hideSubmenu('save', 150)}
-		>
-			<button>Save</button>
+	{#snippet groups({ closeDropdown })}
+		<div class="dropdown-item" onclick={() => handleSaveAction(closeDropdown)}>
+			<button>Save…</button>
 		</div>
 
-		<!-- View data option -->
 		<div
 			class="dropdown-item"
-			onclick={() => { showDataAsTable(plotId); closeDropdown(); }}
-			onmouseenter={() => hideSubmenu('save', 0)}
+			onclick={() => {
+				showDataAsTable(plotId);
+				closeDropdown();
+			}}
 		>
 			<button>View data</button>
 		</div>
 
-		<!-- Download data option -->
-		<div
-			class="dropdown-item"
-			onclick={() => handleDownloadData(closeDropdown)}
-			onmouseenter={() => hideSubmenu('save', 0)}
-		>
+		<div class="dropdown-item" onclick={() => handleDownloadData(closeDropdown)}>
 			<button>Download data</button>
 		</div>
 
-		<!-- Delete option -->
-		<div
-			class="dropdown-item"
-			onclick={() => handleDeleteAction(closeDropdown)}
-			onmouseenter={() => hideSubmenu('save', 0)}
-		>
+		<div class="dropdown-item" onclick={() => handleDeleteAction(closeDropdown)}>
 			<button>Delete</button>
 		</div>
-
-		<!-- Submenu for Save -->
-		{#if dropdownActiveSubmenu === 'save' && saveMenuItem}
-			{@const position = { top: saveMenuItem.offsetTop, left: saveMenuItem.offsetLeft }}
-			<!-- Bridge element to cover gap -->
-			<div
-				class="submenu-bridge"
-				style="top: {dropdownTop + 6}px; left: {dropdownLeft +
-					210}px; width: 5px; height: {saveMenuItem.getBoundingClientRect().height}px;"
-				onmouseenter={() => keepSubmenuOpen('save')}
-			></div>
-			<div
-				class="submenu"
-				style="top: {dropdownTop + 6}px; left: {dropdownLeft + 210}px;"
-				onmouseenter={() => keepSubmenuOpen('save')}
-				onmouseleave={() => hideSubmenu('save', 150)}
-			>
-				{#each ['svg', 'png'] as type}
-					<button class="submenu-item" onclick={() => handleSaveAction(type, closeDropdown)}>
-						{type.toUpperCase()}
-					</button>
-				{/each}
-			</div>
-		{/if}
 	{/snippet}
 </Dropdown>
+
+<SavePlot bind:open={showSaveDialog} Id={plotId} />
 
 <style>
 	button {
@@ -124,39 +74,13 @@
 		padding: 0;
 	}
 
-	.submenu-bridge {
-		position: fixed;
-		background: transparent;
-		z-index: 1002; /* Above dialog and submenu */
-		pointer-events: auto;
-	}
-
-	.submenu {
-		position: fixed;
-		min-width: 150px;
-		background-color: var(--surface-card);
-		border-radius: var(--radius-sm);
-		border: 1px solid var(--color-lightness-85);
-		box-shadow:
-			0 4px 8px 0 rgba(0, 0, 0, 0.2),
-			0 6px 10px 0 rgba(0, 0, 0, 0.1);
-		z-index: 1001; /* Above dialog */
-		padding: 0;
-	}
-
-	.submenu-item {
-		display: block;
+	.dropdown-item {
 		padding: 0.6em;
-		cursor: pointer;
-		border: none;
-		background: transparent;
-		text-align: left;
-		font: inherit;
-		width: 100%;
 		font-size: var(--font-lg);
+		cursor: pointer;
 	}
 
-	.submenu-item:hover {
+	.dropdown-item:hover {
 		background-color: var(--color-lightness-95);
 	}
 </style>

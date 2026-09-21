@@ -397,33 +397,26 @@
 		result = cached;
 		p.warnings = cached?.warnings ?? [];
 	}
-	// Nothing changed since this node last ran? Put the previous result back
-	// rather than recomputing: result lives only in this component, so it is
-	// lost whenever an instance is destroyed (a view switch) or never seen by a
-	// second instance (see `seenHash` below).
-	const sync = () => restoreOrCompute(memo, getHash, restore, recompute);
 	onMount(() => {
 		mounted = true;
-		seenHash = getHash;
-		sync();
+		// Nothing changed since this node last ran? Put the previous result back
+		// rather than recomputing: result lives only in this component, so it
+		// was lost when the view switch destroyed the last instance.
+		restoreOrCompute(memo, getHash, restore, recompute);
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
 	// and rebuilds this component) does not recompute unchanged inputs.
 	const memo = nodeMemo(p, 'tableprocess');
-	// Per-instance "have I handled this hash" guard. The memo is shared by every
-	// mounted instance of this node, and there are two at once whenever the node
-	// is expanded on the canvas AND selected in the control panel. Guarding on
-	// `hash === memo.hash` let the first instance claim the hash and left the
-	// second one stale: its results kept the old rows after the inputs changed.
-	// Each instance now tracks what it has seen itself; the microtask then either
-	// restores the result the other instance already computed or computes it.
-	let seenHash = '';
 	$effect(() => {
 		const hash = getHash;
-		if (!mounted || hash === seenHash) return;
-		seenHash = hash;
-		queueMicrotask(() => untrack(sync));
+		if (!mounted || hash === memo.hash) return;
+		memo.hash = hash;
+		queueMicrotask(() => untrack(recompute));
 	});
+	// Every mounted instance follows the shared result: with the node expanded on
+	// the canvas AND selected in the control panel there are two, and only the
+	// first to run the effect above computes (see computeMemo.js).
+	$effect(() => memo.follow(getHash, restore));
 </script>
 
 <div class="control-input-vertical">

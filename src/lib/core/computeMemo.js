@@ -43,14 +43,56 @@
 // hold transient display state additionally store it (`memo.payload = data`) and
 // restore it on mount.
 //
+// TWO INSTANCES AT ONCE
+//
+// The memo is keyed by node, not by component instance, and a node has two live
+// instances whenever it is expanded on the canvas AND selected in the control
+// panel. The guard above then lets the first instance to run claim the hash, and
+// the second sees "already handled" and keeps its old panel. Fixed once, here,
+// rather than per node: the payload is observable. Each instance follows it,
+//
+//     $effect(() => memo.follow(getHash, (cached) => { result = cached; }));
+//
+// and `apply` runs on every instance whose local state is behind, immediately
+// when a payload for that hash is already cached (a remount rehydrating), and
+// from a microtask when one is published later (the other instance finishing).
+// The compute still runs once per hash; only the result fans out. The payload
+// remembers the hash it was computed for, so a follower is never handed the
+// previous hash's result while a new compute is in flight.
+//
+// A node whose compute is deferred (setTimeout, worker) claims the hash in its
+// effect before starting; `has(hash)` is false until the result lands, which is
+// what keeps a mount in that window from restoring stale data.
+//
 // SCOPE AND LIFETIME
 //
 // In memory only, cleared on session import because node ids are reused across
 // sessions and a stale payload would be silently wrong. Keyed by node kind + id
 // so table-processes and column-processes cannot collide.
 
-/** @type {Map<string, {hash: string, payload: any}>} */
+import { untrack } from 'svelte';
+
+/**
+ * One node's entry. `payloadHash` is the hash `payload` was recorded under, so a
+ * payload can be told apart from a hash that was merely claimed for a compute
+ * still in flight. null until a payload is stored.
+ * @typedef {{hash: string, payload: any, payloadHash: string|null}} Entry
+ */
+/** @type {Map<string, Entry>} */
 const cache = new Map();
+
+/**
+ * Live followers per node: the mounted component instances waiting for a
+ * payload. Deliberately NOT part of `cache`: memoClear/memoForget drop cached
+ * results, but a follower belongs to a component that is still mounted and
+ * unsubscribes itself on teardown.
+ * @typedef {{hash: string, apply: (payload: any) => void, last: any}} Follower
+ * @type {Map<string, Set<Follower>>}
+ */
+const followers = new Map();
+
+/** "This follower has applied nothing yet". Not undefined or null: both are legal payloads. */
+const NONE = Symbol('none');
 
 const DEV = import.meta.env?.DEV ?? false;
 
@@ -64,11 +106,36 @@ function keyFor(p, kind) {
 	return `${kind}_${p.id}`;
 }
 
+/** @returns {Entry} */
+function freshEntry() {
+	return { hash: '', payload: null, payloadHash: null };
+}
+
 // Production always memoises. In dev this can be switched off from the console so
 // a before/after measurement runs through identical instrumentation, rather than
 // comparing two different builds:
 //     await __computeMetrics.measure(() => appState.view = 'plots')
 let memoEnabled = true;
+
+/**
+ * Hand every follower whose hash matches the published payload that payload,
+ * from a microtask so `apply` never runs inside whichever effect published it
+ * (a node's apply writes its own $state; running it inside another instance's
+ * effect would make that effect depend on the reads). Re-checked at delivery:
+ * the follower may have unsubscribed, or a newer payload may have superseded it.
+ */
+function publish(set, read) {
+	for (const sub of set) {
+		if (sub.hash !== read()?.payloadHash) continue;
+		queueMicrotask(() => {
+			if (!set.has(sub)) return;
+			const e = read();
+			if (!e || e.payloadHash !== sub.hash || e.payload === sub.last) return;
+			sub.last = e.payload;
+			sub.apply(e.payload);
+		});
+	}
+}
 
 /**
  * The per-node handle. `hash` is a drop-in replacement for the component-local
@@ -80,19 +147,38 @@ export function nodeMemo(p, kind) {
 	const label = DEV ? `${kind}:${p?.name ?? p?.displayName ?? '?'}` : '';
 	// The unmemoised fallback. Used when the node has no id to key on, and when
 	// memoisation is switched off for a measurement — in both cases this is a
-	// plain per-instance field, which is exactly the `let lastHash` it replaces.
+	// plain per-instance entry, which is exactly the `let lastHash` it replaces.
 	//
 	// It must exist. An earlier version returned a constant '' whenever the cache
 	// was unavailable, so the node could never record the hash it had just
 	// handled: every compute wrote output columns, the input hash changed, and the
 	// effect fired again forever. Reading back what was written is what terminates
 	// the loop, cache or no cache.
-	let local = '';
-	let localPayload;
+	const local = freshEntry();
+	const localFollowers = new Set();
 	const usable = () => key != null && memoEnabled;
+	/** Where reads come from: the shared entry (may not exist yet) or the local one. */
+	const read = () => (usable() ? cache.get(key) : local);
+	/**
+	 * Where writes go. Always the local entry; also the shared one whenever the
+	 * node has a key, memoised or not, so that switching memoisation back on
+	 * finds what was written while it was off (the A/B measurement relies on it).
+	 */
+	const targets = () => {
+		if (key == null) return [local];
+		let shared = cache.get(key);
+		if (!shared) cache.set(key, (shared = freshEntry()));
+		return [local, shared];
+	};
+	const followerSet = () => {
+		if (!usable()) return localFollowers;
+		let set = followers.get(key);
+		if (!set) followers.set(key, (set = new Set()));
+		return set;
+	};
 	return {
 		get hash() {
-			return usable() ? (cache.get(key)?.hash ?? '') : local;
+			return read()?.hash ?? '';
 		},
 		set hash(v) {
 			// Count a compute only when this write actually CHANGES the recorded
@@ -106,13 +192,9 @@ export function nodeMemo(p, kind) {
 			// recompute, which is exactly the false positive this metric exists to
 			// detect. Compare against what is stored, not against what this instance
 			// happens to have seen.
-			const prev = usable() ? cache.get(key)?.hash : local;
+			const prev = read()?.hash;
 			if (DEV && v !== prev) countCompute(label);
-			local = v;
-			if (key == null) return;
-			const entry = cache.get(key);
-			if (entry) entry.hash = v;
-			else cache.set(key, { hash: v, payload: null });
+			for (const e of targets()) e.hash = v;
 		},
 		/**
 		 * Transient display state that would otherwise be lost on unmount. With
@@ -120,14 +202,47 @@ export function nodeMemo(p, kind) {
 		 * fresh mount, so an A/B measurement exercises the real recompute path.
 		 */
 		get payload() {
-			return usable() ? (cache.get(key)?.payload ?? undefined) : localPayload;
+			const e = read();
+			return e && e.payloadHash != null ? e.payload : undefined;
 		},
 		set payload(v) {
-			localPayload = v;
-			if (key == null) return;
-			const entry = cache.get(key);
-			if (entry) entry.payload = v;
-			else cache.set(key, { hash: '', payload: v });
+			// Recorded under the CURRENT hash: nodes set the hash first (in the
+			// effect that claims the compute, or just before storing the result).
+			// Re-storing the same object under the same hash is not a publication;
+			// a follower that has just applied a payload mirrors it straight back.
+			const cur = read();
+			if (cur && cur.payloadHash === cur.hash && cur.payload === v) return;
+			for (const e of targets()) {
+				e.payload = v;
+				e.payloadHash = e.hash;
+			}
+			publish(followerSet(), read);
+		},
+		/** True when a payload computed for exactly `hash` is cached. */
+		has(hash) {
+			const e = read();
+			return !!e && e.hash === hash && e.payloadHash === hash;
+		},
+		/**
+		 * Keep this component instance's local state in step with the shared
+		 * payload for `hash`: `apply` runs now if that payload is already cached,
+		 * and again (from a microtask) each time a payload for `hash` is
+		 * published. Call from a $effect that reads the node's hash and return
+		 * the unsubscribe as the effect's teardown; the effect then re-follows
+		 * on every hash change.
+		 * @returns {() => void} unsubscribe
+		 */
+		follow(hash, apply) {
+			/** @type {Follower} */
+			const sub = { hash, apply, last: NONE };
+			const set = followerSet();
+			set.add(sub);
+			const e = read();
+			if (e && e.hash === hash && e.payloadHash === hash) {
+				sub.last = e.payload;
+				untrack(() => apply(e.payload));
+			}
+			return () => set.delete(sub);
 		}
 	};
 }
@@ -148,11 +263,12 @@ export function nodeMemo(p, kind) {
  * @returns true if it computed, false if it restored. Mostly for tests.
  */
 export function restoreOrCompute(memo, hash, restore, compute) {
-	const cached = memo.payload;
-	// `undefined` means nothing was ever cached. A node whose result is legitimately
-	// null still stores null, and null is a hit.
-	if (memo.hash === hash && cached !== undefined) {
-		restore(cached);
+	// A payload recorded under this exact hash. A hash that was only claimed (a
+	// compute still in flight elsewhere) is not a hit; nor is the previous
+	// hash's payload. A node whose result is legitimately null still stores
+	// null, and null is a hit.
+	if (memo.has(hash)) {
+		restore(memo.payload);
 		return false;
 	}
 	compute();
