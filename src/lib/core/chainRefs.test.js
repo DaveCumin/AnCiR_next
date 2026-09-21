@@ -127,6 +127,32 @@ describe('reconcileChainRefs', () => {
 		expect(core.plots[1].plot.data[0].y.refId).toBe(6); // consumer untouched
 	});
 
+	it('follows into an overlay `at` consumer, which holds ONE column (replaced, never appended)', () => {
+		// A Line overlay wired to the via plot's passthrough x. The stub mirrors the
+		// OverlayClass surface chainRefs reads (id/kind/form + wiredRefIds/setWire).
+		const wires = { at: [5] };
+		const line = {
+			id: 2,
+			kind: 'line',
+			form: 'vertical',
+			wiredRefIds: (k) => wires[k] ?? [],
+			setWire: (k, id) => {
+				wires[k] = [id];
+			}
+		};
+		core.plots[1].plot.overlays = [line];
+		core.chainRefs = [
+			{ toId: 'plot_10', toPort: 'ov2_at', viaPlotId: 9, colId: 5, channel: 'x', series: 1 }
+		];
+		reconcileChainRefs();
+		expect(core.chainRefs).toHaveLength(1); // in sync: the single wire is the ref
+
+		core.plots[0].plot.data[0].x.refId = 7; // via plot rewired its x 5 → 7
+		reconcileChainRefs();
+		expect(wires.at).toEqual([7]); // one column, swapped
+		expect(core.chainRefs[0].colId).toBe(7);
+	});
+
 	it('follows into TP consumers (yIN array member)', () => {
 		core.tableProcesses.push({ id: 3, name: 'cosinor', args: { xIN: 5, yIN: [6] } });
 		core.chainRefs = [

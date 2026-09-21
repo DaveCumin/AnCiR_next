@@ -111,6 +111,49 @@ describe('persistence', () => {
 		expect(back.overlays[1].parentPlot).toBe(back);
 	});
 
+	it('a saved Line whose `at` holds several columns loads as one Line per column (same style, one column each)', () => {
+		// Fixture in the pre-2026-09-18 shape: a dynamic `at` with two wires.
+		const { s: src } = mkScatter();
+		const early = mkCol([2, 4]);
+		const late = mkCol([7]);
+		const json = JSON.parse(JSON.stringify(src.toJSON()));
+		json.overlays = [
+			{
+				id: 3,
+				name: 'Alerts',
+				kind: 'line',
+				form: 'vertical',
+				label: 'alert',
+				colour: '#C0392B',
+				strokeWidth: 2,
+				stroke: 'none',
+				enabled: true,
+				channels: { at: { columns: [{ refId: early }, { refId: late }], typed: [] } }
+			},
+			{
+				kind: 'band',
+				form: 'horizontal',
+				channels: { lower: { typed: [11] }, upper: { typed: [13] } }
+			}
+		];
+
+		const back = Scatterplotclass.fromJSON({ id: 2, width: 400, height: 300 }, json);
+		expect(back.overlays.map((o) => o.kind)).toEqual(['line', 'line', 'band']);
+		const [a, b] = back.overlays;
+		expect(a).toMatchObject({ id: 3, name: 'Alerts', label: 'alert', colour: '#C0392B' });
+		expect(b).toMatchObject({ name: 'Line 2', label: 'alert', colour: '#C0392B', strokeWidth: 2 });
+		expect(b.id).not.toBe(3);
+		expect(a.wiredRefIds('at')).toEqual([early]);
+		expect(b.wiredRefIds('at')).toEqual([late]);
+		// Both draw, and together they cover exactly what the union used to.
+		expect(a.geometry().positions).toEqual([2, 4]);
+		expect(b.geometry().positions).toEqual([7]);
+		expect(back.overlays.every((o) => o.parentPlot === back)).toBe(true);
+		// Saving again writes the split shape, so the next load is a no-op split.
+		const again = JSON.parse(JSON.stringify(back.toJSON()));
+		expect(again.overlays.map((o) => o.channels.at?.columns.length ?? 0)).toEqual([1, 1, 0]);
+	});
+
 	it('fromJSON tolerates a missing/partial overlays field (?? guards)', () => {
 		expect(Scatterplotclass.fromJSON(null, { data: [] }).overlays).toEqual([]);
 		const s = Scatterplotclass.fromJSON(null, { data: [], overlays: [{}] });

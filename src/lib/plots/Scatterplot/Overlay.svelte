@@ -29,11 +29,15 @@
 	const EDGE_COLOUR_DEFAULT = '#2C2C2C';
 
 	// The channel table from the plan, in panel/port order. `axis` is the axis
-	// the channel is READ on; `dynamic` allows many wires (union of columns).
+	// the channel is READ on. No channel is dynamic (decision 2026-09-18): every
+	// channel holds ONE column, so each wired source is its own Line overlay with
+	// its own colour, stroke and label. The flag stays in the spec shape because
+	// the port emitter and the MCP catalogue read it; `fromJSONSplit` turns a
+	// saved multi-column `at` from before that decision into one Line per column.
 	const CHANNEL_TABLE = {
 		line: {
-			vertical: [{ key: 'at', axis: 'x', dynamic: true }],
-			horizontal: [{ key: 'at', axis: 'y', dynamic: true }]
+			vertical: [{ key: 'at', axis: 'x', dynamic: false }],
+			horizontal: [{ key: 'at', axis: 'y', dynamic: false }]
 		},
 		band: {
 			ribbon: [
@@ -171,11 +175,14 @@
 
 			// Channels: one empty slot per valid key, then whatever the json holds
 			// for those keys (a saved channel that no longer fits the form is dropped).
+			// Only the FIRST saved column is kept: a channel holds one column, and a
+			// legacy multi-column `at` is split by fromJSONSplit before it gets here.
 			for (const { key } of OverlayClass.channelsFor(this.kind, this.form)) {
 				const saved = dataIN?.channels?.[key];
 				this.channels[key] = {
 					columns: (saved?.columns ?? [])
 						.filter((c) => c?.refId != null)
+						.slice(0, 1)
 						.map((c) => ColumnClass.fromJSON({ refId: c.refId })),
 					typed: (saved?.typed ?? []).map(toFinite).filter((v) => v != null)
 				};
@@ -221,17 +228,12 @@
 			ch.typed = [];
 		}
 
-		/** Append a wire (dynamic channels); a duplicate refId is ignored. Non-dynamic: setWire. */
+		/**
+		 * Kept for API compatibility with the dynamic-`at` era: every channel is
+		 * single now, so this is `setWire` (a second wire replaces the first).
+		 */
 		addWire(key, refId) {
-			const ch = this.channels[key];
-			if (!ch) return;
-			if (!this.channelSpec(key)?.dynamic) {
-				this.setWire(key, refId);
-				return;
-			}
-			if (ch.columns.some((c) => c.refId === refId)) return;
-			ch.columns.push(new ColumnClass({ refId }));
-			ch.typed = [];
+			this.setWire(key, refId);
 		}
 
 		removeWire(key, refId) {
@@ -263,29 +265,28 @@
 		// ---- resolution ----------------------------------------------------
 
 		/**
-		 * The finite numbers a channel provides, in order: wired → the union of
-		 * the columns' data (null/blank/NaN skipped), typed → the typed list,
-		 * neither → []. An x-axis channel wired to an hours-from-origin column
-		 * is converted onto the time axis exactly as series x is (xOriginFor).
+		 * The finite numbers a channel provides, in order: wired → the column's
+		 * data (null/blank/NaN skipped), typed → the typed list, neither → [].
+		 * An x-axis channel wired to an hours-from-origin column is converted
+		 * onto the time axis exactly as series x is (xOriginFor).
 		 */
 		values(key) {
 			const ch = this.channels[key];
 			if (!ch) return [];
-			if (ch.columns.length === 0) return ch.typed.slice();
+			const col = ch.columns[0];
+			if (!col) return ch.typed.slice();
 			const spec = this.channelSpec(key);
 			const parent = this.parentPlot;
+			const data = typeof col?.getData === 'function' ? (col.getData() ?? []) : [];
+			const origin =
+				spec?.axis === 'x' && typeof parent?.xOriginFor === 'function'
+					? parent.xOriginFor(col)
+					: null;
 			const out = [];
-			for (const col of ch.columns) {
-				const data = typeof col?.getData === 'function' ? (col.getData() ?? []) : [];
-				const origin =
-					spec?.axis === 'x' && typeof parent?.xOriginFor === 'function'
-						? parent.xOriginFor(col)
-						: null;
-				for (const raw of data) {
-					const v = toFinite(raw);
-					if (v == null) continue;
-					out.push(origin != null ? origin + v * MS_PER_HOUR : v);
-				}
+			for (const raw of data) {
+				const v = toFinite(raw);
+				if (v == null) continue;
+				out.push(origin != null ? origin + v * MS_PER_HOUR : v);
 			}
 			return out;
 		}
@@ -579,6 +580,39 @@
 		}
 
 		/**
+		 * Session-load variant of fromJSON that honours the one-column rule: a
+		 * saved Line whose `at.columns` holds N > 1 entries (the dynamic-`at` era,
+		 * before 2026-09-18) becomes N Line overlays, one column each. The first
+		 * keeps the saved id, name, label and style; the others are copies with a
+		 * fresh id and the usual "Line N" name (counted from the lines already in
+		 * `parent` plus the first), sharing the style and label. Anything else
+		 * (a single or unwired line, a typed line, any band) is one overlay, as
+		 * fromJSON. The caller pushes the result onto `parent.overlays` in order.
+		 */
+		static fromJSONSplit(parent, json) {
+			const first = OverlayClass.fromJSON(parent, json);
+			const saved = (json?.channels?.at?.columns ?? []).filter((c) => c?.refId != null);
+			if (first.kind !== 'line' || saved.length <= 1) return [first];
+			// Copies share everything but identity and the column. `name` is minted
+			// explicitly because the constructor's counter only sees overlays that
+			// are already in the parent, and none of these are yet.
+			const shared = { ...first.toJSON() };
+			delete shared.id;
+			delete shared.name;
+			delete shared.channels;
+			const lineCount = (parent?.overlays ?? []).filter((o) => o?.kind === 'line').length + 1;
+			const rest = saved.slice(1).map((c, i) => {
+				const copy = new OverlayClass(parent, {
+					...shared,
+					channels: { at: { columns: [{ refId: c.refId }], typed: [] } }
+				});
+				copy.name = `Line ${lineCount + i + 1}`;
+				return copy;
+			});
+			return [first, ...rest];
+		}
+
+		/**
 		 * Migrate a saved NightBand: mode 'repeating' → a repeating band with the
 		 * four fields; mode 'custom' → a vertical band whose start/end are typed
 		 * from `customBands` (`{startTime, durationHours}` or the older
@@ -658,12 +692,13 @@
 	const channelSpecs = $derived(OverlayClass.channelsFor(overlay?.kind, overlay?.form));
 	const isTimeX = $derived(!!inner?.anyXdataTime);
 
-	// The EMPTY picker (the one that adds a wire): a blank wrapper column that is
-	// NOT in the model. Once it resolves to a real column the wire goes in through
-	// the API and the blank is replaced (and its picker re-mounted via `blankGen`)
-	// so the slot reads empty again. Plain objects on purpose: the blank is scratch,
-	// and a Column must not be constructed inside an effect (see the vault note on
-	// derived_inert).
+	// The EMPTY picker (shown while a channel is unwired): a blank wrapper column
+	// that is NOT in the model. Once it resolves to a real column the wire goes in
+	// through the API, the wired column's own picker takes the slot, and the blank
+	// is replaced (its picker re-mounted via `blankGen`) so that if the wire is
+	// later removed the slot reads empty again. Plain objects on purpose: the
+	// blank is scratch, and a Column must not be constructed inside an effect (see
+	// the vault note on derived_inert).
 	const blanks = {};
 	let blankGen = $state({});
 	function blankFor(key) {
@@ -675,26 +710,17 @@
 		blankGen[key] = (blankGen[key] ?? 0) + 1;
 	}
 
-	/** The empty picker resolved: replace (single channel) or append (dynamic). */
-	function onBlankChange(key, spec, refId) {
+	/** The empty picker resolved: the channel takes the column as its one wire. */
+	function onBlankChange(key, refId) {
 		if (refId == null || refId < 0) return;
-		if (spec.dynamic) overlay.addWire(key, refId);
-		else overlay.setWire(key, refId);
+		overlay.setWire(key, refId);
 		resetBlank(key);
 	}
 
-	/** An existing wire's picker changed column. */
-	function onWireChange(key, spec, refId) {
+	/** The wired column's picker changed column: replace the wire (typed values clear). */
+	function onWireChange(key, refId) {
 		if (refId == null || refId < 0) return;
-		if (!spec.dynamic) {
-			overlay.setWire(key, refId);
-			return;
-		}
-		// The picker mutated that column's refId in place; re-derive the wire list
-		// through the public API so typed values clear and duplicates collapse.
-		const ids = [...new Set(overlay.wiredRefIds(key))];
-		for (const id of ids) overlay.removeWire(key, id);
-		for (const id of ids) overlay.addWire(key, id);
+		overlay.setWire(key, refId);
 	}
 
 	function typedText(key) {
@@ -783,17 +809,22 @@
 			<ControlInput label={spec.display}></ControlInput>
 		</div>
 		<div class="overlay-channel-pickers">
-			{#each ch?.columns ?? [] as col (col.id)}
-				<Column {col} canChange={true} onChange={(refId) => onWireChange(key, spec, refId)} />
-			{/each}
-			<!-- The empty picker: always present for a dynamic channel (add another
-			     column), only while unwired for a single one. -->
-			{#if spec.dynamic || (ch?.columns?.length ?? 0) === 0}
+			<!-- Exactly one picker per channel: the wired column when wired, else
+			     the blank one (a channel holds one column; see the model). -->
+			{#if ch?.columns?.[0]}
+				{#key ch.columns[0].id}
+					<Column
+						col={ch.columns[0]}
+						canChange={true}
+						onChange={(refId) => onWireChange(key, refId)}
+					/>
+				{/key}
+			{:else}
 				{#key blankGen[key] ?? 0}
 					<Column
 						col={blankFor(key)}
 						canChange={true}
-						onChange={(refId) => onBlankChange(key, spec, refId)}
+						onChange={(refId) => onBlankChange(key, refId)}
 					/>
 				{/key}
 			{/if}

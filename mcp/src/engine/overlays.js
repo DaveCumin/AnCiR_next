@@ -13,7 +13,12 @@
 //   number[]          → typed values                   (`at: [35, 55.6]`)
 //   string            → a column, by NAME or "id"      (`lower: "lower limit"`)
 //   { column: ref }   → a column, by id or name        (`x: { column: 3 }`)
-//   string[] / {column}[] → several columns (dynamic `at` only)
+//   string[] / {column}[] → several columns on a line's `at` ONLY, and then the
+//                       spec is SPLIT into one Line overlay per column (same
+//                       form, style and label; the name goes to the first, the
+//                       rest get the usual "Line N"). A channel holds one column
+//                       (decision 2026-09-18), so this mirrors what the GUI does
+//                       with a legacy multi-column `at` on load.
 // A bare number is a VALUE, never a column id: a reference line at y = 3 and a line wired
 // to column 3 are both common, so the two must not share a spelling.
 //
@@ -64,16 +69,34 @@ export function describeOverlayForms() {
 /**
  * Validate and normalise tool `overlays` into OverlayClass JSON (the shape
  * `OverlayClass.fromJSON` and the session file use): channels become
- * `{ columns: [{ refId }], typed: [] }`.
+ * `{ columns: [{ refId }], typed: [] }`. A line whose `at` lists several
+ * columns yields several JSONs (see splitLine), so the output may be longer
+ * than the input; order is kept.
  *
  * @param {Array<object>} overlays  tool input (may be undefined)
  * @param {(ref: string|number) => number} resolveCol  column name/id → id; throws if unknown
- * @returns {Array<object>}  overlay JSON, one per input, in order
+ * @returns {Array<object>}  overlay JSON, in input order, one per resulting overlay
  */
 export function normalizeOverlaySpecs(overlays, resolveCol) {
 	if (overlays == null) return [];
 	if (!Array.isArray(overlays)) throw new Error('`overlays` must be an array.');
-	return overlays.map((spec, i) => normalizeOne(spec, i, resolveCol));
+	return overlays.flatMap((spec, i) => splitLine(normalizeOne(spec, i, resolveCol)));
+}
+
+/**
+ * One Line per wired `at` column: the first JSON keeps the name, the copies
+ * drop it (the class then names them "Line N") and share everything else. A
+ * line with one or no wire, a typed line and every band pass through as `[json]`.
+ */
+function splitLine(json) {
+	const cols = json.channels?.at?.columns ?? [];
+	if (json.kind !== 'line' || cols.length <= 1) return [json];
+	const shared = { ...json };
+	delete shared.name;
+	return cols.map((c, i) => ({
+		...(i === 0 ? json : shared),
+		channels: { at: { columns: [{ refId: c.refId }], typed: [] } }
+	}));
 }
 
 function normalizeOne(spec, i, resolveCol) {
@@ -128,7 +151,9 @@ function normalizeChannel(value, cspec, where, resolveCol) {
 		const typed = (value.typed ?? []).filter(isNum);
 		if (cols.length && typed.length)
 			throw new Error(`${where}: a channel is wired OR typed, not both.`);
-		if (!cspec.dynamic && cols.length > 1) throw new Error(`${where}: takes one column.`);
+		if (cols.length > 1 && !isLineAt(cspec)) {
+			throw new Error(`${where}: takes one column.`);
+		}
 		return { columns: cols.map((refId) => ({ refId })), typed };
 	}
 
@@ -142,11 +167,20 @@ function normalizeChannel(value, cspec, where, resolveCol) {
 		);
 	}
 	if (allNum) return { columns: [], typed: list.slice() };
-	if (!cspec.dynamic && list.length > 1) {
-		throw new Error(`${where}: takes one column (only a line's \`at\` accepts several).`);
+	if (list.length > 1 && !isLineAt(cspec)) {
+		throw new Error(
+			`${where}: takes one column (only a line's \`at\` accepts a list, which makes one line per column).`
+		);
 	}
 	const ids = list.map((v) => resolveCol(typeof v === 'string' ? v : v.column));
 	return { columns: ids.map((refId) => ({ refId })), typed: [] };
+}
+
+// The one channel whose LIST of columns is accepted (and then split): a line's
+// `at`, the only channel of that key in the table. Decided by key rather than
+// by a dynamic flag, because no channel is dynamic any more.
+function isLineAt(cspec) {
+	return cspec.key === 'at';
 }
 
 /** Every column id an overlay JSON list wires (for render_plot's column bundle). */

@@ -44,7 +44,12 @@
 		plotSetChannel,
 		detachColumnSetFromPlot
 	} from '$lib/core/Plot.svelte';
-	import { plotNodeSlots, resolveOverlayPort } from '$lib/core/ProcessNode.svelte.js';
+	import {
+		plotNodeSlots,
+		resolveOverlayPort,
+		isNewLinePort,
+		supportsOverlays
+	} from '$lib/core/ProcessNode.svelte.js';
 	import {
 		applyOverlayWire,
 		clearOverlayPort,
@@ -1881,13 +1886,17 @@
 	}
 
 	// Is this an overlay port (`ov<id>_<key>`, see ProcessNode.svelte.js) of this
-	// plot node? Every wire path below (connect, disconnect, picker, edge delete,
-	// edge reroute) gates on this and then writes through overlayWiring.js, so the
-	// overlay channel is only ever touched via the OverlayClass API.
+	// plot node, or its trailing `ovnew_line` drop port? Every wire path below
+	// (connect, disconnect, picker, edge delete, edge reroute) gates on this and
+	// then writes through overlayWiring.js, so the overlay channel is only ever
+	// touched via the OverlayClass API. On the drop port a connect creates a Line
+	// overlay plus its wire in one recordPlotEdit (one undo step); the other paths
+	// are no-ops there, since nothing ever stays wired to it.
 	function isOverlayPortOn(target, portName) {
 		if (target?.type !== 'plot' || !target.plotObj || target.plotObj.type === 'tableplot') {
 			return false;
 		}
+		if (isNewLinePort(portName)) return supportsOverlays(target.plotObj.plot);
 		return resolveOverlayPort(target.plotObj.plot, portName) != null;
 	}
 
@@ -2247,10 +2256,13 @@
 			return;
 		}
 
-		// Overlay channel port (`ov<id>_<key>`): a single channel takes the column
-		// as its one wire (replacing any previous wire and clearing typed values);
-		// a dynamic channel (a line's `at`) appends it. Recorded through the same
-		// setPlotInner op as series wiring, so it is one undo step.
+		// Overlay channel port (`ov<id>_<key>`): the channel takes the column as
+		// its ONE wire (replacing any previous wire and clearing typed values; a
+		// line's `at` included, since 2026-09-18 a Line holds one column). The
+		// trailing `ovnew_line` port instead creates a new vertical Line overlay
+		// wired to the column.
+		// Either way it is recorded through the same setPlotInner op as series
+		// wiring, so it is one undo step (overlay + wire together).
 		if (isOverlayPortOn(target, toPort)) {
 			recordPlotEdit(target.plotObj, () => applyOverlayWire(target.plotObj.plot, toPort, colId));
 			return;
@@ -2366,8 +2378,8 @@
 			return;
 		}
 
-		// Overlay channel port: clearing the port removes every wire on that
-		// channel (typed values, if any, are untouched: a wired channel has none).
+		// Overlay channel port: clearing the port removes the wire on that channel
+		// (typed values, if any, are untouched: a wired channel has none).
 		if (isOverlayPortOn(target, portName)) {
 			recordPlotEdit(target.plotObj, () => clearOverlayPort(target.plotObj.plot, portName));
 			return;
@@ -2551,7 +2563,7 @@
 		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && portName === 'series') {
 			return { many: true, ids: (target.plotObj.plot.columnRefs ?? []).filter((n) => n >= 0) };
 		}
-		// Overlay channel port: its wired columns; many only for a dynamic channel.
+		// Overlay channel port: its one wired column; never many (see overlayWiring).
 		if (isOverlayPortOn(target, portName)) {
 			return overlayPortSelection(target.plotObj.plot, portName);
 		}
@@ -2611,7 +2623,7 @@
 			if (plot?.data) plot.data = plot.data.filter((dp) => dp?.[field]?.refId !== colId);
 			return;
 		}
-		// Overlay channel port (picker un-tick on a dynamic `at`): drop that one wire.
+		// Overlay channel port (picker un-tick): drop that wire.
 		if (isOverlayPortOn(target, portName)) {
 			recordPlotEdit(target.plotObj, () => removeOverlayWire(target.plotObj.plot, portName, colId));
 			return;
@@ -3022,8 +3034,7 @@
 			return;
 		}
 
-		// Overlay channel port: swap the one wire that matches, keeping its position
-		// among a dynamic channel's other wires.
+		// Overlay channel port: swap the one wire when it matches.
 		if (isOverlayPortOn(target, edge.toPort)) {
 			recordPlotEdit(target.plotObj, () =>
 				rerouteOverlayWire(target.plotObj.plot, edge.toPort, oldColId, newColId)

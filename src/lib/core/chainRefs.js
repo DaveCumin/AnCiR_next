@@ -137,13 +137,10 @@ function rewireConsumer(consumer, toPort, oldCol, nextCol) {
 		}
 		return;
 	}
-	// Overlay channel port: swap the wire in place (order kept for a dynamic `at`).
+	// Overlay channel port: swap the one wire (every channel holds one column).
 	const ov = resolveOverlayPort(inner, toPort);
 	if (ov) {
-		const ids = ov.overlay.wiredRefIds(ov.key);
-		if (!ids.includes(oldCol)) return;
-		for (const id of ids) ov.overlay.removeWire(ov.key, id);
-		for (const id of ids) ov.overlay.addWire(ov.key, id === oldCol ? nextCol : id);
+		if (ov.overlay.wiredRefIds(ov.key).includes(oldCol)) ov.overlay.setWire(ov.key, nextCol);
 		return;
 	}
 	for (const dp of inner?.data ?? []) {

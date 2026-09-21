@@ -20,7 +20,12 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadPlots } from './plotMap.js';
 import { OverlayClass } from './Scatterplot/Overlay.svelte';
-import { overlayPortName, resolveOverlayPort } from '$lib/core/ProcessNode.svelte.js';
+import {
+	overlayPortName,
+	resolveOverlayPort,
+	parseOverlayPort,
+	NEW_LINE_PORT
+} from '$lib/core/ProcessNode.svelte.js';
 
 /** The field a plot stores its i-th input under, given its public port names. */
 export function storageFieldFor(ports, i) {
@@ -120,11 +125,21 @@ describe('overlay port names vs stored channel fields', () => {
 				expect(['x', 'y']).toContain(s.axis);
 			}
 		}
-		// Only a line's `at` accepts many wires.
+		// No channel accepts many wires: a Line holds one column (one Line per
+		// source since 2026-09-18), so `columns[j]` above is always `columns[0]`.
 		const dynamic = forms.flatMap(([kind, form, specs]) =>
 			specs.filter((s) => s.dynamic).map((s) => `${kind}/${form}/${s.key}`)
 		);
-		expect(dynamic.sort()).toEqual(['line/horizontal/at', 'line/vertical/at']);
+		expect(dynamic).toEqual([]);
+	});
+
+	it('the trailing `ovnew_line` drop port has NO storage field: it is not an overlay port', () => {
+		// It creates an overlay on drop (overlayWiring.applyOverlayWire); nothing is
+		// ever stored under it, so it must never parse or resolve as `ov<id>_<key>`.
+		expect(parseOverlayPort(NEW_LINE_PORT)).toBeNull();
+		const inner = { data: [], overlays: [] };
+		inner.overlays.push(OverlayClass.fromJSON(inner, { kind: 'line', form: 'vertical' }));
+		expect(resolveOverlayPort(inner, NEW_LINE_PORT)).toBeNull();
 	});
 
 	it('an overlay written with STORAGE fields reads back on the matching ov<id>_<key> port', () => {

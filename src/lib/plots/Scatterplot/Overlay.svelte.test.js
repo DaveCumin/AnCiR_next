@@ -2,9 +2,10 @@
  * OverlayClass: the data model behind scatterplot reference lines and shaded
  * bands (plan 2026-09-13, part B). This pins the contract the Overlays tab,
  * the plotbits renderers and the canvas ports all build against: the channel
- * table, in-place form swaps, wired/typed exclusivity, resolution (union,
- * uniques, cap), the warning wording, the geometry shapes, persistence and
- * the NightBand migration.
+ * table, in-place form swaps, wired/typed exclusivity, resolution (one column
+ * per channel, uniques, cap), the warning wording, the geometry shapes,
+ * persistence (including the split of a legacy multi-column `at` into one
+ * Line per column) and the NightBand migration.
  *
  * Columns are REAL `Column` instances registered in `core`, so wired
  * resolution goes through the same getData() the renderers use.
@@ -35,10 +36,10 @@ beforeEach(() => {
 describe('OverlayClass.channelsFor', () => {
 	it('returns the ordered channel table from the plan (key, axis, dynamic, display)', () => {
 		expect(OverlayClass.channelsFor('line', 'vertical')).toEqual([
-			{ key: 'at', axis: 'x', dynamic: true, display: 'at (x)' }
+			{ key: 'at', axis: 'x', dynamic: false, display: 'at (x)' }
 		]);
 		expect(OverlayClass.channelsFor('line', 'horizontal')).toEqual([
-			{ key: 'at', axis: 'y', dynamic: true, display: 'at (y)' }
+			{ key: 'at', axis: 'y', dynamic: false, display: 'at (y)' }
 		]);
 		expect(OverlayClass.channelsFor('band', 'ribbon')).toEqual([
 			{ key: 'x', axis: 'x', dynamic: false, display: 'x (x)' },
@@ -191,21 +192,32 @@ describe('wiring API', () => {
 		expect(l.channels.at.typed).toEqual([]);
 	});
 
-	it('addWire appends on the dynamic channel (union of columns), removeWire drops one', () => {
+	it('no channel is dynamic: every channel holds ONE column (decision 2026-09-18)', () => {
+		for (const [kind, forms] of Object.entries(OverlayClass.FORMS)) {
+			for (const form of forms) {
+				for (const spec of OverlayClass.channelsFor(kind, form)) expect(spec.dynamic).toBe(false);
+			}
+		}
+	});
+
+	it('a second wire on `at` REPLACES the first (addWire behaves as setWire); removeWire drops it', () => {
 		const l = new OverlayClass(mkParent(), { kind: 'line' });
 		const a = mkCol([1, 2]);
 		const b = mkCol([3, 4]);
 		l.addWire('at', a);
+		expect(l.wiredRefIds('at')).toEqual([a]);
+		expect(l.values('at')).toEqual([1, 2]);
 		l.addWire('at', b);
-		l.addWire('at', a); // duplicate ignored
-		expect(l.wiredRefIds('at')).toEqual([a, b]);
-		expect(l.values('at')).toEqual([1, 2, 3, 4]);
-		l.removeWire('at', a);
-		expect(l.wiredRefIds('at')).toEqual([b]);
+		expect(l.wiredRefIds('at')).toEqual([b]); // replaced, never a union
 		expect(l.values('at')).toEqual([3, 4]);
+		l.addWire('at', b); // re-wiring the same column changes nothing
+		expect(l.wiredRefIds('at')).toEqual([b]);
+		l.removeWire('at', b);
+		expect(l.wiredRefIds('at')).toEqual([]);
+		expect(l.values('at')).toEqual([]);
 	});
 
-	it('addWire on a non-dynamic channel replaces, like setWire', () => {
+	it('addWire on a band channel replaces too, like setWire', () => {
 		const b = new OverlayClass(mkParent(), { kind: 'band', form: 'ribbon' });
 		const a = mkCol([1]);
 		const c = mkCol([2]);
@@ -691,6 +703,109 @@ describe('toJSON / fromJSON', () => {
 	it('an unknown form in json falls back to the kind default', () => {
 		const l = OverlayClass.fromJSON(mkParent(), { kind: 'line', form: 'ribbon' });
 		expect(l.form).toBe('vertical');
+	});
+});
+
+describe('fromJSONSplit (legacy multi-column `at`)', () => {
+	// Before 2026-09-18 a Line's `at` was dynamic and could hold several
+	// columns (their union was drawn). Now a Line holds ONE column so each
+	// source has its own colour, stroke and label; a saved multi-column `at`
+	// therefore loads as one Line per column. The FIRST keeps the saved
+	// id/name/label/style; the others are copies with fresh ids and the usual
+	// "Line N" names, sharing the style and label, one column each.
+	const legacy = (cols, extra = {}) => ({
+		id: 7,
+		name: 'Alerts',
+		kind: 'line',
+		form: 'vertical',
+		label: 'alert',
+		colour: '#C0392B',
+		strokeWidth: 2.5,
+		stroke: 'none',
+		enabled: true,
+		channels: { at: { columns: cols.map((refId) => ({ refId })), typed: [] } },
+		...extra
+	});
+
+	it('splits N wired columns into N Line overlays: first keeps identity, copies share style and label', () => {
+		const parent = mkParent();
+		const a = mkCol([1]);
+		const b = mkCol([2]);
+		const c = mkCol([3]);
+		const out = OverlayClass.fromJSONSplit(parent, legacy([a, b, c]));
+		expect(out).toHaveLength(3);
+		expect(out.every((o) => o instanceof OverlayClass)).toBe(true);
+
+		expect(out[0]).toMatchObject({ id: 7, name: 'Alerts', label: 'alert', form: 'vertical' });
+		expect(out[0].wiredRefIds('at')).toEqual([a]);
+
+		expect(out[1].wiredRefIds('at')).toEqual([b]);
+		expect(out[2].wiredRefIds('at')).toEqual([c]);
+		const ids = out.map((o) => o.id);
+		expect(new Set(ids).size).toBe(3);
+		expect(out[1].id).not.toBe(7);
+		expect(out[2].id).not.toBe(7);
+		// Names follow the usual counter: the parent is empty, the first is the
+		// (named) Line 1, so the copies are Line 2 and Line 3.
+		expect(out.slice(1).map((o) => o.name)).toEqual(['Line 2', 'Line 3']);
+		for (const o of out.slice(1)) {
+			expect(o).toMatchObject({
+				kind: 'line',
+				form: 'vertical',
+				label: 'alert',
+				colour: '#C0392B',
+				strokeWidth: 2.5,
+				stroke: 'none',
+				enabled: true
+			});
+			expect(o.channels.at.typed).toEqual([]);
+		}
+		// Each is drawable on its own.
+		expect(out.map((o) => o.values('at'))).toEqual([[1], [2], [3]]);
+	});
+
+	it('copy names continue from the lines already in the parent', () => {
+		const parent = mkParent();
+		parent.overlays.push(new OverlayClass(parent, { kind: 'line' })); // Line 1
+		parent.overlays.push(new OverlayClass(parent, { kind: 'band' })); // Band 1, not counted
+		const out = OverlayClass.fromJSONSplit(parent, legacy([mkCol([1]), mkCol([2])]));
+		expect(out.map((o) => o.name)).toEqual(['Alerts', 'Line 3']);
+	});
+
+	it('a single-column, a typed and an unwired line each stay ONE overlay; bands never split', () => {
+		const parent = mkParent();
+		expect(OverlayClass.fromJSONSplit(parent, legacy([mkCol([1])]))).toHaveLength(1);
+		expect(
+			OverlayClass.fromJSONSplit(parent, {
+				kind: 'line',
+				channels: { at: { columns: [], typed: [1, 2, 3] } }
+			})
+		).toHaveLength(1);
+		expect(OverlayClass.fromJSONSplit(parent, { kind: 'line' })).toHaveLength(1);
+		const [band] = OverlayClass.fromJSONSplit(parent, {
+			kind: 'band',
+			form: 'horizontal',
+			channels: { lower: { columns: [{ refId: 1 }, { refId: 2 }] }, upper: { typed: [3] } }
+		});
+		expect(band.kind).toBe('band');
+		expect(band.wiredRefIds('lower')).toEqual([1]);
+	});
+
+	it('a horizontal line splits too (form is kept)', () => {
+		const out = OverlayClass.fromJSONSplit(
+			mkParent(),
+			legacy([mkCol([1]), mkCol([2])], { form: 'horizontal' })
+		);
+		expect(out.map((o) => o.form)).toEqual(['horizontal', 'horizontal']);
+	});
+
+	it('plain fromJSON keeps only the first column, so a channel never holds several', () => {
+		const a = mkCol([1]);
+		const b = mkCol([2]);
+		const ov = OverlayClass.fromJSON(mkParent(), legacy([a, b]));
+		expect(ov.wiredRefIds('at')).toEqual([a]);
+		expect(ov.values('at')).toEqual([1]);
+		expect(ov.toJSON().channels.at.columns).toEqual([{ refId: a }]);
 	});
 });
 

@@ -759,8 +759,11 @@
 			// Overlays, then any LEGACY night bands migrated behind them. Both after
 			// `data` is populated: fromLegacyNightBand reads anyXdataTime to scale
 			// custom-band durations, and ribbon fills borrow the first series colour.
+			// fromJSONSplit (not fromJSON): a Line saved with several `at` columns
+			// (before 2026-09-18) becomes one Line per column, pushed in order so
+			// the copies' "Line N" names count the lines already restored.
 			for (const o of json.overlays ?? []) {
-				scatter.overlays.push(OverlayClass.fromJSON(scatter, o));
+				for (const ov of OverlayClass.fromJSONSplit(scatter, o)) scatter.overlays.push(ov);
 			}
 			for (const nb of json.nightBands ?? []) {
 				scatter.overlays.push(OverlayClass.fromLegacyNightBand(scatter, nb));

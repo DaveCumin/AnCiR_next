@@ -8,6 +8,7 @@ import { render, cleanup } from '@testing-library/svelte';
 import { core } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import Scatterplot, { Scatterplotclass } from './Scatterplot.svelte';
+import Overlay from './Overlay.svelte';
 
 function mkCol(values, type = 'number') {
 	const c = new Column({ type, data: -1 });
@@ -120,5 +121,48 @@ describe('Scatterplot overlay rendering', () => {
 		const { container } = render(Scatterplot, { props: { theData: wrapper, which: 'plot' } });
 		expect(container.querySelectorAll('line.overlay-rule')).toHaveLength(0);
 		expect(container.querySelectorAll('path.band-ribbon')).toHaveLength(0);
+	});
+});
+
+describe('Overlays tab: one picker per channel', () => {
+	// Decision 2026-09-18: a channel holds ONE column, so the block shows exactly
+	// one picker per channel: the wired column when wired, else the blank picker.
+	// (The dynamic-`at` era rendered one picker per wire PLUS an always-present
+	// blank one; a wired Line showed two.)
+	const pickersIn = (container) =>
+		container.querySelectorAll('.overlay-channel-pickers > .clps-container');
+
+	it('an unwired Line shows one (blank) picker', () => {
+		const { s } = mkPlot();
+		const line = s.addOverlay('line', 'vertical');
+		const { container } = render(Overlay, {
+			props: { overlay: line, inner: s, which: 'controls' }
+		});
+		expect(container.querySelectorAll('.overlay-channel')).toHaveLength(1);
+		expect(pickersIn(container)).toHaveLength(1);
+	});
+
+	it('a wired Line still shows exactly one picker (the wired column, no extra blank)', () => {
+		const { s } = mkPlot();
+		const line = s.addOverlay('line', 'vertical');
+		line.setWire('at', mkCol([2, 5]));
+		const { container } = render(Overlay, {
+			props: { overlay: line, inner: s, which: 'controls' }
+		});
+		expect(pickersIn(container)).toHaveLength(1);
+	});
+
+	it('a ribbon band shows one picker per channel (x, lower, upper), wired or not', () => {
+		const { s } = mkPlot();
+		const band = s.addOverlay('band', 'ribbon');
+		band.setWire('lower', mkCol([1, 1, 1]));
+		const { container } = render(Overlay, {
+			props: { overlay: band, inner: s, which: 'controls' }
+		});
+		const rows = container.querySelectorAll('.overlay-channel');
+		expect(rows).toHaveLength(3);
+		for (const row of rows) {
+			expect(row.querySelectorAll('.overlay-channel-pickers > .clps-container')).toHaveLength(1);
+		}
 	});
 });

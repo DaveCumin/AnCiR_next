@@ -37,9 +37,8 @@ process.on('unhandledRejection', (reason) => {
 });
 
 await ensureDom();
-const { AncirSession, ensureRegistry, describeCapabilities, filterCapabilities } = await import(
-	'./engine/session.js'
-);
+const { AncirSession, ensureRegistry, describeCapabilities, filterCapabilities } =
+	await import('./engine/session.js');
 
 // Load the node registry up-front. This must happen during the initial top-level
 // run so vite-node's transform server is still alive to compile the Svelte modules
@@ -160,7 +159,9 @@ function registerTools(server) {
 
 	// Scatterplot overlays: reference lines and shaded bands, mirroring the GUI's
 	// Overlays tab. Channel values: a NUMBER is a typed value, a STRING is a column
-	// (by name or "id"), { column } is a column; lists of either for a line's `at`.
+	// (by name or "id"), { column } is a column; a list of numbers is several typed
+	// positions, and a list of columns on a line's `at` makes ONE LINE PER COLUMN
+	// (a channel holds one column; see engine/overlays.js).
 	const overlayColumnRef = z.object({ column: z.union([z.number().int(), z.string()]) });
 	const overlayChannelValue = z.union([
 		z.number(),
@@ -185,7 +186,7 @@ function registerTools(server) {
 					.record(overlayChannelValue)
 					.optional()
 					.describe(
-						'Per form: line → { at }; band ribbon → { x, lower, upper }; band horizontal → { lower, upper }; band vertical → { start, end }; band repeating → none (use repeatEveryHours/nightDurationHours/startTimeHours/useDataMin). A number is a TYPED value; a string / { column } is a column WIRE (name or id). Only `at` takes several columns.'
+						'Per form: line → { at }; band ribbon → { x, lower, upper }; band horizontal → { lower, upper }; band vertical → { start, end }; band repeating → none (use repeatEveryHours/nightDurationHours/startTimeHours/useDataMin). A number is a TYPED value; a string / { column } is a column WIRE (name or id). Every channel holds ONE column. A list of numbers on `at` is several typed positions on one line; a list of columns on `at` creates one line PER column (same style and label, named Line N).'
 					),
 				colour: z.string().optional().describe('Line colour (#RRGGBB)'),
 				strokeWidth: z.number().optional(),

@@ -47,6 +47,28 @@ function makeNodePort(name, direction, artifactKind = 'column', dynamic = false)
 
 const OVERLAY_PORT_RE = /^ov(\d+)_([A-Za-z]\w*)$/;
 
+// The always-visible trailing "Line" drop target (plan B4, decision
+// 2026-09-17): one port, display `line`, under a `Line` header after the
+// named overlay groups, mirroring the empty "Series N+1" pair. Dropping a
+// column on it CREATES a Line overlay (default form, vertical) wired into `at`
+// (overlayWiring.applyOverlayWire); nothing is ever stored under the port
+// itself, so it is deliberately NOT an `ov<id>_<key>` port: parseOverlayPort
+// and resolveOverlayPort return null for it. Orientation is chosen in the
+// control panel afterwards. NOT dynamic (decision 2026-09-18: a Line holds one
+// column, so the port takes one drop at a time and WorkflowNode must not star
+// it as "accepts one or more columns"); every drop makes its own Line.
+export const NEW_LINE_PORT = 'ovnew_line';
+
+/** True for the trailing "Line" drop port. */
+export function isNewLinePort(portName) {
+	return portName === NEW_LINE_PORT;
+}
+
+/** Whether a plot's inner data object carries overlays at all (scatterplot). */
+export function supportsOverlays(inner) {
+	return Array.isArray(inner?.overlays);
+}
+
 /** `ov<id>_<key>` for an overlay id and channel key. */
 export function overlayPortName(overlayId, key) {
 	return `ov${overlayId}_${key}`;
@@ -104,7 +126,8 @@ export function plotNodeSlots(inputs = [], outputs = []) {
 	// Series structure from the input ports (x starts a series, ys joins it).
 	// Overlay ports (tagged `overlay: { id, name }`) are NOT series: they are
 	// collected per overlay and laid out after the series groups, each under a
-	// header carrying the overlay's name.
+	// header carrying the overlay's name. The trailing "Line" drop port carries
+	// `overlay: { id: null, name: 'Line' }` and so forms its own last group.
 	const series = [];
 	const overlayGroups = [];
 	for (const p of inputs) {
@@ -787,10 +810,11 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			// Overlays (reference lines / bands): one input port per channel of the
 			// overlay's current form, tagged `overlay: { id, name }` so plotNodeSlots /
 			// WorkflowNode render them as a group headed by the overlay's name beneath
-			// the series groups. `dynamic` only where the channel table says so (the
-			// line `at` channel takes many columns). No trailing empty overlay group:
-			// overlays are created in the panel or via MCP, and a form must be chosen
-			// before any port exists. No passthrough outputs (see addPassthrough).
+			// the series groups. `dynamic` follows the channel table, where no channel
+			// is dynamic any more (one column per channel, decision 2026-09-18), so a
+			// drop on a wired `at` replaces the column exactly as on an x port. No
+			// passthrough outputs (see addPassthrough). Bands are created in the panel
+			// or via MCP (a ribbon needs three wires, a repeating band none).
 			for (const ov of plot.plot?.overlays ?? []) {
 				if (ov?.id == null) continue;
 				for (const spec of OverlayClass.channelsFor(ov.kind, ov.form)) {
@@ -801,6 +825,18 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 						channel: spec.key
 					});
 				}
+			}
+			// Trailing "Line" group: one always-visible drop target that creates a
+			// Line overlay on drop (see NEW_LINE_PORT). Emitted only where the inner
+			// carries overlays at all, the same key the loop above reads.
+			if (supportsOverlays(plot.plot)) {
+				inputs.push({
+					...makeNodePort(NEW_LINE_PORT, 'input', 'column', false),
+					display: 'line',
+					overlay: { id: null, name: 'Line' },
+					newOverlay: true,
+					channel: 'at'
+				});
 			}
 		}
 

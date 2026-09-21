@@ -172,8 +172,8 @@ class, two kinds, and a `form` per kind that decides which channels exist:
 
 | kind | form | channels (all read on the axis in brackets) |
 |---|---|---|
-| line | `vertical` | `at` (x), dynamic: many columns allowed |
-| line | `horizontal` | `at` (y), dynamic |
+| line | `vertical` | `at` (x), one column (decision 2026-09-18: one Line per source, so each has its own colour, stroke and label; a saved or MCP `at` with several columns is split into one Line overlay per column) |
+| line | `horizontal` | `at` (y), one column |
 | band | `ribbon` | `x` (x), `lower` (y), `upper` (y) |
 | band | `horizontal` | `lower` (y), `upper` (y) |
 | band | `vertical` | `start` (x), `end` (x) |
@@ -187,12 +187,12 @@ with alpha, default the NightBand grey `#2C2C2C30` for repeating/vertical/
 horizontal, and the first series colour at ~20% alpha for ribbon), `edge`
 (boolean, off) with `edgeColour`/`edgeWidth`.
 
-**Channel** = `{ columns: ColumnClass[], typed: number[] }` (`columns` holds
-many only for the dynamic `at`; every other channel holds at most one). A
+**Channel** = `{ columns: ColumnClass[], typed: number[] }` (every channel
+holds at most one column since 2026-09-18; the array shape is kept for
+persistence compatibility and for splitting legacy multi-column `at`). A
 channel is wired OR typed, never both: wiring clears `typed`, typing clears
 the wires. Typed input is a number or a comma-separated list. Resolution
-(`values()`): wired → the column's finite values (for `at`, the union over
-all wired columns); typed → the list; neither → empty. On a datetime x axis
+(`values()`): wired → the column's finite values; typed → the list; neither → empty. On a datetime x axis
 typed x values are stored in RAW axis units (milliseconds), which is what
 NightBand's date pickers always stored; the panel therefore enters them
 through a date-time picker rather than a number field. Wired x-channel
@@ -267,13 +267,21 @@ cleared. Channel pickers are the same `Column` component series x/y use
 ("Series N" groups of `xN` + dynamic `ysN`). It now also emits one group
 per overlay from `plot.plot.overlays`, headed by the overlay's name, with
 ports named `ov<id>_<channel>` (e.g. `ov3_at`, `ov3_lower`), display
-`at (x)`, `lower (y)`, ... per the table, `dynamic: true` only for `at`.
+`at (x)`, `lower (y)`, ... per the table; no overlay port is dynamic.
 `plotNodeSlots`/`WorkflowNode.svelte` render the group under its header
-like a series group. There is NO trailing empty overlay group (a form must
-be chosen before ports exist); overlays are created in the panel or via
-MCP, and their ports then appear. Wire-apply and disconnect resolve
+like a series group. A trailing **`Line`** group with one always-visible
+port (`line`, port name `ovnew_line`; it accepts one drop at a time, each
+drop creating a new Line) follows the overlay groups,
+mirroring the empty "Series N+1" group (decision 2026-09-17: one port, not
+two; orientation is chosen in the control panel). Dropping a column on it
+creates a Line overlay in the default form (vertical) wired to `at`, in one
+undo step; the overlay then gets its own named group and the empty `Line`
+group reappears below. Bands remain panel-created (a ribbon needs three
+wires, a repeating band none). A heuristic single port that infers
+orientation was rejected: a threshold of 20 on an x axis of 0 to 48 lies
+inside the x range and would be drawn vertical. Wire-apply and disconnect resolve
 `ov<id>_<channel>` to the overlay channel's `columns` (replace for
-single channels, append for dynamic `at`) via the `OverlayClass` API:
+every channel is single since 2026-09-18) via the `OverlayClass` API:
 `setWire(key, refId)`, `addWire(key, refId)`, `removeWire(key, refId)`;
 `OverlayClass.channelsFor(kind, form)` returns the ordered
 `[{ key, axis: 'x'|'y', dynamic }]` list the port emitter iterates. Passthrough output ports are NOT emitted for overlay columns.
@@ -320,13 +328,12 @@ threshold simply typed into a horizontal line) on the same plot.
 
 ### Tests (Part B)
 
-Unit: channel resolution (wired/typed exclusivity, union over dynamic
-`at`, uniques + cap + warning, ribbon length mismatch warning, vertical
+Unit: channel resolution (wired/typed exclusivity, legacy multi-column
+`at` split into one Line per column on load, uniques + cap + warning, ribbon length mismatch warning, vertical
 band pairing); overlay toJSON/fromJSON round trip incl. `??` defaults;
 nightBands migration on a shipped demo; legend items; download data;
 domain extension; port emission (`ov<id>_<channel>` names, display,
-dynamic flag, no passthroughs) and wire-apply/disconnect for both a single
-and a dynamic channel; facet replication. E2E (Playwright): open the
+no dynamic flags, no passthroughs) and wire-apply/disconnect; facet replication. E2E (Playwright): open the
 Crossing demo, add a vertical line wired to `crossing` and a horizontal
 line wired to the lower limit, assert the SVG contains the expected
 `<line>` elements at the scaled positions; add a ribbon band from typed

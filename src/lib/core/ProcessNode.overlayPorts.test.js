@@ -10,7 +10,10 @@ import {
 	plotNodeSlots,
 	overlayPortName,
 	parseOverlayPort,
-	resolveOverlayPort
+	resolveOverlayPort,
+	NEW_LINE_PORT,
+	isNewLinePort,
+	supportsOverlays
 } from './ProcessNode.svelte.js';
 import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
 
@@ -105,11 +108,12 @@ describe('overlay port emission', () => {
 			`ov${line.id}_at`,
 			`ov${band.id}_x`,
 			`ov${band.id}_lower`,
-			`ov${band.id}_upper`
+			`ov${band.id}_upper`,
+			NEW_LINE_PORT // the always-visible trailing "Line" drop target
 		]);
 	});
 
-	it('each port carries the display, the dynamic flag from the table, and the group tag', () => {
+	it('each port carries the display, the group tag, and is never dynamic (one column per channel)', () => {
 		const core = makeCore();
 		const plot = makePlot();
 		const line = addOverlay(plot, 'line', 'horizontal');
@@ -124,7 +128,7 @@ describe('overlay port emission', () => {
 		expect(at).toMatchObject({
 			direction: 'input',
 			artifactKind: 'column',
-			dynamic: true,
+			dynamic: false,
 			display: 'at (y)',
 			channel: 'at',
 			overlay: { id: line.id, name: 'Line 1' }
@@ -139,6 +143,9 @@ describe('overlay port emission', () => {
 			overlay: { id: band.id, name: 'Band 1' }
 		});
 		expect(byName[`ov${band.id}_end`]).toMatchObject({ dynamic: false, display: 'end (x)' });
+		// No overlay port is dynamic (WorkflowNode would otherwise star it and say
+		// "accepts one or more columns").
+		expect(node.ports.inputs.filter((p) => p.overlay && p.dynamic)).toEqual([]);
 	});
 
 	it('a repeating band has no channels and therefore no ports; no trailing empty overlay group', () => {
@@ -149,8 +156,8 @@ describe('overlay port emission', () => {
 
 		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
 		const node = graph.nodes.find((n) => n.id === 'plot_9');
-		expect(node.ports.inputs.filter((p) => p.overlay)).toEqual([]);
-		expect(node.ports.inputs.map((p) => p.name)).toEqual(['x1', 'ys1', 'x2', 'ys2']);
+		expect(node.ports.inputs.filter((p) => p.overlay && !p.newOverlay)).toEqual([]);
+		expect(node.ports.inputs.map((p) => p.name)).toEqual(['x1', 'ys1', 'x2', 'ys2', NEW_LINE_PORT]);
 	});
 
 	it('changing an overlay form swaps its ports (the graph cache is invalidated)', () => {
@@ -194,13 +201,100 @@ describe('overlay port emission', () => {
 	});
 });
 
+describe('the trailing `Line` drop port (ovnew_line)', () => {
+	it('is named ovnew_line, never parses or resolves as an overlay port, and is recognised by isNewLinePort', () => {
+		expect(NEW_LINE_PORT).toBe('ovnew_line');
+		expect(parseOverlayPort(NEW_LINE_PORT)).toBeNull();
+		const plot = makePlot();
+		addOverlay(plot, 'line', 'vertical');
+		expect(resolveOverlayPort(plot.plot, NEW_LINE_PORT)).toBeNull();
+		expect(isNewLinePort(NEW_LINE_PORT)).toBe(true);
+		for (const name of ['ov0_at', 'ovnew_at', 'ys1', '', null, undefined]) {
+			expect(isNewLinePort(name)).toBe(false);
+		}
+	});
+
+	it('supportsOverlays keys on the inner carrying an overlays array', () => {
+		expect(supportsOverlays({ data: [], overlays: [] })).toBe(true);
+		expect(supportsOverlays({ data: [] })).toBe(false);
+		expect(supportsOverlays(null)).toBe(false);
+		expect(supportsOverlays({ overlays: {} })).toBe(false);
+	});
+
+	it('exists on a scatterplot with NO overlays, last, NOT dynamic, tagged as the new "Line" group', () => {
+		const core = makeCore();
+		const plot = makePlot();
+		core.plots.push(plot);
+		const node = getCachedProcessNodeGraph(core, makeAppConsts()).nodes.find(
+			(n) => n.id === 'plot_9'
+		);
+		const names = node.ports.inputs.map((p) => p.name);
+		expect(names).toEqual(['x1', 'ys1', 'x2', 'ys2', NEW_LINE_PORT]);
+		const port = node.ports.inputs.at(-1);
+		expect(port).toMatchObject({
+			name: NEW_LINE_PORT,
+			direction: 'input',
+			artifactKind: 'column',
+			dynamic: false,
+			display: 'line',
+			newOverlay: true,
+			overlay: { id: null, name: 'Line' }
+		});
+		expect(port.axis).toBeUndefined();
+		expect(port.series).toBeUndefined();
+		// Exactly one such port, and no passthrough / edge for it.
+		expect(node.ports.inputs.filter((p) => p.newOverlay)).toHaveLength(1);
+	});
+
+	it('follows the named overlay groups when overlays exist', () => {
+		const core = makeCore();
+		const plot = makePlot();
+		const line = addOverlay(plot, 'line', 'vertical');
+		const band = addOverlay(plot, 'band', 'horizontal');
+		core.plots.push(plot);
+		const node = getCachedProcessNodeGraph(core, makeAppConsts()).nodes.find(
+			(n) => n.id === 'plot_9'
+		);
+		const names = node.ports.inputs.map((p) => p.name);
+		expect(names.at(-1)).toBe(NEW_LINE_PORT);
+		expect(names.indexOf(NEW_LINE_PORT)).toBeGreaterThan(names.indexOf(`ov${line.id}_at`));
+		expect(names.indexOf(NEW_LINE_PORT)).toBeGreaterThan(names.indexOf(`ov${band.id}_upper`));
+	});
+
+	it('is absent on plot types whose inner has no overlays array (boxplot, histogram, tableplot)', () => {
+		const core = makeCore();
+		core.plots.push({ id: 1, name: 'B', type: 'boxplot', plot: { data: [] } });
+		core.plots.push({ id: 2, name: 'H', type: 'histogram', plot: { data: [] } });
+		core.plots.push({ id: 3, name: 'T', type: 'tableplot', plot: { columnRefs: [] } });
+		const consts = makeAppConsts();
+		consts.plotMap.set('boxplot', { defaultInputs: ['x', 'y'] });
+		consts.plotMap.set('histogram', { defaultInputs: ['data'] });
+		consts.plotMap.set('tableplot', { defaultInputs: [] });
+		const graph = getCachedProcessNodeGraph(core, consts);
+		for (const id of ['plot_1', 'plot_2', 'plot_3']) {
+			const node = graph.nodes.find((n) => n.id === id);
+			expect(node.ports.inputs.map((p) => p.name)).not.toContain(NEW_LINE_PORT);
+			expect(node.ports.inputs.some((p) => p.newOverlay || p.overlay)).toBe(false);
+		}
+	});
+
+	it('never draws an edge into it', () => {
+		const core = makeCore();
+		const plot = makePlot();
+		addOverlay(plot, 'line', 'vertical').addWire('at', 3);
+		core.plots.push(plot);
+		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
+		expect(graph.connections.some((c) => c.toPort === NEW_LINE_PORT)).toBe(false);
+	});
+});
+
 describe('overlay edges', () => {
-	it('draws one edge per wired column from the column owner to ov<id>_<key>', () => {
+	it('draws ONE edge per wired channel from the column owner to ov<id>_<key> (a second wire replaces)', () => {
 		const core = makeCore();
 		const plot = makePlot();
 		const line = addOverlay(plot, 'line', 'vertical');
 		line.addWire('at', 3);
-		line.addWire('at', 4);
+		line.addWire('at', 4); // replaces 3: the channel holds one column
 		const band = addOverlay(plot, 'band', 'horizontal');
 		band.setWire('lower', 4);
 		core.plots.push(plot);
@@ -208,7 +302,7 @@ describe('overlay edges', () => {
 		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
 		const into = graph.connections.filter((c) => c.toId === 'plot_9');
 		const pick = (toPort) => into.filter((c) => c.toPort === toPort).map((c) => c.fromId);
-		expect(pick(`ov${line.id}_at`)).toEqual(['data_3', 'data_4']);
+		expect(pick(`ov${line.id}_at`)).toEqual(['data_4']);
 		expect(pick(`ov${band.id}_lower`)).toEqual(['data_4']);
 		expect(pick(`ov${band.id}_upper`)).toEqual([]); // unwired channel: no edge
 		// Series edges are untouched.
@@ -253,7 +347,7 @@ describe('plotNodeSlots with overlay groups', () => {
 			{ name: 'ys1', axis: 'y', series: 1 },
 			{ name: 'x2', axis: 'x', series: 2, newSeries: true },
 			{ name: 'ys2', axis: 'y', series: 2, newSeries: true },
-			{ name: 'ov0_at', overlay: { id: 0, name: 'Line 1' }, channel: 'at', dynamic: true },
+			{ name: 'ov0_at', overlay: { id: 0, name: 'Line 1' }, channel: 'at', dynamic: false },
 			{ name: 'ov1_lower', overlay: { id: 1, name: 'Band 1' }, channel: 'lower' },
 			{ name: 'ov1_upper', overlay: { id: 1, name: 'Band 1' }, channel: 'upper' }
 		];
@@ -283,6 +377,53 @@ describe('plotNodeSlots with overlay groups', () => {
 		expect(outSlot('col_1')).toBe(1);
 		expect(outSlot('col_18')).toBe(11);
 		expect(totalSlots).toBe(12);
+	});
+
+	it('lays the trailing Line port out as its own headed group after every named overlay', () => {
+		const inputs = [
+			{ name: 'x1', axis: 'x', series: 1 },
+			{ name: 'ys1', axis: 'y', series: 1 },
+			{ name: 'ov0_at', overlay: { id: 0, name: 'Line 1' }, channel: 'at', dynamic: false },
+			{
+				name: 'ovnew_line',
+				overlay: { id: null, name: 'Line' },
+				newOverlay: true,
+				dynamic: false,
+				display: 'line'
+			}
+		];
+		const outputs = [{ name: 'col_18', metric: true }];
+		const { inputRows, outputRows, totalSlots } = plotNodeSlots(inputs, outputs);
+		expect(inputRows.map((r) => (r.kind === 'header' ? `H:${r.label}` : r.port.name))).toEqual([
+			'H:Series 1',
+			'x1',
+			'ys1',
+			'H:Line 1',
+			'ov0_at',
+			'H:Line',
+			'ovnew_line'
+		]);
+		const lineHeader = inputRows.find((r) => r.kind === 'header' && r.label === 'Line');
+		expect(lineHeader.slot).toBe(5);
+		expect(lineHeader.overlayId).toBeNull();
+		expect(inputRows.find((r) => r.port?.name === 'ovnew_line').slot).toBe(6);
+		// The metric output trails the Line group; nothing shares a row with it.
+		expect(outputRows.find((r) => r.port.name === 'col_18').slot).toBe(7);
+		expect(totalSlots).toBe(8);
+	});
+
+	it('the Line group alone (scatterplot with no overlays) still groups', () => {
+		const inputs = [
+			{ name: 'x1', axis: 'x', series: 1, newSeries: true },
+			{ name: 'ys1', axis: 'y', series: 1, newSeries: true },
+			{ name: 'ovnew_line', overlay: { id: null, name: 'Line' }, newOverlay: true, dynamic: false }
+		];
+		const { inputRows, totalSlots } = plotNodeSlots(inputs, []);
+		expect(inputRows.filter((r) => r.kind === 'header').map((r) => r.label)).toEqual([
+			'Series 1',
+			'Line'
+		]);
+		expect(totalSlots).toBe(5);
 	});
 
 	it('an overlay-only port list still groups (no series ports needed)', () => {

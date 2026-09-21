@@ -32,7 +32,13 @@ describe('capability catalogue advertises overlays where the class supports them
 		const caps = describeCapabilities();
 		const scatter = caps.plots.find((p) => p.id === 'scatterplot');
 		expect(scatter.overlays).toEqual(describeOverlayForms());
-		expect(scatter.overlays.line.vertical).toEqual([{ key: 'at', axis: 'x', dynamic: true }]);
+		expect(scatter.overlays.line.vertical).toEqual([{ key: 'at', axis: 'x', dynamic: false }]);
+		// No channel is dynamic (one column per channel, decision 2026-09-18).
+		for (const forms of Object.values(scatter.overlays)) {
+			for (const specs of Object.values(forms)) {
+				for (const c of specs) expect(c.dynamic).toBe(false);
+			}
+		}
 		expect(scatter.overlays.band.ribbon.map((c) => c.key)).toEqual(['x', 'lower', 'upper']);
 		const acto = caps.plots.find((p) => p.id === 'actogram');
 		expect(acto.overlays).toBeUndefined();
@@ -90,17 +96,56 @@ describe('normalizeOverlaySpecs', () => {
 		});
 	});
 
-	it('a dynamic `at` takes several columns or several typed values', () => {
-		const [wired, typed] = normalizeOverlaySpecs(
+	it('an `at` list of several WIRES becomes one Line per column (shared style); several typed values stay one', () => {
+		const out = normalizeOverlaySpecs(
 			[
-				{ kind: 'line', channels: { at: ['crossing', { column: 3 }] } },
+				{
+					kind: 'line',
+					form: 'horizontal',
+					name: 'limits',
+					label: 'limit',
+					colour: '#C0392B',
+					stroke: 'none',
+					channels: { at: ['crossing', { column: 3 }] }
+				},
 				{ kind: 'line', channels: { at: [1, 2.5, 4] } }
 			],
 			resolve
 		);
-		expect(wired.form).toBe('vertical'); // default form for a line
-		expect(wired.channels.at).toEqual({ columns: [{ refId: 2 }, { refId: 3 }], typed: [] });
+		expect(out).toHaveLength(3); // 2 (split) + 1 (typed)
+		const [a, b, typed] = out;
+		expect(a).toEqual({
+			kind: 'line',
+			form: 'horizontal',
+			name: 'limits',
+			label: 'limit',
+			colour: '#C0392B',
+			stroke: 'none',
+			channels: { at: { columns: [{ refId: 2 }], typed: [] } }
+		});
+		// The copy shares form, style and label; it has NO name so the class mints
+		// the usual "Line N" when it is added.
+		expect(b).toEqual({
+			kind: 'line',
+			form: 'horizontal',
+			label: 'limit',
+			colour: '#C0392B',
+			stroke: 'none',
+			channels: { at: { columns: [{ refId: 3 }], typed: [] } }
+		});
+		expect(typed.form).toBe('vertical'); // default form for a line
 		expect(typed.channels.at).toEqual({ columns: [], typed: [1, 2.5, 4] });
+	});
+
+	it('a one-entry wire list and the raw { columns } shape with several columns follow the same rule', () => {
+		const one = normalizeOverlaySpecs([{ kind: 'line', channels: { at: ['crossing'] } }], resolve);
+		expect(one).toHaveLength(1);
+		expect(one[0].channels.at).toEqual({ columns: [{ refId: 2 }], typed: [] });
+		const raw = normalizeOverlaySpecs(
+			[{ kind: 'line', channels: { at: { columns: [{ refId: 2 }, { refId: 3 }] } } }],
+			resolve
+		);
+		expect(raw.map((o) => o.channels.at.columns)).toEqual([[{ refId: 2 }], [{ refId: 3 }]]);
 	});
 
 	it('defaults: band → ribbon; no channels → empty channel map; style keys pass through', () => {
@@ -134,7 +179,7 @@ describe('normalizeOverlaySpecs', () => {
 		).toThrow(/has no channels/);
 	});
 
-	it('rejects mixed typed/wired lists, several columns on a single channel, and unknown names', () => {
+	it('rejects mixed typed/wired lists, several columns on a band channel, and unknown names', () => {
 		expect(() =>
 			normalizeOverlaySpecs([{ kind: 'line', channels: { at: [3, 'crossing'] } }], resolve)
 		).toThrow(/mix of typed values and columns/);
@@ -172,6 +217,7 @@ describe('normalizeOverlaySpecs', () => {
 			],
 			resolve
 		);
+		expect(jsons).toHaveLength(3); // the two-wire `at` split into two lines
 		expect(overlayColumnIds(jsons)).toEqual([2, 7]);
 		const remapped = remapOverlayColumnIds(
 			jsons,
@@ -180,8 +226,9 @@ describe('normalizeOverlaySpecs', () => {
 				[7, 1]
 			])
 		);
-		expect(remapped[0].channels.at.columns).toEqual([{ refId: 0 }, { refId: 1 }]);
-		expect(remapped[1].channels).toEqual({
+		expect(remapped[0].channels.at.columns).toEqual([{ refId: 0 }]);
+		expect(remapped[1].channels.at.columns).toEqual([{ refId: 1 }]);
+		expect(remapped[2].channels).toEqual({
 			lower: { columns: [], typed: [1] },
 			upper: { columns: [], typed: [2] }
 		});
@@ -217,6 +264,37 @@ describe('add_plot with overlays', () => {
 		expect(inner.overlays[0].channels.at.columns).toEqual([{ refId: 2 }]);
 		expect(inner.overlays[2].fill).toBe('#FF000020');
 		expect(inner.nightBands).toBeUndefined();
+	});
+
+	it('add_plot with a two-column `at` reports TWO lines, "Line N" named, same style, one column each', () => {
+		const s = sessionWithColumns('plot-overlays-split');
+		const res = s.addPlot('scatterplot', { x: 'x', y: 'y' }, [
+			{
+				kind: 'line',
+				form: 'vertical',
+				label: 'alert',
+				colour: '#C0392B',
+				channels: { at: ['crossing', 'lower limit'] }
+			}
+		]);
+		expect(res.overlays).toHaveLength(2);
+		expect(res.overlays[0]).toMatchObject({
+			name: 'Line 1',
+			label: 'alert',
+			channels: { at: { columns: [2], typed: [] } }
+		});
+		expect(res.overlays[1]).toMatchObject({
+			name: 'Line 2',
+			label: 'alert',
+			channels: { at: { columns: [3], typed: [] } }
+		});
+		expect(res.overlays[1].id).not.toBe(res.overlays[0].id);
+		const inner = s.exportSessionObject().plots[0].plot;
+		expect(inner.overlays.map((o) => o.colour)).toEqual(['#C0392B', '#C0392B']);
+		expect(inner.overlays.map((o) => o.channels.at.columns)).toEqual([
+			[{ refId: 2 }],
+			[{ refId: 3 }]
+		]);
 	});
 
 	it('a plot without overlays returns no overlays key', () => {
