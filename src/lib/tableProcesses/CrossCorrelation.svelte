@@ -103,11 +103,19 @@
 <script>
 	// @ts-nocheck
 	import { onMount, untrack } from 'svelte';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { saveStaticDataAsCSV } from '$lib/components/plotbits/helpers/save.svelte.js';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { core } from '$lib/core/core.svelte.js';
-	let { p = $bindable() } = $props();
+	// `hideInputs` is set by TableProcess.svelte when the node is chained from another
+	// analysis (its inputs are then wired for it), the same contract as the other nodes.
+	let { p = $bindable(), hideInputs = false } = $props();
 	let mounted = $state(false);
+
+	// The node's own output columns must not be offered as inputs.
+	let outIds = $derived(
+		Object.values(p.args.out ?? {}).filter((id) => typeof id === 'number' && id >= 0)
+	);
 	let result = $state({ lag: [], correlation: [], pvalue: [], warnings: [] });
 
 	const getTableData = () => ({
@@ -138,29 +146,36 @@
 			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
 	});
+	function restore(cached) {
+		result = cached;
+		p.warnings = cached?.warnings ?? [];
+	}
+	// Nothing changed since this node last ran? Put the previous result back
+	// rather than recomputing: result lives only in this component, so it is
+	// lost whenever an instance is destroyed (a view switch) or never seen by a
+	// second instance (see `seenHash` below).
+	const sync = () => restoreOrCompute(memo, getHash, restore, recompute);
 	onMount(() => {
 		mounted = true;
-		// Nothing changed since this node last ran? Put the previous result back
-		// rather than recomputing: result lives only in this component, so it
-		// was lost when the view switch destroyed the last instance.
-		restoreOrCompute(
-			memo,
-			getHash,
-			(cached) => {
-				result = cached;
-				p.warnings = cached?.warnings ?? [];
-			},
-			recompute
-		);
+		seenHash = getHash;
+		sync();
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
 	// and rebuilds this component) does not recompute unchanged inputs.
 	const memo = nodeMemo(p, 'tableprocess');
+	// Per-instance "have I handled this hash" guard. The memo is shared by every
+	// mounted instance of this node, and there are two at once whenever the node
+	// is expanded on the canvas AND selected in the control panel. Guarding on
+	// `hash === memo.hash` let the first instance claim the hash and left the
+	// second one stale: its results kept the old rows after the inputs changed.
+	// Each instance now tracks what it has seen itself; the microtask then either
+	// restores the result the other instance already computed or computes it.
+	let seenHash = '';
 	$effect(() => {
 		const hash = getHash;
-		if (!mounted || hash === memo.hash) return;
-		memo.hash = hash;
-		queueMicrotask(() => untrack(() => recompute()));
+		if (!mounted || hash === seenHash) return;
+		seenHash = hash;
+		queueMicrotask(() => untrack(sync));
 	});
 
 	function openFullTable() {
@@ -180,6 +195,16 @@
 </script>
 
 <div class="control-input-vertical">
+	{#if !hideInputs}
+		<div class="control-input">
+			<p>Series A</p>
+			<ColumnSelector bind:value={p.args.xIN} excludeColIds={outIds} />
+		</div>
+		<div class="control-input">
+			<p>Series B</p>
+			<ColumnSelector bind:value={p.args.yIN} excludeColIds={outIds} />
+		</div>
+	{/if}
 	<ControlInput label="Method">
 		<AttributeSelect
 			bind:value={p.args.method}
@@ -200,20 +225,22 @@
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">{result.aName} × {result.bName}</summary>
-			<table class="d-table">
-				<thead>
-					<tr><th>lag</th><th>r</th><th>p</th></tr>
-				</thead>
-				<tbody>
-					{#each result.lag as lg, i (lg)}
-						<tr class:peak={lg === result.peakLag}>
-							<td class="num">{lg}</td>
-							<td class="num">{fmt(result.correlation[i])}</td>
-							<td class="num">{fmt(result.pvalue[i])}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+			<div class="d-table-wrap">
+				<table class="d-table">
+					<thead>
+						<tr><th>lag</th><th>r</th><th>p</th></tr>
+					</thead>
+					<tbody>
+						{#each result.lag as lg, i (lg)}
+							<tr class:peak={lg === result.peakLag}>
+								<td class="num">{lg}</td>
+								<td class="num">{fmt(result.correlation[i])}</td>
+								<td class="num">{fmt(result.pvalue[i])}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 			<div class="tp-stat-actions">
 				<button class="tp-stat-btn" onclick={openFullTable}>Open full table</button>
 				<button
@@ -246,6 +273,11 @@
 		margin: var(--space-1) 0 0;
 	}
 	.tp-output-panel {
+		/* The panel sits in a centred flex column (.control-input-vertical); without
+		   these it keeps its content width and overflows both edges symmetrically. */
+		align-self: stretch;
+		min-width: 0;
+		box-sizing: border-box;
 		margin-top: var(--space-2);
 		padding: var(--space-2);
 		border: 1px solid var(--color-lightness-85);
@@ -277,8 +309,15 @@
 		color: var(--color-text-muted);
 		padding: 0.1rem 0.3rem;
 	}
+	/* Scrolls sideways in a narrow panel instead of letting the browser wrap
+	   numbers one character per line. */
+	.d-table-wrap {
+		overflow-x: auto;
+	}
+	.d-table th,
 	.d-table td {
 		padding: 0.1rem 0.3rem;
+		white-space: nowrap;
 	}
 	.d-table .num {
 		text-align: right;

@@ -158,12 +158,20 @@
 <script>
 	// @ts-nocheck
 	import { onMount, untrack } from 'svelte';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { saveStaticDataAsCSV } from '$lib/components/plotbits/helpers/save.svelte.js';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { core, pushObj } from '$lib/core/core.svelte.js';
 	import { Column } from '$lib/core/Column.svelte';
-	let { p = $bindable() } = $props();
+	// `hideInputs` is set by TableProcess.svelte when the node is chained from another
+	// analysis (its inputs are then wired for it), the same contract as the other nodes.
+	let { p = $bindable(), hideInputs = false } = $props();
 	let mounted = $state(false);
+
+	// The node's own output columns must not be offered as inputs.
+	let outIds = $derived(
+		Object.values(p.args.out ?? {}).filter((id) => typeof id === 'number' && id >= 0)
+	);
 	let result = $state({ rows: [], warnings: [], converged: false });
 
 	const getTableData = () => ({
@@ -188,6 +196,15 @@
 			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
 	});
+	function restore(cached) {
+		result = cached;
+		p.warnings = cached?.warnings ?? [];
+	}
+	// Nothing changed since this node last ran? Put the previous result back
+	// rather than recomputing: result lives only in this component, so it is
+	// lost whenever an instance is destroyed (a view switch) or never seen by a
+	// second instance (see `seenHash` below).
+	const sync = () => restoreOrCompute(memo, getHash, restore, recompute);
 	onMount(() => {
 		// Backfill any output column missing from an older saved session — the per-observation
 		// outcome/eta/fitted outputs were added after this node first shipped, so old sessions lack
@@ -209,27 +226,25 @@
 			}
 		}
 		mounted = true;
-		// Nothing changed since this node last ran? Put the previous result back
-		// rather than recomputing: result lives only in this component, so it
-		// was lost when the view switch destroyed the last instance.
-		restoreOrCompute(
-			memo,
-			getHash,
-			(cached) => {
-				result = cached;
-				p.warnings = cached?.warnings ?? [];
-			},
-			recompute
-		);
+		seenHash = getHash;
+		sync();
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
 	// and rebuilds this component) does not recompute unchanged inputs.
 	const memo = nodeMemo(p, 'tableprocess');
+	// Per-instance "have I handled this hash" guard. The memo is shared by every
+	// mounted instance of this node, and there are two at once whenever the node
+	// is expanded on the canvas AND selected in the control panel. Guarding on
+	// `hash === memo.hash` let the first instance claim the hash and left the
+	// second one stale: its results kept the old rows after the inputs changed.
+	// Each instance now tracks what it has seen itself; the microtask then either
+	// restores the result the other instance already computed or computes it.
+	let seenHash = '';
 	$effect(() => {
 		const hash = getHash;
-		if (!mounted || hash === memo.hash) return;
-		memo.hash = hash;
-		queueMicrotask(() => untrack(() => recompute()));
+		if (!mounted || hash === seenHash) return;
+		seenHash = hash;
+		queueMicrotask(() => untrack(sync));
 	});
 
 	function openFullTable() {
@@ -249,6 +264,16 @@
 </script>
 
 <div class="control-input-vertical">
+	{#if !hideInputs}
+		<div class="control-input">
+			<p>Outcome (binary)</p>
+			<ColumnSelector bind:value={p.args.yIN} excludeColIds={outIds} />
+		</div>
+		<div class="control-input">
+			<p>Predictors</p>
+			<ColumnSelector multiple bind:value={p.args.xIN} excludeColIds={outIds} />
+		</div>
+	{/if}
 	{#if result.rows.length}
 		<p class="hint">
 			Outcome <strong>{result.outcomeName}</strong> = 1 for “{result.positiveClass}”. n = {result.n},
@@ -256,23 +281,25 @@
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Coefficients</summary>
-			<table class="d-table">
-				<thead>
-					<tr><th>term</th><th>coef</th><th>OR</th><th>p</th></tr>
-				</thead>
-				<tbody>
-					{#each result.rows as row (row.term)}
-						<tr
-							title={`${row.term}: coef=${fmt(row.coef)} (SE ${fmt(row.se)}), OR=${fmt(row.oddsRatio)} [${fmt(row.ciLow)}, ${fmt(row.ciHigh)}], p=${fmt(row.pvalue)}`}
-						>
-							<td class="term">{row.term}</td>
-							<td class="num">{fmt(row.coef)}</td>
-							<td class="num">{fmt(row.oddsRatio)}</td>
-							<td class="num">{fmt(row.pvalue)}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+			<div class="d-table-wrap">
+				<table class="d-table">
+					<thead>
+						<tr><th>term</th><th>coef</th><th>OR</th><th>p</th></tr>
+					</thead>
+					<tbody>
+						{#each result.rows as row (row.term)}
+							<tr
+								title={`${row.term}: coef=${fmt(row.coef)} (SE ${fmt(row.se)}), OR=${fmt(row.oddsRatio)} [${fmt(row.ciLow)}, ${fmt(row.ciHigh)}], p=${fmt(row.pvalue)}`}
+							>
+								<td class="term"><span class="term-name">{row.term}</span></td>
+								<td class="num">{fmt(row.coef)}</td>
+								<td class="num">{fmt(row.oddsRatio)}</td>
+								<td class="num">{fmt(row.pvalue)}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 			<div class="tp-stat-actions">
 				<button class="tp-stat-btn" onclick={openFullTable}>Open full table</button>
 				<button
@@ -305,6 +332,11 @@
 		margin: var(--space-1) 0 0;
 	}
 	.tp-output-panel {
+		/* The panel sits in a centred flex column (.control-input-vertical); without
+		   these it keeps its content width and overflows both edges symmetrically. */
+		align-self: stretch;
+		min-width: 0;
+		box-sizing: border-box;
 		margin-top: var(--space-2);
 		padding: var(--space-2);
 		border: 1px solid var(--color-lightness-85);
@@ -339,12 +371,28 @@
 	.d-table th:first-child {
 		text-align: left;
 	}
+	/* Scrolls sideways in a narrow panel instead of letting the browser wrap
+	   numbers one character per line. */
+	.d-table-wrap {
+		overflow-x: auto;
+	}
+	.d-table th,
 	.d-table td {
 		padding: 0.1rem 0.3rem;
+		white-space: nowrap;
 	}
 	.d-table .term {
 		text-align: left;
-		white-space: nowrap;
+	}
+	/* Long names would push every statistic past the fold; clip them (the full
+	   name is in the row tooltip and in the full table). A table cell ignores
+	   max-width under auto layout, so the clip lives on an inline-block span. */
+	.d-table .term-name {
+		display: inline-block;
+		max-width: 6.5rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		vertical-align: bottom;
 	}
 	.d-table .num {
 		text-align: right;

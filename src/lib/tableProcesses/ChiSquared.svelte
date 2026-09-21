@@ -35,7 +35,7 @@
 		effectSizeLabel,
 		groupsToTable
 	} from '$lib/utils/chisquare.js';
-	import { fisherExact, fisherExactFromColumns } from '$lib/utils/fisherExact.js';
+	import { fisherExact } from '$lib/utils/fisherExact.js';
 
 	// User-facing name only. The registry key is the FILENAME (ChiSquared), and
 	// saved sessions store that key in `name`, so the file is deliberately NOT
@@ -130,8 +130,6 @@
 
 		if (testType === 'fisher') {
 			if (!isRef(argsIN.xIN) || !isRef(argsIN.yIN)) return [null, false];
-			const rowVar = getColumnById(argsIN.xIN);
-			const colVar = getColumnById(argsIN.yIN);
 			const builtF = buildTable(argsIN);
 			warnings.push(...builtF.warnings);
 			const fx =
@@ -359,8 +357,16 @@
 <script>
 	// @ts-nocheck
 	import { onMount, untrack } from 'svelte';
-	let { p = $bindable() } = $props();
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	// `hideInputs` is set by TableProcess.svelte when the node is chained from another
+	// analysis (its inputs are then wired for it), the same contract as the other nodes.
+	let { p = $bindable(), hideInputs = false } = $props();
 	let mounted = $state(false);
+
+	// The node's own output columns must not be offered as inputs.
+	let outIds = $derived(
+		Object.values(p.args.out ?? {}).filter((id) => typeof id === 'number' && id >= 0)
+	);
 	let result = $state({ statistic: NaN, pvalue: NaN, df: NaN, warnings: [] });
 
 	function recompute() {
@@ -387,33 +393,60 @@
 			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
 	});
+	function restore(cached) {
+		result = cached;
+		p.warnings = cached?.warnings ?? [];
+	}
+	// Nothing changed since this node last ran? Put the previous result back
+	// rather than recomputing: result lives only in this component, so it is
+	// lost whenever an instance is destroyed (a view switch) or never seen by a
+	// second instance (see `seenHash` below).
+	const sync = () => restoreOrCompute(memo, getHash, restore, recompute);
 	onMount(() => {
 		mounted = true;
-		// Nothing changed since this node last ran? Put the previous result back
-		// rather than recomputing: result lives only in this component, so it
-		// was lost when the view switch destroyed the last instance.
-		restoreOrCompute(
-			memo,
-			getHash,
-			(cached) => {
-				result = cached;
-				p.warnings = cached?.warnings ?? [];
-			},
-			recompute
-		);
+		seenHash = getHash;
+		sync();
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
 	// and rebuilds this component) does not recompute unchanged inputs.
 	const memo = nodeMemo(p, 'tableprocess');
+	// Per-instance "have I handled this hash" guard. The memo is shared by every
+	// mounted instance of this node, and there are two at once whenever the node
+	// is expanded on the canvas AND selected in the control panel. Guarding on
+	// `hash === memo.hash` let the first instance claim the hash and left the
+	// second one stale: its results kept the old rows after the inputs changed.
+	// Each instance now tracks what it has seen itself; the microtask then either
+	// restores the result the other instance already computed or computes it.
+	let seenHash = '';
 	$effect(() => {
 		const hash = getHash;
-		if (!mounted || hash === memo.hash) return;
-		memo.hash = hash;
-		queueMicrotask(() => untrack(() => recompute()));
+		if (!mounted || hash === seenHash) return;
+		seenHash = hash;
+		queueMicrotask(() => untrack(sync));
 	});
 </script>
 
 <div class="control-input-vertical">
+	{#if !hideInputs}
+		<!-- The two ports read differently per test and input format, so the
+		     labels follow the choices below rather than the raw port names. -->
+		<div class="control-input">
+			<p>
+				{p.args.testType === 'goodness'
+					? 'Column to test'
+					: p.args.dataFormat === 'groups'
+						? 'Group 1'
+						: 'Variable 1 (rows)'}
+			</p>
+			<ColumnSelector bind:value={p.args.xIN} excludeColIds={outIds} />
+		</div>
+		{#if p.args.testType !== 'goodness'}
+			<div class="control-input">
+				<p>{p.args.dataFormat === 'groups' ? 'Group 2' : 'Variable 2 (columns)'}</p>
+				<ColumnSelector bind:value={p.args.yIN} excludeColIds={outIds} />
+			</div>
+		{/if}
+	{/if}
 	<ControlInput label="Test">
 		<AttributeSelect
 			bind:value={p.args.testType}
@@ -504,42 +537,46 @@
 		{#if (result.testType === 'independence' || result.testType === 'fisher') && result.table?.length}
 			<details class="tp-output-panel" open>
 				<summary class="tp-output-summary">Contingency table</summary>
-				<table class="d-table">
-					<thead>
-						<tr
-							><th></th>{#each result.colLabels as c (c)}<th>{c}</th>{/each}</tr
-						>
-					</thead>
-					<tbody>
-						{#each result.table as row, r (result.rowLabels[r])}
-							<tr>
-								<td class="rowlab">{result.rowLabels[r]}</td>
-								<!-- Key on the COLUMN INDEX, not the cell value: two equal counts in
+				<div class="d-table-wrap">
+					<table class="d-table">
+						<thead>
+							<tr
+								><th></th>{#each result.colLabels as c (c)}<th>{c}</th>{/each}</tr
+							>
+						</thead>
+						<tbody>
+							{#each result.table as row, r (result.rowLabels[r])}
+								<tr>
+									<td class="rowlab">{result.rowLabels[r]}</td>
+									<!-- Key on the COLUMN INDEX, not the cell value: two equal counts in
 								     one row (very common — a table with two zeros) produced the same
 								     key and crashed the render with each_key_duplicate. -->
-								{#each row as cell, c (c)}<td class="num">{cell}</td>{/each}
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+									{#each row as cell, c (c)}<td class="num">{cell}</td>{/each}
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</details>
 		{:else if result.testType === 'goodness' && result.observed?.length}
 			<details class="tp-output-panel" open>
 				<summary class="tp-output-summary">Observed vs expected</summary>
-				<table class="d-table">
-					<thead>
-						<tr><th>category</th><th>obs</th><th>exp</th></tr>
-					</thead>
-					<tbody>
-						{#each result.observed as o, i (result.labels[i])}
-							<tr>
-								<td class="rowlab">{result.labels[i]}</td>
-								<td class="num">{o}</td>
-								<td class="num">{fmt(result.expected?.[i])}</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+				<div class="d-table-wrap">
+					<table class="d-table">
+						<thead>
+							<tr><th>category</th><th>obs</th><th>exp</th></tr>
+						</thead>
+						<tbody>
+							{#each result.observed as o, i (result.labels[i])}
+								<tr>
+									<td class="rowlab">{result.labels[i]}</td>
+									<td class="num">{o}</td>
+									<td class="num">{fmt(result.expected?.[i])}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</details>
 		{/if}
 	{/if}
@@ -563,6 +600,11 @@
 		margin: var(--space-1) 0 0;
 	}
 	.tp-output-panel {
+		/* The panel sits in a centred flex column (.control-input-vertical); without
+		   these it keeps its content width and overflows both edges symmetrically. */
+		align-self: stretch;
+		min-width: 0;
+		box-sizing: border-box;
 		margin-top: var(--space-2);
 		padding: var(--space-2);
 		border: 1px solid var(--color-lightness-85);
@@ -597,8 +639,15 @@
 	.d-table th:first-child {
 		text-align: left;
 	}
+	/* Scrolls sideways in a narrow panel instead of letting the browser wrap
+	   numbers one character per line. */
+	.d-table-wrap {
+		overflow-x: auto;
+	}
+	.d-table th,
 	.d-table td {
 		padding: 0.1rem 0.3rem;
+		white-space: nowrap;
 	}
 	.d-table .rowlab {
 		text-align: left;

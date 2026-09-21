@@ -97,23 +97,37 @@
 		}
 	};
 
+	// Same precision rule as the sibling stats nodes (NormalityTest, LogisticRegression):
+	// four significant figures, trailing zeros trimmed, exponent form for the extremes.
 	const fmt = (v) =>
 		v == null || Number.isNaN(v)
 			? '—'
-			: Math.abs(v) >= 1000 || (Math.abs(v) < 0.01 && v !== 0)
+			: Math.abs(v) >= 1000 || (Math.abs(v) < 0.001 && v !== 0)
 				? Number(v).toExponential(2)
-				: Number(v).toFixed(2);
+				: Number(v)
+						.toPrecision(4)
+						.replace(/\.?0+$/, '');
+	// `n` is a count: print it whole, never "50.00".
+	const fmtStat = (key, v) => (key === 'n' && Number.isFinite(v) ? String(v) : fmt(v));
 </script>
 
 <script>
 	// @ts-nocheck
 	import { onMount, untrack } from 'svelte';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { saveStaticDataAsCSV } from '$lib/components/plotbits/helpers/save.svelte.js';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { core } from '$lib/core/core.svelte.js';
-	let { p = $bindable() } = $props();
+	// `hideInputs` is set by TableProcess.svelte when the node is chained from another
+	// analysis (its inputs are then wired for it), the same contract as the other nodes.
+	let { p = $bindable(), hideInputs = false } = $props();
 	let mounted = $state(false);
 	let result = $state({ rows: [] });
+
+	// The node's own output columns must not be offered as inputs (a summary of a summary).
+	let outIds = $derived(
+		Object.values(p.args.out ?? {}).filter((id) => typeof id === 'number' && id >= 0)
+	);
 
 	// A compact set for the in-node preview; the full table has every column.
 	const PREVIEW_STATS = ['n', 'mean', 'median', 'sd', 'min', 'max'];
@@ -141,29 +155,36 @@
 			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
 	});
+	function restore(cached) {
+		result = cached;
+		p.warnings = cached?.warnings ?? [];
+	}
+	// Nothing changed since this node last ran? Put the previous result back
+	// rather than recomputing: result lives only in this component, so it is
+	// lost whenever an instance is destroyed (a view switch) or never seen by a
+	// second instance (see `seenHash` below).
+	const sync = () => restoreOrCompute(memo, getHash, restore, recompute);
 	onMount(() => {
 		mounted = true;
-		// Nothing changed since this node last ran? Put the previous result back
-		// rather than recomputing: result lives only in this component, so it
-		// was lost when the view switch destroyed the last instance.
-		restoreOrCompute(
-			memo,
-			getHash,
-			(cached) => {
-				result = cached;
-				p.warnings = cached?.warnings ?? [];
-			},
-			recompute
-		);
+		seenHash = getHash;
+		sync();
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
 	// and rebuilds this component) does not recompute unchanged inputs.
 	const memo = nodeMemo(p, 'tableprocess');
+	// Per-instance "have I handled this hash" guard. The memo is shared by every
+	// mounted instance of this node, and there are two at once whenever the node
+	// is expanded on the canvas AND selected in the control panel. Guarding on
+	// `hash === memo.hash` let the first instance claim the hash and left the
+	// second one stale: its table kept the old rows after the inputs changed.
+	// Each instance now tracks what it has seen itself; the microtask then either
+	// restores the result the other instance already computed or computes it.
+	let seenHash = '';
 	$effect(() => {
 		const hash = getHash;
-		if (!mounted || hash === memo.hash) return;
-		memo.hash = hash;
-		queueMicrotask(() => untrack(() => recompute()));
+		if (!mounted || hash === seenHash) return;
+		seenHash = hash;
+		queueMicrotask(() => untrack(sync));
 	});
 
 	// Open full table → a live tableplot wired to the output columns (not a static snapshot).
@@ -184,27 +205,39 @@
 </script>
 
 <div class="control-input-vertical">
+	{#if !hideInputs}
+		<div class="control-input">
+			<p>Columns to describe</p>
+			<ColumnSelector multiple bind:value={p.args.yIN} excludeColIds={outIds} />
+		</div>
+	{/if}
 	{#if result.rows.length}
 		<p class="hint">
 			{result.rows.length} variable{result.rows.length === 1 ? '' : 's'}. Quick-plot for histograms.
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Summary</summary>
-			<table class="d-table">
-				<thead>
-					<tr
-						><th>var</th>{#each PREVIEW_STATS as s (s)}<th>{s}</th>{/each}</tr
-					>
-				</thead>
-				<tbody>
-					{#each result.rows as row (row.variable)}
-						<tr>
-							<td class="var">{row.variable}</td>
-							{#each PREVIEW_STATS as s (s)}<td class="num">{fmt(row[s])}</td>{/each}
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+			<!-- Scrolls sideways in a narrow panel (as RayleighTest does) instead of
+			     letting the browser wrap numbers one character per line. -->
+			<div class="d-table-wrap">
+				<table class="d-table">
+					<thead>
+						<tr
+							><th>var</th>{#each PREVIEW_STATS as s (s)}<th>{s}</th>{/each}</tr
+						>
+					</thead>
+					<tbody>
+						{#each result.rows as row (row.variable)}
+							<tr
+								title={`${row.variable}: ${PREVIEW_STATS.map((s) => `${s}=${fmtStat(s, row[s])}`).join(', ')}`}
+							>
+								<td class="var"><span class="var-name">{row.variable}</span></td>
+								{#each PREVIEW_STATS as s (s)}<td class="num">{fmtStat(s, row[s])}</td>{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 			<div class="tp-stat-actions">
 				<button class="tp-stat-btn" onclick={openFullTable}>Open full table</button>
 				<button
@@ -238,6 +271,12 @@
 		margin: var(--space-2) 0 0;
 	}
 	.tp-output-panel {
+		/* The panel sits in a centred flex column (.control-input-vertical); without
+		   these it keeps its content width and overflows both edges symmetrically,
+		   which is why the Summary heading and the first column went missing. */
+		align-self: stretch;
+		min-width: 0;
+		box-sizing: border-box;
 		margin-top: var(--space-2);
 		padding: var(--space-2);
 		border: 1px solid var(--color-lightness-85);
@@ -258,6 +297,9 @@
 		top: 0;
 		background: var(--color-lightness-99);
 	}
+	.d-table-wrap {
+		overflow-x: auto;
+	}
 	.d-table {
 		width: 100%;
 		border-collapse: collapse;
@@ -272,12 +314,23 @@
 	.d-table th:first-child {
 		text-align: left;
 	}
+	.d-table th,
 	.d-table td {
 		padding: 0.1rem 0.3rem;
+		white-space: nowrap;
 	}
 	.d-table .var {
 		text-align: left;
-		white-space: nowrap;
+	}
+	/* Long column names would push every statistic past the fold; clip them (the
+	   full name is in the row tooltip and in the full table). A table cell ignores
+	   max-width under auto layout, so the clip lives on an inline-block span. */
+	.d-table .var-name {
+		display: inline-block;
+		max-width: 6.5rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		vertical-align: bottom;
 	}
 	.d-table .num {
 		text-align: right;

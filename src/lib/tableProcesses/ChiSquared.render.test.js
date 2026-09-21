@@ -10,8 +10,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/svelte';
 
 const mockColumns = {};
+// The panel now mounts a ColumnSelector per input port, which walks
+// core.groups / core.plots, so the mock carries those too.
 vi.mock('$lib/core/core.svelte', () => ({
-	core: { rawData: new Map(), data: [], tableProcesses: [] }
+	core: { rawData: new Map(), data: [], groups: [], plots: [], tableProcesses: [] }
+}));
+vi.mock('$lib/core/core.svelte.js', () => ({
+	core: { rawData: new Map(), data: [], groups: [], plots: [], tableProcesses: [] }
 }));
 vi.mock('$lib/core/Column.svelte', async () => {
 	const actual = await vi.importActual('$lib/core/Column.svelte').catch(() => ({}));
