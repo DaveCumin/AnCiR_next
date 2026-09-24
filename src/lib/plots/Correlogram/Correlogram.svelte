@@ -4,6 +4,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
+	import { paddedDomain } from '$lib/plots/axisDomain.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
@@ -257,9 +258,9 @@
 			const { min: mnRaw, max: mxRaw } = minMaxAcross(this.data.map((d) => d.acfData.correlations));
 			if (mnRaw == null || mxRaw == null) return [-1, 1];
 
-			const range = mxRaw - mnRaw;
-			const ymin = Math.max(mnRaw - range * 0.1, -1);
-			const ymax = Math.min(mxRaw + range * 0.1, 1);
+			// Padded but NOT capped at +/-1. The lag-0 autocorrelation is exactly 1, and a cap
+			// there put it on the clip edge, cutting off half the stroke; see plots/axisDomain.js.
+			const [ymin, ymax] = paddedDomain(mnRaw, mxRaw, { pad: 0.05 });
 
 			return [
 				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
@@ -797,7 +798,7 @@
 
 						{#if datum.dataWarnings && datum.dataWarnings.length > 0}
 							<div class="data-warning">
-								{#each datum.dataWarnings as warning}
+								{#each datum.dataWarnings as warning, w (w)}
 									<p>⚠ {warning}</p>
 								{/each}
 							</div>
@@ -931,7 +932,7 @@
 		{/if}
 
 		<!-- Plot data -->
-		{#each theData.plot.data as datum}
+		{#each theData.plot.data as datum, di (di)}
 			<!-- Autocorrelation line and points -->
 			<Line
 				lineData={datum.line}

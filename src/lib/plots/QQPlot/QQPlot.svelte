@@ -22,6 +22,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
+	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
@@ -124,7 +125,57 @@
 			this.#padding = v;
 		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		// Width before an outside legend takes its share; see legendAuto.svelte.js.
+		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		basePlotHeight = $derived(this.plotheight);
+		plotwidth = $derived(this.basePlotWidth - this.legendLayout.reserveW);
+
+		legendLayout = new LegendAutoLayout(this, {
+			obstacles: (w, h) => this.legendObstacles(w, h),
+			outside: rightOfPlot(() => ({ baseWidth: this.basePlotWidth }))
+		});
+
+		// What a legend must not cover, in px over a w x h plot area: the sample points, the
+		// confidence band and the reference line, as far as each is shown.
+		legendObstacles(w, h) {
+			const xs = scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, w]);
+			const ys = scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([h, 0]);
+			const out = [];
+			for (const d of this.data) {
+				const q = d.qq;
+				if (!(q.n >= 3)) continue;
+				out.push({
+					px: q.theoretical.map(xs),
+					py: q.sample.map(ys),
+					radius: d.pointRadius ?? 3
+				});
+				const fitted = Number.isFinite(q.line.slope);
+				if (fitted && this.showBand) {
+					const rects = [];
+					for (let i = 0; i + 1 < q.theoretical.length; i++) {
+						rects.push([
+							xs(q.theoretical[i]),
+							ys(Math.max(q.band.hi[i], q.band.hi[i + 1])),
+							xs(q.theoretical[i + 1]),
+							ys(Math.min(q.band.lo[i], q.band.lo[i + 1]))
+						]);
+					}
+					out.push({ rects });
+				}
+				if (fitted && this.showLine) {
+					const [x0, x1] = this.xlims;
+					out.push({
+						px: [xs(x0), xs(x1)],
+						py: [
+							ys(q.line.intercept + q.line.slope * x0),
+							ys(q.line.intercept + q.line.slope * x1)
+						],
+						line: true
+					});
+				}
+			}
+			return out;
+		}
 
 		// v1: 'normal' only; persisted for forward compatibility (no UI until a second
 		// distribution exists).
@@ -437,7 +488,12 @@
 
 		<div class="div-line"></div>
 
-		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
+		<Legend
+			legendData={theData.legend}
+			figureStyle={theData.parentBox?.style}
+			canPlaceOutside={theData.legendLayout.canPlaceOutside}
+			which="controls"
+		/>
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -625,7 +681,7 @@
 		width={theData.plot.viewWidth}
 		height={theData.plot.viewHeight}
 		viewBox="0 0 {theData.plot.viewWidth} {theData.plot.viewHeight}"
-		style={`background: var(--surface-card); position: absolute;`}
+		style="background: var(--surface-card); position: absolute;"
 	>
 		{#if !hasData}
 			<text
@@ -668,7 +724,7 @@
 			/>
 
 			<g clip-path="url(#{'qqclip' + theData.plot.parentBox.id})">
-				{#each theData.plot.data as datum}
+				{#each theData.plot.data as datum, di (di)}
 					{@const q = datum.qq}
 					{#if q.n >= 3}
 						{#if theData.plot.showBand && Number.isFinite(q.line.slope)}
@@ -692,7 +748,7 @@
 								stroke-dasharray="5 3"
 							/>
 						{/if}
-						{#each q.theoretical as t, i}
+						{#each q.theoretical as t, i (i)}
 							<circle
 								cx={xScale(t) + theData.plot.padding.left}
 								cy={yScale(q.sample[i]) + theData.plot.padding.top}
@@ -712,6 +768,8 @@
 				plotWidth={theData.plot.plotwidth}
 				plotHeight={theData.plot.plotheight}
 				padding={theData.plot.padding}
+				autoPlacement={theData.plot.legendLayout.auto}
+				outsidePosition={theData.plot.legendLayout.outsidePosition}
 				which="plot"
 			/>
 		{/if}

@@ -13,6 +13,11 @@
 	import { gaussianKDE } from '$lib/utils/kde.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
+	import { paddedDomain } from '$lib/plots/axisDomain.js';
+
+	/** Fraction of the bin range left empty at each automatic end of the x axis. */
+	export const HIST_X_PAD = 0.02;
+	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 
 	export const Histogram_defaultDataInputs = ['column'];
 	export const Histogram_controlHeaders = ['Properties', 'Data'];
@@ -208,7 +213,37 @@
 			this.#padding = v;
 		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		// Width before an outside legend takes its share; see legendAuto.svelte.js.
+		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		basePlotHeight = $derived(this.plotheight);
+		plotwidth = $derived(this.basePlotWidth - this.legendLayout.reserveW);
+
+		legendLayout = new LegendAutoLayout(this, {
+			obstacles: (w, h) => this.legendObstacles(w, h),
+			outside: rightOfPlot(() => ({ baseWidth: this.basePlotWidth }))
+		});
+
+		// What a legend must not cover, in px over a w x h plot area: the bars (with room
+		// above for count labels when shown) and any density curve.
+		legendObstacles(w, h) {
+			const xs = scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, w]);
+			const ys = scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([h, 0]);
+			const out = [];
+			for (const d of this.data) {
+				const b = d.binned;
+				const rects = [];
+				for (let i = 0; i < b.bins.length; i++) {
+					if (!(b.y_out[i] > 0)) continue;
+					const top = ys(b.y_out[i]) - (d.showCounts ? 14 : 0);
+					rects.push([xs(b.bins[i]), top, xs(b.binEnds[i]), ys(0)]);
+				}
+				out.push({ rects });
+				if (d.showDensity && d.density?.x?.length > 1) {
+					out.push({ px: d.density.x.map(xs), py: d.density.y.map(ys), line: true });
+				}
+			}
+			return out;
+		}
 
 		xlimsIN = $state(/** @type {(number|null)[]} */ ([null, null]));
 		ylimsIN = $state(/** @type {(number|null)[]} */ ([null, null]));
@@ -228,9 +263,12 @@
 				}
 			});
 			if (xmin === Infinity || xmax === -Infinity) return [0, 1];
+			// A little room at the AUTOMATIC ends, so the outermost bars do not sit on the y axis
+			// line or the right edge (see plots/axisDomain.js). A limit the user set is exact.
+			const [plo, phi] = paddedDomain(xmin, xmax, { pad: HIST_X_PAD });
 			return [
-				this.xlimsIN[0] != null ? this.xlimsIN[0] : xmin,
-				this.xlimsIN[1] != null ? this.xlimsIN[1] : xmax
+				this.xlimsIN[0] != null ? this.xlimsIN[0] : plo,
+				this.xlimsIN[1] != null ? this.xlimsIN[1] : phi
 			];
 		});
 
@@ -440,7 +478,12 @@
 	{#if appState.currentControlTab === 'properties'}
 		<div class="div-line"></div>
 
-		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
+		<Legend
+			legendData={theData.legend}
+			figureStyle={theData.parentBox?.style}
+			canPlaceOutside={theData.legendLayout.canPlaceOutside}
+			which="controls"
+		/>
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -709,7 +752,7 @@
 		width={theData.plot.viewWidth}
 		height={theData.plot.viewHeight}
 		viewBox="0 0 {theData.plot.viewWidth} {theData.plot.viewHeight}"
-		style={`background: var(--surface-card); position: absolute;`}
+		style="background: var(--surface-card); position: absolute;"
 	>
 		<Axis
 			figureStyle={theData.plot.viewStyle}
@@ -732,7 +775,7 @@
 			which="plot"
 		/>
 
-		{#each theData.plot.data as datum}
+		{#each theData.plot.data as datum, di (di)}
 			{@const b = datum.binned}
 			{#if b.bins.length > 0}
 				<g
@@ -772,15 +815,15 @@
 				{/if}
 
 				{#if datum.showCounts}
-					{#each b.bins as _binStart, i}
-						{#if b.y_out[i] > 0}
+					{#each b.y_out as count, i (i)}
+						{#if count > 0}
 							<text
 								x={xScale((b.bins[i] + b.binEnds[i]) / 2) + theData.plot.padding.left}
-								y={yScale(b.y_out[i]) + theData.plot.padding.top - 3}
+								y={yScale(count) + theData.plot.padding.top - 3}
 								text-anchor="middle"
 								font-size="10"
 								fill="var(--color-text)"
-								style="pointer-events: none;">{b.y_out[i]}</text
+								style="pointer-events: none;">{count}</text
 							>
 						{/if}
 					{/each}
@@ -795,6 +838,8 @@
 			plotWidth={theData.plot.plotwidth}
 			plotHeight={theData.plot.plotheight}
 			padding={theData.plot.padding}
+			autoPlacement={theData.plot.legendLayout.auto}
+			outsidePosition={theData.plot.legendLayout.outsidePosition}
 			which="plot"
 		/>
 	</svg>

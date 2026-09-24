@@ -4,6 +4,7 @@ import { addNotification } from '$lib/core/notifications.svelte.js';
 import { mutationService } from '$lib/core/mutationService.js';
 import { prepareExport, setPhysicalSize } from '$lib/plots/exportStyle.js';
 import { exportScale, resolveStyle } from '$lib/plots/figureStyle.js';
+import { setPngDataUrlDpi } from '$lib/utils/pngDpi.js';
 
 /**
  * Convert headers and rows to a CSV string and trigger a download.
@@ -419,10 +420,12 @@ export function preparePlotExport(
 		const live = document.getElementById('plot' + plotId);
 		if (!live) return null;
 		const { width, height } = svgSize(live);
+		const resolved = resolveStyle(style);
 		return prepareExport(live, {
 			width,
 			height,
-			backgroundColour: resolveStyle(style).backgroundColour,
+			backgroundColour: resolved.backgroundColour,
+			fontFamily: resolved.fontFamily,
 			physical,
 			title: titleSpec(plot, includeTitle, label)
 		});
@@ -630,6 +633,10 @@ export function svgDataUrl(svgString) {
  * resolution rather than upscaling a bitmap; that is what makes "85 mm at 300 dpi"
  * mean what it says. Rejects where there is no canvas (tests, very old browsers).
  *
+ * The file also STATES that resolution (a pHYs chunk; see utils/pngDpi.js). A px is 1/96
+ * inch, so drawing at `scale` is `scale * 96` dpi. Without the chunk a 300 dpi figure
+ * opened as 72 dpi, i.e. at more than four times its intended physical size.
+ *
  * @returns {Promise<string>}
  */
 export function rasterisePng(svgString, width, height, scale = 1) {
@@ -645,7 +652,7 @@ export function rasterisePng(svgString, width, height, scale = 1) {
 				context.imageSmoothingEnabled = true;
 				context.imageSmoothingQuality = 'high';
 				context.drawImage(img, 0, 0, canvas.width, canvas.height);
-				resolve(canvas.toDataURL('image/png'));
+				resolve(setPngDataUrlDpi(canvas.toDataURL('image/png'), scale * 96));
 			} catch (e) {
 				reject(e);
 			}

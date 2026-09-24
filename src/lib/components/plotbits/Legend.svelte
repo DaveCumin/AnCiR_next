@@ -2,7 +2,6 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
-	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	// Legend border defaults.
@@ -18,15 +17,10 @@
 	// deliberately pale grey: the ColourPicker writes a hex literal, never this
 	// token reference, so a user's choice is always distinguishable from the default
 	// even when the two resolve to the same colour.
-	/**
-	 * Inset the corner presets sit at, and the span the custom fractions map onto.
-	 *
-	 * Shared deliberately: because custom placement runs over the SAME inset area,
-	 * fraction 0 lands exactly where a left preset does and fraction 1 exactly where a
-	 * right preset does. That is what lets switching to Custom keep the legend
-	 * precisely where it already was instead of nudging it by the margin.
-	 */
-	export const LEGEND_MARGIN = 10;
+	// LEGEND_MARGIN lives in legendLayout.js (plots reserving room for an outside legend
+	// need it without importing a component) and is re-exported here for existing callers.
+	import { LEGEND_MARGIN as SHARED_LEGEND_MARGIN } from './legendLayout.js';
+	export const LEGEND_MARGIN = SHARED_LEGEND_MARGIN;
 
 	/**
 	 * The custom fraction equivalent to each corner preset.
@@ -74,10 +68,26 @@
 		return saved;
 	}
 
+	/**
+	 * Every position a legend can have. 'auto' avoids the data (see legendLayout.js) and is
+	 * the default for a NEW legend; a saved legend keeps whatever it was saved with, so an
+	 * existing figure does not rearrange itself on load. 'outsideright' needs the plot to
+	 * reserve room, so only plots that do (canPlaceOutside) offer it.
+	 */
+	export const LEGEND_POSITIONS = [
+		'auto',
+		'topright',
+		'topleft',
+		'bottomright',
+		'bottomleft',
+		'outsideright',
+		'custom'
+	];
+
 	export class LegendClass {
 		show = $state(true);
-		// topright | topleft | bottomright | bottomleft | custom
-		position = $state('topright');
+		// One of LEGEND_POSITIONS.
+		position = $state('auto');
 		// Free placement, used only when position === 'custom'. Stored as a FRACTION of
 		// the plot area (0..1) rather than pixels, so a legend keeps its place when the
 		// figure is resized — which now happens whenever a width preset is chosen.
@@ -99,7 +109,8 @@
 		constructor(dataIN) {
 			if (dataIN) {
 				this.show = dataIN.show ?? true;
-				this.position = dataIN.position ?? 'topright';
+				// A saved legend with no position predates the field and was top right.
+				this.position = LEGEND_POSITIONS.includes(dataIN.position) ? dataIN.position : 'topright';
 				this.customX = typeof dataIN.customX === 'number' ? dataIN.customX : 0.02;
 				this.customY = typeof dataIN.customY === 'number' ? dataIN.customY : 0.02;
 				this.orientation = dataIN.orientation ?? 'vertical';
@@ -137,6 +148,13 @@
 <script>
 	import { resolveStyle } from '$lib/plots/figureStyle.js';
 	import { getPointPath } from './pointShapes.js';
+	import {
+		measureLabelWidths,
+		legendBoxSize,
+		LEGEND_ICON_W,
+		LEGEND_ICON_GAP,
+		LEGEND_H_SPACING
+	} from './legendLayout.js';
 
 	let {
 		legendData,
@@ -145,6 +163,15 @@
 		plotHeight,
 		padding,
 		which = 'plot',
+		// 'auto' placement as the plot resolved it: { outside, x, y } with x, y relative to the
+		// plot area (legendLayout.chooseLegendPlacement). A plot that passes nothing gets top
+		// right for 'auto', which is what every legend did before 'auto' existed.
+		autoPlacement = null,
+		// { x, y } of an OUTSIDE legend, relative to the plot area's top-left corner. Set only by
+		// a plot that reserves the room (legendAuto.svelte.js); null means it cannot.
+		outsidePosition = null,
+		// Controls only: whether to offer 'Outside right'.
+		canPlaceOutside = false,
 		// This figure's style, passed by the plot that renders this legend. See the
 		// note in Axis.svelte for why this is a prop and not context.
 		figureStyle = null
@@ -170,80 +197,80 @@
 	// fractions from where it already is. Tracked rather than read at change time
 	// because bind:value has already written 'custom' by the time onChange fires.
 	let lastCorner = $state('topright');
+	// Where an 'auto' legend sat inside the plot, as custom fractions, so Custom can start
+	// from there too. null when it was outside (Custom is always inside).
+	let lastAutoFraction = $state(null);
 	$effect(() => {
-		if (legendData.position !== 'custom') lastCorner = legendData.position;
+		const pos = legendData.position;
+		if (pos === 'custom') return;
+		lastCorner = pos;
+		lastAutoFraction = null;
+		if (pos === 'auto' && autoPlacement && !autoPlacement.outside) {
+			const { width, height } = legendDimensions;
+			const spanX = plotWidth - width - LEGEND_MARGIN * 2;
+			const spanY = plotHeight - height - LEGEND_MARGIN * 2;
+			lastAutoFraction = {
+				x: spanX > 0 ? Math.min(1, Math.max(0, (autoPlacement.x - LEGEND_MARGIN) / spanX)) : 0,
+				y: spanY > 0 ? Math.min(1, Math.max(0, (autoPlacement.y - LEGEND_MARGIN) / spanY)) : 0
+			};
+		}
 	});
 
 	function onPositionChange(next) {
 		if (next !== 'custom') return;
-		const f = cornerFraction(lastCorner);
+		const f = lastAutoFraction ?? cornerFraction(lastCorner === 'auto' ? 'topright' : lastCorner);
 		legendData.customX = f.x;
 		legendData.customY = f.y;
 	}
 
-	let legendSizeInput = $state(0);
-	$effect(() => {
-		legendSizeInput = Math.round(legendFontSize * 10) / 10;
-	});
+	const POSITION_LABELS = {
+		auto: 'Auto (avoid data)',
+		topright: 'Top Right',
+		topleft: 'Top Left',
+		bottomright: 'Bottom Right',
+		bottomleft: 'Bottom Left',
+		outsideright: 'Outside Right',
+		custom: 'Custom'
+	};
+	// 'Outside Right' only where the plot reserves room for it, but always listed when it is
+	// the current value, so a select never shows a value it has no option for.
+	const positionOptions = $derived(
+		LEGEND_POSITIONS.filter(
+			(p) => p !== 'outsideright' || canPlaceOutside || legendData.position === p
+		).map((value) => ({ value, label: POSITION_LABELS[value] }))
+	);
+
+	// A writable derived: shows the size being drawn, and a typed value holds until the
+	// next change of legendFontSize (which the onInput below makes immediately).
+	let legendSizeInput = $derived(Math.round(legendFontSize * 10) / 10);
 	// Whether to draw the box at all. The border colour and width stay on
 	// legendData: this flag is house style, those are per-legend refinements.
 	const showBox = $derived(resolved.legendBox !== false);
 
-	let labelWidths = $state([]); // width of each <text> element
-	let measuringCanvas = $state(null); // hidden <canvas> for text metrics
+	// Label widths and the box come from legendLayout.js, the same functions a plot uses to
+	// reserve room for an outside legend, so the reserved gap always matches the drawn box.
+	// Family from the figure style, NOT a hardcoded 'sans-serif': measuring in the wrong
+	// family makes the border not fit the text it encloses.
+	let labelWidths = $derived(
+		legendData.show && items.length > 0
+			? measureLabelWidths(
+					items.map((it) => it.label),
+					legendFontSize,
+					resolved.fontFamily
+				)
+			: []
+	);
 
-	// create a hidden canvas once (Svelte runs this after first render)
-	$effect(() => {
-		if (!measuringCanvas) {
-			const canvas = document.createElement('canvas');
-			document.body.appendChild(canvas);
-			measuringCanvas = canvas.getContext('2d');
-		}
-	});
-
-	// recompute widths whenever items, fontSize or the items array change
-	$effect(() => {
-		if (!measuringCanvas || !legendData.show || items.length === 0) {
-			labelWidths = [];
-			return;
-		}
-		// Family from the figure style, NOT a hardcoded 'sans-serif'. The legend box is
-		// sized from these measured widths, so measuring in the wrong family makes the
-		// border not fit the text it encloses — invisible while the figure is sans,
-		// wrong the moment it is switched to serif.
-		measuringCanvas.font = `${legendFontSize}px ${resolved.fontFamily}`;
-		labelWidths = items.map((it) => measuringCanvas.measureText(it.label).width);
-	});
-
-	// Calculate legend dimensions
 	let legendDimensions = $derived.by(() => {
 		if (!legendData.show || items.length === 0) return { width: 0, height: 0, contentHeight: 0 };
-
-		const iconW = 25; // space for line / circle
-		const gap = 4; // gap between icon and text
-		const padding = legendData.padding;
-
-		// max width of *all* labels (plus icon + gap)
-		const maxLabelW = Math.max(...labelWidths, 0) + 2 + legendData.padding / 2;
-		const contentW = iconW + gap + maxLabelW;
-
-		const lineH = legendFontSize + legendData.itemSpacing + 4; // +4 for possible overlap
-
-		if (legendData.orientation === 'vertical') {
-			return {
-				width: contentW + padding * 2,
-				height: items.length * lineH + padding * 2,
-				contentHeight: legendFontSize
-			};
-		} else {
-			// horizontal: each entry gets its own width + a little extra spacing
-			const totalContentW = items.reduce((sum, _, i) => sum + iconW + gap + labelWidths[i] + 10, 0);
-			return {
-				width: totalContentW + padding * 2,
-				height: lineH + padding * 2,
-				contentHeight: legendFontSize
-			};
-		}
+		const { width, height } = legendBoxSize({
+			labelWidths,
+			fontPx: legendFontSize,
+			padding: legendData.padding,
+			itemSpacing: legendData.itemSpacing,
+			orientation: legendData.orientation
+		});
+		return { width, height, contentHeight: legendFontSize };
 	});
 
 	// Calculate legend position
@@ -254,6 +281,17 @@
 		const margin = LEGEND_MARGIN;
 
 		switch (legendData.position) {
+			case 'auto':
+				if (autoPlacement?.outside && outsidePosition) return outsidePosition;
+				if (autoPlacement && !autoPlacement.outside) {
+					return { x: autoPlacement.x, y: autoPlacement.y };
+				}
+				return { x: plotWidth - width - margin, y: margin };
+			case 'outsideright':
+				// Top-aligned with the plot area, in the room the plot reserved. A plot that
+				// reserves none falls back to the conventional corner.
+				if (outsidePosition) return outsidePosition;
+				return { x: plotWidth - width - margin, y: margin };
 			case 'custom': {
 				// Runs over the same inset area the presets use, so fraction 0 and 1 coincide
 				// exactly with the left/right and top/bottom presets. Clamped, so a legend
@@ -294,9 +332,9 @@
 			return [];
 		}
 
-		const iconW = 25;
-		const gap = 4;
-		const spacing = 10;
+		const iconW = LEGEND_ICON_W;
+		const gap = LEGEND_ICON_GAP;
+		const spacing = LEGEND_H_SPACING;
 		const positions = [];
 		let cumulative = legendData.padding;
 
@@ -329,9 +367,9 @@
 					<p>Position</p>
 					<AttributeSelect
 						bind:value={legendData.position}
-						options={['topright', 'topleft', 'bottomright', 'bottomleft', 'custom']}
-						optionsDisplay={['Top Right', 'Top Left', 'Bottom Right', 'Bottom Left', 'Custom']}
-					onChange={(v) => onPositionChange(v)}
+						options={positionOptions.map((o) => o.value)}
+						optionsDisplay={positionOptions.map((o) => o.label)}
+						onChange={(v) => onPositionChange(v)}
 					/>
 				</div>
 				<div class="control-input">
@@ -399,17 +437,16 @@
 			/>
 
 			<!-- items -->
-			{#each items as item, i}
+			{#each items as item, i (i)}
 				{@const lineH = legendFontSize + legendData.itemSpacing + 4}
-				{@const iconW = 25}
-				{@const gap = 4}
-				{@const labelW = labelWidths[i] ?? 0}
+				{@const iconW = LEGEND_ICON_W}
+				{@const gap = LEGEND_ICON_GAP}
 
 				{#if legendData.orientation === 'vertical'}
 					{@const itemX = legendData.padding}
 					{@const itemY = legendData.padding + i * lineH + lineH / 2}
 					<g transform="translate({itemX}, {itemY})">
-						{#each item.elements as el}
+						{#each item.elements as el, j (j)}
 							{#if el.type === 'line'}
 								<line
 									x1={2}
@@ -435,7 +472,14 @@
 								/>
 							{/if}
 						{/each}
-						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendFontSize} font-family={resolved.fontFamily} fill="black">
+						<text
+							x={iconW + gap}
+							y={0}
+							dy="0.35em"
+							font-size={legendFontSize}
+							font-family={resolved.fontFamily}
+							fill="black"
+						>
 							{item.label}
 						</text>
 					</g>
@@ -445,7 +489,7 @@
 					{@const itemY = legendDimensions.height / 2}
 
 					<g transform="translate({startX}, {itemY})">
-						{#each item.elements as el}
+						{#each item.elements as el, j (j)}
 							{#if el.type === 'line'}
 								<line
 									x1={2}
@@ -471,7 +515,14 @@
 								/>
 							{/if}
 						{/each}
-						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendFontSize} font-family={resolved.fontFamily} fill="black">
+						<text
+							x={iconW + gap}
+							y={0}
+							dy="0.35em"
+							font-size={legendFontSize}
+							font-family={resolved.fontFamily}
+							fill="black"
+						>
 							{item.label}
 						</text>
 					</g>

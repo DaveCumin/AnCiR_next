@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
 	rowLabelText,
 	rowLabelGutter,
+	rowLabelFontPx,
+	labelledRows,
 	migrateRowLabels,
 	DEFAULT_DATE_FORMAT
 } from './rowLabels.js';
@@ -169,5 +171,35 @@ describe('migrateRowLabels', () => {
 
 	it('prefers the new field over the legacy pair when both are present', () => {
 		expect(migrateRowLabels({ rowLabels: 'none', showDayNumbers: true })).toBe('none');
+	});
+});
+
+describe('row label type', () => {
+	it('uses the tick size when the rows have room for it', () => {
+		expect(rowLabelFontPx({ tickPx: 15, plotHeight: 600, nRows: 10 })).toBe(15);
+	});
+
+	it('shrinks to the row pitch so thin rows never collide', () => {
+		// 20 rows, every one labelled, in 200 px: 10 px apart
+		expect(rowLabelFontPx({ tickPx: 15, plotHeight: 200, nRows: 20 })).toBe(10);
+	});
+
+	it('counts only labelled rows past 20 (every second row at 29)', () => {
+		expect(labelledRows(29)[1] - labelledRows(29)[0]).toBe(2);
+		// 29 rows in 290 px = 10 px per row, labels 20 px apart
+		expect(rowLabelFontPx({ tickPx: 15, plotHeight: 290, nRows: 29 })).toBe(15);
+	});
+
+	it('labels every row up to 20', () => {
+		expect(labelledRows(3)).toEqual([0, 1, 2]);
+		expect(labelledRows(0)).toEqual([]);
+	});
+
+	it('the gutter grows with the type size', () => {
+		const small = rowLabelGutter({ mode: 'period', nRows: 29, fontPx: 10 });
+		const large = rowLabelGutter({ mode: 'period', nRows: 29, fontPx: 15 });
+		expect(large).toBeGreaterThan(small);
+		// default unchanged: 2 chars at 10 px
+		expect(rowLabelGutter({ mode: 'period', nRows: 29 })).toBe(16);
 	});
 });
