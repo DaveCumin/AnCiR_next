@@ -310,4 +310,27 @@ describe('cwtFromSeries', () => {
 		expect(cwtFromSeries([1, 2, 3], [1, 2]).valid).toBe(false);
 		expect(cwtFromSeries(null, null).valid).toBe(false);
 	});
+
+	// Regression: the uniformity check spread one argument per sample into Math.max,
+	// which threw "RangeError: Maximum call stack size exceeded" from N ~ 125k up
+	// (reported at N = 250,000). A narrow period band keeps the transform itself cheap.
+	it('handles a long record (N = 300,000) without overflowing the call stack', () => {
+		const n = 300_000;
+		const dt = 1 / 60; // 1-minute sampling, ~208 days
+		const times = Array.from({ length: n }, (_, i) => i * dt);
+		const r = cwtFromSeries(times, sine(n, dt, 24), { dj: 0.25, periodRange: [20, 28] });
+		expect(r.valid).toBe(true);
+		expect(r.times).toHaveLength(n);
+		const found = r.periods[peakIndexAt(r, Math.floor(n / 2))];
+		expect(Math.abs(found / 24 - 1)).toBeLessThan(0.1);
+	});
+
+	it('still refuses a long record with one irregular interval', () => {
+		const n = 300_000;
+		const dt = 1 / 60;
+		const times = Array.from({ length: n }, (_, i) => i * dt + (i >= n / 2 ? 0.5 : 0));
+		const r = cwtFromSeries(times, sine(n, dt, 24), { periodRange: [20, 28] });
+		expect(r.valid).toBe(false);
+		expect(r.reason).toMatch(/not uniform/);
+	});
 });

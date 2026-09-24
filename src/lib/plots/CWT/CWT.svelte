@@ -197,6 +197,42 @@
 	};
 
 	/**
+	 * Most image columns the scalogram is painted with. One column per sample made a
+	 * 250,000-sample record a 250,000 px wide canvas: past the browsers' canvas size
+	 * limits, so the plot came out blank (and it cost millions of colour lookups).
+	 * The image is stretched to the plot width anyway, a few hundred pixels.
+	 */
+	export const SCALOGRAM_MAX_COLUMNS = 4096;
+
+	/**
+	 * Bin the time axis of a power field (rows = scales) down to at most `maxCols`
+	 * columns, averaging the finite values in each bin (NaN if a bin has none).
+	 * Returns the input unchanged when it is already narrow enough.
+	 */
+	export function downsampleColumns(power, maxCols) {
+		const nTimes = power[0]?.length ?? 0;
+		if (nTimes <= maxCols) return power;
+		return power.map((row) => {
+			const out = new Float64Array(maxCols);
+			for (let c = 0; c < maxCols; c++) {
+				const i0 = Math.floor((c * nTimes) / maxCols);
+				const i1 = Math.floor(((c + 1) * nTimes) / maxCols);
+				let sum = 0;
+				let n = 0;
+				for (let i = i0; i < i1; i++) {
+					const v = row[i];
+					if (Number.isFinite(v)) {
+						sum += v;
+						n++;
+					}
+				}
+				out[c] = n > 0 ? sum / n : NaN;
+			}
+			return out;
+		});
+	}
+
+	/**
 	 * Paint the power field to an offscreen canvas and return a data URI.
 	 *
 	 * Row 0 of the image is the TOP of the plot, and the top of a scalogram is the
@@ -207,6 +243,7 @@
 	 */
 	export function renderScalogramURI(power, colormap, powerMax) {
 		if (typeof document === 'undefined') return '';
+		power = downsampleColumns(power, SCALOGRAM_MAX_COLUMNS);
 		const nScales = power.length;
 		const nTimes = power[0]?.length ?? 0;
 		if (nScales === 0 || nTimes === 0) return '';

@@ -130,10 +130,8 @@
 
 		let dataMax = -Infinity;
 		groups.forEach((g) => {
-			if (g.values.length > 0) {
-				const gMax = Math.max(...g.values);
-				if (gMax > dataMax) dataMax = gMax;
-			}
+			// Loop rather than Math.max(...g.values): a spread of a large group overflows the stack.
+			for (const v of g.values) if (v > dataMax) dataMax = v;
 		});
 
 		const n = groups.length;

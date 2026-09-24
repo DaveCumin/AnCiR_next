@@ -346,7 +346,14 @@ export function cwtFromSeries(times, values, opts = {}) {
 	if (!Number.isFinite(dt) || dt <= 0) {
 		return { ...EMPTY, reason: 'time axis is not increasing' };
 	}
-	const maxDev = Math.max(...diffs.map((d) => Math.abs(d - dt))) / dt;
+	// A loop, not Math.max(...diffs): spreading one argument per sample overflows the
+	// call stack ("Maximum call stack size exceeded") for series of ~125k+ samples.
+	let maxAbsDev = 0;
+	for (let i = 0; i < diffs.length; i++) {
+		const dev = Math.abs(diffs[i] - dt);
+		if (dev > maxAbsDev) maxAbsDev = dev;
+	}
+	const maxDev = maxAbsDev / dt;
 	if (maxDev > tolerance) {
 		return {
 			...EMPTY,

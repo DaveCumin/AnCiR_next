@@ -404,11 +404,19 @@
 		return out.map((s) => s.trim());
 	}
 
+	/** Longest of the given arrays. A loop, not Math.max(...): pasted tables can have
+	 *  enough rows that spreading one argument per row overflows the call stack. */
+	function maxLength(arrays) {
+		let n = 0;
+		for (const a of arrays) if (a.length > n) n = a.length;
+		return n;
+	}
+
 	function parseJsonTable(j) {
 		if (Array.isArray(j)) {
 			if (j.length === 0) return null;
 			if (Array.isArray(j[0])) {
-				const ncol = Math.max(...j.map((r) => r.length));
+				const ncol = maxLength(j);
 				const first = j[0].map((v) => String(v));
 				const headerLike = first.every((c) => c === '' || isNaN(Number(c)));
 				const headers = headerLike
@@ -436,7 +444,7 @@
 		if (j && typeof j === 'object') {
 			const keys = Object.keys(j).filter((k) => Array.isArray(j[k]));
 			if (keys.length === 0) return null;
-			const rows = Math.max(...keys.map((k) => j[k].length));
+			const rows = maxLength(keys.map((k) => j[k]));
 			return { columns: keys.map((k) => ({ name: k, values: j[k] })), rows };
 		}
 		return null;
@@ -456,7 +464,7 @@
 		if (lines.length === 0) return null;
 		const delim = lines[0].includes('\t') ? '\t' : ',';
 		const rows = lines.map((l) => splitCsvLine(l, delim));
-		const ncol = Math.max(...rows.map((r) => r.length));
+		const ncol = maxLength(rows);
 		const first = rows[0];
 		const headerLike =
 			first.every((c) => c === '' || isNaN(Number(c))) && first.some((c) => c !== '');

@@ -124,7 +124,14 @@
 
 		const finite = t.filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
 		if (finite.length < 2) return warnings;
-		const spanHours = Math.max(...finite) - Math.min(...finite);
+		// Loop rather than Math.max(...finite): a spread of a long series overflows the stack.
+		let lo = Infinity;
+		let hi = -Infinity;
+		for (const v of finite) {
+			if (v < lo) lo = v;
+			if (v > hi) hi = v;
+		}
+		const spanHours = hi - lo;
 		const period = opts.period || 24;
 		const days = spanHours / period;
 

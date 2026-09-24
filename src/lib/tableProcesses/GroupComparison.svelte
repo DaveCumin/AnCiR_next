@@ -978,8 +978,19 @@
 		for (const result of Object.values(comparisonData?.comparisons ?? {})) {
 			for (const g of result?.groups ?? []) {
 				const vals = g.values ?? [];
-				const gMin = vals.length ? Math.min(...vals) : NaN;
-				const gMax = vals.length ? Math.max(...vals) : NaN;
+				// Loop rather than Math.min(...vals): a spread of a large group overflows the
+				// stack. Like Math.min/max, any NaN (or an empty group) gives NaN.
+				let gMin = vals.length ? Infinity : NaN;
+				let gMax = vals.length ? -Infinity : NaN;
+				for (const v of vals) {
+					const x = Number(v);
+					if (Number.isNaN(x)) {
+						gMin = gMax = NaN;
+						break;
+					}
+					if (x < gMin) gMin = x;
+					if (x > gMax) gMax = x;
+				}
 				const gMed = median(vals);
 				// JB requires n >= 8; use null when not evaluable so formatter renders '-'
 				const jb = jarqueBeraNormality(vals);
