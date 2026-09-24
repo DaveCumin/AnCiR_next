@@ -3,6 +3,7 @@
 
 	import Column from '$lib/core/Column.svelte';
 	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
+	import { resolveStyle } from '$lib/plots/figureStyle.js';
 	import Hist from '$lib/components/plotbits/Hist.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 
@@ -29,6 +30,8 @@
 	import {
 		rowLabelText,
 		rowLabelGutter as computeRowLabelGutter,
+		rowLabelFontPx,
+		labelledRows,
 		migrateRowLabels,
 		DEFAULT_DATE_FORMAT
 	} from '$lib/plots/Actogram/rowLabels.js';
@@ -362,21 +365,34 @@
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 20 });
 		// Room for the row labels, ADDED to the user's left padding the same way the light
 		// bands add to the top; see rowLabels.js for why it is estimated rather than measured.
+		// The figure's type, resolved once: row labels and the heatmap legend read it.
+		resolvedStyle = $derived(resolveStyle(this.viewStyle));
+		topPadding = $derived(
+			this.lightBands.length > 0
+				? this.paddingIN.top + this.lightBands.height * 2
+				: this.paddingIN.top
+		);
+		// Row-label size. Computed from the VERTICAL layout only (top/bottom padding), never
+		// from `padding`, because `padding.left` depends on this through the gutter.
+		rowLabelFontSize = $derived(
+			rowLabelFontPx({
+				tickPx: this.resolvedStyle.sizes.tick,
+				plotHeight: this.viewHeight - this.topPadding - this.paddingIN.bottom,
+				nRows: this.Ndays,
+				spaceBetween: this.spaceBetween
+			})
+		);
 		rowLabelGutter = $derived(
 			computeRowLabelGutter({
 				mode: this.rowLabels,
 				dateFormat: this.dateFormat,
-				nRows: this.Ndays
+				nRows: this.Ndays,
+				fontPx: this.rowLabelFontSize
 			})
 		);
 		padding = $derived.by(() => {
-			const allTopPadding =
-				this.lightBands.length > 0
-					? this.paddingIN.top + this.lightBands.height * 2
-					: this.paddingIN.top;
-
 			return {
-				top: allTopPadding,
+				top: this.topPadding,
 				right: this.paddingIN.right,
 				bottom: this.paddingIN.bottom,
 				left: this.paddingIN.left + this.rowLabelGutter
@@ -1050,7 +1066,7 @@
 		id={'plot' + theData.plot.parentBox.id}
 		width={theData.plot.viewWidth}
 		height={theData.plot.viewHeight}
-		style={`background: var(--surface-card); position: absolute;`}
+		style="background: var(--surface-card); position: absolute;"
 		onclick={(e) => handleClick(e)}
 		ontooltip={handleTooltip}
 	>
@@ -1079,10 +1095,10 @@
 			which="plot"
 		/>
 
-		{#each theData.plot.data as datum, d}
+		{#each theData.plot.data as datum, d (d)}
 			{#if datum.draw}
 				<!-- Make the histogram for each period using new xStart/xEnd format -->
-				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
+				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day (day)}
 					{@const thisScale = scaleLinear()
 						.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
 						.range([theData.plot.eachplotheight, 0])}
@@ -1143,35 +1159,32 @@
 			{/if}
 			<!-- THE MARKERS (clipped to plot area) -->
 			<g clip-path={'url(#actogram-clip-' + theData.plot.parentBox.id + ')'}>
-				{#each datum.phaseMarkers as marker}
+				{#each datum.phaseMarkers as marker (marker.id)}
 					<PhaseMarker {which} {marker} />
 				{/each}
 			</g>
 		{/each}
 		<!-- THE ANNOTATIONS -->
-		{#each theData.plot.annotations as annotation}
+		{#each theData.plot.annotations as annotation (annotation.id)}
 			<Annotation {which} {annotation} />
 		{/each}
 		<!-- DAY/PERIOD NUMBERS -->
 		{#if theData.plot.rowLabels !== 'none' && theData.plot.Ndays > 0}
-			{@const dayScale = scaleLinear()
-				.domain([0, theData.plot.Ndays])
-				.range([0, theData.plot.Ndays])}
-			{@const dayTicks =
-				theData.plot.Ndays > 20 ? dayScale.ticks() : makeSeqArray(0, theData.plot.Ndays - 1, 1)}
-			{#each dayTicks as day}
-				{#if day >= 0 && day < theData.plot.Ndays}
-					<text
-						x={theData.plot.padding.left - 10}
-						y={theData.plot.padding.top +
-							day * (theData.plot.eachplotheight + theData.plot.spaceBetween) +
-							theData.plot.eachplotheight / 2}
-						text-anchor="end"
-						dominant-baseline="central"
-						font-size="10"
-						fill="#555">{rowLabel(day)}</text
-					>
-				{/if}
+			<!-- Figure font and tick size, tick colour: these ARE the row axis's tick labels.
+			     An explicit family matters most on export, where there is no stylesheet to
+			     inherit from and an unstyled <text> falls back to Times. -->
+			{#each labelledRows(theData.plot.Ndays) as day (day)}
+				<text
+					x={theData.plot.padding.left - 10}
+					y={theData.plot.padding.top +
+						day * (theData.plot.eachplotheight + theData.plot.spaceBetween) +
+						theData.plot.eachplotheight / 2}
+					text-anchor="end"
+					dominant-baseline="central"
+					font-size={theData.plot.rowLabelFontSize}
+					font-family={theData.plot.resolvedStyle.fontFamily}
+					fill="currentColor">{rowLabel(day)}</text
+				>
 			{/each}
 		{/if}
 
@@ -1205,11 +1218,21 @@
 						stroke-width="0.5"
 					/>
 					<rect x={legX} y={legY} width={legW} height={8} fill={'url(#' + gradId + ')'} />
-					<text x={legX} y={legY + 20} font-size="9" fill="#555" text-anchor="start"
-						>{Number(dom[0]).toPrecision(3)}</text
+					<text
+						x={legX}
+						y={legY + 20}
+						font-size="9"
+						font-family={theData.plot.resolvedStyle.fontFamily}
+						fill="#555"
+						text-anchor="start">{Number(dom[0]).toPrecision(3)}</text
 					>
-					<text x={legX + legW} y={legY + 20} font-size="9" fill="#555" text-anchor="end"
-						>{Number(dom[1]).toPrecision(3)}</text
+					<text
+						x={legX + legW}
+						y={legY + 20}
+						font-size="9"
+						font-family={theData.plot.resolvedStyle.fontFamily}
+						fill="#555"
+						text-anchor="end">{Number(dom[1]).toPrecision(3)}</text
 					>
 				</g>
 			{/if}

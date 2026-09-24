@@ -64,8 +64,14 @@ describe('legend border default', () => {
 // rather than pixels, so the legend keeps its place when the figure is resized — which
 // now happens whenever a width preset is chosen.
 describe('legend custom placement', () => {
-	it('defaults to a corner, so nothing changes for existing legends', () => {
-		expect(new LegendClass().position).toBe('topright');
+	it('a NEW legend avoids the data; a saved one keeps its place', () => {
+		// New legends default to 'auto' (legendLayout.js). Existing legends must not move
+		// on load: a saved corner is kept, and a saved legend with no position (older than
+		// the field) was top right.
+		expect(new LegendClass().position).toBe('auto');
+		expect(LegendClass.fromJSON({ position: 'topright' }).position).toBe('topright');
+		expect(LegendClass.fromJSON({ show: true }).position).toBe('topright');
+		expect(LegendClass.fromJSON({ position: 'nonsense' }).position).toBe('topright');
 	});
 
 	it('round-trips the custom fraction', () => {

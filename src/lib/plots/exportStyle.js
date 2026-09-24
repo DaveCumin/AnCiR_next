@@ -323,16 +323,18 @@ export function addTitle(clone, { text = '', label = '', fontFamily, fontSize, w
  *
  * @param {SVGElement} svg the live element
  * @param {{width:number, height:number, backgroundColour?:string, physical?:boolean,
- *          title?: {text?: string, label?: string, fontFamily: string, fontSize: number}|null}} opts
+ *          title?: {text?: string, label?: string, fontFamily: string, fontSize: number}|null,
+ *          fontFamily?: string|null}} opts
  * @returns {{svg: SVGElement, width: number, height: number}|null}
  */
 export function prepareExport(
 	svg,
-	{ width, height, backgroundColour, physical = false, title = null }
+	{ width, height, backgroundColour, physical = false, title = null, fontFamily = null }
 ) {
 	if (!svg) return null;
 	const clone = svg.cloneNode(true);
 	resolveSvgVars(svg, clone);
+	setRootFontFamily(clone, fontFamily);
 	let w = width;
 	let h = height;
 	if (title) {
@@ -345,6 +347,25 @@ export function prepareExport(
 	addBackgroundRect(clone, backgroundColour, w, h);
 	if (physical) setPhysicalSize(clone, w, h);
 	return { svg: clone, width: w, height: h };
+}
+
+/**
+ * Give the exported document a default typeface: the figure's.
+ *
+ * On screen, an svg <text> with no font-family inherits the page's font through CSS. An
+ * exported file has no page, so every such element (actogram row numbers, histogram counts,
+ * polar-grid radii, sig-bar stars, heatmap values) fell back to the viewer's default, which
+ * is Times in browsers and most editors: a serif scattered through a sans-serif figure.
+ * A presentation attribute on the root is inherited by every descendant that does not set
+ * its own, so this one line covers them all. An element with its own family is untouched.
+ *
+ * @param {SVGElement} clone
+ * @param {string|null} fontFamily a CSS font stack, e.g. from resolveStyle().fontFamily
+ */
+export function setRootFontFamily(clone, fontFamily) {
+	if (!clone || !fontFamily) return;
+	if (clone.getAttribute('font-family')) return;
+	clone.setAttribute('font-family', fontFamily);
 }
 
 /**

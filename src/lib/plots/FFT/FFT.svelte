@@ -18,6 +18,8 @@
 		bindAltTooltipToggle
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
+	import { paddedDomain } from '$lib/plots/axisDomain.js';
+	import { fftXAxisLabel, convertFftLimits, FFT_PERIOD_LABEL } from './fftAxis.js';
 
 	export const FFT_defaultDataInputs = ['time', 'values'];
 	export const FFT_controlHeaders = ['Properties', 'Data'];
@@ -203,7 +205,22 @@
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
 
-		showPeriod = $state(true); // Toggle between frequency and period
+		// Toggle between frequency and period. An accessor so that EVERY way of changing the
+		// mode (the checkbox, the multi-select shared fields, fromJSON) keeps an automatic
+		// x-axis label in step with it; see fftAxis.js.
+		#showPeriod = $state(true);
+		get showPeriod() {
+			return this.#showPeriod;
+		}
+		set showPeriod(v) {
+			this.#showPeriod = !!v;
+			this.syncXAxisLabel();
+		}
+		syncXAxisLabel() {
+			if (!this.xAxis) return;
+			const next = fftXAxisLabel(this.xAxis.label, this.#showPeriod);
+			if (next !== this.xAxis.label) this.xAxis.label = next;
+		}
 		xlimsIN = $state([4, 30]);
 
 		// Get max frequency and min period from data
@@ -280,9 +297,11 @@
 
 			const { min: mnRaw, max: mxRaw } = minMaxAcross(this.data.map((d) => d.fftData.magnitudes));
 			if (mnRaw == null || mxRaw == null) return [0, 1];
-			const range = mxRaw - mnRaw;
-			const ymin = Math.max(mnRaw - range * 0.1, 0);
-			const ymax = mxRaw + range * 0.1;
+			// Headroom and a nice top tick; see plots/axisDomain.js. Magnitude is never negative.
+			const [ymin, ymax] = paddedDomain(mnRaw, mxRaw, {
+				lowerBound: 0,
+				nice: this.yAxisMag?.nticks ?? 5
+			});
 
 			return [
 				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
@@ -320,7 +339,8 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
-			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Period (hours)' });
+			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: FFT_PERIOD_LABEL });
+			this.syncXAxisLabel();
 			this.yAxisMag = AxisClass.withDefaults(dataIN?.yAxisMag, { label: 'Magnitude' });
 			this.yAxisPhase = AxisClass.withDefaults(dataIN?.yAxisPhase, {
 				label: 'Phase (radians)',
@@ -502,8 +522,14 @@
 			if (json.xAxis) {
 				fft.xAxis = AxisClass.fromJSON(json.xAxis);
 			} else {
-				fft.xAxis = new AxisClass({ label: 'Frequency', gridlines: json.xgridlines ?? true });
+				fft.xAxis = new AxisClass({
+					label: fftXAxisLabel('Frequency', fft.showPeriod),
+					gridlines: json.xgridlines ?? true
+				});
 			}
+			// A legacy session has no axis object, and one saved before the label followed the
+			// mode may carry the wrong automatic label; both resolve to the label for the mode.
+			fft.syncXAxisLabel();
 			if (json.yAxisMag) {
 				fft.yAxisMag = AxisClass.fromJSON(json.yAxisMag);
 			} else {
@@ -887,11 +913,7 @@
 					<input
 						type="checkbox"
 						bind:checked={theData.showPeriod}
-						onchange={(e) =>
-							(theData.xlimsIN = [
-								theData.xlimsIN[0] > 0 ? 1 / theData.xlimsIN[0] : this.minPeriod,
-								1 / theData.xlimsIN[1]
-							])}
+						onchange={() => (theData.xlimsIN = convertFftLimits(theData.xlimsIN))}
 					/>
 					<p>Show as Period (hours)</p>
 				</div>
@@ -1011,7 +1033,7 @@
 
 						{#if datum.dataWarnings && datum.dataWarnings.length > 0}
 							<div class="data-warning">
-								{#each datum.dataWarnings as warning}
+								{#each datum.dataWarnings as warning, w (w)}
 									<p>⚠ {warning}</p>
 								{/each}
 							</div>
@@ -1172,7 +1194,7 @@
 			/>
 
 			<!-- Plot data -->
-			{#each theData.plot.data as datum}
+			{#each theData.plot.data as datum, di (di)}
 				{@const xData = theData.plot.showPeriod
 					? datum.fftData.frequencies.filter((f) => f > 0).map((f) => 1 / f)
 					: datum.fftData.frequencies}
@@ -1195,7 +1217,7 @@
 					tooltip={true}
 					dataLabel={datum.y.name || ''}
 					dataColour={datum.line.colour}
-					xLabel={theData.plot.xAxis.label || 'Frequency'}
+					xLabel={fftXAxisLabel(theData.plot.xAxis.label || 'Frequency', theData.plot.showPeriod)}
 					yLabel={theData.plot.yAxisMag.label || 'Magnitude'}
 					siblings={fftMagnitudeSiblings}
 					which="plot"
@@ -1211,7 +1233,7 @@
 					tooltip={true}
 					dataLabel={datum.y.name || ''}
 					dataColour={datum.points.colour}
-					xLabel={theData.plot.xAxis.label || 'Frequency'}
+					xLabel={fftXAxisLabel(theData.plot.xAxis.label || 'Frequency', theData.plot.showPeriod)}
 					yLabel={theData.plot.yAxisMag.label || 'Magnitude'}
 					siblings={fftMagnitudeSiblings}
 					which="plot"
@@ -1230,7 +1252,7 @@
 						tooltip={true}
 						dataLabel={datum.y.name ? datum.y.name + ' (phase)' : 'Phase'}
 						dataColour={datum.phaseLine.colour}
-						xLabel={theData.plot.xAxis.label || 'Frequency'}
+						xLabel={fftXAxisLabel(theData.plot.xAxis.label || 'Frequency', theData.plot.showPeriod)}
 						yLabel={theData.plot.yAxisPhase.label || 'Phase (radians)'}
 						siblings={fftPhaseSiblings}
 						which="plot"
@@ -1246,7 +1268,7 @@
 						tooltip={true}
 						dataLabel={datum.y.name ? datum.y.name + ' (phase)' : 'Phase'}
 						dataColour={datum.phasePoints.colour}
-						xLabel={theData.plot.xAxis.label || 'Frequency'}
+						xLabel={fftXAxisLabel(theData.plot.xAxis.label || 'Frequency', theData.plot.showPeriod)}
 						yLabel={theData.plot.yAxisPhase.label || 'Phase (radians)'}
 						siblings={fftPhaseSiblings}
 						which="plot"

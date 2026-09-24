@@ -24,7 +24,7 @@
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import { argMax, argMaxAmong } from '$lib/components/plotbits/helpers/peakFinder.js';
-	import { minMaxAcross } from '$lib/utils/stats.js';
+	import { paddedDomain, finiteExtent } from '$lib/plots/axisDomain.js';
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 	export const Periodogram_controlHeaders = ['Properties', 'Data'];
@@ -461,10 +461,21 @@
 				return [0, 0];
 			}
 
-			const { min: mnRaw, max: mxRaw } = minMaxAcross(this.data.map((d) => d.periodData.y));
+			// The significance threshold counts as data here: it is drawn, so it must fit. A
+			// threshold hidden by the user (draw off) does not stretch the axis.
+			const { min: mnRaw, max: mxRaw } = finiteExtent(
+				this.data.flatMap((d) => [
+					d.periodData.y,
+					d.method === 'Chi-squared' && d.thresholdline?.draw ? d.periodData.threshold : null
+				])
+			);
 			if (mnRaw == null || mxRaw == null) return [0, 0];
-			const ymin = Math.floor(mnRaw);
-			const ymax = Math.ceil(mxRaw);
+			// Headroom plus a nice top tick, so the highest peak is never flattened by the clip
+			// edge; see plots/axisDomain.js. Power is never negative, hence the lower bound.
+			const [ymin, ymax] = paddedDomain(mnRaw, mxRaw, {
+				lowerBound: 0,
+				nice: this.yAxis?.nticks ?? 5
+			});
 			return [
 				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
 				this.ylimsIN[1] != null ? this.ylimsIN[1] : ymax
@@ -647,7 +658,12 @@
 			// '0')", killing the whole plot node.
 			periodogram.periodlimsIN = json.periodlimsIN ?? periodogram.periodlimsIN;
 			periodogram.periodSteps = json.periodSteps ?? periodogram.periodSteps;
-			periodogram.ylimsIN = json.ylimsIN ?? periodogram.ylimsIN;
+			// The Min/Max boxes used to store `[value]` (a one-element array) instead of the
+			// value, and sessions saved then still carry it; unwrap on load.
+			const unwrap = (v) => (Array.isArray(v) ? (v[0] ?? null) : v);
+			periodogram.ylimsIN = Array.isArray(json.ylimsIN)
+				? [unwrap(json.ylimsIN[0]), unwrap(json.ylimsIN[1])]
+				: periodogram.ylimsIN;
 
 			// Support both new AxisClass format and old individual properties
 			if (json.xAxis) {
@@ -932,9 +948,9 @@
 				<ControlInput label="Min">
 					<NumberWithUnits
 						step="0.1"
-						value={theData.ylimsIN[0] ? theData.ylimsIN[0] : theData.ylims[0]}
+						value={theData.ylimsIN[0] != null ? theData.ylimsIN[0] : theData.ylims[0]}
 						onInput={(val) => {
-							theData.ylimsIN[0] = [parseFloat(val)];
+							theData.ylimsIN[0] = parseFloat(val);
 						}}
 					/>
 				</ControlInput>
@@ -942,9 +958,9 @@
 				<ControlInput label="Max">
 					<NumberWithUnits
 						step="0.1"
-						value={theData.ylimsIN[1] ? theData.ylimsIN[1] : theData.ylims[1]}
+						value={theData.ylimsIN[1] != null ? theData.ylimsIN[1] : theData.ylims[1]}
 						onInput={(val) => {
-							theData.ylimsIN[1] = [parseFloat(val)];
+							theData.ylimsIN[1] = parseFloat(val);
 						}}
 					/>
 				</ControlInput>
@@ -1061,7 +1077,7 @@
 
 						{#if (datum.method === 'Chi-squared' || datum.method === 'Enright') && datum.dataWarnings && datum.dataWarnings.length > 0}
 							<div class="data-warning">
-								{#each datum.dataWarnings as warning}
+								{#each datum.dataWarnings as warning, w (w)}
 									<p>⚠ {warning}</p>
 								{/each}
 							</div>
@@ -1195,7 +1211,7 @@
 			which="plot"
 		/>
 
-		{#each theData.plot.data as datum}
+		{#each theData.plot.data as datum, di (di)}
 			<Line
 				lineData={datum.line}
 				x={datum.periodData.x}

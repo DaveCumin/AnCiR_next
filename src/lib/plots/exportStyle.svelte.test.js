@@ -274,3 +274,33 @@ describe('prepareExport with a title', () => {
 		expect(out.svg.querySelector('text.export-title')).toBeNull();
 	});
 });
+
+// Unstyled <text> in an exported file has no page font to inherit, so it rendered in the
+// viewer's default (Times): the actogram's row numbers came out serif beside sans axes.
+describe('prepareExport font family', () => {
+	it("gives the root the figure's family so unstyled text inherits it", () => {
+		const svg = mount('<text>1</text>');
+		const { svg: clone } = prepareExport(svg, {
+			width: 200,
+			height: 100,
+			fontFamily: 'system-ui, sans-serif'
+		});
+		expect(clone.getAttribute('font-family')).toBe('system-ui, sans-serif');
+		// the live element is not touched
+		expect(svg.getAttribute('font-family')).toBeNull();
+	});
+
+	it('leaves a root that already names a family alone, and does nothing without one', () => {
+		const svg = mount('<text>1</text>');
+		svg.setAttribute('font-family', 'Georgia');
+		expect(
+			prepareExport(svg, { width: 200, height: 100, fontFamily: 'sans-serif' }).svg.getAttribute(
+				'font-family'
+			)
+		).toBe('Georgia');
+		svg.removeAttribute('font-family');
+		expect(
+			prepareExport(svg, { width: 200, height: 100 }).svg.getAttribute('font-family')
+		).toBeNull();
+	});
+});

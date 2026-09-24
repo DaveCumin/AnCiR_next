@@ -134,6 +134,10 @@ describe('figure style is wired to every plotbit that draws text', () => {
 describe('Axis and Legend accept the prop and tolerate its absence', () => {
 	const axis = readFileSync(join(HERE, '..', 'components', 'plotbits', 'Axis.svelte'), 'utf8');
 	const legend = readFileSync(join(HERE, '..', 'components', 'plotbits', 'Legend.svelte'), 'utf8');
+	const layout = readFileSync(
+		join(HERE, '..', 'components', 'plotbits', 'legendLayout.js'),
+		'utf8'
+	);
 
 	it('both declare figureStyle as a prop defaulting to null', () => {
 		expect(axis).toMatch(/figureStyle = null/);
@@ -155,7 +159,10 @@ describe('Axis and Legend accept the prop and tolerate its absence', () => {
 	it('Legend measures its text in the figure family, not a hardcoded one', () => {
 		// Sizing the box from widths measured in the wrong family makes the border not
 		// fit the text it encloses, which only shows once a figure is set to serif.
+		// Measurement moved to legendLayout.js (shared with the plots that reserve room for
+		// an outside legend); the Legend must hand it the figure's family.
 		expect(legend).not.toMatch(/px sans-serif`/);
-		expect(legend).toMatch(/px \$\{resolved\.fontFamily\}`/);
+		expect(legend).toMatch(/measureLabelWidths\([\s\S]*?legendFontSize,\s*resolved\.fontFamily/);
+		expect(layout).toMatch(/`\$\{fontPx\}px \$\{fontFamily\}`/);
 	});
 });

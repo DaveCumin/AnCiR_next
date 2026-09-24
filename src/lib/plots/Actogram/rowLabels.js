@@ -7,6 +7,7 @@
 // plot and a browser to render. The component keeps the SVG; this keeps the decisions.
 import dayjs from '$lib/utils/time/dayjsSetup.js';
 import { DEFAULT_DATE_FORMAT } from '$lib/utils/time/displayTime.js';
+import { scaleLinear } from 'd3-scale';
 
 export { DEFAULT_DATE_FORMAT };
 
@@ -71,7 +72,7 @@ export function rowLabelText(day, { mode, startTime, periodHrs, dateFormat, zone
  * Without it the labels draw at `padding.left - 10` and run off the left edge of the SVG:
  * even "12" was clipped at the default padding of 20, and "05 Aug" is three times wider.
  *
- * Estimated from the character count (about 6 px per character at font-size 10) rather than
+ * Estimated from the character count (about 0.6 em per character) rather than
  * measured. Measuring would mean a DOM read inside a `$derived`, which is both a render-order
  * hazard and unavailable during export; over-reserving a few pixels of margin is much the
  * cheaper mistake.
@@ -81,13 +82,55 @@ export function rowLabelText(day, { mode, startTime, periodHrs, dateFormat, zone
  *
  * @returns {number} pixels, 0 when the labels are off
  */
-export function rowLabelGutter({ mode, dateFormat, nRows } = {}) {
+export function rowLabelGutter({ mode, dateFormat, nRows, fontPx = 10 } = {}) {
 	if (mode !== 'period' && mode !== 'date') return 0;
 	const sample =
 		mode === 'date'
 			? (dateFormat || DEFAULT_DATE_FORMAT).replace(/[A-Za-z]/g, 'M')
 			: String(Math.max(1, Math.floor(nRows ?? 1)));
-	return Math.ceil(sample.length * 6) + 4;
+	const px = Number.isFinite(fontPx) && fontPx > 0 ? fontPx : 10;
+	return Math.ceil(sample.length * px * 0.6) + 4;
+}
+
+/**
+ * Which rows get a label. Every row up to 20; beyond that, round-numbered rows only
+ * (d3's ticks over [0, nRows]), so a long record is not a solid column of numbers.
+ *
+ * @param {number} nRows
+ * @returns {number[]} 0-based row indices
+ */
+export function labelledRows(nRows) {
+	const n = Math.max(0, Math.floor(nRows ?? 0));
+	if (n <= 20) return Array.from({ length: n }, (_, i) => i);
+	return scaleLinear()
+		.domain([0, n])
+		.ticks()
+		.filter((d) => d >= 0 && d < n);
+}
+
+/**
+ * The type size of the row labels, in px.
+ *
+ * They are tick labels for the row axis, so they take the figure's TICK size (they used to
+ * be a hardcoded 10 px with no family at all, which rendered in Times in an exported SVG
+ * beside sans-serif axes). Capped at the distance between two labelled rows, so a tall
+ * record with thin rows never has its labels run into each other.
+ *
+ * @param {object} opts
+ * @param {number} opts.tickPx the figure's tick size
+ * @param {number} opts.plotHeight height of the rows area in px
+ * @param {number} opts.nRows
+ * @param {number} [opts.spaceBetween] px gap between rows
+ * @returns {number}
+ */
+export function rowLabelFontPx({ tickPx, plotHeight, nRows, spaceBetween = 0 }) {
+	const size = Number.isFinite(tickPx) && tickPx > 0 ? tickPx : 10;
+	const n = Math.floor(nRows ?? 0);
+	if (!(n > 0) || !(plotHeight > 0)) return size;
+	const rows = labelledRows(n);
+	const step = rows.length > 1 ? rows[1] - rows[0] : 1;
+	const pitch = ((plotHeight + spaceBetween) / n) * step;
+	return Math.max(1, Math.min(size, pitch));
 }
 
 /**

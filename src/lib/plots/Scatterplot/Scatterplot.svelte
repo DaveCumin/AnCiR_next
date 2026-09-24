@@ -16,6 +16,14 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import Overlay, { OverlayClass } from './Overlay.svelte';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
+	import { resolveStyle } from '$lib/plots/figureStyle.js';
+	import { LEGEND_MARGIN } from '$lib/components/plotbits/Legend.svelte';
+	import {
+		measureLabelWidths,
+		legendBoxSize,
+		buildOccupancy,
+		chooseLegendPlacement
+	} from '$lib/components/plotbits/legendLayout.js';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 	// Tab keys derive from these headers lower-cased (controlTabsCoverage.test.js):
@@ -241,7 +249,107 @@
 		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 
-		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		// The plot-area width before any room is taken for an outside legend. Auto legend
+		// placement is decided at THIS width: deciding at `plotwidth` would be circular, since
+		// the decision is what sets `plotwidth`.
+		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		plotwidth = $derived(this.basePlotWidth - this.legendReserve);
+
+		// --- Legend layout (see components/plotbits/legendLayout.js) ---------------------
+		legendFontPx = $derived(this.legend?.fontSize ?? resolveStyle(this.viewStyle).sizes.legend);
+		legendBox = $derived.by(() => {
+			const items = this.getLegendItems;
+			if (!this.legend?.show || items.length === 0) return null;
+			const labelWidths = measureLabelWidths(
+				items.map((it) => it.label),
+				this.legendFontPx,
+				resolveStyle(this.viewStyle).fontFamily
+			);
+			return legendBoxSize({
+				labelWidths,
+				fontPx: this.legendFontPx,
+				padding: this.legend.padding,
+				itemSpacing: this.legend.itemSpacing,
+				orientation: this.legend.orientation
+			});
+		});
+		// Where the marks are, over the plot area at `basePlotWidth`, using scales built here
+		// from the domains rather than XScale/YScale*, whose ranges depend on `plotwidth`.
+		legendOccupancy = $derived.by(() => {
+			const w = this.basePlotWidth;
+			const h = this.plotheight;
+			if (!(w > 0) || !(h > 0)) return null;
+			const [x0, x1] = this.xlims;
+			const xs = this.anyXdataTime
+				? scaleUtc().domain([x0, x1])
+				: this.xLogScale && x0 > 0 && x1 > 0
+					? scaleLog().domain([x0, x1])
+					: scaleLinear().domain([x0, x1]);
+			xs.range([0, w]);
+			const yScaleFor = (lims, log) =>
+				(log && lims[0] > 0 && lims[1] > 0 ? scaleLog() : scaleLinear())
+					.domain([lims[0], lims[1]])
+					.range([h, 0]);
+			const ysLeft = yScaleFor(this.ylimsLeft, this.yLogScaleLeft);
+			const ysRight = yScaleFor(this.ylimsRight, this.yLogScaleRight);
+			const series = [];
+			for (const d of this.data) {
+				const line = !!d.line?.draw;
+				const pts = !!d.points?.draw;
+				if (!line && !pts) continue;
+				const xRaw = safeColumnData(d.x);
+				const yRaw = safeColumnData(d.y);
+				const origin = this.xOriginFor(d.x);
+				const ys = d.yAxis === 'right' ? ysRight : ysLeft;
+				const n = Math.min(xRaw.length, yRaw.length);
+				const px = new Float64Array(n);
+				const py = new Float64Array(n);
+				for (let i = 0; i < n; i++) {
+					const xv = xRaw[i];
+					const yv = yRaw[i];
+					if (xv == null || yv == null || Number.isNaN(xv) || Number.isNaN(yv)) {
+						px[i] = NaN;
+						py[i] = NaN;
+						continue;
+					}
+					px[i] = xs(origin != null ? origin + xv * 3600000 : xv);
+					py[i] = ys(yv);
+				}
+				series.push({ px, py, line, radius: pts ? (d.points.radius ?? 0) : 0 });
+			}
+			return buildOccupancy({ width: w, height: h, series });
+		});
+		legendAutoPlacement = $derived.by(() => {
+			if (this.legend?.position !== 'auto' || !this.legendBox || !this.legendOccupancy) return null;
+			return chooseLegendPlacement({
+				occupancy: this.legendOccupancy,
+				plotW: this.basePlotWidth,
+				plotH: this.plotheight,
+				boxW: this.legendBox.width,
+				boxH: this.legendBox.height,
+				margin: LEGEND_MARGIN,
+				allowOutside: true
+			});
+		});
+		legendOutside = $derived(
+			!!this.legendBox &&
+				(this.legend.position === 'outsideright' ||
+					(this.legend.position === 'auto' && !!this.legendAutoPlacement?.outside))
+		);
+		// Room taken from the plot area for an outside legend: its width plus a gap from the
+		// plot, and a gap from the figure edge when a right axis sits between the two.
+		legendReserve = $derived(
+			this.legendOutside
+				? this.legendBox.width + LEGEND_MARGIN + (this.hasRightAxisData ? LEGEND_MARGIN : 0)
+				: 0
+		);
+		// x of an outside legend relative to the plot area: past the right axis when there is
+		// one, otherwise straight after the plot with the usual inset.
+		legendOutsideX = $derived(
+			this.legendOutside
+				? this.plotwidth + (this.hasRightAxisData ? this.padding.right : 0) + LEGEND_MARGIN
+				: null
+		);
 
 		xlimsIN = $state([null, null]);
 		xLogScale = $state(false);
@@ -951,7 +1059,12 @@
 	{#if appState.currentControlTab === 'properties'}
 		<div class="div-line"></div>
 
-		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
+		<Legend
+			legendData={theData.legend}
+			figureStyle={theData.parentBox?.style}
+			canPlaceOutside={true}
+			which="controls"
+		/>
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -1440,6 +1553,8 @@
 			plotWidth={theData.plot.plotwidth}
 			plotHeight={theData.plot.plotheight}
 			padding={theData.plot.padding}
+			autoPlacement={theData.plot.legendAutoPlacement}
+			outsideX={theData.plot.legendOutsideX}
 			which="plot"
 		/>
 	</svg>
