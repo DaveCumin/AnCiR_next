@@ -452,7 +452,7 @@ def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
         bin_var = ((means - y.mean()) ** 2 * counts).sum() / n
         powers[k] = n * bin_var / var_y
         dfs[k] = df
-    # Per-period Sidak-corrected UPPER-tail threshold, matching periodogram.js:
+    # Per-fold Sidak-corrected UPPER-tail threshold, matching periodogram.js:
     # correctedAlpha = (1 - alpha)^(1/M) is the per-comparison CONFIDENCE level,
     # so the quantile is evaluated at correctedAlpha (upper tail), with the SAME
     # effective df the statistic used (NaN below df 1) — statistic, df and
@@ -460,7 +460,11 @@ def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
     # scalar taken at a mid-grid df — a third, different line from both the JS
     # intent and the JS bug it mirrored; the pure-chisq-periodogram parity
     # fixtures now pin power, df and threshold across all three languages.
-    m = len(periods)
+    # M counts the DISTINCT folds that produced a statistic (`periods` is one
+    # entry per fold, see _fold_grid), not the requested trial periods: trial
+    # periods sharing a fold are one test, and counting them held the
+    # family-wise false-positive rate far below the nominal alpha.
+    m = int(np.sum(np.nan_to_num(dfs, nan=0.0) >= 1))
     corrected = (1.0 - alpha) ** (1.0 / m) if m else float('nan')
     thresholds = [
         float(sp_stats.chi2.ppf(corrected, df)) if df >= 1 else float('nan')
@@ -475,7 +479,7 @@ def _enright_pgram(t, y, periods, dt):
     y = np.asarray(y, dtype=float) - float(np.mean(y))
     powers = []
     for P in periods:
-        lag = int(round(P / dt))
+        lag = _js_round(P / dt)
         if lag <= 0 or lag >= y.size:
             powers.append(0.0)
             continue
@@ -484,6 +488,31 @@ def _enright_pgram(t, y, periods, dt):
         denom = math.sqrt(float((a * a).sum()) * float((b * b).sum()))
         powers.append(float((a * b).sum()) / denom if denom > 0 else 0.0)
     return powers
+
+
+def _fold_grid(periods, dt, p_min, p_max):
+    # Distinct fold periods for the binned methods, matching periodogram.js
+    # foldGrid. Chi-squared and Enright depend on a trial period only through
+    # nbins = round(P / dt), so trial periods within one bin width are the same
+    # test; reporting them separately tied their power and argmax took the first
+    # (a -dt/2 bias on the peak). Each distinct fold is returned once, at the
+    # period it actually tests (nbins * dt); folds that round outside
+    # [p_min, p_max] are dropped. The grid ascends, so equal folds are adjacent.
+    out = []
+    if not (dt > 0) or not math.isfinite(dt):
+        return out
+    eps = 1e-9 * max(1.0, abs(p_min), abs(p_max))
+    last = None
+    for P in periods:
+        n = _js_round(P / dt)
+        if n < 1 or n == last:
+            continue
+        last = n
+        fold = n * dt
+        if fold < p_min - eps or fold > p_max + eps:
+            continue
+        out.append(fold)
+    return out
 
 
 def run_periodogram_calculation(params, on_progress=None):
@@ -497,6 +526,8 @@ def run_periodogram_calculation(params, on_progress=None):
     step = float(params.get('stepSize', 0.1))
     periods = make_seq_array(p_min, p_max, step)
     dt = float(params.get('dt', None) or _median_dt(t))
+    if method != 'Lomb-Scargle':
+        periods = _fold_grid(periods, dt, p_min, p_max)
     if method == 'Lomb-Scargle':
         powers = _lomb_scargle(t, y, periods)
         threshold = None
@@ -2581,6 +2612,11 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
                     'minPeriod': args.get('periodMin', args.get('minPeriod', 1.0)),
                     'maxPeriod': args.get('periodMax', args.get('maxPeriod', win)),
                     'stepSize': args.get('periodStep', args.get('stepPg', 0.1)),
+                    # JS movinganalysis.js passes binSize = pgBinSize ?? 0.25 and
+                    # chiSquaredAlpha = pgAlpha ?? 0.05; without them the binned
+                    # methods folded at the median sampling interval instead.
+                    'dt': args.get('pgBinSize', 0.25),
+                    'alpha': args.get('pgAlpha', 0.05),
                 })
                 if pg['y']:
                     idx = int(np.argmax(pg['y']))

@@ -2643,7 +2643,7 @@ lomb_scargle <- function(t, y, periods) {
 # (binSize <= sampling interval — the regime the empty-bin fixture pins); with
 # several points per bin this simplified mod-binning port still differs from the JS
 # binData-then-fold pipeline. The significance threshold is the per-period
-# Sidak-corrected UPPER-tail chi-square quantile, matching periodogram.js:
+# Sidak-corrected UPPER-tail chi-square quantile (M = distinct folds), matching periodogram.js:
 # correctedAlpha = (1 - alpha)^(1/M) is the per-comparison CONFIDENCE level, so the
 # quantile is evaluated at correctedAlpha with the SAME effective df the statistic
 # used (NA below df 1) — statistic, df and threshold only calibrate together. The
@@ -2679,7 +2679,11 @@ chi_squared_pgram <- function(t, y, periods, dt, alpha = 0.05) {
     powers[k] <- n * (sum((means - ymean)^2 * counts) / n) / vary
     dfs[k] <- df
   }
-  m <- length(periods)
+  # M counts the DISTINCT folds that produced a statistic (`periods` is one entry
+  # per fold, see fold_grid), not the requested trial periods: trial periods sharing
+  # a fold are one test, and counting them held the family-wise false-positive rate
+  # far below the nominal alpha.
+  m <- sum(!is.na(dfs) & dfs >= 1)
   corrected <- if (m > 0) (1 - alpha)^(1 / m) else NA_real_
   thresholds <- vapply(dfs, function(df) {
     if (!is.na(df) && df >= 1) qchisq(corrected, df) else NA_real_
@@ -2701,6 +2705,22 @@ enright_pgram <- function(t, y, periods, dt) {
   }, numeric(1))
 }
 
+# Distinct fold periods for the binned methods, matching periodogram.js foldGrid.
+# Chi-squared and Enright depend on a trial period only through nbins = round(P / dt),
+# so trial periods within one bin width are the same test; reporting them separately
+# tied their power and argmax took the first (a -dt/2 bias on the peak). Each distinct
+# fold is returned once, at the period it actually tests (nbins * dt); folds that round
+# outside [p_min, p_max] are dropped. The grid ascends, so equal folds are adjacent.
+fold_grid <- function(periods, dt, p_min, p_max) {
+  if (!is.finite(dt) || dt <= 0) return(numeric(0))
+  eps <- 1e-9 * max(1, abs(p_min), abs(p_max))
+  n <- js_round(periods / dt)
+  n <- n[n >= 1]
+  n <- n[c(TRUE, diff(n) != 0)[seq_along(n)]]
+  fold <- n * dt
+  fold[fold >= p_min - eps & fold <= p_max + eps]
+}
+
 run_periodogram_calculation <- function(params) {
   t <- suppressWarnings(as.numeric(unlist(params$t, use.names = FALSE)))
   y <- suppressWarnings(as.numeric(unlist(params$y, use.names = FALSE)))
@@ -2711,6 +2731,7 @@ run_periodogram_calculation <- function(params) {
   periods <- make_seq_array(p_min, p_max, step)
   dt <- if (!is.null(params$dt) && is.finite(params$dt) && params$dt > 0) params$dt
         else median_dt(t)
+  if (!identical(method, "Lomb-Scargle")) periods <- fold_grid(periods, dt, p_min, p_max)
   if (identical(method, "Lomb-Scargle")) {
     list(x = periods, y = lomb_scargle(t, y, periods), threshold = NULL)
   } else if (identical(method, "Chi-squared")) {
@@ -3002,7 +3023,12 @@ tp_movinganalysis <- function(args, env) {
           method = pick("pgMethod", "method", "Lomb-Scargle"),
           minPeriod = pick("periodMin", "minPeriod", 1),
           maxPeriod = pick("periodMax", "maxPeriod", win),
-          stepSize = pick("periodStep", "stepPg", 0.1)))
+          stepSize = pick("periodStep", "stepPg", 0.1),
+          # JS movinganalysis.js passes binSize = pgBinSize ?? 0.25 and
+          # chiSquaredAlpha = pgAlpha ?? 0.05; without them the binned methods
+          # folded at the median sampling interval instead.
+          dt = if (is.null(args$pgBinSize)) 0.25 else as.numeric(args$pgBinSize),
+          alpha = if (is.null(args$pgAlpha)) 0.05 else as.numeric(args$pgAlpha)))
         if (length(pg$y)) {
           i <- which.max(pg$y)
           stats$peak_period <- pg$x[i]; stats$peak_power <- pg$y[i]

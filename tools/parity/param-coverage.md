@@ -7,7 +7,7 @@ Which values of each analysis’s ENUMERABLE parameters (booleans, select option
 appear in any parity fixture. A value listed here is a branch that the JS, Python and R
 runtimes all claim to agree on and that nothing has ever compared.
 
-22 analyses have at least one fixture; 9 reach every enumerable value.
+23 analyses have at least one fixture; 10 reach every enumerable value.
 
 ## Values no fixture reaches
 
@@ -74,7 +74,6 @@ runtimes all claim to agree on and that nothing has ever compared.
 ### RhythmicityAnalysis
 
 - `analysis`: ["fft","correlogram"]
-- `pgMethod`: ["Chi-squared","Enright"]
 
 ### SurrogateTest
 
@@ -85,6 +84,7 @@ runtimes all claim to agree on and that nothing has ever compared.
 - AverageProfile
 - CircadianFunctionIndex
 - ColumnFunctions
+- Crossing
 - DescribeData
 - Interpolate
 - LogisticRegression
