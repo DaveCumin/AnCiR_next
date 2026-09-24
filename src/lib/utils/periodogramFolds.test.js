@@ -172,3 +172,25 @@ describe('Chi-squared family-wise false-positive rate on white noise', () => {
 		expect(fwer).toBeLessThanOrEqual(0.07);
 	});
 });
+
+describe('Enright periodogram with missing values', () => {
+	// A missing y (null) must leave its bin EMPTY, exactly as if the row were
+	// absent. binData's isFinite(null) is true (Number(null) is 0), so a raw
+	// null used to be averaged into its bin as a zero; the Periodogram plot
+	// passes columns with nulls straight through. Chi-squared already filtered
+	// with validPairs; Enright did not.
+	it('treats a null y as a missing row, not as zero', () => {
+		const { t, y } = cosine(24, 14, 1);
+		const withNulls = y.map((v, i) => (i % 7 === 3 || (i >= 100 && i < 130) ? null : v));
+		const keep = withNulls.map((v) => v !== null);
+		const common = { method: 'Enright', binSize: 1, periodMin: 18, periodMax: 30, periodSteps: 1 };
+		const a = runPeriodogramCalculation({ ...common, xData: t, yData: withNulls });
+		const b = runPeriodogramCalculation({
+			...common,
+			xData: t.filter((_, i) => keep[i]),
+			yData: y.filter((_, i) => keep[i])
+		});
+		expect(a.x).toEqual(b.x);
+		expect(a.y).toEqual(b.y);
+	});
+});

@@ -474,19 +474,41 @@ def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
 
 
 def _enright_pgram(t, y, periods, dt):
-    """Binned autocorrelation Enright periodogram (simplified)."""
-    t = np.asarray(t, dtype=float)
-    y = np.asarray(y, dtype=float) - float(np.mean(y))
+    """Port of periodogram.js calculateEnrightPower (Enright 1965): bin the
+    series at dt, centre the bin means on their grand mean (an EMPTY bin, from
+    a gap or a missing value, becomes 0 after centring), then for each fold of
+    nb = round(P / dt) bins average the lag-product correlation
+    sum(c_i * c_(i+lag)) / (n - lag) over every lag = k * nb < n, and divide by
+    the binned variance sum(c^2) / n. Missing rows are dropped before binning
+    (bin_data), as validPairs does in the JS. This replaced a single-lag
+    normalised autocorrelation that was a different statistic from the app's,
+    so exported scripts drew a different Enright spectrum; the
+    pure-enright-periodogram-* parity fixtures pin the power."""
+    if len(t) < 2 or len(y) < 2:
+        return [float('nan')] * len(periods)
+    data = np.asarray(bin_data(t, y, dt, 0.0)['y_out'], dtype=float)
+    n = data.size
+    if n == 0:
+        return [0.0] * len(periods)
+    valid = ~np.isnan(data)
+    mean = float(data[valid].mean()) if valid.any() else 0.0
+    c = np.where(valid, data - mean, 0.0)
+    variance = float((c * c).sum()) / n
     powers = []
     for P in periods:
-        lag = _js_round(P / dt)
-        if lag <= 0 or lag >= y.size:
+        nb = _js_round(P / dt)
+        if nb < 1 or nb > n:
             powers.append(0.0)
             continue
-        a = y[:-lag]
-        b = y[lag:]
-        denom = math.sqrt(float((a * a).sum()) * float((b * b).sum()))
-        powers.append(float((a * b).sum()) / denom if denom > 0 else 0.0)
+        acc = 0.0
+        count = 0
+        lag = nb
+        while lag < n:
+            acc += float((c[:n - lag] * c[lag:]).sum()) / (n - lag)
+            count += 1
+            lag += nb
+        qp = acc / count if count else 0.0
+        powers.append(qp / variance if variance > 0 else 0.0)
     return powers
 
 
@@ -561,6 +583,19 @@ def chi_squared_periodogram(t, y, opts):
     })
     return {'period': res['x'], 'power': res['y'], 'df': res['df'],
             'threshold': res['threshold']}
+
+
+def enright_periodogram(t, y, opts):
+    """Pure-util parity surface for the Enright periodogram: the distinct-fold
+    period axis and the power at each fold, matching periodogram.js."""
+    res = run_periodogram_calculation({
+        't': t, 'y': y, 'method': 'Enright',
+        'minPeriod': opts.get('periodMin', 1.0),
+        'maxPeriod': opts.get('periodMax', 48.0),
+        'stepSize': opts.get('periodStep', 0.1),
+        'dt': opts.get('binSize', 0.25),
+    })
+    return {'period': res['x'], 'power': res['y']}
 
 
 def _median_dt(t):

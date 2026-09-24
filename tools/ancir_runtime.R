@@ -2691,17 +2691,35 @@ chi_squared_pgram <- function(t, y, periods, dt, alpha = 0.05) {
   list(powers = powers, dfs = dfs, threshold = thresholds)
 }
 
-# Binned-autocorrelation Enright periodogram (the simplified form the app uses).
+# Port of periodogram.js calculateEnrightPower (Enright 1965): bin the series at dt,
+# centre the bin means on their grand mean (an EMPTY bin, from a gap or a missing value,
+# becomes 0 after centring), then for each fold of nb = round(P / dt) bins average the
+# lag-product correlation sum(c_i * c_(i+lag)) / (n - lag) over every lag = k * nb < n, and
+# divide by the binned variance sum(c^2) / n. Missing rows are dropped before binning
+# (bin_data), as validPairs does in the JS. This replaced a single-lag normalised
+# autocorrelation that was a different statistic from the app's, so exported scripts drew a
+# different Enright spectrum; the pure-enright-periodogram-* parity fixtures pin the power.
 enright_pgram <- function(t, y, periods, dt) {
+  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
   y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
-  y <- y - mean(y)
+  if (length(t) < 2 || length(y) < 2) return(rep(NA_real_, length(periods)))
+  data <- bin_data(t, y, dt, 0)$y_out
+  n <- length(data)
+  if (!n) return(rep(0, length(periods)))
+  ok <- !is.na(data)
+  m <- if (any(ok)) mean(data[ok]) else 0
+  cc <- ifelse(ok, data - m, 0)
+  variance <- sum(cc * cc) / n
   vapply(periods, function(P) {
-    lag <- js_round(P / dt)
-    if (lag <= 0 || lag >= length(y)) return(0)
-    a <- y[seq_len(length(y) - lag)]
-    b <- y[(lag + 1):length(y)]
-    den <- sqrt(sum(a * a) * sum(b * b))
-    if (den > 0) sum(a * b) / den else 0
+    nb <- js_round(P / dt)
+    if (!is.finite(nb) || nb < 1 || nb > n) return(0)
+    lags <- nb * seq_len((n - 1) %/% nb)
+    qp <- if (length(lags)) {
+      mean(vapply(lags, function(lag) {
+        sum(cc[seq_len(n - lag)] * cc[(lag + 1):n]) / (n - lag)
+      }, numeric(1)))
+    } else 0
+    if (variance > 0) qp / variance else 0
   }, numeric(1))
 }
 
@@ -3448,6 +3466,18 @@ chi_squared_periodogram <- function(t, y, opts) {
   list(period = res$x, power = res$y, df = res$df, threshold = res$threshold)
 }
 
+# Pure-util parity surface for the Enright periodogram: the distinct-fold period axis and
+# the power at each fold, matching periodogram.js.
+enright_periodogram <- function(t, y, opts) {
+  res <- run_periodogram_calculation(list(
+    t = t, y = y, method = "Enright",
+    minPeriod = if (is.null(opts$periodMin)) 1 else as.numeric(opts$periodMin),
+    maxPeriod = if (is.null(opts$periodMax)) 48 else as.numeric(opts$periodMax),
+    stepSize = if (is.null(opts$periodStep)) 0.1 else as.numeric(opts$periodStep),
+    dt = if (is.null(opts$binSize)) 0.25 else as.numeric(opts$binSize)))
+  list(period = res$x, power = res$y)
+}
+
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
 # sits beside the existing `pyFunc`, so both legs read one fixture file).
 #
@@ -3467,6 +3497,7 @@ PURE_UTIL_MAP <- list(
   compute_autocorrelation = compute_autocorrelation,
   compute_fft    = compute_fft,
   chi_squared_periodogram = chi_squared_periodogram,
+  enright_periodogram = enright_periodogram,
   d_agostino     = d_agostino,
   shapiro_wilk   = shapiro_wilk,
   qq_points      = qq_points,

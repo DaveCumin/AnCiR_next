@@ -114,7 +114,11 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 		return new Array(periods.length).fill(NaN);
 	}
 
-	const binnedData = binData(times, values, binSize, 0);
+	// validPairs first, as the Chi-squared path does: binData's isFinite(null) is
+	// true, so a raw null y was averaged into its bin as a zero instead of leaving
+	// the bin empty. See utils/validPairs.js.
+	const { tt, yy } = validPairs(times, values);
+	const binnedData = binData(tt, yy, binSize, 0);
 	if (binnedData.bins.length === 0) {
 		return new Array(periods.length).fill(0);
 	}

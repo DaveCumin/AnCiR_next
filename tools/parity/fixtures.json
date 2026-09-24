@@ -4321,7 +4321,11 @@
     "refs": {
      "x": "t",
      "y": "y"
-    }
+    },
+    "gap": [
+     100,
+     140
+    ]
    },
    "args": {
     "xIN": "@t",
@@ -4341,9 +4345,10 @@
     }
    },
    "compareOutputs": [
-    "rhythmicityx"
+    "rhythmicityx",
+    "rhythmicityy"
    ],
-   "note": "Pins only the distinct-fold period axis for Enright. The power is NOT compared: the Python/R Enright port is a simplified single-lag autocorrelation, while periodogram.js averages the lag correlation over every multiple of the fold, so the two statistics differ."
+   "note": "Enright through the Rhythmicity Analysis node, with a 40 h gap (null y) that leaves empty bins. Pins the distinct-fold period axis and the Enright power at each fold."
   },
   {
    "id": "pure-chisq-periodogram-threshold",
@@ -4497,6 +4502,107 @@
     "threshold"
    ],
    "note": "A 0.05 h step at 1 h bins: 241 trial periods but only 13 distinct folds. Each language must return one point per fold at the period it actually tests (18, 19, ..., 30 h; not the first trial period of each fold, which biased the peak by -binSize/2), and the Sidak family size must be the 13 folds, not the 241 trial periods."
+  },
+  {
+   "id": "pure-enright-periodogram-hourly",
+   "kind": "pureUtil",
+   "jsFn": "enrightPeriodogram",
+   "pyFunc": "enright_periodogram",
+   "rFunc": "enright_periodogram",
+   "tolerance": 1e-09,
+   "generate": {
+    "type": "rhythm",
+    "n": 336,
+    "period": 24.3,
+    "amp": 30,
+    "mesor": 45,
+    "phase": 6,
+    "noise": 5,
+    "seed": 921,
+    "refs": {
+     "x": "t",
+     "y": "y"
+    }
+   },
+   "argRefs": [
+    "t",
+    "y"
+   ],
+   "jsArgs": [
+    {
+     "binSize": 1,
+     "periodMin": 18,
+     "periodMax": 30,
+     "periodStep": 0.05
+    }
+   ],
+   "pyArgs": [
+    {
+     "binSize": 1,
+     "periodMin": 18,
+     "periodMax": 30,
+     "periodStep": 0.05
+    }
+   ],
+   "compareArrays": [
+    "period",
+    "power"
+   ],
+   "note": "Hourly data at 1 h bins. Pins the app's Enright statistic in every language: for each distinct fold, the mean lag-product correlation over every multiple of the fold, over the binned variance. The Python/R ports used to compute a single-lag normalised autocorrelation, a different statistic."
+  },
+  {
+   "id": "pure-enright-periodogram-missing",
+   "kind": "pureUtil",
+   "jsFn": "enrightPeriodogram",
+   "pyFunc": "enright_periodogram",
+   "rFunc": "enright_periodogram",
+   "tolerance": 1e-09,
+   "generate": {
+    "type": "rhythm",
+    "n": 1344,
+    "period": 24.3,
+    "amp": 30,
+    "mesor": 45,
+    "phase": 6,
+    "noise": 5,
+    "seed": 922,
+    "dt": 0.25,
+    "missingEvery": 9,
+    "missingOffset": 4,
+    "gap": [
+     500,
+     620
+    ],
+    "refs": {
+     "x": "t",
+     "y": "y"
+    }
+   },
+   "argRefs": [
+    "t",
+    "y"
+   ],
+   "jsArgs": [
+    {
+     "binSize": 1,
+     "periodMin": 18,
+     "periodMax": 30,
+     "periodStep": 0.25
+    }
+   ],
+   "pyArgs": [
+    {
+     "binSize": 1,
+     "periodMin": 18,
+     "periodMax": 30,
+     "periodStep": 0.25
+    }
+   ],
+   "compareArrays": [
+    "period",
+    "power"
+   ],
+   "note": "15 min data at 1 h bins (four points per bin) with every 9th value missing and a 30 h gap (null y). Missing rows must be dropped before binning, never averaged in as zeros, and the gap's EMPTY bins centre to 0 in the lag products while still counting in n."
   },
   {
    "id": "time-iso-utc-z",
