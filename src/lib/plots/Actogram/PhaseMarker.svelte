@@ -2,52 +2,22 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import {
+		matchTemplateMarkers,
+		markerAbsoluteTimes,
+		unwrapOnsets,
+		markerDisplayPosition,
+		lineCopyOffsets,
+		wrapPhaseToRow,
+		assessOnsetFit,
+		periodogramPeak
+	} from './onsetUnwrap.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
-	import {
-		linearRegression,
-		removeNullsFromXY
-	} from '$lib/components/plotbits/helpers/wrangleData';
+	import { linearRegression } from '$lib/components/plotbits/helpers/wrangleData';
 	import { scaleLinear } from 'd3-scale';
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
-
-	function findCentileValue(data, centile) {
-		// isNaN-ok: callers pass yByPeriod slices, which Actogram builds with an explicit
-		// `tempy[i] != null` guard, so nulls never reach here.
-		const filteredData = data.filter((value) => !isNaN(value) && value !== 0);
-		// Sort the filtered data in ascending order
-		const sortedData = filteredData.slice().sort((a, b) => a - b);
-		// Calculate the index for the percentile
-		const indexPercentile = Math.ceil((centile / 100) * sortedData.length) - 1;
-		// Retrieve the value at the calculated index
-		const percentileValue = sortedData[indexPercentile];
-
-		return percentileValue;
-	}
-
-	//Find the start index of the test data that best matches the template
-	function findBestMatchIndex(test, template) {
-		let bestMatchIndex = -1;
-		let bestCorrelation = -Infinity;
-		//cycle over the test data
-		for (let i = 0; i <= test.length - template.length; i++) {
-			let correlation = 0;
-
-			// Calculate the cross-correlation at the current index
-			for (let j = 0; j < template.length; j++) {
-				correlation += test[i + j] * template[j];
-			}
-
-			// Update best match if the correlation is higher
-			if (correlation > bestCorrelation) {
-				bestCorrelation = correlation;
-				bestMatchIndex = i;
-			}
-		}
-
-		return bestMatchIndex;
-	}
 
 	let _phaseMarkerCounter = 0;
 
@@ -116,6 +86,23 @@
 			this.manualMarkers = [...this.manualMarkers, absoluteTime];
 		}
 
+		// Onset/offset template detections: per row, the hour in the row and the
+		// detection's absolute time (it can fall in the next row). See onsetUnwrap.js.
+		templateMatches = $derived.by(() =>
+			matchTemplateMarkers(
+				this.parentData.dataByDays.xByPeriod,
+				this.parentData.dataByDays.yByPeriod,
+				{
+					periodHrs: this.parentData.parentPlot.periodHrs,
+					binSize: this.parentData.binSize,
+					hrsBefore: this.templateHrsBefore,
+					hrsAfter: this.templateHrsAfter,
+					centile: this.centileThreshold,
+					type: this.type
+				}
+			)
+		);
+
 		//Calculate the markers for the actogram
 		markers = $derived.by(() => {
 			const periodHrs = this.parentData.parentPlot.periodHrs;
@@ -138,71 +125,24 @@
 				return Array.from({ length: maxDay + 1 }, (_, i) => markersByDay[i] ?? NaN);
 			}
 
-			//-------------------------------
-			//Generate the template
-			//-------------------------------
-			//Calculate the number of before and after bins that are needed
-			const N = Math.round(this.templateHrsBefore / this.parentData.binSize);
-			const M = Math.round(this.templateHrsAfter / this.parentData.binSize);
-
-			//Fill the N and M with 1s and -1s (if onset; or -1s and 1s if offset)
-			const template = [];
-			for (let i = 0; i < N; i++) {
-				template.push(this.type === 'onset' ? -1 : 1);
-			}
-			for (let i = 0; i < M; i++) {
-				template.push(this.type === 'onset' ? 1 : -1);
-			}
-
-			//-------------------------------
-			// For each period, find the threshold and match the template
-			// Only calculate for periods that have data
-			//-------------------------------
-			const xByPeriod = this.parentData.dataByDays.xByPeriod;
-			const yByPeriod = this.parentData.dataByDays.yByPeriod;
-			const periodKeys = Object.keys(xByPeriod).map(Number);
-			if (periodKeys.length === 0) return [];
-			const maxPeriod = Math.max(...periodKeys);
-
-			let bestMatchx = [];
-
-			for (let i = 0; i <= maxPeriod; i++) {
-				// Skip periods without data
-				if (!yByPeriod[i] || yByPeriod[i].length === 0) {
-					bestMatchx.push(NaN);
-					continue;
-				}
-
-				let periodsData, xData;
-				// Use double-period matching if next period has data
-				if (yByPeriod[i + 1] && yByPeriod[i + 1].length > 0) {
-					periodsData = [...yByPeriod[i], ...yByPeriod[i + 1]];
-					xData = [...xByPeriod[i], ...xByPeriod[i + 1]];
-				} else {
-					periodsData = [...yByPeriod[i]];
-					xData = [...xByPeriod[i]];
-				}
-
-				const centileValue = findCentileValue(periodsData, this.centileThreshold);
-				const aboveBelow = periodsData.map((value) =>
-					value <= centileValue || isNaN(value) ? -1 : 1
-				);
-
-				let bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
-
-				if (bestMatchIndex >= 0 && bestMatchIndex < xData.length) {
-					let rawHour = xData[bestMatchIndex] - i * periodHrs;
-					rawHour = ((rawHour % periodHrs) + periodHrs) % periodHrs;
-
-					bestMatchx.push(rawHour);
-				} else {
-					bestMatchx.push(NaN);
-				}
-			}
-
-			//Return the markers
-			return bestMatchx;
+			return this.templateMatches.hours;
 		});
+
+		// Absolute time of each row's marker, and the selected markers unwrapped
+		// across the row boundary so the regression slope is tau.
+		markerTimes = $derived(
+			markerAbsoluteTimes(
+				this.markers,
+				this.parentData.parentPlot.periodHrs,
+				this.type === 'onset' || this.type === 'offset' ? this.templateMatches.times : null
+			)
+		);
+		onsetUnwrap = $derived(
+			unwrapOnsets(this.markerTimes, {
+				periodHrs: this.parentData.parentPlot.periodHrs,
+				selected: this.selectedPeriods
+			})
+		);
 
 		markerPoints = $derived.by(() => {
 			let out = '';
@@ -213,12 +153,14 @@
 			for (let m = 0; m < this.markers.length; m++) {
 				if (!(this.selectedPeriods[m] ?? true)) continue;
 				if (isNaN(this.markers[m]) || this.markers[m] == null) continue;
-				out += `M${xscale(this.markers[m]) + this.parentData.parentPlot.padding.left} ${
+				// Drawn in the row the onset fell in (a row's search spans two rows).
+				const pos = markerDisplayPosition(this.markerTimes[m], this.parentData.parentPlot.periodHrs);
+				out += `M${xscale(pos.hour) + this.parentData.parentPlot.padding.left} ${
 					this.parentData.parentPlot.padding.top +
 					this.parentData.parentPlot.eachplotheight -
 					radius / 2 +
-					m * this.parentData.parentPlot.spaceBetween +
-					m * this.parentData.parentPlot.eachplotheight
+					pos.row * this.parentData.parentPlot.spaceBetween +
+					pos.row * this.parentData.parentPlot.eachplotheight
 				} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0 `;
 			}
 
@@ -233,17 +175,8 @@
 				if (this.fitSlope == null || this.fitIntercept == null) return NaN;
 				return { slope: this.fitSlope, intercept: this.fitIntercept, rSquared: 1, rmse: 0 };
 			}
-			//get the selected markers
-			let xs = [];
-			let ys = [];
-			for (let i = 0; i < this.markers.length; i++) {
-				if (this.selectedPeriods[i] ?? true) {
-					xs.push(i + 1);
-					ys.push(this.markers[i] + (i + 1) * this.parentData.parentPlot.periodHrs);
-				}
-			}
-			//remove any NaNs
-			[xs, ys] = removeNullsFromXY(xs, ys);
+			//the selected markers, unwrapped across the row boundary
+			const { xs, ys } = this.onsetUnwrap;
 			//return an NaN if there are no values
 			if (xs.length == 0) return NaN;
 			return linearRegression(xs, ys);
@@ -261,7 +194,7 @@
 			const refDay = this.fitRefDay;
 			const yPred = reg.slope * refDay + reg.intercept;
 			const markerHourPred = yPred - refDay * periodHrs;
-			const wrapped = ((markerHourPred % periodHrs) + periodHrs) % periodHrs;
+			const wrapped = wrapPhaseToRow(markerHourPred, reg.slope, periodHrs);
 			return { phase: wrapped, refDay };
 		});
 
@@ -315,6 +248,25 @@
 			return { candidates: results, strongest };
 		});
 
+		// Reasons not to trust the automatic tau (see assessOnsetFit).
+		onsetWarnings = $derived.by(() => {
+			if (this.type === 'fitline') return [];
+			const P = this.parentData.parentPlot.periodHrs;
+			return assessOnsetFit({
+				unwrap: this.onsetUnwrap,
+				reg: this.linearRegression,
+				periodHrs: P,
+				periodogramPeak: () =>
+					periodogramPeak(
+						this.parentData.x?.hoursSinceStart,
+						this.parentData.y?.getData(),
+						this.parentData.binSize || 0.25,
+						P / 2,
+						P * 1.5
+					)
+			});
+		});
+
 		//Edit a marker value. If onset/offset, convert to manual first.
 		editMarker(periodIndex, newHourValue) {
 			const periodHrs = this.parentData.parentPlot.periodHrs;
@@ -326,7 +278,10 @@
 						const hour = i === periodIndex ? newHourValue : this.markers[i];
 						// Wrap to [0, periodHrs) to ensure correct period assignment
 						const wrappedHour = ((hour % periodHrs) + periodHrs) % periodHrs;
-						newManualMarkers.push(i * periodHrs + wrappedHour);
+						// Keep each other detection's true time (it may belong to the next row).
+						newManualMarkers.push(
+							i === periodIndex ? i * periodHrs + wrappedHour : this.markerTimes[i]
+						);
 					}
 				}
 				this.manualMarkers = newManualMarkers;
@@ -645,6 +600,13 @@
 					/>
 				</p>
 			{/if}
+			{#if marker.onsetWarnings.length > 0}
+				<div class="data-warning">
+					{#each marker.onsetWarnings as warning (warning)}
+						<p>⚠ {warning}</p>
+					{/each}
+				</div>
+			{/if}
 
 			{#if marker.estimatedPhase}
 				<p>
@@ -748,6 +710,26 @@
 		{@const hi = Math.min(Ndays, marker.lineMaxDay ?? Ndays)}
 		{#if hi >= lo}
 			{@const dx = marker.linearRegression.slope - periodHrs}
+			<!-- The line's other copies, a whole τ either side of the one below: once the
+			     onsets cross the row boundary the line leaves the plot and re-enters where
+			     they reappear, and a double plot shows every onset twice (onsetUnwrap.js). -->
+			{#each lineCopyOffsets({
+				slope: marker.linearRegression.slope,
+				intercept: marker.linearRegression.intercept,
+				periodHrs,
+				span: periodHrs * marker.parentData.parentPlot.doublePlot,
+				lo,
+				hi
+			}).filter((off) => off !== 0) as off (off)}
+				<line
+					x1={xscale(marker.linearRegression.intercept + off + (lo - 1) * dx) + padLeft}
+					y1={padTop + (lo - 1) * (eph + sb)}
+					x2={xscale(marker.linearRegression.intercept + off + hi * dx) + padLeft}
+					y2={padTop + (hi - 1) * (eph + sb) + eph}
+					stroke={marker.colour}
+					stroke-width={marker.lineWidth}
+				/>
+			{/each}
 			<!-- y at top of day d (0-indexed) = padTop + d*(eph+sb).
 			     y at bottom of day d         = padTop + d*(eph+sb) + eph.
 			     x at top of day d            = intercept + d*dx. -->
@@ -841,6 +823,20 @@
 		border: 1px solid #ddd;
 		border-radius: 2px;
 		box-sizing: border-box;
+	}
+
+	/* Same house style as the plots' .data-warning blocks (Periodogram, SeriesBlockHeader). */
+	.data-warning {
+		margin: var(--space-2) 0;
+		padding: 0.45rem 0.6rem;
+		border-radius: 0.375rem;
+		background: color-mix(in srgb, #f5c76a 18%, white);
+		border: 1px solid color-mix(in srgb, #d89c1b 35%, white);
+	}
+
+	.data-warning p {
+		margin: 0.15rem 0;
+		font-size: 0.92em;
 	}
 
 	.marker-value-input:focus {
