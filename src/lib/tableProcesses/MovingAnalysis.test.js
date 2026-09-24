@@ -37,7 +37,10 @@ vi.mock('$lib/utils/periodogram.js', () => ({
 	})
 }));
 
-vi.mock('$lib/utils/cosinor.js', () => ({
+// Partial mock: the fitters are stubbed, the pure helpers (FREE_PERIOD_DEFAULTS,
+// freePeriodFitWarnings, resolvePeriodRange) stay real.
+vi.mock('$lib/utils/cosinor.js', async (importOriginal) => ({
+	...(await importOriginal()),
 	fitCosineCurves: vi.fn(() => ({
 		parameters: {
 			cosines: [{ amplitude: 2, frequency: (2 * Math.PI) / 24, phase: 0.3 }],

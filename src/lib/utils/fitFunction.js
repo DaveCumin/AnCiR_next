@@ -1,5 +1,10 @@
 // @ts-nocheck
-import { fitCosineCurves, fitCosinorFixed, evaluateCosinorAtPoints } from '$lib/utils/cosinor.js';
+import {
+	fitCosineCurves,
+	fitCosinorFixed,
+	evaluateCosinorAtPoints,
+	FREE_PERIOD_DEFAULTS
+} from '$lib/utils/cosinor.js';
 import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
 import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
 import { permutationTest } from '$lib/utils/permutationTest.js';
@@ -43,7 +48,11 @@ function fitCosinorModel(t, x, options = {}) {
 	}
 
 	const Ncurves = Math.max(1, Math.trunc(Number(options.Ncurves ?? 1)));
-	const fitResult = fitCosineCurves(t, x, Ncurves);
+	// Bounded free period (see FREE_PERIOD_DEFAULTS in cosinor.js).
+	const fitResult = fitCosineCurves(t, x, Ncurves, {
+		minPeriod: options.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod,
+		maxPeriod: options.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod
+	});
 	if (!fitResult) return null;
 	return {
 		model: 'cosinor',
@@ -55,7 +64,9 @@ function fitCosinorModel(t, x, options = {}) {
 		},
 		fitted: fitResult.fitted,
 		rmse: fitResult.rmse,
-		rSquared: fitResult.rSquared
+		rSquared: fitResult.rSquared,
+		// converged / atBound / periodRange, for the node's warnings
+		diagnostics: fitResult.diagnostics
 	};
 }
 

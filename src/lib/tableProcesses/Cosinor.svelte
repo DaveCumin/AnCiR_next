@@ -3,7 +3,12 @@
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
-	import { evaluateCosinorAtPoints } from '$lib/utils/cosinor.js';
+	import {
+		evaluateCosinorAtPoints,
+		freePeriodFitWarnings,
+		resolvePeriodRange,
+		FREE_PERIOD_DEFAULTS
+	} from '$lib/utils/cosinor.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
@@ -72,6 +77,12 @@
 		['valid', { val: false }],
 		['useFixedPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
+		// Free-period fit only: the period range (h) the fit may use. Without a
+		// bound the optimiser followed trends out to thousands of hours on real
+		// activity data (see cosinor.js). Sessions saved before these existed get
+		// the defaults via fillDefaults.
+		['minPeriod', { val: FREE_PERIOD_DEFAULTS.minPeriod }],
+		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
 		['nHarmonics', { val: 1 }],
 		['alpha', { val: 0.05 }],
 		// Reference zeitgeber time (h) for the phase-angle-of-entrainment metric.
@@ -136,6 +147,8 @@
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
 		const nHarmonics = argsIN.nHarmonics ?? 1;
 		const alpha = argsIN.alpha ?? 0.05;
+		const minPeriod = argsIN.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod;
+		const maxPeriod = argsIN.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod;
 
 		// The permutation fit must match this node's fit, or the null distribution
 		// is not the null for the model being reported.
@@ -144,7 +157,9 @@
 			fixedPeriod,
 			nHarmonics,
 			Ncurves: Ncurves ?? 1,
-			alpha
+			alpha,
+			minPeriod,
+			maxPeriod
 		};
 
 		async function fitOne(tt, yy) {
@@ -155,7 +170,9 @@
 				useFixedPeriod,
 				fixedPeriod,
 				nHarmonics,
-				alpha
+				alpha,
+				minPeriod,
+				maxPeriod
 			};
 			let results;
 			if (shouldUseWorkers({ inputLen: tt.length })) {
@@ -395,12 +412,11 @@
 					// MESOR is the rhythm-adjusted mean (fixed-period fit's offset M).
 					mesor = yr.fixedStats.M ?? NaN;
 					amplitude = yr.fixedStats.harmonics?.[0]?.amplitude ?? NaN;
-					// fixedStats gives the CLASSICAL acrophase (acrophase_hrs = wrap(-t_peak));
-					// the free branch below feeds bathyphase/phaseAngle the true PEAK time,
-					// so convert here to the same peak-time convention (t_peak = wrap(-acrophase_hrs)).
-					// Without this, bathyphase/phase_angle were sign-inverted in fixed-period mode.
-					const classicalAcro = yr.fixedStats.harmonics?.[0]?.acrophase_hrs ?? NaN;
-					acrophase = wrapToPeriod(-classicalAcro, period);
+					// fitCosinorFixed reports acrophase_hrs as the time of peak (h after
+					// t = 0), the same convention as the free branch below and as the
+					// panel and stats CSV. (It used to return the classical wrap(−t_peak),
+					// which this line negated while the panel and CSV did not.)
+					acrophase = yr.fixedStats.harmonics?.[0]?.acrophase_hrs ?? NaN;
 				} else {
 					const c = yr.fittedData?.parameters?.cosines?.[0];
 					period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
@@ -421,10 +437,11 @@
 			const h1 = useFixed ? yr?.fixedStats?.harmonics?.[0] : null;
 			ampCiLowArr.push(h1?.CI_A?.[0] ?? NaN);
 			ampCiHighArr.push(h1?.CI_A?.[1] ?? NaN);
-			// The acrophase CI is reported on the same peak-time convention as
-			// `acrophase` itself, so the interval brackets the value shown.
-			acroCiLowArr.push(h1?.CI_acrophase ? wrapToPeriod(-h1.CI_acrophase[1], period) : NaN);
-			acroCiHighArr.push(h1?.CI_acrophase ? wrapToPeriod(-h1.CI_acrophase[0], period) : NaN);
+			// Each end of the (unwrapped) peak-time CI is wrapped onto the clock, as
+			// the panel and stats CSV show it, so an interval that spans t = 0 reads
+			// e.g. 23.1 to 0.9 h.
+			acroCiLowArr.push(h1?.CI_acrophase ? wrapToPeriod(h1.CI_acrophase[0], period) : NaN);
+			acroCiHighArr.push(h1?.CI_acrophase ? wrapToPeriod(h1.CI_acrophase[1], period) : NaN);
 			// Report acrophase as the peak time wrapped into [0, period), matching the
 			// convention bathyphase/phase_angle already use.
 			acrophaseArr.push(wrapToPeriod(acrophase, period));
@@ -503,6 +520,26 @@
 		return warnings;
 	}
 
+	// The free fit refuses an empty period range (min ≥ max, or a range that lies
+	// entirely below the Nyquist period of the sampling); say why instead of
+	// leaving the panel blank.
+	function periodRangeWarnings(t, argsIN) {
+		const lo = Number(argsIN.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod);
+		const hi = Number(argsIN.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod);
+		if (!(lo > 0 && hi > lo)) {
+			return [
+				`Period range ${lo} to ${hi} h is empty: the minimum period must be above 0 and below the maximum. Set a range that contains the rhythm you expect (default ${FREE_PERIOD_DEFAULTS.minPeriod} to ${FREE_PERIOD_DEFAULTS.maxPeriod} h).`
+			];
+		}
+		const finite = (t ?? []).filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
+		if (finite.length >= 2 && !resolvePeriodRange(finite, lo, hi)) {
+			return [
+				`Period range ${lo} to ${hi} h lies below what the sampling can resolve (the shortest resolvable period is twice the sampling interval). Raise the maximum period.`
+			];
+		}
+		return [];
+	}
+
 	export async function cosinor(argsIN) {
 		const [result, anyValid] = await evaluateCosinor(argsIN);
 		if (anyValid && argsIN?.out?.cosinorx !== -1) {
@@ -522,9 +559,122 @@
 		}));
 		result.warnings = [
 			...checkFitResultsFinite(fitEntries, 'The cosinor fit'),
+			...(argsIN.useFixedPeriod
+				? []
+				: [
+						...periodRangeWarnings(t, argsIN),
+						...freePeriodFitWarnings(fitEntries, 'The free-period cosinor fit')
+					]),
 			...cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1))
 		];
 		return [result, anyValid];
+	}
+
+	/**
+	 * The "View stats" / "Download stats" table. Module-level and pure (bar the
+	 * column-name lookup) so the acrophase convention it prints is testable
+	 * against the ports. Every acrophase here is the time of peak (h after the
+	 * start), the same number as the `acrophase` port.
+	 */
+	export function cosinorStatsTable(cosinorData, args) {
+		if (!cosinorData?.y_results) return { headers: [], rows: [] };
+		const useFixed = args.useFixedPeriod ?? false;
+		const validEntries = Object.entries(cosinorData.y_results).filter(
+			([, r]) => (r.fittedData?.fitted?.length ?? 0) > 0
+		);
+		if (!validEntries.length) return { headers: [], rows: [] };
+		// The permutation p is a different test from the fixed-period F-test, so it
+		// gets its own column (and only appears when the test was actually run).
+		const withPerm = validEntries.some(([, r]) => Number.isFinite(r.pValue));
+		const permHeader = withPerm ? ['perm_p_value'] : [];
+		const permCell = (r) => (withPerm ? [r.pValue ?? null] : []);
+
+		if (useFixed) {
+			const maxH = Math.max(...validEntries.map(([, r]) => r.fixedStats?.harmonics?.length ?? 0));
+			const headers = [
+				'column',
+				'rmse',
+				'r2',
+				'mesor',
+				'mesor_ci_lo',
+				'mesor_ci_hi',
+				'F_stat',
+				'F_p_value',
+				...permHeader
+			];
+			for (let h = 1; h <= maxH; h++) {
+				headers.push(
+					`H${h}_amplitude`,
+					`H${h}_amp_ci_lo`,
+					`H${h}_amp_ci_hi`,
+					// Time of peak (h after the start), the same number as the
+					// `acrophase` port; CI ends wrapped onto the clock like the port.
+					`H${h}_acrophase_peak_h`,
+					`H${h}_acrophase_ci_lo`,
+					`H${h}_acrophase_ci_hi`
+				);
+			}
+			const rows = validEntries.map(([yId, r]) => {
+				const name = getColumnById(Number(yId))?.name ?? String(yId);
+				const s = r.fixedStats;
+				const row = [
+					name,
+					r.fittedData.rmse,
+					r.fittedData.rSquared,
+					s?.M ?? null,
+					s?.CI_M?.[0] ?? null,
+					s?.CI_M?.[1] ?? null,
+					s?.F_stat ?? null,
+					s?.pF ?? null,
+					...permCell(r)
+				];
+				for (let h = 0; h < maxH; h++) {
+					const hd = s?.harmonics?.[h];
+					const hPeriod = (s?.period ?? args.fixedPeriod ?? 24) / (h + 1);
+					row.push(
+						hd?.amplitude ?? null,
+						hd?.CI_A?.[0] ?? null,
+						hd?.CI_A?.[1] ?? null,
+						hd?.acrophase_hrs ?? null,
+						hd?.CI_acrophase ? wrapToPeriod(hd.CI_acrophase[0], hPeriod) : null,
+						hd?.CI_acrophase ? wrapToPeriod(hd.CI_acrophase[1], hPeriod) : null
+					);
+				}
+				return row;
+			});
+			return { headers, rows };
+		} else {
+			const maxC = Math.max(
+				...validEntries.map(([, r]) => r.fittedData?.parameters?.cosines?.length ?? 0)
+			);
+			const headers = ['column', 'rmse', 'r2', ...permHeader];
+			for (let c = 1; c <= maxC; c++) {
+				// `phase_rad` is the model's φ (A·cos(ωt + φ)); `acrophase_peak_h` is the
+				// time of peak, the convention every acrophase in AnCiR uses.
+				headers.push(
+					`curve${c}_period`,
+					`curve${c}_amplitude`,
+					`curve${c}_phase_rad`,
+					`curve${c}_acrophase_peak_h`
+				);
+			}
+			const rows = validEntries.map(([yId, r]) => {
+				const name = getColumnById(Number(yId))?.name ?? String(yId);
+				const row = [name, r.fittedData.rmse, r.fittedData.rSquared, ...permCell(r)];
+				for (let c = 0; c < maxC; c++) {
+					const cd = r.fittedData.parameters?.cosines?.[c];
+					const period = cd?.frequency ? (2 * Math.PI) / cd.frequency : null;
+					row.push(
+						period,
+						cd?.amplitude ?? null,
+						cd?.phase ?? null,
+						period ? wrapToPeriod(-cd.phase / cd.frequency, period) : null
+					);
+				}
+				return row;
+			});
+			return { headers, rows };
+		}
 	}
 </script>
 
@@ -610,7 +760,11 @@
 			'|' +
 			p.args.alpha +
 			'|' +
-			p.args.Ncurves;
+			p.args.Ncurves +
+			'|' +
+			p.args.minPeriod +
+			'|' +
+			p.args.maxPeriod;
 		return out;
 	});
 	// The stats (MESOR / amplitude / phase / CIs / F-stat / RMSE) live only in the
@@ -806,89 +960,7 @@
 	}
 
 	function getCosinorStatsData() {
-		if (!cosinorData?.y_results) return { headers: [], rows: [] };
-		const useFixed = p.args.useFixedPeriod ?? false;
-		const validEntries = Object.entries(cosinorData.y_results).filter(
-			([, r]) => (r.fittedData?.fitted?.length ?? 0) > 0
-		);
-		if (!validEntries.length) return { headers: [], rows: [] };
-		// The permutation p is a different test from the fixed-period F-test, so it
-		// gets its own column (and only appears when the test was actually run).
-		const withPerm = validEntries.some(([, r]) => Number.isFinite(r.pValue));
-		const permHeader = withPerm ? ['perm_p_value'] : [];
-		const permCell = (r) => (withPerm ? [r.pValue ?? null] : []);
-
-		if (useFixed) {
-			const maxH = Math.max(...validEntries.map(([, r]) => r.fixedStats?.harmonics?.length ?? 0));
-			const headers = [
-				'column',
-				'rmse',
-				'r2',
-				'mesor',
-				'mesor_ci_lo',
-				'mesor_ci_hi',
-				'F_stat',
-				'F_p_value',
-				...permHeader
-			];
-			for (let h = 1; h <= maxH; h++) {
-				headers.push(
-					`H${h}_amplitude`,
-					`H${h}_amp_ci_lo`,
-					`H${h}_amp_ci_hi`,
-					`H${h}_acrophase_hrs`,
-					`H${h}_acro_ci_lo`,
-					`H${h}_acro_ci_hi`
-				);
-			}
-			const rows = validEntries.map(([yId, r]) => {
-				const name = getColumnById(Number(yId))?.name ?? String(yId);
-				const s = r.fixedStats;
-				const row = [
-					name,
-					r.fittedData.rmse,
-					r.fittedData.rSquared,
-					s?.M ?? null,
-					s?.CI_M?.[0] ?? null,
-					s?.CI_M?.[1] ?? null,
-					s?.F_stat ?? null,
-					s?.pF ?? null,
-					...permCell(r)
-				];
-				for (let h = 0; h < maxH; h++) {
-					const hd = s?.harmonics?.[h];
-					row.push(
-						hd?.amplitude ?? null,
-						hd?.CI_A?.[0] ?? null,
-						hd?.CI_A?.[1] ?? null,
-						hd?.acrophase_hrs ?? null,
-						hd?.CI_acrophase?.[0] ?? null,
-						hd?.CI_acrophase?.[1] ?? null
-					);
-				}
-				return row;
-			});
-			return { headers, rows };
-		} else {
-			const maxC = Math.max(
-				...validEntries.map(([, r]) => r.fittedData?.parameters?.cosines?.length ?? 0)
-			);
-			const headers = ['column', 'rmse', 'r2', ...permHeader];
-			for (let c = 1; c <= maxC; c++) {
-				headers.push(`curve${c}_period`, `curve${c}_amplitude`, `curve${c}_phase`);
-			}
-			const rows = validEntries.map(([yId, r]) => {
-				const name = getColumnById(Number(yId))?.name ?? String(yId);
-				const row = [name, r.fittedData.rmse, r.fittedData.rSquared, ...permCell(r)];
-				for (let c = 0; c < maxC; c++) {
-					const cd = r.fittedData.parameters?.cosines?.[c];
-					const period = cd?.frequency ? (2 * Math.PI) / cd.frequency : null;
-					row.push(period, cd?.amplitude ?? null, cd?.phase ?? null);
-				}
-				return row;
-			});
-			return { headers, rows };
-		}
+		return cosinorStatsTable(cosinorData, p.args);
 	}
 </script>
 
@@ -964,6 +1036,25 @@
 					bind:value={p.args.Ncurves}
 					onInput={() => getCosinor()}
 					min="1"
+					step="1"
+				/>
+			</ControlInput>
+		</div>
+		<!-- The free period is searched for, and kept, inside this range. -->
+		<div class="control-input-horizontal">
+			<ControlInput label="Min period (hrs)">
+				<NumberWithUnits
+					bind:value={p.args.minPeriod}
+					onInput={() => getCosinor()}
+					min="0.1"
+					step="1"
+				/>
+			</ControlInput>
+			<ControlInput label="Max period (hrs)">
+				<NumberWithUnits
+					bind:value={p.args.maxPeriod}
+					onInput={() => getCosinor()}
+					min="0.1"
 					step="1"
 				/>
 			</ControlInput>
@@ -1085,7 +1176,7 @@
 			{/if}
 		</div>
 	</div>
-	{#each yResult?.fittedData?.parameters.cosines ?? [] as cosine, i}
+	{#each yResult?.fittedData?.parameters.cosines ?? [] as cosine, i (i)}
 		{@const period = 2 * Math.PI * (1 / cosine.frequency)}
 		<div class="control-input-horizontal">
 			<div class="control-input">
@@ -1110,8 +1201,26 @@
 						source="Cosinor"
 					/>
 				</p>
+				{#if !yResult?.fixedStats}
+					<p>
+						Acrophase (time of peak): {wrapToPeriod(
+							-cosine.phase / cosine.frequency,
+							period
+						).toFixed(2)} h
+						<StoreValueButton
+							label="Acrophase (time of peak, h)"
+							getter={() => {
+								const c = yResult?.fittedData?.parameters?.cosines?.[i];
+								if (!c?.frequency) return NaN;
+								return wrapToPeriod(-c.phase / c.frequency, (2 * Math.PI) / c.frequency);
+							}}
+							defaultName={`cosinor_acrophase_${yName}${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`}
+							source="Cosinor"
+						/>
+					</p>
+				{/if}
 				<p>
-					Phase: {cosine.phase.toFixed(2)}
+					Phase φ (rad): {cosine.phase.toFixed(2)}
 					<StoreValueButton
 						label="Phase"
 						getter={() => yResult?.fittedData?.parameters?.cosines?.[i]?.phase}
@@ -1145,7 +1254,7 @@
 						source="Cosinor (fixed)"
 					/>
 				</p>
-				{#each s.harmonics as h}
+				{#each s.harmonics as h (h.k)}
 					<p>
 						H{h.k} Amplitude: {h.amplitude.toFixed(3)} &nbsp;[CI: {h.CI_A[0].toFixed(3)}, {h.CI_A[1].toFixed(
 							3
@@ -1157,12 +1266,14 @@
 							source="Cosinor (fixed)"
 						/>
 					</p>
+					{@const hPeriod = s.period / h.k}
 					<p>
-						H{h.k} Acrophase: {h.acrophase_hrs.toFixed(2)} h &nbsp;[CI: {h.CI_acrophase[0].toFixed(
-							2
-						)}, {h.CI_acrophase[1].toFixed(2)}]
+						H{h.k} Acrophase (time of peak): {h.acrophase_hrs.toFixed(2)} h &nbsp;[CI: {wrapToPeriod(
+							h.CI_acrophase[0],
+							hPeriod
+						).toFixed(2)}, {wrapToPeriod(h.CI_acrophase[1], hPeriod).toFixed(2)}]
 						<StoreValueButton
-							label={`H${h.k} Acrophase`}
+							label={`H${h.k} Acrophase (time of peak, h)`}
 							getter={() => yResult?.fixedStats?.harmonics?.[h.k - 1]?.acrophase_hrs}
 							defaultName={`cosinor_acrophase_${yName}${s.harmonics.length > 1 ? '_H' + h.k : ''}`}
 							source="Cosinor (fixed)"

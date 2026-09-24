@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { fitCosineCurves, evaluateCosinorAtPoints, fitCosinorFixed } from './cosinor.js';
+import {
+	fitCosineCurves,
+	evaluateCosinorAtPoints,
+	fitCosinorFixed,
+	freePeriodFitWarnings,
+	resolvePeriodRange,
+	scanPeriodogram,
+	FREE_PERIOD_DEFAULTS
+} from './cosinor.js';
 
 // Synthetic: y = 2*cos(2π/24 * t + 0.5) + 5
 // amplitude=2, period=24h, phase=0.5 rad, offset=5
@@ -90,13 +98,37 @@ describe('fitCosinorFixed', () => {
 		expect(result.pF).toBeLessThan(0.001);
 	});
 
-	it('recovers the acrophase of a known cosine', () => {
-		// y = 2·cos(2π/24·t + 0.5) + 5.  The classical acrophase φ = -0.5 rad
-		// → acrophase_hrs = (-φ)·period/2π = 0.5·24/2π ≈ 1.91h.
+	it('reports acrophase_hrs as the time of peak of a known cosine', () => {
+		// y = 2·cos(2π/24·t + 0.5) + 5 peaks where 2π/24·t + 0.5 = 0 (mod 2π),
+		// i.e. t = −0.5·24/2π ≈ −1.91 h → 24 − 1.91 = 22.09 h after t = 0.
 		const { t, y } = syntheticData();
 		const result = fitCosinorFixed(t, y, 24, 1);
-		const expectedAcroHrs = (0.5 * 24) / (2 * Math.PI);
-		expect(result.harmonics[0].acrophase_hrs).toBeCloseTo(expectedAcroHrs, 1);
+		const expectedPeakHrs = 24 - (0.5 * 24) / (2 * Math.PI);
+		expect(result.harmonics[0].acrophase_hrs).toBeCloseTo(expectedPeakHrs, 6);
+	});
+
+	it('a rhythm peaking at 06:00 reports acrophase 6 h (not the classical 18 h)', () => {
+		// The paper benchmark's evidence case (E_issue_evidence.json): the node port
+		// said 6.0 h while the panel and stats CSV said 18.0 h for the same fit.
+		const t = Array.from({ length: 96 }, (_, i) => i * 0.5);
+		const y = t.map((ti) => 10 + 3 * Math.cos((2 * Math.PI * (ti - 6)) / 24));
+		const h = fitCosinorFixed(t, y, 24, 1).harmonics[0];
+		expect(h.acrophase_hrs).toBeCloseTo(6, 9);
+		expect(h.CI_acrophase[0]).toBeLessThanOrEqual(h.acrophase_hrs);
+		expect(h.CI_acrophase[1]).toBeGreaterThanOrEqual(h.acrophase_hrs);
+	});
+
+	it('second-harmonic acrophase is the peak time within [0, period/2)', () => {
+		const t = Array.from({ length: 96 }, (_, i) => i * 0.5);
+		const y = t.map(
+			(ti) =>
+				10 +
+				3 * Math.cos((2 * Math.PI * (ti - 6)) / 24) +
+				1 * Math.cos((4 * Math.PI * (ti - 2)) / 24)
+		);
+		const r = fitCosinorFixed(t, y, 24, 2);
+		expect(r.harmonics[0].acrophase_hrs).toBeCloseTo(6, 9);
+		expect(r.harmonics[1].acrophase_hrs).toBeCloseTo(2, 9);
 	});
 
 	it('acrophase is reported within [0, period)', () => {
@@ -232,5 +264,155 @@ describe('fitCosinorFixed F-test vs scipy', () => {
 		const r = fitCosinorFixed(t48, mk(0.9, NOISE_WEAK), 24, 1, 0.05);
 		expect(r.F_stat).toBeCloseTo(2.3424837144170088, 9);
 		expect(r.pF).toBeCloseTo(0.10770077966803805, 9);
+	});
+});
+
+// Standard errors pinned against statsmodels OLS + the delta method with the FULL
+// (β, γ) covariance. The record is short (≈31 h, 1.3 cycles) and unevenly sampled,
+// so cov(β, γ) is far from zero (correlation −0.08); the old diagonal-only formula
+// was 2.0% high on SE(A) and 1.9% low on SE(acrophase) here. Reference computed
+// with tools/.venv (statsmodels 0.14.6, numpy 2.4.6):
+//   i = 0..44, t = 0.7·i + 0.3·sin(i),
+//   y = 10 + 3·cos(2π(t−5)/24) [+ 1.2·cos(4π(t−2)/24)] + 1.5·sin(7.3·i)·cos(3.1·i)
+//   r = sm.OLS(y, add_constant([cos ωt, sin ωt, …])).fit(); V = r.cov_params()
+//   SE(A) = sqrt(J V J'), J = [β/A, γ/A]; SE(θ) = sqrt(Jθ V Jθ'), Jθ = [−γ/A², β/A²]
+describe('fitCosinorFixed standard errors vs statsmodels (delta method, full covariance)', () => {
+	const idx = Array.from({ length: 45 }, (_, i) => i);
+	const t = idx.map((i) => 0.7 * i + 0.3 * Math.sin(i));
+	const noise = idx.map((i) => 1.5 * Math.sin(7.3 * i) * Math.cos(3.1 * i));
+	const w = (2 * Math.PI) / 24;
+
+	it('one harmonic: SE(A) and SE(acrophase) match to 1e-9', () => {
+		const y = t.map((ti, i) => 10 + 3 * Math.cos(w * (ti - 5)) + noise[i]);
+		const h = fitCosinorFixed(t, y, 24, 1).harmonics[0];
+		expect(h.amplitude).toBeCloseTo(2.9922639137901097, 9);
+		expect(h.SE_A).toBeCloseTo(0.1500332952917331, 9);
+		expect(h.acrophase_hrs).toBeCloseTo(5.013771731695563, 9);
+		expect(h.SE_acrophase_hrs).toBeCloseTo(0.20208373983611563, 9);
+	});
+
+	it('two harmonics: each harmonic uses its own (β_k, γ_k) covariance block', () => {
+		const y = t.map(
+			(ti, i) => 10 + 3 * Math.cos(w * (ti - 5)) + 1.2 * Math.cos(2 * w * (ti - 2)) + noise[i]
+		);
+		const [h1, h2] = fitCosinorFixed(t, y, 24, 2).harmonics;
+		expect(h1.amplitude).toBeCloseTo(2.9891136100450013, 9);
+		expect(h1.SE_A).toBeCloseTo(0.156363560214331, 9);
+		expect(h1.acrophase_hrs).toBeCloseTo(5.013046854870302, 9);
+		expect(h1.SE_acrophase_hrs).toBeCloseTo(0.21103561800876341, 9);
+		expect(h2.amplitude).toBeCloseTo(1.2057290540971293, 9);
+		expect(h2.SE_A).toBeCloseTo(0.15912526433147098, 9);
+		expect(h2.acrophase_hrs).toBeCloseTo(2.026642347408284, 9);
+		expect(h2.SE_acrophase_hrs).toBeCloseTo(0.24976957716204085, 9);
+	});
+});
+
+// Bounded free period. Before the bound, a non-sinusoidal rhythm riding on a trend
+// let the optimiser stretch one cosine across the whole record: this 14-day, 5-min
+// bimodal (morning + evening peak) series with a linear ramp returned a 174.6 h
+// "period", and real data went to ≈6,275 h (Drosophila) and ≈796 h (isopod), all
+// silently.
+describe('fitCosineCurves: bounded free period', () => {
+	function bimodalWithTrend(days = 14, dt = 1 / 12, ramp = 0.03) {
+		const t = [];
+		const y = [];
+		for (let x = 0; x < days * 24; x += dt) {
+			const ph = x % 24;
+			const bump = (c, s) => Math.exp(-((((ph - c + 36) % 24) - 12) ** 2) / (2 * s * s));
+			t.push(x);
+			y.push(
+				5 * bump(1, 1.2) +
+					7 * bump(12, 1.5) +
+					ramp * x +
+					0.8 * Math.sin(x * 12.9898) * Math.cos(x * 78.233)
+			);
+		}
+		return { t, y };
+	}
+
+	it('keeps the fitted period inside the default range and reports diagnostics', () => {
+		const { t, y } = bimodalWithTrend();
+		const r = fitCosineCurves(t, y, 1, FREE_PERIOD_DEFAULTS);
+		const period = (2 * Math.PI) / r.parameters.cosines[0].frequency;
+		expect(period).toBeGreaterThanOrEqual(FREE_PERIOD_DEFAULTS.minPeriod);
+		expect(period).toBeLessThanOrEqual(FREE_PERIOD_DEFAULTS.maxPeriod);
+		// The dominant component of this waveform is the 12 h harmonic.
+		expect(period).toBeCloseTo(12, 1);
+		expect(r.diagnostics).toMatchObject({ converged: true, atBound: [null] });
+		expect(r.diagnostics.periodRange).toEqual([1, 48]);
+		expect(freePeriodFitWarnings([{ label: '"y"', result: r }])).toEqual([]);
+	});
+
+	it('flags a fit that ends on the upper bound, with a visible warning', () => {
+		// A 24 h rhythm fitted in a 2 to 8 h window cannot be reached; a slow
+		// trend in a 30 to 48 h window pins the fit at 48 h. Use the trend case.
+		const t = Array.from({ length: 24 * 14 }, (_, i) => i);
+		const y = t.map((ti) => 0.1 * ti + 0.2 * Math.sin(ti * 12.9898) * Math.cos(ti * 78.233));
+		const r = fitCosineCurves(t, y, 1, { minPeriod: 30, maxPeriod: 48 });
+		expect((2 * Math.PI) / r.parameters.cosines[0].frequency).toBeCloseTo(48, 6);
+		expect(r.diagnostics.atBound).toEqual(['max']);
+		const [msg] = freePeriodFitWarnings([{ label: '"y"', result: r }]);
+		expect(msg).toMatch(/upper limit of the period range: 48 h, range 30 to 48 h/);
+	});
+
+	it('flags a fit that ends on the lower bound', () => {
+		// A clean 24 h rhythm fitted in a 26 to 40 h window: the nearest the fit can
+		// get is the 26 h edge.
+		const t = Array.from({ length: 24 * 14 }, (_, i) => i * 0.5);
+		const y = t.map((ti) => 3 * Math.cos((2 * Math.PI * ti) / 24));
+		const r = fitCosineCurves(t, y, 1, { minPeriod: 26, maxPeriod: 40 });
+		expect(r.diagnostics.atBound).toEqual(['min']);
+		expect(freePeriodFitWarnings([{ result: r }])[0]).toMatch(/lower limit/);
+	});
+
+	it('reports non-convergence when the optimiser runs out of iterations', () => {
+		const { t, y } = bimodalWithTrend(6, 0.25, 0.01);
+		const r = fitCosineCurves(t, y, 2, { minPeriod: 1, maxPeriod: 48, maxIterations: 1 });
+		expect(r.diagnostics.converged).toBe(false);
+		expect(freePeriodFitWarnings([{ label: '"y"', result: r }]).join(' ')).toMatch(
+			/did not converge \(1 iterations\)/
+		);
+	});
+
+	it('every curve of a multi-cosine fit stays inside the range', () => {
+		const { t, y } = bimodalWithTrend();
+		const r = fitCosineCurves(t, y, 2, FREE_PERIOD_DEFAULTS);
+		for (const c of r.parameters.cosines) {
+			const p = (2 * Math.PI) / c.frequency;
+			expect(p).toBeGreaterThanOrEqual(1 - 1e-9);
+			expect(p).toBeLessThanOrEqual(48 + 1e-9);
+			expect(c.amplitude).toBeGreaterThanOrEqual(0);
+			expect(Math.abs(c.phase)).toBeLessThanOrEqual(Math.PI);
+		}
+	});
+
+	it('recovers a clean non-24 h period (12.4 h, tidal) from inside the range', () => {
+		const t = Array.from({ length: 24 * 4 * 20 }, (_, i) => i * 0.25);
+		const y = t.map((ti) => 5 + 2 * Math.cos((2 * Math.PI * (ti - 3)) / 12.4));
+		const r = fitCosineCurves(t, y, 1, FREE_PERIOD_DEFAULTS);
+		expect((2 * Math.PI) / r.parameters.cosines[0].frequency).toBeCloseTo(12.4, 6);
+		expect(r.parameters.cosines[0].amplitude).toBeCloseTo(2, 6);
+	});
+
+	it('returns null for an empty period range', () => {
+		const { t, y } = bimodalWithTrend(3);
+		expect(fitCosineCurves(t, y, 1, { minPeriod: 30, maxPeriod: 20 })).toBeNull();
+	});
+});
+
+describe('resolvePeriodRange / scanPeriodogram', () => {
+	it('falls back to Nyquist and the record span, and never goes below Nyquist', () => {
+		const t = Array.from({ length: 49 }, (_, i) => i * 0.5); // 24 h span, dt 0.5
+		expect(resolvePeriodRange(t)).toMatchObject({ minPeriod: 1, maxPeriod: 24 });
+		expect(resolvePeriodRange(t, 0.2, 48)).toMatchObject({ minPeriod: 1, maxPeriod: 48 });
+		expect(resolvePeriodRange(t, 5, 3)).toBeNull();
+	});
+
+	it('the strongest periodogram peak is the planted period', () => {
+		const t = Array.from({ length: 24 * 4 * 10 }, (_, i) => i * 0.25);
+		const y = t.map((ti) => Math.cos((2 * Math.PI * ti) / 23.5) + 0.3 * Math.cos(ti));
+		const [top] = scanPeriodogram(t, y, 1, 48, 3);
+		expect(top.period).toBeGreaterThan(23);
+		expect(top.period).toBeLessThan(24);
 	});
 });

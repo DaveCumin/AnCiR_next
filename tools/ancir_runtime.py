@@ -195,6 +195,8 @@ def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
         b, g = float(beta[idx_b]), float(beta[idx_g])
         amp = math.hypot(b, g)
         phi = math.atan2(-g, b)  # JS: atan2(-gamma, beta)
+        # Time of peak of harmonic k (h after t = 0) in [0, period/k): the one
+        # acrophase convention (cosinor.js fitCosinorFixed).
         acro_hrs = (-phi / (k * omega)) % (period / k)
         var_b = max(cov[idx_b, idx_b], 0.0)
         var_g = max(cov[idx_g, idx_g], 0.0)
@@ -217,7 +219,8 @@ def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
             'k': k, 'beta': b, 'gamma': g,
             'amplitude': amp, 'acrophase_hrs': acro_hrs,
             'phi_rad': phi, 'SE_A': SE_A, 'SE_acrophase_hrs': SE_acro_hrs,
-            'CI_A': [amp - tcrit * SE_A, amp + tcrit * SE_A],
+            # Lower end clamped at 0 (an amplitude is non-negative), as in the JS.
+            'CI_A': [max(0.0, amp - tcrit * SE_A), amp + tcrit * SE_A],
             'CI_acrophase': [acro_hrs - tcrit * SE_acro_hrs,
                              acro_hrs + tcrit * SE_acro_hrs],
         })
@@ -238,12 +241,138 @@ def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
     }
 
 
-def fit_cosine_curves(t, x, n_curves, options=None):
-    """Multi-cosine fit (free periods/phases). Param layout: [B0,w0,o0,...,O].
+# Free-period cosinor: bounded period range, periodogram-seeded starts.
+# Mirrors src/lib/utils/cosinor.js (FREE_PERIOD_DEFAULTS, resolvePeriodRange,
+# scanPeriodogram, buildStarts, fitCosineCurves). Without a bound the fit used to
+# follow a trend out to its internal frequency clamp (6,283 h in the JS, 1,000 h
+# here) on real activity data, silently.
+FREE_PERIOD_DEFAULTS = {'minPeriod': 1.0, 'maxPeriod': 48.0}
+_SCAN_OVERSAMPLE = 4
+_SCAN_MIN_FREQS = 64
+_SCAN_MAX_FREQS = 5000
+_SCAN_MAX_POINTS = 10000
+_SCAN_PEAKS = 3
+_BOUND_RTOL = 1e-6
 
-    Uses scipy.optimize.least_squares (Trust Region Reflective) as a
-    drop-in replacement for the JS Levenberg-Marquardt loop. Multi-start
-    over period seeds taken from a coarse periodogram pass on the data.
+
+def resolve_period_range(t, min_period=None, max_period=None):
+    """[min, max] period the free fit may use (t units). Missing ends fall back to
+    the Nyquist period (2 x median spacing) and the record span; the short end is
+    never below Nyquist. None when the range is empty. Mirrors resolvePeriodRange."""
+    ts = np.sort(np.asarray([v for v in _to_float_arr(t) if math.isfinite(v)], dtype=float))
+    if ts.size < 2:
+        return None
+    span = float(ts[-1] - ts[0])
+    diffs = np.diff(ts)
+    diffs = diffs[diffs > 0]
+    if not span > 0 or diffs.size == 0:
+        return None
+    nyquist = 2 * float(np.median(diffs))
+    try:
+        umin = float(min_period) if min_period is not None else float('nan')
+    except (TypeError, ValueError):
+        umin = float('nan')
+    try:
+        umax = float(max_period) if max_period is not None else float('nan')
+    except (TypeError, ValueError):
+        umax = float('nan')
+    lo = max(umin, nyquist) if (math.isfinite(umin) and umin > 0) else nyquist
+    hi = umax if (math.isfinite(umax) and umax > 0) else span
+    if not hi > lo:
+        return None
+    return {'minPeriod': lo, 'maxPeriod': hi, 'nyquist': nyquist, 'span': span}
+
+
+def scan_periodogram(t, x, min_period, max_period, n_peaks=_SCAN_PEAKS):
+    """Floating-mean least-squares periodogram on a uniform frequency grid inside
+    [min_period, max_period]; returns up to n_peaks local maxima (range ends
+    included), strongest first, as cycles-per-unit frequencies. Mirrors
+    scanPeriodogram (same grid, same scan-only binning of long records)."""
+    t = _to_float_arr(t)
+    x = _to_float_arr(x)
+    m = np.isfinite(t) & np.isfinite(x)
+    t, x = t[m], x[m]
+    if t.size < 3:
+        return []
+    t_min, t_max = float(t.min()), float(t.max())
+    span = t_max - t_min
+    if not span > 0:
+        return []
+    if t.size > _SCAN_MAX_POINTS:
+        w = min(span / _SCAN_MAX_POINTS, min_period / 8)
+        nb = int(math.floor(span / w)) + 1
+        b = np.minimum(nb - 1, np.floor((t - t_min) / w).astype(int))
+        cnt = np.bincount(b, minlength=nb).astype(float)
+        st = np.bincount(b, weights=t, minlength=nb)
+        sx = np.bincount(b, weights=x, minlength=nb)
+        keep = cnt > 0
+        t = st[keep] / cnt[keep]
+        x = sx[keep] / cnt[keep]
+    n = t.size
+    y = x - x.mean()
+    tau = t - t_min
+    f_lo, f_hi = 1.0 / max_period, 1.0 / min_period
+    nf = min(_SCAN_MAX_FREQS,
+             max(_SCAN_MIN_FREQS, int(math.ceil(_SCAN_OVERSAMPLE * span * (f_hi - f_lo))) + 1))
+    freqs = f_lo + (f_hi - f_lo) * np.arange(nf) / (nf - 1)
+    power = np.zeros(nf)
+    chunk = max(1, 2_000_000 // max(n, 1))
+    for a in range(0, nf, chunk):
+        fr = freqs[a:a + chunk]
+        arg = 2 * math.pi * np.outer(fr, tau)
+        c = np.cos(arg)
+        s_ = np.sin(arg)
+        C = c.sum(1) / n
+        S = s_.sum(1) / n
+        CC = (c * c).sum(1) / n - C * C
+        SS = (s_ * s_).sum(1) / n - S * S
+        CS = (c * s_).sum(1) / n - C * S
+        YC = (c @ y) / n
+        YS = (s_ @ y) / n
+        D = CC * SS - CS * CS
+        with np.errstate(divide='ignore', invalid='ignore'):
+            pw = (SS * YC * YC + CC * YS * YS - 2 * CS * YC * YS) / D
+        power[a:a + chunk] = np.where(D > 1e-12, pw, 0.0)
+    peaks = []
+    for k in range(nf):
+        left = -np.inf if k == 0 else power[k - 1]
+        right = -np.inf if k == nf - 1 else power[k + 1]
+        if power[k] >= left and power[k] > right:
+            peaks.append(k)
+    peaks.sort(key=lambda k: (-power[k], k))
+    return [float(freqs[k]) for k in peaks[:n_peaks]]
+
+
+def _cos_linear_init(t, x, freqs):
+    """OLS amplitude/phase/offset at fixed frequencies (cycles/unit):
+    a*cos + b*sin = B*cos(2*pi*w*t + o), B = hypot(a, b), o = atan2(-b, a)."""
+    cols = [np.ones(t.size)]
+    for w in freqs:
+        th = 2 * math.pi * w * t
+        cols += [np.cos(th), np.sin(th)]
+    X = np.column_stack(cols)
+    try:
+        coef = np.linalg.solve(X.T @ X, X.T @ x)
+    except np.linalg.LinAlgError:
+        coef = None
+    p0 = []
+    for j, w in enumerate(freqs):
+        if coef is not None:
+            a, b = coef[2 * j + 1], coef[2 * j + 2]
+            p0 += [float(math.hypot(a, b)), w, float(math.atan2(-b, a))]
+        else:
+            p0 += [0.0, w, 0.0]
+    p0.append(float(coef[0]) if coef is not None else float(np.mean(x)))
+    return p0
+
+
+def fit_cosine_curves(t, x, n_curves, options=None):
+    """Multi-cosine fit (free periods/phases). Param layout: [B0,w0,o0,...,O],
+    w in cycles per t unit, every period 1/w kept inside the resolved range.
+
+    scipy.optimize.least_squares (Trust Region Reflective, box bounds on w) from
+    the same periodogram-peak starts as the JS Levenberg-Marquardt; the lowest
+    cost wins. Returns `diagnostics` (converged, atBound, periodRange) like the JS.
     """
     options = options or {}
     t = _to_float_arr(t)
@@ -252,6 +381,10 @@ def fit_cosine_curves(t, x, n_curves, options=None):
     t, x = t[mask], x[mask]
     if t.size < 4 * n_curves:
         return None
+    rng = resolve_period_range(t, options.get('minPeriod'), options.get('maxPeriod'))
+    if rng is None:
+        return None
+    f_lo, f_hi = 1.0 / rng['maxPeriod'], 1.0 / rng['minPeriod']
 
     def residuals(p, t_, x_):
         m = (len(p) - 1) // 3
@@ -264,17 +397,9 @@ def fit_cosine_curves(t, x, n_curves, options=None):
         return y - x_
 
     def jacobian(p, t_, _x):
-        """Analytic Jacobian of `residuals`.
-
-        Supplied for accuracy and speed rather than as a bug fix. Without it least_squares
-        differences the Jacobian, and the frequency column is the one that suffers: d/dw is
-        -B * 2*pi*t * sin(...), which over a week-long t is both large and rapidly
-        oscillating, so a differenced estimate is poorest exactly where the fit relies on it.
-
-        It is NOT what fixed the near-zero-amplitude collapse this function used to show —
-        that was the phase seeding below, and adding this Jacobian alone left the wrong
-        answer unchanged.
-        """
+        """Analytic Jacobian of `residuals` (accuracy and speed: the differenced
+        frequency column, -B*2*pi*t*sin(...), is poorest exactly where the fit
+        relies on it)."""
         m = (len(p) - 1) // 3
         j = np.zeros((t_.size, len(p)))
         for i in range(m):
@@ -288,68 +413,82 @@ def fit_cosine_curves(t, x, n_curves, options=None):
         j[:, -1] = 1.0
         return j
 
-    timespan = float(t[-1] - t[0]) if t[-1] > t[0] else 1.0
-    span_amp = float(np.std(x))
-    seed_freqs = [1.0 / 24.0, 1.0 / 12.0, 1.0 / 6.0, 1.0 / max(timespan, 1.0)]
+    def clamp(w):
+        return min(f_hi, max(f_lo, w))
+
+    peaks = scan_periodogram(t, x, rng['minPeriod'], rng['maxPeriod'],
+                             max(_SCAN_PEAKS, n_curves))
+    top = peaks if peaks else [clamp(1.0 / 24.0)]
+    # Starts mirror cosinor.js buildStarts. Amplitude and phase are SOLVED for at
+    # the seed frequencies rather than started at sd(x) and phase 0: a phase-0
+    # seed can be anti-correlated with the data, and the trust-region step then
+    # shrinks the amplitude instead of rotating the phase (a collapse to
+    # amplitude 3.3 against a true 38 before this seeding).
+    if n_curves == 1:
+        sets = [[w] for w in top]
+    else:
+        by_peaks = [top[i] if i < len(top) else clamp(top[0] * (i + 1)) for i in range(n_curves)]
+        harmonics = [clamp(top[0] * (i + 1)) for i in range(n_curves)]
+        sets = [by_peaks, harmonics]
+    lb, ub = [], []
+    for _ in range(n_curves):
+        lb += [-np.inf, f_lo, -np.inf]
+        ub += [np.inf, f_hi, np.inf]
+    lb.append(-np.inf)
+    ub.append(np.inf)
     best = None
-    for f_seed in seed_freqs:
-        # Seed amplitude and phase by SOLVING for them, rather than starting every fit at
-        # amplitude = sd(x) and phase = 0.
-        #
-        # At a fixed frequency the model is linear in (B*cos o, B*sin o) and the offset, so
-        # the best amplitude/phase for that frequency has a closed form. Starting from
-        # phase 0 instead means the seed cosine is anti-correlated with the data whenever the
-        # true acrophase is far from 0, and the trust-region step then shrinks the AMPLITUDE
-        # toward zero rather than rotating the phase — a basin it does not escape. On a clean
-        # 23.7 h rhythm every one of the four seeds collapsed that way, returning amplitude
-        # 3.3 against a true 38 (R^2 = 0.09) while the JS engine recovered it correctly.
-        p0 = []
+    for fs in sets:
+        p0 = _cos_linear_init(t, x, fs)
+        # least_squares needs a strictly feasible start
         for i in range(n_curves):
-            w = f_seed * (i + 1)
-            th = 2 * math.pi * w * t
-            design = np.column_stack([np.ones(t.size), np.cos(th), np.sin(th)])
-            try:
-                coef, *_ = np.linalg.lstsq(design, x, rcond=None)
-                amp0 = float(math.hypot(coef[1], coef[2]))
-                pha0 = float(math.atan2(-coef[2], coef[1]))
-            except np.linalg.LinAlgError:
-                amp0, pha0 = span_amp / max(1, n_curves), 0.0
-            p0 += [amp0, w, pha0]
-        p0.append(float(np.mean(x)))
-        lb = []
-        ub = []
-        for i in range(n_curves):
-            lb += [-np.inf, 0.001, -np.inf]
-            ub += [np.inf, 100.0, np.inf]
-        lb.append(-np.inf)
-        ub.append(np.inf)
+            p0[3 * i + 1] = min(f_hi * (1 - 1e-12), max(f_lo * (1 + 1e-12), p0[3 * i + 1]))
         try:
             res = sp_optimize.least_squares(residuals, p0, jac=jacobian, args=(t, x),
-                                            bounds=(lb, ub), max_nfev=2000)
+                                            bounds=(lb, ub), max_nfev=2000,
+                                            ftol=1e-12, xtol=1e-12, gtol=1e-12)
         except Exception:
             continue
         if best is None or res.cost < best.cost:
             best = res
     if best is None:
         return None
-    p = best.x
-    fitted = x + (best.fun if False else residuals(p, t, x) + x)  # = pred
+    p = np.array(best.x, dtype=float)
+    # Canonical form: B >= 0, phase in (-pi, pi] (B*cos(th) = -B*cos(th + pi)).
+    for i in range(n_curves):
+        if p[3 * i] < 0:
+            p[3 * i] = -p[3 * i]
+            p[3 * i + 2] += math.pi
+        ph = math.fmod(p[3 * i + 2], 2 * math.pi)
+        if ph <= -math.pi:
+            ph += 2 * math.pi
+        elif ph > math.pi:
+            ph -= 2 * math.pi
+        p[3 * i + 2] = ph
     pred = residuals(p, t, x) + x
     rss = float(((x - pred) ** 2).sum())
     rmse = math.sqrt(rss / t.size)
     ss_tot = float(((x - x.mean()) ** 2).sum())
     r2 = 1 - rss / ss_tot if ss_tot > 0 else 0.0
     cosines = []
+    at_bound = []
     for i in range(n_curves):
         B = float(p[3 * i])
         w = float(p[3 * i + 1])
         o = float(p[3 * i + 2])
-        cosines.append({'amplitude': abs(B), 'frequency': w, 'phase': o})
+        cosines.append({'amplitude': B, 'frequency': w, 'phase': o})
+        if abs(w - f_lo) <= _BOUND_RTOL * f_lo:
+            at_bound.append('max')
+        elif abs(w - f_hi) <= _BOUND_RTOL * f_hi:
+            at_bound.append('min')
+        else:
+            at_bound.append(None)
     return {
         'parameters': {'A': 0.0, 'cosines': cosines, 'O': float(p[-1])},
         'fitted': pred.tolist(),
         'residuals': (x - pred).tolist(),
         'rmse': rmse, 'rSquared': float(r2), 'rss': rss,
+        'diagnostics': {'converged': bool(best.status > 0), 'atBound': at_bound,
+                        'periodRange': [rng['minPeriod'], rng['maxPeriod']]},
     }
 
 
@@ -1788,6 +1927,9 @@ def tp_cosinor(args, cols, raw_data, _sv):
     n_curves = int(args.get('Ncurves', 0) or 0)
     use_fixed = bool(args.get('useFixedPeriod', False))
     fixed_period = float(args.get('fixedPeriod', 24))
+    # Free-period range (h); sessions saved before it existed use the defaults.
+    period_range = {'minPeriod': args.get('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
+                    'maxPeriod': args.get('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod'])}
     n_h = int(args.get('nHarmonics', 1))
     alpha = float(args.get('alpha', 0.05))
     output_x_id = args.get('outputX', -1)
@@ -1854,27 +1996,24 @@ def tp_cosinor(args, cols, raw_data, _sv):
             ys = (evaluate_cosinor_at_points(
                 {**res, 'period': fixed_period}, xs)
                   if output_x_data else res['fitted'])
-            # Classical acrophase_hrs = wrap(+phi/omega); JS then re-wraps to the
-            # peak-time convention wrap(-phi/omega). Compute the peak time here.
-            omega = 2 * math.pi / fixed_period
-            phi = res['harmonics'][0]['phi_rad'] if res.get('harmonics') else float('nan')
-            acrophase = wrap_to_period(-phi / omega, fixed_period)
+            # acrophase_hrs is already the time of peak (the one convention).
+            acrophase = (res['harmonics'][0]['acrophase_hrs'] if res.get('harmonics')
+                         else float('nan'))
             period_used = fixed_period
             mesor = res.get('M', float('nan'))
             h0 = res['harmonics'][0] if res.get('harmonics') else {}
             amp_by_y[y_id] = h0.get('amplitude', float('nan'))
             ci_a = h0.get('CI_A') or [float('nan'), float('nan')]
             amp_lo_by_y[y_id], amp_hi_by_y[y_id] = ci_a[0], ci_a[1]
-            # The acrophase CI is computed on the CLASSICAL convention, so it is re-wrapped
-            # onto the peak-time convention the acrophase port uses; otherwise the interval
-            # would sit half a period away from the estimate it is supposed to bracket.
+            # The peak-time CI is unwrapped around the estimate; each end is wrapped
+            # onto the clock for the port, as in Cosinor.svelte.
             ci_p = h0.get('CI_acrophase') or [float('nan'), float('nan')]
-            acro_lo_by_y[y_id] = wrap_to_period(-ci_p[1], fixed_period)
-            acro_hi_by_y[y_id] = wrap_to_period(-ci_p[0], fixed_period)
+            acro_lo_by_y[y_id] = wrap_to_period(ci_p[0], fixed_period)
+            acro_hi_by_y[y_id] = wrap_to_period(ci_p[1], fixed_period)
             r2_by_y[y_id] = res.get('R2', float('nan'))
             pval_by_y[y_id] = res.get('pF', float('nan'))
         else:
-            res = fit_cosine_curves(tt, yy, n_curves)
+            res = fit_cosine_curves(tt, yy, n_curves, period_range)
             if res is None:
                 continue
             xs = output_x_data if output_x_data else tt
@@ -3748,7 +3887,9 @@ def _ff_fit_curve_model(tt, yy, model, args):
                                    'M': res['M'], 'harmonics': res['harmonics']},
                     'fitted': res['fitted']}
         n_curves = max(1, int(args.get('Ncurves', 1)))
-        res = fit_cosine_curves(tt, yy, n_curves)
+        res = fit_cosine_curves(tt, yy, n_curves, {
+            'minPeriod': args.get('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
+            'maxPeriod': args.get('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod'])})
         if res is None:
             return None
         return {'model': 'cosinor', 'mode': 'free',

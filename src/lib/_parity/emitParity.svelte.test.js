@@ -296,7 +296,9 @@ function generateInputs(spec) {
 		// `missingOffset`), and `gap: [from, to]` nulls y for from <= index < to.
 		// The noise draw still runs for a nulled row, so the rest of the series is
 		// identical to the spec without them.
-		const { n, period, amp, mesor = 0, phase = 0, noise = 0, dt = 1, refs } = spec;
+		// `trend` (optional) adds a linear drift of `trend` per x unit: the case that
+		// used to drag the free-period cosinor out to thousands of hours.
+		const { n, period, amp, mesor = 0, phase = 0, noise = 0, dt = 1, trend = 0, refs } = spec;
 		const { missingEvery = 0, missingOffset = 0, gap = null } = spec;
 		const t = seq(n, (i) => i * dt);
 		const y = t.map((h, i) => {
@@ -306,7 +308,8 @@ function generateInputs(spec) {
 				(noise ? normal(rng, 0, noise) : 0);
 			const skipped = missingEvery > 0 && i % missingEvery === missingOffset;
 			const inGap = gap && i >= gap[0] && i < gap[1];
-			return skipped || inGap ? null : v;
+			if (skipped || inGap) return null;
+			return trend ? v + trend * h : v;
 		});
 		return { [refs.x]: { type: 'number', values: t }, [refs.y]: { type: 'number', values: y } };
 	}

@@ -2,22 +2,97 @@
 import { KahanSum } from './numerics.js';
 import quantile_t from '@stdlib/stats-base-dists-t-quantile';
 import cdf_f from '@stdlib/stats-base-dists-f-cdf';
-import { min, max } from './MathsStats.js';
+
+// ─── Free-period search range ────────────────────────────────────────────────
+//
+// WHY THE FREE PERIOD IS BOUNDED
+//
+// The free-period cosinor is a nonlinear least-squares problem, and the period
+// is the badly conditioned parameter: a trend, or a non-sinusoidal waveform
+// whose power is split over harmonics, can lower the residual sum of squares
+// further by stretching one cosine across the whole record than by fitting the
+// rhythm. With no bound on the period the optimiser used to follow that slope
+// until it hit its internal frequency clamp (ω = 0.001 rad/h, i.e. a 6,283 h
+// "period"), with nothing on screen to say so. On real activity data that gave
+// ≈6,275 h for a Drosophila group mean and ≈796 h for an intertidal isopod
+// record whose periodogram peaks cleanly at 12.4 h.
+//
+// The fit is therefore restricted to a period range [minPeriod, maxPeriod]
+// (the nodes expose it; FREE_PERIOD_DEFAULTS is the default), it STARTS from
+// the best peaks of a least-squares periodogram inside that range, and it
+// reports when the fitted period finishes on a bound or the optimiser runs out
+// of iterations (`diagnostics`), so the node can say so instead of printing a
+// number that is not a rhythm.
+
+/** Default period range (h) for the Cosinor / Fit waveform model free-period fit. */
+export const FREE_PERIOD_DEFAULTS = Object.freeze({ minPeriod: 1, maxPeriod: 48 });
+
+// Periodogram used to seed the fit. Frequencies are spaced 1/(OVERSAMPLE·span)
+// apart, which puts several grid points inside every peak's main lobe (width
+// ≈ 1/span), capped so very long records stay affordable. Records longer than
+// SCAN_MAX_POINTS are averaged into bins no wider than minPeriod/8 for the scan
+// only (the fit itself always uses every point).
+const SCAN_OVERSAMPLE = 4;
+const SCAN_MIN_FREQS = 64;
+const SCAN_MAX_FREQS = 5000;
+const SCAN_MAX_POINTS = 10000;
+const SCAN_PEAKS = 3;
+// A fitted period within this relative distance of a bound counts as "on" it.
+const BOUND_RTOL = 1e-6;
+
+/**
+ * Resolve the period range the free fit may use.
+ *
+ * `minPeriod` / `maxPeriod` are in the units of `t` (hours for time columns).
+ * A missing value falls back to what the sampling supports: the Nyquist period
+ * (2 × median spacing) at the short end, the record span at the long end. The
+ * short end is never allowed below the Nyquist period, where a cosine aliases.
+ *
+ * @returns {{minPeriod:number, maxPeriod:number, nyquist:number, span:number} | null}
+ *   null when the resolved range is empty (min ≥ max) or `t` has < 2 distinct values.
+ */
+export function resolvePeriodRange(t, minPeriod, maxPeriod) {
+	const ts = [];
+	for (const v of t ?? []) if (Number.isFinite(v)) ts.push(v);
+	if (ts.length < 2) return null;
+	ts.sort((a, b) => a - b);
+	const span = ts[ts.length - 1] - ts[0];
+	const diffs = [];
+	for (let i = 1; i < ts.length; i++) {
+		const d = ts[i] - ts[i - 1];
+		if (d > 0) diffs.push(d);
+	}
+	if (!(span > 0) || diffs.length === 0) return null;
+	diffs.sort((a, b) => a - b);
+	const mid = diffs.length >> 1;
+	const medianDt = diffs.length % 2 ? diffs[mid] : (diffs[mid - 1] + diffs[mid]) / 2;
+	const nyquist = 2 * medianDt;
+	const userMin = Number(minPeriod);
+	const userMax = Number(maxPeriod);
+	const lo = Number.isFinite(userMin) && userMin > 0 ? Math.max(userMin, nyquist) : nyquist;
+	const hi = Number.isFinite(userMax) && userMax > 0 ? userMax : span;
+	if (!(hi > lo)) return null;
+	return { minPeriod: lo, maxPeriod: hi, nyquist, span };
+}
 
 /**
  * Fits a model comprised of N cosine curves to data.
- * Model: O + Σ B_i·cos(ω_i·t + φ_i)
+ * Model: O + Σ B_i·cos(ω_i·t + φ_i), with every period 2π/ω_i kept inside
+ * [minPeriod, maxPeriod].
  *
  * @param {number[]} t - Time/input array
  * @param {number[]} x - Data/output array
  * @param {number} N - Number of cosine curves
  * @param {Object} options
+ * @param {number} options.minPeriod       - Shortest allowed period (t units). Default: Nyquist.
+ * @param {number} options.maxPeriod       - Longest allowed period (t units). Default: record span.
  * @param {number[]} options.initialGuess - Optional initial params [B1,w1,o1,...,BN,wN,oN,O]
- * @param {number} options.maxIterations   - Max LM iterations per start (default 2000)
- * @param {number} options.tolerance       - Relative convergence tolerance (default 1e-7)
- * @param {boolean} options.useMultiStart  - Multiple random starts (default true)
- * @param {number} options.numStarts       - Number of starts (default 5)
- * @returns {Object} Fitting results
+ * @param {number} options.maxIterations   - Max LM iterations per start (default 10000)
+ * @param {number} options.tolerance       - Relative convergence tolerance (default 1e-12)
+ * @param {boolean} options.useMultiStart  - Try several periodogram-peak starts (default true)
+ * @returns {Object|null} Fitting results, with `diagnostics` = { converged, iterations,
+ *   atBound: ('min'|'max'|null)[] per curve, periodRange: [min, max] }; null when the
+ *   period range is empty.
  */
 export function fitCosineCurves(t, x, N, options = {}) {
 	if (t.length !== x.length) {
@@ -27,21 +102,48 @@ export function fitCosineCurves(t, x, N, options = {}) {
 	const {
 		initialGuess = null,
 		maxIterations = 10000,
-		tolerance = 1e-6,
+		// Relative RSS improvement below which a step ends the fit. Near the optimum
+		// the RSS gain is quadratic in the parameter error, so 1e-6 (the old default)
+		// stopped with ~1e-3 relative error left in the period; 1e-12 is at the
+		// floor of what a double RSS can resolve, and the damping ceiling ends the
+		// fit if no step can improve it at all.
+		tolerance = 1e-12,
 		useMultiStart = true,
-		numStarts = 5
-	} = options;
+		minPeriod = null,
+		maxPeriod = null
+	} = options ?? {};
 
+	if (initialGuess && initialGuess.length !== 3 * N + 1) {
+		throw new Error(`Initial guess must have ${3 * N + 1} parameters`);
+	}
+
+	const range = resolvePeriodRange(t, minPeriod, maxPeriod);
+	if (!range) return null;
+	const wLo = (2 * Math.PI) / range.maxPeriod;
+	const wHi = (2 * Math.PI) / range.minPeriod;
+
+	let starts;
 	if (initialGuess) {
-		return fitWithInitialGuess(t, x, N, initialGuess, maxIterations, tolerance);
+		starts = [initialGuess];
+	} else {
+		const peaks = scanPeriodogram(t, x, range.minPeriod, range.maxPeriod, Math.max(SCAN_PEAKS, N));
+		starts = buildStarts(t, x, N, peaks, wLo, wHi);
+		if (!useMultiStart) starts = starts.slice(0, 1);
 	}
 
-	if (useMultiStart && N > 1) {
-		return fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance);
-	} else {
-		const params = generateInitialGuess(t, x, N, 0);
-		return fitWithInitialGuess(t, x, N, params, maxIterations, tolerance);
+	let best = null;
+	for (const start of starts) {
+		const result = fitWithInitialGuess(t, x, N, start, maxIterations, tolerance, wLo, wHi);
+		if (!Number.isFinite(result.rss)) continue;
+		if (!best || result.rss < best.rss) best = result;
 	}
+	if (!best) {
+		// Every start went non-finite: return the first attempt so the caller's
+		// non-finite check can report it, rather than a silent null.
+		best = fitWithInitialGuess(t, x, N, starts[0], maxIterations, tolerance, wLo, wHi);
+	}
+	best.diagnostics.periodRange = [range.minPeriod, range.maxPeriod];
+	return best;
 }
 
 /**
@@ -58,63 +160,294 @@ export function evaluateCosinorAtPoints(parameters, xPoints) {
 	});
 }
 
-// ─── Multi-start ─────────────────────────────────────────────────────────────
+/**
+ * Plain-language warnings for free-period fits whose diagnostics show the
+ * result is not a rhythm estimate: the period finished on a bound of the
+ * allowed range, or the optimiser ran out of iterations. Pure; callers pass
+ * `{ label, result }` entries (result = a fitCosineCurves return value).
+ */
+export function freePeriodFitWarnings(entries, modelLabel = 'The free-period cosinor fit') {
+	const out = [];
+	const fmt = (v) => (Math.abs(v) >= 100 ? v.toFixed(0) : String(Number(v.toFixed(2))));
+	for (const entry of entries ?? []) {
+		const d = entry?.result?.diagnostics;
+		if (!d) continue;
+		const label = entry.label ? `${modelLabel} for ${entry.label}` : modelLabel;
+		const [lo, hi] = d.periodRange ?? [NaN, NaN];
+		const cosines = entry.result.parameters?.cosines ?? [];
+		(d.atBound ?? []).forEach((side, i) => {
+			if (!side) return;
+			const c = cosines[i];
+			const period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
+			const which = cosines.length > 1 ? ` (curve ${i + 1})` : '';
+			const limit = side === 'max' ? 'upper' : 'lower';
+			out.push(
+				`${label}${which} stopped at the ${limit} limit of the period range: ${fmt(period)} h, range ${fmt(lo)} to ${fmt(hi)} h. The data have no clear rhythm inside that range (a trend, or a longer or shorter cycle, is pulling the fit), so this period, amplitude and acrophase do not describe a rhythm. Widen the period range if a longer or shorter rhythm is plausible, remove the trend, or use a fixed period.`
+			);
+		});
+		if (d.converged === false) {
+			out.push(
+				`${label} did not converge (${d.iterations} iterations), so the period, amplitude and acrophase may not be the best fit. Narrow the period range around the expected period, or use a fixed period.`
+			);
+		}
+	}
+	return out;
+}
 
-function fitWithMultiStart(t, x, N, numStarts, maxIterations, tolerance) {
-	let bestResult = null;
-	let bestRmse = Infinity;
+// ─── Starting values ─────────────────────────────────────────────────────────
 
-	for (let start = 0; start < numStarts; start++) {
-		const params = generateInitialGuess(t, x, N, start);
-		const result = fitWithInitialGuess(t, x, N, params, maxIterations, tolerance);
-		if (result.rmse < bestRmse) {
-			bestRmse = result.rmse;
-			bestResult = result;
+/**
+ * Least-squares ("floating-mean" / generalised Lomb-Scargle) periodogram on a
+ * uniform frequency grid inside [minPeriod, maxPeriod]. For each frequency the
+ * power is the variance explained by the best mean + cosine + sine fit at that
+ * frequency, i.e. exactly the single-cosine fit the optimiser then refines, so
+ * the highest peak is the best starting basin. Returns up to `nPeaks` local
+ * maxima (range endpoints included), strongest first, as angular frequencies.
+ */
+export function scanPeriodogram(t, x, minPeriod, maxPeriod, nPeaks = SCAN_PEAKS) {
+	let ts = [];
+	let xs = [];
+	for (let i = 0; i < t.length; i++) {
+		if (Number.isFinite(t[i]) && Number.isFinite(x[i])) {
+			ts.push(t[i]);
+			xs.push(x[i]);
+		}
+	}
+	if (ts.length < 3) return [];
+	let tMin = Infinity;
+	let tMax = -Infinity;
+	for (const v of ts) {
+		if (v < tMin) tMin = v;
+		if (v > tMax) tMax = v;
+	}
+	const span = tMax - tMin;
+	if (!(span > 0)) return [];
+
+	// Long records: average into bins for the scan only.
+	if (ts.length > SCAN_MAX_POINTS) {
+		const w = Math.min(span / SCAN_MAX_POINTS, minPeriod / 8);
+		const nb = Math.floor(span / w) + 1;
+		const st = new Float64Array(nb);
+		const sx = new Float64Array(nb);
+		const cnt = new Float64Array(nb);
+		for (let i = 0; i < ts.length; i++) {
+			const b = Math.min(nb - 1, Math.floor((ts[i] - tMin) / w));
+			st[b] += ts[i];
+			sx[b] += xs[i];
+			cnt[b] += 1;
+		}
+		ts = [];
+		xs = [];
+		for (let b = 0; b < nb; b++) {
+			if (cnt[b] > 0) {
+				ts.push(st[b] / cnt[b]);
+				xs.push(sx[b] / cnt[b]);
+			}
 		}
 	}
 
-	return bestResult;
+	const n = ts.length;
+	let mean = 0;
+	for (const v of xs) mean += v;
+	mean /= n;
+
+	const fLo = 1 / maxPeriod;
+	const fHi = 1 / minPeriod;
+	const nf = Math.min(
+		SCAN_MAX_FREQS,
+		Math.max(SCAN_MIN_FREQS, Math.ceil(SCAN_OVERSAMPLE * span * (fHi - fLo)) + 1)
+	);
+	const df = (fHi - fLo) / (nf - 1);
+
+	// Accumulate the per-frequency sums point by point, stepping cos/sin across
+	// the frequency grid by rotation (no trig in the inner loop).
+	const Sc = new Float64Array(nf);
+	const Ss = new Float64Array(nf);
+	const Scc = new Float64Array(nf);
+	const Sss = new Float64Array(nf);
+	const Scs = new Float64Array(nf);
+	const Syc = new Float64Array(nf);
+	const Sys = new Float64Array(nf);
+	for (let i = 0; i < n; i++) {
+		const tau = ts[i] - tMin;
+		const y = xs[i] - mean;
+		const a0 = 2 * Math.PI * fLo * tau;
+		const da = 2 * Math.PI * df * tau;
+		let c = Math.cos(a0);
+		let s = Math.sin(a0);
+		const cd = Math.cos(da);
+		const sd = Math.sin(da);
+		for (let k = 0; k < nf; k++) {
+			Sc[k] += c;
+			Ss[k] += s;
+			Scc[k] += c * c;
+			Sss[k] += s * s;
+			Scs[k] += c * s;
+			Syc[k] += y * c;
+			Sys[k] += y * s;
+			const cn = c * cd - s * sd;
+			s = s * cd + c * sd;
+			c = cn;
+		}
+	}
+
+	const power = new Float64Array(nf);
+	for (let k = 0; k < nf; k++) {
+		const C = Sc[k] / n;
+		const S = Ss[k] / n;
+		const CC = Scc[k] / n - C * C;
+		const SS = Sss[k] / n - S * S;
+		const CS = Scs[k] / n - C * S;
+		const YC = Syc[k] / n;
+		const YS = Sys[k] / n;
+		const D = CC * SS - CS * CS;
+		power[k] = D > 1e-12 ? (SS * YC * YC + CC * YS * YS - 2 * CS * YC * YS) / D : 0;
+	}
+
+	const peaks = [];
+	for (let k = 0; k < nf; k++) {
+		const left = k === 0 ? -Infinity : power[k - 1];
+		const right = k === nf - 1 ? -Infinity : power[k + 1];
+		if (power[k] >= left && power[k] > right) peaks.push(k);
+	}
+	peaks.sort((a, b) => power[b] - power[a] || a - b);
+	return peaks.slice(0, nPeaks).map((k) => ({
+		frequency: 2 * Math.PI * (fLo + k * df),
+		period: 1 / (fLo + k * df),
+		power: power[k]
+	}));
+}
+
+/**
+ * Starting parameter vectors. With the frequencies fixed the model is linear in
+ * (B·cos φ, B·sin φ) and the offset, so amplitude, phase and offset come from
+ * an ordinary least-squares solve at the seed frequencies; the optimiser only
+ * has to refine.
+ *   N = 1: one start per periodogram peak.
+ *   N > 1: the N strongest peaks together, then the strongest peak with its
+ *          harmonics (2ω, 3ω, …) inside the range.
+ */
+function buildStarts(t, x, N, peaks, wLo, wHi) {
+	const clampW = (w) => Math.min(wHi, Math.max(wLo, w));
+	const fallback = clampW((2 * Math.PI) / 24);
+	const top = peaks.length ? peaks.map((p) => p.frequency) : [fallback];
+	const sets = [];
+	if (N === 1) {
+		for (const w of top) sets.push([w]);
+	} else {
+		const byPeaks = [];
+		for (let i = 0; i < N; i++) byPeaks.push(i < top.length ? top[i] : clampW(top[0] * (i + 1)));
+		sets.push(byPeaks);
+		const harmonics = [];
+		for (let i = 0; i < N; i++) harmonics.push(clampW(top[0] * (i + 1)));
+		sets.push(harmonics);
+	}
+	return sets.map((ws) => linearInit(t, x, ws));
+}
+
+function linearInit(t, x, omegas) {
+	const N = omegas.length;
+	const p = 2 * N + 1;
+	const XtX = Array.from({ length: p }, () => new Array(p).fill(0));
+	const Xty = new Array(p).fill(0);
+	let mean = 0;
+	for (const v of x) mean += v;
+	mean /= x.length;
+	const row = new Array(p);
+	for (let i = 0; i < t.length; i++) {
+		row[0] = 1;
+		for (let j = 0; j < N; j++) {
+			row[2 * j + 1] = Math.cos(omegas[j] * t[i]);
+			row[2 * j + 2] = Math.sin(omegas[j] * t[i]);
+		}
+		for (let a = 0; a < p; a++) {
+			Xty[a] += row[a] * x[i];
+			for (let b = a; b < p; b++) XtX[a][b] += row[a] * row[b];
+		}
+	}
+	for (let a = 0; a < p; a++) for (let b = a + 1; b < p; b++) XtX[b][a] = XtX[a][b];
+	let coef = null;
+	try {
+		coef = solveLinearSystem(XtX, Xty);
+	} catch {
+		coef = null;
+	}
+	const params = [];
+	for (let j = 0; j < N; j++) {
+		if (coef) {
+			// a·cos ωt + b·sin ωt = B·cos(ωt + φ) with B = hypot(a, b), φ = atan2(−b, a)
+			const a = coef[2 * j + 1];
+			const b = coef[2 * j + 2];
+			params.push(Math.hypot(a, b), omegas[j], Math.atan2(-b, a));
+		} else {
+			params.push(0, omegas[j], 0);
+		}
+	}
+	params.push(coef ? coef[0] : mean);
+	return params;
 }
 
 // ─── Core LM optimizer ───────────────────────────────────────────────────────
 
 /**
- * Levenberg-Marquardt with proper step rejection and relative convergence.
+ * Levenberg-Marquardt with step rejection, relative convergence and box bounds
+ * on each angular frequency ([wLo, wHi]). A frequency sitting on a bound whose
+ * descent direction points out of the range is held fixed for that step (a
+ * simple active set), so the other parameters keep improving instead of the
+ * step being clamped into a no-op.
  * Parameter layout: [B0, w0, o0,  B1, w1, o1,  …,  O]
  */
-function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
+function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance, wLo, wHi) {
 	const numParams = 3 * N + 1; // no redundant A term
 	let params = [...initialParams];
 
 	if (params.length !== numParams) {
 		throw new Error(`Initial guess must have ${numParams} parameters`);
 	}
+	for (let i = 0; i < N; i++) {
+		params[3 * i + 1] = Math.min(wHi, Math.max(wLo, params[3 * i + 1]));
+	}
 
 	let lambda = 0.01;
 	let { JtJ, JtR, rss: currentRss } = computeNormalEquations(t, x, params, N);
+	let converged = false;
+	let iterations = 0;
 
 	for (let iter = 0; iter < maxIterations; iter++) {
+		iterations = iter + 1;
+		// Frequencies pinned on a bound this step (descent would leave the range).
+		// The Gauss-Newton move is −JtR (newParams = params − delta).
+		const frozen = new Array(numParams).fill(false);
+		for (let i = 0; i < N; i++) {
+			const j = 3 * i + 1;
+			const move = -JtR[j];
+			if ((params[j] <= wLo && move < 0) || (params[j] >= wHi && move > 0)) frozen[j] = true;
+		}
 		// Damp diagonal: use JtJ[i][i] scaling (Marquardt's original scaling)
 		const JtJ_d = JtJ.map((row, i) => {
-			const r = row.slice();
+			if (frozen[i]) return row.map((_, k) => (k === i ? 1 : 0));
+			const r = row.map((v, k) => (frozen[k] ? 0 : v));
 			r[i] += lambda * (row[i] > 0 ? row[i] : 1);
 			return r;
 		});
+		const rhs = JtR.map((v, i) => (frozen[i] ? 0 : v));
 
 		let delta;
 		try {
-			delta = solveLinearSystem(JtJ_d, JtR.slice());
+			delta = solveLinearSystem(JtJ_d, rhs);
 		} catch {
 			lambda = Math.min(lambda * 10, 1e12);
-			if (lambda >= 1e12) break;
+			if (lambda >= 1e12) {
+				converged = true; // no descent step exists at any damping
+				break;
+			}
 			continue;
 		}
 
-		// Proposed new parameters
+		// Proposed new parameters, frequencies kept inside the period range.
 		const newParams = params.map((p, i) => p - delta[i]);
-		// Frequency must stay positive and reasonable
 		for (let i = 0; i < N; i++) {
-			newParams[3 * i + 1] = Math.max(0.001, Math.min(newParams[3 * i + 1], 100));
+			newParams[3 * i + 1] = Math.min(wHi, Math.max(wLo, newParams[3 * i + 1]));
 		}
 
 		const { JtJ: newJtJ, JtR: newJtR, rss: newRss } = computeNormalEquations(t, x, newParams, N);
@@ -127,16 +460,35 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
 			JtR = newJtR;
 			currentRss = newRss;
 			lambda = Math.max(lambda / 3, 1e-10);
-			if (relImprovement < tolerance) break;
+			if (relImprovement < tolerance) {
+				converged = true;
+				break;
+			}
 		} else {
-			// Reject step — increase damping
+			// Reject step — increase damping. At the damping ceiling no step
+			// lowers the RSS: the fit is at a (constrained) minimum.
 			lambda = Math.min(lambda * 10, 1e12);
-			if (lambda >= 1e12) break;
+			if (lambda >= 1e12) {
+				converged = true;
+				break;
+			}
 		}
 	}
 
+	// Canonical form: B ≥ 0 and φ in (−π, π]. B·cos(ωt + φ) = (−B)·cos(ωt + φ + π),
+	// so the optimiser may return either sign; reporting one form keeps the
+	// amplitude positive and the acrophase (−φ/ω) meaningful.
+	for (let i = 0; i < N; i++) {
+		if (params[3 * i] < 0) {
+			params[3 * i] = -params[3 * i];
+			params[3 * i + 2] += Math.PI;
+		}
+		params[3 * i + 2] = wrapPhase(params[3 * i + 2]);
+	}
+
 	// Final statistics
-	const residuals = t.map((ti, i) => x[i] - evaluateModel(ti, params, N));
+	const fitted = t.map((ti) => evaluateModel(ti, params, N));
+	const residuals = t.map((ti, i) => x[i] - fitted[i]);
 	const rmse = Math.sqrt(currentRss / t.length);
 
 	const xMeanAcc = new KahanSum();
@@ -145,6 +497,14 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
 	const sstotAcc = new KahanSum();
 	for (const v of x) sstotAcc.add((v - xMean) ** 2);
 	const rSquared = sstotAcc.value > 0 ? 1 - currentRss / sstotAcc.value : 0;
+
+	const atBound = Array.from({ length: N }, (_, i) => {
+		const w = params[3 * i + 1];
+		if (Math.abs(w - wLo) <= BOUND_RTOL * wLo) return 'max'; // lowest frequency = longest period
+		if (Math.abs(w - wHi) <= BOUND_RTOL * wHi) return 'min';
+		return null;
+	});
+	const allFinite = params.every(Number.isFinite) && Number.isFinite(currentRss);
 
 	return {
 		parameters: {
@@ -156,12 +516,21 @@ function fitWithInitialGuess(t, x, N, initialParams, maxIterations, tolerance) {
 			})),
 			O: params[params.length - 1]
 		},
-		fitted: t.map((ti) => evaluateModel(ti, params, N)),
+		fitted,
 		residuals,
 		rmse,
 		rSquared,
-		rss: currentRss
+		rss: currentRss,
+		diagnostics: { converged: converged && allFinite, iterations, atBound }
 	};
+}
+
+function wrapPhase(phi) {
+	const twoPi = 2 * Math.PI;
+	let p = phi % twoPi;
+	if (p <= -Math.PI) p += twoPi;
+	else if (p > Math.PI) p -= twoPi;
+	return p;
 }
 
 // ─── Model evaluation ─────────────────────────────────────────────────────────
@@ -226,109 +595,6 @@ function computeNormalEquations(t, x, params, N) {
 	return { JtJ, JtR, rss };
 }
 
-// ─── Period/frequency scanner ─────────────────────────────────────────────────
-
-function estimateDominantPeriods(t, x, numPeriods = 3) {
-	const n = t.length;
-	if (n < 8) return [];
-
-	const mean = x.reduce((s, v) => s + v, 0) / n;
-	const detrended = x.map((v) => v - mean);
-
-	const tMin = min(t);
-	const tMax = max(t);
-	const totalTime = tMax - tMin;
-
-	const minPeriod = totalTime / (n / 2); // ≥2 samples per period
-	const maxPeriod = totalTime * 0.75; // allows ~1.3 periods in window
-	const numCandidates = Math.min(500, n * 5);
-
-	const candidates = [];
-	for (let i = 0; i < numCandidates; i++) {
-		const period = minPeriod + ((maxPeriod - minPeriod) * i) / (numCandidates - 1);
-		const frequency = (2 * Math.PI) / period;
-		candidates.push({ period, frequency, score: scorePeriodCandidate(t, detrended, frequency) });
-	}
-
-	candidates.sort((a, b) => b.score - a.score);
-	return candidates.slice(0, numPeriods);
-}
-
-function scorePeriodCandidate(t, x, frequency) {
-	let cosSum = 0,
-		sinSum = 0,
-		norm = 0;
-	for (let i = 0; i < t.length; i++) {
-		const phase = frequency * t[i];
-		cosSum += x[i] * Math.cos(phase);
-		sinSum += x[i] * Math.sin(phase);
-		norm += x[i] * x[i];
-	}
-	if (norm === 0) return 0;
-	return Math.sqrt(cosSum * cosSum + sinSum * sinSum) / Math.sqrt(norm * t.length);
-}
-
-// ─── Initial guess generation ─────────────────────────────────────────────────
-
-function generateInitialGuess(t, x, N, seed = 0) {
-	const mean = x.reduce((s, v) => s + v, 0) / x.length;
-	const std = Math.sqrt(x.reduce((s, v) => s + (v - mean) ** 2, 0) / x.length);
-
-	const params = [];
-
-	if (N === 1) {
-		// For multi-start N=1: seed selects which top-ranked period to try
-		const numCandidatePeriods = 5;
-		const dominantPeriods = estimateDominantPeriods(t, x, numCandidatePeriods);
-		const periodIdx = Math.min(seed, dominantPeriods.length - 1);
-		const frequency =
-			dominantPeriods.length > 0 ? dominantPeriods[periodIdx].frequency : (2 * Math.PI) / 24;
-
-		// Amplitude & phase from projection onto cos/sin at detected frequency
-		const detrended = x.map((v) => v - mean);
-		let cosSum = 0,
-			sinSum = 0;
-		for (let i = 0; i < t.length; i++) {
-			cosSum += detrended[i] * Math.cos(frequency * t[i]);
-			sinSum += detrended[i] * Math.sin(frequency * t[i]);
-		}
-		cosSum *= 2 / t.length;
-		sinSum *= 2 / t.length;
-
-		const amplitude = Math.sqrt(cosSum * cosSum + sinSum * sinSum);
-		const phase = -Math.atan2(sinSum, cosSum);
-
-		// Layout: [B, w, o, O]
-		params.push(amplitude, frequency, phase, mean);
-		return params;
-	}
-
-	// Multi-cosine — layout: [B0,w0,o0, …, BN-1,wN-1,oN-1, O]
-	const dominantPeriods = estimateDominantPeriods(t, x, Math.max(3, N));
-	const rng = createSeededRNG(seed);
-
-	for (let i = 0; i < N; i++) {
-		params.push(std * (1 / (i + 1)) * (0.5 + 0.5 * rng())); // B_i
-		const frequency =
-			i < dominantPeriods.length
-				? dominantPeriods[i].frequency
-				: (dominantPeriods[0]?.frequency ?? (2 * Math.PI) / 24) * (i + 1) * (0.5 + rng());
-		params.push(frequency); // w_i
-		params.push(((2 * Math.PI * (seed * 7 + i * 11)) / 17) % (2 * Math.PI)); // o_i
-	}
-	params.push(mean); // O
-
-	return params;
-}
-
-function createSeededRNG(seed) {
-	let state = seed || 12345;
-	return function () {
-		state = (state * 1103515245 + 12345) % 2 ** 31;
-		return state / 2 ** 31;
-	};
-}
-
 // ─── Gaussian elimination with partial pivoting ───────────────────────────────
 
 function solveLinearSystem(A, b) {
@@ -363,6 +629,9 @@ function solveLinearSystem(A, b) {
 
 /**
  * Model: Y(t) = M + Σ_k [ β_k·cos(kωt) + γ_k·sin(kωt) ],  ω = 2π/period
+ *
+ * Each harmonic reports `acrophase_hrs` as the time of peak (t units after
+ * t = 0, in [0, period/k)), with a delta-method SE and an unwrapped CI around it.
  */
 export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05) {
 	const n = t.length;
@@ -456,18 +725,43 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 		const A_k = Math.sqrt(beta_k ** 2 + gamma_k ** 2);
 		const phi_k = Math.atan2(-gamma_k, beta_k);
 
-		let acrophase_hrs = (phi_k * period) / (2 * Math.PI * k);
+		// ACROPHASE CONVENTION: `acrophase_hrs` is the TIME OF PEAK of harmonic k,
+		// in t units (hours) after t = 0, wrapped into [0, period/k). β·cos + γ·sin
+		// = A·cos(kωt − θ) with θ = atan2(γ, β) = −φ, which peaks at t = θ/(kω).
+		// This function used to return the classical wrap(φ/(kω)) = wrap(−t_peak)
+		// instead, and every consumer had to remember to negate it; the Cosinor
+		// panel and stats CSV did not, so one node showed 06:00 on its port and
+		// 18:00 in its panel for the same rhythm. `phi_rad` (the model phase used
+		// for evaluation) is unchanged.
+		let acrophase_hrs = (-phi_k * period) / (2 * Math.PI * k);
 		if (acrophase_hrs < 0) acrophase_hrs += period / k;
+		if (acrophase_hrs >= period / k) acrophase_hrs -= period / k;
 
+		// Delta-method standard errors from the FULL covariance of (β, γ). On a
+		// whole number of evenly sampled cycles cos and sin are orthogonal and
+		// cov(β, γ) ≈ 0, but on short or uneven records it is not, and leaving it
+		// out made SE(A) up to ~2% wrong against statsmodels (and SE of the
+		// acrophase likewise). ∂A/∂β = β/A, ∂A/∂γ = γ/A; ∂θ/∂β = −γ/A², ∂θ/∂γ = β/A².
 		const varBeta = MSE * XtX_inv[bIdx][bIdx];
 		const varGamma = MSE * XtX_inv[gIdx][gIdx];
+		const covBG = MSE * XtX_inv[bIdx][gIdx];
 
-		const varA = A_k > 0 ? (beta_k ** 2 * varBeta + gamma_k ** 2 * varGamma) / A_k ** 2 : 0;
+		const varA =
+			A_k > 0
+				? (beta_k ** 2 * varBeta + gamma_k ** 2 * varGamma + 2 * beta_k * gamma_k * covBG) /
+					A_k ** 2
+				: 0;
 		const SE_A = Math.sqrt(Math.max(0, varA));
 		const CI_A = [Math.max(0, A_k - t_crit * SE_A), A_k + t_crit * SE_A];
 
-		const varPhi = A_k > 0 ? (gamma_k ** 2 * varBeta + beta_k ** 2 * varGamma) / A_k ** 4 : 0;
+		const varPhi =
+			A_k > 0
+				? (gamma_k ** 2 * varBeta + beta_k ** 2 * varGamma - 2 * beta_k * gamma_k * covBG) /
+					A_k ** 4
+				: 0;
 		const SE_acrophase_hrs = (Math.sqrt(Math.max(0, varPhi)) * period) / (2 * Math.PI * k);
+		// Symmetric interval around the peak time, NOT wrapped (so lo ≤ acrophase ≤ hi
+		// always holds); wrap each end for clock-time display.
 		const CI_acrophase = [
 			acrophase_hrs - t_crit * SE_acrophase_hrs,
 			acrophase_hrs + t_crit * SE_acrophase_hrs
