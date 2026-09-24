@@ -546,7 +546,6 @@
 	>
 		<PolarGrid
 			projection={P}
-			showRLabels={!hasTimed}
 			hint={hasTimed
 				? `value ${plot.valueAxis[0]}–${plot.valueAxis[1]} · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`
 				: `phase · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`}
@@ -610,21 +609,32 @@
 			{/if}
 		{/each}
 
-		{#if hasTimed}
-			<g class="value-axis-ticks">
+		<!-- Radial scale labels: the value ticks (timed) or R = 0.5 / 1 (untimed). Drawn AFTER
+		     the data, with a halo in the plot's own background colour (paint-order: stroke
+		     first), so a point under a label can never make it illegible. The halo colour is a
+		     CSS variable, which the export resolves like every other paint (exportStyle.js). -->
+		<g
+			class="radial-scale-labels"
+			font-size="9"
+			fill="var(--color-lightness-50)"
+			stroke="var(--surface-card)"
+			stroke-width="3"
+			stroke-linejoin="round"
+			paint-order="stroke"
+		>
+			{#if hasTimed}
 				{#each valueScale.ticks(3) as t (t)}
 					{@const r01 = valueScale(t)}
 					{#if r01 >= 0 && r01 <= 1}
-						<text
-							x={P.cx + 3}
-							y={P.cy - P.radius * r01 + 4}
-							font-size="9"
-							fill="var(--color-lightness-50)">{t}</text
-						>
+						<text x={P.cx + 3} y={P.cy - P.radius * r01 + 4}>{t}</text>
 					{/if}
 				{/each}
-			</g>
-		{/if}
+			{:else}
+				{#each [0.5, 1] as f (f)}
+					<text x={P.cx + 3} y={P.cy - P.radius * f + 4}>R={f}</text>
+				{/each}
+			{/if}
+		</g>
 
 		<Legend
 			figureStyle={plot.viewStyle}

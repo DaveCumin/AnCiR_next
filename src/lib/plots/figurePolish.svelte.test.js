@@ -1,9 +1,10 @@
 // @ts-nocheck
-// Pixel-level fixes, checked on the shipped demo sessions:
+// Three pixel-level fixes, checked on the shipped demo sessions:
 //   - histogram bars never sit on the y axis line (x domain has room at automatic ends);
-//   - boxplot whisker caps never sit on the x axis line;
-//   - a boxplot coloured per category shows no single-swatch legend.
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+//   - a boxplot coloured per category shows no single-swatch legend;
+//   - the circular plot's radial scale labels are drawn over the data with a halo.
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { render, cleanup } from '@testing-library/svelte';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { scaleLinear } from 'd3-scale';
@@ -12,6 +13,7 @@ import { loadPlots } from '$lib/plots/plotMap.js';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { importJson } from '$lib/components/iconActions/Setting.svelte';
+import CircularPhase from './CircularPhase/CircularPhase.svelte';
 
 const DEMOS = join(process.cwd(), 'static', 'sessions', 'demos');
 
@@ -32,6 +34,7 @@ beforeEach(() => {
 	core.rawData = new Map();
 	core.tableProcesses = [];
 });
+afterEach(() => cleanup());
 
 describe('histogram x domain', () => {
 	it('the outermost bars are clear of the axis line and the right edge', async () => {
@@ -66,6 +69,24 @@ describe('boxplot legend with per-category colours', () => {
 		p.addData({ x: { refId: d.x.refId }, y: { refId: d.y.refId } });
 		expect(p.categoryColoured).toBe(false);
 		expect(p.getLegendItems).toHaveLength(2);
+	});
+});
+
+describe('circular phase radial scale labels', () => {
+	it('are drawn after the data, with a halo painted under the text', async () => {
+		const wrapper = await loadDemo('demo-circular-phase-two-groups', 'circularphase');
+		const { container } = render(CircularPhase, { props: { theData: wrapper, which: 'plot' } });
+		const labels = container.querySelector('g.radial-scale-labels');
+		expect(labels).not.toBeNull();
+		expect(labels.querySelectorAll('text').length).toBeGreaterThan(0);
+		expect(labels.getAttribute('paint-order')).toBe('stroke');
+		expect(Number(labels.getAttribute('stroke-width'))).toBeGreaterThan(0);
+		// Every data path comes BEFORE the labels in document (paint) order.
+		const paths = [...container.querySelectorAll('path[role="presentation"]')];
+		expect(paths.length).toBeGreaterThan(0);
+		for (const path of paths) {
+			expect(path.compareDocumentPosition(labels) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		}
 	});
 });
 

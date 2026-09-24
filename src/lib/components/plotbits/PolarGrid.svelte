@@ -4,7 +4,6 @@
 		gridColour = 'var(--color-lightness-80)',
 		gridSoftColour = 'var(--color-lightness-90)',
 		labelColour = 'var(--color-lightness-50)',
-		showRLabels = true,
 		hint = ''
 	} = $props();
 
@@ -25,11 +24,6 @@
 			stroke-width={i === 3 ? 1.4 : 1}
 		/>
 	{/each}
-	{#if showRLabels}
-		{#each [0.5, 1] as f (f)}
-			<text x={P.cx + 3} y={P.cy - P.radius * f + 4} font-size="9" fill={labelColour}>R={f}</text>
-		{/each}
-	{/if}
 	{#each spokes as v (v)}
 		{@const [x, y] = P.toXY(v, 1)}
 		<line x1={P.cx} y1={P.cy} x2={x} y2={y} stroke={gridSoftColour} stroke-width="1" />
@@ -48,12 +42,8 @@
 		</text>
 	{/each}
 	{#if hint}
-		<text
-			x={P.cx}
-			y={P.cy + P.radius + 34}
-			text-anchor="middle"
-			font-size="10.5"
-			fill={labelColour}>{hint}</text
+		<text x={P.cx} y={P.cy + P.radius + 34} text-anchor="middle" font-size="10.5" fill={labelColour}
+			>{hint}</text
 		>
 	{/if}
 </g>
