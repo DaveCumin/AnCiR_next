@@ -56,6 +56,10 @@ describe('auto legend placement per plot', () => {
 
 	it('boxplot: whiskers reach the top in every category, so the legend goes outside', async () => {
 		const p = await loadDemo('demo-boxplot-by-day', 'boxplot');
+		// A second series: with one, boxes are coloured per category and there is no legend
+		// at all (see figurePolish.svelte.test.js).
+		const d = p.data[0];
+		p.addData({ x: { refId: d.x.refId }, y: { refId: d.y.refId } });
 		p.legend.position = 'auto';
 		expect(p.legendLayout.auto.outside).toBe(true);
 		expect(p.plotwidth).toBeLessThan(p.basePlotWidth);

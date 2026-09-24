@@ -1,7 +1,8 @@
 // @ts-nocheck
 // Pixel-level fixes, checked on the shipped demo sessions:
 //   - histogram bars never sit on the y axis line (x domain has room at automatic ends);
-//   - boxplot whisker caps never sit on the x axis line.
+//   - boxplot whisker caps never sit on the x axis line;
+//   - a boxplot coloured per category shows no single-swatch legend.
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -46,6 +47,25 @@ describe('histogram x domain', () => {
 		p.xlimsIN = [40, null];
 		expect(p.xlims[0]).toBe(40);
 		expect(p.xlims[1]).toBeGreaterThan(p.data[0].binned.binEnds.at(-1));
+	});
+});
+
+describe('boxplot legend with per-category colours', () => {
+	it('shows no legend: one swatch cannot stand for seven colours', async () => {
+		const p = (await loadDemo('demo-boxplot-by-day', 'boxplot')).plot;
+		expect(p.categoryColoured).toBe(true);
+		expect(p.getLegendItems).toEqual([]);
+		// ...so nothing is reserved for it either.
+		expect(p.legendLayout.box).toBeNull();
+		expect(p.plotwidth).toBe(p.basePlotWidth);
+	});
+
+	it('a second series brings the legend back, since colour identifies series again', async () => {
+		const p = (await loadDemo('demo-boxplot-by-day', 'boxplot')).plot;
+		const d = p.data[0];
+		p.addData({ x: { refId: d.x.refId }, y: { refId: d.y.refId } });
+		expect(p.categoryColoured).toBe(false);
+		expect(p.getLegendItems).toHaveLength(2);
 	});
 });
 

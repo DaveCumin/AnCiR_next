@@ -715,7 +715,21 @@
 			this.data.splice(idx, 1);
 		}
 
+		// One series whose boxes are coloured per CATEGORY (Box/Violin `useCategoryColour`).
+		// Category colours outrank the series colour there, so each box has its own colour and
+		// the x axis already names every group.
+		categoryColoured = $derived(
+			this.data.length === 1 &&
+				this.uniqueXValues.length > 1 &&
+				(this.data[0].x.getData()?.length ?? 0) > 0
+		);
+
 		getLegendItems = $derived.by(() => {
+			// A legend would show ONE swatch, in the first category's colour, for boxes that are
+			// all different colours: it identifies nothing and misattributes a colour. With no
+			// items the legend draws nothing (box, violin and points variants alike); a second
+			// series brings it back, since colour then identifies the series again.
+			if (this.categoryColoured) return [];
 			const items = [];
 			this.data.forEach((datum) => {
 				const legendItem = datum.getLegendItem();
@@ -1464,9 +1478,7 @@
 						x={xDataForDatum(datum, i)}
 						y={datum.y.getData() ?? []}
 						uniqueXValues={theData.plot.uniqueXValues}
-						useCategoryColour={theData.plot.data.length === 1 &&
-							theData.plot.uniqueXValues.length > 1 &&
-							hasCategoryXData(datum)}
+						useCategoryColour={theData.plot.categoryColoured}
 						monochrome={theData.plot.parentBox?.style?.monochrome === true}
 						seriesIndex={i}
 						totalSeries={theData.plot.data.length}
@@ -1502,9 +1514,7 @@
 					x={xDataForDatum(datum, i)}
 					y={datum.y.getData() ?? []}
 					uniqueXValues={theData.plot.uniqueXValues}
-					useCategoryColour={theData.plot.data.length === 1 &&
-						theData.plot.uniqueXValues.length > 1 &&
-						hasCategoryXData(datum)}
+					useCategoryColour={theData.plot.categoryColoured}
 					monochrome={theData.plot.parentBox?.style?.monochrome === true}
 					seriesIndex={i}
 					totalSeries={theData.plot.data.length}
