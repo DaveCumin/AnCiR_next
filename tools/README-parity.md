@@ -71,6 +71,12 @@ one or two digits, so the ports were right and JS was wrong. `parseTimeStrict` i
 `TimeUtils.js` now lets the single-width tokens `H h m s D M` take a padded or unpadded
 value while still rejecting out-of-range values.
 
+The reverse (`time-double-width-strict`) pins the other half of the rule. A double-width
+token (`HH mm ss DD MM hh`) needs exactly two digits in JS, so `9:30:00` under `HH:mm:ss` is
+blank there, but `strptime` would read it. Both ports therefore gate each value on the
+format's digit widths before parsing (`dayjs_width_pattern` / `.dayjs_width_pattern`), and a
+value that fails the gate is a gap, as in JS.
+
 ### `rTolerance`
 
 A fixture may set `rTolerance` to loosen the comparison **for R alone**. Widening the shared

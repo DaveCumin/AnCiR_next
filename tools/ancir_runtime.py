@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import functools
 import math
+import re
 import sys
 from dataclasses import dataclass, field
 from typing import Any, Callable
@@ -1124,6 +1125,52 @@ def strptime_from_dayjs(fmt):
     return ''.join(out)
 
 
+# Digit width each numeric dayjs token accepts in the JS engine. strptime's %H, %M,
+# %S, %d and %m read one OR two digits, but the app parses with dayjs strict mode,
+# where a double-width token (HH mm ss DD MM hh) needs exactly two digits and a
+# single-width one (H m s D M h) takes one or two (parseTimeStrict in TimeUtils.js).
+# Without this gate the ports read "9:30:00" under HH:mm:ss, which the app leaves
+# blank. Tokens not listed (month names, meridiem, offsets) are not width-checked.
+_DAYJS_WIDTHS = {
+    'YYYY': r'\d{4}', 'YY': r'\d{2}',
+    'MM': r'\d{2}', 'M': r'\d{1,2}',
+    'DD': r'\d{2}', 'D': r'\d{1,2}',
+    'HH': r'\d{2}', 'H': r'\d{1,2}',
+    'hh': r'\d{2}', 'h': r'\d{1,2}',
+    'mm': r'\d{2}', 'm': r'\d{1,2}',
+    'ss': r'\d{2}', 's': r'\d{1,2}',
+    'SSS': r'\d{3}',
+}
+
+
+def dayjs_width_pattern(fmt):
+    """Compiled regex a value must fully match to have the digit widths `fmt` allows.
+
+    Mirrors the JS engine's strictness on numeric token widths (see _DAYJS_WIDTHS).
+    Returns None when there is no format.
+    """
+    if not fmt or not isinstance(fmt, str):
+        return None
+    out, i = [], 0
+    while i < len(fmt):
+        ch = fmt[i]
+        if ch == '[':
+            end = fmt.find(']', i)
+            if end != -1:
+                out.append(re.escape(fmt[i + 1:end]))
+                i = end + 1
+                continue
+        for token, _ in _DAYJS_TO_STRPTIME:
+            if fmt.startswith(token, i):
+                out.append(_DAYJS_WIDTHS.get(token, '.+?'))
+                i += len(token)
+                break
+        else:
+            out.append(re.escape(ch))
+            i += 1
+    return re.compile(''.join(out))
+
+
 @dataclass
 class Column:
     id: int
@@ -1159,6 +1206,11 @@ class Column:
             if data and not isinstance(data[0], (int, float)):
                 fmt = strptime_from_dayjs(self.time_format)
                 parsed = None
+                widths = dayjs_width_pattern(self.time_format)
+                if widths is not None:
+                    # Values the app's strict parse rejects on digit width are gaps.
+                    data = [v if isinstance(v, str) and widths.fullmatch(v) else None
+                            for v in data]
                 if fmt:
                     # Honour the session's OWN format when there is one. Auto-detection
                     # is not a safe substitute: "01/03/2026" under DD/MM/YYYY is 1 March

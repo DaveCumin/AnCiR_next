@@ -4629,6 +4629,31 @@
     "data",
     "hoursSinceStart"
    ]
+  },
+  {
+   "id": "time-double-width-strict",
+   "kind": "timeColumn",
+   "pyFunc": "timecolumn",
+   "rFunc": "timecolumn",
+   "note": "Double-width tokens (HH mm ss DD MM) need exactly two digits in the JS engine (dayjs strict), so '9:30:00' under HH:mm:ss is blank there. strptime's %H/%M/%S/%d/%m read one OR two digits, so both ports gate each value on the token widths before parsing. Single-width tokens (H m s D M) take one or two digits in all three; see time-unpadded-*.",
+   "column": {
+    "type": "time",
+    "timeFormat": "DD/MM/YYYY HH:mm:ss",
+    "values": [
+     "05/01/2020 09:00:00",
+     "05/01/2020 9:30:00",
+     "05/01/2020 10:00:00",
+     "05/01/2020 10:5:00",
+     "5/01/2020 11:00:00",
+     "05/1/2020 11:30:00",
+     "05/01/2020 12:00:7",
+     "05/01/2020 13:00:00"
+    ]
+   },
+   "compareArrays": [
+    "data",
+    "hoursSinceStart"
+   ]
   }
  ]
 }
