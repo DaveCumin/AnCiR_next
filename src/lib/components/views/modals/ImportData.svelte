@@ -21,7 +21,8 @@
 		guessDateofArray,
 		forceFormat,
 		getPeriod,
-		normalizeTimeFormat
+		normalizeTimeFormat,
+		parseTimeStrict
 	} from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
 	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
@@ -324,7 +325,7 @@
 		if (!text) return null;
 		const normalized = normalizeTimeFormat(fmt);
 		if (normalized) {
-			const strict = dayjs.utc(text, normalized, true);
+			const strict = parseTimeStrict(text, normalized);
 			if (strict.isValid()) return strict;
 		}
 		const fallback = dayjs.utc(text);
@@ -683,7 +684,7 @@
 			'YYYY-MM-DDTHH:mm:ss'
 		];
 		for (const f of formats) {
-			const dt = dayjs.utc(s, f, true);
+			const dt = parseTimeStrict(s, f);
 			if (dt.isValid()) return dt.valueOf();
 		}
 		const fallback = dayjs.utc(s);
@@ -780,7 +781,7 @@
 			if (detectedTimeFmt && detectedTimeFmt !== -1 && detectedTimeFmt.length > 0) {
 				const normalized = normalizeTimeFormat(detectedTimeFmt);
 				if (normalized) {
-					const dt = dayjs.utc(s, normalized, true);
+					const dt = parseTimeStrict(s, normalized);
 					if (dt.isValid()) return dt.valueOf();
 				}
 				// Non-strict attempt with detected format

@@ -4588,6 +4588,47 @@
     "data",
     "hoursSinceStart"
    ]
+  },
+  {
+   "id": "time-unpadded-tokens-padded-values",
+   "kind": "timeColumn",
+   "pyFunc": "timecolumn",
+   "rFunc": "timecolumn",
+   "column": {
+    "type": "time",
+    "timeFormat": "YYYY-MM-DD H:mm:s",
+    "values": [
+     "2017-12-20 23:55:00",
+     "2017-12-21 00:00:00",
+     "2017-12-21 09:05:00",
+     "2017-12-21 9:10:5",
+     "2017-12-21 10:00:07"
+    ]
+   },
+   "compareArrays": [
+    "data",
+    "hoursSinceStart"
+   ]
+  },
+  {
+   "id": "time-unpadded-day-month-padded-values",
+   "kind": "timeColumn",
+   "pyFunc": "timecolumn",
+   "rFunc": "timecolumn",
+   "column": {
+    "type": "time",
+    "timeFormat": "D/M/YYYY h:mm A",
+    "values": [
+     "05/01/2020 09:00 AM",
+     "5/1/2020 9:30 AM",
+     "13/01/2020 06:15 PM",
+     "02/02/2020 12:00 AM"
+    ]
+   },
+   "compareArrays": [
+    "data",
+    "hoursSinceStart"
+   ]
   }
  ]
 }

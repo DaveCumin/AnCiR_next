@@ -115,8 +115,8 @@ describe('dotted meridiem (a.m./p.m.) parsing', () => {
 });
 
 describe('normalizeTimeFormat — additional token rules', () => {
-	it('widens a lone "s" to "ss"', () => {
-		expect(normalizeTimeFormat('HH:mm:s')).toBe('HH:mm:ss');
+	it('leaves a lone "s" alone (parsing accepts padded and unpadded seconds)', () => {
+		expect(normalizeTimeFormat('HH:mm:s')).toBe('HH:mm:s');
 	});
 
 	it('leaves an existing "ss" untouched', () => {
@@ -156,9 +156,7 @@ describe('calculateTimeDifference — null/undefined handling', () => {
 	});
 
 	it('returns a negative difference when end precedes start', () => {
-		const h = Number(
-			calculateTimeDifference('2024-01-01 05:00:00', '2024-01-01 02:00:00', fmt)
-		);
+		const h = Number(calculateTimeDifference('2024-01-01 05:00:00', '2024-01-01 02:00:00', fmt));
 		expect(h).toBeCloseTo(-3, 4);
 	});
 });
@@ -261,5 +259,112 @@ describe('formatTimeAxisTick — multi-resolution axis tick labels', () => {
 
 	it('shows year for January 1st ticks', () => {
 		expect(formatTimeAxisTick(Date.UTC(2026, 0, 1))).toBe('2026');
+	});
+});
+
+// Sessions saved by older versions store formats such as 'YYYY-MM-DD H:mm:s'. A
+// single-width numeric token (H h m s D M) means "one or two digits", so it must
+// accept a zero-padded value as well as a bare one. dayjs's strict mode rejects
+// '09' under 'H' because it round-trips the parse through format() and compares
+// strings, which blanked every row from 00:00 to 09:59 in such a session.
+describe('single-width tokens accept padded and unpadded values', () => {
+	const at = (iso) => Date.parse(iso);
+
+	it('parses zero-padded hours under a legacy "H:mm:s" format', () => {
+		const fmt = 'YYYY-MM-DD H:mm:s';
+		expect(getUNIXDate('2017-12-20 09:05:00', fmt)).toBe(at('2017-12-20T09:05:00Z'));
+		expect(getUNIXDate('2017-12-21 00:00:00', fmt)).toBe(at('2017-12-21T00:00:00Z'));
+		expect(getUNIXDate('2017-12-20 15:05:00', fmt)).toBe(at('2017-12-20T15:05:00Z'));
+	});
+
+	it('still parses unpadded values under the same format', () => {
+		const fmt = 'YYYY-MM-DD H:mm:s';
+		expect(getUNIXDate('2017-12-20 9:05:7', fmt)).toBe(at('2017-12-20T09:05:07Z'));
+	});
+
+	it.each([
+		['H', '07', '7', 'hour', 7],
+		['m', '07', '7', 'minute', 7],
+		['s', '07', '7', 'second', 7],
+		['D', '07', '7', 'date', 7],
+		['M', '07', '7', 'month', 6]
+	])('token %s accepts "%s" and "%s"', (tok, padded, bare, unit, expected) => {
+		const fmt = `YYYY ${tok}`;
+		for (const v of [padded, bare]) {
+			const ms = getUNIXDate(`2020 ${v}`, fmt);
+			expect(Number.isFinite(ms)).toBe(true);
+			const d = new Date(ms);
+			const got = {
+				hour: d.getUTCHours(),
+				minute: d.getUTCMinutes(),
+				second: d.getUTCSeconds(),
+				date: d.getUTCDate(),
+				month: d.getUTCMonth()
+			}[unit];
+			expect(got).toBe(expected);
+		}
+	});
+
+	it('token h accepts padded and unpadded 12-hour values', () => {
+		const fmt = 'YYYY-MM-DD h:mm a';
+		expect(getUNIXDate('2020-01-01 07:30 pm', fmt)).toBe(at('2020-01-01T19:30:00Z'));
+		expect(getUNIXDate('2020-01-01 7:30 pm', fmt)).toBe(at('2020-01-01T19:30:00Z'));
+	});
+
+	it('accepts mixed padding within one value', () => {
+		expect(getUNIXDate('2020-3-05 09:5:07', 'YYYY-M-D H:m:s')).toBe(at('2020-03-05T09:05:07Z'));
+	});
+
+	it('keeps double-width tokens strict (HH rejects a bare hour)', () => {
+		expect(Number.isNaN(getUNIXDate('2020-01-01 9:05:00', 'YYYY-MM-DD HH:mm:ss'))).toBe(true);
+	});
+
+	it('still rejects out-of-range values instead of rolling them over', () => {
+		expect(Number.isNaN(getUNIXDate('2020-02-30 09:00', 'YYYY-MM-D H:mm'))).toBe(true);
+		expect(Number.isNaN(getUNIXDate('13/05/2020', 'D/M/YYYY'))).toBe(false);
+		expect(Number.isNaN(getUNIXDate('13/05/2020', 'M/D/YYYY'))).toBe(true);
+		expect(Number.isNaN(getUNIXDate('2020-01-01 25:00', 'YYYY-MM-DD H:mm'))).toBe(true);
+	});
+
+	it('keeps day/month disambiguation working in the guesser', () => {
+		const dates = ['13/05/2020 09:00', '14/05/2020 10:00', '15/05/2020 11:00'];
+		const fmt = guessDateofArray(dates);
+		for (const d of dates) expect(Number.isFinite(getUNIXDate(d, fmt))).toBe(true);
+		expect(new Date(getUNIXDate(dates[0], fmt)).getUTCMonth()).toBe(4);
+	});
+
+	it('time differences and offsets work for padded hours under "H"', () => {
+		const fmt = 'YYYY-MM-DD H:mm:s';
+		expect(calculateTimeDifference('2020-01-01 08:00:00', '2020-01-01 09:30:00', fmt)).toBe(
+			'1.5000'
+		);
+		expect(getISODate('2020-01-01 08:00:00', fmt)).toBe('2020-01-01T08:00:00.000Z');
+	});
+
+	it('a guessed format parses every row of padded overnight data', () => {
+		const times = [];
+		for (let h = 0; h < 24; h++) times.push(`2020-01-01 ${String(h).padStart(2, '0')}:00:00`);
+		const fmt = guessDateofArray(times);
+		const bad = times.filter((t) => !Number.isFinite(getUNIXDate(t, fmt)));
+		expect(bad).toEqual([]);
+	});
+
+	it('a format guessed from afternoon-only rows still parses padded morning rows', () => {
+		// Column.svelte guesses from the first 10 rows. A recording starting at 15:05
+		// yields 'H' (the guesser maps 10-23 to H), which must still read "09:05:00".
+		const sample = [];
+		for (let i = 0; i < 10; i++) sample.push(`2017-12-20 15:${String(5 * i).padStart(2, '0')}:00`);
+		const fmt = guessDateofArray(sample);
+		expect(fmt).toContain('H:');
+		expect(getUNIXDate('2017-12-21 09:05:00', fmt)).toBe(at('2017-12-21T09:05:00Z'));
+	});
+
+	it('a guessed format parses every row of unpadded hours', () => {
+		// (The guesser only recognises two-digit minutes and seconds.)
+		const times = [];
+		for (let h = 0; h < 24; h++) times.push(`2020-01-01 ${h}:30:00`);
+		const fmt = guessDateofArray(times);
+		const bad = times.filter((t) => !Number.isFinite(getUNIXDate(t, fmt)));
+		expect(bad).toEqual([]);
 	});
 });
