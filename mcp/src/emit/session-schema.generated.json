@@ -235,6 +235,8 @@
 				"outputX": -1,
 				"useFixedPeriod": false,
 				"fixedPeriod": 24,
+				"minPeriod": 1,
+				"maxPeriod": 48,
 				"nHarmonics": 1,
 				"alpha": 0.05,
 				"referenceHrs": 0,
@@ -265,7 +267,7 @@
 				"x": "cosinorx",
 				"yPrefix": "cosinory_"
 			},
-			"paramNote": "For a daily rhythm keep `useFixedPeriod:true`, `fixedPeriod` in HOURS (e.g. 24). `nHarmonics` (fixed-period) adds harmonics; `Ncurves` (free-period) is the number of components. `referenceHrs` (HOURS) is the phase-angle reference. `alpha` (0.05). `permuteTest:true` enables the permutation test (`nPermutations`/`permutationSeed`/`permutationStatistic`)."
+			"paramNote": "For a daily rhythm keep `useFixedPeriod:true`, `fixedPeriod` in HOURS (e.g. 24). `nHarmonics` (fixed-period) adds harmonics; `Ncurves` (free-period) is the number of components; the free period is searched for and kept inside `minPeriod`..`maxPeriod` (HOURS, default 1..48) and the node warns if it ends on a bound. Every acrophase (port, panel, CSV) is the time of peak in hours after the start. `referenceHrs` (HOURS) is the phase-angle reference. `alpha` (0.05). `permuteTest:true` enables the permutation test (`nPermutations`/`permutationSeed`/`permutationStatistic`)."
 		},
 		"CrossCorrelation": {
 			"displayName": "Cross-correlation",
@@ -432,6 +434,8 @@
 				"useFixedPeriod": true,
 				"fixedPeriod": 24,
 				"Ncurves": 1,
+				"minPeriod": 1,
+				"maxPeriod": 48,
 				"nHarmonics": 1,
 				"alpha": 0.05,
 				"fixKappa": false,
@@ -466,7 +470,7 @@
 				"x": "fitx",
 				"yPrefix": "fity_"
 			},
-			"paramNote": "`model` is \"cosinor\", \"rectangular\" or \"doublelogistic\". For a periodic fit keep `useFixedPeriod:true`, `fixedPeriod` in HOURS. `permuteTest:true` enables the permutation test (then `nPermutations`/`permutationSeed`/`permutationStatistic` = \"rSquared\" or \"rmse\" apply). `fix*`/`fixed*` pairs pin a parameter (e.g. `fixKappa:true` → `fixedKappa`)."
+			"paramNote": "`model` is \"cosinor\", \"rectangular\" or \"doublelogistic\". For a periodic fit keep `useFixedPeriod:true`, `fixedPeriod` in HOURS; a free-period cosinor (`useFixedPeriod:false`, `Ncurves`) stays inside `minPeriod`..`maxPeriod` (HOURS, default 1..48). `permuteTest:true` enables the permutation test (then `nPermutations`/`permutationSeed`/`permutationStatistic` = \"rSquared\" or \"rmse\" apply). `fix*`/`fixed*` pairs pin a parameter (e.g. `fixKappa:true` → `fixedKappa`)."
 		},
 		"FormulaColumn": {
 			"displayName": "Formula Column",
