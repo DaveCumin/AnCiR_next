@@ -245,6 +245,41 @@ function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 	return { power: isFinite(result) ? result : NaN, df };
 }
 
+// ========== Fold Grid (binned methods) ==========
+
+// The binned methods (Chi-squared and Enright) fold the binned series at a whole
+// number of bins, nBins = round(P / binSize), so they depend on the trial period
+// ONLY through nBins: every trial period inside one bin width is the same test.
+// Returning each trial period as its own point gave runs of identical power, and
+// argmax picked the FIRST of the tie. A noise-free 24.0 h cosine at 1 h bins was
+// reported as 23.5 h (a -binSize/2 bias), and the Sidak correction counted every
+// duplicate as an extra comparison, so the threshold was too conservative.
+//
+// This maps the requested grid to its DISTINCT folds and labels each with the
+// period it actually tests, nBins * binSize. The step still decides which folds
+// are sampled (a step coarser than binSize skips folds, a finer one just repeats
+// them), and a fold whose period rounds outside [periodMin, periodMax] is
+// dropped, so every returned point lies inside the requested range. Mirrored in
+// tools/ancir_runtime.py (_fold_grid) and tools/ancir_runtime.R (fold_grid).
+export function foldGrid(periods, binSize, periodMin, periodMax) {
+	const nBins = [];
+	const foldPeriods = [];
+	if (!(binSize > 0) || !Number.isFinite(binSize)) return { nBins, periods: foldPeriods };
+	// Relative slack so a fold landing exactly on a range end is not lost to rounding.
+	const eps = 1e-9 * Math.max(1, Math.abs(periodMin), Math.abs(periodMax));
+	for (const period of periods) {
+		const n = Math.round(period / binSize);
+		if (!Number.isFinite(n) || n < 1) continue;
+		// The grid ascends, so trial periods sharing a fold are adjacent.
+		if (nBins.length && nBins[nBins.length - 1] === n) continue;
+		const foldPeriod = n * binSize;
+		if (foldPeriod < periodMin - eps || foldPeriod > periodMax + eps) continue;
+		nBins.push(n);
+		foldPeriods.push(foldPeriod);
+	}
+	return { nBins, periods: foldPeriods };
+}
+
 // ========== Main Calculation Function ==========
 
 export function runPeriodogramCalculation(params, onProgress) {
@@ -266,10 +301,15 @@ export function runPeriodogramCalculation(params, onProgress) {
 		}
 	}
 
-	const periods = makeSeqArray(params.periodMin, params.periodMax, params.periodSteps);
+	const requested = makeSeqArray(params.periodMin, params.periodMax, params.periodSteps);
+	// Lomb-Scargle evaluates every requested period; the binned methods evaluate
+	// each distinct fold once, at the period it actually tests (see foldGrid).
+	const periods =
+		params.method === 'Chi-squared' || params.method === 'Enright'
+			? foldGrid(requested, params.binSize, params.periodMin, params.periodMax).periods
+			: requested;
 	const frequencies = periods.map((p) => 1 / p);
 
-	const correctedAlpha = Math.pow(1 - params.chiSquaredAlpha, 1 / periods.length);
 	const power = new Array(periods.length);
 	const threshold = new Array(periods.length);
 	const pvalue = new Array(periods.length);
@@ -313,20 +353,31 @@ export function runPeriodogramCalculation(params, onProgress) {
 			} else {
 				power[p] = qp;
 				dfOut[p] = df;
-				// Sidak-corrected UPPER-tail quantile: correctedAlpha is the per-period
-				// CONFIDENCE level (1 - alpha)^(1/M), so the quantile is evaluated at
-				// correctedAlpha directly. Passing 1 - correctedAlpha (as this once did)
-				// lands on the LOWER tail, drawing the line below the noise floor so
-				// nearly every period looked significant. Mirrored in
-				// tools/ancir_runtime.py and tools/ancir_runtime.R; the
-				// pure-chisq-periodogram-threshold parity fixture pins all three.
-				threshold[p] = quantile_chisq(correctedAlpha, df);
 				pvalue[p] = 1 - cdf_chisq(qp, df);
 			}
 
 			if (onProgress && p % 10 === 0) {
 				onProgress(p, periods.length);
 			}
+		}
+
+		// Sidak family size M = the number of DISTINCT folds that produced a
+		// statistic. `periods` is already one entry per fold (see foldGrid), so
+		// repeated trial periods that share a fold are one test, not several;
+		// counting them made the line too high (0-0.2% false positives on white
+		// noise at a nominal 5%). Folds with no statistic (df < 1) were not tested.
+		const nTests = dfOut.filter((df) => df >= 1).length;
+		const correctedAlpha = Math.pow(1 - params.chiSquaredAlpha, 1 / nTests);
+		for (let p = 0; p < periods.length; p++) {
+			if (!(dfOut[p] >= 1)) continue;
+			// Sidak-corrected UPPER-tail quantile: correctedAlpha is the per-fold
+			// CONFIDENCE level (1 - alpha)^(1/M), so the quantile is evaluated at
+			// correctedAlpha directly. Passing 1 - correctedAlpha (as this once did)
+			// lands on the LOWER tail, drawing the line below the noise floor so
+			// nearly every period looked significant. Mirrored in
+			// tools/ancir_runtime.py and tools/ancir_runtime.R; the
+			// pure-chisq-periodogram-threshold parity fixture pins all three.
+			threshold[p] = quantile_chisq(correctedAlpha, dfOut[p]);
 		}
 	} else if (params.method === 'Lomb-Scargle') {
 		const powers = calculateLombScarglePower(params.xData, params.yData, frequencies, onProgress);

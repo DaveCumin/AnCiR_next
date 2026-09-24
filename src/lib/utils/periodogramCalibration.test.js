@@ -86,27 +86,32 @@ describe('chi-squared periodogram calibration (E[Qp] ≈ df at any binSize)', ()
 	// Empty bins carry no information, so at a trial period where the fold
 	// aligns with the sampling grid the sub-sampling binSize must reproduce the
 	// matched binSize EXACTLY — statistic, df, threshold and p-value together.
-	// The threshold value is pinned against scipy:
+	// The threshold differs only through the Sidak family size, which counts
+	// DISTINCT folds: the 18..30 x 0.5 grid hits 25 folds at 0.25 h bins but only
+	// 13 at 1 h bins (pairs of trial periods share a fold). Pinned against scipy:
 	// scipy.stats.chi2.ppf((1 - 0.05) ** (1 / 25), 23) = 47.30749996546788
-	// (25 trial periods on the 18..30 x 0.5 grid).
+	// scipy.stats.chi2.ppf((1 - 0.05) ** (1 / 13), 23) = 45.03294146024386
 	it('matches the binSize-1 result exactly at period 24 with 0.25 h bins (scipy-pinned threshold)', () => {
 		const fine = noiseRun(12345, 0.25);
 		const coarse = noiseRun(12345, 1.0);
 		const iF = fine.x.findIndex((p) => Math.abs(p - 24) < 1e-9);
 		const iC = coarse.x.findIndex((p) => Math.abs(p - 24) < 1e-9);
+		expect(fine.x.length).toBe(25);
+		expect(coarse.x.length).toBe(13);
 		expect(fine.y[iF]).toBeCloseTo(coarse.y[iC], 9);
 		expect(fine.df[iF]).toBe(coarse.df[iC]);
 		expect(fine.threshold[iF]).toBeCloseTo(47.30749996546788, 6);
-		expect(coarse.threshold[iC]).toBeCloseTo(47.30749996546788, 6);
+		expect(coarse.threshold[iC]).toBeCloseTo(45.03294146024386, 6);
 		expect(fine.pvalue[iF]).toBeCloseTo(coarse.pvalue[iC], 9);
 	});
 
 	// Statistic, threshold and p-value must key off the SAME df: crossing the
 	// drawn line and clearing the Sidak-corrected p cut are the same event.
 	it('keeps power/threshold/p-value mutually consistent at every period', () => {
-		const pCut = 1 - Math.pow(1 - 0.05, 1 / 25); // per-period Sidak alpha, M = 25
 		for (const binSize of [0.25, 1.0]) {
 			const res = noiseRun(777, binSize);
+			// Per-fold Sidak alpha; M = number of distinct folds tested.
+			const pCut = 1 - Math.pow(1 - 0.05, 1 / res.x.length);
 			for (let i = 0; i < res.y.length; i++) {
 				expect(res.y[i] > res.threshold[i]).toBe(res.pvalue[i] < pCut);
 			}
