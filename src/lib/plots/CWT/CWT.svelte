@@ -139,16 +139,7 @@
 		autoScalePadding() {}
 
 		getDownloadData() {
-			const tr = this.transform;
-			if (!tr.valid) return { headers: ['time', 'period', 'power'], rows: [] };
-			// Tidy long, matching Histogram's export convention: one row per cell.
-			const rows = [];
-			for (let j = 0; j < tr.periods.length; j++) {
-				for (let i = 0; i < tr.times.length; i++) {
-					rows.push([tr.times[i], tr.periods[j], tr.power[j][i]]);
-				}
-			}
-			return { headers: ['time', 'period', 'power'], rows };
+			return scalogramExport(this.transform);
 		}
 
 		toJSON() {
@@ -195,6 +186,46 @@
 		controlHeaders: CWT_controlHeaders,
 		plotClass: CWTClass
 	};
+
+	/** Most rows "Download data" / "View data" produce for a scalogram. See scalogramExport. */
+	export const CWT_EXPORT_MAX_ROWS = 250_000;
+
+	/**
+	 * The scalogram as a tidy long table (time, period, power), one row per cell, matching
+	 * Histogram's export convention.
+	 *
+	 * A cell per sample per period does not scale: 250,000 samples x 45 periods is over 11
+	 * million rows, a CSV of hundreds of MB and a View data table that cannot render. When
+	 * the full grid exceeds `maxRows`, time is binned (power averaged over consecutive
+	 * samples, each row's time the mean time of its bin) to the most time points that fit;
+	 * every period is kept. The result then carries a `note` saying so, which the CSV
+	 * download shows to the user.
+	 */
+	export function scalogramExport(tr, maxRows = CWT_EXPORT_MAX_ROWS) {
+		const headers = ['time', 'period', 'power'];
+		if (!tr?.valid) return { headers, rows: [] };
+		const nP = tr.periods.length;
+		const nT = tr.times.length;
+		const maxCols = Math.max(1, Math.floor(maxRows / Math.max(1, nP)));
+		let times = tr.times;
+		let power = tr.power;
+		let note = null;
+		if (nT > maxCols) {
+			times = downsampleColumns([tr.times], maxCols)[0];
+			power = downsampleColumns(tr.power, maxCols);
+			const perBin = (nT / maxCols).toFixed(1);
+			note =
+				`The full scalogram is ${nT.toLocaleString('en')} time points x ${nP} periods ` +
+				`(${(nT * nP).toLocaleString('en')} cells). To keep the export under ` +
+				`${maxRows.toLocaleString('en')} rows, power is averaged over about ${perBin} ` +
+				`consecutive samples per row, and each row's time is the mean time of its samples.`;
+		}
+		const rows = [];
+		for (let j = 0; j < nP; j++) {
+			for (let i = 0; i < times.length; i++) rows.push([times[i], tr.periods[j], power[j][i]]);
+		}
+		return note ? { headers, rows, note } : { headers, rows };
+	}
 
 	/**
 	 * Most image columns the scalogram is painted with. One column per sample made a
