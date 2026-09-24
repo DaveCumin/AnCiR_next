@@ -362,11 +362,19 @@
 				console.error('Periodogram calculation error:', e);
 			};
 
-			// `periodSteps` is the number of trial periods, i.e. the actual size of
-			// the job — the input series length alone would understate a fine sweep
-			// over a short record.
+			// The job size is the number of trial periods; the input series length
+			// alone would understate a fine sweep over a short record. `periodSteps`
+			// is the step SIZE in hours, not a count (passing it as `work` kept every
+			// short record on the main thread), so derive the count from the range.
+			const nTrialPeriods =
+				params.periodSteps > 0
+					? Math.floor((params.periodMax - params.periodMin) / params.periodSteps) + 1
+					: 0;
 			if (
-				shouldUseWorkers({ inputLen: params.xData?.length ?? 0, work: params.periodSteps ?? 0 })
+				shouldUseWorkers({
+					inputLen: params.xData?.length ?? 0,
+					work: Number.isFinite(nTrialPeriods) ? nTrialPeriods : 0
+				})
 			) {
 				runComputeTask('periodogram.compute', params).then(commit).catch(fail).finally(done);
 				return;
