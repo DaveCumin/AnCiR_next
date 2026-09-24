@@ -7,16 +7,21 @@
 import { base } from '$app/paths';
 import { appState } from '$lib/core/core.svelte.js';
 import { importJson } from '$lib/components/iconActions/Setting.svelte';
+import { addNotification } from '$lib/core/notifications.svelte.js';
+import { fetchAppAsset, AppAssetUnavailableError } from '$lib/start/offline.js';
 
 // Load a classroom lesson by file name (e.g. 'learn-hidden-rhythm.json') and show
 // it on the canvas. Safe to call from a step's beforeShow; failures are swallowed
 // with a console warning so the tour can still narrate.
 export async function loadLesson(file) {
 	try {
-		const res = await fetch(`${base}/sessions/classroom/${file}`);
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		const res = await fetchAppAsset(`${base}/sessions/classroom/${file}`);
 		await importJson(await res.json());
 	} catch (err) {
+		// Offline download (file://) or no connection: say why the canvas is empty.
+		if (err instanceof AppAssetUnavailableError) {
+			addNotification(`This lesson's session could not be loaded.\n\n${err.message}`);
+		}
 		// eslint-disable-next-line no-console
 		console.warn('[classroom-tour] failed to load lesson', file, err);
 	}

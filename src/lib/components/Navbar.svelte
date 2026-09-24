@@ -13,6 +13,7 @@
 	import AiPrompt from './views/modals/AiPrompt.svelte';
 	import { NL_CONFIGURED, checkNlHealth } from '$lib/utils/nlSession.js';
 	import { helpHint, dismissHelpHint } from '$lib/core/helpHint.svelte.js';
+	import { isOfflineFile } from '$lib/start/offline.js';
 
 	// Callback from +page: summon the welcome/start screen (Help → "Welcome screen").
 	let { onShowWelcome = null } = $props();
@@ -27,6 +28,12 @@
 	let exists = $state(false);
 
     async function checkFile() {
+      // The offline download (file://) ships without the handbook, and a fetch from
+      // file:// fails noisily (WebKit reports it as an uncaught error).
+      if (isOfflineFile()) {
+        exists = false;
+        return;
+      }
       try {
         const res = await fetch('/handbook.html', { method: 'HEAD' });
         exists = res.ok;

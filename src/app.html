@@ -46,11 +46,18 @@
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
-		<script
-			defer
-			src="https://static.cloudflareinsights.com/beacon.min.js"
-			data-cf-beacon='{"token": "e247a64cf88f45869799a7ee6dd0db7f"}'
-		></script>
+		<!-- Cloudflare Web Analytics, only when served over http(s). The same index.html is the
+		     offline download; from file:// the beacon can only fail (WebKit reports its blocked
+		     request as an uncaught error), and there is no site visit to count. -->
+		<script>
+			if (/^https?:$/.test(location.protocol)) {
+				var cf = document.createElement('script');
+				cf.defer = true;
+				cf.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+				cf.setAttribute('data-cf-beacon', '{"token": "e247a64cf88f45869799a7ee6dd0db7f"}');
+				document.body.appendChild(cf);
+			}
+		</script>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

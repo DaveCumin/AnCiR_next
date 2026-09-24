@@ -7,6 +7,7 @@ import { importJson } from '$lib/components/iconActions/Setting.svelte';
 import { addNotification } from '$lib/core/notifications.svelte.js';
 import { recordRecent } from '$lib/start/recentSessions.svelte.js';
 import { thumbnailForWorkflow } from '$lib/start/thumbnails.js';
+import { fetchAppAsset } from '$lib/start/offline.js';
 
 /**
  * Manifest names carry a "Workflow — " prefix and are lower case. One normalisation, shared by the
@@ -29,8 +30,7 @@ export function resolveExampleUrl(url) {
  */
 export async function openExample(session, onProgress) {
 	const url = resolveExampleUrl(session.url);
-	const res = await fetch(url);
-	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	const res = await fetchAppAsset(url);
 	const data = await res.json();
 	await importJson(data, onProgress);
 	// Examples earn a recent row too: the url makes them reopenable in one click anywhere, which
@@ -104,8 +104,7 @@ export function simulateData() {
 
 /** Fetch the example manifest, split into the groups the start screen shows. */
 export async function loadExampleManifest() {
-	const res = await fetch(`${base}/sessions/demos/index.json`);
-	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	const res = await fetchAppAsset(`${base}/sessions/demos/index.json`);
 	const idx = await res.json();
 	const workflows = (idx.sessions ?? []).filter((s) => s.kind === 'workflow');
 	const groups = new Map();

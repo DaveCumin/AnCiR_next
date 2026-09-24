@@ -102,3 +102,32 @@ test('when workers cannot start, it warns once and still computes on the main th
 	expect(seen.workers).toBe(0);
 	expect(seen.fallbackWarnings[0]).toMatch(/Web Workers are unavailable.*workers blocked/);
 });
+
+// The offline download ships without the example library (sessions/), and browsers
+// refuse fetch() from file:// (WebKit even reports it as an uncaught error). The app
+// must say so plainly instead of erroring.
+test('the offline single-file HTML explains that example sessions need the hosted version', async ({
+	page
+}) => {
+	const errors = [];
+	page.on('pageerror', (e) => errors.push(String(e)));
+	page.on('console', (msg) => msg.type() === 'error' && errors.push(msg.text()));
+	await page.goto(OFFLINE_HTML);
+
+	const note = page.getByTestId('examples-unavailable');
+	await expect(note).toContainText('Example sessions need an internet connection');
+	await expect(note.getByRole('link', { name: 'Open the hosted version' })).toHaveAttribute(
+		'href',
+		'https://ancir.pages.dev'
+	);
+
+	// The full library (Load session > Examples) says the same.
+	await page.locator('button.primary-card', { hasText: 'Start with a blank canvas' }).click();
+	await page.getByTestId('nav-load-session').click();
+	await page.getByRole('tab', { name: 'Examples', exact: true }).click();
+	await expect(page.getByTestId('examples-unavailable').last()).toContainText(
+		'not included in the downloaded offline file'
+	);
+
+	expect(errors).toEqual([]);
+});
