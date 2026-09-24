@@ -6,6 +6,7 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
+	import { clearEnds } from '$lib/plots/axisDomain.js';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import { meanSemByGroup } from '$lib/utils/meanSem.js';
@@ -242,7 +243,11 @@
 
 			const yBot = this.ylimsIN[0] != null ? this.ylimsIN[0] : niceAxisLimit(ymin, 'floor');
 			const yTop = this.ylimsIN[1] != null ? this.ylimsIN[1] : niceAxisLimit(ymax, 'ceil');
-			return [yBot, yTop];
+			// An error-bar cap at the extreme must not be drawn on the axis line.
+			return clearEnds([yBot, yTop], ymin, ymax, 4, this.plotheight, {
+				autoLo: this.ylimsIN[0] == null,
+				autoHi: this.ylimsIN[1] == null
+			});
 		});
 
 		xlims = $derived.by(() => {

@@ -110,15 +110,18 @@
 	// duplicate-per-branch version is exactly why the outer size went unnoticed.
 	const configureTicks = (a) => a.tickSizeInner(ticklength).tickSizeOuter(0).tickPadding(tickspace);
 
-	// Whether a tick's gridline would coincide with the axis line that crosses this one. A
-	// bottom/top axis is crossed by the left axis at x = 0; a left/right axis by the bottom
-	// axis at y = height. Half a pixel of tolerance absorbs float noise from the scale.
+	// Whether a tick's gridline would coincide with, or crowd, the axis line that crosses this
+	// one. A bottom/top axis is crossed by the left axis at x = 0; a left/right axis by the
+	// bottom axis at y = height. Within GRID_AXIS_CLEAR px the dashed gridline reads as a
+	// doubled axis line (a domain widened slightly to clear a whisker cap puts the lowest
+	// tick just above the axis), so it is not drawn.
+	const GRID_AXIS_CLEAR = 4;
 	function onAxisLine(d) {
 		const offset = typeof scale?.bandwidth === 'function' ? scale.bandwidth() / 2 : 0;
 		const at = Number(scale(d)) + offset;
 		if (!Number.isFinite(at)) return false;
-		if (position === 'bottom' || position === 'top') return Math.abs(at) < 0.5;
-		return Math.abs(at - height) < 0.5;
+		if (position === 'bottom' || position === 'top') return Math.abs(at) < GRID_AXIS_CLEAR;
+		return Math.abs(at - height) < GRID_AXIS_CLEAR;
 	}
 
 	$effect(() => {

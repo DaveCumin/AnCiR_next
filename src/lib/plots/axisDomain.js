@@ -108,3 +108,42 @@ export function markerPaddedDomain(min, max, padPx, lengthPx, { log = false } = 
 	}
 	return widen(min, max);
 }
+
+/**
+ * Keep a NICE domain, but never let the data sit on (or within `gapPx` of) an automatic end.
+ *
+ * For plots whose domain is rounded to nice numbers (boxplot, Mean +/- SEM): usually the
+ * rounding leaves room, but when the data minimum is itself close to a round number the
+ * lowest whisker cap is drawn ON the x axis line. Only an end that is too close moves, and
+ * only by the minimum that restores the gap, so the ticks and every other domain stay as
+ * they were. An end the user set (`autoLo` / `autoHi` false) is never moved.
+ *
+ * @param {[number, number]} domain the rounded [lo, hi]
+ * @param {number} min data minimum
+ * @param {number} max data maximum
+ * @param {number} gapPx wanted clearance at each end, px
+ * @param {number} lengthPx axis length, px
+ * @param {{autoLo?: boolean, autoHi?: boolean}} [opts]
+ * @returns {[number, number]}
+ */
+export function clearEnds(
+	[lo, hi],
+	min,
+	max,
+	gapPx,
+	lengthPx,
+	{ autoLo = true, autoHi = true } = {}
+) {
+	if (![lo, hi, min, max].every(Number.isFinite) || !(hi > lo)) return [lo, hi];
+	const L = lengthPx;
+	const g = Math.min(gapPx, L / 4);
+	if (!(g > 0) || !(L > 0)) return [lo, hi];
+	const px = (v, a, b) => ((v - a) / (b - a)) * L;
+	// Solving (min - lo') / (hi - lo') * L = g for lo', and likewise for hi'. Two passes,
+	// because widening one end shrinks the px-per-unit at the other.
+	for (let pass = 0; pass < 2; pass++) {
+		if (autoLo && px(min, lo, hi) < g) lo = (min * L - g * hi) / (L - g);
+		if (autoHi && L - px(max, lo, hi) < g) hi = (max * L - g * lo) / (L - g);
+	}
+	return [lo, hi];
+}

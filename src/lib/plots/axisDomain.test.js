@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { paddedDomain, finiteExtent, markerPaddedDomain } from './axisDomain.js';
+import { paddedDomain, finiteExtent, markerPaddedDomain, clearEnds } from './axisDomain.js';
 import { Periodogramclass } from './Periodogram/Periodogram.svelte';
 
 describe('paddedDomain', () => {
@@ -85,5 +85,19 @@ describe('markerPaddedDomain', () => {
 		const [lo, hi] = markerPaddedDomain(0, 10, 1000, 100);
 		expect(Number.isFinite(lo) && Number.isFinite(hi)).toBe(true);
 		expect(hi - lo).toBeCloseTo(20, 6); // quarter-axis cap: span doubles
+	});
+});
+
+describe('clearEnds', () => {
+	it('moves only an end the data crowds, by just enough', () => {
+		// Data minimum ON the rounded bottom: 4 px of room is made, the top is untouched.
+		const [lo, hi] = clearEnds([-10, 100], -10, 95, 4, 300);
+		expect(hi).toBe(100);
+		expect(((-10 - lo) / (hi - lo)) * 300).toBeCloseTo(4, 6);
+	});
+
+	it('leaves a domain with room alone, and never moves a user-set end', () => {
+		expect(clearEnds([0, 100], 5, 95, 4, 300)).toEqual([0, 100]);
+		expect(clearEnds([-10, 100], -10, 95, 4, 300, { autoLo: false })).toEqual([-10, 100]);
 	});
 });

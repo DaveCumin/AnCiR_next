@@ -20,6 +20,7 @@
 	} from '$lib/tableProcesses/GroupComparison.svelte';
 	import { resolveCssVar } from '$lib/plots/exportStyle.js';
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
+	import { clearEnds } from '$lib/plots/axisDomain.js';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 
 	/**
@@ -592,7 +593,11 @@
 				}
 			}
 
-			return [yBot, yTop];
+			// A whisker cap at the data minimum must not be drawn on the x axis line.
+			return clearEnds([yBot, yTop], ymin, ymax, 4, this.plotheight, {
+				autoLo: this.ylimsIN[0] == null,
+				autoHi: this.ylimsIN[1] == null
+			});
 		});
 
 		// X-axis is categorical (0 to n-1 for n unique values)

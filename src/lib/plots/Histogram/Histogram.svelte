@@ -13,6 +13,10 @@
 	import { gaussianKDE } from '$lib/utils/kde.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
 	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
+	import { paddedDomain } from '$lib/plots/axisDomain.js';
+
+	/** Fraction of the bin range left empty at each automatic end of the x axis. */
+	export const HIST_X_PAD = 0.02;
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 
 	export const Histogram_defaultDataInputs = ['column'];
@@ -256,9 +260,12 @@
 				}
 			});
 			if (xmin === Infinity || xmax === -Infinity) return [0, 1];
+			// A little room at the AUTOMATIC ends, so the outermost bars do not sit on the y axis
+			// line or the right edge (see plots/axisDomain.js). A limit the user set is exact.
+			const [plo, phi] = paddedDomain(xmin, xmax, { pad: HIST_X_PAD });
 			return [
-				this.xlimsIN[0] != null ? this.xlimsIN[0] : xmin,
-				this.xlimsIN[1] != null ? this.xlimsIN[1] : xmax
+				this.xlimsIN[0] != null ? this.xlimsIN[0] : plo,
+				this.xlimsIN[1] != null ? this.xlimsIN[1] : phi
 			];
 		});
 
