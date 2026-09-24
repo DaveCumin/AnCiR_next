@@ -131,7 +131,8 @@
 
 	function formatCell(value) {
 		if (value == null || value === '') return '';
-		if (typeof value === 'number') return Number.isFinite(value) ? value.toFixed(theData.plot.decimalPlaces) : String(value);
+		if (typeof value === 'number')
+			return Number.isFinite(value) ? value.toFixed(theData.plot.decimalPlaces) : String(value);
 		return value;
 	}
 </script>
@@ -194,7 +195,11 @@
 					</VirtualList>
 				</div>
 			</div>
-			<p class="tableplot-row-bar">{rowCount} row{rowCount === 1 ? '' : 's'}</p>
+			<p class="tableplot-row-bar" title={theData.plot.downloadData.note ?? ''}>
+				{rowCount} row{rowCount === 1 ? '' : 's'}{theData.plot.downloadData.note
+					? ' (reduced from the full data; hover for details)'
+					: ''}
+			</p>
 		</div>
 	{/if}
 {/snippet}

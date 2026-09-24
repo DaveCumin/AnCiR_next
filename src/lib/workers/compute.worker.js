@@ -28,3 +28,7 @@ self.onmessage = (e) => {
 		self.postMessage({ id, ok: false, error: String(err?.message ?? err) });
 	}
 };
+
+// Tell the pool the script loaded and is listening. An error from a worker that never
+// sent a message means it failed to start, and the pool stops using workers.
+self.postMessage({ ready: true });

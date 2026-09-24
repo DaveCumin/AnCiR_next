@@ -137,6 +137,7 @@
 	}
 	import { stackOrderInsideOut } from 'd3-shape';
 	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { fetchAppAsset, describeAssetError } from '$lib/start/offline.js';
 	import {
 		deriveLabelsFromNames,
 		hasReplicatePattern,
@@ -228,15 +229,14 @@
 		examplesError = '';
 		examplesLoading = true;
 		try {
-			const res = await fetch(`${base}/sessions/demos/index.json`);
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const res = await fetchAppAsset(`${base}/sessions/demos/index.json`);
 			const idx = await res.json();
 			const all = Array.isArray(idx?.sessions) ? idx.sessions : [];
 			exampleDatasets = all.filter(
 				(s) => s.kind === 'dataset' || /\.(csv|tsv|txt)$/i.test(s.url || '')
 			);
 		} catch (err) {
-			examplesError = err.message;
+			examplesError = describeAssetError(err).replace('Example sessions', 'Example data');
 			examplesRequested = false; // allow retry on next tab visit
 		} finally {
 			examplesLoading = false;
@@ -2563,7 +2563,9 @@
 						{#if examplesLoading}
 							<LoadingSpinner message="Loading examples…" />
 						{:else if examplesError || exampleDatasets.length === 0}
-							<p class="tab-hint">Can't find any example data.</p>
+							<p class="tab-hint" data-testid="examples-unavailable">
+								{examplesError || "Can't find any example data."}
+							</p>
 						{:else}
 							{#each groupedExampleDatasets as [group, datasets] (group)}
 								<p class="example-group-label">{group}</p>

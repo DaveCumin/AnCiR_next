@@ -16,8 +16,12 @@ export function saveDataAsCSV(plotId) {
 	const plotData = plot.plot;
 	if (typeof plotData.getDownloadData !== 'function') return;
 
-	const { headers, rows } = plotData.getDownloadData();
+	const { headers, rows, note } = plotData.getDownloadData();
 	if (!headers || !rows || rows.length === 0) return;
+	// A plot whose full data would be unmanageable exports a reduced form and says how
+	// (e.g. the CWT bins time on long records); tell the user rather than hand them a
+	// file that silently differs from what they expected.
+	if (note) addNotification(note, 'info', 12000);
 
 	const csvContent = [
 		headers.map(escapeCSV).join(','),

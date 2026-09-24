@@ -67,7 +67,10 @@
 			const values = this.column?.getData?.() ?? [];
 			const valid = values.filter((value) => value != null && !isNaN(value));
 			if (this.column?.type === 'time' || valid.length === 0) return 0;
-			return Math.floor(Math.min(...valid));
+			// Loop rather than Math.min(...valid): a spread of a long column overflows the stack.
+			let lo = Infinity;
+			for (const v of valid) if (Number(v) < lo) lo = Number(v);
+			return Math.floor(lo);
 		});
 
 		effectiveBinStart = $derived(this.binStart ?? this.autoBinStart);

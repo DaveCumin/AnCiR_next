@@ -42,7 +42,9 @@
 		for (let p = from; p < to; p++) {
 			if (dataIN[p]) {
 				const offset = from * period;
-				byPeriod.push(...dataIN[p].map((d) => d - offset));
+				// Loop rather than push(...): one spread argument per sample overflows the
+				// call stack for densely sampled periods.
+				for (const d of dataIN[p]) byPeriod.push(d - offset);
 			}
 		}
 		return byPeriod;

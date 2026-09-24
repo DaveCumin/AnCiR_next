@@ -1,21 +1,18 @@
 import { test, expect } from '@playwright/test';
+import { loadSampleData, isThirdPartyNoise } from './helpers.js';
 
-test('cmd-shift-s loads sample data and renders SVG without console errors', async ({ page }) => {
+test('cmd-shift-x loads sample data and renders SVG without console errors', async ({ page }) => {
 	const consoleErrors = [];
 	page.on('console', (msg) => {
-		if (msg.type() === 'error' && !msg.text().includes('cloudflareinsights')) {
-			consoleErrors.push(msg.text());
-		}
+		if (msg.type() === 'error' && !isThirdPartyNoise(msg)) consoleErrors.push(msg.text());
 	});
+	page.on('pageerror', (e) => consoleErrors.push(String(e)));
 
-	await page.goto('/');
+	// Trigger the built-in sample-data loader (Cmd+Shift+X / Ctrl+Shift+X)
+	await loadSampleData(page);
 
-	// Trigger the built-in sample-data loader (Cmd+Shift+S / Ctrl+Shift+S)
-	await page.keyboard.press('Meta+Shift+S');
-
-	// Wait for an SVG to appear (actogram render)
-	const svg = page.locator('svg').first();
-	await expect(svg).toBeVisible({ timeout: 15000 });
+	// Wait for a plot SVG to appear (the sample session includes an actogram)
+	await expect(page.locator('g.actogram').first()).toBeAttached({ timeout: 15000 });
 
 	expect(consoleErrors).toHaveLength(0);
 });

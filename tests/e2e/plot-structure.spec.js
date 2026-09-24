@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { loadSampleData } from './helpers.js';
 
 /**
  * SVG structural tests for the Actogram plot.
  *
- * After loading sample data (Meta+Shift+S), the app renders an Actogram.
+ * After loading sample data (Cmd/Ctrl+Shift+X), the app renders an Actogram.
  * These tests verify the SVG DOM structure produced by Svelte + D3:
  *   - The top x-axis group (class "axis-top") is rendered
  *   - D3 has populated the axis with tick <g> elements and text labels
@@ -13,8 +14,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Actogram SVG structure', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.keyboard.press('Meta+Shift+S');
+		await loadSampleData(page);
 
 		// Wait for SVG to appear
 		await expect(page.locator('svg').first()).toBeVisible({ timeout: 15000 });

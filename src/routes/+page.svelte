@@ -426,11 +426,10 @@
 					event.preventDefault();
 					selectAllPlots();
 				}
-				// visualise
-				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'x') {
-					event.preventDefault();
-					appState.showWorkflow = !appState.showWorkflow;
-				}
+				// (Cmd/Ctrl+Shift+X used to also toggle the legacy fullscreen workflow modal
+				// here. v73.1 moved "create sample data" onto the same chord, so one press did
+				// both and mounted a second WorkflowEditor over the canvas. The canvas view
+				// replaces that modal, so the chord now only creates sample data.)
 				// ADMIN: reveal/hide the classroom lessons in the tour picker.
 				if (MODIFIER && event.shiftKey && event.code === 'Space' && !editableFocused) {
 					event.preventDefault();

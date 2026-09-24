@@ -492,7 +492,14 @@
 		if (finite.length < 2) return warnings;
 
 		const period = Number(argsIN.fixedPeriod) || 24;
-		const span = Math.max(...finite) - Math.min(...finite);
+		// Loop rather than Math.max(...finite): a spread of a long series overflows the stack.
+		let lo = Infinity;
+		let hi = -Infinity;
+		for (const v of finite) {
+			if (v < lo) lo = v;
+			if (v > hi) hi = v;
+		}
+		const span = hi - lo;
 		const cycles = span / period;
 		const perCycle = finite.length / Math.max(cycles, 1e-9);
 

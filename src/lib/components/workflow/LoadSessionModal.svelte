@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { tick } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { dev } from '$app/environment';
 	import { base } from '$app/paths';
 
@@ -11,6 +11,7 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
 	import { importDataUrlDirect } from '$lib/core/dataSourceActions.js';
+	import { fetchAppAsset, describeAssetError } from '$lib/start/offline.js';
 
 	let { showModal = $bindable(false), initialSourceMode = 'file' } = $props();
 
@@ -83,13 +84,12 @@
 		examplesError = '';
 		examplesLoading = true;
 		try {
-			const res = await fetch(`${base}/sessions/demos/index.json`);
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const res = await fetchAppAsset(`${base}/sessions/demos/index.json`);
 			const idx = await res.json();
 			exampleSessions = Array.isArray(idx?.sessions) ? idx.sessions : [];
 		} catch (err) {
-			// Bad connection / missing manifest — fail gracefully (see template).
-			examplesError = err.message;
+			// Bad connection / missing manifest / offline download: fail gracefully (see template).
+			examplesError = describeAssetError(err);
 			examplesRequested = false; // allow retry on next tab visit
 		} finally {
 			examplesLoading = false;
@@ -109,8 +109,13 @@
 		return () => cancelAnimationFrame(raf);
 	}
 
+	// Fetch when the Examples tab is shown. untrack: ensureExampleIndex reads and
+	// resets `examplesRequested`, and tracking that made a failed fetch retrigger this
+	// effect at once, retrying in a tight loop that froze the page (no connection, or
+	// the offline file, where the failure is immediate). A failure now retries on the
+	// next visit to the tab, as intended.
 	$effect(() => {
-		if (showModal && sourceMode === 'example') ensureExampleIndex();
+		if (showModal && sourceMode === 'example') untrack(() => ensureExampleIndex());
 	});
 
 	// Reset transient state when the modal closes so reopening starts clean.
@@ -220,8 +225,7 @@
 		loading = true;
 		loadError = '';
 		try {
-			const response = await fetch(url);
-			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			const response = await fetchAppAsset(url);
 			const data = await response.json();
 			await loadAndImport(data, session.name || url.split('/').pop());
 		} catch (err) {
@@ -328,7 +332,9 @@
 						</div>
 					{:else if examplesError || exampleSessions.length === 0}
 						<!-- Bad connection, missing manifest, or empty list — fail gracefully. -->
-						<p class="tab-hint">Can't find any examples.</p>
+						<p class="tab-hint" data-testid="examples-unavailable">
+							{examplesError || "Can't find any examples."}
+						</p>
 					{:else}
 						<input
 							class="search-input"

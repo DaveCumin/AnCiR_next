@@ -43,7 +43,10 @@
 		if (!res.lags.length) return [null, false];
 
 		const warnings = [];
-		const minN = Math.min(...res.n.filter(Number.isFinite));
+		// Loop rather than Math.min(...res.n): there is one entry per lag, which for the
+		// default window is half the series length, enough to overflow the stack.
+		let minN = Infinity;
+		for (const v of res.n) if (Number.isFinite(v) && v < minN) minN = v;
 		if (Number.isFinite(minN) && minN < 10) {
 			warnings.push(
 				`The most-shifted lags overlap in only ${minN} points; their correlations are noisy. Reduce the max lag for steadier tails.`

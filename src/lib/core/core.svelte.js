@@ -361,6 +361,12 @@ export const appState = $state({
 	// Bumped to request a one-shot workflow auto-tidy (e.g. after the demo seed);
 	// WorkflowEditor watches this counter. Pre-declared so the effect subscribes.
 	tidyLayoutRequest: 0,
+	// Bumped by every session import; WorkflowEditor then pushes apart any nodes that
+	// load on top of one another (see settleOverlaps there). `settleLayoutHandled` is
+	// the last request it acted on, kept here (not in the component) so remounting the
+	// canvas does not re-run it against positions the user has since chosen.
+	settleLayoutRequest: 0,
+	settleLayoutHandled: 0,
 
 	// One-shot request to spawn a table-process node on the workflow canvas from
 	// OUTSIDE it (e.g. the worksheet's "Simulate data" empty-state). Shape:

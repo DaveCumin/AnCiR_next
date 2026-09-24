@@ -29,6 +29,7 @@
 		loadExampleManifest,
 		notifyFailure
 	} from '$lib/start/startActions.js';
+	import { AppAssetUnavailableError, describeAssetError, HOSTED_URL } from '$lib/start/offline.js';
 
 	// `summoned` = reopened from Help → "Welcome screen" OVER existing work (the TODO
 	// note's summoned-over-work case). Same overlay — it already has the full modal
@@ -44,6 +45,9 @@
 	let showAi = $state(false);
 	let exampleGroups = $state([]);
 	let manifestError = $state('');
+	// True when the library cannot be reached at all (offline download, no connection),
+	// as opposed to a server error: then the search and "full library" links are moot.
+	let examplesUnavailable = $state(false);
 	let busyId = $state(null);
 	let query = $state('');
 	// The load-session modal is reused for two jobs: opening a file, and browsing the full library.
@@ -110,7 +114,10 @@
 	$effect(() => {
 		loadExampleManifest()
 			.then((g) => (exampleGroups = g))
-			.catch((e) => (manifestError = e.message));
+			.catch((e) => {
+				manifestError = describeAssetError(e);
+				examplesUnavailable = e instanceof AppAssetUnavailableError;
+			});
 	});
 
 	function handleDrop(files) {
@@ -245,15 +252,17 @@
 		<section class="start-section">
 			<div class="section-head">
 				<h2 class="section-label">Example sessions</h2>
-				<div class="search-box">
-					<Icon name="search" width={14} height={14} />
-					<input
-						type="search"
-						bind:value={query}
-						placeholder="Search examples"
-						aria-label="Search example sessions"
-					/>
-				</div>
+				{#if !manifestError}
+					<div class="search-box">
+						<Icon name="search" width={14} height={14} />
+						<input
+							type="search"
+							bind:value={query}
+							placeholder="Search examples"
+							aria-label="Search example sessions"
+						/>
+					</div>
+				{/if}
 				{#if filtered}
 					<span class="search-count">{filtered.length} of {allExamples.length}</span>
 				{:else if overflows}
@@ -268,7 +277,14 @@
 			</div>
 
 			{#if manifestError}
-				<p class="empty-note">Could not load the example library ({manifestError}).</p>
+				<p class="empty-note" data-testid="examples-unavailable">
+					{manifestError}
+					{#if examplesUnavailable}
+						<a class="browse-link" href={HOSTED_URL} target="_blank" rel="noopener"
+							>Open the hosted version</a
+						>
+					{/if}
+				</p>
 			{:else if filtered && filtered.length === 0}
 				<p class="empty-note">
 					Nothing matches “{query}”. Try a rhythm term (tau, split, tidal), a test name (ANOVA,
@@ -324,17 +340,19 @@
 
 			<!-- A separate destination, not a bigger version of the columns above: the library also
 			     holds the per-node demos, the plot demos and the raw datasets. -->
-			<p class="library-note">
-				These are the worked workflows.
-				<button
-					type="button"
-					class="browse-link"
-					onclick={() => { loadMode = 'example'; showLoadSession = true; }}
-				>
-					Browse the full library →
-				</button>
-				for single-node demos, plot examples and raw datasets.
-			</p>
+			{#if !examplesUnavailable}
+				<p class="library-note">
+					These are the worked workflows.
+					<button
+						type="button"
+						class="browse-link"
+						onclick={() => { loadMode = 'example'; showLoadSession = true; }}
+					>
+						Browse the full library →
+					</button>
+					for single-node demos, plot examples and raw datasets.
+				</p>
+			{/if}
 		</section>
 
 	</div>
@@ -553,6 +571,9 @@
 		color: var(--color-accent-text);
 		text-decoration: underline;
 		cursor: pointer;
+	}
+	.empty-note .browse-link {
+		font-size: inherit;
 	}
 	.browse-link:hover,
 	.browse-link:focus-visible {

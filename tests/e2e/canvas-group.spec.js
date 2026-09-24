@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { startBlankCanvas } from './helpers.js';
 
 // Smoke test for the new Group node: spawning from the palette should drop a
-// `.group-node` element onto the canvas. Membership reconciliation and the
+// `.group-card` element onto the canvas. Membership reconciliation and the
 // drag-children behaviour live in WorkflowEditor's stopAll; this just covers
 // the spawn path so future regressions on the palette wiring get caught.
 test('Group tile in NodePalette spawns a group-node on the canvas', async ({ page }) => {
-	await page.goto('/');
+	await startBlankCanvas(page);
 
 	// Wait for the canvas editor to mount.
 	const editor = page.locator('.workflow-editor.inline');
@@ -24,5 +25,5 @@ test('Group tile in NodePalette spawns a group-node on the canvas', async ({ pag
 	await groupTile.click();
 
 	// The dashed-frame container should appear in the canvas.
-	await expect(page.locator('.group-node').first()).toBeVisible({ timeout: 5000 });
+	await expect(page.locator('.group-card').first()).toBeVisible({ timeout: 5000 });
 });

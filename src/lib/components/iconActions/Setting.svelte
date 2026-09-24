@@ -532,6 +532,9 @@
 		// Bumped unconditionally: a legacy session with no saved viewport restores
 		// the appState defaults, which is the correct "reset" behaviour.
 		appState.viewportEpoch = (appState.viewportEpoch ?? 0) + 1;
+		// Once its nodes have rendered, the workflow canvas moves apart any that overlap
+		// (a saved or baked layout cannot know how tall an expanded node will draw).
+		appState.settleLayoutRequest = (appState.settleLayoutRequest ?? 0) + 1;
 
 		// hoursSinceStart is already pre-computed in pushObj; no second pass.
 		if (onProgress) onProgress('Finalising…');

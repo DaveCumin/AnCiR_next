@@ -139,16 +139,7 @@
 		autoScalePadding() {}
 
 		getDownloadData() {
-			const tr = this.transform;
-			if (!tr.valid) return { headers: ['time', 'period', 'power'], rows: [] };
-			// Tidy long, matching Histogram's export convention: one row per cell.
-			const rows = [];
-			for (let j = 0; j < tr.periods.length; j++) {
-				for (let i = 0; i < tr.times.length; i++) {
-					rows.push([tr.times[i], tr.periods[j], tr.power[j][i]]);
-				}
-			}
-			return { headers: ['time', 'period', 'power'], rows };
+			return scalogramExport(this.transform);
 		}
 
 		toJSON() {
@@ -196,6 +187,82 @@
 		plotClass: CWTClass
 	};
 
+	/** Most rows "Download data" / "View data" produce for a scalogram. See scalogramExport. */
+	export const CWT_EXPORT_MAX_ROWS = 250_000;
+
+	/**
+	 * The scalogram as a tidy long table (time, period, power), one row per cell, matching
+	 * Histogram's export convention.
+	 *
+	 * A cell per sample per period does not scale: 250,000 samples x 45 periods is over 11
+	 * million rows, a CSV of hundreds of MB and a View data table that cannot render. When
+	 * the full grid exceeds `maxRows`, time is binned (power averaged over consecutive
+	 * samples, each row's time the mean time of its bin) to the most time points that fit;
+	 * every period is kept. The result then carries a `note` saying so, which the CSV
+	 * download shows to the user.
+	 */
+	export function scalogramExport(tr, maxRows = CWT_EXPORT_MAX_ROWS) {
+		const headers = ['time', 'period', 'power'];
+		if (!tr?.valid) return { headers, rows: [] };
+		const nP = tr.periods.length;
+		const nT = tr.times.length;
+		const maxCols = Math.max(1, Math.floor(maxRows / Math.max(1, nP)));
+		let times = tr.times;
+		let power = tr.power;
+		let note = null;
+		if (nT > maxCols) {
+			times = downsampleColumns([tr.times], maxCols)[0];
+			power = downsampleColumns(tr.power, maxCols);
+			const perBin = (nT / maxCols).toFixed(1);
+			note =
+				`The full scalogram is ${nT.toLocaleString('en')} time points x ${nP} periods ` +
+				`(${(nT * nP).toLocaleString('en')} cells). To keep the export under ` +
+				`${maxRows.toLocaleString('en')} rows, power is averaged over about ${perBin} ` +
+				`consecutive samples per row, and each row's time is the mean time of its samples.`;
+		}
+		const rows = [];
+		for (let j = 0; j < nP; j++) {
+			for (let i = 0; i < times.length; i++) rows.push([times[i], tr.periods[j], power[j][i]]);
+		}
+		return note ? { headers, rows, note } : { headers, rows };
+	}
+
+	/**
+	 * Most image columns the scalogram is painted with. One column per sample made a
+	 * 250,000-sample record a 250,000 px wide canvas: past the browsers' canvas size
+	 * limits, so the plot came out blank (and it cost millions of colour lookups).
+	 * The image is stretched to the plot width anyway, a few hundred pixels.
+	 */
+	export const SCALOGRAM_MAX_COLUMNS = 4096;
+
+	/**
+	 * Bin the time axis of a power field (rows = scales) down to at most `maxCols`
+	 * columns, averaging the finite values in each bin (NaN if a bin has none).
+	 * Returns the input unchanged when it is already narrow enough.
+	 */
+	export function downsampleColumns(power, maxCols) {
+		const nTimes = power[0]?.length ?? 0;
+		if (nTimes <= maxCols) return power;
+		return power.map((row) => {
+			const out = new Float64Array(maxCols);
+			for (let c = 0; c < maxCols; c++) {
+				const i0 = Math.floor((c * nTimes) / maxCols);
+				const i1 = Math.floor(((c + 1) * nTimes) / maxCols);
+				let sum = 0;
+				let n = 0;
+				for (let i = i0; i < i1; i++) {
+					const v = row[i];
+					if (Number.isFinite(v)) {
+						sum += v;
+						n++;
+					}
+				}
+				out[c] = n > 0 ? sum / n : NaN;
+			}
+			return out;
+		});
+	}
+
 	/**
 	 * Paint the power field to an offscreen canvas and return a data URI.
 	 *
@@ -207,6 +274,7 @@
 	 */
 	export function renderScalogramURI(power, colormap, powerMax) {
 		if (typeof document === 'undefined') return '';
+		power = downsampleColumns(power, SCALOGRAM_MAX_COLUMNS);
 		const nScales = power.length;
 		const nTimes = power[0]?.length ?? 0;
 		if (nScales === 0 || nTimes === 0) return '';
@@ -286,6 +354,10 @@
 	{@const tr = plot.transform}
 	{@const W = plot.plotwidth}
 	{@const H = plot.plotheight}
+	<!-- Type, and the offsets that make room for it, scale with the view (a workflow node
+	     draws smaller type and its padding shrinks to match, see plots/viewBox.js). At fixed
+	     sizes the axis titles and the colour legend were pushed off a node's edge and cut. -->
+	{@const fs = plot.fontScale}
 	<svg
 		id={'plot' + plot.parentBox.id}
 		width={plot.viewWidth}
@@ -295,11 +367,11 @@
 	>
 		{#if !tr.valid}
 			<text
-				x={plot.parentBox.width / 2}
-				y={plot.parentBox.height / 2}
+				x={plot.viewWidth / 2}
+				y={plot.viewHeight / 2}
 				text-anchor="middle"
 				fill="var(--color-text-muted)"
-				font-size="12"
+				font-size={12 * fs}
 			>
 				{tr.reason === 'no data' ? 'Wire a time column and a value column.' : tr.reason}
 			</text>
@@ -368,18 +440,18 @@
 					{@const y = periodToY(p, tr.periods, H, plot.logScale)}
 					<line x1="-4" y1={y} x2="0" y2={y} stroke="var(--color-lightness-50)" />
 					<text
-						x="-7"
+						x={-(4 + 3 * fs)}
 						{y}
 						text-anchor="end"
 						dominant-baseline="central"
-						font-size="10"
+						font-size={10 * fs}
 						fill="var(--color-lightness-25)">{fmtPeriod(p)}</text
 					>
 				{/each}
 				<text
-					transform="translate({-46}, {H / 2}) rotate(-90)"
+					transform="translate({-(4 + 42 * fs)}, {H / 2}) rotate(-90)"
 					text-anchor="middle"
-					font-size="11"
+					font-size={11 * fs}
 					fill="var(--color-lightness-25)">Period (hrs)</text
 				>
 
@@ -387,39 +459,45 @@
 				{#each [0, 0.25, 0.5, 0.75, 1] as f (f)}
 					{@const x = f * W}
 					<line x1={x} y1={H} x2={x} y2={H + 4} stroke="var(--color-lightness-50)" />
-					<text {x} y={H + 16} text-anchor="middle" font-size="10" fill="var(--color-lightness-25)"
-						>{(t0 + f * (t1 - t0)).toFixed(0)}</text
+					<text
+						{x}
+						y={H + 4 + 12 * fs}
+						text-anchor="middle"
+						font-size={10 * fs}
+						fill="var(--color-lightness-25)">{(t0 + f * (t1 - t0)).toFixed(0)}</text
 					>
 				{/each}
 				<text
 					x={W / 2}
-					y={H + 34}
+					y={H + 4 + 30 * fs}
 					text-anchor="middle"
-					font-size="11"
+					font-size={11 * fs}
 					fill="var(--color-lightness-25)">Time</text
 				>
 			</g>
 
 			<!-- power legend -->
-			{@const lx = plot.padding.left + W + 14}
+			<!-- 40 (x fs) spans the bar, the "max"/"0" labels and the rotated "Power" title. -->
+			{@const lx = plot.padding.left + W + 14 * fs}
 			{@const lh = Math.min(H, 150)}
-			{#if lx + 36 < plot.parentBox.width}
+			{#if lx + 40 * fs <= plot.viewWidth}
 				<g transform="translate({lx}, {plot.padding.top})">
 					{#each legendStops as t, k (k)}
 						<rect
 							x="0"
 							y={lh - (k + 1) * (lh / legendStops.length)}
-							width="10"
+							width={10 * fs}
 							height={lh / legendStops.length + 0.5}
 							fill={colormapRGB(plot.colormap, t)}
 						/>
 					{/each}
-					<text x="14" y="6" font-size="9" fill="var(--color-lightness-25)">max</text>
-					<text x="14" y={lh} font-size="9" fill="var(--color-lightness-25)">0</text>
+					<text x={14 * fs} y={6 * fs} font-size={9 * fs} fill="var(--color-lightness-25)">max</text
+					>
+					<text x={14 * fs} y={lh} font-size={9 * fs} fill="var(--color-lightness-25)">0</text>
 					<text
-						transform="translate(34, {lh / 2}) rotate(-90)"
+						transform="translate({34 * fs}, {lh / 2}) rotate(-90)"
 						text-anchor="middle"
-						font-size="10"
+						font-size={10 * fs}
 						fill="var(--color-lightness-25)">Power</text
 					>
 				</g>
