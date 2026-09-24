@@ -671,7 +671,8 @@
 	import MiniDataTable from '$lib/components/workflow/MiniDataTable.svelte';
 
 	import Editable from '$lib/components/inputs/Editable.svelte';
-	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
+	import { describeTimeFormatProblem } from '$lib/utils/time/TimeUtils.js';
+	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 
 	let {
 		col = $bindable(),
@@ -695,6 +696,13 @@
 		const src = col.refId != null ? getColumnById(col.refId) : col;
 		const arr = src ? core.rawData.get(src.data) : null;
 		return Array.isArray(arr) && arr.some((v) => v != null && typeof v === 'string');
+	});
+
+	// Why this text time column would show blanks (no format, or values the format
+	// cannot read), surfaced beside the format field instead of failing silently.
+	let timeFormatProblem = $derived.by(() => {
+		if (!timeFormatApplies || canChange) return null;
+		return describeTimeFormatProblem(core.rawData.get(col.data), col.timeFormat);
 	});
 
 	// Live rename: write to customName so the name survives node-label changes
@@ -728,17 +736,7 @@
 	}
 
 	function onTypeChange(newType) {
-		if (newType !== 'time') return;
-		const fmt = col.timeFormat;
-		const isEmpty = !fmt || (Array.isArray(fmt) ? fmt.length === 0 : fmt === '');
-		if (!isEmpty) return;
-		const rawData = core.rawData.get(col.data);
-		if (!Array.isArray(rawData) || rawData.length === 0) return;
-		const sample = rawData.slice(0, 10);
-		const guessed = guessDateofArray(sample);
-		if (guessed !== -1 && guessed.length > 0) {
-			col.timeFormat = guessed;
-		}
+		sniffTimeFormatOnTypeChange(col, newType);
 	}
 </script>
 
@@ -807,6 +805,9 @@
 						<span>{getColumnById(col.refId)?.timeFormat}</span>
 					{/if}
 				</div>
+				{#if timeFormatProblem}
+					<p class="time-format-warning" role="alert">{timeFormatProblem}</p>
+				{/if}
 			{/if}
 
 			{#if !canChange && col.type !== 'time' && col.type !== 'bin' && col.refId == null}
@@ -901,6 +902,14 @@
 	.time-format-row input {
 		flex: 1 1 auto;
 		min-width: 0;
+	}
+	.time-format-warning {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-2);
+		margin: 0 0 var(--space-2);
 	}
 
 	/* .data-collapsible-title-container {

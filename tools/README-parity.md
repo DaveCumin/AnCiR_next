@@ -62,6 +62,21 @@ Two bugs this kind found immediately:
   died. Plain `NA` was fine; it was specifically `""`.
 - **Both ports ignored the stored format**, as above.
 
+A later pair of fixtures (`time-unpadded-tokens-padded-values`,
+`time-unpadded-day-month-padded-values`) pins the opposite failure, this time in JS. Older
+sessions store formats such as `YYYY-MM-DD H:mm:s`, and dayjs's strict mode rejected a
+zero-padded `09` under `H` (it formats the parsed date back and compares strings), so
+every row from 00:00 to 09:59 came back empty. `strptime` (`%H`, `%d`, ...) always read
+one or two digits, so the ports were right and JS was wrong. `parseTimeStrict` in
+`TimeUtils.js` now lets the single-width tokens `H h m s D M` take a padded or unpadded
+value while still rejecting out-of-range values.
+
+The reverse (`time-double-width-strict`) pins the other half of the rule. A double-width
+token (`HH mm ss DD MM hh`) needs exactly two digits in JS, so `9:30:00` under `HH:mm:ss` is
+blank there, but `strptime` would read it. Both ports therefore gate each value on the
+format's digit widths before parsing (`dayjs_width_pattern` / `.dayjs_width_pattern`), and a
+value that fails the gate is a gap, as in JS.
+
 ### `rTolerance`
 
 A fixture may set `rTolerance` to loosen the comparison **for R alone**. Widening the shared

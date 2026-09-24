@@ -49,9 +49,9 @@ export function normalizeTimeFormat(fmt) {
 		[/\bL\b/g, 'M'],
 		[/dd/g, 'DD'],
 		[/\bd\b/g, 'D'],
-		// Dayjs strict parsing is more reliable with `ss` for two-digit seconds.
-		// If a guess yields a lone `s`, widen it to `ss`.
-		[/(?<!s)s(?!s)/g, 'ss'],
+		// A lone `s` is left alone: parseTimeStrict lets every single-width
+		// numeric token take one or two digits, so `s` reads both "7" and "07".
+		// Widening it to `ss` (as this used to) rejected unpadded seconds.
 		// Luxon's single `S` is "fractional seconds (any precision)". Our
 		// stored format has a literal `.S` followed by ms digits, so widen
 		// to 3-digit milliseconds (`SSS`). If a user-saved format genuinely
@@ -62,6 +62,109 @@ export function normalizeTimeFormat(fmt) {
 	for (const [re, to] of replacements) out = out.replace(re, to);
 
 	return out;
+}
+
+// Single-width numeric tokens: "one or two digits". dayjs's customParseFormat
+// already reads 1-2 digits for each of these, but its strict mode then formats
+// the parsed date back with the same format string and compares the strings,
+// so under `H` the value "09" fails because it formats as "9". Sessions saved by
+// older versions carry formats such as 'YYYY-MM-DD H:mm:s' over zero-padded data,
+// and that round-trip blanked every row from 00:00 to 09:59.
+const PAD_TOLERANT_TOKENS = new Set(['H', 'h', 'm', 's', 'D', 'M']);
+// The token grammar dayjs's own format() uses (dayjs/esm/constant REGEX_FORMAT),
+// so the per-token round-trip below splits the format exactly as dayjs does.
+const DAYJS_FORMAT_TOKENS =
+	/\[([^\]]+)]|Y{1,4}|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS/g;
+
+function escapeRegExp(text) {
+	return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Widen every single-width numeric token outside [literals] to its padded form.
+function padSingleWidthTokens(fmt) {
+	return fmt.replace(DAYJS_FORMAT_TOKENS, (tok) =>
+		PAD_TOLERANT_TOKENS.has(tok) ? tok + tok : tok
+	);
+}
+
+// Strict round-trip in which a single-width token may match its value with or
+// without one leading zero. Double-width tokens and everything else must match
+// exactly, as in dayjs strict mode.
+function roundTripsPadTolerant(input, dt, fmt) {
+	let pattern = '';
+	let last = 0;
+	for (const m of fmt.matchAll(DAYJS_FORMAT_TOKENS)) {
+		pattern += escapeRegExp(fmt.slice(last, m.index));
+		last = m.index + m[0].length;
+		if (m[1] !== undefined) {
+			pattern += escapeRegExp(m[1]);
+			continue;
+		}
+		const text = dt.format(m[0]);
+		pattern +=
+			PAD_TOLERANT_TOKENS.has(m[0]) && text.length === 1
+				? `0?${escapeRegExp(text)}`
+				: escapeRegExp(text);
+	}
+	pattern += escapeRegExp(fmt.slice(last));
+	return new RegExp(`^${pattern}$`).test(input);
+}
+
+/**
+ * Whether `fmt` is something a time value can be parsed with: a non-empty string,
+ * or a non-empty array of them. `''` and `[]` both mean "no format yet".
+ * @param {unknown} fmt
+ */
+export function hasTimeFormat(fmt) {
+	if (typeof fmt === 'string') return fmt.trim() !== '';
+	return (
+		Array.isArray(fmt) &&
+		fmt.length > 0 &&
+		fmt.every((f) => typeof f === 'string' && f.trim() !== '')
+	);
+}
+
+/**
+ * Strictly parse `value` against a dayjs format string, as `dayjs(value, fmt, true)`
+ * does, except that single-width numeric tokens (H h m s D M) accept a zero-padded
+ * value too. Out-of-range values (hour 25, 30 February, month 13) are still
+ * rejected rather than rolled over, so day/month disambiguation is unchanged.
+ * The format is used as given; callers normalise legacy formats first.
+ *
+ * @param {string} value
+ * @param {string} fmt dayjs format string
+ * @param {{ utc?: boolean }} [opts] parse as UTC (default) or local wall-clock
+ * @returns {import('dayjs').Dayjs} possibly-invalid dayjs instance
+ */
+export function parseTimeStrict(value, fmt, { utc = true } = {}) {
+	const make = utc ? dayjs.utc : dayjs;
+	// No format (Column.timeFormat defaults to [], and the guesser returns [] when
+	// it recognises nothing): an invalid instant, not a throw from inside dayjs.
+	if (!hasTimeFormat(fmt)) return make(NaN);
+	if (Array.isArray(fmt)) {
+		// dayjs accepts a list of formats; try each with the same padding rules.
+		let first;
+		for (const f of fmt) {
+			const dt = parseTimeStrict(value, f, { utc });
+			if (dt.isValid()) return dt;
+			first ??= dt;
+		}
+		return first;
+	}
+	const text = normalizeMeridiemText(value);
+	const exact = make(text, fmt, true);
+	if (exact.isValid() || typeof text !== 'string' || typeof fmt !== 'string') return exact;
+	const padded = padSingleWidthTokens(fmt);
+	if (padded === fmt) return exact;
+	// Fast path for the common case: every single-width token's value is padded.
+	const widened = make(text, padded, true);
+	if (widened.isValid()) return widened;
+	// Mixed padding within one value, e.g. "09:5" under "H:m": neither the
+	// format as given nor its fully padded form round-trips, so compare token
+	// by token, letting each single-width token carry an optional leading zero.
+	const loose = make(text, fmt);
+	if (loose.isValid() && roundTripsPadTolerant(text, loose, fmt)) return loose;
+	return exact;
 }
 
 // Accept dotted meridiem variants (a.m./p.m.) anywhere in imported text.
@@ -133,7 +236,7 @@ export function guessDateofArray(dates) {
 			let score = 0;
 			for (let i = 0; i < datesToCheck.length; i++) {
 				// Strict parse so a token-mismatch counts as a miss for scoring.
-				if (dayjs(normalizeMeridiemText(datesToCheck[i]), guess, true).isValid()) {
+				if (parseTimeStrict(datesToCheck[i], guess, { utc: false }).isValid()) {
 					score++;
 				}
 			}
@@ -146,7 +249,7 @@ export function guessDateofArray(dates) {
 
 		//return that one
 		return guessesArray[guessScore.indexOf(Math.max(...guessScore))];
-	} catch (error) {
+	} catch {
 		return -1;
 	}
 }
@@ -159,8 +262,8 @@ export function calculateTimeDifference(start, end, dateFormat) {
 		return null;
 	}
 	const fmt = normalizeTimeFormat(dateFormat);
-	const startDt = dayjs(normalizeMeridiemText(start), fmt, true);
-	const endDt = dayjs(normalizeMeridiemText(end), fmt, true);
+	const startDt = parseTimeStrict(start, fmt, { utc: false });
+	const endDt = parseTimeStrict(end, fmt, { utc: false });
 	// dayjs.diff returns a number; pass `true` for fractional hours.
 	return endDt.diff(startDt, 'hour', true).toFixed(decimalPlaces);
 }
@@ -182,7 +285,7 @@ export function getPeriod(timeData, timefmt) {
 //data. Calculates the offset for actograms (and other plots).
 export function getstartTimeOffset(inputTime, firstTime, timeFormat) {
 	const start = dayjs(inputTime);
-	const end = dayjs(normalizeMeridiemText(firstTime), normalizeTimeFormat(timeFormat), true);
+	const end = parseTimeStrict(firstTime, normalizeTimeFormat(timeFormat), { utc: false });
 	return end.diff(start, 'hour', true).toFixed(decimalPlaces);
 }
 
@@ -250,15 +353,42 @@ export function formatTimeFromISO(timeString) {
 
 	return `${day} ${monthText} ${year} ${hours}:${minutes}:${seconds}`;
 }
+// Both return the input unchanged when there is no format ('' or []), so numeric
+// epoch-ms values pass through and text becomes NaN at the caller's Number().
 export function getISODate(stringIN, formatIN) {
-	if (!formatIN) return stringIN;
-	return dayjs
-		.utc(normalizeMeridiemText(stringIN), normalizeTimeFormat(formatIN), true)
-		.toISOString();
+	if (!hasTimeFormat(formatIN)) return stringIN;
+	return parseTimeStrict(stringIN, normalizeTimeFormat(formatIN)).toISOString();
 }
 export function getUNIXDate(stringIN, formatIN) {
-	if (!formatIN) return stringIN;
-	return dayjs.utc(normalizeMeridiemText(stringIN), normalizeTimeFormat(formatIN), true).valueOf();
+	if (!hasTimeFormat(formatIN)) return stringIN;
+	return parseTimeStrict(stringIN, normalizeTimeFormat(formatIN)).valueOf();
+}
+
+/**
+ * A user-facing explanation of why a text time column will show blanks, or null
+ * when its format reads every sampled value. Samples at most `maxSample` non-empty
+ * text values so it stays cheap on large columns.
+ * @param {unknown[]} values raw column values
+ * @param {unknown} fmt the column's timeFormat
+ * @param {number} [maxSample]
+ * @returns {string | null}
+ */
+export function describeTimeFormatProblem(values, fmt, maxSample = 200) {
+	if (!Array.isArray(values)) return null;
+	const sample = [];
+	for (const v of values) {
+		if (typeof v === 'string' && v.trim() !== '') sample.push(v);
+		if (sample.length >= maxSample) break;
+	}
+	if (sample.length === 0) return null;
+	if (!hasTimeFormat(fmt)) {
+		return `No time format was recognised for values like "${sample[0]}". Type one here (for example YYYY-MM-DD H:mm:ss) so they can be read as times; until then they are blank.`;
+	}
+	const normalized = Array.isArray(fmt) ? fmt.map(normalizeTimeFormat) : normalizeTimeFormat(fmt);
+	const bad = sample.filter((v) => !parseTimeStrict(v, normalized).isValid());
+	if (bad.length === 0) return null;
+	const scope = sample.length === maxSample ? 'sampled values' : 'values';
+	return `${bad.length} of ${sample.length} ${scope} (e.g. "${bad[0]}") do not match this format and will be blank.`;
 }
 export function addTime(start, hoursIN) {
 	return formatTimeFromISO(dayjs(start).add(hoursIN, 'hour').toISOString());

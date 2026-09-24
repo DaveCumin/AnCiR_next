@@ -86,6 +86,11 @@ const abbreviatedTimezones =
 	'AoE|BST|CHADT|CHAST|CHUT|CKT|ChST|EASST|EAST|FJST|FJT|GALT|GAMT|GILT|HST|KOST|LINT|MART|' +
 	'MHT|NCT|NRT|NUT|NZDT|NZST|PGT|PHOT|PONT|PST|PWT|SBT|SST|TAHT|TKT|TOST|TOT|TVT|VUT|WAKT|WFT|WST|YAPT|' +
 	'ACT|AMST|AMT|ART|BOT|BRST|BRT|CLST|CLT|COT|ECT|FKST|FKT|FNT|GFT|GST|GYT|PET|PYST|PYT|SRT|UYST|UYT|VET|WARST';
+// Minute or second in the delimited (non-ISO) parsers: two digits, or ONE digit
+// when it follows a colon. Loggers often write "9:30:5", and requiring two digits
+// meant no candidate at all, so such a column imported as text. The one-digit form
+// is limited to ":" so a decimal number such as "12.5" is not read as H.m.
+const bareOrPadded = '[0-5]\\d|(?<=:)\\d(?!\\d)';
 const dayOfMonthAndMonthNameDateFormatParser = new Parser(
 	'DayOfMonthAndMonthNameDateFormatParser',
 	new RegExp(
@@ -107,11 +112,11 @@ const dayOfMonthAndMonthNameDateFormatParser = new Parser(
 			'(?:(?<twentyFourHour>2[0-3]|0?\\d|1\\d)|(?<twelveHour>0?[1-9]|1[0-2]))' +
 			'(?:' +
 			'(?<delim8>[:.])' +
-			'(?<minute>[0-5]\\d)' +
+			`(?<minute>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim9>[:.])' +
-			'(?<second>[0-5]\\d)' +
+			`(?<second>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim10>.)' +
@@ -190,11 +195,11 @@ const monthNameAndDayOfMonthDateFormatParser = new Parser(
 			'(?:(?<twentyFourHour>2[0-3]|0?\\d|1\\d)|(?<twelveHour>0?[1-9]|1[0-2]))' +
 			'(?:' +
 			'(?<delim8>[:.])' +
-			'(?<minute>[0-5]\\d)' +
+			`(?<minute>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim9>[:.])' +
-			'(?<second>[0-5]\\d)' +
+			`(?<second>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim10>.)' +
@@ -242,11 +247,11 @@ const slashDelimitedDateTimeFormatParser = new Parser(
 			'(?:(?<twentyFourHour>2[0-3]|0?\\d|1\\d)|(?<twelveHour>0?[1-9]|1[0-2]))' +
 			'(?:' +
 			'(?<delim5>[:.])' +
-			'(?<minute>[0-5]\\d)' +
+			`(?<minute>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim6>[:.])' +
-			'(?<second>[0-5]\\d)' +
+			`(?<second>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim7>.)' +
@@ -270,11 +275,11 @@ const twelveHourTimeFormatParser = new Parser(
 			'(?<twelveHour>0?[1-9]|1[0-2])' +
 			'(?:' +
 			'(?<delim1>[:.])' +
-			'(?<minute>[0-5]\\d)' +
+			`(?<minute>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim2>[:.])' +
-			'(?<second>[0-5]\\d)' +
+			`(?<second>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim3>.)' +
@@ -295,10 +300,10 @@ const twentyFourHourTimeFormatParser = new Parser(
 		'^' +
 			'(?<twentyFourHour>2[0-3]|0?\\d|1\\d)' +
 			'(?<delim1>[:.])' +
-			'(?<minute>[0-5]\\d)' +
+			`(?<minute>${bareOrPadded})` +
 			'(?:' +
 			'(?<delim2>[:.])' +
-			'(?<second>[0-5]\\d)' +
+			`(?<second>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim3>.)' +
@@ -329,11 +334,11 @@ const uKStyleSlashDelimitedDateTimeFormatParser = new Parser(
 			'(?:(?<twentyFourHour>2[0-3]|0?\\d|1\\d)|(?<twelveHour>0?[1-9]|1[0-2]))' +
 			'(?:' +
 			'(?<delim5>[:.])' +
-			'(?<minute>[0-5]\\d)' +
+			`(?<minute>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim6>[:.])' +
-			'(?<second>[0-5]\\d)' +
+			`(?<second>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim7>.)' +
@@ -368,11 +373,11 @@ const uSStyleSlashDelimitedDateTimeFormatParser = new Parser(
 			'(?:(?<twentyFourHour>2[0-3]|0?\\d|1\\d)|(?<twelveHour>0?[1-9]|1[0-2]))' +
 			'(?:' +
 			'(?<delim5>[:.])' +
-			'(?<minute>[0-5]\\d)' +
+			`(?<minute>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim6>[:.])' +
-			'(?<second>[0-5]\\d)' +
+			`(?<second>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim7>.)' +
@@ -407,11 +412,11 @@ const dashDelimitedWithMonthNameDateTimeFormatParser = new Parser(
 			'(?:(?<twentyFourHour>2[0-3]|0?\\d|1\\d)|(?<twelveHour>0?[1-9]|1[0-2]))' +
 			'(?:' +
 			'(?<delim5>[:.])' +
-			'(?<minute>[0-5]\\d)' +
+			`(?<minute>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim6>[:.])' +
-			'(?<second>[0-5]\\d)' +
+			`(?<second>${bareOrPadded})` +
 			')?' +
 			'(?:' +
 			'(?<delim7>.)' +

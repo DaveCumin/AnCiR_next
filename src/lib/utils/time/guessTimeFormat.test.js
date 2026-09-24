@@ -107,12 +107,7 @@ describe('guessFormat', () => {
 
 	describe('produced format strings actually parse their source', () => {
 		// A guessed format should parse the very string it was guessed from.
-		const cases = [
-			'2024-08-06T00:00:00',
-			'2024-08-06 14:30:00',
-			'31/12/2020',
-			'06/08/2024 00:00'
-		];
+		const cases = ['2024-08-06T00:00:00', '2024-08-06 14:30:00', '31/12/2020', '06/08/2024 00:00'];
 		for (const src of cases) {
 			it(`round-trips "${src}"`, async () => {
 				const { default: dayjs } = await import('./dayjsSetup.js');
@@ -120,5 +115,31 @@ describe('guessFormat', () => {
 				expect(dayjs(src, fmt, true).isValid()).toBe(true);
 			});
 		}
+	});
+
+	// Loggers often write bare minutes and seconds ("9:30:5"). The guesser used to
+	// require two digits, returned no candidates, and the column imported as text.
+	describe('unpadded minutes and seconds', () => {
+		const as = (r) => (Array.isArray(r) ? r : [r]);
+		it('emits "s" for a one-digit second', () => {
+			expect(as(guessFormat('2020-01-01 9:30:5'))).toContain('YYYY-MM-DD H:mm:s');
+		});
+		it('emits "m" for a one-digit minute', () => {
+			expect(as(guessFormat('2020-01-01 10:0:35'))).toContain('YYYY-MM-DD H:m:ss');
+		});
+		it('handles a bare time of day', () => {
+			expect(as(guessFormat('9:5:7'))).toContain('H:m:s');
+		});
+		it('handles day-first dates with bare minutes', () => {
+			expect(as(guessFormat('13/01/2020 9:5'))).toContain('DD/MM/YYYY H:m');
+		});
+		it('does not read a decimal number as hours.minutes', () => {
+			// "12.5" must not become a time of day; only ":" introduces a bare minute.
+			expect(as(guessFormat('12.5'))).not.toContain('H.m');
+			expect(as(guessFormat('3.7'))).not.toContain('H.m');
+		});
+		it('still rejects a minute of 60 or more', () => {
+			expect(as(guessFormat('9:65'))).toEqual([]);
+		});
 	});
 });

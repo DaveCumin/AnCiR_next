@@ -8,7 +8,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { getNodeName, setNodeName, isNodeNameEditable } from '$lib/core/nodeNaming.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
-	import { guessDateofArray } from '$lib/utils/time/TimeUtils.js';
+	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { plotNodeSlots } from '$lib/core/ProcessNode.svelte.js';
 	let {
@@ -24,21 +24,11 @@
 	// Note flag: keeps the left-side note button visible whenever a note exists.
 	const hasNote = $derived(!!core.nodeNotes[node.id]?.trim());
 
-	// Mirror the legacy Column.svelte behaviour: when the user picks "time" and
-	// no format is set yet, sniff one from the first few raw rows.
+	// When the user picks "time" and no format is set yet, sniff one from the
+	// first few raw rows (shared with the control panel and the other nodes).
 	function onColumnTypeChange(newType) {
 		const col = node.refId != null ? getColumnById(node.refId) : null;
-		if (!col || newType !== 'time') return;
-		const fmt = col.timeFormat;
-		const isEmpty = !fmt || (Array.isArray(fmt) ? fmt.length === 0 : fmt === '');
-		if (!isEmpty) return;
-		const rawData = core.rawData.get(col.data);
-		if (!Array.isArray(rawData) || rawData.length === 0) return;
-		const sample = rawData.slice(0, 10);
-		const guessed = guessDateofArray(sample);
-		if (guessed !== -1 && guessed.length > 0) {
-			col.timeFormat = guessed;
-		}
+		sniffTimeFormatOnTypeChange(col, newType);
 	}
 
 	// Shared port-layout constants (mirrors WorkflowEditor.svelte). Re-declared locally

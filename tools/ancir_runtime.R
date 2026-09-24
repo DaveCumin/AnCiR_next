@@ -3661,6 +3661,50 @@ col_is_ref <- function(col) !is.null(col$ref_id)
   res
 }
 
+# Digit width each numeric dayjs token accepts in the JS engine. strptime's %H, %M, %S,
+# %d and %m read one OR two digits, but the app parses with dayjs strict mode, where a
+# double-width token (HH mm ss DD MM hh) needs exactly two digits and a single-width one
+# (H m s D M h) takes one or two (parseTimeStrict in TimeUtils.js). Without this gate the
+# port reads "9:30:00" under HH:mm:ss, which the app leaves blank. Tokens not listed
+# (month names, meridiem, offsets) are not width-checked. Mirrors dayjs_width_pattern().
+.dayjs_width_pattern <- function(fmt) {
+  if (is.null(fmt) || !is.character(fmt) || !nzchar(fmt)) return(NULL)
+  widths <- list(
+    YYYY = "[0-9]{4}", YY = "[0-9]{2}",
+    MMMM = ".+?", MMM = ".+?", MM = "[0-9]{2}", M = "[0-9]{1,2}",
+    DD = "[0-9]{2}", D = "[0-9]{1,2}",
+    HH = "[0-9]{2}", H = "[0-9]{1,2}",
+    hh = "[0-9]{2}", h = "[0-9]{1,2}",
+    mm = "[0-9]{2}", m = "[0-9]{1,2}",
+    ss = "[0-9]{2}", s = "[0-9]{1,2}",
+    SSS = "[0-9]{3}",
+    A = ".+?", a = ".+?", ZZ = ".+?", Z = ".+?"
+  )
+  esc <- function(x) gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", x, perl = TRUE)
+  out <- character(0)
+  i <- 1
+  n <- nchar(fmt)
+  while (i <= n) {
+    ch <- substr(fmt, i, i)
+    if (identical(ch, "[")) {
+      end <- regexpr("]", substr(fmt, i, n), fixed = TRUE)
+      if (end != -1) {
+        out <- c(out, esc(substr(fmt, i + 1, i + end - 2)))
+        i <- i + end
+        next
+      }
+    }
+    matched <- FALSE
+    for (t in names(widths)) {
+      if (identical(substr(fmt, i, i + nchar(t) - 1), t)) {
+        out <- c(out, widths[[t]]); i <- i + nchar(t); matched <- TRUE; break
+      }
+    }
+    if (!matched) { out <- c(out, esc(ch)); i <- i + 1 }
+  }
+  paste0("^", paste(out, collapse = ""), "$")
+}
+
 .decompress <- function(col, raw) {
   # AWD records store a regular grid as {start, step, length} rather than every value.
   if (identical(col$compression, "awd") && is.list(raw) && !is.null(raw$start)) {
@@ -3694,6 +3738,9 @@ col_data <- function(col, cols, raw_data) {
       # Gaps stay NA, matching the JS engine, which maps null/'' to null for the same reason.
       parsed <- rep(NA_real_, length(v))
       ok <- !is.na(v) & nzchar(v)
+      # Values the app's strict parse rejects on digit width are gaps too.
+      widths <- .dayjs_width_pattern(col$time_format)
+      if (!is.null(widths)) ok <- ok & grepl(widths, v, perl = TRUE)
       if (any(ok)) {
         fmt <- .strptime_from_dayjs(col$time_format)
         p <- NULL
