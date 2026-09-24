@@ -276,14 +276,17 @@ function generateInputs(spec) {
 		// `dt` is the time step in x units (default 1). A fixture whose axis is in
 		// days sets dt: 1/24 (written as 0.041666… in JSON) so the time values are
 		// the same non-representable multiples a day-unit session would carry.
-		const { n, period, amp, mesor = 0, phase = 0, noise = 0, dt = 1, refs } = spec;
+		// `trend` (optional) adds a linear drift of `trend` per x unit: the case that
+		// used to drag the free-period cosinor out to thousands of hours.
+		const { n, period, amp, mesor = 0, phase = 0, noise = 0, dt = 1, trend = 0, refs } = spec;
 		const t = seq(n, (i) => i * dt);
-		const y = t.map(
-			(h) =>
+		const y = t.map((h) => {
+			const v =
 				mesor +
 				amp * Math.cos((2 * Math.PI * (h - phase)) / period) +
-				(noise ? normal(rng, 0, noise) : 0)
-		);
+				(noise ? normal(rng, 0, noise) : 0);
+			return trend ? v + trend * h : v;
+		});
 		return { [refs.x]: { type: 'number', values: t }, [refs.y]: { type: 'number', values: y } };
 	}
 	if (spec.type === 'pvalues') {

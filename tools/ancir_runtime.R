@@ -310,44 +310,144 @@ p_adjust <- function(pvalues, method = "benjamini-hochberg") {
   jm
 }
 
-# Multi-start free-period cosine fit. Mirrors fit_cosine_curves: same seed frequencies, same
-# bounds, same "keep the lowest cost" rule, so the two land in the same basin.
-fit_cosine_curves <- function(t, x, n_curves = 1) {
+# Free-period cosinor: bounded period range, periodogram-seeded starts. Mirrors
+# src/lib/utils/cosinor.js (FREE_PERIOD_DEFAULTS, resolvePeriodRange, scanPeriodogram,
+# buildStarts) and the Python fit_cosine_curves. Without a bound the fit followed trends out
+# to its internal frequency clamp on real activity data, silently.
+FREE_PERIOD_DEFAULTS <- list(minPeriod = 1, maxPeriod = 48)
+.SCAN_OVERSAMPLE <- 4; .SCAN_MIN_FREQS <- 64; .SCAN_MAX_FREQS <- 5000
+.SCAN_MAX_POINTS <- 10000; .SCAN_PEAKS <- 3; .BOUND_RTOL <- 1e-6
+
+# [min, max] period the free fit may use (t units). Missing ends fall back to the Nyquist
+# period (2 x median spacing) and the record span; the short end is never below Nyquist.
+resolve_period_range <- function(t, min_period = NULL, max_period = NULL) {
+  ts <- sort(as.numeric(t)[is.finite(as.numeric(t))])
+  if (length(ts) < 2) return(NULL)
+  span <- ts[length(ts)] - ts[1]
+  d <- diff(ts); d <- d[d > 0]
+  if (!(span > 0) || !length(d)) return(NULL)
+  nyq <- 2 * stats::median(d)
+  umin <- suppressWarnings(as.numeric(if (is.null(min_period)) NA else min_period))
+  umax <- suppressWarnings(as.numeric(if (is.null(max_period)) NA else max_period))
+  lo <- if (is.finite(umin) && umin > 0) max(umin, nyq) else nyq
+  hi <- if (is.finite(umax) && umax > 0) umax else span
+  if (!(hi > lo)) return(NULL)
+  list(minPeriod = lo, maxPeriod = hi, nyquist = nyq, span = span)
+}
+
+# Floating-mean least-squares periodogram on a uniform frequency grid; returns up to
+# n_peaks local maxima (range ends included), strongest first, in cycles per t unit.
+scan_periodogram <- function(t, x, min_period, max_period, n_peaks = .SCAN_PEAKS) {
+  ok <- is.finite(t) & is.finite(x)
+  t <- as.numeric(t)[ok]; x <- as.numeric(x)[ok]
+  if (length(t) < 3) return(numeric(0))
+  t_min <- min(t); span <- max(t) - t_min
+  if (!(span > 0)) return(numeric(0))
+  if (length(t) > .SCAN_MAX_POINTS) {
+    # Long records: average into bins for the scan only (the fit uses every point).
+    w <- min(span / .SCAN_MAX_POINTS, min_period / 8)
+    nb <- floor(span / w) + 1
+    b <- pmin(nb - 1, floor((t - t_min) / w)) + 1
+    cnt <- tabulate(b, nb)
+    st <- rowsum(t, b, reorder = TRUE); sx <- rowsum(x, b, reorder = TRUE)
+    keep <- cnt[cnt > 0]
+    t <- as.vector(st) / keep; x <- as.vector(sx) / keep
+  }
+  n <- length(t); y <- x - mean(x); tau <- t - t_min
+  f_lo <- 1 / max_period; f_hi <- 1 / min_period
+  nf <- min(.SCAN_MAX_FREQS,
+            max(.SCAN_MIN_FREQS, ceiling(.SCAN_OVERSAMPLE * span * (f_hi - f_lo)) + 1))
+  freqs <- f_lo + (f_hi - f_lo) * (0:(nf - 1)) / (nf - 1)
+  power <- numeric(nf)
+  for (k in seq_len(nf)) {
+    th <- 2 * pi * freqs[k] * tau
+    cc <- cos(th); ss <- sin(th)
+    C <- sum(cc) / n; S <- sum(ss) / n
+    CC <- sum(cc * cc) / n - C * C; SS <- sum(ss * ss) / n - S * S
+    CS <- sum(cc * ss) / n - C * S
+    YC <- sum(y * cc) / n; YS <- sum(y * ss) / n
+    D <- CC * SS - CS * CS
+    power[k] <- if (D > 1e-12) (SS * YC^2 + CC * YS^2 - 2 * CS * YC * YS) / D else 0
+  }
+  left <- c(-Inf, power[-nf]); right <- c(power[-1], -Inf)
+  pk <- which(power >= left & power > right)
+  pk <- pk[order(-power[pk], pk)]
+  freqs[utils::head(pk, n_peaks)]
+}
+
+# OLS amplitude/phase/offset at fixed frequencies: a cos + b sin = B cos(2 pi w t + o).
+.cos_linear_init <- function(t, x, fs) {
+  X <- matrix(1, nrow = length(t), ncol = 1)
+  for (w in fs) X <- cbind(X, cos(2 * pi * w * t), sin(2 * pi * w * t))
+  coef <- tryCatch(solve(crossprod(X), crossprod(X, x)), error = function(e) NULL)
+  p0 <- c()
+  for (j in seq_along(fs)) {
+    if (is.null(coef)) { p0 <- c(p0, 0, fs[j], 0); next }
+    a <- coef[2 * j]; b <- coef[2 * j + 1]
+    p0 <- c(p0, sqrt(a^2 + b^2), fs[j], atan2(-b, a))
+  }
+  c(p0, if (is.null(coef)) mean(x) else coef[1])
+}
+
+# Bounded Gauss-Newton refinement with step halving; parameters on a bound whose step
+# points outward are held fixed for that step.
+.gn_polish <- function(p, t, x, lb, ub, iters = 100) {
+  cost <- function(q) sum(.cos_resid(q, t, x)^2)
+  cur <- cost(p)
+  for (it in seq_len(iters)) {
+    r <- .cos_resid(p, t, x); J <- .cos_jac(p, t)
+    g <- as.vector(crossprod(J, r))
+    free <- !((p <= lb & g > 0) | (p >= ub & g < 0))
+    JtJ <- crossprod(J[, free, drop = FALSE])
+    step <- tryCatch(solve(JtJ, g[free]), error = function(e) NULL)
+    if (is.null(step)) break
+    accepted <- FALSE; h <- 1
+    for (k in 1:30) {
+      q <- p; q[free] <- p[free] - h * step
+      q <- pmin(ub, pmax(lb, q))
+      cq <- cost(q)
+      if (cq < cur) { accepted <- TRUE; break }
+      h <- h / 2
+    }
+    if (!accepted) break
+    rel <- (cur - cq) / (cur + 1e-10)
+    p <- q; cur <- cq
+    if (rel < 1e-15) break
+  }
+  p
+}
+
+# Multi-start free-period cosine fit from the same periodogram-peak starts as the JS and
+# Python; lowest cost wins. Amplitude and phase are SOLVED for at each seed frequency: a
+# phase-0 seed can be anti-correlated with the data, and an optimiser then shrinks the
+# AMPLITUDE toward zero rather than rotating the phase (the Python port once returned
+# amplitude 3.3 against a true 38 that way).
+fit_cosine_curves <- function(t, x, n_curves = 1, min_period = NULL, max_period = NULL) {
   ok <- is.finite(t) & is.finite(x)
   t <- as.numeric(t)[ok]; x <- as.numeric(x)[ok]
   if (length(t) < 4 * n_curves) return(NULL)
+  rng <- resolve_period_range(t, min_period, max_period)
+  if (is.null(rng)) return(NULL)
+  f_lo <- 1 / rng$maxPeriod; f_hi <- 1 / rng$minPeriod
+  clampf <- function(w) min(f_hi, max(f_lo, w))
 
   cost <- function(p) 0.5 * sum(.cos_resid(p, t, x)^2)
   grad <- function(p) as.vector(crossprod(.cos_jac(p, t), .cos_resid(p, t, x)))
 
-  timespan <- if (t[length(t)] > t[1]) t[length(t)] - t[1] else 1
-  # numpy's std is the population form; sd() is the sample form, hence the rescale.
-  span_amp <- sd(x) * sqrt((length(x) - 1) / length(x))
+  peaks <- scan_periodogram(t, x, rng$minPeriod, rng$maxPeriod, max(.SCAN_PEAKS, n_curves))
+  top <- if (length(peaks)) peaks else clampf(1 / 24)
+  sets <- if (n_curves == 1) {
+    lapply(top, function(w) w)
+  } else {
+    list(vapply(seq_len(n_curves), function(i)
+           if (i <= length(top)) top[i] else clampf(top[1] * i), numeric(1)),
+         vapply(seq_len(n_curves), function(i) clampf(top[1] * i), numeric(1)))
+  }
+  lb <- c(rep(c(-Inf, f_lo, -Inf), n_curves), -Inf)
+  ub <- c(rep(c(Inf, f_hi, Inf), n_curves), Inf)
   best <- NULL
-  for (fs in c(1 / 24, 1 / 12, 1 / 6, 1 / max(timespan, 1))) {
-    p0 <- c(); lb <- c(); ub <- c()
-    for (i in seq_len(n_curves)) {
-      # Seed amplitude and phase by SOLVING for them at this frequency: with w fixed the
-      # model is linear in (B cos o, B sin o) and the offset, so the best pair has a closed
-      # form. Seeding phase at 0 instead leaves the starting cosine anti-correlated whenever
-      # the true acrophase is far from 0, and an optimiser can then shrink the AMPLITUDE
-      # toward zero rather than rotate the phase. The Python port did exactly that and
-      # returned amplitude 3.3 against a true 38; this seeding is what fixed it, and both
-      # ports now seed identically so neither can drift into that basin.
-      w <- fs * i
-      th <- 2 * pi * w * t
-      design <- cbind(1, cos(th), sin(th))
-      coef <- tryCatch(qr.solve(design, x), error = function(e) NULL)
-      if (is.null(coef)) {
-        amp0 <- span_amp / max(1, n_curves); pha0 <- 0
-      } else {
-        amp0 <- sqrt(coef[2]^2 + coef[3]^2)
-        pha0 <- atan2(-coef[3], coef[2])
-      }
-      p0 <- c(p0, amp0, w, pha0)
-      lb <- c(lb, -Inf, 0.001, -Inf); ub <- c(ub, Inf, 100, Inf)
-    }
-    p0 <- c(p0, mean(x)); lb <- c(lb, -Inf); ub <- c(ub, Inf)
+  for (fs in sets) {
+    p0 <- .cos_linear_init(t, x, fs)
     fit <- tryCatch(
       optim(p0, cost, grad, method = "L-BFGS-B", lower = lb, upper = ub,
             control = list(factr = 1, pgtol = 0, maxit = 5000)),
@@ -356,20 +456,38 @@ fit_cosine_curves <- function(t, x, n_curves = 1) {
   }
   if (is.null(best)) return(NULL)
 
-  p <- best$par
+  # L-BFGS-B stops ~1e-6 short of the least-squares optimum on this badly scaled problem
+  # (the frequency gradient is ~t times the others); a bounded Gauss-Newton polish from
+  # its answer reaches the optimum the JS (LM) and Python (TRF) find, to ~1e-9.
+  p <- .gn_polish(best$par, t, x, lb, ub)
+  # Canonical form: B >= 0, phase in (-pi, pi] (B cos(th) = -B cos(th + pi)).
+  for (i in seq_len(n_curves)) {
+    ib <- 3 * (i - 1) + 1
+    if (p[ib] < 0) { p[ib] <- -p[ib]; p[ib + 2] <- p[ib + 2] + pi }
+    ph <- p[ib + 2] %% (2 * pi)
+    if (ph > pi) ph <- ph - 2 * pi
+    p[ib + 2] <- ph
+  }
   pred <- .cos_resid(p, t, x) + x
   rss <- sum((x - pred)^2)
   ss_tot <- sum((x - mean(x))^2)
   cosines <- lapply(seq_len(n_curves), function(i) {
-    list(amplitude = abs(p[3 * (i - 1) + 1]),
+    list(amplitude = p[3 * (i - 1) + 1],
          frequency = p[3 * (i - 1) + 2],
          phase = p[3 * (i - 1) + 3])
   })
+  at_bound <- vapply(seq_len(n_curves), function(i) {
+    w <- p[3 * (i - 1) + 2]
+    if (abs(w - f_lo) <= .BOUND_RTOL * f_lo) "max"
+    else if (abs(w - f_hi) <= .BOUND_RTOL * f_hi) "min" else NA_character_
+  }, character(1))
   list(parameters = list(A = 0, cosines = cosines, O = p[length(p)]),
        fitted = pred, residuals = x - pred,
        rmse = sqrt(rss / length(t)),
        rSquared = if (ss_tot > 0) 1 - rss / ss_tot else 0,
-       rss = rss)
+       rss = rss,
+       diagnostics = list(converged = best$convergence == 0, atBound = at_bound,
+                          periodRange = c(rng$minPeriod, rng$maxPeriod)))
 }
 
 # ---------------------------------------------------------------------------
@@ -711,7 +829,7 @@ fit_cosinor_fixed <- function(t, y, period = 24, n_harmonics = 1, alpha = 0.05) 
     b <- beta[ib]; g <- beta[ig]
     amp <- sqrt(b^2 + g^2)
     phi <- atan2(-g, b)                      # JS: atan2(-gamma, beta)
-    acro <- (-phi / (k * omega)) %% (period / k)
+    acro <- (-phi / (k * omega)) %% (period / k)  # time of peak (the one convention)
     var_b <- max(cov[ib, ib], 0); var_g <- max(cov[ig, ig], 0); cov_bg <- cov[ib, ig]
     se_a <- if (amp > 0) sqrt(max((b^2 * var_b + g^2 * var_g + 2 * b * g * cov_bg) / amp^2, 0)) else 0
     den <- b^2 + g^2
@@ -720,7 +838,7 @@ fit_cosinor_fixed <- function(t, y, period = 24, n_harmonics = 1, alpha = 0.05) 
     harmonics[[k]] <- list(k = k, beta = b, gamma = g, amplitude = amp,
                            acrophase_hrs = acro, phi_rad = phi,
                            SE_A = se_a, SE_acrophase_hrs = se_acro,
-                           CI_A = c(amp - tcrit * se_a, amp + tcrit * se_a),
+                           CI_A = c(max(0, amp - tcrit * se_a), amp + tcrit * se_a),
                            CI_acrophase = c(acro - tcrit * se_acro, acro + tcrit * se_acro))
   }
   df1 <- p - 1
@@ -769,11 +887,12 @@ tp_cosinor <- function(args, env) {
   }
 
   any_valid <- FALSE; first_x <- NULL
-  mesor <- c(); acro <- c(); pval <- c()
+  mesor <- c(); acro <- c(); pval <- c(); per <- c()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) {
-      mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); pval <- c(pval, NA_real_); next
+      mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); pval <- c(pval, NA_real_)
+      per <- c(per, NA_real_); next
     }
     y <- suppressWarnings(as.numeric(unlist(col_data(env$cols[[yk]], env$cols, env$raw_data),
                                             use.names = FALSE)))
@@ -782,10 +901,14 @@ tp_cosinor <- function(args, env) {
     res <- if (use_fixed || n_curves == 0) {
       fit_cosinor_fixed(tt, yy, fixed_period, n_h, alpha)
     } else {
-      fit_cosine_curves(tt, yy, n_curves)
+      # Free-period range (h); sessions saved before it existed use the defaults.
+      fit_cosine_curves(tt, yy, n_curves,
+                        if (is.null(args$minPeriod)) FREE_PERIOD_DEFAULTS$minPeriod else args$minPeriod,
+                        if (is.null(args$maxPeriod)) FREE_PERIOD_DEFAULTS$maxPeriod else args$maxPeriod)
     }
     if (is.null(res)) {
-      mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); pval <- c(pval, NA_real_); next
+      mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); pval <- c(pval, NA_real_)
+      per <- c(per, NA_real_); next
     }
     params <- if (!is.null(res$harmonics)) res else res$parameters
     if (is.null(first_x)) {
@@ -798,8 +921,20 @@ tp_cosinor <- function(args, env) {
               if (yo == -1) out_id(args, "cosinory") else yo
             },
             evaluate_cosinor_at_points(params, first_x), type = "number")
-    mesor <- c(mesor, if (!is.null(res$M)) res$M else NA_real_)
-    acro <- c(acro, if (!is.null(res$harmonics)) res$harmonics[[1]]$acrophase_hrs else NA_real_)
+    # MESOR and acrophase (time of peak, h) for both fits: the fixed fit's M and
+    # acrophase_hrs, or the free fit's offset O and -phase/omega wrapped into
+    # [0, period) — the same numbers as the JS `mesor` / `acrophase` ports.
+    if (!is.null(res$harmonics)) {
+      per <- c(per, fixed_period)
+      mesor <- c(mesor, res$M)
+      acro <- c(acro, res$harmonics[[1]]$acrophase_hrs)
+    } else {
+      c1 <- res$parameters$cosines[[1]]
+      per <- c(per, if (isTRUE(c1$frequency > 0)) 1 / c1$frequency else NA_real_)
+      mesor <- c(mesor, res$parameters$O)
+      acro <- c(acro, if (isTRUE(c1$frequency > 0))
+        (-c1$phase / (2 * pi * c1$frequency)) %% (1 / c1$frequency) else NA_real_)
+    }
     # `pvalue` is the ANALYTIC zero-amplitude F-test p of the FIXED-period fit
     # (fit_cosinor_fixed's pF), matching the JS and Python semantics fixed in
     # v72.x. The free-period nonlinear fit has no analytic test, so NA there.
@@ -808,6 +943,7 @@ tp_cosinor <- function(args, env) {
   }
   # Scalar metric ports carry ONE value per y input, in yIN order — the contract the whole
   # "one analysis node per group" idiom depends on.
+  set_col(env, env$cols, out_id(args, "period"), per, type = "number")
   set_col(env, env$cols, out_id(args, "mesor"), mesor, type = "number")
   set_col(env, env$cols, out_id(args, "acrophase"), acro, type = "number")
   set_col(env, env$cols, out_id(args, "pvalue"), pval, type = "number")
@@ -2316,7 +2452,9 @@ ff_fit_curve_model <- function(tt, yy, model, args) {
                   fitted = res$fitted))
     }
     nc <- max(1, as.integer(if (is.null(args$Ncurves)) 1 else args$Ncurves))
-    res <- fit_cosine_curves(tt, yy, nc)
+    res <- fit_cosine_curves(tt, yy, nc,
+                             if (is.null(args$minPeriod)) FREE_PERIOD_DEFAULTS$minPeriod else args$minPeriod,
+                             if (is.null(args$maxPeriod)) FREE_PERIOD_DEFAULTS$maxPeriod else args$maxPeriod)
     if (is.null(res)) return(NULL)
     return(list(model = "cosinor", mode = "free",
                 parameters = c(list(mode = "free"), res$parameters),

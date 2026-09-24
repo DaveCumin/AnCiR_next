@@ -8,6 +8,7 @@
 		fitPermutationPValue
 	} from '$lib/utils/fitFunction.js';
 	import { wrapToPeriod } from '$lib/utils/cosinorAddons.js';
+	import { freePeriodFitWarnings, FREE_PERIOD_DEFAULTS } from '$lib/utils/cosinor.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/fitFunction.worker-task.js';
@@ -62,6 +63,10 @@
 		['useFixedPeriod', { val: true }],
 		['fixedPeriod', { val: 24 }],
 		['Ncurves', { val: 1 }],
+		// Cosinor free-period fit only: the period range (h) the fit may use (see
+		// FREE_PERIOD_DEFAULTS in cosinor.js). Old sessions get these defaults.
+		['minPeriod', { val: FREE_PERIOD_DEFAULTS.minPeriod }],
+		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
 		['nHarmonics', { val: 1 }],
 		['alpha', { val: 0.05 }],
 		['fixKappa', { val: false }],
@@ -126,7 +131,9 @@
 				fixedPeriod: argsIN.fixedPeriod ?? 24,
 				nHarmonics: argsIN.nHarmonics ?? 1,
 				Ncurves: argsIN.Ncurves ?? 1,
-				alpha: argsIN.alpha ?? 0.05
+				alpha: argsIN.alpha ?? 0.05,
+				minPeriod: argsIN.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod,
+				maxPeriod: argsIN.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod
 			};
 		}
 		if (argsIN.model === 'rectangular') {
@@ -227,14 +234,9 @@
 				if (key === 'period') return period;
 				if (key === 'mesor') return fr.fixedStats?.M ?? fr.parameters?.M ?? NaN;
 				if (key === 'amplitude') return fr.fixedStats?.harmonics?.[0]?.amplitude ?? NaN;
-				if (key === 'acrophase') {
-					// fixedStats reports the CLASSICAL acrophase (wrap(-t_peak));
-					// convert to peak time, the convention Cosinor's port uses.
-					const classicalAcro = fr.fixedStats?.harmonics?.[0]?.acrophase_hrs;
-					return classicalAcro != null && Number.isFinite(period)
-						? wrapToPeriod(-classicalAcro, period)
-						: NaN;
-				}
+				// fitCosinorFixed reports acrophase_hrs as the time of peak already,
+				// the convention Cosinor's port and every panel use.
+				if (key === 'acrophase') return fr.fixedStats?.harmonics?.[0]?.acrophase_hrs ?? NaN;
 			} else {
 				const c = fr.parameters?.cosines?.[0];
 				const period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
@@ -469,15 +471,26 @@
 		// optimisers with no convergence flag to read, so non-finite R²/RMSE is the
 		// only observable symptom, and dashes with no explanation is what the user
 		// otherwise sees.
+		result.warnings = fitWarnings(argsIN, result);
+		return [result, anyValid];
+	}
+
+	// Shared by the headless path above and the component's getFit, so the panel
+	// shows the same warnings the engine computes (getFit used to publish none).
+	export function fitWarnings(argsIN, result) {
 		const fitEntries = Object.entries(result?.y_results ?? {}).map(([yId, yr]) => ({
 			label: `"${getColumnById(Number(yId))?.name ?? yId}"`,
 			result: yr?.fitResult ?? null
 		}));
-		result.warnings = [
+		const freeCosinor = (argsIN.model ?? 'cosinor') === 'cosinor' && !argsIN.useFixedPeriod;
+		return [
 			...checkFitResultsFinite(fitEntries, `The ${argsIN.model ?? 'cosinor'} fit`),
+			// The free-period cosinor reports when its period finished on a bound of
+			// the allowed range or the optimiser gave up (fitCosinorModel carries
+			// the diagnostics through).
+			...(freeCosinor ? freePeriodFitWarnings(fitEntries, 'The free-period cosinor fit') : []),
 			...fitSampleWarnings(argsIN)
 		];
-		return [result, anyValid];
 	}
 
 	// Self-contained sample-size check for this node. A fit needs meaningfully
@@ -586,6 +599,7 @@
 		out += p.args.useFixedPeriod;
 		out += p.args.fixedPeriod;
 		out += p.args.Ncurves;
+		out += '|' + p.args.minPeriod + '|' + p.args.maxPeriod;
 		out += p.args.nHarmonics;
 		out += p.args.fixKappa;
 		out += p.args.fixOmega;
@@ -644,41 +658,11 @@
 		spawnResidualPlot(p, { xId: p.args.xIN, residId: p.args.out?.['resid_' + yId], label: yName });
 	}
 
-	function getModelArgs() {
-		return {
-			model: p.args.model,
-			useFixedPeriod: p.args.useFixedPeriod,
-			fixedPeriod: p.args.fixedPeriod,
-			Ncurves: p.args.Ncurves,
-			nHarmonics: p.args.nHarmonics,
-			alpha: p.args.alpha,
-			fixKappa: p.args.fixKappa,
-			fixedKappa: p.args.fixedKappa,
-			fixOmega: p.args.fixOmega,
-			fixedOmega: p.args.fixedOmega,
-			fixDutyCycle: p.args.fixDutyCycle,
-			fixedDutyCycle: p.args.fixedDutyCycle,
-			periodic: p.args.periodic,
-			fixK1: p.args.fixK1,
-			fixedK1: p.args.fixedK1,
-			fixK2: p.args.fixK2,
-			fixedK2: p.args.fixedK2
-		};
-	}
-
 	function getXData(col) {
 		return col.type === 'time' ? col.hoursSinceStart : col.getData();
 	}
 
-	function getValidPairs(t, y) {
-		const validIndices = t
-			.map((v, i) => (isInvalidValue(v) || isInvalidValue(y[i]) ? -1 : i))
-			.filter((i) => i !== -1);
-		return {
-			tt: validIndices.map((i) => t[i]),
-			yy: validIndices.map((i) => y[i])
-		};
-	}
+	// getValidPairs is the module-script helper above (shared with the headless path).
 
 	async function getFit() {
 		previewStart = 1;
@@ -791,6 +775,7 @@
 		}
 
 		if (token !== _calcToken) return;
+		result.warnings = fitWarnings(p.args, result);
 		fitData = result;
 		p.args.valid = anyValid;
 		p.warnings = result?.warnings ?? [];
@@ -888,7 +873,7 @@
 	});
 
 	$effect(() => {
-		const _yIN = p.args.yIN;
+		p.args.yIN; // tracked: reconcile when the y inputs change
 		if (!mounted) return;
 		// Defer reconcile out of the effect: syncYColumns() calls `new Column()`, whose
 		// $derived fields go inert if created while this effect is the active reaction
@@ -1006,13 +991,22 @@
 				const maxH = Math.max(
 					...validEntries.map(([, r]) => r.fitResult?.fixedStats?.harmonics?.length ?? 0)
 				);
-				for (let i = 0; i < maxH; i++) headers.push(`H${i + 1}_amplitude`, `H${i + 1}_acrophase`);
+				// Acrophase = time of peak (h after the start), as on the `acrophase` port.
+				for (let i = 0; i < maxH; i++)
+					headers.push(`H${i + 1}_amplitude`, `H${i + 1}_acrophase_peak_h`);
 			} else {
 				const maxC = Math.max(
 					...validEntries.map(([, r]) => r.fitResult?.parameters?.cosines?.length ?? 0)
 				);
+				// `phase_rad` is the model's φ in A·cos(ωt + φ); `acrophase_peak_h` is the
+				// time of peak, the convention every acrophase in AnCiR uses.
 				for (let i = 0; i < maxC; i++)
-					headers.push(`C${i + 1}_period`, `C${i + 1}_amplitude`, `C${i + 1}_phase`);
+					headers.push(
+						`C${i + 1}_period`,
+						`C${i + 1}_amplitude`,
+						`C${i + 1}_phase_rad`,
+						`C${i + 1}_acrophase_peak_h`
+					);
 			}
 		} else if (model === 'rectangular') {
 			headers.push('period', 'acrophase', 'duty_cycle', 'kappa', 'M', 'A', 'pValue');
@@ -1040,7 +1034,12 @@
 				} else {
 					for (const c of fr.parameters?.cosines ?? []) {
 						const period = c.frequency ? (2 * Math.PI) / c.frequency : NaN;
-						row.push(period, c.amplitude ?? null, c.phase ?? null);
+						row.push(
+							period,
+							c.amplitude ?? null,
+							c.phase ?? null,
+							c.frequency ? wrapToPeriod(-c.phase / c.frequency, period) : null
+						);
 					}
 					while (row.length < headers.length) row.push(null);
 				}
@@ -1162,6 +1161,25 @@
 			<div class="control-input-horizontal">
 				<ControlInput label="Number of cosines">
 					<NumberWithUnits bind:value={p.args.Ncurves} min="1" step="1" onInput={() => getFit()} />
+				</ControlInput>
+			</div>
+			<!-- The free period is searched for, and kept, inside this range. -->
+			<div class="control-input-horizontal">
+				<ControlInput label="Min period (hrs)">
+					<NumberWithUnits
+						bind:value={p.args.minPeriod}
+						min="0.1"
+						step="1"
+						onInput={() => getFit()}
+					/>
+				</ControlInput>
+				<ControlInput label="Max period (hrs)">
+					<NumberWithUnits
+						bind:value={p.args.maxPeriod}
+						min="0.1"
+						step="1"
+						onInput={() => getFit()}
+					/>
 				</ControlInput>
 			</div>
 		{/if}
@@ -1425,9 +1443,11 @@
 				{#if p.args.useFixedPeriod}
 					<p>Mesor: {yResult?.fitResult?.fixedStats?.M?.toFixed(3)}</p>
 					<p>Period: {p.args.fixedPeriod?.toFixed?.(3)} hrs</p>
-					{#each yResult?.fitResult?.fixedStats?.harmonics ?? [] as h, i}
+					{#each yResult?.fitResult?.fixedStats?.harmonics ?? [] as h, i (i)}
 						<p>
-							H{i + 1}: amp {h.amplitude?.toFixed(3)}, phase {h.acrophase_hrs?.toFixed(3)} hrs
+							H{i + 1}: amp {h.amplitude?.toFixed(3)}, acrophase (time of peak) {h.acrophase_hrs?.toFixed(
+								3
+							)} h
 							<StoreValueButton
 								label={`H${i + 1}`}
 								getter={() => h.amplitude}
@@ -1437,11 +1457,13 @@
 						</p>
 					{/each}
 				{:else}
-					{#each yResult?.fitResult?.parameters?.cosines ?? [] as c, i}
+					{#each yResult?.fitResult?.parameters?.cosines ?? [] as c, i (i)}
 						<p>
 							C{i + 1}: amp {c.amplitude?.toFixed(3)}, period {c.frequency
 								? ((2 * Math.PI) / c.frequency).toFixed(3)
-								: 'NaN'}
+								: 'NaN'} h, acrophase (time of peak) {c.frequency
+								? wrapToPeriod(-c.phase / c.frequency, (2 * Math.PI) / c.frequency).toFixed(3)
+								: 'NaN'} h
 							<StoreValueButton
 								label={`C${i + 1}`}
 								getter={() => c.amplitude}
@@ -1491,7 +1513,7 @@
 						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
 						<ColumnComponent col={xout} />
 					</div>
-					{#each p.args.yIN ?? [] as yId}
+					{#each p.args.yIN ?? [] as yId (yId)}
 						{@const outKey = 'fity_' + yId}
 						{@const yOutId = p.args.out[outKey]}
 						{#if yOutId >= 0}
@@ -1521,7 +1543,7 @@
 				</div>
 			{:else if p.args.valid}
 				<p>Preview:</p>
-				{#each Object.entries(fitData?.y_results ?? {}) as [yId, yResult]}
+				{#each Object.entries(fitData?.y_results ?? {}) as [yId, yResult] (yId)}
 					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>

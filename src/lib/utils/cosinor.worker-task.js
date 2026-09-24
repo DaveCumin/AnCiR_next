@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { fitCosineCurves, fitCosinorFixed } from './cosinor.js';
+import { fitCosineCurves, fitCosinorFixed, FREE_PERIOD_DEFAULTS } from './cosinor.js';
 import { registerComputeTask } from '$lib/workers/computeTasks.js';
 
 /**
@@ -14,6 +14,8 @@ import { registerComputeTask } from '$lib/workers/computeTasks.js';
  *   fixedPeriod       hours
  *   nHarmonics        integer >= 1
  *   alpha             significance level
+ *   minPeriod         free fit only: shortest allowed period (h)
+ *   maxPeriod         free fit only: longest allowed period (h)
  *
  * Returns:
  *   { results: Array<...fit result objects...> }
@@ -26,7 +28,9 @@ export function cosinorFitMany(args) {
 		useFixedPeriod = false,
 		fixedPeriod = 24,
 		nHarmonics = 1,
-		alpha = 0.05
+		alpha = 0.05,
+		minPeriod = FREE_PERIOD_DEFAULTS.minPeriod,
+		maxPeriod = FREE_PERIOD_DEFAULTS.maxPeriod
 	} = args;
 	const results = ys.map((y) => {
 		if (useFixedPeriod) {
@@ -34,7 +38,8 @@ export function cosinorFitMany(args) {
 			if (r == null) return null;
 			return { ...r, period: fixedPeriod, valid: r?.valid !== false };
 		}
-		const r = fitCosineCurves(t, y, Ncurves, alpha);
+		// The period range bounds the free fit (see FREE_PERIOD_DEFAULTS in cosinor.js).
+		const r = fitCosineCurves(t, y, Ncurves, { minPeriod, maxPeriod });
 		if (r == null) return null;
 		return { ...r, valid: r?.valid !== false };
 	});

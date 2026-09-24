@@ -1345,6 +1345,14 @@
           "default": 24
         },
         {
+          "name": "minPeriod",
+          "default": 1
+        },
+        {
+          "name": "maxPeriod",
+          "default": 48
+        },
+        {
           "name": "nHarmonics",
           "default": 1
         },
@@ -1896,6 +1904,14 @@
         {
           "name": "Ncurves",
           "default": 1
+        },
+        {
+          "name": "minPeriod",
+          "default": 1
+        },
+        {
+          "name": "maxPeriod",
+          "default": 48
         },
         {
           "name": "nHarmonics",

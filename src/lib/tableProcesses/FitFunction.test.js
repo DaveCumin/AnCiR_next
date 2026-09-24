@@ -64,7 +64,10 @@ vi.mock('$lib/components/inputs/NumberWithUnits.svelte', () => ({ default: {} })
 vi.mock('$lib/components/inputs/ColumnSelector.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/inputs/AttributeSelect.svelte', () => ({ default: {} }));
 
-vi.mock('$lib/utils/cosinor.js', () => ({
+// Partial mock: the fitters are stubbed, the pure helpers (FREE_PERIOD_DEFAULTS,
+// freePeriodFitWarnings, resolvePeriodRange) stay real.
+vi.mock('$lib/utils/cosinor.js', async (importOriginal) => ({
+	...(await importOriginal()),
 	fitCosinorFixed: vi.fn((tt, yy) => ({
 		fitted: yy.map((v) => v * 0.9),
 		M: 40,
@@ -116,7 +119,6 @@ import {
 	fitMetricValue
 } from './FitFunction.svelte';
 import { syncMetricOutColumns } from './metricOutputs.js';
-import { wrapToPeriod } from '$lib/utils/cosinorAddons.js';
 
 const N = 48;
 const t = Array.from({ length: N }, (_, i) => i);
@@ -213,10 +215,9 @@ describe('FitFunction — datum → metric mapping (values on the ports)', () =>
 		expect(rawData.get(out.period)).toEqual([24, 24]);
 		expect(rawData.get(out.mesor)).toEqual([40, 40]);
 		expect(rawData.get(out.amplitude)).toEqual([12, 12]);
-		// fixedStats reports the classical acrophase (5 h); the port carries the
-		// PEAK time wrapped into [0, period), Cosinor's convention.
-		expect(rawData.get(out.acrophase)).toEqual([wrapToPeriod(-5, 24), wrapToPeriod(-5, 24)]);
-		expect(rawData.get(out.acrophase)[0]).toBe(19);
+		// fitCosinorFixed reports acrophase_hrs as the peak time (5 h), and the port
+		// carries it unchanged: one convention on the util, the port and the panel.
+		expect(rawData.get(out.acrophase)).toEqual([5, 5]);
 	});
 
 	it('cosinor (free period): period/mesor/amplitude/acrophase from the first cosine', async () => {

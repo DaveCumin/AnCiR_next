@@ -5,7 +5,10 @@ vi.mock('$lib/core/core.svelte', () => ({ core: { rawData: { set: vi.fn() } } })
 vi.mock('$lib/core/Column.svelte', () => ({ getColumnById: (id) => mockColumns[id] }));
 vi.mock('$lib/components/inputs/NumberWithUnits.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/inputs/AttributeSelect.svelte', () => ({ default: {} }));
-vi.mock('$lib/utils/cosinor.js', () => ({
+// Partial mock: the fitters are stubbed, the pure helpers (FREE_PERIOD_DEFAULTS,
+// freePeriodFitWarnings, resolvePeriodRange) stay real.
+vi.mock('$lib/utils/cosinor.js', async (importOriginal) => ({
+	...(await importOriginal()),
 	fitCosineCurves: vi.fn(() => ({
 		fitted: [1, 2, 3],
 		parameters: { cosines: [{ amplitude: 1, frequency: 0.26, acrophase: 0 }] },

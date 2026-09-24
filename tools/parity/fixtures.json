@@ -3733,15 +3733,165 @@
     "useFixedPeriod": false,
     "outputX": -1,
     "out": {
-     "cosinorx": -1
+     "cosinorx": -1,
+     "mesor": -1,
+     "acrophase": -1
     }
    },
    "compareOutputs": [
     "cosinorx",
-    "cosinory"
+    "cosinory",
+    "mesor",
+    "acrophase"
    ],
    "rTolerance": 1e-06,
    "rToleranceWhy": "Nonlinear fit: R reaches the optimum with optim(L-BFGS-B) + an analytic Jacobian, scipy with trust-region least_squares. They agree to ~1e-8 on the fitted parameters, which is inside 1e-6 but not the 1e-9 default."
+  },
+  {
+   "id": "tp-cosinor-free-period-range",
+   "kind": "tableProcess",
+   "jsName": "Cosinor",
+   "pyFunc": "cosinor",
+   "rFunc": "cosinor",
+   "_comment": "Free period inside an explicit range (20 to 28 h). Pins the bounded optimiser, the periodogram-seeded start and the acrophase (time of peak) convention for free fits in all three languages.",
+   "generate": {
+    "type": "rhythm",
+    "n": 240,
+    "period": 25.3,
+    "amp": 20,
+    "mesor": 40,
+    "phase": 15,
+    "noise": 8,
+    "seed": 611,
+    "refs": {
+     "x": "t",
+     "y": "y"
+    }
+   },
+   "args": {
+    "xIN": "@t",
+    "yIN": [
+     "@y"
+    ],
+    "Ncurves": 1,
+    "useFixedPeriod": false,
+    "minPeriod": 20,
+    "maxPeriod": 28,
+    "outputX": -1,
+    "out": {
+     "cosinorx": -1,
+     "period": -1,
+     "amplitude": -1,
+     "mesor": -1,
+     "acrophase": -1
+    }
+   },
+   "compareOutputs": [
+    "cosinorx",
+    "cosinory",
+    "period",
+    "mesor",
+    "acrophase"
+   ],
+   "rTolerance": 1e-06,
+   "rToleranceWhy": "Nonlinear fit: R uses optim(L-BFGS-B), scipy trust-region least_squares, JS Levenberg-Marquardt; all reach the same bounded optimum to ~1e-8."
+  },
+  {
+   "id": "tp-cosinor-free-period-trend-bound",
+   "kind": "tableProcess",
+   "jsName": "Cosinor",
+   "pyFunc": "cosinor",
+   "rFunc": "cosinor",
+   "_comment": "A weak 24 h rhythm on a strong linear trend with the default 1 to 48 h range. Unbounded, the free fit followed the trend out of the circadian range; now every language stops on the 48 h bound (and the JS node warns).",
+   "generate": {
+    "type": "rhythm",
+    "n": 336,
+    "period": 24,
+    "amp": 2,
+    "mesor": 10,
+    "phase": 6,
+    "noise": 1,
+    "trend": 0.2,
+    "seed": 612,
+    "refs": {
+     "x": "t",
+     "y": "y"
+    }
+   },
+   "args": {
+    "xIN": "@t",
+    "yIN": [
+     "@y"
+    ],
+    "Ncurves": 1,
+    "useFixedPeriod": false,
+    "outputX": -1,
+    "out": {
+     "cosinorx": -1,
+     "period": -1,
+     "mesor": -1,
+     "acrophase": -1
+    }
+   },
+   "compareOutputs": [
+    "cosinorx",
+    "cosinory",
+    "period",
+    "mesor",
+    "acrophase"
+   ],
+   "rTolerance": 1e-06,
+   "rToleranceWhy": "Nonlinear fit (see tp-cosinor-free-period-range)."
+  },
+  {
+   "id": "tp-cosinor-fixed-ci-short-record",
+   "kind": "tableProcess",
+   "jsName": "Cosinor",
+   "pyFunc": "cosinor",
+   "_comment": "Short (1.4 cycle) fixed-period record, where cov(beta, gamma) is not negligible: pins the delta-method amplitude CI (full covariance) and the time-of-peak acrophase CI, JS vs Python.",
+   "generate": {
+    "type": "rhythm",
+    "n": 34,
+    "period": 24,
+    "amp": 5,
+    "mesor": 20,
+    "phase": 22,
+    "noise": 2,
+    "seed": 613,
+    "refs": {
+     "x": "t",
+     "y": "y"
+    }
+   },
+   "args": {
+    "xIN": "@t",
+    "yIN": [
+     "@y"
+    ],
+    "Ncurves": 1,
+    "useFixedPeriod": true,
+    "fixedPeriod": 24,
+    "nHarmonics": 1,
+    "alpha": 0.05,
+    "outputX": -1,
+    "out": {
+     "cosinorx": -1,
+     "amplitude": -1,
+     "amplitude_ciLow": -1,
+     "amplitude_ciHigh": -1,
+     "acrophase": -1,
+     "acrophase_ciLow": -1,
+     "acrophase_ciHigh": -1
+    }
+   },
+   "compareOutputs": [
+    "amplitude",
+    "amplitude_ciLow",
+    "amplitude_ciHigh",
+    "acrophase",
+    "acrophase_ciLow",
+    "acrophase_ciHigh"
+   ]
   },
   {
    "id": "tp-binneddata",

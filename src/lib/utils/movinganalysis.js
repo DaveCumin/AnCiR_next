@@ -169,13 +169,12 @@ function computeStatsForWindow(tt, yy, args) {
 			for (let h = 0; h < r.harmonics.length; h++) {
 				const k = h + 1;
 				stats[`H${k}_amplitude`] = r.harmonics[h].amplitude;
-				// fitCosinorFixed returns the CLASSICAL acrophase; the peak time is
-				// wrap(-acrophase_hrs). The standalone Cosinor node already converts
-				// (Cosinor.svelte, "convert here to the same peak-time convention"),
-				// and this path did NOT — so a rhythm peaking at 08:00 was reported
-				// as 16:00, disagreeing with the Cosinor node on the same data.
-				// Caught by the util-movingwindows-cosinor-relamp parity fixture.
-				stats[`H${k}_acrophase`] = wrapToPeriod(-r.harmonics[h].acrophase_hrs, periodUsed / k);
+				// fitCosinorFixed reports acrophase_hrs as the time of peak, the
+				// convention the Cosinor node uses. (It once returned the classical
+				// wrap(−t_peak) and this path forgot to negate it, reporting a rhythm
+				// peaking at 08:00 as 16:00; caught by the
+				// util-movingwindows-cosinor-relamp parity fixture.)
+				stats[`H${k}_acrophase`] = wrapToPeriod(r.harmonics[h].acrophase_hrs, periodUsed / k);
 			}
 			// Guard the ratio: a MESOR at or near zero (a mean-centred or
 			// zero-baseline signal) makes amplitude/MESOR meaningless or infinite.
@@ -191,6 +190,9 @@ function computeStatsForWindow(tt, yy, args) {
 			return stats;
 		}
 		const N = Math.max(1, args.Ncurves ?? 1);
+		// No explicit period range: each window's free fit is bounded by what the
+		// window can resolve (Nyquist period to the window span; see
+		// resolvePeriodRange in cosinor.js).
 		const r = fitCosineCurves(tt, yy, N);
 		if (!r || !r.parameters?.cosines?.length) return stats;
 		for (let c = 0; c < r.parameters.cosines.length; c++) {
