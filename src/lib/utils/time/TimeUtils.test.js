@@ -15,7 +15,10 @@ import {
 	getstartTimeOffset,
 	addTime,
 	forceFormat,
-	getGuessedFormat
+	getGuessedFormat,
+	parseTimeStrict,
+	hasTimeFormat,
+	describeTimeFormatProblem
 } from './TimeUtils.js';
 import { formatTimeAxisTick } from './displayTime.js';
 
@@ -366,5 +369,70 @@ describe('single-width tokens accept padded and unpadded values', () => {
 		const fmt = guessDateofArray(times);
 		const bad = times.filter((t) => !Number.isFinite(getUNIXDate(t, fmt)));
 		expect(bad).toEqual([]);
+	});
+});
+
+// When the guesser recognises nothing it returns [], and Column.timeFormat also
+// defaults to []. getUNIXDate(x, []) used to throw a TypeError from inside dayjs,
+// which Column.getData swallowed, handing raw strings on as "times".
+describe('no time format ([] or empty string)', () => {
+	it('hasTimeFormat treats [] and blank strings as no format', () => {
+		expect(hasTimeFormat([])).toBe(false);
+		expect(hasTimeFormat('')).toBe(false);
+		expect(hasTimeFormat('  ')).toBe(false);
+		expect(hasTimeFormat(undefined)).toBe(false);
+		expect(hasTimeFormat('YYYY')).toBe(true);
+		expect(hasTimeFormat(['YYYY', 'YY'])).toBe(true);
+	});
+
+	it('getUNIXDate does not throw and passes the value through', () => {
+		expect(() => getUNIXDate('2020-01-01 9:30:5', [])).not.toThrow();
+		expect(Number(getUNIXDate('2020-01-01 9:30:5', []))).toBeNaN();
+		expect(getUNIXDate(1577836800000, [])).toBe(1577836800000);
+	});
+
+	it('parseTimeStrict and time differences return invalid rather than throwing', () => {
+		expect(parseTimeStrict('2020-01-01', []).isValid()).toBe(false);
+		expect(() => calculateTimeDifference('a', 'b', [])).not.toThrow();
+	});
+
+	it('parseTimeStrict tries each format of a list, with padding tolerance', () => {
+		const fmts = ['DD MMM YYYY', 'YYYY-MM-DD H:mm:s'];
+		expect(parseTimeStrict('2020-01-01 09:30:05', fmts).valueOf()).toBe(
+			Date.parse('2020-01-01T09:30:05Z')
+		);
+	});
+});
+
+describe('guessing unpadded minutes and seconds end to end', () => {
+	it('guesses a format that reads every row of a bare-seconds log', () => {
+		const rows = [];
+		for (let i = 0; i < 30; i++) {
+			const t = 9 * 3600 + 59 * 60 + i * 7;
+			rows.push(`2020-01-01 ${Math.floor(t / 3600)}:${Math.floor((t % 3600) / 60)}:${t % 60}`);
+		}
+		const fmt = guessDateofArray(rows);
+		expect(hasTimeFormat(fmt)).toBe(true);
+		const ms = rows.map((r) => getUNIXDate(r, fmt));
+		expect(ms.every(Number.isFinite)).toBe(true);
+		expect(ms[1] - ms[0]).toBe(7000);
+		expect(ms[29]).toBe(Date.parse('2020-01-01T10:02:23Z'));
+	});
+});
+
+describe('describeTimeFormatProblem', () => {
+	it('says so when there is no format', () => {
+		expect(describeTimeFormatProblem(['9:30:5'], [])).toMatch(/No time format was recognised/);
+	});
+
+	it('counts values the format does not read', () => {
+		const msg = describeTimeFormatProblem(['2020-01-01 09:00', 'garbage', ''], 'YYYY-MM-DD H:mm');
+		expect(msg).toMatch(/^1 of 2 values/);
+		expect(msg).toContain('"garbage"');
+	});
+
+	it('returns null when every value parses, or there is no text to parse', () => {
+		expect(describeTimeFormatProblem(['2020-01-01 09:00'], 'YYYY-MM-DD H:mm')).toBeNull();
+		expect(describeTimeFormatProblem([1577836800000], [])).toBeNull();
 	});
 });

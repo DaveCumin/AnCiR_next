@@ -111,6 +111,20 @@ function roundTripsPadTolerant(input, dt, fmt) {
 }
 
 /**
+ * Whether `fmt` is something a time value can be parsed with: a non-empty string,
+ * or a non-empty array of them. `''` and `[]` both mean "no format yet".
+ * @param {unknown} fmt
+ */
+export function hasTimeFormat(fmt) {
+	if (typeof fmt === 'string') return fmt.trim() !== '';
+	return (
+		Array.isArray(fmt) &&
+		fmt.length > 0 &&
+		fmt.every((f) => typeof f === 'string' && f.trim() !== '')
+	);
+}
+
+/**
  * Strictly parse `value` against a dayjs format string, as `dayjs(value, fmt, true)`
  * does, except that single-width numeric tokens (H h m s D M) accept a zero-padded
  * value too. Out-of-range values (hour 25, 30 February, month 13) are still
@@ -124,6 +138,19 @@ function roundTripsPadTolerant(input, dt, fmt) {
  */
 export function parseTimeStrict(value, fmt, { utc = true } = {}) {
 	const make = utc ? dayjs.utc : dayjs;
+	// No format (Column.timeFormat defaults to [], and the guesser returns [] when
+	// it recognises nothing): an invalid instant, not a throw from inside dayjs.
+	if (!hasTimeFormat(fmt)) return make(NaN);
+	if (Array.isArray(fmt)) {
+		// dayjs accepts a list of formats; try each with the same padding rules.
+		let first;
+		for (const f of fmt) {
+			const dt = parseTimeStrict(value, f, { utc });
+			if (dt.isValid()) return dt;
+			first ??= dt;
+		}
+		return first;
+	}
 	const text = normalizeMeridiemText(value);
 	const exact = make(text, fmt, true);
 	if (exact.isValid() || typeof text !== 'string' || typeof fmt !== 'string') return exact;
@@ -326,13 +353,42 @@ export function formatTimeFromISO(timeString) {
 
 	return `${day} ${monthText} ${year} ${hours}:${minutes}:${seconds}`;
 }
+// Both return the input unchanged when there is no format ('' or []), so numeric
+// epoch-ms values pass through and text becomes NaN at the caller's Number().
 export function getISODate(stringIN, formatIN) {
-	if (!formatIN) return stringIN;
+	if (!hasTimeFormat(formatIN)) return stringIN;
 	return parseTimeStrict(stringIN, normalizeTimeFormat(formatIN)).toISOString();
 }
 export function getUNIXDate(stringIN, formatIN) {
-	if (!formatIN) return stringIN;
+	if (!hasTimeFormat(formatIN)) return stringIN;
 	return parseTimeStrict(stringIN, normalizeTimeFormat(formatIN)).valueOf();
+}
+
+/**
+ * A user-facing explanation of why a text time column will show blanks, or null
+ * when its format reads every sampled value. Samples at most `maxSample` non-empty
+ * text values so it stays cheap on large columns.
+ * @param {unknown[]} values raw column values
+ * @param {unknown} fmt the column's timeFormat
+ * @param {number} [maxSample]
+ * @returns {string | null}
+ */
+export function describeTimeFormatProblem(values, fmt, maxSample = 200) {
+	if (!Array.isArray(values)) return null;
+	const sample = [];
+	for (const v of values) {
+		if (typeof v === 'string' && v.trim() !== '') sample.push(v);
+		if (sample.length >= maxSample) break;
+	}
+	if (sample.length === 0) return null;
+	if (!hasTimeFormat(fmt)) {
+		return `No time format was recognised for values like "${sample[0]}". Type one here (for example YYYY-MM-DD H:mm:ss) so they can be read as times; until then they are blank.`;
+	}
+	const normalized = Array.isArray(fmt) ? fmt.map(normalizeTimeFormat) : normalizeTimeFormat(fmt);
+	const bad = sample.filter((v) => !parseTimeStrict(v, normalized).isValid());
+	if (bad.length === 0) return null;
+	const scope = sample.length === maxSample ? 'sampled values' : 'values';
+	return `${bad.length} of ${sample.length} ${scope} (e.g. "${bad[0]}") do not match this format and will be blank.`;
 }
 export function addTime(start, hoursIN) {
 	return formatTimeFromISO(dayjs(start).add(hoursIN, 'hour').toISOString());
