@@ -47,13 +47,14 @@ describe('Scatterplot overlay rendering', () => {
 		const { container } = render(Scatterplot, { props: { theData: wrapper, which: 'plot' } });
 		const rules = container.querySelectorAll('line.overlay-rule');
 		expect(rules).toHaveLength(2);
-		// plotwidth = 400 - 50 - 30 = 320 over the domain [0, 10] → 32px per unit, plus the
-		// left padding. Both endpoints span the plot height (300 - 20 - 30 = 250).
-		expect(Number(rules[0].getAttribute('x1'))).toBeCloseTo(50 + 64);
-		expect(Number(rules[0].getAttribute('x2'))).toBeCloseTo(50 + 64);
+		// plotwidth = 400 - 50 - 30 = 320 over the domain (the data's [0, 10] plus a little
+		// marker room), plus the left padding. Both endpoints span the plot height
+		// (300 - 20 - 30 = 250).
+		expect(Number(rules[0].getAttribute('x1'))).toBeCloseTo(50 + s.XScale(2));
+		expect(Number(rules[0].getAttribute('x2'))).toBeCloseTo(50 + s.XScale(2));
 		expect(Number(rules[0].getAttribute('y1'))).toBeCloseTo(20);
 		expect(Number(rules[0].getAttribute('y2'))).toBeCloseTo(20 + 250);
-		expect(Number(rules[1].getAttribute('x1'))).toBeCloseTo(50 + 160);
+		expect(Number(rules[1].getAttribute('x1'))).toBeCloseTo(50 + s.XScale(5));
 		expect(rules[0].getAttribute('stroke')).toBe('#C0392B');
 		expect(rules[0].getAttribute('stroke-width')).toBe('2');
 		expect(rules[0].getAttribute('stroke-dasharray')).toBe('5, 5');

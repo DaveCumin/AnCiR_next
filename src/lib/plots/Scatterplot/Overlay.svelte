@@ -367,10 +367,19 @@
 			const isTime = ctx?.xIsTime ?? parent?.anyXdataTime ?? false;
 			if (!Number.isFinite(minX) || !Number.isFinite(maxX)) return [];
 
-			let bandStart = this.useDataMin ? minX : this.startTimeHours;
 			const bandWidth = isTime ? this.nightDurationHours * MS_PER_HOUR : this.nightDurationHours;
 			const step = isTime ? this.repeatEveryHours * MS_PER_HOUR : this.repeatEveryHours;
 			if (!(step > 0) || !(bandWidth > 0)) return [];
+			// Following the data: the cycle is anchored at the DATA minimum (the domain's
+			// automatic ends carry a little room for markers, which must not shift the phase),
+			// and continued backwards across that room so the pattern reaches the axis.
+			let bandStart = this.useDataMin
+				? (ctx?.xAnchorMin ?? parent?.xlimsUnpadded?.[0] ?? minX)
+				: this.startTimeHours;
+			if (this.useDataMin && Number.isFinite(bandStart) && bandStart > minX) {
+				bandStart -= Math.ceil((bandStart - minX) / step) * step;
+			}
+			if (!Number.isFinite(bandStart)) return [];
 
 			const segments = [];
 			while (bandStart < maxX) {
@@ -394,7 +403,7 @@
 		}
 
 		/**
-		 * What to draw, as plain data. `ctx` = `{ xDomainMin, xDomainMax, xIsTime }`
+		 * What to draw, as plain data. `ctx` = `{ xDomainMin, xDomainMax, xAnchorMin, xIsTime }`
 		 * (only repeating bands read it; each falls back to the parent plot).
 		 *
 		 *   line             → { kind:'line', orientation:'vertical'|'horizontal', positions:number[] }

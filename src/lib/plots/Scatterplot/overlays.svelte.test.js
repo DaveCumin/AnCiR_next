@@ -23,14 +23,24 @@ function mkCol(values, type = 'number') {
 	return c.id;
 }
 
-/** A scatter with one number series x=0..9, y=10..19. */
-function mkScatter() {
+/**
+ * A scatter with one number series x=0..9, y=10..19.
+ *
+ * `marks: false` draws neither points nor line, so the automatic domain carries no room
+ * for markers (markerPaddedDomain) and equals the data/overlay EXTENT exactly, which is
+ * what the domain-extension tests below are about. Marker room has its own tests.
+ */
+function mkScatter({ marks = true } = {}) {
 	const xId = mkCol([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 	const yId = mkCol([10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
 	const parentBox = { id: 1, width: 400, height: 300 };
 	const s = new Scatterplotclass(parentBox, null);
 	s.parentBox = parentBox;
 	s.addData({ x: { refId: xId }, y: { refId: yId } });
+	if (!marks) {
+		s.data[0].points.draw = false;
+		s.data[0].line.draw = false;
+	}
 	return { s, xId, yId };
 }
 
@@ -219,7 +229,8 @@ describe('persistence', () => {
 					}
 				]
 			});
-			expect(s.xlims).toEqual([0, 167]);
+			// The data extent; the drawn domain adds a little marker room either side.
+			expect(s.xlimsUnpadded).toEqual([0, 167]);
 			expect(s.anyXdataTime).toBe(false);
 			expect(s.overlays).toHaveLength(1);
 			const o = s.overlays[0];
@@ -227,7 +238,14 @@ describe('persistence', () => {
 			expect(o.form).toBe('repeating');
 			expect(o.name).toBe('Night');
 			expect(o.fill).toBe('#2C2C2C30');
-			expect(o.geometry({}).segments).toEqual(NIGHTBAND_REPEATING_SEGMENTS);
+			// Over the domain the legacy segments were recorded on (the data extent). On the
+			// drawn domain the pattern also continues into the marker room at either end.
+			expect(o.geometry({ xDomainMin: 0, xDomainMax: 167 }).segments).toEqual(
+				NIGHTBAND_REPEATING_SEGMENTS
+			);
+			const drawn = o.geometry(s.overlayContext()).segments;
+			expect(drawn[0]).toEqual({ x0: 0, x1: 12 });
+			expect(drawn.at(-1).x1).toBeCloseTo(s.xlims[1]);
 			// Saving again writes the migrated shape only.
 			const json = JSON.parse(JSON.stringify(s.toJSON()));
 			expect(json.nightBands).toBeUndefined();
@@ -356,7 +374,7 @@ describe('getDownloadData', () => {
 
 describe('auto-domain extension', () => {
 	it('a vertical line beyond the data widens the AUTO x domain; manual limits win', () => {
-		const { s } = mkScatter();
+		const { s } = mkScatter({ marks: false });
 		expect(s.xlims).toEqual([0, 9]);
 		const line = s.addOverlay('line');
 		line.setTyped('at', [-2, 14.5]);
@@ -369,7 +387,7 @@ describe('auto-domain extension', () => {
 	});
 
 	it('a horizontal band beyond the data widens the AUTO left y domain', () => {
-		const { s } = mkScatter();
+		const { s } = mkScatter({ marks: false });
 		expect(s.ylimsLeft).toEqual([10, 19]);
 		const band = s.addOverlay('band', 'horizontal');
 		band.setTyped('lower', [5]);
@@ -380,7 +398,7 @@ describe('auto-domain extension', () => {
 	});
 
 	it('a ribbon extends both axes; a repeating band extends neither', () => {
-		const { s } = mkScatter();
+		const { s } = mkScatter({ marks: false });
 		const ribbon = s.addOverlay('band', 'ribbon');
 		ribbon.setTyped('x', [2, 12]);
 		ribbon.setTyped('lower', [8, 8]);

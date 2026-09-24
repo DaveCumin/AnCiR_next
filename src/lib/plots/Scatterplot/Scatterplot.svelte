@@ -17,6 +17,8 @@
 	import Overlay, { OverlayClass } from './Overlay.svelte';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
+	import { LEGEND_MARGIN } from '$lib/components/plotbits/legendLayout.js';
+	import { markerPaddedDomain } from '$lib/plots/axisDomain.js';
 
 	export const Scatterplot_defaultDataInputs = ['x', 'y'];
 	// Tab keys derive from these headers lower-cased (controlTabsCoverage.test.js):
@@ -372,7 +374,29 @@
 				ymin = Math.min(ymin, ext[0]);
 				ymax = Math.max(ymax, ext[1]);
 			}
-			return [manual[0] != null ? manual[0] : ymin, manual[1] != null ? manual[1] : ymax];
+			// Room for the markers at the AUTOMATIC ends only; a limit the user typed (or a
+			// zoom set) is kept exactly. See markerPaddedDomain.
+			const [plo, phi] = markerPaddedDomain(
+				ymin,
+				ymax,
+				this.markerPadPx(sideData),
+				this.plotheight,
+				{
+					log: side === 'left' ? this.yLogScaleLeft : this.yLogScaleRight
+				}
+			);
+			return [manual[0] != null ? manual[0] : plo, manual[1] != null ? manual[1] : phi];
+		}
+
+		// Half the widest mark any of these series draws, in px: marker radius, or half the
+		// line width, plus a pixel so the antialiased edge is inside too.
+		markerPadPx(series) {
+			let pad = 0;
+			for (const d of series) {
+				if (d.points?.draw) pad = Math.max(pad, Number(d.points.radius) || 0);
+				if (d.line?.draw) pad = Math.max(pad, (Number(d.line.strokeWidth) || 0) / 2);
+			}
+			return pad > 0 ? pad + 1 : 0;
 		}
 
 		ylimsLeft = $derived.by(() => this.#yLimitsFor('left', this.ylimsLeftIN));
@@ -380,10 +404,11 @@
 		// Right Y-axis limits
 		ylimsRight = $derived.by(() => this.#yLimitsFor('right', this.ylimsRightIN));
 
-		xlims = $derived.by(() => {
-			if (this.data.length === 0) {
-				return [0, 0];
-			}
+		// The x range the DATA (and overlays) ask for, before any room is left for markers:
+		// [xmin, xmax], or null when there is none. Also the anchor for repeating bands that
+		// start at the data minimum, which must not move when the domain is padded.
+		xExtent = $derived.by(() => {
+			if (this.data.length === 0) return null;
 
 			let xmin = Infinity;
 			let xmax = -Infinity;
@@ -414,21 +439,44 @@
 				xmax = Math.ceil(max([xmax, ...validx]));
 			});
 
-			// No valid x anywhere — return a benign finite domain rather than
-			// [∞,-∞] (which d3 renders as epoch ticks for a time scale).
-			if (!Number.isFinite(xmin) || !Number.isFinite(xmax)) {
-				return [this.xlimsIN[0] ?? 0, this.xlimsIN[1] ?? 1];
-			}
+			if (!Number.isFinite(xmin) || !Number.isFinite(xmax)) return null;
 
 			const ext = this.overlayExtent('x');
 			if (ext) {
 				xmin = Math.min(xmin, ext[0]);
 				xmax = Math.max(xmax, ext[1]);
 			}
+			return [xmin, xmax];
+		});
 
+		// The x limits without marker room: manual where set, else the data extent.
+		xlimsUnpadded = $derived.by(() => {
+			const e = this.xExtent;
+			if (!e) return this.data.length === 0 ? [0, 0] : [this.xlimsIN[0] ?? 0, this.xlimsIN[1] ?? 1];
+			return [this.xlimsIN[0] ?? e[0], this.xlimsIN[1] ?? e[1]];
+		});
+
+		xlims = $derived.by(() => {
+			if (this.data.length === 0) return [0, 0];
+			// No valid x anywhere — return a benign finite domain rather than
+			// [∞,-∞] (which d3 renders as epoch ticks for a time scale).
+			const e = this.xExtent;
+			if (!e) return [this.xlimsIN[0] ?? 0, this.xlimsIN[1] ?? 1];
+			const [xmin, xmax] = e;
+
+			// As for y: marker room at the automatic ends only. The width used is the one the
+			// plot will have if an outside legend is reserved (the narrowest it can be), NOT
+			// `plotwidth`: that depends on the legend decision, which depends on these limits.
+			const box = this.legendLayout.box;
+			const mayGoOutside =
+				box && (this.legend?.position === 'auto' || this.legend?.position === 'outsideright');
+			const lengthPx = this.basePlotWidth - (mayGoOutside ? box.width + 2 * LEGEND_MARGIN : 0);
+			const [plo, phi] = markerPaddedDomain(xmin, xmax, this.markerPadPx(this.data), lengthPx, {
+				log: this.xLogScale && !this.anyXdataTime
+			});
 			return [
-				this.xlimsIN[0] != null ? this.xlimsIN[0] : xmin,
-				this.xlimsIN[1] != null ? this.xlimsIN[1] : xmax
+				this.xlimsIN[0] != null ? this.xlimsIN[0] : plo,
+				this.xlimsIN[1] != null ? this.xlimsIN[1] : phi
 			];
 		});
 		xAxis = $state();
@@ -688,7 +736,14 @@
 
 		/** The draw context every overlay's geometry() takes (repeating bands read it). */
 		overlayContext() {
-			return { xDomainMin: this.xlims[0], xDomainMax: this.xlims[1], xIsTime: this.anyXdataTime };
+			return {
+				xDomainMin: this.xlims[0],
+				xDomainMax: this.xlims[1],
+				// Where a band that follows the data starts: the data minimum (or the user's
+				// minimum), not the padded edge of the domain.
+				xAnchorMin: this.xlimsUnpadded[0],
+				xIsTime: this.anyXdataTime
+			};
 		}
 
 		getDownloadData() {

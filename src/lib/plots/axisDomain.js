@@ -73,3 +73,38 @@ export function finiteExtent(arrays) {
 	}
 	return min === Infinity ? { min: null, max: null } : { min, max };
 }
+
+/**
+ * Widen [min, max] just enough that a mark `padPx` wide at either end of a `lengthPx` axis
+ * stays inside the plot area.
+ *
+ * For plots whose domain is the data's exact range (the scatterplot): a point at the maximum
+ * sits ON the edge, so half of its marker is drawn outside the plot area, over the axis or
+ * the margin. Solving for the span S' whose px-per-unit leaves `padPx` at each end:
+ * S' = S / (1 - 2 padPx / lengthPx). The pad is capped at a quarter of the axis, so a tiny
+ * plot with a large marker is not squeezed to nothing. On a log axis the same is done in
+ * log space. Non-finite input is returned unchanged.
+ *
+ * @param {number} min
+ * @param {number} max
+ * @param {number} padPx
+ * @param {number} lengthPx
+ * @param {{log?: boolean}} [opts]
+ * @returns {[number, number]}
+ */
+export function markerPaddedDomain(min, max, padPx, lengthPx, { log = false } = {}) {
+	if (!Number.isFinite(min) || !Number.isFinite(max)) return [min, max];
+	if (!(padPx > 0) || !(lengthPx > 0)) return [min, max];
+	const f = Math.min(padPx / lengthPx, 0.25);
+	const widen = (lo, hi) => {
+		const span = hi - lo || Math.abs(hi) || 1;
+		const extra = (span / (1 - 2 * f) - span) / 2;
+		return [lo - extra, hi + extra];
+	};
+	if (log) {
+		if (!(min > 0) || !(max > 0)) return [min, max];
+		const [a, b] = widen(Math.log10(min), Math.log10(max));
+		return [10 ** a, 10 ** b];
+	}
+	return widen(min, max);
+}

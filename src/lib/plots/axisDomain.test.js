@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { paddedDomain, finiteExtent } from './axisDomain.js';
+import { paddedDomain, finiteExtent, markerPaddedDomain } from './axisDomain.js';
 import { Periodogramclass } from './Periodogram/Periodogram.svelte';
 
 describe('paddedDomain', () => {
@@ -60,5 +60,30 @@ describe('Periodogram y domain', () => {
 	it('loads the old one-element-array Min/Max values as plain numbers', () => {
 		const p = Periodogramclass.fromJSON(null, { data: [], ylimsIN: [[0], [500]] });
 		expect(p.ylimsIN).toEqual([0, 500]);
+	});
+});
+
+describe('markerPaddedDomain', () => {
+	it('leaves exactly padPx at each end of the axis', () => {
+		const [lo, hi] = markerPaddedDomain(0, 100, 5, 400);
+		const px = (v) => ((v - lo) / (hi - lo)) * 400;
+		expect(px(0)).toBeCloseTo(5, 6);
+		expect(px(100)).toBeCloseTo(395, 6);
+	});
+
+	it('works in log space on a log axis and stays positive', () => {
+		const [lo, hi] = markerPaddedDomain(1, 1000, 10, 300, { log: true });
+		expect(lo).toBeGreaterThan(0);
+		expect(lo).toBeLessThan(1);
+		expect(hi).toBeGreaterThan(1000);
+		const px = (v) => ((Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo))) * 300;
+		expect(px(1)).toBeCloseTo(10, 6);
+	});
+
+	it('is a no-op without a pad, and caps a pad too big for the axis', () => {
+		expect(markerPaddedDomain(0, 10, 0, 400)).toEqual([0, 10]);
+		const [lo, hi] = markerPaddedDomain(0, 10, 1000, 100);
+		expect(Number.isFinite(lo) && Number.isFinite(hi)).toBe(true);
+		expect(hi - lo).toBeCloseTo(20, 6); // quarter-axis cap: span doubles
 	});
 });
