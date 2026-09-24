@@ -17,15 +17,10 @@
 	// deliberately pale grey: the ColourPicker writes a hex literal, never this
 	// token reference, so a user's choice is always distinguishable from the default
 	// even when the two resolve to the same colour.
-	/**
-	 * Inset the corner presets sit at, and the span the custom fractions map onto.
-	 *
-	 * Shared deliberately: because custom placement runs over the SAME inset area,
-	 * fraction 0 lands exactly where a left preset does and fraction 1 exactly where a
-	 * right preset does. That is what lets switching to Custom keep the legend
-	 * precisely where it already was instead of nudging it by the margin.
-	 */
-	export const LEGEND_MARGIN = 10;
+	// LEGEND_MARGIN lives in legendLayout.js (plots reserving room for an outside legend
+	// need it without importing a component) and is re-exported here for existing callers.
+	import { LEGEND_MARGIN as SHARED_LEGEND_MARGIN } from './legendLayout.js';
+	export const LEGEND_MARGIN = SHARED_LEGEND_MARGIN;
 
 	/**
 	 * The custom fraction equivalent to each corner preset.
@@ -172,9 +167,9 @@
 		// plot area (legendLayout.chooseLegendPlacement). A plot that passes nothing gets top
 		// right for 'auto', which is what every legend did before 'auto' existed.
 		autoPlacement = null,
-		// x of an OUTSIDE legend, relative to the plot area's left edge. Set only by a plot that
-		// reserves the room (it knows where its right axis ends); null means it cannot.
-		outsideX = null,
+		// { x, y } of an OUTSIDE legend, relative to the plot area's top-left corner. Set only by
+		// a plot that reserves the room (legendAuto.svelte.js); null means it cannot.
+		outsidePosition = null,
 		// Controls only: whether to offer 'Outside right'.
 		canPlaceOutside = false,
 		// This figure's style, passed by the plot that renders this legend. See the
@@ -287,7 +282,7 @@
 
 		switch (legendData.position) {
 			case 'auto':
-				if (autoPlacement?.outside && outsideX != null) return { x: outsideX, y: 0 };
+				if (autoPlacement?.outside && outsidePosition) return outsidePosition;
 				if (autoPlacement && !autoPlacement.outside) {
 					return { x: autoPlacement.x, y: autoPlacement.y };
 				}
@@ -295,7 +290,7 @@
 			case 'outsideright':
 				// Top-aligned with the plot area, in the room the plot reserved. A plot that
 				// reserves none falls back to the conventional corner.
-				if (outsideX != null) return { x: outsideX, y: 0 };
+				if (outsidePosition) return outsidePosition;
 				return { x: plotWidth - width - margin, y: margin };
 			case 'custom': {
 				// Runs over the same inset area the presets use, so fraction 0 and 1 coincide

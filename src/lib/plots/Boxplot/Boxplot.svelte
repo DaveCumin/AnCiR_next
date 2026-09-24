@@ -19,6 +19,7 @@
 		pairwiseMannWhitney
 	} from '$lib/tableProcesses/GroupComparison.svelte';
 	import { resolveCssVar } from '$lib/plots/exportStyle.js';
+	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 
 	/**
@@ -364,7 +365,53 @@
 			this.#padding = v;
 		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		// Width before an outside legend takes its share; see legendAuto.svelte.js.
+		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		basePlotHeight = $derived(this.plotheight);
+		plotwidth = $derived(this.basePlotWidth - this.legendLayout.reserveW);
+
+		legendLayout = new LegendAutoLayout(this, {
+			obstacles: (w, h) => this.legendObstacles(w, h),
+			outside: rightOfPlot(() => ({ baseWidth: this.basePlotWidth }))
+		});
+
+		// What a legend must not cover, in px over a w x h plot area: each category's full
+		// vertical extent (box, whiskers, outliers, jittered points and violin all sit inside
+		// it) across most of the category's width, and the significance brackets.
+		legendObstacles(w, h) {
+			const xs = scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, w]);
+			const ys = scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([h, 0]);
+			const cats = this.uniqueXValues.map(String);
+			const rects = [];
+			this.data.forEach((d, idx) => {
+				const yData = d.y.getData() ?? [];
+				const xRaw = d.x.getData() ?? [];
+				const label = String(d.label || `Box Plot ${idx + 1}`);
+				const lo = new Array(cats.length).fill(Infinity);
+				const hi = new Array(cats.length).fill(-Infinity);
+				for (let i = 0; i < yData.length; i++) {
+					const v = yData[i];
+					if (v == null || Number.isNaN(v)) continue;
+					const c = cats.indexOf(xRaw.length > 0 ? String(xRaw[i]) : label);
+					if (c < 0) continue;
+					if (v < lo[c]) lo[c] = v;
+					if (v > hi[c]) hi[c] = v;
+				}
+				lo.forEach((vlo, c) => {
+					if (vlo <= hi[c]) rects.push([xs(c - 0.45), ys(hi[c]), xs(c + 0.45), ys(vlo)]);
+				});
+			});
+			if (this.showSigBars && this.sigBarLevels.length > 0) {
+				const { dataMax } = this.sigBarResult;
+				const levelStep = (this.ylims[1] - this.ylims[0]) * 0.1 * this.sigBarSpacing;
+				const base = Number.isFinite(dataMax) ? dataMax : this.ylims[1];
+				for (const e of this.sigBarLevels) {
+					const y = ys(base + levelStep * (e.level + 1)) + this.sigBarYOffset;
+					rects.push([xs(e.i), y - 16, xs(e.j), y + 6]);
+				}
+			}
+			return [{ rects }];
+		}
 
 		xlimsIN = $state([null, null]);
 		ylimsIN = $state([null, null]);
@@ -405,6 +452,7 @@
 
 		// Get all unique x values across all data series
 		uniqueXValues = $derived.by(() => {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
 			const allXValues = new Set();
 			this.data.forEach((d, i) => {
 				const xData = d.x.getData() ?? [];
@@ -468,6 +516,7 @@
 				if (!d.boxPlot?.draw) return;
 				const xData = d.x.getData() ?? [];
 				const yData = d.y.getData() ?? [];
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
 				const groups = new Map();
 				if (xData.length > 0) {
 					xData.forEach((cat, j) => {
@@ -681,6 +730,7 @@
 				const label = datum.label || `Data ${d}`;
 				const xData = datum.x.getData() ?? [];
 				const yData = datum.y.getData() ?? [];
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
 				const groups = new Map();
 				xData.forEach((cat, i) => {
 					const val = yData[i];
@@ -698,6 +748,7 @@
 					});
 				}
 				// Pre-compute stats per category
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
 				const statsMap = new Map();
 				allCategories.forEach((cat) => {
 					const vals = groups.get(cat) ?? [];
@@ -964,10 +1015,6 @@
 	});
 
 	// Custom tick values for x-axis to show actual unique x values
-	function getXAxisTickValues(uniqueXValues) {
-		return uniqueXValues.map((val, i) => ({ position: i, label: String(val) }));
-	}
-
 	function formatCategoryTick(value, categories) {
 		const idx = Math.round(Number(value));
 		if (!Number.isFinite(idx) || idx < 0 || idx >= categories.length) return '';
@@ -1001,7 +1048,12 @@
 	{#if appState.currentControlTab === 'properties'}
 		<div class="div-line"></div>
 
-		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
+		<Legend
+			legendData={theData.legend}
+			figureStyle={theData.parentBox?.style}
+			canPlaceOutside={theData.legendLayout.canPlaceOutside}
+			which="controls"
+		/>
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -1149,7 +1201,7 @@
 					     must be visible without expanding anything. -->
 					{#if theData.violinWarnings.length > 0}
 						<div class="data-warning">
-							{#each theData.violinWarnings as warning}
+							{#each theData.violinWarnings as warning, w (w)}
 								<p>⚠ {warning}</p>
 							{/each}
 						</div>
@@ -1248,7 +1300,7 @@
 					</div>
 					{#if theData.sigBarWarnings.length > 0}
 						<div class="data-warning">
-							{#each theData.sigBarWarnings as warning}
+							{#each theData.sigBarWarnings as warning, w (w)}
 								<p>⚠ {warning}</p>
 							{/each}
 						</div>
@@ -1258,7 +1310,7 @@
 				{#if theData.sigTableResult.pairs.length > 0}
 					<details class="tp-output-panel">
 						<summary class="tp-output-summary">Pairwise comparisons</summary>
-						{#each theData.getSigBarPreviewPairs() as pair}
+						{#each theData.getSigBarPreviewPairs() as pair, pi (pi)}
 							<div class="control-input-horizontal">
 								<div class="control-input">
 									<p><strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong></p>
@@ -1365,7 +1417,7 @@
 		width={theData.plot.viewWidth}
 		height={theData.plot.viewHeight}
 		viewBox="0 0 {theData.plot.viewWidth} {theData.plot.viewHeight}"
-		style={`background: var(--surface-card); position: absolute;`}
+		style="background: var(--surface-card); position: absolute;"
 		ontooltip={handleTooltip}
 	>
 		<!-- Y-axis -->
@@ -1400,7 +1452,7 @@
 		<!-- Violin overlays: rendered BEFORE the boxes so every violin sits behind
 		     every box, median line, and jittered point. -->
 		{#if theData.plot.showViolin}
-			{#each theData.plot.data as datum, i}
+			{#each theData.plot.data as datum, i (i)}
 				{#if datum.y.getData()?.length > 0}
 					<Violin
 						boxPlotData={datum.boxPlot}
@@ -1431,7 +1483,7 @@
 		{/if}
 
 		<!-- Box plots -->
-		{#each theData.plot.data as datum, i}
+		{#each theData.plot.data as datum, i (i)}
 			{#if datum.y.getData()?.length > 0}
 				{@const xScale = scaleLinear()
 					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
@@ -1474,6 +1526,8 @@
 			plotWidth={theData.plot.plotwidth}
 			plotHeight={theData.plot.plotheight}
 			padding={theData.plot.padding}
+			autoPlacement={theData.plot.legendLayout.auto}
+			outsidePosition={theData.plot.legendLayout.outsidePosition}
 			which="plot"
 		/>
 
@@ -1488,7 +1542,7 @@
 			{@const { dataMax } = theData.plot.sigBarResult}
 			{@const dataRange = theData.plot.ylims[1] - theData.plot.ylims[0]}
 			{@const levelStep = dataRange * 0.1 * theData.plot.sigBarSpacing}
-			{#each theData.plot.sigBarLevels as entry}
+			{#each theData.plot.sigBarLevels as entry, ei (ei)}
 				{@const xi = sigXScale(entry.i) + theData.plot.padding.left}
 				{@const xj = sigXScale(entry.j) + theData.plot.padding.left}
 				{@const barYData =

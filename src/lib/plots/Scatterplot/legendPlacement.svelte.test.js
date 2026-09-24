@@ -63,7 +63,7 @@ describe('scatterplot legend placement', () => {
 	it('keeps the top-right corner when the data leave it clear', () => {
 		// Two points, bottom left and top left: the top right is clear.
 		const p = scatter([0, 0], [0, 10]);
-		const a = p.legendAutoPlacement;
+		const a = p.legendLayout.auto;
 		expect(a.outside).toBe(false);
 		expect(a.name).toBe('topright');
 		expect(p.plotwidth).toBe(p.basePlotWidth);
@@ -73,31 +73,34 @@ describe('scatterplot legend placement', () => {
 		// Points everywhere, as in the paper figure.
 		const [xs, ys] = fullGrid();
 		const p = scatter(xs, ys);
-		expect(p.legendAutoPlacement.outside).toBe(true);
-		expect(p.legendOutside).toBe(true);
-		expect(p.plotwidth).toBeCloseTo(p.basePlotWidth - p.legendBox.width - LEGEND_MARGIN, 6);
+		expect(p.legendLayout.auto.outside).toBe(true);
+		expect(p.legendLayout.outsidePlacement != null).toBe(true);
+		expect(p.plotwidth).toBeCloseTo(p.basePlotWidth - p.legendLayout.box.width - LEGEND_MARGIN, 6);
 		// The legend sits just right of the plot area and ends where the area used to end.
-		expect(p.legendOutsideX).toBeCloseTo(p.plotwidth + LEGEND_MARGIN, 6);
-		expect(p.legendOutsideX + p.legendBox.width).toBeCloseTo(p.basePlotWidth, 6);
+		expect(p.legendLayout.outsidePosition.x).toBeCloseTo(p.plotwidth + LEGEND_MARGIN, 6);
+		expect(p.legendLayout.outsidePosition.x + p.legendLayout.box.width).toBeCloseTo(
+			p.basePlotWidth,
+			6
+		);
 	});
 
 	it('a saved legend keeps its saved corner and reserves nothing', () => {
 		const [xs, ys] = fullGrid();
 		const p = scatter(xs, ys, { position: 'topright', show: true });
 		expect(p.legend.position).toBe('topright');
-		expect(p.legendAutoPlacement).toBeNull();
+		expect(p.legendLayout.auto).toBeNull();
 		expect(p.plotwidth).toBe(p.basePlotWidth);
 	});
 
 	it('an explicit outside-right legend reserves room whatever the data', () => {
 		const p = scatter([0, 10], [10, 0], { position: 'outsideright', show: true });
-		expect(p.legendOutside).toBe(true);
+		expect(p.legendLayout.outsidePlacement != null).toBe(true);
 		expect(p.plotwidth).toBeLessThan(p.basePlotWidth);
 	});
 
 	it('a hidden legend reserves nothing', () => {
 		const p = scatter([0, 10], [10, 0], { position: 'outsideright', show: false });
-		expect(p.legendOutside).toBe(false);
+		expect(p.legendLayout.outsidePlacement != null).toBe(false);
 		expect(p.plotwidth).toBe(p.basePlotWidth);
 	});
 });

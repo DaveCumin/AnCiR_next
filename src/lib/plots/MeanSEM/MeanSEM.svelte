@@ -5,9 +5,9 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
+	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
-	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { meanSemByGroup } from '$lib/utils/meanSem.js';
 
 	/**
@@ -169,7 +169,42 @@
 			this.#padding = v;
 		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		// Width before an outside legend takes its share; see legendAuto.svelte.js.
+		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		basePlotHeight = $derived(this.plotheight);
+		plotwidth = $derived(this.basePlotWidth - this.legendLayout.reserveW);
+
+		legendLayout = new LegendAutoLayout(this, {
+			obstacles: (w, h) => this.legendObstacles(w, h),
+			outside: rightOfPlot(() => ({ baseWidth: this.basePlotWidth }))
+		});
+
+		// What a legend must not cover, in px over a w x h plot area: each mean marker, its
+		// error bar and caps, and the connecting line.
+		legendObstacles(w, h) {
+			const xs = scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, w]);
+			const ys = scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([h, 0]);
+			const cats = this.uniqueXValues.map(String);
+			const out = [];
+			this.data.forEach((d, i) => {
+				const dodge = this.dodgeFor(i);
+				const pts = d.stats.map((st) => ({ cx: cats.indexOf(String(st.x)) + dodge, ...st }));
+				const cap = Math.max(d.errorCapWidth ?? 0, 4) / 2;
+				const rects = d.showError
+					? pts
+							.filter((p) => p.sem > 0)
+							.map((p) => [xs(p.cx) - cap, ys(p.mean + p.sem), xs(p.cx) + cap, ys(p.mean - p.sem)])
+					: [];
+				out.push({
+					px: pts.map((p) => xs(p.cx)),
+					py: pts.map((p) => ys(p.mean)),
+					line: !!d.line?.draw,
+					radius: d.points?.draw ? (d.points.radius ?? 4) : 0,
+					rects
+				});
+			});
+			return out;
+		}
 
 		xlimsIN = $state([null, null]);
 		ylimsIN = $state([null, null]);
@@ -179,6 +214,7 @@
 
 		// Union of group keys across all series, numeric-aware sorted (matches Boxplot).
 		uniqueXValues = $derived.by(() => {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
 			const all = new Set();
 			this.data.forEach((d) => {
 				d.stats.forEach((s) => all.add(s.x));
@@ -323,7 +359,7 @@
 				: ['Stat', ...categories.map(String)];
 
 			const rows = [];
-			this.data.forEach((datum, d) => {
+			this.data.forEach((datum) => {
 				const label = datum.displayLabel;
 				const byX = new Map(datum.stats.map((s) => [String(s.x), s]));
 				statKeys.forEach((key) => {
@@ -459,7 +495,12 @@
 	{#if appState.currentControlTab === 'properties'}
 		<div class="div-line"></div>
 
-		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
+		<Legend
+			legendData={theData.legend}
+			figureStyle={theData.parentBox?.style}
+			canPlaceOutside={theData.legendLayout.canPlaceOutside}
+			which="controls"
+		/>
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -626,7 +667,7 @@
 		width={plot.viewWidth}
 		height={plot.viewHeight}
 		viewBox="0 0 {plot.viewWidth} {plot.viewHeight}"
-		style={`background: var(--surface-card); position: absolute;`}
+		style="background: var(--surface-card); position: absolute;"
 	>
 		<Axis
 			figureStyle={plot.viewStyle}
@@ -651,12 +692,12 @@
 			which="plot"
 		/>
 
-		{#each plot.data as datum, i}
+		{#each plot.data as datum, i (i)}
 			{@const pts = seriesPoints(plot, datum, i)}
 			<!-- Error bars: vertical whisker + caps at mean ± SEM -->
 			{#if datum.showError}
 				<g style={`transform: translate(${plot.padding.left}px, ${plot.padding.top}px);`}>
-					{#each pts as p}
+					{#each pts as p, pi (pi)}
 						{#if p.sem > 0}
 							{@const cx = xScale(p.cx)}
 							{@const yTop = yScale(p.mean + p.sem)}
@@ -726,6 +767,8 @@
 			plotWidth={plot.plotwidth}
 			plotHeight={plot.plotheight}
 			padding={plot.padding}
+			autoPlacement={plot.legendLayout.auto}
+			outsidePosition={plot.legendLayout.outsidePosition}
 			which="plot"
 		/>
 	</svg>

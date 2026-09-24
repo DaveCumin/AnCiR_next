@@ -21,6 +21,8 @@
 	import RoseWedges from '$lib/components/plotbits/RoseWedges.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
+	import { LegendAutoLayout } from '$lib/components/plotbits/legendAuto.svelte.js';
+	import { LEGEND_MARGIN } from '$lib/components/plotbits/legendLayout.js';
 	import {
 		seriesStats,
 		displayPeriodFor,
@@ -171,15 +173,113 @@
 				? displayPeriodFor('hours', this.period)
 				: displayPeriodFor(this.unit, this.period)
 		);
+		// The room inside the padding. The plot is the largest square that fits, drawn at the
+		// top left; an outside legend (legendAuto.svelte.js) takes its share of this first.
+		availWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		availHeight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
+		// The square before any legend reservation: what 'auto' decides on (the acyclic rule).
+		basePlotWidth = $derived(Math.max(40, Math.min(this.availWidth, this.availHeight)));
+		basePlotHeight = $derived(this.basePlotWidth);
 		plotSize = $derived(
 			Math.max(
 				40,
 				Math.min(
-					this.viewWidth - this.padding.left - this.padding.right,
-					this.viewHeight - this.padding.top - this.padding.bottom
+					this.availWidth - this.legendLayout.reserveW,
+					this.availHeight - this.legendLayout.reserveH
 				)
 			)
 		);
+
+		legendLayout = new LegendAutoLayout(this, {
+			obstacles: (w) => this.legendObstacles(w),
+			outside: (box, { explicit }) => this.legendOutside(box, explicit)
+		});
+
+		// An outside legend beside or below the square. It goes where the figure already has
+		// spare room if either side does (costing the plot nothing); otherwise on the side that
+		// shrinks the square least. 'Outside Right' chosen explicitly always goes right.
+		legendOutside(box, explicit) {
+			const M = LEGEND_MARGIN;
+			const W = this.availWidth;
+			const H = this.availHeight;
+			const needW = box.width + M;
+			const needH = box.height + M;
+			const sizeRight = Math.max(40, Math.min(W - needW, H));
+			const sizeBelow = Math.max(40, Math.min(W, H - needH));
+			const right = explicit || sizeRight >= sizeBelow;
+			if (right) {
+				return { reserveW: needW, reserveH: 0, x: sizeRight + M, y: 0, side: 'right' };
+			}
+			return {
+				reserveW: 0,
+				reserveH: needH,
+				x: Math.max(0, (sizeBelow - box.width) / 2),
+				y: sizeBelow + M,
+				side: 'below'
+			};
+		}
+
+		// What a legend must not cover, in px over a size x size square: the outer ring with
+		// its hour labels, the hint beneath, every point and the mean vectors. The inner grid
+		// is not an obstacle: a legend over faint rings reads fine, one over data does not.
+		legendObstacles(size) {
+			const P = createPolar({
+				cx: size / 2,
+				cy: size / 2,
+				radius: (size / 2) * 0.82,
+				period: this.displayPeriod
+			});
+			const out = [];
+			// Outer ring and labels: a band from the ring out past the label radius (+16 px).
+			const ringX = [];
+			const ringY = [];
+			for (let k = 0; k <= 96; k++) {
+				const [x, y] = P.toXY((this.displayPeriod * k) / 96, 1 + 16 / P.radius);
+				ringX.push(x);
+				ringY.push(y);
+			}
+			out.push({ px: ringX, py: ringY, line: true, radius: 18 });
+			// The hint line under the plot (see PolarGrid).
+			out.push({ rects: [[P.cx - 110, P.cy + P.radius + 24, P.cx + 110, P.cy + P.radius + 38]] });
+			const valueScale = scaleLinear().domain(this.valueAxis).range([INNER_RIM, OUTER_RIM]);
+			for (const d of this.data) {
+				if (d.draw) {
+					const px = [];
+					const py = [];
+					if (d.timeWired) {
+						d.angles.forEach((ph, i) => {
+							const v = d.rawValues[i];
+							if (!Number.isFinite(ph) || !Number.isFinite(v)) return;
+							const [x, y] = P.toXY(ph, valueScale(v));
+							px.push(x);
+							py.push(y);
+						});
+					} else {
+						const placed = placeCircularPoints(d.rawValues, {
+							placement: this.placement,
+							period: this.displayPeriod,
+							binWidth: this.binWidth,
+							dotRadius: d.radius,
+							plotRadius: P.radius,
+							maxStack: this.untimedMaxStack,
+							innerRim: INNER_RIM,
+							outerRim: OUTER_RIM
+						});
+						for (const pt of placed) {
+							const [x, y] = P.toXY(pt.value, pt.r01);
+							px.push(x);
+							py.push(y);
+						}
+					}
+					out.push({ px, py, radius: d.radius });
+				}
+				if (this.showMeanVectors && Number.isFinite(d.stats?.meanValue)) {
+					const [x, y] = P.toXY(d.stats.meanValue, d.stats.R);
+					out.push({ px: [P.cx, x], py: [P.cy, y], line: true, radius: 4 });
+				}
+			}
+			return out;
+		}
 		perSeriesStats = $derived.by(() =>
 			this.data.map((d) => ({ label: d.displayLabel, colour: d.colour, ...d.stats }))
 		);
@@ -452,7 +552,7 @@
 				: `phase · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`}
 		/>
 
-		{#each plot.data as d, i (d.x.id + '-' + d.y.id)}
+		{#each plot.data as d (d.x.id + '-' + d.y.id)}
 			{#if !d.timeWired && plot.showWedges}
 				<RoseWedges
 					projection={P}
@@ -533,6 +633,8 @@
 			plotWidth={size}
 			plotHeight={size}
 			padding={plot.padding}
+			autoPlacement={plot.legendLayout.auto}
+			outsidePosition={plot.legendLayout.outsidePosition}
 			which="plot"
 		/>
 	</svg>
@@ -543,7 +645,12 @@
 	{#if appState.currentControlTab === 'properties'}
 		<div class="div-line"></div>
 
-		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
+		<Legend
+			legendData={theData.legend}
+			figureStyle={theData.parentBox?.style}
+			canPlaceOutside={theData.legendLayout.canPlaceOutside}
+			which="controls"
+		/>
 		<div class="div-line"></div>
 
 		<div class="control-component">

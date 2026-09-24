@@ -16,6 +16,17 @@
 //    make room puts the legend OUTSIDE the plot area, on the right; one that cannot takes
 //    the least-covered position.
 
+/**
+ * Inset the corner presets sit at, and the span the custom fractions map onto.
+ *
+ * Shared deliberately: because custom placement runs over the SAME inset area,
+ * fraction 0 lands exactly where a left preset does and fraction 1 exactly where a
+ * right preset does. That is what lets switching to Custom keep the legend
+ * precisely where it already was instead of nudging it by the margin. Also the gap
+ * between the plot area and an outside legend.
+ */
+export const LEGEND_MARGIN = 10;
+
 /** Width of the icon (line / marker swatch) column. */
 export const LEGEND_ICON_W = 25;
 /** Gap between the icon and its label. */
@@ -87,8 +98,10 @@ export function legendBoxSize({ labelWidths, fontPx, padding, itemSpacing, orien
  * @param {object} o
  * @param {number} o.width plot-area width, px
  * @param {number} o.height plot-area height, px
- * @param {Array<{px: ArrayLike<number>, py: ArrayLike<number>, line?: boolean, radius?: number}>} o.series
- *   pixel coordinates within the plot area (NaN or null for a gap)
+ * @param {Array<{px?: ArrayLike<number>, py?: ArrayLike<number>, line?: boolean, radius?: number,
+ *   rects?: Array<[number, number, number, number]>}>} o.series
+ *   pixel coordinates within the plot area (NaN or null for a gap). `rects` are filled
+ *   areas (bars, boxes, text) as [x0, y0, x1, y1], in any corner order.
  * @param {number} [o.cell] grid cell size in px
  * @returns {{cols: number, rows: number, cell: number, grid: Uint8Array}}
  */
@@ -96,6 +109,7 @@ export function buildOccupancy({ width, height, series, cell = 4 }) {
 	const cols = Math.max(1, Math.ceil(width / cell));
 	const rows = Math.max(1, Math.ceil(height / cell));
 	const grid = new Uint8Array(cols * rows);
+	const ok = (v) => typeof v === 'number' && Number.isFinite(v);
 	const mark = (x, y, r) => {
 		const c0 = Math.floor((x - r) / cell);
 		const c1 = Math.floor((x + r) / cell);
@@ -105,8 +119,18 @@ export function buildOccupancy({ width, height, series, cell = 4 }) {
 			for (let cc = Math.max(0, c0); cc <= Math.min(cols - 1, c1); cc++) grid[rr * cols + cc] = 1;
 		}
 	};
-	const ok = (v) => typeof v === 'number' && Number.isFinite(v);
+	const fill = ([ax, ay, bx, by]) => {
+		if (![ax, ay, bx, by].every(ok)) return;
+		const x0 = Math.min(ax, bx);
+		const y0 = Math.min(ay, by);
+		const c0 = Math.max(0, Math.floor(x0 / cell));
+		const c1 = Math.min(cols - 1, Math.floor(Math.max(ax, bx) / cell));
+		const r0 = Math.max(0, Math.floor(y0 / cell));
+		const r1 = Math.min(rows - 1, Math.floor(Math.max(ay, by) / cell));
+		for (let rr = r0; rr <= r1; rr++) for (let cc = c0; cc <= c1; cc++) grid[rr * cols + cc] = 1;
+	};
 	for (const s of series ?? []) {
+		for (const r of s.rects ?? []) fill(r);
 		const { px, py } = s;
 		const n = Math.min(px?.length ?? 0, py?.length ?? 0);
 		const r = Math.max(0, s.radius ?? 0);
