@@ -279,7 +279,9 @@ describe('runPeriodogramCalculation — Chi-squared', () => {
 	// LOWER tail — which for alpha 0.05 over a 25-period grid at df 23 gives 8.24
 	// instead of 47.31. Since noise-level Qp averages about df, the drawn line sat
 	// BELOW the noise floor and nearly every period looked significant.
-	// Reference values pinned against scipy.stats.chi2.ppf((1-0.05)**(1/25), df).
+	// Reference values pinned against scipy.stats.chi2.ppf((1-0.05)**(1/13), df):
+	// the Sidak family is the 13 distinct 1 h folds (18..30 h), not the 25 trial
+	// periods of the 0.5 h step, which pair up onto those folds (see foldGrid).
 	it('draws the Sidak-corrected upper-tail chi-square quantile as the threshold', () => {
 		const { t, y } = cosineTimeSeries(24, 24 * 10, 0.5);
 		const result = runPeriodogramCalculation({
@@ -292,11 +294,11 @@ describe('runPeriodogramCalculation — Chi-squared', () => {
 			periodSteps: 0.5,
 			chiSquaredAlpha: 0.05
 		});
-		// Grid is 18..30 step 0.5 → M = 25 trial periods; df = round(P/binSize) - 1.
+		// Grid is 18..30 step 0.5 at 1 h bins → M = 13 distinct folds; df = P/binSize - 1.
 		const pinned = [
-			[18, 38.571630187617615],
-			[24, 47.30749996546788],
-			[30, 55.7022178391594]
+			[18, 36.494328738708134],
+			[24, 45.03294146024386],
+			[30, 53.25397210707606]
 		];
 		for (const [period, expected] of pinned) {
 			const idx = result.x.findIndex((x) => Math.abs(x - period) < 1e-9);

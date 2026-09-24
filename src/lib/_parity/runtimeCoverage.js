@@ -177,6 +177,7 @@ export const R_PURE_UTILS = [
 	'cross_correlation',
 	'd_agostino',
 	'describe_stats',
+	'enright_periodogram',
 	'jarque_bera',
 	'moving_windows',
 	'p_adjust',

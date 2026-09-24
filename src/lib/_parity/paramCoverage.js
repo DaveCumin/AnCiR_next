@@ -164,6 +164,6 @@ export const PARAM_COVERAGE_GAPS = {
 		fixDutyCycle: [true],
 		permuteTest: [true]
 	},
-	RhythmicityAnalysis: { analysis: ['fft', 'correlogram'], pgMethod: ['Chi-squared', 'Enright'] },
+	RhythmicityAnalysis: { analysis: ['fft', 'correlogram'] },
 	SurrogateTest: { method: ['phase', 'aaft', 'ar1', 'shuffle'] }
 };

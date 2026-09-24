@@ -452,7 +452,7 @@ def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
         bin_var = ((means - y.mean()) ** 2 * counts).sum() / n
         powers[k] = n * bin_var / var_y
         dfs[k] = df
-    # Per-period Sidak-corrected UPPER-tail threshold, matching periodogram.js:
+    # Per-fold Sidak-corrected UPPER-tail threshold, matching periodogram.js:
     # correctedAlpha = (1 - alpha)^(1/M) is the per-comparison CONFIDENCE level,
     # so the quantile is evaluated at correctedAlpha (upper tail), with the SAME
     # effective df the statistic used (NaN below df 1) — statistic, df and
@@ -460,7 +460,11 @@ def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
     # scalar taken at a mid-grid df — a third, different line from both the JS
     # intent and the JS bug it mirrored; the pure-chisq-periodogram parity
     # fixtures now pin power, df and threshold across all three languages.
-    m = len(periods)
+    # M counts the DISTINCT folds that produced a statistic (`periods` is one
+    # entry per fold, see _fold_grid), not the requested trial periods: trial
+    # periods sharing a fold are one test, and counting them held the
+    # family-wise false-positive rate far below the nominal alpha.
+    m = int(np.sum(np.nan_to_num(dfs, nan=0.0) >= 1))
     corrected = (1.0 - alpha) ** (1.0 / m) if m else float('nan')
     thresholds = [
         float(sp_stats.chi2.ppf(corrected, df)) if df >= 1 else float('nan')
@@ -470,20 +474,67 @@ def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
 
 
 def _enright_pgram(t, y, periods, dt):
-    """Binned autocorrelation Enright periodogram (simplified)."""
-    t = np.asarray(t, dtype=float)
-    y = np.asarray(y, dtype=float) - float(np.mean(y))
+    """Port of periodogram.js calculateEnrightPower (Enright 1965): bin the
+    series at dt, centre the bin means on their grand mean (an EMPTY bin, from
+    a gap or a missing value, becomes 0 after centring), then for each fold of
+    nb = round(P / dt) bins average the lag-product correlation
+    sum(c_i * c_(i+lag)) / (n - lag) over every lag = k * nb < n, and divide by
+    the binned variance sum(c^2) / n. Missing rows are dropped before binning
+    (bin_data), as validPairs does in the JS. This replaced a single-lag
+    normalised autocorrelation that was a different statistic from the app's,
+    so exported scripts drew a different Enright spectrum; the
+    pure-enright-periodogram-* parity fixtures pin the power."""
+    if len(t) < 2 or len(y) < 2:
+        return [float('nan')] * len(periods)
+    data = np.asarray(bin_data(t, y, dt, 0.0)['y_out'], dtype=float)
+    n = data.size
+    if n == 0:
+        return [0.0] * len(periods)
+    valid = ~np.isnan(data)
+    mean = float(data[valid].mean()) if valid.any() else 0.0
+    c = np.where(valid, data - mean, 0.0)
+    variance = float((c * c).sum()) / n
     powers = []
     for P in periods:
-        lag = int(round(P / dt))
-        if lag <= 0 or lag >= y.size:
+        nb = _js_round(P / dt)
+        if nb < 1 or nb > n:
             powers.append(0.0)
             continue
-        a = y[:-lag]
-        b = y[lag:]
-        denom = math.sqrt(float((a * a).sum()) * float((b * b).sum()))
-        powers.append(float((a * b).sum()) / denom if denom > 0 else 0.0)
+        acc = 0.0
+        count = 0
+        lag = nb
+        while lag < n:
+            acc += float((c[:n - lag] * c[lag:]).sum()) / (n - lag)
+            count += 1
+            lag += nb
+        qp = acc / count if count else 0.0
+        powers.append(qp / variance if variance > 0 else 0.0)
     return powers
+
+
+def _fold_grid(periods, dt, p_min, p_max):
+    # Distinct fold periods for the binned methods, matching periodogram.js
+    # foldGrid. Chi-squared and Enright depend on a trial period only through
+    # nbins = round(P / dt), so trial periods within one bin width are the same
+    # test; reporting them separately tied their power and argmax took the first
+    # (a -dt/2 bias on the peak). Each distinct fold is returned once, at the
+    # period it actually tests (nbins * dt); folds that round outside
+    # [p_min, p_max] are dropped. The grid ascends, so equal folds are adjacent.
+    out = []
+    if not (dt > 0) or not math.isfinite(dt):
+        return out
+    eps = 1e-9 * max(1.0, abs(p_min), abs(p_max))
+    last = None
+    for P in periods:
+        n = _js_round(P / dt)
+        if n < 1 or n == last:
+            continue
+        last = n
+        fold = n * dt
+        if fold < p_min - eps or fold > p_max + eps:
+            continue
+        out.append(fold)
+    return out
 
 
 def run_periodogram_calculation(params, on_progress=None):
@@ -497,6 +548,8 @@ def run_periodogram_calculation(params, on_progress=None):
     step = float(params.get('stepSize', 0.1))
     periods = make_seq_array(p_min, p_max, step)
     dt = float(params.get('dt', None) or _median_dt(t))
+    if method != 'Lomb-Scargle':
+        periods = _fold_grid(periods, dt, p_min, p_max)
     if method == 'Lomb-Scargle':
         powers = _lomb_scargle(t, y, periods)
         threshold = None
@@ -530,6 +583,19 @@ def chi_squared_periodogram(t, y, opts):
     })
     return {'period': res['x'], 'power': res['y'], 'df': res['df'],
             'threshold': res['threshold']}
+
+
+def enright_periodogram(t, y, opts):
+    """Pure-util parity surface for the Enright periodogram: the distinct-fold
+    period axis and the power at each fold, matching periodogram.js."""
+    res = run_periodogram_calculation({
+        't': t, 'y': y, 'method': 'Enright',
+        'minPeriod': opts.get('periodMin', 1.0),
+        'maxPeriod': opts.get('periodMax', 48.0),
+        'stepSize': opts.get('periodStep', 0.1),
+        'dt': opts.get('binSize', 0.25),
+    })
+    return {'period': res['x'], 'power': res['y']}
 
 
 def _median_dt(t):
@@ -2581,6 +2647,11 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
                     'minPeriod': args.get('periodMin', args.get('minPeriod', 1.0)),
                     'maxPeriod': args.get('periodMax', args.get('maxPeriod', win)),
                     'stepSize': args.get('periodStep', args.get('stepPg', 0.1)),
+                    # JS movinganalysis.js passes binSize = pgBinSize ?? 0.25 and
+                    # chiSquaredAlpha = pgAlpha ?? 0.05; without them the binned
+                    # methods folded at the median sampling interval instead.
+                    'dt': args.get('pgBinSize', 0.25),
+                    'alpha': args.get('pgAlpha', 0.05),
                 })
                 if pg['y']:
                     idx = int(np.argmax(pg['y']))

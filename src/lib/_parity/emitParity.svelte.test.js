@@ -168,6 +168,22 @@ const PURE_UTIL_FNS = {
 		});
 		return { period: r.x, power: r.y, df: r.df, threshold: r.threshold };
 	},
+	// Enright periodogram through the real binData pipeline: the ports must
+	// reproduce the app's multi-lag statistic (mean lag-product correlation at
+	// every multiple of the fold, over the binned variance), including the empty
+	// bins that missing values and gaps leave.
+	enrightPeriodogram: (t, y, opts) => {
+		const r = runPeriodogramCalculation({
+			method: 'Enright',
+			xData: t,
+			yData: y,
+			binSize: opts.binSize ?? 0.25,
+			periodMin: opts.periodMin,
+			periodMax: opts.periodMax,
+			periodSteps: opts.periodStep
+		});
+		return { period: r.x, power: r.y };
+	},
 	fisherConditionalOR: (table, confidence) => {
 		const ci = oddsRatioCI(table, confidence);
 		return { conditionalOddsRatio: conditionalOddsRatio(table), ciLow: ci[0], ciHigh: ci[1] };
@@ -276,14 +292,22 @@ function generateInputs(spec) {
 		// `dt` is the time step in x units (default 1). A fixture whose axis is in
 		// days sets dt: 1/24 (written as 0.041666… in JSON) so the time values are
 		// the same non-representable multiples a day-unit session would carry.
+		// Optional missing data: `missingEvery` nulls every k-th y (from index
+		// `missingOffset`), and `gap: [from, to]` nulls y for from <= index < to.
+		// The noise draw still runs for a nulled row, so the rest of the series is
+		// identical to the spec without them.
 		const { n, period, amp, mesor = 0, phase = 0, noise = 0, dt = 1, refs } = spec;
+		const { missingEvery = 0, missingOffset = 0, gap = null } = spec;
 		const t = seq(n, (i) => i * dt);
-		const y = t.map(
-			(h) =>
+		const y = t.map((h, i) => {
+			const v =
 				mesor +
 				amp * Math.cos((2 * Math.PI * (h - phase)) / period) +
-				(noise ? normal(rng, 0, noise) : 0)
-		);
+				(noise ? normal(rng, 0, noise) : 0);
+			const skipped = missingEvery > 0 && i % missingEvery === missingOffset;
+			const inGap = gap && i >= gap[0] && i < gap[1];
+			return skipped || inGap ? null : v;
+		});
 		return { [refs.x]: { type: 'number', values: t }, [refs.y]: { type: 'number', values: y } };
 	}
 	if (spec.type === 'pvalues') {

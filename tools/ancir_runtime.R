@@ -2643,7 +2643,7 @@ lomb_scargle <- function(t, y, periods) {
 # (binSize <= sampling interval — the regime the empty-bin fixture pins); with
 # several points per bin this simplified mod-binning port still differs from the JS
 # binData-then-fold pipeline. The significance threshold is the per-period
-# Sidak-corrected UPPER-tail chi-square quantile, matching periodogram.js:
+# Sidak-corrected UPPER-tail chi-square quantile (M = distinct folds), matching periodogram.js:
 # correctedAlpha = (1 - alpha)^(1/M) is the per-comparison CONFIDENCE level, so the
 # quantile is evaluated at correctedAlpha with the SAME effective df the statistic
 # used (NA below df 1) — statistic, df and threshold only calibrate together. The
@@ -2679,7 +2679,11 @@ chi_squared_pgram <- function(t, y, periods, dt, alpha = 0.05) {
     powers[k] <- n * (sum((means - ymean)^2 * counts) / n) / vary
     dfs[k] <- df
   }
-  m <- length(periods)
+  # M counts the DISTINCT folds that produced a statistic (`periods` is one entry
+  # per fold, see fold_grid), not the requested trial periods: trial periods sharing
+  # a fold are one test, and counting them held the family-wise false-positive rate
+  # far below the nominal alpha.
+  m <- sum(!is.na(dfs) & dfs >= 1)
   corrected <- if (m > 0) (1 - alpha)^(1 / m) else NA_real_
   thresholds <- vapply(dfs, function(df) {
     if (!is.na(df) && df >= 1) qchisq(corrected, df) else NA_real_
@@ -2687,18 +2691,52 @@ chi_squared_pgram <- function(t, y, periods, dt, alpha = 0.05) {
   list(powers = powers, dfs = dfs, threshold = thresholds)
 }
 
-# Binned-autocorrelation Enright periodogram (the simplified form the app uses).
+# Port of periodogram.js calculateEnrightPower (Enright 1965): bin the series at dt,
+# centre the bin means on their grand mean (an EMPTY bin, from a gap or a missing value,
+# becomes 0 after centring), then for each fold of nb = round(P / dt) bins average the
+# lag-product correlation sum(c_i * c_(i+lag)) / (n - lag) over every lag = k * nb < n, and
+# divide by the binned variance sum(c^2) / n. Missing rows are dropped before binning
+# (bin_data), as validPairs does in the JS. This replaced a single-lag normalised
+# autocorrelation that was a different statistic from the app's, so exported scripts drew a
+# different Enright spectrum; the pure-enright-periodogram-* parity fixtures pin the power.
 enright_pgram <- function(t, y, periods, dt) {
+  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
   y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
-  y <- y - mean(y)
+  if (length(t) < 2 || length(y) < 2) return(rep(NA_real_, length(periods)))
+  data <- bin_data(t, y, dt, 0)$y_out
+  n <- length(data)
+  if (!n) return(rep(0, length(periods)))
+  ok <- !is.na(data)
+  m <- if (any(ok)) mean(data[ok]) else 0
+  cc <- ifelse(ok, data - m, 0)
+  variance <- sum(cc * cc) / n
   vapply(periods, function(P) {
-    lag <- js_round(P / dt)
-    if (lag <= 0 || lag >= length(y)) return(0)
-    a <- y[seq_len(length(y) - lag)]
-    b <- y[(lag + 1):length(y)]
-    den <- sqrt(sum(a * a) * sum(b * b))
-    if (den > 0) sum(a * b) / den else 0
+    nb <- js_round(P / dt)
+    if (!is.finite(nb) || nb < 1 || nb > n) return(0)
+    lags <- nb * seq_len((n - 1) %/% nb)
+    qp <- if (length(lags)) {
+      mean(vapply(lags, function(lag) {
+        sum(cc[seq_len(n - lag)] * cc[(lag + 1):n]) / (n - lag)
+      }, numeric(1)))
+    } else 0
+    if (variance > 0) qp / variance else 0
   }, numeric(1))
+}
+
+# Distinct fold periods for the binned methods, matching periodogram.js foldGrid.
+# Chi-squared and Enright depend on a trial period only through nbins = round(P / dt),
+# so trial periods within one bin width are the same test; reporting them separately
+# tied their power and argmax took the first (a -dt/2 bias on the peak). Each distinct
+# fold is returned once, at the period it actually tests (nbins * dt); folds that round
+# outside [p_min, p_max] are dropped. The grid ascends, so equal folds are adjacent.
+fold_grid <- function(periods, dt, p_min, p_max) {
+  if (!is.finite(dt) || dt <= 0) return(numeric(0))
+  eps <- 1e-9 * max(1, abs(p_min), abs(p_max))
+  n <- js_round(periods / dt)
+  n <- n[n >= 1]
+  n <- n[c(TRUE, diff(n) != 0)[seq_along(n)]]
+  fold <- n * dt
+  fold[fold >= p_min - eps & fold <= p_max + eps]
 }
 
 run_periodogram_calculation <- function(params) {
@@ -2711,6 +2749,7 @@ run_periodogram_calculation <- function(params) {
   periods <- make_seq_array(p_min, p_max, step)
   dt <- if (!is.null(params$dt) && is.finite(params$dt) && params$dt > 0) params$dt
         else median_dt(t)
+  if (!identical(method, "Lomb-Scargle")) periods <- fold_grid(periods, dt, p_min, p_max)
   if (identical(method, "Lomb-Scargle")) {
     list(x = periods, y = lomb_scargle(t, y, periods), threshold = NULL)
   } else if (identical(method, "Chi-squared")) {
@@ -3002,7 +3041,12 @@ tp_movinganalysis <- function(args, env) {
           method = pick("pgMethod", "method", "Lomb-Scargle"),
           minPeriod = pick("periodMin", "minPeriod", 1),
           maxPeriod = pick("periodMax", "maxPeriod", win),
-          stepSize = pick("periodStep", "stepPg", 0.1)))
+          stepSize = pick("periodStep", "stepPg", 0.1),
+          # JS movinganalysis.js passes binSize = pgBinSize ?? 0.25 and
+          # chiSquaredAlpha = pgAlpha ?? 0.05; without them the binned methods
+          # folded at the median sampling interval instead.
+          dt = if (is.null(args$pgBinSize)) 0.25 else as.numeric(args$pgBinSize),
+          alpha = if (is.null(args$pgAlpha)) 0.05 else as.numeric(args$pgAlpha)))
         if (length(pg$y)) {
           i <- which.max(pg$y)
           stats$peak_period <- pg$x[i]; stats$peak_power <- pg$y[i]
@@ -3422,6 +3466,18 @@ chi_squared_periodogram <- function(t, y, opts) {
   list(period = res$x, power = res$y, df = res$df, threshold = res$threshold)
 }
 
+# Pure-util parity surface for the Enright periodogram: the distinct-fold period axis and
+# the power at each fold, matching periodogram.js.
+enright_periodogram <- function(t, y, opts) {
+  res <- run_periodogram_calculation(list(
+    t = t, y = y, method = "Enright",
+    minPeriod = if (is.null(opts$periodMin)) 1 else as.numeric(opts$periodMin),
+    maxPeriod = if (is.null(opts$periodMax)) 48 else as.numeric(opts$periodMax),
+    stepSize = if (is.null(opts$periodStep)) 0.1 else as.numeric(opts$periodStep),
+    dt = if (is.null(opts$binSize)) 0.25 else as.numeric(opts$binSize)))
+  list(period = res$x, power = res$y)
+}
+
 # Pure kernels the parity harness can call by name, keyed by the fixture's `rFunc` (which
 # sits beside the existing `pyFunc`, so both legs read one fixture file).
 #
@@ -3441,6 +3497,7 @@ PURE_UTIL_MAP <- list(
   compute_autocorrelation = compute_autocorrelation,
   compute_fft    = compute_fft,
   chi_squared_periodogram = chi_squared_periodogram,
+  enright_periodogram = enright_periodogram,
   d_agostino     = d_agostino,
   shapiro_wilk   = shapiro_wilk,
   qq_points      = qq_points,
