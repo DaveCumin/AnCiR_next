@@ -199,13 +199,16 @@
 
   <WarnBox title="The significance line and multiple testing">
     <p>
-      A periodogram scanning 16–32 h in 0.05 h steps performs several hundred
-      simultaneous χ² tests, so an uncorrected α = 0.05 threshold will be exceeded
-      by chance in most pure-noise records. AnCiR's drawn threshold line already
-      applies a <strong>Sidak correction</strong> over the number of trial periods
-      tested (the per-period confidence level is (1−α)<sup>1/m</sup>), so it does
-      not need a further Bonferroni adjustment; the per-period p-values it exports
-      are raw, uncorrected upper-tail values. For a still safer bar, derive the
+      A periodogram scanning 16–32 h at 15 min bins performs 65 simultaneous χ²
+      tests (one per fold length from 64 to 128 bins), so an uncorrected α = 0.05
+      threshold will be exceeded by chance in many pure-noise records. AnCiR's
+      drawn threshold line already applies a <strong>Sidak correction</strong> over
+      the number of <em>distinct fold lengths</em> tested (the per-fold confidence
+      level is (1−α)<sup>1/m</sup>), so it does not need a further Bonferroni
+      adjustment; the per-period p-values it exports are raw, uncorrected
+      upper-tail values. The count is of folds, not of trial periods: a step finer
+      than the bin size revisits the same fold, which is the same test and is not
+      counted twice. For a still safer bar, derive the
       threshold by <strong>permuting the series</strong> and
       taking the 95th percentile of the maximum Q_P — this handles both the
       multiplicity and the correlation between neighbouring trial periods. Two
@@ -265,7 +268,11 @@
         Set the period range to test using <strong>Period min</strong> and
         <strong>Period max</strong> (e.g., 16–32 h for circadian analysis; widen for
         ultradian/infradian) and the <strong>Step</strong> resolution (default 0.25 h).
-        The default method is <strong>Lomb-Scargle</strong>.
+        The default method is <strong>Lomb-Scargle</strong>. Chi-squared and Enright
+        fold the binned data at a whole number of bins, so they can only test periods
+        that are multiples of the bin size: each fold appears once, plotted at the
+        period it actually tests, and a step finer than the bin size adds no new
+        points.
       </li>
       <li>
         For the <strong>Chi-squared</strong> method, set the <strong>Bin Size</strong>
