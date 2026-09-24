@@ -84,6 +84,7 @@
 		compactPortAnchorY
 	} from './nodeGeometry.js';
 	import { buildNodeLayout, parseNodeLayout } from './nodeLayoutIO.js';
+	import { settleBoxes } from './settleOverlaps.js';
 
 	let { inline = false } = $props();
 
@@ -1324,6 +1325,64 @@
 			layerOffsets[layer] += measureNodeHeight(node) + GAP;
 		}
 	}
+
+	/**
+	 * Push apart nodes that overlap after a session import (see settleOverlaps.js),
+	 * using the nodes' rendered sizes. Unlike tidyLayout, nothing that does not overlap
+	 * moves. 11 of the 86 shipped demos loaded with nodes on top of each other.
+	 */
+	function settleOverlaps() {
+		const frames = [];
+		for (const node of allNodes) {
+			if (node.type !== 'group') continue;
+			const p = stablePositions[node.id];
+			const g = node.groupObj;
+			if (p && g) frames.push({ x: p.x, y: p.y, w: g.width ?? 0, h: g.height ?? 0 });
+		}
+		const boxes = [];
+		for (const node of allNodes) {
+			if (node.type === 'group' || node.type === 'composite') continue;
+			const pos = stablePositions[node.id];
+			if (!pos) continue;
+			const el = document.querySelector(
+				`.workflow-node-wrapper[data-node-id="${CSS.escape(node.id)}"]`
+			);
+			boxes.push({
+				id: node.id,
+				x: pos.x,
+				y: pos.y,
+				w: el?.offsetWidth || getNodeWidth(node),
+				h: el?.offsetHeight || getNodeRenderHeight(node)
+			});
+		}
+		for (const [id, y] of settleBoxes(boxes, frames)) stablePositions[id].y = y;
+	}
+
+	// Session import: settle overlaps once the imported nodes have rendered. Nodes
+	// arrive over several frames (plots last), so, as for the tidy request, every change
+	// in the node set within a short window re-arms a debounced settle.
+	let _settleWindowUntil = 0;
+	let _settleTimer = null;
+	$effect(() => {
+		const req = appState.settleLayoutRequest;
+		const count = allNodes.length;
+		if (!req || count === 0) return;
+		untrack(() => {
+			if (req === appState.settleLayoutHandled) return;
+			const now = performance.now();
+			if (_settleWindowUntil === 0) _settleWindowUntil = now + 4000;
+			clearTimeout(_settleTimer);
+			const finish = () => {
+				settleOverlaps();
+				appState.settleLayoutHandled = req;
+				_settleWindowUntil = 0;
+			};
+			// Past the window, settle at once rather than waiting on more nodes.
+			_settleTimer = setTimeout(finish, now > _settleWindowUntil ? 0 : 350);
+		});
+		// Re-runs re-arm the timer above; unmounting must not leave it to fire.
+		return () => clearTimeout(_settleTimer);
+	});
 
 	// Path-focus: when enabled, highlight the active node (hovered, else selected)
 	// plus its IMMEDIATE (1-hop) neighbours and lowlight everything else — matching

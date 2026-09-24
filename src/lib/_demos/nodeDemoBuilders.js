@@ -240,6 +240,10 @@ function setAxisLabels(p, axes) {
 // Rows are generous (≈500px) because nodes load EXPANDED and the canvas
 // auto-layout can't measure an expanded node's height; the WorkflowEditor
 // `_importedLayout` restore honours these even for late-loading plot nodes.
+// A node taller than its row (a Cosinor with many y-inputs) would still land on
+// the next one, so on import WorkflowEditor measures the rendered nodes and pushes
+// overlapping ones down (settleOverlaps.js); these rows are a starting point, not
+// a guarantee. tests/e2e/demo-layout.spec.js checks shipped demos for overlaps.
 function bakeLayoutFromGraph() {
 	const { nodes } = getProcessNodeGraph();
 	const sources = [];
