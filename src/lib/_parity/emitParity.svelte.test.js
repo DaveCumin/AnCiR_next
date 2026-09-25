@@ -98,6 +98,9 @@ const PLOT_COMPUTE_FNS = { computeFFT, computeAutocorrelation };
 // the fixture's `jsArgs`, and returns either a dict of arrays (compareArrays),
 // an array of objects (compareFields), or a dict of scalars (compareScalars).
 const PURE_UTIL_FNS = {
+	// Also a PLOT_COMPUTE_FN: reachable here so a fixture can compare its scalar
+	// peak (peakLag/peakCorrelation) and not only the lag/correlation arrays.
+	computeAutocorrelation,
 	gaussianKDE,
 	meanSemByGroup,
 	rayleighTest,

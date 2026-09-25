@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeAutocorrelation } from './correlogram.js';
+import { computeAutocorrelation, findAutocorrelationPeak } from './correlogram.js';
 
 // Uniformly-sampled cosine.
 function cosine(periodH, durationH, stepH) {
@@ -147,5 +147,91 @@ describe('computeAutocorrelation — degenerate / non-time X axis', () => {
 	it('returns empty for an explicit binSize of 0', () => {
 		const r = computeAutocorrelation([0, 1, 2, 3, 4], [1, 2, 3, 4, 5], 0);
 		expect(r.lags).toEqual([]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Peak of the correlogram. See the convention comment on findAutocorrelationPeak
+// in correlogram.js: this is the dominant PERIOD, so it is neither lag 0 (always
+// exactly 1) nor the largest |r| (a rhythm is anti-correlated with itself at P/2)
+// nor the plain maximum over non-zero lags (which drifts to 2P, 3P … because the
+// long lags are normalised by ever fewer overlapping pairs).
+// ---------------------------------------------------------------------------
+describe('findAutocorrelationPeak', () => {
+	it('reports the fundamental period of a clean 24 h rhythm, not lag 0', () => {
+		const { t, y } = cosine(24, 24 * 8, 1);
+		const r = computeAutocorrelation(t, y);
+		expect(r.correlations[0]).toBeCloseTo(1, 12); // lag 0 is 1 by definition
+		expect(r.peakLag).toBe(24);
+		expect(r.peakCorrelation).toBeGreaterThan(0.99);
+	});
+
+	it('is not sign-blind: the r = -1 antiphase lag is not the peak', () => {
+		// A textbook rhythmic correlogram: exactly -1 at half a period and +0.9 at
+		// the period. The largest |r| away from lag 0 is the antiphase trough, and
+		// the cross-correlation convention would report lag 12 with r = -1. That is
+		// the same single rhythm seen upside down, so the peak here is lag 24.
+		const lags = [0, 6, 12, 18, 24, 30];
+		const corrs = [1, 0, -1, 0, 0.9, 0];
+		const p = findAutocorrelationPeak(lags, corrs);
+		expect(p).toMatchObject({ lag: 24, correlation: 0.9 });
+		// The rejected candidate really is the strongest association present.
+		expect(Math.abs(corrs[2])).toBeGreaterThan(Math.abs(p.correlation));
+	});
+
+	it('reads a real 24 h rhythm the same way', () => {
+		const { t, y } = cosine(24, 24 * 8, 1);
+		const r = computeAutocorrelation(t, y);
+		expect(r.correlations[nearestLag(r.lags, 12)]).toBeLessThan(-0.99);
+		expect(r.peakLag).toBe(24);
+		expect(r.peakCorrelation).toBeGreaterThan(0.99);
+	});
+
+	it('picks the fundamental over a repeat whose correlation is numerically larger', () => {
+		// 12 h rhythm, hourly, five days. The repeats at 24/36 h are computed from
+		// fewer overlapping pairs and come out ABOVE the one at 12 h, so a plain
+		// maximum over non-zero lags reports 36 h. The first positive lobe is 12 h.
+		const { t, y } = cosine(12, 24 * 5 - 1, 1);
+		const r = computeAutocorrelation(t, y);
+		const at = (lag) => r.correlations[nearestLag(r.lags, lag)];
+		expect(at(36)).toBeGreaterThan(at(12));
+		expect(r.peakLag).toBe(12);
+	});
+
+	it('breaks an exact tie inside the lobe towards the smaller lag', () => {
+		// A correlogram handed in directly, so the tie is exact rather than
+		// approximate: lags 5 and 7 carry the identical correlation.
+		const lags = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+		const corrs = [1, 0.5, -0.2, -0.6, -0.1, 0.8, 0.8, 0.8, -0.3];
+		expect(findAutocorrelationPeak(lags, corrs)).toMatchObject({ lag: 5, correlation: 0.8 });
+	});
+
+	it('ignores a float-wobble win of a few ulps', () => {
+		const lags = [0, 1, 2, 3, 4, 5];
+		const corrs = [1, -0.5, 0.9, 0.9 + 1e-15, 0.9, -0.2];
+		expect(findAutocorrelationPeak(lags, corrs).lag).toBe(2);
+	});
+
+	it('takes the largest non-zero-lag correlation when there is no lobe to read', () => {
+		// A ramp: the correlogram decays monotonically and never comes back up, so
+		// there is no first lobe. The honest answer is the strongest repeat present.
+		const t = [];
+		const y = [];
+		for (let i = 0; i < 20; i++) {
+			t.push(i);
+			y.push(i);
+		}
+		const r = computeAutocorrelation(t, y);
+		expect(r.peakLag).toBe(1);
+		expect(r.peakCorrelation).toBeCloseTo(r.correlations[1], 12);
+	});
+
+	it('returns null when there is no non-zero lag to read', () => {
+		expect(findAutocorrelationPeak([], [])).toBe(null);
+		expect(findAutocorrelationPeak([0], [1])).toBe(null);
+	});
+
+	it('skips non-finite correlations', () => {
+		expect(findAutocorrelationPeak([0, 1, 2, 3], [1, NaN, -0.5, 0.4])).toMatchObject({ lag: 3 });
 	});
 });

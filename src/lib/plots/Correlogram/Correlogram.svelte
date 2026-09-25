@@ -16,8 +16,7 @@
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
-	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
-	import { argMax, argMaxAmong } from '$lib/components/plotbits/helpers/peakFinder.js';
+	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
 	import { minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 
 	export const Correlogram_defaultDataInputs = ['time', 'values'];
@@ -72,28 +71,32 @@
 			return { upper: bound, lower: -bound };
 		});
 
-		// Peak detection - find the highest correlation after lag 0 (across ALL data)
+		// The dominant period of the series: the first substantial positive peak
+		// away from lag 0. NOT a plain argmax; see findAutocorrelationPeak in
+		// utils/correlogram.js for why lag 0, the antiphase trough and the long-lag
+		// repeats all have to be ruled out first.
 		peak = $derived.by(() => {
 			const { lags, correlations } = this.acfData;
 			if (!lags || !correlations || lags.length < 2) return null;
-			// Skip index 0 (lag=0 always has correlation=1.0)
-			const idx = argMax(correlations, 1);
-			return idx < 0 ? null : { lag: lags[idx], correlation: correlations[idx] };
+			const p = findAutocorrelationPeak(lags, correlations);
+			return p ? { lag: p.lag, correlation: p.correlation } : null;
 		});
 
-		// Peak within the visible x-axis range
+		// The same reading, restricted to the visible x-axis range.
 		visiblePeak = $derived.by(() => {
 			const { lags, correlations } = this.acfData;
 			if (!lags || !correlations || lags.length < 2) return null;
 			const [xMin, xMax] = this.parentPlot?.laglims ?? [0, Infinity];
-			const visibleIndices = [];
+			const visLags = [];
+			const visCorrs = [];
 			for (let i = 0; i < lags.length; i++) {
-				// Skip lag=0 (index 0 when lags[0] === 0)
-				if (i === 0 && lags[i] === 0) continue;
-				if (lags[i] >= xMin && lags[i] <= xMax) visibleIndices.push(i);
+				if (lags[i] >= xMin && lags[i] <= xMax) {
+					visLags.push(lags[i]);
+					visCorrs.push(correlations[i]);
+				}
 			}
-			const idx = argMaxAmong(correlations, visibleIndices);
-			return idx < 0 ? null : { lag: lags[idx], correlation: correlations[idx] };
+			const p = findAutocorrelationPeak(visLags, visCorrs);
+			return p ? { lag: p.lag, correlation: p.correlation } : null;
 		});
 
 		dataWarnings = $derived.by(() => {

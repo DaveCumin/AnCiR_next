@@ -8,7 +8,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { computeFFT } from '$lib/utils/fft.js';
-	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
+	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	// Side-effect: registers 'periodogram.compute' on the main thread so sync fallback works.
@@ -188,14 +188,11 @@
 			outputs.lag = r.lags ?? [];
 			outputs.correlation = r.correlations ?? [];
 			if (!r.lags?.length) return { outputs, stats };
-			// Skip lag=0 (trivial correlation=1); otherwise the first entry is a valid peak candidate
-			let bestIdx = r.lags[0] === 0 ? 1 : 0;
-			if (bestIdx >= r.correlations.length) return { outputs, stats };
-			for (let i = bestIdx + 1; i < r.correlations.length; i++) {
-				if (r.correlations[i] > r.correlations[bestIdx]) bestIdx = i;
-			}
-			stats.peak_lag = r.lags[bestIdx];
-			stats.peak_correlation = r.correlations[bestIdx];
+			// Dominant period, not lag 0 and not the largest |r|. See findAutocorrelationPeak.
+			const peak = findAutocorrelationPeak(r.lags, r.correlations);
+			if (!peak) return { outputs, stats };
+			stats.peak_lag = peak.lag;
+			stats.peak_correlation = peak.correlation;
 			return { outputs, stats };
 		}
 

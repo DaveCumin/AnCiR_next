@@ -6,7 +6,7 @@
 import { runPeriodogramCalculation } from './periodogram.js';
 import { fitCosineCurves, fitCosinorFixed } from './cosinor.js';
 import { computeFFT } from './fft.js';
-import { computeAutocorrelation } from './correlogram.js';
+import { computeAutocorrelation, findAutocorrelationPeak } from './correlogram.js';
 import { fitRectangularWave } from './rectwave.js';
 import { fitDoubleLogistic } from './doublelogistic.js';
 // fitTrendSync, NOT fitTrend: fitTrend is `async` (it awaits an optional
@@ -225,14 +225,11 @@ function computeStatsForWindow(tt, yy, args) {
 		const maxLag = args.corrMaxLag > 0 ? args.corrMaxLag : null;
 		const r = computeAutocorrelation(tt, yy, null, maxLag, minLag);
 		if (!r.lags?.length) return stats;
-		// Skip lag 0 (always 1) when picking the peak; when minLag > 0, first entry is already valid
-		let bestIdx = r.lags[0] === 0 ? 1 : 0;
-		if (bestIdx >= r.correlations.length) return stats;
-		for (let i = bestIdx + 1; i < r.correlations.length; i++) {
-			if (r.correlations[i] > r.correlations[bestIdx]) bestIdx = i;
-		}
-		stats.peak_lag = r.lags[bestIdx];
-		stats.peak_correlation = r.correlations[bestIdx];
+		// Dominant period, not lag 0 and not the largest |r|. See findAutocorrelationPeak.
+		const peak = findAutocorrelationPeak(r.lags, r.correlations);
+		if (!peak) return stats;
+		stats.peak_lag = peak.lag;
+		stats.peak_correlation = peak.correlation;
 		return stats;
 	}
 
