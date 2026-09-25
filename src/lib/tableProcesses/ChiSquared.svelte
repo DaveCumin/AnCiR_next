@@ -20,6 +20,7 @@
 	// sits inside the Rayleigh node.
 	// Outputs three metric columns (statistic, pvalue, df). Maths is the pure, scipy-parity-checked
 	// utils/chisquare.js. The contingency / observed-vs-expected table is shown in-node.
+	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -530,7 +531,7 @@
 		{#if (result.testType === 'independence' || result.testType === 'fisher') && result.table?.length}
 			<details class="tp-output-panel" open>
 				<summary class="tp-output-summary">Contingency table</summary>
-				<div class="d-table-wrap">
+				<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
 					<table class="d-table">
 						<thead>
 							<tr
@@ -554,7 +555,7 @@
 		{:else if result.testType === 'goodness' && result.observed?.length}
 			<details class="tp-output-panel" open>
 				<summary class="tp-output-summary">Observed vs expected</summary>
-				<div class="d-table-wrap">
+				<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
 					<table class="d-table">
 						<thead>
 							<tr><th>category</th><th>obs</th><th>exp</th></tr>
@@ -610,6 +611,14 @@
 		max-height: 14rem;
 		overflow: auto;
 		scrollbar-gutter: stable;
+	}
+	/* In a canvas node's editor panel, which already scrolls (and fades its cut
+	   edge), a second scroll box inside it cut its own last line in half. Let the
+	   output flow and scroll with the panel instead. */
+	:global(.process-editor-panel) .tp-output-panel[open] {
+		max-height: none;
+		overflow: visible;
+		scrollbar-gutter: auto;
 	}
 	.tp-output-summary {
 		cursor: pointer;

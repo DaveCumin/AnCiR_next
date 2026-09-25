@@ -456,44 +456,50 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Bin parameters</span></div>
 
-	<ControlInput label="Bin mode">
-		<select
-			bind:value={p.args.binMode}
-			onchange={getBinnedData}
-			disabled={xIsTime}
-			title={xIsTime ? 'Custom edges not supported for time-typed X (v1)' : ''}
-		>
-			<option value="uniform">Uniform</option>
-			<option value="cuts">Custom edges</option>
-		</select>
-	</ControlInput>
-
-	{#if p.args.binMode === 'cuts' && !xIsTime}
-		<ControlInput label="Cut edges (comma- or space-separated)">
-			<input
-				type="text"
-				value={cutsText}
-				oninput={handleCutsInput}
-				placeholder="e.g. 0, 1, 2.5, 5, 10"
-			/>
-			<p class="cuts-summary">
-				{#if p.args.cuts.length >= 2}
-					{p.args.cuts.length} edges → {p.args.cuts.length - 1} bins
-				{:else}
-					Enter at least 2 distinct numeric edges
-				{/if}
-			</p>
-		</ControlInput>
-		<ControlInput label="Function">
-			<select bind:value={p.args.aggFunction} onchange={getBinnedData}>
-				<option value="count">Count</option>
-				<option value="mean">Mean</option>
-				<option value="median">Median</option>
-				<option value="min">Min</option>
-				<option value="max">Max</option>
-				<option value="stddev">Std Dev</option>
+	<div class="control-input-horizontal">
+		<ControlInput label="Bin mode">
+			<select
+				bind:value={p.args.binMode}
+				onchange={getBinnedData}
+				disabled={xIsTime}
+				title={xIsTime ? 'Custom edges not supported for time-typed X (v1)' : ''}
+			>
+				<option value="uniform">Uniform</option>
+				<option value="cuts">Custom edges</option>
 			</select>
 		</ControlInput>
+	</div>
+
+	{#if p.args.binMode === 'cuts' && !xIsTime}
+		<div class="control-input-horizontal">
+			<ControlInput label="Cut edges (comma- or space-separated)">
+				<input
+					type="text"
+					value={cutsText}
+					oninput={handleCutsInput}
+					placeholder="e.g. 0, 1, 2.5, 5, 10"
+				/>
+				<p class="cuts-summary">
+					{#if p.args.cuts.length >= 2}
+						{p.args.cuts.length} edges → {p.args.cuts.length - 1} bins
+					{:else}
+						Enter at least 2 distinct numeric edges
+					{/if}
+				</p>
+			</ControlInput>
+		</div>
+		<div class="control-input-horizontal">
+			<ControlInput label="Function">
+				<select bind:value={p.args.aggFunction} onchange={getBinnedData}>
+					<option value="count">Count</option>
+					<option value="mean">Mean</option>
+					<option value="median">Median</option>
+					<option value="min">Min</option>
+					<option value="max">Max</option>
+					<option value="stddev">Std Dev</option>
+				</select>
+			</ControlInput>
+		</div>
 	{:else}
 		<div class="control-input-horizontal">
 			<ControlInput label="Bin size (hrs)">

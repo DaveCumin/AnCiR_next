@@ -1,10 +1,17 @@
 @import '@ancir/design/tokens.css';
 
-
 /* Consistent keyboard-focus ring. Only triggers on :focus-visible (keyboard nav /
    assistive tech) — mouse clicks never show it, so there is no added visual weight in
    normal use. :where() keeps specificity at 0 so components can still opt out or restyle. */
-:where(button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1']), .port-dot):focus-visible {
+:where(
+	button,
+	input,
+	select,
+	textarea,
+	a[href],
+	[tabindex]:not([tabindex='-1']),
+	.port-dot
+):focus-visible {
 	outline: var(--focus-ring);
 	outline-offset: 2px;
 }
@@ -238,4 +245,27 @@ summary.section-details-summary:hover::after {
 	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 	font-weight: 600;
 	color: var(--color-accent-text);
+}
+
+/* Horizontal scroll box (a wide result table in a narrow node panel): fade the
+   edge that has more content past it, so a column cut by the edge reads as
+   "scroll for more" rather than as clipped text. The flags come from the
+   scrollFade attachment ($lib/utils/scrollFade.js). */
+.scroll-fade-x {
+	--scroll-fade: 24px;
+}
+.scroll-fade-x[data-more-right] {
+	mask-image: linear-gradient(to right, #000 calc(100% - var(--scroll-fade)), transparent);
+}
+.scroll-fade-x[data-more-left] {
+	mask-image: linear-gradient(to left, #000 calc(100% - var(--scroll-fade)), transparent);
+}
+.scroll-fade-x[data-more-left][data-more-right] {
+	mask-image: linear-gradient(
+		to right,
+		transparent,
+		#000 var(--scroll-fade),
+		#000 calc(100% - var(--scroll-fade)),
+		transparent
+	);
 }

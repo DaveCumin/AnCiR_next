@@ -7,6 +7,7 @@
 	// (utils/logistic.js, statsmodels-parity-checked), reporting per term: coefficient, SE, Wald z,
 	// p-value, odds ratio and its 95% CI, plus the model log-likelihood, likelihood-ratio test and
 	// McFadden pseudo-R². Output is one row per term (long form), so it composes with a table.
+	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
@@ -274,7 +275,7 @@
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Coefficients</summary>
-			<div class="d-table-wrap">
+			<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
 				<table class="d-table">
 					<thead>
 						<tr><th>term</th><th>coef</th><th>OR</th><th>p</th></tr>
@@ -342,6 +343,14 @@
 		max-height: 14rem;
 		overflow: auto;
 		scrollbar-gutter: stable;
+	}
+	/* In a canvas node's editor panel, which already scrolls (and fades its cut
+	   edge), a second scroll box inside it cut its own last line in half. Let the
+	   output flow and scroll with the panel instead. */
+	:global(.process-editor-panel) .tp-output-panel[open] {
+		max-height: none;
+		overflow: visible;
+		scrollbar-gutter: auto;
 	}
 	.tp-output-summary {
 		cursor: pointer;

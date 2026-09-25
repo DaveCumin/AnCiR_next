@@ -1014,17 +1014,21 @@
 	</div>
 
 	{#if !hideInputs}
-		<div class="control-input">
-			<p>Group column (optional with 2+ Y columns)</p>
-			<ColumnSelector bind:value={p.args.xIN} />
-		</div>
+		<div class="control-input-vertical">
+			<div class="control-input">
+				<p>Group column (optional with 2+ Y columns)</p>
+				<ColumnSelector bind:value={p.args.xIN} />
+			</div>
 
-		<div class="control-input">
-			<p>Y columns</p>
-			<ColumnSelector bind:value={p.args.yIN} multiple={true} excludeColIds={yExcludeIds} />
+			<div class="control-input">
+				<p>Y columns</p>
+				<ColumnSelector bind:value={p.args.yIN} multiple={true} excludeColIds={yExcludeIds} />
+			</div>
 		</div>
 	{/if}
 
+	<!-- Method gets a row to itself: its option names are long, and beside two
+	     other fields in a node's editor panel the select was ~60px wide. -->
 	<div class="control-input-horizontal">
 		<ControlInput label="Method">
 			<select bind:value={p.args.method} onchange={doComparison}>
@@ -1035,13 +1039,18 @@
 				<option value="kruskal">Kruskal-Wallis (+ pairwise Mann-Whitney)</option>
 			</select>
 		</ControlInput>
+	</div>
+	<div class="control-input-horizontal">
 		<ControlInput label="Alpha">
 			<NumberWithUnits min="0.001" max="0.5" step="0.001" bind:value={p.args.alpha} />
 		</ControlInput>
-		<div class="control-input" style="display: flex; align-items: center; gap: 0.4rem;">
-			<input id={'posthoc-' + p.id} type="checkbox" bind:checked={p.args.postHocEnabled} />
-			<label for={'posthoc-' + p.id}>Enable post-hoc</label>
-		</div>
+		<label
+			class="control-input-checkbox posthoc-toggle"
+			title="Run pairwise post-hoc tests when there are 3+ groups"
+		>
+			<input type="checkbox" bind:checked={p.args.postHocEnabled} />
+			<span class="ci-label">Post-hoc</span>
+		</label>
 	</div>
 
 	{#if p.args.valid}
@@ -1299,6 +1308,14 @@
 		overflow-y: auto;
 		scrollbar-gutter: stable;
 	}
+	/* In a canvas node's editor panel, which already scrolls (and fades its cut
+	   edge), a second scroll box inside it cut its own last line in half. Let the
+	   output flow and scroll with the panel instead. */
+	:global(.process-editor-panel) .tp-output-panel[open] {
+		max-height: none;
+		overflow-y: visible;
+		scrollbar-gutter: auto;
+	}
 
 	.tp-output-summary {
 		cursor: pointer;
@@ -1357,5 +1374,11 @@
 	.data-warning p {
 		margin: 0.15rem 0;
 		font-size: 0.92em;
+	}
+	/* Sits on the Alpha input's line (not centred on label + input) so the two
+	   controls read as one row. */
+	.posthoc-toggle {
+		align-self: flex-end;
+		min-height: var(--control-input-height);
 	}
 </style>

@@ -772,7 +772,9 @@
 							<ColumnSelector bind:value={col.refId} bind:onChange />
 						</div>
 					{:else}
-						<p class="col-name"><Editable value={col.name} onInput={renameThis} /></p>
+						<p class="col-name" title={col.name}>
+							<Editable value={col.name} onInput={renameThis} />
+						</p>
 					{/if}
 				</div>
 
@@ -868,6 +870,15 @@
 	.col-name {
 		margin: 0;
 		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	/* The name renders in Editable's inline-block span, which the paragraph's
+	   own text-overflow cannot ellipsize (an inline-block is atomic), so a long
+	   name was cut mid-glyph. The span ellipsizes itself; the title has it all. */
+	.col-name :global(.inline-edit-span) {
+		display: block;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;

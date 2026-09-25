@@ -23,14 +23,38 @@
 		onInput = null
 	} = $props();
 
-	let buffer = $state(value);
-	$effect(() => {
-		buffer = value;
-	});
+	// Writable derived: follows `value`, and is overwritten locally while editing.
+	let buffer = $derived(value);
 
 	let original = $state(value);
 	let isEditing = $state(false);
 	let inputEl;
+
+	// The idle span ellipsizes a name too long for its slot. When it does, the
+	// hover tooltip leads with the full name so it is never lost. Measured on
+	// pointerenter (before the browser shows the title) rather than observed.
+	let truncated = $state(false);
+	const shownText = $derived(value && value !== '' ? value : placeholder);
+	const spanTitle = $derived(
+		truncated && shownText ? (title ? `${shownText}\n${title}` : shownText) : title
+	);
+	function measureTruncation(e) {
+		const el = e.currentTarget;
+		// scrollWidth is rounded to whole px, so text a fraction of a pixel too wide
+		// is drawn with an ellipsis yet reports no overflow. Compare the text's own
+		// width with the content box too.
+		const cs = getComputedStyle(el);
+		const inset =
+			parseFloat(cs.paddingLeft) +
+			parseFloat(cs.paddingRight) +
+			parseFloat(cs.borderLeftWidth) +
+			parseFloat(cs.borderRightWidth);
+		const range = document.createRange();
+		range.selectNodeContents(el);
+		const textW = range.getBoundingClientRect().width;
+		truncated =
+			el.scrollWidth > el.clientWidth || textW > el.getBoundingClientRect().width - inset + 0.05;
+	}
 
 	async function startEdit(e) {
 		if (!editable) return;
@@ -94,8 +118,9 @@
 		tabindex={editable ? 0 : -1}
 		class="editable-span"
 		class:editable
-		{title}
+		title={spanTitle}
 		aria-label={ariaLabel}
+		onpointerenter={measureTruncation}
 		ondblclick={startEdit}
 		onpointerdown={(e) => {
 			if (e.detail >= 2) e.stopPropagation();
@@ -107,7 +132,7 @@
 			}
 		}}
 	>
-		{value && value !== '' ? value : placeholder}
+		{shownText}
 	</span>
 {/if}
 
@@ -130,6 +155,19 @@
 		outline: none;
 		box-sizing: border-box;
 		vertical-align: baseline;
+	}
+
+	/* Names are single-line labels (node titles, output rows): an over-long one
+	   ends in an ellipsis instead of being cut mid-glyph by the parent's
+	   overflow:hidden. The parent's own text-overflow cannot do this, because an
+	   inline-block is atomic and never ellipsized. vertical-align: top because an
+	   overflow:hidden inline-block's baseline drops to its bottom edge, which
+	   would lift the text off the line. */
+	.editable-span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		vertical-align: top;
 	}
 
 	.editable-span.editable {
