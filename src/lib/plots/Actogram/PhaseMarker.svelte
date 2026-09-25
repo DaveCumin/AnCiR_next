@@ -213,13 +213,17 @@
 					this.markerTimes[m],
 					this.parentData.parentPlot.periodHrs
 				);
-				out += `M${xscale(pos.hour) + this.parentData.parentPlot.padding.left} ${
+				const cx = xscale(pos.hour) + this.parentData.parentPlot.padding.left;
+				const cy =
 					this.parentData.parentPlot.padding.top +
 					this.parentData.parentPlot.eachplotheight -
 					radius / 2 +
 					pos.row * this.parentData.parentPlot.spaceBetween +
-					pos.row * this.parentData.parentPlot.eachplotheight
-				} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0 `;
+					pos.row * this.parentData.parentPlot.eachplotheight;
+				// A non-finite coordinate (e.g. before the plot has sized itself) would make
+				// the browser reject the whole path; skip that dot instead.
+				if (!Number.isFinite(cx) || !Number.isFinite(cy)) continue;
+				out += `M${cx} ${cy} m-${radius} 0 a${radius} ${radius} 0 1 0 ${2 * radius} 0 a${radius} ${radius} 0 1 0 -${2 * radius} 0 `;
 			}
 
 			return out;

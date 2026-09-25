@@ -306,3 +306,11 @@ describe('migration of sessions saved before the locks existed', () => {
 		expect(m.linearRegression.rmse).toBeNull();
 	});
 });
+
+describe('marker path stays valid before the plot has sized itself', () => {
+	it('skips dots whose row position is not finite instead of writing "Infinity"', () => {
+		const block = manualBlock(24.5, 6);
+		block.parentData.parentPlot.eachplotheight = Infinity;
+		expect(block.markerPoints).not.toMatch(/Infinity|NaN/);
+	});
+});

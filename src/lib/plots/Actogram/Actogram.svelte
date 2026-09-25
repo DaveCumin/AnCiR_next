@@ -25,6 +25,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS, DEFAULT_COLORMAP } from './colormaps.js';
+	import { rowHeight } from './rowHeight.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
@@ -547,9 +548,7 @@
 			}
 			return [{ rects }];
 		}
-		eachplotheight = $derived.by(() => {
-			return (this.plotheight - (this.Ndays - 1) * this.spaceBetween) / this.Ndays;
-		});
+		eachplotheight = $derived(rowHeight(this.plotheight, this.Ndays, this.spaceBetween));
 		startTime = $derived.by(() => {
 			let minTime = Infinity;
 
