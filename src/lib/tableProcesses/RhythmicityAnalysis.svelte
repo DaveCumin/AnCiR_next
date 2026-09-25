@@ -9,7 +9,7 @@
 	import ControlGroup from '$lib/components/inputs/ControlGroup.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { computeFFT } from '$lib/utils/fft.js';
-	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
+	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	// Side-effect: registers 'periodogram.compute' on the main thread so sync fallback works.
@@ -189,14 +189,11 @@
 			outputs.lag = r.lags ?? [];
 			outputs.correlation = r.correlations ?? [];
 			if (!r.lags?.length) return { outputs, stats };
-			// Skip lag=0 (trivial correlation=1); otherwise the first entry is a valid peak candidate
-			let bestIdx = r.lags[0] === 0 ? 1 : 0;
-			if (bestIdx >= r.correlations.length) return { outputs, stats };
-			for (let i = bestIdx + 1; i < r.correlations.length; i++) {
-				if (r.correlations[i] > r.correlations[bestIdx]) bestIdx = i;
-			}
-			stats.peak_lag = r.lags[bestIdx];
-			stats.peak_correlation = r.correlations[bestIdx];
+			// Dominant period, not lag 0 and not the largest |r|. See findAutocorrelationPeak.
+			const peak = findAutocorrelationPeak(r.lags, r.correlations);
+			if (!peak) return { outputs, stats };
+			stats.peak_lag = peak.lag;
+			stats.peak_correlation = peak.correlation;
 			return { outputs, stats };
 		}
 
@@ -415,9 +412,9 @@
 
 	// Reconcile output columns whenever yIN or output/stat-key set changes
 	$effect(() => {
-		const _y = p.args.yIN;
-		const _keys = currentOutputKeys;
-		const _statKeys = currentStatKeys;
+		void p.args.yIN; // dependency reads: re-reconcile when the Y selection,
+		void currentOutputKeys; // the output-key set
+		void currentStatKeys; // or the stat-key set changes
 		if (!mounted) return;
 		// Defer reconcile out of the effect: syncOutputColumns() calls `new Column()`,
 		// whose $derived fields go inert if created while this effect is the active
@@ -455,6 +452,7 @@
 		// output columns in core.data directly so changing the analysis/mode updates
 		// the node's ports. Only touch `parent.columnRefs` when a parent exists.
 		const activeIds = [...new Set((p.args.yIN ?? []).map(Number).filter((id) => id >= 0))];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local desired-key set inside syncOutputColumns(); never read reactively
 		const desired = new Set();
 		if (hideInputs) {
 			if (activeIds.length > 0) desired.add('rhythmicityx');
@@ -488,6 +486,7 @@
 		const staleKeys = Object.keys(p.args.out ?? {}).filter(
 			(k) => !desired.has(k) && Number(p.args.out[k]) >= 0
 		);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local stale-key pool inside syncOutputColumns(); never read reactively
 		const staleByGroup = new Map();
 		for (const k of staleKeys) {
 			const g = keyGroup(k);
@@ -497,6 +496,7 @@
 		}
 
 		// Transfer stale columns to missing desired keys of the same group.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local bookkeeping of reused keys inside syncOutputColumns(); never read reactively
 		const reusedStale = new Set();
 		for (const key of desired) {
 			if (Number(p.args.out[key]) >= 0) continue;

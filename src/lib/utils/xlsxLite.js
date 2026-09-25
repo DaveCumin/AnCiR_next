@@ -294,6 +294,7 @@ function parseSheet(bytes, sharedStrings, dateStyleIndices) {
  * Read an XLSX file from a Uint8Array.
  * Returns { SheetNames: string[], Sheets: { [name]: sheet } }
  */
+// eslint-disable-next-line no-unused-vars -- `_opts` keeps the SheetJS-compatible read(data, opts) signature that ImportData.svelte calls with { type: 'array' }; the options are not needed here
 export function read(data, _opts) {
 	const uint8 = data instanceof Uint8Array ? data : new Uint8Array(data);
 	const files = unzipSync(uint8);

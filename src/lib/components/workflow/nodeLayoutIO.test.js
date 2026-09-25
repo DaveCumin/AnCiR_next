@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildNodeLayout, parseNodeLayout } from './nodeLayoutIO.js';
+import { buildNodeLayout, nodeLayoutMatches, parseNodeLayout } from './nodeLayoutIO.js';
 
 // The workflow canvas persists its layout through core.nodeLayout (session
 // export) and a localStorage mirror. Positions and collapsed flags were saved,
@@ -95,5 +95,68 @@ describe('parseNodeLayout', () => {
 	it('requires BOTH w and h to accept a size', () => {
 		const { sizes } = parseNodeLayout({ a: { x: 0, y: 0, w: 100 } });
 		expect(sizes).toEqual({});
+	});
+});
+
+// Regression: two mounted WorkflowEditors (the canvas view plus the legacy
+// now-deleted fullscreen `appState.showWorkflow` one) each guard their adopt effect on the
+// IDENTITY of the last layout they themselves published, so neither recognises
+// the other's write. They then adopt each other's layouts forever and Svelte
+// aborts the flush with effect_update_depth_exceeded. The content guard has to
+// report "already matches" for a layout that round-tripped through
+// buildNodeLayout/parseNodeLayout, whatever object identity it arrived with.
+describe('nodeLayoutMatches', () => {
+	const state = {
+		positions: { plot_1: { x: 10, y: 20 }, tp_2: { x: 30, y: 40 } },
+		collapsedIds: new Set(['tp_2']),
+		sizes: { plot_1: { w: 300, h: 200 } }
+	};
+
+	it('accepts a layout that round-tripped through build/parse', () => {
+		const roundTripped = parseNodeLayout(buildNodeLayout(state));
+		expect(roundTripped.positions).not.toBe(state.positions); // genuinely a new object
+		expect(nodeLayoutMatches(roundTripped, state)).toBe(true);
+	});
+
+	it('rejects a moved node', () => {
+		const moved = parseNodeLayout(buildNodeLayout(state));
+		moved.positions.plot_1.x = 11;
+		expect(nodeLayoutMatches(moved, state)).toBe(false);
+	});
+
+	it('rejects an added or removed node', () => {
+		const extra = parseNodeLayout(buildNodeLayout(state));
+		extra.positions.data_9 = { x: 0, y: 0 };
+		expect(nodeLayoutMatches(extra, state)).toBe(false);
+
+		const fewer = parseNodeLayout(buildNodeLayout(state));
+		delete fewer.positions.tp_2;
+		expect(nodeLayoutMatches(fewer, state)).toBe(false);
+	});
+
+	it('rejects a changed collapsed set', () => {
+		const collapsed = parseNodeLayout(buildNodeLayout(state));
+		collapsed.collapsedIds = new Set(['plot_1']);
+		expect(nodeLayoutMatches(collapsed, state)).toBe(false);
+
+		const none = parseNodeLayout(buildNodeLayout(state));
+		none.collapsedIds = new Set();
+		expect(nodeLayoutMatches(none, state)).toBe(false);
+	});
+
+	it('rejects a resized preview box', () => {
+		const resized = parseNodeLayout(buildNodeLayout(state));
+		resized.sizes.plot_1.h = 201;
+		expect(nodeLayoutMatches(resized, state)).toBe(false);
+
+		const dropped = parseNodeLayout(buildNodeLayout(state));
+		delete dropped.sizes.plot_1;
+		expect(nodeLayoutMatches(dropped, state)).toBe(false);
+	});
+
+	it('treats two empty layouts as matching', () => {
+		expect(
+			nodeLayoutMatches(parseNodeLayout({}), { positions: {}, collapsedIds: new Set(), sizes: {} })
+		).toBe(true);
 	});
 });

@@ -52,102 +52,100 @@
 		</div>
 	{/snippet}
 
-	{#snippet children()}
-		<div class="title-container">
-			<div id="logo-container" style="width: 36px; height: 36px;"></div>
-			<h3>Analysis of Chronobiological Rhythms (AnCiR) v{appConsts.version}</h3>
-		</div>
-		<p>
-			This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for analysis of chronobiological rhythms (and other data).
-		</p>
-		<p>
-			A handbook for chronobiological analysis that includes steps in AnCiR is <a
-				href="./handbook.html"
-				target="_blank">here</a
-			>. It is a separate, citable work with its own DOI (<a
-				href="https://doi.org/10.5281/zenodo.21727169"
-				target="_blank">10.5281/zenodo.21727169</a
-			>); please cite it rather than AnCiR when citing the text. There is also a video
-			introduction available
-			<a href="https://youtu.be/3FZSJZrKF_M" target="_blank">here</a>.
-		</p>
+	<div class="title-container">
+		<div id="logo-container" style="width: 36px; height: 36px;"></div>
+		<h3>Analysis of Chronobiological Rhythms (AnCiR) v{appConsts.version}</h3>
+	</div>
+	<p>
+		This is our 'AnCiR' to the need for a simple-to-use (GUI; no coding) tool for analysis of
+		chronobiological rhythms (and other data).
+	</p>
+	<p>
+		A handbook for chronobiological analysis that includes steps in AnCiR is <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- handbook.html is a static file shipped in static/, not a SvelteKit route, so there is nothing for resolve() to resolve --><a
+			href="./handbook.html"
+			target="_blank">here</a
+		>. It is a separate, citable work with its own DOI (<a
+			href="https://doi.org/10.5281/zenodo.21727169"
+			target="_blank">10.5281/zenodo.21727169</a
+		>); please cite it rather than AnCiR when citing the text. There is also a video introduction
+		available
+		<a href="https://youtu.be/3FZSJZrKF_M" target="_blank">here</a>.
+	</p>
 
-		<p>
-			This version was financially supported by a University of Auckland Teaching and Learning
-			Development and Innovation Grant (2024) and is written in <a href="https://svelte.dev/"
-				>Svelte</a
-			>
-			by
-			<a href="https://github.com/davecumin">David Cumin</a>
-			and <a href="https://github.com/yz-329">Yuxing (Starr) Zhang</a>, with help from AI models.
-		</p>
-		<p>
-			<strong
-				>Please send any bug reports, feature requests, or offers of support to <a
-					href="mailto:d.cumin@auckland.ac.nz?subject=AnCiR">d.cumin@auckland.ac.nz</a
-				></strong
-			>
-		</p>
+	<p>
+		This version was financially supported by a University of Auckland Teaching and Learning
+		Development and Innovation Grant (2024) and is written in <a href="https://svelte.dev/"
+			>Svelte</a
+		>
+		by
+		<a href="https://github.com/davecumin">David Cumin</a>
+		and <a href="https://github.com/yz-329">Yuxing (Starr) Zhang</a>, with help from AI models.
+	</p>
+	<p>
+		<strong
+			>Please send any bug reports, feature requests, or offers of support to <a
+				href="mailto:d.cumin@auckland.ac.nz?subject=AnCiR">d.cumin@auckland.ac.nz</a
+			></strong
+		>
+	</p>
 
-		The following packages were used in this project:
-		<ul>
-			<li>
-				<a href="https://d3js.org/">D3</a> is used for plotting (ISC licensed).
-			</li>
-			<li>
-				<a href="https://www.papaparse.com/">Papaparse</a> is used for importing the data (MIT licensed).
-			</li>
-			<li>
-				<a href="https://www.npmjs.com/package/xlsx">SheetJS</a> was the basis for a light, custom
-				implementation to import data from xlsx files (Apache 2.0); the actual unzipping is done with
-				<a href="https://github.com/101arrowz/fflate">fflate</a> (MIT licensed).
-			</li>
-			<li>
-				<a href="https://www.npmjs.com/package/moment-guess">Moment-guess</a>
-				was adapted to guess the time format of data (MIT licensed).
-			</li>
+	The following packages were used in this project:
+	<ul>
+		<li>
+			<a href="https://d3js.org/">D3</a> is used for plotting (ISC licensed).
+		</li>
+		<li>
+			<a href="https://www.papaparse.com/">Papaparse</a> is used for importing the data (MIT licensed).
+		</li>
+		<li>
+			<a href="https://www.npmjs.com/package/xlsx">SheetJS</a> was the basis for a light, custom
+			implementation to import data from xlsx files (Apache 2.0); the actual unzipping is done with
+			<a href="https://github.com/101arrowz/fflate">fflate</a> (MIT licensed).
+		</li>
+		<li>
+			<a href="https://www.npmjs.com/package/moment-guess">Moment-guess</a>
+			was adapted to guess the time format of data (MIT licensed).
+		</li>
 
-			<li>
-				Stats functions from <a href="https://github.com/stdlib-js/stdlib">stdlib.io</a> (Apache-2.0 license).
-			</li>
-			<li>
-				<a href="https://www.npmjs.com/package/dayjs">Day.js</a> is used for date manipulation and calculations
-				(MIT licensed).
-			</li>
-		</ul>
-		<p>
-			Icons are from <a href="https://github.com/FortAwesome/Font-Awesome">FontAwesome</a> (CC BY
-			4.0 Licensed) and the <a href="https://icon-sets.iconify.design/tabler">Tabler set</a> (MIT Licensed).
-		</p>
-		<p>
-			Default colours for the plots are taken from the <a
-				href="https://www.fabiocrameri.ch/colourmaps/">maps designed and curated by Fabio Crameri</a
-			>
-			(MIT licensed). See
-			<a href="https://doi.org/10.1038/s41467-020-19160-7"
-				>Crameri, F., G.E. Shephard, and P.J. Heron (2020), The misuse of colour in science
-				communication, Nature Communications, 11, 5444</a
-			>.
-		</p>
-		<p>
-			As such, this software is licensed under the stricter of the above - the <a
-				href="http://www.apache.org/licenses/">Apache-2.0 license</a
-			>.
-		</p>
-		<p>
-			<a href="https://doi.org/10.5281/zenodo.19340642"
-				><img src="https://zenodo.org/badge/967164279.svg" alt="AnCiR DOI" /></a
-			>
-		</p>
-		<p style="font-size:var(--font-sm);">
-			Cite the software: <a href="https://doi.org/10.5281/zenodo.19340642"
-				>10.5281/zenodo.19340642</a
-			>. Cite the handbook:
-			<a href="https://doi.org/10.5281/zenodo.21727169">10.5281/zenodo.21727169</a>.
-		</p>
+		<li>
+			Stats functions from <a href="https://github.com/stdlib-js/stdlib">stdlib.io</a> (Apache-2.0 license).
+		</li>
+		<li>
+			<a href="https://www.npmjs.com/package/dayjs">Day.js</a> is used for date manipulation and calculations
+			(MIT licensed).
+		</li>
+	</ul>
+	<p>
+		Icons are from <a href="https://github.com/FortAwesome/Font-Awesome">FontAwesome</a> (CC BY 4.0
+		Licensed) and the <a href="https://icon-sets.iconify.design/tabler">Tabler set</a> (MIT Licensed).
+	</p>
+	<p>
+		Default colours for the plots are taken from the <a
+			href="https://www.fabiocrameri.ch/colourmaps/">maps designed and curated by Fabio Crameri</a
+		>
+		(MIT licensed). See
+		<a href="https://doi.org/10.1038/s41467-020-19160-7"
+			>Crameri, F., G.E. Shephard, and P.J. Heron (2020), The misuse of colour in science
+			communication, Nature Communications, 11, 5444</a
+		>.
+	</p>
+	<p>
+		As such, this software is licensed under the stricter of the above - the <a
+			href="http://www.apache.org/licenses/">Apache-2.0 license</a
+		>.
+	</p>
+	<p>
+		<a href="https://doi.org/10.5281/zenodo.19340642"
+			><img src="https://zenodo.org/badge/967164279.svg" alt="AnCiR DOI" /></a
+		>
+	</p>
+	<p style="font-size:var(--font-sm);">
+		Cite the software: <a href="https://doi.org/10.5281/zenodo.19340642">10.5281/zenodo.19340642</a
+		>. Cite the handbook:
+		<a href="https://doi.org/10.5281/zenodo.21727169">10.5281/zenodo.21727169</a>.
+	</p>
 
-		<p style="font-size:var(--font-sm);">Build Number: {buildInfo.buildNumber}</p>
-	{/snippet}
+	<p style="font-size:var(--font-sm);">Build Number: {buildInfo.buildNumber}</p>
 </Modal>
 
 <style>
@@ -156,11 +154,5 @@
 		justify-content: left; /* Left horizontally */
 		align-items: center; /* Center vertically */
 		gap: 10px; /* Space between logo and text */
-	}
-	#logo img,
-	#logo svg {
-		width: 100%;
-		height: 100%;
-		display: block; /* Remove any extra spacing */
 	}
 </style>

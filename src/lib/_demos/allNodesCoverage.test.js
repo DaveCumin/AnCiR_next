@@ -9,9 +9,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { core, appConsts, getProcessNodeGraph } from '$lib/core/core.svelte.js';
 import { clearProcessNodeGraphCache } from '$lib/core/ProcessNode.svelte.js';
-import { loadProcesses } from '$lib/processes/processMap.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
-import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { loadProcesses } from '$test/processRegistry.js';
+import { loadPlots } from '$test/plotRegistry.js';
+import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { PLOT_SPECS, PROCESS_SPECS, TP_SPECS, buildAllNodes } from './nodeCatalog.js';
 
 let graph;

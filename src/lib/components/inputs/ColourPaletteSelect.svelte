@@ -1,6 +1,7 @@
 <script>
 	import { appConsts, appState } from '$lib/core/core.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
+	import { escapeHtml, safeColour } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 
 	// `colours` overrides what the swatches show. Settings passes a palette that has been
 	// chosen but not yet applied, so the row previews the choice while the figures still
@@ -33,15 +34,22 @@
 		listPos = { left: labelPos.left, top: labelPos.bottom };
 	}
 
+	// `appConsts.colourPalettes` is an in-repo constant, but `appState.appColours` is
+	// not: ColourPicker's "Save to Palette" pushes whatever is in its free-text hex
+	// field, unvalidated. Both interpolation sites here are ATTRIBUTES, so the value is
+	// shape-checked and then escaped rather than trusted.
 	function swatches(cols) {
 		return cols
-			.map((c) => `<span class="palette-swatch" style="background:${c};" title="${c}"></span>`)
+			.map((c) => {
+				const colour = escapeHtml(safeColour(c));
+				return `<span class="palette-swatch" style="background:${colour};" title="${colour}"></span>`;
+			})
 			.join('');
 	}
 </script>
 
 <div class="palette-control">
-	<!-- eslint-disable-next-line svelte/no-at-html-tags -- colours are app constants -->
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- swatches() shape-validates and escapes each colour -->
 	<div class="palette-swatches">{@html swatches(shown)}</div>
 	<button type="button" class="palette-trigger" onclick={openList} bind:this={dropdownLabel}>
 		Change<span class="palette-caret" aria-hidden="true">▾</span>
@@ -53,6 +61,7 @@
 		{#each Object.keys(appConsts.colourPalettes) as palette (palette)}
 			<button type="button" class="palette-option" onclick={() => onSelect(palette)}>
 				<span class="palette-option-name">{palette}</span>
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- swatches() shape-validates and escapes each colour -->
 				<span class="palette-swatches">{@html swatches(appConsts.colourPalettes[palette])}</span>
 			</button>
 		{/each}

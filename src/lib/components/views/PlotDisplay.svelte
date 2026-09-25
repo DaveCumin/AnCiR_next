@@ -20,11 +20,10 @@
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 	import { createLazyPointerCapture } from '$lib/core/lazyPointerCapture.js';
-	import { onMount, tick, untrack } from 'svelte';
-	import { fly, fade } from 'svelte/transition';
+	import { onMount, untrack } from 'svelte';
+	import { fade } from 'svelte/transition';
 
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
-	import { removePlots } from '$lib/core/Plot.svelte';
 	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
 	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
 	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
@@ -83,8 +82,6 @@
 	const MAX_ZOOM = 4;
 	const ZOOM_STEP = 0.1;
 
-	let selectedPlotIds = $derived.by(() => core.plots.filter((p) => p.selected).map((p) => p.id));
-
 	// The workspace viewport is appState.canvasOffset + appState.canvasScale, which
 	// persist across view switches (module state), reset on a fresh page load (see
 	// +page.svelte), and are restored from a loaded session by loadAppState — so no
@@ -117,6 +114,7 @@
 
 	// Two-finger pinch-zoom + pan (Tier 2). Only background pointers land here —
 	// Draggable and the interactive chrome stop pointerdown before it bubbles.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- per-gesture pointer bookkeeping for pinch/pan; read only from pointer handlers, never from markup or a $derived
 	const activePointers = new Map();
 	let pinchPrev = null;
 	const pinchActive = () => activePointers.size >= 2;
@@ -338,7 +336,10 @@
 	);
 
 	onMount(() => {
-		const onKeyDown = (e) => {
+		// Backspace/Delete used to remove the selected plots from here. That was
+		// disabled because it fired too easily; the guard below is kept so the
+		// handler can be restored without rediscovering the text-input case.
+		const onKeyDown = () => {
 			const active = document.activeElement;
 
 			const isTextInput =
@@ -348,10 +349,6 @@
 					active.getAttribute('contenteditable') === 'true');
 
 			if (isTextInput) return;
-
-			// if ((e.key === 'Backspace' || e.key === 'Delete') && selectedPlotIds.length > 0) {
-			// 	removePlots(selectedPlotIds);
-			// }
 		};
 
 		window.addEventListener('keydown', onKeyDown);
@@ -407,7 +404,8 @@
 		<div
 			class="canvas-inner"
 			style="
-			transform: translate({appState.canvasOffset?.x ?? 0}px, {appState.canvasOffset?.y ?? 0}px) scale({appState.canvasScale});
+			transform: translate({appState.canvasOffset?.x ?? 0}px, {appState.canvasOffset?.y ??
+				0}px) scale({appState.canvasScale});
 			transform-origin: 0 0;
 		"
 		>
@@ -416,7 +414,7 @@
 			{/each}
 
 			{#if core.plots.length > 0}
-				{#each core.plots as plot, i (plot.id)}
+				{#each core.plots as plot (plot.id)}
 					{#if !appState.invisiblePlotIds.includes(plot.id) && !plot.facet}
 						<!-- Facet generators don't render as a card here; their children do. -->
 						<Draggable

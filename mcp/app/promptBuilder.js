@@ -24,7 +24,10 @@ function rules() {
 
 /** A short version tag so logs can attribute build quality to a prompt revision. */
 export function promptVersion() {
-	return createHash('sha256').update(template() + rules()).digest('hex').slice(0, 8);
+	return createHash('sha256')
+		.update(template() + rules())
+		.digest('hex')
+		.slice(0, 8);
 }
 
 /**

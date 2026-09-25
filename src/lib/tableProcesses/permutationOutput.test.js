@@ -8,17 +8,19 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { core, appConsts } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
-import { loadProcesses } from '$lib/processes/processMap.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
-import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { loadProcesses } from '$test/processRegistry.js';
+import { loadPlots } from '$test/plotRegistry.js';
+import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 
 const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 
+// The three registries are already built by the time this runs: the $test/*Registry modules
+// warm them at import time, so these calls are map lookups.
 beforeAll(async () => {
 	appConsts.processMap = await loadProcesses();
 	appConsts.plotMap = await loadPlots();
 	appConsts.tableProcessMap = await loadTableProcesses();
-}, 60000);
+});
 
 beforeEach(() => {
 	core.data = [];

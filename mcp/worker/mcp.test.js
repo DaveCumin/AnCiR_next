@@ -55,7 +55,11 @@ test('initialize → protocol version echoed, tools capability advertised', asyn
 		jsonrpc: '2.0',
 		id: 1,
 		method: 'initialize',
-		params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'x', version: '1' } }
+		params: {
+			protocolVersion: '2025-06-18',
+			capabilities: {},
+			clientInfo: { name: 'x', version: '1' }
+		}
 	});
 	assert.equal(status, 200);
 	assert.equal(body.jsonrpc, '2.0');
@@ -84,7 +88,12 @@ test('notifications get no body (202), not a null-id response', async () => {
 test('tools/list → every tool, each with an inputSchema', async () => {
 	const { body } = await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
 	const names = body.result.tools.map((t) => t.name).sort();
-	assert.deepEqual(names, ['build_session', 'check_draft', 'describe_session', 'list_capabilities']);
+	assert.deepEqual(names, [
+		'build_session',
+		'check_draft',
+		'describe_session',
+		'list_capabilities'
+	]);
 	for (const t of body.result.tools) assert.equal(t.inputSchema.type, 'object');
 });
 
@@ -127,7 +136,10 @@ test('build_session → stores a session and returns a loadFromURL link that res
 		{
 			analyses: [
 				{ name: 'SimulatedData', args: { period: 24, days: 4 } },
-				{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+				{
+					name: 'Cosinor',
+					args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 }
+				}
 			],
 			plots: [
 				{
@@ -182,7 +194,11 @@ test('build_session reports an unusable draft instead of storing an empty sessio
 
 test('build_session honours the rate limiter, and does not write when limited', async () => {
 	const env = { ...ENV(), RATE_LIMITER: { limit: async () => ({ success: false }) } };
-	const { body } = await call('build_session', { analyses: [{ name: 'SimulatedData', args: {} }] }, env);
+	const { body } = await call(
+		'build_session',
+		{ analyses: [{ name: 'SimulatedData', args: {} }] },
+		env
+	);
 	assert.equal(body.result.isError, true);
 	assert.match(body.result.content[0].text, /rate limited/i);
 	assert.equal(env.SESSIONS._m.size, 0);
@@ -215,9 +231,16 @@ const COSINOR_DRAFT = {
 	analyses: [
 		{
 			name: 'SimulatedData',
-			args: { seed: 1, samplingPeriod_hours: 1, sections: [{ duration_hours: 240, rhythmPeriod_hours: 24 }] }
+			args: {
+				seed: 1,
+				samplingPeriod_hours: 1,
+				sections: [{ duration_hours: 240, rhythmPeriod_hours: 24 }]
+			}
 		},
-		{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+		{
+			name: 'Cosinor',
+			args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 }
+		}
 	]
 };
 
@@ -244,13 +267,22 @@ test('check_draft reports what WOULD be dropped, and agrees with build_session',
 	// trust a fiction. Same normalizer, so the same verdict — asserted, not assumed.
 	const bad = {
 		analyses: [
-			{ name: 'SimulatedData', args: { seed: 1, samplingPeriod_hours: 1, sections: [{ duration_hours: 96 }] } },
-			{ name: 'Cosinor', args: { xIN: 'nope', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+			{
+				name: 'SimulatedData',
+				args: { seed: 1, samplingPeriod_hours: 1, sections: [{ duration_hours: 96 }] }
+			},
+			{
+				name: 'Cosinor',
+				args: { xIN: 'nope', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 }
+			}
 		]
 	};
 	const dry = await call('check_draft', bad);
 	const real = await call('build_session', bad, ENV());
-	assert.deepEqual(dry.body.result.structuredContent.errors, real.body.result.structuredContent.errors);
+	assert.deepEqual(
+		dry.body.result.structuredContent.errors,
+		real.body.result.structuredContent.errors
+	);
 	assert.equal(dry.body.result.structuredContent.ok, false);
 	assert.match(dry.body.result.content[0].text, /would be dropped|would build/i);
 });
@@ -260,9 +292,16 @@ test('check_draft passes on scientific fitness, so the agent can fix it before b
 		analyses: [
 			{
 				name: 'SimulatedData',
-				args: { seed: 1, samplingPeriod_hours: 1, sections: [{ duration_hours: 36, rhythmPeriod_hours: 24 }] }
+				args: {
+					seed: 1,
+					samplingPeriod_hours: 1,
+					sections: [{ duration_hours: 36, rhythmPeriod_hours: 24 }]
+				}
 			},
-			{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+			{
+				name: 'Cosinor',
+				args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 }
+			}
 		]
 	});
 	assert.match(body.result.content[0].text, /1\.5 cycles/);
@@ -284,7 +323,10 @@ test('describe_session reads back a session built through this server', async ()
 		assert.equal(body.result.isError, undefined, `failed for ${ref}`);
 		const sc = body.result.structuredContent;
 		assert.equal(sc.sessionId, sessionId);
-		assert.deepEqual(sc.analyses.map((a) => a.name), ['SimulatedData', 'Cosinor']);
+		assert.deepEqual(
+			sc.analyses.map((a) => a.name),
+			['SimulatedData', 'Cosinor']
+		);
 		assert.equal(sc.generatedBy.route, 'mcp');
 	}
 });
@@ -294,9 +336,15 @@ test('describe_session says which columns actually hold data', async () => {
 	// is empty until a browser opens the link. Reasoning over the latter means reasoning over [].
 	const env = ENV();
 	const built = await call('build_session', COSINOR_DRAFT, env);
-	const { body } = await call('describe_session', { session: built.body.result.structuredContent.sessionId }, env);
+	const { body } = await call(
+		'describe_session',
+		{ session: built.body.result.structuredContent.sessionId },
+		env
+	);
 
-	const cols = Object.fromEntries(body.result.structuredContent.columns.map((c) => [c.name, c.hasData]));
+	const cols = Object.fromEntries(
+		body.result.structuredContent.columns.map((c) => [c.name, c.hasData])
+	);
 	assert.equal(cols.time, true, 'baked generator output');
 	assert.equal(cols.cosinorx, false, 'computed in the browser, empty here');
 	assert.match(body.result.content[0].text, /computed on open/);
@@ -332,7 +380,9 @@ test('describe_session PARSES a url — it never fetches one (SSRF)', async () =
 });
 
 test('describe_session on an expired id explains WHY, so the agent stops retrying', async () => {
-	const { body } = await call('describe_session', { session: '11111111-2222-3333-4444-555555555555' });
+	const { body } = await call('describe_session', {
+		session: '11111111-2222-3333-4444-555555555555'
+	});
 	assert.equal(body.result.isError, true);
 	assert.match(body.result.content[0].text, /transient|expire/i);
 });

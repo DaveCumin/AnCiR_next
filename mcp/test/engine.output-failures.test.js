@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { finalizeTableProcessOutputs } from '../src/engine/session.js';
 import { core, pushObj } from '$lib/core/core.svelte.js';
-import { Column, getColumnById } from '$lib/core/Column.svelte';
+import { Column } from '$lib/core/Column.svelte';
 
 function mkCol(name, values) {
 	const c = new Column({ type: 'number', data: -1 });
@@ -61,7 +61,10 @@ describe('finalizeTableProcessOutputs — failed output reads', () => {
 	it('attaches fit / stats to a successful result', () => {
 		const filled = mkCol('c', [1, 2]);
 		const tp = { id: 9, args: { out: { c: filled.id } } };
-		const res = finalizeTableProcessOutputs(tp, 'FitProc', { fit: { period: 24 }, stats: { comparisons: {} } });
+		const res = finalizeTableProcessOutputs(tp, 'FitProc', {
+			fit: { period: 24 },
+			stats: { comparisons: {} }
+		});
 		expect(res.valid).toBe(true);
 		expect(res.fit).toEqual({ period: 24 });
 		expect(res.stats).toEqual({ comparisons: {} });

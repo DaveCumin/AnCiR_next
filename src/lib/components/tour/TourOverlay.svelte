@@ -5,7 +5,7 @@
 	// plus a tooltip card. Hands-on steps auto-advance when their predicate is
 	// met; passive steps show a Next button. Mounted once (in +page).
 	import { untrack } from 'svelte';
-	import { tourState, nextStep, prevStep, stopTour, finishTour } from '$lib/core/tourRunner.svelte.js';
+	import { tourState, nextStep, prevStep, stopTour } from '$lib/core/tourRunner.svelte.js';
 
 	const step = $derived(
 		tourState.activeTour ? (tourState.activeTour.steps[tourState.index] ?? null) : null
@@ -34,7 +34,9 @@
 
 	// title/body may be plain strings OR functions of live app state, so the
 	// tooltip updates as the user changes things (e.g. switching views).
-	const titleText = $derived(typeof step?.title === 'function' ? step.title() : (step?.title ?? ''));
+	const titleText = $derived(
+		typeof step?.title === 'function' ? step.title() : (step?.title ?? '')
+	);
 	const bodyHtml = $derived(typeof step?.body === 'function' ? step.body() : (step?.body ?? ''));
 
 	let targetRect = $state(null); // {top,left,width,height} or null → centered
@@ -251,6 +253,7 @@
 		// the pointerup-scheduled repositions stay bound to the OLD step and fire
 		// ~60ms into the next step's glide, yanking the tooltip back (the "starts
 		// twice" jump).
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local timeout-id bookkeeping for this step only; created and cleared inside this function, never read in markup
 		const timers = new Set();
 		const schedule = (ms) => {
 			const id = setTimeout(() => {
@@ -281,6 +284,7 @@
 			markLiveTracking();
 			if (!followRaf) followRaf = requestAnimationFrame(followLoop);
 		};
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set of already-observed canvas elements; consumed inside this function, never read reactively
 		const observed = new Set();
 		const observers = [];
 		const attachCanvasObservers = () => {
@@ -448,11 +452,7 @@
 	{#if wireRings.length || wireEdges.length}
 		<svg class="tour-wire-layer" aria-hidden="true">
 			{#each wireEdges as e, i (`e_${i}`)}
-				<path
-					class="tour-wire"
-					d={wirePath(e.from, e.to)}
-					marker-end="url(#tour-wire-arrow)"
-				/>
+				<path class="tour-wire" d={wirePath(e.from, e.to)} marker-end="url(#tour-wire-arrow)" />
 			{/each}
 			{#each wireRings as r, i (`pr_${i}`)}
 				<circle class="tour-wire-ring" cx={r.cx} cy={r.cy} r="11" />
@@ -489,19 +489,16 @@
 		<h3 class="tour-title">{titleText}</h3>
 		<!-- title/body are static, developer-authored copy from src/lib/tours/*.js
 		     (never user input), so @html is safe and lets steps use <strong> etc. -->
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- step.body is developer-authored copy from src/lib/tours/*.js (a static literal or a pure function over it), never user input -->
 		<p class="tour-body">{@html bodyHtml}</p>
 		<div class="tour-actions">
-			<button
-				class="tour-btn tour-skip"
-				type="button"
-				data-testid="tour-skip"
-				onclick={stopTour}
-			>
+			<button class="tour-btn tour-skip" type="button" data-testid="tour-skip" onclick={stopTour}>
 				{isLast ? 'Close' : 'Skip'}
 			</button>
 			<span class="tour-spacer"></span>
 			{#if tourState.index > 0}
-				<button class="tour-btn" type="button" data-testid="tour-back" onclick={prevStep}>Back</button
+				<button class="tour-btn" type="button" data-testid="tour-back" onclick={prevStep}
+					>Back</button
 				>
 			{/if}
 			{#if showNext}

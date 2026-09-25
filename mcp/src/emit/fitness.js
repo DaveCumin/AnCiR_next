@@ -65,7 +65,10 @@ function timeStats(hours) {
 		// Regularity as a RELATIVE spread: an FFT needs even sampling, Lomb-Scargle doesn't.
 		// Relative, because 5 minutes of jitter is nothing in daily data and everything in
 		// per-minute data. The 5% threshold is a convention, and only ever raises a warning.
-		irregular: positive.length > 1 && step > 0 && (Math.max(...positive) - Math.min(...positive)) / step > 0.05
+		irregular:
+			positive.length > 1 &&
+			step > 0 &&
+			(Math.max(...positive) - Math.min(...positive)) / step > 0.05
 	};
 }
 
@@ -141,19 +144,33 @@ export function checkFitness(session) {
 
 		// --- the time axis itself ---
 		if (stats.backwards)
-			say('high', `${name} reads a time column that goes backwards. Sort the data by time first; every period estimate below depends on the order.`);
+			say(
+				'high',
+				`${name} reads a time column that goes backwards. Sort the data by time first; every period estimate below depends on the order.`
+			);
 		if (stats.duplicates)
-			say('medium', `${name} reads a time column with repeated timestamps. Duplicate times are usually a merge or import artefact, and they bias a fit toward whatever was double-counted.`);
+			say(
+				'medium',
+				`${name} reads a time column with repeated timestamps. Duplicate times are usually a merge or import artefact, and they bias a fit toward whatever was double-counted.`
+			);
 
 		// --- lengths ---
 		for (const yId of Array.isArray(args.yIN) ? args.yIN : []) {
 			const y = valuesOf(yId);
 			if (!Array.isArray(y) || y.length === 0) continue;
 			if (y.length !== xRaw.length)
-				say('high', `${name}: "${colById.get(yId)?.name ?? yId}" has ${y.length} values but its time column has ${xRaw.length}. They are paired by position, so the extra values are read against the wrong times.`);
-			const missing = y.filter((v) => v == null || (typeof v === 'number' && !Number.isFinite(v))).length;
+				say(
+					'high',
+					`${name}: "${colById.get(yId)?.name ?? yId}" has ${y.length} values but its time column has ${xRaw.length}. They are paired by position, so the extra values are read against the wrong times.`
+				);
+			const missing = y.filter(
+				(v) => v == null || (typeof v === 'number' && !Number.isFinite(v))
+			).length;
 			if (y.length && missing / y.length > 0.5)
-				say('medium', `${name}: "${colById.get(yId)?.name ?? yId}" is ${Math.round((missing / y.length) * 100)}% blank. The fit uses only what's left.`);
+				say(
+					'medium',
+					`${name}: "${colById.get(yId)?.name ?? yId}" is ${Math.round((missing / y.length) * 100)}% blank. The fit uses only what's left.`
+				);
 		}
 
 		const period = num(PERIOD_OF[name](args));
@@ -164,9 +181,15 @@ export function checkFitness(session) {
 		// returns numbers, and they describe the noise as much as the rhythm.
 		const cycles = stats.span / period;
 		if (cycles < 2)
-			say('high', `${name} is fitting a ${round(period)} h period to ${round(stats.span)} h of data — only ${round(cycles)} cycles. A period fit needs at least 2 cycles, and 3+ to be worth reporting: below that the amplitude and phase are not identifiable, though it will still return a confident-looking number. Use a longer recording, or fit a shorter period.`);
+			say(
+				'high',
+				`${name} is fitting a ${round(period)} h period to ${round(stats.span)} h of data — only ${round(cycles)} cycles. A period fit needs at least 2 cycles, and 3+ to be worth reporting: below that the amplitude and phase are not identifiable, though it will still return a confident-looking number. Use a longer recording, or fit a shorter period.`
+			);
 		else if (cycles < 3)
-			say('medium', `${name} is fitting a ${round(period)} h period to ${round(cycles)} cycles of data. Usable, but amplitude and phase will be poorly constrained — 3+ cycles is the usual minimum for reporting.`);
+			say(
+				'medium',
+				`${name} is fitting a ${round(period)} h period to ${round(cycles)} cycles of data. Usable, but amplitude and phase will be poorly constrained — 3+ cycles is the usual minimum for reporting.`
+			);
 
 		// --- can the sampling even see it? ---
 		// Nyquist is the hard one: below 2 samples per cycle the rhythm is not attenuated, it
@@ -174,9 +197,15 @@ export function checkFitness(session) {
 		if (stats.step > 0) {
 			const perCycle = period / stats.step;
 			if (perCycle < 2)
-				say('high', `${name} is looking for a ${round(period)} h period in data sampled every ${round(stats.step)} h — under 2 samples per cycle. Nyquist: this cannot resolve that rhythm, and will report an alias (a period that isn't there) rather than nothing. Sample at least every ${round(period / 2)} h.`);
+				say(
+					'high',
+					`${name} is looking for a ${round(period)} h period in data sampled every ${round(stats.step)} h — under 2 samples per cycle. Nyquist: this cannot resolve that rhythm, and will report an alias (a period that isn't there) rather than nothing. Sample at least every ${round(period / 2)} h.`
+				);
 			else if (perCycle < 4)
-				say('medium', `${name} has only ${round(perCycle)} samples per ${round(period)} h cycle. Above Nyquist, so the period is recoverable, but amplitude and phase get rough below ~4.`);
+				say(
+					'medium',
+					`${name} has only ${round(perCycle)} samples per ${round(period)} h cycle. Above Nyquist, so the period is recoverable, but amplitude and phase get rough below ~4.`
+				);
 		}
 
 		// --- method vs sampling ---
@@ -184,9 +213,15 @@ export function checkFitness(session) {
 		// it didn't get it. Lomb-Scargle exists precisely for this and is one param away.
 		if (stats.irregular) {
 			if (args.analysis === 'fft')
-				say('high', `${name} runs an FFT on unevenly sampled data (steps vary around ${round(stats.step)} h). An FFT assumes even spacing and cannot tell that it didn't get it; the spectrum will be wrong. Use analysis:"periodogram" with pgMethod:"Lomb-Scargle", which is built for uneven sampling.`);
+				say(
+					'high',
+					`${name} runs an FFT on unevenly sampled data (steps vary around ${round(stats.step)} h). An FFT assumes even spacing and cannot tell that it didn't get it; the spectrum will be wrong. Use analysis:"periodogram" with pgMethod:"Lomb-Scargle", which is built for uneven sampling.`
+				);
 			else if (args.analysis === 'periodogram' && args.pgMethod && args.pgMethod !== 'Lomb-Scargle')
-				say('medium', `${name} uses pgMethod:"${args.pgMethod}" on unevenly sampled data (steps vary around ${round(stats.step)} h). "Lomb-Scargle" handles uneven sampling properly.`);
+				say(
+					'medium',
+					`${name} uses pgMethod:"${args.pgMethod}" on unevenly sampled data (steps vary around ${round(stats.step)} h). "Lomb-Scargle" handles uneven sampling properly.`
+				);
 		}
 	}
 

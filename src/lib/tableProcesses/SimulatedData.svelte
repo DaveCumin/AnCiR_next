@@ -254,7 +254,7 @@
 	</ControlInput>
 </div>
 
-{#each p.args.sections as section, index}
+{#each p.args.sections as section, index (index)}
 	<div
 		class="section-row"
 		style="border-left: 3px solid var(--color-lightness-80); padding-left: 10px; margin-bottom: 10px;"

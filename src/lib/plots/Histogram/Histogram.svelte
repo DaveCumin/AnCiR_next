@@ -11,7 +11,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { binData, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { gaussianKDE } from '$lib/utils/kde.js';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
 	import { paddedDomain } from '$lib/plots/axisDomain.js';
 

@@ -23,8 +23,16 @@
 		onInput = null
 	} = $props();
 
-	// Writable derived: follows `value`, and is overwritten locally while editing.
-	let buffer = $derived(value);
+	// Deliberately $state + a post-render $effect rather than a writable $derived: the
+	// buffer must only re-sync AFTER the DOM has updated. `handleInput` writes the buffer
+	// and then calls `onInput`, which usually writes back to `value`; a writable $derived
+	// would re-evaluate synchronously during that round trip and can clobber the buffer
+	// mid-keystroke in this focus/caret-sensitive inline editor.
+	// eslint-disable-next-line svelte/prefer-writable-derived -- see comment above: the post-render timing of the effect is load bearing
+	let buffer = $state(value);
+	$effect(() => {
+		buffer = value;
+	});
 
 	let original = $state(value);
 	let isEditing = $state(false);

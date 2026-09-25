@@ -12,12 +12,10 @@ import { bindAltTooltipToggle, _altSubscriberCount } from './tooltipHelpers.js';
 // tooltipHelpers.js registers nothing at import time, only on first bind, so
 // nothing has been missed by the time this spy is installed.
 const altRegistrations = [];
-const addSpy = vi
-	.spyOn(document, 'addEventListener')
-	.mockImplementation(function (type, ...rest) {
-		if (type === 'keydown' || type === 'keyup') altRegistrations.push(type);
-		return EventTarget.prototype.addEventListener.call(this, type, ...rest);
-	});
+const addSpy = vi.spyOn(document, 'addEventListener').mockImplementation(function (type, ...rest) {
+	if (type === 'keydown' || type === 'keyup') altRegistrations.push(type);
+	return EventTarget.prototype.addEventListener.call(this, type, ...rest);
+});
 
 afterAll(() => {
 	addSpy.mockRestore();

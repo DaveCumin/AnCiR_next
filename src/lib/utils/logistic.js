@@ -93,9 +93,25 @@ export function logisticRegression(y, predictorCols, names, opts = {}) {
 	const k = p + 1;
 	const labels = ['(intercept)', ...names];
 	// Per-observation outputs, full input length, NaN where the row was dropped.
-	const emptyPerObs = () => ({ eta: new Array(total).fill(NaN), fitted: new Array(total).fill(NaN), outcome: new Array(total).fill(NaN) });
+	const emptyPerObs = () => ({
+		eta: new Array(total).fill(NaN),
+		fitted: new Array(total).fill(NaN),
+		outcome: new Array(total).fill(NaN)
+	});
 	if (n < k + 1) {
-		return { converged: false, iterations: 0, n, coefficients: [], logLik: NaN, nullLogLik: NaN, lrChiSq: NaN, lrDf: p, lrPvalue: NaN, pseudoR2: NaN, perObs: emptyPerObs() };
+		return {
+			converged: false,
+			iterations: 0,
+			n,
+			coefficients: [],
+			logLik: NaN,
+			nullLogLik: NaN,
+			lrChiSq: NaN,
+			lrDf: p,
+			lrPvalue: NaN,
+			pseudoR2: NaN,
+			perObs: emptyPerObs()
+		};
 	}
 
 	let beta = new Array(k).fill(0);
@@ -141,7 +157,8 @@ export function logisticRegression(y, predictorCols, names, opts = {}) {
 		const mu = sigmoid(eta);
 		const w = Math.max(mu * (1 - mu), 1e-10);
 		logLik += ys[i] === 1 ? Math.log(Math.max(mu, 1e-300)) : Math.log(Math.max(1 - mu, 1e-300));
-		for (let a = 0; a < k; a++) for (let b = 0; b < k; b++) XtWX[a][b] += rows[i][a] * rows[i][b] * w;
+		for (let a = 0; a < k; a++)
+			for (let b = 0; b < k; b++) XtWX[a][b] += rows[i][a] * rows[i][b] * w;
 		const idx = keptIndex[i];
 		perObs.eta[idx] = eta;
 		perObs.fitted[idx] = mu;
@@ -169,10 +186,24 @@ export function logisticRegression(y, predictorCols, names, opts = {}) {
 	// Null model (intercept only): closed form β₀ = logit(ȳ).
 	const ybar = ys.reduce((s, v) => s + v, 0) / n;
 	let nullLogLik = 0;
-	for (const yi of ys) nullLogLik += yi === 1 ? Math.log(Math.max(ybar, 1e-300)) : Math.log(Math.max(1 - ybar, 1e-300));
+	for (const yi of ys)
+		nullLogLik +=
+			yi === 1 ? Math.log(Math.max(ybar, 1e-300)) : Math.log(Math.max(1 - ybar, 1e-300));
 	const lrChiSq = 2 * (logLik - nullLogLik);
 	const lrPvalue = pUpperFromChiSq(lrChiSq, p);
 	const pseudoR2 = nullLogLik !== 0 ? 1 - logLik / nullLogLik : NaN; // McFadden's
 
-	return { converged, iterations: iter, n, coefficients, logLik, nullLogLik, lrChiSq, lrDf: p, lrPvalue, pseudoR2, perObs };
+	return {
+		converged,
+		iterations: iter,
+		n,
+		coefficients,
+		logLik,
+		nullLogLik,
+		lrChiSq,
+		lrDf: p,
+		lrPvalue,
+		pseudoR2,
+		perObs
+	};
 }

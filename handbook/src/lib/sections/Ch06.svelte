@@ -164,12 +164,12 @@
 		The <a class="gloss" href="#gloss-enright-periodogram">Enright periodogram</a><sup class="cite"
 			><a href="#ref-23">[23]</a></sup
 		>
-		folds the series at each trial period into a Buys-Ballot table (rows = cycles, columns =
-		position within the cycle) and uses the <strong>standard deviation of the column means</strong>
-		as its test statistic: a true period makes the fold means scatter widely. It is the direct
-		ancestor of the chi-squared periodogram — Sokolove and Bushell's Q_P is essentially Enright's
-		statistic rescaled to a known χ² null distribution. Because the two are so closely related, an
-		Enright peak and a chi-squared peak at the same period are
+		folds the series at each trial period into a Buys-Ballot table (rows = cycles, columns = position
+		within the cycle) and uses the <strong>standard deviation of the column means</strong>
+		as its test statistic: a true period makes the fold means scatter widely. It is the direct ancestor
+		of the chi-squared periodogram — Sokolove and Bushell's Q_P is essentially Enright's statistic rescaled
+		to a known χ² null distribution. Because the two are so closely related, an Enright peak and a chi-squared
+		peak at the same period are
 		<strong>not independent confirmation</strong> of each other. Enright's method makes no distributional
 		assumption and is robust with longer recordings.
 	</p>
@@ -207,8 +207,8 @@
 			trial periods: a step finer than the bin size revisits the same fold, which is the same test
 			and is not counted twice. For a still safer bar, derive the threshold by
 			<strong>permuting the series</strong>
-			and taking the 95th percentile of the maximum Q_P — this handles both the multiplicity and the
-			correlation between neighbouring trial periods. Two further cautions: the χ² null assumes
+			and taking the 95th percentile of the maximum Q_P — this handles both the multiplicity and the correlation
+			between neighbouring trial periods. Two further cautions: the χ² null assumes
 			<strong>independent observations</strong>, and activity data are strongly autocorrelated,
 			which inflates Q_P and makes nominal p-values optimistic; and the
 			<strong>bin size sets the degrees of freedom</strong> (k−1), so changing it moves the significance

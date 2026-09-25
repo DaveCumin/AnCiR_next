@@ -179,9 +179,7 @@ describe('Trend removal (linear)', () => {
 		// y = 0.5*t + cosine  (clear linear trend)
 		const n = 100;
 		const trend = Array.from({ length: n }, (_, i) => 0.5 * i);
-		const cosine = Array.from({ length: n }, (_, i) =>
-			Math.cos((2 * Math.PI * i) / 24)
-		);
+		const cosine = Array.from({ length: n }, (_, i) => Math.cos((2 * Math.PI * i) / 24));
 		const y = trend.map((t, i) => t + cosine[i]);
 
 		const detrended = removetrend(y, {

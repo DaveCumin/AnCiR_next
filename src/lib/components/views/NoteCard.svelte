@@ -124,11 +124,7 @@
 		oninput={(e) => (note.text = e.currentTarget.value)}
 		onpointerdown={(e) => e.stopPropagation()}
 	></textarea>
-	<div
-		class="resize-handle"
-		role="presentation"
-		onpointerdown={startResize}
-	></div>
+	<div class="resize-handle" role="presentation" onpointerdown={startResize}></div>
 </div>
 
 <style>

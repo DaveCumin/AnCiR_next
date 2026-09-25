@@ -471,7 +471,10 @@ export function planEdit(spec, { summary, facts }) {
 
 		analyses.push({ tpType, inputs, params });
 		const inputBits = Object.entries(inputs)
-			.map(([k, v]) => `${k}=${Array.isArray(v) ? v.map((i) => nameOf.get(i)).join(', ') : nameOf.get(v)}`)
+			.map(
+				([k, v]) =>
+					`${k}=${Array.isArray(v) ? v.map((i) => nameOf.get(i)).join(', ') : nameOf.get(v)}`
+			)
 			.join('; ');
 		preview.push(`Add analysis: ${tpType}${inputBits ? ` (${inputBits})` : ''}`);
 	}
@@ -590,8 +593,17 @@ export function planEdit(spec, { summary, facts }) {
 		}
 		const from = Number(b?.fromHour);
 		const to = Number(b?.toHour);
-		if (!Number.isFinite(from) || !Number.isFinite(to) || from < 0 || from >= 24 || to < 0 || to >= 24) {
-			errors.push(`Shading needs fromHour and toHour as clock hours 0–24 (got ${b?.fromHour}–${b?.toHour}).`);
+		if (
+			!Number.isFinite(from) ||
+			!Number.isFinite(to) ||
+			from < 0 ||
+			from >= 24 ||
+			to < 0 ||
+			to >= 24
+		) {
+			errors.push(
+				`Shading needs fromHour and toHour as clock hours 0–24 (got ${b?.fromHour}–${b?.toHour}).`
+			);
 			continue;
 		}
 		const durationHours = bandDuration(from, to);
@@ -601,7 +613,8 @@ export function planEdit(spec, { summary, facts }) {
 		}
 		const label = typeof b?.label === 'string' && b.label.trim() ? b.label.trim() : 'Night';
 		bands.push({ plotId: target.id, fromHour: from, durationHours, label });
-		const hh = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
+		const hh = (h) =>
+			`${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
 		preview.push(
 			`Shade ${target.type}${target.name ? ` "${target.name}"` : ''}: ${hh(from)}–${hh(to)} each day`
 		);
@@ -698,7 +711,11 @@ export function applyEdit(plan) {
 			// Shouldn't happen (addFreeTableProcess never no-ops), but wiring plots against a
 			// mismatched list would be worse than stopping.
 			errors.push('Some analyses could not be added; plots were skipped.');
-			return { ok: false, errors, added: { analyses: tps.filter(Boolean).length, plots: 0, changes: 0 } };
+			return {
+				ok: false,
+				errors,
+				added: { analyses: tps.filter(Boolean).length, plots: 0, changes: 0 }
+			};
 		}
 	}
 

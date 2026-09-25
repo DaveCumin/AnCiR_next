@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	calculateStandardDeviation,
-	mean,
-	max,
-	min,
-	createSequenceArray
-} from './MathsStats.js';
+import { calculateStandardDeviation, mean, max, min, createSequenceArray } from './MathsStats.js';
 
 describe('mean', () => {
 	it('returns the average of an array', () => {

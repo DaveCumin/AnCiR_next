@@ -162,7 +162,11 @@ describe('Random port is identical to the real generator', () => {
 	const cases = {
 		uniform: { distribution: 'uniform', N: 40, offset: 0, multiply: 10, seed: 42 },
 		'uniform with offset + negative scale': {
-			distribution: 'uniform', N: 25, offset: -5, multiply: -3.5, seed: 7
+			distribution: 'uniform',
+			N: 25,
+			offset: -5,
+			multiply: -3.5,
+			seed: 7
 		},
 		gaussian: { distribution: 'gaussian', N: 40, offset: 100, multiply: 15, seed: 99 },
 		exponential: { distribution: 'exponential', N: 40, offset: 2, multiply: 5, seed: 3 },
@@ -171,19 +175,43 @@ describe('Random port is identical to the real generator', () => {
 		// p out of range clamps identically on both sides; default p when absent.
 		'bernoulli p clamped + default': { distribution: 'bernoulli', N: 20, probability: 5, seed: 13 },
 		// degenerate scale collapses to a constant upstream — mirror it exactly
-		'gaussian with zero sigma': { distribution: 'gaussian', N: 5, offset: 42, multiply: 0, seed: 1 },
-		'exponential with zero mean': { distribution: 'exponential', N: 5, offset: 7, multiply: 0, seed: 1 },
+		'gaussian with zero sigma': {
+			distribution: 'gaussian',
+			N: 5,
+			offset: 42,
+			multiply: 0,
+			seed: 1
+		},
+		'exponential with zero mean': {
+			distribution: 'exponential',
+			N: 5,
+			offset: 7,
+			multiply: 0,
+			seed: 1
+		},
 		'N = 0': { distribution: 'uniform', N: 0, offset: 0, multiply: 1, seed: 1 },
 		// Random's normalizeSeed differs from SimulatedData's: NaN → 1, and 0 is NOT
 		// special-cased. These two cases fail if the helpers are ever "unified".
 		'seed 0 (not special-cased, unlike SimulatedData)': {
-			distribution: 'uniform', N: 10, offset: 0, multiply: 10, seed: 0
+			distribution: 'uniform',
+			N: 10,
+			offset: 0,
+			multiply: 10,
+			seed: 0
 		},
 		'non-numeric seed falls back to 1': {
-			distribution: 'uniform', N: 10, offset: 0, multiply: 10, seed: 'nonsense'
+			distribution: 'uniform',
+			N: 10,
+			offset: 0,
+			multiply: 10,
+			seed: 'nonsense'
 		},
 		'negative seed wraps into range': {
-			distribution: 'uniform', N: 10, offset: 0, multiply: 10, seed: -12345
+			distribution: 'uniform',
+			N: 10,
+			offset: 0,
+			multiply: 10,
+			seed: -12345
 		}
 	};
 

@@ -69,6 +69,7 @@
 	});
 
 	const exampleGroups = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local grouping map built and consumed inside this $derived; only the returned entries array is read
 		const groups = new Map();
 		for (const s of filteredSessions) {
 			const family = s.family || 'Examples';
@@ -287,103 +288,101 @@
 		/>
 	{/snippet}
 
-	{#snippet children()}
-		<div class="import-container">
-			{#if sourceMode === 'file'}
-				<div class="tab-panel">
-					<button class="primary-button" onclick={chooseFile} disabled={loading}>
-						Choose .json file
-					</button>
-					<p class="tab-hint">
-						Pick a previously saved <code>.json</code> session file. It loads as soon as you select it.
-					</p>
-				</div>
-			{:else if sourceMode === 'url'}
-				<div class="tab-panel">
-					<div class="url-row">
-						<input
-							class="url-input"
-							type="url"
-							bind:value={sessionUrl}
-							placeholder="https://example.com/session.json"
-							disabled={loading}
-							onkeydown={(e) => {
-								if (e.key === 'Enter') {
-									e.preventDefault();
-									fetchSessionFromURL();
-								}
-							}}
-						/>
-						<button
-							class="primary-button"
-							onclick={fetchSessionFromURL}
-							disabled={loading || !sessionUrl.trim()}
-						>
-							{loading ? 'Fetching…' : 'Fetch'}
-						</button>
-					</div>
-					<p class="tab-hint">Paste a URL to a session JSON; it loads on Fetch.</p>
-				</div>
-			{:else}
-				<div class="tab-panel example-list">
-					{#if examplesLoading}
-						<div class="loading-row">
-							<LoadingSpinner message="Loading examples…" />
-						</div>
-					{:else if examplesError || exampleSessions.length === 0}
-						<!-- Bad connection, missing manifest, or empty list — fail gracefully. -->
-						<p class="tab-hint" data-testid="examples-unavailable">
-							{examplesError || "Can't find any examples."}
-						</p>
-					{:else}
-						<input
-							class="search-input"
-							type="search"
-							bind:value={exampleSearch}
-							placeholder="Search examples by node or function (e.g. fourier, bin, cosinor)…"
-							disabled={loading}
-							aria-label="Search example sessions"
-							{@attach focusOnMount}
-						/>
-						{#if filteredSessions.length === 0}
-							<p class="tab-hint">No examples match “{exampleSearch}”.</p>
-						{/if}
-						{#each exampleGroups as [family, sessions] (family)}
-							<div class="example-group-label">{family}</div>
-							{#each sessions as session (session.id ?? session.url)}
-								{@const active = activeExampleUrl === session.url}
-								<button
-									class="example-item"
-									class:active
-									title={session.description ?? ''}
-									onclick={() => loadExample(session)}
-									disabled={loading}
-								>
-									<span class="example-name">{session.name}</span>
-									{#if session.description}
-										<span class="example-description">{session.description}</span>
-									{/if}
-								</button>
-							{/each}
-						{/each}
-					{/if}
-				</div>
-			{/if}
-
-			{#if loading}
-				<div class="status-row">
-					<LoadingSpinner
-						message={fileName ? `Loading ${fileName}…` : 'Loading session…'}
-						detail={progressDetail}
+	<div class="import-container">
+		{#if sourceMode === 'file'}
+			<div class="tab-panel">
+				<button class="primary-button" onclick={chooseFile} disabled={loading}>
+					Choose .json file
+				</button>
+				<p class="tab-hint">
+					Pick a previously saved <code>.json</code> session file. It loads as soon as you select it.
+				</p>
+			</div>
+		{:else if sourceMode === 'url'}
+			<div class="tab-panel">
+				<div class="url-row">
+					<input
+						class="url-input"
+						type="url"
+						bind:value={sessionUrl}
+						placeholder="https://example.com/session.json"
+						disabled={loading}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') {
+								e.preventDefault();
+								fetchSessionFromURL();
+							}
+						}}
 					/>
+					<button
+						class="primary-button"
+						onclick={fetchSessionFromURL}
+						disabled={loading || !sessionUrl.trim()}
+					>
+						{loading ? 'Fetching…' : 'Fetch'}
+					</button>
 				</div>
-			{/if}
+				<p class="tab-hint">Paste a URL to a session JSON; it loads on Fetch.</p>
+			</div>
+		{:else}
+			<div class="tab-panel example-list">
+				{#if examplesLoading}
+					<div class="loading-row">
+						<LoadingSpinner message="Loading examples…" />
+					</div>
+				{:else if examplesError || exampleSessions.length === 0}
+					<!-- Bad connection, missing manifest, or empty list — fail gracefully. -->
+					<p class="tab-hint" data-testid="examples-unavailable">
+						{examplesError || "Can't find any examples."}
+					</p>
+				{:else}
+					<input
+						class="search-input"
+						type="search"
+						bind:value={exampleSearch}
+						placeholder="Search examples by node or function (e.g. fourier, bin, cosinor)…"
+						disabled={loading}
+						aria-label="Search example sessions"
+						{@attach focusOnMount}
+					/>
+					{#if filteredSessions.length === 0}
+						<p class="tab-hint">No examples match “{exampleSearch}”.</p>
+					{/if}
+					{#each exampleGroups as [family, sessions] (family)}
+						<div class="example-group-label">{family}</div>
+						{#each sessions as session (session.id ?? session.url)}
+							{@const active = activeExampleUrl === session.url}
+							<button
+								class="example-item"
+								class:active
+								title={session.description ?? ''}
+								onclick={() => loadExample(session)}
+								disabled={loading}
+							>
+								<span class="example-name">{session.name}</span>
+								{#if session.description}
+									<span class="example-description">{session.description}</span>
+								{/if}
+							</button>
+						{/each}
+					{/each}
+				{/if}
+			</div>
+		{/if}
 
-			{#if loadError}
-				<p class="tab-hint error">{loadError}</p>
-			{/if}
-		</div>
-	{/snippet}
+		{#if loading}
+			<div class="status-row">
+				<LoadingSpinner
+					message={fileName ? `Loading ${fileName}…` : 'Loading session…'}
+					detail={progressDetail}
+				/>
+			</div>
+		{/if}
+
+		{#if loadError}
+			<p class="tab-hint error">{loadError}</p>
+		{/if}
+	</div>
 </Modal>
 
 <style>

@@ -32,7 +32,7 @@ export function deriveLabelFromName(name) {
 	const s = String(name ?? '').trim();
 	if (s === '') return s;
 	// Optional separator + trailing digits (with optional trailing separator).
-	const stripped = s.replace(/[ _.\-]*\d+[ _.\-]*$/, '').trim();
+	const stripped = s.replace(/[ _.-]*\d+[ _.-]*$/, '').trim();
 	return stripped === '' ? s : stripped;
 }
 

@@ -66,7 +66,10 @@ vi.mock('$lib/utils/fft.js', () => ({
 	}))
 }));
 
-vi.mock('$lib/utils/correlogram.js', () => ({
+// Partial mock: the ACF itself is stubbed, but findAutocorrelationPeak stays REAL
+// so the peak convention is exercised here rather than echoed back by the stub.
+vi.mock('$lib/utils/correlogram.js', async (importOriginal) => ({
+	...(await importOriginal()),
 	computeAutocorrelation: vi.fn(() => ({
 		lags: [0, 12, 24, 36],
 		correlations: [1, -0.2, 0.8, -0.1],
@@ -230,7 +233,8 @@ describe('rhythmicityanalysis', () => {
 		const r = result.y_results[2];
 		expect(r.outputs.lag).toEqual([0, 12, 24, 36]);
 		expect(r.outputs.correlation).toEqual([1, -0.2, 0.8, -0.1]);
-		// peak picks the largest correlation starting from index 1 → lag 24, corr 0.8
+		// The correlogram dips to -0.2 at lag 12 and comes back up: the first positive
+		// lobe is lag 24, so that is the reported period (not lag 0, whose r is 1).
 		expect(r.stats.peak_lag).toBe(24);
 		expect(r.stats.peak_correlation).toBe(0.8);
 	});

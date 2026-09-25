@@ -95,7 +95,7 @@
 
 {#if Object.keys(units).length > 2}
 	<select class="unitSelect" bind:value={selectedUnit}>
-		{#each Object.keys(units) as unit}
+		{#each Object.keys(units) as unit (unit)}
 			{#if unit !== 'default'}
 				<option value={unit}>{unit}</option>
 			{/if}

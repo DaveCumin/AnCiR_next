@@ -1446,7 +1446,34 @@ cross_correlation <- function(x, y, max_lag = 0, method = "pearson") {
     c1 <- correlate(xa[idx + 1], ya[idx + k + 1], method)
     lags <- c(lags, k); rs <- c(rs, c1$r); ps <- c(ps, c1$pvalue); ns <- c(ns, c1$n)
   }
-  list(lags = lags, r = rs, pvalue = ps, n = ns)
+  peak <- cross_correlation_peak(lags, rs)
+  list(lags = lags, r = rs, pvalue = ps, n = ns, peakLag = peak$lag, peakR = peak$r)
+}
+
+# Two lags whose |r| differ by less than this are a TIE, not a ranking.
+CC_TIE <- 1e-12
+
+# Mirror of findPeak in utils/crossCorrelation.js. Peak convention, in order: largest |r|;
+# then the POSITIVE r (an exact +1 is never beaten by an exact -1 at the anti-phase lag);
+# then the smallest |lag| (a periodic series repeats its own peak once per period); then
+# the smaller lag, for determinism.
+cross_correlation_peak <- function(lags, rs) {
+  best_lag <- NA_real_; best_r <- NA_real_; best_mag <- -Inf
+  for (i in seq_along(lags)) {
+    r <- rs[i]
+    if (is.na(r) || !is.finite(r)) next
+    mag <- abs(r)
+    take <- FALSE
+    if (mag > best_mag + CC_TIE) {
+      take <- TRUE
+    } else if (abs(mag - best_mag) <= CC_TIE) {
+      if ((r >= 0) != (best_r >= 0)) take <- (r >= 0)
+      else if (abs(lags[i]) != abs(best_lag)) take <- abs(lags[i]) < abs(best_lag)
+      else take <- lags[i] < best_lag
+    }
+    if (take) { best_lag <- lags[i]; best_r <- r; best_mag <- mag }
+  }
+  list(lag = best_lag, r = best_r)
 }
 
 chi_square_goodness_of_fit <- function(observed, expected = NULL, ddof = 0) {
@@ -2901,6 +2928,53 @@ run_periodogram_calculation <- function(params) {
   }
 }
 
+# Two lags whose correlation differs by less than this are a TIE, not a ranking: a
+# perfectly periodic series lands on its repeat value to within a few ulps, so a raw
+# `>` lets floating-point noise decide which repeat is reported.
+ACF_PEAK_TIE <- 1e-12
+
+# The peak of an autocorrelogram: the DOMINANT PERIOD of the series.
+#
+# Deliberately NOT the cross-correlogram's convention (largest |r|, see
+# cross_correlation). Lag 0 is exactly 1 by definition, so a sign-blind maximum always
+# answers 0; a rhythm is anti-correlated with itself at half a period, so the largest
+# |r| away from 0 is typically r = -1 at P/2, the same rhythm in antiphase rather than
+# a second finding; and a rhythm repeats at every MULTIPLE of its period, with this
+# estimator normalising each lag by its own overlap count, so the long lags are
+# computed from fewer pairs and drift ABOVE the fundamental (values over 1 are routine
+# at lag 3P). A plain maximum over non-zero lags therefore reports 2P, 3P or the last
+# lag in the window.
+#
+# So: drop lag 0 and non-finite values; find where the correlogram first goes negative
+# and then returns to non-negative, and take the largest correlation in that first
+# positive lobe, ties within 1e-12 going to the smaller lag. With no lobe (no dip, or
+# no recovery after one), fall back to the largest correlation over the non-zero lags.
+# This is the standard reading of a circadian autocorrelogram (Levine et al. 2002,
+# BMC Neuroscience 3:1). Mirrors findAutocorrelationPeak in utils/correlogram.js.
+find_autocorrelation_peak <- function(lags, correlations) {
+  m <- min(length(lags), length(correlations))
+  cand <- if (m < 1) integer(0)
+          else Filter(function(i) lags[i] > 0 && is.finite(correlations[i]), seq_len(m))
+  if (!length(cand)) return(list(lag = NA_real_, correlation = NA_real_))
+  window <- cand
+  dip <- NA_integer_
+  for (k in seq_along(cand)) if (correlations[cand[k]] < 0) { dip <- k; break }
+  if (!is.na(dip)) {
+    start <- NA_integer_
+    if (dip + 1 <= length(cand)) {
+      for (k in (dip + 1):length(cand)) if (correlations[cand[k]] >= 0) { start <- k; break }
+    }
+    if (!is.na(start)) {
+      end <- start
+      while (end + 1 <= length(cand) && correlations[cand[end + 1]] >= 0) end <- end + 1
+      window <- cand[start:end]
+    }
+  }
+  best <- window[1]
+  for (i in window) if (correlations[i] > correlations[best] + ACF_PEAK_TIE) best <- i
+  list(lag = lags[best], correlation = correlations[best])
+}
+
 compute_autocorrelation <- function(times, values, bin_size = NULL,
                                     max_lag = NULL, min_lag = 0) {
   t <- suppressWarnings(as.numeric(unlist(times, use.names = FALSE)))
@@ -2910,19 +2984,22 @@ compute_autocorrelation <- function(times, values, bin_size = NULL,
   ok <- is.finite(t) & is.finite(y)
   t <- t[ok]; y <- y[ok]
   n <- length(y)
-  if (n < 2) return(list(lags = numeric(0), correlations = numeric(0), dt = 1))
+  if (n < 2) return(list(lags = numeric(0), correlations = numeric(0), dt = 1,
+                             peakLag = NA_real_, peakCorrelation = NA_real_))
   dt <- if (!is.null(bin_size)) as.numeric(bin_size) else median_dt(t)
   timespan <- t[length(t)] - t[1]
   max_lag_t <- if (!is.null(max_lag) && is.finite(max_lag) && max_lag > 0) as.numeric(max_lag)
                else timespan / 2
   min_lag_t <- if (!is.null(min_lag) && is.finite(min_lag) && min_lag > 0) as.numeric(min_lag)
                else 0
-  if (min_lag_t >= max_lag_t) return(list(lags = numeric(0), correlations = numeric(0), dt = dt))
+  if (min_lag_t >= max_lag_t) return(list(lags = numeric(0), correlations = numeric(0), dt = dt,
+                             peakLag = NA_real_, peakCorrelation = NA_real_))
   n_lags <- min(floor(max_lag_t / dt), n %/% 2)
   start_idx <- ceiling(min_lag_t / dt)
   ymean <- mean(y)
   yvar <- sum((y - ymean)^2) / n
-  if (yvar == 0) return(list(lags = numeric(0), correlations = numeric(0), dt = dt))
+  if (yvar == 0) return(list(lags = numeric(0), correlations = numeric(0), dt = dt,
+                             peakLag = NA_real_, peakCorrelation = NA_real_))
   diffs <- diff(t)
   med <- median(diffs)
   # "Uniform enough" within 10% of the median spacing takes the fast index-shift path; the
@@ -2954,7 +3031,9 @@ compute_autocorrelation <- function(times, values, bin_size = NULL,
       lags <- c(lags, target)
     }
   }
-  list(lags = lags, correlations = corrs, dt = dt)
+  pk <- find_autocorrelation_peak(lags, corrs)
+  list(lags = lags, correlations = corrs, dt = dt,
+       peakLag = pk$lag, peakCorrelation = pk$correlation)
 }
 
 # ---------------------------------------------------------------------------
@@ -3249,8 +3328,12 @@ tp_movinganalysis <- function(args, env) {
           min_lag = as.numeric(if (is.null(args$corrMinLag)) 0 else args$corrMinLag),
           max_lag = if (is.null(args$corrMaxLag)) NULL else args$corrMaxLag)
         if (length(ac$correlations)) {
-          i <- which.max(ac$correlations)
-          stats$peak_lag <- ac$lags[i]; stats$peak_correlation <- ac$correlations[i]
+          # Dominant period, not lag 0 (always 1) and not the largest |r|.
+          # See find_autocorrelation_peak.
+          pk <- find_autocorrelation_peak(ac$lags, ac$correlations)
+          if (!is.na(pk$lag)) {
+            stats$peak_lag <- pk$lag; stats$peak_correlation <- pk$correlation
+          }
         }
       }
 

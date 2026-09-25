@@ -18,7 +18,7 @@
 //   1 input   -> stored under its own name (histogram: `column`)
 //   0 inputs  -> no series at all (tableplot, dataview)
 import { describe, it, expect, beforeAll } from 'vitest';
-import { loadPlots } from './plotMap.js';
+import { loadPlots } from '$test/plotRegistry.js';
 import { OverlayClass } from './Scatterplot/Overlay.svelte';
 import {
 	overlayPortName,

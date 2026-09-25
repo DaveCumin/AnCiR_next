@@ -7,7 +7,6 @@
 	// their onsets, computed on activity folded onto an average 24 h profile.
 	// Robust to the highly non-sinusoidal rest-activity rhythm where cosinor is
 	// insensitive (Van Someren et al. 1999, Chronobiol Int 16(4):505-518).
-	import { core } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
@@ -194,7 +193,6 @@
 <script>
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
-	import ColumnComponent from '$lib/core/Column.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';

@@ -873,7 +873,7 @@
 	});
 
 	$effect(() => {
-		p.args.yIN; // tracked: reconcile when the y inputs change
+		void p.args.yIN; // dependency read: re-reconcile when the Y selection changes
 		if (!mounted) return;
 		// Defer reconcile out of the effect: syncYColumns() calls `new Column()`, whose
 		// $derived fields go inert if created while this effect is the active reaction

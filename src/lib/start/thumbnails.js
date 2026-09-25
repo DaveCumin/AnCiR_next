@@ -368,9 +368,6 @@ export function thumbnailForWorkflow(id) {
 			return sparkline(Array.from({ length: 40 }, (_, i) => Math.sin(i / 4) + rng() * 0.6));
 	}
 }
-const recents = { items: [] };
-const hasWindow = () => typeof window !== 'undefined';
-
 /**
  * Thumbnail derived from REAL data (used when saving a recent), rather than from a workflow id.
  * A multi-day record reads best as a double-plotted actogram; anything shorter has no daily

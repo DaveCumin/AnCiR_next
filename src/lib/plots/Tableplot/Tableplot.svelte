@@ -521,7 +521,7 @@
 
 	let standaloneColumns = $derived.by(() => {
 		// "Standalone" = columns not absorbed by any Group node.
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a local scratch set, not state
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 		const grouped = new Set();
 		for (const g of core.groups ?? []) {
 			for (const cid of g.sourceColumnIds ?? []) grouped.add(cid);

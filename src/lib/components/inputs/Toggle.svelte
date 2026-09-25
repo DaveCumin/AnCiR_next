@@ -1,7 +1,7 @@
 <script>
 	let {
 		value = $bindable(),
-		onChange = (v) => {},
+		onChange = () => {},
 		Labels = ['On', 'Off'],
 		inactiveColor = 'var(--color-lightness-75)',
 		activeColor = 'var(--color-lightness-45)',

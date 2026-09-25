@@ -14,7 +14,6 @@
 		createComposite,
 		removeComposite,
 		createOrphanProcess,
-		removeOrphanProcess,
 		replaceColumnRefs,
 		deleteOperationNode,
 		pushObj
@@ -36,7 +35,7 @@
 	import { createLazyPointerCapture } from '$lib/core/lazyPointerCapture.js';
 	import { canonicalNodeViz, plotDataFromSpec } from '$lib/plots/canonicalNodeViz.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
-	import { deleteTableProcess, detachColumnSetFromTP } from '$lib/core/TableProcess.svelte';
+	import { detachColumnSetFromTP } from '$lib/core/TableProcess.svelte';
 	import {
 		selectPlot,
 		deselectAllPlots,
@@ -64,7 +63,6 @@
 	import { getGroupPortY } from './groupPortPositions.svelte.js';
 	import WorkflowEdges from './WorkflowEdges.svelte';
 	import EmbeddedPlot from './EmbeddedPlot.svelte';
-	import MiniDataTable from './MiniDataTable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import NodePalette from './NodePalette.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
@@ -84,7 +82,7 @@
 		compactNodeHeight,
 		compactPortAnchorY
 	} from './nodeGeometry.js';
-	import { buildNodeLayout, parseNodeLayout } from './nodeLayoutIO.js';
+	import { buildNodeLayout, nodeLayoutMatches, parseNodeLayout } from './nodeLayoutIO.js';
 	import { settleBoxes } from './settleOverlaps.js';
 
 	let { inline = false } = $props();
@@ -114,8 +112,6 @@
 	const MIN_PREVIEW_H = 60; // px — minimum preview panel height when resizing
 	const MIN_NOTE_W = 140; // px — minimum note node width when resizing
 	const MIN_NOTE_H = 70; // px — minimum note body height when resizing
-	const MIN_PLOT_W = 100; // px — minimum actual plot width
-	const MIN_PLOT_H = 80; // px — minimum actual plot height
 
 	// Derive the natural preview height from a plot's aspect ratio (no cropping by default)
 	function getDefaultPreviewH(plotObj) {
@@ -364,7 +360,9 @@
 	 */
 	function computeNodeLayers(nodes, edges) {
 		const nodeIds = new Set(nodes.map((n) => n.id));
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure graph algorithm inside computeNodeLayers(); built and consumed in this function, never read reactively
 		const adj = new Map();
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure graph algorithm inside computeNodeLayers(); built and consumed in this function, never read reactively
 		const inDeg = new Map();
 
 		for (const id of nodeIds) {
@@ -381,6 +379,7 @@
 		// Kahn's topological sort
 		const topoOrder = [];
 		const queue = [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure graph algorithm inside computeNodeLayers(); built and consumed in this function, never read reactively
 		const tempInDeg = new Map(inDeg);
 
 		for (const [id, deg] of tempInDeg) {
@@ -403,6 +402,7 @@
 		}
 
 		// Longest-path layer assignment
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure graph algorithm inside computeNodeLayers(); built and consumed in this function, never read reactively
 		const layer = new Map();
 		for (const id of topoOrder) {
 			if (!layer.has(id)) layer.set(id, 0);
@@ -612,6 +612,29 @@
 		if (!cl || Object.keys(cl).length === 0) return; // nothing to adopt
 		untrack(() => {
 			const { positions: pos, collapsedIds: collapsed, sizes } = parseNodeLayout(cl);
+			// Second guard, on CONTENT rather than identity: adopting a layout we already
+			// match would write stablePositions for no reason, and that write is what the
+			// mirror effect below listens to. The identity guard alone only holds while a
+			// single editor owns core.nodeLayout. The legacy fullscreen `showWorkflow`
+			// branch in +page.svelte used to mount a SECOND WorkflowEditor alongside the
+			// canvas one (that branch is gone, but nothing stops a future caller from
+			// mounting two), and each instance's `_mirroredLayout` is blind to the
+			// other's write. The
+			// two then chase each other forever: A adopts B's layout, A's mirror publishes
+			// a brand-new object, B adopts that, and so on until Svelte gives up with
+			// effect_update_depth_exceeded. With this check the exchange stops after one
+			// round trip, because by then both editors hold identical positions.
+			if (
+				nodeLayoutMatches(
+					{ positions: pos, collapsedIds: collapsed, sizes },
+					{ positions: stablePositions, collapsedIds: collapsedNodeIds, sizes: plotPreviewSizes }
+				)
+			) {
+				// Still claim it, so the identity guard short-circuits the next run.
+				_mirroredLayout = cl;
+				_importedLayout = cl;
+				return;
+			}
 			stablePositions = pos;
 			collapsedNodeIds = collapsed;
 			// Restore resized plot preview boxes. Clear first so a node the
@@ -1011,6 +1034,7 @@
 	// When a SECOND background finger lands, we switch from single-finger pan to
 	// pinch mode: the finger-distance drives zoom (anchored at the centroid) and
 	// the centroid's movement drives pan.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- per-gesture pointer bookkeeping for pinch/pan; read only from pointer handlers, never from markup or a $derived
 	const activePointers = new Map(); // pointerId -> { x, y } in client coords
 	let pinchPrev = null; // { cx, cy, dist } from the previous move, or null
 	const pinchActive = () => activePointers.size >= 2;
@@ -1392,6 +1416,7 @@
 		if (!pathFocusEnabled) return null;
 		const active = hoveredNodeId ?? appState.canvasSelectedNodeId;
 		if (!active) return null;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built fresh on every run of this $derived and never mutated afterwards; the derived recomputing is what drives the highlight
 		const connected = new Set([active]);
 		for (const edge of edgeTopology) {
 			if (edge.fromId === active) connected.add(edge.toId);
@@ -1411,6 +1436,7 @@
 	// never pruned — only truly-removed ones are.
 	$effect(() => {
 		if (collapsedNodeIds.size === 0) return;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup set built and consumed inside this $effect; never read reactively
 		const liveIds = new Set();
 		for (const col of core.data ?? []) {
 			liveIds.add(`data_${col.id}`);
@@ -1424,6 +1450,7 @@
 			}
 		}
 		let changed = false;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set assigned wholesale to the $state holder collapsedNodeIds; the reassignment is what drives reactivity
 		const next = new Set();
 		for (const id of collapsedNodeIds) {
 			if (liveIds.has(id)) next.add(id);
@@ -2834,6 +2861,7 @@
 	function updateMarqueeSelection() {
 		const rect = marqueeRect;
 		if (!marquee || !rect) return;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local marquee hit-test set built and consumed inside this function; assigned wholesale to the $state holder
 		const next = new Set(marquee.base);
 		for (const node of allNodes) {
 			const pos = stablePositions[node.id] ?? defaultPositions.positions[node.id];
@@ -3239,6 +3267,7 @@
 			return;
 		}
 		if (!SQUARED_KINDS.has(node.type)) return;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fresh copy assigned wholesale back to the $state holder collapsedNodeIds; the reassignment is what drives reactivity
 		const next = new Set(collapsedNodeIds);
 		if (next.has(node.id))
 			next.delete(node.id); // currently collapsed → expand
@@ -3247,6 +3276,7 @@
 	}
 
 	function toggleMultiSelect(id) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fresh copy assigned wholesale back to the $state holder multiSelectedNodeIds; the reassignment is what drives reactivity
 		const next = new Set(multiSelectedNodeIds);
 		if (next.has(id)) next.delete(id);
 		else next.add(id);
@@ -3469,6 +3499,7 @@
 			removeNode(node);
 			if (appState.canvasSelectedNodeId === node.id) appState.canvasSelectedNodeId = null;
 			if (multiSelectedNodeIds.has(node.id)) {
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fresh copy assigned wholesale back to the $state holder multiSelectedNodeIds; the reassignment is what drives reactivity
 				const next = new Set(multiSelectedNodeIds);
 				next.delete(node.id);
 				multiSelectedNodeIds = next;
@@ -3790,6 +3821,7 @@
 	 *  pasted from another tab. Both are the same shape by construction. */
 	function pasteEntries(entries) {
 		const PASTE_OFFSET = 40;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local id set built inside pasteEntries and assigned wholesale to the $state holder afterwards
 		const newIds = new Set();
 		for (const entry of entries) {
 			const newPos = {
@@ -3968,12 +4000,14 @@
 		if (!COMPOSABLE(nodeId)) return;
 		if (core.composites.some((c) => c.memberIds.includes(nodeId))) return;
 		const conns = processGraph.rawConnections ?? [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local neighbour set built and consumed inside this function; never read reactively
 		const neighbours = new Set();
 		for (const c of conns) {
 			if (c.fromId === nodeId) neighbours.add(c.toId);
 			else if (c.toId === nodeId) neighbours.add(c.fromId);
 		}
 		if (!neighbours.size) return;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local id lookup built and consumed inside this function; never read reactively
 		const memberToComp = new Map();
 		for (const comp of core.composites)
 			for (const m of comp.memberIds) memberToComp.set(m, comp.id);
@@ -4167,17 +4201,6 @@
 	role="presentation"
 	tabindex="-1"
 >
-	{#if !inline}
-		<!-- Legacy fullscreen-modal mode keeps the close-X only. The "+ Plot" / "+ TP"
-		     header buttons moved into NodePalette so canvas mode is chrome-free. -->
-		<button
-			class="close-btn legacy-only"
-			onclick={() => (appState.showWorkflow = false)}
-			aria-label="Close workflow"
-			{@attach tooltip('Close workflow')}>✕</button
-		>
-	{/if}
-
 	{#if multiSelectedNodeIds.size >= 2 || compositeSelection.canUncombine}
 		<div class="selection-toolbar-host">
 			<SelectionLayoutToolbar
@@ -4581,28 +4604,6 @@
 		border-left: none;
 	}
 
-	/* Legacy fullscreen-modal mode only: the close-X overlay button. */
-	.close-btn.legacy-only {
-		position: absolute;
-		top: 8px;
-		right: 12px;
-		z-index: 40;
-	}
-
-	.close-btn {
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		color: var(--color-lightness-35);
-		font-size: 16px;
-		padding: 0 4px;
-		flex-shrink: 0;
-	}
-
-	.close-btn:hover {
-		color: var(--color-lightness-25);
-	}
-
 	.canvas-viewport {
 		flex: 1;
 		overflow: hidden;
@@ -4810,49 +4811,6 @@
 		display: block;
 	}
 
-	.process-intermediate-preview {
-		margin-top: 6px;
-		padding-top: 6px;
-		border-top: 1px dashed rgba(0, 0, 0, 0.15);
-	}
-
-	.plot-preview-panel {
-		overflow: hidden;
-		border: 1.5px solid rgba(0, 0, 0, 0.15);
-		border-top: none;
-		border-bottom-left-radius: 6px;
-		border-bottom-right-radius: 6px;
-		background: var(--surface-card);
-		box-shadow: var(--shadow-1);
-		box-sizing: border-box;
-		position: relative;
-	}
-
-	.plot-preview-inner {
-		pointer-events: none;
-	}
-
-	.plot-resize-handle {
-		position: absolute;
-		bottom: 2px;
-		right: 2px;
-		width: 16px;
-		height: 16px;
-		font-size: var(--font-xs);
-		line-height: 16px;
-		text-align: center;
-		cursor: nwse-resize;
-		color: var(--color-lightness-45);
-		background: rgba(255, 255, 255, 0.8);
-		border-radius: 2px;
-		user-select: none;
-	}
-
-	.plot-resize-handle:hover {
-		color: var(--color-lightness-25);
-		background: rgba(255, 255, 255, 1);
-	}
-
 	/* Grouped viewport toolbar — a card matching the selection layout toolbar. */
 	.zoom-controls {
 		position: fixed;
@@ -4901,27 +4859,6 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
-	}
-
-	.selection-action-btn {
-		pointer-events: auto;
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		height: 30px;
-		padding: 0 10px;
-		font-size: var(--font-sm);
-		font-weight: 600;
-		color: var(--color-lightness-25);
-		background: var(--surface-card);
-		border: 1px solid var(--color-lightness-80);
-		border-radius: var(--radius-md);
-		box-shadow: var(--shadow-1);
-		cursor: pointer;
-	}
-	.selection-action-btn:hover {
-		border-color: var(--color-accent);
-		color: var(--color-accent-text);
 	}
 
 	/* Most viewport icons (zoom, reset, paths) inherit their fill from the global

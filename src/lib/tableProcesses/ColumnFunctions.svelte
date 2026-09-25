@@ -251,7 +251,7 @@
 	<ControlInput label="Function">
 		<p>{p.args.out.result}</p>
 		<select bind:value={p.args.func} onchange={() => doColumnFunction()}>
-			{#each funcOptions as opt}
+			{#each funcOptions as opt (opt.value)}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
 		</select>
@@ -272,8 +272,8 @@
 			multiple={true}
 		/>
 
-		{#each p.args.xsIN as _, i}
-			<a>{getColumnById(p.args.xsIN[i])?.name ?? '?'}</a>
+		{#each p.args.xsIN as xId, i (i)}
+			<a>{getColumnById(xId)?.name ?? '?'}</a>
 			<button
 				onclick={() => {
 					p.args.xsIN.splice(i, 1);

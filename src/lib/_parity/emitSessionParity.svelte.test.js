@@ -17,9 +17,9 @@ import { join } from 'node:path';
 import { core, appConsts, pushObj } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
-import { loadProcesses } from '$lib/processes/processMap.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
-import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { loadProcesses } from '$test/processRegistry.js';
+import { loadPlots } from '$test/plotRegistry.js';
+import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { setWorkerFactory } from '$lib/workers/workerPool.js';
 
 const ROOT = process.cwd();
@@ -66,7 +66,7 @@ async function loadAndRun(session) {
 	for (const tp of core.tableProcesses) {
 		try {
 			await tp.doProcess();
-		} catch (e) {
+		} catch {
 			// record nothing extra; a throw here surfaces as empty outputs which the
 			// Python side will mismatch on — exactly what we want to see.
 		}

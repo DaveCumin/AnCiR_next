@@ -4,7 +4,8 @@ import { openApp } from './helpers.js';
 
 // The Wavelet (CWT) scalogram drew its axis titles and colour legend at fixed pixel sizes
 // while a workflow node shrinks the plot's padding with its type, so in a node the legend
-// ("max", "Power") and the axis titles were pushed past the SVG edge and cut off.
+// and the axis titles were pushed past the SVG edge and cut off. The legend is now the
+// shared colour-scale legend (ColourScale.svelte), labelled with the real power range.
 
 const DEMO = path.resolve('static/sessions/demos/demo-cwt-period-change.json');
 
@@ -44,7 +45,7 @@ test('CWT legend and axis titles fit inside the plot, in a node and in the works
 }) => {
 	await loadDemo(page);
 	const svg = page.locator('svg[id^="plot"]').first();
-	for (const label of ['max', 'Power', 'Period (hrs)', 'Time']) {
+	for (const label of ['Power', 'Period (hrs)', 'Time']) {
 		await expect(svg.getByText(label, { exact: true })).toBeAttached();
 	}
 	expect(await clippedLabels(page)).toEqual([]);

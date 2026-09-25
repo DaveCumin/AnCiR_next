@@ -37,7 +37,11 @@ export async function chatCompletion(cfg, body, opts = {}) {
 			// Network error / timeout (AbortError) — retry if we have budget.
 			if (attempt < retries) {
 				const delay = backoffDelay(attempt, null, baseDelayMs);
-				onRetry?.({ attempt: attempt + 1, reason: `network:${err?.name || err?.message}`, delayMs: delay });
+				onRetry?.({
+					attempt: attempt + 1,
+					reason: `network:${err?.name || err?.message}`,
+					delayMs: delay
+				});
 				await sleep(delay);
 				continue;
 			}

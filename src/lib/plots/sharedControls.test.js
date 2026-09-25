@@ -223,7 +223,12 @@ describe('descend descriptor', () => {
 		const schema = getSharedDataSchema(makeStyledWrapper());
 		const colour = schema.find((f) => f.path === 'style.colour');
 		const shape = schema.find((f) => f.path === 'style.shape');
-		expect(colour).toEqual({ path: 'style.colour', label: 'Style Colour', input: 'color', group: 'Style' });
+		expect(colour).toEqual({
+			path: 'style.colour',
+			label: 'Style Colour',
+			input: 'color',
+			group: 'Style'
+		});
 		expect(shape).toEqual({
 			path: 'style.shape',
 			label: 'Style Shape',

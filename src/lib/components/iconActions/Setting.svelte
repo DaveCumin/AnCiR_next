@@ -304,7 +304,7 @@
 		if (!jsonData.rawData) {
 			//legacy support for rawData as array
 			core.rawData = new Map(
-				Object.entries($state.snapshot(jsonData.data)).map(([id, data]) => [
+				Object.entries($state.snapshot(jsonData.data)).map(([, data]) => [
 					Number(data.id),
 					data.data
 				])
@@ -411,6 +411,7 @@
 			}
 
 			// 2. Collect TP-output column ids (these are NOT sources).
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup of TP output column ids, built and consumed inside this import function; never read reactively
 			const tpOutIds = new Set();
 			for (const tp of newTPs) {
 				for (const cid of Object.values(tp.args?.out ?? {})) {

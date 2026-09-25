@@ -71,7 +71,13 @@ describe('cleanNumericColumn', () => {
 
 describe('columnToPhaseHours', () => {
 	it('numeric column keeps raw hours; gaps -> NaN', () => {
-		expect(columnToPhaseHours([7.5, null, '', 'x', 19], 'number')).toEqual([7.5, NaN, NaN, NaN, 19]);
+		expect(columnToPhaseHours([7.5, null, '', 'x', 19], 'number')).toEqual([
+			7.5,
+			NaN,
+			NaN,
+			NaN,
+			19
+		]);
 	});
 	it('time column converts epoch-ms -> absolute hours', () => {
 		// 1 hour = 3_600_000 ms

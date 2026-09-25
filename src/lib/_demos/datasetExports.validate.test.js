@@ -13,7 +13,8 @@ const datasets = manifest.filter((s) => s.kind === 'dataset');
 
 const datasetFor = (workflowId) => datasets.find((d) => d.id === `dataset-${workflowId}`);
 /** Read through the manifest url, so a broken link fails here rather than only in the browser. */
-const csvOf = (workflowId) => readFileSync(join(DIR, datasetFor(workflowId).url.split('/').pop()), 'utf8');
+const csvOf = (workflowId) =>
+	readFileSync(join(DIR, datasetFor(workflowId).url.split('/').pop()), 'utf8');
 const headerOf = (id) => csvOf(id).split('\n')[0].split(',');
 
 describe('workflow data exports', () => {
@@ -54,18 +55,23 @@ describe('workflow data exports', () => {
 		expect(header.length).toBe(sources.length);
 	});
 
-	it.each(workflows.map((w) => w.id))('%s has rows, and every row matches the header width', (id) => {
-		const lines = csvOf(id).trimEnd().split('\n');
-		const width = lines[0].split(',').length;
-		expect(lines.length).toBeGreaterThan(1);
-		// Ragged series are padded, not truncated: two demos carry different sampling rates.
-		const wrong = lines.slice(1).filter((l) => l.split(',').length !== width);
-		expect(wrong).toEqual([]);
-	});
+	it.each(workflows.map((w) => w.id))(
+		'%s has rows, and every row matches the header width',
+		(id) => {
+			const lines = csvOf(id).trimEnd().split('\n');
+			const width = lines[0].split(',').length;
+			expect(lines.length).toBeGreaterThan(1);
+			// Ragged series are padded, not truncated: two demos carry different sampling rates.
+			const wrong = lines.slice(1).filter((l) => l.split(',').length !== width);
+			expect(wrong).toEqual([]);
+		}
+	);
 
 	it('describes each dataset with its real shape', () => {
 		for (const d of datasets.filter((x) => x.id.startsWith('dataset-workflow-'))) {
-			const lines = readFileSync(join(DIR, d.url.split('/').pop()), 'utf8').trimEnd().split('\n');
+			const lines = readFileSync(join(DIR, d.url.split('/').pop()), 'utf8')
+				.trimEnd()
+				.split('\n');
 			expect(d.description).toContain(`${lines[0].split(',').length} columns`);
 			expect(d.description).toContain(`${lines.length - 1} rows`);
 		}

@@ -6,138 +6,138 @@ import { mutationService as M } from './mutationService.js';
 import { core, appConsts } from './core.svelte.js';
 
 beforeAll(() => {
-    if (!appConsts.plotMap.has('scatterplot')) {
-        appConsts.plotMap.set('scatterplot', {
-            displayName: 'Scatterplot (test stub)',
-            data: { fromJSON: (_plot, plotData) => plotData ?? {} }
-        });
-    }
-    if (!appConsts.processMap.has('Normalize')) {
-        appConsts.processMap.set('Normalize', {
-            displayName: 'Normalize (test stub)',
-            defaults: new Map([['normalizationType', { val: 'z-score' }]]),
-            func: (data) => data
-        });
-    }
-    history.init();
+	if (!appConsts.plotMap.has('scatterplot')) {
+		appConsts.plotMap.set('scatterplot', {
+			displayName: 'Scatterplot (test stub)',
+			data: { fromJSON: (_plot, plotData) => plotData ?? {} }
+		});
+	}
+	if (!appConsts.processMap.has('Normalize')) {
+		appConsts.processMap.set('Normalize', {
+			displayName: 'Normalize (test stub)',
+			defaults: new Map([['normalizationType', { val: 'z-score' }]]),
+			func: (data) => data
+		});
+	}
+	history.init();
 });
 
 beforeEach(() => {
-    history.clear();
-    core.plots.length = 0;
-    core.data.length = 0;
+	history.clear();
+	core.plots.length = 0;
+	core.data.length = 0;
 });
 
 describe('opHistory', () => {
-    it('records an op and supports undo/redo', () => {
-        const plot = M.addPlot({ type: 'scatterplot', name: 'orig', x: 0, y: 0, width: 1, height: 1 });
-        expect(history.canUndo).toBe(true);
-        history.undo();
-        expect(core.plots).toHaveLength(0);
-        expect(history.canRedo).toBe(true);
-        history.redo();
-        expect(core.plots).toHaveLength(1);
-    });
+	it('records an op and supports undo/redo', () => {
+		M.addPlot({ type: 'scatterplot', name: 'orig', x: 0, y: 0, width: 1, height: 1 });
+		expect(history.canUndo).toBe(true);
+		history.undo();
+		expect(core.plots).toHaveLength(0);
+		expect(history.canRedo).toBe(true);
+		history.redo();
+		expect(core.plots).toHaveLength(1);
+	});
 
-    it('coalesces consecutive setProcessArg ops on the same (col, proc, key)', () => {
-        const col = M.addColumn({ name: 'X', type: 'number' });
-        const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
-        M.setProcessArg(col.id, proc.id, 'normalizationType', 'min-max');
-        M.setProcessArg(col.id, proc.id, 'normalizationType', 'robust');
-        M.setProcessArg(col.id, proc.id, 'normalizationType', 'unit-vector');
-        // Pre-coalesce: 5 entries (addCol + addProc + 3 setArg). Coalesced: 3.
-        expect(history.undoCount).toBe(3);
-        history.undo(); // undoes the coalesced setArg back to 'z-score'
-        expect(proc.args.normalizationType).toBe('z-score');
-    });
+	it('coalesces consecutive setProcessArg ops on the same (col, proc, key)', () => {
+		const col = M.addColumn({ name: 'X', type: 'number' });
+		const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
+		M.setProcessArg(col.id, proc.id, 'normalizationType', 'min-max');
+		M.setProcessArg(col.id, proc.id, 'normalizationType', 'robust');
+		M.setProcessArg(col.id, proc.id, 'normalizationType', 'unit-vector');
+		// Pre-coalesce: 5 entries (addCol + addProc + 3 setArg). Coalesced: 3.
+		expect(history.undoCount).toBe(3);
+		history.undo(); // undoes the coalesced setArg back to 'z-score'
+		expect(proc.args.normalizationType).toBe('z-score');
+	});
 
-    it('does not record while restoring (no echo on undo/redo)', () => {
-        M.addPlot({ type: 'scatterplot', x: 0, y: 0, width: 1, height: 1 });
-        const stackBefore = history.undoCount;
-        history.undo();
-        expect(history.undoCount).toBe(stackBefore - 1);
-    });
+	it('does not record while restoring (no echo on undo/redo)', () => {
+		M.addPlot({ type: 'scatterplot', x: 0, y: 0, width: 1, height: 1 });
+		const stackBefore = history.undoCount;
+		history.undo();
+		expect(history.undoCount).toBe(stackBefore - 1);
+	});
 
-    it('caps stack at maxStackSize (50)', () => {
-        for (let i = 0; i < 60; i++) {
-            M.addPlot({ type: 'scatterplot', x: 0, y: 0, width: 1, height: 1 });
-        }
-        expect(history.undoCount).toBe(50);
-    });
+	it('caps stack at maxStackSize (50)', () => {
+		for (let i = 0; i < 60; i++) {
+			M.addPlot({ type: 'scatterplot', x: 0, y: 0, width: 1, height: 1 });
+		}
+		expect(history.undoCount).toBe(50);
+	});
 
-    describe('UI snapshot handlers', () => {
-        let uiState;
-        let unregister;
+	describe('UI snapshot handlers', () => {
+		let uiState;
+		let unregister;
 
-        // NOTE: the real WorkflowEditor handlers snapshot selection only
-        // (focused + multi-selected + edge), NOT node expansion — expansion is a
-        // sticky per-node gesture that must survive undo/redo untouched. These
-        // tests mirror that handler shape and verify the generic snapshot plumbing.
-        beforeEach(() => {
-            uiState = {
-                focusedNodeId: null,
-                multiSelectedNodeIds: [],
-                selectedEdgeKey: null
-            };
-            unregister = history.registerUiHandlers(
-                () => ({
-                    ...uiState,
-                    multiSelectedNodeIds: [...uiState.multiSelectedNodeIds]
-                }),
-                (snap) => {
-                    uiState = {
-                        focusedNodeId: snap.focusedNodeId ?? null,
-                        multiSelectedNodeIds: [...(snap.multiSelectedNodeIds ?? [])],
-                        selectedEdgeKey: snap.selectedEdgeKey ?? null
-                    };
-                }
-            );
-        });
+		// NOTE: the real WorkflowEditor handlers snapshot selection only
+		// (focused + multi-selected + edge), NOT node expansion — expansion is a
+		// sticky per-node gesture that must survive undo/redo untouched. These
+		// tests mirror that handler shape and verify the generic snapshot plumbing.
+		beforeEach(() => {
+			uiState = {
+				focusedNodeId: null,
+				multiSelectedNodeIds: [],
+				selectedEdgeKey: null
+			};
+			unregister = history.registerUiHandlers(
+				() => ({
+					...uiState,
+					multiSelectedNodeIds: [...uiState.multiSelectedNodeIds]
+				}),
+				(snap) => {
+					uiState = {
+						focusedNodeId: snap.focusedNodeId ?? null,
+						multiSelectedNodeIds: [...(snap.multiSelectedNodeIds ?? [])],
+						selectedEdgeKey: snap.selectedEdgeKey ?? null
+					};
+				}
+			);
+		});
 
-        afterEach(() => {
-            unregister?.();
-        });
+		afterEach(() => {
+			unregister?.();
+		});
 
-        it('restores focused + selection together on undo', async () => {
-            const col = M.addColumn({ name: 'X', type: 'number' });
-            const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
+		it('restores focused + selection together on undo', async () => {
+			const col = M.addColumn({ name: 'X', type: 'number' });
+			const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
 
-            // Simulate user selecting the process node, then editing.
-            uiState.focusedNodeId = `process_${proc.id}`;
-            uiState.multiSelectedNodeIds = [`process_${proc.id}`];
+			// Simulate user selecting the process node, then editing.
+			uiState.focusedNodeId = `process_${proc.id}`;
+			uiState.multiSelectedNodeIds = [`process_${proc.id}`];
 
-            M.setProcessArg(col.id, proc.id, 'normalizationType', 'min-max');
-            // Let the microtask scheduled by #record run so uiAfter is captured.
-            await Promise.resolve();
+			M.setProcessArg(col.id, proc.id, 'normalizationType', 'min-max');
+			// Let the microtask scheduled by #record run so uiAfter is captured.
+			await Promise.resolve();
 
-            // Pretend the user clicked away before pressing undo.
-            uiState.focusedNodeId = null;
-            uiState.multiSelectedNodeIds = [];
+			// Pretend the user clicked away before pressing undo.
+			uiState.focusedNodeId = null;
+			uiState.multiSelectedNodeIds = [];
 
-            history.undo();
+			history.undo();
 
-            expect(proc.args.normalizationType).toBe('z-score');
-            expect(uiState.focusedNodeId).toBe(`process_${proc.id}`);
-            expect(uiState.multiSelectedNodeIds).toEqual([`process_${proc.id}`]);
-        });
+			expect(proc.args.normalizationType).toBe('z-score');
+			expect(uiState.focusedNodeId).toBe(`process_${proc.id}`);
+			expect(uiState.multiSelectedNodeIds).toEqual([`process_${proc.id}`]);
+		});
 
-        it('restores post-op state on redo', async () => {
-            const col = M.addColumn({ name: 'X', type: 'number' });
-            const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
+		it('restores post-op state on redo', async () => {
+			const col = M.addColumn({ name: 'X', type: 'number' });
+			const proc = M.addProcess(col.id, 'Normalize', { normalizationType: 'z-score' });
 
-            // After-op state: node selected (e.g. user selected then edited).
-            uiState.focusedNodeId = `process_${proc.id}`;
-            uiState.multiSelectedNodeIds = [`process_${proc.id}`];
+			// After-op state: node selected (e.g. user selected then edited).
+			uiState.focusedNodeId = `process_${proc.id}`;
+			uiState.multiSelectedNodeIds = [`process_${proc.id}`];
 
-            M.setProcessArg(col.id, proc.id, 'normalizationType', 'min-max');
-            await Promise.resolve();
+			M.setProcessArg(col.id, proc.id, 'normalizationType', 'min-max');
+			await Promise.resolve();
 
-            history.undo();
-            history.redo();
+			history.undo();
+			history.redo();
 
-            expect(proc.args.normalizationType).toBe('min-max');
-            expect(uiState.focusedNodeId).toBe(`process_${proc.id}`);
-            expect(uiState.multiSelectedNodeIds).toEqual([`process_${proc.id}`]);
-        });
-    });
+			expect(proc.args.normalizationType).toBe('min-max');
+			expect(uiState.focusedNodeId).toBe(`process_${proc.id}`);
+			expect(uiState.multiSelectedNodeIds).toEqual([`process_${proc.id}`]);
+		});
+	});
 });

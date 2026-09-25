@@ -111,7 +111,8 @@ export function dominantTickPattern(values) {
 		// reads as; resolving by insertion order instead picked whichever tick came first,
 		// which is how the box once said HH:mm under an axis labelled 5 Aug … 8 Aug.
 		const better =
-			n > bestN || (n === bestN && PATTERN_COARSENESS.indexOf(pattern) > PATTERN_COARSENESS.indexOf(best));
+			n > bestN ||
+			(n === bestN && PATTERN_COARSENESS.indexOf(pattern) > PATTERN_COARSENESS.indexOf(best));
 		if (better) {
 			best = pattern;
 			bestN = n;

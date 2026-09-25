@@ -18,14 +18,12 @@ import { core } from '$lib/core/core.svelte.js';
 /** Plot types that support brush/wheel zoom (drive the toolbar Zoom button). */
 export function isZoomCapable(type) {
 	return (
-		type === 'scatterplot' ||
-		type === 'periodogram' ||
-		type === 'correlogram' ||
-		type === 'fft'
+		type === 'scatterplot' || type === 'periodogram' || type === 'correlogram' || type === 'fft'
 	);
 }
 
-const pairEq = (a, b) => (a?.[0] ?? null) === (b?.[0] ?? null) && (a?.[1] ?? null) === (b?.[1] ?? null);
+const pairEq = (a, b) =>
+	(a?.[0] ?? null) === (b?.[0] ?? null) && (a?.[1] ?? null) === (b?.[1] ?? null);
 const eitherSet = (a) => a?.[0] != null || a?.[1] != null;
 
 function linX(p, domain) {
@@ -113,11 +111,16 @@ function fftAdapter(p) {
 		{ orient: 'y', scale: magScale, set: (l) => (p.ylimsIN = l) }
 	];
 	if (hasPhase) {
-		axes.push({ orient: 'y', scale: () => linY(p, p.phaseYlims), set: (l) => (p.phaseYlimsIN = l) });
+		axes.push({
+			orient: 'y',
+			scale: () => linY(p, p.phaseYlims),
+			set: (l) => (p.phaseYlimsIN = l)
+		});
 	}
 	return {
 		axes,
-		isZoomed: () => !pairEq(p.xlimsIN, [4, 30]) || eitherSet(p.ylimsIN) || eitherSet(p.phaseYlimsIN),
+		isZoomed: () =>
+			!pairEq(p.xlimsIN, [4, 30]) || eitherSet(p.ylimsIN) || eitherSet(p.phaseYlimsIN),
 		reset: () => {
 			p.xlimsIN = [4, 30];
 			p.ylimsIN = [null, null];

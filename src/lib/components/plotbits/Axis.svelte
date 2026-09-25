@@ -65,6 +65,11 @@
 	import { select, selectAll } from 'd3-selection';
 	import { axisBottom, axisLeft, axisTop, axisRight } from 'd3-axis';
 
+	// Side-effect import: d3-transition augments d3-selection's prototype with
+	// .transition(). Kept (unbound) so the commented-out transition code below can
+	// be re-enabled without a missing-method surprise.
+	import 'd3-transition';
+
 	let {
 		axisData = $bindable(),
 		height, //height of the plot

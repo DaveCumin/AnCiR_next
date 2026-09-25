@@ -5,7 +5,7 @@
 	// output columns rendered as normal column rows. Mirrors the canvas node /
 	// Control Panel so a node looks the same everywhere. Rewiring stays on the
 	// canvas / Control Panel — inputs here are display-only.
-	import { core, appState, deleteOperationNode } from '$lib/core/core.svelte.js';
+	import { appState, deleteOperationNode } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
@@ -24,6 +24,7 @@
 		}
 		// table-process: any arg whose key ends in "IN" (xIN, yIN, …).
 		const out = [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local dedupe set built and consumed inside this $derived; never read reactively
 		const seen = new Set();
 		for (const [k, v] of Object.entries(node.tpObj?.args ?? {})) {
 			if (!k.endsWith('IN')) continue;
@@ -90,11 +91,13 @@
 			}
 		}}
 	>
-		<p class="node-name"><Editable
+		<p class="node-name">
+			<Editable
 				value={getNodeName(node)}
 				onInput={(v) => setNodeName(node, v)}
 				onCommit={(v) => setNodeName(node, v, { commit: true })}
-			/></p>
+			/>
+		</p>
 		<div class="node-head-btns">
 			<button
 				class="icon node-action-btn"

@@ -79,8 +79,7 @@ const OUT_META = {
 		values: { type: 'number' }
 	}),
 	SequenceColumn: (args) => ({
-		result:
-			args.seqType === 'time' ? { type: 'time', timeFormat: TIME_FMT } : { type: 'number' }
+		result: args.seqType === 'time' ? { type: 'time', timeFormat: TIME_FMT } : { type: 'number' }
 	})
 };
 

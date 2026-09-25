@@ -350,7 +350,9 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 		// Returns a { outKey: number[] } map, or null when no baking is available yet.
 		const baked = nodeSchema.generate ? nodeSchema.generate(args) : null;
 		if (nodeSchema.generate && !baked)
-			warnings.push(`${name}: generator outputs not baked (no generate()); downstream analyses may not compute on load.`);
+			warnings.push(
+				`${name}: generator outputs not baked (no generate()); downstream analyses may not compute on load.`
+			);
 
 		// PRE-ALLOCATE output columns + `out` wiring (required — see ADR Test C).
 		const out = {};
@@ -363,7 +365,8 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 
 		// Remember a RhythmicityAnalysis's outputs so a spectrum plot fed by them can be caught
 		// and retyped to a scatterplot (see rhythmicityOutputCols).
-		if (name === 'RhythmicityAnalysis') for (const id of Object.values(out)) rhythmicityOutputCols.add(id);
+		if (name === 'RhythmicityAnalysis')
+			for (const id of Object.values(out)) rhythmicityOutputCols.add(id);
 
 		tableProcesses.push({
 			id: tpId++,
@@ -386,7 +389,9 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 	for (const p of draft.plots ?? []) {
 		const pSchema = plots_[p.type];
 		if (!pSchema) {
-			errors.push(`Unknown plot type "${p.type}". Available: ${Object.keys(plots_).join(', ')}. Skipped.`);
+			errors.push(
+				`Unknown plot type "${p.type}". Available: ${Object.keys(plots_).join(', ')}. Skipped.`
+			);
 			continue;
 		}
 
@@ -438,7 +443,9 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 			}
 
 			if (bad) {
-				errors.push(`Plot ${bad}. Available: ${[...byName.keys()].join(', ') || '(none)'}. Skipped.`);
+				errors.push(
+					`Plot ${bad}. Available: ${[...byName.keys()].join(', ') || '(none)'}. Skipped.`
+				);
 				continue;
 			}
 			inner = { data };
@@ -546,7 +553,9 @@ function columnValuesIssue(name, type, values) {
 	}
 
 	if (type === 'time') {
-		const i = values.findIndex((v) => !blank(v) && !Number.isFinite(Number.isFinite(Number(v)) ? Number(v) : Date.parse(v)));
+		const i = values.findIndex(
+			(v) => !blank(v) && !Number.isFinite(Number.isFinite(Number(v)) ? Number(v) : Date.parse(v))
+		);
 		if (i !== -1)
 			return `Column "${name}" is type "time" but values[${i}] is ${describe(values[i])}, which is neither an ISO timestamp nor an epoch number. Skipped.`;
 	}

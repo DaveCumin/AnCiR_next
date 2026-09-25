@@ -1,10 +1,6 @@
 <script module>
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
-	import {
-		seriesColumnId,
-		colourForCategory,
-		colourForCategoryLabel
-	} from '$lib/plots/seriesColour.js';
+	import { colourForCategory, colourForCategoryLabel } from '$lib/plots/seriesColour.js';
 	import { resolveColour } from '$lib/plots/appearanceIdentity.js';
 	import { greyForIndex } from '$lib/plots/seriesAppearance.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -266,6 +262,7 @@
 			return [];
 		}
 
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 		const groups = new Map();
 
 		x.forEach((cat, i) => {
@@ -381,7 +378,7 @@
 							options={['solid', '5, 5', '2, 2', '5, 2']}
 							optionsDisplay={['Solid', 'Dashed', 'Dotted', 'Dashed & Dotted']}
 							other={true}
-							placeholder={'eg 5, 5'}
+							placeholder="eg 5, 5"
 						/>
 					</div>
 					{#if boxPlotData.stroke === -1}
@@ -442,7 +439,7 @@
 				<div>
 					<p>Outliers</p>
 					<div class="removed-values-list">
-						{#each outlierValues as value, i}
+						{#each outlierValues as value, i (i)}
 							<div class="removed-value-row">
 								<span class="removed-value-number">{i + 1}:</span>
 								<span class="removed-value">{parseFloat(value.toFixed(2))}</span>
@@ -466,7 +463,7 @@
 		</clipPath>
 
 		<g clip-path="url(#{clipKey})" style="transform: translate({xoffset}px, {yoffset}px);">
-			{#each groupedStats as group}
+			{#each groupedStats as group, gi (gi)}
 				{@const categoryIdx = getCategoryIndex(group.category)}
 				{@const xCenter = xscale(categoryIdx) + dodgeOffset}
 				{@const categoryColour = useCategoryColour
@@ -540,7 +537,7 @@
 
 					<!-- Outliers -->
 					{#if boxPlotData.showOutliers}
-						{#each group.outliers as outlier}
+						{#each group.outliers as outlier, oi (oi)}
 							<circle
 								cx={xCenter}
 								cy={yscale(outlier)}
@@ -560,7 +557,7 @@
 				     and outlier rings — with a darker same-hue stroke so semi-transparent
 				     points still read against a fill of the same colour. -->
 				{#if showPoints}
-					{#each group.values as value, vi}
+					{#each group.values as value, vi (vi)}
 						<circle
 							cx={xCenter + jitterOffset(seriesIndex, categoryIdx, vi) * boxHalfWidth * pointJitter}
 							cy={yscale(value)}

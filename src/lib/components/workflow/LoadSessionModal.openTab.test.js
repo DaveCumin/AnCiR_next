@@ -16,7 +16,9 @@ Element.prototype.animate ??= () => ({ finished: Promise.resolve(), cancel() {},
 afterEach(() => cleanup());
 
 const activeTab = () =>
-	[...document.querySelectorAll('.tab-btn')].find((b) => b.classList.contains('active'))?.textContent?.trim();
+	[...document.querySelectorAll('.tab-btn')]
+		.find((b) => b.classList.contains('active'))
+		?.textContent?.trim();
 
 describe('LoadSessionModal opening tab', () => {
 	it('opens on the tab the caller asked for', async () => {

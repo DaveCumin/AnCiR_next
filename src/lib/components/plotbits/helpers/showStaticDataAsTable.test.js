@@ -23,7 +23,13 @@ describe('showStaticDataAsTable placement', () => {
 	it('places the stats table next to its source node, not at a fixed off-screen corner', () => {
 		// Regression: the table used to spawn at a hard-coded (80,80) — usually off-screen or
 		// behind other content — so "View stats" looked like it did nothing.
-		showStaticDataAsTable('Trend fit stats', ['column', 'r2'], [['y', 0.9]], null, 'tableprocess_5');
+		showStaticDataAsTable(
+			'Trend fit stats',
+			['column', 'r2'],
+			[['y', 0.9]],
+			null,
+			'tableprocess_5'
+		);
 		expect(added).toHaveLength(1);
 		expect(added[0].x).toBe(440 + 360);
 		expect(added[0].y).toBe(314 + 40);

@@ -1,6 +1,4 @@
 <script>
-	import { tick } from 'svelte';
-
 	// Props for the component
 	let {
 		steps = $bindable(), // Array of { label: string, completed: boolean, active: boolean, isExpanded: boolean }
@@ -53,7 +51,9 @@
 				<div class="step-content" class:expanded={step.isExpanded}>
 					<div
 						class="content-inner"
-						style="border-left: 2px solid {step.completed ? 'var(--color-success)' : 'var(--color-lightness-90)'};"
+						style="border-left: 2px solid {step.completed
+							? 'var(--color-success)'
+							: 'var(--color-lightness-90)'};"
 					>
 						{#if stepContent}
 							{@render stepContent(index, step)}
@@ -68,7 +68,9 @@
 					<div
 						class="progress-line"
 						class:completed={step.completed && steps[index + 1]?.completed}
-						style="background-color: {step.completed ? 'var(--color-success)' : 'var(--color-lightness-90)'};"
+						style="background-color: {step.completed
+							? 'var(--color-success)'
+							: 'var(--color-lightness-90)'};"
 					></div>
 				{/if}
 			</div>

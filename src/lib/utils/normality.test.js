@@ -3,7 +3,10 @@ import { shapiroWilk, dAgostino, jarqueBera, normalityTest } from './normality.j
 
 // Reference values from scipy 1.x: stats.shapiro / stats.normaltest / stats.jarque_bera on the
 // exact arrays below.
-const NORMALISH = [2.1, -0.3, 1.4, 0.2, -1.1, 0.8, 0.05, 1.9, -0.7, 0.4, 1.2, -0.9, 0.6, -0.2, 0.9, 1.5, -1.3, 0.3, 0.7, -0.5, 0.1, -0.4, 1.1, -0.8, 0.5];
+const NORMALISH = [
+	2.1, -0.3, 1.4, 0.2, -1.1, 0.8, 0.05, 1.9, -0.7, 0.4, 1.2, -0.9, 0.6, -0.2, 0.9, 1.5, -1.3, 0.3,
+	0.7, -0.5, 0.1, -0.4, 1.1, -0.8, 0.5
+];
 const SKEWED = [1, 1, 1, 1, 2, 2, 3, 10, 4, 5, 6, 7, 3, 2, 8, 1, 1, 9, 2, 1, 1, 2, 3, 1, 15];
 
 describe('shapiroWilk (scipy.stats.shapiro parity)', () => {
@@ -87,10 +90,16 @@ describe('normalityTest dispatch', () => {
 		expect(normalityTest(NORMALISH).statistic).toBeCloseTo(shapiroWilk(NORMALISH).statistic, 10);
 	});
 	it('selects dagostino', () => {
-		expect(normalityTest(NORMALISH, 'dagostino').statistic).toBeCloseTo(dAgostino(NORMALISH).statistic, 10);
+		expect(normalityTest(NORMALISH, 'dagostino').statistic).toBeCloseTo(
+			dAgostino(NORMALISH).statistic,
+			10
+		);
 	});
 	it('selects jarquebera', () => {
-		expect(normalityTest(NORMALISH, 'jarquebera').statistic).toBeCloseTo(jarqueBera(NORMALISH).statistic, 10);
+		expect(normalityTest(NORMALISH, 'jarquebera').statistic).toBeCloseTo(
+			jarqueBera(NORMALISH).statistic,
+			10
+		);
 	});
 	it('ignores invalid values (NaN/null) when cleaning', () => {
 		const withGaps = [...NORMALISH.slice(0, 12), NaN, null, ...NORMALISH.slice(12)];

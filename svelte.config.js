@@ -9,7 +9,10 @@ const config = {
 		// the canonical Python runtime (tools/ancir_runtime.py) for the experimental
 		// "export session as Python" feature — keeping a single source of truth.
 		alias: {
-			$tools: 'tools'
+			$tools: 'tools',
+
+			// `$test` → src/test, the shared test-only helpers (see plotRegistry.js).
+			$test: 'src/test'
 		},
 
 		output: {

@@ -107,9 +107,10 @@ describe('design-token guardrail', () => {
 					if (m && m[1] === m[2]) selfRefs.push(`${rel}:${i + 1}  ${m[1]}: var(${m[1]})`);
 				});
 		}
-		expect(selfRefs, `Token defined as itself (resolves to nothing):\n${selfRefs.join('\n')}`).toEqual(
-			[]
-		);
+		expect(
+			selfRefs,
+			`Token defined as itself (resolves to nothing):\n${selfRefs.join('\n')}`
+		).toEqual([]);
 	});
 
 	it('uses no tokenized colour literals (denylist)', () => {
@@ -135,8 +136,9 @@ describe('design-token guardrail', () => {
 				}
 			});
 		}
-		expect(violations, `Use the mapped token instead of the raw literal:\n${violations.join('\n')}`).toEqual(
-			[]
-		);
+		expect(
+			violations,
+			`Use the mapped token instead of the raw literal:\n${violations.join('\n')}`
+		).toEqual([]);
 	});
 });

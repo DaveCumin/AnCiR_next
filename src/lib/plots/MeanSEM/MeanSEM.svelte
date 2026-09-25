@@ -215,7 +215,7 @@
 
 		// Union of group keys across all series, numeric-aware sorted (matches Boxplot).
 		uniqueXValues = $derived.by(() => {
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 			const all = new Set();
 			this.data.forEach((d) => {
 				d.stats.forEach((s) => all.add(s.x));
@@ -444,7 +444,7 @@
 	import { slide } from 'svelte/transition';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 
 	let { theData, which } = $props();
 

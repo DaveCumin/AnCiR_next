@@ -483,9 +483,7 @@ describe('the id-as-prefix family, with word suffixes', () => {
 		// and this key begins with the literal `value_`.
 		setup({
 			columns: [{ id: 1 }, { id: 40 }],
-			tableProcesses: [
-				tp(1, { categoryIN: 5, timeIN: 6, valueIN: 7, out: { value_1: 40 } })
-			]
+			tableProcesses: [tp(1, { categoryIN: 5, timeIN: 6, valueIN: 7, out: { value_1: 40 } })]
 		});
 		expect(sourceColumnId(40)).toBeNull();
 	});

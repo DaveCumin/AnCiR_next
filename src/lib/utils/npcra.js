@@ -70,7 +70,7 @@ export function computeNPCRA(t, y, opts = {}) {
 	// 3. Grand mean + overall sum-of-squares over the valid epochs.
 	let n = 0;
 	let mean = 0;
-	for (let k = 0; k < nEpochs; k++) if (Number.isFinite(x[k])) mean += x[k], n++;
+	for (let k = 0; k < nEpochs; k++) if (Number.isFinite(x[k])) ((mean += x[k]), n++);
 	if (n === 0) return null;
 	mean /= n;
 	const Xbar = mean;
@@ -114,7 +114,7 @@ export function computeNPCRA(t, y, opts = {}) {
 			let wc = 0;
 			for (let j = 0; j < w; j++) {
 				const v = profile[(s + j) % p];
-				if (Number.isFinite(v)) ws += v, wc++;
+				if (Number.isFinite(v)) ((ws += v), wc++);
 			}
 			if (wc === 0) continue;
 			const m = ws / wc;

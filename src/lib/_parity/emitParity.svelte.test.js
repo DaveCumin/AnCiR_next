@@ -24,9 +24,9 @@ import { join } from 'node:path';
 import { core, appConsts, pushObj } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
-import { loadProcesses } from '$lib/processes/processMap.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
-import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { loadProcesses } from '$test/processRegistry.js';
+import { loadPlots } from '$test/plotRegistry.js';
+import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { setWorkerFactory } from '$lib/workers/workerPool.js';
 import { computeFFT } from '$lib/utils/fft.js';
 import { computeAutocorrelation } from '$lib/utils/correlogram.js';
@@ -98,6 +98,9 @@ const PLOT_COMPUTE_FNS = { computeFFT, computeAutocorrelation };
 // the fixture's `jsArgs`, and returns either a dict of arrays (compareArrays),
 // an array of objects (compareFields), or a dict of scalars (compareScalars).
 const PURE_UTIL_FNS = {
+	// Also a PLOT_COMPUTE_FN: reachable here so a fixture can compare its scalar
+	// peak (peakLag/peakCorrelation) and not only the lag/correlation arrays.
+	computeAutocorrelation,
 	gaussianKDE,
 	meanSemByGroup,
 	rayleighTest,

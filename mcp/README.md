@@ -28,27 +28,27 @@ browser anyway.
 
 ## Layers
 
-| Layer | Where | Runs in |
-| ----- | ----- | ------- |
-| Engine — `AncirSession` over the real `core` | `src/engine/session.js` | Node (happy‑dom) / browser |
-| DOM bootstrap (shim for non‑browser runs) | `src/engine/bootstrapDom.js` | Node |
-| MCP server (stdio **and** Streamable HTTP) | `src/server.js` | vite‑node |
-| Headless plot rasteriser (Vite + Playwright; uses the app's `convertToImage`) | `src/engine/renderPlot.js`, `src/render/` | Chromium |
-| Multi‑session isolation (process‑per‑session) | `src/sessionManager.js`, `src/worker.js` | vite‑node (1 per session) |
+| Layer                                                                         | Where                                     | Runs in                    |
+| ----------------------------------------------------------------------------- | ----------------------------------------- | -------------------------- |
+| Engine — `AncirSession` over the real `core`                                  | `src/engine/session.js`                   | Node (happy‑dom) / browser |
+| DOM bootstrap (shim for non‑browser runs)                                     | `src/engine/bootstrapDom.js`              | Node                       |
+| MCP server (stdio **and** Streamable HTTP)                                    | `src/server.js`                           | vite‑node                  |
+| Headless plot rasteriser (Vite + Playwright; uses the app's `convertToImage`) | `src/engine/renderPlot.js`, `src/render/` | Chromium                   |
+| Multi‑session isolation (process‑per‑session)                                 | `src/sessionManager.js`, `src/worker.js`  | vite‑node (1 per session)  |
 
 ## Tools
 
-| Tool | Description |
-| ---- | ----------- |
-| `list_capabilities` | Every analysis, **column transform**, and plot type, **derived live from the engine registry** — input fields, params (with defaults), output keys, status |
-| `create_session` | Create/reset the active session |
-| `import_data` | Add numeric columns (`{name, type?, values[]}`) |
-| `list_columns` | List columns (id, name, type, length) |
-| `run_table_process` | **Generic:** run *any* AnCiR analysis by name (`{name, args}`) through the real `definition` registry; output columns are written into the session |
-| `add_column_process` | Apply a **column transform** (Add, Multiply, normalize, Sort, OutlierRemoval, RemoveTrend, …) to a column and run its chain; embedded in the session |
-| `add_plot` | Create a plot wired to columns and add it to the session (opens rendered in the GUI) |
-| `render_plot` | **Rasterise** a plot to PNG (+ SVG) via a real headless browser — the actual AnCiR component with axes/gridlines/legend |
-| `export_session` | Export AnCiR‑compatible JSON (optionally write to a file) |
+| Tool                 | Description                                                                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_capabilities`  | Every analysis, **column transform**, and plot type, **derived live from the engine registry** — input fields, params (with defaults), output keys, status |
+| `create_session`     | Create/reset the active session                                                                                                                            |
+| `import_data`        | Add numeric columns (`{name, type?, values[]}`)                                                                                                            |
+| `list_columns`       | List columns (id, name, type, length)                                                                                                                      |
+| `run_table_process`  | **Generic:** run _any_ AnCiR analysis by name (`{name, args}`) through the real `definition` registry; output columns are written into the session         |
+| `add_column_process` | Apply a **column transform** (Add, Multiply, normalize, Sort, OutlierRemoval, RemoveTrend, …) to a column and run its chain; embedded in the session       |
+| `add_plot`           | Create a plot wired to columns and add it to the session (opens rendered in the GUI)                                                                       |
+| `render_plot`        | **Rasterise** a plot to PNG (+ SVG) via a real headless browser — the actual AnCiR component with axes/gridlines/legend                                    |
+| `export_session`     | Export AnCiR‑compatible JSON (optionally write to a file)                                                                                                  |
 
 ### `run_table_process`
 
@@ -124,13 +124,13 @@ npm run start:http     # launch on Streamable HTTP (127.0.0.1:3017/mcp)
 
 ```jsonc
 {
-  "mcpServers": {
-    "ancir": {
-      "command": "npm",
-      "args": ["start"],
-      "cwd": "/absolute/path/to/AnCiR_next/mcp"
-    }
-  }
+	"mcpServers": {
+		"ancir": {
+			"command": "npm",
+			"args": ["start"],
+			"cwd": "/absolute/path/to/AnCiR_next/mcp"
+		}
+	}
 }
 ```
 
@@ -147,7 +147,7 @@ npm run start:http          # → http://127.0.0.1:3017/mcp  (Streamable HTTP, J
 ```
 
 Point any MCP‑over‑HTTP client at `http://127.0.0.1:3017/mcp`. The transport is
-*stateless* but the engine session persists in the process, so drive it
+_stateless_ but the engine session persists in the process, so drive it
 sequentially — one process = one AnCiR session (`core` is a singleton).
 
 ### Multi‑session isolation (many concurrent sessions)
@@ -162,8 +162,15 @@ multi‑tenant backend (e.g. an app where each user's request builds its own ses
 import { SessionManager } from './src/sessionManager.js';
 const mgr = new SessionManager();
 await mgr.call('user-42', 'create_session', { id: 'user-42' });
-await mgr.call('user-42', 'import_data', { columns: [/* … */] });
-const fit = await mgr.call('user-42', 'run_table_process', { name: 'Cosinor', args: { xIN: 0, yIN: [1] } });
+await mgr.call('user-42', 'import_data', {
+	columns: [
+		/* … */
+	]
+});
+const fit = await mgr.call('user-42', 'run_table_process', {
+	name: 'Cosinor',
+	args: { xIN: 0, yIN: [1] }
+});
 const { json } = await mgr.call('user-42', 'export_session');
 ```
 

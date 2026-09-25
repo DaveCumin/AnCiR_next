@@ -4,7 +4,7 @@
 	import { reportUnknownNode } from '$lib/core/unknownNode.js';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
-	import { selectedColumnIds, setSelection } from '$lib/tableProcesses/columnSet.js';
+	import { setSelection } from '$lib/tableProcesses/columnSet.js';
 	import { PLOT_CHROME } from '$lib/core/workspaceLayout.js';
 	import { facetGridCells } from '$lib/core/facetGrid.js';
 	import { removePlotMetricColumns } from '$lib/plots/plotMetricOutputs.svelte.js';
@@ -173,6 +173,7 @@
 		JSON.stringify(
 			(inner?.overlays ?? []).map((o) => {
 				const json = typeof o?.toJSON === 'function' ? o.toJSON() : o;
+				// eslint-disable-next-line no-unused-vars -- destructured only to drop `id` from the signature; see the comment above
 				const { id: _id, ...rest } = json ?? {};
 				return rest;
 			})
@@ -214,6 +215,7 @@
 		const padding = appState.gridSize ?? 15;
 		const width = snapToGrid(gen.width ?? 360);
 		const height = snapToGrid(gen.height ?? 220);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set of live facet keys, built and consumed inside this function; never read reactively
 		const keep = new Set();
 
 		// Step by the size of the WRAPPER, not the plot: Draggable adds side chrome and a header
@@ -643,21 +645,21 @@
 	let { plot } = $props();
 	// Optional chaining: an unknown plot type used to throw a bare
 	// "Cannot read properties of undefined" from the render.
-	const Plot = appConsts.plotMap.get(plot.type)?.plot ?? null;
-	const unknownPlotMessage = Plot ? '' : reportUnknownNode('plot', plot.type);
+	const PlotComponent = appConsts.plotMap.get(plot.type)?.plot ?? null;
+	const unknownPlotMessage = PlotComponent ? '' : reportUnknownNode('plot', plot.type);
 </script>
 
 <div>
-	{#if !Plot}
+	{#if !PlotComponent}
 		<p class="unknown-node">{unknownPlotMessage}</p>
 	{:else}
-		<Plot bind:theData={plot} which="plot" />
+		<PlotComponent bind:theData={plot} which="plot" />
 	{/if}
 </div>
 
 <div>
-	{#if Plot}
-		<Plot theData={plot.plot} which="controls" />
+	{#if PlotComponent}
+		<PlotComponent theData={plot.plot} which="controls" />
 	{/if}
 </div>
 

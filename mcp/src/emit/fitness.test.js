@@ -16,14 +16,24 @@ const simulated = ({ hours = 96, step = 1, analysis }) =>
 				args: {
 					seed: 1,
 					samplingPeriod_hours: step,
-					sections: [{ duration_hours: hours, rhythmPeriod_hours: 24, rhythmAmplitude: 100, noiseEnabled: false }]
+					sections: [
+						{
+							duration_hours: hours,
+							rhythmPeriod_hours: 24,
+							rhythmAmplitude: 100,
+							noiseEnabled: false
+						}
+					]
 				}
 			},
 			analysis
 		]
 	}).session;
 
-const messages = (s) => checkFitness(s).map((f) => f.message).join('\n');
+const messages = (s) =>
+	checkFitness(s)
+		.map((f) => f.message)
+		.join('\n');
 const highs = (s) => checkFitness(s).filter((f) => f.severity === 'high');
 
 test('DRIFT GUARD: every node with a period is judged, or excluded with a reason', () => {
@@ -41,7 +51,8 @@ test('DRIFT GUARD: every node with a period is judged, or excluded with a reason
 		);
 	}
 	// And nothing is excluded by a shrug.
-	for (const reason of Object.values(EXCLUDED)) assert.ok(reason.length > 20, 'excluded needs a real reason');
+	for (const reason of Object.values(EXCLUDED))
+		assert.ok(reason.length > 20, 'excluded needs a real reason');
 });
 
 test('UNITS: an ISO time column is read as hours, not parsed into nonsense', () => {
@@ -51,7 +62,10 @@ test('UNITS: an ISO time column is read as hours, not parsed into nonsense', () 
 	const s = simulated({
 		hours: 96,
 		step: 1,
-		analysis: { name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+		analysis: {
+			name: 'Cosinor',
+			args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 }
+		}
 	});
 	const col = s.data.find((c) => c.name === 'time');
 	assert.equal(col.type, 'time');
@@ -65,10 +79,16 @@ test('no false positives on a well-designed session', () => {
 	// The credibility test. A warning system that cries wolf gets ignored, and then the real
 	// Nyquist violation scrolls past with it.
 	for (const analysis of [
-		{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } },
+		{
+			name: 'Cosinor',
+			args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 }
+		},
 		{ name: 'AverageProfile', args: { xIN: 'time', yIN: ['values'], period: 24 } },
 		{ name: 'NonparametricRA', args: { xIN: 'time', yIN: ['values'], period: 24 } },
-		{ name: 'RhythmicityAnalysis', args: { xIN: 'time', yIN: ['values'], analysis: 'periodogram', periodMax: 28 } }
+		{
+			name: 'RhythmicityAnalysis',
+			args: { xIN: 'time', yIN: ['values'], analysis: 'periodogram', periodMax: 28 }
+		}
 	]) {
 		const s = simulated({ hours: 240, step: 0.5, analysis });
 		assert.deepEqual(checkFitness(s), [], `${analysis.name} should be silent:\n${messages(s)}`);
@@ -81,7 +101,10 @@ test('a period fit over too few cycles is called out, with the number', () => {
 	const s = simulated({
 		hours: 36,
 		step: 1,
-		analysis: { name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+		analysis: {
+			name: 'Cosinor',
+			args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 }
+		}
 	});
 	assert.deepEqual(s.errors ?? [], [], 'the session itself is perfectly valid');
 	const [f] = highs(s);
@@ -96,7 +119,10 @@ test('2.5 cycles is a warning, not an alarm', () => {
 	const s = simulated({
 		hours: 60,
 		step: 1,
-		analysis: { name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+		analysis: {
+			name: 'Cosinor',
+			args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 }
+		}
 	});
 	const f = checkFitness(s).find((x) => /cycles of data/.test(x.message));
 	assert.equal(f.severity, 'medium');
@@ -108,7 +134,10 @@ test('sampling below Nyquist is called an ALIAS, not just imprecision', () => {
 	const s = simulated({
 		hours: 480,
 		step: 13,
-		analysis: { name: 'RhythmicityAnalysis', args: { xIN: 'time', yIN: ['values'], analysis: 'periodogram', periodMax: 24 } }
+		analysis: {
+			name: 'RhythmicityAnalysis',
+			args: { xIN: 'time', yIN: ['values'], analysis: 'periodogram', periodMax: 24 }
+		}
 	});
 	const f = highs(s).find((x) => /Nyquist/.test(x.message));
 	assert.ok(f, `expected a Nyquist warning, got:\n${messages(s)}`);
@@ -124,7 +153,12 @@ test('an FFT on unevenly sampled data is caught, and told about Lomb-Scargle', (
 			{ name: 't', values: [0, 1, 2, 3.9, 8, 9, 15, 21, 30, 44, 60, 61, 62, 80, 96] },
 			{ name: 'v', values: Array.from({ length: 15 }, (_, i) => Math.sin(i)) }
 		],
-		analyses: [{ name: 'RhythmicityAnalysis', args: { xIN: 't', yIN: ['v'], analysis: 'fft', periodMax: 24 } }]
+		analyses: [
+			{
+				name: 'RhythmicityAnalysis',
+				args: { xIN: 't', yIN: ['v'], analysis: 'fft', periodMax: 24 }
+			}
+		]
 	});
 	const f = highs(session).find((x) => /FFT/.test(x.message));
 	assert.ok(f, `expected an FFT warning, got:\n${messages(session)}`);
@@ -137,7 +171,9 @@ test('a time column that goes backwards is caught', () => {
 			{ name: 't', values: [0, 6, 12, 18, 24, 12, 36, 42, 48, 54, 60, 66] },
 			{ name: 'v', values: Array.from({ length: 12 }, (_, i) => i) }
 		],
-		analyses: [{ name: 'Cosinor', args: { xIN: 't', yIN: ['v'], useFixedPeriod: true, fixedPeriod: 24 } }]
+		analyses: [
+			{ name: 'Cosinor', args: { xIN: 't', yIN: ['v'], useFixedPeriod: true, fixedPeriod: 24 } }
+		]
 	});
 	assert.ok(highs(session).some((f) => /goes backwards/.test(f.message)));
 });
@@ -148,7 +184,9 @@ test('paired-by-position columns of different lengths are caught', () => {
 			{ name: 't', values: Array.from({ length: 80 }, (_, i) => i) },
 			{ name: 'v', values: Array.from({ length: 40 }, (_, i) => i) }
 		],
-		analyses: [{ name: 'Cosinor', args: { xIN: 't', yIN: ['v'], useFixedPeriod: true, fixedPeriod: 24 } }]
+		analyses: [
+			{ name: 'Cosinor', args: { xIN: 't', yIN: ['v'], useFixedPeriod: true, fixedPeriod: 24 } }
+		]
 	});
 	const f = highs(session).find((x) => /40 values/.test(x.message));
 	assert.ok(f, `expected a length warning, got:\n${messages(session)}`);
@@ -165,9 +203,19 @@ test("an analysis reading another analysis's output is skipped, not guessed at",
 	});
 	const withDownstream = normalizeSession({
 		analyses: [
-			{ name: 'SimulatedData', args: { seed: 1, samplingPeriod_hours: 1, sections: [{ duration_hours: 480, rhythmPeriod_hours: 24 }] } },
+			{
+				name: 'SimulatedData',
+				args: {
+					seed: 1,
+					samplingPeriod_hours: 1,
+					sections: [{ duration_hours: 480, rhythmPeriod_hours: 24 }]
+				}
+			},
 			{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: [100] } },
-			{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values_1'], useFixedPeriod: true, fixedPeriod: 24 } }
+			{
+				name: 'Cosinor',
+				args: { xIN: 'time', yIN: ['values_1'], useFixedPeriod: true, fixedPeriod: 24 }
+			}
 		]
 	}).session;
 	// values_1 is empty; the x column is real, so only x-based checks could fire, and 480 h is
@@ -191,9 +239,15 @@ test('findings are ordered high-severity first', () => {
 	const s = simulated({
 		hours: 30,
 		step: 13,
-		analysis: { name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+		analysis: {
+			name: 'Cosinor',
+			args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 }
+		}
 	});
 	const sev = checkFitness(s).map((f) => f.severity);
 	assert.ok(sev.length > 1);
-	assert.deepEqual(sev, [...sev].sort((a, b) => (a === 'high' ? -1 : 1) - (b === 'high' ? -1 : 1)));
+	assert.deepEqual(
+		sev,
+		[...sev].sort((a, b) => (a === 'high' ? -1 : 1) - (b === 'high' ? -1 : 1))
+	);
 });

@@ -140,3 +140,32 @@ export class LegendAutoLayout {
 		this.outsidePlacement ? { x: this.outsidePlacement.x, y: this.outsidePlacement.y } : null
 	);
 }
+
+/**
+ * One series drawn as a Line and/or Points (the LineClass / PointsClass pair most plots
+ * use), as a buildOccupancy series over a plot area mapped by `xs` and `ys`. Null when
+ * neither is drawn, so the caller can skip it.
+ *
+ * @param {ArrayLike<number>} x data x values
+ * @param {ArrayLike<number>} y data y values
+ * @param {(v: number) => number} xs data to px, over the plot area before any reservation
+ * @param {(v: number) => number} ys data to px, likewise
+ * @param {{draw?: boolean} | null | undefined} lineData
+ * @param {{draw?: boolean, radius?: number} | null | undefined} [pointsData]
+ */
+export function lineSeriesObstacle(x, y, xs, ys, lineData, pointsData = null) {
+	const line = !!lineData?.draw;
+	const pts = !!pointsData?.draw;
+	if (!line && !pts) return null;
+	const n = Math.min(x?.length ?? 0, y?.length ?? 0);
+	const px = new Float64Array(n);
+	const py = new Float64Array(n);
+	for (let i = 0; i < n; i++) {
+		const xv = x[i];
+		const yv = y[i];
+		const bad = xv == null || yv == null || Number.isNaN(xv) || Number.isNaN(yv);
+		px[i] = bad ? NaN : xs(xv);
+		py[i] = bad ? NaN : ys(yv);
+	}
+	return { px, py, line, radius: pts ? (pointsData.radius ?? 0) : 0 };
+}

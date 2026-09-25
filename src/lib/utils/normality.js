@@ -22,7 +22,10 @@ const clean = (values) => (values ?? []).filter((v) => !isInvalidValue(v)).map(N
 function normalCdf(z) {
 	const t = 1 / (1 + 0.2316419 * Math.abs(z));
 	const d = 0.3989422804014327 * Math.exp(-(z * z) / 2);
-	const p = d * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+	const p =
+		d *
+		t *
+		(0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
 	return z >= 0 ? 1 - p : p;
 }
 // Inverse normal CDF for the Shapiro-Wilk m-values: the single shared Acklam
@@ -66,7 +69,9 @@ export function shapiroWilk(values) {
 		let fac;
 		if (n > 5) {
 			const aN1 = m[n - 2] / sq + poly(SW_C2, rsn);
-			fac = Math.sqrt((ssm - 2 * m[n - 1] ** 2 - 2 * m[n - 2] ** 2) / (1 - 2 * aN * aN - 2 * aN1 * aN1));
+			fac = Math.sqrt(
+				(ssm - 2 * m[n - 1] ** 2 - 2 * m[n - 2] ** 2) / (1 - 2 * aN * aN - 2 * aN1 * aN1)
+			);
 			a[n - 1] = aN;
 			a[0] = -aN;
 			a[n - 2] = aN1;
@@ -140,7 +145,8 @@ function moments(x) {
 /** scipy.stats.skewtest Z (needs n ≥ 8). */
 function skewZ(n, b1) {
 	const y = b1 * Math.sqrt(((n + 1) * (n + 3)) / (6 * (n - 2)));
-	const beta2 = (3 * (n * n + 27 * n - 70) * (n + 1) * (n + 3)) / ((n - 2) * (n + 5) * (n + 7) * (n + 9));
+	const beta2 =
+		(3 * (n * n + 27 * n - 70) * (n + 1) * (n + 3)) / ((n - 2) * (n + 5) * (n + 7) * (n + 9));
 	const W2 = -1 + Math.sqrt(2 * (beta2 - 1));
 	const delta = 1 / Math.sqrt(0.5 * Math.log(W2));
 	const alpha = Math.sqrt(2 / (W2 - 1));
@@ -153,7 +159,9 @@ function kurtZ(n, b2) {
 	const E = (3 * (n - 1)) / (n + 1);
 	const varB2 = (24 * n * (n - 2) * (n - 3)) / ((n + 1) * (n + 1) * (n + 3) * (n + 5));
 	const x = (b2 - E) / Math.sqrt(varB2);
-	const sqrtBeta1 = ((6 * (n * n - 5 * n + 2)) / ((n + 7) * (n + 9))) * Math.sqrt((6 * (n + 3) * (n + 5)) / (n * (n - 2) * (n - 3)));
+	const sqrtBeta1 =
+		((6 * (n * n - 5 * n + 2)) / ((n + 7) * (n + 9))) *
+		Math.sqrt((6 * (n + 3) * (n + 5)) / (n * (n - 2) * (n - 3)));
 	const A = 6 + (8 / sqrtBeta1) * (2 / sqrtBeta1 + Math.sqrt(1 + 4 / (sqrtBeta1 * sqrtBeta1)));
 	const term1 = 1 - 2 / (9 * A);
 	const denom = 1 + x * Math.sqrt(2 / (A - 4)); // Math.cbrt handles a negative denom, matching scipy's sign() branch

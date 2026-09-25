@@ -57,7 +57,6 @@
 			const paramValues = colIds.map((id) => getColumnById(id).getData());
 			const svParamNames = svKeys.map((k) => `__sv_${k.replace(/[^a-zA-Z0-9_]/g, '_')}`);
 			const svParamValues = svKeys.map((k) => getStoredValue(k));
-			// eslint-disable-next-line no-new-func
 			const fn = new Function(
 				...paramNames,
 				...svParamNames,
@@ -192,9 +191,11 @@ return _r;`
 
 	// ── Available columns list ────────────────────────────────────────────────
 	let allColumns = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- dedupe set built and consumed inside this $derived body; never read reactively
 		const seen = new Set();
 		const cols = [];
 		// Map colId → owning Group name (best-effort label).
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- colId to group-name lookup built and consumed inside this $derived body; never read reactively
 		const colToGroupName = new Map();
 		for (const g of core.groups ?? []) {
 			for (const cid of g.sourceColumnIds ?? []) {
@@ -610,7 +611,7 @@ return _r;`
 	<div class="formula-editor-wrap" bind:this={formulaEditorWrapEl}>
 		<!-- Formula editor: inline tokens (text inputs + column/stored value chips) -->
 		<div class="formula-editor">
-			{#each p.args.tokens as token, i}
+			{#each p.args.tokens as token, i (i)}
 				{#if token.type === 'text'}
 					<input
 						type="text"
@@ -656,7 +657,7 @@ return _r;`
 					{#if filteredColumns.length === 0}
 						<div class="ac-empty">No matching columns</div>
 					{:else}
-						{#each filteredColumns as col, j}
+						{#each filteredColumns as col, j (col.id)}
 							<div
 								class="ac-item"
 								class:ac-selected={j === ac.selIdx}
@@ -681,7 +682,7 @@ return _r;`
 				{:else if filteredStoredValues.length === 0}
 					<div class="ac-empty">No matching stored values</div>
 				{:else}
-					{#each filteredStoredValues as sv, j}
+					{#each filteredStoredValues as sv, j (sv.key)}
 						<div
 							class="ac-item"
 							class:ac-selected={j === ac.selIdx}

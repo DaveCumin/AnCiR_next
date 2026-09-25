@@ -1,168 +1,169 @@
 <script>
-// @ts-nocheck
-import Modal from '$lib/components/reusables/Modal.svelte';
-import { addProcessToColumns, getColumnById } from '$lib/core/Column.svelte';
-import { appConsts, core } from '$lib/core/core.svelte.js';
-import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	// @ts-nocheck
+	import Modal from '$lib/components/reusables/Modal.svelte';
+	import { addProcessToColumns, getColumnById } from '$lib/core/Column.svelte';
+	import { appConsts, core } from '$lib/core/core.svelte.js';
+	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 
-let { show = $bindable() } = $props();
+	let { show = $bindable() } = $props();
 
-let processChosen = $state('');
-let selectedColIds = $state([]);
+	let processChosen = $state('');
+	let selectedColIds = $state([]);
 
-// Get sorted processes by display name
-let sortedProcesses = $derived.by(() => {
-	return Array.from(appConsts.processMap.entries()).sort((a, b) => {
-		const nameA = a[1].displayName || a[0];
-		const nameB = b[1].displayName || b[0];
-		return nameA.localeCompare(nameB);
+	// Get sorted processes by display name
+	let sortedProcesses = $derived.by(() => {
+		return Array.from(appConsts.processMap.entries()).sort((a, b) => {
+			const nameA = a[1].displayName || a[0];
+			const nameB = b[1].displayName || b[0];
+			return nameA.localeCompare(nameB);
+		});
 	});
-});
 
-// All non-output column IDs (raw + source) for select-all.
-let allColIds = $derived.by(() => {
-	const tpOutputIds = new Set();
-	for (const tp of core.tableProcesses ?? []) {
-		for (const cid of Object.values(tp.args?.out ?? {})) {
-			if (typeof cid === 'number' && cid >= 0) tpOutputIds.add(cid);
+	// All non-output column IDs (raw + source) for select-all.
+	let allColIds = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup set built and consumed inside this $derived; only the returned id array is read
+		const tpOutputIds = new Set();
+		for (const tp of core.tableProcesses ?? []) {
+			for (const cid of Object.values(tp.args?.out ?? {})) {
+				if (typeof cid === 'number' && cid >= 0) tpOutputIds.add(cid);
+			}
 		}
+		return (core.data ?? []).filter((c) => !tpOutputIds.has(c.id)).map((c) => c.id);
+	});
+
+	function selectAll() {
+		selectedColIds = [...allColIds];
 	}
-	return (core.data ?? []).filter((c) => !tpOutputIds.has(c.id)).map((c) => c.id);
-});
 
-function selectAll() {
-	selectedColIds = [...allColIds];
-}
-
-function selectNone() {
-	selectedColIds = [];
-}
-
-let canConfirm = $derived(processChosen !== '' && selectedColIds.length >= 1);
-
-function confirm() {
-	const cols = selectedColIds.map((id) => getColumnById(id)).filter(Boolean);
-	if (cols.length > 0 && processChosen) {
-		addProcessToColumns(cols, processChosen);
+	function selectNone() {
+		selectedColIds = [];
 	}
-	processChosen = '';
-	selectedColIds = [];
-	show = false;
-}
 
-function onClose() {
-	processChosen = '';
-	selectedColIds = [];
-}
+	let canConfirm = $derived(processChosen !== '' && selectedColIds.length >= 1);
+
+	function confirm() {
+		const cols = selectedColIds.map((id) => getColumnById(id)).filter(Boolean);
+		if (cols.length > 0 && processChosen) {
+			addProcessToColumns(cols, processChosen);
+		}
+		processChosen = '';
+		selectedColIds = [];
+		show = false;
+	}
+
+	function onClose() {
+		processChosen = '';
+		selectedColIds = [];
+	}
 </script>
 
 <Modal bind:showModal={show} onclose={onClose}>
-<h2>Add Process to Multiple Columns</h2>
+	<h2>Add Process to Multiple Columns</h2>
 
-<div class="section">
-	<span class="section-label">Process</span>
-	<select bind:value={processChosen}>
-		<option value="">Select a process…</option>
-		{#each sortedProcesses as [key, value]}
-			<option value={key}>{value.displayName || key}</option>
-		{/each}
-	</select>
-</div>
+	<div class="section">
+		<span class="section-label">Process</span>
+		<select bind:value={processChosen}>
+			<option value="">Select a process…</option>
+			{#each sortedProcesses as [key, value] (key)}
+				<option value={key}>{value.displayName || key}</option>
+			{/each}
+		</select>
+	</div>
 
-<div class="section">
-	<div class="columns-header">
-		<span class="section-label">Columns <span class="hint">(shift-click for range)</span></span>
-		<div class="select-actions">
-			<button class="link-btn" onclick={selectAll}>All</button>
-			<button class="link-btn" onclick={selectNone}>None</button>
+	<div class="section">
+		<div class="columns-header">
+			<span class="section-label">Columns <span class="hint">(shift-click for range)</span></span>
+			<div class="select-actions">
+				<button class="link-btn" onclick={selectAll}>All</button>
+				<button class="link-btn" onclick={selectNone}>None</button>
+			</div>
 		</div>
+		<ColumnSelector multiple={true} bind:value={selectedColIds} />
 	</div>
-	<ColumnSelector multiple={true} bind:value={selectedColIds} />
-</div>
 
-{#if canConfirm}
-	<div class="dialog-button-container">
-		<button class="dialog-button" onclick={confirm}>
-			Add to {selectedColIds.length} column{selectedColIds.length !== 1 ? 's' : ''}
-		</button>
-	</div>
-{/if}
+	{#if canConfirm}
+		<div class="dialog-button-container">
+			<button class="dialog-button" onclick={confirm}>
+				Add to {selectedColIds.length} column{selectedColIds.length !== 1 ? 's' : ''}
+			</button>
+		</div>
+	{/if}
 </Modal>
 
 <style>
-h2 {
-	margin: 0 0 var(--space-6) 0;
-	font-size: 1.1rem;
-}
+	h2 {
+		margin: 0 0 var(--space-6) 0;
+		font-size: 1.1rem;
+	}
 
-.section {
-	margin-bottom: var(--space-6);
-}
+	.section {
+		margin-bottom: var(--space-6);
+	}
 
-.section-label {
-	display: block;
-	font-weight: 500;
-	font-size: 0.85rem;
-	margin-bottom: 0.3rem;
-	color: var(--color-lightness-35);
-}
+	.section-label {
+		display: block;
+		font-weight: 500;
+		font-size: 0.85rem;
+		margin-bottom: 0.3rem;
+		color: var(--color-lightness-35);
+	}
 
-.hint {
-	font-weight: 400;
-	font-size: var(--font-sm);
-	color: var(--color-text-muted);
-}
+	.hint {
+		font-weight: 400;
+		font-size: var(--font-sm);
+		color: var(--color-text-muted);
+	}
 
-select {
-	width: 100%;
-	padding: 0.35rem var(--space-4);
-	border: 1px solid var(--color-lightness-85);
-	border-radius: var(--radius-sm);
-	font-size: 0.9rem;
-}
+	select {
+		width: 100%;
+		padding: 0.35rem var(--space-4);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm);
+		font-size: 0.9rem;
+	}
 
-.columns-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 0.3rem;
-}
+	.columns-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.3rem;
+	}
 
-.select-actions {
-	display: flex;
-	gap: var(--space-4);
-}
+	.select-actions {
+		display: flex;
+		gap: var(--space-4);
+	}
 
-.link-btn {
-	background: none;
-	border: none;
-	padding: 0;
-	font-size: 0.8rem;
-	color: var(--color-lightness-35);
-	cursor: pointer;
-	text-decoration: underline;
-}
+	.link-btn {
+		background: none;
+		border: none;
+		padding: 0;
+		font-size: 0.8rem;
+		color: var(--color-lightness-35);
+		cursor: pointer;
+		text-decoration: underline;
+	}
 
-.link-btn:hover {
-	color: #000;
-}
+	.link-btn:hover {
+		color: #000;
+	}
 
-.dialog-button-container {
-	display: flex;
-	justify-content: flex-end;
-	margin-top: var(--space-4);
-}
+	.dialog-button-container {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: var(--space-4);
+	}
 
-.dialog-button {
-	padding: 0.4rem var(--space-6);
-	border: 1px solid var(--color-lightness-85);
-	border-radius: var(--radius-sm);
-	background: var(--color-lightness-95);
-	cursor: pointer;
-	font-size: 0.85rem;
-}
+	.dialog-button {
+		padding: 0.4rem var(--space-6);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm);
+		background: var(--color-lightness-95);
+		cursor: pointer;
+		font-size: 0.85rem;
+	}
 
-.dialog-button:hover {
-	background: var(--color-lightness-90);
-}
+	.dialog-button:hover {
+		background: var(--color-lightness-90);
+	}
 </style>

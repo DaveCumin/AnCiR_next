@@ -8,7 +8,13 @@ export const log = pino(
 		// Belt-and-suspenders: never emit an API key / auth header even if one slips into
 		// a logged object.
 		redact: {
-			paths: ['apiKey', 'llm.apiKey', 'req.headers.authorization', 'headers.authorization', '*.apiKey'],
+			paths: [
+				'apiKey',
+				'llm.apiKey',
+				'req.headers.authorization',
+				'headers.authorization',
+				'*.apiKey'
+			],
 			censor: '[redacted]'
 		},
 		base: undefined // omit pid/hostname noise

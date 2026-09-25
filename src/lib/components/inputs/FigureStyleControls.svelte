@@ -199,8 +199,8 @@
 	     broken. -->
 	{#if plot && appState.view === 'canvas'}
 		<p class="figure-note">
-			Width and height change the figure, not this node. You will see it in the workspace
-			and in exports; a node is sized by its own handle.
+			Width and height change the figure, not this node. You will see it in the workspace and in
+			exports; a node is sized by its own handle.
 		</p>
 	{/if}
 
@@ -234,19 +234,11 @@
 			<p>Box around legend</p>
 		</div>
 		<div class="control-input-checkbox">
-			<input
-				type="checkbox"
-				bind:checked={style.varyMarkers}
-				onchange={() => onFigureChange?.()}
-			/>
+			<input type="checkbox" bind:checked={style.varyMarkers} onchange={() => onFigureChange?.()} />
 			<p>Vary marker shape per series</p>
 		</div>
 		<div class="control-input-checkbox">
-			<input
-				type="checkbox"
-				bind:checked={style.monochrome}
-				onchange={() => onFigureChange?.()}
-			/>
+			<input type="checkbox" bind:checked={style.monochrome} onchange={() => onFigureChange?.()} />
 			<p>Monochrome (print-safe)</p>
 		</div>
 	</div>
@@ -257,8 +249,8 @@
 		     indistinguishable, so it is worth saying so where the choice is made. -->
 		<div class="style-note">
 			<p>
-				⚠ Monochrome with a single marker shape makes several series hard to tell apart.
-				Consider turning on varying marker shapes.
+				⚠ Monochrome with a single marker shape makes several series hard to tell apart. Consider
+				turning on varying marker shapes.
 			</p>
 		</div>
 	{/if}
@@ -282,8 +274,8 @@
 		<div class="control-input-vertical">
 			<button class="apply-btn" onclick={apply}>Apply to all plots</button>
 			<p class="apply-hint">
-				These are the defaults for NEW plots. Existing plots keep their own settings until
-				you apply.
+				These are the defaults for NEW plots. Existing plots keep their own settings until you
+				apply.
 				{#if applied > 0}
 					<strong>Applied to {applied} plot{applied === 1 ? '' : 's'}.</strong>
 				{/if}
@@ -291,9 +283,9 @@
 			{#if onResetToMap}
 				<button class="apply-btn" onclick={resetToMap}>Reset data colours</button>
 				<p class="apply-hint">
-					Drops per-figure colour choices so every figure shows the colour recorded for
-					that data. Hand-picked colours are what get cleared, so this is the action to
-					use after tidying the colour map.
+					Drops per-figure colour choices so every figure shows the colour recorded for that data.
+					Hand-picked colours are what get cleared, so this is the action to use after tidying the
+					colour map.
 					{#if reset >= 0}
 						<strong>{reset} series reset.</strong>
 					{/if}

@@ -40,7 +40,10 @@ test('an unbuilt deliverable is caught even when the session is error-free', () 
 });
 
 test('names are matched case-insensitively — the model writes "cosinor", the registry "Cosinor"', () => {
-	const s = scoreIntent({ deliverables: [{ kind: 'analysis', what: ' cosinor ' }] }, session(['Cosinor']));
+	const s = scoreIntent(
+		{ deliverables: [{ kind: 'analysis', what: ' cosinor ' }] },
+		session(['Cosinor'])
+	);
 	assert.equal(s.met, 1);
 });
 
@@ -87,7 +90,10 @@ test('a repair that fixes errors without losing coverage is kept', () => {
 test('a repair that buys fewer errors by dropping a deliverable is REJECTED', () => {
 	// The case node-counting cannot see: same number of analyses, but the Cosinor the user
 	// asked for has been swapped for a Periodogram that happened to wire up cleanly.
-	const first = { errors: ['bad col'], session: session(['SimulatedData', 'Cosinor'], ['actogram']) };
+	const first = {
+		errors: ['bad col'],
+		session: session(['SimulatedData', 'Cosinor'], ['actogram'])
+	};
 	const second = { errors: [], session: session(['SimulatedData', 'Periodogram'], ['actogram']) };
 	first.score = scoreIntent(INTENT, first.session);
 	second.score = scoreIntent(INTENT, second.session);
@@ -98,16 +104,28 @@ test('a repair that buys fewer errors by dropping a deliverable is REJECTED', ()
 
 test('a repair is never accepted for equal or greater errors', () => {
 	const s = session(['Cosinor']);
-	assert.equal(repairIsBetter({ errors: [], session: s, score: null }, { errors: [], session: s, score: null }), false);
 	assert.equal(
-		repairIsBetter({ errors: ['a'], session: s, score: null }, { errors: ['a', 'b'], session: s, score: null }),
+		repairIsBetter(
+			{ errors: [], session: s, score: null },
+			{ errors: [], session: s, score: null }
+		),
+		false
+	);
+	assert.equal(
+		repairIsBetter(
+			{ errors: ['a'], session: s, score: null },
+			{ errors: ['a', 'b'], session: s, score: null }
+		),
 		false
 	);
 });
 
 test('with no intent, repair acceptance falls back to the node-count proxy', () => {
 	const first = { errors: ['x'], session: session(['A', 'B']), score: null };
-	assert.equal(repairIsBetter(first, { errors: [], session: session(['A', 'B']), score: null }), true);
+	assert.equal(
+		repairIsBetter(first, { errors: [], session: session(['A', 'B']), score: null }),
+		true
+	);
 	// Dropped a node ⇒ still rejected, even without a contract.
 	assert.equal(repairIsBetter(first, { errors: [], session: session(['A']), score: null }), false);
 });

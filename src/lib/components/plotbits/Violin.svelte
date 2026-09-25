@@ -41,6 +41,7 @@
 	let groupedCurves = $derived.by(() => {
 		if (!boxPlotData?.draw || !Array.isArray(x) || !Array.isArray(y)) return [];
 
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 		const groups = new Map();
 		x.forEach((cat, i) => {
 			const val = y[i];
@@ -99,7 +100,7 @@
 	</clipPath>
 
 	<g clip-path="url(#{clipKey})" style="transform: translate({xoffset}px, {yoffset}px);">
-		{#each groupedCurves as group}
+		{#each groupedCurves as group, gi (gi)}
 			{@const categoryIdx = getCategoryIndex(group.category)}
 			{@const xCenter = xscale(categoryIdx) + dodgeOffset}
 			{@const categoryColour = useCategoryColour

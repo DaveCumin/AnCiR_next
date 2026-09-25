@@ -803,6 +803,56 @@ def compute_fft(times, values, freq_step=None):
 # Correlogram (with minLag)
 # ----------------------------------------------------------------------
 
+# Two lags whose correlation differs by less than this are a TIE, not a ranking:
+# a perfectly periodic series lands on its repeat value to within a few ulps, so a
+# raw `>` lets floating-point noise decide which repeat is reported.
+_ACF_PEAK_TIE = 1e-12
+
+
+def find_autocorrelation_peak(lags, correlations):
+    """The peak of an autocorrelogram: the DOMINANT PERIOD of the series.
+
+    Deliberately NOT the cross-correlogram's convention (largest |r|, see
+    cross_correlation). Lag 0 is exactly 1 by definition, so a sign-blind maximum
+    always answers 0; a rhythm is anti-correlated with itself at half a period, so
+    the largest |r| away from 0 is typically r = -1 at P/2, which is the same rhythm
+    in antiphase rather than a second finding; and a rhythm repeats at every MULTIPLE
+    of its period, with this estimator normalising each lag by its own overlap count,
+    so the long lags are computed from fewer pairs and drift ABOVE the fundamental
+    (values over 1 are routine at lag 3P). A plain maximum over non-zero lags
+    therefore reports 2P, 3P or the last lag in the window.
+
+    So: drop lag 0 and non-finite values; find where the correlogram first goes
+    negative and then returns to non-negative, and take the largest correlation in
+    that first positive lobe, ties within 1e-12 going to the smaller lag. If there is
+    no lobe (no dip, or no recovery after one), fall back to the largest correlation
+    over the non-zero lags. This is the standard reading of a circadian
+    autocorrelogram (Levine et al. 2002, BMC Neuroscience 3:1).
+
+    Mirrors findAutocorrelationPeak in src/lib/utils/correlogram.js.
+    Returns (lag, correlation), or (nan, nan) when there is nothing to read.
+    """
+    cand = [i for i in range(min(len(lags), len(correlations)))
+            if lags[i] > 0 and math.isfinite(correlations[i])]
+    if not cand:
+        return float('nan'), float('nan')
+    window = cand
+    dip = next((k for k in range(len(cand)) if correlations[cand[k]] < 0), None)
+    if dip is not None:
+        start = next((k for k in range(dip + 1, len(cand))
+                      if correlations[cand[k]] >= 0), None)
+        if start is not None:
+            end = start
+            while end + 1 < len(cand) and correlations[cand[end + 1]] >= 0:
+                end += 1
+            window = cand[start:end + 1]
+    best = window[0]
+    for i in window:
+        if correlations[i] > correlations[best] + _ACF_PEAK_TIE:
+            best = i
+    return lags[best], correlations[best]
+
+
 def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
                             min_lag=0.0):
     t = _to_float_arr(times)
@@ -811,7 +861,8 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
     t, y = t[mask], y[mask]
     n = y.size
     if n < 2:
-        return {'lags': [], 'correlations': [], 'dt': 1.0}
+        return {'lags': [], 'correlations': [], 'dt': 1.0,
+                'peakLag': float('nan'), 'peakCorrelation': float('nan')}
     if bin_size is not None:
         dt = float(bin_size)
     else:
@@ -820,13 +871,15 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
     max_lag_t = float(max_lag) if max_lag else timespan / 2.0
     min_lag_t = float(min_lag) if (min_lag and min_lag > 0) else 0.0
     if min_lag_t >= max_lag_t:
-        return {'lags': [], 'correlations': [], 'dt': dt}
+        return {'lags': [], 'correlations': [], 'dt': dt,
+                'peakLag': float('nan'), 'peakCorrelation': float('nan')}
     n_lags = min(int(max_lag_t // dt), n // 2)
     start_idx = int(math.ceil(min_lag_t / dt))
     ymean = float(y.mean())
     yvar = float(((y - ymean) ** 2).sum() / n)
     if yvar == 0:
-        return {'lags': [], 'correlations': [], 'dt': dt}
+        return {'lags': [], 'correlations': [], 'dt': dt,
+                'peakLag': float('nan'), 'peakCorrelation': float('nan')}
     diffs = np.diff(t)
     median_dt = float(np.median(diffs))
     is_uniform = bool(np.max(np.abs(diffs - median_dt)) < median_dt * 0.1)
@@ -859,7 +912,9 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
                         break
             corrs.append(sum_ / (count * yvar) if count > 0 else 0.0)
             lags.append(target)
-    return {'lags': lags, 'correlations': corrs, 'dt': dt}
+    peak_lag, peak_r = find_autocorrelation_peak(lags, corrs)
+    return {'lags': lags, 'correlations': corrs, 'dt': dt,
+            'peakLag': peak_lag, 'peakCorrelation': peak_r}
 
 
 # ----------------------------------------------------------------------
@@ -2908,9 +2963,13 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
                     min_lag=float(args.get('corrMinLag', 0.0)),
                     max_lag=args.get('corrMaxLag') or None)
                 if ac['correlations']:
-                    idx = int(np.argmax(ac['correlations']))
-                    stats['peak_lag'] = ac['lags'][idx]
-                    stats['peak_correlation'] = ac['correlations'][idx]
+                    # Dominant period, not lag 0 (always 1) and not the largest
+                    # |r|. See find_autocorrelation_peak.
+                    peak_lag, peak_r = find_autocorrelation_peak(
+                        ac['lags'], ac['correlations'])
+                    if not math.isnan(peak_lag):
+                        stats['peak_lag'] = peak_lag
+                        stats['peak_correlation'] = peak_r
             for k, v in stats.items():
                 per_stat.setdefault(k, []).append(v)
         if movex is None and x_labels:
@@ -5963,7 +6022,42 @@ def cross_correlation(x, y, max_lag=0, method="pearson"):
         rs.append(c["r"])
         ps.append(c["pvalue"])
         ns.append(c["n"])
-    return {"lags": lags, "r": rs, "pvalue": ps, "n": ns}
+    peak_lag, peak_r = _cross_correlation_peak(lags, rs)
+    return {"lags": lags, "r": rs, "pvalue": ps, "n": ns,
+            "peakLag": peak_lag, "peakR": peak_r}
+
+
+# Two lags whose |r| differ by less than this are a TIE, not a ranking.
+_CC_TIE = 1e-12
+
+
+def _cross_correlation_peak(lags, rs):
+    """Mirror of findPeak in utils/crossCorrelation.js. Peak convention, in order:
+    largest |r|; then the POSITIVE r (an exact +1 is never beaten by an exact -1 at
+    the anti-phase lag); then the smallest |lag| (a periodic series repeats its own
+    peak once per period); then the smaller lag, for determinism."""
+    nan = float("nan")
+    best_lag, best_r, best_mag = nan, nan, float("-inf")
+    for lag, r in zip(lags, rs):
+        if r is None or math.isnan(r) or math.isinf(r):
+            continue
+        mag = abs(r)
+        if mag > best_mag + _CC_TIE:
+            best_lag, best_r, best_mag = lag, r, mag
+            continue
+        if abs(mag - best_mag) > _CC_TIE:
+            continue
+        if (r >= 0) != (best_r >= 0):
+            if r >= 0:
+                best_lag, best_r, best_mag = lag, r, mag
+            continue
+        if abs(lag) != abs(best_lag):
+            if abs(lag) < abs(best_lag):
+                best_lag, best_r, best_mag = lag, r, mag
+            continue
+        if lag < best_lag:
+            best_lag, best_r, best_mag = lag, r, mag
+    return best_lag, best_r
 
 
 def chi_square_goodness_of_fit(observed, expected=None, ddof=0):

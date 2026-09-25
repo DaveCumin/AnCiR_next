@@ -22,7 +22,9 @@
 	let error = $state('');
 
 	// Is there anything to edit? An empty canvas can only be built on.
-	const hasSession = $derived((core.data?.length ?? 0) > 0 || (core.tableProcesses?.length ?? 0) > 0);
+	const hasSession = $derived(
+		(core.data?.length ?? 0) > 0 || (core.tableProcesses?.length ?? 0) > 0
+	);
 
 	// 'edit' changes the open session in place; 'create' replaces it with a new one. Default to
 	// edit whenever there's something there: someone with a session open who asks for "a
@@ -127,10 +129,9 @@
 				// undo in hand.
 				const p = planEdit(spec, { summary: summariseSession(), facts: registryFacts() });
 				if (!p.analyses.length && !p.plots.length && !p.changes.length && !p.bands.length) {
-					error =
-						p.errors.length
-							? `Nothing in that suggestion could be applied:\n${p.errors.join('\n')}`
-							: "The AI didn't suggest any changes that could be applied.";
+					error = p.errors.length
+						? `Nothing in that suggestion could be applied:\n${p.errors.join('\n')}`
+						: "The AI didn't suggest any changes that could be applied.";
 					busy = false;
 					return;
 				}
@@ -254,8 +255,8 @@
 	{#if tab === 'prompt'}
 		<p class="hint">
 			{#if effectiveMode === 'edit'}
-				Describe what to add. It's applied straight to this session for you to check — undo
-				reverses it.
+				Describe what to add. It's applied straight to this session for you to check — undo reverses
+				it.
 			{:else}
 				Describe the analysis you want. A session is built for you to check and edit — it is a
 				starting point, not an answer.
@@ -263,9 +264,7 @@
 		</p>
 
 		{#if effectiveMode === 'create' && hasSession}
-			<p class="warn-inline" role="alert">
-				This replaces the session you have open.
-			</p>
+			<p class="warn-inline" role="alert">This replaces the session you have open.</p>
 		{/if}
 
 		<textarea
@@ -405,7 +404,9 @@
 		     "working". Same LoadingSpinner the rest of the app uses, so it looks native. -->
 		{#if busy}
 			<LoadingSpinner
-				message={effectiveMode === 'edit' ? 'Asking the AI to make changes…' : 'Building your session…'}
+				message={effectiveMode === 'edit'
+					? 'Asking the AI to make changes…'
+					: 'Building your session…'}
 			/>
 		{:else}
 			<span class="note">Prompts are logged so the analyses can be reviewed and improved.</span>

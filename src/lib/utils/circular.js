@@ -131,7 +131,10 @@ export function rayleighTest(anglesRad) {
  * @returns {{ meanAngle:number, R:number, n:number, W:number, C:number, S:number }}
  */
 export function weightedCircularMean(anglesRad, weights) {
-	let C = 0, S = 0, W = 0, n = 0;
+	let C = 0,
+		S = 0,
+		W = 0,
+		n = 0;
 	const len = Math.min(anglesRad?.length ?? 0, weights?.length ?? 0);
 	for (let i = 0; i < len; i++) {
 		const a = cleanNum(anglesRad[i]);
@@ -168,12 +171,21 @@ export function weightedRayleigh(anglesRad, weights) {
 		sumSq += w * w;
 	}
 	if (n === 0 || !(W > 0) || !(sumSq > 0) || !Number.isFinite(R)) {
-		return { n, nEff: NaN, R: NaN, meanAngle: NaN, z: NaN, pValue: NaN, W: Number.isFinite(W) ? W : NaN };
+		return {
+			n,
+			nEff: NaN,
+			R: NaN,
+			meanAngle: NaN,
+			z: NaN,
+			pValue: NaN,
+			W: Number.isFinite(W) ? W : NaN
+		};
 	}
 	const nEff = (W * W) / sumSq;
 	const z = nEff * R * R;
 	const inner =
-		1 + (2 * z - z * z) / (4 * nEff) -
+		1 +
+		(2 * z - z * z) / (4 * nEff) -
 		(24 * z - 132 * z * z + 76 * z ** 3 - 9 * z ** 4) / (288 * nEff * nEff);
 	let pValue = Math.exp(-z) * inner;
 	if (!Number.isFinite(pValue)) pValue = Math.exp(-z);

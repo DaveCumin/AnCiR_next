@@ -1,8 +1,8 @@
 <script module>
 	// @ts-nocheck
 
-	import { Process, nextLinkedGroupId, getLinkedProcesses } from '$lib/core/Process.svelte';
-	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
+	import { Process, nextLinkedGroupId } from '$lib/core/Process.svelte';
+	import { core, appState } from '$lib/core/core.svelte.js';
 	import { reconcileAllOutputs } from '$lib/core/reconcileOutputs.js';
 	import {
 		resolveProducer,
@@ -57,6 +57,7 @@
 	 * args copy. This function re-links them so they share the same object.
 	 */
 	export function relinkLinkedProcessArgs() {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local linkedGroupId lookup built and consumed inside this function; never read reactively
 		const seen = new Map();
 		for (const col of core.data) {
 			for (const p of col.processes) {
@@ -80,6 +81,7 @@
 	// followed by the steps applied, e.g. "HR → Add" or "HR → Add → Normalize".
 	// This keeps names informative and, after the uniqueness pass in the `name`
 	// getter, unique. A user-set customName always wins (names stay editable).
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- module-level recursion guard for the name getter; identity bookkeeping only, never read reactively
 	const _nameInFlight = new Set();
 
 	// The label shown for a step (producing op or an owned process).
@@ -678,6 +680,7 @@
 		col = $bindable(),
 		canChange = false,
 		onChange = () => {},
+		// eslint-disable-next-line no-unused-vars -- public prop set by DataDisplay; kept so the component's API stays stable
 		canvasSelectedProcessId = null
 	} = $props();
 
@@ -791,7 +794,7 @@
 					</button>
 
 					{#if col.tableProcessGUId == '' && col.refId == null}
-						<button class="icon" title="Delete" onclick={(e) => doRemoveColumn(col.id)}>
+						<button class="icon" title="Delete" onclick={() => doRemoveColumn(col.id)}>
 							<Icon name="trash" width={15} height={15} className="menu-icon" />
 						</button>
 					{/if}
@@ -937,42 +940,6 @@
 		padding: 0;
 	} */
 
-	.data-component-info {
-		display: flex;
-		flex-direction: column;
-		width: 100%;
-
-		font-size: var(--font-sm);
-		text-align: left;
-		color: var(--color-lightness-35);
-
-		margin: 0;
-		padding: 0;
-
-		gap: var(--space-2);
-	}
-
-	.data-component-info p {
-		margin: 0;
-		padding: 0;
-	}
-
-	.line {
-		width: 100%;
-		height: 1px;
-
-		background-color: var(--color-lightness-85);
-
-		margin: var(--space-2) 0 var(--space-4) 0;
-	}
-
-	.block {
-		width: 100%;
-		height: 0.75rem;
-
-		background-color: transparent;
-	}
-
 	/* General container */
 
 	.clps-container {
@@ -993,19 +960,6 @@
 		background-color: var(--color-lightness-97);
 	}
 
-	.clps-content-container {
-		width: calc(100% - (0.5rem + 0.5rem) + 6px);
-		/* note: width: calc(100% - (0.5rem + margin-left) + 6px)*/
-		min-width: 0;
-
-		display: flex;
-		flex-direction: column;
-		flex: 1 1 0;
-
-		margin: 0 0 0 var(--space-4);
-		padding: 0;
-	}
-
 	.clps-title {
 		display: flex;
 		flex-direction: row;
@@ -1021,61 +975,8 @@
 		gap: var(--space-4);
 	}
 
-	details {
-		width: 100%;
-		min-width: 0;
-
-		margin: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-		padding: 0;
-	}
-
-	summary {
-		width: 100%;
-		min-width: 0;
-
-		list-style: none;
-
-		display: flex;
-		flex: 1 1 0;
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
-
-		margin: 0;
-		padding: 0;
-	}
-
-	summary p {
-		margin: 0;
-		padding: 0;
-	}
-
-	summary button {
-		margin: 0;
-		padding: 0;
-	}
-
-	summary .icon {
-		opacity: 0;
-		pointer-events: none;
-		transition: opacity 0.2s ease;
-	}
-
-	details:hover summary .icon {
-		opacity: 1;
-		pointer-events: auto;
-	}
-
-	/* Provenance italic style */
-	italic {
-		font-style: italic;
-		font-size: var(--font-sm);
-		color: var(--color-lightness-35);
-	}
-
-	/* Select and input controls — compact so panel rows match the node output
-	   rows' density. */
-	select,
+	/* Input controls — compact so panel rows match the node output rows'
+	   density. */
 	input {
 		height: 1.55rem;
 		width: auto;
@@ -1094,63 +995,8 @@
 		transition: border-color 0.2s;
 	}
 
-	input[readonly]:focus {
-		border: 1px solid transparent;
-		outline: none;
-	}
-
 	.display {
 		margin: 0;
 		margin-bottom: var(--space-4);
-	}
-
-	.process-container {
-		display: flex;
-		flex-direction: column;
-		margin: 0;
-		gap: var(--space-4);
-	}
-
-	.linked-process {
-		border-left: 2px solid var(--color-lightness-35);
-		padding-left: var(--space-3);
-	}
-
-	.linked-badge {
-		font-size: var(--font-2xs);
-		color: var(--color-lightness-35);
-		line-height: 1;
-		margin-bottom: var(--space-1);
-	}
-
-	.drag-handle {
-		cursor: grab;
-		user-select: none;
-		font-size: var(--font-sm);
-		line-height: 1;
-		color: var(--color-lightness-50);
-		padding: 0 var(--space-1);
-		opacity: 0;
-		transition: opacity 0.15s ease;
-	}
-
-	.drag-handle:active {
-		cursor: grabbing;
-	}
-
-	.single-process-container:hover .drag-handle {
-		opacity: 1;
-	}
-
-	.drag-over {
-		border-top: 2px solid var(--color-lightness-35);
-	}
-
-	/* Mirrors the canvas selection — applied when this process is the focused
-	   node in WorkflowEditor (via appState.canvasSelectedNodeId). */
-	.single-process-container.canvas-selected {
-		border-radius: var(--radius-sm);
-		box-shadow: inset 2px 0 0 var(--color-accent);
-		background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
 	}
 </style>

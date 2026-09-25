@@ -75,10 +75,10 @@
 		<code>arctan</code>
 		cannot separate φ from φ + π and would place the
 		<a class="gloss" href="#gloss-acrophase">acrophase</a>
-		at the trough for half of all datasets. With φ defined this way the model is A·cos(2πt/τ + φ),
-		which peaks at t<sub>peak</sub> = −φ·τ/2π (mod τ). The classical cosinor convention instead
-		reports φ itself, in <strong>negative degrees</strong> from a stated reference time (0°), with
-		360° = one period; the two differ only in sign and units.
+		at the trough for half of all datasets. With φ defined this way the model is A·cos(2πt/τ + φ), which
+		peaks at t<sub>peak</sub> = −φ·τ/2π (mod τ). The classical cosinor convention instead reports φ
+		itself, in <strong>negative degrees</strong> from a stated reference time (0°), with 360° = one
+		period; the two differ only in sign and units.
 		<strong>AnCiR reports every acrophase as the time of peak</strong>, in hours after the start of
 		the x column (t = 0), wrapped into [0, τ): the Cosinor node's <code>acrophase</code> port, its
 		panel ("Acrophase (time of peak)"), its stats table, Fit waveform model and Moving analysis all
@@ -138,8 +138,8 @@
 			>
 			(one per subject) into a <strong>Cosinor</strong> node fits each subject
 			<em>independently</em>
-			and returns a per-subject results table. To obtain a group-level estimate, export that table
-			(via a <strong>tableplot</strong> or <strong>Save session</strong>) and vector-average the
+			and returns a per-subject results table. To obtain a group-level estimate, export that table (via
+			a <strong>tableplot</strong> or <strong>Save session</strong>) and vector-average the
 			individual (β, γ) estimates in R (<em>cosinor2</em>) or Python, or plot the individual
 			acrophases on the <strong>Circular phase plot</strong> and test them with the
 			<strong>Rayleigh test</strong> node (Chapter 12).
@@ -166,16 +166,16 @@
 						<strong>harmonics</strong>
 						(<a class="gloss" href="#gloss-harmonic">harmonics</a>; start with 1). Choose the
 						<strong>CI level</strong>
-						(the dropdown offers 95% / 99%). This gives MESOR, amplitude, acrophase ± CI, and an
-						F-test <a class="gloss" href="#gloss-p-value">p-value</a>. AnCiR can also run an
-						optional <strong>permutation test</strong> for a distribution-free p-value.
+						(the dropdown offers 95% / 99%). This gives MESOR, amplitude, acrophase ± CI, and an F-test
+						<a class="gloss" href="#gloss-p-value">p-value</a>. AnCiR can also run an optional
+						<strong>permutation test</strong> for a distribution-free p-value.
 					</li>
 					<li>
 						<strong>Free period:</strong> leave Fixed Period unticked and set
 						<strong>N cosine curves</strong>
-						= 1 to fit a single sinusoid with optimised period and phase. N &gt; 1 fits multiple
-						overlapping cosines. <strong>Min period</strong> and <strong>Max period</strong> (default
-						1 to 48 h) bound the search; widen them for ultradian or infradian rhythms.
+						= 1 to fit a single sinusoid with optimised period and phase. N &gt; 1 fits multiple overlapping
+						cosines. <strong>Min period</strong> and <strong>Max period</strong> (default 1 to 48 h) bound
+						the search; widen them for ultradian or infradian rhythms.
 					</li>
 				</ul>
 			</li>

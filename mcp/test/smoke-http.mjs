@@ -49,11 +49,25 @@ await call('import_data', {
 	]
 });
 const caps = JSON.parse(await call('list_capabilities'));
-const fit = JSON.parse(await call('run_table_process', { name: 'Cosinor', args: { xIN: 0, yIN: [1], useFixedPeriod: true, fixedPeriod: 24 } }));
-const tx = JSON.parse(await call('add_column_process', { columnId: 1, name: 'normalize', args: {} }));
+const fit = JSON.parse(
+	await call('run_table_process', {
+		name: 'Cosinor',
+		args: { xIN: 0, yIN: [1], useFixedPeriod: true, fixedPeriod: 24 }
+	})
+);
+const tx = JSON.parse(
+	await call('add_column_process', { columnId: 1, name: 'normalize', args: {} })
+);
 const plot = JSON.parse(await call('add_plot', { type: 'scatterplot', inputs: { x: 0, y: 1 } }));
 
-console.log('ANALYSES:', caps.analyses.length, 'TRANSFORMS:', caps.transforms.length, 'PLOTS:', caps.plots.length);
+console.log(
+	'ANALYSES:',
+	caps.analyses.length,
+	'TRANSFORMS:',
+	caps.transforms.length,
+	'PLOTS:',
+	caps.plots.length
+);
 console.log('COSINOR valid:', fit.valid, '| normalize len:', tx.length, '| plot:', plot.type);
 
 await client.close();

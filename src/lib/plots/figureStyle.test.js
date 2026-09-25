@@ -405,12 +405,21 @@ describe('transitional sizes for legend and sig bars', () => {
 // loaded.
 describe('physicalWidthPx', () => {
 	it('a named preset fixes a width', () => {
-		expect(physicalWidthPx({ widthPreset: 'single' })).toBeCloseTo(WIDTH_PRESET_MM.single * PX_PER_MM, 6);
-		expect(physicalWidthPx({ widthPreset: 'double' })).toBeCloseTo(WIDTH_PRESET_MM.double * PX_PER_MM, 6);
+		expect(physicalWidthPx({ widthPreset: 'single' })).toBeCloseTo(
+			WIDTH_PRESET_MM.single * PX_PER_MM,
+			6
+		);
+		expect(physicalWidthPx({ widthPreset: 'double' })).toBeCloseTo(
+			WIDTH_PRESET_MM.double * PX_PER_MM,
+			6
+		);
 	});
 
 	it('custom with millimetres fixes that width', () => {
-		expect(physicalWidthPx({ widthPreset: 'custom', widthMm: 100 })).toBeCloseTo(100 * PX_PER_MM, 6);
+		expect(physicalWidthPx({ widthPreset: 'custom', widthMm: 100 })).toBeCloseTo(
+			100 * PX_PER_MM,
+			6
+		);
 	});
 
 	it('custom with NO millimetres fixes nothing', () => {
@@ -448,7 +457,9 @@ describe('applyFigureWidth', () => {
 	});
 
 	it('tolerates a plot with no usable size', () => {
-		expect(applyFigureWidth({ width: 0, style: newFigureStyle({ widthPreset: 'single' }) })).toBe(false);
+		expect(applyFigureWidth({ width: 0, style: newFigureStyle({ widthPreset: 'single' }) })).toBe(
+			false
+		);
 		expect(applyFigureWidth(null)).toBe(false);
 		expect(applyFigureWidthToAll(null)).toBe(0);
 	});

@@ -32,7 +32,8 @@
 	}
 
 	// Shared port-layout constant (mirrors WorkflowEditor.svelte). Re-declared locally
-	// — a trivial number and the duplication is contained to these two files.
+	// because it is a trivial number and the duplication is contained to these two files.
+	// The matching header height lives in CSS below (see the "HEADER_H" comment).
 	const PORT_H = 22;
 
 	// Plot nodes always have a preview panel below, so apply the expanded border style
@@ -395,22 +396,6 @@
 		flex-shrink: 0;
 	}
 
-	.expand-indicator {
-		font-size: 9px;
-		color: var(--color-text-muted);
-		flex-shrink: 0;
-		padding: 2px 4px;
-		border: none;
-		border-radius: var(--radius-xs);
-		background: transparent;
-		cursor: pointer;
-		line-height: 1;
-	}
-
-	.expand-indicator:hover {
-		color: var(--color-accent);
-		background: rgba(0, 0, 0, 0.05);
-	}
 	.drop-badge {
 		font-size: 9px;
 		font-weight: 700;

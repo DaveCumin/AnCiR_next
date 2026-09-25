@@ -68,7 +68,10 @@ export const PythonExportUnavailableError = ExportSidecarUnavailableError;
  * document.baseURI keeps it next to whatever index.html the user actually opened; the
  * hash router's fragment drops out of URL resolution, so "#/workspace" is harmless.
  */
-export function sidecarUrl(file = 'ancir-python-export.js', baseURI = globalThis.document?.baseURI) {
+export function sidecarUrl(
+	file = 'ancir-python-export.js',
+	baseURI = globalThis.document?.baseURI
+) {
 	return new URL(file, baseURI ?? 'http://localhost/').href;
 }
 

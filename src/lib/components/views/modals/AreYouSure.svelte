@@ -57,26 +57,24 @@
 	button={emptySnippet}
 	showCloseButton={false}
 >
-	{#snippet children()}
-		<div class="modal-shell">
-			<div class="title-container">
-				<h4>{text}</h4>
-			</div>
-			<div class="button-row">
-				{#each renderedOptions as option}
-					<button
-						class={`dialog-button ${option.tone}`}
-						onclick={() => {
-							if (callback) callback(option.value);
-							showModal = false;
-						}}
-					>
-						{option.label}
-					</button>
-				{/each}
-			</div>
+	<div class="modal-shell">
+		<div class="title-container">
+			<h4>{text}</h4>
 		</div>
-	{/snippet}
+		<div class="button-row">
+			{#each renderedOptions as option, i (i)}
+				<button
+					class={`dialog-button ${option.tone}`}
+					onclick={() => {
+						if (callback) callback(option.value);
+						showModal = false;
+					}}
+				>
+					{option.label}
+				</button>
+			{/each}
+		</div>
+	</div>
 </Modal>
 
 <style>

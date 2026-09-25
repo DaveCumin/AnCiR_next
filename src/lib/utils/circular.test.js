@@ -134,8 +134,8 @@ describe('kappaFromRbar', () => {
 
 describe('watsonWilliams', () => {
 	// Simple F CDF upper tail via a series is overkill for the test; use a stub
-	// that just records df so we can assert F/df without a stats dependency.
-	const captureP = (F, df1, df2) => 0.5; // sentinel
+	// returning a sentinel so we can assert F/df without a stats dependency.
+	const captureP = () => 0.5; // sentinel
 
 	it('needs at least 2 non-empty groups', () => {
 		expect(watsonWilliams([]).valid).toBe(false);

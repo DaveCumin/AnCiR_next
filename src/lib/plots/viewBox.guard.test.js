@@ -73,9 +73,7 @@ describe('view-box wiring', () => {
 				.replace(/viewWidth\s*=\s*\$derived\([^;]*\);/, '')
 				.replace(/viewHeight\s*=\s*\$derived\([^;]*\);/, '');
 			const strays = [...body.matchAll(/this\.parentBox\.(width|height)/g)].map((m) => m[0]);
-			expect(strays, `${name}: ${strays.join(', ')} should read viewWidth/viewHeight`).toEqual(
-				[]
-			);
+			expect(strays, `${name}: ${strays.join(', ')} should read viewWidth/viewHeight`).toEqual([]);
 		});
 	}
 });

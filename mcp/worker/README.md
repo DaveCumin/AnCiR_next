@@ -9,12 +9,12 @@ See the ADR: `2026-07-15-static-session-emission` (in the vault).
 
 ## Routes
 
-| | |
-| --- | --- |
-| `POST /build` | `{prompt, llm:{baseUrl,apiKey,model}, options?}` → `{url, sessionUrl, sessionId, manifest, fitness, warnings, errors}` |
-| `POST /mcp` | remote **MCP server** (JSON-RPC) — an agent builds sessions with no clone, no key |
-| `GET /sessions/:id` | the session JSON (CORS `*`, so AnCiR can fetch it cross-origin) |
-| `GET /health` | `{ok:true}` |
+|                     |                                                                                                                        |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `POST /build`       | `{prompt, llm:{baseUrl,apiKey,model}, options?}` → `{url, sessionUrl, sessionId, manifest, fitness, warnings, errors}` |
+| `POST /mcp`         | remote **MCP server** (JSON-RPC) — an agent builds sessions with no clone, no key                                      |
+| `GET /sessions/:id` | the session JSON (CORS `*`, so AnCiR can fetch it cross-origin)                                                        |
+| `GET /health`       | `{ok:true}`                                                                                                            |
 
 `url` is the payoff: `https://<ancir>/?loadFromURL=<sessionUrl>` — open it and the session
 builds itself in the browser.
@@ -27,27 +27,27 @@ claude mcp add --transport http ancir https://ancir-nl.david-cumin.workers.dev/m
 
 That's the whole setup: no clone, no `npm install`, no VM. Four tools:
 
-| | |
-| --- | --- |
-| `list_capabilities` | every analysis and plot, with exact flat args, the columns each produces, and the fitted-curve pairing — straight from `session-schema.generated.json` |
-| `check_draft` | **dry run**: the same normalizer, nothing stored, no link. Returns the errors it *would* raise, the columns each analysis *would* create, and fitness advice |
-| `build_session` | a draft → normalizer → KV → the `?loadFromURL=` link, plus `structuredContent.{url,sessionUrl,sessionId,errors,warnings,fitness}` |
-| `describe_session` | read a session back: columns (and **which hold data**), analyses with args, plots, fitness |
+|                     |                                                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `list_capabilities` | every analysis and plot, with exact flat args, the columns each produces, and the fitted-curve pairing — straight from `session-schema.generated.json`       |
+| `check_draft`       | **dry run**: the same normalizer, nothing stored, no link. Returns the errors it _would_ raise, the columns each analysis _would_ create, and fitness advice |
+| `build_session`     | a draft → normalizer → KV → the `?loadFromURL=` link, plus `structuredContent.{url,sessionUrl,sessionId,errors,warnings,fitness}`                            |
+| `describe_session`  | read a session back: columns (and **which hold data**), analyses with args, plots, fitness                                                                   |
 
 `check_draft` and `describe_session` exist because the server was otherwise **write-only**: an
 agent could build but never look — not at what it had just made, not at a session a user linked
-it to. `check_draft` in particular is the cheap way to learn what an analysis *names* its
+it to. `check_draft` in particular is the cheap way to learn what an analysis _names_ its
 outputs (the thing agents most reliably get wrong) before wiring a plot to them, and it runs the
-*same* normalizer rather than a cheaper approximation — a dry run that disagrees with the real
+_same_ normalizer rather than a cheaper approximation — a dry run that disagrees with the real
 thing just teaches the agent to trust a fiction.
 
-`describe_session` **parses** its argument for a session id; it never *fetches* it. "Describe the
+`describe_session` **parses** its argument for a session id; it never _fetches_ it. "Describe the
 session at this URL" reads as an invitation to go and get it, which would hand any caller an
 SSRF primitive running inside the Worker. It only ever reads our own KV, so anything that isn't
 a plain UUID isn't a session id. (This exposes nothing new: `GET /sessions/:id` is already
 public and CORS-`*`, because AnCiR fetches it cross-origin.)
 
-**No LLM call and no API key** — the calling agent *is* the model, so `/mcp` never touches
+**No LLM call and no API key** — the calling agent _is_ the model, so `/mcp` never touches
 `OPENAI_*` and never spends the default key's quota. It's the same normalizer `/build` uses,
 minus the inference step.
 
@@ -126,20 +126,29 @@ The KV counter (`BUILD_RATE_MAX`) remains only as a fallback for when the bindin
 (tests, stripped config); it's best-effort, since KV is eventually consistent.
 
 **What the user sees:** a blocked request returns 429 + `Retry-After`, and AnCiR's AI dialog
-shows *"Too many requests. The AI service limits how often sessions can be built — wait about
-60s and try again."* rather than a raw status code.
+shows _"Too many requests. The AI service limits how often sessions can be built — wait about
+60s and try again."_ rather than a raw status code.
 
 ## Reading the prompt logs
 
 Every `/build` writes one structured line, so you can review what people actually ask for:
 
 ```json
-{ "event":"build", "ts":"2026-07-17T00:12:49.650Z",
-  "prompt":"Simulate 4 days of a 24 h rhythm, fit a cosinor, and plot it",
-  "model":"openai/gpt-oss-120b", "baseUrl":"https://api.groq.com/openai/v1",
-  "llmKeySource":"worker-default", "outcome":"ok", "ms":23,
-  "sessionId":"75e8…", "nodes":["SimulatedData","Cosinor"], "plots":["scatterplot"],
-  "errors":[], "warnings":[] }
+{
+	"event": "build",
+	"ts": "2026-07-17T00:12:49.650Z",
+	"prompt": "Simulate 4 days of a 24 h rhythm, fit a cosinor, and plot it",
+	"model": "openai/gpt-oss-120b",
+	"baseUrl": "https://api.groq.com/openai/v1",
+	"llmKeySource": "worker-default",
+	"outcome": "ok",
+	"ms": 23,
+	"sessionId": "75e8…",
+	"nodes": ["SimulatedData", "Cosinor"],
+	"plots": ["scatterplot"],
+	"errors": [],
+	"warnings": []
+}
 ```
 
 `outcome` is one of `ok`, `llm_error`, `llm_unreachable`, `unparseable_draft`, `empty_session`
@@ -184,11 +193,11 @@ option can't use it — it reaches for the wrong tool, or fabricates data by han
 So three hand-written note maps fill what the registry can't express. Each lives beside the code
 it describes and is baked into the catalogue by `gen-schema.js`:
 
-| map | file | teaches |
-| --- | --- | --- |
-| `OUTPUT_NOTES` | `dynamicOut.js` | how a computed-output node names its columns (Split's segments, MovingAnalysis' stats) |
-| `USAGE_NOTES` | `generators.js` | how to *drive* a generator — Random's distributions, that `sections` run back-to-back in time |
-| `PARAM_NOTES` | `paramNotes.js` | an analysis param's **enums, units and gating** — `pgMethod`'s methods, which numbers are HOURS, that `fixedPeriod` only bites when `useFixedPeriod:true` |
+| map            | file            | teaches                                                                                                                                                   |
+| -------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OUTPUT_NOTES` | `dynamicOut.js` | how a computed-output node names its columns (Split's segments, MovingAnalysis' stats)                                                                    |
+| `USAGE_NOTES`  | `generators.js` | how to _drive_ a generator — Random's distributions, that `sections` run back-to-back in time                                                             |
+| `PARAM_NOTES`  | `paramNotes.js` | an analysis param's **enums, units and gating** — `pgMethod`'s methods, which numbers are HOURS, that `fixedPeriod` only bites when `useFixedPeriod:true` |
 
 Hand-written is how catalogues start lying, so the enum half of `PARAM_NOTES` is held honest by a
 **drift guard** (`src/lib/tableProcesses/paramNotesCoverage.test.js`, app-side because it needs the
@@ -202,7 +211,7 @@ their hand-written pieces.)
 `/build` gives the model its own mistakes back, **once**, when the normalizer reports errors.
 
 This matters more than any prompt wording. The normalizer already knows exactly what went wrong
-and says so — *"no column named `time_1`. Available: time, values, values_1, values_2"* — and
+and says so — _"no column named `time_1`. Available: time, values, values_1, values_2"_ — and
 that message was going to the USER, who can only reword and hope. The model can act on it: it's
 a precise, mechanical correction, and it's the same class of error every time (a plausible
 column name that doesn't exist). A catalogue note can only fix the mistakes someone predicted;
@@ -213,7 +222,7 @@ Rules, all of them deliberate:
 - **Once.** A second failure is a real dead end, and looping would burn a token budget the free
   tier doesn't have (8K/min — a build is ~2.5K, so a repair round roughly doubles a failing
   request).
-- **Only if it helps.** The retry is kept only when it has *fewer* errors AND hasn't lost
+- **Only if it helps.** The retry is kept only when it has _fewer_ errors AND hasn't lost
   intent coverage (see below). Otherwise the first answer stands and the user still sees the
   errors.
 - **Never on a clean draft** — no wasted call.
@@ -223,13 +232,13 @@ Rules, all of them deliberate:
 
 ## The intent contract
 
-The normalizer answers *"is this session wired correctly?"*. It cannot answer *"is this the
-session the user asked for?"* — by the time a draft reaches it the prompt is gone. So a draft
+The normalizer answers _"is this session wired correctly?"_. It cannot answer _"is this the
+session the user asked for?"_ — by the time a draft reaches it the prompt is gone. So a draft
 that builds four of the five things asked for normalises perfectly, reports zero errors, and
 nobody notices.
 
 So the model states its goal in the **same reply** as the draft (no extra call, a handful of
-tokens), and states it *checkably*:
+tokens), and states it _checkably_:
 
 ```json
 "intent": {
@@ -244,13 +253,13 @@ tokens), and states it *checkably*:
 (`src/emit/intent.js`); `goal` and `assumptions` are prose, shown to the user, never scored.
 This buys three things:
 
-- **The manifest** (below): the reply finally says what was *asked for*, not just what was built.
+- **The manifest** (below): the reply finally says what was _asked for_, not just what was built.
 - **A real repair test.** The old rule was "fewer errors, no fewer analyses" — node COUNT, which
   cannot tell a Cosinor from a Periodogram. Coverage can.
 - **`intentMet: "4/5"` in the logs**, with `intentMissing` naming the deliverables. A session can
   be error-free and still be 3/5; this is the only number that sees that.
 
-Two things it deliberately does **not** do. It never scores a repair against the repair's *own*
+Two things it deliberately does **not** do. It never scores a repair against the repair's _own_
 restated intent — always the first draft's, made before the model hit trouble, or a model can
 simply promise less and declare victory. And an unverifiable deliverable (a `kind` we have no
 check for) is excluded from the score rather than counted against the draft; guessing would make
@@ -265,20 +274,24 @@ built".
 `/build` returns a `manifest` alongside the URL:
 
 ```json
-{ "goal": "…", "assumptions": ["period not given; assumed 24 h"],
-  "built": { "analyses": ["SimulatedData", "Cosinor"], "plots": [] },
-  "deliverables": [ { "kind": "plot", "what": "actogram", "met": false } ],
-  "missing": ["plot: actogram"], "complete": false }
+{
+	"goal": "…",
+	"assumptions": ["period not given; assumed 24 h"],
+	"built": { "analyses": ["SimulatedData", "Cosinor"], "plots": [] },
+	"deliverables": [{ "kind": "plot", "what": "actogram", "met": false }],
+	"missing": ["plot: actogram"],
+	"complete": false
+}
 ```
 
-`assumptions` is the interesting field: it's everything the model decided *for* the user without
+`assumptions` is the interesting field: it's everything the model decided _for_ the user without
 being told. `missing` is the headline — before this, a user who asked for five things and got
 four had to reverse-engineer the node graph to find out.
 
 ## Fitness: is this a sensible thing to do to this data?
 
 The normalizer checks wiring. The intent contract checks we built what was asked for. Neither
-asks the question a chronobiologist asks first — whether the number will *mean* anything.
+asks the question a chronobiologist asks first — whether the number will _mean_ anything.
 
 A Cosinor fitted to 1.5 cycles returns a confident amplitude and acrophase. A periodogram over
 data sampled every 13 h reports a period, and it's an alias. Both sessions are perfectly wired,
@@ -354,12 +367,17 @@ values) ever leaves the browser.
 AnCiR reports its own crashes here, so a bug nobody mentions still shows up:
 
 ```json
-{ "event":"client_error", "ts":"…",
-  "message":"Cannot read properties of undefined (reading '0')",
-  "stack":"at get scale (Periodogram.svelte:1104)",
-  "source":"render", "context":"rendering the periodogram plot",
-  "version":"β.58.0", "sessionShape":{"columns":12,"analyses":2,"plots":1},
-  "generatedBy":{"sessionId":"75e8…","route":"build"} }
+{
+	"event": "client_error",
+	"ts": "…",
+	"message": "Cannot read properties of undefined (reading '0')",
+	"stack": "at get scale (Periodogram.svelte:1104)",
+	"source": "render",
+	"context": "rendering the periodogram plot",
+	"version": "β.58.0",
+	"sessionShape": { "columns": 12, "analyses": 2, "plots": 1 },
+	"generatedBy": { "sessionId": "75e8…", "route": "build" }
+}
 ```
 
 `generatedBy.sessionId` is the good bit: it joins the crash to the `build` line that made
@@ -367,7 +385,7 @@ that session, so you can read the prompt that produced the thing that broke. Fil
 `event = "client_error"`.
 
 The route is unauthenticated (anyone can POST), so it stores nothing, echoes nothing, caps
-every field, and is rate-limited — a crash *loop* is dropped with a 200 rather than a 429, since
+every field, and is rate-limited — a crash _loop_ is dropped with a 200 rather than a 429, since
 the app has already told the user and retrying helps nobody. **The session is never sent**: it's
 the bulk of a report and the part most likely to hold unpublished data. The app parks a copy in
 the user's own `localStorage` (`ancir:last-crash-session`) instead, for them to send if they
@@ -393,7 +411,7 @@ session" and sends the JSON, search Workers Logs for that id and you get the pro
 and the outcome that produced it. Without the stamp a session is anonymous the moment it leaves.
 
 - **`route`** — `build` (someone typed a prompt) or `mcp` (an agent called us).
-- **`model`** is absent on the `mcp` route: the calling agent *is* the model and never tells us
+- **`model`** is absent on the `mcp` route: the calling agent _is_ the model and never tells us
   which. That's an honest gap, not an oversight — a wrong fingerprint is worse than none.
 - **No key, no IP, no prompt** goes in it. The prompt stays in the log, which is ours; the
   session travels and may be shared on. Tests assert this.
@@ -404,15 +422,15 @@ session and sending it on — which is exactly how a bug report arrives.
 
 **Two ways to read them:**
 
-| | |
-| --- | --- |
-| **Live tail** (debugging now) | `npx wrangler tail --config worker/wrangler.toml --format pretty` |
-| **Stored + queryable** (reviewing later) | Cloudflare dashboard → **Workers & Pages** → *ancir-nl* → **Observability** |
+|                                          |                                                                             |
+| ---------------------------------------- | --------------------------------------------------------------------------- |
+| **Live tail** (debugging now)            | `npx wrangler tail --config worker/wrangler.toml --format pretty`           |
+| **Stored + queryable** (reviewing later) | Cloudflare dashboard → **Workers & Pages** → _ancir-nl_ → **Observability** |
 
 The dashboard view is on because `wrangler.toml` sets `[observability] enabled = true`; without
 it, logs only stream to `tail` and vanish.
 
-**Where to actually look.** The Events list shows one row per *invocation*, and its Message
+**Where to actually look.** The Events list shows one row per _invocation_, and its Message
 column is the HTTP line (`POST …/build`) — the prompt is **not** in that column. Expand the
 `/build` row to see the log the Worker emitted. Because it's logged as an **object** (not a
 JSON string), Workers Logs indexes its fields, so you can query them directly, e.g.
@@ -429,8 +447,9 @@ analysis over them, write to KV/D1/R2 or an external sink instead. Say the word 
 that.
 
 **What is and isn't recorded** — deliberately:
+
 - **Yes:** the prompt (the point), which model answered, outcome, timing, what got built.
-- **No:** any API key — neither a caller's nor the Worker's secret. `llmKeySource` says *whose*
+- **No:** any API key — neither a caller's nor the Worker's secret. `llmKeySource` says _whose_
   key was used (`caller` / `worker-default`) without revealing it. There are tests asserting this.
 - **No IP address.** Adding one would make these logs personal data; add it only if you need it.
 - Prompts are user-typed content, so the modal tells users they're logged.

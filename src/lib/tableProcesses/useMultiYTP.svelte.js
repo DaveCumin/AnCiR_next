@@ -69,7 +69,9 @@ export function useMultiYTP(p, yPrefix, yColNamePrefix) {
 	 */
 	function syncYColumns() {
 		const newIds = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local membership check inside syncYColumns(); never read reactively
 		const newSet = new Set(newIds);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local membership check inside syncYColumns(); never read reactively
 		const oldSet = new Set(prevYIds);
 
 		// No change — return early so callers skip unnecessary recomputes.

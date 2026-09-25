@@ -1,5 +1,11 @@
 <script module>
+	import {
+		LegendAutoLayout,
+		rightOfPlot,
+		lineSeriesObstacle
+	} from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
@@ -15,9 +21,8 @@
 		bindAltTooltipToggle
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
-	import { computeAutocorrelation } from '$lib/utils/correlogram.js';
-	import { argMax, argMaxAmong } from '$lib/components/plotbits/helpers/peakFinder.js';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
+	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
 	import { minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 
 	export const Correlogram_defaultDataInputs = ['time', 'values'];
@@ -72,28 +77,32 @@
 			return { upper: bound, lower: -bound };
 		});
 
-		// Peak detection - find the highest correlation after lag 0 (across ALL data)
+		// The dominant period of the series: the first substantial positive peak
+		// away from lag 0. NOT a plain argmax; see findAutocorrelationPeak in
+		// utils/correlogram.js for why lag 0, the antiphase trough and the long-lag
+		// repeats all have to be ruled out first.
 		peak = $derived.by(() => {
 			const { lags, correlations } = this.acfData;
 			if (!lags || !correlations || lags.length < 2) return null;
-			// Skip index 0 (lag=0 always has correlation=1.0)
-			const idx = argMax(correlations, 1);
-			return idx < 0 ? null : { lag: lags[idx], correlation: correlations[idx] };
+			const p = findAutocorrelationPeak(lags, correlations);
+			return p ? { lag: p.lag, correlation: p.correlation } : null;
 		});
 
-		// Peak within the visible x-axis range
+		// The same reading, restricted to the visible x-axis range.
 		visiblePeak = $derived.by(() => {
 			const { lags, correlations } = this.acfData;
 			if (!lags || !correlations || lags.length < 2) return null;
 			const [xMin, xMax] = this.parentPlot?.laglims ?? [0, Infinity];
-			const visibleIndices = [];
+			const visLags = [];
+			const visCorrs = [];
 			for (let i = 0; i < lags.length; i++) {
-				// Skip lag=0 (index 0 when lags[0] === 0)
-				if (i === 0 && lags[i] === 0) continue;
-				if (lags[i] >= xMin && lags[i] <= xMax) visibleIndices.push(i);
+				if (lags[i] >= xMin && lags[i] <= xMax) {
+					visLags.push(lags[i]);
+					visCorrs.push(correlations[i]);
+				}
 			}
-			const idx = argMaxAmong(correlations, visibleIndices);
-			return idx < 0 ? null : { lag: lags[idx], correlation: correlations[idx] };
+			const p = findAutocorrelationPeak(visLags, visCorrs);
+			return p ? { lag: p.lag, correlation: p.correlation } : null;
 		});
 
 		dataWarnings = $derived.by(() => {
@@ -157,13 +166,82 @@
 			}
 			this.line = new LineClass(dataIN?.line, this);
 			this.confidenceLine = new LineClass(dataIN?.confidenceLine, this);
-			this.confidenceLine.stroke = dataIN?.confidenceLine?.stroke ?? '5,5';
+			// The DEFAULT must be spelled exactly as the shared dash vocabulary spells it
+			// (strokeStyles.js), or the Stroke select has no option to match and falls back
+			// to "Other". '5,5' and '5, 5' draw the same dashes but are different strings.
+			// A value that came from a saved session is left exactly as saved.
+			this.confidenceLine.stroke = dataIN?.confidenceLine?.stroke ?? '5, 5';
 			this.confidenceLine.strokeWidth = dataIN?.confidenceLine?.strokeWidth ?? 1;
 			this.points = new PointsClass(dataIN?.points, this);
 			this.maxLag = dataIN?.maxLag ?? null;
 			this.minLag = dataIN?.minLag ?? 0;
 			this.showConfidenceBounds = dataIN?.showConfidenceBounds ?? true;
 			this.confidenceLevel = dataIN?.confidenceLevel ?? 0.95;
+		}
+
+		get displayLabel() {
+			return seriesDisplayLabel(this);
+		}
+
+		getLegendItem() {
+			const item = { label: this.displayLabel, elements: [] };
+			if (this.line.draw) {
+				item.elements.push({
+					type: 'line',
+					color: this.line.colour,
+					strokeWidth: this.line.strokeWidth,
+					stroke: this.line.stroke
+				});
+			}
+			if (this.points.draw) {
+				item.elements.push({
+					type: 'points',
+					color: this.points.colour,
+					size: this.points.radius,
+					shape: this.points.shape
+				});
+			}
+			// Nothing drawn, nothing to explain.
+			if (item.elements.length === 0) return null;
+			return item;
+		}
+
+		/**
+		 * Whether the two confidence-bound lines are actually on the figure.
+		 *
+		 * BOTH gates matter and they live in different places: the template only
+		 * reaches the bound <Line>s when `showConfidenceBounds` is on, and each
+		 * <Line> then draws only when its own `draw` flag is set (the "Confidence
+		 * Bounds" eye toggle in the Data tab). A legend entry for a line that is
+		 * switched off either way would be a swatch for nothing.
+		 */
+		get confidenceBoundsDrawn() {
+			return !!(this.showConfidenceBounds && this.confidenceBounds && this.confidenceLine?.draw);
+		}
+
+		/**
+		 * The SEPARATE legend entry for the confidence bounds, or null when they
+		 * are not drawn. It carries the confidence line's real colour, width and
+		 * dash so the swatch matches the bounds on the figure (they are styled
+		 * independently of the series line).
+		 *
+		 * @param {boolean} [nameSeries] prefix the series label, for a plot with
+		 *   more than one series where "which bounds?" is a real question.
+		 */
+		getConfidenceLegendItem(nameSeries = false) {
+			if (!this.confidenceBoundsDrawn) return null;
+			const pct = Math.round((this.confidenceLevel ?? 0.95) * 100);
+			return {
+				label: nameSeries ? `${this.displayLabel} ${pct}% bounds` : `${pct}% confidence bounds`,
+				elements: [
+					{
+						type: 'line',
+						color: this.confidenceLine.colour,
+						strokeWidth: this.confidenceLine.strokeWidth,
+						stroke: this.confidenceLine.stroke
+					}
+				]
+			};
 		}
 
 		toJSON() {
@@ -231,7 +309,41 @@
 			this.#padding = v;
 		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		// Width before an outside legend takes its share; see legendAuto.svelte.js.
+		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		basePlotHeight = $derived(this.plotheight);
+		plotwidth = $derived(this.basePlotWidth - this.legendLayout.reserveW);
+
+		legendLayout = new LegendAutoLayout(this, {
+			obstacles: (w, h) => this.legendObstacles(w, h),
+			outside: rightOfPlot(() => ({ baseWidth: this.basePlotWidth }))
+		});
+
+		// What a legend must not cover, in px over a w x h plot area: each series' line
+		// and points, and its two confidence-bound lines when they are shown.
+		legendObstacles(w, h) {
+			const xs = scaleLinear().domain([this.laglims[0], this.laglims[1]]).range([0, w]);
+			const ys = scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([h, 0]);
+			const out = [];
+			for (const d of this.data) {
+				const lags = d.acfData?.lags ?? [];
+				const series = lineSeriesObstacle(lags, d.acfData?.correlations, xs, ys, d.line, d.points);
+				if (series) out.push(series);
+				if (d.showConfidenceBounds && d.confidenceBounds) {
+					for (const level of [d.confidenceBounds.upper, d.confidenceBounds.lower]) {
+						const bound = lineSeriesObstacle(
+							lags,
+							new Array(lags.length).fill(level),
+							xs,
+							ys,
+							d.confidenceLine
+						);
+						if (bound) out.push(bound);
+					}
+				}
+			}
+			return out;
+		}
 
 		laglimsIN = $state([null, null]);
 		laglims = $derived.by(() => {
@@ -270,9 +382,28 @@
 
 		xAxis = $state();
 		yAxis = $state();
+		legend = $state();
+
+		// One entry per drawn series, each followed by its own confidence-bounds
+		// entry when those lines are drawn.
+		getLegendItems = $derived.by(() => {
+			const items = [];
+			const nameSeries = this.data.length > 1;
+			this.data.forEach((d) => {
+				const item = d.getLegendItem();
+				if (item) items.push(item);
+				const bounds = d.getConfidenceLegendItem(nameSeries);
+				if (bounds) items.push(bounds);
+			});
+			return items;
+		});
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			// Default OFF: every saved session already contains correlograms, so a
+			// legend that switched itself on at load would silently change a figure
+			// the user had finished with. See LegendClass.withDefaults.
+			this.legend = LegendClass.withDefaults(dataIN?.legend, { show: false });
 			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Lag (hours)' });
 			this.yAxis = AxisClass.withDefaults(dataIN?.yAxis, { label: 'Autocorrelation' });
 			if (dataIN) {
@@ -415,6 +546,7 @@
 				padding: this.#padding,
 				xAxis: this.xAxis.toJSON(),
 				yAxis: this.yAxis.toJSON(),
+				legend: this.legend.toJSON(),
 				data: this.data
 			};
 		}
@@ -432,6 +564,9 @@
 			correlogram.padding = json.padding ?? json.paddingIN ?? correlogram.padding;
 			correlogram.laglimsIN = json.laglimsIN || [null, null];
 			correlogram.ylimsIN = json.ylimsIN ?? correlogram.ylimsIN;
+			// withDefaults, not fromJSON: a session saved before the correlogram had a
+			// legend carries no `legend` key at all, and must stay legend-less.
+			correlogram.legend = LegendClass.withDefaults(json.legend, { show: false });
 
 			// Support both new AxisClass format and old individual properties
 			if (json.xAxis) {
@@ -481,6 +616,7 @@
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
+	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
 	import { getZoomAdapter } from '$lib/plots/zoomAdapters.js';
 	import { usePlotMetricOutputs } from '$lib/plots/plotMetricOutputs.svelte.js';
@@ -544,6 +680,16 @@
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
 		<div class="div-line"></div>
+
+		<!-- First in Properties, as on every other plot that has a legend. It was at the
+		     very bottom here, below the axis controls, so the one control a user goes
+		     looking for by name was the one in a different place. -->
+		<Legend
+			legendData={theData.legend}
+			figureStyle={theData.parentBox?.style}
+			canPlaceOutside={theData.legendLayout.canPlaceOutside}
+			which="controls"
+		/>
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -1017,6 +1163,18 @@
 				/>
 			{/if}
 		{/each}
+
+		<Legend
+			figureStyle={theData.plot.viewStyle}
+			legendData={theData.plot.legend}
+			items={theData.plot.getLegendItems}
+			plotWidth={theData.plot.plotwidth}
+			plotHeight={theData.plot.plotheight}
+			padding={theData.plot.padding}
+			autoPlacement={theData.plot.legendLayout.auto}
+			outsidePosition={theData.plot.legendLayout.outsidePosition}
+			which="plot"
+		/>
 
 		<!-- Brush-zoom overlay (Zoom mode or Shift+drag); box renders above the data. -->
 		{#if brushable}

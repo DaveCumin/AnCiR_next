@@ -15,7 +15,7 @@
 	import MiniDataTable from './MiniDataTable.svelte';
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
-	import { core, removeGroup } from '$lib/core/core.svelte.js';
+	import { removeGroup } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';

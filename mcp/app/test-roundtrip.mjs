@@ -32,30 +32,40 @@ const build = await (
 	await fetch(`${base}/build`, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ prompt: '48 hours of a 24-hour cosine, fit a cosinor and plot time vs signal' })
+		body: JSON.stringify({
+			prompt: '48 hours of a 24-hour cosine, fit a cosinor and plot time vs signal'
+		})
 	})
 ).json();
-console.log('BUILD:', JSON.stringify({ planner: build.planner, trace: build.trace, ancirUrl: build.ancirUrl }, null, 2));
+console.log(
+	'BUILD:',
+	JSON.stringify({ planner: build.planner, trace: build.trace, ancirUrl: build.ancirUrl }, null, 2)
+);
 
 // Fetch the session JSON exactly as AnCiR's loadFromURL would.
 const sessionRes = await fetch(build.sessionUrl);
 const session = await sessionRes.json();
-console.log('SESSION:', JSON.stringify({
-	cors: sessionRes.headers.get('access-control-allow-origin'),
-	columns: (session.data ?? []).length,
-	tableProcesses: (session.tableProcesses ?? []).map((t) => t.name),
-	plots: (session.plots ?? []).map((p) => p.type),
-	version: session.version
-}));
+console.log(
+	'SESSION:',
+	JSON.stringify({
+		cors: sessionRes.headers.get('access-control-allow-origin'),
+		columns: (session.data ?? []).length,
+		tableProcesses: (session.tableProcesses ?? []).map((t) => t.name),
+		plots: (session.plots ?? []).map((p) => p.type),
+		version: session.version
+	})
+);
 
 child.kill('SIGINT');
 
 // Assertions
 if (build.planner !== 'scripted') throw new Error('expected scripted planner without a key');
 if (!build.ancirUrl.includes('loadFromURL=')) throw new Error('ancirUrl missing loadFromURL');
-if (sessionRes.headers.get('access-control-allow-origin') !== '*') throw new Error('session not CORS-open');
+if (sessionRes.headers.get('access-control-allow-origin') !== '*')
+	throw new Error('session not CORS-open');
 if ((session.data ?? []).length < 2) throw new Error('session has too few columns');
-if (!(session.tableProcesses ?? []).some((t) => t.name === 'Cosinor')) throw new Error('no Cosinor in session');
+if (!(session.tableProcesses ?? []).some((t) => t.name === 'Cosinor'))
+	throw new Error('no Cosinor in session');
 if ((session.plots ?? []).length < 1) throw new Error('no plot in session');
 console.log('\nROUNDTRIP OK ✅  NL → session → ?loadFromURL= (open the ancirUrl above in AnCiR)');
 process.exit(0);

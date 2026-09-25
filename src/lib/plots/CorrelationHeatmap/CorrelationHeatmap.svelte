@@ -15,6 +15,7 @@
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { correlationGrid } from '$lib/utils/correlationGrid.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
+	import { ColourScaleClass } from '$lib/components/plotbits/ColourScale.svelte';
 
 	export const CorrelationHeatmap_defaultDataInputs = ['column'];
 	export const CorrelationHeatmap_controlHeaders = ['Properties', 'Data'];
@@ -64,6 +65,11 @@
 		colormap = $state('rdbu');
 		showValues = $state(true);
 		method = $state('pearson'); // 'pearson' | 'spearman'
+		// The gradient key for the cells. DEFAULT ON, unlike the five plots that gained
+		// a SERIES legend: this plot has always drawn a colour bar, so ON is what keeps
+		// a saved figure looking as it did. What is new is being able to move it, to
+		// switch it off, and to have it stay on a figure too narrow for the old one.
+		colourScale = $state();
 
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
@@ -77,6 +83,7 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			this.colourScale = ColourScaleClass.withDefaults(dataIN?.colourScale, { show: true });
 			if (dataIN?.column) this.addData(dataIN);
 		}
 
@@ -102,6 +109,7 @@
 				colormap: this.colormap,
 				showValues: this.showValues,
 				method: this.method,
+				colourScale: this.colourScale.toJSON(),
 				data: this.data.map((d) => d.toJSON())
 			};
 		}
@@ -115,6 +123,9 @@
 			c.colormap = json.colormap ?? c.colormap;
 			c.showValues = json.showValues ?? c.showValues;
 			c.method = json.method ?? c.method;
+			// withDefaults, not fromJSON: a heatmap saved before the scale was a
+			// persisted object has no `colourScale` key and must come back ON.
+			c.colourScale = ColourScaleClass.withDefaults(json.colourScale, { show: true });
 			if (Array.isArray(json.data)) c.data = json.data.map((d) => HeatmapColumn.fromJSON(d, c));
 			else if (json.dataIn) c.addData(json.dataIn);
 			return c;
@@ -150,13 +161,12 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
+	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
 
 	let { theData, which } = $props();
 
 	const colormapOptions = Object.keys(COLORMAP_LABELS);
 	const colormapLabelList = colormapOptions.map((k) => COLORMAP_LABELS[k]);
-	// A short colour scale for the legend (-1 … +1).
-	const legendStops = Array.from({ length: 21 }, (_, i) => i / 20);
 </script>
 
 {#snippet plot(theData)}
@@ -239,45 +249,38 @@
 					>
 				{/each}
 			</g>
-			<!-- colour legend (-1 … +1) -->
-			{@const lx = plot.padding.left + gridW + 12}
-			{@const lh = Math.min(gridW, 140)}
-			{#if lx + 40 < plot.parentBox.width}
-				<g transform="translate({lx}, {plot.padding.top})">
-					{#each legendStops as t, k (k)}
-						<rect
-							x={0}
-							y={(1 - t) * lh - lh / legendStops.length}
-							width={12}
-							height={lh / legendStops.length + 1}
-							fill={colormapRGB(plot.colormap, t)}
-						/>
-					{/each}
-					<text
-						x={16}
-						y={0}
-						dominant-baseline="hanging"
-						font-size="10"
-						fill="var(--color-text-muted)">+1</text
-					>
-					<text
-						x={16}
-						y={lh / 2}
-						dominant-baseline="central"
-						font-size="10"
-						fill="var(--color-text-muted)">0</text
-					>
-					<text x={16} y={lh} dominant-baseline="auto" font-size="10" fill="var(--color-text-muted)"
-						>−1</text
-					>
-				</g>
-			{/if}
+			<!-- Correlation key. The domain is the mapping cellFill actually uses:
+			     [-1, +1], centred so 0 lands on the ramp's middle stop.
+
+			     contentWidth/Height are the GRID, not the plot area. The grid is square,
+			     so on a wide figure it stops well short of the right edge, and the key
+			     belongs beside the cells rather than out in the empty space. -->
+			<ColourScale
+				scaleData={plot.colourScale}
+				colormap={plot.colormap}
+				domain={[-1, 1]}
+				label={plot.method === 'spearman' ? '\u03c1' : 'r'}
+				plotWidth={plot.plotwidth}
+				plotHeight={plot.plotheight}
+				contentWidth={gridW}
+				contentHeight={gridW}
+				padding={plot.padding}
+				idPrefix={'heatmap-' + plot.parentBox.id}
+				figureStyle={plot.viewStyle}
+				which="plot"
+			/>
 		{/if}
 	</svg>
 {/snippet}
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
+		<!-- First in the Properties tab, where every legend control in the app lives. -->
+		<ColourScale
+			scaleData={theData.colourScale}
+			figureStyle={theData.parentBox?.style}
+			which="controls"
+		/>
 		<div class="control-component">
 			<div class="control-component-title">Correlation heatmap</div>
 			<ControlInput label="Width"
@@ -293,7 +296,7 @@
 					optionsDisplay={['Pearson (linear)', 'Spearman (rank)']}
 				/>
 			</ControlInput>
-			<ControlInput label="Colour scale">
+			<ControlInput label="Colour map">
 				<AttributeSelect
 					bind:value={theData.colormap}
 					options={colormapOptions}

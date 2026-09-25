@@ -1,17 +1,14 @@
 <script>
 	// @ts-nocheck
-	import { onMount, tick } from 'svelte';
+	import { tick } from 'svelte';
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
-	import Icon from '$lib/icons/Icon.svelte';
-	import { deselectAllPlots } from '$lib/core/Plot.svelte';
-	import { removePlots, selectPlot } from '$lib/core/Plot.svelte';
+	import { removePlots } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import { getCanvasWidthPx } from '$lib/components/views/PlotDisplay.svelte';
 	import Editable from '../inputs/Editable.svelte';
 	import NodeActions from '$lib/components/workflow/NodeActions.svelte';
 	import NodeNoteButton from '$lib/components/workflow/NodeNoteButton.svelte';
-	import { tooltip } from '$lib/utils/tooltip.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 	import { clientToCanvasPoint } from '$lib/core/canvasCoords.js';
 	let plotElement;
@@ -35,7 +32,6 @@
 	let resizing = false;
 	let initialMouseX, initialMouseY, initialWidth, initialHeight;
 
-	let dragStartX, dragStartY;
 	let mouseStartX, mouseStartY;
 	// Cursor canvas-coords captured at mousedown. Used as the reference point so
 	// drag math stays correct when edge-pan moves the canvas during the drag.
@@ -152,7 +148,7 @@
 				dragStartPositions[p.id] = { x: p.x, y: p.y };
 			}
 		});
-		moving = true && doMove;
+		moving = doMove;
 		if (moving && viewportEl) {
 			startEdgePan({
 				getViewportRect: () => viewportEl.getBoundingClientRect(),
@@ -198,7 +194,7 @@
 				dragStartPositions[p.id] = { x: p.x, y: p.y };
 			}
 		});
-		moving = true && doMove;
+		moving = doMove;
 		if (moving && viewportEl) {
 			startEdgePan({
 				getViewportRect: () => viewportEl.getBoundingClientRect(),
@@ -309,7 +305,7 @@
 		onPointerUp();
 	}
 
-	function onTouchEnd(e) {
+	function onTouchEnd() {
 		// For very short touches without movement, treat as a tap
 		const currentTime = Date.now();
 		const touchDuration = currentTime - touchStartTime;
@@ -341,17 +337,6 @@
 
 		if (e.type.startsWith('touch')) {
 			isTouch = true;
-		}
-	}
-
-	function bringToFront(id) {
-		if (id >= 0) {
-			//handle colour-picker
-			const index = core.plots.findIndex((p) => p.id === id);
-			if (index !== -1) {
-				const [plot] = core.plots.splice(index, 1);
-				core.plots.push(plot);
-			}
 		}
 	}
 
@@ -411,12 +396,7 @@
 		dropdownLeft = rect.right + window.scrollX + 12;
 	}
 
-	function openDropdown() {
-		recalculateDropdownPosition();
-		showDropdown = true;
-	}
-
-	// Keyed on the flag rather than added in openDropdown, because this component
+	// Keyed on the flag rather than added when the dropdown opens, because this component
 	// never closes its own dropdown: SinglePlotAction owns the close through
 	// `bind:showDropdown`. An effect covers the close AND an unmount while open.
 	$effect(() => {

@@ -699,7 +699,8 @@ export function planStyleRules(style, columns, seriesMap = {}, categoryMap = {})
 		// Name first: the more specific statement wins.
 		const name = typeof col.name === 'string' ? col.name : null;
 		const group = typeof col.groupLabel === 'string' && col.groupLabel ? col.groupLabel : null;
-		const ruleKey = name != null && byName[name] ? name : group != null && byGroup[group] ? group : null;
+		const ruleKey =
+			name != null && byName[name] ? name : group != null && byGroup[group] ? group : null;
 		if (ruleKey == null) continue;
 
 		const rule = normaliseRecord(byName[ruleKey] ?? byGroup[ruleKey]);
@@ -737,8 +738,13 @@ export function planStyleRules(style, columns, seriesMap = {}, categoryMap = {})
 /** One line, safe to show in a notification. Says what did NOT match as well as what did. */
 function describeRuleApplication(ruleCount, columnsTouched, categoriesTouched, unmatched) {
 	if (ruleCount === 0 && categoriesTouched.length === 0) return 'This style carries no data rules.';
-	const parts = [`${ruleCount} rule${ruleCount === 1 ? '' : 's'} → ${columnsTouched} column${columnsTouched === 1 ? '' : 's'}`];
-	if (categoriesTouched.length) parts.push(`${categoriesTouched.length} categor${categoriesTouched.length === 1 ? 'y' : 'ies'}`);
+	const parts = [
+		`${ruleCount} rule${ruleCount === 1 ? '' : 's'} → ${columnsTouched} column${columnsTouched === 1 ? '' : 's'}`
+	];
+	if (categoriesTouched.length)
+		parts.push(
+			`${categoriesTouched.length} categor${categoriesTouched.length === 1 ? 'y' : 'ies'}`
+		);
 	if (unmatched.length) parts.push(`${unmatched.length} matched nothing: ${unmatched.join(', ')}`);
 	return parts.join('; ') + '.';
 }

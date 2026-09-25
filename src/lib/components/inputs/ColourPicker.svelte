@@ -19,7 +19,7 @@
 <script>
 	import { tick } from 'svelte';
 	import { onMount, onDestroy } from 'svelte';
-	import { appConsts, appState } from '$lib/core/core.svelte';
+	import { appState } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	let { value = $bindable() } = $props();
 
@@ -34,7 +34,7 @@
 	//for layout
 	const numberInputWidth = 38;
 
-	function onMouseDown(e) {
+	function onMouseDown() {
 		moving = true;
 	}
 
@@ -327,7 +327,7 @@
 							<span>Old</span>
 							<div
 								style="background-color: {initialColor}; width: 24px; height: 24px; border: 1px solid var(--color-lightness-80); position: relative; cursor: pointer;"
-								onclick={(e) => {
+								onclick={() => {
 									value = initialColor;
 									hexInput = value;
 								}}
@@ -359,7 +359,7 @@
 					<div style="margin-bottom: 16px;">
 						<label>Palette</label>
 						<div style="display: flex; flex-wrap: wrap; gap: 8px; cursor: pointer;">
-							{#each appState.appColours as color, index}
+							{#each appState.appColours as color, index (index)}
 								<div
 									id="palette-{index}"
 									style="background-color: {color}; width: 24px; height: 24px; border: 1px solid var(--color-lightness-80); position: relative;"
@@ -669,8 +669,7 @@
 </div>
 
 <style>
-	.myslider::-webkit-slider-thumb,
-	.slider::-webkit-slider-thumb {
+	.myslider::-webkit-slider-thumb {
 		-webkit-appearance: none;
 		width: 14px;
 		height: 14px;
@@ -682,8 +681,7 @@
 		cursor: crosshair;
 	}
 
-	.myslider::-moz-range-thumb,
-	.slider::-moz-range-thumb {
+	.myslider::-moz-range-thumb {
 		width: 14px;
 		height: 14px;
 		margin-bottom: 4px;

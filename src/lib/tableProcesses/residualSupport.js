@@ -24,7 +24,11 @@ export const RESIDUAL_COLOUR = '#BE796B'; // terracotta — matches the fitted-o
 export function residualColumn(predicted, yFull, xFull) {
 	if (!Array.isArray(predicted) || !Array.isArray(yFull)) return null;
 	return yFull.map((v, i) =>
-		isInvalidValue(v) || (xFull ? isInvalidValue(xFull[i]) : false) || !Number.isFinite(predicted[i]) ? NaN : v - predicted[i]
+		isInvalidValue(v) ||
+		(xFull ? isInvalidValue(xFull[i]) : false) ||
+		!Number.isFinite(predicted[i])
+			? NaN
+			: v - predicted[i]
 	);
 }
 

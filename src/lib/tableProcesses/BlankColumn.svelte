@@ -211,11 +211,6 @@
 		commitExtra(colId);
 	}
 
-	function updateCell(index, value) {
-		editableData[index] = value;
-		commitData();
-	}
-
 	// ── Stored value reactivity ──────────────────────────────────────────────
 	let svHash = $derived.by(() => {
 		const refs = p.args.storedValueRefs || {};
@@ -379,6 +374,9 @@
 	// `col_<j>` outputs created on the fly. Stale extras from a previous, wider
 	// paste are removed.
 	let pasteText = $state('');
+	// Multi-line placeholder for the paste box. Held as a constant rather than written inline
+	// so the \n escapes stay real newlines (a plain attribute would render a literal backslash-n).
+	const PASTE_PLACEHOLDER = 'name,age\nAda,36\nAlan,41';
 	let parseStatus = $state(null); // { ok: boolean, msg: string } | null
 
 	function splitCsvLine(line, delim) {
@@ -642,11 +640,7 @@
 		Paste a table (CSV/TSV, optional header row) or JSON (array of objects, array of arrays, or
 		object of arrays). The first column fills this node; any extra columns are added as outputs.
 	</p>
-	<textarea
-		class="paste-box"
-		bind:value={pasteText}
-		rows="5"
-		placeholder={'name,age\nAda,36\nAlan,41'}
+	<textarea class="paste-box" bind:value={pasteText} rows="5" placeholder={PASTE_PLACEHOLDER}
 	></textarea>
 	<div class="paste-actions">
 		<button

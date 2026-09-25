@@ -39,9 +39,7 @@
 		</div>
 	{/snippet}
 
-	{#snippet children()}
-		<BlankColumn bind:p />
-	{/snippet}
+	<BlankColumn bind:p />
 
 	{#snippet button()}
 		{#if p.args.valid}

@@ -68,7 +68,7 @@ describe('producer-sourced columns (dataflow model)', () => {
 		expect(core.orphanProcesses).toHaveLength(1);
 	});
 
-	it('re-derives when the producing node\'s arg changes (cache busts)', () => {
+	it("re-derives when the producing node's arg changes (cache busts)", () => {
 		const input = makeSourceColumn([1, 2, 3]);
 		const proc = makeFreeAdd(input, 1);
 		const out = makeProducerColumn(proc);

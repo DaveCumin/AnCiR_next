@@ -21,25 +21,37 @@ describe('filterbyothercol — self-filter (numeric)', () => {
 
 	it('keeps values that satisfy == condition', () => {
 		const x = [1, 2, 3, 2, 1];
-		const args = { parentColId: SELF_ID, conditions: [{ byColId: SELF_ID, isOperator: '==', byColValue: 2 }] };
+		const args = {
+			parentColId: SELF_ID,
+			conditions: [{ byColId: SELF_ID, isOperator: '==', byColValue: 2 }]
+		};
 		expect(filterbyothercol(x, args)).toEqual([null, 2, null, 2, null]);
 	});
 
 	it('keeps values that satisfy > condition', () => {
 		const x = [1, 2, 3, 4, 5];
-		const args = { parentColId: SELF_ID, conditions: [{ byColId: SELF_ID, isOperator: '>', byColValue: 3 }] };
+		const args = {
+			parentColId: SELF_ID,
+			conditions: [{ byColId: SELF_ID, isOperator: '>', byColValue: 3 }]
+		};
 		expect(filterbyothercol(x, args)).toEqual([null, null, null, 4, 5]);
 	});
 
 	it('keeps values that satisfy <= condition', () => {
 		const x = [1, 2, 3];
-		const args = { parentColId: SELF_ID, conditions: [{ byColId: SELF_ID, isOperator: '<=', byColValue: 2 }] };
+		const args = {
+			parentColId: SELF_ID,
+			conditions: [{ byColId: SELF_ID, isOperator: '<=', byColValue: 2 }]
+		};
 		expect(filterbyothercol(x, args)).toEqual([1, 2, null]);
 	});
 
 	it('keeps values that satisfy != condition', () => {
 		const x = [1, 2, 3];
-		const args = { parentColId: SELF_ID, conditions: [{ byColId: SELF_ID, isOperator: '!=', byColValue: 2 }] };
+		const args = {
+			parentColId: SELF_ID,
+			conditions: [{ byColId: SELF_ID, isOperator: '!=', byColValue: 2 }]
+		};
 		expect(filterbyothercol(x, args)).toEqual([1, null, 3]);
 	});
 
@@ -51,7 +63,10 @@ describe('filterbyothercol — self-filter (numeric)', () => {
 	it('skips conditions with byColId == -1', () => {
 		const x = [1, 2, 3];
 		// The invalid condition is skipped, resultMask stays all-true → all kept
-		const args = { parentColId: SELF_ID, conditions: [{ byColId: -1, isOperator: '==', byColValue: 0 }] };
+		const args = {
+			parentColId: SELF_ID,
+			conditions: [{ byColId: -1, isOperator: '==', byColValue: 0 }]
+		};
 		expect(filterbyothercol(x, args)).toEqual([1, 2, 3]);
 	});
 });
@@ -90,7 +105,10 @@ describe('filterbyothercol — external category column', () => {
 	});
 
 	it('filters by string includes', () => {
-		mockColumns[FILTER_COL_ID] = { type: 'category', getData: () => ['hello world', 'foo', 'hello there'] };
+		mockColumns[FILTER_COL_ID] = {
+			type: 'category',
+			getData: () => ['hello world', 'foo', 'hello there']
+		};
 		const x = [1, 2, 3];
 		const args = {
 			parentColId: PARENT_ID,
@@ -130,21 +148,30 @@ describe('filterbyothercol — all-pass and all-fail', () => {
 	it('all-pass predicate keeps every value', () => {
 		mockColumns[COL] = { type: 'number', getData: () => [10, 20, 30] };
 		const x = [1, 2, 3];
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: COL, isOperator: '>=', byColValue: 0 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: COL, isOperator: '>=', byColValue: 0 }]
+		};
 		expect(filterbyothercol(x, args)).toEqual([1, 2, 3]);
 	});
 
 	it('all-fail predicate nullifies every value', () => {
 		mockColumns[COL] = { type: 'number', getData: () => [10, 20, 30] };
 		const x = [1, 2, 3];
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: COL, isOperator: '<', byColValue: 0 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: COL, isOperator: '<', byColValue: 0 }]
+		};
 		expect(filterbyothercol(x, args)).toEqual([null, null, null]);
 	});
 
 	it('unknown operator falls through to false → nullifies everything', () => {
 		mockColumns[COL] = { type: 'number', getData: () => [1, 2, 3] };
 		const x = [1, 2, 3];
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: COL, isOperator: '???', byColValue: 0 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: COL, isOperator: '???', byColValue: 0 }]
+		};
 		expect(filterbyothercol(x, args)).toEqual([null, null, null]);
 	});
 });
@@ -157,27 +184,42 @@ describe('filterbyothercol — boundary predicates', () => {
 	});
 
 	it('>= includes the boundary value', () => {
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: COL, isOperator: '>=', byColValue: 10 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: COL, isOperator: '>=', byColValue: 10 }]
+		};
 		expect(filterbyothercol([1, 2, 3], args)).toEqual([null, 2, 3]);
 	});
 
 	it('> excludes the boundary value', () => {
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: COL, isOperator: '>', byColValue: 10 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: COL, isOperator: '>', byColValue: 10 }]
+		};
 		expect(filterbyothercol([1, 2, 3], args)).toEqual([null, null, 3]);
 	});
 
 	it('<= includes the boundary value', () => {
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: COL, isOperator: '<=', byColValue: 10 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: COL, isOperator: '<=', byColValue: 10 }]
+		};
 		expect(filterbyothercol([1, 2, 3], args)).toEqual([1, 2, null]);
 	});
 
 	it('< excludes the boundary value', () => {
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: COL, isOperator: '<', byColValue: 10 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: COL, isOperator: '<', byColValue: 10 }]
+		};
 		expect(filterbyothercol([1, 2, 3], args)).toEqual([1, null, null]);
 	});
 
 	it('== matches the exact value', () => {
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: COL, isOperator: '==', byColValue: 10 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: COL, isOperator: '==', byColValue: 10 }]
+		};
 		expect(filterbyothercol([1, 2, 3], args)).toEqual([null, 2, null]);
 	});
 });
@@ -212,7 +254,10 @@ describe('filterbyothercol — mismatched lengths', () => {
 	it('keeps trailing values when the filter column is shorter than x', () => {
 		mockColumns[COL] = { type: 'number', getData: () => [10, 20] };
 		const x = [1, 2, 3, 4];
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: COL, isOperator: '>', byColValue: 15 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: COL, isOperator: '>', byColValue: 15 }]
+		};
 		// indices 0,1 evaluated (10>15 false, 20>15 true); indices 2,3 keep default-true mask.
 		expect(filterbyothercol(x, args)).toEqual([null, 2, 3, 4]);
 	});
@@ -220,7 +265,10 @@ describe('filterbyothercol — mismatched lengths', () => {
 	it('ignores filter-column entries beyond x when the filter column is longer', () => {
 		mockColumns[COL] = { type: 'number', getData: () => [10, 20, 30, 40, 50, 60] };
 		const x = [1, 2, 3, 4];
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: COL, isOperator: '>', byColValue: 25 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: COL, isOperator: '>', byColValue: 25 }]
+		};
 		expect(filterbyothercol(x, args)).toEqual([null, null, 3, 4]);
 	});
 });
@@ -232,7 +280,10 @@ describe('filterbyothercol — guards', () => {
 
 	it('skips a condition whose column is not found (keeps all)', () => {
 		const x = [1, 2, 3];
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: 999, isOperator: '==', byColValue: 0 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: 999, isOperator: '==', byColValue: 0 }]
+		};
 		// getColumnById(999) → undefined → condition skipped → mask stays all-true.
 		expect(filterbyothercol(x, args)).toEqual([1, 2, 3]);
 	});
@@ -241,7 +292,10 @@ describe('filterbyothercol — guards', () => {
 		const EMPTY = 10;
 		mockColumns[EMPTY] = { type: 'number', getData: () => [] };
 		const x = [1, 2, 3];
-		const args = { parentColId: PARENT_ID, conditions: [{ byColId: EMPTY, isOperator: '>', byColValue: 0 }] };
+		const args = {
+			parentColId: PARENT_ID,
+			conditions: [{ byColId: EMPTY, isOperator: '>', byColValue: 0 }]
+		};
 		expect(filterbyothercol(x, args)).toEqual([1, 2, 3]);
 	});
 

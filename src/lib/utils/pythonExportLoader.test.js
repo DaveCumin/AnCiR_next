@@ -24,9 +24,9 @@ describe('sidecarUrl', () => {
 	});
 
 	it('ignores the hash router fragment', () => {
-		expect(sidecarUrl('ancir-python-export.js', 'https://example.org/ancir/index.html#/workspace')).toBe(
-			'https://example.org/ancir/ancir-python-export.js'
-		);
+		expect(
+			sidecarUrl('ancir-python-export.js', 'https://example.org/ancir/index.html#/workspace')
+		).toBe('https://example.org/ancir/ancir-python-export.js');
 	});
 
 	it('still yields a URL when there is no document', () => {

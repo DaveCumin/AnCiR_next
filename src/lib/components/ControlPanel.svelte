@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { appConsts, appState, core } from '$lib/core/core.svelte';
+	import { appState, core } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import ControlDisplay from './views/ControlDisplay.svelte';
 	import { fly, fade } from 'svelte/transition';
@@ -46,7 +46,7 @@
 	// Drop any dangling drag listeners if this unmounts mid-gesture.
 	$effect(() => stopResize);
 
-	function startResize(e) {
+	function startResize() {
 		resizing = true;
 		document.body.style.userSelect = 'none';
 		window.addEventListener('mousemove', onMouseMove);
@@ -95,7 +95,7 @@
 	</div>
 {/if}
 
-{#if core.plots.length > 0 && !appState.showWorkflow && appState.view !== 'canvas'}
+{#if core.plots.length > 0 && appState.view !== 'canvas'}
 	<button
 		class="icon newplotconstant"
 		style="z-index: 999; position: fixed; right: calc({appState.showControlPanel

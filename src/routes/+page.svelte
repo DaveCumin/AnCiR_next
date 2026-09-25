@@ -401,6 +401,7 @@
 				}
 				// Create sample data quickly - FOR TESTING
 				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'x') {
+					event.preventDefault();
 					refresh();
 				}
 
@@ -426,10 +427,14 @@
 					event.preventDefault();
 					selectAllPlots();
 				}
-				// (Cmd/Ctrl+Shift+X used to also toggle the legacy fullscreen workflow modal
-				// here. v73.1 moved "create sample data" onto the same chord, so one press did
-				// both and mounted a second WorkflowEditor over the canvas. The canvas view
-				// replaces that modal, so the chord now only creates sample data.)
+				// NOTE: Cmd/Ctrl+Shift+X used to ALSO toggle `appState.showWorkflow`, the legacy
+				// fullscreen workflow modal. Once the sample-data shortcut moved here from
+				// Cmd+Shift+S (v73.1) both handlers fired on one keypress, so seeding the demo
+				// also mounted a SECOND WorkflowEditor on top of the canvas view's one. Two
+				// editors both own core.nodeLayout, and their adopt/mirror effects re-trigger
+				// each other until Svelte aborts with effect_update_depth_exceeded, which is
+				// exactly the "demo data doesn't work" crash. The toggle is redundant (the
+				// canvas view IS the workflow editor), so it is gone rather than rebound.
 				// ADMIN: reveal/hide the classroom lessons in the tour picker.
 				if (MODIFIER && event.shiftKey && event.code === 'Space' && !editableFocused) {
 					event.preventDefault();
@@ -841,11 +846,6 @@
 	<title>AnCiR {appConsts.version}: Circadian Rhythm and Time-Series Data Analysis</title>
 </svelte:head>
 
-{#if appState.showWorkflow}
-	<!-- Legacy fullscreen-modal entry retained for callers that still set
-	     appState.showWorkflow; the canvas-default view below replaces normal use. -->
-	<WorkflowEditor />
-{/if}
 {#if !appState.loadingState.isLoading || core.data.length > 0}
 	{#if appState.showNavbar}
 		<Navbar onShowWelcome={() => (welcomeSummoned = true)} />

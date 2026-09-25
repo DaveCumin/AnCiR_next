@@ -123,6 +123,44 @@
 			}
 		}
 
+		/**
+		 * Build a legend from saved JSON while choosing a different DEFAULT for
+		 * `show`, mirroring AxisClass.withDefaults.
+		 *
+		 * The six plots that have always had a legend default it ON. The ones that
+		 * are gaining one now must default it OFF: every saved session already
+		 * contains those plots, and a legend that switched itself on at load would
+		 * silently change a figure the user had finished with. A plain
+		 * `new LegendClass(json)` cannot express that, because the constructor's
+		 * `?? true` is hardcoded.
+		 *
+		 * Spreading `{ show: false, ...json }` is NOT equivalent: a JSON object
+		 * carrying an explicit `show: undefined` (hand-written or round-tripped
+		 * through a tool that drops falsy values) would put that key back and fall
+		 * through to `?? true`. Resolving `show` in one place avoids that.
+		 *
+		 * @param {any} saved persisted legend JSON, or null/undefined for a new plot
+		 * @param {{ show?: boolean }} [defaults]
+		 */
+		static withDefaults(saved, { show = true } = {}) {
+			// `new this`, not `new LegendClass`: called on a subclass (ColourScaleClass,
+			// the colour-mapped plots' gradient key) this must build THAT class, or the
+			// subclass's own fields are dropped on every load and the helper quietly
+			// downgrades the object it was asked to restore. Identical when called on
+			// LegendClass itself, which is how the eleven series legends call it.
+			//
+			// A NEW plot (nothing saved) must get the class's own new-legend defaults,
+			// above all position 'auto'. Passing `{ show }` to the constructor instead
+			// would look like a saved legend from before `position` existed and come
+			// back 'topright'.
+			if (saved == null) {
+				const legend = new this();
+				legend.show = show;
+				return legend;
+			}
+			return new this({ ...saved, show: saved.show ?? show });
+		}
+
 		toJSON() {
 			return {
 				show: this.show,
@@ -140,7 +178,8 @@
 		}
 
 		static fromJSON(json) {
-			return new LegendClass(json);
+			// `new this` for the same reason as withDefaults above.
+			return new this(json);
 		}
 	}
 </script>
@@ -179,6 +218,23 @@
 
 	// Tolerates null and returns the defaults.
 	const resolved = $derived(resolveStyle(figureStyle));
+
+	/**
+	 * A line swatch's dash pattern, using the SAME rule Line.svelte draws with.
+	 *
+	 * `LineClass.stroke` is a STROKE STYLE, not a dash array: 'solid' plus three
+	 * real patterns (see strokeStyles.js). Passing it straight through wrote
+	 * `stroke-dasharray="solid"` into the swatch, which is not a valid value.
+	 * Browsers ignore an invalid dasharray and draw a solid line, so it looked
+	 * right on screen and survived unnoticed — but a SAVED SVG carried the
+	 * invalid attribute out to whatever opens it next, and that is the artefact
+	 * a user keeps. Mirrors the `dash` derived in Line.svelte exactly.
+	 *
+	 * @param {string | number | undefined | null} stroke
+	 */
+	function dashFor(stroke) {
+		return typeof stroke === 'string' && stroke !== 'solid' ? stroke : null;
+	}
 	// The size actually drawn: a deliberate per-legend override, else the figure's
 	// legend size. Every use goes through this — the box is sized from measured text
 	// widths and line heights, so a null leaking into that maths would become NaN and
@@ -455,7 +511,7 @@
 									y2={0}
 									stroke={el.color}
 									stroke-width={el.strokeWidth}
-									stroke-dasharray={el.stroke}
+									stroke-dasharray={dashFor(el.stroke)}
 								/>
 							{:else if el.type === 'points'}
 								<path d={getPointPath(el.shape || 'circle', 10, 0, el.size)} fill={el.color} />
@@ -498,7 +554,7 @@
 									y2={0}
 									stroke={el.color}
 									stroke-width={el.strokeWidth}
-									stroke-dasharray={el.stroke}
+									stroke-dasharray={dashFor(el.stroke)}
 								/>
 							{:else if el.type === 'points'}
 								<path d={getPointPath(el.shape || 'circle', 10, 0, el.size)} fill={el.color} />

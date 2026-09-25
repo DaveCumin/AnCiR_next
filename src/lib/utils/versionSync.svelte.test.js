@@ -35,9 +35,7 @@ describe('citation metadata matches appConsts.version', () => {
 	it('CITATION.cff and .zenodo.json agree on the creator list', () => {
 		const cff = readFileSync('./CITATION.cff', 'utf8');
 		const zenodo = JSON.parse(readFileSync('./.zenodo.json', 'utf8'));
-		const cffFamilies = [...cff.matchAll(/^ {2}- family-names:\s*(.+)$/gm)].map((m) =>
-			m[1].trim()
-		);
+		const cffFamilies = [...cff.matchAll(/^ {2}- family-names:\s*(.+)$/gm)].map((m) => m[1].trim());
 		const zenodoFamilies = zenodo.creators.map((c) => c.name.split(',')[0].trim());
 		expect(zenodoFamilies).toEqual(cffFamilies);
 	});

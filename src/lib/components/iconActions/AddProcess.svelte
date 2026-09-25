@@ -1,12 +1,9 @@
 <!-- TODO: Import data/table logic might need re-work -->
 <script>
 	// @ts-nocheck
-	import Icon from '$lib/icons/Icon.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
 	import { appConsts, createOrphanProcess } from '$lib/core/core.svelte.js';
-	import { getColumnById } from '$lib/core/Column.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
-	import { on } from 'svelte/events';
 
 	let {
 		showDropdown = $bindable(false),
@@ -57,7 +54,7 @@
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
-		{#each sortedProcesses as [key, value]}
+		{#each sortedProcesses as [key, value] (key)}
 			<div
 				class="dropdown-action"
 				onclick={() => {

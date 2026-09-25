@@ -22,9 +22,9 @@ import { core, appConsts, pushObj, outputCoreAsJson } from '$lib/core/core.svelt
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
-import { loadProcesses } from '$lib/processes/processMap.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
-import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { loadProcesses } from '$test/processRegistry.js';
+import { loadPlots } from '$test/plotRegistry.js';
+import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 
 const OUT_DIR = join(process.cwd(), 'static', 'sessions', 'classroom');
 

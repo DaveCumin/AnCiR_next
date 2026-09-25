@@ -39,9 +39,7 @@
 		</div>
 	{/snippet}
 
-	{#snippet children()}
-		<SequenceColumn bind:p />
-	{/snippet}
+	<SequenceColumn bind:p />
 
 	{#snippet button()}
 		{#if p.args.valid}

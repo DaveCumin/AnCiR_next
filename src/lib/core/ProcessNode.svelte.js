@@ -423,6 +423,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 
 	const nodes = [];
 	const connections = [];
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local dedupe set for this graph build; never read reactively
 	const seenConnections = new Set();
 
 	// ORDER MATTERS in this block: tpOutputColIds/tpOutputColToTP,
@@ -431,11 +432,13 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	// columnSourceRef() — it silently falls back to the standalone data_<colId>
 	// node for any colId missing from these maps, which mis-routes wires rather
 	// than erroring. Add any new column-routing lookup here, not further down.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this pure graph builder
 	const tpOutputColIds = new Set();
 	// colId → { nodeId, port } pointing at the producing TP node's inline
 	// output-column row. TP output columns render as rows INSIDE the TP node
 	// (flowtest Group-style), not as standalone data_<colId> nodes, so every
 	// downstream consumer anchors its wire on the TP node's `col_<colId>` port.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this pure graph builder
 	const tpOutputColToTP = new Map();
 	const collectTPOutputs = (tp) => {
 		const tpNodeId = `tableprocess_${tp.id}`;
@@ -496,6 +499,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	// output port on the owning group (`col_${colId}`). Table-process / plot
 	// output columns are never absorbable here (they have no standalone data
 	// node to drag from), so we just ignore those entries.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this pure graph builder
 	const absorbedColToGroup = new Map();
 	for (const group of core.groups ?? []) {
 		for (const colId of group.sourceColumnIds ?? []) {
@@ -516,6 +520,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	//     source has no processes — refUpToProcessId is null in that case).
 	// Broken taps (refUpToProcessId === -1) are skipped so their consumers
 	// fall back to the normal data_X path (where getData() returns []).
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this pure graph builder
 	const tapColMeta = new Map(); // colId → { refId, refUpToProcessId }
 	for (const col of core.data ?? []) {
 		const hasUpTo = col.refUpToProcessId != null && col.refUpToProcessId !== -1;
@@ -532,6 +537,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	// taps, they are model-only on the canvas — represented by the producing
 	// node's output port, not a standalone data_<id> node. Consumer wires route
 	// through columnSourceRef → the producing node's output.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this pure graph builder
 	const producerColMeta = new Map(); // colId → { nodeId, port }
 	for (const col of core.data ?? []) {
 		if (
@@ -961,6 +967,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		);
 	}
 
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local id lookup built and consumed inside this pure graph builder
 	const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
 	function addConnection(fromId, toId, type, fromPort = 'output', toPort = 'input') {
@@ -1007,8 +1014,10 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		// set feeds. The same column used on ANOTHER port (e.g. a set feeds yIN and
 		// that column is also the xIN) must still draw its own edge to that port.
 		const tpSetRefs = tp.args?.setRefs ?? {};
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local per-port lookup consumed inside this loop; never read reactively
 		const setOwnedByPort = new Map(); // port → Set of candidate colIds fed by a set there
 		for (const port of Object.keys(tpSetRefs)) {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local per-port set consumed inside this loop; never read reactively
 			const owned = new Set();
 			for (const csId of tpSetRefs[port] ?? []) {
 				const cs = core.tableProcesses.find((t) => t.id === csId);
@@ -1065,8 +1074,10 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		// column used as the plot's x (an xN port, not a set channel) must still
 		// draw its own edge.
 		const plotSetRefs = plot.setRefs ?? {};
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local per-channel lookup consumed inside this loop; never read reactively
 		const setOwnedByChannel = new Map(); // channel → Set of candidate colIds
 		for (const ch of Object.keys(plotSetRefs)) {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local per-channel set consumed inside this loop; never read reactively
 			const owned = new Set();
 			for (const csId of plotSetRefs[ch] ?? []) {
 				const cs = core.tableProcesses.find((tp) => tp.id === csId);
@@ -1165,6 +1176,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	// --- Composite nodes: add one node per composite; when collapsed, hide its
 	// member nodes and reroute their boundary edges through the composite's
 	// interface ports (display-only — mirrors group absorption). ---------------
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local id lookup built and consumed inside this pure graph builder
 	const compById = new Map((core.composites ?? []).map((c) => [c.id, c]));
 	for (const comp of core.composites ?? []) {
 		const cnode = {
@@ -1182,7 +1194,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	}
 	// Transitive collapse: walk each collapsed composite; leaf member ids map to
 	// the TOP collapsed composite, and any nested composite ids are hidden too.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this pure graph builder
 	const memberToCollapsed = new Map();
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set built and consumed inside this pure graph builder
 	const hiddenComposites = new Set();
 	for (const comp of core.composites ?? []) {
 		if (!comp.collapsed) continue;
@@ -1201,6 +1215,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		const portIdFor = (comp, list, member, port) =>
 			(comp.interface?.[list] ?? []).find((p) => p.member === member && p.port === port)?.id;
 		const rerouted = [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local dedupe set for the reroute pass; never read reactively
 		const seen = new Set();
 		for (const c of connections) {
 			const fromComp = memberToCollapsed.get(c.fromId);
@@ -1226,6 +1241,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		}
 		connections.length = 0;
 		connections.push(...rerouted);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set built and consumed inside this pure graph builder
 		const hidden = new Set([...memberToCollapsed.keys(), ...hiddenComposites]);
 		for (let i = nodes.length - 1; i >= 0; i--) {
 			if (hidden.has(nodes[i].id)) nodes.splice(i, 1);
@@ -1233,6 +1249,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	}
 
 	const changedNodeIds = [];
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- module-private execution-key snapshot compared in plain JS; never read reactively
 	const nextKeys = new Map();
 
 	const workflowNodes = nodes.map((n) => {
@@ -1264,6 +1281,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 
 export function clearProcessNodeGraphCache() {
 	_cachedHash = '';
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- module-private execution-key cache compared in plain JS; never read reactively
 	_cachedNodeExecutionKeys = new Map();
 	_cachedGraph = { nodes: [], connections: [] };
 }

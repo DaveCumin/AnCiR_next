@@ -11,7 +11,11 @@ const loadExampleManifest = vi.fn(async () => [
 		'Rhythm & circadian',
 		[
 			{ id: 'rest-activity', name: 'Rest–activity', summary: 'A rhythm run.' },
-			{ id: 'free-running', name: 'Free-running period', summary: 'Measure tau with no zeitgeber.' },
+			{
+				id: 'free-running',
+				name: 'Free-running period',
+				summary: 'Measure tau with no zeitgeber.'
+			},
 			{ id: 'phase-groups', name: 'Group phase comparison', summary: 'Two groups, two peaks.' },
 			{ id: 'split-rhythm', name: 'Split rhythm', summary: 'Constant light splits the band.' },
 			// Deliberately a 5th, so the four-per-column cap has something to hide.
@@ -25,7 +29,10 @@ const loadExampleManifest = vi.fn(async () => [
 			{ id: 'stats-chi', name: 'Chi-square', summary: 'Categorical association.' }
 		]
 	],
-	['Reading the output', [{ id: 'arrhythmic', name: 'Arrhythmic record', summary: 'The negative control.' }]]
+	[
+		'Reading the output',
+		[{ id: 'arrhythmic', name: 'Arrhythmic record', summary: 'The negative control.' }]
+	]
 ]);
 vi.mock('$lib/start/startActions.js', () => ({
 	openExample: (...a) => openExample(...a),
@@ -89,7 +96,9 @@ describe('hierarchy', () => {
 
 	it('caps each column at four, and holds the rest behind a per-column count', async () => {
 		const { container } = render(StartScreen);
-		await waitFor(() => expect(container.querySelectorAll('.example-row').length).toBeGreaterThan(0));
+		await waitFor(() =>
+			expect(container.querySelectorAll('.example-row').length).toBeGreaterThan(0)
+		);
 		// Rhythm holds five, so one is held back; the other two columns are under the cap.
 		expect(rowsIn(container, 'Rhythm and circadian')).toHaveLength(4);
 		expect(rowsIn(container, 'General statistics')).toHaveLength(2);
@@ -100,7 +109,9 @@ describe('hierarchy', () => {
 
 	it('expands EVERY column when any "more" is pressed, not just its own', async () => {
 		const { container } = render(StartScreen);
-		await waitFor(() => expect(container.querySelectorAll('.example-row').length).toBeGreaterThan(0));
+		await waitFor(() =>
+			expect(container.querySelectorAll('.example-row').length).toBeGreaterThan(0)
+		);
 		// Only Rhythm overflows, so it is the only column with a "more" button — but pressing it
 		// reveals all columns in full, since the cap is a property of the view, not the group.
 		await fireEvent.click(screen.getByRole('button', { name: /1 more example in rhythm/i }));
@@ -113,7 +124,9 @@ describe('hierarchy', () => {
 
 	it('toggles the whole gallery from the header link', async () => {
 		const { container } = render(StartScreen);
-		await waitFor(() => expect(container.querySelectorAll('.example-row').length).toBeGreaterThan(0));
+		await waitFor(() =>
+			expect(container.querySelectorAll('.example-row').length).toBeGreaterThan(0)
+		);
 		await fireEvent.click(screen.getByRole('button', { name: /show all 8/i }));
 		await waitFor(() => expect(container.querySelectorAll('.example-row')).toHaveLength(8));
 		await fireEvent.click(screen.getByRole('button', { name: /show fewer/i }));
@@ -179,9 +192,7 @@ describe('search', () => {
 		await waitFor(() => expect(container.querySelector('.example-row')).toBeTruthy());
 		await type('tidal'); // a rhythm-only hit
 		// All three headings stay put, so a hit's column still reads as information.
-		await waitFor(() =>
-			expect(container.querySelectorAll('.example-group')).toHaveLength(3)
-		);
+		await waitFor(() => expect(container.querySelectorAll('.example-group')).toHaveLength(3));
 		expect(container.querySelectorAll('.column-empty')).toHaveLength(2);
 	});
 

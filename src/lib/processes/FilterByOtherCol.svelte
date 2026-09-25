@@ -115,7 +115,7 @@
 </script>
 
 <ProcessShell {p} title="Filter conditions">
-	{#each p.args.conditions as condition, index}
+	{#each p.args.conditions as condition, index (index)}
 		<div class="conditions">
 			<div class="second-level-condition">
 				<ColumnSelector bind:value={condition.byColId} />
@@ -144,10 +144,9 @@
 				{#if getColumnById(condition.byColId)?.type === 'category'}
 					<input type="text" bind:value={condition.byColValue} />
 				{:else if getColumnById(condition.byColId)?.type === 'time'}
-					{@const condDate = condition.byColValue
-						? new Date(condition.byColValue).toISOString().slice(0, 16)
-						: ''}
-					<!--TODO: bind a value here so it always shows in ui-->
+					<!--TODO: bind a value here so it always shows in ui. The value needs
+					    formatting as new Date(condition.byColValue).toISOString().slice(0, 16),
+					    falling back to '' when byColValue is empty.-->
 					<DateTimeHrs bind:value={condition.byColValue} />
 				{:else}
 					<NumberWithUnits bind:value={condition.byColValue} step="0.01" />

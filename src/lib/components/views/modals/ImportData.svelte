@@ -19,8 +19,6 @@
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import {
 		guessDateofArray,
-		forceFormat,
-		getPeriod,
 		normalizeTimeFormat,
 		parseTimeStrict
 	} from '$lib/utils/time/TimeUtils';
@@ -30,8 +28,6 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import TableLayout from '$lib/components/plotbits/Table.svelte';
-	import Icon from '$lib/icons/Icon.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
 	import { tick } from 'svelte';
@@ -135,7 +131,6 @@
 		if (numeric.trim() !== '' && Number.isFinite(n)) return { value: n, marked };
 		return { value: field, marked: false };
 	}
-	import { stackOrderInsideOut } from 'd3-shape';
 	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { fetchAppAsset, describeAssetError } from '$lib/start/offline.js';
 	import {
@@ -175,6 +170,10 @@
 	let enspireBinnedRows = $derived(enspireMultiplatePayload?.binnedRows ?? 0);
 	let skipLines = $state(0);
 	let sortBy = $state('__time__'); // sentinel: '__none__' | '__time__' | <column name>
+	// Write-only today: every parse/fetch failure path below records its reason here,
+	// but nothing reads it back out. Kept (rather than deleted) because removing it would
+	// silently drop the reason strings the failure UI is meant to surface.
+	// eslint-disable-next-line no-unused-vars
 	let error = $state({});
 	let parsedData = $state(null);
 	let errorInfile = $state(false);
@@ -203,6 +202,7 @@
 		'Reading the output'
 	];
 	const groupedExampleDatasets = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local grouping map built and consumed inside this $derived; only the returned array is read
 		const groups = new Map();
 		for (const ds of exampleDatasets) {
 			const g = ds.group ?? 'Other data';
@@ -412,6 +412,7 @@
 
 	// Append a fresh pair, picking sensible defaults from unused headers.
 	function addPair() {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup set built and consumed inside this function; never read reactively
 		const used = new Set();
 		for (const p of dateTimePairs) {
 			if (p.dateCol) used.add(p.dateCol);
@@ -432,6 +433,7 @@
 	// Remove a pair and shift any larger indices in the combine-set.
 	function removePair(idx) {
 		dateTimePairs = dateTimePairs.filter((_, i) => i !== idx);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- assigned wholesale to the $state holder combinePairs; the reassignment is what drives reactivity (a Set inside $state is not proxied)
 		const next = new Set();
 		for (const i of combinePairs) {
 			if (i < idx) next.add(i);
@@ -489,6 +491,7 @@
 	 */
 	function getExistingColumnOptions() {
 		const out = [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this function; never read reactively
 		const colToGroupName = new Map();
 		for (const g of core.groups ?? []) {
 			for (const cid of g.sourceColumnIds ?? []) {
@@ -511,7 +514,9 @@
 	 * Returns an array of { name, isOriginal } where combined columns use the merged name.
 	 */
 	function getEffectiveImportColumns() {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this function; never read reactively
 		const combinedDateCols = new Set();
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this function; never read reactively
 		const combinedTimeCols = new Set();
 		for (const idx of combinePairs) {
 			const pair = dateTimePairs[idx];
@@ -792,6 +797,7 @@
 			return parseEnspireDateTimeMs(v);
 		}
 
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local per-parse accumulator inside this plate-reader helper; never read reactively
 		const repeatWindows = new Map();
 		for (const r of plateRows) {
 			const ms = parsePlateTimeMs(r.time);
@@ -1449,7 +1455,6 @@
 
 		return new Promise((resolve, reject) => {
 			let parseAttempts = 0;
-			const maxAttempts = 2;
 
 			function tryParse() {
 				Papa.parse(targetFile, {
@@ -1655,6 +1660,7 @@
 		}
 
 		const refHeaders = [...headers];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local per-check map built and consumed inside this async function; never read reactively
 		const fileHeadersMap = new Map();
 		fileHeadersMap.set(targetFile.name, refHeaders);
 
@@ -1671,9 +1677,9 @@
 		}
 
 		const parsedHeaderLists = [...fileHeadersMap.values()];
-		commonColumns = refHeaders.filter((h) => parsedHeaderLists.every((hdrs) => hdrs.includes(h)));
 		const commonSet = new Set(commonColumns);
 
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this async function; never read reactively
 		const unionSet = new Set();
 		for (const hdrs of parsedHeaderLists) hdrs.forEach((h) => unionSet.add(h));
 		const mismatched = [];
@@ -1702,6 +1708,7 @@
 			selectedColumns = new Set([...selectedColumns].filter((c) => commonSet.has(c)));
 
 			const newPairs = [];
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- assigned wholesale to the $state holder combinePairs below; the reassignment is what drives reactivity
 			const newCombine = new Set();
 			dateTimePairs.forEach((pair, oldIdx) => {
 				if (commonSet.has(pair.dateCol) && commonSet.has(pair.timeCol)) {
@@ -1813,20 +1820,6 @@
 			console.warn('Error converting array to object:', error);
 			return {};
 		}
-	}
-
-	function changeObjectKeys(object, newKeys) {
-		const newObject = {};
-
-		Object.keys(object).forEach((originalKey, i) => {
-			const newKey = newKeys[i] || originalKey;
-			if (object[originalKey]) {
-				object[originalKey].splice(0, 1);
-				newObject[newKey] = object[originalKey];
-			}
-		});
-
-		return newObject;
 	}
 
 	async function loadData() {
@@ -2067,7 +2060,6 @@
 
 	async function doBasicFileImport(result, fname) {
 		const keys = Object.keys(result);
-		const totalColumns = keys.length;
 
 		// Separate columns into "replace existing" and "import as new"
 		const replaceEntries = []; // [{ colName, targetId }]
@@ -2518,7 +2510,7 @@
 						class="control-input-horizontal"
 						style="align-items: center; margin-top: var(--space-4);"
 					>
-						<button class="dialog-button" style="margin-top:0;" onclick={(e) => fileInput.click()}
+						<button class="dialog-button" style="margin-top:0;" onclick={() => fileInput.click()}
 							>{buttonText}</button
 						>
 						<p class="filename-preview">
@@ -2598,453 +2590,448 @@
 		{/if}
 	{/snippet}
 
-	{#snippet children()}
-		{#if !awaitingPreview && !awaitingLoad}
-			<div class="import-container">
-				<div class="preview-placeholder">
-					{#if parsedData && importReady}
-						{#if enspireMultiplatePayload}
-							<div class="section-row enspire-summary-panel">
-								<p class="enspire-summary-title">EnSpire multi-plate format detected</p>
-								<p class="enspire-summary-detail">
-									This import will create two tables. No preview is shown for this format.
-								</p>
-								<p class="enspire-summary-detail">
-									Plate info table rows: <strong>{enspirePlateInfoRows.toLocaleString()}</strong>
-								</p>
-								<p class="enspire-summary-detail">
-									Binned wells table rows: <strong>{enspireBinnedRows.toLocaleString()}</strong>
-								</p>
-								<p class="enspire-summary-detail">
-									Time axis will be imported as time bins with per-repeat windows.
-								</p>
-								<p class="enspire-summary-proceed">Proceed with import?</p>
+	{#if !awaitingPreview && !awaitingLoad}
+		<div class="import-container">
+			<div class="preview-placeholder">
+				{#if parsedData && importReady}
+					{#if enspireMultiplatePayload}
+						<div class="section-row enspire-summary-panel">
+							<p class="enspire-summary-title">EnSpire multi-plate format detected</p>
+							<p class="enspire-summary-detail">
+								This import will create two tables. No preview is shown for this format.
+							</p>
+							<p class="enspire-summary-detail">
+								Plate info table rows: <strong>{enspirePlateInfoRows.toLocaleString()}</strong>
+							</p>
+							<p class="enspire-summary-detail">
+								Binned wells table rows: <strong>{enspireBinnedRows.toLocaleString()}</strong>
+							</p>
+							<p class="enspire-summary-detail">
+								Time axis will be imported as time bins with per-repeat windows.
+							</p>
+							<p class="enspire-summary-proceed">Proceed with import?</p>
+						</div>
+					{:else}
+						<div class="section-row">
+							<div class="control-input-horizontal">
+								<div class="control-input-checkbox">
+									<input type="checkbox" bind:checked={hasHeader} onchange={() => reParse()} />
+									<p>Has header row</p>
+								</div>
+								<ControlInput label="Delimiter">
+									<select bind:value={delimiter} onchange={() => reParse()}>
+										<option value="">auto</option>
+										<option value=",">, (comma)</option>
+										<option value=";">; (semicolon)</option>
+										<option value="\t">Tab</option>
+										<option value="|">| (pipe)</option>
+										<option value=" ">(space)</option>
+									</select>
+								</ControlInput>
+								<ControlInput label="Skip lines">
+									<NumberWithUnits bind:value={skipLines} min="0" onInput={() => reParse()} />
+								</ControlInput>
+								<ControlInput label="Sort by">
+									<select bind:value={sortBy} disabled={awaitingLoad}>
+										<option value="__none__">None (keep file order)</option>
+										<option value="__time__">Time (auto-detect)</option>
+										{#each headers.filter((h) => selectedColumns.has(h)) as h, hi (hi)}
+											<option value={h}>{h}</option>
+										{/each}
+									</select>
+								</ControlInput>
 							</div>
-						{:else}
-							<div class="section-row">
+						</div>
+
+						{#if totalRowCount > ROW_THRESHOLD}
+							<div class="section-row binning-panel">
+								<p class="binning-warning">
+									This file has ~{totalRowCount.toLocaleString()} rows. Consider binning to reduce data
+									size.
+								</p>
 								<div class="control-input-horizontal">
 									<div class="control-input-checkbox">
-										<input type="checkbox" bind:checked={hasHeader} onchange={() => reParse()} />
-										<p>Has header row</p>
+										<input type="checkbox" bind:checked={binningEnabled} />
+										<p>Bin data to</p>
 									</div>
-									<ControlInput label="Delimiter">
-										<select bind:value={delimiter} onchange={() => reParse()}>
-											<option value="">auto</option>
-											<option value=",">, (comma)</option>
-											<option value=";">; (semicolon)</option>
-											<option value="\t">Tab</option>
-											<option value="|">| (pipe)</option>
-											<option value=" ">(space)</option>
-										</select>
-									</ControlInput>
-									<ControlInput label="Skip lines">
-										<NumberWithUnits bind:value={skipLines} min="0" onInput={() => reParse()} />
-									</ControlInput>
-									<ControlInput label="Sort by">
-										<select bind:value={sortBy} disabled={awaitingLoad}>
-											<option value="__none__">None (keep file order)</option>
-											<option value="__time__">Time (auto-detect)</option>
-											{#each headers.filter((h) => selectedColumns.has(h)) as h}
-												<option value={h}>{h}</option>
-											{/each}
-										</select>
+									<ControlInput label="Interval (mins)">
+										<NumberWithUnits bind:value={binIntervalMin} min={1} step={1} />
 									</ControlInput>
 								</div>
-							</div>
-
-							{#if totalRowCount > ROW_THRESHOLD}
-								<div class="section-row binning-panel">
-									<p class="binning-warning">
-										This file has ~{totalRowCount.toLocaleString()} rows. Consider binning to reduce data
-										size.
+								{#if binningEnabled}
+									<p class="binning-estimate">
+										~{estimatedBinnedRows.toLocaleString()} rows after binning, {dataIntervalMin} min
+										intervals detected
 									</p>
-									<div class="control-input-horizontal">
-										<div class="control-input-checkbox">
-											<input type="checkbox" bind:checked={binningEnabled} />
-											<p>Bin data to</p>
-										</div>
-										<ControlInput label="Interval (mins)">
-											<NumberWithUnits bind:value={binIntervalMin} min={1} step={1} />
-										</ControlInput>
-									</div>
-									{#if binningEnabled}
-										<p class="binning-estimate">
-											~{estimatedBinnedRows.toLocaleString()} rows after binning, {dataIntervalMin} min
-											intervals detected
-										</p>
-									{/if}
-								</div>
-							{/if}
+								{/if}
+							</div>
+						{/if}
 
-							<div class="section-row combine-panel">
-								<p class="combine-title">
-									Combine separate Date and Time columns into a single DateTime column:
+						<div class="section-row combine-panel">
+							<p class="combine-title">
+								Combine separate Date and Time columns into a single DateTime column:
+							</p>
+							{#if dateTimePairs.length === 0}
+								<p class="combine-empty">
+									No date/time pairs detected. Click "Add pair" to choose two columns to merge.
 								</p>
-								{#if dateTimePairs.length === 0}
-									<p class="combine-empty">
-										No date/time pairs detected. Click "Add pair" to choose two columns to merge.
-									</p>
-								{/if}
-								{#each dateTimePairs as pair, idx (idx)}
-									<div class="combine-row">
-										<input
-											type="checkbox"
-											title="Merge this pair on import"
-											checked={combinePairs.has(idx)}
-											onchange={(e) => {
-												const checked = e.currentTarget.checked;
-												combinePairs = checked
-													? new Set([...combinePairs, idx])
-													: new Set([...combinePairs].filter((i) => i !== idx));
-											}}
-										/>
-										<select
-											class="combine-select"
-											value={pair.dateCol}
-											onchange={(e) => updatePair(idx, 'dateCol', e.currentTarget.value)}
-										>
-											{#each headers as h (h)}
-												<option value={h}>{h}</option>
-											{/each}
-										</select>
-										<span class="combine-plus">+</span>
-										<select
-											class="combine-select"
-											value={pair.timeCol}
-											onchange={(e) => updatePair(idx, 'timeCol', e.currentTarget.value)}
-										>
-											{#each headers as h (h)}
-												<option value={h}>{h}</option>
-											{/each}
-										</select>
-										<button
-											type="button"
-											class="combine-remove"
-											title="Remove this pair"
-											onclick={() => removePair(idx)}
-										>
-											×
-										</button>
-									</div>
-								{/each}
-								{#if headers.length >= 2}
-									<button type="button" class="combine-add" onclick={addPair}> + Add pair </button>
-								{/if}
-							</div>
-
-							{#if (core.data ?? []).length > 0}
-								<div class="section-row">
-									<div class="control-input-checkbox">
-										<input
-											type="checkbox"
-											bind:checked={replaceMode}
-											onchange={() => {
-												if (replaceMode) autoSuggestMappings();
-												else columnMappings = {};
-											}}
-										/>
-										<p>Replace existing columns</p>
-									</div>
-								</div>
 							{/if}
-
-							<div class="section-row">
-								<div class="col-select-actions">
-									<button
-										class="dialog-button"
-										style="margin-top:0;"
-										onclick={() => {
-											selectedColumns = new Set(headers);
-										}}>All</button
-									>
-									<button
-										class="dialog-button"
-										style="margin-top:0;"
-										onclick={() => {
-											selectedColumns = new Set();
-										}}>None</button
-									>
-								</div>
-							</div>
-
-							{#if !enspireMultiplatePayload}
-								{#if labelRowSuggestion}
-									<div class="label-suggest">
-										<span
-											>Row {labelRowSuggestion.rowIndex + 1} looks like trace labels (text above numeric
-											data).</span
-										>
-										<button
-											class="dialog-button label-suggest-yes"
-											style="margin-top:0;"
-											onclick={() => pickLabelRow(labelRowSuggestion.rowIndex)}
-											>Use as labels</button
-										>
-										<button class="link-button" onclick={() => (labelRowSuggestion = null)}
-											>Dismiss</button
-										>
-									</div>
-								{/if}
-
-								<div class="section-row label-actions">
-									<span class="label-actions-title">Group labels:</span>
-									<button
-										class="dialog-button"
-										class:active={pickingLabelRow}
-										style="margin-top:0;"
-										title="Then click a row below to use its cells as column labels"
-										onclick={() => (pickingLabelRow = !pickingLabelRow)}
-									>
-										{pickingLabelRow ? 'Click a row below…' : 'Use a row as labels'}
-									</button>
-									{#if namesLookLabelled}
-										<button
-											class="dialog-button"
-											style="margin-top:0;"
-											title="Strip trailing replicate numbers from column names"
-											onclick={applyDeriveLabelsFromNames}>Derive from names</button
-										>
-									{/if}
+							{#each dateTimePairs as pair, idx (idx)}
+								<div class="combine-row">
 									<input
-										class="label-bulk-input"
-										type="text"
-										placeholder="label…"
-										bind:value={labelBulkText}
+										type="checkbox"
+										title="Merge this pair on import"
+										checked={combinePairs.has(idx)}
+										onchange={(e) => {
+											const checked = e.currentTarget.checked;
+											combinePairs = checked
+												? new Set([...combinePairs, idx])
+												: new Set([...combinePairs].filter((i) => i !== idx));
+										}}
 									/>
+									<select
+										class="combine-select"
+										value={pair.dateCol}
+										onchange={(e) => updatePair(idx, 'dateCol', e.currentTarget.value)}
+									>
+										{#each headers as h (h)}
+											<option value={h}>{h}</option>
+										{/each}
+									</select>
+									<span class="combine-plus">+</span>
+									<select
+										class="combine-select"
+										value={pair.timeCol}
+										onchange={(e) => updatePair(idx, 'timeCol', e.currentTarget.value)}
+									>
+										{#each headers as h (h)}
+											<option value={h}>{h}</option>
+										{/each}
+									</select>
+									<button
+										type="button"
+										class="combine-remove"
+										title="Remove this pair"
+										onclick={() => removePair(idx)}
+									>
+										×
+									</button>
+								</div>
+							{/each}
+							{#if headers.length >= 2}
+								<button type="button" class="combine-add" onclick={addPair}> + Add pair </button>
+							{/if}
+						</div>
+
+						{#if (core.data ?? []).length > 0}
+							<div class="section-row">
+								<div class="control-input-checkbox">
+									<input
+										type="checkbox"
+										bind:checked={replaceMode}
+										onchange={() => {
+											if (replaceMode) autoSuggestMappings();
+											else columnMappings = {};
+										}}
+									/>
+									<p>Replace existing columns</p>
+								</div>
+							</div>
+						{/if}
+
+						<div class="section-row">
+							<div class="col-select-actions">
+								<button
+									class="dialog-button"
+									style="margin-top:0;"
+									onclick={() => {
+										selectedColumns = new Set(headers);
+									}}>All</button
+								>
+								<button
+									class="dialog-button"
+									style="margin-top:0;"
+									onclick={() => {
+										selectedColumns = new Set();
+									}}>None</button
+								>
+							</div>
+						</div>
+
+						{#if !enspireMultiplatePayload}
+							{#if labelRowSuggestion}
+								<div class="label-suggest">
+									<span
+										>Row {labelRowSuggestion.rowIndex + 1} looks like trace labels (text above numeric
+										data).</span
+									>
+									<button
+										class="dialog-button label-suggest-yes"
+										style="margin-top:0;"
+										onclick={() => pickLabelRow(labelRowSuggestion.rowIndex)}>Use as labels</button
+									>
+									<button class="link-button" onclick={() => (labelRowSuggestion = null)}
+										>Dismiss</button
+									>
+								</div>
+							{/if}
+
+							<div class="section-row label-actions">
+								<span class="label-actions-title">Group labels:</span>
+								<button
+									class="dialog-button"
+									class:active={pickingLabelRow}
+									style="margin-top:0;"
+									title="Then click a row below to use its cells as column labels"
+									onclick={() => (pickingLabelRow = !pickingLabelRow)}
+								>
+									{pickingLabelRow ? 'Click a row below…' : 'Use a row as labels'}
+								</button>
+								{#if namesLookLabelled}
 									<button
 										class="dialog-button"
 										style="margin-top:0;"
-										disabled={selectedColumns.size === 0}
-										title="Apply the label to all selected columns"
-										onclick={applyLabelToSelected}>Apply to selected</button
+										title="Strip trailing replicate numbers from column names"
+										onclick={applyDeriveLabelsFromNames}>Derive from names</button
 									>
-									{#if anyLabelsSet || labelRowIndex != null}
-										<button class="link-button" onclick={clearLabels}>Clear labels</button>
-									{/if}
-								</div>
-								{#if labelRowIndex != null}
-									<p class="label-note">
-										Row {labelRowIndex + 1} is used as labels and will be excluded from the imported data.
-									</p>
 								{/if}
+								<input
+									class="label-bulk-input"
+									type="text"
+									placeholder="label…"
+									bind:value={labelBulkText}
+								/>
+								<button
+									class="dialog-button"
+									style="margin-top:0;"
+									disabled={selectedColumns.size === 0}
+									title="Apply the label to all selected columns"
+									onclick={applyLabelToSelected}>Apply to selected</button
+								>
+								{#if anyLabelsSet || labelRowIndex != null}
+									<button class="link-button" onclick={clearLabels}>Clear labels</button>
+								{/if}
+							</div>
+							{#if labelRowIndex != null}
+								<p class="label-note">
+									Row {labelRowIndex + 1} is used as labels and will be excluded from the imported data.
+								</p>
 							{/if}
+						{/if}
 
-							<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
-								<table class="preview-table">
-									<thead>
-										<tr>
-											{#each headers as col, i (`${i}-${selectedColumns.has(col)}-${combinedTimeCols.has(col)}`)}
+						<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
+							<table class="preview-table">
+								<thead>
+									<tr>
+										{#each headers as col, i (`${i}-${selectedColumns.has(col)}-${combinedTimeCols.has(col)}`)}
+											{#if combinedTimeCols.has(col)}
+												<!-- skip: merged into date col -->
+											{:else}
+												{@const isCombinedDate = combinedDateCols.has(col)}
+												{@const combinedName = isCombinedDate
+													? (() => {
+															const pIdx = [...combinePairs].find(
+																(j) => dateTimePairs[j].dateCol === col
+															);
+															return pIdx !== undefined
+																? `${col} ${dateTimePairs[pIdx].timeCol}`
+																: col;
+														})()
+													: col}
+												<th
+													class:selected={selectedColumns.has(col)}
+													class:unselected={!selectedColumns.has(col)}
+												>
+													<label class="header-checkbox">
+														<input
+															type="checkbox"
+															checked={selectedColumns.has(col)}
+															onchange={(e) => {
+																const checked = e.currentTarget.checked;
+																if (isCombinedDate) {
+																	const pIdx = [...combinePairs].find(
+																		(j) => dateTimePairs[j].dateCol === col
+																	);
+																	const timeCol =
+																		pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null;
+																	if (checked) {
+																		selectedColumns = new Set([
+																			...selectedColumns,
+																			col,
+																			...(timeCol ? [timeCol] : [])
+																		]);
+																	} else {
+																		selectedColumns = new Set(
+																			[...selectedColumns].filter((c) => c !== col && c !== timeCol)
+																		);
+																	}
+																} else {
+																	selectedColumns = checked
+																		? new Set([...selectedColumns, col])
+																		: new Set([...selectedColumns].filter((c) => c !== col));
+																}
+															}}
+														/>
+														<span class="col-name">{combinedName}</span>
+													</label>
+													{#if replaceMode && selectedColumns.has(col)}
+														<select
+															class="mapping-select"
+															value={columnMappings[combinedName] ?? ''}
+															onchange={(e) => {
+																const val = e.currentTarget.value;
+																columnMappings[combinedName] = val === '' ? null : Number(val);
+																columnMappings = { ...columnMappings };
+															}}
+														>
+															<option value="">New column</option>
+															{#each existingColumnOptions as opt (opt.id)}
+																<option value={opt.id}>{opt.label}</option>
+															{/each}
+														</select>
+													{/if}
+												</th>
+											{/if}
+										{/each}
+									</tr>
+									{#if !enspireMultiplatePayload}
+										<tr class="label-row">
+											{#each headers as col, i (`lbl-${i}-${combinedTimeCols.has(col)}`)}
 												{#if combinedTimeCols.has(col)}
 													<!-- skip: merged into date col -->
+												{:else if combinedDateCols.has(col)}
+													<th class="label-cell label-cell-muted" title="Time column">time</th>
 												{:else}
-													{@const isCombinedDate = combinedDateCols.has(col)}
-													{@const combinedName = isCombinedDate
-														? (() => {
-																const pIdx = [...combinePairs].find(
-																	(j) => dateTimePairs[j].dateCol === col
-																);
-																return pIdx !== undefined
-																	? `${col} ${dateTimePairs[pIdx].timeCol}`
-																	: col;
-															})()
-														: col}
-													<th
-														class:selected={selectedColumns.has(col)}
-														class:unselected={!selectedColumns.has(col)}
-													>
-														<label class="header-checkbox">
-															<input
-																type="checkbox"
-																checked={selectedColumns.has(col)}
-																onchange={(e) => {
-																	const checked = e.currentTarget.checked;
-																	if (isCombinedDate) {
-																		const pIdx = [...combinePairs].find(
-																			(j) => dateTimePairs[j].dateCol === col
-																		);
-																		const timeCol =
-																			pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null;
-																		if (checked) {
-																			selectedColumns = new Set([
-																				...selectedColumns,
-																				col,
-																				...(timeCol ? [timeCol] : [])
-																			]);
-																		} else {
-																			selectedColumns = new Set(
-																				[...selectedColumns].filter(
-																					(c) => c !== col && c !== timeCol
-																				)
-																			);
-																		}
-																	} else {
-																		selectedColumns = checked
-																			? new Set([...selectedColumns, col])
-																			: new Set([...selectedColumns].filter((c) => c !== col));
-																	}
-																}}
-															/>
-															<span class="col-name">{combinedName}</span>
-														</label>
-														{#if replaceMode && selectedColumns.has(col)}
-															<select
-																class="mapping-select"
-																value={columnMappings[combinedName] ?? ''}
-																onchange={(e) => {
-																	const val = e.currentTarget.value;
-																	columnMappings[combinedName] = val === '' ? null : Number(val);
-																	columnMappings = { ...columnMappings };
-																}}
-															>
-																<option value="">New column</option>
-																{#each existingColumnOptions as opt (opt.id)}
-																	<option value={opt.id}>{opt.label}</option>
-																{/each}
-															</select>
-														{/if}
+													<th class="label-cell">
+														<input
+															class="label-input"
+															type="text"
+															placeholder="label"
+															value={columnLabels[col] ?? ''}
+															oninput={(e) => {
+																columnLabels = { ...columnLabels, [col]: e.currentTarget.value };
+															}}
+														/>
 													</th>
 												{/if}
 											{/each}
 										</tr>
-										{#if !enspireMultiplatePayload}
-											<tr class="label-row">
-												{#each headers as col, i (`lbl-${i}-${combinedTimeCols.has(col)}`)}
-													{#if combinedTimeCols.has(col)}
-														<!-- skip: merged into date col -->
-													{:else if combinedDateCols.has(col)}
-														<th class="label-cell label-cell-muted" title="Time column">time</th>
-													{:else}
-														<th class="label-cell">
-															<input
-																class="label-input"
-																type="text"
-																placeholder="label"
-																value={columnLabels[col] ?? ''}
-																oninput={(e) => {
-																	columnLabels = { ...columnLabels, [col]: e.currentTarget.value };
-																}}
-															/>
-														</th>
-													{/if}
-												{/each}
-											</tr>
-										{/if}
-									</thead>
-									<tbody>
-										{#each Array(Math.min(6, Math.max(0, previewRowCount - (previewDisplayStart - 1)))) as _, i}
-											{@const rowIdx = previewDisplayStart - 1 + i}
-											<tr
-												class:pickable={pickingLabelRow}
-												class:is-label-row={rowIdx === labelRowIndex}
-												onclick={pickingLabelRow ? () => pickLabelRow(rowIdx) : null}
-												title={pickingLabelRow ? 'Use this row as column labels' : null}
-											>
-												{#each headers as col}
-													{#if combinedTimeCols.has(col)}
-														<!-- skip: merged -->
-													{:else if combinedDateCols.has(col)}
-														{@const pIdx = [...combinePairs].find(
-															(j) => dateTimePairs[j].dateCol === col
-														)}
-														{@const timeColName =
-															pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null}
-														<td
-															class:selected={selectedColumns.has(col)}
-															class:unselected={!selectedColumns.has(col)}
-														>
-															{parsedData[col]?.[rowIdx] ?? ''}
-															{timeColName ? (parsedData[timeColName]?.[rowIdx] ?? '') : ''}
-														</td>
-													{:else}
-														<td
-															class:selected={selectedColumns.has(col)}
-															class:unselected={!selectedColumns.has(col)}
-														>
-															{parsedData[col]?.[rowIdx] ?? '—'}
-														</td>
-													{/if}
-												{/each}
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							</div>
-							<div
-								class="control-input"
-								style="flex-direction: row; align-items: center; gap: var(--space-2); flex-wrap: wrap;"
-							>
-								<p style="margin:0;">Row</p>
-								<NumberWithUnits
-									min={1}
-									max={Math.max(1, previewRowCount - 5)}
-									step={1}
-									bind:value={previewDisplayStart}
-								/>
-								<p style="margin:0;">
-									to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)
-								</p>
-							</div>
-
-							{#if targetFiles.length > 1}
-								<div class="multi-file-list">
-									<p class="multi-file-title">Files to concatenate ({targetFiles.length}):</p>
-									<ul>
-										{#each targetFiles as file, i}
-											<li class="file-item">
-												<span class="file-item-name">{file.name}</span>
-												{#if i === 0}
-													<span class="badge badge-reference">reference</span>
-												{:else if checkingHeaders}
-													<span class="badge badge-checking">checking…</span>
-												{:else}
-													{@const fatal = extraFileErrors.find((e) => e.filename === file.name)}
-													{@const partial = mismatchedColumns.some((m) =>
-														m.missingFrom.includes(file.name)
-													)}
-													{#if fatal}
-														<span class="badge badge-error" title={fatal.error}>✗ error</span>
-													{:else if partial}
-														<span class="badge badge-warn">⚠ partial</span>
-													{:else}
-														<span class="badge badge-ok">✓ ok</span>
-													{/if}
-												{/if}
-											</li>
-										{/each}
-									</ul>
-									{#if extraFileErrors.length > 0}
-										<div class="mismatch-warning">
-											<p class="mismatch-warning-title">Cannot import these files:</p>
-											{#each extraFileErrors as err}
-												<p class="mismatch-detail">
-													<strong>{err.filename}:</strong>
-													{err.error}
-												</p>
-											{/each}
-										</div>
-									{:else if mismatchedColumns.length > 0}
-										<div class="mismatch-warning-soft">
-											<p class="mismatch-warning-title">
-												Some columns are not present in every file. Only the {commonColumns.length}
-												common column{commonColumns.length === 1 ? '' : 's'} will be imported.
-											</p>
-											{#each mismatchedColumns as m}
-												<p class="mismatch-detail">
-													<strong>{m.column}</strong> — missing from: {m.missingFrom.join(', ')}
-												</p>
-											{/each}
-										</div>
 									{/if}
-								</div>
-							{/if}
+								</thead>
+								<tbody>
+									{#each Array(Math.min(6, Math.max(0, previewRowCount - (previewDisplayStart - 1)))), i (i)}
+										{@const rowIdx = previewDisplayStart - 1 + i}
+										<tr
+											class:pickable={pickingLabelRow}
+											class:is-label-row={rowIdx === labelRowIndex}
+											onclick={pickingLabelRow ? () => pickLabelRow(rowIdx) : null}
+											title={pickingLabelRow ? 'Use this row as column labels' : null}
+										>
+											{#each headers as col, ci (ci)}
+												{#if combinedTimeCols.has(col)}
+													<!-- skip: merged -->
+												{:else if combinedDateCols.has(col)}
+													{@const pIdx = [...combinePairs].find(
+														(j) => dateTimePairs[j].dateCol === col
+													)}
+													{@const timeColName =
+														pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null}
+													<td
+														class:selected={selectedColumns.has(col)}
+														class:unselected={!selectedColumns.has(col)}
+													>
+														{parsedData[col]?.[rowIdx] ?? ''}
+														{timeColName ? (parsedData[timeColName]?.[rowIdx] ?? '') : ''}
+													</td>
+												{:else}
+													<td
+														class:selected={selectedColumns.has(col)}
+														class:unselected={!selectedColumns.has(col)}
+													>
+														{parsedData[col]?.[rowIdx] ?? '—'}
+													</td>
+												{/if}
+											{/each}
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+						<div
+							class="control-input"
+							style="flex-direction: row; align-items: center; gap: var(--space-2); flex-wrap: wrap;"
+						>
+							<p style="margin:0;">Row</p>
+							<NumberWithUnits
+								min={1}
+								max={Math.max(1, previewRowCount - 5)}
+								step={1}
+								bind:value={previewDisplayStart}
+							/>
+							<p style="margin:0;">
+								to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)
+							</p>
+						</div>
+
+						{#if targetFiles.length > 1}
+							<div class="multi-file-list">
+								<p class="multi-file-title">Files to concatenate ({targetFiles.length}):</p>
+								<ul>
+									{#each targetFiles as file, i (i)}
+										<li class="file-item">
+											<span class="file-item-name">{file.name}</span>
+											{#if i === 0}
+												<span class="badge badge-reference">reference</span>
+											{:else if checkingHeaders}
+												<span class="badge badge-checking">checking…</span>
+											{:else}
+												{@const fatal = extraFileErrors.find((e) => e.filename === file.name)}
+												{@const partial = mismatchedColumns.some((m) =>
+													m.missingFrom.includes(file.name)
+												)}
+												{#if fatal}
+													<span class="badge badge-error" title={fatal.error}>✗ error</span>
+												{:else if partial}
+													<span class="badge badge-warn">⚠ partial</span>
+												{:else}
+													<span class="badge badge-ok">✓ ok</span>
+												{/if}
+											{/if}
+										</li>
+									{/each}
+								</ul>
+								{#if extraFileErrors.length > 0}
+									<div class="mismatch-warning">
+										<p class="mismatch-warning-title">Cannot import these files:</p>
+										{#each extraFileErrors as err, ei (ei)}
+											<p class="mismatch-detail">
+												<strong>{err.filename}:</strong>
+												{err.error}
+											</p>
+										{/each}
+									</div>
+								{:else if mismatchedColumns.length > 0}
+									<div class="mismatch-warning-soft">
+										<p class="mismatch-warning-title">
+											Some columns are not present in every file. Only the {commonColumns.length}
+											common column{commonColumns.length === 1 ? '' : 's'} will be imported.
+										</p>
+										{#each mismatchedColumns as m (m.column)}
+											<p class="mismatch-detail">
+												<strong>{m.column}</strong> — missing from: {m.missingFrom.join(', ')}
+											</p>
+										{/each}
+									</div>
+								{/if}
+							</div>
 						{/if}
-					{:else if !awaitingPreview && !awaitingLoad}
-						<p>Choose file to preview data</p>
 					{/if}
-				</div>
+				{:else if !awaitingPreview && !awaitingLoad}
+					<p>Choose file to preview data</p>
+				{/if}
 			</div>
-		{/if}
-	{/snippet}
+		</div>
+	{/if}
 
 	{#snippet button()}
 		<div class="dialog-button-container">

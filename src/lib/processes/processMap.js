@@ -1,8 +1,9 @@
 import { normalizeNodeDefinition } from '$lib/core/NodeDefinition.svelte.js';
 import { getNodeMeta } from '$lib/core/nodeMeta.js';
-import { loadNodeMap, formatDisplayName } from '$lib/core/nodeLoaders.js';
+import { loadNodeMap, memoiseNodeMap, formatDisplayName } from '$lib/core/nodeLoaders.js';
 
-export async function loadProcesses() {
+/** The column-process registry: `fileName -> { component, func, ... }`. Memoised; see memoiseNodeMap. */
+export const loadProcesses = memoiseNodeMap(async () => {
 	// Keep the glob literal here — Vite analyses the pattern statically.
 	const sveltePaths = import.meta.glob('$lib/processes/*.svelte', { eager: false });
 	return loadNodeMap(sveltePaths, (sveltePath, svelteModule) => {
@@ -32,4 +33,4 @@ export async function loadProcesses() {
 			}
 		];
 	});
-}
+});

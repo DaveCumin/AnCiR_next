@@ -193,7 +193,6 @@ describe('formulacolumn', () => {
 	});
 
 	it('classifies a string-producing formula as category type', async () => {
-		const { core } = await import('$lib/core/core.svelte');
 		mockColumns[1] = { getData: () => [1, 2] };
 		mockColumns[6] = { data: null, type: null, tableProcessGUId: null };
 		const tokens = [

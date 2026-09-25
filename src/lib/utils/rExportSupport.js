@@ -105,7 +105,9 @@ export function explainRSupport(report) {
 		parts.push(`The R runtime does not implement: ${report.missingAnalyses.join(', ')}.`);
 	}
 	if (report.missingProcesses.length) {
-		parts.push(`It does not implement the column transform(s): ${report.missingProcesses.join(', ')}.`);
+		parts.push(
+			`It does not implement the column transform(s): ${report.missingProcesses.join(', ')}.`
+		);
 	}
 	parts.push('Export as Python instead — the Python runtime covers the whole engine.');
 	return parts.join(' ');

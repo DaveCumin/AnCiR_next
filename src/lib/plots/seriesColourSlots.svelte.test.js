@@ -27,16 +27,6 @@ beforeEach(() => {
 	core.data = [];
 });
 
-/** Register column ids as live, since slot claiming only counts pins for existing columns. */
-function liveColumns(...ids) {
-	core.data = ids.map((id) => ({ id }));
-}
-
-/** A minimal plot series shaped the way the real ones are. */
-function mkSeries(colId, styleColour, extra = {}) {
-	return { y: { refId: colId }, points: { colour: styleColour, ...extra } };
-}
-
 describe('helpers', () => {
 	it('paletteIndexOf finds and misses correctly', () => {
 		expect(paletteIndexOf(PAL_A[3])).toBe(3);

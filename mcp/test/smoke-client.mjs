@@ -52,13 +52,28 @@ console.log('COSINOR:', JSON.stringify({ valid: cos.valid, mesor: r.mesor, rSqua
 
 // Capabilities are now derived live from the engine registry.
 const caps = JSON.parse(await call('list_capabilities'));
-console.log('ANALYSES:', caps.analyses.length, '— e.g.', caps.analyses.slice(0, 4).map((a) => a.id).join(', '));
+console.log(
+	'ANALYSES:',
+	caps.analyses.length,
+	'— e.g.',
+	caps.analyses
+		.slice(0, 4)
+		.map((a) => a.id)
+		.join(', ')
+);
 
 // Generic registry-driven analysis: run a TrendFit through the same path the GUI uses.
-const trend = JSON.parse(await call('run_table_process', { name: 'TrendFit', args: { xIN: 0, yIN: [1], model: 'linear' } }));
-console.log('TRENDFIT:', JSON.stringify({ valid: trend.valid, outputs: trend.outputs.map((o) => o.key) }));
+const trend = JSON.parse(
+	await call('run_table_process', { name: 'TrendFit', args: { xIN: 0, yIN: [1], model: 'linear' } })
+);
+console.log(
+	'TRENDFIT:',
+	JSON.stringify({ valid: trend.valid, outputs: trend.outputs.map((o) => o.key) })
+);
 
-const exported = JSON.parse(await call('export_session', { path: '/tmp/ancir-smoke-session.json' }));
+const exported = JSON.parse(
+	await call('export_session', { path: '/tmp/ancir-smoke-session.json' })
+);
 console.log('EXPORTED:', JSON.stringify(exported));
 
 await client.close();
@@ -69,6 +84,8 @@ if (!(r.rSquared > 0.99)) throw new Error('cosinor R² too low: ' + r.rSquared);
 if (Math.abs(r.mesor - 10) > 0.5) throw new Error('MESOR off: ' + r.mesor);
 if (Math.abs(r.harmonics[0].amplitude - 5) > 0.5) throw new Error('amplitude off');
 if (!(cos.tableProcessId >= 0)) throw new Error('Cosinor node not added to session');
-if (!(caps.analyses.length > 10)) throw new Error('too few analyses surfaced: ' + caps.analyses.length);
-if (!trend.valid || trend.outputs.length === 0) throw new Error('TrendFit produced no valid output');
+if (!(caps.analyses.length > 10))
+	throw new Error('too few analyses surfaced: ' + caps.analyses.length);
+if (!trend.valid || trend.outputs.length === 0)
+	throw new Error('TrendFit produced no valid output');
 console.log('SMOKE OK ✅');

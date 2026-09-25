@@ -11,6 +11,7 @@
 	//
 	// Maths is the pure, unit-tested utils/pairsLayout.js (scipy-pinned correlations, shared
 	// least-squares fit). Diverging colormap for the lower triangle, centred at 0.
+	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { pairsLayout } from '$lib/utils/pairsLayout.js';
@@ -20,6 +21,15 @@
 	export const PairsPlot_defaultDataInputs = ['column'];
 	export const PairsPlot_controlHeaders = ['Properties', 'Data'];
 	export const PairsPlot_displayName = 'Pairs plot';
+
+	// The two overlay marks share one ink, deliberately hoisted here so the legend
+	// swatch and the stroke in the template can never drift apart: both read these.
+	// (They are currently the SAME colour, which makes the two legend rows look alike;
+	// giving the fit its own hue is a separate change to the drawing, not to this.)
+	export const PAIRS_DENSITY_STROKE = '#BE796B';
+	export const PAIRS_DENSITY_WIDTH = 1.25;
+	export const PAIRS_FIT_STROKE = '#BE796B';
+	export const PAIRS_FIT_WIDTH = 1.5;
 
 	class PairsColumn {
 		parentPlot = $state();
@@ -67,9 +77,27 @@
 		// Density curve over the diagonal histograms, as in psych::pairs.panels. On by default:
 		// the curve is what shows skew and bimodality that binning can hide.
 		showDensity = $state(true);
+		legend = $state();
 
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		// Width before an outside legend takes its share; see legendAuto.svelte.js.
+		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		basePlotHeight = $derived(this.plotheight);
+		plotwidth = $derived(this.basePlotWidth - this.legendLayout.reserveW);
+
+		legendLayout = new LegendAutoLayout(this, {
+			obstacles: (w, h) => this.legendObstacles(w, h),
+			outside: rightOfPlot(() => ({ baseWidth: this.basePlotWidth }))
+		});
+
+		// What a legend must not cover, in px over a w x h plot area: the whole matrix. It is
+		// a square of side min(w, h) in the top-left corner (see the plot snippet), and every
+		// cell holds marks or a coefficient, so the free room is beside or below it.
+		legendObstacles(w, h) {
+			if (this.layout.labels.length < 2) return [];
+			const side = Math.min(w, h);
+			return [{ rects: [[0, 0, side, side]] }];
+		}
 
 		layout = $derived.by(() => {
 			const cols = this.data.map((d) => d.column?.getData?.() ?? []);
@@ -77,8 +105,57 @@
 			return pairsLayout(cols, names, this.method);
 		});
 
+		// The legend lists the MARKS, not the variables.
+		//
+		// Every variable in this matrix is drawn in the same `pointColour`, and its name
+		// is already printed on its diagonal cell and again down the left edge. A
+		// conventional per-series legend would therefore be N identical swatches labelled
+		// with names the reader can already see: no information, and it would imply the
+		// variables are colour-coded when they are not.
+		//
+		// What a reader genuinely cannot decode is which mark is which. So there is one
+		// entry per kind of mark, and only while that mark is actually on the figure: the
+		// points and diagonal bars, the density curve (only while `showDensity`), and the
+		// upper-triangle fit line, which is drawn in every cell that has two or more
+		// finite pairs. Below two variables the matrix draws nothing, so it legends
+		// nothing.
+		getLegendItems = $derived.by(() => {
+			if (this.layout.labels.length < 2) return [];
+			const items = [
+				{
+					label: 'Observations',
+					elements: [{ type: 'points', color: this.pointColour, shape: 'circle', size: 3 }]
+				}
+			];
+			if (this.showDensity) {
+				items.push({
+					label: 'Density',
+					elements: [
+						{
+							type: 'line',
+							color: PAIRS_DENSITY_STROKE,
+							strokeWidth: PAIRS_DENSITY_WIDTH,
+							stroke: 'solid'
+						}
+					]
+				});
+			}
+			items.push({
+				label: 'Linear fit',
+				elements: [
+					{ type: 'line', color: PAIRS_FIT_STROKE, strokeWidth: PAIRS_FIT_WIDTH, stroke: 'solid' }
+				]
+			});
+			return items;
+		});
+
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			// Defaults OFF. Saved sessions already contain pairs plots, and a legend that
+			// switched itself on at load would silently alter a finished figure. Note this
+			// constructor's dataIN is a SERIES (see the addData call below), so it never
+			// carries a legend of its own; a saved one is restored in fromJSON.
+			this.legend = LegendClass.withDefaults(dataIN?.legend, { show: false });
 			if (dataIN?.column) this.addData(dataIN);
 		}
 		addData(dataIN) {
@@ -101,7 +178,8 @@
 				method: this.method,
 				pointColour: this.pointColour,
 				showDensity: this.showDensity,
-				data: this.data.map((d) => d.toJSON())
+				data: this.data.map((d) => d.toJSON()),
+				legend: this.legend.toJSON()
 			};
 		}
 		static fromJSON(parent, json) {
@@ -112,6 +190,7 @@
 			c.method = json.method ?? c.method;
 			c.pointColour = json.pointColour ?? c.pointColour;
 			c.showDensity = json.showDensity ?? c.showDensity;
+			c.legend = LegendClass.withDefaults(json.legend, { show: false });
 			if (Array.isArray(json.data)) c.data = json.data.map((d) => PairsColumn.fromJSON(d, c));
 			else if (json.dataIn) c.addData(json.dataIn);
 			return c;
@@ -213,6 +292,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
+	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 
 	let { theData, which } = $props();
 	const colormapOptions = Object.keys(COLORMAP_LABELS);
@@ -283,8 +363,8 @@
 										<path
 											d={dPath}
 											fill="none"
-											stroke="#BE796B"
-											stroke-width="1.25"
+											stroke={PAIRS_DENSITY_STROKE}
+											stroke-width={PAIRS_DENSITY_WIDTH}
 											stroke-linejoin="round"
 										/>
 									{/if}
@@ -320,8 +400,8 @@
 										y1={fitLine.y1}
 										x2={fitLine.x2}
 										y2={fitLine.y2}
-										stroke="#BE796B"
-										stroke-width="1.5"
+										stroke={PAIRS_FIT_STROKE}
+										stroke-width={PAIRS_FIT_WIDTH}
 									/>
 								{/if}
 							{:else}
@@ -362,6 +442,18 @@
 					>
 				{/each}
 			</g>
+
+			<Legend
+				figureStyle={plot.viewStyle}
+				legendData={plot.legend}
+				items={plot.getLegendItems}
+				plotWidth={plot.plotwidth}
+				plotHeight={plot.plotheight}
+				padding={plot.padding}
+				autoPlacement={plot.legendLayout.auto}
+				outsidePosition={plot.legendLayout.outsidePosition}
+				which="plot"
+			/>
 		{/if}
 	</svg>
 {/snippet}
@@ -397,6 +489,15 @@
 				<input type="checkbox" bind:checked={theData.showDensity} />
 			</ControlInput>
 		</div>
+
+		<div class="div-line"></div>
+
+		<Legend
+			legendData={theData.legend}
+			figureStyle={theData.parentBox?.style}
+			canPlaceOutside={theData.legendLayout.canPlaceOutside}
+			which="controls"
+		/>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<div class="control-data-add">

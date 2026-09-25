@@ -94,8 +94,13 @@ describe('postNl error reporting (via buildNlSession)', () => {
 	});
 
 	it('still handles an object detail, in case a route forwards the raw provider error', async () => {
-		respond(502, { error: 'LLM error 400', detail: { error: { message: 'context_length_exceeded' } } });
-		await expect(buildNlSession({ prompt: 'x', llm: {} })).rejects.toThrow(/context_length_exceeded/);
+		respond(502, {
+			error: 'LLM error 400',
+			detail: { error: { message: 'context_length_exceeded' } }
+		});
+		await expect(buildNlSession({ prompt: 'x', llm: {} })).rejects.toThrow(
+			/context_length_exceeded/
+		);
 	});
 
 	it('a detail-less error still reports the status rather than "undefined"', async () => {

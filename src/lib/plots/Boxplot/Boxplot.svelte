@@ -9,7 +9,7 @@
 	import { VIOLIN_MIN_N } from '$lib/components/plotbits/helpers/violin.js';
 	import { mean, calculateStandardDeviation } from '$lib/utils/MathsStats.js';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import {
 		getComparisonWarnings,
 		welchTTest,
@@ -451,7 +451,7 @@
 
 		// Get all unique x values across all data series
 		uniqueXValues = $derived.by(() => {
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 			const allXValues = new Set();
 			this.data.forEach((d, i) => {
 				const xData = d.x.getData() ?? [];
@@ -515,7 +515,7 @@
 				if (!d.boxPlot?.draw) return;
 				const xData = d.x.getData() ?? [];
 				const yData = d.y.getData() ?? [];
-				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 				const groups = new Map();
 				if (xData.length > 0) {
 					xData.forEach((cat, j) => {
@@ -747,7 +747,7 @@
 				const label = datum.label || `Data ${d}`;
 				const xData = datum.x.getData() ?? [];
 				const yData = datum.y.getData() ?? [];
-				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 				const groups = new Map();
 				xData.forEach((cat, i) => {
 					const val = yData[i];
@@ -765,7 +765,7 @@
 					});
 				}
 				// Pre-compute stats per category
-				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local per-series stats lookup; it is read back into plain arrays inside this same $derived.by and never in markup
 				const statsMap = new Map();
 				allCategories.forEach((cat) => {
 					const vals = groups.get(cat) ?? [];
@@ -1031,7 +1031,6 @@
 		//console.log($state.snapshot(theData.data));
 	});
 
-	// Custom tick values for x-axis to show actual unique x values
 	function formatCategoryTick(value, categories) {
 		const idx = Math.round(Number(value));
 		if (!Number.isFinite(idx) || idx < 0 || idx >= categories.length) return '';
@@ -1218,7 +1217,7 @@
 					     must be visible without expanding anything. -->
 					{#if theData.violinWarnings.length > 0}
 						<div class="data-warning">
-							{#each theData.violinWarnings as warning, w (w)}
+							{#each theData.violinWarnings as warning, wi (wi)}
 								<p>⚠ {warning}</p>
 							{/each}
 						</div>
@@ -1317,7 +1316,7 @@
 					</div>
 					{#if theData.sigBarWarnings.length > 0}
 						<div class="data-warning">
-							{#each theData.sigBarWarnings as warning, w (w)}
+							{#each theData.sigBarWarnings as warning, wi (wi)}
 								<p>⚠ {warning}</p>
 							{/each}
 						</div>

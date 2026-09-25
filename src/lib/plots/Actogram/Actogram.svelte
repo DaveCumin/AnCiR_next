@@ -17,9 +17,10 @@
 	import Annotation, { AnnotationClass } from './Annotation.svelte';
 
 	import { scaleLinear } from 'd3-scale';
+	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { makeSeqArray, max, min } from '$lib/components/plotbits/helpers/wrangleData';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
@@ -255,18 +256,108 @@
 			return seriesDisplayLabel(this);
 		}
 
+		/**
+		 * This series' own legend entry, or null when the series draws no bars/cells.
+		 *
+		 * The swatch has to match what is DRAWN, and that depends on the plot's
+		 * `renderMode`:
+		 *
+		 *  - 'bars': every bar is filled with `this.colour`, so a solid swatch in
+		 *                that colour is exactly right.
+		 *  - 'heatmap': the series is NOT drawn in `this.colour` at all. Each cell is
+		 *                coloured by the shared colormap from its intensity. A swatch in
+		 *                `this.colour` would name a colour that appears nowhere on the
+		 *                figure, so we use the colormap's MID stop instead, which IS a
+		 *                colour the series is drawn in. It is deliberately the same for
+		 *                every series, because in heatmap mode series genuinely cannot be
+		 *                told apart by colour; the entry's job there is to NAME the
+		 *                series (the colour-scale legend gives the ramp its numbers but
+		 *                no names), not to claim a distinguishing colour it does not have.
+		 */
+		getLegendItem() {
+			if (!this.draw) return null;
+			const heatmap = this.parentPlot?.renderMode === 'heatmap';
+			const swatch = heatmap
+				? colormapRGB(this.parentPlot?.colormap ?? DEFAULT_COLORMAP, 0.5)
+				: this.colour;
+			return {
+				label: this.displayLabel,
+				elements: [{ type: 'boxplot', color: swatch, fillColor: swatch, fillOpacity: 1 }]
+			};
+		}
+
+		/**
+		 * One legend entry per phase-marker block that actually draws something.
+		 *
+		 * NOT gated on `this.draw`: the marker <g> in the plot snippet below sits
+		 * OUTSIDE the `{#if datum.draw}` branch, so hiding a series hides its bars and
+		 * leaves its markers and lines on the figure. The legend must say the same
+		 * thing the figure does.
+		 *
+		 * Light bands are deliberately absent from the legend entirely. A band carries
+		 * only a percentage and a colour (see LightBandClass); it has no name, so
+		 * there is nothing honest to label it with.
+		 */
+		getMarkerLegendItems() {
+			const items = [];
+			this.phaseMarkers.forEach((marker, i) => {
+				const elements = [];
+				// `markersDrawn` / `lineDrawn`, NOT `showMarkers` / `showLine`.
+				//
+				// `showMarkers` is never read by PhaseMarker's renderer at all (and its
+				// constructor's `|| true` pins it true regardless), so keying the swatch
+				// off it put a dot in the legend for every block — including a one-click
+				// line block, which has no markers and draws none. `showLine` is likewise
+				// only half the renderer's gate: the line also needs a fitted slope and a
+				// non-empty day range. Both getters live on PhaseMarkerClass beside the
+				// values they read, and the plot snippet uses `lineDrawn` itself, so the
+				// legend and the figure cannot disagree.
+				if (marker.markersDrawn) {
+					// Drawn as filled circles of radius `markerSize`; capped so a big
+					// on-plot marker cannot overflow the legend's icon column.
+					elements.push({
+						type: 'points',
+						color: marker.colour,
+						shape: 'circle',
+						size: Math.min(6, marker.markerSize ?? 5)
+					});
+				}
+				if (marker.lineDrawn) {
+					elements.push({
+						type: 'line',
+						color: marker.colour,
+						strokeWidth: marker.lineWidth ?? 1
+					});
+				}
+				if (elements.length === 0) return;
+				const name = typeof marker.name === 'string' ? marker.name.trim() : '';
+				items.push({
+					label: name || `${this.displayLabel} marker ${i + 1}`,
+					elements
+				});
+			});
+			return items;
+		}
+
 		addMarker() {
 			this.phaseMarkers.push(new PhaseMarkerClass(this, { type: 'manual' }));
 		}
 
-		// Eye-fit line: starts as a vertical line (slope = periodHrs → no drift) down the
-		// middle of the plot, spanning all days, in this series' colour. The user then
-		// drags/rotates it (or edits τ/θ) to lie along the activity onsets.
+		// One-click line: a marker block with NO markers and both parameters Fixed,
+		// which draws a bare line and nothing else. It starts vertical (slope =
+		// periodHrs → no drift) down the middle of the plot, spanning all days, in
+		// this series' colour; the user then drags/rotates it (or edits τ/θ) to lie
+		// along the activity onsets. Because it is an ordinary manual block it can
+		// also gain clicked markers later and be switched back to Fit, which the old
+		// dedicated `fitline` type could not.
 		addFitLine() {
 			const P = this.parentPlot;
 			this.phaseMarkers.push(
 				new PhaseMarkerClass(this, {
-					type: 'fitline',
+					type: 'manual',
+					manualMarkers: [],
+					lockTau: 'fixed',
+					lockTheta: 'fixed',
 					name: 'fit_' + this.phaseMarkers.length,
 					colour: this.colour,
 					fitSlope: P.periodHrs,
@@ -283,6 +374,9 @@
 			return {
 				x: this.x,
 				y: this.y,
+				// `label` used to be omitted here, so a user-typed series label was lost
+				// on save and the legend/tooltip silently reverted to the column name.
+				label: this.label,
 				colour: this.colour,
 				draw: this.draw,
 				phaseMarkers: this.phaseMarkers
@@ -295,6 +389,10 @@
 				// without it the constructor's port-name fallback would never see them.
 				x: json.x ?? json.time,
 				y: json.y ?? json.values,
+				// `?? ''`: sessions saved before toJSON carried `label` have no key, and
+				// the constructor's own `?? ''` then applies anyway, but being explicit
+				// here keeps the read beside the write.
+				label: json.label ?? '',
 				draw: json.draw,
 				colour: json.colour
 			});
@@ -401,7 +499,54 @@
 			};
 		});
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
-		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		// Width before an outside legend takes its share; see legendAuto.svelte.js.
+		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
+		basePlotHeight = $derived(this.plotheight);
+		plotwidth = $derived(this.basePlotWidth - this.legendLayout.reserveW);
+
+		legendLayout = new LegendAutoLayout(this, {
+			obstacles: (w, h) => this.legendObstacles(w, h),
+			outside: rightOfPlot(() => ({ baseWidth: this.basePlotWidth }))
+		});
+
+		// What a legend must not cover, in px over a w x h plot area: every drawn bar (a
+		// whole row cell in heatmap mode), row by row exactly as the plot snippet lays them
+		// out, and the heatmap's colour-scale bar, which cannot be moved.
+		legendObstacles(w, h) {
+			const N = this.Ndays;
+			if (!(N > 0)) return [];
+			const sb = this.spaceBetween;
+			const rowH = (h - (N - 1) * sb) / N;
+			const span = this.periodHrs * this.doublePlot;
+			const xs = scaleLinear().domain([0, span]).range([0, w]);
+			const rects = [];
+			this.data.forEach((datum, d) => {
+				if (!datum.draw) return;
+				for (let day = 0; day < N; day++) {
+					const bins = getBinsForPeriods(
+						datum.binsByPeriod,
+						day,
+						day + this.doublePlot,
+						this.periodHrs
+					);
+					const top = day * (sb + rowH) + sb;
+					const lims = this.ylims?.[d]?.[day] ?? [0, 1];
+					const ys = scaleLinear().domain([lims[0], lims[1]]).range([rowH, 0]);
+					for (let i = 0; i < bins.xStart.length; i++) {
+						const y = bins.y[i];
+						if (y == null || Number.isNaN(y)) continue;
+						const barTop = this.renderMode === 'heatmap' ? 0 : ys(y);
+						if (!(barTop < rowH)) continue;
+						rects.push([xs(bins.xStart[i]), top + barTop, xs(bins.xEnd[i]), top + rowH]);
+					}
+				}
+			});
+			// The heatmap scale bar at its normal top-right place (see the plot snippet).
+			if (this.renderMode === 'heatmap' && this.data.some((d) => d.draw)) {
+				rects.push([w - 96 - 15, 2, w - 5, 28]);
+			}
+			return [{ rects }];
+		}
 		eachplotheight = $derived.by(() => {
 			return (this.plotheight - (this.Ndays - 1) * this.spaceBetween) / this.Ndays;
 		});
@@ -461,6 +606,7 @@
 		renderMode = $state('bars');
 		colormap = $state(DEFAULT_COLORMAP);
 		lightBands = $state(new LightBandClass(this, { lightBands: [] }));
+		legend = $state();
 		xAxis = $state();
 		Ndays = $derived.by(() => {
 			if (this.data.length === 0) {
@@ -539,8 +685,28 @@
 			})
 		);
 
+		// Series entries first, then that series' phase-marker blocks, so a block reads
+		// directly under the series it belongs to.
+		getLegendItems = $derived.by(() => {
+			const items = [];
+			this.data.forEach((d) => {
+				const item = d.getLegendItem();
+				if (item) items.push(item);
+				items.push(...d.getMarkerLegendItems());
+			});
+			return items;
+		});
+
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			// NOTE: this constructor treats `dataIN` as a SERIES (see addData below), so
+			// it never actually carries a legend; fromJSON sets the real one. The optional
+			// read is here so a future caller that does pass a plot-shaped object is
+			// honoured rather than silently ignored.
+			//
+			// DEFAULT OFF: every saved session already contains actograms, and a legend
+			// that switched itself on at load would silently change a finished figure.
+			this.legend = LegendClass.withDefaults(dataIN?.legend, { show: false });
 			this.xAxis = new AxisClass({
 				label: dataIN?.xAxis?.label ?? '',
 				gridlines: dataIN?.xAxis?.gridlines ?? false,
@@ -605,6 +771,7 @@
 				renderMode: this.renderMode,
 				colormap: this.colormap,
 				lightBands: this.lightBands,
+				legend: this.legend.toJSON(),
 				annotations: this.annotations,
 				xAxis: this.xAxis.toJSON(),
 				data: this.data
@@ -635,6 +802,10 @@
 			// rather than clobbering it with undefined.
 			actogram.renderMode = json.renderMode ?? actogram.renderMode;
 			actogram.colormap = json.colormap ?? actogram.colormap;
+
+			// withDefaults, not fromJSON: an actogram saved before the legend existed has
+			// no `legend` key, and it must come back OFF rather than on the shared default.
+			actogram.legend = LegendClass.withDefaults(json.legend, { show: false });
 
 			actogram.lightBands = LightBandClass.fromJSON(
 				json.lightBands ?? { lightBands: [] },
@@ -677,6 +848,7 @@
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import { bindAltTooltipToggle } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
+	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 
 	let { theData, which } = $props();
 
@@ -724,10 +896,14 @@
 
 	function handleClick(e) {
 		// add markers if selected
-		if (theData.plot.isAddingMarkerTo >= 0) {
-			const [clickedDay, clickedHrs] = getClickedTime(e);
-			theData.plot.addPhaseMarkerTo(theData.plot.isAddingMarkerTo, clickedDay, clickedHrs);
-		}
+		if (theData.plot.isAddingMarkerTo < 0) return;
+		// The click landed in a margin, on an axis or past the last row:
+		// getClickedTime has no day/time to give, so this is a no-op, exactly as
+		// a click with nothing armed is.
+		const at = getClickedTime(e);
+		if (!at) return;
+		const [clickedDay, clickedHrs] = at;
+		theData.plot.addPhaseMarkerTo(theData.plot.isAddingMarkerTo, clickedDay, clickedHrs);
 	}
 
 	function getClickedTime(e) {
@@ -832,6 +1008,15 @@
 				{/if}
 			</div>
 		</div>
+
+		<div class="div-line"></div>
+
+		<Legend
+			legendData={theData.legend}
+			figureStyle={theData.parentBox?.style}
+			canPlaceOutside={theData.legendLayout.canPlaceOutside}
+			which="controls"
+		/>
 
 		<div class="div-line"></div>
 
@@ -987,15 +1172,17 @@
 										className="control-component-title-icon"
 									/>
 								</button>
-								<p>Markers</p>
+								<p>Markers and lines</p>
 							</div>
 
 							<div class="control-component-title-icons">
 								<button
 									class="icon"
-									aria-label="Add fit line"
+									aria-label="Add line"
 									onclick={() => datum.addFitLine()}
-									{@attach attachTooltip('Add a fit line that you can move')}
+									{@attach attachTooltip(
+										'Add line: drag its middle to shift the phase, an end to change the period'
+									)}
 								>
 									<Icon
 										name="linear-fit"
@@ -1006,9 +1193,9 @@
 								</button>
 								<button
 									class="icon"
-									aria-label="Add marker"
+									aria-label="Add markers"
 									onclick={() => datum.addMarker()}
-									{@attach attachTooltip('Add a marker to this series')}
+									{@attach attachTooltip('Add markers: click the plot to place them by hand')}
 								>
 									<Icon
 										name="add"
@@ -1190,15 +1377,46 @@
 			{/each}
 		{/if}
 
-		<!-- Heatmap colour-scale legend (top-right, over the plot with a backdrop so
+		<!-- Series legend. Drawn after the data so it sits ABOVE it, and before the
+		     heatmap colour-scale legend below: that one cannot be moved by the user,
+		     so it must be the one left on top if the two ever overlap. The series legend
+		     ships OFF and defaults to 'auto', which treats the scale bar as an obstacle
+		     (see legendObstacles); an explicit top-right is handled below. -->
+		<Legend
+			figureStyle={theData.plot.viewStyle}
+			legendData={theData.plot.legend}
+			items={theData.plot.getLegendItems}
+			plotWidth={theData.plot.plotwidth}
+			plotHeight={theData.plot.plotheight}
+			padding={theData.plot.padding}
+			autoPlacement={theData.plot.legendLayout.auto}
+			outsidePosition={theData.plot.legendLayout.outsidePosition}
+			which="plot"
+		/>
+
+		<!-- Heatmap colour-scale legend (top corner, over the plot with a backdrop so
 		     the actogram stays self-describing when exported). Uses the first drawn
-		     series' global intensity domain. -->
+		     series' global intensity domain.
+
+		     It normally sits top-RIGHT, and a series legend placed top-right would land
+		     on top of it. The scale bar is the one
+		     the user cannot move, so it is the one that steps aside: while a series
+		     legend is actually drawn in the top-right corner, the scale bar moves to
+		     the top-LEFT instead. Only that one preset is mirrored — `custom` can be
+		     anywhere, and the user placing it by hand can see the bar and go round it.
+		     Gated on the series legend being SHOWN, so no figure saved before it
+		     existed moves. -->
 		{#if theData.plot.renderMode === 'heatmap'}
 			{@const fdi = theData.plot.data.findIndex((d) => d.draw)}
 			{#if fdi >= 0}
 				{@const dom = theData.plot.intensityDomain[fdi] ?? [0, 1]}
 				{@const legW = 96}
-				{@const legX = theData.plot.padding.left + theData.plot.plotwidth - legW - 10}
+				{@const stepAside =
+					theData.plot.legend.show &&
+					theData.plot.legend.position === 'topright' &&
+					theData.plot.getLegendItems.length > 0}
+				{@const legX =
+					theData.plot.padding.left + (stepAside ? 10 : theData.plot.plotwidth - legW - 10)}
 				{@const legY = theData.plot.padding.top + 6}
 				{@const gradId = 'actogram-heat-legend-' + theData.plot.parentBox.id}
 				<defs>

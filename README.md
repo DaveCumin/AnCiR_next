@@ -57,10 +57,10 @@ problem comes straight back.
 
 The software and the handbook are archived separately, so please cite whichever you are actually referring to.
 
-| Work | Licence | DOI |
-| --- | --- | --- |
-| AnCiR (the software) | Apache-2.0 | [10.5281/zenodo.19340642](https://doi.org/10.5281/zenodo.19340642) |
-| A Handbook of Chronobiological Data Analysis | CC BY 4.0 | [10.5281/zenodo.21727169](https://doi.org/10.5281/zenodo.21727169) |
+| Work                                         | Licence    | DOI                                                                |
+| -------------------------------------------- | ---------- | ------------------------------------------------------------------ |
+| AnCiR (the software)                         | Apache-2.0 | [10.5281/zenodo.19340642](https://doi.org/10.5281/zenodo.19340642) |
+| A Handbook of Chronobiological Data Analysis | CC BY 4.0  | [10.5281/zenodo.21727169](https://doi.org/10.5281/zenodo.21727169) |
 
 Both DOIs are concept DOIs: each resolves to the most recent release, and every release also has its own version DOI if you need to pin one. See `CITATION.cff` for machine-readable metadata.
 

@@ -20,45 +20,6 @@ function _transpose(matrix) {
 	return matrix[0].map((_, colIndex) => matrix.map((row) => row[colIndex]));
 }
 
-function _addMatrices(A, B) {
-	return A.map((row, i) => row.map((val, j) => val + B[i][j]));
-}
-
-function _diagonalMatrix(diagonal) {
-	const n = diagonal.length;
-	const result = Array(n)
-		.fill()
-		.map(() => Array(n).fill(0));
-	for (let i = 0; i < n; i++) result[i][i] = diagonal[i];
-	return result;
-}
-
-function _scalarMultiply(matrix, scalar) {
-	return matrix.map((row) => row.map((val) => val * scalar));
-}
-
-function _solveLinearSystem(A, b) {
-	const n = A.length;
-	const augmented = A.map((row, i) => [...row, b[i]]);
-	for (let i = 0; i < n; i++) {
-		let maxRow = i;
-		for (let k = i + 1; k < n; k++)
-			if (Math.abs(augmented[k][i]) > Math.abs(augmented[maxRow][i])) maxRow = k;
-		[augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
-		for (let k = i + 1; k < n; k++) {
-			const factor = augmented[k][i] / augmented[i][i];
-			for (let j = i; j <= n; j++) augmented[k][j] -= factor * augmented[i][j];
-		}
-	}
-	const result = new Array(n);
-	for (let i = n - 1; i >= 0; i--) {
-		result[i] = augmented[i][n];
-		for (let j = i + 1; j < n; j++) result[i] -= augmented[i][j] * result[j];
-		result[i] /= augmented[i][i];
-	}
-	return result;
-}
-
 function _invertMatrix(matrix) {
 	const n = matrix.length;
 	const identity = Array(n)
@@ -259,14 +220,21 @@ export function loess(x, y, bandwidth = 0.3) {
 		const maxDist = neighbors[neighbors.length - 1].dist;
 		const weights = neighbors.map((nb) => _tricubeWeight(nb.dist / (maxDist || 1)));
 
-		let sumW = 0, sumWX = 0, sumWY = 0, sumWXX = 0, sumWXY = 0;
+		let sumW = 0,
+			sumWX = 0,
+			sumWY = 0,
+			sumWXX = 0,
+			sumWXY = 0;
 		for (let j = 0; j < neighbors.length; j++) {
 			const idx = neighbors[j].index;
 			const w = weights[j];
 			const xj = x[idx];
 			const yj = y[idx];
-			sumW += w; sumWX += w * xj; sumWY += w * yj;
-			sumWXX += w * xj * xj; sumWXY += w * xj * yj;
+			sumW += w;
+			sumWX += w * xj;
+			sumWY += w * yj;
+			sumWXX += w * xj * xj;
+			sumWXY += w * xj * yj;
 		}
 
 		const denom = sumW * sumWXX - sumWX * sumWX;
@@ -303,17 +271,29 @@ export function smoothArrays(xVals, yVals, smootherType, options = {}) {
 	let smoothedY;
 	switch (smootherType) {
 		case 'whittaker':
-			smoothedY = whittakerEilers(yVals, options.whittakerLambda ?? 100, options.whittakerOrder ?? 2);
+			smoothedY = whittakerEilers(
+				yVals,
+				options.whittakerLambda ?? 100,
+				options.whittakerOrder ?? 2
+			);
 			break;
 		case 'savitzky':
-			smoothedY = savitzkyGolay(yVals, options.savitzkyWindowSize ?? 5, options.savitzkyPolyOrder ?? 2);
+			smoothedY = savitzkyGolay(
+				yVals,
+				options.savitzkyWindowSize ?? 5,
+				options.savitzkyPolyOrder ?? 2
+			);
 			break;
 		case 'loess':
 			smoothedY = loess(xVals, yVals, options.loessBandwidth ?? 0.3);
 			break;
 		case 'moving':
 		default:
-			smoothedY = movingAverage(yVals, options.movingAvgWindowSize ?? 5, options.movingAvgType ?? 'simple');
+			smoothedY = movingAverage(
+				yVals,
+				options.movingAvgWindowSize ?? 5,
+				options.movingAvgType ?? 'simple'
+			);
 			break;
 	}
 	return { x_out: xVals, y_out: smoothedY };

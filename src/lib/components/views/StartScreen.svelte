@@ -297,6 +297,7 @@
 				<p class="empty-note" data-testid="examples-unavailable">
 					{manifestError}
 					{#if examplesUnavailable}
+						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- HOSTED_URL is an absolute external URL (the hosted app), not a SvelteKit route, so there is nothing for resolve() to resolve -->
 						<a class="browse-link" href={HOSTED_URL} target="_blank" rel="noopener"
 							>Open the hosted version</a
 						>
@@ -326,6 +327,7 @@
 												onclick={() => launchExample(s)}
 												disabled={busyId === s.id}
 											>
+												<!-- eslint-disable-next-line svelte/no-at-html-tags -- thumbnailForWorkflow returns an SVG string built entirely in $lib/start/thumbnails.js from a seeded PRNG; no user or network data reaches it -->
 												<span class="thumb thumb-sm">{@html thumbnailForWorkflow(s.id)}</span>
 												<span class="example-text">
 													<span class="example-name">{displayName(s.name)}</span>

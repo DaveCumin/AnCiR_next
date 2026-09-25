@@ -3,7 +3,13 @@
 	// Modal launched from the navbar Help (?) menu. Lists the available guided
 	// tours (loaded lazily) and starts the chosen one. Shows a ✓ for tours the
 	// user has completed before.
-	import { tourState, closePicker, startTour, loadTourList, completedSet } from '$lib/core/tourRunner.svelte.js';
+	import {
+		tourState,
+		closePicker,
+		startTour,
+		loadTourList,
+		completedSet
+	} from '$lib/core/tourRunner.svelte.js';
 
 	let tours = $state([]);
 	let loading = $state(false);
@@ -72,7 +78,9 @@
 							<div class="tp-item-main">
 								<span class="tp-item-name">
 									{t.name}
-									{#if t.kind === 'lesson'}<span class="tp-badge" title="Hidden lesson (admin)">lesson</span>{/if}
+									{#if t.kind === 'lesson'}<span class="tp-badge" title="Hidden lesson (admin)"
+											>lesson</span
+										>{/if}
 									{#if done.has(t.id)}<span class="tp-done" title="Completed before">✓</span>{/if}
 								</span>
 								<span class="tp-item-desc">{t.description}</span>

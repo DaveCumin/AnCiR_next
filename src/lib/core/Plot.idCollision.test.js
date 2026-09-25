@@ -12,7 +12,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { appConsts, core } from '$lib/core/core.svelte.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
+import { loadPlots } from '$test/plotRegistry.js';
 import { Plot, reservePlotIds } from '$lib/core/Plot.svelte';
 
 beforeEach(async () => {

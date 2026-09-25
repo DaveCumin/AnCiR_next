@@ -1,6 +1,6 @@
 <script module>
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
-	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { core } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import {
@@ -310,7 +310,7 @@
 				</ControlInput>
 			</div>
 			<p class="hint">
-				Grid spans the data range (min→max of X). Step is in X units{' '}
+				Grid spans the data range (min→max of X). Step is in X units
 				{xIN_col?.type === 'time' ? '(hours)' : ''}.
 			</p>
 		{/if}
@@ -325,13 +325,13 @@
 		<table class="interp-preview">
 			<thead>
 				<tr
-					>{#each previewRows.headers as h}<th>{h}</th>{/each}</tr
+					>{#each previewRows.headers as h, i (i)}<th>{h}</th>{/each}</tr
 				>
 			</thead>
 			<tbody>
-				{#each previewRows.rows as row}
+				{#each previewRows.rows as row, r (r)}
 					<tr
-						>{#each row as cell}<td>{cell}</td>{/each}</tr
+						>{#each row as cell, c (c)}<td>{cell}</td>{/each}</tr
 					>
 				{/each}
 			</tbody>
@@ -347,7 +347,7 @@
 			{@const xcol = getColumnById(p.args.out.interpx)}
 			{#if xcol}<ColumnComponent col={xcol} />{/if}
 		{/if}
-		{#each p.args.yIN ?? [] as yId}
+		{#each p.args.yIN ?? [] as yId (yId)}
 			{@const outId = p.args.out?.['interpy_' + yId]}
 			{#if outId >= 0}
 				{@const ycol = getColumnById(outId)}

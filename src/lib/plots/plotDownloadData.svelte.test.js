@@ -72,12 +72,7 @@ describe('calculating-plot getDownloadData contract', () => {
 
 	it('FFT: frequency/period/magnitude rows (no phase column by default)', () => {
 		const { headers, rows } = build(FFTclass).getDownloadData();
-		expect(headers).toEqual([
-			'DataSeries',
-			'Frequency (cycles/hr)',
-			'Period (hours)',
-			'Magnitude'
-		]);
+		expect(headers).toEqual(['DataSeries', 'Frequency (cycles/hr)', 'Period (hours)', 'Magnitude']);
 		expect(rows.length).toBeGreaterThan(0);
 		for (const r of rows) expect(r).toHaveLength(4);
 		// dominant period should be ~24 h for the seeded rhythm

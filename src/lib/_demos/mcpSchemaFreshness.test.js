@@ -7,8 +7,8 @@
 // of staleness fails CI. To fix a failure: run `npm run mcp:schema` (or `npm run build`).
 import { describe, it, expect, beforeAll } from 'vitest';
 import { appConsts } from '$lib/core/core.svelte.js';
-import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
+import { loadTableProcesses } from '$test/tableProcessRegistry.js';
+import { loadPlots } from '$test/plotRegistry.js';
 import generated from '../../../mcp/src/emit/session-schema.generated.json';
 
 beforeAll(async () => {

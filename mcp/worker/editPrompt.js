@@ -57,9 +57,7 @@ const q = (v) => JSON.stringify(v == null ? '' : String(v));
 
 /** Render the open session so the model can refer to it: names, ids, nothing else. */
 export function renderSummary(summary) {
-	const cols = (summary?.columns ?? [])
-		.map((c) => `  ${q(c.name)}  (${q(c.type)})`)
-		.join('\n');
+	const cols = (summary?.columns ?? []).map((c) => `  ${q(c.name)}  (${q(c.type)})`).join('\n');
 	const analyses = (summary?.analyses ?? [])
 		.map((a) => `  #${a.id} ${q(a.name)}  args=${JSON.stringify(a.args ?? {})}`)
 		.join('\n');

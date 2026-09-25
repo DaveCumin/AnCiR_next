@@ -2,14 +2,18 @@
 // Loaded on demand by tourRunner (import.meta.glob). Predicates read live app
 // state so steps that ask the user to DO something auto-advance when done.
 import { core, appState } from '$lib/core/core.svelte.js';
-import { anyPlotStatus, axisHint, anyPlotInPortEl, sourceOutElForAxis } from '$lib/core/tourWiring.js';
+import {
+	anyPlotStatus,
+	axisHint,
+	anyPlotInPortEl,
+	sourceOutElForAxis
+} from '$lib/core/tourWiring.js';
 import { iconHtml } from '$lib/icons/iconRegistry.js';
 
 // Inline icon markup for the "Find on canvas" row button. Tour bodies render via
 // {@html}, so the <Icon> component can't be used here — `iconHtml` pulls the same
 // artwork from the shared icon registry as a string (single source of icons).
 const processIconHtml = iconHtml('process');
-
 
 // --- start screen + import-modal targets -------------------------------------
 // The start screen is an overlay above everything (z-index 1100), so while it is up nothing on
@@ -121,7 +125,8 @@ export const tour = {
 		},
 		{
 			// Highlight the + button, then the palette once it opens.
-			target: () => document.querySelector('.palette-menu') ?? document.querySelector('.np-trigger'),
+			target: () =>
+				document.querySelector('.palette-menu') ?? document.querySelector('.np-trigger'),
 			placement: 'left',
 			title: 'Add an actogram',
 			body: 'Open the <strong>+</strong> menu and pick <strong>“Actogram”</strong> — the classic chronobiology plot. It starts empty; we’ll connect your data to it next.',
@@ -177,7 +182,8 @@ export const tour = {
 		{
 			// Open the Data panel and point at its sections so the user knows where to
 			// find everything later.
-			target: () => document.querySelector('.display-list') ?? document.querySelector('.view-container'),
+			target: () =>
+				document.querySelector('.display-list') ?? document.querySelector('.view-container'),
 			placement: 'right',
 			title: 'Find everything here',
 			body: `This is the <strong>Data</strong> panel. Everything in your session lives here, grouped into <strong>Data</strong> (your columns and sources), <strong>Nodes</strong> (analysis steps) and <strong>Plots</strong>. Click the ${processIconHtml} button on any row to jump to it on the canvas.`,

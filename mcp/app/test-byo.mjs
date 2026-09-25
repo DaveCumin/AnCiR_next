@@ -11,7 +11,13 @@ const MCP = fileURLToPath(new URL('..', import.meta.url));
 const child = spawn(process.execPath, [SERVER], {
 	cwd: MCP,
 	// APP_HOST 127.0.0.1 ⇒ local mode ⇒ SSRF guard permissive (localhost allowed).
-	env: { ...process.env, APP_PORT: String(PORT), APP_HOST: '127.0.0.1', OPENAI_API_KEY: '', OPENAI_BASE_URL: '' },
+	env: {
+		...process.env,
+		APP_PORT: String(PORT),
+		APP_HOST: '127.0.0.1',
+		OPENAI_API_KEY: '',
+		OPENAI_BASE_URL: ''
+	},
 	stdio: ['ignore', 'inherit', 'pipe']
 });
 await new Promise((ok, bad) => {
@@ -27,9 +33,11 @@ await new Promise((ok, bad) => {
 
 const base = `http://127.0.0.1:${PORT}`;
 const post = (body) =>
-	fetch(`${base}/build`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then((r) =>
-		r.json().then((j) => ({ status: r.status, j }))
-	);
+	fetch(`${base}/build`, {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify(body)
+	}).then((r) => r.json().then((j) => ({ status: r.status, j })));
 
 // 1) No llm, no server key → scripted.
 const a = await post({ prompt: 'make a 24h rhythm and fit a cosinor' });
@@ -41,7 +49,12 @@ const b = await post({
 	llm: { baseUrl: 'http://127.0.0.1:9/v1', apiKey: 'byo-key', model: 'user-model' },
 	options: { retries: 0, timeoutMs: 5000 }
 });
-console.log('byo-llm → status', b.status, '| tried caller endpoint:', /127\.0\.0\.1:9|fetch failed|ECONNREFUSED|LLM request failed|LLM HTTP/i.test(JSON.stringify(b.j)));
+console.log(
+	'byo-llm → status',
+	b.status,
+	'| tried caller endpoint:',
+	/127\.0\.0\.1:9|fetch failed|ECONNREFUSED|LLM request failed|LLM HTTP/i.test(JSON.stringify(b.j))
+);
 
 child.kill('SIGINT');
 if (a.j.planner !== 'scripted') throw new Error('expected scripted without llm');
