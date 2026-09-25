@@ -1,0 +1,5 @@
+# Local tooling links and large regenerable outputs
+node_modules/
+# Worked-example inputs contain research datasets and session copies; figures are large and regenerable
+results/worked_example/inputs/
+results/worked_example/figures/

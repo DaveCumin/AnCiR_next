@@ -1,0 +1,4 @@
+# Generated benchmark inputs and bundles (large, reproducible from the scripts)
+.data/
+.cache/
+test-results/

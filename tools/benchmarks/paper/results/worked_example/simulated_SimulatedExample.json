@@ -1,0 +1,942 @@
+{
+ "app": {
+  "plots": [
+   {
+    "name": "Scatterplot with cosinor",
+    "type": "scatterplot",
+    "series": [
+     {
+      "x": 0,
+      "y": 1,
+      "yName": "values_0"
+     },
+     {
+      "x": 85,
+      "y": 35,
+      "yName": "Before cosinor y"
+     },
+     {
+      "x": 86,
+      "y": 37,
+      "yName": "After cosinor y"
+     }
+    ]
+   },
+   {
+    "name": "Actogram",
+    "type": "actogram",
+    "series": [
+     {
+      "x": 0,
+      "y": 1,
+      "yName": "values_0",
+      "binSize": 0.2499815905743741,
+      "markers": [
+       {
+        "type": "manual",
+        "selectedDays": [
+         19,
+         24
+        ],
+        "markers": [
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         11.948201438848912,
+         null,
+         null,
+         null,
+         null,
+         3.3841726618704797
+        ],
+        "regression": {
+         "slope": 22.287194244604326,
+         "intercept": 44.49151079136669,
+         "rSquared": 1,
+         "rmse": 4.0194366942304644e-14
+        }
+       },
+       {
+        "type": "manual",
+        "selectedDays": [
+         1,
+         10
+        ],
+        "markers": [
+         12.776978417266188,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         17.4043165467626
+        ],
+        "regression": {
+         "slope": 24.51414868105515,
+         "intercept": 12.262829736211103,
+         "rSquared": 1,
+         "rmse": 4.521866281009272e-14
+        }
+       }
+      ]
+     },
+     {
+      "x": 0,
+      "y": 83,
+      "yName": "After → Filter",
+      "binSize": 0.2499815905743741,
+      "markers": []
+     },
+     {
+      "x": 0,
+      "y": 84,
+      "yName": "Before → Filter",
+      "binSize": 0.2499815905743741,
+      "markers": []
+     }
+    ],
+    "periodHrs": 24
+   },
+   {
+    "name": "Fourier",
+    "type": "fft",
+    "series": [
+     {
+      "x": 0,
+      "y": 84,
+      "yName": "Before → Filter",
+      "freqStep": 0.0001,
+      "peak": {
+       "frequency": 0.040771484375,
+       "period": 24.526946107784433,
+       "magnitude": 0.6372913708891916
+      },
+      "visiblePeak": {
+       "frequency": 0.040771484375,
+       "period": 24.526946107784433,
+       "magnitude": 0.6372913708891916
+      }
+     },
+     {
+      "x": 0,
+      "y": 83,
+      "yName": "After → Filter",
+      "freqStep": 0.0001,
+      "peak": {
+       "frequency": 0.04498947317203001,
+       "period": 22.22742187213921,
+       "magnitude": 0.6896005628289881
+      },
+      "visiblePeak": {
+       "frequency": 0.04498947317203001,
+       "period": 22.22742187213921,
+       "magnitude": 0.6896005628289881
+      }
+     }
+    ],
+    "xlimsIN": [
+     5,
+     30
+    ]
+   },
+   {
+    "name": "Periodogram",
+    "type": "periodogram",
+    "series": [
+     {
+      "x": 0,
+      "y": 84,
+      "yName": "Before → Filter",
+      "method": "Lomb-Scargle",
+      "binSize": 0.25,
+      "alpha": 0.05,
+      "peak": {
+       "period": 24.51,
+       "power": 315.58887387647945,
+       "pvalue": null
+      },
+      "visiblePeak": {
+       "period": 24.51,
+       "power": 315.58887387647945,
+       "pvalue": null
+      }
+     },
+     {
+      "x": 0,
+      "y": 83,
+      "yName": "After → Filter",
+      "method": "Lomb-Scargle",
+      "binSize": 0.25,
+      "alpha": 0.05,
+      "peak": {
+       "period": 22.26,
+       "power": 333.49412178299553,
+       "pvalue": null
+      },
+      "visiblePeak": {
+       "period": 22.26,
+       "power": 333.49412178299553,
+       "pvalue": null
+      }
+     }
+    ],
+    "periodlimsIN": [
+     1,
+     30
+    ],
+    "periodSteps": 0.25
+   }
+  ],
+  "tableProcesses": [
+   {
+    "id": 6,
+    "name": "Cosinor",
+    "args": {
+     "xIN": 0,
+     "yIN": [
+      83
+     ],
+     "Ncurves": 1,
+     "out": {
+      "cosinorx": 86,
+      "cosinory": 37,
+      "period": 38,
+      "mesor": 39,
+      "amplitude": 40,
+      "acrophase": 41,
+      "rsquared": 42,
+      "pvalue": 43,
+      "perm_pvalue": 44,
+      "bathyphase": 45,
+      "phase_angle": 46,
+      "cosinory_83": 47,
+      "resid_83": 90
+     },
+     "valid": true,
+     "useFixedPeriod": false,
+     "fixedPeriod": 24,
+     "nHarmonics": 1,
+     "alpha": 0.05,
+     "outputX": 0,
+     "minPeriod": 1,
+     "maxPeriod": 48,
+     "referenceHrs": 0,
+     "permuteTest": false,
+     "nPermutations": 999,
+     "permutationSeed": 12345,
+     "permutationStatistic": "rSquared",
+     "forcollected": true,
+     "collectedType": "cosinor",
+     "preProcesses": [],
+     "tableProcesses": [],
+     "_fitHash": "11021false0false99912345rSquared|24|1|0.05|1|1|48"
+    },
+    "outputs": {
+     "period": 22.23457449299918,
+     "mesor": 28.813037215842968,
+     "amplitude": 32.95484421101782,
+     "acrophase": 15.634305101705593,
+     "rsquared": 0.4871895133160363,
+     "pvalue": null,
+     "perm_pvalue": null,
+     "bathyphase": 4.517017855206003,
+     "phase_angle": -6.600269391293587
+    }
+   },
+   {
+    "id": 5,
+    "name": "Cosinor",
+    "args": {
+     "xIN": 0,
+     "yIN": [
+      84
+     ],
+     "Ncurves": 1,
+     "out": {
+      "cosinorx": 85,
+      "cosinory": 35,
+      "period": 49,
+      "mesor": 50,
+      "amplitude": 51,
+      "acrophase": 52,
+      "rsquared": 53,
+      "pvalue": 54,
+      "perm_pvalue": 55,
+      "bathyphase": 56,
+      "phase_angle": 57,
+      "cosinory_84": 91,
+      "resid_84": 92
+     },
+     "valid": true,
+     "useFixedPeriod": true,
+     "fixedPeriod": 24,
+     "nHarmonics": 1,
+     "alpha": 0.05,
+     "outputX": 0,
+     "minPeriod": 1,
+     "maxPeriod": 48,
+     "referenceHrs": 0,
+     "permuteTest": false,
+     "nPermutations": 999,
+     "permutationSeed": 12345,
+     "permutationStatistic": "rSquared",
+     "forcollected": true,
+     "collectedType": "cosinor",
+     "preProcesses": [],
+     "tableProcesses": [],
+     "_fitHash": "11031true0false99912345rSquared|24|1|0.05|1|1|48"
+    },
+    "outputs": {
+     "period": 24,
+     "mesor": 26.683267389359337,
+     "amplitude": 26.388141068815123,
+     "acrophase": 9.46508558046878,
+     "rsquared": 0.33789469675484973,
+     "pvalue": 0,
+     "perm_pvalue": null,
+     "bathyphase": 21.46508558046878,
+     "phase_angle": 9.46508558046878
+    }
+   },
+   {
+    "id": 2,
+    "name": "Duplicate",
+    "args": {
+     "xIN": 1,
+     "out": {
+      "result": 84
+     },
+     "data": [],
+     "valid": true
+    }
+   },
+   {
+    "id": 1,
+    "name": "Duplicate",
+    "args": {
+     "xIN": 1,
+     "out": {
+      "result": 83
+     },
+     "data": [],
+     "valid": true
+    }
+   },
+   {
+    "id": 0,
+    "name": "SimulatedData",
+    "args": {
+     "startTime": 1577836800000,
+     "sections": [
+      {
+       "duration_hours": 343.20000000000005,
+       "rhythmPeriod_hours": 24.5,
+       "rhythmPhase_hours": 0,
+       "rhythmAmplitude": 100,
+       "noiseEnabled": false,
+       "noiseMode": "multiply",
+       "noiseAmplitude": 1
+      },
+      {
+       "duration_hours": 336,
+       "rhythmPeriod_hours": 22.25,
+       "rhythmPhase_hours": 0,
+       "rhythmAmplitude": 100,
+       "noiseEnabled": false,
+       "noiseMode": "multiply",
+       "noiseAmplitude": 1
+      }
+     ],
+     "samplingPeriod_hours": 0.25,
+     "out": {
+      "time": 0,
+      "values": 1
+     },
+     "valid": true,
+     "seed": 12345
+    }
+   }
+  ]
+ },
+ "series": [
+  {
+   "label": "Before",
+   "x": 0,
+   "y": 84,
+   "xName": "time_0",
+   "yName": "Before → Filter",
+   "n": 1344,
+   "tStart_h": 0,
+   "tEnd_h": 335.75,
+   "span_h": 335.75,
+   "medianDt_h": 0.25,
+   "firstTimeISO": "2020-01-01T00:00:00.000Z",
+   "lastTimeISO": "2020-01-14T23:45:00.000Z",
+   "periodograms": [
+    {
+     "tiedPeakRange": [
+      24.51,
+      24.51
+     ],
+     "foldColumns": null,
+     "foldPeriod": null,
+     "method": "Lomb-Scargle",
+     "grid": "1-30 h, step 0.25 h (plot lattice from 0.01)",
+     "binSize": null,
+     "peakPeriod": 24.51,
+     "peakPower": 315.58887387647945,
+     "threshold": null,
+     "pvalue": null,
+     "df": null,
+     "aboveThreshold": null
+    },
+    {
+     "tiedPeakRange": [
+      24.5,
+      24.5
+     ],
+     "foldColumns": 98,
+     "foldPeriod": 24.5,
+     "method": "Chi-squared",
+     "grid": "1-30 h, step 0.25 h (plot lattice from 0.01)",
+     "binSize": 0.25,
+     "peakPeriod": 24.5,
+     "peakPower": 799.7306732778096,
+     "threshold": 151.320442229931,
+     "pvalue": 0,
+     "df": 97,
+     "aboveThreshold": true
+    },
+    {
+     "tiedPeakRange": [
+      24.5,
+      24.5
+     ],
+     "foldColumns": 98,
+     "foldPeriod": 24.5,
+     "method": "Enright",
+     "grid": "1-30 h, step 0.25 h (plot lattice from 0.01)",
+     "binSize": 0.25,
+     "peakPeriod": 24.5,
+     "peakPower": 0.5595213074455049,
+     "threshold": null,
+     "pvalue": null,
+     "df": null,
+     "aboveThreshold": null
+    },
+    {
+     "tiedPeakRange": [
+      24.54,
+      24.54
+     ],
+     "foldColumns": null,
+     "foldPeriod": null,
+     "method": "Lomb-Scargle",
+     "grid": "1-30 h, step 0.01 h",
+     "binSize": null,
+     "peakPeriod": 24.54,
+     "peakPower": 315.90299136384544,
+     "threshold": null,
+     "pvalue": null,
+     "df": null,
+     "aboveThreshold": null
+    },
+    {
+     "tiedPeakRange": [
+      24.5,
+      24.5
+     ],
+     "foldColumns": 98,
+     "foldPeriod": 24.5,
+     "method": "Chi-squared",
+     "grid": "1-30 h, step 0.01 h",
+     "binSize": 0.25,
+     "peakPeriod": 24.5,
+     "peakPower": 799.7306732778096,
+     "threshold": 150.14754522834622,
+     "pvalue": 0,
+     "df": 97,
+     "aboveThreshold": true
+    },
+    {
+     "tiedPeakRange": [
+      24.5,
+      24.5
+     ],
+     "foldColumns": 98,
+     "foldPeriod": 24.5,
+     "method": "Enright",
+     "grid": "1-30 h, step 0.01 h",
+     "binSize": 0.25,
+     "peakPeriod": 24.5,
+     "peakPower": 0.5595213074455049,
+     "threshold": null,
+     "pvalue": null,
+     "df": null,
+     "aboveThreshold": null
+    }
+   ],
+   "fft": {
+    "freqStep": 0.0001,
+    "nFreq": 32767,
+    "freqResolution": 0.00006103515625,
+    "peakPeriodInRange": 24.526946107784433,
+    "peakFrequency": 0.040771484375,
+    "peakMagnitude": 0.6372913708891916,
+    "neighbourPeriods": [
+     24.563718140929534,
+     24.490284005979074
+    ],
+    "overallPeakPeriod": 24.526946107784433
+   },
+   "cosinor": {
+    "freePeriod": 24.541278493123084,
+    "amplitude": 31.211215741184095,
+    "mesor": 26.19167193294806,
+    "rSquared": 0.470678188158158,
+    "rmse": 23.35409307402648,
+    "fixedAtFreePeriod": {
+     "R2": 0.47067818815815654,
+     "F": 596.2152288074222,
+     "pF": 0,
+     "amplitude": 31.211215741131884,
+     "keys": [
+      "M",
+      "SE_M",
+      "CI_M",
+      "harmonics",
+      "F_stat",
+      "df",
+      "pF",
+      "R2",
+      "RMSE",
+      "fitted",
+      "n",
+      "period",
+      "nHarmonics",
+      "alpha"
+     ]
+    }
+   }
+  },
+  {
+   "label": "After",
+   "x": 0,
+   "y": 83,
+   "xName": "time_0",
+   "yName": "After → Filter",
+   "n": 1372,
+   "tStart_h": 336.25,
+   "tEnd_h": 678.95,
+   "span_h": 342.70000000000005,
+   "medianDt_h": 0.25,
+   "firstTimeISO": "2020-01-15T00:15:00.000Z",
+   "lastTimeISO": "2020-01-29T06:57:00.000Z",
+   "periodograms": [
+    {
+     "tiedPeakRange": [
+      22.26,
+      22.26
+     ],
+     "foldColumns": null,
+     "foldPeriod": null,
+     "method": "Lomb-Scargle",
+     "grid": "1-30 h, step 0.25 h (plot lattice from 0.01)",
+     "binSize": null,
+     "peakPeriod": 22.26,
+     "peakPower": 333.49412178299553,
+     "threshold": null,
+     "pvalue": null,
+     "df": null,
+     "aboveThreshold": null
+    },
+    {
+     "tiedPeakRange": [
+      22.25,
+      22.25
+     ],
+     "foldColumns": 89,
+     "foldPeriod": 22.25,
+     "method": "Chi-squared",
+     "grid": "1-30 h, step 0.25 h (plot lattice from 0.01)",
+     "binSize": 0.25,
+     "peakPeriod": 22.25,
+     "peakPower": 867.9900970672356,
+     "threshold": 140.08027629833367,
+     "pvalue": 0,
+     "df": 88,
+     "aboveThreshold": true
+    },
+    {
+     "tiedPeakRange": [
+      22.25,
+      22.25
+     ],
+     "foldColumns": 89,
+     "foldPeriod": 22.25,
+     "method": "Enright",
+     "grid": "1-30 h, step 0.25 h (plot lattice from 0.01)",
+     "binSize": 0.25,
+     "peakPeriod": 22.25,
+     "peakPower": 0.18234608100109795,
+     "threshold": null,
+     "pvalue": null,
+     "df": null,
+     "aboveThreshold": null
+    },
+    {
+     "tiedPeakRange": [
+      22.23,
+      22.23
+     ],
+     "foldColumns": null,
+     "foldPeriod": null,
+     "method": "Lomb-Scargle",
+     "grid": "1-30 h, step 0.01 h",
+     "binSize": null,
+     "peakPeriod": 22.23,
+     "peakPower": 333.82390179527494,
+     "threshold": null,
+     "pvalue": null,
+     "df": null,
+     "aboveThreshold": null
+    },
+    {
+     "tiedPeakRange": [
+      22.25,
+      22.25
+     ],
+     "foldColumns": 89,
+     "foldPeriod": 22.25,
+     "method": "Chi-squared",
+     "grid": "1-30 h, step 0.01 h",
+     "binSize": 0.25,
+     "peakPeriod": 22.25,
+     "peakPower": 867.9900970672356,
+     "threshold": 138.9485934327902,
+     "pvalue": 0,
+     "df": 88,
+     "aboveThreshold": true
+    },
+    {
+     "tiedPeakRange": [
+      22.25,
+      22.25
+     ],
+     "foldColumns": 89,
+     "foldPeriod": 22.25,
+     "method": "Enright",
+     "grid": "1-30 h, step 0.01 h",
+     "binSize": 0.25,
+     "peakPeriod": 22.25,
+     "peakPower": 0.18234608100109795,
+     "threshold": null,
+     "pvalue": null,
+     "df": null,
+     "aboveThreshold": null
+    }
+   ],
+   "fft": {
+    "freqStep": 0.0001,
+    "nFreq": 32767,
+    "freqResolution": 0.00006104406129176392,
+    "peakPeriodInRange": 22.22742187213921,
+    "peakFrequency": 0.04498947317203001,
+    "peakMagnitude": 0.6896005628289881,
+    "neighbourPeriods": [
+     22.25762217359592,
+     22.19730341431788
+    ],
+    "overallPeakPeriod": 22.22742187213921
+   },
+   "cosinor": {
+    "freePeriod": 22.23457449299918,
+    "amplitude": 32.95484421101782,
+    "mesor": 28.813037215842968,
+    "rSquared": 0.4871895133160363,
+    "rmse": 23.900224570485083,
+    "fixedAtFreePeriod": {
+     "R2": 0.48718951331603644,
+     "F": 650.3010966512193,
+     "pF": 0,
+     "amplitude": 32.95484421164281,
+     "keys": [
+      "M",
+      "SE_M",
+      "CI_M",
+      "harmonics",
+      "F_stat",
+      "df",
+      "pF",
+      "R2",
+      "RMSE",
+      "fitted",
+      "n",
+      "period",
+      "nHarmonics",
+      "alpha"
+     ]
+    }
+   }
+  }
+ ],
+ "actogramOnset": [
+  {
+   "label": "Before series",
+   "plot": "Actogram",
+   "series": 2,
+   "yName": "Before → Filter",
+   "periodHrs": 24,
+   "binSize": 0.2499815905743741,
+   "centileThreshold": 50,
+   "templateHrsBefore": 3,
+   "templateHrsAfter": 3,
+   "markers": [
+    0.5,
+    1,
+    1.5,
+    2,
+    2.5,
+    3,
+    3.5,
+    3.5,
+    4.5,
+    4.5,
+    5,
+    6,
+    6,
+    6.5
+   ],
+   "fits": [
+    {
+     "label": "all days with data",
+     "daysUsed": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+     ],
+     "regression": {
+      "slope": 24.5,
+      "intercept": -0.5,
+      "rSquared": 1,
+      "rmse": 0
+     }
+    }
+   ]
+  },
+  {
+   "label": "After series",
+   "plot": "Actogram",
+   "series": 1,
+   "yName": "After → Filter",
+   "periodHrs": 24,
+   "binSize": 0.2499815905743741,
+   "centileThreshold": 50,
+   "templateHrsBefore": 3,
+   "templateHrsAfter": 3,
+   "markers": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    7,
+    5.449999999999989,
+    3.6999999999999886,
+    0.9499999999999886,
+    20.69999999999999,
+    18.94999999999999,
+    18.94999999999999,
+    17.200000000000045,
+    15.450000000000045,
+    13.700000000000045,
+    11.950000000000045,
+    10.200000000000045,
+    8.450000000000045,
+    6.7000000000000455,
+    3.7000000000000455
+   ],
+   "fits": [
+    {
+     "label": "all days with data",
+     "daysUsed": [
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29
+     ],
+     "regression": {
+      "slope": 22.217258064516216,
+      "intercept": 34.15306451612709,
+      "rSquared": 0.9999882520497191,
+      "rmse": 0.35833636979386957
+     }
+    }
+   ]
+  }
+ ],
+ "summary": {
+  "Before": {
+   "n": 1344,
+   "span_h": 335.75,
+   "cosinorFree": 24.541278493123084,
+   "cosinorP": 0,
+   "fft": 24.526946107784433,
+   "pgrams": [
+    "Lomb-Scargle [1-30 h, step 0.25 h (plot lattice from 0.01)] 24.510 tie[24.51,24.51] p=null thr=undefined pow=315.6",
+    "Chi-squared [1-30 h, step 0.25 h (plot lattice from 0.01), bin 0.25] 24.500 tie[24.50,24.50] fold=24.500 p=0 thr=151.3 pow=799.7",
+    "Enright [1-30 h, step 0.25 h (plot lattice from 0.01), bin 0.25] 24.500 tie[24.50,24.50] fold=24.500 p=null thr=undefined pow=0.6",
+    "Lomb-Scargle [1-30 h, step 0.01 h] 24.540 tie[24.54,24.54] p=null thr=undefined pow=315.9",
+    "Chi-squared [1-30 h, step 0.01 h, bin 0.25] 24.500 tie[24.50,24.50] fold=24.500 p=0 thr=150.1 pow=799.7",
+    "Enright [1-30 h, step 0.01 h, bin 0.25] 24.500 tie[24.50,24.50] fold=24.500 p=null thr=undefined pow=0.6"
+   ]
+  },
+  "After": {
+   "n": 1372,
+   "span_h": 342.7,
+   "cosinorFree": 22.23457449299918,
+   "cosinorP": 0,
+   "fft": 22.22742187213921,
+   "pgrams": [
+    "Lomb-Scargle [1-30 h, step 0.25 h (plot lattice from 0.01)] 22.260 tie[22.26,22.26] p=null thr=undefined pow=333.5",
+    "Chi-squared [1-30 h, step 0.25 h (plot lattice from 0.01), bin 0.25] 22.250 tie[22.25,22.25] fold=22.250 p=0 thr=140.1 pow=868.0",
+    "Enright [1-30 h, step 0.25 h (plot lattice from 0.01), bin 0.25] 22.250 tie[22.25,22.25] fold=22.250 p=null thr=undefined pow=0.2",
+    "Lomb-Scargle [1-30 h, step 0.01 h] 22.230 tie[22.23,22.23] p=null thr=undefined pow=333.8",
+    "Chi-squared [1-30 h, step 0.01 h, bin 0.25] 22.250 tie[22.25,22.25] fold=22.250 p=0 thr=138.9 pow=868.0",
+    "Enright [1-30 h, step 0.01 h, bin 0.25] 22.250 tie[22.25,22.25] fold=22.250 p=null thr=undefined pow=0.2"
+   ]
+  },
+  "onset:Before series": [
+   "all days with data: slope 24.5 R2 1 n 14",
+   "[0.5,1,1.5,2,2.5,3,3.5,3.5,4.5,4.5,5,6,6,6.5]"
+  ],
+  "onset:After series": [
+   "all days with data: slope 22.217258064516216 R2 0.9999882520497191 n 15",
+   "[null,null,null,null,null,null,null,null,null,null,null,null,null,null,7,5.45,3.7,0.95,20.7,18.95,18.95,17.2,15.45,13.7,11.95,10.2,8.45,6.7,3.7]"
+  ],
+  "app": [
+   "Scatterplot with cosinor: \"\" | \"\" | \"\"",
+   "Actogram: [22.287194244604326,24.51414868105515] | [] | []",
+   "Fourier: {\"frequency\":0.040771484375,\"period\":24.526946107784433,\"magnitude\":0.6372913708891916} | {\"frequency\":0.04498947317203001,\"period\":22.22742187213921,\"magnitude\":0.6896005628289881}",
+   "Periodogram: {\"period\":24.51,\"power\":315.58887387647945,\"pvalue\":null} | {\"period\":22.26,\"power\":333.49412178299553,\"pvalue\":null}"
+  ]
+ },
+ "config": {
+  "name": "simulated_SimulatedExample",
+  "session": "/Users/dcum007/Documents/Circadian/RACiR/Paper/Archive/SimulatedExample.json",
+  "series": [
+   {
+    "label": "Before",
+    "x": 0,
+    "y": 84,
+    "range": [
+     1,
+     30
+    ],
+    "grids": [
+     {
+      "step": 0.25,
+      "binSize": 0.25,
+      "appCalcRange": true
+     },
+     {
+      "step": 0.01,
+      "binSize": 0.25
+     }
+    ]
+   },
+   {
+    "label": "After",
+    "x": 0,
+    "y": 83,
+    "range": [
+     1,
+     30
+    ],
+    "grids": [
+     {
+      "step": 0.25,
+      "binSize": 0.25,
+      "appCalcRange": true
+     },
+     {
+      "step": 0.01,
+      "binSize": 0.25
+     }
+    ]
+   }
+  ],
+  "actogram": [
+   {
+    "label": "Before series",
+    "plot": "Actogram",
+    "series": 2,
+    "daySets": [
+     {
+      "label": "all days with data"
+     }
+    ]
+   },
+   {
+    "label": "After series",
+    "plot": "Actogram",
+    "series": 1,
+    "daySets": [
+     {
+      "label": "all days with data"
+     }
+    ]
+   }
+  ]
+ },
+ "appVersion": "AnCiR β.75.2: Circadian Rhythm and Time-Series Data Analysis"
+}

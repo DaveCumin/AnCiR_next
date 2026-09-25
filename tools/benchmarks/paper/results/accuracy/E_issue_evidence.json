@@ -1,0 +1,170 @@
+{
+ "plateau": [
+  {
+   "method": "Chi-squared",
+   "dt": 1,
+   "binSize": 1,
+   "step": 0.05,
+   "true_tau": 24,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Enright",
+   "dt": 1,
+   "binSize": 1,
+   "step": 0.05,
+   "true_tau": 24,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Chi-squared",
+   "dt": 1,
+   "binSize": 1,
+   "step": 0.1,
+   "true_tau": 24,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Enright",
+   "dt": 1,
+   "binSize": 1,
+   "step": 0.1,
+   "true_tau": 24,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Chi-squared",
+   "dt": 1,
+   "binSize": 1,
+   "step": 0.25,
+   "true_tau": 24,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Enright",
+   "dt": 1,
+   "binSize": 1,
+   "step": 0.25,
+   "true_tau": 24,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Chi-squared",
+   "dt": 0.25,
+   "binSize": 0.25,
+   "step": 0.05,
+   "true_tau": 24,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Enright",
+   "dt": 0.25,
+   "binSize": 0.25,
+   "step": 0.05,
+   "true_tau": 24,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Chi-squared",
+   "dt": 0.25,
+   "binSize": 1,
+   "step": 0.05,
+   "true_tau": 24,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Enright",
+   "dt": 0.25,
+   "binSize": 1,
+   "step": 0.05,
+   "true_tau": 24,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Chi-squared",
+   "dt": 1,
+   "binSize": 1,
+   "step": 0.05,
+   "true_tau": 24.3,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  },
+  {
+   "method": "Enright",
+   "dt": 1,
+   "binSize": 1,
+   "step": 0.05,
+   "true_tau": 24.3,
+   "days": 14,
+   "noise": "none",
+   "reported_peak": 24,
+   "tied_min": 24,
+   "tied_max": 24,
+   "n_tied": 1
+  }
+ ],
+ "acrophase": {
+  "true_peak_time_h": 6,
+  "fitCosinorFixed_acrophase_hrs": 5.999999999999996,
+  "CI_acrophase": [
+   5.999999999999995,
+   5.9999999999999964
+  ],
+  "cosinor_node_port_value_wrap_minus_acrophase_hrs": 18.000000000000004,
+  "note": "Cosinor.svelte: port `acrophase` = wrap(-acrophase_hrs) (line ~403); panel text \"H1 Acrophase\" (line ~1161) and CSV column H1_acrophase_hrs (line ~839/864) print acrophase_hrs unconverted."
+ }
+}

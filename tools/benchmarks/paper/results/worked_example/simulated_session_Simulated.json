@@ -1,0 +1,439 @@
+{
+ "app": {
+  "plots": [
+   {
+    "name": "Scatterplot with cosinor",
+    "type": "scatterplot",
+    "series": [
+     {
+      "x": 0,
+      "y": 1,
+      "yName": "values_0"
+     },
+     {
+      "x": 34,
+      "y": 35,
+      "yName": "Before cosinor y"
+     },
+     {
+      "x": 36,
+      "y": 37,
+      "yName": "After cosinor y"
+     }
+    ]
+   },
+   {
+    "name": "Actogram",
+    "type": "actogram",
+    "series": [
+     {
+      "x": 0,
+      "y": 1,
+      "yName": "values_0",
+      "binSize": 0.2499815905743741,
+      "markers": [
+       {
+        "type": "manual",
+        "selectedDays": [
+         19,
+         24
+        ],
+        "markers": [
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         11.948201438848912,
+         null,
+         null,
+         null,
+         null,
+         3.3841726618704797
+        ],
+        "regression": {
+         "slope": 22.287194244604326,
+         "intercept": 44.49151079136669,
+         "rSquared": 1,
+         "rmse": 4.0194366942304644e-14
+        }
+       },
+       {
+        "type": "manual",
+        "selectedDays": [
+         1,
+         10
+        ],
+        "markers": [
+         12.776978417266188,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         null,
+         17.4043165467626
+        ],
+        "regression": {
+         "slope": 24.51414868105515,
+         "intercept": 12.262829736211103,
+         "rSquared": 1,
+         "rmse": 4.521866281009272e-14
+        }
+       }
+      ]
+     },
+     {
+      "x": 0,
+      "y": 90,
+      "yName": "After → Filter",
+      "binSize": 0.2499815905743741,
+      "markers": []
+     },
+     {
+      "x": 0,
+      "y": 91,
+      "yName": "Before → Filter",
+      "binSize": 0.2499815905743741,
+      "markers": []
+     }
+    ],
+    "periodHrs": 24
+   },
+   {
+    "name": "Fourier",
+    "type": "fft",
+    "series": [
+     {
+      "x": 0,
+      "y": 91,
+      "yName": "Before → Filter",
+      "freqStep": 0.0001,
+      "peak": {
+       "frequency": 0.040771484375,
+       "period": 24.526946107784433,
+       "magnitude": 0.6372913708891916
+      },
+      "visiblePeak": {
+       "frequency": 0.040771484375,
+       "period": 24.526946107784433,
+       "magnitude": 0.6372913708891916
+      }
+     },
+     {
+      "x": 0,
+      "y": 90,
+      "yName": "After → Filter",
+      "freqStep": 0.0001,
+      "peak": {
+       "frequency": 0.04498947317203001,
+       "period": 22.22742187213921,
+       "magnitude": 0.6896005628289881
+      },
+      "visiblePeak": {
+       "frequency": 0.04498947317203001,
+       "period": 22.22742187213921,
+       "magnitude": 0.6896005628289881
+      }
+     }
+    ],
+    "xlimsIN": [
+     5,
+     30
+    ]
+   },
+   {
+    "name": "Fourier-closeup",
+    "type": "fft",
+    "series": [
+     {
+      "x": 0,
+      "y": 91,
+      "yName": "Before → Filter",
+      "freqStep": 0.0001,
+      "peak": {
+       "frequency": 0.040771484375,
+       "period": 24.526946107784433,
+       "magnitude": 0.6372913708891916
+      },
+      "visiblePeak": {
+       "frequency": 0.040771484375,
+       "period": 24.526946107784433,
+       "magnitude": 0.6372913708891916
+      }
+     },
+     {
+      "x": 0,
+      "y": 90,
+      "yName": "After → Filter",
+      "freqStep": 0.0001,
+      "peak": {
+       "frequency": 0.04498947317203001,
+       "period": 22.22742187213921,
+       "magnitude": 0.6896005628289881
+      },
+      "visiblePeak": {
+       "frequency": 0.04498947317203001,
+       "period": 22.22742187213921,
+       "magnitude": 0.6896005628289881
+      }
+     }
+    ],
+    "xlimsIN": [
+     22,
+     25
+    ]
+   },
+   {
+    "name": "Periodogram",
+    "type": "periodogram",
+    "series": [
+     {
+      "x": 0,
+      "y": 91,
+      "yName": "Before → Filter",
+      "method": "Lomb-Scargle",
+      "binSize": 0.25,
+      "alpha": 0.05,
+      "peak": {
+       "period": 24.540000000000003,
+       "power": 315.90299136384556,
+       "pvalue": null
+      },
+      "visiblePeak": {
+       "period": 24.540000000000003,
+       "power": 315.90299136384556,
+       "pvalue": null
+      }
+     },
+     {
+      "x": 0,
+      "y": 90,
+      "yName": "After → Filter",
+      "method": "Lomb-Scargle",
+      "binSize": 0.25,
+      "alpha": 0.05,
+      "peak": {
+       "period": 22.23,
+       "power": 333.82390179527494,
+       "pvalue": null
+      },
+      "visiblePeak": {
+       "period": 22.23,
+       "power": 333.82390179527494,
+       "pvalue": null
+      }
+     }
+    ],
+    "periodlimsIN": [
+     1,
+     30
+    ],
+    "periodSteps": 0.01
+   }
+  ],
+  "tableProcesses": [
+   {
+    "id": 6,
+    "name": "Cosinor",
+    "args": {
+     "xIN": 0,
+     "yIN": [
+      90
+     ],
+     "Ncurves": 1,
+     "out": {
+      "cosinorx": 36,
+      "cosinory": 37,
+      "period": 38,
+      "mesor": 39,
+      "amplitude": 40,
+      "acrophase": 41,
+      "rsquared": 42,
+      "pvalue": 43,
+      "perm_pvalue": 44,
+      "bathyphase": 45,
+      "phase_angle": 46,
+      "cosinory_90": 47,
+      "resid_90": 95
+     },
+     "valid": true,
+     "outputX": -1,
+     "useFixedPeriod": false,
+     "fixedPeriod": 24,
+     "minPeriod": 1,
+     "maxPeriod": 48,
+     "nHarmonics": 1,
+     "alpha": 0.05,
+     "referenceHrs": 0,
+     "permuteTest": false,
+     "nPermutations": 999,
+     "permutationSeed": 12345,
+     "permutationStatistic": "rSquared",
+     "forcollected": true,
+     "collectedType": "cosinor",
+     "preProcesses": [],
+     "tableProcesses": [],
+     "_fitHash": "1128undefinedfalse0false99912345rSquared|24|1|0.05|1|1|48"
+    },
+    "outputs": {
+     "period": 22.23457449299918,
+     "mesor": 28.813037215842968,
+     "amplitude": 32.95484421101782,
+     "acrophase": 15.634305101705593,
+     "rsquared": 0.4871895133160363,
+     "pvalue": null,
+     "perm_pvalue": null,
+     "bathyphase": 4.517017855206003,
+     "phase_angle": -6.600269391293587
+    }
+   },
+   {
+    "id": 5,
+    "name": "Cosinor",
+    "args": {
+     "xIN": 0,
+     "yIN": [
+      91
+     ],
+     "Ncurves": 1,
+     "out": {
+      "cosinorx": 34,
+      "cosinory": 35,
+      "period": 49,
+      "mesor": 50,
+      "amplitude": 51,
+      "acrophase": 52,
+      "rsquared": 53,
+      "pvalue": 54,
+      "perm_pvalue": 55,
+      "bathyphase": 56,
+      "phase_angle": 57,
+      "cosinory_91": 96,
+      "resid_91": 97
+     },
+     "valid": true,
+     "outputX": -1,
+     "useFixedPeriod": false,
+     "fixedPeriod": 24,
+     "minPeriod": 1,
+     "maxPeriod": 48,
+     "nHarmonics": 1,
+     "alpha": 0.05,
+     "referenceHrs": 0,
+     "permuteTest": false,
+     "nPermutations": 999,
+     "permutationSeed": 12345,
+     "permutationStatistic": "rSquared",
+     "forcollected": true,
+     "collectedType": "cosinor",
+     "preProcesses": [],
+     "tableProcesses": [],
+     "_fitHash": "1129undefinedfalse0false99912345rSquared|24|1|0.05|1|1|48"
+    },
+    "outputs": {
+     "period": 24.541278493123084,
+     "mesor": 26.19167193294806,
+     "amplitude": 31.211215741184095,
+     "acrophase": 5.9840991441347064,
+     "rsquared": 0.470678188158158,
+     "pvalue": null,
+     "perm_pvalue": null,
+     "bathyphase": 18.25473839069625,
+     "phase_angle": 5.9840991441347064
+    }
+   },
+   {
+    "id": 2,
+    "name": "Duplicate",
+    "args": {
+     "xIN": 1,
+     "out": {
+      "result": 91
+     },
+     "data": [],
+     "valid": true
+    }
+   },
+   {
+    "id": 1,
+    "name": "Duplicate",
+    "args": {
+     "xIN": 1,
+     "out": {
+      "result": 90
+     },
+     "data": [],
+     "valid": true
+    }
+   },
+   {
+    "id": 0,
+    "name": "SimulatedData",
+    "args": {
+     "startTime": 1577836800000,
+     "sections": [
+      {
+       "duration_hours": 343.20000000000005,
+       "rhythmPeriod_hours": 24.5,
+       "rhythmPhase_hours": 0,
+       "rhythmAmplitude": 100,
+       "noiseEnabled": false,
+       "noiseMode": "multiply",
+       "noiseAmplitude": 1
+      },
+      {
+       "duration_hours": 336,
+       "rhythmPeriod_hours": 22.25,
+       "rhythmPhase_hours": 0,
+       "rhythmAmplitude": 100,
+       "noiseEnabled": false,
+       "noiseMode": "multiply",
+       "noiseAmplitude": 1
+      }
+     ],
+     "samplingPeriod_hours": 0.25,
+     "out": {
+      "time": 0,
+      "values": 1
+     },
+     "valid": true,
+     "seed": 12345
+    }
+   }
+  ]
+ },
+ "series": [],
+ "actogramOnset": [],
+ "summary": {
+  "app": [
+   "Scatterplot with cosinor: \"\" | \"\" | \"\"",
+   "Actogram: [22.287194244604326,24.51414868105515] | [] | []",
+   "Fourier: {\"frequency\":0.040771484375,\"period\":24.526946107784433,\"magnitude\":0.6372913708891916} | {\"frequency\":0.04498947317203001,\"period\":22.22742187213921,\"magnitude\":0.6896005628289881}",
+   "Fourier-closeup: {\"frequency\":0.040771484375,\"period\":24.526946107784433,\"magnitude\":0.6372913708891916} | {\"frequency\":0.04498947317203001,\"period\":22.22742187213921,\"magnitude\":0.6896005628289881}",
+   "Periodogram: {\"period\":24.540000000000003,\"power\":315.90299136384556,\"pvalue\":null} | {\"period\":22.23,\"power\":333.82390179527494,\"pvalue\":null}"
+  ]
+ },
+ "config": {
+  "name": "simulated_session_Simulated",
+  "session": "/Users/dcum007/Documents/Circadian/RACiR/Paper/Archive/session_Simulated.json",
+  "series": [],
+  "actogram": []
+ },
+ "appVersion": "AnCiR β.75.2: Circadian Rhythm and Time-Series Data Analysis"
+}

@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "date": "2026-09-25T00:05:38.591Z",
+    "chromium": "147.0.7727.15",
+    "playwright": "1.59.1",
+    "node": "v24.12.0",
+    "cpu": "Apple M3",
+    "totalmem_gb": 16,
+    "base": "http://localhost:4395",
+    "quiet_ms": 1500
+  },
+  "results": [
+    {
+      "case": "actogram",
+      "N": 2000000,
+      "rep": 0,
+      "file_mb": 34.3,
+      "first_node_ms": 15373,
+      "file_to_settled_ms": 16068,
+      "longtasks": {
+        "count": 6,
+        "max_ms": 13040,
+        "tbt_ms": 15187
+      },
+      "heap_peak_sampled_mb": 3578,
+      "heap_settled_mb": 3578,
+      "svg_marks": 38,
+      "rows_total_text": "2000000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period -> 24.5",
+      "update_to_settled_ms": 11403,
+      "update_longtasks": {
+        "count": 2,
+        "max_ms": 10903,
+        "tbt_ms": 11258
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 34.3,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "periodogram",
+      "N": 2000000,
+      "rep": 0,
+      "file_mb": 34.3,
+      "first_node_ms": 1730,
+      "file_to_settled_ms": 13905,
+      "longtasks": {
+        "count": 3,
+        "max_ms": 1327,
+        "tbt_ms": 1369
+      },
+      "heap_peak_sampled_mb": 125,
+      "heap_settled_mb": 71,
+      "svg_marks": 41,
+      "rows_total_text": "2000000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period Step -> 0.2",
+      "update_to_settled_ms": 15046,
+      "update_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 35,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    }
+  ]
+}

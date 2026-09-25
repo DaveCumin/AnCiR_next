@@ -1,0 +1,5 @@
+# Python reference stack used for Study C (installed into tools/.venv)
+numpy==2.4.6
+scipy==1.18.0
+astropy==8.0.1
+statsmodels==0.14.6
