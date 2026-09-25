@@ -1,6 +1,6 @@
 {
   "meta": {
-    "date": "2026-09-24T23:54:46.068Z",
+    "date": "2026-09-25T18:53:02.655Z",
     "chromium": "147.0.7727.15",
     "playwright": "1.59.1",
     "node": "v24.12.0",
@@ -15,7 +15,7 @@
       "N": 10000,
       "rep": 0,
       "file_mb": 0.3,
-      "preview_ms": 82,
+      "preview_ms": 112,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -23,20 +23,20 @@
       },
       "binning_offered": false,
       "binned": false,
-      "confirm_to_node_visible_ms": 1065,
-      "confirm_to_settled_ms": 1145,
-      "total_file_to_settled_ms": 1229,
+      "confirm_to_node_visible_ms": 1129,
+      "confirm_to_settled_ms": 1210,
+      "total_file_to_settled_ms": 1324,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 293,
-        "tbt_ms": 449
+        "max_ms": 296,
+        "tbt_ms": 462
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 24,
-      "heap_settled_mb": 21,
+      "heap_peak_sampled_mb": 23,
+      "heap_settled_mb": 23,
       "ok": true,
       "crashed": false,
-      "wall_s": 3.6,
+      "wall_s": 3.7,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -46,7 +46,7 @@
       "N": 10000,
       "rep": 1,
       "file_mb": 0.3,
-      "preview_ms": 80,
+      "preview_ms": 86,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -54,16 +54,16 @@
       },
       "binning_offered": false,
       "binned": false,
-      "confirm_to_node_visible_ms": 1101,
-      "confirm_to_settled_ms": 1186,
-      "total_file_to_settled_ms": 1268,
+      "confirm_to_node_visible_ms": 1093,
+      "confirm_to_settled_ms": 1122,
+      "total_file_to_settled_ms": 1209,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 286,
-        "tbt_ms": 443
+        "max_ms": 301,
+        "tbt_ms": 462
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 24,
+      "heap_peak_sampled_mb": 22,
       "heap_settled_mb": 22,
       "ok": true,
       "crashed": false,
@@ -77,7 +77,7 @@
       "N": 10000,
       "rep": 2,
       "file_mb": 0.3,
-      "preview_ms": 80,
+      "preview_ms": 125,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -85,13 +85,13 @@
       },
       "binning_offered": false,
       "binned": false,
-      "confirm_to_node_visible_ms": 1142,
-      "confirm_to_settled_ms": 1173,
-      "total_file_to_settled_ms": 1255,
+      "confirm_to_node_visible_ms": 1106,
+      "confirm_to_settled_ms": 1134,
+      "total_file_to_settled_ms": 1261,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 288,
-        "tbt_ms": 441
+        "max_ms": 299,
+        "tbt_ms": 460
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 22,
@@ -108,7 +108,7 @@
       "N": 20000,
       "rep": 0,
       "file_mb": 0.5,
-      "preview_ms": 85,
+      "preview_ms": 93,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -117,16 +117,16 @@
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 1674,
-      "confirm_to_settled_ms": 1708,
-      "total_file_to_settled_ms": 1855,
+      "confirm_to_node_visible_ms": 1646,
+      "confirm_to_settled_ms": 1733,
+      "total_file_to_settled_ms": 1888,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 558,
-        "tbt_ms": 981
+        "max_ms": 577,
+        "tbt_ms": 1008
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 32,
+      "heap_peak_sampled_mb": 31,
       "heap_settled_mb": 31,
       "ok": true,
       "crashed": false,
@@ -140,7 +140,7 @@
       "N": 20000,
       "rep": 1,
       "file_mb": 0.5,
-      "preview_ms": 84,
+      "preview_ms": 137,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -149,20 +149,20 @@
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 1684,
-      "confirm_to_settled_ms": 1715,
-      "total_file_to_settled_ms": 1846,
+      "confirm_to_node_visible_ms": 1663,
+      "confirm_to_settled_ms": 1745,
+      "total_file_to_settled_ms": 1952,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 563,
-        "tbt_ms": 982
+        "max_ms": 584,
+        "tbt_ms": 1013
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 31,
-      "heap_settled_mb": 32,
+      "heap_settled_mb": 31,
       "ok": true,
       "crashed": false,
-      "wall_s": 4.2,
+      "wall_s": 4.3,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -172,7 +172,7 @@
       "N": 20000,
       "rep": 2,
       "file_mb": 0.5,
-      "preview_ms": 99,
+      "preview_ms": 134,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -181,20 +181,20 @@
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 1698,
-      "confirm_to_settled_ms": 1729,
-      "total_file_to_settled_ms": 1857,
+      "confirm_to_node_visible_ms": 1766,
+      "confirm_to_settled_ms": 1793,
+      "total_file_to_settled_ms": 1961,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 569,
-        "tbt_ms": 986
+        "max_ms": 589,
+        "tbt_ms": 1069
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 32,
-      "heap_settled_mb": 31,
+      "heap_peak_sampled_mb": 38,
+      "heap_settled_mb": 15,
       "ok": true,
       "crashed": false,
-      "wall_s": 4.2,
+      "wall_s": 4.3,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -204,7 +204,7 @@
       "N": 100000,
       "rep": 0,
       "file_mb": 2.6,
-      "preview_ms": 108,
+      "preview_ms": 130,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -213,20 +213,20 @@
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 5808,
-      "confirm_to_settled_ms": 5841,
-      "total_file_to_settled_ms": 5967,
+      "confirm_to_node_visible_ms": 5892,
+      "confirm_to_settled_ms": 5975,
+      "total_file_to_settled_ms": 6180,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 2678,
-        "tbt_ms": 5111
+        "max_ms": 2755,
+        "tbt_ms": 5249
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 77,
-      "heap_settled_mb": 76,
+      "heap_peak_sampled_mb": 98,
+      "heap_settled_mb": 98,
       "ok": true,
       "crashed": false,
-      "wall_s": 8.3,
+      "wall_s": 8.5,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -236,7 +236,7 @@
       "N": 100000,
       "rep": 1,
       "file_mb": 2.6,
-      "preview_ms": 111,
+      "preview_ms": 109,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -245,20 +245,20 @@
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 5787,
-      "confirm_to_settled_ms": 5868,
-      "total_file_to_settled_ms": 6021,
+      "confirm_to_node_visible_ms": 5929,
+      "confirm_to_settled_ms": 6013,
+      "total_file_to_settled_ms": 6156,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 2709,
-        "tbt_ms": 5147
+        "max_ms": 2771,
+        "tbt_ms": 5273
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 101,
-      "heap_settled_mb": 77,
+      "heap_peak_sampled_mb": 100,
+      "heap_settled_mb": 76,
       "ok": true,
       "crashed": false,
-      "wall_s": 8.3,
+      "wall_s": 8.4,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -268,7 +268,7 @@
       "N": 100000,
       "rep": 2,
       "file_mb": 2.6,
-      "preview_ms": 106,
+      "preview_ms": 114,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -277,17 +277,17 @@
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 5811,
-      "confirm_to_settled_ms": 5892,
-      "total_file_to_settled_ms": 6046,
+      "confirm_to_node_visible_ms": 5901,
+      "confirm_to_settled_ms": 5983,
+      "total_file_to_settled_ms": 6112,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 2700,
-        "tbt_ms": 5162
+        "max_ms": 2767,
+        "tbt_ms": 5279
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 85,
-      "heap_settled_mb": 85,
+      "heap_peak_sampled_mb": 98,
+      "heap_settled_mb": 76,
       "ok": true,
       "crashed": false,
       "wall_s": 8.4,
@@ -300,29 +300,29 @@
       "N": 250000,
       "rep": 0,
       "file_mb": 6.4,
-      "preview_ms": 215,
+      "preview_ms": 219,
       "preview_longtasks": {
-        "count": 1,
-        "max_ms": 63,
-        "tbt_ms": 13
+        "count": 2,
+        "max_ms": 66,
+        "tbt_ms": 16
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 3275,
-      "confirm_to_settled_ms": 3355,
-      "total_file_to_settled_ms": 3589,
+      "confirm_to_node_visible_ms": 3325,
+      "confirm_to_settled_ms": 3403,
+      "total_file_to_settled_ms": 3700,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 1540,
-        "tbt_ms": 2626
+        "max_ms": 1586,
+        "tbt_ms": 2701
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 202,
       "heap_settled_mb": 70,
       "ok": true,
       "crashed": false,
-      "wall_s": 5.9,
+      "wall_s": 6,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -332,29 +332,29 @@
       "N": 250000,
       "rep": 1,
       "file_mb": 6.4,
-      "preview_ms": 214,
+      "preview_ms": 224,
       "preview_longtasks": {
-        "count": 1,
-        "max_ms": 63,
-        "tbt_ms": 13
+        "count": 2,
+        "max_ms": 72,
+        "tbt_ms": 25
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 3342,
-      "confirm_to_settled_ms": 3374,
-      "total_file_to_settled_ms": 3603,
+      "confirm_to_node_visible_ms": 3453,
+      "confirm_to_settled_ms": 3535,
+      "total_file_to_settled_ms": 3811,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 1541,
-        "tbt_ms": 2626
+        "max_ms": 1673,
+        "tbt_ms": 2787
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 202,
-      "heap_settled_mb": 70,
+      "heap_peak_sampled_mb": 164,
+      "heap_settled_mb": 76,
       "ok": true,
       "crashed": false,
-      "wall_s": 6,
+      "wall_s": 6.2,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -364,29 +364,29 @@
       "N": 250000,
       "rep": 2,
       "file_mb": 6.4,
-      "preview_ms": 203,
+      "preview_ms": 229,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 64,
-        "tbt_ms": 14
+        "max_ms": 77,
+        "tbt_ms": 38
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 3343,
-      "confirm_to_settled_ms": 3370,
-      "total_file_to_settled_ms": 3637,
+      "confirm_to_node_visible_ms": 3493,
+      "confirm_to_settled_ms": 3572,
+      "total_file_to_settled_ms": 3843,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 1550,
-        "tbt_ms": 2638
+        "max_ms": 1706,
+        "tbt_ms": 2831
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 169,
-      "heap_settled_mb": 70,
+      "heap_peak_sampled_mb": 164,
+      "heap_settled_mb": 76,
       "ok": true,
       "crashed": false,
-      "wall_s": 6,
+      "wall_s": 6.2,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -396,29 +396,29 @@
       "N": 500000,
       "rep": 0,
       "file_mb": 12.9,
-      "preview_ms": 259,
+      "preview_ms": 275,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 111,
-        "tbt_ms": 66
+        "max_ms": 120,
+        "tbt_ms": 77
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 5933,
-      "confirm_to_settled_ms": 5962,
-      "total_file_to_settled_ms": 6245,
+      "confirm_to_node_visible_ms": 6018,
+      "confirm_to_settled_ms": 6098,
+      "total_file_to_settled_ms": 6448,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 3039,
-        "tbt_ms": 5210
+        "max_ms": 3112,
+        "tbt_ms": 5355
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 316,
-      "heap_settled_mb": 316,
+      "heap_peak_sampled_mb": 318,
+      "heap_settled_mb": 319,
       "ok": true,
       "crashed": false,
-      "wall_s": 8.6,
+      "wall_s": 8.8,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -428,29 +428,29 @@
       "N": 500000,
       "rep": 1,
       "file_mb": 12.9,
-      "preview_ms": 257,
+      "preview_ms": 253,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 113,
-        "tbt_ms": 70
+        "max_ms": 112,
+        "tbt_ms": 69
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 6342,
-      "confirm_to_settled_ms": 6366,
-      "total_file_to_settled_ms": 6652,
+      "confirm_to_node_visible_ms": 6048,
+      "confirm_to_settled_ms": 6080,
+      "total_file_to_settled_ms": 6404,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 3047,
-        "tbt_ms": 5634
+        "max_ms": 3109,
+        "tbt_ms": 5340
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 319,
-      "heap_settled_mb": 319,
+      "heap_peak_sampled_mb": 318,
+      "heap_settled_mb": 318,
       "ok": true,
       "crashed": false,
-      "wall_s": 9,
+      "wall_s": 8.8,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -460,22 +460,22 @@
       "N": 500000,
       "rep": 2,
       "file_mb": 12.9,
-      "preview_ms": 281,
+      "preview_ms": 257,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 126,
-        "tbt_ms": 84
+        "max_ms": 112,
+        "tbt_ms": 71
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 6014,
-      "confirm_to_settled_ms": 6097,
-      "total_file_to_settled_ms": 6409,
+      "confirm_to_node_visible_ms": 6113,
+      "confirm_to_settled_ms": 6196,
+      "total_file_to_settled_ms": 6501,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 3140,
-        "tbt_ms": 5336
+        "max_ms": 3174,
+        "tbt_ms": 5403
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 317,
@@ -492,29 +492,29 @@
       "N": 1000000,
       "rep": 0,
       "file_mb": 25.7,
-      "preview_ms": 404,
+      "preview_ms": 456,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 240,
-        "tbt_ms": 208
+        "max_ms": 249,
+        "tbt_ms": 218
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 11091,
-      "confirm_to_settled_ms": 11173,
-      "total_file_to_settled_ms": 11583,
+      "confirm_to_node_visible_ms": 11226,
+      "confirm_to_settled_ms": 11254,
+      "total_file_to_settled_ms": 11737,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 6035,
-        "tbt_ms": 10446
+        "max_ms": 6110,
+        "tbt_ms": 10530
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 611,
-      "heap_settled_mb": 611,
+      "heap_peak_sampled_mb": 625,
+      "heap_settled_mb": 625,
       "ok": true,
       "crashed": false,
-      "wall_s": 13.9,
+      "wall_s": 14.1,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -524,29 +524,29 @@
       "N": 1000000,
       "rep": 1,
       "file_mb": 25.7,
-      "preview_ms": 393,
+      "preview_ms": 467,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 231,
-        "tbt_ms": 198
+        "max_ms": 285,
+        "tbt_ms": 255
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 11007,
-      "confirm_to_settled_ms": 11091,
-      "total_file_to_settled_ms": 11513,
+      "confirm_to_node_visible_ms": 11402,
+      "confirm_to_settled_ms": 11486,
+      "total_file_to_settled_ms": 11989,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 6020,
-        "tbt_ms": 10371
+        "max_ms": 6190,
+        "tbt_ms": 10741
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 623,
+      "heap_peak_sampled_mb": 622,
       "heap_settled_mb": 623,
       "ok": true,
       "crashed": false,
-      "wall_s": 13.9,
+      "wall_s": 14.3,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -556,29 +556,29 @@
       "N": 1000000,
       "rep": 2,
       "file_mb": 25.7,
-      "preview_ms": 386,
+      "preview_ms": 410,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 224,
-        "tbt_ms": 188
+        "max_ms": 229,
+        "tbt_ms": 196
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": false,
-      "confirm_to_node_visible_ms": 11056,
-      "confirm_to_settled_ms": 11082,
-      "total_file_to_settled_ms": 11479,
+      "confirm_to_node_visible_ms": 11243,
+      "confirm_to_settled_ms": 11269,
+      "total_file_to_settled_ms": 11706,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 5993,
-        "tbt_ms": 10385
+        "max_ms": 6118,
+        "tbt_ms": 10572
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 622,
-      "heap_settled_mb": 623,
+      "heap_peak_sampled_mb": 621,
+      "heap_settled_mb": 621,
       "ok": true,
       "crashed": false,
-      "wall_s": 13.9,
+      "wall_s": 14.1,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -596,13 +596,44 @@
       },
       "binning_offered": false,
       "binned": false,
-      "confirm_to_node_visible_ms": 1079,
-      "confirm_to_settled_ms": 1106,
-      "total_file_to_settled_ms": 1240,
+      "confirm_to_node_visible_ms": 1131,
+      "confirm_to_settled_ms": 1163,
+      "total_file_to_settled_ms": 1296,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 290,
-        "tbt_ms": 444
+        "max_ms": 299,
+        "tbt_ms": 463
+      },
+      "node_ports": 3,
+      "heap_peak_sampled_mb": 22,
+      "heap_settled_mb": 22,
+      "ok": true,
+      "crashed": false,
+      "wall_s": 3.7,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "import-binned",
+      "N": 10000,
+      "rep": 1,
+      "file_mb": 0.3,
+      "preview_ms": 129,
+      "preview_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "binning_offered": false,
+      "binned": false,
+      "confirm_to_node_visible_ms": 1138,
+      "confirm_to_settled_ms": 1170,
+      "total_file_to_settled_ms": 1301,
+      "import_longtasks": {
+        "count": 2,
+        "max_ms": 298,
+        "tbt_ms": 458
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 23,
@@ -617,9 +648,9 @@
     {
       "case": "import-binned",
       "N": 10000,
-      "rep": 1,
+      "rep": 2,
       "file_mb": 0.3,
-      "preview_ms": 130,
+      "preview_ms": 128,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -627,17 +658,17 @@
       },
       "binning_offered": false,
       "binned": false,
-      "confirm_to_node_visible_ms": 1082,
-      "confirm_to_settled_ms": 1166,
-      "total_file_to_settled_ms": 1298,
+      "confirm_to_node_visible_ms": 1126,
+      "confirm_to_settled_ms": 1162,
+      "total_file_to_settled_ms": 1291,
       "import_longtasks": {
         "count": 2,
-        "max_ms": 288,
-        "tbt_ms": 441
+        "max_ms": 291,
+        "tbt_ms": 452
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 26,
-      "heap_settled_mb": 23,
+      "heap_peak_sampled_mb": 24,
+      "heap_settled_mb": 22,
       "ok": true,
       "crashed": false,
       "wall_s": 3.6,
@@ -647,41 +678,10 @@
     },
     {
       "case": "import-binned",
-      "N": 10000,
-      "rep": 2,
-      "file_mb": 0.3,
-      "preview_ms": 123,
-      "preview_longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "binning_offered": false,
-      "binned": false,
-      "confirm_to_node_visible_ms": 1132,
-      "confirm_to_settled_ms": 1164,
-      "total_file_to_settled_ms": 1289,
-      "import_longtasks": {
-        "count": 2,
-        "max_ms": 286,
-        "tbt_ms": 444
-      },
-      "node_ports": 3,
-      "heap_peak_sampled_mb": 25,
-      "heap_settled_mb": 22,
-      "ok": true,
-      "crashed": false,
-      "wall_s": 3.7,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "import-binned",
       "N": 20000,
       "rep": 0,
       "file_mb": 0.5,
-      "preview_ms": 110,
+      "preview_ms": 91,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -691,17 +691,17 @@
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~1,334 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 711,
-      "confirm_to_settled_ms": 770,
-      "total_file_to_settled_ms": 883,
+      "confirm_to_node_visible_ms": 738,
+      "confirm_to_settled_ms": 823,
+      "total_file_to_settled_ms": 917,
       "import_longtasks": {
         "count": 1,
-        "max_ms": 138,
-        "tbt_ms": 88
+        "max_ms": 142,
+        "tbt_ms": 92
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 25,
-      "heap_settled_mb": 22,
+      "heap_settled_mb": 23,
       "ok": true,
       "crashed": false,
       "wall_s": 3.2,
@@ -714,7 +714,7 @@
       "N": 20000,
       "rep": 1,
       "file_mb": 0.5,
-      "preview_ms": 138,
+      "preview_ms": 133,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -724,16 +724,16 @@
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~1,334 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 718,
-      "confirm_to_settled_ms": 778,
-      "total_file_to_settled_ms": 919,
+      "confirm_to_node_visible_ms": 752,
+      "confirm_to_settled_ms": 837,
+      "total_file_to_settled_ms": 973,
       "import_longtasks": {
         "count": 1,
-        "max_ms": 136,
-        "tbt_ms": 86
+        "max_ms": 140,
+        "tbt_ms": 90
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 29,
+      "heap_peak_sampled_mb": 28,
       "heap_settled_mb": 22,
       "ok": true,
       "crashed": false,
@@ -747,7 +747,7 @@
       "N": 20000,
       "rep": 2,
       "file_mb": 0.5,
-      "preview_ms": 135,
+      "preview_ms": 137,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -757,20 +757,20 @@
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~1,334 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 793,
-      "confirm_to_settled_ms": 822,
-      "total_file_to_settled_ms": 960,
+      "confirm_to_node_visible_ms": 752,
+      "confirm_to_settled_ms": 838,
+      "total_file_to_settled_ms": 979,
       "import_longtasks": {
         "count": 1,
-        "max_ms": 136,
-        "tbt_ms": 86
+        "max_ms": 141,
+        "tbt_ms": 91
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 28,
       "heap_settled_mb": 22,
       "ok": true,
       "crashed": false,
-      "wall_s": 3.4,
+      "wall_s": 3.3,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -780,40 +780,7 @@
       "N": 100000,
       "rep": 0,
       "file_mb": 2.6,
-      "preview_ms": 122,
-      "preview_longtasks": {
-        "count": 1,
-        "max_ms": 51,
-        "tbt_ms": 1
-      },
-      "binning_offered": true,
-      "binning_default_on": true,
-      "binned": true,
-      "binning_estimate": "~6,667 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 1410,
-      "confirm_to_settled_ms": 1494,
-      "total_file_to_settled_ms": 1620,
-      "import_longtasks": {
-        "count": 3,
-        "max_ms": 642,
-        "tbt_ms": 722
-      },
-      "node_ports": 3,
-      "heap_peak_sampled_mb": 65,
-      "heap_settled_mb": 65,
-      "ok": true,
-      "crashed": false,
-      "wall_s": 4,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "import-binned",
-      "N": 100000,
-      "rep": 1,
-      "file_mb": 2.6,
-      "preview_ms": 111,
+      "preview_ms": 113,
       "preview_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -823,50 +790,17 @@
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~6,667 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 1425,
-      "confirm_to_settled_ms": 1503,
-      "total_file_to_settled_ms": 1617,
+      "confirm_to_node_visible_ms": 1475,
+      "confirm_to_settled_ms": 1507,
+      "total_file_to_settled_ms": 1623,
       "import_longtasks": {
         "count": 3,
-        "max_ms": 641,
-        "tbt_ms": 717
-      },
-      "node_ports": 3,
-      "heap_peak_sampled_mb": 65,
-      "heap_settled_mb": 65,
-      "ok": true,
-      "crashed": false,
-      "wall_s": 4,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "import-binned",
-      "N": 100000,
-      "rep": 2,
-      "file_mb": 2.6,
-      "preview_ms": 125,
-      "preview_longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "binning_offered": true,
-      "binning_default_on": true,
-      "binned": true,
-      "binning_estimate": "~6,667 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 1473,
-      "confirm_to_settled_ms": 1505,
-      "total_file_to_settled_ms": 1634,
-      "import_longtasks": {
-        "count": 3,
-        "max_ms": 648,
+        "max_ms": 651,
         "tbt_ms": 726
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 65,
-      "heap_settled_mb": 65,
+      "heap_settled_mb": 66,
       "ok": true,
       "crashed": false,
       "wall_s": 4,
@@ -876,30 +810,96 @@
     },
     {
       "case": "import-binned",
+      "N": 100000,
+      "rep": 1,
+      "file_mb": 2.6,
+      "preview_ms": 109,
+      "preview_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "binning_offered": true,
+      "binning_default_on": true,
+      "binned": true,
+      "binning_estimate": "~6,667 rows after binning, 1 min intervals detected",
+      "confirm_to_node_visible_ms": 1440,
+      "confirm_to_settled_ms": 1520,
+      "total_file_to_settled_ms": 1633,
+      "import_longtasks": {
+        "count": 3,
+        "max_ms": 657,
+        "tbt_ms": 738
+      },
+      "node_ports": 3,
+      "heap_peak_sampled_mb": 65,
+      "heap_settled_mb": 65,
+      "ok": true,
+      "crashed": false,
+      "wall_s": 3.9,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "import-binned",
+      "N": 100000,
+      "rep": 2,
+      "file_mb": 2.6,
+      "preview_ms": 106,
+      "preview_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "binning_offered": true,
+      "binning_default_on": true,
+      "binned": true,
+      "binning_estimate": "~6,667 rows after binning, 1 min intervals detected",
+      "confirm_to_node_visible_ms": 1379,
+      "confirm_to_settled_ms": 1459,
+      "total_file_to_settled_ms": 1568,
+      "import_longtasks": {
+        "count": 3,
+        "max_ms": 655,
+        "tbt_ms": 728
+      },
+      "node_ports": 3,
+      "heap_peak_sampled_mb": 65,
+      "heap_settled_mb": 65,
+      "ok": true,
+      "crashed": false,
+      "wall_s": 3.9,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "import-binned",
       "N": 250000,
       "rep": 0,
       "file_mb": 6.4,
-      "preview_ms": 214,
+      "preview_ms": 211,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 71,
-        "tbt_ms": 22
+        "max_ms": 65,
+        "tbt_ms": 15
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~16,667 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 3415,
-      "confirm_to_settled_ms": 3450,
-      "total_file_to_settled_ms": 3666,
+      "confirm_to_node_visible_ms": 3463,
+      "confirm_to_settled_ms": 3492,
+      "total_file_to_settled_ms": 3706,
       "import_longtasks": {
         "count": 3,
-        "max_ms": 1944,
-        "tbt_ms": 2704
+        "max_ms": 1966,
+        "tbt_ms": 2728
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 197,
-      "heap_settled_mb": 38,
+      "heap_settled_mb": 21,
       "ok": true,
       "crashed": false,
       "wall_s": 6.1,
@@ -912,30 +912,30 @@
       "N": 250000,
       "rep": 1,
       "file_mb": 6.4,
-      "preview_ms": 205,
+      "preview_ms": 204,
       "preview_longtasks": {
-        "count": 1,
-        "max_ms": 67,
-        "tbt_ms": 17
+        "count": 2,
+        "max_ms": 66,
+        "tbt_ms": 16
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~16,667 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 3512,
-      "confirm_to_settled_ms": 3492,
-      "total_file_to_settled_ms": 3701,
+      "confirm_to_node_visible_ms": 3334,
+      "confirm_to_settled_ms": 3415,
+      "total_file_to_settled_ms": 3622,
       "import_longtasks": {
         "count": 3,
-        "max_ms": 1941,
-        "tbt_ms": 2696
+        "max_ms": 1914,
+        "tbt_ms": 2654
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 197,
       "heap_settled_mb": 38,
       "ok": true,
       "crashed": false,
-      "wall_s": 6.1,
+      "wall_s": 5.9,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -945,27 +945,27 @@
       "N": 250000,
       "rep": 2,
       "file_mb": 6.4,
-      "preview_ms": 202,
+      "preview_ms": 204,
       "preview_longtasks": {
-        "count": 1,
-        "max_ms": 64,
-        "tbt_ms": 14
+        "count": 2,
+        "max_ms": 65,
+        "tbt_ms": 15
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~16,667 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 3451,
-      "confirm_to_settled_ms": 3490,
-      "total_file_to_settled_ms": 3696,
+      "confirm_to_node_visible_ms": 3433,
+      "confirm_to_settled_ms": 3462,
+      "total_file_to_settled_ms": 3670,
       "import_longtasks": {
         "count": 3,
-        "max_ms": 1943,
-        "tbt_ms": 2687
+        "max_ms": 1937,
+        "tbt_ms": 2676
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 197,
-      "heap_settled_mb": 38,
+      "heap_settled_mb": 21,
       "ok": true,
       "crashed": false,
       "wall_s": 6.1,
@@ -978,56 +978,23 @@
       "N": 500000,
       "rep": 0,
       "file_mb": 12.9,
-      "preview_ms": 256,
+      "preview_ms": 275,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 110,
-        "tbt_ms": 67
+        "max_ms": 120,
+        "tbt_ms": 78
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~33,334 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 6333,
-      "confirm_to_settled_ms": 6412,
-      "total_file_to_settled_ms": 6671,
+      "confirm_to_node_visible_ms": 6308,
+      "confirm_to_settled_ms": 6390,
+      "total_file_to_settled_ms": 6668,
       "import_longtasks": {
         "count": 3,
-        "max_ms": 3948,
-        "tbt_ms": 5672
-      },
-      "node_ports": 3,
-      "heap_peak_sampled_mb": 232,
-      "heap_settled_mb": 215,
-      "ok": true,
-      "crashed": false,
-      "wall_s": 9,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "import-binned",
-      "N": 500000,
-      "rep": 1,
-      "file_mb": 12.9,
-      "preview_ms": 257,
-      "preview_longtasks": {
-        "count": 2,
-        "max_ms": 112,
-        "tbt_ms": 67
-      },
-      "binning_offered": true,
-      "binning_default_on": true,
-      "binned": true,
-      "binning_estimate": "~33,334 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 6370,
-      "confirm_to_settled_ms": 6451,
-      "total_file_to_settled_ms": 6711,
-      "import_longtasks": {
-        "count": 3,
-        "max_ms": 3928,
-        "tbt_ms": 5643
+        "max_ms": 3921,
+        "tbt_ms": 5637
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 232,
@@ -1042,32 +1009,65 @@
     {
       "case": "import-binned",
       "N": 500000,
-      "rep": 2,
+      "rep": 1,
       "file_mb": 12.9,
-      "preview_ms": 291,
+      "preview_ms": 269,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 125,
-        "tbt_ms": 83
+        "max_ms": 118,
+        "tbt_ms": 77
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~33,334 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 6454,
-      "confirm_to_settled_ms": 6487,
-      "total_file_to_settled_ms": 6781,
+      "confirm_to_node_visible_ms": 6351,
+      "confirm_to_settled_ms": 6433,
+      "total_file_to_settled_ms": 6705,
       "import_longtasks": {
         "count": 3,
-        "max_ms": 3931,
-        "tbt_ms": 5677
+        "max_ms": 3922,
+        "tbt_ms": 5613
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 232,
       "heap_settled_mb": 215,
       "ok": true,
       "crashed": false,
-      "wall_s": 9.2,
+      "wall_s": 9,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "import-binned",
+      "N": 500000,
+      "rep": 2,
+      "file_mb": 12.9,
+      "preview_ms": 263,
+      "preview_longtasks": {
+        "count": 2,
+        "max_ms": 114,
+        "tbt_ms": 69
+      },
+      "binning_offered": true,
+      "binning_default_on": true,
+      "binned": true,
+      "binning_estimate": "~33,334 rows after binning, 1 min intervals detected",
+      "confirm_to_node_visible_ms": 6266,
+      "confirm_to_settled_ms": 6345,
+      "total_file_to_settled_ms": 6611,
+      "import_longtasks": {
+        "count": 3,
+        "max_ms": 3901,
+        "tbt_ms": 5596
+      },
+      "node_ports": 3,
+      "heap_peak_sampled_mb": 232,
+      "heap_settled_mb": 215,
+      "ok": true,
+      "crashed": false,
+      "wall_s": 8.9,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1077,30 +1077,30 @@
       "N": 1000000,
       "rep": 0,
       "file_mb": 25.7,
-      "preview_ms": 416,
+      "preview_ms": 421,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 234,
-        "tbt_ms": 202
+        "max_ms": 236,
+        "tbt_ms": 200
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~66,667 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 12325,
-      "confirm_to_settled_ms": 12358,
-      "total_file_to_settled_ms": 12777,
+      "confirm_to_node_visible_ms": 12205,
+      "confirm_to_settled_ms": 12291,
+      "total_file_to_settled_ms": 12715,
       "import_longtasks": {
         "count": 3,
-        "max_ms": 7922,
-        "tbt_ms": 11586
+        "max_ms": 7899,
+        "tbt_ms": 11530
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 406,
-      "heap_settled_mb": 406,
+      "heap_peak_sampled_mb": 409,
+      "heap_settled_mb": 409,
       "ok": true,
       "crashed": false,
-      "wall_s": 15.2,
+      "wall_s": 15.1,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1110,30 +1110,30 @@
       "N": 1000000,
       "rep": 1,
       "file_mb": 25.7,
-      "preview_ms": 396,
+      "preview_ms": 400,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 231,
+        "max_ms": 232,
         "tbt_ms": 196
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~66,667 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 12252,
-      "confirm_to_settled_ms": 12332,
-      "total_file_to_settled_ms": 12732,
+      "confirm_to_node_visible_ms": 12874,
+      "confirm_to_settled_ms": 12954,
+      "total_file_to_settled_ms": 13357,
       "import_longtasks": {
         "count": 3,
-        "max_ms": 7902,
-        "tbt_ms": 11533
+        "max_ms": 8403,
+        "tbt_ms": 12161
       },
       "node_ports": 3,
       "heap_peak_sampled_mb": 406,
-      "heap_settled_mb": 406,
+      "heap_settled_mb": 381,
       "ok": true,
       "crashed": false,
-      "wall_s": 15.1,
+      "wall_s": 15.7,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1143,30 +1143,30 @@
       "N": 1000000,
       "rep": 2,
       "file_mb": 25.7,
-      "preview_ms": 397,
+      "preview_ms": 425,
       "preview_longtasks": {
         "count": 2,
-        "max_ms": 233,
-        "tbt_ms": 200
+        "max_ms": 240,
+        "tbt_ms": 207
       },
       "binning_offered": true,
       "binning_default_on": true,
       "binned": true,
       "binning_estimate": "~66,667 rows after binning, 1 min intervals detected",
-      "confirm_to_node_visible_ms": 12249,
-      "confirm_to_settled_ms": 12278,
-      "total_file_to_settled_ms": 12678,
+      "confirm_to_node_visible_ms": 12564,
+      "confirm_to_settled_ms": 12649,
+      "total_file_to_settled_ms": 13078,
       "import_longtasks": {
         "count": 3,
-        "max_ms": 7879,
-        "tbt_ms": 11505
+        "max_ms": 8118,
+        "tbt_ms": 11859
       },
       "node_ports": 3,
-      "heap_peak_sampled_mb": 417,
-      "heap_settled_mb": 392,
+      "heap_peak_sampled_mb": 405,
+      "heap_settled_mb": 406,
       "ok": true,
       "crashed": false,
-      "wall_s": 15.1,
+      "wall_s": 15.4,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1176,17 +1176,110 @@
       "N": 10000,
       "rep": 0,
       "file_mb": 0.2,
-      "first_node_ms": 194,
-      "file_to_settled_ms": 587,
+      "first_node_ms": 189,
+      "file_to_settled_ms": 615,
       "longtasks": {
         "count": 1,
-        "max_ms": 57,
-        "tbt_ms": 7
+        "max_ms": 55,
+        "tbt_ms": 5
       },
       "heap_peak_sampled_mb": 25,
       "heap_settled_mb": 26,
       "svg_marks": 45,
       "rows_total_text": "10000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period -> 24.5",
+      "update_to_settled_ms": 22,
+      "update_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 6.6,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "actogram",
+      "N": 10000,
+      "rep": 1,
+      "file_mb": 0.2,
+      "first_node_ms": 159,
+      "file_to_settled_ms": 550,
+      "longtasks": {
+        "count": 1,
+        "max_ms": 54,
+        "tbt_ms": 4
+      },
+      "heap_peak_sampled_mb": 25,
+      "heap_settled_mb": 26,
+      "svg_marks": 45,
+      "rows_total_text": "10000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period -> 24.5",
+      "update_to_settled_ms": 30,
+      "update_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 6.6,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "actogram",
+      "N": 10000,
+      "rep": 2,
+      "file_mb": 0.2,
+      "first_node_ms": 143,
+      "file_to_settled_ms": 551,
+      "longtasks": {
+        "count": 1,
+        "max_ms": 56,
+        "tbt_ms": 6
+      },
+      "heap_peak_sampled_mb": 25,
+      "heap_settled_mb": 26,
+      "svg_marks": 45,
+      "rows_total_text": "10000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period -> 24.5",
+      "update_to_settled_ms": 29,
+      "update_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 6.6,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "actogram",
+      "N": 20000,
+      "rep": 0,
+      "file_mb": 0.3,
+      "first_node_ms": 216,
+      "file_to_settled_ms": 593,
+      "longtasks": {
+        "count": 1,
+        "max_ms": 102,
+        "tbt_ms": 52
+      },
+      "heap_peak_sampled_mb": 46,
+      "heap_settled_mb": 46,
+      "svg_marks": 52,
+      "rows_total_text": "20000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period -> 24.5",
       "update_to_settled_ms": 44,
@@ -1204,139 +1297,46 @@
     },
     {
       "case": "actogram",
-      "N": 10000,
-      "rep": 1,
-      "file_mb": 0.2,
-      "first_node_ms": 188,
-      "file_to_settled_ms": 584,
-      "longtasks": {
-        "count": 1,
-        "max_ms": 55,
-        "tbt_ms": 5
-      },
-      "heap_peak_sampled_mb": 25,
-      "heap_settled_mb": 26,
-      "svg_marks": 45,
-      "rows_total_text": "10000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 39,
-      "update_longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 6.7,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "actogram",
-      "N": 10000,
-      "rep": 2,
-      "file_mb": 0.2,
-      "first_node_ms": 190,
-      "file_to_settled_ms": 585,
-      "longtasks": {
-        "count": 1,
-        "max_ms": 57,
-        "tbt_ms": 7
-      },
-      "heap_peak_sampled_mb": 25,
-      "heap_settled_mb": 26,
-      "svg_marks": 45,
-      "rows_total_text": "10000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 36,
-      "update_longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 6.7,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "actogram",
-      "N": 20000,
-      "rep": 0,
-      "file_mb": 0.3,
-      "first_node_ms": 252,
-      "file_to_settled_ms": 611,
-      "longtasks": {
-        "count": 1,
-        "max_ms": 100,
-        "tbt_ms": 50
-      },
-      "heap_peak_sampled_mb": 46,
-      "heap_settled_mb": 46,
-      "svg_marks": 52,
-      "rows_total_text": "20000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 64,
-      "update_longtasks": {
-        "count": 1,
-        "max_ms": 55,
-        "tbt_ms": 5
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 6.8,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "actogram",
       "N": 20000,
       "rep": 1,
       "file_mb": 0.3,
-      "first_node_ms": 224,
-      "file_to_settled_ms": 572,
-      "longtasks": {
-        "count": 1,
-        "max_ms": 106,
-        "tbt_ms": 56
-      },
-      "heap_peak_sampled_mb": 46,
-      "heap_settled_mb": 46,
-      "svg_marks": 52,
-      "rows_total_text": "20000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 62,
-      "update_longtasks": {
-        "count": 1,
-        "max_ms": 54,
-        "tbt_ms": 4
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 6.8,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "actogram",
-      "N": 20000,
-      "rep": 2,
-      "file_mb": 0.3,
-      "first_node_ms": 215,
+      "first_node_ms": 245,
       "file_to_settled_ms": 594,
       "longtasks": {
         "count": 1,
-        "max_ms": 100,
-        "tbt_ms": 50
+        "max_ms": 105,
+        "tbt_ms": 55
+      },
+      "heap_peak_sampled_mb": 47,
+      "heap_settled_mb": 47,
+      "svg_marks": 52,
+      "rows_total_text": "20000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period -> 24.5",
+      "update_to_settled_ms": 54,
+      "update_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 6.8,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "actogram",
+      "N": 20000,
+      "rep": 2,
+      "file_mb": 0.3,
+      "first_node_ms": 203,
+      "file_to_settled_ms": 557,
+      "longtasks": {
+        "count": 1,
+        "max_ms": 102,
+        "tbt_ms": 52
       },
       "heap_peak_sampled_mb": 46,
       "heap_settled_mb": 46,
@@ -1344,15 +1344,15 @@
       "rows_total_text": "20000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 64,
+      "update_to_settled_ms": 38,
       "update_longtasks": {
-        "count": 1,
-        "max_ms": 54,
-        "tbt_ms": 4
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 6.7,
+      "wall_s": 6.6,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1362,28 +1362,28 @@
       "N": 100000,
       "rep": 0,
       "file_mb": 1.6,
-      "first_node_ms": 561,
-      "file_to_settled_ms": 1023,
+      "first_node_ms": 621,
+      "file_to_settled_ms": 1025,
       "longtasks": {
         "count": 2,
-        "max_ms": 373,
-        "tbt_ms": 362
+        "max_ms": 400,
+        "tbt_ms": 387
       },
-      "heap_peak_sampled_mb": 191,
+      "heap_peak_sampled_mb": 190,
       "heap_settled_mb": 187,
       "svg_marks": 108,
       "rows_total_text": "100000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 234,
+      "update_to_settled_ms": 211,
       "update_longtasks": {
         "count": 1,
-        "max_ms": 223,
-        "tbt_ms": 173
+        "max_ms": 204,
+        "tbt_ms": 154
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 7.4,
+      "wall_s": 7.2,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1393,24 +1393,24 @@
       "N": 100000,
       "rep": 1,
       "file_mb": 1.6,
-      "first_node_ms": 589,
-      "file_to_settled_ms": 1020,
+      "first_node_ms": 557,
+      "file_to_settled_ms": 1000,
       "longtasks": {
         "count": 2,
-        "max_ms": 420,
-        "tbt_ms": 402
+        "max_ms": 400,
+        "tbt_ms": 388
       },
       "heap_peak_sampled_mb": 187,
-      "heap_settled_mb": 185,
+      "heap_settled_mb": 187,
       "svg_marks": 108,
       "rows_total_text": "100000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 241,
+      "update_to_settled_ms": 205,
       "update_longtasks": {
         "count": 1,
-        "max_ms": 231,
-        "tbt_ms": 181
+        "max_ms": 201,
+        "tbt_ms": 151
       },
       "ok": true,
       "crashed": false,
@@ -1424,28 +1424,28 @@
       "N": 100000,
       "rep": 2,
       "file_mb": 1.6,
-      "first_node_ms": 789,
-      "file_to_settled_ms": 1157,
+      "first_node_ms": 656,
+      "file_to_settled_ms": 986,
       "longtasks": {
         "count": 2,
-        "max_ms": 521,
-        "tbt_ms": 502
+        "max_ms": 416,
+        "tbt_ms": 403
       },
-      "heap_peak_sampled_mb": 191,
-      "heap_settled_mb": 109,
+      "heap_peak_sampled_mb": 187,
+      "heap_settled_mb": 188,
       "svg_marks": 108,
       "rows_total_text": "100000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 255,
+      "update_to_settled_ms": 191,
       "update_longtasks": {
         "count": 1,
-        "max_ms": 248,
-        "tbt_ms": 198
+        "max_ms": 183,
+        "tbt_ms": 133
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 7.5,
+      "wall_s": 7.2,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1455,24 +1455,24 @@
       "N": 250000,
       "rep": 0,
       "file_mb": 4.1,
-      "first_node_ms": 1441,
-      "file_to_settled_ms": 1772,
+      "first_node_ms": 1453,
+      "file_to_settled_ms": 1885,
       "longtasks": {
         "count": 2,
-        "max_ms": 1041,
-        "tbt_ms": 1129
+        "max_ms": 1084,
+        "tbt_ms": 1169
       },
-      "heap_peak_sampled_mb": 460,
-      "heap_settled_mb": 457,
+      "heap_peak_sampled_mb": 458,
+      "heap_settled_mb": 459,
       "svg_marks": 38,
       "rows_total_text": "250000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 530,
+      "update_to_settled_ms": 567,
       "update_longtasks": {
         "count": 1,
-        "max_ms": 521,
-        "tbt_ms": 471
+        "max_ms": 563,
+        "tbt_ms": 513
       },
       "ok": true,
       "crashed": false,
@@ -1486,12 +1486,12 @@
       "N": 250000,
       "rep": 1,
       "file_mb": 4.1,
-      "first_node_ms": 1213,
-      "file_to_settled_ms": 1669,
+      "first_node_ms": 1246,
+      "file_to_settled_ms": 1726,
       "longtasks": {
         "count": 2,
-        "max_ms": 919,
-        "tbt_ms": 1008
+        "max_ms": 991,
+        "tbt_ms": 1075
       },
       "heap_peak_sampled_mb": 458,
       "heap_settled_mb": 458,
@@ -1499,42 +1499,11 @@
       "rows_total_text": "250000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 542,
+      "update_to_settled_ms": 501,
       "update_longtasks": {
         "count": 1,
-        "max_ms": 533,
-        "tbt_ms": 483
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 8.4,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "actogram",
-      "N": 250000,
-      "rep": 2,
-      "file_mb": 4.1,
-      "first_node_ms": 1217,
-      "file_to_settled_ms": 1680,
-      "longtasks": {
-        "count": 2,
-        "max_ms": 932,
-        "tbt_ms": 1018
-      },
-      "heap_peak_sampled_mb": 459,
-      "heap_settled_mb": 456,
-      "svg_marks": 38,
-      "rows_total_text": "250000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 532,
-      "update_longtasks": {
-        "count": 1,
-        "max_ms": 521,
-        "tbt_ms": 471
+        "max_ms": 490,
+        "tbt_ms": 440
       },
       "ok": true,
       "crashed": false,
@@ -1545,77 +1514,46 @@
     },
     {
       "case": "actogram",
+      "N": 250000,
+      "rep": 2,
+      "file_mb": 4.1,
+      "first_node_ms": 1562,
+      "file_to_settled_ms": 2010,
+      "longtasks": {
+        "count": 2,
+        "max_ms": 1168,
+        "tbt_ms": 1301
+      },
+      "heap_peak_sampled_mb": 476,
+      "heap_settled_mb": 453,
+      "svg_marks": 38,
+      "rows_total_text": "250000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period -> 24.5",
+      "update_to_settled_ms": 490,
+      "update_longtasks": {
+        "count": 1,
+        "max_ms": 487,
+        "tbt_ms": 437
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 8.6,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "actogram",
       "N": 500000,
       "rep": 0,
       "file_mb": 8.2,
-      "first_node_ms": 2366,
-      "file_to_settled_ms": 2867,
+      "first_node_ms": 2490,
+      "file_to_settled_ms": 2877,
       "longtasks": {
         "count": 2,
-        "max_ms": 1933,
-        "tbt_ms": 2163
-      },
-      "heap_peak_sampled_mb": 906,
-      "heap_settled_mb": 906,
-      "svg_marks": 38,
-      "rows_total_text": "500000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 1156,
-      "update_longtasks": {
-        "count": 1,
-        "max_ms": 1148,
-        "tbt_ms": 1098
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 10.2,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "actogram",
-      "N": 500000,
-      "rep": 1,
-      "file_mb": 8.2,
-      "first_node_ms": 2393,
-      "file_to_settled_ms": 2783,
-      "longtasks": {
-        "count": 2,
-        "max_ms": 1843,
-        "tbt_ms": 2071
-      },
-      "heap_peak_sampled_mb": 904,
-      "heap_settled_mb": 905,
-      "svg_marks": 38,
-      "rows_total_text": "500000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 1109,
-      "update_longtasks": {
-        "count": 1,
-        "max_ms": 1098,
-        "tbt_ms": 1048
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 10.1,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "actogram",
-      "N": 500000,
-      "rep": 2,
-      "file_mb": 8.2,
-      "first_node_ms": 2310,
-      "file_to_settled_ms": 2810,
-      "longtasks": {
-        "count": 2,
-        "max_ms": 1861,
-        "tbt_ms": 2107
+        "max_ms": 1946,
+        "tbt_ms": 2175
       },
       "heap_peak_sampled_mb": 907,
       "heap_settled_mb": 907,
@@ -1623,15 +1561,77 @@
       "rows_total_text": "500000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 1033,
+      "update_to_settled_ms": 1481,
       "update_longtasks": {
-        "count": 1,
-        "max_ms": 1025,
-        "tbt_ms": 975
+        "count": 2,
+        "max_ms": 1407,
+        "tbt_ms": 1361
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 10,
+      "wall_s": 10.5,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "actogram",
+      "N": 500000,
+      "rep": 1,
+      "file_mb": 8.2,
+      "first_node_ms": 2526,
+      "file_to_settled_ms": 2920,
+      "longtasks": {
+        "count": 3,
+        "max_ms": 1950,
+        "tbt_ms": 2196
+      },
+      "heap_peak_sampled_mb": 906,
+      "heap_settled_mb": 906,
+      "svg_marks": 38,
+      "rows_total_text": "500000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period -> 24.5",
+      "update_to_settled_ms": 1393,
+      "update_longtasks": {
+        "count": 2,
+        "max_ms": 1317,
+        "tbt_ms": 1270
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 10.5,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "actogram",
+      "N": 500000,
+      "rep": 2,
+      "file_mb": 8.2,
+      "first_node_ms": 2492,
+      "file_to_settled_ms": 2916,
+      "longtasks": {
+        "count": 2,
+        "max_ms": 1926,
+        "tbt_ms": 2177
+      },
+      "heap_peak_sampled_mb": 906,
+      "heap_settled_mb": 906,
+      "svg_marks": 38,
+      "rows_total_text": "500000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period -> 24.5",
+      "update_to_settled_ms": 1120,
+      "update_longtasks": {
+        "count": 2,
+        "max_ms": 1054,
+        "tbt_ms": 1005
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 10.3,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1641,28 +1641,28 @@
       "N": 1000000,
       "rep": 0,
       "file_mb": 16.8,
-      "first_node_ms": 4807,
-      "file_to_settled_ms": 5328,
+      "first_node_ms": 5282,
+      "file_to_settled_ms": 5852,
       "longtasks": {
         "count": 4,
-        "max_ms": 3874,
-        "tbt_ms": 4525
+        "max_ms": 4334,
+        "tbt_ms": 5038
       },
-      "heap_peak_sampled_mb": 1804,
-      "heap_settled_mb": 1805,
+      "heap_peak_sampled_mb": 1808,
+      "heap_settled_mb": 1808,
       "svg_marks": 38,
       "rows_total_text": "1000000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 2979,
+      "update_to_settled_ms": 2855,
       "update_longtasks": {
         "count": 2,
-        "max_ms": 2831,
-        "tbt_ms": 2859
+        "max_ms": 2711,
+        "tbt_ms": 2736
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 14.6,
+      "wall_s": 15,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1672,55 +1672,24 @@
       "N": 1000000,
       "rep": 1,
       "file_mb": 16.8,
-      "first_node_ms": 4573,
-      "file_to_settled_ms": 5096,
+      "first_node_ms": 4648,
+      "file_to_settled_ms": 5177,
       "longtasks": {
         "count": 4,
-        "max_ms": 3674,
-        "tbt_ms": 4263
+        "max_ms": 3746,
+        "tbt_ms": 4386
       },
-      "heap_peak_sampled_mb": 1805,
-      "heap_settled_mb": 1805,
+      "heap_peak_sampled_mb": 1806,
+      "heap_settled_mb": 1806,
       "svg_marks": 38,
       "rows_total_text": "1000000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 2908,
+      "update_to_settled_ms": 2611,
       "update_longtasks": {
-        "count": 2,
-        "max_ms": 2771,
-        "tbt_ms": 2788
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 14.4,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "actogram",
-      "N": 1000000,
-      "rep": 2,
-      "file_mb": 16.8,
-      "first_node_ms": 4546,
-      "file_to_settled_ms": 5059,
-      "longtasks": {
-        "count": 5,
-        "max_ms": 3634,
-        "tbt_ms": 4261
-      },
-      "heap_peak_sampled_mb": 1804,
-      "heap_settled_mb": 1805,
-      "svg_marks": 38,
-      "rows_total_text": "1000000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period -> 24.5",
-      "update_to_settled_ms": 2772,
-      "update_longtasks": {
-        "count": 2,
-        "max_ms": 2629,
-        "tbt_ms": 2650
+        "count": 1,
+        "max_ms": 2602,
+        "tbt_ms": 2552
       },
       "ok": true,
       "crashed": false,
@@ -1730,74 +1699,43 @@
       ]
     },
     {
+      "case": "actogram",
+      "N": 1000000,
+      "rep": 2,
+      "file_mb": 16.8,
+      "first_node_ms": 4566,
+      "file_to_settled_ms": 5226,
+      "longtasks": {
+        "count": 4,
+        "max_ms": 3723,
+        "tbt_ms": 4418
+      },
+      "heap_peak_sampled_mb": 1806,
+      "heap_settled_mb": 1804,
+      "svg_marks": 38,
+      "rows_total_text": "1000000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period -> 24.5",
+      "update_to_settled_ms": 3127,
+      "update_longtasks": {
+        "count": 1,
+        "max_ms": 3123,
+        "tbt_ms": 3073
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 14.6,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
       "case": "periodogram",
       "N": 10000,
       "rep": 0,
       "file_mb": 0.2,
-      "first_node_ms": 185,
-      "file_to_settled_ms": 566,
-      "longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "heap_peak_sampled_mb": 13,
-      "heap_settled_mb": 10,
-      "svg_marks": 41,
-      "rows_total_text": "10000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 353,
-      "update_longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 7.1,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "periodogram",
-      "N": 10000,
-      "rep": 1,
-      "file_mb": 0.2,
-      "first_node_ms": 194,
-      "file_to_settled_ms": 591,
-      "longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "heap_peak_sampled_mb": 13,
-      "heap_settled_mb": 10,
-      "svg_marks": 41,
-      "rows_total_text": "10000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 346,
-      "update_longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 7.1,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "periodogram",
-      "N": 10000,
-      "rep": 2,
-      "file_mb": 0.2,
-      "first_node_ms": 187,
-      "file_to_settled_ms": 584,
+      "first_node_ms": 209,
+      "file_to_settled_ms": 605,
       "longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -1809,7 +1747,7 @@
       "rows_total_text": "10000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 353,
+      "update_to_settled_ms": 341,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -1817,7 +1755,69 @@
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 7.1,
+      "wall_s": 7,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "periodogram",
+      "N": 10000,
+      "rep": 1,
+      "file_mb": 0.2,
+      "first_node_ms": 187,
+      "file_to_settled_ms": 570,
+      "longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "heap_peak_sampled_mb": 13,
+      "heap_settled_mb": 10,
+      "svg_marks": 41,
+      "rows_total_text": "10000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period Step -> 0.2",
+      "update_to_settled_ms": 341,
+      "update_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 7,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "periodogram",
+      "N": 10000,
+      "rep": 2,
+      "file_mb": 0.2,
+      "first_node_ms": 94,
+      "file_to_settled_ms": 569,
+      "longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "heap_peak_sampled_mb": 12,
+      "heap_settled_mb": 8,
+      "svg_marks": 41,
+      "rows_total_text": "10000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period Step -> 0.2",
+      "update_to_settled_ms": 337,
+      "update_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 7,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1827,7 +1827,7 @@
       "N": 20000,
       "rep": 0,
       "file_mb": 0.3,
-      "first_node_ms": 198,
+      "first_node_ms": 202,
       "file_to_settled_ms": 593,
       "longtasks": {
         "count": 0,
@@ -1840,7 +1840,7 @@
       "rows_total_text": "20000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 421,
+      "update_to_settled_ms": 412,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -1859,19 +1859,19 @@
       "rep": 1,
       "file_mb": 0.3,
       "first_node_ms": 201,
-      "file_to_settled_ms": 598,
+      "file_to_settled_ms": 596,
       "longtasks": {
         "count": 0,
         "max_ms": 0,
         "tbt_ms": 0
       },
-      "heap_peak_sampled_mb": 14,
-      "heap_settled_mb": 10,
+      "heap_peak_sampled_mb": 11,
+      "heap_settled_mb": 11,
       "svg_marks": 41,
       "rows_total_text": "20000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 421,
+      "update_to_settled_ms": 408,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -1879,7 +1879,7 @@
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 7.1,
+      "wall_s": 7,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1889,8 +1889,8 @@
       "N": 20000,
       "rep": 2,
       "file_mb": 0.3,
-      "first_node_ms": 198,
-      "file_to_settled_ms": 596,
+      "first_node_ms": 193,
+      "file_to_settled_ms": 588,
       "longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -1902,7 +1902,7 @@
       "rows_total_text": "20000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 428,
+      "update_to_settled_ms": 411,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -1910,7 +1910,7 @@
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 7.1,
+      "wall_s": 7,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1920,12 +1920,12 @@
       "N": 100000,
       "rep": 0,
       "file_mb": 1.6,
-      "first_node_ms": 315,
-      "file_to_settled_ms": 1065,
+      "first_node_ms": 252,
+      "file_to_settled_ms": 1074,
       "longtasks": {
         "count": 1,
-        "max_ms": 94,
-        "tbt_ms": 44
+        "max_ms": 85,
+        "tbt_ms": 35
       },
       "heap_peak_sampled_mb": 15,
       "heap_settled_mb": 15,
@@ -1933,7 +1933,7 @@
       "rows_total_text": "100000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 985,
+      "update_to_settled_ms": 994,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -1941,7 +1941,7 @@
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 8.2,
+      "wall_s": 8,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -1951,39 +1951,8 @@
       "N": 100000,
       "rep": 1,
       "file_mb": 1.6,
-      "first_node_ms": 258,
-      "file_to_settled_ms": 1030,
-      "longtasks": {
-        "count": 1,
-        "max_ms": 84,
-        "tbt_ms": 34
-      },
-      "heap_peak_sampled_mb": 16,
-      "heap_settled_mb": 15,
-      "svg_marks": 41,
-      "rows_total_text": "100000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 1001,
-      "update_longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 8.1,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "periodogram",
-      "N": 100000,
-      "rep": 2,
-      "file_mb": 1.6,
-      "first_node_ms": 242,
-      "file_to_settled_ms": 1041,
+      "first_node_ms": 261,
+      "file_to_settled_ms": 1058,
       "longtasks": {
         "count": 1,
         "max_ms": 88,
@@ -1995,7 +1964,38 @@
       "rows_total_text": "100000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 991,
+      "update_to_settled_ms": 1235,
+      "update_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 8.3,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "periodogram",
+      "N": 100000,
+      "rep": 2,
+      "file_mb": 1.6,
+      "first_node_ms": 257,
+      "file_to_settled_ms": 1054,
+      "longtasks": {
+        "count": 1,
+        "max_ms": 84,
+        "tbt_ms": 34
+      },
+      "heap_peak_sampled_mb": 18,
+      "heap_settled_mb": 19,
+      "svg_marks": 41,
+      "rows_total_text": "100000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period Step -> 0.2",
+      "update_to_settled_ms": 1012,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -2013,20 +2013,82 @@
       "N": 250000,
       "rep": 0,
       "file_mb": 4.1,
-      "first_node_ms": 366,
-      "file_to_settled_ms": 2029,
+      "first_node_ms": 400,
+      "file_to_settled_ms": 2073,
       "longtasks": {
         "count": 1,
-        "max_ms": 184,
-        "tbt_ms": 134
+        "max_ms": 183,
+        "tbt_ms": 133
       },
-      "heap_peak_sampled_mb": 21,
+      "heap_peak_sampled_mb": 27,
+      "heap_settled_mb": 27,
+      "svg_marks": 41,
+      "rows_total_text": "250000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period Step -> 0.2",
+      "update_to_settled_ms": 2099,
+      "update_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 10.3,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "periodogram",
+      "N": 250000,
+      "rep": 1,
+      "file_mb": 4.1,
+      "first_node_ms": 353,
+      "file_to_settled_ms": 2106,
+      "longtasks": {
+        "count": 1,
+        "max_ms": 185,
+        "tbt_ms": 135
+      },
+      "heap_peak_sampled_mb": 22,
       "heap_settled_mb": 21,
       "svg_marks": 41,
       "rows_total_text": "250000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 2062,
+      "update_to_settled_ms": 2092,
+      "update_longtasks": {
+        "count": 0,
+        "max_ms": 0,
+        "tbt_ms": 0
+      },
+      "ok": true,
+      "crashed": false,
+      "wall_s": 10.3,
+      "errors": [
+        "Failed to load resource: net::ERR_FAILED"
+      ]
+    },
+    {
+      "case": "periodogram",
+      "N": 250000,
+      "rep": 2,
+      "file_mb": 4.1,
+      "first_node_ms": 344,
+      "file_to_settled_ms": 2062,
+      "longtasks": {
+        "count": 1,
+        "max_ms": 178,
+        "tbt_ms": 128
+      },
+      "heap_peak_sampled_mb": 27,
+      "heap_settled_mb": 27,
+      "svg_marks": 41,
+      "rows_total_text": "250000 rows total",
+      "spinner_still_visible": false,
+      "update_param": "Period Step -> 0.2",
+      "update_to_settled_ms": 2103,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -2041,23 +2103,23 @@
     },
     {
       "case": "periodogram",
-      "N": 250000,
-      "rep": 1,
-      "file_mb": 4.1,
-      "first_node_ms": 369,
-      "file_to_settled_ms": 2014,
+      "N": 500000,
+      "rep": 0,
+      "file_mb": 8.2,
+      "first_node_ms": 584,
+      "file_to_settled_ms": 3831,
       "longtasks": {
         "count": 1,
-        "max_ms": 185,
-        "tbt_ms": 135
+        "max_ms": 339,
+        "tbt_ms": 289
       },
-      "heap_peak_sampled_mb": 21,
-      "heap_settled_mb": 21,
+      "heap_peak_sampled_mb": 43,
+      "heap_settled_mb": 34,
       "svg_marks": 41,
-      "rows_total_text": "250000 rows total",
+      "rows_total_text": "500000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 2051,
+      "update_to_settled_ms": 3994,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -2065,38 +2127,7 @@
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 10.3,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "periodogram",
-      "N": 250000,
-      "rep": 2,
-      "file_mb": 4.1,
-      "first_node_ms": 357,
-      "file_to_settled_ms": 2040,
-      "longtasks": {
-        "count": 1,
-        "max_ms": 182,
-        "tbt_ms": 132
-      },
-      "heap_peak_sampled_mb": 27,
-      "heap_settled_mb": 27,
-      "svg_marks": 41,
-      "rows_total_text": "250000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 2067,
-      "update_longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 10.3,
+      "wall_s": 13.9,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -2104,22 +2135,22 @@
     {
       "case": "periodogram",
       "N": 500000,
-      "rep": 0,
+      "rep": 1,
       "file_mb": 8.2,
       "first_node_ms": 551,
-      "file_to_settled_ms": 3627,
+      "file_to_settled_ms": 3805,
       "longtasks": {
         "count": 1,
-        "max_ms": 331,
-        "tbt_ms": 281
+        "max_ms": 345,
+        "tbt_ms": 295
       },
       "heap_peak_sampled_mb": 43,
-      "heap_settled_mb": 32,
+      "heap_settled_mb": 34,
       "svg_marks": 41,
       "rows_total_text": "500000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 3841,
+      "update_to_settled_ms": 3922,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -2127,38 +2158,7 @@
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 13.5,
-      "errors": [
-        "Failed to load resource: net::ERR_FAILED"
-      ]
-    },
-    {
-      "case": "periodogram",
-      "N": 500000,
-      "rep": 1,
-      "file_mb": 8.2,
-      "first_node_ms": 570,
-      "file_to_settled_ms": 3641,
-      "longtasks": {
-        "count": 1,
-        "max_ms": 352,
-        "tbt_ms": 302
-      },
-      "heap_peak_sampled_mb": 43,
-      "heap_settled_mb": 32,
-      "svg_marks": 41,
-      "rows_total_text": "500000 rows total",
-      "spinner_still_visible": false,
-      "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 3833,
-      "update_longtasks": {
-        "count": 0,
-        "max_ms": 0,
-        "tbt_ms": 0
-      },
-      "ok": true,
-      "crashed": false,
-      "wall_s": 13.6,
+      "wall_s": 13.8,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -2168,20 +2168,20 @@
       "N": 500000,
       "rep": 2,
       "file_mb": 8.2,
-      "first_node_ms": 555,
-      "file_to_settled_ms": 3634,
+      "first_node_ms": 565,
+      "file_to_settled_ms": 3735,
       "longtasks": {
         "count": 1,
-        "max_ms": 340,
-        "tbt_ms": 290
+        "max_ms": 347,
+        "tbt_ms": 297
       },
-      "heap_peak_sampled_mb": 42,
-      "heap_settled_mb": 39,
+      "heap_peak_sampled_mb": 43,
+      "heap_settled_mb": 32,
       "svg_marks": 41,
       "rows_total_text": "500000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 3846,
+      "update_to_settled_ms": 3939,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -2189,7 +2189,7 @@
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 13.6,
+      "wall_s": 13.7,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -2199,20 +2199,20 @@
       "N": 1000000,
       "rep": 0,
       "file_mb": 16.8,
-      "first_node_ms": 952,
-      "file_to_settled_ms": 6921,
+      "first_node_ms": 948,
+      "file_to_settled_ms": 7275,
       "longtasks": {
         "count": 1,
-        "max_ms": 671,
-        "tbt_ms": 621
+        "max_ms": 649,
+        "tbt_ms": 599
       },
       "heap_peak_sampled_mb": 76,
-      "heap_settled_mb": 67,
+      "heap_settled_mb": 68,
       "svg_marks": 41,
       "rows_total_text": "1000000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 7404,
+      "update_to_settled_ms": 7661,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -2220,7 +2220,7 @@
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 21.1,
+      "wall_s": 20.9,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -2230,20 +2230,20 @@
       "N": 1000000,
       "rep": 1,
       "file_mb": 16.8,
-      "first_node_ms": 1642,
-      "file_to_settled_ms": 8450,
+      "first_node_ms": 934,
+      "file_to_settled_ms": 7464,
       "longtasks": {
-        "count": 4,
-        "max_ms": 1258,
-        "tbt_ms": 1277
+        "count": 1,
+        "max_ms": 680,
+        "tbt_ms": 630
       },
-      "heap_peak_sampled_mb": 64,
-      "heap_settled_mb": 64,
+      "heap_peak_sampled_mb": 77,
+      "heap_settled_mb": 69,
       "svg_marks": 41,
       "rows_total_text": "1000000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 7536,
+      "update_to_settled_ms": 7956,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -2251,7 +2251,7 @@
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 22.5,
+      "wall_s": 21.5,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]
@@ -2261,12 +2261,12 @@
       "N": 1000000,
       "rep": 2,
       "file_mb": 16.8,
-      "first_node_ms": 993,
-      "file_to_settled_ms": 6983,
+      "first_node_ms": 983,
+      "file_to_settled_ms": 7129,
       "longtasks": {
-        "count": 1,
-        "max_ms": 710,
-        "tbt_ms": 660
+        "count": 3,
+        "max_ms": 684,
+        "tbt_ms": 634
       },
       "heap_peak_sampled_mb": 77,
       "heap_settled_mb": 68,
@@ -2274,7 +2274,7 @@
       "rows_total_text": "1000000 rows total",
       "spinner_still_visible": false,
       "update_param": "Period Step -> 0.2",
-      "update_to_settled_ms": 7516,
+      "update_to_settled_ms": 7675,
       "update_longtasks": {
         "count": 0,
         "max_ms": 0,
@@ -2282,7 +2282,7 @@
       },
       "ok": true,
       "crashed": false,
-      "wall_s": 20.6,
+      "wall_s": 20.9,
       "errors": [
         "Failed to load resource: net::ERR_FAILED"
       ]

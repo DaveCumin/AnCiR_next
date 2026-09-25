@@ -550,7 +550,8 @@
       "slope": 24.168923432682444,
       "intercept": 1.762474212891241,
       "rSquared": 0.9998845467236579,
-      "rmse": 1.0415119119527154
+      "rmse": 1.0415119119527154,
+      "n": 11
      }
     }
    ]
@@ -662,5 +663,5 @@
    }
   ]
  },
- "appVersion": "AnCiR β.75.2: Circadian Rhythm and Time-Series Data Analysis"
+ "appVersion": "AnCiR β.77.0: Circadian Rhythm and Time-Series Data Analysis"
 }

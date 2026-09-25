@@ -53,7 +53,8 @@
          "slope": 24.81290322580651,
          "intercept": -9.25161290322751,
          "rSquared": 1,
-         "rmse": 2.898457019905882e-13
+         "rmse": 2.898457019905882e-13,
+         "n": 2
         }
        }
       ]
@@ -683,7 +684,8 @@
       "slope": 24.319751523021107,
       "intercept": -5.101358706677921,
       "rSquared": 0.9998149164547872,
-      "rmse": 6.049884593416273
+      "rmse": 6.049884593416273,
+      "n": 45
      }
     }
    ]
@@ -962,7 +964,8 @@
       "slope": 12.636510941759854,
       "intercept": -12.573723406816887,
       "rSquared": 0.9997781830148906,
-      "rmse": 6.328700143676536
+      "rmse": 6.328700143676536,
+      "n": 89
      }
     }
    ]
@@ -1103,5 +1106,5 @@
    }
   ]
  },
- "appVersion": "AnCiR β.75.2: Circadian Rhythm and Time-Series Data Analysis"
+ "appVersion": "AnCiR β.77.0: Circadian Rhythm and Time-Series Data Analysis"
 }
