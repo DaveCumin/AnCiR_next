@@ -154,7 +154,10 @@
 				if (!(this.selectedPeriods[m] ?? true)) continue;
 				if (isNaN(this.markers[m]) || this.markers[m] == null) continue;
 				// Drawn in the row the onset fell in (a row's search spans two rows).
-				const pos = markerDisplayPosition(this.markerTimes[m], this.parentData.parentPlot.periodHrs);
+				const pos = markerDisplayPosition(
+					this.markerTimes[m],
+					this.parentData.parentPlot.periodHrs
+				);
 				out += `M${xscale(pos.hour) + this.parentData.parentPlot.padding.left} ${
 					this.parentData.parentPlot.padding.top +
 					this.parentData.parentPlot.eachplotheight -
@@ -509,82 +512,82 @@
 				</ControlInput>
 			</div>
 			<p class="fitline-hint">
-				Set the day range below, then drag the line on the plot to fit the activity
-				onsets (τ = slope, θ = start time).
+				Set the day range below, then drag the line on the plot to fit the activity onsets (τ =
+				slope, θ = start time).
 			</p>
 		{:else}
-		<div>
-			<div class="period-selection-header">
-				<p>Periods</p>
-				<div class="period-selection-actions">
-					<button
-						class="period-select-btn"
-						onclick={() => {
-							const newSelected = [...marker.selectedPeriods];
-							for (let i = 0; i < marker.markers.length; i++) {
-								if (!isNaN(marker.markers[i]) && marker.markers[i] != null) {
-									while (newSelected.length <= i) newSelected.push(true);
-									newSelected[i] = true;
+			<div>
+				<div class="period-selection-header">
+					<p>Periods</p>
+					<div class="period-selection-actions">
+						<button
+							class="period-select-btn"
+							onclick={() => {
+								const newSelected = [...marker.selectedPeriods];
+								for (let i = 0; i < marker.markers.length; i++) {
+									if (!isNaN(marker.markers[i]) && marker.markers[i] != null) {
+										while (newSelected.length <= i) newSelected.push(true);
+										newSelected[i] = true;
+									}
 								}
-							}
-							marker.selectedPeriods = newSelected;
-						}}>All</button
-					>
-					<button
-						class="period-select-btn"
-						onclick={() => {
-							const newSelected = [...marker.selectedPeriods];
-							for (let i = 0; i < marker.markers.length; i++) {
-								if (!isNaN(marker.markers[i]) && marker.markers[i] != null) {
-									while (newSelected.length <= i) newSelected.push(true);
-									newSelected[i] = false;
+								marker.selectedPeriods = newSelected;
+							}}>All</button
+						>
+						<button
+							class="period-select-btn"
+							onclick={() => {
+								const newSelected = [...marker.selectedPeriods];
+								for (let i = 0; i < marker.markers.length; i++) {
+									if (!isNaN(marker.markers[i]) && marker.markers[i] != null) {
+										while (newSelected.length <= i) newSelected.push(true);
+										newSelected[i] = false;
+									}
 								}
-							}
-							marker.selectedPeriods = newSelected;
-						}}>None</button
-					>
+								marker.selectedPeriods = newSelected;
+							}}>None</button
+						>
+					</div>
+				</div>
+				<div class="period-marker-list">
+					{#each marker.markers as markerValue, i (i)}
+						{#if !isNaN(markerValue) && markerValue != null}
+							{@const periodHrs = marker.parentData.parentPlot.periodHrs}
+							{@const displayValue = parseFloat(
+								(((markerValue % periodHrs) + periodHrs) % periodHrs).toFixed(2)
+							)}
+							<div class="period-marker-row">
+								<input
+									type="checkbox"
+									checked={marker.selectedPeriods[i] ?? true}
+									onchange={() => {
+										const newSelected = [...marker.selectedPeriods];
+										while (newSelected.length <= i) newSelected.push(true);
+										newSelected[i] = !newSelected[i];
+										marker.selectedPeriods = newSelected;
+									}}
+								/>
+								<span class="period-number">{i + 1}:</span>
+								<input
+									type="number"
+									class="marker-value-input"
+									value={displayValue}
+									step="0.01"
+									min="0"
+									max={periodHrs}
+									onchange={(e) => {
+										const newVal = parseFloat(e.target.value);
+										if (!isNaN(newVal)) {
+											marker.editMarker(i, newVal);
+										} else {
+											e.target.value = displayValue;
+										}
+									}}
+								/>
+							</div>
+						{/if}
+					{/each}
 				</div>
 			</div>
-			<div class="period-marker-list">
-				{#each marker.markers as markerValue, i (i)}
-					{#if !isNaN(markerValue) && markerValue != null}
-						{@const periodHrs = marker.parentData.parentPlot.periodHrs}
-						{@const displayValue = parseFloat(
-							(((markerValue % periodHrs) + periodHrs) % periodHrs).toFixed(2)
-						)}
-						<div class="period-marker-row">
-							<input
-								type="checkbox"
-								checked={marker.selectedPeriods[i] ?? true}
-								onchange={() => {
-									const newSelected = [...marker.selectedPeriods];
-									while (newSelected.length <= i) newSelected.push(true);
-									newSelected[i] = !newSelected[i];
-									marker.selectedPeriods = newSelected;
-								}}
-							/>
-							<span class="period-number">{i + 1}:</span>
-							<input
-								type="number"
-								class="marker-value-input"
-								value={displayValue}
-								step="0.01"
-								min="0"
-								max={periodHrs}
-								onchange={(e) => {
-									const newVal = parseFloat(e.target.value);
-									if (!isNaN(newVal)) {
-										marker.editMarker(i, newVal);
-									} else {
-										e.target.value = displayValue;
-									}
-								}}
-							/>
-						</div>
-					{/if}
-				{/each}
-			</div>
-		</div>
 		{/if}
 
 		{#if marker.linearRegression?.slope}
@@ -713,14 +716,7 @@
 			<!-- The line's other copies, a whole τ either side of the one below: once the
 			     onsets cross the row boundary the line leaves the plot and re-enters where
 			     they reappear, and a double plot shows every onset twice (onsetUnwrap.js). -->
-			{#each lineCopyOffsets({
-				slope: marker.linearRegression.slope,
-				intercept: marker.linearRegression.intercept,
-				periodHrs,
-				span: periodHrs * marker.parentData.parentPlot.doublePlot,
-				lo,
-				hi
-			}).filter((off) => off !== 0) as off (off)}
+			{#each lineCopyOffsets( { slope: marker.linearRegression.slope, intercept: marker.linearRegression.intercept, periodHrs, span: periodHrs * marker.parentData.parentPlot.doublePlot, lo, hi } ).filter((off) => off !== 0) as off (off)}
 				<line
 					x1={xscale(marker.linearRegression.intercept + off + (lo - 1) * dx) + padLeft}
 					y1={padTop + (lo - 1) * (eph + sb)}

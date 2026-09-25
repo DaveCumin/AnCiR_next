@@ -27,20 +27,20 @@
 
 	let exists = $state(false);
 
-    async function checkFile() {
-      // The offline download (file://) ships without the handbook, and a fetch from
-      // file:// fails noisily (WebKit reports it as an uncaught error).
-      if (isOfflineFile()) {
-        exists = false;
-        return;
-      }
-      try {
-        const res = await fetch('/handbook.html', { method: 'HEAD' });
-        exists = res.ok;
-      } catch {
-        exists = false;
-      }
-    }
+	async function checkFile() {
+		// The offline download (file://) ships without the handbook, and a fetch from
+		// file:// fails noisily (WebKit reports it as an uncaught error).
+		if (isOfflineFile()) {
+			exists = false;
+			return;
+		}
+		try {
+			const res = await fetch('/handbook.html', { method: 'HEAD' });
+			exists = res.ok;
+		} catch {
+			exists = false;
+		}
+	}
 
 	// The AI button needs a reachable Worker, so ask it rather than trusting
 	// `navigator.onLine` (which only reports a link, not that our service is up — it would
@@ -55,8 +55,6 @@
 		});
 		return () => (cancelled = true);
 	});
-
-
 
 	// The Data panel is independent of the canvas mode — it overlays either the
 	// workflow or the workspace canvas. So it's a plain toggle.
@@ -204,9 +202,7 @@
 				data-testid="nav-ai"
 				aria-disabled={!aiAvailable}
 				onclick={() => aiAvailable && (showAi = true)}
-				{@attach tooltip(
-					aiAvailable ? 'Build/edit a session using AI' : 'AI unavailable'
-				)}
+				{@attach tooltip(aiAvailable ? 'Build/edit a session using AI' : 'AI unavailable')}
 			>
 				<Icon name="aibot" />
 			</button>
@@ -217,11 +213,10 @@
 				class:hint-halo={helpHint.visible}
 				data-testid="nav-help"
 				onclick={() => {
-                  				  dismissHelpHint();
-                  				  checkFile();
-                                  showHelpMenu = !showHelpMenu
-                  				}
-    				    }
+					dismissHelpHint();
+					checkFile();
+					showHelpMenu = !showHelpMenu;
+				}}
 				aria-haspopup="menu"
 				aria-expanded={showHelpMenu}
 				{@attach tooltip('Help — take a tour or about AnCiR')}
@@ -251,14 +246,14 @@
 						>
 					{/if}
 					{#if exists}
-    					<button
-    						type="button"
-    						role="menuitem"
-    						data-testid="open-handbook"
-    						onclick={() => {
-    							window.open('/handbook.html', '_blank');
-    						}}>Open handbook</button
-    					>
+						<button
+							type="button"
+							role="menuitem"
+							data-testid="open-handbook"
+							onclick={() => {
+								window.open('/handbook.html', '_blank');
+							}}>Open handbook</button
+						>
 					{/if}
 					<button
 						type="button"

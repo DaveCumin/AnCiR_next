@@ -94,11 +94,13 @@ export async function pickSessionFile() {
 	}
 }
 
-
 /** Spawn a Simulate Data node on the canvas (same route the empty-state prompt uses). */
 export function simulateData() {
 	appState.view = 'canvas';
-	appState.spawnNodeRequest = { tpType: 'SimulatedData', n: (appState.spawnNodeRequest?.n ?? 0) + 1 };
+	appState.spawnNodeRequest = {
+		tpType: 'SimulatedData',
+		n: (appState.spawnNodeRequest?.n ?? 0) + 1
+	};
 	appState.showControlPanel = true;
 }
 
