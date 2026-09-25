@@ -1,3 +1,16 @@
+<script module>
+	// The panel's border (1.5px left, right and bottom; none on top, where it meets the
+	// node header). The panel is `size` border-box, so the plot gets what is inside the
+	// border. Drawing it at the full `size` hid its right 3px and bottom 1.5px under the
+	// border: the descenders of the x-axis title and the edge of the last x tick label.
+	export const PANEL_BORDER = 1.5;
+
+	/** The plot's drawing box inside a preview panel of outer size `size`. */
+	export function panelInnerBox(size) {
+		return { w: size.w - 2 * PANEL_BORDER, h: size.h - PANEL_BORDER };
+	}
+</script>
+
 <script>
 	// @ts-nocheck
 	import { appConsts, core } from '$lib/core/core.svelte.js';
@@ -15,6 +28,7 @@
 	// is where `renderBox` is declared. Detecting on the wrapper silently found nothing and
 	// left every plot on the old scaled path.
 	const laysOutToBox = $derived(plot?.plot != null && 'renderBox' in plot.plot);
+	const inner = $derived(panelInnerBox(size));
 
 	// Hand the plot this view's size while the canvas owns the render, and TAKE IT BACK on
 	// teardown. The two views never render at once (+page.svelte mounts WorkflowEditor or
@@ -23,7 +37,7 @@
 	$effect(() => {
 		if (!laysOutToBox) return;
 		const target = plot.plot;
-		target.renderBox = { w: size.w, h: size.h };
+		target.renderBox = { w: inner.w, h: inner.h };
 		return () => {
 			target.renderBox = null;
 		};
@@ -33,7 +47,7 @@
 	// (plotPreviewSizes); the plot's real width/height belong to the workspace and
 	// aren't touched by a workflow resize.
 	const previewScale = $derived(
-		plot?.width && plot?.height ? Math.min(size.w / plot.width, size.h / plot.height) : 1
+		plot?.width && plot?.height ? Math.min(inner.w / plot.width, inner.h / plot.height) : 1
 	);
 
 	// Facet generator: preview the per-series child plots as a small-multiples grid
@@ -54,8 +68,8 @@
 	const gridCols = $derived(facetGrid.cols);
 	const gridRows = $derived(facetGrid.rows);
 	// Cell size inside the preview panel, and the scale to fit each child into it.
-	const cellW = $derived(size.w / gridCols);
-	const cellH = $derived(size.h / gridRows);
+	const cellW = $derived(inner.w / gridCols);
+	const cellH = $derived(inner.h / gridRows);
 	function childScale(child) {
 		if (!child?.width || !child?.height) return 1;
 		return Math.min(cellW / child.width, cellH / child.height);
@@ -95,7 +109,10 @@
 			     such plot throws during render and takes the ENTIRE canvas with it — every other
 			     node vanishes and the app looks like it lost the session. Contain it here: the
 			     broken plot shows why, everything else keeps working, and undo still exists. -->
-			<svelte:boundary onerror={(e) => reportError(e, { source: 'render', context: `rendering the ${plot.type} plot` })}>
+			<svelte:boundary
+				onerror={(e) =>
+					reportError(e, { source: 'render', context: `rendering the ${plot.type} plot` })}
+			>
 				<!-- Two ways to fill the box. A plot that lays out to `renderBox` is drawn at
 				     the node's real size, so its axes and legend arrange for that shape and its
 				     text stays at full size. Everything else is still drawn at the figure's own
@@ -103,7 +120,7 @@
 				<div
 					class="plot-preview-inner"
 					style={laysOutToBox
-						? `width:${size.w}px; height:${size.h}px;`
+						? `width:${inner.w}px; height:${inner.h}px;`
 						: `transform:scale(${previewScale}); transform-origin:top left; width:${plot.width}px; height:${plot.height}px;`}
 				>
 					<PlotComp theData={plot} which="plot" />
@@ -207,6 +224,14 @@
 		background: rgba(255, 255, 255, 0.8);
 		border-radius: 2px;
 		user-select: none;
+		/* Revealed on hover only: at rest it sat on the plot's corner and hid the
+		   last x tick label. The nwse-resize cursor still marks the corner. */
+		opacity: 0;
+		transition: opacity 0.12s ease;
+	}
+	.plot-preview-panel:hover .plot-resize-handle,
+	.plot-resize-handle:focus-visible {
+		opacity: 1;
 	}
 
 	.plot-resize-handle:hover {

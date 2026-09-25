@@ -31,18 +31,26 @@
 		sniffTimeFormatOnTypeChange(col, newType);
 	}
 
-	// Shared port-layout constants (mirrors WorkflowEditor.svelte). Re-declared locally
-	// — they're trivial numbers and the duplication is contained to these two files.
-	const HEADER_H = 26;
+	// Shared port-layout constant (mirrors WorkflowEditor.svelte). Re-declared locally
+	// — a trivial number and the duplication is contained to these two files.
 	const PORT_H = 22;
 
-	let isEditable = $derived(node.type === 'process' || node.type === 'tableprocess');
 	// Plot nodes always have a preview panel below, so apply the expanded border style
 	let hasPanel = $derived(node.type === 'plot' || expanded);
 
 	let inputPorts = $derived(node.ports?.inputs ?? []);
 	let outputPorts = $derived(node.ports?.outputs ?? []);
 	let portRows = $derived(Math.max(inputPorts.length, outputPorts.length));
+
+	// Input and output labels of one slot share a line. Inputs (short port names)
+	// keep up to half the width; the output label takes whatever the input label
+	// beside it leaves, so a long output such as "Peak period (h)" is not cut at
+	// a fixed width while the row has room for it. Keyed by slot index.
+	let inRowWidths = $state({});
+	const LABEL_GAP = 8; // px between an input label and the output label beside it
+	function outRowMaxWidth(slot) {
+		return `max-width:calc(100% - ${(inRowWidths[slot] ?? 0) + LABEL_GAP}px);`;
+	}
 
 	// Plot nodes whose inputs carry series metadata (axis/series) or overlay
 	// metadata (`overlay: { id, name }`, one group per reference line / band)
@@ -171,7 +179,11 @@
 						{row.label}
 					</div>
 				{:else}
-					<div class="port-row input" style="top:{row.slot * PORT_H}px;">
+					<div
+						class="port-row input"
+						style="top:{row.slot * PORT_H}px;"
+						bind:offsetWidth={inRowWidths[row.slot]}
+					>
 						<div
 							class="port-dot dot-input"
 							data-node-id={node.id}
@@ -198,7 +210,7 @@
 			<!-- Output ports (passthrough columns + plot metrics) on the right, slot-
 			     aligned with their series (metrics after all series). -->
 			{#each groupedSlots.outputRows as { slot, port } (`out_${port.name}`)}
-				<div class="port-row output" style="top:{slot * PORT_H}px;">
+				<div class="port-row output" style="top:{slot * PORT_H}px;{outRowMaxWidth(slot)}">
 					<div
 						class="port-dot dot-output"
 						class:metric-port={port.metric === true}
@@ -226,7 +238,7 @@
 	{:else if portRows > 0}
 		<div class="node-ports" style="height:{portRows * PORT_H}px;">
 			{#each inputPorts as port, i (`in_${port.name}_${i}`)}
-				<div class="port-row input" style="top:{i * PORT_H}px;">
+				<div class="port-row input" style="top:{i * PORT_H}px;" bind:offsetWidth={inRowWidths[i]}>
 					<div
 						class="port-dot dot-input"
 						data-node-id={node.id}
@@ -244,7 +256,7 @@
 				</div>
 			{/each}
 			{#each outputPorts as port, i (`out_${port.name}_${i}`)}
-				<div class="port-row output" style="top:{i * PORT_H}px;">
+				<div class="port-row output" style="top:{i * PORT_H}px;{outRowMaxWidth(i)}">
 					<div
 						class="port-dot dot-output"
 						class:metric-port={port.metric === true}
@@ -442,6 +454,7 @@
 		display: flex;
 		align-items: center;
 		height: 22px; /* PORT_H */
+		box-sizing: border-box; /* max-width includes the dot padding */
 		font-size: var(--font-xs);
 		color: var(--color-lightness-40);
 		pointer-events: none; /* let only the dot capture clicks */
@@ -449,6 +462,7 @@
 
 	.port-row.input {
 		left: 0;
+		max-width: 50%;
 		padding-left: 14px;
 		flex-direction: row;
 	}
@@ -525,11 +539,14 @@
 		color: var(--color-lightness-40);
 	}
 
+	/* Width comes from the row (see outRowMaxWidth); the label shrinks into it
+	   and ellipsizes only when the row itself is out of room. The port dot's
+	   tooltip always carries the full name. */
 	.port-label {
 		padding: 0 4px;
 		pointer-events: none;
 		white-space: nowrap;
-		max-width: 80px;
+		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}

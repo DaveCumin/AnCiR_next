@@ -265,8 +265,8 @@
         </ul>
       </li>
       <li>
-        Set the period range to test using <strong>Period min</strong> and
-        <strong>Period max</strong> (e.g., 16–32 h for circadian analysis; widen for
+        Set the period range to test under <strong>Period range (hrs)</strong>:
+        <strong>Min</strong> and <strong>Max</strong> (e.g., 16–32 h for circadian analysis; widen for
         ultradian/infradian) and the <strong>Step</strong> resolution (default 0.25 h).
         The default method is <strong>Lomb-Scargle</strong>. Chi-squared and Enright
         fold the binned data at a whole number of bins, so they can only test periods

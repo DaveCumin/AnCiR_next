@@ -1402,6 +1402,10 @@
 
 	:global(.control-input select, .control-input input) {
 		width: 100%;
+		/* Form controls do not inherit type by default: a select drew in Arial,
+		   black, beside the ColumnSelector triggers in the app font. */
+		font-family: inherit;
+		color: inherit;
 
 		height: var(--control-input-height);
 		box-sizing: border-box;
@@ -1416,8 +1420,15 @@
 		transition: border-color 0.2s;
 	}
 
+	/* No vertical padding: the fixed control height minus 0.2rem top and bottom
+	   left the text box shorter than a line of the app font, so descenders (the
+	   g in "Lomb-Scargle") were clipped. Chrome centres the text in the box. */
 	:global(.control-input select) {
-		padding: 0.2rem var(--space-2);
+		padding: 0 var(--space-2);
+		/* Keep a long option name clear of the drop-down arrow, which Chrome
+		   paints inside the padding box once a select has an author border. */
+		padding-right: 1.5em;
+		text-overflow: ellipsis;
 	}
 
 	:global(.control-input select:hover, .control-input input:hover) {

@@ -662,7 +662,7 @@
 		   min-width:auto lets wide row content (e.g. a long tag chip in a metric
 		   breakdown) blow the column out past the fixed-width card instead of
 		   shrinking/ellipsizing. */
-		grid-template-columns: minmax(54px, auto) minmax(0, 1fr);
+		grid-template-columns: minmax(44px, auto) minmax(0, 1fr);
 		align-items: start;
 		padding: 2px 0;
 	}
@@ -835,6 +835,11 @@
 	.metric-strip {
 		grid-template-columns: 14px 12px minmax(0, 1fr) auto;
 		padding-right: 12px;
+	}
+	/* The strip's own right padding already clears the port dot, so the series
+	   rows' 14px name padding would only steal width from the metric name. */
+	.metric-strip .row-name {
+		padding-right: 0;
 	}
 	.metric-glyph {
 		display: inline-flex;

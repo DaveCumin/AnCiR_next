@@ -533,7 +533,13 @@
 
 {#if !hideTrigger}
 	<div class="select-container" bind:this={containerEl}>
-		<button bind:this={triggerEl} class="trigger" onclick={toggleDropdown} type="button">
+		<button
+			bind:this={triggerEl}
+			class="trigger"
+			title={selectedLabel}
+			onclick={toggleDropdown}
+			type="button"
+		>
 			<span class="trigger-label">{selectedLabel}</span>
 			<span class="arrow">{open ? '▲' : '▼'}</span>
 		</button>

@@ -6,6 +6,7 @@
 	// IQR, skewness, excess kurtosis. Output as fixed columns (a `variable` name column plus one
 	// column per statistic), tidy long form. Quick-plot draws a histogram of each input column.
 	// Maths is the pure, unit-tested utils/describeStats.js (scipy-matched moments).
+	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
@@ -212,7 +213,7 @@
 			<summary class="tp-output-summary">Summary</summary>
 			<!-- Scrolls sideways in a narrow panel (as RayleighTest does) instead of
 			     letting the browser wrap numbers one character per line. -->
-			<div class="d-table-wrap">
+			<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
 				<table class="d-table">
 					<thead>
 						<tr
@@ -282,6 +283,14 @@
 		max-height: 14rem;
 		overflow: auto;
 		scrollbar-gutter: stable;
+	}
+	/* In a canvas node's editor panel, which already scrolls (and fades its cut
+	   edge), a second scroll box inside it cut its own last line in half. Let the
+	   output flow and scroll with the panel instead. */
+	:global(.process-editor-panel) .tp-output-panel[open] {
+		max-height: none;
+		overflow: visible;
+		scrollbar-gutter: auto;
 	}
 	.tp-output-summary {
 		cursor: pointer;

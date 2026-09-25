@@ -8,6 +8,7 @@
 	//   • D'Agostino-Pearson K² (scipy normaltest) — omnibus skew + kurtosis, needs n ≥ 8.
 	//   • Jarque-Bera — the same moment idea, valid down to n ≥ 3 but weaker in small samples.
 	// Output is fixed long-form columns so it composes (filter non-normal, feed a table, etc.).
+	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -231,7 +232,7 @@
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Results</summary>
-			<div class="d-table-wrap">
+			<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
 				<table class="d-table">
 					<thead>
 						<tr><th>var</th><th>stat</th><th>p</th><th>n</th><th>normal?</th></tr>
@@ -302,6 +303,14 @@
 		max-height: 14rem;
 		overflow: auto;
 		scrollbar-gutter: stable;
+	}
+	/* In a canvas node's editor panel, which already scrolls (and fades its cut
+	   edge), a second scroll box inside it cut its own last line in half. Let the
+	   output flow and scroll with the panel instead. */
+	:global(.process-editor-panel) .tp-output-panel[open] {
+		max-height: none;
+		overflow: visible;
+		scrollbar-gutter: auto;
 	}
 	.tp-output-summary {
 		cursor: pointer;

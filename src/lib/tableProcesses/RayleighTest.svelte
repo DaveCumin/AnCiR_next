@@ -1,4 +1,5 @@
 <script module>
+	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	// @ts-nocheck
@@ -405,7 +406,7 @@
 </div>
 
 {#if rows.length}
-	<div class="rayleigh-results">
+	<div class="rayleigh-results scroll-fade-x" {@attach scrollFade()}>
 		<table>
 			<thead>
 				<tr>

@@ -6,6 +6,7 @@
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
+	import ControlGroup from '$lib/components/inputs/ControlGroup.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { min as arrayMin, minMax as arrayMinMax, isInvalidValue } from '$lib/utils/stats.js';
 	// Pure compute (getStatKeys + the windowed loop) lives in utils/ so it can run
@@ -673,15 +674,17 @@
 			</div>
 		</div>
 		<div class="control-input-horizontal">
-			<ControlInput label="Period min (hrs)">
-				<NumberWithUnits bind:value={p.args.periodMin} min="0.01" step="0.5" />
-			</ControlInput>
-			<ControlInput label="Period max (hrs)">
-				<NumberWithUnits bind:value={p.args.periodMax} min="0.01" step="0.5" />
-			</ControlInput>
-			<ControlInput label="Period step (hrs)">
-				<NumberWithUnits bind:value={p.args.periodStep} min="0.001" step="0.01" />
-			</ControlInput>
+			<ControlGroup label="Period range (hrs)">
+				<ControlInput label="Min">
+					<NumberWithUnits bind:value={p.args.periodMin} min="0.01" step="0.5" />
+				</ControlInput>
+				<ControlInput label="Max">
+					<NumberWithUnits bind:value={p.args.periodMax} min="0.01" step="0.5" />
+				</ControlInput>
+				<ControlInput label="Step">
+					<NumberWithUnits bind:value={p.args.periodStep} min="0.001" step="0.01" />
+				</ControlInput>
+			</ControlGroup>
 		</div>
 		{#if p.args.pgMethod === 'Chi-squared' || p.args.pgMethod === 'Enright'}
 			<div class="control-input-horizontal">

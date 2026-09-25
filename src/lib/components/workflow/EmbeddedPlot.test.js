@@ -57,3 +57,29 @@ describe('a plot that throws while rendering', () => {
 		expect(console.error).toHaveBeenCalled();
 	});
 });
+
+// The preview panel is `size` border-box with a 1.5px border on the left, right and
+// bottom. A plot laid out at the full `size` lost its right 3px and bottom 1.5px under
+// that border (the x-axis title's descenders and the last x tick label were cut), so it
+// lays out to the box INSIDE the border.
+describe('the plot is laid out inside the panel border', () => {
+	it('panelInnerBox subtracts the side and bottom borders', async () => {
+		const { panelInnerBox, PANEL_BORDER } = await import('./EmbeddedPlot.svelte');
+		expect(PANEL_BORDER).toBe(1.5);
+		expect(panelInnerBox({ w: 240, h: 140 })).toEqual({ w: 237, h: 138.5 });
+	});
+
+	it('hands a renderBox plot the inner box, and takes it back on teardown', () => {
+		appConsts.plotMap.set('boxed', { plot: ThrowingPlot, displayName: 'Boxed (test)' });
+		try {
+			const inner = { renderBox: null, periodlimsIN: [0, 1] };
+			const plot = { id: 2, type: 'boxed', name: 'b', width: 400, height: 300, plot: inner };
+			const { unmount } = render(EmbeddedPlot, { props: { plot, size: { w: 240, h: 140 } } });
+			expect(inner.renderBox).toEqual({ w: 237, h: 138.5 });
+			unmount();
+			expect(inner.renderBox).toBeNull();
+		} finally {
+			appConsts.plotMap.delete('boxed');
+		}
+	});
+});

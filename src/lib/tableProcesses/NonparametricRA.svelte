@@ -1,4 +1,5 @@
 <script module>
+	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { normalizeYInputs, migrateLegacyYIN } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	// @ts-nocheck
@@ -375,7 +376,7 @@
 {#if calculating}
 	<LoadingSpinner />
 {:else if rows.length}
-	<div class="npcra-results">
+	<div class="npcra-results scroll-fade-x" {@attach scrollFade()}>
 		<table>
 			<thead>
 				<tr>

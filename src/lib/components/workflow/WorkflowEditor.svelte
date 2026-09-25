@@ -68,6 +68,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import NodePalette from './NodePalette.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
+	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
 	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
 	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
@@ -4415,6 +4416,7 @@
 								<div
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
+									{@attach scrollFade()}
 								>
 									<!-- p= (not bind:p): node.processObj is a plain member of the
 									     allNodes $derived, so bind: warns binding_property_non_reactive.
@@ -4431,6 +4433,7 @@
 								<div
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
+									{@attach scrollFade()}
 								>
 									<!-- p= (not bind:p) — see the process-panel note above. -->
 									<TPComp p={node.tpObj} />
@@ -4760,7 +4763,11 @@
 		}
 	}
 
+	/* Capped height, so a tall editor scrolls. scrollFade flags an edge with more
+	   content past it, and that edge fades out instead of cutting a line of text
+	   in half (overlay scrollbars give no other hint that the panel scrolls). */
 	.process-editor-panel {
+		--panel-fade: 28px;
 		overflow-y: auto;
 		background: var(--surface-card);
 		border: 1.5px solid rgba(0, 0, 0, 0.15);
@@ -4771,6 +4778,36 @@
 		box-shadow: var(--shadow-2);
 		cursor: default;
 		box-sizing: border-box;
+	}
+
+	/* Edge fades: sticky pseudo-elements pinned to the panel's visible top /
+	   bottom. The negative margin cancels their height, so they overlay the
+	   content without changing the scroll height. A mask-image on the panel
+	   itself would also fade its border and clip its shadow. */
+	.process-editor-panel::before,
+	.process-editor-panel::after {
+		content: '';
+		display: none;
+		position: sticky;
+		z-index: 1;
+		height: var(--panel-fade);
+		margin: 0 -8px; /* span the panel's side padding */
+		pointer-events: none;
+	}
+	.process-editor-panel::before {
+		top: -6px; /* the panel's top padding */
+		margin-bottom: calc(-1 * var(--panel-fade));
+		background: linear-gradient(var(--surface-card), transparent);
+	}
+	.process-editor-panel::after {
+		bottom: -6px; /* the panel's bottom padding */
+		margin-top: calc(-1 * var(--panel-fade));
+		background: linear-gradient(transparent, var(--surface-card));
+	}
+	/* :global — the flags are set at runtime, so Svelte would prune them as unused. */
+	.process-editor-panel:global([data-more-above])::before,
+	.process-editor-panel:global([data-more-below])::after {
+		display: block;
 	}
 
 	.process-intermediate-preview {

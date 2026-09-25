@@ -302,6 +302,7 @@
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
 	import VirtualList from '$lib/components/reusables/VirtualList.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
+	import { columnWidths, MIN_COL_W } from './columnWidths.js';
 
 	let { theData, which } = $props();
 
@@ -329,20 +330,40 @@
 	let rowItems = $derived(Array.from({ length: rowCount }, (_, i) => i));
 	let hasTwoLineCol = $derived(
 		visibleColumns.some(
-			(c) =>
-				c.col &&
-				(c.col.type === 'bin' ||
-					(c.col.type === 'time' && !c.col.isReferencial()))
+			(c) => c.col && (c.col.type === 'bin' || (c.col.type === 'time' && !c.col.isReferencial()))
 		)
 	);
 	// Row height for the 0.85rem cell font: ~44px for one line, more for the two-line time
 	// cells (value + "computed hrs" sub-line). It used to be described as tracking 1.5rem,
 	// which was only ever true inside a workflow node, and that override is gone.
 	let rowH = $derived(hasTwoLineCol ? 64 : 44);
-	const DEFAULT_COL_W = 130;
-	const MIN_COL_W = 56;
-	const widthFor = (colId) => theData?.plot?.colWidths?.[colId] ?? DEFAULT_COL_W;
-	let colOffsetPx = $derived(theData?.plot?.showColNumber ? '44px ' : '');
+	const NUM_COL_W = 44;
+	// Inner width of the scroll box; unresized columns share it (columnWidths.js).
+	// Less the body list's vertical scrollbar, where the platform draws a classic
+	// one: the rows are that much narrower than the header, and a table sized to
+	// the full box would clip its last column under the scrollbar.
+	let scrollEl = $state(null);
+	let scrollBoxW = $state(0);
+	let scrollBoxH = $state(0);
+	let bodyGutter = $state(0);
+	$effect(() => {
+		void scrollBoxW;
+		void scrollBoxH;
+		void rowCount;
+		const list = scrollEl?.querySelector('.vlist');
+		bodyGutter = list ? list.offsetWidth - list.clientWidth : 0;
+	});
+	let numColW = $derived(theData?.plot?.showColNumber ? NUM_COL_W : 0);
+	let widths = $derived(
+		columnWidths(
+			visibleColumns.map((vc) => vc.colId),
+			theData?.plot?.colWidths,
+			scrollBoxW > 0 ? scrollBoxW - bodyGutter : 0,
+			numColW
+		)
+	);
+	const widthFor = (colId) => widths[colId];
+	let colOffsetPx = $derived(numColW ? `${numColW}px ` : '');
 	// Fixed px column widths (not 1fr) so the sticky header grid and the row grids
 	// stay aligned regardless of the body's vertical scrollbar, and so columns can
 	// be resized + overflow can ellipsis.
@@ -350,8 +371,7 @@
 		`${colOffsetPx}${visibleColumns.map((vc) => `${widthFor(vc.colId)}px`).join(' ')}`
 	);
 	let tableMinWidth = $derived(
-		(theData?.plot?.showColNumber ? 44 : 0) +
-			visibleColumns.reduce((sum, vc) => sum + widthFor(vc.colId), 0)
+		numColW + visibleColumns.reduce((sum, vc) => sum + widthFor(vc.colId), 0)
 	);
 
 	// Set while a column-resize drag is live, so an unmount mid-drag can still
@@ -443,11 +463,6 @@
 		return theData?.columnRefs?.includes(colId) ?? false;
 	}
 
-	function isTableSelected(table) {
-		if (!table?.columnRefs?.length) return false;
-		return table.columnRefs.every(isColumnSelected);
-	}
-
 	function isPlotSelected(plot) {
 		let cols = [];
 		if (plot?.data && Array.isArray(plot.plot.data)) {
@@ -456,19 +471,6 @@
 			cols = plot.plot.columnRefs;
 		}
 		return cols.length > 0 && cols.every(isColumnSelected);
-	}
-
-	function toggleTableSelection(table) {
-		if (!table?.columnRefs) return;
-		const isSel = isTableSelected(table);
-		if (isSel) {
-			table.columnRefs.forEach((colId) => {
-				const idx = theData.columnRefs.indexOf(colId);
-				if (idx >= 0) theData.removeColumn(idx);
-			});
-		} else {
-			theData.addColumns(table.columnRefs);
-		}
 	}
 
 	function togglePlotSelection(plot) {
@@ -519,6 +521,7 @@
 
 	let standaloneColumns = $derived.by(() => {
 		// "Standalone" = columns not absorbed by any Group node.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a local scratch set, not state
 		const grouped = new Set();
 		for (const g of core.groups ?? []) {
 			for (const cid of g.sourceColumnIds ?? []) grouped.add(cid);
@@ -784,6 +787,9 @@
 		<div class="tableplot-layout">
 			<div
 				class="tp-scroll"
+				bind:this={scrollEl}
+				bind:clientWidth={scrollBoxW}
+				bind:clientHeight={scrollBoxH}
 				role="presentation"
 				onwheel={(e) => {
 					if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
@@ -795,7 +801,7 @@
 							<div class="tp-th tp-num">#</div>
 						{/if}
 						{#each visibleColumns as vc, vi (vc.colId)}
-							<div class="tp-th">
+							<div class="tp-th" title={vc.col?.name ?? ''}>
 								<Editable
 									editable={true}
 									value={vc.col?.name ?? '???'}
@@ -814,14 +820,16 @@
 					</div>
 
 					<VirtualList items={rowItems} fill itemHeight={rowH}>
-						{#snippet row(_, i)}
+						<!-- The items ARE the row indices, so the item is all a row needs. -->
+						{#snippet row(i)}
 							<div class="tp-tr" style="grid-template-columns:{gridCols};">
 								{#if theData.plot.showColNumber}
 									<div class="tp-td tp-num">{i + 1}</div>
 								{/if}
 								{#each visibleColumns as vc, vi (vc.colId)}
 									{@const cell = formatCell(vc.col, i)}
-									<div class="tp-td">
+									<!-- title: a narrow column ellipsizes long values; hover shows it whole. -->
+									<div class="tp-td" title={cell?.isTime ? String(cell.raw) : (cell ?? '')}>
 										{#if cell && cell.isTime}
 											<div class="time-cell">
 												<Editable
@@ -903,14 +911,20 @@
 		flex-shrink: 0;
 	}
 
+	/* Headers wrap instead of ellipsizing: a column name like "Peak period (h)"
+	   is the only label the column has, so it should read in full at the default
+	   width. Bottom-aligned so a one-line header sits on the same line as the
+	   last line of a wrapped neighbour. The cell's title carries the full name
+	   for the rare header that still hits the line clamp below. */
 	.tp-th {
 		padding: 6px 12px;
 		font-weight: 600;
 		border-bottom: 1px solid var(--color-lightness-85);
 		border-right: 1px solid var(--color-lightness-85);
-		white-space: nowrap;
+		display: flex;
+		align-items: flex-end;
+		min-width: 0;
 		overflow: hidden;
-		text-overflow: ellipsis;
 		position: relative; /* anchors the resize grip */
 	}
 
@@ -939,13 +953,22 @@
 	/* Truncate over-long cell/header text with an ellipsis (the values are
 	   rendered by the Editable child, hence the :global span target). The fixed
 	   column width gives it something to truncate against. */
-	.tp-th :global(.inline-edit-span),
 	.tp-td :global(.inline-edit-span) {
 		display: block;
 		max-width: 100%;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+	.tp-th :global(.inline-edit-span) {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
+		max-width: 100%;
+		overflow: hidden;
+		white-space: normal;
+		overflow-wrap: anywhere;
 	}
 
 	.tp-tr {
@@ -1008,6 +1031,9 @@
 	.tableplot-row-bar {
 		flex-shrink: 0;
 		margin: 0.4rem 0 0;
+		/* Same inset as the cells, so the count lines up with the column text and
+		   does not sit on the border of a canvas node's preview. */
+		padding: 0 12px;
 		font-size: 0.8rem;
 		color: var(--color-text-muted);
 	}
