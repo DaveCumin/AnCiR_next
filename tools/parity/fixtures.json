@@ -1892,6 +1892,78 @@
    "rFunc": "cross_correlation"
   },
   {
+   "_comment": "Peak-of-the-correlogram convention, checked in all three languages. X is a triangle wave of period 8 correlated with ITSELF, so r is exactly +1 at lag 0 and exactly -1 at lags -4 and +4. A sign-blind argmax that keeps the first winner reports lag -4 with r = -1; the peak must be lag 0 with r = +1.",
+   "id": "util-crosscorrelation-peak",
+   "kind": "pureUtil",
+   "jsFn": "crossCorrelation",
+   "pyFunc": "cross_correlation",
+   "input": {
+    "x": [
+     0,
+     1,
+     2,
+     1,
+     0,
+     -1,
+     -2,
+     -1,
+     0,
+     1,
+     2,
+     1,
+     0,
+     -1,
+     -2,
+     -1,
+     0,
+     1,
+     2,
+     1
+    ],
+    "y": [
+     0,
+     1,
+     2,
+     1,
+     0,
+     -1,
+     -2,
+     -1,
+     0,
+     1,
+     2,
+     1,
+     0,
+     -1,
+     -2,
+     -1,
+     0,
+     1,
+     2,
+     1
+    ]
+   },
+   "argRefs": [
+    "x",
+    "y"
+   ],
+   "jsArgs": [
+    {
+     "maxLag": 4,
+     "method": "pearson"
+    }
+   ],
+   "pyArgs": [
+    4,
+    "pearson"
+   ],
+   "compareScalars": [
+    "peakLag",
+    "peakR"
+   ],
+   "rFunc": "cross_correlation"
+  },
+  {
    "id": "util-chisquare-gof",
    "kind": "pureUtil",
    "jsFn": "chiSquareGoodnessOfFit",

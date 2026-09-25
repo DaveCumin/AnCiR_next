@@ -1310,7 +1310,34 @@ cross_correlation <- function(x, y, max_lag = 0, method = "pearson") {
     c1 <- correlate(xa[idx + 1], ya[idx + k + 1], method)
     lags <- c(lags, k); rs <- c(rs, c1$r); ps <- c(ps, c1$pvalue); ns <- c(ns, c1$n)
   }
-  list(lags = lags, r = rs, pvalue = ps, n = ns)
+  peak <- cross_correlation_peak(lags, rs)
+  list(lags = lags, r = rs, pvalue = ps, n = ns, peakLag = peak$lag, peakR = peak$r)
+}
+
+# Two lags whose |r| differ by less than this are a TIE, not a ranking.
+CC_TIE <- 1e-12
+
+# Mirror of findPeak in utils/crossCorrelation.js. Peak convention, in order: largest |r|;
+# then the POSITIVE r (an exact +1 is never beaten by an exact -1 at the anti-phase lag);
+# then the smallest |lag| (a periodic series repeats its own peak once per period); then
+# the smaller lag, for determinism.
+cross_correlation_peak <- function(lags, rs) {
+  best_lag <- NA_real_; best_r <- NA_real_; best_mag <- -Inf
+  for (i in seq_along(lags)) {
+    r <- rs[i]
+    if (is.na(r) || !is.finite(r)) next
+    mag <- abs(r)
+    take <- FALSE
+    if (mag > best_mag + CC_TIE) {
+      take <- TRUE
+    } else if (abs(mag - best_mag) <= CC_TIE) {
+      if ((r >= 0) != (best_r >= 0)) take <- (r >= 0)
+      else if (abs(lags[i]) != abs(best_lag)) take <- abs(lags[i]) < abs(best_lag)
+      else take <- lags[i] < best_lag
+    }
+    if (take) { best_lag <- lags[i]; best_r <- r; best_mag <- mag }
+  }
+  list(lag = best_lag, r = best_r)
 }
 
 chi_square_goodness_of_fit <- function(observed, expected = NULL, ddof = 0) {

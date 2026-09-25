@@ -19,6 +19,7 @@
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { cwtFromSeries, waveletRidge, WAVELETS } from '$lib/utils/cwt.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
+	import { ColourScaleClass } from '$lib/components/plotbits/ColourScale.svelte';
 
 	export const CWT_defaultDataInputs = ['x', 'y'];
 	export const CWT_controlHeaders = ['Properties', 'Data'];
@@ -80,6 +81,11 @@
 		showCOI = $state(true);
 		showRidge = $state(false);
 		logScale = $state(true);
+		// The gradient key for the power field. DEFAULT ON, which is the opposite of
+		// the five plots that gained a SERIES legend, and for the same reason: this
+		// plot has always drawn a colour bar, so ON is what leaves a saved figure
+		// looking as it did. Turning it off is now possible, which it was not before.
+		colourScale = $state();
 
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		plotwidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
@@ -123,6 +129,7 @@
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			this.colourScale = ColourScaleClass.withDefaults(dataIN?.colourScale, { show: true });
 			if (dataIN?.x || dataIN?.y || dataIN?.time || dataIN?.values) this.addData(dataIN);
 		}
 
@@ -164,6 +171,7 @@
 				showCOI: this.showCOI,
 				showRidge: this.showRidge,
 				logScale: this.logScale,
+				colourScale: this.colourScale.toJSON(),
 				data: this.data.map((d) => d.toJSON())
 			};
 		}
@@ -183,6 +191,10 @@
 			c.showCOI = json.showCOI ?? c.showCOI;
 			c.showRidge = json.showRidge ?? c.showRidge;
 			c.logScale = json.logScale ?? c.logScale;
+			// withDefaults, not fromJSON: a CWT saved before the scale was a persisted
+			// object has no `colourScale` key, and it must come back ON so the figure
+			// keeps the bar it already had.
+			c.colourScale = ColourScaleClass.withDefaults(json.colourScale, { show: true });
 			if (Array.isArray(json.data)) c.data = json.data.map((d) => CWTSeries.fromJSON(d, c));
 			else if (json.dataIn) c.addData(json.dataIn);
 			return c;
@@ -249,12 +261,12 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
+	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
 
 	let { theData, which } = $props();
 
 	const colormapOptions = Object.keys(COLORMAP_LABELS);
 	const colormapLabelList = colormapOptions.map((k) => COLORMAP_LABELS[k]);
-	const legendStops = Array.from({ length: 21 }, (_, i) => i / 20);
 
 	/** Period → y pixel. Scales are log2-spaced, so a log axis is the honest one. */
 	function periodToY(period, periods, h, logScale) {
@@ -400,36 +412,36 @@
 				>
 			</g>
 
-			<!-- power legend -->
-			{@const lx = plot.padding.left + W + 14}
-			{@const lh = Math.min(H, 150)}
-			{#if lx + 36 < plot.parentBox.width}
-				<g transform="translate({lx}, {plot.padding.top})">
-					{#each legendStops as t, k (k)}
-						<rect
-							x="0"
-							y={lh - (k + 1) * (lh / legendStops.length)}
-							width="10"
-							height={lh / legendStops.length + 0.5}
-							fill={colormapRGB(plot.colormap, t)}
-						/>
-					{/each}
-					<text x="14" y="6" font-size="9" fill="var(--color-lightness-25)">max</text>
-					<text x="14" y={lh} font-size="9" fill="var(--color-lightness-25)">0</text>
-					<text
-						transform="translate(34, {lh / 2}) rotate(-90)"
-						text-anchor="middle"
-						font-size="10"
-						fill="var(--color-lightness-25)">Power</text
-					>
-				</g>
-			{/if}
+			<!-- Power key: the shared colour-scale legend. Drawn OUTSIDE the padding
+			     translate above because the component applies the padding itself, the same
+			     way the series legend does on the eleven plots that have one.
+
+			     The power field is a canvas <image>, so this is the only part of the key
+			     that is real SVG; it sits above the image and exports with it. -->
+			<ColourScale
+				scaleData={plot.colourScale}
+				colormap={plot.colormap}
+				domain={[0, plot.powerMax]}
+				label="Power"
+				plotWidth={W}
+				plotHeight={H}
+				padding={plot.padding}
+				idPrefix={'cwt-' + plot.parentBox.id}
+				figureStyle={plot.viewStyle}
+				which="plot"
+			/>
 		{/if}
 	</svg>
 {/snippet}
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
+		<!-- First in the Properties tab, where every legend control in the app lives. -->
+		<ColourScale
+			scaleData={theData.colourScale}
+			figureStyle={theData.parentBox?.style}
+			which="controls"
+		/>
 		<div class="control-component">
 			<div class="control-component-title">Wavelet transform</div>
 			<ControlInput label="Width">
@@ -457,7 +469,7 @@
 			<ControlInput label="Scale resolution (dj)">
 				<NumberWithUnits bind:value={theData.dj} min="0.005" max="1" step="0.025" />
 			</ControlInput>
-			<ControlInput label="Colour scale">
+			<ControlInput label="Colour map">
 				<AttributeSelect
 					bind:value={theData.colormap}
 					options={colormapOptions}

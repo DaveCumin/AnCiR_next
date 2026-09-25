@@ -832,7 +832,6 @@
 			<div class="control-input">
 				<button
 					onclick={() => {
-						console.log(addMarkerButtonText);
 						if (addMarkerButtonText == 'Add markers') {
 							marker.parentData.parentPlot.isAddingMarkerTo = marker.id;
 							addMarkerButtonText = 'Stop adding';

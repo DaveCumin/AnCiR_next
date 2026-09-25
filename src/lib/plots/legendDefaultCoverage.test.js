@@ -191,3 +191,116 @@ describe('the legend control', () => {
 		expect(late).toEqual([]);
 	});
 });
+
+/**
+ * The COLOUR-SCALE legend, and why it is classified separately.
+ *
+ * Two plots encode their values as colour rather than position: the CWT
+ * scalogram and the correlation heatmap. Neither has series to list, so their
+ * legend is a gradient bar with the numbers its ends stand for, persisted as
+ * `colourScale` rather than `legend`. Everything above keys on `legend`, so
+ * without this block a colour-mapped plot could lose its key, or gain one on
+ * every saved figure, and the guard would be silent — the same hole it was
+ * written to close for series legends.
+ *
+ * Both default ON, which is the OPPOSITE of the five plots that gained a series
+ * legend, and for the same reason those default off: the invariant is that a
+ * saved figure looks as it did. These two have always drawn a bar (hardcoded,
+ * unmovable, and silently dropped on a narrow figure), so ON is what preserves
+ * them. A colour-mapped plot added later with no such history belongs in an OFF
+ * list, exactly like the series ones.
+ */
+const COLOUR_SCALE_ON = ['cwt', 'correlationheatmap'];
+
+/** Every registered plot whose persisted inner carries a `colourScale`. */
+function colourScalePlots() {
+	const out = [];
+	for (const [key, entry] of plotMap) {
+		let json;
+		try {
+			json = entry.data.fromJSON(null, { data: [] })?.toJSON();
+		} catch {
+			continue;
+		}
+		if (json && 'colourScale' in json) out.push(key);
+	}
+	return out;
+}
+
+describe('plot colour-scale legend defaults', () => {
+	it('finds one on every colour-mapped plot, and only those', () => {
+		expect(colourScalePlots().sort()).toEqual([...COLOUR_SCALE_ON].sort());
+	});
+
+	it('never puts the same plot in both legend families without being told', () => {
+		// Not forbidden in principle (a plot could have series AND a ramp), but it
+		// has never been done, so it should be a deliberate edit here rather than a
+		// surprise.
+		const both = colourScalePlots().filter((k) => legendPlots().includes(k));
+		expect(both).toEqual([]);
+	});
+
+	for (const key of COLOUR_SCALE_ON) {
+		it(`${key}: a session saved before the scale was persisted loads with it ON`, () => {
+			const cls = plotMap.get(key).data;
+			expect(cls.fromJSON(null, { data: [] }).colourScale.show, 'no key').toBe(true);
+			expect(cls.fromJSON(null, {}).colourScale.show, 'empty inner').toBe(true);
+			expect(cls.fromJSON(null, null).colourScale.show, 'null inner').toBe(true);
+		});
+
+		it(`${key}: an explicitly undefined show still lands on the default`, () => {
+			const cls = plotMap.get(key).data;
+			const inner = { data: [], colourScale: { position: 'topleft', show: undefined } };
+			expect('show' in inner.colourScale).toBe(true);
+			expect(cls.fromJSON(null, inner).colourScale.show).toBe(true);
+		});
+
+		it(`${key}: round-trips a user's choice in both directions`, () => {
+			const cls = plotMap.get(key).data;
+			for (const show of [true, false]) {
+				const inst = cls.fromJSON(null, { data: [] });
+				inst.colourScale.show = show;
+				inst.colourScale.position = 'bottomleft';
+				const back = cls.fromJSON(null, JSON.parse(JSON.stringify(inst.toJSON())));
+				expect(back.colourScale.show, `${key} with show=${show}`).toBe(show);
+				expect(back.colourScale.position).toBe('bottomleft');
+			}
+		});
+	}
+});
+
+/**
+ * Where the colour-scale CONTROL sits. Same reasoning as the series legend's
+ * control above: a bar that is drawn but has no switch is a dead end, and the
+ * switch belongs in the one place a user already looks for it.
+ */
+describe('the colour-scale control', () => {
+	const sources = fs
+		.readdirSync(PLOTS_DIR, { withFileTypes: true })
+		.filter((e) => e.isDirectory())
+		.map((e) => path.join(PLOTS_DIR, e.name, `${e.name}.svelte`))
+		.filter((f) => fs.existsSync(f))
+		.map((f) => ({ name: path.basename(f, '.svelte'), src: fs.readFileSync(f, 'utf8') }))
+		.filter(({ src }) => /<ColourScale\b[^>]*which="plot"/s.test(src));
+
+	it('finds the plots that draw one (so the assertions below are not vacuous)', () => {
+		expect(sources.map((s) => s.name).sort()).toEqual(['CWT', 'CorrelationHeatmap'].sort());
+	});
+
+	it('every plot that draws a colour scale also offers the control that switches it on', () => {
+		const missing = sources
+			.filter(({ src }) => !/<ColourScale\b[^>]*which="controls"/s.test(src))
+			.map((s) => s.name);
+		expect(missing, 'drawn but with no way to enable it').toEqual([]);
+	});
+
+	it('puts the colour-scale control first in the Properties tab', () => {
+		const late = [];
+		for (const { name, src } of sources) {
+			const scaleAt = src.search(/<ColourScale\b[^>]*which="controls"/s);
+			const firstAt = src.search(/<[A-Z][A-Za-z]*\b[^>]*which="controls"/s);
+			if (scaleAt !== firstAt) late.push(`${name}: colour-scale control is not the first one`);
+		}
+		expect(late).toEqual([]);
+	});
+});

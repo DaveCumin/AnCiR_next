@@ -5699,7 +5699,42 @@ def cross_correlation(x, y, max_lag=0, method="pearson"):
         rs.append(c["r"])
         ps.append(c["pvalue"])
         ns.append(c["n"])
-    return {"lags": lags, "r": rs, "pvalue": ps, "n": ns}
+    peak_lag, peak_r = _cross_correlation_peak(lags, rs)
+    return {"lags": lags, "r": rs, "pvalue": ps, "n": ns,
+            "peakLag": peak_lag, "peakR": peak_r}
+
+
+# Two lags whose |r| differ by less than this are a TIE, not a ranking.
+_CC_TIE = 1e-12
+
+
+def _cross_correlation_peak(lags, rs):
+    """Mirror of findPeak in utils/crossCorrelation.js. Peak convention, in order:
+    largest |r|; then the POSITIVE r (an exact +1 is never beaten by an exact -1 at
+    the anti-phase lag); then the smallest |lag| (a periodic series repeats its own
+    peak once per period); then the smaller lag, for determinism."""
+    nan = float("nan")
+    best_lag, best_r, best_mag = nan, nan, float("-inf")
+    for lag, r in zip(lags, rs):
+        if r is None or math.isnan(r) or math.isinf(r):
+            continue
+        mag = abs(r)
+        if mag > best_mag + _CC_TIE:
+            best_lag, best_r, best_mag = lag, r, mag
+            continue
+        if abs(mag - best_mag) > _CC_TIE:
+            continue
+        if (r >= 0) != (best_r >= 0):
+            if r >= 0:
+                best_lag, best_r, best_mag = lag, r, mag
+            continue
+        if abs(lag) != abs(best_lag):
+            if abs(lag) < abs(best_lag):
+                best_lag, best_r, best_mag = lag, r, mag
+            continue
+        if lag < best_lag:
+            best_lag, best_r, best_mag = lag, r, mag
+    return best_lag, best_r
 
 
 def chi_square_goodness_of_fit(observed, expected=None, ddof=0):

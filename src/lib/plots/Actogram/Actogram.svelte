@@ -830,10 +830,14 @@
 
 	function handleClick(e) {
 		// add markers if selected
-		if (theData.plot.isAddingMarkerTo >= 0) {
-			const [clickedDay, clickedHrs] = getClickedTime(e);
-			theData.plot.addPhaseMarkerTo(theData.plot.isAddingMarkerTo, clickedDay, clickedHrs);
-		}
+		if (theData.plot.isAddingMarkerTo < 0) return;
+		// The click landed in a margin, on an axis or past the last row:
+		// getClickedTime has no day/time to give, so this is a no-op, exactly as
+		// a click with nothing armed is.
+		const at = getClickedTime(e);
+		if (!at) return;
+		const [clickedDay, clickedHrs] = at;
+		theData.plot.addPhaseMarkerTo(theData.plot.isAddingMarkerTo, clickedDay, clickedHrs);
 	}
 
 	function getClickedTime(e) {

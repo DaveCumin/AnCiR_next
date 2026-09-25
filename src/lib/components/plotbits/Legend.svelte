@@ -132,7 +132,12 @@
 		 * @param {{ show?: boolean }} [defaults]
 		 */
 		static withDefaults(saved, { show = true } = {}) {
-			return new LegendClass({ ...(saved ?? {}), show: saved?.show ?? show });
+			// `new this`, not `new LegendClass`: called on a subclass (ColourScaleClass,
+			// the colour-mapped plots' gradient key) this must build THAT class, or the
+			// subclass's own fields are dropped on every load and the helper quietly
+			// downgrades the object it was asked to restore. Identical when called on
+			// LegendClass itself, which is how the eleven series legends call it.
+			return new this({ ...(saved ?? {}), show: saved?.show ?? show });
 		}
 
 		toJSON() {
@@ -152,7 +157,8 @@
 		}
 
 		static fromJSON(json) {
-			return new LegendClass(json);
+			// `new this` for the same reason as withDefaults above.
+			return new this(json);
 		}
 	}
 </script>
