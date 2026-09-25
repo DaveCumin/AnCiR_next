@@ -110,7 +110,12 @@ export const tour = {
 		wireAxisStep(
 			'Wire the activity → Bin Data',
 			() =>
-				axisHint('Now connect your activity column:', 'activity', 'yIN', tpStatus('BinnedData').yOk),
+				axisHint(
+					'Now connect your activity column:',
+					'activity',
+					'yIN',
+					tpStatus('BinnedData').yOk
+				),
 			() => tpStatus('BinnedData'),
 			'y',
 			{
@@ -212,7 +217,8 @@ export const tour = {
 		),
 		wireAxisStep(
 			'Wire the binned activity → Actogram',
-			() => axisHint('Now the binned activity:', 'binned activity', 'y', plotStatus('actogram').yOk),
+			() =>
+				axisHint('Now the binned activity:', 'binned activity', 'y', plotStatus('actogram').yOk),
 			() => plotStatus('actogram'),
 			'y',
 			{
@@ -266,7 +272,12 @@ export const tour = {
 		wireAxisStep(
 			'Wire the binned time → Cosinor',
 			() =>
-				axisHint('Connect the binned time to the Cosinor:', 'binned time', 'xIN', tpStatus('Cosinor').xOk),
+				axisHint(
+					'Connect the binned time to the Cosinor:',
+					'binned time',
+					'xIN',
+					tpStatus('Cosinor').xOk
+				),
 			() => tpStatus('Cosinor'),
 			'x',
 			{

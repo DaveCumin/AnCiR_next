@@ -49,8 +49,14 @@ describe('placeCircularPoints fit-scaling', () => {
 	it('keeps the tallest bin inside the rim via maxStack', () => {
 		const vals = Array.from({ length: 50 }, () => 7); // one huge column
 		const out = placeCircularPoints(vals, {
-			placement: 'bin', period: 24, binWidth: 1, dotRadius: 3, plotRadius: 100,
-			maxStack: 50, innerRim: 0.12, outerRim: 0.98
+			placement: 'bin',
+			period: 24,
+			binWidth: 1,
+			dotRadius: 3,
+			plotRadius: 100,
+			maxStack: 50,
+			innerRim: 0.12,
+			outerRim: 0.98
 		});
 		expect(out.length).toBe(50);
 		expect(Math.max(...out.map((p) => p.r01))).toBeLessThanOrEqual(0.98 + 1e-9);

@@ -32,6 +32,7 @@ export async function ensureDom() {
 	set('HTMLElement', win.HTMLElement);
 	set('Node', win.Node);
 	set('customElements', win.customElements);
-	if (typeof win.getComputedStyle === 'function') set('getComputedStyle', win.getComputedStyle.bind(win));
+	if (typeof win.getComputedStyle === 'function')
+		set('getComputedStyle', win.getComputedStyle.bind(win));
 	installed = true;
 }

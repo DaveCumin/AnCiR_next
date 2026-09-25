@@ -151,6 +151,7 @@
 	}
 
 	let sourceGroups = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- source to items lookup built and drained into an array inside this $derived body; never read reactively
 		const map = new Map();
 		for (const [key, entry] of Object.entries(coreState.storedValues ?? {})) {
 			const source = String(entry?.source || 'Other');
@@ -234,6 +235,7 @@
 	function toggleKey(groupId, key) {
 		p.args.groups = (p.args.groups ?? []).map((g) => {
 			if (g.id !== groupId) return g;
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- transient set converted straight back to an array on the next line; never read reactively
 			const keys = new Set(g.keys ?? []);
 			if (keys.has(key)) keys.delete(key);
 			else keys.add(key);
@@ -245,6 +247,7 @@
 	function setSourceSelection(groupId, sourceKeys, checked) {
 		p.args.groups = (p.args.groups ?? []).map((g) => {
 			if (g.id !== groupId) return g;
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- transient set converted straight back to an array on the next line; never read reactively
 			const keys = new Set(g.keys ?? []);
 			for (const k of sourceKeys) {
 				if (checked) keys.add(k);
@@ -315,7 +318,7 @@
 						<p class="hint">No stored values available.</p>
 					{:else}
 						<div class="source-tree">
-							{#each sourceGroups as src}
+							{#each sourceGroups as src (src.source)}
 								{@const keys = src.items.map((it) => it.key)}
 								{@const sel = sourceSelectionState(group, keys)}
 								<div class="source-block">

@@ -486,10 +486,23 @@ export async function buildTPDemo(spec, entry, display) {
 		const outcomeId = tp.args.out.outcome;
 		const series = [];
 		if (etaId >= 0 && outcomeId >= 0)
-			series.push({ x: etaId, y: outcomeId, label: 'observed outcome', kind: 'points', colour: RAW_COLOUR });
+			series.push({
+				x: etaId,
+				y: outcomeId,
+				label: 'observed outcome',
+				kind: 'points',
+				colour: RAW_COLOUR
+			});
 		if (etaId >= 0 && fittedId >= 0)
-			series.push({ x: etaId, y: fittedId, label: 'fitted P(y=1)', kind: 'points', colour: OUT_COLOUR });
-		if (series.length) scatterPlot(`${display}: fit`, series, { x: 'linear predictor (η)', y: 'P(y=1)' });
+			series.push({
+				x: etaId,
+				y: fittedId,
+				label: 'fitted P(y=1)',
+				kind: 'points',
+				colour: OUT_COLOUR
+			});
+		if (series.length)
+			scatterPlot(`${display}: fit`, series, { x: 'linear predictor (η)', y: 'P(y=1)' });
 		const termIds = ['term', 'coef', 'oddsRatio', 'pvalue']
 			.map((k) => tp.args.out[k])
 			.filter((v) => typeof v === 'number' && v >= 0);

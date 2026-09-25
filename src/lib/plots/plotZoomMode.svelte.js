@@ -18,6 +18,7 @@ export function isZoomMode(plotId) {
 
 /** Toggle zoom mode for a plot. @param {number|string} plotId */
 export function toggleZoomMode(plotId) {
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- the holder is $state and a FRESH Set is assigned to zoomMode.ids below; reactivity comes from that reassignment, so a SvelteSet would be churn
 	const next = new Set(zoomMode.ids);
 	if (next.has(plotId)) next.delete(plotId);
 	else next.add(plotId);
@@ -29,6 +30,7 @@ export function setZoomMode(plotId, on) {
 	// No-op when already in the target state, so callers (e.g. a deselect effect)
 	// can call this freely without churning the Set / triggering re-renders.
 	if (zoomMode.ids.has(plotId) === on) return;
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- same as toggleZoomMode: a fresh Set is assigned to the $state holder, which is what drives the reactive reads
 	const next = new Set(zoomMode.ids);
 	if (on) next.add(plotId);
 	else next.delete(plotId);

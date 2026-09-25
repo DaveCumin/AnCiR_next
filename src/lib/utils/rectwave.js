@@ -102,7 +102,7 @@ function computeNormalEqs(t, x, params, freeIndices) {
 	const JtR = new Array(nFree).fill(0);
 	let rss = 0;
 
-	const [M, A, kappa, omega, phi, d] = params;
+	const [, A, kappa, omega, phi, d] = params;
 
 	for (let i = 0; i < t.length; i++) {
 		const ti = t[i];

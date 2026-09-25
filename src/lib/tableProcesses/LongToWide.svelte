@@ -48,6 +48,7 @@
 		const rawTimeInput = canUseRawStrings ? (core.rawData.get(inputTimeCol.data) ?? []) : null;
 
 		// Build union of all time values (deduplicated, sorted by UNIX ms)
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- dedupe set for the time union, local to this function; never read reactively
 		const seenTimes = new Set();
 		const unionEntries = []; // { unix: UNIX ms, raw: original string or UNIX ms }
 		for (let i = 0; i < timeData.length; i++) {
@@ -64,6 +65,7 @@
 
 		// Get unique categories (preserving order of first appearance)
 		// Skip null/undefined/empty-string values from sparse CSV data
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- dedupe set for categories, local to this function; never read reactively
 		const seenCats = new Set();
 		const categories = [];
 		for (const c of categoryData) {
@@ -75,6 +77,7 @@
 		}
 
 		// Build a map: category -> (time -> value)
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- category to time-value lookup built and consumed inside this function; never read reactively
 		const catTimeMap = new Map();
 		for (const cat of categories) catTimeMap.set(cat, new Map());
 		for (let i = 0; i < categoryData.length; i++) {
@@ -389,6 +392,7 @@
 		previewStart = 1;
 		if (p.args.categoryIN >= 0 && p.args.timeIN >= 0 && p.args.valueIN >= 0) {
 			const catData = getColumnById(p.args.categoryIN).getData();
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- dedupe set for categories, local to doLongToWide(); never read reactively
 			const seenCats = new Set();
 			const categories = [];
 			for (const c of catData) {
@@ -552,7 +556,7 @@
 				{#if p.args.valid && p.args.out.time >= 0}
 					<div class="tableProcess-label"><span>Output</span></div>
 					<ColumnComponent col={getColumnById(p.args.out.time)} />
-					{#each p.args.categories as cat}
+					{#each p.args.categories as cat (cat)}
 						{#if p.args.out['value_' + cat] >= 0}
 							<ColumnComponent col={getColumnById(p.args.out['value_' + cat])} />
 						{/if}

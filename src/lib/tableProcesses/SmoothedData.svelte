@@ -294,7 +294,7 @@
 
 	// Reconcile output columns when yIN changes externally (e.g. from parent in collected mode)
 	$effect(() => {
-		const _yIN = p.args.yIN;
+		void p.args.yIN; // dependency read: re-reconcile when the Y selection changes
 		if (!mounted) return;
 		queueMicrotask(() => untrack(() => onYSelectionChange()));
 	});
@@ -350,7 +350,7 @@
 		<div class="control-input-vertical">
 			<div class="control-input">
 				<p>X column</p>
-				<ColumnSelector bind:value={p.args.xIN} onChange={(e) => getSmoothedData()} /> <br />
+				<ColumnSelector bind:value={p.args.xIN} onChange={() => getSmoothedData()} /> <br />
 			</div>
 			<div class="control-input-vertical">
 				<div class="control-input">
@@ -474,7 +474,7 @@
 						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
 						<ColumnComponent col={xout} />
 					</div>
-					{#each p.args.yIN ?? [] as yId}
+					{#each p.args.yIN ?? [] as yId (yId)}
 						{@const outKey = 'smoothedy_' + yId}
 						{@const yOutId = p.args.out[outKey]}
 						{#if yOutId >= 0}

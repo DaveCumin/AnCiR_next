@@ -15,9 +15,9 @@ import { describe, it } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { core, appConsts, outputCoreAsJson } from '$lib/core/core.svelte.js';
-import { loadProcesses } from '$lib/processes/processMap.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
-import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { loadProcesses } from '$test/processRegistry.js';
+import { loadPlots } from '$test/plotRegistry.js';
+import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { PROCESS_SPECS } from './nodeCatalog.js';
 import { buildProcessDemo } from './nodeDemoBuilders.js';
 

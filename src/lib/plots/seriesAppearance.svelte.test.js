@@ -7,13 +7,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { core, appState } from '$lib/core/core.svelte';
 import { pinAppearance, mappedColour } from './appearanceIdentity.js';
-import {
-	greyForIndex,
-	releaseSeriesAppearance,
-	applyFigureAppearance,
-	applyAppearanceToAll
-} from './seriesAppearance.js';
-import { POINT_SHAPES } from '$lib/components/plotbits/pointShapes.js';
+import { greyForIndex, applyFigureAppearance, applyAppearanceToAll } from './seriesAppearance.js';
 import { newFigureStyle } from './figureStyle.js';
 
 const PAL = ['#aa0000', '#00aa00', '#0000aa', '#aaaa00'];

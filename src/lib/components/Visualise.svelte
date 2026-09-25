@@ -7,8 +7,6 @@
 	let nodes = $state([]);
 	let edges = $state([]);
 	let nodeMap = $state(new Map());
-	let network = $state();
-	let error = $state();
 
 	// Function to add nodes if they don't exist
 	function addNode(id, label, group, level = 0) {
@@ -26,6 +24,7 @@
 		//reset
 		nodes = [];
 		edges = [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- identity bookkeeping for de-duplicating node ids; only read inside addNode, never in markup, and the holder is reassigned wholesale here
 		nodeMap = new Map();
 
 		// Track the maximum level for column processes
@@ -58,12 +57,14 @@
 		});
 
 		// Standalone columns (not in any group, not a TP output)
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this function; never read reactively
 		const tpOutIds = new Set();
 		for (const tp of core?.tableProcesses ?? []) {
 			for (const cid of Object.values(tp.args?.out ?? {})) {
 				if (typeof cid === 'number' && cid >= 0) tpOutIds.add(cid);
 			}
 		}
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this function; never read reactively
 		const grouped = new Set();
 		for (const g of core?.groups ?? []) {
 			for (const cid of g.sourceColumnIds ?? []) grouped.add(cid);
@@ -186,7 +187,7 @@
 			},
 			physics: { enabled: false }
 		};
-		network = new window.vis.Network(container, data, options);
+		new window.vis.Network(container, data, options);
 	}
 
 	$effect(() => {

@@ -122,7 +122,6 @@
 			core.nodeNotes[node.id] = next;
 		}
 	}
-
 </script>
 
 {#if appState.canvasMultiSelectedCount > 1}
@@ -132,8 +131,8 @@
 		</div>
 	</div>
 	<p class="multi-hint">
-		Drag any selected node to move them as a group. Delete / Backspace removes them all.
-		Cmd / Ctrl + C copies; Cmd / Ctrl + V pastes.
+		Drag any selected node to move them as a group. Delete / Backspace removes them all. Cmd / Ctrl
+		+ C copies; Cmd / Ctrl + V pastes.
 	</p>
 {:else if node}
 	<div class="control-banner">

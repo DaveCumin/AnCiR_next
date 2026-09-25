@@ -225,7 +225,7 @@
 		<div>
 			<p>Removed values</p>
 			<div class="removed-values-list">
-				{#each removedValues as value, i}
+				{#each removedValues as value, i (i)}
 					<div class="removed-value-row">
 						<span class="removed-value-number">{i + 1}:</span>
 						<span class="removed-value">{parseFloat(value.toFixed(2))}</span>

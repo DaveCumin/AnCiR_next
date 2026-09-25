@@ -48,12 +48,8 @@
 		</text>
 	{/each}
 	{#if hint}
-		<text
-			x={P.cx}
-			y={P.cy + P.radius + 34}
-			text-anchor="middle"
-			font-size="10.5"
-			fill={labelColour}>{hint}</text
+		<text x={P.cx} y={P.cy + P.radius + 34} text-anchor="middle" font-size="10.5" fill={labelColour}
+			>{hint}</text
 		>
 	{/if}
 </g>

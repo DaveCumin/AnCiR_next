@@ -3,272 +3,275 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { addOpListener, withSuppressedListeners, applyOp } from './operations.js';
 import { appConsts, core } from './core.svelte.js';
-import { Column } from './Column.svelte';
 
 beforeAll(() => {
-    // Register a minimal stub for 'scatterplot' so Plot's constructor can
-    // resolve appConsts.plotMap.get(this.type) without pulling in the real
-    // (Svelte-rendered) scatterplot component.
-    if (!appConsts.plotMap.has('scatterplot')) {
-        appConsts.plotMap.set('scatterplot', {
-            displayName: 'Scatterplot (test stub)',
-            data: {
-                fromJSON: (_plot, plotData) => plotData ?? {}
-            }
-        });
-    }
-    if (!appConsts.processMap.has('Normalize')) {
-        appConsts.processMap.set('Normalize', {
-            displayName: 'Normalize (test stub)',
-            defaults: new Map([['normalizationType', { val: 'z-score' }]]),
-            func: (data, args) => data // no-op
-        });
-    }
-    if (!appConsts.tableProcessMap.has('BinnedData')) {
-        appConsts.tableProcessMap.set('BinnedData', {
-            displayName: 'BinnedData (test stub)',
-            defaults: new Map([['binSize', { val: 60 }]]),
-            func: () => null, // no-op; new TableProcess() calls this for side-effects
-            columnIdFields: { scalar: [], array: [] }
-        });
-    }
+	// Register a minimal stub for 'scatterplot' so Plot's constructor can
+	// resolve appConsts.plotMap.get(this.type) without pulling in the real
+	// (Svelte-rendered) scatterplot component.
+	if (!appConsts.plotMap.has('scatterplot')) {
+		appConsts.plotMap.set('scatterplot', {
+			displayName: 'Scatterplot (test stub)',
+			data: {
+				fromJSON: (_plot, plotData) => plotData ?? {}
+			}
+		});
+	}
+	if (!appConsts.processMap.has('Normalize')) {
+		appConsts.processMap.set('Normalize', {
+			displayName: 'Normalize (test stub)',
+			defaults: new Map([['normalizationType', { val: 'z-score' }]]),
+			func: (data) => data // no-op
+		});
+	}
+	if (!appConsts.tableProcessMap.has('BinnedData')) {
+		appConsts.tableProcessMap.set('BinnedData', {
+			displayName: 'BinnedData (test stub)',
+			defaults: new Map([['binSize', { val: 60 }]]),
+			func: () => null, // no-op; new TableProcess() calls this for side-effects
+			columnIdFields: { scalar: [], array: [] }
+		});
+	}
 });
 
 describe('applyOp listener plumbing', () => {
-    it('addOpListener returns an unsubscribe function', () => {
-        const seen = [];
-        const off = addOpListener((f, r) => seen.push({ f, r }));
-        expect(typeof off).toBe('function');
-        off();
-    });
+	it('addOpListener returns an unsubscribe function', () => {
+		const seen = [];
+		const off = addOpListener((f, r) => seen.push({ f, r }));
+		expect(typeof off).toBe('function');
+		off();
+	});
 
-    it('withSuppressedListeners runs the callback', () => {
-        let ran = false;
-        withSuppressedListeners(() => {
-            ran = true;
-        });
-        expect(ran).toBe(true);
-    });
+	it('withSuppressedListeners runs the callback', () => {
+		let ran = false;
+		withSuppressedListeners(() => {
+			ran = true;
+		});
+		expect(ran).toBe(true);
+	});
 });
 
 describe('applyOp: plot ops', () => {
-    beforeEach(() => {
-        core.plots.length = 0;
-    });
+	beforeEach(() => {
+		core.plots.length = 0;
+	});
 
-    it('addPlot inserts a plot and returns removePlot as inverse', () => {
-        const inv = applyOp({
-            kind: 'addPlot',
-            plotData: { type: 'scatterplot', x: 0, y: 0, width: 500, height: 300 }
-        });
-        expect(core.plots).toHaveLength(1);
-        expect(typeof core.plots[0].id).toBe('number');
-        expect(inv).toEqual({ kind: 'removePlot', id: core.plots[0].id });
-    });
+	it('addPlot inserts a plot and returns removePlot as inverse', () => {
+		const inv = applyOp({
+			kind: 'addPlot',
+			plotData: { type: 'scatterplot', x: 0, y: 0, width: 500, height: 300 }
+		});
+		expect(core.plots).toHaveLength(1);
+		expect(typeof core.plots[0].id).toBe('number');
+		expect(inv).toEqual({ kind: 'removePlot', id: core.plots[0].id });
+	});
 
-    it('removePlot deletes a plot and returns addPlot as inverse', () => {
-        applyOp({
-            kind: 'addPlot',
-            plotData: { type: 'scatterplot', x: 10, y: 20, width: 400, height: 250 }
-        });
-        const id = core.plots[0].id;
-        const inv = applyOp({ kind: 'removePlot', id });
-        expect(core.plots).toHaveLength(0);
-        expect(inv.kind).toBe('addPlot');
-        expect(inv.plotData.id).toBe(id);
-    });
+	it('removePlot deletes a plot and returns addPlot as inverse', () => {
+		applyOp({
+			kind: 'addPlot',
+			plotData: { type: 'scatterplot', x: 10, y: 20, width: 400, height: 250 }
+		});
+		const id = core.plots[0].id;
+		const inv = applyOp({ kind: 'removePlot', id });
+		expect(core.plots).toHaveLength(0);
+		expect(inv.kind).toBe('addPlot');
+		expect(inv.plotData.id).toBe(id);
+	});
 
-    it('setPlotProperty changes a key and returns the reverse', () => {
-        applyOp({
-            kind: 'addPlot',
-            plotData: { type: 'scatterplot', name: 'old', x: 0, y: 0, width: 1, height: 1 }
-        });
-        const id = core.plots[0].id;
-        const inv = applyOp({ kind: 'setPlotProperty', id, key: 'name', value: 'new' });
-        expect(core.plots[0].name).toBe('new');
-        expect(inv).toEqual({ kind: 'setPlotProperty', id, key: 'name', value: 'old' });
-    });
+	it('setPlotProperty changes a key and returns the reverse', () => {
+		applyOp({
+			kind: 'addPlot',
+			plotData: { type: 'scatterplot', name: 'old', x: 0, y: 0, width: 1, height: 1 }
+		});
+		const id = core.plots[0].id;
+		const inv = applyOp({ kind: 'setPlotProperty', id, key: 'name', value: 'new' });
+		expect(core.plots[0].name).toBe('new');
+		expect(inv).toEqual({ kind: 'setPlotProperty', id, key: 'name', value: 'old' });
+	});
 
-    it('setPlotPosition changes coords and returns the previous coords', () => {
-        applyOp({
-            kind: 'addPlot',
-            plotData: { type: 'scatterplot', x: 0, y: 0, width: 100, height: 100 }
-        });
-        const id = core.plots[0].id;
-        const inv = applyOp({ kind: 'setPlotPosition', id, x: 50, y: 60 });
-        expect(core.plots[0].x).toBe(50);
-        expect(core.plots[0].y).toBe(60);
-        expect(inv.kind).toBe('setPlotPosition');
-        expect(inv.x).toBe(0);
-        expect(inv.y).toBe(0);
-    });
+	it('setPlotPosition changes coords and returns the previous coords', () => {
+		applyOp({
+			kind: 'addPlot',
+			plotData: { type: 'scatterplot', x: 0, y: 0, width: 100, height: 100 }
+		});
+		const id = core.plots[0].id;
+		const inv = applyOp({ kind: 'setPlotPosition', id, x: 50, y: 60 });
+		expect(core.plots[0].x).toBe(50);
+		expect(core.plots[0].y).toBe(60);
+		expect(inv.kind).toBe('setPlotPosition');
+		expect(inv.x).toBe(0);
+		expect(inv.y).toBe(0);
+	});
 });
 
 describe('applyOp: column + process ops', () => {
-    beforeEach(() => {
-        core.data.length = 0;
-    });
+	beforeEach(() => {
+		core.data.length = 0;
+	});
 
-    it('addColumn pushes a column and returns removeColumn', () => {
-        const inv = applyOp({
-            kind: 'addColumn',
-            columnData: { name: 'X', type: 'number' }
-        });
-        expect(core.data).toHaveLength(1);
-        expect(typeof core.data[0].id).toBe('number');
-        expect(inv).toEqual({ kind: 'removeColumn', id: core.data[0].id });
-    });
+	it('addColumn pushes a column and returns removeColumn', () => {
+		const inv = applyOp({
+			kind: 'addColumn',
+			columnData: { name: 'X', type: 'number' }
+		});
+		expect(core.data).toHaveLength(1);
+		expect(typeof core.data[0].id).toBe('number');
+		expect(inv).toEqual({ kind: 'removeColumn', id: core.data[0].id });
+	});
 
-    it('removeColumn removes and inverse re-adds with the same id', () => {
-        applyOp({ kind: 'addColumn', columnData: { name: 'X', type: 'number' } });
-        const id = core.data[0].id;
-        const inv = applyOp({ kind: 'removeColumn', id });
-        expect(core.data).toHaveLength(0);
-        expect(inv.kind).toBe('addColumn');
-        expect(inv.columnData.id).toBe(id);
-    });
+	it('removeColumn removes and inverse re-adds with the same id', () => {
+		applyOp({ kind: 'addColumn', columnData: { name: 'X', type: 'number' } });
+		const id = core.data[0].id;
+		const inv = applyOp({ kind: 'removeColumn', id });
+		expect(core.data).toHaveLength(0);
+		expect(inv.kind).toBe('addColumn');
+		expect(inv.columnData.id).toBe(id);
+	});
 
-    it('addProcess appends and returns removeProcess', () => {
-        applyOp({ kind: 'addColumn', columnData: { name: 'X', type: 'number' } });
-        const colId = core.data[0].id;
-        const inv = applyOp({
-            kind: 'addProcess',
-            columnId: colId,
-            processType: 'Normalize',
-            args: { normalizationType: 'z-score' }
-        });
-        const col = core.data.find((c) => c.id === colId);
-        expect(col.processes).toHaveLength(1);
-        expect(typeof col.processes[0].id).toBe('number');
-        expect(inv).toEqual({ kind: 'removeProcess', columnId: colId, processId: col.processes[0].id });
-    });
+	it('addProcess appends and returns removeProcess', () => {
+		applyOp({ kind: 'addColumn', columnData: { name: 'X', type: 'number' } });
+		const colId = core.data[0].id;
+		const inv = applyOp({
+			kind: 'addProcess',
+			columnId: colId,
+			processType: 'Normalize',
+			args: { normalizationType: 'z-score' }
+		});
+		const col = core.data.find((c) => c.id === colId);
+		expect(col.processes).toHaveLength(1);
+		expect(typeof col.processes[0].id).toBe('number');
+		expect(inv).toEqual({ kind: 'removeProcess', columnId: colId, processId: col.processes[0].id });
+	});
 
-    it('setProcessArg updates an arg and returns the previous value', () => {
-        applyOp({ kind: 'addColumn', columnData: { name: 'X', type: 'number' } });
-        const colId = core.data[0].id;
-        applyOp({
-            kind: 'addProcess',
-            columnId: colId,
-            processType: 'Normalize',
-            args: { normalizationType: 'z-score' }
-        });
-        const procId = core.data[0].processes[0].id;
-        const inv = applyOp({
-            kind: 'setProcessArg',
-            columnId: colId,
-            processId: procId,
-            key: 'normalizationType',
-            value: 'min-max'
-        });
-        expect(core.data[0].processes[0].args.normalizationType).toBe('min-max');
-        expect(inv.value).toBe('z-score');
-    });
+	it('setProcessArg updates an arg and returns the previous value', () => {
+		applyOp({ kind: 'addColumn', columnData: { name: 'X', type: 'number' } });
+		const colId = core.data[0].id;
+		applyOp({
+			kind: 'addProcess',
+			columnId: colId,
+			processType: 'Normalize',
+			args: { normalizationType: 'z-score' }
+		});
+		const procId = core.data[0].processes[0].id;
+		const inv = applyOp({
+			kind: 'setProcessArg',
+			columnId: colId,
+			processId: procId,
+			key: 'normalizationType',
+			value: 'min-max'
+		});
+		expect(core.data[0].processes[0].args.normalizationType).toBe('min-max');
+		expect(inv.value).toBe('z-score');
+	});
 });
 
 describe('applyOp: free tableprocess ops', () => {
-    beforeEach(() => {
-        core.tableProcesses.length = 0;
-        core.data.length = 0; // TableProcess construction may try to read columns
-    });
+	beforeEach(() => {
+		core.tableProcesses.length = 0;
+		core.data.length = 0; // TableProcess construction may try to read columns
+	});
 
-    it('addFreeTableProcess appends and returns removeFreeTableProcess', () => {
-        const inv = applyOp({
-            kind: 'addFreeTableProcess',
-            tpType: 'BinnedData',
-            args: { binSize: 60, out: {} }
-        });
-        expect(core.tableProcesses).toHaveLength(1);
-        expect(typeof core.tableProcesses[0].id).toBe('number');
-        expect(inv).toEqual({
-            kind: 'removeFreeTableProcess',
-            tpId: core.tableProcesses[0].id
-        });
-    });
+	it('addFreeTableProcess appends and returns removeFreeTableProcess', () => {
+		const inv = applyOp({
+			kind: 'addFreeTableProcess',
+			tpType: 'BinnedData',
+			args: { binSize: 60, out: {} }
+		});
+		expect(core.tableProcesses).toHaveLength(1);
+		expect(typeof core.tableProcesses[0].id).toBe('number');
+		expect(inv).toEqual({
+			kind: 'removeFreeTableProcess',
+			tpId: core.tableProcesses[0].id
+		});
+	});
 
-    it('removeFreeTableProcess removes and inverse re-adds with same id', () => {
-        applyOp({
-            kind: 'addFreeTableProcess',
-            tpType: 'BinnedData',
-            args: { binSize: 60, out: {} }
-        });
-        const id = core.tableProcesses[0].id;
-        const inv = applyOp({ kind: 'removeFreeTableProcess', tpId: id });
-        expect(core.tableProcesses).toHaveLength(0);
-        expect(inv.kind).toBe('addFreeTableProcess');
-        expect(inv.tpId).toBe(id);
-    });
+	it('removeFreeTableProcess removes and inverse re-adds with same id', () => {
+		applyOp({
+			kind: 'addFreeTableProcess',
+			tpType: 'BinnedData',
+			args: { binSize: 60, out: {} }
+		});
+		const id = core.tableProcesses[0].id;
+		const inv = applyOp({ kind: 'removeFreeTableProcess', tpId: id });
+		expect(core.tableProcesses).toHaveLength(0);
+		expect(inv.kind).toBe('addFreeTableProcess');
+		expect(inv.tpId).toBe(id);
+	});
 
-    it('setFreeTableProcessArg returns the previous value', () => {
-        applyOp({
-            kind: 'addFreeTableProcess',
-            tpType: 'BinnedData',
-            args: { binSize: 60, out: {} }
-        });
-        const tpId = core.tableProcesses[0].id;
-        const inv = applyOp({
-            kind: 'setFreeTableProcessArg',
-            tpId,
-            key: 'binSize',
-            value: 120
-        });
-        expect(core.tableProcesses[0].args.binSize).toBe(120);
-        expect(inv.value).toBe(60);
-    });
+	it('setFreeTableProcessArg returns the previous value', () => {
+		applyOp({
+			kind: 'addFreeTableProcess',
+			tpType: 'BinnedData',
+			args: { binSize: 60, out: {} }
+		});
+		const tpId = core.tableProcesses[0].id;
+		const inv = applyOp({
+			kind: 'setFreeTableProcessArg',
+			tpId,
+			key: 'binSize',
+			value: 120
+		});
+		expect(core.tableProcesses[0].args.binSize).toBe(120);
+		expect(inv.value).toBe(60);
+	});
 });
 
 describe('applyOp: stored values + batch', () => {
-    beforeEach(() => {
-        for (const k of Object.keys(core.storedValues)) {
-            delete core.storedValues[k];
-        }
-    });
+	beforeEach(() => {
+		for (const k of Object.keys(core.storedValues)) {
+			delete core.storedValues[k];
+		}
+	});
 
-    it('setStoredValue adds and returns removeStoredValue', () => {
-        const inv = applyOp({
-            kind: 'setStoredValue',
-            name: 'tau',
-            entry: { staticValue: 24, source: 'manual' }
-        });
-        expect(core.storedValues.tau.staticValue).toBe(24);
-        expect(inv).toEqual({ kind: 'removeStoredValue', name: 'tau' });
-    });
+	it('setStoredValue adds and returns removeStoredValue', () => {
+		const inv = applyOp({
+			kind: 'setStoredValue',
+			name: 'tau',
+			entry: { staticValue: 24, source: 'manual' }
+		});
+		expect(core.storedValues.tau.staticValue).toBe(24);
+		expect(inv).toEqual({ kind: 'removeStoredValue', name: 'tau' });
+	});
 
-    it('setStoredValue overwrites and returns setStoredValue with prior entry', () => {
-        applyOp({ kind: 'setStoredValue', name: 'tau', entry: { staticValue: 24, source: 'a' } });
-        const inv = applyOp({ kind: 'setStoredValue', name: 'tau', entry: { staticValue: 25, source: 'b' } });
-        expect(core.storedValues.tau.staticValue).toBe(25);
-        expect(inv.kind).toBe('setStoredValue');
-        expect(inv.entry.staticValue).toBe(24);
-    });
+	it('setStoredValue overwrites and returns setStoredValue with prior entry', () => {
+		applyOp({ kind: 'setStoredValue', name: 'tau', entry: { staticValue: 24, source: 'a' } });
+		const inv = applyOp({
+			kind: 'setStoredValue',
+			name: 'tau',
+			entry: { staticValue: 25, source: 'b' }
+		});
+		expect(core.storedValues.tau.staticValue).toBe(25);
+		expect(inv.kind).toBe('setStoredValue');
+		expect(inv.entry.staticValue).toBe(24);
+	});
 
-    it('removeStoredValue returns setStoredValue with prior entry', () => {
-        applyOp({ kind: 'setStoredValue', name: 'tau', entry: { staticValue: 24, source: 'manual' } });
-        const inv = applyOp({ kind: 'removeStoredValue', name: 'tau' });
-        expect(core.storedValues.tau).toBeUndefined();
-        expect(inv.kind).toBe('setStoredValue');
-        expect(inv.entry.staticValue).toBe(24);
-    });
+	it('removeStoredValue returns setStoredValue with prior entry', () => {
+		applyOp({ kind: 'setStoredValue', name: 'tau', entry: { staticValue: 24, source: 'manual' } });
+		const inv = applyOp({ kind: 'removeStoredValue', name: 'tau' });
+		expect(core.storedValues.tau).toBeUndefined();
+		expect(inv.kind).toBe('setStoredValue');
+		expect(inv.entry.staticValue).toBe(24);
+	});
 
-    it('renameStoredValue moves an entry and returns the inverse', () => {
-        applyOp({ kind: 'setStoredValue', name: 'old', entry: { staticValue: 1, source: 's' } });
-        const inv = applyOp({ kind: 'renameStoredValue', oldName: 'old', newName: 'new' });
-        expect(core.storedValues.new.staticValue).toBe(1);
-        expect(core.storedValues.old).toBeUndefined();
-        expect(inv).toEqual({ kind: 'renameStoredValue', oldName: 'new', newName: 'old' });
-    });
+	it('renameStoredValue moves an entry and returns the inverse', () => {
+		applyOp({ kind: 'setStoredValue', name: 'old', entry: { staticValue: 1, source: 's' } });
+		const inv = applyOp({ kind: 'renameStoredValue', oldName: 'old', newName: 'new' });
+		expect(core.storedValues.new.staticValue).toBe(1);
+		expect(core.storedValues.old).toBeUndefined();
+		expect(inv).toEqual({ kind: 'renameStoredValue', oldName: 'new', newName: 'old' });
+	});
 
-    it('batch applies in order and inverse undoes in reverse order', () => {
-        const inv = applyOp({
-            kind: 'batch',
-            ops: [
-                { kind: 'setStoredValue', name: 'a', entry: { staticValue: 1, source: 'test' } },
-                { kind: 'setStoredValue', name: 'b', entry: { staticValue: 2, source: 'test' } }
-            ]
-        });
-        expect(core.storedValues.a.staticValue).toBe(1);
-        expect(core.storedValues.b.staticValue).toBe(2);
-        applyOp(inv);
-        expect(core.storedValues.a).toBeUndefined();
-        expect(core.storedValues.b).toBeUndefined();
-    });
+	it('batch applies in order and inverse undoes in reverse order', () => {
+		const inv = applyOp({
+			kind: 'batch',
+			ops: [
+				{ kind: 'setStoredValue', name: 'a', entry: { staticValue: 1, source: 'test' } },
+				{ kind: 'setStoredValue', name: 'b', entry: { staticValue: 2, source: 'test' } }
+			]
+		});
+		expect(core.storedValues.a.staticValue).toBe(1);
+		expect(core.storedValues.b.staticValue).toBe(2);
+		applyOp(inv);
+		expect(core.storedValues.a).toBeUndefined();
+		expect(core.storedValues.b).toBeUndefined();
+	});
 });

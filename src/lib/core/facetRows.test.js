@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { core, appConsts, appState } from '$lib/core/core.svelte.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
+import { loadPlots } from '$test/plotRegistry.js';
 import { Plot, syncFacetChildren } from '$lib/core/Plot.svelte';
 import { Column } from '$lib/core/Column.svelte';
 import { PLOT_CHROME } from '$lib/core/workspaceLayout.js';

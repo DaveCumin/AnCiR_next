@@ -8,6 +8,8 @@ import { render, fireEvent, cleanup } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import NodeNoteButton from './NodeNoteButton.svelte';
 import { core } from '$lib/core/core.svelte.js';
+import { readFileSync } from 'node:fs';
+import { compile } from 'svelte/compiler';
 
 afterEach(() => cleanup());
 beforeEach(() => {
@@ -89,5 +91,32 @@ describe('NodeNoteButton popover', () => {
 		expect(document.querySelector('.node-note-popover')).toBeNull();
 		expect(r.getByLabelText('View or edit note').classList.contains('has-note')).toBe(true);
 		r.box.remove();
+	});
+});
+
+/**
+ * Every `bind:this` target in this component must be declared with `$state(...)`.
+ *
+ * `textareaEl` was a plain `let`, which the compiler warns about on every build
+ * (`non_reactive_update`). It was harmless only because the element is read
+ * imperatively after `await tick()` and never reactively; the moment anyone read it from
+ * a `$derived` or `$effect` it would silently never update. That is exactly the runes
+ * trap this repo has been bitten by before, so pin it rather than live with the warning.
+ */
+describe('NodeNoteButton compiles without runes warnings', () => {
+	it('emits no non_reactive_update warning', () => {
+		const source = readFileSync('src/lib/components/workflow/NodeNoteButton.svelte', 'utf8');
+		const { warnings } = compile(source, { name: 'NodeNoteButton', generate: 'client' });
+		const codes = warnings.map((w) => w.code);
+		expect(codes).not.toContain('non_reactive_update');
+	});
+
+	it('focuses the textarea when the popover opens, so the binding is live', async () => {
+		const r = mountInClippedBox();
+		await open(r);
+		await tick();
+		const textarea = document.querySelector('.node-note-popover textarea');
+		expect(textarea).not.toBeNull();
+		expect(document.activeElement).toBe(textarea);
 	});
 });

@@ -111,7 +111,10 @@ describe('python runtime coverage', () => {
 		const orphans = cps.filter(
 			(k) => !jsCps.includes(k) && !PYTHON_COLUMN_ORPHANS.includes(k) && !aliases.includes(k)
 		);
-		expect(orphans, `ancir_runtime.py dispatches column processes that do not exist: ${orphans}`).toEqual([]);
+		expect(
+			orphans,
+			`ancir_runtime.py dispatches column processes that do not exist: ${orphans}`
+		).toEqual([]);
 	});
 
 	it('treats a not-applicable analysis as done, not as debt', () => {
@@ -135,10 +138,9 @@ describe('R runtime coverage', () => {
 
 	it('implements everything it claims to', () => {
 		const claimed = R_IMPLEMENTED.filter((k) => !keys.includes(k));
-		expect(
-			claimed,
-			`R_IMPLEMENTED lists analyses absent from ancir_runtime.R: ${claimed}`
-		).toEqual([]);
+		expect(claimed, `R_IMPLEMENTED lists analyses absent from ancir_runtime.R: ${claimed}`).toEqual(
+			[]
+		);
 	});
 
 	it('claims only analyses that actually exist in the app', () => {

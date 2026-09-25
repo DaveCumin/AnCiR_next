@@ -21,7 +21,13 @@
 // Pure and dependency-free, like the normalizer, so it runs in the Worker.
 
 /** Case/space-insensitive compare — the model writes "cosinor", the registry says "Cosinor". */
-const same = (a, b) => String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
+const same = (a, b) =>
+	String(a ?? '')
+		.trim()
+		.toLowerCase() ===
+	String(b ?? '')
+		.trim()
+		.toLowerCase();
 
 /**
  * Was one deliverable actually built?

@@ -4,10 +4,9 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import WorksheetAddPalette from './WorksheetAddPalette.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
-	import SavePlot from '$lib/components/iconActions/SavePlot.svelte';
 
 	import { appState, core } from '$lib/core/core.svelte.js';
-	import { deselectAllPlots, selectAllPlots, selectPlot } from '$lib/core/Plot.svelte';
+	import { selectPlot } from '$lib/core/Plot.svelte';
 	import Editable from '../inputs/Editable.svelte';
 
 	let addBtnRef;
@@ -96,11 +95,6 @@
 	}
 
 	let openClps = $state({});
-
-	let openMenus = $state({});
-	function toggleMenu(id) {
-		openMenus[id] = !openMenus[id];
-	}
 
 	function changePlotVisibility(id) {
 		if (appState.invisiblePlotIds.includes(id)) {

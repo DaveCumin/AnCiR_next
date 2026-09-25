@@ -262,6 +262,7 @@
 				.filter(Number.isFinite);
 			labels = observed.map((_, i) => `bin ${i + 1}`);
 		} else {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- category tally built and drained into labels/observed inside this function; never read reactively
 			const counts = new Map();
 			for (const v of raw) {
 				if (isMissingCategory(v)) continue; // NaN is missing, not a category

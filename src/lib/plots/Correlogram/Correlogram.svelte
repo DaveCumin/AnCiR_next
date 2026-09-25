@@ -15,7 +15,7 @@
 		bindAltTooltipToggle
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
 	import { minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 
@@ -160,7 +160,11 @@
 			}
 			this.line = new LineClass(dataIN?.line, this);
 			this.confidenceLine = new LineClass(dataIN?.confidenceLine, this);
-			this.confidenceLine.stroke = dataIN?.confidenceLine?.stroke ?? '5,5';
+			// The DEFAULT must be spelled exactly as the shared dash vocabulary spells it
+			// (strokeStyles.js), or the Stroke select has no option to match and falls back
+			// to "Other". '5,5' and '5, 5' draw the same dashes but are different strings.
+			// A value that came from a saved session is left exactly as saved.
+			this.confidenceLine.stroke = dataIN?.confidenceLine?.stroke ?? '5, 5';
 			this.confidenceLine.strokeWidth = dataIN?.confidenceLine?.strokeWidth ?? 1;
 			this.points = new PointsClass(dataIN?.points, this);
 			this.maxLag = dataIN?.maxLag ?? null;

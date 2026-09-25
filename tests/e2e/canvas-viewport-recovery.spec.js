@@ -12,10 +12,7 @@ test('off-screen persisted viewport auto-recovers so nodes are visible', async (
 	await context.clearCookies();
 	await page.addInitScript(() => {
 		try {
-			localStorage.setItem(
-				'ancir.canvas.viewport',
-				JSON.stringify({ x: -8000, y: -8000, z: 1 })
-			);
+			localStorage.setItem('ancir.canvas.viewport', JSON.stringify({ x: -8000, y: -8000, z: 1 }));
 		} catch {
 			// pass
 		}
@@ -31,7 +28,10 @@ test('off-screen persisted viewport auto-recovers so nodes are visible', async (
 
 	let visible = 0;
 	for (let i = 0; i < total; i++) {
-		const box = await allNodes.nth(i).boundingBox().catch(() => null);
+		const box = await allNodes
+			.nth(i)
+			.boundingBox()
+			.catch(() => null);
 		if (box && box.x > -10 && box.y > -10 && box.x < 1280 && box.y < 800) visible++;
 	}
 	expect(visible).toBeGreaterThan(0);

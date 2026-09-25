@@ -66,7 +66,13 @@ function tpViz(tp) {
 			series.push({ x: xRaw, y: yId, label: colName(yId), kind: 'points', colour: RAW_COLOUR });
 			const yOut = out[entry.yOutKeyPrefix + yId];
 			if (isRef(xOut) && isRef(yOut)) {
-				series.push({ x: xOut, y: yOut, label: `${colName(yId)} fit`, kind: 'line', colour: OUT_COLOUR });
+				series.push({
+					x: xOut,
+					y: yOut,
+					label: `${colName(yId)} fit`,
+					kind: 'line',
+					colour: OUT_COLOUR
+				});
 			}
 		}
 		if (series.length) return { type: 'scatterplot', title: `${tp.name}: data + fit`, series };
@@ -129,8 +135,21 @@ function tpViz(tp) {
 		const outcomeId = out.outcome;
 		if (isRef(etaId) && isRef(fittedId)) {
 			const series = [];
-			if (isRef(outcomeId)) series.push({ x: etaId, y: outcomeId, label: 'observed outcome', kind: 'points', colour: RAW_COLOUR });
-			series.push({ x: etaId, y: fittedId, label: 'fitted P(y=1)', kind: 'points', colour: OUT_COLOUR });
+			if (isRef(outcomeId))
+				series.push({
+					x: etaId,
+					y: outcomeId,
+					label: 'observed outcome',
+					kind: 'points',
+					colour: RAW_COLOUR
+				});
+			series.push({
+				x: etaId,
+				y: fittedId,
+				label: 'fitted P(y=1)',
+				kind: 'points',
+				colour: OUT_COLOUR
+			});
 			return { type: 'scatterplot', title: `${tp.name}: fit`, series };
 		}
 	}
@@ -140,7 +159,8 @@ function tpViz(tp) {
 	if (tp.name === 'RayleighTest') {
 		const timeRef = isRef(tp.args?.timeIN) ? tp.args.timeIN : -1;
 		const series = yINs.filter(isRef).map((yId) => ({ x: timeRef, y: yId, label: colName(yId) }));
-		if (series.length) return { type: 'circularphase', title: `${tp.name}: circular phase`, series };
+		if (series.length)
+			return { type: 'circularphase', title: `${tp.name}: circular phase`, series };
 	}
 
 	// Fallback: a table of the inputs + every numeric output column.
@@ -213,7 +233,12 @@ function scatterInner(series) {
 			y: { refId: s.y },
 			label: s.label,
 			yAxis: s.yAxis || 'left',
-			line: { colour: s.colour, draw: s.kind === 'line', strokeWidth: s.kind === 'line' ? 2.5 : 2, stroke: 'solid' },
+			line: {
+				colour: s.colour,
+				draw: s.kind === 'line',
+				strokeWidth: s.kind === 'line' ? 2.5 : 2,
+				stroke: 'solid'
+			},
 			points: { colour: s.colour, draw: s.kind !== 'line', radius: 3, shape: 'circle' }
 		}))
 	};
@@ -223,13 +248,23 @@ export function plotDataFromSpec(spec, { x, y, width = 420, height = 300, source
 	if (!spec) return null;
 	let inner;
 	if (spec.type === 'scatterplot') inner = scatterInner(spec.series);
-	else if (spec.type === 'boxplot') inner = { data: [{ x: { refId: spec.box.x }, y: { refId: spec.box.y } }], showSigBars: !!spec.showSigBars };
-	else if (spec.type === 'circularphase') inner = { data: spec.series.map((s) => ({ x: { refId: s.x }, y: { refId: s.y }, label: s.label })) };
-	else if (spec.type === 'tableplot') inner = { columnRefs: [...spec.columnRefs], showCol: spec.columnRefs.map(() => true) };
+	else if (spec.type === 'boxplot')
+		inner = {
+			data: [{ x: { refId: spec.box.x }, y: { refId: spec.box.y } }],
+			showSigBars: !!spec.showSigBars
+		};
+	else if (spec.type === 'circularphase')
+		inner = {
+			data: spec.series.map((s) => ({ x: { refId: s.x }, y: { refId: s.y }, label: s.label }))
+		};
+	else if (spec.type === 'tableplot')
+		inner = { columnRefs: [...spec.columnRefs], showCol: spec.columnRefs.map(() => true) };
 	else if (spec.type === 'correlationheatmap')
 		inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
-	else if (spec.type === 'histogram') inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
-	else if (spec.type === 'qqplot') inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
+	else if (spec.type === 'histogram')
+		inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
+	else if (spec.type === 'qqplot')
+		inner = { data: spec.columns.map((id) => ({ column: { refId: id } })) };
 	else return null;
 	return { name: spec.title, type: spec.type, x, y, width, height, sourceNodeId, plot: inner };
 }

@@ -49,7 +49,9 @@ function resolveColRef(ref) {
 		const col = core.data.find((c) => c.name === ref);
 		if (col) return col.id;
 		const names = core.data.map((c) => c.name).join(', ');
-		throw new Error(`No column named "${ref}". Available: ${names || '(none)'}. Call list_columns.`);
+		throw new Error(
+			`No column named "${ref}". Available: ${names || '(none)'}. Call list_columns.`
+		);
 	}
 	return ref;
 }
@@ -232,7 +234,10 @@ export function filterCapabilities(full, { detail = 'summary', family = null, na
 		const hit = all.find(([, x]) => x.id.toLowerCase() === nm);
 		return hit
 			? { kind: hit[0], capability: hit[1] }
-			: { capability: null, error: `No capability named "${name}". Call list_capabilities for names.` };
+			: {
+					capability: null,
+					error: `No capability named "${name}". Call list_capabilities for names.`
+				};
 	}
 
 	const projAnalysis = (x) =>
@@ -254,7 +259,8 @@ export function filterCapabilities(full, { detail = 'summary', family = null, na
 			: detail === 'full'
 				? x
 				: { id: x.id, family: x.family, summary: x.summary, params: Object.keys(x.params) };
-	const projPlot = (x) => (detail === 'names' ? { id: x.id } : detail === 'full' ? x : { id: x.id, inputs: x.inputs });
+	const projPlot = (x) =>
+		detail === 'names' ? { id: x.id } : detail === 'full' ? x : { id: x.id, inputs: x.inputs };
 
 	let A = full.analyses,
 		T = full.transforms,
@@ -264,7 +270,12 @@ export function filterCapabilities(full, { detail = 'summary', family = null, na
 		T = T.filter((x) => (x.family || '').toLowerCase() === fam);
 		P = []; // plots carry no family, so a family filter excludes them
 	}
-	return { detail, analyses: A.map(projAnalysis), transforms: T.map(projTransform), plots: P.map(projPlot) };
+	return {
+		detail,
+		analyses: A.map(projAnalysis),
+		transforms: T.map(projTransform),
+		plots: P.map(projPlot)
+	};
 }
 
 function resetCore() {
@@ -332,7 +343,9 @@ export function validateColumnValues(name, type, values) {
 
 /** Remove a table process and its output columns from the engine state. */
 export function discardTableProcess(tp) {
-	const outIds = Object.values(tp?.args?.out ?? {}).filter((id) => typeof id === 'number' && id >= 0);
+	const outIds = Object.values(tp?.args?.out ?? {}).filter(
+		(id) => typeof id === 'number' && id >= 0
+	);
 	core.tableProcesses = core.tableProcesses.filter((t) => t.id !== tp.id);
 	for (const id of outIds) {
 		try {
@@ -568,7 +581,9 @@ export class AncirSession {
 		const entry = appConsts.tableProcessMap?.get(name);
 		if (!entry) {
 			const known = [...(appConsts.tableProcessMap?.keys() ?? [])].join(', ');
-			throw new Error(`Unknown table process "${name}". Available: ${known || '(registry not loaded)'}.`);
+			throw new Error(
+				`Unknown table process "${name}". Available: ${known || '(registry not loaded)'}.`
+			);
 		}
 
 		// Clone so we never mutate the caller's object; auto-seed `out` when omitted.
@@ -726,7 +741,9 @@ export class AncirSession {
 		const entry = appConsts.processMap?.get(name);
 		if (!entry) {
 			const known = [...(appConsts.processMap?.keys() ?? [])].join(', ');
-			throw new Error(`Unknown column process "${name}". Available: ${known || '(registry not loaded)'}.`);
+			throw new Error(
+				`Unknown column process "${name}". Available: ${known || '(registry not loaded)'}.`
+			);
 		}
 
 		const processId = col.addProcess(name);
@@ -768,7 +785,9 @@ export class AncirSession {
 		const entry = appConsts.plotMap?.get(type);
 		if (!entry) {
 			const known = [...(appConsts.plotMap?.keys() ?? [])].join(', ');
-			throw new Error(`Unknown plot type "${type}". Available: ${known || '(registry not loaded)'}.`);
+			throw new Error(
+				`Unknown plot type "${type}". Available: ${known || '(registry not loaded)'}.`
+			);
 		}
 
 		// Accept a column name too (LLMs track names more reliably than numeric ids).
@@ -791,7 +810,8 @@ export class AncirSession {
 		} else {
 			const fields = entry.defaultInputs ?? [];
 			const optional = new Set(OPTIONAL_PLOT_INPUTS[type] ?? []);
-			const refOf = (field) => (Array.isArray(inputs) ? inputs[fields.indexOf(field)] : inputs[field]);
+			const refOf = (field) =>
+				Array.isArray(inputs) ? inputs[fields.indexOf(field)] : inputs[field];
 			// Reject incomplete wiring BEFORE committing the plot. Previously a missing field was
 			// silently skipped and the plot inserted anyway (e.g. a scatterplot with x but no y),
 			// so add_plot reported success but the plot rendered blank / unusable.
@@ -856,7 +876,9 @@ export class AncirSession {
 		const entry = appConsts.plotMap?.get(type);
 		if (!entry) {
 			const known = [...(appConsts.plotMap?.keys() ?? [])].join(', ');
-			throw new Error(`Unknown plot type "${type}". Available: ${known || '(registry not loaded)'}.`);
+			throw new Error(
+				`Unknown plot type "${type}". Available: ${known || '(registry not loaded)'}.`
+			);
 		}
 
 		const overlayJsons = normalizeOverlaySpecs(overlays, (ref) => {

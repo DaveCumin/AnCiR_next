@@ -156,9 +156,7 @@ describe('calculateTimeDifference — null/undefined handling', () => {
 	});
 
 	it('returns a negative difference when end precedes start', () => {
-		const h = Number(
-			calculateTimeDifference('2024-01-01 05:00:00', '2024-01-01 02:00:00', fmt)
-		);
+		const h = Number(calculateTimeDifference('2024-01-01 05:00:00', '2024-01-01 02:00:00', fmt));
 		expect(h).toBeCloseTo(-3, 4);
 	});
 });

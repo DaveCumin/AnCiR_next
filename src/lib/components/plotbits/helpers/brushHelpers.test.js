@@ -24,10 +24,7 @@ describe('limitsFromBrush', () => {
 
 	it('maps a box to the enclosed data range (x + left y)', () => {
 		// px x 20..60 -> data 2..6 ; px y 25..75 -> data 37.5..12.5
-		const out = limitsFromBrush(
-			{ x0: 20, y0: 25, x1: 60, y1: 75 },
-			{ xScale, yScaleLeft }
-		);
+		const out = limitsFromBrush({ x0: 20, y0: 25, x1: 60, y1: 75 }, { xScale, yScaleLeft });
 		expect(out.xlims[0]).toBeCloseTo(2);
 		expect(out.xlims[1]).toBeCloseTo(6);
 		expect(out.ylimsLeft[0]).toBeCloseTo(12.5);
@@ -36,10 +33,7 @@ describe('limitsFromBrush', () => {
 	});
 
 	it('normalises corner order (drag up-left)', () => {
-		const out = limitsFromBrush(
-			{ x0: 60, y0: 75, x1: 20, y1: 25 },
-			{ xScale, yScaleLeft }
-		);
+		const out = limitsFromBrush({ x0: 60, y0: 75, x1: 20, y1: 25 }, { xScale, yScaleLeft });
 		expect(out.xlims[0]).toBeCloseTo(2);
 		expect(out.xlims[1]).toBeCloseTo(6);
 	});

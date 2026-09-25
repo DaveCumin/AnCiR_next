@@ -47,13 +47,13 @@
 
 	{#if rows.length === 0}
 		<p class="hint">
-			Nothing plotted yet. Each column picks up a colour, marker and line style the
-			first time a figure draws it, and they appear here to adjust.
+			Nothing plotted yet. Each column picks up a colour, marker and line style the first time a
+			figure draws it, and they appear here to adjust.
 		</p>
 	{:else}
 		<p class="hint">
-			How each column is drawn in every figure. Editing a row fixes it, so it is no
-			longer assigned automatically. Reset returns it to automatic.
+			How each column is drawn in every figure. Editing a row fixes it, so it is no longer assigned
+			automatically. Reset returns it to automatic.
 		</p>
 		<div class="rows">
 			{#each rows as row (row.columnId)}

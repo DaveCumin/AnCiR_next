@@ -31,7 +31,10 @@ export function rectsIntersect(a, b) {
 }
 
 function bounds(boxes) {
-	let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+	let minX = Infinity,
+		minY = Infinity,
+		maxX = -Infinity,
+		maxY = -Infinity;
 	for (const b of boxes) {
 		minX = Math.min(minX, b.x);
 		minY = Math.min(minY, b.y);
@@ -56,12 +59,24 @@ export function alignBoxes(boxes, mode) {
 	for (const b of boxes) {
 		let { x, y } = b;
 		switch (mode) {
-			case 'left': x = minX; break;
-			case 'right': x = maxX - b.w; break;
-			case 'hcenter': x = cx - b.w / 2; break;
-			case 'top': y = minY; break;
-			case 'bottom': y = maxY - b.h; break;
-			case 'vcenter': y = cy - b.h / 2; break;
+			case 'left':
+				x = minX;
+				break;
+			case 'right':
+				x = maxX - b.w;
+				break;
+			case 'hcenter':
+				x = cx - b.w / 2;
+				break;
+			case 'top':
+				y = minY;
+				break;
+			case 'bottom':
+				y = maxY - b.h;
+				break;
+			case 'vcenter':
+				y = cy - b.h / 2;
+				break;
 		}
 		out.set(b.id, { x, y });
 	}

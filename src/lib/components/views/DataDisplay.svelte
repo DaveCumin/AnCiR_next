@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { core, appConsts, appState, getProcessNodeGraph } from '$lib/core/core.svelte.js';
+	import { core, appState, getProcessNodeGraph } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { tick, untrack } from 'svelte';
 
@@ -35,11 +35,6 @@
 		return (group.sourceColumnIds ?? [])
 			.map((id) => getColumnById(id))
 			.filter((c) => c && matches(c.name));
-	}
-
-	function openMakeNewColumn() {
-		newColInitialType = '';
-		showNewCol = true;
 	}
 
 	// Expand state — keyed by section id (group id, '__nodes__', '__ungrouped__',
@@ -122,6 +117,7 @@
 	// Collect every column id that's an output of a free TP — these aren't
 	// listed under groups (they're derived) but show under each TP's row.
 	const tpOutputColIds = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built fresh inside this $derived and never mutated afterwards; the derived recomputing is what drives the UI
 		const s = new Set();
 		for (const tp of core.tableProcesses ?? []) {
 			for (const cid of Object.values(tp.args?.out ?? {})) {
@@ -132,6 +128,7 @@
 	});
 
 	const groupedColumnIds = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built fresh inside this $derived and never mutated afterwards; the derived recomputing is what drives the UI
 		const s = new Set();
 		for (const g of core.groups ?? []) {
 			for (const cid of g.sourceColumnIds ?? []) s.add(cid);
@@ -153,7 +150,9 @@
 		return nodes.filter(
 			(n) =>
 				n.type === 'process' ||
-				(n.type === 'tableprocess' && typeof n.id === 'string' && !n.id.startsWith('tableprocess_nested_'))
+				(n.type === 'tableprocess' &&
+					typeof n.id === 'string' &&
+					!n.id.startsWith('tableprocess_nested_'))
 		);
 	});
 
@@ -424,74 +423,75 @@
 
 				<!-- Groups (nested under Data) -->
 				{#each core.groups as group (group.id)}
-		{@const visCols = groupVisibleColumns(group)}
-		{#if !q || visCols.length > 0}
-			<div
-				class="clps-container"
-				class:canvas-selected={appState.canvasSelectedNodeId === group.id}
-				draggable="true"
-				ondragstart={(e) => startDragGroup(e, group.id)}
-				ondragover={(e) => onDragOverSection(e, '__group_order__', group.id)}
-				ondrop={(e) => onDropSection(e, '__group_order__', group.id)}
-			>
-				<details class="clps-item" open={isOpen(group.id)}>
-					<summary class="clps-title-container" onclick={(e) => toggleSection(e, group.id)}>
-						<div class="clps-title">
-							<p><Editable bind:value={group.name} /></p>
-						</div>
-						<div class="clps-title-button">
-							<button
-								class="icon group-find-btn"
-								title="Find on canvas"
-								onclick={(e) => {
-									e.stopPropagation();
-									groupFindSelect(group);
-								}}
-							>
-								<Icon name="process" width={15} height={15} className="menu-icon" />
-							</button>
-							<button class="icon" onclick={(e) => toggleSectionFromCaret(e, group.id)}>
-								{#if isOpen(group.id)}
-									<Icon name="caret-down" width={20} height={20} />
-								{:else}
-									<Icon name="caret-right" width={20} height={20} />
-								{/if}
-							</button>
-						</div>
-					</summary>
-
-					{#each visCols as col (col.id)}
-						{@const colSelected = canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
-						{@const ownsSelectedProcess =
-							canvasSelection?.kind === 'process' &&
-							col.processes?.some((pr) => pr.id === canvasSelection.id)}
+					{@const visCols = groupVisibleColumns(group)}
+					{#if !q || visCols.length > 0}
 						<div
-							class="second-clps"
-							class:canvas-selected={colSelected || ownsSelectedProcess}
-							bind:this={rowRefs[`data_${col.id}`]}
+							class="clps-container"
+							class:canvas-selected={appState.canvasSelectedNodeId === group.id}
 							draggable="true"
-							ondragstart={(e) => startDragColumn(e, col.id, group.id)}
-							ondragover={(e) => onDragOverSection(e, group.id, col.id)}
-							ondrop={(e) => onDropSection(e, group.id, col.id)}
+							ondragstart={(e) => startDragGroup(e, group.id)}
+							ondragover={(e) => onDragOverSection(e, '__group_order__', group.id)}
+							ondrop={(e) => onDropSection(e, '__group_order__', group.id)}
 						>
-							<ColumnComponent
-								{col}
-								canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
-							/>
-						</div>
-					{/each}
+							<details class="clps-item" open={isOpen(group.id)}>
+								<summary class="clps-title-container" onclick={(e) => toggleSection(e, group.id)}>
+									<div class="clps-title">
+										<p><Editable bind:value={group.name} /></p>
+									</div>
+									<div class="clps-title-button">
+										<button
+											class="icon group-find-btn"
+											title="Find on canvas"
+											onclick={(e) => {
+												e.stopPropagation();
+												groupFindSelect(group);
+											}}
+										>
+											<Icon name="process" width={15} height={15} className="menu-icon" />
+										</button>
+										<button class="icon" onclick={(e) => toggleSectionFromCaret(e, group.id)}>
+											{#if isOpen(group.id)}
+												<Icon name="caret-down" width={20} height={20} />
+											{:else}
+												<Icon name="caret-right" width={20} height={20} />
+											{/if}
+										</button>
+									</div>
+								</summary>
 
-					<!-- Drop zone at end of group -->
-					<div
-						class="dropzone"
-						class:active={dropHint.section === group.id && dropHint.beforeId == null}
-						ondragover={(e) => onDragOverSection(e, group.id, null)}
-						ondrop={(e) => onDropSection(e, group.id, null)}
-					></div>
-				</details>
-			</div>
-		{/if}
-	{/each}
+								{#each visCols as col (col.id)}
+									{@const colSelected =
+										canvasSelection?.kind === 'data' && canvasSelection.id === col.id}
+									{@const ownsSelectedProcess =
+										canvasSelection?.kind === 'process' &&
+										col.processes?.some((pr) => pr.id === canvasSelection.id)}
+									<div
+										class="second-clps"
+										class:canvas-selected={colSelected || ownsSelectedProcess}
+										bind:this={rowRefs[`data_${col.id}`]}
+										draggable="true"
+										ondragstart={(e) => startDragColumn(e, col.id, group.id)}
+										ondragover={(e) => onDragOverSection(e, group.id, col.id)}
+										ondrop={(e) => onDropSection(e, group.id, col.id)}
+									>
+										<ColumnComponent
+											{col}
+											canvasSelectedProcessId={ownsSelectedProcess ? canvasSelection.id : null}
+										/>
+									</div>
+								{/each}
+
+								<!-- Drop zone at end of group -->
+								<div
+									class="dropzone"
+									class:active={dropHint.section === group.id && dropHint.beforeId == null}
+									ondragover={(e) => onDragOverSection(e, group.id, null)}
+									ondrop={(e) => onDropSection(e, group.id, null)}
+								></div>
+							</details>
+						</div>
+					{/if}
+				{/each}
 
 				<!-- Ungrouped source columns (flat, after the groups) -->
 				{#each filteredUngrouped as col (col.id)}
@@ -839,7 +839,6 @@
 	.clps-title-container {
 		cursor: pointer;
 	}
-
 
 	.second-clps.canvas-selected,
 	.clps-container.canvas-selected {

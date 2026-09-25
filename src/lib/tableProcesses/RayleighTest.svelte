@@ -27,6 +27,9 @@
 	// module's own scope, and pUpperFromF is used internally below (in
 	// watsonWilliams's callback) — so import it normally and re-export it.
 	import { pUpperFromF } from '$lib/utils/fdist.js';
+	// `export { <imported binding> }` is a re-export and assigns nothing; the rule misreads it
+	// inside a Svelte module script (the same code lints clean in a plain .js file).
+	// eslint-disable-next-line no-import-assign -- re-export of an imported binding, not an assignment
 	export { pUpperFromF };
 
 	const displayName = 'Rayleigh test';
@@ -498,13 +501,13 @@
 				<StoreValueButton
 					label="F"
 					getter={() => ww.F}
-					defaultName={'watson_williams_F'}
+					defaultName="watson_williams_F"
 					source="RayleighTest (Watson-Williams)"
 				/>
 				<StoreValueButton
 					label="p-value"
 					getter={() => ww.pValue}
-					defaultName={'watson_williams_p'}
+					defaultName="watson_williams_p"
 					source="RayleighTest (Watson-Williams)"
 				/>
 			</div>

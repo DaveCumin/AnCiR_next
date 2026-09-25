@@ -522,8 +522,7 @@ describe('the pending palette', () => {
 // REPORT as much as the result: a rule that matched nothing looks exactly like a rule that
 // worked, and the count is the only thing that separates them.
 describe('planStyleRules', () => {
-	const cols = (...defs) =>
-		defs.map(([id, name, groupLabel = null]) => ({ id, name, groupLabel }));
+	const cols = (...defs) => defs.map(([id, name, groupLabel = null]) => ({ id, name, groupLabel }));
 
 	const style = {
 		columns: { activity: { colour: { hex: '#c0392b' }, shape: 'square' } },
@@ -618,7 +617,10 @@ describe('planStyleRules', () => {
 	});
 
 	it('ignores an empty group label rather than matching every ungrouped column', () => {
-		const plan = planStyleRules({ groups: { '': { colour: { hex: '#c0392b' } } } }, cols([1, 'a', '']));
+		const plan = planStyleRules(
+			{ groups: { '': { colour: { hex: '#c0392b' } } } },
+			cols([1, 'a', ''])
+		);
 		expect(plan.columnsTouched).toBe(0);
 	});
 });

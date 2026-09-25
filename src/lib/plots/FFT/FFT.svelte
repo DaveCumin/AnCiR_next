@@ -10,7 +10,7 @@
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { computeFFT } from '$lib/utils/fft.js';
 	import { argMax, argMaxAmong } from '$lib/components/plotbits/helpers/peakFinder.js';
 	import { minMax, minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
@@ -982,7 +982,7 @@
 					<input
 						type="checkbox"
 						bind:checked={theData.showPeriod}
-						onchange={(e) =>
+						onchange={() =>
 							(theData.xlimsIN = [
 								theData.xlimsIN[0] > 0 ? 1 / theData.xlimsIN[0] : this.minPeriod,
 								1 / theData.xlimsIN[1]
@@ -1106,7 +1106,7 @@
 
 						{#if datum.dataWarnings && datum.dataWarnings.length > 0}
 							<div class="data-warning">
-								{#each datum.dataWarnings as warning}
+								{#each datum.dataWarnings as warning, wi (wi)}
 									<p>⚠ {warning}</p>
 								{/each}
 							</div>
@@ -1267,7 +1267,7 @@
 			/>
 
 			<!-- Plot data -->
-			{#each theData.plot.data as datum}
+			{#each theData.plot.data as datum, di (di)}
 				{@const xData = theData.plot.showPeriod
 					? datum.fftData.frequencies.filter((f) => f > 0).map((f) => 1 / f)
 					: datum.fftData.frequencies}

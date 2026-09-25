@@ -15,7 +15,7 @@
 		nticks = $state(5);
 		manualTicks = $state(null);
 
-		constructor(dataIN, parent) {
+		constructor(dataIN) {
 			this.label = dataIN?.label ?? '';
 			this.gridlines = dataIN?.gridlines ?? true;
 			this.nticks = dataIN?.nticks ?? 5;
@@ -65,9 +65,10 @@
 	import { select, selectAll } from 'd3-selection';
 	import { axisBottom, axisLeft, axisTop, axisRight } from 'd3-axis';
 
-	import { timeFormat } from 'd3-time-format';
-	import { scaleTime } from 'd3-scale';
-	import { transition } from 'd3-transition';
+	// Side-effect import: d3-transition augments d3-selection's prototype with
+	// .transition(). Kept (unbound) so the commented-out transition code below can
+	// be re-enabled without a missing-method surprise.
+	import 'd3-transition';
 
 	let {
 		axisData = $bindable(),
@@ -112,8 +113,7 @@
 	// `tickSizeOuter(0)` leaves a plain domain line with ticks only where there
 	// is something to tick. Kept as a single helper because the previous
 	// duplicate-per-branch version is exactly why the outer size went unnoticed.
-	const configureTicks = (a) =>
-		a.tickSizeInner(ticklength).tickSizeOuter(0).tickPadding(tickspace);
+	const configureTicks = (a) => a.tickSizeInner(ticklength).tickSizeOuter(0).tickPadding(tickspace);
 
 	$effect(() => {
 		height;
@@ -241,7 +241,6 @@
 
 		// Remove existing label`
 		select(axisGroup).select('.axis-label').remove();
-		const nolabelRect = axisGroup.getBoundingClientRect();
 
 		// //add in the label
 		let labelElement = select(axisGroup)

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { core, appConsts } from '$lib/core/core.svelte.js';
-import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { canonicalNodeViz, plotDataFromSpec } from './canonicalNodeViz.js';
 
 beforeEach(async () => {
@@ -38,7 +38,11 @@ describe('canonicalNodeViz', () => {
 	});
 
 	it('RayleighTest → circular phase plot: one series per Y, time from timeIN', () => {
-		const node = { id: 'tableprocess_2', type: 'tableprocess', tpObj: { id: 2, name: 'RayleighTest', args: { timeIN: 7, yIN: [21, 22], out: {} } } };
+		const node = {
+			id: 'tableprocess_2',
+			type: 'tableprocess',
+			tpObj: { id: 2, name: 'RayleighTest', args: { timeIN: 7, yIN: [21, 22], out: {} } }
+		};
 		const spec = canonicalNodeViz(node);
 		expect(spec.type).toBe('circularphase');
 		expect(spec.series).toEqual([
@@ -48,7 +52,11 @@ describe('canonicalNodeViz', () => {
 	});
 
 	it('RayleighTest with no timeIN → circular series with x = -1', () => {
-		const node = { id: 'tableprocess_3', type: 'tableprocess', tpObj: { id: 3, name: 'RayleighTest', args: { timeIN: -1, yIN: [21], out: {} } } };
+		const node = {
+			id: 'tableprocess_3',
+			type: 'tableprocess',
+			tpObj: { id: 3, name: 'RayleighTest', args: { timeIN: -1, yIN: [21], out: {} } }
+		};
 		expect(canonicalNodeViz(node).series[0]).toMatchObject({ x: -1, y: 21 });
 	});
 
@@ -62,14 +70,20 @@ describe('canonicalNodeViz', () => {
 	});
 
 	it('Correlation → correlationheatmap wired to its INPUT columns (the heatmap is self-contained)', () => {
-		const node = fitNode('Correlation', { yIN: [1, 2, 3], out: { var_i: 30, var_j: 31, r: 32, pvalue: 33, n: 34 } });
+		const node = fitNode('Correlation', {
+			yIN: [1, 2, 3],
+			out: { var_i: 30, var_j: 31, r: 32, pvalue: 33, n: 34 }
+		});
 		const spec = canonicalNodeViz(node);
 		expect(spec.type).toBe('correlationheatmap');
 		expect(spec.columns).toEqual([1, 2, 3]);
 	});
 
 	it('NormalityTest → qqplot wired to its INPUT columns (the Q-Q plot is self-computing)', () => {
-		const node = fitNode('NormalityTest', { yIN: [1, 2], out: { variable: 30, statistic: 31, pvalue: 32, n: 33, normal: 34 } });
+		const node = fitNode('NormalityTest', {
+			yIN: [1, 2],
+			out: { variable: 30, statistic: 31, pvalue: 32, n: 33, normal: 34 }
+		});
 		const spec = canonicalNodeViz(node);
 		expect(spec.type).toBe('qqplot');
 		expect(spec.columns).toEqual([1, 2]);
@@ -147,7 +161,12 @@ describe('canonicalNodeViz', () => {
 	});
 
 	it('RhythmicityAnalysis with no computed outputs → tableplot, not an empty scatter', () => {
-		const node = fitNode('RhythmicityAnalysis', { analysis: 'periodogram', xIN: 1, yIN: [2], out: {} });
+		const node = fitNode('RhythmicityAnalysis', {
+			analysis: 'periodogram',
+			xIN: 1,
+			yIN: [2],
+			out: {}
+		});
 		expect(canonicalNodeViz(node).type).toBe('tableplot');
 	});
 
@@ -214,7 +233,15 @@ describe('canonicalNodeViz', () => {
 	});
 
 	it('fit TP with no x wired → falls back to tableplot (no broken scatter)', () => {
-		const node = { id: 'tableprocess_9', type: 'tableprocess', tpObj: { id: 9, name: 'Cosinor', args: { xIN: -1, yIN: [20], out: { cosinory_20: 40, period: 50 } } } };
+		const node = {
+			id: 'tableprocess_9',
+			type: 'tableprocess',
+			tpObj: {
+				id: 9,
+				name: 'Cosinor',
+				args: { xIN: -1, yIN: [20], out: { cosinory_20: 40, period: 50 } }
+			}
+		};
 		const spec = canonicalNodeViz(node);
 		expect(spec.type).toBe('tableplot');
 	});
@@ -231,28 +258,53 @@ describe('plotDataFromSpec', () => {
 			]
 		};
 		const pd = plotDataFromSpec(spec, { x: 800, y: 60, sourceNodeId: 'tableprocess_1' });
-		expect(pd).toMatchObject({ name: 'Cosinor: data + fit', type: 'scatterplot', x: 800, y: 60, sourceNodeId: 'tableprocess_1' });
+		expect(pd).toMatchObject({
+			name: 'Cosinor: data + fit',
+			type: 'scatterplot',
+			x: 800,
+			y: 60,
+			sourceNodeId: 'tableprocess_1'
+		});
 		expect(pd.plot.data[0]).toMatchObject({ x: { refId: 10 }, y: { refId: 20 } });
-		expect(pd.plot.data[1].line.draw).toBe(true);   // fit series is a line
+		expect(pd.plot.data[1].line.draw).toBe(true); // fit series is a line
 		expect(pd.plot.data[0].points.draw).toBe(true); // raw series is points
 	});
 
 	it('boxplot + tableplot specs → correct inner shapes', () => {
-		const box = plotDataFromSpec({ type: 'boxplot', title: 't', box: { x: 1, y: 2 }, showSigBars: true }, { x: 0, y: 0 });
-		expect(box.plot).toMatchObject({ data: [{ x: { refId: 1 }, y: { refId: 2 } }], showSigBars: true });
-		const tbl = plotDataFromSpec({ type: 'tableplot', title: 't', columnRefs: [1, 2, 3] }, { x: 0, y: 0 });
+		const box = plotDataFromSpec(
+			{ type: 'boxplot', title: 't', box: { x: 1, y: 2 }, showSigBars: true },
+			{ x: 0, y: 0 }
+		);
+		expect(box.plot).toMatchObject({
+			data: [{ x: { refId: 1 }, y: { refId: 2 } }],
+			showSigBars: true
+		});
+		const tbl = plotDataFromSpec(
+			{ type: 'tableplot', title: 't', columnRefs: [1, 2, 3] },
+			{ x: 0, y: 0 }
+		);
 		expect(tbl.plot).toMatchObject({ columnRefs: [1, 2, 3], showCol: [true, true, true] });
 	});
 
 	it('qqplot spec → one column-wired series per input column', () => {
-		const qq = plotDataFromSpec({ type: 'qqplot', title: 'NormalityTest: Q-Q', columns: [7, 8] }, { x: 0, y: 0 });
+		const qq = plotDataFromSpec(
+			{ type: 'qqplot', title: 'NormalityTest: Q-Q', columns: [7, 8] },
+			{ x: 0, y: 0 }
+		);
 		expect(qq.type).toBe('qqplot');
 		expect(qq.plot).toMatchObject({ data: [{ column: { refId: 7 } }, { column: { refId: 8 } }] });
 	});
 
 	it('circularphase spec → data series wired {x:time, y:phase}', () => {
 		const cp = plotDataFromSpec(
-			{ type: 'circularphase', title: 'c', series: [{ x: 7, y: 21, label: 'a' }, { x: -1, y: 22, label: 'b' }] },
+			{
+				type: 'circularphase',
+				title: 'c',
+				series: [
+					{ x: 7, y: 21, label: 'a' },
+					{ x: -1, y: 22, label: 'b' }
+				]
+			},
 			{ x: 0, y: 0 }
 		);
 		expect(cp.type).toBe('circularphase');

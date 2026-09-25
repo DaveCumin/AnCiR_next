@@ -2,6 +2,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
+	// eslint-disable-next-line no-unused-vars -- referenced only by the commented-out background/border colour controls in the legend panel below; kept so re-enabling that block does not need the import back
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -227,10 +228,10 @@
 		legendData.customY = f.y;
 	}
 
-	let legendSizeInput = $state(0);
-	$effect(() => {
-		legendSizeInput = Math.round(legendFontSize * 10) / 10;
-	});
+	// Writable $derived: it mirrors the resolved font size, and the NumberWithUnits
+	// binding writes straight back into it before onInput pushes the value onto
+	// legendData.fontSize (which then feeds legendFontSize again).
+	let legendSizeInput = $derived(Math.round(legendFontSize * 10) / 10);
 	// Whether to draw the box at all. The border colour and width stay on
 	// legendData: this flag is house style, those are per-legend refinements.
 	const showBox = $derived(resolved.legendBox !== false);
@@ -445,17 +446,16 @@
 			/>
 
 			<!-- items -->
-			{#each items as item, i}
+			{#each items as item, i (i)}
 				{@const lineH = legendFontSize + legendData.itemSpacing + 4}
 				{@const iconW = 25}
 				{@const gap = 4}
-				{@const labelW = labelWidths[i] ?? 0}
 
 				{#if legendData.orientation === 'vertical'}
 					{@const itemX = legendData.padding}
 					{@const itemY = legendData.padding + i * lineH + lineH / 2}
 					<g transform="translate({itemX}, {itemY})">
-						{#each item.elements as el}
+						{#each item.elements as el, ei (ei)}
 							{#if el.type === 'line'}
 								<line
 									x1={2}
@@ -498,7 +498,7 @@
 					{@const itemY = legendDimensions.height / 2}
 
 					<g transform="translate({startX}, {itemY})">
-						{#each item.elements as el}
+						{#each item.elements as el, ei (ei)}
 							{#if el.type === 'line'}
 								<line
 									x1={2}

@@ -68,7 +68,8 @@ const callMcp = async (name, args) => {
 if (!API_KEY) {
 	console.log(`No OPENAI_API_KEY set — DRY RUN (bridge + server only).\n`);
 	console.log(`Translated ${oaiTools.length} MCP tools into OpenAI function schemas:`);
-	for (const t of oaiTools) console.log(`  • ${t.function.name}: ${t.function.description.slice(0, 70)}…`);
+	for (const t of oaiTools)
+		console.log(`  • ${t.function.name}: ${t.function.description.slice(0, 70)}…`);
 
 	console.log('\nRunning a scripted tool sequence (what an LLM would call):');
 	await callMcp('create_session', { id: 'agnostic-dry' });
@@ -78,10 +79,22 @@ if (!API_KEY) {
 		t.push(i);
 		y.push(10 + 5 * Math.cos((2 * Math.PI * i) / 24));
 	}
-	await callMcp('import_data', { columns: [{ name: 'time_h', values: t }, { name: 'signal', values: y }] });
-	const fit = JSON.parse(await callMcp('run_table_process', { name: 'Cosinor', args: { xIN: 0, yIN: [1], useFixedPeriod: true, fixedPeriod: 24 } }));
+	await callMcp('import_data', {
+		columns: [
+			{ name: 'time_h', values: t },
+			{ name: 'signal', values: y }
+		]
+	});
+	const fit = JSON.parse(
+		await callMcp('run_table_process', {
+			name: 'Cosinor',
+			args: { xIN: 0, yIN: [1], useFixedPeriod: true, fixedPeriod: 24 }
+		})
+	);
 	await callMcp('add_plot', { type: 'scatterplot', inputs: { x: 0, y: 1 } });
-	const exp = JSON.parse(await callMcp('export_session', { path: '/tmp/agnostic-llm-session.json' }));
+	const exp = JSON.parse(
+		await callMcp('export_session', { path: '/tmp/agnostic-llm-session.json' })
+	);
 	const o = fit.outputs.find((o) => o.length === 48) || fit.outputs[0];
 	console.log(`  cosinor valid=${fit.valid}, fitted-curve column "${o?.name}" len=${o?.length}`);
 	console.log(`  exported ${exp.bytes} bytes → ${exp.written}`);
@@ -118,7 +131,8 @@ async function chat() {
 	} catch {
 		/* not JSON */
 	}
-	if (res.status === 400 && parsed?.error?.code === 'tool_use_failed') return { toolUseFailed: parsed.error.message || 'invalid tool call' };
+	if (res.status === 400 && parsed?.error?.code === 'tool_use_failed')
+		return { toolUseFailed: parsed.error.message || 'invalid tool call' };
 	throw new Error(`LLM HTTP ${res.status}: ${body}`);
 }
 

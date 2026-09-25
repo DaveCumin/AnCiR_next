@@ -32,7 +32,7 @@ export function placeCircularPoints(values, opts) {
 	const outer = opts.outerRim ?? 0.98;
 	const fitStep = opts.maxStack > 0 ? (outer - inner) / Math.max(1, opts.maxStack) : naturalStep;
 	const step = opts.maxStack != null ? Math.min(naturalStep, fitStep) : naturalStep;
-	const base = opts.maxStack != null ? inner : (opts.rim != null ? opts.rim : baseRim);
+	const base = opts.maxStack != null ? inner : opts.rim != null ? opts.rim : baseRim;
 
 	if (placement === 'bin') {
 		const nb = Math.max(1, Math.round(period / binWidth));

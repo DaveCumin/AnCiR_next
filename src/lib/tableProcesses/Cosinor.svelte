@@ -1085,7 +1085,7 @@
 			{/if}
 		</div>
 	</div>
-	{#each yResult?.fittedData?.parameters.cosines ?? [] as cosine, i}
+	{#each yResult?.fittedData?.parameters.cosines ?? [] as cosine, i (i)}
 		{@const period = 2 * Math.PI * (1 / cosine.frequency)}
 		<div class="control-input-horizontal">
 			<div class="control-input">
@@ -1145,7 +1145,7 @@
 						source="Cosinor (fixed)"
 					/>
 				</p>
-				{#each s.harmonics as h}
+				{#each s.harmonics as h (h.k)}
 					<p>
 						H{h.k} Amplitude: {h.amplitude.toFixed(3)} &nbsp;[CI: {h.CI_A[0].toFixed(3)}, {h.CI_A[1].toFixed(
 							3

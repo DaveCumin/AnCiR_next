@@ -30,6 +30,7 @@
 	//   group: { key, label, options[], proc? }   // proc set when group is a renameable TableProcess
 	let options = $derived.by(() => {
 		const tree = [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- de-duplication set rebuilt from scratch on every run of this $derived.by and consumed inside it; never read outside
 		const seenIds = new Set();
 
 		if (getPlotSiblings !== -1) {

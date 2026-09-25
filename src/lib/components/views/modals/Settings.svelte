@@ -285,268 +285,266 @@
 		</div>
 	{/snippet}
 
-	{#snippet children()}
-		<!-- Reuses the control-panel patterns (control-component / control-input /
-		     div-line) so the modal matches the rest of the app. -->
-		<!-- The session TEMPLATE. Copied into each new plot; existing plots are only
-		     changed by the button inside these controls. FigureStyleControls already
-		     renders its own control-component wrapper, matching the sections below.
-		     The palette rides along as a top control: it reads as one of these defaults,
-		     but it is app-wide state rather than a per-figure field, so it is passed in
-		     here rather than living in the component. -->
-		{#snippet paletteControl()}
-			<div class="control-input">
-				<p>Default colour palette</p>
-				<ColourPaletteSelect
-					colours={pendingPalette?.colours}
-					onSelect={(palette) => choosePalette(palette)}
-				/>
-				{#if pendingPalette}
-					<p class="pending-note">
-						{pendingPalette.name} is chosen but not in use yet. Existing figures keep their colours until
-						you apply.
-					</p>
-				{/if}
-			</div>
-		{/snippet}
-
-		<FigureStyleControls
-			topControls={paletteControl}
-			onResetToMap={() => clearSeriesColourOverrides(core.plots)}
-			style={core.figureStyle}
-			showApplyToAll={true}
-			onApplyToAll={() => {
-				// The palette first: it is what the slot records below resolve against, so
-				// swapping it after the style pass would leave the repaint working from the
-				// colours the figures had a moment ago.
-				applyPendingPalette();
-				const n = applyStyleToAll(core.plots, core.figureStyle);
-				// The style fields alone do not move monochrome/marker state into series
-				// that already exist, so push those too or "Apply to all" would leave the
-				// two flags visibly ignored.
-				applyAppearanceToAll(core.plots);
-				applyFigureWidthToAll(core.plots);
-				return n;
-			}}
-			title="Figure defaults"
-		/>
-
-		<div class="div-line"></div>
-
-		<!-- The identity map, made visible. Session-scoped like the template above, and
-		     the reason it sits here rather than in a plot's panel: it governs every
-		     figure, not one. -->
-		<AppearanceMapEditor />
-
-		<div class="div-line"></div>
-
-		<!-- Named presets of the two sections above: the figure defaults and the palette,
-		     plus the appearance map re-keyed onto column names and group labels so it can
-		     leave this session. Stored per browser, not in the session file. -->
-		<div class="control-component">
-			<div class="control-component-title"><p>Figure styles</p></div>
-
-			{#if savedStyles.length === 0}
-				<p class="privacy-note">No saved styles on this browser yet.</p>
-			{:else}
-				<div class="style-list">
-					{#each savedStyles as name (name)}
-						<div class="style-row">
-							<span class="style-name">
-								{name}
-								{#if name === browserActiveStyle}<span class="style-tag">active</span>{/if}
-							</span>
-							<div class="style-actions">
-								<button class="export-py-btn" type="button" onclick={() => useStyle(name)}>
-									Use
-								</button>
-								<button class="export-py-btn" type="button" onclick={() => removeStyle(name)}>
-									Delete
-								</button>
-							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-
-			<div class="style-save-row">
-				<input
-					type="text"
-					bind:value={newStyleName}
-					placeholder="Style name"
-					onkeydown={(e) => {
-						if (e.key === 'Enter') saveCurrentStyle();
-					}}
-				/>
-				<button class="export-py-btn" type="button" onclick={saveCurrentStyle}>
-					Save current settings as…
-				</button>
-			</div>
-			<label class="privacy-row">
-				<input type="checkbox" bind:checked={templateOnly} />
-				<span>Template and palette only</span>
-			</label>
-			<p class="privacy-note">
-				A style keeps the figure defaults above (typeface, type size, figure width, export DPI,
-				background, legend box) and the colour palette. Unticking the box also keeps the appearance
-				rules, re-keyed onto your column names and group labels; those names leave this session with
-				the style, so leave the box ticked on a shared machine. Using a style sets the figure
-				defaults and the palette, and applies the rules to any column whose name or group label
-				matches. Matching is by name, so a renamed column stops matching; the notification says how
-				many columns were reached and names any rule that matched nothing. One undo reverses the
-				whole thing.
-			</p>
-			<p class="privacy-note">
-				Styles are saved in this browser only, so they do not follow you to another machine, and
-				they are deliberately kept when ephemeral mode is switched on.
-			</p>
-			{#if core.activeStyleName}
-				<p class="privacy-note">
-					This session was styled with <strong>{core.activeStyleName}</strong>{sessionStyleMissing
-						? ' — not saved on this browser, so nothing was substituted for it.'
-						: '.'} Loading a session never re-applies a style; it shows what it was saved with.
+	<!-- Reuses the control-panel patterns (control-component / control-input /
+	     div-line) so the modal matches the rest of the app. -->
+	<!-- The session TEMPLATE. Copied into each new plot; existing plots are only
+	     changed by the button inside these controls. FigureStyleControls already
+	     renders its own control-component wrapper, matching the sections below.
+	     The palette rides along as a top control: it reads as one of these defaults,
+	     but it is app-wide state rather than a per-figure field, so it is passed in
+	     here rather than living in the component. -->
+	{#snippet paletteControl()}
+		<div class="control-input">
+			<p>Default colour palette</p>
+			<ColourPaletteSelect
+				colours={pendingPalette?.colours}
+				onSelect={(palette) => choosePalette(palette)}
+			/>
+			{#if pendingPalette}
+				<p class="pending-note">
+					{pendingPalette.name} is chosen but not in use yet. Existing figures keep their colours until
+					you apply.
 				</p>
 			{/if}
 		</div>
+	{/snippet}
 
-		<div class="div-line"></div>
+	<FigureStyleControls
+		topControls={paletteControl}
+		onResetToMap={() => clearSeriesColourOverrides(core.plots)}
+		style={core.figureStyle}
+		showApplyToAll={true}
+		onApplyToAll={() => {
+			// The palette first: it is what the slot records below resolve against, so
+			// swapping it after the style pass would leave the repaint working from the
+			// colours the figures had a moment ago.
+			applyPendingPalette();
+			const n = applyStyleToAll(core.plots, core.figureStyle);
+			// The style fields alone do not move monochrome/marker state into series
+			// that already exist, so push those too or "Apply to all" would leave the
+			// two flags visibly ignored.
+			applyAppearanceToAll(core.plots);
+			applyFigureWidthToAll(core.plots);
+			return n;
+		}}
+		title="Figure defaults"
+	/>
 
-		<div class="control-component">
-			<div class="control-component-title"><p>Canvas</p></div>
-			<div class="control-input-horizontal">
-				<ControlInput label="Grid size">
-					<NumberWithUnits bind:value={appState.gridSize} min="1" max="100" />
-				</ControlInput>
-				<ControlInput label="Zoom">
-					<NumberWithUnits bind:value={appState.canvasScale} min="0.01" max="10" step="0.05" />
-				</ControlInput>
+	<div class="div-line"></div>
+
+	<!-- The identity map, made visible. Session-scoped like the template above, and
+	     the reason it sits here rather than in a plot's panel: it governs every
+	     figure, not one. -->
+	<AppearanceMapEditor />
+
+	<div class="div-line"></div>
+
+	<!-- Named presets of the two sections above: the figure defaults and the palette,
+	     plus the appearance map re-keyed onto column names and group labels so it can
+	     leave this session. Stored per browser, not in the session file. -->
+	<div class="control-component">
+		<div class="control-component-title"><p>Figure styles</p></div>
+
+		{#if savedStyles.length === 0}
+			<p class="privacy-note">No saved styles on this browser yet.</p>
+		{:else}
+			<div class="style-list">
+				{#each savedStyles as name (name)}
+					<div class="style-row">
+						<span class="style-name">
+							{name}
+							{#if name === browserActiveStyle}<span class="style-tag">active</span>{/if}
+						</span>
+						<div class="style-actions">
+							<button class="export-py-btn" type="button" onclick={() => useStyle(name)}>
+								Use
+							</button>
+							<button class="export-py-btn" type="button" onclick={() => removeStyle(name)}>
+								Delete
+							</button>
+						</div>
+					</div>
+				{/each}
 			</div>
+		{/if}
+
+		<div class="style-save-row">
+			<input
+				type="text"
+				bind:value={newStyleName}
+				placeholder="Style name"
+				onkeydown={(e) => {
+					if (e.key === 'Enter') saveCurrentStyle();
+				}}
+			/>
+			<button class="export-py-btn" type="button" onclick={saveCurrentStyle}>
+				Save current settings as…
+			</button>
 		</div>
+		<label class="privacy-row">
+			<input type="checkbox" bind:checked={templateOnly} />
+			<span>Template and palette only</span>
+		</label>
+		<p class="privacy-note">
+			A style keeps the figure defaults above (typeface, type size, figure width, export DPI,
+			background, legend box) and the colour palette. Unticking the box also keeps the appearance
+			rules, re-keyed onto your column names and group labels; those names leave this session with
+			the style, so leave the box ticked on a shared machine. Using a style sets the figure defaults
+			and the palette, and applies the rules to any column whose name or group label matches.
+			Matching is by name, so a renamed column stops matching; the notification says how many
+			columns were reached and names any rule that matched nothing. One undo reverses the whole
+			thing.
+		</p>
+		<p class="privacy-note">
+			Styles are saved in this browser only, so they do not follow you to another machine, and they
+			are deliberately kept when ephemeral mode is switched on.
+		</p>
+		{#if core.activeStyleName}
+			<p class="privacy-note">
+				This session was styled with <strong>{core.activeStyleName}</strong>{sessionStyleMissing
+					? ' — not saved on this browser, so nothing was substituted for it.'
+					: '.'} Loading a session never re-applies a style; it shows what it was saved with.
+			</p>
+		{/if}
+	</div>
 
-		<div class="div-line"></div>
+	<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title"><p>Time</p></div>
-			<ControlInput label="Timezone">
-				<div class="tz-row">
-					<input
-						type="text"
-						list="ancir-timezone-list"
-						bind:value={zoneInput}
-						onchange={() => applyZone(zoneInput)}
-						onblur={() => applyZone(zoneInput)}
-						onkeydown={(e) => {
-							if (e.key === 'Enter') applyZone(zoneInput);
-						}}
-						placeholder="utc"
-					/>
-					<button class="tz-detect" type="button" onclick={detectLocalZone}>
-						Detect from browser
-					</button>
-					<datalist id="ancir-timezone-list">
-						<option value="utc"></option>
-						{#each allZones as z (z)}
-							<option value={z}></option>
-						{/each}
-					</datalist>
-				</div>
-				{#if zoneError}
-					<p class="zone-error">{zoneError}</p>
-				{/if}
+	<div class="control-component">
+		<div class="control-component-title"><p>Canvas</p></div>
+		<div class="control-input-horizontal">
+			<ControlInput label="Grid size">
+				<NumberWithUnits bind:value={appState.gridSize} min="1" max="100" />
+			</ControlInput>
+			<ControlInput label="Zoom">
+				<NumberWithUnits bind:value={appState.canvasScale} min="0.01" max="10" step="0.05" />
 			</ControlInput>
 		</div>
+	</div>
 
-		<div class="div-line"></div>
+	<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title"><p>Privacy</p></div>
-			<label class="privacy-row">
+	<div class="control-component">
+		<div class="control-component-title"><p>Time</p></div>
+		<ControlInput label="Timezone">
+			<div class="tz-row">
 				<input
-					type="checkbox"
-					checked={privacy.ephemeral}
-					onchange={(e) => toggleEphemeral(e.currentTarget.checked)}
+					type="text"
+					list="ancir-timezone-list"
+					bind:value={zoneInput}
+					onchange={() => applyZone(zoneInput)}
+					onblur={() => applyZone(zoneInput)}
+					onkeydown={(e) => {
+						if (e.key === 'Enter') applyZone(zoneInput);
+					}}
+					placeholder="utc"
 				/>
-				<span>Ephemeral mode (shared or clinic machine)</span>
-			</label>
-			<p class="privacy-note">
-				Keeps everything in the tab: no recent-session list, no saved file handles, nothing left in
-				this browser once the tab is closed. Your data itself is never uploaded in either mode; this
-				is about what stays behind on the machine.
-			</p>
-			<button class="export-py-btn" type="button" disabled={clearing} onclick={clearNow}>
-				{clearing ? 'Clearing…' : 'Clear data stored in this browser'}
-			</button>
-			<p class="privacy-note">
-				Removes the recent-session list, the saved file handles and the remembered canvas layout.
-				Your saved session files on disk are untouched.
-			</p>
-			<!-- Separate from the button above on purpose. That one clears things the app can
-			     rebuild; a style is authored work and is NOT recoverable from a session file, so
-			     one button doing both would either destroy presets by surprise or leave them
-			     behind silently. -->
-			<button class="export-py-btn" type="button" onclick={forgetStyles}>
-				Forget saved figure styles
-			</button>
-			<p class="privacy-note">
-				Removes the named figure styles above, including any column names and group labels they
-				carry. Saved styles are kept by the button above and by ephemeral mode, so this is the only
-				thing that forgets them. They are not stored in your session files, so they cannot be
-				recovered from one.
-			</p>
-		</div>
-
-		<div class="div-line"></div>
-
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>Experimental <span class="exp-badge">experimental</span></p>
+				<button class="tz-detect" type="button" onclick={detectLocalZone}>
+					Detect from browser
+				</button>
+				<datalist id="ancir-timezone-list">
+					<option value="utc"></option>
+					{#each allZones as z (z)}
+						<option value={z}></option>
+					{/each}
+				</datalist>
 			</div>
-			<label class="privacy-row">
-				<input type="checkbox" bind:checked={exportSplitFiles} />
-				<span>Split into helper + analysis files</span>
-			</label>
-			<p class="experimental-note">
-				Instead of one self-contained script, exports an <code>ancir_helpers</code> file holding all
-				the analysis functions and a short <code>analysis</code> script that reads like a methods section
-				— just your data and the steps performed. Keep the files in the same folder. Several files download
-				together as one zip.
-			</p>
-			<label class="privacy-row">
-				<input type="checkbox" bind:checked={exportDataAsCsv} />
-				<span>Export data as separate CSV</span>
-			</label>
-			<p class="experimental-note">
-				Moves the column data out of the script into <code>session_data.csv</code>, loaded back with
-				<code>read.csv</code>
-				/ <code>pandas.read_csv</code>. Keep the CSV next to the script.
-			</p>
-			<button
-				class="export-py-btn"
-				type="button"
-				onclick={() => exportPython({ split: exportSplitFiles, dataAsCsv: exportDataAsCsv })}
-			>
-				Export session as Python
-			</button>
-			<p class="experimental-note">
-				Downloads a standalone Python script that reproduces this session's analyses. Requires
-				<code>numpy</code>, <code>pandas</code> and <code>scipy</code>. Some processes may not yet
-				be implemented in the Python runtime — the script prints a warning when run.
-			</p>
-			<button
-				class="export-py-btn"
-				type="button"
-				onclick={() => exportR({ split: exportSplitFiles, dataAsCsv: exportDataAsCsv })}
-			>
-				Export session as R
-			</button>
-			<p class="experimental-note">
-				Downloads a standalone R script that reproduces this session's analyses. Needs
-				<strong>no extra packages</strong> — base R only. The R runtime does not cover every node yet,
-				so a session using one it lacks is refused here, naming the node, rather than exported as a script
-				that would stop partway.
-			</p>
+			{#if zoneError}
+				<p class="zone-error">{zoneError}</p>
+			{/if}
+		</ControlInput>
+	</div>
+
+	<div class="div-line"></div>
+
+	<div class="control-component">
+		<div class="control-component-title"><p>Privacy</p></div>
+		<label class="privacy-row">
+			<input
+				type="checkbox"
+				checked={privacy.ephemeral}
+				onchange={(e) => toggleEphemeral(e.currentTarget.checked)}
+			/>
+			<span>Ephemeral mode (shared or clinic machine)</span>
+		</label>
+		<p class="privacy-note">
+			Keeps everything in the tab: no recent-session list, no saved file handles, nothing left in
+			this browser once the tab is closed. Your data itself is never uploaded in either mode; this
+			is about what stays behind on the machine.
+		</p>
+		<button class="export-py-btn" type="button" disabled={clearing} onclick={clearNow}>
+			{clearing ? 'Clearing…' : 'Clear data stored in this browser'}
+		</button>
+		<p class="privacy-note">
+			Removes the recent-session list, the saved file handles and the remembered canvas layout. Your
+			saved session files on disk are untouched.
+		</p>
+		<!-- Separate from the button above on purpose. That one clears things the app can
+		     rebuild; a style is authored work and is NOT recoverable from a session file, so
+		     one button doing both would either destroy presets by surprise or leave them
+		     behind silently. -->
+		<button class="export-py-btn" type="button" onclick={forgetStyles}>
+			Forget saved figure styles
+		</button>
+		<p class="privacy-note">
+			Removes the named figure styles above, including any column names and group labels they carry.
+			Saved styles are kept by the button above and by ephemeral mode, so this is the only thing
+			that forgets them. They are not stored in your session files, so they cannot be recovered from
+			one.
+		</p>
+	</div>
+
+	<div class="div-line"></div>
+
+	<div class="control-component">
+		<div class="control-component-title">
+			<p>Experimental <span class="exp-badge">experimental</span></p>
 		</div>
-	{/snippet}
+		<label class="privacy-row">
+			<input type="checkbox" bind:checked={exportSplitFiles} />
+			<span>Split into helper + analysis files</span>
+		</label>
+		<p class="experimental-note">
+			Instead of one self-contained script, exports an <code>ancir_helpers</code> file holding all
+			the analysis functions and a short <code>analysis</code> script that reads like a methods section
+			— just your data and the steps performed. Keep the files in the same folder. Several files download
+			together as one zip.
+		</p>
+		<label class="privacy-row">
+			<input type="checkbox" bind:checked={exportDataAsCsv} />
+			<span>Export data as separate CSV</span>
+		</label>
+		<p class="experimental-note">
+			Moves the column data out of the script into <code>session_data.csv</code>, loaded back with
+			<code>read.csv</code>
+			/ <code>pandas.read_csv</code>. Keep the CSV next to the script.
+		</p>
+		<button
+			class="export-py-btn"
+			type="button"
+			onclick={() => exportPython({ split: exportSplitFiles, dataAsCsv: exportDataAsCsv })}
+		>
+			Export session as Python
+		</button>
+		<p class="experimental-note">
+			Downloads a standalone Python script that reproduces this session's analyses. Requires
+			<code>numpy</code>, <code>pandas</code> and <code>scipy</code>. Some processes may not yet be
+			implemented in the Python runtime — the script prints a warning when run.
+		</p>
+		<button
+			class="export-py-btn"
+			type="button"
+			onclick={() => exportR({ split: exportSplitFiles, dataAsCsv: exportDataAsCsv })}
+		>
+			Export session as R
+		</button>
+		<p class="experimental-note">
+			Downloads a standalone R script that reproduces this session's analyses. Needs
+			<strong>no extra packages</strong> — base R only. The R runtime does not cover every node yet, so
+			a session using one it lacks is refused here, naming the node, rather than exported as a script
+			that would stop partway.
+		</p>
+	</div>
 </Modal>
 
 <style>

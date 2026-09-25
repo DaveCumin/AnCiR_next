@@ -8,17 +8,17 @@ drift risk — if someone changes a JS analysis without matching the Python port
 
 Scope: **per-module** parity (one table/column process at a time). Session-level
 parity through `ancir_to_python.py` is a separate, not-yet-built layer (see
-*Limitations* below).
+_Limitations_ below).
 
 ## Pieces
 
-| File | Role |
-|------|------|
-| `tools/parity/fixtures.json` | Language-neutral cases: process + args + input data + which outputs to compare. The single source both sides read. |
+| File                                        | Role                                                                                                                   |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `tools/parity/fixtures.json`                | Language-neutral cases: process + args + input data + which outputs to compare. The single source both sides read.     |
 | `src/lib/_parity/emitParity.svelte.test.js` | JS side. Runs each fixture through the real JS engine, writes `tools/parity/js_results.json`. Gated by `GEN_PARITY=1`. |
-| `tools/test_parity.py` | Python side. Runs each fixture through `ancir_runtime.py` and asserts it matches `js_results.json` within `tolerance`. |
-| `tools/parity/js_results.json` | Generated JS **inputs and outputs** (git-ignored; regenerate with the emitter). |
-| `tools/test_parity.R` | R side. Runs each fixture tagged with an `rFunc` through `ancir_runtime.R` and asserts it matches `js_results.json`. |
+| `tools/test_parity.py`                      | Python side. Runs each fixture through `ancir_runtime.py` and asserts it matches `js_results.json` within `tolerance`. |
+| `tools/parity/js_results.json`              | Generated JS **inputs and outputs** (git-ignored; regenerate with the emitter).                                        |
+| `tools/test_parity.R`                       | R side. Runs each fixture tagged with an `rFunc` through `ancir_runtime.R` and asserts it matches `js_results.json`.   |
 
 Run all three legs with `npm run parity` (or `parity:emit` / `parity:py` / `parity:r`
 individually).
@@ -28,7 +28,7 @@ individually).
 `js_results.json` records each fixture's **inputs** as well as its outputs, so every language
 consumes the exact seeded inputs the JS emitter used rather than regenerating them. R
 therefore needs no port of mulberry32 or the rhythm generator, and the three languages cannot
-silently disagree about their *inputs* instead of their maths.
+silently disagree about their _inputs_ instead of their maths.
 
 A fixture opts into the R leg by gaining an `rFunc` key beside its `pyFunc`. Untagged
 fixtures are reported as "not claimed by the R port" rather than passing silently.
@@ -57,7 +57,7 @@ when there is no format, which is the epoch-ms and legacy-session case.
 Two bugs this kind found immediately:
 
 - **R aborted on any gap.** An empty string (a blank cell in a CSV — the normal shape of
-  an actigraphy gap) makes `as.POSIXct` *error* rather than return NA, and an error is
+  an actigraphy gap) makes `as.POSIXct` _error_ rather than return NA, and an error is
   not a warning, so `suppressWarnings` did not catch it and the whole generated script
   died. Plain `NA` was fine; it was specifically `""`.
 - **Both ports ignored the stored format**, as above.
@@ -66,7 +66,7 @@ Two bugs this kind found immediately:
 
 A fixture may set `rTolerance` to loosen the comparison **for R alone**. Widening the shared
 `tolerance` would quietly weaken the Python leg too. The one use so far is Shapiro-Wilk:
-R's `shapiro.test` and the JS port both implement Royston AS R94 and agree on *W* to 2.8e-11,
+R's `shapiro.test` and the JS port both implement Royston AS R94 and agree on _W_ to 2.8e-11,
 but the p-value's normalising transform differs by 5.4e-8 — a tail-approximation coefficient
 difference, not a disagreement about the statistic.
 
@@ -75,7 +75,7 @@ difference, not a disagreement about the statistic.
 `src/lib/_parity/runtimeCoverage.test.js` runs in the normal vitest suite (no Python or R
 toolchain needed) and checks each port against the JS analyses. It exists because
 `tools/check_tp_coverage.py` had always exited non-zero on a missing Python implementation
-but was wired into *nothing* — no npm script, no test, no CI step — so nobody ran it and the
+but was wired into _nothing_ — no npm script, no test, no CI step — so nobody ran it and the
 Python port silently fell eight analyses behind. Those eight are recorded in `PYTHON_GAPS`,
 which may shrink but never grow.
 
@@ -116,12 +116,12 @@ Append to `tools/parity/fixtures.json`, then re-run both steps. No code changes.
 
 ```json
 {
-  "id": "col-removetrend",
-  "kind": "columnProcess",
-  "jsName": "RemoveTrend",       // JS registry key = the .svelte FILE name
-  "pyFunc": "removetrend",       // key in ancir_runtime COLUMN_PROCESS_MAP
-  "input": [1, 2, 3, 4, 5],
-  "args": { }
+	"id": "col-removetrend",
+	"kind": "columnProcess",
+	"jsName": "RemoveTrend", // JS registry key = the .svelte FILE name
+	"pyFunc": "removetrend", // key in ancir_runtime COLUMN_PROCESS_MAP
+	"input": [1, 2, 3, 4, 5],
+	"args": {}
 }
 ```
 
@@ -129,16 +129,28 @@ Append to `tools/parity/fixtures.json`, then re-run both steps. No code changes.
 
 ```json
 {
-  "id": "tp-smootheddata",
-  "kind": "tableProcess",
-  "jsName": "SmoothedData",      // JS registry key (file name)
-  "pyFunc": "smootheddata",      // Python runs tp_<pyFunc>
-  "inputs": [
-    { "ref": "t", "type": "number", "values": [/* ... */] },
-    { "ref": "y", "type": "number", "values": [/* ... */] }
-  ],
-  "args": { "xIN": "@t", "yIN": ["@y"], "out": { } },
-  "compareOutputs": ["<canonical output key>"]
+	"id": "tp-smootheddata",
+	"kind": "tableProcess",
+	"jsName": "SmoothedData", // JS registry key (file name)
+	"pyFunc": "smootheddata", // Python runs tp_<pyFunc>
+	"inputs": [
+		{
+			"ref": "t",
+			"type": "number",
+			"values": [
+				/* ... */
+			]
+		},
+		{
+			"ref": "y",
+			"type": "number",
+			"values": [
+				/* ... */
+			]
+		}
+	],
+	"args": { "xIN": "@t", "yIN": ["@y"], "out": {} },
+	"compareOutputs": ["<canonical output key>"]
 }
 ```
 
@@ -147,28 +159,34 @@ and list the comparison fields to check:
 
 ```json
 {
-  "id": "tp-groupcomparison-ttest",
-  "kind": "tableProcessResult",
-  "jsName": "GroupComparison",
-  "pyFunc": "groupcomparison",
-  "generate": { "type": "groups", "seed": 7,
-    "groups": [ { "label": "A", "mean": 50, "sd": 12, "n": 40 },
-                { "label": "B", "mean": 62, "sd": 12, "n": 40 } ],
-    "refs": { "g": "grp", "v": "val" } },
-  "args": { "xIN": "@grp", "yIN": ["@val"], "method": "ttest", "alpha": 0.05, "out": {} },
-  "compareFields": ["test", "difference", "t", "df", "pValue"]
+	"id": "tp-groupcomparison-ttest",
+	"kind": "tableProcessResult",
+	"jsName": "GroupComparison",
+	"pyFunc": "groupcomparison",
+	"generate": {
+		"type": "groups",
+		"seed": 7,
+		"groups": [
+			{ "label": "A", "mean": 50, "sd": 12, "n": 40 },
+			{ "label": "B", "mean": 62, "sd": 12, "n": 40 }
+		],
+		"refs": { "g": "grp", "v": "val" }
+	},
+	"args": { "xIN": "@grp", "yIN": ["@val"], "method": "ttest", "alpha": 0.05, "out": {} },
+	"compareFields": ["test", "difference", "t", "df", "pValue"]
 }
 ```
 
 **Seeded input data.** Instead of hand-written arrays, a table-process fixture may
 declare a `generate` spec; the JS emitter realises it (deterministically, from
 `seed`) and writes the arrays into `js_results.json`, so Python analyses the
-*identical* numbers. Types: `rhythm` (mesor + amp·cos + Gaussian noise → `x`,`y`),
+_identical_ numbers. Types: `rhythm` (mesor + amp·cos + Gaussian noise → `x`,`y`),
 `linear` (slope·x + intercept + noise → `x`,`y`), `groups` (category + values →
 `g`,`v`). This is how the complex functions (Cosinor, FitFunction, GroupComparison)
 are exercised on realistic noisy data rather than toy arrays.
 
 Notes:
+
 - **Column refs use `@ref` tokens** (`"@t"`), resolved to real column ids in each
   language. With `generate`, the `refs` map names the columns; otherwise declare
   them in `inputs[]` with a `ref` name and explicit `values`.
@@ -200,7 +218,7 @@ Good next targets (column-output analyses, low-friction to add): `SmoothedData`,
 ## End-to-end session parity
 
 Whole-session JS↔Python check over every shipped session (one per node + the
-classroom lessons). This is what catches port drift across the *entire* analysis
+classroom lessons). This is what catches port drift across the _entire_ analysis
 graph, not just one module.
 
 ```bash
@@ -221,7 +239,7 @@ real differences:
 - `NONDETERMINISTIC` — sessions whose JS output uses an unseeded RNG
   (`demo-tp-random`, `learn-hidden-rhythm`); not parity-checkable.
 - `SESSION_TOLERANCE` — relaxed **relative** tolerance for analyses where JS and
-  Python use *different numerical implementations*. Each is investigated and
+  Python use _different numerical implementations_. Each is investigated and
   explained, not hand-waved (see below).
 - `SKIP_COLUMNS` — specific columns whose **JS baseline is itself degenerate** (a
   JS-engine headless limitation, not a Python bug): `filterbyothercol` col 58 (the
@@ -231,7 +249,7 @@ real differences:
 
 ### Why the tolerances are justified (investigated, not assumed)
 
-- **`demo-tp-doublelogistic` (1e-3)** — was a *real Python bug*: the free-period
+- **`demo-tp-doublelogistic` (1e-3)** — was a _real Python bug_: the free-period
   fit was seeded at 24h and the optimizer collapsed the period to a degenerate
   many-tile minimum (RMSE-vs-data 8.3 vs JS 2.8; 44% curve error). Fixed by
   seeding a free period from the data timespan (JS does the same), which lands on

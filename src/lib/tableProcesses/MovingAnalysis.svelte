@@ -18,6 +18,10 @@
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/movinganalysis.worker-task.js';
+	// MovingAnalysis.test.js imports getStatKeys from this component, and it is also used
+	// locally below. `export { <imported binding> }` is a re-export and assigns nothing; the
+	// rule misreads it inside a Svelte module script (the same code lints clean in a .js file).
+	// eslint-disable-next-line no-import-assign -- re-export of an imported binding, not an assignment
 	export { getStatKeys };
 
 	const displayName = 'Moving Analysis';
@@ -382,8 +386,8 @@
 
 	// Reconcile output columns whenever yIN or stat-key set changes
 	$effect(() => {
-		const _y = p.args.yIN;
-		const _keys = currentStatKeys;
+		void p.args.yIN; // dependency reads: re-reconcile when the Y selection
+		void currentStatKeys; // or the stat-key set changes
 		if (!mounted) return;
 		// Defer reconcile out of the effect: syncStatColumns() calls `new Column()`,
 		// whose $derived fields go inert if created while this effect is the active
@@ -426,6 +430,7 @@
 		// `parent.columnRefs` when a legacy parent container actually exists.
 		const activeIds = new Set((p.args.yIN ?? []).map(Number).filter((id) => id >= 0));
 		const wantedKeys = currentStatKeys;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local desired-key set inside syncStatColumns(); never read reactively
 		const desired = new Set(['movex']);
 		for (const yId of activeIds) {
 			for (const k of wantedKeys) desired.add(`${yId}_${k}`);
@@ -440,12 +445,14 @@
 		const staleKeys = Object.keys(p.args.out ?? {}).filter(
 			(k) => k !== 'movex' && !desired.has(k) && Number(p.args.out[k]) >= 0
 		);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local stale-key pool inside syncStatColumns(); never read reactively
 		const staleBySuffix = new Map();
 		for (const k of staleKeys) {
 			const suffix = k.slice(k.indexOf('_') + 1);
 			if (!staleBySuffix.has(suffix)) staleBySuffix.set(suffix, []);
 			staleBySuffix.get(suffix).push(k);
 		}
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local bookkeeping of reused keys inside syncStatColumns(); never read reactively
 		const reusedStale = new Set();
 		for (const yId of activeIds) {
 			const srcName = getColumnById(yId)?.name ?? String(yId);

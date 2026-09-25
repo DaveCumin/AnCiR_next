@@ -14,7 +14,10 @@ try {
 	await mgr.call('A', 'import_data', {
 		columns: [
 			{ name: 't', values: Array.from({ length: 48 }, (_, i) => i) },
-			{ name: 'y', values: Array.from({ length: 48 }, (_, i) => 10 + 5 * Math.cos((2 * Math.PI * i) / 24)) }
+			{
+				name: 'y',
+				values: Array.from({ length: 48 }, (_, i) => 10 + 5 * Math.cos((2 * Math.PI * i) / 24))
+			}
 		]
 	});
 	await mgr.call('B', 'import_data', {
@@ -38,7 +41,9 @@ try {
 	const aMesor = fit.outputs.length;
 
 	const bColsAfter = (await mgr.call('B', 'list_columns')).columns;
-	console.log(`After A's analysis — B columns still: ${bColsAfter.length}, A cosinor valid: ${fit.valid}`);
+	console.log(
+		`After A's analysis — B columns still: ${bColsAfter.length}, A cosinor valid: ${fit.valid}`
+	);
 
 	if (aCols.length !== 2) throw new Error('A should have 2 columns, got ' + aCols.length);
 	if (bCols.length !== 4) throw new Error('B should have 4 columns, got ' + bCols.length);

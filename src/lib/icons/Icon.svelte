@@ -31,6 +31,7 @@
 	style:--icon-height={typeof height === 'number' ? `${height}px` : height}
 >
 	<!-- SVG files are trusted local assets shipped in the bundle, so {@html} is safe. -->
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- markup comes from iconRegistry.js, a build-time glob of repo-local .svg files; never user input -->
 	{@html svg}
 </span>
 

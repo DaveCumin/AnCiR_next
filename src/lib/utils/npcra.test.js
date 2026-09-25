@@ -89,7 +89,11 @@ describe('computeNPCRA', () => {
 	// period 24) and must give the same IS/IV. 1/24 is not exactly representable, so
 	// bin-of-day assignment must not rely on exact floating-point division.
 	it('gives identical IS/IV when time is in days (epoch 1/24, period 1) as in hours', () => {
-		const { t, y } = buildDays(7, 1, (hod) => 50 + 40 * Math.sin((2 * Math.PI * (hod - 8)) / 24) + (hod % 5));
+		const { t, y } = buildDays(
+			7,
+			1,
+			(hod) => 50 + 40 * Math.sin((2 * Math.PI * (hod - 8)) / 24) + (hod % 5)
+		);
 		const hours = computeNPCRA(t, y, { epochHours: 1, period: 24, mWindow: 10, lWindow: 5 });
 		const days = computeNPCRA(
 			t.map((h) => h / 24),

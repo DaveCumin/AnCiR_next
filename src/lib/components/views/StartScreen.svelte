@@ -38,7 +38,6 @@
 	// anything either way.
 	let { onDismiss = null, summoned = false } = $props();
 
-
 	let dragActive = $state(false);
 	let showLoadSession = $state(false);
 	let showAi = $state(false);
@@ -71,9 +70,7 @@
 	const filtered = $derived.by(() => {
 		const q = query.trim().toLowerCase();
 		if (!q) return null;
-		return allExamples.filter((s) =>
-			`${s.name} ${s.summary} ${s.group}`.toLowerCase().includes(q)
-		);
+		return allExamples.filter((s) => `${s.name} ${s.summary} ${s.group}`.toLowerCase().includes(q));
 	});
 
 	/**
@@ -195,7 +192,12 @@
 
 		<!-- 1. Actions: four cards of equal weight ------------------------------ -->
 		<div class="primary-row">
-			<button type="button" class="primary-card" class:armed={dragActive} onclick={() => openImportData()}>
+			<button
+				type="button"
+				class="primary-card"
+				class:armed={dragActive}
+				onclick={() => openImportData()}
+			>
 				<span class="primary-icon"><Icon name="add-file" width={26} height={26} /></span>
 				<span class="primary-title">Import data</span>
 				<span class="primary-sub">
@@ -207,22 +209,30 @@
 			<button type="button" class="primary-card" onclick={loadSession}>
 				<span class="primary-icon"><Icon name="sessionload" width={26} height={26} /></span>
 				<span class="primary-title">Load session</span>
-				<span class="primary-sub">Reopen a saved session with its data, pipeline and figures intact</span>
+				<span class="primary-sub"
+					>Reopen a saved session with its data, pipeline and figures intact</span
+				>
 			</button>
 
 			<button type="button" class="primary-card" onclick={() => (showAi = true)}>
 				<span class="primary-icon"><Icon name="aibot" width={26} height={26} /></span>
 				<span class="primary-title">Build a session with AI</span>
-				<span class="primary-sub">Describe what you want to find out and let AI assemble the analysis</span>
+				<span class="primary-sub"
+					>Describe what you want to find out and let AI assemble the analysis</span
+				>
 			</button>
 
 			<button type="button" class="primary-card" onclick={() => onDismiss?.()}>
 				<!-- "workflow" was never a registered icon name, so this card rendered a blank box.
 				     "process" is the app's own icon for the workflow canvas, which is where this lands. -->
 				<span class="primary-icon"><Icon name="process" width={26} height={26} /></span>
-				<span class="primary-title">{summoned ? 'Back to your session' : 'Start with a blank canvas'}</span>
+				<span class="primary-title"
+					>{summoned ? 'Back to your session' : 'Start with a blank canvas'}</span
+				>
 				<span class="primary-sub"
-					>{summoned ? 'Close this screen — your work is untouched' : 'Build it yourself, node by node'}</span
+					>{summoned
+						? 'Close this screen — your work is untouched'
+						: 'Build it yourself, node by node'}</span
 				>
 			</button>
 		</div>
@@ -235,7 +245,14 @@
 					<strong>Take the tour</strong>
 					<span>A short guided pass: import a record, build a session, read the output.</span>
 				</div>
-				<button type="button" class="tour-cta" onclick={() => { openTourPicker(); onDismiss?.(); }}>
+				<button
+					type="button"
+					class="tour-cta"
+					onclick={() => {
+						openTourPicker();
+						onDismiss?.();
+					}}
+				>
 					Take the tour
 				</button>
 			</div>
@@ -293,6 +310,7 @@
 												onclick={() => launchExample(s)}
 												disabled={busyId === s.id}
 											>
+												<!-- eslint-disable-next-line svelte/no-at-html-tags -- thumbnailForWorkflow returns an SVG string built entirely in $lib/start/thumbnails.js from a seeded PRNG; no user or network data reaches it -->
 												<span class="thumb thumb-sm">{@html thumbnailForWorkflow(s.id)}</span>
 												<span class="example-text">
 													<span class="example-name">{displayName(s.name)}</span>
@@ -329,14 +347,16 @@
 				<button
 					type="button"
 					class="browse-link"
-					onclick={() => { loadMode = 'example'; showLoadSession = true; }}
+					onclick={() => {
+						loadMode = 'example';
+						showLoadSession = true;
+					}}
 				>
 					Browse the full library →
 				</button>
 				for single-node demos, plot examples and raw datasets.
 			</p>
 		</section>
-
 	</div>
 </div>
 

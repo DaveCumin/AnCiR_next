@@ -56,18 +56,21 @@ describe('worker compute-task registry', () => {
 
 	it('fitfunction.fit matches the direct util', () => {
 		const opts = { useFixedPeriod: true, fixedPeriod: 24, nHarmonics: 1 };
-		expect(getComputeTask('fitfunction.fit')({ tt: t, yy: y, model: 'cosinor', options: opts }))
-			.toEqual(fitCurveModel(t, y, 'cosinor', opts));
+		expect(
+			getComputeTask('fitfunction.fit')({ tt: t, yy: y, model: 'cosinor', options: opts })
+		).toEqual(fitCurveModel(t, y, 'cosinor', opts));
 	});
 
 	it('doublelogistic.fit matches the direct util', () => {
 		const opts = { periodic: true, fixK1: false, fixK2: false, fixPeriod: false };
-		expect(getComputeTask('doublelogistic.fit')({ tt: t, yy: y, opts }))
-			.toEqual(fitDoubleLogistic(t, y, opts));
+		expect(getComputeTask('doublelogistic.fit')({ tt: t, yy: y, opts })).toEqual(
+			fitDoubleLogistic(t, y, opts)
+		);
 	});
 
 	it('trendfit.fit matches the direct util', () => {
-		expect(getComputeTask('trendfit.fit')({ tt: t, yy: y, model: 'linear', polyDegree: 2 }))
-			.toEqual(fitTrendSync(t, y, 'linear', 2));
+		expect(
+			getComputeTask('trendfit.fit')({ tt: t, yy: y, model: 'linear', polyDegree: 2 })
+		).toEqual(fitTrendSync(t, y, 'linear', 2));
 	});
 });

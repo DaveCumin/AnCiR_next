@@ -108,9 +108,7 @@ describe('cosinorFitStatus — the fitted curve must be plotted', () => {
 
 describe('plotSeriesCounts — how many series carry x / y (multi-series steps)', () => {
 	it('counts x- and y-filled series independently', () => {
-		core.plots = [
-			plot('scatterplot', [series(1, 2), { x: { refId: 3 }, y: { refId: -1 } }])
-		];
+		core.plots = [plot('scatterplot', [series(1, 2), { x: { refId: 3 }, y: { refId: -1 } }])];
 		expect(plotSeriesCounts('scatterplot')).toEqual({ withX: 2, withY: 1 });
 	});
 	it('is zero for an unwired plot', () => {
@@ -183,7 +181,6 @@ describe('wiringHint — live nudge for what is still missing', () => {
 	});
 });
 
-
 describe('sourceOutElForAxis — pick the demo-edge source by column TYPE, not DOM order', () => {
 	// Reproduces the bug behind the wrong y-axis highlight: once a plot is wired it sprouts its
 	// OWN output dot (on a plot_* node) that lands FIRST in document order, shifting a positional
@@ -215,7 +212,7 @@ describe('sourceOutElForAxis — pick the demo-edge source by column TYPE, not D
 		expect(sourceOutElForAxis('y').dataset.testTag).toBe('group_1:1');
 	});
 
-	it('ignores a plot\'s own output dot, even when it sorts first in the DOM', () => {
+	it("ignores a plot's own output dot, even when it sorts first in the DOM", () => {
 		// The phantom: a wired actogram exposes col_0 on plot_0, added to the DOM BEFORE the group.
 		dot('plot_0', 0);
 		dot('group_1', 0); // Time
@@ -226,7 +223,7 @@ describe('sourceOutElForAxis — pick the demo-edge source by column TYPE, not D
 		expect(firstSourceOutEl().getAttribute('data-node-id')).toBe('group_1');
 	});
 
-	it('picks by type regardless of the source columns\' order', () => {
+	it("picks by type regardless of the source columns' order", () => {
 		// Value first, time second — the type check must still route each axis correctly.
 		core.data = [
 			{ id: 5, type: 'number', name: 'Activity' },

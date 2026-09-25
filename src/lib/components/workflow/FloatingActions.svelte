@@ -61,7 +61,6 @@
 			<Icon name="redo" width={22} height={22} />
 		</button>
 	</div>
-
 </div>
 
 <LoadSessionModal bind:showModal={showLoadModal} />

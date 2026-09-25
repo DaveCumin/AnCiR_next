@@ -441,7 +441,7 @@
 	}
 
 	$effect(() => {
-		const _yIN = p.args.yIN;
+		void p.args.yIN; // dependency read: re-reconcile when the Y selection changes
 		if (!mounted) return;
 		queueMicrotask(() => untrack(() => onYSelectionChange()));
 	});
@@ -818,7 +818,7 @@
 						<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
 						<ColumnComponent col={xout} />
 					</div>
-					{#each p.args.yIN ?? [] as yId}
+					{#each p.args.yIN ?? [] as yId (yId)}
 						{@const outKey = 'dlogy_' + yId}
 						{@const yOutId = p.args.out[outKey]}
 						{#if yOutId >= 0}
@@ -839,7 +839,7 @@
 				</div>
 			{:else if p.args.valid}
 				<p>Preview:</p>
-				{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult]}
+				{#each Object.entries(dlData?.y_results ?? {}) as [yId, yResult] (yId)}
 					{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 					<div class="div-line"></div>
 					<p><strong>{srcName}</strong></p>

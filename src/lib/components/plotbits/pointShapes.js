@@ -34,9 +34,18 @@ export function getPointPath(shape, cx, cy, r) {
 			// Plus-sign outline; rotated 45° for 'x'. Both share a bounding circle of radius r.
 			const t = r / 3;
 			const base = [
-				[-t, -t], [-t, -r], [t, -r], [t, -t],
-				[r, -t], [r, t], [t, t], [t, r],
-				[-t, r], [-t, t], [-r, t], [-r, -t]
+				[-t, -t],
+				[-t, -r],
+				[t, -r],
+				[t, -t],
+				[r, -t],
+				[r, t],
+				[t, t],
+				[t, r],
+				[-t, r],
+				[-t, t],
+				[-r, t],
+				[-r, -t]
 			];
 			const [sin, cos] = shape === 'x' ? [Math.SQRT1_2, Math.SQRT1_2] : [0, 1];
 			let d = '';

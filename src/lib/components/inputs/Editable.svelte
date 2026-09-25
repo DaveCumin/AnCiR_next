@@ -73,7 +73,7 @@
 		{placeholder}
 		onkeydown={handleKeydown}
 		onblur={endEdit}
-		oninput={(e) => onInput(value)}
+		oninput={() => onInput(value)}
 	/>
 {:else}
 	<span

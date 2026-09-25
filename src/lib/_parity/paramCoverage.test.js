@@ -153,7 +153,12 @@ describe.runIf(process.env.PARAM_COVERAGE_REPORT)('parameter coverage report', (
 			for (const [p, m] of Object.entries(g)) lines.push(`- \`${p}\`: ${JSON.stringify(m)}`);
 			lines.push('');
 		}
-		lines.push('## Fully covered', '', reached.map((n) => `- ${n.id}`).join('\n') || '- (none)', '');
+		lines.push(
+			'## Fully covered',
+			'',
+			reached.map((n) => `- ${n.id}`).join('\n') || '- (none)',
+			''
+		);
 		const out = join(repo, 'tools/parity/param-coverage.md');
 		writeFileSync(out, lines.join('\n'), 'utf8');
 		expect(readFileSync(out, 'utf8')).toContain('Parity fixture parameter coverage');

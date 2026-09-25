@@ -23,7 +23,10 @@
 	let draft = $state('');
 	let rootEl;
 	let btnEl;
-	let textareaEl;
+	// `$state` because `bind:this` writes it after the popover mounts; a plain `let`
+	// compiles to a non-reactive binding (the compiler's `non_reactive_update` warning)
+	// and would silently stop any reactive read from ever seeing the element.
+	let textareaEl = $state(null);
 	let popoverEl = $state(null);
 	let pos = $state({ top: 0, left: 0, placement: 'below' });
 	// Hidden until the first measurement so the popover never flashes at 0,0.

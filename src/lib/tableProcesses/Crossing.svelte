@@ -282,10 +282,7 @@
 		recompute();
 	}
 	function addCondition(g) {
-		p.args.groups[g] = [
-			...p.args.groups[g],
-			{ target: -1, isOperator: '<', source: -1, value: 0 }
-		];
+		p.args.groups[g] = [...p.args.groups[g], { target: -1, isOperator: '<', source: -1, value: 0 }];
 		p.args.groups = [...p.args.groups];
 		recompute();
 	}
@@ -344,16 +341,16 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Rule</span></div>
 	<div class="control-input-vertical">
-		{#each p.args.groups as group, g}
+		{#each p.args.groups as group, g (g)}
 			{#if g > 0}
 				<p class="crossing-or-label">— OR —</p>
 			{/if}
-			{#each group as cond, c}
+			{#each group as cond, c (c)}
 				<div class="control-input crossing-condition">
 					{#if c > 0}<span class="crossing-and-label">and</span>{/if}
 					<select bind:value={cond.target} onchange={recompute}>
 						<option value={-1}>— series —</option>
-						{#each yOptions as opt}
+						{#each yOptions as opt (opt.id)}
 							<option value={opt.id}>{opt.name}</option>
 						{/each}
 						{#if p.args.xIN >= 0}
@@ -367,7 +364,7 @@
 					/>
 					<select bind:value={cond.source} onchange={recompute}>
 						<option value={-1}>typed value</option>
-						{#each thresholdOptions as opt}
+						{#each thresholdOptions as opt (opt.id)}
 							<option value={opt.id}>{opt.name}</option>
 						{/each}
 					</select>

@@ -13,7 +13,6 @@ describe('workerGate', () => {
 		if (!_hadWorker) delete globalThis.Worker;
 	});
 
-
 	it('returns true when override forces on', () => {
 		_setGateOverride('on');
 		expect(shouldUseWorkers({ inputLen: 1000 })).toBe(true);

@@ -1,10 +1,7 @@
 // @ts-nocheck
 import { describe, it, expect, beforeEach } from 'vitest';
 import { runComputeTask, setWorkerFactory, _resetWorkerPool, _poolState } from './workerPool.js';
-import {
-	registerComputeTask,
-	_resetComputeTasks
-} from './computeTasks.js';
+import { registerComputeTask, _resetComputeTasks } from './computeTasks.js';
 
 class FakeWorker {
 	constructor() {
@@ -14,7 +11,9 @@ class FakeWorker {
 	postMessage(req) {
 		// Resolve next tick with id echoed
 		setTimeout(() => {
-			this.onmessage?.({ data: { id: req.id, ok: true, result: { y: req.payload.x.map((v) => v * 2) } } });
+			this.onmessage?.({
+				data: { id: req.id, ok: true, result: { y: req.payload.x.map((v) => v * 2) } }
+			});
 		}, 0);
 	}
 	terminate() {}
@@ -35,7 +34,7 @@ describe('workerPool', () => {
 
 	it('falls back to sync compute when worker errors', async () => {
 		class ErrWorker {
-			postMessage(req) {
+			postMessage() {
 				setTimeout(() => this.onerror?.({ message: 'boom' }), 0);
 			}
 			terminate() {}

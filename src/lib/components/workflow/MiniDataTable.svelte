@@ -78,7 +78,7 @@
 <div class="mini-table" role="table" aria-label={`Preview of ${column?.name ?? ''}`}>
 	<div class="mini-header">{column?.name ?? '(unnamed)'}</div>
 	<div class="mini-rows">
-		{#each { length: previewN } as _, i (i)}
+		{#each { length: previewN }, i (i)}
 			{@const cell = cellAt(i)}
 			<div class="mini-row">
 				{#if cell && cell.isTime}

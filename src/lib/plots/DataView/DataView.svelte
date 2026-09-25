@@ -131,7 +131,8 @@
 
 	function formatCell(value) {
 		if (value == null || value === '') return '';
-		if (typeof value === 'number') return Number.isFinite(value) ? value.toFixed(theData.plot.decimalPlaces) : String(value);
+		if (typeof value === 'number')
+			return Number.isFinite(value) ? value.toFixed(theData.plot.decimalPlaces) : String(value);
 		return value;
 	}
 </script>
@@ -184,8 +185,10 @@
 					</div>
 
 					<VirtualList items={rowItems} fill itemHeight={44}>
+						<!-- eslint-disable-next-line no-unused-vars -- the snippet's first parameter is positional; `i` is the one we use -->
 						{#snippet row(_, i)}
 							<div class="tp-tr" style="grid-template-columns:{gridCols};">
+								<!-- eslint-disable-next-line no-unused-vars -- `as` binding is required before the index; only the column index `c` is used -->
 								{#each headers as _h, c (c)}
 									<div class="tp-td">{formatCell(rows[i]?.[c])}</div>
 								{/each}

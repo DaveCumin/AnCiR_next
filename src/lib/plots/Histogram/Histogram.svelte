@@ -11,7 +11,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { binData, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { gaussianKDE } from '$lib/utils/kde.js';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
 
 	export const Histogram_defaultDataInputs = ['column'];
@@ -706,7 +706,7 @@
 		width={theData.plot.viewWidth}
 		height={theData.plot.viewHeight}
 		viewBox="0 0 {theData.plot.viewWidth} {theData.plot.viewHeight}"
-		style={`background: var(--surface-card); position: absolute;`}
+		style="background: var(--surface-card); position: absolute;"
 	>
 		<Axis
 			figureStyle={theData.plot.viewStyle}
@@ -729,7 +729,7 @@
 			which="plot"
 		/>
 
-		{#each theData.plot.data as datum}
+		{#each theData.plot.data as datum, di (di)}
 			{@const b = datum.binned}
 			{#if b.bins.length > 0}
 				<g
@@ -769,7 +769,8 @@
 				{/if}
 
 				{#if datum.showCounts}
-					{#each b.bins as _binStart, i}
+					<!-- eslint-disable-next-line no-unused-vars -- `as` binding is required before the index; the bin edges are read via b.bins[i]/b.binEnds[i] -->
+					{#each b.bins as _binStart, i (i)}
 						{#if b.y_out[i] > 0}
 							<text
 								x={xScale((b.bins[i] + b.binEnds[i]) / 2) + theData.plot.padding.left}

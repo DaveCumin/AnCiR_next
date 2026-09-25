@@ -7,7 +7,6 @@
 	import { scaleLinear } from 'd3-scale';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
-	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { meanSemByGroup } from '$lib/utils/meanSem.js';
 
 	/**
@@ -179,6 +178,7 @@
 
 		// Union of group keys across all series, numeric-aware sorted (matches Boxplot).
 		uniqueXValues = $derived.by(() => {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 			const all = new Set();
 			this.data.forEach((d) => {
 				d.stats.forEach((s) => all.add(s.x));
@@ -323,7 +323,7 @@
 				: ['Stat', ...categories.map(String)];
 
 			const rows = [];
-			this.data.forEach((datum, d) => {
+			this.data.forEach((datum) => {
 				const label = datum.displayLabel;
 				const byX = new Map(datum.stats.map((s) => [String(s.x), s]));
 				statKeys.forEach((key) => {
@@ -403,7 +403,7 @@
 	import { slide } from 'svelte/transition';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 
 	let { theData, which } = $props();
 
@@ -626,7 +626,7 @@
 		width={plot.viewWidth}
 		height={plot.viewHeight}
 		viewBox="0 0 {plot.viewWidth} {plot.viewHeight}"
-		style={`background: var(--surface-card); position: absolute;`}
+		style="background: var(--surface-card); position: absolute;"
 	>
 		<Axis
 			figureStyle={plot.viewStyle}
@@ -651,12 +651,12 @@
 			which="plot"
 		/>
 
-		{#each plot.data as datum, i}
+		{#each plot.data as datum, i (i)}
 			{@const pts = seriesPoints(plot, datum, i)}
 			<!-- Error bars: vertical whisker + caps at mean ± SEM -->
 			{#if datum.showError}
 				<g style={`transform: translate(${plot.padding.left}px, ${plot.padding.top}px);`}>
-					{#each pts as p}
+					{#each pts as p, pi (pi)}
 						{#if p.sem > 0}
 							{@const cx = xScale(p.cx)}
 							{@const yTop = yScale(p.mean + p.sem)}

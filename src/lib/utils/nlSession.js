@@ -141,9 +141,7 @@ async function postNl(path, payload, { timeoutMs = 90000 } = {}) {
 			// provider's detail, e.g. "Limit 14400, Used 14400, try again in 2m") over a
 			// generic one; only invent text if it sent none.
 			const retry = Number(body?.retryAfterS ?? res.headers.get('Retry-After')) || 60;
-			const msg =
-				body?.error ??
-				`Too many requests. Wait about ${retry}s and try again.`;
+			const msg = body?.error ?? `Too many requests. Wait about ${retry}s and try again.`;
 			throw new Error([msg, body?.detail].filter(Boolean).join('\n'));
 		}
 		if (!body) {

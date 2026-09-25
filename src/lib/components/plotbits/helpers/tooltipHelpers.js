@@ -9,6 +9,53 @@ import { onDestroy } from 'svelte';
 import { formatDateTime } from '$lib/utils/time/displayTime.js';
 
 /**
+ * Escape a value for interpolation into tooltip HTML.
+ *
+ * Tooltip content is an HTML string rendered with `{@html}` (PlotTooltip.svelte),
+ * and the values interpolated into it are NOT developer copy: series labels come
+ * from imported CSV column headers and from label fields the user types into, and
+ * sessions are shared as files between researchers. So a header of
+ * `<img src=x onerror=…>` used to execute in the reader's session on hover.
+ *
+ * `&` must be replaced FIRST, or the ampersands this function itself introduces
+ * would be escaped again and a literal `&lt;` typed by the user would decode back
+ * to `<`. The apostrophe is included because these values also land inside
+ * double-quoted attributes, and a single-quoted attribute is one refactor away.
+ */
+export function escapeHtml(value) {
+	return String(value ?? '')
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
+/**
+ * The colour shapes a series colour is allowed to take.
+ *
+ * Deliberately STRICTER than `looksLikeColour` in plots/appearanceIdentity.js and
+ * plots/styleConfig.js, which accept a bare `rgb(` PREFIX: `rgb(0,0,0);position:fixed`
+ * passes those and reaches here. A style attribute is a second injection surface —
+ * a semicolon ends the declaration without needing a quote at all — so the value is
+ * matched WHOLE rather than by prefix.
+ */
+const COLOUR_RE =
+	/^(?:#[0-9a-f]{3,4}|#[0-9a-f]{6}|#[0-9a-f]{8}|(?:rgb|hsl)a?\([0-9a-z.,%/+\-\s]*\)|[a-z]+)$/i;
+
+/**
+ * A series colour that is safe to interpolate into `style="background:…"`.
+ *
+ * Anything unrecognised becomes `currentColor`: a swatch in the wrong colour is a
+ * cosmetic loss on a value the app never produces, and refusing to paint at all
+ * would hide the series row entirely.
+ */
+export function safeColour(value, fallback = 'currentColor') {
+	const s = typeof value === 'string' ? value.trim() : '';
+	return COLOUR_RE.test(s) ? s : fallback;
+}
+
+/**
  * Format a value for display.
  * - type='time' renders via the app-wide displayTimezone (default UTC)
  * - numbers are rendered with `dp` decimal places
@@ -20,7 +67,7 @@ export function safeFormat(value, dp = 3, type = 'number') {
 	}
 	try {
 		return value.toFixed(dp);
-	} catch (e) {
+	} catch {
 		return value;
 	}
 }
@@ -84,13 +131,21 @@ export function buildAggregatedContent({
 	series = [],
 	dp = 3
 }) {
+	// EVERY interpolated value is escaped at the point of interpolation, including the
+	// formatted x/y strings: `safeFormat` returns a non-number as-is, so a text or
+	// category column's value reaches the markup verbatim, and `xFormatter` is a
+	// caller-supplied function whose output is no more trusted than its input.
 	const xStr = xFormatter ? xFormatter(xValue) : safeFormat(xValue, dp, xtype);
-	let content = `<span style="opacity:0.7">${xLabel}:</span> ${xStr}`;
+	let content = `<span style="opacity:0.7">${escapeHtml(xLabel)}:</span> ${escapeHtml(xStr)}`;
 	for (const s of series) {
 		if (s.yValue == null || (typeof s.yValue === 'number' && isNaN(s.yValue))) continue;
-		const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.colour};margin-right:4px;vertical-align:middle;"></span>`;
-		const label = s.label || 'Data';
-		const yStr = safeFormat(s.yValue, dp);
+		// The colour lands in a `style` attribute, a separate surface from the text
+		// nodes: validate its shape first, then escape what survives, so loosening
+		// the grammar later cannot on its own reintroduce an attribute escape.
+		const colour = escapeHtml(safeColour(s.colour));
+		const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colour};margin-right:4px;vertical-align:middle;"></span>`;
+		const label = escapeHtml(s.label || 'Data');
+		const yStr = escapeHtml(safeFormat(s.yValue, dp));
 		content += `<br/>${dot}<strong>${label}:</strong> ${yStr}`;
 	}
 	return content;

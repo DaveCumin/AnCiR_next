@@ -24,7 +24,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { loadPlots } from './plotMap.js';
+import { loadPlots } from '$test/plotRegistry.js';
 
 const PLOTS_DIR = path.resolve('src/lib/plots');
 

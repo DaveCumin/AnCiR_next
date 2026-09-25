@@ -107,12 +107,7 @@ describe('guessFormat', () => {
 
 	describe('produced format strings actually parse their source', () => {
 		// A guessed format should parse the very string it was guessed from.
-		const cases = [
-			'2024-08-06T00:00:00',
-			'2024-08-06 14:30:00',
-			'31/12/2020',
-			'06/08/2024 00:00'
-		];
+		const cases = ['2024-08-06T00:00:00', '2024-08-06 14:30:00', '31/12/2020', '06/08/2024 00:00'];
 		for (const src of cases) {
 			it(`round-trips "${src}"`, async () => {
 				const { default: dayjs } = await import('./dayjsSetup.js');

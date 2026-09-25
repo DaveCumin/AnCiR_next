@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
 	loadRecents,
 	recordRecent,
@@ -17,7 +17,8 @@ beforeEach(() => {
 	loadRecents();
 });
 
-const add = (name, over = {}) => recordRecent({ name, meta: '7 days · 6 subjects', workflow: 'rest-activity', ...over });
+const add = (name, over = {}) =>
+	recordRecent({ name, meta: '7 days · 6 subjects', workflow: 'rest-activity', ...over });
 
 describe('recents index', () => {
 	it('starts empty', () => {
@@ -58,7 +59,9 @@ describe('recents index', () => {
 
 	it('keeps the stored index small (a few kB, not a payload store)', async () => {
 		for (let i = 0; i < MAX_RECENTS; i++) {
-			await add(`session ${i}`, { thumb: '<svg viewBox="0 0 120 80"><rect width="120" height="80"/></svg>' });
+			await add(`session ${i}`, {
+				thumb: '<svg viewBox="0 0 120 80"><rect width="120" height="80"/></svg>'
+			});
 		}
 		const raw = window.localStorage.getItem('ancir.recents.v1') ?? '';
 		expect(raw.length).toBeLessThan(64 * 1024);
@@ -88,7 +91,10 @@ describe('recents index', () => {
 	});
 
 	it('drops malformed entries', () => {
-		window.localStorage.setItem('ancir.recents.v1', JSON.stringify([{ name: 'no id' }, { id: 'ok', name: 'fine', ts: 1 }]));
+		window.localStorage.setItem(
+			'ancir.recents.v1',
+			JSON.stringify([{ name: 'no id' }, { id: 'ok', name: 'fine', ts: 1 }])
+		);
 		expect(loadRecents().map((e) => e.id)).toEqual(['ok']);
 	});
 });

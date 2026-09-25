@@ -63,6 +63,7 @@
 	}
 
 	function buildGroups(groupData, yData) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local grouping map drained into an array before buildGroups() returns; never read reactively
 		const buckets = new Map();
 		for (let i = 0; i < yData.length; i++) {
 			const gRaw = groupData?.[i];
@@ -132,6 +133,8 @@
 			running = Math.max(running, adj);
 			sorted[i].pAdjusted = running;
 		}
+		// The config has no ignoreRestSiblings, so the omitted key reads as unused.
+		// eslint-disable-next-line no-unused-vars -- `_idx` names the key to omit from `rest`
 		return sorted.sort((a, b) => a._idx - b._idx).map(({ _idx, ...rest }) => rest);
 	}
 
@@ -185,6 +188,10 @@
 		};
 	}
 
+	// `alpha` is part of this exported function's signature: Boxplot.svelte,
+	// GroupComparison.test.js and five call sites below pass it positionally, so it cannot be
+	// dropped even though no warning currently reads it.
+	// eslint-disable-next-line no-unused-vars -- positional parameter fixed by the public signature
 	export function getComparisonWarnings(groups, chosen, alpha = 0.05) {
 		if (!chosen || !Array.isArray(groups) || groups.length < 2) return [];
 
@@ -416,6 +423,7 @@
 		}
 
 		const { ranks, tieCounts } = rankWithTies(tagged.map((x) => x.v));
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local rank-sum tally inside the Kruskal-Wallis computation; never read reactively
 		const rankSums = new Map();
 		for (let i = 0; i < tagged.length; i++) {
 			const key = tagged[i].group;
@@ -1036,7 +1044,7 @@
 	{#if p.args.valid}
 		{#if comparisonData.warnings.length > 0}
 			<div class="data-warning" style="margin-top: var(--space-4);">
-				{#each comparisonData.warnings as warning}
+				{#each comparisonData.warnings as warning, i (i)}
 					<p>⚠ {warning}</p>
 				{/each}
 			</div>
@@ -1045,10 +1053,10 @@
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">Stats table</summary>
 			{#if statsTableData.rows.length > 0}
-				{#each getPreviewRows(statsTableData.rows, statsPreviewStart) as row}
+				{#each getPreviewRows(statsTableData.rows, statsPreviewStart) as row, i (i)}
 					<div class="control-input-horizontal">
 						<div class="control-input">
-							{#each statsTableData.headers as header, idx}
+							{#each statsTableData.headers as header, idx (idx)}
 								{#if row[idx] != null && row[idx] !== ''}
 									<p>
 										<strong>{formatValueLabel(header)}:</strong>
@@ -1091,7 +1099,7 @@
 		<details class="tp-output-panel">
 			<summary class="tp-output-summary">Group summary</summary>
 			{#if groupSummaryTableData.rows.length > 0}
-				{#each getPreviewRows(groupSummaryTableData.rows, summaryPreviewStart) as row}
+				{#each getPreviewRows(groupSummaryTableData.rows, summaryPreviewStart) as row, i (i)}
 					<div class="control-input-horizontal">
 						<div class="control-input">
 							<p><strong>Column:</strong> {formatValueDisplay(row[0])}</p>
@@ -1130,7 +1138,7 @@
 			<details class="tp-output-panel">
 				<summary class="tp-output-summary">Post-hoc comparisons</summary>
 				{#if postHocTableData.rows.length > 0}
-					{#each getPreviewRows(postHocTableData.rows, postHocPreviewStart) as row}
+					{#each getPreviewRows(postHocTableData.rows, postHocPreviewStart) as row, i (i)}
 						<div class="control-input-horizontal">
 							<div class="control-input">
 								<p>
@@ -1176,7 +1184,7 @@
 			</details>
 		{/if}
 
-		{#each Object.entries(comparisonData.comparisons) as [yId, res]}
+		{#each Object.entries(comparisonData.comparisons) as [yId, res] (yId)}
 			<div
 				class="result-card"
 				style="margin-top: var(--space-4); border: 1px solid var(--stroke2); padding: var(--space-4); border-radius: 0.375rem;"
@@ -1235,7 +1243,7 @@
 
 				{#if (res.warnings?.length ?? 0) > 0}
 					<div class="data-warning" style="margin-top: 0.35rem;">
-						{#each res.warnings as warning}
+						{#each res.warnings as warning, i (i)}
 							<p>⚠ {warning}</p>
 						{/each}
 					</div>
@@ -1243,7 +1251,7 @@
 
 				{#if (res.postHoc?.length ?? 0) > 0}
 					<p style="margin-top: 0.35rem;"><strong>{res.postHocLabel}</strong></p>
-					{#each res.postHoc as pair}
+					{#each res.postHoc as pair (pair.groupA + '\u0000' + pair.groupB)}
 						<p>
 							<strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong>: stat = {Number.isFinite(
 								pair.statistic
@@ -1257,7 +1265,7 @@
 				{/if}
 
 				{#if (res.groups?.length ?? 0) > 0}
-					{#each res.groups as g}
+					{#each res.groups as g (g.name)}
 						<p>
 							<strong>{g.name}</strong>: n = {g.n}, mean = {Number.isFinite(g.mean)
 								? g.mean.toFixed(4)

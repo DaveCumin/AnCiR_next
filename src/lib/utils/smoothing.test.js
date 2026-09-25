@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-	movingAverage,
-	savitzkyGolay,
-	loess,
-	whittakerEilers,
-	smoothArrays
-} from './smoothing.js';
+import { movingAverage, savitzkyGolay, loess, whittakerEilers, smoothArrays } from './smoothing.js';
 
 // Deterministic pseudo-random noise so "smoother lambda → smoother output"
 // style tests are reproducible (the existing test uses Math.random()).

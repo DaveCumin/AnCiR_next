@@ -52,7 +52,10 @@ test('Cosinor by NAME resolves refs, pre-allocates out, leaves outputs empty', (
 
 test('yIN scalar is coerced to an array', () => {
 	const { session } = normalizeSession({
-		columns: [{ name: 't', values: [0, 1] }, { name: 'y', values: [1, 2] }],
+		columns: [
+			{ name: 't', values: [0, 1] },
+			{ name: 'y', values: [1, 2] }
+		],
 		analyses: [{ name: 'Cosinor', args: { xIN: 't', yIN: 'y' } }]
 	});
 	assert.deepEqual(findTP(session, 'Cosinor').args.yIN, [1]);
@@ -60,7 +63,10 @@ test('yIN scalar is coerced to an array', () => {
 
 test('nested params/inputs wrapper is flattened', () => {
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 't', values: [0] }, { name: 'y', values: [1] }],
+		columns: [
+			{ name: 't', values: [0] },
+			{ name: 'y', values: [1] }
+		],
 		analyses: [
 			{ name: 'Cosinor', args: { inputs: { xIN: 't', yIN: ['y'] }, params: { fixedPeriod: 12 } } }
 		]
@@ -152,9 +158,7 @@ test('suffix-node outputs are named after the Y column, so the model can plot th
 		// Exactly what the catalogue now tells a model to write: the already-computed period/power
 		// go on a SCATTERPLOT (a periodogram plot would recompute the spectrum — see the retype
 		// tests). This test is about the OUTPUT NAMES resolving, so it uses the correct plot.
-		plots: [
-			{ type: 'scatterplot', series: [{ x: 'activity_period', y: 'activity_power' }] }
-		]
+		plots: [{ type: 'scatterplot', series: [{ x: 'activity_period', y: 'activity_power' }] }]
 	});
 	assert.deepEqual(errors, []);
 	assert.deepEqual(warnings, []);
@@ -246,7 +250,9 @@ test('Split accepts an absolute ISO-date boundary, converting it via Date.parse 
 			{ name: 'time', type: 'time', values: times },
 			{ name: 'values', values: times.map((_, i) => i) }
 		],
-		analyses: [{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: ['2024-08-21'] } }]
+		analyses: [
+			{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: ['2024-08-21'] } }
+		]
 	});
 	assert.deepEqual(errors, []);
 	// The literal parsed date, NOT start + 2024*3600000 (which is what the hours path would produce).
@@ -259,7 +265,9 @@ test('Split warns and declines an absolute date on a non-time (relative) column'
 			{ name: 'hour', type: 'number', values: Array.from({ length: 48 }, (_, i) => i) },
 			{ name: 'values', values: Array.from({ length: 48 }, (_, i) => i) }
 		],
-		analyses: [{ name: 'Split', args: { xIN: 'hour', yIN: ['values'], splitTimes: ['2024-08-21'] } }]
+		analyses: [
+			{ name: 'Split', args: { xIN: 'hour', yIN: ['values'], splitTimes: ['2024-08-21'] } }
+		]
 	});
 	assert.ok(
 		warnings.some((w) => /date/i.test(w) && /time column/i.test(w)),
@@ -280,7 +288,9 @@ test('ChiSquared warns when a group column has a single (concatenated) value', (
 		analyses: [{ name: 'ChiSquared', args: { xIN: 'groupA', yIN: 'groupB' } }]
 	});
 	assert.ok(
-		warnings.some((w) => /ChiSquared/.test(w) && /one value|ONE value/i.test(w) && /groupA/.test(w)),
+		warnings.some(
+			(w) => /ChiSquared/.test(w) && /one value|ONE value/i.test(w) && /groupA/.test(w)
+		),
 		`expected a single-value ChiSquared warning naming groupA, got: ${JSON.stringify(warnings)}`
 	);
 });
@@ -289,11 +299,17 @@ test('ChiSquared does NOT warn when both groups are proper per-subject outcome c
 	const { warnings } = normalizeSession({
 		columns: [
 			{ name: 'groupA', values: [1, 1, 1, 1, 1, 1, 1, 0, 0, 0] }, // 7 of 10
-			{ name: 'groupB', values: [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } // 2 of 25
+			{
+				name: 'groupB',
+				values: [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			} // 2 of 25
 		],
 		analyses: [{ name: 'ChiSquared', args: { xIN: 'groupA', yIN: 'groupB' } }]
 	});
-	assert.ok(!warnings.some((w) => /ChiSquared/.test(w)), `unexpected ChiSquared warning: ${JSON.stringify(warnings)}`);
+	assert.ok(
+		!warnings.some((w) => /ChiSquared/.test(w)),
+		`unexpected ChiSquared warning: ${JSON.stringify(warnings)}`
+	);
 });
 
 test('Split rejects a yearless date, asking for a full one', () => {
@@ -332,7 +348,10 @@ test('Split warns when a converted split falls outside the recording', () => {
 		],
 		analyses: [{ name: 'Split', args: { xIN: 'time', yIN: ['v'], splitTimes: [999] } }] // 999 h ≫ 24 h
 	});
-	assert.ok(warnings.some((w) => /outside the recording/.test(w)), warnings.join('; '));
+	assert.ok(
+		warnings.some((w) => /outside the recording/.test(w)),
+		warnings.join('; ')
+	);
 });
 
 test('a Split segment can be fed straight into another analysis, by name', () => {
@@ -352,7 +371,9 @@ test('a Split segment can be fed straight into another analysis, by name', () =>
 				args: { xIN: 'time', yIN: ['values_2'], analysis: 'periodogram', pgMethod: 'Lomb-Scargle' }
 			}
 		],
-		plots: [{ type: 'periodogram', series: [{ time: 'values_2_period', values: 'values_2_power' }] }]
+		plots: [
+			{ type: 'periodogram', series: [{ time: 'values_2_period', values: 'values_2_power' }] }
+		]
 	});
 	assert.deepEqual(errors, []);
 	// The Split segment resolved as a named input and the analysis wired up.
@@ -373,24 +394,44 @@ test('a periodogram plot fed RhythmicityAnalysis period/power becomes a scatterp
 	// Those outputs are already the spectrum; showing them is a scatterplot of period vs power.
 	const { session, errors, warnings } = normalizeSession({
 		analyses: [
-			{ name: 'SimulatedData', args: { seed: 1, samplingPeriod_hours: 0.5, sections: [{ duration_hours: 480 }] } },
-			{ name: 'RhythmicityAnalysis', args: { xIN: 'time', yIN: ['values'], analysis: 'periodogram' } }
+			{
+				name: 'SimulatedData',
+				args: { seed: 1, samplingPeriod_hours: 0.5, sections: [{ duration_hours: 480 }] }
+			},
+			{
+				name: 'RhythmicityAnalysis',
+				args: { xIN: 'time', yIN: ['values'], analysis: 'periodogram' }
+			}
 		],
-		plots: [{ type: 'periodogram', name: 'PG', series: [{ time: 'values_period', values: 'values_power' }] }]
+		plots: [
+			{
+				type: 'periodogram',
+				name: 'PG',
+				series: [{ time: 'values_period', values: 'values_power' }]
+			}
+		]
 	});
 	assert.deepEqual(errors, []);
 	const plot = session.plots[0];
 	assert.equal(plot.type, 'scatterplot', 'retyped from periodogram');
 	// The series survives intact — period on x, power on y.
 	assert.ok(plot.plot.data[0].x.refId >= 0 && plot.plot.data[0].y.refId >= 0);
-	assert.ok(warnings.some((w) => /scatterplot of period vs power/.test(w)), warnings.join('; '));
+	assert.ok(
+		warnings.some((w) => /scatterplot of period vs power/.test(w)),
+		warnings.join('; ')
+	);
 });
 
 test('a periodogram plot fed RAW time-series is left alone', () => {
 	// The legitimate use: a periodogram plot computes the spectrum from raw (time, values). Its
 	// inputs are NOT RhythmicityAnalysis outputs, so it must stay a periodogram.
 	const { session, warnings } = normalizeSession({
-		analyses: [{ name: 'SimulatedData', args: { seed: 1, samplingPeriod_hours: 0.5, sections: [{ duration_hours: 240 }] } }],
+		analyses: [
+			{
+				name: 'SimulatedData',
+				args: { seed: 1, samplingPeriod_hours: 0.5, sections: [{ duration_hours: 240 }] }
+			}
+		],
 		plots: [{ type: 'periodogram', series: [{ time: 'time', values: 'values' }] }]
 	});
 	assert.equal(session.plots[0].type, 'periodogram', 'a raw-data periodogram is untouched');
@@ -398,7 +439,8 @@ test('a periodogram plot fed RAW time-series is left alone', () => {
 });
 
 test('the generated catalogue holds no entropy or wall-clock values', async () => {
-	const generated = (await import('./session-schema.generated.json', { with: { type: 'json' } })).default;
+	const generated = (await import('./session-schema.generated.json', { with: { type: 'json' } }))
+		.default;
 
 	const volatile = [];
 	const walk = (value, path) => {
@@ -418,8 +460,11 @@ test('the generated catalogue holds no entropy or wall-clock values', async () =
 });
 
 test('the session version is registry-derived, not a hand-kept literal', async () => {
-	const { session } = normalizeSession({ analyses: [{ name: 'SimulatedData', args: { seed: 1 } }] });
-	const generated = (await import('./session-schema.generated.json', { with: { type: 'json' } })).default;
+	const { session } = normalizeSession({
+		analyses: [{ name: 'SimulatedData', args: { seed: 1 } }]
+	});
+	const generated = (await import('./session-schema.generated.json', { with: { type: 'json' } }))
+		.default;
 
 	// It must be the version the CATALOGUE was generated from — the same read, carried across
 	// the boundary in a plain file rather than by importing core.svelte.js (which would drag the
@@ -457,7 +502,12 @@ test('SequenceColumn time mode emits a time-typed, formatted column', () => {
 		analyses: [
 			{
 				name: 'SequenceColumn',
-				args: { seqType: 'time', startTime: Date.parse('2024-01-01T00:00:00.000Z'), stepHours: 1, count: 5 }
+				args: {
+					seqType: 'time',
+					startTime: Date.parse('2024-01-01T00:00:00.000Z'),
+					stepHours: 1,
+					count: 5
+				}
 			}
 		]
 	});
@@ -520,7 +570,10 @@ test('a scalar yIN hallucinated onto a node does not crash the normalizer', () =
 	// A node that does not DECLARE yIN never coerces it, so a model that adds a bare `yIN` to a
 	// generator left a raw string where output-column naming did `.map`. That TypeError was
 	// uncaught and took the whole /build down — the browser only saw "Failed to fetch".
-	for (const args of [{ N: 10, yIN: 'foo' }, { N: 10, yIN: 3 }]) {
+	for (const args of [
+		{ N: 10, yIN: 'foo' },
+		{ N: 10, yIN: 3 }
+	]) {
 		assert.doesNotThrow(() => normalizeSession({ analyses: [{ name: 'Random', args }] }));
 		const { session } = normalizeSession({ analyses: [{ name: 'Random', args }] });
 		assert.equal(session.tableProcesses.length, 1, 'the node still builds');
@@ -540,7 +593,10 @@ test('schema is registry-derived: broad node coverage + Cosinor keeps its fixed 
 
 test('suffix node (RhythmicityAnalysis) pre-allocates `${yid}_${suffix}` keys per method', () => {
 	const draft = (args) => ({
-		columns: [{ name: 't', values: [0, 1, 2] }, { name: 'y', values: [1, 2, 3] }],
+		columns: [
+			{ name: 't', values: [0, 1, 2] },
+			{ name: 'y', values: [1, 2, 3] }
+		],
 		analyses: [{ name: 'RhythmicityAnalysis', args: { xIN: 't', yIN: ['y'], ...args } }]
 	});
 	// default periodogram (Lomb-Scargle) → period + power for y (column id 1)
@@ -557,15 +613,20 @@ test('suffix node (RhythmicityAnalysis) pre-allocates `${yid}_${suffix}` keys pe
 
 	// fft has an entirely different key set
 	const fft = normalizeSession(draft({ analysis: 'fft' }));
-	assert.deepEqual(
-		Object.keys(fft.session.tableProcesses[0].args.out).sort(),
-		['1_frequency', '1_magnitude', '1_period', '1_phase']
-	);
+	assert.deepEqual(Object.keys(fft.session.tableProcesses[0].args.out).sort(), [
+		'1_frequency',
+		'1_magnitude',
+		'1_period',
+		'1_phase'
+	]);
 });
 
 test('un-baked discriminator combo warns instead of emitting wrong keys', () => {
 	const { warnings } = normalizeSession({
-		columns: [{ name: 't', values: [0, 1] }, { name: 'y', values: [1, 2] }],
+		columns: [
+			{ name: 't', values: [0, 1] },
+			{ name: 'y', values: [1, 2] }
+		],
 		analyses: [
 			{ name: 'RhythmicityAnalysis', args: { xIN: 't', yIN: ['y'], analysis: 'not-a-method' } }
 		]
@@ -575,7 +636,10 @@ test('un-baked discriminator combo warns instead of emitting wrong keys', () => 
 
 test('computed-output node (Split) pre-allocates one column per y × segment', () => {
 	const { session, warnings, errors } = normalizeSession({
-		columns: [{ name: 't', values: [0, 1, 2] }, { name: 'y', values: [1, 2, 3] }],
+		columns: [
+			{ name: 't', values: [0, 1, 2] },
+			{ name: 'y', values: [1, 2, 3] }
+		],
 		analyses: [{ name: 'Split', args: { xIN: 't', yIN: ['y'], splitTimes: [1] } }]
 	});
 	assert.equal(errors.length, 0, errors.join('; '));
@@ -588,7 +652,10 @@ test('computed-output node (Split) pre-allocates one column per y × segment', (
 
 test('MovingAnalysis pre-allocates movex + per-(y,stat) columns', () => {
 	const { session, warnings } = normalizeSession({
-		columns: [{ name: 't', values: [0, 1] }, { name: 'y', values: [1, 2] }],
+		columns: [
+			{ name: 't', values: [0, 1] },
+			{ name: 'y', values: [1, 2] }
+		],
 		analyses: [{ name: 'MovingAnalysis', args: { xIN: 't', yIN: ['y'], analysis: 'periodogram' } }]
 	});
 	const ma = findTP(session, 'MovingAnalysis');
@@ -611,7 +678,10 @@ test('LongToWide reads its categories from the baked category column', () => {
 	const l2w = findTP(session, 'LongToWide');
 	// `time` is its fixed output; one value_<category> per distinct group, de-duplicated
 	assert.deepEqual(Object.keys(l2w.args.out).sort(), [
-		'time', 'value_ctrl', 'value_ko', 'value_wt'
+		'time',
+		'value_ctrl',
+		'value_ko',
+		'value_wt'
 	]);
 	assert.equal(warnings.length, 0);
 });
@@ -620,7 +690,10 @@ test('LongToWide warns (rather than guesses) when categories are not yet knowabl
 	// categoryIN wired to an ANALYSIS output → empty at emit time, so the categories in it
 	// cannot be enumerated. Warn instead of inventing keys.
 	const { warnings } = normalizeSession({
-		columns: [{ name: 't', values: [0, 1] }, { name: 'y', values: [1, 2] }],
+		columns: [
+			{ name: 't', values: [0, 1] },
+			{ name: 'y', values: [1, 2] }
+		],
 		analyses: [
 			{ name: 'Cosinor', args: { xIN: 't', yIN: ['y'] } },
 			{ name: 'LongToWide', args: { timeIN: 't', categoryIN: 'period', valueIN: 'y' } }
@@ -631,7 +704,10 @@ test('LongToWide warns (rather than guesses) when categories are not yet knowabl
 
 test('plot emits refId series in the inner `plot.data`, not flat column ids', () => {
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 'hour', values: [0, 1] }, { name: 'signal', values: [5, 6] }],
+		columns: [
+			{ name: 'hour', values: [0, 1] },
+			{ name: 'signal', values: [5, 6] }
+		],
 		plots: [{ type: 'scatterplot', inputs: { x: 'hour', y: 'signal' } }]
 	});
 	assert.equal(errors.length, 0, errors.join('; '));
@@ -654,7 +730,10 @@ test('a requested series colour reaches a plot that reads a TOP-LEVEL colour (ac
 	// written into the line/points slots, but the actogram reads `series.colour` directly, so it
 	// never saw it and fell back to the palette. The colour must be emitted at the top level too.
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 'binnedx', type: 'time', values: [0, 3600000] }, { name: 'act', values: [1, 2] }],
+		columns: [
+			{ name: 'binnedx', type: 'time', values: [0, 3600000] },
+			{ name: 'act', values: [1, 2] }
+		],
 		plots: [{ type: 'actogram', series: [{ time: 'binnedx', values: 'act', colour: 'pink' }] }]
 	});
 	assert.deepEqual(errors, []);
@@ -668,7 +747,10 @@ test('a requested colour also reaches a plot that reads its OWN slot (boxplot)',
 	// The boxplot reads `series.boxPlot.{colour,fillColour}`, not the top-level colour, so the
 	// style union has to carry a boxPlot slot or an AI "red boxplot" comes out palette-coloured.
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 'g', values: [1, 1, 2, 2] }, { name: 'v', values: [3, 4, 5, 6] }],
+		columns: [
+			{ name: 'g', values: [1, 1, 2, 2] },
+			{ name: 'v', values: [3, 4, 5, 6] }
+		],
 		plots: [{ type: 'boxplot', series: [{ x: 'g', y: 'v', colour: 'red' }] }]
 	});
 	assert.deepEqual(errors, []);
@@ -682,8 +764,19 @@ test('a boxplot shows significance bars by default ("show the differences")', ()
 	// never set them, so an AI "boxplot showing the differences" came out with none — the user
 	// had to tick it by hand. Now it's on by default (matching Quick-Plot's GroupComparison).
 	const { session } = normalizeSession({
-		columns: [{ name: 'a', values: [1, 2, 3] }, { name: 'b', values: [4, 5, 6] }],
-		plots: [{ type: 'boxplot', series: [{ y: 'a', label: 'A' }, { y: 'b', label: 'B' }] }]
+		columns: [
+			{ name: 'a', values: [1, 2, 3] },
+			{ name: 'b', values: [4, 5, 6] }
+		],
+		plots: [
+			{
+				type: 'boxplot',
+				series: [
+					{ y: 'a', label: 'A' },
+					{ y: 'b', label: 'B' }
+				]
+			}
+		]
 	});
 	assert.equal(session.plots[0].plot.showSigBars, true);
 });
@@ -703,8 +796,14 @@ test('a boxplot group is ONE y-only series per column — no fabricated x/catego
 	// drawn as one box, so three columns → three boxes, and no extra nodes.
 	const { session, errors } = normalizeSession({
 		analyses: [
-			{ name: 'Random', args: { N: 20, distribution: 'gaussian', offset: 0, multiply: 1, seed: 1 } },
-			{ name: 'Random', args: { N: 20, distribution: 'gaussian', offset: 0, multiply: 1, seed: 2 } },
+			{
+				name: 'Random',
+				args: { N: 20, distribution: 'gaussian', offset: 0, multiply: 1, seed: 1 }
+			},
+			{
+				name: 'Random',
+				args: { N: 20, distribution: 'gaussian', offset: 0, multiply: 1, seed: 2 }
+			},
 			{ name: 'Random', args: { N: 20, distribution: 'gaussian', offset: 3, multiply: 1, seed: 3 } }
 		],
 		plots: [
@@ -731,7 +830,10 @@ test('a boxplot group is ONE y-only series per column — no fabricated x/catego
 
 test('an omitted colour still defaults, and only the asked-for series is coloured', () => {
 	const { session } = normalizeSession({
-		columns: [{ name: 't', type: 'time', values: [0, 3600000] }, { name: 'a', values: [1, 2] }],
+		columns: [
+			{ name: 't', type: 'time', values: [0, 3600000] },
+			{ name: 'a', values: [1, 2] }
+		],
 		plots: [{ type: 'actogram', series: [{ time: 't', values: 'a' }] }]
 	});
 	// No colour asked ⇒ a real default, never undefined (the actogram would palette-fallback).
@@ -741,7 +843,10 @@ test('an omitted colour still defaults, and only the asked-for series is coloure
 test('a plot carries MULTIPLE series, so raw data + fitted curve share one plot', () => {
 	// The canonical Cosinor viz (matches AnCiR's own Quick-Plot): raw points + fit line.
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 'hour', values: [0, 1] }, { name: 'signal', values: [5, 6] }],
+		columns: [
+			{ name: 'hour', values: [0, 1] },
+			{ name: 'signal', values: [5, 6] }
+		],
 		analyses: [{ name: 'Cosinor', args: { xIN: 'hour', yIN: ['signal'], fixedPeriod: 24 } }],
 		plots: [
 			{
@@ -779,7 +884,10 @@ test('a plot carries MULTIPLE series, so raw data + fitted curve share one plot'
 
 test('single-series `inputs` shorthand still works', () => {
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 'hour', values: [0, 1] }, { name: 'signal', values: [5, 6] }],
+		columns: [
+			{ name: 'hour', values: [0, 1] },
+			{ name: 'signal', values: [5, 6] }
+		],
 		plots: [{ type: 'scatterplot', inputs: { x: 'hour', y: 'signal' } }]
 	});
 	assert.equal(errors.length, 0, errors.join('; '));
@@ -789,7 +897,10 @@ test('single-series `inputs` shorthand still works', () => {
 
 test('an unresolved ref in ANY series drops the plot rather than emitting half of it', () => {
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 'hour', values: [0, 1] }, { name: 'signal', values: [5, 6] }],
+		columns: [
+			{ name: 'hour', values: [0, 1] },
+			{ name: 'signal', values: [5, 6] }
+		],
 		plots: [
 			{
 				type: 'scatterplot',
@@ -818,7 +929,10 @@ test('a time/values plot is READ by port name but STORED as x/y', () => {
 	// `pg.time`, which locked the bug in: AnCiR loaded such a plot with refId -1 on every
 	// input and then threw "undefined (reading 'left')" from the actogram's LightBand.
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 't', values: [0, 1] }, { name: 'v', values: [5, 6] }],
+		columns: [
+			{ name: 't', values: [0, 1] },
+			{ name: 'v', values: [5, 6] }
+		],
 		plots: [
 			{ type: 'periodogram', inputs: { time: 't', values: 'v' } },
 			{ type: 'histogram', inputs: { column: 'v' } }
@@ -843,7 +957,10 @@ test('a time/values plot is READ by port name but STORED as x/y', () => {
 
 test('tableplot uses columnRefs/showCol, not x/y series', () => {
 	const { session } = normalizeSession({
-		columns: [{ name: 'a', values: [1] }, { name: 'b', values: [2] }],
+		columns: [
+			{ name: 'a', values: [1] },
+			{ name: 'b', values: [2] }
+		],
 		plots: [{ type: 'tableplot', inputs: ['a', 'b'] }]
 	});
 	assert.deepEqual(session.plots[0].plot, { columnRefs: [0, 1], showCol: [true, true] });
@@ -856,9 +973,16 @@ test('an actogram wired by port name loads WIRED (the reported bug)', () => {
 	// found nothing, and defaulted both to refId -1. The user got an unwired actogram that
 	// crashed the canvas. Every input must resolve to a REAL column id.
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 'binnedx', values: [0, 1] }, { name: 'binnedy_values', values: [5, 6] }],
+		columns: [
+			{ name: 'binnedx', values: [0, 1] },
+			{ name: 'binnedy_values', values: [5, 6] }
+		],
 		plots: [
-			{ type: 'actogram', name: 'Binned profile', series: [{ time: 'binnedx', values: 'binnedy_values' }] }
+			{
+				type: 'actogram',
+				name: 'Binned profile',
+				series: [{ time: 'binnedx', values: 'binnedy_values' }]
+			}
 		]
 	});
 	assert.equal(errors.length, 0, errors.join('; '));
@@ -872,7 +996,10 @@ test('a time/values plot also accepts the generic x/y vocabulary', () => {
 	// The prompt's worked example is a scatterplot, so a model may reach for x/y on an actogram.
 	// It means the same thing; refusing it would cost the user a plot for no reason.
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 'hour', values: [0, 1] }, { name: 'act', values: [5, 6] }],
+		columns: [
+			{ name: 'hour', values: [0, 1] },
+			{ name: 'act', values: [5, 6] }
+		],
 		plots: [{ type: 'actogram', inputs: { x: 'hour', y: 'act' } }]
 	});
 	assert.equal(errors.length, 0, errors.join('; '));
@@ -884,7 +1011,10 @@ test('a time/values plot also accepts the generic x/y vocabulary', () => {
 
 test('the port name wins when a spec carries both vocabularies', () => {
 	const { session, errors } = normalizeSession({
-		columns: [{ name: 'hour', values: [0, 1] }, { name: 'act', values: [5, 6] }],
+		columns: [
+			{ name: 'hour', values: [0, 1] },
+			{ name: 'act', values: [5, 6] }
+		],
 		plots: [
 			{ type: 'periodogram', series: [{ time: 'hour', values: 'act', label: 'act' }] },
 			{ type: 'actogram', series: [{ time: 'hour', values: 'act', x: 'act', y: 'hour' }] }
@@ -899,7 +1029,10 @@ test('the port name wins when a spec carries both vocabularies', () => {
 
 test('plots whose ports really are x/y, and histogram, are unaffected', () => {
 	const scatter = normalizeSession({
-		columns: [{ name: 'a', values: [1] }, { name: 'b', values: [2] }],
+		columns: [
+			{ name: 'a', values: [1] },
+			{ name: 'b', values: [2] }
+		],
 		plots: [{ type: 'scatterplot', inputs: { x: 'a', y: 'b' } }]
 	});
 	assert.equal(scatter.errors.length, 0, scatter.errors.join('; '));
@@ -941,8 +1074,19 @@ test('unknown plot type and unresolved plot refs are reported, not emitted', () 
 test('session skeleton has every slice the GUI importJson expects', () => {
 	const { session } = normalizeSession({ columns: [{ name: 'x', values: [1] }] });
 	for (const k of [
-		'rawData', 'data', 'plots', 'tableProcesses', 'storedValues', 'chainRefs',
-		'nodeNotes', 'notes', 'groups', 'composites', 'orphanProcesses', 'nodeLayout', 'version'
+		'rawData',
+		'data',
+		'plots',
+		'tableProcesses',
+		'storedValues',
+		'chainRefs',
+		'nodeNotes',
+		'notes',
+		'groups',
+		'composites',
+		'orphanProcesses',
+		'nodeLayout',
+		'version'
 	]) {
 		assert.ok(k in session, `missing slice ${k}`);
 	}
@@ -973,12 +1117,19 @@ test('legitimate literal data still passes, blanks and all', () => {
 	const { session, errors } = normalizeSession({
 		columns: [
 			{ name: 't', type: 'number', values: [0, 6, 12, null, 24] },
-			{ name: 'iso', type: 'time', values: ['2026-07-17T00:00:00.000Z', '2026-07-17T01:00:00.000Z'] },
+			{
+				name: 'iso',
+				type: 'time',
+				values: ['2026-07-17T00:00:00.000Z', '2026-07-17T01:00:00.000Z']
+			},
 			{ name: 'label', type: 'category', values: ['wt', 'ko'] }
 		]
 	});
 	assert.deepEqual(errors, []);
-	assert.deepEqual(session.data.map((c) => c.name), ['t', 'iso', 'label']);
+	assert.deepEqual(
+		session.data.map((c) => c.name),
+		['t', 'iso', 'label']
+	);
 	assert.deepEqual(session.rawData[0], [0, 6, 12, null, 24]);
 });
 
@@ -996,8 +1147,14 @@ test('a non-number in a number column names the offending index', () => {
 test('same-named outputs are uniquified so every column stays referenceable', () => {
 	const { session, errors } = normalizeSession({
 		analyses: [
-			{ name: 'Random', args: { N: 5, distribution: 'gaussian', offset: 0, multiply: 0.5, seed: 1 } },
-			{ name: 'Random', args: { N: 5, distribution: 'gaussian', offset: 5, multiply: 0.5, seed: 2 } },
+			{
+				name: 'Random',
+				args: { N: 5, distribution: 'gaussian', offset: 0, multiply: 0.5, seed: 1 }
+			},
+			{
+				name: 'Random',
+				args: { N: 5, distribution: 'gaussian', offset: 5, multiply: 0.5, seed: 2 }
+			},
 			{ name: 'Random', args: { N: 5, distribution: 'gaussian', offset: 1, multiply: 0, seed: 3 } }
 		],
 		plots: [
@@ -1011,19 +1168,34 @@ test('same-named outputs are uniquified so every column stays referenceable', ()
 		]
 	});
 	assert.deepEqual(errors, [], 'the second and third Random must be nameable');
-	assert.deepEqual(session.data.map((c) => c.name), ['result', 'result_1', 'result_2']);
+	assert.deepEqual(
+		session.data.map((c) => c.name),
+		['result', 'result_1', 'result_2']
+	);
 	// Each series points at a DIFFERENT phase column, sharing the constant one.
 	const series = session.plots[0].plot.data;
-	assert.deepEqual(series.map((s) => s.x.refId), [0, 1]);
-	assert.deepEqual(series.map((s) => s.y.refId), [2, 2]);
+	assert.deepEqual(
+		series.map((s) => s.x.refId),
+		[0, 1]
+	);
+	assert.deepEqual(
+		series.map((s) => s.y.refId),
+		[2, 2]
+	);
 });
 
 test('uniquified generator columns still carry their own baked data', () => {
 	// The names being distinct is worthless if they share values.
 	const { session } = normalizeSession({
 		analyses: [
-			{ name: 'Random', args: { N: 40, distribution: 'gaussian', offset: 0, multiply: 0.5, seed: 1 } },
-			{ name: 'Random', args: { N: 40, distribution: 'gaussian', offset: 5, multiply: 0.5, seed: 2 } }
+			{
+				name: 'Random',
+				args: { N: 40, distribution: 'gaussian', offset: 0, multiply: 0.5, seed: 1 }
+			},
+			{
+				name: 'Random',
+				args: { N: 40, distribution: 'gaussian', offset: 5, multiply: 0.5, seed: 2 }
+			}
 		]
 	});
 	const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -1035,7 +1207,9 @@ test('a gaussian with multiply:0 is the way to make a constant column', () => {
 	// The only route to a column of 1s: SequenceColumn's step:0 yields nothing. USAGE_NOTES
 	// promises this, so it has to be true.
 	const { session } = normalizeSession({
-		analyses: [{ name: 'Random', args: { N: 6, distribution: 'gaussian', offset: 1, multiply: 0, seed: 1 } }]
+		analyses: [
+			{ name: 'Random', args: { N: 6, distribution: 'gaussian', offset: 1, multiply: 0, seed: 1 } }
+		]
 	});
 	assert.deepEqual(session.rawData[0], [1, 1, 1, 1, 1, 1]);
 });

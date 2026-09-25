@@ -16,7 +16,7 @@
 		bindAltTooltipToggle
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 	// Side-effect import: registers 'periodogram.compute' on the main thread so the
@@ -1139,7 +1139,7 @@
 
 						{#if (datum.method === 'Chi-squared' || datum.method === 'Enright') && datum.dataWarnings && datum.dataWarnings.length > 0}
 							<div class="data-warning">
-								{#each datum.dataWarnings as warning}
+								{#each datum.dataWarnings as warning, wi (wi)}
 									<p>⚠ {warning}</p>
 								{/each}
 							</div>
@@ -1273,7 +1273,7 @@
 			which="plot"
 		/>
 
-		{#each theData.plot.data as datum}
+		{#each theData.plot.data as datum, di (di)}
 			<Line
 				lineData={datum.line}
 				x={datum.periodData.x}

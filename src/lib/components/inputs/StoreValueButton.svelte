@@ -128,28 +128,6 @@
 		display: inline-flex;
 		align-items: center;
 	}
-	.store-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 22px;
-		height: 22px;
-		padding: 0;
-		margin-left: 4px;
-		cursor: pointer;
-		font-size: var(--font-sm);
-		vertical-align: middle;
-		line-height: 1;
-	}
-	.store-btn:hover {
-		background: var(--color-lightness-85);
-	}
-	:global(.store-icon) {
-		fill: var(--color-lightness-45);
-	}
-	:global(.store-btn:hover .store-icon) {
-		fill: var(--color-hover);
-	}
 	.popover-backdrop {
 		position: fixed;
 		inset: 0;

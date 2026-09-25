@@ -13,7 +13,12 @@ const SHOT = '/tmp/ancir-nl-e2e.png';
 
 const child = spawn(process.execPath, [SERVER], {
 	cwd: MCP_DIR,
-	env: { ...process.env, APP_PORT: String(APP_PORT), APP_HOST: '127.0.0.1', ANCIR_BASE_URL: ANCIR_BASE },
+	env: {
+		...process.env,
+		APP_PORT: String(APP_PORT),
+		APP_HOST: '127.0.0.1',
+		ANCIR_BASE_URL: ANCIR_BASE
+	},
 	stdio: ['ignore', 'inherit', 'pipe']
 });
 await new Promise((resolve, reject) => {
@@ -32,7 +37,9 @@ const build = await (
 	await fetch(`${base}/build`, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ prompt: 'a 24-hour cosine over two days, fit a cosinor and plot time vs signal' })
+		body: JSON.stringify({
+			prompt: 'a 24-hour cosine over two days, fit a cosinor and plot time vs signal'
+		})
 	})
 ).json();
 console.log('ancirUrl:', build.ancirUrl);
@@ -53,7 +60,9 @@ try {
 		.catch(() => false);
 
 	await page.screenshot({ path: SHOT, fullPage: false });
-	console.log(`E2E OK ✅  session appeared in AnCiR (Cosinor node visible: ${cosinorVisible}) → ${SHOT}`);
+	console.log(
+		`E2E OK ✅  session appeared in AnCiR (Cosinor node visible: ${cosinorVisible}) → ${SHOT}`
+	);
 	if (errors.length) console.log('page console errors:', errors.slice(0, 3));
 } finally {
 	await browser.close();

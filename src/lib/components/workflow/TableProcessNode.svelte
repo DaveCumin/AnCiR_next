@@ -627,23 +627,6 @@
 		flex-shrink: 0;
 		display: flex;
 	}
-	.expand-indicator {
-		font-size: 9px;
-		color: var(--color-text-muted);
-		flex-shrink: 0;
-		padding: 2px 4px;
-		border: none;
-		border-radius: var(--radius-xs);
-		background: transparent;
-		cursor: pointer;
-		line-height: 1;
-	}
-
-	.expand-indicator:hover {
-		color: var(--color-accent-text);
-		background: rgba(0, 0, 0, 0.05);
-	}
-
 	.tp-sublabel {
 		font-size: var(--font-2xs);
 		color: #555;

@@ -32,6 +32,11 @@
 		xscale, // D3 scale for x-axis
 		yscale, // D3 scale for y-axis
 		colour, // Fill color for bars
+		// Optional outline/opacity styling for the bars. The defaults produce no
+		// style attribute at all, which is what every current caller relies on.
+		opacity = 1, // Fill opacity (1 = fully opaque, omitted from the style string)
+		stroke = null, // Outline colour; null/'' means no outline
+		strokeWidth = 0, // Outline width in px; 0 means no outline
 		yoffset = 0, // Y translation offset
 		xoffset = 0, // X translation offset
 		// Tooltip props (same shape as Points/Line)
@@ -87,7 +92,7 @@
 	});
 
 	// Build style string for additional styling options
-	let styleString = $derived(() => {
+	let styleString = $derived.by(() => {
 		let styles = [];
 		if (opacity !== 1) styles.push(`fill-opacity: ${opacity}`);
 		if (stroke) styles.push(`stroke: ${stroke}`);
@@ -99,7 +104,6 @@
 		if (!tooltip) return;
 
 		const mouseX = e.offsetX;
-		const mouseY = e.offsetY;
 
 		// Map pixel x to data x (in this row's coordinate system), then add any
 		// caller-provided offset to arrive at the true "absolute" x used for lookups.

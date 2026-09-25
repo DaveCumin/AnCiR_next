@@ -1,3 +1,5 @@
+import { availableParallelism } from 'node:os';
+
 import { sveltekit } from '@sveltejs/kit/vite';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
@@ -97,6 +99,22 @@ export default defineConfig({
 
 	test: {
 		environment: 'happy-dom',
+		// Second half of the `loadPlots()` hook-timeout fix (the first is the warm registry
+		// modules in src/test/; see plotRegistry.js). Building a node registry means importing
+		// every plot or analysis component from cold, and each test file gets its own module
+		// registry, so that work is done 23 times a run, most of it served by the
+		// SINGLE-THREADED vite-node transform server in this process. Vitest's default of one
+		// worker per core minus one has seven workers queueing behind that one server at the
+		// start of a run, and the default sequencer puts the biggest files first, which here
+		// are the registry-heavy ones.
+		//
+		// Halving the worker count halves that simultaneous demand. It is also what Vitest
+		// itself uses in watch mode (`cpus - 1` for `vitest run`, `cpus / 2` for `vitest`),
+		// which is part of why only the one-shot command ever flaked. Measured on an 8-core
+		// machine against four competing CPU-bound processes: `cpus - 1` failed 2 of 3 runs on
+		// a registry hook, and `cpus / 2` plus the warm registries passed 3 of 3, at about 10%
+		// more wall clock on an idle machine.
+		maxWorkers: Math.max(1, Math.floor(availableParallelism() / 2)),
 		setupFiles: ['./src/test/setup.js'],
 		// scripts/ is included so the build tooling (e.g. the Python-export sidecar
 		// generator) is covered by the same suite as the app.

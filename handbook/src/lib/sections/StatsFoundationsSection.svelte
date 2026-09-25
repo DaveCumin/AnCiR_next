@@ -3,7 +3,6 @@
 	import AnCiRBox from '$lib/components/AnCiRBox.svelte';
 	import NoteBox from '$lib/components/NoteBox.svelte';
 	import WarnBox from '$lib/components/WarnBox.svelte';
-	import DemoLink from '$lib/components/DemoLink.svelte';
 	import PermutationAnim from '$lib/animations/PermutationAnim.svelte';
 	import FDRAnim from '$lib/animations/FDRAnim.svelte';
 	import ChiSquaredAnim from '$lib/animations/ChiSquaredAnim.svelte';
@@ -161,10 +160,11 @@
 		<p>
 			So state the layout rather than assuming it. AnCiR&rsquo;s Chi-squared node has an <strong
 				>Input format</strong
-			> control for exactly this. It defaults to independent groups, because in AnCiR a column is a data
+			>
+			control for exactly this. It defaults to independent groups, because in AnCiR a column is a data
 			series and two groups in two columns is the shape the data usually takes; switch it to
-			<em>Paired</em> when your rows really are subjects. It also warns when the two columns differ
-			markedly in length, which is the usual sign that the wrong layout is selected.
+			<em>Paired</em> when your rows really are subjects. It also warns when the two columns differ markedly
+			in length, which is the usual sign that the wrong layout is selected.
 		</p>
 	</WarnBox>
 
@@ -230,8 +230,8 @@
 				&mdash; the fastest way to spot a relationship that is driven entirely by one outlier.
 			</li>
 			<li>
-				<strong>Fit trend</strong> (Fitting) fits linear, polynomial, exponential or
-				logarithmic models and returns <strong>trendy_*</strong>,
+				<strong>Fit trend</strong> (Fitting) fits linear, polynomial, exponential or logarithmic
+				models and returns <strong>trendy_*</strong>,
 				<strong>r2</strong>, <strong>rmse</strong>, coefficients, and crucially
 				<strong>resid_*</strong>.
 			</li>

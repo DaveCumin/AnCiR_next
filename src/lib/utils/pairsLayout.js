@@ -16,7 +16,8 @@ import { linearRegression } from '$lib/components/plotbits/helpers/wrangleData.j
  */
 export function histogramBins(values, nBins = 12) {
 	const clean = (values ?? []).filter((v) => !isInvalidValue(v)).map(Number);
-	if (clean.length === 0) return { binStarts: [], counts: [], binWidth: 0, min: 0, max: 0, maxCount: 0 };
+	if (clean.length === 0)
+		return { binStarts: [], counts: [], binWidth: 0, min: 0, max: 0, maxCount: 0 };
 	let min = clean[0];
 	let max = clean[0];
 	for (const v of clean) {
@@ -25,7 +26,14 @@ export function histogramBins(values, nBins = 12) {
 	}
 	if (max === min) {
 		// A constant column: one bin holding everything (avoids a zero-width divide).
-		return { binStarts: [min], counts: [clean.length], binWidth: 1, min, max, maxCount: clean.length };
+		return {
+			binStarts: [min],
+			counts: [clean.length],
+			binWidth: 1,
+			min,
+			max,
+			maxCount: clean.length
+		};
 	}
 	const binWidth = (max - min) / nBins;
 	const counts = new Array(nBins).fill(0);
@@ -59,7 +67,9 @@ export function linearFit(x, y) {
  *            ranges:{min:number,max:number}[], hists:ReturnType<typeof histogramBins>[]}}
  */
 export function pairsLayout(columns, names, method = 'pearson') {
-	const cols = (columns ?? []).map((c) => (c ?? []).map((v) => (isInvalidValue(v) ? NaN : Number(v))));
+	const cols = (columns ?? []).map((c) =>
+		(c ?? []).map((v) => (isInvalidValue(v) ? NaN : Number(v)))
+	);
 	if (cols.length === 0) return { labels: [], r: [], p: [], cols: [], ranges: [], hists: [] };
 	const grid = correlationGrid(cols, names, method);
 	const ranges = cols.map((c) => {

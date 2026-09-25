@@ -69,8 +69,7 @@ describe('layoutWorkspacePlots', () => {
 		];
 		layoutWorkspacePlots(plots);
 		for (let i = 0; i < plots.length; i++)
-			for (let j = i + 1; j < plots.length; j++)
-				expect(overlaps(plots[i], plots[j])).toBe(false);
+			for (let j = i + 1; j < plots.length; j++) expect(overlaps(plots[i], plots[j])).toBe(false);
 	});
 
 	it('reserves room under a faceted plot so its children do not land on the next plot', () => {

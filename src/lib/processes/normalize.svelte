@@ -187,7 +187,7 @@
 <ProcessShell {p}>
 	<div class="control-input">
 		<select bind:value={p.args.normalizationType}>
-			{#each normalizationTypes as type}
+			{#each normalizationTypes as type (type.value)}
 				<option value={type.value}>{type.label}</option>
 			{/each}
 		</select>

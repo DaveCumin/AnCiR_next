@@ -25,7 +25,9 @@ describe('facetSetFor', () => {
 		const gen = makePlot('gen', { facet: true });
 		const c1 = makePlot('c1', { facetParent: 'gen' });
 		const c2 = makePlot('c2', { facetParent: 'gen' });
-		const ids = facetSetFor(gen, [gen, c1, c2]).map((q) => q.id).sort();
+		const ids = facetSetFor(gen, [gen, c1, c2])
+			.map((q) => q.id)
+			.sort();
 		expect(ids).toEqual(['c1', 'c2', 'gen']);
 	});
 
@@ -33,7 +35,9 @@ describe('facetSetFor', () => {
 		const gen = makePlot('gen', { facet: true });
 		const c1 = makePlot('c1', { facetParent: 'gen' });
 		const c2 = makePlot('c2', { facetParent: 'gen' });
-		const ids = facetSetFor(c1, [gen, c1, c2]).map((q) => q.id).sort();
+		const ids = facetSetFor(c1, [gen, c1, c2])
+			.map((q) => q.id)
+			.sort();
 		expect(ids).toEqual(['c1', 'c2', 'gen']);
 	});
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { core, appConsts } from '$lib/core/core.svelte';
-import { loadPlots } from '$lib/plots/plotMap.js';
+import { loadPlots } from '$test/plotRegistry.js';
 import { showDataAsTable } from './save.svelte.js';
 
 function fakeSource(id, name, rows) {

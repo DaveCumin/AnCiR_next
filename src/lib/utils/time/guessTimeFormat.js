@@ -442,25 +442,6 @@ const parsers = [
 	dashDelimitedWithMonthNameDateTimeFormatParser
 ];
 
-class StandardFormatParsersRefiner {
-	constructor(name) {
-		this.name = name;
-	}
-	refine(parsedResults) {
-		const res = parsedResults.filter((r) => {
-			return (
-				r.parser === 'ISO8601ExtendedDateTimeFormatParser' ||
-				r.parser === 'ISO8601BasicDateTimeFormatParser' ||
-				r.parser === 'RFC2822DateTimeFormatParser'
-			);
-		});
-		if (res.length === 0) {
-			return parsedResults;
-		}
-		return res;
-	}
-}
-
 class TimeFormatRefiner {
 	constructor(name) {
 		this.name = name;
@@ -591,7 +572,7 @@ class DelimiterFormatTokenAssigner {
 		this.format = format;
 		this.type = type;
 	}
-	assign(token) {}
+	assign() {}
 }
 
 class MinuteFormatTokenAssigner {

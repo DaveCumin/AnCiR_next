@@ -94,8 +94,15 @@
 		{#if open}
 			<div class="add-data-menu" role="menu">
 				{#each choices as choice (choice.key)}
-					<button type="button" class="add-data-choice" role="menuitem" onclick={() => pick(choice)}>
-						<span class="add-data-choice-icon"><Icon name={choice.icon} width={22} height={22} /></span>
+					<button
+						type="button"
+						class="add-data-choice"
+						role="menuitem"
+						onclick={() => pick(choice)}
+					>
+						<span class="add-data-choice-icon"
+							><Icon name={choice.icon} width={22} height={22} /></span
+						>
 						<span class="add-data-choice-text">
 							<span class="add-data-choice-title">{choice.title}</span>
 							<span class="add-data-choice-subtitle">{choice.subtitle}</span>

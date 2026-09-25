@@ -322,7 +322,7 @@
 			{#if keyOptions.length === 0}
 				<option value={-1}>— add columns first —</option>
 			{/if}
-			{#each keyOptions as opt}
+			{#each keyOptions as opt (opt.id)}
 				<option value={opt.id}>{opt.name}</option>
 			{/each}
 		</select>
@@ -343,7 +343,7 @@
 				{#if p.args.valid}
 					<div class="tableProcess-label"><span>Output</span></div>
 					<div class="tp-outputs">
-						{#each p.args.yIN ?? [] as yId}
+						{#each p.args.yIN ?? [] as yId (yId)}
 							{@const yOutId = p.args.out['sortedy_' + yId]}
 							{#if yOutId >= 0}
 								{@const yout = getColumnById(yOutId)}

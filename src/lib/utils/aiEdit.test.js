@@ -12,6 +12,9 @@ import {
 	plotProps,
 	fanOutSeriesColour
 } from './aiEdit.js';
+// Importing the registry here rather than building it in a hook: it compiles every plot
+// component, so it is a dependency of this file, not setup for one test.
+import { loadPlots } from '$test/plotRegistry.js';
 
 // Registry facts as the live registry reports them (see registryFacts).
 const FACTS = {
@@ -64,11 +67,31 @@ const SUMMARY = {
 					value: 'auto'
 				},
 				// Per-series, from getSharedDataSchema — where colours actually live.
-				{ path: 'plot.data[0].line.colour', label: 'signal: Line Colour', input: 'text', value: '#234154' },
-				{ path: 'plot.data[1].line.colour', label: 'signal fit: Line Colour', input: 'text', value: '#BE796B' },
+				{
+					path: 'plot.data[0].line.colour',
+					label: 'signal: Line Colour',
+					input: 'text',
+					value: '#234154'
+				},
+				{
+					path: 'plot.data[1].line.colour',
+					label: 'signal fit: Line Colour',
+					input: 'text',
+					value: '#BE796B'
+				},
 				// The combined per-series colour — recolours line AND points together.
-				{ path: 'plot.data[0].colour', label: 'signal: Colour (line + points)', input: 'color', value: '#234154' },
-				{ path: 'plot.data[1].colour', label: 'signal fit: Colour (line + points)', input: 'color', value: '#BE796B' }
+				{
+					path: 'plot.data[0].colour',
+					label: 'signal: Colour (line + points)',
+					input: 'color',
+					value: '#234154'
+				},
+				{
+					path: 'plot.data[1].colour',
+					label: 'signal fit: Colour (line + points)',
+					input: 'color',
+					value: '#BE796B'
+				}
 			]
 		},
 		{ id: 5, type: 'actogram', name: 'Acto', props: [] }
@@ -80,9 +103,7 @@ const plan = (spec, summary = SUMMARY) => planEdit(spec, { summary, facts: FACTS
 describe('planEdit — resolving what the model wrote', () => {
 	it('resolves column names to ids and keeps known params', () => {
 		const p = plan({
-			analyses: [
-				{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], fixedPeriod: 12 } }
-			]
+			analyses: [{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], fixedPeriod: 12 } }]
 		});
 		expect(p.errors).toEqual([]);
 		expect(p.analyses[0]).toMatchObject({
@@ -101,7 +122,10 @@ describe('planEdit — resolving what the model wrote', () => {
 	it('flattens a nested inputs/params wrapper, which models emit despite the flat contract', () => {
 		const p = plan({
 			analyses: [
-				{ name: 'Cosinor', args: { inputs: { xIN: 'time', yIN: ['values'] }, params: { fixedPeriod: 8 } } }
+				{
+					name: 'Cosinor',
+					args: { inputs: { xIN: 'time', yIN: ['values'] }, params: { fixedPeriod: 8 } }
+				}
 			]
 		});
 		expect(p.errors).toEqual([]);
@@ -202,7 +226,7 @@ describe('planEdit — what it refuses', () => {
 		// Would need ordering + mid-phase re-resolution; wiring it to the wrong column is worse.
 		const p = plan({
 			analyses: [
-                { name: 'Cosinor', args: { xIN: 'time', yIN: ['values'] } },
+				{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'] } },
 				{ name: 'Periodogram', args: { xIN: 'cosinorx', yIN: ['values'] } }
 			]
 		});
@@ -211,12 +235,12 @@ describe('planEdit — what it refuses', () => {
 	});
 
 	it('rejects an unknown plot type and an unresolvable series', () => {
-		expect(plan({ plots: [{ type: 'nope', series: [{ x: 'time', y: 'values' }] }] }).errors[0]).toMatch(
-			/Unknown plot type "nope"/
-		);
-		expect(plan({ plots: [{ type: 'scatterplot', series: [{ x: 'time', y: 'ghost' }] }] }).plots).toEqual(
-			[]
-		);
+		expect(
+			plan({ plots: [{ type: 'nope', series: [{ x: 'time', y: 'values' }] }] }).errors[0]
+		).toMatch(/Unknown plot type "nope"/);
+		expect(
+			plan({ plots: [{ type: 'scatterplot', series: [{ x: 'time', y: 'ghost' }] }] }).plots
+		).toEqual([]);
 	});
 
 	it('rejects a plot type with no wireable inputs rather than adding an empty one', () => {
@@ -273,10 +297,18 @@ describe('planEdit — shading a time-of-day window', () => {
 	});
 
 	it('refuses nonsense hours and zero-width windows', () => {
-		expect(plan({ bands: [{ plot: 2, fromHour: 18, toHour: 18 }] }).errors[0]).toMatch(/covers nothing/);
-		expect(plan({ bands: [{ plot: 2, fromHour: 25, toHour: 6 }] }).errors[0]).toMatch(/clock hours 0–24/);
-		expect(plan({ bands: [{ plot: 2, fromHour: '6pm', toHour: 6 }] }).errors[0]).toMatch(/clock hours 0–24/);
-		expect(plan({ bands: [{ plot: 99, fromHour: 18, toHour: 6 }] }).errors[0]).toMatch(/no such plot/);
+		expect(plan({ bands: [{ plot: 2, fromHour: 18, toHour: 18 }] }).errors[0]).toMatch(
+			/covers nothing/
+		);
+		expect(plan({ bands: [{ plot: 2, fromHour: 25, toHour: 6 }] }).errors[0]).toMatch(
+			/clock hours 0–24/
+		);
+		expect(plan({ bands: [{ plot: 2, fromHour: '6pm', toHour: 6 }] }).errors[0]).toMatch(
+			/clock hours 0–24/
+		);
+		expect(plan({ bands: [{ plot: 99, fromHour: 18, toHour: 6 }] }).errors[0]).toMatch(
+			/no such plot/
+		);
 	});
 });
 
@@ -329,9 +361,7 @@ describe('planEdit — restyling a plot', () => {
 			changes: [{ plot: 2, set: { 'plot.data[1].line.colour': '#ff0000' } }]
 		});
 		expect(p.errors).toEqual([]);
-		expect(p.changes).toEqual([
-			{ plotId: 2, path: 'plot.data[1].line.colour', value: '#ff0000' }
-		]);
+		expect(p.changes).toEqual([{ plotId: 2, path: 'plot.data[1].line.colour', value: '#ff0000' }]);
 		// The label names the series, so a user reading the preview knows WHICH one moved.
 		expect(p.preview).toEqual(['Restyle scatterplot "Raw": signal fit: Line Colour = "#ff0000"']);
 	});
@@ -353,7 +383,9 @@ describe('planEdit — restyling a plot', () => {
 
 	it('refuses a plot that does not exist, and one with no properties', () => {
 		expect(plan({ changes: [{ plot: 99, set: { width: 10 } }] }).errors[0]).toMatch(/no such plot/);
-		expect(plan({ changes: [{ plot: 5, set: { width: 10 } }] }).errors[0]).toMatch(/isn't a property/);
+		expect(plan({ changes: [{ plot: 5, set: { width: 10 } }] }).errors[0]).toMatch(
+			/isn't a property/
+		);
 	});
 
 	it('type-checks what is genuinely checkable', () => {
@@ -363,7 +395,9 @@ describe('planEdit — restyling a plot', () => {
 		expect(plan({ changes: [{ plot: 2, set: { 'plot.sigMethod': 'magic' } }] }).errors[0]).toMatch(
 			/must be one of auto, tukey/
 		);
-		expect(plan({ changes: [{ plot: 2, set: { width: 'wide' } }] }).errors[0]).toMatch(/must be a number/);
+		expect(plan({ changes: [{ plot: 2, set: { width: 'wide' } }] }).errors[0]).toMatch(
+			/must be a number/
+		);
 		expect(plan({ changes: [{ plot: 2, set: { width: { a: 1 } } }] }).errors[0]).toMatch(
 			/must be a single value/
 		);
@@ -420,16 +454,14 @@ describe('firstBandStart', () => {
 // the allow-list the planner trusts has to be the app's own reflection, or the whole scheme is
 // just a second source of truth waiting to drift.
 describe('plotProps (against a live plot class)', () => {
-	// loadPlots() dynamically imports and compiles EVERY plot component — slow, and under
-	// parallel load with a cold transform cache it blew past the 5s default and timed out
-	// intermittently. Do it ONCE for the block, with headroom, so the flake can't recur and the
-	// per-test cost is a cheap map lookup rather than a recompile.
+	// Built ONCE for the block, so the per-test cost is a cheap map lookup. The registry
+	// itself is already warm by the time any hook runs (see $test/plotRegistry.js).
 	let plots;
 	let getSharedSchema;
 	beforeAll(async () => {
-		plots = await (await import('$lib/plots/plotMap.js')).loadPlots();
+		plots = await loadPlots();
 		({ getSharedSchema } = await import('$lib/plots/sharedControls.js'));
-	}, 30000);
+	});
 
 	it('reports the same paths the shared-options panel offers, with current values', () => {
 		const entry = plots.get('scatterplot');
@@ -521,7 +553,9 @@ describe('plotProps (against a live plot class)', () => {
 		for (const type of ['periodogram', 'fft', 'correlogram']) {
 			const entry = plots.get(type);
 			if (!entry) continue; // registry-driven; don't assert a plot that isn't built
-			const inner = entry.data.fromJSON(null, { data: [{ x: { refId: 0 }, y: { refId: 1 }, label: 's' }] });
+			const inner = entry.data.fromJSON(null, {
+				data: [{ x: { refId: 0 }, y: { refId: 1 }, label: 's' }]
+			});
 			const paths = plotProps({ id: 1, type, plot: inner, width: 420, height: 300 })
 				.filter((p) => /\.colour$/.test(p.path))
 				.map((p) => p.path);
@@ -611,9 +645,9 @@ describe('applyEdit — shading lands as a repeating band OVERLAY on the live pl
 		({ applyEdit } = await import('./aiEdit.js'));
 		({ core, appConsts } = await import('$lib/core/core.svelte.js'));
 		({ history } = await import('$lib/core/opHistory.svelte.js'));
-		appConsts.plotMap = await (await import('$lib/plots/plotMap.js')).loadPlots();
+		appConsts.plotMap = await loadPlots();
 		history.init();
-	}, 30000);
+	});
 
 	it('appends one repeating band overlay per planned band and undo removes it', async () => {
 		const { mutationService: M } = await import('$lib/core/mutationService.js');

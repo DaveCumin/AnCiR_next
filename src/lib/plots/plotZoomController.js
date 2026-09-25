@@ -13,7 +13,10 @@
 //   svgEl    : the plot's <svg> element
 //   adapter  : { axes: [{ orient:'x'|'y', scale():d3scale, set(lims) }], reset() }
 
-import { toLimitNumber, zoomLimitsAroundPoint } from '$lib/components/plotbits/helpers/brushHelpers.js';
+import {
+	toLimitNumber,
+	zoomLimitsAroundPoint
+} from '$lib/components/plotbits/helpers/brushHelpers.js';
 
 export function createPlotZoom(ctx) {
 	// Pointer client coords -> plot-area local user-units, correcting for the CSS

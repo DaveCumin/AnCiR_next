@@ -28,7 +28,6 @@
 //
 // Design spec: docs/superpowers/specs/2026-07-30-figure-style-system-design.md
 import { core } from '$lib/core/core.svelte';
-import { POINT_SHAPES } from '$lib/components/plotbits/pointShapes.js';
 import { seriesColumnId } from '$lib/plots/seriesColour.js';
 import {
 	DASH_ORDER,

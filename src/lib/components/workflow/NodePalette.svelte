@@ -247,6 +247,7 @@
 	}
 
 	const families = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local grouping map built and consumed inside this $derived; only the derived array of families is read
 		const groups = new Map();
 		for (const it of filteredItems) {
 			if (!groups.has(it.family)) groups.set(it.family, []);

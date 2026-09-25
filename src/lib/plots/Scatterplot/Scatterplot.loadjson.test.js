@@ -109,8 +109,7 @@ vi.mock('$lib/components/plotbits/helpers/tooltipHelpers.js', () => ({
 	findNearestY: () => null,
 	bindAltTooltipToggle: () => {}
 }));
-vi.mock('$lib/components/views/ControlDisplay.svelte', () => ({
-	default: {},
+vi.mock('$lib/components/views/dataSettingsScroll.js', () => ({
 	dataSettingsScrollTo: () => {}
 }));
 

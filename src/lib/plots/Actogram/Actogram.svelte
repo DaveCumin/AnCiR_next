@@ -18,7 +18,7 @@
 	import { scaleLinear } from 'd3-scale';
 	import { makeSeqArray, max, min } from '$lib/components/plotbits/helpers/wrangleData';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
@@ -1184,7 +1184,7 @@
 		id={'plot' + theData.plot.parentBox.id}
 		width={theData.plot.viewWidth}
 		height={theData.plot.viewHeight}
-		style={`background: var(--surface-card); position: absolute;`}
+		style="background: var(--surface-card); position: absolute;"
 		onclick={(e) => handleClick(e)}
 		ontooltip={handleTooltip}
 	>
@@ -1213,10 +1213,10 @@
 			which="plot"
 		/>
 
-		{#each theData.plot.data as datum, d}
+		{#each theData.plot.data as datum, d (d)}
 			{#if datum.draw}
 				<!-- Make the histogram for each period using new xStart/xEnd format -->
-				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day}
+				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day (day)}
 					{@const thisScale = scaleLinear()
 						.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
 						.range([theData.plot.eachplotheight, 0])}
@@ -1277,13 +1277,13 @@
 			{/if}
 			<!-- THE MARKERS (clipped to plot area) -->
 			<g clip-path={'url(#actogram-clip-' + theData.plot.parentBox.id + ')'}>
-				{#each datum.phaseMarkers as marker}
+				{#each datum.phaseMarkers as marker, mi (mi)}
 					<PhaseMarker {which} {marker} />
 				{/each}
 			</g>
 		{/each}
 		<!-- THE ANNOTATIONS -->
-		{#each theData.plot.annotations as annotation}
+		{#each theData.plot.annotations as annotation, ai (ai)}
 			<Annotation {which} {annotation} />
 		{/each}
 		<!-- DAY/PERIOD NUMBERS -->
@@ -1293,7 +1293,7 @@
 				.range([0, theData.plot.Ndays])}
 			{@const dayTicks =
 				theData.plot.Ndays > 20 ? dayScale.ticks() : makeSeqArray(0, theData.plot.Ndays - 1, 1)}
-			{#each dayTicks as day}
+			{#each dayTicks as day, di (di)}
 				{#if day >= 0 && day < theData.plot.Ndays}
 					<text
 						x={theData.plot.padding.left - 10}

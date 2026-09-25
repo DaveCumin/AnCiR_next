@@ -9,7 +9,6 @@
 	// part under test. See utils/surrogates.js for which null answers which
 	// question — the pairing matters, and the node surfaces a warning when it is
 	// wrong (surrogateAdvice).
-	import { core } from '$lib/core/core.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';

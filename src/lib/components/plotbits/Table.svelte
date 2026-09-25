@@ -52,11 +52,11 @@
 	<table style="width: auto; table-layout: fixed;">
 		<thead>
 			<tr>
-				{#each headers as header, index}
+				{#each headers as header, index (index)}
 					<th style="width: {widths[index]}">
 						<Editable
 							{editable}
-							value={headers[index]}
+							value={header}
 							onInput={(v) => onInput({ col: index, row: 'h', value: v, old: oldVal })}
 						/>
 						<div class="resizer" onmousedown={() => startResize(index)}></div>
@@ -65,9 +65,10 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each new Array(Math.max(0, ...data.map((col) => col?.length ?? 0))) as d, r}
+			<!-- eslint-disable-next-line no-unused-vars -- Array(n) holes; only the row index `r` is used, but the `as` binding is required before it -->
+			{#each new Array(Math.max(0, ...data.map((col) => col?.length ?? 0))) as d, r (r)}
 				<tr>
-					{#each data as col, c}
+					{#each data as col, c (c)}
 						<td style="width: {widths[c]}">
 							{#if col[r]?.isTime}
 								<div class="time-cell">

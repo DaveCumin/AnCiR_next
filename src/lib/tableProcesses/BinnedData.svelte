@@ -578,7 +578,7 @@
 							<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
 							<ColumnComponent col={xout} />
 						</div>
-						{#each p.args.yIN ?? [] as yId}
+						{#each p.args.yIN ?? [] as yId (yId)}
 							{@const outKey = 'binnedy_' + yId}
 							{@const yOutId = p.args.out[outKey]}
 							{#if yOutId >= 0}

@@ -10,6 +10,13 @@ const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
 export default [
 	includeIgnoreFile(gitignorePath),
+	{
+		// tools/benchmarks/ is the standalone harness for the paper: committed result
+		// artefacts plus generated .cache/ bundles and .data/ sessions. It is neither
+		// app source nor shipped code, and the bundles are machine-written, so it is
+		// outside the app's lint gate.
+		ignores: ['tools/benchmarks/**']
+	},
 	js.configs.recommended,
 	...svelte.configs.recommended,
 	prettier,

@@ -16,50 +16,49 @@
 	}
 </script>
 
-<Modal
-	bind:showModal
-	onclose={close}
-	width="min(95vw, 1100px)"
-	max_height="85vh"
->
+<Modal bind:showModal onclose={close} width="min(95vw, 1100px)" max_height="85vh">
 	{#snippet header()}
 		<h3 style="margin: 0 0 var(--space-5) 0; font-size: 1rem;">{name}</h3>
 	{/snippet}
 
-	{#snippet children()}
-		{#if rows.length === 0}
-			<p style="color: var(--color-text-muted); font-size: 0.9rem;">No data available.</p>
-		{:else}
-			{@const gridCols = `repeat(${Math.max(1, headers.length)}, minmax(110px, 1fr))`}
-			<div class="table-scroll">
-				<div class="vt-inner" style="min-width:{Math.max(1, headers.length) * 110}px;">
-					<div class="vt-head" style="grid-template-columns:{gridCols};">
-						{#each headers as h}
-							<div class="vt-th">{h}</div>
-						{/each}
-					</div>
-					<!-- Windowed body: only on-screen rows are in the DOM, so even a
-					     100k-row export stays light. -->
-					<VirtualList items={rows} height="58vh" itemHeight={30}>
-						{#snippet row(r)}
-							<div class="vt-tr" style="grid-template-columns:{gridCols};">
-								{#each r as cell}
-									<div class="vt-td">{cell ?? ''}</div>
-								{/each}
-							</div>
-						{/snippet}
-					</VirtualList>
+	{#if rows.length === 0}
+		<p style="color: var(--color-text-muted); font-size: 0.9rem;">No data available.</p>
+	{:else}
+		{@const gridCols = `repeat(${Math.max(1, headers.length)}, minmax(110px, 1fr))`}
+		<div class="table-scroll">
+			<div class="vt-inner" style="min-width:{Math.max(1, headers.length) * 110}px;">
+				<div class="vt-head" style="grid-template-columns:{gridCols};">
+					{#each headers as h, hi (hi)}
+						<div class="vt-th">{h}</div>
+					{/each}
 				</div>
+				<!-- Windowed body: only on-screen rows are in the DOM, so even a
+				     100k-row export stays light. -->
+				<VirtualList items={rows} height="58vh" itemHeight={30}>
+					{#snippet row(r)}
+						<div class="vt-tr" style="grid-template-columns:{gridCols};">
+							{#each r as cell, ci (ci)}
+								<div class="vt-td">{cell ?? ''}</div>
+							{/each}
+						</div>
+					{/snippet}
+				</VirtualList>
 			</div>
-			<p class="row-count">{rows.length} row{rows.length === 1 ? '' : 's'}</p>
-		{/if}
-	{/snippet}
+		</div>
+		<p class="row-count">{rows.length} row{rows.length === 1 ? '' : 's'}</p>
+	{/if}
 
 	{#snippet button()}
 		<div class="footer-buttons">
 			<button class="btn-secondary" onclick={close}>Close</button>
 			{#if plotId !== null}
-				<button class="btn-primary" onclick={() => { saveDataAsCSV(plotId); close(); }}>
+				<button
+					class="btn-primary"
+					onclick={() => {
+						saveDataAsCSV(plotId);
+						close();
+					}}
+				>
 					Download CSV
 				</button>
 			{/if}

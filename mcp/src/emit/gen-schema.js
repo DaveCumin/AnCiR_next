@@ -28,9 +28,8 @@ const { ensureRegistry } = await import('../engine/session.js');
 await ensureRegistry();
 const { appConsts } = await import('$lib/core/core.svelte.js');
 const { describeOverlayForms } = await import('../engine/overlays.js');
-const { getOutputKeys: rhythmicityOutputKeys } = await import(
-	'$lib/tableProcesses/RhythmicityAnalysis.svelte'
-);
+const { getOutputKeys: rhythmicityOutputKeys } =
+	await import('$lib/tableProcesses/RhythmicityAnalysis.svelte');
 
 /**
  * Nodes whose per-Y keys are `${yid}_${suffix}` with a suffix set that is a pure function
@@ -150,7 +149,9 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 	//   'suffix'  — per-Y `${yid}_${suffix}`, suffixes looked up by discrete discriminators
 	//   'runtime' — keys depend on data or unbounded params; not statically knowable
 	const rule = SUFFIX_RULES[name];
-	let dynamicKind, suffixesBy = null, discriminators = null;
+	let dynamicKind,
+		suffixesBy = null,
+		discriminators = null;
 	if (rule) {
 		dynamicKind = 'suffix';
 		discriminators = Object.keys(rule.domains);
@@ -187,9 +188,10 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 		// exists standalone. Ungated, this told the model RhythmicityAnalysis had a
 		// `rhythmicityx` / `rhythmicityy_<Y>` curve; it has neither, so every plot built on
 		// that advice referenced columns that were never created.
-		fitOut: dynamicKind === 'prefix' && entry.xOutKey && entry.yOutKeyPrefix
-			? { x: entry.xOutKey, yPrefix: entry.yOutKeyPrefix }
-			: null,
+		fitOut:
+			dynamicKind === 'prefix' && entry.xOutKey && entry.yOutKeyPrefix
+				? { x: entry.xOutKey, yPrefix: entry.yOutKeyPrefix }
+				: null,
 		// For dynamicKind==='suffix': which args select the suffix set, and the baked table.
 		...(discriminators ? { discriminators, suffixesBy } : {}),
 		// For dynamicKind==='runtime': the RULE for its output names, since no static list can
@@ -245,9 +247,7 @@ console.log(`Wrote ${out.count} node schemas → ${target}`);
 // Spot-check the node that motivated this: Cosinor MUST carry cosinorx in fixedOut.
 const cos = schema.Cosinor;
 if (cos) {
-	console.log(
-		`Cosinor: fixedOut=[${cos.fixedOut.join(', ')}] perYPrefix=${cos.perYPrefix}`
-	);
+	console.log(`Cosinor: fixedOut=[${cos.fixedOut.join(', ')}] perYPrefix=${cos.perYPrefix}`);
 	if (!cos.fixedOut.includes('cosinorx'))
 		console.warn('WARNING: Cosinor.fixedOut is missing cosinorx — the fit will not compute!');
 }

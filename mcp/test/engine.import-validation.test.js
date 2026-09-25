@@ -26,16 +26,22 @@ describe('validateColumnValues', () => {
 		['an array', [1, 2]],
 		['a boolean', true]
 	])('rejects %s in a number column', (_label, bad) => {
-		expect(() => validateColumnValues('x', 'number', [1, 2, bad])).toThrow(/invalid value at index 2/);
+		expect(() => validateColumnValues('x', 'number', [1, 2, bad])).toThrow(
+			/invalid value at index 2/
+		);
 	});
 
 	it('accepts strings / numbers / null in category and time columns', () => {
 		expect(() => validateColumnValues('g', 'category', ['A', 'B', null, 3])).not.toThrow();
-		expect(() => validateColumnValues('t', 'time', ['2024-01-01T00:00:00Z', 1700000000000, null])).not.toThrow();
+		expect(() =>
+			validateColumnValues('t', 'time', ['2024-01-01T00:00:00Z', 1700000000000, null])
+		).not.toThrow();
 	});
 
 	it('rejects non-primitive values in category / time columns', () => {
-		expect(() => validateColumnValues('g', 'category', ['A', { x: 1 }])).toThrow(/non-primitive value at index 1/);
+		expect(() => validateColumnValues('g', 'category', ['A', { x: 1 }])).toThrow(
+			/non-primitive value at index 1/
+		);
 	});
 });
 

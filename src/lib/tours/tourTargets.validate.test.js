@@ -30,7 +30,9 @@ const isLive = (file) => {
 	const base = file.split('/').pop();
 	if (/^\+(page|layout)\.svelte$/.test(base)) return true;
 	const name = base.replace(/\.(svelte|js)$/, '');
-	return new RegExp(`import\\s+[^;]*from\\s+['"\`][^'"\`]*${name}(\\.svelte|\\.js)?['"\`]`).test(allText);
+	return new RegExp(`import\\s+[^;]*from\\s+['"\`][^'"\`]*${name}(\\.svelte|\\.js)?['"\`]`).test(
+		allText
+	);
 };
 const uiSource = allFiles
 	.filter(isLive)
@@ -45,7 +47,8 @@ function selectorsIn(src) {
 	for (const m of src.matchAll(/['"`](\.[a-z][a-z0-9-]*(?:\s*\.[a-z][a-z0-9-]*)*)['"`]/gi)) {
 		for (const cls of m[1].split(/\s+/)) found.add(cls);
 	}
-	for (const m of src.matchAll(/\[data-tour=['"]([a-z0-9-]+)['"]\]/gi)) found.add(`[data-tour=${m[1]}]`);
+	for (const m of src.matchAll(/\[data-tour=['"]([a-z0-9-]+)['"]\]/gi))
+		found.add(`[data-tour=${m[1]}]`);
 	return [...found];
 }
 
@@ -63,8 +66,10 @@ describe('tour targets still exist in the UI', () => {
 			}
 			// A class is "defined" if it is used as a class anywhere in the app source.
 			const cls = sel.slice(1);
-			return !new RegExp(`class(?:Name)?=["'\`][^"'\`]*\\b${cls}\\b`).test(uiSource) &&
-				!uiSource.includes(`class:${cls}`);
+			return (
+				!new RegExp(`class(?:Name)?=["'\`][^"'\`]*\\b${cls}\\b`).test(uiSource) &&
+				!uiSource.includes(`class:${cls}`)
+			);
 		});
 		expect(dead).toEqual([]);
 	});

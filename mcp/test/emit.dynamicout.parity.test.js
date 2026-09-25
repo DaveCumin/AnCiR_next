@@ -49,7 +49,9 @@ describe('dynamicOutKeys mirrors synthesizeDynamicOut', () => {
 
 	it('Split: N split points → N+1 segments per y, 1-indexed', () => {
 		expect(dynamicOutKeys('Split', { yIN: [7], splitTimes: [10, 20] }).keys).toEqual([
-			'7_1', '7_2', '7_3'
+			'7_1',
+			'7_2',
+			'7_3'
 		]);
 		// no split points is still one segment
 		expect(dynamicOutKeys('Split', { yIN: [7] }).keys).toEqual(['7_1']);
@@ -57,9 +59,9 @@ describe('dynamicOutKeys mirrors synthesizeDynamicOut', () => {
 
 	it('CollectColumns / StoredValueGroup key off their own args', () => {
 		expect(dynamicOutKeys('CollectColumns', { colIds: [2, 5] }).keys).toEqual(['col_2', 'col_5']);
-		expect(dynamicOutKeys('StoredValueGroup', { groups: [{ id: 'a' }, { id: 'b' }] }).keys).toEqual([
-			'group_a', 'group_b'
-		]);
+		expect(dynamicOutKeys('StoredValueGroup', { groups: [{ id: 'a' }, { id: 'b' }] }).keys).toEqual(
+			['group_a', 'group_b']
+		);
 	});
 
 	it('LongToWide: one key per distinct category, read from the baked column', () => {
@@ -79,7 +81,9 @@ describe('dynamicOutKeys mirrors synthesizeDynamicOut', () => {
 	it('yIN accepts a bare id and de-duplicates', () => {
 		expect(dynamicOutKeys('Split', { yIN: 5, splitTimes: [] }).keys).toEqual(['5_1']);
 		expect(dynamicOutKeys('MovingAnalysis', { yIN: [2, 2], analysis: 'fft' }).keys).toEqual([
-			'2_peak_period', '2_peak_frequency', '2_peak_magnitude'
+			'2_peak_period',
+			'2_peak_frequency',
+			'2_peak_magnitude'
 		]);
 	});
 

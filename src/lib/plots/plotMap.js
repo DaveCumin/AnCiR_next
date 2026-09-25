@@ -1,7 +1,8 @@
 import { getNodeMeta } from '$lib/core/nodeMeta.js';
-import { loadNodeMap, formatDisplayName } from '$lib/core/nodeLoaders.js';
+import { loadNodeMap, memoiseNodeMap, formatDisplayName } from '$lib/core/nodeLoaders.js';
 
-export async function loadPlots() {
+/** The plot registry: `plotKey -> { plot, data, definition, ... }`. Memoised; see memoiseNodeMap. */
+export const loadPlots = memoiseNodeMap(async () => {
 	// Keep the glob literal here — Vite analyses the pattern statically.
 	const sveltePaths = import.meta.glob('$lib/plots/**/*.svelte', { eager: false });
 
@@ -48,4 +49,4 @@ export async function loadPlots() {
 			}
 		];
 	});
-}
+});

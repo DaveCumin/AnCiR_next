@@ -95,7 +95,10 @@
 			     such plot throws during render and takes the ENTIRE canvas with it — every other
 			     node vanishes and the app looks like it lost the session. Contain it here: the
 			     broken plot shows why, everything else keeps working, and undo still exists. -->
-			<svelte:boundary onerror={(e) => reportError(e, { source: 'render', context: `rendering the ${plot.type} plot` })}>
+			<svelte:boundary
+				onerror={(e) =>
+					reportError(e, { source: 'render', context: `rendering the ${plot.type} plot` })}
+			>
 				<!-- Two ways to fill the box. A plot that lays out to `renderBox` is drawn at
 				     the node's real size, so its axes and legend arrange for that shape and its
 				     text stays at full size. Everything else is still drawn at the figure's own

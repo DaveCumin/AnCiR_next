@@ -46,14 +46,16 @@ const json = (data, status = 200, extra = {}) =>
 /** The public origin of THIS worker, derived from the request — no config needed. */
 const selfBase = (request) => new URL(request.url).origin;
 
-
 /**
  * Pull the JSON object out of a model reply. Models wrap JSON in prose or a ```json fence
  * even when told not to, so be forgiving: try the whole string, then the outermost {...}.
  */
 export function extractDraft(text) {
 	if (typeof text !== 'string' || !text.trim()) throw new Error('model returned an empty reply');
-	const stripped = text.replace(/^\s*```(?:json)?/i, '').replace(/```\s*$/, '').trim();
+	const stripped = text
+		.replace(/^\s*```(?:json)?/i, '')
+		.replace(/```\s*$/, '')
+		.trim();
 	const candidates = [stripped];
 	const first = stripped.indexOf('{');
 	const last = stripped.lastIndexOf('}');
@@ -636,7 +638,10 @@ export default {
 				stack: typeof e?.stack === 'string' ? e.stack.slice(0, 2000) : undefined,
 				path: new URL(request.url).pathname
 			});
-			return json({ error: 'The AI service hit an internal error.', detail: String(e?.message ?? e) }, 500);
+			return json(
+				{ error: 'The AI service hit an internal error.', detail: String(e?.message ?? e) },
+				500
+			);
 		}
 	}
 };
@@ -648,7 +653,8 @@ async function route(request, env, ctx) {
 	if (url.pathname === '/health') return json({ ok: true });
 	if (url.pathname === '/build' && request.method === 'POST') return handleBuild(request, env, ctx);
 	if (url.pathname === '/edit' && request.method === 'POST') return handleEdit(request, env, ctx);
-	if (url.pathname === '/report' && request.method === 'POST') return handleReport(request, env, ctx);
+	if (url.pathname === '/report' && request.method === 'POST')
+		return handleReport(request, env, ctx);
 	if (url.pathname === '/mcp') {
 		if (request.method === 'POST') return handleMcpRoute(request, env, ctx);
 		// The Streamable HTTP spec has GET open a server→client SSE stream. We're stateless

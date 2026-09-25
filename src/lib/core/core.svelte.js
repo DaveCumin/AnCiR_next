@@ -8,6 +8,7 @@ import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
 import { transitionalFigureStyle } from '$lib/plots/figureStyle.js';
 
 export const core = $state({
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- raw stored series keyed by column id; entries are written once at import and consumers re-read via the owning column, not per-key subscription. Making this a SvelteMap would add per-key subscriptions across every getData() path (TPs write outputs here from inside effects), which is a behaviour change
 	rawData: new Map(),
 	data: [],
 	plots: [],
@@ -445,9 +446,12 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.76.3',
+	version: 'β.76.4',
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.processMap = await loadProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	processMap: new Map(),
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.plotMap = await loadPlots()); never mutated in place, so the $state reassignment already drives reactivity
 	plotMap: new Map(),
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.tableProcessMap = await loadTableProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	tableProcessMap: new Map(),
 	timeoutRefresh_ms: 20,
 	colourPalettes: {
@@ -711,7 +715,9 @@ function findNextAvailablePosition(existingPlots) {
  * to populate during module init.
  */
 function _getColIdFieldSets() {
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set built and consumed inside this function; never read reactively
 	const scalar = new Set();
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set built and consumed inside this function; never read reactively
 	const array = new Set();
 	const map = appConsts.tableProcessMap;
 	if (map && typeof map.values === 'function') {
@@ -739,6 +745,7 @@ export function replaceColumnRefs(newColId, oldColId) {
 
 	// A single-entry remap: same walker as the bulk swap path, so scalar/array/
 	// out/nested-TP handling can't drift between the two.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- single-entry remap lookup passed straight to the walker below; never read reactively
 	const map = new Map([[oldColId, newColId]]);
 	core.tableProcesses.forEach((tp) => {
 		_remapInTPArgs(tp.args, map);
@@ -822,6 +829,7 @@ export function swapColumnRefsBulk(pairs) {
 	const valid = pairs.filter(([a, b]) => a !== b && a >= 0 && b >= 0);
 	if (!valid.length) return;
 
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local remap lookup passed straight to the walker below; never read reactively
 	const map = new Map();
 	for (const [a, b] of valid) {
 		map.set(a, b);

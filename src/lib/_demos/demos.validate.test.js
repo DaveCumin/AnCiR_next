@@ -13,9 +13,9 @@ import { core, appConsts, pushObj } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { Process } from '$lib/core/Process.svelte';
-import { loadProcesses } from '$lib/processes/processMap.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
-import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { loadProcesses } from '$test/processRegistry.js';
+import { loadPlots } from '$test/plotRegistry.js';
+import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 
 const DIR = join(process.cwd(), 'static', 'sessions', 'demos');
 

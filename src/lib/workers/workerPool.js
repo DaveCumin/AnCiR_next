@@ -150,7 +150,7 @@ export function runComputeTask(name, args) {
 			const transfers = [];
 			const payload = prepareTransferable(args, transfers);
 			slot.worker.postMessage({ id, name, payload }, transfers);
-		} catch (postErr) {
+		} catch {
 			_pending.delete(id);
 			slot.inflight = Math.max(0, slot.inflight - 1);
 			try {

@@ -14,7 +14,10 @@ const RAW_ICONS = import.meta.glob('./*.svg', {
 
 const iconCache = new Map();
 for (const path in RAW_ICONS) {
-	const key = path.split('/').pop().replace(/\.svg$/, '');
+	const key = path
+		.split('/')
+		.pop()
+		.replace(/\.svg$/, '');
 	const raw = RAW_ICONS[path] ?? '';
 	// Recolour fills to currentColor (but keep fill="none" outlines) so an icon
 	// inherits its surrounding text colour wherever it's used.

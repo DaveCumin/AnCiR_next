@@ -146,7 +146,7 @@ export function guessDateofArray(dates) {
 
 		//return that one
 		return guessesArray[guessScore.indexOf(Math.max(...guessScore))];
-	} catch (error) {
+	} catch {
 		return -1;
 	}
 }

@@ -196,9 +196,6 @@
 	let previewStart = $state(1);
 	let _calcToken = 0;
 
-	// Track previous Y IDs
-	let prevYIds = [...(p.args.yIN ?? [])].map(Number);
-
 	// Reactivity: recompute when inputs or split times change
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time');
@@ -282,6 +279,7 @@
 	function reconcileOutputs() {
 		const yIds = (p.args.yIN ?? []).map(Number).filter((id) => id >= 0);
 		const desired = [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local desired-key set inside reconcileOutputs(); never read reactively
 		const desiredKeys = new Set();
 		for (const yId of yIds) {
 			for (let seg = 1; seg <= segmentCount; seg++) {
@@ -301,6 +299,7 @@
 		const staleKeys = Object.keys(p.args.out).filter(
 			(k) => !desiredKeys.has(k) && Number(p.args.out[k]) >= 0
 		);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local stale-key pool inside reconcileOutputs(); never read reactively
 		const staleBySeg = new Map();
 		for (const k of staleKeys) {
 			const seg = Number(k.split('_')[1]);
@@ -309,6 +308,7 @@
 		}
 
 		// Transfer a stale column to each missing desired key of the same segment.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local bookkeeping of reused keys inside reconcileOutputs(); never read reactively
 		const reusedStale = new Set();
 		for (const d of desired) {
 			if (Number(p.args.out[d.key]) >= 0) continue; // already present
@@ -346,7 +346,6 @@
 			changed = true;
 		}
 
-		prevYIds = [...yIds];
 		return changed;
 	}
 
@@ -385,8 +384,8 @@
 	// Reconcile output columns whenever the Y selection OR the number of segments
 	// (driven by splitTimes) changes, then recompute.
 	$effect(() => {
-		const _yIN = p.args.yIN;
-		const _segs = segmentCount;
+		void p.args.yIN; // dependency reads: re-reconcile when the Y selection
+		void segmentCount; // or the segment count changes
 		if (!mounted) return;
 		// Reconcile OUTSIDE this effect. reconcileOutputs() calls `new Column()`, and a
 		// $derived created while an effect is the active reaction becomes inert when
@@ -504,7 +503,9 @@
 	</div>
 	<div class="control-input-vertical">
 		<div class="split-times-list">
-			{#each sortedSplitTimes as time, idx (idx)}
+			<!-- Each row binds to p.args.splitTimes[idx] rather than to the item. -->
+			<!-- eslint-disable-next-line no-unused-vars -- {#each} has no index-only form -->
+			{#each sortedSplitTimes as _time, idx (idx)}
 				<div class="split-time-row">
 					{#if xIsTime}
 						<DateTimeHrs bind:value={p.args.splitTimes[idx]} />
@@ -544,10 +545,12 @@
 				<LoadingSpinner message="Splitting data…" />
 			{:else if p.args.valid && splitResult && Object.values(p.args.out).some((id) => id >= 0)}
 				<div class="tableProcess-label"><span>Output</span></div>
-				{#each p.args.yIN ?? [] as yId}
+				{#each p.args.yIN ?? [] as yId (yId)}
 					{@const yResult = splitResult.y_results[yId]}
 					{#if yResult}
-						{#each yResult.segments as _, segIdx}
+						<!-- The row is addressed by index via the `${yId}_${segIdx + 1}` output key. -->
+						<!-- eslint-disable-next-line no-unused-vars -- {#each} has no index-only form -->
+						{#each yResult.segments as _seg, segIdx (segIdx)}
 							{@const outKey = `${yId}_${segIdx + 1}`}
 							{@const outId = p.args.out[outKey]}
 							{#if outId >= 0}

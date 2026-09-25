@@ -1,10 +1,17 @@
 @import '@ancir/design/tokens.css';
 
-
 /* Consistent keyboard-focus ring. Only triggers on :focus-visible (keyboard nav /
    assistive tech) — mouse clicks never show it, so there is no added visual weight in
    normal use. :where() keeps specificity at 0 so components can still opt out or restyle. */
-:where(button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1']), .port-dot):focus-visible {
+:where(
+	button,
+	input,
+	select,
+	textarea,
+	a[href],
+	[tabindex]:not([tabindex='-1']),
+	.port-dot
+):focus-visible {
 	outline: var(--focus-ring);
 	outline-offset: 2px;
 }

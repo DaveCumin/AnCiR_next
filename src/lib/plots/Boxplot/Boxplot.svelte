@@ -9,7 +9,7 @@
 	import { VIOLIN_MIN_N } from '$lib/components/plotbits/helpers/violin.js';
 	import { mean, calculateStandardDeviation } from '$lib/utils/MathsStats.js';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import {
 		getComparisonWarnings,
 		welchTTest,
@@ -405,6 +405,7 @@
 
 		// Get all unique x values across all data series
 		uniqueXValues = $derived.by(() => {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 			const allXValues = new Set();
 			this.data.forEach((d, i) => {
 				const xData = d.x.getData() ?? [];
@@ -468,6 +469,7 @@
 				if (!d.boxPlot?.draw) return;
 				const xData = d.x.getData() ?? [];
 				const yData = d.y.getData() ?? [];
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 				const groups = new Map();
 				if (xData.length > 0) {
 					xData.forEach((cat, j) => {
@@ -681,6 +683,7 @@
 				const label = datum.label || `Data ${d}`;
 				const xData = datum.x.getData() ?? [];
 				const yData = datum.y.getData() ?? [];
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 				const groups = new Map();
 				xData.forEach((cat, i) => {
 					const val = yData[i];
@@ -698,6 +701,7 @@
 					});
 				}
 				// Pre-compute stats per category
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local per-series stats lookup; it is read back into plain arrays inside this same $derived.by and never in markup
 				const statsMap = new Map();
 				allCategories.forEach((cat) => {
 					const vals = groups.get(cat) ?? [];
@@ -963,11 +967,6 @@
 		//console.log($state.snapshot(theData.data));
 	});
 
-	// Custom tick values for x-axis to show actual unique x values
-	function getXAxisTickValues(uniqueXValues) {
-		return uniqueXValues.map((val, i) => ({ position: i, label: String(val) }));
-	}
-
 	function formatCategoryTick(value, categories) {
 		const idx = Math.round(Number(value));
 		if (!Number.isFinite(idx) || idx < 0 || idx >= categories.length) return '';
@@ -1149,7 +1148,7 @@
 					     must be visible without expanding anything. -->
 					{#if theData.violinWarnings.length > 0}
 						<div class="data-warning">
-							{#each theData.violinWarnings as warning}
+							{#each theData.violinWarnings as warning, wi (wi)}
 								<p>⚠ {warning}</p>
 							{/each}
 						</div>
@@ -1248,7 +1247,7 @@
 					</div>
 					{#if theData.sigBarWarnings.length > 0}
 						<div class="data-warning">
-							{#each theData.sigBarWarnings as warning}
+							{#each theData.sigBarWarnings as warning, wi (wi)}
 								<p>⚠ {warning}</p>
 							{/each}
 						</div>
@@ -1258,7 +1257,7 @@
 				{#if theData.sigTableResult.pairs.length > 0}
 					<details class="tp-output-panel">
 						<summary class="tp-output-summary">Pairwise comparisons</summary>
-						{#each theData.getSigBarPreviewPairs() as pair}
+						{#each theData.getSigBarPreviewPairs() as pair, pi (pi)}
 							<div class="control-input-horizontal">
 								<div class="control-input">
 									<p><strong>{pair.groupA}</strong> vs <strong>{pair.groupB}</strong></p>
@@ -1365,7 +1364,7 @@
 		width={theData.plot.viewWidth}
 		height={theData.plot.viewHeight}
 		viewBox="0 0 {theData.plot.viewWidth} {theData.plot.viewHeight}"
-		style={`background: var(--surface-card); position: absolute;`}
+		style="background: var(--surface-card); position: absolute;"
 		ontooltip={handleTooltip}
 	>
 		<!-- Y-axis -->
@@ -1400,7 +1399,7 @@
 		<!-- Violin overlays: rendered BEFORE the boxes so every violin sits behind
 		     every box, median line, and jittered point. -->
 		{#if theData.plot.showViolin}
-			{#each theData.plot.data as datum, i}
+			{#each theData.plot.data as datum, i (i)}
 				{#if datum.y.getData()?.length > 0}
 					<Violin
 						boxPlotData={datum.boxPlot}
@@ -1431,7 +1430,7 @@
 		{/if}
 
 		<!-- Box plots -->
-		{#each theData.plot.data as datum, i}
+		{#each theData.plot.data as datum, i (i)}
 			{#if datum.y.getData()?.length > 0}
 				{@const xScale = scaleLinear()
 					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
@@ -1488,7 +1487,7 @@
 			{@const { dataMax } = theData.plot.sigBarResult}
 			{@const dataRange = theData.plot.ylims[1] - theData.plot.ylims[0]}
 			{@const levelStep = dataRange * 0.1 * theData.plot.sigBarSpacing}
-			{#each theData.plot.sigBarLevels as entry}
+			{#each theData.plot.sigBarLevels as entry, ei (ei)}
 				{@const xi = sigXScale(entry.i) + theData.plot.padding.left}
 				{@const xj = sigXScale(entry.j) + theData.plot.padding.left}
 				{@const barYData =

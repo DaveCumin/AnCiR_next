@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/svelte';
 import { core, appConsts, appState } from '$lib/core/core.svelte.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
+import { loadPlots } from '$test/plotRegistry.js';
 import { Plot } from '$lib/core/Plot.svelte';
 import { Column } from '$lib/core/Column.svelte';
 import Periodogram, { Periodogramclass } from './Periodogram.svelte';

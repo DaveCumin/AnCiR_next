@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Scatterplotclass } from './Scatterplot/Scatterplot.svelte';
 import { Boxplotclass } from './Boxplot/Boxplot.svelte';
-import { loadPlots } from './plotMap.js';
+import { loadPlots } from '$test/plotRegistry.js';
 
 describe('plot fromJSON is robust to a partial (quick-plot) inner', () => {
 	it('Scatterplot.fromJSON({data:[]}) keeps a valid padding + computable plotheight', () => {
@@ -93,12 +93,19 @@ describe('EVERY registered plot survives a partial inner', () => {
 			// plot without anyone remembering to update a list.
 			const fresh = cls.fromJSON(null, null);
 			const field =
-				fresh?.paddingIN !== undefined ? 'paddingIN' : fresh?.padding !== undefined ? 'padding' : null;
+				fresh?.paddingIN !== undefined
+					? 'paddingIN'
+					: fresh?.padding !== undefined
+						? 'padding'
+						: null;
 			if (!field) continue; // no padding concept (tableplot / dataview)
 
 			const partial = cls.fromJSON(null, { data: [] });
 			const box = partial[field];
-			expect(box, `${key}: ${field} is undefined — fromJSON clobbered the class default`).toBeDefined();
+			expect(
+				box,
+				`${key}: ${field} is undefined — fromJSON clobbered the class default`
+			).toBeDefined();
 			for (const side of ['top', 'right', 'bottom', 'left']) {
 				expect(box?.[side], `${key}.${field}.${side}`).toEqual(expect.any(Number));
 			}
@@ -171,7 +178,9 @@ describe('a normalizer-emitted series colour reaches the plots that read it', ()
 	});
 
 	it('the actogram honours the top-level colour (its reported bug)', async () => {
-		const acto = (await loadPlots()).get('actogram').data.fromJSON(null, { data: [emitted('pink')] });
+		const acto = (await loadPlots())
+			.get('actogram')
+			.data.fromJSON(null, { data: [emitted('pink')] });
 		expect(acto.data[0].colour).toBe('pink');
 	});
 
@@ -192,7 +201,9 @@ describe('a normalizer-emitted series colour reaches the plots that read it', ()
 			box = boxCls.fromJSON(null, { data: [bare] });
 		}, 'a boxplot with no boxPlot slot must not throw').not.toThrow();
 		expect(box.data[0].boxPlot, 'a box style is present, defaulted').toBeTruthy();
-		expect(box.data[0].boxPlot.colour, 'colour defaulted from the palette').toEqual(expect.any(String));
+		expect(box.data[0].boxPlot.colour, 'colour defaulted from the palette').toEqual(
+			expect.any(String)
+		);
 	});
 
 	it('a line/points plot ignores the extra slots and keeps reading its own', async () => {

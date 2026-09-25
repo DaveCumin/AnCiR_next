@@ -24,7 +24,7 @@
 	import { scaleLinear } from 'd3-scale';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { qqPoints } from '$lib/utils/qq.js';
 
 	export const QQPlot_defaultDataInputs = ['column'];
@@ -625,7 +625,7 @@
 		width={theData.plot.viewWidth}
 		height={theData.plot.viewHeight}
 		viewBox="0 0 {theData.plot.viewWidth} {theData.plot.viewHeight}"
-		style={`background: var(--surface-card); position: absolute;`}
+		style="background: var(--surface-card); position: absolute;"
 	>
 		{#if !hasData}
 			<text
@@ -668,7 +668,7 @@
 			/>
 
 			<g clip-path="url(#{'qqclip' + theData.plot.parentBox.id})">
-				{#each theData.plot.data as datum}
+				{#each theData.plot.data as datum, di (di)}
 					{@const q = datum.qq}
 					{#if q.n >= 3}
 						{#if theData.plot.showBand && Number.isFinite(q.line.slope)}
@@ -692,7 +692,7 @@
 								stroke-dasharray="5 3"
 							/>
 						{/if}
-						{#each q.theoretical as t, i}
+						{#each q.theoretical as t, i (i)}
 							<circle
 								cx={xScale(t) + theData.plot.padding.left}
 								cy={yScale(q.sample[i]) + theData.plot.padding.top}

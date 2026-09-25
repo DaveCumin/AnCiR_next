@@ -47,8 +47,10 @@ const DONE_KEY = 'ancir.tours.completed';
 
 export function completedSet() {
 	try {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fresh Set parsed from localStorage on each call; the one caller (TourPicker) reassigns its $state holder wholesale, so reactivity already works
 		return new Set(JSON.parse(store.getItem(DONE_KEY) || '[]'));
 	} catch {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fresh empty Set returned on parse failure; never read reactively
 		return new Set();
 	}
 }

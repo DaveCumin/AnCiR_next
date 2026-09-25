@@ -540,7 +540,6 @@
 					}
 				});
 
-				const predicted = fitTrendSync(tt, yy, model, polyDegree);
 				result.y_results[yId] = {
 					fittedData,
 					predicted: null,
@@ -624,7 +623,7 @@
 
 	// Reconcile output columns when yIN changes externally (e.g. from parent in collected mode)
 	$effect(() => {
-		const _yIN = p.args.yIN;
+		void p.args.yIN; // dependency read: re-reconcile when the Y selection changes
 		if (!mounted) return;
 		queueMicrotask(() => untrack(() => onYSelectionChange()));
 	});
@@ -1031,7 +1030,7 @@
 					/>
 				</p>
 			{:else if p.args.model === 'polynomial'}
-				{#each yResult?.fittedData?.parameters?.coeffs ?? [] as c, i}
+				{#each yResult?.fittedData?.parameters?.coeffs ?? [] as c, i (i)}
 					<p>
 						c{i}: {c.toFixed(2)}
 						<StoreValueButton
@@ -1082,7 +1081,7 @@
 							<span class="tp-output-label">{getColumnById(p.args.xIN)?.name ?? 'x'} (shared)</span>
 							<ColumnComponent col={xout} />
 						</div>
-						{#each p.args.yIN ?? [] as yId}
+						{#each p.args.yIN ?? [] as yId (yId)}
 							{@const outKey = 'trendy_' + yId}
 							{@const yOutId = p.args.out[outKey]}
 							{#if yOutId >= 0}
@@ -1109,7 +1108,7 @@
 					</div>
 				{:else if p.args.valid}
 					<p>Preview:</p>
-					{#each Object.entries(trendData?.y_results ?? {}) as [yId, yResult]}
+					{#each Object.entries(trendData?.y_results ?? {}) as [yId, yResult] (yId)}
 						{@const srcName = getColumnById(Number(yId))?.name ?? yId}
 						<div class="div-line"></div>
 						<p><strong>{srcName}</strong></p>

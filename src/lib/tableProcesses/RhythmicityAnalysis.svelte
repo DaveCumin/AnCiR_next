@@ -411,9 +411,9 @@
 
 	// Reconcile output columns whenever yIN or output/stat-key set changes
 	$effect(() => {
-		const _y = p.args.yIN;
-		const _keys = currentOutputKeys;
-		const _statKeys = currentStatKeys;
+		void p.args.yIN; // dependency reads: re-reconcile when the Y selection,
+		void currentOutputKeys; // the output-key set
+		void currentStatKeys; // or the stat-key set changes
 		if (!mounted) return;
 		// Defer reconcile out of the effect: syncOutputColumns() calls `new Column()`,
 		// whose $derived fields go inert if created while this effect is the active
@@ -451,6 +451,7 @@
 		// output columns in core.data directly so changing the analysis/mode updates
 		// the node's ports. Only touch `parent.columnRefs` when a parent exists.
 		const activeIds = [...new Set((p.args.yIN ?? []).map(Number).filter((id) => id >= 0))];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local desired-key set inside syncOutputColumns(); never read reactively
 		const desired = new Set();
 		if (hideInputs) {
 			if (activeIds.length > 0) desired.add('rhythmicityx');
@@ -484,6 +485,7 @@
 		const staleKeys = Object.keys(p.args.out ?? {}).filter(
 			(k) => !desired.has(k) && Number(p.args.out[k]) >= 0
 		);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local stale-key pool inside syncOutputColumns(); never read reactively
 		const staleByGroup = new Map();
 		for (const k of staleKeys) {
 			const g = keyGroup(k);
@@ -493,6 +495,7 @@
 		}
 
 		// Transfer stale columns to missing desired keys of the same group.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local bookkeeping of reused keys inside syncOutputColumns(); never read reactively
 		const reusedStale = new Set();
 		for (const key of desired) {
 			if (Number(p.args.out[key]) >= 0) continue;

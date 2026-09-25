@@ -83,8 +83,7 @@ export function makeInterpolator(xs, ys, method = 'linear') {
 			const p = sig * y2[i - 1] + 2;
 			y2[i] = (sig - 1) / p;
 			let ui =
-				(ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]) -
-				(ys[i] - ys[i - 1]) / (xs[i] - xs[i - 1]);
+				(ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]) - (ys[i] - ys[i - 1]) / (xs[i] - xs[i - 1]);
 			u[i] = (6 * ui) / (xs[i + 1] - xs[i - 1]);
 			u[i] = (u[i] - sig * u[i - 1]) / p;
 		}

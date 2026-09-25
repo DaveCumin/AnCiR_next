@@ -33,8 +33,21 @@ function envHosts() {
 // hosts + IPs. Full DNS-rebinding protection would resolve at connect time.)
 function isPrivateHost(hostname) {
 	const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
-	if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.local') || h.endsWith('.internal')) return true;
-	if (h === '::1' || h === '::' || h.startsWith('fe80:') || h.startsWith('fc') || h.startsWith('fd')) return true;
+	if (
+		h === 'localhost' ||
+		h.endsWith('.localhost') ||
+		h.endsWith('.local') ||
+		h.endsWith('.internal')
+	)
+		return true;
+	if (
+		h === '::1' ||
+		h === '::' ||
+		h.startsWith('fe80:') ||
+		h.startsWith('fc') ||
+		h.startsWith('fd')
+	)
+		return true;
 	const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
 	if (m) {
 		const [a, b] = [Number(m[1]), Number(m[2])];
@@ -158,7 +171,9 @@ const sessionSummarySchema = z
 										input: z.string().max(30).optional(),
 										options: z.array(z.string().max(100)).max(50).optional(),
 										// Whatever the property currently holds — a scalar or null.
-										value: z.union([z.string().max(500), z.number(), z.boolean(), z.null()]).optional()
+										value: z
+											.union([z.string().max(500), z.number(), z.boolean(), z.null()])
+											.optional()
 									})
 									.strict()
 							)
@@ -177,7 +192,12 @@ export const editSchema = buildSchema.extend({ session: sessionSummarySchema });
 
 function finish(parsed, { isPublic }) {
 	if (!parsed.success) {
-		return { ok: false, error: parsed.error.issues.map((i) => `${i.path.join('.') || 'body'}: ${i.message}`).join('; ') };
+		return {
+			ok: false,
+			error: parsed.error.issues
+				.map((i) => `${i.path.join('.') || 'body'}: ${i.message}`)
+				.join('; ')
+		};
 	}
 	const baseUrl = parsed.data.llm?.baseUrl;
 	if (baseUrl) {

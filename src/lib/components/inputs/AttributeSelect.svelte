@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
+	import { untrack } from 'svelte';
 
 	let {
 		value = $bindable(),
@@ -14,9 +14,52 @@
 	let selected = $state();
 	let selectComponent = $state();
 	let otherComponent = $state();
+	// What the "Other" text field shows. Seeded from an incoming out-of-vocabulary
+	// value so a saved custom entry is visible and editable, not invisible.
+	let otherText = $state('');
 
-	onMount(() => {
-		selected = value;
+	// Which preset `value` is, if any. The comparison is loose on purpose: a <select>
+	// onchange hands back `e.target.value` as a STRING, so a numeric option (0.95) that
+	// has been through the control once comes back as '0.95' and a strict match would
+	// no longer find it.
+	const matchIndex = $derived(
+		Array.isArray(options) && value !== undefined && value !== null
+			? options.findIndex((o) => o === value || String(o) === String(value))
+			: -1
+	);
+	// A value outside the preset list is not a mistake when `other` is on: that option
+	// exists precisely so a custom pattern (a stroke-dasharray such as '5,5') can be
+	// typed. Treat it as a custom entry rather than leaving the <select> blank.
+	const isCustom = $derived(
+		other &&
+			matchIndex < 0 &&
+			value !== undefined &&
+			value !== null &&
+			value !== '' &&
+			value !== otherValInternal
+	);
+
+	// Keep the control in step with `value`, including a value that arrives from a saved
+	// session. `value` itself is NEVER written here: silently rewriting someone's saved
+	// dash pattern to the nearest preset is worse than the blank select this fixes.
+	$effect(() => {
+		if (matchIndex >= 0) {
+			// The canonical option, not `value`, so a stringified number re-selects its
+			// own <option> instead of matching nothing.
+			selected = options[matchIndex];
+		} else if (isCustom) {
+			selected = otherValInternal;
+			// Strings only. A consumer that rejects a half-typed pattern by writing back a
+			// sentinel (Line.svelte writes -1 for an invalid dasharray) must not overwrite
+			// what the user is in the middle of typing.
+			if (typeof value === 'string') {
+				untrack(() => {
+					if (otherText !== value) otherText = value;
+				});
+			}
+		}
+		// Otherwise leave `selected` alone: with `other` off there is nothing sensible to
+		// show for an unknown value, and the user's own pick must not be clobbered.
 	});
 </script>
 
@@ -38,7 +81,7 @@
 		}}
 	>
 		<option value="" disabled selected>Select {label}</option>
-		{#each options as option, i}
+		{#each options as option, i (i)}
 			<option value={option}>{optionsDisplay[i]}</option>
 		{/each}
 		{#if other}
@@ -51,6 +94,7 @@
 			class="other-input"
 			type="text"
 			{placeholder}
+			bind:value={otherText}
 			oninput={(e) => {
 				value = e.target.value;
 				onChange(e.target.value);

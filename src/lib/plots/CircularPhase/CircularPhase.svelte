@@ -335,26 +335,21 @@
 	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
-	import { dataSettingsScrollTo } from '$lib/components/views/ControlDisplay.svelte';
+	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import {
 		bindAltTooltipToggle,
 		computeTooltipPosition,
 		dispatchTooltip,
-		hideTooltip
+		escapeHtml,
+		hideTooltip,
+		safeColour
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 
 	let { theData, which } = $props();
 
 	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
 	const fmtP = (p) => (Number.isFinite(p) ? (p < 1e-4 ? '< 0.0001' : p.toFixed(4)) : '—');
-	const escapeHtml = (s) =>
-		String(s)
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;');
-
 	// Value-unit suffix for the placement bin-width control.
 	const unitSuffix = (u) => (u === 'hours' ? 'h' : u === 'degrees' ? '°' : 'rad');
 
@@ -414,7 +409,11 @@
 			return;
 		}
 
-		const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${d.colour};margin-right:4px;vertical-align:middle;"></span>`;
+		// Same two surfaces as buildAggregatedContent: the label is text (escaped) and
+		// the colour is a `style` attribute (shape-validated, then escaped).
+		const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${escapeHtml(
+			safeColour(d.colour)
+		)};margin-right:4px;vertical-align:middle;"></span>`;
 		const content = d.timeWired
 			? `${dot}<strong>${escapeHtml(d.displayLabel)}</strong><br/><span style="opacity:0.7">time:</span> ${fmtPhase(d.angles[bestIdx], 'hours', plot.period)}<br/><span style="opacity:0.7">value:</span> ${fmt(d.rawValues[bestIdx])}`
 			: `${dot}<strong>${escapeHtml(d.displayLabel)}</strong><br/><span style="opacity:0.7">phase:</span> ${fmtPhase(d.rawValues[bestIdx], plot.unit, plot.period)}`;
@@ -452,7 +451,7 @@
 				: `phase · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`}
 		/>
 
-		{#each plot.data as d, i (d.x.id + '-' + d.y.id)}
+		{#each plot.data as d (d.x.id + '-' + d.y.id)}
 			{#if !d.timeWired && plot.showWedges}
 				<RoseWedges
 					projection={P}

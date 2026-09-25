@@ -35,12 +35,12 @@ import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { layoutWorkspacePlots } from '$lib/core/workspaceLayout.js';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
-import { loadProcesses } from '$lib/processes/processMap.js';
-import { loadPlots } from '$lib/plots/plotMap.js';
-import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { loadProcesses } from '$test/processRegistry.js';
+import { loadPlots } from '$test/plotRegistry.js';
+import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 // The per-node specs are shared with allNodesCoverage.test.js so the gallery
 // covers exactly the registered nodes (one example session per process / TP).
-import { PROCESS_SPECS, TP_SPECS, SAMPLE } from './nodeCatalog.js';
+import { PROCESS_SPECS, TP_SPECS } from './nodeCatalog.js';
 // Column-process and table-process demos share builders (Sequence x + y → node,
 // with a scatter + table, tidy baked layout) — same as the focused generators.
 import { buildProcessDemo, buildTPDemo, addDemoNote } from './nodeDemoBuilders.js';
@@ -2368,8 +2368,6 @@ function resetCore() {
 	// (addDemoNote) never carries a previous demo's node/note positions forward.
 	core.nodeLayout = {};
 }
-
-const resolve = (d) => (typeof d === 'function' ? d() : d);
 
 // Column auto-ids share the global Column counter, so columns created here never
 // collide with output columns the TableProcess constructor allocates.

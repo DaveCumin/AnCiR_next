@@ -47,7 +47,12 @@ const fakeD1 = () => {
 const withLogs = () => {
 	const db = fakeD1();
 	const pending = [];
-	return { env: { ...ENV(), LOGS_DB: db }, ctx: { waitUntil: (p) => pending.push(p) }, db, pending };
+	return {
+		env: { ...ENV(), LOGS_DB: db },
+		ctx: { waitUntil: (p) => pending.push(p) },
+		db,
+		pending
+	};
 };
 
 const post = (body) =>
@@ -100,7 +105,10 @@ test('extractDraft handles bare JSON, a ```json fence, and surrounding prose', (
 	const want = { analyses: [{ name: 'SimulatedData', args: {} }] };
 	assert.deepEqual(extractDraft(JSON.stringify(want)), want);
 	assert.deepEqual(extractDraft('```json\n' + JSON.stringify(want) + '\n```'), want);
-	assert.deepEqual(extractDraft(`Sure! Here you go:\n${JSON.stringify(want)}\nHope that helps.`), want);
+	assert.deepEqual(
+		extractDraft(`Sure! Here you go:\n${JSON.stringify(want)}\nHope that helps.`),
+		want
+	);
 });
 
 test('extractDraft rejects empty / non-object replies', () => {
@@ -161,7 +169,10 @@ test('the catalogue only claims outputs a node can actually produce', () => {
 	);
 	// And that those names depend on the discriminating params, so a model changing `analysis`
 	// doesn't keep using the periodogram names.
-	assert.match(p, /for analysis=periodogram, pgMethod=Lomb-Scargle; other values give other columns/);
+	assert.match(
+		p,
+		/for analysis=periodogram, pgMethod=Lomb-Scargle; other values give other columns/
+	);
 
 	// The genuine fitted curves are untouched — this must not over-correct.
 	assert.match(p, /Cosinor:.*fitted curve: x=cosinorx, y=cosinory_<your Y column>/);
@@ -295,7 +306,10 @@ test('POST /build: draft → session → loadFromURL link, and the session is fe
 		})
 	);
 	const env = ENV();
-	const res = await worker.fetch(post({ prompt: 'simulate a 24h rhythm and fit a cosinor', llm: LLM }), env);
+	const res = await worker.fetch(
+		post({ prompt: 'simulate a 24h rhythm and fit a cosinor', llm: LLM }),
+		env
+	);
 	assert.equal(res.status, 200);
 	const out = await res.json();
 
@@ -339,7 +353,12 @@ const SPLIT_DRAFT = (xForAnalysis) => ({
 		{ name: 'Split', args: { xIN: 'time', yIN: ['values'], splitTimes: [100] } },
 		{
 			name: 'RhythmicityAnalysis',
-			args: { xIN: xForAnalysis, yIN: ['values_1'], analysis: 'periodogram', pgMethod: 'Lomb-Scargle' }
+			args: {
+				xIN: xForAnalysis,
+				yIN: ['values_1'],
+				analysis: 'periodogram',
+				pgMethod: 'Lomb-Scargle'
+			}
 		}
 	]
 });
@@ -429,7 +448,10 @@ test('the reply carries a manifest: the goal, the guesses, and what is missing',
 			]
 		})
 	);
-	const res = await worker.fetch(post({ prompt: 'split it and analyse each half', llm: LLM }), ENV());
+	const res = await worker.fetch(
+		post({ prompt: 'split it and analyse each half', llm: LLM }),
+		ENV()
+	);
 	const { manifest, errors } = await res.json();
 
 	assert.deepEqual(errors, [], 'a perfectly-wired session that is still not what was asked for');
@@ -460,7 +482,10 @@ test('a repair cannot declare itself complete by restating its own intent', asyn
 			]
 		})
 	);
-	const res = await worker.fetch(post({ prompt: 'split it and analyse each half', llm: LLM }), ENV());
+	const res = await worker.fetch(
+		post({ prompt: 'split it and analyse each half', llm: LLM }),
+		ENV()
+	);
 	const out = await res.json();
 
 	assert.equal(sent.length, 2);
@@ -513,13 +538,23 @@ test('/build warns when a valid session will produce a misleading number', async
 				analyses: [
 					{
 						name: 'SimulatedData',
-						args: { seed: 1, samplingPeriod_hours: 1, sections: [{ duration_hours: 36, rhythmPeriod_hours: 24 }] }
+						args: {
+							seed: 1,
+							samplingPeriod_hours: 1,
+							sections: [{ duration_hours: 36, rhythmPeriod_hours: 24 }]
+						}
 					},
-					{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 } }
+					{
+						name: 'Cosinor',
+						args: { xIN: 'time', yIN: ['values'], useFixedPeriod: true, fixedPeriod: 24 }
+					}
 				]
 			})
 		);
-		const res = await worker.fetch(post({ prompt: 'fit a daily rhythm to a day and a half', llm: LLM }), ENV());
+		const res = await worker.fetch(
+			post({ prompt: 'fit a daily rhythm to a day and a half', llm: LLM }),
+			ENV()
+		);
 		assert.equal(res.status, 200, 'advice, never a blocker');
 		out = await res.json();
 	} finally {
@@ -586,7 +621,7 @@ test('logs the prompt + outcome, and NEVER the api key', async () => {
 	assert.equal(b.prompt, 'simulate a 24h rhythm', 'the prompt is the point of the log');
 	assert.equal(b.outcome, 'ok');
 	assert.equal(b.model, 'gpt-4o-mini');
-	assert.equal(b.llmKeySource, 'caller', "whose key, not the key");
+	assert.equal(b.llmKeySource, 'caller', 'whose key, not the key');
 	assert.deepEqual(b.nodes, ['SimulatedData']);
 	assert.ok(typeof b.ms === 'number' && b.ts);
 	// the one thing that must never appear
@@ -640,7 +675,12 @@ test('logs failures too — a rejected prompt is the interesting case', async ()
 
 test('a request with no llm{} uses the worker default and says so', async () => {
 	stubLLM(JSON.stringify({ analyses: [{ name: 'SimulatedData', args: {} }] }));
-	const env = { ...ENV(), OPENAI_BASE_URL: 'https://api.groq.com/openai/v1', OPENAI_API_KEY: 'gsk_secret', OPENAI_MODEL: 'openai/gpt-oss-120b' };
+	const env = {
+		...ENV(),
+		OPENAI_BASE_URL: 'https://api.groq.com/openai/v1',
+		OPENAI_API_KEY: 'gsk_secret',
+		OPENAI_MODEL: 'openai/gpt-oss-120b'
+	};
 	const cap = captureLogs();
 	let res;
 	try {
@@ -661,7 +701,8 @@ test('model rate/usage limit → 429 with the provider detail, not a blanket 502
 		new Response(
 			JSON.stringify({
 				error: {
-					message: 'Rate limit reached for model `openai/gpt-oss-120b`: Limit 14400, Used 14400. Please try again in 2m30s.',
+					message:
+						'Rate limit reached for model `openai/gpt-oss-120b`: Limit 14400, Used 14400. Please try again in 2m30s.',
 					code: 'rate_limit_exceeded'
 				}
 			}),
@@ -689,7 +730,10 @@ test('rejected key → says whose key it was', async () => {
 		new Response(JSON.stringify({ error: { message: 'Invalid API Key' } }), { status: 401 });
 
 	// caller's key ⇒ tell them to fix it
-	const theirs = await worker.fetch(post({ prompt: 'hi', llm: LLM, options: { retries: 0 } }), ENV());
+	const theirs = await worker.fetch(
+		post({ prompt: 'hi', llm: LLM, options: { retries: 0 } }),
+		ENV()
+	);
 	assert.equal(theirs.status, 502);
 	assert.match((await theirs.json()).error, /That API key was rejected/i);
 
@@ -724,10 +768,21 @@ test('a handler that THROWS answers with a CORS 500, not an opaque crash', async
 	// which carries NO CORS headers, so the browser can't read it and reports a network failure.
 	// The fetch wrapper must catch anything and return a CORS'd JSON error instead. Force a throw
 	// from deep in a handler via a misbehaving rate limiter.
-	const env = { ...ENV(), RATE_LIMITER: { limit: () => { throw new Error('boom'); } } };
+	const env = {
+		...ENV(),
+		RATE_LIMITER: {
+			limit: () => {
+				throw new Error('boom');
+			}
+		}
+	};
 	const res = await worker.fetch(post({ prompt: 'x', llm: LLM }), env);
 	assert.equal(res.status, 500);
-	assert.equal(res.headers.get('Access-Control-Allow-Origin'), '*', 'CORS present so the app can read it');
+	assert.equal(
+		res.headers.get('Access-Control-Allow-Origin'),
+		'*',
+		'CORS present so the app can read it'
+	);
 	const out = await res.json();
 	assert.match(out.error, /internal error/i);
 });
@@ -792,7 +847,11 @@ test('rate limiting: the binding wins over the KV fallback', async () => {
 	const env = {
 		...ENV(),
 		BUILD_RATE_MAX: '1',
-		RATE_LIMITER: { async limit() { return { success: true }; } } // allowed
+		RATE_LIMITER: {
+			async limit() {
+				return { success: true };
+			}
+		} // allowed
 	};
 	// Several requests would trip the KV counter (max 1); the binding says fine, so they pass.
 	for (let i = 0; i < 3; i++) {
@@ -806,7 +865,10 @@ test('GET /sessions/:id → 404 for unknown id; OPTIONS preflight is allowed', a
 	const missing = await worker.fetch(new Request('https://nl.example.com/sessions/nope'), env);
 	assert.equal(missing.status, 404);
 
-	const pre = await worker.fetch(new Request('https://nl.example.com/build', { method: 'OPTIONS' }), env);
+	const pre = await worker.fetch(
+		new Request('https://nl.example.com/build', { method: 'OPTIONS' }),
+		env
+	);
 	assert.equal(pre.status, 204);
 	assert.equal(pre.headers.get('Access-Control-Allow-Origin'), '*');
 });

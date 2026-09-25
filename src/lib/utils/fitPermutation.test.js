@@ -6,7 +6,12 @@ const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 describe('fitPermutationPValue — permutation test for the dedicated fit nodes', () => {
 	const t = seq(48, (i) => i);
 	const cosOpts = { useFixedPeriod: true, fixedPeriod: 24, nHarmonics: 1, alpha: 0.05 };
-	const args = { ...PERMUTATION_DEFAULTS, permuteTest: true, nPermutations: 199, permutationSeed: 7 };
+	const args = {
+		...PERMUTATION_DEFAULTS,
+		permuteTest: true,
+		nPermutations: 199,
+		permutationSeed: 7
+	};
 
 	it('is disabled by default (returns NaN)', () => {
 		const y = seq(48, (i) => Math.cos((2 * Math.PI * i) / 24));

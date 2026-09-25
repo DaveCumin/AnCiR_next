@@ -161,7 +161,7 @@
 				<NumberWithUnits bind:value={bands.height} min="1" />
 			</ControlInput>
 		</div>
-		{#each bands.bands as b, i}
+		{#each bands.bands as b, i (i)}
 			<div class="control-input-color">
 				<ColourPicker bind:value={b.col} />
 				<div class="control-input">
@@ -180,8 +180,7 @@
 		{/each}
 	{:else}
 		<div class="control-input-vertical">
-			<ControlInput label="Click + to add a band">
-			</ControlInput>
+			<ControlInput label="Click + to add a band"></ControlInput>
 		</div>
 	{/if}
 {/snippet}
@@ -191,7 +190,7 @@
 		class="actogram"
 		style="transform: translate({bands.parentPlot.paddingIN.left}px, {bands.height}px);"
 	>
-		{#each bands.bands as b, i}
+		{#each bands.bands as b, i (i)}
 			{@const xPos = bands.bands
 				.slice(0, i)
 				.reduce((sum, band) => sum + singleWidth * 0.01 * band.pc, 0)}

@@ -12,14 +12,7 @@
 import { getColumnById } from './Column.svelte';
 
 // Node types whose name the user can rename inline.
-const EDITABLE_TYPES = new Set([
-	'data',
-	'process',
-	'tableprocess',
-	'plot',
-	'group',
-	'composite'
-]);
+const EDITABLE_TYPES = new Set(['data', 'process', 'tableprocess', 'plot', 'group', 'composite']);
 
 export function isNodeNameEditable(node) {
 	return !!node && EDITABLE_TYPES.has(node.type);

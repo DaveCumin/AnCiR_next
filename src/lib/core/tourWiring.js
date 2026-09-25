@@ -59,7 +59,9 @@ export const tpOutPortElByPrefix = (name, prefix) => {
 // y = the first per-Y output. So downstream wire steps draw the edge from the
 // Bin Data / Cosinor node, not from the raw simulated-data source.
 export const binnedOutElForAxis = (axis) =>
-	axis === 'y' ? tpOutPortElByPrefix('BinnedData', 'binnedy_') : tpOutPortEl('BinnedData', 'binnedx');
+	axis === 'y'
+		? tpOutPortElByPrefix('BinnedData', 'binnedy_')
+		: tpOutPortEl('BinnedData', 'binnedx');
 export const cosinorOutElForAxis = (axis) =>
 	axis === 'y' ? tpOutPortElByPrefix('Cosinor', 'cosinory_') : tpOutPortEl('Cosinor', 'cosinorx');
 
@@ -67,9 +69,9 @@ export const cosinorOutElForAxis = (axis) =>
 // (getting-started lets the user pick any plot type).
 export const anyPlotInPortEl = (portName) => {
 	if (typeof document === 'undefined') return null;
-	const dots = [...document.querySelectorAll(`[data-port-dir="in"][data-port-name="${portName}"]`)].filter(
-		(d) => (d.getAttribute('data-node-id') || '').startsWith('plot_')
-	);
+	const dots = [
+		...document.querySelectorAll(`[data-port-dir="in"][data-port-name="${portName}"]`)
+	].filter((d) => (d.getAttribute('data-node-id') || '').startsWith('plot_'));
 	return dots[dots.length - 1] || null;
 };
 
@@ -193,8 +195,7 @@ export const cosinorFitStatus = () => {
 // telling the user exactly which port is still missing. Returns HTML (the tour
 // tooltip renders body with @html; all copy here is developer-authored).
 export const wiringHint = (intro, xLabel, xPort, yLabel, yPort, status, tip = '') => {
-	const row = (ok, what, port) =>
-		`${ok ? '✅' : '⬜️'} ${what} → <strong>${port}</strong>`;
+	const row = (ok, what, port) => `${ok ? '✅' : '⬜️'} ${what} → <strong>${port}</strong>`;
 	let nudge;
 	if (status.done) nudge = 'Both connected — moving on…';
 	else if (!status.xOk && !status.yOk) nudge = 'Drag both wires to continue.';
@@ -211,7 +212,9 @@ export const wiringHint = (intro, xLabel, xPort, yLabel, yPort, status, tip = ''
 // Single-axis hint for the split "wire x, then wire y" steps. `ok` ticks the line
 // and switches the nudge to a confirmation.
 export const axisHint = (intro, label, port, ok, tip = '') => {
-	const nudge = ok ? 'Connected — moving on…' : `Drag <strong>${label}</strong> onto <strong>${port}</strong>.`;
+	const nudge = ok
+		? 'Connected — moving on…'
+		: `Drag <strong>${label}</strong> onto <strong>${port}</strong>.`;
 	const tipHtml = tip ? `<br><span class="tour-tip">${tip}</span>` : '';
 	return `${intro}<br><br>${ok ? '✅' : '⬜️'} ${label} → <strong>${port}</strong><br><br><em>${nudge}</em>${tipHtml}`;
 };

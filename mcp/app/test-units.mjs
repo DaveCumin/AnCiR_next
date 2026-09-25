@@ -34,8 +34,15 @@ describe('resolveOptions — clamping', () => {
 describe('runScripted — deterministic planner', () => {
 	it('cosinor path: import → Cosinor(fixed period) → scatterplot', async () => {
 		const calls = [];
-		await runScripted({ prompt: 'fit a cosinor with period 24', call: async (n, a) => (calls.push([n, a]), '{}'), trace: [] });
-		assert.deepEqual(calls.map((c) => c[0]), ['import_data', 'run_table_process', 'add_plot']);
+		await runScripted({
+			prompt: 'fit a cosinor with period 24',
+			call: async (n, a) => (calls.push([n, a]), '{}'),
+			trace: []
+		});
+		assert.deepEqual(
+			calls.map((c) => c[0]),
+			['import_data', 'run_table_process', 'add_plot']
+		);
 		const tp = calls.find((c) => c[0] === 'run_table_process')[1];
 		assert.equal(tp.name, 'Cosinor');
 		assert.equal(tp.args.useFixedPeriod, true);
@@ -43,7 +50,11 @@ describe('runScripted — deterministic planner', () => {
 	});
 	it('periodogram branch → RhythmicityAnalysis', async () => {
 		const calls = [];
-		await runScripted({ prompt: 'show a periodogram', call: async (n, a) => (calls.push([n, a]), '{}'), trace: [] });
+		await runScripted({
+			prompt: 'show a periodogram',
+			call: async (n, a) => (calls.push([n, a]), '{}'),
+			trace: []
+		});
 		assert.equal(calls.find((c) => c[0] === 'run_table_process')[1].name, 'RhythmicityAnalysis');
 	});
 });
@@ -57,8 +68,11 @@ describe('chatCompletion — retry/backoff', () => {
 		let n = 0;
 		global.fetch = async () => {
 			n++;
-			if (n === 1) return new Response('{"error":{}}', { status: 429, headers: { 'retry-after': '0' } });
-			return new Response(JSON.stringify({ choices: [{ message: { content: 'hi' } }] }), { status: 200 });
+			if (n === 1)
+				return new Response('{"error":{}}', { status: 429, headers: { 'retry-after': '0' } });
+			return new Response(JSON.stringify({ choices: [{ message: { content: 'hi' } }] }), {
+				status: 200
+			});
 		};
 		const r = await chatCompletion(cfg, { messages: [] }, { retries: 3, baseDelayMs: 1 });
 		assert.equal(n, 2);
@@ -66,7 +80,10 @@ describe('chatCompletion — retry/backoff', () => {
 		assert.equal(r.message.content, 'hi');
 	});
 	it('returns (no throw) on a non-retryable 400, preserving tool_use_failed', async () => {
-		global.fetch = async () => new Response(JSON.stringify({ error: { code: 'tool_use_failed', message: 'bad' } }), { status: 400 });
+		global.fetch = async () =>
+			new Response(JSON.stringify({ error: { code: 'tool_use_failed', message: 'bad' } }), {
+				status: 400
+			});
 		const r = await chatCompletion(cfg, { messages: [] }, { retries: 2, baseDelayMs: 1 });
 		assert.equal(r.ok, false);
 		assert.equal(r.status, 400);
@@ -76,7 +93,10 @@ describe('chatCompletion — retry/backoff', () => {
 		global.fetch = async () => {
 			throw new Error('boom');
 		};
-		await assert.rejects(chatCompletion(cfg, { messages: [] }, { retries: 1, baseDelayMs: 1 }), /after 2 attempts/);
+		await assert.rejects(
+			chatCompletion(cfg, { messages: [] }, { retries: 1, baseDelayMs: 1 }),
+			/after 2 attempts/
+		);
 	});
 });
 
@@ -96,7 +116,16 @@ describe('validation + SSRF guard', () => {
 
 describe('promptBuilder', () => {
 	it('injects the catalogue and forces useFixedPeriod:true', () => {
-		const caps = { analyses: [{ id: 'Cosinor', inputs: { scalar: ['xIN'], array: ['yIN'] }, params: { useFixedPeriod: false } }], plots: [] };
+		const caps = {
+			analyses: [
+				{
+					id: 'Cosinor',
+					inputs: { scalar: ['xIN'], array: ['yIN'] },
+					params: { useFixedPeriod: false }
+				}
+			],
+			plots: []
+		};
 		const p = buildSystemPrompt(caps);
 		assert.ok(p.includes('Cosinor: args='));
 		assert.ok(p.includes('"useFixedPeriod":true'));
@@ -122,7 +151,12 @@ describe('HTTP endpoints (no build spawn)', () => {
 		assert.ok((await (await fetch(`${base}/`)).text()).includes('Model settings'));
 	});
 	it('POST /build validates (400) then rate-limits (429)', async () => {
-		const post = (b) => fetch(`${base}/build`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) });
+		const post = (b) =>
+			fetch(`${base}/build`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify(b)
+			});
 		assert.equal((await post({})).status, 400); // empty prompt (counts against limit 1)
 		assert.equal((await post({ prompt: 'hi' })).status, 429); // 2nd in window
 	});

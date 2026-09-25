@@ -329,10 +329,7 @@
 	let rowItems = $derived(Array.from({ length: rowCount }, (_, i) => i));
 	let hasTwoLineCol = $derived(
 		visibleColumns.some(
-			(c) =>
-				c.col &&
-				(c.col.type === 'bin' ||
-					(c.col.type === 'time' && !c.col.isReferencial()))
+			(c) => c.col && (c.col.type === 'bin' || (c.col.type === 'time' && !c.col.isReferencial()))
 		)
 	);
 	// Row height for the 0.85rem cell font: ~44px for one line, more for the two-line time
@@ -443,11 +440,6 @@
 		return theData?.columnRefs?.includes(colId) ?? false;
 	}
 
-	function isTableSelected(table) {
-		if (!table?.columnRefs?.length) return false;
-		return table.columnRefs.every(isColumnSelected);
-	}
-
 	function isPlotSelected(plot) {
 		let cols = [];
 		if (plot?.data && Array.isArray(plot.plot.data)) {
@@ -456,19 +448,6 @@
 			cols = plot.plot.columnRefs;
 		}
 		return cols.length > 0 && cols.every(isColumnSelected);
-	}
-
-	function toggleTableSelection(table) {
-		if (!table?.columnRefs) return;
-		const isSel = isTableSelected(table);
-		if (isSel) {
-			table.columnRefs.forEach((colId) => {
-				const idx = theData.columnRefs.indexOf(colId);
-				if (idx >= 0) theData.removeColumn(idx);
-			});
-		} else {
-			theData.addColumns(table.columnRefs);
-		}
 	}
 
 	function togglePlotSelection(plot) {
@@ -519,6 +498,7 @@
 
 	let standaloneColumns = $derived.by(() => {
 		// "Standalone" = columns not absorbed by any Group node.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 		const grouped = new Set();
 		for (const g of core.groups ?? []) {
 			for (const cid of g.sourceColumnIds ?? []) grouped.add(cid);
@@ -814,6 +794,7 @@
 					</div>
 
 					<VirtualList items={rowItems} fill itemHeight={rowH}>
+						<!-- eslint-disable-next-line no-unused-vars -- the snippet's first parameter is positional; only the row index `i` is used -->
 						{#snippet row(_, i)}
 							<div class="tp-tr" style="grid-template-columns:{gridCols};">
 								{#if theData.plot.showColNumber}

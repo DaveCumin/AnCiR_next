@@ -20,6 +20,14 @@
 
 {#if visible}
 	<div class="tooltip plot-tooltip" use:portal style="left: {x}px; top: {y}px;">
+		<!-- `content` is the HTML string built by buildAggregatedContent() in tooltipHelpers.js
+		     (colour-swatch spans, <strong> labels, <br/>), so it is markup by design and cannot be
+		     rendered as text. The values it interpolates — column names, user-entered labels,
+		     formatted values, series colours — are escaped at the point of interpolation there
+		     (escapeHtml / safeColour), which is what keeps this {@html} safe. Any OTHER producer
+		     of `content` owes the same: today that is CircularPhase.svelte and the Actogram's
+		     Annotation.svelte, and both escape. -->
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- every producer escapes; see above -->
 		{@html content}
 	</div>
 {/if}

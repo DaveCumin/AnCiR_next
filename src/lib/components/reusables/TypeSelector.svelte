@@ -17,8 +17,6 @@
 		value === 'bin' ? allOptions : allOptions.filter((o) => o.value !== 'bin')
 	);
 
-	let selected = $state();
-
 	let btnRef;
 	let showDropdown = $state(false);
 	let top = $state(0);
@@ -68,7 +66,7 @@
 			{#if open}
 				<Dropdown bind:showDropdown {top} {left}>
 					{#snippet groups()}
-						{#each options as option}
+						{#each options as option (option.value)}
 							<div
 								class="option dropdown-action"
 								class:selected={option.value === value}

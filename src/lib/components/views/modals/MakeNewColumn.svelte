@@ -4,7 +4,6 @@
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { tick } from 'svelte';
-	import Icon from '$lib/icons/Icon.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	let { show = $bindable(), initialType = $bindable('') } = $props();
@@ -149,6 +148,8 @@
 	}
 </script>
 
+<!-- `step` is part of the snippet signature ProgressIndicator renders with; this modal keys off `index` only. -->
+<!-- eslint-disable-next-line no-unused-vars -->
 {#snippet stepContent(index, step)}
 	{#if index === 0}
 		<div>
@@ -162,7 +163,7 @@
 				}}
 			>
 				<option value=""></option>
-				{#each sortedTableProcesses as [key, value]}
+				{#each sortedTableProcesses as [key, value] (key)}
 					<option value={key}>{value.displayName || key}</option>
 				{/each}
 			</select>

@@ -1,21 +1,10 @@
 <!-- Handle click plot (plot id core state) -->
 <script module>
 	import { getByPath, setByPath } from '$lib/utils/objectPath.js';
-
-	export function dataSettingsScrollTo(position = 'bottom') {
-		const dataSettings = document.getElementsByClassName('control-display')[0].parentElement;
-		const topPos =
-			position == 'bottom' ? dataSettings.scrollHeight : position == 'top' ? 0 : position;
-		if (dataSettings) {
-			dataSettings.scrollTo({
-				top: topPos,
-				left: 0,
-				behavior: 'smooth'
-			});
-		} else {
-			console.error("Element with ID 'dataSettings' not found");
-		}
-	}
+	// `dataSettingsScrollTo` used to live here, but ten plot components import it, and that
+	// dragged this whole control panel (SavePlot, FigureStyleControls, the inputs) into every
+	// plot's module graph. It is a plain DOM helper, so it now lives in
+	// $lib/components/views/dataSettingsScroll.js.
 
 	// --- Path helpers used by the multi-select shared-options UI ---
 	// Accept dot or bracket notation:
@@ -23,9 +12,8 @@
 	//   'plot.xlimsIN[0]'      → plot.plot.xlimsIN[0]
 	//
 	// The helpers themselves now live in utils/objectPath.js so the AI edit path can write the
-	// same paths this panel writes, through the same code. Re-exported here: existing callers
-	// (and this file) still import them from ControlDisplay.
-	export { getByPath, setByPath };
+	// same paths this panel writes, through the same code. Import them from there directly;
+	// this file used to re-export them, but nothing imports them from here any more.
 
 	// Intersect a per-plot list of schema fields by `path`, preserving the
 	// order from the first plot's schema. Mixed-type selections drop fields
@@ -99,7 +87,6 @@
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import ControlInput from '../inputs/ControlInput.svelte';
 	import {
-		selectPlot,
 		removePlots,
 		getPlotById,
 		FACETABLE_PLOT_TYPES,
@@ -269,7 +256,6 @@
 		let gap = null;
 		if (by == 'horizontal') {
 			const sortedPlots = [...selectedPlots].sort((a, b) => a.x - b.x);
-			const sortedPlotIds = sortedPlots.map((p) => p.id);
 			const minX = Math.min(...sortedPlots.map((p) => p.x));
 			const maxX = Math.max(...sortedPlots.map((p) => p.x + p.width + 25)); // need to add the 25 that makes up a bit of a margin
 			const totalWidth = sortedPlots.reduce((sum, p) => sum + p.width + 25, 0);
@@ -280,7 +266,6 @@
 
 		if (by == 'vertical') {
 			const sortedPlots = [...selectedPlots].sort((a, b) => a.y - b.y);
-			const sortedPlotIds = sortedPlots.map((p) => p.id);
 			const minY = Math.min(...sortedPlots.map((p) => p.y));
 			const maxY = Math.max(...sortedPlots.map((p) => p.y + p.height + 50)); // need to add the 50 that makes up a bit of a margin and accounts for the header bar
 			const totalHeight = sortedPlots.reduce((sum, p) => sum + p.height + 50, 0);
@@ -354,6 +339,7 @@
 	// The literal selection (plot-view + canvas), generators included. Used for
 	// actions that target the selected entity itself (e.g. delete).
 	let rawSelectedPlots = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local dedupe map built and consumed inside this $derived; the derived re-runs on its reactive deps, the map itself is never read reactively
 		const map = new Map();
 		for (const p of core.plots) {
 			if (p.selected) map.set(p.id, p);
@@ -370,6 +356,7 @@
 	// child instead edits just that facet (a per-facet override). Everything that
 	// styles/positions plots works on this expanded set.
 	let selectedPlots = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local dedupe map built and consumed inside this $derived; the derived re-runs on its reactive deps, the map itself is never read reactively
 		const map = new Map();
 		for (const p of rawSelectedPlots) {
 			if (p?.facet) {
@@ -413,7 +400,8 @@
 				appState.currentControlTab = tab;
 			}
 		}
-		//dataSettingsScrollTo('top');
+		// dataSettingsScrollTo('top') from ./dataSettingsScroll.js, if this ever needs to
+		// scroll the panel back to the top on a tab change.
 		// console.log('DEBUG:', appState.currentControlTab);
 	}
 </script>
@@ -511,7 +499,7 @@
 				<div class="control-input">
 					<p>Vertically</p>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<button class="icon" onclick={(e) => alignPlots('top')}>
+						<button class="icon" onclick={() => alignPlots('top')}>
 							<Icon
 								name="align-top"
 								width={24}
@@ -519,7 +507,7 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<button class="icon" onclick={(e) => alignPlots('middle')}>
+						<button class="icon" onclick={() => alignPlots('middle')}>
 							<Icon
 								name="align-middle"
 								width={24}
@@ -527,7 +515,7 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<button class="icon" onclick={(e) => alignPlots('bottom')}>
+						<button class="icon" onclick={() => alignPlots('bottom')}>
 							<Icon
 								name="align-bottom"
 								width={24}
@@ -541,7 +529,7 @@
 				<div class="control-input">
 					<p>Horizontally</p>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<button class="icon" onclick={(e) => alignPlots('left')}>
+						<button class="icon" onclick={() => alignPlots('left')}>
 							<Icon
 								name="align-left"
 								width={24}
@@ -549,7 +537,7 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<button class="icon" onclick={(e) => alignPlots('center')}>
+						<button class="icon" onclick={() => alignPlots('center')}>
 							<Icon
 								name="align-centre"
 								width={24}
@@ -557,7 +545,7 @@
 								className="control-component-title-icon"
 							/>
 						</button>
-						<button class="icon" onclick={(e) => alignPlots('right')}>
+						<button class="icon" onclick={() => alignPlots('right')}>
 							<Icon
 								name="align-right"
 								width={24}
@@ -579,7 +567,7 @@
 				<div class="control-input">
 					<p>Vertically (gap)</p>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<button class="icon" onclick={(e) => distributePlots('verticalEqual')}>
+						<button class="icon" onclick={() => distributePlots('verticalEqual')}>
 							<Icon
 								name="distribute-vertical"
 								width={24}
@@ -604,7 +592,7 @@
 				<div class="control-input">
 					<p>Horizontally (gap)</p>
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<button class="icon" onclick={(e) => distributePlots('horizontalEqual')}>
+						<button class="icon" onclick={() => distributePlots('horizontalEqual')}>
 							<Icon
 								name="distribute-horizontal"
 								width={24}
@@ -843,7 +831,7 @@
 					</div>
 
 					<div class="control-tab">
-						{#each appConsts.plotMap.get(plot.type).controlHeaders as header}
+						{#each appConsts.plotMap.get(plot.type).controlHeaders as header (header)}
 							<button
 								class={appState.currentControlTab === header.toLowerCase() ? 'active' : ''}
 								onclick={(e) => {

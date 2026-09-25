@@ -462,7 +462,9 @@ function op_removeFreeTableProcess(op) {
 	//
 	// Cheap to reverse: rawData is keyed by column id and is left alone, so restoring the
 	// descriptor restores the data with it — the same trick op_removeColumn relies on.
-	const outIds = Object.values(snap.args.out ?? {}).filter((id) => typeof id === 'number' && id >= 0);
+	const outIds = Object.values(snap.args.out ?? {}).filter(
+		(id) => typeof id === 'number' && id >= 0
+	);
 	const removedColumns = [];
 	for (const id of outIds) {
 		const i = core.data.findIndex((c) => c.id === id);

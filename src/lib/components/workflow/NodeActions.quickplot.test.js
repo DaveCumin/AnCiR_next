@@ -11,7 +11,11 @@ afterEach(() => cleanup());
 describe('NodeActions quick-plot button', () => {
 	it('renders when showQuickPlot and fires onQuickPlot', async () => {
 		const onQuickPlot = vi.fn();
-		const { getByLabelText } = render(NodeActions, { revealed: true, showQuickPlot: true, onQuickPlot });
+		const { getByLabelText } = render(NodeActions, {
+			revealed: true,
+			showQuickPlot: true,
+			onQuickPlot
+		});
 		const btn = getByLabelText('Quick plot');
 		await fireEvent.click(btn);
 		expect(onQuickPlot).toHaveBeenCalledTimes(1);

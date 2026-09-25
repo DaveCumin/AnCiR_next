@@ -56,7 +56,10 @@ export function createApp() {
 		const start = Date.now();
 		res.on('finish', () => {
 			if (req.path === '/health' || req.method === 'GET') return;
-			log.info({ method: req.method, path: req.path, status: res.statusCode, ms: Date.now() - start }, 'req');
+			log.info(
+				{ method: req.method, path: req.path, status: res.statusCode, ms: Date.now() - start },
+				'req'
+			);
 		});
 		next();
 	});
@@ -94,7 +97,18 @@ export function createApp() {
 				planner === 'scripted'
 					? 'SCRIPTED planner (no model configured) — ignores your prompt and always builds a cosine demo. Add your own model in Model settings for real natural-language following.'
 					: undefined;
-			log.info({ reqId, planner, model, promptVersion, turns: trace.length, ms: Date.now() - t0, bytes: json.length }, 'build');
+			log.info(
+				{
+					reqId,
+					planner,
+					model,
+					promptVersion,
+					turns: trace.length,
+					ms: Date.now() - t0,
+					bytes: json.length
+				},
+				'build'
+			);
 			res.json({ id, planner, model, note, trace, sessionUrl, ancirUrl: ancirUrlFor(sessionUrl) });
 		} catch (err) {
 			log.error({ reqId, err: err?.message || String(err) }, 'build failed'); // never the body
@@ -126,10 +140,13 @@ function validateEnv() {
 			APP_PORT: z.coerce.number().int().positive().optional()
 		})
 		.safeParse(process.env);
-	if (!r.success) for (const i of r.error.issues) log.warn({ var: i.path.join('.'), issue: i.message }, 'env');
+	if (!r.success)
+		for (const i of r.error.issues) log.warn({ var: i.path.join('.'), issue: i.message }, 'env');
 	// Mixed-content trap: an https AnCiR can't fetch an http session URL.
 	if (isPublicBind && !ANCIR_BASE.startsWith('https://')) {
-		log.warn(`ANCIR_BASE_URL is not https (${ANCIR_BASE}); an HTTPS AnCiR app will block loading the session (mixed content).`);
+		log.warn(
+			`ANCIR_BASE_URL is not https (${ANCIR_BASE}); an HTTPS AnCiR app will block loading the session (mixed content).`
+		);
 	}
 }
 
@@ -139,7 +156,9 @@ async function checkAncir() {
 		if (r.ok) log.info(`AnCiR reachable at ${ANCIR_BASE}`);
 		else log.warn(`AnCiR at ${ANCIR_BASE} returned HTTP ${r.status}`);
 	} catch {
-		log.warn(`AnCiR NOT reachable at ${ANCIR_BASE} — start it (npm run dev) or set ANCIR_BASE_URL.`);
+		log.warn(
+			`AnCiR NOT reachable at ${ANCIR_BASE} — start it (npm run dev) or set ANCIR_BASE_URL.`
+		);
 	}
 }
 

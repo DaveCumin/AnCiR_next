@@ -6,7 +6,6 @@
 	// report the per-phase-bin mean (± SEM). The "average day" view. Shares the
 	// fold used inside NonparametricRA, exposed as a standalone node so it can be
 	// run without a full NPCRA pass and its profile wired into plots/comparisons.
-	import { core } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';

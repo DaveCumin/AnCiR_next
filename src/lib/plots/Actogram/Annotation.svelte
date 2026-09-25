@@ -8,6 +8,7 @@
 	import { scaleLinear } from 'd3-scale';
 	import { getPlotById } from '$lib/core/Plot.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
+	import { escapeHtml } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 
 	let _annotationCounter = 0;
 
@@ -176,7 +177,9 @@
 					visible: true,
 					x: e.clientX + 16,
 					y: e.clientY + 14,
-					content: annotation.name
+					// PlotTooltip renders `content` with {@html}, and the annotation name is
+					// typed by the user and travels inside a shared session file.
+					content: escapeHtml(annotation.name)
 				},
 				bubbles: true
 			});
@@ -257,7 +260,7 @@
 {/snippet}
 
 {#snippet plot(annotation)}
-	{#each annotation.segments as segment}
+	{#each annotation.segments as segment, si (si)}
 		<g
 			class="annotations"
 			transform="translate({annotation.parentData.padding.left}, {annotation.parentData.padding

@@ -55,9 +55,7 @@ describe('Phase 2: free process + producer column wiring', () => {
 
 	it('wires the free process input from its source column (args.inIN)', () => {
 		const graph = getCachedProcessNodeGraph(makeCore(), makeAppConsts());
-		const edge = graph.connections.find(
-			(c) => c.toId === 'process_7' && c.toPort === 'input'
-		);
+		const edge = graph.connections.find((c) => c.toId === 'process_7' && c.toPort === 'input');
 		expect(edge).toBeTruthy();
 		expect(edge.fromId).toBe('data_1');
 		expect(edge.fromPort).toBe('column');
@@ -67,9 +65,7 @@ describe('Phase 2: free process + producer column wiring', () => {
 		const graph = getCachedProcessNodeGraph(makeCore(), makeAppConsts());
 		// The plot's y references the producer column (id 2); its wire must come
 		// from process_7.output, not a data_2 node.
-		const edge = graph.connections.find(
-			(c) => c.toId === 'plot_3' && c.fromId === 'process_7'
-		);
+		const edge = graph.connections.find((c) => c.toId === 'plot_3' && c.fromId === 'process_7');
 		expect(edge).toBeTruthy();
 		expect(edge.fromPort).toBe('output');
 	});
@@ -82,8 +78,24 @@ function makeFanOutCore() {
 		data: [
 			{ id: 1, name: 'A', refId: null, data: 1, processes: [] },
 			{ id: 2, name: 'B', refId: null, data: 2, processes: [] },
-			{ id: 3, name: 'A → Add', refId: null, data: null, producerNodeId: 'process_7', producerPort: 'out_1', processes: [] },
-			{ id: 4, name: 'B → Add', refId: null, data: null, producerNodeId: 'process_7', producerPort: 'out_2', processes: [] }
+			{
+				id: 3,
+				name: 'A → Add',
+				refId: null,
+				data: null,
+				producerNodeId: 'process_7',
+				producerPort: 'out_1',
+				processes: []
+			},
+			{
+				id: 4,
+				name: 'B → Add',
+				refId: null,
+				data: null,
+				producerNodeId: 'process_7',
+				producerPort: 'out_2',
+				processes: []
+			}
 		],
 		orphanProcesses: [{ id: 7, name: 'Add', displayName: 'Add', args: { value: 5, inIN: [1, 2] } }],
 		tableProcesses: [],

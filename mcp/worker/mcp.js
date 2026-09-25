@@ -55,7 +55,7 @@ const DRAFT_SCHEMA = {
 		analyses: {
 			type: 'array',
 			description:
-				'Run in order — put a generator before the analysis that reads it. `args` is FLAT: input-column fields (xIN, yIN, …) AND parameters together at the top level. Reference columns by NAME. Never pass `out`; output columns are allocated automatically. Call list_capabilities for each analysis\'s exact args and the names of the columns it produces.',
+				"Run in order — put a generator before the analysis that reads it. `args` is FLAT: input-column fields (xIN, yIN, …) AND parameters together at the top level. Reference columns by NAME. Never pass `out`; output columns are allocated automatically. Call list_capabilities for each analysis's exact args and the names of the columns it produces.",
 			items: {
 				type: 'object',
 				properties: {
@@ -68,7 +68,7 @@ const DRAFT_SCHEMA = {
 		plots: {
 			type: 'array',
 			description:
-				'A plot holds a LIST of series, so raw data and a fitted curve go on the same plot. A series\' keys are the plot type\'s own input fields (scatterplot/boxplot/meansem → x,y; actogram/periodogram/fft/correlogram/circularphase → time,values; histogram → column) — see list_capabilities.',
+				"A plot holds a LIST of series, so raw data and a fitted curve go on the same plot. A series' keys are the plot type's own input fields (scatterplot/boxplot/meansem → x,y; actogram/periodogram/fft/correlogram/circularphase → time,values; histogram → column) — see list_capabilities.",
 			items: {
 				type: 'object',
 				properties: {
@@ -96,14 +96,14 @@ function toolList() {
 			name: 'list_capabilities',
 			title: 'List AnCiR analyses and plots',
 			description:
-				'The analyses and plot types available, with each analysis\'s exact flat args, the names of the columns it produces, and (for fits) which output pairs as the fitted curve. Call this FIRST — it is derived from AnCiR\'s live registry, so it is the only reliable source for names and parameters.',
+				"The analyses and plot types available, with each analysis's exact flat args, the names of the columns it produces, and (for fits) which output pairs as the fitted curve. Call this FIRST — it is derived from AnCiR's live registry, so it is the only reliable source for names and parameters.",
 			inputSchema: { type: 'object', properties: {} }
 		},
 		{
 			name: 'build_session',
 			title: 'Build an AnCiR session',
 			description:
-				'Turn a session draft into a real AnCiR session and return a link that opens it. The analyses are computed in the user\'s browser when the link is opened, so this does NOT return computed results — it returns a session to look at. Anything unusable is reported in `errors` rather than silently dropped.',
+				"Turn a session draft into a real AnCiR session and return a link that opens it. The analyses are computed in the user's browser when the link is opened, so this does NOT return computed results — it returns a session to look at. Anything unusable is reported in `errors` rather than silently dropped.",
 			inputSchema: DRAFT_SCHEMA
 		},
 		{
@@ -260,13 +260,16 @@ async function callTool(name, args, env, request, ctx) {
 				content: [
 					{
 						type: 'text',
-						text: 'That doesn\'t contain a session id. Pass the id, or a link this server produced (…/sessions/<id>, or an AnCiR ?loadFromURL=… link).'
+						text: "That doesn't contain a session id. Pass the id, or a link this server produced (…/sessions/<id>, or an AnCiR ?loadFromURL=… link)."
 					}
 				]
 			};
 		}
 		if (!env.SESSIONS) {
-			return { isError: true, content: [{ type: 'text', text: 'Session storage is not configured on this server.' }] };
+			return {
+				isError: true,
+				content: [{ type: 'text', text: 'Session storage is not configured on this server.' }]
+			};
 		}
 		const stored = await env.SESSIONS.get(`s:${id}`);
 		if (!stored) {
@@ -303,7 +306,7 @@ async function callTool(name, args, env, request, ctx) {
 						`ANALYSES:\n${detail || '  (none)'}`,
 						`PLOTS:\n${(session.plots ?? []).map((p) => `  ${p.type}${p.name ? ` "${p.name}"` : ''}`).join('\n') || '  (none)'}`,
 						fitnessText(session),
-						'This is the session\'s STRUCTURE. Results exist only once the link is opened in a browser.'
+						"This is the session's STRUCTURE. Results exist only once the link is opened in a browser."
 					]
 						.filter(Boolean)
 						.join('\n\n')
@@ -318,7 +321,11 @@ async function callTool(name, args, env, request, ctx) {
 					type: c.type,
 					hasData: (session.rawData?.[c.id] ?? []).length > 0
 				})),
-				analyses: (session.tableProcesses ?? []).map((t) => ({ id: t.id, name: t.name, args: t.args })),
+				analyses: (session.tableProcesses ?? []).map((t) => ({
+					id: t.id,
+					name: t.name,
+					args: t.args
+				})),
 				plots: (session.plots ?? []).map((p) => ({ type: p.type, name: p.name })),
 				fitness: checkFitness(session)
 			}

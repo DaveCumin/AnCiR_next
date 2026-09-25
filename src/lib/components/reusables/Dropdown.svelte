@@ -2,6 +2,7 @@
 	let { showDropdown = $bindable(), top = 0, left = 0, groups } = $props();
 	let dialog = $state();
 	let activeSubmenu = $state(null);
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- submenu timeout-id bookkeeping; only read inside showSubmenu/hideSubmenu, never in markup or a derived
 	let submenuTimeouts = new Map();
 
 	$effect(() => {
@@ -34,7 +35,7 @@
 		}
 	}
 
-	function showSubmenu(submenuId, event) {
+	function showSubmenu(submenuId) {
 		if (submenuTimeouts.has(submenuId)) {
 			clearTimeout(submenuTimeouts.get(submenuId));
 			submenuTimeouts.delete(submenuId);
@@ -76,7 +77,7 @@
 			}
 		}}
 	>
-		<div class="dropdown-content" onclick={(e) => closeDropdown()}>
+		<div class="dropdown-content" onclick={() => closeDropdown()}>
 			{@render groups?.({
 				showSubmenu,
 				hideSubmenu,
@@ -101,7 +102,7 @@
 		border-radius: var(--radius-sm);
 		border: 1px solid var(--color-lightness-85);
 		box-shadow:
-			0 4px 8px 0 rgba(0, 0, 0, 0.2), 
+			0 4px 8px 0 rgba(0, 0, 0, 0.2),
 			0 6px 10px 0 rgba(0, 0, 0, 0.1);
 	}
 
@@ -114,5 +115,4 @@
 		flex-direction: column;
 		position: relative;
 	}
-
 </style>

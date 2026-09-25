@@ -58,6 +58,8 @@ try {
 } catch {
 	// Fail loudly. A silently-skipped deploy leaves production stale, and a silently-skipped
 	// regenerate ships a catalogue that disagrees with the app — the exact drift this replaced.
-	console.error(`✖ ${task.label} failed. Fix it, or run \`npm run buildonly\` to build without it.`);
+	console.error(
+		`✖ ${task.label} failed. Fix it, or run \`npm run buildonly\` to build without it.`
+	);
 	process.exit(1);
 }

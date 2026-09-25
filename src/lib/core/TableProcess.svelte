@@ -1,7 +1,7 @@
 <script module>
 	import { appState, appConsts, pushObj, core } from '$lib/core/core.svelte.js';
 	import { removeColumnFromPlots, detachColumnSetFromPlot } from '$lib/core/Plot.svelte';
-	import { Column, removeColumn, getColumnById } from '$lib/core/Column.svelte';
+	import { Column, removeColumn } from '$lib/core/Column.svelte';
 	import { setSelection } from '$lib/tableProcesses/columnSet.js';
 	import { reportUnknownNode } from '$lib/core/unknownNode.js';
 	import { memoForget } from '$lib/core/computeMemo.js';
@@ -193,6 +193,7 @@
 		// reactive even though the property is assigned after construction.
 		warnings = $state([]);
 
+		// eslint-disable-next-line no-unused-vars -- positional: every caller passes (data, null, id), so the slot must stay
 		constructor({ ...dataIN }, _parent = null, id = null) {
 			if (id === null) {
 				this.id = id ?? _tableprocessidCounter;
@@ -282,9 +283,6 @@
 	import { untrack } from 'svelte';
 	let { p = $bindable() } = $props();
 
-	// Derive the tableProcessMap entry for this TP
-	const entry = $derived(appConsts.tableProcessMap.get(p?.name));
-
 	// --- refTPId chaining ---
 
 	// Find the upstream TP that this one chains from.
@@ -347,7 +345,7 @@
 						}}
 					>
 						<option value="">— none —</option>
-						{#each chainablePrecedingTPs as upstream}
+						{#each chainablePrecedingTPs as upstream (upstream.id)}
 							<option value={upstream.id}>{upstream.displayName} #{upstream.id}</option>
 						{/each}
 					</select>

@@ -44,8 +44,10 @@ export function resolveLlm(llm = {}) {
 // Runtime knobs (maxTurns/timeout/temperature/…), clamped to safe ranges. The HTTP layer
 // also validates+clamps these; this keeps direct callers (tests) safe too.
 export function resolveOptions(o = {}) {
-	const num = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Number(v))) : d);
-	const int = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Math.round(Number(v)))) : d);
+	const num = (v, lo, hi, d) =>
+		Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Number(v))) : d;
+	const int = (v, lo, hi, d) =>
+		Number.isFinite(Number(v)) ? Math.max(lo, Math.min(hi, Math.round(Number(v)))) : d;
 	return {
 		maxTurns: int(o.maxTurns, 1, 24, 16),
 		timeoutMs: int(o.timeoutMs, 5000, 120000, 90000),
@@ -164,7 +166,8 @@ export async function runLlm({ prompt, call, tools, trace, cfg, options = {} }) 
 export async function runScripted({ prompt, call, trace }) {
 	const p = String(prompt || '').toLowerCase();
 	const periodMatch =
-		p.match(/period\s*(?:of\s*)?(\d+(?:\.\d+)?)/) || p.match(/(\d+(?:\.\d+)?)\s*[- ]?h(?:our|r)?s?\b/);
+		p.match(/period\s*(?:of\s*)?(\d+(?:\.\d+)?)/) ||
+		p.match(/(\d+(?:\.\d+)?)\s*[- ]?h(?:our|r)?s?\b/);
 	const T = periodMatch ? Number(periodMatch[1]) : 24;
 	const N = 96;
 	const t = [];
@@ -173,7 +176,12 @@ export async function runScripted({ prompt, call, trace }) {
 		t.push(i);
 		y.push(10 + 5 * Math.cos((2 * Math.PI * i) / T));
 	}
-	await call('import_data', { columns: [{ name: 'time_h', values: t }, { name: 'signal', values: y }] });
+	await call('import_data', {
+		columns: [
+			{ name: 'time_h', values: t },
+			{ name: 'signal', values: y }
+		]
+	});
 	trace.push('import_data(time_h, signal)');
 
 	if (p.includes('periodogram') || p.includes('rhythm')) {
