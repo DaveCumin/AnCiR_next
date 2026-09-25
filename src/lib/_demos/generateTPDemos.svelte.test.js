@@ -50,7 +50,6 @@ describe.runIf(process.env.GEN_DEMOS)('generate table-process demo sessions', ()
 			await buildTPDemo(spec, entry, display);
 			const file = `demo-tp-${spec.name.toLowerCase()}.json`;
 			writeFileSync(join(OUT_DIR, file), outputCoreAsJson(), 'utf8');
-			// eslint-disable-next-line no-console
 			console.log(`GENERATED ${file}`);
 		}
 	});

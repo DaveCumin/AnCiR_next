@@ -433,7 +433,6 @@ describe.runIf(process.env.GEN_CLASSROOM)('generate classroom sessions', () => {
 
 		const index = { version: 1, count: manifest.length, sessions: manifest };
 		writeFileSync(join(OUT_DIR, 'index.json'), JSON.stringify(index, null, 2), 'utf8');
-		// eslint-disable-next-line no-console
 		console.log(`GENERATED ${manifest.length} classroom lessons -> ${OUT_DIR}`);
 	});
 });

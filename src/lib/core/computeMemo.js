@@ -345,7 +345,6 @@ if (DEV && typeof window !== 'undefined') {
 		// Subtract the trailing quiet period: it is the detector's settling time,
 		// not time the app spent working.
 		const wallMs = Math.round(Math.max(0, lastComputeAt - t0));
-		// eslint-disable-next-line no-console
 		if (rows.length) console.table(rows);
 		return { memo: memoEnabled ? 'ON' : 'OFF', computes: total, wallMs, rows };
 	}

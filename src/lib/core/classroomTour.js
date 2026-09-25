@@ -22,7 +22,6 @@ export async function loadLesson(file) {
 		if (err instanceof AppAssetUnavailableError) {
 			addNotification(`This lesson's session could not be loaded.\n\n${err.message}`);
 		}
-		// eslint-disable-next-line no-console
 		console.warn('[classroom-tour] failed to load lesson', file, err);
 	}
 	appState.view = 'canvas';

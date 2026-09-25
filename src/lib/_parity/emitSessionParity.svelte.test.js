@@ -102,7 +102,6 @@ describe.runIf(process.env.GEN_SESSION_PARITY)('emit session parity (JS)', () =>
 
 		mkdirSync(join(ROOT, 'tools', 'parity'), { recursive: true });
 		writeFileSync(OUT, JSON.stringify(results, null, 2), 'utf8');
-		// eslint-disable-next-line no-console
 		console.log(`SESSION PARITY: wrote ${Object.keys(results).length} sessions -> ${OUT}`);
 	});
 });

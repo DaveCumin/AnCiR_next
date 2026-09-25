@@ -48,7 +48,6 @@ describe.runIf(process.env.GEN_DEMOS)('generate column-process demo sessions', (
 			await buildProcessDemo(spec, display);
 			const file = `demo-process-${spec.name.toLowerCase()}.json`;
 			writeFileSync(join(OUT_DIR, file), outputCoreAsJson(), 'utf8');
-			// eslint-disable-next-line no-console
 			console.log(`GENERATED ${file}`);
 		}
 	});

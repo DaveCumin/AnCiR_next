@@ -2700,7 +2700,6 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 
 		const index = { version: 1, count: manifest.length, sessions: manifest };
 		writeFileSync(join(OUT_DIR, 'index.json'), JSON.stringify(index, null, 2), 'utf8');
-		// eslint-disable-next-line no-console
 		console.log(`GENERATED ${manifest.length} demos -> ${OUT_DIR}`);
 		// Builds and writes ~100 sessions, every analysis actually run so its outputs bake in.
 		// The 5s default is not a budget this was ever going to meet.

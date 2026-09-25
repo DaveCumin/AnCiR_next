@@ -19,7 +19,6 @@ describe.runIf(process.env.GEN_MANIFEST)('generate node manifest', () => {
 	it('writes static/nodes.json from the live registry', { timeout: 120000 }, async () => {
 		const manifest = await buildNodeManifest();
 		writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-		// eslint-disable-next-line no-console
 		console.log(`wrote ${manifest.count} nodes to static/nodes.json`);
 	});
 });

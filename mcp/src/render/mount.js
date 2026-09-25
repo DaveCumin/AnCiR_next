@@ -95,6 +95,5 @@ async function run() {
 
 run().catch((e) => {
 	window.__ancirError = e?.message || String(e);
-	// eslint-disable-next-line no-console
 	console.error('AnCiR render error:', e);
 });
