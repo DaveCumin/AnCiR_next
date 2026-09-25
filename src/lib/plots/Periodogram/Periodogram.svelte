@@ -4,6 +4,7 @@
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
+	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import { scaleLinear } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -387,6 +388,56 @@
 			}, 0);
 		}
 
+		get displayLabel() {
+			return seriesDisplayLabel(this);
+		}
+
+		// One legend entry for the series itself: the line and/or the points, whichever
+		// is actually drawn. Null when neither is, so an invisible series contributes
+		// nothing (same rule as the scatterplot).
+		getLegendItem() {
+			const item = { label: this.displayLabel, elements: [] };
+			if (this.line.draw) {
+				item.elements.push({
+					type: 'line',
+					color: this.line.colour,
+					strokeWidth: this.line.strokeWidth,
+					stroke: this.line.stroke
+				});
+			}
+			if (this.points.draw) {
+				item.elements.push({
+					type: 'points',
+					color: this.points.colour,
+					size: this.points.radius,
+					shape: this.points.shape
+				});
+			}
+			if (item.elements.length === 0) return null;
+			return item;
+		}
+
+		// A SEPARATE entry for the significance threshold, which the renderer draws only
+		// for the Chi-squared method. Mirroring that condition exactly is the point: an
+		// entry for a line that is not on screen is worse than no legend at all. The
+		// series label is carried through so a multi-series figure stays unambiguous
+		// about whose threshold it is.
+		getThresholdLegendItem() {
+			if (this.method !== 'Chi-squared') return null;
+			if (!this.thresholdline?.draw) return null;
+			return {
+				label: `${this.displayLabel} threshold`,
+				elements: [
+					{
+						type: 'line',
+						color: this.thresholdline.colour,
+						strokeWidth: this.thresholdline.strokeWidth,
+						stroke: this.thresholdline.stroke
+					}
+				]
+			};
+		}
+
 		toJSON() {
 			return {
 				x: this.x,
@@ -472,9 +523,27 @@
 		});
 		xAxis = $state();
 		yAxis = $state();
+		legend = $state();
+
+		// Series entry then that series' threshold entry, so the two read together.
+		getLegendItems = $derived.by(() => {
+			const items = [];
+			this.data.forEach((datum) => {
+				const item = datum.getLegendItem();
+				if (item) items.push(item);
+				const threshold = datum.getThresholdLegendItem();
+				if (threshold) items.push(threshold);
+			});
+			return items;
+		});
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			// DEFAULT OFF. Every saved session already contains periodograms, so a legend
+			// that switched itself on at load would silently change figures the user had
+			// finished with. `dataIN?.legend` is defensive: this constructor treats dataIN
+			// as a SERIES (see addData below), so there is normally no legend on it.
+			this.legend = LegendClass.withDefaults(dataIN?.legend, { show: false });
 			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Period (hours)' });
 			this.yAxis = AxisClass.withDefaults(dataIN?.yAxis, { label: 'Power' });
 			if (dataIN) {
@@ -628,6 +697,7 @@
 				padding: this.#padding,
 				xAxis: this.xAxis.toJSON(),
 				yAxis: this.yAxis.toJSON(),
+				legend: this.legend.toJSON(),
 				data: this.data
 			};
 		}
@@ -648,6 +718,9 @@
 			periodogram.periodlimsIN = json.periodlimsIN ?? periodogram.periodlimsIN;
 			periodogram.periodSteps = json.periodSteps ?? periodogram.periodSteps;
 			periodogram.ylimsIN = json.ylimsIN ?? periodogram.ylimsIN;
+			// Same "default OFF" rule as the constructor: a session saved before the
+			// periodogram had a legend carries no `legend` key and must stay unlegended.
+			periodogram.legend = LegendClass.withDefaults(json.legend, { show: false });
 
 			// Support both new AxisClass format and old individual properties
 			if (json.xAxis) {
@@ -695,6 +768,7 @@
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
+	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
 	import { getZoomAdapter } from '$lib/plots/zoomAdapters.js';
 	import { usePlotMetricOutputs } from '$lib/plots/plotMetricOutputs.svelte.js';
@@ -801,6 +875,10 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
+		<div class="div-line"></div>
+
+		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
+
 		<div class="div-line"></div>
 
 		<div class="control-component">
@@ -1253,6 +1331,16 @@
 				/>
 			{/if}
 		{/each}
+
+		<Legend
+			figureStyle={theData.plot.viewStyle}
+			legendData={theData.plot.legend}
+			items={theData.plot.getLegendItems}
+			plotWidth={theData.plot.plotwidth}
+			plotHeight={theData.plot.plotheight}
+			padding={theData.plot.padding}
+			which="plot"
+		/>
 
 		<!-- Brush-zoom overlay (Zoom mode or Shift+drag); box renders above the data. -->
 		{#if brushable}

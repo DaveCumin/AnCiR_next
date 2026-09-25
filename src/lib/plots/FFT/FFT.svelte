@@ -1,5 +1,6 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
+	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
@@ -33,6 +34,7 @@
 		line = $state();
 		points = $state();
 		phaseLine = $state();
+		phasePoints = $state();
 
 		fftData = $derived.by(() => {
 			const times = this.x.hoursSinceStart;
@@ -150,6 +152,72 @@
 			this.freqStep = dataIN?.freqStep ?? 0.0001;
 		}
 
+		get displayLabel() {
+			return seriesDisplayLabel(this);
+		}
+
+		/**
+		 * The MAGNITUDE entry for this series: the line and/or points actually drawn
+		 * against the left-hand magnitude axis. Null when neither is drawn, so a
+		 * hidden series never occupies a legend row (see Scatterplot).
+		 */
+		getLegendItem() {
+			const elements = [];
+			if (this.line.draw) {
+				elements.push({
+					type: 'line',
+					color: this.line.colour,
+					strokeWidth: this.line.strokeWidth,
+					stroke: this.line.stroke
+				});
+			}
+			if (this.points.draw) {
+				elements.push({
+					type: 'points',
+					color: this.points.colour,
+					size: this.points.radius,
+					shape: this.points.shape
+				});
+			}
+			if (elements.length === 0) return null;
+			return { label: this.displayLabel, elements };
+		}
+
+		/**
+		 * The PHASE entry for this series, or null.
+		 *
+		 * Phase is not a separate sub-plot: it is drawn into the same plot area as the
+		 * magnitude, against a right-hand axis that only appears while some series has
+		 * `showPhase` on. So one legend covers both, and the entry is suffixed
+		 * " phase" to tell the two curves of a series apart.
+		 *
+		 * `showPhase` gates the ENTIRE phase render in the template, so it is checked
+		 * first: without it a series with showPhase off would advertise a phase curve
+		 * that is nowhere on the figure.
+		 */
+		getPhaseLegendItem() {
+			if (!this.showPhase) return null;
+			const elements = [];
+			if (this.phaseLine.draw) {
+				elements.push({
+					type: 'line',
+					color: this.phaseLine.colour,
+					strokeWidth: this.phaseLine.strokeWidth,
+					stroke: this.phaseLine.stroke
+				});
+			}
+			if (this.phasePoints.draw) {
+				elements.push({
+					type: 'points',
+					color: this.phasePoints.colour,
+					size: this.phasePoints.radius,
+					shape: this.phasePoints.shape
+				});
+			}
+			if (elements.length === 0) return null;
+			return { label: `${this.displayLabel} phase`, elements };
+		}
+
 		toJSON() {
 			return {
 				x: this.x,
@@ -189,6 +257,7 @@
 		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
 		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		data = $state([]);
+		legend = $state();
 		// Stored padding belongs to the FIGURE. A view that draws the type smaller needs
 		// proportionally less room for it, so `padding` reads back SCALED while a renderBox is
 		// set; the raw value is what gets saved. See plots/viewBox.js.
@@ -318,8 +387,26 @@
 		yAxisMag = $state();
 		yAxisPhase = $state();
 
+		// One flat list: every series' magnitude entry, then its phase entry when phase
+		// is on screen for that series. Walking `data` in order means the legend order
+		// follows the Data tab and a series reorder.
+		getLegendItems = $derived.by(() => {
+			const items = [];
+			this.data.forEach((datum) => {
+				const mag = datum.getLegendItem();
+				if (mag) items.push(mag);
+				const phase = datum.getPhaseLegendItem();
+				if (phase) items.push(phase);
+			});
+			return items;
+		});
+
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
+			// DEFAULT OFF. Every saved session already contains FFT plots, so a legend
+			// that appeared at load would silently change a finished figure. See
+			// LegendClass.withDefaults.
+			this.legend = LegendClass.withDefaults(dataIN?.legend, { show: false });
 			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Period (hours)' });
 			this.yAxisMag = AxisClass.withDefaults(dataIN?.yAxisMag, { label: 'Magnitude' });
 			this.yAxisPhase = AxisClass.withDefaults(dataIN?.yAxisPhase, {
@@ -476,7 +563,8 @@
 				yAxisPhase: this.yAxisPhase.toJSON(),
 				logScale: this.logScale,
 				showPeriod: this.showPeriod,
-				data: this.data
+				data: this.data,
+				legend: this.legend.toJSON()
 			};
 		}
 
@@ -514,6 +602,10 @@
 			} else {
 				fft.yAxisPhase = new AxisClass({ label: 'Phase (radians)', gridlines: false });
 			}
+
+			// Same default-off rule as the constructor: an old session (or a tool-written
+			// inner) with no `legend` key must load with the legend hidden.
+			fft.legend = LegendClass.withDefaults(json.legend, { show: false });
 
 			if (json.data) {
 				fft.data = json.data.map((d) => FFTDataclass.fromJSON(d, fft));
@@ -570,6 +662,7 @@
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
+	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
 	import { getZoomAdapter } from '$lib/plots/zoomAdapters.js';
 	import { usePlotMetricOutputs } from '$lib/plots/plotMetricOutputs.svelte.js';
@@ -671,6 +764,8 @@
 
 {#snippet controls(theData)}
 	{#if appState.currentControlTab === 'properties'}
+		<Legend legendData={theData.legend} figureStyle={theData.parentBox?.style} which="controls" />
+
 		<div class="div-line"></div>
 
 		<div class="control-component">
@@ -1254,6 +1349,20 @@
 				{/if}
 			{/each}
 		{/key}
+
+		<!-- Series legend. Sits over the single plot area that BOTH the magnitude and the
+		     phase curves are drawn into, so its corner presets clear the left magnitude
+		     axis and the right phase axis alike (those live outside plotwidth). Drawn
+		     after the data marks and before the brush overlay. -->
+		<Legend
+			figureStyle={theData.plot.viewStyle}
+			legendData={theData.plot.legend}
+			items={theData.plot.getLegendItems}
+			plotWidth={theData.plot.plotwidth}
+			plotHeight={theData.plot.plotheight}
+			padding={theData.plot.padding}
+			which="plot"
+		/>
 
 		<!-- Brush-zoom overlay (Zoom mode or Shift+drag); box renders above the data. -->
 		{#if brushable}

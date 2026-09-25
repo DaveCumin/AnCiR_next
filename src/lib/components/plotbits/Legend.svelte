@@ -112,6 +112,29 @@
 			}
 		}
 
+		/**
+		 * Build a legend from saved JSON while choosing a different DEFAULT for
+		 * `show`, mirroring AxisClass.withDefaults.
+		 *
+		 * The six plots that have always had a legend default it ON. The ones that
+		 * are gaining one now must default it OFF: every saved session already
+		 * contains those plots, and a legend that switched itself on at load would
+		 * silently change a figure the user had finished with. A plain
+		 * `new LegendClass(json)` cannot express that, because the constructor's
+		 * `?? true` is hardcoded.
+		 *
+		 * Spreading `{ show: false, ...json }` is NOT equivalent: a JSON object
+		 * carrying an explicit `show: undefined` (hand-written or round-tripped
+		 * through a tool that drops falsy values) would put that key back and fall
+		 * through to `?? true`. Resolving `show` in one place avoids that.
+		 *
+		 * @param {any} saved persisted legend JSON, or null/undefined for a new plot
+		 * @param {{ show?: boolean }} [defaults]
+		 */
+		static withDefaults(saved, { show = true } = {}) {
+			return new LegendClass({ ...(saved ?? {}), show: saved?.show ?? show });
+		}
+
 		toJSON() {
 			return {
 				show: this.show,
@@ -152,6 +175,23 @@
 
 	// Tolerates null and returns the defaults.
 	const resolved = $derived(resolveStyle(figureStyle));
+
+	/**
+	 * A line swatch's dash pattern, using the SAME rule Line.svelte draws with.
+	 *
+	 * `LineClass.stroke` is a STROKE STYLE, not a dash array: 'solid' plus three
+	 * real patterns (see strokeStyles.js). Passing it straight through wrote
+	 * `stroke-dasharray="solid"` into the swatch, which is not a valid value.
+	 * Browsers ignore an invalid dasharray and draw a solid line, so it looked
+	 * right on screen and survived unnoticed — but a SAVED SVG carried the
+	 * invalid attribute out to whatever opens it next, and that is the artefact
+	 * a user keeps. Mirrors the `dash` derived in Line.svelte exactly.
+	 *
+	 * @param {string | number | undefined | null} stroke
+	 */
+	function dashFor(stroke) {
+		return typeof stroke === 'string' && stroke !== 'solid' ? stroke : null;
+	}
 	// The size actually drawn: a deliberate per-legend override, else the figure's
 	// legend size. Every use goes through this — the box is sized from measured text
 	// widths and line heights, so a null leaking into that maths would become NaN and
@@ -331,7 +371,7 @@
 						bind:value={legendData.position}
 						options={['topright', 'topleft', 'bottomright', 'bottomleft', 'custom']}
 						optionsDisplay={['Top Right', 'Top Left', 'Bottom Right', 'Bottom Left', 'Custom']}
-					onChange={(v) => onPositionChange(v)}
+						onChange={(v) => onPositionChange(v)}
 					/>
 				</div>
 				<div class="control-input">
@@ -418,7 +458,7 @@
 									y2={0}
 									stroke={el.color}
 									stroke-width={el.strokeWidth}
-									stroke-dasharray={el.stroke}
+									stroke-dasharray={dashFor(el.stroke)}
 								/>
 							{:else if el.type === 'points'}
 								<path d={getPointPath(el.shape || 'circle', 10, 0, el.size)} fill={el.color} />
@@ -435,7 +475,14 @@
 								/>
 							{/if}
 						{/each}
-						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendFontSize} font-family={resolved.fontFamily} fill="black">
+						<text
+							x={iconW + gap}
+							y={0}
+							dy="0.35em"
+							font-size={legendFontSize}
+							font-family={resolved.fontFamily}
+							fill="black"
+						>
 							{item.label}
 						</text>
 					</g>
@@ -454,7 +501,7 @@
 									y2={0}
 									stroke={el.color}
 									stroke-width={el.strokeWidth}
-									stroke-dasharray={el.stroke}
+									stroke-dasharray={dashFor(el.stroke)}
 								/>
 							{:else if el.type === 'points'}
 								<path d={getPointPath(el.shape || 'circle', 10, 0, el.size)} fill={el.color} />
@@ -471,7 +518,14 @@
 								/>
 							{/if}
 						{/each}
-						<text x={iconW + gap} y={0} dy="0.35em" font-size={legendFontSize} font-family={resolved.fontFamily} fill="black">
+						<text
+							x={iconW + gap}
+							y={0}
+							dy="0.35em"
+							font-size={legendFontSize}
+							font-family={resolved.fontFamily}
+							fill="black"
+						>
 							{item.label}
 						</text>
 					</g>

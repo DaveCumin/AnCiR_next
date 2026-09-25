@@ -5,12 +5,10 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
-	import {
-		linearRegression,
-		removeNullsFromXY
-	} from '$lib/components/plotbits/helpers/wrangleData';
+	import { removeNullsFromXY } from '$lib/components/plotbits/helpers/wrangleData';
 	import { scaleLinear } from 'd3-scale';
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
+	import { fitLine } from './lineFit.js';
 
 	function findCentileValue(data, centile) {
 		// isNaN-ok: callers pass yByPeriod slices, which Actogram builds with an explicit
@@ -73,12 +71,23 @@
 		phaseRefDay = $state(null);
 		selectedPeriods = $state([]);
 		manualMarkers = $state([]);
-		// type 'fitline' — a straight line the user positions directly (eye-fit).
-		// Stored as slope + intercept in the same absolute-time-vs-1-indexed-day frame
-		// as the regression (so the drawn line, τ, θ and the harmonic check all reuse
+		// The line, stored as slope + intercept in the same absolute-time-vs-1-indexed-day
+		// frame as the regression (so the drawn line, τ, θ and the harmonic check all reuse
 		// linearRegression below). slope = τ (period, hrs); the day span is lineMin/MaxDay.
+		// A block with no markers and both locks Fixed is a line the user positions
+		// directly (the "Add line" preset, and what the old `fitline` type became).
 		fitSlope = $state(null);
 		fitIntercept = $state(null);
+		// Per-parameter locks. The line has exactly two parameters, τ (the slope,
+		// the period in hours) and θ (the phase, the time of day at the reference
+		// day), and each is independently either FITTED from this block's selected
+		// markers or FIXED at the value the user typed or dragged to.
+		//   'fit'   → least squares decides it
+		//   'fixed' → read out of fitSlope/fitIntercept (see tauValue/thetaValue)
+		// Defaults: an eye-fit line (no markers) is fixed on both; a marker block
+		// fits both, which is exactly the behaviour before locks existed.
+		lockTau = $state('fit');
+		lockTheta = $state('fit');
 
 		// The day the phase (θ) is reported / anchored to (1-indexed, clamped into the
 		// plot). Shared by Est φ and the fit line's θ handling. User-set via phaseRefDay;
@@ -93,19 +102,67 @@
 			const P = this.parentData.parentPlot.periodHrs;
 			return (this.fitSlope - P) * d + this.fitIntercept;
 		}
-		// Rotate: set τ (slope) while keeping the time-of-day at the reference day fixed.
+		// The FIXED values of the two parameters, decoded from the stored
+		// (fitSlope, fitIntercept) pair. That pair is only ever a storage encoding
+		// of (τ, θ) at the reference day, which is what lets old sessions (which
+		// stored nothing else) load unchanged.
+		get tauValue() {
+			return this.fitSlope;
+		}
+		get thetaValue() {
+			if (this.fitSlope == null || this.fitIntercept == null) return null;
+			return this.fitTimeOfDayAt(this.fitRefDay);
+		}
+
+		// Seed fitSlope/fitIntercept from the line as currently drawn, so flipping a
+		// lock to Fixed or typing into one field never makes the line jump.
+		pinCurrentLine() {
+			const reg = this.linearRegression;
+			if (
+				reg &&
+				typeof reg === 'object' &&
+				Number.isFinite(reg.slope) &&
+				Number.isFinite(reg.intercept)
+			) {
+				this.fitSlope = reg.slope;
+				this.fitIntercept = reg.intercept;
+				return;
+			}
+			const P = this.parentData.parentPlot.periodHrs;
+			this.fitSlope ??= P;
+			this.fitIntercept ??= P / 2;
+		}
+
+		// Rotate: set τ (slope) while keeping the time-of-day at the reference day
+		// fixed. Typing into the τ field or rotating the line on the plot both land
+		// here, and both mean "I have decided τ", so the lock flips to Fixed.
 		setTau(slope) {
+			this.pinCurrentLine();
 			const P = this.parentData.parentPlot.periodHrs;
 			const rd = this.fitRefDay;
 			const tod = this.fitTimeOfDayAt(rd);
 			this.fitSlope = slope;
 			this.fitIntercept = tod - (slope - P) * rd;
+			this.lockTau = 'fixed';
 		}
 		// Translate: set the time-of-day (θ) at the reference day, keeping τ fixed.
 		setTheta(tod) {
+			this.pinCurrentLine();
 			const P = this.parentData.parentPlot.periodHrs;
 			const rd = this.fitRefDay;
 			this.fitIntercept = tod - (this.fitSlope - P) * rd;
+			this.lockTheta = 'fixed';
+		}
+
+		// Lock switches. Going to Fixed pins the line where it is, so the only thing
+		// that changes is which parameter least squares is still free to move.
+		setLockTau(mode) {
+			if (mode === 'fixed') this.pinCurrentLine();
+			this.lockTau = mode;
+		}
+		setLockTheta(mode) {
+			if (mode === 'fixed') this.pinCurrentLine();
+			this.lockTheta = mode;
 		}
 
 		//Add a manual marker - the raw time clicked on
@@ -119,10 +176,6 @@
 		//Calculate the markers for the actogram
 		markers = $derived.by(() => {
 			const periodHrs = this.parentData.parentPlot.periodHrs;
-			// A fit line has no per-day markers — it's a directly-positioned line. Returning
-			// [] keeps markerPoints empty (no stray dot) without touching the drawn line,
-			// which comes from linearRegression (fitSlope/fitIntercept) above.
-			if (this.type === 'fitline') return [];
 			if (this.type === 'manual') {
 				// Group manual markers by day based on current periodHrs
 				const markersByDay = {};
@@ -225,15 +278,37 @@
 			return out;
 		});
 
-		linearRegression = $derived.by(() => {
-			// Eye-fit line: slope/intercept come straight from the user-positioned line,
-			// so everything that keys off linearRegression (the drawn <line>, τ display,
-			// estimatedPhase, harmonicCheck) works unchanged. A perfect "fit" by construction.
-			if (this.type === 'fitline') {
-				if (this.fitSlope == null || this.fitIntercept == null) return NaN;
-				return { slope: this.fitSlope, intercept: this.fitIntercept, rSquared: 1, rmse: 0 };
-			}
-			//get the selected markers
+		/**
+		 * Whether this block puts any marker dots on the figure.
+		 *
+		 * The `<path d={marker.markerPoints}>` at the bottom of the plot snippet is
+		 * NOT gated on `showMarkers` (that field is never read by the template, and
+		 * its `|| true` in the constructor means it is always true anyway). What
+		 * decides is simply whether `markerPoints` produced any path data: an empty
+		 * string is a path that draws nothing. A one-click line block has no
+		 * markers, so it is false for that and true for an onset/fit block.
+		 *
+		 * Exists so the legend asks the same question the renderer answers, instead
+		 * of re-deriving it from a field that looks authoritative and is not.
+		 */
+		markersDrawn = $derived(this.markerPoints !== '');
+
+		/**
+		 * Whether this block puts its fitted line on the figure. Mirrors the plot
+		 * snippet's gate exactly, INCLUDING the day-range clamp: a block whose
+		 * min-day is past its max-day draws no line even with `showLine` on.
+		 */
+		lineDrawn = $derived.by(() => {
+			if (!this.showLine || !this.linearRegression?.slope) return false;
+			const Ndays = this.parentData?.parentPlot?.Ndays ?? 0;
+			const lo = Math.max(1, this.lineMinDay ?? 1);
+			const hi = Math.min(Ndays, this.lineMaxDay ?? Ndays);
+			return hi >= lo;
+		});
+
+		// The selected markers in the fit's frame: x = 1-indexed day, y = absolute
+		// time. A line-only block has no markers, so this is empty for it.
+		fitPoints = $derived.by(() => {
 			let xs = [];
 			let ys = [];
 			for (let i = 0; i < this.markers.length; i++) {
@@ -244,9 +319,28 @@
 			}
 			//remove any NaNs
 			[xs, ys] = removeNullsFromXY(xs, ys);
-			//return an NaN if there are no values
-			if (xs.length == 0) return NaN;
-			return linearRegression(xs, ys);
+			return { xs, ys };
+		});
+
+		// Whether either parameter CAN be fitted: a source-less eye-fit line has no
+		// markers to fit to, so its locks must both stay Fixed.
+		canFit = $derived(this.fitPoints.xs.length > 0);
+
+		linearRegression = $derived.by(() => {
+			const { xs, ys } = this.fitPoints;
+			const tau = this.lockTau === 'fixed' ? this.tauValue : null;
+			const theta = this.lockTheta === 'fixed' ? this.thetaValue : null;
+			const res = fitLine(xs, ys, {
+				tau,
+				theta,
+				refDay: this.fitRefDay,
+				periodHrs: this.parentData.parentPlot.periodHrs
+			});
+			// NaN (rather than a half-finished object) is what every consumer already
+			// treats as "there is no line": no markers and nothing fixed to fall back
+			// on, or a single marker with both parameters free.
+			if (!Number.isFinite(res.slope) || !Number.isFinite(res.intercept)) return NaN;
+			return res;
 		});
 
 		// Predicted phase (marker time within periodHrs) at the line's start
@@ -347,8 +441,14 @@
 			this.id = _phaseMarkerCounter;
 			_phaseMarkerCounter++;
 			if (dataIN) {
+				// MIGRATION: `fitline` was its own type until v75.3, but by then it was
+				// only "a manual block with no markers and both parameters fixed", which
+				// is exactly what it becomes here. Same stored (fitSlope, fitIntercept),
+				// same locks, same drawn line — and now it can gain clicked markers and
+				// be switched back to Fit, which the dead-end type never could.
+				const legacyFitLine = dataIN.type === 'fitline';
 				this.name = dataIN.name || 'marker_' + this.id;
-				this.type = dataIN.type || 'onset';
+				this.type = legacyFitLine ? 'manual' : dataIN.type || 'onset';
 				this.centileThreshold = dataIN.centileThreshold || 50;
 				this.templateHrsBefore = dataIN.templateHrsBefore || 3;
 				this.templateHrsAfter = dataIN.templateHrsAfter || 3;
@@ -356,6 +456,12 @@
 				this.colour = dataIN.colour || parent?.colour || 'black';
 				this.fitSlope = dataIN.fitSlope ?? null;
 				this.fitIntercept = dataIN.fitIntercept ?? null;
+				// Migration: sessions saved before the locks existed carry neither field.
+				// A `fitline` was a line the user placed by hand (both parameters fixed);
+				// every other block was a plain least-squares fit (both free).
+				const lockDefault = legacyFitLine ? 'fixed' : 'fit';
+				this.lockTau = dataIN.lockTau ?? lockDefault;
+				this.lockTheta = dataIN.lockTheta ?? lockDefault;
 				this.showLine = dataIN.showLine || true;
 				this.showMarkers = dataIN.showMarkers || true;
 				this.lineWidth = dataIN.lineWidth || 1;
@@ -382,7 +488,9 @@
 				} else {
 					this.selectedPeriods = Array.from({ length: numPeriods }, () => true);
 				}
-				this.manualMarkers = dataIN.manualMarkers || [];
+				// A legacy `fitline` never had markers; keep it that way whatever the
+				// session happens to carry, so it still draws as a bare line.
+				this.manualMarkers = legacyFitLine ? [] : dataIN.manualMarkers || [];
 			}
 		}
 
@@ -404,7 +512,9 @@
 				selectedPeriods: this.selectedPeriods,
 				manualMarkers: this.manualMarkers,
 				fitSlope: this.fitSlope,
-				fitIntercept: this.fitIntercept
+				fitIntercept: this.fitIntercept,
+				lockTau: this.lockTau,
+				lockTheta: this.lockTheta
 			};
 		}
 
@@ -428,14 +538,25 @@
 				periodRangeMax: json.periodRangeMax,
 				manualMarkers: json.manualMarkers,
 				fitSlope: json.fitSlope,
-				fitIntercept: json.fitIntercept
+				fitIntercept: json.fitIntercept,
+				lockTau: json.lockTau,
+				lockTheta: json.lockTheta
 			});
 		}
 	}
 </script>
 
 <script>
+	import { onDestroy } from 'svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { recordInnerEdit } from '$lib/plots/seriesDelete.js';
+	import {
+		actogramPointToDayTime,
+		cursorForZone,
+		dragLine,
+		lineZoneAt,
+		pastThreshold
+	} from './lineDrag.js';
 
 	let { marker, which } = $props();
 	const xscale = $derived(
@@ -444,6 +565,225 @@
 			.range([0, marker.parentData.parentPlot.plotwidth])
 	);
 	let addMarkerButtonText = $state('Add markers');
+
+	// The number shown beside each lock: always the value of the line as DRAWN, so a
+	// fitted parameter reads out its fitted value and flipping that lock to Fixed
+	// keeps the same number (pinCurrentLine holds the line still).
+	function fmtLockValue(m, key) {
+		const reg = m.linearRegression;
+		const hasLine = reg && typeof reg === 'object';
+		const P = m.parentData.parentPlot.periodHrs;
+		const v = hasLine
+			? key === 'tau'
+				? reg.slope
+				: (reg.slope - P) * m.fitRefDay + reg.intercept
+			: key === 'tau'
+				? m.tauValue
+				: m.thetaValue;
+		return Number.isFinite(v) ? v.toFixed(3) : '';
+	}
+
+	// Absent statistics read as a dash, never as a fabricated number.
+	function fmtStat(v) {
+		return Number.isFinite(v) ? v.toFixed(3) : '\u2013';
+	}
+
+	// ---------------------------------------------------------------------------
+	// DRAGGING THE LINE
+	//
+	// The maths lives in lineDrag.js; this is only the plumbing: pointer pixels in,
+	// setTau/setTheta out. Three things it has to get right:
+	//
+	//  1. LAZY CAPTURE. setPointerCapture is taken on the first move past a few
+	//     pixels, never on pointerdown. Capturing eagerly is what broke the
+	//     in-canvas buttons in v62.4 (fixed in v62.5, commit 1540c9e5).
+	//  2. ONE UNDO STEP. Moves mutate the live marker so the line follows the
+	//     finger; only pointerup records, by rewinding to the pre-drag values and
+	//     replaying the final ones through recordInnerEdit (the setPlotInner op).
+	//     A press that did not move records nothing.
+	//  3. NOT ALSO A CLICK. pointerdown stops propagation so the gesture cannot
+	//     pan the canvas or start a marquee, and a moved gesture swallows the
+	//     click that follows so it cannot also drop a manual marker. A press that
+	//     did not move is left alone, so clicking through the line still works,
+	//     and while "Add markers" is armed the line does not take the pointer at
+	//     all.
+	// ---------------------------------------------------------------------------
+	let hoverZone = $state('middle');
+	let dragging = $state(false);
+	/** @type {any} */
+	let gesture = null;
+	/** @type {((e: Event) => void) | null} */
+	let clickSwallower = null;
+
+	function lineGeom(m) {
+		const p = m.parentData.parentPlot;
+		return {
+			padLeft: p.padding.left,
+			padTop: p.padding.top,
+			plotwidth: p.plotwidth,
+			eachplotheight: p.eachplotheight,
+			spaceBetween: p.spaceBetween,
+			periodHrs: p.periodHrs,
+			doublePlot: p.doublePlot
+		};
+	}
+
+	/** The drawn day span, exactly as the `plot` snippet clamps it. */
+	function lineSpan(m) {
+		const Ndays = m.parentData.parentPlot.Ndays;
+		return { lo: Math.max(1, m.lineMinDay ?? 1), hi: Math.min(Ndays, m.lineMaxDay ?? Ndays) };
+	}
+
+	// `ownerSVGElement` is the direct route; the walk up is the fallback, because
+	// jsdom leaves ownerSVGElement null on an SVG child.
+	function ownerSvg(el) {
+		if (el.ownerSVGElement) return el.ownerSVGElement;
+		let n = el.parentNode;
+		while (n && n.nodeType === 1) {
+			if (n.localName === 'svg') return n;
+			n = n.parentNode;
+		}
+		return null;
+	}
+
+	// Client pixels to the plot SVG's own pixel frame. The host's rect is measured
+	// rather than using offsetX/offsetY because the plot can sit inside a scaled
+	// workflow-canvas transform, where the two differ by the zoom factor. With no
+	// laid-out host (an unattached tree, or jsdom) the rect is empty, and client
+	// pixels then ARE the plot's own pixels.
+	function pointerDayTime(el, clientX, clientY, m, geom) {
+		const r = ownerSvg(el)?.getBoundingClientRect() ?? { left: 0, top: 0, width: 0, height: 0 };
+		const p = m.parentData.parentPlot;
+		const sx = r.width ? p.viewWidth / r.width : 1;
+		const sy = r.height ? p.viewHeight / r.height : 1;
+		return actogramPointToDayTime((clientX - r.left) * sx, (clientY - r.top) * sy, geom);
+	}
+
+	function handleLineHover(e, m) {
+		if (dragging) return;
+		const at = pointerDayTime(e.currentTarget, e.clientX, e.clientY, m, lineGeom(m));
+		hoverZone = lineZoneAt(at.day, lineSpan(m));
+	}
+
+	function handleLinePointerDown(e, m) {
+		if (e.button != null && e.button !== 0) return;
+		// "Add markers" is armed: the plot's click-to-place owns this pointer.
+		if (m.parentData.parentPlot.isAddingMarkerTo >= 0) return;
+		const reg = m.linearRegression;
+		if (!reg || typeof reg !== 'object') return;
+		e.stopPropagation();
+		e.preventDefault();
+		releaseClickSwallower();
+
+		const geom = lineGeom(m);
+		const grab = pointerDayTime(e.currentTarget, e.clientX, e.clientY, m, geom);
+		const refDay = m.fitRefDay;
+		gesture = {
+			marker: m,
+			geom,
+			el: e.currentTarget,
+			pointerId: e.pointerId,
+			zone: lineZoneAt(grab.day, lineSpan(m)),
+			grab,
+			startClient: { x: e.clientX, y: e.clientY },
+			// The line as DRAWN, which is what the user is grabbing.
+			tau: reg.slope,
+			theta: (reg.slope - geom.periodHrs) * refDay + reg.intercept,
+			refDay,
+			before: {
+				fitSlope: m.fitSlope,
+				fitIntercept: m.fitIntercept,
+				lockTau: m.lockTau,
+				lockTheta: m.lockTheta
+			},
+			moved: false
+		};
+		hoverZone = gesture.zone;
+		window.addEventListener('pointermove', handleLinePointerMove);
+		window.addEventListener('pointerup', handleLinePointerUp);
+		window.addEventListener('pointercancel', handleLinePointerUp);
+	}
+
+	function handleLinePointerMove(e) {
+		const g = gesture;
+		if (!g) return;
+		if (!g.moved) {
+			if (!pastThreshold(e.clientX - g.startClient.x, e.clientY - g.startClient.y)) return;
+			g.moved = true;
+			dragging = true;
+			try {
+				g.el.setPointerCapture(g.pointerId);
+			} catch {
+				// Some pointers (and jsdom) cannot be captured; the window listeners
+				// above already deliver every move, so the drag still works.
+			}
+		}
+		const pointer = pointerDayTime(g.el, e.clientX, e.clientY, g.marker, g.geom);
+		const next = dragLine({
+			zone: g.zone,
+			grab: g.grab,
+			pointer,
+			tau: g.tau,
+			theta: g.theta,
+			refDay: g.refDay,
+			periodHrs: g.geom.periodHrs
+		});
+		if (!next) return;
+		if (next.theta != null) g.marker.setTheta(next.theta);
+		else g.marker.setTau(next.tau);
+	}
+
+	function handleLinePointerUp() {
+		const g = gesture;
+		if (!g) return;
+		endGesture();
+		if (!g.moved) return;
+		// Swallow the click this gesture is about to produce, so the drag does not
+		// also drop a manual marker through the actogram's own click handler.
+		clickSwallower = (ev) => {
+			ev.stopPropagation();
+			clickSwallower = null;
+		};
+		window.addEventListener('click', clickSwallower, { capture: true, once: true });
+
+		const m = g.marker;
+		const after = {
+			fitSlope: m.fitSlope,
+			fitIntercept: m.fitIntercept,
+			lockTau: m.lockTau,
+			lockTheta: m.lockTheta
+		};
+		// Rewind, then replay through the op layer: the whole gesture lands on the
+		// undo stack as ONE step (recordInnerEdit no-ops when nothing changed).
+		Object.assign(m, g.before);
+		recordInnerEdit(m.parentData.parentPlot, () => Object.assign(m, after));
+	}
+
+	function endGesture() {
+		const g = gesture;
+		gesture = null;
+		dragging = false;
+		window.removeEventListener('pointermove', handleLinePointerMove);
+		window.removeEventListener('pointerup', handleLinePointerUp);
+		window.removeEventListener('pointercancel', handleLinePointerUp);
+		if (!g) return;
+		try {
+			g.el.releasePointerCapture(g.pointerId);
+		} catch {
+			// Never captured, or the pointer is already gone.
+		}
+	}
+
+	function releaseClickSwallower() {
+		if (!clickSwallower) return;
+		window.removeEventListener('click', clickSwallower, { capture: true });
+		clickSwallower = null;
+	}
+
+	onDestroy(() => {
+		endGesture();
+		releaseClickSwallower();
+	});
 </script>
 
 {#snippet controls(marker)}
@@ -465,19 +805,13 @@
 				</button>
 			</div>
 		</div>
-		{#if marker.type === 'fitline'}
-			<ControlInput label="Type">
-				<span class="fitline-type-label">Fit line</span>
-			</ControlInput>
-		{:else}
-			<ControlInput label="Type">
-				<select bind:value={marker.type}>
-					<option value="onset">Onset</option>
-					<option value="offset">Offset</option>
-					<option value="manual">Manual</option>
-				</select>
-			</ControlInput>
-		{/if}
+		<ControlInput label="Type">
+			<select bind:value={marker.type}>
+				<option value="onset">Onset</option>
+				<option value="offset">Offset</option>
+				<option value="manual">Manual</option>
+			</select>
+		</ControlInput>
 
 		<div class="control-input-color">
 			<div class="control-color">
@@ -509,7 +843,7 @@
 					}}>{addMarkerButtonText}</button
 				>
 			</div>
-		{:else if marker.type !== 'fitline'}
+		{:else}
 			<div class="control-input-horizontal">
 				<ControlInput label="N">
 					<NumberWithUnits min="0" max="100" bind:value={marker.templateHrsBefore} />
@@ -524,40 +858,6 @@
 				</ControlInput>
 			</div>
 		{/if}
-		{#if marker.type === 'fitline'}
-			{@const P = marker.parentData.parentPlot.periodHrs}
-			<div class="control-input-horizontal">
-				<ControlInput label="τ (period, hrs)">
-					<input
-						type="number"
-						class="marker-value-input"
-						min="1"
-						step="0.05"
-						value={(marker.fitSlope ?? P).toFixed(3)}
-						onchange={(e) => {
-							const v = parseFloat(/** @type {HTMLInputElement} */ (e.currentTarget).value);
-							if (!isNaN(v)) marker.setTau(v);
-						}}
-					/>
-				</ControlInput>
-				<ControlInput label="θ @ start (hrs)">
-					<input
-						type="number"
-						class="marker-value-input"
-						step="0.05"
-						value={marker.fitTimeOfDayAt(marker.fitRefDay).toFixed(3)}
-						onchange={(e) => {
-							const v = parseFloat(/** @type {HTMLInputElement} */ (e.currentTarget).value);
-							if (!isNaN(v)) marker.setTheta(v);
-						}}
-					/>
-				</ControlInput>
-			</div>
-			<p class="fitline-hint">
-				Set the day range below, then drag the line on the plot to fit the activity
-				onsets (τ = slope, θ = start time).
-			</p>
-		{:else}
 		<div>
 			<div class="period-selection-header">
 				<p>Periods</p>
@@ -630,7 +930,72 @@
 				{/each}
 			</div>
 		</div>
-		{/if}
+
+		<!-- Per-parameter locks: τ (slope) and θ (phase at the reference day) are each
+		     either fitted from the selected markers or fixed at a value the user set.
+		     "Fit" is disabled when there are no markers to fit to. -->
+		<div class="lock-block">
+			<p class="lock-title">Line fit</p>
+			{#each [{ key: 'tau', label: 'τ (hrs)', title: 'τ: the period, i.e. the slope of the line', mode: marker.lockTau }, { key: 'theta', label: 'θ (hrs)', title: 'θ: the phase, i.e. the time of day the line crosses at the reference day', mode: marker.lockTheta }] as param (param.key)}
+				<div class="lock-row">
+					<span class="lock-label" title={param.title}>{param.label}</span>
+					<div class="segmented small" role="radiogroup" aria-label={param.label}>
+						<label
+							class:active={param.mode === 'fit'}
+							class:disabled={!marker.canFit}
+							title={marker.canFit
+								? 'Fit this parameter to the selected markers'
+								: 'No markers to fit to; this line is positioned by hand'}
+						>
+							<input
+								type="radio"
+								name={'lock-' + param.key + '-' + marker.id}
+								value="fit"
+								checked={param.mode === 'fit'}
+								disabled={!marker.canFit}
+								onchange={() =>
+									param.key === 'tau' ? marker.setLockTau('fit') : marker.setLockTheta('fit')}
+							/>
+							Fit
+						</label>
+						<label
+							class:active={param.mode === 'fixed'}
+							title="Hold this parameter at the value beside it"
+						>
+							<input
+								type="radio"
+								name={'lock-' + param.key + '-' + marker.id}
+								value="fixed"
+								checked={param.mode === 'fixed'}
+								onchange={() =>
+									param.key === 'tau' ? marker.setLockTau('fixed') : marker.setLockTheta('fixed')}
+							/>
+							Fixed
+						</label>
+					</div>
+					<input
+						type="number"
+						class="marker-value-input lock-value"
+						step="0.05"
+						min={param.key === 'tau' ? 1 : undefined}
+						disabled={param.mode !== 'fixed'}
+						value={fmtLockValue(marker, param.key)}
+						onchange={(e) => {
+							const v = parseFloat(/** @type {HTMLInputElement} */ (e.currentTarget).value);
+							if (isNaN(v)) return;
+							if (param.key === 'tau') marker.setTau(v);
+							else marker.setTheta(v);
+						}}
+					/>
+				</div>
+			{/each}
+			{#if marker.showLine}
+				<p class="lock-hint">
+					On the plot, drag the middle of the line to shift θ, or either end to change τ. Dragging
+					fixes that parameter.
+				</p>
+			{/if}
+		</div>
 
 		{#if marker.linearRegression?.slope}
 			<!-- <p>Drawn τ: {marker.linearRegression.slope.toFixed(2)} hrs</p> -->
@@ -674,26 +1039,25 @@
 				</ControlInput>
 			{/if}
 
-			<!-- R²/RMSE are meaningless for a directly-drawn fit line (perfect by
-			     construction), so only show them for fitted markers. -->
-			{#if marker.type !== 'fitline'}
-				<p>
-					R²: {marker.linearRegression.rSquared.toFixed(3)}
-					<StoreValueButton
-						label="R²"
-						getter={() => marker.linearRegression.rSquared}
-						defaultName={'marker_r_squared_' + marker.name}
-						source={'Actogram phase marker (' + marker.name + ')'}
-					/>
-					&ensp;Error: {marker.linearRegression.rmse.toFixed(3)}
-					<StoreValueButton
-						label="RMSE"
-						getter={() => marker.linearRegression.rmse}
-						defaultName={'marker_rmse_' + marker.name}
-						source={'Actogram phase marker (' + marker.name + ')'}
-					/>
-				</p>
-			{/if}
+			<!-- R²/RMSE always describe the line as DRAWN against this block's selected
+			     markers, in every lock combination. A line with no markers to compare
+			     against reports a dash, not a fabricated 1 / 0. -->
+			<p>
+				R²: {fmtStat(marker.linearRegression.rSquared)}
+				<StoreValueButton
+					label="R²"
+					getter={() => marker.linearRegression.rSquared}
+					defaultName={'marker_r_squared_' + marker.name}
+					source={'Actogram phase marker (' + marker.name + ')'}
+				/>
+				&ensp;Error: {fmtStat(marker.linearRegression.rmse)}
+				<StoreValueButton
+					label="RMSE"
+					getter={() => marker.linearRegression.rmse}
+					defaultName={'marker_rmse_' + marker.name}
+					source={'Actogram phase marker (' + marker.name + ')'}
+				/>
+			</p>
 
 			<div class="control-input-checkbox">
 				<input type="checkbox" bind:checked={marker.showLine} />
@@ -736,7 +1100,10 @@
 {/snippet}
 
 {#snippet plot(marker)}
-	{#if marker.showLine && marker.linearRegression?.slope}
+	<!-- `lineDrawn` folds in the day-range clamp below as well, so the legend can ask
+	     one question and get the same answer this gate gives. The inner `{#if hi >= lo}`
+	     stays because the coordinates are computed from lo/hi. -->
+	{#if marker.lineDrawn}
 		{@const Ndays = marker.parentData.parentPlot.Ndays}
 		{@const eph = marker.parentData.parentPlot.eachplotheight}
 		{@const sb = marker.parentData.parentPlot.spaceBetween}
@@ -751,13 +1118,24 @@
 			<!-- y at top of day d (0-indexed) = padTop + d*(eph+sb).
 			     y at bottom of day d         = padTop + d*(eph+sb) + eph.
 			     x at top of day d            = intercept + d*dx. -->
+			{@const x1 = xscale(marker.linearRegression.intercept + (lo - 1) * dx) + padLeft}
+			{@const y1 = padTop + (lo - 1) * (eph + sb)}
+			{@const x2 = xscale(marker.linearRegression.intercept + hi * dx) + padLeft}
+			{@const y2 = padTop + (hi - 1) * (eph + sb) + eph}
+			<line {x1} {y1} {x2} {y2} stroke={marker.colour} stroke-width={marker.lineWidth} />
+			<!-- A wide transparent stroke on top, so a 2 px line is still grabbable.
+			     `visibleStroke` is the same idiom Line.svelte uses for its hit area. -->
 			<line
-				x1={xscale(marker.linearRegression.intercept + (lo - 1) * dx) + padLeft}
-				y1={padTop + (lo - 1) * (eph + sb)}
-				x2={xscale(marker.linearRegression.intercept + hi * dx) + padLeft}
-				y2={padTop + (hi - 1) * (eph + sb) + eph}
-				stroke={marker.colour}
-				stroke-width={marker.lineWidth}
+				class="line-handle"
+				{x1}
+				{y1}
+				{x2}
+				{y2}
+				stroke="transparent"
+				stroke-width={Math.max(14, marker.lineWidth * 4)}
+				style:cursor={cursorForZone(hoverZone, dragging)}
+				onpointerdown={(e) => handleLinePointerDown(e, marker)}
+				onpointermove={(e) => handleLineHover(e, marker)}
 			/>
 		{/if}
 	{/if}
@@ -771,6 +1149,19 @@
 {/if}
 
 <style>
+	/* The line's grab area: invisible, wide, and it must not scroll the page on
+	   touch or the drag would fight the browser's own panning. */
+	.line-handle {
+		pointer-events: visibleStroke;
+		touch-action: none;
+	}
+
+	.lock-hint {
+		font-size: var(--font-xs);
+		color: var(--color-lightness-45);
+		margin: 0;
+	}
+
 	.period-selection-header {
 		display: flex;
 		justify-content: space-between;
@@ -846,5 +1237,98 @@
 	.marker-value-input:focus {
 		outline: none;
 		border-color: #007bff;
+	}
+
+	/* Per-parameter lock rows. The control panel is narrow, so the label column is
+	   fixed and the segmented switch and value field share the rest on one line. */
+	.lock-block {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		margin: var(--space-2) 0;
+	}
+
+	.lock-row {
+		display: grid;
+		grid-template-columns: 1fr auto 70px;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.lock-title {
+		font-size: var(--font-sm);
+		color: var(--color-lightness-35);
+		margin: 0;
+	}
+
+	.lock-label {
+		font-size: var(--font-xs);
+		color: var(--color-lightness-35);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.lock-value {
+		width: 100%;
+	}
+
+	.lock-value:disabled {
+		background: var(--color-lightness-96);
+		color: var(--color-lightness-60);
+		cursor: not-allowed;
+	}
+
+	.segmented {
+		display: inline-flex;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm);
+		overflow: hidden;
+	}
+
+	.segmented label {
+		padding: 0.1rem 0.5rem;
+		font-size: var(--font-xs);
+		line-height: 1.5;
+		color: var(--color-lightness-35);
+		cursor: pointer;
+		user-select: none;
+		background: var(--surface-card);
+		transition:
+			background 0.15s,
+			color 0.15s;
+	}
+
+	.segmented label + label {
+		border-left: 1px solid var(--color-lightness-85);
+	}
+
+	.segmented label:hover {
+		background: var(--color-lightness-97);
+	}
+
+	.segmented label.active {
+		background: var(--color-accent-fill);
+		color: white;
+		font-weight: 600;
+	}
+
+	.segmented label.disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
+	.segmented label:focus-within {
+		box-shadow: var(--shadow-focus-soft);
+	}
+
+	/* Visually hidden radios; the label carries the state. */
+	.segmented input {
+		position: absolute;
+		opacity: 0;
+		width: 1px;
+		height: 1px;
+		margin: 0;
+		pointer-events: none;
 	}
 </style>

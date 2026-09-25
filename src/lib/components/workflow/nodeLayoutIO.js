@@ -75,3 +75,48 @@ export function parseNodeLayout(layout) {
 
 	return { positions, collapsedIds, sizes };
 }
+
+/**
+ * Does a parsed layout already describe the editor's live state?
+ *
+ * The adopt-on-import effect uses this to skip layouts that would change
+ * nothing. Its other guard compares object IDENTITY against the last layout the
+ * editor itself wrote, which only holds while ONE editor owns core.nodeLayout.
+ * Two mounted editors (the canvas view plus the legacy fullscreen one) each keep
+ * their own identity guard, so neither recognises the other's write: A adopts
+ * B's layout, A's mirror writes a fresh object, B adopts that, and the two
+ * effects re-trigger each other forever (Svelte's effect_update_depth_exceeded).
+ * Comparing CONTENT stops that at the first exchange, because after one round
+ * trip both editors hold the same positions.
+ *
+ * @param {{positions?: Record<string,{x:number,y:number}>,
+ *          collapsedIds?: Set<string>|Iterable<string>,
+ *          sizes?: Record<string,{w:number,h:number}>}} parsed
+ * @param {{positions?: Record<string,{x:number,y:number}>,
+ *          collapsedIds?: Set<string>|Iterable<string>,
+ *          sizes?: Record<string,{w:number,h:number}>}} state
+ * @returns {boolean}
+ */
+export function nodeLayoutMatches(parsed, state) {
+	const samePoints = (a = {}, b = {}, keys) => {
+		const ak = Object.keys(a);
+		if (ak.length !== Object.keys(b).length) return false;
+		for (const id of ak) {
+			const x = a[id];
+			const y = b[id];
+			if (!y) return false;
+			for (const k of keys) if (Number(x?.[k]) !== Number(y?.[k])) return false;
+		}
+		return true;
+	};
+
+	const aIds = new Set(parsed?.collapsedIds ?? []);
+	const bIds = new Set(state?.collapsedIds ?? []);
+	if (aIds.size !== bIds.size) return false;
+	for (const id of aIds) if (!bIds.has(id)) return false;
+
+	return (
+		samePoints(parsed?.positions, state?.positions, ['x', 'y']) &&
+		samePoints(parsed?.sizes, state?.sizes, ['w', 'h'])
+	);
+}

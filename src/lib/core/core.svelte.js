@@ -441,13 +441,11 @@ export const appState = $state({
 	showAYSModal: false, // AreYouSure modal
 	AYStext: '',
 	AYScallback: null,
-	AYSoptions: ['Yes', 'No'],
-
-	showWorkflow: false
+	AYSoptions: ['Yes', 'No']
 });
 
 export const appConsts = $state({
-	version: 'β.75.2',
+	version: 'β.76.1',
 	processMap: new Map(),
 	plotMap: new Map(),
 	tableProcessMap: new Map(),

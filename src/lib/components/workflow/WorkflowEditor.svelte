@@ -83,7 +83,7 @@
 		compactNodeHeight,
 		compactPortAnchorY
 	} from './nodeGeometry.js';
-	import { buildNodeLayout, parseNodeLayout } from './nodeLayoutIO.js';
+	import { buildNodeLayout, nodeLayoutMatches, parseNodeLayout } from './nodeLayoutIO.js';
 
 	let { inline = false } = $props();
 
@@ -610,6 +610,29 @@
 		if (!cl || Object.keys(cl).length === 0) return; // nothing to adopt
 		untrack(() => {
 			const { positions: pos, collapsedIds: collapsed, sizes } = parseNodeLayout(cl);
+			// Second guard, on CONTENT rather than identity: adopting a layout we already
+			// match would write stablePositions for no reason, and that write is what the
+			// mirror effect below listens to. The identity guard alone only holds while a
+			// single editor owns core.nodeLayout. The legacy fullscreen `showWorkflow`
+			// branch in +page.svelte used to mount a SECOND WorkflowEditor alongside the
+			// canvas one (that branch is gone, but nothing stops a future caller from
+			// mounting two), and each instance's `_mirroredLayout` is blind to the
+			// other's write. The
+			// two then chase each other forever: A adopts B's layout, A's mirror publishes
+			// a brand-new object, B adopts that, and so on until Svelte gives up with
+			// effect_update_depth_exceeded. With this check the exchange stops after one
+			// round trip, because by then both editors hold identical positions.
+			if (
+				nodeLayoutMatches(
+					{ positions: pos, collapsedIds: collapsed, sizes },
+					{ positions: stablePositions, collapsedIds: collapsedNodeIds, sizes: plotPreviewSizes }
+				)
+			) {
+				// Still claim it, so the identity guard short-circuits the next run.
+				_mirroredLayout = cl;
+				_importedLayout = cl;
+				return;
+			}
 			stablePositions = pos;
 			collapsedNodeIds = collapsed;
 			// Restore resized plot preview boxes. Clear first so a node the
@@ -4107,17 +4130,6 @@
 	role="presentation"
 	tabindex="-1"
 >
-	{#if !inline}
-		<!-- Legacy fullscreen-modal mode keeps the close-X only. The "+ Plot" / "+ TP"
-		     header buttons moved into NodePalette so canvas mode is chrome-free. -->
-		<button
-			class="close-btn legacy-only"
-			onclick={() => (appState.showWorkflow = false)}
-			aria-label="Close workflow"
-			{@attach tooltip('Close workflow')}>✕</button
-		>
-	{/if}
-
 	{#if multiSelectedNodeIds.size >= 2 || compositeSelection.canUncombine}
 		<div class="selection-toolbar-host">
 			<SelectionLayoutToolbar
@@ -4517,28 +4529,6 @@
 		   but drops the modal overlay z-index and the close-X chrome. */
 		z-index: 1;
 		border-left: none;
-	}
-
-	/* Legacy fullscreen-modal mode only: the close-X overlay button. */
-	.close-btn.legacy-only {
-		position: absolute;
-		top: 8px;
-		right: 12px;
-		z-index: 40;
-	}
-
-	.close-btn {
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		color: var(--color-lightness-35);
-		font-size: 16px;
-		padding: 0 4px;
-		flex-shrink: 0;
-	}
-
-	.close-btn:hover {
-		color: var(--color-lightness-25);
 	}
 
 	.canvas-viewport {
