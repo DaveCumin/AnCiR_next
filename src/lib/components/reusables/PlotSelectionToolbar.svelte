@@ -1,9 +1,11 @@
 <script>
 	// @ts-nocheck
-	// Floating toolbar shown when exactly ONE plot is selected in the workspace.
+	// Floating toolbar shown when exactly ONE plot or facet panel is selected in the
+	// workspace. `plot` is a Plot or a FacetPanel (same surface: id, type, plot).
 	// - Zoom: toggles zoom mode for this plot (drag-to-box-zoom + scroll-to-zoom).
 	//         Shift+scroll always zooms regardless (handled in the plot).
-	// - Reset: clears the zoom back to auto limits (also resets facet siblings' x).
+	// - Reset: clears the zoom back to auto limits (on a panel: the shared x on the
+	//         generator and this panel's y override).
 	// - Save: the same PNG/SVG/data export menu the control panel offers.
 	// Presentational shell around shared helpers; positioned by the parent host.
 	import Icon from '$lib/icons/Icon.svelte';

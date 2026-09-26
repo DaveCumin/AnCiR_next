@@ -1,65 +1,78 @@
 // plotZoom.js
 //
-// Applying brush-zoom limits to a plot, with facet "link-zoom" propagation.
+// Applying brush-zoom limits to a plot or a facet PANEL, with the facet "link-zoom".
 //
-// A facet set is one generator plot (`facet` truthy) plus its per-series child
-// plots (each carrying `facetParent === generator.id`). Small multiples share
-// the X axis (typically time) but each child shows a DIFFERENT series, so the Y
-// range is meaningful per-plot. Link-zoom therefore shares the x-range across
-// the whole set while keeping y-limits local to the plot the user brushed.
+// A faceted plot is one generator plus N derived panels (core/facetPanels.svelte.js). Small
+// multiples share the X axis (typically time) but each panel shows a DIFFERENT series, so
+// the Y range is meaningful per panel. Link-zoom therefore writes the x-limits ONCE, on the
+// generator's inner (every panel projects it), and the y-limits to the brushed panel's
+// override (`generator.facetOverrides[unitKey]`, plan 1.6), which only that panel's
+// projection applies. A standalone plot gets everything on its own inner, as before.
 //
-// Pure module (no `core`/Svelte import) so callers pass the plot list in and it
-// stays unit-testable. Each `plot` is an outer Plot ({ id, facet, facetParent,
-// plot }) whose inner `.plot` holds the `*IN` limit-override arrays.
+// Plain writes, not history ops: brush and wheel zoom were never undo steps (they write the
+// same *IN limit overrides the axis inputs edit, and a wheel tick per step would flood the
+// stack), and a half-recorded zoom (y on the stack, x not) would be worse than neither.
+// The control panel's per-panel editor (Phase 2) records through the setFacetOverride op.
+//
+// No `core` import: a ref carries everything (a panel knows its generator), so this stays
+// unit-testable on stand-ins.
+import { overridePathRoot } from '$lib/core/facetOverrides.js';
 
 /**
  * @typedef {{ xlims?: (number|null)[], ylimsLeft?: (number|null)[]|null, ylimsRight?: (number|null)[]|null }} Limits
  */
 
-/** Write limit overrides onto one plot's inner model. Missing keys are skipped. */
-function applyLimitsToPlot(plot, limits, { xOnly = false } = {}) {
-	const p = plot?.plot;
-	if (!p) return;
-	if (limits.xlims) p.xlimsIN = [...limits.xlims];
-	if (xOnly) return;
-	if (limits.ylimsLeft) p.ylimsLeftIN = [...limits.ylimsLeft];
-	if (limits.ylimsRight) p.ylimsRightIN = [...limits.ylimsRight];
-}
+const isPanel = (ref) => ref != null && typeof ref === 'object' && ref.generator != null;
+const isReset = (pair) => Array.isArray(pair) && pair.every((v) => v == null);
 
 /**
- * The facet set a plot belongs to: [generator, ...children]. Returns just
- * [plot] for a standalone plot. Order is not significant to callers.
- * @param {any} plot
- * @param {any[]} allPlots
- * @returns {any[]}
+ * Write one axis-limit key for a ref.
+ *
+ * - a plot: `ref.plot[key] = value`;
+ * - a panel, `shared` (an x axis): the generator's inner, so every panel follows;
+ * - a panel, not shared (a y axis): the panel's override entry. An all-null pair REMOVES the
+ *   override (the panel falls back to the generator's value), so a reset leaves no trace.
+ *
+ * @param {any} ref a Plot or a FacetPanel
+ * @param {string} key an inner limit key ('xlimsIN', 'ylimsLeftIN', 'periodlimsIN', ...)
+ * @param {(number|null)[]} value copied, never aliased
+ * @param {{ shared?: boolean }} [opts]
  */
-export function facetSetFor(plot, allPlots = []) {
-	if (!plot) return [];
-	if (plot.facetParent != null) {
-		const parentId = plot.facetParent;
-		const parent = allPlots.find((q) => q.id === parentId);
-		const kids = allPlots.filter((q) => q.facetParent === parentId);
-		return parent ? [parent, ...kids] : kids;
+export function writeAxisLimit(ref, key, value, { shared = false } = {}) {
+	if (!ref || !Array.isArray(value)) return;
+	if (!isPanel(ref)) {
+		if (ref.plot) ref.plot[key] = [...value];
+		return;
 	}
-	if (plot.facet) {
-		return [plot, ...allPlots.filter((q) => q.facetParent === plot.id)];
+	const gen = ref.generator;
+	if (shared) {
+		if (gen.plot) gen.plot[key] = [...value];
+		return;
 	}
-	return [plot];
+	if (!gen.facetOverrides || typeof gen.facetOverrides !== 'object') gen.facetOverrides = {};
+	const map = gen.facetOverrides;
+	// Every path under this key goes: the whole-key form and any leaf form (`ylimsLeftIN[0]`,
+	// which the migration writes). A brush supersedes both, and a reset must leave neither.
+	const entry = map[ref.unitKey];
+	if (entry) {
+		for (const path of Object.keys(entry)) if (overridePathRoot(path) === key) delete entry[path];
+		if (Object.keys(entry).length === 0) delete map[ref.unitKey];
+	}
+	if (isReset(value)) return;
+	if (!map[ref.unitKey]) map[ref.unitKey] = {};
+	map[ref.unitKey][key] = [...value];
 }
 
 /**
- * Apply zoom limits to `plot`, propagating the x-range to its facet siblings.
- * The brushed plot gets the full x+y limits; siblings get only the shared x.
- * @param {any} plot   the plot the user brushed
+ * Apply scatterplot zoom limits to `ref` (a plot or a panel). On a panel the x-range is
+ * shared across the whole facet set and the y-limits stay with the brushed panel.
+ * Missing keys are skipped; a null pair resets that axis.
+ * @param {any} ref   the plot or panel the user brushed
  * @param {Limits} limits
- * @param {any[]} allPlots  full plot list (e.g. core.plots)
  */
-export function applyLinkedZoom(plot, limits, allPlots = []) {
-	applyLimitsToPlot(plot, limits);
-	const set = facetSetFor(plot, allPlots);
-	if (set.length <= 1) return;
-	for (const member of set) {
-		if (member === plot || (member?.id != null && member.id === plot?.id)) continue;
-		applyLimitsToPlot(member, limits, { xOnly: true });
-	}
+export function applyLinkedZoom(ref, limits) {
+	if (!ref || !limits) return;
+	if (limits.xlims) writeAxisLimit(ref, 'xlimsIN', limits.xlims, { shared: true });
+	if (limits.ylimsLeft) writeAxisLimit(ref, 'ylimsLeftIN', limits.ylimsLeft);
+	if (limits.ylimsRight) writeAxisLimit(ref, 'ylimsRightIN', limits.ylimsRight);
 }

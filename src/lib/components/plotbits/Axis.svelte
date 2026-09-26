@@ -82,8 +82,9 @@
 		title = 'Axis',
 		// This figure's style (core/Plot.svelte -> Plot.style), passed by the plot that
 		// renders this axis. A PROP rather than context on purpose: Axis is rendered from
-		// four different host components, and a facet child carries its OWN style, so
-		// "nearest ancestor" is not the same thing as "the figure this axis belongs to".
+		// four different host components, and a facet panel reads its generator's style
+		// through its own parentBox, so "nearest ancestor" is not the same thing as "the
+		// figure this axis belongs to".
 		// Absent in the controls branch and in tests, where the defaults apply.
 		figureStyle = null
 	} = $props();

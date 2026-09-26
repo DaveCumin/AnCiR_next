@@ -33,6 +33,12 @@ export const mutationService = {
 	setPlotInner(id, inner) {
 		applyOp({ kind: 'setPlotInner', id, inner });
 	},
+	// One path of one facet panel's override (plan 1.6). `value` undefined removes it.
+	setFacetOverride(id, unitKey, path, value) {
+		const op = { kind: 'setFacetOverride', id, unitKey, path };
+		if (value !== undefined) op.value = value;
+		applyOp(op);
+	},
 
 	// --- Column ops ---
 	addColumn(columnData) {

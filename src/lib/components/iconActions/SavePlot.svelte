@@ -18,7 +18,7 @@
 	// dimensions are never remembered: they belong to the plot.
 	import { untrack } from 'svelte';
 	import Modal from '$lib/components/reusables/Modal.svelte';
-	import { core } from '$lib/core/core.svelte';
+	import { resolvePlotRef, ownerPlotOf } from '$lib/core/plotRefs.js';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { PX_PER_MM, physicalWidthPx } from '$lib/plots/figureStyle.js';
 	import {
@@ -42,7 +42,9 @@
 
 	const ids = $derived(normalisePlotIds(Id));
 	const multi = $derived(ids.length > 1);
-	const plotById = (id) => core.plots.find((p) => p.id === id) ?? null;
+	// A plot or a facet PANEL (string id): a panel carries the same surface (name, style,
+	// width, height, plot), so the dialog pages through panels exactly as through plots.
+	const plotById = (id) => resolvePlotRef(id);
 	const firstPlot = $derived(plotById(ids[0]));
 	const heading = $derived(
 		multi ? `Save ${ids.length} plots` : `Save ${firstPlot?.name ?? 'plot'}`
@@ -299,13 +301,22 @@
 		for (const id of ids) {
 			const plot = plotById(id);
 			if (!plot) continue;
+			// The ops address the PLOT: for a panel that is its generator (whose size and
+			// style every panel shares), so one op per generator however many panels paged.
+			const targetId = ownerPlotOf(plot)?.id ?? id;
+			if (ops.some((o) => o.id === targetId)) continue;
 			const size = showDims ? sizes[id] : null;
 			const base = originals[id];
 			const sizeChanged =
 				size && base && (size.width !== base.width || size.height !== base.height);
 			const dpiChanged = dpiTargets.includes(id) && plot.style?.exportDpi !== dpi;
 			if (sizeChanged) {
-				ops.push({ kind: 'setPlotPosition', id, width: size.width, height: size.height });
+				ops.push({
+					kind: 'setPlotPosition',
+					id: targetId,
+					width: size.width,
+					height: size.height
+				});
 			}
 			if (sizeChanged || dpiChanged) {
 				const style = { ...($state.snapshot(plot.style) ?? {}) };
@@ -321,7 +332,8 @@
 					dpiChanged ||
 					style.widthPreset !== plot.style?.widthPreset ||
 					style.widthMm !== plot.style?.widthMm;
-				if (styleChanged) ops.push({ kind: 'setPlotProperty', id, key: 'style', value: style });
+				if (styleChanged)
+					ops.push({ kind: 'setPlotProperty', id: targetId, key: 'style', value: style });
 			}
 		}
 		return ops;

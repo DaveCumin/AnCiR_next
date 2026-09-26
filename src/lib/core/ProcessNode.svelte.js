@@ -458,7 +458,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	// (Plain object keyed by colId — local, non-reactive builder state.)
 	const plotMetricColRefs = {};
 	for (const plot of core.plots ?? []) {
-		if (plot.facetParent != null) continue;
 		for (const colId of Object.values(plot.metricOut ?? {})) {
 			if (colId != null && colId >= 0) {
 				plotMetricColRefs[colId] = { nodeId: `plot_${plot.id}`, port: `col_${colId}` };
@@ -473,9 +472,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	// draw a port that doesn't exist).
 	const chainRouteByTarget = {}; // `${toId}|${toPort}|${colId}` → { nodeId, port }
 	for (const entry of core.chainRefs ?? []) {
-		const viaPlot = (core.plots ?? []).find(
-			(p) => p.id === entry.viaPlotId && p.facetParent == null
-		);
+		const viaPlot = (core.plots ?? []).find((p) => p.id === entry.viaPlotId);
 		if (!viaPlot) continue;
 		const usesCol =
 			(viaPlot.plot?.columnRefs ?? []).includes(entry.colId) ||
@@ -764,9 +761,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	for (const tp of core.tableProcesses ?? []) emitTableProcessNode(tp);
 
 	for (const plot of core.plots ?? []) {
-		// Facet children are generated views of a generator; they aren't shown as
-		// canvas nodes.
-		if (plot.facetParent != null) continue;
 		// Tableplots have a flat `columnRefs` list — keep them as a single `series`
 		// port. Every other plot type carries `data: [{x: {refId}, y: {refId}, z?:
 		// {refId}}, ...]`, so expose flowtest-style {x, ys[, zs]} ports.
@@ -1066,7 +1060,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	for (const tp of core.tableProcesses ?? []) emitTPConnections(tp);
 
 	for (const plot of core.plots ?? []) {
-		if (plot.facetParent != null) continue; // facet children have no canvas node
 		const plotNodeId = `plot_${plot.id}`;
 		// Columns owned by a wired Column Set are represented by the SINGLE bundle
 		// wire, so suppress their individual data edges — but only on the CHANNEL

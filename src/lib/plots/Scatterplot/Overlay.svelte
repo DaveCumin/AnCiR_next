@@ -140,7 +140,7 @@
 			// The id is the overlay's canvas identity: its ports are named
 			// `ov<id>_<key>` and the right-click picker / history ops address it by
 			// that name. A saved id therefore SURVIVES fromJSON (history replay,
-			// session load, facet copy); only a brand-new overlay mints one, and the
+			// session load, a facet panel's projected copy); only a brand-new overlay mints one, and the
 			// counter always stays above every id it has seen so a re-minted id can
 			// never collide with a restored one.
 			const savedId = dataIN?.id;

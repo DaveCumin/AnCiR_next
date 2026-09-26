@@ -1,5 +1,6 @@
 import { flushSync } from 'svelte';
 import { core } from '$lib/core/core.svelte';
+import { resolvePlotRef, isFacetPanel, isPanelId } from '$lib/core/plotRefs.js';
 import { addNotification } from '$lib/core/notifications.svelte.js';
 import { mutationService } from '$lib/core/mutationService.js';
 import { prepareExport, setPhysicalSize } from '$lib/plots/exportStyle.js';
@@ -8,10 +9,11 @@ import { setPngDataUrlDpi } from '$lib/utils/pngDpi.js';
 
 /**
  * Convert headers and rows to a CSV string and trigger a download.
- * @param {number} plotId - The plot id (core.plots[].id), not the array index
+ * @param {number|string} plotId - The plot id (core.plots[].id) or a facet panel id, whose
+ *   projected instance holds that panel's series
  */
 export function saveDataAsCSV(plotId) {
-	const plot = core.plots.find((p) => p.id === plotId);
+	const plot = resolvePlotRef(plotId);
 	if (!plot || !plot.plot) return;
 
 	const plotData = plot.plot;
@@ -41,11 +43,12 @@ export function saveDataAsCSV(plotId) {
 }
 
 /**
- * Open a DataView plot on the canvas showing the data from the given plot.
- * @param {number} plotId - The id of the source plot (core.plots[].id), not the array index
+ * Open a DataView plot on the canvas showing the data from the given plot or facet panel
+ * (the DataView resolves a panel id to the panel's projected instance).
+ * @param {number|string} plotId - The id of the source plot (core.plots[].id) or panel
  */
 export function showDataAsTable(plotId) {
-	const sourcePlot = core.plots.find((p) => p.id === plotId);
+	const sourcePlot = resolvePlotRef(plotId);
 	if (!sourcePlot?.plot || typeof sourcePlot.plot.getDownloadData !== 'function') return;
 
 	mutationService.addPlot({
@@ -209,17 +212,28 @@ export function saveExportOptions(options) {
 }
 
 /**
- * Plot ids from whatever a caller passes: a `plotN` string, a number, or an array of
- * either. Callers historically mixed all three, and `'plot5'[0]` is `'p'`.
+ * Plot refs from whatever a caller passes: a `plotN` string, a number, a facet panel id
+ * (`7:c112#0`, or `plot7:c112#0` off an svg id), or an array of any. Callers historically
+ * mixed all three, and `'plot5'[0]` is `'p'`.
  *
- * @returns {number[]} unique ids in the order given
+ * @returns {(number|string)[]} unique ids in the order given: numbers for plots, the
+ *   panel id string for panels
  */
 export function normalisePlotIds(Id) {
 	const list = Array.isArray(Id) ? Id : [Id];
 	const out = [];
 	for (const v of list) {
 		if (v == null) continue;
-		const n = typeof v === 'number' ? v : Number(String(v).replace(/^plot/, ''));
+		if (typeof v === 'number') {
+			if (Number.isFinite(v) && !out.includes(v)) out.push(v);
+			continue;
+		}
+		const raw = String(v).replace(/^plot/, '');
+		if (isPanelId(raw)) {
+			if (!out.includes(raw)) out.push(raw);
+			continue;
+		}
+		const n = Number(raw);
 		if (Number.isFinite(n) && !out.includes(n)) out.push(n);
 	}
 	return out;
@@ -373,6 +387,19 @@ export function withPlotSize(plot, size, fn) {
 	// (the dialog's Save applies its ops and exports in the same task) must capture the
 	// svg drawn at that size, not the one still on screen from before the write.
 	flushSync();
+	// A facet panel's box is its generator's (a getter), so it is drawn at another size
+	// through its own `renderSize` instead; same synchronous set, capture, restore.
+	if (isFacetPanel(plot)) {
+		if (plot.width === target.width && plot.height === target.height) return fn();
+		try {
+			plot.renderSize = { width: target.width, height: target.height };
+			flushSync();
+			return fn();
+		} finally {
+			plot.renderSize = null;
+			flushSync();
+		}
+	}
 	const inner = plot.plot;
 	const hasBox = inner && typeof inner === 'object' && 'renderBox' in inner;
 	const box = hasBox ? inner.renderBox : null;
@@ -401,11 +428,11 @@ export function withPlotSize(plot, size, fn) {
  * the on-canvas thumbnail is NOT drawn at; see withPlotSize). A plot with no box, as
  * in the MCP mount, exports its live svg as is.
  *
- * @param {number} plotId
+ * @param {number|string} plotId a plot id, or a facet panel id (its svg is `plot<panelId>`)
  * @param {{includeTitle?: boolean, label?: string, physical?: boolean,
  *          size?: {width: number, height: number}|null}} [opts]
  * @returns {{svg: SVGElement, width: number, height: number, style: object|null,
- *            name: string, plotId: number, x: number, y: number}|null}
+ *            name: string, plotId: number|string, x: number, y: number}|null}
  *          null when the plot is not on screen (a table, or a plot in another view)
  */
 export function preparePlotExport(
@@ -413,7 +440,7 @@ export function preparePlotExport(
 	{ includeTitle = true, label = '', physical = false, size = null } = {}
 ) {
 	if (!document.getElementById('plot' + plotId)) return null;
-	const plot = core.plots.find((p) => p.id === plotId) ?? null;
+	const plot = resolvePlotRef(plotId);
 	const style = plot?.style ?? null;
 	const target = validSize(size) ?? validSize(plot);
 	const prepared = withPlotSize(plot, target, () => {
@@ -501,7 +528,7 @@ export function prepareCombinedExport(
 	// svg is the fallback for a plot with no box.
 	const liveHeights = panels.map(
 		(p) =>
-			validSize(core.plots.find((q) => q.id === p.plotId))?.height ??
+			validSize(resolvePlotRef(p.plotId))?.height ??
 			svgSize(document.getElementById('plot' + p.plotId)).height
 	);
 	const bands = panels.map((p, i) => p.height - liveHeights[i]);

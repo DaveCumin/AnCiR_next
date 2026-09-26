@@ -4,6 +4,7 @@
 	import { appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { removePlots } from '$lib/core/Plot.svelte';
+	import { resolvePlotRef, renderables, ownerPlotOf, isFacetPanel } from '$lib/core/plotRefs.js';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 	import { getCanvasWidthPx } from '$lib/components/views/PlotDisplay.svelte';
 	import Editable from '../inputs/Editable.svelte';
@@ -21,8 +22,38 @@
 		title = $bindable(''),
 		id,
 		selected = $bindable(false),
-		viewportEl = null
+		viewportEl = null,
+		// A facet panel's name is derived from its column; the title is read-only for it.
+		titleEditable = true
 	} = $props();
+
+	// What this card renders: a Plot (numeric id) or a facet PANEL (string id, plotRefs.js).
+	// A panel's geometry is derived from its generator, so every write below (a drag, a
+	// resize) goes to the OWNER: the generator for a panel, the plot itself otherwise.
+	const ref = $derived(resolvePlotRef(id));
+	const owner = $derived(ownerPlotOf(ref));
+	const isPanel = $derived(isFacetPanel(ref));
+
+	/** Deselect every other renderable (plots and panels alike). */
+	function deselectOthers() {
+		renderables().forEach((r) => {
+			if (r.id !== id) r.selected = false;
+		});
+	}
+
+	/**
+	 * Pre-drag positions of every OWNER the gesture will move: the owners of the selected
+	 * renderables plus this card's own. Keyed by owner id (always a plot id), so two selected
+	 * panels of one generator move it once.
+	 */
+	function captureDragStart() {
+		dragStartPositions = {};
+		const sel = renderables().filter((r) => r.selected || r.id === id);
+		for (const r of sel) {
+			const o = ownerPlotOf(r);
+			if (o && !dragStartPositions[o.id]) dragStartPositions[o.id] = { x: o.x, y: o.y };
+		}
+	}
 
 	const minWidth = 100;
 	const minHeight = 100;
@@ -118,11 +149,7 @@
 		if (isTouch) {
 			// Simple touch selection - just select this plot
 			if (!selected) {
-				core.plots.forEach((p) => {
-					if (p.id !== id) {
-						p.selected = false;
-					}
-				});
+				deselectOthers();
 				selected = true;
 			}
 		} else {
@@ -132,22 +159,13 @@
 				return;
 			}
 			if (!selected) {
-				core.plots.forEach((p) => {
-					if (p.id !== id) {
-						p.selected = false;
-					}
-				});
+				deselectOthers();
 				selected = true;
 			}
 		}
 
 		// Prepare for potential drag operation
-		dragStartPositions = {};
-		core.plots.forEach((p) => {
-			if (p.selected) {
-				dragStartPositions[p.id] = { x: p.x, y: p.y };
-			}
-		});
+		captureDragStart();
 		moving = doMove;
 		if (moving && viewportEl) {
 			startEdgePan({
@@ -179,21 +197,12 @@
 		// If this plot is not selected, we need to handle selection logic
 		if (!selected) {
 			// Clear other selections unless Alt is held
-			core.plots.forEach((p) => {
-				if (p.id !== id) {
-					p.selected = false;
-				}
-			});
+			deselectOthers();
 			selected = true;
 		}
 
 		// Prepare for potential drag operation
-		dragStartPositions = {};
-		core.plots.forEach((p) => {
-			if (p.selected) {
-				dragStartPositions[p.id] = { x: p.x, y: p.y };
-			}
-		});
+		captureDragStart();
 		moving = doMove;
 		if (moving && viewportEl) {
 			startEdgePan({
@@ -232,23 +241,26 @@
 			const deltaX = cur.x - mouseStartCanvasX;
 			const deltaY = cur.y - mouseStartCanvasY;
 
-			core.plots.forEach((p) => {
-				if (p.selected || p.id == id) {
-					const start = dragStartPositions[p.id];
-					if (!start) return;
-
-					p.x = snapToGrid(start.x + deltaX);
-					p.y = snapToGrid(start.y + deltaY);
-				}
-			});
+			// Every owner captured at press time moves by the same delta (a panel moves
+			// its generator, and with it the whole grid).
+			for (const pid of Object.keys(dragStartPositions)) {
+				const p = core.plots.find((pp) => String(pp.id) === pid);
+				if (!p) continue;
+				const start = dragStartPositions[pid];
+				p.x = snapToGrid(start.x + deltaX);
+				p.y = snapToGrid(start.y + deltaY);
+			}
 		} else if (resizing) {
 			// Resize uses absolute screen-delta / zoom — independent of pan because
 			// the corner being dragged stays under the cursor without further math.
 			let deltaX = (pos.x - initialMouseX) / appState.canvasScale;
 			let deltaY = (pos.y - initialMouseY) / appState.canvasScale;
 
-			width = snapToGrid(Math.max(minWidth, initialWidth + deltaX));
-			height = snapToGrid(Math.max(minHeight, initialHeight + deltaY));
+			// Written to the owner, not the bound prop: a panel's size IS its generator's.
+			if (owner) {
+				owner.width = snapToGrid(Math.max(minWidth, initialWidth + deltaX));
+				owner.height = snapToGrid(Math.max(minHeight, initialHeight + deltaY));
+			}
 		}
 	}
 
@@ -283,13 +295,13 @@
 			}
 			if (ops.length) mutationService.atomicBatch(ops); // group move → one undo
 		} else if (resizing) {
-			const p = core.plots.find((pp) => pp.id === id);
+			const p = owner;
 			if (p && (p.width !== initialWidth || p.height !== initialHeight)) {
 				const endW = p.width;
 				const endH = p.height;
 				p.width = initialWidth;
 				p.height = initialHeight;
-				mutationService.setPlotPosition(id, { width: endW, height: endH });
+				mutationService.setPlotPosition(p.id, { width: endW, height: endH });
 			}
 		}
 
@@ -313,11 +325,7 @@
 		if (touchDuration < 200 && !hasMouseMoved) {
 			// This was a quick tap, handle selection
 			if (!selected) {
-				core.plots.forEach((p) => {
-					if (p.id !== id) {
-						p.selected = false;
-					}
-				});
+				deselectOthers();
 				selected = true;
 			}
 		}
@@ -332,8 +340,9 @@
 		resizing = true;
 		initialMouseX = pos.x;
 		initialMouseY = pos.y;
-		initialWidth = width;
-		initialHeight = height;
+		// The owner's own numbers: a panel's `width` prop is the generator's size snapped.
+		initialWidth = owner?.width ?? width;
+		initialHeight = owner?.height ?? height;
 
 		if (e.type.startsWith('touch')) {
 			isTouch = true;
@@ -456,7 +465,7 @@
 		>
 			<NodeNoteButton nodeId={`plot_${id}`} />
 		</div>
-		<p class="plot-title"><Editable bind:value={title} /></p>
+		<p class="plot-title"><Editable bind:value={title} editable={titleEditable} /></p>
 
 		<!-- Shared action cluster (maximise · delete), revealed on hover/selection. -->
 		<div
@@ -465,13 +474,15 @@
 			onpointerdown={(e) => e.stopPropagation()}
 			role="presentation"
 		>
+			<!-- A panel cannot be maximised on its own (its box is the generator's); deleting
+			     it deletes the generator, which is the plot it is a view of. -->
 			<NodeActions
 				revealed={hovered || selected}
-				showMaximise={true}
+				showMaximise={!isPanel}
 				maximised={fullscreen}
 				onToggleMaximise={() => toggleFullscreen()}
-				onDelete={() => removePlots(id)}
-				deleteTooltip="Delete plot"
+				onDelete={() => removePlots(owner?.id ?? id)}
+				deleteTooltip={isPanel ? 'Delete the faceted plot' : 'Delete plot'}
 			/>
 		</div>
 	</div>

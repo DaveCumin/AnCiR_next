@@ -24,6 +24,8 @@
 	import { fade } from 'svelte/transition';
 
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
+	import { renderables, moveRefTo } from '$lib/core/plotRefs.js';
+	import FacetGroup from '$lib/components/views/FacetGroup.svelte';
 	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
 	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
 	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
@@ -35,16 +37,20 @@
 	let fileDragOver = $state(false);
 
 	// --- Multi-plot align / distribute / grid (worksheet) ---
-	let selectedPlots = $derived(core.plots.filter((p) => p.selected));
+	// What the workspace draws and selects: top-level plots and facet PANELS (plotRefs.js).
+	// A generator is never drawn, so it is never in this list.
+	let selectedPlots = $derived(renderables().filter((p) => p.selected));
 
 	// Zoom mode is a per-plot tool that only makes sense while the plot is selected
-	// (the toolbar that toggles it shows on selection). Clear it whenever a plot is
-	// deselected, so re-selecting always starts from zoom-off. Tracks each plot's
-	// `selected`; the clearing is untracked (setZoomMode is a no-op when unchanged).
+	// (the toolbar that toggles it shows on selection). Clear it whenever a plot or
+	// panel is deselected, so re-selecting always starts from zoom-off. Tracks each
+	// renderable's `selected`; the clearing is untracked (setZoomMode is a no-op when
+	// unchanged).
 	$effect(() => {
-		core.plots.forEach((p) => p.selected); // establish selection dependency
+		const all = renderables();
+		all.forEach((p) => p.selected); // establish selection dependency
 		untrack(() => {
-			for (const p of core.plots) if (!p.selected) setZoomMode(p.id, false);
+			for (const p of all) if (!p.selected) setZoomMode(p.id, false);
 		});
 	});
 
@@ -59,13 +65,17 @@
 			h: (p.height ?? 150) + 50
 		}));
 	}
+	// A panel cannot be placed on its own (its position is derived); moveRefTo moves its
+	// generator by the delta instead, so one write per generator, from its first panel.
 	function applyPlotPositions(map) {
-		for (const p of core.plots) {
+		const movedOwners = [];
+		for (const p of renderables()) {
 			const np = map.get(p.id);
-			if (np) {
-				p.x = snapToGrid(np.x);
-				p.y = snapToGrid(np.y);
-			}
+			if (!np) continue;
+			const owner = p.generator ?? p;
+			if (movedOwners.includes(owner)) continue;
+			movedOwners.push(owner);
+			moveRefTo(p, np.x, np.y);
 		}
 	}
 	function alignSelectedPlots(mode) {
@@ -295,7 +305,7 @@
 		if (_viewportSanityChecked) return;
 		if (!canvasViewportEl) return;
 		const items = [
-			...core.plots.map((p) => ({ x: p.x, y: p.y, w: p.width + 20, h: p.height + 50 })),
+			...renderables().map((p) => ({ x: p.x, y: p.y, w: p.width + 20, h: p.height + 50 })),
 			...core.notes.map((n) => ({ x: n.x, y: n.y, w: n.width, h: n.height }))
 		];
 		if (items.length === 0) return;
@@ -415,8 +425,12 @@
 
 			{#if core.plots.length > 0}
 				{#each core.plots as plot (plot.id)}
-					{#if !appState.invisiblePlotIds.includes(plot.id) && !plot.facet}
-						<!-- Facet generators don't render as a card here; their children do. -->
+					{#if appState.invisiblePlotIds.includes(plot.id)}
+						<!-- hidden from the plots list -->
+					{:else if plot.facet}
+						<!-- A facet generator is not a card; its derived panels are (one per series). -->
+						<FacetGroup generator={plot} viewportEl={canvasViewportEl} />
+					{:else}
 						<Draggable
 							bind:x={plot.x}
 							bind:y={plot.y}

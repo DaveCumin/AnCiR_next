@@ -12,8 +12,7 @@
 // }
 
 import { scaleLinear, scaleLog } from 'd3-scale';
-import { applyLinkedZoom } from '$lib/plots/plotZoom.js';
-import { core } from '$lib/core/core.svelte.js';
+import { applyLinkedZoom, writeAxisLimit } from '$lib/plots/plotZoom.js';
 
 /** Plot types that support brush/wheel zoom (drive the toolbar Zoom button). */
 export function isZoomCapable(type) {
@@ -33,18 +32,26 @@ function linY(p, domain) {
 	return scaleLinear().domain(domain).range([p.plotheight, 0]);
 }
 
+/**
+ * @param plot a Plot or a FacetPanel (the workspace and the toolbar hand over whichever
+ *   they render). Reads come off its inner (`plot.plot`: a panel's projected instance, so an
+ *   override shows as zoomed); writes go through `writeAxisLimit`, which on a panel sends an
+ *   x axis to the generator (shared by every panel) and a y axis to the panel's override.
+ */
 export function getZoomAdapter(plot) {
 	const p = plot?.plot;
 	if (!p) return null;
+	const setX = (key) => (l) => writeAxisLimit(plot, key, l, { shared: true });
+	const setY = (key) => (l) => writeAxisLimit(plot, key, l);
 	switch (plot?.type) {
 		case 'scatterplot':
 			return scatterAdapter(plot, p);
 		case 'periodogram':
-			return periodogramAdapter(p);
+			return periodogramAdapter(p, setX, setY);
 		case 'correlogram':
-			return correlogramAdapter(p);
+			return correlogramAdapter(p, setX, setY);
 		case 'fft':
-			return fftAdapter(p);
+			return fftAdapter(p, setX, setY);
 		default:
 			return null;
 	}
@@ -56,47 +63,47 @@ function scatterAdapter(plot, p) {
 	return {
 		isZoomed: () => eitherSet(p.xlimsIN) || eitherSet(p.ylimsLeftIN) || eitherSet(p.ylimsRightIN),
 		reset: () =>
-			applyLinkedZoom(
-				plot,
-				{ xlims: [null, null], ylimsLeft: [null, null], ylimsRight: [null, null] },
-				core.plots
-			)
+			applyLinkedZoom(plot, {
+				xlims: [null, null],
+				ylimsLeft: [null, null],
+				ylimsRight: [null, null]
+			})
 	};
 }
 
 // Period on X (default [1,30]), power on Y (single).
-function periodogramAdapter(p) {
+function periodogramAdapter(p, setX, setY) {
 	return {
 		axes: [
-			{ orient: 'x', scale: () => linX(p, p.periodlimsIN), set: (l) => (p.periodlimsIN = l) },
-			{ orient: 'y', scale: () => linY(p, p.ylims), set: (l) => (p.ylimsIN = l) }
+			{ orient: 'x', scale: () => linX(p, p.periodlimsIN), set: setX('periodlimsIN') },
+			{ orient: 'y', scale: () => linY(p, p.ylims), set: setY('ylimsIN') }
 		],
 		isZoomed: () => !pairEq(p.periodlimsIN, [1, 30]) || eitherSet(p.ylimsIN),
 		reset: () => {
-			p.periodlimsIN = [1, 30];
-			p.ylimsIN = [null, null];
+			setX('periodlimsIN')([1, 30]);
+			setY('ylimsIN')([null, null]);
 		}
 	};
 }
 
 // Lag on X, correlation on Y (single); both default auto.
-function correlogramAdapter(p) {
+function correlogramAdapter(p, setX, setY) {
 	return {
 		axes: [
-			{ orient: 'x', scale: () => linX(p, p.laglims), set: (l) => (p.laglimsIN = l) },
-			{ orient: 'y', scale: () => linY(p, p.ylims), set: (l) => (p.ylimsIN = l) }
+			{ orient: 'x', scale: () => linX(p, p.laglims), set: setX('laglimsIN') },
+			{ orient: 'y', scale: () => linY(p, p.ylims), set: setY('ylimsIN') }
 		],
 		isZoomed: () => eitherSet(p.laglimsIN) || eitherSet(p.ylimsIN),
 		reset: () => {
-			p.laglimsIN = [null, null];
-			p.ylimsIN = [null, null];
+			setX('laglimsIN')([null, null]);
+			setY('ylimsIN')([null, null]);
 		}
 	};
 }
 
 // Period/frequency on X (default [4,30]), magnitude on Y (linear or log), plus a
 // phase Y axis when any series shows phase.
-function fftAdapter(p) {
+function fftAdapter(p, setX, setY) {
 	const magScale = () => {
 		if (p.logScale && p.ylims[0] > 0 && p.ylims[1] > 0) {
 			return scaleLog()
@@ -107,14 +114,14 @@ function fftAdapter(p) {
 	};
 	const hasPhase = p.data?.some((d) => d.showPhase);
 	const axes = [
-		{ orient: 'x', scale: () => linX(p, p.xlims), set: (l) => (p.xlimsIN = l) },
-		{ orient: 'y', scale: magScale, set: (l) => (p.ylimsIN = l) }
+		{ orient: 'x', scale: () => linX(p, p.xlims), set: setX('xlimsIN') },
+		{ orient: 'y', scale: magScale, set: setY('ylimsIN') }
 	];
 	if (hasPhase) {
 		axes.push({
 			orient: 'y',
 			scale: () => linY(p, p.phaseYlims),
-			set: (l) => (p.phaseYlimsIN = l)
+			set: setY('phaseYlimsIN')
 		});
 	}
 	return {
@@ -122,9 +129,9 @@ function fftAdapter(p) {
 		isZoomed: () =>
 			!pairEq(p.xlimsIN, [4, 30]) || eitherSet(p.ylimsIN) || eitherSet(p.phaseYlimsIN),
 		reset: () => {
-			p.xlimsIN = [4, 30];
-			p.ylimsIN = [null, null];
-			p.phaseYlimsIN = [null, null];
+			setX('xlimsIN')([4, 30]);
+			setY('ylimsIN')([null, null]);
+			setY('phaseYlimsIN')([null, null]);
 		}
 	};
 }

@@ -13,9 +13,11 @@
 
 <script>
 	// @ts-nocheck
-	import { appConsts, core } from '$lib/core/core.svelte.js';
+	import { appConsts } from '$lib/core/core.svelte.js';
 	import { reportError } from '$lib/core/errorReporter.js';
 	import { facetGridCells } from '$lib/core/facetGrid.js';
+	import { panelsFor } from '$lib/core/facetPanels.svelte.js';
+	import FacetPanelHost from '$lib/components/views/FacetPanelHost.svelte';
 
 	let { plot, size, onResizeMouseDown } = $props();
 
@@ -50,13 +52,11 @@
 		plot?.width && plot?.height ? Math.min(inner.w / plot.width, inner.h / plot.height) : 1
 	);
 
-	// Facet generator: preview the per-series child plots as a small-multiples grid
-	// (matching the workspace), rather than the single all-series plot.
-	const facetChildren = $derived(
-		plot?.facet ? core.plots.filter((p) => p.facetParent === plot.id) : []
-	);
-	const isFacet = $derived(plot?.facet && facetChildren.length > 0);
-	// Same grid the worksheet lays the real children out on (automatic near-square, or the
+	// Facet generator: preview its derived PANELS (core/facetPanels.svelte.js) as a
+	// small-multiples grid (matching the workspace), rather than the single all-series plot.
+	const facetPanels = $derived(plot?.facet ? panelsFor(plot) : []);
+	const isFacet = $derived(plot?.facet && facetPanels.length > 0);
+	// Same grid the worksheet lays the panels out on (automatic near-square, or the
 	// generator's chosen facetRows), so the node thumbnail is a faithful miniature of it.
 	//
 	// The cells are placed EXPLICITLY rather than left to CSS auto-flow: a chosen row count
@@ -64,7 +64,7 @@
 	// which auto-flow would repack into a full 2-column grid and show a shape the worksheet
 	// never draws. The track count still comes from the widest row, so rows stay left-aligned
 	// and short rows simply leave their trailing cells empty.
-	const facetGrid = $derived(facetGridCells(facetChildren.length, { rows: plot?.facetRows ?? 0 }));
+	const facetGrid = $derived(facetGridCells(facetPanels.length, { rows: plot?.facetRows ?? 0 }));
 	const gridCols = $derived(facetGrid.cols);
 	const gridRows = $derived(facetGrid.rows);
 	// Cell size inside the preview panel, and the scale to fit each child into it.
@@ -83,24 +83,28 @@
 				class="facet-grid"
 				style="grid-template-columns:repeat({gridCols}, 1fr); grid-template-rows:repeat({gridRows}, 1fr);"
 			>
-				{#each facetChildren as child, i (child.id)}
-					{@const CComp = appConsts.plotMap.get(child.type)?.plot}
+				{#each facetPanels as panel, i (panel.id)}
+					{@const CComp = appConsts.plotMap.get(panel.type)?.plot}
 					{@const cell = facetGrid.cells[i]}
-					<div
-						class="facet-cell"
-						style="grid-column:{(cell?.col ?? 0) + 1}; grid-row:{(cell?.row ?? 0) + 1};"
-					>
-						{#if CComp}
+					<FacetPanelHost {panel}>
+						{#snippet children(child)}
 							<div
-								class="plot-preview-inner"
-								style="transform:scale({childScale(
-									child
-								)}); transform-origin:top left; width:{child.width}px; height:{child.height}px;"
+								class="facet-cell"
+								style="grid-column:{(cell?.col ?? 0) + 1}; grid-row:{(cell?.row ?? 0) + 1};"
 							>
-								<CComp theData={child} which="plot" />
+								{#if CComp && child.plot}
+									<div
+										class="plot-preview-inner"
+										style="transform:scale({childScale(
+											child
+										)}); transform-origin:top left; width:{child.width}px; height:{child.height}px;"
+									>
+										<CComp theData={child} which="plot" />
+									</div>
+								{/if}
 							</div>
-						{/if}
-					</div>
+						{/snippet}
+					</FacetPanelHost>
 				{/each}
 			</div>
 		{:else}

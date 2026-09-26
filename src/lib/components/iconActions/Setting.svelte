@@ -7,6 +7,8 @@
 	import { normaliseFigureStyle, transitionalFigureStyle } from '$lib/plots/figureStyle.js';
 	import { migrateCategoryColourMap } from '$lib/plots/seriesColour.js';
 	import { migrateAppearanceMaps } from '$lib/plots/appearanceIdentity.js';
+	import { migrateFacetChildren } from '$lib/core/facetMigration.js';
+	import { childDefaultsFromRegistry } from '$lib/core/facetMigrationDefaults.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -196,6 +198,19 @@
 	}
 
 	export async function importJson(jsonData, onProgress) {
+		// Legacy facet CHILD plots (sessions saved before facets became views) fold into their
+		// generator here, before anything is built: axis limits become per-panel overrides,
+		// actogram markers move onto the generator's series, anything else is reported. The
+		// ONLY session-load entry point is this function (the URL load, the start screen, the
+		// load modal, the classroom tours and drag-drop all call it), so every path migrates.
+		// One warning per generator, so a session with 12 panels raises one toast, not 12.
+		{
+			const migrated = migrateFacetChildren(jsonData, {
+				childDefaults: childDefaultsFromRegistry(appConsts.plotMap)
+			});
+			jsonData = migrated.json;
+			for (const w of migrated.warnings) addNotification(w, 'warning', 0);
+		}
 		//reset existing workflow
 		// Node ids restart from 1 in the incoming session, so any cached compute
 		// result from the previous one would be served to a completely unrelated
@@ -449,10 +464,9 @@
 		// across frames. A single batched push freezes the compositor (and the
 		// spinner) for the entire build, which is what we want to avoid here.
 		//
-		// That yield is also why the whole id space has to be claimed FIRST: it lets Svelte
-		// effects run mid-loop, and a faceted plot's reconcile mints children through the same
-		// allocator. Without this, a child could take an id belonging to a plot further down the
-		// file, leaving the workspace keying an {#each} on two plots with the same id.
+		// That yield lets Svelte effects run mid-loop, so the whole id space is claimed FIRST:
+		// anything that mints a plot mid-load (nothing does today; facet panels are derived, not
+		// minted) cannot take an id belonging to a plot further down the file.
 		const totalPlots = jsonData.plots?.length ?? 0;
 		reservePlotIds((jsonData.plots ?? []).map((p) => p?.id));
 		for (let i = 0; i < totalPlots; i++) {

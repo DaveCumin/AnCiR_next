@@ -10,6 +10,7 @@
  */
 
 import { facetGridDims } from './facetGrid.js';
+import { COLUMN_BASED_FACET_TYPES } from './facetTypes.js';
 
 /** Two columns of this width fit a normal laptop workspace without horizontal scrolling. */
 const DEFAULT_SIZE = { width: 520, height: 300 };
@@ -48,58 +49,69 @@ export function plotSizeFor(type) {
 }
 
 /**
- * Vertical space a faceted plot needs for the children it will spawn.
+ * How many panels a facet generator shows, from its wired series alone (no column lookup, so
+ * this stays pure and works on a headless session): one per wired column for a column-based
+ * type, one per y of the first x-set otherwise. The same count facetPanels.facetUnits gives
+ * once the columns exist, minus the check that each column is present.
+ */
+export function facetUnitCount(plot) {
+	if (!plot?.facet) return 0;
+	const data = Array.isArray(plot.plot?.data) ? plot.plot.data : [];
+	if (COLUMN_BASED_FACET_TYPES.has(plot.type)) {
+		return data.filter((dp) => (dp?.column?.refId ?? -1) >= 0).length;
+	}
+	let firstX;
+	let n = 0;
+	for (const dp of data) {
+		const xRef = dp?.x?.refId ?? -1;
+		if (firstX === undefined) firstX = xRef;
+		if (xRef === firstX && (dp?.y?.refId ?? -1) >= 0) n++;
+	}
+	return n;
+}
+
+/**
+ * Vertical space a faceted plot needs for its panel grid.
  *
- * Mirrors syncFacetChildren in Plot.svelte, which lays children out one plot-height plus two
- * paddings below the generator, on the grid facetGrid.js computes (automatic near-square, or the
- * generator's chosen `facetRows`). Reserving it here is what stops a facet's children from landing
+ * Mirrors facetPanels.svelte.js, which lays the panels out one plot-height plus two paddings
+ * below the generator, on the grid facetGrid.js computes (automatic near-square, or the
+ * generator's chosen `facetRows`). Reserving it here is what stops a facet's panels from landing
  * on top of whatever was packed beneath it.
  *
  * @param facetRows the generator's chosen row count; 0 = automatic.
  */
-export function facetFootprint({ width, height }, childCount, padding = 15, facetRows = 0) {
-	if (!childCount) return { width: outerWidth(width), height: outerHeight(height) };
-	const { rows, cols } = facetGridDims(childCount, facetRows);
+export function facetFootprint({ width, height }, panelCount, padding = 15, facetRows = 0) {
+	if (!panelCount) return { width: outerWidth(width), height: outerHeight(height) };
+	const { rows, cols } = facetGridDims(panelCount, facetRows);
 	const stepX = outerWidth(width) + padding;
 	const stepY = outerHeight(height) + padding;
 	return {
 		width: cols * stepX - padding,
-		// The generator itself, the gap beneath it, then the child grid.
+		// The generator itself, the gap beneath it, then the panel grid.
 		height: outerHeight(height) + 2 * padding + rows * stepY - padding
 	};
 }
 
 /**
- * Place every top-level plot, mutating x/y/width/height in place.
- *
- * Facet CHILDREN are skipped: they are derived, and syncFacetChildren repositions them relative to
- * their parent whenever it reconciles, so anything written here would be overwritten anyway.
+ * Place every plot, mutating x/y/width/height in place. A facet generator reserves the room
+ * its panel grid takes (facetUnitCount, derived from its own series); the panels themselves
+ * are views placed relative to it and are not plots.
  *
  * Packing is shortest-column-first rather than strict row-major, so a tall plot beside a short one
  * does not leave a hole underneath the short one.
  *
- * @param plots            the session's plots
- * @param facetChildCounts map of plot id → number of children it will spawn
+ * @param plots the session's plots
  */
 export function layoutWorkspacePlots(plots, opts = {}) {
-	const {
-		columns = 2,
-		gutter = 30,
-		originX = 60,
-		originY = 60,
-		padding = 15,
-		facetChildCounts = {}
-	} = opts;
+	const { columns = 2, gutter = 30, originX = 60, originY = 60, padding = 15 } = opts;
 
-	const top = (plots ?? []).filter((p) => p && p.facetParent == null);
+	const top = (plots ?? []).filter(Boolean);
 	if (top.length === 0) return plots;
 
-	// A faceted plot is as wide as its child grid, so it can need more than one column's width.
+	// A faceted plot is as wide as its panel grid, so it can need more than one column's width.
 	const colWidth = Math.max(
 		...top.map(
-			(p) =>
-				facetFootprint(plotSizeFor(p.type), facetChildCounts[p.id] ?? 0, padding, p.facetRows ?? 0)
-					.width
+			(p) => facetFootprint(plotSizeFor(p.type), facetUnitCount(p), padding, p.facetRows ?? 0).width
 		),
 		DEFAULT_SIZE.width
 	);
@@ -111,7 +123,7 @@ export function layoutWorkspacePlots(plots, opts = {}) {
 		p.width = size.width;
 		p.height = size.height;
 
-		const foot = facetFootprint(size, facetChildCounts[p.id] ?? 0, padding, p.facetRows ?? 0);
+		const foot = facetFootprint(size, facetUnitCount(p), padding, p.facetRows ?? 0);
 		// Shortest column wins; ties go left so the reading order stays predictable.
 		let col = 0;
 		for (let i = 1; i < columns; i++) if (nextY[i] < nextY[col]) col = i;

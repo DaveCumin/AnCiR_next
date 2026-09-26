@@ -3,10 +3,18 @@ import {
 	layoutWorkspacePlots,
 	plotSizeFor,
 	facetFootprint,
+	facetUnitCount,
 	PLOT_CHROME
 } from './workspaceLayout.js';
 
-const mk = (id, type, extra = {}) => ({ id, type, facetParent: null, ...extra });
+const mk = (id, type, extra = {}) => ({ id, type, ...extra });
+/** A facet generator wired to `n` columns (a column-based type), the way a session carries it. */
+const mkFacet = (id, type, n, extra = {}) =>
+	mk(id, type, {
+		facet: true,
+		plot: { data: Array.from({ length: n }, (_, i) => ({ column: { refId: 100 + i } })) },
+		...extra
+	});
 
 /**
  * Overlap is judged on the RENDERED box, not the plot's own width/height: Draggable adds side
@@ -72,19 +80,21 @@ describe('layoutWorkspacePlots', () => {
 			for (let j = i + 1; j < plots.length; j++) expect(overlaps(plots[i], plots[j])).toBe(false);
 	});
 
-	it('reserves room under a faceted plot so its children do not land on the next plot', () => {
-		const plots = [mk(1, 'histogram', { facet: true }), mk(2, 'tableplot')];
-		layoutWorkspacePlots(plots, { columns: 1, facetChildCounts: { 1: 4 } });
+	it('reserves room under a faceted plot so its panels do not land on the next plot', () => {
+		// The panel count is DERIVED from the generator's series (facetUnitCount); no option.
+		const plots = [mkFacet(1, 'histogram', 4), mk(2, 'tableplot')];
+		layoutWorkspacePlots(plots, { columns: 1 });
 		const foot = facetFootprint(plotSizeFor('histogram'), 4);
 		expect(plots[1].y).toBeGreaterThanOrEqual(plots[0].y + foot.height);
 	});
 
-	it('skips facet children, which are positioned by their parent at runtime', () => {
-		const child = { id: 9, type: 'histogram', facetParent: 1, x: 111, y: 222 };
-		const plots = [mk(1, 'histogram'), child];
-		layoutWorkspacePlots(plots);
-		expect(child.x).toBe(111);
-		expect(child.y).toBe(222);
+	it('a generator with facet off reserves only its own box', () => {
+		const plots = [mkFacet(1, 'histogram', 4, { facet: false }), mk(2, 'tableplot')];
+		layoutWorkspacePlots(plots, { columns: 1 });
+		const own = facetFootprint(plotSizeFor('histogram'), 0);
+		const grid = facetFootprint(plotSizeFor('histogram'), 4);
+		expect(plots[1].y).toBeGreaterThanOrEqual(plots[0].y + own.height);
+		expect(plots[1].y).toBeLessThan(plots[0].y + grid.height);
 	});
 
 	it('packs the shortest column first, so a tall plot does not strand a gap', () => {
@@ -102,10 +112,10 @@ describe('layoutWorkspacePlots', () => {
 		const size = plotSizeFor('histogram');
 		const childCount = 4;
 		const padding = 15;
-		const plots = [mk(1, 'histogram', { facet: true }), mk(2, 'tableplot')];
-		layoutWorkspacePlots(plots, { columns: 1, padding, facetChildCounts: { 1: childCount } });
+		const plots = [mkFacet(1, 'histogram', childCount), mk(2, 'tableplot')];
+		layoutWorkspacePlots(plots, { columns: 1, padding });
 
-		// Bottom of the lowest child, laid out the way syncFacetChildren does it.
+		// Bottom of the lowest panel, laid out the way facetPanels does it.
 		const cols = Math.ceil(Math.sqrt(childCount));
 		const rows = Math.ceil(childCount / cols);
 		const stepY = size.height + PLOT_CHROME.y + padding;
@@ -119,5 +129,34 @@ describe('layoutWorkspacePlots', () => {
 	it('is a no-op on an empty session', () => {
 		expect(() => layoutWorkspacePlots([])).not.toThrow();
 		expect(() => layoutWorkspacePlots(undefined)).not.toThrow();
+	});
+});
+
+describe('facetUnitCount', () => {
+	it('is 0 for a plot that is not faceting, whatever it is wired to', () => {
+		expect(facetUnitCount(mkFacet(1, 'histogram', 3, { facet: false }))).toBe(0);
+		expect(facetUnitCount(mk(1, 'tableplot'))).toBe(0);
+		expect(facetUnitCount(null)).toBe(0);
+	});
+
+	it('counts one panel per wired column for a column-based type, skipping unwired slots', () => {
+		const gen = mkFacet(1, 'histogram', 3);
+		gen.plot.data.push({ column: { refId: -1 } });
+		expect(facetUnitCount(gen)).toBe(3);
+	});
+
+	it('counts the ys of the FIRST x-set for an x/y type (later sets are overlaid, not panels)', () => {
+		const gen = mk(1, 'scatterplot', {
+			facet: true,
+			plot: {
+				data: [
+					{ x: { refId: 1 }, y: { refId: 10 } },
+					{ x: { refId: 1 }, y: { refId: 11 } },
+					{ x: { refId: 1 }, y: { refId: -1 } },
+					{ x: { refId: 2 }, y: { refId: 20 } }
+				]
+			}
+		});
+		expect(facetUnitCount(gen)).toBe(2);
 	});
 });

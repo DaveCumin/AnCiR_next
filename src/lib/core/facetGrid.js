@@ -1,10 +1,10 @@
 /**
  * Grid maths for facet (small-multiples) sets.
  *
- * Faceting spawns one CHILD PLOT per series, and those children are laid out in a grid in three
- * places: the worksheet (real x/y positions written by syncFacetChildren in Plot.svelte), the
- * workspace packer (workspaceLayout.js, which must reserve the footprint the grid will occupy),
- * and the node-canvas thumbnail (EmbeddedPlot.svelte, a CSS grid). All three used to compute
+ * A faceted plot shows one PANEL per series (core/facetPanels.svelte.js), and those panels are
+ * laid out in a grid in three places: the worksheet (each panel's x/y getter), the workspace
+ * packer (workspaceLayout.js, which must reserve the footprint the grid will occupy), and the
+ * node-canvas thumbnail (EmbeddedPlot.svelte, a CSS grid). All three used to compute
  * `ceil(sqrt(n))` columns independently; they now share this module so a user-chosen row count
  * cannot mean one thing in one view and something else in another.
  *

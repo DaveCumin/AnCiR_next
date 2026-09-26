@@ -2449,16 +2449,11 @@ function prewarmWrapperNames() {
  * Every Plot is born at the same default position, so a demo that adds three without moving them
  * saved all three on top of each other and the workspace opened as one pile.
  *
- * Facet children are NOT baked into a session (syncFacetChildren respawns them from the generator
- * on load), so the child count has to be estimated here to reserve their space. One child per
- * wired series is what facetUnits produces, so the series count is the estimate.
+ * A facet generator's panels are views derived from its series, never part of a session; the
+ * packer reserves their grid from the generator itself (workspaceLayout.facetUnitCount).
  */
 function tidyPlots() {
-	const facetChildCounts = {};
-	for (const p of core.plots) {
-		if (p.facet) facetChildCounts[p.id] = p.plot?.data?.length ?? 0;
-	}
-	layoutWorkspacePlots(core.plots, { facetChildCounts });
+	layoutWorkspacePlots(core.plots);
 }
 
 /** RFC4180-ish quoting: only quote when the value actually needs it. */
@@ -2621,10 +2616,10 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 				}
 			};
 			demo.build(mk);
-			// Explanatory note for the showcased plot type (first non-facet plot).
+			// Explanatory note for the showcased plot type (the first plot).
 			// A demo may name a variant note (e.g. the violin demo showcases the
 			// boxplot node but wants the violin-specific note) via `noteId`.
-			const showcasedType = core.plots.find((p) => p.facetParent == null)?.type;
+			const showcasedType = core.plots[0]?.type;
 			const noteId = demo.noteId ?? showcasedType;
 			if (noteId) addDemoNote(noteId);
 			prewarmWrapperNames();

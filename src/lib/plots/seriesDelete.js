@@ -69,8 +69,8 @@ export function recordInnerEdit(inner, mutate) {
 
 	// Revert the direct mutation, then route the after-state through the op so the
 	// edit lands on the undo stack as a single step. fromJSON rebuilds plot.plot
-	// (a $state field, so the swap is reactive and facet reconcile / metric outputs
-	// re-run off it exactly as they do for a wiring edit).
+	// (a $state field, so the swap is reactive and the facet panel projection / metric
+	// outputs re-run off it exactly as they do for a wiring edit).
 	plotObj.plot = entry.data.fromJSON(plotObj, before);
 	mutationService.setPlotInner(plotObj.id, after);
 

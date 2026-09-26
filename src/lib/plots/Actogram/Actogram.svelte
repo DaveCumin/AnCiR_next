@@ -839,6 +839,7 @@
 </script>
 
 <script>
+	import { isFacetPanel } from '$lib/core/facetPanels.svelte.js';
 	// @ts-nocheck
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
@@ -894,15 +895,30 @@
 	});
 
 	function handleClick(e) {
-		// add markers if selected
-		if (theData.plot.isAddingMarkerTo < 0) return;
+		// add markers if selected. The armed marker lives on the plot whose controls armed it:
+		// for a facet PANEL that is its generator (a panel's inner is a projection and its own
+		// `isAddingMarkerTo` is never set), and the marker is written onto the generator's
+		// series, never the panel's copy (plan Phase 1 risk: the next projection would
+		// overwrite the copy). A click on a panel counts only when the armed marker belongs
+		// to one of the series that panel shows, exactly as a click on an unarmed child did
+		// nothing.
+		const owner = isFacetPanel(theData) ? theData.generator.plot : theData.plot;
+		const armed = owner.isAddingMarkerTo;
+		if (armed < 0) return;
+		if (isFacetPanel(theData)) {
+			const shown = theData.unit?.seriesIdx ?? [];
+			const onThisPanel = shown.some((gi) =>
+				(owner.data[gi]?.phaseMarkers ?? []).some((m) => m.id == armed)
+			);
+			if (!onThisPanel) return;
+		}
 		// The click landed in a margin, on an axis or past the last row:
 		// getClickedTime has no day/time to give, so this is a no-op, exactly as
 		// a click with nothing armed is.
 		const at = getClickedTime(e);
 		if (!at) return;
 		const [clickedDay, clickedHrs] = at;
-		theData.plot.addPhaseMarkerTo(theData.plot.isAddingMarkerTo, clickedDay, clickedHrs);
+		owner.addPhaseMarkerTo(armed, clickedDay, clickedHrs);
 	}
 
 	function getClickedTime(e) {

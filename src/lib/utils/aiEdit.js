@@ -26,6 +26,7 @@
 // misread instruction is a much worse failure than one that declines to.
 
 import { core, appConsts, appState } from '$lib/core/core.svelte.js';
+import { resolvePlotRef, ownerPlotOf } from '$lib/core/plotRefs.js';
 import { applyOp } from '$lib/core/operations.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
 import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
@@ -765,7 +766,8 @@ export function applyEdit(plan) {
 			ops.push({ kind: 'setFreeTableProcessArg', tpId: c.tpId, key: c.key, value: c.value });
 			continue;
 		}
-		const plot = core.plots.find((p) => p.id === c.plotId);
+		// A panel id names a facet panel; Phase 1 routes its edit to the generator it projects.
+		const plot = ownerPlotOf(resolvePlotRef(c.plotId));
 		if (!plot?.plot?.toJSON) {
 			errors.push(`Couldn't restyle plot ${c.plotId} — it's no longer there.`);
 			continue;
@@ -792,7 +794,7 @@ export function applyEdit(plan) {
 	// Shading. Clock hours become axis units here, where the axis and timezone are visible.
 	let skippedBands = 0;
 	for (const b of plan.bands ?? []) {
-		const plot = core.plots.find((p) => p.id === b.plotId);
+		const plot = ownerPlotOf(resolvePlotRef(b.plotId));
 		if (!plot?.plot?.toJSON) {
 			errors.push(`Couldn't shade plot ${b.plotId} — it's no longer there.`);
 			skippedBands++;

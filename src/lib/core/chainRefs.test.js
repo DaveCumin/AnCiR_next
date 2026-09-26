@@ -22,14 +22,12 @@ function seed() {
 	core.plots.push({
 		id: 9,
 		type: 'periodogram',
-		facetParent: null,
 		plot: { data: [{ x: { refId: 5 }, y: { refId: 6 } }] }
 	});
 	// Consumer plot: scatter chained x from the periodogram's passthrough.
 	core.plots.push({
 		id: 10,
 		type: 'scatterplot',
-		facetParent: null,
 		plot: { data: [{ x: { refId: 5 }, y: { refId: 6 } }] }
 	});
 }

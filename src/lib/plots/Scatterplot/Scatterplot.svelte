@@ -903,7 +903,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import Toggle from '$lib/components/inputs/Toggle.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import { appState, core } from '$lib/core/core.svelte';
+	import { appState } from '$lib/core/core.svelte';
 	import {
 		formatTimeAxisTick,
 		formatDateTime,
@@ -955,15 +955,17 @@
 			yScaleLeft: p.hasLeftAxisData ? p.YScaleLeft : null,
 			yScaleRight: p.hasRightAxisData ? p.YScaleRight : null
 		});
-		// Apply to this plot and, if it's part of a facet set, its siblings.
-		applyLinkedZoom(theData, limits, core.plots);
+		// `theData` is the plot, or the facet PANEL this instance renders: on a panel the
+		// x-range goes to the generator (every panel shares it) and the y-limits to this
+		// panel's override (plotZoom.js).
+		applyLinkedZoom(theData, limits);
 	}
 	function resetBrushZoom() {
-		applyLinkedZoom(
-			theData,
-			{ xlims: [null, null], ylimsLeft: [null, null], ylimsRight: [null, null] },
-			core.plots
-		);
+		applyLinkedZoom(theData, {
+			xlims: [null, null],
+			ylimsLeft: [null, null],
+			ylimsRight: [null, null]
+		});
 	}
 
 	// Wheel-zoom over the plot area, anchored on the cursor. Handled at the SVG
@@ -1012,7 +1014,7 @@
 					factor
 				)
 			: null;
-		applyLinkedZoom(theData, { xlims, ylimsLeft, ylimsRight }, core.plots);
+		applyLinkedZoom(theData, { xlims, ylimsLeft, ylimsRight });
 	}
 
 	//Tooltip

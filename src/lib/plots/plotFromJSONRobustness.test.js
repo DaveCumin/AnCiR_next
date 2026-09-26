@@ -3,10 +3,13 @@
 // plot class's fromJSON must keep its default padding rather than clobber it with
 // `undefined`, or the plotheight derived throws
 // "Cannot read properties of undefined (reading 'top')" at render.
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { Scatterplotclass } from './Scatterplot/Scatterplot.svelte';
 import { Boxplotclass } from './Boxplot/Boxplot.svelte';
 import { loadPlots } from '$test/plotRegistry.js';
+import { core, appConsts } from '$lib/core/core.svelte.js';
+import { Plot } from '$lib/core/Plot.svelte';
+import { notifications } from '$lib/core/notifications.svelte.js';
 
 describe('plot fromJSON is robust to a partial (quick-plot) inner', () => {
 	it('Scatterplot.fromJSON({data:[]}) keeps a valid padding + computable plotheight', () => {
@@ -212,5 +215,58 @@ describe('a normalizer-emitted series colour reaches the plots that read it', ()
 		});
 		expect(s.data[0].line.colour).toBe('#234154');
 		expect(s.data[0].points.colour).toBe('#BE796B');
+	});
+});
+
+// The WRAPPER's own fields go through the same door (Plot.fromJSON). `facetOverrides` is the
+// one field whose shape the projection depends on, so a wrong shape anywhere in the map loads
+// as {} with one load warning naming the plot (plan 2026-09-26-facets-as-views, 2.4). And the
+// two legacy child fields (`facetParent`, `facetKey`) are gone from the class: a session that
+// still carries them after the migration ran is a bug elsewhere, and the wrapper must ignore
+// them rather than hide the plot.
+describe('Plot.fromJSON is robust to a wrong-shaped facetOverrides and to stray legacy fields', () => {
+	beforeEach(async () => {
+		appConsts.plotMap = await loadPlots();
+		core.plots = [];
+		notifications.list.length = 0;
+	});
+
+	it.each([
+		['an array', []],
+		['a string', 'nope'],
+		['a unit entry that is not an object', { 'y1#0': 5 }],
+		['a value that is an object', { 'y1#0': { xlimsIN: { a: 1 } } }],
+		['a nested array', { 'y1#0': { xlimsIN: [[1]] } }]
+	])('loads facetOverrides = %s as {} with one load warning naming the plot', (_label, bad) => {
+		const p = Plot.fromJSON({
+			id: 5,
+			name: 'Dist',
+			type: 'histogram',
+			plot: { data: [] },
+			facetOverrides: bad
+		});
+		expect(p.facetOverrides).toEqual({});
+		const w = notifications.list.filter((n) => n.type === 'warning');
+		expect(w).toHaveLength(1);
+		expect(w[0].message).toContain("Plot 'Dist'");
+		expect(w[0].message).toContain('facetOverrides');
+	});
+
+	it('a stray facetParent / facetKey on a top-level plot is ignored, not a reason to hide it', () => {
+		const p = Plot.fromJSON({
+			id: 5,
+			name: 'Dist',
+			type: 'histogram',
+			plot: { data: [] },
+			facetParent: 7,
+			facetKey: '7:0:112'
+		});
+		expect(p).toBeInstanceOf(Plot);
+		expect(p.facet).toBe(false);
+		expect(p).not.toHaveProperty('facetParent');
+		expect(p).not.toHaveProperty('facetKey');
+		expect(p.toJSON()).not.toHaveProperty('facetParent');
+		expect(p.toJSON()).not.toHaveProperty('facetKey');
+		expect(notifications.list).toHaveLength(0);
 	});
 });

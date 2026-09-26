@@ -1,7 +1,8 @@
 <!-- Navbar.svelte -->
 <script>
+	import { refFromNodeId } from '$lib/core/plotRefs.js';
 	// @ts-nocheck
-	import { appState, core } from '$lib/core/core.svelte.js';
+	import { appState } from '$lib/core/core.svelte.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import Settings from '$lib/components/views/modals/Settings.svelte';
 	import About from './views/modals/About.svelte';
@@ -85,13 +86,11 @@
 		if (ids.length === 0) return;
 		const kept = [];
 		for (const id of ids) {
-			if (typeof id === 'string' && id.startsWith('plot_')) {
-				const plotId = Number(id.slice(5));
-				const plot = core.plots.find((p) => p.id === plotId);
-				if (plot) {
-					plot.selected = true;
-					kept.push(id);
-				}
+			// A plot node (numeric id) or a facet panel (string id); see plotRefs.refFromNodeId.
+			const ref = refFromNodeId(id);
+			if (ref) {
+				ref.selected = true;
+				kept.push(id);
 			}
 		}
 		if (kept.length === ids.length) return;
