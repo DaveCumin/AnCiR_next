@@ -12,7 +12,9 @@ import { resolve } from 'node:path';
 // load stalls on "Loading N columns". Headless Chromium is not hidden.
 
 const ROOT = resolve(import.meta.dirname, '..', '..');
-const PIN_DIR = resolve(ROOT, 'tests/e2e/snapshots/facet-eda-v76.4');
+// v77.0 pins: v77.0 changed histogram rendering for every plot (axis padding, no gridline on
+// the axis), so the v76.4 pins are kept as history; see snapshots/facet-eda-v77.0/README.md.
+const PIN_DIR = resolve(ROOT, 'tests/e2e/snapshots/facet-eda-v77.0');
 const FIXTURES = resolve(ROOT, 'src/test/fixtures');
 const EDA = '/sessions/demos/demo-workflow-stats-eda.json';
 
@@ -77,6 +79,10 @@ const headerOf = (page, id) =>
 	page.locator(`section.draggable:has(svg[id="plot${id}"]) .plot-header`);
 
 test.describe('facets as views', () => {
+	// Dev-server only: the fixtures load through Vite's /@fs/ route and the checks read the
+	// dev-only window.__core, neither of which exists in the production preview that a
+	// plain `playwright test` run builds. Run with E2E_BASE_URL pointing at `pnpm dev`.
+	test.skip(!process.env.E2E_BASE_URL, 'needs a dev server (set E2E_BASE_URL)');
 	test('(a) the shipped EDA demo renders four panels at the pinned ids, positions and SVGs', async ({
 		page
 	}) => {
