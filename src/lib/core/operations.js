@@ -88,6 +88,13 @@ import { memoForget } from './computeMemo.js';
  * @property {string} id
  * @property {Object} inner   serialized snapshot of plot.plot (the type's data object)
  *
+ * @typedef {Object} OpSetFacetOverride
+ * @property {'setFacetOverride'} kind
+ * @property {string} id        the facet generator's plot id
+ * @property {string} unitKey   the panel's unit key (facetPanels.unitKeyFor)
+ * @property {string} path      dotted inner path ('ylimsLeftIN', 'xlimsIN[0]')
+ * @property {unknown} [value]  the override; undefined removes the path
+ *
  * @typedef {Object} OpSetOrphanProcessArg
  * @property {'setOrphanProcessArg'} kind
  * @property {string} processId
@@ -124,7 +131,7 @@ import { memoForget } from './computeMemo.js';
  *
  * @typedef {OpAddColumn | OpRemoveColumn | OpAddProcess | OpRemoveProcess |
  *   OpSetProcessArg | OpAddPlot | OpRemovePlot | OpSetPlotProperty | OpSetPlotPosition |
- *   OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
+ *   OpSetPlotInner | OpSetFacetOverride | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
  *   OpSetOrphanProcessArg | OpSetStoredValue | OpRemoveStoredValue |
  *   OpRenameStoredValue | OpReplaceColumnRefs | OpSwapColumnRefs | OpBatch} GraphOperation
  */
@@ -210,6 +217,8 @@ function applyForward(op) {
 			return op_setPlotPosition(op);
 		case 'setPlotInner':
 			return op_setPlotInner(op);
+		case 'setFacetOverride':
+			return op_setFacetOverride(op);
 		case 'addColumn':
 			return op_addColumn(op);
 		case 'removeColumn':
@@ -316,6 +325,43 @@ function op_setPlotInner(op) {
 		{ kind: 'setPlotInner', id: op.id, inner: snapshotPlotInner(op.inner) },
 		{ kind: 'setPlotInner', id: op.id, inner: before }
 	);
+}
+
+// One path of one panel's override map (plan 1.6 / 1.7): `value` undefined REMOVES the path
+// (and drops the unit's entry once it is empty), so "reset to facet" is the same op with no
+// value, and the inverse of a first-time set is a removal. Arrays are copied on the way in
+// and out so a later in-place edit of a limit pair cannot rewrite history. The map is a
+// $state object on the generator, so in-place writes re-run the panel projection.
+function op_setFacetOverride(op) {
+	const plot = core.plots.find((p) => p.id === op.id);
+	if (!plot || typeof op.unitKey !== 'string' || !op.unitKey || typeof op.path !== 'string')
+		return null;
+	if (!op.path) return null;
+	if (!plot.facetOverrides || typeof plot.facetOverrides !== 'object') plot.facetOverrides = {};
+	const map = plot.facetOverrides;
+	const entry = map[op.unitKey];
+	const had = entry != null && Object.prototype.hasOwnProperty.call(entry, op.path);
+	const before = had ? JSON.parse(JSON.stringify(entry[op.path])) : undefined;
+	const next = op.value === undefined ? undefined : JSON.parse(JSON.stringify(op.value));
+	if (
+		JSON.stringify(before ?? null) === JSON.stringify(next ?? null) &&
+		had === (next !== undefined)
+	)
+		return null;
+	if (next === undefined) {
+		if (had) {
+			delete entry[op.path];
+			if (Object.keys(entry).length === 0) delete map[op.unitKey];
+		}
+	} else {
+		if (!map[op.unitKey]) map[op.unitKey] = {};
+		map[op.unitKey][op.path] = next;
+	}
+	const canonical = { kind: 'setFacetOverride', id: op.id, unitKey: op.unitKey, path: op.path };
+	if (next !== undefined) canonical.value = JSON.parse(JSON.stringify(next));
+	const inverse = { kind: 'setFacetOverride', id: op.id, unitKey: op.unitKey, path: op.path };
+	if (had) inverse.value = before;
+	return pair(canonical, inverse);
 }
 
 function snapshotColumn(col) {

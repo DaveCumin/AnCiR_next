@@ -83,15 +83,12 @@
 	import { applyFigureAppearance } from '$lib/plots/seriesAppearance.js';
 	import { applyFigureWidth } from '$lib/plots/figureStyle.js';
 
-	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
+	import { appConsts, appState, snapToGrid } from '$lib/core/core.svelte';
 	import NumberWithUnits from '../inputs/NumberWithUnits.svelte';
 	import ControlInput from '../inputs/ControlInput.svelte';
-	import {
-		removePlots,
-		getPlotById,
-		FACETABLE_PLOT_TYPES,
-		syncFacetChildren
-	} from '$lib/core/Plot.svelte';
+	import { removePlots, FACETABLE_PLOT_TYPES } from '$lib/core/Plot.svelte';
+	import { selectedRefs, ownerPlotOf, isFacetPanel, moveRefTo } from '$lib/core/plotRefs.js';
+	import { facetUnits, panelsFor } from '$lib/core/facetPanels.svelte.js';
 	import Editable from '../inputs/Editable.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import CanvasNodeControls from './CanvasNodeControls.svelte';
@@ -122,13 +119,13 @@
 	// selection that is plot-only is treated the same as a plot-view multi-
 	// selection (alt-click) — both feed into `selectedPlots` and surface the
 	// shared-properties UI.
+	// `plot_<id>` entries only; the id may be a plot's number or a facet panel's string
+	// (plotRefs.refFromNodeId resolves either). Counted here to tell a plot-only canvas
+	// selection from a mixed one.
 	const canvasSelectedPlotIds = $derived.by(() => {
 		const out = [];
 		for (const id of activeCanvasMultiIds) {
-			if (typeof id === 'string' && id.startsWith('plot_')) {
-				const n = Number(id.slice(5));
-				if (Number.isFinite(n)) out.push(n);
-			}
+			if (typeof id === 'string' && id.startsWith('plot_')) out.push(id.slice(5));
 		}
 		return out;
 	});
@@ -176,15 +173,18 @@
 
 	// Apply a value to all edit-target plots at the given dotted path.
 	function setSharedField(path, val) {
-		selectedPlots.forEach((p) => setByPath(p, path, val));
+		editTargets.forEach((p) => setByPath(p, path, val));
 	}
 
-	// Apply a value to data row [rowIndex] of every edit-target plot.
+	// Apply a value to data row [rowIndex] of every edit-target plot. On a panel the row is
+	// the generator series it is a copy of (facetPanels), so the edit lands on the source.
 	function setSharedDataField(rowIndex, path, val) {
-		selectedPlots.forEach((p) => {
-			const row = p.plot?.data?.[rowIndex];
+		for (const ref of selectedPlots) {
+			const owner = ownerPlotOf(ref);
+			const gi = isFacetPanel(ref) ? ref.unit?.seriesIdx?.[rowIndex] : rowIndex;
+			const row = gi == null ? null : owner?.plot?.data?.[gi];
 			if (row) setByPath(row, path, val);
-		});
+		}
 	}
 
 	function formatPillValue(val, input) {
@@ -218,9 +218,10 @@
 		boundaries.middle = (boundaries.top + boundaries.bottom) / 2;
 		boundaries.center = (boundaries.left + boundaries.right) / 2;
 
-		// Map plots to new positions based on 'by'
-		core.plots.forEach((plot) => {
-			if (plot.selected) {
+		// Map plots to new positions based on 'by'. A panel is moved through its generator
+		// (moveRefTo), so its whole grid follows.
+		selectedPlots.forEach((plot) => {
+			{
 				let newX = plot.x,
 					newY = plot.y;
 
@@ -246,8 +247,7 @@
 				}
 
 				//update the plot
-				plot.x = snapToGrid(newX);
-				plot.y = snapToGrid(newY);
+				moveRefTo(plot, newX, newY);
 			}
 		});
 	}
@@ -283,7 +283,6 @@
 		if (by === 'horizontalEqual') {
 			//do calcs
 			const sortedPlots = [...selectedPlots].sort((a, b) => a.x - b.x);
-			const sortedPlotIds = sortedPlots.map((p) => p.id);
 			const minX = Math.min(...sortedPlots.map((p) => p.x));
 			if (spacingIN == null) {
 				const maxX = Math.max(...sortedPlots.map((p) => p.x + p.width + 25));
@@ -293,20 +292,18 @@
 				);
 			}
 
-			console.log('spacing: ', spacingIN);
 			//now distribute
 			let currentX = minX;
-			sortedPlotIds.forEach((id) => {
+			sortedPlots.forEach((p) => {
 				// Not clamped to 0: the canvas extends infinitely in every direction,
 				// so a selection sitting left of the origin must distribute in place.
-				getPlotById(id).x = snapToGrid(currentX);
-				currentX += getPlotById(id).width + 25 + spacingIN;
+				moveRefTo(p, currentX, p.y);
+				currentX += p.width + 25 + spacingIN;
 			});
 		}
 
 		if (by === 'verticalEqual') {
 			const sortedPlots = [...selectedPlots].sort((a, b) => a.y - b.y);
-			const sortedPlotIds = sortedPlots.map((p) => p.id);
 			const minY = Math.min(...sortedPlots.map((p) => p.y));
 			if (spacingIN == null) {
 				const maxY = Math.max(...sortedPlots.map((p) => p.y + p.height + 50));
@@ -316,11 +313,10 @@
 				);
 			}
 			let currentY = minY;
-			sortedPlotIds.forEach((id) => {
-				console.log('setting plot ', id, ' to y: ', currentY);
+			sortedPlots.forEach((p) => {
 				// See horizontalEqual above: no clamp on an infinite canvas.
-				getPlotById(id).y = snapToGrid(currentY);
-				currentY += getPlotById(id).height + 50 + spacingIN;
+				moveRefTo(p, p.x, currentY);
+				currentY += p.height + 50 + spacingIN;
 			});
 		}
 	}
@@ -334,39 +330,37 @@
 		}
 	}
 
-	// Union of plot-view-selected plots and any plots multi-selected on the
-	// workflow canvas — both routes contribute to the shared-properties UI.
-	// The literal selection (plot-view + canvas), generators included. Used for
-	// actions that target the selected entity itself (e.g. delete).
-	let rawSelectedPlots = $derived.by(() => {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local dedupe map built and consumed inside this $derived; the derived re-runs on its reactive deps, the map itself is never read reactively
-		const map = new Map();
-		for (const p of core.plots) {
-			if (p.selected) map.set(p.id, p);
-		}
-		for (const plotId of canvasSelectedPlotIds) {
-			const p = core.plots.find((q) => q.id === plotId);
-			if (p) map.set(p.id, p);
-		}
-		return [...map.values()];
-	});
+	// The selection as REFS (plotRefs.selectedRefs): plots selected on the worksheet, facet
+	// PANELS selected on the worksheet, and plot nodes multi-selected on the workflow canvas
+	// (a generator's node selects the generator itself). Everything that reads geometry or
+	// values reads these; a panel carries the same surface as a plot (id, name, type, x, y,
+	// width, height, plot, style).
+	let rawSelectedPlots = $derived(selectedRefs());
+	let selectedPlots = $derived(rawSelectedPlots);
 
-	// The edit targets. A facet generator isn't drawn itself — its children are —
-	// so editing one routes to its children (the template). Selecting a single
-	// child instead edits just that facet (a per-facet override). Everything that
-	// styles/positions plots works on this expanded set.
-	let selectedPlots = $derived.by(() => {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local dedupe map built and consumed inside this $derived; the derived re-runs on its reactive deps, the map itself is never read reactively
-		const map = new Map();
-		for (const p of rawSelectedPlots) {
-			if (p?.facet) {
-				for (const c of core.plots) if (c.facetParent === p.id) map.set(c.id, c);
-			} else if (p) {
-				map.set(p.id, p);
-			}
+	// Where WRITES go (Phase 1 of facets-as-views): a panel's edits route to its generator,
+	// so a shared-panel write on N panels of one generator is ONE write on it. Deduped.
+	let editTargets = $derived.by(() => {
+		const out = [];
+		for (const ref of selectedPlots) {
+			const owner = ownerPlotOf(ref);
+			if (owner && !out.includes(owner)) out.push(owner);
 		}
-		return [...map.values()];
+		return out;
 	});
+	// The generators whose panels are in a multi-selection, for the banner's note.
+	let panelGenerators = $derived.by(() => {
+		const out = [];
+		for (const ref of selectedPlots) {
+			if (isFacetPanel(ref) && !out.includes(ref.generator)) out.push(ref.generator);
+		}
+		return out;
+	});
+	// Save exports what is DRAWN: a selected generator stands for its panels (today's
+	// behaviour, since the children were the selection), a panel for itself.
+	let saveIds = $derived(
+		selectedPlots.flatMap((r) => (r.facet ? panelsFor(r).map((p) => p.id) : [r.id]))
+	);
 
 	let horizontalGapIN = $state(null);
 	let horizontalGap = $derived.by(() => {
@@ -418,16 +412,15 @@
      knob, it is the shape of the figure, and it only appears once faceting is on and there is
      more than one facet to arrange. -->
 {#snippet facetControls(p)}
-	{@const nFacets = core.plots.filter((c) => c.facetParent === p.id).length}
+	{@const nFacets = facetUnits(p).length}
 	<div class="control-component">
 		<div class="control-input-checkbox">
+			<!-- Ops, not direct writes (plan 1.7): each toggle is one undo step. The panels are
+			     derived from the generator, so nothing has to be synced here. -->
 			<input
 				type="checkbox"
 				checked={p.facet}
-				onchange={(e) => {
-					p.facet = e.currentTarget.checked;
-					syncFacetChildren(p);
-				}}
+				onchange={(e) => mutationService.setPlotProperty(p.id, 'facet', e.currentTarget.checked)}
 			/>
 			<p>One plot per series (facet)</p>
 		</div>
@@ -435,10 +428,8 @@
 			<ControlInput label="Rows">
 				<select
 					value={String(p.facetRows ?? 0)}
-					onchange={(e) => {
-						p.facetRows = Number(e.currentTarget.value) || 0;
-						syncFacetChildren(p);
-					}}
+					onchange={(e) =>
+						mutationService.setPlotProperty(p.id, 'facetRows', Number(e.currentTarget.value) || 0)}
 				>
 					<option value="0">Auto</option>
 					<!-- One option per possible row count, up to one facet per row. The saved value is
@@ -461,13 +452,7 @@
 	{:else if selectedPlots.length > 1}
 		<div class="control-banner">
 			<div class="control-banner-title">
-				<p>
-					{#if rawSelectedPlots.length === 1 && rawSelectedPlots[0]?.facet}
-						Faceted plot — {selectedPlots.length} facets
-					{:else}
-						{selectedPlots.length} plots selected
-					{/if}
-				</p>
+				<p>{selectedPlots.length} plots selected</p>
 
 				<div class="control-banner-icons">
 					<button class="icon" onclick={openDropdown} aria-label="Save plots">
@@ -477,7 +462,7 @@
 						class="icon"
 						onclick={(e) => {
 							e.stopPropagation();
-							removePlots(rawSelectedPlots.map((p) => p.id));
+							removePlots(editTargets.map((p) => p.id));
 						}}
 					>
 						<Icon name="trash" width={20} height={20} className="menu-icon" />
@@ -486,8 +471,16 @@
 			</div>
 		</div>
 
-		{#if rawSelectedPlots.length === 1 && rawSelectedPlots[0]?.facet}
-			{@render facetControls(rawSelectedPlots[0])}
+		{#if panelGenerators.length > 0}
+			<!-- Phase 1 of facets-as-views: a panel has no values of its own yet, so an edit
+			     made here on a panel is applied to its plot, which every panel projects. -->
+			<p class="panel-note">
+				{#each panelGenerators as gen (gen.id)}
+					<span
+						>Edits to a panel of {gen.name} apply to all {facetUnits(gen).length} of its panels.</span
+					>
+				{/each}
+			</p>
 		{/if}
 
 		<div class="control-component">
@@ -794,10 +787,22 @@
 			</div>
 		{/if}
 	{:else if selectedPlots.length == 1}
-		{@const plot = selectedPlots[0]}
+		<!-- A facet PANEL shows its generator's controls under a banner (Phase 1: every edit on a
+		     panel is an edit of the plot it projects); a generator shows its own. -->
+		{@const ref = selectedPlots[0]}
+		{@const plot = ownerPlotOf(ref)}
 		{#if plot}
 			{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
 			{#if Plot}
+				{#if isFacetPanel(ref)}
+					{@const n = facetUnits(plot).length}
+					<div class="panel-banner" data-testid="facet-panel-banner">
+						<p>
+							Panel {ref.index + 1} of {n} of {plot.name}: {ref.name}
+						</p>
+						<p class="panel-note">Edits here apply to all {n} panels.</p>
+					</div>
+				{/if}
 				<div class="control-banner">
 					<div class="control-banner-title">
 						<p>
@@ -895,7 +900,7 @@
 </div>
 
 <!-- One dialog serves both the single-plot and the multi-select banner. -->
-<SavePlot bind:open={showSavePlot} Id={selectedPlots.map((p) => p.id)} />
+<SavePlot bind:open={showSavePlot} Id={saveIds} />
 
 <style>
 	.heading {
@@ -929,6 +934,22 @@
 		font-weight: 600;
 		opacity: 0.75;
 		margin: var(--space-3) 0 var(--space-2);
+	}
+
+	.panel-banner {
+		padding: var(--space-2) 0;
+		font-size: var(--font-sm);
+	}
+	.panel-banner p {
+		margin: 0;
+	}
+	.panel-note {
+		font-size: var(--font-sm);
+		color: var(--color-text-muted);
+		margin: var(--space-1) 0 var(--space-2);
+	}
+	.panel-note span {
+		display: block;
 	}
 
 	.mixed-tag {

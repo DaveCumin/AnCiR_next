@@ -47,7 +47,7 @@
 //
 // Resolving on read makes wiring order irrelevant, which is the actual fix. Patching
 // the places a column can change would mean nine plots plus rewiring, Column Set
-// expansion and facet children, and "one site gets missed" has already caused four
+// expansion and facet panel projection, and "one site gets missed" has already caused four
 // defects in this work.
 //
 // WHERE PINNING HAPPENS

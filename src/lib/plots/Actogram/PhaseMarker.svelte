@@ -548,6 +548,7 @@
 
 <script>
 	import { onDestroy } from 'svelte';
+	import { isFacetPanel, panelSeriesTarget } from '$lib/core/facetPanels.svelte.js';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import { recordInnerEdit } from '$lib/plots/seriesDelete.js';
 	import {
@@ -667,8 +668,11 @@
 
 	function handleLinePointerDown(e, m) {
 		if (e.button != null && e.button !== 0) return;
-		// "Add markers" is armed: the plot's click-to-place owns this pointer.
-		if (m.parentData.parentPlot.isAddingMarkerTo >= 0) return;
+		// "Add markers" is armed: the plot's click-to-place owns this pointer. On a panel
+		// the arming lives on the generator (its controls are the panel's controls).
+		const box = m.parentData.parentPlot.parentBox;
+		const armedOn = isFacetPanel(box) ? box.generator.plot : m.parentData.parentPlot;
+		if (armedOn.isAddingMarkerTo >= 0) return;
 		const reg = m.linearRegression;
 		if (!reg || typeof reg !== 'object') return;
 		e.stopPropagation();
@@ -756,7 +760,26 @@
 		// Rewind, then replay through the op layer: the whole gesture lands on the
 		// undo stack as ONE step (recordInnerEdit no-ops when nothing changed).
 		Object.assign(m, g.before);
-		recordInnerEdit(m.parentData.parentPlot, () => Object.assign(m, after));
+		// On a facet PANEL the dragged line is a projected copy; the edit is written to the
+		// generator's own marker (same series, same block), and the projection mirrors it
+		// back onto every copy. Writing the copy would be undone by the next projection.
+		const target = markerWriteTarget(m);
+		recordInnerEdit(target.parentData.parentPlot, () => Object.assign(target, after));
+	}
+
+	/**
+	 * The marker an edit made on `m` belongs to: `m` itself on a plot; on a facet panel the
+	 * generator's marker at the same series and block index (a panel's series are copies of
+	 * generator series, in order, so the indices line up by construction).
+	 */
+	function markerWriteTarget(m) {
+		const inner = m.parentData?.parentPlot;
+		const box = inner?.parentBox;
+		if (!isFacetPanel(box)) return m;
+		const j = inner.data.indexOf(m.parentData);
+		const k = m.parentData.phaseMarkers.indexOf(m);
+		const series = panelSeriesTarget(box, j);
+		return series?.phaseMarkers?.[k] ?? m;
 	}
 
 	function endGesture() {

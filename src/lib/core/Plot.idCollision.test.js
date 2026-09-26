@@ -1,14 +1,19 @@
 /**
- * Session load mints plot ids that must not collide with the ones still to be rebuilt.
+ * Session load reserves the incoming plot ids so nothing minted mid-load can collide with a
+ * plot still to be rebuilt.
  *
  * The load loop in Setting.svelte yields a frame between every plot so the compositor stays
- * responsive. That yield lets Svelte effects run mid-import — and a FACETED plot's reconcile
- * effect spawns child plots through the same id allocator. So a child could be handed an id that
- * a plot later in the same file already owns, and the workspace then rendered a keyed `{#each}`
- * over two plots with the same id (`each_key_duplicate`).
+ * responsive, and that yield lets Svelte effects run mid-import. Until v76.4 a FACETED plot's
+ * reconcile effect spawned child plots through the same id allocator during that window, so a
+ * child could be handed an id that a plot later in the same file already owned, and the
+ * workspace rendered a keyed `{#each}` over two plots with the same id (`each_key_duplicate`).
+ * The reported case was demo-workflow-stats-eda.json, whose plot 7 is a faceted histogram and
+ * whose next plot owns id 8.
  *
- * Reproduces the reported case: demo-workflow-stats-eda.json, whose plot 7 is a faceted
- * histogram and whose next plot owns id 8.
+ * Facets are views now, so no reconcile mints anything during a load. The allocator
+ * assertions stay (plan 2026-09-26-facets-as-views, 0.2 and 5.11): `reservePlotIds` is the
+ * backstop for any OTHER mid-load minting path, and the scenario below stands in for one by
+ * constructing a plot by hand between the first and the rest.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { appConsts, core } from '$lib/core/core.svelte.js';
@@ -27,7 +32,8 @@ describe('plot id allocation across a session load', () => {
 		const saved = [7, 8, 9, 10, 11];
 		reservePlotIds(saved);
 
-		// The faceted plot lands first, and its reconcile mints a child before the rest arrive.
+		// The first plot lands, then something mints a plot before the rest arrive (what the
+		// facet reconcile did until v76.4).
 		const parent = hist(7);
 		const child = new Plot({ type: 'histogram', plot: { data: [] } });
 		const rest = saved.slice(1).map(hist);

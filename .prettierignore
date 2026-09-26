@@ -41,3 +41,7 @@ tools/benchmarks/
 # formatting it would put `pnpm build` and `pnpm lint` in a permanent fight (and
 # versionSync.svelte.test.js reads the double-quoted form).
 CITATION.cff
+
+# Sessions captured from the running app at v76.4 (facet migration fixtures), written
+# byte-for-byte by the app's own Save action. Reformatting would destroy the provenance.
+src/test/fixtures/*.json

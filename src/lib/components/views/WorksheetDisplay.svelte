@@ -1,4 +1,5 @@
 <script>
+	import { facetUnits } from '$lib/core/facetPanels.svelte.js';
 	// @ts-nocheck
 
 	import Icon from '$lib/icons/Icon.svelte';
@@ -158,7 +159,12 @@
 								<Icon name="eye" width={16} height={16} className="visible" />
 							{/if}
 						</button>
-						<p><Editable bind:value={plot.name} /></p>
+						<p>
+							<Editable bind:value={plot.name} />
+							{#if plot.facet}
+								<span class="panel-count">({facetUnits(plot).length} panels)</span>
+							{/if}
+						</p>
 					</div>
 
 					<div class="clps-title-button">
@@ -192,6 +198,12 @@
 />
 
 <style>
+	.panel-count {
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+		margin-left: var(--space-1);
+		white-space: nowrap;
+	}
 	.heading {
 		position: sticky;
 		top: 0;

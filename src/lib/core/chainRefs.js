@@ -160,9 +160,7 @@ export function reconcileChainRefs() {
 	let changed = false;
 
 	for (const entry of refs) {
-		const viaPlot = (core.plots ?? []).find(
-			(p) => p.id === entry.viaPlotId && p.facetParent == null
-		);
+		const viaPlot = (core.plots ?? []).find((p) => p.id === entry.viaPlotId);
 		const consumer = findConsumer(entry.toId);
 		if (!viaPlot || !consumer) {
 			changed = true;

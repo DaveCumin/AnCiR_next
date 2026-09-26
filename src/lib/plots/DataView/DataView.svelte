@@ -1,6 +1,6 @@
 <script module>
 	// @ts-nocheck
-	import { core } from '$lib/core/core.svelte';
+	import { resolvePlotRef } from '$lib/core/plotRefs.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
@@ -28,7 +28,8 @@
 
 		sourcePlot = $derived.by(() => {
 			if (this.sourcePlotId == null) return null;
-			return core.plots.find((p) => p.id === this.sourcePlotId) ?? null;
+			// A plot id, or a facet panel id (the panel's projected instance holds its series).
+			return resolvePlotRef(this.sourcePlotId);
 		});
 
 		downloadData = $derived.by(() => {

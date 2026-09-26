@@ -1,12 +1,13 @@
 // @ts-nocheck
 // Reordering a scatterplot's series through the real class + real op path
 // reorders the LEGEND (getLegendItems walks `data`), keeps every series' colour,
-// and undo restores the previous legend. Also: a facet generator's children
-// follow the new order on the next reconcile.
+// and undo restores the previous legend. Also: a facet generator's panels follow
+// the new order and keep their identity (the same panel objects, re-indexed).
 import { describe, it, expect, beforeEach } from 'vitest';
 import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 import { loadPlots } from '$test/plotRegistry.js';
-import { Plot, syncFacetChildren } from '$lib/core/Plot.svelte';
+import { Plot } from '$lib/core/Plot.svelte';
+import { panelsFor } from '$lib/core/facetPanels.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { history } from '$lib/core/opHistory.svelte.js';
 import { reorderSeriesWithUndo } from '$lib/plots/seriesReorder.js';
@@ -93,19 +94,22 @@ describe('Scatterplot series reorder → legend', () => {
 		]);
 	});
 
-	it('a facet generator re-syncs its children in the new order', () => {
+	it("a facet generator's panels follow the new order and keep their identity", () => {
 		const gen = makeScatter({ facet: true });
-		syncFacetChildren(gen);
-		const names = () =>
-			core.plots
-				.filter((p) => p.facetParent === gen.id)
-				.sort((p, q) => p.facetKey.localeCompare(q.facetKey))
-				.map((p) => p.name);
-		expect(names()).toEqual(['a', 'b', 'c']);
+		const before = panelsFor(gen);
+		const byName = Object.fromEntries(before.map((p) => [p.name, p]));
+		expect(before.map((p) => p.name)).toEqual(['a', 'b', 'c']);
 
 		reorderSeriesWithUndo(gen.plot, 2, 0);
-		syncFacetChildren(gen);
-		expect(names()).toEqual(['c', 'a', 'b']);
-		expect(core.plots.filter((p) => p.facetParent === gen.id)).toHaveLength(3);
+		const after = panelsFor(gen);
+		expect(after.map((p) => p.name)).toEqual(['c', 'a', 'b']);
+		// v76.4 destroyed every child on a reorder (plan 0.4 item 5); a panel survives it.
+		after.forEach((p) => expect(p).toBe(byName[p.name]));
+		expect(after.map((p) => p.index)).toEqual([0, 1, 2]);
+		expect(core.plots).toEqual([gen]);
+
+		history.undo();
+		expect(panelsFor(gen).map((p) => p.name)).toEqual(['a', 'b', 'c']);
+		expect(panelsFor(gen)[0]).toBe(byName.a);
 	});
 });

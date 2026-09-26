@@ -74,9 +74,13 @@ export const PLOT_METRIC_DEFS = {
 	}
 };
 
-/** True when this plot should carry metric output columns. */
+/**
+ * True when this plot should carry metric output columns. Only a Plot in core.plots does:
+ * a facet panel (facetPanels.svelte.js) has no `metricOut`, and its generator already
+ * emits one value per series, which IS the per-panel metric.
+ */
 function isMetricPlot(plot) {
-	return plot && plot.facetParent == null && PLOT_METRIC_DEFS[plot.type] != null;
+	return plot && plot.generator == null && PLOT_METRIC_DEFS[plot.type] != null;
 }
 
 /**

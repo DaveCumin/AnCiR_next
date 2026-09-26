@@ -1,15 +1,19 @@
 <script module>
 	// @ts-nocheck
-	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { Column } from '$lib/core/Column.svelte';
 	import { reportUnknownNode } from '$lib/core/unknownNode.js';
 
 	import { appConsts, appState, core, snapToGrid } from '$lib/core/core.svelte';
 	import { setSelection } from '$lib/tableProcesses/columnSet.js';
-	import { PLOT_CHROME } from '$lib/core/workspaceLayout.js';
-	import { facetGridCells } from '$lib/core/facetGrid.js';
 	import { removePlotMetricColumns } from '$lib/plots/plotMetricOutputs.svelte.js';
 	import { newFigureStyle, normaliseFigureStyle } from '$lib/plots/figureStyle.js';
-	import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+	import { FACETABLE_PLOT_TYPES as SHARED_FACETABLE_PLOT_TYPES } from '$lib/core/facetTypes.js';
+	import { sanitiseOverrides } from '$lib/core/facetOverrides.js';
+	import { allPanels } from '$lib/core/facetPanels.svelte.js';
+	import { addNotification } from '$lib/core/notifications.svelte.js';
+	// The facet type sets live in facetTypes.js (shared with the panel engine and the session
+	// migration, which must stay free of this module); re-exported so existing importers work.
+	export const FACETABLE_PLOT_TYPES = SHARED_FACETABLE_PLOT_TYPES;
 	let _counter = 0;
 	function getNextId() {
 		let id = _counter++;
@@ -23,10 +27,12 @@
 	 * Claim every id an incoming session owns, BEFORE any of its plots are rebuilt.
 	 *
 	 * The load loop yields a frame between plots so the compositor stays responsive, which lets
-	 * Svelte effects run mid-import. A faceted plot's reconcile spawns children through this same
-	 * allocator, so without reserving up front a child can be minted with an id that a plot later
-	 * in the file already owns — and the workspace then keys an `{#each}` on two plots with the
-	 * same id. Monotonic, so opening a smaller session afterwards cannot rewind the counter.
+	 * Svelte effects run mid-import. Until v76.4 a faceted plot's reconcile spawned child plots
+	 * through this same allocator mid-load, so a child could be minted with an id that a plot
+	 * later in the file already owned, and the workspace then keyed an `{#each}` on two plots
+	 * with the same id. Facets are views now (no plot is minted during a load), but the
+	 * reservation stays as a backstop for any other mid-load minting path (plan 0.2, 5.11).
+	 * Monotonic, so opening a smaller session afterwards cannot rewind the counter.
 	 */
 	export function reservePlotIds(ids) {
 		for (const id of ids ?? []) {
@@ -72,230 +78,12 @@
 
 	function deletePlotIds(ids) {
 		const idSet = new Set(ids);
-		const isDeleted = (p) => idSet.has(p.id) || (p.facetParent != null && idSet.has(p.facetParent));
+		const isDeleted = (p) => idSet.has(p.id);
 		// Metric out-columns belong to the plot — delete them with it.
 		for (const p of core.plots) {
 			if (isDeleted(p)) removePlotMetricColumns(p);
 		}
-		// Deleting a facet generator also removes its generated children.
 		core.plots = core.plots.filter((p) => !isDeleted(p));
-	}
-
-	// Plot types that support faceting (small multiples). Most use an x/y series model;
-	// the histogram is column-based (one `column` ref per series), which the engine also
-	// handles (see facetUnits below) — one child histogram per wired column.
-	//
-	// The boxplot is NOT here, and neither is the mean/SEM plot, for the same reason: a box
-	// already IS the summary of one group, so the comparison between groups is the whole
-	// point of the figure. Faceting it puts one box in each panel and takes the comparison
-	// away. Every type below draws a distribution or a series that stays readable alone.
-	export const FACETABLE_PLOT_TYPES = new Set([
-		'scatterplot',
-		'actogram',
-		'correlogram',
-		'periodogram',
-		'fft',
-		'histogram'
-	]);
-
-	// Plot types whose series are a flat list of single columns (no x/y pairing).
-	const COLUMN_BASED_FACET_TYPES = new Set(['histogram']);
-
-	// Group a plot's flat data points into series-sets by shared x (mirrors the
-	// per-set (xN, ysN) ports). Each set keeps only valid ys, in wired order.
-	function facetSets(data) {
-		const sets = [];
-		for (const dp of data ?? []) {
-			const xRef = dp?.x?.refId ?? -1;
-			const yRef = dp?.y?.refId ?? -1;
-			let s = sets.find((ss) => ss.xRefId === xRef);
-			if (!s) {
-				s = { xRefId: xRef, ys: [] };
-				sets.push(s);
-			}
-			if (yRef >= 0 && getColumnById(yRef)) s.ys.push(yRef);
-		}
-		return sets;
-	}
-
-	// Normalise a generator's wired series into the facet UNITS that drive the small
-	// multiples — one child plot per unit. Two data models:
-	//   • column-based (histogram): one unit per wired `column`; the child gets that single
-	//     column. desired = [{ column }].
-	//   • x/y (scatter, boxplot, …): set 1 (the first wired x-group) drives the facets, one
-	//     unit per y in set 1; any further sets (2, 3, …) are paired by position — the i-th y of
-	//     set 2/3 is overlaid onto unit i — so raw points and their fitted curve land together.
-	//     desired = [{ xRef, yRef }, …].
-	// Each unit carries a stable `key` for reuse, a `name`, and a `sig` for idempotent syncing.
-	function facetUnits(gen) {
-		const data = gen.plot?.data ?? [];
-		if (COLUMN_BASED_FACET_TYPES.has(gen.type)) {
-			const units = [];
-			data.forEach((dp) => {
-				const ref = dp?.column?.refId ?? -1;
-				if (ref < 0 || !getColumnById(ref)) return;
-				const i = units.length;
-				units.push({
-					key: `${gen.id}:${i}:${ref}`,
-					name: getColumnById(ref)?.name ?? `series ${i + 1}`,
-					desired: [{ column: ref }],
-					sig: `c${ref}`
-				});
-			});
-			return units;
-		}
-		const sets = facetSets(data);
-		const primary = sets[0] ?? { xRefId: -1, ys: [] };
-		return primary.ys.map((yRef, i) => {
-			const desired = [{ xRef: primary.xRefId, yRef }];
-			for (let k = 1; k < sets.length; k++) {
-				if (i < sets[k].ys.length) desired.push({ xRef: sets[k].xRefId, yRef: sets[k].ys[i] });
-			}
-			return {
-				key: `${gen.id}:${i}:${yRef}`,
-				name: getColumnById(yRef)?.name ?? `series ${i + 1}`,
-				desired,
-				sig: desired.map((d) => `${d.xRef}:${d.yRef}`).join(',')
-			};
-		});
-	}
-
-	// Overlays (reference lines / bands) are replicated onto every facet child, so a
-	// reference mark drawn on the generator appears on all its small multiples.
-	// Ids copy through the JSON round trip (OverlayClass keeps a saved id), so a
-	// child's overlay carries the SAME id as the generator's: the child's ports are
-	// then `ov<id>_<key>` with the generator's ids, which is what a user who wired
-	// the generator expects to see on every small multiple. The signature still
-	// leaves `id` out: identity is decided by the generator, and comparing on ids
-	// would only add a way for a pre-persistence child (minted ids) to be rewritten
-	// on every reconcile.
-	const overlaysSig = (inner) =>
-		JSON.stringify(
-			(inner?.overlays ?? []).map((o) => {
-				const json = typeof o?.toJSON === 'function' ? o.toJSON() : o;
-				// eslint-disable-next-line no-unused-vars -- destructured only to drop `id` from the signature; see the comment above
-				const { id: _id, ...rest } = json ?? {};
-				return rest;
-			})
-		);
-
-	/**
-	 * Copy the generator's overlays onto a child by JSON round-trip through
-	 * OverlayClass.fromJSON. Idempotent: rewrites only when the signatures differ.
-	 * A generator without an `overlays` array (a plot type that has none) leaves
-	 * the child alone.
-	 */
-	export function syncFacetOverlays(gen, child) {
-		const src = gen?.plot?.overlays;
-		const inner = child?.plot;
-		if (!Array.isArray(src) || !inner) return;
-		if (overlaysSig(inner) === overlaysSig(gen.plot)) return;
-		inner.overlays = src.map((o) =>
-			OverlayClass.fromJSON(inner, typeof o?.toJSON === 'function' ? o.toJSON() : o)
-		);
-	}
-
-	// Signature of a child's current series, in the same shape facetUnits emits, so syncing
-	// only rewrites the series when they actually differ.
-	function childSeriesSig(child) {
-		return (child.plot?.data ?? [])
-			.map((dp) =>
-				dp?.column?.refId != null
-					? `c${dp.column.refId}`
-					: `${dp?.x?.refId ?? -1}:${dp?.y?.refId ?? -1}`
-			)
-			.join(',');
-	}
-
-	// Reconcile a facet generator's child plots. Children are keyed for stable reuse and arranged
-	// in a grid. Idempotent: only writes core.plots / child fields when something changed.
-	export function syncFacetChildren(gen) {
-		if (!gen) return;
-		const units = gen.facet ? facetUnits(gen) : [];
-		const padding = appState.gridSize ?? 15;
-		const width = snapToGrid(gen.width ?? 360);
-		const height = snapToGrid(gen.height ?? 220);
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set of live facet keys, built and consumed inside this function; never read reactively
-		const keep = new Set();
-
-		// Step by the size of the WRAPPER, not the plot: Draggable adds side chrome and a header
-		// bar, so spacing on the bare width/height overlapped every row by the header's height.
-		// One step per axis for the whole grid, so every column lines up down the grid and the
-		// (possibly partial) last row keeps the column positions of the full rows above it.
-		//
-		// The step is snapped ONCE, and the origin once, rather than snapping each child's final
-		// coordinate: the raw step (a snapped width plus 20px of chrome plus the padding) is not
-		// itself a multiple of the grid, so per-child snapping rounded successive columns in
-		// different directions and the gaps alternated — visibly ragged axes across the grid.
-		const stepX = snapToGrid(width + PLOT_CHROME.x + padding);
-		const stepY = snapToGrid(height + PLOT_CHROME.y + padding);
-		// gen.facetRows: 0 = automatic (near-square, the original rule); see facetGrid.js.
-		const grid = facetGridCells(units.length, { rows: gen.facetRows ?? 0, stepX, stepY });
-		// Origin of the child grid: one generator-height plus two paddings below the generator.
-		const originX = snapToGrid(gen.x ?? 0);
-		const originY = snapToGrid((gen.y ?? 0) + height + PLOT_CHROME.y + 2 * padding);
-
-		units.forEach((unit, i) => {
-			const key = unit.key;
-			keep.add(key);
-			const cell = grid.cells[i];
-			const x = originX + cell.dx;
-			const y = originY + cell.dy;
-
-			let child = core.plots.find((p) => p.facetParent === gen.id && p.facetKey === key);
-			if (!child) {
-				child = new Plot({ type: gen.type, name: unit.name, x, y, width, height });
-				child.facetParent = gen.id;
-				child.facetKey = key;
-				core.plots.push(child);
-			} else {
-				child.x = x;
-				child.y = y;
-				child.width = width;
-				child.height = height;
-				child.name = unit.name;
-			}
-
-			// Sync the child's series to `unit.desired` only when they differ (keeps the
-			// reconciliation idempotent and avoids needless column churn).
-			if (childSeriesSig(child) !== unit.sig) {
-				child.plot.data = [];
-				for (const d of unit.desired) {
-					if (d.column != null) {
-						child.plot.addData({ column: { refId: d.column } });
-					} else {
-						const dataIn = { y: { refId: d.yRef } };
-						if (d.xRef != null && d.xRef >= 0) dataIn.x = { refId: d.xRef };
-						child.plot.addData(dataIn);
-					}
-				}
-			}
-
-			// Overlays follow the generator onto every child (idempotent, like series).
-			syncFacetOverlays(gen, child);
-		});
-
-		// Drop children that no longer correspond to a facet. Only reassign when
-		// something actually changed so this is idempotent (safe to call from an
-		// effect without re-triggering itself).
-		const stale = core.plots.filter((p) => p.facetParent === gen.id && !keep.has(p.facetKey));
-		if (stale.length) {
-			const staleSet = new Set(stale);
-			core.plots = core.plots.filter((p) => !staleSet.has(p));
-		}
-	}
-
-	// Reconcile every facet generator and prune children whose parent is no longer
-	// a generator (faceting toggled off, or the generator deleted). Idempotent.
-	export function reconcileAllFacets() {
-		const gens = core.plots.filter((p) => p.facet);
-		for (const g of gens) syncFacetChildren(g);
-		const genIds = new Set(gens.map((g) => g.id));
-		const orphans = core.plots.filter((p) => p.facetParent != null && !genIds.has(p.facetParent));
-		if (orphans.length) {
-			const orphanSet = new Set(orphans);
-			core.plots = core.plots.filter((p) => !orphanSet.has(p));
-		}
 	}
 
 	// --- Live Column Set → plot inputs -----------------------------------------
@@ -340,7 +128,7 @@
 
 	/** Materialise every Column Set wired to a plot into its series (idempotent). */
 	export function syncPlotSets(plot) {
-		if (!plot || plot.facetParent != null) return;
+		if (!plot) return;
 		if (plot.type === 'tableplot') {
 			const { candidates, selected } = setSelection(plot.setRefs?.series ?? []);
 			const cur = plot.plot?.columnRefs ?? [];
@@ -365,7 +153,6 @@
 	/** Reconcile every plot that has a Column Set wired in. Idempotent. */
 	export function reconcileAllPlotSets() {
 		for (const p of core.plots ?? []) {
-			if (p.facetParent != null) continue;
 			if (p.setRefs && Object.values(p.setRefs).some((a) => (a ?? []).length > 0)) syncPlotSets(p);
 		}
 	}
@@ -426,25 +213,31 @@
 		appState.showAYSModal = true;
 	}
 
+	// Selection lives on plots AND on facet panels (facetPanels.svelte.js, plan 1.5), so every
+	// helper below walks both. `id` may be a numeric plot id or a panel id string.
 	export function selectPlot(e, id) {
-		// //look for alt held at the same time
+		const all = [...core.plots, ...allPanels()];
 		if (e.altKey) {
-			//simply toggle selection
-			core.plots.forEach((p) => {
-				p.id == id ? (p.selected = !p.selected) : null;
+			// Alt held: toggle just this one.
+			all.forEach((p) => {
+				if (p.id == id) p.selected = !p.selected;
 			});
 		} else {
-			//de-select all others and only select this one
-			core.plots.forEach((p) => {
-				p.id == id ? (p.selected = true) : (p.selected = false);
+			// Deselect everything else and select this one.
+			all.forEach((p) => {
+				p.selected = p.id == id;
 			});
 		}
 	}
+	// Every renderable: the top-level plots and every panel. A generator is not drawn, so it
+	// is not selected here (its canvas node selects it, see plotRefs.selectedRefs).
 	export function selectAllPlots() {
-		core.plots.forEach((p) => (p.selected = true));
+		core.plots.forEach((p) => (p.selected = !p.facet));
+		allPanels().forEach((p) => (p.selected = true));
 	}
 	export function deselectAllPlots() {
 		core.plots.forEach((p) => (p.selected = false));
+		allPanels().forEach((p) => (p.selected = false));
 	}
 
 	export function removeColumnFromPlots(c_id) {
@@ -484,17 +277,17 @@
 		// setPlotInner op) re-renders the plot. In-place edits to plot.plot.data /
 		// columnRefs were already reactive on their own $state; this covers the swap.
 		plot = $state();
-		// Faceting (small multiples): a generator plot has facet=true and produces
-		// one child plot per series. Children carry facetParent (the generator id)
-		// and facetKey (stable id for reconciliation); they aren't shown on the
-		// canvas and the generator itself isn't shown on the workspace.
+		// Faceting (small multiples): a generator plot has facet=true and is shown on the
+		// workspace as one PANEL per series (core/facetPanels.svelte.js). Panels are views
+		// derived from the generator on read: never in core.plots, never saved.
 		facet = $state(false);
-		facetParent = $state(null);
-		facetKey = $state(null);
-		// Rows the child grid uses. 0 = automatic (near-square), which is what every plot did
+		// Rows the panel grid uses. 0 = automatic (near-square), which is what every plot did
 		// before this option existed and what a session saved without the field loads as.
-		// Columns follow from the row count — see facetGrid.js.
+		// Columns follow from the row count; see facetGrid.js.
 		facetRows = $state(0);
+		// Per-panel overrides of a facet generator: { [unitKey]: { [innerPath]: value } }. Phase 1
+		// admits axis limits only (facetOverrides.js). Persisted only when non-empty.
+		facetOverrides = $state({});
 		// Live Column Set inputs, keyed by channel: `series` (tableplot), `data`
 		// (single-input plots like Histogram), or `y` (x/y plots — one y-series per
 		// selected column, sharing the plot's primary x). Each value is a list of
@@ -553,10 +346,18 @@
 			this.plot = plotTypeEntry.data.fromJSON(this, plotData.plot);
 
 			this.facet = plotData.facet ?? false;
-			this.facetParent = plotData.facetParent ?? null;
-			this.facetKey = plotData.facetKey ?? null;
 			// `??` not `||`: 0 is the meaningful "automatic" value, not a missing one.
 			this.facetRows = plotData.facetRows ?? 0;
+			// A wrong shape anywhere in the map loads as {} with a load warning, so a hand-edited
+			// or stale session can never put a panel into a state the projection cannot apply.
+			const { overrides, reason } = sanitiseOverrides(plotData.facetOverrides);
+			this.facetOverrides = overrides;
+			if (reason)
+				addNotification(
+					`Plot '${this.name}': ${reason}; the panel overrides were dropped`,
+					'warning',
+					0
+				);
 			this.setRefs =
 				plotData.setRefs && typeof plotData.setRefs === 'object' ? { ...plotData.setRefs } : {};
 			this.metricOut =
@@ -585,9 +386,10 @@
 				type: this.type,
 				selected: this.selected,
 				facet: this.facet,
-				facetParent: this.facetParent,
-				facetKey: this.facetKey,
 				facetRows: this.facetRows,
+				...(Object.keys(this.facetOverrides ?? {}).length > 0 && {
+					facetOverrides: this.facetOverrides
+				}),
 				setRefs: this.setRefs,
 				metricOut: this.metricOut,
 				sourceNodeId: this.sourceNodeId,
@@ -608,9 +410,8 @@
 				selected,
 				plot,
 				facet,
-				facetParent,
-				facetKey,
 				facetRows,
+				facetOverrides,
 				setRefs,
 				metricOut,
 				sourceNodeId,
@@ -627,9 +428,8 @@
 					selected,
 					plot,
 					facet,
-					facetParent,
-					facetKey,
 					facetRows,
+					facetOverrides,
 					setRefs,
 					metricOut,
 					sourceNodeId,

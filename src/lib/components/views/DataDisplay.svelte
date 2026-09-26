@@ -1,4 +1,5 @@
 <script>
+	import { facetUnits } from '$lib/core/facetPanels.svelte.js';
 	// @ts-nocheck
 	import { core, appState, getProcessNodeGraph } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
@@ -637,7 +638,13 @@
 									<Icon name="eye" width={16} height={16} className="visible" />
 								{/if}
 							</button>
-							<p class="plot-name"><Editable bind:value={plot.name} /></p>
+							<p class="plot-name">
+								<Editable bind:value={plot.name} />
+								{#if plot.facet}
+									<!-- A facet generator's panels are views, not plots: one row, with the count. -->
+									<span class="panel-count">({facetUnits(plot).length} panels)</span>
+								{/if}
+							</p>
 							<button
 								class="icon plot-find-btn"
 								title="Find on canvas"
@@ -678,6 +685,12 @@
 />
 
 <style>
+	.panel-count {
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+		margin-left: var(--space-1);
+		white-space: nowrap;
+	}
 	/* Section dividers (between Data / Nodes / Plots), mirroring the nav .rail-sep. */
 	.section-sep {
 		height: 1px;

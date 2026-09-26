@@ -43,12 +43,7 @@
 		createOrphanProcess
 	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
-	import {
-		Plot,
-		selectAllPlots,
-		reconcileAllFacets,
-		reconcileAllPlotSets
-	} from '$lib/core/Plot.svelte';
+	import { Plot, selectAllPlots, reconcileAllPlotSets } from '$lib/core/Plot.svelte';
 	import { selectedColumnIds } from '$lib/tableProcesses/columnSet.js';
 	import { TableProcess, reconcileAllTPSets } from '$lib/core/TableProcess.svelte';
 	import { reconcileChainRefs } from '$lib/core/chainRefs.js';
@@ -147,36 +142,8 @@
 		window.__appState = appState;
 	}
 
-	// Keep facet generators' child plots in sync with their wired series. We track
-	// only the generators' geometry + series refIds; reconciliation runs untracked
-	// and is idempotent, so it won't re-trigger itself in the steady state.
-	$effect(() => {
-		const gens = core.plots.filter((p) => p.facet);
-		for (const g of gens) {
-			void g.x;
-			void g.y;
-			void g.width;
-			void g.height;
-			void g.type;
-			// The chosen row count changes only the child GRID, but it changes it the same way a
-			// resize does, so it has to be tracked here too — the control panel calls
-			// syncFacetChildren itself, but any other writer (session edit, AI, undo) would
-			// otherwise leave the children on the old grid until something else moved.
-			void g.facetRows;
-			for (const s of g.plot?.data ?? []) {
-				void s?.x?.refId;
-				void s?.y?.refId;
-			}
-			// Overlays (reference lines / bands) are replicated onto the children, so
-			// any change to one (form, wiring, typed values, style) must re-sync them.
-			for (const o of g.plot?.overlays ?? []) {
-				void JSON.stringify(typeof o?.toJSON === 'function' ? o.toJSON() : o);
-			}
-		}
-		// Also react to children being added/removed (membership changes).
-		void core.plots.length;
-		untrack(() => reconcileAllFacets());
-	});
+	// Facets are VIEWS (core/facetPanels.svelte.js): a generator's panels are derived on read
+	// and projected by the panel hosts that render them, so nothing here reconciles them.
 
 	// Keep plots that have a Column Set wired in synced with the set's live
 	// selection. Track each wired plot's setRefs and, for every referenced Column

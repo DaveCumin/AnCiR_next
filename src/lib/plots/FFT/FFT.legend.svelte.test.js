@@ -38,7 +38,6 @@ function mkFFT(labels = ['a']) {
 		name: 'p',
 		width: 500,
 		height: 320,
-		facetParent: null,
 		style: null,
 		plot: null
 	};
