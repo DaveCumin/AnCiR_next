@@ -150,7 +150,8 @@ describe('SavePlot dialog', () => {
 		);
 		await fireEvent.click(save);
 		await waitFor(() => expect(saveExport).toHaveBeenCalledTimes(1));
-		expect(saveExport.mock.calls[0][0]).toEqual([1, 2]);
+		// The ids reach the save in Plots-list order: plot 2 is the top row.
+		expect(saveExport.mock.calls[0][0]).toEqual([2, 1]);
 		expect(saveExport.mock.calls[0][1]).toMatchObject({
 			format: 'svg',
 			includeTitle: true,
@@ -243,6 +244,41 @@ describe('SavePlot dialog: dimensions', () => {
 		await fireEvent.click(byLabel('Individual files'));
 		await waitFor(() => expect(field('width')).not.toBeNull());
 		expect(document.querySelector('.dims-note')).toBeNull();
+	});
+});
+
+describe('SavePlot dialog: panel label order', () => {
+	const previewLabels = () => {
+		const src = document.querySelector('img.export-preview')?.getAttribute('src') ?? '';
+		if (!src.startsWith('data:image/svg+xml')) return null;
+		const doc = new DOMParser().parseFromString(
+			decodeURIComponent(escape(atob(src.split(',')[1]))),
+			'image/svg+xml'
+		);
+		return [...doc.querySelectorAll('text.export-title')].map((t) => t.textContent);
+	};
+
+	it('labels the preview from the top of the Plots list down, and follows a reorder', async () => {
+		mountPlot(1, 'A', 0);
+		mountPlot(2, 'B', 300);
+		mountPlot(3, 'C', 600);
+		render(SavePlot, { props: { open: true, Id: [1, 2, 3] } });
+		await waitFor(() => expect(byLabel('Panel labels')).toBeDefined());
+		await fireEvent.click(byLabel('SVG'));
+		await fireEvent.click(byLabel('Panel labels'));
+		// The list shows C, B, A top to bottom.
+		await waitFor(() => expect(previewLabels()).toEqual(['a  C', 'b  B', 'c  A']));
+		// Drag A to the top of the list (the end of core.plots): its label follows.
+		const [a] = core.plots.splice(0, 1);
+		core.plots.push(a);
+		await tick();
+		await waitFor(() => expect(previewLabels()).toEqual(['a  A', 'b  C', 'c  B']));
+		// The pager walks the same order.
+		await fireEvent.click(byLabel('Individual files'));
+		await waitFor(() => expect(caption()).toMatch(/^Plot 1 of 3/));
+		await waitFor(() => expect(previewLabels()).toEqual(['A']));
+		await fireEvent.click(pagerButton('Next'));
+		await waitFor(() => expect(previewLabels()).toEqual(['C']));
 	});
 });
 
@@ -343,9 +379,11 @@ describe('SavePlot dialog: typing into the size fields', () => {
 
 describe('SavePlot dialog: pager', () => {
 	it("pages through the plots in individual mode and keeps each plot's edited size", async () => {
-		mountPlot(1, 'One', 0, { w: 200, h: 100 });
-		mountPlot(2, 'Two', 300, { w: 400, h: 100 });
+		// Pages run in Plots-list order (core.plots reversed): mounted Three, Two, One, the
+		// list shows One on top, so page 1 is One.
 		mountPlot(3, 'Three', 600, { w: 600, h: 100 });
+		mountPlot(2, 'Two', 300, { w: 400, h: 100 });
+		mountPlot(1, 'One', 0, { w: 200, h: 100 });
 		render(SavePlot, { props: { open: true, Id: [1, 2, 3] } });
 		await waitFor(() => expect(byLabel('Individual files')).toBeDefined());
 		await fireEvent.click(byLabel('Individual files'));
@@ -383,9 +421,9 @@ describe('SavePlot dialog: pager', () => {
 		// Save applies every edited size.
 		await fireEvent.click(saveButton());
 		await waitFor(() => expect(saveExport).toHaveBeenCalledTimes(1));
-		expect(core.plots[0].width).toBe(250);
+		expect(core.plots[2].width).toBe(250);
 		expect(core.plots[1].width).toBe(450);
-		expect(core.plots[2].width).toBe(600);
+		expect(core.plots[0].width).toBe(600);
 		expect(saveExport.mock.calls[0][1].sizes).toEqual({
 			1: { width: 250, height: 125 },
 			2: { width: 450, height: 113 }
@@ -471,7 +509,7 @@ describe('SavePlot dialog: writing back to the plot', () => {
 		expect(saveExport).not.toHaveBeenCalled();
 	});
 
-	it('in combined mode the dpi goes to the first panel only', async () => {
+	it('in combined mode the dpi goes to the first panel only (the top of the Plots list)', async () => {
 		const a = mountPlot(1, 'One', 0, { style: { exportDpi: 300 } });
 		const b = mountPlot(2, 'Two', 300, { style: { exportDpi: 300 } });
 		render(SavePlot, { props: { open: true, Id: [1, 2] } });
@@ -479,8 +517,9 @@ describe('SavePlot dialog: writing back to the plot', () => {
 		await fireEvent.click(button(/^72$/));
 		await fireEvent.click(saveButton());
 		await waitFor(() => expect(saveExport).toHaveBeenCalledTimes(1));
-		expect(a.style.exportDpi).toBe(72);
-		expect(b.style.exportDpi).toBe(300);
+		// Plot 2 is the top row of the list, so it is panel "a" and carries the figure's dpi.
+		expect(b.style.exportDpi).toBe(72);
+		expect(a.style.exportDpi).toBe(300);
 		expect(history.undoCount).toBe(1);
 	});
 });

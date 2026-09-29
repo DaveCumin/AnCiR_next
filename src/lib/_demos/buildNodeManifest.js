@@ -16,6 +16,7 @@ import { appConsts } from '$lib/core/core.svelte.js';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { plotMetricManifestOutputs } from '$lib/plots/plotMetricDefs.js';
 
 export const MANIFEST_PATH = join(process.cwd(), 'static', 'nodes.json');
 const INDEX = join(process.cwd(), 'static', 'sessions', 'demos', 'index.json');
@@ -122,7 +123,9 @@ export async function buildNodeManifest() {
 				cardinality: 'many'
 			})),
 			params: [],
-			outputs: [],
+			// The plot's metric output ports (peak stats, Q-Q r/n, an actogram's five per marker
+			// rule), from the same definitions the app mints its columns from.
+			outputs: plotMetricManifestOutputs(id),
 			demo: demoByNode[id] ?? null
 		});
 	}

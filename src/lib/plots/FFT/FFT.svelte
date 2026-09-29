@@ -743,13 +743,14 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
+	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
 	import { getZoomAdapter } from '$lib/plots/zoomAdapters.js';
-	import { usePlotMetricOutputs } from '$lib/plots/plotMetricOutputs.svelte.js';
+	import { usePlotMetricOutputs, ownsPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
 
 	let { theData, which, brushable = false, zoomMode = false } = $props();
 
@@ -758,7 +759,7 @@
 	// already computes.
 	usePlotMetricOutputs(
 		() => theData,
-		() => which === 'plot'
+		() => ownsPlotMetrics(which)
 	);
 
 	// Brush + wheel zoom (shared controller + per-plot adapter). Mirrors Scatterplot.
@@ -1114,21 +1115,16 @@
 		<Axis axisData={theData.xAxis} which="controls" title="X-Axis Controls" />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
-			<div class="control-data-add">
-				<button
-					class="icon"
-					onclick={async () => {
-						theData.addData({
-							x: null,
-							y: { refId: -1 }
-						});
-						await tick();
-						dataSettingsScrollTo('bottom');
-					}}
-				>
-					<Icon name="add" width={16} height={16} />
-				</button>
-			</div>
+			<DataAddHeader
+				onadd={async () => {
+					theData.addData({
+						x: null,
+						y: { refId: -1 }
+					});
+					await tick();
+					dataSettingsScrollTo('bottom');
+				}}
+			/>
 
 			<div class="control-data-container">
 				{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}

@@ -410,13 +410,14 @@
 	// @ts-nocheck
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
+	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import { onMount, tick } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
-	import { usePlotMetricOutputs } from '$lib/plots/plotMetricOutputs.svelte.js';
+	import { usePlotMetricOutputs, ownsPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
 
 	let { theData, which } = $props();
 
@@ -425,7 +426,7 @@
 	// For which === 'plot', theData is the wrapper Plot (as in Periodogram).
 	usePlotMetricOutputs(
 		() => theData,
-		() => which === 'plot'
+		() => ownsPlotMetrics(which)
 	);
 
 	onMount(() => {
@@ -580,21 +581,13 @@
 		</div>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
-			<div class="control-data-add">
-				<div class="add">
-					<button
-						class="icon"
-						title="Add a series"
-						onclick={async () => {
-							theData.addData({});
-							await tick();
-							dataSettingsScrollTo('bottom');
-						}}
-					>
-						<Icon name="add" width={16} height={16} />
-					</button>
-				</div>
-			</div>
+			<DataAddHeader
+				onadd={async () => {
+					theData.addData({});
+					await tick();
+					dataSettingsScrollTo('bottom');
+				}}
+			/>
 
 			<p class="qq-hint">
 				Wire any numeric column — e.g. a fit node's resid_ output to check whether its residuals are

@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.77.0",
+  "generatedFromVersion": "β.78.0",
   "count": 62,
   "nodes": [
     {
@@ -30,7 +30,48 @@
         }
       ],
       "params": [],
-      "outputs": [],
+      "outputs": [
+        {
+          "name": "r*_tau",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicSuffix": "_tau",
+          "per": "marker rule"
+        },
+        {
+          "name": "r*_phi",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicSuffix": "_phi",
+          "per": "marker rule"
+        },
+        {
+          "name": "r*_r2",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicSuffix": "_r2",
+          "per": "marker rule"
+        },
+        {
+          "name": "r*_rmse",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicSuffix": "_rmse",
+          "per": "marker rule"
+        },
+        {
+          "name": "r*_n",
+          "kind": "column",
+          "cardinality": "many",
+          "metric": true,
+          "dynamicSuffix": "_n",
+          "per": "marker rule"
+        }
+      ],
       "demo": "sessions/demos/demo-workflow-rest-activity.json"
     },
     {
@@ -145,7 +186,20 @@
         }
       ],
       "params": [],
-      "outputs": [],
+      "outputs": [
+        {
+          "name": "peak_lag",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "peak_correlation",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        }
+      ],
       "demo": "sessions/demos/demo-correlogram-rhythm.json"
     },
     {
@@ -222,7 +276,26 @@
         }
       ],
       "params": [],
-      "outputs": [],
+      "outputs": [
+        {
+          "name": "peak_period",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "peak_frequency",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "peak_magnitude",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        }
+      ],
       "demo": "sessions/demos/demo-fft-rhythm.json"
     },
     {
@@ -331,7 +404,26 @@
         }
       ],
       "params": [],
-      "outputs": [],
+      "outputs": [
+        {
+          "name": "peak_period",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "peak_power",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "peak_pvalue",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        }
+      ],
       "demo": "sessions/demos/demo-workflow-free-running.json"
     },
     {
@@ -356,7 +448,20 @@
         }
       ],
       "params": [],
-      "outputs": [],
+      "outputs": [
+        {
+          "name": "qq_r",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "qq_n",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        }
+      ],
       "demo": "sessions/demos/demo-qqplot-normality.json"
     },
     {

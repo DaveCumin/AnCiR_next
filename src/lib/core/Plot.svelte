@@ -360,10 +360,18 @@
 				);
 			this.setRefs =
 				plotData.setRefs && typeof plotData.setRefs === 'object' ? { ...plotData.setRefs } : {};
-			this.metricOut =
-				plotData.metricOut && typeof plotData.metricOut === 'object'
-					? { ...plotData.metricOut }
-					: {};
+			// Only { key: integer colId } entries (-1 = not yet minted). The metric sync DELETES
+			// the column of any key its type does not list, so a wrong shape here is not cosmetic:
+			// an array used to spread into { 0: id, 1: id } and cost the session those columns.
+			this.metricOut = Object.fromEntries(
+				Object.entries(
+					plotData.metricOut &&
+						typeof plotData.metricOut === 'object' &&
+						!Array.isArray(plotData.metricOut)
+						? plotData.metricOut
+						: {}
+				).filter(([, id]) => Number.isInteger(id) && id >= -1)
+			);
 			// Quick-Plot: the canvas node this plot was spawned from (for the reference
 			// edge + re-click focus). null for normal user-created plots.
 			this.sourceNodeId = plotData.sourceNodeId ?? null;

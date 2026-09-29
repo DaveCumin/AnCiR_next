@@ -183,6 +183,30 @@ function capabilitiesText() {
 	return `ANALYSES (exact args):\n${nodes}\n\nPLOTS (exact series fields):\n${plots}`;
 }
 
+// An actogram's MARKER RULES publish five output columns each, keyed on the rule's id
+// (`r1_tau`, `r1_phi`, `r1_r2`, `r1_rmse`, `r1_n`; one value per series). The app mints and
+// fills them in the browser, so a session read here carries the rules but no values; naming
+// the keys still tells an agent what the user can wire (plan 2026-09-30 marker rules, 2.4).
+const RULE_OUTPUT_SUFFIXES = ['tau', 'phi', 'r2', 'rmse', 'n'];
+function actogramRuleOutputs(plot) {
+	if (plot?.type !== 'actogram' || !Array.isArray(plot.plot?.markerRules)) return [];
+	return plot.plot.markerRules
+		.filter((r) => r && typeof r.id === 'string')
+		.map((r) => ({
+			id: r.id,
+			name: r.name,
+			type: r.type,
+			outputs: RULE_OUTPUT_SUFFIXES.map((s) => `${r.id}_${s}`)
+		}));
+}
+function describePlotLine(p) {
+	const base = `  ${p.type}${p.name ? ` "${p.name}"` : ''}`;
+	const rules = actogramRuleOutputs(p);
+	if (!rules.length) return base;
+	const list = rules.map((r) => `"${r.name}" (${r.type}) -> ${r.outputs.join(', ')}`).join('; ');
+	return `${base}; marker rules: ${list} (tau, phi and RMSE in hours; one value per series, computed on open)`;
+}
+
 /** Fitness advice as text the agent can act on, or '' when there's nothing to say. */
 function fitnessText(session) {
 	const findings = checkFitness(session);
@@ -304,7 +328,7 @@ async function callTool(name, args, env, request, ctx) {
 						`Session ${id} (AnCiR ${session.version ?? 'unknown'}${session.generatedBy ? `, built by ${session.generatedBy.source} via ${session.generatedBy.route}` : ''}).`,
 						`COLUMNS:\n${columns.join('\n') || '  (none)'}`,
 						`ANALYSES:\n${detail || '  (none)'}`,
-						`PLOTS:\n${(session.plots ?? []).map((p) => `  ${p.type}${p.name ? ` "${p.name}"` : ''}`).join('\n') || '  (none)'}`,
+						`PLOTS:\n${(session.plots ?? []).map(describePlotLine).join('\n') || '  (none)'}`,
 						fitnessText(session),
 						"This is the session's STRUCTURE. Results exist only once the link is opened in a browser."
 					]
@@ -326,7 +350,10 @@ async function callTool(name, args, env, request, ctx) {
 					name: t.name,
 					args: t.args
 				})),
-				plots: (session.plots ?? []).map((p) => ({ type: p.type, name: p.name })),
+				plots: (session.plots ?? []).map((p) => {
+					const rules = actogramRuleOutputs(p);
+					return { type: p.type, name: p.name, ...(rules.length ? { markerRules: rules } : {}) };
+				}),
 				fitness: checkFitness(session)
 			}
 		};

@@ -8,6 +8,7 @@
 	import { migrateCategoryColourMap } from '$lib/plots/seriesColour.js';
 	import { migrateAppearanceMaps } from '$lib/plots/appearanceIdentity.js';
 	import { migrateFacetChildren } from '$lib/core/facetMigration.js';
+	import { migratePhaseMarkerStoredValues } from '$lib/core/phaseMarkerStoredValueMigration.js';
 	import { childDefaultsFromRegistry } from '$lib/core/facetMigrationDefaults.js';
 	export function exportJson() {
 		try {
@@ -208,6 +209,16 @@
 			const migrated = migrateFacetChildren(jsonData, {
 				childDefaults: childDefaultsFromRegistry(appConsts.plotMap)
 			});
+			jsonData = migrated.json;
+			for (const w of migrated.warnings) addNotification(w, 'warning', 0);
+		}
+		// Stored values that came from actogram marker blocks (plan 2026-09-30 marker rules,
+		// 5.2): the blocks no longer publish them. One that a formula or another consumer
+		// USES is re-pointed at its marker rule's output column where one exists, or kept as
+		// its saved number and reported; unused ones (registered just by opening a block) go.
+		// After the facet migration, which may move blocks onto a generator's series.
+		{
+			const migrated = migratePhaseMarkerStoredValues(jsonData);
 			jsonData = migrated.json;
 			for (const w of migrated.warnings) addNotification(w, 'warning', 0);
 		}

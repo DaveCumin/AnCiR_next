@@ -350,11 +350,20 @@ function seriesJsonForPanel(seriesJson) {
  * mirrored in place. Exported so tests pin what is and is not structural.
  */
 export function panelStructureSig(type, unit, json) {
+	// Actogram marker rules: which rules exist and which series opted out of which. These
+	// decide which rule INSTANCES a panel has, and only fromJSON reconciles instances, so a
+	// same-length change (detach r1 and reattach r2 in one step) must be a rebuild, not a
+	// leaf mirror. A rule SETTING stays a leaf mirror: the instances read the rule live.
+	// Present only when there is something to say, so every other signature is unchanged.
+	const rules = (json?.markerRules ?? []).map((r) => r?.id ?? null);
+	const detached = (json?.data ?? []).map((d) => d?.detachedRules ?? []);
+	const ruleSig = rules.length > 0 || detached.some((d) => d.length > 0) ? { rules, detached } : {};
 	return JSON.stringify({
 		type,
 		sig: unit?.sig ?? '',
 		overlays: (json?.overlays ?? []).map((o) => ({ id: o?.id, channels: o?.channels ?? null })),
-		wiring: (json?.data ?? []).map((d) => JSON.stringify(wiringOf(d)))
+		wiring: (json?.data ?? []).map((d) => JSON.stringify(wiringOf(d))),
+		...ruleSig
 	});
 }
 

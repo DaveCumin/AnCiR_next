@@ -1,7 +1,7 @@
 {
 	"name": "ancir-next",
 	"private": true,
-	"version": "77.0",
+	"version": "78.0",
 	"license": "Apache-2.0",
 	"type": "module",
 	"scripts": {

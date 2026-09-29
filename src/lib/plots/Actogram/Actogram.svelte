@@ -11,10 +11,21 @@
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
+	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
 	import Annotation, { AnnotationClass } from './Annotation.svelte';
+	import MarkerRuleBlock from './MarkerRuleBlock.svelte';
+	import { rulesFromJSON, ruleIdNumber, reconcileRuleInstances } from './markerRules.svelte.js';
+	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import {
+		detachRecorded,
+		reattachRecorded,
+		promoteRecorded,
+		matchingBlocks,
+		canReattach
+	} from './markerRuleActions.js';
 
 	import { scaleLinear } from 'd3-scale';
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
@@ -216,6 +227,14 @@
 		});
 
 		phaseMarkers = $state([]);
+		// Marker rules (markerRules.svelte.js). `ruleData[ruleId]` holds this series' own
+		// facts for a rule (its ticked days, its hand-placed points), created on first write;
+		// `detachedRules` lists the rules this series opted out of (it carries its own block
+		// with `fromRule` instead); `ruleInstances` are the computed blocks the rules project
+		// here, rebuilt only by reconcileRuleInstances and never persisted.
+		ruleData = $state({});
+		detachedRules = $state([]);
+		ruleInstances = $state([]);
 
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
@@ -301,8 +320,16 @@
 		 */
 		getMarkerLegendItems() {
 			const items = [];
+			// Rule instances first, as they are drawn. A rule with a FIXED colour looks the
+			// same on every series, so the plot emits ONE entry for it (getLegendItems); a rule
+			// that follows each series' colour gets one entry per series, "<series>: <rule>".
+			for (const inst of this.ruleInstances) {
+				if (inst.rule.colour != null) continue;
+				const elements = markerLegendElements(inst);
+				if (elements.length === 0) continue;
+				items.push({ label: `${this.displayLabel}: ${inst.cfg.name}`, elements });
+			}
 			this.phaseMarkers.forEach((marker, i) => {
-				const elements = [];
 				// `markersDrawn` / `lineDrawn`, NOT `showMarkers` / `showLine`.
 				//
 				// `showMarkers` is never read by PhaseMarker's renderer at all (and its
@@ -312,26 +339,10 @@
 				// only half the renderer's gate: the line also needs a fitted slope and a
 				// non-empty day range. Both getters live on PhaseMarkerClass beside the
 				// values they read, and the plot snippet uses `lineDrawn` itself, so the
-				// legend and the figure cannot disagree.
-				if (marker.markersDrawn) {
-					// Drawn as filled circles of radius `markerSize`; capped so a big
-					// on-plot marker cannot overflow the legend's icon column.
-					elements.push({
-						type: 'points',
-						color: marker.colour,
-						shape: 'circle',
-						size: Math.min(6, marker.markerSize ?? 5)
-					});
-				}
-				if (marker.lineDrawn) {
-					elements.push({
-						type: 'line',
-						color: marker.colour,
-						strokeWidth: marker.lineWidth ?? 1
-					});
-				}
+				// legend and the figure cannot disagree (markerLegendElements).
+				const elements = markerLegendElements(marker);
 				if (elements.length === 0) return;
-				const name = typeof marker.name === 'string' ? marker.name.trim() : '';
+				const name = typeof marker.cfg.name === 'string' ? marker.cfg.name.trim() : '';
 				items.push({
 					label: name || `${this.displayLabel} marker ${i + 1}`,
 					elements
@@ -340,35 +351,10 @@
 			return items;
 		}
 
+		// A marker block with no markers and both parameters Fixed draws a bare
+		// line the user positions by hand (there is no separate "line" preset).
 		addMarker() {
 			this.phaseMarkers.push(new PhaseMarkerClass(this, { type: 'manual' }));
-		}
-
-		// One-click line: a marker block with NO markers and both parameters Fixed,
-		// which draws a bare line and nothing else. It starts vertical (slope =
-		// periodHrs → no drift) down the middle of the plot, spanning all days, in
-		// this series' colour; the user then drags/rotates it (or edits τ/θ) to lie
-		// along the activity onsets. Because it is an ordinary manual block it can
-		// also gain clicked markers later and be switched back to Fit, which the old
-		// dedicated `fitline` type could not.
-		addFitLine() {
-			const P = this.parentPlot;
-			this.phaseMarkers.push(
-				new PhaseMarkerClass(this, {
-					type: 'manual',
-					manualMarkers: [],
-					lockTau: 'fixed',
-					lockTheta: 'fixed',
-					name: 'fit_' + this.phaseMarkers.length,
-					colour: this.colour,
-					fitSlope: P.periodHrs,
-					fitIntercept: P.periodHrs / 2,
-					lineMinDay: 1,
-					lineMaxDay: Math.max(1, P.Ndays),
-					showLine: true,
-					lineWidth: 2
-				})
-			);
 		}
 
 		toJSON() {
@@ -380,8 +366,29 @@
 				label: this.label,
 				colour: this.colour,
 				draw: this.draw,
-				phaseMarkers: this.phaseMarkers
+				phaseMarkers: this.phaseMarkers,
+				...this.ruleJSON()
 			};
+		}
+
+		// The rule fields of this series, written only when non-empty so a session with no
+		// rules saves byte-identically. Entries for rules that no longer exist are dropped:
+		// undoing a rule deletion restores the whole inner snapshot, which still has them.
+		ruleJSON() {
+			const live = new Set((this.parentPlot?.markerRules ?? []).map((r) => r.id));
+			const out = {};
+			const ruleData = {};
+			for (const [id, entry] of Object.entries(this.ruleData ?? {})) {
+				if (!live.has(id)) continue;
+				ruleData[id] = {
+					selectedPeriods: [...(entry.selectedPeriods ?? [])],
+					manualMarkers: [...(entry.manualMarkers ?? [])]
+				};
+			}
+			if (Object.keys(ruleData).length > 0) out.ruleData = ruleData;
+			const detached = this.detachedRules.filter((id) => live.has(id));
+			if (detached.length > 0) out.detachedRules = detached;
+			return out;
 		}
 
 		static fromJSON(json, parent) {
@@ -402,8 +409,57 @@
 					PhaseMarkerClass.fromJSON(d, actClass)
 				);
 			}
+			actClass.ruleData = ruleDataFromJSON(json.ruleData);
+			actClass.detachedRules = Array.isArray(json.detachedRules)
+				? [...new Set(json.detachedRules.filter((id) => ruleIdNumber(id) > 0))]
+				: [];
 			return actClass;
 		}
+	}
+
+	// The legend swatches of one marker block or rule instance: a dot when it draws markers,
+	// a stroke when it draws its line. `markersDrawn` / `lineDrawn` ask exactly what the
+	// renderer asks (see getMarkerLegendItems).
+	function markerLegendElements(marker) {
+		const elements = [];
+		if (marker.markersDrawn) {
+			// Drawn as filled circles of radius `markerSize`; capped so a big on-plot marker
+			// cannot overflow the legend's icon column.
+			elements.push({
+				type: 'points',
+				color: marker.cfg.colour,
+				shape: 'circle',
+				size: Math.min(6, marker.cfg.markerSize ?? 5)
+			});
+		}
+		if (marker.lineDrawn) {
+			elements.push({
+				type: 'line',
+				color: marker.cfg.colour,
+				strokeWidth: marker.cfg.lineWidth ?? 1
+			});
+		}
+		return elements;
+	}
+
+	// A series' saved `ruleData`, shape-guarded: a plain object of
+	// { selectedPeriods: boolean[], manualMarkers: finite number[] } keyed by rule id.
+	function ruleDataFromJSON(raw) {
+		const out = {};
+		if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return out;
+		for (const [id, entry] of Object.entries(raw)) {
+			if (ruleIdNumber(id) <= 0) continue;
+			if (entry == null || typeof entry !== 'object' || Array.isArray(entry)) continue;
+			out[id] = {
+				selectedPeriods: Array.isArray(entry.selectedPeriods)
+					? entry.selectedPeriods.map((v) => v !== false)
+					: [],
+				manualMarkers: Array.isArray(entry.manualMarkers)
+					? entry.manualMarkers.filter((v) => Number.isFinite(v))
+					: []
+			};
+		}
+		return out;
 	}
 
 	// Helper function to get histogram bins for specific periods
@@ -462,6 +518,10 @@
 		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
 		data = $state([]);
 		annotations = $state([]);
+		// Plot-level marker rules, projected onto every series (markerRules.svelte.js), and
+		// the id counter that keeps a deleted rule's id from ever being reused.
+		markerRules = $state([]);
+		nextRuleId = $state(1);
 		isAddingMarkerTo = $state(-1);
 		paddingIN = $state({ top: 30, right: 20, bottom: 10, left: 20 });
 		// Room for the row labels, ADDED to the user's left padding the same way the light
@@ -693,6 +753,21 @@
 				if (item) items.push(item);
 				items.push(...d.getMarkerLegendItems());
 			});
+			// One entry per FIXED-colour rule (every instance looks the same), after the
+			// series, with the swatches of whatever any of its instances draws.
+			for (const rule of this.markerRules) {
+				if (rule.colour == null) continue;
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local swatch dedupe, built and read inside this derived
+				const kinds = new Map();
+				for (const d of this.data) {
+					const inst = d.ruleInstances.find((i) => i.ruleId === rule.id);
+					if (!inst) continue;
+					for (const el of markerLegendElements(inst)) kinds.set(el.type, el);
+				}
+				if (kinds.size === 0) continue;
+				const elements = ['points', 'line'].filter((k) => kinds.has(k)).map((k) => kinds.get(k));
+				items.push({ label: rule.name, elements });
+			}
 			return items;
 		});
 
@@ -724,6 +799,7 @@
 
 			const datum = new ActogramDataclass(this, dataIN);
 			this.data.push(datum);
+			reconcileRuleInstances(this);
 		}
 		removeData(idx) {
 			this.data.splice(idx, 1);
@@ -732,16 +808,36 @@
 		addPhaseMarkerTo(markerId, clickedDay, clickedTime) {
 			//find the marker with the id
 			for (let i = 0; i < this.data.length; i++) {
-				for (let j = 0; j < this.data[i].phaseMarkers.length; j++) {
-					if (this.data[i].phaseMarkers[j].id == markerId) {
-						this.data[i].phaseMarkers[j].addTime(clickedDay, clickedTime);
-					}
+				for (const m of [...this.data[i].ruleInstances, ...this.data[i].phaseMarkers]) {
+					if (m.id == markerId) m.addTime(clickedDay, clickedTime);
 				}
 			}
 		}
 
 		addAnnotation() {
 			this.annotations.push(new AnnotationClass(this));
+		}
+
+		// Marker-rule actions for PhaseMarker.svelte, which cannot import the rule modules
+		// itself (they extend its class at module load, so the import would be a cycle).
+		// Each is ONE undo step; see markerRuleActions.js.
+		ruleById(id) {
+			return this.markerRules.find((r) => r.id === id) ?? null;
+		}
+		detachInstance(inst, edit = null) {
+			detachRecorded(inst, edit);
+		}
+		reattachBlock(block) {
+			return reattachRecorded(block);
+		}
+		promoteBlock(block, opts) {
+			promoteRecorded(block, opts);
+		}
+		matchingBlocks(block) {
+			return matchingBlocks(block);
+		}
+		canReattach(block) {
+			return canReattach(block);
 		}
 
 		getDownloadData() {
@@ -773,7 +869,12 @@
 				legend: this.legend.toJSON(),
 				annotations: this.annotations,
 				xAxis: this.xAxis.toJSON(),
-				data: this.data
+				data: this.data,
+				// Written only once a rule has ever existed, so the shipped sessions (and any
+				// session without rules) save byte-identically. `nextRuleId` outlives its rules
+				// so a deleted rule's id is never handed to a new one.
+				...(this.markerRules.length > 0 ? { markerRules: this.markerRules } : {}),
+				...(this.nextRuleId > 1 ? { nextRuleId: this.nextRuleId } : {})
 			};
 		}
 		static fromJSON(parent, json) {
@@ -820,6 +921,16 @@
 				actogram.xAxis = AxisClass.fromJSON(json.xAxis);
 			}
 
+			// Rules before the series, so a series' fromJSON can see which rule ids are live.
+			const { rules, dropped } = rulesFromJSON(json.markerRules);
+			actogram.markerRules = rules;
+			if (dropped > 0) {
+				addNotification(
+					`${dropped} marker rule${dropped === 1 ? '' : 's'} could not be read and ${dropped === 1 ? 'was' : 'were'} skipped.`,
+					'warning'
+				);
+			}
+
 			if (json.data) {
 				actogram.data = json.data.map((d) => ActogramDataclass.fromJSON(d, actogram));
 			} else if (json.dataIn) {
@@ -827,6 +938,17 @@
 				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
 				actogram.addData(json.dataIn);
 			}
+			// Never below an id already in use (by a rule, or by a block detached from a rule
+			// since deleted), so a new rule cannot inherit a dead rule's detachments.
+			let maxUsed = 0;
+			for (const r of actogram.markerRules) maxUsed = Math.max(maxUsed, ruleIdNumber(r.id));
+			for (const d of actogram.data) {
+				for (const m of d.phaseMarkers) maxUsed = Math.max(maxUsed, ruleIdNumber(m.fromRule));
+				for (const id of Object.keys(d.ruleData)) maxUsed = Math.max(maxUsed, ruleIdNumber(id));
+			}
+			const savedNext = Number.isInteger(json.nextRuleId) ? json.nextRuleId : 1;
+			actogram.nextRuleId = Math.max(savedNext, maxUsed + 1, 1);
+			reconcileRuleInstances(actogram);
 			return actogram;
 		}
 	}
@@ -840,6 +962,8 @@
 
 <script>
 	import { isFacetPanel } from '$lib/core/facetPanels.svelte.js';
+	import { addRuleRecorded } from './markerRuleActions.js';
+	import { usePlotMetricOutputs, ownsPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
 	// @ts-nocheck
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
@@ -851,6 +975,15 @@
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 
 	let { theData, which } = $props();
+
+	// Marker-rule OUTPUT PORTS (five per rule: r<id>_tau, _phi, _r2, _rmse, _n; see
+	// plotMetricDefs.js). One writer per plot: the on-screen instance, or the headless one a
+	// facet host mounts for its generator ('compute', which renders nothing), never the
+	// controls instance and never a panel. theData is the wrapper Plot for both.
+	usePlotMetricOutputs(
+		() => theData,
+		() => ownsPlotMetrics(which)
+	);
 
 	/** The label beside one actogram row. The decisions live in rowLabels.js. */
 	function rowLabel(day) {
@@ -908,7 +1041,9 @@
 		if (isFacetPanel(theData)) {
 			const shown = theData.unit?.seriesIdx ?? [];
 			const onThisPanel = shown.some((gi) =>
-				(owner.data[gi]?.phaseMarkers ?? []).some((m) => m.id == armed)
+				[...(owner.data[gi]?.ruleInstances ?? []), ...(owner.data[gi]?.phaseMarkers ?? [])].some(
+					(m) => m.id == armed
+				)
 			);
 			if (!onThisPanel) return;
 		}
@@ -1124,11 +1259,50 @@
 			</div>
 		{/if}
 	{:else if appState.currentControlTab === 'data'}
-		<div class="control-data-add">
-			<button class="icon" onclick={async () => await addData()}>
-				<Icon name="add" width={16} height={16} />
-			</button>
+		<!-- MARKER RULES: one definition, projected onto every series (markerRules.svelte.js).
+		     At the top of the Data tab, above the series it applies to. -->
+		<div class="control-component marker-rules">
+			<div class="control-data-title with-icon">
+				<div style="display: flex; align-items: center; justify-content: flex-start; margin: 0;">
+					<button class="icon">
+						<Icon name="pin" width={18} height={18} className="control-component-title-icon" />
+					</button>
+					<p>Marker rules</p>
+				</div>
+				<div class="control-component-title-icons">
+					<button
+						class="icon"
+						aria-label="Add a marker rule"
+						onclick={() => addRuleRecorded(theData)}
+						{@attach attachTooltip('Add a rule: the same markers and line on every series')}
+					>
+						<Icon name="add" width={16} height={16} className="control-component-title-icon" />
+					</button>
+				</div>
+			</div>
+			{#if theData.markerRules.length === 0}
+				<p class="marker-rules-note">
+					A rule puts the same markers and line on all {theData.data.length}
+					{theData.parentBox?.facet ? 'panels' : 'series'}. Add one with +, or use "Make rule" on a
+					series' own block.
+				</p>
+			{/if}
+			{#each theData.markerRules as rule (rule.id)}
+				<MarkerRuleBlock
+					inner={theData}
+					{rule}
+					unitLabel={theData.parentBox?.facet ? 'panels' : 'series'}
+				/>
+			{/each}
 		</div>
+		<div class="div-line"></div>
+
+		<DataAddHeader
+			label={theData.parentBox?.facet ? 'Panels' : 'Series'}
+			ariaLabel={theData.parentBox?.facet ? 'Add a panel' : 'Add a series'}
+			tooltip={theData.parentBox?.facet ? 'Add a panel' : 'Add a series'}
+			onadd={async () => await addData()}
+		/>
 
 		<div class="control-component">
 			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
@@ -1193,21 +1367,6 @@
 							<div class="control-component-title-icons">
 								<button
 									class="icon"
-									aria-label="Add line"
-									onclick={() => datum.addFitLine()}
-									{@attach attachTooltip(
-										'Add line: drag its middle to shift the phase, an end to change the period'
-									)}
-								>
-									<Icon
-										name="linear-fit"
-										width={16}
-										height={16}
-										className="control-component-title-icon"
-									/>
-								</button>
-								<button
-									class="icon"
 									aria-label="Add markers"
 									onclick={() => datum.addMarker()}
 									{@attach attachTooltip('Add markers: click the plot to place them by hand')}
@@ -1222,6 +1381,13 @@
 							</div>
 						</div>
 
+						<!-- Rule instances first (settings from the rule, per-day ticks editable), then
+						     this series' own blocks. -->
+						{#each datum.ruleInstances as inst (inst.ruleId)}
+							<div class="markerBlock">
+								<PhaseMarker {which} marker={inst} />
+							</div>
+						{/each}
 						{#each datum.phaseMarkers as marker (marker.id)}
 							<div
 								class="markerBlock"
@@ -1363,6 +1529,9 @@
 			{/if}
 			<!-- THE MARKERS (clipped to plot area) -->
 			<g clip-path={'url(#actogram-clip-' + theData.plot.parentBox.id + ')'}>
+				{#each datum.ruleInstances as inst (inst.ruleId)}
+					<PhaseMarker {which} marker={inst} />
+				{/each}
 				{#each datum.phaseMarkers as marker (marker.id)}
 					<PhaseMarker {which} {marker} />
 				{/each}
@@ -1503,5 +1672,15 @@
 	   shrinks/clips; let the label beside them absorb any squeeze instead. */
 	.control-component-title-icons {
 		flex-shrink: 0;
+	}
+
+	.marker-rules {
+		width: 100%;
+	}
+
+	.marker-rules-note {
+		margin: 0 0 var(--space-2);
+		font-size: var(--font-xs);
+		color: var(--color-lightness-45);
 	}
 </style>

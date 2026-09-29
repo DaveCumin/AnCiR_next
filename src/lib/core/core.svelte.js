@@ -452,7 +452,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.77.0',
+	version: 'β.78.0',
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.processMap = await loadProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	processMap: new Map(),
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.plotMap = await loadPlots()); never mutated in place, so the $state reassignment already drives reactivity
@@ -582,7 +582,8 @@ export function storeValue(name, getter, source = '') {
 /**
  * Store a named REFERENCE to a metric output port cell: `{ tpId, outKey, yId,
  * index }` picks one value out of a table process's metric out-column (one
- * value per y input, in yIN order). Unlike getter entries, refs live in core —
+ * value per y input, in yIN order); `{ plotId, outKey, index }` picks one out of a
+ * plot's (one value per series, see resolveStoredValueRef). Unlike getter entries, refs live in core —
  * they are not tied to any component's lifetime, they serialize, and they
  * restore on session import.
  * @param {string} name
@@ -600,6 +601,18 @@ export function storeValueRef(name, ref, source = '') {
  */
 export function resolveStoredValueRef(ref) {
 	if (!ref) return NaN;
+	// A PLOT metric port cell: `{ plotId, outKey, index }` picks series `index` of the plot's
+	// metric out-column (one value per series, in plot-data order; e.g. an actogram marker
+	// rule's `r1_tau`). Series have no stable id to prefer, so the index is the address.
+	if (ref.plotId != null) {
+		const plot = (core.plots ?? []).find((p) => p.id === ref.plotId);
+		const colId = plot?.metricOut?.[ref.outKey];
+		if (colId == null || colId === -1) return NaN;
+		const data = core.rawData.get(colId);
+		if (!Array.isArray(data) || !Number.isInteger(ref.index)) return NaN;
+		const v = data[ref.index];
+		return typeof v === 'number' ? v : NaN;
+	}
 	const tp = (core.tableProcesses ?? []).find((t) => t.id === ref.tpId);
 	const colId = tp?.args?.out?.[ref.outKey];
 	if (colId == null || colId === -1) return NaN;

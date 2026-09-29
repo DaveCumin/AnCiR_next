@@ -7,7 +7,9 @@ const COALESCE_KINDS = new Set([
 	'setProcessArg',
 	'setTableProcessArg',
 	'setPlotProperty',
-	'setPlotPosition'
+	'setPlotPosition',
+	// A colour-picker drag or a run of spinner clicks on one rule field is one step.
+	'setMarkerRule'
 ]);
 
 class OpHistoryManager {
@@ -123,6 +125,17 @@ class OpHistoryManager {
 				return a.id === b.id && a.key === b.key;
 			case 'setPlotPosition':
 				return a.id === b.id;
+			case 'setMarkerRule':
+				return (
+					a.id === b.id &&
+					a.ruleId === b.ruleId &&
+					Object.keys(a.patch ?? {})
+						.sort()
+						.join() ===
+						Object.keys(b.patch ?? {})
+							.sort()
+							.join()
+				);
 		}
 		return false;
 	}

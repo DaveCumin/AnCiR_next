@@ -154,8 +154,8 @@
 	// @ts-nocheck
 	import { appState } from '$lib/core/core.svelte';
 	import Column from '$lib/core/Column.svelte';
-	import Icon from '$lib/icons/Icon.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
+	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -309,13 +309,12 @@
 		</div>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
-			<div class="control-data-add">
-				<div class="add">
-					<button class="icon" title="Add a variable" onclick={() => theData.addData({})}>
-						<Icon name="add" width={16} height={16} />
-					</button>
-				</div>
-			</div>
+			<DataAddHeader
+				label="Variables"
+				ariaLabel="Add a variable"
+				tooltip="Add a variable"
+				onadd={() => theData.addData({})}
+			/>
 
 			{#each theData.data as datum, i (datum.column.id)}
 				<div

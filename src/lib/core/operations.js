@@ -95,6 +95,22 @@ import { memoForget } from './computeMemo.js';
  * @property {string} path      dotted inner path ('ylimsLeftIN', 'xlimsIN[0]')
  * @property {unknown} [value]  the override; undefined removes the path
  *
+ * @typedef {Object} OpSetMarkerRule
+ * @property {'setMarkerRule'} kind
+ * @property {string} id        the actogram's plot id
+ * @property {string} ruleId    the rule's persisted id ('r1', ...)
+ * @property {Object} patch     { setting: value } for the rule's own settings
+ *
+ * @typedef {Object} OpRenameColumn
+ * @property {'renameColumn'} kind
+ * @property {number} id        the column's id (never changes)
+ * @property {string} name      the new name
+ *
+ * @typedef {Object} OpSetPlotMetricOut
+ * @property {'setPlotMetricOut'} kind
+ * @property {string} id        the plot's id
+ * @property {Object} metricOut { key: colId }, the plot's whole metric-output map
+ *
  * @typedef {Object} OpSetOrphanProcessArg
  * @property {'setOrphanProcessArg'} kind
  * @property {string} processId
@@ -131,7 +147,7 @@ import { memoForget } from './computeMemo.js';
  *
  * @typedef {OpAddColumn | OpRemoveColumn | OpAddProcess | OpRemoveProcess |
  *   OpSetProcessArg | OpAddPlot | OpRemovePlot | OpSetPlotProperty | OpSetPlotPosition |
- *   OpSetPlotInner | OpSetFacetOverride | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
+ *   OpSetPlotInner | OpSetFacetOverride | OpSetMarkerRule | OpRenameColumn | OpSetPlotMetricOut | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
  *   OpSetOrphanProcessArg | OpSetStoredValue | OpRemoveStoredValue |
  *   OpRenameStoredValue | OpReplaceColumnRefs | OpSwapColumnRefs | OpBatch} GraphOperation
  */
@@ -219,6 +235,12 @@ function applyForward(op) {
 			return op_setPlotInner(op);
 		case 'setFacetOverride':
 			return op_setFacetOverride(op);
+		case 'setMarkerRule':
+			return op_setMarkerRule(op);
+		case 'renameColumn':
+			return op_renameColumn(op);
+		case 'setPlotMetricOut':
+			return op_setPlotMetricOut(op);
 		case 'addColumn':
 			return op_addColumn(op);
 		case 'removeColumn':
@@ -362,6 +384,69 @@ function op_setFacetOverride(op) {
 	const inverse = { kind: 'setFacetOverride', id: op.id, unitKey: op.unitKey, path: op.path };
 	if (had) inverse.value = before;
 	return pair(canonical, inverse);
+}
+
+// One or more settings of one actogram marker rule, applied IN PLACE (plan 2026-09-30
+// actogram marker rules, section 4). Deliberately not setPlotInner: that rebuilds the whole
+// inner through fromJSON, re-running every detection on every series, whereas a rule's
+// instances read the rule live, so an in-place write recomputes exactly that rule's
+// instances and remounts nothing. On a facet generator the panels mirror the leaf change.
+// The plot and the rule are looked up by id at apply time (ids are persisted, so an
+// intervening setPlotInner cannot strand the op); either missing is a no-op. Only keys the
+// rule already has are patched, never `id`. The inverse is the prior values.
+function op_setMarkerRule(op) {
+	const plot = core.plots.find((p) => p.id === op.id);
+	const rule = plot?.plot?.markerRules?.find?.((r) => r.id === op.ruleId);
+	if (!rule || op.patch == null || typeof op.patch !== 'object') return null;
+	const before = {};
+	const after = {};
+	for (const [key, value] of Object.entries(op.patch)) {
+		if (key === 'id' || !(key in rule)) continue;
+		const prev = rule[key];
+		if (JSON.stringify(prev ?? null) === JSON.stringify(value ?? null)) continue;
+		before[key] = prev;
+		after[key] = value;
+	}
+	if (Object.keys(after).length === 0) return null;
+	for (const [key, value] of Object.entries(after)) rule[key] = value;
+	return pair(
+		{ kind: 'setMarkerRule', id: op.id, ruleId: op.ruleId, patch: after },
+		{ kind: 'setMarkerRule', id: op.id, ruleId: op.ruleId, patch: before }
+	);
+}
+
+// Rename a column in place: its id, data and every wire into it stay (plan 2026-09-30,
+// section 4: renaming a marker rule renames its output columns and must never re-mint
+// them). Writes `customName`, the field a user's own rename writes, so the name holds
+// whatever the column's derived default would have been.
+function op_renameColumn(op) {
+	const col = core.data.find((c) => c.id === op.id);
+	if (!col || typeof op.name !== 'string' || !op.name) return null;
+	const before = col.name;
+	if (before === op.name) return null;
+	col.customName = op.name;
+	return pair(
+		{ kind: 'renameColumn', id: op.id, name: op.name },
+		{ kind: 'renameColumn', id: op.id, name: before }
+	);
+}
+
+// Replace a plot's whole metric-output map ({ key: colId }). Deep-copied both ways, unlike
+// setPlotProperty, whose inverse holds the live $state object: the metric sync mutates that
+// object in place (syncPlotMetricColumns), which would rewrite history after the fact.
+// Used with removeColumn in one batch when a marker rule is deleted, so undo restores the
+// map AND the columns with their ids, and downstream wires come back.
+function op_setPlotMetricOut(op) {
+	const plot = core.plots.find((p) => p.id === op.id);
+	if (!plot || op.metricOut == null || typeof op.metricOut !== 'object') return null;
+	const before = JSON.parse(JSON.stringify(plot.metricOut ?? {}));
+	const next = JSON.parse(JSON.stringify(op.metricOut));
+	if (JSON.stringify(before) === JSON.stringify(next)) return null;
+	plot.metricOut = next;
+	return pair(
+		{ kind: 'setPlotMetricOut', id: op.id, metricOut: JSON.parse(JSON.stringify(next)) },
+		{ kind: 'setPlotMetricOut', id: op.id, metricOut: before }
+	);
 }
 
 function snapshotColumn(col) {

@@ -18,7 +18,8 @@
 // without touching this file fails, which makes the decision deliberate.
 // `perm_pvalue` joined the extractor in v72.25, when RectangularWave/DoubleLogistic
 // renamed their permutation-p port off the bare `pvalue`: a rename must not silently
-// walk a node out of this registry's scope.
+// walk a node out of this registry's scope. Plots joined in v77.x, when their metric
+// ports reached the manifest: the periodogram's `peak_pvalue` had escaped until then.
 //
 // This is the paramNotesCoverage pattern, and it follows its central lesson: a
 // guard whose failure mode is "skip what I don't recognise" degrades to green
@@ -58,28 +59,61 @@ const SAMPLE_SIZE_POLICY = {
 	NormalityTest: 'checked', // D'Agostino below n ~ 20; Shapiro-Wilk's n <= 5000 ceiling
 	RayleighTest: 'checked', // n < 8 (Zar 1999), and says a null result is uninformative too
 	RectangularWave: 'checked',
-	SurrogateTest: 'refuses' // returns invalid with 'need at least 8 samples'
+	SurrogateTest: 'refuses', // returns invalid with 'need at least 8 samples'
+	// A PLOT (its metric ports joined the manifest in v77.x): the chi-squared periodogram's
+	// peak_pvalue, one per series. Exempt, with the gap stated rather than hidden: the plot
+	// warns about missing values, gaps and a bin size below the sampling interval, but NOT
+	// about a record too short to hold many cycles. The p-value is the Sokolove-Bushell
+	// chi-squared statistic's, whose degrees of freedom follow the fold, not the record
+	// length; the handbook's Node Reference tells the reader to weigh it against the number
+	// of cycles. A short-record warning would move this to 'checked'.
+	periodogram:
+		'exempt: warns on missing values, gaps and bin size, not on record length (see the handbook entry)'
 };
 
-/** Nodes whose output includes a p-value the user will read as a result. */
+// Output names that carry a p-value. `peak_pvalue` is the periodogram's (a plot metric port).
+const PVALUE_NAMES = new Set(['pvalue', 'perm_pvalue', 'padj', 'ww_pvalue', 'peak_pvalue']);
+
+const outputNames = (n) => (n.outputs ?? []).map((o) => (typeof o === 'string' ? o : o?.name));
+
+/**
+ * Nodes whose output includes a p-value the user will read as a result: table processes
+ * and, since their metric ports are in the manifest, plots.
+ */
 const pvalueNodes = manifest.nodes
-	.filter((n) => n.kind === 'tableProcess')
-	.filter((n) =>
-		(n.outputs ?? []).some((o) => {
-			const name = typeof o === 'string' ? o : o?.name;
-			return name === 'pvalue' || name === 'perm_pvalue' || name === 'padj' || name === 'ww_pvalue';
-		})
-	)
+	.filter((n) => n.kind === 'tableProcess' || n.kind === 'plot')
+	.filter((n) => outputNames(n).some((name) => PVALUE_NAMES.has(name)))
 	.map((n) => n.id);
 
 function sourceOf(id) {
-	const f = join(repo, 'src/lib/tableProcesses', `${id}.svelte`);
+	const kind = manifest.nodes.find((n) => n.id === id)?.kind;
+	const f =
+		kind === 'plot'
+			? join(
+					repo,
+					'src/lib/plots',
+					`${id[0].toUpperCase()}${id.slice(1)}`,
+					`${id[0].toUpperCase()}${id.slice(1)}.svelte`
+				)
+			: join(repo, 'src/lib/tableProcesses', `${id}.svelte`);
 	return existsSync(f) ? readFileSync(f, 'utf8') : '';
 }
 
 describe('every p-value node has a stated small-sample policy', () => {
 	it('finds the p-value nodes (guards against the extractor going blind)', () => {
 		expect(pvalueNodes.length).toBeGreaterThan(8);
+	});
+
+	it('scans PLOT outputs too: the periodogram is in scope, the actogram rules are not', () => {
+		// Plots published no outputs to the manifest before v77.x, so the periodogram's
+		// peak_pvalue escaped this registry. Both halves pin that the scan now sees plots.
+		expect(pvalueNodes).toContain('periodogram');
+		// The actogram's marker-rule ports are read by the scan and carry no p-value: a fit's
+		// tau, phi, R², RMSE and n. n (markers fitted) is what lets a consumer weigh a tau
+		// from a handful of onsets, the same role qq_n plays for the Q-Q plot's r.
+		const acto = manifest.nodes.find((n) => n.id === 'actogram');
+		expect(outputNames(acto)).toEqual(['r*_tau', 'r*_phi', 'r*_r2', 'r*_rmse', 'r*_n']);
+		expect(pvalueNodes).not.toContain('actogram');
 	});
 
 	it('every p-value node appears in the policy registry', () => {

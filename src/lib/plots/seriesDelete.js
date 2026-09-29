@@ -48,11 +48,16 @@ function serializeInner(inner) {
  * @param {any} inner the plot's inner data object (`theData` in a plot's controls
  *   snippet) — must carry `parentBox` (the wrapper Plot)
  * @param {(inner: any) => void} mutate performs the edit directly on `inner`
+ * @param {(inner: any) => any[]} [extraOps] ops that belong to the same gesture (a marker
+ *   rule's deleted output columns, re-pointed stored values), computed AFTER `mutate` from
+ *   the mutated inner. When it returns any, the inner edit and those ops land as ONE
+ *   atomicBatch, so one undo reverses all of them. The ops must not depend on the inner
+ *   edit having been applied through the op layer (they run right after it, in order).
  * @returns {{ recorded: any } | null} the history entry the edit produced, or null
  *   when nothing changed. When the plot type has no fromJSON contract (or the inner
  *   is stale) the mutation is applied directly and `recorded` is null.
  */
-export function recordInnerEdit(inner, mutate) {
+export function recordInnerEdit(inner, mutate, extraOps = null) {
 	const plotObj = inner?.parentBox;
 	const entry = plotObj && appConsts.plotMap.get(plotObj.type);
 	if (typeof entry?.data?.fromJSON !== 'function' || plotObj.plot !== inner) {
@@ -66,13 +71,18 @@ export function recordInnerEdit(inner, mutate) {
 	mutate(inner);
 	const after = serializeInner(plotObj.plot);
 	if (JSON.stringify(before) === JSON.stringify(after)) return null; // nothing changed
+	const extra = typeof extraOps === 'function' ? (extraOps(plotObj.plot) ?? []) : [];
 
 	// Revert the direct mutation, then route the after-state through the op so the
 	// edit lands on the undo stack as a single step. fromJSON rebuilds plot.plot
 	// (a $state field, so the swap is reactive and the facet panel projection / metric
 	// outputs re-run off it exactly as they do for a wiring edit).
 	plotObj.plot = entry.data.fromJSON(plotObj, before);
-	mutationService.setPlotInner(plotObj.id, after);
+	if (extra.length > 0) {
+		mutationService.atomicBatch([{ kind: 'setPlotInner', id: plotObj.id, inner: after }, ...extra]);
+	} else {
+		mutationService.setPlotInner(plotObj.id, after);
+	}
 
 	// Read the entry back from the $state stack so later `===` checks compare the
 	// same proxy (state_proxy_equality_mismatch otherwise).
@@ -88,9 +98,10 @@ export function recordInnerEdit(inner, mutate) {
  *   snippet) — must carry `parentBox` (the wrapper Plot)
  * @param {(inner: any) => void} mutate performs the removal directly on `inner`
  * @param {string} message the toast text, e.g. `Series "activity" removed`
+ * @param {(inner: any) => any[]} [extraOps] see recordInnerEdit
  */
-export function removeFromInnerWithUndo(inner, mutate, message) {
-	const result = recordInnerEdit(inner, mutate);
+export function removeFromInnerWithUndo(inner, mutate, message, extraOps = null) {
+	const result = recordInnerEdit(inner, mutate, extraOps);
 	if (!result || !result.recorded) return; // nothing removed, or the direct fallback
 	const { recorded } = result;
 	const isTop = () =>

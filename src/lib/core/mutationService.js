@@ -40,6 +40,16 @@ export const mutationService = {
 		applyOp(op);
 	},
 
+	// Replace a plot's metric-output map ({ key: colId }), deep-copied (see operations.js).
+	setPlotMetricOut(id, metricOut) {
+		return applyOp({ kind: 'setPlotMetricOut', id, metricOut });
+	},
+
+	// Patch one actogram marker rule's settings IN PLACE as one undo step (no inner rebuild).
+	setMarkerRule(id, ruleId, patch) {
+		return applyOp({ kind: 'setMarkerRule', id, ruleId, patch });
+	},
+
 	// --- Column ops ---
 	addColumn(columnData) {
 		const inv = applyOp({ kind: 'addColumn', columnData });
@@ -48,6 +58,10 @@ export const mutationService = {
 	},
 	removeColumn(id) {
 		applyOp({ kind: 'removeColumn', id });
+	},
+	// Rename in place (same id, same data, same wires).
+	renameColumn(id, name) {
+		return applyOp({ kind: 'renameColumn', id, name });
 	},
 	addProcess(columnId, processType, args = {}) {
 		const inv = applyOp({ kind: 'addProcess', columnId, processType, args });

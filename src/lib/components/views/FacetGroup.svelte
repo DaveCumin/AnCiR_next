@@ -4,9 +4,12 @@
 	// grid the panel derives from its generator. Nothing here is a plot: the panels are
 	// views (core/facetPanels.svelte.js), never in core.plots, never saved. Dragging a panel
 	// moves the generator by the same delta (Draggable resolves the owner), so the whole
-	// grid follows; selection lives on the panel (`bind:selected`).
+	// grid follows; selection lives on the panel (`bind:selected`). The generator itself is
+	// mounted once, headless, so its calculation and metric outputs stay live (see
+	// FacetGeneratorCompute.svelte).
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
 	import FacetPanelHost from '$lib/components/views/FacetPanelHost.svelte';
+	import FacetGeneratorCompute from '$lib/components/views/FacetGeneratorCompute.svelte';
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { panelsFor } from '$lib/core/facetPanels.svelte.js';
 	import { isZoomMode } from '$lib/plots/plotZoomMode.svelte.js';
@@ -16,6 +19,8 @@
 	const panels = $derived(panelsFor(generator));
 	const PlotComp = $derived(appConsts.plotMap.get(generator?.type)?.plot ?? null);
 </script>
+
+<FacetGeneratorCompute {generator} />
 
 {#each panels as panel (panel.id)}
 	<FacetPanelHost {panel}>

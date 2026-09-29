@@ -175,6 +175,30 @@
 				a mean + SD cutoff.
 			</li>
 			<li>
+				<strong>Marker rules:</strong> with several animals on one actogram, add a
+				<strong>rule</strong> under <strong>Marker rules</strong> at the top of the Data tab instead
+				of one block per series. A rule applies the same markers and line to every series (every
+				panel when faceted) and lists each series' fitted τ, φ, R², RMSE and marker count. Its
+				<strong>min and max day</strong> set which days are fitted on every series, and each series
+				can still untick its own days. φ is reported in hours after the row start, at the range's
+				first day unless you set a φ day. Changing a setting under one series (or dragging its line,
+				or correcting one of its onsets) <strong>detaches</strong> that series with its own copy;
+				<strong>Reattach to rule</strong> undoes that, and <strong>Make rule</strong> on a series' own
+				block turns it into a rule for all series.
+			</li>
+			<li>
+				<strong>Wiring the results:</strong> each rule adds five <strong>output ports</strong> to
+				the actogram node, named after the rule (for a rule called Onsets: <em>Onsets τ (h)</em>,
+				<em>Onsets φ (h)</em>, <em>Onsets R²</em>, <em>Onsets RMSE (h)</em> and <em>Onsets n</em>),
+				each a column with one value per series. Wire τ into <strong>Describe Data</strong> for the
+				mean period across animals, or φ into a <strong>Rayleigh test</strong>. τ is the harmonic
+				check's pick (the fitted slope, or half or twice it if the periodogram says so). Renaming
+				the rule relabels the ports and keeps the wires; deleting it removes them, and undo brings
+				them back. Marker blocks no longer publish Stored Values: in an older session, a formula
+				that used one keeps its saved number, and <strong>Make rule</strong> on that block makes it live
+				again.
+			</li>
+			<li>
 				Resize the plot by dragging its corners, and export it as <strong>PNG or SVG</strong>
 				from the plot's controls.
 			</li>

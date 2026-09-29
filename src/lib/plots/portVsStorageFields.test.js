@@ -206,3 +206,38 @@ describe('overlay port names vs stored channel fields', () => {
 		if (covered === 0) console.warn('portVsStorageFields: no plot class carries `overlays` yet');
 	});
 });
+
+// The third port family: a plot's METRIC OUTPUT ports. The port is `col_<colId>` and its
+// label is the metric's name; neither is stored in the inner. What IS stored is the key
+// (`plot.metricOut[key] = colId`), and for an actogram the key is derived from a marker
+// rule's persisted ID, never its name (`r1_tau`). So the storage contract is: a rule written
+// in its storage shape (`markerRules[{ id, name, ... }]`, the series' `ruleData`) must come
+// back with the same id, the same keys, and a label that follows the name.
+describe('actogram marker-rule output ports vs stored fields', () => {
+	it('a rule and its series rule data round-trip with the same id, keys and label', async () => {
+		const { plotMetricKeys, plotMetricLabel } = await import('./plotMetricOutputs.svelte.js');
+		const cls = plotMap.get('actogram').data;
+		const stored = {
+			data: [
+				{
+					x: { refId: 100 },
+					y: { refId: 101 },
+					ruleData: { r4: { selectedPeriods: [true, false], manualMarkers: [] } }
+				}
+			],
+			markerRules: [{ id: 'r4', name: 'Onsets', type: 'onset' }],
+			nextRuleId: 5
+		};
+		const act = cls.fromJSON(null, stored);
+		const plot = { type: 'actogram', id: 2, plot: act };
+		expect(plotMetricKeys(plot)).toEqual(['r4_tau', 'r4_phi', 'r4_r2', 'r4_rmse', 'r4_n']);
+		expect(plotMetricLabel(plot, 'r4_tau')).toBe('Onsets τ (h)');
+		const back = JSON.parse(JSON.stringify(act));
+		expect(back.markerRules.map((r) => r.id)).toEqual(['r4']);
+		expect(back.data[0].ruleData).toEqual(stored.data[0].ruleData);
+		// Renaming changes the label, never the key.
+		act.markerRules[0].name = 'Offsets';
+		expect(plotMetricKeys(plot)).toEqual(['r4_tau', 'r4_phi', 'r4_r2', 'r4_rmse', 'r4_n']);
+		expect(plotMetricLabel(plot, 'r4_phi')).toBe('Offsets φ (h)');
+	});
+});

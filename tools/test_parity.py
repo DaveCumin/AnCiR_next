@@ -182,6 +182,42 @@ def run_time_column(fx, js):
     return out
 
 
+def run_actogram_markers(fx, js):
+    """Rebuild the fixture's actogram from the plain arrays the JS emitter recorded and
+    compute every rule on every series, with all intermediates."""
+    fn = getattr(rt, fx["pyFunc"], None)
+    if fn is None:
+        raise AssertionError(f"no Python {fx['pyFunc']} in ancir_runtime")
+    inp = js["inputs"]
+    return fn(inp["inner"], inp["series"], inp.get("zone", "utc"))
+
+
+def _deep_diff(py, want, tol, path="$"):
+    """First difference between a port's nested result and the JS record, or None. Every
+    key the JS recorded must be present and equal (numbers within tol, NaN == null)."""
+    if isinstance(want, dict):
+        if not isinstance(py, dict):
+            return f"{path}: expected an object, got {py!r}"
+        for k, w in want.items():
+            d = _deep_diff(py.get(k), w, tol, f"{path}.{k}")
+            if d:
+                return d
+        return None
+    if isinstance(want, list):
+        if not isinstance(py, list) or len(py) != len(want):
+            return f"{path}: length {None if not isinstance(py, list) else len(py)} vs {len(want)}"
+        for i, (p, w) in enumerate(zip(py, want)):
+            d = _deep_diff(p, w, tol, f"{path}[{i}]")
+            if d:
+                return d
+        return None
+    if isinstance(want, (bool, str)) or isinstance(py, (bool, str)):
+        return None if py == want else f"{path}: {py!r} vs {want!r}"
+    if isinstance(py, dict):
+        return f"{path}: got an object, expected {want!r}"
+    return None if nums_match(py, want, tol) else f"{path}: {py!r} vs {want!r}"
+
+
 def run_table_process_result(fx, js):
     raw_data, cols, id_map, _ = _build_cols(js)
     args = resolve_tokens(fx["args"], id_map)
@@ -244,6 +280,11 @@ def _check_fixture(fx, js_results):
                 else:
                     assert nums_match(pv, jv, tol), \
                         f"{fx['id']} scalar '{key}' differs: {pv!r} vs {jv!r}"
+
+    elif fx["kind"] == "actogramMarkers":
+        py = run_actogram_markers(fx, js)
+        diff = _deep_diff(py, js["outputs"], tol)
+        assert diff is None, f"{fx['id']} differs at {diff}"
 
     elif fx["kind"] == "tableProcessResult":
         py = run_table_process_result(fx, js)

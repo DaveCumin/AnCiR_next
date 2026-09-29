@@ -4,8 +4,11 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { flushSync } from 'svelte';
 import { core } from '$lib/core/core.svelte';
+import { Column } from '$lib/core/Column.svelte';
+import { panelsFor } from '$lib/core/facetPanels.svelte.js';
 import {
 	normalisePlotIds,
+	exportOrder,
 	withPlotSize,
 	panelLabel,
 	romanNumeral,
@@ -217,7 +220,8 @@ describe('buildExport', () => {
 		mountPlot(1, { name: 'A' });
 		mountPlot(2, { name: 'B' });
 		expect(buildExport([1], { combined: true }).map((j) => j.filename)).toEqual(['A']);
-		expect(buildExport([1, 2], { combined: false }).map((j) => j.filename)).toEqual(['A', 'B']);
+		// Individual files come in Plots-list order (core.plots reversed): B is on top.
+		expect(buildExport([1, 2], { combined: false }).map((j) => j.filename)).toEqual(['B', 'A']);
 		const combined = buildExport([1, 2], { combined: true });
 		expect(combined).toHaveLength(1);
 		expect(combined[0].svg.querySelectorAll(':scope > svg')).toHaveLength(2);
@@ -356,9 +360,10 @@ describe('export at an overridden size', () => {
 			dpi: 150,
 			sizes: { 1: { width: 300, height: 150 } }
 		});
+		// Jobs come in Plots-list order (plot 2 is on top), each at its own size.
 		expect(jobs.map((j) => [j.width, j.height])).toEqual([
-			[300, 150],
-			[200, 100]
+			[200, 100],
+			[300, 150]
 		]);
 		expect(jobs[0].scale).toBeCloseTo(150 / 96, 6);
 		expect(jobs[1].scale).toBeCloseTo(150 / 96, 6);
@@ -433,7 +438,106 @@ describe('saveExport', () => {
 		globalThis.URL.revokeObjectURL ??= () => {};
 		const n = await saveExport([1, 2], { format: 'svg', combined: false, includeTitle: true });
 		expect(n).toBe(2);
-		expect(clicks).toEqual(['One.svg', 'Two.svg']);
+		// Files download in Plots-list order: Two is the top row.
+		expect(clicks).toEqual(['Two.svg', 'One.svg']);
 		click.mockRestore();
+	});
+});
+
+// The order of a multi-plot export: the Plots list in the Data view, top to bottom. That
+// list is core.plots REVERSED (the topmost row is the plot drawn last), so the plot at the
+// top of the list gets the first label, and dragging a row there moves its label.
+describe('exportOrder', () => {
+	function mkCol(name, values) {
+		const c = new Column({ type: 'number', data: -1 });
+		c.customName = name;
+		core.rawData.set(c.id, values);
+		c.data = c.id;
+		core.data.push(c);
+		return c.id;
+	}
+	/** A faceted scatterplot generator with one panel per y, as a plain core.plots entry. */
+	function mountGenerator(id, ys) {
+		const x = mkCol('t', [0, 1, 2, 3]);
+		const data = ys.map((name) => ({ x: { refId: x }, y: { refId: mkCol(name, [1, 2, 3]) } }));
+		core.plots.push({
+			id,
+			name: 'Gen ' + id,
+			facet: true,
+			type: 'scatterplot',
+			x: 0,
+			y: 0,
+			width: 200,
+			height: 100,
+			style: null,
+			plot: { data }
+		});
+		const gen = core.plots[core.plots.length - 1];
+		const panels = panelsFor(gen);
+		for (const panel of panels) {
+			const host = document.createElement('div');
+			host.innerHTML = `<svg xmlns="${SVG_NS}" id="plot${panel.id}" width="200" height="100" viewBox="0 0 200 100"><circle r="5" /></svg>`;
+			document.body.appendChild(host);
+			hosts.push(host);
+		}
+		return { gen, panelIds: panels.map((p) => p.id) };
+	}
+	afterEach(() => {
+		core.data.length = 0;
+		core.rawData.clear();
+	});
+
+	const labelsOf = (job) =>
+		[...job.svg.querySelectorAll('text.export-title')].map((t) => t.textContent);
+
+	it('puts the plot at the top of the Plots list first: core.plots [A, B, C] exports C, B, A', () => {
+		mountPlot(1, { name: 'A', x: 0, y: 0 });
+		mountPlot(2, { name: 'B', x: 300, y: 0 });
+		mountPlot(3, { name: 'C', x: 600, y: 0 });
+		expect(exportOrder([1, 2, 3])).toEqual([3, 2, 1]);
+		// The order is the list's, whatever order the ids arrive in.
+		expect(exportOrder([2, 3, 1])).toEqual([3, 2, 1]);
+		const [job] = buildExport([1, 2, 3], { combined: true, panelLabels: true });
+		expect(labelsOf(job)).toEqual(['a  C', 'b  B', 'c  A']);
+		// Individual files page in the same order.
+		expect(buildExport([1, 2, 3], { combined: false }).map((j) => j.filename)).toEqual([
+			'C',
+			'B',
+			'A'
+		]);
+	});
+
+	it('follows a drag-reorder of the list', () => {
+		mountPlot(1, { name: 'A', x: 0, y: 0 });
+		mountPlot(2, { name: 'B', x: 300, y: 0 });
+		mountPlot(3, { name: 'C', x: 600, y: 0 });
+		// Drag A to the top of the list: it goes to the END of core.plots.
+		const [a] = core.plots.splice(0, 1);
+		core.plots.push(a);
+		expect(exportOrder([1, 2, 3])).toEqual([1, 3, 2]);
+		const [job] = buildExport([1, 2, 3], { combined: true, panelLabels: true });
+		expect(labelsOf(job)).toEqual(['a  A', 'b  C', 'c  B']);
+	});
+
+	it("keeps facet panels of one generator in grid order, at their generator's place in the list", () => {
+		mountPlot(1, { name: 'Below', x: 0, y: 0 });
+		const { panelIds } = mountGenerator(2, ['p', 'q', 'r']);
+		mountPlot(3, { name: 'Above', x: 0, y: 900 });
+		expect(panelIds).toHaveLength(3);
+		// The panels arrive shuffled; they come back in grid order, between the two plots.
+		const shuffled = [panelIds[2], 1, panelIds[0], 3, panelIds[1]];
+		expect(exportOrder(shuffled)).toEqual([3, ...panelIds, 1]);
+		const [job] = buildExport(shuffled, { combined: true, panelLabels: true, includeTitle: false });
+		expect(labelsOf(job).map((t) => t.trim())).toEqual(['a', 'b', 'c', 'd', 'e']);
+		const panelOrder = [...job.svg.querySelectorAll(':scope > svg')].map((p) =>
+			p.querySelector('text.export-title').textContent.trim()
+		);
+		expect(panelOrder).toEqual(['a', 'b', 'c', 'd', 'e']);
+	});
+
+	it('leaves ids that resolve to nothing at the end, in the order given', () => {
+		mountPlot(1, { name: 'A' });
+		expect(exportOrder([9, 1, 8])).toEqual([1, 9, 8]);
+		expect(exportOrder([])).toEqual([]);
 	});
 });

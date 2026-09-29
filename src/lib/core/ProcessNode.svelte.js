@@ -1,6 +1,7 @@
 // @ts-nocheck
 
 import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+import { plotMetricKeys, plotMetricLabel } from '$lib/plots/plotMetricDefs.js';
 
 /**
  * ProcessNode: a normalized node model used by the workflow layer.
@@ -888,11 +889,19 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 				}
 			});
 		}
-		for (const [key, colId] of Object.entries(plot.metricOut ?? {})) {
+		// In the type's key order (an actogram's rules in rule order, five ports each), then any
+		// key the def no longer lists (stale until the next column sync drops it). Labelled by
+		// the def (`Onsets τ (h)`), so renaming a rule relabels its ports; the port id is the
+		// column id, which a rename never changes.
+		const metricOut = plot.metricOut ?? {};
+		const ordered = plotMetricKeys(plot).filter((k) => k in metricOut);
+		for (const k of Object.keys(metricOut)) if (!ordered.includes(k)) ordered.push(k);
+		for (const key of ordered) {
+			const colId = metricOut[key];
 			if (typeof colId !== 'number' || colId < 0) continue;
 			if (!(core.data ?? []).some((c) => c.id === colId)) continue;
 			const port = { ...makeNodePort(`col_${colId}`, 'output', 'column'), metric: true };
-			port.display = key;
+			port.display = plotMetricLabel(plot, key);
 			outputs.push(port);
 			outputColumns.push({ key, colId, port: `col_${colId}`, metric: true });
 		}

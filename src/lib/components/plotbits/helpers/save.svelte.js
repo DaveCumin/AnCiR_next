@@ -239,6 +239,36 @@ export function normalisePlotIds(Id) {
 	return out;
 }
 
+/**
+ * The order plots are exported in: the Plots list in the Data view, top to bottom. That
+ * list is `core.plots` REVERSED (its top row is the plot drawn last), so the plot at the
+ * top of the list gets the first panel label and the first page of an individual export,
+ * and dragging a row there moves its label. A facet panel takes its generator's place in
+ * the list, and the panels of one generator stay in grid order. Ids that resolve to
+ * nothing keep their given order after everything that does. Pure, and the ONE ordering
+ * rule: `buildExport` (the combined figure, individual files, MCP) and the dialog (its
+ * pager, its first-panel reads) both go through it. The combined figure's TILING is not
+ * touched by this: panels sit where they are on the canvas (see prepareCombinedExport).
+ *
+ * @param {(number|string)[]} ids plot ids and panel ids, as normalisePlotIds returns them
+ * @returns {(number|string)[]} the same ids, in export order
+ */
+export function exportOrder(ids) {
+	const plots = core.plots ?? [];
+	const unknown = plots.length;
+	const rank = (id) => {
+		const ref = resolvePlotRef(id);
+		if (!ref) return [unknown, 0];
+		const owner = isFacetPanel(ref) ? ref.generator : ref;
+		const i = plots.findIndex((p) => p?.id === owner?.id);
+		return [i < 0 ? unknown : plots.length - 1 - i, isFacetPanel(ref) ? ref.index : 0];
+	};
+	return ids
+		.map((id, given) => ({ id, given, rank: rank(id) }))
+		.sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.given - b.given)
+		.map((e) => e.id);
+}
+
 /** Panel letter for the i-th panel: a..z, then a1..z1, and so on. */
 export function panelLetter(i) {
 	const letter = String.fromCharCode(97 + (i % 26));
@@ -504,6 +534,10 @@ export function panelRows(panels) {
  * and background, and nothing has to be re-keyed. Panel ids are already unique per
  * plot (`qqclip5`, `actogram-clip-5`) so nested documents do not collide.
  *
+ * Panel labels (a, b, c) run in the order of `plotIds`, and the first id's style speaks
+ * for the figure; `buildExport` passes the ids in export order (exportOrder), so callers
+ * wanting the Plots-list order go through it rather than calling this directly.
+ *
  * @param {number[]} plotIds
  * @param {{includeTitle?: boolean, panelLabels?: boolean, labelStyle?: string,
  *          physical?: boolean}} [opts]
@@ -614,7 +648,8 @@ export function serialiseSvg(svg) {
  */
 export function buildExport(Id, options = {}) {
 	const opts = { ...EXPORT_OPTION_DEFAULTS, ...options, dpi: options.dpi ?? null };
-	const ids = normalisePlotIds(Id);
+	// Plots-list order: labels, pages and the figure's first panel all follow it.
+	const ids = exportOrder(normalisePlotIds(Id));
 	const physical = opts.format === 'svg';
 	const sizes = opts.sizes && typeof opts.sizes === 'object' ? opts.sizes : {};
 	const prepared = [];

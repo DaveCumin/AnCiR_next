@@ -28,6 +28,7 @@ const { ensureRegistry } = await import('../engine/session.js');
 await ensureRegistry();
 const { appConsts } = await import('$lib/core/core.svelte.js');
 const { describeOverlayForms } = await import('../engine/overlays.js');
+const { plotMetricManifestOutputs } = await import('$lib/plots/plotMetricDefs.js');
 const { getOutputKeys: rhythmicityOutputKeys } =
 	await import('$lib/tableProcesses/RhythmicityAnalysis.svelte');
 
@@ -227,7 +228,14 @@ for (const [id, entry] of appConsts.plotMap ?? new Map()) {
 		// Reference lines / shaded bands (add_plot / render_plot `overlays`): the channel table
 		// per (kind, form), read from OverlayClass so it cannot drift. Only on plots whose class
 		// has addOverlay (the scatterplot).
-		...(typeof entry.data?.prototype?.addOverlay === 'function' ? { overlays: overlayForms } : {})
+		...(typeof entry.data?.prototype?.addOverlay === 'function' ? { overlays: overlayForms } : {}),
+		// The metric output ports the plot emits in the app (one value per series), in the node
+		// manifest's shape. Read-only knowledge for the model: the engine cannot wire a plot
+		// metric column (the app mints them at mount; plan 2026-09-30 marker rules, Phase C), so
+		// this says what a user's session may carry, e.g. an actogram's r<id>_tau per marker rule.
+		...(plotMetricManifestOutputs(id).length
+			? { metricOutputs: plotMetricManifestOutputs(id) }
+			: {})
 	};
 }
 

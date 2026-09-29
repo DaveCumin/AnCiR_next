@@ -16,8 +16,11 @@
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
+	import { harmonicCheck as computeHarmonicCheck } from './harmonicCheck.js';
+	import { tauReadout } from './tauReadout.js';
+	import { RULE_STAT_LABEL } from '$lib/plots/plotMetricDefs.js';
 	import { fitLine } from './lineFit.js';
+	import { selectionMask } from './markerSelection.js';
 
 	let _phaseMarkerCounter = 0;
 
@@ -47,7 +50,8 @@
 		// frame as the regression (so the drawn line, τ, θ and the harmonic check all reuse
 		// linearRegression below). slope = τ (period, hrs); the day span is lineMin/MaxDay.
 		// A block with no markers and both locks Fixed is a line the user positions
-		// directly (the "Add line" preset, and what the old `fitline` type became).
+		// directly (what the old `fitline` type became; the user gets one by adding
+		// a marker block and setting both locks to Fixed).
 		fitSlope = $state(null);
 		fitIntercept = $state(null);
 		// Per-parameter locks. The line has exactly two parameters, τ (the slope,
@@ -60,29 +64,60 @@
 		// fits both, which is exactly the behaviour before locks existed.
 		lockTau = $state('fit');
 		lockTheta = $state('fit');
+		// Whether the day range (lineMinDay..lineMaxDay) also limits which days are FITTED,
+		// not only where the line is drawn. False for a plain per-series block (the range has
+		// always been a draw clip there, so no saved session changes); true for a block
+		// detached from a marker rule, whose range scopes the fit (Decision 1a), so the
+		// detached copy computes exactly what its rule instance did. See markerSelection.js.
+		fitWithinRange = $state(false);
+		// The id of the marker rule this block was detached from or promoted into, or null.
+		// Drives "Reattach to rule"; a dead id reads "Rule deleted".
+		fromRule = $state(null);
+		// Rule instances override this; an own block is never one.
+		get isInstance() {
+			return false;
+		}
+
+		// WHERE THE COMPUTATION READS FROM. Every derived below reads its SETTINGS through
+		// `this.cfg` and its per-series DATA (the ticked days, hand-placed points) through
+		// `this.store`. On an own block both are the block itself, so its fields, JSON and
+		// tests are exactly as they always were. A rule instance (markerRules.svelte.js)
+		// points `cfg` at the plot-level rule and `store` at its series' `ruleData` entry,
+		// and inherits every derived unchanged: one computation class, two sources
+		// (plan 2026-09-30-actogram-marker-rules-and-outputs 1.3).
+		get cfg() {
+			return this;
+		}
+		get store() {
+			return this;
+		}
+		/** The per-series data object a data write (a tick, a hand-placed point) lands in. */
+		writableStore() {
+			return this;
+		}
 
 		// The day the phase (θ) is reported / anchored to (1-indexed, clamped into the
 		// plot). Shared by Est φ and the fit line's θ handling. User-set via phaseRefDay;
 		// defaults to the line's start day (lineMinDay) or day 1.
 		get fitRefDay() {
 			const Ndays = Math.max(1, this.parentData.parentPlot.Ndays);
-			const raw = this.phaseRefDay ?? this.lineMinDay ?? 1;
+			const raw = this.cfg.phaseRefDay ?? this.cfg.lineMinDay ?? 1;
 			return Math.min(Math.max(1, raw), Ndays);
 		}
 		// Time-of-day the line crosses at day `d` (1-indexed): (slope - periodHrs)*d + intercept.
 		fitTimeOfDayAt(d) {
 			const P = this.parentData.parentPlot.periodHrs;
-			return (this.fitSlope - P) * d + this.fitIntercept;
+			return (this.cfg.fitSlope - P) * d + this.cfg.fitIntercept;
 		}
 		// The FIXED values of the two parameters, decoded from the stored
 		// (fitSlope, fitIntercept) pair. That pair is only ever a storage encoding
 		// of (τ, θ) at the reference day, which is what lets old sessions (which
 		// stored nothing else) load unchanged.
 		get tauValue() {
-			return this.fitSlope;
+			return this.cfg.fitSlope;
 		}
 		get thetaValue() {
-			if (this.fitSlope == null || this.fitIntercept == null) return null;
+			if (this.cfg.fitSlope == null || this.cfg.fitIntercept == null) return null;
 			return this.fitTimeOfDayAt(this.fitRefDay);
 		}
 
@@ -96,13 +131,13 @@
 				Number.isFinite(reg.slope) &&
 				Number.isFinite(reg.intercept)
 			) {
-				this.fitSlope = reg.slope;
-				this.fitIntercept = reg.intercept;
+				this.cfg.fitSlope = reg.slope;
+				this.cfg.fitIntercept = reg.intercept;
 				return;
 			}
 			const P = this.parentData.parentPlot.periodHrs;
-			this.fitSlope ??= P;
-			this.fitIntercept ??= P / 2;
+			this.cfg.fitSlope ??= P;
+			this.cfg.fitIntercept ??= P / 2;
 		}
 
 		// Rotate: set τ (slope) while keeping the time-of-day at the reference day
@@ -113,28 +148,28 @@
 			const P = this.parentData.parentPlot.periodHrs;
 			const rd = this.fitRefDay;
 			const tod = this.fitTimeOfDayAt(rd);
-			this.fitSlope = slope;
-			this.fitIntercept = tod - (slope - P) * rd;
-			this.lockTau = 'fixed';
+			this.cfg.fitSlope = slope;
+			this.cfg.fitIntercept = tod - (slope - P) * rd;
+			this.cfg.lockTau = 'fixed';
 		}
 		// Translate: set the time-of-day (θ) at the reference day, keeping τ fixed.
 		setTheta(tod) {
 			this.pinCurrentLine();
 			const P = this.parentData.parentPlot.periodHrs;
 			const rd = this.fitRefDay;
-			this.fitIntercept = tod - (this.fitSlope - P) * rd;
-			this.lockTheta = 'fixed';
+			this.cfg.fitIntercept = tod - (this.cfg.fitSlope - P) * rd;
+			this.cfg.lockTheta = 'fixed';
 		}
 
 		// Lock switches. Going to Fixed pins the line where it is, so the only thing
 		// that changes is which parameter least squares is still free to move.
 		setLockTau(mode) {
 			if (mode === 'fixed') this.pinCurrentLine();
-			this.lockTau = mode;
+			this.cfg.lockTau = mode;
 		}
 		setLockTheta(mode) {
 			if (mode === 'fixed') this.pinCurrentLine();
-			this.lockTheta = mode;
+			this.cfg.lockTheta = mode;
 		}
 
 		//Add a manual marker - the raw time clicked on
@@ -142,7 +177,8 @@
 			// Calculate absolute time using the current periodHrs
 			const periodHrs = this.parentData.parentPlot.periodHrs;
 			const absoluteTime = clickedDay * periodHrs + clickedHrs;
-			this.manualMarkers = [...this.manualMarkers, absoluteTime];
+			const store = this.writableStore();
+			store.manualMarkers = [...store.manualMarkers, absoluteTime];
 		}
 
 		// Onset/offset template detections: per row, the hour in the row and the
@@ -154,10 +190,10 @@
 				{
 					periodHrs: this.parentData.parentPlot.periodHrs,
 					binSize: this.parentData.binSize,
-					hrsBefore: this.templateHrsBefore,
-					hrsAfter: this.templateHrsAfter,
-					centile: this.centileThreshold,
-					type: this.type
+					hrsBefore: this.cfg.templateHrsBefore,
+					hrsAfter: this.cfg.templateHrsAfter,
+					centile: this.cfg.centileThreshold,
+					type: this.cfg.type
 				}
 			)
 		);
@@ -165,10 +201,10 @@
 		//Calculate the markers for the actogram
 		markers = $derived.by(() => {
 			const periodHrs = this.parentData.parentPlot.periodHrs;
-			if (this.type === 'manual') {
+			if (this.cfg.type === 'manual') {
 				// Group manual markers by day based on current periodHrs
 				const markersByDay = {};
-				for (const absoluteTime of this.manualMarkers) {
+				for (const absoluteTime of this.store.manualMarkers) {
 					const day = Math.floor(absoluteTime / periodHrs);
 					const hour = absoluteTime % periodHrs;
 					if (!markersByDay[day]) markersByDay[day] = [];
@@ -189,13 +225,22 @@
 			markerAbsoluteTimes(
 				this.markers,
 				this.parentData.parentPlot.periodHrs,
-				this.type === 'onset' || this.type === 'offset' ? this.templateMatches.times : null
+				this.cfg.type === 'onset' || this.cfg.type === 'offset' ? this.templateMatches.times : null
 			)
+		);
+		// Which rows enter the fit (and get a dot): the series' ticks AND, when the range
+		// scopes the fit, the day range. One pure rule, markerSelection.js.
+		selectedMask = $derived(
+			selectionMask(this.markers.length, this.store.selectedPeriods, {
+				rangeScopesFit: !!this.cfg.fitWithinRange,
+				lineMinDay: this.cfg.lineMinDay,
+				lineMaxDay: this.cfg.lineMaxDay
+			})
 		);
 		onsetUnwrap = $derived(
 			unwrapOnsets(this.markerTimes, {
 				periodHrs: this.parentData.parentPlot.periodHrs,
-				selected: this.selectedPeriods
+				selected: this.selectedMask
 			})
 		);
 
@@ -204,9 +249,9 @@
 			const xscale = scaleLinear()
 				.domain([0, this.parentData.parentPlot.periodHrs * this.parentData.parentPlot.doublePlot])
 				.range([0, this.parentData.parentPlot.plotwidth]);
-			const radius = this.markerSize;
+			const radius = this.cfg.markerSize;
 			for (let m = 0; m < this.markers.length; m++) {
-				if (!(this.selectedPeriods[m] ?? true)) continue;
+				if (!this.selectedMask[m]) continue;
 				if (isNaN(this.markers[m]) || this.markers[m] == null) continue;
 				// Drawn in the row the onset fell in (a row's search spans two rows).
 				const pos = markerDisplayPosition(
@@ -248,7 +293,7 @@
 		// 'auto' legend reservation, which sets the plot width) depend on the plot width.
 		// The loop is markerPoints' own skip rule.
 		markersDrawn = $derived(
-			this.markers.some((v, m) => (this.selectedPeriods[m] ?? true) && v != null && !isNaN(v))
+			this.markers.some((v, m) => this.selectedMask[m] && v != null && !isNaN(v))
 		);
 
 		/**
@@ -257,10 +302,10 @@
 		 * min-day is past its max-day draws no line even with `showLine` on.
 		 */
 		lineDrawn = $derived.by(() => {
-			if (!this.showLine || !this.linearRegression?.slope) return false;
+			if (!this.cfg.showLine || !this.linearRegression?.slope) return false;
 			const Ndays = this.parentData?.parentPlot?.Ndays ?? 0;
-			const lo = Math.max(1, this.lineMinDay ?? 1);
-			const hi = Math.min(Ndays, this.lineMaxDay ?? Ndays);
+			const lo = Math.max(1, this.cfg.lineMinDay ?? 1);
+			const hi = Math.min(Ndays, this.cfg.lineMaxDay ?? Ndays);
 			return hi >= lo;
 		});
 
@@ -276,8 +321,8 @@
 
 		linearRegression = $derived.by(() => {
 			const { xs, ys } = this.fitPoints;
-			const tau = this.lockTau === 'fixed' ? this.tauValue : null;
-			const theta = this.lockTheta === 'fixed' ? this.thetaValue : null;
+			const tau = this.cfg.lockTau === 'fixed' ? this.tauValue : null;
+			const theta = this.cfg.lockTheta === 'fixed' ? this.thetaValue : null;
 			const res = fitLine(xs, ys, {
 				tau,
 				theta,
@@ -308,59 +353,30 @@
 		});
 
 		// Check harmonics of the estimated tau against the periodogram
-		harmonicCheck = $derived.by(() => {
-			if (!this.linearRegression?.slope) return null;
-			const tau = this.linearRegression.slope;
-			const xData = this.parentData.x?.hoursSinceStart;
-			const yData = this.parentData.y?.getData();
-			if (!xData?.length || !yData?.length) return null;
-
-			const binSize = this.parentData.binSize || 0.25;
-			const dataSpan = xData[xData.length - 1] - xData[0];
-
-			// Candidate periods: tau, tau/2, 2*tau
-			const candidates = [
-				{ label: 'τ', period: tau },
-				{ label: 'τ/2', period: tau / 2 },
-				{ label: '2τ', period: tau * 2 }
-			].filter((c) => c.period > binSize * 2 && c.period < dataSpan / 2);
-
-			if (candidates.length === 0) return null;
-
-			// Run a single narrow periodogram covering all candidate windows
-			const margin = 0; // ±x hours around each candidate
-			const step = 0.001;
-			const results = candidates.map((c) => {
-				const pMin = c.period - margin;
-				const pMax = c.period + margin;
-				const result = runPeriodogramCalculation({
-					xData,
-					yData,
-					binSize,
-					method: 'Lomb-Scargle',
-					chiSquaredAlpha: 0.05,
-					periodMin: pMin,
-					periodMax: pMax,
-					periodSteps: step
-				});
-				if (!result.y.length) return { ...c, peakPeriod: c.period, power: 0 };
-				const peakIdx = result.y.indexOf(Math.max(...result.y));
-				return {
-					...c,
-					peakPeriod: result.x[peakIdx],
-					power: result.y[peakIdx]
-				};
-			});
-
-			// Find strongest
-			const strongest = results.reduce((a, b) => (b.power > a.power ? b : a));
-			return { candidates: results, strongest };
+		// The fitted slope as a NUMBER, so the harmonic check below re-runs only when the
+		// slope's VALUE moves. `linearRegression` is a fresh object on every recompute (a
+		// reference-day edit, a lock flip that keeps the line where it is), and depending on
+		// the object would re-run three periodogram evaluations for nothing (Decision 2b:
+		// the check is computed once per instance and cached, never on an unrelated edit).
+		fittedSlope = $derived.by(() => {
+			const reg = this.linearRegression;
+			return reg && typeof reg === 'object' && Number.isFinite(reg.slope) ? reg.slope : null;
 		});
+		// The harmonic check (tau, tau/2, 2 tau against a Lomb-Scargle evaluation of the series'
+		// own data) lives in the pure harmonicCheck.js, which the Python and R ports mirror.
+		harmonicCheck = $derived.by(() =>
+			computeHarmonicCheck({
+				xData: this.parentData.x?.hoursSinceStart,
+				yData: this.parentData.y?.getData(),
+				binSize: this.parentData.binSize,
+				tau: this.fittedSlope
+			})
+		);
 
 		// Reasons not to trust the automatic tau (see assessOnsetFit). Only while tau is
 		// fitted from the markers: a fixed tau is the user's own value, not an estimate.
 		onsetWarnings = $derived.by(() => {
-			if (this.lockTau !== 'fit' || !this.canFit) return [];
+			if (this.cfg.lockTau !== 'fit' || !this.canFit) return [];
 			const reg = this.linearRegression;
 			if (!reg || typeof reg !== 'object') return [];
 			const P = this.parentData.parentPlot.periodHrs;
@@ -382,7 +398,7 @@
 		//Edit a marker value. If onset/offset, convert to manual first.
 		editMarker(periodIndex, newHourValue) {
 			const periodHrs = this.parentData.parentPlot.periodHrs;
-			if (this.type !== 'manual') {
+			if (this.cfg.type !== 'manual') {
 				// Convert all current computed markers to manual markers
 				const newManualMarkers = [];
 				for (let i = 0; i < this.markers.length; i++) {
@@ -396,13 +412,13 @@
 						);
 					}
 				}
-				this.manualMarkers = newManualMarkers;
-				this.type = 'manual';
+				this.store.manualMarkers = newManualMarkers;
+				this.cfg.type = 'manual';
 			} else {
 				// Already manual - update the specific marker
 				const absoluteTime = periodIndex * periodHrs + newHourValue;
-				this.manualMarkers = [
-					...this.manualMarkers.filter((t) => Math.floor(t / periodHrs) !== periodIndex),
+				this.store.manualMarkers = [
+					...this.store.manualMarkers.filter((t) => Math.floor(t / periodHrs) !== periodIndex),
 					absoluteTime
 				];
 			}
@@ -435,13 +451,18 @@
 				const lockDefault = legacyFitLine ? 'fixed' : 'fit';
 				this.lockTau = dataIN.lockTau ?? lockDefault;
 				this.lockTheta = dataIN.lockTheta ?? lockDefault;
-				this.showLine = dataIN.showLine || true;
+				// `?? true`, not `|| true`: the latter made an unticked "Show Line" come back
+				// ticked on every load and every recorded edit (which round-trips the JSON).
+				this.showLine = dataIN.showLine ?? true;
 				this.showMarkers = dataIN.showMarkers || true;
 				this.lineWidth = dataIN.lineWidth || 1;
 				this.markerSize = dataIN.markerSize || 5;
 				this.lineMinDay = dataIN.lineMinDay ?? null;
 				this.lineMaxDay = dataIN.lineMaxDay ?? null;
 				this.phaseRefDay = dataIN.phaseRefDay ?? null;
+				this.fitWithinRange = dataIN.fitWithinRange === true;
+				this.fromRule =
+					typeof dataIN.fromRule === 'string' && dataIN.fromRule ? dataIN.fromRule : null;
 				// Keep only finite day indices and cap the count: a non-time X axis can
 				// produce a huge/NaN period key, which would make Array.from({length})
 				// below throw (RangeError) or allocate absurdly.
@@ -487,7 +508,10 @@
 				fitSlope: this.fitSlope,
 				fitIntercept: this.fitIntercept,
 				lockTau: this.lockTau,
-				lockTheta: this.lockTheta
+				lockTheta: this.lockTheta,
+				// Written only when set, so a session with no rules saves byte-identically.
+				...(this.fitWithinRange ? { fitWithinRange: true } : {}),
+				...(this.fromRule ? { fromRule: this.fromRule } : {})
 			};
 		}
 
@@ -513,7 +537,9 @@
 				fitSlope: json.fitSlope,
 				fitIntercept: json.fitIntercept,
 				lockTau: json.lockTau,
-				lockTheta: json.lockTheta
+				lockTheta: json.lockTheta,
+				fitWithinRange: json.fitWithinRange,
+				fromRule: json.fromRule
 			});
 		}
 	}
@@ -522,8 +548,9 @@
 <script>
 	import { onDestroy } from 'svelte';
 	import { isFacetPanel, panelSeriesTarget } from '$lib/core/facetPanels.svelte.js';
-	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import { recordInnerEdit } from '$lib/plots/seriesDelete.js';
+	import { isOutsideFitRange } from './markerSelection.js';
+	import { ruleBlockDomId } from './ruleDom.js';
 	import {
 		actogramPointToDayTime,
 		cursorForZone,
@@ -539,6 +566,9 @@
 			.range([0, marker.parentData.parentPlot.plotwidth])
 	);
 	let addMarkerButtonText = $state('Add markers');
+	// A rule instance's harmonic check and warnings scan (periodograms) are computed only
+	// while the user has them open (plan section 8; Decision 2b).
+	let tauCheckOpen = $state(false);
 
 	// The number shown beside each lock: always the value of the line as DRAWN, so a
 	// fitted parameter reads out its fitted value and flipping that lock to Fixed
@@ -605,7 +635,10 @@
 	/** The drawn day span, exactly as the `plot` snippet clamps it. */
 	function lineSpan(m) {
 		const Ndays = m.parentData.parentPlot.Ndays;
-		return { lo: Math.max(1, m.lineMinDay ?? 1), hi: Math.min(Ndays, m.lineMaxDay ?? Ndays) };
+		return {
+			lo: Math.max(1, m.cfg.lineMinDay ?? 1),
+			hi: Math.min(Ndays, m.cfg.lineMaxDay ?? Ndays)
+		};
 	}
 
 	// `ownerSVGElement` is the direct route; the walk up is the fallback, because
@@ -668,10 +701,10 @@
 			theta: (reg.slope - geom.periodHrs) * refDay + reg.intercept,
 			refDay,
 			before: {
-				fitSlope: m.fitSlope,
-				fitIntercept: m.fitIntercept,
-				lockTau: m.lockTau,
-				lockTheta: m.lockTheta
+				fitSlope: m.cfg.fitSlope,
+				fitIntercept: m.cfg.fitIntercept,
+				lockTau: m.cfg.lockTau,
+				lockTheta: m.cfg.lockTheta
 			},
 			moved: false
 		};
@@ -725,34 +758,117 @@
 
 		const m = g.marker;
 		const after = {
-			fitSlope: m.fitSlope,
-			fitIntercept: m.fitIntercept,
-			lockTau: m.lockTau,
-			lockTheta: m.lockTheta
+			fitSlope: m.cfg.fitSlope,
+			fitIntercept: m.cfg.fitIntercept,
+			lockTau: m.cfg.lockTau,
+			lockTheta: m.cfg.lockTheta
 		};
 		// Rewind, then replay through the op layer: the whole gesture lands on the
-		// undo stack as ONE step (recordInnerEdit no-ops when nothing changed).
-		Object.assign(m, g.before);
+		// undo stack as ONE step (recordInnerEdit no-ops when nothing changed). A rule
+		// instance previewed the drag in its `local` override (the rule itself was never
+		// touched), so rewinding it is dropping that override.
+		if (m.isInstance) m.local = null;
+		else Object.assign(m, g.before);
 		// On a facet PANEL the dragged line is a projected copy; the edit is written to the
 		// generator's own marker (same series, same block), and the projection mirrors it
 		// back onto every copy. Writing the copy would be undone by the next projection.
 		const target = markerWriteTarget(m);
+		if (target.isInstance) {
+			// Dragging a rule instance's line is a SETTINGS change on that series only, so it
+			// detaches the series (Decision 5a): the detach and the dragged line are one step.
+			target.parentData.parentPlot.detachInstance(target, (block) => Object.assign(block, after));
+			return;
+		}
 		recordInnerEdit(target.parentData.parentPlot, () => Object.assign(target, after));
 	}
 
 	/**
 	 * The marker an edit made on `m` belongs to: `m` itself on a plot; on a facet panel the
-	 * generator's marker at the same series and block index (a panel's series are copies of
-	 * generator series, in order, so the indices line up by construction).
+	 * generator's marker on the same series (a panel's series are copies of generator
+	 * series, in order, so the indices line up by construction): an own block by its index,
+	 * a rule instance by its rule id.
 	 */
 	function markerWriteTarget(m) {
 		const inner = m.parentData?.parentPlot;
 		const box = inner?.parentBox;
 		if (!isFacetPanel(box)) return m;
 		const j = inner.data.indexOf(m.parentData);
-		const k = m.parentData.phaseMarkers.indexOf(m);
 		const series = panelSeriesTarget(box, j);
+		if (m.isInstance) return series?.ruleInstances?.find((i) => i.ruleId === m.ruleId) ?? m;
+		const k = m.parentData.phaseMarkers.indexOf(m);
 		return series?.phaseMarkers?.[k] ?? m;
+	}
+
+	// ---------------------------------------------------------------------------
+	// SETTINGS EDITS
+	//
+	// On an own block a settings control writes the block directly, as block controls
+	// always have. On a rule instance the same edit is a settings change on ONE series, so
+	// it detaches that series from the rule first (Decision 5a; plan 1.3 `requireOwn`), and
+	// the detach plus the edit are ONE undo step with an Undo toast. `fn` receives the block
+	// to write: the block itself, or the new own block the detach made.
+	// ---------------------------------------------------------------------------
+	function editSettings(m, fn) {
+		if (!m.isInstance) {
+			fn(m);
+			return;
+		}
+		m.parentData.parentPlot.detachInstance(m, fn);
+	}
+
+	/** A committed number from a change event, or null for an empty field. */
+	function numberOrNull(e, parse = parseFloat) {
+		const v = /** @type {HTMLInputElement} */ (e.currentTarget).value;
+		if (v === '') return null;
+		const n = parse(v, 10);
+		return Number.isFinite(n) ? n : undefined;
+	}
+
+	/** Per-day ticks are DATA: they land in the series' own store and never detach. */
+	function setDay(m, i, value) {
+		const store = m.writableStore();
+		const next = [...store.selectedPeriods];
+		while (next.length <= i) next.push(true);
+		next[i] = value;
+		store.selectedPeriods = next;
+	}
+	function setAllDays(m, value) {
+		const store = m.writableStore();
+		const next = [...store.selectedPeriods];
+		for (let i = 0; i < m.markers.length; i++) {
+			if (!isNaN(m.markers[i]) && m.markers[i] != null) {
+				while (next.length <= i) next.push(true);
+				next[i] = value;
+			}
+		}
+		store.selectedPeriods = next;
+	}
+
+	/** Scroll the rule's block (Data tab, Marker rules) into view and flash it. */
+	function showRule(m) {
+		const el = document.getElementById(ruleBlockDomId(m.parentData.parentPlot, m.ruleId));
+		if (!el) return;
+		el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+		el.classList.remove('rule-flash');
+		void el.offsetWidth;
+		el.classList.add('rule-flash');
+	}
+
+	// Promote ("Make this a rule for all series"): when other series carry a block with
+	// the same settings, offer to replace those too (plan 5.1), unticked by default.
+	let promoteOffer = $state(null);
+	function startPromote(m) {
+		const matches = m.parentData.parentPlot.matchingBlocks(m);
+		if (matches.length === 0) {
+			m.parentData.parentPlot.promoteBlock(m);
+			return;
+		}
+		promoteOffer = { matches, replace: false };
+	}
+	function confirmPromote(m) {
+		const offer = promoteOffer;
+		promoteOffer = null;
+		m.parentData.parentPlot.promoteBlock(m, { alsoReplace: offer?.replace ? offer.matches : [] });
 	}
 
 	function endGesture() {
@@ -782,15 +898,219 @@
 	});
 </script>
 
+{#snippet periodList(marker)}
+	{@const rangeOpts = {
+		rangeScopesFit: !!marker.cfg.fitWithinRange,
+		lineMinDay: marker.cfg.lineMinDay,
+		lineMaxDay: marker.cfg.lineMaxDay
+	}}
+	<div>
+		<div class="period-selection-header">
+			<p>Periods</p>
+			<div class="period-selection-actions">
+				<button class="period-select-btn" onclick={() => setAllDays(marker, true)}>All</button>
+				<button class="period-select-btn" onclick={() => setAllDays(marker, false)}>None</button>
+			</div>
+		</div>
+		<div class="period-marker-list">
+			{#each marker.markers as markerValue, i (i)}
+				{#if !isNaN(markerValue) && markerValue != null}
+					{@const periodHrs = marker.parentData.parentPlot.periodHrs}
+					{@const displayValue = parseFloat(
+						(((markerValue % periodHrs) + periodHrs) % periodHrs).toFixed(2)
+					)}
+					{@const outside = isOutsideFitRange(i, rangeOpts)}
+					<div class="period-marker-row" class:outside-range={outside}>
+						<input
+							type="checkbox"
+							checked={marker.store.selectedPeriods[i] ?? true}
+							disabled={outside}
+							title={outside ? 'Outside the day range: not fitted' : undefined}
+							onchange={() => setDay(marker, i, !(marker.store.selectedPeriods[i] ?? true))}
+						/>
+						<span class="period-number">{i + 1}:</span>
+						<input
+							type="number"
+							class="marker-value-input"
+							value={displayValue}
+							step="0.01"
+							min="0"
+							max={periodHrs}
+							onchange={(e) => {
+								const newVal = parseFloat(e.currentTarget.value);
+								if (!isNaN(newVal)) {
+									// A corrected detection is a settings change: on a rule instance it
+									// detaches this series (Decision 5a).
+									editSettings(marker, (b) => b.editMarker(i, newVal));
+								} else {
+									e.currentTarget.value = String(displayValue);
+								}
+							}}
+						/>
+						{#if outside}<span class="outside-note">outside range</span>{/if}
+					</div>
+				{/if}
+			{/each}
+		</div>
+	</div>
+{/snippet}
+
+{#snippet lockBlock(marker)}
+	<!-- Per-parameter locks: τ (slope) and θ (phase at the reference day) are each
+	     either fitted from the selected markers or fixed at a value the user set.
+	     "Fit" is disabled when there are no markers to fit to. -->
+	<div class="lock-block">
+		<p class="lock-title">Line fit</p>
+		{#each [{ key: 'tau', label: 'τ (hrs)', title: 'τ: the period, i.e. the slope of the line', mode: marker.cfg.lockTau }, { key: 'theta', label: 'θ (hrs)', title: 'θ: the phase, i.e. the time of day the line crosses at the reference day', mode: marker.cfg.lockTheta }] as param (param.key)}
+			<div class="lock-row">
+				<span class="lock-label" title={param.title}>{param.label}</span>
+				<div class="segmented small" role="radiogroup" aria-label={param.label}>
+					<label
+						class:active={param.mode === 'fit'}
+						class:disabled={!marker.canFit}
+						title={marker.canFit
+							? 'Fit this parameter to the selected markers'
+							: 'No markers to fit to; this line is positioned by hand'}
+					>
+						<input
+							type="radio"
+							name={'lock-' + param.key + '-' + marker.id}
+							value="fit"
+							checked={param.mode === 'fit'}
+							disabled={!marker.canFit}
+							onchange={() =>
+								editSettings(marker, (b) =>
+									param.key === 'tau' ? b.setLockTau('fit') : b.setLockTheta('fit')
+								)}
+						/>
+						Fit
+					</label>
+					<label
+						class:active={param.mode === 'fixed'}
+						title="Hold this parameter at the value beside it"
+					>
+						<input
+							type="radio"
+							name={'lock-' + param.key + '-' + marker.id}
+							value="fixed"
+							checked={param.mode === 'fixed'}
+							onchange={() =>
+								editSettings(marker, (b) =>
+									param.key === 'tau' ? b.setLockTau('fixed') : b.setLockTheta('fixed')
+								)}
+						/>
+						Fixed
+					</label>
+				</div>
+				<input
+					type="number"
+					class="marker-value-input lock-value"
+					step="0.05"
+					min={param.key === 'tau' ? 1 : undefined}
+					disabled={param.mode !== 'fixed'}
+					value={fmtLockValue(marker, param.key)}
+					onchange={(e) => {
+						const v = parseFloat(/** @type {HTMLInputElement} */ (e.currentTarget).value);
+						if (isNaN(v)) return;
+						editSettings(marker, (b) => (param.key === 'tau' ? b.setTau(v) : b.setTheta(v)));
+					}}
+				/>
+			</div>
+		{/each}
+		{#if marker.cfg.showLine}
+			<p class="lock-hint">
+				On the plot, drag the middle of the line to shift θ, or either end to change τ. Dragging
+				fixes that parameter.
+			</p>
+		{/if}
+	</div>
+{/snippet}
+
+<!-- τ as the rule's τ output reports it (the harmonic check's pick, Decision 2b), labelled
+     as the port labels it, with the line's slope beside it and a flag when they differ.
+     Same helper and wording as the rule summary table (MarkerRuleBlock.svelte). -->
+{#snippet estTau(marker)}
+	{#if marker.harmonicCheck}
+		{@const t = tauReadout(marker)}
+		<div class="tau-readout">
+			<p {@attach tooltip(t.note)}>
+				<strong>{RULE_STAT_LABEL.tau} {t.tau.toFixed(2)}</strong>
+				<span class="tau-source">harmonic check</span>
+			</p>
+			<p class:tau-disagree={t.disagree} {@attach tooltip(t.note)}>
+				line slope (h) {Number.isFinite(t.slope) ? t.slope.toFixed(2) : '\u2013'}
+				{#if t.disagree}<span class="disagree-flag" role="img" aria-label="disagrees with τ">⚠</span
+					>{/if}
+			</p>
+		</div>
+	{/if}
+
+	{#if marker.onsetWarnings.length > 0}
+		<div class="data-warning">
+			{#each marker.onsetWarnings as warning (warning)}
+				<p>⚠ {warning}</p>
+			{/each}
+		</div>
+	{/if}
+{/snippet}
+
+{#snippet phiAndFit(marker)}
+	{#if marker.estimatedPhase}
+		<p>
+			<strong
+				>{RULE_STAT_LABEL.phi} at day {marker.estimatedPhase.refDay}: {marker.estimatedPhase.phase.toFixed(
+					2
+				)}</strong
+			>
+		</p>
+		{#if !marker.isInstance}
+			<ControlInput label="φ reference day">
+				<input
+					type="number"
+					min="1"
+					max={marker.parentData.parentPlot.Ndays}
+					step="1"
+					placeholder={String(marker.estimatedPhase.refDay)}
+					value={marker.phaseRefDay ?? ''}
+					onchange={(e) => {
+						const v = /** @type {HTMLInputElement} */ (e.currentTarget).value;
+						marker.phaseRefDay = v === '' ? null : parseInt(v, 10);
+					}}
+				/>
+			</ControlInput>
+		{/if}
+	{/if}
+	<!-- R²/RMSE always describe the line as DRAWN against this block's selected
+	     markers, in every lock combination. A line with no markers to compare
+	     against reports a dash, not a fabricated 1 / 0. -->
+	<p>
+		R²: {fmtStat(marker.linearRegression.rSquared)}
+		&ensp;Error: {fmtStat(marker.linearRegression.rmse)}
+	</p>
+{/snippet}
+
 {#snippet controls(marker)}
+	{@const plotInner = marker.parentData.parentPlot}
+	{@const sourceRule = marker.fromRule ? plotInner.ruleById?.(marker.fromRule) : null}
 	<div class="tableProcess-container">
 		<div class="control-component-title">
 			<div class="control-component-title-colour">
 				<p><Editable bind:value={marker.name} /></p>
 			</div>
-			<div class="control-component-title-icons" {@attach tooltip('Remove this phase marker')}>
+			<div class="control-component-title-icons">
+				{#if !marker.fromRule && plotInner.markerRules && plotInner.data.length > 0}
+					<button
+						class="period-select-btn"
+						onclick={() => startPromote(marker)}
+						{@attach tooltip(
+							'Make this a rule for all series: the same markers and line on every series'
+						)}>Make rule</button
+					>
+				{/if}
 				<button
 					class="icon"
+					aria-label="Remove this phase marker"
+					{@attach tooltip('Remove this phase marker')}
 					onclick={() => {
 						marker.parentData.phaseMarkers = marker.parentData.phaseMarkers.filter(
 							(m) => m.id !== marker.id
@@ -801,6 +1121,36 @@
 				</button>
 			</div>
 		</div>
+		{#if marker.fromRule}
+			<div class="rule-banner">
+				{#if sourceRule}
+					<span class="rule-chip">Detached from {sourceRule.name}</span>
+					<button
+						class="period-select-btn"
+						onclick={() => plotInner.reattachBlock(marker)}
+						{@attach tooltip(
+							"Reattach: this series goes back to the rule's settings; your per-day choices are kept"
+						)}>Reattach to rule</button
+					>
+				{:else}
+					<span class="rule-chip muted">Rule deleted</span>
+				{/if}
+			</div>
+		{/if}
+		{#if promoteOffer}
+			<div class="rule-banner promote-offer">
+				<label class="promote-replace">
+					<input type="checkbox" bind:checked={promoteOffer.replace} />
+					Also replace the matching block{promoteOffer.matches.length === 1 ? '' : 's'} on {promoteOffer
+						.matches.length} other series (their per-day choices are kept)
+				</label>
+				<div class="period-selection-actions">
+					<button class="period-select-btn" onclick={() => confirmPromote(marker)}>Make rule</button
+					>
+					<button class="period-select-btn" onclick={() => (promoteOffer = null)}>Cancel</button>
+				</div>
+			</div>
+		{/if}
 		<ControlInput label="Type">
 			<select bind:value={marker.type}>
 				<option value="onset">Onset</option>
@@ -853,214 +1203,12 @@
 				</ControlInput>
 			</div>
 		{/if}
-		<div>
-			<div class="period-selection-header">
-				<p>Periods</p>
-				<div class="period-selection-actions">
-					<button
-						class="period-select-btn"
-						onclick={() => {
-							const newSelected = [...marker.selectedPeriods];
-							for (let i = 0; i < marker.markers.length; i++) {
-								if (!isNaN(marker.markers[i]) && marker.markers[i] != null) {
-									while (newSelected.length <= i) newSelected.push(true);
-									newSelected[i] = true;
-								}
-							}
-							marker.selectedPeriods = newSelected;
-						}}>All</button
-					>
-					<button
-						class="period-select-btn"
-						onclick={() => {
-							const newSelected = [...marker.selectedPeriods];
-							for (let i = 0; i < marker.markers.length; i++) {
-								if (!isNaN(marker.markers[i]) && marker.markers[i] != null) {
-									while (newSelected.length <= i) newSelected.push(true);
-									newSelected[i] = false;
-								}
-							}
-							marker.selectedPeriods = newSelected;
-						}}>None</button
-					>
-				</div>
-			</div>
-			<div class="period-marker-list">
-				{#each marker.markers as markerValue, i (i)}
-					{#if !isNaN(markerValue) && markerValue != null}
-						{@const periodHrs = marker.parentData.parentPlot.periodHrs}
-						{@const displayValue = parseFloat(
-							(((markerValue % periodHrs) + periodHrs) % periodHrs).toFixed(2)
-						)}
-						<div class="period-marker-row">
-							<input
-								type="checkbox"
-								checked={marker.selectedPeriods[i] ?? true}
-								onchange={() => {
-									const newSelected = [...marker.selectedPeriods];
-									while (newSelected.length <= i) newSelected.push(true);
-									newSelected[i] = !newSelected[i];
-									marker.selectedPeriods = newSelected;
-								}}
-							/>
-							<span class="period-number">{i + 1}:</span>
-							<input
-								type="number"
-								class="marker-value-input"
-								value={displayValue}
-								step="0.01"
-								min="0"
-								max={periodHrs}
-								onchange={(e) => {
-									const newVal = parseFloat(e.target.value);
-									if (!isNaN(newVal)) {
-										marker.editMarker(i, newVal);
-									} else {
-										e.target.value = displayValue;
-									}
-								}}
-							/>
-						</div>
-					{/if}
-				{/each}
-			</div>
-		</div>
-
-		<!-- Per-parameter locks: τ (slope) and θ (phase at the reference day) are each
-		     either fitted from the selected markers or fixed at a value the user set.
-		     "Fit" is disabled when there are no markers to fit to. -->
-		<div class="lock-block">
-			<p class="lock-title">Line fit</p>
-			{#each [{ key: 'tau', label: 'τ (hrs)', title: 'τ: the period, i.e. the slope of the line', mode: marker.lockTau }, { key: 'theta', label: 'θ (hrs)', title: 'θ: the phase, i.e. the time of day the line crosses at the reference day', mode: marker.lockTheta }] as param (param.key)}
-				<div class="lock-row">
-					<span class="lock-label" title={param.title}>{param.label}</span>
-					<div class="segmented small" role="radiogroup" aria-label={param.label}>
-						<label
-							class:active={param.mode === 'fit'}
-							class:disabled={!marker.canFit}
-							title={marker.canFit
-								? 'Fit this parameter to the selected markers'
-								: 'No markers to fit to; this line is positioned by hand'}
-						>
-							<input
-								type="radio"
-								name={'lock-' + param.key + '-' + marker.id}
-								value="fit"
-								checked={param.mode === 'fit'}
-								disabled={!marker.canFit}
-								onchange={() =>
-									param.key === 'tau' ? marker.setLockTau('fit') : marker.setLockTheta('fit')}
-							/>
-							Fit
-						</label>
-						<label
-							class:active={param.mode === 'fixed'}
-							title="Hold this parameter at the value beside it"
-						>
-							<input
-								type="radio"
-								name={'lock-' + param.key + '-' + marker.id}
-								value="fixed"
-								checked={param.mode === 'fixed'}
-								onchange={() =>
-									param.key === 'tau' ? marker.setLockTau('fixed') : marker.setLockTheta('fixed')}
-							/>
-							Fixed
-						</label>
-					</div>
-					<input
-						type="number"
-						class="marker-value-input lock-value"
-						step="0.05"
-						min={param.key === 'tau' ? 1 : undefined}
-						disabled={param.mode !== 'fixed'}
-						value={fmtLockValue(marker, param.key)}
-						onchange={(e) => {
-							const v = parseFloat(/** @type {HTMLInputElement} */ (e.currentTarget).value);
-							if (isNaN(v)) return;
-							if (param.key === 'tau') marker.setTau(v);
-							else marker.setTheta(v);
-						}}
-					/>
-				</div>
-			{/each}
-			{#if marker.showLine}
-				<p class="lock-hint">
-					On the plot, drag the middle of the line to shift θ, or either end to change τ. Dragging
-					fixes that parameter.
-				</p>
-			{/if}
-		</div>
+		{@render periodList(marker)}
+		{@render lockBlock(marker)}
 
 		{#if marker.linearRegression?.slope}
-			<!-- <p>Drawn τ: {marker.linearRegression.slope.toFixed(2)} hrs</p> -->
-			{#if marker.harmonicCheck}
-				<p>
-					<strong>Est τ: {marker.harmonicCheck.strongest.peakPeriod.toFixed(2)} hrs</strong>
-					<StoreValueButton
-						label="τ"
-						getter={() => marker.harmonicCheck.strongest.peakPeriod}
-						defaultName={'tau_' + marker.name}
-						source={'Actogram phase marker (' + marker.name + ')'}
-					/>
-				</p>
-			{/if}
-
-			{#if marker.onsetWarnings.length > 0}
-				<div class="data-warning">
-					{#each marker.onsetWarnings as warning (warning)}
-						<p>⚠ {warning}</p>
-					{/each}
-				</div>
-			{/if}
-
-			{#if marker.estimatedPhase}
-				<p>
-					<strong
-						>Est φ (day {marker.estimatedPhase.refDay}): {marker.estimatedPhase.phase.toFixed(2)} hrs</strong
-					>
-					<StoreValueButton
-						label="φ"
-						getter={() => marker.estimatedPhase.phase}
-						defaultName={'phi_' + marker.name}
-						source={'Actogram phase marker (' + marker.name + ')'}
-					/>
-				</p>
-				<ControlInput label="φ reference day">
-					<input
-						type="number"
-						min="1"
-						max={marker.parentData.parentPlot.Ndays}
-						step="1"
-						placeholder={String(marker.estimatedPhase.refDay)}
-						value={marker.phaseRefDay ?? ''}
-						onchange={(e) => {
-							const v = /** @type {HTMLInputElement} */ (e.currentTarget).value;
-							marker.phaseRefDay = v === '' ? null : parseInt(v, 10);
-						}}
-					/>
-				</ControlInput>
-			{/if}
-
-			<!-- R²/RMSE always describe the line as DRAWN against this block's selected
-			     markers, in every lock combination. A line with no markers to compare
-			     against reports a dash, not a fabricated 1 / 0. -->
-			<p>
-				R²: {fmtStat(marker.linearRegression.rSquared)}
-				<StoreValueButton
-					label="R²"
-					getter={() => marker.linearRegression.rSquared}
-					defaultName={'marker_r_squared_' + marker.name}
-					source={'Actogram phase marker (' + marker.name + ')'}
-				/>
-				&ensp;Error: {fmtStat(marker.linearRegression.rmse)}
-				<StoreValueButton
-					label="RMSE"
-					getter={() => marker.linearRegression.rmse}
-					defaultName={'marker_rmse_' + marker.name}
-					source={'Actogram phase marker (' + marker.name + ')'}
-				/>
-			</p>
+			{@render estTau(marker)}
+			{@render phiAndFit(marker)}
 
 			<div class="control-input-checkbox">
 				<input type="checkbox" bind:checked={marker.showLine} />
@@ -1097,7 +1245,148 @@
 						/>
 					</ControlInput>
 				</div>
+				<div class="control-input-checkbox">
+					<input type="checkbox" bind:checked={marker.fitWithinRange} />
+					<p {@attach tooltip('Fit the line only to the days inside the line min and max day')}>
+						Fit only these days
+					</p>
+				</div>
 			{/if}
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet instanceControls(marker)}
+	{@const rule = marker.rule}
+	{@const P = marker.parentData.parentPlot.periodHrs}
+	<div class="tableProcess-container rule-instance" data-rule-instance={marker.ruleId}>
+		<div class="instance-head">
+			<div class="instance-title">
+				<span class="instance-name" title={rule.name}>{rule.name}</span>
+				<span class="rule-chip">From rule</span>
+			</div>
+			<div class="instance-actions">
+				<button
+					class="period-select-btn"
+					onclick={() => showRule(marker)}
+					{@attach tooltip('Show this rule under Marker rules')}>Edit rule</button
+				>
+				<button
+					class="period-select-btn"
+					onclick={() => marker.parentData.parentPlot.detachInstance(marker)}
+					{@attach tooltip('Give this series its own copy of the rule, to change it here only')}
+					>Detach</button
+				>
+			</div>
+		</div>
+		<p class="lock-hint">Changing a setting here detaches this series from the rule.</p>
+
+		<ControlInput label="Type">
+			<select
+				value={marker.cfg.type}
+				onchange={(e) => {
+					const v = e.currentTarget.value;
+					editSettings(marker, (b) => (b.type = v));
+				}}
+			>
+				<option value="onset">Onset</option>
+				<option value="offset">Offset</option>
+				<option value="manual">Line only (hand-placed)</option>
+			</select>
+		</ControlInput>
+
+		<div class="control-input-color">
+			<div class="control-color">
+				<ColourPicker
+					bind:value={
+						() => marker.cfg.colour,
+						(v) => {
+							// The picker writes its value back on mount; only a CHANGE is an edit.
+							if (v !== marker.cfg.colour) editSettings(marker, (b) => (b.colour = v));
+						}
+					}
+				/>
+			</div>
+			<ControlInput label="Marker size">
+				<input
+					type="number"
+					class="rule-num"
+					min="1"
+					step="0.2"
+					value={marker.cfg.markerSize}
+					onchange={(e) => {
+						const v = numberOrNull(e);
+						if (v != null) editSettings(marker, (b) => (b.markerSize = v));
+					}}
+				/>
+			</ControlInput>
+			<ControlInput label="Line width">
+				<input
+					type="number"
+					class="rule-num"
+					min="1"
+					step="0.2"
+					value={marker.cfg.lineWidth}
+					onchange={(e) => {
+						const v = numberOrNull(e);
+						if (v != null) editSettings(marker, (b) => (b.lineWidth = v));
+					}}
+				/>
+			</ControlInput>
+		</div>
+
+		{#if marker.cfg.type === 'manual'}
+			<div class="control-input">
+				<button
+					onclick={() => {
+						if (addMarkerButtonText == 'Add markers') {
+							marker.parentData.parentPlot.isAddingMarkerTo = marker.id;
+							addMarkerButtonText = 'Stop adding';
+						} else {
+							marker.parentData.parentPlot.isAddingMarkerTo = -1;
+							addMarkerButtonText = 'Add markers';
+						}
+					}}>{addMarkerButtonText}</button
+				>
+			</div>
+		{:else}
+			<div class="control-input-horizontal">
+				{#each [['N', 'templateHrsBefore'], ['M', 'templateHrsAfter'], ['%', 'centileThreshold']] as [label, key] (key)}
+					<ControlInput {label}>
+						<input
+							type="number"
+							class="rule-num"
+							min="0"
+							max="100"
+							value={marker.cfg[key]}
+							onchange={(e) => {
+								const v = numberOrNull(e);
+								if (v != null) editSettings(marker, (b) => (b[key] = v));
+							}}
+						/>
+					</ControlInput>
+				{/each}
+			</div>
+		{/if}
+
+		{@render periodList(marker)}
+		{@render lockBlock(marker)}
+
+		{#if marker.linearRegression?.slope}
+			{@render phiAndFit(marker)}
+			<p class="lock-hint">
+				Fitted to {marker.fitPoints.xs.length} marker{marker.fitPoints.xs.length === 1 ? '' : 's'}
+				(days {marker.cfg.lineMinDay ?? 1} to {marker.cfg.lineMaxDay ??
+					marker.parentData.parentPlot.Ndays}, ticked). φ reported at day {marker.fitRefDay}, in
+				hours after the row start (P = {P}
+				h).
+			</p>
+			<!-- The harmonic check and the warnings scan run periodograms; they are computed
+			     only when opened, and cached per instance (Decision 2b). -->
+			<details class="instance-details" ontoggle={(e) => (tauCheckOpen = e.currentTarget.open)}>
+				<summary>τ check against the periodogram</summary>
+				{#if tauCheckOpen}{@render estTau(marker)}{/if}
+			</details>
 		{/if}
 	</div>
 {/snippet}
@@ -1114,8 +1403,8 @@
 		{@const padTop = marker.parentData.parentPlot.padding.top}
 		{@const padLeft = marker.parentData.parentPlot.padding.left}
 		<!-- 1-indexed day range from UI (null = unbounded). Clamp to plot. -->
-		{@const lo = Math.max(1, marker.lineMinDay ?? 1)}
-		{@const hi = Math.min(Ndays, marker.lineMaxDay ?? Ndays)}
+		{@const lo = Math.max(1, marker.cfg.lineMinDay ?? 1)}
+		{@const hi = Math.min(Ndays, marker.cfg.lineMaxDay ?? Ndays)}
 		{#if hi >= lo}
 			{@const dx = marker.linearRegression.slope - periodHrs}
 			<!-- The line's other copies, a whole τ either side of the one below: once the
@@ -1128,8 +1417,8 @@
 					y1={padTop + (lo - 1) * (eph + sb)}
 					x2={xscale(marker.linearRegression.intercept + off + hi * dx) + padLeft}
 					y2={padTop + (hi - 1) * (eph + sb) + eph}
-					stroke={marker.colour}
-					stroke-width={marker.lineWidth}
+					stroke={marker.cfg.colour}
+					stroke-width={marker.cfg.lineWidth}
 				/>
 			{/each}
 			<!-- y at top of day d (0-indexed) = padTop + d*(eph+sb).
@@ -1139,7 +1428,7 @@
 			{@const y1 = padTop + (lo - 1) * (eph + sb)}
 			{@const x2 = xscale(marker.linearRegression.intercept + hi * dx) + padLeft}
 			{@const y2 = padTop + (hi - 1) * (eph + sb) + eph}
-			<line {x1} {y1} {x2} {y2} stroke={marker.colour} stroke-width={marker.lineWidth} />
+			<line {x1} {y1} {x2} {y2} stroke={marker.cfg.colour} stroke-width={marker.cfg.lineWidth} />
 			<!-- A wide transparent stroke on top, so a 2 px line is still grabbable.
 			     `visibleStroke` is the same idiom Line.svelte uses for its hit area. -->
 			<line
@@ -1149,20 +1438,24 @@
 				{x2}
 				{y2}
 				stroke="transparent"
-				stroke-width={Math.max(14, marker.lineWidth * 4)}
+				stroke-width={Math.max(14, marker.cfg.lineWidth * 4)}
 				style:cursor={cursorForZone(hoverZone, dragging)}
 				onpointerdown={(e) => handleLinePointerDown(e, marker)}
 				onpointermove={(e) => handleLineHover(e, marker)}
 			/>
 		{/if}
 	{/if}
-	<path d={marker.markerPoints} fill={marker.colour} stroke="none" />
+	<path d={marker.markerPoints} fill={marker.cfg.colour} stroke="none" />
 {/snippet}
 
 {#if which === 'plot'}
 	{@render plot(marker)}
 {:else if which === 'controls'}
-	{@render controls(marker)}
+	{#if marker.isInstance}
+		{@render instanceControls(marker)}
+	{:else}
+		{@render controls(marker)}
+	{/if}
 {/if}
 
 <style>
@@ -1185,6 +1478,25 @@
 	.data-warning p {
 		margin: 0.15rem 0;
 		font-size: 0.92em;
+	}
+
+	.tau-readout p {
+		margin: 0.15rem 0;
+	}
+
+	.tau-source {
+		font-size: var(--font-xs);
+		color: var(--color-lightness-45);
+	}
+
+	.tau-readout .tau-disagree {
+		font-weight: 600;
+	}
+
+	.disagree-flag {
+		margin-left: 3px;
+		color: var(--color-warning-text);
+		cursor: help;
 	}
 
 	.lock-hint {
@@ -1351,6 +1663,118 @@
 
 	.segmented label:focus-within {
 		box-shadow: var(--shadow-focus-soft);
+	}
+
+	/* Marker rules: the instance chip, the detached banner, the promote offer. */
+	.rule-instance {
+		border-left: 3px solid var(--color-accent-fill);
+		padding-left: var(--space-2);
+	}
+
+	.instance-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-1) var(--space-2);
+		margin-bottom: var(--space-1);
+	}
+
+	.instance-title {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		min-width: 0;
+		flex: 1 1 auto;
+	}
+
+	.instance-name {
+		font-weight: 600;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		min-width: 0;
+	}
+
+	.instance-title .rule-chip {
+		margin-left: 0;
+	}
+
+	.instance-actions {
+		display: flex;
+		gap: var(--space-1);
+		flex-shrink: 0;
+	}
+
+	.instance-actions .period-select-btn {
+		white-space: nowrap;
+	}
+
+	.rule-chip {
+		display: inline-block;
+		margin-left: var(--space-2);
+		padding: 0 0.4rem;
+		border-radius: var(--radius-sm);
+		font-size: var(--font-xs);
+		line-height: 1.6;
+		color: var(--color-accent-fill);
+		background: color-mix(in srgb, var(--color-accent-fill) 12%, transparent);
+		white-space: nowrap;
+	}
+
+	.rule-chip.muted {
+		color: var(--color-lightness-45);
+		background: var(--color-lightness-96);
+		margin-left: 0;
+	}
+
+	.rule-banner {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-2);
+		margin: var(--space-1) 0 var(--space-2);
+	}
+
+	.rule-banner .rule-chip {
+		margin-left: 0;
+	}
+
+	.promote-offer {
+		padding: var(--space-2);
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm);
+		background: var(--color-lightness-97);
+	}
+
+	.promote-replace {
+		display: flex;
+		gap: var(--space-2);
+		align-items: flex-start;
+		font-size: var(--font-xs);
+	}
+
+	.rule-num {
+		width: 100%;
+		min-width: 0;
+		box-sizing: border-box;
+	}
+
+	.period-marker-row.outside-range {
+		color: var(--color-lightness-60);
+	}
+
+	.outside-note {
+		font-size: var(--font-xs);
+		color: var(--color-lightness-60);
+		white-space: nowrap;
+	}
+
+	.instance-details summary {
+		cursor: pointer;
+		font-size: var(--font-sm);
+		color: var(--color-lightness-35);
 	}
 
 	/* Visually hidden radios; the label carries the state. */

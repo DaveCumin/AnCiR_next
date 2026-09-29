@@ -442,6 +442,7 @@
 <script>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
+	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import { onMount, tick } from 'svelte';
@@ -559,20 +560,13 @@
 		</div>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
-			<div class="control-data-add">
-				<div class="add">
-					<button
-						class="icon"
-						onclick={async () => {
-							theData.addData({});
-							await tick();
-							dataSettingsScrollTo('bottom');
-						}}
-					>
-						<Icon name="add" width={16} height={16} />
-					</button>
-				</div>
-			</div>
+			<DataAddHeader
+				onadd={async () => {
+					theData.addData({});
+					await tick();
+					dataSettingsScrollTo('bottom');
+				}}
+			/>
 
 			{#each theData.data as datum, i (datum.column.id)}
 				<div

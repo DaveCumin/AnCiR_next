@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Scalar-metric OUTPUT PORTS for analysis plots (Periodogram / FFT /
+// Scalar-metric OUTPUT PORTS for analysis plots (Periodogram / FFT / Actogram /
 // Correlogram / Q-Q): the stats each plot computes per series (spectral peaks,
 // or the Q-Q plot's probability-plot correlation), exposed as real columns
 // (one value per series, in plot-data order) so they can be wired downstream
@@ -9,6 +9,19 @@
 // the session). Reconcile + writes are driven by EACH PLOT COMPONENT's own
 // metric effect (call usePlotMetricOutputs from the component), piggybacking
 // on the values the component already computes to render its stats panel.
+//
+// ONE writer per plot, in every view and facet state: the plot's own component
+// instance. Unfaceted, that is the instance on screen (`which === 'plot'`). A
+// facet GENERATOR is never on screen (only its derived panels are, and panels
+// carry no metric outputs), so the facet host mounts the generator's component
+// once, headless, as `which === 'compute'` (FacetGeneratorCompute.svelte): it
+// runs the generator's calculation and metric effects and renders nothing. The
+// facet flag picks exactly one of the two branches, so they never coexist; the
+// shared last-written snapshot below also makes a toggle write nothing when the
+// stats did not change. Without the headless instance a faceted plot's ports
+// went stale (v77.0 regression): FFT/Correlogram stats sit in deriveds nobody
+// read, and the Periodogram's spectrum is $state filled only by the component's
+// own calculation effect, so no headless READ could have kept it current.
 //
 // Deliberately NOT a global effect: to track the stats, an effect must READ
 // them, and Correlogram/FFT stats sit behind synchronous full-series
@@ -20,64 +33,29 @@
 import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 import { core, pushObj } from '$lib/core/core.svelte.js';
 import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
+import { PLOT_METRIC_DEFS, plotMetricKeys, plotMetricColumnName } from './plotMetricDefs.js';
+
+export * from './plotMetricDefs.js';
+
+/** Whether a plot type has metric output columns (Periodogram, FFT, Correlogram, Q-Q, Actogram). */
+export function hasPlotMetrics(type) {
+	return PLOT_METRIC_DEFS[type] != null;
+}
 
 /**
- * Per-plot-type metric definitions. `statsFor(datum)` reads the same deriveds
- * the plot's stats panel shows (visiblePeak preferred, matching the display
- * and the legacy StoreValueButton getters).
+ * Whether a plot component instance mounted as `which` owns its plot's calculation and
+ * metric outputs: the on-screen instance (`'plot'`) or the headless one a facet host mounts
+ * for its generator (`'compute'`). The controls instance never does.
  */
-export const PLOT_METRIC_DEFS = {
-	periodogram: {
-		keys: ['peak_period', 'peak_power', 'peak_pvalue'],
-		statsFor(datum) {
-			const p = datum?.visiblePeak ?? datum?.peak;
-			// peak_pvalue is the chi-squared significance of the peak; NaN for
-			// Lomb-Scargle/Enright (no analytic p). This supersedes the standalone
-			// Free-Running Period node, which was a thin chi-squared periodogram wrapper.
-			return {
-				peak_period: p?.period ?? NaN,
-				peak_power: p?.power ?? NaN,
-				peak_pvalue: p?.pvalue ?? NaN
-			};
-		}
-	},
-	fft: {
-		keys: ['peak_period', 'peak_frequency', 'peak_magnitude'],
-		statsFor(datum) {
-			const p = datum?.visiblePeak ?? datum?.peak;
-			return {
-				peak_period: p?.period ?? NaN,
-				peak_frequency: p?.frequency ?? NaN,
-				peak_magnitude: p?.magnitude ?? NaN
-			};
-		}
-	},
-	correlogram: {
-		keys: ['peak_lag', 'peak_correlation'],
-		statsFor(datum) {
-			const p = datum?.visiblePeak ?? datum?.peak;
-			return { peak_lag: p?.lag ?? NaN, peak_correlation: p?.correlation ?? NaN };
-		}
-	},
-	qqplot: {
-		keys: ['qq_r', 'qq_n'],
-		statsFor(datum) {
-			// datum.qq is the series' full Q-Q computation (utils/qq.js): r is the
-			// probability-plot correlation on the plotted Blom-position pairs, n the
-			// valid-value count. r is null when undefined (constant data / n < 3) —
-			// NaN in the column, like the other defs' missing stats. Deliberately NO
-			// p-value output: the Q-Q plot is descriptive, the NormalityTest node
-			// owns W/p (and the sample-size policy guard watches pvalue outputs).
-			const q = datum?.qq;
-			return { qq_r: q?.r ?? NaN, qq_n: q?.n ?? NaN };
-		}
-	}
-};
+export function ownsPlotMetrics(which) {
+	return which === 'plot' || which === 'compute';
+}
 
 /**
  * True when this plot should carry metric output columns. Only a Plot in core.plots does:
  * a facet panel (facetPanels.svelte.js) has no `metricOut`, and its generator already
- * emits one value per series, which IS the per-panel metric.
+ * emits one value per series, which IS the per-panel metric (written by the generator's
+ * headless instance while faceted, see the header).
  */
 function isMetricPlot(plot) {
 	return plot && plot.generator == null && PLOT_METRIC_DEFS[plot.type] != null;
@@ -101,7 +79,7 @@ export function plotMetricStats(plot) {
 export function syncPlotMetricColumns(plot) {
 	if (!plot.metricOut || typeof plot.metricOut !== 'object') plot.metricOut = {};
 	// Plain array (a handful of keys, local + throwaway — not reactive state).
-	const desired = isMetricPlot(plot) ? PLOT_METRIC_DEFS[plot.type].keys : [];
+	const desired = isMetricPlot(plot) ? plotMetricKeys(plot) : [];
 	let changed = false;
 
 	for (const key of Object.keys(plot.metricOut)) {
@@ -118,8 +96,9 @@ export function syncPlotMetricColumns(plot) {
 	for (const key of desired) {
 		if (Number(plot.metricOut[key]) >= 0 && getColumnById(plot.metricOut[key])) continue;
 		const col = new Column({});
-		// Same naming convention as table-process metric out-columns.
-		col.name = `${key}_${plot.id}`;
+		// Same naming convention as table-process metric out-columns (a rule's columns carry
+		// its name: 'Onsets_tau_0'; a rename rewrites them in the same undo step).
+		col.name = plotMetricColumnName(plot, key);
 		pushObj(col);
 		plot.metricOut[key] = col.id;
 		changed = true;
@@ -133,7 +112,7 @@ export function writePlotMetricOutputs(plot, statsBySeries = plotMetricStats(plo
 	const def = PLOT_METRIC_DEFS[plot?.type];
 	if (!def) return;
 	const processHash = crypto.randomUUID();
-	for (const key of def.keys) {
+	for (const key of plotMetricKeys(plot)) {
 		writeOutputColumn(
 			plot.metricOut?.[key],
 			statsBySeries.map((s) => s?.[key] ?? NaN),
@@ -144,7 +123,8 @@ export function writePlotMetricOutputs(plot, statsBySeries = plotMetricStats(plo
 
 /**
  * Component hook: call once from a metric plot component's instance script
- * (the `which === 'plot'` instance) with a getter for the wrapper Plot.
+ * (active for the instance `ownsPlotMetrics(which)` accepts) with a getter for
+ * the wrapper Plot.
  * Tracks the per-series stats the component already computes for display and
  * keeps `plot.metricOut` columns reconciled + written. Column CREATION is
  * deferred out of the effect (new Column() under an active reaction goes
@@ -152,7 +132,7 @@ export function writePlotMetricOutputs(plot, statsBySeries = plotMetricStats(plo
  *
  * Svelte requires $effect at component init — hence a hook, not a plain call.
  * @param {() => object} getPlot - returns the wrapper Plot (theData)
- * @param {() => boolean} isActive - e.g. () => which === 'plot'
+ * @param {() => boolean} isActive - e.g. () => ownsPlotMetrics(which)
  */
 // Last-written stats snapshot per plot: unrelated effect re-runs (e.g. a zoom
 // that doesn't move the visible peak) skip the write — every write stamps a

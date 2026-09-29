@@ -331,6 +331,48 @@ test('describe_session reads back a session built through this server', async ()
 	}
 });
 
+test("describe_session names an actogram's marker rules and their output keys", async () => {
+	const env = ENV();
+	const id = crypto.randomUUID();
+	const session = {
+		version: '77.0',
+		data: [],
+		rawData: {},
+		tableProcesses: [],
+		plots: [
+			{
+				id: 0,
+				type: 'actogram',
+				name: 'Activity',
+				plot: { data: [], markerRules: [{ id: 'r2', name: 'Onsets', type: 'onset' }] }
+			},
+			{ id: 1, type: 'scatterplot', name: 'S', plot: { data: [] } }
+		]
+	};
+	await env.SESSIONS.put(`s:${id}`, JSON.stringify(session));
+	const { body } = await call('describe_session', { session: id }, env);
+	assert.equal(body.result.isError, undefined);
+	assert.match(
+		body.result.content[0].text,
+		/actogram "Activity"; marker rules: "Onsets" \(onset\) -> r2_tau, r2_phi, r2_r2, r2_rmse, r2_n/
+	);
+	assert.deepEqual(body.result.structuredContent.plots, [
+		{
+			type: 'actogram',
+			name: 'Activity',
+			markerRules: [
+				{
+					id: 'r2',
+					name: 'Onsets',
+					type: 'onset',
+					outputs: ['r2_tau', 'r2_phi', 'r2_r2', 'r2_rmse', 'r2_n']
+				}
+			]
+		},
+		{ type: 'scatterplot', name: 'S' }
+	]);
+});
+
 test('describe_session says which columns actually hold data', async () => {
 	// The distinction an agent must not get wrong: a generator's output is baked, an analysis's
 	// is empty until a browser opens the link. Reasoning over the latter means reasoning over [].

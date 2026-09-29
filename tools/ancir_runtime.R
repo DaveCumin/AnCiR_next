@@ -4186,3 +4186,716 @@ smooth_arrays <- function(x_vals, y_vals, smoother_type, options = list()) {
   }
   list(x = x_vals, y = y_vals)
 }
+
+# ======================================================================================
+# Actogram marker rules (plan docs/plans/2026-09-30-actogram-marker-rules-and-outputs.md,
+# Phase B2). A one-for-one port of the pure JS modules the app computes a rule's five output
+# ports from, mirroring the Python port function for function:
+#
+#   plots/Actogram/onsetUnwrap.js      find_centile_value, find_best_match_index,
+#                                      match_template_markers, marker_absolute_times,
+#                                      unwrap_onsets, wrap_phase_to_row
+#   plots/Actogram/markerSelection.js  fit_day_range, is_day_selected, selection_mask,
+#                                      is_outside_fit_range
+#   plots/Actogram/lineFit.js          fit_line (all four lock combinations)
+#   plots/Actogram/harmonicCheck.js    harmonic_check (over this runtime's lomb_scargle)
+#   plotbits/helpers/wrangleData.js    kahan_linear_regression (the app's linearRegression)
+#   plots/plotMetricDefs.js            rule_output_values
+#
+# plus the row folding at the plot's startTime (Actogram.svelte), a rule's cfg adapter
+# (markerRules.svelte.js ruleCfg) and a block's deriveds (PhaseMarker.svelte). The
+# `actogramMarkers` parity fixtures compare every intermediate, not only the outputs.
+#
+# JS semantics reproduced on purpose: `%` is a remainder with the sign of the dividend
+# (.js_mod, not R's %% which takes the divisor's sign), Math.round rounds half up
+# (js_round), `x || d` treats 0 and NaN as missing, sorts are stable, and the sums JS
+# compensates (KahanSum) are compensated here. R is 1-indexed; every row index below is
+# kept 0-based, as in JS, and shifted only where a vector is subscripted.
+# ======================================================================================
+
+.js_mod <- function(a, b) {
+  r <- a %% b
+  if (is.finite(a) && a < 0 && r != 0) r - b else r
+}
+
+.is_fin <- function(v) is.numeric(v) && length(v) == 1 && !is.na(v) && is.finite(v)
+
+# stats.js isInvalidValue on one value: NULL/NA, a blank string, or NaN after coercion.
+.js_invalid <- function(v) {
+  if (is.null(v) || length(v) != 1) return(TRUE)
+  if (is.character(v)) {
+    if (!nzchar(trimws(v))) return(TRUE)
+    return(is.na(suppressWarnings(as.numeric(v))))
+  }
+  is.na(v)
+}
+
+# KahanSum as utils/numerics.js has it: a closure over (sum, c), no NaN skipping.
+.kahan <- function() {
+  s <- 0; cc <- 0
+  list(add = function(v) { y <- v - cc; t <- s + y; cc <<- t - s - y; s <<- t },
+       value = function() s)
+}
+
+# JS division: x / 0 is +-Inf and 0 / 0 is NaN. R already does this for doubles.
+kahan_linear_regression <- function(x, y) {
+  n <- length(x)
+  if (n != length(y) || n == 0) stop("Input arrays must have the same non-zero length")
+  kx <- .kahan(); ky <- .kahan(); kxy <- .kahan(); kxx <- .kahan()
+  for (i in seq_len(n)) {
+    kx$add(x[i]); ky$add(y[i]); kxy$add(x[i] * y[i]); kxx$add(x[i] * x[i])
+  }
+  sx <- kx$value(); sy <- ky$value(); sxy <- kxy$value(); sxx <- kxx$value()
+  slope <- (n * sxy - sx * sy) / (n * sxx - sx * sx)
+  intercept <- (sy - slope * sx) / n
+  kt <- .kahan(); kr <- .kahan()
+  mean_y <- sy / n
+  for (i in seq_len(n)) {
+    kt$add((y[i] - mean_y)^2)
+    kr$add((y[i] - (slope * x[i] + intercept))^2)
+  }
+  list(slope = slope, intercept = intercept, rSquared = 1 - kr$value() / kt$value(),
+       rmse = sqrt(kr$value() / n))
+}
+
+# --- onsetUnwrap.js: template matching ---------------------------------------------------
+
+# The value at the centile of the non-zero, non-NaN values; NULL when there is none (JS
+# `undefined`, against which every comparison is false).
+find_centile_value <- function(data, centile) {
+  f <- data[!is.na(data) & data != 0]
+  s <- sort(f, method = "radix")
+  idx <- ceiling((centile / 100) * length(s)) - 1
+  if (idx >= 0 && idx < length(s)) s[idx + 1] else NULL
+}
+
+# 0-based start index of the best (strictly highest) cross-correlation, or -1.
+find_best_match_index <- function(test, template) {
+  best_idx <- -1; best <- -Inf
+  last <- length(test) - length(template)
+  if (last < 0) return(-1)
+  for (i in 0:last) {
+    corr <- 0
+    for (j in seq_along(template)) corr <- corr + test[i + j] * template[j]
+    if (corr > best) { best <- corr; best_idx <- i }
+  }
+  best_idx
+}
+
+# One detection per actogram row. x_by_period / y_by_period are lists keyed by the 0-based
+# row as a string. Returns list(hours, times), NaN = none.
+match_template_markers <- function(x_by_period, y_by_period, period_hrs, bin_size, hrs_before,
+                                   hrs_after, centile, type) {
+  N <- js_round(hrs_before / bin_size)
+  M <- js_round(hrs_after / bin_size)
+  template <- c(rep(if (identical(type, "onset")) -1 else 1, max(0, N)),
+                rep(if (identical(type, "onset")) 1 else -1, max(0, M)))
+  keys <- as.numeric(names(x_by_period))
+  if (!length(keys)) return(list(hours = numeric(0), times = numeric(0)))
+  max_period <- max(keys)
+  hours <- numeric(0); times <- numeric(0)
+  for (i in 0:max_period) {
+    yi <- y_by_period[[as.character(i)]]
+    if (is.null(yi) || !length(yi)) { hours <- c(hours, NaN); times <- c(times, NaN); next }
+    yn <- y_by_period[[as.character(i + 1)]]
+    if (!is.null(yn) && length(yn)) {
+      data <- c(yi, yn)
+      xs <- c(x_by_period[[as.character(i)]], x_by_period[[as.character(i + 1)]])
+    } else {
+      data <- yi
+      xs <- x_by_period[[as.character(i)]]
+    }
+    cv <- find_centile_value(data, centile)
+    above_below <- vapply(data, function(v) {
+      if (is.na(v) || (!is.null(cv) && v <= cv)) -1 else 1
+    }, numeric(1))
+    best <- find_best_match_index(above_below, template) + js_round((N + M) / 2)
+    if (best >= 0 && best < length(xs)) {
+      t <- xs[best + 1]
+      raw <- t - i * period_hrs
+      raw <- .js_mod(.js_mod(raw, period_hrs) + period_hrs, period_hrs)
+      hours <- c(hours, raw); times <- c(times, t)
+    } else {
+      hours <- c(hours, NaN); times <- c(times, NaN)
+    }
+  }
+  list(hours = hours, times = times)
+}
+
+# Absolute time of each row's marker: the detection's own time, else i * P + hour.
+marker_absolute_times <- function(markers, period_hrs, times = NULL) {
+  out <- numeric(length(markers))
+  for (k in seq_along(markers)) {
+    i <- k - 1
+    t <- if (!is.null(times) && k <= length(times)) times[k] else NA
+    h <- markers[k]
+    out[k] <- if (!is.na(t) && is.finite(t)) t
+              else if (!is.na(h) && is.finite(h)) i * period_hrs + h
+              else NaN
+  }
+  out
+}
+
+# --- onsetUnwrap.js: unwrapping ----------------------------------------------------------
+
+.wrap_half <- function(v, P) v - P * floor(v / P + 0.5)
+
+.median_js <- function(a) {
+  if (!length(a)) return(NaN)
+  s <- sort(a, method = "radix")
+  m <- length(s) %/% 2
+  if (length(s) %% 2 == 1) s[m + 1] else (s[m] + s[m + 1]) / 2
+}
+
+.plain_mean <- function(v) {
+  acc <- 0
+  for (x in v) acc <- acc + x
+  acc / length(v)
+}
+
+.seed_tau <- function(rows, ts, P) {
+  o <- order(rows, method = "radix")
+  r <- rows[o]; t <- ts[o]
+  adjacent <- numeric(0); spaced <- numeric(0)
+  if (length(r) >= 2) for (j in 2:length(r)) {
+    g <- r[j] - r[j - 1]
+    if (g < 1) next
+    change <- .wrap_half(t[j] - t[j - 1] - g * P, P)
+    if (g == 1) adjacent <- c(adjacent, change / g) else spaced <- c(spaced, change / g)
+  }
+  changes <- if (length(adjacent) >= 2) adjacent else c(adjacent, spaced)
+  drift <- .median_js(changes)
+  tau <- P + (if (is.finite(drift)) drift else 0)
+  if (tau > 0) tau else P
+}
+
+.number_cycles <- function(sorted_t, sorted_rows, tau) {
+  groups <- list(list(k = 0, ts = sorted_t[1], rows = sorted_rows[1]))
+  ambiguous <- 0
+  if (length(sorted_t) >= 2) for (j in 2:length(sorted_t)) {
+    last <- groups[[length(groups)]]
+    prev_t <- .plain_mean(last$ts)
+    ratio <- (sorted_t[j] - prev_t) / tau
+    n <- js_round(ratio)
+    if (abs(ratio - n) > 0.25) ambiguous <- ambiguous + 1
+    if (n <= 0) {
+      last$ts <- c(last$ts, sorted_t[j]); last$rows <- c(last$rows, sorted_rows[j])
+      groups[[length(groups)]] <- last
+    } else {
+      groups[[length(groups) + 1]] <- list(k = last$k + n, ts = sorted_t[j], rows = sorted_rows[j])
+    }
+  }
+  list(groups = groups, ambiguous = ambiguous)
+}
+
+# Unwrap the selected per-row marker times into fit points whose slope is tau.
+# xs = 1-indexed UNWRAPPED rows, ys = absolute time + P.
+unwrap_onsets <- function(times, period_hrs, selected = NULL) {
+  P <- period_hrs
+  rows <- numeric(0); ts <- numeric(0)
+  for (k in seq_along(times)) {
+    sel <- if (!is.null(selected) && k <= length(selected)) selected[k] else NA
+    if (!is.na(sel) && !isTRUE(as.logical(sel))) next
+    t <- times[k]
+    if (is.na(t) || !is.finite(t)) next
+    rows <- c(rows, k - 1); ts <- c(ts, t)
+  }
+  if (!length(ts) || !(P > 0)) {
+    return(list(xs = numeric(0), ys = numeric(0), n = 0, nDetections = length(ts),
+                nMerged = 0, nAmbiguous = 0, seedTau = NaN))
+  }
+  o <- order(ts, method = "radix")
+  st <- ts[o]; sr <- rows[o]
+  tau <- .seed_tau(rows, ts, P)
+  result <- NULL; prev_key <- ""
+  for (pass in 1:5) {
+    nc <- .number_cycles(st, sr, tau)
+    groups <- nc$groups
+    first_t <- .plain_mean(groups[[1]]$ts)
+    x0 <- floor(first_t / P) + 1
+    xs <- vapply(groups, function(g) x0 + g$k, numeric(1))
+    ys <- vapply(groups, function(g) .plain_mean(g$ts) + P, numeric(1))
+    result <- list(xs = xs, ys = ys, n = length(groups), nDetections = length(ts),
+                   nMerged = length(ts) - length(groups), nAmbiguous = nc$ambiguous,
+                   seedTau = tau)
+    key <- paste(vapply(groups, function(g) format(g$k, scientific = FALSE), ""), collapse = ",")
+    if (identical(key, prev_key) || length(xs) < 2) break
+    prev_key <- key
+    fitted <- kahan_linear_regression(xs, ys)$slope
+    if (!is.finite(fitted) || fitted <= 0) break
+    tau <- fitted
+  }
+  result
+}
+
+# The line's time of day in [0, P) in a row, from its unwrapped position there.
+wrap_phase_to_row <- function(hour, tau, period_hrs) {
+  if (is.null(hour) || is.na(hour) || !is.finite(hour)) return(NaN)
+  period <- if (!is.null(tau) && !is.na(tau) && is.finite(tau) && tau > 0) tau else period_hrs
+  v <- hour - period * floor(hour / period)
+  if (v >= period_hrs) v <- v - period_hrs
+  v
+}
+
+# --- markerSelection.js ------------------------------------------------------------------
+
+fit_day_range <- function(line_min_day = NULL, line_max_day = NULL) {
+  lo <- if (.is_fin(line_min_day)) max(1, line_min_day) else 1
+  hi <- if (.is_fin(line_max_day)) line_max_day else Inf
+  list(lo = lo, hi = hi)
+}
+
+# Whether 0-based row i enters the fit: ticked (missing = ticked) AND, when the range scopes
+# the fit, inside lineMinDay..lineMaxDay.
+is_day_selected <- function(i, selected_periods, range_scopes_fit = FALSE,
+                            line_min_day = NULL, line_max_day = NULL) {
+  v <- if (!is.null(selected_periods) && i + 1 <= length(selected_periods))
+    selected_periods[[i + 1]] else NULL
+  if (!is.null(v) && !is.na(v) && !isTRUE(as.logical(v))) return(FALSE)
+  if (!isTRUE(range_scopes_fit)) return(TRUE)
+  r <- fit_day_range(line_min_day, line_max_day)
+  day <- i + 1
+  day >= r$lo && day <= r$hi
+}
+
+selection_mask <- function(n, selected_periods, range_scopes_fit = FALSE,
+                           line_min_day = NULL, line_max_day = NULL) {
+  n <- max(0, as.integer(n))
+  vapply(seq_len(n) - 1, function(i) is_day_selected(i, selected_periods, range_scopes_fit,
+                                                     line_min_day, line_max_day), logical(1))
+}
+
+is_outside_fit_range <- function(i, range_scopes_fit = FALSE, line_min_day = NULL,
+                                 line_max_day = NULL) {
+  if (!isTRUE(range_scopes_fit)) return(FALSE)
+  r <- fit_day_range(line_min_day, line_max_day)
+  day <- i + 1
+  day < r$lo || day > r$hi
+}
+
+# --- lineFit.js ---------------------------------------------------------------------------
+
+# The marker line with tau (slope) and theta (time of day at ref_day) each fitted (NULL) or
+# fixed. R2/RMSE are of the line as drawn against the markers, NA with no markers.
+fit_line <- function(xs, ys, tau = NULL, theta = NULL, ref_day = 1, period_hrs = 24) {
+  if (length(xs) != length(ys)) stop("fit_line: x and y must be arrays of the same length")
+  n <- length(xs)
+  tau_fixed <- .is_fin(tau)
+  theta_fixed <- .is_fin(theta)
+  x0 <- ref_day
+  y0 <- (if (theta_fixed) theta else 0) + period_hrs * ref_day
+  if (!tau_fixed && !theta_fixed) {
+    if (n == 0) { slope <- NaN; intercept <- NaN }
+    else { reg <- kahan_linear_regression(xs, ys); slope <- reg$slope; intercept <- reg$intercept }
+  } else if (tau_fixed && !theta_fixed) {
+    slope <- tau
+    if (n == 0) intercept <- NaN
+    else {
+      k <- .kahan()
+      for (i in seq_len(n)) k$add(ys[i] - slope * xs[i])
+      intercept <- k$value() / n
+    }
+  } else if (!tau_fixed && theta_fixed) {
+    num <- 0; den <- 0
+    for (i in seq_len(n)) {
+      dx <- xs[i] - x0
+      num <- num + dx * (ys[i] - y0)
+      den <- den + dx * dx
+    }
+    slope <- if (den == 0) NaN else num / den
+    intercept <- y0 - slope * x0
+  } else {
+    slope <- tau
+    intercept <- y0 - slope * x0
+  }
+  r2 <- NA_real_; rmse <- NA_real_
+  if (n > 0 && is.finite(slope) && is.finite(intercept)) {
+    ky <- .kahan()
+    for (v in ys) ky$add(v)
+    mean_y <- ky$value() / n
+    kt <- .kahan(); kr <- .kahan()
+    for (i in seq_len(n)) {
+      kt$add((ys[i] - mean_y)^2)
+      kr$add((ys[i] - (slope * xs[i] + intercept))^2)
+    }
+    r2 <- 1 - kr$value() / kt$value()
+    rmse <- sqrt(kr$value() / n)
+  }
+  list(slope = slope, intercept = intercept, rSquared = r2, rmse = rmse, n = n)
+}
+
+# --- harmonicCheck.js ---------------------------------------------------------------------
+
+# One single-period Lomb-Scargle evaluation as runPeriodogramCalculation returns it for
+# periodMin = periodMax = period: numeric(0) when the JS gives NaN (fewer than two raw
+# samples, stripped), else the power. Pairs are filtered with the app's validPairs rule and a
+# degenerate series (no pairs, zero or undefined variance) scores 0, as
+# calculateLombScarglePower does, before this runtime's lomb_scargle is called.
+.harmonic_power <- function(x_data, y_data, period) {
+  if (length(x_data) < 2 || length(y_data) < 2 || length(x_data) != length(y_data)) {
+    return(numeric(0))
+  }
+  ok <- !is.na(x_data) & !is.na(y_data)
+  tt <- x_data[ok]; yy <- y_data[ok]
+  if (length(tt) < 2) return(0)
+  m <- .plain_mean(yy)
+  v <- sum((yy - m)^2) / (length(yy) - 1)
+  if (!(v > 0)) return(0)
+  p <- lomb_scargle(tt, yy, period)[1]
+  if (is.finite(p)) p else 0
+}
+
+# tau, tau/2 and 2 tau, each scored by one Lomb-Scargle evaluation of the series; the
+# strongest wins, ties keeping the earlier candidate. Candidates must satisfy
+# bin*2 < period < span/2 with span = last sample minus first (sample order) and
+# bin = bin_size or 0.25. NULL when there is no tau, no data or no candidate.
+harmonic_check <- function(x_data, y_data, bin_size, tau) {
+  if (is.null(tau) || is.na(tau) || tau == 0) return(NULL)
+  if (!length(x_data) || !length(y_data)) return(NULL)
+  bin <- if (!is.null(bin_size) && !is.na(bin_size) && bin_size != 0) bin_size else 0.25
+  # JS coerces a null endpoint to 0 in the subtraction (null - x0 = -x0).
+  last <- x_data[length(x_data)]; first <- x_data[1]
+  span <- (if (is.na(last) && !is.nan(last)) 0 else last) -
+          (if (is.na(first) && !is.nan(first)) 0 else first)
+  cands <- list(list(label = "τ", period = tau),
+                list(label = "τ/2", period = tau / 2),
+                list(label = "2τ", period = tau * 2))
+  keep <- vapply(cands, function(c) isTRUE(c$period > bin * 2 && c$period < span / 2), logical(1))
+  cands <- cands[keep]
+  if (!length(cands)) return(NULL)
+  results <- lapply(cands, function(c) {
+    p <- .harmonic_power(x_data, y_data, c$period)
+    list(label = c$label, period = c$period, peakPeriod = c$period,
+         power = if (length(p)) p else 0)
+  })
+  strongest <- results[[1]]
+  if (length(results) >= 2) for (r in results[-1]) if (r$power > strongest$power) strongest <- r
+  list(candidates = results, strongest = strongest)
+}
+
+# --- Actogram.svelte: the row folding -----------------------------------------------------
+
+# The plot's startTime (epoch ms): the earliest sample over ALL time-typed series with valid
+# x and y, snapped to the start of its day in the display zone ('utc' or an IANA zone).
+actogram_start_time <- function(series_list, zone = "utc") {
+  min_time <- Inf
+  for (s in series_list) {
+    if (!identical(s$xType, "time")) next
+    xd <- s$x; yd <- s$y
+    if (!length(xd) || !length(yd)) next
+    n <- min(length(xd), length(yd))
+    for (i in seq_len(n)) {
+      if (is.na(xd[i]) || is.na(yd[i])) next
+      if (xd[i] < min_time) min_time <- xd[i]
+    }
+  }
+  if (!is.finite(min_time)) min_time <- 0
+  if (is.null(zone) || tolower(zone) == "utc") return(floor(min_time / 86400000) * 86400000)
+  lt <- as.POSIXlt(min_time / 1000, origin = "1970-01-01", tz = zone)
+  midnight <- as.POSIXct(format(lt, "%Y-%m-%d"), tz = zone)
+  round(as.numeric(midnight) * 1000)
+}
+
+# Column.hoursSinceStart: minus the smallest valid value (/ 3.6e6 for time), NA kept.
+actogram_hours_since_start <- function(x, x_type) {
+  if (!length(x) || all(is.na(x))) return(numeric(0))
+  base <- min(x, na.rm = TRUE)
+  if (identical(x_type, "time")) (x - base) / 3600000 else x - base
+}
+
+# ActogramDataclass.binSize: (last - first) / (last_idx - first_idx) over valid hours.
+actogram_bin_size <- function(hours) {
+  if (length(hours) <= 1) return(0)
+  ok <- which(!is.na(hours))
+  if (!length(ok) || ok[length(ok)] == ok[1]) return(0)
+  f <- ok[1]; l <- ok[length(ok)]
+  (hours[l] - hours[f]) / (l - f)
+}
+
+# One series folded into rows as ActogramDataclass.dataByDays does it.
+actogram_series_frame <- function(x, y, x_type, start_time, period_hrs) {
+  hss <- actogram_hours_since_start(x, x_type)
+  xmin <- if (length(x) && !all(is.na(x))) min(x, na.rm = TRUE) else 0
+  offset <- if (identical(x_type, "time")) (start_time - xmin) / 3600000 else -xmin
+  x_by <- list(); y_by <- list()
+  for (i in seq_along(hss)) {
+    tx <- hss[i]
+    ty <- if (i <= length(y)) y[i] else NA
+    if (is.na(tx) || is.na(ty)) next
+    p <- floor((tx - offset) / period_hrs)
+    if (p < 0) next
+    key <- as.character(p)
+    x_by[[key]] <- c(x_by[[key]], tx - offset)
+    y_by[[key]] <- c(y_by[[key]], ty)
+  }
+  list(hoursSinceStart = hss, y = y, binSize = actogram_bin_size(hss), offset = offset,
+       xByPeriod = x_by, yByPeriod = y_by)
+}
+
+actogram_ndays <- function(frames) {
+  max_period <- -1
+  for (f in frames) {
+    k <- as.numeric(names(f$xByPeriod))
+    if (length(k)) max_period <- max(max_period, k)
+  }
+  if (max_period < 0 || max_period + 1 > 20000) 0 else max_period + 1
+}
+
+# --- markerRules.svelte.js / PhaseMarker.svelte: a block's settings ----------------------
+
+# JS `v || d`: NULL, FALSE, "", 0 and NaN fall back.
+.js_or <- function(v, d) {
+  if (is.null(v) || length(v) == 0) return(d)
+  if (is.logical(v) && !isTRUE(v)) return(d)
+  if (is.character(v) && !nzchar(v)) return(d)
+  if (is.numeric(v) && (is.na(v) || v == 0)) return(d)
+  v
+}
+
+.num_or_null <- function(v) if (.is_fin(v)) v else NULL
+
+# MarkerRule's constructor guards on a saved rule (markerRules.svelte.js).
+marker_rule_from_json <- function(j) {
+  finite_or <- function(v, d) if (.is_fin(v)) v else d
+  positive_or <- function(v, d) if (.is_fin(v) && v > 0) v else d
+  day_or_null <- function(v) if (.is_fin(v) && v >= 1) js_round(v) else NULL
+  lock_or <- function(v, d) if (!is.null(v) && v %in% c("fit", "fixed")) v else d
+  list(
+    id = j$id,
+    type = if (!is.null(j$type) && j$type %in% c("onset", "offset", "manual")) j$type else "onset",
+    templateHrsBefore = finite_or(j$templateHrsBefore, 3),
+    templateHrsAfter = finite_or(j$templateHrsAfter, 3),
+    centileThreshold = finite_or(j$centileThreshold, 50),
+    lockTau = lock_or(j$lockTau, "fit"),
+    lockTheta = lock_or(j$lockTheta, "fit"),
+    fixedTau = positive_or(j$fixedTau, NULL),
+    fixedTheta = .num_or_null(j$fixedTheta),
+    phaseRefDay = day_or_null(j$phaseRefDay),
+    lineMinDay = day_or_null(j$lineMinDay),
+    lineMaxDay = day_or_null(j$lineMaxDay)
+  )
+}
+
+# PhaseMarkerClass's constructor defaults on a saved own block (its `||` defaults differ from
+# a rule's on purpose: a block's centile 0 reads as 50).
+marker_block_from_json <- function(j) {
+  legacy <- identical(j$type, "fitline")
+  lock_default <- if (legacy) "fixed" else "fit"
+  list(
+    type = if (legacy) "manual" else .js_or(j$type, "onset"),
+    centileThreshold = .js_or(j$centileThreshold, 50),
+    templateHrsBefore = .js_or(j$templateHrsBefore, 3),
+    templateHrsAfter = .js_or(j$templateHrsAfter, 3),
+    fitSlope = j$fitSlope, fitIntercept = j$fitIntercept,
+    lockTau = if (!is.null(j$lockTau)) j$lockTau else lock_default,
+    lockTheta = if (!is.null(j$lockTheta)) j$lockTheta else lock_default,
+    lineMinDay = j$lineMinDay, lineMaxDay = j$lineMaxDay, phaseRefDay = j$phaseRefDay,
+    fitWithinRange = isTRUE(j$fitWithinRange)
+  )
+}
+
+# PhaseMarkerClass.fitRefDay: phaseRefDay ?? lineMinDay ?? 1, clamped to 1..Ndays.
+.fit_ref_day <- function(cfg, n_days) {
+  nd <- max(1, n_days)
+  raw <- if (!is.null(cfg$phaseRefDay)) cfg$phaseRefDay
+         else if (!is.null(cfg$lineMinDay)) cfg$lineMinDay else 1
+  min(max(1, raw), nd)
+}
+
+# markerRules.svelte.js ruleCfg: a rule seen as a block's settings. The fixed pair is
+# re-encoded as (fitSlope, fitIntercept) with intercept = theta - (tau - P) * refDay; tau
+# defaults to P when only theta is fixed. The range always scopes the fit (Decision 1a).
+marker_rule_cfg <- function(rule, period_hrs, n_days) {
+  r <- marker_rule_from_json(rule)
+  cfg <- r[c("type", "templateHrsBefore", "templateHrsAfter", "centileThreshold",
+             "lockTau", "lockTheta")]
+  cfg$phaseRefDay <- r$phaseRefDay
+  cfg$lineMinDay <- r$lineMinDay
+  cfg$lineMaxDay <- r$lineMaxDay
+  cfg$fitWithinRange <- TRUE
+  P <- period_hrs
+  cfg$fitSlope <- if (!is.null(r$fixedTau)) r$fixedTau else if (!is.null(r$fixedTheta)) P else NULL
+  if (!is.null(r$fixedTheta)) {
+    slope <- if (!is.null(r$fixedTau)) r$fixedTau else P
+    cfg$fitIntercept <- r$fixedTheta - (slope - P) * .fit_ref_day(cfg, n_days)
+  }
+  cfg
+}
+
+# A series' per-rule data as ruleDataFromJSON reads it (Actogram.svelte).
+.rule_store <- function(series, rule_id) {
+  e <- series$ruleData[[rule_id]]
+  if (is.null(e) || !is.list(e)) return(list(selectedPeriods = list(), manualMarkers = numeric(0)))
+  sp <- if (is.list(e$selectedPeriods) || is.logical(e$selectedPeriods))
+    lapply(e$selectedPeriods, function(v) !identical(v, FALSE)) else list()
+  mm <- as_numeric_list(e$manualMarkers)
+  list(selectedPeriods = sp, manualMarkers = mm[is.finite(mm)])
+}
+
+as_numeric_list <- function(v) {
+  if (is.null(v)) return(numeric(0))
+  vapply(v, function(e) if (is.null(e) || !is.numeric(e)) NA_real_ else as.numeric(e), numeric(1))
+}
+
+# An own block's per-series data as its constructor reads it (PhaseMarker.svelte).
+.block_store <- function(j, frame) {
+  if (is.list(j$selectedPeriods) || is.logical(j$selectedPeriods)) {
+    sp <- as.list(j$selectedPeriods)
+  } else if (!is.null(j$periodRangeMin) && !is.null(j$periodRangeMax)) {
+    k <- as.numeric(names(frame$xByPeriod))
+    n <- if (length(k)) max(k) + 1 else 0
+    if (n > 20000) n <- 0
+    sp <- lapply(seq_len(n), function(d) d >= j$periodRangeMin && d <= j$periodRangeMax)
+  } else sp <- list()
+  mm <- if (identical(j$type, "fitline")) numeric(0) else as_numeric_list(j$manualMarkers)
+  list(selectedPeriods = sp, manualMarkers = mm)
+}
+
+# PhaseMarkerClass.markers for a 'manual' block: hand-placed absolute times grouped by row
+# (the LAST point in a row wins), hour = time % P with JS remainder semantics.
+.manual_markers_by_row <- function(manual, period_hrs) {
+  rows <- numeric(0); hrs <- numeric(0)
+  for (t in manual) {
+    row <- floor(t / period_hrs)
+    k <- match(row, rows)
+    if (is.na(k)) { rows <- c(rows, row); hrs <- c(hrs, .js_mod(t, period_hrs)) }
+    else hrs[k] <- .js_mod(t, period_hrs)
+  }
+  max_row <- max(c(-1, rows))
+  if (max_row < 0) return(numeric(0))
+  vapply(0:max_row, function(i) { k <- match(i, rows); if (is.na(k)) NaN else hrs[k] },
+         numeric(1))
+}
+
+# Everything PhaseMarkerClass derives for one block (own block or rule instance) on one
+# series: detections, absolute times, the fit selection, the unwrap, the line, the phase and
+# the harmonic check.
+marker_block_compute <- function(cfg, store, frame, period_hrs, n_days) {
+  P <- period_hrs
+  if (identical(cfg$type, "manual")) {
+    markers <- .manual_markers_by_row(store$manualMarkers, P)
+    times <- NULL
+  } else {
+    tm <- match_template_markers(frame$xByPeriod, frame$yByPeriod, P, frame$binSize,
+                                 cfg$templateHrsBefore, cfg$templateHrsAfter,
+                                 cfg$centileThreshold, cfg$type)
+    markers <- tm$hours
+    times <- if (cfg$type %in% c("onset", "offset")) tm$times else NULL
+  }
+  marker_times <- marker_absolute_times(markers, P, times)
+  rsf <- isTRUE(cfg$fitWithinRange)
+  mask <- selection_mask(length(markers), store$selectedPeriods, rsf, cfg$lineMinDay,
+                         cfg$lineMaxDay)
+  unwrap <- unwrap_onsets(marker_times, P, mask)
+  ref_day <- .fit_ref_day(cfg, n_days)
+  fs <- cfg$fitSlope; fi <- cfg$fitIntercept
+  theta_value <- if (is.null(fs) || is.null(fi)) NULL else (fs - P) * ref_day + fi
+  res <- fit_line(unwrap$xs, unwrap$ys,
+                  tau = if (identical(cfg$lockTau, "fixed")) fs else NULL,
+                  theta = if (identical(cfg$lockTheta, "fixed")) theta_value else NULL,
+                  ref_day = ref_day, period_hrs = P)
+  reg <- if (is.finite(res$slope) && is.finite(res$intercept)) res else NULL
+  phase <- NA_real_
+  if (!is.null(reg) && reg$slope != 0) {
+    phase <- wrap_phase_to_row(reg$slope * ref_day + reg$intercept - ref_day * P, reg$slope, P)
+  }
+  hc <- harmonic_check(frame$hoursSinceStart, frame$y, frame$binSize,
+                       if (is.null(reg)) NULL else reg$slope)
+  list(
+    markerHours = markers,
+    markerTimes = marker_times,
+    selectedMask = mask,
+    outsideRange = vapply(seq_along(markers) - 1, function(i)
+      is_outside_fit_range(i, rsf, cfg$lineMinDay, cfg$lineMaxDay), logical(1)),
+    unwrap = unwrap,
+    refDay = ref_day,
+    fitSlope = if (is.null(fs)) NA_real_ else fs,
+    fitIntercept = if (is.null(fi)) NA_real_ else fi,
+    regression = reg,
+    phase = phase,
+    harmonic = if (is.null(hc)) NULL else list(candidates = hc$candidates,
+                                                strongest = hc$strongest$label),
+    .harmonicPick = if (is.null(hc)) NA_real_ else hc$strongest$peakPeriod
+  )
+}
+
+# plotMetricDefs.js ruleOutputValues: a block's five port values. tau is the harmonic pick;
+# tau/phi/r2/rmse are NaN with no valid line (r2/rmse also with no markers to compare
+# against); n is always the count of fitted markers; no block at all is five NaNs.
+rule_output_values <- function(block) {
+  if (is.null(block)) return(list(tau = NaN, phi = NaN, r2 = NaN, rmse = NaN, n = NaN))
+  reg <- block$regression
+  ok <- !is.null(reg)
+  list(tau = if (ok) block$.harmonicPick else NaN,
+       phi = if (ok) block$phase else NaN,
+       r2 = if (ok) reg$rSquared else NaN,
+       rmse = if (ok) reg$rmse else NaN,
+       n = length(block$unwrap$xs))
+}
+
+# The five outputs one marker rule gives one series, exactly as the app's `r<id>_*` ports
+# carry them. `rule` is MarkerRule.toJSON's shape; `series` the series' saved JSON (ruleData,
+# detachedRules, phaseMarkers); `frame` that series folded at the plot's startTime
+# (actogram_series_frame). A series detached from the rule reports its own block carrying
+# `fromRule`; a detached series with no such block reports five NaNs. details = TRUE adds
+# every intermediate and where the block came from (`source`).
+actogram_marker_rule_outputs <- function(rule, series, frame, period_hrs = 24, n_days = NULL,
+                                         details = FALSE) {
+  if (is.null(n_days)) n_days <- actogram_ndays(list(frame))
+  rid <- rule$id
+  detached <- rid %in% unlist(series$detachedRules)
+  block <- NULL; source <- "none"
+  if (!detached) {
+    block <- marker_block_compute(marker_rule_cfg(rule, period_hrs, n_days),
+                                  .rule_store(series, rid), frame, period_hrs, n_days)
+    source <- "instance"
+  } else {
+    for (bj in series$phaseMarkers) {
+      if (is.list(bj) && identical(bj$fromRule, rid)) {
+        block <- marker_block_compute(marker_block_from_json(bj), .block_store(bj, frame),
+                                      frame, period_hrs, n_days)
+        source <- "detached"
+        break
+      }
+    }
+  }
+  out <- rule_output_values(block)
+  if (!details) return(out)
+  d <- if (is.null(block)) list() else block[setdiff(names(block), ".harmonicPick")]
+  c(list(source = source, outputs = out), d)
+}
+
+# Every marker rule's outputs for a whole actogram, as the app's metric columns carry them:
+# list(startTime, Ndays, series = [list(binSize, rules = list(<id> = details))],
+# columns = list(r1_tau = one value per series, ...)). `inner` is the actogram's saved inner
+# JSON; `series_data[[i]]` is list(xType, x, y) with x the column's values (epoch ms for a
+# time column, hours otherwise).
+actogram_plot_rule_outputs <- function(inner, series_data, zone = "utc") {
+  P <- if (!is.null(inner$periodHrs)) inner$periodHrs else 24
+  sd <- lapply(series_data, function(s) list(xType = s$xType,
+                                             x = as_numeric_list(s$x), y = as_numeric_list(s$y)))
+  start <- actogram_start_time(sd, zone)
+  frames <- lapply(sd, function(s) actogram_series_frame(s$x, s$y, s$xType, start, P))
+  n_days <- actogram_ndays(frames)
+  rules <- inner$markerRules
+  datas <- inner$data
+  columns <- list()
+  for (r in rules) for (sfx in c("tau", "phi", "r2", "rmse", "n")) {
+    columns[[paste0(r$id, "_", sfx)]] <- numeric(0)
+  }
+  out_series <- list()
+  for (i in seq_along(frames)) {
+    sj <- if (i <= length(datas)) datas[[i]] else list()
+    per <- list()
+    for (r in rules) {
+      det <- actogram_marker_rule_outputs(r, sj, frames[[i]], P, n_days, details = TRUE)
+      per[[r$id]] <- det
+      for (sfx in names(det$outputs)) {
+        key <- paste0(r$id, "_", sfx)
+        columns[[key]] <- c(columns[[key]], det$outputs[[sfx]])
+      }
+    }
+    out_series[[i]] <- list(binSize = frames[[i]]$binSize, rules = per)
+  }
+  list(startTime = start, Ndays = n_days, series = out_series, columns = columns)
+}

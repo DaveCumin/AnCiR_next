@@ -916,6 +916,7 @@
 	import { tick } from 'svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
+	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
 	import {
@@ -1301,26 +1302,19 @@
 		</div>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
-			<div class="control-data-add">
-				<div class="add">
-					<button
-						class="icon"
-						onclick={async () => {
-							theData.addData({
-								x: null,
-								y: null
-							});
+			<DataAddHeader
+				onadd={async () => {
+					theData.addData({
+						x: null,
+						y: null
+					});
 
-							await tick();
+					await tick();
 
-							//Scroll to the bottom of dataSettings
-							dataSettingsScrollTo('bottom');
-						}}
-					>
-						<Icon name="add" width={16} height={16} />
-					</button>
-				</div>
-			</div>
+					//Scroll to the bottom of dataSettings
+					dataSettingsScrollTo('bottom');
+				}}
+			/>
 
 			{#each theData.data as datum, i (datum.x.id + '-' + datum.y.id)}
 				<div

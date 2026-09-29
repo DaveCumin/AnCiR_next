@@ -270,3 +270,91 @@ describe('Plot.fromJSON is robust to a wrong-shaped facetOverrides and to stray 
 		expect(notifications.list).toHaveLength(0);
 	});
 });
+
+// A plot's METRIC OUTPUT map ({ key: colId }) is what the metric sync reconciles: every key
+// the type no longer lists has its column DELETED. So a wrong-shaped map is not cosmetic. An
+// array `[3, 4]` used to spread into { 0: 3, 1: 4 }, keys no def lists, and the next sync
+// deleted columns 3 and 4, which are whatever the session put there (user data).
+describe('Plot.fromJSON keeps only a well-formed metricOut', () => {
+	beforeEach(async () => {
+		appConsts.plotMap = await loadPlots();
+		core.plots = [];
+	});
+
+	it.each([
+		['an array', [3, 4], {}],
+		['a string', 'nope', {}],
+		['null', null, {}],
+		['non-integer ids', { peak_period: 'x', peak_power: 2.5, peak_pvalue: { a: 1 } }, {}],
+		[
+			'a mix',
+			{ peak_period: 7, peak_power: -1, peak_pvalue: null },
+			{ peak_period: 7, peak_power: -1 }
+		]
+	])('metricOut = %s', (_label, bad, expected) => {
+		const p = Plot.fromJSON({
+			id: 3,
+			name: 'P',
+			type: 'periodogram',
+			plot: { data: [] },
+			metricOut: bad
+		});
+		expect(p.metricOut).toEqual(expected);
+	});
+});
+
+// The actogram's metric keys FOLLOW ITS STATE (five per marker rule). Whatever wrong shapes a
+// saved inner carries, the keys must come only from the rules that survived the load: a key
+// for a rule that did not would get a column minted for nothing.
+describe('an actogram inner with wrong-shaped marker-rule fields', () => {
+	beforeAll(async () => {
+		appConsts.plotMap = await loadPlots();
+	});
+
+	it.each([
+		['markerRules not an array', { markerRules: { id: 'r1' } }, []],
+		[
+			'a rule with no id, a duplicate id, a null',
+			{ markerRules: [{ name: 'x' }, null, { id: 'r2' }, { id: 'r2' }] },
+			['r2']
+		],
+		[
+			'a rule id of the wrong form',
+			{ markerRules: [{ id: 7 }, { id: 'rule1' }, { id: 'r3' }] },
+			['r3']
+		],
+		[
+			'series ruleData / detachedRules / fromRule / fitWithinRange of the wrong shape',
+			{
+				markerRules: [{ id: 'r1', name: 'A' }],
+				data: [
+					{
+						x: { refId: -1 },
+						y: { refId: -1 },
+						ruleData: 'no',
+						detachedRules: 5,
+						phaseMarkers: [{ fromRule: 9, fitWithinRange: 'yes' }]
+					}
+				]
+			},
+			['r1']
+		]
+	])('%s', async (_label, inner, ruleIds) => {
+		const { plotMetricKeys } = await import('./plotMetricOutputs.svelte.js');
+		const cls = appConsts.plotMap.get('actogram').data;
+		const act = cls.fromJSON(null, { data: [], ...inner });
+		expect(act.markerRules.map((r) => r.id)).toEqual(ruleIds);
+		const keys = plotMetricKeys({ type: 'actogram', id: 0, plot: act });
+		expect(keys).toEqual(
+			ruleIds.flatMap((id) => ['tau', 'phi', 'r2', 'rmse', 'n'].map((s) => `${id}_${s}`))
+		);
+		for (const d of act.data) {
+			expect(d.ruleData).toEqual({});
+			expect(d.detachedRules).toEqual([]);
+			for (const m of d.phaseMarkers) {
+				expect(m.fromRule).toBeNull();
+				expect(m.fitWithinRange).toBe(false);
+			}
+		}
+	});
+});

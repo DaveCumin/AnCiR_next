@@ -144,7 +144,25 @@ const CONCEPT = {
 	// per-sample rule state.
 	crossing: /crossing/,
 	count: /count|number of crossings/,
-	breach: /breach/
+	breach: /breach/,
+	// PLOT metric outputs (v77.x, plan 2026-09-30 marker rules, Phase B): the manifest now lists
+	// what each metric plot publishes, so its prose must say so too.
+	peak_period: /peak_period|period of the highest peak/,
+	peak_power: /peak_power|height of that peak/,
+	peak_pvalue: /peak_pvalue/,
+	peak_frequency: /peak_frequency|cycles per hour/,
+	peak_magnitude: /peak_magnitude|magnitude/,
+	peak_lag: /peak_lag/,
+	peak_correlation: /peak_correlation/,
+	qq_r: /probability-plot correlation/,
+	qq_n: /number of valid values/,
+	// An actogram marker rule's five ports (`r<id>_<stat>`, one set per rule). The tau port is
+	// the HARMONIC-check pick, not the fitted slope; the prose must say which.
+	'r*_tau': /harmonic check/,
+	'r*_phi': /phase/,
+	'r*_r2': /R²|R\^2|r-?squared/,
+	'r*_rmse': /RMSE/,
+	'r*_n': /number of markers/
 };
 
 /** Ports deliberately left undescribed, each with its reason. */
@@ -163,6 +181,16 @@ describe('handbook prose covers the outputs each node produces', () => {
 	it('finds nodes and ports to check (guards against the extractor going blind)', () => {
 		expect(entries.length).toBeGreaterThan(10);
 		expect(entries.reduce((n, e) => n + e.ports.length, 0)).toBeGreaterThan(40);
+	});
+
+	it('covers the PLOT metric outputs too, the actogram rule ports included', () => {
+		// Plots carried `outputs: []` until the manifest learned their metric ports; a plot
+		// dropping out of `entries` would make every check below silently vacuous for it.
+		const byId = Object.fromEntries(entries.map((e) => [e.id, e.ports]));
+		expect(byId.periodogram).toEqual(['peak_period', 'peak_power', 'peak_pvalue']);
+		expect(byId.qqplot).toEqual(['qq_r', 'qq_n']);
+		expect(byId.actogram).toEqual(['r*_tau', 'r*_phi', 'r*_r2', 'r*_rmse', 'r*_n']);
+		for (const id of ['fft', 'correlogram']) expect(byId[id]?.length, id).toBeGreaterThan(0);
 	});
 
 	it('every interpretive port has a concept mapping or a stated exemption', () => {

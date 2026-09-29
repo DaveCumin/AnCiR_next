@@ -6426,3 +6426,870 @@ def correlation_ci(values, method='pearson', confidence=0.95):
     zc = norm.ppf(1 - (1 - confidence) / 2)
     se = np.sqrt((1 + r ** 2 / 2) / (n - 3)) if method == 'spearman' else 1 / np.sqrt(n - 3)
     return {'ciLow': float(np.tanh(z - zc * se)), 'ciHigh': float(np.tanh(z + zc * se))}
+
+
+# ----------------------------------------------------------------------
+# Actogram marker rules (plan docs/plans/2026-09-30-actogram-marker-rules-and-outputs.md,
+# Phase B2). A one-for-one port of the pure JS modules the app computes a rule's five output
+# ports from, so an actogram's onset/offset tau, phi, R2, RMSE and n can be recomputed
+# outside the app:
+#
+#   plots/Actogram/onsetUnwrap.js      find_centile_value, find_best_match_index,
+#                                      match_template_markers, marker_absolute_times,
+#                                      unwrap_onsets, wrap_phase_to_row
+#   plots/Actogram/markerSelection.js  fit_day_range, is_day_selected, selection_mask,
+#                                      is_outside_fit_range
+#   plots/Actogram/lineFit.js          fit_line (all four lock combinations)
+#   plots/Actogram/harmonicCheck.js    harmonic_check (over this runtime's _lomb_scargle)
+#   plotbits/helpers/wrangleData.js    kahan_linear_regression (the app's linearRegression)
+#   plots/plotMetricDefs.js            rule_output_values
+#
+# and the parts of the Svelte classes the outputs depend on: the row folding at the plot's
+# startTime (Actogram.svelte: startTime, offset, dataByDays, binSize, Ndays), a rule's cfg
+# adapter (markerRules.svelte.js ruleCfg: fixed tau/theta re-encoded as slope/intercept) and
+# the block's deriveds (PhaseMarker.svelte: markers, markerTimes, selectedMask, onsetUnwrap,
+# linearRegression, estimatedPhase, harmonicCheck). The `actogramMarkers` parity fixtures
+# compare every one of those intermediates, not only the five outputs, against the JS.
+#
+# JS semantics reproduced on purpose (each one changes a number somewhere):
+#   - `%` is JS remainder (sign of the dividend): math.fmod, never Python's %;
+#   - Math.round rounds half toward +inf: _js_round;
+#   - `x ?? d` treats only null/undefined as missing, `x || d` treats 0 and NaN as missing
+#     too (an own block's centile 0 reads as 50; a rule's does not);
+#   - sorts are stable and numeric; sums that JS compensates (KahanSum) are compensated here.
+# ----------------------------------------------------------------------
+
+class _KahanJS:
+    """KahanSum exactly as utils/numerics.js has it: no NaN skipping (KahanSum above skips
+    None and NaN, which the JS class does not)."""
+
+    def __init__(self):
+        self.sum = 0.0
+        self.c = 0.0
+
+    def add(self, value):
+        y = value - self.c
+        t = self.sum + y
+        self.c = t - self.sum - y
+        self.sum = t
+
+    @property
+    def value(self):
+        return self.sum
+
+
+def _finite(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def _js_invalid(v):
+    """stats.js isInvalidValue: null/undefined, a blank string, or NaN after coercion."""
+    if v is None:
+        return True
+    if isinstance(v, str):
+        if v.strip() == '':
+            return True
+        try:
+            return math.isnan(float(v))
+        except ValueError:
+            return True
+    try:
+        return math.isnan(float(v))
+    except (TypeError, ValueError):
+        return True
+
+
+def _js_min(data):
+    """stats.js min: the smallest valid value, or None when there is none."""
+    out = math.inf
+    for v in data:
+        if not _js_invalid(v) and v < out:
+            out = v
+    return None if out == math.inf else out
+
+
+def _js_mod(a, b):
+    """JS `a % b` (the remainder takes the sign of the dividend)."""
+    return math.fmod(a, b)
+
+
+def kahan_linear_regression(x, y):
+    """plotbits/helpers/wrangleData.js linearRegression: raw compensated sums, no NaN
+    filtering, NaN slope for a single point (the sums' 0 / 0), exactly as the app fits
+    both-free marker lines. (`linear_regression` above is a different, centred numpy fit.)"""
+    n = len(x)
+    if n != len(y) or n == 0:
+        raise ValueError('Input arrays must have the same non-zero length')
+    kx, ky, kxy, kxx = _KahanJS(), _KahanJS(), _KahanJS(), _KahanJS()
+    for i in range(n):
+        kx.add(x[i])
+        ky.add(y[i])
+        kxy.add(x[i] * y[i])
+        kxx.add(x[i] * x[i])
+    sx, sy, sxy, sxx = kx.value, ky.value, kxy.value, kxx.value
+    num = n * sxy - sx * sy
+    den = n * sxx - sx * sx
+    slope = _js_div(num, den)
+    intercept = (sy - slope * sx) / n
+    k_tot, k_res = _KahanJS(), _KahanJS()
+    mean_y = sy / n
+    for i in range(n):
+        pred = slope * x[i] + intercept
+        k_tot.add((y[i] - mean_y) ** 2)
+        k_res.add((y[i] - pred) ** 2)
+    r2 = 1 - _js_div(k_res.value, k_tot.value)
+    rmse = math.sqrt(k_res.value / n) if k_res.value == k_res.value else float('nan')
+    return {'slope': slope, 'intercept': intercept, 'rSquared': r2, 'rmse': rmse}
+
+
+def _js_div(a, b):
+    """IEEE division as JS does it: x / 0 is +-Infinity, 0 / 0 is NaN (Python raises)."""
+    if b == 0:
+        if a == 0 or a != a:
+            return float('nan')
+        return math.copysign(math.inf, a) * math.copysign(1.0, b)
+    return a / b
+
+
+# --- onsetUnwrap.js: template matching ------------------------------------------------
+
+def find_centile_value(data, centile):
+    """The value at the centile of the non-zero, non-NaN values (None when there is none,
+    JS `undefined`)."""
+    filtered = [v for v in data if not (v != v) and v != 0]
+    s = sorted(filtered)
+    idx = math.ceil((centile / 100) * len(s)) - 1
+    return s[idx] if 0 <= idx < len(s) else None
+
+
+def find_best_match_index(test, template):
+    """Start index of the best (strictly highest) cross-correlation, or -1."""
+    best_idx = -1
+    best = -math.inf
+    for i in range(0, len(test) - len(template) + 1):
+        corr = 0
+        for j in range(len(template)):
+            corr += test[i + j] * template[j]
+        if corr > best:
+            best = corr
+            best_idx = i
+    return best_idx
+
+
+def match_template_markers(x_by_period, y_by_period, period_hrs, bin_size, hrs_before,
+                           hrs_after, centile, type):
+    """One detection per actogram row (see onsetUnwrap.js matchTemplateMarkers). Returns
+    {'hours': per-row hour in [0, P), 'times': per-row absolute time}, NaN = none."""
+    N = _js_round(hrs_before / bin_size)
+    M = _js_round(hrs_after / bin_size)
+    template = [(-1 if type == 'onset' else 1)] * N + [(1 if type == 'onset' else -1)] * M
+    hours, times = [], []
+    keys = [int(k) for k in x_by_period.keys()]
+    if not keys:
+        return {'hours': hours, 'times': times}
+    max_period = max(keys)
+    nan = float('nan')
+    for i in range(0, max_period + 1):
+        yi = y_by_period.get(i)
+        if not yi:
+            hours.append(nan)
+            times.append(nan)
+            continue
+        yn = y_by_period.get(i + 1)
+        if yn:
+            data = list(yi) + list(yn)
+            xs = list(x_by_period[i]) + list(x_by_period[i + 1])
+        else:
+            data = list(yi)
+            xs = list(x_by_period[i])
+        cv = find_centile_value(data, centile)
+        # JS: value <= undefined is false, so with no centile every non-NaN value is +1.
+        above_below = [-1 if (v != v) or (cv is not None and v <= cv) else 1 for v in data]
+        best = find_best_match_index(above_below, template) + _js_round((N + M) / 2)
+        if 0 <= best < len(xs):
+            t = xs[best]
+            raw = t - i * period_hrs
+            raw = _js_mod(_js_mod(raw, period_hrs) + period_hrs, period_hrs)
+            hours.append(raw)
+            times.append(t)
+        else:
+            hours.append(nan)
+            times.append(nan)
+    return {'hours': hours, 'times': times}
+
+
+def marker_absolute_times(markers, period_hrs, times=None):
+    """Absolute time of each row's marker: the detection's own time, else i * P + hour."""
+    out = []
+    for i, h in enumerate(markers):
+        t = times[i] if times is not None and i < len(times) else None
+        if _finite(t):
+            out.append(t)
+        elif _finite(h):
+            out.append(i * period_hrs + h)
+        else:
+            out.append(float('nan'))
+    return out
+
+
+# --- onsetUnwrap.js: unwrapping ---------------------------------------------------------
+
+def _wrap_half(v, P):
+    """Wrap v into [-P/2, P/2)."""
+    return v - P * math.floor(v / P + 0.5)
+
+
+def _median_js(arr):
+    if not arr:
+        return float('nan')
+    s = sorted(arr)
+    m = len(s) // 2
+    return s[m] if len(s) % 2 else (s[m - 1] + s[m]) / 2
+
+
+def _seed_tau(pts, P):
+    by_row = sorted(pts, key=lambda p: p['row'])
+    adjacent, spaced = [], []
+    for j in range(1, len(by_row)):
+        g = by_row[j]['row'] - by_row[j - 1]['row']
+        if g < 1:
+            continue
+        change = _wrap_half(by_row[j]['t'] - by_row[j - 1]['t'] - g * P, P)
+        (adjacent if g == 1 else spaced).append(change / g)
+    changes = adjacent if len(adjacent) >= 2 else adjacent + spaced
+    drift = _median_js(changes)
+    tau = P + (drift if math.isfinite(drift) else 0)
+    return tau if tau > 0 else P
+
+
+def _number_cycles(sorted_pts, tau):
+    groups = [{'k': 0, 'ts': [sorted_pts[0]['t']], 'rows': [sorted_pts[0]['row']]}]
+    ambiguous = 0
+    for j in range(1, len(sorted_pts)):
+        last = groups[-1]
+        acc = 0
+        for v in last['ts']:
+            acc += v
+        prev_t = acc / len(last['ts'])
+        ratio = (sorted_pts[j]['t'] - prev_t) / tau
+        n = _js_round(ratio)
+        if abs(ratio - n) > 0.25:
+            ambiguous += 1
+        if n <= 0:
+            last['ts'].append(sorted_pts[j]['t'])
+            last['rows'].append(sorted_pts[j]['row'])
+        else:
+            groups.append({'k': last['k'] + n, 'ts': [sorted_pts[j]['t']],
+                           'rows': [sorted_pts[j]['row']]})
+    return groups, ambiguous
+
+
+def _plain_mean(vals):
+    acc = 0
+    for v in vals:
+        acc += v
+    return acc / len(vals)
+
+
+def unwrap_onsets(times, period_hrs, selected=None):
+    """Unwrap the selected per-row marker times into fit points whose slope is tau (see
+    onsetUnwrap.js unwrapOnsets). xs = 1-indexed UNWRAPPED rows, ys = absolute time + P."""
+    P = period_hrs
+    selected = selected or []
+    pts = []
+    for i, t in enumerate(times):
+        sel = selected[i] if i < len(selected) else None
+        if not (True if sel is None else sel):
+            continue
+        if not _finite(t):
+            continue
+        pts.append({'row': i, 't': t})
+    if not pts or not (P > 0):
+        return {'xs': [], 'ys': [], 'n': 0, 'nDetections': len(pts), 'nMerged': 0,
+                'nAmbiguous': 0, 'seedTau': float('nan')}
+    sorted_pts = sorted(pts, key=lambda p: p['t'])
+    tau = _seed_tau(pts, P)
+    result = None
+    prev_key = ''
+    for _ in range(5):
+        groups, ambiguous = _number_cycles(sorted_pts, tau)
+        first_t = _plain_mean(groups[0]['ts'])
+        x0 = math.floor(first_t / P) + 1
+        xs = [x0 + g['k'] for g in groups]
+        ys = [_plain_mean(g['ts']) + P for g in groups]
+        result = {'xs': xs, 'ys': ys, 'n': len(groups), 'nDetections': len(pts),
+                  'nMerged': len(pts) - len(groups), 'nAmbiguous': ambiguous, 'seedTau': tau}
+        key = ','.join(str(g['k']) for g in groups)
+        if key == prev_key or len(xs) < 2:
+            break
+        prev_key = key
+        fitted = kahan_linear_regression(xs, ys)['slope']
+        if not math.isfinite(fitted) or fitted <= 0:
+            break
+        tau = fitted
+    return result
+
+
+def wrap_phase_to_row(hour, tau, period_hrs):
+    """The line's time of day in [0, P) in a row, from its unwrapped position there."""
+    if not _finite(hour):
+        return float('nan')
+    period = tau if (_finite(tau) and tau > 0) else period_hrs
+    v = hour - period * math.floor(hour / period)
+    if v >= period_hrs:
+        v -= period_hrs
+    return v
+
+
+# --- markerSelection.js -----------------------------------------------------------------
+
+def fit_day_range(line_min_day=None, line_max_day=None):
+    """The inclusive 1-indexed day range the fit may use; hi is inf when unbounded."""
+    lo = max(1, line_min_day) if _finite(line_min_day) else 1
+    hi = line_max_day if _finite(line_max_day) else math.inf
+    return {'lo': lo, 'hi': hi}
+
+
+def is_day_selected(i, selected_periods, range_scopes_fit=False, line_min_day=None,
+                    line_max_day=None):
+    """Whether row i (0-based) enters the fit: ticked (missing = ticked) AND, when the range
+    scopes the fit, inside lineMinDay..lineMaxDay."""
+    sp = selected_periods or []
+    v = sp[i] if 0 <= i < len(sp) else None
+    if not (True if v is None else v):
+        return False
+    if not range_scopes_fit:
+        return True
+    r = fit_day_range(line_min_day, line_max_day)
+    day = i + 1
+    return r['lo'] <= day <= r['hi']
+
+
+def selection_mask(n, selected_periods, range_scopes_fit=False, line_min_day=None,
+                   line_max_day=None):
+    """The selection for rows 0..n-1 as a dense list of booleans."""
+    return [is_day_selected(i, selected_periods, range_scopes_fit, line_min_day, line_max_day)
+            for i in range(max(0, int(n)))]
+
+
+def is_outside_fit_range(i, range_scopes_fit=False, line_min_day=None, line_max_day=None):
+    """Whether row i is left out by the range (not by the series' own tick)."""
+    if not range_scopes_fit:
+        return False
+    r = fit_day_range(line_min_day, line_max_day)
+    day = i + 1
+    return day < r['lo'] or day > r['hi']
+
+
+# --- lineFit.js -------------------------------------------------------------------------
+
+def _line_residuals(xs, ys, slope, intercept):
+    n = len(xs)
+    if n == 0 or not math.isfinite(slope) or not math.isfinite(intercept):
+        return None, None
+    ky = _KahanJS()
+    for v in ys:
+        ky.add(v)
+    mean_y = ky.value / n
+    k_tot, k_res = _KahanJS(), _KahanJS()
+    for i in range(n):
+        k_tot.add((ys[i] - mean_y) ** 2)
+        k_res.add((ys[i] - (slope * xs[i] + intercept)) ** 2)
+    return 1 - _js_div(k_res.value, k_tot.value), math.sqrt(k_res.value / n)
+
+
+def fit_line(xs, ys, tau=None, theta=None, ref_day=1, period_hrs=24):
+    """The marker line with tau (slope) and theta (time of day at ref_day) each fitted or
+    fixed (lineFit.js fitLine). Frame: x = 1-indexed day, y = absolute time, so the line's
+    time of day at day d is (slope - P) * d + intercept; a fixed theta pins the line through
+    (ref_day, theta + P * ref_day). R2/RMSE are of the line as drawn, None with no markers."""
+    if len(xs) != len(ys):
+        raise ValueError('fit_line: x and y must be arrays of the same length')
+    n = len(xs)
+    tau_fixed = _finite(tau)
+    theta_fixed = _finite(theta)
+    x0 = ref_day
+    y0 = (theta if theta_fixed else 0) + period_hrs * ref_day
+    nan = float('nan')
+    if not tau_fixed and not theta_fixed:
+        if n == 0:
+            slope, intercept = nan, nan
+        else:
+            reg = kahan_linear_regression(xs, ys)
+            slope, intercept = reg['slope'], reg['intercept']
+    elif tau_fixed and not theta_fixed:
+        slope = tau
+        if n == 0:
+            intercept = nan
+        else:
+            k = _KahanJS()
+            for i in range(n):
+                k.add(ys[i] - slope * xs[i])
+            intercept = k.value / n
+    elif not tau_fixed and theta_fixed:
+        num = 0
+        den = 0
+        for i in range(n):
+            dx = xs[i] - x0
+            num += dx * (ys[i] - y0)
+            den += dx * dx
+        slope = nan if den == 0 else num / den
+        intercept = y0 - slope * x0
+    else:
+        slope = tau
+        intercept = y0 - slope * x0
+    r2, rmse = _line_residuals(xs, ys, slope, intercept)
+    return {'slope': slope, 'intercept': intercept, 'rSquared': r2, 'rmse': rmse, 'n': n}
+
+
+# --- harmonicCheck.js -------------------------------------------------------------------
+
+def _harmonic_power(x_data, y_data, period):
+    """One single-period Lomb-Scargle evaluation as runPeriodogramCalculation returns it
+    for periodMin = periodMax = period: [] when the JS gives NaN (fewer than two raw samples,
+    which its NaN strip then removes), else [power]. The pairs are filtered with the app's
+    validPairs rule, and a degenerate series (no pairs, zero or undefined variance) scores 0,
+    as calculateLombScarglePower does, before this runtime's _lomb_scargle is called."""
+    if x_data is None or y_data is None or len(x_data) < 2 or len(y_data) < 2 \
+            or len(x_data) != len(y_data):
+        return []
+    tt, yy = [], []
+    for t, v in zip(x_data, y_data):
+        if not _js_invalid(t) and not _js_invalid(v):
+            tt.append(float(t))
+            yy.append(float(v))
+    if len(tt) < 2:
+        return [0.0]
+    m = _plain_mean(yy)
+    var = sum((v - m) ** 2 for v in yy) / (len(yy) - 1)
+    if not (var > 0):
+        return [0.0]
+    p = _lomb_scargle(tt, yy, [period])[0]
+    return [p if math.isfinite(p) else 0.0]
+
+
+def harmonic_check(x_data, y_data, bin_size, tau):
+    """tau, tau/2 and 2 tau, each scored by one Lomb-Scargle evaluation of the series; the
+    strongest wins, ties keeping the earlier candidate. Candidates must satisfy
+    bin*2 < period < span/2 with span = last sample minus first (in sample order) and
+    bin = bin_size or 0.25. None when there is no tau, no data or no candidate."""
+    if not tau or tau != tau:
+        return None
+    if not x_data or not y_data:
+        return None
+    bin_ = bin_size if (bin_size and bin_size == bin_size) else 0.25
+    # JS coerces a null endpoint to 0 in the subtraction (null - x0 = -x0).
+    last = 0 if x_data[-1] is None else x_data[-1]
+    first = 0 if x_data[0] is None else x_data[0]
+    span = last - first
+    cands = [{'label': 'τ', 'period': tau}, {'label': 'τ/2', 'period': tau / 2},
+             {'label': '2τ', 'period': tau * 2}]
+    cands = [c for c in cands if c['period'] > bin_ * 2 and c['period'] < span / 2]
+    if not cands:
+        return None
+    results = []
+    for c in cands:
+        power = _harmonic_power(x_data, y_data, c['period'])
+        if not power:
+            results.append({**c, 'peakPeriod': c['period'], 'power': 0})
+        else:
+            results.append({**c, 'peakPeriod': c['period'], 'power': power[0]})
+    strongest = results[0]
+    for r in results[1:]:
+        if r['power'] > strongest['power']:
+            strongest = r
+    return {'candidates': results, 'strongest': strongest}
+
+
+# --- Actogram.svelte: the row folding ---------------------------------------------------
+
+def _num_or_none(v):
+    """Number(v) for a present value, None for a missing one."""
+    if v is None or (isinstance(v, str) and v.strip() == ''):
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return float('nan')
+
+
+def actogram_start_time(series_list, zone='utc'):
+    """The plot's startTime (epoch ms): the earliest sample over ALL time-typed series whose
+    x and y are both valid, snapped to the start of its day in the display zone ('utc', the
+    app's default, or an IANA zone such as 'America/New_York'). 0 when no series is
+    time-typed; rows of a non-time actogram never read it."""
+    min_time = math.inf
+    for s in series_list:
+        if s.get('xType') != 'time':
+            continue
+        xd, yd = s.get('x') or [], s.get('y') or []
+        if not xd or not yd:
+            continue
+        for i in range(min(len(xd), len(yd))):
+            xv, yv = _num_or_none(xd[i]), _num_or_none(yd[i])
+            if xv is None or yv is None or xv != xv or yv != yv:
+                continue
+            if xv < min_time:
+                min_time = xv
+    if min_time == math.inf:
+        min_time = 0
+    import datetime as _dt
+    if zone in (None, 'utc', 'UTC'):
+        return math.floor(min_time / 86400000.0) * 86400000.0
+    from zoneinfo import ZoneInfo
+    tz = ZoneInfo(zone)
+    local = _dt.datetime.fromtimestamp(min_time / 1000.0, tz)
+    midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
+    # Re-attach the zone at the new wall-clock time so its own UTC offset applies.
+    midnight = _dt.datetime(midnight.year, midnight.month, midnight.day, tzinfo=tz)
+    return float(round(midnight.timestamp() * 1000))
+
+
+def actogram_hours_since_start(x, x_type):
+    """Column.hoursSinceStart: minus the smallest valid value (and / 3.6e6 for time),
+    invalid entries kept as None."""
+    base = _js_min(x)
+    if base is None:
+        return []
+    out = []
+    for v in x:
+        if v is None or _js_invalid(v):
+            out.append(None)
+        elif x_type == 'time':
+            out.append((v - base) / 3600000)
+        else:
+            out.append(v - base)
+    return out
+
+
+def actogram_bin_size(hours):
+    """ActogramDataclass.binSize: (last - first) / (last_idx - first_idx) over valid hours."""
+    if not hours or len(hours) <= 1:
+        return 0
+    first = last = -1
+    for i, v in enumerate(hours):
+        if v is not None and v == v:
+            if first == -1:
+                first = i
+            last = i
+    if first == -1 or last == first:
+        return 0
+    return (hours[last] - hours[first]) / (last - first)
+
+
+def actogram_series_frame(x, y, x_type, start_time, period_hrs):
+    """One series folded into rows as ActogramDataclass.dataByDays does it: x in hours
+    since the plot's startTime (hoursSinceStart - offset), row = floor(x / P), rows before 0
+    dropped. Also returns what the harmonic check reads (hoursSinceStart and y, unfolded)."""
+    hss = actogram_hours_since_start(x, x_type)
+    xmin = _js_min(x)
+    if x_type == 'time':
+        # JS: (startTime - min(x)) / 3.6e6; min() of an empty column is null, i.e. 0.
+        offset = (start_time - (xmin if xmin is not None else 0)) / 3600000
+    else:
+        offset = -(xmin if xmin is not None else 0)
+    x_by, y_by = {}, {}
+    for i in range(len(hss)):
+        tx = hss[i]
+        ty = y[i] if i < len(y) else None
+        if tx is None or tx != tx or ty is None or _js_invalid(ty):
+            continue
+        p = math.floor((tx - offset) / period_hrs)
+        if p < 0:
+            continue
+        x_by.setdefault(p, []).append(tx - offset)
+        y_by.setdefault(p, []).append(ty)
+    return {'hoursSinceStart': hss, 'y': list(y), 'binSize': actogram_bin_size(hss),
+            'offset': offset, 'xByPeriod': x_by, 'yByPeriod': y_by}
+
+
+def actogram_ndays(frames):
+    """Actogram Ndays: the highest row over all series + 1 (0 past 20000 rows)."""
+    max_period = -1
+    for f in frames:
+        for k in f['xByPeriod']:
+            if k > max_period:
+                max_period = k
+    if max_period < 0 or max_period + 1 > 20000:
+        return 0
+    return max_period + 1
+
+
+# --- markerRules.svelte.js / PhaseMarker.svelte: a block's settings --------------------
+
+def _js_or(v, d):
+    """JS `v || d`: 0, NaN, '', null and false all fall back."""
+    if v is None or v is False or v == '' or (isinstance(v, (int, float)) and (v == 0 or v != v)):
+        return d
+    return v
+
+
+def marker_rule_from_json(json_rule):
+    """MarkerRule's constructor guards (markerRules.svelte.js), on a saved rule."""
+    j = json_rule or {}
+
+    def finite_or(v, d):
+        return v if _finite(v) else d
+
+    def positive_or(v, d):
+        return v if (_finite(v) and v > 0) else d
+
+    def day_or_none(v):
+        return _js_round(v) if (_finite(v) and v >= 1) else None
+
+    def lock_or(v, d):
+        return v if v in ('fit', 'fixed') else d
+
+    return {
+        'id': j.get('id'),
+        'name': j.get('name') if isinstance(j.get('name'), str) else '',
+        'type': j.get('type') if j.get('type') in ('onset', 'offset', 'manual') else 'onset',
+        'templateHrsBefore': finite_or(j.get('templateHrsBefore'), 3),
+        'templateHrsAfter': finite_or(j.get('templateHrsAfter'), 3),
+        'centileThreshold': finite_or(j.get('centileThreshold'), 50),
+        'lockTau': lock_or(j.get('lockTau'), 'fit'),
+        'lockTheta': lock_or(j.get('lockTheta'), 'fit'),
+        'fixedTau': positive_or(j.get('fixedTau'), None),
+        'fixedTheta': j.get('fixedTheta') if _finite(j.get('fixedTheta')) else None,
+        'phaseRefDay': day_or_none(j.get('phaseRefDay')),
+        'lineMinDay': day_or_none(j.get('lineMinDay')),
+        'lineMaxDay': day_or_none(j.get('lineMaxDay')),
+    }
+
+
+def marker_block_from_json(json_block):
+    """PhaseMarkerClass's constructor defaults (PhaseMarker.svelte), on a saved own block.
+    Its `||` defaults differ from a rule's on purpose: a block's centile 0 reads as 50."""
+    j = json_block or {}
+    legacy_fitline = j.get('type') == 'fitline'
+    lock_default = 'fixed' if legacy_fitline else 'fit'
+    return {
+        'type': 'manual' if legacy_fitline else _js_or(j.get('type'), 'onset'),
+        'centileThreshold': _js_or(j.get('centileThreshold'), 50),
+        'templateHrsBefore': _js_or(j.get('templateHrsBefore'), 3),
+        'templateHrsAfter': _js_or(j.get('templateHrsAfter'), 3),
+        'fitSlope': j.get('fitSlope'),
+        'fitIntercept': j.get('fitIntercept'),
+        'lockTau': j.get('lockTau') if j.get('lockTau') is not None else lock_default,
+        'lockTheta': j.get('lockTheta') if j.get('lockTheta') is not None else lock_default,
+        'lineMinDay': j.get('lineMinDay'),
+        'lineMaxDay': j.get('lineMaxDay'),
+        'phaseRefDay': j.get('phaseRefDay'),
+        'fitWithinRange': j.get('fitWithinRange') is True,
+        'fromRule': j.get('fromRule') if isinstance(j.get('fromRule'), str) and j.get('fromRule') else None,
+    }
+
+
+def _fit_ref_day(cfg, n_days):
+    """PhaseMarkerClass.fitRefDay: phaseRefDay ?? lineMinDay ?? 1, clamped to 1..Ndays."""
+    nd = max(1, n_days)
+    raw = cfg.get('phaseRefDay')
+    if raw is None:
+        raw = cfg.get('lineMinDay')
+    if raw is None:
+        raw = 1
+    return min(max(1, raw), nd)
+
+
+def marker_rule_cfg(rule, period_hrs, n_days):
+    """markerRules.svelte.js ruleCfg: a rule seen as a block's settings. The fixed pair is
+    stored on the rule as (fixedTau, fixedTheta) and re-encoded here as the block's
+    (fitSlope, fitIntercept) with intercept = theta - (tau - P) * refDay; tau defaults to P
+    when only theta is fixed, which decodes back to exactly theta. The range always scopes
+    the fit (Decision 1a)."""
+    r = marker_rule_from_json(rule)
+    cfg = {k: r[k] for k in ('type', 'templateHrsBefore', 'templateHrsAfter',
+                             'centileThreshold', 'lockTau', 'lockTheta', 'phaseRefDay',
+                             'lineMinDay', 'lineMaxDay')}
+    cfg['fitWithinRange'] = True
+    P = period_hrs
+    if r['fixedTau'] is not None:
+        cfg['fitSlope'] = r['fixedTau']
+    else:
+        cfg['fitSlope'] = P if r['fixedTheta'] is not None else None
+    if r['fixedTheta'] is None:
+        cfg['fitIntercept'] = None
+    else:
+        slope = r['fixedTau'] if r['fixedTau'] is not None else P
+        cfg['fitIntercept'] = r['fixedTheta'] - (slope - P) * _fit_ref_day(cfg, n_days)
+    return cfg
+
+
+def _rule_store(series, rule_id):
+    """A series' per-rule data as ruleDataFromJSON reads it (Actogram.svelte)."""
+    entry = (series.get('ruleData') or {}).get(rule_id)
+    if not isinstance(entry, dict):
+        return {'selectedPeriods': [], 'manualMarkers': []}
+    sp = entry.get('selectedPeriods')
+    mm = entry.get('manualMarkers')
+    return {
+        'selectedPeriods': [v is not False for v in sp] if isinstance(sp, list) else [],
+        'manualMarkers': [v for v in mm if _finite(v)] if isinstance(mm, list) else [],
+    }
+
+
+def _block_store(json_block, frame):
+    """An own block's per-series data as its constructor reads it (PhaseMarker.svelte)."""
+    j = json_block or {}
+    if isinstance(j.get('selectedPeriods'), list):
+        sp = list(j['selectedPeriods'])
+    elif j.get('periodRangeMin') is not None and j.get('periodRangeMax') is not None:
+        keys = [k for k in frame['xByPeriod'] if _finite(k)]
+        n = max(keys) + 1 if keys else 0
+        if n > 20000:
+            n = 0
+        sp = [j['periodRangeMin'] <= i + 1 <= j['periodRangeMax'] for i in range(n)]
+    else:
+        sp = []
+    mm = [] if j.get('type') == 'fitline' else list(_js_or(j.get('manualMarkers'), []))
+    return {'selectedPeriods': sp, 'manualMarkers': mm}
+
+
+def _manual_markers_by_row(manual, period_hrs):
+    """PhaseMarkerClass.markers for a 'manual' block: hand-placed absolute times grouped by
+    row (the LAST point in a row wins), hour = time % P in JS remainder semantics."""
+    by_row = {}
+    for t in manual:
+        row = math.floor(t / period_hrs)
+        by_row[row] = _js_mod(t, period_hrs)
+    max_row = max([-1] + list(by_row.keys()))
+    return [by_row.get(i, float('nan')) for i in range(max_row + 1)]
+
+
+def marker_block_compute(cfg, store, frame, period_hrs, n_days):
+    """Everything PhaseMarkerClass derives for one block (own block or rule instance) on
+    one series: detections, absolute times, the fit selection, the unwrap, the line, the
+    phase and the harmonic check."""
+    P = period_hrs
+    if cfg['type'] == 'manual':
+        markers = _manual_markers_by_row(store['manualMarkers'], P)
+        times = None
+    else:
+        tm = match_template_markers(frame['xByPeriod'], frame['yByPeriod'], P,
+                                    frame['binSize'], cfg['templateHrsBefore'],
+                                    cfg['templateHrsAfter'], cfg['centileThreshold'],
+                                    cfg['type'])
+        markers = tm['hours']
+        times = tm['times'] if cfg['type'] in ('onset', 'offset') else None
+    marker_times = marker_absolute_times(markers, P, times)
+    scope = dict(range_scopes_fit=bool(cfg.get('fitWithinRange')),
+                 line_min_day=cfg.get('lineMinDay'), line_max_day=cfg.get('lineMaxDay'))
+    mask = selection_mask(len(markers), store['selectedPeriods'], **scope)
+    unwrap = unwrap_onsets(marker_times, P, mask)
+    ref_day = _fit_ref_day(cfg, n_days)
+    fit_slope, fit_intercept = cfg.get('fitSlope'), cfg.get('fitIntercept')
+    tau_value = fit_slope
+    theta_value = None if (fit_slope is None or fit_intercept is None) \
+        else (fit_slope - P) * ref_day + fit_intercept
+    res = fit_line(unwrap['xs'], unwrap['ys'],
+                   tau=tau_value if cfg['lockTau'] == 'fixed' else None,
+                   theta=theta_value if cfg['lockTheta'] == 'fixed' else None,
+                   ref_day=ref_day, period_hrs=P)
+    reg = res if (math.isfinite(res['slope']) and math.isfinite(res['intercept'])) else None
+    phase = None
+    if reg is not None and reg['slope']:
+        y_pred = reg['slope'] * ref_day + reg['intercept']
+        phase = wrap_phase_to_row(y_pred - ref_day * P, reg['slope'], P)
+    fitted_slope = reg['slope'] if reg is not None else None
+    hc = harmonic_check(frame['hoursSinceStart'], frame['y'], frame['binSize'], fitted_slope)
+    return {
+        'markerHours': markers,
+        'markerTimes': marker_times,
+        'selectedMask': mask,
+        'outsideRange': [is_outside_fit_range(i, **scope) for i in range(len(markers))],
+        'unwrap': unwrap,
+        'refDay': ref_day,
+        'fitSlope': fit_slope,
+        'fitIntercept': fit_intercept,
+        'regression': reg,
+        'phase': phase,
+        'harmonic': None if hc is None else {
+            'candidates': hc['candidates'], 'strongest': hc['strongest']['label']},
+        '_harmonicPick': None if hc is None else hc['strongest']['peakPeriod'],
+    }
+
+
+def rule_output_values(block):
+    """plotMetricDefs.js ruleOutputValues: a block's five port values. tau is the harmonic
+    pick; tau/phi/r2/rmse are NaN with no valid line (r2/rmse also with no markers to compare
+    against); n is always the count of fitted markers; no block at all is five NaNs."""
+    nan = float('nan')
+    if block is None:
+        return {'tau': nan, 'phi': nan, 'r2': nan, 'rmse': nan, 'n': nan}
+    reg = block['regression']
+    ok = reg is not None
+
+    def nn(v):
+        return nan if v is None else v
+    return {
+        'tau': nn(block['_harmonicPick']) if ok else nan,
+        'phi': nn(block['phase']) if ok else nan,
+        'r2': nn(reg['rSquared']) if ok else nan,
+        'rmse': nn(reg['rmse']) if ok else nan,
+        'n': len(block['unwrap']['xs']),
+    }
+
+
+def actogram_marker_rule_outputs(rule, series, frame, period_hrs=24, n_days=None,
+                                 details=False):
+    """The five outputs (tau, phi, r2, rmse, n) one marker rule gives one series, exactly as
+    the app's `r<id>_*` ports carry them. `rule` is MarkerRule.toJSON's shape; `series` is
+    the series' saved JSON (its `ruleData`, `detachedRules`, `phaseMarkers`); `frame` is that
+    series folded at the plot's startTime (actogram_series_frame). A series detached from the
+    rule reports its own block that carries `fromRule` (computed with ITS settings); a
+    detached series with no such block reports five NaNs. With details=True the result also
+    carries every intermediate under 'details' and where the block came from ('source')."""
+    if n_days is None:
+        n_days = actogram_ndays([frame])
+    rid = rule.get('id')
+    detached = rid in (series.get('detachedRules') or [])
+    block = None
+    source = 'none'
+    if not detached:
+        block = marker_block_compute(marker_rule_cfg(rule, period_hrs, n_days),
+                                     _rule_store(series, rid), frame, period_hrs, n_days)
+        source = 'instance'
+    else:
+        for bj in series.get('phaseMarkers') or []:
+            if isinstance(bj, dict) and bj.get('fromRule') == rid:
+                block = marker_block_compute(marker_block_from_json(bj), _block_store(bj, frame),
+                                             frame, period_hrs, n_days)
+                source = 'detached'
+                break
+    out = rule_output_values(block)
+    if details:
+        d = {} if block is None else {k: v for k, v in block.items() if k != '_harmonicPick'}
+        out = {'source': source, 'outputs': dict(out), **d}
+    return out
+
+
+def actogram_plot_rule_outputs(inner, series_data, zone='utc'):
+    """Every marker rule's outputs for a whole actogram, as the app's metric columns carry
+    them: {'startTime', 'Ndays', 'series': [{'binSize', 'rules': {id: details}}],
+    'columns': {'r1_tau': [one value per series], ...}}. `inner` is the actogram's saved
+    inner JSON (periodHrs, markerRules, data[i] with ruleData/detachedRules/phaseMarkers);
+    `series_data[i]` is {'xType', 'x', 'y'} with x as the column's values (epoch ms for a
+    time column, hours otherwise) and y the values."""
+    # Actogram fromJSON: `json.periodHrs ?? 24`.
+    P = inner.get('periodHrs') if inner.get('periodHrs') is not None else 24
+    start = actogram_start_time(series_data, zone)
+    frames = [actogram_series_frame(s.get('x') or [], s.get('y') or [], s.get('xType'), start, P)
+              for s in series_data]
+    n_days = actogram_ndays(frames)
+    rules = inner.get('markerRules') or []
+    datas = inner.get('data') or []
+    out_series = []
+    columns = {}
+    for r in rules:
+        for suffix in ('tau', 'phi', 'r2', 'rmse', 'n'):
+            columns[f"{r.get('id')}_{suffix}"] = []
+    for i, frame in enumerate(frames):
+        sj = datas[i] if i < len(datas) else {}
+        per = {}
+        for r in rules:
+            det = actogram_marker_rule_outputs(r, sj, frame, P, n_days, details=True)
+            per[r.get('id')] = det
+            for suffix, v in det['outputs'].items():
+                columns[f"{r.get('id')}_{suffix}"].append(v)
+        out_series.append({'binSize': frame['binSize'], 'rules': per})
+    return {'startTime': start, 'Ndays': n_days, 'series': out_series, 'columns': columns}

@@ -3068,6 +3068,750 @@
 				]
 			},
 			"compareArrays": ["data", "hoursSinceStart"]
+		},
+		{
+			"id": "actogram-rule-onset",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Onset rule on one 15-min time series (tau 24.5 h). Rows fold at the UTC midnight before the first sample (start 06:30Z).",
+			"generate": {
+				"seed": 11,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24.5,
+						"onsetHr": 14
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-offset",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Offset rule (N 2, M 4, 40th centile) on a NUMBER x axis starting at 3.25 h, with 23.5 h rows.",
+			"periodHrs": 23.5,
+			"generate": {
+				"seed": 12,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 3.25,
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 23.6,
+						"onsetHr": 10,
+						"activeHrs": 11
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Offsets",
+					"type": "offset",
+					"templateHrsBefore": 2,
+					"templateHrsAfter": 4,
+					"centileThreshold": 40,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-drift-crosses-row",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Two series whose onsets drift across the row boundary (tau 25.5 h forwards past midnight, tau 22.8 h backwards). Series 1 starts a day later, so it folds at series 0's start of day (the shared startTime).",
+			"generate": {
+				"seed": 13,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 12,
+						"tau": 25.5,
+						"onsetHr": 12
+					},
+					{
+						"xType": "time",
+						"start": "2024-03-05T02:00:00Z",
+						"dtHrs": 0.25,
+						"days": 11,
+						"tau": 22.8,
+						"onsetHr": 1
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-gap-row",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "A null gap that empties one row and cuts into its neighbours, plus a spike outside the active phase.",
+			"generate": {
+				"seed": 14,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24.3,
+						"onsetHr": 14,
+						"gap": [60, 100],
+						"spike": [150, 151.5]
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-locks",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "The four lock combinations on one series: fit/fit; fixed tau; fixed theta at reference day 3; both fixed from day 2 (the identity intercept = theta - (tau - P) * refDay).",
+			"generate": {
+				"seed": 15,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24.4,
+						"onsetHr": 14
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Fit both",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r2",
+					"name": "Fixed tau",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fixed",
+					"lockTheta": "fit",
+					"fixedTau": 24.2,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r3",
+					"name": "Fixed theta",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fixed",
+					"fixedTau": null,
+					"fixedTheta": 20.0,
+					"phaseRefDay": 3,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r4",
+					"name": "Both fixed",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fixed",
+					"lockTheta": "fixed",
+					"fixedTau": 24.6,
+					"fixedTheta": 21.0,
+					"phaseRefDay": 2,
+					"lineMinDay": 2,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-day-range",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "A rule day range 3..9 scopes the fit; the series unticks day 5 inside it (r1). r2 has the same range and no per-series data.",
+			"generate": {
+				"seed": 16,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 12,
+						"tau": 24.4,
+						"onsetHr": 14
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Ranged",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": 3,
+					"lineMaxDay": 9,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r2",
+					"name": "Range only",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": 3,
+					"lineMaxDay": 9,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			],
+			"series": [
+				{
+					"ruleData": {
+						"r1": {
+							"selectedPeriods": [
+								true,
+								true,
+								true,
+								true,
+								false,
+								true,
+								true,
+								true,
+								true,
+								true,
+								true,
+								true
+							],
+							"manualMarkers": []
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-detached",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Series 1 is detached from r1 and carries its own block (fromRule r1, fitWithinRange, tau fixed, own ticks, centile 0 read as 50); series 0 has an unrelated own block that must not fill r1. Series 1 is also detached from r2 with no block, so r2 is all NaN there.",
+			"generate": {
+				"seed": 17,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24.2,
+						"onsetHr": 14
+					},
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24.7,
+						"onsetHr": 15
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r2",
+					"name": "Offsets",
+					"type": "offset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			],
+			"series": [
+				{
+					"phaseMarkers": [
+						{
+							"name": "mine",
+							"type": "offset",
+							"centileThreshold": 60,
+							"templateHrsBefore": 3,
+							"templateHrsAfter": 3,
+							"lockTau": "fit",
+							"lockTheta": "fit",
+							"selectedPeriods": [],
+							"manualMarkers": []
+						}
+					]
+				},
+				{
+					"detachedRules": ["r1", "r2"],
+					"phaseMarkers": [
+						{
+							"name": "Onsets",
+							"type": "onset",
+							"centileThreshold": 0,
+							"templateHrsBefore": 4,
+							"templateHrsAfter": 2,
+							"lockTau": "fixed",
+							"lockTheta": "fit",
+							"fitSlope": 24.3,
+							"fitIntercept": 8.5,
+							"lineMinDay": 2,
+							"lineMaxDay": 8,
+							"phaseRefDay": null,
+							"fitWithinRange": true,
+							"fromRule": "r1",
+							"selectedPeriods": [true, true, false, true, true, true, true, true, true, true],
+							"manualMarkers": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-harmonic-rest-activity",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Shipped rest-activity demo (plot 0, two hourly series, 7 days). r1 onset rule; line-only rules fixed at tau 12.3 h (2 tau wins), 47 h (tau/2 wins; 2 tau = 94 h is past half the 167 h record and is filtered out) and 24 h. The harmonicCheck.pin cases.",
+			"source": {
+				"session": "static/sessions/demos/demo-workflow-rest-activity.json",
+				"plotId": 0
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r2",
+					"name": "Fixed 12.3",
+					"type": "manual",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fixed",
+					"lockTheta": "fixed",
+					"fixedTau": 12.3,
+					"fixedTheta": 6,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r3",
+					"name": "Fixed 47",
+					"type": "manual",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fixed",
+					"lockTheta": "fixed",
+					"fixedTau": 47,
+					"fixedTheta": 6,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r4",
+					"name": "Fixed 24",
+					"type": "manual",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fixed",
+					"lockTheta": "fixed",
+					"fixedTau": 24,
+					"fixedTheta": 6,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-split-rhythm",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Shipped split-rhythm demo (plot 51, two hourly series of 26 days, true periods 24.8 and 23.4 h): one onset rule over both series.",
+			"source": {
+				"session": "static/sessions/demos/demo-workflow-split-rhythm.json",
+				"plotId": 51
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-line-only",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Line-only (manual) rules. r1 fits hand-placed points (two in one row: the later wins); on series 1 it has ONE point, so no line (NaN) but n = 1. r2 is fixed at tau 60 h: a line on series 0, but series 1 (2 days) has no harmonic candidate inside its record, so tau is NaN while phi is not. r3 has nothing to fit and nothing fixed: all NaN, n = 0.",
+			"generate": {
+				"seed": 18,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24.3,
+						"onsetHr": 14
+					},
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 2,
+						"tau": 24.3,
+						"onsetHr": 14
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Hand",
+					"type": "manual",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r2",
+					"name": "Fixed 60",
+					"type": "manual",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fixed",
+					"lockTheta": "fixed",
+					"fixedTau": 60,
+					"fixedTheta": 5,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				},
+				{
+					"id": "r3",
+					"name": "Empty",
+					"type": "manual",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			],
+			"series": [
+				{
+					"ruleData": {
+						"r1": {
+							"selectedPeriods": [],
+							"manualMarkers": [20.5, 44.0, 45.1, 69.4, 93.9, 118.2, 142.0]
+						}
+					}
+				},
+				{
+					"ruleData": {
+						"r1": {
+							"selectedPeriods": [],
+							"manualMarkers": [30.2]
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-zone",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Display zone America/New_York: the first sample (03:30Z on 4 March) is 22:30 on 3 March there, so rows fold at New York midnight on 3 March (05:00Z), not at UTC midnight on 4 March. The record crosses the 10 March DST change, which must not move the rows.",
+			"zone": "America/New_York",
+			"generate": {
+				"seed": 19,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T03:30:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24.2,
+						"onsetHr": 14
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
 		}
 	]
 }

@@ -77,6 +77,78 @@ blank there, but `strptime` would read it. Both ports therefore gate each value 
 format's digit widths before parsing (`dayjs_width_pattern` / `.dayjs_width_pattern`), and a
 value that fails the gate is a gap, as in JS.
 
+### The `actogramMarkers` fixture kind
+
+Pins the actogram MARKER RULES (plan `docs/plans/2026-09-30-actogram-marker-rules-and-outputs.md`,
+Phase B2): the five output ports a rule gives each series (`r<id>_tau`, `_phi`, `_r2`,
+`_rmse`, `_n`), recomputed by `actogram_plot_rule_outputs` in both ports.
+
+One fixture is one actogram: its series (seeded synthetic rest/activity data from a
+`generate.series` list, or a shipped demo named by `source: {session, plotId}`), its
+`periodHrs`, the display `zone` its rows snap to, its `markerRules` (the `MarkerRule.toJSON`
+shape) and, per series, `ruleData`, `detachedRules` and own `phaseMarkers`. The emitter builds
+it through `Plot.fromJSON` over real Columns, so the rule instances, the row folding at the
+plot's `startTime` and the rule's cfg adapter are the app's own, and records the plain arrays
+(`inputs.series[i] = {xType, x, y}`, x in epoch ms for a time column) plus, per series and per
+rule, the five outputs AND every intermediate: the per-row detections and absolute times, the
+day-selection mask, the outside-range flags, the unwrapped fit points and their counts, the
+regression, the reference day, the re-encoded fixed slope/intercept, the phase and the
+harmonic candidates. Both legs compare that whole tree (`_deep_diff` / `deep_diff`), so a
+failure names the first intermediate that moved, not only the output it eventually changed.
+
+Why one kind rather than a `pureUtil` fixture per function: the outputs are a CHAIN (fold,
+detect, select, unwrap, fit, phase, harmonic check) whose joins come from the plot, not from
+any one function (startTime and Ndays are computed over ALL series; a rule's fixed tau/theta
+are re-encoded through the reference day). Per-function fixtures would pin each link and
+leave the joins unchecked; recording the intermediates of the real chain pins both.
+
+The ported functions, same names in both runtimes: `find_centile_value`,
+`find_best_match_index`, `match_template_markers`, `marker_absolute_times`, `unwrap_onsets`,
+`wrap_phase_to_row` (onsetUnwrap.js); `fit_day_range`, `is_day_selected`, `selection_mask`,
+`is_outside_fit_range` (markerSelection.js); `fit_line` (lineFit.js); `harmonic_check`
+(harmonicCheck.js, over each runtime's existing Lomb-Scargle); `kahan_linear_regression`
+(wrangleData.js linearRegression, with its Kahan sums); `rule_output_values`
+(plotMetricDefs.js); and the class-side pieces `actogram_start_time`,
+`actogram_hours_since_start`, `actogram_bin_size`, `actogram_series_frame` (dataByDays),
+`actogram_ndays`, `marker_rule_from_json`, `marker_block_from_json`, `marker_rule_cfg`
+(ruleCfg), `marker_block_compute` (the PhaseMarkerClass deriveds) and
+`actogram_marker_rule_outputs` (one rule on one series). `periodogramPeak` and
+`assessOnsetFit` are NOT ported: they feed the UI's warnings only, never an output.
+
+Cases (11): onset; offset on a number axis with 23.5 h rows; two series whose onsets drift
+across the row boundary in opposite directions, the second starting a day later (the shared
+startTime); a gap that empties one row plus a spike; the four lock combinations (fixed theta at
+reference day 3, both fixed from day 2); a day range with one unticked day inside it; a
+detached series with its own block (`fromRule`, `fitWithinRange`, centile 0 read as 50) and a
+detached series with no block (all NaN); the rest-activity demo with fixed 12.3 h (2 tau wins),
+47 h (tau/2 wins, 2 tau filtered out) and 24 h lines; the split-rhythm demo (tau 24.823 and
+23.379 h against true 24.8 and 23.4 h); line-only rules (two points in one row, a single point
+giving NaN with n = 1, no harmonic candidate inside a 2-day record giving NaN tau with a finite
+phi, an empty rule giving NaN with n = 0); and the America/New_York display zone.
+
+Tolerance 1e-9 (relative), the value the other pure-kernel fixtures use. Measured: every
+detection, time, mask, count, fit, phase and output agrees BIT FOR BIT in both ports; the only
+difference anywhere is the Lomb-Scargle power of a harmonic candidate (worst 9.8e-15 Python,
+9.3e-15 R), because the JS sums are compensated and the ports' `_lomb_scargle` /
+`lomb_scargle` are not. The pick is unaffected on every case.
+
+Proof that the kind bites (each deliberately broken in the port, the leg run, then restored;
+the same six in both languages, with the same first difference reported):
+
+| Broken                                                                      | First failure                                                                                       |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `fit_line`: fixed-theta branch intercept sign flipped                       | `actogram-rule-locks` at `series[0].rules.r3.regression.intercept`: 166.19 vs 17.81                 |
+| `harmonic_check`: candidate filter dropped                                  | `actogram-rule-harmonic-rest-activity` at `r3.harmonic.candidates`: length 3 vs 2 (and `line-only`) |
+| `unwrap_onsets`: same-onset merge `n <= 0` weakened to `n < 0`              | 9 fixtures, e.g. `actogram-rule-split-rhythm` at `r1.unwrap.xs`: length 26 vs 19                    |
+| `is_day_selected`: the range no longer scopes the fit                       | `locks`, `day-range`, `detached` at `selectedMask[0]`: true vs false                                |
+| `marker_rule_cfg`: identity intercept = theta - (tau - P) \* refDay dropped | `locks` at `r4.fitIntercept`: 21 vs 19.8 (and `harmonic-rest-activity`, `line-only`)                |
+| `actogram_start_time`: zone midnight taken in UTC                           | `actogram-rule-zone` at `startTime`: 1709424000000 vs 1709442000000                                 |
+
+Exported scripts: the generated Python and R scripts embed the whole runtime, so these
+functions ship in them, but the scripts do not compute plot metric outputs for ANY plot type
+(`render_plots` draws; the saved metric columns reach `columns.csv` as rawData snapshots). The
+actogram's rule columns follow the same precedent; no new export mechanism was added.
+
 ### `rTolerance`
 
 A fixture may set `rTolerance` to loosen the comparison **for R alone**. Widening the shared
@@ -221,6 +293,7 @@ Notes:
 - Column processes: `add`, `multiply`, `sub`, `normalize`.
 - Curve fitting on seeded noisy rhythm data: `Cosinor` (fixed period),
   `FitFunction` (cosinor model) — compares `cosinorx`/`cosinory`, `fitx`/`fity`.
+- Actogram marker rules (`actogramMarkers`, Python and R): see the section above.
 - Stats on seeded group data (`tableProcessResult`): `GroupComparison` Welch
   t-test (`difference`,`t`,`df`,`pValue`) and one-way ANOVA (`f`, `ssBetween`,
   `ssWithin`, `dfBetween`, `dfWithin`, `etaSquared`, `pValue`).

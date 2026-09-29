@@ -1185,12 +1185,12 @@
 		color: var(--color-lightness-25);
 	}
 
+	/* The Data tab's "Series +" row (DataAddHeader.svelte). In normal flow: it was once
+	   position: fixed against the viewport, which only lined up under a one-line panel
+	   header and covered tab labels and header icons otherwise. */
 	:global(.control-data-add) {
-		position: fixed;
-		top: 4.2rem;
-		width: 100%;
-		z-index: 100;
-		left: calc(100% - 2rem);
+		flex: 0 0 auto;
+		margin: var(--space-2) 0;
 	}
 
 	:global(.control-component) {
@@ -1552,7 +1552,12 @@
 		font-size: 0.78rem;
 		line-height: 1.4;
 		z-index: 9999;
-		white-space: nowrap;
+		/* One line for a short tip; a long one wraps at a readable measure instead of
+		   running across the screen. */
+		width: max-content;
+		max-width: min(22rem, calc(100vw - 16px));
+		white-space: normal;
+		overflow-wrap: break-word;
 		backdrop-filter: blur(4px);
 	}
 

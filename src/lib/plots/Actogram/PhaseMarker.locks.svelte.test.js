@@ -48,7 +48,7 @@ function manualBlock(tau, theta0, { nDays = 6, noise = null, ...extra } = {}) {
 	return new PhaseMarkerClass(stubParent(), { type: 'manual', manualMarkers, ...extra });
 }
 
-/** A source-less line, exactly as the "Add line" preset (addFitLine) builds it. */
+/** A source-less line: a manual block with no markers and both locks Fixed. */
 function lineBlock(extra = {}) {
 	return new PhaseMarkerClass(stubParent(), {
 		type: 'manual',

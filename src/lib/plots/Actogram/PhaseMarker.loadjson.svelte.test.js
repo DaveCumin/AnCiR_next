@@ -76,7 +76,7 @@ function actogramWithMarkers(phaseMarkers) {
 	return actogramWith(phaseMarkers).markers;
 }
 
-/** As above, but also hands back the series, so the "Add line" preset can be run. */
+/** As above, but also hands back the series, so blocks can be added through its API. */
 function actogramWith(phaseMarkers) {
 	const session = JSON.parse(readFileSync(SESSION, 'utf8'));
 	core.data = [];
@@ -193,23 +193,28 @@ describe('demo-workflow-free-running actogram: legacy marker blocks', () => {
 		expect(lineEndpoints(m)).toEqual({ x1: 92.5, y1: 30, x2: 162.5, y2: 430 });
 	});
 
-	it('the "Add line" preset lands exactly where the old fit line did', () => {
+	it('a fresh marker block with both locks Fixed lands exactly where the old fit line did', () => {
+		// The way a user now gets a reference line: add a marker block, then set
+		// both locks to Fixed. There is no longer a separate "Add line" preset.
 		const { series } = actogramWith([]);
-		series.addFitLine();
+		series.addMarker();
 		const m = series.phaseMarkers[0];
-		// The preset is now an ordinary manual block with nothing but a line.
 		expect(m.type).toBe('manual');
 		expect(m.manualMarkers).toEqual([]);
+		expect(m.canFit).toBe(false);
+		expect(m.lockTau).toBe('fit');
+		expect(m.lockTheta).toBe('fit');
+		m.setLockTau('fixed');
+		m.setLockTheta('fixed');
 		expect(m.lockTau).toBe('fixed');
 		expect(m.lockTheta).toBe('fixed');
-		expect(m.canFit).toBe(false);
 		expect(m.markerPoints).toBe('');
 		// Same seeds as the old `fitline` preset: slope = periodHrs (no drift),
-		// intercept = periodHrs / 2 (mid-plot), spanning every day.
+		// intercept = periodHrs / 2 (mid-plot); the null day bounds span every day.
 		expect(m.fitSlope).toBe(24);
 		expect(m.fitIntercept).toBe(12);
-		expect(m.lineMinDay).toBe(1);
-		expect(m.lineMaxDay).toBe(14);
+		expect(m.lineMinDay).toBeNull();
+		expect(m.lineMaxDay).toBeNull();
 		// …which draws a VERTICAL line down the middle: same x top and bottom.
 		const ends = lineEndpoints(m);
 		expect(ends.x1).toBe(ends.x2);

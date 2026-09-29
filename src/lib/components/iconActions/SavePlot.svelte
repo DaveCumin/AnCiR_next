@@ -23,6 +23,7 @@
 	import { PX_PER_MM, physicalWidthPx } from '$lib/plots/figureStyle.js';
 	import {
 		buildExport,
+		exportOrder,
 		normalisePlotIds,
 		saveExport,
 		svgDataUrl,
@@ -40,7 +41,10 @@
 
 	let { open = $bindable(false), Id } = $props();
 
-	const ids = $derived(normalisePlotIds(Id));
+	// In export order (the Plots list, top to bottom) so the pager, the first-panel reads
+	// (title, dpi) and buildExport agree on which plot is panel "a". Reads core.plots, so a
+	// drag-reorder of the list re-derives it.
+	const ids = $derived(exportOrder(normalisePlotIds(Id)));
 	const multi = $derived(ids.length > 1);
 	// A plot or a facet PANEL (string id): a panel carries the same surface (name, style,
 	// width, height, plot), so the dialog pages through panels exactly as through plots.

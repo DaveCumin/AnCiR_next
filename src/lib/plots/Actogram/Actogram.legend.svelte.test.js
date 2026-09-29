@@ -50,6 +50,19 @@ const ONSET = {
 	manualMarkers: []
 };
 
+/**
+ * A line-only block built the way a user now does it: add a marker block, then
+ * set both locks to Fixed. With no markers to fit, pinning seeds a vertical line
+ * down the middle of the plot, spanning every day.
+ */
+function addLineOnlyBlock(series) {
+	series.addMarker();
+	const marker = series.phaseMarkers.at(-1);
+	marker.setLockTau('fixed');
+	marker.setLockTheta('fixed');
+	return marker;
+}
+
 function actogramFromDemo({ markers = [] } = {}) {
 	const session = JSON.parse(readFileSync(SESSION, 'utf8'));
 	core.data = [];
@@ -130,14 +143,12 @@ describe('Actogram series legend: phase-marker blocks', () => {
 	});
 
 	it('a block drawing only its line contributes a line-only entry', () => {
-		// A one-click line block: manual with no markers at all, both parameters
-		// fixed. `addFitLine` builds exactly this, and it is the case that shipped
-		// with a dot in the legend and no dot on the figure, because the entry was
-		// keyed off `showMarkers` — a field the renderer never reads.
+		// A line-only block: manual with no markers at all, both parameters
+		// fixed. This is the case that shipped with a dot in the legend and no dot
+		// on the figure, because the entry was keyed off `showMarkers`, a field the
+		// renderer never reads.
 		const plot = actogramFromDemo();
-		const series = plot.plot.data[0];
-		series.addFitLine();
-		const marker = series.phaseMarkers.at(-1);
+		const marker = addLineOnlyBlock(plot.plot.data[0]);
 		expect(marker.markerPoints, 'the block draws no marker dots').toBe('');
 		expect(marker.showMarkers, 'and says it does, which is why it is not consulted').toBe(true);
 
@@ -159,9 +170,7 @@ describe('Actogram series legend: phase-marker blocks', () => {
 
 	it('a block that draws nothing at all contributes nothing', () => {
 		const plot = actogramFromDemo();
-		const series = plot.plot.data[0];
-		series.addFitLine();
-		const marker = series.phaseMarkers.at(-1);
+		const marker = addLineOnlyBlock(plot.plot.data[0]);
 		marker.showLine = false;
 		expect(marker.markerPoints).toBe('');
 		expect(labels(plot)).not.toContain(marker.name);
@@ -173,9 +182,7 @@ describe('Actogram series legend: phase-marker blocks', () => {
 		// were mirrored, so a block clamped to an impossible day range advertised a
 		// line that the figure does not draw.
 		const plot = actogramFromDemo();
-		const series = plot.plot.data[0];
-		series.addFitLine();
-		const marker = series.phaseMarkers.at(-1);
+		const marker = addLineOnlyBlock(plot.plot.data[0]);
 		expect(marker.lineDrawn).toBe(true);
 		marker.lineMinDay = 5;
 		marker.lineMaxDay = 2;

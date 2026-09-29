@@ -223,6 +223,44 @@ run_tpr_fixture <- function(fx, rec) {
   res[[1]]
 }
 
+# First difference between the R port's nested result and the JS record, or NULL. Every key
+# the JS recorded must be present and equal: numbers within tol (NA == JSON null), logicals
+# and strings exactly. Used by the `actogramMarkers` kind, whose record is a tree (per series,
+# per rule, every intermediate) rather than a flat set of arrays.
+deep_diff <- function(got, want, tol, path = "$") {
+  if (is.list(want) && !is.null(names(want)) && length(want)) {
+    if (!is.list(got)) return(sprintf("%s: expected an object, got %s", path,
+                                      paste(format(got), collapse = ",")))
+    for (k in names(want)) {
+      d <- deep_diff(got[[k]], want[[k]], tol, paste0(path, ".", k))
+      if (!is.null(d)) return(d)
+    }
+    return(NULL)
+  }
+  if (is.list(want)) {
+    # A JSON array. Scalars stay scalars on both sides, so compare element-wise.
+    gl <- if (is.list(got)) got else as.list(got)
+    if (length(gl) != length(want)) {
+      return(sprintf("%s: length %d vs %d", path, length(gl), length(want)))
+    }
+    for (i in seq_along(want)) {
+      d <- deep_diff(gl[[i]], want[[i]], tol, sprintf("%s[%d]", path, i - 1))
+      if (!is.null(d)) return(d)
+    }
+    return(NULL)
+  }
+  if (is.logical(want) && !is.na(want) || is.character(want)) {
+    if (length(got) == 1 && !is.na(got) && identical(as.vector(got), want)) return(NULL)
+    return(sprintf("%s: %s vs %s", path, paste(format(got), collapse = ","), format(want)))
+  }
+  if (is.list(got) && length(got)) return(sprintf("%s: got an object, expected %s", path,
+                                                  format(want)))
+  if (cmp_scalar(got, want, tol)) NULL
+  else sprintf("%s: %s vs %s", path,
+               if (is.null(got) || !length(got)) "NULL" else paste(sprintf("%.17g", as.numeric(got)), collapse = ","),
+               if (is.null(want)) "null" else sprintf("%.17g", as.numeric(want)))
+}
+
 results <- list()
 n_pass <- 0; n_fail <- 0; n_skip <- 0
 
@@ -237,9 +275,13 @@ for (fx in fixtures) {
   is_tp <- identical(fx$kind, "tableProcess")
   is_cp <- identical(fx$kind, "columnProcess")
   is_tc <- identical(fx$kind, "timeColumn")
+  # An actogramMarkers fixture names a top-level runtime function (the whole actogram's
+  # rule outputs) rather than an entry in one of the dispatch maps.
+  is_am <- identical(fx$kind, "actogramMarkers")
   # A timeColumn fixture exercises col_data/col_hours directly rather than any entry in the
   # analysis maps, so it needs no lookup — the parser IS the thing under test.
   fn <- if (is_tc) TRUE
+        else if (is_am) get0(rfunc, mode = "function")
         else if (is_tp || is_tpr) TABLE_PROCESS_MAP[[rfunc]]
         else if (is_cp) COLUMN_PROCESS_MAP[[rfunc]]
         else PURE_UTIL_MAP[[rfunc]]
@@ -278,6 +320,22 @@ for (fx in fixtures) {
            else fx$pyArgs
   call_args <- c(lapply(refs, function(nm) unwrap_input(rec$inputs[[nm]])),
                  if (is.null(extra)) list() else extra)
+
+  if (is_am) {
+    got <- tryCatch(fn(rec$inputs$inner, rec$inputs$series,
+                       if (is.null(rec$inputs$zone)) "utc" else rec$inputs$zone),
+                    error = function(e) e)
+    diff <- if (inherits(got, "error")) sprintf("R threw: %s", conditionMessage(got))
+            else deep_diff(got, rec$outputs, tol)
+    if (is.null(diff)) {
+      n_pass <- n_pass + 1
+      results[[length(results) + 1]] <- list(id = fx$id, ok = TRUE, msg = "")
+    } else {
+      n_fail <- n_fail + 1
+      results[[length(results) + 1]] <- list(id = fx$id, ok = FALSE, msg = diff)
+    }
+    next
+  }
 
   got <- if (is_tc) tryCatch(run_time_column_fixture(fx, rec), error = function(e) e)
          else if (is_tpr) tryCatch(run_tpr_fixture(fx, rec), error = function(e) e)

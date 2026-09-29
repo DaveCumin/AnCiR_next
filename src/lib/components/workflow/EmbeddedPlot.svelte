@@ -18,6 +18,7 @@
 	import { facetGridCells } from '$lib/core/facetGrid.js';
 	import { panelsFor } from '$lib/core/facetPanels.svelte.js';
 	import FacetPanelHost from '$lib/components/views/FacetPanelHost.svelte';
+	import FacetGeneratorCompute from '$lib/components/views/FacetGeneratorCompute.svelte';
 
 	let { plot, size, onResizeMouseDown } = $props();
 
@@ -79,6 +80,9 @@
 {#if PlotComp && plot}
 	<div class="plot-preview-panel" style="width:{size.w}px; height:{size.h}px;">
 		{#if isFacet}
+			<!-- The generator is not drawn here, only its panels; this keeps its calculation
+			     and metric outputs live (one instance per generator, not per panel). -->
+			<FacetGeneratorCompute generator={plot} />
 			<div
 				class="facet-grid"
 				style="grid-template-columns:repeat({gridCols}, 1fr); grid-template-rows:repeat({gridRows}, 1fr);"

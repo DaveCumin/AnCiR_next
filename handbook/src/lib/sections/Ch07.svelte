@@ -193,8 +193,11 @@
 				raw data as one series (points) and the fitted columns as a second series (line).
 			</li>
 			<li>
-				Click <strong>Store Value</strong> next to any scalar (e.g., period, amplitude) to save it
-				as a <strong>Stored Value</strong> for use in Formula Columns or elsewhere.
+				Every scalar result (period, MESOR, amplitude, acrophase, R², p-value) is also an
+				<strong>output port</strong> on the node, one value per Y column: wire it straight into
+				<strong>Describe Data</strong>, a <strong>Rayleigh test</strong> or a
+				<strong>Formula Column</strong>. To use a single number inside a formula instead, click
+				<strong>Store Value</strong> next to it to save it as a <strong>Stored Value</strong>.
 			</li>
 		</ol>
 		<DemoLink

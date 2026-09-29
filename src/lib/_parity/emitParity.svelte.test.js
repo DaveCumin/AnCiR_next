@@ -21,8 +21,11 @@
 import { describe, it } from 'vitest';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { core, appConsts, pushObj } from '$lib/core/core.svelte.js';
+import { core, appConsts, appState, pushObj } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
+import { Plot } from '$lib/core/Plot.svelte';
+import { ruleOutputValues } from '$lib/plots/plotMetricDefs.js';
+import { isOutsideFitRange } from '$lib/plots/Actogram/markerSelection.js';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
 import { loadProcesses } from '$test/processRegistry.js';
 import { loadPlots } from '$test/plotRegistry.js';
@@ -562,6 +565,203 @@ function runTimeColumn(fx) {
 	return { column: spec, outputs };
 }
 
+// --- actogram marker rules (the `actogramMarkers` kind) ---------------------------------
+//
+// One fixture is one ACTOGRAM: its series (x, y and x type), its row length, the display
+// zone its rows snap to, its marker rules, and each series' per-rule data (ticked days,
+// hand-placed points), detachments and own blocks. The emitter builds it as the app does
+// (Plot.fromJSON over real Columns, so the rule instances, the row folding at the plot's
+// startTime and the cfg adapter are the app's own) and records, per series and per rule,
+// the five output values `ruleOutputValues` gives the port AND every intermediate the ports
+// compute on the way: detections, absolute times, the day-selection mask, the unwrapped
+// fit points, the regression, the reference day, the phase and the harmonic candidates.
+// The ports rebuild the same actogram from the recorded plain arrays.
+//
+// Why a kind of its own rather than several pureUtil fixtures: the five outputs are not one
+// function's result but a chain (fold -> detect -> select -> unwrap -> fit -> phase ->
+// harmonic check) whose inputs come from the plot (startTime and Ndays are computed over
+// ALL series, the rule's fixed tau/theta are re-encoded through the reference day). A
+// pure-util fixture per function would pin each link and still leave the joins unchecked;
+// recording the intermediates of one real chain pins both.
+
+/** Synthetic rest/activity series for an actogram fixture (seeded, deterministic). */
+function generateActogramSeries(spec) {
+	const rng = mulberry32(spec.seed ?? 1);
+	return spec.series.map((s) => {
+		const {
+			xType = 'time',
+			start = '2024-03-04T06:30:00Z',
+			dtHrs = 0.25,
+			days = 10,
+			tau = 24,
+			activeHrs = 12,
+			onsetHr = 20,
+			low = 2,
+			high = 40,
+			noise = 3,
+			gap = null,
+			spike = null
+		} = s;
+		const n = Math.round((days * 24) / dtHrs);
+		const startMs = xType === 'time' ? Date.parse(start) : 0;
+		const x = [];
+		const y = [];
+		for (let i = 0; i < n; i++) {
+			const h = i * dtHrs;
+			x.push(xType === 'time' ? startMs + Math.round(h * 3600000) : (s.startHr ?? 0) + h);
+			const phase = (((h - onsetHr) % tau) + tau) % tau;
+			let v = (phase < activeHrs ? high : low) + (noise ? normal(rng, 0, noise) : 0);
+			if (v < 0) v = 0;
+			// A spike: a short bout outside the active phase, so a row's template match can
+			// be pulled away from the true onset.
+			if (spike && h >= spike[0] && h < spike[1]) v = high * 1.5;
+			if (gap && h >= gap[0] && h < gap[1]) v = null;
+			y.push(v);
+		}
+		return { xType, x, y };
+	});
+}
+
+/** The plain arrays a fixture's series hold, from a shipped session's actogram. */
+function sessionActogramSeries(src) {
+	const session = JSON.parse(readFileSync(join(process.cwd(), src.session), 'utf8'));
+	core.rawData = new Map(Object.entries(session.rawData ?? {}).map(([k, v]) => [+k, v]));
+	core.data = [];
+	for (const cd of session.data ?? []) pushObj(Column.fromJSON(cd));
+	const plot = session.plots.find((p) => p.id === src.plotId);
+	if (!plot) throw new Error(`no plot ${src.plotId} in ${src.session}`);
+	const byId = (id) => core.data.find((c) => c.id === id);
+	const out = plot.plot.data.map((d) => {
+		const xc = byId(d.x.refId);
+		const yc = byId(d.y.refId);
+		return { xType: xc.type, x: [...xc.getData()], y: [...yc.getData()] };
+	});
+	resetCore();
+	return out;
+}
+
+/** NaN and +-Infinity become null, recursively, so the record is valid JSON. */
+function jsonSafe(v) {
+	if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+	if (Array.isArray(v)) return v.map(jsonSafe);
+	if (v && typeof v === 'object') {
+		const out = {};
+		for (const [k, val] of Object.entries(v)) out[k] = jsonSafe(val);
+		return out;
+	}
+	return v ?? null;
+}
+
+/** Every intermediate of one block's computation, in the shape the ports return. */
+function blockRecord(block, source) {
+	if (!block) return { source, outputs: ruleOutputValues(null) };
+	const cfg = block.cfg;
+	const scope = {
+		rangeScopesFit: !!cfg.fitWithinRange,
+		lineMinDay: cfg.lineMinDay,
+		lineMaxDay: cfg.lineMaxDay
+	};
+	const reg = block.linearRegression;
+	const hc = block.harmonicCheck;
+	const u = block.onsetUnwrap;
+	return {
+		source,
+		markerHours: [...block.markers],
+		markerTimes: [...block.markerTimes],
+		selectedMask: [...block.selectedMask],
+		outsideRange: block.markers.map((_, i) => isOutsideFitRange(i, scope)),
+		unwrap: {
+			xs: [...u.xs],
+			ys: [...u.ys],
+			n: u.n,
+			nDetections: u.nDetections,
+			nMerged: u.nMerged,
+			nAmbiguous: u.nAmbiguous,
+			seedTau: u.seedTau
+		},
+		refDay: block.fitRefDay,
+		fitSlope: cfg.fitSlope,
+		fitIntercept: cfg.fitIntercept,
+		regression:
+			reg && typeof reg === 'object'
+				? {
+						slope: reg.slope,
+						intercept: reg.intercept,
+						rSquared: reg.rSquared,
+						rmse: reg.rmse,
+						n: reg.n
+					}
+				: null,
+		phase: block.estimatedPhase?.phase ?? null,
+		harmonic: hc
+			? {
+					candidates: hc.candidates.map((c) => ({
+						label: c.label,
+						period: c.period,
+						peakPeriod: c.peakPeriod,
+						power: c.power
+					})),
+					strongest: hc.strongest.label
+				}
+			: null,
+		outputs: ruleOutputValues(block)
+	};
+}
+
+function runActogramMarkers(fx) {
+	const series = fx.source ? sessionActogramSeries(fx.source) : generateActogramSeries(fx.generate);
+	const zone = fx.zone ?? 'utc';
+	const extra = fx.series ?? [];
+	const inner = {
+		periodHrs: fx.periodHrs ?? 24,
+		markerRules: fx.markerRules ?? [],
+		data: series.map((_, i) => ({
+			phaseMarkers: extra[i]?.phaseMarkers ?? [],
+			...(extra[i]?.ruleData ? { ruleData: extra[i].ruleData } : {}),
+			...(extra[i]?.detachedRules ? { detachedRules: extra[i].detachedRules } : {})
+		}))
+	};
+
+	const prevZone = appState.displayTimezone;
+	appState.displayTimezone = zone;
+	try {
+		const data = series.map((s, i) => {
+			const xId = mkCol(s.xType, s.x, `x${i}`);
+			const yId = mkCol('number', s.y, `y${i}`);
+			return { ...inner.data[i], x: { refId: xId }, y: { refId: yId }, colour: '#000000' };
+		});
+		const plot = Plot.fromJSON({
+			id: 0,
+			name: fx.id,
+			type: 'actogram',
+			width: 600,
+			height: 400,
+			plot: { ...inner, data }
+		});
+		core.plots.push(plot);
+		const act = plot.plot;
+		const outputs = {
+			startTime: act.startTime,
+			Ndays: act.Ndays,
+			series: act.data.map((d) => {
+				const rules = {};
+				for (const r of act.markerRules) {
+					const inst = d.ruleInstances.find((b) => b.ruleId === r.id);
+					const det = inst ? null : d.phaseMarkers.find((m) => m.fromRule === r.id);
+					rules[r.id] = blockRecord(
+						inst ?? det ?? null,
+						inst ? 'instance' : det ? 'detached' : 'none'
+					);
+				}
+				return { binSize: d.binSize, rules };
+			})
+		};
+		return jsonSafe({ inputs: { zone, inner, series }, outputs });
+	} finally {
+		appState.displayTimezone = prevZone;
+	}
+}
+
 describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 	it('runs every fixture through the JS engine', async () => {
 		appConsts.processMap = await loadProcesses();
@@ -578,6 +778,7 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 			else if (fx.kind === 'plotCompute') results[fx.id] = runPlotCompute(fx);
 			else if (fx.kind === 'pureUtil') results[fx.id] = runPureUtil(fx);
 			else if (fx.kind === 'timeColumn') results[fx.id] = runTimeColumn(fx);
+			else if (fx.kind === 'actogramMarkers') results[fx.id] = runActogramMarkers(fx);
 			else results[fx.id] = await runTableProcess(fx);
 		}
 
