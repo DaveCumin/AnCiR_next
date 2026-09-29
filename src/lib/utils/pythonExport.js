@@ -88,7 +88,8 @@ def main():
             data=meta.get("data"),
             raw_data=RAW_DATA,
             time_format=meta.get("timeFormat"),
-            bin_width=meta.get("binWidth", 1.0),
+            bin_width=meta.get("binWidth"),
+            origin_time_ms=meta.get("originTime_ms"),
             compression=meta.get("compression"),
             ref_id=meta.get("refId"),
             group_label=meta.get("groupLabel"),
@@ -208,7 +209,10 @@ function colMetaForColumn(col) {
 		data: col.data ?? null,
 		compression: col.compression ?? null,
 		timeFormat: col.timeFormat ?? null,
-		binWidth: col.binWidth ?? 1.0,
+		// Only columns that carry bins have a binWidth (the app reads it for truthiness: the
+		// actogram's bar width), so a missing one stays missing rather than becoming 1.
+		binWidth: col.binWidth ?? null,
+		originTime_ms: col.originTime_ms ?? null,
 		refId: col.refId ?? null,
 		groupLabel: col.groupLabel ?? null,
 		processes: (col.processes ?? []).map((p) => ({

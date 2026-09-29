@@ -1143,24 +1143,27 @@
 		padding: 0;
 	}
 
+	/* The strip is a size container so its tabs can respond to the panel width (200 to 500 px,
+	   ControlPanel.svelte). Inline axis only, so its height still comes from the tabs. The tabs
+	   wrap onto a second row only when even the compact size below cannot fit them; nothing
+	   is ever clipped or left behind a hidden horizontal scroll. */
 	:global(.control-tab) {
+		container-type: inline-size;
 		width: 100%;
 		display: flex;
 		flex-direction: row;
-		flex-wrap: nowrap; /* Prevent buttons from wrapping */
+		flex-wrap: wrap;
 		align-items: center;
 		justify-content: flex-start;
-		gap: 0.4rem;
-		overflow-x: auto;
-	}
-
-	:global(.control-tab::-webkit-scrollbar) {
-		display: none;
+		gap: 0 0.4rem;
 	}
 
 	/* Canonical tab treatment (see .tab-strip in app.css): active = accent underline,
 	   so the control panel reads as the same control as the modal source tabs. */
 	:global(.control-tab button) {
+		display: inline-flex;
+		flex-direction: column;
+		align-items: center;
 		font-size: var(--font-lg);
 		margin: 0;
 		padding: var(--space-3) var(--space-4);
@@ -1173,6 +1176,30 @@
 		transition:
 			color 0.15s ease,
 			border-color 0.15s ease;
+	}
+
+	/* Reserve each tab's bold width up front (a hidden, zero-height bold copy of its label),
+	   so selecting a tab never widens it and never nudges its neighbours. The second
+	   declaration empties the copy for assistive tech where alt text for content is supported. */
+	:global(.control-tab button::after) {
+		content: attr(data-label);
+		content: attr(data-label) / '';
+		height: 0;
+		overflow: hidden;
+		visibility: hidden;
+		font-weight: 600;
+		user-select: none;
+		pointer-events: none;
+	}
+
+	/* Below the width the full-size Actogram tabs need (Properties, Data, Annotations at
+	   14 px bold with 8 px side padding), step down to the compact size so they stay on one
+	   row at the default 250 px panel. */
+	@container (max-width: 245px) {
+		:global(.control-tab button) {
+			font-size: var(--font-md);
+			padding-inline: var(--space-2);
+		}
 	}
 
 	:global(.control-tab button.active) {

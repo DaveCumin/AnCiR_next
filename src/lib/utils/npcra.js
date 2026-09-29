@@ -10,7 +10,9 @@
 // Nonparametric Methods. Chronobiology International, 16(4), 505-518,
 // formulas p.509. IS/IV originate in Witting et al. (1990).
 //
-// Pure and dependency-free — O(n), safe to run synchronously (no worker).
+// Pure, and dependent only on the house missing-value rule (isInvalidValue) — O(n), safe
+// to run synchronously (no worker).
+import { isInvalidValue } from './stats.js';
 
 /**
  * @param {number[]} t  time in hours (any origin; only differences matter)
@@ -35,6 +37,9 @@ export function computeNPCRA(t, y, opts = {}) {
 	const pairs = [];
 	const len = Math.min(t?.length ?? 0, y?.length ?? 0);
 	for (let i = 0; i < len; i++) {
+		// A missing time is dropped, not read as hour 0: Number(null) and Number('') are 0,
+		// which pulled t0 back to 0 and averaged the row into the first epoch.
+		if (isInvalidValue(t[i])) continue;
 		const ti = Number(t[i]);
 		if (Number.isFinite(ti)) pairs.push([ti, Number(y[i])]);
 	}

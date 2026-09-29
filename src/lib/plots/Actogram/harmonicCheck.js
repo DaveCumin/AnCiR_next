@@ -13,7 +13,9 @@
 //
 // Details a port must reproduce exactly:
 //  - candidates are kept only when binSize * 2 < period < dataSpan / 2, with
-//    dataSpan = xData[last] - xData[first] (the samples' order, not their min and max);
+//    dataSpan = xData[j] - xData[i] over the first and last PRESENT samples i and j (the
+//    samples' order, not their min and max; a missing end is skipped, not read as 0, see
+//    harmonicCheck.missingEnds.test.js);
 //  - binSize falls back to 0.25 h when it is 0, null or undefined;
 //  - each evaluation is runPeriodogramCalculation with method 'Lomb-Scargle',
 //    periodMin = periodMax = the candidate (margin 0) and periodSteps 0.001, so it is exactly
@@ -21,6 +23,7 @@
 //  - an evaluation that returns no points scores power 0 at the candidate's own period;
 //  - ties keep the EARLIER candidate (order tau, tau / 2, 2 tau): `b.power > a.power`.
 import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
+import { validEnds } from '$lib/utils/validPairs.js';
 
 /**
  * @param {object} args
@@ -38,7 +41,10 @@ export function harmonicCheck({ xData, yData, binSize, tau }) {
 	if (!xData?.length || !yData?.length) return null;
 
 	const bin = binSize || 0.25;
-	const dataSpan = xData[xData.length - 1] - xData[0];
+	// First and last PRESENT samples: xData is hoursSinceStart, which keeps a missing time as
+	// null, and `null - x0` made a missing LAST time a span of about 0 (no candidate at all).
+	const { first, last } = validEnds(xData);
+	const dataSpan = first < 0 ? NaN : Number(xData[last]) - Number(xData[first]);
 
 	const candidates = [
 		{ label: 'τ', period: tau },

@@ -19,16 +19,18 @@
 /**
  * Analyses that no language runtime implements because there is nothing to implement.
  *
- * ColumnSet curates a live subset of columns and emits NO output columns of its own
- * (nodeSpec.outputs is empty). Its selection is materialised into each consumer's real
- * inputs by syncTPSets while the session is being edited, so by the time a session is saved
- * or exported the consumers already hold concrete column ids. A runtime never sees a
- * Column Set that still needs resolving.
+ * EMPTY since 2026-09-30. ColumnSet used to be here: it emits NO output columns, and its
+ * selection is materialised into each consumer's real inputs by syncTPSets while the session
+ * is edited, so the consumers already hold concrete column ids. But the Column Set NODE is
+ * still in the saved `tableProcesses`, so it does reach the runtimes, and their strict
+ * dispatchers aborted every exported script of a session containing one (and the whole-session
+ * parity check reported `demo-tp-columnset` as an error). Both runtimes now dispatch it as a
+ * recognised no-op (`tp_columnset`: valid, writes nothing), mirroring the app's `columnset`.
  *
  * Kept separate from PYTHON_GAPS on purpose: "nothing to do" and "somebody still has to do
  * this" are different states, and merging them is how real debt gets forgotten.
  */
-export const NOT_APPLICABLE = ['columnset'];
+export const NOT_APPLICABLE = [];
 
 /**
  * Analyses with no Python port.
@@ -92,6 +94,7 @@ export const R_IMPLEMENTED = [
 	'circadianfunctionindex',
 	'collectcolumns',
 	'columnfunctions',
+	'columnset',
 	'correlation',
 	'binneddata',
 	'blankcolumn',

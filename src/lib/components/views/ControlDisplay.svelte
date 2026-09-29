@@ -839,10 +839,8 @@
 						{#each appConsts.plotMap.get(plot.type).controlHeaders as header (header)}
 							<button
 								class={appState.currentControlTab === header.toLowerCase() ? 'active' : ''}
-								onclick={(e) => {
-									updateCurrentControlTab(header.toLowerCase(), plot.type);
-									e.target.scrollIntoView({ behavior: 'smooth' });
-								}}
+								data-label={header}
+								onclick={() => updateCurrentControlTab(header.toLowerCase(), plot.type)}
 							>
 								{header}
 							</button>

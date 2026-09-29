@@ -198,6 +198,48 @@
 			"rFunc": "nonparametricra"
 		},
 		{
+			"id": "tp-npcra-missing-x-ends",
+			"kind": "tableProcess",
+			"jsName": "NonparametricRA",
+			"pyFunc": "npcra",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 23,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingX": [0, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"out": {
+					"npcrax": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1,
+					"M10": -1,
+					"L5": -1,
+					"M10onset": -1,
+					"L5onset": -1
+				}
+			},
+			"compareOutputs": ["npcrax", "npcray", "IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset"],
+			"rFunc": "nonparametricra",
+			"note": "NPCRA on a NUMBER x (hourly from 0) with the FIRST and LAST times missing. computeNPCRA kept every row whose Number(t) is finite, and Number(null) is 0, so both rows became samples at hour 0: the epoch grid started an hour early and their y values were averaged into the first epoch. A missing time is now dropped (isInvalidValue), which the Python and R ports already did."
+		},
+		{
 			"id": "tp-groupcomparison-ttest",
 			"kind": "tableProcessResult",
 			"jsName": "GroupComparison",
@@ -337,6 +379,428 @@
 			"extraArgs": [null, null, 0],
 			"compareArrays": ["lags", "correlations"],
 			"rFunc": "compute_autocorrelation"
+		},
+		{
+			"id": "correlogram-data-binned-time",
+			"kind": "plotCompute",
+			"jsFn": "correlogramDownloadData",
+			"pyFunc": "correlogram_download_data",
+			"tolerance": 1e-9,
+			"note": "A correlogram of a BinnedData output on a TIME input: 1 h bins stepping 0.5 h (diffStep), so the x column's binWidth (1) is twice its spacing. The app takes the lag step from the column's binWidth; the Python export estimated it from the spacing (0.5).",
+			"binned": {
+				"binSize": 1,
+				"binStart": 0,
+				"stepSize": 0.5,
+				"diffStep": true,
+				"aggFunction": "mean"
+			},
+			"generate": {
+				"seed": 101,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:20:00Z",
+						"dtHrs": 0.25,
+						"days": 6,
+						"tau": 24,
+						"onsetHr": 18
+					}
+				]
+			}
+		},
+		{
+			"id": "correlogram-data-bin-column",
+			"kind": "plotCompute",
+			"jsFn": "correlogramDownloadData",
+			"pyFunc": "correlogram_download_data",
+			"tolerance": 1e-9,
+			"note": "An imported 'bin' column (binWidth 0.75 h on a 0.5 h step, as the Enspire wells schema creates). The app's lag step is the binWidth, 0.75; the Python export used the spacing, 0.5.",
+			"generate": {
+				"seed": 103,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 0,
+						"dtHrs": 0.5,
+						"days": 6,
+						"tau": 24,
+						"onsetHr": 9,
+						"bin": {
+							"binWidth": 0.75,
+							"originTime": "2024-03-04T07:30:00Z"
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": "correlogram-data-number-offset",
+			"kind": "plotCompute",
+			"jsFn": "correlogramDownloadData",
+			"pyFunc": "correlogram_download_data",
+			"tolerance": 1e-9,
+			"note": "A plain NUMBER x starting at 5 h whose spacing cycles 1, 1, 1.05 h (within 10% of the median, so the index-shift path). The app's lag step is the MEAN spacing, (last - first) / (n - 1) = 1.0167 h, over hoursSinceStart; the Python export used the median, 1 h, over the raw x (the offset itself changes nothing: the autocorrelation is shift-invariant).",
+			"generate": {
+				"seed": 107,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 5,
+						"stepPattern": [1, 1, 1.05],
+						"days": 10,
+						"tau": 24,
+						"onsetHr": 8
+					}
+				]
+			}
+		},
+		{
+			"id": "correlogram-data-irregular",
+			"kind": "plotCompute",
+			"jsFn": "correlogramDownloadData",
+			"pyFunc": "correlogram_download_data",
+			"tolerance": 1e-9,
+			"note": "Two series. The first is a TIME x whose spacing alternates 0.25 and 0.75 h (not uniform, so the time-pair path), with maxLag 30 h and minLag 2 h saved on the SERIES as the app saves them; the app's lag step is the mean spacing, 0.5 h, where the Python export used the median (0.25 h) and read plot-level corrMaxLag / corrMinLag keys the app never writes. The second is a regular hourly time series on the auto lag range.",
+			"generate": {
+				"seed": 109,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T00:10:00Z",
+						"stepPattern": [0.25, 0.75],
+						"days": 4,
+						"tau": 24,
+						"onsetHr": 20,
+						"maxLag": 30,
+						"minLag": 2
+					},
+					{
+						"xType": "time",
+						"start": "2024-03-04T00:00:00Z",
+						"dtHrs": 1,
+						"days": 5,
+						"tau": 24,
+						"onsetHr": 10
+					}
+				]
+			}
+		},
+		{
+			"id": "correlogram-data-missing-ends",
+			"kind": "plotCompute",
+			"jsFn": "correlogramDownloadData",
+			"pyFunc": "correlogram_download_data",
+			"tolerance": 1e-9,
+			"note": "Two series whose x has a missing END, no binWidth, so the lag step is the mean spacing. The first is a NUMBER x from 5 h, hourly, with the LAST time missing; the second a TIME x every 0.5 h with the FIRST time missing. The app used (t[n-1] - t[0]) / (n-1) over the raw rows and read the missing end as 0: the first series got a step of about -5/(n-1), negative, so the plot was blank, and the second a step of 0.5 * (n-2)/(n-1), so every lag was mislabelled. The step is (t_j - t_i) / (j - i) over the first and last VALID rows (utils/correlogram.js meanSpacing), which the Python port already used; it equals the old formula whenever both ends are present.",
+			"generate": {
+				"seed": 113,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 5,
+						"dtHrs": 1,
+						"days": 6,
+						"tau": 24,
+						"onsetHr": 8,
+						"missingX": [-1]
+					},
+					{
+						"xType": "time",
+						"start": "2024-03-04T00:10:00Z",
+						"dtHrs": 0.5,
+						"days": 5,
+						"tau": 24,
+						"onsetHr": 20,
+						"missingX": [0]
+					}
+				]
+			}
+		},
+		{
+			"id": "plot-correlogram-upper-median",
+			"kind": "plotCompute",
+			"jsFn": "computeAutocorrelation",
+			"pyFunc": "compute_autocorrelation",
+			"rFunc": "compute_autocorrelation",
+			"note": "computeAutocorrelation with no binSize (how RhythmicityAnalysis and MovingAnalysis call it) on spacings 1,1,1,2,2,2: the app's step is the UPPER median, the element at floor(len / 2) of the sorted spacings (2), not the mean of the middle two (1.5, what np.median and R's median give), so the lags are 2 and 4 h, not 1.5, 3 and 4.5 h. Its lag slots were also the old overlapping ones: three pairs exactly 1 h apart (half the 2 h step) were counted at lag 0 AND at lag 2, and two pairs 3 h apart at lag 2 AND lag 4, and lag 0 left out each sample's pairing with itself, so it read -0.142 instead of 1. With lag 0 defined as 1 and half-open slots [(k - 1/2) dt, (k + 1/2) dt) (utils/correlogram.js), the correlations are 1, 0.0423, -0.0941 (were -0.142, -0.140, -0.331).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [0, 1, 2, 3, 5, 7, 9]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [1, 3, 2, 5, 4, 6, 2]
+				}
+			],
+			"xRef": "t",
+			"yRef": "y",
+			"extraArgs": [null, null, 0],
+			"compareArrays": ["lags", "correlations"]
+		},
+		{
+			"id": "plot-correlogram-boundary-pair",
+			"kind": "plotCompute",
+			"jsFn": "computeAutocorrelation",
+			"pyFunc": "compute_autocorrelation",
+			"rFunc": "compute_autocorrelation",
+			"note": "Pairs exactly on a lag-slot boundary. Uneven times (the time-pair path) with the step given as 1 h and minLag 1 h (so lag 0 is out of it): many separations are exactly 0.5, 1.5, 2.5 ... h, half-way between two lags. Slots are half-open, lag k takes (k - 1/2) dt <= d < (k + 1/2) dt, so each such pair is counted once, in the UPPER lag. The old window |d - k dt| <= dt / 2 counted it in both.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [0, 1, 1.5, 3, 4, 6, 6.5, 8, 9.5, 10]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [3, 1, 4, 1, 5, 9, 2, 6, 5, 3]
+				}
+			],
+			"xRef": "t",
+			"yRef": "y",
+			"extraArgs": [1, null, 1],
+			"compareArrays": ["lags", "correlations"]
+		},
+		{
+			"id": "plot-correlogram-near-zero-pairs",
+			"kind": "plotCompute",
+			"jsFn": "computeAutocorrelation",
+			"pyFunc": "compute_autocorrelation",
+			"rFunc": "compute_autocorrelation",
+			"note": "Distinct samples closer than half a step. Uneven times with four near-coincident pairs (0.1, 0.2, 0.05 and 0.3 h apart) and a 1 h step. Lag 0 is exactly 1 by definition; the near-zero pairs estimate the correlation at a small NON-zero lag, so they are not used at any lag (they are below the lag-1 slot). The old code excluded each sample's pairing with itself and averaged only the near-zero pairs, so lag 0 was their correlation, not 1.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [0, 0.1, 1, 2, 2.2, 3, 4, 4.05, 5, 6, 7, 7.3, 8]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [5, 2, 7, 3, 8, 4, 6, 1, 9, 2, 6, 8, 3]
+				}
+			],
+			"xRef": "t",
+			"yRef": "y",
+			"extraArgs": [1, null, 0],
+			"compareArrays": ["lags", "correlations"]
+		},
+		{
+			"id": "actogram-data-two-series-different-days",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "Two series starting on different days, the second with a leading gap and a coarser step. The app folds BOTH at the earliest valid sample over all series, snapped to that day's midnight (4 March), so series 1's first bar lands in period 2, not period 1 of its own day.",
+			"periodHrs": 24,
+			"generate": {
+				"seed": 41,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:20:00Z",
+						"dtHrs": 0.25,
+						"days": 4,
+						"tau": 24,
+						"onsetHr": 14
+					},
+					{
+						"xType": "time",
+						"start": "2024-03-05T09:10:00Z",
+						"dtHrs": 0.5,
+						"days": 3,
+						"tau": 24,
+						"onsetHr": 10,
+						"gap": [0, 2]
+					}
+				]
+			}
+		},
+		{
+			"id": "actogram-data-zone-new-york",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "Display zone America/New_York: the first sample (03:40Z on 8 March) is 22:40 on 7 March there, so rows start at New York midnight on 7 March (05:00Z), not UTC midnight on 8 March. The record crosses the 10 March DST change, which must not move the rows.",
+			"periodHrs": 24,
+			"zone": "America/New_York",
+			"generate": {
+				"seed": 43,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-08T03:40:00Z",
+						"dtHrs": 0.25,
+						"days": 4,
+						"tau": 24,
+						"onsetHr": 8
+					}
+				]
+			}
+		},
+		{
+			"id": "actogram-data-offset-start-utc",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "One series in UTC whose first sample is 06:20, not midnight, on a 0.3 h step that never lands on a row boundary, so every row's first and last bar is split at the boundary.",
+			"periodHrs": 24,
+			"generate": {
+				"seed": 47,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:20:00Z",
+						"dtHrs": 0.3,
+						"days": 3,
+						"tau": 24,
+						"onsetHr": 12
+					}
+				]
+			}
+		},
+		{
+			"id": "actogram-data-number-axis",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "A number x axis starting at 5 h with 23.5 h rows: bars sit at the raw x (no start-of-day snap), split at multiples of 23.5.",
+			"periodHrs": 23.5,
+			"generate": {
+				"seed": 53,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 5,
+						"dtHrs": 0.5,
+						"days": 3,
+						"tau": 24,
+						"onsetHr": 6
+					}
+				]
+			}
+		},
+		{
+			"id": "actogram-data-binned-time",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "A BinnedData node's output on a TIME input starting at midnight: the output is a time column of bin STARTS (epoch ms) carrying binWidth = binSize and originTime_ms = the input's first sample. binSize 1.5 h, so rows split bars at 0, 1.5, 3, ... and a bar straddles no boundary; the day boundary 24 h is a multiple.",
+			"periodHrs": 24,
+			"binned": {
+				"binSize": 1.5,
+				"binStart": 0,
+				"aggFunction": "mean"
+			},
+			"generate": {
+				"seed": 59,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T00:00:00Z",
+						"dtHrs": 0.25,
+						"days": 3,
+						"tau": 24,
+						"onsetHr": 14
+					}
+				]
+			}
+		},
+		{
+			"id": "actogram-data-binned-time-offset-origin",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "The same on an input whose first sample (the output's originTime_ms) is 06:20Z, in the America/New_York display zone: bars start at 06:20Z = 01:20 New York, 1.333 h into row 1, and are 1 h wide.",
+			"periodHrs": 24,
+			"zone": "America/New_York",
+			"binned": {
+				"binSize": 1,
+				"binStart": 0,
+				"aggFunction": "mean"
+			},
+			"generate": {
+				"seed": 61,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:20:00Z",
+						"dtHrs": 0.25,
+						"days": 3,
+						"tau": 24,
+						"onsetHr": 8
+					}
+				]
+			}
+		},
+		{
+			"id": "actogram-data-binned-number",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "A BinnedData node's output on a NUMBER input starting at 5 h: a 'bin' column whose raw values are bin starts (5, 6, 7, ...) and whose getData is the centres. The actogram places bars at the raw starts, not the centres.",
+			"periodHrs": 24,
+			"binned": {
+				"binSize": 1,
+				"binStart": 0,
+				"aggFunction": "mean"
+			},
+			"generate": {
+				"seed": 67,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 5,
+						"dtHrs": 0.25,
+						"days": 3,
+						"tau": 24,
+						"onsetHr": 6
+					}
+				]
+			}
+		},
+		{
+			"id": "actogram-data-bin-origin",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "An imported 'bin' column (as the Enspire multiplate wells schema creates) carrying binWidth 0.75 h on a 0.5 h step (so the bars are the column's binWidth wide, not the scanned step) and originTime_ms at 07:30Z, plotted with a time series whose first sample is 02:00Z. Its bars shift by the origin's time of day: raw start 0 lands at 7.5 h in row 1.",
+			"periodHrs": 24,
+			"generate": {
+				"seed": 71,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T02:00:00Z",
+						"dtHrs": 0.25,
+						"days": 6,
+						"tau": 24,
+						"onsetHr": 16
+					},
+					{
+						"xType": "number",
+						"startHr": 0,
+						"dtHrs": 0.5,
+						"days": 6,
+						"tau": 24,
+						"onsetHr": 9,
+						"bin": {
+							"binWidth": 0.75,
+							"originTime": "2024-03-04T07:30:00Z"
+						}
+					}
+				]
+			}
 		},
 		{
 			"id": "util-kde-gaussian-fixed-bw",
@@ -1348,6 +1812,83 @@
 			"rFunc": "surrogatetest"
 		},
 		{
+			"id": "tp-surrogate-observed-missing-last-x",
+			"kind": "tableProcess",
+			"jsName": "SurrogateTest",
+			"pyFunc": "surrogatetest",
+			"generate": {
+				"type": "rhythm",
+				"n": 480,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 0,
+				"noise": 8,
+				"seed": 403,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingX": [-1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": "@y",
+				"method": "block",
+				"nSurrogates": 19,
+				"seed": 12345,
+				"blockLengthHours": 24,
+				"periodMin": 20,
+				"periodMax": 28,
+				"out": {
+					"pvalue": -1,
+					"observed": -1
+				}
+			},
+			"compareOutputs": ["observed"],
+			"rFunc": "surrogatetest",
+			"note": "A NUMBER x (hourly from 0) whose LAST time is missing. The node coerced its times with Number, so the missing row went into the FFT at t = 0: the FFT's own step came out negative, it returned an empty spectrum and the observed statistic was 0. The same coercion made the hours-to-samples step for the block bootstrap (t[n-1] - t[0]) / (n-1) read the end as 0. The node now keeps the rows where x and y are both present (as both ports always did) and takes the step from the first and last present times (utils/validPairs.js meanSpacing, shared with the Correlogram). Only `observed` is compared: the p-value is Monte Carlo (see Known boundaries)."
+		},
+		{
+			"id": "tp-surrogate-observed-missing-first-x",
+			"kind": "tableProcess",
+			"jsName": "SurrogateTest",
+			"pyFunc": "surrogatetest",
+			"generate": {
+				"type": "rhythm",
+				"n": 480,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 0,
+				"noise": 8,
+				"seed": 403,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingX": [0],
+				"xStart": "2024-03-04T00:00:00Z"
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": "@y",
+				"method": "block",
+				"nSurrogates": 19,
+				"seed": 12345,
+				"blockLengthHours": 24,
+				"periodMin": 20,
+				"periodMax": 28,
+				"out": {
+					"pvalue": -1,
+					"observed": -1
+				}
+			},
+			"compareOutputs": ["observed"],
+			"rFunc": "surrogatetest",
+			"note": "A TIME x (every hour from 2024-03-04T00:00Z) whose FIRST timestamp is missing. hoursSinceStart keeps it as null and starts the rest at 0, so the old Number coercion put the missing row at t = 0 beside the real first sample and its y went into the FFT. The observed statistic is now computed on the present (x, y) rows only, as in both ports."
+		},
+		{
 			"id": "util-movingwindows-npcra",
 			"kind": "pureUtil",
 			"jsFn": "movingWindows",
@@ -2221,6 +2762,1267 @@
 				}
 			},
 			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-time-input",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "BinnedData on a TIME input (first sample 06:20Z). The app's x output is a time column of bin STARTS in epoch ms (origin + start hours), which getData returns unchanged. The ports used to write bin-centre HOURS into a time column, read back as milliseconds.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"dt": 0.25,
+				"period": 24,
+				"amp": 20,
+				"mesor": 30,
+				"phase": 4,
+				"noise": 3,
+				"seed": 79,
+				"xStart": "2024-03-04T06:20:00Z",
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binSize": 1,
+				"binStart": 0,
+				"aggFunc": "mean",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-agg-step",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "The app's saved arg names: aggFunction (not aggFunc) picks the aggregate, and stepSize (default 0.25) is only used when diffStep is true, otherwise the step is binSize. Here aggFunction 'max', binSize 2, stepSize 0.25, diffStep false: 2 h bins on a 2 h step, max of each.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 20,
+				"mesor": 30,
+				"phase": 4,
+				"noise": 3,
+				"seed": 83,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binSize": 2,
+				"binStart": 0,
+				"stepSize": 0.25,
+				"diffStep": false,
+				"aggFunction": "max",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-diffstep",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "diffStep TRUE: overlapping 3 h windows stepping by stepSize 1 h, median of each. The app's headless compute (definition.func, used by this emitter, the MCP engine and the demo generator) used to ignore diffStep and step by binSize, so it disagreed with the node's own panel; both now read the step from args through one rule.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 20,
+				"mesor": 30,
+				"phase": 4,
+				"noise": 3,
+				"seed": 89,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binSize": 3,
+				"binStart": 0,
+				"stepSize": 1,
+				"diffStep": true,
+				"aggFunction": "median",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-cuts-mean",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Custom-edge (cuts) bins on a NUMBER input, aggFunction 'mean'. Edges saved unsorted with a duplicate ([10,0,1,2.5,3,3.2,7,1] -> 0,1,2.5,3,3.2,7,10, uneven). The app's rules (wrangleData.js binData): every bin is [a,b) except the last, which is [a,b] (10 is kept); a value within 1e-10 below an edge belongs to the NEXT bin (0.99999999999 falls in [1,2.5)); values outside the edges (-1, 12) are dropped; [3,3.2) is empty; x is sorted first. (Missing x and y are pinned by the tp-binneddata-missing-* fixtures.) The x output is the bin STARTS read back unchanged (binWidth null).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						3.5, -1, 0, 0.5, 0.99999999999, 1, 2.4, 2.5, 5, 7, 8, 9.99999999999, 10, 12, 6, 1.5
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, 4, 6, 8, 12, 20, 30, 40, 50, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binMode": "cuts",
+				"cuts": [10, 0, 1, 2.5, 3, 3.2, 7, 1],
+				"binSize": 0.25,
+				"binStart": 0,
+				"aggFunction": "mean",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-cuts-median",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Custom-edge (cuts) bins on a NUMBER input, aggFunction 'median'. Edges saved unsorted with a duplicate ([10,0,1,2.5,3,3.2,7,1] -> 0,1,2.5,3,3.2,7,10, uneven). The app's rules (wrangleData.js binData): every bin is [a,b) except the last, which is [a,b] (10 is kept); a value within 1e-10 below an edge belongs to the NEXT bin (0.99999999999 falls in [1,2.5)); values outside the edges (-1, 12) are dropped; [3,3.2) is empty; x is sorted first. (Missing x and y are pinned by the tp-binneddata-missing-* fixtures.) The x output is the bin STARTS read back unchanged (binWidth null).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						3.5, -1, 0, 0.5, 0.99999999999, 1, 2.4, 2.5, 5, 7, 8, 9.99999999999, 10, 12, 6, 1.5
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, 4, 6, 8, 12, 20, 30, 40, 50, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binMode": "cuts",
+				"cuts": [10, 0, 1, 2.5, 3, 3.2, 7, 1],
+				"binSize": 0.25,
+				"binStart": 0,
+				"aggFunction": "median",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-cuts-min",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Custom-edge (cuts) bins on a NUMBER input, aggFunction 'min'. Edges saved unsorted with a duplicate ([10,0,1,2.5,3,3.2,7,1] -> 0,1,2.5,3,3.2,7,10, uneven). The app's rules (wrangleData.js binData): every bin is [a,b) except the last, which is [a,b] (10 is kept); a value within 1e-10 below an edge belongs to the NEXT bin (0.99999999999 falls in [1,2.5)); values outside the edges (-1, 12) are dropped; [3,3.2) is empty; x is sorted first. (Missing x and y are pinned by the tp-binneddata-missing-* fixtures.) The x output is the bin STARTS read back unchanged (binWidth null).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						3.5, -1, 0, 0.5, 0.99999999999, 1, 2.4, 2.5, 5, 7, 8, 9.99999999999, 10, 12, 6, 1.5
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, 4, 6, 8, 12, 20, 30, 40, 50, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binMode": "cuts",
+				"cuts": [10, 0, 1, 2.5, 3, 3.2, 7, 1],
+				"binSize": 0.25,
+				"binStart": 0,
+				"aggFunction": "min",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-cuts-max",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Custom-edge (cuts) bins on a NUMBER input, aggFunction 'max'. Edges saved unsorted with a duplicate ([10,0,1,2.5,3,3.2,7,1] -> 0,1,2.5,3,3.2,7,10, uneven). The app's rules (wrangleData.js binData): every bin is [a,b) except the last, which is [a,b] (10 is kept); a value within 1e-10 below an edge belongs to the NEXT bin (0.99999999999 falls in [1,2.5)); values outside the edges (-1, 12) are dropped; [3,3.2) is empty; x is sorted first. (Missing x and y are pinned by the tp-binneddata-missing-* fixtures.) The x output is the bin STARTS read back unchanged (binWidth null).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						3.5, -1, 0, 0.5, 0.99999999999, 1, 2.4, 2.5, 5, 7, 8, 9.99999999999, 10, 12, 6, 1.5
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, 4, 6, 8, 12, 20, 30, 40, 50, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binMode": "cuts",
+				"cuts": [10, 0, 1, 2.5, 3, 3.2, 7, 1],
+				"binSize": 0.25,
+				"binStart": 0,
+				"aggFunction": "max",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-cuts-stddev",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Custom-edge (cuts) bins on a NUMBER input, aggFunction 'stddev'. Edges saved unsorted with a duplicate ([10,0,1,2.5,3,3.2,7,1] -> 0,1,2.5,3,3.2,7,10, uneven). The app's rules (wrangleData.js binData): every bin is [a,b) except the last, which is [a,b] (10 is kept); a value within 1e-10 below an edge belongs to the NEXT bin (0.99999999999 falls in [1,2.5)); values outside the edges (-1, 12) are dropped; [3,3.2) is empty; x is sorted first. (Missing x and y are pinned by the tp-binneddata-missing-* fixtures.) The x output is the bin STARTS read back unchanged (binWidth null).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						3.5, -1, 0, 0.5, 0.99999999999, 1, 2.4, 2.5, 5, 7, 8, 9.99999999999, 10, 12, 6, 1.5
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, 4, 6, 8, 12, 20, 30, 40, 50, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binMode": "cuts",
+				"cuts": [10, 0, 1, 2.5, 3, 3.2, 7, 1],
+				"binSize": 0.25,
+				"binStart": 0,
+				"aggFunction": "stddev",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-cuts-count",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Custom-edge (cuts) bins on a NUMBER input, aggFunction 'count'. Edges saved unsorted with a duplicate ([10,0,1,2.5,3,3.2,7,1] -> 0,1,2.5,3,3.2,7,10, uneven). The app's rules (wrangleData.js binData): every bin is [a,b) except the last, which is [a,b] (10 is kept); a value within 1e-10 below an edge belongs to the NEXT bin (0.99999999999 falls in [1,2.5)); values outside the edges (-1, 12) are dropped; [3,3.2) is empty; x is sorted first. (Missing x and y are pinned by the tp-binneddata-missing-* fixtures.) The x output is the bin STARTS read back unchanged (binWidth null).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						3.5, -1, 0, 0.5, 0.99999999999, 1, 2.4, 2.5, 5, 7, 8, 9.99999999999, 10, 12, 6, 1.5
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, 4, 6, 8, 12, 20, 30, 40, 50, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binMode": "cuts",
+				"cuts": [10, 0, 1, 2.5, 3, 3.2, 7, 1],
+				"binSize": 0.25,
+				"binStart": 0,
+				"aggFunction": "count",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-cuts-time-input",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"recordValid": true,
+			"note": "Cuts mode on a TIME input. The app refuses it (BinnedData.svelte: custom cuts are not allowed for a time x) and returns invalid without writing outputs; the ports must refuse it too rather than bin the hours since start.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "time",
+					"values": [
+						1709533200000, 1709535000000, 1709536800000, 1709538600000, 1709540400000,
+						1709542200000, 1709544000000, 1709545800000, 1709547600000, 1709549400000,
+						1709551200000, 1709553000000
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [0.0, 1.0, 2.0, 3.0, 4.0, 0.0, 1.0, 2.0, 3.0, 4.0, 0.0, 1.0]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binMode": "cuts",
+				"cuts": [0, 1.5, 4],
+				"binSize": 1,
+				"binStart": 0,
+				"aggFunction": "mean",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-cuts-one-edge",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"recordValid": true,
+			"note": "Cuts mode with fewer than two distinct edges after sort and dedupe ([4,4] -> [4]): the app returns invalid and writes nothing.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						3.5, -1, 0, 0.5, 0.99999999999, 1, 2.4, 2.5, 5, 7, 8, 9.99999999999, 10, 12, 6, 1.5
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, 4, 6, 8, 12, 20, 30, 40, 50, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binMode": "cuts",
+				"cuts": [4, 4],
+				"binSize": 1,
+				"binStart": 0,
+				"aggFunction": "mean",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-uniform-stddev",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Uniform bins (2.5 wide from 0) on the same irregular input, aggFunction 'stddev'. The app's stddev is the SAMPLE standard deviation (n - 1) and 0 for a bin of fewer than two points; its count is the number of pairs in the bin (0 when empty). The ports used the population stddev and had no count (it fell through to the mean).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						3.5, -1, 0, 0.5, 0.99999999999, 1, 2.4, 2.5, 5, 7, 8, 9.99999999999, 10, 12, 6, 1.5
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, 4, 6, 8, 12, 20, 30, 40, 50, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binSize": 2.5,
+				"binStart": 0,
+				"aggFunction": "stddev",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-uniform-count",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Uniform bins (2.5 wide from 0) on the same irregular input, aggFunction 'count'. The app's stddev is the SAMPLE standard deviation (n - 1) and 0 for a bin of fewer than two points; its count is the number of pairs in the bin (0 when empty). The ports used the population stddev and had no count (it fell through to the mean).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						3.5, -1, 0, 0.5, 0.99999999999, 1, 2.4, 2.5, 5, 7, 8, 9.99999999999, 10, 12, 6, 1.5
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, 4, 6, 8, 12, 20, 30, 40, 50, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binSize": 2.5,
+				"binStart": 0,
+				"aggFunction": "count",
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-missing-uniform-mean",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Missing values in BOTH x and y: x is null at rows 4 and 11, y at rows 3 and 10. A row with a missing x or y is DROPPED, never binned as 0. The app's binData used to filter pairs with the global isFinite, and isFinite(null) is true, so a null y was averaged in as 0 (and became the bin min, reported as null) and a null x put its y in the bin at 0; the Python and R ports already dropped them. Uniform 2.5-wide bins from 0, mean: bin [0,2.5) holds y 2, 8, 12, 11 (mean 8.25) and bin [7.5,10), whose only row has a null y, is empty. The pre-fix app averaged the null y in as 0 and binned the two null-x rows (y 6 and 60) at x = 0, giving 99/7 = 14.14, and reported the empty bin as 0.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [3.5, -1, 0, 0.5, null, 1, 2.4, 2.5, 5, 7, 8, null, 10, 12, 6, 1.5]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, null, 6, 8, 12, 20, 30, 40, null, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"aggFunction": "mean",
+				"out": {
+					"binnedx": -1
+				},
+				"binSize": 2.5,
+				"binStart": 0
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-missing-uniform-min",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Missing values in BOTH x and y: x is null at rows 4 and 11, y at rows 3 and 10. A row with a missing x or y is DROPPED, never binned as 0. The app's binData used to filter pairs with the global isFinite, and isFinite(null) is true, so a null y was averaged in as 0 (and became the bin min, reported as null) and a null x put its y in the bin at 0; the Python and R ports already dropped them. Uniform 2.5-wide bins from 0, min: bin [0,2.5) has min 2; the pre-fix app reported null (its min kept the null y and returned it).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [3.5, -1, 0, 0.5, null, 1, 2.4, 2.5, 5, 7, 8, null, 10, 12, 6, 1.5]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, null, 6, 8, 12, 20, 30, 40, null, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"aggFunction": "min",
+				"out": {
+					"binnedx": -1
+				},
+				"binSize": 2.5,
+				"binStart": 0
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-missing-cuts-mean",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Missing values in BOTH x and y: x is null at rows 4 and 11, y at rows 3 and 10. A row with a missing x or y is DROPPED, never binned as 0. The app's binData used to filter pairs with the global isFinite, and isFinite(null) is true, so a null y was averaged in as 0 (and became the bin min, reported as null) and a null x put its y in the bin at 0; the Python and R ports already dropped them. Custom edges saved with a missing edge ([10,1,null,2.5,7] -> 1,2.5,7,10; the pre-fix app read the null as an extra edge at 0), mean: [1,2.5) holds 8, 12, 11; [7,10] holds 40 and 70 (the null-y row at x = 8 is dropped, where the pre-fix app averaged it in as 0).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [3.5, -1, 0, 0.5, null, 1, 2.4, 2.5, 5, 7, 8, null, 10, 12, 6, 1.5]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, null, 6, 8, 12, 20, 30, 40, null, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"aggFunction": "mean",
+				"out": {
+					"binnedx": -1
+				},
+				"binMode": "cuts",
+				"cuts": [10, 1, null, 2.5, 7],
+				"binSize": 0.25,
+				"binStart": 0
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-binneddata-missing-cuts-count",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Missing values in BOTH x and y: x is null at rows 4 and 11, y at rows 3 and 10. A row with a missing x or y is DROPPED, never binned as 0. The app's binData used to filter pairs with the global isFinite, and isFinite(null) is true, so a null y was averaged in as 0 (and became the bin min, reported as null) and a null x put its y in the bin at 0; the Python and R ports already dropped them. Custom edges saved with a missing edge ([10,1,null,2.5,7] -> 1,2.5,7,10; the pre-fix app read the null as an extra edge at 0), count: the number of COMPLETE pairs in each bin (3, 4, 2).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [3.5, -1, 0, 0.5, null, 1, 2.4, 2.5, 5, 7, 8, null, 10, 12, 6, 1.5]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [10, 99, 2, null, 6, 8, 12, 20, 30, 40, null, 60, 70, 88, 16, 11]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"aggFunction": "count",
+				"out": {
+					"binnedx": -1
+				},
+				"binMode": "cuts",
+				"cuts": [10, 1, null, 2.5, 7],
+				"binSize": 0.25,
+				"binStart": 0
+			},
+			"compareOutputs": ["binnedx", "binnedy"]
+		},
+		{
+			"id": "tp-chisquared-fisher-paired",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "Fisher's exact (testType 'fisher') on two PAIRED category columns (the demo-workflow-stats-fisher-exact data): p, df NaN, statistic NaN, effect size = the conditional-MLE odds ratio, ciLow/ciHigh its exact 95% interval. Neither port had a Fisher mode: both ran the chi-squared independence test instead.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "category",
+					"values": [
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control"
+					]
+				},
+				{
+					"ref": "b",
+					"type": "category",
+					"values": [
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Free-running",
+						"Entrained",
+						"Entrained",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running"
+					]
+				}
+			],
+			"args": {
+				"xIN": "@a",
+				"yIN": "@b",
+				"testType": "fisher",
+				"dataFormat": "paired",
+				"alternative": "two-sided",
+				"correction": true,
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "tp-chisquared-fisher-greater",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "Fisher's exact, alternative 'greater', same paired data. The p-value is one-sided; the app's interval stays the two-sided 95% one.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "category",
+					"values": [
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control"
+					]
+				},
+				{
+					"ref": "b",
+					"type": "category",
+					"values": [
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Free-running",
+						"Entrained",
+						"Entrained",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running"
+					]
+				}
+			],
+			"args": {
+				"xIN": "@a",
+				"yIN": "@b",
+				"testType": "fisher",
+				"dataFormat": "paired",
+				"alternative": "greater",
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "tp-chisquared-groups-default",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "Independence on two INDEPENDENT GROUPS (the demo-workflow-stats-two-groups-counts data: 7 of 10 vs 2 of 25), with NO dataFormat saved, so the app's default 'groups' applies: each column is one group's outcomes, tabulated group x outcome (groupsToTable). Both ports cross-tabulated the columns row by row as if paired.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "category",
+					"values": [
+						"arrhythmic",
+						"arrhythmic",
+						"arrhythmic",
+						"arrhythmic",
+						"arrhythmic",
+						"arrhythmic",
+						"arrhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic"
+					]
+				},
+				{
+					"ref": "b",
+					"type": "category",
+					"values": [
+						"arrhythmic",
+						"arrhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic"
+					]
+				}
+			],
+			"args": {
+				"xIN": "@a",
+				"yIN": "@b",
+				"testType": "independence",
+				"correction": true,
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "tp-chisquared-groups-fisher",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "Fisher's exact on the same two independent groups (dataFormat 'groups').",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "category",
+					"values": [
+						"arrhythmic",
+						"arrhythmic",
+						"arrhythmic",
+						"arrhythmic",
+						"arrhythmic",
+						"arrhythmic",
+						"arrhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic"
+					]
+				},
+				{
+					"ref": "b",
+					"type": "category",
+					"values": [
+						"arrhythmic",
+						"arrhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic",
+						"rhythmic"
+					]
+				}
+			],
+			"args": {
+				"xIN": "@a",
+				"yIN": "@b",
+				"testType": "fisher",
+				"dataFormat": "groups",
+				"alternative": "two-sided",
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "tp-chisquared-goodness-categorical",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "Goodness of fit (the app's testType is 'goodness'; the ports only knew 'goodnessoffit') on a CATEGORY column: tabulated by first appearance, a missing cell and the string 'NaN' skipped, tested against a uniform expectation; effect size Cohen's w.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "category",
+					"values": [
+						"red",
+						"blue",
+						"red",
+						"green",
+						null,
+						"red",
+						"blue",
+						"NaN",
+						"red",
+						"green",
+						"red",
+						"blue",
+						"red",
+						""
+					]
+				}
+			],
+			"args": {
+				"xIN": "@a",
+				"testType": "goodness",
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "tp-chisquared-goodness-counts",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "Goodness of fit on a NUMBER column read as observed counts (a missing cell dropped, not counted as 0).",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [18, 22, null, 31, 29]
+				}
+			],
+			"args": {
+				"xIN": "@a",
+				"testType": "goodness",
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "tp-correlation-auto-normal",
+			"kind": "tableProcess",
+			"jsName": "Correlation",
+			"pyFunc": "correlation",
+			"rFunc": "correlation",
+			"note": "Correlation, method 'auto', on the demo-tp-correlation data. The app picks ONE method for the whole matrix by Jarque-Bera (n >= 8, sample-SD moments, p >= 0.05 is normal): all three columns pass, so Pearson (input 2 is an exact linear map of input 1, r = 1). Both ports ran Shapiro-Wilk per PAIR, which rejected the cosine-shaped columns and gave Spearman (r = 0.9994).",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [
+						10, 11.362966948437268, 15.35898384862245, 21.7157287525381, 30, 39.64723819589917, 50,
+						60.35276180410083, 70, 78.2842712474619, 84.64101615137756, 88.63703305156272, 90,
+						88.63703305156272, 84.64101615137756, 78.28427124746192, 70.00000000000001,
+						60.35276180410082, 50.00000000000001, 39.647238195899185, 29.999999999999996,
+						21.7157287525381, 15.358983848622458, 11.362966948437276, 10, 11.362966948437276,
+						15.358983848622458, 21.71572875253809, 29.999999999999982, 39.64723819589917,
+						49.99999999999996, 60.35276180410081, 69.99999999999997, 78.28427124746192,
+						84.64101615137756, 88.63703305156272, 90, 88.63703305156274, 84.64101615137756,
+						78.28427124746193, 70, 60.3527618041009, 50.000000000000014, 39.64723819589919,
+						30.000000000000032, 21.715728752538084, 15.358983848622486, 11.362966948437276, 10,
+						11.362966948437261
+					]
+				},
+				{
+					"ref": "b",
+					"type": "number",
+					"values": [
+						25, 26.192596079882613, 29.689110867544645, 35.251262658470836, 42.5, 50.94133342141178,
+						60, 69.05866657858823, 77.5, 84.74873734152916, 90.31088913245536, 93.8074039201174, 95,
+						93.8074039201174, 90.31088913245536, 84.74873734152918, 77.50000000000001,
+						69.05866657858822, 60.00000000000001, 50.941333421411784, 42.5, 35.251262658470836,
+						29.689110867544652, 26.19259607988262, 25, 26.192596079882613, 29.68911086754465,
+						35.251262658470836, 42.499999999999986, 50.94133342141178, 59.99999999999996,
+						69.0586665785882, 77.49999999999997, 84.74873734152918, 90.31088913245536,
+						93.8074039201174, 95, 93.8074039201174, 90.31088913245537, 84.74873734152919, 77.5,
+						69.05866657858829, 60.000000000000014, 50.9413334214118, 42.50000000000003,
+						35.25126265847082, 29.689110867544677, 26.192596079882613, 25, 26.192596079882605
+					]
+				},
+				{
+					"ref": "c",
+					"type": "number",
+					"values": [
+						100, 98, 96, 94, 92, 90, 88, 86, 84, 82, 80, 78, 76, 74, 72, 70, 68, 66, 64, 62, 60, 58,
+						56, 54, 52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 30, 28, 26, 24, 22, 20, 18, 16, 14,
+						12, 10, 8, 6, 4, 2
+					]
+				}
+			],
+			"args": {
+				"yIN": ["@a", "@b", "@c"],
+				"method": "auto",
+				"alpha": 0.05,
+				"out": {
+					"var_i": -1,
+					"var_j": -1,
+					"r": -1,
+					"pvalue": -1,
+					"n": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
+					"significant": -1
+				}
+			},
+			"compareOutputs": ["var_i", "var_j", "r", "pvalue", "n", "ciLow", "ciHigh", "significant"]
+		},
+		{
+			"id": "tp-correlation-auto-one-skewed",
+			"kind": "tableProcess",
+			"jsName": "Correlation",
+			"pyFunc": "correlation",
+			"rFunc": "correlation",
+			"note": "Correlation, method 'auto', where ONE of three columns is strongly skewed (Jarque-Bera rejects it): the app switches the WHOLE matrix to Spearman, including the pair of the two normal-looking columns, which a per-pair rule would have left on Pearson.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [
+						10.0, 12.032653, 13.156349, 12.889628, 11.404964, 9.44765, 7.985273, 7.752642, 8.9062,
+						10.950442, 12.97096, 14.064505, 13.763797, 12.257295, 10.300563, 8.860913, 8.662467,
+						9.845589, 11.900869, 13.908709, 14.971822, 14.63724, 13.109355, 11.153786, 9.737299,
+						9.573122, 10.785502, 12.851268, 14.845891, 15.878299
+					]
+				},
+				{
+					"ref": "b",
+					"type": "number",
+					"values": [
+						7.0, 6.805165, 6.280605, 5.591474, 4.967706, 4.647713, 4.820015, 5.577087, 3.892713,
+						5.628408, 7.567324, 6.46734, 8.120341, 9.403175, 7.307805, 7.943271, 5.509, 6.245976,
+						4.377739, 3.055656, 5.321857, 5.098926, 5.208851, 8.41661, 8.487708, 8.245597, 7.614894,
+						6.639841, 5.473474, 4.340151
+					]
+				},
+				{
+					"ref": "c",
+					"type": "number",
+					"values": [
+						1.0, 1.197217, 1.433329, 1.716007, 2.054433, 2.459603, 2.94468, 3.525421, 4.220696,
+						5.05309, 6.049647, 7.242743, 8.671138, 10.381237, 12.428597, 14.879732, 17.814273,
+						21.327557, 25.533722, 30.569415, 36.598234, 43.816042, 52.457326, 62.802821, 75.188628,
+						90.017131, 107.770073, 129.024202, 154.470015, 184.934184
+					]
+				}
+			],
+			"args": {
+				"yIN": ["@a", "@b", "@c"],
+				"method": "auto",
+				"alpha": 0.05,
+				"out": {
+					"var_i": -1,
+					"var_j": -1,
+					"r": -1,
+					"pvalue": -1,
+					"n": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
+					"significant": -1
+				}
+			},
+			"compareOutputs": ["var_i", "var_j", "r", "pvalue", "n", "ciLow", "ciHigh", "significant"]
+		},
+		{
+			"id": "tp-correlation-auto-jb-sample-sd",
+			"kind": "tableProcess",
+			"jsName": "Correlation",
+			"pyFunc": "correlation",
+			"rFunc": "correlation",
+			"note": "Correlation 'auto' where the choice hinges on HOW the app's Jarque-Bera standardises. Column c (n = 10, right-skewed) has JB p = 0.086 with the SAMPLE standard deviation the app uses, so every column passes and the matrix is Pearson; with the population SD (the NormalityTest node's convention) its p would be 0.016 and the matrix would switch to Spearman.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [2.1, 3.4, 1.8, 4.0, 2.9, 3.1, 2.5, 3.8, 2.2, 3.3]
+				},
+				{
+					"ref": "b",
+					"type": "number",
+					"values": [5.2, 6.1, 4.8, 6.9, 5.5, 6.0, 5.1, 6.4, 5.0, 5.9]
+				},
+				{
+					"ref": "c",
+					"type": "number",
+					"values": [1.03, 0.91, 0.82, 0.97, 2.82, 0.71, 0.56, 1.27, 0.27, 0.36]
+				}
+			],
+			"args": {
+				"yIN": ["@a", "@b", "@c"],
+				"method": "auto",
+				"alpha": 0.05,
+				"out": {
+					"var_i": -1,
+					"var_j": -1,
+					"r": -1,
+					"pvalue": -1,
+					"n": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
+					"significant": -1
+				}
+			},
+			"compareOutputs": ["var_i", "var_j", "r", "pvalue", "n", "ciLow", "ciHigh", "significant"]
+		},
+		{
+			"id": "tp-chisquared-paired-no-yates",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "Independence on the paired demo data WITHOUT Yates' continuity correction (correction false): the uncorrected statistic and its p; Cramer's V is the uncorrected one either way.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "category",
+					"values": [
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control"
+					]
+				},
+				{
+					"ref": "b",
+					"type": "category",
+					"values": [
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Free-running",
+						"Entrained",
+						"Entrained",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running"
+					]
+				}
+			],
+			"args": {
+				"xIN": "@a",
+				"yIN": "@b",
+				"testType": "independence",
+				"dataFormat": "paired",
+				"correction": false,
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "tp-chisquared-fisher-less",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "Fisher's exact, alternative 'less' (the lower tail, P(X <= a)), same paired data.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "category",
+					"values": [
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Treated",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control",
+						"Control"
+					]
+				},
+				{
+					"ref": "b",
+					"type": "category",
+					"values": [
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Entrained",
+						"Free-running",
+						"Entrained",
+						"Entrained",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running",
+						"Free-running"
+					]
+				}
+			],
+			"args": {
+				"xIN": "@a",
+				"yIN": "@b",
+				"testType": "fisher",
+				"dataFormat": "paired",
+				"alternative": "less",
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
 		},
 		{
 			"id": "tp-sort-asc",
@@ -3112,6 +4914,49 @@
 			]
 		},
 		{
+			"id": "actogram-rule-harmonic-missing-last-x",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "The onset rule of actogram-rule-onset on a series whose LAST timestamp is missing. The harmonic check filters its candidates by the record span, which was xData[last] - xData[0]; hoursSinceStart keeps the missing time as null and JS reads it as 0, so the span was about 0, no candidate survived and the check returned null (tau NaN). Both ports copied that. The span is now last PRESENT minus first PRESENT time in all three (harmonicCheck.js validEnds).",
+			"generate": {
+				"seed": 11,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:30:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24.5,
+						"onsetHr": 14,
+						"missingX": [-1]
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
 			"id": "actogram-rule-offset",
 			"kind": "actogramMarkers",
 			"pyFunc": "actogram_plot_rule_outputs",
@@ -3767,6 +5612,60 @@
 							"manualMarkers": [30.2]
 						}
 					}
+				}
+			]
+		},
+		{
+			"id": "actogram-rule-bin-origin",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "An onset rule over a time series and an imported 'bin' column with originTime_ms at 07:30Z. The bin series folds at -rawBinStart0 + (startTime - originTime_ms) / 3.6e6, so its onsets sit at clock hours; the ports used -min(centres), half a bin and 7.5 h off.",
+			"generate": {
+				"seed": 73,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T02:00:00Z",
+						"dtHrs": 0.25,
+						"days": 6,
+						"tau": 24,
+						"onsetHr": 16
+					},
+					{
+						"xType": "number",
+						"startHr": 0,
+						"dtHrs": 0.5,
+						"days": 6,
+						"tau": 24,
+						"onsetHr": 9,
+						"bin": {
+							"binWidth": 0.75,
+							"originTime": "2024-03-04T07:30:00Z"
+						}
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
 				}
 			]
 		},

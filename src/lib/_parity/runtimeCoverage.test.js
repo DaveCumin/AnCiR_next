@@ -118,8 +118,8 @@ describe('python runtime coverage', () => {
 	});
 
 	it('treats a not-applicable analysis as done, not as debt', () => {
-		// ColumnSet emits no columns and is resolved before export, so a runtime entry for it
-		// would be dead code. It must still name a REAL analysis.
+		// An analysis with genuinely nothing to compute (none at present; see NOT_APPLICABLE)
+		// must still name a REAL analysis.
 		const notReal = NOT_APPLICABLE.filter((k) => !jsKeys.includes(k));
 		expect(notReal, `NOT_APPLICABLE names analyses that do not exist: ${notReal}`).toEqual([]);
 	});

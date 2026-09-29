@@ -168,7 +168,8 @@
 					const rawArr = core.rawData.get(col.data);
 					if (Array.isArray(rawArr)) {
 						const start = this.colCurrent - 1;
-						const binStep = col.binStep ?? col.binWidth ?? 0;
+						// Centre = start + half the bin WIDTH, as Column.getData reports it. The
+						// step only spaces the starts (windows overlap when it is smaller).
 						const halfRange = (col.binWidth ?? 0) / 2;
 						const rangeStr = `±${halfRange.toFixed(2)}`;
 						if (col.originTime_ms != null) {
@@ -178,7 +179,7 @@
 									if (!Number.isFinite(x)) {
 										return { raw: '-', computed: '-', isTime: true };
 									}
-									const centerMs = col.originTime_ms + (x + binStep / 2) * 3600000;
+									const centerMs = col.originTime_ms + (x + halfRange) * 3600000;
 									return {
 										raw: Number.isFinite(centerMs) ? formatDateTime(centerMs) : '-',
 										computed: Number.isFinite(centerMs) ? rangeStr : '-',
@@ -194,7 +195,7 @@
 										return { raw: '-', computed: '-', isTime: true };
 									}
 									return {
-										raw: (x + binStep / 2).toFixed(this.decimalPlaces),
+										raw: (x + halfRange).toFixed(this.decimalPlaces),
 										computed: rangeStr,
 										isTime: true
 									};
@@ -411,17 +412,18 @@
 			if (!Array.isArray(rawArr)) return '—';
 			const x = rawArr[i];
 			if (!Number.isFinite(x)) return { raw: '-', computed: '-', isTime: true };
-			const binStep = col.binStep ?? col.binWidth ?? 0;
-			const rangeStr = `±${((col.binWidth ?? 0) / 2).toFixed(2)}`;
+			// Centre = start + half the bin WIDTH, as Column.getData reports it.
+			const half = (col.binWidth ?? 0) / 2;
+			const rangeStr = `±${half.toFixed(2)}`;
 			if (col.originTime_ms != null) {
-				const centerMs = col.originTime_ms + (x + binStep / 2) * 3600000;
+				const centerMs = col.originTime_ms + (x + half) * 3600000;
 				return {
 					raw: Number.isFinite(centerMs) ? formatDateTime(centerMs) : '-',
 					computed: Number.isFinite(centerMs) ? rangeStr : '-',
 					isTime: true
 				};
 			}
-			return { raw: (x + binStep / 2).toFixed(dp), computed: rangeStr, isTime: true };
+			return { raw: (x + half).toFixed(dp), computed: rangeStr, isTime: true };
 		}
 		if (col.type === 'time' && !col.isReferencial()) {
 			const rawArr = core.rawData.get(col.data);

@@ -132,7 +132,12 @@ run_tp_fixture <- function(fx, rec) {
 
   for (nm in names(rec$inputs)) {
     spec <- rec$inputs[[nm]]
-    vals <- unwrap_input(spec)
+    # A category column keeps its text (a JSON null becomes NA); unwrap_input would coerce
+    # every label to NA and hand the port a column of nothing.
+    vals <- if (identical(spec$type, "category"))
+      vapply(spec$values, function(e) if (is.null(e)) NA_character_ else as.character(e),
+             character(1), USE.NAMES = FALSE)
+      else unwrap_input(spec)
     id <- next_id; next_id <- next_id + 1
     ref_to_id[[nm]] <- id
     env$raw_data[[as.character(id)]] <- vals
@@ -182,12 +187,20 @@ run_tp_fixture <- function(fx, rec) {
   }
 
   ok <- run_table_process(fx$jsName, args, env)
+  # A `recordValid` fixture pins the node's validity itself (a refusal, typically).
+  if (!is.null(rec$valid) && !identical(isTRUE(ok), isTRUE(rec$valid))) {
+    stop(sprintf("R valid=%s, JS valid=%s", isTRUE(ok), isTRUE(rec$valid)))
+  }
+  # Compare what the column READS (getData on the JS side), not what it stores: a 'bin'
+  # column stores bin starts and reads bin centres. Mirrors test_parity.py.
   outs <- list()
   for (k in names(out_pairs)) {
     dyn <- env$raw_data[[as.character(out_pairs[[k]][2])]]
-    outs[[k]] <- unlist(if (!is.null(dyn) && length(dyn)) dyn
-                        else env$raw_data[[as.character(out_pairs[[k]][1])]],
-                        use.names = FALSE)
+    oid <- as.character(if (!is.null(dyn) && length(dyn)) out_pairs[[k]][2]
+                        else out_pairs[[k]][1])
+    outs[[k]] <- if (is.null(env$raw_data[[oid]])) NULL
+                 else unlist(col_data(env$cols[[oid]], env$cols, env$raw_data),
+                             use.names = FALSE)
   }
   outs
 }
@@ -359,6 +372,15 @@ for (fx in fixtures) {
   for (k in names(want)) {
     w <- want[[k]]
     g <- got[[k]]
+    # A category output (Correlation's var_i / var_j) compares as text.
+    if (is.list(w) && length(w) && all(vapply(w, is.character, logical(1)))) {
+      wv <- unlist(w, use.names = FALSE); gv <- as.character(unlist(g, use.names = FALSE))
+      if (!identical(wv, gv)) {
+        bad <- c(bad, sprintf("%s: %s vs %s", k, paste(gv, collapse = ","),
+                              paste(wv, collapse = ",")))
+      }
+      next
+    }
     if (is.list(w) || length(as_num_vec(w)) > 1) {
       wv <- as_num_vec(w); gv <- as_num_vec(g)
       if (length(gv) != length(wv)) {

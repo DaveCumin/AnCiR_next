@@ -307,6 +307,9 @@ function generateInputs(spec) {
 		const { n, period, amp, mesor = 0, phase = 0, noise = 0, dt = 1, trend = 0, refs } = spec;
 		const { missingEvery = 0, missingOffset = 0, gap = null } = spec;
 		const t = seq(n, (i) => i * dt);
+		// `xStart` (optional, ISO) turns x into a TIME column: epoch ms at xStart + t hours.
+		// y is drawn on the same hours, so the series is otherwise identical.
+		const xStartMs = spec.xStart != null ? Date.parse(spec.xStart) : null;
 		const y = t.map((h, i) => {
 			const v =
 				mesor +
@@ -317,7 +320,20 @@ function generateInputs(spec) {
 			if (skipped || inGap) return null;
 			return trend ? v + trend * h : v;
 		});
-		return { [refs.x]: { type: 'number', values: t }, [refs.y]: { type: 'number', values: y } };
+		// `missingX` (optional): row indices whose x is missing (null), negative from the end,
+		// e.g. [0, -1] for both ends. y is unchanged.
+		const nullX = (xs) => {
+			for (const k of spec.missingX ?? []) xs[k < 0 ? n + k : k] = null;
+			return xs;
+		};
+		if (xStartMs != null) {
+			const ms = nullX(t.map((h) => xStartMs + Math.round(h * 3600000)));
+			return { [refs.x]: { type: 'time', values: ms }, [refs.y]: { type: 'number', values: y } };
+		}
+		return {
+			[refs.x]: { type: 'number', values: nullX([...t]) },
+			[refs.y]: { type: 'number', values: y }
+		};
 	}
 	if (spec.type === 'pvalues') {
 		// A realistic screen: mostly uniform nulls with a handful of genuinely
@@ -445,7 +461,7 @@ async function runTableProcess(fx) {
 	const { inputs, args } = buildTableInputs(fx);
 	const tp = new TableProcess({ name: fx.jsName, args }, null);
 	pushObj(tp);
-	await entry.func(tp.args);
+	const ret = await entry.func(tp.args);
 
 	const want = new Set(fx.compareOutputs ?? []);
 	const outputs = {};
@@ -455,6 +471,10 @@ async function runTableProcess(fx) {
 		if (!want.has(canon)) continue;
 		outputs[canon] = safeArray(core.data.find((c) => c.id === id)?.getData?.());
 	}
+	// `recordValid` fixtures pin a REFUSAL (the node returns invalid and writes nothing), so
+	// the validity flag is part of what the ports must reproduce. Recorded only when asked
+	// for, so every other fixture's record stays as it was.
+	if (fx.recordValid) return { inputs, outputs, valid: Array.isArray(ret) ? !!ret[1] : !!ret };
 	return { inputs, outputs };
 }
 
@@ -481,6 +501,13 @@ async function runTableProcessResult(fx) {
 // Calls a pure plot-compute function (fft/autocorrelation) with seeded inputs
 // and captures the arrays the fixture wants compared. No plot/reactivity.
 function runPlotCompute(fx) {
+	// The actogram's plot data is not a pure function of one (times, values) pair: its rows
+	// fold every series at ONE startTime taken over all series in the display zone, so it
+	// is read from a real Actogram built as the app builds it.
+	if (fx.jsFn === 'actogramDownloadData') return runActogramDownload(fx);
+	// The correlogram's rows are the plot's acfData, whose lag step comes from the x
+	// COLUMN (its binWidth, else its mean spacing), so they too are read from a real plot.
+	if (fx.jsFn === 'correlogramDownloadData') return runCorrelogramDownload(fx);
 	const inputs = tpInputs(fx);
 	const fn = PLOT_COMPUTE_FNS[fx.jsFn];
 	if (!fn) throw new Error(`no JS plot-compute fn ${fx.jsFn}`);
@@ -602,12 +629,18 @@ function generateActogramSeries(spec) {
 			gap = null,
 			spike = null
 		} = s;
-		const n = Math.round((days * 24) / dtHrs);
+		// `stepPattern` (optional, hours) cycles through uneven sample spacings instead of a
+		// fixed dtHrs; the record length is then days * 24 over the pattern's mean step.
+		const pattern = s.stepPattern ?? null;
+		const meanStep = pattern ? pattern.reduce((a, b) => a + b, 0) / pattern.length : dtHrs;
+		const n = Math.round((days * 24) / meanStep);
 		const startMs = xType === 'time' ? Date.parse(start) : 0;
 		const x = [];
 		const y = [];
+		let hAcc = 0;
 		for (let i = 0; i < n; i++) {
-			const h = i * dtHrs;
+			if (pattern && i > 0) hAcc += pattern[(i - 1) % pattern.length];
+			const h = pattern ? hAcc : i * dtHrs;
 			x.push(xType === 'time' ? startMs + Math.round(h * 3600000) : (s.startHr ?? 0) + h);
 			const phase = (((h - onsetHr) % tau) + tau) % tau;
 			let v = (phase < activeHrs ? high : low) + (noise ? normal(rng, 0, noise) : 0);
@@ -617,6 +650,21 @@ function generateActogramSeries(spec) {
 			if (spike && h >= spike[0] && h < spike[1]) v = high * 1.5;
 			if (gap && h >= gap[0] && h < gap[1]) v = null;
 			y.push(v);
+		}
+		// `missingX` (optional): row indices whose TIME is missing (null), negative from the
+		// end, e.g. [0, -1] for both ends. The y draw is unchanged.
+		for (const k of s.missingX ?? []) x[k < 0 ? n + k : k] = null;
+		// `bin: {binWidth, originTime}` on a number series makes it a BIN column as an
+		// import schema would (ImportData, e.g. the Enspire multiplate wells): x holds the
+		// raw bin starts, and the column carries binWidth and originTime_ms.
+		if (s.bin) {
+			return {
+				xType: 'bin',
+				x,
+				y,
+				binWidth: s.bin.binWidth,
+				originTime_ms: s.bin.originTime != null ? Date.parse(s.bin.originTime) : null
+			};
 		}
 		return { xType, x, y };
 	});
@@ -708,6 +756,130 @@ function blockRecord(block, source) {
 	};
 }
 
+/**
+ * Build the fixture's actogram as the app does (Plot.fromJSON over real Columns) with the
+ * display zone set to `zone`, hand it to `read`, and restore the zone afterwards. `read`
+ * must read every derived it needs before returning, because startTime reads the zone.
+ */
+function withActogram(fx, zone, series, inner, read) {
+	const prevZone = appState.displayTimezone;
+	appState.displayTimezone = zone;
+	try {
+		const data = series.map((s, i) => {
+			const xId = s.xId ?? mkCol(s.xType, s.x, `x${i}`);
+			const yId = s.yId ?? mkCol('number', s.y, `y${i}`);
+			if (s.xId == null && s.xType === 'bin') {
+				const xc = core.data.find((c) => c.id === xId);
+				xc.binWidth = s.binWidth;
+				if (s.originTime_ms != null) xc.originTime_ms = s.originTime_ms;
+			}
+			return { ...inner.data[i], x: { refId: xId }, y: { refId: yId }, colour: '#000000' };
+		});
+		const plot = Plot.fromJSON({
+			id: 0,
+			name: fx.id,
+			type: 'actogram',
+			width: 600,
+			height: 400,
+			plot: { ...inner, data }
+		});
+		core.plots.push(plot);
+		return read(plot.plot);
+	} finally {
+		appState.displayTimezone = prevZone;
+	}
+}
+
+// The actogram's "Show/Save data" rows (Actogramclass.getDownloadData), which the Python
+// export writes as `<plot>_data.csv`. A `plotCompute` fixture with jsFn
+// 'actogramDownloadData' and a `generate.series` list like the actogramMarkers kind.
+// With `binned` (BinnedData args: binSize, binStart, stepSize, aggFunc) each series is
+// first run through a real BinnedData node and the actogram plots its OUTPUT columns, so
+// the bars come from the binned column's own metadata (binWidth, originTime_ms, type).
+async function runActogramDownload(fx) {
+	const series = generateActogramSeries(fx.generate);
+	const zone = fx.zone ?? 'utc';
+	const inner = { periodHrs: fx.periodHrs ?? 24, data: series.map(() => ({})) };
+	let plotted = series;
+	if (fx.binned) {
+		const entry = appConsts.tableProcessMap.get('BinnedData');
+		plotted = [];
+		for (const [i, s] of series.entries()) {
+			const xIn = mkCol(s.xType, s.x, `x${i}`);
+			const yIn = mkCol('number', s.y, `y${i}`);
+			const tp = new TableProcess(
+				{ name: 'BinnedData', args: { ...fx.binned, xIN: xIn, yIN: [yIn], out: { binnedx: -1 } } },
+				null
+			);
+			pushObj(tp);
+			await entry.func(tp.args);
+			plotted.push({ xId: tp.args.out.binnedx, yId: tp.args.out[`binnedy_${yIn}`] });
+		}
+	}
+	return withActogram(fx, zone, plotted, inner, (act) => {
+		const { headers, rows } = act.getDownloadData();
+		return jsonSafe({
+			inputs: { zone, periodHrs: inner.periodHrs, binned: fx.binned ?? null, series },
+			outputs: { headers, rows }
+		});
+	});
+}
+
+// The correlogram's "Show/Save data" rows (Correlogramclass.getDownloadData), which the
+// Python export writes as `<plot>_data.csv`. A `plotCompute` fixture with jsFn
+// 'correlogramDownloadData', a `generate.series` list as the actogram kinds use (a series
+// may add `stepPattern` for uneven spacing, and `maxLag` / `minLag`, saved PER SERIES as
+// the app saves them) and, optionally, `binned` BinnedData args: each series is then run
+// through a real BinnedData node and the correlogram plots its outputs, so the lag step is
+// the binned column's own binWidth.
+async function runCorrelogramDownload(fx) {
+	const series = generateActogramSeries(fx.generate);
+	const lagsOf = (i) => ({
+		maxLag: fx.generate.series[i].maxLag ?? null,
+		minLag: fx.generate.series[i].minLag ?? 0
+	});
+	const plotted = [];
+	for (const [i, s] of series.entries()) {
+		const xId = mkCol(s.xType, s.x, `x${i}`);
+		const yId = mkCol('number', s.y, `y${i}`);
+		if (s.xType === 'bin') {
+			const xc = core.data.find((c) => c.id === xId);
+			xc.binWidth = s.binWidth;
+			if (s.originTime_ms != null) xc.originTime_ms = s.originTime_ms;
+		}
+		if (!fx.binned) {
+			plotted.push({ xId, yId });
+			continue;
+		}
+		const tp = new TableProcess(
+			{ name: 'BinnedData', args: { ...fx.binned, xIN: xId, yIN: [yId], out: { binnedx: -1 } } },
+			null
+		);
+		pushObj(tp);
+		await appConsts.tableProcessMap.get('BinnedData').func(tp.args);
+		plotted.push({ xId: tp.args.out.binnedx, yId: tp.args.out[`binnedy_${yId}`] });
+	}
+	const plot = Plot.fromJSON({
+		id: 0,
+		name: fx.id,
+		type: 'correlogram',
+		width: 600,
+		height: 400,
+		plot: {
+			data: plotted.map((p, i) => ({ x: { refId: p.xId }, y: { refId: p.yId }, ...lagsOf(i) }))
+		}
+	});
+	core.plots.push(plot);
+	const { headers, rows } = plot.plot.getDownloadData();
+	return jsonSafe({
+		inputs: {
+			binned: fx.binned ?? null,
+			series: series.map((s, i) => ({ ...s, ...lagsOf(i) }))
+		},
+		outputs: { headers, rows }
+	});
+}
+
 function runActogramMarkers(fx) {
 	const series = fx.source ? sessionActogramSeries(fx.source) : generateActogramSeries(fx.generate);
 	const zone = fx.zone ?? 'utc';
@@ -722,24 +894,7 @@ function runActogramMarkers(fx) {
 		}))
 	};
 
-	const prevZone = appState.displayTimezone;
-	appState.displayTimezone = zone;
-	try {
-		const data = series.map((s, i) => {
-			const xId = mkCol(s.xType, s.x, `x${i}`);
-			const yId = mkCol('number', s.y, `y${i}`);
-			return { ...inner.data[i], x: { refId: xId }, y: { refId: yId }, colour: '#000000' };
-		});
-		const plot = Plot.fromJSON({
-			id: 0,
-			name: fx.id,
-			type: 'actogram',
-			width: 600,
-			height: 400,
-			plot: { ...inner, data }
-		});
-		core.plots.push(plot);
-		const act = plot.plot;
+	return withActogram(fx, zone, series, inner, (act) => {
 		const outputs = {
 			startTime: act.startTime,
 			Ndays: act.Ndays,
@@ -756,10 +911,21 @@ function runActogramMarkers(fx) {
 				return { binSize: d.binSize, rules };
 			})
 		};
-		return jsonSafe({ inputs: { zone, inner, series }, outputs });
-	} finally {
-		appState.displayTimezone = prevZone;
-	}
+		// A bin series is recorded as the ports' frame reads it: x as the column's getData
+		// (bin CENTRES), plus the raw first bin start and the origin the row offset uses.
+		const recorded = series.map((s, i) => {
+			if (s.xType !== 'bin') return s;
+			const xc = act.data[i].x;
+			return {
+				xType: 'bin',
+				x: [...xc.getData()],
+				y: s.y,
+				rawBinStart0: core.rawData.get(xc.data)?.[0] ?? 0,
+				originTime_ms: xc.originTime_ms ?? null
+			};
+		});
+		return jsonSafe({ inputs: { zone, inner, series: recorded }, outputs });
+	});
 }
 
 describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
@@ -775,7 +941,7 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 			resetCore();
 			if (fx.kind === 'columnProcess') results[fx.id] = runColumnProcess(fx);
 			else if (fx.kind === 'tableProcessResult') results[fx.id] = await runTableProcessResult(fx);
-			else if (fx.kind === 'plotCompute') results[fx.id] = runPlotCompute(fx);
+			else if (fx.kind === 'plotCompute') results[fx.id] = await runPlotCompute(fx);
 			else if (fx.kind === 'pureUtil') results[fx.id] = runPureUtil(fx);
 			else if (fx.kind === 'timeColumn') results[fx.id] = runTimeColumn(fx);
 			else if (fx.kind === 'actogramMarkers') results[fx.id] = runActogramMarkers(fx);

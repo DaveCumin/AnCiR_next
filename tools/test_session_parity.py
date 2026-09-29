@@ -95,7 +95,8 @@ def build_columns(session):
         cols[cid] = rt.Column(
             id=cid, name=c.get("name"), type=c.get("type", "number"),
             data=c.get("data"), raw_data=raw, time_format=c.get("timeFormat"),
-            bin_width=c.get("binWidth", 1.0), compression=c.get("compression"),
+            bin_width=c.get("binWidth"), origin_time_ms=c.get("originTime_ms"),
+            compression=c.get("compression"),
             ref_id=c.get("refId"), columns_index=None, processes=c.get("processes", []),
         )
     for col in cols.values():
@@ -168,6 +169,20 @@ SKIP_COLUMNS = {
 }
 
 
+# Columns whose JS value is a MONTE CARLO quantity drawn from the app's seeded @stdlib
+# minstd-shuffle PRNG, which the runtime does not reproduce. The port deliberately emits NaN
+# ("not computed") for them rather than a number that would look comparable and could not
+# be; see tp_surrogatetest's docstring. The same boundary is why demo-tp-random is in
+# NONDETERMINISTIC. These are NOT skipped silently: the check REQUIRES the port's value to be
+# NaN (a port that started inventing p-values would fail), and each exclusion is printed.
+#
+#  - surrogatetest `pvalue`: the rank of the observed band statistic among nSurrogates
+#    surrogates. Its `observed` column IS deterministic and is compared as normal.
+MONTE_CARLO_COLUMNS = {
+    "demo-tp-surrogatetest": {"pvalue"},
+}
+
+
 def _canonical_name(name):
     """Strip a trailing `_<digits>` suffix from a column name so skip keys
     survive demo regeneration (which reassigns the id embedded in the suffix)."""
@@ -189,13 +204,23 @@ def check_session(sid, path, js_results, verbose=False):
 
     tol = SESSION_TOLERANCE.get(sid, TOL)
     skip_names = SKIP_COLUMNS.get(sid, set())
+    mc_names = MONTE_CARLO_COLUMNS.get(sid, set())
     diffs = []
+    excluded = []
     matched = 0
     for cid_str, js_col in js["columns"].items():
         cid = int(cid_str)
         if _canonical_name(js_col.get("name")) in skip_names:
             continue
         col = cols.get(cid)
+        if _canonical_name(js_col.get("name")) in mc_names:
+            vals = col.get_data() if col is not None else None
+            if vals and all(_is_nan(_num(v)) for v in vals):
+                excluded.append(js_col.get("name"))
+            else:
+                diffs.append((cid, js_col.get("name"),
+                              f"Monte Carlo column must be NaN in the port, got {vals!r}"))
+            continue
         try:
             py_values = col.get_data() if col is not None else None
         except Exception as e:  # noqa: BLE001
@@ -209,7 +234,7 @@ def check_session(sid, path, js_results, verbose=False):
 
     status = "match" if not diffs and not errors else ("mismatch" if not errors else "tp-error")
     return {"status": status, "matched": matched, "total": len(js["columns"]),
-            "errors": errors, "diffs": diffs}
+            "errors": errors, "diffs": diffs, "excluded": excluded}
 
 
 def main(argv):
@@ -231,6 +256,9 @@ def main(argv):
             print(f"        ! {e}")
         for cid, name, reason in r.get("diffs", [])[:4]:
             print(f"        Δ col {cid} ({name}): {reason}")
+        for name in r.get("excluded", []) or []:
+            print(f"        ~ col {name}: Monte Carlo (seeded JS PRNG, not ported); "
+                  "port reports NaN as required")
 
     print("\nsummary:", ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
     return 0 if counts.get("mismatch", 0) == 0 and counts.get("tp-error", 0) == 0 \

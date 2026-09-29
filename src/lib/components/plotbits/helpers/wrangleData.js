@@ -1,4 +1,5 @@
 import { KahanSum } from '$lib/utils/numerics.js';
+import { validPairs } from '$lib/utils/validPairs.js';
 export { min, max, minMax, mean } from '$lib/utils/stats.js';
 
 //Bin data in binSize bins starting at binStart - takes the average y-value and returns the starting x positions
@@ -46,11 +47,21 @@ export function binData(
 		}
 	}
 
-	// Pair, drop non-finite x/y values (e.g. NaN from failed time parses), then sort by x
-	const paired = xValues
-		.map((x, i) => ({ x, y: yValues[i] }))
-		.filter((p) => isFinite(p.x) && isFinite(p.y))
-		.sort((a, b) => a.x - b.x);
+	// Pair, drop missing and non-finite x/y values, then sort by x.
+	//
+	// Missing is decided by the house rule (validPairs / isInvalidValue): null, undefined, a
+	// blank string and NaN are absence, a real 0 is data. This used to be the global
+	// `isFinite`, which coerces, so `isFinite(null)` and `isFinite('')` are TRUE: a missing y
+	// was averaged in as 0 (and became the bin min) and a missing x put its row in the bin at
+	// 0. Infinity is still dropped: it is not missing, but it cannot be binned or averaged.
+	const { tt: vx, yy: vy } = validPairs(xValues, yValues ?? []);
+	const paired = [];
+	for (let i = 0; i < vx.length; i++) {
+		const x = Number(vx[i]);
+		const y = Number(vy[i]);
+		if (Number.isFinite(x) && Number.isFinite(y)) paired.push({ x, y });
+	}
+	paired.sort((a, b) => a.x - b.x);
 
 	const n = paired.length;
 	if (n === 0) {
@@ -189,6 +200,41 @@ export function binData(
 	}
 
 	return { bins, binEnds, y_out, droppedCount };
+}
+
+/**
+ * Uniform-bin several y columns against ONE x on one shared grid.
+ *
+ * binData drops a row whose x or y is missing, so each column's bins run only to its own
+ * last complete row: a column whose trailing cells are blank gets fewer bins than one that
+ * is full. Import-time binning writes all columns side by side, so it needs them on the same
+ * grid. The grid here is taken from the valid x alone and every column is padded to it with
+ * NaN (what binData itself returns for an empty bin). Uniform bins are index-aligned from
+ * `binStart`, so bin i is the same interval in every column.
+ *
+ * @param {Array<number|null>} xValues
+ * @param {Array<Array<number|null|string>>} yColumns
+ * @param {number} binSize
+ * @param {number} [binStart]
+ * @param {number|null} [stepSize]
+ * @param {string} [aggFunc]
+ * @returns {{bins:number[], y_outs:number[][]}}
+ */
+export function binOnSharedGrid(
+	xValues,
+	yColumns,
+	binSize,
+	binStart = 0,
+	stepSize = null,
+	aggFunc = 'mean'
+) {
+	const grid = binData(xValues, xValues, binSize, binStart, stepSize, 'count');
+	const n = grid.bins.length;
+	const y_outs = yColumns.map((y) => {
+		const b = binData(xValues, y, binSize, binStart, stepSize, aggFunc);
+		return Array.from({ length: n }, (_, i) => (i < b.y_out.length ? b.y_out[i] : NaN));
+	});
+	return { bins: grid.bins, y_outs };
 }
 
 /// Make a sequential array

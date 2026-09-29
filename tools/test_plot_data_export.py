@@ -10,8 +10,9 @@ numbers are finite and land where the seeded 24 h rhythm says they should.
 
 This is the end-to-end check of the Python export path (including the ported
 actogram binning). Numeric JS↔Python parity for the FFT/correlogram compute
-functions is checked separately by the `plotCompute` fixtures in
-tools/parity/fixtures.json (see test_parity.py).
+functions and for the actogram's rows (several series starting on different
+days, a non-UTC display zone, a mid-day start) is checked separately by the
+`plotCompute` fixtures in tools/parity/fixtures.json (see test_parity.py).
 
     tools/.venv/bin/python -m pytest tools/test_plot_data_export.py -q
 """

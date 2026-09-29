@@ -136,8 +136,7 @@ export function uncoveredValues(node, options, used) {
  * are the same failure class as the cosinor bug above and should go first.
  */
 export const PARAM_COVERAGE_GAPS = {
-	BinnedData: { diffStep: [true] },
-	Correlation: { method: ['auto', 'spearman'] },
+	Correlation: { method: ['spearman'] },
 	Cosinor: { permuteTest: [true] },
 	CrossCorrelation: { method: ['spearman'] },
 	DoubleLogistic: { fixK1: [true], fixK2: [true], fixPeriod: [false], permuteTest: [true] },

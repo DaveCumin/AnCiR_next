@@ -82,7 +82,6 @@ describe('sessionToPython', () => {
 			name: 'x',
 			type: 'number',
 			data: 36,
-			binWidth: 1.0,
 			processes: []
 		});
 		// col 37 has no `data`/`compression`/`timeFormat` → those keys are absent;
@@ -90,11 +89,27 @@ describe('sessionToPython', () => {
 		expect(meta['37']).toEqual({
 			name: 'y',
 			type: 'number',
-			binWidth: 1.0,
 			refId: 37,
 			processes: [{ funcname: 'add', name: 'Add', args: { n: 5 } }]
 		});
 		expect('compression' in meta['37']).toBe(false);
+	});
+
+	it("keeps a bin column's binWidth and originTime_ms, and gives no other column a binWidth", () => {
+		const session = {
+			rawData: { 1: [0, 0.5, 1], 2: [3, 4, 5] },
+			data: [
+				{ id: 1, name: 't', type: 'bin', data: 1, binWidth: 0.5, originTime_ms: 1709537400000 },
+				{ id: 2, name: 'v', type: 'number', data: 2 }
+			],
+			tableProcesses: [],
+			plots: []
+		};
+		const meta = extractEmbedded(sessionToPython(session, FAKE_RUNTIME), '_COL_META_RAW');
+		expect(meta['1']).toMatchObject({ binWidth: 0.5, originTime_ms: 1709537400000 });
+		// The actogram reads binWidth for truthiness (its bar width): a default of 1 would
+		// make every column's bars 1 h wide in the export.
+		expect('binWidth' in meta['2']).toBe(false);
 	});
 
 	it('re-ints the embedded string keys in the generated script', () => {

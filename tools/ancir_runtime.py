@@ -100,43 +100,150 @@ def linear_regression(x, y):
             'rSquared': float(r2), 'rmse': float(rmse)}
 
 
+_BIN_EPSILON = 1e-10
+
+
+def _bin_finite(v):
+    """A usable binning value: a finite number. None, NaN and +/-inf are dropped.
+
+    Matches the app's wrangleData.js binData, which drops missing values by the house rule
+    (validPairs / isInvalidValue) and then non-finite ones. It used to filter with the GLOBAL
+    `isFinite`, which coerces, so a null x or y read as 0 and was binned; that app bug was
+    never copied here and is now fixed there (fixtures tp-binneddata-missing-*)."""
+    if v is None or isinstance(v, bool):
+        return False
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(f)
+
+
+def _bin_agg(agg_func, ys, start, end):
+    """The app's per-bin aggregates (binData's aggFunctions), over ys[start:end] of the
+    x-sorted values. An unknown name is the mean, as in the app."""
+    k = end - start
+    if agg_func == 'count':
+        return k
+    if agg_func in ('min', 'max'):
+        if k == 0:
+            return None  # the app's null for an empty bin
+        return min(ys[start:end]) if agg_func == 'min' else max(ys[start:end])
+    if agg_func == 'median':
+        if k == 0:
+            return float('nan')
+        sl = sorted(ys[start:end])
+        mid = k // 2
+        return (sl[mid - 1] + sl[mid]) / 2 if k % 2 == 0 else sl[mid]
+    if agg_func == 'stddev':
+        if k < 2:
+            return 0  # the app returns 0, not NaN, for fewer than two points
+        mean = _bin_agg('mean', ys, start, end)
+        sum_sq = 0.0
+        for i in range(start, end):
+            d = ys[i] - mean
+            sum_sq += d * d
+        return math.sqrt(sum_sq / (k - 1))  # SAMPLE standard deviation, as the app
+    # mean (and any unknown name): a plain left-to-right sum, as the app's loop.
+    if k == 0:
+        return float('nan')
+    tot = 0.0
+    for i in range(start, end):
+        tot += ys[i]
+    return tot / k
+
+
 def bin_data(x_values, y_values, bin_size, bin_start=0.0, step_size=None,
-             agg_func='mean'):
-    """Port of plotbits/helpers/wrangleData.js::binData."""
-    if step_size is None:
-        step_size = bin_size
-    xa = _to_float_arr(x_values)
-    ya = _to_float_arr(y_values)
-    mask = ~(np.isnan(xa) | np.isnan(ya))
-    xa, ya = xa[mask], ya[mask]
-    if xa.size == 0:
-        return {'bins': [], 'y_out': []}
-    end = xa.max()
-    bins, y_out = [], []
-    cur = bin_start
-    while True:  # JS binData pushes the bin THEN breaks (post-push) → one trailing bin
-        in_bin = ya[(xa >= cur) & (xa < cur + bin_size)]
-        if in_bin.size:
-            if agg_func == 'mean':
-                v = float(in_bin.mean())
-            elif agg_func == 'min':
-                v = float(in_bin.min())
-            elif agg_func == 'max':
-                v = float(in_bin.max())
-            elif agg_func == 'median':
-                v = float(np.median(in_bin))
-            elif agg_func == 'stddev':
-                v = float(in_bin.std(ddof=0))
+             agg_func='mean', cuts=None):
+    """Port of plotbits/helpers/wrangleData.js::binData, both modes.
+
+    Returns {'bins', 'bin_ends', 'y_out', 'dropped_count'} like the app's
+    {bins, binEnds, y_out, droppedCount}. Pairs with a non-finite x or y are dropped and
+    the rest sorted by x (stable, as the app's sort). Bin membership uses the app's 1e-10
+    edge tolerance: a value within 1e-10 BELOW an edge belongs to the next bin.
+
+    Uniform mode (cuts None or fewer than two edges): bins [start, start + bin_size) at
+    start = bin_start + i * step (step = step_size when positive, else bin_size), and the
+    loop pushes a bin THEN stops once its start reaches the last x, so there is one bin at
+    or past the last datum.
+
+    Cuts mode (`cuts`, strictly ascending; the caller sorts and dedupes): one bin per
+    consecutive pair of edges, each [a, b) except the LAST, which is [a, b]. Values below
+    the first edge or above the last are dropped (counted in dropped_count). A cuts list
+    that is not strictly ascending gives no bins, as in the app."""
+    empty = {'bins': [], 'bin_ends': [], 'y_out': [], 'dropped_count': 0}
+    use_cuts = cuts is not None and len(cuts) >= 2
+    x_values = list(x_values) if x_values is not None else []
+    if not x_values:
+        return empty
+    if use_cuts:
+        for i in range(1, len(cuts)):
+            if not cuts[i] > cuts[i - 1]:
+                return empty
+    else:
+        step = step_size if step_size is not None and step_size > 0 else bin_size
+        if step is None or not step > 0 or not math.isfinite(step):
+            return empty
+    y_values = list(y_values) if y_values is not None else []
+    paired = [(float(x), float(y_values[i])) for i, x in enumerate(x_values)
+              if i < len(y_values) and _bin_finite(x) and _bin_finite(y_values[i])]
+    paired.sort(key=lambda p: p[0])
+    n = len(paired)
+    if n == 0:
+        return empty
+    xs = [p[0] for p in paired]
+    ys = [p[1] for p in paired]
+    eps = _BIN_EPSILON
+
+    if use_cuts:
+        num_bins = len(cuts) - 1
+        bins, bin_ends, y_out = [], [], []
+        dropped = 0
+        pointer = 0
+        while pointer < n and xs[pointer] < cuts[0] - eps:
+            pointer += 1
+            dropped += 1
+        for i in range(num_bins):
+            bins.append(cuts[i])
+            bin_ends.append(cuts[i + 1])
+            start_idx = pointer
+            end_idx = start_idx
+            if i == num_bins - 1:
+                while end_idx < n and xs[end_idx] <= cuts[i + 1] + eps:
+                    end_idx += 1
             else:
-                v = float(in_bin.mean())
-        else:
-            v = float('nan')
-        bins.append(cur)
-        y_out.append(v)
-        if cur >= end:
+                while end_idx < n and xs[end_idx] < cuts[i + 1] - eps:
+                    end_idx += 1
+            y_out.append(_bin_agg(agg_func, ys, start_idx, end_idx))
+            pointer = end_idx
+        dropped += n - pointer
+        return {'bins': bins, 'bin_ends': bin_ends, 'y_out': y_out, 'dropped_count': dropped}
+
+    bins, bin_ends, y_out = [], [], []
+    dropped = 0
+    current = bin_start
+    bin_index = 0
+    pointer = 0
+    while pointer < n and xs[pointer] < current - eps:
+        pointer += 1
+        dropped += 1
+    while True:
+        b_end = current + bin_size
+        bins.append(current)
+        bin_ends.append(b_end)
+        while pointer < n and xs[pointer] < current - eps:
+            pointer += 1
+        start_idx = pointer
+        end_idx = start_idx
+        while end_idx < n and xs[end_idx] < b_end - eps:
+            end_idx += 1
+        y_out.append(_bin_agg(agg_func, ys, start_idx, end_idx))
+        if current >= xs[n - 1]:
             break
-        cur += step_size
-    return {'bins': bins, 'y_out': y_out}
+        bin_index += 1
+        # From bin_start each time, not by accumulation, so the edges do not drift.
+        current = bin_start + bin_index * step
+    return {'bins': bins, 'bin_ends': bin_ends, 'y_out': y_out, 'dropped_count': dropped}
 
 
 # ----------------------------------------------------------------------
@@ -853,68 +960,142 @@ def find_autocorrelation_peak(lags, correlations):
     return lags[best], correlations[best]
 
 
+def _js_upper_median(diffs):
+    """correlogram.js's median spacing: the diffs sorted ascending and the element at
+    floor(len / 2), i.e. the UPPER median for an even count (not the mean of the middle
+    two, as np.median). Every diff counts, including zero and negative ones."""
+    d = sorted(diffs)
+    return d[len(d) // 2]
+
+
 def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
                             min_lag=0.0):
-    t = _to_float_arr(times)
-    y = _to_float_arr(values)
-    mask = ~(np.isnan(t) | np.isnan(y))
-    t, y = t[mask], y[mask]
-    n = y.size
-    if n < 2:
-        return {'lags': [], 'correlations': [], 'dt': 1.0,
-                'peakLag': float('nan'), 'peakCorrelation': float('nan')}
-    if bin_size is not None:
-        dt = float(bin_size)
-    else:
-        dt = _median_dt(t.tolist())
-    timespan = float(t[-1] - t[0])
-    max_lag_t = float(max_lag) if max_lag else timespan / 2.0
-    min_lag_t = float(min_lag) if (min_lag and min_lag > 0) else 0.0
-    if min_lag_t >= max_lag_t:
+    """Port of utils/correlogram.js computeAutocorrelation.
+
+    `bin_size` None estimates the lag step as the UPPER median of the successive spacings
+    of the valid times (in their given order); a non-finite or non-positive step, or times
+    and values of different lengths, give no lags, as in the app. Sampling within 10% of
+    that median takes the index-shift path, anything else is the slotted estimator (Edelson
+    and Krolik 1988; Rehfeld et al. 2011, Nonlin. Processes Geophys. 18:389, Eqs. 10-11):
+    each product of two mean-removed samples goes to the lag slot its separation falls in.
+    As in the app (see the rules in utils/correlogram.js): lag 0 is exactly 1 on both paths;
+    slots are half-open, lag k takes (k - 1/2) dt <= d < (k + 1/2) dt, so a pair on a
+    boundary counts once (in the upper lag); distinct pairs closer than half a step are not
+    used at any lag."""
+    def empty(dt):
         return {'lags': [], 'correlations': [], 'dt': dt,
                 'peakLag': float('nan'), 'peakCorrelation': float('nan')}
-    n_lags = min(int(max_lag_t // dt), n // 2)
-    start_idx = int(math.ceil(min_lag_t / dt))
+
+    times = list(times) if times is not None else None
+    values = list(values) if values is not None else None
+    if (not times or not values or len(times) < 2 or len(values) < 2
+            or len(times) != len(values)):
+        return empty(1.0)
+    idx = [i for i in range(len(times))
+           if not _js_invalid(times[i]) and not _js_invalid(values[i])]
+    if len(idx) < 2:
+        return empty(1.0)
+    t = np.array([float(times[i]) for i in idx], dtype=float)
+    y = np.array([float(values[i]) for i in idx], dtype=float)
+    n = y.size
+    diffs = np.diff(t).tolist()
+    dt = float(bin_size) if bin_size is not None else _js_upper_median(diffs)
+    if not math.isfinite(dt) or dt <= 0:
+        return empty(1.0)
+    # `maxLag ? maxLag : span / 2`: JS truthiness, so 0, null and NaN mean "auto".
+    ml = None if max_lag is None else float(max_lag)
+    max_lag_t = ml if (ml is not None and ml != 0 and not math.isnan(ml)) \
+        else float(t[-1] - t[0]) / 2.0
+    mn = None if min_lag is None else float(min_lag)
+    min_lag_t = mn if (mn is not None and math.isfinite(mn) and mn > 0) else 0.0
+    if min_lag_t >= max_lag_t:
+        return empty(dt)
+    n_lags = min(math.floor(max_lag_t / dt), n // 2)
+    start_idx = math.ceil(min_lag_t / dt)
     ymean = float(y.mean())
     yvar = float(((y - ymean) ** 2).sum() / n)
     if yvar == 0:
-        return {'lags': [], 'correlations': [], 'dt': dt,
-                'peakLag': float('nan'), 'peakCorrelation': float('nan')}
-    diffs = np.diff(t)
-    median_dt = float(np.median(diffs))
-    is_uniform = bool(np.max(np.abs(diffs - median_dt)) < median_dt * 0.1)
+        return empty(dt)
+    median = _js_upper_median(diffs)
+    is_uniform = max(abs(d - median) for d in diffs) < median * 0.1
     lags, corrs = [], []
     if is_uniform:
         ydem = y - ymean
         for lag in range(start_idx, n_lags + 1):
-            if lag >= n:
-                break
+            if lag == 0:
+                # Lag 0 is 1 by definition, not sum / (n * var) with its rounding.
+                corrs.append(1.0)
+                lags.append(0.0)
+                continue
             a = ydem[:n - lag]
             b = ydem[lag:]
             count = a.size
-            if count <= 0:
-                corrs.append(0.0)
-            else:
-                corrs.append(float((a * b).sum() / (count * yvar)))
+            corrs.append(float((a * b).sum() / (count * yvar)) if count > 0 else 0.0)
             lags.append(lag * dt)
     else:
-        tol = dt / 2.0
         for li in range(start_idx, n_lags + 1):
             target = li * dt
+            if li == 0:
+                corrs.append(1.0)
+                lags.append(target)
+                continue
+            # The half-open slot [(k - 1/2) dt, (k + 1/2) dt).
+            lo = (li - 0.5) * dt
+            hi = (li + 0.5) * dt
             sum_, count = 0.0, 0
             for i in range(n):
                 for j in range(i + 1, n):
                     td = t[j] - t[i]
-                    if abs(td - target) <= tol:
+                    if lo <= td < hi:
                         sum_ += (y[i] - ymean) * (y[j] - ymean)
                         count += 1
-                    if td > target + tol:
+                    if td >= hi:
                         break
             corrs.append(sum_ / (count * yvar) if count > 0 else 0.0)
             lags.append(target)
     peak_lag, peak_r = find_autocorrelation_peak(lags, corrs)
     return {'lags': lags, 'correlations': corrs, 'dt': dt,
             'peakLag': peak_lag, 'peakCorrelation': peak_r}
+
+
+def correlogram_series_acf(series, columns_index):
+    """One correlogram series as the app computes it (CorrelogramDataclass.acfData), or
+    None when a column is missing. Shared by the PNG renderer and the plot-data export so
+    the two always agree.
+
+    - times are the x column's hoursSinceStart for EVERY column type (a number or bin x
+      counts from its own minimum; the autocorrelation is shift-invariant, so this changes
+      no number, but it is the app's input);
+    - the lag step is the x column's binWidth when it has one (a BinnedData output, an
+      imported bin column), else the MEAN spacing (last - first) / (count - 1) over all
+      rows, valid or not; only when there are fewer than two rows is it left to the
+      compute's own median rule;
+    - maxLag / minLag are PER SERIES (the saved series' `maxLag`, `minLag`).
+
+    The mean spacing uses the first and last VALID rows, (t_j - t_i) / (j - i), as the app
+    now does (utils/correlogram.js meanSpacing). The app used to read a missing first or
+    last time as 0 (JS null arithmetic), which made the step wrong or blanked the plot; the
+    two agree whenever both ends are present (fixture correlogram-data-missing-ends)."""
+    x_col = _resolve_plot_col(series.get('x'), columns_index)
+    y_col = _resolve_plot_col(series.get('y'), columns_index)
+    if x_col is None or y_col is None:
+        return None
+    times = [None if v is None or (isinstance(v, float) and math.isnan(v)) else v
+             for v in (x_col.hours_since_start or [])]
+    values = y_col.get_data() or []
+    bin_size = None
+    bw = x_col.eff_bin_width
+    if bw:
+        bin_size = float(bw)
+    elif len(times) > 1:
+        valid = [i for i, v in enumerate(times) if v is not None]
+        if len(valid) >= 2:
+            i, j = valid[0], valid[-1]
+            bin_size = (times[j] - times[i]) / (j - i)
+        else:
+            bin_size = float('nan')
+    return compute_autocorrelation(times, values, bin_size,
+                                   series.get('maxLag'), series.get('minLag') or 0)
 
 
 # ----------------------------------------------------------------------
@@ -1439,15 +1620,57 @@ class Column:
     data: Any = None  # raw payload key into RAW_DATA, or list, or {start,step,length}
     raw_data: dict = field(default_factory=dict)
     time_format: str | None = None
-    bin_width: float = 1.0
+    # Column.binWidth: set only on columns that carry bins (a 'bin' column, and the x
+    # outputs of BinnedData and MovingAnalysis); None everywhere else, as in the app, where
+    # plots test it for truthiness (the actogram's bar width, the correlogram's step).
+    bin_width: float | None = None
     compression: str | None = None
     ref_id: int | None = None  # if this column is referencial
     group_label: str | None = None  # per-column group/replicate label (metadata; not used in compute)
     columns_index: dict = field(default_factory=dict)  # {id: Column}
     processes: list = field(default_factory=list)  # [(funcname, args)]
+    # Column.originTime_ms: the epoch ms a binned/analysis x output counts its hours from
+    # (BinnedData on a time input, an imported bin column such as the Enspire wells).
+    origin_time_ms: float | None = None
+    # Column.cutsList: the edges of a BinnedData x output in cuts mode. Such a column has
+    # binWidth null in the app, so its getData adds null / 2 = 0 and reads the bin starts.
+    cuts_list: list | None = None
 
     def is_referencial(self):
         return self.ref_id is not None
+
+    def _ref(self):
+        return self.columns_index.get(self.ref_id) if self.is_referencial() else None
+
+    @property
+    def eff_bin_width(self):
+        """Column.binWidth: a referencial column reads its source's."""
+        if self.is_referencial():
+            ref = self._ref()
+            return ref.eff_bin_width if ref else None
+        return self.bin_width
+
+    @property
+    def eff_origin_time_ms(self):
+        """Column.originTime_ms: a referencial column reads its source's."""
+        if self.is_referencial():
+            ref = self._ref()
+            return ref.eff_origin_time_ms if ref else None
+        return self.origin_time_ms
+
+    @property
+    def raw_first(self):
+        """The first STORED value (for a 'bin' column, the raw first bin start, before
+        getData centres it), 0 when there is none: the actogram's
+        `core.rawData.get(x.data ?? x.refColumn.data)?.[0] ?? 0`."""
+        key = self.data
+        if key is None and self.is_referencial():
+            ref = self._ref()
+            key = ref.data if ref else None
+        raw = self.raw_data.get(key) if key is not None else None
+        if isinstance(raw, (list, tuple)) and raw and raw[0] is not None:
+            return raw[0]
+        return 0
 
     def _decompress(self, raw):
         if self.compression == 'awd' and isinstance(raw, dict):
@@ -1463,7 +1686,12 @@ class Column:
         data = self._decompress(raw)
         if self.type == 'time' and self.compression != 'awd':
             # Already-numeric (UNIX ms, e.g. written by SimulatedData TP): leave alone.
-            if data and not isinstance(data[0], (int, float)):
+            # Judged on the first PRESENT value: judging on data[0] sent an epoch-ms column
+            # whose first time is missing through pd.to_datetime, which reads integers as
+            # NANOseconds, so every time shrank a millionfold (fixture
+            # correlogram-data-missing-ends).
+            first = next((v for v in data if v is not None and v != ''), None)
+            if first is not None and not isinstance(first, (int, float)):
                 fmt = strptime_from_dayjs(self.time_format)
                 parsed = None
                 widths = dayjs_width_pattern(self.time_format)
@@ -1499,7 +1727,16 @@ class Column:
                     epoch = pd.Timestamp('1970-01-01', tz='UTC')
                     data = ((parsed - epoch) // pd.Timedelta('1ms')).tolist()
         if self.type == 'bin':
-            data = [v + self.bin_width / 2 for v in data]
+            # getData reports bin CENTRES: start + binWidth / 2. A uniform bin column always
+            # carries binWidth in the app; 1.0 stands in for one saved without it (the ports'
+            # old default). A cuts column's binWidth is null, which the app's arithmetic
+            # reads as 0, so it reports its starts.
+            if self.cuts_list is not None:
+                half = 0.0
+            else:
+                half = (self.bin_width if self.bin_width is not None else 1.0) / 2
+            data = [v + half if isinstance(v, (int, float)) and math.isfinite(v) else v
+                    for v in data]
         # Apply column processes (entries are dicts with funcname/name + args)
         for entry in self.processes:
             funcname = entry.get('funcname') or entry.get('name')
@@ -2137,37 +2374,93 @@ def tp_cosinor(args, cols, raw_data, _sv):
 
 # --- BinnedData ---
 
+def _binned_cuts(raw):
+    """BinnedData's cuts at the node boundary: the finite edges, deduplicated and sorted."""
+    out = set()
+    for c in raw if isinstance(raw, (list, tuple)) else []:
+        if _bin_finite(c):
+            out.add(float(c))
+    return sorted(out)
+
+
 def tp_binneddata(args, cols, raw_data, _sv):
+    """Port of BinnedData.svelte `binneddata(args)`: uniform bins (binSize / binStart /
+    effectiveStep) or custom edges (binMode 'cuts'). Returns the node's validity; like the
+    app it writes NOTHING when invalid."""
     x_in = args.get('xIN', -1)
     y_ins = _id_list(args.get('yIN'))
-    if x_in == -1 or x_in not in cols or not y_ins:
+    if x_in is None or x_in == -1 or x_in not in cols or not y_ins:
         return False
-    bin_size = float(args.get('binSize', 1.0))
-    bin_start = float(args.get('binStart', 0.0))
-    step = float(args.get('stepSize', bin_size))
-    agg = args.get('aggFunc', 'mean')
+    bin_mode = 'cuts' if args.get('binMode') == 'cuts' else 'uniform'
+    bin_size = args.get('binSize', 1.0)
+    bin_start = args.get('binStart', 0.0)
+    # As the app's effectiveStep(args) (one rule for its panel and headless paths): stepSize
+    # (saved with a 0.25 default) is the step only when diffStep is ticked and it is a usable
+    # positive number, otherwise binSize.
+    try:
+        step_arg = float(args.get('stepSize'))
+    except (TypeError, ValueError):
+        step_arg = float('nan')
+    step = step_arg if args.get('diffStep') and step_arg > 0 else bin_size
+    agg = args.get('aggFunction') or 'mean'
+    cuts = _binned_cuts(args.get('cuts'))
     x_col = cols[x_in]
-    x_data = _t_for_col(x_col)
 
+    if bin_mode == 'cuts':
+        # The app refuses custom edges on a time x (BinnedData.svelte) and needs at least
+        # two distinct edges.
+        if x_col.type == 'time' or len(cuts) < 2:
+            return False
+    elif bin_size is None or bin_start is None or not float(bin_size) > 0:
+        return False
+    if bin_mode == 'uniform':
+        bin_size, bin_start, step = float(bin_size), float(bin_start), float(step)
+
+    x_data = _t_for_col(x_col)
+    cuts_arg = cuts if bin_mode == 'cuts' else None
     bins_x = None
-    any_valid = False
+    y_results = {}
     for y_id in y_ins:
-        if y_id not in cols:
+        if y_id is None or y_id == -1 or y_id not in cols:
             continue
-        b = bin_data(x_data, cols[y_id].get_data(),
-                     bin_size, bin_start, step, agg)
-        if bins_x is None:
-            # JS emits bin CENTRES (start + binSize/2), not bin starts.
-            bins_x = [bx + bin_size / 2.0 for bx in b['bins']]
-            x_out = _out_id(args, 'binnedx')
-            _set_col(raw_data, cols, x_out, bins_x,
-                     type_=x_col.type, time_format=x_col.time_format)
+        b = bin_data(x_data, cols[y_id].get_data(), bin_size, bin_start, step, agg, cuts_arg)
+        if b['bins']:
+            if bins_x is None:
+                bins_x = b['bins']  # the first valid y's bins are the shared x output
+            y_results[y_id] = b['y_out']
+    x_out = _out_id(args, 'binnedx')
+    if bins_x is None:
+        return False
+    if x_out == -1:
+        return True  # valid, but the app writes nothing without an x output
+    # As BinnedData.svelte writes it: the x output stores bin STARTS. A time input gives a
+    # time column of epoch ms (origin + start hours, origin = the input's earliest sample,
+    # the baseline hoursSinceStart used); anything else gives a 'bin' column, whose getData
+    # then adds half the bin width. Uniform bins carry binWidth = binSize (the actogram
+    # draws its bars with it); cut bins carry binWidth null and the edge list, so a cuts
+    # column reads back its starts unchanged.
+    if x_col.type == 'time':
+        origin = _js_min(x_col.get_data())
+        base = origin if origin is not None else 0
+        _set_col(raw_data, cols, x_out, [base + h * 3600000 for h in bins_x], type_='time')
+        meta = {'time_format': None, 'origin_time_ms': origin}
+    else:
+        _set_col(raw_data, cols, x_out, bins_x, type_='bin')
+        meta = {'origin_time_ms': None}
+    out_col = cols.get(x_out)
+    if out_col is not None:
+        if bin_mode == 'cuts':
+            meta.update(bin_width=None, cuts_list=list(cuts))
+        else:
+            meta.update(bin_width=bin_size, cuts_list=None)
+        for k, v in meta.items():
+            setattr(out_col, k, v)
+    for y_id, y_vals in y_results.items():
         y_out = _out_id(args, f'binnedy_{y_id}')
         if y_out == -1:
             y_out = _out_id(args, 'binnedy')
-        _set_col(raw_data, cols, y_out, b['y_out'], type_='number')
-        any_valid = True
-    return any_valid
+        _set_col(raw_data, cols, y_out, y_vals, type_='number')
+    return True
 
 
 # --- NonparametricRA (NPCRA) ---
@@ -2635,6 +2928,20 @@ def tp_fdrcorrection(args, cols, raw_data, _sv):
     return n_tested > 0
 
 
+# --- ColumnSet ---
+
+def tp_columnset(_args, _cols, _raw_data, _sv):
+    """ColumnSet.svelte `columnset`: a recognised NO-OP, valid, writing nothing.
+
+    A Column Set curates a subset of its candidate columns and emits NO columns of its own;
+    the app materialises its selection into each consumer's real inputs (syncTPSets /
+    syncPlotSets) while the session is edited, so the saved consumers already hold concrete
+    column ids and there is nothing left to compute here. The node itself is still in the
+    saved `tableProcesses`, though, and the strict dispatcher used to abort on it as an
+    unknown process, which killed every exported script of a session containing one."""
+    return True
+
+
 # --- SurrogateTest ---
 
 def tp_surrogatetest(args, cols, raw_data, _sv):
@@ -2977,6 +3284,10 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
             mx_id = _out_id(args, 'movex')
             x_type = 'time' if x_col.type == 'time' else 'number'
             _set_col(raw_data, cols, mx_id, movex, type_=x_type)
+            # MovingAnalysis.svelte stamps binWidth = windowSize on its x output (the
+            # actogram draws each window that wide).
+            if mx_id in cols:
+                cols[mx_id].bin_width = win
         for k, vlist in per_stat.items():
             out_key = f'{y_id}_{k}'
             out_id = _out_id(args, out_key)
@@ -4867,32 +5178,64 @@ def tp_normalitytest(args, cols, raw_data, _sv):
     return _result_rows(raw_data, cols, args, rows)
 
 
+def jarque_bera_normality(values):
+    """Port of GroupComparison.svelte jarqueBeraNormality: the app's assumption check (used
+    by Correlation's `auto` method and GroupComparison's warnings). NOT the NormalityTest
+    node's Jarque-Bera: this one standardises by the SAMPLE standard deviation (n - 1).
+    Fewer than 8 values is not evaluable; zero variance is evaluable and non-normal; normal
+    means p >= 0.05."""
+    clean = [float(v) for v in (values or [])
+             if v is not None and not (isinstance(v, float) and math.isnan(v))]
+    n = len(clean)
+    if n < 8:
+        return {'evaluable': False, 'normal': None}
+    m = float(np.mean(clean))
+    var = sum((x - m) ** 2 for x in clean) / (n - 1)
+    if not math.isfinite(var) or var == 0:
+        return {'evaluable': True, 'normal': False, 'statistic': float('inf'), 'pValue': 0.0}
+    sd = math.sqrt(var)
+    skew = sum(((x - m) / sd) ** 3 for x in clean) / n
+    kurt = sum(((x - m) / sd) ** 4 for x in clean) / n
+    jb = (n / 6) * (skew ** 2 + (kurt - 3) ** 2 / 4)
+    p = float(sp_stats.chi2.sf(jb, 2)) if math.isfinite(jb) and jb >= 0 else float('nan')
+    return {'evaluable': True, 'normal': (p >= 0.05) if math.isfinite(p) else False,
+            'statistic': jb, 'pValue': p}
+
+
 def tp_correlation(args, cols, raw_data, _sv):
-    """Pairwise correlation matrix over the wired columns, one row per pair."""
+    """Port of Correlation.svelte `correlation`: the pairwise matrix over the wired columns,
+    one row per pair, under ONE method for the whole matrix. `auto` is Pearson unless ANY
+    column is non-normal by the app's Jarque-Bera check (jarque_bera_normality), then
+    Spearman for every pair."""
     y_ins = [y for y in _id_list(args.get('yIN')) if y in cols]
     if len(y_ins) < 2:
         return False
-    method = args.get('method', 'auto')
-    alpha = float(args.get('alpha', 0.05))
+    requested = args.get('method', 'auto') or 'auto'
+    alpha_raw = args.get('alpha', 0.05)
+    try:
+        alpha = float(alpha_raw)
+    except (TypeError, ValueError):
+        alpha = float('nan')
+    if not math.isfinite(alpha):
+        alpha = 0.05
+    columns = [cols[y].get_data() or [] for y in y_ins]
+    names = [cols[y].name if cols[y].name is not None else str(y) for y in y_ins]
+    use = 'spearman' if requested == 'spearman' else 'pearson'
+    if requested == 'auto':
+        for c in columns:
+            jb = jarque_bera_normality(c)
+            if jb['evaluable'] and jb['normal'] is False:
+                use = 'spearman'
+                break
     rows = {'var_i': [], 'var_j': [], 'r': [], 'pvalue': [], 'n': [],
             'ciLow': [], 'ciHigh': [], 'significant': []}
     for a in range(len(y_ins)):
         for b in range(a + 1, len(y_ins)):
-            ca, cb = cols[y_ins[a]], cols[y_ins[b]]
-            xs, ys = ca.get_data(), cb.get_data()
-            use = method
-            if method == 'auto':
-                # Mirrors the JS: Shapiro on both, Spearman if either looks non-normal.
-                pa = shapiro_wilk(xs)['pvalue']
-                pb = shapiro_wilk(ys)['pvalue']
-                non_normal = ((not _isnan(pa) and pa <= 0.05)
-                              or (not _isnan(pb) and pb <= 0.05))
-                use = 'spearman' if non_normal else 'pearson'
-            res = correlate(xs, ys, use)
+            res = correlate(columns[a], columns[b], use)
             ci = correlation_ci([res['r'], res['n']], use, 1 - alpha)
             p = res['pvalue']
-            rows['var_i'].append(ca.name or str(y_ins[a]))
-            rows['var_j'].append(cb.name or str(y_ins[b]))
+            rows['var_i'].append(names[a])
+            rows['var_j'].append(names[b])
             rows['r'].append(res['r'])
             rows['pvalue'].append(p)
             rows['n'].append(res['n'])
@@ -4900,7 +5243,8 @@ def tp_correlation(args, cols, raw_data, _sv):
             rows['ciHigh'].append(ci['ciHigh'])
             rows['significant'].append(
                 float('nan') if _isnan(p) else (1 if p < alpha else 0))
-    return _result_rows(raw_data, cols, args, rows)
+    _result_rows(raw_data, cols, args, rows)
+    return True
 
 
 def tp_crosscorrelation(args, cols, raw_data, _sv):
@@ -4918,59 +5262,191 @@ def tp_crosscorrelation(args, cols, raw_data, _sv):
         'lag': res['lags'], 'correlation': res['r'], 'pvalue': res['pvalue']})
 
 
+def _is_missing_category(v):
+    """chisquare.js isMissingCategory: null, '' and NaN (or the text 'NaN') are absent."""
+    if v is None or v == '':
+        return True
+    if isinstance(v, float) and math.isnan(v):
+        return True
+    return _js_string(v) == 'NaN'
+
+
+def _js_string(v):
+    """JS String(v) for the values a column holds: integral floats print without '.0'."""
+    if isinstance(v, bool):
+        return 'true' if v else 'false'
+    if isinstance(v, float):
+        if math.isnan(v):
+            return 'NaN'
+        if v.is_integer() and abs(v) < 1e21:
+            return str(int(v))
+    return str(v)
+
+
+def contingency_table(row_var, col_var):
+    """chisquare.js contingencyTable: PAIRED columns cross-tabulated by index (to the shorter
+    length), rows with a missing cell skipped, labels in order of first appearance."""
+    row_labels, col_labels, cells = [], [], {}
+    n = min(len(row_var or []), len(col_var or []))
+    for i in range(n):
+        r, c = row_var[i], col_var[i]
+        if _is_missing_category(r) or _is_missing_category(c):
+            continue
+        rk, ck = _js_string(r), _js_string(c)
+        if rk not in row_labels:
+            row_labels.append(rk)
+        if ck not in col_labels:
+            col_labels.append(ck)
+        cells[(rk, ck)] = cells.get((rk, ck), 0) + 1
+    table = [[cells.get((r, c), 0) for c in col_labels] for r in row_labels]
+    return {'rowLabels': row_labels, 'colLabels': col_labels, 'table': table}
+
+
+def groups_to_table(columns, names=None):
+    """chisquare.js groupsToTable: INDEPENDENT groups, one column per group holding that
+    group's outcomes; rows are the groups, columns the outcomes by first appearance."""
+    groups = [c for c in (columns or []) if isinstance(c, list)]
+    names = names or []
+    if len(groups) < 2:
+        return {'rowLabels': [], 'colLabels': [], 'table': []}
+    col_labels, per_group = [], []
+    for vals in groups:
+        counts = {}
+        for v in vals:
+            if _is_missing_category(v):
+                continue
+            k = _js_string(v)
+            if k not in col_labels:
+                col_labels.append(k)
+            counts[k] = counts.get(k, 0) + 1
+        per_group.append(counts)
+    row_labels = [names[i] if i < len(names) and names[i] is not None else f'Group {i + 1}'
+                  for i in range(len(groups))]
+    table = [[counts.get(c, 0) for c in col_labels] for counts in per_group]
+    return {'rowLabels': row_labels, 'colLabels': col_labels, 'table': table}
+
+
+def fisher_exact_full(table, alternative='two-sided'):
+    """utils/fisherExact.js fisherExact on a 2x2 table: the p-value for `alternative`, the
+    conditional-MLE odds ratio and its exact TWO-SIDED 95% interval (the app reports that
+    interval whatever the alternative). A table with an empty row or column margin gives
+    p = 1 and NaN estimates, as in the app. Returns None for a table that is not 2x2 of
+    non-negative whole counts or has an unknown alternative."""
+    if (not isinstance(table, list) or len(table) != 2
+            or any(not isinstance(r, list) or len(r) != 2 for r in table)):
+        return None
+    if alternative not in ('two-sided', 'less', 'greater'):
+        return None
+    cells = [float(v) for r in table for v in r]
+    if any((not math.isfinite(v)) or v < 0 or not v.is_integer() for v in cells):
+        return None
+    a, b, c, d = cells
+    if a + b + c + d == 0:
+        return None
+    nan = float('nan')
+    if a + b == 0 or c + d == 0 or a + c == 0 or b + d == 0:
+        return {'pvalue': 1.0, 'conditionalOddsRatio': nan, 'ciLow': nan, 'ciHigh': nan}
+    p = fisher_exact_test([[int(a), int(b)], [int(c), int(d)]], alternative)['pvalue']
+    ci = fisher_odds_ratio_ci([[int(a), int(b)], [int(c), int(d)]], 0.95)
+    return {'pvalue': min(1.0, max(0.0, p)), 'conditionalOddsRatio': ci['conditionalOddsRatio'],
+            'ciLow': ci['ciLow'], 'ciHigh': ci['ciHigh']}
+
+
 def tp_chisquared(args, cols, raw_data, _sv):
-    """Independence / goodness-of-fit / Fisher's exact on two categorical columns."""
+    """Port of ChiSquared.svelte `chisquared` (the "Categorical tests" node).
+
+    testType: 'independence' (default), 'goodness' or 'fisher'. For independence and
+    Fisher the two wired columns are read per `dataFormat`: 'groups' (the DEFAULT, also for
+    sessions saved without it) treats each column as one independent group's outcomes;
+    'paired' cross-tabulates them row by row. Writes statistic / pvalue / df / effectSize /
+    ciLow / ciHigh (Cramer's V, Cohen's w or the conditional-MLE odds ratio; the interval is
+    Fisher's only). Like the app, a result it cannot compute (too few categories, a NaN
+    p-value) is VALID but writes nothing."""
     x_in = args.get('xIN', -1)
     y_in = args.get('yIN', -1)
     if isinstance(y_in, list):
         y_in = y_in[0] if y_in else -1
-    if x_in == -1 or x_in not in cols:
-        return False
-    test_type = args.get('testType', 'independence')
+    test_type = args.get('testType')
+    if test_type not in ('goodness', 'fisher'):
+        test_type = 'independence'
+    data_format = args.get('dataFormat', 'groups')
     correction = bool(args.get('correction', True))
-    xs = cols[x_in].get_data()
+    nan = float('nan')
 
-    if test_type == 'goodnessoffit':
-        counts = _clean_numeric(xs)
-        if not counts:
+    def is_ref(cid):
+        return cid is not None and cid != -1 and cid in cols
+
+    def write(stat, p, df, effect, ci_low=nan, ci_high=nan):
+        if p is None or (isinstance(p, float) and math.isnan(p)):
+            return True  # the app gates the write on the p-value
+        _result_rows(raw_data, cols, args, {
+            'statistic': [stat], 'pvalue': [p], 'df': [df], 'effectSize': [effect],
+            'ciLow': [ci_low], 'ciHigh': [ci_high]})
+        return True
+
+    def build_table():
+        rc, cc = cols[x_in], cols[y_in]
+        a, b = rc.get_data() or [], cc.get_data() or []
+        if data_format == 'groups':
+            return groups_to_table([list(a), list(b)],
+                                   [rc.name or 'Group 1', cc.name or 'Group 2'])
+        return contingency_table(a, b)
+
+    if test_type in ('fisher', 'independence'):
+        if not is_ref(x_in) or not is_ref(y_in):
             return False
-        res = chi_square_goodness_of_fit(counts)
-        return _result_rows(raw_data, cols, args, {
-            'statistic': [res['statistic']], 'pvalue': [res['pvalue']],
-            'df': [res['df']], 'effectSize': [float('nan')],
-            'ciLow': [float('nan')], 'ciHigh': [float('nan')]})
+        built = build_table()
+        table = built['table']
+        if test_type == 'fisher':
+            if not (len(table) == 2 and len(table[0]) == 2):
+                return True
+            fx = fisher_exact_full(table, args.get('alternative') or 'two-sided')
+            if fx is None:
+                return True
+            return write(nan, fx['pvalue'], nan, fx['conditionalOddsRatio'],
+                         fx['ciLow'], fx['ciHigh'])
+        if len(built['rowLabels']) < 2 or len(built['colLabels']) < 2:
+            return True
+        if sum(sum(r) for r in table) <= 0:
+            return True
+        res = chi_square_independence_effects(table, correction)
+        return write(res['statistic'], res['pvalue'], res['df'],
+                     res.get('cramersV', nan))
 
-    if y_in == -1 or y_in not in cols:
+    # goodness of fit: a numeric column is read as observed counts, anything else is
+    # tabulated by category (first appearance) and tested against a uniform expectation.
+    if not is_ref(x_in):
         return False
-    table = _contingency(xs, cols[y_in].get_data())
-    if not table or len(table) < 2 or len(table[0]) < 2:
-        return False
-    res = chi_square_independence_effects(table, correction)
-    return _result_rows(raw_data, cols, args, {
-        'statistic': [res['statistic']], 'pvalue': [res['pvalue']],
-        'df': [res['df']], 'effectSize': [res.get('cramersV', float('nan'))],
-        'ciLow': [float('nan')], 'ciHigh': [float('nan')]})
+    raw = cols[x_in].get_data() or []
+
+    def numeric_cell(v):
+        if v is None or v == '':
+            return True
+        try:
+            return math.isfinite(float(v))
+        except (TypeError, ValueError):
+            return False
+
+    if raw and all(numeric_cell(v) for v in raw):
+        observed = [float(v) for v in raw if v is not None and v != '']
+        observed = [v for v in observed if math.isfinite(v)]
+    else:
+        counts = {}
+        for v in raw:
+            if _is_missing_category(v):
+                continue
+            k = _js_string(v)
+            counts[k] = counts.get(k, 0) + 1
+        observed = list(counts.values())
+    if len(observed) < 2:
+        return True
+    res = chi_square_goodness_of_fit(observed)
+    return write(res['statistic'], res['pvalue'], res['df'],
+                 cohens_w(res['statistic'], sum(observed)))
 
 
 def _isfinite(v):
     return v is not None and isinstance(v, (int, float)) and math.isfinite(v)
-
-
-def _contingency(xs, ys):
-    """Counts of (x, y) category pairs, rows ordered by first appearance."""
-    rows, colnames, counts = [], [], {}
-    n = min(len(xs), len(ys))
-    for i in range(n):
-        a, b = xs[i], ys[i]
-        if a is None or b is None or a == '' or b == '':
-            continue
-        a, b = str(a), str(b)
-        if a not in rows:
-            rows.append(a)
-        if b not in colnames:
-            colnames.append(b)
-        counts[(a, b)] = counts.get((a, b), 0) + 1
-    return [[counts.get((r, c), 0) for c in colnames] for r in rows]
 
 
 def tp_logisticregression(args, cols, raw_data, _sv):
@@ -5113,6 +5589,7 @@ TABLE_PROCESS_MAP = {
     'correlation': tp_correlation,
     'crosscorrelation': tp_crosscorrelation,
     'chisquared': tp_chisquared,
+    'columnset': tp_columnset,
     'logisticregression': tp_logisticregression,
     'interpolate': tp_interpolate,
     'averageprofile': tp_averageprofile,
@@ -5364,20 +5841,10 @@ def plot_periodogram(plot, columns_index, ax):
 def plot_correlogram(plot, columns_index, ax):
     p = plot.get('plot', {})
     for series in p.get('data', []):
-        x_col = _resolve_plot_col(series.get('x'), columns_index)
+        ac = correlogram_series_acf(series, columns_index)
+        if ac is None or not ac['lags']:
+            continue
         y_col = _resolve_plot_col(series.get('y'), columns_index)
-        if x_col is None or y_col is None:
-            continue
-        t = (x_col.hours_since_start if x_col.type == 'time'
-             else x_col.get_data())
-        y = y_col.get_data()
-        t, y = _paired_finite(t, y)
-        if not t:
-            continue
-        ac = compute_autocorrelation(
-            t, y,
-            min_lag=float(p.get('corrMinLag', 0.0)),
-            max_lag=p.get('corrMaxLag') or None)
         line = series.get('line') or {}
         colour = line.get('colour') or line.get('color')
         ax.plot(ac['lags'], ac['correlations'], color=colour,
@@ -5627,111 +6094,72 @@ def correlogram_download_data(plot, columns_index):
     headers = ['DataSeries', 'Lag (hours)', 'Autocorrelation']
     rows = []
     for d, series in enumerate(p.get('data', [])):
-        t, y = _series_time_and_y(series, columns_index)
-        if t is None:
+        # The app's acfData, series by series (lag step from the x column's binWidth or
+        # its mean spacing, per-series maxLag / minLag): see correlogram_series_acf.
+        ac = correlogram_series_acf(series, columns_index)
+        if ac is None:
             continue
-        ac = compute_autocorrelation(
-            t, y,
-            min_lag=float(p.get('corrMinLag', 0.0)),
-            max_lag=p.get('corrMaxLag') or None)
         for i, lag in enumerate(ac['lags']):
             rows.append([d, lag, ac['correlations'][i]])
     return headers, rows
 
 
-def _actogram_bin_width(x_col):
-    """Bar width (hours). Only binned/awd columns carry a real bin width in JS;
-    plain number/time columns fall back to the scanned sampling step."""
-    if getattr(x_col, 'type', None) == 'bin' or \
-            getattr(x_col, 'compression', None) == 'awd':
-        bw = getattr(x_col, 'bin_width', None)
-        if bw:
-            return float(bw)
-    return None
-
-
-def _scan_step(values):
-    """(last - first) / (last_idx - first_idx) over the finite entries —
-    mirrors ActogramDataclass.binSize so a nulled endpoint can't collapse it."""
-    first = last = -1
-    for i, v in enumerate(values):
-        if v is not None and not (isinstance(v, float) and math.isnan(v)):
-            if first == -1:
-                first = i
-            last = i
-    if first == -1 or last == first:
-        return 0.0
-    return (values[last] - values[first]) / (last - first)
-
-
-def _actogram_bins_by_period(x_col, y_col, period_hrs):
-    """Port of ActogramDataclass.allBins + binsByPeriod (Actogram.svelte):
-    build left-edge bars in offset-corrected hours, then split them at period
-    boundaries. Returns {period_index: [{'xStart', 'xEnd', 'y'}, ...]}."""
-    raw_x = x_col.get_data()
-    raw_y = y_col.get_data()
-    if not raw_x or not raw_y:
-        return {}
-
-    def _finite(v):
-        return v is not None and not (isinstance(v, float) and math.isnan(v))
-
-    # Offset-corrected bar start (JS: hoursSinceStart - offset). For time this
-    # is hours since start-of-day of the earliest sample; for everything else
-    # the min-baseline of hoursSinceStart and the offset cancel, leaving the
-    # raw x value.
-    if x_col.type == 'time':
-        valid = [v for v in raw_x if _finite(v)]
-        if not valid:
-            return {}
-        # dayjs.utc(min).startOf('day') — the default display zone is UTC.
-        start_of_day_ms = math.floor(min(valid) / 86400000.0) * 86400000.0
-        starts = [(v - start_of_day_ms) / 3600000.0 if _finite(v) else None
-                  for v in raw_x]
-    else:
-        starts = [float(v) if _finite(v) else None for v in raw_x]
-
-    width = _actogram_bin_width(x_col)
-    if width is None:
-        width = _scan_step(x_col.hours_since_start)
-
+def actogram_bins_by_period(frame, period_hrs, bin_width=None):
+    """ActogramDataclass.allBins + binsByPeriod (Actogram.svelte) over one series already
+    folded at the plot's startTime (actogram_series_frame): a left-edge bar per valid sample
+    in offset-corrected hours, `bin_width` wide when the column carries one and the scanned
+    step otherwise, then split at every row boundary it crosses. Returns
+    {row_index: [{'xStart', 'xEnd', 'y'}, ...]}."""
+    hss, y, offset = frame['hoursSinceStart'], frame['y'], frame['offset']
+    width = bin_width if bin_width else frame['binSize']
     period_bins = {}
-    n = min(len(starts), len(raw_y))
-    for i in range(n):
-        s, yv = starts[i], raw_y[i]
-        if s is None or not _finite(yv):
+    for i, tx in enumerate(hss):
+        ty = y[i] if i < len(y) else None
+        if tx is None or tx != tx or ty is None or _js_invalid(ty):
             continue
-        bin_start, bin_end = s, s + width
+        bin_start, bin_end = tx - offset, tx + width - offset
         start_period = math.floor(bin_start / period_hrs)
         end_period = math.floor(bin_end / period_hrs)
         if end_period < 0:
             continue
         if start_period == end_period and start_period >= 0:
             period_bins.setdefault(start_period, []).append(
-                {'xStart': bin_start, 'xEnd': bin_end, 'y': yv})
+                {'xStart': bin_start, 'xEnd': bin_end, 'y': ty})
         else:
             for pp in range(max(0, start_period), end_period + 1):
                 seg_start = max(bin_start, pp * period_hrs)
                 seg_end = min(bin_end, (pp + 1) * period_hrs)
                 if seg_end > seg_start:
                     period_bins.setdefault(pp, []).append(
-                        {'xStart': seg_start, 'xEnd': seg_end, 'y': yv})
+                        {'xStart': seg_start, 'xEnd': seg_end, 'y': ty})
     return period_bins
 
 
-def actogram_download_data(plot, columns_index):
-    """Mirror Actogramclass.getDownloadData (Actogram.svelte): one tidy row
-    per bin, periods numbered from 1."""
+def actogram_download_data(plot, columns_index, zone='utc'):
+    """Mirror Actogramclass.getDownloadData (Actogram.svelte): one tidy row per bar, rows
+    (periods) numbered from 1. Every series is folded at the plot's ONE startTime: the
+    earliest valid sample over ALL series, snapped to its midnight in the display `zone`
+    (the session's appState.displayTimezone), exactly as the app draws it."""
     p = plot.get('plot', {})
     period_hrs = float(p.get('periodHrs', 24) or 24)
     headers = ['DataSeries', 'Period', 'BinStart (hrs)', 'BinEnd (hrs)', 'Value']
-    rows = []
-    for d, series in enumerate(p.get('data', [])):
+    resolved = []
+    for series in p.get('data', []):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
-        if x_col is None or y_col is None:
+        resolved.append(None if x_col is None or y_col is None else (x_col, {
+            'xType': x_col.type, 'x': x_col.get_data() or [], 'y': y_col.get_data() or [],
+            'rawBinStart0': x_col.raw_first, 'originTime_ms': x_col.eff_origin_time_ms}))
+    start = actogram_start_time([r[1] for r in resolved if r is not None], zone)
+    rows = []
+    for d, r in enumerate(resolved):
+        if r is None:
             continue
-        bins = _actogram_bins_by_period(x_col, y_col, period_hrs)
+        x_col, s = r
+        frame = actogram_series_frame(s['x'], s['y'], s['xType'], start, period_hrs,
+                                      s['rawBinStart0'], s['originTime_ms'])
+        # `if (this.x.binWidth)`: the column's own bin width when it carries one.
+        bins = actogram_bins_by_period(frame, period_hrs, x_col.eff_bin_width)
         for per in sorted(bins.keys()):
             for b in bins[per]:
                 rows.append([d, per + 1, b['xStart'], b['xEnd'], b['y']])
@@ -5746,11 +6174,13 @@ PLOT_DATA_BUILDERS = {
 }
 
 
-def export_plot_data(plots, columns_index, output_dir):
+def export_plot_data(plots, columns_index, output_dir, zone='utc'):
     """Write `<plot>_data.csv` for every calculating plot (periodogram, FFT,
     correlogram, actogram). Each CSV mirrors the plot's in-app "Show/Save data"
     output. Returns the list of paths written; non-calculating plots
-    (scatter, boxplot, tableplot, dataview) are skipped."""
+    (scatter, boxplot, tableplot, dataview) are skipped. `zone` is the session's
+    display time zone (appState.displayTimezone); only the actogram reads it, to
+    place its rows at local midnight as the app does."""
     import csv
     from pathlib import Path
 
@@ -5762,7 +6192,8 @@ def export_plot_data(plots, columns_index, output_dir):
         if builder is None:
             continue
         try:
-            headers, rows = builder(plot, columns_index)
+            kwargs = {'zone': zone} if plot.get('type') == 'actogram' else {}
+            headers, rows = builder(plot, columns_index, **kwargs)
         except Exception as e:  # noqa: BLE001 — one bad plot shouldn't abort the rest
             print(f"[ancir-plotdata] error building {plot.get('name')}: {e}")
             continue
@@ -6871,17 +7302,18 @@ def _harmonic_power(x_data, y_data, period):
 def harmonic_check(x_data, y_data, bin_size, tau):
     """tau, tau/2 and 2 tau, each scored by one Lomb-Scargle evaluation of the series; the
     strongest wins, ties keeping the earlier candidate. Candidates must satisfy
-    bin*2 < period < span/2 with span = last sample minus first (in sample order) and
+    bin*2 < period < span/2 with span = last PRESENT sample minus first (sample order) and
     bin = bin_size or 0.25. None when there is no tau, no data or no candidate."""
     if not tau or tau != tau:
         return None
     if not x_data or not y_data:
         return None
     bin_ = bin_size if (bin_size and bin_size == bin_size) else 0.25
-    # JS coerces a null endpoint to 0 in the subtraction (null - x0 = -x0).
-    last = 0 if x_data[-1] is None else x_data[-1]
-    first = 0 if x_data[0] is None else x_data[0]
-    span = last - first
+    # First and last PRESENT samples. The app used to read a missing end as 0 (JS
+    # `null - x0`), which made a missing LAST time a span of about 0 and dropped every
+    # candidate; this port copied that. Both now skip a missing end (harmonicCheck.js).
+    present = [i for i, v in enumerate(x_data) if not _js_invalid(v)]
+    span = (float(x_data[present[-1]]) - float(x_data[present[0]])) if present else float('nan')
     cands = [{'label': 'τ', 'period': tau}, {'label': 'τ/2', 'period': tau / 2},
              {'label': '2τ', 'period': tau * 2}]
     cands = [c for c in cands if c['period'] > bin_ * 2 and c['period'] < span / 2]
@@ -6977,15 +7409,23 @@ def actogram_bin_size(hours):
     return (hours[last] - hours[first]) / (last - first)
 
 
-def actogram_series_frame(x, y, x_type, start_time, period_hrs):
+def actogram_series_frame(x, y, x_type, start_time, period_hrs, raw_bin_start0=None,
+                          origin_time_ms=None):
     """One series folded into rows as ActogramDataclass.dataByDays does it: x in hours
     since the plot's startTime (hoursSinceStart - offset), row = floor(x / P), rows before 0
-    dropped. Also returns what the harmonic check reads (hoursSinceStart and y, unfolded)."""
+    dropped. Also returns what the harmonic check reads (hoursSinceStart and y, unfolded).
+    `x` is the column's getData (bin CENTRES for a 'bin' column); a 'bin' column also needs
+    its raw first bin start and its originTime_ms, which place its rows."""
     hss = actogram_hours_since_start(x, x_type)
     xmin = _js_min(x)
     if x_type == 'time':
         # JS: (startTime - min(x)) / 3.6e6; min() of an empty column is null, i.e. 0.
         offset = (start_time - (xmin if xmin is not None else 0)) / 3600000
+    elif x_type == 'bin':
+        # JS: -rawBinStart0 + (startTime - (originTime_ms ?? startTime)) / 3.6e6, so bars
+        # sit at their raw bin starts, shifted to clock time when the column has an origin.
+        origin = origin_time_ms if origin_time_ms is not None else start_time
+        offset = -(raw_bin_start0 or 0) + (start_time - origin) / 3600000
     else:
         offset = -(xmin if xmin is not None else 0)
     x_by, y_by = {}, {}
@@ -7273,7 +7713,8 @@ def actogram_plot_rule_outputs(inner, series_data, zone='utc'):
     # Actogram fromJSON: `json.periodHrs ?? 24`.
     P = inner.get('periodHrs') if inner.get('periodHrs') is not None else 24
     start = actogram_start_time(series_data, zone)
-    frames = [actogram_series_frame(s.get('x') or [], s.get('y') or [], s.get('xType'), start, P)
+    frames = [actogram_series_frame(s.get('x') or [], s.get('y') or [], s.get('xType'), start, P,
+                                    s.get('rawBinStart0'), s.get('originTime_ms'))
               for s in series_data]
     n_days = actogram_ndays(frames)
     rules = inner.get('markerRules') or []

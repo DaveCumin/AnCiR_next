@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeAutocorrelation, findAutocorrelationPeak } from './correlogram.js';
+import { computeAutocorrelation, findAutocorrelationPeak, meanSpacing } from './correlogram.js';
 
 // Uniformly-sampled cosine.
 function cosine(periodH, durationH, stepH) {
@@ -233,5 +233,84 @@ describe('findAutocorrelationPeak', () => {
 
 	it('skips non-finite correlations', () => {
 		expect(findAutocorrelationPeak([0, 1, 2, 3], [1, NaN, -0.5, 0.4])).toMatchObject({ lag: 3 });
+	});
+});
+
+describe('meanSpacing (the Correlogram lag step with no binWidth)', () => {
+	it('is (last - first) / (n - 1) when both ends are present, interior gaps counted as rows', () => {
+		expect(meanSpacing([5, 6, null, 8, 9])).toBe(1);
+		expect(meanSpacing([0, 0.25, 1, 1.25, 2])).toBe(0.5);
+	});
+
+	it('uses the first and last PRESENT rows when an end is missing', () => {
+		expect(meanSpacing([null, 6, 7, 8, 9])).toBe(1);
+		expect(meanSpacing([5, 6, 7, 8, null])).toBe(1);
+		expect(meanSpacing(['', 6, 7, 8, undefined])).toBe(1);
+		expect(meanSpacing([NaN, 6, 7, 8, null])).toBe(1);
+	});
+
+	it('keeps a real 0 time', () => {
+		expect(meanSpacing([0, 1, 2])).toBe(1);
+	});
+
+	it('is NaN with fewer than two present times', () => {
+		expect(meanSpacing([null, 3, null])).toBeNaN();
+		expect(meanSpacing([])).toBeNaN();
+		expect(meanSpacing(null)).toBeNaN();
+	});
+});
+
+// The slotted (time-pair) estimator's three rules; see the computeAutocorrelation doc comment.
+describe('computeAutocorrelation — lag slots on uneven data', () => {
+	const t = [0, 0.1, 1, 2, 2.2, 3, 4, 4.05, 5, 6, 7, 7.3, 8];
+	const y = [5, 2, 7, 3, 8, 4, 6, 1, 9, 2, 6, 8, 3];
+
+	it('lag 0 is exactly 1 on the time-pair path, near-zero pairs notwithstanding', () => {
+		const r = computeAutocorrelation(t, y, 1, null, 0);
+		expect(r.lags[0]).toBe(0);
+		expect(r.correlations[0]).toBe(1);
+	});
+
+	it('lag 0 is exactly 1 on the index-shift path too', () => {
+		// A series on which sum / (n * var) rounds to 1.0000000000000002, not 1.
+		const tu = Array.from({ length: 37 }, (_, i) => i);
+		const yu = tu.map((h) => Math.sin(h * 1.7) + h * 0.01);
+		expect(computeAutocorrelation(tu, yu).correlations[0]).toBe(1);
+	});
+
+	it('near-zero pairs are not used at lag 1 (they sit below its slot)', () => {
+		// Brute force over the half-open slot [0.5, 1.5): the four near-coincident pairs
+		// (0.05 to 0.3 h apart) are not in it.
+		const n = y.length;
+		const m = y.reduce((a, b) => a + b, 0) / n;
+		const v = y.reduce((a, b) => a + (b - m) ** 2, 0) / n;
+		let s = 0;
+		let c = 0;
+		for (let i = 0; i < n; i++)
+			for (let j = i + 1; j < n; j++) {
+				const d = t[j] - t[i];
+				if (d >= 0.5 && d < 1.5) {
+					s += (y[i] - m) * (y[j] - m);
+					c++;
+				}
+			}
+		expect(computeAutocorrelation(t, y, 1, null, 0).correlations[1]).toBeCloseTo(s / (c * v), 14);
+	});
+
+	it('a pair exactly on a slot boundary is counted once, in the upper lag', () => {
+		// Two pairs: one exactly 1.5 steps apart (the lag-1 / lag-2 boundary), one 2 apart.
+		// Old rule |d - k dt| <= dt/2 put the 1.5 pair in BOTH lag 1 and lag 2.
+		const tb = [0, 1.5, 10, 12, 30, 31.2];
+		const yb = [1, 3, 2, 4, 0, 5];
+		const r = computeAutocorrelation(tb, yb, 1, 3, 1);
+		const n = yb.length;
+		const m = yb.reduce((a, b) => a + b, 0) / n;
+		const v = yb.reduce((a, b) => a + (b - m) ** 2, 0) / n;
+		const p = (i, j) => (yb[i] - m) * (yb[j] - m);
+		expect(r.lags).toEqual([1, 2, 3]);
+		// lag 1, slot [0.5, 1.5): only the 1.2 pair (30, 31.2).
+		expect(r.correlations[0]).toBeCloseTo(p(4, 5) / v, 14);
+		// lag 2, slot [1.5, 2.5): the 1.5 pair (0, 1.5) and the 2 pair (10, 12).
+		expect(r.correlations[1]).toBeCloseTo((p(0, 1) + p(2, 3)) / (2 * v), 14);
 	});
 });

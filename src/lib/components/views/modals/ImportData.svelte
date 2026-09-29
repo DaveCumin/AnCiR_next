@@ -131,7 +131,7 @@
 		if (numeric.trim() !== '' && Number.isFinite(n)) return { value: n, marked };
 		return { value: field, marked: false };
 	}
-	import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { binOnSharedGrid } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { fetchAppAsset, describeAssetError } from '$lib/start/offline.js';
 	import {
 		deriveLabelsFromNames,
@@ -2298,7 +2298,8 @@
 		});
 	}
 
-	function binParsedData(data) {
+	// Exported as a test seam (ImportData.binning.test.js); reads the modal's bin interval.
+	export function binParsedData(data) {
 		// data is { colName: [values...], ... } — column-oriented
 		const keys = Object.keys(data);
 		if (keys.length === 0) return data;
@@ -2383,32 +2384,39 @@
 			colTypes[k] = typeof sample === 'number' && !isNaN(sample) ? 'number' : 'other';
 		}
 
-		// Use binData for the first numeric column to get the bin positions
+		// Need at least one numeric column to bin
 		const firstNumKey = keys.find((k) => colTypes[k] === 'number');
 		if (!firstNumKey) {
 			console.warn('Binning: no numeric columns found, skipping');
 			return data;
 		}
 
-		const refResult = binData(timeHours, data[firstNumKey], binSizeHours, 0, binSizeHours, 'mean');
-		const binPositions = refResult.bins; // bin start positions in hours
+		// One grid for every column, taken from the valid times alone: binData drops a row with
+		// a missing value, so a column's own bins stop at its last complete row, and taking the
+		// grid from the first numeric column truncated the whole import when its tail was blank.
+		const numKeys = keys.filter((k) => colTypes[k] === 'number');
+		const shared = binOnSharedGrid(
+			timeHours,
+			numKeys.map((k) => data[k]),
+			binSizeHours,
+			0,
+			binSizeHours,
+			'mean'
+		);
+		const binnedByKey = Object.fromEntries(numKeys.map((k, i) => [k, shared.y_outs[i]]));
+		const binPositions = shared.bins; // bin start positions in hours
 		const numBins = binPositions.length;
 
 		// Build result: for time column, reconstruct datetime strings from bin positions
 		const result = {};
 		result[timeKey] = binPositions.map((h) => binTimeLabel(firstDt, h));
 
-		// For each other column, bin using binData or map category by index
+		// For each other column: the shared-grid numeric result, or map category by index
 		for (const k of keys) {
 			if (k === timeKey) continue;
 
 			if (colTypes[k] === 'number') {
-				if (k === firstNumKey) {
-					result[k] = refResult.y_out;
-				} else {
-					const binned = binData(timeHours, data[k], binSizeHours, 0, binSizeHours, 'mean');
-					result[k] = binned.y_out;
-				}
+				result[k] = binnedByKey[k];
 			} else {
 				// Category: take first value per bin using the bin positions
 				result[k] = new Array(numBins);

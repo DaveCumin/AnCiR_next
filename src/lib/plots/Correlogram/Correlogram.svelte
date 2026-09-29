@@ -22,7 +22,11 @@
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
-	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
+	import {
+		computeAutocorrelation,
+		findAutocorrelationPeak,
+		meanSpacing
+	} from '$lib/utils/correlogram.js';
 	import { minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 
 	export const Correlogram_defaultDataInputs = ['time', 'values'];
@@ -58,8 +62,9 @@
 			if (this.x?.binWidth) {
 				binSize = this.x.binWidth;
 			} else if (times.length > 1) {
-				// Calculate from data
-				binSize = (times[times.length - 1] - times[0]) / (times.length - 1);
+				// The mean spacing, from the first and last VALID times: a missing end must not
+				// be read as 0 (it blanked the plot or mislabelled every lag). See meanSpacing.
+				binSize = meanSpacing(times);
 			}
 
 			return computeAutocorrelation(times, values, binSize, this.maxLag, this.minLag);

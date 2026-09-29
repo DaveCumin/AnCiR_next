@@ -50,10 +50,12 @@
 		if (isBin && Array.isArray(rawArr)) {
 			const x = rawArr[i];
 			if (!Number.isFinite(x)) return { raw: '-', computed: '-', isTime: true };
-			const binStep = column.binStep ?? column.binWidth ?? 0;
-			const rangeStr = `±${((column.binWidth ?? 0) / 2).toFixed(2)}`;
+			// Centre = start + half the bin WIDTH, as Column.getData reports it. The step
+			// only spaces the starts: with a step smaller than the width the windows overlap.
+			const half = (column.binWidth ?? 0) / 2;
+			const rangeStr = `±${half.toFixed(2)}`;
 			if (column.originTime_ms != null) {
-				const centerMs = column.originTime_ms + (x + binStep / 2) * 3600000;
+				const centerMs = column.originTime_ms + (x + half) * 3600000;
 				return {
 					raw: Number.isFinite(centerMs) ? formatDateTime(centerMs) : '-',
 					computed: rangeStr,
@@ -61,7 +63,7 @@
 					unit: 'hrs'
 				};
 			}
-			return { raw: (x + binStep / 2).toFixed(DP), computed: rangeStr, isTime: true, unit: 'hrs' };
+			return { raw: (x + half).toFixed(DP), computed: rangeStr, isTime: true, unit: 'hrs' };
 		}
 		// Time: readable time with hours-since-start underneath.
 		if (isTime && Array.isArray(timeArr)) {

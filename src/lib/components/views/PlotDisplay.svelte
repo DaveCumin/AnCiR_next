@@ -33,6 +33,10 @@
 	import { isZoomMode, setZoomMode } from '$lib/plots/plotZoomMode.svelte.js';
 	import { alignBoxes, distributeBoxes, arrangeGrid } from '$lib/core/layoutHelpers.js';
 	import { snapToGrid } from '$lib/core/core.svelte.js';
+	import {
+		placeSelectionToolbar,
+		unionRect
+	} from '$lib/components/views/selectionToolbarPlacement.js';
 
 	let fileDragOver = $state(false);
 
@@ -87,6 +91,72 @@
 	function gridSelectedPlots() {
 		applyPlotPositions(arrangeGrid(plotBoxes(), { snap: snapToGrid }));
 	}
+
+	// --- Selection toolbar anchoring -------------------------------------------------
+	// The toolbar (PlotSelectionToolbar for one plot, SelectionLayoutToolbar for 2+) sits
+	// just above the selection's top-right corner, like Figma. Everything is derived from
+	// state (plot/panel x, y, width, height plus the pan offset and zoom), so it tracks
+	// pan, zoom, drag and resize live without reading the DOM. The only measured sizes
+	// come from bind:client/offset* (Svelte's own ResizeObserver, torn down with the
+	// element). Coordinates are local to the .canvas element, whose box the viewport fills.
+	let canvasW = $state(0);
+	let canvasH = $state(0);
+	let toolbarW = $state(0);
+	let toolbarH = $state(0);
+	let zoomCardW = $state(0);
+	let zoomCardH = $state(0);
+	// Draggable's header band in canvas px: 1px card border + 28px min-height header + 1px
+	// divider. The toolbar's inside placement drops below it so it never covers the note,
+	// maximise or delete controls.
+	const PLOT_HEADER_PX = 30;
+	const DRAGGABLE_MIN_WIDTH = 200;
+	// Chrome that overhangs the canvas's right edge from outside it: the new-plot button
+	// (ControlPanel.svelte, 34px wide at right + 5px), the control panel's close chevron
+	// (about 29px into the canvas) and the zoom-controls card below. The toolbar keeps out
+	// of that strip so it never sits under them.
+	const RIGHT_CHROME_GUTTER = 44;
+	// The zoom-controls card is fixed at right: rightPx + 5px, bottom: 10px, and the canvas
+	// ends at the control panel's left edge, so in canvas-local coords it is inset 5 / 10.
+	const ZOOM_CARD_RIGHT = 5;
+	const ZOOM_CARD_BOTTOM = 10;
+
+	let selectionToolbarPos = $derived.by(() => {
+		if (selectedPlots.length === 0 || canvasW <= 0 || canvasH <= 0) return null;
+		const z = appState.canvasScale ?? 1;
+		const offX = appState.canvasOffset?.x ?? 0;
+		const offY = appState.canvasOffset?.y ?? 0;
+		// Box footprint mirrors Draggable's rendered size (snapped width + 20, height + 50,
+		// with its CSS min-width of 200px).
+		const boxes = selectedPlots.map((p) => {
+			const left = offX + p.x * z;
+			const top = offY + p.y * z;
+			return {
+				left,
+				top,
+				right: left + Math.max(DRAGGABLE_MIN_WIDTH, snapToGrid((p.width ?? 200) + 20)) * z,
+				bottom: top + snapToGrid((p.height ?? 150) + 50) * z
+			};
+		});
+		const headers = boxes.map((b) => ({ ...b, bottom: b.top + PLOT_HEADER_PX * z }));
+		const occluders =
+			zoomCardW > 0
+				? [
+						{
+							left: canvasW - ZOOM_CARD_RIGHT - zoomCardW,
+							top: canvasH - ZOOM_CARD_BOTTOM - zoomCardH,
+							right: canvasW - ZOOM_CARD_RIGHT,
+							bottom: canvasH - ZOOM_CARD_BOTTOM
+						}
+					]
+				: [];
+		return placeSelectionToolbar({
+			selection: unionRect(boxes),
+			view: { left: 0, top: 0, right: canvasW - RIGHT_CHROME_GUTTER, bottom: canvasH },
+			toolbar: { width: toolbarW, height: toolbarH },
+			occluders,
+			headers
+		});
+	});
 
 	const MIN_ZOOM = 0.15;
 	const MAX_ZOOM = 4;
@@ -378,6 +448,8 @@
 			height: 100vh;
 			"
 	bind:this={canvasEl}
+	bind:clientWidth={canvasW}
+	bind:clientHeight={canvasH}
 	onwheel={handleWheel}
 	onpointerdown={handleCanvasPointerDown}
 	onpointermove={handlePointerMove}
@@ -390,19 +462,33 @@
 		<div class="canvas-file-drop-overlay"><span>Drop a data file to import</span></div>
 	{/if}
 
-	{#if selectedPlots.length >= 2}
-		<div class="selection-toolbar-host">
-			<SelectionLayoutToolbar
-				onAlign={alignSelectedPlots}
-				onDistribute={distributeSelectedPlots}
-				onGrid={gridSelectedPlots}
-				showGrid={true}
-				canDistribute={selectedPlots.length >= 3}
-			/>
-		</div>
-	{:else if selectedPlots.length === 1}
-		<div class="selection-toolbar-host">
-			<PlotSelectionToolbar plot={selectedPlots[0]} />
+	{#if selectedPlots.length > 0}
+		<!-- Pointer and click events stop here: a press on the toolbar (even on its padding,
+		     between buttons) must not start a canvas pan, deselect, or close the control panel. -->
+		<div
+			class="selection-toolbar-host"
+			class:measuring={toolbarW === 0}
+			class:offscreen={selectionToolbarPos && !selectionToolbarPos.visible}
+			style:left="{selectionToolbarPos?.left ?? 0}px"
+			style:top="{selectionToolbarPos?.top ?? 0}px"
+			bind:offsetWidth={toolbarW}
+			bind:offsetHeight={toolbarH}
+			onpointerdown={(e) => e.stopPropagation()}
+			onclick={(e) => e.stopPropagation()}
+			ondblclick={(e) => e.stopPropagation()}
+			role="presentation"
+		>
+			{#if selectedPlots.length >= 2}
+				<SelectionLayoutToolbar
+					onAlign={alignSelectedPlots}
+					onDistribute={distributeSelectedPlots}
+					onGrid={gridSelectedPlots}
+					showGrid={true}
+					canDistribute={selectedPlots.length >= 3}
+				/>
+			{:else}
+				<PlotSelectionToolbar plot={selectedPlots[0]} />
+			{/if}
 		</div>
 	{/if}
 	<div
@@ -469,7 +555,12 @@
 	</div>
 </div>
 
-<div class="zoom-controls" style="right: calc({rightPx}px + 5px);">
+<div
+	class="zoom-controls"
+	style="right: calc({rightPx}px + 5px);"
+	bind:offsetWidth={zoomCardW}
+	bind:offsetHeight={zoomCardH}
+>
 	<button
 		type="button"
 		class="icon viewport-btn"
@@ -548,13 +639,18 @@
 		height: 0;
 	}
 
+	/* Placed by selectionToolbarPlacement.js (left/top in .canvas-local px). The host is
+	   shrink-wrapped to the toolbar so its measured size is the toolbar's. */
 	.selection-toolbar-host {
 		position: absolute;
-		top: 12px;
-		left: 50%;
-		transform: translateX(-50%);
 		z-index: 40;
+		width: max-content;
 		pointer-events: none;
+	}
+	/* Unmeasured (first frame) or pointing at a selection outside the view. */
+	.selection-toolbar-host.measuring,
+	.selection-toolbar-host.offscreen {
+		visibility: hidden;
 	}
 
 	.no-plot-prompt {

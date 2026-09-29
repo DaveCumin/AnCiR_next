@@ -40,7 +40,11 @@ export const R_GENERATOR_NODES = [];
  */
 const BAKED_NODES = ['random', 'simulateddata', 'simulatedata'];
 
-/** ColumnSet emits no columns and is resolved before export, so it never reaches a runtime. */
+/**
+ * ColumnSet emits no columns: its selection is already in each consumer's saved inputs. The
+ * node itself does reach the runtime, which dispatches it as a no-op (it is in R_IMPLEMENTED
+ * too); listed here so the support check never depends on that.
+ */
 const RESOLVED_BEFORE_EXPORT = ['columnset'];
 
 /** Normalise a stored node name ("Bin Data", "BinnedData") to its runtime key. */

@@ -20,27 +20,21 @@ const preview = { binnedx: -1 };
 
 describe('binneddata', () => {
 	it('returns invalid when inputs are missing', () => {
-		const [, valid] = binneddata(
-			{ xIN: -1, yIN: -1, binSize: 1, binStart: 0, out: preview },
-			false
-		);
+		const [, valid] = binneddata({ xIN: -1, yIN: -1, binSize: 1, binStart: 0, out: preview });
 		expect(valid).toBe(false);
 	});
 
 	it('returns invalid when binSize <= 0', () => {
 		mockColumns[1] = { type: 'number', getData: () => [0, 1, 2] };
 		mockColumns[2] = { type: 'number', getData: () => [10, 20, 30] };
-		const [, valid] = binneddata({ xIN: 1, yIN: 2, binSize: 0, binStart: 0, out: preview }, false);
+		const [, valid] = binneddata({ xIN: 1, yIN: 2, binSize: 0, binStart: 0, out: preview });
 		expect(valid).toBe(false);
 	});
 
 	it('bins data and returns correct number of bins', () => {
 		mockColumns[1] = { type: 'number', getData: () => [0, 0.5, 1, 1.5, 2] };
 		mockColumns[2] = { type: 'number', getData: () => [10, 20, 30, 40, 50] };
-		const [result, valid] = binneddata(
-			{ xIN: 1, yIN: 2, binSize: 1, binStart: 0, out: preview },
-			false
-		);
+		const [result, valid] = binneddata({ xIN: 1, yIN: 2, binSize: 1, binStart: 0, out: preview });
 		expect(valid).toBe(true);
 		expect(result.bins.length).toBeGreaterThan(0);
 		expect(result.bins.length).toBe(result.y_results[2].length);
@@ -50,11 +44,30 @@ describe('binneddata', () => {
 		// Two points at x=0 and x=0.5, both in bin [0,1)
 		mockColumns[1] = { type: 'number', getData: () => [0, 0.5] };
 		mockColumns[2] = { type: 'number', getData: () => [10, 20] };
-		const [result] = binneddata(
-			{ xIN: 1, yIN: 2, binSize: 1, binStart: 0, aggFunction: 'mean', out: preview },
-			false
-		);
+		const [result] = binneddata({
+			xIN: 1,
+			yIN: 2,
+			binSize: 1,
+			binStart: 0,
+			aggFunction: 'mean',
+			out: preview
+		});
 		expect(result.y_results[2][0]).toBeCloseTo(15, 6);
+	});
+
+	it('drops a missing y instead of averaging it in as 0', () => {
+		// Bin [0,3): 16, 20, 20 and a null. The mean is 18.667; reading the null as 0 gave 14.
+		mockColumns[1] = { type: 'number', getData: () => [0, 1, 2, 2.5, 3, 4] };
+		mockColumns[2] = { type: 'number', getData: () => [16, 20, 20, null, 7, 9] };
+		const [result] = binneddata({
+			xIN: 1,
+			yIN: 2,
+			binSize: 3,
+			binStart: 0,
+			aggFunction: 'mean',
+			out: preview
+		});
+		expect(result.y_results[2][0]).toBeCloseTo(56 / 3, 12);
 	});
 
 	describe('binMode=cuts', () => {
@@ -64,17 +77,14 @@ describe('binneddata', () => {
 		});
 
 		it('uses custom cut edges and produces n-1 bins', () => {
-			const [result, valid] = binneddata(
-				{
-					xIN: 1,
-					yIN: [2],
-					binMode: 'cuts',
-					cuts: [0, 2, 5],
-					aggFunction: 'count',
-					out: preview
-				},
-				false
-			);
+			const [result, valid] = binneddata({
+				xIN: 1,
+				yIN: [2],
+				binMode: 'cuts',
+				cuts: [0, 2, 5],
+				aggFunction: 'count',
+				out: preview
+			});
 			expect(valid).toBe(true);
 			expect(result.bins).toEqual([0, 2]);
 			expect(result.binEnds).toEqual([2, 5]);
@@ -82,42 +92,57 @@ describe('binneddata', () => {
 		});
 
 		it('returns invalid when cuts has fewer than 2 valid edges', () => {
-			const [, valid] = binneddata(
-				{ xIN: 1, yIN: [2], binMode: 'cuts', cuts: [3], aggFunction: 'count', out: preview },
-				false
-			);
+			const [, valid] = binneddata({
+				xIN: 1,
+				yIN: [2],
+				binMode: 'cuts',
+				cuts: [3],
+				aggFunction: 'count',
+				out: preview
+			});
 			expect(valid).toBe(false);
 		});
 
 		it('sorts and dedupes cuts at the TP boundary before passing to helper', () => {
-			const [result, valid] = binneddata(
-				{
-					xIN: 1,
-					yIN: [2],
-					binMode: 'cuts',
-					cuts: [5, 0, 2, 5, 2], // unsorted and duplicates
-					aggFunction: 'count',
-					out: preview
-				},
-				false
-			);
+			const [result, valid] = binneddata({
+				xIN: 1,
+				yIN: [2],
+				binMode: 'cuts',
+				cuts: [5, 0, 2, 5, 2], // unsorted and duplicates
+				aggFunction: 'count',
+				out: preview
+			});
 			expect(valid).toBe(true);
 			expect(result.bins).toEqual([0, 2]); // sorted+deduped to [0,2,5]
 		});
 
+		it('drops a missing (null or blank) edge instead of reading it as an edge at 0', () => {
+			// A hand-edited session or an MCP call can carry a null edge; the global
+			// isFinite(null) is true, so it used to become the edge 0 and split [0,2) off.
+			const [result, valid] = binneddata({
+				xIN: 1,
+				yIN: [2],
+				binMode: 'cuts',
+				cuts: [null, 2, '', 5, 1],
+				aggFunction: 'count',
+				out: preview
+			});
+			expect(valid).toBe(true);
+			expect(result.bins).toEqual([1, 2]);
+			expect(result.binEnds).toEqual([2, 5]);
+			expect(result.y_results[2]).toEqual([1, 3]);
+		});
+
 		it('reports droppedCount for points outside the cuts range', () => {
 			// Data: 0.5, 1.5, 2.5, 3.5, 4.5 — cuts [1, 3] keep 1.5, 2.5; drop 0.5, 3.5, 4.5
-			const [result] = binneddata(
-				{
-					xIN: 1,
-					yIN: [2],
-					binMode: 'cuts',
-					cuts: [1, 3],
-					aggFunction: 'count',
-					out: preview
-				},
-				false
-			);
+			const [result] = binneddata({
+				xIN: 1,
+				yIN: [2],
+				binMode: 'cuts',
+				cuts: [1, 3],
+				aggFunction: 'count',
+				out: preview
+			});
 			expect(result.droppedCount).toBe(3);
 		});
 
@@ -127,17 +152,14 @@ describe('binneddata', () => {
 				hoursSinceStart: [0, 1, 2, 3],
 				getData: () => [0, 1, 2, 3]
 			};
-			const [, valid] = binneddata(
-				{
-					xIN: 1,
-					yIN: [2],
-					binMode: 'cuts',
-					cuts: [0, 1, 2],
-					aggFunction: 'count',
-					out: preview
-				},
-				false
-			);
+			const [, valid] = binneddata({
+				xIN: 1,
+				yIN: [2],
+				binMode: 'cuts',
+				cuts: [0, 1, 2],
+				aggFunction: 'count',
+				out: preview
+			});
 			expect(valid).toBe(false);
 		});
 	});
@@ -146,17 +168,14 @@ describe('binneddata', () => {
 		it('returns row counts and ignores Y values', () => {
 			mockColumns[1] = { type: 'number', getData: () => [0, 0.5, 1, 1.5, 2] };
 			mockColumns[2] = { type: 'number', getData: () => [99, 99, 99, 99, 99] };
-			const [result, valid] = binneddata(
-				{
-					xIN: 1,
-					yIN: [2],
-					binSize: 1,
-					binStart: 0,
-					aggFunction: 'count',
-					out: preview
-				},
-				false
-			);
+			const [result, valid] = binneddata({
+				xIN: 1,
+				yIN: [2],
+				binSize: 1,
+				binStart: 0,
+				aggFunction: 'count',
+				out: preview
+			});
 			expect(valid).toBe(true);
 			// bin [0,1): 0, 0.5 → 2; bin [1,2): 1, 1.5 → 2; bin [2,3): 2 → 1
 			expect(result.y_results[2].slice(0, 3)).toEqual([2, 2, 1]);
@@ -168,22 +187,16 @@ describe('binneddata', () => {
 	it('returns invalid for empty input data', () => {
 		mockColumns[1] = { type: 'number', getData: () => [] };
 		mockColumns[2] = { type: 'number', getData: () => [] };
-		const [, valid] = binneddata(
-			{ xIN: 1, yIN: [2], binSize: 1, binStart: 0, out: preview },
-			false
-		);
+		const [, valid] = binneddata({ xIN: 1, yIN: [2], binSize: 1, binStart: 0, out: preview });
 		expect(valid).toBe(false);
 	});
 
 	it('fails safe (no throw) when a Y column ref is missing', () => {
 		mockColumns[1] = { type: 'number', getData: () => [0, 1, 2] };
 		expect(() =>
-			binneddata({ xIN: 1, yIN: [999], binSize: 1, binStart: 0, out: preview }, false)
+			binneddata({ xIN: 1, yIN: [999], binSize: 1, binStart: 0, out: preview })
 		).not.toThrow();
-		const [, valid] = binneddata(
-			{ xIN: 1, yIN: [999], binSize: 1, binStart: 0, out: preview },
-			false
-		);
+		const [, valid] = binneddata({ xIN: 1, yIN: [999], binSize: 1, binStart: 0, out: preview });
 		expect(valid).toBe(false);
 	});
 
@@ -191,10 +204,14 @@ describe('binneddata', () => {
 		// x exactly on bin boundaries: 0,1,2 with binSize 1 from 0
 		mockColumns[1] = { type: 'number', getData: () => [0, 1, 2] };
 		mockColumns[2] = { type: 'number', getData: () => [10, 20, 30] };
-		const [result] = binneddata(
-			{ xIN: 1, yIN: [2], binSize: 1, binStart: 0, aggFunction: 'count', out: preview },
-			false
-		);
+		const [result] = binneddata({
+			xIN: 1,
+			yIN: [2],
+			binSize: 1,
+			binStart: 0,
+			aggFunction: 'count',
+			out: preview
+		});
 		// each boundary value lands in its own bin: [0,1)->1, [1,2)->1, [2,3)->1
 		expect(result.bins[0]).toBe(0);
 		expect(result.y_results[2][0]).toBe(1);
@@ -204,18 +221,30 @@ describe('binneddata', () => {
 		mockColumns[1] = { type: 'number', getData: () => [0, 0.2, 0.4] };
 		mockColumns[2] = { type: 'number', getData: () => [5, 1, 9] };
 
-		const mn = binneddata(
-			{ xIN: 1, yIN: [2], binSize: 1, binStart: 0, aggFunction: 'min', out: preview },
-			false
-		)[0];
-		const mx = binneddata(
-			{ xIN: 1, yIN: [2], binSize: 1, binStart: 0, aggFunction: 'max', out: preview },
-			false
-		)[0];
-		const md = binneddata(
-			{ xIN: 1, yIN: [2], binSize: 1, binStart: 0, aggFunction: 'median', out: preview },
-			false
-		)[0];
+		const mn = binneddata({
+			xIN: 1,
+			yIN: [2],
+			binSize: 1,
+			binStart: 0,
+			aggFunction: 'min',
+			out: preview
+		})[0];
+		const mx = binneddata({
+			xIN: 1,
+			yIN: [2],
+			binSize: 1,
+			binStart: 0,
+			aggFunction: 'max',
+			out: preview
+		})[0];
+		const md = binneddata({
+			xIN: 1,
+			yIN: [2],
+			binSize: 1,
+			binStart: 0,
+			aggFunction: 'median',
+			out: preview
+		})[0];
 
 		expect(mn.y_results[2][0]).toBe(1);
 		expect(mx.y_results[2][0]).toBe(9);
@@ -227,10 +256,14 @@ describe('binneddata', () => {
 		mockColumns[2] = { type: 'number', getData: () => [10, 20, 30, 40] };
 		mockColumns[3] = { type: 'number', getData: () => [1, 2, 3, 4] };
 
-		const [result, valid] = binneddata(
-			{ xIN: 1, yIN: [2, 3], binSize: 1, binStart: 0, aggFunction: 'mean', out: preview },
-			false
-		);
+		const [result, valid] = binneddata({
+			xIN: 1,
+			yIN: [2, 3],
+			binSize: 1,
+			binStart: 0,
+			aggFunction: 'mean',
+			out: preview
+		});
 		expect(valid).toBe(true);
 		expect(result.y_results[2].length).toBe(result.bins.length);
 		expect(result.y_results[3].length).toBe(result.bins.length);
@@ -239,32 +272,39 @@ describe('binneddata', () => {
 	it('handles a single data point', () => {
 		mockColumns[1] = { type: 'number', getData: () => [0.5] };
 		mockColumns[2] = { type: 'number', getData: () => [42] };
-		const [result, valid] = binneddata(
-			{ xIN: 1, yIN: [2], binSize: 1, binStart: 0, aggFunction: 'mean', out: preview },
-			false
-		);
+		const [result, valid] = binneddata({
+			xIN: 1,
+			yIN: [2],
+			binSize: 1,
+			binStart: 0,
+			aggFunction: 'mean',
+			out: preview
+		});
 		expect(valid).toBe(true);
 		expect(result.y_results[2][0]).toBe(42);
 	});
 
-	it('uses stepSize for sliding windows when differentstepsize=true', () => {
+	it('uses stepSize for sliding windows when args.diffStep is true, binSize otherwise', () => {
 		mockColumns[1] = { type: 'number', getData: () => [0, 0.5, 1, 1.5, 2] };
 		mockColumns[2] = { type: 'number', getData: () => [1, 1, 1, 1, 1] };
-		const [result, valid] = binneddata(
-			{
-				xIN: 1,
-				yIN: [2],
-				binSize: 1,
-				binStart: 0,
-				stepSize: 0.5,
-				aggFunction: 'count',
-				out: preview
-			},
-			true
-		);
+		const args = {
+			xIN: 1,
+			yIN: [2],
+			binSize: 1,
+			binStart: 0,
+			stepSize: 0.5,
+			aggFunction: 'count',
+			out: preview
+		};
+		// The step is read from the args alone: the headless path (definition.func)
+		// passes nothing else, so a positional flag would silently be ignored there.
+		const [sliding, valid] = binneddata({ ...args, diffStep: true });
 		expect(valid).toBe(true);
-		// overlapping windows of width 1 stepping by 0.5 → more bins than non-overlapping
-		expect(result.bins.length).toBeGreaterThan(2);
+		// overlapping windows of width 1 stepping by 0.5
+		expect(sliding.bins).toEqual([0, 0.5, 1, 1.5, 2]);
+		expect(sliding.y_results[2]).toEqual([2, 2, 2, 2, 1]);
+		const [plain] = binneddata({ ...args, diffStep: false });
+		expect(plain.bins).toEqual([0, 1, 2]);
 	});
 
 	it('applies a registered pre-process to binned y results', async () => {
@@ -273,18 +313,15 @@ describe('binneddata', () => {
 		mockColumns[1] = { type: 'number', getData: () => [0, 0.5] };
 		mockColumns[2] = { type: 'number', getData: () => [10, 20] };
 
-		const [result] = binneddata(
-			{
-				xIN: 1,
-				yIN: [2],
-				binSize: 1,
-				binStart: 0,
-				aggFunction: 'mean',
-				preProcesses: [{ processName: 'negate', processArgs: {} }],
-				out: preview
-			},
-			false
-		);
+		const [result] = binneddata({
+			xIN: 1,
+			yIN: [2],
+			binSize: 1,
+			binStart: 0,
+			aggFunction: 'mean',
+			preProcesses: [{ processName: 'negate', processArgs: {} }],
+			out: preview
+		});
 		expect(result.y_results[2][0]).toBe(-15);
 		appConsts.processMap.delete('negate');
 	});

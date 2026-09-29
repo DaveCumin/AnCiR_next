@@ -22,7 +22,7 @@ const libRoot = resolve(here, '..');
 
 /** Source files where a data-row filter could plausibly live. */
 function sourceFiles() {
-	return globSync('{tableProcesses,processes,plots,utils}/**/*.{svelte,js}', {
+	return globSync('{tableProcesses,processes,plots,utils,components/plotbits}/**/*.{svelte,js}', {
 		cwd: libRoot
 	})
 		.filter((p) => !p.endsWith('.test.js'))
@@ -38,10 +38,19 @@ const isComment = (line) => /^\s*(\/\/|\*|\/\*)/.test(line);
  */
 const isParseFloatIdiom = (line) => /parseFloat/.test(line);
 
-/** Does this line guard against null/undefined as well as NaN? */
+/**
+ * Does this line guard against null/undefined as well as NaN?
+ *
+ * The GLOBAL `isFinite` is NOT a guard: it coerces, so `isFinite(null)` and `isFinite('')` are
+ * TRUE. BinnedData's binData filtered pairs with it and averaged every missing y in as 0.
+ * Only `Number.isFinite` (which rejects null) counts.
+ */
 const isGuarded = (line) =>
-	/==\s*null|!=\s*null|isInvalidValue|Number\.isFinite|isFinite\(|!==\s*undefined/.test(line) ||
+	/==\s*null|!=\s*null|isInvalidValue|Number\.isFinite\(|!==\s*undefined/.test(line) ||
 	/isNaN-ok:/.test(line);
+
+/** A call to the GLOBAL isFinite (not Number.isFinite / math.isfinite / a method). */
+const bareIsFinite = /(^|[^.\w])isFinite\(/;
 
 /**
  * Does this line look like it is filtering DATA ROWS (as opposed to validating a scalar
@@ -85,5 +94,34 @@ describe('no bare isNaN() row filters (the null trap)', () => {
 				`safe, annotate the line with "isNaN-ok: <reason>".\n\n` +
 				offenders.join('\n')
 		).toEqual([]);
+	});
+
+	it('no row filter uses the global isFinite() (isFinite(null) is true)', () => {
+		const offenders = [];
+		for (const file of sourceFiles()) {
+			const lines = readFileSync(file, 'utf8').split('\n');
+			lines.forEach((line, i) => {
+				if (!bareIsFinite.test(line)) return;
+				if (isComment(line)) return;
+				if (/isFinite-ok:/.test(line)) return;
+				if (!looksLikeRowFilter(line)) return;
+				offenders.push(`${relative(libRoot, file)}:${i + 1}  ${line.trim()}`);
+			});
+		}
+		expect(
+			offenders,
+			`Global isFinite() row filter(s) found. isFinite(null) and isFinite('') are TRUE, so\n` +
+				`these KEEP missing rows and the analysis reads them as zeros. Use validPairs() /\n` +
+				`validValues() from utils/validPairs.js, isInvalidValue() from utils/stats.js, or\n` +
+				`Number.isFinite(). If a hit is genuinely safe, annotate it with "isFinite-ok: <reason>".\n\n` +
+				offenders.join('\n')
+		).toEqual([]);
+	});
+
+	it('the global-isFinite scan bites on the shape it forbids', () => {
+		expect(bareIsFinite.test('.filter((p) => isFinite(p.x) && isFinite(p.y))')).toBe(true);
+		expect(looksLikeRowFilter('.filter((p) => isFinite(p.x) && isFinite(p.y))')).toBe(true);
+		expect(bareIsFinite.test('.filter((v) => Number.isFinite(v))')).toBe(false);
+		expect(isGuarded('.filter((v) => isFinite(v) && !isNaN(v))')).toBe(false);
 	});
 });

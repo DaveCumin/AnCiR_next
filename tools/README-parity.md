@@ -149,6 +149,226 @@ functions ship in them, but the scripts do not compute plot metric outputs for A
 (`render_plots` draws; the saved metric columns reach `columns.csv` as rawData snapshots). The
 actogram's rule columns follow the same precedent; no new export mechanism was added.
 
+### Actogram plot data (`plotCompute`, jsFn `actogramDownloadData`)
+
+Pins the actogram's "Show/Save data" rows (`Actogramclass.getDownloadData`), which
+`ancir_to_python.py` scripts write as `<plot>_data.csv` through `export_plot_data`. The
+emitter builds the actogram as the `actogramMarkers` kind does (Plot.fromJSON over real
+Columns, in the fixture's display `zone`) and records the rows; the Python leg rebuilds
+Columns from the recorded arrays and calls the export builder itself,
+`actogram_download_data(plot, columns, zone=...)`, compared with `_deep_diff`.
+
+The export used to fold each series on its OWN first day, always in UTC, while the app folds
+every series at ONE startTime (the earliest valid sample over all series, at midnight in the
+display zone). Nothing caught it because the only check was `test_plot_data_export.py`, which
+asserts shape and invariants on a single-series demo with a number x axis. The builder now goes
+through `actogram_start_time`, `actogram_series_frame` and `actogram_bins_by_period`, so the
+runtime has one folding implementation. Cases (4): two series starting on different days
+(leading gap, different steps); America/New_York across the 10 March DST change; a UTC series
+starting 06:20 on a 0.3 h step, so every row's edge bars are split; a number axis with 23.5 h
+rows. The first two failed on the old code (`rows[388][1]: 1 vs 2`, `rows[0][2]:
+3.67 vs 22.67`); the last two passed on it and guard the paths that were already right.
+
+Python only: neither the R runtime nor the exported R scripts write plot data for any plot
+type, and the in-app Python export (`pythonExport.js`) draws plots but does not call
+`export_plot_data`.
+
+Binned x columns (4 more cases, plus `actogram-rule-bin-origin` for the marker kind and two
+`tp-binneddata-*` table-process cases, all in both ports where the port computes them). With
+`binned` (BinnedData args) the emitter runs a real BinnedData node and plots its outputs, and
+the Python leg runs `tp_binneddata` itself, so the bars come from the metadata each port's
+node writes. The app's rules: BinnedData stores bin STARTS; on a time input its x output is a
+time column of epoch ms (origin + start hours) with `binWidth` = binSize and `originTime_ms` =
+the input's earliest sample, otherwise a `bin` column whose getData is the centres. The
+actogram draws a column's bars `binWidth` wide when it has one, and folds a `bin` column at
+`-rawBinStart0 + (startTime - (originTime_ms ?? startTime)) / 3.6e6`. Both ports' BinnedData
+wrote bin-centre HOURS into a column of the input's type (so a time input read back as
+milliseconds after 1970), read `aggFunc` instead of the saved `aggFunction`, and always
+stepped by `stepSize` (saved with a 0.25 default) where the app steps by binSize unless
+`diffStep`; the Python Column gave every column `bin_width` 1.0 and had no `originTime_ms`;
+and both ports' `actogram_series_frame` folded a `bin` column at `-min(centres)`. The frame now
+takes `raw_bin_start0` and `origin_time_ms`, and the `tableProcess` legs compare what an output
+column READS (getData), not what it stores.
+
+| Broken (Python)                                   | First failure                                                    |
+| ------------------------------------------------- | ---------------------------------------------------------------- |
+| the whole binned fix reverted                     | 7 fixtures (R: the 3 it claims), e.g. `tp-binneddata-time-input` |
+| `originTime_ms` ignored in the bin offset         | `actogram-data-bin-origin` at `rows[576][2]`: 0.0 vs 7.5         |
+| bar width from the scanned step, not `binWidth`   | `actogram-data-bin-origin` at `rows`: length 864 vs 870          |
+| bin offset from `min(centres)`, not the raw start | `binned-number`, `bin-origin`, `rule-bin-origin`                 |
+
+### Correlogram plot data (`plotCompute`, jsFn `correlogramDownloadData`)
+
+Pins the correlogram's "Show/Save data" rows (`Correlogramclass.getDownloadData`, the
+series' `acfData`), which `ancir_to_python.py` scripts write as `<plot>_data.csv`. The emitter
+builds a real Correlogram over real Columns (optionally over a real BinnedData node's
+outputs, `binned`), records the rows, and the Python leg rebuilds the columns and calls
+`correlogram_download_data`, compared with `_deep_diff`. The PNG renderer
+(`plot_correlogram`) now goes through the same `correlogram_series_acf`, so a plot's CSV and
+its picture agree.
+
+Why the existing `plot-correlogram-rhythm-noisy` passed while the export was wrong: it calls
+the pure `computeAutocorrelation` directly on an hourly grid from 0 with no bin size, so none
+of the plot's own inputs were exercised. The app's plot (a) takes the lag step from the x
+column's `binWidth` when it has one, else the MEAN spacing `(last - first) / (n - 1)`,
+(b) feeds `hoursSinceStart` for every column type, and (c) keeps `maxLag` / `minLag` on each
+SERIES. The export ignored `binWidth`, let the compute estimate the step from the median
+spacing, read raw x for non-time columns (harmless: the autocorrelation is shift-invariant)
+and read plot-level `corrMaxLag` / `corrMinLag` keys the app never writes. Separately, the
+compute's own step estimate (used when no bin size is passed, as RhythmicityAnalysis and
+MovingAnalysis do) is the UPPER median of the spacings in the app, where Python used
+`np.median` over the positive spacings and R used `median`; both ports now match
+(`plot-correlogram-upper-median`, both ports). Cases: a BinnedData output on a time input
+with a 1 h binWidth on a 0.5 h step; an imported bin column (binWidth 0.75 on a 0.5 h step); a
+number x from 5 h stepping 1, 1, 1.05 h; an alternating 0.25 / 0.75 h time x with per-series
+maxLag 30 and minLag 2, plotted with a regular series.
+
+| Broken (Python)                    | First failure                                                    |
+| ---------------------------------- | ---------------------------------------------------------------- |
+| the whole fix reverted             | all 5 fixtures, e.g. `binned-time` at `rows`: length 144 vs 72   |
+| the column's binWidth ignored      | `binned-time`, `bin-column`                                      |
+| median spacing instead of the mean | `number-offset` (rows 119 vs 118), `irregular` (149 vs 116)      |
+| per-series maxLag / minLag ignored | `irregular` at `rows`: length 156 vs 116                         |
+| `np.median` in the compute         | `plot-correlogram-upper-median` at `lags`: length 4 vs 3 (R too) |
+
+Python only for the rows: neither the R runtime nor the exported R scripts write plot data
+for any plot type (the R export's only CSV is the session's input data).
+
+A missing FIRST or LAST x: the app's mean spacing used to read it as 0 (JS `null`
+arithmetic), which gave a wrong step or a blank plot. The port never copied that; it uses the
+first and last valid rows, `(t_j - t_i) / (j - i)`, and the app now does the same
+(`utils/correlogram.js meanSpacing`); the two formulas agree whenever both ends are present.
+`correlogram-data-missing-ends` pins it (a number x missing its last time, a time x missing its
+first). It also caught a Python-only bug: `Column.get_data` judged "already epoch ms" on
+`data[0]`, so a time column whose FIRST value is missing went through `pd.to_datetime`, which
+reads integers as nanoseconds, and every time shrank a millionfold (lag 0 came out 0, not 1).
+It now judges on the first present value.
+
+| Broken                                | First failure                                            |
+| ------------------------------------- | -------------------------------------------------------- |
+| the app's old `(t[n-1] - t[0])/(n-1)` | `missing-ends` at `rows`: length 192 vs 120 (Python leg) |
+| Python judges epoch ms on `data[0]`   | `missing-ends` at `rows[72][2]` (lag 0): 0.0 vs 1        |
+
+### Autocorrelation lag slots on uneven data (all three languages)
+
+`computeAutocorrelation`'s time-pair path (uneven spacing; also what gapped, evenly spaced
+data takes once its missing rows are dropped) is the slotted estimator: each product of two
+mean-removed samples goes to the lag slot its separation falls in (Edelson and Krolik 1988;
+the rectangular kernel of Rehfeld et al. 2011, Nonlin. Processes Geophys. 18:389, Eqs. 10-11).
+All three languages used the window `|d - k dt| <= dt / 2` and left out each sample's pairing
+with itself, so lag 0 was the correlation of the near-coincident pairs only (the upper-median
+fixture read -0.142), and a pair exactly half a step off a lag was counted in two lags. Now,
+in lockstep (`utils/correlogram.js`, `compute_autocorrelation` in both ports):
+
+- lag 0 is exactly 1 on both paths (on the index-shift path `sum / (n * var)` was 1 up to
+  rounding, 2 ulp off on two shipped MovingAnalysis windows);
+- slots are half-open, lag k takes `(k - 1/2) dt <= d < (k + 1/2) dt`: a boundary pair counts
+  once, in the upper lag;
+- distinct pairs closer than half a step are not used at any lag.
+
+On evenly spaced data every separation is a whole number of steps, so nothing else moves.
+`src/lib/utils/correlogram.evenSpacing.svelte.test.js` replays, against a golden recorded
+before the change, every call the app makes on the shipped sessions (the correlogram demo's
+plot, every RhythmicityAnalysis and MovingAnalysis node re-run in correlogram mode), the
+`util-autocorrelation-peak` and `plot-correlogram-rhythm-noisy` inputs, and three gapped even
+series: byte-identical except lag 0 (the two 2-ulp windows, and the gapped series, whose lag 0
+was 0).
+
+Changed record: `plot-correlogram-upper-median` correlations `[-0.142, -0.140, -0.331]` ->
+`[1, 0.0423, -0.0941]`. New: `plot-correlogram-boundary-pair` (separations exactly on the
+slot boundaries, minLag 1) and `plot-correlogram-near-zero-pairs` (four near-coincident pairs).
+
+| Broken (one language at a time) | First failure                                               |
+| ------------------------------- | ----------------------------------------------------------- |
+| JS keeps the old window         | the 3 fixtures in both ports (Python 3 failed, R 3 failed)  |
+| Python keeps the old window     | `upper-median`, `boundary-pair`, `near-zero-pairs` (Python) |
+| R keeps the old window          | `upper-median`, `boundary-pair`, `near-zero-pairs` (R)      |
+
+### A missing first or last x: SurrogateTest, NPCRA and the harmonic check
+
+The same JS trap as the correlogram's step (`Number(null) === 0`, `null - x0 === -x0`) sat in
+three more places that take a step or span from a series' ends. A seeded `rhythm` spec can now
+null x rows with `missingX` (row indices, negative from the end), as the actogram series
+generator already could.
+
+- **SurrogateTest** coerced its times with `Number`, so a missing time went into the FFT behind
+  the `observed` statistic at t = 0 (a missing LAST time gave the FFT a negative step, an empty
+  spectrum and `observed` = 0), and the hours-to-samples block length read the end as 0 (a
+  "24 h" block became 69 samples instead of 96 on a series from 100 h, or fell back to 24
+  samples). The node now keeps the rows where x and y are both present, as both ports always
+  did, and takes the step from `meanSpacing` (now in `utils/validPairs.js`, re-exported by
+  `utils/correlogram.js`, so the Correlogram is unchanged). The ports do not build surrogates
+  (the p-value stays a Monte Carlo boundary), so only `observed` is compared.
+- **computeNPCRA** kept every row whose `Number(t)` is finite, so a missing time became a
+  sample at hour 0 (epoch grid pulled back, its y averaged into the first epoch). It now drops
+  it (`isInvalidValue`), which both ports already did.
+- **harmonicCheck** took the record span as `xData[last] - xData[0]` over `hoursSinceStart`,
+  which keeps a missing time as null: a missing LAST time made the span about 0, no candidate
+  survived and tau went NaN. Both ports had copied that deliberately. All three now use the
+  first and last PRESENT samples (`validEnds` in `utils/validPairs.js`).
+
+| Broken                                 | First failure (Python; R the same fixtures)                                     |
+| -------------------------------------- | ------------------------------------------------------------------------------- |
+| SurrogateTest's old `Number` coercion  | `tp-surrogate-observed-missing-last-x` `observed`: 31.45 vs 0                   |
+|                                        | `tp-surrogate-observed-missing-first-x` `observed`: 31.40 vs 31.50              |
+| computeNPCRA reads a missing time as 0 | `tp-npcra-missing-x-ends` `npcray[0]`: 39.14 vs 31.80                           |
+| the app's old span (JS)                | `actogram-rule-harmonic-missing-last-x` at `harmonic`: app None, port an object |
+| the ports' old span (JS fixed)         | `actogram-rule-harmonic-missing-last-x` at `harmonic`: app an object, port None |
+
+### BinnedData custom edges (`cuts`) and the aggregates
+
+Neither port implemented BinnedData's `binMode: 'cuts'` (custom bin edges): both binned a cuts
+session uniformly at its leftover `binSize`, so a 7-edge session came back as 49 bins. Both
+ports now carry a line-by-line port of `wrangleData.js binData` in BOTH modes (`bin_data` /
+`bin_data` with a `cuts` argument) and of the node's `binneddata(args)` checks. The rules they
+pin, all from the app:
+
+- the edges are the finite `cuts`, deduplicated and sorted at the node boundary; fewer than
+  two distinct edges, or ANY time-typed x, makes the node invalid and it writes nothing;
+- every bin is `[a, b)` except the last, which is `[a, b]`; values outside the edges are
+  dropped; a value within 1e-10 BELOW an edge belongs to the next bin (the same tolerance the
+  uniform bins use);
+- the x output is a `bin` column of the bin STARTS with `binWidth` null (the Python and R
+  columns record `cuts_list` instead), so it reads back its starts, not centres;
+- the aggregates are the app's: `stddev` is the SAMPLE deviation and 0 for fewer than two
+  points, `count` counts pairs (0 when empty), `min`/`max` of an empty bin are null, `mean`
+  and `median` of one are NaN. The ports had the POPULATION deviation and no `count` at all
+  (it silently fell through to the mean), in uniform mode too.
+
+Uniform bins now also step as the app does, `binStart + i * step` rather than by
+accumulation, with the 1e-10 edge tolerance.
+
+Missing values: a row whose x or y is missing (null, blank) is DROPPED, and a missing edge in
+`cuts` is dropped too. The ports always did this; the app did not, because `binData` filtered
+pairs with the global `isFinite`, and `isFinite(null)` is true, so a null y was averaged in as
+0 (and became the bin `min`, reported as null) and a null x put its y in the bin at 0; a null
+edge became an edge at 0. The app now uses the house rule (`validPairs` / `isInvalidValue`).
+`tp-binneddata-missing-{uniform-mean,uniform-min,cuts-mean,cuts-count}` pin it in both ports
+(x missing at two rows, y at two others; edges `[10,1,null,2.5,7]`). With the app fix reverted
+all four fail in both ports; with only the edge fix reverted, the two cuts fixtures fail.
+
+Fixtures (all in both ports): `tp-binneddata-cuts-{mean,median,min,max,stddev,count}` (one
+irregular, unsorted number input; edges saved unsorted with a duplicate, uneven, one empty bin,
+values on and 1e-11 below an edge, values outside both ends), `tp-binneddata-cuts-time-input`
+and `tp-binneddata-cuts-one-edge` (refusals), `tp-binneddata-uniform-{stddev,count}`. The two
+refusals set `recordValid`: the emitter then records the node's validity as `valid`, and both
+legs compare the port's own validity to it (every other fixture's record is unchanged).
+
+| Broken (Python)                       | First failure                                                       |
+| ------------------------------------- | ------------------------------------------------------------------- |
+| the whole cuts/aggregate fix reverted | the 10 new fixtures (R: the same 10), e.g. `binnedx` length 49 vs 6 |
+| last bin `[a, b)` instead of `[a, b]` | 5 cuts fixtures, e.g. `cuts-count` at `binnedy[5]`: 2 vs 4          |
+| no 1e-10 tolerance on the edges       | 6 cuts fixtures, e.g. `cuts-count` at `binnedy[0]`: 3 vs 2          |
+| population stddev                     | `cuts-stddev` and `uniform-stddev`                                  |
+| time x no longer refused              | `cuts-time-input`: valid True vs False                              |
+| cuts column reads centres             | 6 cuts fixtures at `binnedx[0]`: 0.5 vs 0                           |
+
+Not pinned, deliberately: the app's binData filters pairs with the GLOBAL `isFinite`, which
+coerces, so a missing (null) x or y is binned as 0 rather than dropped (on the cuts fixture's
+input a null y moved one bin's mean from 18.67 to 13.33 and made its min null). The ports drop
+missing pairs, which is what that filter's own comment says it is for; see the item in the
+parity report.
+
 ### `rTolerance`
 
 A fixture may set `rTolerance` to loosen the comparison **for R alone**. Widening the shared
@@ -294,6 +514,7 @@ Notes:
 - Curve fitting on seeded noisy rhythm data: `Cosinor` (fixed period),
   `FitFunction` (cosinor model) — compares `cosinorx`/`cosinory`, `fitx`/`fity`.
 - Actogram marker rules (`actogramMarkers`, Python and R): see the section above.
+- Actogram plot-data rows (`plotCompute` / `actogramDownloadData`, Python only): see above.
 - Stats on seeded group data (`tableProcessResult`): `GroupComparison` Welch
   t-test (`difference`,`t`,`df`,`pValue`) and one-way ANOVA (`f`, `ssBetween`,
   `ssWithin`, `dfBetween`, `dfWithin`, `etaSquared`, `pValue`).
@@ -319,9 +540,13 @@ tools/.venv/bin/python tools/test_session_parity.py        # summary + per-colum
 - **Python side** `tools/test_session_parity.py`: loads each session through
   `ancir_runtime.py`, runs the analyses, compares column-by-column by id.
 
-Current status: **42 match, 2 skipped (non-deterministic), 0 genuine mismatches.**
+Current status (2026-09-30): **89 match, 2 skipped (non-deterministic), 0 mismatches, 0
+errors.** The JS side RECOMPUTES every table process (`doProcess`), so the comparison is
+against what the app computes now, not against the outputs stored in the session JSON; a
+stale saved session cannot hide a port bug or cause a false one. (One caveat: the emitter
+swallows a JS throw, which would leave that node's stored outputs in place.)
 
-Three knobs in `test_session_parity.py` keep this honest rather than papering over
+Four knobs in `test_session_parity.py` keep this honest rather than papering over
 real differences:
 
 - `NONDETERMINISTIC` — sessions whose JS output uses an unseeded RNG
@@ -330,10 +555,68 @@ real differences:
   Python use _different numerical implementations_. Each is investigated and
   explained, not hand-waved (see below).
 - `SKIP_COLUMNS` — specific columns whose **JS baseline is itself degenerate** (a
-  JS-engine headless limitation, not a Python bug): `filterbyothercol` col 58 (the
-  filter process isn't applied during headless column reconstruction) and
-  `widetolong` col 196 (output time typed `'time'` but holding raw ms → JS
-  `get_data` returns all-None). The Python port is correct in both.
+  JS-engine headless limitation, not a Python bug): `widetolong` `time` (output
+  typed `'time'` but holding raw ms → JS `get_data` returns all-None). The Python
+  port is correct there.
+- `MONTE_CARLO_COLUMNS`: columns whose JS value is drawn from the app's SEEDED
+  @stdlib minstd-shuffle PRNG, which the runtime does not reproduce:
+  `demo-tp-surrogatetest` `pvalue` (the observed statistic's rank among 19
+  surrogates; 0.05 in the app). The port emits NaN, "not computed", by design (see
+  `tp_surrogatetest`). This is NOT a silent skip: the check requires the port's
+  value to be NaN, so a port that started inventing a p-value would fail, and each
+  exclusion is printed. Porting minstd-shuffle would lift this for SurrogateTest,
+  Random and the permutation p-values together.
+
+### The 2026-09-30 triage (82 match, 6 mismatch, 1 error before)
+
+| Session                                 | What differed                                                                              | Class                 | Outcome                             |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------- | ----------------------------------- |
+| `demo-tp-correlation`                   | port `r` 0.9994, app 1; p 0.819 vs 0.758                                                   | port bug (both ports) | fixed; `tp-correlation-auto-*` (3)  |
+| `demo-workflow-stats-correlation`       | port `r[3]` 0.9452, app 0.9377; p off by 0.029                                             | same bug              | fixed                               |
+| `demo-workflow-stats-eda`               | port `r[1]` -0.0386, app -0.0367                                                           | same bug              | fixed                               |
+| `demo-workflow-stats-fisher-exact`      | Fisher node: port statistic 5.625, app none; effect 0.67 (Cramer's V) vs 21.4 (odds ratio) | port bug (both ports) | fixed; `tp-chisquared-fisher-*` (3) |
+| `demo-workflow-stats-two-groups-counts` | port chi-squared 0.0298, app 11.31; p 0.863 vs 0.00077                                     | port bug (both ports) | fixed; `tp-chisquared-groups-*` (2) |
+| `demo-tp-surrogatetest`                 | app `pvalue` 0.05, port NaN                                                                | intentional boundary  | `MONTE_CARLO_COLUMNS`, NaN required |
+| `demo-tp-columnset` (error)             | "unsupported table process 'ColumnSet'"                                                    | port bug (both ports) | fixed: dispatched as a no-op        |
+
+- **Correlation `auto`.** The app picks ONE method for the whole matrix: Pearson unless ANY
+  column is non-normal by GroupComparison's `jarqueBeraNormality` (n >= 8, moments over the
+  SAMPLE standard deviation, p >= 0.05 normal), then Spearman for every pair. Both ports ran
+  Shapiro-Wilk per PAIR and chose per pair. Fixtures: the demo's own data (all normal, so
+  Pearson, r = 1 on an exact linear map), a matrix with one skewed column (Spearman for every
+  pair, including the two normal columns), and a column whose decision flips on the sample
+  vs population SD. The skewed fixture also caught an R-only bug: R's `cor.test` gives the
+  EXACT (AS 89) Spearman p for n < 1290, where the app and scipy use the t approximation
+  (0.4350 vs 0.4367); R now passes `exact = FALSE`.
+- **ChiSquared ("Categorical tests").** Both ports had only half the node: no Fisher mode
+  (`testType: 'fisher'` ran the chi-squared test), no `dataFormat` (the app's DEFAULT
+  `'groups'` reads each column as one independent group's outcomes; both ports always
+  cross-tabulated row by row), the wrong goodness-of-fit key (`'goodnessoffit'`, where the app
+  saves `'goodness'`, so it never ran), no categorical goodness of fit and no Cohen's w. Both
+  now port the node whole: `contingency_table`, `groups_to_table`, the missing-category rule
+  (null, '', NaN and the text 'NaN'), Fisher's p for each alternative with the conditional-MLE
+  odds ratio and its two-sided 95% interval (Python via scipy; R ports the app's bisection
+  because `fisher.test`'s `uniroot` is only good to ~1e-4), and the app's "valid but writes
+  nothing" results. Fixtures: `tp-chisquared-{fisher-paired, fisher-greater, fisher-less,
+groups-default, groups-fisher, goodness-categorical, goodness-counts, paired-no-yates}`.
+- **ColumnSet.** The node emits no columns and its selection is already in the consumers'
+  saved inputs, which is why `runtimeCoverage.js` listed it as not applicable. But the node
+  itself is in the saved `tableProcesses`, so the strict dispatchers aborted every exported
+  Python or R script of a session containing one (reproduced: `ancir_to_python.py` on
+  `demo-tp-columnset` raised `UnsupportedProcessError`). Both runtimes now dispatch it as a
+  no-op that is valid and writes nothing, as the app's `columnset` does.
+
+| Broken                                       | First failure                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------ |
+| the Python item reverted                     | the 8 then-new fixtures, e.g. `groups-default` statistic 0.0298 vs 11.31 |
+| Python `dataFormat` default `'paired'`       | `tp-chisquared-groups-default`                                           |
+| Python per-pair method (auto never Spearman) | `tp-correlation-auto-one-skewed` r -0.1518 vs -0.1475                    |
+| Python Fisher alternative ignored            | `tp-chisquared-fisher-greater` p 0.0152 vs 0.0076                        |
+| JB with the population SD (Python and R)     | `tp-correlation-auto-jb-sample-sd` r 0.9515 vs 0.9691                    |
+| R `dataFormat` default `'paired'`            | `tp-chisquared-groups-default`                                           |
+| R interval upper tail `<` instead of `<=`    | the 4 Fisher fixtures                                                    |
+| R exact Spearman p                           | `tp-correlation-auto-one-skewed`                                         |
+| `tp_columnset` removed                       | `demo-tp-columnset` back to an error                                     |
 
 ### Why the tolerances are justified (investigated, not assumed)
 

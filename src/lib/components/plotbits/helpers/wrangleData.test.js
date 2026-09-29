@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
 	binData,
+	binOnSharedGrid,
 	linearRegression,
 	removeNullsFromXY,
 	mean,
@@ -338,5 +339,120 @@ describe('binData — custom cuts', () => {
 		const result = binData([0, 1.5, 2, 4], [1, 3, 4, 6], 0, 0, null, 'mean', [0, 2, 5]);
 		expect(result.y_out[0]).toBeCloseTo(2, 6);
 		expect(result.y_out[1]).toBeCloseTo(5, 6);
+	});
+});
+
+// A missing value is ABSENCE, not zero. The pair filter used the global `isFinite`, and
+// `isFinite(null)` and `isFinite('')` are both TRUE (they coerce to 0), so a null or blank y
+// was averaged in as 0 and a null or blank x put its y in the bin at 0. The house rule
+// (utils/validPairs.js, utils/stats.js isInvalidValue): a real 0 is data; null, undefined,
+// a blank string and NaN are not.
+describe('binData — missing values are dropped, not read as 0', () => {
+	// Bin [0,3): y 16, 20, 20 -> mean 18.667, min 16. A null y in the bin must change nothing.
+	const x = [0, 1, 2, 2.5, 3, 4];
+	const y = [16, 20, 20, null, 7, 9];
+
+	it('a null y leaves the bin mean unchanged (was 14, i.e. (16+20+20+0)/4)', () => {
+		const r = binData(x, y, 3, 0);
+		expect(r.bins.slice(0, 2)).toEqual([0, 3]);
+		expect(r.y_out[0]).toBeCloseTo(56 / 3, 12);
+		expect(r.y_out[1]).toBeCloseTo(8, 12);
+	});
+
+	it('a null y does not become the bin min (was 0)', () => {
+		expect(binData(x, y, 3, 0, null, 'min').y_out[0]).toBe(16);
+	});
+
+	it('a null y is not counted', () => {
+		expect(binData(x, y, 3, 0, null, 'count').y_out.slice(0, 2)).toEqual([3, 2]);
+	});
+
+	it('a blank-string y is dropped too', () => {
+		const r = binData(x, [16, 20, 20, '', 7, 9], 3, 0);
+		expect(r.y_out[0]).toBeCloseTo(56 / 3, 12);
+	});
+
+	it('a null or blank x drops its row instead of binning it at 0', () => {
+		// Without the fix both rows land in [0,3) as x = 0 and drag the mean to (16+20+20+100+100)/5.
+		const r = binData([0, 1, 2, null, '', 4], [16, 20, 20, 100, 100, 9], 3, 0);
+		expect(r.y_out[0]).toBeCloseTo(56 / 3, 12);
+		expect(
+			binData([0, 1, 2, null, '', 4], [16, 20, 20, 100, 100, 9], 3, 0, null, 'count').y_out[0]
+		).toBe(3);
+	});
+
+	it('a real zero is data', () => {
+		const r = binData([0, 1, 2], [0, 0, 6], 3, 0);
+		expect(r.y_out[0]).toBeCloseTo(2, 12);
+	});
+
+	it('NaN and Infinity are still dropped', () => {
+		const r = binData([0, 1, 2, Infinity, 2.5], [16, 20, 20, 5, NaN], 3, 0);
+		expect(r.y_out[0]).toBeCloseTo(56 / 3, 12);
+	});
+
+	it('cuts mode drops missing values the same way', () => {
+		const r = binData(
+			[0.5, 1, 1.5, null, 2.5],
+			[16, 20, 20, 5, null],
+			1,
+			0,
+			null,
+			'mean',
+			[0, 2, 3]
+		);
+		expect(r.y_out[0]).toBeCloseTo(56 / 3, 12);
+		expect(r.y_out[1]).toBeNaN();
+	});
+});
+
+// The Histogram plot counts a single column by passing it as both x and y with 'count'.
+describe('binData — a histogram of a column with missing values', () => {
+	it('does not count missing values in the bin at 0', () => {
+		// Two real zeros and two missing cells. Reading null and '' as 0 gave 4 in [0,1).
+		const v = [0, 0, null, '', 1.5, 2.5];
+		const r = binData(v, v, 1, 0, null, 'count');
+		expect(r.y_out.slice(0, 3)).toEqual([2, 1, 1]);
+	});
+});
+
+// Import-time binning (ImportData binParsedData) writes every numeric column on ONE grid.
+describe('binOnSharedGrid', () => {
+	it('pads a column whose trailing cells are missing out to the full grid', () => {
+		const t = [0, 1, 2, 3, 4, 5];
+		const full = [1, 1, 2, 2, 3, 3];
+		const tail = [5, 5, 6, null, null, null];
+		const r = binOnSharedGrid(t, [tail, full], 2, 0, 2, 'mean');
+		// binData's grid ends with the bin that starts at or past the last x (6 here).
+		expect(r.bins).toEqual([0, 2, 4, 6]);
+		expect(r.y_outs[1]).toEqual([1, 2, 3, NaN]);
+		// On its own, `tail` bins only to x = 2 (two bins); here it is padded to four.
+		expect(r.y_outs[0]).toEqual([5, 6, NaN, NaN]);
+	});
+
+	it('takes the grid from the valid x alone, not from the first column', () => {
+		// First column is entirely missing: the grid must still span every valid time.
+		const r = binOnSharedGrid(
+			[0, 1, 2, 3],
+			[
+				[null, null, null, null],
+				[1, 2, 3, 4]
+			],
+			2,
+			0,
+			2
+		);
+		expect(r.bins).toEqual([0, 2, 4]);
+		expect(r.y_outs[0]).toEqual([NaN, NaN, NaN]);
+		expect(r.y_outs[1]).toEqual([1.5, 3.5, NaN]);
+	});
+
+	it('matches binData exactly for complete columns', () => {
+		const t = Array.from({ length: 50 }, (_, i) => i * 0.25);
+		const y = t.map((h) => Math.sin(h));
+		const r = binOnSharedGrid(t, [y], 1, 0, 1, 'mean');
+		const b = binData(t, y, 1, 0, 1, 'mean');
+		expect(r.bins).toEqual(b.bins);
+		expect(r.y_outs[0]).toEqual(b.y_out);
 	});
 });

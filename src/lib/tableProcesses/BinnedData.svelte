@@ -6,6 +6,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { min as arrayMin } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 	const displayName = 'Bin Data';
 	const defaults = new Map([
 		['xIN', { val: -1 }],
@@ -50,26 +51,95 @@
 	 */
 
 	/**
+	 * Bring saved args up to the current shape, in place. Idempotent. Run by the
+	 * compute itself (so the headless path sees the same args as the panel) and by
+	 * the component at init (so its bindings see them before the first compute).
+	 * @param {any} args
+	 */
+	export function migrateBinnedArgs(args) {
+		// Legacy single yIN number -> array
+		migrateLegacyYIN(args);
+		if (!args.out) args.out = {};
+		// Old single 'binnedy' output key -> per-Y 'binnedy_{yId}'
+		if (args.out.binnedy != null) {
+			if (args.out.binnedy >= 0 && Array.isArray(args.yIN) && args.yIN.length > 0) {
+				args.out['binnedy_' + args.yIN[0]] = args.out.binnedy;
+			}
+			delete args.out.binnedy;
+		}
+		if (args.diffStep === undefined) args.diffStep = false;
+		// binMode and cuts were added 2026-05-07
+		if (args.binMode === undefined) args.binMode = 'uniform';
+		if (!Array.isArray(args.cuts)) args.cuts = [];
+	}
+
+	/**
+	 * The step between consecutive bin starts: `stepSize` when "Different step
+	 * size" is ticked and it is a usable positive number, otherwise the bin size
+	 * (non-overlapping bins). The Python and R ports apply the same rule.
+	 * @param {any} args
+	 */
+	export function effectiveStep(args) {
+		return args.diffStep && Number(args.stepSize) > 0 ? Number(args.stepSize) : args.binSize;
+	}
+
+	/**
+	 * Everything the binned output depends on, as a string. Inputs by data hash;
+	 * parameters as a JSON array, so no two parameter sets can collide (this used
+	 * to ADD binSize + binStart + stepSize, so 4,0,1 and 3,1,1 hashed alike).
+	 * @param {any} args
+	 * @param {(id: number) => any} [getCol]
+	 */
+	export function binnedDataHash(args, getCol = getColumnById) {
+		const xCol = args.xIN >= 0 ? getCol(args.xIN) : null;
+		const yHashes = normalizeYInputs(args.yIN).map((yId) => {
+			const col = yId >= 0 ? getCol(yId) : null;
+			return col?.getDataHash ?? '';
+		});
+		return JSON.stringify([
+			xCol?.getDataHash ?? '',
+			yHashes,
+			args.binMode ?? 'uniform',
+			args.binSize,
+			args.binStart,
+			args.stepSize ?? null,
+			!!args.diffStep,
+			args.aggFunction ?? 'mean',
+			args.cuts ?? []
+		]);
+	}
+
+	/**
+	 * The one compute, shared by the headless path (`definition.func`, used by
+	 * op-created nodes, the MCP engine, the demo generator and the parity emitter)
+	 * and the mounted panel. Every option is read from `argsIN`, so the two paths
+	 * cannot be handed different settings.
 	 * @param {any} argsIN
-	 * @param {boolean} differentstepsize
 	 * @returns {[BinnedDataResult, boolean]}
 	 */
-	export function binneddata(argsIN, differentstepsize) {
+	export function binneddata(argsIN) {
+		migrateBinnedArgs(argsIN);
 		const xIN = argsIN.xIN;
-		// Backward compat: accept single number or array
 		const yINs = normalizeYInputs(argsIN.yIN);
 		const binMode = argsIN.binMode === 'cuts' ? 'cuts' : 'uniform';
 		const binSize = argsIN.binSize;
 		const binStart = argsIN.binStart;
-		const stepSize = differentstepsize ? argsIN.stepSize : binSize;
+		const stepSize = effectiveStep(argsIN);
 		const aggFunction = argsIN.aggFunction || 'mean';
 		const xOUT = argsIN.out.binnedx;
 		// Sort + dedupe cuts at the TP boundary so the helper sees a clean ascending array
 		/** @type {number[]} */
 		const rawCuts = Array.isArray(argsIN.cuts) ? argsIN.cuts : [];
-		const cuts = [...new Set(rawCuts.filter((/** @type {number} */ c) => isFinite(c)))].sort(
-			(a, b) => a - b
-		);
+		// A missing edge (null or blank, as a hand-edited session or an MCP call can carry) is
+		// dropped, not read as an edge at 0: the global `isFinite(null)` is true.
+		const cuts = [
+			...new Set(
+				rawCuts
+					.filter((/** @type {any} */ c) => !isInvalidValue(c))
+					.map(Number)
+					.filter((c) => Number.isFinite(c))
+			)
+		].sort((a, b) => a - b);
 
 		/** @returns {BinnedDataResult} */
 		const empty = () => ({ bins: [], binEnds: [], y_results: {}, droppedCount: 0 });
@@ -217,21 +287,8 @@
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
-	// --- Backward compat ---
-	// Convert legacy single yIN number to array
-	migrateLegacyYIN(p.args);
-	// Migrate old 'binnedy' output key to per-Y format ('binnedy_{yId}')
-	if (p.args.out?.binnedy != null) {
-		if (p.args.out.binnedy >= 0 && p.args.yIN.length > 0) {
-			p.args.out['binnedy_' + p.args.yIN[0]] = p.args.out.binnedy;
-		}
-		delete p.args.out.binnedy;
-	}
-	// Migrate: ensure diffStep exists
-	if (p.args.diffStep === undefined) p.args.diffStep = false;
-	// Migrate: ensure binMode and cuts exist (added 2026-05-07)
-	if (p.args.binMode === undefined) p.args.binMode = 'uniform';
-	if (!Array.isArray(p.args.cuts)) p.args.cuts = [];
+	// --- Backward compat --- (the compute runs this too, for the headless path)
+	migrateBinnedArgs(p.args);
 
 	// Local text mirror for the cut-edges input. Source of truth is p.args.cuts;
 	// we re-serialise from the parsed array so the input survives session reload
@@ -307,21 +364,9 @@
 		}
 	});
 
-	let getHash = $derived.by(() => {
-		let h = '';
-		h += xIN_col?.getDataHash ?? '';
-		for (const yId of p.args.yIN ?? []) {
-			const col = yId >= 0 ? getColumnById(yId) : null;
-			h += col?.getDataHash ?? '';
-		}
-		h += p.args.binSize + p.args.binStart + (p.args.stepSize ?? '') + p.args.aggFunction;
-		h += '|' + p.args.binMode + '|' + JSON.stringify(p.args.cuts ?? []);
-		// These change the result but were missing from this hash. While the memo
-		// was component-local a view switch recomputed anyway and hid it; now that
-		// the memo survives a remount, an omission here means an edit is ignored.
-		h += '|' + p.args.diffStep;
-		return h;
-	});
+	// Everything that changes the result must be in here: the memo survives a
+	// remount, so an omission means an edit is ignored.
+	let getHash = $derived(binnedDataHash(p.args));
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
 	// and rebuilds this component) does not recompute unchanged inputs.
 	const memo = nodeMemo(p, 'tableprocess');
@@ -334,7 +379,7 @@
 		if (dataHash !== memo.hash) {
 			untrack(() => {
 				previewStart = 1;
-				[binnedData, p.args.valid] = binneddata(p.args, p.args.diffStep);
+				[binnedData, p.args.valid] = binneddata(p.args);
 			});
 			memo.hash = dataHash;
 		}
@@ -346,7 +391,7 @@
 
 	function getBinnedData() {
 		previewStart = 1;
-		[binnedData, p.args.valid] = binneddata(p.args, p.args.diffStep);
+		[binnedData, p.args.valid] = binneddata(p.args);
 		memo.hash = getHash;
 	}
 
@@ -601,7 +646,11 @@
 				{:else if p.args.valid && binnedData?.bins?.length}
 					{@const totalRows = binnedData.bins.length}
 					{@const yIds = Object.keys(binnedData.y_results)}
-					<p>Preview ({p.args.aggFunction}{p.args.stepSize ? `, step=${p.args.stepSize}` : ''}):</p>
+					<p>
+						Preview ({p.args.aggFunction}{p.args.diffStep
+							? `, step=${effectiveStep(p.args)}`
+							: ''}):
+					</p>
 					<Table
 						headers={[
 							xIsTime ? 'binned x' : 'binned x (center)',
@@ -618,7 +667,7 @@
 										isTime: true
 									};
 								}
-								const center = (x + p.args.stepSize / 2).toFixed(4);
+								const center = (x + p.args.binSize / 2).toFixed(4);
 								return {
 									raw: center,
 									computed: `±${(p.args.binSize / 2).toFixed(2)}`,

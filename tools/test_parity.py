@@ -43,6 +43,9 @@ def _is_nan(v):
 
 
 def nums_match(x, y, tol):
+    # A category output (Correlation's var_i / var_j) compares as text.
+    if isinstance(x, str) or isinstance(y, str):
+        return str(x) == str(y)
     if _is_nan(x) and _is_nan(y):
         return True
     if _is_nan(x) or _is_nan(y):
@@ -124,12 +127,22 @@ def run_table_process(fx, js):
     if fn is None:
         raise AssertionError(f"no Python tp_{fx['pyFunc']} in ancir_runtime")
     valid = fn(args, cols, raw_data, {})
-    assert valid, f"{fx['id']}: Python tp_{fx['pyFunc']} returned invalid"
+    if "valid" in js:
+        # A `recordValid` fixture pins the node's validity itself (a refusal, typically).
+        assert bool(valid) == js["valid"], \
+            f"{fx['id']}: Python tp_{fx['pyFunc']} valid={bool(valid)}, JS valid={js['valid']}"
+    else:
+        assert valid, f"{fx['id']}: Python tp_{fx['pyFunc']} returned invalid"
 
+    # Compare what the column READS (getData on the JS side), not what it stores: a 'bin'
+    # column stores bin starts and reads bin centres.
     outputs = {}
     for k, (static_id, dyn_id) in out_ids.items():
-        dyn = raw_data.get(dyn_id)
-        outputs[k] = dyn if dyn else raw_data.get(static_id)
+        oid = dyn_id if raw_data.get(dyn_id) else static_id
+        outputs[k] = cols[oid].get_data() if raw_data.get(oid) is not None else None
+        # A refused node writes nothing; the JS output column then reads back empty.
+        if outputs[k] is None and js.get("valid") is False:
+            outputs[k] = []
     return outputs
 
 
@@ -144,6 +157,80 @@ def run_plot_compute(fx, js):
     y = js["inputs"][fx["yRef"]]["values"]
     res = fn(t, y, *fx.get("extraArgs", []))
     return {k: res.get(k) for k in fx.get("compareArrays", [])}
+
+
+def run_actogram_download(fx, js):
+    """The actogram's plot-data rows through the Python EXPORT path: real Columns built from
+    the arrays the JS emitter recorded, a plot dict shaped like the saved session's, and
+    the same builder `export_plot_data` calls, in the recorded display zone."""
+    fn = getattr(rt, fx["pyFunc"], None)
+    if fn is None:
+        raise AssertionError(f"no Python {fx['pyFunc']} in ancir_runtime")
+    inp = js["inputs"]
+    raw_data, cols, data = {}, {}, []
+
+    def new_col(name, values, ctype, bin_width=None, origin_time_ms=None):
+        cid = len(cols) + 1
+        raw_data[cid] = None if values is None else list(values)
+        col = rt.Column(id=cid, name=name, type=ctype, data=cid, raw_data=raw_data,
+                        bin_width=bin_width)
+        # An imported bin column's origin, as the session JSON carries it.
+        col.origin_time_ms = origin_time_ms
+        cols[cid] = col
+        return cid
+
+    for i, s in enumerate(inp["series"]):
+        x_id = new_col(f"x{i}", s["x"], s["xType"], s.get("binWidth"), s.get("originTime_ms"))
+        y_id = new_col(f"y{i}", s["y"], "number")
+        binned = inp.get("binned")
+        if binned:
+            # The actogram plots a BinnedData node's outputs: run the port's own node, so
+            # the columns carry whatever metadata IT writes.
+            bx, by = new_col(f"bx{i}", None, "number"), new_col(f"by{i}", None, "number")
+            args = {**binned, "xIN": x_id, "yIN": [y_id],
+                    "out": {"binnedx": bx, f"binnedy_{y_id}": by}}
+            assert rt.tp_binneddata(args, cols, raw_data, {}), f"{fx['id']}: BinnedData failed"
+            x_id, y_id = bx, by
+        data.append({"x": {"refId": x_id}, "y": {"refId": y_id}})
+    plot = {"type": "actogram", "plot": {"periodHrs": inp["periodHrs"], "data": data}}
+    headers, rows = fn(plot, cols, zone=inp.get("zone", "utc"))
+    return {"headers": headers, "rows": rows}
+
+
+def run_correlogram_download(fx, js):
+    """The correlogram's plot-data rows through the Python EXPORT path: real Columns built
+    from the arrays the JS emitter recorded (a bin column with its binWidth), optionally run
+    through the port's own BinnedData node, a plot dict shaped like the saved session's
+    (maxLag / minLag on each series), and the builder `export_plot_data` calls."""
+    fn = getattr(rt, fx["pyFunc"], None)
+    if fn is None:
+        raise AssertionError(f"no Python {fx['pyFunc']} in ancir_runtime")
+    inp = js["inputs"]
+    raw_data, cols, data = {}, {}, []
+
+    def new_col(name, values, ctype, bin_width=None, origin_time_ms=None):
+        cid = len(cols) + 1
+        raw_data[cid] = None if values is None else list(values)
+        col = rt.Column(id=cid, name=name, type=ctype, data=cid, raw_data=raw_data,
+                        bin_width=bin_width)
+        col.origin_time_ms = origin_time_ms
+        cols[cid] = col
+        return cid
+
+    for i, s in enumerate(inp["series"]):
+        x_id = new_col(f"x{i}", s["x"], s["xType"], s.get("binWidth"), s.get("originTime_ms"))
+        y_id = new_col(f"y{i}", s["y"], "number")
+        binned = inp.get("binned")
+        if binned:
+            bx, by = new_col(f"bx{i}", None, "number"), new_col(f"by{i}", None, "number")
+            args = {**binned, "xIN": x_id, "yIN": [y_id],
+                    "out": {"binnedx": bx, f"binnedy_{y_id}": by}}
+            assert rt.tp_binneddata(args, cols, raw_data, {}), f"{fx['id']}: BinnedData failed"
+            x_id, y_id = bx, by
+        data.append({"x": {"refId": x_id}, "y": {"refId": y_id},
+                     "maxLag": s.get("maxLag"), "minLag": s.get("minLag", 0)})
+    headers, rows = fn({"type": "correlogram", "plot": {"data": data}}, cols)
+    return {"headers": headers, "rows": rows}
 
 
 def run_pure_util(fx, js):
@@ -240,6 +327,16 @@ def _check_fixture(fx, js_results):
         py = run_column_process(fx, js)
         ok, why = arrays_match(py["value"], js["outputs"]["value"], tol)
         assert ok, f"{fx['id']} output 'value' differs: {why}"
+
+    elif fx["kind"] == "plotCompute" and fx.get("jsFn") == "actogramDownloadData":
+        py = run_actogram_download(fx, js)
+        diff = _deep_diff(py, js["outputs"], tol)
+        assert diff is None, f"{fx['id']} differs at {diff}"
+
+    elif fx["kind"] == "plotCompute" and fx.get("jsFn") == "correlogramDownloadData":
+        py = run_correlogram_download(fx, js)
+        diff = _deep_diff(py, js["outputs"], tol)
+        assert diff is None, f"{fx['id']} differs at {diff}"
 
     elif fx["kind"] == "plotCompute":
         py = run_plot_compute(fx, js)

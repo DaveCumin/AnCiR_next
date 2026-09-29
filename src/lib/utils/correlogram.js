@@ -2,11 +2,48 @@
 import { mean } from '$lib/components/plotbits/helpers/wrangleData.js';
 import { validPairs } from './validPairs.js';
 
+// meanSpacing lives with the valid-row rules it applies; SurrogateTest uses it too. Re-exported
+// so the Correlogram and its tests keep importing it from here.
+export { meanSpacing } from './validPairs.js';
+
 /**
  * Compute the autocorrelation function of a 1-D signal sampled at `times`.
  *
  * Uses a fast index-based path when sampling is approximately uniform (within
  * 10% of the median dt) and a slower time-pair path otherwise.
+ *
+ * The time-pair path is the slotted estimator for unevenly sampled series: every product of
+ * two mean-removed samples is dropped into the lag slot its time separation falls in, and a
+ * slot's correlation is the mean of its products over the variance. This is the discrete
+ * correlation function of Edelson and Krolik (1988, ApJ 333:646), which Rehfeld et al. (2011,
+ * "Comparison of correlation analysis techniques for irregularly sampled time series",
+ * Nonlinear Processes in Geophysics 18:389-404, doi:10.5194/npg-18-389-2011, Sect. "Correlation
+ * slotting", Eqs. 10-11 and Table 1) write as a rectangular kernel b_k that keeps a pair when
+ * its separation lies within half a slot of k * dt. Three rules make it well defined:
+ *
+ *   1. Lag 0 is exactly 1, on both paths. A normalised autocorrelation is 1 at zero lag by
+ *      definition. The slot around 0 holds each sample's pairing with itself (the product
+ *      (y_i - mean)^2, whose mean over all i IS the variance, so 1) and any distinct pairs
+ *      closer than half a step. Those near-zero pairs estimate the correlation at a small
+ *      NON-zero lag, not at 0, and pull the slot away from 1. The old code left the
+ *      self-pairs out and averaged only those near pairs: the fixture
+ *      plot-correlogram-upper-median (step 2 h) read -0.142 at lag 0 from three pairs exactly
+ *      1 h apart. So lag 0 is reported as 1 and the near-zero, non-self pairs
+ *      (separation below half a step) are not used at any lag. On the index-shift path the
+ *      sum-over-variance is 1 up to rounding (2 ulp off on some windows); it is set exactly.
+ *   2. Slots are HALF-OPEN: lag k (k >= 1) takes the separations d with
+ *      (k - 1/2) * dt <= d < (k + 1/2) * dt, so a pair exactly on a boundary is counted in
+ *      one lag, the upper one, never in two. Rehfeld et al. state the window both ways (a
+ *      strict "< 1/2" in Eq. 11, "d <= h/2" in Table 1); only a half-open window gives every
+ *      pair exactly one slot.
+ *   3. On evenly spaced data every separation is a whole number of steps, so rules 1 and 2
+ *      change nothing there except lag 0 (see correlogram.evenSpacing.svelte.test.js).
+ *
+ * Edelson and Krolik's original paper was not available to check here; the rules above rest on
+ * Rehfeld et al.'s description of it and on the definition of the normalised autocorrelation.
+ * The Python and R ports (tools/ancir_runtime.py, tools/ancir_runtime.R) follow the same
+ * rules, pinned by the parity fixtures plot-correlogram-{upper-median,boundary-pair,
+ * near-zero-pairs}.
  *
  * @param {number[]} times      - Sample times (hours).
  * @param {number[]} values     - Signal values aligned to `times`.
@@ -91,6 +128,12 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 
 	if (isUniform(timeDiffs)) {
 		for (let lag = startLagIdx; lag <= nLags; lag++) {
+			// Rule 1: lag 0 is 1 by definition, not sum / (n * var) with its rounding.
+			if (lag === 0) {
+				lags.push(0);
+				correlations.push(1);
+				continue;
+			}
 			let sum = 0;
 			let count = 0;
 			for (let i = 0; i < n - lag; i++) {
@@ -107,21 +150,29 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 	} else {
 		for (let lagIdx = startLagIdx; lagIdx <= nLags; lagIdx++) {
 			const targetLag = lagIdx * dt;
+			// Rule 1: lag 0 is 1 by definition; the near-zero, non-self pairs are not used.
+			if (lagIdx === 0) {
+				lags.push(0);
+				correlations.push(1);
+				continue;
+			}
+			// Rule 2: the half-open slot [(k - 1/2) dt, (k + 1/2) dt).
+			const lo = (lagIdx - 0.5) * dt;
+			const hi = (lagIdx + 0.5) * dt;
 			let sum = 0;
 			let count = 0;
-			const tolerance = dt / 2;
 
 			for (let i = 0; i < n; i++) {
 				for (let j = i + 1; j < n; j++) {
 					const timeDiff = t[j] - t[i];
-					if (Math.abs(timeDiff - targetLag) <= tolerance) {
+					if (timeDiff >= lo && timeDiff < hi) {
 						// isNaN-ok: y is built from validPairs + an explicit != null filter above.
 						if (!isNaN(y[i]) && !isNaN(y[j])) {
 							sum += (y[i] - yMean) * (y[j] - yMean);
 							count++;
 						}
 					}
-					if (timeDiff > targetLag + tolerance) break;
+					if (timeDiff >= hi) break;
 				}
 			}
 			const correlation = count > 0 ? sum / (count * yVariance) : 0;

@@ -12,6 +12,7 @@
 	} from '$lib/core/producerRuntime.js';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
 	import { min } from '$lib/components/plotbits/helpers/wrangleData';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	// Monotonic counter bumped whenever any Column's getDataHash $derived re-runs.
 	// Returning a fresh integer gives us cheap !== equality for cache invalidation
@@ -364,7 +365,9 @@
 			if (baseline == null) return [];
 			// Preserve null/NaN so downstream null-checks still catch filtered rows;
 			// without this, (null - baseline) coerces to -baseline and leaks through.
-			const isInvalid = (v) => v == null || isNaN(v);
+			// The house rule, not `v == null || isNaN(v)`: isNaN('') is false, so a blank
+			// cell leaked through as -baseline (min() above already skips it).
+			const isInvalid = isInvalidValue;
 			if (this.type == 'number') {
 				let out = Array(thedata.length);
 				for (let i = 0; i < thedata.length; i++) {

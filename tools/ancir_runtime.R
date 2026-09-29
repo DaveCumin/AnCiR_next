@@ -242,7 +242,11 @@ correlate <- function(x, y, method = "pearson") {
     return(list(r = if (length(r) == 1 && is.finite(r)) r else NA_real_,
                 pvalue = NA_real_, n = n))
   }
-  res <- suppressWarnings(cor.test(p$x, p$y,
+  # exact = FALSE: the app (utils/correlation.js) and scipy's spearmanr give Spearman's p
+  # from the t approximation. cor.test's default for n < 1290 without ties is the EXACT
+  # AS 89 p-value, which differs (0.4350 vs 0.4367 on tp-correlation-auto-one-skewed).
+  # Pearson ignores the flag.
+  res <- suppressWarnings(cor.test(p$x, p$y, exact = FALSE,
                                    method = if (method == "spearman") "spearman" else "pearson"))
   list(r = unname(res$estimate), pvalue = unname(res$p.value), n = n)
 }
@@ -728,61 +732,193 @@ cp_removetrend <- function(x, args, cols, raw_data) {
 # Binning
 # ---------------------------------------------------------------------------
 
-# Port of plotbits/helpers/wrangleData.js::binData. The loop pushes the bin and THEN checks
-# the end condition, so there is always one trailing bin past the last datum — matching the
-# JS exactly rather than the more obvious pre-check, which would drop it.
-bin_data <- function(x_values, y_values, bin_size, bin_start = 0, step_size = NULL,
-                     agg_func = "mean") {
-  if (is.null(step_size)) step_size <- bin_size
-  xa <- suppressWarnings(as.numeric(unlist(x_values, use.names = FALSE)))
-  ya <- suppressWarnings(as.numeric(unlist(y_values, use.names = FALSE)))
-  ok <- is.finite(xa) & is.finite(ya)
-  xa <- xa[ok]; ya <- ya[ok]
-  if (!length(xa)) return(list(bins = numeric(0), y_out = numeric(0)))
-  end <- max(xa)
-  bins <- c(); y_out <- c(); cur <- bin_start
-  repeat {
-    in_bin <- ya[xa >= cur & xa < cur + bin_size]
-    v <- if (!length(in_bin)) NA_real_ else switch(agg_func,
-      min = min(in_bin), max = max(in_bin), median = median(in_bin),
-      # numpy std(ddof = 0): population, not sample.
-      stddev = sqrt(sum((in_bin - mean(in_bin))^2) / length(in_bin)),
-      mean(in_bin))
-    bins <- c(bins, cur); y_out <- c(y_out, v)
-    if (cur >= end) break
-    cur <- cur + step_size
+# The app's per-bin aggregates (binData's aggFunctions) over ys[start + 1 .. end] of the
+# x-sorted values (start/end are the app's 0-based half-open indices). An unknown name is
+# the mean, as in the app.
+bin_agg <- function(agg_func, ys, start, end) {
+  k <- end - start
+  if (identical(agg_func, "count")) return(k)
+  sl <- if (k > 0) ys[(start + 1):end] else numeric(0)
+  if (agg_func %in% c("min", "max")) {
+    if (!k) return(NA_real_)  # the app's null for an empty bin
+    return(if (identical(agg_func, "min")) min(sl) else max(sl))
   }
-  list(bins = bins, y_out = y_out)
+  if (identical(agg_func, "median")) {
+    if (!k) return(NA_real_)
+    sl <- sort(sl); mid <- k %/% 2
+    return(if (k %% 2 == 0) (sl[mid] + sl[mid + 1]) / 2 else sl[mid + 1])
+  }
+  if (identical(agg_func, "stddev")) {
+    if (k < 2) return(0)  # the app returns 0, not NaN, for fewer than two points
+    m <- bin_agg("mean", ys, start, end)
+    ss <- 0
+    for (v in sl) ss <- ss + (v - m) * (v - m)
+    return(sqrt(ss / (k - 1)))  # SAMPLE standard deviation, as the app
+  }
+  if (!k) return(NA_real_)
+  tot <- 0
+  for (v in sl) tot <- tot + v  # a plain left-to-right sum, as the app's loop
+  tot / k
 }
 
+# Port of plotbits/helpers/wrangleData.js::binData, both modes; returns list(bins, bin_ends,
+# y_out, dropped_count) like the app's {bins, binEnds, y_out, droppedCount}.
+#
+# Pairs with a missing or non-finite x or y are dropped, as the app now does (it used to
+# filter with the global isFinite, which reads a null as 0 and binned it; never copied here;
+# fixtures tp-binneddata-missing-*), then sorted by x (stable, as the app). Membership uses the app's 1e-10 edge tolerance: a value within 1e-10 BELOW an
+# edge belongs to the next bin.
+#
+# Uniform mode (cuts NULL or fewer than two edges): bins [start, start + bin_size) at
+# start = bin_start + i * step (step = step_size when positive, else bin_size). The loop
+# pushes a bin and THEN checks the end condition, so there is always one bin at or past the
+# last datum, matching the app rather than the more obvious pre-check.
+#
+# Cuts mode (`cuts`, strictly ascending; the caller sorts and dedupes): one bin per pair of
+# consecutive edges, each [a, b) except the LAST, which is [a, b]. Values outside the edges
+# are dropped. Cuts that are not strictly ascending give no bins, as in the app.
+bin_data <- function(x_values, y_values, bin_size, bin_start = 0, step_size = NULL,
+                     agg_func = "mean", cuts = NULL) {
+  empty <- list(bins = numeric(0), bin_ends = numeric(0), y_out = numeric(0),
+                dropped_count = 0)
+  use_cuts <- !is.null(cuts) && length(cuts) >= 2
+  xa <- suppressWarnings(as.numeric(unlist(x_values, use.names = FALSE)))
+  if (!length(xa)) return(empty)
+  if (use_cuts) {
+    if (any(!(diff(cuts) > 0))) return(empty)
+  } else {
+    step <- if (!is.null(step_size) && isTRUE(step_size > 0)) step_size else bin_size
+    if (is.null(step) || !isTRUE(step > 0) || !is.finite(step)) return(empty)
+  }
+  ya <- suppressWarnings(as.numeric(unlist(y_values, use.names = FALSE)))
+  length(ya) <- length(xa)
+  ok <- is.finite(xa) & is.finite(ya)
+  xa <- xa[ok]; ya <- ya[ok]
+  n <- length(xa)
+  if (!n) return(empty)
+  o <- order(xa, method = "radix")  # stable
+  xs <- xa[o]; ys <- ya[o]
+  eps <- 1e-10
+
+  if (use_cuts) {
+    num_bins <- length(cuts) - 1
+    y_out <- numeric(num_bins)
+    dropped <- 0
+    pointer <- 0  # 0-based count of consumed points, as the app's index
+    while (pointer < n && xs[pointer + 1] < cuts[1] - eps) {
+      pointer <- pointer + 1; dropped <- dropped + 1
+    }
+    for (i in seq_len(num_bins)) {
+      s0 <- pointer; e0 <- s0
+      if (i == num_bins) {
+        while (e0 < n && xs[e0 + 1] <= cuts[i + 1] + eps) e0 <- e0 + 1
+      } else {
+        while (e0 < n && xs[e0 + 1] < cuts[i + 1] - eps) e0 <- e0 + 1
+      }
+      y_out[i] <- bin_agg(agg_func, ys, s0, e0)
+      pointer <- e0
+    }
+    dropped <- dropped + n - pointer
+    return(list(bins = cuts[-length(cuts)], bin_ends = cuts[-1], y_out = y_out,
+                dropped_count = dropped))
+  }
+
+  bins <- c(); bin_ends <- c(); y_out <- c()
+  dropped <- 0; current <- bin_start; bin_index <- 0; pointer <- 0
+  while (pointer < n && xs[pointer + 1] < current - eps) {
+    pointer <- pointer + 1; dropped <- dropped + 1
+  }
+  repeat {
+    b_end <- current + bin_size
+    bins <- c(bins, current); bin_ends <- c(bin_ends, b_end)
+    while (pointer < n && xs[pointer + 1] < current - eps) pointer <- pointer + 1
+    s0 <- pointer; e0 <- s0
+    while (e0 < n && xs[e0 + 1] < b_end - eps) e0 <- e0 + 1
+    y_out <- c(y_out, bin_agg(agg_func, ys, s0, e0))
+    if (current >= xs[n]) break
+    bin_index <- bin_index + 1
+    # From bin_start each time, not by accumulation, so the edges do not drift.
+    current <- bin_start + bin_index * step
+  }
+  list(bins = bins, bin_ends = bin_ends, y_out = y_out, dropped_count = dropped)
+}
+
+# BinnedData's cuts at the node boundary: the finite edges, deduplicated and sorted.
+binned_cuts <- function(raw) {
+  v <- suppressWarnings(as.numeric(unlist(raw, use.names = FALSE)))
+  sort(unique(v[is.finite(v)]))
+}
+
+# Port of BinnedData.svelte `binneddata(args)`: uniform bins (binSize / binStart /
+# effectiveStep) or custom edges (binMode "cuts"). Returns the node's validity; like the app
+# it writes NOTHING when invalid.
 tp_binneddata <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
   if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
-  bin_size <- as.numeric(if (is.null(args$binSize)) 1 else args$binSize)
-  bin_start <- as.numeric(if (is.null(args$binStart)) 0 else args$binStart)
-  step <- as.numeric(if (is.null(args$stepSize)) bin_size else args$stepSize)
-  agg <- if (is.null(args$aggFunc)) "mean" else args$aggFunc
+  bin_mode <- if (identical(args$binMode, "cuts")) "cuts" else "uniform"
+  bin_size <- if (is.null(args$binSize)) 1 else suppressWarnings(as.numeric(args$binSize))
+  bin_start <- if (is.null(args$binStart)) 0 else suppressWarnings(as.numeric(args$binStart))
+  # As the app's effectiveStep(args): stepSize (saved with a 0.25 default) is the step only
+  # when diffStep is ticked and it is a usable positive number, otherwise binSize.
+  step_arg <- if (is.null(args$stepSize)) NA_real_
+              else suppressWarnings(as.numeric(args$stepSize))
+  step <- if (isTRUE(args$diffStep) && isTRUE(step_arg > 0)) step_arg else bin_size
+  agg <- if (is.null(args$aggFunction)) "mean" else args$aggFunction
+  cuts <- binned_cuts(args$cuts)
   x_col <- env$cols[[as.character(x_in)]]
+  if (identical(bin_mode, "cuts")) {
+    # The app refuses custom edges on a time x and needs at least two distinct edges.
+    if (identical(x_col$type, "time") || length(cuts) < 2) return(FALSE)
+  } else if (!length(bin_size) || !length(bin_start) || !isTRUE(bin_size > 0)) {
+    return(FALSE)
+  }
   x_data <- t_for_col(x_col, env$cols, env$raw_data)
-  bins_x <- NULL; any_valid <- FALSE
+  cuts_arg <- if (identical(bin_mode, "cuts")) cuts else NULL
+  bins_x <- NULL; y_results <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
     b <- bin_data(x_data, col_data(env$cols[[yk]], env$cols, env$raw_data),
-                  bin_size, bin_start, step, agg)
-    if (is.null(bins_x)) {
-      # The JS emits bin CENTRES (start + binSize/2), not bin starts.
-      bins_x <- b$bins + bin_size / 2
-      set_col(env, env$cols, out_id(args, "binnedx"), bins_x,
-              type = x_col$type, time_format = x_col$time_format)
+                  bin_size, bin_start, step, agg, cuts_arg)
+    if (length(b$bins)) {
+      if (is.null(bins_x)) bins_x <- b$bins  # the first valid y's bins are the shared x
+      y_results[[yk]] <- b$y_out
     }
-    y_out <- out_id(args, paste0("binnedy_", y_id))
-    if (y_out == -1) y_out <- out_id(args, "binnedy")
-    set_col(env, env$cols, y_out, b$y_out, type = "number")
-    any_valid <- TRUE
   }
-  any_valid
+  if (is.null(bins_x)) return(FALSE)
+  x_out <- out_id(args, "binnedx")
+  if (x_out == -1) return(TRUE)  # valid, but the app writes nothing without an x output
+  # As BinnedData.svelte writes it: the x output stores bin STARTS. A time input gives a time
+  # column of epoch ms (origin + start hours, origin = the input's earliest sample, the
+  # baseline hoursSinceStart used); anything else gives a 'bin' column, whose col_data then
+  # adds half the bin width. Uniform bins carry bin_width = binSize; cut bins carry the edge
+  # list (cuts_list) and the app's null binWidth, so they read back their starts.
+  key <- as.character(x_out)
+  if (identical(x_col$type, "time")) {
+    xs <- suppressWarnings(as.numeric(unlist(col_data(x_col, env$cols, env$raw_data),
+                                             use.names = FALSE)))
+    origin <- if (any(is.finite(xs))) min(xs[is.finite(xs)]) else 0
+    set_col(env, env$cols, x_out, origin + bins_x * 3600000, type = "time")
+    if (!is.null(env$cols[[key]])) env$cols[[key]]["time_format"] <- list(NULL)
+  } else {
+    set_col(env, env$cols, x_out, bins_x, type = "bin")
+  }
+  if (!is.null(env$cols[[key]])) {
+    if (identical(bin_mode, "cuts")) {
+      env$cols[[key]]["bin_width"] <- list(NULL)
+      env$cols[[key]]$cuts_list <- cuts
+    } else {
+      env$cols[[key]]$bin_width <- bin_size
+      env$cols[[key]]["cuts_list"] <- list(NULL)
+    }
+  }
+  for (yk in names(y_results)) {
+    y_out <- out_id(args, paste0("binnedy_", yk))
+    if (y_out == -1) y_out <- out_id(args, "binnedy")
+    set_col(env, env$cols, y_out, y_results[[yk]], type = "number")
+  }
+  TRUE
 }
 
 # ---------------------------------------------------------------------------
@@ -1581,31 +1717,56 @@ interp_series <- function(xs, ys, grid = NULL, method = "linear") {
 
 # --- the analyses ----------------------------------------------------------
 
+# Port of GroupComparison.svelte jarqueBeraNormality: the app's assumption check (used by
+# Correlation's `auto` method). NOT the NormalityTest node's Jarque-Bera: this one standardises
+# by the SAMPLE standard deviation (n - 1). Fewer than 8 values is not evaluable; zero variance
+# is evaluable and non-normal; normal means p >= 0.05.
+jarque_bera_normality <- function(values) {
+  x <- suppressWarnings(as.numeric(unlist(values, use.names = FALSE)))
+  x <- x[!is.na(x)]
+  n <- length(x)
+  if (n < 8) return(list(evaluable = FALSE, normal = NA))
+  m <- mean(x)
+  v <- sum((x - m)^2) / (n - 1)
+  if (!is.finite(v) || v == 0) return(list(evaluable = TRUE, normal = FALSE))
+  z <- (x - m) / sqrt(v)
+  skew <- sum(z^3) / n
+  kurt <- sum(z^4) / n
+  jb <- (n / 6) * (skew^2 + (kurt - 3)^2 / 4)
+  p <- if (is.finite(jb) && jb >= 0) pchisq(jb, 2, lower.tail = FALSE) else NA_real_
+  list(evaluable = TRUE, normal = if (is.finite(p)) p >= 0.05 else FALSE)
+}
+
+# Port of Correlation.svelte `correlation`: the pairwise matrix, one row per pair, under ONE
+# method for the whole matrix. `auto` is Pearson unless ANY column is non-normal by the app's
+# Jarque-Bera check, then Spearman for every pair.
 tp_correlation <- function(args, env) {
   y_ins <- id_list(args$yIN)
   y_ins <- y_ins[vapply(y_ins, function(i) !is.null(env$cols[[as.character(i)]]), logical(1))]
   if (length(y_ins) < 2) return(FALSE)
-  method <- if (is.null(args$method)) "auto" else args$method
-  alpha <- as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha)
+  requested <- if (is.null(args$method)) "auto" else args$method
+  alpha <- suppressWarnings(as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha))
+  if (!length(alpha) || !is.finite(alpha)) alpha <- 0.05
+  columns <- lapply(y_ins, function(i) col_data(env$cols[[as.character(i)]], env$cols,
+                                                 env$raw_data))
+  names_ <- vapply(y_ins, function(i) {
+    nm <- env$cols[[as.character(i)]]$name
+    if (is.null(nm)) as.character(i) else nm
+  }, character(1))
+  use <- if (identical(requested, "spearman")) "spearman" else "pearson"
+  if (identical(requested, "auto")) {
+    for (cvals in columns) {
+      jb <- jarque_bera_normality(cvals)
+      if (isTRUE(jb$evaluable) && identical(jb$normal, FALSE)) { use <- "spearman"; break }
+    }
+  }
   rows <- list(var_i = c(), var_j = c(), r = c(), pvalue = c(), n = c(),
                ciLow = c(), ciHigh = c(), significant = c())
   for (a in seq_len(length(y_ins) - 1)) for (b in (a + 1):length(y_ins)) {
-    ca <- env$cols[[as.character(y_ins[a])]]
-    cb <- env$cols[[as.character(y_ins[b])]]
-    xs <- col_data(ca, env$cols, env$raw_data)
-    ys <- col_data(cb, env$cols, env$raw_data)
-    use <- method
-    if (identical(method, "auto")) {
-      # Shapiro on both; Spearman if EITHER looks non-normal, matching the JS.
-      pa <- shapiro_wilk(xs)$pvalue
-      pb <- shapiro_wilk(ys)$pvalue
-      non_normal <- (!is.na(pa) && pa <= 0.05) || (!is.na(pb) && pb <= 0.05)
-      use <- if (non_normal) "spearman" else "pearson"
-    }
-    res <- correlate(xs, ys, use)
+    res <- correlate(columns[[a]], columns[[b]], use)
     ci <- correlation_ci(c(res$r, res$n), use, 1 - alpha)
-    rows$var_i <- c(rows$var_i, if (is.null(ca$name)) as.character(y_ins[a]) else ca$name)
-    rows$var_j <- c(rows$var_j, if (is.null(cb$name)) as.character(y_ins[b]) else cb$name)
+    rows$var_i <- c(rows$var_i, names_[a])
+    rows$var_j <- c(rows$var_j, names_[b])
     rows$r <- c(rows$r, res$r)
     rows$pvalue <- c(rows$pvalue, res$pvalue)
     rows$n <- c(rows$n, res$n)
@@ -1615,7 +1776,14 @@ tp_correlation <- function(args, env) {
                           if (is.na(res$pvalue)) NA_real_ else as.numeric(res$pvalue < alpha))
   }
   .write_result_rows(args, env, rows)
+  TRUE
 }
+
+# ColumnSet.svelte `columnset`: a recognised NO-OP, valid, writing nothing. A Column Set emits
+# no columns; the app materialises its selection into each consumer's saved inputs, so there is
+# nothing to compute, but the node is still in the saved tableProcesses and the strict
+# dispatcher used to abort the whole exported script on it.
+tp_columnset <- function(args, env) TRUE
 
 tp_crosscorrelation <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
@@ -1637,54 +1805,155 @@ tp_crosscorrelation <- function(args, env) {
 # Counts of (x, y) category pairs, with rows and columns ordered by FIRST APPEARANCE rather
 # than sorted: chi-square's statistic is order-invariant, but phi's SIGN is not, so the row
 # and column order has to match the JS.
-contingency <- function(xs, ys) {
-  xs <- as.character(unlist(xs, use.names = FALSE))
-  ys <- as.character(unlist(ys, use.names = FALSE))
-  n <- min(length(xs), length(ys))
-  rows <- character(0); cols <- character(0)
-  pairs_a <- character(0); pairs_b <- character(0)
-  for (i in seq_len(n)) {
-    a <- xs[i]; b <- ys[i]
-    if (is.na(a) || is.na(b) || !nzchar(a) || !nzchar(b)) next
-    if (!(a %in% rows)) rows <- c(rows, a)
-    if (!(b %in% cols)) cols <- c(cols, b)
-    pairs_a <- c(pairs_a, a); pairs_b <- c(pairs_b, b)
+# chisquare.js isMissingCategory: NULL/NA, "" and NaN (or the text "NaN") are absent. Values
+# arrive as character (a category column) or numeric; an integral number prints without ".0",
+# as JS String() does.
+is_missing_category <- function(v) {
+  is.na(v) | (is.character(v) & (v == "" | v == "NaN")) | (is.numeric(v) & is.nan(v))
+}
+js_string <- function(v) if (is.numeric(v)) format(v, digits = 15, trim = TRUE) else as.character(v)
+
+# chisquare.js contingencyTable: PAIRED columns cross-tabulated by index (to the shorter
+# length), rows with a missing cell skipped, labels in order of first appearance.
+contingency_table <- function(row_var, col_var) {
+  rv <- unlist(row_var, use.names = FALSE); cv <- unlist(col_var, use.names = FALSE)
+  n <- min(length(rv), length(cv))
+  rv <- rv[seq_len(n)]; cv <- cv[seq_len(n)]
+  keep <- !(is_missing_category(rv) | is_missing_category(cv))
+  rk <- js_string(rv[keep]); ck <- js_string(cv[keep])
+  rl <- unique(rk); cl <- unique(ck)
+  m <- matrix(0, nrow = length(rl), ncol = length(cl))
+  for (i in seq_along(rk)) {
+    m[match(rk[i], rl), match(ck[i], cl)] <- m[match(rk[i], rl), match(ck[i], cl)] + 1
   }
-  if (!length(rows) || !length(cols)) return(NULL)
-  m <- matrix(0, nrow = length(rows), ncol = length(cols))
-  for (i in seq_along(pairs_a)) {
-    m[match(pairs_a[i], rows), match(pairs_b[i], cols)] <-
-      m[match(pairs_a[i], rows), match(pairs_b[i], cols)] + 1
-  }
-  m
+  list(rowLabels = rl, colLabels = cl, table = m)
 }
 
+# chisquare.js groupsToTable: INDEPENDENT groups, one column per group holding that group's
+# outcomes; rows are the groups, columns the outcomes by first appearance across groups.
+groups_to_table <- function(columns, names_) {
+  vals <- lapply(columns, function(v) {
+    v <- unlist(v, use.names = FALSE)
+    js_string(v[!is_missing_category(v)])
+  })
+  cl <- unique(unlist(vals, use.names = FALSE))
+  m <- matrix(0, nrow = length(vals), ncol = length(cl))
+  for (g in seq_along(vals)) for (k in vals[[g]]) m[g, match(k, cl)] <- m[g, match(k, cl)] + 1
+  list(rowLabels = names_, colLabels = cl, table = m)
+}
+
+# Port of utils/fisherExact.js on a 2x2 table [[a, b], [c, d]]: the p-value for `alternative`
+# (the two-sided one sums every table no more probable than the observed, with the 1e-7
+# relative tolerance), the conditional-MLE odds ratio and its exact TWO-SIDED 95% interval,
+# both by 200-step bisection on log(psi) as in the app. R's fisher.test gives the same
+# quantities, but its uniroot tolerance (~1e-4) is far looser than the app's bisection.
+# An empty row or column margin gives p = 1 and NA estimates; NULL for an unusable table.
+fisher_exact_full <- function(m, alternative = "two-sided") {
+  if (!is.matrix(m) || any(dim(m) != 2)) return(NULL)
+  if (!(alternative %in% c("two-sided", "less", "greater"))) return(NULL)
+  a <- m[1, 1]; b <- m[1, 2]; c <- m[2, 1]; d <- m[2, 2]
+  cells <- c(a, b, c, d)
+  if (any(!is.finite(cells) | cells < 0 | cells != round(cells))) return(NULL)
+  n <- sum(cells)
+  if (n == 0) return(NULL)
+  row_a <- a + b; row_b <- c + d; col_a <- a + c
+  if (row_a == 0 || row_b == 0 || col_a == 0 || col_a == n) {
+    return(list(pvalue = 1, conditionalOddsRatio = NA_real_, ciLow = NA_real_, ciHigh = NA_real_))
+  }
+  lo <- max(0, col_a - row_b); hi <- min(row_a, col_a)
+  ks <- lo:hi
+  logw <- lchoose(row_a, ks) + lchoose(row_b, col_a - ks)
+  probs_at <- function(psi) {
+    l <- logw + ks * log(psi)
+    r <- exp(l - max(l))
+    r / sum(r)
+  }
+  norm <- probs_at(1)
+  idx <- a - lo + 1
+  p <- if (identical(alternative, "less")) sum(norm[seq_len(idx)])
+       else if (identical(alternative, "greater")) sum(norm[idx:length(norm)])
+       else sum(norm[norm <= norm[idx] * (1 + 1e-7)])
+  bisect <- function(go_up) {
+    l <- -50; h <- 50
+    for (i in 1:200) {
+      mid <- (l + h) / 2
+      if (go_up(exp(mid))) l <- mid else h <- mid
+    }
+    exp((l + h) / 2)
+  }
+  cor <- if (a <= lo) 0 else if (a >= hi) Inf
+         else bisect(function(psi) sum(ks * probs_at(psi)) < a)
+  alpha <- (1 - 0.95) / 2
+  ci_low <- if (a > lo) bisect(function(psi) sum(probs_at(psi)[ks >= a]) < alpha) else 0
+  ci_high <- if (a < hi) bisect(function(psi) sum(probs_at(psi)[ks <= a]) > alpha) else Inf
+  list(pvalue = min(1, max(0, p)), conditionalOddsRatio = cor, ciLow = ci_low, ciHigh = ci_high)
+}
+
+cohens_w <- function(statistic, n) {
+  if (!is.finite(statistic) || !is.finite(n) || n <= 0) return(NA_real_)
+  sqrt(statistic / n)
+}
+
+# Port of ChiSquared.svelte `chisquared` (the "Categorical tests" node). testType
+# "independence" (default), "goodness" or "fisher". For independence and Fisher the two
+# wired columns are read per `dataFormat`: "groups" (the DEFAULT, also for sessions saved
+# without it) treats each column as one independent group's outcomes; "paired"
+# cross-tabulates them row by row. Like the app, a result it cannot compute (too few
+# categories, an NA p-value) is VALID but writes nothing.
 tp_chisquared <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_in <- args$yIN
   if (is.list(y_in)) y_in <- if (length(y_in)) y_in[[1]] else -1
   if (is.null(y_in)) y_in <- -1
-  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]])) return(FALSE)
-  test_type <- if (is.null(args$testType)) "independence" else args$testType
+  test_type <- if (!is.null(args$testType) && args$testType %in% c("goodness", "fisher"))
+                 args$testType else "independence"
+  data_format <- if (is.null(args$dataFormat)) "groups" else args$dataFormat
   correction <- !identical(args$correction, FALSE)
-  xs <- col_data(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
-
-  if (identical(test_type, "goodnessoffit")) {
-    counts <- clean_numeric(xs)
-    if (!length(counts)) return(FALSE)
-    res <- chi_square_goodness_of_fit(counts)
-    return(.write_result_rows(args, env, list(
-      statistic = res$statistic, pvalue = res$pvalue, df = res$df,
-      effectSize = NA_real_, ciLow = NA_real_, ciHigh = NA_real_)))
+  is_ref <- function(id) !is.null(id) && id != -1 && !is.null(env$cols[[as.character(id)]])
+  write <- function(stat, p, df, effect, ci_low = NA_real_, ci_high = NA_real_) {
+    if (is.null(p) || is.na(p)) return(TRUE)  # the app gates the write on the p-value
+    .write_result_rows(args, env, list(statistic = stat, pvalue = p, df = df,
+                                       effectSize = effect, ciLow = ci_low, ciHigh = ci_high))
+    TRUE
   }
 
-  if (y_in == -1 || is.null(env$cols[[as.character(y_in)]])) return(FALSE)
-  tab <- contingency(xs, col_data(env$cols[[as.character(y_in)]], env$cols, env$raw_data))
-  if (is.null(tab) || nrow(tab) < 2 || ncol(tab) < 2) return(FALSE)
-  res <- chi_square_independence_effects(tab, correction)
-  .write_result_rows(args, env, list(
-    statistic = res$statistic, pvalue = res$pvalue, df = res$df,
-    effectSize = res$cramersV, ciLow = NA_real_, ciHigh = NA_real_))
+  if (test_type %in% c("fisher", "independence")) {
+    if (!is_ref(x_in) || !is_ref(y_in)) return(FALSE)
+    rc <- env$cols[[as.character(x_in)]]; cc <- env$cols[[as.character(y_in)]]
+    a <- col_data(rc, env$cols, env$raw_data); b <- col_data(cc, env$cols, env$raw_data)
+    built <- if (identical(data_format, "groups"))
+      groups_to_table(list(a, b), c(if (is.null(rc$name)) "Group 1" else rc$name,
+                                    if (is.null(cc$name)) "Group 2" else cc$name))
+      else contingency_table(a, b)
+    tab <- built$table
+    if (identical(test_type, "fisher")) {
+      if (!(nrow(tab) == 2 && ncol(tab) == 2)) return(TRUE)
+      alt <- if (is.null(args$alternative)) "two-sided" else args$alternative
+      fx <- fisher_exact_full(tab, alt)
+      if (is.null(fx)) return(TRUE)
+      return(write(NA_real_, fx$pvalue, NA_real_, fx$conditionalOddsRatio, fx$ciLow, fx$ciHigh))
+    }
+    if (length(built$rowLabels) < 2 || length(built$colLabels) < 2 || sum(tab) <= 0) {
+      return(TRUE)
+    }
+    res <- chi_square_independence_effects(tab, correction)
+    return(write(res$statistic, res$pvalue, res$df, res$cramersV))
+  }
+
+  # goodness of fit: a numeric column is read as observed counts, anything else is tabulated
+  # by category (first appearance) and tested against a uniform expectation.
+  if (!is_ref(x_in)) return(FALSE)
+  raw <- unlist(col_data(env$cols[[as.character(x_in)]], env$cols, env$raw_data),
+                use.names = FALSE)
+  present <- raw[!is.na(raw) & !(is.character(raw) & raw == "")]
+  nums <- suppressWarnings(as.numeric(present))
+  observed <- if (length(raw) && all(is.finite(nums))) nums else {
+    keys <- js_string(raw[!is_missing_category(raw)])
+    as.numeric(table(factor(keys, levels = unique(keys))))
+  }
+  if (length(observed) < 2) return(TRUE)
+  res <- chi_square_goodness_of_fit(observed)
+  write(res$statistic, res$pvalue, res$df, cohens_w(res$statistic, sum(observed)))
 }
 
 tp_logisticregression <- function(args, env) {
@@ -2975,56 +3244,78 @@ find_autocorrelation_peak <- function(lags, correlations) {
   list(lag = lags[best], correlation = correlations[best])
 }
 
+# The app's median spacing (utils/correlogram.js): the diffs sorted ascending and the element
+# at floor(len / 2), i.e. the UPPER median for an even count, not the mean of the middle two
+# (R's median). Every diff counts, including zero and negative ones.
+js_upper_median <- function(d) sort(d)[length(d) %/% 2 + 1]
+
+# Port of utils/correlogram.js computeAutocorrelation. `bin_size` NULL estimates the lag step
+# as the upper median of the successive spacings of the valid times (in their given order);
+# a non-finite or non-positive step, or times and values of different lengths, give no lags,
+# as in the app. The uneven path is the slotted estimator (Edelson and Krolik 1988; Rehfeld
+# et al. 2011, Nonlin. Processes Geophys. 18:389, Eqs. 10-11), with the app's rules: lag 0 is
+# exactly 1 on both paths; slots are half-open, lag k takes (k - 1/2) dt <= d < (k + 1/2) dt,
+# so a pair on a boundary counts once (in the upper lag); distinct pairs closer than half a
+# step are not used at any lag.
 compute_autocorrelation <- function(times, values, bin_size = NULL,
                                     max_lag = NULL, min_lag = 0) {
+  empty <- function(dt) list(lags = numeric(0), correlations = numeric(0), dt = dt,
+                             peakLag = NA_real_, peakCorrelation = NA_real_)
   t <- suppressWarnings(as.numeric(unlist(times, use.names = FALSE)))
   y <- suppressWarnings(as.numeric(unlist(values, use.names = FALSE)))
-  n0 <- min(length(t), length(y))
-  t <- t[seq_len(n0)]; y <- y[seq_len(n0)]
-  ok <- is.finite(t) & is.finite(y)
+  if (length(t) < 2 || length(y) < 2 || length(t) != length(y)) return(empty(1))
+  ok <- !is.na(t) & !is.na(y)
   t <- t[ok]; y <- y[ok]
   n <- length(y)
-  if (n < 2) return(list(lags = numeric(0), correlations = numeric(0), dt = 1,
-                             peakLag = NA_real_, peakCorrelation = NA_real_))
-  dt <- if (!is.null(bin_size)) as.numeric(bin_size) else median_dt(t)
+  if (n < 2) return(empty(1))
+  diffs <- diff(t)
+  dt <- if (!is.null(bin_size)) as.numeric(bin_size) else js_upper_median(diffs)
+  if (!is.finite(dt) || dt <= 0) return(empty(1))
   timespan <- t[length(t)] - t[1]
-  max_lag_t <- if (!is.null(max_lag) && is.finite(max_lag) && max_lag > 0) as.numeric(max_lag)
+  # `maxLag ? maxLag : span / 2`: JS truthiness, so 0, null and NaN mean "auto".
+  max_lag_t <- if (!is.null(max_lag) && !is.na(max_lag) && max_lag != 0) as.numeric(max_lag)
                else timespan / 2
   min_lag_t <- if (!is.null(min_lag) && is.finite(min_lag) && min_lag > 0) as.numeric(min_lag)
                else 0
-  if (min_lag_t >= max_lag_t) return(list(lags = numeric(0), correlations = numeric(0), dt = dt,
-                             peakLag = NA_real_, peakCorrelation = NA_real_))
+  if (min_lag_t >= max_lag_t) return(empty(dt))
   n_lags <- min(floor(max_lag_t / dt), n %/% 2)
   start_idx <- ceiling(min_lag_t / dt)
   ymean <- mean(y)
   yvar <- sum((y - ymean)^2) / n
   if (yvar == 0) return(list(lags = numeric(0), correlations = numeric(0), dt = dt,
                              peakLag = NA_real_, peakCorrelation = NA_real_))
-  diffs <- diff(t)
-  med <- median(diffs)
+  med <- js_upper_median(diffs)
   # "Uniform enough" within 10% of the median spacing takes the fast index-shift path; the
   # uneven path is O(n^2) and pairs samples by TIME difference instead, so a gappy record
   # still gets the right lags rather than lags that silently mean "index offset".
   is_uniform <- max(abs(diffs - med)) < med * 0.1
   lags <- c(); corrs <- c()
   ydem <- y - ymean
+  # The app's `for (lag = start; lag <= nLags; lag++)` runs zero times when start > nLags
+  # (a minLag beyond n / 2 samples); seq(start, nLags) would count DOWN instead.
+  lag_idx <- if (start_idx <= n_lags) start_idx:n_lags else integer(0)
   if (is_uniform) {
-    for (lag in seq(start_idx, n_lags)) {
+    for (lag in lag_idx) {
       if (lag >= n) break
+      # Lag 0 is 1 by definition, not sum / (n * var) with its rounding.
+      if (lag == 0) { corrs <- c(corrs, 1); lags <- c(lags, 0); next }
       a <- ydem[seq_len(n - lag)]; b <- ydem[(lag + 1):n]
       corrs <- c(corrs, if (length(a) > 0) sum(a * b) / (length(a) * yvar) else 0)
       lags <- c(lags, lag * dt)
     }
   } else {
-    tol <- dt / 2
-    for (li in seq(start_idx, n_lags)) {
+    for (li in lag_idx) {
       target <- li * dt
+      if (li == 0) { corrs <- c(corrs, 1); lags <- c(lags, target); next }
+      # The half-open slot [(k - 1/2) dt, (k + 1/2) dt).
+      lo <- (li - 0.5) * dt
+      hi <- (li + 0.5) * dt
       s <- 0; count <- 0
       for (i in seq_len(n)) {
         for (j in seq_len(n)[-seq_len(i)]) {
           td <- t[j] - t[i]
-          if (abs(td - target) <= tol) { s <- s + ydem[i] * ydem[j]; count <- count + 1 }
-          if (td > target + tol) break
+          if (td >= lo && td < hi) { s <- s + ydem[i] * ydem[j]; count <- count + 1 }
+          if (td >= hi) break
         }
       }
       corrs <- c(corrs, if (count > 0) s / (count * yvar) else 0)
@@ -3744,6 +4035,7 @@ TABLE_PROCESS_MAP = list(
   fitfunction = tp_fitfunction,
   groupcomparison = tp_groupcomparison,
   chisquared = tp_chisquared,
+  columnset = tp_columnset,
   circadianfunctionindex = tp_circadianfunctionindex,
   correlation = tp_correlation,
   crosscorrelation = tp_crosscorrelation,
@@ -3984,7 +4276,10 @@ col_data <- function(col, cols, raw_data) {
     }
   }
   if (identical(col$type, "bin")) {
-    d <- unlist(d, use.names = FALSE) + col$bin_width / 2
+    # getData reports bin CENTRES: start + binWidth / 2. A BinnedData cuts column carries
+    # the app's null binWidth, which its arithmetic reads as 0, so it reports its starts.
+    half <- if (!is.null(col$cuts_list)) 0 else col$bin_width / 2
+    d <- unlist(d, use.names = FALSE) + half
   }
   for (entry in col$processes) {
     fname <- if (!is.null(entry$funcname)) entry$funcname else entry$name
@@ -4547,16 +4842,19 @@ fit_line <- function(xs, ys, tau = NULL, theta = NULL, ref_day = 1, period_hrs =
 
 # tau, tau/2 and 2 tau, each scored by one Lomb-Scargle evaluation of the series; the
 # strongest wins, ties keeping the earlier candidate. Candidates must satisfy
-# bin*2 < period < span/2 with span = last sample minus first (sample order) and
+# bin*2 < period < span/2 with span = last PRESENT sample minus first (sample order) and
 # bin = bin_size or 0.25. NULL when there is no tau, no data or no candidate.
 harmonic_check <- function(x_data, y_data, bin_size, tau) {
   if (is.null(tau) || is.na(tau) || tau == 0) return(NULL)
   if (!length(x_data) || !length(y_data)) return(NULL)
   bin <- if (!is.null(bin_size) && !is.na(bin_size) && bin_size != 0) bin_size else 0.25
-  # JS coerces a null endpoint to 0 in the subtraction (null - x0 = -x0).
-  last <- x_data[length(x_data)]; first <- x_data[1]
-  span <- (if (is.na(last) && !is.nan(last)) 0 else last) -
-          (if (is.na(first) && !is.nan(first)) 0 else first)
+  # First and last PRESENT samples. The app used to read a missing end as 0 (JS
+  # `null - x0`), which made a missing LAST time a span of about 0 and dropped every
+  # candidate; this port copied that. Both now skip a missing end (harmonicCheck.js).
+  present <- which(!is.na(suppressWarnings(as.numeric(x_data))))
+  span <- if (length(present)) {
+    as.numeric(x_data[present[length(present)]]) - as.numeric(x_data[present[1]])
+  } else NaN
   cands <- list(list(label = "τ", period = tau),
                 list(label = "τ/2", period = tau / 2),
                 list(label = "2τ", period = tau * 2))
@@ -4613,10 +4911,21 @@ actogram_bin_size <- function(hours) {
 }
 
 # One series folded into rows as ActogramDataclass.dataByDays does it.
-actogram_series_frame <- function(x, y, x_type, start_time, period_hrs) {
+# `x` is the column's values (bin CENTRES for a 'bin' column); a 'bin' column also needs its
+# raw first bin start and its originTime_ms, which place its rows:
+# -rawBinStart0 + (startTime - (originTime_ms ?? startTime)) / 3.6e6.
+actogram_series_frame <- function(x, y, x_type, start_time, period_hrs, raw_bin_start0 = NULL,
+                                  origin_time_ms = NULL) {
   hss <- actogram_hours_since_start(x, x_type)
   xmin <- if (length(x) && !all(is.na(x))) min(x, na.rm = TRUE) else 0
-  offset <- if (identical(x_type, "time")) (start_time - xmin) / 3600000 else -xmin
+  offset <- if (identical(x_type, "time")) {
+    (start_time - xmin) / 3600000
+  } else if (identical(x_type, "bin")) {
+    origin <- if (is.null(origin_time_ms)) start_time else origin_time_ms
+    -(if (is.null(raw_bin_start0)) 0 else raw_bin_start0) + (start_time - origin) / 3600000
+  } else {
+    -xmin
+  }
   x_by <- list(); y_by <- list()
   for (i in seq_along(hss)) {
     tx <- hss[i]
@@ -4873,9 +5182,12 @@ actogram_marker_rule_outputs <- function(rule, series, frame, period_hrs = 24, n
 actogram_plot_rule_outputs <- function(inner, series_data, zone = "utc") {
   P <- if (!is.null(inner$periodHrs)) inner$periodHrs else 24
   sd <- lapply(series_data, function(s) list(xType = s$xType,
-                                             x = as_numeric_list(s$x), y = as_numeric_list(s$y)))
+                                             x = as_numeric_list(s$x), y = as_numeric_list(s$y),
+                                             rawBinStart0 = s$rawBinStart0,
+                                             originTime_ms = s$originTime_ms))
   start <- actogram_start_time(sd, zone)
-  frames <- lapply(sd, function(s) actogram_series_frame(s$x, s$y, s$xType, start, P))
+  frames <- lapply(sd, function(s) actogram_series_frame(s$x, s$y, s$xType, start, P,
+                                                         s$rawBinStart0, s$originTime_ms))
   n_days <- actogram_ndays(frames)
   rules <- inner$markerRules
   datas <- inner$data

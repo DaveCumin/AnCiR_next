@@ -14,6 +14,7 @@
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { surrogateTest, surrogateAdvice, SURROGATE_METHODS } from '$lib/utils/surrogates.js';
 	import { computeFFT } from '$lib/utils/fft.js';
+	import { validPairs, meanSpacing } from '$lib/utils/validPairs.js';
 
 	const displayName = 'Surrogate Test';
 
@@ -67,17 +68,35 @@
 		// i.e. a plain shuffle, the anti-conservative null this node exists to
 		// avoid — and the period band would match nothing. Same idiom as Cosinor /
 		// BinnedData / AverageProfile.
-		const times = ((xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) ?? []).map(
-			Number
-		);
-		const values = yCol.getData() ?? [];
-		if (times.length < 8 || values.length < 8) {
+		const rawTimes = (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) ?? [];
+		const rawValues = yCol.getData() ?? [];
+		if (rawTimes.length < 8 || rawValues.length < 8) {
 			return [{ ...empty, reason: 'need at least 8 samples' }, false];
 		}
 
+		// Keep the (x, y) rows where BOTH are present, as the Python and R ports do. The node
+		// used to coerce the raw times with Number, which reads a missing time as 0, so a
+		// missing row went into the FFT at t = 0; and the engine drops missing y on its own,
+		// so the statistic's times.slice(0, y.length) no longer lined up after a gap.
+		const { tt, yy } = validPairs(rawTimes, rawValues);
+		const times = [];
+		const values = [];
+		for (let i = 0; i < tt.length; i++) {
+			const t = Number(tt[i]);
+			const v = Number(yy[i]);
+			if (Number.isFinite(t) && Number.isFinite(v)) {
+				times.push(t);
+				values.push(v);
+			}
+		}
+
 		// Block length is given in HOURS but the bootstrap works in SAMPLES — the
-		// units trap that silently makes a "24 h" block one sample long.
-		const dt = times.length > 1 ? (times[times.length - 1] - times[0]) / (times.length - 1) : 1;
+		// units trap that silently makes a "24 h" block one sample long. The step is
+		// the row-grid spacing between the first and last PRESENT times (meanSpacing,
+		// shared with the Correlogram): (t[n-1] - t[0]) / (n-1) read a missing end as
+		// 0, which turned a 24 h block into 69 samples instead of 96 (missing first,
+		// x from 100 h) or a negative step and the 24-sample fallback (missing last).
+		const dt = meanSpacing(rawTimes);
 		const blockSamples =
 			Number.isFinite(dt) && dt > 0
 				? Math.max(1, Math.round((Number(argsIN.blockLengthHours) || 24) / dt))
