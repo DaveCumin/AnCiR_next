@@ -7,13 +7,15 @@ describe('averageDailyProfile', () => {
 			binCentres: [],
 			profile: [],
 			sem: [],
-			n: []
+			n: [],
+			t0: NaN
 		});
 		expect(averageDailyProfile([0, 1], [1, 2], { period: 24, nBins: 0 })).toEqual({
 			binCentres: [],
 			profile: [],
 			sem: [],
-			n: []
+			n: [],
+			t0: NaN
 		});
 	});
 

@@ -1,13 +1,22 @@
 // @ts-nocheck
 // Column type detection for imported tables, and the user's override of it.
 //
-// Order matters: numbers are checked BEFORE times. PapaParse (dynamicTyping) has
-// already turned "8.4" into the number 8.4, and a date guesser handed 8.4 happily
+// Order matters: numbers are checked BEFORE times. The cell typer has already
+// turned "8.4" into the number 8.4, and a date guesser handed 8.4 happily
 // answers "D.M" (8 April), which turned activity counts into a time column whose
 // every value was missing. A column of JS numbers is therefore never given a time
 // format automatically. Epoch timestamps are numbers too, so reading a numeric
 // column as epoch seconds or milliseconds is an explicit choice in the preview.
-import { guessDateofArray, hasTimeFormat, isBlankCell } from '$lib/utils/time/TimeUtils.js';
+//
+// Cell typing is ours, not PapaParse's (see makeCellTyper): its dynamicTyping
+// turned zone-qualified ISO timestamps into Date objects the time guesser could
+// not read, and has no decimal-comma mode.
+import {
+	guessDateDetails,
+	guessDateofArray,
+	hasTimeFormat,
+	isBlankCell
+} from '$lib/utils/time/TimeUtils.js';
 
 // Text the importer treats as "no value" when picking the first real value.
 const MISSING_TEXT = new Set(['NaN', 'NA', 'null']);
@@ -16,6 +25,92 @@ const MISSING_TEXT = new Set(['NaN', 'NA', 'null']);
 // epoch options in the preview; nothing is converted without the user choosing.
 const EPOCH_S_MIN = 631_152_000;
 const EPOCH_S_MAX = 4_102_444_800;
+
+// PapaParse's own number test (papaparse.js FLOAT, and its +/-2^53 bound), so a
+// cell is a number here exactly when dynamicTyping would have made it one.
+const FLOAT = /^\s*-?(\d+\.?|\.\d+|\d+\.\d+)([eE][-+]?\d+)?\s*$/;
+const MAX_FLOAT = 2 ** 53;
+// A decimal-comma number: "10,5", "-0,25", "1.234,5" (dots group thousands).
+const DECIMAL_COMMA = /^\s*-?(\d+|\d{1,3}(\.\d{3})+),\d+\s*$/;
+
+/**
+ * The number a decimal-comma cell ("10,5", "1.234,5") stands for, or null.
+ * @param {unknown} value
+ * @returns {number | null}
+ */
+export function parseDecimalComma(value) {
+	if (typeof value !== 'string' || !DECIMAL_COMMA.test(value)) return null;
+	return Number(value.trim().replace(/\./g, '').replace(',', '.'));
+}
+
+/**
+ * A PapaParse `transform` that types each cell as dynamicTyping did (numbers,
+ * true/false, '' as null) except that ISO timestamps stay text, so the time
+ * guesser can read them, and, with `decimalComma`, "10,5" is the number 10.5.
+ * Use it with `dynamicTyping: false`.
+ * @param {{ decimalComma?: boolean }} [opts]
+ * @returns {(value: string) => unknown}
+ */
+export function makeCellTyper({ decimalComma = false } = {}) {
+	return (value) => {
+		if (typeof value !== 'string') return value;
+		if (value === '') return null;
+		if (value === 'true' || value === 'TRUE') return true;
+		if (value === 'false' || value === 'FALSE') return false;
+		if (FLOAT.test(value)) {
+			const n = parseFloat(value);
+			if (n > -MAX_FLOAT && n < MAX_FLOAT) return n;
+		}
+		if (decimalComma) {
+			const n = parseDecimalComma(value);
+			if (n !== null) return n;
+		}
+		return value;
+	};
+}
+
+/**
+ * Columns that look written with decimal commas: at least one "10,5" cell, and
+ * every other non-blank cell a whole number (which reads the same either way) or
+ * an explicit missing marker. A column with "1.5" in it is not one.
+ * @param {Record<string, unknown[]>} columns parsed with decimal commas off
+ * @returns {string[]}
+ */
+export function decimalCommaColumns(columns) {
+	const out = [];
+	for (const [name, values] of Object.entries(columns ?? {})) {
+		let commas = 0;
+		let fits = true;
+		for (const v of values ?? []) {
+			if (isBlankCell(v) || MISSING_TEXT.has(v)) continue;
+			if (parseDecimalComma(v) !== null) commas++;
+			else if (!(typeof v === 'number' && Number.isInteger(v))) {
+				fits = false;
+				break;
+			}
+		}
+		if (fits && commas > 0) out.push(name);
+	}
+	return out;
+}
+
+/**
+ * Non-blank cells of a number column that are not numbers (and are not one of
+ * the importer's missing markers), which will be imported as missing.
+ * @param {unknown[]} values
+ * @returns {{ count: number, example: unknown }}
+ */
+export function countNonNumeric(values) {
+	let count = 0;
+	let example;
+	for (const v of Array.isArray(values) ? values : []) {
+		if (isBlankCell(v) || MISSING_TEXT.has(v)) continue;
+		if (typeof v === 'number' && Number.isFinite(v)) continue;
+		if (count === 0) example = v;
+		count++;
+	}
+	return { count, example };
+}
 
 function firstValid(values) {
 	for (const v of values) {
@@ -40,22 +135,33 @@ export function epochHint(nums) {
 
 /**
  * Detect a column's type from its values.
+ *
+ * `dayMonth` is the guesser's day/month verdict for a time column (see
+ * guessDateDetails), else null. When it is ambiguous, `opts.order` picks the
+ * reading `timeFormat` holds; without one it is the guesser's default.
  * @param {unknown[]} values
- * @returns {{ type: 'time' | 'number' | 'category', timeFormat: string | string[] | null, epoch: 's' | 'ms' | null }}
+ * @param {{ order?: 'day' | 'month' | null }} [opts]
+ * @returns {{ type: 'time' | 'number' | 'category', timeFormat: string | string[] | null, epoch: 's' | 'ms' | null, dayMonth: object | null }}
  */
-export function detectColumnType(values) {
+export function detectColumnType(values, opts = {}) {
 	const arr = Array.isArray(values) ? values : [];
 	const nonBlank = arr.filter((v) => !isBlankCell(v));
 	if (nonBlank.length > 0 && nonBlank.every((v) => typeof v === 'number' && Number.isFinite(v))) {
-		return { type: 'number', timeFormat: null, epoch: epochHint(nonBlank) };
+		return { type: 'number', timeFormat: null, epoch: epochHint(nonBlank), dayMonth: null };
 	}
-	const fmt = guessDateofArray(arr);
-	if (fmt !== -1 && hasTimeFormat(fmt)) return { type: 'time', timeFormat: fmt, epoch: null };
+	const { format, dayMonth } = guessDateDetails(arr);
+	if (format !== -1 && hasTimeFormat(format)) {
+		let timeFormat = format;
+		if (dayMonth?.ambiguous && (opts.order === 'day' || opts.order === 'month')) {
+			timeFormat = opts.order === 'day' ? dayMonth.dayFirst : dayMonth.monthFirst;
+		}
+		return { type: 'time', timeFormat, epoch: null, dayMonth };
+	}
 	const datum = firstValid(arr);
 	if (typeof datum === 'number' && !Number.isNaN(datum)) {
-		return { type: 'number', timeFormat: null, epoch: null };
+		return { type: 'number', timeFormat: null, epoch: null, dayMonth: null };
 	}
-	return { type: 'category', timeFormat: null, epoch: null };
+	return { type: 'category', timeFormat: null, epoch: null, dayMonth: null };
 }
 
 /**
@@ -96,12 +202,20 @@ export function isNumericColumn(values) {
 /**
  * Resolve the type a column is imported with: the user's override when there is
  * one, otherwise detection on the full values. Epoch seconds are converted to
- * epoch milliseconds (what a time column with no format holds).
+ * epoch milliseconds (what a time column with no format holds). `opts.order`
+ * settles an ambiguous day/month order (see guessDateofArray); Date objects
+ * from another parser are stored as their ISO text.
  * @param {unknown[]} values full column values
  * @param {{ choice: string, timeFormat?: string } | null | undefined} override
+ * @param {{ order?: 'day' | 'month' | null }} [opts]
  * @returns {{ type: 'time' | 'number' | 'category', timeFormat: string | string[], values: unknown[] }}
  */
-export function resolveImportType(values, override) {
+export function resolveImportType(values, override, opts = {}) {
+	if (Array.isArray(values) && values.some((v) => v instanceof Date)) {
+		values = values.map((v) =>
+			v instanceof Date && Number.isFinite(v.valueOf()) ? v.toISOString() : v
+		);
+	}
 	const choice = override?.choice;
 	// Epoch choices apply to numbers only. A column that is text by now (binning
 	// rewrites its time column as labels) falls through to detection.
@@ -111,12 +225,14 @@ export function resolveImportType(values, override) {
 		return { type: 'time', timeFormat: [], values: out };
 	}
 	if (choice === 'time') {
-		const fmt = override.timeFormat?.trim() ? override.timeFormat.trim() : guessDateofArray(values);
+		const fmt = override.timeFormat?.trim()
+			? override.timeFormat.trim()
+			: guessDateofArray(values, opts);
 		return { type: 'time', timeFormat: fmt === -1 ? [] : fmt, values };
 	}
 	if (choice === 'number' || choice === 'category') {
 		return { type: choice, timeFormat: [], values };
 	}
-	const d = detectColumnType(values);
+	const d = detectColumnType(values, opts);
 	return { type: d.type, timeFormat: d.timeFormat ?? [], values };
 }

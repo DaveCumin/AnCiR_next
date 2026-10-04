@@ -155,6 +155,8 @@ export const PARAM_COVERAGE_GAPS = {
 	GroupComparison: { postHocEnabled: [false] },
 	NormalityTest: { method: ['dagostino', 'jarquebera'] },
 	RayleighTest: { showWatsonWilliams: [false] },
+	// TrendFit's permutation test is not run by the ports (they write NaN for perm_pvalue).
+	TrendFit: { permuteTest: [true], autoPermutations: [true], permutationStatistic: ['rmse'] },
 	RectangularWave: {
 		fixKappa: [true],
 		fixDutyCycle: [true],

@@ -126,3 +126,70 @@ describe('relativeTime', () => {
 		expect(relativeTime(now - 86400_000, now)).toBe('1 day ago');
 	});
 });
+
+// A minimal in-memory IndexedDB, just enough for the handle store (open / put / get / delete), so
+// the one-click reopen path can run here. Each request resolves on a microtask, like the real one.
+function fakeIndexedDB() {
+	const stores = new Map();
+	const later = (fn) => queueMicrotask(fn);
+	const request = (compute) => {
+		const req = {};
+		later(() => {
+			req.result = compute();
+			req.onsuccess?.();
+		});
+		return req;
+	};
+	const db = {
+		objectStoreNames: { contains: (n) => stores.has(n) },
+		createObjectStore: (n) => stores.set(n, new Map()),
+		close() {},
+		transaction(name) {
+			const map = stores.get(name);
+			const t = {};
+			const done = (v) => {
+				later(() => later(() => t.oncomplete?.()));
+				return v;
+			};
+			t.objectStore = () => ({
+				put: (v, k) => done(request(() => map.set(k, v) && k)),
+				get: (k) => done(request(() => map.get(k))),
+				delete: (k) => done(request(() => map.delete(k))),
+				clear: () => done(request(() => map.clear()))
+			});
+			return t;
+		}
+	};
+	return {
+		open() {
+			const req = {};
+			later(() => {
+				req.result = db;
+				req.onupgradeneeded?.();
+				req.onsuccess?.();
+			});
+			return req;
+		}
+	};
+}
+
+describe('reopening a .ancir session file', () => {
+	it('a stored handle to a .ancir file reopens in one click, like a .json one', async () => {
+		const saved = window.indexedDB;
+		window.indexedDB = fakeIndexedDB();
+		try {
+			const file = { name: 'Cohort C.ancir', text: async () => '{"data":[]}' };
+			const handle = {
+				queryPermission: async () => 'granted',
+				getFile: async () => file
+			};
+			await recordRecent({ id: 'file::Cohort C.ancir', name: 'Cohort C', handle });
+			const res = await openRecent('file::Cohort C.ancir');
+			expect(res.status).toBe('ok');
+			expect(res.file.name).toBe('Cohort C.ancir');
+			expect(res.handle).toBe(handle);
+		} finally {
+			window.indexedDB = saved;
+		}
+	});
+});

@@ -23,6 +23,12 @@
 	} from '$lib/tableProcesses/permutationSupport.js';
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import {
+		fitTimeFrame,
+		applyPhaseReference,
+		PHASE_REFERENCE_START
+	} from '$lib/utils/phaseReference.js';
+	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 
 	const displayName = 'Rectangular Wave';
@@ -40,6 +46,11 @@
 		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
 		['fixDutyCycle', { val: false }],
 		['fixedDutyCycle', { val: 0.5 }],
+		// What hour 0 means for the acrophase (panel, stored values, stats table):
+		// 'start' = hours after the first sample (x = 0 for a numeric x; the default),
+		// 'clock' = hours after local midnight in the display timezone, wrapped to the
+		// fitted period. Review FIT-9; utils/phaseReference.js.
+		['phaseReference', { val: PHASE_REFERENCE_START }],
 		// Permutation test: a model-vs-chance significance test for each y fit.
 		['permuteTest', { val: PERMUTATION_DEFAULTS.permuteTest }],
 		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
@@ -158,28 +169,14 @@
 		const tCol = getColumnById(xIN);
 		const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
 
-		// Get outputX data if specified
-		let outputXData = null;
-		if (outputXId != -1 && getColumnById(outputXId)) {
-			const outputXCol = getColumnById(outputXId);
-			outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
-			outputXData = outputXData.filter((v) => !isInvalidValue(v));
-		}
-
-		// Determine origin time for time columns
-		let originTime_ms = null;
-		if (outputXId != -1) {
-			const outputXColForOrigin = getColumnById(outputXId);
-			if (outputXColForOrigin && outputXColForOrigin.type === 'time') {
-				originTime_ms = outputXColForOrigin.getData()[0];
-			}
-		}
-		if (originTime_ms == null && tCol.type === 'time') {
-			originTime_ms = tCol.getData()[0];
-		}
+		// Output grid in the fit's hour frame + the origin (minimum valid input time)
+		// that turns hours back into timestamps (review STAT-19; utils/phaseReference.js).
+		const outputXCol = outputXId != -1 ? getColumnById(outputXId) : null;
+		const { outputXData, originTime_ms } = fitTimeFrame(tCol, outputXCol);
 
 		result.outputXData = outputXData;
 		result.originTime_ms = originTime_ms;
+		result.phaseRef = resolveNodePhaseReference(argsIN, tCol);
 
 		// Per-column fit outcomes: a null or all-NaN fit is reported by name rather
 		// than shown as dashes with nothing to explain them.
@@ -322,6 +319,7 @@
 						...rectWaveFitWarnings(fitEntries, 'The free-period rectangular-wave fit')
 					]),
 			...permWarnings,
+			...(result.phaseRef?.warning ? [result.phaseRef.warning] : []),
 			...fitSampleWarnings(argsIN)
 		];
 		return [result, anyValid];
@@ -339,6 +337,8 @@
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
+	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
+	import { appState } from '$lib/core/core.svelte';
 
 	import { migrateRenamedMetricOut } from '$lib/tableProcesses/metricOutputs.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
@@ -431,6 +431,11 @@
 		// the memo survives a remount, an omission here means an edit is ignored.
 		out += '|' + p.args.fixedDutyCycle + '|' + p.args.fixedKappa + '|' + p.args.fixedPeriod;
 		out += '|' + p.args.minPeriod + '|' + p.args.maxPeriod + '|' + p.args.permutationScheme;
+		// Clock-time phases move with the display timezone, so it is an input then.
+		out +=
+			'|' +
+			p.args.phaseReference +
+			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -581,6 +586,10 @@
 		}
 	}
 
+	// The acrophase in the node's phase reference (FIT-9): untouched since first sample.
+	const rwAcrophase = (fr) => applyPhaseReference(fr?.acrophase, rwave?.phaseRef, fr?.period);
+	let phaseNote = $derived(rwave?.phaseRef?.clock ? 'clock time' : 'h after start');
+
 	function getRwaveStatsData() {
 		if (!rwave?.y_results) return { headers: [], rows: [] };
 		const validEntries = Object.entries(rwave.y_results).filter(([, r]) => r.fitResult);
@@ -593,7 +602,7 @@
 			'r2',
 			...(withPerm ? ['perm_p_value'] : []),
 			'period',
-			'acrophase',
+			rwave.phaseRef?.clock ? 'acrophase_clock_h' : 'acrophase',
 			'duty_cycle',
 			'kappa',
 			'M',
@@ -608,7 +617,7 @@
 				fr.rSquared,
 				...(withPerm ? [r.pValue ?? null] : []),
 				fr.period,
-				fr.acrophase,
+				rwAcrophase(fr),
 				fr.parameters?.dutyCycle,
 				fr.parameters?.kappa,
 				fr.parameters?.M,
@@ -700,6 +709,14 @@
 			</ControlInput>
 		</div>
 	{/if}
+
+	<div class="control-input-horizontal">
+		<PhaseReferenceSelect
+			bind:value={p.args.phaseReference}
+			xIsTime={xIN_col?.type === 'time'}
+			onchange={getRwave}
+		/>
+	</div>
 
 	<!-- Duty cycle (d) -->
 	<div class="control-input-horizontal">
@@ -793,10 +810,10 @@
 					/>
 				</p>
 				<p>
-					Acrophase: {fr.acrophase.toFixed(3)} hrs
+					Acrophase (time of peak, {phaseNote}): {rwAcrophase(fr).toFixed(3)} hrs
 					<StoreValueButton
-						label="Acrophase"
-						getter={() => yResult?.fitResult?.acrophase}
+						label={`Acrophase (time of peak, ${phaseNote})`}
+						getter={() => rwAcrophase(yResult?.fitResult)}
 						defaultName={`rectwave_acrophase_${yName}`}
 						source="Rectangular Wave"
 					/>

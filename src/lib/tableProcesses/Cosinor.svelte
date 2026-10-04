@@ -30,8 +30,19 @@
 		attachPermutation,
 		permutationValidityWarnings
 	} from '$lib/tableProcesses/permutationSupport.js';
-	import { bathyphase, phaseAngleOfEntrainment, wrapToPeriod } from '$lib/utils/cosinorAddons.js';
+	import {
+		bathyphase,
+		phaseAngleOfEntrainment,
+		wrapToPeriod,
+		multiComponentWaveform
+	} from '$lib/utils/cosinorAddons.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import {
+		fitTimeFrame,
+		applyPhaseReference,
+		PHASE_REFERENCE_START
+	} from '$lib/utils/phaseReference.js';
+	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 
 	const displayName = 'Cosinor';
 	const defaults = new Map([
@@ -51,9 +62,17 @@
 				period: { val: -1 },
 				// MESOR (rhythm-adjusted mean), amplitude and acrophase (peak time, h)
 				// are the three classical cosinor parameters — each a scalar metric port.
+				// With nHarmonics > 1 (fixed period) `amplitude`, `acrophase` and
+				// `bathyphase` describe the OVERALL fitted waveform (half its range, the
+				// times of its maximum and minimum; review FIT-13), and the `*_h1` ports
+				// below carry harmonic 1. With one harmonic (and in free-period mode,
+				// curve 1) the two families hold the same numbers.
 				mesor: { val: -1 },
 				amplitude: { val: -1 },
 				acrophase: { val: -1 },
+				amplitude_h1: { val: -1 },
+				acrophase_h1: { val: -1 },
+				bathyphase_h1: { val: -1 },
 				// Confidence intervals for the first harmonic's amplitude and acrophase.
 				// fitCosinorFixed already computes both (CI_A / CI_acrophase) and the
 				// panel shows them; these ports make them wireable. Fixed-period mode
@@ -94,6 +113,12 @@
 		['alpha', { val: 0.05 }],
 		// Reference zeitgeber time (h) for the phase-angle-of-entrainment metric.
 		['referenceHrs', { val: 0 }],
+		// What hour 0 means for every phase output (acrophase, bathyphase, their CIs,
+		// phase angle): 'start' = hours after the first sample (x = 0 for a numeric
+		// x; the default, and what sessions saved before this arg existed report),
+		// 'clock' = hours after local midnight in the display timezone, wrapped to
+		// [0, period). Review FIT-9; see utils/phaseReference.js.
+		['phaseReference', { val: PHASE_REFERENCE_START }],
 		// Permutation test: a model-vs-chance significance test for each y fit.
 		['permuteTest', { val: PERMUTATION_DEFAULTS.permuteTest }],
 		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
@@ -143,7 +168,10 @@
 				{ name: 'pvalue', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'perm_pvalue', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'bathyphase', kind: 'column', cardinality: 'one', metric: true },
-				{ name: 'phase_angle', kind: 'column', cardinality: 'one', metric: true }
+				{ name: 'phase_angle', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'amplitude_h1', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'acrophase_h1', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'bathyphase_h1', kind: 'column', cardinality: 'one', metric: true }
 			]
 		}
 	};
@@ -212,31 +240,20 @@
 		const tCol = getColumnById(xIN);
 		const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
 
-		// Get outputX data if specified
-		let outputXData = null;
-		if (outputXId != -1 && getColumnById(outputXId)) {
-			const outputXCol = getColumnById(outputXId);
-			outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
-			// Same null trap as the pair filter below: a null here survived `!isNaN` and the
-			// curve was then evaluated at Number(null) === 0, drawing a spurious point back at
-			// the time origin. A Split segment wired as the output grid is exactly that case.
-			outputXData = outputXData.filter((v) => !isInvalidValue(v));
-		}
-
-		// Determine origin time for converting hours → ms on the x output
-		let originTime_ms = null;
-		if (outputXId != -1) {
-			const _outputXColForOrigin = getColumnById(outputXId);
-			if (_outputXColForOrigin && _outputXColForOrigin.type === 'time') {
-				originTime_ms = _outputXColForOrigin.getData()[0];
-			}
-		}
-		if (originTime_ms == null && tCol.type === 'time') {
-			originTime_ms = tCol.getData()[0];
-		}
+		// The output grid (when given) in the fit's hour frame, and the origin that turns
+		// those hours back into timestamps: the input's MINIMUM valid time, the baseline
+		// hoursSinceStart measures from (review STAT-19). getData()[0] was null for a
+		// Split segment and wrong for unsorted data, and a time grid used to be read in
+		// its own frame, so a grid starting later than the input was evaluated early.
+		// Invalid grid values are dropped: one evaluated at Number(null) === 0 drew a
+		// spurious point back at the time origin.
+		const outputXCol = outputXId != -1 ? getColumnById(outputXId) : null;
+		const { outputXData, originTime_ms } = fitTimeFrame(tCol, outputXCol);
 
 		result.outputXData = outputXData;
 		result.originTime_ms = originTime_ms;
+		// The frame every phase output is reported in (FIT-9).
+		result.phaseRef = resolveNodePhaseReference(argsIN, tCol);
 		// Test-validity warnings per series (review FIT-5): the F-test and the shuffle
 		// permutation test assume independent observations.
 		result.validityWarnings = [];
@@ -367,6 +384,106 @@
 		return [result, anyValid];
 	}
 
+	/**
+	 * Every scalar metric of one y series' fit, in the node's phase reference: the
+	 * single source for the ports, the panel and the stats table.
+	 *
+	 * Phases are computed as hours after t = 0 of the fit's frame (the first sample
+	 * of a time x; x = 0 of a numeric x) and then expressed in `phaseRef` by
+	 * applyPhaseReference, which leaves them untouched in the default reference.
+	 *
+	 * nHarmonics > 1 (fixed period): `amplitude`, `acrophase`, `bathyphase` are the
+	 * overall waveform's half-range, orthophase and bathyphase (multiComponentWaveform,
+	 * review FIT-13) and `phase_angle` is measured from that orthophase; the `*_h1`
+	 * keys and the acrophase/amplitude CIs are harmonic 1's. Otherwise both families
+	 * are harmonic 1 (free period: curve 1), computed exactly as before FIT-13.
+	 *
+	 * @param {object|undefined} yr  one entry of result.y_results
+	 * @param {object} args  the node args
+	 * @param {{clock:boolean, offsetHours:number}|undefined} phaseRef
+	 * @returns {Record<string, number>}
+	 */
+	export function cosinorMetrics(yr, args, phaseRef) {
+		const useFixed = args.useFixedPeriod ?? false;
+		const fixedPeriod = args.fixedPeriod ?? 24;
+		const referenceHrs = args.referenceHrs ?? 0;
+		let period = NaN;
+		let mesor = NaN;
+		let amplitude = NaN;
+		let rsq = NaN;
+		// Harmonic 1's (curve 1's) time of peak, unwrapped, hours after t = 0.
+		let acrophase = NaN;
+		let overall = null;
+		if (yr) {
+			rsq = yr.fittedData?.rSquared ?? NaN;
+			if (useFixed && yr.fixedStats) {
+				period = fixedPeriod;
+				// MESOR is the rhythm-adjusted mean (fixed-period fit's offset M).
+				mesor = yr.fixedStats.M ?? NaN;
+				amplitude = yr.fixedStats.harmonics?.[0]?.amplitude ?? NaN;
+				// fitCosinorFixed reports acrophase_hrs as the time of peak (h after
+				// t = 0), the same convention as the free branch below and as the
+				// panel and stats CSV. (It used to return the classical wrap(−t_peak),
+				// which this line negated while the panel and CSV did not.)
+				acrophase = yr.fixedStats.harmonics?.[0]?.acrophase_hrs ?? NaN;
+				if ((yr.fixedStats.harmonics?.length ?? 0) > 1) {
+					overall = multiComponentWaveform(yr.fixedStats.M, yr.fixedStats.harmonics, period);
+				}
+			} else {
+				const c = yr.fittedData?.parameters?.cosines?.[0];
+				period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
+				// Free-fit offset O is the MESOR (rhythm-adjusted mean).
+				mesor = yr.fittedData?.parameters?.O ?? NaN;
+				amplitude = c?.amplitude ?? NaN;
+				// Free cosine model: A·cos(ω·t + φ) peaks when ω·t + φ = 0, i.e.
+				// t_peak = −φ/ω, wrapped into [0, period). bathyphase/phaseAngle
+				// wrap internally so an unwrapped value here is fine.
+				if (c?.frequency) acrophase = -c.phase / c.frequency;
+			}
+		}
+		const ref = (h) => applyPhaseReference(h, phaseRef, period);
+		// Harmonic 1, in the node's phase reference.
+		const acroH1 = ref(wrapToPeriod(acrophase, period));
+		const bathyH1 = ref(bathyphase(acrophase, period));
+		// CIs come from the fixed-period linear fit only; the free-period
+		// nonlinear fit has no closed-form interval, so those stay NaN. Each end of
+		// the (unwrapped) peak-time CI is wrapped onto the clock, as the panel and
+		// stats CSV show it, so an interval that spans t = 0 reads e.g. 23.1 to 0.9 h.
+		const h1 = useFixed ? yr?.fixedStats?.harmonics?.[0] : null;
+		// The peak the phase angle is measured from, before referencing.
+		const peak = overall ? overall.orthophase : acrophase;
+		const peakRef = phaseRef?.clock ? peak + phaseRef.offsetHours : peak;
+		return {
+			period,
+			mesor,
+			amplitude: overall ? overall.amplitude : amplitude,
+			// Report acrophase as the peak time wrapped into [0, period), matching the
+			// convention bathyphase/phase_angle already use.
+			acrophase: overall ? ref(overall.orthophase) : acroH1,
+			bathyphase: overall ? ref(overall.bathyphase) : bathyH1,
+			phase_angle: phaseAngleOfEntrainment(peakRef, referenceHrs, period),
+			amplitude_h1: amplitude,
+			acrophase_h1: acroH1,
+			bathyphase_h1: bathyH1,
+			amplitude_ciLow: h1?.CI_A?.[0] ?? NaN,
+			amplitude_ciHigh: h1?.CI_A?.[1] ?? NaN,
+			acrophase_ciLow: h1?.CI_acrophase ? ref(wrapToPeriod(h1.CI_acrophase[0], period)) : NaN,
+			acrophase_ciHigh: h1?.CI_acrophase ? ref(wrapToPeriod(h1.CI_acrophase[1], period)) : NaN,
+			rsquared: rsq,
+			// `pvalue` = the ANALYTIC zero-amplitude F-test p, straight off the
+			// fixed-period fit — the number the panel prints as "F(df1, df2) = …, p"
+			// and the one a user reading "p" next to R² expects. It used to carry the
+			// permutation p instead (NaN unless that optional test ran), so the port
+			// disagreed with both the handbook and the Python mirror. Free-period
+			// fits stay NaN: with the period estimated, no analytic test exists.
+			pvalue: useFixed ? (yr?.fixedStats?.pF ?? NaN) : NaN,
+			// The permutation p is a DIFFERENT test (model vs chance, empirical
+			// null), already computed against the same null-filtered pairs the fit
+			// used; it keeps its own port and is NaN when the test did not run.
+			perm_pvalue: yr?.pValue ?? NaN
+		};
+	}
+
 	function writeCosinorOutputs(argsIN, result) {
 		const xOUT = argsIN.out.cosinorx;
 		if (xOUT == null || xOUT === -1) return;
@@ -405,102 +522,35 @@
 			}
 		}
 
-		// Scalar-metric ports: one value per y input, in yIN order. Reuses the
-		// exact expressions behind the per-y StoreValueButtons so the wired values
-		// match what users previously stored by name.
-		const useFixed = argsIN.useFixedPeriod ?? false;
-		const fixedPeriod = argsIN.fixedPeriod ?? 24;
-		const referenceHrs = argsIN.referenceHrs ?? 0;
-		const periodArr = [];
-		const mesorArr = [];
-		const amplitudeArr = [];
-		const acrophaseArr = [];
-		const ampCiLowArr = [];
-		const ampCiHighArr = [];
-		const acroCiLowArr = [];
-		const acroCiHighArr = [];
-		const rsquaredArr = [];
-		const pvalueArr = [];
-		const permPvalueArr = [];
-		const bathyphaseArr = [];
-		const phaseAngleArr = [];
-		for (const yId of yINs) {
-			const yr = result.y_results[yId];
-			let period = NaN;
-			let mesor = NaN;
-			let amplitude = NaN;
-			let rsq = NaN;
-			let acrophase = NaN;
-			if (yr) {
-				rsq = yr.fittedData?.rSquared ?? NaN;
-				if (useFixed && yr.fixedStats) {
-					period = fixedPeriod;
-					// MESOR is the rhythm-adjusted mean (fixed-period fit's offset M).
-					mesor = yr.fixedStats.M ?? NaN;
-					amplitude = yr.fixedStats.harmonics?.[0]?.amplitude ?? NaN;
-					// fitCosinorFixed reports acrophase_hrs as the time of peak (h after
-					// t = 0), the same convention as the free branch below and as the
-					// panel and stats CSV. (It used to return the classical wrap(−t_peak),
-					// which this line negated while the panel and CSV did not.)
-					acrophase = yr.fixedStats.harmonics?.[0]?.acrophase_hrs ?? NaN;
-				} else {
-					const c = yr.fittedData?.parameters?.cosines?.[0];
-					period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
-					// Free-fit offset O is the MESOR (rhythm-adjusted mean).
-					mesor = yr.fittedData?.parameters?.O ?? NaN;
-					amplitude = c?.amplitude ?? NaN;
-					// Free cosine model: A·cos(ω·t + φ) peaks when ω·t + φ = 0, i.e.
-					// t_peak = −φ/ω, wrapped into [0, period). bathyphase/phaseAngle
-					// wrap internally so an unwrapped value here is fine.
-					if (c?.frequency) acrophase = -c.phase / c.frequency;
-				}
-			}
-			periodArr.push(period);
-			mesorArr.push(mesor);
-			amplitudeArr.push(amplitude);
-			// CIs come from the fixed-period linear fit only; the free-period
-			// nonlinear fit has no closed-form interval, so those stay NaN.
-			const h1 = useFixed ? yr?.fixedStats?.harmonics?.[0] : null;
-			ampCiLowArr.push(h1?.CI_A?.[0] ?? NaN);
-			ampCiHighArr.push(h1?.CI_A?.[1] ?? NaN);
-			// Each end of the (unwrapped) peak-time CI is wrapped onto the clock, as
-			// the panel and stats CSV show it, so an interval that spans t = 0 reads
-			// e.g. 23.1 to 0.9 h.
-			acroCiLowArr.push(h1?.CI_acrophase ? wrapToPeriod(h1.CI_acrophase[0], period) : NaN);
-			acroCiHighArr.push(h1?.CI_acrophase ? wrapToPeriod(h1.CI_acrophase[1], period) : NaN);
-			// Report acrophase as the peak time wrapped into [0, period), matching the
-			// convention bathyphase/phase_angle already use.
-			acrophaseArr.push(wrapToPeriod(acrophase, period));
-			rsquaredArr.push(rsq);
-			bathyphaseArr.push(bathyphase(acrophase, period));
-			phaseAngleArr.push(phaseAngleOfEntrainment(acrophase, referenceHrs, period));
-
-			// `pvalue` = the ANALYTIC zero-amplitude F-test p, straight off the
-			// fixed-period fit — the number the panel prints as "F(df1, df2) = …, p"
-			// and the one a user reading "p" next to R² expects. It used to carry the
-			// permutation p instead (NaN unless that optional test ran), so the port
-			// disagreed with both the handbook and the Python mirror. Free-period
-			// fits stay NaN: with the period estimated, no analytic test exists.
-			pvalueArr.push(useFixed ? (yr?.fixedStats?.pF ?? NaN) : NaN);
-			// The permutation p is a DIFFERENT test (model vs chance, empirical
-			// null), already computed against the same null-filtered pairs the fit
-			// used; it keeps its own port and is NaN when the test did not run.
-			permPvalueArr.push(yr?.pValue ?? NaN);
+		// Scalar-metric ports: one value per y input, in yIN order. The numbers come
+		// from cosinorMetrics, the same function the panel and stats table read, so a
+		// wired value always matches what the panel shows.
+		const metricKeys = [
+			'period',
+			'mesor',
+			'amplitude',
+			'amplitude_ciLow',
+			'amplitude_ciHigh',
+			'acrophase_ciLow',
+			'acrophase_ciHigh',
+			'acrophase',
+			'rsquared',
+			'pvalue',
+			'perm_pvalue',
+			'bathyphase',
+			'phase_angle',
+			'amplitude_h1',
+			'acrophase_h1',
+			'bathyphase_h1'
+		];
+		const perY = yINs.map((yId) => cosinorMetrics(result.y_results[yId], argsIN, result.phaseRef));
+		for (const key of metricKeys) {
+			writeOutputColumn(
+				argsIN.out[key],
+				perY.map((m) => m[key]),
+				{ processHash }
+			);
 		}
-		const writeScalarOut = (key, arr) => writeOutputColumn(argsIN.out[key], arr, { processHash });
-		writeScalarOut('period', periodArr);
-		writeScalarOut('mesor', mesorArr);
-		writeScalarOut('amplitude', amplitudeArr);
-		writeScalarOut('amplitude_ciLow', ampCiLowArr);
-		writeScalarOut('amplitude_ciHigh', ampCiHighArr);
-		writeScalarOut('acrophase_ciLow', acroCiLowArr);
-		writeScalarOut('acrophase_ciHigh', acroCiHighArr);
-		writeScalarOut('acrophase', acrophaseArr);
-		writeScalarOut('rsquared', rsquaredArr);
-		writeScalarOut('pvalue', pvalueArr);
-		writeScalarOut('perm_pvalue', permPvalueArr);
-		writeScalarOut('bathyphase', bathyphaseArr);
-		writeScalarOut('phase_angle', phaseAngleArr);
 	}
 
 	// A cosinor needs enough of the cycle sampled AND enough cycles observed, and
@@ -579,6 +629,7 @@
 						...freePeriodFitWarnings(fitEntries, 'The free-period cosinor fit')
 					]),
 			...(result?.validityWarnings ?? []),
+			...(result?.phaseRef?.warning ? [result.phaseRef.warning] : []),
 			...cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1))
 		];
 		return [result, anyValid];
@@ -587,12 +638,16 @@
 	/**
 	 * The "View stats" / "Download stats" table. Module-level and pure (bar the
 	 * column-name lookup) so the acrophase convention it prints is testable
-	 * against the ports. Every acrophase here is the time of peak (h after the
-	 * start), the same number as the `acrophase` port.
+	 * against the ports. Every acrophase here is the time of peak in the node's
+	 * phase reference: hours after the start (`*_peak_h` columns) or clock time
+	 * of day (`*_clock_h`), the same number as the `acrophase` port.
 	 */
 	export function cosinorStatsTable(cosinorData, args) {
 		if (!cosinorData?.y_results) return { headers: [], rows: [] };
 		const useFixed = args.useFixedPeriod ?? false;
+		const phaseRef = cosinorData.phaseRef;
+		const unit = phaseRef?.clock ? 'clock_h' : 'peak_h';
+		const ref = (h, period) => (h == null ? null : applyPhaseReference(h, phaseRef, period));
 		const validEntries = Object.entries(cosinorData.y_results).filter(
 			([, r]) => (r.fittedData?.fitted?.length ?? 0) > 0
 		);
@@ -616,14 +671,18 @@
 				'F_p_value',
 				...permHeader
 			];
+			// With several harmonics, the overall waveform the ports report (FIT-13).
+			if (maxH > 1) {
+				headers.push('overall_amplitude', `orthophase_${unit}`, `bathyphase_${unit}`);
+			}
 			for (let h = 1; h <= maxH; h++) {
 				headers.push(
 					`H${h}_amplitude`,
 					`H${h}_amp_ci_lo`,
 					`H${h}_amp_ci_hi`,
-					// Time of peak (h after the start), the same number as the
-					// `acrophase` port; CI ends wrapped onto the clock like the port.
-					`H${h}_acrophase_peak_h`,
+					// Time of peak in the phase reference, the same number as the
+					// `acrophase_h1` port; CI ends wrapped onto the clock like the port.
+					`H${h}_acrophase_${unit}`,
 					`H${h}_acrophase_ci_lo`,
 					`H${h}_acrophase_ci_hi`
 				);
@@ -642,6 +701,15 @@
 					s?.pF ?? null,
 					...permCell(r)
 				];
+				if (maxH > 1) {
+					const m = cosinorMetrics(r, args, phaseRef);
+					const multi = (s?.harmonics?.length ?? 0) > 1;
+					row.push(
+						multi ? m.amplitude : null,
+						multi ? m.acrophase : null,
+						multi ? m.bathyphase : null
+					);
+				}
 				for (let h = 0; h < maxH; h++) {
 					const hd = s?.harmonics?.[h];
 					const hPeriod = (s?.period ?? args.fixedPeriod ?? 24) / (h + 1);
@@ -649,9 +717,9 @@
 						hd?.amplitude ?? null,
 						hd?.CI_A?.[0] ?? null,
 						hd?.CI_A?.[1] ?? null,
-						hd?.acrophase_hrs ?? null,
-						hd?.CI_acrophase ? wrapToPeriod(hd.CI_acrophase[0], hPeriod) : null,
-						hd?.CI_acrophase ? wrapToPeriod(hd.CI_acrophase[1], hPeriod) : null
+						ref(hd?.acrophase_hrs ?? null, hPeriod),
+						hd?.CI_acrophase ? ref(wrapToPeriod(hd.CI_acrophase[0], hPeriod), hPeriod) : null,
+						hd?.CI_acrophase ? ref(wrapToPeriod(hd.CI_acrophase[1], hPeriod), hPeriod) : null
 					);
 				}
 				return row;
@@ -669,7 +737,7 @@
 					`curve${c}_period`,
 					`curve${c}_amplitude`,
 					`curve${c}_phase_rad`,
-					`curve${c}_acrophase_peak_h`
+					`curve${c}_acrophase_${unit}`
 				);
 			}
 			const rows = validEntries.map(([yId, r]) => {
@@ -682,7 +750,7 @@
 						period,
 						cd?.amplitude ?? null,
 						cd?.phase ?? null,
-						period ? wrapToPeriod(-cd.phase / cd.frequency, period) : null
+						period ? ref(wrapToPeriod(-cd.phase / cd.frequency, period), period) : null
 					);
 				}
 				return row;
@@ -712,6 +780,8 @@
 	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
 	import { createComputeRunner, computeErrorMessage } from '$lib/core/asyncCompute.js';
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
+	import { appState } from '$lib/core/core.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -784,6 +854,11 @@
 			p.args.maxPeriod +
 			'|' +
 			p.args.permutationScheme;
+		// Clock-time phases move with the display timezone, so it is an input then.
+		out +=
+			'|' +
+			p.args.phaseReference +
+			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
 		return out;
 	});
 	// The stats (MESOR / amplitude / phase / CIs / F-stat / RMSE) live only in the
@@ -899,7 +974,10 @@
 		'pvalue',
 		'perm_pvalue',
 		'bathyphase',
-		'phase_angle'
+		'phase_angle',
+		'amplitude_h1',
+		'acrophase_h1',
+		'bathyphase_h1'
 	];
 
 	onMount(() => {
@@ -986,6 +1064,10 @@
 	function getCosinorStatsData() {
 		return cosinorStatsTable(cosinorData, p.args);
 	}
+
+	// Panel phases in the node's phase reference (the same conversion as the ports).
+	const refPhase = (h, period) => applyPhaseReference(h, cosinorData?.phaseRef, period);
+	let phaseNote = $derived(cosinorData?.phaseRef?.clock ? 'clock time' : 'h after start');
 </script>
 
 <!-- Input Section -->
@@ -1085,6 +1167,13 @@
 		</div>
 	{/if}
 
+	<div class="control-input-horizontal">
+		<PhaseReferenceSelect
+			bind:value={p.args.phaseReference}
+			xIsTime={xIN_col?.type === 'time'}
+			onchange={() => getCosinor()}
+		/>
+	</div>
 	<div class="control-input-horizontal">
 		<ControlInput label="Reference time (h)">
 			<NumberWithUnits bind:value={p.args.referenceHrs} onInput={() => getCosinor()} step="1" />
@@ -1241,16 +1330,17 @@
 				</p>
 				{#if !yResult?.fixedStats}
 					<p>
-						Acrophase (time of peak): {wrapToPeriod(
-							-cosine.phase / cosine.frequency,
+						Acrophase (time of peak, {phaseNote}): {refPhase(
+							wrapToPeriod(-cosine.phase / cosine.frequency, period),
 							period
 						).toFixed(2)} h
 						<StoreValueButton
-							label="Acrophase (time of peak, h)"
+							label={`Acrophase (time of peak, ${phaseNote})`}
 							getter={() => {
 								const c = yResult?.fittedData?.parameters?.cosines?.[i];
 								if (!c?.frequency) return NaN;
-								return wrapToPeriod(-c.phase / c.frequency, (2 * Math.PI) / c.frequency);
+								const P = (2 * Math.PI) / c.frequency;
+								return refPhase(wrapToPeriod(-c.phase / c.frequency, P), P);
 							}}
 							defaultName={`cosinor_acrophase_${yName}${(yResult?.fittedData?.parameters?.cosines?.length ?? 0) > 1 ? '_' + (i + 1) : ''}`}
 							source="Cosinor"
@@ -1306,18 +1396,53 @@
 					</p>
 					{@const hPeriod = s.period / h.k}
 					<p>
-						H{h.k} Acrophase (time of peak): {h.acrophase_hrs.toFixed(2)} h &nbsp;[CI: {wrapToPeriod(
-							h.CI_acrophase[0],
+						H{h.k} Acrophase (time of peak, {phaseNote}): {refPhase(
+							h.acrophase_hrs,
 							hPeriod
-						).toFixed(2)}, {wrapToPeriod(h.CI_acrophase[1], hPeriod).toFixed(2)}]
+						).toFixed(2)} h &nbsp;[CI: {refPhase(
+							wrapToPeriod(h.CI_acrophase[0], hPeriod),
+							hPeriod
+						).toFixed(2)}, {refPhase(wrapToPeriod(h.CI_acrophase[1], hPeriod), hPeriod).toFixed(2)}]
 						<StoreValueButton
-							label={`H${h.k} Acrophase (time of peak, h)`}
-							getter={() => yResult?.fixedStats?.harmonics?.[h.k - 1]?.acrophase_hrs}
+							label={`H${h.k} Acrophase (time of peak, ${phaseNote})`}
+							getter={() =>
+								refPhase(yResult?.fixedStats?.harmonics?.[h.k - 1]?.acrophase_hrs, hPeriod)}
 							defaultName={`cosinor_acrophase_${yName}${s.harmonics.length > 1 ? '_H' + h.k : ''}`}
 							source="Cosinor (fixed)"
 						/>
 					</p>
 				{/each}
+				{#if s.harmonics.length > 1}
+					<!-- The waveform the amplitude / acrophase / bathyphase ports report (FIT-13). -->
+					{@const m = cosinorMetrics(yResult, p.args, cosinorData?.phaseRef)}
+					<p>
+						Overall amplitude (half the curve's range): {m.amplitude.toFixed(3)}
+						<StoreValueButton
+							label="Overall amplitude"
+							getter={() => cosinorMetrics(yResult, p.args, cosinorData?.phaseRef).amplitude}
+							defaultName={`cosinor_overall_amplitude_${yName}`}
+							source="Cosinor (fixed)"
+						/>
+					</p>
+					<p>
+						Orthophase (time of overall peak, {phaseNote}): {m.acrophase.toFixed(2)} h
+						<StoreValueButton
+							label={`Orthophase (time of overall peak, ${phaseNote})`}
+							getter={() => cosinorMetrics(yResult, p.args, cosinorData?.phaseRef).acrophase}
+							defaultName={`cosinor_orthophase_${yName}`}
+							source="Cosinor (fixed)"
+						/>
+					</p>
+					<p>
+						Bathyphase (time of overall trough, {phaseNote}): {m.bathyphase.toFixed(2)} h
+						<StoreValueButton
+							label={`Bathyphase (time of overall trough, ${phaseNote})`}
+							getter={() => cosinorMetrics(yResult, p.args, cosinorData?.phaseRef).bathyphase}
+							defaultName={`cosinor_bathyphase_${yName}`}
+							source="Cosinor (fixed)"
+						/>
+					</p>
+				{/if}
 				<p>
 					F({s.df[0]}, {s.df[1]}) = {s.F_stat.toFixed(3)}, p {s.pF < 0.001
 						? '< 0.001'

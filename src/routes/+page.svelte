@@ -231,7 +231,7 @@
 	// palette, and canvas file-drop open it through the dataSourceActions registry
 	// rather than mounting their own copy.
 	//
-	// A dropped .json is not necessarily a session (review ROB-1): JSON that is not session-shaped
+	// A dropped .json or .ancir is not necessarily a session (review ROB-1): JSON that is not session-shaped
 	// goes to the Import modal, whose sniffer explains what it is, instead of being loaded over the
 	// open work. A real session asks before replacing a non-empty one, and importJson either loads
 	// it completely or leaves the open session exactly as it was.
@@ -241,8 +241,11 @@
 			let parsed;
 			try {
 				parsed = JSON.parse(e.target.result);
-			} catch (err) {
-				addNotification('Invalid JSON session file: ' + (err?.message ?? err));
+			} catch {
+				// A session is JSON whatever its extension (.json or .ancir).
+				addNotification(
+					`"${file.name}" is not an AnCiR session (it is not JSON). Your open session was not changed.`
+				);
 				return;
 			}
 			if (!isSessionJson(parsed)) {

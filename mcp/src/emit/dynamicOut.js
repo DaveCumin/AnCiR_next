@@ -37,7 +37,10 @@ export function movingStatKeys(args) {
 		}
 		const keys = [];
 		const N = Math.max(1, args.Ncurves ?? 1);
-		for (let c = 1; c <= N; c++) keys.push(`C${c}_period`, `C${c}_amplitude`, `C${c}_phase`);
+		// `C<c>_acrophase` (the window's peak time, review FIT-9) follows `C<c>_phase` (radians).
+		for (let c = 1; c <= N; c++) {
+			keys.push(`C${c}_period`, `C${c}_amplitude`, `C${c}_phase`, `C${c}_acrophase`);
+		}
 		keys.push('r2', 'rmse');
 		return keys;
 	}

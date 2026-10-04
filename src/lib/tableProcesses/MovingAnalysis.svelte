@@ -8,7 +8,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ControlGroup from '$lib/components/inputs/ControlGroup.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
-	import { min as arrayMin, minMax as arrayMinMax, isInvalidValue } from '$lib/utils/stats.js';
+	import { minMax as arrayMinMax, isInvalidValue } from '$lib/utils/stats.js';
 	// Pure compute (getStatKeys + the windowed loop) lives in utils/ so it can run
 	// in the compute worker; getStatKeys is re-exported for the component + tests.
 	import {
@@ -19,6 +19,8 @@
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/movinganalysis.worker-task.js';
+	import { PHASE_REFERENCE_START, timeOriginMs } from '$lib/utils/phaseReference.js';
+	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 	// MovingAnalysis.test.js imports getStatKeys from this component, and it is also used
 	// locally below. `export { <imported binding> }` is a re-export and assigns nothing; the
 	// rule misreads it inside a Svelte module script (the same code lints clean in a .js file).
@@ -76,6 +78,11 @@
 		['dlFixedK1', { val: 0.5 }],
 		['dlFixK2', { val: false }],
 		['dlFixedK2', { val: 0.5 }],
+		// What hour 0 means for the rolling phase outputs (M10onset, H<k>_acrophase,
+		// C<c>_acrophase, acrophase, onset, offset): 'start' = hours after the first
+		// sample (the default), 'clock' = hours after local midnight in the display
+		// timezone. Every window is on the same frame either way (review FIT-9).
+		['phaseReference', { val: PHASE_REFERENCE_START }],
 		// outputs & misc
 		['out', { movex: { val: -1 } }],
 		['valid', { val: false }],
@@ -126,7 +133,7 @@
 		// hoursSinceStart is relative to min(getData()), so anchor origin to the
 		// same baseline; using getData()[0] breaks when the first row is null or
 		// when the data isn't sorted.
-		const originTime_ms = isTimeX ? (arrayMin(tCol.getData()) ?? null) : null;
+		const originTime_ms = isTimeX ? timeOriginMs(tCol) : null;
 
 		// House missing-value rule (isInvalidValue): null, NaN AND blank strings are
 		// missing — hoursSinceStart preserves null for filtered rows, and a blank
@@ -162,13 +169,16 @@
 			if (!yCol) continue;
 			yEntries.push({ yId, yData: yCol.getData() });
 		}
+		// One phase frame for every window: the record start, plus the node's reference.
+		const phaseRef = resolveNodePhaseReference(argsIN, tCol);
 		const maParams = {
 			tAll,
 			ys: yEntries.map((e) => e.yData),
 			starts,
 			windowSize,
 			statKeys,
-			args: argsIN
+			args: argsIN,
+			phase: { recordStart: xMin, ref: phaseRef }
 		};
 		const perY = shouldUseWorkers({ work: starts.length * yEntries.length })
 			? await runComputeTask('movingAnalysis.compute', maParams)
@@ -182,7 +192,7 @@
 		// screen to say why (the silent case that prompted this: a logarithmic
 		// trend window containing x <= 0 was dropped without a word). Turn each
 		// per-y `__skips` tally into sentences for the node's warnings badge.
-		const warnings = [];
+		const warnings = phaseRef.warning ? [phaseRef.warning] : [];
 		for (let i = 0; i < yEntries.length; i++) {
 			// Name the series only when there are several — a single-input node's
 			// warning reads cleaner without "for <column>" in every sentence.
@@ -247,6 +257,8 @@
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
+	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
+	import { appState } from '$lib/core/core.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -357,6 +369,11 @@
 			p.args.pgAlpha +
 			'|' +
 			(p.args.summaryPercentile ?? '');
+		// Clock-time phases move with the display timezone, so it is an input then.
+		out +=
+			'|' +
+			p.args.phaseReference +
+			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -676,6 +693,16 @@
 			/>
 		</div>
 	</div>
+	{#if ['npcra', 'cosinor', 'rectfit', 'doublelogistic'].includes(p.args.analysis)}
+		<!-- Only the analyses with phase outputs (onsets, acrophases) use it. -->
+		<div class="control-input-horizontal">
+			<PhaseReferenceSelect
+				bind:value={p.args.phaseReference}
+				{xIsTime}
+				numericOrigin={p.args.analysis === 'npcra' ? 'the first sample' : 'x = 0'}
+			/>
+		</div>
+	{/if}
 
 	{#if p.args.analysis === 'summary'}
 		<div class="control-input-horizontal">

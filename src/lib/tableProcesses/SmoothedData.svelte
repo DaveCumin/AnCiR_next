@@ -5,6 +5,7 @@
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { validPairs } from '$lib/utils/validPairs.js';
+	import { timeOriginMs } from '$lib/utils/phaseReference.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -69,7 +70,9 @@
 
 		const xData = xInCol.type === 'time' ? xInCol.hoursSinceStart : xInCol.getData();
 		const isTimeInput = xInCol.type === 'time';
-		const originTime_ms = isTimeInput ? xInCol.getData()[0] : null;
+		// The minimum valid time: the baseline hoursSinceStart measures from (STAT-19).
+		// getData()[0] was null after a filter and wrong for unsorted data.
+		const originTime_ms = isTimeInput ? timeOriginMs(xInCol) : null;
 
 		const result = { x_out: [], y_results: {}, originTime_ms };
 		// Retained raw y per column (sorted, valid), aligned to x_out — needed for residuals.

@@ -7,8 +7,11 @@
 //
 // Precedence (sniffFileType):
 //   1. A firm extension wins outright: .csv/.tsv → csv, .awd → awd,
-//      .json → json, .xlsx/.xls → excel. These files must behave exactly as
-//      they always have — no content-sniffing detour.
+//      .json/.ancir → json, .xlsx/.xls → excel. These files must behave exactly as
+//      they always have — no content-sniffing detour. (.ancir is AnCiR's own
+//      session extension; its content is session JSON, so it takes the JSON
+//      branch, where looksLikeSession decides whether it really is a session
+//      and anything else is refused instead of being read as CSV.)
 //   2. Everything else (.txt, .dat, no extension, …) is sniffed from a text
 //      slice of the content, in order JSON → AWD → Excel(zip magic) → CSV.
 //      The order runs strongest-signal first: JSON and AWD have structural
@@ -33,6 +36,7 @@ const FIRM_EXTENSIONS = new Map([
 	['tsv', 'csv'],
 	['awd', 'awd'],
 	['json', 'json'],
+	['ancir', 'json'],
 	['xlsx', 'excel'],
 	['xls', 'excel']
 ]);

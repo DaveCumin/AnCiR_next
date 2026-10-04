@@ -24,7 +24,13 @@ import { isInvalidValue } from './stats.js';
  * @param {number} [opts.lWindow=5]     L-window length (h) for L5
  * @returns {{IS:number,IV:number,RA:number,M10:number,L5:number,M10onset:number,
  *   L5onset:number,profile:number[],binCentres:number[],n:number,p:number,
- *   nEpochs:number}|null}  null when there is no usable data.
+ *   nEpochs:number,t0:number}|null}  null when there is no usable data.
+ *
+ * PHASE FRAME: M10onset, L5onset and binCentres are hours after `t0`, the earliest
+ * valid time (the first sample), folded into [0, period). They are NOT clock time:
+ * a record starting at 07:00 whose most active hours start at 08:00 has M10onset
+ * 1. Callers that want clock time or a common origin across windows add `t0` (and
+ * the origin's clock hour) and re-wrap: see utils/phaseReference.js.
  */
 export function computeNPCRA(t, y, opts = {}) {
 	const epochHours = opts.epochHours ?? 1;
@@ -153,6 +159,7 @@ export function computeNPCRA(t, y, opts = {}) {
 		binCentres,
 		n,
 		p,
-		nEpochs
+		nEpochs,
+		t0
 	};
 }

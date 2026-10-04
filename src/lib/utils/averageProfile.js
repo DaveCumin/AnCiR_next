@@ -20,18 +20,22 @@ import { kahanMean } from '$lib/utils/numerics.js';
  * @param {object} [opts]
  * @param {number} [opts.period=24] folding period (same units as t)
  * @param {number} [opts.nBins=24]  number of phase bins over [0, period)
- * @returns {{binCentres:number[], profile:number[], sem:number[], n:number[]}}
- *   binCentres — bin-centre time-of-day for each bin (length nBins)
+ * @returns {{binCentres:number[], profile:number[], sem:number[], n:number[], t0:number}}
+ *   binCentres — bin-centre phase for each bin (length nBins): hours after `t0`, the
+ *                earliest sample with a valid value, folded into [0, period). This is
+ *                NOT clock time unless the record starts at midnight; callers relabel
+ *                with utils/phaseReference.js (relabelFoldedProfile) for clock time.
  *   profile    — mean of finite y in each bin (NaN for an empty bin)
  *   sem        — standard error of the mean per bin (NaN when fewer than 2 pts)
  *   n          — count of finite (t,y) pairs contributing to each bin
+ *   t0         — the fold origin (NaN when there is no usable pair)
  *   For invalid parameters (period ≤ 0, nBins < 1) every array is empty.
  */
 export function averageDailyProfile(t, y, opts = {}) {
 	const period = opts.period ?? 24;
 	const nBins = Math.trunc(opts.nBins ?? 24);
 	if (!(period > 0) || !(nBins >= 1)) {
-		return { binCentres: [], profile: [], sem: [], n: [] };
+		return { binCentres: [], profile: [], sem: [], n: [], t0: NaN };
 	}
 
 	const binWidth = period / nBins;
@@ -57,9 +61,9 @@ export function averageDailyProfile(t, y, opts = {}) {
 	const profile = new Array(nBins).fill(NaN);
 	const sem = new Array(nBins).fill(NaN);
 	const n = new Array(nBins).fill(0);
-	if (!pairs.length) return { binCentres, profile, sem, n };
+	if (!pairs.length) return { binCentres, profile, sem, n, t0: NaN };
 
-	// 2. Fold each sample onto [0, period) and bin it.
+	// 2. Fold each sample onto [0, period) and bin it (phase relative to t0).
 	const buckets = Array.from({ length: nBins }, () => []);
 	for (const [ti, yi] of pairs) {
 		const timeOfDay = (((ti - t0) % period) + period) % period;
@@ -85,5 +89,5 @@ export function averageDailyProfile(t, y, opts = {}) {
 		}
 	}
 
-	return { binCentres, profile, sem, n };
+	return { binCentres, profile, sem, n, t0 };
 }

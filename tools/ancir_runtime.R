@@ -535,27 +535,50 @@ tp_trendfit <- function(args, env) {
   x_col <- env$cols[[as.character(x_in)]]
   t <- t_for_col(x_col, env$cols, env$raw_data)
   output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
-  output_x <- NULL
-  if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]])) {
-    output_x <- t_for_col(env$cols[[as.character(output_x_id)]], env$cols, env$raw_data)
-  }
-  xs <- NULL; any_valid <- FALSE
+  out_col <- if (output_x_id != -1) env$cols[[as.character(output_x_id)]] else NULL
+  # Output grid in the fit's hour frame, origin = the input's minimum time (STAT-19).
+  frm <- fit_time_frame(x_col, out_col, env$cols, env$raw_data)
+  output_x <- frm$out
+  xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
-    ys_raw <- col_data(env$cols[[yk]], env$cols, env$raw_data)
-    res <- fit_trend(t, ys_raw, model, deg)
+    pr <- .pgram_pairs(t, col_data(env$cols[[yk]], env$cols, env$raw_data))
+    if (!length(pr$t)) next
+    tt <- pr$t; yv <- pr$y
+    refused <- (identical(model, "logarithmic") && any(tt <= 0)) ||
+               (identical(model, "exponential") && any(yv <= 0)) ||
+               (identical(model, "polynomial") && length(tt) <= deg) ||
+               (length(tt) >= 2 && all(tt == tt[1]))
+    if (refused) next
+    res <- fit_trend(tt, yv, model, deg)
     if (is.null(res)) next
     if (is.null(xs)) {
-      # The JS evaluates the fit at the FINITE input t, not on a dense grid.
-      xs <- if (!is.null(output_x)) output_x else t[is.finite(t)]
-      set_col(env, env$cols, out_id(args, "trendx"), xs, type = "number")
+      xs <- if (!is.null(output_x)) output_x else tt
+      if (!is.null(frm$origin)) set_col(env, env$cols, out_id(args, "trendx"),
+                                        frm$origin + xs * 3600000, type = "time")
+      else set_col(env, env$cols, out_id(args, "trendx"), xs, type = "number")
     }
     yy <- evaluate_trend_at_points(res$parameters, model, xs)
     y_out <- out_id(args, paste0("trendy_", y_id))
     if (y_out == -1) y_out <- out_id(args, "trendy")
     set_col(env, env$cols, y_out, yy, type = "number")
+    stats_by_y[[yk]] <- res
     any_valid <- TRUE
+  }
+  if (any_valid) {
+    # Fit-quality and linear-coefficient ports, one value per y (as the Python port).
+    pick <- function(f) vapply(y_ins, function(y) {
+      r <- stats_by_y[[as.character(y)]]
+      v <- if (is.null(r)) NULL else f(r)
+      if (is.null(v)) NaN else as.numeric(v)
+    }, numeric(1))
+    set_col(env, env$cols, out_id(args, "r2"), pick(function(r) r$rSquared), type = "number")
+    set_col(env, env$cols, out_id(args, "rmse"), pick(function(r) r$rmse), type = "number")
+    set_col(env, env$cols, out_id(args, "coef_slope"), pick(function(r) r$parameters$slope),
+            type = "number")
+    set_col(env, env$cols, out_id(args, "coef_intercept"),
+            pick(function(r) r$parameters$intercept), type = "number")
   }
   any_valid
 }
@@ -573,8 +596,8 @@ tp_smootheddata <- function(args, env) {
   x_data <- if (is_time) col_hours(x_col, env$cols, env$raw_data)
             else col_data(x_col, env$cols, env$raw_data)
   origin_ms <- if (is_time) {
-    d <- unlist(col_data(x_col, env$cols, env$raw_data), use.names = FALSE)
-    if (length(d)) d[1] else NA_real_
+    o <- time_origin_ms(x_col, env$cols, env$raw_data)
+    if (is.null(o)) NA_real_ else o
   } else NA_real_
   x_out <- NULL; y_res <- list(); raw_by <- list(); any_valid <- FALSE
   for (y_id in y_ins) {
@@ -1094,6 +1117,164 @@ evaluate_cosinor_at_points <- function(parameters, x_points) {
   y
 }
 
+# --- Time origin and phase reference (utils/phaseReference.js), matching the Python port ---
+# The session's display time zone (appState.displayTimezone); the exported script sets it.
+DISPLAY_TIMEZONE <- "utc"
+.CLOCK_FALLBACK_WARNING <- paste0('Phase reference "Clock time of day" needs a time column as ',
+                                  "x; phases are reported as hours since the first sample instead.")
+
+wrap_to_period <- function(h, p) {
+  if (!is.numeric(h) || length(h) != 1 || !is.finite(h) || !isTRUE(p > 0)) return(NaN)
+  .js_mod(.js_mod(h, p) + p, p)
+}
+bathyphase <- function(acro, p) {
+  if (!is.numeric(acro) || length(acro) != 1 || !is.finite(acro) || !isTRUE(p > 0)) return(NaN)
+  wrap_to_period(acro + p / 2, p)
+}
+phase_angle_of_entrainment <- function(acro, ref = 0, p = 24) {
+  if (!is.numeric(acro) || length(acro) != 1 || !is.finite(acro) || !isTRUE(p > 0)) return(NaN)
+  r <- if (is.numeric(ref) && length(ref) == 1 && is.finite(ref)) ref else 0
+  d <- wrap_to_period(acro - r, p)
+  if (d > p / 2) d - p else d
+}
+
+time_origin_ms <- function(col, cols, raw_data) {
+  if (is.null(col) || !identical(col$type, "time")) return(NULL)
+  v <- suppressWarnings(as.numeric(unlist(col_data(col, cols, raw_data), use.names = FALSE)))
+  v <- v[is.finite(v)]
+  if (length(v)) min(v) else NULL
+}
+
+# phaseReference.js fitTimeFrame: list(origin, out) (see the Python port).
+fit_time_frame <- function(t_col, out_col, cols, raw_data) {
+  in_origin <- time_origin_ms(t_col, cols, raw_data)
+  origin <- in_origin; out <- NULL
+  if (!is.null(out_col)) {
+    if (identical(out_col$type, "time")) {
+      if (!is.null(in_origin)) {
+        v <- suppressWarnings(as.numeric(unlist(col_data(out_col, cols, raw_data))))
+        out <- (v[is.finite(v)] - in_origin) / 3600000
+      } else {
+        origin <- time_origin_ms(out_col, cols, raw_data)
+        h <- col_hours(out_col, cols, raw_data)
+        out <- h[is.finite(h)]
+      }
+    } else {
+      v <- col_data(out_col, cols, raw_data)
+      out <- vapply(Filter(function(e) !.js_invalid(e), as.list(v)), .js_number, numeric(1))
+    }
+  }
+  list(origin = origin, out = out)
+}
+
+clock_hour_of_day <- function(ms, zone = "utc") {
+  if (is.null(ms) || !is.finite(ms)) return(NaN)
+  tz <- if (is.null(zone) || zone %in% c("utc", "UTC")) "UTC" else zone
+  lt <- as.POSIXlt(ms / 1000, origin = "1970-01-01", tz = tz)
+  msec <- floor(ms) %% 1000
+  lt$hour + lt$min / 60 + floor(lt$sec) / 3600 + msec / 3600000
+}
+
+resolve_phase_reference <- function(reference, origin_ms, zone = DISPLAY_TIMEZONE) {
+  if (!identical(reference, "clock")) return(list(clock = FALSE, offsetHours = 0, warning = NULL))
+  off <- if (is.null(origin_ms)) NaN else clock_hour_of_day(origin_ms, zone)
+  if (!is.finite(off))
+    return(list(clock = FALSE, offsetHours = 0, warning = .CLOCK_FALLBACK_WARNING))
+  list(clock = TRUE, offsetHours = off, warning = NULL)
+}
+node_phase_reference <- function(args, x_col, cols, raw_data) {
+  if (!identical(args$phaseReference, "clock")) return(resolve_phase_reference(NULL, NULL))
+  resolve_phase_reference("clock", time_origin_ms(x_col, cols, raw_data))
+}
+apply_phase_reference <- function(h, ref, p) {
+  if (is.null(ref) || !isTRUE(ref$clock)) return(h)
+  if (!is.numeric(h) || !is.finite(h)) return(NaN)
+  wrap_to_period(h + ref$offsetHours, p)
+}
+relabel_folded_profile <- function(bin_times, series, ref, p) {
+  if (is.null(ref) || !isTRUE(ref$clock) || is.null(bin_times)) return(list(bin_times, series))
+  sh <- vapply(bin_times, function(c) apply_phase_reference(c, ref, p), numeric(1))
+  o <- order(sh, method = "radix")
+  list(sh[o], lapply(series, function(a) a[o]))
+}
+nearest_phase_instant <- function(phase, p, centre) {
+  if (!is.numeric(phase) || !is.finite(phase) || !isTRUE(p > 0) || !is.finite(centre)) return(NaN)
+  phase + p * floor((centre - phase) / p + 0.5)
+}
+
+# cosinorAddons.js multiComponentWaveform (see the Python port).
+multi_component_waveform <- function(M, harmonics, p) {
+  nan <- list(amplitude = NaN, orthophase = NaN, bathyphase = NaN, max = NaN, min = NaN)
+  if (!is.finite(M) || !isTRUE(p > 0) || !length(harmonics)) return(nan)
+  N <- 2880; dt <- p / N; om <- 2 * pi / p
+  t <- (0:(N - 1)) * dt
+  y <- rep(M, N)
+  for (h in harmonics) y <- y + h$beta * cos(h$k * om * t) + h$gamma * sin(h$k * om * t)
+  i_max <- which.max(y); i_min <- which.min(y)
+  refine <- function(i) {
+    a <- y[((i - 2) %% N) + 1]; b <- y[i]; c <- y[(i %% N) + 1]
+    den <- a - 2 * b + c
+    d <- if (den != 0) 0.5 * (a - c) / den else 0
+    off <- max(-0.5, min(0.5, d))
+    list(t = wrap_to_period((i - 1 + off) * dt, p), v = b - 0.25 * (a - c) * off)
+  }
+  hi <- refine(i_max); lo <- refine(i_min)
+  list(amplitude = (hi$v - lo$v) / 2, orthophase = hi$t, bathyphase = lo$t, max = hi$v,
+       min = lo$v)
+}
+
+COSINOR_METRIC_KEYS <- c("period", "mesor", "amplitude", "amplitude_ciLow", "amplitude_ciHigh",
+                         "acrophase_ciLow", "acrophase_ciHigh", "acrophase", "rsquared",
+                         "pvalue", "perm_pvalue", "bathyphase", "phase_angle", "amplitude_h1",
+                         "acrophase_h1", "bathyphase_h1")
+
+# Cosinor.svelte cosinorMetrics (see the Python port cosinor_metrics).
+cosinor_metrics <- function(fixed_res, free_res, args, phase_ref) {
+  use_fixed <- isTRUE(args$useFixedPeriod)
+  fp <- as.numeric(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod)
+  ref_hrs <- if (is.null(args$referenceHrs)) 0 else args$referenceHrs
+  period <- NaN; mesor <- NaN; amp <- NaN; rsq <- NaN; acro <- NaN; overall <- NULL; h1 <- NULL
+  if (use_fixed && !is.null(fixed_res)) {
+    period <- fp; mesor <- fixed_res$M
+    h1 <- if (length(fixed_res$harmonics)) fixed_res$harmonics[[1]] else NULL
+    amp <- if (is.null(h1)) NaN else h1$amplitude
+    acro <- if (is.null(h1)) NaN else h1$acrophase_hrs
+    rsq <- fixed_res$R2
+    if (length(fixed_res$harmonics) > 1)
+      overall <- multi_component_waveform(mesor, fixed_res$harmonics, period)
+  } else if (!is.null(free_res)) {
+    c1 <- if (length(free_res$parameters$cosines)) free_res$parameters$cosines[[1]] else NULL
+    w <- if (is.null(c1)) 0 else c1$frequency
+    period <- if (w) 1 / w else NaN
+    mesor <- free_res$parameters$O
+    amp <- if (is.null(c1)) NaN else c1$amplitude
+    if (!is.null(c1) && w) acro <- -c1$phase / (2 * pi * w)
+    rsq <- free_res$rSquared
+  }
+  rf <- function(h) apply_phase_reference(h, phase_ref, period)
+  acro_h1 <- rf(wrap_to_period(acro, period))
+  bathy_h1 <- rf(bathyphase(acro, period))
+  peak <- if (!is.null(overall)) overall$orthophase else acro
+  peak_ref <- if (isTRUE(phase_ref$clock)) peak + phase_ref$offsetHours else peak
+  ci_a <- if (use_fixed && !is.null(h1)) h1$CI_A else NULL
+  ci_p <- if (use_fixed && !is.null(h1)) h1$CI_acrophase else NULL
+  list(period = period, mesor = mesor,
+       amplitude = if (!is.null(overall)) overall$amplitude else amp,
+       acrophase = if (!is.null(overall)) rf(overall$orthophase) else acro_h1,
+       bathyphase = if (!is.null(overall)) rf(overall$bathyphase) else bathy_h1,
+       phase_angle = phase_angle_of_entrainment(peak_ref, ref_hrs, period),
+       amplitude_h1 = amp, acrophase_h1 = acro_h1, bathyphase_h1 = bathy_h1,
+       amplitude_ciLow = if (is.null(ci_a)) NaN else ci_a[1],
+       amplitude_ciHigh = if (is.null(ci_a)) NaN else ci_a[2],
+       acrophase_ciLow = if (is.null(ci_p)) NaN else rf(wrap_to_period(ci_p[1], period)),
+       acrophase_ciHigh = if (is.null(ci_p)) NaN else rf(wrap_to_period(ci_p[2], period)),
+       rsquared = rsq,
+       pvalue = if (use_fixed && !is.null(fixed_res)) fixed_res$pF else NaN,
+       perm_pvalue = NaN)
+}
+
+# Port of Cosinor.svelte (matching the Python port): output x from the input's minimum time
+# (fit_time_frame, STAT-19), metrics from cosinor_metrics (FIT-9, FIT-13).
 tp_cosinor <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
@@ -1106,78 +1287,53 @@ tp_cosinor <- function(args, env) {
   output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
   x_col <- env$cols[[as.character(x_in)]]
   t <- t_for_col(x_col, env$cols, env$raw_data)
+  out_col <- if (output_x_id != -1) env$cols[[as.character(output_x_id)]] else NULL
+  fr <- fit_time_frame(x_col, out_col, env$cols, env$raw_data)
+  phase_ref <- node_phase_reference(args, x_col, env$cols, env$raw_data)
 
-  output_x <- NULL
-  if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]])) {
-    ox <- t_for_col(env$cols[[as.character(output_x_id)]], env$cols, env$raw_data)
-    output_x <- ox[is.finite(ox)]
-  }
-
-  any_valid <- FALSE; first_x <- NULL
-  mesor <- c(); acro <- c(); pval <- c(); per <- c()
+  any_valid <- FALSE; first_x <- NULL; metrics <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
-    if (is.null(env$cols[[yk]])) {
-      mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); pval <- c(pval, NA_real_)
-      per <- c(per, NA_real_); next
-    }
-    y <- suppressWarnings(as.numeric(unlist(col_data(env$cols[[yk]], env$cols, env$raw_data),
-                                            use.names = FALSE)))
-    ok <- is.finite(t) & is.finite(y)
-    tt <- t[ok]; yy <- y[ok]
-    res <- if (use_fixed || n_curves == 0) {
-      fit_cosinor_fixed(tt, yy, fixed_period, n_h, alpha)
+    if (is.null(env$cols[[yk]])) next
+    pr <- .pgram_pairs(t, col_data(env$cols[[yk]], env$cols, env$raw_data))
+    tt <- pr$t; yy <- pr$y
+    if (!length(tt)) next
+    fixed_res <- NULL; free_res <- NULL
+    if (use_fixed) {
+      fixed_res <- fit_cosinor_fixed(tt, yy, fixed_period, n_h, alpha)
+      res <- fixed_res
     } else {
-      # Free-period range (h); sessions saved before it existed use the defaults.
-      fit_cosine_curves(tt, yy, n_curves,
+      free_res <- fit_cosine_curves(tt, yy, n_curves,
                         if (is.null(args$minPeriod)) FREE_PERIOD_DEFAULTS$minPeriod else args$minPeriod,
                         if (is.null(args$maxPeriod)) FREE_PERIOD_DEFAULTS$maxPeriod else args$maxPeriod)
+      res <- free_res
     }
-    if (is.null(res)) {
-      mesor <- c(mesor, NA_real_); acro <- c(acro, NA_real_); pval <- c(pval, NA_real_)
-      per <- c(per, NA_real_); next
-    }
+    if (is.null(res)) next
     params <- if (!is.null(res$harmonics)) res else res$parameters
+    xs <- if (!is.null(fr$out)) fr$out else tt
+    metrics[[yk]] <- cosinor_metrics(fixed_res, free_res, args, phase_ref)
     if (is.null(first_x)) {
-      first_x <- if (!is.null(output_x)) output_x else tt
-      set_col(env, env$cols, out_id(args, "cosinorx"), first_x, type = "number")
+      first_x <- xs
+      if (!is.null(fr$origin)) set_col(env, env$cols, out_id(args, "cosinorx"),
+                                       fr$origin + xs * 3600000, type = "time")
+      else set_col(env, env$cols, out_id(args, "cosinorx"), xs, type = "number")
     }
-    set_col(env, env$cols,
-            {
-              yo <- out_id(args, paste0("cosinory_", y_id))
-              if (yo == -1) out_id(args, "cosinory") else yo
-            },
-            evaluate_cosinor_at_points(params, first_x), type = "number")
-    # MESOR and acrophase (time of peak, h) for both fits: the fixed fit's M and
-    # acrophase_hrs, or the free fit's offset O and -phase/omega wrapped into
-    # [0, period) — the same numbers as the JS `mesor` / `acrophase` ports.
-    if (!is.null(res$harmonics)) {
-      per <- c(per, fixed_period)
-      mesor <- c(mesor, res$M)
-      acro <- c(acro, res$harmonics[[1]]$acrophase_hrs)
-    } else {
-      c1 <- res$parameters$cosines[[1]]
-      per <- c(per, if (isTRUE(c1$frequency > 0)) 1 / c1$frequency else NA_real_)
-      mesor <- c(mesor, res$parameters$O)
-      acro <- c(acro, if (isTRUE(c1$frequency > 0))
-        (-c1$phase / (2 * pi * c1$frequency)) %% (1 / c1$frequency) else NA_real_)
-    }
-    # `pvalue` is the ANALYTIC zero-amplitude F-test p of the FIXED-period fit
-    # (fit_cosinor_fixed's pF), matching the JS and Python semantics fixed in
-    # v72.x. The free-period nonlinear fit has no analytic test, so NA there.
-    pval <- c(pval, if (!is.null(res$pF)) res$pF else NA_real_)
+    yo <- out_id(args, paste0("cosinory_", y_id))
+    if (yo == -1) yo <- out_id(args, "cosinory")
+    set_col(env, env$cols, yo, evaluate_cosinor_at_points(params, xs), type = "number")
     any_valid <- TRUE
   }
-  # Scalar metric ports carry ONE value per y input, in yIN order — the contract the whole
-  # "one analysis node per group" idiom depends on.
-  set_col(env, env$cols, out_id(args, "period"), per, type = "number")
-  set_col(env, env$cols, out_id(args, "mesor"), mesor, type = "number")
-  set_col(env, env$cols, out_id(args, "acrophase"), acro, type = "number")
-  set_col(env, env$cols, out_id(args, "pvalue"), pval, type = "number")
-  # The permutation p is a Monte Carlo quantity tied to the JS's seeded PRNG
-  # (same boundary as the Python runtime): emitted as NA, never a lookalike.
-  set_col(env, env$cols, out_id(args, "perm_pvalue"),
-          rep(NA_real_, length(pval)), type = "number")
+  if (any_valid) {
+    empty <- cosinor_metrics(NULL, NULL, args, phase_ref)
+    for (key in COSINOR_METRIC_KEYS) {
+      v <- vapply(y_ins, function(y) {
+        m <- metrics[[as.character(y)]]
+        x <- if (is.null(m)) empty[[key]] else m[[key]]
+        if (is.null(x)) NaN else as.numeric(x)
+      }, numeric(1))
+      set_col(env, env$cols, out_id(args, key), v, type = "number")
+    }
+  }
   any_valid
 }
 
@@ -1206,7 +1362,7 @@ compute_average_profile <- function(t, y, period = 24, n_bins = 24) {
   ti <- ti[ok]; yi <- yi[ok]
   profile <- rep(NA_real_, n_bins); sem <- rep(NA_real_, n_bins); n <- integer(n_bins)
   if (!length(ti)) return(list(bin_centres = bin_centres, profile = profile,
-                               sem = sem, n = n))
+                               sem = sem, n = n, t0 = NaN))
   t0 <- min(ti)
   # Double modulo, as the JS does: a negative remainder would otherwise index backwards.
   tod <- ((ti - t0) %% period + period) %% period
@@ -1219,7 +1375,7 @@ compute_average_profile <- function(t, y, period = 24, n_bins = 24) {
     profile[k] <- m
     if (length(vals) >= 2) sem[k] <- sqrt(sum((vals - m)^2) / (length(vals) - 1)) / sqrt(length(vals))
   }
-  list(bin_centres = bin_centres, profile = profile, sem = sem, n = n)
+  list(bin_centres = bin_centres, profile = profile, sem = sem, n = n, t0 = min(ti))
 }
 
 # IS, IV, RA, M10/L5 and their onsets. Port of src/lib/utils/npcra.js
@@ -1300,7 +1456,7 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
   list(IS = IS, IV = IV, RA = RA, M10 = m10$value, L5 = l5$value,
        M10onset = m10$onset, L5onset = l5$onset,
        profile = profile, bin_centres = (seq_len(p) - 1) * e + e / 2,
-       n = nn, p = p, n_epochs = n_epochs)
+       n = nn, p = p, n_epochs = n_epochs, t0 = t0)
 }
 
 tp_averageprofile <- function(args, env) {
@@ -1310,6 +1466,7 @@ tp_averageprofile <- function(args, env) {
   period <- as.numeric(if (is.null(args$period)) 24 else args$period)
   n_bins <- as.integer(if (is.null(args$nBins)) 24 else args$nBins)
   x_data <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
+  phase_ref <- node_phase_reference(args, env$cols[[as.character(x_in)]], env$cols, env$raw_data)
   centres <- NULL; any_valid <- FALSE
   for (y_id in y_ins) {
     yk <- as.character(y_id)
@@ -1317,6 +1474,14 @@ tp_averageprofile <- function(args, env) {
     res <- compute_average_profile(x_data, col_data(env$cols[[yk]], env$cols, env$raw_data),
                                    period, n_bins)
     if (!length(res$bin_centres)) next
+    if (isTRUE(phase_ref$clock) && is.finite(res$t0)) {
+      # Clock time (FIT-9): bin times are hours after the series' first valid sample.
+      rl <- relabel_folded_profile(res$bin_centres, list(res$profile, res$sem, res$n),
+                                   list(clock = TRUE, offsetHours = phase_ref$offsetHours + res$t0),
+                                   period)
+      res$bin_centres <- rl[[1]]
+      res$profile <- rl[[2]][[1]]; res$sem <- rl[[2]][[2]]; res$n <- rl[[2]][[3]]
+    }
     if (is.null(centres)) {
       centres <- res$bin_centres
       set_col(env, env$cols, out_id(args, "avgprofx"), centres, type = "number")
@@ -1341,6 +1506,7 @@ tp_nonparametricra <- function(args, env) {
   m_window <- as.numeric(if (is.null(args$mWindow)) 10 else args$mWindow)
   l_window <- as.numeric(if (is.null(args$lWindow)) 5 else args$lWindow)
   x_data <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
+  phase_ref <- node_phase_reference(args, env$cols[[as.character(x_in)]], env$cols, env$raw_data)
 
   scalar_keys <- c("IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset")
   per_y <- list(); centres <- NULL; any_valid <- FALSE
@@ -1350,6 +1516,14 @@ tp_nonparametricra <- function(args, env) {
     res <- compute_npcra(x_data, col_data(env$cols[[yk]], env$cols, env$raw_data),
                          epoch, period, m_window, l_window)
     if (is.null(res)) next
+    if (isTRUE(phase_ref$clock)) {
+      # Clock time (FIT-9): onsets and bin times are hours after the series' first sample.
+      rf <- list(clock = TRUE, offsetHours = phase_ref$offsetHours + res$t0)
+      res$M10onset <- apply_phase_reference(res$M10onset, rf, period)
+      res$L5onset <- apply_phase_reference(res$L5onset, rf, period)
+      rl <- relabel_folded_profile(res$bin_centres, list(res$profile), rf, period)
+      res$bin_centres <- rl[[1]]; res$profile <- rl[[2]][[1]]
+    }
     per_y[[yk]] <- res
     if (is.null(centres)) {
       centres <- res$bin_centres
@@ -2888,16 +3062,10 @@ tp_rectangularwave <- function(args, env) {
                fixDutyCycle = args$fixDutyCycle, fixedDutyCycle = args$fixedDutyCycle,
                minPeriod = args$minPeriod, maxPeriod = args$maxPeriod)
   output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
-  origin <- NA_real_
-  output_x <- NULL
-  if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]])) {
-    oc <- env$cols[[as.character(output_x_id)]]
-    ox <- t_for_col(oc, env$cols, env$raw_data)
-    output_x <- ox[is.finite(ox)]
-    if (identical(oc$type, "time")) origin <- unlist(col_data(oc, env$cols, env$raw_data))[1]
-  }
-  if (is.na(origin) && identical(x_col$type, "time"))
-    origin <- unlist(col_data(x_col, env$cols, env$raw_data))[1]
+  out_col <- if (output_x_id != -1) env$cols[[as.character(output_x_id)]] else NULL
+  frm <- fit_time_frame(x_col, out_col, env$cols, env$raw_data)
+  output_x <- frm$out
+  origin <- if (is.null(frm$origin)) NA_real_ else frm$origin
 
   first_xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
   for (y_id in y_ins) {
@@ -3159,14 +3327,10 @@ tp_doublelogistic <- function(args, env) {
   x_col <- env$cols[[as.character(x_in)]]
   t <- t_for_col(x_col, env$cols, env$raw_data)
   output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
-  origin <- NA_real_; output_x <- NULL
-  if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]])) {
-    oc <- env$cols[[as.character(output_x_id)]]
-    ox <- t_for_col(oc, env$cols, env$raw_data); output_x <- ox[is.finite(ox)]
-    if (identical(oc$type, "time")) origin <- unlist(col_data(oc, env$cols, env$raw_data))[1]
-  }
-  if (is.na(origin) && identical(x_col$type, "time"))
-    origin <- unlist(col_data(x_col, env$cols, env$raw_data))[1]
+  out_col <- if (output_x_id != -1) env$cols[[as.character(output_x_id)]] else NULL
+  frm <- fit_time_frame(x_col, out_col, env$cols, env$raw_data)
+  output_x <- frm$out
+  origin <- if (is.null(frm$origin)) NA_real_ else frm$origin
 
   first_xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
   for (y_id in y_ins) {
@@ -3214,7 +3378,8 @@ tp_doublelogistic <- function(args, env) {
 # fitCurveModel + the per-model option plumbing.
 ff_fit_curve_model <- function(tt, yy, model, args) {
   if (identical(model, "cosinor")) {
-    if (isTRUE(args$useFixedPeriod)) {
+    # FitFunction.svelte getModelOptions: useFixedPeriod ?? true.
+    if (!identical(args$useFixedPeriod, FALSE)) {
       fp <- as.numeric(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod)
       nh <- max(1, as.integer(if (is.null(args$nHarmonics)) 1 else args$nHarmonics))
       alpha <- as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha)
@@ -3223,7 +3388,7 @@ ff_fit_curve_model <- function(tt, yy, model, args) {
       return(list(model = "cosinor", mode = "fixed",
                   parameters = list(mode = "fixed", period = fp, M = res$M,
                                     harmonics = res$harmonics),
-                  fitted = res$fitted))
+                  fixedStats = res, fitted = res$fitted, rSquared = res$R2, rmse = res$RMSE))
     }
     nc <- max(1, as.integer(if (is.null(args$Ncurves)) 1 else args$Ncurves))
     res <- fit_cosine_curves(tt, yy, nc,
@@ -3232,7 +3397,7 @@ ff_fit_curve_model <- function(tt, yy, model, args) {
     if (is.null(res)) return(NULL)
     return(list(model = "cosinor", mode = "free",
                 parameters = c(list(mode = "free"), res$parameters),
-                fitted = res$fitted))
+                fitted = res$fitted, rSquared = res$rSquared, rmse = res$rmse))
   }
   if (identical(model, "rectangular")) {
     # rectwave.js pins omega, not the period: fitFunction.js derives it from fixedPeriod.
@@ -3243,7 +3408,9 @@ ff_fit_curve_model <- function(tt, yy, model, args) {
       fixDutyCycle = args$fixDutyCycle, fixedDutyCycle = args$fixedDutyCycle,
       minPeriod = args$minPeriod, maxPeriod = args$maxPeriod))
     if (is.null(res)) return(NULL)
-    return(list(model = "rectangular", parameters = res$parameters, fitted = res$fitted))
+    return(list(model = "rectangular", parameters = res$parameters, fitted = res$fitted,
+                rSquared = res$rSquared, rmse = res$rmse, period = res$period,
+                acrophase = res$acrophase))
   }
   if (identical(model, "doublelogistic")) {
     periodic <- !identical(args$periodic, FALSE)
@@ -3253,7 +3420,9 @@ ff_fit_curve_model <- function(tt, yy, model, args) {
       fixedPeriod = args$fixedPeriod, minPeriod = args$minPeriod, maxPeriod = args$maxPeriod))
     if (is.null(res)) return(NULL)
     return(list(model = "doublelogistic", periodic = periodic,
-                parameters = res$parameters, fitted = res$fitted))
+                parameters = res$parameters, fitted = res$fitted, rSquared = res$rSquared,
+                rmse = res$rmse, onsetPhase = res$onsetPhase, offsetPhase = res$offsetPhase,
+                dutyCycle = res$dutyCycle))
   }
   NULL
 }
@@ -3288,6 +3457,72 @@ ff_evaluate_at_points <- function(fit_result, model, t_points) {
   rep(NA_real_, length(t_points))
 }
 
+# FitFunction.svelte getFitMetricKeys / rawFitMetricValue / fitMetricValue (see the Python
+# port).
+ff_metric_keys <- function(args) {
+  shared <- c("r2", "rmse", "perm_pvalue")
+  model <- if (is.null(args$model)) "cosinor" else args$model
+  switch(model,
+    cosinor = c(shared, "period", "mesor", "amplitude", "acrophase", "amplitude_h1",
+                "acrophase_h1"),
+    rectangular = c(shared, "period", "mesor", "amplitude", "acrophase", "duty_cycle", "kappa"),
+    doublelogistic = c(shared, "period", "mesor", "amplitude", "onset", "offset", "k1", "k2",
+                       "duty_cycle"),
+    shared)
+}
+.nz <- function(...) { for (v in list(...)) if (!is.null(v)) return(as.numeric(v)); NaN }
+ff_raw_metric <- function(key, model, fr) {
+  if (is.null(fr)) return(NaN)
+  if (key == "r2") return(.nz(fr$rSquared))
+  if (key == "rmse") return(.nz(fr$rmse))
+  if (key == "perm_pvalue") return(NaN)
+  p <- fr$parameters
+  if (identical(model, "cosinor")) {
+    if (identical(fr$mode, "fixed")) {
+      period <- .nz(p$period)
+      if (key == "period") return(period)
+      if (key == "mesor") return(.nz(fr$fixedStats$M, p$M))
+      hs <- fr$fixedStats$harmonics
+      if (length(hs) > 1 && key %in% c("amplitude", "acrophase")) {
+        w <- multi_component_waveform(fr$fixedStats$M, hs, period)
+        return(if (key == "amplitude") w$amplitude else w$orthophase)
+      }
+      if (key %in% c("amplitude", "amplitude_h1")) return(if (length(hs)) hs[[1]]$amplitude else NaN)
+      if (key %in% c("acrophase", "acrophase_h1"))
+        return(if (length(hs)) hs[[1]]$acrophase_hrs else NaN)
+    } else {
+      c1 <- if (length(p$cosines)) p$cosines[[1]] else NULL
+      w <- if (is.null(c1)) 0 else c1$frequency
+      period <- if (w) 1 / w else NaN
+      if (key == "period") return(period)
+      if (key == "mesor") return(.nz(p$O))
+      if (key %in% c("amplitude", "amplitude_h1")) return(.nz(c1$amplitude))
+      if (key %in% c("acrophase", "acrophase_h1"))
+        return(if (w) wrap_to_period(-c1$phase / (2 * pi * w), period) else NaN)
+    }
+    return(NaN)
+  }
+  if (identical(model, "rectangular"))
+    return(switch(key, period = .nz(fr$period), acrophase = .nz(fr$acrophase),
+                  mesor = .nz(p$M), amplitude = .nz(p$A), duty_cycle = .nz(p$dutyCycle),
+                  kappa = .nz(p$kappa), NaN))
+  if (identical(model, "doublelogistic"))
+    return(switch(key, period = .nz(p$T), mesor = .nz(p$M), amplitude = .nz(p$A),
+                  onset = .nz(fr$onsetPhase, p$t1), offset = .nz(fr$offsetPhase, p$t2),
+                  k1 = .nz(p$k1), k2 = .nz(p$k2), duty_cycle = .nz(fr$dutyCycle), NaN))
+  NaN
+}
+ff_metric_value <- function(key, model, fr, phase_ref) {
+  v <- ff_raw_metric(key, model, fr)
+  if (!isTRUE(phase_ref$clock) || !(key %in% c("acrophase", "acrophase_h1", "onset", "offset")))
+    return(v)
+  per <- if (identical(model, "cosinor")) ff_raw_metric("period", model, fr)
+         else if (identical(model, "rectangular")) .nz(fr$period)
+         else if (identical(model, "doublelogistic")) (if (is.null(fr$parameters$T)) 24 else fr$parameters$T)
+         else NaN
+  apply_phase_reference(v, phase_ref, per)
+}
+
 tp_fitfunction <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
@@ -3296,42 +3531,47 @@ tp_fitfunction <- function(args, env) {
   if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
   t_col <- env$cols[[as.character(x_in)]]
   t <- t_for_col(t_col, env$cols, env$raw_data)
-
   output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
-  output_x <- NULL
-  if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]])) {
-    ox <- t_for_col(env$cols[[as.character(output_x_id)]], env$cols, env$raw_data)
-    output_x <- ox[is.finite(ox)]
-  }
+  out_col <- if (output_x_id != -1) env$cols[[as.character(output_x_id)]] else NULL
+  frm <- fit_time_frame(t_col, out_col, env$cols, env$raw_data)
+  output_x <- frm$out
+  phase_ref <- node_phase_reference(args, t_col, env$cols, env$raw_data)
 
   y_results <- list(); any_valid <- FALSE
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
-    y <- suppressWarnings(as.numeric(unlist(col_data(env$cols[[yk]], env$cols, env$raw_data),
-                                            use.names = FALSE)))
-    n <- min(length(t), length(y))
-    ok <- is.finite(t[seq_len(n)]) & is.finite(y[seq_len(n)])
-    tt <- t[seq_len(n)][ok]; yy <- y[seq_len(n)][ok]
+    pr <- .pgram_pairs(t, col_data(env$cols[[yk]], env$cols, env$raw_data))
+    tt <- pr$t; yy <- pr$y
     if (!length(tt)) next
     fr <- ff_fit_curve_model(tt, yy, model, args)
     if (is.null(fr)) next
     y_out_data <- if (!is.null(output_x)) ff_evaluate_at_points(fr, model, output_x)
                   else fr$fitted
-    y_results[[yk]] <- list(xOutData = if (!is.null(output_x)) output_x else tt,
+    y_results[[yk]] <- list(fr = fr, xOutData = if (!is.null(output_x)) output_x else tt,
                             yOutData = y_out_data)
     if (length(fr$fitted)) any_valid <- TRUE
   }
 
   if (any_valid && x_out != -1) {
     first <- y_results[[1]]
-    set_col(env, env$cols, x_out, first$xOutData, type = "number")
+    if (!is.null(frm$origin)) set_col(env, env$cols, x_out,
+                                      frm$origin + first$xOutData * 3600000, type = "time")
+    else set_col(env, env$cols, x_out, first$xOutData, type = "number")
     for (y_id in y_ins) {
       yr <- y_results[[as.character(y_id)]]
       y_out <- out_id(args, paste0("fity_", y_id))
       if (y_out != -1 && !is.null(yr)) {
         set_col(env, env$cols, y_out, yr$yOutData, type = "number")
       }
+    }
+  }
+  if (any_valid) {
+    for (key in ff_metric_keys(args)) {
+      v <- vapply(y_ins, function(y) ff_metric_value(key, model,
+                                                     y_results[[as.character(y)]]$fr, phase_ref),
+                  numeric(1))
+      set_col(env, env$cols, out_id(args, key), v, type = "number")
     }
   }
   any_valid
@@ -3542,7 +3782,10 @@ cp_editvalue <- function(x, args, cols, raw_data) {
     # Positions are 1-based in the UI and stay 1-based in R, unlike the Python which
     # subtracts 1 for its 0-based lists.
     pos <- as.integer(edit$position)
-    if (!is.na(pos) && pos >= 1 && pos <= length(out)) out[[pos]] <- edit$value
+    # A null value (a cleared cell, STAT-15) is MISSING: `out[[pos]] <- NULL` would delete
+    # the element and shift every later row up.
+    if (!is.na(pos) && pos >= 1 && pos <= length(out))
+      out[pos] <- list(if (is.null(edit$value)) NA else edit$value)
   }
   out
 }
@@ -4304,235 +4547,262 @@ tp_storedvaluegroup <- function(args, env) {
 # Slide a window along the record and run one of the rhythm analyses inside each, emitting a
 # per-window series for every statistic that analysis produces. Everything here is plumbing
 # over kernels already ported; the only real decisions are the window edges and the labels.
+# movinganalysis.js getStatKeys (matching the Python port moving_stat_keys).
+moving_stat_keys <- function(args) {
+  an <- if (is.null(args$analysis)) "" else args$analysis
+  g <- function(k, d) if (is.null(args[[k]])) d else args[[k]]
+  switch(an,
+    periodogram = c("peak_period", "peak_power"),
+    summary = c("mean", "sd", "percentile"),
+    npcra = c("IS", "IV", "RA", "L5", "M10", "M10onset"),
+    cosinor = if (isTRUE(args$useFixedPeriod)) {
+      H <- max(1, as.integer(g("nHarmonics", 1)))
+      c("mesor", as.vector(rbind(paste0("H", 1:H, "_amplitude"), paste0("H", 1:H, "_acrophase"))),
+        "rel_amplitude", "r2", "rmse", "pvalue")
+    } else {
+      N <- max(1, as.integer(g("Ncurves", 1)))
+      c(as.vector(rbind(paste0("C", 1:N, "_period"), paste0("C", 1:N, "_amplitude"),
+                        paste0("C", 1:N, "_phase"), paste0("C", 1:N, "_acrophase"))),
+        "r2", "rmse")
+    },
+    fft = c("peak_period", "peak_frequency", "peak_magnitude"),
+    correlogram = c("peak_lag", "peak_correlation"),
+    rectfit = c("mesor", "amplitude", "period", "acrophase", "duty_cycle", "kappa", "r2", "rmse"),
+    doublelogistic = c("mesor", "amplitude", "onset", "offset", "k1", "k2",
+                       if (isTRUE(args$dlPeriodic)) "period", "r2", "rmse"),
+    trend = {
+      model <- g("trendModel", "linear")
+      if (model == "linear") c("slope", "intercept", "r2", "rmse")
+      else if (model %in% c("exponential", "logarithmic")) c("a", "b", "r2", "rmse")
+      else if (model == "polynomial") {
+        deg <- max(0, floor(g("trendPolyDegree", 2)))
+        c(paste0("c", 0:deg), "r2", "rmse")
+      } else character(0)
+    },
+    character(0))
+}
+
+# movinganalysis.js computeStatsForWindow with the rolling phase frame (FIT-9).
+.moving_window_stats <- function(tt, yy, args, phase = NULL, centre = NaN) {
+  ref <- phase$ref
+  rs <- if (is.null(phase$recordStart)) 0 else phase$recordStart
+  g <- function(k, d) if (is.null(args[[k]])) d else args[[k]]
+  keys <- moving_stat_keys(args)
+  st <- setNames(as.list(rep(NaN, length(keys))), keys)
+  if (length(tt) < 3) return(st)
+  an <- g("analysis", "")
+  if (an == "summary") {
+    pct <- .js_number(g("summaryPercentile", 50))
+    st$mean <- mean(yy); st$sd <- sd(yy)
+    st$percentile <- as.numeric(quantile(yy, (if (is.finite(pct)) pct else 50) / 100,
+                                         type = 7, names = FALSE))
+  } else if (an == "periodogram") {
+    res <- run_periodogram_calculation(list(t = tt, y = yy, method = g("pgMethod", "Lomb-Scargle"),
+      minPeriod = args$periodMin, maxPeriod = args$periodMax, stepSize = args$periodStep,
+      dt = g("pgBinSize", 0.25), alpha = g("pgAlpha", 0.05)))
+    i <- .spectral_peak_index(res$y)
+    if (i > 0) { st$peak_period <- res$x[i]; st$peak_power <- res$y[i] }
+  } else if (an == "npcra") {
+    P <- g("npcraPeriod", 24)
+    r <- compute_npcra(tt, yy, g("npcraEpochHours", 1), P, g("npcraMWindow", 10),
+                       g("npcraLWindow", 5))
+    if (!is.null(r)) {
+      for (k in c("IS", "IV", "RA", "L5", "M10")) st[[k]] <- r[[k]]
+      st$M10onset <- apply_phase_reference(wrap_to_period(r$M10onset + r$t0 - rs, P), ref, P)
+    }
+  } else if (an == "cosinor") {
+    if (isTRUE(args$useFixedPeriod)) {
+      per <- g("fixedPeriod", 24)
+      r <- fit_cosinor_fixed(tt, yy, per, max(1, as.integer(g("nHarmonics", 1))), g("alpha", 0.05))
+      if (!is.null(r)) {
+        st$mesor <- r$M
+        for (h in r$harmonics) {
+          st[[paste0("H", h$k, "_amplitude")]] <- h$amplitude
+          st[[paste0("H", h$k, "_acrophase")]] <- apply_phase_reference(
+            wrap_to_period(h$acrophase_hrs, per / h$k), ref, per / h$k)
+        }
+        amp1 <- if (length(r$harmonics)) r$harmonics[[1]]$amplitude else NaN
+        st$rel_amplitude <- if (is.finite(r$M) && abs(r$M) > 1e-12 && is.finite(amp1))
+          amp1 / r$M else NaN
+        st$r2 <- r$R2; st$rmse <- r$RMSE; st$pvalue <- r$pF
+      }
+    } else {
+      r <- fit_cosine_curves(tt, yy, max(1, as.integer(g("Ncurves", 1))))
+      if (!is.null(r) && length(r$parameters$cosines)) {
+        for (ci in seq_along(r$parameters$cosines)) {
+          cs <- r$parameters$cosines[[ci]]
+          w <- cs$frequency; per <- if (w) 1 / w else NaN
+          st[[paste0("C", ci, "_period")]] <- per
+          st[[paste0("C", ci, "_amplitude")]] <- cs$amplitude
+          st[[paste0("C", ci, "_phase")]] <- cs$phase
+          pk <- if (isTRUE(per > 0)) wrap_to_period(-cs$phase / (2 * pi * w), per) else NaN
+          st[[paste0("C", ci, "_acrophase")]] <- apply_phase_reference(
+            wrap_to_period(nearest_phase_instant(pk, per, centre), 24), ref, 24)
+        }
+        st$r2 <- r$rSquared; st$rmse <- r$rmse
+      }
+    }
+  } else if (an == "fft") {
+    fs <- .moving_fft_stats(tt, yy, args)
+    for (k in names(fs)) st[[k]] <- fs[[k]]
+  } else if (an == "correlogram") {
+    mn <- args$corrMinLag; mx <- args$corrMaxLag
+    r <- compute_autocorrelation(tt, yy, NULL,
+                                 max_lag = if (is.numeric(mx) && isTRUE(mx > 0)) mx else NULL,
+                                 min_lag = if (is.numeric(mn) && isTRUE(mn > 0)) mn else 0)
+    if (length(r$lags)) {
+      pk <- find_autocorrelation_peak(r$lags, r$correlations)
+      if (!is.na(pk$lag)) { st$peak_lag <- pk$lag; st$peak_correlation <- pk$correlation }
+    }
+  } else if (an == "rectfit") {
+    fixed <- isTRUE(args$useFixedPeriod); fp <- g("fixedPeriod", 24)
+    r <- tryCatch(fit_rectangular_wave(tt, yy, list(
+      fixOmega = fixed, fixedOmega = if (fixed) 2 * pi / fp else NULL,
+      fixKappa = isTRUE(args$rwFixKappa), fixedKappa = g("rwFixedKappa", 5),
+      fixDutyCycle = isTRUE(args$rwFixDutyCycle), fixedDutyCycle = g("rwFixedDutyCycle", 0.5))),
+      error = function(e) NULL)
+    if (!is.null(r)) {
+      pr <- r$parameters
+      st$mesor <- pr$M; st$amplitude <- pr$A; st$period <- r$period
+      fold <- if (fixed) fp else 24
+      pk <- if (fixed) r$acrophase
+            else wrap_to_period(nearest_phase_instant(r$acrophase, r$period, centre), fold)
+      st$acrophase <- apply_phase_reference(pk, ref, fold)
+      st$duty_cycle <- pr$dutyCycle; st$kappa <- pr$kappa
+      st$r2 <- r$rSquared; st$rmse <- r$rmse
+    }
+  } else if (an == "doublelogistic") {
+    periodic <- isTRUE(args$dlPeriodic)
+    r <- fit_double_logistic(tt, yy, list(periodic = periodic, fixK1 = isTRUE(args$dlFixK1),
+      fixedK1 = g("dlFixedK1", 0.5), fixK2 = isTRUE(args$dlFixK2), fixedK2 = g("dlFixedK2", 0.5),
+      fixPeriod = periodic && isTRUE(args$useFixedPeriod), fixedPeriod = g("fixedPeriod", 24)))
+    if (!is.null(r)) {
+      pr <- r$parameters
+      st$mesor <- pr$M; st$amplitude <- pr$A
+      T <- pr$T
+      fold <- if (periodic && isTRUE(args$useFixedPeriod)) g("fixedPeriod", 24) else 24
+      dlp <- function(tx) {
+        inst <- if (periodic && !is.null(T) && isTRUE(T > 0)) nearest_phase_instant(tx, T, centre) else tx
+        apply_phase_reference(wrap_to_period(inst, fold), ref, fold)
+      }
+      st$onset <- dlp(pr$t1); st$offset <- dlp(pr$t2)
+      st$k1 <- pr$k1; st$k2 <- pr$k2
+      if (periodic) st$period <- T
+      st$r2 <- r$rSquared; st$rmse <- r$rmse
+    }
+  } else if (an == "trend") {
+    model <- g("trendModel", "linear"); deg <- max(0, floor(g("trendPolyDegree", 2)))
+    bad <- (model == "logarithmic" && any(!(tt > 0))) || (model == "exponential" && any(!(yy > 0))) ||
+      (model == "polynomial" && length(tt) <= deg)
+    r <- if (bad) NULL else tryCatch(fit_trend(tt, yy, model, deg), error = function(e) NULL)
+    if (!is.null(r) && !is.null(r$parameters)) {
+      pr <- r$parameters
+      if (model == "linear") { st$slope <- pr$slope; st$intercept <- pr$intercept }
+      else if (model %in% c("exponential", "logarithmic")) { st$a <- pr$a; st$b <- pr$b }
+      else if (model == "polynomial") for (i in seq_along(pr$coeffs)) st[[paste0("c", i - 1)]] <- pr$coeffs[i]
+      st$r2 <- r$rSquared; st$rmse <- r$rmse
+    }
+  }
+  st
+}
+
+# movinganalysis.js computeMovingWindows (matching the Python port compute_moving_windows).
+compute_moving_windows <- function(t_all, ys, starts, window_size, stat_keys, args, phase = NULL) {
+  model <- if (identical(args$analysis, "trend")) (if (is.null(args$trendModel)) "linear" else args$trendModel) else NULL
+  deg <- max(0, floor(if (is.null(args$trendPolyDegree)) 2 else args$trendPolyDegree))
+  tl <- as.list(t_all)
+  tn_all <- vapply(tl, function(v) if (.js_invalid(v)) NaN else .js_number(v), numeric(1))
+  lapply(ys, function(y_data) {
+    yl <- as.list(y_data)
+    yn_all <- vapply(yl, function(v) if (.js_invalid(v)) NaN else .js_number(v), numeric(1))
+    n <- min(length(tn_all), length(yn_all))
+    tn <- tn_all[seq_len(n)]; yn <- yn_all[seq_len(n)]
+    ok <- !is.nan(tn) & !is.nan(yn)
+    per <- setNames(lapply(stat_keys, function(k) rep(NaN, length(starts))), stat_keys)
+    for (w in seq_along(starts)) {
+      ws <- starts[w]
+      m <- ok & tn >= ws & tn < ws + window_size
+      tt <- tn[m]; yy <- yn[m]
+      if (length(tt) < 3) next
+      if (identical(model, "logarithmic") && any(!(tt > 0))) next
+      if (identical(model, "exponential") && any(!(yy > 0))) next
+      if (identical(model, "polynomial") && length(tt) <= deg) next
+      if (identical(args$analysis, "fft") && !regrid_uniform(tt, yy)$ok) next
+      s <- .moving_window_stats(tt, yy, args, phase, ws + window_size / 2)
+      for (k in stat_keys) {
+        v <- s[[k]]
+        if (!is.null(v) && length(v) == 1 && is.finite(v)) per[[k]][w] <- v
+      }
+    }
+    per
+  })
+}
+
+# Port of MovingAnalysis.svelte movinganalysis over compute_moving_windows (see the Python
+# port tp_movinganalysis).
 tp_movinganalysis <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
-  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
-  win <- as.numeric(if (is.null(args$windowSize)) 48 else args$windowSize)
-  step <- as.numeric(if (is.null(args$stepSize)) 12 else args$stepSize)
-  label <- if (is.null(args$binLabel)) "center" else args$binLabel
-  analysis <- if (is.null(args$analysis)) "periodogram" else args$analysis
+  win <- if (is.null(args$windowSize)) NaN else .js_number(args$windowSize)
+  step <- if (is.null(args$stepSize)) NaN else .js_number(args$stepSize)
+  if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins) ||
+      !isTRUE(win > 0) || !isTRUE(step > 0)) return(FALSE)
   x_col <- env$cols[[as.character(x_in)]]
-  t_full <- t_for_col(x_col, env$cols, env$raw_data)
-  pick <- function(a, b, d) if (!is.null(args[[a]])) args[[a]]
-                            else if (!is.null(args[[b]])) args[[b]] else d
-
-  movex <- NULL; any_valid <- FALSE
-  for (y_id in y_ins) {
-    yk <- as.character(y_id)
-    if (is.null(env$cols[[yk]])) next
-    ya <- suppressWarnings(as.numeric(unlist(col_data(env$cols[[yk]], env$cols, env$raw_data),
-                                             use.names = FALSE)))
-    n0 <- min(length(t_full), length(ya))
-    ta <- t_full[seq_len(n0)]; ya <- ya[seq_len(n0)]
-    ok <- is.finite(ta) & is.finite(ya)
-    ta <- ta[ok]; ya <- ya[ok]
-    if (length(ta) < 4) next
-
-    # The 1e-9 slack decides whether a window ending exactly at the last sample is emitted;
-    # without it floating-point drift drops the final window on tidy inputs.
-    starts <- seq(min(ta), max(ta) - win + 1e-9, by = step)
-    if (!length(starts) || is.na(starts[1])) next
-    per_stat <- list(); x_labels <- c(); window_stats <- list()
-
-    for (s in starts) {
-      e <- s + win
-      # Half-open [s, e): a sample on the boundary belongs to exactly one window.
-      m <- ta >= s & ta < e
-      tw <- ta[m]; yw <- ya[m]
-      if (length(tw) < 4) next
-      x_labels <- c(x_labels, switch(label, start = s, end = e, (s + e) / 2))
-      stats <- list()
-
-      if (identical(analysis, "periodogram")) {
-        pg <- run_periodogram_calculation(list(
-          t = tw, y = yw,
-          method = pick("pgMethod", "method", "Lomb-Scargle"),
-          minPeriod = pick("periodMin", "minPeriod", 1),
-          maxPeriod = pick("periodMax", "maxPeriod", win),
-          stepSize = pick("periodStep", "stepPg", 0.1),
-          # JS movinganalysis.js passes binSize = pgBinSize ?? 0.25 and
-          # chiSquaredAlpha = pgAlpha ?? 0.05; without them the binned methods
-          # folded at the median sampling interval instead.
-          dt = if (is.null(args$pgBinSize)) 0.25 else as.numeric(args$pgBinSize),
-          alpha = if (is.null(args$pgAlpha)) 0.05 else as.numeric(args$pgAlpha)))
-        # spectralPeakIndex: no positive power is no rhythm (NaN), not the first period.
-        i <- .spectral_peak_index(pg$y)
-        if (i > 0) { stats$peak_period <- pg$x[i]; stats$peak_power <- pg$y[i] }
-      } else if (identical(analysis, "cosinor")) {
-        if (!identical(args$useFixedPeriod, FALSE)) {
-          res <- fit_cosinor_fixed(tw, yw,
-                                   as.numeric(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod),
-                                   as.integer(if (is.null(args$nHarmonics)) 1 else args$nHarmonics))
-          if (!is.null(res)) {
-            stats$mesor <- res$M; stats$r2 <- res$R2
-            stats$rmse <- res$RMSE; stats$pvalue <- res$pF
-            for (h in res$harmonics) {
-              stats[[paste0("H", h$k, "_amplitude")]] <- h$amplitude
-              stats[[paste0("H", h$k, "_acrophase")]] <- h$acrophase_hrs
-            }
-            # rel_amplitude is NaN when the MESOR is ~0: a mean-centred signal has no
-            # meaningful relative amplitude, and +/-Inf would poison every downstream plot.
-            amp1 <- if (length(res$harmonics)) res$harmonics[[1]]$amplitude else NA_real_
-            stats$rel_amplitude <- if (is.finite(res$M) && abs(res$M) > 1e-12 && is.finite(amp1))
-              amp1 / res$M else NA_real_
-          }
-        } else {
-          res <- fit_cosine_curves(tw, yw,
-                                   as.integer(if (is.null(args$Ncurves)) 1 else args$Ncurves))
-          if (!is.null(res)) {
-            stats$r2 <- res$rSquared; stats$rmse <- res$rmse
-            cs <- res$parameters$cosines
-            for (k in seq_along(cs)) {
-              stats[[paste0("C", k, "_period")]] <-
-                if (cs[[k]]$frequency != 0) 1 / cs[[k]]$frequency else Inf
-              stats[[paste0("C", k, "_amplitude")]] <- cs[[k]]$amplitude
-              stats[[paste0("C", k, "_phase")]] <- cs[[k]]$phase
-            }
-          }
-        }
-      } else if (identical(analysis, "npcra")) {
-        npc <- compute_npcra(tw, yw,
-                             as.numeric(if (is.null(args$npcraEpochHours)) 1 else args$npcraEpochHours),
-                             as.numeric(if (is.null(args$npcraPeriod)) 24 else args$npcraPeriod),
-                             as.numeric(if (is.null(args$npcraMWindow)) 10 else args$npcraMWindow),
-                             as.numeric(if (is.null(args$npcraLWindow)) 5 else args$npcraLWindow))
-        if (!is.null(npc)) {
-          for (k in c("IS", "IV", "RA", "L5", "M10", "M10onset")) {
-            stats[[k]] <- if (is.null(npc[[k]])) NA_real_ else npc[[k]]
-          }
-        }
-      } else if (identical(analysis, "fft")) {
-        # A window off the regular grid is skipped (NaN); the peak is the refined fftPeak.
-        for (k in names(fs <- .moving_fft_stats(tw, yw, args))) stats[[k]] <- fs[[k]]
-      } else if (identical(analysis, "correlogram")) {
-        ac <- compute_autocorrelation(
-          tw, yw,
-          min_lag = as.numeric(if (is.null(args$corrMinLag)) 0 else args$corrMinLag),
-          max_lag = if (is.null(args$corrMaxLag)) NULL else args$corrMaxLag)
-        if (length(ac$correlations)) {
-          # Dominant period, not lag 0 (always 1) and not the largest |r|.
-          # See find_autocorrelation_peak.
-          pk <- find_autocorrelation_peak(ac$lags, ac$correlations)
-          if (!is.na(pk$lag)) {
-            stats$peak_lag <- pk$lag; stats$peak_correlation <- pk$correlation
-          }
-        }
-      }
-
-      window_stats[[length(window_stats) + 1]] <- stats
-    }
-    # One row per window for every stat any window produced; a window with nothing for a
-    # stat (refused FFT grid, flat data) is NaN there, as in the JS, not shifted up a row.
-    for (k in unique(unlist(lapply(window_stats, names)))) {
-      per_stat[[k]] <- vapply(window_stats, function(w)
-        if (is.null(w[[k]])) NaN else as.numeric(w[[k]]), numeric(1))
-    }
-
-    if (is.null(movex) && length(x_labels)) {
-      movex <- x_labels
-      set_col(env, env$cols, out_id(args, "movex"), movex,
-              type = if (identical(x_col$type, "time")) "time" else "number")
-    }
-    for (k in names(per_stat)) {
-      oid <- out_id(args, paste0(y_id, "_", k))
-      if (oid != -1) {
-        set_col(env, env$cols, oid, per_stat[[k]], type = "number")
-        any_valid <- TRUE
-      }
-    }
+  is_time <- identical(x_col$type, "time")
+  t_all <- if (is_time) col_hours(x_col, env$cols, env$raw_data)
+           else col_data(x_col, env$cols, env$raw_data)
+  origin <- if (is_time) time_origin_ms(x_col, env$cols, env$raw_data) else NULL
+  vx <- vapply(Filter(function(v) !.js_invalid(v), as.list(t_all)), .js_number, numeric(1))
+  if (length(vx) < 3) return(FALSE)
+  x_min <- min(vx); x_max <- max(vx)
+  if (x_max - x_min < win) return(FALSE)
+  starts <- c(); s <- x_min
+  while (s <= x_max - win + 1e-9) { starts <- c(starts, s); s <- s + step }
+  if (!length(starts)) return(FALSE)
+  lab <- if (is.null(args$binLabel)) "center" else args$binLabel
+  off <- if (lab == "start") 0 else if (lab == "end") win else win / 2
+  bins <- starts + off
+  keys <- moving_stat_keys(args)
+  ids <- Filter(function(y) !is.null(env$cols[[as.character(y)]]), y_ins)
+  if (!length(ids)) return(FALSE)
+  phase <- list(recordStart = x_min, ref = node_phase_reference(args, x_col, env$cols, env$raw_data))
+  per_y <- compute_moving_windows(t_all, lapply(ids, function(y)
+    col_data(env$cols[[as.character(y)]], env$cols, env$raw_data)), starts, win, keys, args, phase)
+  names(per_y) <- as.character(ids)
+  for (pp in args$preProcesses) {
+    nm <- pp$processName
+    if (is.null(nm)) next
+    for (yk in names(per_y)) for (k in keys)
+      per_y[[yk]][[k]] <- run_column_process(tolower(gsub(" ", "", nm)), per_y[[yk]][[k]],
+        if (is.null(pp$processArgs)) list() else pp$processArgs, env$cols, env$raw_data)
   }
-  any_valid
+  mx <- out_id(args, "movex")
+  if (mx != -1) {
+    if (!is.null(origin)) set_col(env, env$cols, mx, origin + bins * 3600000, type = "time")
+    else set_col(env, env$cols, mx, bins, type = "number")
+    if (!is.null(env$cols[[as.character(mx)]])) env$cols[[as.character(mx)]]$bin_width <- win
+    for (yk in names(per_y)) for (k in keys)
+      set_col(env, env$cols, out_id(args, paste0(yk, "_", k)), per_y[[yk]][[k]], type = "number")
+  }
+  TRUE
 }
 
-
-# Rolling-window statistics as flat arrays, one per stat key.
-#
-# Targets the pure windowing rather than tp_movinganalysis, because the JS node's per-stat
-# output COLUMNS are created by its component reconcile and not by its `func` — so the
-# table-process parity path cannot reach them. This is where the windowing and the per-window
-# maths actually live, so checking it checks the thing that could be wrong.
-#
-# Note the window minimum here is 3 samples, NOT the 4 that tp_movinganalysis uses: the two
-# were written against different call sites and the fixtures pin this one. Kept faithful
-# rather than harmonised, since changing it would move the first window.
+# Parity surface mirroring the emitter's movingWindowsAdapter (see the Python port).
 moving_windows <- function(times, values, opts = list()) {
-  window <- as.numeric(if (is.null(opts$windowSize)) 168 else opts$windowSize)
-  step <- as.numeric(if (is.null(opts$stepSize)) 24 else opts$stepSize)
-  analysis <- if (is.null(opts$analysis)) "npcra" else opts$analysis
-  ta <- suppressWarnings(as.numeric(unlist(times, use.names = FALSE)))
-  ya <- suppressWarnings(as.numeric(unlist(values, use.names = FALSE)))
-  n0 <- min(length(ta), length(ya))
-  ta <- ta[seq_len(n0)]; ya <- ya[seq_len(n0)]
-  ok <- is.finite(ta) & is.finite(ya)
-  ta <- ta[ok]; ya <- ya[ok]
-
-  starts <- c(); s <- min(ta); hi <- max(ta)
+  window <- .js_number(if (is.null(opts$windowSize)) 168 else opts$windowSize)
+  step <- .js_number(if (is.null(opts$stepSize)) 24 else opts$stepSize)
+  tt <- vapply(as.list(times), function(v) if (.js_invalid(v)) NaN else .js_number(v), numeric(1))
+  yv <- vapply(as.list(values), function(v) if (.js_invalid(v)) NaN else .js_number(v), numeric(1))
+  valid <- tt[is.finite(tt)]
+  lo <- min(valid); hi <- max(valid)
+  starts <- c(); s <- lo
   while (s <= hi - window + 1e-9) { starts <- c(starts, s); s <- s + step }
-
-  n_h <- as.integer(if (is.null(opts$nHarmonics)) 1 else opts$nHarmonics)
-  keys <- if (identical(analysis, "summary")) {
-    c("mean", "sd", "percentile")
-  } else if (identical(analysis, "npcra")) {
-    c("IS", "IV", "RA", "L5", "M10", "M10onset")
-  } else if (identical(analysis, "cosinor")) {
-    c("mesor", as.vector(rbind(paste0("H", seq_len(n_h), "_amplitude"),
-                               paste0("H", seq_len(n_h), "_acrophase"))),
-      "rel_amplitude", "r2", "rmse", "pvalue")
-  } else if (identical(analysis, "fft")) {
-    c("peak_period", "peak_frequency", "peak_magnitude")
-  } else {
-    stop(sprintf("moving_windows: unsupported analysis '%s'", analysis))
-  }
-
-  out <- setNames(lapply(keys, function(k) numeric(0)), keys)
-  for (st in starts) {
-    m <- ta >= st & ta < st + window
-    tw <- ta[m]; yw <- ya[m]
-    stats <- setNames(as.list(rep(NA_real_, length(keys))), keys)
-    if (length(tw) >= 3) {
-      if (identical(analysis, "summary")) {
-        # R IS the reference here (D13): mean, SAMPLE sd (n-1, matching
-        # DescribeData), and quantile(type = 7) — R's default quantile.
-        pct <- as.numeric(if (is.null(opts$summaryPercentile)) 50 else opts$summaryPercentile)
-        if (!is.finite(pct)) pct <- 50
-        pct <- min(100, max(0, pct))
-        stats$mean <- mean(yw)
-        stats$sd <- sd(yw)
-        stats$percentile <- as.numeric(quantile(yw, pct / 100, type = 7, names = FALSE))
-      } else if (identical(analysis, "npcra")) {
-        npc <- compute_npcra(tw, yw,
-                             as.numeric(if (is.null(opts$npcraEpochHours)) 1 else opts$npcraEpochHours),
-                             as.numeric(if (is.null(opts$npcraPeriod)) 24 else opts$npcraPeriod),
-                             as.numeric(if (is.null(opts$npcraMWindow)) 10 else opts$npcraMWindow),
-                             as.numeric(if (is.null(opts$npcraLWindow)) 5 else opts$npcraLWindow))
-        if (!is.null(npc)) for (k in keys) {
-          stats[[k]] <- if (is.null(npc[[k]])) NA_real_ else as.numeric(npc[[k]])
-        }
-      } else if (identical(analysis, "fft")) {
-        fs <- .moving_fft_stats(tw, yw, opts)
-        for (k in names(fs)) if (is.finite(fs[[k]])) stats[[k]] <- fs[[k]]
-      } else {
-        res <- fit_cosinor_fixed(tw, yw,
-                                 as.numeric(if (is.null(opts$fixedPeriod)) 24 else opts$fixedPeriod),
-                                 n_h)
-        if (!is.null(res)) {
-          stats$mesor <- res$M; stats$r2 <- res$R2
-          stats$rmse <- res$RMSE; stats$pvalue <- res$pF
-          for (h in res$harmonics) {
-            stats[[paste0("H", h$k, "_amplitude")]] <- h$amplitude
-            stats[[paste0("H", h$k, "_acrophase")]] <- h$acrophase_hrs
-          }
-          amp1 <- if (length(res$harmonics)) res$harmonics[[1]]$amplitude else NA_real_
-          stats$rel_amplitude <- if (is.finite(res$M) && abs(res$M) > 1e-12 && is.finite(amp1))
-            amp1 / res$M else NA_real_
-        }
-      }
-    }
-    for (k in keys) out[[k]] <- c(out[[k]], stats[[k]])
-  }
-  out$starts <- starts
-  out
+  keys <- moving_stat_keys(opts)
+  off <- opts$clockOffsetHours
+  phase <- list(recordStart = lo,
+                ref = if (!is.null(off)) list(clock = TRUE, offsetHours = off) else NULL)
+  per <- compute_moving_windows(tt, list(yv), starts, window, keys, opts, phase)[[1]]
+  c(list(starts = starts), per)
 }
 
 # ---------------------------------------------------------------------------
@@ -4670,6 +4940,9 @@ gc_run_selected <- function(groups, chosen, alpha) {
   }
   if (identical(chosen, "anova")) {
     r <- gc_one_way_anova(groups)
+    ph <- if (isTRUE(r$valid) && length(groups) > 2)
+      gc_tukey_kramer_post_hoc(groups, r$msWithin, r$dfWithin, alpha) else list()
+    r$postHoc <- ph
     return(c(list(test = "One-way ANOVA", groupCount = length(groups),
                   nTotal = sum(vapply(groups, function(g) g$n, numeric(1))),
                   groups = list(groups)), r))
@@ -4818,6 +5091,66 @@ enright_periodogram <- function(t, y, opts) {
 # build the call — `argRefs`/`valuesRef` name the inputs and `pyArgs`/`rArgs` supply the rest
 # — so the harness assembles positional arguments the same way for every kernel. Per-kernel
 # adapters would be a second, hand-maintained copy of that contract, and would drift.
+# Studentized range (STAT-10). R's ptukey/qtukey, accurate to about 1e-11 ABSOLUTE in the
+# upper tail (the JS and Python integrate the tail directly, so a p below ~1e-9 agrees only
+# in absolute terms; fixtures carry rTolerance 1e-9).
+studentized_range_sf <- function(q, k, df) {
+  if (!is.finite(k) || k < 2 || !(df > 0) || is.na(q)) return(NaN)
+  if (q <= 0) return(1)
+  if (is.infinite(q)) return(0)
+  ptukey(q, k, df, lower.tail = FALSE)
+}
+studentized_range <- function(v) {
+  v <- as.numeric(unlist(v))
+  list(sf = studentized_range_sf(v[1], v[2], v[3]), quantile = qtukey(v[4], v[2], v[3]))
+}
+
+# GroupComparison.svelte tukeyKramerPostHoc (matching the Python port): q against the
+# studentized range at k non-empty groups and df = N - k, no Holm step.
+gc_tukey_kramer_post_hoc <- function(groups, ms_within, df_within, alpha = 0.05) {
+  if (!is.finite(ms_within) || !is.finite(df_within) || df_within <= 0) return(list())
+  k <- sum(vapply(groups, function(g) g$n > 0, logical(1)))
+  if (k < 2) return(list())
+  qcrit <- qtukey(1 - alpha, k, df_within)
+  out <- list()
+  for (i in seq_along(groups)) for (j in seq_along(groups)) {
+    if (j <= i) next
+    a <- groups[[i]]; b <- groups[[j]]
+    if (a$n == 0 || b$n == 0) next
+    diff <- a$mean - b$mean
+    se <- sqrt((ms_within / 2) * (1 / a$n + 1 / b$n))
+    q <- if (!is.finite(diff)) NaN else if (se == 0) (if (diff == 0) 0 else Inf) else abs(diff) / se
+    pv <- if (is.nan(q)) NaN else if (is.finite(q)) pf(q * q / 2, 1, df_within, lower.tail = FALSE) else 0
+    pa <- if (is.nan(q)) NaN else studentized_range_sf(q, k, df_within)
+    out[[length(out) + 1]] <- list(groupA = a$name, groupB = b$name, diff = diff,
+                                   statistic = q, pValue = pv, pAdjusted = pa,
+                                   ciLow = diff - qcrit * se, ciHigh = diff + qcrit * se,
+                                   significant = isTRUE(pa < alpha))
+  }
+  out
+}
+
+# Parity surface: one-way ANOVA then Tukey-Kramer on groups given as value arrays (g1, g2,
+# ...); the last argument is alpha. Returned column-wise (one vector per field).
+tukey_kramer_of <- function(...) {
+  args <- list(...)
+  alpha <- as.numeric(args[[length(args)]])
+  groups <- lapply(seq_len(length(args) - 1), function(i) {
+    v <- .present_numbers(args[[i]])
+    list(name = paste0("g", i), values = v, n = length(v), mean = gc_mean(v),
+         sd = gc_sample_std(v))
+  })
+  an <- gc_one_way_anova(groups)
+  rows <- if (isTRUE(an$valid)) gc_tukey_kramer_post_hoc(groups, an$msWithin, an$dfWithin, alpha)
+          else list()
+  fields <- c("groupA", "groupB", "diff", "statistic", "pValue", "pAdjusted", "ciLow",
+              "ciHigh", "significant")
+  setNames(lapply(fields, function(f) {
+    v <- lapply(rows, function(r) r[[f]])
+    if (f %in% c("groupA", "groupB")) as.list(unlist(v)) else unlist(v)
+  }), fields)
+}
+
 # Parity surfaces: fft_peak over compute_fft as scalars (NaN for no peak), and the grid.
 fft_peak_of <- function(times, values, freq_step = NULL, period_min = NULL, period_max = NULL) {
   pk <- fft_peak(compute_fft(times, values, freq_step), period_min, period_max)
@@ -4831,6 +5164,8 @@ regrid_uniform_summary <- function(times, values) {
 }
 
 PURE_UTIL_MAP <- list(
+  studentized_range = studentized_range,
+  tukey_kramer_of = tukey_kramer_of,
   seeded_sequence = seeded_sequence,
   lomb_scargle_periodogram = lomb_scargle_periodogram,
   fft_peak_of = fft_peak_of,
@@ -5539,7 +5874,14 @@ col_data <- function(col, cols, raw_data) {
         fmt <- .strptime_from_dayjs(col$time_format)
         p <- NULL
         if (!is.null(fmt)) {
-          p <- suppressWarnings(as.POSIXct(v[ok], tz = "UTC", format = fmt))
+          vv <- v[ok]
+          # R's %z reads only "+0530": strip the colon from a "+05:30" offset and read a
+          # trailing "Z" as "+0000" (STAT-16 zone-qualified imports).
+          if (grepl("%z", fmt, fixed = TRUE)) {
+            vv <- sub("([+-][0-9]{2}):([0-9]{2})$", "\\1\\2", vv, perl = TRUE)
+            vv <- sub("Z$", "+0000", vv, perl = TRUE)
+          }
+          p <- suppressWarnings(as.POSIXct(vv, tz = "UTC", format = fmt))
           # All-NA means the translation was wrong, not that the data is bad; fall back
           # rather than return a column of NA.
           if (all(is.na(p))) p <- NULL
@@ -5953,7 +6295,8 @@ match_template_markers <- function(x_by_period, y_by_period, period_hrs, bin_siz
     above_below <- vapply(data, function(v) {
       if (is.na(v) || (!is.null(cv) && v <= cv)) -1 else 1
     }, numeric(1))
-    best <- find_best_match_index(above_below, template) + js_round((N + M) / 2)
+    # The new state starts at template start + N (onsetUnwrap.js, FIT-6).
+    best <- find_best_match_index(above_below, template) + N
     if (best >= 0 && best < length(xs)) {
       t <- xs[best + 1]
       raw <- t - i * period_hrs

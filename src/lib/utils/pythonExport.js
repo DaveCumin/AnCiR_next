@@ -424,6 +424,8 @@ function dataSectionLines(session, dataAsCsv) {
 	lines.push(embed('TABLE_PROCESSES', tpsClean));
 	lines.push(embed('PLOTS', plots));
 	lines.push(embed('STORED_VALUES', storedValues));
+	// The display zone clock-time phase outputs are reported in (phaseReference 'clock').
+	lines.push(`set_display_timezone(${JSON.stringify(session.appState?.displayTimezone ?? 'utc')})`);
 	return { lines, csvText };
 }
 

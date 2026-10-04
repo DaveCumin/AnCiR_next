@@ -2,6 +2,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { dataEnteringProcess } from '$lib/core/processInput.js';
+	import { parseCellEntry, parseNumberEntry } from '$lib/utils/cellEntry.js';
 
 	export function editvalue(x, args) {
 		const edits = args.edits || [];
@@ -76,12 +77,17 @@
 		}
 	});
 
-	// Ensure values match the column type
+	// Ensure values match the column type. A blank or unreadable value is MISSING (null), never
+	// 0: `Number(v) || 0` used to turn a cleared cell into a real zero as soon as this panel
+	// mounted (STAT-15). Writes only what changes, so an untouched list records no undo step.
 	$effect(() => {
 		if (p.inputCol?.type == 'number' && p.args.edits) {
 			p.args.edits.forEach((edit) => {
-				edit.position = Number(edit.position) || 0;
-				edit.value = Number(edit.value) || 0;
+				const position = Number(edit.position) || 0;
+				if (edit.position !== position) edit.position = position;
+				const parsed = parseNumberEntry(edit.value);
+				const value = parsed.ok ? parsed.value : null;
+				if (edit.value !== value) edit.value = value;
 			});
 		}
 	});
@@ -94,7 +100,8 @@
 		const newEdit = {
 			id: crypto.randomUUID(),
 			position: 1,
-			value: p.inputCol?.type == 'number' ? 0 : ''
+			// Starts as missing (null) until a value is typed, rather than a silent 0.
+			value: p.inputCol?.type == 'time' ? 0 : null
 		};
 
 		p.args.edits = [...p.args.edits, newEdit];
@@ -117,10 +124,30 @@
 				</ControlInput>
 
 				<ControlInput label="value">
-					{#if p.inputCol?.type == 'time' || p.inputCol?.type == 'number'}
+					{#if p.inputCol?.type == 'number'}
+						<!-- Empty means missing (null), not 0; a blank box stays blank. -->
+						<input
+							type="number"
+							step="any"
+							placeholder="missing"
+							value={edit.value ?? ''}
+							oninput={(e) => {
+								// A half-typed entry ("-", "1e") reads as '' with badInput set: not a clear.
+								if (e.currentTarget.validity?.badInput) return;
+								const parsed = parseNumberEntry(e.currentTarget.value);
+								if (parsed.ok) edit.value = parsed.value;
+							}}
+						/>
+					{:else if p.inputCol?.type == 'time'}
 						<NumberWithUnits bind:value={edit.value} />
 					{:else if p.inputCol?.type == 'category'}
-						<input type="text" bind:value={edit.value} />
+						<input
+							type="text"
+							placeholder="missing"
+							value={edit.value ?? ''}
+							oninput={(e) =>
+								(edit.value = parseCellEntry('category', e.currentTarget.value).value)}
+						/>
 					{/if}
 				</ControlInput>
 

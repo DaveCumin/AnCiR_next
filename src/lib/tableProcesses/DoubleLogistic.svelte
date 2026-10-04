@@ -22,6 +22,12 @@
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/doublelogistic.worker-task.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import {
+		fitTimeFrame,
+		applyPhaseReference,
+		PHASE_REFERENCE_START
+	} from '$lib/utils/phaseReference.js';
+	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 
 	const displayName = 'Double Logistic';
@@ -39,6 +45,11 @@
 		// fitted a 111 h "period" (review FIT-1); same defaults as Cosinor.
 		['minPeriod', { val: FREE_PERIOD_DEFAULTS.minPeriod }],
 		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
+		// What hour 0 means for the onset and offset phases (panel, stored values, stats
+		// table): 'start' = hours after the first sample (x = 0 for a numeric x; the
+		// default), 'clock' = hours after local midnight in the display timezone, wrapped
+		// to the fitted period. Review FIT-9; utils/phaseReference.js.
+		['phaseReference', { val: PHASE_REFERENCE_START }],
 		// Permutation test: a model-vs-chance significance test for each y fit.
 		['permuteTest', { val: PERMUTATION_DEFAULTS.permuteTest }],
 		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
@@ -147,23 +158,11 @@
 		const tCol = getColumnById(xIN);
 		const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
 
-		// Output X data
-		let outputXData = null;
-		if (outputXId != -1 && getColumnById(outputXId)) {
-			const outputXCol = getColumnById(outputXId);
-			outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
-			outputXData = outputXData.filter((v) => !isInvalidValue(v));
-		}
-
-		// Origin time for datetime display
-		let originTime_ms = null;
-		if (outputXId != -1) {
-			const col = getColumnById(outputXId);
-			if (col?.type === 'time') originTime_ms = col.getData()[0];
-		}
-		if (originTime_ms == null && tCol.type === 'time') {
-			originTime_ms = tCol.getData()[0];
-		}
+		// Output grid in the fit's hour frame + the origin (minimum valid input time)
+		// that turns hours back into timestamps (review STAT-19; utils/phaseReference.js).
+		const outputXCol = outputXId != -1 ? getColumnById(outputXId) : null;
+		const { outputXData, originTime_ms } = fitTimeFrame(tCol, outputXCol);
+		const phaseRef = resolveNodePhaseReference(argsIN, tCol);
 
 		const y_results = {};
 		let sharedT = null;
@@ -288,6 +287,7 @@
 				outputXData,
 				y_results,
 				originTime_ms,
+				phaseRef,
 				warnings: [
 					...checkFitResultsFinite(fitEntries, 'The double-logistic fit'),
 					...(fixPeriod
@@ -297,6 +297,7 @@
 								...doubleLogisticFitWarnings(fitEntries, 'The free-period double-logistic fit')
 							]),
 					...permWarnings,
+					...(phaseRef.warning ? [phaseRef.warning] : []),
 					...fitSampleWarnings(argsIN)
 				]
 			},
@@ -316,6 +317,8 @@
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
+	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
+	import { appState } from '$lib/core/core.svelte';
 
 	import { migrateRenamedMetricOut } from '$lib/tableProcesses/metricOutputs.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
@@ -428,6 +431,11 @@
 		// the memo survives a remount, an omission here means an edit is ignored.
 		out += '|' + p.args.fixedK1 + '|' + p.args.fixedK2 + '|' + p.args.fixedPeriod;
 		out += '|' + p.args.minPeriod + '|' + p.args.maxPeriod + '|' + p.args.permutationScheme;
+		// Clock-time phases move with the display timezone, so it is an input then.
+		out +=
+			'|' +
+			p.args.phaseReference +
+			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -557,6 +565,12 @@
 		return val.toFixed(decimals);
 	}
 
+	// Onset/offset in the node's phase reference (FIT-9): untouched since first sample;
+	// clock time wraps to the fitted period.
+	const dlPhase = (v, fr) =>
+		v == null ? v : applyPhaseReference(v, dlData?.phaseRef, fr?.parameters?.T ?? 24);
+	let phaseNote = $derived(dlData?.phaseRef?.clock ? 'clock time' : 'h after start');
+
 	function getDlogStatsData() {
 		if (!dlData?.y_results) return { headers: [], rows: [] };
 		const validEntries = Object.entries(dlData.y_results).filter(([, r]) => r.fitResult);
@@ -572,9 +586,9 @@
 			'M',
 			'A',
 			'k1',
-			'onset',
+			dlData.phaseRef?.clock ? 'onset_clock_h' : 'onset',
 			'k2',
-			'offset'
+			dlData.phaseRef?.clock ? 'offset_clock_h' : 'offset'
 		];
 		const rows = validEntries.map(([yId, r]) => {
 			const name = getColumnById(Number(yId))?.name ?? String(yId);
@@ -588,9 +602,9 @@
 				fr.parameters?.M,
 				fr.parameters?.A,
 				fr.parameters?.k1,
-				fr.parameters?.t1,
+				dlPhase(fr.parameters?.t1, fr),
 				fr.parameters?.k2,
-				fr.parameters?.t2
+				dlPhase(fr.parameters?.t2, fr)
 			];
 		});
 		return { headers, rows };
@@ -721,6 +735,14 @@
 		<PermutationSummary entries={permEntries} nodeId={p.id} label="Double logistic" />
 	{/if}
 
+	<div class="control-input-horizontal">
+		<PhaseReferenceSelect
+			bind:value={p.args.phaseReference}
+			xIsTime={xIN_col?.type === 'time'}
+			onchange={getFit}
+		/>
+	</div>
+
 	{#if !hideInputs}
 		<!-- Output X -->
 		<div class="control-input-horizontal">
@@ -760,19 +782,19 @@
 					/>
 				</p>
 				<p>
-					Onset phase: {fmt(fr.onsetPhase)} hrs
+					Onset phase ({phaseNote}): {fmt(dlPhase(fr.onsetPhase, fr))} hrs
 					<StoreValueButton
-						label="Onset phase"
-						getter={() => yResult?.fitResult?.onsetPhase}
+						label={`Onset phase (${phaseNote})`}
+						getter={() => dlPhase(yResult?.fitResult?.onsetPhase, yResult?.fitResult)}
 						defaultName={`dlog_onset_${yName}`}
 						source="Double Logistic"
 					/>
 				</p>
 				<p>
-					Offset phase: {fmt(fr.offsetPhase)} hrs
+					Offset phase ({phaseNote}): {fmt(dlPhase(fr.offsetPhase, fr))} hrs
 					<StoreValueButton
-						label="Offset phase"
-						getter={() => yResult?.fitResult?.offsetPhase}
+						label={`Offset phase (${phaseNote})`}
+						getter={() => dlPhase(yResult?.fitResult?.offsetPhase, yResult?.fitResult)}
 						defaultName={`dlog_offset_${yName}`}
 						source="Double Logistic"
 					/>

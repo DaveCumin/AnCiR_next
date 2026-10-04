@@ -1,16 +1,35 @@
 <script module>
 	import { core, getStoredValue } from '$lib/core/core.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
+	import { isBlankEntry } from '$lib/utils/cellEntry.js';
 
 	/**
-	 * The numeric-data detection every entry path in this node shares: treat the
-	 * column as numeric when nothing is non-numeric AND at least one cell has been
-	 * filled in, so an untouched column stays categorical rather than becoming a
-	 * column of NaN. The three call sites shape their data slightly differently
-	 * afterwards, so only the test is shared.
+	 * What the grid's cells are stored as, for every entry path in this node (typing, paste,
+	 * stored values). The column is numeric when nothing is non-numeric AND at least one cell has
+	 * been filled in, so an untouched column stays categorical. A blank cell (empty, whitespace,
+	 * or the null / NaN a reloaded session holds) is MISSING, stored as null in either type: it
+	 * used to become NaN, or 0 for a whitespace cell since Number(' ') === 0 (STAT-15).
+	 *
+	 * `keepRaw` keeps non-blank category entries as they are instead of as text: the result
+	 * column's stored-value refs substitute real numbers, which should stay numbers.
+	 * @returns {{type: 'number'|'category', values: any[]}}
 	 */
-	function looksNumeric(vals) {
-		return vals.every((v) => v === '' || !isNaN(Number(v))) && vals.some((v) => v !== '');
+	export function enteredColumn(vals, { keepRaw = false } = {}) {
+		const numeric =
+			vals.every((v) => isBlankEntry(v) || Number.isFinite(Number(v))) &&
+			vals.some((v) => !isBlankEntry(v));
+		if (numeric) {
+			return { type: 'number', values: vals.map((v) => (isBlankEntry(v) ? null : Number(v))) };
+		}
+		return {
+			type: 'category',
+			values: vals.map((v) => (isBlankEntry(v) ? null : keepRaw ? v : String(v)))
+		};
+	}
+
+	/** A stored cell as the grid's text buffer shows it: missing is an empty box, not "NaN". */
+	function toEditText(v) {
+		return isBlankEntry(v) ? '' : v;
 	}
 
 	const displayName = 'Enter Data';
@@ -23,7 +42,7 @@
 
 	export function blankcolumn(argsIN) {
 		const count = Math.max(0, Math.floor(Number(argsIN.N)));
-		let result = new Array(count).fill(NaN);
+		let result = new Array(count).fill(null);
 
 		if (argsIN.out.result == null || argsIN.out.result < 0) {
 			// preview only (output column not allocated yet)
@@ -32,7 +51,7 @@
 			const existing = core.rawData.get(argsIN.out.result);
 			if (existing && Array.isArray(existing)) {
 				if (existing.length < count) {
-					result = [...existing, ...new Array(count - existing.length).fill('')];
+					result = [...existing, ...new Array(count - existing.length).fill(null)];
 				} else {
 					result = existing.slice(0, count);
 				}
@@ -128,9 +147,9 @@
 			if (Number(idx) >= count) delete p.args.storedValueRefs[idx];
 		}
 		[result, p.args.valid] = blankcolumn(p.args);
-		editableData = [...result];
+		editableData = result.map(toEditText);
 		// Re-commit so the result column gets the same numeric detection as the
-		// extras (blank cells become NaN for a numeric column, not '').
+		// extras (blank cells are stored as null, the house rule's missing value).
 		commitData();
 		// Keep any extra (pasted) columns the same length as the row count.
 		for (const c of extraCols) {
@@ -146,7 +165,7 @@
 		const outKey = p.args.out.result;
 		if (outKey >= 0 && core.rawData.has(outKey) && core.rawData.get(outKey).length > 0) {
 			result = core.rawData.get(outKey);
-			editableData = [...result];
+			editableData = result.map(toEditText);
 			p.args.valid = true;
 		} else {
 			doBlank();
@@ -188,21 +207,15 @@
 		untrack(() => {
 			const next = {};
 			for (const id of ids) {
-				next[id] =
-					extraData[id] ?? (core.rawData.get(id) ?? []).map((v) => (v == null ? '' : String(v)));
+				next[id] = extraData[id] ?? (core.rawData.get(id) ?? []).map((v) => String(toEditText(v)));
 			}
 			extraData = next;
 		});
 	});
 
 	function commitExtra(colId) {
-		const vals = extraData[colId] ?? [];
-		const numeric = looksNumeric(vals);
-		writeOutputColumn(
-			colId,
-			numeric ? vals.map((v) => (v === '' ? NaN : Number(v))) : vals.map((v) => String(v)),
-			{ type: numeric ? 'number' : 'category', processHash: crypto.randomUUID() }
-		);
+		const { type, values } = enteredColumn(extraData[colId] ?? []);
+		writeOutputColumn(colId, values, { type, processHash: crypto.randomUUID() });
 	}
 
 	function handleExtraInput(colId, i, val) {
@@ -353,16 +366,12 @@
 				}
 			}
 
-			// Note the categorical branch keeps the entered values as-is rather than
+			// keepRaw: the categorical branch keeps the entered values as they are rather than
 			// stringifying them (unlike commitExtra/setColData): a stored-value ref
 			// substitutes a real number into editableData, and that should stay a
 			// number. Preserved deliberately.
-			const numeric = looksNumeric(editableData);
-			writeOutputColumn(
-				p.args.out.result,
-				numeric ? editableData.map((v) => (v === '' ? NaN : Number(v))) : [...editableData],
-				{ type: numeric ? 'number' : 'category', processHash: crypto.randomUUID() }
-			);
+			const { type, values } = enteredColumn(editableData, { keepRaw: true });
+			writeOutputColumn(p.args.out.result, values, { type, processHash: crypto.randomUUID() });
 			result = [...editableData];
 		}
 	}
@@ -479,13 +488,11 @@
 
 	// Write a column's data + type (numeric detection mirrors commitData()).
 	function setColData(colId, values) {
-		const vals = values.map((v) => (v == null ? '' : v));
-		const numeric = looksNumeric(vals);
-		writeOutputColumn(
-			colId,
-			numeric ? vals.map((v) => (v === '' ? NaN : Number(v))) : vals.map((v) => String(v)),
-			{ type: numeric ? 'number' : 'category', processHash: crypto.randomUUID() }
-		);
+		const entered = enteredColumn(values);
+		writeOutputColumn(colId, entered.values, {
+			type: entered.type,
+			processHash: crypto.randomUUID()
+		});
 	}
 
 	// Materialise parsed tabular data as the node's output columns: column 0 reuses

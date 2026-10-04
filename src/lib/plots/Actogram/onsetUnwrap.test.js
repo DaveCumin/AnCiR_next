@@ -290,3 +290,56 @@ describe('assessOnsetFit', () => {
 		expect(called).toBe(false);
 	});
 });
+
+describe('template placement (asymmetric N and M)', () => {
+	// Active from 18:00 to 06:00 every day, 0.25 h bins, 6 days on 24 h rows.
+	// The true onset is 18:00 and the true offset is 06:00 whatever N and M are.
+	function squareWave(binSize = 0.25) {
+		const xByPeriod = {};
+		const yByPeriod = {};
+		for (let t = 0; t < 6 * 24; t += binSize) {
+			const h = t % 24;
+			const p = Math.floor(t / 24);
+			(xByPeriod[p] ||= []).push(t);
+			(yByPeriod[p] ||= []).push(h >= 18 || h < 6 ? 10 : 1);
+		}
+		return { xByPeriod, yByPeriod };
+	}
+	function detect(type, hrsBefore, hrsAfter, binSize = 0.25) {
+		const { xByPeriod, yByPeriod } = squareWave(binSize);
+		const { hours } = matchTemplateMarkers(xByPeriod, yByPeriod, {
+			periodHrs: 24,
+			binSize,
+			hrsBefore,
+			hrsAfter,
+			centile: 50,
+			type
+		});
+		// The last row has no next row to search, so a transition with fewer than
+		// N bins before it in that row can only be partly matched. Check the rows
+		// whose search spans two rows (all but the last).
+		return hours.slice(0, -1).filter(Number.isFinite);
+	}
+	const cases = [
+		[3, 3],
+		[6, 2],
+		[2, 6],
+		[8, 1],
+		[1, 5],
+		[4.5, 2]
+	];
+	for (const [N, M] of cases) {
+		it(`places the onset at 18:00 and the offset at 06:00 with N = ${N} h, M = ${M} h`, () => {
+			const on = detect('onset', N, M);
+			const off = detect('offset', N, M);
+			expect(on.length).toBeGreaterThan(3);
+			expect(off.length).toBeGreaterThan(3);
+			for (const h of on) expect(h).toBe(18);
+			for (const h of off) expect(h).toBe(6);
+		});
+	}
+	it('holds on hourly bins too (N = 5 h, M = 2 h)', () => {
+		for (const h of detect('onset', 5, 2, 1)) expect(h).toBe(18);
+		for (const h of detect('offset', 5, 2, 1)) expect(h).toBe(6);
+	});
+});

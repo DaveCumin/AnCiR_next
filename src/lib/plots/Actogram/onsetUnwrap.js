@@ -133,7 +133,12 @@ export function matchTemplateMarkers(
 		const centileValue = findCentileValue(periodsData, centile);
 		const aboveBelow = periodsData.map((value) => (value <= centileValue || isNaN(value) ? -1 : 1));
 
-		const bestMatchIndex = findBestMatchIndex(aboveBelow, template) + Math.round((N + M) / 2);
+		// The template is N "before" bins (indices 0..N-1) then M "after" bins
+		// (N..N+M-1), so when it starts at bin s the transition is between s+N-1
+		// and s+N, and the first bin of the new state is s+N. Using the template's
+		// midpoint, (N+M)/2, agreed only when N = M and otherwise moved the marker
+		// by (M-N)/2 bins.
+		const bestMatchIndex = findBestMatchIndex(aboveBelow, template) + N;
 
 		if (bestMatchIndex >= 0 && bestMatchIndex < xData.length) {
 			const t = xData[bestMatchIndex];

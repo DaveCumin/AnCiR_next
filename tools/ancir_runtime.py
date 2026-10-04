@@ -2908,7 +2908,77 @@ def tp_duplicate(args, cols, raw_data, _sv):
 
 # --- Cosinor ---
 
+_COSINOR_METRIC_KEYS = ('period', 'mesor', 'amplitude', 'amplitude_ciLow', 'amplitude_ciHigh',
+                        'acrophase_ciLow', 'acrophase_ciHigh', 'acrophase', 'rsquared',
+                        'pvalue', 'perm_pvalue', 'bathyphase', 'phase_angle', 'amplitude_h1',
+                        'acrophase_h1', 'bathyphase_h1')
+
+
+def cosinor_metrics(fixed_res, free_res, args, phase_ref):
+    """Cosinor.svelte cosinorMetrics: every scalar metric of one y series, in the node's
+    phase reference. With a fixed period and nHarmonics > 1, amplitude / acrophase /
+    bathyphase are the OVERALL waveform's (multi_component_waveform; phase_angle from its
+    orthophase) and the *_h1 keys harmonic 1's; otherwise both families are harmonic 1
+    (free period: curve 1). perm_pvalue is NaN (the permutation test is not ported)."""
+    use_fixed = bool(args.get('useFixedPeriod', False))
+    fixed_period = args.get('fixedPeriod', 24)
+    reference_hrs = args.get('referenceHrs', 0)
+    nan = _NAN
+    period = mesor = amplitude = rsq = acrophase = nan
+    overall = None
+    h1 = None
+    if use_fixed and fixed_res is not None:
+        period = float(fixed_period)
+        mesor = fixed_res.get('M', nan)
+        hs = fixed_res.get('harmonics') or []
+        h1 = hs[0] if hs else None
+        amplitude = h1['amplitude'] if h1 else nan
+        acrophase = h1['acrophase_hrs'] if h1 else nan
+        rsq = fixed_res.get('R2', nan)
+        if len(hs) > 1:
+            overall = multi_component_waveform(mesor, hs, period)
+    elif free_res is not None:
+        cs = free_res['parameters'].get('cosines') or []
+        c = cs[0] if cs else None
+        w = c['frequency'] if c else 0  # cycles per unit in this port
+        period = (1.0 / w) if w else nan
+        mesor = free_res['parameters'].get('O', nan)
+        amplitude = c['amplitude'] if c else nan
+        if c and w:
+            acrophase = -c['phase'] / (2 * math.pi * w)
+        rsq = free_res.get('rSquared', nan)
+
+    def ref(h):
+        return apply_phase_reference(h, phase_ref, period)
+    acro_h1 = ref(wrap_to_period(acrophase, period))
+    bathy_h1 = ref(bathyphase(acrophase, period))
+    peak = overall['orthophase'] if overall else acrophase
+    peak_ref = peak + phase_ref['offsetHours'] if (phase_ref and phase_ref.get('clock')) \
+        else peak
+    ci_a = (h1 or {}).get('CI_A') if use_fixed else None
+    ci_p = (h1 or {}).get('CI_acrophase') if use_fixed else None
+    return {
+        'period': period, 'mesor': mesor,
+        'amplitude': overall['amplitude'] if overall else amplitude,
+        'acrophase': ref(overall['orthophase']) if overall else acro_h1,
+        'bathyphase': ref(overall['bathyphase']) if overall else bathy_h1,
+        'phase_angle': phase_angle_of_entrainment(peak_ref, reference_hrs, period),
+        'amplitude_h1': amplitude, 'acrophase_h1': acro_h1, 'bathyphase_h1': bathy_h1,
+        'amplitude_ciLow': ci_a[0] if ci_a else nan,
+        'amplitude_ciHigh': ci_a[1] if ci_a else nan,
+        'acrophase_ciLow': ref(wrap_to_period(ci_p[0], period)) if ci_p else nan,
+        'acrophase_ciHigh': ref(wrap_to_period(ci_p[1], period)) if ci_p else nan,
+        'rsquared': rsq,
+        'pvalue': (fixed_res or {}).get('pF', nan) if use_fixed else nan,
+        'perm_pvalue': nan,
+    }
+
+
 def tp_cosinor(args, cols, raw_data, _sv):
+    """Port of Cosinor.svelte cosinor + writeCosinorOutputs. The output x is the input's
+    hour frame turned back into timestamps from its MINIMUM valid time (fit_time_frame,
+    STAT-19); every scalar metric comes from cosinor_metrics (phase reference FIT-9,
+    multi-harmonic overall waveform FIT-13)."""
     x_in = args.get('xIN', -1)
     y_ins = _id_list(args.get('yIN'))
     if x_in == -1 or x_in not in cols or not y_ins:
@@ -2924,119 +2994,44 @@ def tp_cosinor(args, cols, raw_data, _sv):
     output_x_id = args.get('outputX', -1)
     x_col = cols[x_in]
     t = _t_for_col(x_col)
+    out_col = cols.get(output_x_id) if (output_x_id is not None and output_x_id != -1) else None
+    origin_ms, output_x_data = fit_time_frame(x_col, out_col)
+    phase_ref = node_phase_reference(args, x_col)
 
-    output_x_data = None
-    if output_x_id != -1 and output_x_id in cols:
-        oxc = cols[output_x_id]
-        output_x_data = _t_for_col(oxc)
-        output_x_data = [v for v in output_x_data
-                         if v is not None and not (isinstance(v, float) and math.isnan(v))]
-    origin_ms = None
-    if output_x_id != -1 and output_x_id in cols and cols[output_x_id].type == 'time':
-        d = cols[output_x_id].get_data()
-        origin_ms = d[0] if d else None
-    if origin_ms is None and x_col.type == 'time':
-        d = x_col.get_data()
-        origin_ms = d[0] if d else None
-
-    reference_hrs = args.get('referenceHrs', 0)
-    # Cheap add-on metrics derived from the fitted acrophase (one value per y
-    # input, in yIN order), mirroring Cosinor.svelte writeCosinorOutputs. The
-    # peak-time acrophase = wrap(-phi/omega); bathyphase = peak + half-period,
-    # phase_angle = acrophase relative to referenceHrs. NaN for skipped y.
-    bathy_by_y = {}
-    phase_by_y = {}
-    # Classical cosinor parameters exposed as scalar metric ports: MESOR
-    # (rhythm-adjusted mean) and acrophase (peak time, wrapped into [0, period)).
-    mesor_by_y = {}
-    acro_by_y = {}
-    # Declared metric ports that had no writer until 2026-07-28. A session wiring any of
-    # these downstream got an EMPTY column from the export — and these are the headline
-    # numbers of a cosinor, not incidental extras. Found by seeding every declared output
-    # and checking which came back written, rather than by reading the code.
-    period_by_y = {}
-    amp_by_y = {}
-    amp_lo_by_y = {}
-    amp_hi_by_y = {}
-    acro_lo_by_y = {}
-    acro_hi_by_y = {}
-    r2_by_y = {}
-    pval_by_y = {}
-
+    metrics_by_y = {}
     any_valid = False
     first_x_out = None
     for y_id in y_ins:
         if y_id not in cols:
             continue
         y = cols[y_id].get_data()
-        valid = [i for i, (ti, yi) in enumerate(zip(t, y))
-                 if ti is not None and yi is not None
-                 and not (isinstance(ti, float) and math.isnan(ti))
-                 and not (isinstance(yi, float) and math.isnan(yi))]
-        tt = [t[i] for i in valid]
-        yy = [y[i] for i in valid]
+        idx = _js_valid_pairs(t, y)
+        tt = [_js_number(t[i]) for i in idx]
+        yy = [_js_number(y[i]) for i in idx]
         if not tt:
             continue
+        fixed_res = free_res = None
         if use_fixed:
-            res = fit_cosinor_fixed(tt, yy, fixed_period, n_h, alpha)
-            if res is None:
+            fixed_res = fit_cosinor_fixed(tt, yy, fixed_period, n_h, alpha)
+            if fixed_res is None:
                 continue
-            xs = output_x_data if output_x_data else tt
-            ys = (evaluate_cosinor_at_points(
-                {**res, 'period': fixed_period}, xs)
-                  if output_x_data else res['fitted'])
-            # acrophase_hrs is already the time of peak (the one convention).
-            acrophase = (res['harmonics'][0]['acrophase_hrs'] if res.get('harmonics')
-                         else float('nan'))
-            period_used = fixed_period
-            mesor = res.get('M', float('nan'))
-            h0 = res['harmonics'][0] if res.get('harmonics') else {}
-            amp_by_y[y_id] = h0.get('amplitude', float('nan'))
-            ci_a = h0.get('CI_A') or [float('nan'), float('nan')]
-            amp_lo_by_y[y_id], amp_hi_by_y[y_id] = ci_a[0], ci_a[1]
-            # The peak-time CI is unwrapped around the estimate; each end is wrapped
-            # onto the clock for the port, as in Cosinor.svelte.
-            ci_p = h0.get('CI_acrophase') or [float('nan'), float('nan')]
-            acro_lo_by_y[y_id] = wrap_to_period(ci_p[0], fixed_period)
-            acro_hi_by_y[y_id] = wrap_to_period(ci_p[1], fixed_period)
-            r2_by_y[y_id] = res.get('R2', float('nan'))
-            pval_by_y[y_id] = res.get('pF', float('nan'))
+            xs = output_x_data if output_x_data is not None else tt
+            ys = (evaluate_cosinor_at_points({**fixed_res, 'period': fixed_period}, xs)
+                  if output_x_data is not None else fixed_res['fitted'])
         else:
-            res = fit_cosine_curves(tt, yy, n_curves, period_range)
-            if res is None:
+            free_res = fit_cosine_curves(tt, yy, n_curves, period_range)
+            if free_res is None:
                 continue
-            xs = output_x_data if output_x_data else tt
-            ys = (evaluate_cosinor_at_points(res['parameters'], xs)
-                  if output_x_data else res['fitted'])
-            # Free cosine model B*cos(2*pi*w*t + o): angular omega = 2*pi*w, so
-            # period = 1/w and peak time t_peak = -o/(2*pi*w) (JS uses the same,
-            # expressed with an angular frequency).
-            cosines = res['parameters'].get('cosines', [])
-            c = cosines[0] if cosines else None
-            w = c['frequency'] if c else 0
-            period_used = (1.0 / w) if w else float('nan')
-            acrophase = (-c['phase'] / (2 * math.pi * w)) if (c and w) else float('nan')
-            mesor = res['parameters'].get('O', float('nan'))
-            amp_by_y[y_id] = c['amplitude'] if c else float('nan')
-            # The free multi-cosine fit reports no parameter CIs and no F test, so these
-            # stay NaN rather than being invented. NaN means "not available for this model".
-            amp_lo_by_y[y_id] = amp_hi_by_y[y_id] = float('nan')
-            acro_lo_by_y[y_id] = acro_hi_by_y[y_id] = float('nan')
-            r2_by_y[y_id] = res.get('rSquared', float('nan'))
-            pval_by_y[y_id] = float('nan')
-        period_by_y[y_id] = period_used
-        bathy_by_y[y_id] = bathyphase(acrophase, period_used)
-        phase_by_y[y_id] = phase_angle_of_entrainment(acrophase, reference_hrs, period_used)
-        mesor_by_y[y_id] = mesor
-        acro_by_y[y_id] = wrap_to_period(acrophase, period_used)
+            xs = output_x_data if output_x_data is not None else tt
+            ys = (evaluate_cosinor_at_points(free_res['parameters'], xs)
+                  if output_x_data is not None else free_res['fitted'])
+        metrics_by_y[y_id] = cosinor_metrics(fixed_res, free_res, args, phase_ref)
         if first_x_out is None:
             first_x_out = xs
-            x_out_id = _out_id(args, 'cosinorx')
             x_out_ms = ([origin_ms + h * 3600000 for h in xs]
-                       if origin_ms is not None else xs)
-            x_type = 'time' if origin_ms is not None else 'number'
-            _set_col(raw_data, cols, x_out_id, x_out_ms, type_=x_type,
-                     time_format=None)
+                        if origin_ms is not None else xs)
+            _set_col(raw_data, cols, _out_id(args, 'cosinorx'), x_out_ms,
+                     type_='time' if origin_ms is not None else 'number', time_format=None)
         y_out_id = _out_id(args, f'cosinory_{y_id}')
         if y_out_id == -1:
             y_out_id = _out_id(args, 'cosinory')
@@ -3044,28 +3039,10 @@ def tp_cosinor(args, cols, raw_data, _sv):
         any_valid = True
 
     if any_valid:
-        nan = float('nan')
-        bathy_arr = [bathy_by_y.get(y, nan) for y in y_ins]
-        phase_arr = [phase_by_y.get(y, nan) for y in y_ins]
-        mesor_arr = [mesor_by_y.get(y, nan) for y in y_ins]
-        acro_arr = [acro_by_y.get(y, nan) for y in y_ins]
-        _set_col(raw_data, cols, _out_id(args, 'mesor'), mesor_arr, type_='number')
-        _set_col(raw_data, cols, _out_id(args, 'acrophase'), acro_arr, type_='number')
-        _set_col(raw_data, cols, _out_id(args, 'bathyphase'), bathy_arr, type_='number')
-        _set_col(raw_data, cols, _out_id(args, 'phase_angle'), phase_arr, type_='number')
-        for key, src in (('period', period_by_y), ('amplitude', amp_by_y),
-                         ('amplitude_ciLow', amp_lo_by_y), ('amplitude_ciHigh', amp_hi_by_y),
-                         ('acrophase_ciLow', acro_lo_by_y), ('acrophase_ciHigh', acro_hi_by_y),
-                         ('rsquared', r2_by_y), ('pvalue', pval_by_y)):
+        empty = cosinor_metrics(None, None, args, phase_ref)
+        for key in _COSINOR_METRIC_KEYS:
             _set_col(raw_data, cols, _out_id(args, key),
-                     [src.get(y, nan) for y in y_ins], type_='number')
-        # `perm_pvalue` (JS v72.x) carries the optional permutation test's Monte
-        # Carlo p. Same parity boundary as SurrogateTest/DoubleLogistic: its value
-        # depends on the JS's seeded @stdlib PRNG, which this runtime does not
-        # reproduce, so it is NaN here — "not computed", not "not significant".
-        # The analytic F-test p stays on `pvalue`, matched against the JS.
-        _set_col(raw_data, cols, _out_id(args, 'perm_pvalue'),
-                 [nan for _ in y_ins], type_='number')
+                     [metrics_by_y.get(y, empty)[key] for y in y_ins], type_='number')
     return any_valid
 
 
@@ -3268,6 +3245,7 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
         'IS': IS, 'IV': IV, 'RA': RA, 'M10': M10, 'L5': L5,
         'M10onset': m_onset, 'L5onset': l_onset,
         'profile': profile, 'bin_centres': bin_centres, 'n': nn, 'p': p, 'n_epochs': n_epochs,
+        't0': t0,
     }
 
 
@@ -3281,6 +3259,7 @@ def tp_npcra(args, cols, raw_data, _sv):
     m_window = float(args.get('mWindow', 10))
     l_window = float(args.get('lWindow', 5))
     x_data = _t_for_col(cols[x_in])
+    phase_ref = node_phase_reference(args, cols[x_in])
 
     scalar_keys = ['IS', 'IV', 'RA', 'M10', 'L5', 'M10onset', 'L5onset']
     per_y = {}
@@ -3292,6 +3271,15 @@ def tp_npcra(args, cols, raw_data, _sv):
         res = compute_npcra(x_data, cols[y_id].get_data(), epoch, period, m_window, l_window)
         if res is None:
             continue
+        if phase_ref['clock']:
+            # Clock time (FIT-9): onsets and bin times are hours after the series' first
+            # sample t0; add t0 plus the origin's clock hour and wrap to the period.
+            ref = {'clock': True, 'offsetHours': phase_ref['offsetHours'] + res['t0']}
+            res['M10onset'] = apply_phase_reference(res['M10onset'], ref, period)
+            res['L5onset'] = apply_phase_reference(res['L5onset'], ref, period)
+            bt, (res['profile'],) = relabel_folded_profile(res['bin_centres'],
+                                                           [res['profile']], ref, period)
+            res['bin_centres'] = bt
         per_y[y_id] = res
         if bin_centres is None:
             bin_centres = res['bin_centres']
@@ -3996,17 +3984,8 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
     x_col = cols[x_in]
     t = _t_for_col(x_col)
     output_x_id = args.get('outputX', -1)
-    output_x_data = None
-    origin_ms = None
-    if output_x_id != -1 and output_x_id in cols:
-        ox = cols[output_x_id]
-        output_x_data = [_js_number(v) for v in _t_for_col(ox) if not _js_invalid(v)]
-        if ox.type == 'time':
-            d0 = ox.get_data()
-            origin_ms = d0[0] if d0 else None
-    if origin_ms is None and x_col.type == 'time':
-        d0 = x_col.get_data()
-        origin_ms = d0[0] if d0 else None
+    out_col = cols.get(output_x_id) if (output_x_id is not None and output_x_id != -1) else None
+    origin_ms, output_x_data = fit_time_frame(x_col, out_col)
     first_xs = None
     any_valid = False
     stats_by_y = {}
@@ -4619,148 +4598,68 @@ def tp_widetolong(args, cols, raw_data, _sv):
 # --- MovingAnalysis ---
 
 def tp_movinganalysis(args, cols, raw_data, _sv):
+    """Port of MovingAnalysis.svelte movinganalysis over compute_moving_windows (the same
+    core as the moving_windows parity surface): windows from the minimum valid x, s += step
+    while s <= max - size; a skipped window is NaN in every stat; the x output (start, centre
+    or end) is written back from the minimum time for a time x; phases use the record start
+    and the node's phase reference (FIT-9)."""
     x_in = args.get('xIN', -1)
     y_ins = _id_list(args.get('yIN'))
-    if x_in == -1 or x_in not in cols or not y_ins:
+    win = _js_number(args.get('windowSize'))
+    step = _js_number(args.get('stepSize'))
+    if x_in is None or x_in == -1 or x_in not in cols or not y_ins or not (win > 0) \
+            or not (step > 0):
         return False
-    win = float(args.get('windowSize', 48))
-    step = float(args.get('stepSize', 12))
-    label = args.get('binLabel', 'center')
-    analysis = args.get('analysis', 'periodogram')
     x_col = cols[x_in]
-    t_full = _t_for_col(x_col)
-
-    movex = None
-    any_valid = False
-    for y_id in y_ins:
-        if y_id not in cols:
+    is_time = x_col.type == 'time'
+    t_all = _t_for_col(x_col)
+    origin_ms = time_origin_ms(x_col) if is_time else None
+    valid_x = [_js_number(v) for v in t_all if not _js_invalid(v)]
+    if len(valid_x) < 3:
+        return False
+    x_min, x_max = min(valid_x), max(valid_x)
+    if x_max - x_min < win:
+        return False
+    starts = []
+    s_ = x_min
+    while s_ <= x_max - win + 1e-9:
+        starts.append(s_)
+        s_ += step
+    if not starts:
+        return False
+    label = args.get('binLabel') or 'center'
+    off = 0 if label == 'start' else (win if label == 'end' else win / 2)
+    bins = [v + off for v in starts]
+    keys = moving_stat_keys(args)
+    entries = [(y, cols[y].get_data()) for y in y_ins if y is not None and y != -1 and y in cols]
+    if not entries:
+        return False
+    phase = {'recordStart': x_min, 'ref': node_phase_reference(args, x_col)}
+    per_y = compute_moving_windows(t_all, [e[1] for e in entries], starts, win, keys, args,
+                                   phase)
+    results = {e[0]: per_y[i] for i, e in enumerate(entries)}
+    for pp in args.get('preProcesses') or []:
+        name = (pp or {}).get('processName')
+        if not name:
             continue
-        y_col = cols[y_id]
-        ya = np.array([np.nan if v is None else v for v in y_col.get_data()],
-                      dtype=float)
-        ta = np.array([np.nan if v is None else v for v in t_full],
-                      dtype=float)
-        finite = np.isfinite(ta) & np.isfinite(ya)
-        ta, ya = ta[finite], ya[finite]
-        if ta.size < 4:
-            continue
-        starts = np.arange(ta.min(), ta.max() - win + 1e-9, step)
-        per_stat = {}
-        window_stats = []
-        x_labels = []
-        for s in starts:
-            e = s + win
-            mask = (ta >= s) & (ta < e)
-            tw, yw = ta[mask], ya[mask]
-            if tw.size < 4:
-                continue
-            x_labels.append({'start': s, 'end': e, 'center': (s + e) / 2}[label])
-            stats = {}
-            if analysis == 'periodogram':
-                pg = run_periodogram_calculation({
-                    't': tw.tolist(), 'y': yw.tolist(),
-                    'method': args.get('pgMethod', args.get('method', 'Lomb-Scargle')),
-                    'minPeriod': args.get('periodMin', args.get('minPeriod', 1.0)),
-                    'maxPeriod': args.get('periodMax', args.get('maxPeriod', win)),
-                    'stepSize': args.get('periodStep', args.get('stepPg', 0.1)),
-                    # JS movinganalysis.js passes binSize = pgBinSize ?? 0.25 and
-                    # chiSquaredAlpha = pgAlpha ?? 0.05; without them the binned
-                    # methods folded at the median sampling interval instead.
-                    'dt': args.get('pgBinSize', 0.25),
-                    'alpha': args.get('pgAlpha', 0.05),
-                })
-                # spectralPeakIndex: no positive finite power is no rhythm (NaN), not the
-                # first trial period (ROB-13).
-                idx = _spectral_peak_index(pg['y'])
-                if idx >= 0:
-                    stats['peak_period'] = pg['x'][idx]
-                    stats['peak_power'] = pg['y'][idx]
-            elif analysis == 'cosinor':
-                fixed = args.get('useFixedPeriod', True)
-                if fixed:
-                    res = fit_cosinor_fixed(tw, yw,
-                                            float(args.get('fixedPeriod', 24)),
-                                            int(args.get('nHarmonics', 1)))
-                    if res:
-                        stats['mesor'] = res['M']
-                        stats['r2'] = res['R2']
-                        stats['rmse'] = res['RMSE']
-                        stats['pvalue'] = res['pF']
-                        for h in res['harmonics']:
-                            stats[f"H{h['k']}_amplitude"] = h['amplitude']
-                            stats[f"H{h['k']}_acrophase"] = h['acrophase_hrs']
-                        # rel_amplitude = first-harmonic amplitude / MESOR. NaN when
-                        # the MESOR is ~0 (a mean-centred signal has no meaningful
-                        # relative amplitude) rather than +-inf. Mirrors the JS.
-                        mesor = res['M']
-                        amp1 = res['harmonics'][0]['amplitude'] if res['harmonics'] else float('nan')
-                        stats['rel_amplitude'] = (
-                            amp1 / mesor
-                            if math.isfinite(mesor) and abs(mesor) > 1e-12 and math.isfinite(amp1)
-                            else float('nan')
-                        )
-                else:
-                    res = fit_cosine_curves(tw, yw, int(args.get('Ncurves', 1)))
-                    if res:
-                        stats['r2'] = res['rSquared']
-                        stats['rmse'] = res['rmse']
-                        for k, c in enumerate(res['parameters']['cosines'], 1):
-                            stats[f"C{k}_period"] = (1.0 / c['frequency']
-                                                     if c['frequency'] else float('inf'))
-                            stats[f"C{k}_amplitude"] = c['amplitude']
-                            stats[f"C{k}_phase"] = c['phase']
-            elif analysis == 'npcra':
-                # Nonparametric circadian rhythm analysis per window: IS/IV/RA and
-                # the L5/M10 windows. compute_npcra re-bins onto its own epoch grid
-                # internally, so it takes the window's raw (t, y).
-                npc = compute_npcra(tw.tolist(), yw.tolist(),
-                                    epoch_hours=float(args.get('npcraEpochHours', 1)),
-                                    period=float(args.get('npcraPeriod', 24)),
-                                    m_window=float(args.get('npcraMWindow', 10)),
-                                    l_window=float(args.get('npcraLWindow', 5)))
-                if npc:
-                    for k in ('IS', 'IV', 'RA', 'L5', 'M10', 'M10onset'):
-                        stats[k] = npc.get(k, float('nan'))
-            elif analysis == 'fft':
-                stats.update(_moving_fft_stats(tw.tolist(), yw.tolist(), args))
-            elif analysis == 'correlogram':
-                ac = compute_autocorrelation(
-                    tw, yw,
-                    min_lag=float(args.get('corrMinLag', 0.0)),
-                    max_lag=args.get('corrMaxLag') or None)
-                if ac['correlations']:
-                    # Dominant period, not lag 0 (always 1) and not the largest
-                    # |r|. See find_autocorrelation_peak.
-                    peak_lag, peak_r = find_autocorrelation_peak(
-                        ac['lags'], ac['correlations'])
-                    if not math.isnan(peak_lag):
-                        stats['peak_lag'] = peak_lag
-                        stats['peak_correlation'] = peak_r
-            window_stats.append(stats)
-        # One row per window for every stat any window produced; a window that produced
-        # nothing for a stat (refused FFT grid, flat data) is NaN there, as in the JS,
-        # rather than shifting every later window up a row.
-        for st_ in window_stats:
-            for k in st_:
-                per_stat.setdefault(k, [])
-        for k in per_stat:
-            per_stat[k] = [st_.get(k, float('nan')) for st_ in window_stats]
-        if movex is None and x_labels:
-            movex = x_labels
-            mx_id = _out_id(args, 'movex')
-            x_type = 'time' if x_col.type == 'time' else 'number'
-            _set_col(raw_data, cols, mx_id, movex, type_=x_type)
-            # MovingAnalysis.svelte stamps binWidth = windowSize on its x output (the
-            # actogram draws each window that wide).
-            if mx_id in cols:
-                cols[mx_id].bin_width = win
-        for k, vlist in per_stat.items():
-            out_key = f'{y_id}_{k}'
-            out_id = _out_id(args, out_key)
-            if out_id != -1:
-                _set_col(raw_data, cols, out_id, vlist, type_='number')
-                any_valid = True
-    return any_valid
+        for y in results:
+            for k in keys:
+                results[y][k] = list(run_column_process(name.lower().replace(' ', ''),
+                                                        results[y][k],
+                                                        pp.get('processArgs') or {}, cols))
+    mx_id = _out_id(args, 'movex')
+    if mx_id is not None and mx_id != -1:
+        if origin_ms is not None:
+            _set_col(raw_data, cols, mx_id, [origin_ms + h * 3600000 for h in bins],
+                     type_='time')
+        else:
+            _set_col(raw_data, cols, mx_id, bins, type_='number')
+        if mx_id in cols:
+            cols[mx_id].bin_width = win
+        for y, per in results.items():
+            for k in keys:
+                _set_col(raw_data, cols, _out_id(args, f'{y}_{k}'), per[k], type_='number')
+    return True
 
 
 def _spectral_peak_index(values, candidates=None):
@@ -4834,17 +4733,8 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
         'maxPeriod': args.get('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod']),
     }
     output_x_id = args.get('outputX', -1)
-    output_x_data = None
-    origin_ms = None
-    if output_x_id != -1 and output_x_id in cols:
-        ox = cols[output_x_id]
-        output_x_data = [_js_number(v) for v in _t_for_col(ox) if not _js_invalid(v)]
-        if ox.type == 'time':
-            d0 = ox.get_data()
-            origin_ms = d0[0] if d0 else None
-    if origin_ms is None and x_col.type == 'time':
-        d0 = x_col.get_data()
-        origin_ms = d0[0] if d0 else None
+    out_col = cols.get(output_x_id) if (output_x_id is not None and output_x_id != -1) else None
+    origin_ms, output_x_data = fit_time_frame(x_col, out_col)
     first_xs = None
     any_valid = False
     stats_by_y = {}
@@ -5067,10 +4957,7 @@ def tp_smootheddata(args, cols, raw_data, _sv):
     x_col = cols[x_in]
     is_time = x_col.type == 'time'
     x_data = _t_for_col(x_col)
-    origin_ms = None
-    if is_time:
-        d = x_col.get_data()
-        origin_ms = d[0] if d else None
+    origin_ms = time_origin_ms(x_col) if is_time else None
     options = {k: args.get(k) for k in (
         'whittakerLambda', 'whittakerOrder', 'savitzkyWindowSize', 'savitzkyPolyOrder',
         'loessBandwidth', 'movingAvgWindowSize', 'movingAvgType')}
@@ -5279,25 +5166,31 @@ def tp_trendfit(args, cols, raw_data, _sv):
     x_col = cols[x_in]
     t = _t_for_col(x_col)
     output_x_id = args.get('outputX', -1)
-    output_x_data = None
-    if output_x_id != -1 and output_x_id in cols:
-        output_x_data = _t_for_col(cols[output_x_id])
+    out_col = cols.get(output_x_id) if (output_x_id is not None and output_x_id != -1) else None
+    # The output grid in the fit's hour frame and the origin (the input's minimum valid
+    # time) that turns it back into timestamps (fit_time_frame, STAT-19).
+    origin_ms, output_x_data = fit_time_frame(x_col, out_col)
     xs = None
     any_valid = False
     stats_by_y = {}
     for y_id in y_ins:
         if y_id not in cols:
             continue
-        res = fit_trend(t, cols[y_id].get_data(), model, deg)
+        y = cols[y_id].get_data()
+        idx = _js_valid_pairs(t, y)
+        tt = [_js_number(t[i]) for i in idx]
+        yy = [_js_number(y[i]) for i in idx]
+        if not tt or _trend_domain_refused(tt, yy, model, deg):
+            continue
+        res = fit_trend(tt, yy, model, deg)
         if res is None:
             continue
         if xs is None:
-            t_arr = np.array([v for v in t if v is not None
-                              and not (isinstance(v, float) and math.isnan(v))],
-                             dtype=float)
-            # JS evaluates the fit at the (finite) input t, not a dense grid.
-            xs = output_x_data if output_x_data else t_arr.tolist()
-            _set_col(raw_data, cols, _out_id(args, 'trendx'), xs, type_='number')
+            # The app evaluates the fit at the first valid y's input t, not a dense grid.
+            xs = output_x_data if output_x_data is not None else tt
+            _set_col(raw_data, cols, _out_id(args, 'trendx'),
+                     [origin_ms + h * 3600000 for h in xs] if origin_ms is not None else xs,
+                     type_='time' if origin_ms is not None else 'number')
         # Fit-quality ports, previously declared but never written.
         stats_by_y[y_id] = res
         ys = evaluate_trend_at_points(res['parameters'], model, xs)
@@ -5615,37 +5508,280 @@ def _gc_one_way_anova(groups):                           # JS oneWayAnova (:296-
             'etaSquared': eta_squared}
 
 
+# --- Studentized range (utils/studentizedRange.js) --------------------------------------
+#
+# The upper tail is integrated DIRECTLY, as the JS does: scipy's studentized_range.sf is
+# 1 - cdf with an absolute tolerance of 1e-11, so it loses tiny p-values. Same adaptive
+# Gauss-Kronrod (7-15) panels, QUADPACK error estimate, panel layout and tolerances, so the
+# port agrees with the app to quadrature precision.
+
+_SR_LN_SQRT_2PI = 0.5 * math.log(2 * math.pi)
+_SR_XGK = (0.9914553711208126, 0.9491079123427585, 0.8648644233597691, 0.7415311855993945,
+           0.5860872354676911, 0.4058451513773972, 0.20778495500789848, 0.0)
+_SR_WGK = (0.022935322010529224, 0.06309209262997856, 0.10479001032225019,
+           0.14065325971552592, 0.1690047266392679, 0.19035057806478542,
+           0.20443294007529889, 0.20948214108472782)
+_SR_WG = (0.1294849661688697, 0.27970539148927664, 0.3818300505051189, 0.4179591836734694)
+
+
+def _sr_half_tail(x):
+    return 0.5 * math.erfc(abs(x) * math.sqrt(0.5))
+
+
+def _sr_gk15(f, a, b):
+    c = 0.5 * (a + b)
+    h = 0.5 * (b - a)
+    fc = f(c)
+    f1, f2 = [0.0] * 7, [0.0] * 7
+    kron = fc * _SR_WGK[7]
+    gauss = fc * _SR_WG[3]
+    for j in range(7):
+        dx = h * _SR_XGK[j]
+        f1[j] = f(c - dx)
+        f2[j] = f(c + dx)
+        s_ = f1[j] + f2[j]
+        kron += _SR_WGK[j] * s_
+        if j % 2 == 1:
+            gauss += _SR_WG[(j - 1) // 2] * s_
+    mean = 0.5 * kron
+    asc = _SR_WGK[7] * abs(fc - mean)
+    for j in range(7):
+        asc += _SR_WGK[j] * (abs(f1[j] - mean) + abs(f2[j] - mean))
+    resasc = asc * abs(h)
+    err = abs((kron - gauss) * h)
+    if resasc != 0 and err != 0:
+        err = resasc * min(1.0, ((200 * err) / resasc) ** 1.5)
+    return kron * h, err
+
+
+def _sr_integrate(f, pts, rel_tol=1e-7, max_panels=400):
+    panels = []
+    for i in range(len(pts) - 1):
+        if pts[i + 1] > pts[i]:
+            v, e = _sr_gk15(f, pts[i], pts[i + 1])
+            panels.append([pts[i], pts[i + 1], v, e])
+    while True:
+        total = err = 0.0
+        worst = 0
+        for i, pn in enumerate(panels):
+            total += pn[2]
+            err += pn[3]
+            if pn[3] > panels[worst][3]:
+                worst = i
+        if err <= rel_tol * abs(total) or err == 0 or len(panels) >= max_panels:
+            return total
+        a_, b_ = panels[worst][0], panels[worst][1]
+        m = 0.5 * (a_ + b_)
+        v1, e1 = _sr_gk15(f, a_, m)
+        v2, e2 = _sr_gk15(f, m, b_)
+        panels[worst:worst + 1] = [[a_, m, v1, e1], [m, b_, v2, e2]]
+
+
+def _sr_range_sf(w, k):
+    """1 - W_k(w): the upper tail of the range of k standard normals."""
+    if not (w > 0):
+        return 1.0
+    mm = k - 2
+
+    def integrand(z):
+        lphi = -0.5 * z * z - _SR_LN_SQRT_2PI
+        if lphi < -745:
+            return 0.0
+        u = z - w
+        hz = _sr_half_tail(z)
+        hu = _sr_half_tail(u)
+        tail = 1 - hu if u >= 0 else hu
+        if tail == 0:
+            return 0.0
+        a_ = 1 - hz if z >= 0 else hz
+        b_ = hu - hz if u >= 0 else (hz - hu if z <= 0 else 1 - hz - hu)
+        sm, ap = 1.0, 1.0
+        for _ in range(mm):
+            ap *= a_
+            sm = sm * b_ + ap
+        return math.exp(lphi) * tail * sm
+    c = w / 2
+    lo = min(-8.5, c - 6.5)
+    hi = max(8.5, c + 6.5)
+    n_p = math.ceil((hi - lo) / 2)
+    pts = [lo + (hi - lo) * i / n_p for i in range(n_p + 1)]
+    return min(1.0, k * _sr_integrate(integrand, pts))
+
+
+def studentized_range_sf(q, k, df):
+    """studentizedRange.js studentizedRangeSf: P(Q > q), k means, df error degrees of
+    freedom (df = inf is the range of k standard normals). Accurate for tiny p."""
+    if not (isinstance(k, (int, float)) and math.isfinite(k)) or k < 2 or not (df > 0) \
+            or q != q:
+        return float('nan')
+    if q <= 0:
+        return 1.0
+    if q == math.inf:
+        return 0.0
+    if df == math.inf:
+        return _sr_range_sf(q, k)
+    nu = float(df)
+    log_c = (nu / 2) * math.log(nu) - math.lgamma(nu / 2) - (nu / 2 - 1) * math.log(2)
+
+    def log_g(s_):
+        return log_c + (nu - 1) * math.log(s_) - (nu * s_ * s_) / 2
+
+    def integrand(s_):
+        if s_ <= 0:
+            return math.exp(log_c) if nu == 1 else 0.0
+        lg = log_g(s_)
+        if lg < -745:
+            return 0.0
+        return math.exp(lg) * _sr_range_sf(q * s_, k)
+    mode = math.sqrt((nu - 1) / nu) if nu > 1 else 0.0
+    sigma = 1 / math.sqrt(2 * nu)
+    log_peak = log_g(mode) if nu > 1 else log_c
+    hi = max(mode, 1) + sigma
+    while log_g(hi) - log_peak > -60:
+        hi += sigma
+    pts = sorted({x for x in (0.0, mode / 4, mode / 2, mode, mode + 2 * sigma,
+                              mode + 5 * sigma, hi) if x <= hi})
+    return min(1.0, max(0.0, _sr_integrate(integrand, pts)))
+
+
+def _sr_brent(f, a, b, fa, fb, xtol):
+    """studentizedRange.js brentRoot, step for step."""
+    c, fc = a, fa
+    d = e = b - a
+    eps = 2.220446049250313e-16
+    for _ in range(100):
+        if fb * fc > 0:
+            c, fc = a, fa
+            d = e = b - a
+        if abs(fc) < abs(fb):
+            a, b, c = b, c, b
+            fa, fb, fc = fb, fc, fb
+        tol = 2 * eps * abs(b) + 0.5 * xtol
+        m = 0.5 * (c - b)
+        if abs(m) <= tol or fb == 0:
+            return b
+        if abs(e) >= tol and abs(fa) > abs(fb):
+            s_ = fb / fa
+            if a == c:
+                p_ = 2 * m * s_
+                q_ = 1 - s_
+            else:
+                qq = fa / fc
+                r_ = fb / fc
+                p_ = s_ * (2 * m * qq * (qq - r_) - (b - a) * (r_ - 1))
+                q_ = (qq - 1) * (r_ - 1) * (s_ - 1)
+            if p_ > 0:
+                q_ = -q_
+            else:
+                p_ = -p_
+            if 2 * p_ < min(3 * m * q_ - abs(tol * q_), abs(e * q_)):
+                e = d
+                d = p_ / q_
+            else:
+                d = m
+                e = d
+        else:
+            d = m
+            e = d
+        a, fa = b, fb
+        b += d if abs(d) > tol else (tol if m > 0 else -tol)
+        fb = f(b)
+    return b
+
+
+_SR_QCACHE = {}
+
+
+def studentized_range_quantile(p, k, df):
+    """studentizedRange.js studentizedRangeQuantile: q with P(Q <= q) = p, solved on the log
+    of the upper tail."""
+    if not (0 < p < 1) or not math.isfinite(k) or k < 2 or not (df > 0):
+        return float('nan')
+    key = (p, k, df)
+    if key in _SR_QCACHE:
+        return _SR_QCACHE[key]
+    log_t = math.log1p(-p)
+
+    def f(q):
+        sf = studentized_range_sf(q, k, df)
+        return (math.log(sf) if sf > 0 else -math.inf) - log_t
+    lo, flo = 0.0, -log_t
+    hi = 4.0
+    fhi = f(hi)
+    res = None
+    while fhi > 0:
+        lo, flo = hi, fhi
+        hi *= 2
+        if hi > 1e6:
+            res = math.inf
+            break
+        fhi = f(hi)
+    if res is None:
+        res = _sr_brent(f, lo, hi, flo, fhi, 1e-13 * hi)
+    if len(_SR_QCACHE) >= 64:
+        _SR_QCACHE.clear()
+    _SR_QCACHE[key] = res
+    return res
+
+
 def _gc_tukey_kramer_post_hoc(groups, ms_within, df_within, alpha=0.05):
-    # JS tukeyKramerPostHoc (:342-365)
-    if not (math.isfinite(ms_within) and math.isfinite(df_within)) or df_within <= 0:
+    """GroupComparison.svelte tukeyKramerPostHoc (STAT-10): Tukey-Kramer, as scipy.stats
+    .tukey_hsd. q = |diff| / sqrt(MSE/2 (1/n_a + 1/n_b)) against the studentized range with
+    k = non-empty groups and df = N - k; pAdjusted is that tail (it already controls the
+    familywise error; no Holm step), pValue the per-comparison F(1, df) tail of q^2/2, and
+    ciLow/ciHigh the simultaneous (1 - alpha) interval diff -/+ qcrit se."""
+    if not (_finite(ms_within) and _finite(df_within)) or df_within <= 0:
         return []
+    k = sum(1 for g in groups if g['n'] > 0)
+    if k < 2:
+        return []
+    q_crit = studentized_range_quantile(1 - alpha, k, df_within)
     pairs = []
     for i in range(len(groups)):
         for j in range(i + 1, len(groups)):
-            a = groups[i]
-            b = groups[j]
+            a, b = groups[i], groups[j]
             if a['n'] == 0 or b['n'] == 0:
                 continue
             diff = a['mean'] - b['mean']
-            se = math.sqrt(ms_within * (1 / a['n'] + 1 / b['n']))
-            if se == 0:
-                t = 0.0 if diff == 0 else float('inf')
-            else:
-                t = diff / se
-            q = abs(t) * math.sqrt(2)
-            # Only a zero-se infinite t (finite, different means) has the limiting p = 0; a
-            # non-finite mean difference gives NaN, which the Holm step ranks last.
+            se = math.sqrt((ms_within / 2) * (1 / a['n'] + 1 / b['n']))
             if not math.isfinite(diff):
-                p_value = float('nan')
+                q = float('nan')
+            elif se == 0:
+                q = 0.0 if diff == 0 else math.inf
             else:
-                p_value = (_gc_p_upper_from_f(t * t, 1, df_within) if math.isfinite(t)
-                           else 0.0)
-            pairs.append({'groupA': a['name'], 'groupB': b['name'],
-                          'diff': diff, 'statistic': q, 'pValue': p_value})
-    adjusted = _gc_holm_adjust(pairs)
-    for p in adjusted:
-        p['significant'] = p['pAdjusted'] < alpha
-    return adjusted
+                q = abs(diff) / se
+            if q != q:
+                pv = pa = float('nan')
+            else:
+                pv = _gc_p_upper_from_f(q * q / 2, 1, df_within) if math.isfinite(q) else 0.0
+                pa = studentized_range_sf(q, k, df_within)
+            half = q_crit * se
+            pairs.append({'groupA': a['name'], 'groupB': b['name'], 'diff': diff,
+                          'statistic': q, 'pValue': pv, 'pAdjusted': pa,
+                          'ciLow': diff - half, 'ciHigh': diff + half,
+                          'significant': pa < alpha})
+    return pairs
+
+
+def studentized_range(v):
+    """Parity surface: v = [q, k, df, p] -> the upper tail at q and the quantile at p."""
+    return {'sf': studentized_range_sf(v[0], v[1], v[2]),
+            'quantile': studentized_range_quantile(v[3], v[1], v[2])}
+
+
+def tukey_kramer_of(*args):
+    """Parity surface: one-way ANOVA then the Tukey-Kramer post hoc on groups given as value
+    arrays (named g1, g2, ...); the last argument is alpha."""
+    *arrays, alpha = args
+    groups = []
+    for i, arr in enumerate(arrays):
+        vals = _gc_present_numbers(arr)
+        groups.append({'name': f'g{i + 1}', 'values': vals, 'n': len(vals),
+                       'mean': _gc_mean(vals), 'sd': _gc_sample_std(vals)})
+    an = _gc_one_way_anova(groups)
+    if not an.get('valid'):
+        return []
+    return _gc_tukey_kramer_post_hoc(groups, an['msWithin'], an['dfWithin'], alpha)
 
 
 def _gc_mann_whitney_two_groups(group_a, group_b):       # JS mannWhitneyTwoGroups (:367-405)
@@ -5894,7 +6030,10 @@ def compute_group_comparison(args, cols):
 def _ff_fit_curve_model(tt, yy, model, args):
     # JS fitFunction.js fitCurveModel + per-model option plumbing (:8-113)
     if model == 'cosinor':
-        use_fixed = args.get('useFixedPeriod', False)
+        # FitFunction.svelte getModelOptions: useFixedPeriod ?? true.
+        use_fixed = args.get('useFixedPeriod', True)
+        if use_fixed is None:
+            use_fixed = True
         if use_fixed:
             fixed_period = float(args.get('fixedPeriod', 24))
             n_harmonics = max(1, int(args.get('nHarmonics', 1)))
@@ -5905,7 +6044,8 @@ def _ff_fit_curve_model(tt, yy, model, args):
             return {'model': 'cosinor', 'mode': 'fixed',
                     'parameters': {'mode': 'fixed', 'period': fixed_period,
                                    'M': res['M'], 'harmonics': res['harmonics']},
-                    'fitted': res['fitted']}
+                    'fixedStats': res, 'fitted': res['fitted'],
+                    'rSquared': res.get('R2', _NAN), 'rmse': res.get('RMSE', _NAN)}
         n_curves = max(1, int(args.get('Ncurves', 1)))
         res = fit_cosine_curves(tt, yy, n_curves, {
             'minPeriod': args.get('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
@@ -5914,7 +6054,8 @@ def _ff_fit_curve_model(tt, yy, model, args):
             return None
         return {'model': 'cosinor', 'mode': 'free',
                 'parameters': {'mode': 'free', **res['parameters']},
-                'fitted': res['fitted']}
+                'fitted': res['fitted'], 'rSquared': res.get('rSquared', _NAN),
+                'rmse': res.get('rmse', _NAN)}
     if model == 'rectangular':
         opts = {
             'fixKappa': args.get('fixKappa', False),
@@ -5934,7 +6075,8 @@ def _ff_fit_curve_model(tt, yy, model, args):
         if res is None:
             return None
         return {'model': 'rectangular', 'parameters': res['parameters'],
-                'fitted': res['fitted']}
+                'fitted': res['fitted'], 'rSquared': res['rSquared'], 'rmse': res['rmse'],
+                'period': res['period'], 'acrophase': res['acrophase']}
     if model == 'doublelogistic':
         periodic = args.get('periodic', True)
         opts = {
@@ -5950,7 +6092,10 @@ def _ff_fit_curve_model(tt, yy, model, args):
         if res is None:
             return None
         return {'model': 'doublelogistic', 'periodic': periodic,
-                'parameters': res['parameters'], 'fitted': res['fitted']}
+                'parameters': res['parameters'], 'fitted': res['fitted'],
+                'rSquared': res['rSquared'], 'rmse': res['rmse'],
+                'onsetPhase': res.get('onsetPhase'), 'offsetPhase': res.get('offsetPhase'),
+                'dutyCycle': res.get('dutyCycle')}
     return None
 
 
@@ -5984,8 +6129,108 @@ def _ff_evaluate_at_points(fit_result, model, t_points):
     return [float('nan')] * len(t_points)
 
 
+def ff_metric_keys(args):
+    """FitFunction.svelte getFitMetricKeys."""
+    shared = ['r2', 'rmse', 'perm_pvalue']
+    model = args.get('model') or 'cosinor'
+    if model == 'cosinor':
+        return shared + ['period', 'mesor', 'amplitude', 'acrophase', 'amplitude_h1',
+                         'acrophase_h1']
+    if model == 'rectangular':
+        return shared + ['period', 'mesor', 'amplitude', 'acrophase', 'duty_cycle', 'kappa']
+    if model == 'doublelogistic':
+        return shared + ['period', 'mesor', 'amplitude', 'onset', 'offset', 'k1', 'k2',
+                         'duty_cycle']
+    return shared
+
+
+def _ff_raw_metric(key, model, fr):
+    """FitFunction.svelte rawFitMetricValue."""
+    nan = _NAN
+    if not fr:
+        return nan
+    if key == 'r2':
+        return fr.get('rSquared', nan)
+    if key == 'rmse':
+        return fr.get('rmse', nan)
+    if key == 'perm_pvalue':
+        return nan  # the permutation test is not ported
+    p_ = fr.get('parameters') or {}
+    if model == 'cosinor':
+        if fr.get('mode') == 'fixed':
+            period = p_.get('period', nan)
+            if key == 'period':
+                return period
+            if key == 'mesor':
+                return (fr.get('fixedStats') or {}).get('M', p_.get('M', nan))
+            hs = (fr.get('fixedStats') or {}).get('harmonics') or []
+            if len(hs) > 1 and key in ('amplitude', 'acrophase'):
+                w = multi_component_waveform((fr.get('fixedStats') or {}).get('M'), hs, period)
+                return w['amplitude'] if key == 'amplitude' else w['orthophase']
+            if key in ('amplitude', 'amplitude_h1'):
+                return hs[0]['amplitude'] if hs else nan
+            if key in ('acrophase', 'acrophase_h1'):
+                return hs[0]['acrophase_hrs'] if hs else nan
+        else:
+            cs = p_.get('cosines') or []
+            c = cs[0] if cs else None
+            w = c['frequency'] if c else 0  # cycles per unit in this port
+            period = 1.0 / w if w else nan
+            if key == 'period':
+                return period
+            if key == 'mesor':
+                return p_.get('O', nan)
+            if key in ('amplitude', 'amplitude_h1'):
+                return c['amplitude'] if c else nan
+            if key in ('acrophase', 'acrophase_h1'):
+                return wrap_to_period(-c['phase'] / (2 * math.pi * w), period) if w else nan
+        return nan
+    if model == 'rectangular':
+        return {'period': fr.get('period', nan), 'acrophase': fr.get('acrophase', nan),
+                'mesor': p_.get('M', nan), 'amplitude': p_.get('A', nan),
+                'duty_cycle': p_.get('dutyCycle', nan),
+                'kappa': p_.get('kappa', nan)}.get(key, nan)
+    if model == 'doublelogistic':
+        def first(*vals):
+            for v in vals:
+                if v is not None:
+                    return v
+            return nan
+        return {'period': first(p_.get('T')), 'mesor': first(p_.get('M')),
+                'amplitude': first(p_.get('A')),
+                'onset': first(fr.get('onsetPhase'), p_.get('t1')),
+                'offset': first(fr.get('offsetPhase'), p_.get('t2')),
+                'k1': first(p_.get('k1')), 'k2': first(p_.get('k2')),
+                'duty_cycle': first(fr.get('dutyCycle'))}.get(key, nan)
+    return nan
+
+
+_FF_PHASE_KEYS = ('acrophase', 'acrophase_h1', 'onset', 'offset')
+
+
+def ff_metric_value(key, model, fr, phase_ref):
+    """FitFunction.svelte fitMetricValue: phase keys expressed in the phase reference, wrapped
+    to the cosinor period, the rectangular wave's period, or the double logistic's T (24 when
+    non-periodic)."""
+    v = _ff_raw_metric(key, model, fr)
+    if not (phase_ref and phase_ref.get('clock')) or key not in _FF_PHASE_KEYS:
+        return v
+    if model == 'cosinor':
+        per = _ff_raw_metric('period', model, fr)
+    elif model == 'rectangular':
+        per = (fr or {}).get('period', _NAN)
+    elif model == 'doublelogistic':
+        T = ((fr or {}).get('parameters') or {}).get('T')
+        per = 24 if T is None else T
+    else:
+        per = _NAN
+    return apply_phase_reference(v, phase_ref, per)
+
+
 def tp_fitfunction(args, cols, raw_data, _sv):
-    # Port of FitFunction.svelte buildFitResult (:131-235)
+    """Port of FitFunction.svelte: the fit, the output curve (output x from the input's
+    minimum time, STAT-19) and the scalar metric ports (phase reference FIT-9; overall
+    multi-harmonic waveform FIT-13)."""
     x_in = args.get('xIN', -1)
     y_ins = _id_list(args.get('yIN'))
     output_x_id = args.get('outputX', -1)
@@ -5997,20 +6242,9 @@ def tp_fitfunction(args, cols, raw_data, _sv):
 
     t_col = cols[x_in]
     t = _t_for_col(t_col)
-
-    output_x_data = None
-    if output_x_id != -1 and output_x_id in cols:
-        ox = _t_for_col(cols[output_x_id])
-        output_x_data = [v for v in ox
-                         if not (v is None or (isinstance(v, float) and math.isnan(v)))]
-
-    origin_ms = None
-    if output_x_id != -1 and output_x_id in cols and cols[output_x_id].type == 'time':
-        d = cols[output_x_id].get_data()
-        origin_ms = d[0] if d else None
-    if origin_ms is None and t_col.type == 'time':
-        d = t_col.get_data()
-        origin_ms = d[0] if d else None
+    out_col = cols.get(output_x_id) if (output_x_id is not None and output_x_id != -1) else None
+    origin_ms, output_x_data = fit_time_frame(t_col, out_col)
+    phase_ref = node_phase_reference(args, t_col)
 
     y_results = {}     # JS result.y_results
     any_valid = False
@@ -6020,18 +6254,16 @@ def tp_fitfunction(args, cols, raw_data, _sv):
         if y_id is None or y_id == -1 or y_id not in cols:
             continue
         y = cols[y_id].get_data()
-        # JS getValidPairs (:99-107)
-        valid_idx = [i for i in range(min(len(t), len(y)))
-                     if not (_isnan(t[i]) or _isnan(y[i]))]
-        tt = [t[i] for i in valid_idx]
-        yy = [y[i] for i in valid_idx]
+        idx = _js_valid_pairs(t, y)
+        tt = [_js_number(t[i]) for i in idx]
+        yy = [_js_number(y[i]) for i in idx]
         if not tt:
             continue
         fit_result = _ff_fit_curve_model(tt, yy, model, args)   # JS computeSingleFit
         if fit_result is None:
             continue
         predicted = (_ff_evaluate_at_points(fit_result, model, output_x_data)
-                     if output_x_data else None)
+                     if output_x_data is not None else None)
         y_out_data = predicted if predicted is not None else fit_result['fitted']
         x_out_data = output_x_data if output_x_data is not None else tt
         y_results[y_id] = {'fitResult': fit_result, 'xOutData': x_out_data,
@@ -6041,23 +6273,23 @@ def tp_fitfunction(args, cols, raw_data, _sv):
         if fit_result.get('fitted'):
             any_valid = True
 
-    # Write output columns (JS :202-232)
     if any_valid and x_out != -1:
-        first_y_id = next(iter(y_results))
-        first = y_results[first_y_id]
+        first = y_results[next(iter(y_results))]
         x_out_data = first['xOutData'] or output_x_data or first['t']
         x_out_ms = ([origin_ms + h * 3600000 for h in x_out_data]
                     if origin_ms is not None else x_out_data)
-        x_type = 'time' if origin_ms is not None else 'number'
-        _set_col(raw_data, cols, x_out, x_out_ms, type_=x_type,
-                 time_format=None if origin_ms is not None else None)
+        _set_col(raw_data, cols, x_out, x_out_ms,
+                 type_='time' if origin_ms is not None else 'number', time_format=None)
         for y_id in y_ins:
-            out_key = f"fity_{y_id}"
-            y_out = _out_id(args, out_key)
+            y_out = _out_id(args, f"fity_{y_id}")
             yr = y_results.get(y_id)
             if y_out is not None and y_out != -1 and yr:
                 _set_col(raw_data, cols, y_out, yr['yOutData'], type_='number')
-
+    if any_valid:
+        for key in ff_metric_keys(args):
+            _set_col(raw_data, cols, _out_id(args, key),
+                     [ff_metric_value(key, model, (y_results.get(y) or {}).get('fitResult'),
+                                      phase_ref) for y in y_ins], type_='number')
     return any_valid
 
 
@@ -6297,7 +6529,7 @@ def compute_average_profile(t, y, period=24.0, n_bins=24):
     src/lib/utils/averageProfile.js averageDailyProfile."""
     n_bins = int(n_bins)
     if not (period > 0) or not (n_bins >= 1):
-        return {'bin_centres': [], 'profile': [], 'sem': [], 'n': []}
+        return {'bin_centres': [], 'profile': [], 'sem': [], 'n': [], 't0': _NAN}
     bin_width = period / n_bins
     bin_centres = [b * bin_width + bin_width / 2 for b in range(n_bins)]
     length = min(len(t), len(y))
@@ -6322,7 +6554,8 @@ def compute_average_profile(t, y, period=24.0, n_bins=24):
     sem = [_NAN] * n_bins
     n = [0] * n_bins
     if not pairs:
-        return {'bin_centres': bin_centres, 'profile': profile, 'sem': sem, 'n': n}
+        return {'bin_centres': bin_centres, 'profile': profile, 'sem': sem, 'n': n,
+                't0': _NAN}
     buckets = [[] for _ in range(n_bins)]
     for (ti, yi) in pairs:
         tod = ((ti - t0) % period + period) % period
@@ -6344,7 +6577,7 @@ def compute_average_profile(t, y, period=24.0, n_bins=24):
             ss = sum((v - m) ** 2 for v in vals)
             variance = ss / (cnt - 1)
             sem[b] = math.sqrt(variance) / math.sqrt(cnt)
-    return {'bin_centres': bin_centres, 'profile': profile, 'sem': sem, 'n': n}
+    return {'bin_centres': bin_centres, 'profile': profile, 'sem': sem, 'n': n, 't0': t0}
 
 
 def tp_averageprofile(args, cols, raw_data, _sv):
@@ -6355,6 +6588,7 @@ def tp_averageprofile(args, cols, raw_data, _sv):
     period = float(args.get('period', 24))
     n_bins = int(args.get('nBins', 24))
     x_data = _t_for_col(cols[x_in])
+    phase_ref = node_phase_reference(args, cols[x_in])
 
     bin_centres = None
     any_valid = False
@@ -6364,6 +6598,13 @@ def tp_averageprofile(args, cols, raw_data, _sv):
         res = compute_average_profile(x_data, cols[y_id].get_data(), period, n_bins)
         if res is None or not res['bin_centres']:
             continue
+        if phase_ref['clock'] and math.isfinite(res['t0']):
+            # Clock time (FIT-9): bin times are hours after the series' first valid sample,
+            # so add t0 plus the origin's clock hour, wrap, and reorder every bin array.
+            ref = {'clock': True, 'offsetHours': phase_ref['offsetHours'] + res['t0']}
+            bt, (res['profile'], res['sem'], res['n']) = relabel_folded_profile(
+                res['bin_centres'], [res['profile'], res['sem'], res['n']], ref, period)
+            res['bin_centres'] = bt
         if bin_centres is None:
             bin_centres = res['bin_centres']
             _set_col(raw_data, cols, _out_id(args, 'avgprofx'), bin_centres, type_='number')
@@ -6695,6 +6936,169 @@ def bathyphase(acrophase_hrs, period_hrs):
             or not (period_hrs > 0):
         return _NAN
     return wrap_to_period(acrophase_hrs + period_hrs / 2, period_hrs)
+
+
+# --- Time origin and phase reference (utils/phaseReference.js) -------------------------
+#
+# The session's display time zone (appState.displayTimezone). The exported scripts set it
+# from the session; clock-time phase outputs are hours after local midnight in it.
+DISPLAY_TIMEZONE = 'utc'
+
+
+def set_display_timezone(zone):
+    """Set the session's display zone (exported scripts call this; works whether the
+    runtime is inlined or imported as ancir_helpers)."""
+    global DISPLAY_TIMEZONE
+    DISPLAY_TIMEZONE = zone or 'utc'
+
+
+PHASE_REFERENCE_START = 'start'
+PHASE_REFERENCE_CLOCK = 'clock'
+_CLOCK_FALLBACK_WARNING = ('Phase reference "Clock time of day" needs a time column as x; '
+                           'phases are reported as hours since the first sample instead.')
+
+
+def _wrap_js(h, period):
+    """cosinorAddons.js wrapToPeriod with JS remainder semantics."""
+    if not (isinstance(h, (int, float)) and math.isfinite(h)) or not (period > 0):
+        return _NAN
+    return math.fmod(math.fmod(h, period) + period, period)
+
+
+def time_origin_ms(col):
+    """phaseReference.js timeOriginMs: a time column's MINIMUM valid timestamp (the
+    baseline hoursSinceStart measures from); None otherwise."""
+    if col is None or col.type != 'time':
+        return None
+    vals = [_js_number(v) for v in (col.get_data() or []) if not _js_invalid(v)]
+    vals = [v for v in vals if math.isfinite(v)]
+    return min(vals) if vals else None
+
+
+def fit_time_frame(t_col, output_x_col=None):
+    """phaseReference.js fitTimeFrame: (origin_ms, output_x_data) for a fit. A time output
+    grid on a time input is put in the INPUT's hour frame ((ms - input min) / 3.6e6) with the
+    input's origin; a numeric output grid is taken as hours in that frame; a time grid on a
+    numeric input keeps its own hours and origin. Invalid grid values are dropped."""
+    in_origin = time_origin_ms(t_col)
+    origin = in_origin
+    out = None
+    if output_x_col is not None:
+        if output_x_col.type == 'time':
+            if in_origin is not None:
+                out = [(_js_number(v) - in_origin) / 3600000
+                       for v in (output_x_col.get_data() or []) if not _js_invalid(v)]
+            else:
+                origin = time_origin_ms(output_x_col)
+                out = [v for v in (output_x_col.hours_since_start or []) if not _js_invalid(v)]
+        else:
+            out = [_js_number(v) for v in (output_x_col.get_data() or [])
+                   if not _js_invalid(v)]
+    return origin, out
+
+
+def clock_hour_of_day(ms, zone='utc'):
+    """phaseReference.js clockHourOfDay: hours after local midnight in `zone`, in [0, 24)."""
+    if ms is None or not math.isfinite(ms):
+        return _NAN
+    import datetime as _dt
+    if not zone or zone in ('utc', 'UTC'):
+        d = _dt.datetime.fromtimestamp(ms / 1000, tz=_dt.timezone.utc)
+    else:
+        from zoneinfo import ZoneInfo
+        d = _dt.datetime.fromtimestamp(ms / 1000, tz=ZoneInfo(zone))
+    msec = int(round(ms)) % 1000
+    return d.hour + d.minute / 60 + d.second / 3600 + msec / 3600000
+
+
+def resolve_phase_reference(reference, origin_ms, zone=None):
+    """phaseReference.js resolvePhaseReference -> {'clock', 'offsetHours', 'warning'}."""
+    if reference != PHASE_REFERENCE_CLOCK:
+        return {'clock': False, 'offsetHours': 0.0, 'warning': None}
+    off = _NAN if origin_ms is None else clock_hour_of_day(
+        origin_ms, DISPLAY_TIMEZONE if zone is None else zone)
+    if not math.isfinite(off):
+        return {'clock': False, 'offsetHours': 0.0, 'warning': _CLOCK_FALLBACK_WARNING}
+    return {'clock': True, 'offsetHours': off, 'warning': None}
+
+
+def node_phase_reference(args, x_col):
+    """phaseReferenceSupport.js resolveNodePhaseReference."""
+    if (args or {}).get('phaseReference') != PHASE_REFERENCE_CLOCK:
+        return resolve_phase_reference(None, None)
+    return resolve_phase_reference(PHASE_REFERENCE_CLOCK, time_origin_ms(x_col))
+
+
+def apply_phase_reference(hrs, ref, period):
+    """phaseReference.js applyPhaseReference: untouched in the default reference; clock time
+    adds the origin's clock hour and wraps to [0, period)."""
+    if not (ref and ref.get('clock')):
+        return hrs
+    if hrs is None or not math.isfinite(hrs):
+        return _NAN
+    return _wrap_js(hrs + ref['offsetHours'], period)
+
+
+def relabel_folded_profile(bin_times, series, ref, period):
+    """phaseReference.js relabelFoldedProfile: shift and wrap the bin times, then reorder the
+    bins (and every parallel array) so the times ascend (stable)."""
+    if not (ref and ref.get('clock')) or bin_times is None:
+        return bin_times, series
+    shifted = [apply_phase_reference(c, ref, period) for c in bin_times]
+    order = sorted(range(len(shifted)), key=lambda i: shifted[i])
+    return ([shifted[i] for i in order],
+            [[arr[i] for i in order] if isinstance(arr, list) else arr for arr in series])
+
+
+def nearest_phase_instant(phase, period, centre):
+    """phaseReference.js nearestPhaseInstant: phase moved by whole periods to within half a
+    period of centre (round = floor(x + 0.5), JS Math.round)."""
+    if not (isinstance(phase, (int, float)) and math.isfinite(phase)) or not (period > 0) \
+            or not math.isfinite(centre):
+        return _NAN
+    return phase + period * math.floor((centre - phase) / period + 0.5)
+
+
+WAVEFORM_GRID_POINTS = 2880
+
+
+def multi_component_waveform(M, harmonics, period):
+    """cosinorAddons.js multiComponentWaveform: the overall waveform of a multi-harmonic
+    cosinor on a 2880-point grid, peak and trough refined by a parabola through three points;
+    amplitude = half the range, orthophase and bathyphase in [0, period)."""
+    nan = {'amplitude': _NAN, 'orthophase': _NAN, 'bathyphase': _NAN, 'max': _NAN,
+           'min': _NAN}
+    if not _finite(M) or not (period > 0) or not harmonics:
+        return nan
+    for h in harmonics:
+        if not all(_finite(h.get(k)) for k in ('k', 'beta', 'gamma')):
+            return nan
+    N = WAVEFORM_GRID_POINTS
+    dt = period / N
+    om = 2 * math.pi / period
+    y = [0.0] * N
+    i_max = i_min = 0
+    for i in range(N):
+        t = i * dt
+        v = M
+        for h in harmonics:
+            v += h['beta'] * math.cos(h['k'] * om * t) + h['gamma'] * math.sin(h['k'] * om * t)
+        y[i] = v
+        if v > y[i_max]:
+            i_max = i
+        if v < y[i_min]:
+            i_min = i
+
+    def refine(i):
+        a, b, c = y[(i - 1 + N) % N], y[i], y[(i + 1) % N]
+        den = a - 2 * b + c
+        d = (0.5 * (a - c)) / den if den != 0 else 0.0
+        off = max(-0.5, min(0.5, d))
+        return _wrap_js((i + off) * dt, period), b - 0.25 * (a - c) * off
+    ht, hv = refine(i_max)
+    lt, lv = refine(i_min)
+    return {'amplitude': (hv - lv) / 2, 'orthophase': ht, 'bathyphase': lt, 'max': hv,
+            'min': lv}
 
 
 def phase_angle_of_entrainment(acrophase_hrs, reference_hrs=0, period_hrs=24):
@@ -8551,107 +8955,279 @@ def cwt_peak_scale_index(values, opts):
     return {"peakScaleIndex": [int(v) for v in power[:, lo:hi].argmax(axis=0)]}
 
 
-def moving_windows(times, values, opts):
-    """Rolling-window statistics, mirroring utils/movinganalysis.js.
+def moving_stat_keys(args):
+    """movinganalysis.js getStatKeys."""
+    an = args.get('analysis')
+    if an == 'periodogram':
+        return ['peak_period', 'peak_power']
+    if an == 'summary':
+        return ['mean', 'sd', 'percentile']
+    if an == 'npcra':
+        return ['IS', 'IV', 'RA', 'L5', 'M10', 'M10onset']
+    if an == 'cosinor':
+        if args.get('useFixedPeriod'):
+            keys = ['mesor']
+            for h in range(1, max(1, int(args.get('nHarmonics') or 1)) + 1):
+                keys += [f'H{h}_amplitude', f'H{h}_acrophase']
+            return keys + ['rel_amplitude', 'r2', 'rmse', 'pvalue']
+        keys = []
+        for c in range(1, max(1, int(args.get('Ncurves') or 1)) + 1):
+            keys += [f'C{c}_period', f'C{c}_amplitude', f'C{c}_phase', f'C{c}_acrophase']
+        return keys + ['r2', 'rmse']
+    if an == 'fft':
+        return ['peak_period', 'peak_frequency', 'peak_magnitude']
+    if an == 'correlogram':
+        return ['peak_lag', 'peak_correlation']
+    if an == 'rectfit':
+        return ['mesor', 'amplitude', 'period', 'acrophase', 'duty_cycle', 'kappa', 'r2', 'rmse']
+    if an == 'doublelogistic':
+        keys = ['mesor', 'amplitude', 'onset', 'offset', 'k1', 'k2']
+        if args.get('dlPeriodic'):
+            keys.append('period')
+        return keys + ['r2', 'rmse']
+    if an == 'trend':
+        model = args.get('trendModel') or 'linear'
+        if model == 'linear':
+            return ['slope', 'intercept', 'r2', 'rmse']
+        if model in ('exponential', 'logarithmic'):
+            return ['a', 'b', 'r2', 'rmse']
+        if model == 'polynomial':
+            deg = max(0, int(math.floor(args.get('trendPolyDegree', 2) or 0)))
+            return [f'c{i}' for i in range(deg + 1)] + ['r2', 'rmse']
+    return []
 
-    Targets the pure windowing function rather than tp_movinganalysis: the JS
-    node's per-stat output COLUMNS are created by its component reconcile, not by
-    its `func`, so the table-process parity path cannot reach them. This is where
-    the windowing and per-window maths actually live.
 
-    Returns {'starts': [...], '<stat>': [...], ...}.
-    """
-    window = float(opts.get('windowSize', 168))
-    step = float(opts.get('stepSize', 24))
-    analysis = opts.get('analysis', 'npcra')
+_FREE_PHASE_FOLD_HOURS = 24
 
-    def _f(v):
-        # House missing-value rule (v72.28): None, NaN and blank/whitespace
-        # strings are MISSING, never zeros. Numeric strings ('1.5') stay valid.
-        if v is None or (isinstance(v, str) and v.strip() == ''):
-            return float('nan')
+
+def _a(args, k, d):
+    v = args.get(k)
+    return d if v is None else v
+
+
+def _moving_window_stats(tt, yy, args, phase=None, centre=_NAN):
+    """movinganalysis.js computeStatsForWindow, including the rolling phase frame (FIT-9):
+    phases read nearest the window centre (free periods), on the record's hour 0, folded onto
+    a fixed period (else 24 h), then put in the node's phase reference."""
+    ref = (phase or {}).get('ref')
+    record_start = (phase or {}).get('recordStart', 0) or 0
+    keys = moving_stat_keys(args)
+    st = {k: _NAN for k in keys}
+    if len(tt) < 3:
+        return st
+    an = args.get('analysis')
+    if an == 'summary':
+        pct = _js_number(_a(args, 'summaryPercentile', 50))
+        st['mean'] = sum(yy) / len(yy)
+        st['sd'] = _gc_sample_std(yy)
+        st['percentile'] = _quantile_type7(yy, (pct if math.isfinite(pct) else 50) / 100)
+        return st
+    if an == 'periodogram':
+        res = run_periodogram_calculation({
+            't': tt, 'y': yy, 'method': _a(args, 'pgMethod', 'Lomb-Scargle'),
+            'minPeriod': args.get('periodMin'), 'maxPeriod': args.get('periodMax'),
+            'stepSize': args.get('periodStep'), 'dt': _a(args, 'pgBinSize', 0.25),
+            'alpha': _a(args, 'pgAlpha', 0.05)})
+        i = _spectral_peak_index(res['y'] or [])
+        if i >= 0:
+            st['peak_period'] = res['x'][i]
+            st['peak_power'] = res['y'][i]
+        return st
+    if an == 'npcra':
+        P = _a(args, 'npcraPeriod', 24)
+        r = compute_npcra(tt, yy, epoch_hours=_a(args, 'npcraEpochHours', 1), period=P,
+                          m_window=_a(args, 'npcraMWindow', 10),
+                          l_window=_a(args, 'npcraLWindow', 5))
+        if not r:
+            return st
+        for k in ('IS', 'IV', 'RA', 'L5', 'M10'):
+            st[k] = r[k]
+        st['M10onset'] = apply_phase_reference(
+            wrap_to_period(r['M10onset'] + r['t0'] - record_start, P), ref, P)
+        return st
+    if an == 'cosinor':
+        if args.get('useFixedPeriod'):
+            per = _a(args, 'fixedPeriod', 24)
+            r = fit_cosinor_fixed(tt, yy, per, max(1, int(_a(args, 'nHarmonics', 1))),
+                                  _a(args, 'alpha', 0.05))
+            if not r:
+                return st
+            st['mesor'] = r['M']
+            for h in r['harmonics']:
+                k = h['k']
+                st[f'H{k}_amplitude'] = h['amplitude']
+                st[f'H{k}_acrophase'] = apply_phase_reference(
+                    wrap_to_period(h['acrophase_hrs'], per / k), ref, per / k)
+            amp1 = r['harmonics'][0]['amplitude'] if r['harmonics'] else _NAN
+            st['rel_amplitude'] = (amp1 / r['M'] if (math.isfinite(r['M'])
+                                   and abs(r['M']) > 1e-12 and math.isfinite(amp1)) else _NAN)
+            st['r2'], st['rmse'], st['pvalue'] = r['R2'], r['RMSE'], r['pF']
+            return st
+        r = fit_cosine_curves(tt, yy, max(1, int(_a(args, 'Ncurves', 1))))
+        if not r or not r['parameters'].get('cosines'):
+            return st
+        for c, cs in enumerate(r['parameters']['cosines'], start=1):
+            w = cs['frequency']  # cycles per unit in this port
+            per = 1 / w if w else _NAN
+            st[f'C{c}_period'] = per
+            st[f'C{c}_amplitude'] = cs['amplitude']
+            st[f'C{c}_phase'] = cs['phase']
+            peak = wrap_to_period(-cs['phase'] / (2 * math.pi * w), per) if per > 0 else _NAN
+            st[f'C{c}_acrophase'] = apply_phase_reference(
+                wrap_to_period(nearest_phase_instant(peak, per, centre), _FREE_PHASE_FOLD_HOURS),
+                ref, _FREE_PHASE_FOLD_HOURS)
+        st['r2'], st['rmse'] = r['rSquared'], r['rmse']
+        return st
+    if an == 'fft':
+        st.update(_moving_fft_stats(tt, yy, args))
+        return st
+    if an == 'correlogram':
+        mn = args.get('corrMinLag')
+        mx = args.get('corrMaxLag')
+        r = compute_autocorrelation(tt, yy, None, mx if (_finite(mx) and mx > 0) else None,
+                                    mn if (_finite(mn) and mn > 0) else 0)
+        if not r['lags']:
+            return st
+        lag, cr = find_autocorrelation_peak(r['lags'], r['correlations'])
+        if not math.isnan(lag):
+            st['peak_lag'], st['peak_correlation'] = lag, cr
+        return st
+    if an == 'rectfit':
+        fixed = bool(args.get('useFixedPeriod'))
+        fp = _a(args, 'fixedPeriod', 24)
         try:
-            return float(v)
-        except (TypeError, ValueError):
-            return float('nan')
+            r = fit_rectangular_wave(tt, yy, {
+                'fixOmega': fixed, 'fixedOmega': 2 * math.pi / fp if fixed else None,
+                'fixKappa': bool(args.get('rwFixKappa')), 'fixedKappa': _a(args, 'rwFixedKappa', 5),
+                'fixDutyCycle': bool(args.get('rwFixDutyCycle')),
+                'fixedDutyCycle': _a(args, 'rwFixedDutyCycle', 0.5)})
+        except ValueError:
+            r = None
+        if not r:
+            return st
+        pr = r['parameters']
+        st['mesor'], st['amplitude'], st['period'] = pr['M'], pr['A'], r['period']
+        fold = fp if fixed else _FREE_PHASE_FOLD_HOURS
+        peak = r['acrophase'] if fixed else wrap_to_period(
+            nearest_phase_instant(r['acrophase'], r['period'], centre), fold)
+        st['acrophase'] = apply_phase_reference(peak, ref, fold)
+        st['duty_cycle'], st['kappa'] = pr['dutyCycle'], pr['kappa']
+        st['r2'], st['rmse'] = r['rSquared'], r['rmse']
+        return st
+    if an == 'doublelogistic':
+        periodic = bool(args.get('dlPeriodic'))
+        r = fit_double_logistic(tt, yy, {
+            'periodic': periodic, 'fixK1': bool(args.get('dlFixK1')),
+            'fixedK1': _a(args, 'dlFixedK1', 0.5), 'fixK2': bool(args.get('dlFixK2')),
+            'fixedK2': _a(args, 'dlFixedK2', 0.5),
+            'fixPeriod': periodic and bool(args.get('useFixedPeriod')),
+            'fixedPeriod': _a(args, 'fixedPeriod', 24)})
+        if not r:
+            return st
+        pr = r['parameters']
+        st['mesor'], st['amplitude'] = pr['M'], pr['A']
+        T = pr.get('T')
+        fold = (_a(args, 'fixedPeriod', 24) if (periodic and args.get('useFixedPeriod'))
+                else _FREE_PHASE_FOLD_HOURS)
 
-    ta = np.array([_f(v) for v in times], dtype=float)
-    ya = np.array([_f(v) for v in values], dtype=float)
-    finite = np.isfinite(ta) & np.isfinite(ya)
-    ta, ya = ta[finite], ya[finite]
+        def dl_phase(tx):
+            inst = nearest_phase_instant(tx, T, centre) if (periodic and T and T > 0) else tx
+            return apply_phase_reference(wrap_to_period(inst, fold), ref, fold)
+        st['onset'], st['offset'] = dl_phase(pr['t1']), dl_phase(pr['t2'])
+        st['k1'], st['k2'] = pr['k1'], pr['k2']
+        if periodic:
+            st['period'] = T
+        st['r2'], st['rmse'] = r['rSquared'], r['rmse']
+        return st
+    if an == 'trend':
+        model = args.get('trendModel') or 'linear'
+        deg = max(0, int(math.floor(_a(args, 'trendPolyDegree', 2))))
+        if model == 'logarithmic' and any(not (v > 0) for v in tt):
+            return st
+        if model == 'exponential' and any(not (v > 0) for v in yy):
+            return st
+        if model == 'polynomial' and len(tt) <= deg:
+            return st
+        try:
+            r = fit_trend(tt, yy, model, deg)
+        except Exception:  # noqa: BLE001
+            return st
+        if not r or not r.get('parameters'):
+            return st
+        pr = r['parameters']
+        if model == 'linear':
+            st['slope'], st['intercept'] = pr['slope'], pr['intercept']
+        elif model in ('exponential', 'logarithmic'):
+            st['a'], st['b'] = pr['a'], pr['b']
+        elif model == 'polynomial':
+            for i, c in enumerate(pr.get('coeffs') or []):
+                st[f'c{i}'] = c
+        st['r2'], st['rmse'] = r['rSquared'], r['rmse']
+        return st
+    return st
 
+
+def compute_moving_windows(t_all, ys, starts, window_size, stat_keys, args, phase=None):
+    """movinganalysis.js computeMovingWindows: per y, per window [start, start + size), the
+    rows with a valid x and y (house rule, Number()); fewer than 3, a trend outside its
+    domain, or an FFT window off its regular grid is NaN; only finite stats are kept. Window
+    centre = start + size / 2 (rolling phases)."""
+    model = (args.get('trendModel') or 'linear') if args.get('analysis') == 'trend' else None
+    deg = max(0, int(math.floor(_a(args, 'trendPolyDegree', 2))))
+    out = []
+    for y_data in ys:
+        per = {k: [_NAN] * len(starts) for k in stat_keys}
+        for w, w_start in enumerate(starts):
+            w_end = w_start + window_size
+            tt, yy = [], []
+            for i in range(min(len(t_all), len(y_data))):
+                if _js_invalid(t_all[i]) or _js_invalid(y_data[i]):
+                    continue
+                tn = _js_number(t_all[i])
+                if w_start <= tn < w_end:
+                    tt.append(tn)
+                    yy.append(_js_number(y_data[i]))
+            if len(tt) < 3:
+                continue
+            if model == 'logarithmic' and any(not (v > 0) for v in tt):
+                continue
+            if model == 'exponential' and any(not (v > 0) for v in yy):
+                continue
+            if model == 'polynomial' and len(tt) <= deg:
+                continue
+            if args.get('analysis') == 'fft' and not regrid_uniform(tt, yy)['ok']:
+                continue
+            s_ = _moving_window_stats(tt, yy, args, phase, w_start + window_size / 2)
+            for k in stat_keys:
+                v = s_.get(k)
+                if _finite(v):
+                    per[k][w] = v
+        out.append(per)
+    return out
+
+
+def moving_windows(times, values, opts):
+    """Parity surface mirroring the emitter's movingWindowsAdapter: starts from the valid
+    times (s += step), one y, the phase frame {recordStart: min valid t, ref: clock with
+    opts['clockOffsetHours'] when given}. Returns {'starts', <stat>: [...]}."""
+    window = _js_number(_a(opts, 'windowSize', 168))
+    step = _js_number(_a(opts, 'stepSize', 24))
+    tt = [_NAN if _js_invalid(v) else _js_number(v) for v in times]
+    yv = [_NAN if _js_invalid(v) else _js_number(v) for v in values]
+    valid = [v for v in tt if math.isfinite(v)]
+    lo, hi = min(valid), max(valid)
     starts = []
-    s = float(ta.min())
-    hi = float(ta.max())
-    while s <= hi - window + 1e-9:
-        starts.append(s)
-        s += step
-
-    if analysis == 'summary':
-        keys = ['mean', 'sd', 'percentile']
-    elif analysis == 'npcra':
-        keys = ['IS', 'IV', 'RA', 'L5', 'M10', 'M10onset']
-    elif analysis == 'cosinor':
-        n_h = int(opts.get('nHarmonics', 1))
-        keys = ['mesor']
-        for h in range(1, n_h + 1):
-            keys += [f'H{h}_amplitude', f'H{h}_acrophase']
-        keys += ['rel_amplitude', 'r2', 'rmse', 'pvalue']
-    elif analysis == 'fft':
-        keys = ['peak_period', 'peak_frequency', 'peak_magnitude']
-    else:
-        raise ValueError(f'moving_windows: unsupported analysis {analysis!r}')
-
-    out = {k: [] for k in keys}
-    for st in starts:
-        mask = (ta >= st) & (ta < st + window)
-        tw, yw = ta[mask], ya[mask]
-        stats = {k: float('nan') for k in keys}
-        if tw.size >= 3:
-            if analysis == 'summary':
-                # numpy IS the reference here (D13): mean, SAMPLE sd (ddof=1,
-                # matching DescribeData), type-7 percentile (method='linear').
-                pct = float(opts.get('summaryPercentile', 50))
-                pct = min(100.0, max(0.0, pct)) if math.isfinite(pct) else 50.0
-                stats['mean'] = float(np.mean(yw))
-                stats['sd'] = float(np.std(yw, ddof=1))
-                stats['percentile'] = float(np.percentile(yw, pct, method='linear'))
-            elif analysis == 'npcra':
-                npc = compute_npcra(tw.tolist(), yw.tolist(),
-                                    epoch_hours=float(opts.get('npcraEpochHours', 1)),
-                                    period=float(opts.get('npcraPeriod', 24)),
-                                    m_window=float(opts.get('npcraMWindow', 10)),
-                                    l_window=float(opts.get('npcraLWindow', 5)))
-                if npc:
-                    for k in keys:
-                        stats[k] = npc.get(k, float('nan'))
-            elif analysis == 'fft':
-                for k, v in _moving_fft_stats(tw.tolist(), yw.tolist(), opts).items():
-                    if _finite(v):
-                        stats[k] = v
-            else:
-                res = fit_cosinor_fixed(tw, yw,
-                                        float(opts.get('fixedPeriod', 24)),
-                                        int(opts.get('nHarmonics', 1)))
-                if res:
-                    stats['mesor'] = res['M']
-                    stats['r2'] = res['R2']
-                    stats['rmse'] = res['RMSE']
-                    stats['pvalue'] = res['pF']
-                    for h in res['harmonics']:
-                        stats[f"H{h['k']}_amplitude"] = h['amplitude']
-                        stats[f"H{h['k']}_acrophase"] = h['acrophase_hrs']
-                    mesor = res['M']
-                    amp1 = res['harmonics'][0]['amplitude'] if res['harmonics'] else float('nan')
-                    stats['rel_amplitude'] = (
-                        amp1 / mesor
-                        if math.isfinite(mesor) and abs(mesor) > 1e-12 and math.isfinite(amp1)
-                        else float('nan')
-                    )
-        for k in keys:
-            out[k].append(stats[k])
-
-    out['starts'] = starts
+    s_ = lo
+    while s_ <= hi - window + 1e-9:
+        starts.append(s_)
+        s_ += step
+    keys = moving_stat_keys(opts)
+    off = opts.get('clockOffsetHours')
+    phase = {'recordStart': lo,
+             'ref': {'clock': True, 'offsetHours': off} if off is not None else None}
+    per = compute_moving_windows(tt, [yv], starts, window, keys, opts, phase)[0]
+    out = {'starts': starts}
+    out.update(per)
     return out
 
 
@@ -8949,7 +9525,9 @@ def match_template_markers(x_by_period, y_by_period, period_hrs, bin_size, hrs_b
         cv = find_centile_value(data, centile)
         # JS: value <= undefined is false, so with no centile every non-NaN value is +1.
         above_below = [-1 if (v != v) or (cv is not None and v <= cv) else 1 for v in data]
-        best = find_best_match_index(above_below, template) + _js_round((N + M) / 2)
+        # The new state starts at template start + N (onsetUnwrap.js, FIT-6); the old
+        # midpoint (N + M) / 2 moved the marker by (M - N) / 2 bins when N != M.
+        best = find_best_match_index(above_below, template) + N
         if 0 <= best < len(xs):
             t = xs[best]
             raw = t - i * period_hrs

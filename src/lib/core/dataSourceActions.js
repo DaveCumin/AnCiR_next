@@ -8,6 +8,8 @@
 // <ImportData bind:this>. Empty-state prompts, the node palette, and canvas
 // file-drop handlers call the exported helpers below.
 
+import { isSessionFileName } from './sessionFiles.js';
+
 const actions = {
 	/** @type {null | (() => void)} */
 	openImport: null,
@@ -55,7 +57,7 @@ export function importDataUrlDirect(url) {
 }
 
 /**
- * Load a dropped `.json` file as a session. The registered handler (+page.svelte) checks the
+ * Load a dropped session file (`.json` or `.ancir`) as a session. The registered handler (+page.svelte) checks the
  * parsed content first: JSON that is not session-shaped goes to the Import modal instead, a real
  * session asks before replacing open work, and a failed load leaves the open session unchanged.
  */
@@ -64,7 +66,6 @@ export function loadSessionFile(file) {
 }
 
 const DATA_FILE_RE = /\.(csv|tsv|txt|xlsx|xls|awd)$/i;
-const SESSION_FILE_RE = /\.json$/i;
 
 /** True if a filename looks like a tabular data file AnCiR can import. */
 export function isImportableDataFile(name) {
@@ -73,7 +74,7 @@ export function isImportableDataFile(name) {
 
 /**
  * Route files dropped onto a canvas: tabular data files open the import modal;
- * a lone `.json` goes to the session loader, which re-routes it to the import
+ * a lone session file (`.json` or `.ancir`) goes to the session loader, which re-routes it to the import
  * modal when its content is not a session. Returns true if anything was handled.
  * @param {FileList | File[]} fileList
  */
@@ -81,7 +82,7 @@ export function handleCanvasFileDrop(fileList) {
 	const files = [...(fileList ?? [])].filter(Boolean);
 	if (files.length === 0) return false;
 	const dataFiles = files.filter((f) => DATA_FILE_RE.test(f.name));
-	const sessionFiles = files.filter((f) => SESSION_FILE_RE.test(f.name));
+	const sessionFiles = files.filter((f) => isSessionFileName(f.name));
 	if (dataFiles.length > 0) {
 		openImportDataFiles(dataFiles);
 		return true;

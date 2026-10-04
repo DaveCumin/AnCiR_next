@@ -17,6 +17,7 @@ import { fitDoubleLogistic } from './doublelogistic.js';
 import { fitTrendSync } from './trendfit.js';
 import { computeNPCRA } from './npcra.js';
 import { wrapToPeriod } from './cosinorAddons.js';
+import { applyPhaseReference, nearestPhaseInstant } from './phaseReference.js';
 // Descriptive per-window stats (analysis === 'summary'). mean/sampleStd are the
 // SAMPLE-denominator family DescribeData uses; quantileType7 is the shared
 // house quantile (R/numpy default) so percentile(50) === median everywhere.
@@ -57,7 +58,9 @@ export function getStatKeys(args) {
 		const keys = [];
 		const N = Math.max(1, args.Ncurves ?? 1);
 		for (let c = 1; c <= N; c++) {
-			keys.push(`C${c}_period`, `C${c}_amplitude`, `C${c}_phase`);
+			// `C<c>_phase` is the model's φ (radians, at t = 0); `C<c>_acrophase` is the
+			// time of the window's peak, folded onto a 24 h day (see ROLLING PHASES below).
+			keys.push(`C${c}_period`, `C${c}_amplitude`, `C${c}_phase`, `C${c}_acrophase`);
 		}
 		keys.push('r2', 'rmse');
 		return keys;
@@ -93,7 +96,26 @@ export function getStatKeys(args) {
 	return [];
 }
 
-function computeStatsForWindow(tt, yy, args) {
+// ROLLING PHASES (review FIT-9). Every phase a window reports is put on ONE frame shared by
+// all windows, so a stable rhythm reads the same number in every window and agrees with the
+// whole-record node:
+//
+//   - the instant is read where the window's data are: an onset or peak inside (or nearest
+//     the centre of) the window, never extrapolated across the record with that window's
+//     slightly-wrong fitted period (a free cosinor's φ at t = 0 drifted 3 h over 480 h);
+//   - it is expressed in hours after the record's hour 0 (the first sample of a time x; x = 0
+//     of a numeric x, as the fit nodes use; NPCRA counts from the first sample, as the
+//     NonparametricRA node does) and folded onto a FIXED period: the fixed period when the
+//     fit uses one (per harmonic: period / k), the NPCRA period for NPCRA, else 24 h;
+//   - the node's phase reference then applies (clock time of day adds the origin's clock hour).
+//
+// `phase` = { recordStart, ref } where recordStart is the smallest valid x and ref the
+// resolved phase reference ({clock, offsetHours}). Absent `phase` = since first sample.
+const FREE_PHASE_FOLD_HOURS = 24;
+
+function computeStatsForWindow(tt, yy, args, phase = null, centre = NaN) {
+	const ref = phase?.ref ?? null;
+	const recordStart = phase?.recordStart ?? 0;
 	const stats = {};
 	const keys = getStatKeys(args);
 	for (const k of keys) stats[k] = NaN;
@@ -147,7 +169,11 @@ function computeStatsForWindow(tt, yy, args) {
 		stats.RA = r.RA;
 		stats.L5 = r.L5;
 		stats.M10 = r.M10;
-		stats.M10onset = r.M10onset;
+		// computeNPCRA measures the onset from the WINDOW's first sample (r.t0), which moved
+		// with every window start (a stable 08:00 onset read [8, 20, 8, 2, 8]). Re-origin on
+		// the record start and fold onto the NPCRA period.
+		const P = args.npcraPeriod ?? 24;
+		stats.M10onset = applyPhaseReference(wrapToPeriod(r.M10onset + r.t0 - recordStart, P), ref, P);
 		return stats;
 	}
 
@@ -171,7 +197,13 @@ function computeStatsForWindow(tt, yy, args) {
 				// wrap(−t_peak) and this path forgot to negate it, reporting a rhythm
 				// peaking at 08:00 as 16:00; caught by the
 				// util-movingwindows-cosinor-relamp parity fixture.)
-				stats[`H${k}_acrophase`] = wrapToPeriod(r.harmonics[h].acrophase_hrs, periodUsed / k);
+				// Already on the record frame (the fit runs in the record's hours) and folded
+				// onto the fixed period / k; the phase reference applies on top.
+				stats[`H${k}_acrophase`] = applyPhaseReference(
+					wrapToPeriod(r.harmonics[h].acrophase_hrs, periodUsed / k),
+					ref,
+					periodUsed / k
+				);
 			}
 			// Guard the ratio: a MESOR at or near zero (a mean-centred or
 			// zero-baseline signal) makes amplitude/MESOR meaningless or infinite.
@@ -198,6 +230,14 @@ function computeStatsForWindow(tt, yy, args) {
 			stats[`C${c + 1}_period`] = period;
 			stats[`C${c + 1}_amplitude`] = cos.amplitude;
 			stats[`C${c + 1}_phase`] = cos.phase;
+			// The peak nearest the window centre (A·cos(ωt + φ) peaks at t = −φ/ω), folded
+			// onto 24 h: a free period has no fixed fold of its own.
+			const peak = period > 0 ? wrapToPeriod(-cos.phase / cos.frequency, period) : NaN;
+			stats[`C${c + 1}_acrophase`] = applyPhaseReference(
+				wrapToPeriod(nearestPhaseInstant(peak, period, centre), FREE_PHASE_FOLD_HOURS),
+				ref,
+				FREE_PHASE_FOLD_HOURS
+			);
 		}
 		stats.r2 = r.rSquared;
 		stats.rmse = r.rmse;
@@ -247,7 +287,13 @@ function computeStatsForWindow(tt, yy, args) {
 		stats.mesor = r.parameters.M;
 		stats.amplitude = r.parameters.A;
 		stats.period = r.period;
-		stats.acrophase = r.acrophase;
+		// Fixed period: rectwave's acrophase is already folded onto it on the record frame.
+		// Free period: read the peak nearest the window centre and fold onto 24 h.
+		const rwFold = args.useFixedPeriod ? (args.fixedPeriod ?? 24) : FREE_PHASE_FOLD_HOURS;
+		const rwPeak = args.useFixedPeriod
+			? r.acrophase
+			: wrapToPeriod(nearestPhaseInstant(r.acrophase, r.period, centre), rwFold);
+		stats.acrophase = applyPhaseReference(rwPeak, ref, rwFold);
 		stats.duty_cycle = r.parameters.dutyCycle;
 		stats.kappa = r.parameters.kappa;
 		stats.r2 = r.rSquared;
@@ -270,8 +316,20 @@ function computeStatsForWindow(tt, yy, args) {
 		if (!r) return stats;
 		stats.mesor = r.parameters.M;
 		stats.amplitude = r.parameters.A;
-		stats.onset = r.parameters.t1;
-		stats.offset = r.parameters.t2;
+		// t1 / t2 are absolute record hours (an onset at 07:50 on day 3 read 55.8). Fold
+		// onto the fixed period when the periodic fit has one, else onto 24 h; a free
+		// periodic fit first moves each to the instance nearest the window centre.
+		const T = r.parameters.T;
+		const dlFold =
+			periodic && args.useFixedPeriod ? (args.fixedPeriod ?? 24) : FREE_PHASE_FOLD_HOURS;
+		const dlPhase = (tx) =>
+			applyPhaseReference(
+				wrapToPeriod(periodic && T > 0 ? nearestPhaseInstant(tx, T, centre) : tx, dlFold),
+				ref,
+				dlFold
+			);
+		stats.onset = dlPhase(r.parameters.t1);
+		stats.offset = dlPhase(r.parameters.t2);
 		stats.k1 = r.parameters.k1;
 		stats.k2 = r.parameters.k2;
 		if (periodic) stats.period = r.parameters.T;
@@ -332,7 +390,7 @@ function computeStatsForWindow(tt, yy, args) {
 // the same windows are skipped, for the same reasons, in the same places
 // (the guards below mirror computeStatsForWindow's own trend guards, which
 // stay in place as the last line of defence for direct callers).
-export function computeMovingWindows({ tAll, ys, starts, windowSize, statKeys, args }) {
+export function computeMovingWindows({ tAll, ys, starts, windowSize, statKeys, args, phase }) {
 	// House rule (isInvalidValue, fixed in v72.28): a blank/whitespace string is
 	// MISSING data, not zero. The old local `v == null || isNaN(v)` let '' through
 	// (isNaN('') is false → Number('') fabricated a 0 into every window's fit).
@@ -393,7 +451,7 @@ export function computeMovingWindows({ tAll, ys, starts, windowSize, statKeys, a
 				skips.fftGap++;
 				continue;
 			}
-			const s = computeStatsForWindow(tt, yy, args);
+			const s = computeStatsForWindow(tt, yy, args, phase, wStart + windowSize / 2);
 			for (const k of statKeys) {
 				if (Number.isFinite(s[k])) perStat[k][w] = s[k];
 			}

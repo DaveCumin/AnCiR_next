@@ -193,6 +193,8 @@ export const R_PURE_UTILS = [
 	'regrid_uniform_summary',
 	'seeded_sequence',
 	'shapiro_wilk',
+	'studentized_range',
+	'tukey_kramer_of',
 	'weighted_circular_mean',
 	'weighted_rayleigh'
 ];

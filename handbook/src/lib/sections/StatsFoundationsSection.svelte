@@ -118,7 +118,11 @@
 				is why it is the sensible default rather than the classical Student version.
 			</li>
 			<li><strong>Mann-Whitney U</strong> &mdash; two groups, rank based.</li>
-			<li><strong>ANOVA</strong> &mdash; three or more groups.</li>
+			<li>
+				<strong>ANOVA</strong> &mdash; three or more groups, with a Tukey-Kramer post-hoc: each pair's
+				p-value and simultaneous confidence interval come from the studentized range, so they already
+				allow for all the pairs being compared.
+			</li>
 			<li><strong>Kruskal-Wallis</strong> &mdash; three or more, rank based.</li>
 		</ul>
 		<p>

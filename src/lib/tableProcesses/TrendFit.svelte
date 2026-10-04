@@ -15,6 +15,7 @@
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import '$lib/utils/trendfit.worker-task.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { fitTimeFrame } from '$lib/utils/phaseReference.js';
 	import { permutationValidityWarnings } from '$lib/tableProcesses/permutationSupport.js';
 
 	const displayName = 'Fit trend';
@@ -246,29 +247,14 @@
 		const tCol = getColumnById(xIN);
 		const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
 
-		// Get outputX data if specified
-		let outputXData = null;
-		if (outputXId != -1 && getColumnById(outputXId)) {
-			const outputXCol = getColumnById(outputXId);
-			outputXData = outputXCol.type === 'time' ? outputXCol.hoursSinceStart : outputXCol.getData();
-			outputXData = outputXData.filter((v) => !isInvalidValue(v));
-		}
+		// Output x type follows input x type: when either column is time-typed the
+		// hour-offset results are anchored to an origin so the output column can be
+		// stored as ms and typed 'time'. The origin is the input's MINIMUM valid time
+		// (the baseline hoursSinceStart measures from) and a time output grid is read
+		// in the input's frame (review STAT-19; utils/phaseReference.js).
+		const outputXCol = outputXId != -1 ? getColumnById(outputXId) : null;
+		const { outputXData, originTime_ms } = fitTimeFrame(tCol, outputXCol);
 		result.outputXData = outputXData;
-
-		// Output x type follows input x type: if either the chosen outputX column
-		// or the input t column is time-typed, anchor the hour-offset results to
-		// that column's first timestamp so the output column can be stored as ms
-		// and typed 'time'. Mirrors the Cosinor / DoubleLogistic pattern.
-		let originTime_ms = null;
-		if (outputXId != -1) {
-			const outputXColForOrigin = getColumnById(outputXId);
-			if (outputXColForOrigin?.type === 'time') {
-				originTime_ms = outputXColForOrigin.getData()[0];
-			}
-		}
-		if (originTime_ms == null && tCol.type === 'time') {
-			originTime_ms = tCol.getData()[0];
-		}
 		result.originTime_ms = originTime_ms;
 
 		for (const yId of yINs) {

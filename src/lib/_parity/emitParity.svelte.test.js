@@ -60,6 +60,9 @@ import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js'
 import { isInvalidValue } from '$lib/utils/stats.js';
 import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 import { createSeededRNG } from '$lib/utils/permutationTest.js';
+import { studentizedRangeSf, studentizedRangeQuantile } from '$lib/utils/studentizedRange.js';
+import { oneWayAnova, tukeyKramerPostHoc } from '$lib/tableProcesses/GroupComparison.svelte';
+import { mean as sampleMean, sampleStd } from '$lib/utils/sampleStats.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
 
@@ -102,6 +105,28 @@ const PLOT_COMPUTE_FNS = { computeFFT, computeAutocorrelation };
 // the fixture's `jsArgs`, and returns either a dict of arrays (compareArrays),
 // an array of objects (compareFields), or a dict of scalars (compareScalars).
 const PURE_UTIL_FNS = {
+	// Studentized range upper tail and quantile. values = [q, k, df, p].
+	studentizedRange: (v) => ({
+		sf: studentizedRangeSf(v[0], v[1], v[2]),
+		quantile: studentizedRangeQuantile(v[3], v[1], v[2])
+	}),
+	// One-way ANOVA then the Tukey-Kramer post hoc, on groups given as value arrays named
+	// g1, g2, ... (argRefs in order); the last jsArg is alpha. Returns the pair rows.
+	tukeyKramer: (...args) => {
+		const alpha = args.pop();
+		const groups = args.map((vals, i) => {
+			const values = vals.filter((v) => v != null).map(Number);
+			return {
+				name: `g${i + 1}`,
+				values,
+				n: values.length,
+				mean: sampleMean(values),
+				sd: sampleStd(values)
+			};
+		});
+		const an = oneWayAnova(groups);
+		return an.valid ? tukeyKramerPostHoc(groups, an.msWithin, an.dfWithin, alpha) : [];
+	},
 	// The first n draws of createSeededRNG(seed) (@stdlib minstd-shuffle). The input array is
 	// unused: the harness always passes at least one.
 	seededSequence: (_unused, n, seed) => {
@@ -262,7 +287,14 @@ function movingWindowsAdapter(t, y, opts) {
 		starts,
 		windowSize,
 		statKeys,
-		args: opts
+		args: opts,
+		// The node's phase frame: the record start, and (with `clockOffsetHours`) a clock
+		// reference whose origin is that many hours after local midnight.
+		phase: {
+			recordStart: lo,
+			ref:
+				opts.clockOffsetHours != null ? { clock: true, offsetHours: opts.clockOffsetHours } : null
+		}
 	})[0];
 
 	const out = { starts };

@@ -10,7 +10,12 @@
 	import { appState } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
-	import { confirmReplaceSession } from '$lib/core/sessionLoad.svelte.js';
+	import {
+		confirmReplaceSession,
+		sessionShapeProblem,
+		NotASessionError
+	} from '$lib/core/sessionLoad.svelte.js';
+	import { SESSION_FILE_ACCEPT } from '$lib/core/sessionFiles.js';
 	import { importDataUrlDirect } from '$lib/core/dataSourceActions.js';
 	import { fetchAppAsset, describeAssetError } from '$lib/start/offline.js';
 
@@ -135,6 +140,16 @@
 	});
 
 	async function loadAndImport(jsonData, label) {
+		// Refuse what is not a session BEFORE asking to replace the open one: "Replace session?"
+		// for a file that cannot replace anything is a pointless (and alarming) question.
+		const problem = sessionShapeProblem(jsonData);
+		if (problem) {
+			loadError = `${new NotASessionError(problem).message} Your open session was not changed.`;
+			addNotification(loadError);
+			loading = false;
+			activeExampleUrl = null;
+			return;
+		}
 		// Ask before replacing open work (ROB-1). Cancelling keeps this modal open where it was.
 		if (!(await confirmReplaceSession(label ? `"${label}"` : undefined))) {
 			loading = false;
@@ -187,8 +202,9 @@
 			let parsed;
 			try {
 				parsed = JSON.parse(e.target.result);
-			} catch (err) {
-				loadError = `Invalid JSON file: ${err.message}`;
+			} catch {
+				// A session is JSON whatever its extension, so a file that does not parse is not one.
+				loadError = `"${file.name}" is not an AnCiR session (it is not JSON). Your open session was not changed.`;
 				addNotification(loadError);
 				return;
 			}
@@ -290,7 +306,7 @@
 		<input
 			bind:this={fileInput}
 			type="file"
-			accept=".json,application/json"
+			accept={SESSION_FILE_ACCEPT}
 			onchange={handleFileChange}
 			style="display: none;"
 		/>
@@ -300,10 +316,11 @@
 		{#if sourceMode === 'file'}
 			<div class="tab-panel">
 				<button class="primary-button" onclick={chooseFile} disabled={loading}>
-					Choose .json file
+					Choose session file
 				</button>
 				<p class="tab-hint">
-					Pick a previously saved <code>.json</code> session file. It loads as soon as you select it.
+					Pick a previously saved session file (<code>.json</code> or <code>.ancir</code>). It loads
+					as soon as you select it.
 				</p>
 			</div>
 		{:else if sourceMode === 'url'}
@@ -330,7 +347,10 @@
 						{loading ? 'Fetching…' : 'Fetch'}
 					</button>
 				</div>
-				<p class="tab-hint">Paste a URL to a session JSON; it loads on Fetch.</p>
+				<p class="tab-hint">
+					Paste a URL to a session file (<code>.json</code> or <code>.ancir</code>); it loads on
+					Fetch.
+				</p>
 			</div>
 		{:else}
 			<div class="tab-panel example-list">

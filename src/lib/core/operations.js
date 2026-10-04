@@ -108,6 +108,12 @@ import { inReaction } from './reactionContext.svelte.js';
  * @property {number} id        the column's id (never changes)
  * @property {string} name      the new name
  *
+ * @typedef {Object} OpSetRawCell
+ * @property {'setRawCell'} kind
+ * @property {number} columnId  the column whose raw series holds the cell
+ * @property {number} row       0-based index into that series
+ * @property {unknown} value    what to store (null marks the cell missing)
+ *
  * @typedef {Object} OpSetPlotMetricOut
  * @property {'setPlotMetricOut'} kind
  * @property {string} id        the plot's id
@@ -153,7 +159,7 @@ import { inReaction } from './reactionContext.svelte.js';
  *
  * @typedef {OpAddColumn | OpRemoveColumn | OpAddProcess | OpRemoveProcess |
  *   OpSetProcessArg | OpAddPlot | OpRemovePlot | OpSetPlotProperty | OpSetPlotPosition |
- *   OpSetPlotInner | OpSetFacetOverride | OpSetMarkerRule | OpRenameColumn | OpSetPlotMetricOut | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
+ *   OpSetPlotInner | OpSetFacetOverride | OpSetMarkerRule | OpRenameColumn | OpSetRawCell | OpSetPlotMetricOut | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
  *   OpSetOrphanProcessArg | OpSetStoredValue | OpRemoveStoredValue |
  *   OpRenameStoredValue | OpReplaceColumnRefs | OpSwapColumnRefs | OpBatch | OpGraphPatch} GraphOperation
  */
@@ -348,6 +354,8 @@ function applyForward(op) {
 			return op_setMarkerRule(op);
 		case 'renameColumn':
 			return op_renameColumn(op);
+		case 'setRawCell':
+			return op_setRawCell(op);
 		case 'setPlotMetricOut':
 			return op_setPlotMetricOut(op);
 		case 'addColumn':
@@ -540,6 +548,23 @@ function op_renameColumn(op) {
 	return pair(
 		{ kind: 'renameColumn', id: op.id, name: op.name },
 		{ kind: 'renameColumn', id: op.id, name: before }
+	);
+}
+
+// Write one cell of a column's raw series (a Table plot edit of a time cell, which has no
+// Edit value process to carry it). Only the one value is kept for undo, never the series.
+function op_setRawCell(op) {
+	const col = core.data.find((c) => c.id === op.columnId);
+	if (!col) return null;
+	const arr = core.rawData.get(col.data);
+	if (!Array.isArray(arr) || !(op.row >= 0) || op.row >= arr.length) return null;
+	const before = arr[op.row];
+	if (Object.is(before, op.value)) return null;
+	arr[op.row] = op.value;
+	col.rawDataVersion++;
+	return pair(
+		{ kind: 'setRawCell', columnId: op.columnId, row: op.row, value: op.value },
+		{ kind: 'setRawCell', columnId: op.columnId, row: op.row, value: before }
 	);
 }
 

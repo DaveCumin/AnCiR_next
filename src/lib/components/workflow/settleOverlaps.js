@@ -42,3 +42,32 @@ export function settleBoxes(boxes, frames = [], gap = 24) {
 	}
 	return moves;
 }
+
+/**
+ * Where a newly added node can sit without covering another: its own y, or, if it
+ * overlaps anything there, just below what it overlaps (repeated until it is clear).
+ * Used for a node the topological default places after the session is laid out (an
+ * Edit value process a table edit creates, say), which knows nothing of note cards or
+ * of where the user has dragged things, and so can land on top of them.
+ *
+ * @param {{x: number, y: number, w: number, h: number}} box the new node
+ * @param {{x: number, y: number, w: number, h: number}[]} obstacles every other node
+ * @param {number} [gap] clear space left below the node it is moved under
+ * @returns {number} the y to give the new node
+ */
+export function clearPlacementY(box, obstacles, gap = 24) {
+	let y = box.y;
+	let moved = true;
+	while (moved) {
+		moved = false;
+		for (const o of obstacles) {
+			const overlapX = Math.min(box.x + box.w, o.x + o.w) - Math.max(box.x, o.x);
+			const overlapY = Math.min(y + box.h, o.y + o.h) - Math.max(y, o.y);
+			if (overlapX > 0 && overlapY > 0) {
+				y = o.y + o.h + gap;
+				moved = true;
+			}
+		}
+	}
+	return y;
+}

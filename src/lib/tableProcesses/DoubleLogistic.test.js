@@ -413,3 +413,26 @@ describe('doublelogistic', async () => {
 		expect(result.y_results[2].fitResult.parameters.T).toBe(24);
 	});
 });
+
+describe('STAT-19: output time origin is the minimum valid input time', () => {
+	it('unsorted time x with a missing first row anchors on the earliest timestamp', async () => {
+		const T0 = 1772434800000;
+		const H = 3600000;
+		const ms = [null, T0 + 18 * H, T0 + 6 * H, T0, T0 + 24 * H, T0 + 12 * H];
+		mockColumns[1] = {
+			type: 'time',
+			getData: () => ms,
+			hoursSinceStart: ms.map((v) => (v == null ? null : (v - T0) / H))
+		};
+		mockColumns[2] = { type: 'number', getData: () => [null, 25, 50, 75, 75, 50] };
+		const [result, valid] = await doublelogistic({
+			xIN: 1,
+			yIN: [2],
+			outputX: -1,
+			out: { dlogx: -1, dlogy_2: -1 }
+		});
+		expect(valid).toBe(true);
+		// getData()[0] is null here, which made the output x a plain number column.
+		expect(result.originTime_ms).toBe(T0);
+	});
+});

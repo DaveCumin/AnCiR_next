@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-ancir_to_python.py — AnCiR session.json to stand-alone Python script.
+ancir_to_python.py: AnCiR session (.json or .ancir) to stand-alone Python script.
 
 Usage:
-    python ancir_to_python.py session.json -o analysis.py
+    python ancir_to_python.py session.json -o analysis.py   (or session.ancir)
     python analysis.py             # runs the full pipeline
 
 The generated script embeds the AnCiR runtime (the implemented column
@@ -269,6 +269,8 @@ def emit(session_path: Path, output_path: Path) -> None:
     # exported actogram plot data must fold in the same zone to land on the same rows.
     display_zone = (session.get("appState") or {}).get("displayTimezone") or "utc"
     parts.append(f"DISPLAY_TIMEZONE = {json.dumps(display_zone)}")
+    # Clock-time phase outputs (phaseReference 'clock') read the zone through the runtime.
+    parts.append(f"set_display_timezone({json.dumps(display_zone)})")
     parts.append(FOOTER_RUN)
 
     output_path.write_text("\n".join(parts))
@@ -278,7 +280,7 @@ def emit(session_path: Path, output_path: Path) -> None:
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("session", type=Path, help="AnCiR session.json")
+    p.add_argument("session", type=Path, help="AnCiR session file (.json or .ancir)")
     p.add_argument("-o", "--output", type=Path, default=Path("analysis.py"),
                    help="output Python script (default: analysis.py)")
     args = p.parse_args(argv)

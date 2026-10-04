@@ -46,6 +46,24 @@ describe('openSessionFile', () => {
 	});
 });
 
+describe('openSessionFile with a .ancir file', () => {
+	it('opens a .ancir session exactly like a .json one, and records it without the extension', async () => {
+		await openSessionFile(fileOf('Cohort B.ancir', { data: [] }));
+		expect(importJson).toHaveBeenCalledOnce();
+		expect(importJson.mock.calls[0][0]).toEqual({ data: [] });
+		const [entry] = loadRecents();
+		expect(entry.name).toBe('Cohort B'); // .ancir stripped for display
+		expect(entry.id).toBe('file::Cohort B.ancir');
+	});
+
+	it('refuses a .ancir that is not JSON as "not an AnCiR session", loading and recording nothing', async () => {
+		const bad = { name: 'notes.ancir', text: async () => 'just some text' };
+		await expect(openSessionFile(bad)).rejects.toThrow('not an AnCiR session (it is not JSON)');
+		expect(importJson).not.toHaveBeenCalled();
+		expect(loadRecents()).toEqual([]);
+	});
+});
+
 describe('openExample', () => {
 	it('records an example with its url so the row can reopen without a picker', async () => {
 		global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ data: [] }) }));
@@ -74,6 +92,16 @@ describe('pickSessionFile', () => {
 		const res = await pickSessionFile();
 		expect(res.status).toBe('ok');
 		expect(res.handle).toBe(handle); // the handle is what makes one-click reopen possible
+	});
+
+	it('offers .ancir as well as .json in the OS picker', async () => {
+		const handle = { getFile: async () => fileOf('s.ancir', {}) };
+		window.showOpenFilePicker = vi.fn(async () => [handle]);
+		const res = await pickSessionFile();
+		expect(res.status).toBe('ok');
+		const [{ types }] = window.showOpenFilePicker.mock.calls[0];
+		const exts = types.flatMap((t) => Object.values(t.accept).flat());
+		expect(exts).toEqual(expect.arrayContaining(['.json', '.ancir']));
 	});
 
 	it('treats a dismissed picker as a cancel, not a failure', async () => {
@@ -129,6 +157,18 @@ describe('confirm before replacing open work', () => {
 		expect(await pending).toBe(true);
 		expect(importJson).toHaveBeenCalledOnce();
 		expect(loadRecents()[0].id).toBe('file::mine.json');
+		core.notes = [];
+	});
+
+	it('a .ancir that is not a session is refused WITHOUT asking to replace the open work', async () => {
+		withOpenWork();
+		appState.showAYSModal = false;
+		await expect(openSessionFile(fileOf('data.ancir', [1, 2, 3]))).rejects.toThrow(
+			'not an AnCiR session (it is a JSON array, not a session object)'
+		);
+		expect(appState.showAYSModal).toBe(false);
+		expect(importJson).not.toHaveBeenCalled();
+		expect(core.notes).toEqual([{ id: 'note_1', text: 'unsaved' }]); // open work untouched
 		core.notes = [];
 	});
 

@@ -73,11 +73,11 @@
 		data="A time column and a value column. Sparse or unevenly sampled data are fine; fix the period if you already know it."
 		steps={[
 			'<strong>Remove Trend</strong> (Filtering, linear) first if there is a slow baseline drift &mdash; a trend biases the MESOR and inflates the amplitude.',
-			'<strong>Cosinor</strong> (Fitting): tick <strong>Use Fixed Period</strong> and enter 24 h (or your measured τ), harmonics = 1, and a 95% CI.',
+			'<strong>Cosinor</strong> (Fitting): tick <strong>Use Fixed Period</strong> and enter 24 h (or your measured τ), harmonics = 1, and a 95% CI. For a time of day, set <strong>Phase reference</strong> to <strong>Clock time of day</strong> (it needs a time column as x).',
 			'Read the <strong>acrophase</strong>, <strong>amplitude</strong>, <strong>MESOR</strong> and F-test p-value from the node; overlay the fitted curve on a scatterplot to sanity-check it.'
 		]}
-		readoff="Acrophase in hours (convert to clock time as t = φ·τ/2π), amplitude, MESOR, each with its 95% CI, plus an F-test p-value for whether a rhythm is present at all."
-		pitfall="Always state the <strong>reference time</strong> the acrophase is measured from, and remember the F-test assumes independent residuals &mdash; dense, autocorrelated data make its p-value optimistic."
+		readoff="Acrophase as the time of peak in hours (already in hours, no conversion needed): by default hours after the first sample, or clock time of day with the clock phase reference. Amplitude and MESOR with their 95% CIs, plus an F-test p-value for whether a rhythm is present at all."
+		pitfall="Always state the <strong>reference time</strong> the acrophase is measured from: with the default phase reference it is the first sample, so a record starting at 07:00 that peaks at 14:00 reads 7 h, not 14 h. Remember the F-test assumes independent residuals &mdash; dense, autocorrelated data make its p-value optimistic."
 		session="sessions/demos/demo-tp-cosinor.json"
 		sessionLabel="Open the Cosinor example"
 	/>
@@ -90,7 +90,7 @@
 		when="The canonical &lsquo;does the treatment shift the clock?&rsquo; question &mdash; comparing acrophases (or onset times) between two groups."
 		data="Repeated recordings from several subjects per group (the example uses 8 per group over 4 days)."
 		steps={[
-			"One <strong>Cosinor</strong> node per group (fixed 24 h). Because a scalar metric port emits one value per Y input, the <strong>acrophase</strong> port becomes that group's whole distribution of per-subject peak times.",
+			"One <strong>Cosinor</strong> node per group (fixed 24 h). Because a scalar metric port emits one value per Y input, the <strong>acrophase</strong> port becomes that group's whole distribution of per-subject peak times. If the recordings start at different clock times, set <strong>Phase reference</strong> to <strong>Clock time of day</strong>, or the peak times are not on a common clock.",
 			'Wire both acrophase columns into the <strong>Circular phase plot</strong> (Plots) &mdash; each group appears as a coloured cluster on a 24 h clock with its mean-resultant vector.',
 			'Wire the same two columns into the <strong>Rayleigh test</strong> (Analysis), with the <strong>Watson-Williams</strong> toggle on.'
 		]}

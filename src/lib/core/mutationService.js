@@ -63,6 +63,10 @@ export const mutationService = {
 	renameColumn(id, name) {
 		return applyOp({ kind: 'renameColumn', id, name });
 	},
+	// One raw-series cell (a time cell edited in a Table plot), as one undo step.
+	setRawCell(columnId, row, value) {
+		return applyOp({ kind: 'setRawCell', columnId, row, value });
+	},
 	addProcess(columnId, processType, args = {}) {
 		const inv = applyOp({ kind: 'addProcess', columnId, processType, args });
 		if (!inv) return null;

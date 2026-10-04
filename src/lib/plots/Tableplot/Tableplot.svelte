@@ -9,6 +9,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import { timeCellText } from '$lib/utils/time/TimeUtils.js';
 	import { formatDateTime } from '$lib/utils/time/displayTime.js';
+	import { isBlankEntry } from '$lib/utils/cellEntry.js';
 
 	export const Tableplot_defaultDataInputs = [];
 	export const Tableplot_controlHeaders = ['Properties and Data'];
@@ -309,10 +310,12 @@
 
 <script>
 	// @ts-nocheck
-	import dayjs from '$lib/utils/time/dayjsSetup.js';
 	import VirtualList from '$lib/components/reusables/VirtualList.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import { columnWidths, headerMinWidths, MIN_COL_W } from './columnWidths.js';
+	import { applyCellEdit } from './cellEdit.js';
+	import { mutationService } from '$lib/core/mutationService.js';
+	import { addNotification } from '$lib/core/notifications.svelte.js';
 
 	let { theData, which } = $props();
 
@@ -475,7 +478,9 @@
 			}
 		}
 		const v = col.getData()?.[i];
-		return Number.isFinite(v) ? v.toFixed(theData.plot.decimalPlaces) : (v ?? '');
+		if (Number.isFinite(v)) return v.toFixed(theData.plot.decimalPlaces);
+		// Missing (null, blank, or the NaN older sessions stored) shows as an empty, editable cell.
+		return isBlankEntry(v) ? '' : v;
 	}
 
 	// Visible-column position → the `col` index makeEdits expects (row-number column
@@ -598,44 +603,26 @@
 		const rowIndex = Number(edit.row); // virtualised rows pass an absolute index
 		if (rowIndex >= theData.plot.longestCol) return;
 
-		// Time columns: edit the raw data directly
-		if (column.type === 'time' && !column.isReferencial() && column.compression !== 'awd') {
-			const rawArr = core.rawData.get(column.data);
-			if (Array.isArray(rawArr) && rowIndex < rawArr.length) {
-				if (typeof rawArr[0] === 'number') {
-					// UNIX ms time data from tableProcess output — parse "DD MMM YYYY HH:mm:ss" back to ms
-					const dt = dayjs.utc(edit.value, 'DD MMM YYYY HH:mm:ss', true);
-					if (dt.isValid()) {
-						rawArr[rowIndex] = dt.valueOf();
-						column.rawDataVersion++;
-					}
-				} else {
-					// Raw string time data (imported) — store edited string directly
-					rawArr[rowIndex] = edit.value;
-					column.rawDataVersion++;
-				}
-			}
-			return;
-		}
-
-		if (column.processes?.at(-1)?.name !== 'EditValue') {
-			column.addProcess('EditValue');
-		}
-
-		const proc = column.processes.at(-1);
-		if (!proc.args.edits) proc.args.edits = [];
-
-		const exIdx = proc.args.edits.findIndex((e) => e.position === rowIndex + 1);
-		if (exIdx >= 0) {
-			proc.args.edits[exIdx].value = Number(edit.value);
-			proc.args.edits = [...proc.args.edits];
-		} else {
-			proc.args.edits = [
-				...proc.args.edits,
-				{ id: crypto.randomUUID(), position: rowIndex + 1, value: Number(edit.value) }
-			];
+		// Blank is stored as missing (null), a number column only takes numbers and a category
+		// keeps its text (STAT-15). Every edit goes through the op history (an Edit value process
+		// for number and category cells, the raw series for time cells), so each is one undo step.
+		const result = applyCellEdit(column, rowIndex, edit.value, {
+			rawData: core.rawData,
+			addProcess: (colId, name, args) => mutationService.addProcess(colId, name, args),
+			setProcessArg: (colId, procId, key, value) =>
+				mutationService.setProcessArg(colId, procId, key, value),
+			setRawCell: (colId, row, value) => mutationService.setRawCell(colId, row, value)
+		});
+		if (!result.ok) {
+			addNotification(result.reason, 'warning');
+			// The cell still shows the refused text; redraw it from the data it kept.
+			rejectedEdits++;
 		}
 	}
+
+	// Bumped when an entry is refused, to re-mount the body cells so the refused text is replaced
+	// by the stored value (Editable keeps its own copy of what was typed).
+	let rejectedEdits = $state(0);
 </script>
 
 {#snippet controls(theData)}
@@ -878,12 +865,18 @@
 									{@const cell = formatCell(vc.col, i)}
 									<!-- title: a narrow column ellipsizes long values; hover shows it whole. -->
 									<div class="tp-td" title={cell?.isTime ? String(cell.raw) : (cell ?? '')}>
+										<!-- Edits apply on commit (Enter / blur), one undo step each, so a
+										     half-typed entry is never stored. A bin column's cells are derived
+										     (start + half the bin width) and are not editable. -->
 										{#if cell && cell.isTime}
 											<div class="time-cell">
-												<Editable
-													value={cell.raw}
-													onInput={(v) => makeEdits({ col: editColIndex(vi), row: i, value: v })}
-												/>
+												{#key rejectedEdits}
+													<Editable
+														value={cell.raw}
+														editable={vc.col.type !== 'bin'}
+														onCommit={(v) => makeEdits({ col: editColIndex(vi), row: i, value: v })}
+													/>
+												{/key}
 												{#if String(cell.computed) !== String(cell.raw)}
 													<div class="computed-time">{cell.computed} hrs</div>
 												{/if}
@@ -891,10 +884,12 @@
 										{:else if cell == null}
 											<span class="null-value">-</span>
 										{:else}
-											<Editable
-												value={cell}
-												onInput={(v) => makeEdits({ col: editColIndex(vi), row: i, value: v })}
-											/>
+											{#key rejectedEdits}
+												<Editable
+													value={cell}
+													onCommit={(v) => makeEdits({ col: editColIndex(vi), row: i, value: v })}
+												/>
+											{/key}
 										{/if}
 									</div>
 								{/each}

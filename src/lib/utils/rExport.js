@@ -437,6 +437,8 @@ function dataSectionLines(session, dataAsCsv) {
 	}
 	lines.push(`COLUMN_META <- ${toRLiteral(colMeta)}`);
 	lines.push(`TABLE_PROCESSES <- ${toRLiteral(tpsClean)}`);
+	// The display zone clock-time phase outputs are reported in (phaseReference 'clock').
+	lines.push(`DISPLAY_TIMEZONE <- ${JSON.stringify(session.appState?.displayTimezone ?? 'utc')}`);
 	return { lines: wrapRLines(lines), csvText };
 }
 

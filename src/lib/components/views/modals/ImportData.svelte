@@ -20,13 +20,19 @@
 	import {
 		formatTimeFromUNIX,
 		guessDateofArray,
+		localeDayMonthOrder,
 		normalizeTimeFormat,
-		parseTimeStrict
+		parseTimeStrict,
+		settleDayMonthOrder
 	} from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
 	import {
+		countNonNumeric,
+		decimalCommaColumns,
 		detectColumnType,
 		isNumericColumn,
+		makeCellTyper,
+		parseDecimalComma,
 		resolveImportType,
 		typeChoicesFor
 	} from '$lib/utils/importColumnTypes.js';
@@ -260,7 +266,8 @@
 	export async function importDatasetUrl(url) {
 		dataUrl = url;
 		await doPreviewFromURL();
-		if (importReady && !errorInfile) {
+		// A file whose day/month order nothing settles waits for the user to choose.
+		if (importReady && !errorInfile && unsettledDateColumns().length === 0) {
 			await confirmImport();
 		} else {
 			sourceMode = 'url';
@@ -305,6 +312,57 @@
 	// where choice is 'number' | 'category' | 'time' | 'epoch-s' | 'epoch-ms'. A
 	// column without an entry is detected again on the FULL data at import.
 	let columnTypeOverrides = $state({});
+
+	// ─── Cell reading (STAT-16) ────────────────────────────────────────────────
+	// Cells are typed by makeCellTyper, not PapaParse's dynamicTyping, which made
+	// zone-qualified ISO timestamps into Date objects and has no decimal-comma mode.
+	// decimalComma reads "10,5" as 10.5. It is switched on for the user when a
+	// column is written that way and the fields are not comma-separated, and says
+	// so; once the user sets it, their choice stands for this file.
+	let decimalComma = $state(false);
+	let decimalCommaTouched = false;
+	let decimalCommaSuggestion = $state(null); // { columns: string[], example: string } | null
+	// The field delimiter PapaParse used for the last preview (auto-detected or chosen).
+	let lastDelimiter = '';
+	// The URL the last URL preview read, so a re-preview of it keeps the user's choices.
+	let lastPreviewedUrl = '';
+	// The whole first sheet of an Excel preview as CSV, kept for the day/month scan.
+	let excelCsv = null;
+
+	/** PapaParse options that type each cell (see makeCellTyper). */
+	function cellTyping(opts = { decimalComma }) {
+		return { dynamicTyping: false, transform: makeCellTyper(opts) };
+	}
+
+	// ─── Day/month order (STAT-17) ─────────────────────────────────────────────
+	// When every day value in the preview is 12 or less, "03/04/2024" could be
+	// either date. The rest of the file is scanned for a value that settles it
+	// (dateOrderSettled); when nothing does, the preview says so and asks, with the
+	// browser locale's order as the default (dateOrderChoice holds the user's pick).
+	// Read when each file is opened (resetPerFileReading), not once at load.
+	let localeDateOrder = $state(localeDayMonthOrder());
+	let dateOrderChoice = $state({}); // col -> 'day' | 'month'
+	let dateOrderSettled = $state({}); // col -> { order, row, value }
+
+	/** The day/month order to read a column with: settled, else chosen, else the locale's. */
+	function dateOrderFor(col) {
+		if (dateOrderSettled[col]) return dateOrderSettled[col].order;
+		if (dateOrderChoice[col]) return dateOrderChoice[col];
+		// A combined date+time column reads in its date column's order.
+		const pair = dateTimePairs.find((p) => `${p.dateCol} ${p.timeCol}` === col);
+		if (pair) return dateOrderFor(pair.dateCol);
+		return localeDateOrder;
+	}
+
+	function setDateOrder(col, order) {
+		dateOrderChoice = { ...dateOrderChoice, [col]: order };
+	}
+
+	// Errors that stop a preview or an import, shown in the modal (ROB-23).
+	let importError = $state('');
+	// Per-column counts of cells the last import read as missing in a number column.
+	let lastImportWarnings = [];
+
 	// Detection on the preview rows (the picked label row excluded). Not computed
 	// while the full file loads: parsedData then holds every row.
 	const previewColumnTypes = $derived.by(() => {
@@ -313,12 +371,170 @@
 		for (const col of headers) {
 			let vals = parsedData[col] ?? [];
 			if (labelRowIndex != null) vals = vals.filter((_, i) => i !== labelRowIndex);
-			const detected = detectColumnType(vals);
+			const order = dateOrderFor(col);
+			const detected = detectColumnType(vals, { order });
 			const numeric = isNumericColumn(vals);
-			out[col] = { detected, numeric, choices: typeChoicesFor(detected, numeric) };
+			let dayMonth = null;
+			if (detected.dayMonth) {
+				const settled = dateOrderSettled[col];
+				const ambiguous = detected.dayMonth.ambiguous && !settled;
+				dayMonth = { ...detected.dayMonth, ambiguous, order, settled: settled ?? null };
+				if (settled) {
+					detected.timeFormat =
+						settled.order === 'day' ? detected.dayMonth.dayFirst : detected.dayMonth.monthFirst;
+				}
+			}
+			out[col] = {
+				detected,
+				numeric,
+				choices: typeChoicesFor(detected, numeric),
+				dayMonth,
+				nonNumeric: countNonNumeric(vals)
+			};
 		}
 		return out;
 	});
+
+	/** The first preview value of a column read in the given order, as "3 Apr 2024". */
+	function dayMonthReading(col, fmt) {
+		const first = (parsedData?.[col] ?? []).find((v) => typeof v === 'string' && v.trim() !== '');
+		const dt = first == null ? null : parseUTCStrict(first, fmt);
+		return dt ? { value: first, text: dt.format('D MMM YYYY') } : null;
+	}
+
+	function setDecimalComma(on) {
+		decimalComma = on;
+		decimalCommaTouched = true;
+		decimalCommaSuggestion = null;
+		return reParse();
+	}
+
+	/**
+	 * Switch decimal commas on for the user when a column is written with them
+	 * (see decimalCommaColumns) and the file's fields are not comma-separated, and
+	 * re-read the preview values the way the full import will read them.
+	 */
+	function maybeSuggestDecimalComma() {
+		if (decimalComma || decimalCommaTouched || !parsedData) return;
+		if (targetKind !== 'excel' && lastDelimiter === ',') return;
+		const columns = decimalCommaColumns(parsedData);
+		if (columns.length === 0) return;
+		// Show a value with a fractional part where there is one: "10,00 is read as 10"
+		// does not show what the comma did.
+		const readable = parsedData[columns[0]].filter((v) => parseDecimalComma(v) !== null);
+		const example = readable.find((v) => !Number.isInteger(parseDecimalComma(v))) ?? readable[0];
+		decimalComma = true;
+		decimalCommaSuggestion = { columns, example };
+		const next = {};
+		for (const [col, values] of Object.entries(parsedData)) {
+			next[col] = values.map((v) => parseDecimalComma(v) ?? v);
+		}
+		parsedData = next;
+	}
+
+	/**
+	 * Every value of the given columns, as text, from the whole source (file,
+	 * workbook or URL), stopping early once `onRow` returns true. Only the CSV-like
+	 * sources: AWD times are generated and EnSpire never gets here.
+	 */
+	function scanFullColumns(cols, onRow) {
+		const source = isUrlMode ? dataUrl.trim() : targetKind === 'excel' ? excelCsv : targetFile;
+		const idx = cols.map((c) => headers.indexOf(c));
+		let row = 0;
+		return new Promise((resolve, reject) => {
+			Papa.parse(source, {
+				download: isUrlMode,
+				header: false,
+				dynamicTyping: false,
+				skipEmptyLines: 'greedy',
+				skipFirstNLines: skipLines,
+				delimiter: targetKind === 'excel' ? ',' : delimiter,
+				step: (results, parser) => {
+					row++;
+					if (hasHeader && row === 1) return;
+					const dataRow = hasHeader ? row - 1 : row;
+					const values = idx.map((i) => results.data[i]);
+					if (onRow(values, dataRow)) parser.abort();
+				},
+				complete: () => resolve(),
+				error: (err) => reject(err)
+			});
+		});
+	}
+
+	/**
+	 * For each column whose preview rows read either way round, scan the rest of
+	 * the file for a value that settles the day/month order (a day of 13 or more).
+	 */
+	async function settleDateOrders() {
+		dateOrderSettled = {};
+		if (!parsedData || enspireMultiplatePayload || targetKind === 'awd') return;
+		const pending = Object.entries(previewColumnTypes)
+			.filter(([, info]) => info.dayMonth?.ambiguous)
+			.map(([col, info]) => ({ col, dm: info.dayMonth }));
+		if (pending.length === 0) return;
+		// A preview shorter than its cap already holds every row.
+		const rows = parsedData[headers[0]]?.length ?? 0;
+		if (previewIN > 0 && rows < previewIN) return;
+		if (targetKind === 'excel' && excelCsv == null) return;
+		const found = {};
+		loadProgress = { stage: 'Parsing', detail: 'Checking the day and month order…' };
+		await tick();
+		await scanFullColumns(
+			pending.map((p) => p.col),
+			(values, dataRow) => {
+				pending.forEach((p, k) => {
+					if (found[p.col]) return;
+					const hit = settleDayMonthOrder([values[k]], p.dm.dayFirst, p.dm.monthFirst);
+					if (hit) found[p.col] = { order: hit.order, row: dataRow, value: hit.value };
+				});
+				return pending.every((p) => found[p.col]);
+			}
+		);
+		dateOrderSettled = found;
+	}
+
+	/** Columns whose day/month order nothing in the file settles. */
+	function unsettledDateColumns() {
+		return Object.entries(previewColumnTypes)
+			.filter(([col, info]) => info.dayMonth?.ambiguous && !columnTypeOverrides[col]?.timeFormat)
+			.map(([col]) => col);
+	}
+
+	/** An error a user can act on, with the message the modal shows. */
+	function readError(message) {
+		return Object.assign(new Error(message), { userMessage: message });
+	}
+
+	/** What the modal says when a preview or an import fails. */
+	function describeImportError(err) {
+		if (err?.userMessage) return err.userMessage;
+		const name = isUrlMode ? dataUrl.trim() : (targetFile?.name ?? 'the file');
+		const detail = err?.message ?? String(err);
+		if (!isUrlMode && targetKind === 'excel') {
+			return (
+				`Could not read "${name}" as an Excel workbook. The file may be damaged or only ` +
+				`partly copied, or saved in the older .xls format, which AnCiR cannot read. Open it ` +
+				`in Excel, save it as .xlsx or CSV, and try again. (${detail})`
+			);
+		}
+		return `Could not read "${name}". (${detail})`;
+	}
+
+	/**
+	 * Refuse a file that is not text before PapaParse turns its bytes into a
+	 * table of garbage: text files never contain a NUL byte in their first 8 KB.
+	 * (UTF-16 text does; the message says what to do about it.)
+	 */
+	async function assertTextFile(file) {
+		const head = new Uint8Array(await file.slice(0, 8192).arrayBuffer());
+		if (!head.includes(0)) return;
+		throw readError(
+			`"${file.name}" is not a text file (it contains binary data), so it cannot be read as ` +
+				`CSV. If it is a spreadsheet, give it its .xlsx extension or save it as CSV; if it ` +
+				`is text saved as UTF-16 ("Unicode text"), save it as UTF-8 CSV.`
+		);
+	}
 
 	function formatText(fmt) {
 		if (Array.isArray(fmt)) return fmt.join(' | ');
@@ -422,7 +638,7 @@
 			const nonEmpty = sample.filter((v) => String(v ?? '').trim() !== '').slice(0, 25);
 			if (nonEmpty.length < 3) continue;
 
-			const fmt = guessDateofArray(nonEmpty);
+			const fmt = guessDateofArray(nonEmpty, { order: dateOrderFor(col) });
 			if (fmt === -1 || !fmt || fmt.length === 0) continue;
 			const fmtStr = String(fmt);
 			const kind = classifyFormatKind(fmtStr);
@@ -462,7 +678,7 @@
 		const fmtField = field === 'dateCol' ? 'dateFormat' : 'timeFormat';
 		const sample = parsedData?.[value];
 		if (sample && sample.length) {
-			const fmt = guessDateofArray(sample);
+			const fmt = guessDateofArray(sample, { order: dateOrderFor(value) });
 			pair[fmtField] = fmt && fmt !== -1 ? String(fmt) : '';
 		} else {
 			pair[fmtField] = '';
@@ -673,6 +889,8 @@
 		mismatchedColumns = [];
 		dataUrl = '';
 		isUrlMode = false;
+		lastPreviewedUrl = '';
+		resetPerFileReading();
 	}
 
 	// ─── Label capture helpers ─────────────────────────────────────────────────
@@ -1100,21 +1318,84 @@
 			errorInfile,
 			importReady,
 			showImportModal,
-			rowCount: headers.length > 0 ? (parsedData?.[headers[0]]?.length ?? 0) : 0
+			rowCount: headers.length > 0 ? (parsedData?.[headers[0]]?.length ?? 0) : 0,
+			awaitingPreview,
+			awaitingLoad,
+			importError,
+			decimalComma,
+			decimalCommaSuggestedFor: decimalCommaSuggestion?.columns ?? [],
+			decimalCommaExample: decimalCommaSuggestion?.example ?? null,
+			localeDateOrder,
+			lastImportWarnings: [...lastImportWarnings],
+			parsedData: parsedData ? $state.snapshot(parsedData) : null,
+			columnTypes: Object.fromEntries(
+				Object.entries(previewColumnTypes).map(([col, info]) => [
+					col,
+					{
+						type: info.detected.type,
+						timeFormat: info.detected.timeFormat,
+						nonNumeric: info.nonNumeric,
+						dayMonth: info.dayMonth && {
+							ambiguous: info.dayMonth.ambiguous,
+							order: info.dayMonth.order,
+							settledByRow: info.dayMonth.settled?.row ?? null
+						}
+					}
+				])
+			)
 		};
+	}
+
+	/** TEST SEAM: the user actions the preview offers, for integration tests. */
+	export function _importTestActions() {
+		return { confirmImport, setDecimalComma, setDateOrder };
+	}
+
+	/** Forget what the previous file taught the preview: its cell reading and errors. */
+	function resetPerFileReading() {
+		decimalComma = false;
+		decimalCommaTouched = false;
+		decimalCommaSuggestion = null;
+		lastDelimiter = '';
+		excelCsv = null;
+		dateOrderChoice = {};
+		dateOrderSettled = {};
+		localeDateOrder = localeDayMonthOrder();
+		importError = '';
 	}
 
 	async function onFileChange(e) {
 		const files = [...e.target.files];
 		targetFiles = files;
 		targetFile = files[0] ?? null;
+		resetPerFileReading();
 
 		if (targetFile) {
 			await doPreview();
 		}
 	}
 
+	// Every preview ends with the spinner gone: a file that cannot be read (a
+	// damaged workbook, a binary file named .csv, a parser throwing) shows its
+	// reason in the modal instead of spinning forever (ROB-23).
 	async function doPreview() {
+		importError = '';
+		try {
+			await doPreviewSteps();
+		} catch (err) {
+			console.error('Import preview failed:', err);
+			importError = describeImportError(err);
+			errorInfile = true;
+			importReady = false;
+			parsedData = null;
+			headers = [];
+		} finally {
+			awaitingPreview = false;
+			loadProgress = { stage: '', detail: '' };
+		}
+	}
+
+	async function doPreviewSteps() {
 		previewDisplayStart = 1;
 		awaitingPreview = true;
 		loadProgress = { stage: 'Reading file', detail: targetFile?.name ?? '' };
@@ -1152,9 +1433,10 @@
 				importReady = false;
 				error = { reason: 'JSON file is not an AnCiR session' };
 				addNotification(
-					`"${targetFile.name}" is JSON but not an AnCiR session file. ` +
-						`JSON data import is not supported — recognised formats are CSV/TSV text, ` +
-						`Excel (.xlsx/.xls), AWD (Actiwatch), and AnCiR session .json files.`
+					// A .ancir file is routed here by its name, so it may not be JSON at all.
+					`"${targetFile.name}" is ${parsed == null ? 'not JSON, so it is ' : 'JSON but '}not an AnCiR session file. ` +
+						`JSON data import is not supported; recognised formats are CSV/TSV text, ` +
+						`Excel (.xlsx), AWD (Actiwatch), and AnCiR session files (.json or .ancir).`
 				);
 				awaitingPreview = false;
 				loadProgress = { stage: '', detail: '' };
@@ -1165,9 +1447,11 @@
 			// many delimited text files); doPreview warns or errors below once
 			// it can see what came out.
 			targetKind = unknownFallback ? 'csv' : sniff.kind;
+			if (targetKind !== 'excel') await assertTextFile(targetFile);
 		}
 
 		await parseFile();
+		maybeSuggestDecimalComma();
 
 		// Fallback verdict for unrecognised files: a plausible table imports
 		// with a visible warning; garbage gets a clear error naming the
@@ -1204,7 +1488,7 @@
 				if (firstVerdict) {
 					addNotification(
 						`Could not recognise "${targetFile.name}". AnCiR can import CSV/TSV text, ` +
-							`Excel (.xlsx/.xls), AWD (Actiwatch), and AnCiR session .json files.`
+							`Excel (.xlsx), AWD (Actiwatch), and AnCiR session files (.json or .ancir).`
 					);
 				}
 			}
@@ -1241,6 +1525,7 @@
 			detectDateTimePairs();
 			// Suggest a label row if the first data row looks like trace labels
 			maybeSuggestLabelRow();
+			await settleDateOrders();
 		}
 
 		loadProgress = { stage: '', detail: '' };
@@ -1309,6 +1594,28 @@
 
 	async function doPreviewFromURL() {
 		if (!dataUrl.trim()) return;
+		importError = '';
+		try {
+			await doPreviewFromURLSteps();
+		} catch (err) {
+			console.error('URL import preview failed:', err);
+			importError = describeImportError(err);
+			errorInfile = true;
+			importReady = false;
+			parsedData = null;
+			headers = [];
+		} finally {
+			awaitingPreview = false;
+			loadProgress = { stage: '', detail: '' };
+		}
+	}
+
+	async function doPreviewFromURLSteps() {
+		// A different URL is a different file: forget the last one's cell reading.
+		if (dataUrl.trim() !== lastPreviewedUrl) {
+			resetPerFileReading();
+			lastPreviewedUrl = dataUrl.trim();
+		}
 		// Reset relevant state without touching dataUrl
 		parsedData = null;
 		importReady = false;
@@ -1326,19 +1633,24 @@
 		await tick();
 		await new Promise((r) => setTimeout(r, appConsts.timeoutRefresh_ms));
 
-		await new Promise((resolve) => {
+		await new Promise((resolve, reject) => {
 			Papa.parse(dataUrl.trim(), {
 				download: true,
 				preview: previewIN,
 				header: hasHeader,
-				dynamicTyping: true,
+				...cellTyping(),
 				skipEmptyLines: 'greedy',
 				skipFirstNLines: skipLines,
 				delimiter: delimiter,
 				complete: (results) => {
-					if (results.errors.length > 0) errorInfile = true;
-					dealWithData(results.meta.fields, results.data);
-					resolve();
+					try {
+						if (results.errors.length > 0) errorInfile = true;
+						lastDelimiter = results.meta.delimiter ?? '';
+						dealWithData(results.meta.fields, results.data);
+						resolve();
+					} catch (err) {
+						reject(err);
+					}
 				},
 				error: (err) => {
 					error = { err, reason: 'Failed to fetch URL' };
@@ -1353,11 +1665,13 @@
 			selectedColumns = new Set(headers); // reassign: a Set inside $state is not proxied
 		}
 		totalRowCount = parsedData ? (parsedData[headers[0]]?.length ?? 0) : 0;
+		maybeSuggestDecimalComma();
 
 		// Detect date-only + time-only column pairs
 		detectDateTimePairs();
 		// Suggest a label row if the first data row looks like trace labels
 		maybeSuggestLabelRow();
+		await settleDateOrders();
 
 		loadProgress = { stage: '', detail: '' };
 		awaitingPreview = false;
@@ -1369,31 +1683,11 @@
 			Papa.parse(dataUrl.trim(), {
 				download: true,
 				header: hasHeader,
-				dynamicTyping: true,
+				...cellTyping(),
 				skipEmptyLines: 'greedy',
 				skipFirstNLines: skipLines,
 				delimiter: delimiter,
-				complete: async (results) => {
-					let allData = convertArrayToObject(results.data);
-					// Exclude a picked label row before filtering/combining/sorting.
-					if (labelRowIndex != null) {
-						allData = stripRowFromColumns(allData, labelRowIndex);
-					}
-					let filteredData =
-						selectedColumns.size < headers.length
-							? Object.fromEntries(
-									[...selectedColumns].filter((c) => allData[c]).map((c) => [c, allData[c]])
-								)
-							: allData;
-					// Combine date+time column pairs if requested
-					if (combinePairs.size > 0) {
-						filteredData = applyDateTimeCombination(filteredData);
-					}
-					filteredData = sortDataByTimestamp(filteredData);
-					const urlName = dataUrl.split('/').pop() || 'url-data';
-					await doBasicFileImport(filteredData, urlName);
-					resolve();
-				},
+				complete: (results) => loadUrlResults(results).then(resolve, reject),
 				error: (err) => {
 					error = { err, reason: 'Failed to fetch data from URL' };
 					errorInfile = true;
@@ -1403,28 +1697,78 @@
 		});
 	}
 
-	function reParse() {
-		if (isUrlMode) doPreviewFromURL();
-		else doPreview();
+	async function loadUrlResults(results) {
+		let allData = convertArrayToObject(results.data);
+		// Exclude a picked label row before filtering/combining/sorting.
+		if (labelRowIndex != null) {
+			allData = stripRowFromColumns(allData, labelRowIndex);
+		}
+		let filteredData =
+			selectedColumns.size < headers.length
+				? Object.fromEntries(
+						[...selectedColumns].filter((c) => allData[c]).map((c) => [c, allData[c]])
+					)
+				: allData;
+		// Combine date+time column pairs if requested
+		if (combinePairs.size > 0) {
+			filteredData = applyDateTimeCombination(filteredData);
+		}
+		filteredData = sortDataByTimestamp(filteredData);
+		const urlName = dataUrl.split('/').pop() || 'url-data';
+		await doBasicFileImport(filteredData, urlName);
 	}
 
+	function reParse() {
+		return isUrlMode ? doPreviewFromURL() : doPreview();
+	}
+
+	// Like the preview, an import that fails ends with the spinner gone and the
+	// reason in the modal, which stays open (and opens, for the one-click example
+	// and dataset imports that never showed it) so the user sees it (ROB-23).
 	async function confirmImport() {
+		importError = '';
+		lastImportWarnings = [];
+		const previewCap = previewIN;
 		awaitingLoad = true;
 		loadProgress = {
 			stage: 'Loading data',
 			detail: isUrlMode ? 'Fetching full data…' : 'Reading full file…'
 		};
-		await tick();
-		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
-		if (isUrlMode) {
-			await loadDataFromURL();
-		} else {
-			await loadData();
+		try {
+			await tick();
+			await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
+			if (isUrlMode) {
+				await loadDataFromURL();
+			} else {
+				await loadData();
+			}
+			reportNonNumericCells(lastImportWarnings);
+			resetValues();
+			showImportModal = false;
+		} catch (err) {
+			console.error('Import failed:', err);
+			importError = describeImportError(err);
+			// The full parse replaced the preview rows; a retry starts from the preview again.
+			previewIN = previewCap > 0 ? previewCap : 50;
+			showImportModal = true;
+		} finally {
+			awaitingLoad = false;
+			loadProgress = { stage: '', detail: '' };
 		}
-		console.log('Import complete');
-		awaitingLoad = false;
-		resetValues();
-		showImportModal = false;
+	}
+
+	/** One notification naming each number column that had cells read as missing. */
+	function reportNonNumericCells(warnings) {
+		if (warnings.length === 0) return;
+		const parts = warnings.map(
+			(w) =>
+				`"${w.column}": ${w.count} cell${w.count === 1 ? '' : 's'} (for example "${w.example}")`
+		);
+		addNotification(
+			`Some cells in number columns are not numbers and were imported as missing: ${parts.join('; ')}.`,
+			'warning',
+			15000
+		);
 	}
 
 	async function parseXLSX(file) {
@@ -1449,7 +1793,7 @@
 						skipHidden: true,
 						blankrows: false
 					});
-					//console.log('Converted CSV: ', csv);
+					excelCsv = csv;
 
 					loadProgress = { stage: 'Parsing', detail: 'Parsing rows…' };
 					await tick();
@@ -1457,10 +1801,11 @@
 					Papa.parse(csv, {
 						preview: previewIN,
 						header: hasHeader,
-						dynamicTyping: true,
+						...cellTyping(),
 						skipEmptyLines: 'greedy',
 						skipFirstNLines: skipLines,
 						complete: (results) => {
+							lastDelimiter = ',';
 							dealWithData(results.meta.fields, results.data);
 							resolve();
 						},
@@ -1521,7 +1866,8 @@
 				Papa.parse(targetFile, {
 					preview: previewIN,
 					header: hasHeader,
-					dynamicTyping: true,
+					// AWD readings are plain numbers; decimal commas are a CSV matter.
+					...cellTyping({ decimalComma: decimalComma && targetKind !== 'awd' }),
 					skipEmptyLines: 'greedy',
 					skipFirstNLines: skipLines,
 					delimiter: delimiter,
@@ -1546,49 +1892,58 @@
 
 						return lines.join('\n');
 					},
-					complete: async (results) => {
-						if (targetKind === 'awd') {
-							results.errors = [];
-							if (parseAttempts === 0) {
-								// Re-parse: no header (AWD has its own 7-line header),
-								// no row limit, no skip. Remember the wanted preview size
-								// FIRST: `previewIN` is about to become PapaParse's
-								// "read everything" sentinel (0) and must not be reused
-								// as a slice length further down.
-								awdPreviewCap = previewIN > 0 ? previewIN : AWD_PREVIEW_ROWS;
-								hasHeader = false;
-								previewIN = 0;
-								skipLines = 0;
-								parseAttempts++;
-								tryParse();
-								return;
-							} else {
-								results.data = awdTocsv(results.data);
-								results.meta.fields = headers;
-								// Limit preview rows (like CSV)
-								if (awaitingPreview) {
-									results.data = limitPreviewRows(results.data, awdPreviewCap);
-								}
-							}
+					complete: (results) => {
+						try {
+							completeParse(results);
+						} catch (err) {
+							reject(err);
 						}
-
-						if (results.errors.length > 0) {
-							errorInfile = true;
-						}
-
-						if (
-							(specialRecognised === 'actiware' || specialRecognised === 'MW8') &&
-							parseAttempts === 0
-						) {
-							parseAttempts++;
-							tryParse();
-							return;
-						}
-
-						dealWithData(results.meta.fields, results.data);
-						resolve();
 					}
 				});
+			}
+
+			function completeParse(results) {
+				if (targetKind === 'awd') {
+					results.errors = [];
+					if (parseAttempts === 0) {
+						// Re-parse: no header (AWD has its own 7-line header),
+						// no row limit, no skip. Remember the wanted preview size
+						// FIRST: `previewIN` is about to become PapaParse's
+						// "read everything" sentinel (0) and must not be reused
+						// as a slice length further down.
+						awdPreviewCap = previewIN > 0 ? previewIN : AWD_PREVIEW_ROWS;
+						hasHeader = false;
+						previewIN = 0;
+						skipLines = 0;
+						parseAttempts++;
+						tryParse();
+						return;
+					} else {
+						results.data = awdTocsv(results.data);
+						results.meta.fields = headers;
+						// Limit preview rows (like CSV)
+						if (awaitingPreview) {
+							results.data = limitPreviewRows(results.data, awdPreviewCap);
+						}
+					}
+				}
+
+				if (results.errors.length > 0) {
+					errorInfile = true;
+				}
+
+				if (
+					(specialRecognised === 'actiware' || specialRecognised === 'MW8') &&
+					parseAttempts === 0
+				) {
+					parseAttempts++;
+					tryParse();
+					return;
+				}
+
+				lastDelimiter = results.meta.delimiter ?? '';
+				dealWithData(results.meta.fields, results.data);
+				resolve();
 			}
 
 			tryParse();
@@ -1844,7 +2199,7 @@
 						const csv = XLSX.utils.sheet_to_csv(sheet, { skipHidden: true, blankrows: false });
 						Papa.parse(csv, {
 							header: hasHeader,
-							dynamicTyping: true,
+							...cellTyping(),
 							skipEmptyLines: 'greedy',
 							complete: (results) => resolve(rowsToOwnColumnObject(results.data)),
 							error: reject
@@ -1862,11 +2217,17 @@
 		return new Promise((resolve, reject) => {
 			Papa.parse(file, {
 				header: hasHeader,
-				dynamicTyping: true,
+				...cellTyping(),
 				skipEmptyLines: 'greedy',
 				skipFirstNLines: skipLines,
 				delimiter: delimiter,
-				complete: (results) => resolve(rowsToOwnColumnObject(results.data)),
+				complete: (results) => {
+					try {
+						resolve(rowsToOwnColumnObject(results.data));
+					} catch (err) {
+						reject(err);
+					}
+				},
 				error: reject
 			});
 		});
@@ -2118,7 +2479,8 @@
 				break;
 			}
 			if (ov && ov.choice !== 'time') continue;
-			const fmt = ov?.timeFormat?.trim() || guessDateofArray(data[col]);
+			const fmt =
+				ov?.timeFormat?.trim() || guessDateofArray(data[col], { order: dateOrderFor(col) });
 			if (fmt !== -1 && fmt !== null && fmt !== undefined && fmt !== '' && fmt.length > 0) {
 				timeCol = col;
 				timeFmt = fmt;
@@ -2152,7 +2514,7 @@
 		if (!cols.includes(sortColName)) return data;
 		const values = data[sortColName];
 
-		const fmt = guessDateofArray(values);
+		const fmt = guessDateofArray(values, { order: dateOrderFor(sortColName) });
 		const isTime = fmt !== -1 && fmt !== null && fmt !== undefined && fmt !== '' && fmt.length > 0;
 
 		// For time columns, parse to epoch-ms; otherwise let the shared primitive
@@ -2169,6 +2531,13 @@
 		const sorted = {};
 		for (const col of cols) sorted[col] = applyPermutation(data[col], order);
 		return sorted;
+	}
+
+	/** Record a number column's cells that will read as missing (reported after the import). */
+	function noteNonNumericCells(column, resolved) {
+		if (resolved.type !== 'number') return;
+		const { count, example } = countNonNumeric(resolved.values);
+		if (count > 0) lastImportWarnings.push({ column, count, example });
 	}
 
 	async function doBasicFileImport(result, fname, overrides = columnTypeOverrides) {
@@ -2204,7 +2573,10 @@
 
 			// Type: the preview's override, else detection on the full column
 			// (numbers first, so numeric data is never read as a time).
-			const resolved = resolveImportType(result[colName], overrides[colName]);
+			const resolved = resolveImportType(result[colName], overrides[colName], {
+				order: dateOrderFor(colName)
+			});
+			noteNonNumericCells(colName, resolved);
 
 			// Update data
 			core.rawData.set(targetId, resolved.values);
@@ -2251,7 +2623,10 @@
 				} else {
 					// Type: the preview's override, else detection on the full column
 					// (numbers first, so numeric data is never read as a time).
-					const resolved = resolveImportType(result[f], overrides[f]);
+					const resolved = resolveImportType(result[f], overrides[f], {
+						order: dateOrderFor(f)
+					});
+					noteNonNumericCells(f, resolved);
 					df.type = resolved.type;
 					if (resolved.type === 'time') df.timeFormat = resolved.timeFormat;
 
@@ -2374,7 +2749,7 @@
 				Papa.parse(targetFile, {
 					preview: 0,
 					header: false,
-					dynamicTyping: true,
+					...cellTyping({ decimalComma: false }),
 					skipEmptyLines: 'greedy',
 					delimiter: ',',
 					complete: (results) => {
@@ -2384,12 +2759,16 @@
 							return;
 						}
 
-						// Second pass — this is the full one
-						results.data = awdTocsv(results.data);
-						results.meta.fields = headers;
+						try {
+							// Second pass: this is the full one
+							results.data = awdTocsv(results.data);
+							results.meta.fields = headers;
 
-						dealWithData(results.meta.fields, results.data);
-						resolve();
+							dealWithData(results.meta.fields, results.data);
+							resolve();
+						} catch (err) {
+							reject(err);
+						}
 					},
 					error: (err) => reject(err)
 				});
@@ -2421,7 +2800,7 @@
 			// so day/month order is settled by any day of 13 or more.
 			const ov = columnTypeOverrides[k];
 			if (ov && ov.choice !== 'time') continue;
-			const fmt = ov?.timeFormat?.trim() || guessDateofArray(data[k]);
+			const fmt = ov?.timeFormat?.trim() || guessDateofArray(data[k], { order: dateOrderFor(k) });
 			if (fmt !== -1 && fmt.length > 0) {
 				timeKey = k;
 				timeFormat = Array.isArray(fmt) ? fmt[0] : fmt;
@@ -2642,8 +3021,9 @@
 						</p>
 					</div>
 					<p class="tab-hint">
-						Recognised formats: CSV / delimited text, Excel (.xlsx / .xls), AWD (Actiwatch), and
-						AnCiR session .json. Other files are inspected and imported by content.
+						Recognised formats: CSV / delimited text, Excel (.xlsx; save older .xls files as .xlsx),
+						AWD (Actiwatch), and AnCiR session files (.json or .ancir). Other files are inspected
+						and imported by content.
 					</p>
 				{:else if sourceMode === 'url'}
 					<div
@@ -2711,6 +3091,12 @@
 	{#if !awaitingPreview && !awaitingLoad}
 		<div class="import-container">
 			<div class="preview-placeholder">
+				{#if importError}
+					<div class="import-error" role="alert" data-testid="import-error">
+						<p class="import-error-title">This file could not be imported</p>
+						<p class="import-error-detail">{importError}</p>
+					</div>
+				{/if}
 				{#if parsedData && importReady}
 					{#if enspireMultiplatePayload}
 						<div class="section-row enspire-summary-panel">
@@ -2732,10 +3118,28 @@
 					{:else}
 						<div class="section-row">
 							<div class="control-input-horizontal">
-								<label class="control-input-checkbox">
-									<input type="checkbox" bind:checked={hasHeader} onchange={() => reParse()} />
-									<span class="ci-label">Has header row</span>
-								</label>
+								<!-- The two reading switches share one column, so the row keeps
+								     room for the delimiter, skip and sort controls. -->
+								<div class="import-checks">
+									<label class="control-input-checkbox">
+										<input type="checkbox" bind:checked={hasHeader} onchange={() => reParse()} />
+										<span class="ci-label">Has header row</span>
+									</label>
+									{#if targetKind !== 'awd'}
+										<label
+											class="control-input-checkbox"
+											title="Read numbers written with a decimal comma, such as 10,5, as 10.5"
+										>
+											<input
+												type="checkbox"
+												data-testid="import-decimal-comma"
+												checked={decimalComma}
+												onchange={(e) => setDecimalComma(e.currentTarget.checked)}
+											/>
+											<span class="ci-label">Decimal comma</span>
+										</label>
+									{/if}
+								</div>
 								<ControlInput label="Delimiter">
 									<select bind:value={delimiter} onchange={() => reParse()}>
 										<option value="">auto</option>
@@ -2760,6 +3164,17 @@
 								</ControlInput>
 							</div>
 						</div>
+
+						{#if decimalComma && decimalCommaSuggestion}
+							<p class="import-note" data-testid="import-decimal-comma-note">
+								{decimalCommaSuggestion.columns.length === 1 ? 'Column' : 'Columns'}
+								{decimalCommaSuggestion.columns.map((c) => `"${c}"`).join(', ')}
+								{decimalCommaSuggestion.columns.length === 1 ? 'is' : 'are'} written with decimal commas,
+								so values such as "{decimalCommaSuggestion.example}" are read as {parseDecimalComma(
+									decimalCommaSuggestion.example
+								)}. Untick "Decimal comma" if the commas are not decimal points.
+							</p>
+						{/if}
 
 						{#if totalRowCount > ROW_THRESHOLD}
 							<div class="section-row binning-panel">
@@ -3020,7 +3435,7 @@
 													<!-- skip: merged into date col -->
 												{:else if combinedDateCols.has(col)}
 													<th class="label-cell label-cell-muted" title="Combined date and time"
-														>time</th
+														>time{@render dayMonthControl(col)}</th
 													>
 												{:else}
 													{@const info = previewColumnTypes[col]}
@@ -3062,6 +3477,19 @@
 																>Looks like epoch {info.detected.epoch === 's'
 																	? 'seconds'
 																	: 'milliseconds'}</span
+															>
+														{/if}
+														{#if choice === 'time' && !ov?.timeFormat}
+															{@render dayMonthControl(col)}
+														{/if}
+														{#if choice === 'number' && info?.nonNumeric.count > 0}
+															<span
+																class="type-warn"
+																data-testid={`import-nonnumeric-${col}`}
+																title="These cells will be missing values in the imported column. The import also reports the count for the whole file."
+																>{info.nonNumeric.count} preview
+																{info.nonNumeric.count === 1 ? 'cell is' : 'cells are'} not a number (e.g.
+																"{info.nonNumeric.example}"): imported as missing</span
 															>
 														{/if}
 													</th>
@@ -3204,12 +3632,43 @@
 							</div>
 						{/if}
 					{/if}
-				{:else if !awaitingPreview && !awaitingLoad}
+				{:else if !awaitingPreview && !awaitingLoad && !importError}
 					<p>Choose file to preview data</p>
 				{/if}
 			</div>
 		</div>
 	{/if}
+
+	<!-- Day/month order for a date column whose values read either way round
+	     (STAT-17): a choice when nothing in the file settles it, else the reason. -->
+	{#snippet dayMonthControl(col)}
+		{@const dm = previewColumnTypes[col]?.dayMonth}
+		{#if dm?.ambiguous}
+			{@const asDay = dayMonthReading(col, dm.dayFirst)}
+			{@const asMonth = dayMonthReading(col, dm.monthFirst)}
+			<span class="type-warn type-daymonth" data-testid={`import-daymonth-${col}`}>
+				<span class="type-warn-title">Day or month first?</span>
+				Every day value is 12 or less, so {asDay ? `"${asDay.value}"` : 'each date'} could be either.
+				{dateOrderChoice[col]
+					? ''
+					: `Your browser's locale reads ${localeDateOrder === 'day' ? 'day' : 'month'} first.`}
+				<select
+					class="type-select"
+					aria-label={`Date order of ${col}`}
+					value={dm.order}
+					onchange={(e) => setDateOrder(col, e.currentTarget.value)}
+				>
+					<option value="day">Day first{asDay ? `: ${asDay.text}` : ''}</option>
+					<option value="month">Month first{asMonth ? `: ${asMonth.text}` : ''}</option>
+				</select>
+			</span>
+		{:else if dm?.settled}
+			<span class="type-hint" data-testid={`import-daymonth-${col}`}
+				>{dm.settled.order === 'day' ? 'Day' : 'Month'} first: row {dm.settled.row} has "{dm.settled
+					.value}"</span
+			>
+		{/if}
+	{/snippet}
 
 	{#snippet button()}
 		<div class="dialog-button-container">
@@ -3505,6 +3964,67 @@
 		font-size: var(--font-xs);
 		font-weight: 400;
 		color: var(--color-text-muted);
+	}
+	/* A per-column problem the user should look at before importing. The cell is
+	   nowrap (so the type row lines up); these wrap inside a readable width. */
+	.type-warn {
+		display: block;
+		max-width: 16rem;
+		margin-top: var(--space-1);
+		padding: var(--space-1) var(--space-2);
+		border: 1px solid var(--color-warning);
+		border-radius: var(--radius-xs);
+		background: var(--color-warning-bg);
+		color: var(--color-warning-text);
+		font-size: var(--font-xs);
+		font-weight: 400;
+		font-style: normal;
+		text-align: left;
+		white-space: normal;
+	}
+	.type-warn-title {
+		display: block;
+		font-weight: 600;
+	}
+	.type-daymonth .type-select {
+		margin-top: var(--space-1);
+		min-width: 0;
+	}
+	.import-checks {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-1);
+		flex: 0 0 auto;
+	}
+	.import-checks .control-input-checkbox {
+		width: auto;
+		white-space: nowrap;
+	}
+	.import-note {
+		margin: var(--space-2) 0;
+		padding: var(--space-2) var(--space-3);
+		border: 1px solid var(--color-info);
+		border-radius: var(--radius-sm);
+		background: var(--color-info-bg);
+		font-size: var(--font-sm);
+	}
+	.import-error {
+		margin: 0 0 var(--space-4);
+		padding: var(--space-3) var(--space-4);
+		border: 1px solid var(--color-error-border);
+		border-radius: var(--radius-sm);
+		background: var(--color-error-bg);
+		color: var(--color-error);
+	}
+	.import-error-title {
+		margin: 0 0 var(--space-1);
+		font-weight: 600;
+	}
+	.import-error-detail {
+		margin: 0;
+		font-size: var(--font-sm);
+		overflow-wrap: anywhere;
 	}
 	.label-input {
 		width: 100%;

@@ -31,7 +31,7 @@
 	const paramRows = [
 		['MESOR (M)', 'Rhythm-adjusted mean — the midline of the fitted cosine', 'Same as y'],
 		['Amplitude (A)', 'Half the peak-to-trough excursion of the rhythm', 'Same as y'],
-		['Acrophase (φ)', 'Time of peak (clock time or hours from ZT0)', 'Hours'],
+		['Acrophase (φ)', 'Time of peak: hours after the first sample, or clock time of day', 'Hours'],
 		['Period (τ)', 'Duration of one cycle — fixed or free to vary', 'Hours']
 	];
 
@@ -79,12 +79,18 @@
 		peaks at t<sub>peak</sub> = −φ·τ/2π (mod τ). The classical cosinor convention instead reports φ
 		itself, in <strong>negative degrees</strong> from a stated reference time (0°), with 360° = one
 		period; the two differ only in sign and units.
-		<strong>AnCiR reports every acrophase as the time of peak</strong>, in hours after the start of
-		the x column (t = 0), wrapped into [0, τ): the Cosinor node's <code>acrophase</code> port, its
-		panel ("Acrophase (time of peak)"), its stats table, Fit waveform model and Moving analysis all
-		give the same number, and the confidence interval is centred on it. Whichever convention you
-		report, <strong>always state the reference time</strong>, and note that when τ ≠ 24 h the
-		acrophase drifts in clock time across the record.
+		<strong>AnCiR reports every acrophase as the time of peak</strong>, wrapped into [0, τ). By
+		default it is in hours after the first sample of a time column (after x = 0 for a numeric x), so
+		it is a time of day only when the record starts at midnight; set the node's
+		<strong>Phase reference</strong> to <strong>Clock time of day</strong> to report hours after
+		local midnight in the display timezone instead. The Cosinor node's <code>acrophase</code> port,
+		its panel, its stats table and Fit waveform model give the same number, and the confidence
+		interval is centred on it; Moving analysis reports each window's peak on the same frame (folded
+		onto the fixed period, or onto 24 h for a free period). With more than one harmonic the
+		<code>acrophase</code> port is the time of the fitted curve's overall peak (the orthophase) and
+		<code>acrophase_h1</code> is harmonic 1's. Whichever convention you report,
+		<strong>always state the reference time</strong>, and note that when τ ≠ 24 h the acrophase
+		drifts in clock time across the record.
 	</p>
 
 	<ParamTable headers={paramHeaders} rows={paramRows} />

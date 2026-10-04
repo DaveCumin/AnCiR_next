@@ -85,7 +85,7 @@
 		compactPortAnchorY
 	} from './nodeGeometry.js';
 	import { buildNodeLayout, nodeLayoutMatches, parseNodeLayout } from './nodeLayoutIO.js';
-	import { settleBoxes } from './settleOverlaps.js';
+	import { settleBoxes, clearPlacementY } from './settleOverlaps.js';
 
 	let { inline = false } = $props();
 
@@ -514,6 +514,14 @@
 		const currentIds = new Set(currentNodes.map((n) => n.id));
 		const defaults = defaultPositions.positions;
 		const prev = _knownNodeIds;
+		// Nodes given the topo default after the canvas was already laid out (see
+		// clearOfOthers below). Not during a session import: its own settle pass runs then.
+		const lateDefaults = [];
+		const importSettling = untrack(
+			() =>
+				!!appState.settleLayoutRequest &&
+				appState.settleLayoutRequest !== appState.settleLayoutHandled
+		);
 
 		// Assign positions to newly appeared nodes only. Priority order:
 		//   1. Already pinned in stablePositions before the effect ran (e.g.
@@ -541,6 +549,7 @@
 				stablePositions[node.id] = _spawnPositionQueue.shift();
 			} else if (defaults[node.id]) {
 				stablePositions[node.id] = { ...defaults[node.id] };
+				if (prev.size > 0 && !importSettling && node.type !== 'group') lateDefaults.push(node.id);
 			}
 
 			// Same story for a saved preview size: plot nodes load AFTER the
@@ -567,6 +576,7 @@
 		}
 
 		_knownNodeIds = currentIds;
+		if (lateDefaults.length > 0) tick().then(() => clearOfOthers(lateDefaults));
 	});
 
 	// Hold the preview box on the plot's aspect ratio when the PLOT changes shape.
@@ -1367,6 +1377,11 @@
 			const g = node.groupObj;
 			if (p && g) frames.push({ x: p.x, y: p.y, w: g.width ?? 0, h: g.height ?? 0 });
 		}
+		for (const [id, y] of settleBoxes(renderedNodeBoxes(), frames)) stablePositions[id].y = y;
+	}
+
+	/** Every placed node (groups and composites aside) at its rendered size, canvas coords. */
+	function renderedNodeBoxes() {
 		const boxes = [];
 		for (const node of allNodes) {
 			if (node.type === 'group' || node.type === 'composite') continue;
@@ -1383,7 +1398,26 @@
 				h: el?.offsetHeight || getNodeRenderHeight(node)
 			});
 		}
-		for (const [id, y] of settleBoxes(boxes, frames)) stablePositions[id].y = y;
+		return boxes;
+	}
+
+	/**
+	 * Move nodes that the topo default placed into an already laid-out canvas (a table
+	 * edit's Edit value node, say) down until they cover no other node or note card.
+	 * The default knows only the graph's layers, not note cards or where the user has
+	 * dragged things. Nothing else moves.
+	 */
+	function clearOfOthers(ids) {
+		const boxes = renderedNodeBoxes();
+		const fresh = new Set(ids);
+		const obstacles = boxes.filter((b) => !fresh.has(b.id));
+		for (const id of ids) {
+			const b = boxes.find((x) => x.id === id);
+			if (!b || !stablePositions[id]) continue;
+			const y = clearPlacementY(b, obstacles);
+			if (y !== b.y) stablePositions[id].y = y;
+			obstacles.push({ ...b, y });
+		}
 	}
 
 	// Session import: settle overlaps once the imported nodes have rendered. Nodes

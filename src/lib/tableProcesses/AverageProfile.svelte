@@ -10,6 +10,8 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { averageDailyProfile } from '$lib/utils/averageProfile.js';
+	import { relabelFoldedProfile, PHASE_REFERENCE_START } from '$lib/utils/phaseReference.js';
+	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 
 	const displayName = 'Average Profile';
 
@@ -20,6 +22,11 @@
 		['yIN', { val: [] }],
 		['period', { val: 24 }],
 		['nBins', { val: 24 }],
+		// What the profile's time axis means: 'start' = hours after the first sample
+		// (the default, and what saved sessions report), 'clock' = hours after local
+		// midnight in the display timezone, wrapped to the period. Only relabels and
+		// reorders the bins; no value changes. Review FIT-9.
+		['phaseReference', { val: PHASE_REFERENCE_START }],
 		[
 			'out',
 			{
@@ -68,6 +75,10 @@
 		const perY = {};
 		let binCentres = null;
 		let anyValid = false;
+		// Clock time (FIT-9): each bin time is hours after the series' first valid sample
+		// (t0), so clock time adds t0 plus the origin's clock hour, wraps to the period and
+		// reorders the bins (profile, SEM and counts together).
+		const phaseRef = resolveNodePhaseReference(argsIN, xCol);
 		if (t && t.length) {
 			for (const yId of yINs) {
 				const yCol = yId >= 0 ? getColumnById(yId) : null;
@@ -75,13 +86,31 @@
 				if (!y || !y.length) continue;
 				const res = averageDailyProfile(t, y, opts);
 				if (res && res.binCentres.length) {
+					if (phaseRef.clock && Number.isFinite(res.t0)) {
+						const ref = { clock: true, offsetHours: phaseRef.offsetHours + res.t0 };
+						const r = relabelFoldedProfile(
+							res.binCentres,
+							[res.profile, res.sem, res.n],
+							ref,
+							opts.period
+						);
+						res.binCentres = r.binTimes;
+						[res.profile, res.sem, res.n] = r.series;
+					}
 					perY[yId] = res;
 					if (!binCentres) binCentres = res.binCentres;
 					if (res.n.some((c) => c > 0)) anyValid = true;
 				}
 			}
 		}
-		return { perY, binCentres, anyValid, yINs };
+		return {
+			perY,
+			binCentres,
+			anyValid,
+			yINs,
+			phaseRef,
+			warnings: phaseRef.warning ? [phaseRef.warning] : []
+		};
 	}
 
 	// Write the shared bin-centre X + per-Y profile + per-Y SEM columns.
@@ -122,6 +151,8 @@
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
+	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
+	import { appState } from '$lib/core/core.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -158,6 +189,11 @@
 		}
 		out += p.args.period;
 		out += p.args.nBins;
+		// Clock-time phases move with the display timezone, so it is an input then.
+		out +=
+			'|' +
+			p.args.phaseReference +
+			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -216,10 +252,12 @@
 			([data, valid]) => {
 				profData = data;
 				p.args.valid = valid;
+				p.warnings = data?.warnings ?? [];
 			},
 			() => {
 				profData = undefined;
 				p.args.valid = false;
+				p.warnings = [];
 				clearOutputColumns(p.args.out);
 			}
 		);
@@ -299,6 +337,13 @@
 			<NumberWithUnits bind:value={p.args.nBins} min="1" step="1" />
 		</ControlInput>
 	</div>
+	<div class="control-input-horizontal">
+		<PhaseReferenceSelect
+			bind:value={p.args.phaseReference}
+			xIsTime={xIN_col?.type === 'time'}
+			numericOrigin="the first sample"
+		/>
+	</div>
 </div>
 
 {#if calculating}
@@ -325,9 +370,15 @@
 				{/each}
 			</tbody>
 		</table>
+		{#each profData?.warnings ?? [] as w (w)}
+			<p class="warn">{w}</p>
+		{/each}
 		<p class="avgprof-hint">
-			Each series is folded onto one period and averaged per phase bin. Wire <em>avgprofx</em> vs a profile
-			output into a plot for the average-day waveform; the SEM output gives per-bin error.
+			Each series is folded onto one period and averaged per phase bin; bin times are {profData
+				?.phaseRef?.clock
+				? 'clock time of day'
+				: 'hours after the first sample'}. Wire <em>avgprofx</em> vs a profile output into a plot for
+			the average-day waveform; the SEM output gives per-bin error.
 		</p>
 	</div>
 {:else if mounted}
@@ -335,6 +386,15 @@
 {/if}
 
 <style>
+	/* Matches ChiSquared / Rayleigh / NPCRA. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.avgprof-results {
 		margin-top: var(--space-2, 0.5rem);
 		overflow-x: auto;

@@ -510,8 +510,8 @@ Notes:
 
 ## Current coverage
 
-`npm run parity` lists every fixture. As of 2026-10-04: 285 fixtures, Python 285/285, R
-244 pass with 41 not claimed (listed below), whole-session 89 match with 2 skipped.
+`npm run parity` lists every fixture. As of 2026-10-05: 323 fixtures, Python 323/323, R
+282 pass with 41 not claimed (listed below), whole-session 89 match with 2 skipped.
 
 ## Fixture fields added 2026-10-04 (review wave 1 and 2 ports)
 
@@ -553,8 +553,34 @@ finiteness check on FUNCTION results is an equivalent mutant in Python (its math
 raise rather than return Inf or NaN). R gained FormulaColumn with the same parser
 (`R_IMPLEMENTED` now lists `formulacolumn`).
 
-## Remaining divergences (recorded 2026-10-04)
+## Round 2 ports (2026-10-05)
 
+| Change                        | Python and R                                                                                                                                                                                                                                                                           | Fixtures                                                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| FIT-6 template placement      | marker = template start + N (was the midpoint)                                                                                                                                                                                                                                         | `actogram-rule-asymmetric-template` (+ the two existing asymmetric rules)                                               |
+| STAT-10 Tukey-Kramer          | q against the studentized range at (k, N - k), no Holm step, simultaneous CI. Python integrates the upper tail directly (port of `studentizedRange.js`); R uses `ptukey`/`qtukey` (`rTolerance` 1e-6). R GroupComparison ANOVA now computes the post hoc too.                          | `util-tukey-kramer-*`, `util-studentized-range-*`                                                                       |
+| STAT-16 zone offsets (R)      | `+05:30` and a trailing `Z` normalised to `+0530`/`+0000` before `%z`                                                                                                                                                                                                                  | `time-zone-offsets`                                                                                                     |
+| STAT-15 cleared cells (R)     | an EditValue null edit is NA, not a deleted row                                                                                                                                                                                                                                        | `col-editvalue-null`                                                                                                    |
+| STAT-19 output origin         | `fit_time_frame`: the minimum valid input time; a time output grid in the input's hour frame. Cosinor, FitFunction, TrendFit, RectangularWave, DoubleLogistic, SmoothedData                                                                                                            | `tp-cosinor-time-origin-min`, `*-output-grid-time`, `tp-trendfit-time-origin`, `tp-smoothed-time-origin`                |
+| FIT-9 phase reference         | `phaseReference` 'clock' (display zone from `set_display_timezone` / `DISPLAY_TIMEZONE`, which the exporters now set from `appState.displayTimezone`); numeric x falls back to 'start'. Cosinor, FitFunction metric ports, NPCRA (onsets and profile), AverageProfile (bins reordered) | `tp-cosinor-clock-*`, `tp-fitfunction-*-metrics-clock`, `tp-npcra-clock-reference`, `tp-averageprofile-clock-reference` |
+| FIT-13 overall waveform       | `multi_component_waveform` (2880 points, parabolic refinement); Cosinor and FitFunction `amplitude`/`acrophase` (and Cosinor `bathyphase`, `phase_angle`) from it when nHarmonics > 1; new `*_h1` ports                                                                                | `tp-cosinor-multiharmonic*`, `tp-fitfunction-cosinor-metrics-*`                                                         |
+| MovingAnalysis rolling phases | both ports' MovingAnalysis rebuilt on one `compute_moving_windows` (also the parity surface), with every JS analysis (summary, trend, rectfit and double logistic were missing) and the record-start phase frame                                                                       | `util-movingwindows-*`                                                                                                  |
+
+Also fixed on the way: Python and R FitFunction now write their metric ports (they wrote
+none), the cosinor model's `useFixedPeriod` default is true as in the app, TrendFit writes
+its x output as time for a time input and refuses out-of-domain fits per y, R TrendFit writes
+r2/rmse/coefficients, `ancir_to_python.py` documents `.ancir` sessions.
+
+## Remaining divergences (recorded 2026-10-04, updated 2026-10-05)
+
+- **Round 2, outputs the ports do not have**: the Cosinor/FitFunction stats-table CSV headers
+  (`_clock_h`, `overall_amplitude`, `orthophase_*`), the RectangularWave/DoubleLogistic panel
+  phases and stored values, the GroupComparison post-hoc table (`ci_low`, `ci_high`, label),
+  the phase-reference and window-skip warning text. Nothing to port them into.
+- **Studentized range in R**: `ptukey` is accurate to about 1e-11 absolute in the upper tail
+  and `qtukey` to about 1e-8 relative, so the R Tukey fixtures carry `rTolerance` 1e-6.
+- **Free cosinor in the ports** still uses scipy `least_squares` / R `optim`, not the JS
+  Levenberg-Marquardt; MovingAnalysis free-cosinor windows agree to 1e-4 (fixture tolerance).
 - **Permutation p-values** (`perm_pvalue` of Cosinor, RectangularWave, DoubleLogistic,
   FitFunction; the block scheme, `autoPermutations`, scheme and block-length fields, the
   permutation CSV `scheme` column): not run by either port, which write NaN ("not

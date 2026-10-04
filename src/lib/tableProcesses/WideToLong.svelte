@@ -78,9 +78,11 @@
 			if (outTimeCol) {
 				outTimeCol.data = argsIN.out.time;
 				outTimeCol.type = timeCol.type;
-				if (timeCol.timeFormat) {
-					outTimeCol.timeFormat = timeCol.timeFormat;
-				}
+				// The stored times are getData()'s values (UNIX ms for a time column), not
+				// the source's text, so the source's text format would re-parse every one
+				// as invalid and the column would read as all blanks. Clear it, as Split
+				// and CollectColumns do, so getData() passes the ms straight through.
+				outTimeCol.timeFormat = null;
 				outTimeCol.tableProcessGUId = processHash;
 			}
 

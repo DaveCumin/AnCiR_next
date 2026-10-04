@@ -34,16 +34,19 @@ function signatureOf(col, raw) {
  */
 export function auditTimeColumnParse(col, raw, parsed) {
 	if (!col || !Array.isArray(raw) || !Array.isArray(parsed)) return;
-	// No format at all is reported where the format is set (the type-change sniff
-	// and the column's Time Format field); numeric epoch ms need none.
-	if (!hasTimeFormat(col.timeFormat)) return;
 	const sig = signatureOf(col, raw);
 	if (audited.get(col.id) === sig) return;
 	audited.set(col.id, sig);
-
-	const counts = countUnparsedTimes(raw, parsed);
+	// Any newer parse supersedes a pending warning, including one with no format.
 	clearTimeout(pending.get(col.id));
 	pending.delete(col.id);
+	// No format at all is reported where the format is set (the type-change sniff
+	// and the column's Time Format field); numeric epoch ms need none. A node that
+	// clears a stale text format from its epoch-ms output (Wide To Long on a session
+	// saved before it did) lands here, and must cancel the warning its first read raised.
+	if (!hasTimeFormat(col.timeFormat)) return;
+
+	const counts = countUnparsedTimes(raw, parsed);
 	if (!shouldWarnUnparsedTimes(counts)) return;
 
 	const fmt = Array.isArray(col.timeFormat) ? col.timeFormat.join(' or ') : col.timeFormat;

@@ -3,7 +3,8 @@ import {
 	wrapToPeriod,
 	bathyphase,
 	phaseAngleOfEntrainment,
-	circadianFunctionIndex
+	circadianFunctionIndex,
+	multiComponentWaveform
 } from './cosinorAddons.js';
 
 describe('wrapToPeriod', () => {
@@ -101,5 +102,61 @@ describe('circadianFunctionIndex', () => {
 		expect(circadianFunctionIndex({ IS: 1, IV: NaN, RA: 1 }).CFI).toBeNaN();
 		expect(circadianFunctionIndex({}).CFI).toBeNaN();
 		expect(circadianFunctionIndex().CFI).toBeNaN();
+	});
+});
+
+describe('multiComponentWaveform (review FIT-13)', () => {
+	const w = (2 * Math.PI) / 24;
+	const harmonic = (k, A, peak) => ({
+		k,
+		beta: A * Math.cos(k * w * peak),
+		gamma: A * Math.sin(k * w * peak)
+	});
+	// Brute-force extremes on a 0.0001 h grid.
+	const extremes = (curve) => {
+		let tMax = 0;
+		let tMin = 0;
+		for (let t = 0; t < 24; t += 1e-4) {
+			if (curve(t) > curve(tMax)) tMax = t;
+			if (curve(t) < curve(tMin)) tMin = t;
+		}
+		return { tMax, tMin, amp: (curve(tMax) - curve(tMin)) / 2 };
+	};
+
+	it('finds the overall amplitude, orthophase and bathyphase of an asymmetric curve', () => {
+		// 2·cos(ω(t − 14)) + 1.5·cos(2ω(t − 17)): harmonic 1 says amplitude 2 and
+		// peak 14 h; the curve peaks at 16.27 h, troughs at 23.73 h, half-range 3.049.
+		const curve = (t) => 5 + 2 * Math.cos(w * (t - 14)) + 1.5 * Math.cos(2 * w * (t - 17));
+		const r = multiComponentWaveform(5, [harmonic(1, 2, 14), harmonic(2, 1.5, 17)], 24);
+		const ref = extremes(curve);
+		expect(r.orthophase).toBeCloseTo(ref.tMax, 3);
+		expect(r.bathyphase).toBeCloseTo(ref.tMin, 3);
+		expect(r.amplitude).toBeCloseTo(ref.amp, 6);
+		expect(r.orthophase).toBeCloseTo(16.27, 2);
+		expect(r.bathyphase).toBeCloseTo(23.73, 2);
+		expect(r.amplitude).toBeCloseTo(3.049, 3);
+		expect(r.max).toBeCloseTo(curve(ref.tMax), 6);
+	});
+	it("the review's waveform: half-range 2.667, peak at one of its two equal maxima", () => {
+		// 2·cos(ω(t − 14)) + 1.5·cos(2ω(t − 20)) is symmetric about t = 14, so its
+		// maximum is reached twice (9.30 h and 18.70 h, equal heights): either is a
+		// correct orthophase. The amplitude is unambiguous.
+		const r = multiComponentWaveform(0, [harmonic(1, 2, 14), harmonic(2, 1.5, 20)], 24);
+		expect(r.amplitude).toBeCloseTo(8 / 3, 6);
+		const nearOne = Math.min(Math.abs(r.orthophase - 9.3), Math.abs(r.orthophase - 18.7));
+		expect(nearOne).toBeLessThan(0.01);
+	});
+	it('reduces to the single cosine for one harmonic', () => {
+		const r = multiComponentWaveform(1, [harmonic(1, 3, 17.25)], 24);
+		expect(r.amplitude).toBeCloseTo(3, 8);
+		expect(r.orthophase).toBeCloseTo(17.25, 4);
+		expect(r.bathyphase).toBeCloseTo(5.25, 4);
+	});
+	it('returns NaN for unusable input', () => {
+		const hs = [harmonic(1, 2, 14)];
+		expect(multiComponentWaveform(NaN, hs, 24).amplitude).toBeNaN();
+		expect(multiComponentWaveform(1, [], 24).orthophase).toBeNaN();
+		expect(multiComponentWaveform(1, hs, 0).bathyphase).toBeNaN();
+		expect(multiComponentWaveform(1, [{ k: 1, beta: NaN, gamma: 0 }], 24).amplitude).toBeNaN();
 	});
 });

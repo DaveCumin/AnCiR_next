@@ -93,10 +93,16 @@ describe('widetolong', () => {
 			getData: () => [1000, 2000],
 			type: 'time',
 			name: 'time',
-			timeFormat: 'unix'
+			timeFormat: 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]'
 		};
 		mockColumns[2] = { getData: () => [5, 6], type: 'number', name: 'light' };
-		mockColumns[10] = { data: null, type: null, timeFormat: null, tableProcessGUId: null };
+		// A session saved before the fix carries the source's text format on the output.
+		mockColumns[10] = {
+			data: null,
+			type: null,
+			timeFormat: 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]',
+			tableProcessGUId: null
+		};
 		mockColumns[11] = { data: null, type: null, tableProcessGUId: null };
 		mockColumns[12] = { data: null, type: null, tableProcessGUId: null };
 
@@ -111,7 +117,9 @@ describe('widetolong', () => {
 		expect(mockRawDataSet.mock.calls.find(([id]) => id === 11)?.[1]).toEqual(['light', 'light']);
 		expect(mockRawDataSet.mock.calls.find(([id]) => id === 12)?.[1]).toEqual([5, 6]);
 		expect(mockColumns[10].type).toBe('time');
-		expect(mockColumns[10].timeFormat).toBe('unix');
+		// The output holds getData()'s UNIX ms, so the source's text format must not
+		// follow it there: it would re-parse every time as invalid (all blanks).
+		expect(mockColumns[10].timeFormat).toBeNull();
 		expect(mockColumns[11].type).toBe('category');
 		expect(mockColumns[12].type).toBe('number');
 		expect(mockColumns[10].tableProcessGUId).toBeTruthy();

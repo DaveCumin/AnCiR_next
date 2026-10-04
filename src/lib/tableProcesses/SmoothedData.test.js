@@ -124,3 +124,33 @@ describe('smootheddata with blank and numeric-string cells (ROB-8)', () => {
 		expect(result.y_results[2]).toEqual([3, 2, 2, 2, 3]);
 	});
 });
+
+describe('STAT-19: the smoothed x axis uses the minimum valid time as origin', () => {
+	it('unsorted time input with a missing first value maps back to the real timestamps', async () => {
+		const H = 3600000;
+		const T0 = Date.UTC(2026, 2, 2, 7, 0, 0);
+		// Unsorted, first row missing: getData()[0] is null and t[1] is not the earliest.
+		const ms = [null, T0 + 3 * H, T0 + H, T0, T0 + 4 * H, T0 + 2 * H];
+		const hours = ms.map((v) => (v == null ? null : (v - T0) / H));
+		mockColumns[1] = { type: 'time', getData: () => ms, hoursSinceStart: hours };
+		mockColumns[2] = { type: 'number', getData: () => [1, 4, 2, 1, 5, 3] };
+		const [result, valid] = await smootheddata({
+			xIN: 1,
+			yIN: [2],
+			smootherType: 'moving',
+			movingAvgWindowSize: 3,
+			movingAvgType: 'simple',
+			out: preview
+		});
+		expect(valid).toBe(true);
+		expect(result.originTime_ms).toBe(T0);
+		// Sorted output hours, turned back into timestamps from the origin, are the inputs.
+		expect(result.x_out.map((h) => result.originTime_ms + h * H)).toEqual([
+			T0,
+			T0 + H,
+			T0 + 2 * H,
+			T0 + 3 * H,
+			T0 + 4 * H
+		]);
+	});
+});

@@ -125,4 +125,16 @@ https://svelte.dev/playground/modal?version=5.33.7
 		margin-left: -0.2em;
 		margin-top: -0.2em;
 	}
+
+	/* The close button stays put while a long dialog scrolls under it; a card-coloured
+	   disc keeps it legible and stops it reading as part of the field beneath. */
+	.modalCloseBtn {
+		z-index: 1;
+	}
+	.modalCloseBtn button {
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		background-color: var(--surface-card);
+	}
 </style>

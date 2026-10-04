@@ -4,7 +4,12 @@
 import { base } from '$app/paths';
 import { appState, core } from '$lib/core/core.svelte.js';
 import { importJson } from '$lib/components/iconActions/Setting.svelte';
-import { confirmReplaceSession } from '$lib/core/sessionLoad.svelte.js';
+import {
+	confirmReplaceSession,
+	NotASessionError,
+	sessionShapeProblem
+} from '$lib/core/sessionLoad.svelte.js';
+import { SESSION_PICKER_TYPES, sessionBaseName } from '$lib/core/sessionFiles.js';
 import { addNotification } from '$lib/core/notifications.svelte.js';
 import { recordRecent } from '$lib/start/recentSessions.svelte.js';
 import { thumbnailForWorkflow } from '$lib/start/thumbnails.js';
@@ -59,18 +64,26 @@ export function sessionMeta() {
 }
 
 /**
- * Open a session FILE (the user's own saved .json) and record it as a recent.
+ * Open a session FILE (the user's own saved .json or .ancir) and record it as a recent.
  *
  * This is the single chokepoint for "open a session from disk" on the start screen, so recording
  * can never drift out of sync with loading. `handle` is a FileSystemFileHandle when the browser
  * gave us one; storing it is what lets the next visit reopen in one click with no picker.
  */
 export async function openSessionFile(file, handle = null, onProgress) {
-	const data = JSON.parse(await file.text());
-	// Asked after parsing, so a file that is not even JSON fails without a pointless question.
+	let data;
+	try {
+		data = JSON.parse(await file.text());
+	} catch {
+		// Same refusal importJson gives any other non-session, rather than a raw parser message.
+		throw new NotASessionError('it is not JSON');
+	}
+	// Checked before asking, so a file that is not a session fails without a pointless question.
+	const problem = sessionShapeProblem(data);
+	if (problem) throw new NotASessionError(problem);
 	if (!(await confirmReplaceSession(`"${file.name}"`))) return false;
 	await importJson(data, onProgress);
-	const name = file.name.replace(/\.json$/i, '');
+	const name = sessionBaseName(file.name);
 	await recordRecent({
 		id: `file::${file.name}`,
 		name,
@@ -93,7 +106,7 @@ export async function pickSessionFile() {
 	try {
 		const [handle] = await window.showOpenFilePicker({
 			multiple: false,
-			types: [{ description: 'AnCiR session', accept: { 'application/json': ['.json'] } }]
+			types: SESSION_PICKER_TYPES
 		});
 		return { status: 'ok', file: await handle.getFile(), handle };
 	} catch (e) {

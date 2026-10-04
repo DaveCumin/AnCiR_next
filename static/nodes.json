@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.79.0",
+  "generatedFromVersion": "β.80.0",
   "count": 62,
   "nodes": [
     {
@@ -926,6 +926,10 @@
         {
           "name": "nBins",
           "default": 24
+        },
+        {
+          "name": "phaseReference",
+          "default": "start"
         }
       ],
       "outputs": [
@@ -1470,6 +1474,10 @@
           "default": 0
         },
         {
+          "name": "phaseReference",
+          "default": "start"
+        },
+        {
           "name": "permuteTest",
           "default": false
         },
@@ -1582,6 +1590,24 @@
         },
         {
           "name": "phase_angle",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "amplitude_h1",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "acrophase_h1",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "bathyphase_h1",
           "kind": "column",
           "cardinality": "one",
           "metric": true
@@ -1873,6 +1899,10 @@
           "default": 48
         },
         {
+          "name": "phaseReference",
+          "default": "start"
+        },
+        {
           "name": "permuteTest",
           "default": false
         },
@@ -2013,6 +2043,10 @@
         {
           "name": "outputX",
           "default": -1
+        },
+        {
+          "name": "phaseReference",
+          "default": "start"
         },
         {
           "name": "useFixedPeriod",
@@ -2169,6 +2203,18 @@
         },
         {
           "name": "acrophase",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "amplitude_h1",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "acrophase_h1",
           "kind": "column",
           "cardinality": "one",
           "metric": true
@@ -2668,6 +2714,10 @@
         {
           "name": "dlFixedK2",
           "default": 0.5
+        },
+        {
+          "name": "phaseReference",
+          "default": "start"
         }
       ],
       "outputs": [
@@ -2724,6 +2774,10 @@
         {
           "name": "lWindow",
           "default": 5
+        },
+        {
+          "name": "phaseReference",
+          "default": "start"
         }
       ],
       "outputs": [
@@ -3037,6 +3091,10 @@
         {
           "name": "fixedDutyCycle",
           "default": 0.5
+        },
+        {
+          "name": "phaseReference",
+          "default": "start"
         },
         {
           "name": "permuteTest",

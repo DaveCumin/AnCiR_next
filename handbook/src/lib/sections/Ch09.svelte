@@ -34,7 +34,7 @@
 		[
 			'M10 / L5',
 			'Mean activity over the most active 10 hours (M10) and least active 5 hours (L5) of the average day, plus their onset times',
-			'Activity units; onsets in hours'
+			'Activity units; onsets in hours after the first sample, or clock time of day'
 		],
 		[
 			'Relative Amplitude (RA)',
@@ -169,7 +169,10 @@
 			<li>
 				The node reports <strong>IS</strong>, <strong>IV</strong>, <strong>RA</strong>,
 				<strong>M10</strong>, <strong>L5</strong>, and the M10/L5 onset times, alongside the
-				average-day profile.
+				average-day profile. The onsets and the profile's time axis are hours after the first
+				sample, so a record starting at 07:00 whose active hours start at 08:00 reports an M10 onset
+				of 1 h. Set <strong>Phase reference</strong> to <strong>Clock time of day</strong> (it needs a
+				time column) to read them as clock time; IS, IV, RA, M10 and L5 do not change.
 			</li>
 		</ol>
 	</AnCiRBox>

@@ -82,8 +82,21 @@ export const STAT_LABELS = Object.freeze({
 	sd: 'SD'
 });
 
+// Phase outputs of the nodes with a "Phase reference" option (review FIT-9;
+// utils/phaseReference.js). The default (hours after the first sample) keeps the plain
+// "(h)"; clock time of day says so, because the same key then means a different hour 0.
+const PHASE_STAT =
+	/^(acrophase|bathyphase|onset|offset|M10onset|L5onset|H\d+_acrophase|C\d+_acrophase)$/;
+const isClockRef = (args) => args?.phaseReference === 'clock';
+const clockUnit = (label) => label.replace(/\(h\)$/, '(clock time, h)');
+
 /** Label for a statistic name, also covering the numbered families (H1_…, C2_…, c0). */
 export function statLabel(stat, args = {}) {
+	const label = baseStatLabel(stat, args);
+	return label && isClockRef(args) && PHASE_STAT.test(stat) ? clockUnit(label) : label;
+}
+
+function baseStatLabel(stat, args = {}) {
 	if (typeof stat !== 'string') return null;
 	if (stat === 'percentile') {
 		const pct = Number(args?.summaryPercentile ?? 50);
@@ -93,7 +106,10 @@ export function statLabel(stat, args = {}) {
 	const npcra = /^(M10|L5)(onset)?$/.exec(stat);
 	if (npcra) {
 		const isM = npcra[1] === 'M10';
-		const raw = Number(isM ? args?.mWindow : args?.lWindow);
+		// NonparametricRA calls them mWindow / lWindow; Moving analysis npcraMWindow / npcraLWindow.
+		const raw = Number(
+			isM ? (args?.mWindow ?? args?.npcraMWindow) : (args?.lWindow ?? args?.npcraLWindow)
+		);
 		const h = Number.isFinite(raw) && raw > 0 ? raw : isM ? 10 : 5;
 		const name = `${isM ? 'M' : 'L'}${h}`;
 		if (npcra[2]) return `${name} onset (h)`;
@@ -102,9 +118,16 @@ export function statLabel(stat, args = {}) {
 	if (Object.hasOwn(STAT_LABELS, stat)) return STAT_LABELS[stat];
 	let m = /^H(\d+)_(amplitude|acrophase)$/.exec(stat);
 	if (m) return `H${m[1]} ${m[2] === 'amplitude' ? 'amplitude' : 'acrophase (h)'}`;
-	m = /^C(\d+)_(period|amplitude|phase)$/.exec(stat);
+	m = /^C(\d+)_(period|amplitude|phase|acrophase)$/.exec(stat);
 	if (m) {
-		const what = { period: 'period (h)', amplitude: 'amplitude', phase: 'acrophase (h)' }[m[2]];
+		// `C1_phase` is the model's phase angle φ in A·cos(ωt + φ), in radians; the time of
+		// the peak is `C1_acrophase`.
+		const what = {
+			period: 'period (h)',
+			amplitude: 'amplitude',
+			phase: 'phase φ (rad)',
+			acrophase: 'acrophase (h)'
+		}[m[2]];
 		return `C${m[1]} ${what}`;
 	}
 	m = /^c(\d+)$/.exec(stat);
@@ -131,6 +154,17 @@ export function statLabel(stat, args = {}) {
 
 const fit = (family) => () => `${family}: x`;
 
+// Multi-harmonic fixed-period cosinor: amplitude / acrophase / bathyphase describe the
+// overall fitted waveform, and the *_h1 ports carry harmonic 1 (review FIT-13).
+const multiHarmonic = (ctx) =>
+	(ctx?.args?.useFixedPeriod ?? false) && Number(ctx?.args?.nHarmonics ?? 1) > 1;
+const fitMultiHarmonic = (ctx) =>
+	(ctx?.args?.model ?? 'cosinor') === 'cosinor' &&
+	(ctx?.args?.useFixedPeriod ?? true) &&
+	Number(ctx?.args?.nHarmonics ?? 1) > 1;
+/** "<name> (h)", or "(clock time, h)" when the node reports clock time of day. */
+const phaseLabel = (name, ctx) => `${name} (${isClockRef(ctx?.args) ? 'clock time, h' : 'h'})`;
+
 const RAYLEIGH_UNIT = { radians: 'rad', degrees: '°', hours: 'h' };
 function rayleighAcrophase(ctx) {
 	const timeIN = ctx?.args?.timeIN;
@@ -156,7 +190,7 @@ const CHI_EFFECT = {
 
 export const NODE_OUTPUT_LABELS = {
 	AverageProfile: {
-		keys: { avgprofx: 'Profile time (h)' },
+		keys: { avgprofx: (ctx) => phaseLabel('Profile time', ctx) },
 		perInput: [
 			{ prefix: 'avgprof_', label: 'Mean profile' },
 			{ prefix: 'avgprofsem_', label: 'Profile SEM' }
@@ -206,10 +240,21 @@ export const NODE_OUTPUT_LABELS = {
 	Cosinor: {
 		keys: {
 			cosinorx: fit('Cosinor fit'),
-			amplitude_ciLow: 'Amplitude CI low',
-			amplitude_ciHigh: 'Amplitude CI high',
-			acrophase_ciLow: 'Acrophase CI low (h)',
-			acrophase_ciHigh: 'Acrophase CI high (h)'
+			amplitude: (ctx) => (multiHarmonic(ctx) ? 'Overall amplitude' : 'Amplitude'),
+			acrophase: (ctx) =>
+				phaseLabel(multiHarmonic(ctx) ? 'Orthophase, overall peak' : 'Acrophase', ctx),
+			bathyphase: (ctx) =>
+				phaseLabel(multiHarmonic(ctx) ? 'Bathyphase, overall trough' : 'Bathyphase', ctx),
+			amplitude_h1: 'H1 amplitude',
+			acrophase_h1: (ctx) => phaseLabel('H1 acrophase', ctx),
+			bathyphase_h1: (ctx) => phaseLabel('H1 bathyphase', ctx),
+			// The confidence intervals are harmonic 1's.
+			amplitude_ciLow: (ctx) => `${multiHarmonic(ctx) ? 'H1 amplitude' : 'Amplitude'} CI low`,
+			amplitude_ciHigh: (ctx) => `${multiHarmonic(ctx) ? 'H1 amplitude' : 'Amplitude'} CI high`,
+			acrophase_ciLow: (ctx) =>
+				phaseLabel(`${multiHarmonic(ctx) ? 'H1 acrophase' : 'Acrophase'} CI low`, ctx),
+			acrophase_ciHigh: (ctx) =>
+				phaseLabel(`${multiHarmonic(ctx) ? 'H1 acrophase' : 'Acrophase'} CI high`, ctx)
 		},
 		perInput: [
 			{ prefix: 'cosinory_', label: 'Cosinor fit', autoPrefixes: ['cosinor_'] },
@@ -248,7 +293,16 @@ export const NODE_OUTPUT_LABELS = {
 	},
 	FDRCorrection: { keys: { padj: 'Adjusted p-value', reject: 'Rejected (1 = yes)' } },
 	FitFunction: {
-		keys: { fitx: fit('Fit') },
+		keys: {
+			fitx: fit('Fit'),
+			amplitude: (ctx) => (fitMultiHarmonic(ctx) ? 'Overall amplitude' : 'Amplitude'),
+			acrophase: (ctx) =>
+				phaseLabel(fitMultiHarmonic(ctx) ? 'Orthophase, overall peak' : 'Acrophase', ctx),
+			amplitude_h1: 'H1 amplitude',
+			acrophase_h1: (ctx) => phaseLabel('H1 acrophase', ctx),
+			onset: (ctx) => phaseLabel('Onset', ctx),
+			offset: (ctx) => phaseLabel('Offset', ctx)
+		},
 		perInput: [
 			{ prefix: 'fity_', label: 'Fit', autoPrefixes: ['fit_'] },
 			{ prefix: 'resid_', label: 'Residuals' },
@@ -291,7 +345,7 @@ export const NODE_OUTPUT_LABELS = {
 	},
 	MovingAnalysis: { keys: { movex: 'Window time' }, perInputStat: true },
 	NonparametricRA: {
-		keys: { npcrax: 'Average day: time (h)' },
+		keys: { npcrax: (ctx) => phaseLabel('Average day: time', ctx) },
 		perInput: [{ prefix: 'npcray_', label: 'Average day', autoPrefixes: ['npcra_'] }]
 	},
 	NormalityTest: {

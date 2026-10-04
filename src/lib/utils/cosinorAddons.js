@@ -30,6 +30,78 @@ export function bathyphase(acrophaseHrs, periodHrs) {
 	return wrapToPeriod(acrophaseHrs + periodHrs / 2, periodHrs);
 }
 
+/** Grid points per period for the dense evaluation in `multiComponentWaveform`. */
+export const WAVEFORM_GRID_POINTS = 2880;
+
+/**
+ * Overall amplitude, orthophase and bathyphase of a multi-harmonic cosinor.
+ *
+ * With several harmonics the fitted curve is
+ *   y(t) = M + Σ_k [β_k cos(kωt) + γ_k sin(kωt)],   ω = 2π / period,
+ * and harmonic 1's amplitude and acrophase no longer describe it: the waveform's
+ * peak can sit hours away from harmonic 1's peak, and its peak-to-trough range is
+ * not 2·A1. Cornelissen (2014, Theor Biol Med Model 11:16) describes the overall
+ * amplitude, orthophase and bathyphase of such multi-component models as half the
+ * curve's range and the times of its maximum and minimum; they are found here
+ * numerically.
+ *
+ * Method: evaluate y on WAVEFORM_GRID_POINTS equally spaced times over one
+ * period [0, period), take the grid maximum and minimum, and refine each by a
+ * parabola through it and its two neighbours (circular indexing; the step is
+ * period/2880, 30 s for 24 h, so the refinement only polishes the last digits).
+ *
+ * @param {number} M  MESOR
+ * @param {{k:number, beta:number, gamma:number}[]} harmonics
+ * @param {number} period  fundamental period (h), > 0
+ * @returns {{amplitude:number, orthophase:number, bathyphase:number, max:number, min:number}}
+ *   amplitude = (max - min) / 2; orthophase / bathyphase = times (h) of the maximum /
+ *   minimum in [0, period). Every field NaN for non-finite input.
+ */
+export function multiComponentWaveform(M, harmonics, period) {
+	const nan = { amplitude: NaN, orthophase: NaN, bathyphase: NaN, max: NaN, min: NaN };
+	if (!Number.isFinite(M) || !(period > 0) || !Array.isArray(harmonics) || !harmonics.length) {
+		return nan;
+	}
+	for (const h of harmonics) {
+		if (![h?.k, h?.beta, h?.gamma].every(Number.isFinite)) return nan;
+	}
+	const N = WAVEFORM_GRID_POINTS;
+	const dt = period / N;
+	const omega = (2 * Math.PI) / period;
+	const y = new Float64Array(N);
+	let iMax = 0;
+	let iMin = 0;
+	for (let i = 0; i < N; i++) {
+		const t = i * dt;
+		let v = M;
+		for (const h of harmonics) {
+			v += h.beta * Math.cos(h.k * omega * t) + h.gamma * Math.sin(h.k * omega * t);
+		}
+		y[i] = v;
+		if (v > y[iMax]) iMax = i;
+		if (v < y[iMin]) iMin = i;
+	}
+	// Parabolic refinement through (i-1, i, i+1): vertex offset in grid steps.
+	const refine = (i) => {
+		const a = y[(i - 1 + N) % N];
+		const b = y[i];
+		const c = y[(i + 1) % N];
+		const denom = a - 2 * b + c;
+		const d = denom !== 0 ? (0.5 * (a - c)) / denom : 0;
+		const off = Math.max(-0.5, Math.min(0.5, d));
+		return { t: wrapToPeriod((i + off) * dt, period), v: b - 0.25 * (a - c) * off };
+	};
+	const hi = refine(iMax);
+	const lo = refine(iMin);
+	return {
+		amplitude: (hi.v - lo.v) / 2,
+		orthophase: hi.t,
+		bathyphase: lo.t,
+		max: hi.v,
+		min: lo.v
+	};
+}
+
 /**
  * Phase angle of entrainment (ψ) — the phase relationship between an internal
  * rhythm marker (the acrophase) and an external zeitgeber reference time.

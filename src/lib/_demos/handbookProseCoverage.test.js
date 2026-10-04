@@ -109,6 +109,11 @@ const CONCEPT = {
 	amplitude: /amplitude/,
 	acrophase: /acrophase/,
 	bathyphase: /bathyphase|trough/,
+	// Multi-harmonic cosinor (review FIT-13): amplitude/acrophase/bathyphase describe the
+	// overall waveform, and these carry harmonic 1 on its own.
+	amplitude_h1: /first harmonic|fundamental/,
+	acrophase_h1: /first harmonic|fundamental/,
+	bathyphase_h1: /first harmonic|fundamental/,
 	phase_angle: /phase angle|entrain/,
 	period: /period/,
 	// FitFunction's per-model parameter ports (v72.29): the rectangular wave's

@@ -31,6 +31,7 @@ export default defineConfig({
 	// re-optimisation entirely.
 	optimizeDeps: {
 		include: [
+			'@stdlib/math-base-special-erfc',
 			'@stdlib/random-base-minstd-shuffle',
 			'@stdlib/random-base-exponential',
 			'@stdlib/random-base-normal',

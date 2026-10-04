@@ -584,7 +584,13 @@
 					</div>
 				{/each}
 				{#if outputColumns.length === 0 && bundleOutputs.length === 0}
-					<div class="empty-hint">No output columns yet.</div>
+					<!-- A process a column owns (a Table plot cell edit adds one) has no output
+					     column of its own: it changes that column, which its consumers keep reading. -->
+					{#if node.processObj?.parentCol}
+						<div class="empty-hint">Changes its input column in place.</div>
+					{:else}
+						<div class="empty-hint">No output columns yet.</div>
+					{/if}
 				{/if}
 			</div>
 		</div>

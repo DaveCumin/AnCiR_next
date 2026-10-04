@@ -141,3 +141,38 @@ describe('opHistory', () => {
 		});
 	});
 });
+
+describe('setRawCell (a Table plot time-cell edit)', () => {
+	it('is one undo step each, and undo restores the cell and redraws', () => {
+		const col = M.addColumn({ name: 'time', type: 'time' });
+		core.rawData.set(col.data, ['2024-01-01 00:00', '2024-01-01 01:00']);
+		history.clear();
+		const v0 = col.rawDataVersion;
+
+		M.setRawCell(col.id, 1, null); // cleared
+		M.setRawCell(col.id, 0, '2024-01-01 00:30');
+		expect(core.rawData.get(col.data)).toEqual(['2024-01-01 00:30', null]);
+		expect(col.rawDataVersion).toBe(v0 + 2);
+
+		history.undo();
+		expect(core.rawData.get(col.data)).toEqual(['2024-01-01 00:00', null]);
+		history.undo();
+		expect(core.rawData.get(col.data)).toEqual(['2024-01-01 00:00', '2024-01-01 01:00']);
+		expect(col.rawDataVersion).toBe(v0 + 4);
+		expect(history.canUndo).toBe(false);
+
+		history.redo();
+		expect(core.rawData.get(col.data)).toEqual(['2024-01-01 00:00', null]);
+	});
+
+	it('records nothing for an unchanged value or a row outside the series', () => {
+		const col = M.addColumn({ name: 'time', type: 'time' });
+		core.rawData.set(col.data, [0, 3600000]);
+		history.clear();
+		M.setRawCell(col.id, 0, 0);
+		M.setRawCell(col.id, 5, 1);
+		M.setRawCell(col.id, -1, 1);
+		expect(history.canUndo).toBe(false);
+		expect(core.rawData.get(col.data)).toEqual([0, 3600000]);
+	});
+});

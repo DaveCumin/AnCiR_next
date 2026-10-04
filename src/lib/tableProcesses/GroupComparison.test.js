@@ -174,6 +174,183 @@ describe('tukeyKramerPostHoc', () => {
 	});
 });
 
+describe('tukeyKramerPostHoc matches scipy.stats.tukey_hsd (unequal n)', () => {
+	const mk = (vals, i) => ({
+		name: String.fromCharCode(65 + i),
+		values: vals,
+		n: vals.length,
+		mean: vals.reduce((a, b) => a + b, 0) / vals.length
+	});
+	const run = (data) => {
+		const groups = data.map(mk);
+		const a = oneWayAnova(groups);
+		return tukeyKramerPostHoc(groups, a.msWithin, a.dfWithin, 0.05);
+	};
+	const rel = (x, y) => (y === 0 ? Math.abs(x) : Math.abs(x - y) / Math.abs(y));
+	const check = (pairs, want) => {
+		expect(pairs).toHaveLength(want.length);
+		want.forEach((w, idx) => {
+			const p = pairs[idx];
+			expect(p.groupA).toBe(String.fromCharCode(65 + w.a));
+			expect(p.groupB).toBe(String.fromCharCode(65 + w.b));
+			expect(p.diff).toBeCloseTo(w.diff, 12);
+			expect(rel(p.pAdjusted, w.p)).toBeLessThan(1e-6);
+			expect(Math.abs(p.ciLow - w.lo)).toBeLessThan(1e-9);
+			expect(Math.abs(p.ciHigh - w.hi)).toBeLessThan(1e-9);
+		});
+	};
+
+	// The review's example (STAT-10). Reference: scipy 1.18.0 tukey_hsd(...).pvalue and
+	// .confidence_interval(0.95); statsmodels pairwise_tukeyhsd gives the same p-values.
+	// The old Holm-adjusted t-tests gave 0.0873, 0.1018, 8e-05, 1, 0.00419, 0.01106.
+	it('the review example', () => {
+		const pairs = run([
+			[1, 2, 3, 4],
+			[2, 4, 6, 8, 10],
+			[5, 6, 7],
+			[10, 11, 12, 13, 14]
+		]);
+		check(pairs, [
+			{
+				a: 0,
+				b: 1,
+				diff: -3.5,
+				p: 0.1081645451745663,
+				lo: -7.622833111620152,
+				hi: 0.6228331116201522
+			},
+			{
+				a: 0,
+				b: 2,
+				diff: -3.5,
+				p: 0.17767836095187095,
+				lo: -8.194051990115522,
+				hi: 1.1940519901155229
+			},
+			{
+				a: 0,
+				b: 3,
+				diff: -9.5,
+				p: 6.948248814997449e-5,
+				lo: -13.622833111620153,
+				hi: -5.377166888379848
+			},
+			{ a: 1, b: 2, diff: 0, p: 1.0, lo: -4.488372185831295, hi: 4.488372185831295 },
+			{
+				a: 1,
+				b: 3,
+				diff: -6,
+				p: 0.002773134456662607,
+				lo: -9.887044334569392,
+				hi: -2.1129556654306088
+			},
+			{
+				a: 2,
+				b: 3,
+				diff: -6,
+				p: 0.008291384791699108,
+				lo: -10.488372185831295,
+				hi: -1.5116278141687047
+			}
+		]);
+		expect(pairs.map((p) => p.significant)).toEqual([false, false, true, false, true, true]);
+	});
+
+	it('small p-values (down to 2e-10)', () => {
+		const pairs = run([
+			[10.1, 10.4, 9.8, 10.0, 10.3, 9.9],
+			[12.0, 12.4, 11.8],
+			[15.2, 15.0, 15.5, 14.9],
+			[10.2, 10.0, 10.5, 9.7, 10.1, 10.3, 10.0]
+		]);
+		// scipy's sf is 1 - cdf with an absolute integration tolerance of 1e-11, so its
+		// p-values near 1e-15 (pairs A-C and C-D) are not a reference; those pairs are
+		// checked against the bound below instead.
+		const want = [
+			{
+				a: 0,
+				b: 1,
+				diff: -1.983333333333336,
+				p: 4.3803739635528416e-8,
+				lo: -2.502465419991755,
+				hi: -1.464201246674917
+			},
+			{
+				a: 0,
+				b: 3,
+				diff: -0.03095238095238173,
+				p: 0.9962501014894372,
+				lo: -0.43940332247110814,
+				hi: 0.3774985605663447
+			},
+			{
+				a: 1,
+				b: 2,
+				diff: -3.083333333333332,
+				p: 2.0983292881027182e-10,
+				lo: -3.6440600736427675,
+				hi: -2.522606593023897
+			},
+			{
+				a: 1,
+				b: 3,
+				diff: 1.9523809523809543,
+				p: 3.873414755606319e-8,
+				lo: 1.445759911141079,
+				hi: 2.45900199362083
+			}
+		];
+		const byName = (a, b) =>
+			pairs.find(
+				(p) => p.groupA === String.fromCharCode(65 + a) && p.groupB === String.fromCharCode(65 + b)
+			);
+		check(
+			want.map((w) => byName(w.a, w.b)),
+			want
+		);
+		for (const [a, b, lo, hi] of [
+			[0, 2, -5.540567256979239, -4.592766076354097],
+			[2, 3, 4.575552873243342, 5.495875698185231]
+		]) {
+			const p = byName(a, b);
+			expect(p.pAdjusted).toBeGreaterThan(0);
+			expect(p.pAdjusted).toBeLessThan(1e-13);
+			expect(Math.abs(p.ciLow - lo)).toBeLessThan(1e-9);
+			expect(Math.abs(p.ciHigh - hi)).toBeLessThan(1e-9);
+		}
+	});
+
+	it('reports q = |diff| / sqrt(MSE/2 (1/n_i + 1/n_j)) and the unadjusted p for that pair', () => {
+		const groups = [
+			[1, 2, 3, 4],
+			[2, 4, 6, 8, 10],
+			[5, 6, 7]
+		].map(mk);
+		const a = oneWayAnova(groups);
+		const pairs = tukeyKramerPostHoc(groups, a.msWithin, a.dfWithin, 0.05);
+		const se = Math.sqrt((a.msWithin / 2) * (1 / 4 + 1 / 3));
+		const ac = pairs.find((p) => p.groupA === 'A' && p.groupB === 'C');
+		expect(ac.statistic).toBeCloseTo(Math.abs(groups[0].mean - groups[2].mean) / se, 12);
+		// unadjusted: the same q against the range of TWO means, i.e. the pooled t-test
+		expect(ac.pValue).toBeLessThan(ac.pAdjusted);
+		const t = (groups[0].mean - groups[2].mean) / Math.sqrt(a.msWithin * (1 / 4 + 1 / 3));
+		expect(ac.statistic).toBeCloseTo(Math.abs(t) * Math.SQRT2, 12);
+	});
+
+	it('zero within-group variance: different means give p = 0, equal means p = 1', () => {
+		const groups = [
+			{ name: 'A', values: [1, 1], n: 2, mean: 1 },
+			{ name: 'B', values: [1, 1], n: 2, mean: 1 },
+			{ name: 'C', values: [5, 5], n: 2, mean: 5 }
+		];
+		const pairs = tukeyKramerPostHoc(groups, 0, 3, 0.05);
+		expect(pairs[0].pAdjusted).toBe(1);
+		expect(pairs[0].significant).toBe(false);
+		expect(pairs[1].pAdjusted).toBe(0);
+		expect(pairs[1].significant).toBe(true);
+	});
+});
+
 describe('mannWhitneyTwoGroups', () => {
 	it('detects separation between two groups', () => {
 		const a = { name: 'A', values: [1, 2, 1, 2], n: 4, mean: 1.5 };

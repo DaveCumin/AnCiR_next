@@ -11,6 +11,7 @@
 	// effect's p is reported (e.g. 1e-34) instead of being rounded to 0.
 	import { pUpperFromF } from '$lib/utils/fdist.js';
 	import { pUpperFromChiSq } from '$lib/utils/chisquare.js';
+	import { studentizedRangeSf, studentizedRangeQuantile } from '$lib/utils/studentizedRange.js';
 	import tQuantile from '@stdlib/stats-base-dists-t-quantile';
 
 	const displayName = 'Compare groups (stats)';
@@ -352,8 +353,23 @@
 		};
 	}
 
+	/**
+	 * Tukey-Kramer post-hoc for a one-way ANOVA (Tukey's HSD with Kramer's
+	 * adjustment for unequal group sizes), as scipy.stats.tukey_hsd and
+	 * statsmodels pairwise_tukeyhsd compute it. For each pair,
+	 *   q = |mean_i - mean_j| / sqrt(MSE / 2 * (1/n_i + 1/n_j)),
+	 * referred to the studentized range with k = number of non-empty groups and
+	 * df = N - k (the ANOVA error df). That p already controls the familywise
+	 * error over all pairs, so it is reported as `pAdjusted`; `pValue` is the same
+	 * q against the range of two means (the pooled-variance t-test), i.e. the
+	 * per-comparison p before any adjustment. ciLow/ciHigh are the simultaneous
+	 * (1 - alpha) intervals for mean_i - mean_j.
+	 */
 	export function tukeyKramerPostHoc(groups, msWithin, dfWithin, alpha = 0.05) {
 		if (!Number.isFinite(msWithin) || !Number.isFinite(dfWithin) || dfWithin <= 0) return [];
+		const k = groups.filter((g) => g.n > 0).length;
+		if (k < 2) return [];
+		const qCrit = studentizedRangeQuantile(1 - alpha, k, dfWithin);
 		const pairs = [];
 		for (let i = 0; i < groups.length; i++) {
 			for (let j = i + 1; j < groups.length; j++) {
@@ -361,26 +377,38 @@
 				const b = groups[j];
 				if (a.n === 0 || b.n === 0) continue;
 				const diff = a.mean - b.mean;
-				const se = Math.sqrt(msWithin * (1 / a.n + 1 / b.n));
-				const t = se === 0 ? (diff === 0 ? 0 : Number.POSITIVE_INFINITY) : diff / se;
-				const q = Math.abs(t) * Math.sqrt(2);
-				// Only a zero-se infinite t (finite, different means) has the limiting p = 0; a
-				// non-finite mean gives NaN, which holmAdjust ranks last and never flags.
-				const pValue = !Number.isFinite(diff)
+				const se = Math.sqrt((msWithin / 2) * (1 / a.n + 1 / b.n));
+				// se = 0 (no within-group spread): q is 0 for equal means and infinite
+				// otherwise, whose limiting p is 0. A non-finite mean gives NaN.
+				const q = !Number.isFinite(diff)
 					? NaN
-					: Number.isFinite(t)
-						? pUpperFromF(t * t, 1, dfWithin)
+					: se === 0
+						? diff === 0
+							? 0
+							: Number.POSITIVE_INFINITY
+						: Math.abs(diff) / se;
+				// Range of two means = sqrt(2) |t|, so this is exactly the F(1, df) tail of t^2.
+				const pValue = Number.isNaN(q)
+					? NaN
+					: Number.isFinite(q)
+						? pUpperFromF((q * q) / 2, 1, dfWithin)
 						: 0;
+				const pAdjusted = Number.isNaN(q) ? NaN : studentizedRangeSf(q, k, dfWithin);
+				const half = qCrit * se;
 				pairs.push({
 					groupA: a.name,
 					groupB: b.name,
 					diff,
 					statistic: q,
-					pValue
+					pValue,
+					pAdjusted,
+					ciLow: diff - half,
+					ciHigh: diff + half,
+					significant: pAdjusted < alpha
 				});
 			}
 		}
-		return holmAdjust(pairs).map((p) => ({ ...p, significant: p.pAdjusted < alpha }));
+		return pairs;
 	}
 
 	export function mannWhitneyTwoGroups(groupA, groupB) {
@@ -546,7 +574,7 @@
 				groups,
 				warnings,
 				postHoc,
-				postHocLabel: 'Tukey-Kramer post-hoc (Holm adjusted p-values)',
+				postHocLabel: 'Tukey-Kramer post-hoc (q statistic; adjusted p from the studentized range)',
 				...aRes
 			};
 		}
@@ -724,7 +752,8 @@
 					groups,
 					warnings,
 					postHoc,
-					postHocLabel: 'Tukey-Kramer post-hoc (Holm adjusted p-values)',
+					postHocLabel:
+						'Tukey-Kramer post-hoc (q statistic; adjusted p from the studentized range)',
 					...aRes
 				};
 				result.warnings.push(...warnings.map((w) => `${yCol.name}: ${w}`));
@@ -880,6 +909,8 @@
 
 	function formatValueDisplay(value) {
 		if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+		// Counts and degrees of freedom are whole numbers: "4", not "4.000".
+		if (Number.isInteger(value)) return String(value);
 		if (Number.isFinite(value)) return Number(value).toPrecision(4);
 		if (value == null || value === '') return '-';
 		return String(value);
@@ -979,7 +1010,9 @@
 			'test_statistic',
 			'p_raw',
 			'p_adjusted',
-			'significant'
+			'significant',
+			'ci_low',
+			'ci_high'
 		];
 		const rows = [];
 		for (const result of Object.values(comparisonData?.comparisons ?? {})) {
@@ -993,7 +1026,10 @@
 					p.statistic,
 					p.pValue,
 					p.pAdjusted,
-					p.significant
+					p.significant,
+					// Tukey-Kramer only: simultaneous (1 - alpha) interval for mean A - mean B.
+					p.ciLow ?? null,
+					p.ciHigh ?? null
 				]);
 			}
 		}
@@ -1191,6 +1227,12 @@
 								<p><strong>p Raw:</strong> {formatValueDisplay(row[6])}</p>
 								<p><strong>p Adjusted:</strong> {formatValueDisplay(row[7])}</p>
 								<p><strong>Significant:</strong> {formatValueDisplay(row[8])}</p>
+								{#if row[9] != null}
+									<p>
+										<strong>Simultaneous CI:</strong>
+										[{formatValueDisplay(row[9])}, {formatValueDisplay(row[10])}]
+									</p>
+								{/if}
 							</div>
 						</div>
 					{/each}
@@ -1298,8 +1340,11 @@
 							)
 								? pair.statistic.toFixed(4)
 								: 'NaN'}, p = {Number.isFinite(pair.pValue) ? pair.pValue.toPrecision(4) : 'NaN'}, p
-							adj = {Number.isFinite(pair.pAdjusted) ? pair.pAdjusted.toPrecision(4) : 'NaN'},
-							significant = {pair.significant ? 'Yes' : 'No'}
+							adj = {Number.isFinite(pair.pAdjusted)
+								? pair.pAdjusted.toPrecision(4)
+								: 'NaN'}{#if Number.isFinite(pair.ciLow)}, CI = [{pair.ciLow.toFixed(4)}, {pair.ciHigh.toFixed(
+									4
+								)}]{/if}, significant = {pair.significant ? 'Yes' : 'No'}
 						</p>
 					{/each}
 				{/if}

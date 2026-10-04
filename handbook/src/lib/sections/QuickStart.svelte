@@ -39,8 +39,9 @@
 				and wired together.
 			</li>
 			<li>
-				Save your work with the <strong>Save session</strong> button (top-left); it produces a file you
-				can reload later.
+				Save your work with the <strong>Save session</strong> button (top-left); it produces a
+				session file (<code>.json</code>) you can reload later with <strong>Load session</strong> or
+				by dropping it onto the canvas. Session files named <code>.ancir</code> open the same way.
 			</li>
 			<li>
 				Undo/redo with the <strong>Undo</strong> / <strong>Redo</strong> buttons (bottom-left) or

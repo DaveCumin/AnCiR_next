@@ -1,7 +1,7 @@
 // canvasFileDrop.js
 //
 // Svelte action that lets a canvas accept dropped OS files (CSV / Excel / AWD /
-// JSON) to trigger a load. Internal HTML5 drags inside the app (e.g. the data
+// JSON, or a .json / .ancir session) to trigger a load. Internal HTML5 drags inside the app (e.g. the data
 // panel's column reorder, which uses the `application/x-ancir-drag` MIME type)
 // carry no `Files`, so they're ignored — only real file drags activate.
 //

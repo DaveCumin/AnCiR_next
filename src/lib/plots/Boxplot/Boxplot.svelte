@@ -500,16 +500,19 @@
 			});
 		});
 
-		sigBarResult = $derived.by(() => {
-			if (!this.showSigBars) return { pairs: [], dataMax: -Infinity };
-			const groups = buildSigBarGroups(this.data, this.uniqueXValues);
-			return runSigBarStats(groups, this.sigMethod, this.sigAlpha, this.showNs);
-		});
-
 		sigTableResult = $derived.by(() => {
 			const groups = buildSigBarGroups(this.data, this.uniqueXValues);
 			// Always include non-significant rows in the table, independent of bar plotting.
 			return runSigBarStats(groups, this.sigMethod, this.sigAlpha, true);
+		});
+
+		// The bars are the table's rows, less the non-significant ones unless "Show ns"
+		// is on. Deriving them from the table runs the post-hoc once, not twice: a
+		// Tukey-Kramer p is a numerical double integral per pair.
+		sigBarResult = $derived.by(() => {
+			if (!this.showSigBars) return { pairs: [], dataMax: -Infinity };
+			const { pairs, dataMax } = this.sigTableResult;
+			return { pairs: this.showNs ? pairs : pairs.filter((p) => p.significant), dataMax };
 		});
 
 		sigBarLevels = $derived.by(() => {

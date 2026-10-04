@@ -302,3 +302,45 @@ describe('guard: every out key in the shipped demos resolves, keys unchanged', (
 		expect(JSON.stringify(s)).toBe(before);
 	});
 });
+
+describe('phase outputs say which reference they use (review FIT-9, FIT-13)', () => {
+	it('Cosinor: default labels unchanged; clock time and overall waveform say so', () => {
+		expect(outputLabel('Cosinor', 'acrophase', ctx({ phaseReference: 'clock' }))).toBe(
+			'Acrophase (clock time, h)'
+		);
+		expect(outputLabel('Cosinor', 'acrophase_ciLow', ctx({ phaseReference: 'clock' }))).toBe(
+			'Acrophase CI low (clock time, h)'
+		);
+		const multi = { useFixedPeriod: true, nHarmonics: 2 };
+		expect(outputLabel('Cosinor', 'amplitude', ctx(multi))).toBe('Overall amplitude');
+		expect(outputLabel('Cosinor', 'acrophase', ctx(multi))).toBe('Orthophase, overall peak (h)');
+		expect(outputLabel('Cosinor', 'bathyphase', ctx(multi))).toBe('Bathyphase, overall trough (h)');
+		expect(outputLabel('Cosinor', 'acrophase_h1', ctx(multi))).toBe('H1 acrophase (h)');
+		expect(outputLabel('Cosinor', 'amplitude_h1', ctx(multi))).toBe('H1 amplitude');
+		expect(outputLabel('Cosinor', 'amplitude_ciLow', ctx(multi))).toBe('H1 amplitude CI low');
+		// Free period: nHarmonics does not apply.
+		expect(outputLabel('Cosinor', 'amplitude', ctx({ useFixedPeriod: false, nHarmonics: 2 }))).toBe(
+			'Amplitude'
+		);
+	});
+	it('NonparametricRA, AverageProfile, FitFunction and Moving analysis', () => {
+		const clock = { phaseReference: 'clock' };
+		expect(outputLabel('NonparametricRA', 'M10onset', ctx(clock))).toBe(
+			'M10 onset (clock time, h)'
+		);
+		expect(outputLabel('NonparametricRA', 'npcrax', ctx(clock))).toBe(
+			'Average day: time (clock time, h)'
+		);
+		expect(outputLabel('AverageProfile', 'avgprofx', ctx())).toBe('Profile time (h)');
+		expect(outputLabel('FitFunction', 'onset', ctx(clock))).toBe('Onset (clock time, h)');
+		expect(outputLabel('MovingAnalysis', '66_C1_acrophase', ctx(clock))).toBe(
+			'C1 acrophase (clock time, h): A1'
+		);
+		// C<c>_phase is the model phase angle, in radians, not a time of peak.
+		expect(outputLabel('MovingAnalysis', '66_C1_phase', ctx())).toBe('C1 phase φ (rad): A1');
+		// Moving analysis names its NPCRA windows npcraMWindow / npcraLWindow.
+		expect(outputLabel('MovingAnalysis', '66_M10onset', ctx({ npcraMWindow: 6 }))).toBe(
+			'M6 onset (h): A1'
+		);
+	});
+});

@@ -8,7 +8,7 @@
 		fitPermutationPValue,
 		PERMUTATION_DEFAULTS
 	} from '$lib/utils/fitFunction.js';
-	import { wrapToPeriod } from '$lib/utils/cosinorAddons.js';
+	import { wrapToPeriod, multiComponentWaveform } from '$lib/utils/cosinorAddons.js';
 	import { freePeriodFitWarnings, FREE_PERIOD_DEFAULTS } from '$lib/utils/cosinor.js';
 	import { rectWaveFitWarnings } from '$lib/utils/rectwave.js';
 	import { doubleLogisticFitWarnings } from '$lib/utils/doublelogistic.js';
@@ -32,6 +32,12 @@
 		spawnResidualPlot
 	} from '$lib/tableProcesses/residualSupport.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import {
+		fitTimeFrame,
+		applyPhaseReference,
+		PHASE_REFERENCE_START
+	} from '$lib/utils/phaseReference.js';
+	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 
 	const displayName = 'Fit waveform model';
@@ -61,9 +67,18 @@
 				period: { val: -1 },
 				mesor: { val: -1 },
 				amplitude: { val: -1 },
-				acrophase: { val: -1 }
+				acrophase: { val: -1 },
+				// Harmonic 1 of a multi-harmonic fixed cosinor (the two keys above then
+				// describe the overall waveform; review FIT-13). Same numbers otherwise.
+				amplitude_h1: { val: -1 },
+				acrophase_h1: { val: -1 }
 			}
 		],
+		// What hour 0 means for the phase outputs (acrophase, onset, offset):
+		// 'start' = hours after the first sample (x = 0 for a numeric x; the default,
+		// and what saved sessions report), 'clock' = hours after local midnight in the
+		// display timezone, wrapped to one period. Review FIT-9; utils/phaseReference.js.
+		['phaseReference', { val: PHASE_REFERENCE_START }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
 		['collectedType', { val: 'fit' }],
@@ -128,6 +143,8 @@
 				{ name: 'mesor', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'amplitude', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'acrophase', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'amplitude_h1', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'acrophase_h1', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'duty_cycle', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'kappa', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'onset', kind: 'column', cardinality: 'one', metric: true },
@@ -193,6 +210,8 @@
 		'mesor',
 		'amplitude',
 		'acrophase',
+		'amplitude_h1',
+		'acrophase_h1',
 		'duty_cycle',
 		'kappa',
 		'onset',
@@ -212,7 +231,16 @@
 	export function getFitMetricKeys(args) {
 		const shared = ['r2', 'rmse', 'perm_pvalue'];
 		const model = args?.model ?? 'cosinor';
-		if (model === 'cosinor') return [...shared, 'period', 'mesor', 'amplitude', 'acrophase'];
+		if (model === 'cosinor')
+			return [
+				...shared,
+				'period',
+				'mesor',
+				'amplitude',
+				'acrophase',
+				'amplitude_h1',
+				'acrophase_h1'
+			];
 		if (model === 'rectangular')
 			return [...shared, 'period', 'mesor', 'amplitude', 'acrophase', 'duty_cycle', 'kappa'];
 		if (model === 'doublelogistic')
@@ -237,8 +265,34 @@
 	 * strictly the permutation test's empirical p — gated on the null
 	 * distribution actually existing, so the cosinor fixed-period fit's analytic
 	 * pF (which also lands on fitResult.pValue) can never leak onto this port.
+	 *
+	 * Phase keys (acrophase, acrophase_h1, onset, offset) are expressed in
+	 * `phaseRef` (utils/phaseReference.js): untouched in the default "since first
+	 * sample", clock time of day otherwise, wrapped to the model's period (24 h for a
+	 * non-periodic double logistic, whose onset and offset are single instants).
+	 *
+	 * Multi-harmonic fixed cosinor: `amplitude` / `acrophase` describe the overall
+	 * fitted waveform (half its range, time of its maximum), as on the Cosinor node
+	 * (review FIT-13); `amplitude_h1` / `acrophase_h1` keep harmonic 1. With one
+	 * harmonic the two pairs are the same numbers.
 	 */
-	export function fitMetricValue(key, model, fr) {
+	export function fitMetricValue(key, model, fr, phaseRef) {
+		const v = rawFitMetricValue(key, model, fr);
+		if (!phaseRef?.clock || !PHASE_KEYS.has(key)) return v;
+		return applyPhaseReference(v, phaseRef, fitPhasePeriod(model, fr));
+	}
+
+	const PHASE_KEYS = new Set(['acrophase', 'acrophase_h1', 'onset', 'offset']);
+
+	/** The period a model's phase outputs wrap to (h). */
+	function fitPhasePeriod(model, fr) {
+		if (model === 'cosinor') return rawFitMetricValue('period', model, fr);
+		if (model === 'rectangular') return fr?.period ?? NaN;
+		if (model === 'doublelogistic') return fr?.parameters?.T ?? 24;
+		return NaN;
+	}
+
+	function rawFitMetricValue(key, model, fr) {
 		if (!fr) return NaN;
 		if (key === 'r2') return fr.rSquared ?? NaN;
 		if (key === 'rmse') return fr.rmse ?? NaN;
@@ -251,17 +305,22 @@
 				const period = fr.parameters?.period ?? NaN;
 				if (key === 'period') return period;
 				if (key === 'mesor') return fr.fixedStats?.M ?? fr.parameters?.M ?? NaN;
-				if (key === 'amplitude') return fr.fixedStats?.harmonics?.[0]?.amplitude ?? NaN;
+				const hs = fr.fixedStats?.harmonics ?? [];
+				if (hs.length > 1 && (key === 'amplitude' || key === 'acrophase')) {
+					const w = multiComponentWaveform(fr.fixedStats?.M, hs, period);
+					return key === 'amplitude' ? w.amplitude : w.orthophase;
+				}
+				if (key === 'amplitude' || key === 'amplitude_h1') return hs[0]?.amplitude ?? NaN;
 				// fitCosinorFixed reports acrophase_hrs as the time of peak already,
 				// the convention Cosinor's port and every panel use.
-				if (key === 'acrophase') return fr.fixedStats?.harmonics?.[0]?.acrophase_hrs ?? NaN;
+				if (key === 'acrophase' || key === 'acrophase_h1') return hs[0]?.acrophase_hrs ?? NaN;
 			} else {
 				const c = fr.parameters?.cosines?.[0];
 				const period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
 				if (key === 'period') return period;
 				if (key === 'mesor') return fr.parameters?.O ?? NaN;
-				if (key === 'amplitude') return c?.amplitude ?? NaN;
-				if (key === 'acrophase')
+				if (key === 'amplitude' || key === 'amplitude_h1') return c?.amplitude ?? NaN;
+				if (key === 'acrophase' || key === 'acrophase_h1')
 					// A·cos(ωt + φ) peaks at t = −φ/ω, wrapped into [0, period).
 					return c?.frequency ? wrapToPeriod(-c.phase / c.frequency, period) : NaN;
 			}
@@ -302,7 +361,9 @@
 		for (const key of getFitMetricKeys(argsIN)) {
 			writeOutputColumn(
 				argsIN.out?.[key],
-				yINs.map((yId) => fitMetricValue(key, model, result.y_results?.[yId]?.fitResult)),
+				yINs.map((yId) =>
+					fitMetricValue(key, model, result.y_results?.[yId]?.fitResult, result.phaseRef)
+				),
 				{ processHash }
 			);
 		}
@@ -380,24 +441,16 @@
 		const tCol = getColumnById(xIN);
 		const t = getXDataForColumn(tCol);
 
-		let outputXData = null;
-		if (outputXId != -1 && getColumnById(outputXId)) {
-			const outputXCol = getColumnById(outputXId);
-			outputXData = getXDataForColumn(outputXCol).filter((v) => !isInvalidValue(v));
-		}
+		// Output grid in the fit's hour frame + the origin (minimum valid input time)
+		// that turns hours back into timestamps (review STAT-19; utils/phaseReference.js).
+		const { outputXData, originTime_ms } = fitTimeFrame(
+			tCol,
+			outputXId != -1 ? getColumnById(outputXId) : null
+		);
 		result.outputXData = outputXData;
-
-		let originTime_ms = null;
-		if (outputXId != -1) {
-			const outputXColForOrigin = getColumnById(outputXId);
-			if (outputXColForOrigin?.type === 'time') {
-				originTime_ms = outputXColForOrigin.getData()[0];
-			}
-		}
-		if (originTime_ms == null && tCol.type === 'time') {
-			originTime_ms = tCol.getData()[0];
-		}
 		result.originTime_ms = originTime_ms;
+		// The frame the phase outputs are reported in (FIT-9).
+		result.phaseRef = resolveNodePhaseReference(argsIN, tCol);
 
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
@@ -556,6 +609,7 @@
 			...checkFitResultsFinite(fitEntries, `The ${model} fit`),
 			...freeWarnings,
 			...validity,
+			...(result?.phaseRef?.warning ? [result.phaseRef.warning] : []),
 			...fitSampleWarnings(argsIN)
 		];
 	}
@@ -612,6 +666,8 @@
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
+	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
+	import { appState } from '$lib/core/core.svelte';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import {
@@ -698,6 +754,11 @@
 			p.args.fixedK2 +
 			'|' +
 			p.args.fixedKappa;
+		// Clock-time phases move with the display timezone, so it is an input then.
+		out +=
+			'|' +
+			p.args.phaseReference +
+			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
 		return out;
 	});
 	// The fit stats live only in transient state and aren't persisted with the
@@ -782,27 +843,17 @@
 
 		const t = getXData(xCol);
 		const outputXId = p.args.outputX;
-		let outputXData = null;
-		if (outputXId != -1 && getColumnById(outputXId)) {
-			const outputXCol = getColumnById(outputXId);
-			outputXData = getXData(outputXCol).filter((v) => !isInvalidValue(v));
-		}
-
-		let originTime_ms = null;
-		if (outputXId != -1) {
-			const outputXColForOrigin = getColumnById(outputXId);
-			if (outputXColForOrigin?.type === 'time') {
-				originTime_ms = outputXColForOrigin.getData()[0];
-			}
-		}
-		if (originTime_ms == null && xCol.type === 'time') {
-			originTime_ms = xCol.getData()[0];
-		}
+		// Same frame and origin as the headless path above (STAT-19).
+		const { outputXData, originTime_ms } = fitTimeFrame(
+			xCol,
+			outputXId != -1 ? getColumnById(outputXId) : null
+		);
 
 		const result = {
 			t: [],
 			outputXData,
 			originTime_ms,
+			phaseRef: resolveNodePhaseReference(p.args, xCol),
 			y_results: {}
 		};
 
@@ -1063,6 +1114,10 @@
 		}
 	}
 
+	// Panel phases in the node's phase reference (the same conversion as the ports).
+	const panelPhase = (v, period) => applyPhaseReference(v, fitData?.phaseRef, period);
+	let phaseNote = $derived(fitData?.phaseRef?.clock ? 'clock time' : 'h after start');
+
 	function getFitStatsData() {
 		if (!fitData?.y_results) return { headers: [], rows: [] };
 		const model = p.args.model ?? 'cosinor';
@@ -1075,16 +1130,24 @@
 				Number.isFinite(r.fitResult?.pValue) || typeof r.fitResult?.significant === 'boolean'
 		);
 
+		// Phases in the node's phase reference, as on the ports (FIT-9).
+		const phaseRef = fitData.phaseRef;
+		const unit = phaseRef?.clock ? 'clock_h' : 'peak_h';
+		const ph = (v, period) => (v == null ? null : applyPhaseReference(v, phaseRef, period));
+		const clockSuffix = phaseRef?.clock ? '_clock_h' : '';
+		let maxH = 0;
 		let headers = ['column', 'rmse', 'r2'];
 		if (model === 'cosinor') {
 			if (p.args.useFixedPeriod) {
 				headers.push('M', 'period', 'pValue');
-				const maxH = Math.max(
+				maxH = Math.max(
 					...validEntries.map(([, r]) => r.fitResult?.fixedStats?.harmonics?.length ?? 0)
 				);
-				// Acrophase = time of peak (h after the start), as on the `acrophase` port.
+				// The overall waveform the amplitude / acrophase ports report (FIT-13).
+				if (maxH > 1) headers.push('overall_amplitude', `orthophase_${unit}`);
+				// Acrophase = time of peak in the phase reference, as on `acrophase_h1`.
 				for (let i = 0; i < maxH; i++)
-					headers.push(`H${i + 1}_amplitude`, `H${i + 1}_acrophase_peak_h`);
+					headers.push(`H${i + 1}_amplitude`, `H${i + 1}_acrophase_${unit}`);
 			} else {
 				const maxC = Math.max(
 					...validEntries.map(([, r]) => r.fitResult?.parameters?.cosines?.length ?? 0)
@@ -1096,13 +1159,23 @@
 						`C${i + 1}_period`,
 						`C${i + 1}_amplitude`,
 						`C${i + 1}_phase_rad`,
-						`C${i + 1}_acrophase_peak_h`
+						`C${i + 1}_acrophase_${unit}`
 					);
 			}
 		} else if (model === 'rectangular') {
-			headers.push('period', 'acrophase', 'duty_cycle', 'kappa', 'M', 'A', 'pValue');
+			headers.push('period', `acrophase${clockSuffix}`, 'duty_cycle', 'kappa', 'M', 'A', 'pValue');
 		} else if (model === 'doublelogistic') {
-			headers.push('onset', 'offset', 'k1', 'k2', 'period', 'duty_cycle', 'M', 'A', 'pValue');
+			headers.push(
+				`onset${clockSuffix}`,
+				`offset${clockSuffix}`,
+				'k1',
+				'k2',
+				'period',
+				'duty_cycle',
+				'M',
+				'A',
+				'pValue'
+			);
 		}
 
 		if (includePermutation) headers.push('significant');
@@ -1118,8 +1191,16 @@
 						fr.parameters?.period ?? null,
 						fr.pValue ?? null
 					);
+					if (maxH > 1) {
+						const multi = (fr.fixedStats?.harmonics?.length ?? 0) > 1;
+						row.push(
+							multi ? fitMetricValue('amplitude', model, fr, phaseRef) : null,
+							multi ? fitMetricValue('acrophase', model, fr, phaseRef) : null
+						);
+					}
+					const P = fr.parameters?.period ?? p.args.fixedPeriod ?? 24;
 					for (const h of fr.fixedStats?.harmonics ?? []) {
-						row.push(h.amplitude ?? null, h.acrophase_hrs ?? null);
+						row.push(h.amplitude ?? null, ph(h.acrophase_hrs ?? null, P / h.k));
 					}
 					while (row.length < headers.length) row.push(null);
 				} else {
@@ -1129,7 +1210,7 @@
 							period,
 							c.amplitude ?? null,
 							c.phase ?? null,
-							c.frequency ? wrapToPeriod(-c.phase / c.frequency, period) : null
+							c.frequency ? ph(wrapToPeriod(-c.phase / c.frequency, period), period) : null
 						);
 					}
 					while (row.length < headers.length) row.push(null);
@@ -1137,7 +1218,7 @@
 			} else if (model === 'rectangular') {
 				row.push(
 					fr.period ?? null,
-					fr.acrophase ?? null,
+					fitMetricValue('acrophase', model, fr, phaseRef),
 					fr.parameters?.dutyCycle ?? null,
 					fr.parameters?.kappa ?? null,
 					fr.parameters?.M ?? null,
@@ -1146,8 +1227,8 @@
 				);
 			} else if (model === 'doublelogistic') {
 				row.push(
-					fr.onsetPhase ?? fr.parameters?.t1 ?? null,
-					fr.offsetPhase ?? fr.parameters?.t2 ?? null,
+					fitMetricValue('onset', model, fr, phaseRef),
+					fitMetricValue('offset', model, fr, phaseRef),
 					fr.parameters?.k1 ?? null,
 					fr.parameters?.k2 ?? null,
 					fr.parameters?.T ?? null,
@@ -1514,6 +1595,14 @@
 		</div>
 	{/if}
 
+	<div class="control-input-horizontal">
+		<PhaseReferenceSelect
+			bind:value={p.args.phaseReference}
+			xIsTime={xIN_col?.type === 'time'}
+			onchange={() => getFit()}
+		/>
+	</div>
+
 	{#if !hideInputs}
 		<div class="control-input-horizontal">
 			<div class="control-input">
@@ -1595,11 +1684,28 @@
 				{#if p.args.useFixedPeriod}
 					<p>Mesor: {yResult?.fitResult?.fixedStats?.M?.toFixed(3)}</p>
 					<p>Period: {p.args.fixedPeriod?.toFixed?.(3)} hrs</p>
+					{#if (yResult?.fitResult?.fixedStats?.harmonics?.length ?? 0) > 1}
+						<!-- The waveform the amplitude / acrophase ports report (FIT-13). -->
+						<p>
+							Overall: amp (half the curve's range) {fitMetricValue(
+								'amplitude',
+								'cosinor',
+								yResult.fitResult,
+								fitData?.phaseRef
+							)?.toFixed(3)}, orthophase (time of overall peak, {phaseNote}) {fitMetricValue(
+								'acrophase',
+								'cosinor',
+								yResult.fitResult,
+								fitData?.phaseRef
+							)?.toFixed(3)} h
+						</p>
+					{/if}
 					{#each yResult?.fitResult?.fixedStats?.harmonics ?? [] as h, i (i)}
 						<p>
-							H{i + 1}: amp {h.amplitude?.toFixed(3)}, acrophase (time of peak) {h.acrophase_hrs?.toFixed(
-								3
-							)} h
+							H{i + 1}: amp {h.amplitude?.toFixed(3)}, acrophase (time of peak, {phaseNote}) {panelPhase(
+								h.acrophase_hrs,
+								(p.args.fixedPeriod ?? 24) / (i + 1)
+							)?.toFixed(3)} h
 							<StoreValueButton
 								label={`H${i + 1}`}
 								getter={() => h.amplitude}
@@ -1613,8 +1719,11 @@
 						<p>
 							C{i + 1}: amp {c.amplitude?.toFixed(3)}, period {c.frequency
 								? ((2 * Math.PI) / c.frequency).toFixed(3)
-								: 'NaN'} h, acrophase (time of peak) {c.frequency
-								? wrapToPeriod(-c.phase / c.frequency, (2 * Math.PI) / c.frequency).toFixed(3)
+								: 'NaN'} h, acrophase (time of peak, {phaseNote}) {c.frequency
+								? panelPhase(
+										wrapToPeriod(-c.phase / c.frequency, (2 * Math.PI) / c.frequency),
+										(2 * Math.PI) / c.frequency
+									).toFixed(3)
 								: 'NaN'} h
 							<StoreValueButton
 								label={`C${i + 1}`}
@@ -1629,14 +1738,35 @@
 				<p>Mesor: {yResult?.fitResult?.parameters?.M?.toFixed(3)}</p>
 				<p>Amplitude: {yResult?.fitResult?.parameters?.A?.toFixed(3)}</p>
 				<p>Period: {yResult?.fitResult?.period?.toFixed(3)} hrs</p>
-				<p>Acrophase: {yResult?.fitResult?.acrophase?.toFixed(3)} hrs</p>
+				<p>
+					Acrophase ({phaseNote}): {fitMetricValue(
+						'acrophase',
+						'rectangular',
+						yResult?.fitResult,
+						fitData?.phaseRef
+					)?.toFixed(3)} hrs
+				</p>
 				<p>Duty cycle: {(yResult?.fitResult?.parameters?.dutyCycle * 100)?.toFixed?.(1)}%</p>
 				<p>κ: {yResult?.fitResult?.parameters?.kappa?.toFixed(3)}</p>
 			{:else if p.args.model === 'doublelogistic'}
 				<p>Mesor: {yResult?.fitResult?.parameters?.M?.toFixed(3)}</p>
 				<p>Amplitude: {yResult?.fitResult?.parameters?.A?.toFixed(3)}</p>
-				<p>Onset: {yResult?.fitResult?.onsetPhase?.toFixed(3)} hrs</p>
-				<p>Offset: {yResult?.fitResult?.offsetPhase?.toFixed(3)} hrs</p>
+				<p>
+					Onset ({phaseNote}): {fitMetricValue(
+						'onset',
+						'doublelogistic',
+						yResult?.fitResult,
+						fitData?.phaseRef
+					)?.toFixed(3)} hrs
+				</p>
+				<p>
+					Offset ({phaseNote}): {fitMetricValue(
+						'offset',
+						'doublelogistic',
+						yResult?.fitResult,
+						fitData?.phaseRef
+					)?.toFixed(3)} hrs
+				</p>
 				<p>k1: {yResult?.fitResult?.parameters?.k1?.toFixed(3)}</p>
 				<p>k2: {yResult?.fitResult?.parameters?.k2?.toFixed(3)}</p>
 				{#if yResult?.fitResult?.parameters?.T != null}

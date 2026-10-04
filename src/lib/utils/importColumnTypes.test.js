@@ -196,6 +196,32 @@ describe('whole-column validation on first parse', () => {
 		vi.advanceTimersByTime(TIME_PARSE_WARNING_DELAY_MS + 1);
 		expect(notify).not.toHaveBeenCalled();
 	});
+
+	it('a read with the format cleared (epoch ms) also supersedes a pending warning', () => {
+		// A Wide To Long time output saved with its source's text format: the first read
+		// fails every value, then the node clears the format and the next read is fine.
+		const raw = [1704067200000, 1704070800000, 1704074400000];
+		const col = {
+			id: 9,
+			name: 'time_86',
+			timeFormat: 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]',
+			data: 9,
+			rawDataVersion: 0
+		};
+		auditTimeColumnParse(
+			col,
+			raw,
+			raw.map((v) => Number(getUNIXDate(v, col.timeFormat)))
+		);
+		col.timeFormat = null;
+		auditTimeColumnParse(
+			col,
+			raw,
+			raw.map((v) => Number(getUNIXDate(v, col.timeFormat)))
+		);
+		vi.advanceTimersByTime(TIME_PARSE_WARNING_DELAY_MS + 1);
+		expect(notify).not.toHaveBeenCalled();
+	});
 });
 
 describe('time cells never render missing as 1 Jan 1970', () => {

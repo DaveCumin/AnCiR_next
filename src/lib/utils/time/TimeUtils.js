@@ -89,8 +89,9 @@ function padSingleWidthTokens(fmt) {
 
 // Strict round-trip in which a single-width token may match its value with or
 // without one leading zero. Double-width tokens and everything else must match
-// exactly, as in dayjs strict mode.
-function roundTripsPadTolerant(input, dt, fmt) {
+// exactly, as in dayjs strict mode. `offsetText`, when given, is what the zone
+// offset tokens (Z, ZZ) must match: the offset exactly as the input wrote it.
+function roundTripsPadTolerant(input, dt, fmt, offsetText) {
 	let pattern = '';
 	let last = 0;
 	for (const m of fmt.matchAll(DAYJS_FORMAT_TOKENS)) {
@@ -98,6 +99,10 @@ function roundTripsPadTolerant(input, dt, fmt) {
 		last = m.index + m[0].length;
 		if (m[1] !== undefined) {
 			pattern += escapeRegExp(m[1]);
+			continue;
+		}
+		if (offsetText !== undefined && (m[0] === 'Z' || m[0] === 'ZZ')) {
+			pattern += escapeRegExp(offsetText);
 			continue;
 		}
 		const text = dt.format(m[0]);
@@ -108,6 +113,65 @@ function roundTripsPadTolerant(input, dt, fmt) {
 	}
 	pattern += escapeRegExp(fmt.slice(last));
 	return new RegExp(`^${pattern}$`).test(input);
+}
+
+// ─── Zone offsets ("2026-03-01T08:00:00+05:30") ─────────────────────────────
+// dayjs reads the offset correctly, but its strict check formats the parsed
+// instant back in the zone it parsed in (UTC, or the machine's own) and compares
+// strings, so an offset other than that zone's never round-tripped and every such
+// timestamp became missing. The check below compares in the offset the text
+// itself carries instead.
+
+/** Whether a format has a zone offset token (Z or ZZ) outside [literals]. */
+function hasOffsetToken(fmt) {
+	for (const m of fmt.matchAll(DAYJS_FORMAT_TOKENS)) {
+		if (m[1] === undefined && (m[0] === 'Z' || m[0] === 'ZZ')) return true;
+	}
+	return false;
+}
+
+/**
+ * The offset text the input carries where the format has its Z/ZZ token, or
+ * null. dayjs accepts "+05:30", "+0530" and "Z" for either token.
+ */
+function offsetTextIn(input, fmt) {
+	let pattern = '';
+	let last = 0;
+	for (const m of fmt.matchAll(DAYJS_FORMAT_TOKENS)) {
+		pattern += escapeRegExp(fmt.slice(last, m.index));
+		last = m.index + m[0].length;
+		if (m[1] !== undefined) pattern += escapeRegExp(m[1]);
+		else if (m[0] === 'Z' || m[0] === 'ZZ') pattern += '([+-]\\d{2}:?\\d{2}|Z)';
+		else pattern += '.+?';
+	}
+	pattern += escapeRegExp(fmt.slice(last));
+	return new RegExp(`^${pattern}$`).exec(input)?.[1] ?? null;
+}
+
+/** Minutes east of UTC for an offset text ("+05:30", "-0400", "Z"). */
+function offsetMinutes(offsetText) {
+	if (offsetText === 'Z') return 0;
+	const m = /^([+-])(\d{2}):?(\d{2})$/.exec(offsetText);
+	const minutes = Number(m[2]) * 60 + Number(m[3]);
+	return m[1] === '-' ? -minutes : minutes;
+}
+
+/**
+ * Strict parse of a value whose format carries a zone offset. Every other token
+ * is checked against the wall clock IN THE WRITTEN OFFSET (pad-tolerant, as
+ * elsewhere); the instant is the one the text names, returned in the caller's
+ * parse zone.
+ */
+function parseWithOffset(text, fmt, make, invalid) {
+	const offsetText = offsetTextIn(text, fmt);
+	if (offsetText === null) return invalid;
+	const loose = make(text, fmt);
+	if (!loose.isValid()) return invalid;
+	// utcOffset() reads a number of -16..16 as HOURS; whole-hour offsets are
+	// passed as hours so the call is unambiguous either way.
+	const mins = offsetMinutes(offsetText);
+	const local = loose.utcOffset(mins % 60 === 0 ? mins / 60 : mins);
+	return roundTripsPadTolerant(text, local, fmt, offsetText) ? make(loose.valueOf()) : invalid;
 }
 
 /**
@@ -154,6 +218,7 @@ export function parseTimeStrict(value, fmt, { utc = true } = {}) {
 	const text = normalizeMeridiemText(value);
 	const exact = make(text, fmt, true);
 	if (exact.isValid() || typeof text !== 'string' || typeof fmt !== 'string') return exact;
+	if (hasOffsetToken(fmt)) return parseWithOffset(text, fmt, make, exact);
 	const padded = padSingleWidthTokens(fmt);
 	if (padded === fmt) return exact;
 	// Fast path for the common case: every single-width token's value is padded.
@@ -236,41 +301,118 @@ function spread(arr, n) {
  *   day of 13 or more anywhere settles day/month order.
  * - The winner must read more than half of the non-blank values it was scored on.
  *
+ * - When the day and month could be either way round (every day value is 12 or
+ *   less), `opts.order` ('day' or 'month') decides. Without it the earlier
+ *   candidate wins, as it always has; the importer always passes an order and
+ *   shows the user the ambiguity (see guessDateDetails).
+ *
  * Returns -1 if the guesser throws.
  * @param {unknown[]} dates
+ * @param {{ order?: 'day' | 'month' | null }} [opts]
  * @returns {string | string[] | -1}
  */
-export function guessDateofArray(dates) {
-	try {
-		if (!Array.isArray(dates) || dates.length === 0) return [];
+export function guessDateofArray(dates, opts = {}) {
+	const details = guessDateDetails(dates);
+	const dm = details.dayMonth;
+	if (dm?.ambiguous && (opts.order === 'day' || opts.order === 'month')) {
+		return opts.order === 'day' ? dm.dayFirst : dm.monthFirst;
+	}
+	return details.format;
+}
 
-		let rows = dates;
-		if (dates.length > GUESS_FULL_SCAN_ROWS) {
+// Numeric day and month tokens (D/DD, M/MM). MMM and Do are words or ordinals,
+// so a format using them is never ambiguous.
+const DAY_TOKENS = new Set(['D', 'DD']);
+const MONTH_TOKENS = new Set(['M', 'MM']);
+
+/**
+ * The format with its numeric day and month tokens swapped, and which comes
+ * first in the original, or null when the format does not have exactly one
+ * numeric day token and one numeric month token.
+ * @param {string} fmt
+ * @returns {{ swapped: string, dayFirst: boolean, yearFirst: boolean } | null}
+ */
+function swapDayMonth(fmt) {
+	const tokens = [...fmt.matchAll(DAYJS_FORMAT_TOKENS)].filter((m) => m[1] === undefined);
+	const days = tokens.filter((m) => DAY_TOKENS.has(m[0]));
+	const months = tokens.filter((m) => MONTH_TOKENS.has(m[0]));
+	// "DDD" (day of year) lexes as DD + D, so it fails the one-day-token test.
+	if (days.length !== 1 || months.length !== 1) return null;
+	const year = tokens.find((m) => m[0].startsWith('Y'));
+	const d = days[0];
+	const m = months[0];
+	let swapped = '';
+	let last = 0;
+	for (const t of [d, m].sort((a, b) => a.index - b.index)) {
+		swapped += fmt.slice(last, t.index);
+		swapped += t === d ? t[0].replace(/D/g, 'M') : t[0].replace(/M/g, 'D');
+		last = t.index + t[0].length;
+	}
+	swapped += fmt.slice(last);
+	return {
+		swapped,
+		dayFirst: d.index < m.index,
+		yearFirst: year !== undefined && year.index < Math.min(d.index, m.index)
+	};
+}
+
+/** Date cells another parser already turned into Date objects, back to ISO text. */
+function datesToText(values) {
+	return values.map((v) =>
+		v instanceof Date && Number.isFinite(v.valueOf()) ? v.toISOString() : v
+	);
+}
+
+/**
+ * The best time format for a column (see guessDateofArray), plus whether its
+ * day and month order is settled by the values.
+ *
+ * `dayMonth` is null when the format has no numeric day and month; otherwise
+ * `{ ambiguous, dayFirst, monthFirst }`, the two readings of the column, and
+ * `ambiguous` is true when both read exactly as many values (every day value
+ * is 12 or less). Year-first dates are read year-month-day, as ISO 8601 has
+ * them, and are never ambiguous.
+ * @param {unknown[]} dates
+ * @returns {{ format: string | string[] | -1, dayMonth: { ambiguous: boolean, dayFirst: string, monthFirst: string } | null }}
+ */
+export function guessDateDetails(dates) {
+	const none = { format: [], dayMonth: null };
+	try {
+		if (!Array.isArray(dates) || dates.length === 0) return none;
+
+		let rows = datesToText(dates);
+		if (rows.length > GUESS_FULL_SCAN_ROWS) {
 			const idx = createSequenceArray(
 				0,
-				dates.length - 1,
-				Math.floor((dates.length - 1) / GUESS_SPARSE_SAMPLE)
+				rows.length - 1,
+				Math.floor((rows.length - 1) / GUESS_SPARSE_SAMPLE)
 			);
-			rows = idx.map((i) => dates[i]);
+			rows = idx.map((i) => rows[i]);
 		}
 		const nonBlank = rows.filter((v) => !isBlankCell(v));
 		const text = nonBlank.filter((v) => typeof v === 'string');
-		if (text.length === 0) return [];
+		if (text.length === 0) return none;
 
 		const candidates = new Set();
 		for (const v of spread(text, GUESS_CANDIDATE_SOURCES)) {
 			for (const g of guessDateFormat(v)) candidates.add(g);
 		}
-		if (candidates.size === 0) return [];
+		if (candidates.size === 0) return none;
 
+		// Strict parse so a token mismatch counts as a miss.
+		const scoreOf = (guess) => {
+			let score = 0;
+			for (const v of text) {
+				if (parseTimeStrict(v, guess, { utc: false }).isValid()) score++;
+			}
+			return score;
+		};
+		const scores = new Map();
 		let best = null;
 		let bestScore = 0;
 		for (const guess of candidates) {
-			let score = 0;
-			for (const v of text) {
-				// Strict parse so a token mismatch counts as a miss.
-				if (parseTimeStrict(v, guess, { utc: false }).isValid()) score++;
-			}
+			const score = scoreOf(guess);
+			scores.set(guess, score);
 			// Ties keep the earlier candidate (first-row order), as before.
 			if (score > bestScore) {
 				best = guess;
@@ -278,10 +420,73 @@ export function guessDateofArray(dates) {
 			}
 		}
 		// Non-text values (numbers among the text) count as misses here.
-		if (best == null || bestScore * 2 <= nonBlank.length) return [];
-		return best;
+		if (best == null || bestScore * 2 <= nonBlank.length) return none;
+
+		let dayMonth = null;
+		const swap = typeof best === 'string' ? swapDayMonth(best) : null;
+		if (swap) {
+			const swappedScore = scores.get(swap.swapped) ?? scoreOf(swap.swapped);
+			const pair = swap.dayFirst
+				? { dayFirst: best, monthFirst: swap.swapped }
+				: { dayFirst: swap.swapped, monthFirst: best };
+			if (swap.yearFirst) {
+				// YYYY-MM-DD on a tie; otherwise whichever reads more values.
+				if (swap.dayFirst ? swappedScore >= bestScore : swappedScore > bestScore) {
+					best = swap.swapped;
+				}
+			} else if (swappedScore === bestScore) {
+				dayMonth = { ambiguous: true, ...pair };
+			} else {
+				if (swappedScore > bestScore) best = swap.swapped;
+				dayMonth = { ambiguous: false, ...pair };
+			}
+		}
+		return { format: best, dayMonth };
 	} catch {
-		return -1;
+		return { format: -1, dayMonth: null };
+	}
+}
+
+/**
+ * The first value that only one of the two readings accepts, which settles the
+ * column's day/month order, or null when every value reads both ways (or
+ * neither). Scans every value, unlike the guesser's sample of a very long column.
+ * @param {unknown[]} values
+ * @param {string} dayFirst
+ * @param {string} monthFirst
+ * @returns {{ order: 'day' | 'month', index: number, value: string } | null}
+ */
+export function settleDayMonthOrder(values, dayFirst, monthFirst) {
+	if (!Array.isArray(values)) return null;
+	for (let i = 0; i < values.length; i++) {
+		const v = values[i];
+		if (typeof v !== 'string' || v.trim() === '') continue;
+		const d = parseTimeStrict(v, dayFirst).isValid();
+		const m = parseTimeStrict(v, monthFirst).isValid();
+		if (d !== m) return { order: d ? 'day' : 'month', index: i, value: v };
+	}
+	return null;
+}
+
+/**
+ * Whether the locale writes numeric dates day before month ('day', as in New
+ * Zealand and most of the world) or month before day ('month', as in the US, and
+ * in year-first locales such as Japan). Falls back to 'day' when Intl cannot say.
+ * @param {string | string[]} [locale] defaults to the browser's
+ * @returns {'day' | 'month'}
+ */
+export function localeDayMonthOrder(locale) {
+	try {
+		const parts = new Intl.DateTimeFormat(locale, {
+			day: 'numeric',
+			month: 'numeric',
+			year: 'numeric',
+			timeZone: 'UTC'
+		}).formatToParts(new Date(Date.UTC(2024, 10, 22)));
+		const types = parts.map((p) => p.type);
+		return types.indexOf('month') < types.indexOf('day') ? 'month' : 'day';
+	} catch {
+		return 'day';
 	}
 }
 

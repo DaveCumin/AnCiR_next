@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, it, expect } from 'vitest';
-import { settleBoxes } from './settleOverlaps.js';
+import { settleBoxes, clearPlacementY } from './settleOverlaps.js';
 
 const box = (id, x, y, w = 160, h = 100) => ({ id, x, y, w, h });
 
@@ -38,5 +38,24 @@ describe('settleBoxes', () => {
 	it('only moves down, so a node above is never displaced', () => {
 		const moves = settleBoxes([box('low', 0, 50), box('high', 0, 0)]);
 		expect([...moves.keys()]).toEqual(['low']);
+	});
+});
+
+describe('clearPlacementY', () => {
+	it('keeps a new node where it is when it covers nothing', () => {
+		expect(clearPlacementY(box('n', 400, 50), [box('a', 0, 0), box('b', 400, 300)])).toBe(50);
+	});
+
+	it('moves a new node below the note card it would cover, and on past what is under that', () => {
+		// The Wide To Long demo: a table edit's Edit value node, topo-placed at (370, 50),
+		// covered the note card's right edge; the analysis below it is in the way too.
+		const note = box('note', 40, 24, 360, 219);
+		const analysis = box('tp', 440, 314, 220, 440);
+		const y = clearPlacementY(box('edit', 370, 50, 220, 159), [note, analysis]);
+		expect(y).toBe(314 + 440 + 24);
+	});
+
+	it('ignores a node that only touches an edge', () => {
+		expect(clearPlacementY(box('n', 160, 0), [box('a', 0, 0)])).toBe(0);
 	});
 });

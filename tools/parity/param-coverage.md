@@ -7,7 +7,7 @@ Which values of each analysis’s ENUMERABLE parameters (booleans, select option
 appear in any parity fixture. A value listed here is a branch that the JS, Python and R
 runtimes all claim to agree on and that nothing has ever compared.
 
-26 analyses have at least one fixture; 16 reach every enumerable value.
+27 analyses have at least one fixture; 16 reach every enumerable value.
 
 ## Values no fixture reaches
 
@@ -62,6 +62,12 @@ runtimes all claim to agree on and that nothing has ever compared.
 - `fixKappa`: [true]
 - `fixDutyCycle`: [true]
 - `permuteTest`: [true]
+
+### TrendFit
+
+- `permuteTest`: [true]
+- `autoPermutations`: [true]
+- `permutationStatistic`: ["rmse"]
 
 ## Fully covered
 

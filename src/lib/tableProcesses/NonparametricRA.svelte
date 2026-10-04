@@ -11,6 +11,12 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { computeNPCRA } from '$lib/utils/npcra.js';
+	import {
+		applyPhaseReference,
+		relabelFoldedProfile,
+		PHASE_REFERENCE_START
+	} from '$lib/utils/phaseReference.js';
+	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 
 	const displayName = 'Nonparametric RA';
 
@@ -24,6 +30,11 @@
 		['period', { val: 24 }],
 		['mWindow', { val: 10 }],
 		['lWindow', { val: 5 }],
+		// What hour 0 means for M10onset / L5onset and the average-day time axis:
+		// 'start' = hours after the first sample (the default, and what saved sessions
+		// report), 'clock' = hours after local midnight in the display timezone, wrapped
+		// to the period. Only relabels: IS, IV, RA, M10 and L5 never change. Review FIT-9.
+		['phaseReference', { val: PHASE_REFERENCE_START }],
 		[
 			'out',
 			{
@@ -92,6 +103,10 @@
 		const perY = {};
 		let binCentres = null;
 		let anyValid = false;
+		// Clock time (FIT-9) only relabels the phase outputs: each onset and bin time is
+		// measured from its series' first sample (t0, which is hour 0 of a time column),
+		// so clock time adds t0 plus the origin's clock hour and wraps to the period.
+		const phaseRef = resolveNodePhaseReference(argsIN, xCol);
 		if (t && t.length) {
 			for (const yId of yINs) {
 				const yCol = yId >= 0 ? getColumnById(yId) : null;
@@ -99,13 +114,23 @@
 				if (!y || !y.length) continue;
 				const res = computeNPCRA(t, y, opts);
 				if (res) {
+					if (phaseRef.clock) {
+						const ref = { clock: true, offsetHours: phaseRef.offsetHours + res.t0 };
+						res.M10onset = applyPhaseReference(res.M10onset, ref, opts.period);
+						res.L5onset = applyPhaseReference(res.L5onset, ref, opts.period);
+						const r = relabelFoldedProfile(res.binCentres, [res.profile], ref, opts.period);
+						res.binCentres = r.binTimes;
+						res.profile = r.series[0];
+					}
 					perY[yId] = res;
 					if (!binCentres) binCentres = res.binCentres;
 					anyValid = true;
 				}
 			}
 		}
-		return { perY, binCentres, anyValid, yINs, warnings: npcraSampleWarnings(t, perY, opts) };
+		const warnings = npcraSampleWarnings(t, perY, opts);
+		if (phaseRef.warning) warnings.push(phaseRef.warning);
+		return { perY, binCentres, anyValid, yINs, phaseRef, warnings };
 	}
 
 	// IS and IV are DAY-based statistics, so the sample size that matters is the
@@ -202,6 +227,8 @@
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
+	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
+	import { appState } from '$lib/core/core.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -233,6 +260,11 @@
 		out += p.args.period;
 		out += p.args.mWindow;
 		out += p.args.lWindow;
+		// Clock-time phases move with the display timezone, so it is an input then.
+		out +=
+			'|' +
+			p.args.phaseReference +
+			(p.args.phaseReference === 'clock' ? '@' + appState.displayTimezone : '');
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -355,6 +387,8 @@
 			}));
 	});
 	const fmt = (v, dp = 3) => (Number.isFinite(v) ? v.toFixed(dp) : '—');
+	// Onsets are hours after the first sample unless the node reports clock time (FIT-9).
+	let onsetUnit = $derived(npcraData?.phaseRef?.clock ? 'clock time, h' : 'h after start');
 </script>
 
 <div class="control-input-vertical">
@@ -385,6 +419,13 @@
 			<NumberWithUnits bind:value={p.args.lWindow} min="0.1" step="1" />
 		</ControlInput>
 	</div>
+	<div class="control-input-horizontal">
+		<PhaseReferenceSelect
+			bind:value={p.args.phaseReference}
+			xIsTime={xIN_col?.type === 'time'}
+			numericOrigin="the first sample"
+		/>
+	</div>
 </div>
 
 {#if calculating}
@@ -400,10 +441,10 @@
 					<th>IS</th>
 					<th>IV</th>
 					<th>RA</th>
-					<th>M10</th>
-					<th>L5</th>
-					<th>M10 onset</th>
-					<th>L5 onset</th>
+					<th>M{p.args.mWindow}</th>
+					<th>L{p.args.lWindow}</th>
+					<th>M{p.args.mWindow} onset ({onsetUnit})</th>
+					<th>L{p.args.lWindow} onset ({onsetUnit})</th>
 				</tr>
 			</thead>
 			<tbody>
