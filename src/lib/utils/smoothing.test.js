@@ -304,3 +304,21 @@ describe('smoothArrays — dispatch', () => {
 		expect(out.y_out).toEqual(ref);
 	});
 });
+
+// ROB-8: movingAverage summed with `sum += y[j]`, so a numeric string concatenated and a blank
+// ('' or ' ', which pass !isNaN) was read as 0. The house rule (isInvalidValue) now decides what
+// is missing and Number() converts the rest.
+describe('movingAverage with strings and blanks (ROB-8)', () => {
+	it('numeric strings are averaged as numbers', () => {
+		expect(movingAverage(['10', '20', '30'], 3, 'simple')).toEqual([15, 20, 25]);
+	});
+
+	for (const type of ['simple', 'weighted', 'exponential']) {
+		it(`${type}: a blank or whitespace cell is skipped, not averaged in as 0`, () => {
+			const out = movingAverage([10, '', 10, ' ', 10], 3, type);
+			for (const i of [0, 2, 4]) expect(out[i]).toBeCloseTo(10, 12);
+			expect(out[1]).toBeCloseTo(10, 12);
+			expect(out[3]).toBeCloseTo(10, 12);
+		});
+	}
+});

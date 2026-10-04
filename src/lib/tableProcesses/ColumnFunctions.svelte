@@ -96,9 +96,10 @@
 				return [[], false];
 		}
 
-		// The type test used to be inverted (`!== 'string' ? 'category' : 'number'`),
-		// so this node's output — always numeric, every branch above returns numbers —
-		// was tagged 'category'. Matches FormulaColumn's test, which was correct.
+		// The type test used to be inverted (`!== 'string' ? 'category' : 'number'`), so
+		// numeric output was tagged 'category'. Every branch returns numbers except "add"
+		// with a category column, which joins the labels into strings and stays 'category'.
+		// (FormulaColumn, which this once mirrored, now always writes 'number'.)
 		writeOutputColumn(argsIN.out.result, result, {
 			type: typeof result[0] === 'string' ? 'category' : 'number',
 			processHash: crypto.randomUUID()
@@ -233,10 +234,9 @@
 		if (outKey >= 0 && core.rawData.has(outKey) && core.rawData.get(outKey).length > 0) {
 			result = core.rawData.get(outKey);
 			p.args.valid = true;
-			const inputsAreStale = (p.args.xsIN ?? []).some(
-				(id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0
-			);
-			if (!inputsAreStale) memo.hash = getHash; // prevent $effect from recalculating
+			// The saved outputs only fill the panel until the compute effect runs; they are
+			// never trusted as current (the file may predate a fix, or the inputs), so the memo
+			// hash is not pinned here and the node recomputes from its inputs once mounted.
 		}
 		mounted = true;
 	});

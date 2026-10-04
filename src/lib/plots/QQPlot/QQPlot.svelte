@@ -124,6 +124,11 @@
 		set padding(v) {
 			this.#padding = v;
 		}
+		// The stored figure padding, for the Padding controls. While a node view is mounted
+		// `padding` reads back a derived, scaled copy, so an edit bound there was lost.
+		get figurePadding() {
+			return this.#padding;
+		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		// Width before an outside legend takes its share; see legendAuto.svelte.js.
 		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
@@ -456,35 +461,40 @@
 			<ControlInput label="Height"
 				><NumberWithUnits bind:value={theData.parentBox.height} /></ControlInput
 			>
-			<div class="control-input-checkbox" style="margin-top: var(--space-2);">
+			<label class="control-input-checkbox" style="margin-top: var(--space-2);">
 				<input type="checkbox" bind:checked={theData.showLine} />
-				<p title="Reference line through the first and third quartiles (robust to tail departures)">
+				<span
+					class="ci-label"
+					title="Reference line through the first and third quartiles (robust to tail departures)"
+				>
 					Show reference line
-				</p>
-			</div>
-			<div class="control-input-checkbox" style="margin-top: var(--space-2);">
+				</span>
+			</label>
+			<label class="control-input-checkbox" style="margin-top: var(--space-2);">
 				<input type="checkbox" bind:checked={theData.showBand} />
-				<p
+				<span
+					class="ci-label"
 					title="Pointwise envelope: each quantile's plausible range under normality. About {Math.round(
 						(1 - theData.confidence) * 100
 					)}% of points stray outside it even for perfectly normal data."
 				>
 					Show confidence envelope
-				</p>
-			</div>
+				</span>
+			</label>
 			{#if theData.showBand}
 				<ControlInput label="Confidence level">
 					<NumberWithUnits bind:value={theData.confidence} min="0.5" max="0.999" step="0.01" />
 				</ControlInput>
 			{/if}
-			<div class="control-input-checkbox" style="margin-top: var(--space-2);">
+			<label class="control-input-checkbox" style="margin-top: var(--space-2);">
 				<input type="checkbox" bind:checked={theData.showStats} />
-				<p
+				<span
+					class="ci-label"
 					title="Per-series values used (n), dropped-value count, and the probability-plot correlation r — how tightly the points follow a straight line (1 = the sample's shape matches the normal exactly). Descriptive only; for a formal normality test use the Normality Test node."
 				>
 					Show series statistics
-				</p>
-			</div>
+				</span>
+			</label>
 		</div>
 
 		<div class="div-line"></div>
@@ -502,16 +512,16 @@
 			</div>
 			<div class="control-input-square">
 				<ControlInput label="Top">
-					<NumberWithUnits bind:value={theData.padding.top} />
+					<NumberWithUnits bind:value={theData.figurePadding.top} />
 				</ControlInput>
 				<ControlInput label="Bottom">
-					<NumberWithUnits bind:value={theData.padding.bottom} />
+					<NumberWithUnits bind:value={theData.figurePadding.bottom} />
 				</ControlInput>
 				<ControlInput label="Left">
-					<NumberWithUnits bind:value={theData.padding.left} />
+					<NumberWithUnits bind:value={theData.figurePadding.left} />
 				</ControlInput>
 				<ControlInput label="Right">
-					<NumberWithUnits bind:value={theData.padding.right} />
+					<NumberWithUnits bind:value={theData.figurePadding.right} />
 				</ControlInput>
 			</div>
 		</div>

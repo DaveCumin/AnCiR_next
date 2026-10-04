@@ -12,6 +12,7 @@
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import { scaleLinear } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import PaddingControls from '$lib/components/inputs/PaddingControls.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
@@ -21,6 +22,7 @@
 		bindAltTooltipToggle
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 
 	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
@@ -29,8 +31,47 @@
 	import '$lib/utils/periodogram.worker-task.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
-	import { argMax, argMaxAmong } from '$lib/components/plotbits/helpers/peakFinder.js';
+	import { spectralPeakIndex } from '$lib/components/plotbits/helpers/peakFinder.js';
 	import { paddedDomain, finiteExtent } from '$lib/plots/axisDomain.js';
+
+	import { chisqSf as chisqSfImpl } from '$lib/utils/chisqSf.js';
+
+	/**
+	 * Upper tail of the chi-square distribution (SPEC-14). Defined in utils/chisqSf.js so the
+	 * periodogram compute (which also runs in the worker) shares it; re-exported here for the
+	 * callers and tests that import it from the plot.
+	 */
+	export const chisqSf = chisqSfImpl;
+
+	/**
+	 * The chi-squared peak's FAMILY-WISE p: 1 - (1 - p)^M, with p the per-period upper-tail p
+	 * at the peak and M the number of folds that carry a statistic, the same M the Sidak line
+	 * is drawn with (runPeriodogramCalculation). The peak crosses the drawn line exactly when
+	 * this p is below the line's alpha. The per-period p alone is the probability for ONE
+	 * pre-chosen period, but the peak is the maximum over all M, so on white noise it was below
+	 * 0.05 in 34% of records while the line was crossed in 3% (SPEC-6).
+	 *
+	 * @param {{y:number[], pvalue:number[], df?:number[]}} periodData
+	 * @param {number} idx the peak's index
+	 * @returns {number} NaN for Lomb-Scargle/Enright (no analytic p)
+	 */
+	export function peakFamilywiseP(periodData, idx) {
+		const pv = periodData?.pvalue ?? [];
+		let M = 0;
+		for (const v of pv) if (Number.isFinite(v)) M++;
+		if (!M || !Number.isFinite(pv[idx])) return NaN;
+		const df = periodData.df?.[idx];
+		const q = periodData.y?.[idx];
+		const p = Number.isFinite(df) && Number.isFinite(q) ? chisqSf(q, df) : pv[idx];
+		// 1 - (1 - p)^M without cancellation, so a tiny p stays tiny instead of becoming 0.
+		return -Math.expm1(M * Math.log1p(-Math.min(1, Math.max(0, p))));
+	}
+
+	/** A p-value for the panel: three significant figures, or "< 0.0001". */
+	function formatP(p) {
+		if (!Number.isFinite(p)) return '—';
+		return p < 1e-4 ? '< 0.0001' : Number(p.toPrecision(3)).toString();
+	}
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
 	export const Periodogram_controlHeaders = ['Properties', 'Data'];
@@ -95,31 +136,42 @@
 		calculating = $state(false);
 		progress = $state({ current: 0, total: 0 });
 		dataWarnings = $state([]);
+		// The message of the last failed calculation (ROB-11): shown in the controls with a
+		// retry, and the spectrum is emptied rather than left showing the previous inputs.
+		calcError = $state(null);
+		_lastCalc = null;
 
 		// Period data - now $state instead of $derived
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 
 		// Peak detection - find the highest power value across ALL calculated data.
-		// pvalue is the chi-squared significance of that peak (NaN for
-		// Lomb-Scargle/Enright, which have no analytic p here).
+		// A spectrum with no positive power (flat or all-zero data) has no peak: null, not
+		// the first trial period (ROB-13).
+		// pvalue is the chi-squared significance of that peak, FAMILY-WISE over the folds the
+		// threshold line is drawn with (peakFamilywiseP); NaN for Lomb-Scargle/Enright, which
+		// have no analytic p here.
 		peak = $derived.by(() => {
-			const { x, y, pvalue } = this.periodData;
+			const { x, y } = this.periodData;
 			if (!x || !y || x.length === 0 || y.length === 0) return null;
-			const idx = argMax(y);
-			return idx < 0 ? null : { period: x[idx], power: y[idx], pvalue: pvalue?.[idx] ?? NaN };
+			const idx = spectralPeakIndex(y);
+			return idx < 0
+				? null
+				: { period: x[idx], power: y[idx], pvalue: peakFamilywiseP(this.periodData, idx) };
 		});
 
 		// Peak within the visible x-axis range
 		visiblePeak = $derived.by(() => {
-			const { x, y, pvalue } = this.periodData;
+			const { x, y } = this.periodData;
 			if (!x || !y || x.length === 0 || y.length === 0) return null;
 			const [xMin, xMax] = this.parentPlot?.periodlimsIN ?? [0, Infinity];
 			const visibleIndices = [];
 			for (let i = 0; i < x.length; i++) {
 				if (x[i] >= xMin && x[i] <= xMax) visibleIndices.push(i);
 			}
-			const idx = argMaxAmong(y, visibleIndices);
-			return idx < 0 ? null : { period: x[idx], power: y[idx], pvalue: pvalue?.[idx] ?? NaN };
+			const idx = spectralPeakIndex(y, visibleIndices);
+			return idx < 0
+				? null
+				: { period: x[idx], power: y[idx], pvalue: peakFamilywiseP(this.periodData, idx) };
 		});
 
 		// Cache for smart recalculation
@@ -345,6 +397,8 @@
 		 */
 		startCalculation(params, cacheOnSuccess = null) {
 			this.calculating = true;
+			this.calcError = null;
+			this._lastCalc = { params, cacheOnSuccess };
 			this.progress = { current: 0, total: 0 };
 			const token = ++this._calcToken;
 
@@ -366,6 +420,11 @@
 			};
 			const fail = (e) => {
 				console.error('Periodogram calculation error:', e);
+				if (token !== this._calcToken) return;
+				// No stale spectrum (or peak, or metric outputs) for inputs it was not computed
+				// from, and no cache entry, so the same inputs are tried again.
+				this.periodData = { x: [], y: [], threshold: [], pvalue: [] };
+				this.calcError = e?.message ?? String(e);
 			};
 
 			// The number of trial periods is the other half of the job size; the input
@@ -392,6 +451,12 @@
 					done();
 				}
 			}, 0);
+		}
+
+		/** Run the last calculation again (the Try again button after a failure). */
+		retryCalculation() {
+			if (this._lastCalc)
+				this.startCalculation(this._lastCalc.params, this._lastCalc.cacheOnSuccess);
 		}
 
 		get displayLabel() {
@@ -506,6 +571,11 @@
 		}
 		set padding(v) {
 			this.#padding = v;
+		}
+		// The stored figure padding, for the Padding controls. While a node view is mounted
+		// `padding` reads back a derived, scaled copy, so an edit bound there was lost.
+		get figurePadding() {
+			return this.#padding;
 		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		// Width before an outside legend takes its share; see legendAuto.svelte.js.
@@ -938,115 +1008,11 @@
 
 		<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>Padding</p>
-				{#if theData.getAutoScaleValues()?.top != theData.padding.top || theData.getAutoScaleValues()?.bottom != theData.padding.bottom || theData.getAutoScaleValues()?.left != theData.padding.left || theData.getAutoScaleValues()?.right != theData.padding.right}
-					<button class="icon" onclick={() => theData.autoScalePadding('all')}>
-						<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
-					</button>
-				{/if}
-			</div>
-
-			<div class="control-input-square">
-				<div class="control-input">
-					<p>Top</p>
-					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits
-							bind:value={theData.padding.top}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.top != null &&
-							theData.getAutoScaleValues().top != theData.padding.top
-								? 24
-								: 0}px)"
-						/>
-
-						{#if theData.getAutoScaleValues()?.top != null && theData.getAutoScaleValues()?.top != theData.padding.top}
-							<button class="icon" onclick={() => theData.autoScalePadding('top')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<div class="control-input">
-					<p>Bottom</p>
-					<div
-						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
-					>
-						<NumberWithUnits
-							bind:value={theData.padding.bottom}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.bottom != null &&
-							theData.getAutoScaleValues().bottom != theData.padding.bottom
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.bottom != null && theData.getAutoScaleValues()?.bottom != theData.padding.bottom}
-							<button class="icon" onclick={() => theData.autoScalePadding('bottom')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<div class="control-input">
-					<p>Left</p>
-					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits
-							bind:value={theData.padding.left}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.left != null &&
-							theData.getAutoScaleValues().left != theData.padding.left
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.left != null && theData.getAutoScaleValues()?.left != theData.padding.left}
-							<button class="icon" onclick={() => theData.autoScalePadding('left')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<div class="control-input">
-					<p>Right</p>
-					<div
-						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
-					>
-						<NumberWithUnits
-							bind:value={theData.padding.right}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.right != null &&
-							theData.getAutoScaleValues().right != theData.padding.right
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.right != null && theData.getAutoScaleValues()?.right != theData.padding.right}
-							<button class="icon" onclick={() => theData.autoScalePadding('right')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-			</div>
-		</div>
+		<PaddingControls
+			bind:padding={theData.figurePadding}
+			auto={theData.renderBox ? null : theData.getAutoScaleValues()}
+			onReset={(side) => theData.autoScalePadding(side)}
+		/>
 
 		<div class="div-line"></div>
 
@@ -1057,7 +1023,12 @@
 					class="control-component-title-icons"
 					{@attach attachTooltip('Reset the power axis to auto range')}
 				>
-					<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+					<button
+						class="icon"
+						type="button"
+						aria-label="Reset the power axis to auto range"
+						onclick={() => (theData.ylimsIN = [null, null])}
+					>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>
 				</div>
@@ -1197,6 +1168,14 @@
 							</div>
 						{/if}
 
+						{#if datum.calcError}
+							<ErrorBox
+								title="The periodogram could not be calculated."
+								message={datum.calcError}
+								onretry={() => datum.retryCalculation()}
+							/>
+						{/if}
+
 						{#if datum.visiblePeak}
 							<p>
 								<strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} hrs</strong>
@@ -1216,6 +1195,13 @@
 									source="Periodogram"
 								/>
 							</p>
+							{#if Number.isFinite(datum.visiblePeak.pvalue)}
+								<p
+									title="Corrected for every period tested, as the threshold line is: below alpha exactly when the peak crosses the line"
+								>
+									<strong>Peak p (family-wise): {formatP(datum.visiblePeak.pvalue)}</strong>
+								</p>
+							{/if}
 							{#if datum.peak && Math.abs(datum.visiblePeak.period - datum.peak.period) > 0.001}
 								<div class="data-warning">
 									<p>
@@ -1242,6 +1228,13 @@
 									source="Periodogram"
 								/>
 							</p>
+							{#if Number.isFinite(datum.peak.pvalue)}
+								<p
+									title="Corrected for every period tested, as the threshold line is: below alpha exactly when the peak crosses the line"
+								>
+									<strong>Peak p (family-wise): {formatP(datum.peak.pvalue)}</strong>
+								</p>
+							{/if}
 						{/if}
 
 						<Line lineData={datum.line} which="controls" />

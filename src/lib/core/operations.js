@@ -8,11 +8,13 @@ import {
 	swapColumnRefs,
 	propagateStoredValueRename
 } from './core.svelte.js';
-import { Plot } from './Plot.svelte';
-import { Column } from './Column.svelte';
+import { Plot, removePlotsCascade } from './Plot.svelte';
+import { Column, removeColumn as removeColumnCascade } from './Column.svelte';
 import { Process } from './Process.svelte';
-import { TableProcess } from './TableProcess.svelte';
+import { TableProcess, deleteTableProcessCascade } from './TableProcess.svelte';
 import { memoForget } from './computeMemo.js';
+import { captureGraph, makePatch, applyPatch } from './graphPatch.js';
+import { inReaction } from './reactionContext.svelte.js';
 
 /**
  * @typedef {Object} OpAddFreeTableProcess
@@ -145,11 +147,15 @@ import { memoForget } from './computeMemo.js';
  * @property {'batch'} kind
  * @property {GraphOperation[]} ops
  *
+ * @typedef {Object} OpGraphPatch
+ * @property {'graphPatch'} kind
+ * @property {Object} patch   a graphPatch.js patch (entity adds/removes/updates + rawData)
+ *
  * @typedef {OpAddColumn | OpRemoveColumn | OpAddProcess | OpRemoveProcess |
  *   OpSetProcessArg | OpAddPlot | OpRemovePlot | OpSetPlotProperty | OpSetPlotPosition |
  *   OpSetPlotInner | OpSetFacetOverride | OpSetMarkerRule | OpRenameColumn | OpSetPlotMetricOut | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
  *   OpSetOrphanProcessArg | OpSetStoredValue | OpRemoveStoredValue |
- *   OpRenameStoredValue | OpReplaceColumnRefs | OpSwapColumnRefs | OpBatch} GraphOperation
+ *   OpRenameStoredValue | OpReplaceColumnRefs | OpSwapColumnRefs | OpBatch | OpGraphPatch} GraphOperation
  */
 
 const opListeners = new Set();
@@ -191,11 +197,114 @@ export function withSuppressedListeners(fn) {
 
 function emit(forward, reverse) {
 	if (suppressed > 0) return;
+	// A recorded gesture is still settling (see recordGraphMutation). An op emitted from an
+	// effect is the graph's reaction to it, which the gesture's step absorbs when it settles.
+	// Anything else is a new gesture: close the open one first, so neither absorbs the other.
+	if (settling) {
+		if (inReaction()) return;
+		settleGraphMutation();
+	}
 	for (const l of opListeners) l(forward, reverse);
+}
+
+// Depth of graph captures in progress. A cascade nested inside another (deleteOperationNode
+// calling deleteTableProcess, a delete inside an op handler) is part of the outer gesture and
+// must not record a step of its own.
+let captureDepth = 0;
+
+/**
+ * Run `fn` between two graph captures and return the patches that redo and undo it.
+ * Ops nested in `fn` apply normally but are not recorded on their own: the capture covers them.
+ */
+function captureAround(fn) {
+	captureDepth++;
+	const before = captureGraph();
+	let result;
+	try {
+		result = withSuppressedListeners(fn);
+	} finally {
+		captureDepth--;
+	}
+	const after = captureGraph();
+	return { result, forward: makePatch(before, after), inverse: makePatch(after, before) };
+}
+
+/**
+ * Record a cascading edit (a node delete, a wire delete, a paste) as ONE undoable step.
+ *
+ * `fn` runs exactly as it would unrecorded; what it changed is captured as a graphPatch whose
+ * inverse restores every entity it touched with its id, args, output columns, wiring and
+ * downstream references (see graphPatch.js). Nested calls fold into the outermost one, so a
+ * multi-node delete is one step. If `fn` throws, what it did before throwing is still recorded
+ * (and so can be undone) before the error propagates. Returns `fn`'s result.
+ */
+export function recordGraphMutation(fn) {
+	if (captureDepth > 0) return fn();
+	settleGraphMutation();
+	captureDepth++;
+	const before = captureGraph();
+	let result;
+	let error = null;
+	try {
+		result = withSuppressedListeners(fn);
+	} catch (e) {
+		error = e;
+	} finally {
+		captureDepth--;
+	}
+	const after = captureGraph();
+	const forward = makePatch(before, after);
+	if (forward) {
+		const backward = makePatch(after, before);
+		const canonical = { kind: 'graphPatch', patch: forward };
+		const inverse = { kind: 'graphPatch', patch: backward };
+		emit(canonical, inverse);
+		for (const h of stateChangeHooks) h(canonical, inverse);
+		if (suppressed === 0) {
+			settling = { before, forward, backward };
+			setTimeout(settleGraphMutation, 0);
+		}
+	}
+	if (error) throw error;
+	return result;
+}
+
+// The gesture most recently recorded, while the graph is still reacting to it.
+//
+// A gesture's synchronous cascade is not always the whole of it. Deleting the last wire into an
+// analysis drops its per-input outputs here, but the node's own editor then notices it has no
+// input left and removes its summary outputs too, from an effect a microtask later, and the
+// parameter watcher records that `out` write as a step of its own. Undo then reverted only that
+// write: an output map naming columns that no longer existed, and the outputs never came back.
+//
+// So the step stays open until the next macrotask (after every effect and microtask the gesture
+// set off has run). Ops that effects emit in that window are the reaction, so they are not
+// recorded on their own, and the step's patches are then re-taken against the settled graph,
+// IN PLACE (GraphPatch), so the entry already on the undo stack describes everything the
+// gesture did. An op from outside an effect (the user's next gesture) closes the step first.
+let settling = null;
+
+/**
+ * Close the open gesture now: re-take its patches against the current graph. Runs on its own
+ * timer, before any undo or redo (so the entry is complete before it is reversed), and before
+ * the next recorded gesture. Exported for tests that act again before a macrotask passes.
+ */
+export function settleGraphMutation() {
+	const s = settling;
+	if (!s) return;
+	settling = null;
+	const after = captureGraph();
+	const forward = makePatch(s.before, after);
+	if (!forward) return; // the reaction undid the gesture; keep what was recorded
+	s.forward.replaceWith(forward);
+	s.backward.replaceWith(makePatch(after, s.before));
 }
 
 /** Apply one op; return its inverse, or null if the op was a no-op. */
 export function applyOp(op) {
+	// An undo or redo (applied with listeners suppressed) must see the open gesture's complete
+	// patches; ops that are the gesture's own reaction (unsuppressed) must not close it early.
+	if (settling && suppressed > 0 && captureDepth === 0) settleGraphMutation();
 	const result = applyForward(op);
 	if (!result) return null;
 	emit(result.canonical, result.inverse);
@@ -271,6 +380,8 @@ function applyForward(op) {
 			return op_replaceColumnRefs(op);
 		case 'swapColumnRefs':
 			return op_swapColumnRefs(op);
+		case 'graphPatch':
+			return op_graphPatch(op);
 		case 'batch':
 			return op_batch(op);
 		default:
@@ -287,12 +398,13 @@ function op_addPlot(op) {
 	);
 }
 
+// A plot owns its metric out-columns (an actogram marker rule's tau column, for one), so
+// removing the plot removes them too, exactly as the workspace delete always did. The inverse
+// restores the plot, its columns (same ids, same data) and anything wired to them.
 function op_removePlot(op) {
-	const idx = core.plots.findIndex((p) => p.id === op.id);
-	if (idx < 0) return null;
-	const before = snapshotPlot(core.plots[idx]);
-	core.plots.splice(idx, 1);
-	return pair(op, { kind: 'addPlot', plotData: before });
+	if (!core.plots.some((p) => p.id === op.id)) return null;
+	const { inverse } = captureAround(() => removePlotsCascade([op.id]));
+	return pair(op, { kind: 'graphPatch', patch: inverse });
 }
 
 function op_setPlotProperty(op) {
@@ -463,12 +575,17 @@ function op_addColumn(op) {
 	);
 }
 
+// The full removal, not a bare splice (ROB-15): every reference to the column (plot series
+// and table refs, analysis inputs, free-process inputs, group membership, ref chains) is
+// scrubbed, and per-input outputs that described it go with it. Leaving the dead id in place
+// meant a column minted later with the same id (the counter restarts at max+1 after a reload)
+// was silently wired into the old plot. Its rawData is freed from core (so it is not saved
+// with the session, ROB-19); the inverse holds it, so undo restores the column with the same
+// id and data AND puts every scrubbed reference back.
 function op_removeColumn(op) {
-	const idx = core.data.findIndex((c) => c.id === op.id);
-	if (idx < 0) return null;
-	const before = snapshotColumn(core.data[idx]);
-	core.data.splice(idx, 1);
-	return pair(op, { kind: 'addColumn', columnData: before });
+	if (!core.data.some((c) => c.id === op.id)) return null;
+	const { inverse } = captureAround(() => removeColumnCascade(op.id));
+	return pair(op, { kind: 'graphPatch', patch: inverse });
 }
 
 function op_addProcess(op) {
@@ -573,58 +690,26 @@ function op_addFreeTableProcess(op) {
 	return pair(canonical, { kind: 'removeFreeTableProcess', tpId: tp.id });
 }
 
+// Delete a free table process the way the canvas does: its output columns go with it (it
+// minted them, so they are part of the node), every input that read them is scrubbed, Column
+// Set links it fed are detached, and chained nodes are unhooked. The inverse puts all of it
+// back: the node with its id and args, its output columns with the SAME ids and data, and
+// every downstream reference, so the next compute lands where the plots already look.
 function op_removeFreeTableProcess(op) {
-	const idx = core.tableProcesses.findIndex((tp) => tp.id === op.tpId);
-	if (idx < 0) return null;
-	const before = core.tableProcesses[idx];
-	// Undo re-adds the node with the same id and an empty memo, so it recomputes on
-	// mount. That is the same work a fresh mount does, and correct.
-	memoForget(before, 'tableprocess');
-	const snap = {
-		tpType: before.name,
-		tpId: before.id,
-		args: JSON.parse(JSON.stringify(before.args ?? {}))
-	};
+	const tp = core.tableProcesses.find((x) => x.id === op.tpId);
+	if (!tp) return null;
+	const { inverse } = captureAround(() => deleteTableProcessCascade(tp));
+	return pair(op, { kind: 'graphPatch', patch: inverse });
+}
 
-	// Take the node's output columns with it. A table process MINTS these columns (its
-	// constructor does, when `out` has no ids yet), so they are part of the node, not
-	// independent data — leaving them behind turns one undo into a canvas full of orphaned
-	// `rsquared_1001` / `cosinory_1_1001` nodes that nothing produces and nothing reads.
-	//
-	// Cheap to reverse: rawData is keyed by column id and is left alone, so restoring the
-	// descriptor restores the data with it — the same trick op_removeColumn relies on.
-	const outIds = Object.values(snap.args.out ?? {}).filter(
-		(id) => typeof id === 'number' && id >= 0
-	);
-	const removedColumns = [];
-	for (const id of outIds) {
-		const i = core.data.findIndex((c) => c.id === id);
-		if (i < 0) continue;
-		removedColumns.push(snapshotColumn(core.data[i]));
-		core.data.splice(i, 1);
-	}
-
-	core.tableProcesses.splice(idx, 1);
-
-	const addNode = {
-		kind: 'addFreeTableProcess',
-		tpType: snap.tpType,
-		tpId: snap.tpId,
-		args: snap.args
-	};
-	// A node with no output columns needs nothing more than itself put back. Only reach for a
-	// batch when there are columns to restore — and then columns FIRST: re-adding a table
-	// process whose `out` already holds ids makes the constructor adopt them as-is rather than
-	// mint new ones, so they have to be back before it looks for them.
-	return pair(
-		op,
-		removedColumns.length
-			? {
-					kind: 'batch',
-					ops: [...removedColumns.map((columnData) => ({ kind: 'addColumn', columnData })), addNode]
-				}
-			: addNode
-	);
+// Apply a recorded patch (an undo or redo of a cascading edit). The inverse is captured
+// around the application rather than derived from the patch, so it is exact even when the
+// state has drifted since the patch was made.
+function op_graphPatch(op) {
+	if (!op.patch) return null;
+	const { forward, inverse } = captureAround(() => applyPatch(op.patch));
+	if (!forward) return null;
+	return pair({ kind: 'graphPatch', patch: op.patch }, { kind: 'graphPatch', patch: inverse });
 }
 
 function op_setFreeTableProcessArg(op) {

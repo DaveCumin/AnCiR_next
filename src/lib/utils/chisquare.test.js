@@ -151,8 +151,13 @@ describe('isMissingCategory', () => {
 	it('flags the missing forms', () => {
 		for (const v of [null, undefined, '', NaN, 'NaN']) expect(isMissingCategory(v)).toBe(true);
 	});
+	it('treats a whitespace-only label as missing, as isInvalidValue treats a blank cell', () => {
+		// A spreadsheet cell holding a space is blank to the user; as a category it formed its
+		// own invisible group (review STAT-1 follow-up).
+		for (const v of [' ', '   ', '\t', ' \n ']) expect(isMissingCategory(v)).toBe(true);
+	});
 	it('keeps real categories, including 0 and false', () => {
-		for (const v of ['a', 0, 1, false, 'nan', ' ']) expect(isMissingCategory(v)).toBe(false);
+		for (const v of ['a', 0, 1, false, 'nan', ' a ']) expect(isMissingCategory(v)).toBe(false);
 	});
 });
 

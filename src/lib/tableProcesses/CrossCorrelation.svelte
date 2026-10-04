@@ -5,8 +5,12 @@
 	// Two single-column inputs (series A = xIN, series B = yIN). For each lag k in
 	// [-maxLag, maxLag], r(k) is the correlation between A[t] and B[t+k] on the overlapping
 	// segment. Outputs three equal-length array columns (lag, correlation, pvalue) plus the peak
-	// lag/r reported in-node. A peak at k>0 means B leads A by k samples. Maths is the pure,
-	// numpy-parity-checked utils/crossCorrelation.js. Quick-plot draws the correlogram (lag vs r).
+	// lag/r reported in-node. A peak at k > 0 means B follows A by k samples, so A LEADS
+	// (B[t] = A[t - 3] peaks at k = +3); k < 0 means B leads. The pvalue column tests the
+	// PREWHITENED correlation at each lag (A's AR filter applied to both series), because the
+	// raw r of two autocorrelated series is far more variable than an independence test
+	// assumes; see utils/crossCorrelation.js. Maths is the pure, numpy-parity-checked
+	// utils/crossCorrelation.js. Quick-plot draws the correlogram (lag vs r).
 	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
@@ -58,9 +62,15 @@
 			lag: res.lags,
 			correlation: res.r,
 			pvalue: res.pvalue,
+			pwCorrelation: res.pwR,
 			n: res.n,
 			peakLag: res.peakLag,
 			peakR: res.peakR,
+			arOrder: res.arOrder,
+			minP: res.minP,
+			minPLag: res.minPLag,
+			familywiseP: res.familywiseP,
+			nLags: res.nLags,
 			aName: a.name ?? String(argsIN.xIN),
 			bName: b.name ?? String(argsIN.yIN),
 			methodUsed: method,
@@ -96,12 +106,29 @@
 		}
 	};
 
-	const fmt = (v) =>
+	/**
+	 * Which series leads, in words. r(k) correlates A[t] with B[t + k], so a peak at k > 0
+	 * means B repeats A k samples LATER: A leads. (This said the opposite until SPEC-1.)
+	 * @returns {string} '' at lag 0 or with no peak
+	 */
+	export function leadSentence(result) {
+		const k = result?.peakLag;
+		if (!Number.isFinite(k) || k === 0) return '';
+		const leader = k > 0 ? result.aName : result.bName;
+		const follower = k > 0 ? result.bName : result.aName;
+		const s = Math.abs(k) === 1 ? '' : 's';
+		return `${leader} leads ${follower} by ${Math.abs(k)} sample${s}.`;
+	}
+
+	// Four significant figures without trailing zeros. Only zeros AFTER a decimal point are
+	// dropped ("0.5000" -> "0.5"); the old /\.?0+$/ also ate integer zeros ("1000" -> "1").
+	export const fmt = (v) =>
 		v == null || Number.isNaN(v)
 			? '—'
 			: Number(v)
 					.toPrecision(4)
-					.replace(/\.?0+$/, '');
+					.replace(/(\.\d*?)0+$/, '$1')
+					.replace(/\.$/, '');
 </script>
 
 <script>
@@ -123,10 +150,11 @@
 	let result = $state({ lag: [], correlation: [], pvalue: [], warnings: [] });
 
 	const getTableData = () => ({
-		headers: ['lag', 'correlation', 'pvalue', 'n'],
+		headers: ['lag', 'correlation', 'prewhitened_correlation', 'pvalue_prewhitened', 'n'],
 		rows: (result.lag ?? []).map((_, i) => [
 			result.lag[i],
 			result.correlation[i],
+			result.pwCorrelation?.[i],
 			result.pvalue[i],
 			result.n?.[i]
 		])
@@ -215,23 +243,32 @@
 	{#if result.lag.length}
 		<p class="hint">
 			Peak at lag <strong>{result.peakLag}</strong> (r = {fmt(result.peakR)}).
-			{#if Number.isFinite(result.peakLag) && result.peakLag !== 0}
-				{result.peakLag > 0 ? result.bName : result.aName} leads by {Math.abs(result.peakLag)}.
-			{/if}
+			{leadSentence(result)}
 			Quick-plot for the correlogram.
+		</p>
+		<p class="hint">
+			p tests the prewhitened correlation at each lag ({result.arOrder > 0
+				? `${result.aName}'s AR(${result.arOrder}) filter applied to both series`
+				: `${result.aName} looks like white noise, so no filter was needed`}). Each p is for one lag
+			and is not corrected for the {result.nLags} lags shown. Over all of them, the smallest p is {fmt(
+				result.minP
+			)} at lag {result.minPLag}, which is p = {fmt(result.familywiseP)} once corrected for the number
+			of lags (Šidák). When both series carry a strong rhythm of the same period these p are still somewhat
+			liberal; test the rhythm itself with the Surrogate Test.
 		</p>
 		<details class="tp-output-panel" open>
 			<summary class="tp-output-summary">{result.aName} × {result.bName}</summary>
 			<div class="d-table-wrap scroll-fade-x" {@attach scrollFade()}>
 				<table class="d-table">
 					<thead>
-						<tr><th>lag</th><th>r</th><th>p</th></tr>
+						<tr><th>lag</th><th>r</th><th>r (prewhitened)</th><th>p (prewhitened)</th></tr>
 					</thead>
 					<tbody>
 						{#each result.lag as lg, i (lg)}
 							<tr class:peak={lg === result.peakLag}>
 								<td class="num">{lg}</td>
 								<td class="num">{fmt(result.correlation[i])}</td>
+								<td class="num">{fmt(result.pwCorrelation?.[i])}</td>
 								<td class="num">{fmt(result.pvalue[i])}</td>
 							</tr>
 						{/each}

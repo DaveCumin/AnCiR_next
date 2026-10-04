@@ -15,6 +15,7 @@
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import '$lib/utils/trendfit.worker-task.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { permutationValidityWarnings } from '$lib/tableProcesses/permutationSupport.js';
 
 	const displayName = 'Fit trend';
 	const defaults = new Map([
@@ -140,6 +141,37 @@
 		if (args.permutationStatistic === undefined)
 			args.permutationStatistic = PERMUTATION_DEFAULTS.permutationStatistic;
 		return args;
+	}
+
+	/**
+	 * Residual-autocorrelation warnings for the permutation test (review finding FIT-5).
+	 * The test shuffles single values, which assumes exchangeable observations; a trend has
+	 * no period to set a block length, so there is no block scheme here to recommend.
+	 * @param {Record<string, object>} yResults  y id -> { yy, fittedData } (the fitted pairs)
+	 * @param {(yId: string) => string} labelFor  the series label, e.g. '"activity"'
+	 * @returns {string[]}
+	 */
+	export function trendPermutationWarnings(yResults, labelFor) {
+		const out = [];
+		for (const [yId, yr] of Object.entries(yResults ?? {})) {
+			const fd = yr?.fittedData;
+			const yy = yr?.yy;
+			if (!(fd?.permutedStats?.length > 0)) continue;
+			if (!Array.isArray(yy) || !Array.isArray(fd.fitted) || fd.fitted.length !== yy.length)
+				continue;
+			out.push(
+				...permutationValidityWarnings(
+					{ scheme: 'shuffle' },
+					yy.map((v, i) => v - fd.fitted[i]),
+					labelFor(yId),
+					{
+						remedy:
+							'Treat this p-value as too small. Fit trend has no block scheme, because a trend has no period to set the block length.'
+					}
+				)
+			);
+		}
+		return out;
 	}
 
 	export function getCoefKeys(args) {
@@ -356,6 +388,9 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import { createComputeRunner } from '$lib/core/asyncCompute.js';
+	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
@@ -377,7 +412,8 @@
 	applyPermutationDefaults(p.args);
 
 	let trendData = $state();
-	let _calcToken = 0; // guards async fit results against stale overwrites
+	// The message of the last failed fit, shown with a Retry (ROB-11).
+	let calcError = $state(null);
 	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
 	let previewStart = $state(1);
@@ -456,15 +492,19 @@
 			memo.hash = getHash;
 			p.args._fitHash = memo.hash;
 			previewStart = 1;
-			const token = ++_calcToken;
-			// trendfit is async now; apply when it resolves (token guards staleness).
-			trendfit(p.args).then(([data, valid]) => {
-				if (token !== _calcToken) return;
-				untrack(() => {
-					trendData = data;
-					p.args.valid = valid;
-				});
-			});
+			// trendfit is async; the runner applies only the latest run, clears the
+			// permutation spinner whatever happens, and reports a throw on the node.
+			untrack(() =>
+				runner.run(
+					dataHash,
+					() => trendfit(p.args),
+					([data, valid]) => {
+						trendData = data;
+						p.args.valid = valid;
+					},
+					onFitError
+				)
+			);
 		}
 	});
 
@@ -475,10 +515,36 @@
 		if (fitColsChanged || permColsChanged || residColsChanged) getTrend();
 	}
 
-	//------------
-	async function getTrend() {
+	// try/finally, error state, success-only memo commit: see core/asyncCompute.js. Busy
+	// only ever CLEARS the permutation spinner here (a plain fit has none; computeTrend
+	// raises it for a permutation run), so a throw can no longer leave it spinning.
+	const runner = createComputeRunner({
+		memo,
+		node: p,
+		label: 'Trend fit',
+		setBusy: (v) => {
+			if (!v) permutationInProgress = false;
+		},
+		setError: (m) => (calcError = m)
+	});
+	function onFitError() {
+		trendData = undefined;
+		p.warnings = [];
+		p.args.valid = false;
+		clearOutputColumns(p.args.out);
+	}
+	function getTrend() {
 		previewStart = 1;
+		return runner.run(
+			untrack(() => getHash),
+			() => untrack(() => computeTrend()),
+			() => {},
+			onFitError
+		);
+	}
 
+	//------------
+	async function computeTrend() {
 		if (p.args.permuteTest && p.args.yIN && p.args.yIN.length > 0) {
 			permutationInProgress = true;
 			permutationProgress = 0;
@@ -544,6 +610,7 @@
 					fittedData,
 					predicted: null,
 					t: tt,
+					yy,
 					xOutData: tt,
 					yOutData: fittedData.fitted
 				};
@@ -586,7 +653,14 @@
 				writeTrendMetricOutputs(p.args, result, processHash);
 			}
 
-			result.warnings = [...domainWarnings, ...fitSampleWarnings(p.args)];
+			result.warnings = [
+				...domainWarnings,
+				...trendPermutationWarnings(
+					result.y_results,
+					(yId) => `"${getColumnById(Number(yId))?.name ?? yId}"`
+				),
+				...fitSampleWarnings(p.args)
+			];
 			trendData = result;
 			p.warnings = result.warnings;
 			p.args.valid = Object.keys(result.y_results).length > 0;
@@ -892,6 +966,12 @@
 				/>
 			</ControlInput>
 
+			<p class="hint">
+				The test shuffles single values, which assumes the observations are exchangeable
+				(independent). Time series are usually autocorrelated, which makes that p-value too small;
+				the node warns when the residuals are.
+			</p>
+
 			<button onclick={() => getTrend()} disabled={permutationInProgress} style="margin-top: 10px;">
 				{#if permutationInProgress}
 					Testing... {permutationProgress}%
@@ -1071,6 +1151,8 @@
 	<summary class="section-details-summary">Output</summary>
 	{#if permutationInProgress}
 		<LoadingSpinner message="Running permutation test" detail="{permutationProgress}% complete" />
+	{:else if calcError}
+		<ErrorBox title="The fit failed." message={calcError} onretry={getTrend} />
 	{:else}
 		<div class="section-row">
 			<div class="section-content">
@@ -1183,6 +1265,11 @@
 {/each}
 
 <style>
+	.hint {
+		font-size: var(--font-sm);
+		color: var(--color-text-muted);
+		margin: var(--space-1) 0 0;
+	}
 	/* Matches ChiSquared / Rayleigh / Cosinor / NPCRA. */
 	.warn {
 		font-size: var(--font-xs);

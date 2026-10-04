@@ -2,7 +2,9 @@
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 
-	let { value = $bindable(), zone = null, onChange = () => {} } = $props();
+	// `label` names the two fields for assistive tech ("Start time (date)", "Start time (time)").
+	// The widget is two inputs, so one wrapping <label> cannot name it; each field gets its own.
+	let { value = $bindable(), zone = null, onChange = () => {}, label = '' } = $props();
 
 	// Fall back to the app-wide display zone when no explicit zone is passed,
 	// so changing appState.displayTimezone propagates to every input.
@@ -58,6 +60,7 @@
 <div class="datetime-container">
 	<input
 		type="date"
+		aria-label={label ? `${label} (date)` : 'Date'}
 		bind:value={editingDate}
 		onchange={updateValue}
 		onfocus={() => (dateFocused = true)}
@@ -66,6 +69,7 @@
 
 	<input
 		type="time"
+		aria-label={label ? `${label} (time)` : 'Time'}
 		bind:value={editingTime}
 		onchange={updateValue}
 		onfocus={() => (timeFocused = true)}

@@ -338,10 +338,10 @@
 			</div>
 		</ControlInput>
 
-		<div class="control-input-checkbox">
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={section.noiseEnabled} onchange={doSimulated} />
-			<p>Noise</p>
-		</div>
+			<span class="ci-label">Noise</span>
+		</label>
 
 		{#if section.noiseEnabled}
 			<div class="control-input">

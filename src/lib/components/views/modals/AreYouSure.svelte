@@ -47,6 +47,15 @@
 	});
 
 	const emptySnippet = () => null;
+
+	// showModal() puts focus on the first button, which is the confirming (often destructive)
+	// choice, so a stray Enter confirmed it. Move focus to the safe choice (Cancel / No) when
+	// there is one; otherwise leave the browser's default.
+	let buttons = $state([]);
+	function focusSafeChoice() {
+		const i = renderedOptions.findIndex((o) => o.tone === 'ghost');
+		if (i >= 0) buttons[i]?.focus();
+	}
 </script>
 
 <Modal
@@ -56,6 +65,7 @@
 	header={emptySnippet}
 	button={emptySnippet}
 	showCloseButton={false}
+	onopen={focusSafeChoice}
 >
 	<div class="modal-shell">
 		<div class="title-container">
@@ -64,6 +74,7 @@
 		<div class="button-row">
 			{#each renderedOptions as option, i (i)}
 				<button
+					bind:this={buttons[i]}
 					class={`dialog-button ${option.tone}`}
 					onclick={() => {
 						if (callback) callback(option.value);

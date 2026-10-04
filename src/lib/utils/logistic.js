@@ -11,6 +11,7 @@
 // and kept bespoke, pinned to statsmodels' Logit in the parity harness. Returns a `converged`
 // flag rather than throwing on separation or a singular information matrix.
 import { pUpperFromChiSq } from './chisquare.js';
+import { isInvalidValue } from './stats.js';
 
 const Z_975 = 1.959963984540054; // Φ⁻¹(0.975) for the 95% CI
 const sigmoid = (x) => (x >= 0 ? 1 / (1 + Math.exp(-x)) : Math.exp(x) / (1 + Math.exp(x)));
@@ -64,7 +65,10 @@ export function logisticRegression(y, predictorCols, names, opts = {}) {
 	const tol = opts.tol ?? 1e-8;
 	const p = predictorCols.length;
 
-	// Assemble complete rows (drop any with a missing outcome or predictor). keptIndex records the
+	// Assemble complete rows (drop any with a missing outcome or predictor; `n` reports how many
+	// were kept). Missing is the house rule (isInvalidValue), checked BEFORE Number(): Number(null)
+	// and Number('') are 0, so a missing predictor used to be fitted as 0 and a missing outcome
+	// counted as a failure (STAT-5). keptIndex records the
 	// original row each complete case came from, so the per-observation outputs (eta/fitted/outcome)
 	// can be scattered back to the FULL input length (NaN for dropped rows).
 	const total = y.length;
@@ -72,12 +76,14 @@ export function logisticRegression(y, predictorCols, names, opts = {}) {
 	const ys = [];
 	const keptIndex = [];
 	for (let i = 0; i < total; i++) {
+		if (isInvalidValue(y[i])) continue;
 		const yi = Number(y[i]);
 		if (yi !== 0 && yi !== 1) continue;
 		const xr = [1];
 		let ok = true;
 		for (let j = 0; j < p; j++) {
-			const v = Number(predictorCols[j][i]);
+			const raw = predictorCols[j][i];
+			const v = isInvalidValue(raw) ? NaN : Number(raw);
 			if (!Number.isFinite(v)) {
 				ok = false;
 				break;

@@ -44,9 +44,12 @@
 		>
 		|Fⱼ|² (or, as AnCiR plots it, the magnitude √|Fⱼ|²) against period 1/fⱼ reveals dominant rhythmic
 		components. AnCiR uses the Cooley-Tukey <a class="gloss" href="#gloss-fft">FFT</a>
-		algorithm and
-		<a class="gloss" href="#gloss-zero-padding">zero-pads</a> the series to the next power of 2, and removes
-		the mean and trend before transforming.
+		algorithm at the record's own length N (Bluestein's chirp-z form when N is not a power of 2), after
+		removing the mean. It plots 2|Fⱼ|/N, so a sinusoid of amplitude A reads A whatever the record length.
+		It does not
+		<a class="gloss" href="#gloss-zero-padding">zero-pad</a> unless you ask for a finer
+		<strong>Frequency Step</strong>, and a padded spectrum is still scaled by N, so its peak keeps
+		the same height.
 	</p>
 	<WarnBox title="Zero-padding is interpolation, not resolution">
 		<p>
@@ -55,7 +58,8 @@
 			is still set by the record length (see below), and no amount of padding separates two periods
 			the record cannot resolve. Always remove the mean and any trend before padding: appending
 			zeros to a series with a non-zero mean creates a large artificial step and severe
-			<a class="gloss" href="#gloss-spectral-leakage">spectral leakage</a>.
+			<a class="gloss" href="#gloss-spectral-leakage">spectral leakage</a>. AnCiR removes the mean;
+			a trend you must remove yourself (for example with a detrending step) before the FFT.
 		</p>
 	</WarnBox>
 
@@ -66,16 +70,21 @@
 			>Windowing functions</a
 		>
 		(Hann, Hamming, Blackman) reduce
-		<a class="gloss" href="#gloss-spectral-leakage">spectral leakage</a> (where power from one frequency
-		'bleeds' into neighbouring frequencies) at the cost of some frequency resolution. AnCiR's FFT does
-		not currently expose a choice of window; removing the mean and trend first (which it does automatically)
-		is the most important step for limiting leakage in practice.
+		<a class="gloss" href="#gloss-spectral-leakage">spectral leakage</a> (where power from one
+		frequency 'bleeds' into neighbouring frequencies) at the cost of some frequency resolution.
+		AnCiR's FFT does not currently expose a choice of window. Removing the mean (which it does
+		automatically) and any trend (which it does <strong>not</strong>: a drift of 0.02 per hour over
+		10 days puts the largest peak at the record length, not at 24 h) is the most important step for
+		limiting leakage in practice.
 	</p>
 
 	<h3 class="section-head">Important Limitation</h3>
 	<WarnBox title="Requires Uniform Sampling">
-		FFT assumes <strong>uniformly sampled data</strong>. For irregularly sampled data or recordings
-		with gaps, use the
+		FFT assumes <strong>uniformly sampled data</strong>. AnCiR puts the series on its own sampling
+		grid (the median interval) first. Up to 3 missing samples in a row are filled by linear
+		interpolation, provided they are at most 10% of the record; anything more is refused with the
+		reason, because joining the samples either side of a gap shifts the period (a 24 h rhythm read
+		as 31 h after a three-day gap). For irregularly sampled data or recordings with gaps, use the
 		<strong
 			>Lomb <sup class="cite"><a href="#ref-3">[3]</a></sup>-Scargle
 			<sup class="cite"><a href="#ref-4">[4]</a></sup> periodogram</strong
@@ -95,6 +104,12 @@
 		h needs T ≈ 24²/0.5 ≈ 1150 h, about 48 days. This is why the FFT is a good
 		<em>screening</em> tool but a poor <em>period estimator</em> for circadian work; use the chi-squared
 		periodogram, free-period cosinor, or onset regression when the value of τ matters.
+	</p>
+	<p>
+		AnCiR shows Δf under the <strong>Frequency Step</strong> control. The peak it reports is refined between
+		bins by fitting a sinusoid near the largest bin, so a single clean rhythm between two bins is reported
+		at its own period and amplitude rather than at the nearer bin. That does not add resolution: two rhythms
+		closer than Δf still merge into one peak.
 	</p>
 
 	<FftAnim />
@@ -120,8 +135,8 @@
 				uniformly sampled (use <strong>Bin Data</strong> first if needed).
 			</li>
 			<li>
-				The magnitude spectrum (√power) is plotted against period in hours. Peaks correspond to
-				dominant oscillatory components.
+				The amplitude spectrum (2|Fⱼ|/N, so a rhythm of amplitude A peaks at A) is plotted against
+				period in hours. Peaks correspond to dominant oscillatory components.
 			</li>
 			<li>
 				Hover over a peak to read off its period. The primary peak is highlighted automatically.

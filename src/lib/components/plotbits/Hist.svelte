@@ -24,6 +24,7 @@
 		hideTooltip,
 		findBinValue
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
+	import { histPoints } from '$lib/components/plotbits/helpers/histPoints.js';
 
 	let {
 		xStart, // Array of start x positions for each bar
@@ -56,40 +57,27 @@
 		hitboxHeight = 0,
 		// When provided, tooltip aggregates y values across sibling series at the hovered x.
 		// Shape: [{label, colour, findYAt(x)}]
-		siblings = null
+		siblings = null,
+		// Write a compact point string (3-decimal coordinates, touching bars merged). Same
+		// drawing, a fraction of the size: for callers with many thousands of bars.
+		compact = false
 	} = $props();
 
-	// Validate input arrays have same length
-	if (xStart?.length !== xEnd?.length || xStart?.length !== y?.length) {
-		console.warn('Hist component: xStart, xEnd, and y arrays must have the same length');
-	}
-
-	let theline = $derived.by(() => {
-		if (!xStart || !xEnd || !y || !xscale || !yscale) {
-			return '';
+	// Validate input arrays have same length (on every change, not just the first render).
+	$effect(() => {
+		const a = xStart?.length;
+		if (a !== xEnd?.length || a !== y?.length) {
+			console.warn('Hist component: xStart, xEnd, and y arrays must have the same length');
 		}
-
-		let height = yscale.range()[0]; // Bottom of the plot area
-
-		let out = '';
-
-		// Process each bar
-		for (let i = 0; i < Math.min(xStart.length, xEnd.length, y.length); i++) {
-			let leftEdge = xStart[i];
-			let rightEdge = xEnd[i];
-
-			// Add separator between polygons (required for multiple bars)
-			if (i > 0) out += ' ';
-
-			// Create bar as a polygon: bottom-left, top-left, top-right, bottom-right
-			out += `${xscale(leftEdge)},${height} `; // bottom left
-			out += `${xscale(leftEdge)},${yscale(y[i])} `; // top left
-			out += `${xscale(rightEdge)},${yscale(y[i])} `; // top right
-			out += `${xscale(rightEdge)},${height}`; // bottom right
-		}
-
-		return out;
 	});
+
+	// Each prop is read ONCE per derive: inside a component every prop read is a getter (and a
+	// signal read when the parent passed an expression), so reading them per bar dominated the
+	// cost of many-series actograms (review ROB-9). histPoints only ever sees plain values.
+	// `compact` (dense callers such as the actogram): a smaller point string that draws the same
+	// (see histPoints); an outline keeps every bar corner.
+	let outlined = $derived(!!stroke && strokeWidth > 0);
+	let theline = $derived(histPoints(xStart, xEnd, y, xscale, yscale, { compact, outlined }));
 
 	// Build style string for additional styling options
 	let styleString = $derived.by(() => {

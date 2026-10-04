@@ -4,10 +4,16 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
-	import Box, { BoxClass, calculateBoxPlotStats } from '$lib/components/plotbits/Box.svelte';
+	import Box, {
+		BoxClass,
+		calculateBoxPlotStats,
+		presentValues
+	} from '$lib/components/plotbits/Box.svelte';
 	import Violin from '$lib/components/plotbits/Violin.svelte';
 	import { VIOLIN_MIN_N } from '$lib/components/plotbits/helpers/violin.js';
-	import { mean, calculateStandardDeviation } from '$lib/utils/MathsStats.js';
+	import { mean, sampleStd } from '$lib/utils/sampleStats.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { isMissingCategory } from '$lib/utils/chisquare.js';
 	import { min, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import {
@@ -88,12 +94,15 @@
 	 * Build stat-test group objects from the boxplot's data series.
 	 * - If any series has a categorical x column, groups = unique x categories (pooled).
 	 * - Otherwise each series becomes one group.
+	 * Values follow the house rule (presentValues / isInvalidValue: a blank or text cell is
+	 * missing, a numeric string is a number) and a blank category is no group: the old
+	 * `v != null && !isNaN(v)` let '' through as a value and summed numeric strings as text.
 	 */
 	function buildSigBarGroups(data, uniqueXValues) {
 		const hasCatX = data.some((d) => (d.x.getData()?.length ?? 0) > 0);
 		if (!hasCatX) {
 			return data.map((d, i) => {
-				const values = (d.y.getData() ?? []).filter((v) => v != null && !isNaN(v));
+				const values = presentValues(d.y.getData());
 				const n = values.length;
 				const m = n > 0 ? values.reduce((a, b) => a + b, 0) / n : 0;
 				const sd = n > 1 ? Math.sqrt(values.reduce((a, v) => a + (v - m) ** 2, 0) / (n - 1)) : 0;
@@ -107,8 +116,8 @@
 			const yData = d.y.getData() ?? [];
 			xData.forEach((cat, i) => {
 				const val = yData[i];
-				if (cat == null || val == null || isNaN(val)) return;
-				if (groupMap.has(cat)) groupMap.get(cat).push(val);
+				if (isMissingCategory(cat) || isInvalidValue(val)) return;
+				if (groupMap.has(cat)) groupMap.get(cat).push(Number(val));
 			});
 		});
 
@@ -363,6 +372,11 @@
 		set padding(v) {
 			this.#padding = v;
 		}
+		// The stored figure padding, for the Padding controls. While a node view is mounted
+		// `padding` reads back a derived, scaled copy, so an edit bound there was lost.
+		get figurePadding() {
+			return this.#padding;
+		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		// Width before an outside legend takes its share; see legendAuto.svelte.js.
 		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
@@ -389,8 +403,8 @@
 				const lo = new Array(cats.length).fill(Infinity);
 				const hi = new Array(cats.length).fill(-Infinity);
 				for (let i = 0; i < yData.length; i++) {
-					const v = yData[i];
-					if (v == null || Number.isNaN(v)) continue;
+					if (isInvalidValue(yData[i])) continue;
+					const v = Number(yData[i]);
 					const c = cats.indexOf(xRaw.length > 0 ? String(xRaw[i]) : label);
 					if (c < 0) continue;
 					if (v < lo[c]) lo[c] = v;
@@ -461,7 +475,7 @@
 				if (xData.length > 0) {
 					xData.forEach((val, idx) => {
 						const yVal = yData[idx];
-						if (val != null && yVal != null && !isNaN(yVal)) {
+						if (!isMissingCategory(val) && !isInvalidValue(yVal)) {
 							allXValues.add(val);
 							addedAny = true;
 						}
@@ -471,7 +485,7 @@
 				// If no category x data is provided, treat the whole series as one category
 				// named by its data label so single-value columns can render one box each.
 				if (!addedAny) {
-					const hasAnyY = yData.some((v) => v != null && !isNaN(v));
+					const hasAnyY = yData.some((v) => !isInvalidValue(v));
 					if (hasAnyY) {
 						allXValues.add(d.label || `Box Plot ${i + 1}`);
 					}
@@ -520,13 +534,13 @@
 				if (xData.length > 0) {
 					xData.forEach((cat, j) => {
 						const val = yData[j];
-						if (cat == null || val == null || isNaN(val)) return;
+						if (isMissingCategory(cat) || isInvalidValue(val)) return;
 						if (!groups.has(cat)) groups.set(cat, []);
-						groups.get(cat).push(val);
+						groups.get(cat).push(Number(val));
 					});
 				} else {
 					const label = d.label || `Box Plot ${i + 1}`;
-					const vals = yData.filter((v) => v != null && !isNaN(v));
+					const vals = presentValues(yData);
 					if (vals.length > 0) groups.set(label, vals);
 				}
 				groups.forEach((vals, cat) => {
@@ -562,8 +576,7 @@
 			let ymax = -Infinity;
 
 			this.data.forEach((d) => {
-				let tempy = d.y.getData() ?? [];
-				const validData = tempy.filter((val) => val != null && !isNaN(val));
+				const validData = presentValues(d.y.getData());
 				if (validData.length > 0) {
 					ymin = min([ymin, ...validData]);
 					ymax = max([ymax, ...validData]);
@@ -749,20 +762,19 @@
 				const yData = datum.y.getData() ?? [];
 				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array, so nothing reads this collection reactively
 				const groups = new Map();
+				// The house rule (isInvalidValue) decides what is missing, and the rest is converted
+				// with Number(): `!isNaN(val)` let '' and ' ' through, which the mean skipped but
+				// the SD read as 0 (STAT-23).
 				xData.forEach((cat, i) => {
 					const val = yData[i];
-					if (cat == null || val == null || isNaN(val)) return;
+					if (isMissingCategory(cat) || isInvalidValue(val)) return;
 					if (!groups.has(cat)) groups.set(cat, []);
-					groups.get(cat).push(val);
+					groups.get(cat).push(Number(val));
 				});
 
 				if (groups.size === 0) {
-					yData.forEach((val) => {
-						if (val == null || isNaN(val)) return;
-						const fallbackCategory = label;
-						if (!groups.has(fallbackCategory)) groups.set(fallbackCategory, []);
-						groups.get(fallbackCategory).push(val);
-					});
+					const fallback = presentValues(yData);
+					if (fallback.length) groups.set(label, fallback);
 				}
 				// Pre-compute stats per category
 				// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local per-series stats lookup; it is read back into plain arrays inside this same $derived.by and never in markup
@@ -778,11 +790,12 @@
 						statsMap.set(cat, null);
 						return;
 					}
-					const validVals = vals.filter((v) => v != null && !isNaN(v));
+					// Sample SD (n - 1), as DescribeData and pandas' describe report it; the population
+					// SD made [1,2,3,4] 1.118 here and 1.291 in DescribeData (STAT-23).
 					statsMap.set(cat, {
-						count: validVals.length,
-						mean: mean(validVals),
-						std: calculateStandardDeviation(validVals),
+						count: vals.length,
+						mean: mean(vals),
+						std: sampleStd(vals),
 						min: box.min,
 						q1: box.q1,
 						median: box.q2,
@@ -1078,19 +1091,19 @@
 			</div>
 			<div class="control-input-square">
 				<ControlInput label="Top">
-					<NumberWithUnits bind:value={theData.padding.top} />
+					<NumberWithUnits bind:value={theData.figurePadding.top} />
 				</ControlInput>
 
 				<ControlInput label="Bottom">
-					<NumberWithUnits bind:value={theData.padding.bottom} />
+					<NumberWithUnits bind:value={theData.figurePadding.bottom} />
 				</ControlInput>
 
 				<ControlInput label="Left">
-					<NumberWithUnits bind:value={theData.padding.left} />
+					<NumberWithUnits bind:value={theData.figurePadding.left} />
 				</ControlInput>
 
 				<ControlInput label="Right">
-					<NumberWithUnits bind:value={theData.padding.right} />
+					<NumberWithUnits bind:value={theData.figurePadding.right} />
 				</ControlInput>
 			</div>
 		</div>

@@ -23,7 +23,12 @@
 			style="margin-bottom: -1.75rem; z-index: 9999; margin-top: var(--space-2);"
 			{@attach tooltip('Remove this analysis')}
 		>
-			<button class="icon" onclick={() => onDelete(p)}>
+			<button
+				class="icon"
+				type="button"
+				aria-label="Remove this analysis"
+				onclick={() => onDelete(p)}
+			>
 				<Icon name="trash" width={16} height={16} className="menu-icon" />
 			</button>
 		</div>

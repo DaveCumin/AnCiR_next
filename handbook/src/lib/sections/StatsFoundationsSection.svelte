@@ -298,6 +298,14 @@
 		normality.
 	</p>
 	<p>
+		It is not assumption-free, though. Shuffling is only fair if the observations are
+		<strong>exchangeable</strong> under the null: every reordering must be as likely as the one you
+		observed. Independent subjects meet that. Consecutive samples of one recording usually do not,
+		because neighbouring values are correlated, and shuffling them single-file makes p too small (<a
+			href="#ch7">Chapter 7</a
+		> shows by how much, and what to use instead).
+	</p>
+	<p>
 		In the animation the labels are shuffled repeatedly and the difference in means recomputed each
 		time. The histogram is the null. The p-value is simply the fraction of that histogram lying at
 		least as far from zero as the red observed line.
@@ -329,7 +337,9 @@
 		nuisance structure while destroying the rhythm. The choice of method is a choice about
 		<em>what to preserve</em>: block resampling keeps short-range autocorrelation, AR(1) keeps the
 		red-noise character, phase randomisation keeps the entire autocorrelation function, and AAFT
-		keeps that plus the distribution of values. This is the subject of
+		keeps that plus the distribution of values. Keeping the whole autocorrelation function keeps any
+		rhythm too, so phase and AAFT surrogates suit questions about coupling between series, not
+		whether a rhythm is present. This is the subject of
 		<a href="#ch6">Chapter 6</a>, where the <strong>Surrogate Test</strong> node is described in full.
 	</p>
 

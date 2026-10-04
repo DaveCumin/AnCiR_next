@@ -70,6 +70,11 @@
 		set padding(v) {
 			this.#padding = v;
 		}
+		// The stored figure padding, for the Padding controls. While a node view is mounted
+		// `padding` reads back a derived, scaled copy, so an edit bound there was lost.
+		get figurePadding() {
+			return this.#padding;
+		}
 
 		wavelet = $state('morlet');
 		waveletParam = $state(6);

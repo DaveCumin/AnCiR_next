@@ -31,7 +31,7 @@ import { loadProcesses } from '$test/processRegistry.js';
 import { loadPlots } from '$test/plotRegistry.js';
 import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { setWorkerFactory } from '$lib/workers/workerPool.js';
-import { computeFFT } from '$lib/utils/fft.js';
+import { computeFFT, fftPeak, regridUniform } from '$lib/utils/fft.js';
 import { computeAutocorrelation } from '$lib/utils/correlogram.js';
 import { gaussianKDE } from '$lib/utils/kde.js';
 import { meanSemByGroup } from '$lib/utils/meanSem.js';
@@ -59,6 +59,7 @@ import { cwt } from '$lib/utils/cwt.js';
 import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
 import { isInvalidValue } from '$lib/utils/stats.js';
 import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
+import { createSeededRNG } from '$lib/utils/permutationTest.js';
 
 const PARITY_DIR = join(process.cwd(), 'tools', 'parity');
 
@@ -101,6 +102,28 @@ const PLOT_COMPUTE_FNS = { computeFFT, computeAutocorrelation };
 // the fixture's `jsArgs`, and returns either a dict of arrays (compareArrays),
 // an array of objects (compareFields), or a dict of scalars (compareScalars).
 const PURE_UTIL_FNS = {
+	// The first n draws of createSeededRNG(seed) (@stdlib minstd-shuffle). The input array is
+	// unused: the harness always passes at least one.
+	seededSequence: (_unused, n, seed) => {
+		const rng = createSeededRNG(seed);
+		return { values: Array.from({ length: n }, () => rng()) };
+	},
+	// The refined FFT peak (fftPeak over computeFFT), flattened to scalars; no peak (flat data,
+	// a refused grid) is NaN throughout. jsArgs = [freqStep, periodMin, periodMax].
+	fftPeakOf: (t, y, freqStep, periodMin, periodMax) => {
+		const pk = fftPeak(computeFFT(t, y, freqStep ?? null), {
+			periodMin: periodMin ?? undefined,
+			periodMax: periodMax ?? undefined
+		});
+		return pk
+			? { frequency: pk.frequency, period: pk.period, magnitude: pk.magnitude, phase: pk.phase }
+			: { frequency: NaN, period: NaN, magnitude: NaN, phase: NaN };
+	},
+	// The FFT grid (regridUniform): ok flag, step, filled count, longest run and the gridded y.
+	regridUniform: (t, y) => {
+		const g = regridUniform(t, y);
+		return { ok: g.ok ? 1 : 0, dt: g.dt, nFilled: g.nFilled, longestGap: g.longestGap, y: g.y };
+	},
 	// Also a PLOT_COMPUTE_FN: reachable here so a fixture can compare its scalar
 	// peak (peakLag/peakCorrelation) and not only the lag/correlation arrays.
 	computeAutocorrelation,
@@ -172,7 +195,19 @@ const PURE_UTIL_FNS = {
 			periodSteps: opts.periodStep,
 			chiSquaredAlpha: opts.alpha ?? 0.05
 		});
-		return { period: r.x, power: r.y, df: r.df, threshold: r.threshold };
+		return { period: r.x, power: r.y, df: r.df, threshold: r.threshold, pvalue: r.pvalue };
+	},
+	// Lomb-Scargle through runPeriodogramCalculation (valid pairs, flat-data rule).
+	lombScarglePeriodogram: (t, y, opts) => {
+		const r = runPeriodogramCalculation({
+			method: 'Lomb-Scargle',
+			xData: t,
+			yData: y,
+			periodMin: opts.periodMin,
+			periodMax: opts.periodMax,
+			periodSteps: opts.periodStep
+		});
+		return { period: r.x, power: r.y };
 	},
 	// Enright periodogram through the real binData pipeline: the ports must
 	// reproduce the app's multi-lag statistic (mean lag-product correlation at
@@ -459,6 +494,13 @@ async function runTableProcess(fx) {
 	const entry = appConsts.tableProcessMap.get(fx.jsName);
 	if (!entry?.func) throw new Error(`no JS table process ${fx.jsName}`);
 	const { inputs, args } = buildTableInputs(fx);
+	// `storedValues` ({key: value}) seeds core.storedValues in the saved-session entry shape,
+	// so a FormulaColumn stored-value token (#key) reads it as the app does.
+	if (fx.storedValues) {
+		core.storedValues = Object.fromEntries(
+			Object.entries(fx.storedValues).map(([k, v]) => [k, { staticValue: v }])
+		);
+	}
 	const tp = new TableProcess({ name: fx.jsName, args }, null);
 	pushObj(tp);
 	const ret = await entry.func(tp.args);
@@ -747,9 +789,14 @@ function blockRecord(block, source) {
 						label: c.label,
 						period: c.period,
 						peakPeriod: c.peakPeriod,
-						power: c.power
+						power: c.power,
+						// The half-cycle F test that decides whether tau/2 or 2 tau may be picked.
+						eligible: c.eligible,
+						testF: c.test ? safeNum(c.test.F) : null,
+						testP: c.test ? safeNum(c.test.pValue) : null
 					})),
-					strongest: hc.strongest.label
+					strongest: hc.strongest.label,
+					powerStrongest: hc.powerStrongest?.label ?? null
 				}
 			: null,
 		outputs: ruleOutputValues(block)
@@ -947,6 +994,10 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 			else if (fx.kind === 'actogramMarkers') results[fx.id] = runActogramMarkers(fx);
 			else results[fx.id] = await runTableProcess(fx);
 		}
+		// The FormulaColumn injection fixture's payload sets window.__pwned if it ever runs
+		// (SEC-1). Refuse to write results that were produced by an engine that executed it.
+		if (globalThis.__pwned !== undefined)
+			throw new Error('a FormulaColumn payload executed during the parity run (SEC-1)');
 
 		mkdirSync(PARITY_DIR, { recursive: true });
 		writeFileSync(join(PARITY_DIR, 'js_results.json'), JSON.stringify(results, null, 2), 'utf8');

@@ -6,7 +6,7 @@
 // output columns/`out` wiring (with empty rawData), and the AnCiR GUI recomputes every
 // analysis/generator output on load (verified end-to-end in the ADR).
 //
-// No imports, no `core`, no vite: this runs unchanged in Node, a browser, or a
+// No app imports beyond the pure FormulaColumn grammar, no `core`, no vite: this runs unchanged in Node, a browser, or a
 // Cloudflare Worker. That is the whole point — it removes the heavy engine from the
 // session-creation path.
 //
@@ -22,6 +22,9 @@
 // when it built the catalogue, not a literal maintained by hand here — which is how it fell two
 // versions behind the app before.
 import { SCHEMA, PLOTS as plots_, columnIdFields, SESSION_VERSION } from './schema.js';
+// The app's FormulaColumn grammar, shared so the Worker refuses exactly what the GUI refuses.
+// Pure and dependency-free like this file, so it bundles into the Worker unchanged.
+import { validateFormulaTokens } from '../../../src/lib/utils/formulaExpression.js';
 
 // Per-series style slots, each with an explicit colour. Union across the types that read them:
 //   Scatterplot: line, points · Periodogram: line, thresholdline, points
@@ -247,6 +250,34 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 		if (refError) {
 			errors.push(`${refError}. Available: ${[...byName.keys()].join(', ') || '(none)'}. Skipped.`);
 			continue;
+		}
+
+		// FormulaColumn keeps its column refs INSIDE args.tokens ({type:'col', id}), out of reach
+		// of columnIdFields, and its text tokens are a formula the GUI parses on load. Resolve the
+		// refs (a name or an id) and run the app's own grammar check (SEC-1): a token outside the
+		// grammar, such as a JavaScript payload in a text token, is refused HERE, so a session
+		// minted by the Worker can never carry one. The GUI refuses it again on load regardless.
+		if (name === 'FormulaColumn') {
+			const tokens = Array.isArray(args.tokens)
+				? args.tokens.map((t) =>
+						t && t.type === 'col' ? { ...t, id: resolveRef(t.id) ?? t.id } : t
+					)
+				: args.tokens;
+			const bad = Array.isArray(tokens)
+				? tokens.find((t) => t && t.type === 'col' && !Number.isInteger(t.id))
+				: null;
+			if (bad) {
+				errors.push(
+					`FormulaColumn: no column named "${bad.id}". Available: ${[...byName.keys()].join(', ') || '(none)'}. Skipped.`
+				);
+				continue;
+			}
+			const formulaErr = validateFormulaTokens(tokens ?? []);
+			if (formulaErr) {
+				errors.push(`FormulaColumn: ${formulaErr} Skipped.`);
+				continue;
+			}
+			args.tokens = tokens;
 		}
 
 		// fill omitted params from defaults (without clobbering supplied values).

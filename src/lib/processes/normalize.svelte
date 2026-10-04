@@ -2,14 +2,21 @@
 	import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
 	import { min, max } from '$lib/utils/MathsStats.js';
 	import { dataEnteringProcess } from '$lib/core/processInput.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
+
+	// The house rule (review STAT-6): '' and ' ' are missing (isNaN('') is false, so the old
+	// `val != null && !isNaN(val)` let them in as zeros), a numeric string is a number, and a
+	// missing cell stays exactly as it came in, whatever the mode.
+	const presentNumbers = (x) => x.filter((v) => !isInvalidValue(v)).map(Number);
+	const mapPresent = (x, f) => x.map((v) => (isInvalidValue(v) ? v : f(Number(v))));
 
 	export function normalize(x, args) {
 		const type = args.normalizationType || 'z-score';
 		const customMin = Number(args.customMin || 0);
 		const customMax = Number(args.customMax || 1);
 
-		// Filter out null/undefined/NaN values for calculations
-		const validData = x.filter((val) => val != null && !isNaN(val));
+		// Missing cells (null, NaN, blank, text) are left out of every calculation.
+		const validData = presentNumbers(x);
 
 		if (validData.length === 0) {
 			return [...x]; // Return original if no valid data
@@ -24,9 +31,9 @@
 				const std = Math.sqrt(k.value / validData.length);
 
 				if (std === 0) {
-					return x.map(() => 0); // All values are the same
+					return mapPresent(x, () => 0); // All values are the same
 				}
-				return x.map((val) => (val == null || isNaN(val) ? val : (val - mean) / std));
+				return mapPresent(x, (val) => (val - mean) / std);
 			}
 
 			case 'min-max': {
@@ -36,12 +43,11 @@
 				const range = maxVal - minVal;
 
 				if (range === 0) {
-					return x.map((val) => (val == null || isNaN(val) ? val : customMin));
+					return mapPresent(x, () => customMin);
 				}
-				return x.map((val) =>
-					val == null || isNaN(val)
-						? val
-						: ((val - minVal) / range) * (customMax - customMin) + customMin
+				return mapPresent(
+					x,
+					(val) => ((val - minVal) / range) * (customMax - customMin) + customMin
 				);
 			}
 
@@ -63,9 +69,9 @@
 						: sortedDeviations[Math.floor(sortedDeviations.length / 2)];
 
 				if (mad === 0) {
-					return x.map(() => 0);
+					return mapPresent(x, () => 0);
 				}
-				return x.map((val) => (val == null || isNaN(val) ? val : (val - median) / mad));
+				return mapPresent(x, (val) => (val - median) / mad);
 			}
 
 			case 'unit-vector': {
@@ -75,9 +81,9 @@
 				const magnitude = Math.sqrt(kMag.value);
 
 				if (magnitude === 0) {
-					return x.map(() => 0);
+					return mapPresent(x, () => 0);
 				}
-				return x.map((val) => (val == null || isNaN(val) ? val : val / magnitude));
+				return mapPresent(x, (val) => val / magnitude);
 			}
 
 			default:
@@ -95,7 +101,7 @@
 	 */
 	export function normalizeWarnings(x, args) {
 		const type = args.normalizationType || 'z-score';
-		const validData = x.filter((val) => val != null && !isNaN(val));
+		const validData = presentNumbers(x);
 		if (validData.length === 0) return [];
 		const constant = validData.every((v) => v === validData[0]);
 

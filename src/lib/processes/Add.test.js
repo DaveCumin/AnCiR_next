@@ -60,11 +60,34 @@ describe('add', () => {
 		out.forEach((v) => expect(Number.isNaN(v)).toBe(true));
 	});
 
-	it('propagates NaN for null/NaN entries in the column', () => {
-		const out = add([1, null, NaN], { value: 2 });
-		expect(out[0]).toBe(3);
-		// null + 2 === 2 (null coerces to 0); NaN + 2 === NaN
-		expect(out[1]).toBe(2);
-		expect(Number.isNaN(out[2])).toBe(true);
+	it('a null or NaN entry is missing out (null), not 0 + value (STAT-6, below)', () => {
+		expect(add([1, null, NaN], { value: 2 })).toEqual([3, null, null]);
+	});
+});
+
+// STAT-6: a missing input gave a number (Add 5 to [1, null, 3] gave [6, 5, 8]; '' gave 5), and a
+// numeric-string cell concatenated ('1' + 5 === '15'). Split and Filter pad with null, so this
+// invented data outside the window. Missing in, missing (null) out; the house rule decides.
+describe('add with missing values (STAT-6)', () => {
+	it("reviewer's case: [1, null, 3] + 5 is [6, null, 8]", () => {
+		expect(add([1, null, 3], { value: 5 })).toEqual([6, null, 8]);
+	});
+
+	it('blank, whitespace, undefined, NaN and text are missing (null) out', () => {
+		expect(add(['', ' ', undefined, NaN, 'n/a'], { value: 5 })).toEqual([
+			null,
+			null,
+			null,
+			null,
+			null
+		]);
+	});
+
+	it('a numeric string is added as a number, not concatenated', () => {
+		expect(add(['1', '2.5'], { value: 5 })).toEqual([6, 7.5]);
+	});
+
+	it('a real 0 is data', () => {
+		expect(add([0], { value: 5 })).toEqual([5]);
 	});
 });

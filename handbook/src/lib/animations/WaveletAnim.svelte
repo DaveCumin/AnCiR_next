@@ -1,6 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, initPalette } from '$lib/animUtils.js';
+	import { C, setupCanvas, initPalette, canvasSize, observeResize } from '$lib/animUtils.js';
 
 	let { height = '560px' } = $props();
 
@@ -122,8 +122,7 @@
 	function drawSignal(period, probeT, done) {
 		if (!cSig) return;
 		const ctx = cSig.getContext('2d');
-		const W = cSig.offsetWidth,
-			H = cSig.offsetHeight;
+		const { W, H } = canvasSize(cSig);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const L = 46,
@@ -214,8 +213,7 @@
 	function drawScalogram(rowsDone, within, curRow, done) {
 		if (!cScal) return;
 		const ctx = cScal.getContext('2d');
-		const W = cScal.offsetWidth,
-			H = cScal.offsetHeight;
+		const { W, H } = canvasSize(cScal);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const L = 46,
@@ -389,9 +387,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cSig, cScal], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});

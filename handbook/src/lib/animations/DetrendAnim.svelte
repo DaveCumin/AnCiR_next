@@ -5,7 +5,16 @@
 	// from left to right, showing that removing the drift leaves the rhythm on
 	// a flat baseline. Modelled on the other animation components in this dir.
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, drawAxes, drawHGrid, seededRNG, initPalette } from '$lib/animUtils.js';
+	import {
+		C,
+		setupCanvas,
+		drawAxes,
+		drawHGrid,
+		seededRNG,
+		initPalette,
+		canvasSize,
+		observeResize
+	} from '$lib/animUtils.js';
 
 	let { height = '440px' } = $props();
 
@@ -81,8 +90,7 @@
 
 	function drawRaw() {
 		const ctx = cRaw.getContext('2d');
-		const W = cRaw.offsetWidth,
-			H = cRaw.offsetHeight;
+		const { W, H } = canvasSize(cRaw);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 40,
@@ -115,8 +123,7 @@
 
 	function drawRes(upTo) {
 		const ctx = cRes.getContext('2d');
-		const W = cRes.offsetWidth,
-			H = cRes.offsetHeight;
+		const { W, H } = canvasSize(cRes);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 40,
@@ -228,9 +235,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cRaw, cRes], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});

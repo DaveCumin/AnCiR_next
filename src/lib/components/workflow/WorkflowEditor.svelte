@@ -19,6 +19,7 @@
 		pushObj
 	} from '$lib/core/core.svelte.js';
 	import { untrack, tick } from 'svelte';
+	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	import { store } from '$lib/core/localData.svelte.js';
 	import {
 		encodeEnvelope,
@@ -73,6 +74,7 @@
 	import { alignBoxes, distributeBoxes, rectsIntersect } from '$lib/core/layoutHelpers.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 	import CompactNode from './CompactNode.svelte';
+	import { computeOwner, computeKey } from '$lib/core/computeOwners.svelte.js';
 	import NodeActions from './NodeActions.svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import { tourState } from '$lib/core/tourRunner.svelte.js';
@@ -923,7 +925,8 @@
 	 * model rather than at a topo-derived default.
 	 */
 	function spawnColumnProcessFromPalette(processType) {
-		const proc = createOrphanProcess(processType, {});
+		// Recorded, so the spawn is one undo step like every other palette add.
+		const proc = mutationService.record(() => createOrphanProcess(processType, {}));
 		if (!proc) return { ok: false, reason: 'create-failed' };
 		const newId = `process_${proc.id}`;
 		const queued = _spawnPositionQueue.shift();
@@ -2409,7 +2412,12 @@
 		}
 	}
 
+	// One undo step. Clearing an analysis input drops the per-input output columns too, and
+	// undo must bring those back with the same ids and the plot wires into them (ROB-4).
 	function disconnectInputPort(nodeId, portName) {
+		return mutationService.record(() => _disconnectInputPort(nodeId, portName));
+	}
+	function _disconnectInputPort(nodeId, portName) {
 		const target = allNodes.find((n) => n.id === nodeId);
 		if (!target) return;
 
@@ -3316,7 +3324,11 @@
 	 * not every wire on the port. For chain-implied connections (data→firstProcess,
 	 * tp→its-output-column) we no-op rather than tear out the surrounding node.
 	 */
+	// One undo step, for the same reason as disconnectInputPort (ROB-4).
 	function removeEdge(edge) {
+		return mutationService.record(() => _removeEdge(edge));
+	}
+	function _removeEdge(edge) {
 		const target = allNodes.find((n) => n.id === edge.toId);
 		if (!target) return;
 
@@ -3453,7 +3465,12 @@
 		}
 	}
 
+	// Every node kind deletes as one undo step that restores it with its ids, outputs and
+	// wiring (ROB-3 / UI-2).
 	function removeNode(node) {
+		return mutationService.record(() => _removeNode(node));
+	}
+	function _removeNode(node) {
 		if (!node) return;
 		if (node.type === 'data') {
 			mutationService.removeColumn(node.refId);
@@ -3508,7 +3525,11 @@
 		appState.showAYSModal = true;
 	}
 
+	// A multi-node delete is ONE undo step (nested records fold into this one).
 	function deleteSelection() {
+		return mutationService.record(() => _deleteSelection());
+	}
+	function _deleteSelection() {
 		if (selectedEdgeKey) {
 			const edge = edgeTopology.find((e) => edgeKeyFor(e) === selectedEdgeKey);
 			if (edge) removeEdge(edge);
@@ -3819,7 +3840,35 @@
 
 	/** Create nodes from clipboard entries — either this tab's own snapshots or an envelope
 	 *  pasted from another tab. Both are the same shape by construction. */
+	// A pasted column gets its OWN stored series. The clipboard snapshot carries the original's
+	// rawData key, so the copy used to read the original's series, and deleting the original
+	// (which frees that key) emptied the copy (review ROB-16).
+	function addPastedColumn(columnData) {
+		const key = columnData?.data;
+		const raw = key != null ? core.rawData.get(key) : undefined;
+		const col = mutationService.addColumn(columnData);
+		if (!col || raw === undefined || col.refId != null) return col;
+		let copy = raw;
+		try {
+			copy =
+				Array.isArray(raw) || ArrayBuffer.isView(raw)
+					? raw.slice()
+					: raw && typeof raw === 'object'
+						? structuredClone(raw)
+						: raw;
+		} catch {
+			copy = raw;
+		}
+		core.rawData.set(col.id, copy);
+		col.data = col.id;
+		return col;
+	}
+
+	// A paste is one undo step however many nodes it creates.
 	function pasteEntries(entries) {
+		return mutationService.record(() => _pasteEntries(entries));
+	}
+	function _pasteEntries(entries) {
 		const PASTE_OFFSET = 40;
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local id set built inside pasteEntries and assigned wholesale to the $state holder afterwards
 		const newIds = new Set();
@@ -3859,14 +3908,14 @@
 						// Recreate the absorbed columns and re-absorb them, so the pasted group
 						// arrives with its contents rather than as an empty box.
 						for (const columnData of entry.columns ?? []) {
-							const col = mutationService.addColumn(columnData);
+							const col = addPastedColumn(columnData);
 							if (col) g.sourceColumnIds.push(col.id);
 						}
 					}
 					_dbg('paste: createGroup →', id, 'with', entry.columns?.length ?? 0, 'columns');
 					newCanvasId = id;
 				} else if (entry.type === 'data') {
-					const col = mutationService.addColumn(entry.columnData);
+					const col = addPastedColumn(entry.columnData);
 					_dbg('paste: addColumn →', col?.id ?? null);
 					if (col) newCanvasId = `data_${col.id}`;
 				} else {
@@ -3919,7 +3968,11 @@
 		};
 	});
 
+	// Combining is one undo step (uncombine is recorded by removeComposite).
 	function combineSelection() {
+		return mutationService.record(() => _combineSelection());
+	}
+	function _combineSelection() {
 		const sel = [...multiSelectedNodeIds];
 		const ops = sel.filter(COMPOSABLE);
 		const comps = sel.filter((id) => id?.startsWith('composite_'));
@@ -4436,18 +4489,27 @@
 								<!-- The node card (TableProcessNode) shows inputs + per-output mini
 								     tables; this panel below it holds the operation's settings
 								     (e.g. Add's constant). -->
+								<!-- This panel is the node's visible computing instance: claiming it
+								     stands down NodeComputeHost's hidden one (one writer per node). -->
 								<div
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
 									{@attach scrollFade()}
+									{@attach computeOwner(computeKey('process', node.processObj.id))}
 								>
-									<!-- p= (not bind:p): node.processObj is a plain member of the
-									     allNodes $derived, so bind: warns binding_property_non_reactive.
-									     p is a shared reactive Process instance mutated in place, so its
-									     changes propagate without a binding. Svelte's dev-only
-									     ownership_invalid_binding note here is a benign false positive for
-									     this shared-object pattern. -->
-									<PComp p={node.processObj} />
+									<!-- A function binding (getter plus a no-op setter), not p= and not
+									     bind:p={node.processObj}. The node binds its inputs into p.args
+									     (bind:value={p.args.yIN}), and Svelte's dev ownership check wants that
+									     chain declared as a binding (ownership_invalid_binding), while a member
+									     binding on the allNodes $derived warns binding_property_non_reactive.
+									     p is a shared reactive model object mutated in place and never
+									     reassigned, so the setter has nothing to do. -->
+									<ErrorBoundary
+										context={`showing the "${node.label ?? node.processObj?.name ?? 'process'}" process`}
+										title="This process couldn't be shown."
+									>
+										<PComp bind:p={() => node.processObj, () => {}} />
+									</ErrorBoundary>
 								</div>
 							{/if}
 						{:else if isExpanded && node.type === 'tableprocess' && node.tpObj}
@@ -4457,9 +4519,15 @@
 									class="process-editor-panel"
 									style="width:{EDITOR_PANEL_WIDTH}px; max-height:{EDITOR_PANEL_MAX_HEIGHT}px;"
 									{@attach scrollFade()}
+									{@attach computeOwner(computeKey('tableprocess', node.tpObj.id))}
 								>
-									<!-- p= (not bind:p) — see the process-panel note above. -->
-									<TPComp p={node.tpObj} />
+									<!-- Function binding: see the process-panel note above. -->
+									<ErrorBoundary
+										context={`showing the "${node.label ?? node.tpName}" analysis`}
+										title="This analysis couldn't be shown."
+									>
+										<TPComp bind:p={() => node.tpObj, () => {}} />
+									</ErrorBoundary>
 								</div>
 							{/if}
 						{/if}
@@ -4595,6 +4663,12 @@
 		   the pointer handlers never see them. Scrollable node internals (mini
 		   tables) re-enable panning locally where they need it. */
 		touch-action: none;
+	}
+
+	/* The canvas root takes focus programmatically (tabindex -1, for its key handling) and is
+	   never a tab stop, so a focus ring around the whole canvas tells the user nothing. */
+	.workflow-editor:focus-visible {
+		outline: none;
 	}
 
 	.workflow-editor.inline {

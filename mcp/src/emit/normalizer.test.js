@@ -1213,3 +1213,75 @@ test('a gaussian with multiply:0 is the way to make a constant column', () => {
 	});
 	assert.deepEqual(session.rawData[0], [1, 1, 1, 1, 1, 1]);
 });
+
+// SEC-1: FormulaColumn tokens are parsed against the app's fixed grammar here too, so a session
+// minted by the Worker can never carry a JavaScript payload into the GUI.
+test('FormulaColumn: a malicious text token is refused, not passed through', () => {
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'a', values: [1, 2, 3] }],
+		analyses: [
+			{
+				name: 'FormulaColumn',
+				args: {
+					tokens: [
+						{ type: 'col', id: 'a' },
+						{ type: 'text', value: '" + ((window.__pwned=1), 0) + "' }
+					]
+				}
+			}
+		]
+	});
+	assert.equal(findTP(session, 'FormulaColumn'), undefined);
+	assert.equal(errors.length, 1);
+	assert.match(errors[0], /^FormulaColumn: .*Unexpected character/);
+	assert.ok(!JSON.stringify(session).includes('__pwned'));
+});
+
+test('FormulaColumn: a valid formula keeps its tokens, column refs resolve by name', () => {
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 'a', values: [1, 2, 3] },
+			{ name: 'b', values: [4, 5, 6] }
+		],
+		analyses: [
+			{
+				name: 'FormulaColumn',
+				args: {
+					tokens: [
+						{ type: 'text', value: 'log(' },
+						{ type: 'col', id: 'a' },
+						{ type: 'text', value: ') ^ 2 + ' },
+						{ type: 'col', id: 'b' }
+					]
+				}
+			}
+		]
+	});
+	assert.deepEqual(errors, []);
+	const tp = findTP(session, 'FormulaColumn');
+	const ida = session.data.find((c) => c.name === 'a').id;
+	const idb = session.data.find((c) => c.name === 'b').id;
+	assert.deepEqual(tp.args.tokens, [
+		{ type: 'text', value: 'log(' },
+		{ type: 'col', id: ida },
+		{ type: 'text', value: ') ^ 2 + ' },
+		{ type: 'col', id: idb }
+	]);
+	assert.ok(tp.args.out.result >= 0);
+});
+
+test('FormulaColumn: an unresolvable column token or a bad token shape is refused', () => {
+	for (const tokens of [
+		[{ type: 'col', id: 'nope' }],
+		[{ type: 'script', value: 'alert(1)' }],
+		'a + b'
+	]) {
+		const { session, errors } = normalizeSession({
+			columns: [{ name: 'a', values: [1, 2, 3] }],
+			analyses: [{ name: 'FormulaColumn', args: { tokens } }]
+		});
+		assert.equal(findTP(session, 'FormulaColumn'), undefined, JSON.stringify(tokens));
+		assert.equal(errors.length, 1, JSON.stringify(tokens));
+		assert.match(errors[0], /^FormulaColumn: /);
+	}
+});

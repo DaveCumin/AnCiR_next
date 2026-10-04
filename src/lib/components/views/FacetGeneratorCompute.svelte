@@ -10,9 +10,14 @@
 	// `which="compute"` runs those effects and renders nothing (every plot template draws
 	// only for 'plot' or 'controls'). Only plot types with metric outputs are mounted: the
 	// others have nothing a headless instance could keep current.
-	// See plots/plotMetricOutputs.svelte.js for the one-writer rule.
+	// See plots/plotMetricOutputs.svelte.js for the one-writer rule. It claims the generator in
+	// the compute-owner registry, so NodeComputeHost (which covers a generator nobody shows,
+	// e.g. hidden from the workspace) does not mount a second instance.
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { hasPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
+	import ComputeClaim from '$lib/components/views/ComputeClaim.svelte';
+	import { computeKey } from '$lib/core/computeOwners.svelte.js';
+	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 
 	let { generator } = $props();
 
@@ -24,5 +29,14 @@
 </script>
 
 {#if PlotComp}
-	<PlotComp theData={generator} which="compute" />
+	<!-- Headless, so a failure here would otherwise unmount whatever hosts the panels
+	     (the whole worksheet, or the canvas). Contained, it is reported once and the panels
+	     still draw (ROB-12). -->
+	<ErrorBoundary
+		source="background"
+		context={`calculating the ${generator.type} plot "${generator.name}"`}
+	>
+		<PlotComp theData={generator} which="compute" />
+		<ComputeClaim computeKey={computeKey('plot', generator.id)} />
+	</ErrorBoundary>
 {/if}

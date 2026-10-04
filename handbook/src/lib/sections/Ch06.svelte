@@ -379,7 +379,7 @@
 
 	<AnCiRBox
 		title="Surrogate Test node"
-		tip="Start with block and a block length near one cycle. If the result is borderline, try ar1 and phase as well — a rhythm that survives all three is a rhythm worth reporting."
+		tip="Start with block and a block length near one cycle. If the result is borderline, try ar1 as well; a rhythm that survives both is a rhythm worth reporting."
 	>
 		<p>
 			The <strong>Surrogate Test</strong> node (Analysis family) takes time in <code>xIN</code> and
@@ -398,13 +398,13 @@
 				produce.
 			</li>
 			<li>
-				<strong>Phase</strong> — randomise the Fourier phases while keeping the amplitude spectrum exactly.
-				Preserves the entire autocorrelation structure; a strict and widely used null.
-			</li>
-			<li>
-				<strong>AAFT</strong> — amplitude-adjusted Fourier transform. Like phase randomisation, but
-				also preserves the <em>distribution</em> of the values, which matters for skewed data such as
-				activity counts.
+				<strong>Phase</strong> and <strong>AAFT</strong> (amplitude-adjusted Fourier transform)
+				surrogates are <strong>not offered</strong> by this node. They randomise the Fourier phases while
+				keeping the amplitude spectrum exactly, and the spectrum is where a rhythm lives: every surrogate
+				keeps the very peak being tested, so they cannot answer "is there a rhythm". In AnCiR's own simulations,
+				computed correctly they returned p = 1 on every record, rhythmic or not; an earlier version that
+				padded the transform called 47 to 58% of pure white-noise records rhythmic. They are the right
+				null for other questions, such as coupling between two series, not for this one.
 			</li>
 			<li>
 				<strong>Shuffle</strong> — plain random reordering. Destroys autocorrelation along with the
@@ -418,6 +418,12 @@
 			reproducible result. <strong>periodMin</strong> and <strong>periodMax</strong> (default 20–28 h)
 			bound the period range searched.
 		</p>
+		<p>
+			The statistic is the largest FFT amplitude in that band, so the record must be evenly sampled.
+			The node puts it on its own sampling grid first, fills up to 3 missing samples in a row by
+			linear interpolation, and refuses a longer gap with a reason rather than joining the samples
+			either side of it.
+		</p>
 	</AnCiRBox>
 
 	<WarnBox title="Shuffling is the wrong null for a time series">
@@ -428,18 +434,18 @@
 			the resulting p-value is spuriously tiny.
 		</p>
 		<p>
-			Use <strong>block</strong>, <strong>ar1</strong>, or <strong>phase</strong> for any densely
-			sampled record. Reserve <strong>shuffle</strong> for genuinely independent observations — one value
-			per subject, for instance.
+			Use <strong>block</strong> or <strong>ar1</strong> for any densely sampled record. Reserve
+			<strong>shuffle</strong> for genuinely independent observations — one value per subject, for instance.
 		</p>
 	</WarnBox>
 
 	<NoteBox title="Why the p-value is never exactly zero">
 		<p>
 			The node computes p as <strong>(k + 1) / (m + 1)</strong>, where <em>k</em> is the number of
-			surrogates matching or exceeding your observed statistic and <em>m</em> is the number of surrogates.
-			Adding one to each count includes the observed value in its own reference distribution, which is
-			the standard convention for a Monte Carlo test.
+			surrogates matching or exceeding your observed statistic (a surrogate equal to it up to
+			rounding counts as matching) and <em>m</em> is the number of surrogates. Adding one to each count
+			includes the observed value in its own reference distribution, which is the standard convention
+			for a Monte Carlo test.
 		</p>
 		<p>
 			The practical consequence is that p can never be 0 — with 199 surrogates the floor is 0.005.

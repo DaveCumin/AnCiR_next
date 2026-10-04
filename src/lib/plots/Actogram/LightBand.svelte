@@ -138,6 +138,8 @@
 			{#if bands.bands.length > 0}
 				<button
 					class="icon"
+					type="button"
+					aria-label="Swap the band columns"
 					onclick={() => bands.swapBandCols()}
 					{@attach tooltip('Swap the band columns')}
 				>
@@ -146,6 +148,8 @@
 			{/if}
 			<button
 				class="icon"
+				type="button"
+				aria-label="Add a band"
 				onclick={() =>
 					bands.addBand({ col: bands.length % 2 === 0 ? '#000000' : '#ffffff', pc: 10 })}
 				{@attach tooltip('Add a band')}

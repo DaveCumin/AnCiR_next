@@ -94,3 +94,51 @@ describe('helpers', () => {
 		expect(sessionMeta()).toBe('0 columns · 0 plots');
 	});
 });
+
+// The start screen can be summoned over open work (Help → Welcome screen), so opening from it
+// must ask before replacing that work (review ROB-1), and a "no" must change nothing at all.
+const { core, appState } = await import('$lib/core/core.svelte.js');
+describe('confirm before replacing open work', () => {
+	function withOpenWork() {
+		core.notes = [{ id: 'note_1', text: 'unsaved' }];
+	}
+	function answer(choice) {
+		appState.AYScallback(choice);
+		appState.showAYSModal = false;
+	}
+
+	it('an example the user declines is neither fetched, loaded nor recorded', async () => {
+		withOpenWork();
+		global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ data: [] }) }));
+		const pending = openExample({ id: 'x', name: 'Workflow — demo', url: 'sessions/demos/a.json' });
+		expect(appState.showAYSModal).toBe(true);
+		expect(appState.AYStext).toContain('"Demo"');
+		answer('Cancel');
+		expect(await pending).toBe(false);
+		expect(global.fetch).not.toHaveBeenCalled();
+		expect(importJson).not.toHaveBeenCalled();
+		expect(loadRecents()).toEqual([]);
+		core.notes = [];
+	});
+
+	it('a session file the user confirms loads and is recorded', async () => {
+		withOpenWork();
+		const pending = openSessionFile(fileOf('mine.json', { data: [] }));
+		await vi.waitFor(() => expect(appState.showAYSModal).toBe(true));
+		answer('Replace session');
+		expect(await pending).toBe(true);
+		expect(importJson).toHaveBeenCalledOnce();
+		expect(loadRecents()[0].id).toBe('file::mine.json');
+		core.notes = [];
+	});
+
+	it('a session file the user declines is not loaded', async () => {
+		withOpenWork();
+		const pending = openSessionFile(fileOf('mine.json', { data: [] }));
+		await vi.waitFor(() => expect(appState.showAYSModal).toBe(true));
+		answer('Cancel');
+		expect(await pending).toBe(false);
+		expect(importJson).not.toHaveBeenCalled();
+		core.notes = [];
+	});
+});

@@ -7,7 +7,12 @@ import {
 } from '$lib/utils/cosinor.js';
 import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
 import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
-import { permutationTest } from '$lib/utils/permutationTest.js';
+import {
+	permutationTest,
+	permutationTestAsync,
+	recommendPermutations,
+	lag1Autocorrelation
+} from '$lib/utils/permutationTest.js';
 
 export const FIT_FUNCTION_MODELS = ['cosinor', 'rectangular', 'doublelogistic'];
 
@@ -17,7 +22,10 @@ export const PERMUTATION_DEFAULTS = {
 	permuteTest: false,
 	nPermutations: 999,
 	permutationSeed: 12345,
-	permutationStatistic: 'rSquared'
+	permutationStatistic: 'rSquared',
+	// 'shuffle' permutes single values (assumes exchangeable observations); 'block' permutes
+	// circular one-period blocks, which keeps short-range autocorrelation (permutationTest.js).
+	permutationScheme: 'shuffle'
 };
 
 function fitCosinorModel(t, x, options = {}) {
@@ -71,17 +79,23 @@ function fitCosinorModel(t, x, options = {}) {
 }
 
 function fitRectangularModel(t, x, options = {}) {
+	const fixOmega = options.fixOmega ?? false;
+	const fixedPeriod = Number(options.fixedPeriod ?? 24);
 	const fitResult = fitRectangularWave(t, x, {
 		fixKappa: options.fixKappa ?? false,
 		fixedKappa: options.fixedKappa ?? 5,
-		fixOmega: options.fixOmega ?? false,
-		fixedOmega: options.fixedOmega ?? null,
-		fixedPeriod: options.fixedPeriod ?? 24,
+		fixOmega,
+		// rectwave.js pins ω, not the period: derive it from fixedPeriod (as RectangularWave
+		// and movinganalysis do), else a fixed-period fit silently ran at 24 h.
+		fixedOmega: options.fixedOmega ?? (fixOmega ? (2 * Math.PI) / fixedPeriod : null),
 		fixDutyCycle: options.fixDutyCycle ?? false,
 		fixedDutyCycle: options.fixedDutyCycle ?? 0.5,
 		maxIterations: options.maxIterations ?? 10000,
 		tolerance: options.tolerance ?? 1e-6,
-		numStarts: options.numStarts ?? 5
+		numStarts: options.numStarts ?? 5,
+		// Free-period range (rectwave.js defaults to FREE_PERIOD_DEFAULTS when absent).
+		minPeriod: options.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod,
+		maxPeriod: options.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod
 	});
 	if (!fitResult) return null;
 	return {
@@ -92,7 +106,8 @@ function fitRectangularModel(t, x, options = {}) {
 		rSquared: fitResult.rSquared,
 		period: fitResult.period,
 		acrophase: fitResult.acrophase,
-		rss: fitResult.rss
+		rss: fitResult.rss,
+		diagnostics: fitResult.diagnostics
 	};
 }
 
@@ -108,7 +123,9 @@ function fitDoubleLogisticModel(t, x, options = {}) {
 		fixedPeriod: options.fixedPeriod ?? 24,
 		maxIterations: options.maxIterations ?? 10000,
 		tolerance: options.tolerance ?? 1e-6,
-		numStarts: options.numStarts ?? 5
+		numStarts: options.numStarts ?? 5,
+		minPeriod: options.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod,
+		maxPeriod: options.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod
 	});
 	if (!fitResult) return null;
 	return {
@@ -122,7 +139,8 @@ function fitDoubleLogisticModel(t, x, options = {}) {
 		duration: fitResult.duration,
 		onsetPhase: fitResult.onsetPhase,
 		offsetPhase: fitResult.offsetPhase,
-		dutyCycle: fitResult.dutyCycle
+		dutyCycle: fitResult.dutyCycle,
+		diagnostics: fitResult.diagnostics
 	};
 }
 
@@ -172,37 +190,169 @@ export function evaluateCurveModelAtPoints(fitResult, model, tPoints) {
 }
 
 /**
+ * The period (hours) a fitted model repeats with, for the block permutation's block length:
+ * the fixed period when the model fixes it, else the fitted one. NaN when there is none.
+ */
+export function fitModelPeriod(fit, model, options = {}) {
+	if (model === 'cosinor') {
+		if (options.useFixedPeriod) return Number(options.fixedPeriod ?? 24);
+		const ws = (fit?.parameters?.cosines ?? []).map((c) => c.frequency).filter((w) => w > 0);
+		// Several cosines: the block must hold the longest cycle.
+		return ws.length ? (2 * Math.PI) / Math.min(...ws) : NaN;
+	}
+	if (model === 'rectangular') {
+		if (options.fixOmega) return Number(options.fixedPeriod ?? 24);
+		return Number(fit?.period);
+	}
+	if (model === 'doublelogistic') {
+		if (!(options.periodic ?? true)) return NaN;
+		if (options.fixPeriod) return Number(options.fixedPeriod ?? 24);
+		return Number(fit?.parameters?.T);
+	}
+	return NaN;
+}
+
+function medianSpacing(tt) {
+	const d = [];
+	for (let i = 1; i < tt.length; i++) {
+		const v = tt[i] - tt[i - 1];
+		if (v > 0) d.push(v);
+	}
+	if (!d.length) return NaN;
+	d.sort((a, b) => a - b);
+	const m = d.length >> 1;
+	return d.length % 2 ? d[m] : (d[m - 1] + d[m]) / 2;
+}
+
+/**
  * Permutation-test p-value for a fit of `model` (with `options`) on (tt, yy).
  * Uses fitCurveModel as the fit, so the observed and permuted statistics are
  * computed the same way.
  *
- * Returns { pValue, significant, observedStat, permutedStats, statistic } — the
- * whole null distribution, not just its tail probability, so the nodes can show
- * and export it. `permutedStats` is empty and pValue NaN when the test is
- * disabled or there are too few points.
+ * `args.permutationScheme` picks 'shuffle' (default; single values, which assumes the
+ * observations are exchangeable) or 'block' (circular blocks one model period long, see
+ * permutationTest.js). The block length is the model's period (fitModelPeriod) divided by
+ * the median sampling interval; with no period, or fewer than two blocks in the record, the
+ * block test cannot run and pValue is NaN with `unavailable` saying why.
+ *
+ * Returns { pValue, significant, observedStat, permutedStats, statistic, scheme,
+ * blockLength, residualLag1, unavailable } — the whole null distribution, not just its tail
+ * probability, so the nodes can show and export it, and the lag-1 autocorrelation of the
+ * observed fit's residuals so they can warn when the shuffle scheme is not valid.
+ * `permutedStats` is empty and pValue NaN when the test is disabled or there are too few
+ * points.
  */
 export function fitPermutationPValue(tt, yy, model, options, args) {
-	const statistic = args?.permutationStatistic ?? 'rSquared';
-	const n = Array.isArray(tt) ? tt.length : 0;
-	if (!args?.permuteTest || n < 4)
-		return {
-			pValue: NaN,
-			significant: false,
-			observedStat: NaN,
-			permutedStats: [],
-			statistic
-		};
-	const res = permutationTest(tt, yy, (x, y) => fitCurveModel(x, y, model, options), {
-		statistic,
-		nPermutations: Math.max(1, Math.trunc(Number(args.nPermutations ?? 999))),
-		seed: args.permutationSeed ?? 12345
+	const prep = preparePermutation(tt, yy, model, options, args);
+	if (prep.done) return prep.done;
+	return finishPermutation(prep, permutationTest(tt, yy, prep.fitFn, prep.testOptions));
+}
+
+/**
+ * fitPermutationPValue, but yielding to the event loop between batches and reporting
+ * progress, for the Fit waveform model panel. Same preparation, statistic, scheme, block
+ * length and seed, so the panel and the headless engine report the same p for the same
+ * session. (The panel used to call permutationTestAsync with an ASYNC fit function: every
+ * statistic came back undefined and every p was 1 / (n + 1), "significant" whatever the
+ * data.)
+ * @param {{onProgress?: (current: number, total: number) => void}} [hooks]
+ */
+export async function fitPermutationPValueAsync(tt, yy, model, options, args, hooks = {}) {
+	const prep = preparePermutation(tt, yy, model, options, args);
+	if (prep.done) return prep.done;
+	const res = await permutationTestAsync(tt, yy, prep.fitFn, {
+		...prep.testOptions,
+		onProgress: hooks.onProgress ?? null
 	});
+	return finishPermutation(prep, res);
+}
+
+/**
+ * The permutation count a node asks for: `recommendPermutations(n)` when
+ * `args.autoPermutations` is on (Fit waveform model, Fit trend), else `args.nPermutations`.
+ */
+export function resolvePermutationCount(args, n) {
+	if (args?.autoPermutations) return recommendPermutations(n);
+	return Math.max(1, Math.trunc(Number(args?.nPermutations ?? 999)));
+}
+
+/**
+ * Everything both runners share: the disabled/too-short and block-unavailable early
+ * returns (`done`), the observed fit's residual lag-1 autocorrelation, the block length,
+ * and the options passed to permutationTest(Async).
+ */
+function preparePermutation(tt, yy, model, options, args) {
+	const statistic = args?.permutationStatistic ?? 'rSquared';
+	const scheme = args?.permutationScheme === 'block' ? 'block' : 'shuffle';
+	const n = Array.isArray(tt) ? tt.length : 0;
+	const off = (extra = {}) => ({
+		pValue: NaN,
+		significant: false,
+		observedStat: NaN,
+		permutedStats: [],
+		statistic,
+		scheme,
+		blockLength: null,
+		residualLag1: NaN,
+		unavailable: null,
+		...extra
+	});
+	if (!args?.permuteTest || n < 4) return { done: off() };
+	// The observed fit, once, for its residual autocorrelation and (block scheme) its period.
+	let observed = null;
+	try {
+		observed = fitCurveModel(tt, yy, model, options);
+	} catch {
+		observed = null;
+	}
+	const residualLag1 = observed?.fitted
+		? lag1Autocorrelation(yy.map((v, i) => v - observed.fitted[i]))
+		: NaN;
+	let blockLength = null;
+	if (scheme === 'block') {
+		const period = fitModelPeriod(observed, model, options);
+		const dt = medianSpacing(tt);
+		blockLength = Number.isFinite(period) && dt > 0 ? Math.round(period / dt) : null;
+		if (!(blockLength >= 2) || 2 * blockLength > n) {
+			return {
+				done: off({
+					residualLag1,
+					blockLength,
+					unavailable: Number.isFinite(period)
+						? `the record holds fewer than two ${Number(period.toFixed(2))} h blocks`
+						: 'the model has no period to set the block length'
+				})
+			};
+		}
+	}
+	return {
+		done: null,
+		statistic,
+		scheme,
+		blockLength,
+		residualLag1,
+		fitFn: (x, y) => fitCurveModel(x, y, model, options),
+		testOptions: {
+			statistic,
+			nPermutations: resolvePermutationCount(args, n),
+			seed: args.permutationSeed ?? 12345,
+			scheme,
+			blockLength
+		}
+	};
+}
+
+function finishPermutation(prep, res) {
 	return {
 		pValue: res.pValue,
 		significant: res.significant,
 		observedStat: res.observedStat,
 		permutedStats: res.permutedStats ?? [],
-		statistic
+		statistic: prep.statistic,
+		scheme: prep.scheme,
+		blockLength: prep.blockLength,
+		residualLag1: prep.residualLag1,
+		unavailable: null
 	};
 }
 

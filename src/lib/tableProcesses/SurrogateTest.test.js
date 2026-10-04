@@ -157,16 +157,23 @@ describe('surrogatetest', () => {
 		expect(a).toBe(b);
 	});
 
-	it('warns when phase surrogates are used for a rhythmicity question', () => {
-		// The circularity guard: phase randomisation preserves the spectrum, so
-		// it cannot test for the rhythm it already contains.
+	it('refuses phase and AAFT surrogates for this rhythmicity test, with the reason', () => {
+		// The circularity guard (SPEC-4): phase randomisation preserves the spectrum, so
+		// it cannot test for the rhythm it already contains. Computed at the series' own
+		// length every surrogate reproduces the band power, so p would be 1 on every record;
+		// the node now refuses rather than offer a test with no power.
 		const n = 1024;
 		mkColumn(
 			1,
 			Array.from({ length: n }, (_, i) => i * DT)
 		);
 		mkColumn(2, rhythmic(n));
-		expect(surrogatetest(baseArgs({ method: 'phase' }))[0].advice).toMatch(/little or no power/);
+		for (const method of ['phase', 'aaft']) {
+			const [res, valid] = surrogatetest(baseArgs({ method }));
+			expect(valid).toBe(false);
+			expect(res.pValue).toBeNaN();
+			expect(res.reason).toMatch(/little or no power/);
+		}
 		expect(surrogatetest(baseArgs({ method: 'shuffle' }))[0].advice).toMatch(/anti-conservative/);
 		expect(surrogatetest(baseArgs({ method: 'block' }))[0].advice).toBe('');
 	});
@@ -264,5 +271,41 @@ describe('surrogatetest', () => {
 		);
 		mkColumn(2, rhythmic(n));
 		expect(() => surrogatetest(baseArgs({ out: {} }))).not.toThrow();
+	});
+});
+
+// SPEC-2 through the node: the band statistic is an FFT, which used to join the samples
+// either side of a gap. The series now goes onto its own grid first.
+describe('surrogatetest: gaps (SPEC-2)', () => {
+	it('refuses a record with a day missing, with the reason', () => {
+		const hours = [];
+		const values = [];
+		const y = rhythmic(960);
+		for (let i = 0; i < 960; i++) {
+			if (i >= 400 && i < 496) continue; // 24 h missing at 15 min sampling
+			hours.push(i * DT);
+			values.push(y[i]);
+		}
+		mkColumn(1, hours);
+		mkColumn(2, values);
+		const [res, valid] = surrogatetest(baseArgs());
+		expect(valid).toBe(false);
+		expect(res.pValue).toBeNaN();
+		expect(res.reason).toMatch(/gap of 24 h/);
+	});
+
+	it('fills two isolated missing samples and still tests', () => {
+		const y = rhythmic(960);
+		y[100] = null;
+		y[500] = null;
+		mkColumn(
+			1,
+			Array.from({ length: 960 }, (_, i) => i * DT)
+		);
+		mkColumn(2, y);
+		const [res, valid] = surrogatetest(baseArgs());
+		expect(valid).toBe(true);
+		expect(res.nFilled).toBe(2);
+		expect(res.pValue).toBeLessThan(0.05);
 	});
 });

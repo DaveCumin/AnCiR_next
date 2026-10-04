@@ -46,7 +46,7 @@
  * run is reproducible from its seed.
  */
 import { createSeededRNG } from './permutationTest.js';
-import { fftInPlace, ifftInPlace, nextPowerOfTwo } from './fft.js';
+import { fftAnyLength } from './fft.js';
 import { mean } from '$lib/components/plotbits/helpers/wrangleData.js';
 
 export const SURROGATE_METHODS = ['phase', 'aaft', 'block', 'ar1', 'shuffle'];
@@ -80,18 +80,22 @@ export function phaseRandomise(values, rng) {
 	const n = y.length;
 	if (n < 4) return [...y];
 
-	const nPad = nextPowerOfTwo(n);
-	const re = new Float64Array(nPad);
-	const im = new Float64Array(nPad);
+	// Transform at the series' OWN length (fftAnyLength: Bluestein for a non-power-of-two
+	// n), as Theiler et al. (1992) do. This used to zero-pad to the next power of two,
+	// randomise there and truncate back to n, which does not keep the length-n spectrum:
+	// at n = 513 the surrogates had about half the original variance (SPEC-4).
+	const re = new Float64Array(n);
+	const im = new Float64Array(n);
 	const mu = mean(y);
 	for (let i = 0; i < n; i++) re[i] = y[i] - mu;
-	fftInPlace(re, im);
+	fftAnyLength(re, im);
 
-	const half = nPad / 2;
-	for (let k = 1; k < half; k++) {
+	// Bins 1 .. ceil(n/2) - 1 pair with n - k; for even n the Nyquist bin n/2 is its own
+	// partner and must stay real.
+	for (let k = 1; 2 * k < n; k++) {
 		const phi = 2 * Math.PI * rng();
 		const mag = Math.hypot(re[k], im[k]);
-		const nk = nPad - k;
+		const nk = n - k;
 		re[k] = mag * Math.cos(phi);
 		im[k] = mag * Math.sin(phi);
 		re[nk] = re[k];
@@ -99,9 +103,9 @@ export function phaseRandomise(values, rng) {
 	}
 	// DC and Nyquist have no free phase; randomising them would make the output complex.
 	im[0] = 0;
-	if (half < nPad) im[half] = 0;
+	if (n % 2 === 0) im[n / 2] = 0;
 
-	ifftInPlace(re, im);
+	fftAnyLength(re, im, true);
 	const out = new Array(n);
 	for (let i = 0; i < n; i++) out[i] = re[i] + mu;
 	return out;
@@ -220,6 +224,9 @@ export function makeSurrogate(values, method, rng, opts = {}) {
 	}
 }
 
+/** Relative difference below which a surrogate statistic ties the observed one. */
+export const TIE_TOLERANCE = 1e-9;
+
 /**
  * Empirical p-value for a statistic against a surrogate null.
  *
@@ -287,7 +294,15 @@ export function surrogateTest(values, statFn, options = {}) {
 	}
 	if (surrogateStats.length === 0) return fail('every surrogate failed');
 
-	const extreme = surrogateStats.filter((s) => (lowerTail ? s <= observed : s >= observed)).length;
+	// A surrogate statistic within a relative TIE_TOLERANCE of the observed one is a tie and
+	// counts as at least as extreme. A null that preserves the statistic exactly (phase
+	// surrogates against a spectral statistic) otherwise returns values that differ from
+	// the observed only by rounding, and p was decided by the sign of that rounding (one
+	// seed gave p = 1.000, another p = 0.005, on the same series; SPEC-4).
+	const tol = (s) => TIE_TOLERANCE * Math.max(Math.abs(observed), Math.abs(s));
+	const extreme = surrogateStats.filter((s) =>
+		lowerTail ? s <= observed + tol(s) : s >= observed - tol(s)
+	).length;
 	// (k + 1) / (m + 1) — the same convention as permutationTest, so p is never 0.
 	const pValue = (extreme + 1) / (surrogateStats.length + 1);
 

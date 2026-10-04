@@ -1,0 +1,329 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Standalone presentation pages (build/animations/*.html).
+
+   The ONE place that governs how every standalone animation page, and the
+   index, sizes itself. It loads after the handbook's app.css, so the
+   components look exactly as they do in the chapters; the rules here only
+   (a) make the animation fill whatever box the page is given (a browser
+   window, a slide's web view, an iframe), and (b) keep the controls a
+   readable, clickable size at every page size instead of scaling them with
+   the graphic.
+
+   Colour scheme: light only, like the handbook (neither app.css nor the
+   shared design tokens define a dark scheme), on the handbook's white card
+   surface, which sits cleanly on a slide.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Root type size follows the page box, within limits: about 14 px in a small
+   embedded frame, 16 px at 1280x720 and 20 px at 1920x1080. Controls, titles
+   and legends are all rem-sized, so this one rule keeps them in proportion
+   to the window without ever going microscopic or gigantic. */
+html:has(body.anim-standalone),
+html:has(body.anim-index) {
+	font-size: clamp(14px, calc(6px + 0.45vw + 0.6vh), 20px);
+	scroll-behavior: auto;
+}
+
+body.anim-standalone {
+	height: 100vh;
+	height: 100dvh;
+	overflow: hidden;
+	background: var(--surface);
+	line-height: 1.5;
+}
+
+#anim-root {
+	height: 100%;
+}
+
+/* ── The animation box fills the page ─────────────────────────────────── */
+.anim-standalone .anim-embed {
+	/* !important beats the component's inline style="height: ...": that is
+	   the chapter's height, used only for the calibration pass. */
+	height: 100% !important;
+	margin: 0;
+	border: 0;
+	border-radius: 0;
+	padding: clamp(6px, 1.4vmin, 20px);
+	justify-content: center;
+	gap: 0;
+	background: var(--surface);
+}
+
+/* Calibration pass (body.anim-calibrating, before body.anim-standalone is
+   set, so none of the rules above or below apply yet): the component is laid
+   out exactly as a desktop chapter lays it out, 788 px wide at the chapter's
+   own height (the shell sets the width), so its proportions can be measured. Replaced before first
+   paint. */
+body.anim-calibrating .anim-embed * {
+	transition: none !important;
+}
+
+/* Viz rows sized by the shell (width and height set inline). */
+.anim-standalone .viz-row.anim-fitted-row {
+	flex: none;
+	align-self: center;
+	max-width: 100%;
+	min-height: 0;
+}
+
+/* Chart titles and legends scale with the root size set above. */
+.anim-standalone .chart-panel {
+	padding: 0.6rem 0.7rem 0.5rem;
+}
+.anim-standalone .chart-panel h3 {
+	font-size: 0.9rem;
+	margin-bottom: 0.4rem;
+	line-height: 1.3;
+}
+.anim-standalone .anim-embed .legend {
+	font-size: 0.8rem;
+	gap: 0.4rem 1rem;
+	margin: 0.4rem 0 0.2rem;
+}
+.anim-standalone .legend-swatch {
+	width: 1.4rem;
+}
+.anim-standalone .period-label {
+	font-size: 0.85rem;
+}
+
+/* ── Controls: readable, clickable, never overlapping the graphic ───── */
+.anim-standalone .anim-embed .controls {
+	gap: 0.5rem 0.75rem;
+	padding: 0.4rem 0.75rem;
+	margin-top: 0.5rem;
+	row-gap: 0.4rem;
+}
+.anim-standalone .anim-embed .btn,
+.anim-standalone .mol-step-btn,
+.anim-standalone .fp-stage-btn {
+	font-size: 0.78rem;
+	min-height: 2.4rem;
+	padding: 0.35rem 1rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+.anim-standalone .progress-wrap {
+	/* A 0.35rem bar with a transparent border band above and below: the
+	   visible bar stays slim, the click target is about 1.5rem tall. The seek
+	   handlers read getBoundingClientRect's left/width, which the vertical
+	   border does not change. */
+	flex: 1 1 8rem;
+	min-width: 6rem;
+	height: calc(0.35rem + 1.2rem);
+	border-block: 0.6rem solid transparent;
+	background-clip: padding-box;
+	border-radius: 999px;
+}
+.anim-standalone .speed-wrap,
+.anim-standalone .step-indicator {
+	font-size: 0.78rem;
+}
+.anim-standalone .speed-wrap input[type='range'] {
+	width: clamp(5rem, 10vw, 10rem);
+	height: 1.5rem;
+	background: linear-gradient(var(--border), var(--border)) center / 100% 0.3rem no-repeat;
+	cursor: pointer;
+}
+.anim-standalone .speed-wrap input[type='range']::-webkit-slider-thumb {
+	width: 1.1rem;
+	height: 1.1rem;
+}
+.anim-standalone .speed-wrap input[type='range']::-moz-range-thumb {
+	width: 1.1rem;
+	height: 1.1rem;
+	border: 0;
+	border-radius: 50%;
+	background: var(--navy);
+}
+
+/* Step captions and readout boxes (Folding, Molecular). */
+.anim-standalone .mol-step-text,
+.anim-standalone .fp-step-text,
+.anim-standalone .fp-stat-box {
+	font-size: 0.85rem;
+	line-height: 1.5;
+	margin: 0.4rem 0;
+	padding: 0.5rem 0.9rem;
+	min-height: 0;
+	flex-shrink: 0;
+}
+.anim-standalone .fp-stage-nav,
+.anim-standalone .mol-nav {
+	margin: 0 0 0.4rem;
+	gap: 0.4rem;
+	justify-content: center;
+}
+
+/* The folding periodogram's statistic box is a list of label/value rows;
+   two columns halve its height on a landscape page. */
+@media (min-aspect-ratio: 4/3) {
+	.anim-standalone .fp-stat-box {
+		columns: 2 20rem;
+		column-gap: 2.5rem;
+	}
+	.anim-standalone .fp-stat-box .fp-row {
+		break-inside: avoid;
+	}
+}
+
+/* ── SVG animations: the viewBox letterboxes the drawing ──────────────── */
+body.anim-standalone #mol-wrap {
+	/* As tall as the drawing's own 720:460 proportions need at full width, and
+	   allowed to shrink when the window is shorter than that (the viewBox
+	   then letterboxes it sideways). The caption and buttons stay directly
+	   under the drawing, and the whole stack is centred. */
+	flex: 0 1 auto;
+	aspect-ratio: 720 / 460;
+	min-height: 0;
+	max-width: none;
+	width: 100%;
+}
+body.anim-standalone #mol-svg {
+	width: 100%;
+	height: 100%;
+}
+
+/* ── Short frames (a small embedded frame, a letterboxed slide region) ─
+   The graphic comes first. The explanatory text blocks, which a presenter
+   narrates anyway, give way so the graphic keeps room and nothing is
+   clipped or scrolls. */
+@media (max-height: 520px) {
+	.anim-standalone .mol-step-text,
+	.anim-standalone .fp-step-text,
+	.anim-standalone .fp-stat-box,
+	.anim-standalone .note-info {
+		display: none;
+	}
+	/* Let the controls stay on one line where they can. */
+	.anim-standalone .progress-wrap {
+		flex-basis: 3rem;
+		min-width: 3rem;
+	}
+	.anim-standalone .speed-wrap input[type='range'] {
+		width: 4.5rem;
+	}
+	.anim-standalone .anim-embed .controls {
+		margin-top: 0.3rem;
+		padding: 0.25rem 0.5rem;
+	}
+	.anim-standalone .anim-embed .btn,
+	.anim-standalone .mol-step-btn,
+	.anim-standalone .fp-stage-btn {
+		min-height: 2rem;
+	}
+	/* Chart titles and panel padding shrink so the plots keep their room. */
+	.anim-standalone .chart-panel {
+		padding: 0.2rem 0.35rem;
+	}
+	.anim-standalone .chart-panel h3 {
+		font-size: 0.72rem;
+		margin-bottom: 0.15rem;
+	}
+	.anim-standalone .anim-embed .legend {
+		font-size: 0.72rem;
+		margin: 0.2rem 0 0;
+	}
+	.anim-standalone .viz-row {
+		gap: 4px;
+	}
+	.anim-standalone .anim-fitted-row {
+		margin-bottom: 4px;
+	}
+}
+
+/* ── Index page ───────────────────────────────────────────────────────── */
+body.anim-index {
+	background: var(--bg);
+	line-height: 1.55;
+}
+.anim-index main {
+	max-width: 72rem;
+	margin: 0 auto;
+	padding: 2rem 1rem 3rem;
+}
+.anim-index h1 {
+	font-size: 1.6rem;
+	color: var(--navy-dk);
+	line-height: 1.25;
+}
+.anim-index .lede {
+	color: var(--muted);
+	margin: 0.4rem 0 1.25rem;
+	max-width: 48rem;
+}
+.anim-index .version {
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: var(--navy);
+	background: var(--blue-lt);
+	border-radius: 999px;
+	padding: 0.1rem 0.6rem;
+	margin-left: 0.4rem;
+	vertical-align: middle;
+}
+.anim-index ul.cards {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+	gap: 0.75rem;
+}
+.anim-index .cards a {
+	display: block;
+	height: 100%;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	padding: 0.8rem 1rem;
+	color: inherit;
+	text-decoration: none;
+	transition: border-color 0.15s;
+}
+.anim-index .cards a:hover,
+.anim-index .cards a:focus-visible {
+	border-color: var(--navy);
+}
+.anim-index .cards .where {
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--muted);
+}
+.anim-index .cards h2 {
+	font-size: 1rem;
+	color: var(--navy-dk);
+	margin: 0.15rem 0 0.25rem;
+	line-height: 1.3;
+}
+.anim-index .cards p {
+	font-size: 0.85rem;
+	color: var(--text);
+}
+.anim-index .cards code {
+	font-size: 0.75rem;
+	color: var(--muted);
+}
+.anim-index .howto {
+	margin-top: 1.75rem;
+	font-size: 0.9rem;
+	max-width: 48rem;
+}
+.anim-index .howto h2 {
+	font-size: 1.05rem;
+	color: var(--navy-dk);
+	margin-bottom: 0.3rem;
+}
+.anim-index .howto li {
+	margin: 0.25rem 0 0 1.2rem;
+}
+.anim-index .howto code {
+	font-size: 0.82rem;
+	background: var(--panel-bg);
+	padding: 0.05rem 0.3rem;
+	border-radius: 3px;
+}

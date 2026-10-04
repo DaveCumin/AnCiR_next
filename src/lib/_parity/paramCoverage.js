@@ -139,13 +139,11 @@ export const PARAM_COVERAGE_GAPS = {
 	Correlation: { method: ['spearman'] },
 	Cosinor: { permuteTest: [true] },
 	CrossCorrelation: { method: ['spearman'] },
-	DoubleLogistic: { fixK1: [true], fixK2: [true], fixPeriod: [false], permuteTest: [true] },
+	DoubleLogistic: { fixK1: [true], fixK2: [true], permuteTest: [true] },
 	FDRCorrection: { method: ['none', 'bonferroni'] },
 	FitFunction: {
-		model: ['rectangular', 'doublelogistic'],
 		useFixedPeriod: [false],
 		fixKappa: [true],
-		fixOmega: [true],
 		fixDutyCycle: [true],
 		periodic: [false],
 		fixK1: [true],
@@ -159,10 +157,7 @@ export const PARAM_COVERAGE_GAPS = {
 	RayleighTest: { showWatsonWilliams: [false] },
 	RectangularWave: {
 		fixKappa: [true],
-		fixOmega: [true],
 		fixDutyCycle: [true],
 		permuteTest: [true]
-	},
-	RhythmicityAnalysis: { analysis: ['fft', 'correlogram'] },
-	SurrogateTest: { method: ['phase', 'aaft', 'ar1', 'shuffle'] }
+	}
 };

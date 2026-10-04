@@ -73,9 +73,13 @@ describe('every input-removing path reconciles the outputs', () => {
 
 	it('the two known removal paths are still present and still reconcile', () => {
 		// Named explicitly so renaming one cannot silently drop it from the sweep.
+		// Both are recorded as one undo step by a thin wrapper that hands the gesture to
+		// `_<name>` inside mutationService.record; the reconcile has to be in that body.
 		for (const fn of ['removeEdge', 'disconnectInputPort']) {
 			expect(bodies[fn], `${fn} no longer exists`).toBeTruthy();
-			expect(bodies[fn], `${fn} stopped reconciling`).toMatch(/reconcileOutputs\(/);
+			const delegate = bodies[fn].match(/mutationService\.record\(\(\) => (_\w+)\(/)?.[1];
+			const body = delegate ? bodies[delegate] : bodies[fn];
+			expect(body, `${fn} stopped reconciling`).toMatch(/reconcileOutputs\(/);
 		}
 	});
 

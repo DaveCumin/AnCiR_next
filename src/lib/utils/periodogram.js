@@ -2,10 +2,74 @@
 // Periodogram calculations — extracted from web worker, using native JS with Kahan summation.
 
 import { KahanSum, kahanMean, makeSeqArray } from '$lib/utils/numerics.js';
-import cdf_chisq from '@stdlib/stats-base-dists-chisquare-cdf';
+import { chisqSf } from './chisqSf.js';
 import quantile_chisq from '@stdlib/stats-base-dists-chisquare-quantile';
 import { binData } from '$lib/components/plotbits/helpers/wrangleData.js';
 import { validPairs } from './validPairs.js';
+import { isInvalidValue } from './stats.js';
+
+// ========== Degenerate input (ROB-13) ==========
+
+/**
+ * True when the series carries no variation at all: every usable value (missing values,
+ * null, blanks and NaN skipped) is EXACTLY the same, or there are fewer than two of them.
+ *
+ * Exact equality on purpose. A constant like 0.1 is not representable, so after the mean is
+ * removed every sample is left with the same tiny rounding residue (~1e-17), and a
+ * variance-based test then divides that residue by an equally tiny variance: Chi-squared
+ * reported Qp = N at every period (hugely "significant"), Enright a power of 1, and the
+ * FFT/Lomb-Scargle argmax landed on whichever period the rounding favoured. No real
+ * recording is exactly constant unless it truly has no signal (an off-wrist stretch, a dead
+ * channel, a zero-filled segment), and those must report "no rhythm".
+ *
+ * @param {ArrayLike<any>} values
+ * @returns {boolean}
+ */
+export function isFlatSeries(values) {
+	let first;
+	let seen = 0;
+	for (let i = 0; i < (values?.length ?? 0); i++) {
+		const raw = values[i];
+		if (isInvalidValue(raw)) continue;
+		const v = Number(raw); // Number-ok: checked with isInvalidValue on the line above
+		if (seen === 0) first = v;
+		else if (v !== first) return false;
+		seen++;
+	}
+	return true;
+}
+
+/**
+ * Where the binned methods start their first bin: the first sample's bin on the binSize
+ * grid, floor(min(x) / binSize) * binSize.
+ *
+ * The bins used to start at t = 0 whatever the data. A record starting at -120 h lost every
+ * sample before 0 (binData drops points below the start: Qp 238 instead of 477), and
+ * Unix-second-sized times (~1.7e8) made binData walk hundreds of millions of empty bins
+ * (seconds of stall at ~1 GB, then a RangeError). Snapping to the binSize grid rather than
+ * to min(x) itself keeps every bin edge exactly where it was for data at t >= 0: leading
+ * empty bins only rotate Chi-squared's fold columns (Qp is unchanged), so existing results
+ * do not move. (Enright did count leading empty bins, as zero-valued pairs, which this
+ * removes for a record that starts after 0.)
+ *
+ * @param {number[]} xs  times, already filtered to finite values
+ * @param {number} binSize
+ * @returns {number}
+ */
+export function binOrigin(xs, binSize) {
+	let min = Infinity;
+	for (let i = 0; i < xs.length; i++) {
+		if (isInvalidValue(xs[i])) continue;
+		const v = Number(xs[i]); // Number-ok: checked with isInvalidValue on the line above
+		if (v < min) min = v;
+	}
+	if (!Number.isFinite(min) || !(binSize > 0) || !Number.isFinite(binSize)) return 0;
+	let origin = Math.floor(min / binSize) * binSize;
+	// floor(min / binSize) * binSize can round to just above min for a large min and a
+	// binSize that is not a power of two; binData would then drop the first sample.
+	if (origin > min) origin -= binSize;
+	return origin;
+}
 
 // ========== Periodogram Calculation Functions ==========
 
@@ -26,6 +90,8 @@ function calculateLombScarglePower(times, values, frequencies, onProgress) {
 	const { tt: t, yy: y } = validPairs(times, values);
 
 	if (t.length === 0) return new Array(frequencies.length).fill(0);
+	// No variation, no spectral power (ROB-13): see isFlatSeries.
+	if (isFlatSeries(y)) return new Array(frequencies.length).fill(0);
 
 	const yMean = kahanMean(y);
 
@@ -118,7 +184,9 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 	// true, so a raw null y was averaged into its bin as a zero instead of leaving
 	// the bin empty. See utils/validPairs.js.
 	const { tt, yy } = validPairs(times, values);
-	const binnedData = binData(tt, yy, binSize, 0);
+	// Flat data has no rhythm: zero power, not the ratio of two rounding residues (ROB-13).
+	if (isFlatSeries(yy)) return new Array(periods.length).fill(0);
+	const binnedData = binData(tt, yy, binSize, binOrigin(tt, binSize));
 	if (binnedData.bins.length === 0) {
 		return new Array(periods.length).fill(0);
 	}
@@ -206,7 +274,7 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 // the threshold quantile and the p-value — statistic, df, threshold and p only
 // calibrate together. Mirrored in tools/ancir_runtime.py and tools/ancir_runtime.R;
 // the pure-chisq-periodogram fixtures pin power, df and threshold across all three.
-function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
+function calculateChiSquaredPower(data, binSize, period, avgAll, denominator, flat = false) {
 	const colNum = Math.round(period / binSize);
 	// A zero/non-finite binSize makes colNum Infinity/NaN, and a tiny binSize makes
 	// it huge-but-finite; either would blow up the `Array.from({length: colNum})`
@@ -244,6 +312,11 @@ function calculateChiSquaredPower(data, binSize, period, avgAll, denominator) {
 	const df = nonEmptyCols - 1;
 	// Fewer than two occupied columns leaves nothing to compare: no statistic.
 	if (df < 1) return { power: NaN, df: NaN };
+
+	// Flat data (isFlatSeries): no between-column variation at all. Qp is 0, with the fold's
+	// real df, so the p-value is 1 and the threshold is still drawn (ROB-13). Computing it
+	// would divide one rounding residue by another and report Qp = N.
+	if (flat) return { power: 0, df };
 
 	const result = (numAcc.value * nonEmptyBins) / denominator;
 	return { power: isFinite(result) ? result : NaN, df };
@@ -289,6 +362,7 @@ export function foldGrid(periods, binSize, periodMin, periodMax) {
 export function runPeriodogramCalculation(params, onProgress) {
 	let out = { x: [], y: [], threshold: [], pvalue: [], df: [] };
 	let binnedData = { bins: [], y_out: [] };
+	let chiFlat = false;
 
 	if (params.method === 'Chi-squared') {
 		if (!params.yData) {
@@ -299,7 +373,8 @@ export function runPeriodogramCalculation(params, onProgress) {
 		// would otherwise be aggregated into its bin as a zero (isNaN(null) is false), pulling
 		// the bin mean toward 0. This used to filter on x only.
 		const { tt: binX, yy: binY } = validPairs(params.xData, params.yData);
-		binnedData = binData(binX, binY, params.binSize, 0);
+		chiFlat = isFlatSeries(binY);
+		binnedData = binData(binX, binY, params.binSize, binOrigin(binX, params.binSize));
 		if (binnedData.bins.length === 0) {
 			return { x: [], y: [], threshold: [], pvalue: [], df: [] };
 		}
@@ -347,7 +422,8 @@ export function runPeriodogramCalculation(params, onProgress) {
 				params.binSize,
 				periods[p],
 				avgAll,
-				denomAcc.value
+				denomAcc.value,
+				chiFlat
 			);
 			if (!(df >= 1) || !Number.isFinite(qp)) {
 				power[p] = NaN;
@@ -357,7 +433,10 @@ export function runPeriodogramCalculation(params, onProgress) {
 			} else {
 				power[p] = qp;
 				dfOut[p] = df;
-				pvalue[p] = 1 - cdf_chisq(qp, df);
+				// Upper tail computed directly (SPEC-14): 1 - CDF underflows to exactly 0 for a
+				// strong rhythm (Qp 470.9 on 23 df gave 0; the tail is 3.9e-85), and that 0 went
+				// to the CSV export and to any FDR step downstream.
+				pvalue[p] = chisqSf(qp, df);
 			}
 
 			if (onProgress && p % 10 === 0) {

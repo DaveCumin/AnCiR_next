@@ -107,8 +107,9 @@
 		// Reuse baked data from an imported session; otherwise compute now.
 		if (outKey >= 0 && core.rawData.has(outKey) && core.rawData.get(outKey).length > 0) {
 			p.args.valid = true;
-			const stale = (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0;
-			if (!stale) memo.hash = getHash; // don't recompute valid, current data
+			// The saved outputs only fill the panel until the compute effect runs; they are
+			// never trusted as current (the file may predate a fix, or the inputs), so the memo
+			// hash is not pinned here and the node recomputes from its inputs once mounted.
 		} else {
 			recompute();
 		}

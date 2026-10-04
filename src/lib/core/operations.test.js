@@ -65,7 +65,9 @@ describe('applyOp: plot ops', () => {
 		expect(inv).toEqual({ kind: 'removePlot', id: core.plots[0].id });
 	});
 
-	it('removePlot deletes a plot and returns addPlot as inverse', () => {
+	// Removals cascade (a plot takes its metric columns, a column its references), so their
+	// inverse is a graph patch rather than a single add; what matters is what it restores.
+	it('removePlot deletes a plot and its inverse restores it with the same id', () => {
 		applyOp({
 			kind: 'addPlot',
 			plotData: { type: 'scatterplot', x: 10, y: 20, width: 400, height: 250 }
@@ -73,8 +75,8 @@ describe('applyOp: plot ops', () => {
 		const id = core.plots[0].id;
 		const inv = applyOp({ kind: 'removePlot', id });
 		expect(core.plots).toHaveLength(0);
-		expect(inv.kind).toBe('addPlot');
-		expect(inv.plotData.id).toBe(id);
+		applyOp(inv);
+		expect(core.plots.map((p) => [p.id, p.x, p.y, p.width])).toEqual([[id, 10, 20, 400]]);
 	});
 
 	it('setPlotProperty changes a key and returns the reverse', () => {
@@ -123,8 +125,8 @@ describe('applyOp: column + process ops', () => {
 		const id = core.data[0].id;
 		const inv = applyOp({ kind: 'removeColumn', id });
 		expect(core.data).toHaveLength(0);
-		expect(inv.kind).toBe('addColumn');
-		expect(inv.columnData.id).toBe(id);
+		applyOp(inv);
+		expect(core.data.map((c) => [c.id, c.name])).toEqual([[id, 'X']]);
 	});
 
 	it('addProcess appends and returns removeProcess', () => {
@@ -193,8 +195,8 @@ describe('applyOp: free tableprocess ops', () => {
 		const id = core.tableProcesses[0].id;
 		const inv = applyOp({ kind: 'removeFreeTableProcess', tpId: id });
 		expect(core.tableProcesses).toHaveLength(0);
-		expect(inv.kind).toBe('addFreeTableProcess');
-		expect(inv.tpId).toBe(id);
+		applyOp(inv);
+		expect(core.tableProcesses.map((tp) => [tp.id, tp.args.binSize])).toEqual([[id, 60]]);
 	});
 
 	it('setFreeTableProcessArg returns the previous value', () => {

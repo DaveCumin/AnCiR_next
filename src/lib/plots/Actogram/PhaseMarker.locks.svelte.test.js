@@ -90,7 +90,8 @@ describe('the four combinations', () => {
 		const m = manualBlock(23.5, 6, { noise });
 		expect(m.linearRegression.slope).toBeGreaterThan(23.3);
 		expect(m.linearRegression.slope).toBeLessThan(23.7);
-		expect(m.linearRegression.rSquared).toBeGreaterThan(0.999);
+		// Time-of-day frame (FIT-4): the 2.5 h drift against 0.3 h noise.
+		expect(m.linearRegression.rSquared).toBeGreaterThan(0.85);
 	});
 
 	it('τ fixed / θ fitted re-fits the phase and keeps the fixed τ', () => {

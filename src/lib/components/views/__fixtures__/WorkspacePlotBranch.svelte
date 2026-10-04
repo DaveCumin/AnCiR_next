@@ -6,6 +6,8 @@
 	// the workspace swap between the two, as the real view does.
 	import FacetGroup from '$lib/components/views/FacetGroup.svelte';
 	import { appConsts } from '$lib/core/core.svelte.js';
+	import ComputeClaim from '$lib/components/views/ComputeClaim.svelte';
+	import { computeKey } from '$lib/core/computeOwners.svelte.js';
 
 	let { plot } = $props();
 	const PlotComp = $derived(appConsts.plotMap.get(plot?.type)?.plot ?? null);
@@ -15,4 +17,5 @@
 	<FacetGroup generator={plot} />
 {:else if PlotComp}
 	<PlotComp theData={plot} which="plot" />
+	<ComputeClaim computeKey={computeKey('plot', plot.id)} />
 {/if}

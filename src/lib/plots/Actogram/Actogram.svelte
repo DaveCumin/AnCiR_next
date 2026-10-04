@@ -5,6 +5,7 @@
 	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
 	import { resolveStyle } from '$lib/plots/figureStyle.js';
 	import Hist from '$lib/components/plotbits/Hist.svelte';
+	import { keepSameBins, cachedRowBins } from './stableBins.js';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
@@ -145,6 +146,9 @@
 		});
 
 		// New: Calculate bins with their actual boundaries
+		// The previous allBins, so a re-derive with the same values returns the SAME array
+		// (see stableBins.js; review ROB-9). Plain field: written only inside the derive.
+		#prevBins = null;
 		allBins = $derived.by(() => {
 			const tempx = this.x.hoursSinceStart ?? [];
 			const tempy = this.y.getData() ?? [];
@@ -178,7 +182,10 @@
 				});
 			}
 
-			return bins;
+			// Same values as last time: hand back the same array so nothing downstream
+			// (binsByPeriod, every row's bars) re-runs.
+			this.#prevBins = keepSameBins(this.#prevBins, bins);
+			return this.#prevBins;
 		});
 
 		// New: Split bins by period, creating segments where bins cross period boundaries
@@ -1184,7 +1191,7 @@
 			<div class="control-input-vertical">
 				<div class="control-input">
 					<p>Start time</p>
-					<DateTimeHrs bind:value={theData.startTime} />
+					<DateTimeHrs bind:value={theData.startTime} label="Start time" />
 				</div>
 			</div>
 
@@ -1264,9 +1271,10 @@
 		<div class="control-component marker-rules">
 			<div class="control-data-title with-icon">
 				<div style="display: flex; align-items: center; justify-content: flex-start; margin: 0;">
-					<button class="icon">
+					<!-- Decoration beside the heading, not a control: it did nothing as a button. -->
+					<span class="decor-icon" aria-hidden="true">
 						<Icon name="pin" width={18} height={18} className="control-component-title-icon" />
-					</button>
+					</span>
 					<p>Marker rules</p>
 				</div>
 				<div class="control-component-title-icons">
@@ -1353,14 +1361,14 @@
 							<div
 								style="display: flex; align-items: center; justify-content: flex-start; margin: 0;"
 							>
-								<button class="icon">
+								<span class="decor-icon" aria-hidden="true">
 									<Icon
 										name="pin"
 										width={18}
 										height={18}
 										className="control-component-title-icon"
 									/>
-								</button>
+								</span>
 								<p>Markers and lines</p>
 							</div>
 
@@ -1469,19 +1477,26 @@
 			{#if datum.draw}
 				<!-- Make the histogram for each period using new xStart/xEnd format -->
 				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day (day)}
-					{@const thisScale = scaleLinear()
-						.domain([theData.plot.ylims[d][day][0], theData.plot.ylims[d][day][1]])
-						.range([theData.plot.eachplotheight, 0])}
+					<!-- The y limits are pulled out as NUMBERS first. ylims is rebuilt (new arrays)
+					     whenever ANY series changes, so a scale built straight from it was a new
+					     object for every row of every series, and every Hist redrew: loading N
+					     series redrew N x rows bar sets N times over (review ROB-9). A primitive
+					     @const only propagates when its value really changes. -->
+					{@const yLo = theData.plot.ylims[d][day][0]}
+					{@const yHi = theData.plot.ylims[d][day][1]}
+					{@const rowHeight = theData.plot.eachplotheight}
+					{@const thisScale = scaleLinear().domain([yLo, yHi]).range([rowHeight, 0])}
 
-					{@const bins = getBinsForPeriods(
+					{@const bins = cachedRowBins(
 						datum.binsByPeriod,
 						day,
 						day + theData.plot.doublePlot,
-						theData.plot.periodHrs
+						theData.plot.periodHrs,
+						getBinsForPeriods
 					)}
-					{@const rowXscale = scaleLinear()
-						.domain([0, theData.plot.periodHrs * theData.plot.doublePlot])
-						.range([0, theData.plot.plotwidth])}
+					{@const rowSpan = theData.plot.periodHrs * theData.plot.doublePlot}
+					{@const rowWidth = theData.plot.plotwidth}
+					{@const rowXscale = scaleLinear().domain([0, rowSpan]).range([0, rowWidth])}
 					{@const rowYoffset =
 						theData.plot.padding.top +
 						day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
@@ -1522,6 +1537,7 @@
 								xtype="string"
 								xFormatter={actogramXFormatter}
 								siblings={actogramSiblings}
+								compact={true}
 							/>
 						{/if}
 					{/if}
@@ -1682,5 +1698,12 @@
 		margin: 0 0 var(--space-2);
 		font-size: var(--font-xs);
 		color: var(--color-lightness-45);
+	}
+
+	/* The heading's pin icon: laid out as the icon buttons beside it are, but not a control. */
+	.decor-icon {
+		display: flex;
+		justify-content: center;
+		align-items: center;
 	}
 </style>

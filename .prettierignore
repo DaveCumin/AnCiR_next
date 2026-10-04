@@ -8,6 +8,7 @@ bun.lockb
 # Build output (tracked so Pages can serve it, but it is a bundler artefact)
 build/
 static/handbook.html
+static/animations/
 static/ancir-python-export.js
 static/ancir-r-export.js
 

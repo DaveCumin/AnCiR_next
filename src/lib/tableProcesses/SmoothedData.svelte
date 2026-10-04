@@ -4,6 +4,7 @@
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
+	import { validPairs } from '$lib/utils/validPairs.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -81,9 +82,11 @@
 			if (!yCol) continue;
 			const yData = yCol.getData();
 
-			const filteredData = xData
-				.map((x, i) => ({ x, y: yData[i] }))
-				.filter((d) => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y));
+			// Missing rows are dropped by the house rule and the rest converted with Number().
+			// `d.y != null && !isNaN(d.y)` let ' ' and '' through (as 0) and kept numeric strings as
+			// strings, which the moving average then concatenated (ROB-8).
+			const { tt, yy } = validPairs(xData, yData);
+			const filteredData = tt.map((x, i) => ({ x: Number(x), y: Number(yy[i]) }));
 
 			if (filteredData.length < 3) continue;
 
@@ -174,6 +177,9 @@
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import { createComputeRunner } from '$lib/core/asyncCompute.js';
+	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
@@ -226,7 +232,8 @@
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
 	// and rebuilds this component) does not recompute unchanged inputs.
 	const memo = nodeMemo(p, 'tableprocess');
-	let _calcToken = 0;
+	// The message of the last failed compute, shown with a Retry (ROB-11).
+	let calcError = $state(null);
 
 	// Mirror the panel state into the memo so the next mount can restore it.
 	// Guarded on undefined: a fresh instance that has not computed yet must not
@@ -248,16 +255,7 @@
 		if (!mounted) return;
 		if (dataHash !== memo.hash) {
 			memo.hash = dataHash; // read before untrack so it's tracked
-			const token = ++_calcToken;
-			setTimeout(async () => {
-				if (token !== _calcToken) return; // superseded by a newer request
-				previewStart = 1;
-				const promise = untrack(() => smootheddata(p.args));
-				const [data, valid] = await promise;
-				if (token !== _calcToken) return; // re-check after await
-				smoothedResult = data;
-				p.args.valid = valid;
-			}, 0);
+			untrack(() => getSmoothedData());
 		}
 	});
 
@@ -265,18 +263,28 @@
 		if (syncYColumns() | syncResidColumns()) getSmoothedData();
 	}
 
+	// try/finally, error state, success-only memo commit: see core/asyncCompute.js.
+	const runner = createComputeRunner({
+		memo,
+		node: p,
+		label: 'Smoothing',
+		setError: (m) => (calcError = m)
+	});
 	function getSmoothedData() {
 		previewStart = 1;
-		const token = ++_calcToken;
-		setTimeout(async () => {
-			if (token !== _calcToken) return;
-			const promise = untrack(() => smootheddata(p.args));
-			const [data, valid] = await promise;
-			if (token !== _calcToken) return; // re-check after await
-			smoothedResult = data;
-			p.args.valid = valid;
-			memo.hash = getHash;
-		}, 0);
+		runner.run(
+			untrack(() => getHash),
+			() => untrack(() => smootheddata(p.args)),
+			([data, valid]) => {
+				smoothedResult = data;
+				p.args.valid = valid;
+			},
+			() => {
+				smoothedResult = undefined;
+				p.args.valid = false;
+				clearOutputColumns(p.args.out);
+			}
+		);
 	}
 
 	// Exclude own output column IDs from the Y selector
@@ -333,7 +341,9 @@
 				}
 				smoothedResult = { x_out: core.rawData.get(xKey), y_results };
 				p.args.valid = true;
-				memo.hash = getHash;
+				// The saved outputs only fill the panel until the compute effect runs; they are
+				// never trusted as current (the file may predate a fix, or the inputs), so the memo
+				// hash is not pinned here and the node recomputes from its inputs once mounted.
 			}
 		}
 		mounted = true;
@@ -463,6 +473,9 @@
 	{/if}
 </div>
 
+{#if calcError}
+	<ErrorBox title="The smoothing failed." message={calcError} onretry={getSmoothedData} />
+{/if}
 {#key smoothedResult}
 	{#if p.args.valid && p.args.out.smoothedx != -1}
 		{@const xout = getColumnById(p.args.out.smoothedx)}

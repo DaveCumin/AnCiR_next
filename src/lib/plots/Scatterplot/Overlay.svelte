@@ -843,7 +843,11 @@
 				<p class="overlay-or">or pick times:</p>
 				{#each ch?.typed ?? [] as v, i (i)}
 					<div class="overlay-typed-time">
-						<DateTimeHrs value={v} onChange={(val) => setTypedAt(key, i, val)} />
+						<DateTimeHrs
+							value={v}
+							onChange={(val) => setTypedAt(key, i, val)}
+							label={`Time ${i + 1}`}
+						/>
 						<button class="icon" title="Remove this value" onclick={() => removeTypedAt(key, i)}>
 							<Icon name="trash" width={14} height={14} className="series-block-icon" />
 						</button>
@@ -881,7 +885,7 @@
 		<div class="control-input">
 			<p>Start Time (hours)</p>
 			{#if isTimeX}
-				<DateTimeHrs step="0.5" bind:value={overlay.startTimeHours} />
+				<DateTimeHrs step="0.5" bind:value={overlay.startTimeHours} label="Start time" />
 			{:else}
 				<NumberWithUnits step="0.5" bind:value={overlay.startTimeHours} />
 			{/if}

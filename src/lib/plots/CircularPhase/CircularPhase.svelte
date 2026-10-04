@@ -161,6 +161,11 @@
 		set padding(v) {
 			this.#padding = v;
 		}
+		// The stored figure padding, for the Padding controls. While a node view is mounted
+		// `padding` reads back a derived, scaled copy, so an edit bound there was lost.
+		get figurePadding() {
+			return this.#padding;
+		}
 
 		// True when any series has a wired time column (value-radius clock mode).
 		// A timed series' angles are always expressed in period-space HOURS
@@ -200,7 +205,8 @@
 		// spare room if either side does (costing the plot nothing); otherwise on the side that
 		// shrinks the square least. 'Outside Right' chosen explicitly always goes right.
 		legendOutside(box, explicit) {
-			const M = LEGEND_MARGIN;
+			// The view's inset (scaled in a workflow node), carried on the box.
+			const M = box.margin ?? LEGEND_MARGIN;
 			const W = this.availWidth;
 			const H = this.availHeight;
 			const needW = box.width + M;

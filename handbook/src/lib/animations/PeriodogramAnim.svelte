@@ -1,6 +1,15 @@
 <script>
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, drawAxes, drawHGrid, seededRNG, initPalette } from '$lib/animUtils.js';
+	import {
+		C,
+		setupCanvas,
+		drawAxes,
+		drawHGrid,
+		seededRNG,
+		initPalette,
+		canvasSize,
+		observeResize
+	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
 
@@ -72,8 +81,7 @@
 
 	function drawTest(period) {
 		const ctx = cTest.getContext('2d');
-		const W = cTest.offsetWidth,
-			H = cTest.offsetHeight;
+		const { W, H } = canvasSize(cTest);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 12,
@@ -109,8 +117,7 @@
 
 	function drawOverlay(period) {
 		const ctx = cOverlay.getContext('2d');
-		const W = cOverlay.offsetWidth,
-			H = cOverlay.offsetHeight;
+		const { W, H } = canvasSize(cOverlay);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 32,
@@ -177,8 +184,7 @@
 
 	function drawPeriodogram(upTo) {
 		const ctx = cPgram.getContext('2d');
-		const W = cPgram.offsetWidth,
-			H = cPgram.offsetHeight;
+		const { W, H } = canvasSize(cPgram);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 48,
@@ -308,9 +314,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cTest, cOverlay, cPgram], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});

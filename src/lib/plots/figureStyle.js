@@ -267,7 +267,8 @@ export function widthMm(style) {
  *
  * @param {Record<string, any> | null | undefined} style
  * @returns {{fontFamily: string, basePt: number, widthMm: number, widthPx: number,
- *            sizes: Record<string, number>}}
+ *            sizes: Record<string, number>, fontScale: number, legendBox: boolean,
+ *            backgroundColour: string}}
  */
 export function resolveStyle(style) {
 	const pt = basePt(style);
@@ -305,6 +306,10 @@ export function resolveStyle(style) {
 		widthMm: mm,
 		widthPx: mm * PX_PER_MM,
 		sizes,
+		// The view multiplier itself (validated, 1 when absent), for components that draw
+		// fixed-pixel geometry beside the text and must shrink it in step: the legend's
+		// padding, swatch column and inset (see legendLayout.legendChrome).
+		fontScale,
 		// Pass-through, not derived. Components consume ONLY this object, so a flag
 		// they need has to appear here or they would have to reach for the raw style
 		// as well and there would be two ways in. Defaulted here too, so a component

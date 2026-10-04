@@ -187,13 +187,7 @@
 <script>
 	import { resolveStyle } from '$lib/plots/figureStyle.js';
 	import { getPointPath } from './pointShapes.js';
-	import {
-		measureLabelWidths,
-		legendBoxSize,
-		LEGEND_ICON_W,
-		LEGEND_ICON_GAP,
-		LEGEND_H_SPACING
-	} from './legendLayout.js';
+	import { measureLabelWidths, legendBoxSize, legendChrome } from './legendLayout.js';
 
 	let {
 		legendData,
@@ -239,7 +233,19 @@
 	// legend size. Every use goes through this — the box is sized from measured text
 	// widths and line heights, so a null leaking into that maths would become NaN and
 	// collapse the legend rather than merely mis-size it.
-	const legendFontSize = $derived(legendData.fontSize ?? resolved.sizes.legend);
+	//
+	// In a workflow node the view's style carries a fontScale, and the WHOLE legend shrinks
+	// by it (legendLayout.legendChrome): the figure size already includes it, and an override
+	// is in figure px so it is scaled here. Must match LegendAutoLayout.fontPx, which sizes
+	// the box a plot reserves.
+	const legendFontSize = $derived(
+		typeof legendData.fontSize === 'number' && Number.isFinite(legendData.fontSize)
+			? legendData.fontSize * resolved.fontScale
+			: resolved.sizes.legend
+	);
+	// The legend's fixed-pixel geometry (inset, swatch column, gap, spacing) at this view's
+	// scale. Identity at figure size.
+	const chrome = $derived(legendChrome(resolved.fontScale));
 
 	// The control edits a LOCAL mirror, not legendData.fontSize directly.
 	//
@@ -263,11 +269,12 @@
 		lastAutoFraction = null;
 		if (pos === 'auto' && autoPlacement && !autoPlacement.outside) {
 			const { width, height } = legendDimensions;
-			const spanX = plotWidth - width - LEGEND_MARGIN * 2;
-			const spanY = plotHeight - height - LEGEND_MARGIN * 2;
+			const m = chrome.margin;
+			const spanX = plotWidth - width - m * 2;
+			const spanY = plotHeight - height - m * 2;
 			lastAutoFraction = {
-				x: spanX > 0 ? Math.min(1, Math.max(0, (autoPlacement.x - LEGEND_MARGIN) / spanX)) : 0,
-				y: spanY > 0 ? Math.min(1, Math.max(0, (autoPlacement.y - LEGEND_MARGIN) / spanY)) : 0
+				x: spanX > 0 ? Math.min(1, Math.max(0, (autoPlacement.x - m) / spanX)) : 0,
+				y: spanY > 0 ? Math.min(1, Math.max(0, (autoPlacement.y - m) / spanY)) : 0
 			};
 		}
 	});
@@ -297,8 +304,9 @@
 	);
 
 	// A writable derived: shows the size being drawn, and a typed value holds until the
-	// next change of legendFontSize (which the onInput below makes immediately).
-	let legendSizeInput = $derived(Math.round(legendFontSize * 10) / 10);
+	// next change of legendFontSize (which the onInput below makes immediately). In FIGURE
+	// px: an override is stored unscaled, so the box must not show a node's scaled size.
+	let legendSizeInput = $derived(Math.round((legendFontSize / resolved.fontScale) * 10) / 10);
 	// Whether to draw the box at all. The border colour and width stay on
 	// legendData: this flag is house style, those are per-legend refinements.
 	const showBox = $derived(resolved.legendBox !== false);
@@ -318,15 +326,20 @@
 	);
 
 	let legendDimensions = $derived.by(() => {
-		if (!legendData.show || items.length === 0) return { width: 0, height: 0, contentHeight: 0 };
-		const { width, height } = legendBoxSize({
+		if (!legendData.show || items.length === 0) {
+			return { width: 0, height: 0, contentHeight: 0, lineH: 0, padding: 0 };
+		}
+		const { width, height, lineH, padding } = legendBoxSize({
 			labelWidths,
 			fontPx: legendFontSize,
 			padding: legendData.padding,
 			itemSpacing: legendData.itemSpacing,
-			orientation: legendData.orientation
+			orientation: legendData.orientation,
+			scale: chrome.scale
 		});
-		return { width, height, contentHeight: legendFontSize };
+		// `lineH` and `padding` are the view-scaled values the box was built with; the items
+		// are laid out with the same ones so they fill the box exactly.
+		return { width, height, contentHeight: legendFontSize, lineH, padding };
 	});
 
 	// Calculate legend position
@@ -334,7 +347,7 @@
 		if (!legendData.show) return { x: 0, y: 0 };
 
 		const { width, height } = legendDimensions;
-		const margin = LEGEND_MARGIN;
+		const margin = chrome.margin;
 
 		switch (legendData.position) {
 			case 'auto':
@@ -388,11 +401,11 @@
 			return [];
 		}
 
-		const iconW = LEGEND_ICON_W;
-		const gap = LEGEND_ICON_GAP;
-		const spacing = LEGEND_H_SPACING;
+		const iconW = chrome.iconW;
+		const gap = chrome.iconGap;
+		const spacing = chrome.hSpacing;
 		const positions = [];
-		let cumulative = legendData.padding;
+		let cumulative = legendDimensions.padding;
 
 		for (let i = 0; i < items.length; i++) {
 			const labelW = labelWidths[i] ?? 0;
@@ -408,7 +421,13 @@
 	<div class="control-component">
 		<div class="control-component-title">
 			<p>Legend</p>
-			<button class="icon" onclick={() => (legendData.show = !legendData.show)}>
+			<button
+				class="icon"
+				type="button"
+				aria-label="Show legend"
+				aria-pressed={!!legendData.show}
+				onclick={() => (legendData.show = !legendData.show)}
+			>
 				{#if !legendData.show}
 					<Icon name="eye-slash" width={16} height={16} />
 				{:else}
@@ -494,40 +513,45 @@
 
 			<!-- items -->
 			{#each items as item, i (i)}
-				{@const lineH = legendFontSize + legendData.itemSpacing + 4}
-				{@const iconW = LEGEND_ICON_W}
-				{@const gap = LEGEND_ICON_GAP}
+				{@const lineH = legendDimensions.lineH}
+				{@const iconW = chrome.iconW}
+				{@const gap = chrome.iconGap}
+				<!-- Swatches are drawn in figure px and scaled as a group, so a node's swatch is
+				     the figure's in miniature and stays inside its (scaled) column. -->
+				{@const swatchScale = chrome.scale === 1 ? null : `scale(${chrome.scale})`}
 
 				{#if legendData.orientation === 'vertical'}
-					{@const itemX = legendData.padding}
-					{@const itemY = legendData.padding + i * lineH + lineH / 2}
+					{@const itemX = legendDimensions.padding}
+					{@const itemY = legendDimensions.padding + i * lineH + lineH / 2}
 					<g transform="translate({itemX}, {itemY})">
-						{#each item.elements as el, j (j)}
-							{#if el.type === 'line'}
-								<line
-									x1={2}
-									y1={0}
-									x2={18}
-									y2={0}
-									stroke={el.color}
-									stroke-width={el.strokeWidth}
-									stroke-dasharray={dashFor(el.stroke)}
-								/>
-							{:else if el.type === 'points'}
-								<path d={getPointPath(el.shape || 'circle', 10, 0, el.size)} fill={el.color} />
-							{:else if el.type === 'boxplot'}
-								<rect
-									x={3}
-									y={-6}
-									width={14}
-									height={12}
-									fill={el.fillColor ?? 'none'}
-									fill-opacity={el.fillOpacity ?? 0.3}
-									stroke={el.color}
-									stroke-width={2}
-								/>
-							{/if}
-						{/each}
+						<g transform={swatchScale}>
+							{#each item.elements as el, j (j)}
+								{#if el.type === 'line'}
+									<line
+										x1={2}
+										y1={0}
+										x2={18}
+										y2={0}
+										stroke={el.color}
+										stroke-width={el.strokeWidth}
+										stroke-dasharray={dashFor(el.stroke)}
+									/>
+								{:else if el.type === 'points'}
+									<path d={getPointPath(el.shape || 'circle', 10, 0, el.size)} fill={el.color} />
+								{:else if el.type === 'boxplot'}
+									<rect
+										x={3}
+										y={-6}
+										width={14}
+										height={12}
+										fill={el.fillColor ?? 'none'}
+										fill-opacity={el.fillOpacity ?? 0.3}
+										stroke={el.color}
+										stroke-width={2}
+									/>
+								{/if}
+							{/each}
+						</g>
 						<text
 							x={iconW + gap}
 							y={0}
@@ -541,36 +565,38 @@
 					</g>
 				{:else}
 					<!-- HORIZONTAL -->
-					{@const startX = xPositions[i] ?? legendData.padding}
+					{@const startX = xPositions[i] ?? legendDimensions.padding}
 					{@const itemY = legendDimensions.height / 2}
 
 					<g transform="translate({startX}, {itemY})">
-						{#each item.elements as el, j (j)}
-							{#if el.type === 'line'}
-								<line
-									x1={2}
-									y1={0}
-									x2={18}
-									y2={0}
-									stroke={el.color}
-									stroke-width={el.strokeWidth}
-									stroke-dasharray={dashFor(el.stroke)}
-								/>
-							{:else if el.type === 'points'}
-								<path d={getPointPath(el.shape || 'circle', 10, 0, el.size)} fill={el.color} />
-							{:else if el.type === 'boxplot'}
-								<rect
-									x={3}
-									y={-6}
-									width={14}
-									height={12}
-									fill={el.fillColor ?? 'none'}
-									fill-opacity={el.fillOpacity ?? 0.3}
-									stroke={el.color}
-									stroke-width={2}
-								/>
-							{/if}
-						{/each}
+						<g transform={swatchScale}>
+							{#each item.elements as el, j (j)}
+								{#if el.type === 'line'}
+									<line
+										x1={2}
+										y1={0}
+										x2={18}
+										y2={0}
+										stroke={el.color}
+										stroke-width={el.strokeWidth}
+										stroke-dasharray={dashFor(el.stroke)}
+									/>
+								{:else if el.type === 'points'}
+									<path d={getPointPath(el.shape || 'circle', 10, 0, el.size)} fill={el.color} />
+								{:else if el.type === 'boxplot'}
+									<rect
+										x={3}
+										y={-6}
+										width={14}
+										height={12}
+										fill={el.fillColor ?? 'none'}
+										fill-opacity={el.fillOpacity ?? 0.3}
+										stroke={el.color}
+										stroke-width={2}
+									/>
+								{/if}
+							{/each}
+						</g>
 						<text
 							x={iconW + gap}
 							y={0}

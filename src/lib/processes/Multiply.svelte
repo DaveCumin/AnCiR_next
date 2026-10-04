@@ -1,9 +1,12 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 
+	// Missing in, missing (null) out: `i * value` read null and '' as 0
+	// (STAT-6). Missing is the house rule (isInvalidValue); a real 0 is data.
 	export function multiply(x, args) {
 		const value = Number(args.value);
-		return x.map((i) => i * value);
+		return x.map((i) => (isInvalidValue(i) ? null : Number(i) * value));
 	}
 	const multiply_defaults = new Map([['value', { val: Number(1) }]]);
 

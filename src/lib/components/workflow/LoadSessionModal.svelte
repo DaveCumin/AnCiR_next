@@ -10,6 +10,7 @@
 	import { appState } from '$lib/core/core.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
+	import { confirmReplaceSession } from '$lib/core/sessionLoad.svelte.js';
 	import { importDataUrlDirect } from '$lib/core/dataSourceActions.js';
 	import { fetchAppAsset, describeAssetError } from '$lib/start/offline.js';
 
@@ -134,6 +135,12 @@
 	});
 
 	async function loadAndImport(jsonData, label) {
+		// Ask before replacing open work (ROB-1). Cancelling keeps this modal open where it was.
+		if (!(await confirmReplaceSession(label ? `"${label}"` : undefined))) {
+			loading = false;
+			activeExampleUrl = null;
+			return;
+		}
 		if (dev) performance.mark('importSession-start');
 		loading = true;
 		loadError = '';
@@ -150,7 +157,8 @@
 			});
 			showModal = false;
 		} catch (err) {
-			loadError = `Failed to import session: ${err.message}`;
+			// importJson either loads the whole session or leaves the open one untouched.
+			loadError = `Failed to import session: ${err.message} Your open session was not changed.`;
 			addNotification(loadError);
 		} finally {
 			appState.loadingState.isLoading = false;

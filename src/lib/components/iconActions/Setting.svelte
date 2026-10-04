@@ -10,6 +10,17 @@
 	import { migrateFacetChildren } from '$lib/core/facetMigration.js';
 	import { migratePhaseMarkerStoredValues } from '$lib/core/phaseMarkerStoredValueMigration.js';
 	import { childDefaultsFromRegistry } from '$lib/core/facetMigrationDefaults.js';
+	import { history } from '$lib/core/opHistory.svelte.js';
+	import { paramDiffWatcher } from '$lib/core/paramDiffWatcher.svelte.js';
+	import {
+		NotASessionError,
+		sessionShapeProblem,
+		snapshotSession,
+		restoreSession,
+		compareAppVersions
+	} from '$lib/core/sessionLoad.svelte.js';
+	import { markSessionSaved } from '$lib/core/unsavedChanges.svelte.js';
+	import { clearCrashSnapshot } from '$lib/core/errorReporter.js';
 	export function exportJson() {
 		try {
 			// Get JSON string and validate
@@ -38,6 +49,11 @@
 
 			// Programmatically trigger click
 			a.click();
+
+			// The open session is now in a file: nothing to warn about on close (ROB-5), and
+			// a crash copy kept from earlier is older than the file, so it is not offered back.
+			markSessionSaved();
+			clearCrashSnapshot();
 
 			// Clean up
 			setTimeout(() => {
@@ -198,7 +214,94 @@
 		await new Promise((r) => requestAnimationFrame(() => r()));
 	}
 
+	// One load at a time: two interleaved builds would each empty `core` under the other.
+	let loadInFlight = false;
+
+	/** Let the effects a load (or a rollback) set off run, so their writes land inside it. */
+	async function settle() {
+		await tick();
+		await new Promise((r) => setTimeout(r, 0));
+		await tick();
+	}
+
+	/**
+	 * Load a parsed session into `core`, replacing the open one. The ONLY session-load entry
+	 * point: the URL load, the start screen, the load modal, the classroom tours and drag-drop
+	 * all call it, so the guarantees below hold everywhere.
+	 *
+	 * All or nothing (review ROB-1). A value that is not a session throws NotASessionError before
+	 * anything changes. A session that fails half way through its build is rolled back: the
+	 * previous session's objects are put back by identity, so the user keeps exactly what they
+	 * had. Nothing here asks the user; entry points confirm first (confirmReplaceSession).
+	 *
+	 * History (ROB-2, ROB-17). The open session's undo stack cannot apply to the incoming one (ids
+	 * restart, so its ops would hit unrelated nodes), so it is cleared when the load succeeds, and
+	 * undo, redo and recording are off while the load runs, which also keeps the load's own writes
+	 * off the stack. A failed load leaves the stack as it was, matching the restored session.
+	 *
+	 * Plots that cannot be rebuilt (ROB-10) are reported, and their saved JSON is kept in
+	 * `core.unrestoredPlots`, which is saved with the session, so a re-save cannot delete them
+	 * and a later version that understands them restores them.
+	 */
 	export async function importJson(jsonData, onProgress) {
+		const problem = sessionShapeProblem(jsonData);
+		if (problem) throw new NotASessionError(problem);
+		if (loadInFlight) {
+			throw new Error('Another session is still loading. Wait for it to finish, then try again.');
+		}
+		loadInFlight = true;
+		history.beginLoad();
+		const snap = snapshotSession();
+		try {
+			const report = await buildSession(jsonData, onProgress);
+			await settle();
+			paramDiffWatcher.rebaseSnapshot();
+			history.clear();
+			// What is open now is exactly a file the user has: not unsaved work (ROB-5).
+			markSessionSaved();
+			reportLoad(jsonData, report);
+		} catch (err) {
+			restoreSession(snap);
+			// The build may have bumped the id counters past the incoming session's ids; re-sync to
+			// what is actually open. Cached results were cleared for the incoming session, and the
+			// restored nodes recompute into a fresh memo.
+			syncNodeIdCounters();
+			memoClear();
+			await settle();
+			paramDiffWatcher.rebaseSnapshot();
+			throw err;
+		} finally {
+			history.endLoad();
+			loadInFlight = false;
+		}
+	}
+
+	/** The warnings a successful load owes the user. */
+	function reportLoad(jsonData, report) {
+		const failed = report.unrestoredPlots;
+		if (failed.length > 0) {
+			const types = [...new Set(failed.map((p) => p?.type ?? 'unknown'))].join(', ');
+			const n = failed.length;
+			addNotification(
+				`${n} plot${n === 1 ? '' : 's'} could not be restored (type: ${types}). ` +
+					`${n === 1 ? 'It is' : 'They are'} kept in the session and will be saved with it, ` +
+					`so nothing is lost if you save.`,
+				'warning',
+				0
+			);
+		}
+		if (compareAppVersions(jsonData.version, appConsts.version) > 0) {
+			addNotification(
+				`This session was saved by a newer version of AnCiR (${jsonData.version}; this is ` +
+					`${appConsts.version}). Parts of it may not load, and re-saving here may drop ` +
+					`settings this version does not know about.`,
+				'warning',
+				0
+			);
+		}
+	}
+
+	async function buildSession(jsonData, onProgress) {
 		// Legacy facet CHILD plots (sessions saved before facets became views) fold into their
 		// generator here, before anything is built: axis limits become per-panel overrides,
 		// actogram markers move onto the generator's series, anything else is reported. The
@@ -222,6 +325,8 @@
 			jsonData = migrated.json;
 			for (const w of migrated.warnings) addNotification(w, 'warning', 0);
 		}
+		// Plots whose saved JSON could not be rebuilt; kept verbatim (see importJson).
+		core.unrestoredPlots = [];
 		//reset existing workflow
 		// Node ids restart from 1 in the incoming session, so any cached compute
 		// result from the previous one would be served to a completely unrelated
@@ -276,6 +381,17 @@
 		// column looks like, which is exactly how monochrome came to be one-way.
 		// Per-category colours, same shape and same reason to migrate rather than spread.
 		core.categoryColours = migrateCategoryColourMap(jsonData.categoryColours);
+		// Each colormap plot's pre-monochrome colour map, keyed by plot id (seriesAppearance.js).
+		// Saved with the session but was never read back, so a reloaded monochrome session forgot
+		// what to restore, and the previous session's entries stayed attached to whichever new
+		// plots reused their ids. Replaced, not merged, for that reason; only string values count.
+		core.plotColormaps = Object.fromEntries(
+			Object.entries(
+				jsonData.plotColormaps && typeof jsonData.plotColormaps === 'object'
+					? jsonData.plotColormaps
+					: {}
+			).filter(([, v]) => typeof v === 'string')
+		);
 		// Figure style template. Normalised rather than spread: a session file is data
 		// from outside the app, and one saved by an older version is missing whatever
 		// fields did not exist yet. normaliseFigureStyle fills those from the registry
@@ -478,17 +594,24 @@
 		// That yield lets Svelte effects run mid-loop, so the whole id space is claimed FIRST:
 		// anything that mints a plot mid-load (nothing does today; facet panels are derived, not
 		// minted) cannot take an id belonging to a plot further down the file.
-		const totalPlots = jsonData.plots?.length ?? 0;
-		reservePlotIds((jsonData.plots ?? []).map((p) => p?.id));
+		// Plots an earlier load could not rebuild ride along in `unrestoredPlots`; they are tried
+		// again here, so a version that understands them brings them back.
+		const plotJsons = [
+			...(jsonData.plots ?? []),
+			...(Array.isArray(jsonData.unrestoredPlots) ? jsonData.unrestoredPlots : [])
+		];
+		const totalPlots = plotJsons.length;
+		reservePlotIds(plotJsons.map((p) => p?.id));
 		for (let i = 0; i < totalPlots; i++) {
 			if (onProgress) onProgress(`Rebuilding plot ${i + 1} of ${totalPlots}…`);
 			await yieldFrame();
 			// Isolate each plot: a single malformed plot must not hang or abort the
-			// whole load — log and skip it so the rest of the session still opens.
+			// whole load. It is skipped, reported, and its JSON kept so a save preserves it.
 			try {
-				pushObj(Plot.fromJSON(jsonData.plots[i]), false);
+				pushObj(Plot.fromJSON(plotJsons[i]), false);
 			} catch (e) {
 				console.error(`Failed to rebuild plot ${i + 1} of ${totalPlots}; skipping.`, e);
+				core.unrestoredPlots.push(JSON.parse(JSON.stringify(plotJsons[i] ?? null)));
 			}
 		}
 
@@ -565,6 +688,7 @@
 		// hoursSinceStart is already pre-computed in pushObj; no second pass.
 		if (onProgress) onProgress('Finalising…');
 		await yieldFrame();
+		return { unrestoredPlots: [...core.unrestoredPlots] };
 	}
 </script>
 
@@ -589,17 +713,12 @@
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
-		<div class="action" onclick={() => exportJson()}>
-			<button>Save session</button>
+		<div class="action">
+			<button type="button" onclick={() => exportJson()}>Save session</button>
 		</div>
 
-		<div
-			class="action"
-			onclick={() => {
-				showSettingsModal = true;
-			}}
-		>
-			<button>Settings</button>
+		<div class="action">
+			<button type="button" onclick={() => (showSettingsModal = true)}>Settings</button>
 		</div>
 	{/snippet}
 </Dropdown>

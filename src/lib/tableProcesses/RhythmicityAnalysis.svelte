@@ -8,7 +8,8 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ControlGroup from '$lib/components/inputs/ControlGroup.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
-	import { computeFFT } from '$lib/utils/fft.js';
+	import { computeFFT, fftPeak } from '$lib/utils/fft.js';
+	import { spectralPeakIndex } from '$lib/components/plotbits/helpers/peakFinder.js';
 	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
@@ -150,14 +151,10 @@
 			outputs.power = res.y ?? [];
 			if (args.pgMethod === 'Chi-squared') outputs.threshold = res.threshold ?? [];
 			if (!res.y?.length) return { outputs, stats };
-			let bestIdx = 0;
-			let bestPow = -Infinity;
-			for (let i = 0; i < res.y.length; i++) {
-				if (Number.isFinite(res.y[i]) && res.y[i] > bestPow) {
-					bestPow = res.y[i];
-					bestIdx = i;
-				}
-			}
+			// No positive power anywhere (flat or all-zero data) is no rhythm: NaN, not the first
+			// trial period (ROB-13; MovingAnalysis used to report 18 h on off-wrist windows).
+			const bestIdx = spectralPeakIndex(res.y);
+			if (bestIdx < 0) return { outputs, stats };
 			stats.peak_period = res.x[bestIdx];
 			stats.peak_power = res.y[bestIdx];
 			return { outputs, stats };
@@ -170,16 +167,18 @@
 			outputs.period = (r.frequencies ?? []).map((f) => (f !== 0 ? 1 / f : NaN));
 			outputs.magnitude = r.magnitudes ?? [];
 			outputs.phase = r.phases ?? [];
-			if (!r.frequencies?.length) return { outputs, stats };
-			let bestIdx = 0;
-			for (let i = 1; i < r.magnitudes.length; i++) {
-				if (r.magnitudes[i] > r.magnitudes[bestIdx]) bestIdx = i;
-			}
-			const freq = r.frequencies[bestIdx];
-			stats.peak_frequency = freq;
-			stats.peak_period = freq !== 0 ? 1 / freq : NaN;
-			stats.peak_magnitude = r.magnitudes[bestIdx];
-			return { outputs, stats };
+			// computeFFT works on the series' own grid: it reports a refused gap (reason) or
+			// interpolated samples (warnings) instead of joining samples across a gap.
+			const notice = r.reason ? `No FFT: ${r.reason}` : (r.warnings ?? []).join(' ');
+			if (!r.frequencies?.length) return { outputs, stats, notice };
+			// Refined between bins (fftPeak), as the FFT plot reports it.
+			const pk = fftPeak(r);
+			// null for flat data (no rhythm, ROB-13): leave the stats NaN.
+			if (!pk) return { outputs, stats, notice };
+			stats.peak_frequency = pk.frequency;
+			stats.peak_period = pk.frequency !== 0 ? pk.period : NaN;
+			stats.peak_magnitude = pk.magnitude;
+			return { outputs, stats, notice };
 		}
 
 		if (args.analysis === 'correlogram') {
@@ -235,8 +234,8 @@
 			}
 			if (tt.length < 3) continue;
 
-			const { outputs, stats } = await runAnalysis(tt, yy, argsIN);
-			y_results[yId] = { outputs, stats };
+			const { outputs, stats, notice } = await runAnalysis(tt, yy, argsIN);
+			y_results[yId] = { outputs, stats, notice: notice ?? '' };
 			if (outputKeys.some((k) => (outputs[k]?.length ?? 0) > 0)) anyValid = true;
 		}
 
@@ -323,6 +322,9 @@
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import { createComputeRunner } from '$lib/core/asyncCompute.js';
+	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -335,7 +337,8 @@
 	let result = $state();
 	let mounted = $state(false);
 	let calculating = $state(false);
-	let _calcToken = 0;
+	// The message of the last failed compute, shown on the node with a Retry (ROB-11).
+	let calcError = $state(null);
 
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 
@@ -426,19 +429,30 @@
 		);
 	});
 
+	// try/finally, error state and success-only memo commit: see core/asyncCompute.js.
+	const runner = createComputeRunner({
+		memo,
+		node: p,
+		label: 'Rhythmicity analysis',
+		setBusy: (v) => (calculating = v),
+		setError: (m) => (calcError = m)
+	});
 	function recompute() {
-		calculating = true;
-		const token = ++_calcToken;
-		setTimeout(async () => {
-			if (token !== _calcToken) return;
-			const promise = untrack(() => rhythmicityanalysis(p.args));
-			const [data, valid] = await promise;
-			if (token !== _calcToken) return; // re-check after await
-			result = data;
-			p.args.valid = valid;
-			calculating = false;
-			memo.hash = getHash;
-		}, 0);
+		const hash = untrack(() => getHash);
+		runner.run(
+			hash,
+			() => untrack(() => rhythmicityanalysis(p.args)),
+			([data, valid]) => {
+				result = data;
+				p.args.valid = valid;
+			},
+			() => {
+				// Nothing stale may survive a failure: not the panel, not the output columns.
+				result = undefined;
+				p.args.valid = false;
+				clearOutputColumns(p.args.out);
+			}
+		);
 	}
 
 	/**
@@ -778,6 +792,8 @@
 		<div class="section-content">
 			{#if calculating}
 				<LoadingSpinner message="Running analysis…" />
+			{:else if calcError}
+				<ErrorBox title="The analysis failed." message={calcError} onretry={recompute} />
 			{:else if p.args.valid && (p.args.yIN ?? []).length > 0}
 				{@const primary = getPrimaryKeys(p.args)}
 				<div class="tp-outputs">
@@ -837,6 +853,9 @@
 									{/each}
 								</div>
 							{/if}
+							{#if yResult?.notice}
+								<p class="tp-notice">{yResult.notice}</p>
+							{/if}
 						</div>
 					{/each}
 				</div>
@@ -877,6 +896,14 @@
 		margin-bottom: var(--space-4);
 		padding-bottom: var(--space-2);
 		border-bottom: 1px solid var(--color-lightness-95);
+	}
+	.tp-notice {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
 	}
 	.tp-stats {
 		margin-top: var(--space-2);

@@ -60,3 +60,67 @@ describe('smootheddata', () => {
 		expect(result.x_out).toEqual(x);
 	});
 });
+
+// ROB-8: the row filter was `d.y != null && !isNaN(d.y)`, which lets ' ' and '' through (isNaN
+// coerces them to 0) and keeps numeric strings as STRINGS, and movingAverage then did
+// `sum += y[j]`, concatenating: the reviewer saw outputs like 40202 and 2020202. Missing rows
+// are now dropped by the house rule (validPairs) and what is left is converted with Number().
+describe('smootheddata with blank and numeric-string cells (ROB-8)', () => {
+	const x = Array.from({ length: 12 }, (_, i) => i);
+	const yBlank = [10, 10, ' ', 10, 10, '', 10, 10, 10, 10, 10, 10];
+	const yStr = yBlank.map((v) => (typeof v === 'number' ? String(v) : '10'));
+
+	for (const smootherType of ['moving', 'whittaker', 'savitzky', 'loess']) {
+		it(`${smootherType}: blank cells are dropped, not read as 0 or concatenated`, async () => {
+			mockColumns[1] = { type: 'number', getData: () => x };
+			mockColumns[2] = { type: 'number', getData: () => yBlank };
+			const [result, valid] = await smootheddata({
+				xIN: 1,
+				yIN: 2,
+				smootherType,
+				movingAvgWindowSize: 3,
+				movingAvgType: 'simple',
+				out: preview
+			});
+			expect(valid).toBe(true);
+			expect(result.x_out).toEqual([0, 1, 3, 4, 6, 7, 8, 9, 10, 11]);
+			expect(result.y_results[2]).toHaveLength(10);
+			for (const v of result.y_results[2]) {
+				expect(typeof v).toBe('number');
+				expect(v).toBeCloseTo(10, 6);
+			}
+		});
+
+		it(`${smootherType}: numeric strings are smoothed as numbers`, async () => {
+			mockColumns[1] = { type: 'number', getData: () => x.map(String) };
+			mockColumns[2] = { type: 'number', getData: () => yStr };
+			const [result] = await smootheddata({
+				xIN: 1,
+				yIN: 2,
+				smootherType,
+				movingAvgWindowSize: 3,
+				movingAvgType: 'simple',
+				out: preview
+			});
+			expect(result.x_out).toEqual(x);
+			for (const v of result.y_results[2]) {
+				expect(typeof v).toBe('number');
+				expect(v).toBeCloseTo(10, 6);
+			}
+		});
+	}
+
+	it('a real 0 is data', async () => {
+		mockColumns[1] = { type: 'number', getData: () => [0, 1, 2, 3, 4] };
+		mockColumns[2] = { type: 'number', getData: () => [3, 3, 0, 3, 3] };
+		const [result] = await smootheddata({
+			xIN: 1,
+			yIN: 2,
+			smootherType: 'moving',
+			movingAvgWindowSize: 3,
+			movingAvgType: 'simple',
+			out: preview
+		});
+		expect(result.y_results[2]).toEqual([3, 2, 2, 2, 3]);
+	});
+});

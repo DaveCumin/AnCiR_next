@@ -41,7 +41,10 @@ export function computeNPCRA(t, y, opts = {}) {
 		// which pulled t0 back to 0 and averaged the row into the first epoch.
 		if (isInvalidValue(t[i])) continue;
 		const ti = Number(t[i]);
-		if (Number.isFinite(ti)) pairs.push([ti, Number(y[i])]);
+		// A missing VALUE stays missing (NaN, skipped when binning) but its time is kept, so
+		// the epoch grid and the onset origin do not move. Number(y[i]) alone read null, ''
+		// and ' ' as 0: a null-padded Split segment scored IS 0.195 instead of 1.000.
+		if (Number.isFinite(ti)) pairs.push([ti, isInvalidValue(y[i]) ? NaN : Number(y[i])]);
 	}
 	if (!pairs.length) return null;
 	pairs.sort((a, b) => a[0] - b[0]);

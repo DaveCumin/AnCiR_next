@@ -174,7 +174,7 @@
 
 	// The indicator classes live on the block (top edge = before, bottom = after).
 	// The block's own styles cannot be reached from here, so they are global
-	// classes toggled by effect; see the <style> below.
+	// classes toggled by effect; see the style block below.
 	$effect(() => {
 		const block = blockOf(headerEl);
 		if (!block) return;

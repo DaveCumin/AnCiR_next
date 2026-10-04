@@ -500,17 +500,9 @@
 					.map((cat) => p.args.out['value_' + cat])
 					.filter((id) => id !== undefined && id >= 0);
 			}
-
-			// Only skip recompute if none of the input columns have been re-imported since
-			// this session was saved (rawDataVersion stays 0 from fromJSON until importData bumps it).
-			// If any input was already replaced before this component mounted, force recompute.
-			const inputsReimported =
-				(getColumnById(p.args.categoryIN)?.rawDataVersion ?? 0) > 0 ||
-				(getColumnById(p.args.timeIN)?.rawDataVersion ?? 0) > 0 ||
-				(getColumnById(p.args.valueIN)?.rawDataVersion ?? 0) > 0;
-			if (!inputsReimported) {
-				memo.hash = getHash;
-			}
+			// The saved outputs only fill the panel until the compute effect runs; they are
+			// never trusted as current (the file may predate a fix, or the inputs), so the memo
+			// hash is not pinned here and the node recomputes from its inputs once mounted.
 		}
 
 		mounted = true;
@@ -616,7 +608,7 @@
 						</select>
 					</ControlInput>
 					{#if preProcessProcs[idx]}
-						<Processcomponent p={preProcessProcs[idx]} />
+						<Processcomponent bind:p={() => preProcessProcs[idx], () => {}} />
 					{/if}
 				</div>
 			{/each}

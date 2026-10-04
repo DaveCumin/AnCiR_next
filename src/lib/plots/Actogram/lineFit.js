@@ -14,11 +14,25 @@
  * tau" a rotation about a fixed point).
  *
  * Residuals are ALWAYS measured from the line that is actually drawn against
- * the markers that are actually selected, using the same definition as the
- * unconstrained least-squares helper: predicted y = slope * x + intercept,
- * R squared against the mean of y. A constrained fit therefore reports a
- * genuinely worse R squared, and a line with no markers to compare against
- * reports null rather than a fabricated 1 / 0.
+ * the markers that are actually selected: predicted y = slope * x + intercept.
+ * A constrained fit therefore reports a genuinely worse R squared, and a line
+ * with no markers to compare against reports null rather than a fabricated 1 / 0.
+ *
+ * R SQUARED IS MEASURED IN THE TIME-OF-DAY FRAME. The total sum of squares is
+ * that of z = y - periodHrs * x (each marker's unwrapped time of day) about its
+ * mean, not that of the absolute time y. On absolute time the 24 h-per-day ramp
+ * dominates the total, so even onsets placed uniformly at random scored a
+ * median R squared of 0.986 over 7 days (review finding FIT-4). In this frame R
+ * squared is the share of the time-of-day variance that the line's drift
+ * (slope - periodHrs per day) explains: near 0 for random onsets, near 1 for a
+ * clean free-running drift. Two consequences a reader must know:
+ *  - an entrained record whose slope equals periodHrs has no drift to explain,
+ *    so its R squared is near 0 however tight the onsets are (read RMSE);
+ *  - a constrained (fixed tau or fixed theta) line can do worse than the mean
+ *    time of day, so its R squared can legitimately be negative.
+ * The residuals and RMSE are unchanged (y - (slope*x + intercept) equals
+ * z - ((slope - periodHrs)*x + intercept)). R squared is null when the markers'
+ * time of day does not vary at all (the ratio is 0 / 0).
  */
 
 import { linearRegression } from '$lib/components/plotbits/helpers/wrangleData';
@@ -87,34 +101,36 @@ export function fitLine(xs, ys, { tau = null, theta = null, refDay = 1, periodHr
 		intercept = y0 - slope * x0;
 	}
 
-	return { slope, intercept, ...residuals(xs, ys, slope, intercept), n };
+	return { slope, intercept, ...residuals(xs, ys, slope, intercept, periodHrs), n };
 }
 
 /**
  * R squared and RMSE of the drawn line against the markers. Null (not 1 and 0)
- * when there is nothing to compare against.
+ * when there is nothing to compare against. R squared is in the time-of-day
+ * frame (see the header): SS_tot is the spread of z = y - periodHrs * x.
  *
  * @param {number[]} xs
  * @param {number[]} ys
  * @param {number} slope
  * @param {number} intercept
+ * @param {number} periodHrs
  * @returns {{rSquared: number|null, rmse: number|null}}
  */
-function residuals(xs, ys, slope, intercept) {
+function residuals(xs, ys, slope, intercept, periodHrs) {
 	const n = xs.length;
 	if (n === 0 || !Number.isFinite(slope) || !Number.isFinite(intercept)) {
 		return { rSquared: null, rmse: null };
 	}
-	// Compensated sums, matching the shared least-squares helper exactly, so the
-	// unconstrained case reports the same numbers it always did.
-	const kY = new KahanSum();
-	for (let i = 0; i < n; i++) kY.add(ys[i]);
-	const meanY = kY.value / n;
+	// Compensated sums, matching the shared least-squares helper.
+	const kZ = new KahanSum();
+	for (let i = 0; i < n; i++) kZ.add(ys[i] - periodHrs * xs[i]);
+	const meanZ = kZ.value / n;
 	const kTot = new KahanSum();
 	const kRes = new KahanSum();
 	for (let i = 0; i < n; i++) {
-		kTot.add((ys[i] - meanY) ** 2);
+		kTot.add((ys[i] - periodHrs * xs[i] - meanZ) ** 2);
 		kRes.add((ys[i] - (slope * xs[i] + intercept)) ** 2);
 	}
-	return { rSquared: 1 - kRes.value / kTot.value, rmse: Math.sqrt(kRes.value / n) };
+	const rSquared = kTot.value > 0 ? 1 - kRes.value / kTot.value : null;
+	return { rSquared, rmse: Math.sqrt(kRes.value / n) };
 }

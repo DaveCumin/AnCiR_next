@@ -141,7 +141,7 @@ const meta = new Map([
 			keywords: ['permutation', 'bootstrap', 'null', 'shuffle', 'significance', 'red noise'], // search-only synonyms; never rendered
 			nodeIcon: 'node-surrogate',
 			description:
-				"Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked."
+				"Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are not offered: they keep the power spectrum, rhythm included, so they cannot test whether a rhythm is there."
 		}
 	],
 	[

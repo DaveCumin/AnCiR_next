@@ -17,8 +17,16 @@ import '$lib/utils/trendfit.worker-task.js';
 self.onmessage = (e) => {
 	const { id, name, payload } = e.data ?? {};
 	if (!id) return;
+	let fn;
 	try {
-		const fn = getComputeTask(name);
+		fn = getComputeTask(name);
+	} catch (err) {
+		// Not registered in this worker: say so, so the pool can run it on the main thread
+		// (where it may be registered) rather than reporting it as the task's own error.
+		self.postMessage({ id, ok: false, notFound: true, error: String(err?.message ?? err) });
+		return;
+	}
+	try {
 		const args = restoreFromTransferable(payload);
 		const result = fn(args);
 		const transfers = [];

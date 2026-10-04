@@ -30,24 +30,29 @@
 	let ribbon = $derived.by(() => {
 		if (geometry?.form !== 'ribbon' || !(geometry.x?.length > 0)) return null;
 		const { x, lower, upper } = geometry;
+		// Props read once: the accessors below run per point, and a prop read is a getter (ROB-9).
+		const sx = xscale;
+		const sy = yscale;
+		const ox = xoffset;
+		const oy = yoffset;
 		const idx = x.map((_, i) => i);
 		const defined = (i) => finite(x[i]) && finite(lower[i]) && finite(upper[i]);
-		const px = (i) => xscale(x[i]) + xoffset;
+		const px = (i) => sx(x[i]) + ox;
 		const fill = area()
 			.x(px)
-			.y0((i) => yscale(lower[i]) + yoffset)
-			.y1((i) => yscale(upper[i]) + yoffset)
+			.y0((i) => sy(lower[i]) + oy)
+			.y1((i) => sy(upper[i]) + oy)
 			.defined(defined)(idx);
 		if (!fill) return null;
 		return {
 			fill,
 			lower: d3line()
 				.x(px)
-				.y((i) => yscale(lower[i]) + yoffset)
+				.y((i) => sy(lower[i]) + oy)
 				.defined(defined)(idx),
 			upper: d3line()
 				.x(px)
-				.y((i) => yscale(upper[i]) + yoffset)
+				.y((i) => sy(upper[i]) + oy)
 				.defined(defined)(idx)
 		};
 	});

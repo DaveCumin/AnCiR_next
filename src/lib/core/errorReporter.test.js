@@ -54,7 +54,9 @@ describe('reportError', () => {
 		expect(notifications.list).toHaveLength(1);
 		expect(notifications.list[0].type).toBe('error');
 		expect(notifications.list[0].message).toMatch(/was contained/);
-		expect(notifications.list[0].message).toMatch(/copy of your session was saved/);
+		expect(notifications.list[0].message).toMatch(/copy of your session was kept/);
+		// ...and how to get it back, which crashRecovery.js now makes true (ROB-5).
+		expect(notifications.list[0].message).toMatch(/reload the page and AnCiR will offer/);
 		expect(notifications.list[0].message).toMatch(/boom-unique-1/);
 
 		// 2. the session is recoverable
@@ -111,6 +113,7 @@ describe('reportError', () => {
 		// sessionStorage, not localStorage: that is where the snapshot lives now.
 		// Restored by hand — an instance spy survives restoreAllMocks and would break every
 		// later test that stores anything.
+		core.data.push({ id: 0, name: 'time' });
 		const spy = vi.spyOn(sessionStorage, 'setItem').mockImplementation(() => {
 			throw new Error('QuotaExceededError');
 		});
@@ -119,8 +122,28 @@ describe('reportError', () => {
 		} finally {
 			spy.mockRestore();
 		}
-		expect(notifications.list[0].message).toMatch(/save it now to be safe/);
-		expect(notifications.list[0].message).not.toMatch(/copy of your session was saved/);
+		expect(notifications.list[0].message).toMatch(/save your session now to be safe/);
+		expect(notifications.list[0].message).not.toMatch(/copy of your session was kept/);
+	});
+
+	// ROB-12: only a boundary contains an error. A window or promise error was caught by
+	// nobody, and the toast used to claim "was contained" for those too.
+	it('does not claim containment for a window or promise error', () => {
+		core.data.push({ id: 0, name: 'time' });
+		reportError(new Error('boom-window-1'), { source: 'window' });
+		reportError(new Error('boom-promise-1'), { source: 'promise' });
+		for (const n of notifications.list) {
+			expect(n.message).not.toMatch(/contained/);
+			expect(n.message).toMatch(/may not have finished/);
+		}
+		reportError(new Error('boom-render-1'), { source: 'render' });
+		expect(notifications.list[2].message).toMatch(/It was contained/);
+	});
+
+	it('keeps no copy of an empty session, and does not talk about one', () => {
+		reportError(new Error('boom-empty-1'), { source: 'render' });
+		expect(readCrashSnapshot()).toBeNull();
+		expect(notifications.list[0].message).not.toMatch(/copy|save your session/);
 	});
 
 	it('does not throw when everything around it is broken', () => {

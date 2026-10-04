@@ -290,7 +290,8 @@ describe('computeMovingWindows — __skips accounting', () => {
 			fewPoints: 0,
 			logDomain: 1,
 			expDomain: 0,
-			polyDegree: 0
+			polyDegree: 0,
+			fftGap: 0
 		});
 		expect(Number.isNaN(out.a[0])).toBe(true); // skipped window stays blank
 		expect(Number.isFinite(out.a[1])).toBe(true); // clean window still fits
@@ -328,7 +329,8 @@ describe('computeMovingWindows — __skips accounting', () => {
 			fewPoints: 0,
 			logDomain: 0,
 			expDomain: 0,
-			polyDegree: 0
+			polyDegree: 0,
+			fftGap: 0
 		});
 		expect(getStatKeys(args)).not.toContain('__skips');
 	});
@@ -368,5 +370,35 @@ describe('windowSkipMessages', () => {
 			''
 		);
 		expect(one[0]).toContain('1 of 1 window was skipped');
+	});
+});
+
+// SPEC-2 per window: an FFT window whose samples have a long gap used to be transformed with
+// the gap closed up (24 h read as 31 h). It is now skipped, counted and explained.
+describe('computeMovingWindows: FFT windows with a gap', () => {
+	it('skips a window with a long gap, keeps a clean one, and says why', () => {
+		const args = { analysis: 'fft' };
+		const tAll = [];
+		const y = [];
+		for (let i = 0; i < 480; i++) {
+			// Window 1 (240 to 480 h) loses 30 h in the middle; window 0 is complete.
+			if (i >= 330 && i < 360) continue;
+			tAll.push(i);
+			y.push(Math.cos((2 * Math.PI * i) / 24));
+		}
+		const [out] = computeMovingWindows({
+			tAll,
+			ys: [y],
+			starts: [0, 240],
+			windowSize: 240,
+			statKeys: getStatKeys(args),
+			args
+		});
+		expect(out.peak_period[0]).toBeCloseTo(24, 4);
+		expect(out.peak_magnitude[0]).toBeCloseTo(1, 4);
+		expect(Number.isNaN(out.peak_period[1])).toBe(true);
+		expect(out.__skips.fftGap).toBe(1);
+		const msg = windowSkipMessages(out.__skips, 'y').join(' ');
+		expect(msg).toMatch(/1 of 2 windows for y was skipped: the FFT needs evenly spaced samples/);
 	});
 });

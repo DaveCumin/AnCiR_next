@@ -1,7 +1,12 @@
 // @ts-nocheck
 
 import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
-import { plotMetricKeys, plotMetricLabel } from '$lib/plots/plotMetricDefs.js';
+import {
+	plotMetricKeys,
+	plotMetricLabel,
+	plotMetricColumnName
+} from '$lib/plots/plotMetricDefs.js';
+import { createColumnNamer } from './outputLabels.js';
 
 /**
  * ProcessNode: a normalized node model used by the workflow layer.
@@ -426,6 +431,10 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 	const connections = [];
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local dedupe set for this graph build; never read reactively
 	const seenConnections = new Set();
+	// Display names for output columns and ports (UI-4): the node's label ("Cosinor fit: A1",
+	// "R²") where the column still has its auto name, the user's name where they renamed it.
+	// Display only: port names, keys and column ids below are unchanged.
+	const displayName = createColumnNamer(core);
 
 	// ORDER MATTERS in this block: tpOutputColIds/tpOutputColToTP,
 	// absorbedColToGroup, tapColMeta and producerColMeta must ALL be fully
@@ -660,7 +669,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			const port = makeNodePort(pc.producerPort || 'output', 'output', 'column', false);
 			const m = /^out_(\d+)$/.exec(pc.producerPort || '');
 			const inId = m ? Number(m[1]) : fallbackIn;
-			port.display = (core.data ?? []).find((c) => c.id === inId)?.name ?? port.name;
+			const inCol = (core.data ?? []).find((c) => c.id === inId);
+			port.display = inCol ? displayName(inCol) : port.name;
 			return port;
 		});
 		const outputs = producerCols.length
@@ -710,12 +720,18 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		const outputColumns = [];
 		for (const [key, colId] of Object.entries(args?.out ?? {})) {
 			if (typeof colId !== 'number' || colId < 0) continue;
-			outputColumns.push({ key, colId, port: `col_${colId}`, metric: isMetricKey(key) });
+			const entry = { key, colId, port: `col_${colId}`, metric: isMetricKey(key) };
+			// Carried only where the label differs from the column's own name.
+			const shown = displayName.byId(colId);
+			const own = (core.data ?? []).find((c) => c.id === colId)?.name;
+			if (shown && shown !== own) entry.display = shown;
+			outputColumns.push(entry);
 		}
 		const outputPorts = [];
-		for (const { colId, metric } of outputColumns) {
+		for (const { colId, metric, display } of outputColumns) {
 			const port = makeNodePort(`col_${colId}`, 'output', 'column');
 			port.metric = metric;
+			if (display) port.display = display;
 			outputPorts.push(port);
 		}
 		return { outputColumns, outputPorts };
@@ -865,7 +881,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			const col = (core.data ?? []).find((c) => c.id === colId);
 			if (!col) return;
 			const port = { ...makeNodePort(`col_${colId}`, 'output', 'column'), passthrough: true };
-			port.display = display ? `${col.name} (${display})` : col.name;
+			const shown = displayName(col);
+			port.display = display ? `${shown} (${display})` : shown;
 			if (series != null) port.series = series;
 			if (axis != null) port.axis = axis;
 			outputs.push(port);
@@ -901,7 +918,13 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			if (typeof colId !== 'number' || colId < 0) continue;
 			if (!(core.data ?? []).some((c) => c.id === colId)) continue;
 			const port = { ...makeNodePort(`col_${colId}`, 'output', 'column'), metric: true };
-			port.display = plotMetricLabel(plot, key);
+			const col = (core.data ?? []).find((c) => c.id === colId);
+			const shown = displayName(col);
+			// A type with no label table keeps the def's text for its auto-named column.
+			port.display =
+				shown === col.name && col.name === plotMetricColumnName(plot, key)
+					? plotMetricLabel(plot, key)
+					: shown;
 			outputs.push(port);
 			outputColumns.push({ key, colId, port: `col_${colId}`, metric: true });
 		}

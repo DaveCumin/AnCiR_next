@@ -8,6 +8,7 @@
 		max as arrayMax
 	} from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { interpolate, knownPoints, makeGrid, isFiniteNum } from '$lib/utils/interpolate.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	const displayName = 'Interpolate';
 	const defaults = new Map([
@@ -101,7 +102,19 @@
 			// Need at least one finite (x,y) pair to interpolate from.
 			const { xs } = knownPoints(xForInterp, yCol.getData());
 			if (xs.length === 0) continue;
-			result.y_results[yId] = interpolate(xForInterp, yCol.getData(), queryX, method);
+			const yData = yCol.getData();
+			const vals = interpolate(xForInterp, yData, queryX, method);
+			if (mode === 'fill') {
+				// A row whose y is present but whose x is missing keeps its own y: it cannot be
+				// placed on the x axis (nor used as a known point), but it is not missing data.
+				// Same rule as the Python port (tp_interpolate).
+				for (let i = 0; i < vals.length; i++) {
+					if (isInvalidValue(queryX[i]) && i < yData.length && !isInvalidValue(yData[i])) {
+						vals[i] = Number(yData[i]);
+					}
+				}
+			}
+			result.y_results[yId] = vals;
 			anyValid = true;
 		}
 

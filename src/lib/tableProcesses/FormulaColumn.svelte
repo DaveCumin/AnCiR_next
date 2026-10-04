@@ -2,6 +2,12 @@
 	import { core, getStoredValue } from '$lib/core/core.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
+	import {
+		parseFormula,
+		evaluateFormula,
+		FormulaError,
+		FORMULA_FUNCTIONS
+	} from '$lib/utils/formulaExpression.js';
 
 	const displayName = 'Formula Column';
 	const defaults = new Map([
@@ -10,74 +16,66 @@
 		['valid', { val: false }]
 	]);
 
+	// The formula is parsed against a fixed grammar and evaluated by walking the tree
+	// (utils/formulaExpression.js). It is never compiled as JavaScript: a session file is
+	// untrusted input, and the old `new Function` path ran whatever its tokens said (SEC-1).
+	//
+	// Returns [result, valid, error]. `error` is a message for the user when the formula is
+	// refused or references something that does not exist; it is '' for the quiet "not finished
+	// yet" states (no column chosen, empty formula).
 	export function formulacolumn(argsIN) {
 		const tokens = argsIN.tokens ?? [];
 
 		// Need at least one column token referencing a real column
-		const colTokens = tokens.filter((t) => t.type === 'col' && t.id >= 0);
-		if (colTokens.length === 0) return [[], false];
+		const colTokens = tokens.filter((t) => t?.type === 'col' && t.id >= 0);
+		if (colTokens.length === 0) return [[], false, ''];
 
 		// Validate all referenced columns exist
 		for (const t of colTokens) {
-			if (!getColumnById(t.id)) return [[], false];
+			if (!getColumnById(t.id))
+				return [[], false, `A column in the formula (id ${t.id}) no longer exists.`];
 		}
 
 		// Validate stored value tokens
-		const svTokens = tokens.filter((t) => t.type === 'stored');
+		const svTokens = tokens.filter((t) => t?.type === 'stored');
 		for (const t of svTokens) {
-			if (!(t.key in core.storedValues)) return [[], false];
+			if (!Object.prototype.hasOwnProperty.call(core.storedValues, t.key))
+				return [[], false, `The stored value "${t.key}" no longer exists.`];
 		}
 
-		// Build the JS expression: text tokens become literal text,
-		// col tokens become __colN[i] references,
-		// stored value tokens become __sv_KEY (scalar)
-		const formulaExpr = tokens
-			.map((t) => {
-				if (t.type === 'text') return t.value ?? '';
-				if (t.type === 'col') return `__col${t.id}[i]`;
-				if (t.type === 'stored') return `__sv_${t.key.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-				return '';
-			})
-			.join('');
+		let ast;
+		try {
+			ast = parseFormula(tokens);
+		} catch (e) {
+			return [[], false, e instanceof FormulaError ? e.message : 'The formula could not be read.'];
+		}
 
-		if (!formulaExpr.trim()) return [[], false];
-
-		// Collect unique column IDs and their data arrays
-		const colIds = [...new Set(colTokens.map((t) => t.id))];
-		const firstData = getColumnById(colIds[0]).getData();
-		if (!firstData || firstData.length === 0) return [[], false];
+		// The first column sets the row count; a shorter column reads as missing past its end.
+		const firstData = getColumnById(colTokens[0].id).getData();
+		if (!firstData || firstData.length === 0) return [[], false, ''];
 		const n = firstData.length;
-
-		// Collect unique stored value keys
-		const svKeys = [...new Set(svTokens.map((t) => t.key))];
 
 		let result;
 		try {
-			const paramNames = colIds.map((id) => `__col${id}`);
-			const paramValues = colIds.map((id) => getColumnById(id).getData());
-			const svParamNames = svKeys.map((k) => `__sv_${k.replace(/[^a-zA-Z0-9_]/g, '_')}`);
-			const svParamValues = svKeys.map((k) => getStoredValue(k));
-			const fn = new Function(
-				...paramNames,
-				...svParamNames,
-				'Math',
-				`"use strict";
-const _r = new Array(${n});
-for (let i = 0; i < ${n}; i++) { _r[i] = (${formulaExpr}); }
-return _r;`
+			result = evaluateFormula(
+				ast,
+				{ column: (id) => getColumnById(id).getData(), stored: (k) => getStoredValue(k) },
+				n
 			);
-			result = fn(...paramValues, ...svParamValues, Math);
 		} catch (e) {
-			console.warn('Formula evaluation error:', e.message);
-			return [[], false];
+			return [
+				[],
+				false,
+				e instanceof FormulaError ? e.message : 'The formula could not be evaluated.'
+			];
 		}
 
 		writeOutputColumn(argsIN.out.result, result, {
-			type: typeof result[0] === 'string' ? 'category' : 'number',
+			type: 'number',
 			processHash: crypto.randomUUID()
 		});
 
-		return [result, result.length > 0];
+		return [result, result.length > 0, ''];
 	}
 
 	export const definition = {
@@ -165,8 +163,9 @@ return _r;`
 	function doFormula() {
 		previewStart = 1;
 		try {
-			[result, p.args.valid] = formulacolumn(p.args);
-			formulaError = p.args.valid ? '' : formulaError;
+			let message;
+			[result, p.args.valid, message] = formulacolumn(p.args);
+			formulaError = p.args.valid ? '' : (message ?? '');
 		} catch (e) {
 			formulaError = e.message;
 			p.args.valid = false;
@@ -544,8 +543,10 @@ return _r;`
 		});
 	}
 
-	// Map of token index → input element
-	let inputEls = {};
+	// Map of token index → input element. $state so `bind:this={inputEls[i]}` binds to a
+	// reactive property (Svelte clears it when an input unmounts; a plain object warned
+	// binding_property_non_reactive).
+	let inputEls = $state({});
 
 	function focusTextToken(tokenIndex) {
 		inputEls[tokenIndex]?.focus();
@@ -582,10 +583,9 @@ return _r;`
 		if (outKey >= 0 && core.rawData.has(outKey) && core.rawData.get(outKey).length > 0) {
 			result = core.rawData.get(outKey);
 			p.args.valid = true;
-			const inputsAreStale = (p.args.tokens ?? [])
-				.filter((t) => t.type === 'col')
-				.some((t) => (getColumnById(t.id)?.rawDataVersion ?? 0) > 0);
-			if (!inputsAreStale) memo.hash = getHash;
+			// The saved outputs only fill the panel until the compute effect runs; they are
+			// never trusted as current (the file may predate a fix, or the inputs), so the memo
+			// hash is not pinned here and the node recomputes from its inputs once mounted.
 		}
 		mounted = true;
 	});
@@ -662,6 +662,7 @@ return _r;`
 								class="ac-item"
 								class:ac-selected={j === ac.selIdx}
 								role="option"
+								tabindex="-1"
 								aria-selected={j === ac.selIdx}
 								title="Click to insert · Shift/Alt+click to insert and add another"
 								onmousedown={(e) => {
@@ -687,6 +688,7 @@ return _r;`
 							class="ac-item"
 							class:ac-selected={j === ac.selIdx}
 							role="option"
+							tabindex="-1"
 							aria-selected={j === ac.selIdx}
 							title="Click to insert · Shift/Alt+click to insert and add another"
 							onmousedown={(e) => {
@@ -709,8 +711,9 @@ return _r;`
 	</div>
 
 	<p class="formula-hint">
-		Tip: type <kbd>$</kbd> for columns, <kbd>#</kbd> for stored values · Shift/Alt+click (or Shift+Enter)
-		to add multiple
+		Tip: type <kbd>$</kbd> for columns, <kbd>#</kbd> for stored values · Shift/Alt+click (or
+		Shift+Enter) to add multiple. Use + - * / % ^ (power), ( ), pi, e and the functions
+		{FORMULA_FUNCTIONS.join(', ')}.
 	</p>
 
 	{#if formulaError}

@@ -1,0 +1,379 @@
+{
+	"rawData": {
+		"0": [
+			0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11,
+			11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5, 20,
+			20.5, 21, 21.5, 22, 22.5, 23, 23.5
+		],
+		"1": [
+			10, 11.65, 13.29, 11.91, 13.5, 15.04, 13.54, 14.97, 16.33, 14.62, 15.83, 16.96, 15, 15.96,
+			16.83, 14.62, 15.33, 15.97, 13.54, 14.04, 14.5, 11.91, 12.29, 12.65, 10, 10.35, 10.71, 8.09,
+			8.5, 8.96, 6.46, 7.03, 7.67, 5.38, 6.17, 7.04, 5, 6.04, 7.17, 5.38, 6.67, 8.03, 6.46, 7.96,
+			9.5, 8.09, 9.71, 11.35
+		],
+		"2": [0, 4, 8, 12, 16, 20, 24],
+		"3": [
+			12.987499999999997,
+			15.768749999999999,
+			13.778749999999999,
+			8.762500000000001,
+			6.23125,
+			8.471250000000001,
+			null
+		],
+		"4": [],
+		"5": [],
+		"6": [],
+		"7": [],
+		"8": [],
+		"9": [],
+		"10": [],
+		"11": [],
+		"12": [],
+		"13": [],
+		"14": [],
+		"15": [],
+		"16": []
+	},
+	"data": [
+		{
+			"id": 0,
+			"name": "repro_t",
+			"data": 0,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 1,
+			"name": "repro_y",
+			"data": 1,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 2,
+			"name": "binnedx_0",
+			"data": 2,
+			"type": "bin",
+			"binWidth": 4,
+			"tableProcessGUId": "05887bbd-9273-4d7d-ba7d-df555e3bd1a3",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 3,
+			"name": "binnedy_1_0",
+			"data": 3,
+			"type": "number",
+			"tableProcessGUId": "05887bbd-9273-4d7d-ba7d-df555e3bd1a3",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 4,
+			"name": "variable_1",
+			"data": 4,
+			"type": "category",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 5,
+			"name": "n_1",
+			"data": 5,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 6,
+			"name": "mean_1",
+			"data": 6,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 7,
+			"name": "median_1",
+			"data": 7,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 8,
+			"name": "sd_1",
+			"data": 8,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 9,
+			"name": "min_1",
+			"data": 9,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 10,
+			"name": "max_1",
+			"data": 10,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 11,
+			"name": "range_1",
+			"data": 11,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 12,
+			"name": "q1_1",
+			"data": 12,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 13,
+			"name": "q3_1",
+			"data": 13,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 14,
+			"name": "iqr_1",
+			"data": 14,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 15,
+			"name": "skewness_1",
+			"data": 15,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		},
+		{
+			"id": 16,
+			"name": "kurtosis_1",
+			"data": 16,
+			"type": "number",
+			"tableProcessGUId": "",
+			"producerNodeId": null,
+			"producerPort": null,
+			"producerArtifactKind": null,
+			"processes": []
+		}
+	],
+	"plots": [],
+	"tableProcesses": [
+		{
+			"id": 0,
+			"name": "BinnedData",
+			"displayName": "Bin Data",
+			"args": {
+				"xIN": 0,
+				"yIN": [1],
+				"binMode": "uniform",
+				"binSize": 4,
+				"binStart": 0,
+				"stepSize": 1,
+				"diffStep": true,
+				"aggFunction": "mean",
+				"out": {
+					"binnedx": 2,
+					"binnedy_1": 3
+				}
+			},
+			"refTPId": null
+		},
+		{
+			"id": 1,
+			"name": "DescribeData",
+			"displayName": "Describe Data",
+			"args": {
+				"yIN": [3],
+				"out": {
+					"variable": 4,
+					"n": 5,
+					"mean": 6,
+					"median": 7,
+					"sd": 8,
+					"min": 9,
+					"max": 10,
+					"range": 11,
+					"q1": 12,
+					"q3": 13,
+					"iqr": 14,
+					"skewness": 15,
+					"kurtosis": 16
+				},
+				"valid": false
+			},
+			"refTPId": null
+		}
+	],
+	"storedValues": {},
+	"chainRefs": [],
+	"nodeNotes": {},
+	"notes": [],
+	"groups": [],
+	"composites": [],
+	"orphanProcesses": [],
+	"categoryColours": {},
+	"seriesAppearance": {},
+	"plotColormaps": {},
+	"figureStyle": {
+		"fontFamily": "sans",
+		"fontSize": "custom",
+		"fontSizePt": 12,
+		"widthPreset": "custom",
+		"widthMm": null,
+		"exportDpi": 300,
+		"palette": null,
+		"monochrome": false,
+		"varyMarkers": false,
+		"backgroundColour": "transparent",
+		"legendBox": true,
+		"roleScale": {
+			"tick": 0.9375,
+			"legend": 0.75,
+			"sigBar": 0.6875
+		}
+	},
+	"activeStyleName": null,
+	"nodeLayout": {
+		"tableprocess_0": {
+			"x": 320,
+			"y": 80,
+			"collapsed": true
+		},
+		"tableprocess_1": {
+			"x": 620,
+			"y": 80
+		},
+		"data_0": {
+			"x": 40,
+			"y": 40
+		},
+		"data_1": {
+			"x": 40,
+			"y": 160
+		}
+	},
+	"appState": {
+		"currentTab": "null",
+		"currentControlTab": "properties",
+		"loadingState": {
+			"isLoading": false,
+			"loadingMsg": ""
+		},
+		"showNavbar": true,
+		"showDisplayPanel": false,
+		"showControlPanel": false,
+		"importModalOpen": false,
+		"tidyLayoutRequest": 0,
+		"spawnNodeRequest": null,
+		"windowWidth": 1024,
+		"windowHeight": 768,
+		"widthNavBar": 56,
+		"widthDisplayPanel": 250,
+		"widthControlPanel": 250,
+		"gridSize": 15,
+		"canvasOffset": {
+			"x": 0,
+			"y": 0
+		},
+		"canvasScale": 1,
+		"workflowViewport": {
+			"x": 0,
+			"y": 0,
+			"z": 1
+		},
+		"viewportEpoch": 0,
+		"view": "canvas",
+		"displayTimezone": "utc",
+		"invisiblePlotIds": [],
+		"canvasSelectedNodeId": null,
+		"canvasMultiSelectedCount": 0,
+		"canvasMultiSelectedNodeIds": [],
+		"pendingPalette": null,
+		"appColours": [
+			"#234154",
+			"#BE796B",
+			"#3E7295",
+			"#EDADAD",
+			"#A6ACD5",
+			"#83422A",
+			"#6B9FD5",
+			"#4A1E0E",
+			"#fbe67280"
+		],
+		"showColourPicker": false,
+		"showAYSModal": false,
+		"AYStext": "",
+		"AYScallback": null,
+		"AYSoptions": ["Yes", "No"]
+	},
+	"version": "v78.1"
+}

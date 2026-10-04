@@ -4,9 +4,13 @@
 	// @ts-nocheck
 	import { mean, sampleVariance, sampleStd, median } from '$lib/utils/sampleStats.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { isMissingCategory } from '$lib/utils/chisquare.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
-	import cdf_f from '@stdlib/stats-base-dists-f-cdf';
-	import cdf_chisq from '@stdlib/stats-base-dists-chisquare-cdf';
+	// Upper tails computed directly (fdist.js, chisqSf.js), not as 1 - cdf, so a strong
+	// effect's p is reported (e.g. 1e-34) instead of being rounded to 0.
+	import { pUpperFromF } from '$lib/utils/fdist.js';
+	import { pUpperFromChiSq } from '$lib/utils/chisquare.js';
 	import tQuantile from '@stdlib/stats-base-dists-t-quantile';
 
 	const displayName = 'Compare groups (stats)';
@@ -50,17 +54,20 @@
 		}
 	};
 
-	function safePUpperFromF(fValue, df1, df2) {
-		if (!Number.isFinite(fValue) || !Number.isFinite(df1) || !Number.isFinite(df2)) return NaN;
-		if (df1 <= 0 || df2 <= 0 || fValue < 0) return NaN;
-		return 1 - cdf_f(fValue, df1, df2);
+	/**
+	 * The present values of a column as numbers: the house rule (isInvalidValue) drops null,
+	 * blank, whitespace-only and non-numeric text, then Number() converts what is left. A bare
+	 * `!Number.isNaN(v)` does not coerce, so '' and ' ' became 0 and 'n/a' survived as NaN.
+	 */
+	function presentNumbers(values) {
+		const out = [];
+		for (const v of values ?? []) if (!isInvalidValue(v)) out.push(Number(v));
+		return out;
 	}
 
-	function safePUpperFromChiSq(xValue, df) {
-		if (!Number.isFinite(xValue) || !Number.isFinite(df)) return NaN;
-		if (xValue < 0 || df <= 0) return NaN;
-		return 1 - cdf_chisq(xValue, df);
-	}
+	/** The reason given when a test statistic comes out NaN (never reported as p = 0). */
+	const NON_FINITE_REASON =
+		'The test statistic could not be computed: a group contains a non-finite value.';
 
 	function buildGroups(groupData, yData) {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local grouping map drained into an array before buildGroups() returns; never read reactively
@@ -68,7 +75,9 @@
 		for (let i = 0; i < yData.length; i++) {
 			const gRaw = groupData?.[i];
 			const yRaw = yData?.[i];
-			if (gRaw == null || yRaw == null || Number.isNaN(yRaw)) continue;
+			// A missing label (null, blank, NaN or 'NaN') is not a group, and a missing value is
+			// not a zero: both rows are dropped (isMissingCategory / isInvalidValue).
+			if (isMissingCategory(gRaw) || isInvalidValue(yRaw)) continue;
 			const g = String(gRaw);
 			if (!buckets.has(g)) buckets.set(g, []);
 			buckets.get(g).push(Number(yRaw));
@@ -87,9 +96,7 @@
 			if (yId == null || yId === -1) continue;
 			const yCol = getColumnById(yId);
 			if (!yCol) continue;
-			const values = (yCol.getData() ?? [])
-				.filter((v) => v != null && !Number.isNaN(v))
-				.map(Number);
+			const values = presentNumbers(yCol.getData());
 			if (!values.length) continue;
 			groups.push({
 				name: yCol.name || String(yId),
@@ -143,7 +150,7 @@
 	}
 
 	export function jarqueBeraNormality(values) {
-		const clean = (values ?? []).filter((v) => v != null && !Number.isNaN(v)).map(Number);
+		const clean = presentNumbers(values);
 		const n = clean.length;
 		if (n < 8) {
 			return {
@@ -176,7 +183,7 @@
 		skew /= n;
 		kurtosis /= n;
 		const jb = (n / 6) * (skew ** 2 + (kurtosis - 3) ** 2 / 4);
-		const pValue = safePUpperFromChiSq(jb, 2);
+		const pValue = pUpperFromChiSq(jb, 2);
 
 		return {
 			evaluable: true,
@@ -254,6 +261,9 @@
 
 		const m1 = groupA.mean;
 		const m2 = groupB.mean;
+		if (!Number.isFinite(m1) || !Number.isFinite(m2)) {
+			return { valid: false, t: NaN, pValue: NaN, reason: NON_FINITE_REASON };
+		}
 		const v1 = sampleVariance(groupA.values);
 		const v2 = sampleVariance(groupB.values);
 		const a = v1 / n1;
@@ -269,7 +279,9 @@
 		const dfNum = (a + b) ** 2;
 		const dfDen = (a * a) / (n1 - 1) + (b * b) / (n2 - 1);
 		const df = dfDen === 0 ? n1 + n2 - 2 : dfNum / dfDen;
-		const pValue = Number.isFinite(t) ? safePUpperFromF(t * t, 1, df) : 0;
+		// t = +-Infinity only from the se === 0 branch above (zero variance in both groups,
+		// different means): p = 0 is its limit. A NaN t is never mapped to 0.
+		const pValue = Number.isFinite(t) ? pUpperFromF(t * t, 1, df) : 0;
 
 		const tCrit = Number.isFinite(df) ? tQuantile(1 - alpha / 2, df) : NaN;
 		const ciHalf = Number.isFinite(tCrit) && Number.isFinite(se) ? tCrit * se : NaN;
@@ -322,7 +334,9 @@
 		} else {
 			f = msBetween / msWithin;
 		}
-		const pValue = Number.isFinite(f) ? safePUpperFromF(f, dfBetween, dfWithin) : 0;
+		if (Number.isNaN(f)) return { valid: false, f: NaN, pValue: NaN, reason: NON_FINITE_REASON };
+		// f = Infinity only when msWithin === 0 and the means differ: p = 0 is its limit.
+		const pValue = Number.isFinite(f) ? pUpperFromF(f, dfBetween, dfWithin) : 0;
 		const etaSquared = ssBetween + ssWithin > 0 ? ssBetween / (ssBetween + ssWithin) : NaN;
 
 		return {
@@ -350,7 +364,13 @@
 				const se = Math.sqrt(msWithin * (1 / a.n + 1 / b.n));
 				const t = se === 0 ? (diff === 0 ? 0 : Number.POSITIVE_INFINITY) : diff / se;
 				const q = Math.abs(t) * Math.sqrt(2);
-				const pValue = Number.isFinite(t) ? safePUpperFromF(t * t, 1, dfWithin) : 0;
+				// Only a zero-se infinite t (finite, different means) has the limiting p = 0; a
+				// non-finite mean gives NaN, which holmAdjust ranks last and never flags.
+				const pValue = !Number.isFinite(diff)
+					? NaN
+					: Number.isFinite(t)
+						? pUpperFromF(t * t, 1, dfWithin)
+						: 0;
 				pairs.push({
 					groupA: a.name,
 					groupB: b.name,
@@ -390,7 +410,7 @@
 		const meanU = (n1 * n2) / 2;
 		const cc = u > meanU ? 0.5 : -0.5;
 		const z = sigma > 0 ? (u - meanU - cc) / sigma : 0;
-		const pValue = safePUpperFromChiSq(z * z, 1);
+		const pValue = pUpperFromChiSq(z * z, 1);
 		const rEffect = Math.abs(z) / Math.sqrt(n);
 
 		return {
@@ -446,7 +466,7 @@
 		if (tieCorrection <= 0) tieCorrection = 1;
 		const hCorrected = h / tieCorrection;
 		const df = usable.length - 1;
-		const pValue = safePUpperFromChiSq(hCorrected, df);
+		const pValue = pUpperFromChiSq(hCorrected, df);
 		const epsilonSquared = (hCorrected - df) / (n - 1);
 
 		return {

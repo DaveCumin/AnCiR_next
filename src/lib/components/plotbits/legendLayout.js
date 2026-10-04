@@ -63,32 +63,58 @@ export function measureLabelWidths(labels, fontPx, fontFamily) {
 }
 
 /**
- * The legend box, in px. Unchanged from the formula Legend.svelte always used.
+ * The legend's fixed-pixel geometry at a view scale.
+ *
+ * A workflow-canvas node draws the plot at the node's size and shrinks the TYPE by its
+ * `fontScale` (plots/viewBox.js, carried on the view's style). Everything else in the legend
+ * must shrink by the same factor, or the node shows a full-size legend on a miniature plot:
+ * the inner padding, item spacing, swatch column, gap and inset from the plot edge are what
+ * made the box about twice as big, relative to the plot, as in the figure, so 'auto' found no
+ * inside spot and pushed the legend off the plot area. One function, so the box a plot
+ * reserves and the box Legend.svelte draws are scaled identically.
+ *
+ * @param {number} [scale] the view's fontScale; 1 (or anything invalid) is the figure itself
+ */
+export function legendChrome(scale = 1) {
+	const s = typeof scale === 'number' && Number.isFinite(scale) && scale > 0 ? scale : 1;
+	return {
+		scale: s,
+		margin: LEGEND_MARGIN * s,
+		iconW: LEGEND_ICON_W * s,
+		iconGap: LEGEND_ICON_GAP * s,
+		hSpacing: LEGEND_H_SPACING * s
+	};
+}
+
+/**
+ * The legend box, in px. At scale 1, unchanged from the formula Legend.svelte always used.
  *
  * @param {object} o
- * @param {number[]} o.labelWidths
- * @param {number} o.fontPx
- * @param {number} o.padding inner padding of the box
- * @param {number} o.itemSpacing
+ * @param {number[]} o.labelWidths measured at `fontPx`
+ * @param {number} o.fontPx the size the labels are DRAWN at (already view-scaled)
+ * @param {number} o.padding inner padding of the box, in figure px
+ * @param {number} o.itemSpacing in figure px
  * @param {'vertical'|'horizontal'} o.orientation
- * @returns {{width: number, height: number, lineH: number}}
+ * @param {number} [o.scale] the view's fontScale (see legendChrome)
+ * @returns {{width: number, height: number, lineH: number, padding: number}}
+ *   `padding` is the scaled inner padding the box was built with
  */
-export function legendBoxSize({ labelWidths, fontPx, padding, itemSpacing, orientation }) {
+export function legendBoxSize({ labelWidths, fontPx, padding, itemSpacing, orientation, scale }) {
 	const n = labelWidths.length;
-	if (n === 0) return { width: 0, height: 0, lineH: 0 };
-	const lineH = fontPx + itemSpacing + 4; // +4 for possible overlap
+	if (n === 0) return { width: 0, height: 0, lineH: 0, padding: 0 };
+	const c = legendChrome(scale);
+	const pad = padding * c.scale;
+	const lineH = fontPx + (itemSpacing + 4) * c.scale; // +4 for possible overlap
 	if (orientation === 'horizontal') {
-		const total = labelWidths.reduce(
-			(sum, w) => sum + LEGEND_ICON_W + LEGEND_ICON_GAP + w + LEGEND_H_SPACING,
-			0
-		);
-		return { width: total + padding * 2, height: lineH + padding * 2, lineH };
+		const total = labelWidths.reduce((sum, w) => sum + c.iconW + c.iconGap + w + c.hSpacing, 0);
+		return { width: total + pad * 2, height: lineH + pad * 2, lineH, padding: pad };
 	}
-	const maxLabelW = Math.max(...labelWidths, 0) + 2 + padding / 2;
+	const maxLabelW = Math.max(...labelWidths, 0) + 2 * c.scale + pad / 2;
 	return {
-		width: LEGEND_ICON_W + LEGEND_ICON_GAP + maxLabelW + padding * 2,
-		height: n * lineH + padding * 2,
-		lineH
+		width: c.iconW + c.iconGap + maxLabelW + pad * 2,
+		height: n * lineH + pad * 2,
+		lineH,
+		padding: pad
 	};
 }
 

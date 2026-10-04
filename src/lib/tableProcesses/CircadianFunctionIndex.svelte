@@ -117,6 +117,9 @@
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import { onMount, untrack } from 'svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import { createComputeRunner } from '$lib/core/asyncCompute.js';
+	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -126,7 +129,8 @@
 	let cfiData = $state();
 	let mounted = $state(false);
 	let calculating = $state(false);
-	let _calcToken = 0;
+	// The message of the last failed compute, shown with a Retry (ROB-11).
+	let calcError = $state(null);
 
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let getHash = $derived.by(() => {
@@ -171,17 +175,28 @@
 		}
 	});
 
+	// try/finally, error state, success-only memo commit: see core/asyncCompute.js.
+	const runner = createComputeRunner({
+		memo,
+		node: p,
+		label: 'Circadian function index',
+		setBusy: (v) => (calculating = v),
+		setError: (m) => (calcError = m)
+	});
 	function recalculate() {
-		calculating = true;
-		const token = ++_calcToken;
-		setTimeout(async () => {
-			if (token !== _calcToken) return;
-			const [data, valid] = await untrack(() => circadianfunctionindex(p.args));
-			if (token !== _calcToken) return;
-			cfiData = data;
-			p.args.valid = valid;
-			calculating = false;
-		}, 0);
+		runner.run(
+			untrack(() => getHash),
+			() => untrack(() => circadianfunctionindex(p.args)),
+			([data, valid]) => {
+				cfiData = data;
+				p.args.valid = valid;
+			},
+			() => {
+				cfiData = undefined;
+				p.args.valid = false;
+				clearOutputColumns(p.args.out);
+			}
+		);
 	}
 
 	let outIds = $derived.by(() => {
@@ -254,6 +269,8 @@
 
 {#if calculating}
 	<LoadingSpinner />
+{:else if calcError}
+	<ErrorBox title="The analysis failed." message={calcError} onretry={recalculate} />
 {:else if rows.length}
 	<div class="cfi-results">
 		<table>

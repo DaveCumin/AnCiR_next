@@ -108,8 +108,10 @@
 		<button
 			class="rail-btn"
 			data-testid="nav-data-panel"
+			aria-label="Data panel"
+			aria-pressed={appState.showDisplayPanel}
 			onclick={toggleDataPanel}
-			{@attach tooltip('Data — view and edit your columns, nodes and plots')}
+			{@attach tooltip('Data: view and edit your columns, nodes and plots')}
 		>
 			<Icon name="table" className={appState.showDisplayPanel ? 'icon active' : 'icon'} />
 		</button>
@@ -118,16 +120,20 @@
 			<button
 				class="rail-btn"
 				data-testid="nav-workflow-view"
+				aria-label="Workflow view"
+				aria-pressed={appState.view === 'canvas'}
 				onclick={showWorkflowView}
-				{@attach tooltip('Workflow — wire and inspect the analysis pipeline')}
+				{@attach tooltip('Workflow: wire and inspect the analysis pipeline')}
 			>
 				<Icon name="process" className={appState.view === 'canvas' ? 'icon active' : 'icon'} />
 			</button>
 			<button
 				class="rail-btn"
 				data-testid="nav-workspace-view"
+				aria-label="Workspace view"
+				aria-pressed={appState.view === 'plots'}
 				onclick={showWorkspaceView}
-				{@attach tooltip('Workspace — arrange and style your plots')}
+				{@attach tooltip('Workspace: arrange and style your plots')}
 			>
 				<Icon name="layer" className={appState.view === 'plots' ? 'icon active' : 'icon'} />
 			</button>
@@ -139,6 +145,7 @@
 		<button
 			class="rail-btn"
 			data-testid="nav-load-session"
+			aria-label="Load a session"
 			onclick={() => (showLoadModal = true)}
 			{@attach tooltip('Load a session')}
 		>
@@ -147,6 +154,7 @@
 		<button
 			class="rail-btn"
 			data-testid="nav-save-session"
+			aria-label="Save this session"
 			onclick={exportJson}
 			{@attach tooltip('Save this session')}
 		>
@@ -159,10 +167,11 @@
 		<button
 			class="rail-btn"
 			data-testid="nav-undo"
+			aria-label="Undo"
 			onclick={() => history.undo()}
 			disabled={!history.canUndo}
 			{@attach tooltip(
-				`Undo (Cmd/Ctrl+Z)${history.canUndo ? ` — ${history.undoCount} step${history.undoCount > 1 ? 's' : ''}` : ''}`
+				`Undo (Cmd/Ctrl+Z)${history.canUndo ? `: ${history.undoCount} step${history.undoCount > 1 ? 's' : ''}` : ''}`
 			)}
 		>
 			<Icon name="undo" width={20} height={20} />
@@ -170,10 +179,11 @@
 		<button
 			class="rail-btn"
 			data-testid="nav-redo"
+			aria-label="Redo"
 			onclick={() => history.redo()}
 			disabled={!history.canRedo}
 			{@attach tooltip(
-				`Redo (Cmd/Ctrl+Shift+Z)${history.canRedo ? ` — ${history.redoCount} step${history.redoCount > 1 ? 's' : ''}` : ''}`
+				`Redo (Cmd/Ctrl+Shift+Z)${history.canRedo ? `: ${history.redoCount} step${history.redoCount > 1 ? 's' : ''}` : ''}`
 			)}
 		>
 			<Icon name="redo" width={20} height={20} />
@@ -184,6 +194,7 @@
 		<button
 			class="rail-btn"
 			data-testid="nav-settings"
+			aria-label="Settings"
 			onclick={() => (showSettings = true)}
 			{@attach tooltip('Settings')}
 		>
@@ -199,6 +210,7 @@
 				class="rail-btn"
 				class:is-disabled={!aiAvailable}
 				data-testid="nav-ai"
+				aria-label={aiAvailable ? 'Build or edit a session using AI' : 'AI (unavailable)'}
 				aria-disabled={!aiAvailable}
 				onclick={() => aiAvailable && (showAi = true)}
 				{@attach tooltip(aiAvailable ? 'Build/edit a session using AI' : 'AI unavailable')}
@@ -211,6 +223,7 @@
 				class="rail-btn"
 				class:hint-halo={helpHint.visible}
 				data-testid="nav-help"
+				aria-label="Help"
 				onclick={() => {
 					dismissHelpHint();
 					checkFile();
@@ -218,7 +231,7 @@
 				}}
 				aria-haspopup="menu"
 				aria-expanded={showHelpMenu}
-				{@attach tooltip('Help — take a tour or about AnCiR')}
+				{@attach tooltip('Help: take a tour or about AnCiR')}
 			>
 				<Icon name="query" />
 			</button>

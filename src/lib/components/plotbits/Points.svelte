@@ -126,38 +126,54 @@
 
 	//MAKE THE POINTS PATH
 	let points = $derived.by(() => {
+		// Props read ONCE into locals: every prop read is a getter (a signal read when the parent
+		// passed an expression), and the loops below run once per sample (ROB-9).
+		const pd = pointsData;
+		const xv = x;
+		const yv = y;
+		if (!pd?.draw || !xv || !yv) return null;
+		const sx = xscale;
+		const sy = yscale;
+		const ox = xoffset;
+		const oy = yoffset;
+		const shape = pd.shape || 'circle';
+		const radius = pd.radius;
+
 		//filter out the NaNs and data outside the plot limits
-		const xlims = xscale.domain();
+		const xlims = sx.domain();
 		const [minX, maxX] = [Math.min(...xlims), Math.max(...xlims)];
-		const ylims = yscale.domain();
+		const ylims = sy.domain();
 		const [minY, maxY] = [Math.min(...ylims), Math.max(...ylims)];
 
-		const filteredData = x
-			.map((xVal, i) => ({ x: xVal, y: y[i] }))
-			.filter(
-				(d) =>
-					d.x >= minX &&
-					d.x <= maxX &&
-					d.y >= minY &&
-					d.y <= maxY &&
-					d.y != null &&
-					d.x != null &&
-					!isNaN(d.y) &&
-					!isNaN(d.x)
-			);
+		const filteredData = [];
+		const n = xv.length;
+		for (let i = 0; i < n; i++) {
+			const px = xv[i];
+			const py = yv[i];
+			if (
+				px >= minX &&
+				px <= maxX &&
+				py >= minY &&
+				py <= maxY &&
+				py != null &&
+				px != null &&
+				!isNaN(py) &&
+				!isNaN(px)
+			) {
+				filteredData.push({ x: px, y: py });
+			}
+		}
 
-		if (!pointsData?.draw || !x || !y) return null;
-		const shape = pointsData.shape || 'circle';
 		let out = '';
-		filteredData.forEach((p) => {
-			out += getPointPath(shape, xscale(p.x), yscale(p.y), pointsData.radius) + ' ';
-		});
+		for (const p of filteredData) {
+			out += getPointPath(shape, sx(p.x), sy(p.y), radius) + ' ';
+		}
 
 		//Set up the quadtree for hovering
 		if (tooltip) {
 			qt = quadtree()
-				.x((d) => xscale(d.x) + xoffset)
-				.y((d) => yscale(d.y) + yoffset)
+				.x((d) => sx(d.x) + ox)
+				.y((d) => sy(d.y) + oy)
 				.addAll(filteredData);
 		}
 
@@ -219,6 +235,9 @@
 			<p>Points</p>
 			<button
 				class="icon"
+				type="button"
+				aria-label="Show points"
+				aria-pressed={!!pointsData.draw}
 				onclick={(e) => {
 					e.stopPropagation();
 					pointsData.draw = !pointsData.draw;

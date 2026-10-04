@@ -214,10 +214,12 @@ describe('checkRSupport', () => {
 	});
 
 	it('names an unimplemented analysis rather than just failing', () => {
-		const r = checkRSupport(withTps('FormulaColumn'));
+		// Crossing is the one real analysis the R port still lacks (FormulaColumn, the
+		// previous example, gained an R port with its safe parser).
+		const r = checkRSupport(withTps('Crossing'));
 		expect(r.ok).toBe(false);
-		expect(r.missingAnalyses).toEqual(['FormulaColumn']);
-		expect(explainRSupport(r)).toContain('FormulaColumn');
+		expect(r.missingAnalyses).toEqual(['Crossing']);
+		expect(explainRSupport(r)).toContain('Crossing');
 	});
 
 	it('no longer refuses a generator node, now that its output is baked', () => {

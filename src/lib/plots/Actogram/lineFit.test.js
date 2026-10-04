@@ -90,12 +90,10 @@ describe('fitLine: honest residuals', () => {
 		const noisy = ys.map((y, i) => y + [0.4, -0.3, 0.2, -0.5, 0.1, 0.3][i]);
 		const free = fitLine(xs, noisy, { tau: null, theta: null, refDay: 1, periodHrs: P });
 		const forced = fitLine(xs, noisy, { tau: 21, theta: null, refDay: 1, periodHrs: P });
-		expect(free.rSquared).toBeGreaterThan(0.999);
-		// Note R² is measured on absolute times, whose day-to-day trend dominates
-		// the total sum of squares, so even a poor line scores high: what matters
-		// is that the constrained fit is measurably WORSE than the free one.
-		expect(forced.rSquared).toBeLessThan(0.99);
-		expect(free.rSquared - forced.rSquared).toBeGreaterThan(0.01);
+		// R² is in the time-of-day frame (FIT-4): the free line explains most of the
+		// 2.5 h drift; tau = 21 is far worse than the mean time of day, so it goes negative.
+		expect(free.rSquared).toBeGreaterThan(0.85);
+		expect(forced.rSquared).toBeLessThan(0);
 		expect(forced.rmse).toBeGreaterThan(free.rmse * 10);
 	});
 
@@ -156,5 +154,89 @@ describe('fitLine: degenerate inputs', () => {
 
 	it('throws when the arrays disagree in length', () => {
 		expect(() => fitLine([1, 2], [1], {})).toThrow();
+	});
+});
+
+/**
+ * Review finding FIT-4 (2026-10-03): R squared was computed on absolute time
+ * (y = hour + day * P), whose 24 h-per-day ramp dominates the total sum of
+ * squares, so onsets placed uniformly at random scored a median R squared of
+ * 0.986 (7 days) and a wrongly fixed tau still scored 0.9996. These are the
+ * reviewer's cases (scratchpad/review/fitting/r2.mjs), same LCG and seed.
+ */
+describe('fitLine: R squared in the time-of-day frame (FIT-4)', () => {
+	function lcg(seed) {
+		let s = seed;
+		return () => {
+			s = (1103515245 * s + 12345) % 2147483648;
+			return s / 2147483648;
+		};
+	}
+	const median = (a) => [...a].sort((p, q) => p - q)[Math.floor(a.length / 2)];
+
+	it('random onsets give a low R squared (was a median of 0.986 / 0.996)', () => {
+		const rnd = lcg(3);
+		for (const days of [7, 14]) {
+			const r2s = [];
+			for (let k = 0; k < 500; k++) {
+				const xs = [];
+				const ys = [];
+				for (let d = 1; d <= days; d++) {
+					xs.push(d);
+					ys.push(24 * rnd() + 24 * d);
+				}
+				r2s.push(fitLine(xs, ys, { periodHrs: 24 }).rSquared);
+			}
+			// Under the null, R squared of a simple regression is Beta(1/2, (n-2)/2), with
+			// median about 0.08 for n = 7 and 0.04 for n = 14.
+			expect(median(r2s)).toBeLessThan(0.2);
+			// and a genuine drift still scores high (next test).
+		}
+	});
+
+	it('a clean tau = 24.5 drift scores high; tau wrongly FIXED at 24 scores 0 (was 0.9996)', () => {
+		const rnd = lcg(3);
+		for (const days of [7, 14]) {
+			const xs = [];
+			const ys = [];
+			for (let d = 1; d <= days; d++) {
+				xs.push(d);
+				ys.push(6 + 0.5 * (d - 1) + 24 * d + 0.25 * (rnd() - 0.5) * 3.46);
+			}
+			const free = fitLine(xs, ys, { periodHrs: 24 });
+			expect(free.slope).toBeCloseTo(24.5, 1);
+			expect(free.rSquared).toBeGreaterThan(0.9);
+			// Was 0.9996 with RMSE 2.05 h: a line with no drift explains none of it.
+			const wrong = fitLine(xs, ys, { periodHrs: 24, tau: 24 });
+			// tau = periodHrs with the mean-residual phase IS the mean time of day: R² = 0.
+			expect(wrong.rSquared).toBeLessThan(1e-9);
+			expect(wrong.rmse).toBeGreaterThan(3 * free.rmse);
+		}
+	});
+
+	it('equals the squared correlation of day and time of day for the free fit', () => {
+		const xs = [1, 2, 3, 4, 5, 6, 7];
+		const tod = [6.1, 6.4, 7.2, 7.1, 8.0, 8.6, 8.4];
+		const ys = tod.map((h, i) => h + 24 * xs[i]);
+		const n = xs.length;
+		const mx = xs.reduce((a, b) => a + b) / n;
+		const mz = tod.reduce((a, b) => a + b) / n;
+		let sxz = 0;
+		let sxx = 0;
+		let szz = 0;
+		for (let i = 0; i < n; i++) {
+			sxz += (xs[i] - mx) * (tod[i] - mz);
+			sxx += (xs[i] - mx) ** 2;
+			szz += (tod[i] - mz) ** 2;
+		}
+		expect(fitLine(xs, ys, { periodHrs: 24 }).rSquared).toBeCloseTo((sxz * sxz) / (sxx * szz), 12);
+	});
+
+	it('is null, not NaN, when the markers all sit at one time of day', () => {
+		const xs = [1, 2, 3, 4];
+		const ys = xs.map((d) => 6 + 24 * d);
+		const r = fitLine(xs, ys, { periodHrs: 24 });
+		expect(r.rSquared).toBeNull();
+		expect(r.rmse).toBeCloseTo(0, 9);
 	});
 });

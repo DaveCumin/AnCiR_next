@@ -132,6 +132,9 @@
 <script>
 	// @ts-nocheck
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import { createComputeRunner } from '$lib/core/asyncCompute.js';
+	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
@@ -193,8 +196,9 @@
 	let splitResult = $state(null);
 	let mounted = $state(false);
 	let calculating = $state(false);
+	// The message of the last failed compute, shown with a Retry (ROB-11).
+	let calcError = $state(null);
 	let previewStart = $state(1);
-	let _calcToken = 0;
 
 	// Reactivity: recompute when inputs or split times change
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -245,16 +249,8 @@
 		if (!mounted) return;
 		if (memo.hash !== dataHash) {
 			memo.hash = getHash;
-			calculating = true;
-			const token = ++_calcToken;
-			setTimeout(() => {
-				if (token !== _calcToken) return;
-				untrack(() => {
-					[splitResult, p.args.valid] = split(p.args);
-					recalculate();
-				});
-				calculating = false;
-			}, 0);
+			// (This used to split, then call recalculate(), which split again.)
+			untrack(() => recalculate());
 		}
 	});
 
@@ -349,15 +345,28 @@
 		return changed;
 	}
 
+	// try/finally, error state, success-only memo commit: see core/asyncCompute.js.
+	const runner = createComputeRunner({
+		memo,
+		node: p,
+		label: 'Split',
+		setBusy: (v) => (calculating = v),
+		setError: (m) => (calcError = m)
+	});
 	function recalculate() {
-		calculating = true;
-		const token = ++_calcToken;
-		setTimeout(() => {
-			if (token !== _calcToken) return;
-			[splitResult, p.args.valid] = split(p.args);
-			calculating = false;
-			memo.hash = getHash;
-		}, 0);
+		runner.run(
+			untrack(() => getHash),
+			() => untrack(() => split(p.args)),
+			([data, valid]) => {
+				splitResult = data;
+				p.args.valid = valid;
+			},
+			() => {
+				splitResult = null;
+				p.args.valid = false;
+				clearOutputColumns(p.args.out);
+			}
+		);
 	}
 
 	function addSplitTime() {
@@ -412,11 +421,6 @@
 		// free-standing node, which has no parent table).
 		const needsCompute = reconcileOutputs();
 
-		// Did we end up with real segment data? Stays false unless the load branch below finds
-		// populated output columns. Gates whether we pin `memo.hash` — the difference between a
-		// session that computes on load and one that stays blank forever.
-		let loaded = false;
-
 		if (needsCompute) {
 			recalculate();
 		} else if (!restoredFromMemo) {
@@ -449,22 +453,15 @@
 						segmentCount
 					};
 					p.args.valid = true;
-					loaded = true;
 				}
 			}
 		}
 
-		const inputsAreStale =
-			!needsCompute &&
-			((p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
-				(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0));
-		// Pin the hash ONLY when we actually loaded current data — that legitimately suppresses a
-		// redundant recompute. When the output columns exist but are EMPTY (a freshly-normalized
-		// AI session pre-allocates them without values), we must NOT pin it: leaving memo.hash
-		// unset lets the post-mount $effect fire and compute, exactly as BinnedData does. Pinning
-		// here regardless was why a Split loaded from such a session — and every analysis
-		// downstream of it — stayed permanently blank.
-		if (loaded && !inputsAreStale) memo.hash = getHash;
+		// The loaded segments only fill the panel until the compute effect runs. The memo
+		// hash is deliberately NOT pinned: saved outputs are never trusted as current (the
+		// file may predate a fix, or the inputs), so the post-mount $effect recomputes from
+		// the inputs. (Pinning it once also left a Split loaded from a session with EMPTY
+		// pre-allocated outputs, and everything downstream of it, permanently blank.)
 		mounted = true;
 	});
 </script>
@@ -543,6 +540,8 @@
 		<div class="section-content">
 			{#if calculating}
 				<LoadingSpinner message="Splitting data…" />
+			{:else if calcError}
+				<ErrorBox title="The split failed." message={calcError} onretry={recalculate} />
 			{:else if p.args.valid && splitResult && Object.values(p.args.out).some((id) => id >= 0)}
 				<div class="tableProcess-label"><span>Output</span></div>
 				{#each p.args.yIN ?? [] as yId (yId)}

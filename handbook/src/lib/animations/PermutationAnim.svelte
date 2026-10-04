@@ -1,6 +1,13 @@
 <script>
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, seededRNG, initPalette } from '$lib/animUtils.js';
+	import {
+		C,
+		setupCanvas,
+		seededRNG,
+		initPalette,
+		canvasSize,
+		observeResize
+	} from '$lib/animUtils.js';
 
 	let { height = '520px' } = $props();
 
@@ -88,8 +95,7 @@
 	// top: the data, coloured by the CURRENT label assignment
 	function drawGroups(k) {
 		const ctx = cTop.getContext('2d');
-		const W = cTop.offsetWidth,
-			H = cTop.offsetHeight;
+		const { W, H } = canvasSize(cTop);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const L = 60,
@@ -162,8 +168,7 @@
 	// bottom: the null distribution building, with the observed value marked
 	function drawNull(k) {
 		const ctx = cBot.getContext('2d');
-		const W = cBot.offsetWidth,
-			H = cBot.offsetHeight;
+		const { W, H } = canvasSize(cBot);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const L = 60,
@@ -268,9 +273,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cTop, cBot], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});

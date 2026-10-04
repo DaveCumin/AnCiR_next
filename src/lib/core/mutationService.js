@@ -1,6 +1,6 @@
 // src/lib/core/mutationService.js
 // @ts-nocheck
-import { applyOp, applyOps } from './operations.js';
+import { applyOp, applyOps, recordGraphMutation } from './operations.js';
 import { core } from './core.svelte.js';
 
 /**
@@ -131,5 +131,13 @@ export const mutationService = {
 	// e.g. removing a wired input (clear inIN + drop its producer column).
 	atomicBatch(ops) {
 		return applyOp({ kind: 'batch', ops });
+	},
+	// Runs `fn` (any mix of direct core writes, cascades and ops) and records everything it
+	// changed as ONE undo step whose inverse restores the touched entities with their ids,
+	// data and references. Use for gestures with a cascade no single op describes: deleting
+	// nodes, deleting a wire into an analysis (its per-input output columns go too), paste.
+	// Nested calls fold into the outermost. Returns `fn`'s result.
+	record(fn) {
+		return recordGraphMutation(fn);
 	}
 };

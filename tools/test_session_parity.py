@@ -169,18 +169,14 @@ SKIP_COLUMNS = {
 }
 
 
-# Columns whose JS value is a MONTE CARLO quantity drawn from the app's seeded @stdlib
-# minstd-shuffle PRNG, which the runtime does not reproduce. The port deliberately emits NaN
-# ("not computed") for them rather than a number that would look comparable and could not
-# be; see tp_surrogatetest's docstring. The same boundary is why demo-tp-random is in
-# NONDETERMINISTIC. These are NOT skipped silently: the check REQUIRES the port's value to be
-# NaN (a port that started inventing p-values would fail), and each exclusion is printed.
+# Columns whose JS value is a MONTE CARLO quantity drawn from a PRNG the runtime does not
+# reproduce. The port must emit NaN ("not computed") for them; the check REQUIRES that (a port
+# that started inventing p-values would fail), and each exclusion is printed.
 #
-#  - surrogatetest `pvalue`: the rank of the observed band statistic among nSurrogates
-#    surrogates. Its `observed` column IS deterministic and is compared as normal.
-MONTE_CARLO_COLUMNS = {
-    "demo-tp-surrogatetest": {"pvalue"},
-}
+# EMPTY since 2026-10-04: the surrogate test's `pvalue` used to be here, but the ports now
+# reproduce the app's seeded @stdlib minstd-shuffle generator bit for bit (SeededRNG /
+# seeded_rng), so that column is compared like any other.
+MONTE_CARLO_COLUMNS = {}
 
 
 def _canonical_name(name):

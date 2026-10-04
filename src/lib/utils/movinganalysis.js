@@ -5,7 +5,8 @@
 // computeMovingWindows, which runs the per-y, per-window loop. No DOM/Svelte deps.
 import { runPeriodogramCalculation } from './periodogram.js';
 import { fitCosineCurves, fitCosinorFixed } from './cosinor.js';
-import { computeFFT } from './fft.js';
+import { computeFFT, fftPeak, regridUniform, FFT_GAP_RULE } from './fft.js';
+import { spectralPeakIndex } from '$lib/components/plotbits/helpers/peakFinder.js';
 import { computeAutocorrelation, findAutocorrelationPeak } from './correlogram.js';
 import { fitRectangularWave } from './rectwave.js';
 import { fitDoubleLogistic } from './doublelogistic.js';
@@ -121,14 +122,10 @@ function computeStatsForWindow(tt, yy, args) {
 			chiSquaredAlpha: args.pgAlpha ?? 0.05
 		});
 		if (!res.y || res.y.length === 0) return stats;
-		let bestIdx = 0;
-		let bestPow = -Infinity;
-		for (let i = 0; i < res.y.length; i++) {
-			if (Number.isFinite(res.y[i]) && res.y[i] > bestPow) {
-				bestPow = res.y[i];
-				bestIdx = i;
-			}
-		}
+		// No positive power anywhere (flat or all-zero data) is no rhythm: NaN, not the first
+		// trial period (ROB-13; MovingAnalysis used to report 18 h on off-wrist windows).
+		const bestIdx = spectralPeakIndex(res.y);
+		if (bestIdx < 0) return stats;
 		stats.peak_period = res.x[bestIdx];
 		stats.peak_power = res.y[bestIdx];
 		return stats;
@@ -209,16 +206,17 @@ function computeStatsForWindow(tt, yy, args) {
 
 	if (args.analysis === 'fft') {
 		const freqStep = args.fftFreqStep > 0 ? args.fftFreqStep : null;
+		// computeFFT puts the window on its own grid and refuses one with a long gap (a NaN
+		// row for that window, never a spectrum joined across the gap); fftPeak refines the
+		// peak between bins.
 		const r = computeFFT(tt, yy, freqStep);
 		if (!r.frequencies.length) return stats;
-		let bestIdx = 0;
-		for (let i = 1; i < r.magnitudes.length; i++) {
-			if (r.magnitudes[i] > r.magnitudes[bestIdx]) bestIdx = i;
-		}
-		const freq = r.frequencies[bestIdx];
-		stats.peak_frequency = freq;
-		stats.peak_period = freq !== 0 ? 1 / freq : NaN;
-		stats.peak_magnitude = r.magnitudes[bestIdx];
+		const pk = fftPeak(r);
+		// null for flat data (no rhythm, ROB-13): leave the stats NaN.
+		if (!pk) return stats;
+		stats.peak_frequency = pk.frequency;
+		stats.peak_period = pk.frequency !== 0 ? pk.period : NaN;
+		stats.peak_magnitude = pk.magnitude;
 		return stats;
 	}
 
@@ -327,7 +325,7 @@ function computeStatsForWindow(tt, yy, args) {
 // which renders as a blank cell — indistinguishable, to the user, from "the fit
 // failed" or "the app is broken". So each per-y result also carries a `__skips`
 // tally under a reserved key ({ total, fewPoints, logDomain, expDomain,
-// polyDegree }) that the MovingAnalysis node turns into a warning sentence.
+// polyDegree, fftGap }) that the MovingAnalysis node turns into a warning sentence.
 // Every consumer of this result iterates `statKeys` explicitly (output-column
 // writes, pre-processes, previews, the parity adapter), so the extra key is
 // invisible to them and the NUMERIC outputs are bit-identical to before —
@@ -350,7 +348,8 @@ export function computeMovingWindows({ tAll, ys, starts, windowSize, statKeys, a
 			fewPoints: 0,
 			logDomain: 0,
 			expDomain: 0,
-			polyDegree: 0
+			polyDegree: 0,
+			fftGap: 0
 		};
 		for (let w = 0; w < starts.length; w++) {
 			const wStart = starts[w];
@@ -386,6 +385,12 @@ export function computeMovingWindows({ tAll, ys, starts, windowSize, statKeys, a
 			}
 			if (trendModel === 'polynomial' && tt.length <= trendPolyDegree) {
 				skips.polyDegree++;
+				continue;
+			}
+			// The FFT needs the window on a regular grid; a window with a long gap is
+			// refused (SPEC-2) and reported, not transformed with its gap closed up.
+			if (args.analysis === 'fft' && !regridUniform(tt, yy).ok) {
+				skips.fftGap++;
 				continue;
 			}
 			const s = computeStatsForWindow(tt, yy, args);
@@ -437,6 +442,14 @@ export function windowSkipMessages(skips, seriesLabel = '', opts = {}) {
 			`${ofTotal(skips.polyDegree)} ${wasWere(skips.polyDegree)} skipped: a degree-${deg} polynomial ` +
 				`needs more than ${deg} points per window to be determined, and these windows have too few. ` +
 				`Skipped windows are blank in the output columns. Lower the degree, widen the window, or supply denser data.`
+		);
+	}
+	if (skips.fftGap > 0) {
+		out.push(
+			`${ofTotal(skips.fftGap)} ${wasWere(skips.fftGap)} skipped: the FFT needs evenly spaced samples, ` +
+				`and these windows have a run of more than ${FFT_GAP_RULE.maxGapSamples} missing samples or more ` +
+				`than ${FFT_GAP_RULE.maxMissingFraction * 100}% missing, which the FFT will not interpolate. ` +
+				`Skipped windows are blank in the output columns. Use the periodogram (Lomb-Scargle handles gaps), or bin the data to a coarser interval.`
 		);
 	}
 	if (skips.fewPoints > 0) {

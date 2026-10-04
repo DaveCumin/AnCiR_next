@@ -249,12 +249,12 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>Start Date/Time</p>
-			<DateTimeHrs value={annotation.startDateTime} onChange={changedStartDateTime} />
+			<DateTimeHrs value={annotation.startDateTime} onChange={changedStartDateTime} label="Start" />
 		</div>
 
 		<div class="control-input">
 			<p>End Date/Time</p>
-			<DateTimeHrs value={annotation.endDateTime} onChange={changedEndDateTime} />
+			<DateTimeHrs value={annotation.endDateTime} onChange={changedEndDateTime} label="End" />
 		</div>
 	</div>
 {/snippet}

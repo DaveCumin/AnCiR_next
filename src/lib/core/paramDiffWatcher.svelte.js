@@ -3,6 +3,7 @@
 import { core } from './core.svelte.js';
 import { mutationService } from './mutationService.js';
 import { addStateChangeHook } from './operations.js';
+import { history } from './opHistory.svelte.js';
 
 /**
  * Bridge that converts direct `proc.args[key] = v` writes (e.g. from Svelte
@@ -57,6 +58,15 @@ function snapshot() {
 
 function diffAndEmit() {
 	if (suppress) return;
+	// While a session loads, every arg write is the load itself: nodes re-keying their output
+	// maps against the columns that now exist (`out`, review ROB-17) and the like. Turning those
+	// into ops recorded an undo step on every open, and undoing it restored an output map whose
+	// columns were gone. Track them into the baseline instead, so the first diff after the load
+	// compares against the loaded state.
+	if (history.isLoading) {
+		prev = snapshot();
+		return;
+	}
 	const next = snapshot();
 	for (const colKey of Object.keys(next)) {
 		const prevProcs = prev[colKey] ?? {};

@@ -308,7 +308,9 @@
 				value: coreState.rawData.get(p.args.out.value)
 			};
 			p.args.valid = true;
-			memo.hash = getHash;
+			// The saved outputs only fill the panel until the compute effect runs; they are
+			// never trusted as current (the file may predate a fix, or the inputs), so the memo
+			// hash is not pinned here and the node recomputes from its inputs once mounted.
 		}
 
 		timeIN_local = p.args.timeIN;

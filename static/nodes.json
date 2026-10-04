@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.78.1",
+  "generatedFromVersion": "β.79.0",
   "count": 62,
   "nodes": [
     {
@@ -1484,6 +1484,10 @@
         {
           "name": "permutationStatistic",
           "default": "rSquared"
+        },
+        {
+          "name": "permutationScheme",
+          "default": "shuffle"
         }
       ],
       "outputs": [
@@ -1861,6 +1865,14 @@
           "default": 24
         },
         {
+          "name": "minPeriod",
+          "default": 1
+        },
+        {
+          "name": "maxPeriod",
+          "default": 48
+        },
+        {
           "name": "permuteTest",
           "default": false
         },
@@ -1875,6 +1887,10 @@
         {
           "name": "permutationStatistic",
           "default": "rSquared"
+        },
+        {
+          "name": "permutationScheme",
+          "default": "shuffle"
         }
       ],
       "outputs": [
@@ -2085,6 +2101,10 @@
         {
           "name": "permutationStatistic",
           "default": "rSquared"
+        },
+        {
+          "name": "permutationScheme",
+          "default": "shuffle"
         }
       ],
       "outputs": [
@@ -3003,6 +3023,14 @@
           "default": 24
         },
         {
+          "name": "minPeriod",
+          "default": 1
+        },
+        {
+          "name": "maxPeriod",
+          "default": 48
+        },
+        {
           "name": "fixDutyCycle",
           "default": false
         },
@@ -3025,6 +3053,10 @@
         {
           "name": "permutationStatistic",
           "default": "rSquared"
+        },
+        {
+          "name": "permutationScheme",
+          "default": "shuffle"
         }
       ],
       "outputs": [
@@ -3479,7 +3511,7 @@
       "displayName": "Surrogate Test",
       "kind": "tableProcess",
       "family": "Analysis",
-      "description": "Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are also offered for association questions — the node warns when the chosen null cannot answer the question being asked.",
+      "description": "Test rhythm strength against a surrogate null that PRESERVES the series' nuisance structure. Plain shuffling destroys autocorrelation, which makes the null far too easy to beat; block bootstrap and AR(1) red noise keep it. Phase-randomised and AAFT surrogates are not offered: they keep the power spectrum, rhythm included, so they cannot test whether a rhythm is there.",
       "keywords": [
         "permutation",
         "bootstrap",

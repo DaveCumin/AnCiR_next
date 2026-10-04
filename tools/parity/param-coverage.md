@@ -7,17 +7,13 @@ Which values of each analysis’s ENUMERABLE parameters (booleans, select option
 appear in any parity fixture. A value listed here is a branch that the JS, Python and R
 runtimes all claim to agree on and that nothing has ever compared.
 
-23 analyses have at least one fixture; 10 reach every enumerable value.
+26 analyses have at least one fixture; 16 reach every enumerable value.
 
 ## Values no fixture reaches
 
-### BinnedData
-
-- `diffStep`: [true]
-
 ### Correlation
 
-- `method`: ["auto","spearman"]
+- `method`: ["spearman"]
 
 ### Cosinor
 
@@ -31,7 +27,6 @@ runtimes all claim to agree on and that nothing has ever compared.
 
 - `fixK1`: [true]
 - `fixK2`: [true]
-- `fixPeriod`: [false]
 - `permuteTest`: [true]
 
 ### FDRCorrection
@@ -40,10 +35,8 @@ runtimes all claim to agree on and that nothing has ever compared.
 
 ### FitFunction
 
-- `model`: ["rectangular","doublelogistic"]
 - `useFixedPeriod`: [false]
 - `fixKappa`: [true]
-- `fixOmega`: [true]
 - `fixDutyCycle`: [true]
 - `periodic`: [false]
 - `fixK1`: [true]
@@ -67,27 +60,24 @@ runtimes all claim to agree on and that nothing has ever compared.
 ### RectangularWave
 
 - `fixKappa`: [true]
-- `fixOmega`: [true]
 - `fixDutyCycle`: [true]
 - `permuteTest`: [true]
-
-### RhythmicityAnalysis
-
-- `analysis`: ["fft","correlogram"]
-
-### SurrogateTest
-
-- `method`: ["phase","aaft","ar1","shuffle"]
 
 ## Fully covered
 
 - AverageProfile
+- BinnedData
+- ChiSquared
 - CircadianFunctionIndex
 - ColumnFunctions
 - Crossing
 - DescribeData
+- FormulaColumn
 - Interpolate
 - LogisticRegression
 - NonparametricRA
+- RhythmicityAnalysis
+- SmoothedData
 - Sort
+- SurrogateTest
 - WideToLong

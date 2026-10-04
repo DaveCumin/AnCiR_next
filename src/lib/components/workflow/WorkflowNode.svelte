@@ -11,6 +11,7 @@
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { plotNodeSlots } from '$lib/core/ProcessNode.svelte.js';
+	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	let {
 		node,
 		selected = false,
@@ -291,7 +292,14 @@
 	{#if node.type === 'data' && node.refId != null}
 		{@const col = getColumnById(node.refId)}
 		{#if col}
-			<div class="node-body-padded"><MiniDataTable column={col} maxRows={5} /></div>
+			<!-- Contained (ROB-12): a column whose preview throws shows why in this node
+			     rather than unmounting the canvas. -->
+			<ErrorBoundary
+				context={`previewing the column "${col.name}"`}
+				title="This preview couldn't be shown."
+			>
+				<div class="node-body-padded"><MiniDataTable column={col} maxRows={5} /></div>
+			</ErrorBoundary>
 		{/if}
 	{/if}
 
@@ -304,6 +312,7 @@
 		>
 			<textarea
 				class="note-textarea"
+				aria-label="Note"
 				value={node.noteObj.text ?? ''}
 				placeholder="Write a note"
 				oninput={(e) => (node.noteObj.text = e.currentTarget.value)}

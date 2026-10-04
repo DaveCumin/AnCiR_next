@@ -11,7 +11,8 @@
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 	import {
 		permutationTableData,
-		hasPermutationDetail
+		hasPermutationDetail,
+		permutationSchemeLabel
 	} from '$lib/tableProcesses/permutationSupport.js';
 
 	/**
@@ -45,7 +46,9 @@
 					{#if Number.isFinite(e.result.observedStat)}
 						<span class="perm-detail">
 							observed {e.result.permStatistic ?? 'rSquared'} = {e.result.observedStat.toFixed(4)}
-							over {e.result.permStats?.length ?? 0} permutations
+							over {e.result.permStats?.length ?? 0} permutations ({permutationSchemeLabel(
+								e.result
+							)})
 						</span>
 					{/if}
 				</p>

@@ -26,6 +26,9 @@
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import { renderables, moveRefTo } from '$lib/core/plotRefs.js';
 	import FacetGroup from '$lib/components/views/FacetGroup.svelte';
+	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
+	import ComputeClaim from '$lib/components/views/ComputeClaim.svelte';
+	import { computeKey } from '$lib/core/computeOwners.svelte.js';
 	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
 	import { handleCanvasFileDrop } from '$lib/core/dataSourceActions.js';
 	import SelectionLayoutToolbar from '$lib/components/reusables/SelectionLayoutToolbar.svelte';
@@ -527,8 +530,32 @@
 							bind:selected={plot.selected}
 							viewportEl={canvasViewportEl}
 						>
-							{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
-							<Plot theData={plot} which="plot" brushable={true} zoomMode={isZoomMode(plot.id)} />
+							<!-- `?.`: a plot type this build does not know (a newer session, a renamed
+							     type) used to throw here and take every card with it (ROB-12). -->
+							{@const Plot = appConsts.plotMap.get(plot.type)?.plot ?? null}
+							<!-- One boundary per card: a plot that throws while drawing shows why,
+							     in its own card, and the rest of the worksheet keeps working. -->
+							<ErrorBoundary
+								context={`drawing the ${plot.type} plot "${plot.name}"`}
+								title="This plot couldn't be drawn."
+								hint="Check the columns it is wired to; undo reverses the change that broke it."
+							>
+								{#if Plot}
+									<Plot
+										theData={plot}
+										which="plot"
+										brushable={true}
+										zoomMode={isZoomMode(plot.id)}
+									/>
+								{:else}
+									<p class="unknown-plot">Unknown plot type "{plot.type}".</p>
+								{/if}
+							</ErrorBoundary>
+							<!-- Outside the boundary: a card that failed still owns its compute, so the
+							     hidden compute host does not mount a second copy that fails again. -->
+							{#if Plot}
+								<ComputeClaim computeKey={computeKey('plot', plot.id)} />
+							{/if}
 						</Draggable>
 					{/if}
 				{/each}
@@ -540,7 +567,7 @@
 		     panel), so the worksheet's own empty state is now just "add a plot". -->
 		{#if core.plots.length === 0 && core.notes.length === 0 && core.data.length > 0}
 			<div class="no-plot-prompt" out:fade={{ duration: 600 }}>
-				<button class="icon" onclick={() => (showNewPlotModal = true)}>
+				<button class="icon" aria-label="Add a plot" onclick={() => (showNewPlotModal = true)}>
 					<Icon name="add" width={24} height={24} />
 				</button>
 				<p style="margin-left: 10px">Click here to add a plot</p>
@@ -599,6 +626,11 @@
 </div>
 
 <style>
+	.unknown-plot {
+		margin: var(--space-2);
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+	}
 	.canvas {
 		position: fixed;
 		overflow: hidden;

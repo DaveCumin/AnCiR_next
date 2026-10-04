@@ -1,5 +1,6 @@
 // @ts-nocheck
 // Pure smoothing algorithms — extracted so they can be tested and reused.
+import { isInvalidValue } from './stats.js';
 
 // ─── Matrix helpers (used by Whittaker-Eilers and Savitzky-Golay) ──────────
 
@@ -311,19 +312,22 @@ export function movingAverage(y, windowSize = 5, type = 'simple') {
 		const end = Math.min(y.length - 1, i + halfWindow);
 
 		for (let j = start; j <= end; j++) {
-			if (y[j] != null && !isNaN(y[j])) {
+			// The house rule decides what is missing (null, blank, whitespace, text), and Number()
+			// converts the rest: `sum += y[j]` on a numeric string concatenated (ROB-8).
+			if (!isInvalidValue(y[j])) {
+				const yj = Number(y[j]);
 				if (type === 'simple') {
-					sum += y[j];
+					sum += yj;
 					count++;
 				} else if (type === 'weighted') {
 					const distance = Math.abs(i - j);
 					const weight = Math.max(0, windowSize - distance);
-					sum += y[j] * weight;
+					sum += yj * weight;
 					weightSum += weight;
 				} else if (type === 'exponential') {
 					const distance = Math.abs(i - j);
 					const weight = Math.exp(-distance / (windowSize / 3));
-					sum += y[j] * weight;
+					sum += yj * weight;
 					weightSum += weight;
 				}
 			}

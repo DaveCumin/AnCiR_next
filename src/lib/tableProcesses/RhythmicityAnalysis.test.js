@@ -55,7 +55,10 @@ vi.mock('$lib/utils/periodogram.js', () => ({
 	})
 }));
 
-vi.mock('$lib/utils/fft.js', () => ({
+// computeFFT is stubbed; fftPeak stays REAL (with no `grid` on the stub it returns the
+// largest bin), so the node's peak selection is exercised rather than echoed back.
+vi.mock('$lib/utils/fft.js', async (importOriginal) => ({
+	...(await importOriginal()),
 	computeFFT: vi.fn(() => ({
 		frequencies: [0, 1 / 24, 1 / 12, 1 / 8],
 		magnitudes: [0, 5, 1, 0.5],

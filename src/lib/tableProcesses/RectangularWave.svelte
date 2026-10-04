@@ -9,9 +9,18 @@
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
-	import { fitRectangularWave, evaluateRectWaveAtPoints } from '$lib/utils/rectwave.js';
+	import {
+		fitRectangularWave,
+		evaluateRectWaveAtPoints,
+		rectWaveFitWarnings
+	} from '$lib/utils/rectwave.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
-	import { attachPermutation } from '$lib/tableProcesses/permutationSupport.js';
+	import { FREE_PERIOD_DEFAULTS } from '$lib/utils/cosinor.js';
+	import { periodRangeWarnings } from '$lib/utils/periodRangeWarnings.js';
+	import {
+		attachPermutation,
+		permutationValidityWarnings
+	} from '$lib/tableProcesses/permutationSupport.js';
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
@@ -25,6 +34,10 @@
 		['fixedKappa', { val: 5 }],
 		['fixOmega', { val: false }],
 		['fixedPeriod', { val: 24 }],
+		// Free period only: the range (h) the fit may use. Unbounded, a trend with no rhythm
+		// fitted a 2,243 h "period" (review FIT-1); same defaults as Cosinor.
+		['minPeriod', { val: FREE_PERIOD_DEFAULTS.minPeriod }],
+		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
 		['fixDutyCycle', { val: false }],
 		['fixedDutyCycle', { val: 0.5 }],
 		// Permutation test: a model-vs-chance significance test for each y fit.
@@ -32,6 +45,7 @@
 		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
 		['permutationSeed', { val: PERMUTATION_DEFAULTS.permutationSeed }],
 		['permutationStatistic', { val: PERMUTATION_DEFAULTS.permutationStatistic }],
+		['permutationScheme', { val: PERMUTATION_DEFAULTS.permutationScheme }],
 		[
 			'out',
 			{
@@ -127,6 +141,8 @@
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
 		const fixDutyCycle = argsIN.fixDutyCycle ?? false;
 		const fixedDutyCycle = argsIN.fixedDutyCycle ?? 0.5;
+		const minPeriod = argsIN.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod;
+		const maxPeriod = argsIN.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod;
 
 		let result = {
 			t: [],
@@ -178,8 +194,12 @@
 			fixedOmega,
 			fixedPeriod,
 			fixDutyCycle,
-			fixedDutyCycle
+			fixedDutyCycle,
+			minPeriod,
+			maxPeriod
 		};
+		// Residual-autocorrelation warnings for the shuffle permutation test (FIT-5).
+		const permWarnings = [];
 
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
@@ -201,7 +221,9 @@
 				fixDutyCycle,
 				fixedKappa,
 				fixedOmega,
-				fixedDutyCycle
+				fixedDutyCycle,
+				minPeriod,
+				maxPeriod
 			});
 
 			fitEntries.push({ label: `"${yCol.name}"`, result: fitResult ?? null });
@@ -212,11 +234,19 @@
 					? evaluateRectWaveAtPoints(fitResult.parameters, outputXData)
 					: fitResult.fitted;
 
+				const perm = argsIN.permuteTest
+					? fitPermutationPValue(tt, yy, 'rectangular', permOptions, argsIN)
+					: null;
 				result.y_results[yId] = attachPermutation(
 					{ fitResult, fitted: yOutData, t: tt, xOutData, yOutData },
-					argsIN.permuteTest
-						? fitPermutationPValue(tt, yy, 'rectangular', permOptions, argsIN)
-						: null
+					perm
+				);
+				permWarnings.push(
+					...permutationValidityWarnings(
+						perm,
+						yy.map((v, i) => v - fitResult.fitted[i]),
+						`"${yCol.name}"`
+					)
 				);
 				if (result.t.length === 0) result.t = tt;
 				anyValid = true;
@@ -285,6 +315,13 @@
 		// Not gated on anyValid: when a fit fails, the point count is the explanation.
 		result.warnings = [
 			...checkFitResultsFinite(fitEntries, 'The rectangular-wave fit'),
+			...(fixOmega
+				? []
+				: [
+						...periodRangeWarnings(t, minPeriod, maxPeriod),
+						...rectWaveFitWarnings(fitEntries, 'The free-period rectangular-wave fit')
+					]),
+			...permWarnings,
 			...fitSampleWarnings(argsIN)
 		];
 		return [result, anyValid];
@@ -298,6 +335,9 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import { createComputeRunner } from '$lib/core/asyncCompute.js';
+	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
 
 	import { migrateRenamedMetricOut } from '$lib/tableProcesses/metricOutputs.js';
@@ -325,6 +365,8 @@
 	if (p.args.fixedKappa === undefined) p.args.fixedKappa = 5;
 	if (p.args.fixOmega === undefined) p.args.fixOmega = false;
 	if (p.args.fixedPeriod === undefined) p.args.fixedPeriod = 24;
+	if (p.args.minPeriod === undefined) p.args.minPeriod = FREE_PERIOD_DEFAULTS.minPeriod;
+	if (p.args.maxPeriod === undefined) p.args.maxPeriod = FREE_PERIOD_DEFAULTS.maxPeriod;
 	if (p.args.fixDutyCycle === undefined) p.args.fixDutyCycle = false;
 	if (p.args.fixedDutyCycle === undefined) p.args.fixedDutyCycle = 0.5;
 	if (p.args.permuteTest === undefined) p.args.permuteTest = PERMUTATION_DEFAULTS.permuteTest;
@@ -333,6 +375,8 @@
 		p.args.permutationSeed = PERMUTATION_DEFAULTS.permutationSeed;
 	if (p.args.permutationStatistic === undefined)
 		p.args.permutationStatistic = PERMUTATION_DEFAULTS.permutationStatistic;
+	if (p.args.permutationScheme === undefined)
+		p.args.permutationScheme = PERMUTATION_DEFAULTS.permutationScheme;
 
 	let rwave = $state(null);
 
@@ -347,7 +391,8 @@
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
-	let _calcToken = 0;
+	// The message of the last failed compute, shown with a Retry (ROB-11).
+	let calcError = $state(null);
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'rectwavey_', 'rectwave_');
 	const { syncYColumns: syncResidColumns, initYColumns: initResidColumns } = useMultiYTP(
@@ -385,6 +430,7 @@
 		// was component-local a view switch recomputed anyway and hid it; now that
 		// the memo survives a remount, an omission here means an edit is ignored.
 		out += '|' + p.args.fixedDutyCycle + '|' + p.args.fixedKappa + '|' + p.args.fixedPeriod;
+		out += '|' + p.args.minPeriod + '|' + p.args.maxPeriod + '|' + p.args.permutationScheme;
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -411,17 +457,7 @@
 		if (!mounted) return;
 		if (memo.hash !== dataHash) {
 			memo.hash = getHash;
-			calculating = true;
-			const token = ++_calcToken;
-			setTimeout(() => {
-				if (token !== _calcToken) return;
-				untrack(() => {
-					previewStart = 1;
-					[rwave, p.args.valid] = rectangularwave(p.args);
-					p.warnings = rwave?.warnings ?? [];
-					calculating = false;
-				});
-			}, 0);
+			untrack(() => getRwave());
 		}
 	});
 
@@ -430,17 +466,31 @@
 		if (changed) getRwave();
 	}
 
+	// try/finally, error state, success-only memo commit: see core/asyncCompute.js.
+	const runner = createComputeRunner({
+		memo,
+		node: p,
+		label: 'Rectangular wave fit',
+		setBusy: (v) => (calculating = v),
+		setError: (m) => (calcError = m)
+	});
 	function getRwave() {
 		previewStart = 1;
-		calculating = true;
-		const token = ++_calcToken;
-		setTimeout(() => {
-			if (token !== _calcToken) return;
-			[rwave, p.args.valid] = rectangularwave(p.args);
-			p.warnings = rwave?.warnings ?? [];
-			calculating = false;
-			memo.hash = getHash;
-		}, 0);
+		runner.run(
+			untrack(() => getHash),
+			() => untrack(() => rectangularwave(p.args)),
+			([data, valid]) => {
+				rwave = data;
+				p.args.valid = valid;
+				p.warnings = rwave?.warnings ?? [];
+			},
+			() => {
+				rwave = undefined;
+				p.warnings = [];
+				p.args.valid = false;
+				clearOutputColumns(p.args.out);
+			}
+		);
 	}
 
 	// Exclude own output column IDs from the Y selector
@@ -601,10 +651,10 @@
 
 	<!-- Sharpness (κ) -->
 	<div class="control-input-horizontal">
-		<div class="control-input-checkbox">
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={p.args.fixKappa} onchange={getRwave} />
-			<p>Fix sharpness (κ)</p>
-		</div>
+			<span class="ci-label">Fix sharpness (κ)</span>
+		</label>
 	</div>
 	{#if p.args.fixKappa}
 		<div class="control-input-horizontal">
@@ -616,10 +666,10 @@
 
 	<!-- Period (ω) -->
 	<div class="control-input-horizontal">
-		<div class="control-input-checkbox">
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={p.args.fixOmega} onchange={getRwave} />
-			<p>Fix period</p>
-		</div>
+			<span class="ci-label">Fix period</span>
+		</label>
 	</div>
 	{#if p.args.fixOmega}
 		<div class="control-input-horizontal">
@@ -639,14 +689,24 @@
 				/>
 			</ControlInput>
 		</div>
+	{:else}
+		<!-- The free period is searched for, and kept, inside this range (as Cosinor). -->
+		<div class="control-input-horizontal">
+			<ControlInput label="Min period (hrs)">
+				<NumberWithUnits bind:value={p.args.minPeriod} onInput={getRwave} min="0.1" step="1" />
+			</ControlInput>
+			<ControlInput label="Max period (hrs)">
+				<NumberWithUnits bind:value={p.args.maxPeriod} onInput={getRwave} min="0.1" step="1" />
+			</ControlInput>
+		</div>
 	{/if}
 
 	<!-- Duty cycle (d) -->
 	<div class="control-input-horizontal">
-		<div class="control-input-checkbox">
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={p.args.fixDutyCycle} onchange={getRwave} />
-			<p>Fix duty cycle</p>
-		</div>
+			<span class="ci-label">Fix duty cycle</span>
+		</label>
 	</div>
 	{#if p.args.fixDutyCycle}
 		<div class="control-input-horizontal">
@@ -664,10 +724,10 @@
 
 	<!-- Permutation test -->
 	<div class="control-input-horizontal">
-		<div class="control-input-checkbox">
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={p.args.permuteTest} onchange={getRwave} />
-			<p>Test significance (model vs chance)</p>
-		</div>
+			<span class="ci-label">Test significance (model vs chance)</span>
+		</label>
 	</div>
 	{#if p.args.permuteTest}
 		<div class="control-input-horizontal">
@@ -678,20 +738,34 @@
 				<NumberWithUnits bind:value={p.args.permutationSeed} min="0" step="1" onInput={getRwave} />
 			</ControlInput>
 		</div>
+		<!-- Its own row: three controls side by side overlap their labels in a canvas node. -->
+		<div class="control-input-horizontal">
+			<ControlInput label="Permute">
+				<select bind:value={p.args.permutationScheme} onchange={getRwave}>
+					<option value="shuffle">single values</option>
+					<option value="block">one-period blocks</option>
+				</select>
+			</ControlInput>
+		</div>
+		<p class="hint">
+			Permuting single values assumes the observations are exchangeable (independent). Time series
+			are usually autocorrelated, which makes that p-value too small; one-period blocks keep the
+			autocorrelation, and the Surrogate Test node offers block and AR(1) surrogates.
+		</p>
 		<PermutationSummary entries={permEntries} nodeId={p.id} label="Rectangular wave" />
 	{/if}
 
 	{#if !hideInputs}
 		<!-- Output X -->
 		<div class="control-input-horizontal">
-			<div class="control-input-checkbox">
+			<label class="control-input-checkbox">
 				<input
 					type="checkbox"
 					bind:checked={showOutputX}
 					onchange={(e) => toggleOutputX(e.target.checked)}
 				/>
-				<p>Specify output x values</p>
-			</div>
+				<span class="ci-label">Specify output x values</span>
+			</label>
 		</div>
 		{#if showOutputX}
 			<div class="control-input-vertical">
@@ -821,6 +895,8 @@
 		<div class="section-content">
 			{#if calculating}
 				<LoadingSpinner message="Fitting rectangular wave…" />
+			{:else if calcError}
+				<ErrorBox title="The fit failed." message={calcError} onretry={getRwave} />
 			{:else if p.args.valid && p.args.out.rectwavex != -1}
 				{@const xout = getColumnById(p.args.out.rectwavex)}
 				<div class="tp-outputs">
@@ -930,6 +1006,11 @@
 {/each}
 
 <style>
+	.hint {
+		font-size: var(--font-sm);
+		color: var(--color-text-muted);
+		margin: var(--space-1) 0 0;
+	}
 	/* Matches ChiSquared / Rayleigh / Cosinor / NPCRA. */
 	.warn {
 		font-size: var(--font-xs);

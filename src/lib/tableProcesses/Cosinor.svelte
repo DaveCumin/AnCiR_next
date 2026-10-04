@@ -6,9 +6,9 @@
 	import {
 		evaluateCosinorAtPoints,
 		freePeriodFitWarnings,
-		resolvePeriodRange,
 		FREE_PERIOD_DEFAULTS
 	} from '$lib/utils/cosinor.js';
+	import { periodRangeWarnings } from '$lib/utils/periodRangeWarnings.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
@@ -20,9 +20,16 @@
 		migrateLegacyYIN,
 		fillDefaults
 	} from '$lib/tableProcesses/tpArgHelpers.js';
-	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
+	import {
+		writeOutputColumn,
+		writeXOutput,
+		clearOutputColumns
+	} from '$lib/tableProcesses/outputColumns.js';
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
-	import { attachPermutation } from '$lib/tableProcesses/permutationSupport.js';
+	import {
+		attachPermutation,
+		permutationValidityWarnings
+	} from '$lib/tableProcesses/permutationSupport.js';
 	import { bathyphase, phaseAngleOfEntrainment, wrapToPeriod } from '$lib/utils/cosinorAddons.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 
@@ -92,6 +99,9 @@
 		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
 		['permutationSeed', { val: PERMUTATION_DEFAULTS.permutationSeed }],
 		['permutationStatistic', { val: PERMUTATION_DEFAULTS.permutationStatistic }],
+		// 'shuffle' (single values; assumes exchangeable observations) or 'block' (one-period
+		// circular blocks, which keep short-range autocorrelation). Review finding FIT-5.
+		['permutationScheme', { val: PERMUTATION_DEFAULTS.permutationScheme }],
 		['forcollected', { val: true }],
 		['collectedType', { val: 'cosinor' }],
 		['preProcesses', { val: [] }],
@@ -227,6 +237,9 @@
 
 		result.outputXData = outputXData;
 		result.originTime_ms = originTime_ms;
+		// Test-validity warnings per series (review FIT-5): the F-test and the shuffle
+		// permutation test assume independent observations.
+		result.validityWarnings = [];
 
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
@@ -314,8 +327,21 @@
 			// Permutation test: model-vs-chance significance for THIS fit. Computed
 			// here (not in the output-writing pass) so the panel and the stats table
 			// can show it even when nothing downstream is wired to the `pvalue` port.
-			if (argsIN.permuteTest) {
-				attachPermutation(yResult, fitPermutationPValue(tt, yy, 'cosinor', permOptions, argsIN));
+			const perm = argsIN.permuteTest
+				? fitPermutationPValue(tt, yy, 'cosinor', permOptions, argsIN)
+				: null;
+			if (perm) attachPermutation(yResult, perm);
+			const fitted = yResult.fittedData?.fitted ?? [];
+			if (fitted.length === yy.length) {
+				result.validityWarnings.push(
+					...permutationValidityWarnings(
+						perm,
+						yy.map((v, i) => v - fitted[i]),
+						`"${yCol.name ?? yId}"`,
+						// The F-test p exists only for the fixed-period fit.
+						{ fTest: useFixedPeriod && !!yResult.fixedStats }
+					)
+				);
 			}
 
 			result.y_results[yId] = yResult;
@@ -527,26 +553,6 @@
 		return warnings;
 	}
 
-	// The free fit refuses an empty period range (min ≥ max, or a range that lies
-	// entirely below the Nyquist period of the sampling); say why instead of
-	// leaving the panel blank.
-	function periodRangeWarnings(t, argsIN) {
-		const lo = Number(argsIN.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod);
-		const hi = Number(argsIN.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod);
-		if (!(lo > 0 && hi > lo)) {
-			return [
-				`Period range ${lo} to ${hi} h is empty: the minimum period must be above 0 and below the maximum. Set a range that contains the rhythm you expect (default ${FREE_PERIOD_DEFAULTS.minPeriod} to ${FREE_PERIOD_DEFAULTS.maxPeriod} h).`
-			];
-		}
-		const finite = (t ?? []).filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
-		if (finite.length >= 2 && !resolvePeriodRange(finite, lo, hi)) {
-			return [
-				`Period range ${lo} to ${hi} h lies below what the sampling can resolve (the shortest resolvable period is twice the sampling interval). Raise the maximum period.`
-			];
-		}
-		return [];
-	}
-
 	export async function cosinor(argsIN) {
 		const [result, anyValid] = await evaluateCosinor(argsIN);
 		if (anyValid && argsIN?.out?.cosinorx !== -1) {
@@ -569,9 +575,10 @@
 			...(argsIN.useFixedPeriod
 				? []
 				: [
-						...periodRangeWarnings(t, argsIN),
+						...periodRangeWarnings(t, argsIN.minPeriod, argsIN.maxPeriod),
 						...freePeriodFitWarnings(fitEntries, 'The free-period cosinor fit')
 					]),
+			...(result?.validityWarnings ?? []),
 			...cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1))
 		];
 		return [result, anyValid];
@@ -703,6 +710,8 @@
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
+	import { createComputeRunner, computeErrorMessage } from '$lib/core/asyncCompute.js';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -716,7 +725,8 @@
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
-	let _calcToken = 0;
+	// The message of a compute that threw (ROB-11), shown on the node with a Try again button.
+	let calcError = $state(null);
 
 	// One entry per fitted y series, for the permutation readout under the test's controls.
 	let permEntries = $derived(
@@ -771,7 +781,9 @@
 			'|' +
 			p.args.minPeriod +
 			'|' +
-			p.args.maxPeriod;
+			p.args.maxPeriod +
+			'|' +
+			p.args.permutationScheme;
 		return out;
 	});
 	// The stats (MESOR / amplitude / phase / CIs / F-stat / RMSE) live only in the
@@ -799,25 +811,26 @@
 	// computeMemo.js).
 	$effect(() => memo.follow(getHash, restore));
 
+	// One guard for the deferred compute (ROB-11, src/lib/core/asyncCompute.js): the
+	// spinner is cleared in a finally, a throw is shown on the node instead of spinning
+	// forever over the previous result, and the memo hash is committed only on success
+	// (the claim the effect below makes is released on failure, so a remount or Retry
+	// tries the same inputs again).
+	const runner = createComputeRunner({
+		memo,
+		label: 'Cosinor',
+		setBusy: (v) => (calculating = v),
+		setError: (msg) => (calcError = msg)
+	});
+
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
 		if (memo.hash !== dataHash) {
-			memo.hash = getHash; // read before untrack so it's tracked
-			p.args._fitHash = memo.hash;
-			calculating = true;
-			const token = ++_calcToken;
-			setTimeout(async () => {
-				if (token !== _calcToken) return; // superseded by a newer request
-				previewStart = 1;
-				const promise = untrack(() => cosinor(p.args));
-				const [data, valid] = await promise;
-				if (token !== _calcToken) return; // re-check after await
-				cosinorData = data;
-				p.args.valid = valid;
-				p.warnings = cosinorData?.warnings ?? [];
-				calculating = false;
-			}, 0);
+			// Claim the hash before the deferred run starts, so a second mounted instance
+			// (canvas node + control panel) does not run the same compute.
+			memo.hash = dataHash;
+			untrack(() => getCosinor());
 		}
 	});
 
@@ -839,20 +852,24 @@
 	//------------
 	function getCosinor() {
 		previewStart = 1;
-		calculating = true;
-		const token = ++_calcToken;
-		setTimeout(async () => {
-			if (token !== _calcToken) return;
-			const promise = untrack(() => cosinor(p.args));
-			const [data, valid] = await promise;
-			if (token !== _calcToken) return; // re-check after await
-			cosinorData = data;
-			p.args.valid = valid;
-			p.warnings = cosinorData?.warnings ?? [];
-			calculating = false;
-			memo.hash = getHash;
-			p.args._fitHash = memo.hash;
-		}, 0);
+		const hash = untrack(() => getHash);
+		return runner.run(
+			hash,
+			() => untrack(() => cosinor(p.args)),
+			([data, valid]) => {
+				cosinorData = data;
+				p.args.valid = valid;
+				p.warnings = cosinorData?.warnings ?? [];
+				p.args._fitHash = hash;
+			},
+			(e) => {
+				// No stale stats on the panel, and none flowing downstream either.
+				cosinorData = undefined;
+				p.args.valid = false;
+				p.warnings = [`The cosinor fit failed: ${computeErrorMessage(e)}`];
+				clearOutputColumns(p.args.out, { processHash: crypto.randomUUID() });
+			}
+		);
 	}
 
 	// Exclude own output column IDs from the Y selector
@@ -1104,6 +1121,20 @@
 				/>
 			</ControlInput>
 		</div>
+		<!-- Its own row: three controls side by side overlap their labels in a canvas node. -->
+		<div class="control-input-horizontal">
+			<ControlInput label="Permute">
+				<select bind:value={p.args.permutationScheme} onchange={() => getCosinor()}>
+					<option value="shuffle">single values</option>
+					<option value="block">one-period blocks</option>
+				</select>
+			</ControlInput>
+		</div>
+		<p class="hint">
+			Permuting single values assumes the observations are exchangeable (independent). Time series
+			are usually autocorrelated, which makes that p-value too small; one-period blocks keep the
+			autocorrelation, and the Surrogate Test node offers block and AR(1) surrogates.
+		</p>
 		<PermutationSummary entries={permEntries} nodeId={p.id} label="Cosinor" />
 	{/if}
 
@@ -1310,6 +1341,12 @@
 		<div class="section-content">
 			{#if calculating}
 				<LoadingSpinner message="Fitting cosinor…" />
+			{:else if calcError}
+				<ErrorBox
+					title="The cosinor fit failed."
+					message={calcError}
+					onretry={() => getCosinor()}
+				/>
 			{:else if p.args.valid && p.args.out.cosinorx != -1}
 				{@const xout = getColumnById(p.args.out.cosinorx)}
 				<div class="tp-outputs">
@@ -1417,6 +1454,11 @@
 {/each}
 
 <style>
+	.hint {
+		font-size: var(--font-sm);
+		color: var(--color-text-muted);
+		margin: var(--space-1) 0 0;
+	}
 	/* Matches ChiSquared / Rayleigh / NPCRA. */
 	.warn {
 		font-size: var(--font-xs);

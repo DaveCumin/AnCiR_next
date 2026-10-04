@@ -3,6 +3,7 @@
 	// @ts-nocheck
 	import { core, appState, getProcessNodeGraph } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { columnNamer } from '$lib/core/columnLabels.js';
 	import { tick, untrack } from 'svelte';
 
 	import Icon from '$lib/icons/Icon.svelte';
@@ -29,13 +30,19 @@
 	function matches(name) {
 		return !q || (name ?? '').toString().toLowerCase().includes(q);
 	}
+	// A column matches on the name it SHOWS (a node output's label, e.g. "Acrophase (h)") as
+	// well as its stored name (UI-4), so searching either finds it.
+	const namer = $derived(columnNamer());
+	function columnMatches(c) {
+		return matches(c.name) || matches(namer(c));
+	}
 	function isOpen(id) {
 		return openSections[id] || !!q;
 	}
 	function groupVisibleColumns(group) {
 		return (group.sourceColumnIds ?? [])
 			.map((id) => getColumnById(id))
-			.filter((c) => c && matches(c.name));
+			.filter((c) => c && columnMatches(c));
 	}
 
 	// Expand state — keyed by section id (group id, '__nodes__', '__ungrouped__',
@@ -175,13 +182,13 @@
 	});
 
 	// Search-filtered views of each section.
-	const filteredUngrouped = $derived(ungroupedColumns.filter((c) => matches(c.name)));
+	const filteredUngrouped = $derived(ungroupedColumns.filter(columnMatches));
 	function nodeMatches(node) {
 		if (!q) return true;
 		if (matches(getNodeName(node))) return true;
 		for (const o of node.outputColumns ?? []) {
 			const c = getColumnById(o.colId);
-			if (c && matches(c.name)) return true;
+			if (c && columnMatches(c)) return true;
 		}
 		return false;
 	}
@@ -412,7 +419,13 @@
 						>
 							<Icon name="add" width={15} height={15} />
 						</button>
-						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__data__')}>
+						<button
+							class="icon"
+							type="button"
+							aria-label="Show data"
+							aria-expanded={isOpen('__data__')}
+							onclick={(e) => toggleSectionFromCaret(e, '__data__')}
+						>
 							{#if isOpen('__data__')}
 								<Icon name="caret-down" width={20} height={20} />
 							{:else}
@@ -450,7 +463,13 @@
 										>
 											<Icon name="process" width={15} height={15} className="menu-icon" />
 										</button>
-										<button class="icon" onclick={(e) => toggleSectionFromCaret(e, group.id)}>
+										<button
+											class="icon"
+											type="button"
+											aria-label={`Show ${group.name}`}
+											aria-expanded={isOpen(group.id)}
+											onclick={(e) => toggleSectionFromCaret(e, group.id)}
+										>
 											{#if isOpen(group.id)}
 												<Icon name="caret-down" width={20} height={20} />
 											{:else}
@@ -551,7 +570,13 @@
 						<p>Nodes</p>
 					</div>
 					<div class="clps-title-button">
-						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__nodes__')}>
+						<button
+							class="icon"
+							type="button"
+							aria-label="Show nodes"
+							aria-expanded={isOpen('__nodes__')}
+							onclick={(e) => toggleSectionFromCaret(e, '__nodes__')}
+						>
 							{#if isOpen('__nodes__')}
 								<Icon name="caret-down" width={20} height={20} />
 							{:else}
@@ -586,7 +611,13 @@
 						<p>Plots</p>
 					</div>
 					<div class="clps-title-button">
-						<button class="icon" onclick={(e) => toggleSectionFromCaret(e, '__plots__')}>
+						<button
+							class="icon"
+							type="button"
+							aria-label="Show plots"
+							aria-expanded={isOpen('__plots__')}
+							onclick={(e) => toggleSectionFromCaret(e, '__plots__')}
+						>
 							{#if isOpen('__plots__')}
 								<Icon name="caret-down" width={20} height={20} />
 							{:else}

@@ -19,6 +19,9 @@
 	import { panelsFor } from '$lib/core/facetPanels.svelte.js';
 	import FacetPanelHost from '$lib/components/views/FacetPanelHost.svelte';
 	import FacetGeneratorCompute from '$lib/components/views/FacetGeneratorCompute.svelte';
+	import ComputeClaim from '$lib/components/views/ComputeClaim.svelte';
+	import { computeKey } from '$lib/core/computeOwners.svelte.js';
+	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 
 	let { plot, size, onResizeMouseDown } = $props();
 
@@ -97,14 +100,21 @@
 								style="grid-column:{(cell?.col ?? 0) + 1}; grid-row:{(cell?.row ?? 0) + 1};"
 							>
 								{#if CComp && child.plot}
-									<div
-										class="plot-preview-inner"
-										style="transform:scale({childScale(
-											child
-										)}); transform-origin:top left; width:{child.width}px; height:{child.height}px;"
+									<!-- Per panel, like the single-plot branch below: one panel that
+									     throws must not blank the canvas (ROB-12). -->
+									<ErrorBoundary
+										context={`drawing the facet panel "${child.name}"`}
+										title="This panel couldn't be drawn."
 									>
-										<CComp theData={child} which="plot" />
-									</div>
+										<div
+											class="plot-preview-inner"
+											style="transform:scale({childScale(
+												child
+											)}); transform-origin:top left; width:{child.width}px; height:{child.height}px;"
+										>
+											<CComp theData={child} which="plot" />
+										</div>
+									</ErrorBoundary>
 								{/if}
 							</div>
 						{/snippet}
@@ -132,6 +142,9 @@
 						: `transform:scale(${previewScale}); transform-origin:top left; width:${plot.width}px; height:${plot.height}px;`}
 				>
 					<PlotComp theData={plot} which="plot" />
+					<!-- This instance computes the plot's metric outputs: claim it, so the
+					     hidden compute host does not run a second one. -->
+					<ComputeClaim computeKey={computeKey('plot', plot.id)} />
 				</div>
 
 				{#snippet failed(error, reset)}

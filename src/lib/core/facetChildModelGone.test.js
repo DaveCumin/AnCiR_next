@@ -68,7 +68,13 @@ function sourceFiles(dir = srcRoot, out = []) {
 
 const hitsIn = (text) => LEGACY_NAMES.filter((name) => text.includes(name));
 
-describe('the facet child model stays gone', () => {
+// The walk reads every file under src/ (about 10 MB, the captured fixtures included): about a
+// quarter of a second alone, but disk-bound, so in a full parallel run, behind workers that are
+// importing every plot and analysis registry, it was seen to pass the default 5 s limit. A
+// generous limit costs nothing when the guard passes quickly and stops it flaking under load.
+const GUARD_TIMEOUT_MS = 30_000;
+
+describe('the facet child model stays gone', { timeout: GUARD_TIMEOUT_MS }, () => {
 	it('finds source files to scan (guards against the walk matching nothing)', () => {
 		expect(sourceFiles().length).toBeGreaterThan(200);
 	});

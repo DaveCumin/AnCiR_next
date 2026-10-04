@@ -302,3 +302,37 @@ describe('definition.getWarnings — node warnings channel', () => {
 		expect(definition.getWarnings(freeNode(null, { normalizationType: 'z-score' }))).toEqual([]);
 	});
 });
+
+// ─── review STAT-6: blanks are missing, numeric strings are numbers ──────────
+// The valid-value filter was `val != null && !isNaN(val)`, which lets '' and ' ' through
+// (isNaN('') is false): they entered the mean and SD as zeros. And a degenerate input
+// (zero spread, MAD or magnitude) mapped EVERY cell to 0, missing ones included.
+describe('normalize — review STAT-6', () => {
+	it('z-score: blanks neither count nor change; numeric strings are numbers', () => {
+		const out = normalize(['1', '', 3, ' ', 5], { normalizationType: 'z-score' });
+		const ref = normalize([1, 3, 5], { normalizationType: 'z-score' });
+		expect(out[0]).toBeCloseTo(ref[0], 12);
+		expect(out[2]).toBeCloseTo(ref[1], 12);
+		expect(out[4]).toBeCloseTo(ref[2], 12);
+		expect(out[1]).toBe('');
+		expect(out[3]).toBe(' ');
+	});
+
+	it('min-max: blanks are not the minimum', () => {
+		const out = normalize([2, '', 4, 6], { normalizationType: 'min-max' });
+		expect(out).toEqual([0, '', 0.5, 1]);
+	});
+
+	for (const type of ['z-score', 'robust', 'unit-vector']) {
+		it(`a degenerate input keeps its missing cells missing (${type})`, () => {
+			const x = type === 'unit-vector' ? [0, null, 0, ''] : [3, null, 3, ''];
+			const out = normalize(x, { normalizationType: type });
+			expect(out).toEqual([0, null, 0, '']);
+		});
+	}
+
+	it('warnings count only present values', () => {
+		expect(normalizeWarnings([3, '', 3, ' '], { normalizationType: 'z-score' })).toHaveLength(1);
+		expect(normalizeWarnings([3, '', 4], { normalizationType: 'z-score' })).toEqual([]);
+	});
+});

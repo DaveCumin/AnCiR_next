@@ -63,7 +63,15 @@ describe('worker postMessage throw → sync fallback', () => {
 });
 
 describe('worker error reporting (ok:false)', () => {
-	it('a worker reply with ok:false retries on the main thread (sync fallback)', async () => {
+	// ROB-11: a task that THROWS in a healthy worker has answered. It used to be re-run on
+	// the main thread (double the cost, and a frozen UI just to throw the same error again).
+	it('a worker reply with ok:false rejects with the worker error and does not rerun on the main thread', async () => {
+		let mainRuns = 0;
+		_resetComputeTasks();
+		registerComputeTask('double', ({ x }) => {
+			mainRuns++;
+			return { y: x.map((v) => v * 2) };
+		});
 		class ErrReplyWorker {
 			postMessage(req) {
 				setTimeout(() => {
@@ -73,24 +81,79 @@ describe('worker error reporting (ok:false)', () => {
 			terminate() {}
 		}
 		setWorkerFactory(() => new ErrReplyWorker());
-		// sync fallback recomputes successfully
+		await expect(runComputeTask('double', { x: [2, 3] })).rejects.toThrow(/worker boom/);
+		expect(mainRuns).toBe(0);
+	});
+
+	it('a task the worker does not have (notFound) still runs on the main thread', async () => {
+		class NotFoundWorker {
+			postMessage(req) {
+				setTimeout(() => {
+					this.onmessage?.({
+						data: { id: req.id, ok: false, notFound: true, error: 'not found in registry' }
+					});
+				}, 0);
+			}
+			terminate() {}
+		}
+		setWorkerFactory(() => new NotFoundWorker());
 		const out = await runComputeTask('double', { x: [2, 3] });
 		expect(out.y).toEqual([4, 6]);
 	});
 
-	it('sync fallback surfaces a genuine compute error as a rejection', async () => {
+	it('after a worker CRASH, the main-thread rerun surfaces a genuine compute error as a rejection', async () => {
 		_resetComputeTasks();
 		registerComputeTask('boom', () => {
 			throw new Error('bad input');
 		});
-		class ErrReplyWorker {
-			postMessage(req) {
-				setTimeout(() => this.onmessage?.({ data: { id: req.id, ok: false, error: 'x' } }), 0);
+		class CrashWorker {
+			constructor() {
+				setTimeout(() => this.onmessage?.({ data: { ready: true } }), 0);
+			}
+			postMessage() {
+				setTimeout(() => this.onerror?.({ message: 'x' }), 0);
 			}
 			terminate() {}
 		}
-		setWorkerFactory(() => new ErrReplyWorker());
+		setWorkerFactory(() => new CrashWorker());
 		await expect(runComputeTask('boom', {})).rejects.toThrow(/bad input/);
+	});
+});
+
+describe('per-task timeout', () => {
+	it('a task that never answers rejects after its timeout, and its worker is replaced', async () => {
+		const made = [];
+		let mainRuns = 0;
+		_resetComputeTasks();
+		registerComputeTask('double', ({ x }) => {
+			mainRuns++;
+			return { y: x.map((v) => v * 2) };
+		});
+		class Silent {
+			constructor() {
+				this.terminated = false;
+				made.push(this);
+			}
+			postMessage() {}
+			terminate() {
+				this.terminated = true;
+			}
+		}
+		setWorkerFactory(() => new Silent());
+		await expect(runComputeTask('double', { x: [1] }, { timeoutMs: 20 })).rejects.toThrow(
+			/did not finish within/
+		);
+		// Not re-run on the main thread: it would freeze the page for at least as long.
+		expect(mainRuns).toBe(0);
+		// The stuck worker was terminated and a fresh one took its slot.
+		expect(made.filter((w) => w.terminated)).toHaveLength(1);
+		expect(made.length).toBe(_poolState().slots.length + 1);
+		expect(_poolState().slots.every((s) => s.inflight === 0)).toBe(true);
+	});
+
+	it('a task that answers in time is not affected by its timeout', async () => {
+		const out = await runComputeTask('double', { x: [4] }, { timeoutMs: 1000 });
+		expect(out.y).toEqual([8]);
 	});
 });
 

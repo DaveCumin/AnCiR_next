@@ -1,6 +1,15 @@
 <script>
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, drawAxes, drawHGrid, seededRNG, initPalette } from '$lib/animUtils.js';
+	import {
+		C,
+		setupCanvas,
+		drawAxes,
+		drawHGrid,
+		seededRNG,
+		initPalette,
+		canvasSize,
+		observeResize
+	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
 
@@ -52,8 +61,7 @@
 
 	function drawSignal() {
 		const ctx = cSig.getContext('2d');
-		const W = cSig.offsetWidth,
-			H = cSig.offsetHeight;
+		const { W, H } = canvasSize(cSig);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 40,
@@ -94,8 +102,7 @@
 
 	function drawTest(k) {
 		const ctx = cTest.getContext('2d');
-		const W = cTest.offsetWidth,
-			H = cTest.offsetHeight;
+		const { W, H } = canvasSize(cTest);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 12,
@@ -153,8 +160,7 @@
 
 	function drawSpec(upTo) {
 		const ctx = cSpec.getContext('2d');
-		const W = cSpec.offsetWidth,
-			H = cSpec.offsetHeight;
+		const { W, H } = canvasSize(cSpec);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 42,
@@ -278,9 +284,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cSig, cTest, cSpec], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});
@@ -330,7 +336,7 @@
 				min="0.01"
 				max="6"
 				step="0.01"
-				value="0.08"
+				value="0.04"
 				oninput={(e) => {
 					fftSpeed = +e.target.value;
 				}}

@@ -102,3 +102,36 @@ describe('interpolatedata', () => {
 		expect(valid).toBe(false);
 	});
 });
+
+// Review follow-up: in fill mode a row whose y is PRESENT but whose x is missing came out
+// NaN, so the node deleted a real observation it was only meant to keep. It cannot be placed
+// on the x axis (and is not used as a known point), but it keeps its own y, as the Python
+// port (tp_interpolate) already does.
+describe('interpolatedata fill: a missing x keeps its own y', () => {
+	it('keeps the y of a row with a missing x, and still fills real gaps', () => {
+		mockColumns[3] = { type: 'number', name: 't', getData: () => [0, null, 2, '', 4] };
+		mockColumns[4] = { type: 'number', name: 'y', getData: () => [0, 7, NaN, '9', 40] };
+		const [result] = interpolatedata({ xIN: 3, yIN: [4], mode: 'fill', method: 'linear', out: {} });
+		expect(result.y_results[4]).toEqual([0, 7, 20, 9, 40]);
+	});
+
+	it('a row with both x and y missing stays missing', () => {
+		mockColumns[3] = { type: 'number', name: 't', getData: () => [0, null, 2] };
+		mockColumns[4] = { type: 'number', name: 'y', getData: () => [0, null, 20] };
+		const [result] = interpolatedata({ xIN: 3, yIN: [4], mode: 'fill', out: {} });
+		expect(Number.isNaN(result.y_results[4][1])).toBe(true);
+	});
+
+	it('resample mode is unaffected (the grid has no missing x)', () => {
+		mockColumns[3] = { type: 'number', name: 't', getData: () => [0, null, 2] };
+		mockColumns[4] = { type: 'number', name: 'y', getData: () => [0, 7, 20] };
+		const [result] = interpolatedata({
+			xIN: 3,
+			yIN: [4],
+			mode: 'resample',
+			step: 1,
+			out: {}
+		});
+		expect(result.y_results[4]).toEqual([0, 10, 20]);
+	});
+});

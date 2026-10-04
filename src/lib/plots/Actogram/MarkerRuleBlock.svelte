@@ -229,15 +229,15 @@
 			: 'series'}, are fitted. φ is in hours after the row start, at the φ day.
 	</p>
 
-	<div class="control-input-checkbox">
+	<label class="control-input-checkbox">
 		<input
 			type="checkbox"
 			checked={rule.colour == null}
 			onchange={(e) =>
 				commit({ colour: e.currentTarget.checked ? null : (inner.data[0]?.colour ?? '#000000') })}
 		/>
-		<p>Each series' colour</p>
-	</div>
+		<span class="ci-label">Each series' colour</span>
+	</label>
 	<div class="control-input-color">
 		{#if rule.colour != null}
 			<div class="control-color">
@@ -273,14 +273,14 @@
 			/>
 		</ControlInput>
 	</div>
-	<div class="control-input-checkbox">
+	<label class="control-input-checkbox">
 		<input
 			type="checkbox"
 			checked={rule.showLine}
 			onchange={(e) => commit({ showLine: e.currentTarget.checked })}
 		/>
-		<p>Show line</p>
-	</div>
+		<span class="ci-label">Show line</span>
+	</label>
 
 	<!-- What each series reports. τ is what the rule's τ OUTPUT carries (the harmonic
 	     check's pick, Decision 2b), labelled as the port labels it; the line's fitted slope

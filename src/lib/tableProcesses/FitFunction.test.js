@@ -88,6 +88,9 @@ vi.mock('$lib/utils/cosinor.js', async (importOriginal) => ({
 	evaluateCosinorAtPoints: vi.fn((params, points) => points.map(() => 40))
 }));
 vi.mock('$lib/utils/rectwave.js', () => ({
+	// The free-period warnings (review FIT-1) are tested on the real module
+	// (fitPeriodBound.test.js, FitFunction.review.test.js).
+	rectWaveFitWarnings: vi.fn(() => []),
 	fitRectangularWave: vi.fn((tt, yy) => ({
 		fitted: yy.map((v) => v * 0.9),
 		parameters: { period: 24, acrophase: 12, dutyCycle: 0.5, kappa: 5, M: 50, A: 25 },
@@ -99,6 +102,7 @@ vi.mock('$lib/utils/rectwave.js', () => ({
 	evaluateRectWaveAtPoints: vi.fn((params, points) => points.map(() => params.M))
 }));
 vi.mock('$lib/utils/doublelogistic.js', () => ({
+	doubleLogisticFitWarnings: vi.fn(() => []),
 	fitDoubleLogistic: vi.fn((tt, yy) => ({
 		fitted: yy.map((v) => v * 0.9),
 		parameters: { T: 24, M: 50, A: 25, k1: 0.5, k2: 0.7, t1: 6, t2: 18 },

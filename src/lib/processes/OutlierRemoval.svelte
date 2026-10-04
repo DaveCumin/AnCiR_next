@@ -4,6 +4,8 @@
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { KahanSum, kahanMean } from '$lib/utils/numerics.js';
 	import { dataEnteringProcess } from '$lib/core/processInput.js';
+	import { quantileType7 } from '$lib/utils/sampleStats.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	const outlierremoval_defaults = new Map([
 		['method', { val: 'zscore' }],
@@ -15,13 +17,14 @@
 	export const outlierRemovalMethodDisplay = ['IQR', 'Z-Score'];
 
 	// Outlier detection functions
+	/**
+	 * Tukey fences on type-7 quartiles (R's default, numpy.percentile's default, and what
+	 * the Boxplot and DescribeData use), so a value is an outlier here exactly when the
+	 * Boxplot draws it as one. sorted[floor(n/4)] used to disagree (review STAT-22).
+	 */
 	export function detectOutliersIQR(y, multiplier = 1.5) {
-		const sorted = [...y].sort((a, b) => a - b);
-		const n = sorted.length;
-		const q1Index = Math.floor(n / 4);
-		const q3Index = Math.floor((3 * n) / 4);
-		const q1 = sorted[q1Index];
-		const q3 = sorted[q3Index];
+		const q1 = quantileType7(y, 0.25);
+		const q3 = quantileType7(y, 0.75);
 		const iqr = q3 - q1;
 		const lowerBound = q1 - multiplier * iqr;
 		const upperBound = q3 + multiplier * iqr;
@@ -51,9 +54,11 @@
 		const validIndices = [];
 		const validData = [];
 		for (let i = 0; i < x.length; i++) {
-			if (x[i] != null && !isNaN(x[i])) {
+			// The house rule: '' and ' ' are missing (isNaN('') is false, so they used to
+			// enter as zeros); a numeric string is a number.
+			if (!isInvalidValue(x[i])) {
 				validIndices.push(i);
-				validData.push(x[i]);
+				validData.push(Number(x[i]));
 			}
 		}
 
@@ -88,17 +93,35 @@
 	 * Too-few-points warning for the node's ⚠ badge (processWarnings.js). The
 	 * compute above is UNCHANGED — under 4 valid points it still passes the data
 	 * through with nothing removed — this message just says so. Pure, so it is
-	 * unit-testable without a session.
+	 * unit-testable without a session. Also warns when the z rule cannot fire at this n.
+	 * @param {any[]} x
+	 * @param {{method?: string, zThreshold?: number}} [args]
 	 */
-	export function outlierRemovalWarnings(x) {
+	export function outlierRemovalWarnings(x, args = {}) {
 		if (x.length === 0) return [];
-		const validCount = x.reduce((n, v) => (v != null && !isNaN(v) ? n + 1 : n), 0);
-		if (validCount >= 4) return [];
-		return [
-			`Outlier detection needs at least 4 valid points to estimate what is typical, and this ` +
-				`input has ${validCount} (missing cells do not count), so the data passed through ` +
-				`unchanged with nothing removed. Wire in a longer column, or remove this node.`
-		];
+		const validCount = x.reduce((n, v) => (isInvalidValue(v) ? n : n + 1), 0);
+		if (validCount < 4) {
+			return [
+				`Outlier detection needs at least 4 valid points to estimate what is typical, and this ` +
+					`input has ${validCount} (missing cells do not count), so the data passed through ` +
+					`unchanged with nothing removed. Wire in a longer column, or remove this node.`
+			];
+		}
+		// The z rule uses the population SD, which bounds every |z| at (n - 1)/sqrt(n)
+		// (Shiffler 1988, The American Statistician 42:79-80). At or below the threshold the
+		// rule cannot flag anything, however extreme a value is (review STAT-22).
+		if (args?.method === 'zscore') {
+			const threshold = Number(args.zThreshold ?? 3);
+			const bound = (validCount - 1) / Math.sqrt(validCount);
+			if (Number.isFinite(threshold) && bound <= threshold) {
+				return [
+					`With ${validCount} points no value can have |z| above ${bound.toFixed(2)} ` +
+						`((n - 1)/sqrt(n)), so a z threshold of ${threshold} can never flag anything. ` +
+						`Lower the threshold below ${bound.toFixed(2)}, use the IQR rule, or use more data.`
+				];
+			}
+		}
+		return [];
 	}
 
 	export const definition = {
@@ -110,7 +133,7 @@
 		getWarnings: (p) => {
 			const inData = dataEnteringProcess(p);
 			if (!inData) return [];
-			return outlierRemovalWarnings(inData);
+			return outlierRemovalWarnings(inData, p.args);
 		},
 		nodeSpec: {
 			id: 'process.outlierremoval',
@@ -179,7 +202,8 @@
 		}
 
 		// Run outlier detection on the input data
-		const validData = data.filter((val) => val != null && !isNaN(val));
+		// Same valid-value rule as outlierremoval(), so the list matches what was removed.
+		const validData = data.filter((val) => !isInvalidValue(val)).map(Number);
 		if (validData.length < 4) return [];
 
 		let outlierMask;

@@ -70,7 +70,11 @@
 			out:fly={{ x: -appState.widthControlPanel, duration: 600 }}
 			{@attach tooltip('Close control panel')}
 		>
-			<button class="icon" onclick={() => (appState.showControlPanel = false)}>
+			<button
+				class="icon"
+				aria-label="Close control panel"
+				onclick={() => (appState.showControlPanel = false)}
+			>
 				<Icon name="circle-chevron-left" width={32} height={32} />
 			</button>
 		</div>
@@ -89,7 +93,11 @@
 		out:fly={{ x: -appState.widthControlPanel, duration: 600 }}
 		{@attach tooltip('Open control panel')}
 	>
-		<button class="icon" onclick={() => (appState.showControlPanel = true)}>
+		<button
+			class="icon"
+			aria-label="Open control panel"
+			onclick={() => (appState.showControlPanel = true)}
+		>
 			<Icon name="circle-chevron-left" width={32} height={32} />
 		</button>
 	</div>
@@ -98,6 +106,8 @@
 {#if core.plots.length > 0 && appState.view !== 'canvas'}
 	<button
 		class="icon newplotconstant"
+		aria-label="Add a plot"
+		{@attach tooltip('Add a plot')}
 		style="z-index: 999; position: fixed; right: calc({appState.showControlPanel
 			? appState.widthControlPanel
 			: 0}px + 5px); top: 10px;"

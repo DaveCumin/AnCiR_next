@@ -7,12 +7,16 @@
 // found out unless the user said so.
 //
 // So three things, in this order of importance:
-//   1. TELL the user, and say their work is still there. A blank canvas reads as data loss.
+//   1. TELL the user, truthfully: what happened, and where their work is.
 //   2. KEEP a copy of the session locally, because the one thing we must not do is lose it.
+//      The copy is offered back on the next load of the page (crashRecovery.js), which is
+//      what makes "a copy was kept" a promise rather than a comfort (ROB-5).
 //   3. REPORT it, so a crash nobody mentions still gets fixed.
 //
-// Containment itself is `<svelte:boundary>` at the call sites — this module is what a boundary
-// (or a stray window error) hands the error to.
+// Containment itself is `<svelte:boundary>` at the call sites (ErrorBoundary.svelte) — this
+// module is what a boundary (or a stray window error) hands the error to. Only a boundary
+// can say the error was CONTAINED; a window or promise error may have left anything half
+// done, and the toast says so (ROB-12).
 
 import { addNotification } from './notifications.svelte.js';
 import { core, appConsts, outputCoreAsJson } from './core.svelte.js';
@@ -76,6 +80,9 @@ function isRepeat(key) {
 export function saveCrashSnapshot() {
 	const s = snapshotStore();
 	if (!s) return false;
+	// Nothing to keep: an empty app has no work to lose, and offering to "restore" it would
+	// be noise.
+	if (!sessionHasWork()) return false;
 	try {
 		s.setItem(
 			CRASH_SNAPSHOT_KEY,
@@ -87,6 +94,16 @@ export function saveCrashSnapshot() {
 		// bad; throwing FROM the crash handler would be worse.
 		return false;
 	}
+}
+
+/** True when the open session holds anything a crash could cost the user. */
+function sessionHasWork() {
+	return (
+		(core?.data?.length ?? 0) > 0 ||
+		(core?.tableProcesses?.length ?? 0) > 0 ||
+		(core?.plots?.length ?? 0) > 0 ||
+		(core?.notes?.length ?? 0) > 0
+	);
 }
 
 /** The saved session from the last crash, or null. */
@@ -166,11 +183,52 @@ function report(fields) {
 }
 
 /**
+ * The crash toast, worded for what is actually true (ROB-5, ROB-12).
+ *
+ *  - Only an error caught by a boundary was CONTAINED: an on-screen piece ('render') shows
+ *    an error box; a hidden compute instance ('background') has no box to show, so the
+ *    toast says its outputs may be stale. A window or promise error was caught by nobody;
+ *    whatever it interrupted may be half done.
+ *  - "A copy was kept" only when the snapshot was written, and it says where (this tab) and
+ *    how to get it back (reload; the app offers it, see crashRecovery.js).
+ *
+ * Exported for the tests.
+ */
+export function crashToastText({ source, context, saved, hadWork = true, message }) {
+	const where = context ? ` while ${context}` : '';
+	let what;
+	if (source === 'render') {
+		what =
+			`Something went wrong${where}. It was contained: that part shows an error box with ` +
+			'a Try again button, and the rest of your session is still open. ';
+	} else if (source === 'background') {
+		// A hidden compute instance (NodeComputeHost): contained, but there is no box to see.
+		what =
+			`Something went wrong${where}. It was contained to that calculation, which is not ` +
+			'on screen: its outputs may be out of date until you open it. The rest of your ' +
+			'session is still open. ';
+	} else {
+		what =
+			`Something went wrong${where}. Part of the app may not have finished what it was ` +
+			'doing, so check your results. ';
+	}
+	let keep = '';
+	if (saved) {
+		keep =
+			'A copy of your session was kept in this browser tab: if the app stops responding, ' +
+			'reload the page and AnCiR will offer to restore it. ';
+	} else if (hadWork) {
+		keep = 'No copy could be kept in this browser, so save your session now to be safe. ';
+	}
+	return `${what}${keep}Undo may reverse it.\n${message}`;
+}
+
+/**
  * Handle one error: tell the user, keep their session, report it.
  *
  * @param {unknown} error
  * @param {{source?: string, context?: string, silent?: boolean}} [opts]
- *   source  — 'render' | 'window' | 'promise'
+ *   source  — 'render' | 'background' | 'window' | 'promise'
  *   context — what the app was doing ('ai-edit'), when it knows
  */
 export function reportError(error, { source = 'unknown', context } = {}) {
@@ -184,19 +242,12 @@ export function reportError(error, { source = 'unknown', context } = {}) {
 
 	if (isRepeat(key)) return;
 
+	const hadWork = sessionHasWork();
 	const saved = saveCrashSnapshot();
 
-	// Lead with what the user needs to know: it broke, and their session is safe. The message
-	// itself goes last — it's for whoever they forward it to.
-	addNotification(
-		`Something went wrong${context ? ` while ${context}` : ''} and was contained. ` +
-			(saved
-				? 'A copy of your session was saved in this browser. '
-				: 'Your session is still open — save it now to be safe. ') +
-			`Undo may reverse it.\n${message}`,
-		'error',
-		15000
-	);
+	// Lead with what the user needs to know: what broke, how far it reached, and where their
+	// work is. The message itself goes last — it's for whoever they forward it to.
+	addNotification(crashToastText({ source, context, saved, hadWork, message }), 'error', 15000);
 
 	report({
 		message,

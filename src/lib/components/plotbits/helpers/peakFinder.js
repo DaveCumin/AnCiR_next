@@ -37,3 +37,31 @@ export function argMaxAmong(values, candidateIndices) {
 	}
 	return maxIdx;
 }
+
+/**
+ * Index of the spectral PEAK: the largest finite power, optionally among
+ * `candidateIndices`, or -1 when there is no peak to report.
+ *
+ * Differs from argMax in two ways that matter for a periodogram or a magnitude
+ * spectrum (never for a correlogram, whose values can be negative):
+ *  - non-finite entries are skipped, so a NaN at index 0 cannot win by default;
+ *  - a maximum that is not positive is NO peak. Constant or all-zero data has zero
+ *    power at every period, and argMax then returned index 0, so a flat recording was
+ *    reported as rhythmic at the shortest trial period (MovingAnalysis gave 18 h on
+ *    off-wrist windows; ROB-13).
+ *
+ * @param {number[]} values  powers (or magnitudes), >= 0 when defined
+ * @param {number[]} [candidateIndices]  restrict the search (e.g. the visible range)
+ * @returns {number}
+ */
+export function spectralPeakIndex(values, candidateIndices) {
+	if (!values) return -1;
+	let best = -1;
+	const consider = (i) => {
+		const v = values[i];
+		if (Number.isFinite(v) && v > 0 && (best < 0 || v > values[best])) best = i;
+	};
+	if (candidateIndices) for (const i of candidateIndices) consider(i);
+	else for (let i = 0; i < values.length; i++) consider(i);
+	return best;
+}

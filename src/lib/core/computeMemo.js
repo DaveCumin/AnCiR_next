@@ -11,9 +11,10 @@
 // `lastHash` is a plain `let` in the component, so it dies with the component.
 // Switching between the workflow and workspace views is an `{#if}` in
 // +page.svelte: it destroys one whole component tree and builds the other, and
-// in the plots view NodeComputeHost deliberately mounts EVERY analysis node. So a
-// view switch remounts the entire pipeline, every memo starts empty, and the
-// whole session recomputes even though not one input changed.
+// NodeComputeHost mounts a hidden instance of every node that is not shown (so
+// collapsing, expanding, hiding or selecting a node also swaps which instance
+// computes it). Without a memo that outlives the instance, every such swap would
+// start empty and recompute even though not one input changed.
 //
 // WHY NOT JUST PERSIST THE HASH
 //
@@ -182,16 +183,13 @@ export function nodeMemo(p, kind) {
 		},
 		set hash(v) {
 			// Count a compute only when this write actually CHANGES the recorded
-			// hash. Two things would otherwise be counted as work that is not work.
-			// Several nodes mark the hash twice for a single run (the effect claims
-			// it before dispatching, the compute function records it on completion).
-			// And the nodes with a bespoke mount-time load branch — Split,
-			// SmoothedData, LongToWide, CollectColumns — re-pin the unchanged hash on
-			// every mount to say "the baked data is still current"; comparing against
-			// a per-instance variable made each of those remounts look like a
-			// recompute, which is exactly the false positive this metric exists to
-			// detect. Compare against what is stored, not against what this instance
-			// happens to have seen.
+			// hash. Several nodes mark the hash twice for a single run (the effect
+			// claims it before dispatching, the compute function records it on
+			// completion), and a second instance of the node re-marking the same hash
+			// is not work either. Compare against what is stored, not against what
+			// this instance happens to have seen. (Nodes no longer pin the hash on
+			// mount to say "the saved outputs are still current": saved outputs are
+			// never trusted, see NodeComputeHost.)
 			const prev = read()?.hash;
 			if (DEV && v !== prev) countCompute(label);
 			for (const e of targets()) e.hash = v;

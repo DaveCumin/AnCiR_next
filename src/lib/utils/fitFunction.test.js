@@ -5,6 +5,7 @@ import {
 	getFitModelDisplayName,
 	FIT_FUNCTION_MODELS
 } from './fitFunction.js';
+import { fitRectangularWave } from './rectwave.js';
 
 // Synthetic cosine: 2·cos(2π/24·t + 0.5) + 5
 function cosineData(step = 0.5, duration = 96) {
@@ -74,6 +75,29 @@ describe('fitCurveModel — dispatch', () => {
 		expect(r.rSquared).toBeGreaterThan(0.95);
 		expect(r.period).toBeGreaterThan(22);
 		expect(r.period).toBeLessThan(26);
+	});
+
+	it('rectangular model honours fixedPeriod when the period is fixed', () => {
+		// 12 h square wave; a fit pinned to fixedPeriod 12 must sit at 12 h, not 24 h.
+		const t = [];
+		const x = [];
+		for (let ti = 0; ti <= 96; ti += 0.25) {
+			t.push(ti);
+			x.push(ti % 12 < 6 ? 1 : -1);
+		}
+		const r = fitCurveModel(t, x, 'rectangular', {
+			numStarts: 5,
+			fixOmega: true,
+			fixedPeriod: 12
+		});
+		expect(r.period).toBeCloseTo(12, 6);
+		expect(r.rSquared).toBeGreaterThan(0.95);
+	});
+
+	it('rectangular wave refuses fixOmega without a fixed frequency', () => {
+		const t = [0, 1, 2, 3, 4, 5, 6, 7];
+		const x = [1, 1, -1, -1, 1, 1, -1, -1];
+		expect(() => fitRectangularWave(t, x, { fixOmega: true })).toThrow(/fixedOmega/);
 	});
 
 	it('fits the double-logistic model', () => {

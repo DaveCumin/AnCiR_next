@@ -214,3 +214,37 @@ describe('collectcolumns', () => {
 		expect(result[1]).toEqual([7]);
 	});
 });
+
+// Review STAT-6 follow-up: the row filter was `v != null && !isNaN(v)`, so a blank '' cell
+// counted as a value (isNaN('') is false). In a sum it CONCATENATED ('' + 3 = '3', then
+// '3' + 5 = '35'); in a mean it divided by one too many. A row with nothing present
+// produced 0 for a sum, inventing data. Missing cells are now left out, numeric strings
+// are numbers, and an all-missing row stays missing (null) for every method.
+describe('collectcolumns aggregates: missing cells (STAT-6)', () => {
+	const run = (method, a, b) => {
+		mockRawDataSet.mockClear();
+		mockColumns[1] = { getData: () => a, type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[2] = { getData: () => b, type: 'number', data: null, tableProcessGUId: null };
+		mockColumns[20] = { data: null, type: null, tableProcessGUId: null };
+		collectcolumns({
+			colIds: [1, 2],
+			out: {},
+			preProcesses: [],
+			aggregates: [{ method, excludedColIds: [], outColId: 20 }]
+		});
+		return mockRawDataSet.mock.calls.find(([id]) => id === 20)[1];
+	};
+
+	it('sum: blanks are missing and numeric strings are numbers', () => {
+		expect(run('sum', ['', '2', ' '], [3, 5, null])).toEqual([3, 7, null]);
+	});
+
+	it('mean: a blank does not count towards n', () => {
+		expect(run('mean', ['', 2], [4, 6])).toEqual([4, 4]);
+	});
+
+	it('min / max read numeric strings as numbers and skip blanks', () => {
+		expect(run('min', ['10', ''], [9, ' '])).toEqual([9, null]);
+		expect(run('max', ['10', ''], [9, ' '])).toEqual([10, null]);
+	});
+});

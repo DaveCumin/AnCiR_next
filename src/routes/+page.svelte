@@ -21,7 +21,10 @@
 	import Notifications from '$lib/components/reusables/Notifications.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { registerDataSourceActions } from '$lib/core/dataSourceActions.js';
-	import { importJson } from '$lib/components/iconActions/Setting.svelte';
+	import { importJson, exportJson } from '$lib/components/iconActions/Setting.svelte';
+	import { confirmReplaceSession, isSessionJson } from '$lib/core/sessionLoad.svelte.js';
+	import { offerCrashRecovery } from '$lib/core/crashRecovery.js';
+	import { initUnsavedChanges, installUnloadGuard } from '$lib/core/unsavedChanges.svelte.js';
 
 	import { loadProcesses } from '$lib/processes/processMap.js';
 	import { loadPlots } from '$lib/plots/plotMap.js';
@@ -37,7 +40,6 @@
 		appConsts,
 		appState,
 		snapToGrid,
-		outputCoreAsJson,
 		createGroup,
 		absorbColumnIntoGroup,
 		createOrphanProcess
@@ -125,6 +127,8 @@
 	// Initialize history watching (must be in component context)
 	history.init();
 	paramDiffWatcher.init();
+	// Count changes since the last save or load, for the close-tab guard (ROB-5).
+	initUnsavedChanges();
 
 	// Dev-only: expose the history manager (and the core + mutation service) on
 	// window so the undo/redo stacks and live graph can be inspected/driven from
@@ -226,6 +230,11 @@
 	// open/close state lives in module scope, so empty-state prompts, the node
 	// palette, and canvas file-drop open it through the dataSourceActions registry
 	// rather than mounting their own copy.
+	//
+	// A dropped .json is not necessarily a session (review ROB-1): JSON that is not session-shaped
+	// goes to the Import modal, whose sniffer explains what it is, instead of being loaded over the
+	// open work. A real session asks before replacing a non-empty one, and importJson either loads
+	// it completely or leaves the open session exactly as it was.
 	function loadSessionFromFile(file) {
 		const reader = new FileReader();
 		reader.onload = async (e) => {
@@ -236,12 +245,20 @@
 				addNotification('Invalid JSON session file: ' + (err?.message ?? err));
 				return;
 			}
+			if (!isSessionJson(parsed)) {
+				openImportModalWithFiles([file]);
+				return;
+			}
+			if (!(await confirmReplaceSession(`"${file.name}"`))) return;
 			appState.loadingState.isLoading = true;
 			appState.loadingState.loadingMsg = `Loading session from ${file.name}…`;
 			try {
 				await importJson(parsed, (msg) => (appState.loadingState.loadingMsg = msg));
 			} catch (err) {
-				addNotification('Failed to load session: ' + (err?.message ?? err));
+				addNotification(
+					`Could not load "${file.name}": ${err?.message ?? err}\n\n` +
+						'Your open session was not changed.'
+				);
 			} finally {
 				appState.loadingState.isLoading = false;
 				appState.loadingState.loadingMsg = '';
@@ -407,59 +424,35 @@
 					event.preventDefault();
 					toggleLessons();
 				}
-				// SAVE THE SESSION
+				// SAVE THE SESSION: the same save as the Save session button (a copy of it lived
+				// here, and only the button's copy marked the session as saved, ROB-5).
 				if (!event.shiftKey && MODIFIER && event.key.toLowerCase() === 's') {
 					event.preventDefault();
-					//TODO: Can this be put into the Setting module? I tried before and had issues
-					try {
-						// Get JSON string and validate
-						const jsonStr = outputCoreAsJson();
-						if (typeof jsonStr !== 'string' || !jsonStr) {
-							throw new Error('Invalid or empty JSON string returned by outputCoreAsJson');
-						}
-
-						// Validate JSON content
-						try {
-							JSON.parse(jsonStr); // Ensure it's valid JSON
-						} catch (e) {
-							throw new Error('Invalid JSON format: ' + e.message);
-						}
-
-						// Create Blob with JSON content
-						const blob = new Blob([jsonStr], { type: 'application/json' });
-						const url = URL.createObjectURL(blob);
-
-						// Create temporary <a> element
-						const a = document.createElement('a');
-						a.innerText = 'download';
-						a.href = url;
-						a.download = 'session.json'; // File name for download
-						document.body.appendChild(a);
-
-						// Programmatically trigger click
-						a.click();
-
-						console.log(
-							'should have started download of ',
-							JSON.parse(jsonStr),
-							' from ',
-							url,
-							' : ',
-							blob
-						);
-						// Clean up
-						setTimeout(() => {
-							document.body.removeChild(a);
-							URL.revokeObjectURL(url);
-						}, 10); // Delay cleanup to ensure download starts
-					} catch (error) {
-						console.error('Failed to export JSON:', error.message);
-						addNotification('Error exporting JSON: ' + error.message);
-					}
+					exportJson();
 				}
 			}
 		};
 		document.addEventListener('keydown', onKeyDown);
+
+		// Ask before the tab closes or reloads with unsaved work (ROB-5). There is no autosave,
+		// so this prompt is the last chance.
+		const removeUnloadGuard = installUnloadGuard(window);
+
+		// A crash in this tab kept a copy of the session (errorReporter.js): offer it back now,
+		// which is what reloading after a crash is for (ROB-5).
+		offerCrashRecovery({
+			restore: async (session) => {
+				appState.loadingState.isLoading = true;
+				appState.loadingState.loadingMsg = 'Restoring the session from before the error…';
+				try {
+					await importJson(session, (msg) => (appState.loadingState.loadingMsg = msg));
+				} finally {
+					appState.loadingState.isLoading = false;
+					appState.loadingState.loadingMsg = '';
+				}
+			},
+			confirmReplace: confirmReplaceSession
+		});
 
 		//Check for query url
 		// Get query string from URL - for fetching external data
@@ -471,8 +464,9 @@
 			// before the session lands.
 			deepLinkPending = true;
 			// Clear once the load settles either way — a FAILED deep link must fall back to the
-			// start screen rather than leaving the user on a blank canvas.
-			Promise.resolve(loadFromURL(query)).finally(() => (deepLinkPending = false));
+			// start screen rather than leaving the user on a blank canvas. loadFromURL asks
+			// before replacing anything open (on a fresh page load nothing is, so it passes).
+			loadFromURL(query).finally(() => (deepLinkPending = false));
 			window.history.replaceState({}, document.title, window.location.pathname);
 		}
 
@@ -489,6 +483,7 @@
 			// TypeError (two arguments are required), so it removed nothing AND
 			// aborted the rest of this cleanup.
 			document.removeEventListener('keydown', onKeyDown);
+			removeUnloadGuard();
 		};
 	});
 
@@ -564,8 +559,28 @@
 	}
 
 	async function refresh() {
+		// This replaces the open session with sample data, so it asks first like every other load
+		// (ROB-1), and keeps undo off while it builds and clears it after (ROB-2): the previous
+		// session's ops cannot apply to the new one.
+		if (!(await confirmReplaceSession('a new sample-data session'))) return;
+		history.beginLoad();
+		try {
+			await buildSampleSession();
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			paramDiffWatcher.rebaseSnapshot();
+			history.clear();
+		} finally {
+			history.endLoad();
+		}
+	}
+
+	async function buildSampleSession() {
 		//Clear everything
 		core.data = [];
+		core.composites = [];
+		core.orphanProcesses = [];
+		core.chainRefs = [];
+		core.unrestoredPlots = [];
 		core.tableProcesses = [];
 		core.groups = [];
 		core.notes = [];
@@ -827,12 +842,13 @@
 		<WorkflowEditor inline={true} />
 	{:else}
 		<PlotDisplay />
-		<!-- Keep every analysis / transform node's compute effect alive in the
-		     plots view. WorkflowEditor does this in the canvas view; without it here
-		     only the selected node recomputes, leaving downstream nodes (and the
-		     plots reading them) stale. See NodeComputeHost for the full rationale. -->
-		<NodeComputeHost />
 	{/if}
+	<!-- Every node that is not shown anywhere (collapsed on the canvas, inside a collapsed
+	     composite, a plot hidden from the workspace, an unselected node in the plots view)
+	     still computes: this host mounts a hidden instance of its component, and stands it
+	     down whenever a visible instance is mounted. Outside the view branch on purpose, so
+	     a view switch never leaves a gap. See NodeComputeHost for the full rationale. -->
+	<NodeComputeHost />
 
 	{#if showStartScreen || welcomeSummoned}
 		<StartScreen

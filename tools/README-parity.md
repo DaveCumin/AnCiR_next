@@ -510,19 +510,107 @@ Notes:
 
 ## Current coverage
 
-- Column processes: `add`, `multiply`, `sub`, `normalize`.
-- Curve fitting on seeded noisy rhythm data: `Cosinor` (fixed period),
-  `FitFunction` (cosinor model) — compares `cosinorx`/`cosinory`, `fitx`/`fity`.
-- Actogram marker rules (`actogramMarkers`, Python and R): see the section above.
-- Actogram plot-data rows (`plotCompute` / `actogramDownloadData`, Python only): see above.
-- Stats on seeded group data (`tableProcessResult`): `GroupComparison` Welch
-  t-test (`difference`,`t`,`df`,`pValue`) and one-way ANOVA (`f`, `ssBetween`,
-  `ssWithin`, `dfBetween`, `dfWithin`, `etaSquared`, `pValue`).
+`npm run parity` lists every fixture. As of 2026-10-04: 285 fixtures, Python 285/285, R
+244 pass with 41 not claimed (listed below), whole-session 89 match with 2 skipped.
 
-Good next targets (column-output analyses, low-friction to add): `SmoothedData`,
-`MovingAnalysis`, `BinnedData`, `TrendFit`, `SequenceColumn`, `RectangularWave`,
-`Duplicate`, plus the remaining column processes (`RemoveTrend`, `OutlierRemoval`,
-`Sort`, `EditValue`).
+## Fixture fields added 2026-10-04 (review wave 1 and 2 ports)
+
+| Field           | Kind                            | Meaning                                                                                                                                                                                         |
+| --------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `storedValues`  | `tableProcess`                  | `{key: value}` seeded into `core.storedValues` (and handed to the ports) in the saved-session entry shape `{staticValue}`. FormulaColumn `#key` tokens read it.                                 |
+| `rawInputs`     | `tableProcess`, `columnProcess` | The R leg passes cells exactly as JSON gave them (text stays text, booleans stay logical, null becomes NA) instead of coercing to numbers; for fixtures whose subject IS the missing-cell rule. |
+| `mustNotCreate` | `tableProcess`                  | A path the fixture's hostile payload would create if a port executed it. The Python leg asserts it does not exist after the run (SEC-2 proof).                                                  |
+| `allowInvalid`  | `tableProcessResult`            | The comparison may be invalid (a non-computable statistic); its own `valid` field is compared instead of asserting validity.                                                                    |
+| `recordValid`   | `tableProcess`                  | (existing) also used for every refused FormulaColumn payload.                                                                                                                                   |
+
+The emitter also refuses to write results if `globalThis.__pwned` is set after the run (the
+JS FormulaColumn injection payload sets it if it ever executes), and gained pure-util
+adapters `fftPeakOf`, `regridUniform`, `lombScarglePeriodogram`, `seededSequence`, plus a
+`pvalue` array on `chiSquaredPeriodogram`, and the harmonic check's `eligible`, `testF`,
+`testP` and `powerStrongest` in actogram rule records.
+
+## FormulaColumn and SEC-2
+
+`tools/ancir_runtime.py` used to build a Python expression from the formula tokens and call
+`eval(expr, {'math': math, '__builtins__': {}}, {})`. Empty builtins are not a sandbox:
+`[c for c in ().__class__.__base__.__subclasses__() if c.__name__ == '_wrap_close'][0]
+.__init__.__globals__['system']('touch ...')` reaches `os.system`, so a session file (or an
+exported script built from one) could run any command. Both ports now implement
+`src/lib/utils/formulaExpression.js` exactly: a tokeniser (`_formula_lex` /
+`.formula_lex`), a recursive-descent parser with the JS precedence, nesting (200) and size
+(2000 lexemes) limits (`parse_formula`), a flattening to a postfix program, and a stack
+evaluator (`evaluate_formula`). A function name is only ever a key into a fixed table; there
+is no `eval`, `exec`, `compile`, `parse`, `str2lang` or attribute access in the path. A
+refused formula writes nothing and leaves the node invalid. The 19 `tp-formula-*` fixtures
+pin the grammar and semantics (right-associative `^` binding tighter than a unary minus on
+its left, fmod-style `%`, JS `Math.round`, variadic min/max, stored values, Number() syntax
+for numeric text, per-step non-finite = missing, literal and arithmetic overflow) and eight
+refusals, including the Python escape above (with `mustNotCreate`) and a JS
+string-injection payload. Mutation tests of the Python parser (power operand parsed as a
+primary, a left-associative power, Python `%` for `%`, an unknown name read as 0, banker's
+`round`, no per-operator finiteness check) are each killed by a fixture; dropping the
+finiteness check on FUNCTION results is an equivalent mutant in Python (its math functions
+raise rather than return Inf or NaN). R gained FormulaColumn with the same parser
+(`R_IMPLEMENTED` now lists `formulacolumn`).
+
+## Remaining divergences (recorded 2026-10-04)
+
+- **Permutation p-values** (`perm_pvalue` of Cosinor, RectangularWave, DoubleLogistic,
+  FitFunction; the block scheme, `autoPermutations`, scheme and block-length fields, the
+  permutation CSV `scheme` column): not run by either port, which write NaN ("not
+  computed"). The seeded generator they need is now ported (`SeededRNG`), so this is the
+  refit-per-permutation cost (999 Levenberg-Marquardt fits per series in an exported
+  script), not a reproducibility limit.
+- **Periodogram plot metric `peak_pvalue`** (family-wise over the folds,
+  `-expm1(M log1p(-p))`): the ports compute no plot metric outputs for periodograms, so
+  there is nothing to port it into. The per-fold chi-square p is the upper tail in all
+  three (`chi2.sf`, `pchisq(lower.tail = FALSE)`) and the Python periodogram CSV now
+  writes the per-fold threshold and p.
+- **RhythmicityAnalysis `stat_*` metric ports**: now written by both ports (periodogram
+  peak by spectralPeakIndex, FFT by fftPeak, correlogram by the first-positive-lobe rule);
+  fixtures `tp-rhythmicity-*-stats`.
+- **Residual outputs** (`resid_<yId>`): written by the ports for SmoothedData only; the fit
+  nodes' residual columns (Cosinor, FitFunction, RectangularWave, DoubleLogistic, TrendFit)
+  are not ported.
+- **Time-format import (UI-1)**: sessions saved before the fix may store numeric columns as
+  `time` with a format such as `D.M`. JS now reads those values as missing; Python and R read
+  numeric time cells as epoch ms.
+- **FitFunction rectangular fixed period**: fixed in JS (fitFunction.js now passes
+  `fixedOmega = 2 pi / fixedPeriod`, rectwave.js throws without a positive finite one);
+  mirrored in both ports, fixture `tp-fitfunction-rect-fixed-period-12`. No longer a
+  divergence.
+- **Upper tails**: every F and chi-square p in both ports is the upper tail computed
+  directly (`sf`, `lower.tail = FALSE`), the cosinor's at max(0, F), with F = Infinity giving
+  0, matching `pUpperFromF` / `chisqSf`.
+- **LogisticRegression outcome levels**: `coerceBinary` drops only null and '' before
+  counting levels, so a whitespace-only outcome cell is a level and makes a 0/1 outcome
+  "not binary". JS quirk, mirrored.
+- **Cross-correlation AR filter cells**: `crossCorrelation.js` `finite()` treats a
+  whitespace-only cell as Number(' ') = 0 (a value) in the AR fit and filter, while the
+  per-lag correlation drops it (house rule). Mirrored in both ports.
+- **Spline interpolation**: now ported (natural cubic, Numerical Recipes) in both ports;
+  no longer a divergence.
+- **Rounding-level**: the refined FFT peak (golden-section on a flat objective) differs by
+  ~5e-9 relative because V8 `Math.cos` (fdlibm) and the C library differ by an ulp
+  (`tolerance` 1e-7 on those fixtures); R's normal equations for the LM fits use BLAS
+  `crossprod`, agreeing to 1e-6 rather than 1e-10; R's `glm` standard errors (`rTolerance`
+  1e-5 on the logistic fixtures).
+- **Box plot / tables**: the Python export renders box plots with matplotlib (type-7
+  quartiles, 1.5 IQR whiskers) from house-rule values, but has no category grouping and no
+  significance bars; R exports no plots.
+- **Not mirrored because the ports have no such path**: the boxplot significance bars,
+  MovingAnalysis skip warnings, the panel warnings and notices.
+
+## Nodes and fixtures the R port does not claim
+
+Analyses without an R implementation (`R_IMPLEMENTED` in `runtimeCoverage.js`): `Crossing`,
+`Random`, `SimulatedData` (the last two are baked into the session). The 41 fixtures with no
+`rFunc`: the correlogram and actogram plot-data rows (`correlogram-data-*` 5, `actogram-data-*`
+8; R exports no plots), `util-kde-*` 2, `util-meansem-groups`, `tp-cosinor-addons-fixed24`,
+`util-chisquare-gof`, `util-chisquare-independence`, `util-logistic-*` 3 (pure-util call
+shape; the R logistic kernel is covered by the `tp-logistic*` fixtures), `util-cwt-peak-scale`,
+`util-fisher-exact-*` 6, `util-cramers-v-*` 4, `util-fisher-conditional-or-*` 4,
+`tp-cosinor-fixed-ci-short-record`, and the three `tp-crossing-*`.
 
 ## End-to-end session parity
 
@@ -558,14 +646,11 @@ real differences:
   JS-engine headless limitation, not a Python bug): `widetolong` `time` (output
   typed `'time'` but holding raw ms → JS `get_data` returns all-None). The Python
   port is correct there.
-- `MONTE_CARLO_COLUMNS`: columns whose JS value is drawn from the app's SEEDED
-  @stdlib minstd-shuffle PRNG, which the runtime does not reproduce:
-  `demo-tp-surrogatetest` `pvalue` (the observed statistic's rank among 19
-  surrogates; 0.05 in the app). The port emits NaN, "not computed", by design (see
-  `tp_surrogatetest`). This is NOT a silent skip: the check requires the port's
-  value to be NaN, so a port that started inventing a p-value would fail, and each
-  exclusion is printed. Porting minstd-shuffle would lift this for SurrogateTest,
-  Random and the permutation p-values together.
+- `MONTE_CARLO_COLUMNS`: columns whose JS value comes from a PRNG the runtime does not
+  reproduce; the port must emit NaN there and each exclusion is printed. EMPTY since
+  2026-10-04: the ports now reproduce the app's seeded @stdlib minstd-shuffle generator
+  bit for bit (`SeededRNG` in Python, `seeded_rng` in R; fixtures `util-seeded-rng-*`),
+  so `demo-tp-surrogatetest` `pvalue` is compared like any other column.
 
 ### The 2026-09-30 triage (82 match, 6 mismatch, 1 error before)
 

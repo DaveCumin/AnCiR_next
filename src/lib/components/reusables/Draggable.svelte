@@ -349,6 +349,46 @@
 		}
 	}
 
+	// UI-5: keyboard selection. The card is in the Tab order; Space selects it (a
+	// click), Enter selects it and opens the control panel (a double-click), and
+	// Alt with either toggles it in a multi-selection (an Alt-click). Keys pressed
+	// inside the card's own controls (title, buttons) are theirs, not the card's.
+	function onCardKeydown(e) {
+		if (e.target !== e.currentTarget) return;
+		if (e.key !== 'Enter' && e.key !== ' ') return;
+		e.preventDefault();
+		if (e.altKey) {
+			selected = !selected;
+			return;
+		}
+		deselectOthers();
+		selected = true;
+		if (e.key === 'Enter') appState.showControlPanel = true;
+	}
+
+	// A card reached with Tab may sit outside the visible canvas (the canvas pans by a
+	// transform, so the browser does not scroll it into view). Pan just enough to show
+	// it, with a small margin; prefer showing its top-left corner when it is larger
+	// than the viewport.
+	function onCardFocus(e) {
+		if (e.target !== e.currentTarget || !viewportEl) return;
+		try {
+			if (!e.currentTarget.matches(':focus-visible')) return;
+		} catch {
+			/* no :focus-visible support: treat as keyboard focus */
+		}
+		const r = e.currentTarget.getBoundingClientRect();
+		const v = viewportEl.getBoundingClientRect();
+		const m = 24;
+		let dx = 0;
+		let dy = 0;
+		if (r.right > v.right - m) dx = v.right - m - r.right;
+		if (r.left + dx < v.left + m) dx = v.left + m - r.left;
+		if (r.bottom > v.bottom - m) dy = v.bottom - m - r.bottom;
+		if (r.top + dy < v.top + m) dy = v.top + m - r.top;
+		if (dx || dy) applyEdgePan(dx, dy);
+	}
+
 	async function handleDblClick(e) {
 		e.stopPropagation();
 		// Double click
@@ -423,9 +463,19 @@
 />
 <!-- added header therefore TODO: other way than hardcode -->
 
-<!-- the click does nothing becasue it's all handled in the mousedown/up for drag/resize etc. -->
+<!-- the click does nothing becasue it's all handled in the mousedown/up for drag/resize etc.
+     tabindex/keydown: keyboard users select the card (and reach the control panel) with
+     Enter/Space; the mouse handlers are unchanged. -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
 <section
 	bind:this={plotElement}
+	tabindex="0"
+	role="group"
+	aria-roledescription="plot"
+	aria-label={title || 'Untitled plot'}
+	aria-current={selected ? 'true' : undefined}
+	onkeydown={onCardKeydown}
+	onfocus={onCardFocus}
 	ondblclick={(e) => handleDblClick(e)}
 	onmousedown={(e) => onMouseDown(e, false)}
 	ontouchstart={(e) => onTouchStart(e, false)}
@@ -502,6 +552,10 @@
 {/if}
 
 <style>
+	.draggable:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
 	.draggable {
 		user-select: none;
 		position: absolute;

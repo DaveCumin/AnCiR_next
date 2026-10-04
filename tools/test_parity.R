@@ -134,7 +134,12 @@ run_tp_fixture <- function(fx, rec) {
     spec <- rec$inputs[[nm]]
     # A category column keeps its text (a JSON null becomes NA); unwrap_input would coerce
     # every label to NA and hand the port a column of nothing.
-    vals <- if (identical(spec$type, "category"))
+    # A `rawInputs` fixture hands the port the cells exactly as JSON gave them (text stays
+    # text, booleans stay logical, null becomes NA), because what the port does with a raw
+    # cell is the thing under test (FormulaColumn's missing-cell rules).
+    vals <- if (isTRUE(fx$rawInputs))
+      lapply(spec$values, function(e) if (is.null(e)) NA else e)
+      else if (identical(spec$type, "category"))
       vapply(spec$values, function(e) if (is.null(e)) NA_character_ else as.character(e),
              character(1), USE.NAMES = FALSE)
       else unwrap_input(spec)
@@ -186,6 +191,8 @@ run_tp_fixture <- function(fx, rec) {
     out_pairs[[k]] <- c(static_id, dyn_id)
   }
 
+  # `storedValues` ({key: value}) arrive in the saved-session entry shape, as in test_parity.py.
+  env$stored_values <- lapply(fx$storedValues, function(v) list(staticValue = v))
   ok <- run_table_process(fx$jsName, args, env)
   # A `recordValid` fixture pins the node's validity itself (a refusal, typically).
   if (!is.null(rec$valid) && !identical(isTRUE(ok), isTRUE(rec$valid))) {
@@ -215,8 +222,12 @@ run_tpr_fixture <- function(fx, rec) {
     spec <- rec$inputs[[nm]]
     id <- next_id; next_id <- next_id + 1
     ref_to_id[[nm]] <- id
+    # A JSON null label must survive as NA: unlist() would drop it and shift every later
+    # label against its value.
     env$raw_data[[as.character(id)]] <- if (identical(spec$type, "category"))
-      unlist(spec$values, use.names = FALSE) else unwrap_input(spec)
+      vapply(spec$values, function(e) if (is.null(e)) NA_character_ else as.character(e),
+             character(1), USE.NAMES = FALSE)
+      else unwrap_input(spec)
     env$cols[[as.character(id)]] <- new_column(
       id = id, name = nm,
       type = if (!is.null(spec$type)) spec$type else "number", data = id)
@@ -356,8 +367,12 @@ for (fx in fixtures) {
          # A column process is a bare array -> array; the emitter records the input at the
          # TOP level (rec$input, not rec$inputs) and names the result "value".
          else if (is_cp) tryCatch(
-           list(value = run_column_process(rfunc, unlist(rec$input, use.names = FALSE),
-                                           fx$args, list(), list())),
+           list(value = run_column_process(rfunc,
+             # `rawInputs`: cells as JSON gave them (text stays text, null becomes NA), since
+             # unlist() would drop a null and shift every later cell.
+             if (isTRUE(fx$rawInputs)) lapply(rec$input, function(e) if (is.null(e)) NA else e)
+             else unlist(rec$input, use.names = FALSE),
+             fx$args, list(), list())),
            error = function(e) e)
          else tryCatch(do.call(fn, call_args), error = function(e) e)
   if (inherits(got, "error")) {

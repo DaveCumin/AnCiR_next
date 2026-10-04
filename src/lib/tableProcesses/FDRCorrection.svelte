@@ -163,8 +163,9 @@
 		const baked = p.args.out.padj >= 0 && core.rawData.get(p.args.out.padj)?.length > 0;
 		if (baked) {
 			p.args.valid = true;
-			const stale = (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0;
-			if (!stale) memo.hash = getHash;
+			// The saved outputs only fill the panel until the compute effect runs; they are
+			// never trusted as current (the file may predate a fix, or the inputs), so the memo
+			// hash is not pinned here and the node recomputes from its inputs once mounted.
 			const padj = core.rawData.get(p.args.out.padj) ?? [];
 			const rej = core.rawData.get(p.args.out.reject) ?? [];
 			summary = {

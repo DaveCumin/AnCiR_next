@@ -20,6 +20,9 @@ node_modules
 # not source — regenerated every build — so it must not be tracked (it's a 780 KB
 # binary that would churn on every build).
 /static/handbook.html
+# Its standalone presentation animations (handbook/scripts/build-animations.mjs),
+# copied alongside so they are served at /animations/. Generated, not source.
+/static/animations/
 
 # The Python-export sidecar is assembled at build time from src/lib/utils/pythonExport.js
 # and tools/ancir_runtime.py (both tracked). Derived, ~208 KB, and it would churn on every

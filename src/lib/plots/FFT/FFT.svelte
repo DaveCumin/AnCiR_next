@@ -11,13 +11,13 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleLog } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import PaddingControls from '$lib/components/inputs/PaddingControls.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
-	import { computeFFT } from '$lib/utils/fft.js';
-	import { argMax, argMaxAmong } from '$lib/components/plotbits/helpers/peakFinder.js';
+	import { computeFFT, fftPeak } from '$lib/utils/fft.js';
 	import { minMax, minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 	import {
 		findNearestY,
@@ -49,24 +49,20 @@
 			return computeFFT(times, values, this.freqStep);
 		});
 
-		// Map a winning index (or -1) to the { frequency, period, magnitude } shape.
-		peakAt(idx) {
-			if (idx < 0) return null;
-			const { frequencies, magnitudes } = this.fftData;
-			const freq = frequencies[idx];
+		// The { frequency, period, magnitude } of a peak, refined between bins by fftPeak
+		// (a rhythm between two bins of the record's grid is reported at its own period and
+		// amplitude, not at the nearer bin with up to a third of the amplitude lost).
+		peakOf(found) {
+			if (!found) return null;
 			return {
-				frequency: freq,
-				period: freq !== 0 ? 1 / freq : null,
-				magnitude: magnitudes[idx]
+				frequency: found.frequency,
+				period: found.frequency !== 0 ? found.period : null,
+				magnitude: found.magnitude
 			};
 		}
 
 		// Peak detection - find the highest magnitude across ALL calculated data
-		peak = $derived.by(() => {
-			const { frequencies, magnitudes } = this.fftData;
-			if (!frequencies || !magnitudes || frequencies.length === 0) return null;
-			return this.peakAt(argMax(magnitudes));
-		});
+		peak = $derived.by(() => this.peakOf(fftPeak(this.fftData)));
 
 		// Peak within the visible x-axis range
 		visiblePeak = $derived.by(() => {
@@ -83,48 +79,18 @@
 					: frequencies[i];
 				if (xVal != null && xVal >= xMin && xVal <= xMax) visibleIndices.push(i);
 			}
-			return this.peakAt(argMaxAmong(magnitudes, visibleIndices));
+			if (!visibleIndices.length) return null;
+			return this.peakOf(fftPeak(this.fftData, { indices: visibleIndices }));
 		});
 
+		// The transform runs on the series' own sampling grid (computeFFT -> regridUniform):
+		// a few missing samples are interpolated, a long gap or heavy missingness is refused.
+		// Both are reported here, as is the record's true frequency resolution.
 		dataWarnings = $derived.by(() => {
-			const times = this.x?.hoursSinceStart ?? [];
-			const values = this.y?.getData() ?? [];
-
-			if (!times || times.length < 2) return [];
-
+			const spec = this.fftData;
 			const warnings = [];
-
-			const nanXCount = times.filter((v) => v === null || v === undefined || isNaN(v)).length;
-			if (nanXCount > 0) {
-				warnings.push(
-					`${nanXCount} missing time value${nanXCount > 1 ? 's' : ''} — excluded before the FFT; the sampling rate is recalculated from the remaining span and may be inaccurate.`
-				);
-			}
-
-			const nanYCount = values.filter((v) => v === null || v === undefined || isNaN(v)).length;
-			if (nanYCount > 0) {
-				warnings.push(
-					`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''} — excluded before the FFT; these are not zero-padded at their original positions, which may introduce spectral artefacts.`
-				);
-			}
-
-			// Check for irregular spacing — FFT assumes uniform sampling
-			const validT = times
-				.filter((v) => v !== null && v !== undefined && !isNaN(v))
-				.sort((a, b) => a - b);
-			if (validT.length > 1) {
-				const diffs = [];
-				for (let i = 1; i < validT.length; i++) diffs.push(validT[i] - validT[i - 1]);
-				diffs.sort((a, b) => a - b);
-				const medianDt = diffs[Math.floor(diffs.length / 2)];
-				const maxGap = diffs[diffs.length - 1];
-				if (maxGap > medianDt * 1.5) {
-					warnings.push(
-						`Data has gaps up to ${maxGap.toFixed(1)} h (typical interval: ${medianDt.toFixed(2)} h) — the FFT assumes uniform sampling; the frequency axis and Nyquist frequency will be incorrect.`
-					);
-				}
-			}
-
+			if (spec?.reason) warnings.push(`No spectrum: ${spec.reason}`);
+			for (const w of spec?.warnings ?? []) warnings.push(w);
 			return warnings;
 		});
 
@@ -275,6 +241,11 @@
 		}
 		set padding(v) {
 			this.#padding = v;
+		}
+		// The stored figure padding, for the Padding controls. While a node view is mounted
+		// `padding` reads back a derived, scaled copy, so an edit bound there was lost.
+		get figurePadding() {
+			return this.#padding;
 		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		// Width before an outside legend takes its share; see legendAuto.svelte.js.
@@ -858,110 +829,11 @@
 
 		<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>Padding</p>
-				{#if theData.getAutoScaleValues()?.top != theData.padding.top || theData.getAutoScaleValues()?.bottom != theData.padding.bottom || theData.getAutoScaleValues()?.left != theData.padding.left || theData.getAutoScaleValues()?.right != theData.padding.right}
-					<button class="icon" onclick={() => theData.autoScalePadding('all')}>
-						<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
-					</button>
-				{/if}
-			</div>
-
-			<div class="control-input-square">
-				<div class="control-input">
-					<p>Top</p>
-					<div style="display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits
-							bind:value={theData.padding.top}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.top != null &&
-							theData.getAutoScaleValues().top != theData.padding.top
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.top != null && theData.getAutoScaleValues()?.top != theData.padding.top}
-							<button class="icon" onclick={() => theData.autoScalePadding('top')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<div class="control-input">
-					<p>Bottom</p>
-					<div style="display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits
-							bind:value={theData.padding.bottom}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.bottom != null &&
-							theData.getAutoScaleValues().bottom != theData.padding.bottom
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.bottom != null && theData.getAutoScaleValues()?.bottom != theData.padding.bottom}
-							<button class="icon" onclick={() => theData.autoScalePadding('bottom')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<div class="control-input">
-					<p>Left</p>
-					<div style="display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits
-							bind:value={theData.padding.left}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.left != null &&
-							theData.getAutoScaleValues().left != theData.padding.left
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.left != null && theData.getAutoScaleValues()?.left != theData.padding.left}
-							<button class="icon" onclick={() => theData.autoScalePadding('left')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<div class="control-input">
-					<p>Right</p>
-					<div style="display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits
-							bind:value={theData.padding.right}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.right != null &&
-							theData.getAutoScaleValues().right != theData.padding.right
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.right != null && theData.getAutoScaleValues()?.right != theData.padding.right}
-							<button class="icon" onclick={() => theData.autoScalePadding('right')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-			</div>
-		</div>
+		<PaddingControls
+			bind:padding={theData.figurePadding}
+			auto={theData.renderBox ? null : theData.getAutoScaleValues()}
+			onReset={(side) => theData.autoScalePadding(side)}
+		/>
 
 		<div class="div-line"></div>
 
@@ -972,17 +844,22 @@
 					class="control-component-title-icons"
 					{@attach attachTooltip('Reset the magnitude axis to auto range')}
 				>
-					<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+					<button
+						class="icon"
+						type="button"
+						aria-label="Reset the magnitude axis to auto range"
+						onclick={() => (theData.ylimsIN = [null, null])}
+					>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>
 				</div>
 			</div>
 
 			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
+				<label class="control-input-checkbox">
 					<input type="checkbox" bind:checked={theData.logScale} />
-					<p>Log Scale</p>
-				</div>
+					<span class="ci-label">Log Scale</span>
+				</label>
 			</div>
 
 			<div class="control-input-horizontal">
@@ -1018,7 +895,12 @@
 						class="control-component-title-icons"
 						{@attach attachTooltip('Reset the phase axis to auto range')}
 					>
-						<button class="icon" onclick={() => (theData.phaseYlimsIN = [null, null])}>
+						<button
+							class="icon"
+							type="button"
+							aria-label="Reset the phase axis to auto range"
+							onclick={() => (theData.phaseYlimsIN = [null, null])}
+						>
 							<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 						</button>
 					</div>
@@ -1061,28 +943,32 @@
 					class="control-component-title-icons"
 					{@attach attachTooltip('Reset the period/frequency axis to auto range')}
 				>
-					<button class="icon" onclick={() => (theData.xlimsIN = [null, null])}>
+					<button
+						class="icon"
+						type="button"
+						aria-label="Reset the period/frequency axis to auto range"
+						onclick={() => (theData.xlimsIN = [null, null])}
+					>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>
 				</div>
 			</div>
 
 			<div class="control-input-vertical">
-				<div class="control-input-checkbox">
+				<label class="control-input-checkbox">
 					<input
 						type="checkbox"
 						bind:checked={theData.showPeriod}
 						onchange={() => (theData.xlimsIN = convertFftLimits(theData.xlimsIN))}
 					/>
-					<p>Show as Period (hours)</p>
-				</div>
+					<span class="ci-label">Show as Period (hours)</span>
+				</label>
 			</div>
 
 			<div class="control-input-horizontal">
 				<div class="control-input">
 					<p>
-						Min {#if theData.showPeriod}
-							( {theData.minPeriod.toFixed(3)}){/if}
+						{theData.showPeriod ? `Min (${theData.minPeriod.toFixed(3)})` : 'Min'}
 					</p>
 
 					<NumberWithUnits
@@ -1097,7 +983,7 @@
 
 				<div class="control-input">
 					<p>
-						Max {#if !theData.showPeriod}({theData.maxFrequency.toFixed(3)}){/if}
+						{theData.showPeriod ? 'Max' : `Max (${theData.maxFrequency.toFixed(3)})`}
 					</p>
 
 					<NumberWithUnits
@@ -1147,10 +1033,10 @@
 						</div>
 
 						<div class="control-input-vertical">
-							<div class="control-input-checkbox">
+							<label class="control-input-checkbox">
 								<input type="checkbox" bind:checked={datum.showPhase} />
-								<p>Show Phase</p>
-							</div>
+								<span class="ci-label">Show Phase</span>
+							</label>
 						</div>
 
 						<div class="control-input">
@@ -1181,6 +1067,10 @@
 									≈{Math.floor((datum.fftData.nyquistFreq || 1) / datum.freqStep)} points
 								{:else}
 									Auto: {datum.fftData.frequencies.length} points
+								{/if}
+								{#if datum.fftData.resolution > 0}
+									<br />Resolution {datum.fftData.resolution.toPrecision(3)} cycles/hr (1 / record length);
+									a finer step interpolates between independent bins.
 								{/if}
 							</p>
 						</div>

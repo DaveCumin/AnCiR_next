@@ -272,14 +272,12 @@ describe('calculateBoxPlotStats', () => {
 	});
 
 	it('computes correct quartiles for [1..8]', () => {
-		// data = [1,2,3,4,5,6,7,8] (n=8)
-		// floor(8*0.25)=2 → q1=data[2]=3
-		// floor(8*0.5)=4  → q2=data[4]=5
-		// floor(8*0.75)=6 → q3=data[6]=7
+		// data = [1,2,3,4,5,6,7,8] (n=8). Type-7 quartiles (numpy.percentile, R's default):
+		// 2.75 / 4.5 / 6.25. The old sorted[floor(n*q)] gave 3 / 5 / 7 (STAT-2).
 		const stats = calculateBoxPlotStats([1, 2, 3, 4, 5, 6, 7, 8]);
-		expect(stats.q1).toBe(3);
-		expect(stats.q2).toBe(5);
-		expect(stats.q3).toBe(7);
+		expect(stats.q1).toBe(2.75);
+		expect(stats.q2).toBe(4.5);
+		expect(stats.q3).toBe(6.25);
 	});
 
 	it('detects an extreme outlier', () => {

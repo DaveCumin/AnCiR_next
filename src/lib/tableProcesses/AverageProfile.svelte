@@ -119,6 +119,9 @@
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import { createComputeRunner } from '$lib/core/asyncCompute.js';
+	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -130,7 +133,8 @@
 	let profData = $state();
 	let mounted = $state(false);
 	let calculating = $state(false);
-	let _calcToken = 0;
+	// The message of the last failed compute, shown with a Retry (ROB-11).
+	let calcError = $state(null);
 
 	// Two per-Y output families: the profile (avgprof_) and its SEM (avgprofsem_).
 	// The TableProcess constructor auto-seeds the avgprof_ family from
@@ -197,17 +201,28 @@
 		);
 	});
 
+	// try/finally, error state, success-only memo commit: see core/asyncCompute.js.
+	const runner = createComputeRunner({
+		memo,
+		node: p,
+		label: 'Average profile',
+		setBusy: (v) => (calculating = v),
+		setError: (m) => (calcError = m)
+	});
 	function recalculate() {
-		calculating = true;
-		const token = ++_calcToken;
-		setTimeout(() => {
-			if (token !== _calcToken) return;
-			const [data, valid] = untrack(() => averageProfile(p.args));
-			if (token !== _calcToken) return;
-			profData = data;
-			p.args.valid = valid;
-			calculating = false;
-		}, 0);
+		runner.run(
+			untrack(() => getHash),
+			() => untrack(() => averageProfile(p.args)),
+			([data, valid]) => {
+				profData = data;
+				p.args.valid = valid;
+			},
+			() => {
+				profData = undefined;
+				p.args.valid = false;
+				clearOutputColumns(p.args.out);
+			}
+		);
 	}
 
 	let outIds = $derived.by(() => {
@@ -288,6 +303,8 @@
 
 {#if calculating}
 	<LoadingSpinner />
+{:else if calcError}
+	<ErrorBox title="The analysis failed." message={calcError} onretry={recalculate} />
 {:else if rows.length}
 	<div class="avgprof-results">
 		<table>

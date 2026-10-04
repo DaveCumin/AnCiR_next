@@ -1,9 +1,10 @@
 // @ts-nocheck
 // Pearson / Spearman correlation, with a two-sided p-value, and an all-pairs matrix.
 //
-// STATS-LIBRARY POLICY (see the project decision note): the numerically-hard part — the
-// distribution tail for the p-value — is delegated to @stdlib via `pUpperFromF`
-// (@stdlib/stats-base-dists-f-cdf), the same F-CDF the rest of the app uses. The COEFFICIENT
+// STATS-LIBRARY POLICY (see the project decision note): the numerically-hard part (the
+// distribution tail for the p-value) goes through `pUpperFromF` (fdist.js: the F upper tail
+// from the regularised incomplete beta on @stdlib's gammaln, pinned to scipy's f.sf), the
+// same F tail the rest of the app uses. The COEFFICIENT
 // and rank-averaging are kept bespoke: they are elementary, well-conditioned formulae, and
 // AnCiR ships as a single inlined bundle where every added dependency is downloaded by every
 // user. Their correctness is not taken on trust — the parity harness pins them to scipy's

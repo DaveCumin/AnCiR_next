@@ -159,7 +159,8 @@ describe('demo-workflow-free-running actogram: legacy marker blocks', () => {
 		expect(m.onsetUnwrap.nMerged).toBe(1);
 		expect(reg.slope).toBe(24.807692307692307);
 		expect(reg.intercept).toBe(-0.3076923076923077);
-		expect(reg.rSquared).toBe(0.9999914154247648);
+		// Time-of-day frame (review FIT-4): was 0.9999914154247648 on absolute time.
+		expect(reg.rSquared).toBeCloseTo(0.9919665809768636, 12);
 		expect(reg.rmse).toBe(0.27196414661021184);
 		expect(m.estimatedPhase).toEqual({ phase: 0.5, refDay: 1 });
 		// A clean free-running record raises no reason to distrust tau.

@@ -11,6 +11,7 @@
 	import { sanitiseOverrides } from '$lib/core/facetOverrides.js';
 	import { allPanels } from '$lib/core/facetPanels.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { recordGraphMutation } from '$lib/core/operations.js';
 	// The facet type sets live in facetTypes.js (shared with the panel engine and the session
 	// migration, which must stay free of this module); re-exported so existing importers work.
 	export const FACETABLE_PLOT_TYPES = SHARED_FACETABLE_PLOT_TYPES;
@@ -76,7 +77,14 @@
 		return { x: snapToGrid(x), y: snapToGrid(y) };
 	}
 
+	// The workspace delete (the plot header's bin). One undoable step however many plots go,
+	// and undo brings back each plot with its metric out-columns (same ids, same data).
 	function deletePlotIds(ids) {
+		recordGraphMutation(() => removePlotsCascade(ids));
+	}
+
+	/** Remove plots and the metric out-columns they own. Unrecorded; callers wrap it. */
+	export function removePlotsCascade(ids) {
 		const idSet = new Set(ids);
 		const isDeleted = (p) => idSet.has(p.id);
 		// Metric out-columns belong to the plot — delete them with it.

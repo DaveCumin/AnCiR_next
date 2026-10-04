@@ -2,8 +2,9 @@
 	// @ts-nocheck
 
 	import { Process, nextLinkedGroupId } from '$lib/core/Process.svelte';
-	import { core, appState } from '$lib/core/core.svelte.js';
+	import { core, appState, appConsts } from '$lib/core/core.svelte.js';
 	import { reconcileAllOutputs } from '$lib/core/reconcileOutputs.js';
+	import { recordGraphMutation } from '$lib/core/operations.js';
 	import {
 		resolveProducer,
 		touchProducerDeps,
@@ -11,6 +12,7 @@
 		producerInputColId
 	} from '$lib/core/producerRuntime.js';
 	import { getUNIXDate } from '$lib/utils/time/TimeUtils.js';
+	import { auditTimeColumnParse } from '$lib/utils/time/timeParseAudit.js';
 	import { min } from '$lib/components/plotbits/helpers/wrangleData';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 
@@ -125,7 +127,8 @@
 		appState.AYStext = `Are you sure you want to delete ${getColumnById(columnId).name}?`;
 		appState.AYScallback = function handleAYS(option) {
 			if (option === 'Yes') {
-				removeColumn(columnId);
+				// One undoable step: undo restores the column, its data and its references.
+				recordGraphMutation(() => removeColumn(columnId));
 			}
 		};
 		appState.showAYSModal = true;
@@ -159,14 +162,25 @@
 		// alive to notice — the same model deleteTableProcess already uses for its own
 		// outputs. Collected first and removed after the sweep, because removing a
 		// column re-enters this function.
+		//
+		// Every input the node DECLARES as a column id is scrubbed (its definition's
+		// columnIdFields), not only xIN / yIN / xsIN: a Crossing's thresholdIN or a Rayleigh's
+		// timeIN kept the dead id, and after a reload the column counter restarts at max+1, so
+		// a new column could take that id and be wired in unasked (review ROB-15).
 		function scrubTP(process) {
 			const args = process.args;
-			if (args.xIN === columnId) args.xIN = -1;
-			if (args.yIN === columnId) args.yIN = -1;
-			if (Array.isArray(args.xsIN)) {
-				args.xsIN = args.xsIN.filter((id) => id !== columnId);
+			if (!args) return;
+			const fields = appConsts.tableProcessMap?.get?.(process.name)?.columnIdFields ?? {};
+			const scalar = new Set(['xIN', ...(fields.scalar ?? [])]);
+			const array = new Set(['xsIN', ...(fields.array ?? [])]);
+			for (const key of scalar) if (args[key] === columnId) args[key] = -1;
+			for (const key of array) {
+				if (Array.isArray(args[key]) && args[key].includes(columnId))
+					args[key] = args[key].filter((id) => id !== columnId);
 			}
-			if (Array.isArray(args.yIN)) {
+			// yIN is scalar on some nodes and an array on others.
+			if (args.yIN === columnId) args.yIN = -1;
+			if (Array.isArray(args.yIN) && args.yIN.includes(columnId)) {
 				args.yIN = args.yIN.filter((id) => id !== columnId);
 			}
 			if (args.out) {
@@ -184,6 +198,28 @@
 		reconcileAllOutputs(core.tableProcesses, (id) => {
 			if (getColumnById(id)) removeColumn(id);
 		});
+
+		// Step 3a: Free (orphan) process nodes reading this column lose the input, and the
+		// output column they produced FROM it (producerPort `out_<id>`) goes with it, exactly
+		// as deleting that one wire does.
+		const strandedOutputs = [];
+		for (const proc of core.orphanProcesses ?? []) {
+			const raw = proc?.args?.inIN;
+			const ins = Array.isArray(raw) ? raw : raw == null ? [] : [raw];
+			if (!ins.includes(columnId)) continue;
+			proc.args.inIN = Array.isArray(raw) ? raw.filter((id) => id !== columnId) : -1;
+			for (const c of core.data) {
+				if (c.producerNodeId === `process_${proc.id}` && c.producerPort === `out_${columnId}`)
+					strandedOutputs.push(c.id);
+			}
+		}
+		for (const id of strandedOutputs) if (getColumnById(id)) removeColumn(id);
+
+		// A chained input (consumer fed through a plot's passthrough port) carrying this
+		// column is dead too.
+		if ((core.chainRefs ?? []).some((r) => r?.colId === columnId)) {
+			core.chainRefs = core.chainRefs.filter((r) => r?.colId !== columnId);
+		}
 
 		// Step 3b: Drop from any group's source list
 		core.groups.forEach((g) => {
@@ -210,6 +246,7 @@
 				for (const dp of plot.plot.data) {
 					if (dp?.x?.refId === columnId) dp.x.refId = -1;
 					if (dp?.y?.refId === columnId) dp.y.refId = -1;
+					if (dp?.z?.refId === columnId) dp.z.refId = -1;
 				}
 				plot.plot.data = plot.plot.data.filter(
 					(dp) => (dp?.x?.refId ?? -1) >= 0 || (dp?.y?.refId ?? -1) >= 0
@@ -217,9 +254,17 @@
 			}
 		});
 
-		// Step 5: Remove the column itself from core.data
-		core.rawData.delete(columnId);
+		// Step 5: Remove the column itself from core.data, and free its stored series. The
+		// series is keyed by the column's `data` key, which is normally its id; a column
+		// pasted by older versions shared the ORIGINAL's key, so deleting the original used to wipe
+		// the copy (review ROB-16). A key another column still reads is left alone.
+		const removed = getColumnById(columnId);
 		core.data = core.data.filter((col) => col.id !== columnId);
+		const stillRead = (key) => core.data.some((c) => c.data === key);
+		for (const key of new Set([columnId, removed?.data])) {
+			if (key == null || stillRead(key)) continue;
+			core.rawData.delete(key);
+		}
 
 		return {
 			success: true,
@@ -545,9 +590,12 @@
 					// coerced to Number(getUNIXDate(null)) === 0 (the 1970 epoch), which
 					// would otherwise plot spurious points where a segment has no data
 					// (e.g. Split's per-segment time outputs).
+					const rawTimes = out;
 					out = out.map((x) =>
 						x == null || x === '' ? null : Number(getUNIXDate(x, this.timeFormat))
 					);
+					// Warn (once, debounced) when many non-blank values did not parse.
+					auditTimeColumnParse(this, rawTimes, out);
 				} catch {
 					console.warn('Error parsing time data for column ', this.id, this.name);
 				}
@@ -678,6 +726,7 @@
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import { describeTimeFormatProblem } from '$lib/utils/time/TimeUtils.js';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
+	import { columnDisplayName, restoreAutoNameIfLabel } from '$lib/core/columnLabels.js';
 
 	let {
 		col = $bindable(),
@@ -714,8 +763,14 @@
 	// Live rename: write to customName so the name survives node-label changes
 	// (an empty value falls back to the auto-derived name).
 	function renameThis(v) {
+		// Typing a node output's label back restores its auto name, so the label stays live.
+		if (restoreAutoNameIfLabel(col, v)) return;
 		col.customName = v === '' ? null : v;
 	}
+
+	// What the row shows (UI-4): a node output's label ("R²", "Cosinor fit: A1") while the
+	// column keeps its auto name, otherwise the column's own name. Display only.
+	let shownName = $derived(columnDisplayName(col));
 
 	// The canvas node that represents this column: its producing node (derived),
 	// the table-process that outputs it, the group that absorbs it, or its own
@@ -778,8 +833,8 @@
 							<ColumnSelector bind:value={col.refId} bind:onChange />
 						</div>
 					{:else}
-						<p class="col-name" title={col.name}>
-							<Editable value={col.name} onInput={renameThis} />
+						<p class="col-name" title={shownName}>
+							<Editable value={shownName} onInput={renameThis} />
 						</p>
 					{/if}
 				</div>

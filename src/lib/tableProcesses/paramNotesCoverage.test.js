@@ -148,3 +148,28 @@ describe('paramNotes cover every select-param enum in the components', () => {
 		});
 	}
 });
+
+// The guard above reads <AttributeSelect> markup and the GENERATED schema only, so it cannot
+// see the plain <select> that offers `permutationScheme`, nor params added since the schema
+// was last regenerated (`minPeriod`/`maxPeriod` on the waveform fits). Pinned by hand until
+// both holes are closed (review finding FIT-5 / FIT-1 follow-up, 2026-10-04).
+describe('paramNotes: free-period range and permutation scheme on the fit nodes', () => {
+	for (const node of ['Cosinor', 'FitFunction', 'RectangularWave', 'DoubleLogistic']) {
+		it(`${node}: documents minPeriod, maxPeriod and both permutationScheme values`, () => {
+			const note = PARAM_NOTES[node] ?? '';
+			for (const term of [
+				'`minPeriod`',
+				'`maxPeriod`',
+				'`permutationScheme`',
+				'"shuffle"',
+				'"block"'
+			])
+				expect(note, `${node} note lacks ${term}`).toContain(term);
+		});
+	}
+
+	it('SurrogateTest no longer offers phase-randomised or AAFT surrogates', () => {
+		expect(PARAM_NOTES.SurrogateTest).not.toMatch(/"phase"|"aaft"/);
+		expect(PARAM_NOTES.SurrogateTest).toMatch(/not offered/);
+	});
+});

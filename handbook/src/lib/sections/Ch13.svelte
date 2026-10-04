@@ -223,7 +223,8 @@
 			</li>
 			<li>
 				<strong>Shuffling as the null for a time series</strong> — it destroys autocorrelation along with
-				the rhythm, so almost anything looks significant. Use block, AR(1) or phase surrogates.
+				the rhythm, so almost anything looks significant. Use block or AR(1) surrogates (phase surrogates
+				keep the rhythm itself, so they cannot test for one).
 			</li>
 			<li>
 				<strong>Measuring amplitude on smoothed data</strong> — every smoother attenuates amplitude by

@@ -11,6 +11,18 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { binData, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { gaussianKDE } from '$lib/utils/kde.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
+
+	/**
+	 * The present values of a column, as numbers: the house rule (isInvalidValue), so '' and
+	 * ' ' are missing (the old `v != null && !isNaN(v)` let them through, since isNaN('') is
+	 * false, and Number('') is 0) and a numeric string is a number.
+	 */
+	function presentNumbers(values) {
+		const out = [];
+		for (const v of values ?? []) if (!isInvalidValue(v)) out.push(Number(v));
+		return out;
+	}
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
 	import { paddedDomain } from '$lib/plots/axisDomain.js';
@@ -70,11 +82,11 @@
 
 		autoBinStart = $derived.by(() => {
 			const values = this.column?.getData?.() ?? [];
-			const valid = values.filter((value) => value != null && !isNaN(value));
+			const valid = presentNumbers(values);
 			if (this.column?.type === 'time' || valid.length === 0) return 0;
 			// Loop rather than Math.min(...valid): a spread of a long column overflows the stack.
 			let lo = Infinity;
-			for (const v of valid) if (Number(v) < lo) lo = Number(v);
+			for (const v of valid) if (v < lo) lo = v;
 			return Math.floor(lo);
 		});
 
@@ -113,7 +125,7 @@
 		kdeCurve() {
 			const values = this.column?.getData?.() ?? [];
 			if (this.column?.type === 'time' || values.length === 0) return { x: [], y: [] };
-			const valid = values.filter((v) => v != null && !isNaN(v));
+			const valid = presentNumbers(values);
 			if (valid.length < 2) return { x: [], y: [] };
 			const kde = gaussianKDE(valid, {
 				bandwidth: this.bandwidth != null && this.bandwidth > 0 ? this.bandwidth : null,
@@ -211,6 +223,11 @@
 		}
 		set padding(v) {
 			this.#padding = v;
+		}
+		// The stored figure padding, for the Padding controls. While a node view is mounted
+		// `padding` reads back a derived, scaled copy, so an edit bound there was lost.
+		get figurePadding() {
+			return this.#padding;
 		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		// Width before an outside legend takes its share; see legendAuto.svelte.js.
@@ -318,7 +335,7 @@
 				for (let i = 0; i < curve.x.length; i++) {
 					rows.push([label, 'density', curve.x[i], '', curve.y[i]]);
 				}
-				const raw = (d.column?.getData?.() ?? []).filter((v) => v != null && !isNaN(v));
+				const raw = presentNumbers(d.column?.getData?.());
 				for (const v of raw) {
 					rows.push([label, 'raw', v, '', v]);
 				}
@@ -492,16 +509,16 @@
 			</div>
 			<div class="control-input-square">
 				<ControlInput label="Top">
-					<NumberWithUnits bind:value={theData.padding.top} />
+					<NumberWithUnits bind:value={theData.figurePadding.top} />
 				</ControlInput>
 				<ControlInput label="Bottom">
-					<NumberWithUnits bind:value={theData.padding.bottom} />
+					<NumberWithUnits bind:value={theData.figurePadding.bottom} />
 				</ControlInput>
 				<ControlInput label="Left">
-					<NumberWithUnits bind:value={theData.padding.left} />
+					<NumberWithUnits bind:value={theData.figurePadding.left} />
 				</ControlInput>
 				<ControlInput label="Right">
-					<NumberWithUnits bind:value={theData.padding.right} />
+					<NumberWithUnits bind:value={theData.figurePadding.right} />
 				</ControlInput>
 			</div>
 		</div>
@@ -674,23 +691,23 @@
 							</ControlInput>
 						</div>
 
-						<div class="control-input-checkbox" style="margin-top: var(--space-3);">
+						<label class="control-input-checkbox" style="margin-top: var(--space-3);">
 							<input
 								type="checkbox"
 								bind:checked={datum.showCounts}
 								disabled={datum.column?.type === 'time'}
 							/>
-							<p>Show count labels</p>
-						</div>
+							<span class="ci-label">Show count labels</span>
+						</label>
 
-						<div class="control-input-checkbox" style="margin-top: var(--space-2);">
+						<label class="control-input-checkbox" style="margin-top: var(--space-2);">
 							<input
 								type="checkbox"
 								bind:checked={datum.showDensity}
 								disabled={datum.column?.type === 'time'}
 							/>
-							<p>Show density curve (KDE)</p>
-						</div>
+							<span class="ci-label">Show density curve (KDE)</span>
+						</label>
 
 						{#if datum.showDensity}
 							<div class="control-input-horizontal">

@@ -1,6 +1,14 @@
 <script>
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, drawAxes, drawHGrid, initPalette } from '$lib/animUtils.js';
+	import {
+		C,
+		setupCanvas,
+		drawAxes,
+		drawHGrid,
+		initPalette,
+		canvasSize,
+		observeResize
+	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
 
@@ -43,8 +51,7 @@
 
 	function drawCanvas(canvas, T_s, isTop) {
 		const ctx = canvas.getContext('2d');
-		const W = canvas.offsetWidth;
-		const H = canvas.offsetHeight;
+		const { W, H } = canvasSize(canvas);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 
@@ -275,9 +282,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cTop, cBot], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});

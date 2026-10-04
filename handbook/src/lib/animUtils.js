@@ -57,15 +57,74 @@ export function initPalette() {
 	C.data2 = v('--data2') || C.data2;
 }
 
+/**
+ * Per-canvas drawing scale. The handbook always draws at 1 (one drawing unit is
+ * one CSS pixel). The standalone presentation pages set the CSS custom property
+ * --anim-graphic-scale on the animation root so that labels, line widths and
+ * paddings grow with the graphic instead of staying at handbook size on a
+ * 1920-wide slide. setupCanvas() reads it; canvasSize() reports the canvas in
+ * drawing units so the draw code never needs to know the scale.
+ */
+const graphicScales = new WeakMap();
+
+function readGraphicScale(canvas) {
+	const raw = getComputedStyle(canvas).getPropertyValue('--anim-graphic-scale');
+	const k = parseFloat(raw);
+	return Number.isFinite(k) && k > 0 ? k : 1;
+}
+
+/**
+ * Size a canvas's backing store to its CSS box at device-pixel resolution and
+ * set the context transform so draw code works in drawing units.
+ * Returns the context and the canvas size in drawing units.
+ */
 export function setupCanvas(canvas) {
 	const d = window.devicePixelRatio || 1;
-	const W = canvas.offsetWidth || 400;
-	const H = canvas.offsetHeight || 200;
-	canvas.width = W * d;
-	canvas.height = H * d;
+	const k = readGraphicScale(canvas);
+	graphicScales.set(canvas, k);
+	const cssW = canvas.offsetWidth || 400;
+	const cssH = canvas.offsetHeight || 200;
+	canvas.width = Math.round(cssW * d);
+	canvas.height = Math.round(cssH * d);
 	const ctx = canvas.getContext('2d');
-	ctx.scale(d, d);
-	return { ctx, W, H };
+	ctx.setTransform(d * k, 0, 0, d * k, 0, 0);
+	return { ctx, W: cssW / k, H: cssH / k };
+}
+
+/** The canvas's current size in drawing units (CSS pixels divided by the scale). */
+export function canvasSize(canvas) {
+	const k = graphicScales.get(canvas) ?? 1;
+	return { W: canvas.offsetWidth / k, H: canvas.offsetHeight / k };
+}
+
+/**
+ * Call `callback` whenever any of `elements` changes size, or the device pixel
+ * ratio changes (window dragged to another screen, browser zoom). A
+ * ResizeObserver catches what a window 'resize' listener misses: a sidebar
+ * toggling, or an embedding page resizing the iframe the animation lives in.
+ * Returns a function that stops observing.
+ */
+export function observeResize(elements, callback) {
+	const targets = elements.filter(Boolean);
+	const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => callback());
+	for (const el of targets) ro?.observe(el);
+
+	let dprQuery = null;
+	const onDprChange = () => {
+		watchDpr();
+		callback();
+	};
+	function watchDpr() {
+		dprQuery?.removeEventListener('change', onDprChange);
+		dprQuery = window.matchMedia?.(`(resolution: ${window.devicePixelRatio || 1}dppx)`) ?? null;
+		dprQuery?.addEventListener('change', onDprChange);
+	}
+	watchDpr();
+
+	return () => {
+		ro?.disconnect();
+		dprQuery?.removeEventListener('change', onDprChange);
+	};
 }
 
 export function lerp(a, b, t) {

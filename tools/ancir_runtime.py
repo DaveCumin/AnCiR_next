@@ -336,7 +336,10 @@ def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
     ss_null = float(((y - y.mean()) ** 2).sum())
     df1 = p - 1
     F_stat = ((ss_null - rss) / df1) / (rss / df_resid) if rss > 0 else float('inf')
-    pF = float(1 - sp_stats.f.cdf(F_stat, df1, df_resid)) if math.isfinite(F_stat) else 0.0
+    # Upper tail computed directly (fdist.js pUpperFromF): 1 - cdf rounds a tiny p to 0. The
+    # p is taken at max(0, F), so a rounding-negative F gives p = 1; an infinite F gives 0.
+    pF = (float(sp_stats.f.sf(max(0.0, F_stat), df1, df_resid)) if math.isfinite(F_stat)
+          else (0.0 if F_stat == math.inf else float('nan')))
 
     return {
         'M': M, 'SE_M': SE_M, 'CI_M': CI_M,
@@ -624,7 +627,53 @@ def evaluate_cosinor_at_points(parameters, x_points):
 # Periodograms
 # ----------------------------------------------------------------------
 
+def is_flat_series(values):
+    """periodogram.js isFlatSeries (ROB-13): every usable value (house rule) EXACTLY equal, or
+    fewer than two of them. Flat data has no rhythm: zero power everywhere and no peak."""
+    first = None
+    seen = 0
+    for v in values or []:
+        if _js_invalid(v):
+            continue
+        x = _js_number(v)
+        if seen == 0:
+            first = x
+        elif x != first:
+            return False
+        seen += 1
+    return True
+
+
+def bin_origin(xs, bin_size):
+    """periodogram.js binOrigin: floor(min(x) / binSize) * binSize, one binSize lower if that
+    rounds above min(x). The binned methods used to start at t = 0 whatever the data, which
+    dropped every sample before 0 and walked ~1e8 empty bins for epoch-sized times."""
+    mn = math.inf
+    for v in xs or []:
+        if _js_invalid(v):
+            continue
+        x = _js_number(v)
+        if x < mn:
+            mn = x
+    if not math.isfinite(mn) or not (bin_size > 0) or not math.isfinite(bin_size):
+        return 0.0
+    origin = math.floor(mn / bin_size) * bin_size
+    if origin > mn:
+        origin -= bin_size
+    return origin
+
+
+def _pgram_pairs(t, y):
+    idx = _js_valid_pairs(t, y)
+    return [_js_number(t[i]) for i in idx], [_js_number(y[i]) for i in idx]
+
+
 def _lomb_scargle(t, y, periods):
+    if t is None or y is None or len(t) < 2 or len(y) < 2 or len(t) != len(y):
+        return [float('nan')] * len(periods)
+    t, y = _pgram_pairs(t, y)
+    if not t or is_flat_series(y):
+        return [0.0] * len(periods)
     t = np.asarray(t, dtype=float)
     y = np.asarray(y, dtype=float)
     y = y - y.mean()
@@ -641,11 +690,6 @@ def _lomb_scargle(t, y, periods):
         # sampled data. Lomb (1976, Ap&SS 39:447) and Scargle (1982, ApJ 263:835):
         #
         #     tan(2*w*tau) = sum(sin(2*w*t)) / sum(cos(2*w*t))
-        #
-        # The sums run over 2*w. Both this port and the JS engine previously summed over w
-        # while still dividing by 2*w, which is some other offset that does not
-        # orthogonalise the bases. Fixed in JS and here together — they must agree, and the
-        # tp-rhythmicity-periodogram fixture is what enforces that.
         two_w = 2 * w
         s2 = float(np.sin(two_w * t).sum())
         c2 = float(np.cos(two_w * t).sum())
@@ -661,79 +705,83 @@ def _lomb_scargle(t, y, periods):
 
 
 def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
-    # Folding chi-squared (Sokolove-Bushell 1978) periodogram. Occupancy-weighted:
-    # Qp = N_eff * sum_h K_h*(M_h - ybar)^2 / sum_i (y_i - ybar)^2 over NON-EMPTY
-    # fold columns only, and df = (occupied columns) - 1 per trial period — NOT
-    # the nominal round(P/dt) - 1, which counts columns the sampling never fills.
-    # Empty bins carry no information; counting them inflated noise Qp far above
-    # its chi-square null whenever dt (binSize) was below the sampling interval,
-    # and handed the threshold a too-large df. Matches periodogram.js exactly in
-    # the bins<=one-point regime (binSize <= sampling interval, the regime the
-    # empty-bin fixture pins); with several points per bin this simplified
-    # mod-binning port still differs from the JS binData-then-fold pipeline.
-    t = np.asarray(t, dtype=float)
-    y = np.asarray(y, dtype=float)
-    n = y.size
-    var_y = float(y.var()) or 1.0
-    powers = np.empty(len(periods))
-    dfs = np.empty(len(periods))
-    for k, P in enumerate(periods):
-        # _js_round, not round(): Python rounds half to even, Math.round half up,
-        # and the period grid lands on half-integers (e.g. 18.5 h at 1 h bins).
-        nbins = max(2, _js_round(P / dt))
-        bins = ((t / dt).astype(int)) % nbins
-        means = np.zeros(nbins)
-        counts = np.zeros(nbins)
-        for b, v in zip(bins, y):
-            means[b] += v
-            counts[b] += 1
-        with np.errstate(invalid='ignore', divide='ignore'):
-            means = np.where(counts > 0, means / np.maximum(counts, 1), 0.0)
-        df = int((counts > 0).sum()) - 1
-        if df < 1:
-            powers[k] = float('nan')
-            dfs[k] = float('nan')
+    """Folding chi-squared (Sokolove-Bushell 1978) periodogram, the periodogram.js pipeline
+    step for step: valid pairs, bin at dt from binOrigin (the first sample's bin on the dt
+    grid, not 0), then fold the BIN MEANS at colNum = round(P / dt) columns (bin i in column
+    i % colNum). Occupancy-weighted over non-empty columns:
+    Qp = N_eff * sum_h K_h (M_h - M)^2 / sum_i (x_i - M)^2, df = occupied columns - 1.
+    Flat data: Qp 0 with its real df (p 1, the threshold still drawn). Per-fold p is the
+    chi-square UPPER tail (chi2.sf, SPEC-14) and the threshold the Sidak-corrected upper
+    quantile over the M folds with a statistic.
+
+    (This used to fold the raw samples by (t / dt).astype(int) % nbins, which truncated
+    negative times toward 0 and differed from the app whenever a bin held several points.)"""
+    nan = float('nan')
+    tt, yy = _pgram_pairs(t, y)
+    flat = is_flat_series(yy)
+    binned = bin_data(tt, yy, dt, bin_origin(tt, dt))
+    data = [nan if v is None else float(v) for v in binned['y_out']]
+    if not data:
+        return [nan] * len(periods), [nan] * len(periods), [nan] * len(periods), \
+            [nan] * len(periods)
+    present = [v for v in data if v == v]
+    avg_all = kahan_mean(present)
+    den = KahanSum()
+    for v in present:
+        den.add((v - avg_all) ** 2)
+    denominator = den.value()
+    powers, dfs, pvals = [], [], []
+    for P in periods:
+        col_num = _js_round(P / dt)
+        if not math.isfinite(col_num) or col_num < 1 or col_num > len(data):
+            powers.append(nan); dfs.append(nan); pvals.append(nan)
             continue
-        # Empty columns contribute 0 to the weighted sum (counts == 0), so this
-        # already runs over occupied columns only.
-        bin_var = ((means - y.mean()) ** 2 * counts).sum() / n
-        powers[k] = n * bin_var / var_y
-        dfs[k] = df
-    # Per-fold Sidak-corrected UPPER-tail threshold, matching periodogram.js:
-    # correctedAlpha = (1 - alpha)^(1/M) is the per-comparison CONFIDENCE level,
-    # so the quantile is evaluated at correctedAlpha (upper tail), with the SAME
-    # effective df the statistic used (NaN below df 1) — statistic, df and
-    # threshold only calibrate together. This replaced a single UNCORRECTED
-    # scalar taken at a mid-grid df — a third, different line from both the JS
-    # intent and the JS bug it mirrored; the pure-chisq-periodogram parity
-    # fixtures now pin power, df and threshold across all three languages.
-    # M counts the DISTINCT folds that produced a statistic (`periods` is one
-    # entry per fold, see _fold_grid), not the requested trial periods: trial
-    # periods sharing a fold are one test, and counting them held the
-    # family-wise false-positive rate far below the nominal alpha.
-    m = int(np.sum(np.nan_to_num(dfs, nan=0.0) >= 1))
-    corrected = (1.0 - alpha) ** (1.0 / m) if m else float('nan')
-    thresholds = [
-        float(sp_stats.chi2.ppf(corrected, df)) if df >= 1 else float('nan')
-        for df in dfs
-    ]
-    return powers.tolist(), dfs.tolist(), thresholds
+        sums = [KahanSum() for _ in range(col_num)]
+        counts = [0] * col_num
+        for i, v in enumerate(data):
+            if v == v:
+                sums[i % col_num].add(v)
+                counts[i % col_num] += 1
+        num = KahanSum()
+        cols = bins_ne = 0
+        for h in range(col_num):
+            if counts[h] == 0:
+                continue
+            cols += 1
+            bins_ne += counts[h]
+            d = sums[h].value() / counts[h] - avg_all
+            num.add(counts[h] * d * d)
+        df = cols - 1
+        if df < 1:
+            powers.append(nan); dfs.append(nan); pvals.append(nan)
+            continue
+        qp = 0.0 if flat else (num.value() * bins_ne) / denominator if denominator else nan
+        if not math.isfinite(qp):
+            powers.append(nan); dfs.append(nan); pvals.append(nan)
+            continue
+        powers.append(qp)
+        dfs.append(df)
+        pvals.append(float(sp_stats.chi2.sf(qp, df)))
+    m = sum(1 for d in dfs if d == d and d >= 1)
+    corrected = (1.0 - alpha) ** (1.0 / m) if m else nan
+    thresholds = [float(sp_stats.chi2.ppf(corrected, d)) if (d == d and d >= 1) else nan
+                  for d in dfs]
+    return powers, dfs, thresholds, pvals
 
 
 def _enright_pgram(t, y, periods, dt):
-    """Port of periodogram.js calculateEnrightPower (Enright 1965): bin the
-    series at dt, centre the bin means on their grand mean (an EMPTY bin, from
-    a gap or a missing value, becomes 0 after centring), then for each fold of
-    nb = round(P / dt) bins average the lag-product correlation
-    sum(c_i * c_(i+lag)) / (n - lag) over every lag = k * nb < n, and divide by
-    the binned variance sum(c^2) / n. Missing rows are dropped before binning
-    (bin_data), as validPairs does in the JS. This replaced a single-lag
-    normalised autocorrelation that was a different statistic from the app's,
-    so exported scripts drew a different Enright spectrum; the
-    pure-enright-periodogram-* parity fixtures pin the power."""
-    if len(t) < 2 or len(y) < 2:
+    """Port of periodogram.js calculateEnrightPower (Enright 1965): valid pairs, bin at dt
+    from binOrigin, centre the bin means on their grand mean (an EMPTY bin becomes 0), then
+    for each fold of nb = round(P / dt) bins average sum(c_i c_(i+lag)) / (n - lag) over
+    every lag = k nb < n and divide by sum(c^2) / n. Flat data: 0 at every fold."""
+    if t is None or y is None or len(t) < 2 or len(y) < 2:
         return [float('nan')] * len(periods)
-    data = np.asarray(bin_data(t, y, dt, 0.0)['y_out'], dtype=float)
+    tt, yy = _pgram_pairs(t, y)
+    if is_flat_series(yy):
+        return [0.0] * len(periods)
+    data = np.asarray([np.nan if v is None else v
+                       for v in bin_data(tt, yy, dt, bin_origin(tt, dt))['y_out']],
+                      dtype=float)
     n = data.size
     if n == 0:
         return [0.0] * len(periods)
@@ -797,18 +845,23 @@ def run_periodogram_calculation(params, on_progress=None):
     dt = float(params.get('dt', None) or _median_dt(t))
     if method != 'Lomb-Scargle':
         periods = _fold_grid(periods, dt, p_min, p_max)
+    pvals = None
     if method == 'Lomb-Scargle':
         powers = _lomb_scargle(t, y, periods)
         threshold = None
         dfs = None
     elif method == 'Chi-squared':
         alpha = float(params.get('alpha', params.get('chiSquaredAlpha', 0.05)))
-        powers, dfs, threshold = _chi_squared_pgram(t, y, periods, dt, alpha)
+        powers, dfs, threshold, pvals = _chi_squared_pgram(t, y, periods, dt, alpha)
     else:
         powers = _enright_pgram(t, y, periods, dt)
         threshold = None
         dfs = None
-    return {'x': periods, 'y': powers, 'threshold': threshold, 'df': dfs}
+    # periodogram.js drops the periods whose power is NaN (a fold with < 2 occupied columns).
+    keep = [i for i, v in enumerate(powers) if v == v and periods[i] == periods[i]]
+    pick = (lambda a: None if a is None else [a[i] for i in keep])
+    return {'x': pick(periods), 'y': pick(powers), 'threshold': pick(threshold),
+            'df': pick(dfs), 'pvalue': pick(pvals)}
 
 
 def chi_squared_periodogram(t, y, opts):
@@ -829,7 +882,16 @@ def chi_squared_periodogram(t, y, opts):
         'alpha': opts.get('alpha', 0.05),
     })
     return {'period': res['x'], 'power': res['y'], 'df': res['df'],
-            'threshold': res['threshold']}
+            'threshold': res['threshold'], 'pvalue': res['pvalue']}
+
+
+def lomb_scargle_periodogram(t, y, opts):
+    """Pure-util parity surface for Lomb-Scargle through run_periodogram_calculation."""
+    res = run_periodogram_calculation({
+        't': t, 'y': y, 'method': 'Lomb-Scargle',
+        'minPeriod': opts.get('periodMin', 1.0), 'maxPeriod': opts.get('periodMax', 48.0),
+        'stepSize': opts.get('periodStep', 0.1)})
+    return {'period': res['x'], 'power': res['y']}
 
 
 def enright_periodogram(t, y, opts):
@@ -858,52 +920,250 @@ def _median_dt(t):
 # FFT
 # ----------------------------------------------------------------------
 
+# Gap rule shared by every FFT caller (fft.js FFT_GAP_RULE): a run of up to 3 missing grid
+# slots is filled linearly, provided at most 10% of the grid is filled; anything more is
+# refused with a reason. A sample further than a quarter step from its slot is off-grid.
+FFT_GAP_RULE = {'maxGapSamples': 3, 'maxMissingFraction': 0.1}
+_FFT_ALIGN_TOLERANCE = 0.25
+_MAX_FFT_N = 1 << 24
+
+
+def _fmt_h(h):
+    """fft.js fmtH: hours for a message."""
+    if abs(h) >= 10:
+        return f'{h:.0f}'
+    return _js_string(float(f'{h:.3g}'))
+
+
+def regrid_uniform(times, values, max_gap_samples=None, max_missing_fraction=None):
+    """fft.js regridUniform: put a series on its own uniform grid. Step = the LOWER median
+    of the positive intervals between consecutive valid samples (sorted[floor((n-1)/2)]);
+    slot = round((t - t0) / dt); refused when a sample is more than a quarter step off its
+    slot or two share one, when a run of missing slots is longer than 3, or when more than
+    10% of the slots are missing. Short runs are filled by linear interpolation."""
+    mg = FFT_GAP_RULE['maxGapSamples'] if max_gap_samples is None else max_gap_samples
+    mf = (FFT_GAP_RULE['maxMissingFraction'] if max_missing_fraction is None
+          else max_missing_fraction)
+    nan = float('nan')
+
+    def fail(reason, **extra):
+        out = {'ok': False, 'reason': reason, 't0': nan, 'dt': nan, 'y': [], 'nObserved': 0,
+               'nFilled': 0, 'longestGap': 0}
+        out.update(extra)
+        return out
+    if times is None or values is None:
+        return fail('no data')
+    idx = _js_valid_pairs(times, values)
+    if len(idx) < 2:
+        return fail('need at least 2 samples with both a time and a value')
+    t = [_js_number(times[i]) for i in idx]
+    y = [_js_number(values[i]) for i in idx]
+    diffs = []
+    for i in range(1, len(t)):
+        d = t[i] - t[i - 1]
+        if not (d > 0) or not math.isfinite(d):
+            return fail('the time axis is not increasing')
+        diffs.append(d)
+    dt = sorted(diffs)[(len(diffs) - 1) // 2]
+    if not (dt > 0) or not math.isfinite(dt):
+        return fail('the time axis is not increasing')
+    t0 = t[0]
+    slots = []
+    for i, ti in enumerate(t):
+        pos = (ti - t0) / dt
+        slot = int(_formula_round(pos))  # JS Math.round
+        if abs(pos - slot) > _FFT_ALIGN_TOLERANCE or (i > 0 and slot == slots[-1]):
+            return fail(f'the samples do not sit on a regular grid (typical interval '
+                        f'{_fmt_h(dt)} h). Bin the data to a fixed interval first, or use '
+                        'the Lomb-Scargle periodogram.', dt=dt)
+        slots.append(slot)
+    n_grid = slots[-1] + 1
+    if not (n_grid <= _MAX_FFT_N):
+        return fail('the record is too long for the transform', dt=dt)
+    longest = 0
+    for i in range(1, len(slots)):
+        longest = max(longest, slots[i] - slots[i - 1] - 1)
+    n_missing = n_grid - len(t)
+    if longest > mg:
+        return fail(f'the record has a gap of {_fmt_h(longest * dt)} h ({longest} missing '
+                    f'samples at the {_fmt_h(dt)} h interval). The FFT needs evenly spaced '
+                    f'samples and fills at most {mg} in a row. Use the Lomb-Scargle '
+                    'periodogram, which handles gaps, or analyse the segments either side '
+                    'separately.', dt=dt, longestGap=longest, nObserved=len(t))
+    if n_missing > mf * n_grid:
+        return fail(f'{n_missing} of {n_grid} samples ({100 * n_missing / n_grid:.0f}%) are '
+                    f'missing at the {_fmt_h(dt)} h interval, more than the {100 * mf:.0f}% '
+                    'the FFT will interpolate. Use the Lomb-Scargle periodogram, which '
+                    'handles missing samples.', dt=dt, longestGap=longest, nObserved=len(t))
+    out = [0.0] * n_grid
+    for i, sl in enumerate(slots):
+        out[sl] = y[i]
+        if i > 0:
+            gap = sl - slots[i - 1]
+            for g in range(1, gap):
+                out[slots[i - 1] + g] = y[i - 1] + ((y[i] - y[i - 1]) * g) / gap
+    return {'ok': True, 'reason': '', 't0': t0, 'dt': dt, 'y': out, 'nObserved': len(t),
+            'nFilled': n_missing, 'longestGap': longest}
+
+
+def _empty_spectrum(reason=''):
+    return {'frequencies': [], 'magnitudes': [], 'phases': [], 'samplingRate': 0.0,
+            'nyquistFreq': 0.0, 'minPeriod': 0.0, 'resolution': 0.0, 'nSamples': 0,
+            'nTransform': 0, 'nFilled': 0, 'grid': None, 'flat': False, 'warnings': [],
+            'reason': reason}
+
+
 def compute_fft(times, values, freq_step=None):
-    """Magnitude/phase spectrum. Mirrors src/lib/utils/fft.js computeFFT
-    header-for-header: mean-detrend only (no linear detrend), assume
-    approximately uniform sampling (no resampling), zero-pad the detrended
-    signal to the next power of two, and report the one-sided spectrum for
-    bins 1..N/2-1 (the DC bin is dropped) with magnitude = |X|*2/N."""
-    t = _to_float_arr(times)
-    y = _to_float_arr(values)
-    mask = ~(np.isnan(t) | np.isnan(y))
-    t, y = t[mask], y[mask]
-    if t.size < 2:
-        return {'frequencies': [], 'magnitudes': [], 'phases': [],
-                'samplingRate': 0.0, 'nyquistFreq': 0.0, 'minPeriod': 0.0}
-    # Mean-detrend (the app does not linear-detrend or resample).
-    y = y - float(y.mean())
-    dt = (t[-1] - t[0]) / (t.size - 1) if t.size > 1 else 1.0
-    sampling_rate = 1.0 / dt
-    nyquist = sampling_rate / 2.0
-    min_period = 2 * dt
+    """Port of fft.js computeFFT. The series is put on its own grid (regrid_uniform; short
+    gaps filled, long ones refused with `reason`), the mean removed (no linear detrend), and
+    the DFT taken at the record's own length N, or at M = ceil(rate / freqStep) when a finer
+    frequency step is asked for (zero padding). Bins k = 1 .. below M/2 at k * rate / M;
+    magnitude 2|X_k| / N (N samples, not the padded length); phase atan2(Im, Re). A series
+    with no variation at all has magnitude exactly 0 everywhere (`flat`).
+
+    numpy's FFT handles any length directly (the JS uses Bluestein for non-powers of two):
+    the same transform, equal to rounding."""
+    if (times is None or values is None or len(times) < 2 or len(values) < 2
+            or len(times) != len(values)):
+        return _empty_spectrum()
+    g = regrid_uniform(times, values)
+    if not g['ok']:
+        return _empty_spectrum(g['reason'])
+    n = len(g['y'])
+    if n < 4:
+        return _empty_spectrum('need at least 4 samples')
+    dt = g['dt']
+    rate = 1.0 / dt
+    m = n
     if freq_step and freq_step > 0:
-        n = int(math.ceil(sampling_rate / freq_step))
-        n = 2 ** int(math.ceil(math.log2(max(n, 1))))
-    else:
-        n = 2 ** int(math.ceil(math.log2(y.size)))
-    if n < y.size:
-        n = 2 ** int(math.ceil(math.log2(y.size)))
-    y_pad = np.zeros(n)
-    y_pad[:y.size] = y
-    spec = np.fft.fft(y_pad)
-    half_n = n // 2
+        want = math.ceil(rate / freq_step)
+        if math.isfinite(want) and want > n:
+            m = int(want)
+    if m > _MAX_FFT_N:
+        return _empty_spectrum('the requested frequency step is too fine')
+    y_mean = kahan_mean(g['y'])
+    yc = [v - y_mean for v in g['y']]
+    flat = all(v == g['y'][0] for v in g['y'])
+    buf = np.zeros(m)
+    buf[:n] = yc
+    spec = np.fft.fft(buf)
     freqs, mags, phases = [], [], []
-    for i in range(1, half_n):
-        freq = i * sampling_rate / n
-        if freq > nyquist:
-            break
-        freqs.append(freq)
-        mags.append(float(abs(spec[i]) * 2.0 / n))
-        phases.append(float(np.angle(spec[i])))
-    return {
-        'frequencies': freqs,
-        'magnitudes': mags,
-        'phases': phases,
-        'samplingRate': sampling_rate,
-        'nyquistFreq': nyquist,
-        'minPeriod': min_period,
-    }
+    k = 1
+    while 2 * k < m:
+        freqs.append(k * rate / m)
+        mags.append(0.0 if flat else 2 * math.hypot(spec[k].real, spec[k].imag) / n)
+        phases.append(math.atan2(spec[k].imag, spec[k].real))
+        k += 1
+    warnings = []
+    if g['nFilled'] > 0:
+        nf = g['nFilled']
+        warnings.append(f"{nf} missing sample{' was' if nf == 1 else 's were'} filled by "
+                        f"linear interpolation on the {_fmt_h(dt)} h grid (longest run "
+                        f"{g['longestGap']}).")
+    return {'frequencies': freqs, 'magnitudes': mags, 'phases': phases, 'samplingRate': rate,
+            'nyquistFreq': rate / 2, 'minPeriod': 2 * dt, 'resolution': rate / n,
+            'nSamples': n, 'nTransform': m, 'nFilled': g['nFilled'],
+            'grid': {'t0': g['t0'], 'dt': dt, 'y': yc}, 'flat': flat, 'warnings': warnings,
+            'reason': ''}
+
+
+def _fft_magnitude_at(y, dt, f):
+    """fft.js magnitudeAt: least-squares sinusoid at frequency f with CENTRED cos/sin
+    regressors (its own constant). Returns (amplitude, phase, explained sum of squares)."""
+    w = 2 * math.pi * f * dt
+    n = len(y)
+    cs = [math.cos(w * j) for j in range(n)]
+    sn = [math.sin(w * j) for j in range(n)]
+    mc = sum(cs) / n
+    ms = sum(sn) / n
+    scc = sss = scs = syc = sys_ = 0.0
+    for j in range(n):
+        c = cs[j] - mc
+        s_ = sn[j] - ms
+        scc += c * c
+        sss += s_ * s_
+        scs += c * s_
+        syc += y[j] * c
+        sys_ += y[j] * s_
+    det = scc * sss - scs * scs
+    if not (abs(det) > 1e-12 * scc * sss):
+        mag = 2 * math.hypot(syc, sys_) / n
+        return mag, math.atan2(-sys_, syc), mag * mag * n / 2
+    a = (syc * sss - sys_ * scs) / det
+    b = (sys_ * scc - syc * scs) / det
+    return math.hypot(a, b), math.atan2(-b, a), a * syc + b * sys_
+
+
+def fft_peak(spec, period_min=None, period_max=None, indices=None):
+    """Port of fft.js fftPeak: the largest bin (within [period_min, period_max] hours, or
+    among `indices`), refined by golden-section search between its neighbouring bins on the
+    variance a least-squares sinusoid explains; the bin is kept if the search finds nothing
+    better. None for a flat spectrum or no positive magnitude."""
+    f = (spec or {}).get('frequencies') or []
+    m = (spec or {}).get('magnitudes') or []
+    if not f or spec.get('flat'):
+        return None
+    cand = indices
+    if cand is None:
+        lo = 0 if period_min is None else period_min
+        hi = math.inf if period_max is None else period_max
+        cand = [i for i in range(len(f)) if lo <= 1 / f[i] <= hi]
+    best = -1
+    for i in cand:
+        if _finite(m[i]) and (best < 0 or m[i] > m[best]):
+            best = i
+    if best < 0 or not (m[best] > 0):
+        return None
+    freq, mag = f[best], m[best]
+    phase = (spec.get('phases') or [float('nan')] * len(f))[best]
+    grid = spec.get('grid')
+    if grid and grid.get('y'):
+        gy, gdt = grid['y'], grid['dt']
+        a = f[best - 1] if best > 0 else f[best]
+        b = f[best + 1] if best < len(f) - 1 else f[best]
+        if period_max is not None and math.isfinite(period_max):
+            a = max(a, 1 / period_max)
+        if period_min is not None and period_min > 0:
+            b = min(b, 1 / period_min)
+        if b > a:
+            gr = (math.sqrt(5) - 1) / 2
+            c = b - gr * (b - a)
+            d = a + gr * (b - a)
+            fc = _fft_magnitude_at(gy, gdt, c)[2]
+            fd = _fft_magnitude_at(gy, gdt, d)[2]
+            it = 0
+            while it < 60 and b - a > 1e-12 * f[best]:
+                if fc > fd:
+                    b, d, fd = d, c, fc
+                    c = b - gr * (b - a)
+                    fc = _fft_magnitude_at(gy, gdt, c)[2]
+                else:
+                    a, c, fc = c, d, fd
+                    d = a + gr * (b - a)
+                    fd = _fft_magnitude_at(gy, gdt, d)[2]
+                it += 1
+            fr = (a + b) / 2
+            at = _fft_magnitude_at(gy, gdt, fr)
+            if at[2] >= _fft_magnitude_at(gy, gdt, f[best])[2]:
+                freq, mag, phase = fr, at[0], at[1]
+    return {'frequency': freq, 'period': 1 / freq, 'magnitude': mag, 'phase': phase,
+            'index': best}
+
+
+def fft_peak_of(times, values, freq_step=None, period_min=None, period_max=None):
+    """Parity surface: fft_peak over compute_fft as scalars, NaN throughout for no peak."""
+    pk = fft_peak(compute_fft(times, values, freq_step), period_min, period_max)
+    nan = float('nan')
+    if pk is None:
+        return {'frequency': nan, 'period': nan, 'magnitude': nan, 'phase': nan}
+    return {k: pk[k] for k in ('frequency', 'period', 'magnitude', 'phase')}
+
+
+def regrid_uniform_summary(times, values):
+    """Parity surface for regrid_uniform: ok (1/0), dt, nFilled, longestGap and the grid y."""
+    g = regrid_uniform(times, values)
+    return {'ok': 1 if g['ok'] else 0, 'dt': g['dt'], 'nFilled': g['nFilled'],
+            'longestGap': g['longestGap'], 'y': g['y']}
 
 
 # ----------------------------------------------------------------------
@@ -1102,81 +1362,231 @@ def correlogram_series_acf(series, columns_index):
 # Rectangular wave
 # ----------------------------------------------------------------------
 
-def fit_rectangular_wave(t, x, options=None):
-    options = options or {}
-    t = _to_float_arr(t)
-    x = _to_float_arr(x)
-    mask = ~(np.isnan(t) | np.isnan(x))
-    t, x = t[mask], x[mask]
-    if t.size < 6:
-        return None
+def _solve_linear_js(A, b):
+    """rectwave.js / doublelogistic.js solveLinearSystem: Gaussian elimination with partial
+    pivoting; raises ValueError('Singular matrix') on a pivot below 1e-12."""
+    n = len(A)
+    aug = [list(row) + [b[i]] for i, row in enumerate(A)]
+    for i in range(n):
+        mx = i
+        for k in range(i + 1, n):
+            if abs(aug[k][i]) > abs(aug[mx][i]):
+                mx = k
+        aug[i], aug[mx] = aug[mx], aug[i]
+        if abs(aug[i][i]) < 1e-12:
+            raise ValueError('Singular matrix')
+        for k in range(i + 1, n):
+            f = aug[k][i] / aug[i][i]
+            for j in range(i, n + 1):
+                aug[k][j] -= f * aug[i][j]
+    sol = [0.0] * n
+    for i in range(n - 1, -1, -1):
+        acc = aug[i][n]
+        for j in range(i + 1, n):
+            acc -= aug[i][j] * sol[j]
+        sol[i] = acc / aug[i][i]
+    return sol
 
-    fix_kappa = options.get('fixKappa', False)
-    fix_omega = options.get('fixOmega', False)
-    fix_d = options.get('fixD', False)
-    kappa0 = float(options.get('kappa', 5.0))
-    omega0 = float(options.get('omega', 2 * math.pi / 24))
-    d0 = float(options.get('dutyCycle', 0.5))
 
-    free_idx = [0, 1, 4]
-    if not fix_kappa: free_idx.append(2)
-    if not fix_omega: free_idx.append(3)
-    if not fix_d:     free_idx.append(5)
-    free_idx = sorted(free_idx)
+def _rw_eval(t, p):
+    M, A, k, w, phi, d = p
+    return M + A * math.tanh(k * (math.sin(w * t + phi) - math.cos(math.pi * d)))
 
-    def model(p_full, t_):
-        M, A, k, w, phi, d = p_full
-        return M + A * np.tanh(k * (np.sin(w * t_ + phi) - math.cos(math.pi * d)))
 
-    M0 = float(np.mean(x))
-    A0 = (float(np.max(x)) - float(np.min(x))) / 2.0 or 1.0
-    full0 = [M0, A0, kappa0, omega0, 0.0, d0]
-    bounds_full = ([-np.inf, -np.inf, 1e-3, 1e-3, -np.inf, 0.01],
-                   [np.inf, np.inf, np.inf, 100.0, np.inf, 0.99])
+def _rw_normal_eqs(t, x, p, free):
+    nf = len(free)
+    JtJ = [[0.0] * nf for _ in range(nf)]
+    JtR = [0.0] * nf
+    rss = 0.0
+    _, A, k, w, phi, d = p
+    cpd, spd = math.cos(math.pi * d), math.sin(math.pi * d)
+    for ti, xi in zip(t, x):
+        r = xi - _rw_eval(ti, p)
+        rss += r * r
+        arg = w * ti + phi
+        ca, sa = math.cos(arg), math.sin(arg)
+        s_ = sa - cpd
+        th = math.tanh(k * s_)
+        sech2 = 1 - th * th
+        jf = (-1.0, -th, -A * s_ * sech2, -A * k * ti * ca * sech2, -A * k * ca * sech2,
+              -A * k * math.pi * spd * sech2)
+        row = [jf[i] for i in free]
+        for j in range(nf):
+            JtR[j] += row[j] * r
+            for m in range(j, nf):
+                JtJ[j][m] += row[j] * row[m]
+    for j in range(nf):
+        for m in range(j + 1, nf):
+            JtJ[m][j] = JtJ[j][m]
+    return JtJ, JtR, rss
 
-    def residuals(p_free):
-        full = full0.copy()
-        for i, idx in enumerate(free_idx):
-            full[idx] = p_free[i]
-        return model(full, t) - x
 
-    p0 = [full0[i] for i in free_idx]
-    lb = [bounds_full[0][i] for i in free_idx]
-    ub = [bounds_full[1][i] for i in free_idx]
-    # multi-start over period seeds
-    timespan = float(t[-1] - t[0]) or 1.0
-    best = None
-    for P_seed in [24.0, 12.0, 6.0, max(timespan, 1.0)]:
-        full0[3] = 2 * math.pi / P_seed if not fix_omega else omega0
-        p0 = [full0[i] for i in free_idx]
+def _rw_fit_lm(t, x, params, free, max_iter, tol, w_lo, w_hi):
+    """rectwave.js fitWithLM, step for step: omega clamped to [w_lo, w_hi] and frozen for a
+    step when it sits on a bound and the descent points outward; converged = stopped on the
+    tolerance or damping reached 1e12; canonical A >= 0 form; at-bound within 1e-6."""
+    p = list(params)
+    p[3] = min(w_hi, max(w_lo, p[3]))
+    lam = 0.01
+    JtJ, JtR, rss_cur = _rw_normal_eqs(t, x, p, free)
+    converged = False
+    iterations = 0
+    w_pos = free.index(3) if 3 in free else -1
+    for it in range(max_iter):
+        iterations = it + 1
+        frozen = w_pos >= 0 and ((p[3] <= w_lo and JtR[w_pos] > 0)
+                                 or (p[3] >= w_hi and JtR[w_pos] < 0))
+        JtJ_d = []
+        for i, row in enumerate(JtJ):
+            if frozen and i == w_pos:
+                JtJ_d.append([1.0 if k_ == i else 0.0 for k_ in range(len(row))])
+                continue
+            r_ = [0.0 if (frozen and k_ == w_pos) else v for k_, v in enumerate(row)]
+            r_[i] += lam * (row[i] if row[i] > 0 else 1)
+            JtJ_d.append(r_)
+        rhs = [0.0 if (frozen and i == w_pos) else v for i, v in enumerate(JtR)]
         try:
-            res = sp_optimize.least_squares(residuals, p0, bounds=(lb, ub),
-                                            max_nfev=2000)
-        except Exception:
+            delta = _solve_linear_js(JtJ_d, rhs)
+        except ValueError:
+            lam = min(lam * 10, 1e12)
+            if lam >= 1e12:
+                converged = True
+                break
             continue
-        if best is None or res.cost < best.cost:
-            best = res
-    if best is None:
+        new_p = list(p)
+        for j, idx in enumerate(free):
+            new_p[idx] = p[idx] - delta[j]
+        new_p[2] = max(0.01, new_p[2])
+        new_p[3] = max(w_lo, min(new_p[3], w_hi))
+        new_p[5] = max(0.01, min(new_p[5], 0.99))
+        nJtJ, nJtR, rss_new = _rw_normal_eqs(t, x, new_p, free)
+        if rss_new < rss_cur:
+            rel = (rss_cur - rss_new) / (rss_cur + 1e-10)
+            p, JtJ, JtR, rss_cur = new_p, nJtJ, nJtR, rss_new
+            lam = max(lam / 3, 1e-10)
+            if rel < tol:
+                converged = True
+                break
+        else:
+            lam = min(lam * 10, 1e12)
+            if lam >= 1e12:
+                converged = True
+                break
+    n = len(t)
+    fitted = [_rw_eval(ti, p) for ti in t]
+    km = KahanSum()
+    for v in x:
+        km.add(v)
+    xm = km.value() / n
+    kt = KahanSum()
+    for v in x:
+        kt.add((v - xm) ** 2)
+    r2 = 1 - rss_cur / kt.value() if kt.value() > 0 else 0.0
+    rmse = math.sqrt(rss_cur / n)
+    if p[1] < 0:
+        p = list(p)
+        p[1] = -p[1]
+        p[4] += math.pi
+        p[5] = 1 - p[5]
+    p[4] = math.atan2(math.sin(p[4]), math.cos(p[4]))
+    M, A, k, w, phi, d = p
+    period = 2 * math.pi / w
+    acro = (math.pi / 2 - phi) / w
+    acro = math.fmod(math.fmod(acro, period) + period, period)
+    side = None
+    if w_pos >= 0:
+        if abs(w - w_lo) <= _BOUND_RTOL * w_lo:
+            side = 'max'
+        elif abs(w - w_hi) <= _BOUND_RTOL * w_hi:
+            side = 'min'
+    all_finite = all(math.isfinite(v) for v in p) and math.isfinite(rss_cur)
+    return {'parameters': {'M': M, 'A': A, 'kappa': k, 'omega': w, 'phi': phi,
+                           'dutyCycle': d},
+            'period': period, 'acrophase': acro, 'fitted': fitted, 'rmse': rmse,
+            'rSquared': r2, 'rss': rss_cur,
+            'diagnostics': {'converged': converged and all_finite, 'iterations': iterations,
+                            'atBound': [side]}}
+
+
+def fit_rectangular_wave(t, x, options=None):
+    """Port of utils/rectwave.js fitRectangularWave (FIT-1): f(t) = M + A tanh(kappa
+    (sin(omega t + phi) - cos(pi d))), the JS multi-start Levenberg-Marquardt step for step.
+    A free period is bounded to [minPeriod, maxPeriod] (default 1-48 h, resolve_period_range);
+    start s seeds omega from the s-th peak of the least-squares periodogram in that range
+    (2 pi / 24 with none) and phi = pi/2 - atan2(S, C). Returns None for an empty range or
+    when every start fails. Callers pass the valid (t, x) pairs.
+
+    This replaced a scipy least_squares fit with 4 fixed period seeds and an unbounded
+    period, which agreed with the app only approximately (~1e-3 on the parity fixture)."""
+    o = options or {}
+    t = [float(v) for v in t]
+    x = [float(v) for v in x]
+    if len(t) != len(x):
+        raise ValueError('Arrays t and x must have the same length')
+    fix_kappa = bool(o.get('fixKappa', False))
+    fix_omega = bool(o.get('fixOmega', False))
+    fix_d = bool(o.get('fixDutyCycle', o.get('fixD', False)))
+    fixed_kappa = o.get('fixedKappa', 5) if o.get('fixedKappa') is not None else 5
+    fixed_omega = o.get('fixedOmega')
+    fixed_d = o.get('fixedDutyCycle', 0.5) if o.get('fixedDutyCycle') is not None else 0.5
+    max_iter = int(o.get('maxIterations') or 10000)
+    tol = o.get('tolerance') or 1e-6
+    n_starts = int(o.get('numStarts') or 5)
+    min_p = o.get('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod'])
+    max_p = o.get('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod'])
+    if fix_omega and not (_finite(fixed_omega) and fixed_omega > 0):
+        raise ValueError('fit_rectangular_wave: fixOmega needs a positive finite fixedOmega')
+    w_lo, w_hi = 0.001, 100.0
+    rng = None
+    peaks = None
+    if not fix_omega:
+        rng = resolve_period_range(t, min_p, max_p)
+        if not rng:
+            return None
+        w_lo = 2 * math.pi / rng['maxPeriod']
+        w_hi = 2 * math.pi / rng['minPeriod']
+        peaks = [2 * math.pi * f for f in
+                 scan_periodogram(t, x, rng['minPeriod'], rng['maxPeriod'], n_starts)]
+    free = [0, 1, 4]
+    if not fix_kappa:
+        free.append(2)
+    if not fix_omega:
+        free.append(3)
+    if not fix_d:
+        free.append(5)
+    free.sort()
+    n = len(x)
+    if n == 0:
         return None
-    full = full0.copy()
-    for i, idx in enumerate(free_idx):
-        full[idx] = best.x[i]
-    M, A, k, w, phi, d = full
-    pred = model(full, t)
-    rss = float(((x - pred) ** 2).sum())
-    ss_tot = float(((x - x.mean()) ** 2).sum())
-    r2 = 1 - rss / ss_tot if ss_tot > 0 else 0.0
-    rmse = math.sqrt(rss / t.size)
-    period = 2 * math.pi / w if w != 0 else float('inf')
-    acrophase = ((math.pi / 2 - phi) / w) % period if w != 0 else 0.0
-    return {
-        'parameters': {'M': float(M), 'A': float(A), 'kappa': float(k),
-                       'omega': float(w), 'phi': float(phi),
-                       'dutyCycle': float(d)},
-        'period': float(period), 'acrophase': float(acrophase),
-        'fitted': pred.tolist(), 'rmse': rmse, 'rSquared': float(r2),
-        'rss': rss,
-    }
+    mean = sum(x) / n
+    half = (max(x) - min(x)) / 2
+    d_seeds = [0.5, 0.3, 0.7, 0.4, 0.6]
+    k_seeds = [5, 2, 10, 3, 8]
+    best, best_rmse = None, math.inf
+    for st in range(n_starts):
+        if fix_omega and fixed_omega is not None:
+            w = fixed_omega
+        else:
+            seeds = peaks or []
+            w = seeds[min(st, len(seeds) - 1)] if seeds else 2 * math.pi / 24
+            w = min(w_hi, max(w_lo, w))
+        kap = fixed_kappa if fix_kappa else k_seeds[st % len(k_seeds)]
+        d = fixed_d if fix_d else d_seeds[st % len(d_seeds)]
+        cs = sum((xi - mean) * math.cos(w * ti) for ti, xi in zip(t, x))
+        sn = sum((xi - mean) * math.sin(w * ti) for ti, xi in zip(t, x))
+        params = [mean, half if half > 0 else 1, kap, w, math.pi / 2 - math.atan2(sn, cs), d]
+        try:
+            res = _rw_fit_lm(t, x, params, free, max_iter, tol, w_lo, w_hi)
+        except (ValueError, ZeroDivisionError, OverflowError):
+            continue
+        if res['rmse'] < best_rmse:
+            best_rmse, best = res['rmse'], res
+    if best is not None:
+        best['diagnostics']['periodRange'] = ([rng['minPeriod'], rng['maxPeriod']]
+                                              if rng else None)
+        if fix_omega:
+            best['diagnostics']['atBound'] = [None]
+    return best
 
 
 def evaluate_rectwave_at_points(parameters, x_points):
@@ -1198,145 +1608,341 @@ def _sigmoid(z):
     return 1.0 / (1.0 + np.exp(-np.clip(z, -50, 50)))
 
 
-def fit_double_logistic(t, x, options=None):
-    options = options or {}
-    t = _to_float_arr(t)
-    x = _to_float_arr(x)
-    mask = ~(np.isnan(t) | np.isnan(x))
-    t, x = t[mask], x[mask]
-    if t.size < 6:
-        return None
-    periodic = bool(options.get('periodic', False))
-    fix_k1 = options.get('fixK1', False)
-    fix_k2 = options.get('fixK2', False)
-    fix_T = options.get('fixT', False)
-
-    M0 = float(np.min(x))
-    A0 = float(np.max(x) - np.min(x)) or 1.0
-    k1_0 = float(options.get('k1', 1.0))
-    k2_0 = float(options.get('k2', 1.0))
-    timespan = float(t[-1] - t[0]) or 1.0
-    # A FREE period inits from the data timespan; starting it small (e.g. 24)
-    # lets the optimizer collapse to a degenerate many-tile fit. With this init
-    # the fit matches JS exactly for the aperiodic-pulse case.
-    T0 = float(options.get('T', 24.0 if fix_T else timespan))
-
-    if periodic:
-        # PERIODIC mode seeds the two edges from the PHASE-FOLDED data, inside a single
-        # cycle — mirroring generateInitialGuessP in doubleLogistic.js.
-        #
-        # Seeding them at 25% and 75% of the whole RECORD (which is what this did until
-        # 2026-07-28, and is still right for the aperiodic case) puts them ~83 h apart in a
-        # 24 h model. The tiled sum is then nonsense and the optimiser never recovers: on a
-        # clean daily bout it returned R^2 = 0.008 where the JS engine got 0.982.
-        t_min = float(t[0])
-        mean_x = float(x.mean())
-        phases = [((float(ti) - t_min) % T0 + T0) % T0 for ti in t]
-        above = sorted(ph for ph, xi in zip(phases, x) if float(xi) > mean_x)
-        if len(above) > 2:
-            onset_phase, offset_phase = above[0], above[-1]
-        else:
-            onset_phase, offset_phase = T0 * 0.25, T0 * 0.75
-        t1_0 = t_min + onset_phase
-        t2_0 = t1_0 + max(0.01, offset_phase - onset_phase)
-    else:
-        t1_0 = float(t[0]) + timespan * 0.25
-        t2_0 = float(t[0]) + timespan * 0.75
-
-    if periodic:
-        full0 = [M0, A0, k1_0, t1_0, k2_0, t2_0, T0]
-        free = [0, 1, 3, 5]
-        if not fix_k1: free.append(2)
-        if not fix_k2: free.append(4)
-        if not fix_T:  free.append(6)
-        bounds_full = ([-np.inf, -np.inf, 1e-4, -np.inf, 1e-4, -np.inf, 0.1],
-                       [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf])
-    else:
-        full0 = [M0, A0, k1_0, t1_0, k2_0, t2_0]
-        free = [0, 1, 3, 5]
-        if not fix_k1: free.append(2)
-        if not fix_k2: free.append(4)
-        bounds_full = ([-np.inf, -np.inf, 1e-4, -np.inf, 1e-4, -np.inf],
-                       [np.inf, np.inf, np.inf, np.inf, np.inf, np.inf])
-    free = sorted(free)
-
-    def model(p_full, t_):
-        if periodic:
-            M, A, k1, t1, k2, t2, T = p_full
-            n_tiles = max(1, int(math.ceil((t_.max() - t_.min()) / T)) + 2)
-            j_range = np.arange(-1, n_tiles + 1)
-            T_off = j_range * T
-            # broadcast: shape (n_t, n_tiles)
-            tt = t_[:, None]
-            on = _sigmoid(k1 * (tt - t1 - T_off[None, :]))
-            off = _sigmoid(k2 * (tt - t2 - T_off[None, :]))
-            return M + A * (on - off).sum(axis=1)
-        M, A, k1, t1, k2, t2 = p_full
-        return M + A * (_sigmoid(k1 * (t_ - t1)) - _sigmoid(k2 * (t_ - t2)))
-
-    def residuals(p_free):
-        full = full0.copy()
-        for i, idx in enumerate(free):
-            full[idx] = p_free[i]
-        # enforce t2 > t1 + 0.01
-        if full[5] <= full[3] + 0.01:
-            full[5] = full[3] + 0.01
-        return model(full, t) - x
-
-    p0 = [full0[i] for i in free]
-    lb = [bounds_full[0][i] for i in free]
-    ub = [bounds_full[1][i] for i in free]
+def _sig_js(z):
+    """doublelogistic.js sigmoid 1 / (1 + exp(-z)), with JS overflow semantics (exp(-z)
+    = Infinity gives 0)."""
     try:
-        res = sp_optimize.least_squares(residuals, p0, bounds=(lb, ub),
-                                        max_nfev=4000)
-    except Exception:
-        return None
-    full = full0.copy()
-    for i, idx in enumerate(free):
-        full[idx] = res.x[i]
-    pred = model(full, t)
-    rss = float(((x - pred) ** 2).sum())
-    ss_tot = float(((x - x.mean()) ** 2).sum())
-    r2 = 1 - rss / ss_tot if ss_tot > 0 else 0.0
-    rmse = math.sqrt(rss / t.size)
+        return 1.0 / (1.0 + math.exp(-z))
+    except OverflowError:
+        return 0.0
+
+
+_DL_U_LIMIT = 30
+
+
+def _dl_jrange(t_arr, t1, t2, T):
+    return (math.floor((min(t_arr) - max(t1, t2)) / T) - 1,
+            math.ceil((max(t_arr) - min(t1, t2)) / T) + 1)
+
+
+def _dl_eval_np(t, p):
+    M, A, k1, t1, k2, t2 = p[:6]
+    return M + A * (_sig_js(k1 * (t - t1)) - _sig_js(k2 * (t - t2)))
+
+
+def _dl_eval_p(t, p, jr):
+    M, A, k1, t1, k2, t2, T = p
+    out = M
+    for j in range(jr[0], jr[1] + 1):
+        out += A * (_sig_js(k1 * (t - t1 - j * T)) - _sig_js(k2 * (t - t2 - j * T)))
+    return out
+
+
+def _dl_to_model(q):
+    return [q[0], q[1], q[2], q[3], q[4], q[3] + q[6] * _sig_js(q[5]), q[6]]
+
+
+def canonical_periodic_params(m):
+    """doublelogistic.js canonicalPeriodicParams: the A >= 0 form of a periodic vector."""
+    if not (m[1] < 0):
+        return m
+    M, A, k1, t1, k2, t2, T = m
+    return [M + A, -A, k2, t2, k1, t1 + T, T]
+
+
+def _dl_ne_np(t, x, p, free):
+    nf = len(free)
+    JtJ = [[0.0] * nf for _ in range(nf)]
+    JtR = [0.0] * nf
+    rss = 0.0
+    _, A, k1, t1, k2, t2 = p[:6]
+    for ti, xi in zip(t, x):
+        r = xi - _dl_eval_np(ti, p)
+        rss += r * r
+        s1 = _sig_js(k1 * (ti - t1))
+        s2 = _sig_js(k2 * (ti - t2))
+        s1p, s2p = s1 * (1 - s1), s2 * (1 - s2)
+        jf = (-1.0, -(s1 - s2), -A * s1p * (ti - t1), A * k1 * s1p, A * s2p * (ti - t2),
+              -A * k2 * s2p)
+        row = [jf[i] for i in free]
+        for a_ in range(nf):
+            JtR[a_] += row[a_] * r
+            for b_ in range(a_, nf):
+                JtJ[a_][b_] += row[a_] * row[b_]
+    for a_ in range(nf):
+        for b_ in range(a_ + 1, nf):
+            JtJ[b_][a_] = JtJ[a_][b_]
+    return JtJ, JtR, rss
+
+
+def _dl_ne_pu(t, x, q, free):
+    """Periodic normal equations in the optimiser's (t1, u, T) coordinates."""
+    m = _dl_to_model(q)
+    nf = len(free)
+    JtJ = [[0.0] * nf for _ in range(nf)]
+    JtR = [0.0] * nf
+    rss = 0.0
+    _, A, k1, t1, k2, t2, T = m
+    sg = _sig_js(q[5])
+    jr = _dl_jrange(t, t1, t2, T)
+    for ti, xi in zip(t, x):
+        a1 = b1 = c1 = d1 = e1 = f1 = g1 = 0.0
+        for j in range(jr[0], jr[1] + 1):
+            s1 = _sig_js(k1 * (ti - t1 - j * T))
+            s2 = _sig_js(k2 * (ti - t2 - j * T))
+            s1p, s2p = s1 * (1 - s1), s2 * (1 - s2)
+            a1 += s1 - s2
+            b1 += s1p * (ti - t1 - j * T)
+            c1 += s1p
+            d1 += s2p * (ti - t2 - j * T)
+            e1 += s2p
+            f1 += j * k1 * s1p
+            g1 += j * k2 * s2p
+        r = xi - (m[0] + A * a1)
+        rss += r * r
+        dT1 = A * k1 * c1
+        dT2 = -A * k2 * e1
+        dT = A * (f1 - g1)
+        jf = (-1.0, -a1, -A * b1, dT1 + dT2, A * d1, dT2 * T * sg * (1 - sg), dT + dT2 * sg)
+        row = [jf[i] for i in free]
+        for a_ in range(nf):
+            JtR[a_] += row[a_] * r
+            for b_ in range(a_, nf):
+                JtJ[a_][b_] += row[a_] * row[b_]
+    for a_ in range(nf):
+        for b_ in range(a_ + 1, nf):
+            JtJ[b_][a_] = JtJ[a_][b_]
+    return JtJ, JtR, rss
+
+
+def _dl_fit_lm(t, x, params, free, periodic, max_iter, tol, t_lo=0.1, t_hi=math.inf):
+    """doublelogistic.js fitWithLM, step for step."""
+    p = list(params)
     if periodic:
-        M, A, k1, t1, k2, t2, T = full
-        params = {'M': M, 'A': A, 'k1': k1, 't1': t1, 'k2': k2, 't2': t2, 'T': T}
+        p[6] = min(t_hi, max(t_lo, p[6]))
+        frac = min(0.98, max(0.02, (params[5] - params[3]) / p[6]))
+        p[5] = math.log(frac / (1 - frac))
+    ne = (lambda pp: _dl_ne_pu(t, x, pp, free)) if periodic else \
+        (lambda pp: _dl_ne_np(t, x, pp, free))
+    t_pos = free.index(6) if (periodic and 6 in free) else -1
+    lam = 0.01
+    JtJ, JtR, rss_cur = ne(p)
+    converged = False
+    iterations = 0
+    for it in range(max_iter):
+        iterations = it + 1
+        frozen = t_pos >= 0 and ((p[6] <= t_lo and JtR[t_pos] > 0)
+                                 or (p[6] >= t_hi and JtR[t_pos] < 0))
+        JtJ_d = []
+        for i, row in enumerate(JtJ):
+            if frozen and i == t_pos:
+                JtJ_d.append([1.0 if k_ == i else 0.0 for k_ in range(len(row))])
+                continue
+            r_ = [0.0 if (frozen and k_ == t_pos) else v for k_, v in enumerate(row)]
+            r_[i] += lam * (row[i] if row[i] > 0 else 1)
+            JtJ_d.append(r_)
+        rhs = [0.0 if (frozen and i == t_pos) else v for i, v in enumerate(JtR)]
+        try:
+            delta = _solve_linear_js(JtJ_d, rhs)
+        except ValueError:
+            lam = min(lam * 10, 1e12)
+            if lam >= 1e12:
+                converged = True
+                break
+            continue
+        new_p = list(p)
+        for j, idx in enumerate(free):
+            new_p[idx] = p[idx] - delta[j]
+        new_p[2] = max(1e-4, new_p[2])
+        new_p[4] = max(1e-4, new_p[4])
+        if periodic:
+            new_p[6] = min(t_hi, max(t_lo, new_p[6]))
+            new_p[5] = min(_DL_U_LIMIT, max(-_DL_U_LIMIT, new_p[5]))
+        elif new_p[5] <= new_p[3]:
+            new_p[5] = new_p[3] + 0.01
+        nJtJ, nJtR, rss_new = ne(new_p)
+        if rss_new < rss_cur:
+            rel = (rss_cur - rss_new) / (rss_cur + 1e-10)
+            p, JtJ, JtR, rss_cur = new_p, nJtJ, nJtR, rss_new
+            lam = max(lam / 3, 1e-10)
+            if rel < tol:
+                converged = True
+                break
+        else:
+            lam = min(lam * 10, 1e12)
+            if lam >= 1e12:
+                converged = True
+                break
+    n = len(t)
+    side = None
+    if t_pos >= 0:
+        if abs(p[6] - t_hi) <= _BOUND_RTOL * t_hi:
+            side = 'max'
+        elif abs(p[6] - t_lo) <= _BOUND_RTOL * t_lo:
+            side = 'min'
+    all_finite = all(math.isfinite(v) for v in p) and math.isfinite(rss_cur)
+    m = canonical_periodic_params(_dl_to_model(p)) if periodic else p
+    if periodic:
+        jr = _dl_jrange(t, m[3], m[5], m[6])
+        fitted = [_dl_eval_p(ti, m, jr) for ti in t]
     else:
-        M, A, k1, t1, k2, t2 = full
-        params = {'M': M, 'A': A, 'k1': k1, 't1': t1, 'k2': k2, 't2': t2}
-    duration = t2 - t1
-    period = T if periodic else max(timespan, 1.0)
-    onset_phase = (t1 % period) / period
-    offset_phase = (t2 % period) / period
-    duty = duration / period if period > 0 else 0.0
-    return {
-        'parameters': {k: float(v) for k, v in params.items()},
-        'duration': float(duration),
-        'onsetPhase': float(onset_phase),
-        'offsetPhase': float(offset_phase),
-        'dutyCycle': float(duty),
-        'fitted': pred.tolist(),
-        'rmse': rmse, 'rSquared': float(r2), 'rss': rss,
-    }
+        fitted = [_dl_eval_np(ti, m) for ti in t]
+    km = KahanSum()
+    for v in x:
+        km.add(v)
+    xm = km.value() / n
+    kt, kr = KahanSum(), KahanSum()
+    for v in x:
+        kt.add((v - xm) ** 2)
+    for i in range(n):
+        kr.add((x[i] - fitted[i]) ** 2)
+    rss = kr.value()
+    r2 = 1 - rss / kt.value() if kt.value() > 0 else 0.0
+    M, A, k1, t1, k2, t2 = m[:6]
+    T = m[6] if periodic else None
+    dur = t2 - t1
+    return {'parameters': {'M': M, 'A': A, 'k1': k1, 't1': t1, 'k2': k2, 't2': t2, 'T': T},
+            'duration': dur,
+            'onsetPhase': math.fmod(math.fmod(t1, T) + T, T) if periodic else None,
+            'offsetPhase': math.fmod(math.fmod(t2, T) + T, T) if periodic else None,
+            'dutyCycle': dur / T if periodic else None,
+            'fitted': fitted, 'rmse': math.sqrt(rss / n), 'rSquared': r2, 'rss': rss,
+            'diagnostics': {'converged': converged and all_finite, 'iterations': iterations,
+                            'atBound': [side]}}
+
+
+def _dl_guess_np(t, x, seed, fix_k1, fix_k2, fk1, fk2):
+    n = len(x)
+    t_min, t_max = min(t), max(t)
+    tr = t_max - t_min
+    mean = sum(x) / n
+    x_min = min(x)
+    A = (max(x) - x_min) * (1 + 0.1 * seed)
+    above = [ti for ti, xi in zip(t, x) if xi > mean]
+    t1e, t2e = t_min + tr * 0.25, t_min + tr * 0.75
+    if len(above) > 2:
+        t1e, t2e = above[0], above[-1]
+    offs = [0, -0.15, 0.15, -0.3, 0.3]
+    shift = tr * offs[seed % len(offs)]
+    t1 = t1e + shift
+    t2 = max(t1 + 0.01, t2e + shift)
+    ks = [0.5, 0.2, 1.0, 0.3, 0.8]
+    return [x_min, A, fk1 if fix_k1 else ks[seed % 5], t1, fk2 if fix_k2 else ks[seed % 5], t2]
+
+
+def _dl_guess_p(t, x, seed, fix_k1, fix_k2, fix_p, fk1, fk2, fp, peaks, t_lo, t_hi):
+    n = len(x)
+    mean = sum(x) / n
+    x_min = min(x)
+    A = max(x) - x_min
+    if fix_p:
+        T = fp
+    else:
+        seeds = peaks or []
+        T = seeds[min(seed, len(seeds) - 1)] if seeds else 24
+        T = min(math.inf if t_hi is None else t_hi, max(0 if t_lo is None else t_lo, T))
+    ks = [0.5, 0.2, 1.0, 0.3, 0.8]
+    k1 = fk1 if fix_k1 else ks[seed % 5]
+    k2 = fk2 if fix_k2 else ks[seed % 5]
+    t_min = min(t)
+    dc = [0.5, 0.3, 0.7, 0.4, 0.6][seed % 5]
+    above = sorted(math.fmod(math.fmod(ti - t_min, T) + T, T)
+                   for ti, xi in zip(t, x) if xi > mean)
+    onset = T * (0.5 - dc / 2)
+    dur = T * dc
+    if len(above) > 2:
+        gap = above[0] + T - above[-1]
+        after = 0
+        for i in range(1, len(above)):
+            g = above[i] - above[i - 1]
+            if g > gap:
+                gap, after = g, i
+        onset = above[after]
+        dur = min(0.98 * T, max(0.02 * T, T - gap))
+    t1 = t_min + onset
+    return [x_min, A, k1, t1, k2, t1 + dur, T]
+
+
+def fit_double_logistic(t, x, options=None):
+    """Port of utils/doublelogistic.js fitDoubleLogistic (FIT-1, FIT-2), the JS multi-start
+    Levenberg-Marquardt step for step. Periodic mode optimises [M, A, k1, t1, k2, u, T] with
+    t2 = t1 + T sigmoid(u) (|u| <= 30) so tiles never overlap, keeps a free T inside
+    [minPeriod, maxPeriod] (default 1-48 h) with periodogram-peak starts, and reports the
+    canonical A >= 0 form with duration t2 - t1 and dutyCycle = duration / T. Callers pass
+    the valid (t, x) pairs. None for an empty range or when every start fails.
+
+    This replaced a scipy least_squares fit (record-span period init, t1/t2 free) that only
+    matched the app's fit quality approximately."""
+    o = options or {}
+    t = [float(v) for v in t]
+    x = [float(v) for v in x]
+    if len(t) != len(x):
+        raise ValueError('Arrays t and x must have the same length')
+    if not t:
+        return None
+
+    def g(k, d):
+        v = o.get(k)
+        return d if v is None else v
+    periodic = bool(g('periodic', False))
+    fix_k1, fix_k2 = bool(g('fixK1', False)), bool(g('fixK2', False))
+    fix_p = bool(g('fixPeriod', o.get('fixT', False)))
+    fk1, fk2 = g('fixedK1', 0.5), g('fixedK2', 0.5)
+    fp = g('fixedPeriod', o.get('T', 24))
+    max_iter, tol, n_starts = int(g('maxIterations', 10000)), g('tolerance', 1e-6), \
+        int(g('numStarts', 5))
+    rng = None
+    peaks = None
+    t_lo, t_hi = 0.1, math.inf
+    if periodic and not fix_p:
+        rng = resolve_period_range(t, g('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
+                                   g('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod']))
+        if not rng:
+            return None
+        t_lo, t_hi = rng['minPeriod'], rng['maxPeriod']
+        peaks = [1.0 / f for f in scan_periodogram(t, x, t_lo, t_hi, n_starts)]
+    free = [0, 1, 3, 5]
+    if not fix_k1:
+        free.append(2)
+    if not fix_k2:
+        free.append(4)
+    if periodic and not fix_p:
+        free.append(6)
+    free.sort()
+    best, best_rmse = None, math.inf
+    for st in range(n_starts):
+        params = (_dl_guess_p(t, x, st, fix_k1, fix_k2, fix_p, fk1, fk2, fp, peaks, t_lo, t_hi)
+                  if periodic else _dl_guess_np(t, x, st, fix_k1, fix_k2, fk1, fk2))
+        if fix_k1:
+            params[2] = fk1
+        if fix_k2:
+            params[4] = fk2
+        if periodic and fix_p:
+            params[6] = fp
+        try:
+            res = _dl_fit_lm(t, x, params, free, periodic, max_iter, tol, t_lo, t_hi)
+        except (ValueError, ZeroDivisionError, OverflowError):
+            continue
+        if res['rmse'] < best_rmse:
+            best_rmse, best = res['rmse'], res
+    if best is not None:
+        best['diagnostics']['periodRange'] = ([rng['minPeriod'], rng['maxPeriod']]
+                                              if rng else None)
+    return best
 
 
 def evaluate_dl_at_points(parameters, x_points, periodic=False):
-    xa = np.asarray(x_points, dtype=float)
+    """doublelogistic.js evaluateDoubleLogisticAtPoints (tile range from computeJRange)."""
+    pts = [float(v) for v in x_points]
+    pr = parameters
     if periodic:
-        M = parameters['M']; A = parameters['A']
-        k1 = parameters['k1']; t1 = parameters['t1']
-        k2 = parameters['k2']; t2 = parameters['t2']
-        T = parameters['T']
-        n_tiles = max(1, int(math.ceil((xa.max() - xa.min()) / T)) + 2)
-        j = np.arange(-1, n_tiles + 1)
-        on = _sigmoid(k1 * (xa[:, None] - t1 - j[None, :] * T))
-        off = _sigmoid(k2 * (xa[:, None] - t2 - j[None, :] * T))
-        return (M + A * (on - off).sum(axis=1)).tolist()
-    M = parameters['M']; A = parameters['A']
-    k1 = parameters['k1']; t1 = parameters['t1']
-    k2 = parameters['k2']; t2 = parameters['t2']
-    return (M + A * (_sigmoid(k1 * (xa - t1)) - _sigmoid(k2 * (xa - t2)))).tolist()
+        m = [pr['M'], pr['A'], pr['k1'], pr['t1'], pr['k2'], pr['t2'], pr['T']]
+        if not pts:
+            return []
+        jr = _dl_jrange(pts, m[3], m[5], m[6])
+        return [_dl_eval_p(v, m, jr) for v in pts]
+    m = [pr['M'], pr['A'], pr['k1'], pr['t1'], pr['k2'], pr['t2']]
+    return [_dl_eval_np(v, m) for v in pts]
 
 
 # ----------------------------------------------------------------------
@@ -1346,7 +1952,7 @@ def evaluate_dl_at_points(parameters, x_points, periodic=False):
 def whittaker_eilers(y, lam=100.0, order=2):
     y = _to_float_arr(y)
     n = y.size
-    if n < order + 2:
+    if n < 3 or n <= order:  # smoothing.js whittakerEilers returns y unchanged here
         return y.tolist()
     # Build difference matrix D of order `order`
     D = np.eye(n)
@@ -1359,97 +1965,107 @@ def whittaker_eilers(y, lam=100.0, order=2):
 
 
 def savitzky_golay(y, window_size=5, poly_order=2):
-    y = _to_float_arr(y)
+    """smoothing.js savitzkyGolay: the least-squares polynomial's centre weights applied to
+    every FULL window; the first and last floor(window/2) points are left as they are (the
+    JS does not shrink the window at the ends, and a window longer than the series leaves it
+    untouched). An even window grows by one."""
+    y = [float(v) for v in y]
+    n = len(y)
+    window_size = int(window_size)
     if window_size % 2 == 0:
         window_size += 1
-    if window_size > y.size:
-        window_size = y.size if y.size % 2 == 1 else y.size - 1
-    if window_size < poly_order + 2:
-        return y.tolist()
     half = window_size // 2
-    out = np.empty_like(y)
-    for i in range(y.size):
-        lo = max(0, i - half)
-        hi = min(y.size, i + half + 1)
-        xs = np.arange(lo, hi) - i
-        ys = y[lo:hi]
-        deg = min(poly_order, xs.size - 1)
-        coeffs = np.polyfit(xs, ys, deg)
-        out[i] = np.polyval(coeffs, 0.0)
-    return out.tolist()
+    out = list(y)
+    if n - half <= half:
+        return out
+    A = np.array([[float(i) ** j for j in range(int(poly_order) + 1)]
+                  for i in range(-half, half + 1)])
+    try:
+        coeffs = (np.linalg.inv(A.T @ A) @ A.T)[0]
+    except np.linalg.LinAlgError:
+        coeffs = np.full(window_size, np.nan)  # the JS inversion divides by a zero pivot
+    for i in range(half, n - half):
+        acc = 0.0
+        for j in range(-half, half + 1):
+            acc += coeffs[j + half] * y[i + j]
+        out[i] = float(acc)
+    return out
 
 
 def loess(x, y, bandwidth=0.3):
-    xa = _to_float_arr(x); ya = _to_float_arr(y)
-    n = xa.size
-    if n < 4:
-        return ya.tolist()
-    h = max(2, int(round(bandwidth * n)))
-    out = np.empty_like(ya)
+    """smoothing.js loess, step for step: h = max(floor(bandwidth * n), 1) nearest points
+    (ties in index order, a stable sort), tricube weights on distance / max distance, a
+    weighted straight line, or the weighted mean when the line is degenerate."""
+    xs = [float(v) for v in x]
+    ys = [float(v) for v in y]
+    n = len(xs)
+    h = max(int(math.floor(bandwidth * n)), 1)
+    out = [0.0] * n
     for i in range(n):
-        d = np.abs(xa - xa[i])
-        idx = np.argsort(d)[:h]
-        dx = d[idx]
-        dmax = dx.max() if dx.size else 1.0
-        w = (1 - (dx / (dmax or 1.0)) ** 3) ** 3
-        w = np.where(np.isfinite(w), w, 0.0)
-        X = np.column_stack([np.ones(idx.size), xa[idx]])
-        WX = X * w[:, None]
-        try:
-            beta = np.linalg.lstsq(WX, ya[idx] * w, rcond=None)[0]
-            out[i] = beta[0] + beta[1] * xa[i]
-        except Exception:
-            out[i] = ya[i]
-    return out.tolist()
+        xi = xs[i]
+        nb = sorted(range(n), key=lambda j: abs(xi - xs[j]))[:h]
+        max_d = abs(xi - xs[nb[-1]])
+        sw = swx = swy = swxx = swxy = 0.0
+        for j in nb:
+            u = abs(xi - xs[j]) / (max_d or 1)
+            w = 0.0 if u >= 1 else (1 - u ** 3) ** 3
+            sw += w
+            swx += w * xs[j]
+            swy += w * ys[j]
+            swxx += w * xs[j] * xs[j]
+            swxy += w * xs[j] * ys[j]
+        denom = sw * swxx - swx * swx
+        if abs(denom) < 1e-10:
+            out[i] = swy / sw if sw != 0 else float('nan')
+        else:
+            slope = (sw * swxy - swx * swy) / denom
+            out[i] = slope * xi + (swy - slope * swx) / sw
+    return out
 
 
 def moving_average(y, window_size=5, kind='simple'):
-    y = _to_float_arr(y)
-    n = y.size
-    if window_size < 1 or n == 0:
-        return y.tolist()
-    if kind == 'exponential':
-        alpha = 2.0 / (window_size + 1)
-        out = np.empty_like(y)
-        out[0] = y[0]
-        for i in range(1, n):
-            out[i] = alpha * y[i] + (1 - alpha) * out[i - 1]
-        return out.tolist()
-    half = window_size // 2
-    out = np.empty_like(y)
+    """smoothing.js movingAverage, exactly: a centred window of floor(windowSize / 2) each
+    side, clipped at the ends. Missing values (house rule) are skipped. 'weighted' weights a
+    neighbour max(0, windowSize - distance); 'exponential' weights it
+    exp(-distance / (windowSize / 3)). A window with nothing usable keeps the input value.
+    (The port used to run a one-sided EMA and 1..k ramp weights, which are different filters.)"""
+    y = list(y)
+    n = len(y)
+    out = list(y)
+    half = int(math.floor(window_size / 2))
     for i in range(n):
-        lo = max(0, i - half)
-        hi = min(n, i + half + 1)
-        win = y[lo:hi]
-        if kind == 'weighted':
-            w = np.arange(1, win.size + 1, dtype=float)
-            out[i] = float((win * w).sum() / w.sum())
+        total = 0.0
+        count = 0
+        weight_sum = 0.0
+        for j in range(max(0, i - half), min(n - 1, i + half) + 1):
+            if _js_invalid(y[j]):
+                continue
+            yj = _js_number(y[j])
+            d = abs(i - j)
+            if kind == 'simple':
+                total += yj
+                count += 1
+            elif kind == 'weighted':
+                w = max(0, window_size - d)
+                total += yj * w
+                weight_sum += w
+            elif kind == 'exponential':
+                w = math.exp(-d / (window_size / 3))
+                total += yj * w
+                weight_sum += w
+        if kind == 'simple':
+            out[i] = total / count if count > 0 else y[i]
         else:
-            out[i] = float(win.mean())
-    return out.tolist()
+            out[i] = total / weight_sum if weight_sum > 0 else y[i]
+    return out
 
 
 def smooth_arrays(x_vals, y_vals, smoother_type, options=None):
-    options = options or {}
-    if smoother_type == 'whittaker':
-        return list(x_vals), whittaker_eilers(y_vals,
-                                              options.get('lambda', 100.0),
-                                              options.get('order', 2))
-    if smoother_type in ('savitzky-golay', 'savitzky'):
-        return list(x_vals), savitzky_golay(
-            y_vals,
-            int(options.get('savitzkyWindowSize', options.get('windowSize', 5))),
-            int(options.get('savitzkyPolyOrder', options.get('polyOrder', 2))))
-    if smoother_type == 'loess':
-        return list(x_vals), loess(x_vals, y_vals,
-                                   options.get('bandwidth', 0.3))
-    # JS dispatches smootherType 'moving' → movingAverage with movingAvg* args.
-    if smoother_type in ('moving-average', 'moving'):
-        return list(x_vals), moving_average(
-            y_vals,
-            int(options.get('movingAvgWindowSize', options.get('windowSize', 5))),
-            options.get('movingAvgType', options.get('type', 'simple')))
-    return list(x_vals), list(y_vals)
+    """smoothing.js smoothArrays: (x, smoothed y) for pre-filtered, x-sorted arrays. Options
+    use the JS names (whittakerLambda, savitzkyWindowSize, loessBandwidth, movingAvgType, ...);
+    an unknown smoother type is the moving average."""
+    return list(x_vals), _smooth_dispatch(list(x_vals), list(y_vals), smoother_type,
+                                          options or {})
 
 
 # ----------------------------------------------------------------------
@@ -1763,19 +2379,48 @@ class Column:
 # ----------------------------------------------------------------------
 
 def _proc_add(x, args, _cols):
-    v = float(args.get('value', 0))
-    return [None if xi is None else xi + v for xi in x]
+    # Add.svelte: missing in (house rule: None, blank, whitespace, text, NaN) -> None out;
+    # numeric text is its value. value = Number(args.value), so an absent value is NaN.
+    v = _js_number(args['value']) if 'value' in args else float('nan')
+    return [None if _js_invalid(xi) else _js_number(xi) + v for xi in x]
+
+
+def _sub_as_number(v):
+    """Sub.svelte asNumber: a number, or a non-blank numeric string, as a number; else None.
+    Booleans are not numbers here."""
+    if isinstance(v, (bool, np.bool_)):
+        return None
+    if isinstance(v, (int, float, np.integer, np.floating)):
+        return float(v)
+    if isinstance(v, str) and v.strip(_JS_WS) != '' and not math.isnan(_js_number(v)):
+        return _js_number(v)
+    return None
+
+
+def sub_matches(v, find):
+    """Sub.svelte subMatches: None matches only None; numeric compare when both sides are
+    numbers or non-blank numeric strings ('2' is 2; NaN matches nothing); otherwise String()
+    equality (so true does not match 1, and '' does not match 0)."""
+    if find is None:
+        return v is None
+    if v is None:
+        return False
+    a, b = _sub_as_number(v), _sub_as_number(find)
+    if a is not None and b is not None:
+        return a == b
+    return _js_string(v) == _js_string(find)
 
 
 def _proc_substitute(x, args, _cols):
     find = args.get('find')
     replace = args.get('replace')
-    return [replace if xi == find else xi for xi in x]
+    return [replace if sub_matches(xi, find) else xi for xi in x]
 
 
 def _proc_multiply(x, args, _cols):
-    v = float(args.get('value', 1))
-    return [None if xi is None else xi * v for xi in x]
+    # Multiply.svelte: missing in -> None out, as Add.
+    v = _js_number(args['value']) if 'value' in args else float('nan')
+    return [None if _js_invalid(xi) else _js_number(xi) * v for xi in x]
 
 
 def _proc_editvalue(x, args, _cols):
@@ -1788,34 +2433,52 @@ def _proc_editvalue(x, args, _cols):
 
 
 def _proc_normalize(x, args, _cols):
-    method = args.get('method', 'z-score')
-    arr = np.array([np.nan if v is None else v for v in x], dtype=float)
-    valid = ~np.isnan(arr)
-    if not valid.any():
+    """normalize.svelte: present values by the house rule (Number()); missing cells stay as
+    they are, including in the degenerate cases (zero SD / range / MAD / magnitude, where every
+    PRESENT value becomes 0, or customMin for min-max). Type from `normalizationType`
+    (default z-score, population SD); min-max scales to [customMin, customMax] (default 0, 1);
+    robust is (v - median) / MAD; unit-vector divides by the Euclidean norm."""
+    typ = args.get('normalizationType') or args.get('method') or 'z-score'
+
+    def num_or(v, d):
+        return _js_number(v) if v else d  # JS Number(args.x || d)
+    cmin = num_or(args.get('customMin'), 0.0)
+    cmax = num_or(args.get('customMax'), 1.0)
+    vals = [_js_number(v) for v in x if not _js_invalid(v)]
+    if not vals:
         return list(x)
-    sub = arr[valid]
-    if method == 'z-score':
-        m, s = sub.mean(), sub.std(ddof=0)
-        out_sub = (sub - m) / (s if s > 0 else 1.0)
-    elif method == 'min-max':
-        lo, hi = sub.min(), sub.max()
-        rng = hi - lo if hi > lo else 1.0
-        out_sub = (sub - lo) / rng
-    elif method == 'robust':
-        med = np.median(sub)
-        mad = np.median(np.abs(sub - med)) or 1.0
-        out_sub = (sub - med) / mad
-    elif method == 'unit-vector':
-        norm = math.sqrt(float((sub * sub).sum())) or 1.0
-        out_sub = sub / norm
-    else:
-        out_sub = sub
-    out = list(x)
-    j = 0
-    for i, ok in enumerate(valid):
-        if ok:
-            out[i] = float(out_sub[j]); j += 1
-    return out
+
+    def map_present(f):
+        return [v if _js_invalid(v) else f(_js_number(v)) for v in x]
+
+    def med(arr):
+        a_ = sorted(arr)
+        n = len(a_)
+        return (a_[n // 2 - 1] + a_[n // 2]) / 2 if n % 2 == 0 else a_[n // 2]
+    if typ == 'z-score':
+        m = kahan_mean(vals)
+        acc = KahanSum()
+        for v in vals:
+            acc.add((v - m) ** 2)
+        sd = math.sqrt(acc.value() / len(vals))
+        return map_present(lambda v: 0.0) if sd == 0 else map_present(lambda v: (v - m) / sd)
+    if typ == 'min-max':
+        lo, hi = min(vals), max(vals)
+        rng = hi - lo
+        if rng == 0:
+            return map_present(lambda v: cmin)
+        return map_present(lambda v: ((v - lo) / rng) * (cmax - cmin) + cmin)
+    if typ == 'robust':
+        md = med(vals)
+        mad = med([abs(v - md) for v in vals])
+        return map_present(lambda v: 0.0) if mad == 0 else map_present(lambda v: (v - md) / mad)
+    if typ == 'unit-vector':
+        acc = KahanSum()
+        for v in vals:
+            acc.add(v * v)
+        mag = math.sqrt(acc.value())
+        return map_present(lambda v: 0.0) if mag == 0 else map_present(lambda v: v / mag)
+    return list(x)
 
 
 def _proc_filterbyothercol(x, args, cols):
@@ -1857,24 +2520,50 @@ def _proc_filterbyothercol(x, args, cols):
     return [x[i] if mask[i] else None for i in range(n)]
 
 
+def _quantile_type7(arr, q):
+    """sampleStats.js quantileType7 (R type 7, numpy 'linear')."""
+    n = len(arr)
+    if not n:
+        return float('nan')
+    qq = min(1.0, max(0.0, q))
+    srt = sorted(arr)
+    if n == 1:
+        return srt[0]
+    pos = qq * (n - 1)
+    lo = int(math.floor(pos))
+    return srt[lo] + (srt[min(lo + 1, n - 1)] - srt[lo]) * (pos - lo)
+
+
 def _proc_outlierremoval(x, args, _cols):
-    method = args.get('method', 'iqr')
-    arr = np.array([np.nan if v is None else v for v in x], dtype=float)
-    valid = ~np.isnan(arr)
-    sub = arr[valid]
-    if sub.size == 0:
+    """OutlierRemoval.svelte: present values by the house rule (Number()), fewer than 4 ->
+    unchanged. 'zscore' flags |z| > zThreshold (population SD; no flags when the SD is 0);
+    anything else is the IQR rule on TYPE-7 quartiles (Tukey fences q1 - k IQR, q3 + k IQR,
+    k = iqrMultiplier). A flagged value becomes None; missing cells are left as they are."""
+    method = args.get('method')
+    idx = [i for i, v in enumerate(x) if not _js_invalid(v)]
+    vals = [_js_number(x[i]) for i in idx]
+    if len(vals) < 4:
         return list(x)
-    if method == 'iqr':
-        q1, q3 = np.percentile(sub, [25, 75])
-        iqr = q3 - q1
-        m = float(args.get('multiplier', 1.5))
-        lo, hi = q1 - m * iqr, q3 + m * iqr
-        out = [None if (v is not None and (v < lo or v > hi)) else v for v in x]
-    else:  # zscore
-        mu, sd = sub.mean(), sub.std(ddof=0) or 1.0
-        thr = float(args.get('threshold', 3.0))
-        out = [None if (v is not None and abs((v - mu) / sd) > thr) else v
-               for v in x]
+    if method == 'zscore':
+        thr = args.get('zThreshold')
+        thr = 3 if thr is None else thr
+        mu = kahan_mean(vals)
+        acc = KahanSum()
+        for v in vals:
+            acc.add((v - mu) * (v - mu))
+        sd = math.sqrt(acc.value() / len(vals))
+        mask = [False] * len(vals) if sd == 0 else [abs((v - mu) / sd) > thr for v in vals]
+    else:
+        k = args.get('iqrMultiplier')
+        k = 1.5 if k is None else k
+        q1 = _quantile_type7(vals, 0.25)
+        q3 = _quantile_type7(vals, 0.75)
+        lo, hi = q1 - k * (q3 - q1), q3 + k * (q3 - q1)
+        mask = [v < lo or v > hi for v in vals]
+    out = list(x)
+    for j, i in enumerate(idx):
+        if mask[j]:
+            out[i] = None
     return out
 
 
@@ -1903,30 +2592,38 @@ def _proc_removetrend(x, args, cols):
         t = x_col.hours_since_start if x_col.type == 'time' else x_col.get_data()
     else:
         t = list(range(len(x)))
-    valid = [i for i, (ti, xi) in enumerate(zip(t, x))
-             if ti is not None and not (isinstance(ti, float) and math.isnan(ti))
-             and xi is not None and not (isinstance(xi, float) and math.isnan(xi))]
+    # The house rule on BOTH sides (validPairs), then Number(): a None or '' x or y is not
+    # a row (it used to crash on '' and fit a None x as 0).
+    valid = _js_valid_pairs(t, x)
     if len(valid) < 2:
         return list(x)
-    tt = [t[i] for i in valid]
-    yy = [x[i] for i in valid]
+    tt = [_js_number(t[i]) for i in valid]
+    yy = [_js_number(x[i]) for i in valid]
     model = args.get('model', 'linear')
     degree = int(args.get('polyDegree', 2))
     if _trend_domain_refused(tt, yy, model, degree):
         return list(x)
     fit = fit_trend(tt, yy, model, degree)
     detrended = [yy[k] - fit['fitted'][k] for k in range(len(yy))]
-    if args.get('slidingWindow') and int(args.get('windowSize', 1)) > 1:
-        ws = int(args['windowSize'])
-        half = ws // 2
+    ws = args.get('windowSize')
+    if args.get('slidingWindow') and _finite(ws) and ws > 1:
+        # RemoveTrend.svelte slidingStandardisation, formula for formula: one-pass
+        # sqrt(E[x^2] - mean^2), and `|| 1` turns a zero or NaN spread into 1.
+        half = int(math.floor(ws / 2))
         new = []
-        for i in range(len(detrended)):
-            lo = max(0, i - half); hi = min(len(detrended), i + half + 1)
-            win = detrended[lo:hi]
-            m = sum(win) / len(win)
-            v = sum((w - m) ** 2 for w in win) / len(win)
-            sd = math.sqrt(v) or 1.0
-            new.append((detrended[i] - m) / sd)
+        n_d = len(detrended)
+        for i in range(n_d):
+            lo = max(0, i - half)
+            hi = min(n_d - 1, i + half)
+            total = sq = 0.0
+            for j in range(lo, hi + 1):
+                total += detrended[j]
+                sq += detrended[j] * detrended[j]
+            count = hi - lo + 1
+            m = total / count
+            var = sq / count - m * m
+            sd = math.sqrt(var) if var > 0 else 0.0
+            new.append((detrended[i] - m) / (sd or 1.0))
         detrended = new
     out = list(x)
     for k, i in enumerate(valid):
@@ -2631,22 +3328,59 @@ def tp_blankcolumn(args, cols, raw_data, sv):
 # --- CollectColumns ---
 
 def tp_collectcolumns(args, cols, raw_data, _sv):
-    """Stack many columns side-by-side. Real AnCiR uses this to gather
-    per-Y outputs from `forcollected: true` TPs into a wide table."""
-    ids = args.get('colIds', _id_list(args.get('yIN')))
+    """Port of CollectColumns.svelte collectcolumns: copy each input column (after the
+    node's preProcesses) to its `col_<id>` output, then write each row-wise aggregate
+    (mean / min / max / sum over the included columns, `excludedColIds` left out) to its
+    outColId. A row's values follow the house rule (Number(); blank and text are missing),
+    and a row with nothing present is None for every method."""
+    ids = args.get('colIds', _id_list(args.get('yIN'))) or []
+    if not ids:
+        return False
+    if any(cid not in cols for cid in ids):
+        return False
+    result = {cid: list(cols[cid].get_data() or []) for cid in ids}
+    for pp in args.get('preProcesses') or []:
+        name = (pp or {}).get('processName')
+        if not name:
+            continue
+        for cid in ids:
+            result[cid] = list(run_column_process(name.lower().replace(' ', ''), result[cid],
+                                                  pp.get('processArgs') or {}, cols))
     out = args.get('out') or {}
-    any_valid = False
     for cid in ids:
-        if cid in cols:
-            key = f'col_{cid}'
-            out_id = out.get(key)
-            if isinstance(out_id, dict):
-                out_id = out_id.get('val', -1)
-            if out_id and out_id != -1:
-                _set_col(raw_data, cols, out_id, cols[cid].get_data(),
-                         type_=cols[cid].type)
-                any_valid = True
-    return any_valid
+        out_id = out.get(f'col_{cid}')
+        if isinstance(out_id, dict):
+            out_id = out_id.get('val', -1)
+        if out_id is not None and out_id != -1:
+            _set_col(raw_data, cols, out_id, result[cid], type_=cols[cid].type)
+    for agg in args.get('aggregates') or []:
+        method = agg.get('method')
+        out_col = agg.get('outColId')
+        if out_col is None or _js_number(out_col) < 0:
+            continue
+        excluded = agg.get('excludedColIds') or []
+        inc = [cid for cid in ids if cid not in excluded]
+        if not inc:
+            continue
+        n_rows = len(result[inc[0]])
+        vals_out = []
+        for i in range(n_rows):
+            row = [result[cid][i] for cid in inc if i < len(result[cid])]
+            row = [_js_number(v) for v in row if not _js_invalid(v)]
+            if not row:
+                vals_out.append(None)
+            elif method == 'mean':
+                vals_out.append(sum(row) / len(row))
+            elif method == 'min':
+                vals_out.append(min(row))
+            elif method == 'max':
+                vals_out.append(max(row))
+            elif method == 'sum':
+                vals_out.append(sum(row))
+            else:
+                vals_out.append(None)  # JS leaves aggVal undefined
+        _set_col(raw_data, cols, out_col, vals_out, type_='number')
+    return True
 
 
 # --- ColumnFunctions ---
@@ -2788,6 +3522,10 @@ def tp_crossing(args, cols, raw_data, _sv):
     if x_wired and x_in not in cols:
         return False
     x_data = (cols[x_in].get_data() or []) if x_wired else None
+    # Persistence and the gap rule are measured on hours since the start for a TIME x (its
+    # raw data is epoch ms, which made a persistence of 6 round to one sample: FIT-3).
+    x_is_time = x_wired and cols[x_in].type == 'time'
+    x_axis = (cols[x_in].hours_since_start if x_is_time else x_data) if x_wired else None
 
     comparators = {
         '>': lambda v, t: v > t,
@@ -2841,21 +3579,32 @@ def tp_crossing(args, cols, raw_data, _sv):
         return False
 
     required = 1
-    persistence = float(args.get('persistence') or 0)
-    if persistence > 0:
-        if x_data is not None:
-            diffs = []
-            for i in range(1, len(x_data)):
-                a, b = x_data[i - 1], x_data[i]
-                if not _missing(a) and not _missing(b) and float(b) > float(a):
-                    diffs.append(float(b) - float(a))
-            if not diffs:
-                return False
+    dx = None
+    if x_axis is not None:
+        diffs = []
+        for i in range(1, len(x_axis)):
+            a, b = x_axis[i - 1], x_axis[i]
+            if not _missing(a) and not _missing(b) and float(b) > float(a):
+                diffs.append(float(b) - float(a))
+        if diffs:
             diffs.sort()
             dx = diffs[len(diffs) // 2]
-            required = max(1, round(persistence / dx))
+    persistence = _js_number(args.get('persistence') or 0)
+    persistence = persistence if math.isfinite(persistence) else 0
+    if persistence > 0:
+        if x_axis is not None:
+            if dx is None:
+                return False
+            required = max(1, _js_round(persistence / dx))
         else:
-            required = max(1, round(persistence))
+            required = max(1, _js_round(persistence))
+
+    def gap_before(i):
+        # Rows further apart than 1.5 x the median spacing are a gap: it resets a run like
+        # a missing value (and, like one, does not re-arm).
+        return (dx is not None and i > 0 and not _missing(x_axis[i])
+                and not _missing(x_axis[i - 1])
+                and float(x_axis[i]) - float(x_axis[i - 1]) > 1.5 * dx)
 
     breach = []
     for i in range(n):
@@ -2875,6 +3624,8 @@ def tp_crossing(args, cols, raw_data, _sv):
     armed = True
     for i in range(n):
         b = breach[i]
+        if gap_before(i):
+            run = 0
         if b is None:
             run = 0
         elif b == 1:
@@ -2887,7 +3638,8 @@ def tp_crossing(args, cols, raw_data, _sv):
             armed = True
 
     _set_col(raw_data, cols, _out_id(args, 'breach'), breach, type_='number')
-    _set_col(raw_data, cols, _out_id(args, 'crossing'), crossings, type_='number')
+    _set_col(raw_data, cols, _out_id(args, 'crossing'), crossings,
+             type_='time' if x_is_time else 'number')
     _set_col(raw_data, cols, _out_id(args, 'count'), [len(crossings)], type_='number')
     return True
 
@@ -2944,52 +3696,283 @@ def tp_columnset(_args, _cols, _raw_data, _sv):
 
 # --- SurrogateTest ---
 
+# --- Seeded PRNG: @stdlib minstd-shuffle, as permutationTest.js createSeededRNG -----------
+#
+# The app's Monte Carlo tests draw from @stdlib/random-base-minstd-shuffle seeded by
+# createSeededRNG. The generator is tiny and exactly reproducible (Park-Miller minstd,
+# a = 16807, m = 2^31 - 1, behind a 32-entry Bays-Durham shuffle table with 8 warm-up
+# draws), so the ports reproduce the app's draw sequence bit for bit, and with it its
+# surrogate p-values.
+
+_MINSTD_INT32_MAX = 2147483647
+_MINSTD_MAX = 2147483646
+
+
+def _normalize_seed(seed):
+    """permutationTest.js normalizeSeed: into [1, 2147483646]; a non-numeric seed is 1."""
+    v = _js_number(seed) if not isinstance(seed, (int, float)) else float(seed)
+    if not math.isfinite(v):
+        return 1
+    v = int(math.trunc(v))
+    return ((((v - 1) % _MINSTD_MAX) + _MINSTD_MAX) % _MINSTD_MAX) + 1
+
+
+class SeededRNG:
+    """createSeededRNG(seed): call it for the next normalized draw in [0, 1)."""
+
+    def __init__(self, seed):
+        self.state = _normalize_seed(seed)
+        for _ in range(8):
+            self._minstd()
+        self.table = [0] * 32
+        for i in range(31, -1, -1):
+            self.table[i] = self._minstd()
+        self.shuffle = self.table[0]
+
+    def _minstd(self):
+        self.state = (16807 * self.state) % _MINSTD_INT32_MAX
+        return self.state
+
+    def __call__(self):
+        i = int(math.floor(32 * (self.shuffle / _MINSTD_INT32_MAX)))
+        s_ = self.table[i]
+        self.shuffle = s_
+        self.table[i] = self._minstd()
+        return (s_ - 1) / _MINSTD_MAX
+
+
+def seeded_sequence(_unused, n, seed):
+    """Parity surface: the first n draws of createSeededRNG(seed) (first argument unused)."""
+    rng = SeededRNG(seed)
+    return {'values': [rng() for _ in range(int(n))]}
+
+
+# --- Surrogates (utils/surrogates.js) ---------------------------------------------------
+
+SURROGATE_METHODS = ('phase', 'aaft', 'block', 'ar1', 'shuffle')
+SURROGATE_NODE_METHODS = ('block', 'ar1', 'shuffle')
+_SURROGATE_TIE = 1e-9
+
+
+def _sur_gaussian(rng):
+    u = 0.0
+    while u == 0:
+        u = rng()
+    v = rng()
+    return math.sqrt(-2 * math.log(u)) * math.cos(2 * math.pi * v)
+
+
+def _sur_clean(values):
+    """surrogates.js cleanValues: not null, not '', and Number(v) finite."""
+    return [_js_number(v) for v in (values or [])
+            if v is not None and v != '' and math.isfinite(_js_number(v))]
+
+
+def phase_randomise(values, rng):
+    """surrogates.js phaseRandomise: at the series' own length, bins 1 .. below n/2 get a
+    random phase (2 pi rng()) with their magnitude kept, mirrored to n - k; DC and an even
+    n's Nyquist bin stay real."""
+    y = _sur_clean(values)
+    n = len(y)
+    if n < 4:
+        return list(y)
+    mu = kahan_mean(y)
+    X = np.fft.fft(np.asarray(y) - mu)
+    re, im = X.real.copy(), X.imag.copy()
+    k = 1
+    while 2 * k < n:
+        phi = 2 * math.pi * rng()
+        mag = math.hypot(re[k], im[k])
+        re[k], im[k] = mag * math.cos(phi), mag * math.sin(phi)
+        re[n - k], im[n - k] = re[k], -im[k]
+        k += 1
+    im[0] = 0
+    if n % 2 == 0:
+        im[n // 2] = 0
+    out = np.fft.ifft(re + 1j * im).real
+    return [float(v) + mu for v in out]
+
+
+def aaft_surrogate(values, rng):
+    y = _sur_clean(values)
+    n = len(y)
+    if n < 4:
+        return list(y)
+    gauss = sorted(_sur_gaussian(rng) for _ in range(n))
+    order_v = sorted(range(n), key=lambda i: y[i])
+    g = [0.0] * n
+    for rank, i in enumerate(order_v):
+        g[i] = gauss[rank]
+    rnd = phase_randomise(g, rng)
+    so = sorted(y)
+    order_s = sorted(range(n), key=lambda i: rnd[i])
+    out = [0.0] * n
+    for rank, i in enumerate(order_s):
+        out[i] = so[rank]
+    return out
+
+
+def block_bootstrap(values, rng, block_length):
+    y = _sur_clean(values)
+    n = len(y)
+    if n < 4:
+        return list(y)
+    bl = math.floor(block_length) if _finite(block_length) else 0
+    L = max(1, min(n, bl or 1))
+    max_start = n - L
+    out = []
+    while len(out) < n:
+        start = int(math.floor(rng() * (max_start + 1)))
+        i = 0
+        while i < L and len(out) < n:
+            out.append(y[start + i])
+            i += 1
+    return out
+
+
+def ar1_surrogate(values, rng):
+    y = _sur_clean(values)
+    n = len(y)
+    if n < 4:
+        return list(y)
+    mu = kahan_mean(y)
+    dev = [v - mu for v in y]
+    num = sum(dev[i] * dev[i - 1] for i in range(1, n))
+    den = 0.0
+    for d in dev:
+        den += d * d
+    alpha = max(-0.999, min(0.999, num / den)) if den > 0 else 0.0
+    var = den / n
+    isd = math.sqrt(max(0.0, var * (1 - alpha * alpha)))
+    prev = math.sqrt(var) * _sur_gaussian(rng)
+    out = [0.0] * n
+    for i in range(n):
+        prev = alpha * prev + isd * _sur_gaussian(rng)
+        out[i] = prev + mu
+    return out
+
+
+def shuffle_surrogate(values, rng):
+    out = _sur_clean(values)
+    for i in range(len(out) - 1, 0, -1):
+        j = int(math.floor(rng() * (i + 1)))
+        out[i], out[j] = out[j], out[i]
+    return out
+
+
+def make_surrogate(values, method, rng, block_length=24):
+    if method == 'phase':
+        return phase_randomise(values, rng)
+    if method == 'aaft':
+        return aaft_surrogate(values, rng)
+    if method == 'block':
+        return block_bootstrap(values, rng, block_length)
+    if method == 'ar1':
+        return ar1_surrogate(values, rng)
+    if method == 'shuffle':
+        return shuffle_surrogate(values, rng)
+    raise ValueError(f'make_surrogate: unknown method "{method}"')
+
+
+def surrogate_test(values, stat_fn, method='block', n_surrogates=999, seed=12345,
+                   block_length=24, lower_tail=False):
+    """surrogates.js surrogateTest: p = (extreme + 1) / (n + 1), a surrogate counting as
+    at least as extreme when s >= observed - 1e-9 max(|observed|, |s|)."""
+    y = _sur_clean(values)
+    nan = float('nan')
+
+    def fail(reason):
+        return {'pValue': nan, 'observed': nan, 'surrogateStats': [], 'nSurrogates': 0,
+                'valid': False, 'reason': reason}
+    if len(y) < 8:
+        return fail('need at least 8 finite samples')
+    if method not in SURROGATE_METHODS:
+        return fail(f'unknown method "{method}"')
+    try:
+        observed = float(stat_fn(y))
+    except Exception:  # noqa: BLE001
+        return fail('the statistic threw on the observed series')
+    if not math.isfinite(observed):
+        return fail('the statistic is not finite on the observed series')
+    rng = SeededRNG(seed)
+    stats = []
+    for _ in range(int(n_surrogates)):
+        try:
+            v = float(stat_fn(make_surrogate(y, method, rng, block_length)))
+        except Exception:  # noqa: BLE001
+            continue
+        if math.isfinite(v):
+            stats.append(v)
+    if not stats:
+        return fail('every surrogate failed')
+
+    def tol(v):
+        return _SURROGATE_TIE * max(abs(observed), abs(v))
+    extreme = sum(1 for v in stats
+                  if (v <= observed + tol(v) if lower_tail else v >= observed - tol(v)))
+    p = (extreme + 1) / (len(stats) + 1)
+    return {'pValue': p, 'observed': observed, 'surrogateStats': stats,
+            'nSurrogates': len(stats), 'valid': True, 'reason': ''}
+
+
 def tp_surrogatetest(args, cols, raw_data, _sv):
-    """Observed band-limited statistic for the surrogate rhythmicity test.
-
-    PARITY SCOPE — deliberate and limited. The `observed` statistic is fully
-    deterministic (peak FFT magnitude inside the period band) and IS matched
-    against the JS. The `pvalue` is NOT: it is a Monte Carlo quantity whose value
-    depends on the exact sequence drawn from the JS's seeded @stdlib
-    minstd-shuffle PRNG, which this runtime does not reproduce. That is the same
-    boundary already drawn for tp_random, which is excluded from session parity
-    for the same reason.
-
-    So p-value is emitted as NaN here rather than a number that would look
-    comparable but could not be.
-    """
+    """Port of SurrogateTest.svelte surrogatetest: regrid first (refused with a reason when
+    the record is not on a regular grid or has a long gap); block length = round(hours /
+    grid step); statistic = the largest FFT bin magnitude in [periodMin, periodMax] (no
+    peak refinement); phase and AAFT surrogates are refused (they keep the spectrum, rhythm
+    included). The p-value now matches the app: the seeded minstd-shuffle draws are
+    reproduced exactly (SeededRNG)."""
+    nan = float('nan')
     x_in = args.get('xIN', -1)
     y_in = args.get('yIN', -1)
-    if x_in == -1 or y_in == -1 or x_in not in cols or y_in not in cols:
+    if isinstance(y_in, list):
+        y_in = y_in[0] if y_in else -1
+    if x_in is None or x_in == -1 or y_in is None or y_in == -1 \
+            or x_in not in cols or y_in not in cols:
         return False
-
-    times = _t_for_col(cols[x_in])
+    times = _t_for_col(cols[x_in]) or []
     values = cols[y_in].get_data() or []
     if len(times) < 8 or len(values) < 8:
         return False
 
-    ta = np.array([np.nan if v is None else v for v in times], dtype=float)
-    ya = np.array([np.nan if v is None else v for v in values], dtype=float)
-    finite = np.isfinite(ta) & np.isfinite(ya)
-    ta, ya = ta[finite], ya[finite]
-    if ta.size < 8:
+    def refuse():
+        _set_col(raw_data, cols, _out_id(args, 'pvalue'), [nan], type_='number')
+        _set_col(raw_data, cols, _out_id(args, 'observed'), [nan], type_='number')
         return False
+    method = args.get('method') or 'block'
+    if method not in SURROGATE_NODE_METHODS:
+        return refuse()
+    g = regrid_uniform(times, values)
+    if not g['ok']:
+        return refuse()
+    vals = g['y']
+    grid_t = [g['t0'] + i * g['dt'] for i in range(len(vals))]
+    dt = g['dt']
+    bl_h = _js_number(args.get('blockLengthHours'))
+    bl_h = bl_h if (math.isfinite(bl_h) and bl_h != 0) else 24
+    block = max(1, _js_round(bl_h / dt)) if (math.isfinite(dt) and dt > 0) else 24
 
-    period_min = float(args.get('periodMin', 20) or 20)
-    period_max = float(args.get('periodMax', 28) or 28)
+    def num_or(v, d):
+        x = _js_number(v)
+        return x if (math.isfinite(x) and x != 0) else d
+    pmin = num_or(args.get('periodMin'), 20)
+    pmax = num_or(args.get('periodMax'), 28)
 
-    fft = compute_fft(ta.tolist(), ya.tolist())
-    best = 0.0
-    for f, m in zip(fft['frequencies'], fft['magnitudes']):
-        if f == 0:
-            continue
-        period = 1.0 / f
-        if period_min <= period <= period_max and m > best:
-            best = m
-
-    _set_col(raw_data, cols, _out_id(args, 'observed'), [best], type_='number')
-    _set_col(raw_data, cols, _out_id(args, 'pvalue'), [float('nan')], type_='number')
-    return True
+    def stat(y):
+        spec = compute_fft(grid_t, y)
+        best = 0.0
+        for f, m in zip(spec['frequencies'], spec['magnitudes']):
+            per = 1 / f
+            if pmin <= per <= pmax and m > best:
+                best = m
+        return best
+    res = surrogate_test(vals, stat, method=method,
+                         n_surrogates=max(9, int(math.floor(num_or(args.get('nSurrogates'),
+                                                                   199)))),
+                         seed=num_or(args.get('seed'), 12345), block_length=block)
+    _set_col(raw_data, cols, _out_id(args, 'pvalue'), [res['pValue']], type_='number')
+    _set_col(raw_data, cols, _out_id(args, 'observed'), [res['observed']], type_='number')
+    return res['valid']
 
 
 # --- DoubleLogistic ---
@@ -2999,50 +3982,61 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
     y_ins = _id_list(args.get('yIN'))
     if x_in == -1 or x_in not in cols or not y_ins:
         return False
-    periodic = bool(args.get('periodic', True))
-    # JS keys the fixed period as fixPeriod/fixedPeriod (not fixT/T).
-    fix_period = bool(args.get('fixPeriod', args.get('fixT', False)))
+    # The node always fits the PERIODIC model (DoubleLogistic.svelte passes periodic: true).
+    periodic = True
     opts = {
-        'periodic': periodic,
-        'fixK1': args.get('fixK1', False),
-        'fixK2': args.get('fixK2', False),
-        'fixT': fix_period,
-        'k1': args.get('k1', 1.0), 'k2': args.get('k2', 1.0),
+        'periodic': True,
+        'fixK1': args.get('fixK1', False), 'fixedK1': args.get('fixedK1', 0.5),
+        'fixK2': args.get('fixK2', False), 'fixedK2': args.get('fixedK2', 0.5),
+        'fixPeriod': bool(args.get('fixPeriod', args.get('fixT', False))),
+        'fixedPeriod': args.get('fixedPeriod', args.get('T', 24)),
+        'minPeriod': args.get('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
+        'maxPeriod': args.get('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod']),
     }
-    # Seed an explicit period only when it's FIXED; a free period inits from the
-    # data timespan inside fit_double_logistic (matches JS, avoids degenerate fit).
-    if fix_period:
-        opts['T'] = float(args.get('fixedPeriod', args.get('T', 24.0)))
     x_col = cols[x_in]
     t = _t_for_col(x_col)
     output_x_id = args.get('outputX', -1)
     output_x_data = None
+    origin_ms = None
     if output_x_id != -1 and output_x_id in cols:
-        output_x_data = _t_for_col(cols[output_x_id])
+        ox = cols[output_x_id]
+        output_x_data = [_js_number(v) for v in _t_for_col(ox) if not _js_invalid(v)]
+        if ox.type == 'time':
+            d0 = ox.get_data()
+            origin_ms = d0[0] if d0 else None
+    if origin_ms is None and x_col.type == 'time':
+        d0 = x_col.get_data()
+        origin_ms = d0[0] if d0 else None
     first_xs = None
     any_valid = False
     stats_by_y = {}
     for y_id in y_ins:
         if y_id not in cols:
             continue
-        res = fit_double_logistic(t, cols[y_id].get_data(), opts)
+        y = cols[y_id].get_data()
+        idx = _js_valid_pairs(t, y)
+        if len(idx) < 4:
+            continue
+        tt = [_js_number(t[i]) for i in idx]
+        yy = [_js_number(y[i]) for i in idx]
+        if first_xs is None:
+            first_xs = output_x_data if output_x_data is not None else tt
+        res = fit_double_logistic(tt, yy, opts)
         if res is None:
             continue
-        if first_xs is None:
-            t_arr = np.array([v for v in t if v is not None
-                              and not (isinstance(v, float) and math.isnan(v))],
-                             dtype=float)
-            # JS evaluates the fit at the (finite) input t, not a dense grid.
-            first_xs = output_x_data if output_x_data else t_arr.tolist()
-            x_out = _out_id(args, 'dlogx')
-            _set_col(raw_data, cols, x_out, first_xs, type_='number')
-        ys = evaluate_dl_at_points(res['parameters'], first_xs, periodic)
+        ys = (evaluate_dl_at_points(res['parameters'], output_x_data, True)
+              if output_x_data is not None else res['fitted'])
         y_out = _out_id(args, f'dlogy_{y_id}')
         if y_out == -1:
             y_out = _out_id(args, 'dlogy')
         _set_col(raw_data, cols, y_out, ys, type_='number')
         stats_by_y[y_id] = res
         any_valid = True
+    if any_valid:
+        x_vals = ([origin_ms + h * 3600000 for h in first_xs] if origin_ms is not None
+                  else first_xs)
+        _set_col(raw_data, cols, _out_id(args, 'dlogx'), x_vals,
+                 type_='time' if origin_ms is not None else 'number')
     if any_valid:
         nan = float('nan')
         # Declared ports that had no writer until 2026-07-28: a session wiring r2 or rmse
@@ -3060,34 +4054,502 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
 
 
 # --- FormulaColumn ---
+#
+# Port of src/lib/utils/formulaExpression.js (grammar in its header comment) and the module
+# `formulacolumn` in src/lib/tableProcesses/FormulaColumn.svelte.
+#
+# SECURITY (review SEC-2). This node used to glue its tokens into a Python expression and
+# hand it to eval() with empty builtins. Empty builtins are not a sandbox: a text token such
+# as `().__class__.__base__.__subclasses__()` walks from a tuple to every loaded class and on
+# to os.system, so a session file could run any command when its exported script ran. The
+# formula path below never evaluates, executes or compiles source text and never reads an
+# attribute named by the formula: the tokens are lexed against a fixed grammar, parsed into a
+# small tree, flattened to a postfix program and that program is run on a value stack. A
+# function name is only ever a key into the fixed _FORMULA_FUNCTIONS table. Anything outside
+# the grammar is refused (the node is invalid and writes nothing), never turned into a number.
+
+class FormulaError(Exception):
+    """A formula outside the FormulaColumn grammar (JS FormulaError)."""
+
+
+def _formula_round(a):
+    # JS Math.round: halves go toward +infinity (round(2.5) = 3, round(-2.5) = -2), exactly,
+    # including 0.49999999999999994 -> 0 (floor(x + 0.5) would give 1 there).
+    r = math.floor(a)
+    return float(r + 1) if a - r >= 0.5 else float(r)
+
+
+# name -> (min args, max args or None for unbounded, function). JS FUNCTIONS table.
+_FORMULA_FUNCTIONS = {
+    'abs': (1, 1, lambda a: abs(a)),
+    'sqrt': (1, 1, math.sqrt),
+    'log': (1, 1, math.log),
+    'log10': (1, 1, math.log10),
+    'exp': (1, 1, math.exp),
+    'sin': (1, 1, math.sin),
+    'cos': (1, 1, math.cos),
+    'tan': (1, 1, math.tan),
+    'floor': (1, 1, lambda a: float(math.floor(a))),
+    'ceil': (1, 1, lambda a: float(math.ceil(a))),
+    'round': (1, 1, _formula_round),
+    'pow': (2, 2, math.pow),
+    'min': (1, None, lambda *v: min(v)),
+    'max': (1, None, lambda *v: max(v)),
+}
+_FORMULA_CONSTANTS = {'pi': math.pi, 'e': math.e}
+# `Math.`-prefixed spellings the old JS evaluator accepted (JS capitalisation).
+_FORMULA_MATH_CONSTANTS = {'PI': math.pi, 'E': math.e}
+
+_FORMULA_MAX_LEXEMES = 2000
+_FORMULA_MAX_DEPTH = 200
+# ASCII classes only: Python's \d also matches non-ASCII digits, which JS's \d does not.
+_FORMULA_NUMBER_RE = re.compile(r'(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?')
+_FORMULA_NAME_RE = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
+_FORMULA_OPS = '+-*/%^(),'
+
+
+def _formula_show(s):
+    t = ''.join('?' if (c < ' ' or c == '\x7f') else c for c in str(s))
+    if len(t) > 20:
+        t = t[:20] + '...'
+    return f"'{t}'" if ('"' in t and "'" not in t) else f'"{t}"'
+
+
+def _formula_lex(tokens):
+    """JS lex(): FormulaColumn token list -> flat list of lexemes (tuples)."""
+    out = []
+    for tok in tokens or []:
+        if not isinstance(tok, dict):
+            raise FormulaError('Malformed formula token.')
+        ttype = tok.get('type')
+        if ttype == 'col':
+            out.append(('col', tok.get('id', tok.get('colId'))))
+            continue
+        if ttype == 'stored':
+            out.append(('stored', tok.get('key', tok.get('name'))))
+            continue
+        if ttype != 'text':
+            raise FormulaError(f'Unknown formula token type {_formula_show(ttype)}.')
+        src = tok.get('value')
+        if src is None:
+            src = ''
+        if not isinstance(src, str):
+            raise FormulaError('Formula text must be a string.')
+        i = 0
+        while i < len(src):
+            ch = src[i]
+            if ch in ' \t\n\r':
+                i += 1
+                continue
+            m = _FORMULA_NUMBER_RE.match(src, i)
+            if m:
+                glued = _FORMULA_NAME_RE.match(src, m.end())
+                if glued:
+                    raise FormulaError(
+                        f'Cannot read {_formula_show(m.group(0) + glued.group(0))}: '
+                        'put an operator between a number and a name.')
+                out.append(('num', float(m.group(0))))  # '1e999' -> inf, missing at eval
+                i = m.end()
+                continue
+            m = _FORMULA_NAME_RE.match(src, i)
+            if m:
+                name = m.group(0)
+                end = m.end()
+                is_math = False
+                if name == 'Math' and src[end:end + 1] == '.':
+                    m2 = _FORMULA_NAME_RE.match(src, end + 1)
+                    if not m2:
+                        raise FormulaError('Expected a function name after "Math.".')
+                    name = m2.group(0)
+                    end = m2.end()
+                    is_math = True
+                if src[end:end + 1] == '.':
+                    raise FormulaError(
+                        f'{_formula_show(src[i:end + 1])} is not allowed: a formula cannot '
+                        'reach into names with ".".')
+                out.append(('name', name, is_math, src[i:end]))
+                i = end
+                continue
+            if ch in _FORMULA_OPS:
+                out.append(('op', ch))
+                i += 1
+                continue
+            raise FormulaError(
+                f'Unexpected character {_formula_show(ch)}. A formula can use numbers, columns '
+                '($), stored values (#), + - * / % ^ ( ) and the functions '
+                f"{', '.join(_FORMULA_FUNCTIONS)}.")
+    return out
+
+
+def _formula_describe(lx):
+    if lx is None:
+        return 'the end of the formula'
+    kind = lx[0]
+    if kind == 'num':
+        return f'the number {lx[1]}'
+    if kind == 'name':
+        return _formula_show(lx[3])
+    if kind == 'col':
+        return 'a column'
+    if kind == 'stored':
+        return 'a stored value'
+    return _formula_show(lx[1])
+
+
+def parse_formula(tokens):
+    """JS parseFormula(): token list -> expression tree (nested tuples). Raises FormulaError.
+
+    Tree nodes: ('num', v) ('col', id) ('stored', key) ('neg', a) ('bin', op, a, b)
+    ('call', fn_name, [args]). Recursion is bounded by the 200-level nesting limit, which
+    costs at most five Python frames a level, so the interpreter limit is raised for the
+    duration of the parse only when it is below what that needs.
+    """
+    lx = _formula_lex(tokens)
+    if not lx:
+        raise FormulaError('The formula is empty.')
+    if len(lx) > _FORMULA_MAX_LEXEMES:
+        raise FormulaError(f'The formula is too long (over {_FORMULA_MAX_LEXEMES} parts).')
+    st = {'pos': 0, 'depth': 0}
+
+    def peek():
+        p = st['pos']
+        return lx[p] if p < len(lx) else None
+
+    def is_op(v):
+        t = peek()
+        return t is not None and t[0] == 'op' and t[1] == v
+
+    def expect_op(v):
+        if not is_op(v):
+            raise FormulaError(f'Expected {_formula_show(v)} but found {_formula_describe(peek())}.')
+        st['pos'] += 1
+
+    def enter():
+        st['depth'] += 1
+        if st['depth'] > _FORMULA_MAX_DEPTH:
+            raise FormulaError('The formula is nested too deeply.')
+
+    def expr():
+        enter()
+        node = term()
+        while is_op('+') or is_op('-'):
+            op = peek()[1]
+            st['pos'] += 1
+            node = ('bin', op, node, term())
+        st['depth'] -= 1
+        return node
+
+    def term():
+        node = unary()
+        while is_op('*') or is_op('/') or is_op('%'):
+            op = peek()[1]
+            st['pos'] += 1
+            node = ('bin', op, node, unary())
+        return node
+
+    def unary():
+        if is_op('-') or is_op('+'):
+            op = peek()[1]
+            st['pos'] += 1
+            enter()
+            a = unary()
+            st['depth'] -= 1
+            return ('neg', a) if op == '-' else a
+        return power()
+
+    def power():
+        base = primary()
+        if is_op('^'):
+            st['pos'] += 1
+            enter()
+            b = unary()
+            st['depth'] -= 1
+            return ('bin', '^', base, b)
+        return base
+
+    def primary():
+        tok = peek()
+        if tok is None:
+            raise FormulaError('The formula ends where a value was expected.')
+        kind = tok[0]
+        if kind == 'num':
+            st['pos'] += 1
+            return ('num', tok[1])
+        if kind == 'col':
+            st['pos'] += 1
+            return ('col', tok[1])
+        if kind == 'stored':
+            st['pos'] += 1
+            return ('stored', tok[1])
+        if kind == 'name':
+            _, name, is_math, text = tok
+            st['pos'] += 1
+            const_table = _FORMULA_MATH_CONSTANTS if is_math else _FORMULA_CONSTANTS
+            if is_op('('):
+                if name not in _FORMULA_FUNCTIONS:
+                    raise FormulaError(
+                        f'Unknown function {_formula_show(text)}. Allowed: '
+                        f"{', '.join(_FORMULA_FUNCTIONS)}.")
+                st['pos'] += 1
+                args = []
+                if not is_op(')'):
+                    args.append(expr())
+                    while is_op(','):
+                        st['pos'] += 1
+                        args.append(expr())
+                expect_op(')')
+                lo, hi, _fn = _FORMULA_FUNCTIONS[name]
+                if len(args) < lo or (hi is not None and len(args) > hi):
+                    want = str(lo) if lo == hi else (f'at least {lo}' if hi is None
+                                                     else f'{lo} to {hi}')
+                    raise FormulaError(
+                        f"{name}() takes {want} argument{'' if want == '1' else 's'}, "
+                        f'not {len(args)}.')
+                return ('call', name, args)
+            if name in const_table:
+                return ('num', const_table[name])
+            if name in _FORMULA_FUNCTIONS:
+                raise FormulaError(f'{_formula_show(text)} is a function: write {text}(...).')
+            raise FormulaError(
+                f'Unknown name {_formula_show(text)}. Use $ to insert a column and # for a '
+                'stored value.')
+        if is_op('('):
+            st['pos'] += 1
+            inner = expr()
+            expect_op(')')
+            return inner
+        raise FormulaError(f'Expected a value but found {_formula_describe(tok)}.')
+
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(old_limit + 5 * _FORMULA_MAX_DEPTH + 100)
+    try:
+        tree = expr()
+    finally:
+        sys.setrecursionlimit(old_limit)
+    if st['pos'] < len(lx):
+        tok = peek()
+        if tok[0] == 'op' and tok[1] == ')':
+            raise FormulaError('Unbalanced ")" in the formula.')
+        raise FormulaError(f'Unexpected {_formula_describe(tok)}: an operator is missing.')
+    return tree
+
+
+def _formula_postfix(tree):
+    """Flatten a parse tree into a postfix program, iteratively (a 2000-lexeme left chain is
+    about 1000 levels deep, past Python's default recursion limit)."""
+    prog = []
+    stack = [(tree, False)]
+    while stack:
+        node, done = stack.pop()
+        kind = node[0]
+        if kind in ('num', 'col', 'stored'):
+            prog.append(node)
+        elif done:
+            if kind == 'neg':
+                prog.append(('neg',))
+            elif kind == 'bin':
+                prog.append(('bin', node[1]))
+            else:  # call
+                prog.append(('call', node[1], len(node[2])))
+        else:
+            stack.append((node, True))
+            children = [node[1]] if kind == 'neg' else (
+                [node[2], node[3]] if kind == 'bin' else list(node[2]))
+            for child in reversed(children):
+                stack.append((child, False))
+    return prog
+
+
+# JS String.prototype.trim whitespace (WhiteSpace + LineTerminator), not Python's isspace.
+_JS_WS = ('\t\n\x0b\x0c\r \xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007'
+          '\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff')
+_JS_DECIMAL_RE = re.compile(r'[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?')
+_JS_RADIX_RE = re.compile(r'0([xXoObB])([0-9A-Za-z]+)')
+
+
+def _js_number_from_string(s):
+    """JS Number(string) for a non-blank string: a float, or None when JS gives NaN or
+    +-Infinity (both missing to a formula)."""
+    t = s.strip(_JS_WS)
+    if t == '':
+        return None
+    if _JS_DECIMAL_RE.fullmatch(t):
+        v = float(t)
+        return v if math.isfinite(v) else None
+    m = _JS_RADIX_RE.fullmatch(t)
+    if m:
+        base = {'x': 16, 'o': 8, 'b': 2}[m.group(1).lower()]
+        try:
+            v = float(int(m.group(2), base))
+        except (ValueError, OverflowError):
+            return None
+        return v if math.isfinite(v) else None
+    return None  # 'Infinity', 'NaN', '1_000', 'inf', '0x' ... are not finite numbers
+
+
+def formula_cell(v):
+    """JS formulaCell(): a finite float, or None when the cell is missing."""
+    if v is None:
+        return None
+    if isinstance(v, (bool, np.bool_)):
+        return 1.0 if v else 0.0
+    if isinstance(v, (int, float, np.integer, np.floating)):
+        f = float(v)
+        return f if math.isfinite(f) else None
+    if isinstance(v, str):
+        return _js_number_from_string(v)
+    return None
+
+
+def _formula_apply(op, a, b):
+    if op == '+':
+        return a + b
+    if op == '-':
+        return a - b
+    if op == '*':
+        return a * b
+    if op == '/':
+        return a / b
+    if op == '%':
+        return math.fmod(a, b)  # sign of the DIVIDEND, like JS %; not Python's %
+    if op == '^':
+        return math.pow(a, b)
+    raise FormulaError(f'Unknown operator {_formula_show(op)}.')
+
+
+def _formula_finite(v):
+    return v if (v is not None and math.isfinite(v)) else None
+
+
+def evaluate_formula(tree, column, stored, n):
+    """JS evaluateFormula(): run the parsed formula for rows 0..n-1. `column(id)` returns a
+    column's data, `stored(key)` a stored value. Returns a list of floats or None (missing).
+
+    Every step whose value is not finite is missing from that step on. Python raises where
+    JS returns Infinity or NaN (1/0, log(0), sqrt(-1), (-8)^(1/3), exp(1000)); both mean
+    missing here, so the exceptions are caught per step."""
+    prog = _formula_postfix(tree)
+    col_cache, stored_cache = {}, {}
+    for ins in prog:
+        if ins[0] == 'col' and ins[1] not in col_cache:
+            data = column(ins[1])
+            col_cache[ins[1]] = list(data) if data is not None else []
+        elif ins[0] == 'stored' and ins[1] not in stored_cache:
+            stored_cache[ins[1]] = formula_cell(stored(ins[1]))
+    out = [None] * n
+    for i in range(n):
+        stack = []
+        push = stack.append
+        for ins in prog:
+            kind = ins[0]
+            if kind == 'num':
+                push(_formula_finite(ins[1]))
+            elif kind == 'col':
+                data = col_cache[ins[1]]
+                push(formula_cell(data[i]) if i < len(data) else None)
+            elif kind == 'stored':
+                push(stored_cache[ins[1]])
+            elif kind == 'neg':
+                a = stack.pop()
+                push(None if a is None else -a)
+            elif kind == 'bin':
+                b = stack.pop()
+                a = stack.pop()
+                if a is None or b is None:
+                    push(None)
+                    continue
+                try:
+                    push(_formula_finite(_formula_apply(ins[1], a, b)))
+                except (ZeroDivisionError, ValueError, OverflowError):
+                    push(None)
+            else:  # call
+                k = ins[2]
+                vals = stack[len(stack) - k:]
+                del stack[len(stack) - k:]
+                if any(v is None for v in vals):
+                    push(None)
+                    continue
+                try:
+                    push(_formula_finite(_FORMULA_FUNCTIONS[ins[1]][2](*vals)))
+                except (ZeroDivisionError, ValueError, OverflowError):
+                    push(None)
+        out[i] = stack[0]
+    return out
+
+
+def validate_formula_tokens(tokens):
+    """JS validateFormulaTokens(): an error message, or None when the formula is valid."""
+    if not isinstance(tokens, list):
+        return 'tokens must be an array'
+    for t in tokens:
+        if not isinstance(t, dict):
+            return 'every token must be an object'
+        tt = t.get('type')
+        if tt == 'col':
+            cid = t.get('id')
+            if not (isinstance(cid, int) and not isinstance(cid, bool)):
+                return 'a column token needs an integer column id'
+        elif tt == 'stored':
+            if not isinstance(t.get('key'), str) or not t.get('key'):
+                return 'a stored-value token needs a key'
+        elif tt == 'text':
+            if t.get('value') is not None and not isinstance(t.get('value'), str):
+                return 'text token value must be a string'
+        else:
+            return f'unknown token type {_formula_show(tt)}'
+    try:
+        parse_formula(tokens)
+        return None
+    except FormulaError as e:
+        return str(e)
+
+
+def _stored_value_of(entry):
+    """JS getStoredValue for a saved entry: {staticValue} (or a bare value)."""
+    if isinstance(entry, dict):
+        return entry.get('staticValue')
+    return entry
+
 
 def tp_formulacolumn(args, cols, raw_data, sv):
-    tokens = args.get('tokens', [])
+    """JS formulacolumn (FormulaColumn.svelte). Returns validity; a refused formula writes
+    nothing, so the output column stays empty (never zeros)."""
+    tokens = args.get('tokens') or []
+    if not isinstance(tokens, list):
+        return False
 
     def _tok_col(t):  # JS FormulaColumn tokens key the column as 'id'
         return t.get('id', t.get('colId'))
 
-    n = max((len(cols[_tok_col(t)].get_data()) for t in tokens
-             if t.get('type') == 'col' and _tok_col(t) in cols),
-            default=0)
-    rows = []
-    for i in range(n):
-        expr = ''
-        for tok in tokens:
-            if tok['type'] == 'text':
-                expr += tok['value']
-            elif tok['type'] == 'col':
-                cid = _tok_col(tok)
-                v = cols[cid].get_data()[i] if cid in cols else None
-                expr += repr(v if v is not None else 'None')
-            elif tok['type'] == 'stored':
-                expr += repr(sv.get(tok['name']))
-        try:
-            rows.append(eval(expr, {'math': math, '__builtins__': {}}, {}))
-        except Exception:
-            rows.append(None)
-    _set_col(raw_data, cols, _out_id(args, 'result'), rows, type_='number')
-    return True
+    def _is_num_id(cid):
+        return isinstance(cid, (int, float)) and not isinstance(cid, bool)
+
+    col_tokens = [t for t in tokens if isinstance(t, dict) and t.get('type') == 'col'
+                  and _is_num_id(_tok_col(t)) and _tok_col(t) >= 0]
+    if not col_tokens:
+        return False
+    for t in tokens:
+        # Every column token must name a real column (JS: the first filter above, then a
+        # token with a negative id throws on evaluation, which the node also reports invalid).
+        if isinstance(t, dict) and t.get('type') == 'col' and _tok_col(t) not in cols:
+            return False
+    sv = sv or {}
+    for t in tokens:
+        if isinstance(t, dict) and t.get('type') == 'stored' \
+                and t.get('key', t.get('name')) not in sv:
+            return False
+    try:
+        tree = parse_formula(tokens)
+    except FormulaError:
+        return False
+    first = cols[_tok_col(col_tokens[0])].get_data()
+    n = len(first) if first is not None else 0
+    if n == 0:
+        return False
+    result = evaluate_formula(tree, lambda cid: cols[cid].get_data(),
+                              lambda key: _stored_value_of(sv.get(key)), n)
+    _set_col(raw_data, cols, _out_id(args, 'result'), result, type_='number')
+    return len(result) > 0
 
 
 # --- LongToWide ---
@@ -3184,6 +4646,7 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
             continue
         starts = np.arange(ta.min(), ta.max() - win + 1e-9, step)
         per_stat = {}
+        window_stats = []
         x_labels = []
         for s in starts:
             e = s + win
@@ -3206,8 +4669,10 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
                     'dt': args.get('pgBinSize', 0.25),
                     'alpha': args.get('pgAlpha', 0.05),
                 })
-                if pg['y']:
-                    idx = int(np.argmax(pg['y']))
+                # spectralPeakIndex: no positive finite power is no rhythm (NaN), not the
+                # first trial period (ROB-13).
+                idx = _spectral_peak_index(pg['y'])
+                if idx >= 0:
                     stats['peak_period'] = pg['x'][idx]
                     stats['peak_power'] = pg['y'][idx]
             elif analysis == 'cosinor':
@@ -3257,13 +4722,7 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
                     for k in ('IS', 'IV', 'RA', 'L5', 'M10', 'M10onset'):
                         stats[k] = npc.get(k, float('nan'))
             elif analysis == 'fft':
-                fft = compute_fft(tw, yw)
-                if fft['magnitudes']:
-                    idx = int(np.argmax(fft['magnitudes'][1:])) + 1
-                    f = fft['frequencies'][idx]
-                    stats['peak_frequency'] = f
-                    stats['peak_period'] = 1.0 / f if f else float('inf')
-                    stats['peak_magnitude'] = fft['magnitudes'][idx]
+                stats.update(_moving_fft_stats(tw.tolist(), yw.tolist(), args))
             elif analysis == 'correlogram':
                 ac = compute_autocorrelation(
                     tw, yw,
@@ -3277,8 +4736,15 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
                     if not math.isnan(peak_lag):
                         stats['peak_lag'] = peak_lag
                         stats['peak_correlation'] = peak_r
-            for k, v in stats.items():
-                per_stat.setdefault(k, []).append(v)
+            window_stats.append(stats)
+        # One row per window for every stat any window produced; a window that produced
+        # nothing for a stat (refused FFT grid, flat data) is NaN there, as in the JS,
+        # rather than shifting every later window up a row.
+        for st_ in window_stats:
+            for k in st_:
+                per_stat.setdefault(k, [])
+        for k in per_stat:
+            per_stat[k] = [st_.get(k, float('nan')) for st_ in window_stats]
         if movex is None and x_labels:
             movex = x_labels
             mx_id = _out_id(args, 'movex')
@@ -3295,6 +4761,35 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
                 _set_col(raw_data, cols, out_id, vlist, type_='number')
                 any_valid = True
     return any_valid
+
+
+def _spectral_peak_index(values, candidates=None):
+    """peakFinder.js spectralPeakIndex: index of the largest finite POSITIVE value, -1 when
+    there is none (flat or all-zero data is no peak)."""
+    best = -1
+    for i in (range(len(values or [])) if candidates is None else candidates):
+        v = values[i]
+        if _finite(v) and v > 0 and (best < 0 or v > values[best]):
+            best = i
+    return best
+
+
+def _moving_fft_stats(tw, yw, args):
+    """movinganalysis.js FFT window stats: a window that fails the grid check (regridUniform)
+    is skipped (NaN); otherwise computeFFT (fftFreqStep when > 0) and the refined fftPeak.
+    Flat data has no peak (NaN)."""
+    if not regrid_uniform(tw, yw)['ok']:
+        return {}
+    fs = args.get('fftFreqStep')
+    r = compute_fft(tw, yw, fs if (_finite(fs) and fs > 0) else None)
+    if not r['frequencies']:
+        return {}
+    pk = fft_peak(r)
+    if pk is None:
+        return {}
+    return {'peak_frequency': pk['frequency'],
+            'peak_period': pk['period'] if pk['frequency'] != 0 else float('nan'),
+            'peak_magnitude': pk['magnitude']}
 
 
 # --- Random ---
@@ -3326,36 +4821,56 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
         return False
     x_col = cols[x_in]
     t = _t_for_col(x_col)
+    fix_omega = bool(args.get('fixOmega', False))
+    fixed_period = args.get('fixedPeriod', 24)
     opts = {
         'fixKappa': args.get('fixKappa', False),
-        'fixOmega': args.get('fixOmega', False),
-        'fixD': args.get('fixD', False),
-        'kappa': args.get('kappa', 5.0),
-        'omega': args.get('omega', 2 * math.pi / 24),
-        'dutyCycle': args.get('dutyCycle', 0.5),
+        'fixedKappa': args.get('fixedKappa', 5),
+        'fixOmega': fix_omega,
+        'fixedOmega': (2 * math.pi / _js_number(fixed_period)) if fix_omega else None,
+        'fixDutyCycle': args.get('fixDutyCycle', False),
+        'fixedDutyCycle': args.get('fixedDutyCycle', 0.5),
+        'minPeriod': args.get('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
+        'maxPeriod': args.get('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod']),
     }
     output_x_id = args.get('outputX', -1)
     output_x_data = None
+    origin_ms = None
     if output_x_id != -1 and output_x_id in cols:
-        output_x_data = _t_for_col(cols[output_x_id])
+        ox = cols[output_x_id]
+        output_x_data = [_js_number(v) for v in _t_for_col(ox) if not _js_invalid(v)]
+        if ox.type == 'time':
+            d0 = ox.get_data()
+            origin_ms = d0[0] if d0 else None
+    if origin_ms is None and x_col.type == 'time':
+        d0 = x_col.get_data()
+        origin_ms = d0[0] if d0 else None
     first_xs = None
     any_valid = False
     stats_by_y = {}
     for y_id in y_ins:
         if y_id not in cols:
             continue
-        res = fit_rectangular_wave(t, cols[y_id].get_data(), opts)
+        y = cols[y_id].get_data()
+        idx = _js_valid_pairs(t, y)
+        if len(idx) < 4:
+            continue
+        tt = [_js_number(t[i]) for i in idx]
+        yy = [_js_number(y[i]) for i in idx]
+        res = fit_rectangular_wave(tt, yy, opts)
         if res is None:
             continue
+        xs_out = output_x_data if output_x_data is not None else tt
+        ys = (evaluate_rectwave_at_points(res['parameters'], output_x_data)
+              if output_x_data is not None else res['fitted'])
         if first_xs is None:
-            t_arr = np.array([v for v in t if v is not None
-                              and not (isinstance(v, float) and math.isnan(v))],
-                             dtype=float)
-            # JS evaluates the fit at the (finite) input t, not a dense grid.
-            first_xs = output_x_data if output_x_data else t_arr.tolist()
-            _set_col(raw_data, cols, _out_id(args, 'rectwavex'),
-                     first_xs, type_='number')
-        ys = evaluate_rectwave_at_points(res['parameters'], first_xs)
+            first_xs = xs_out
+            if origin_ms is not None:
+                _set_col(raw_data, cols, _out_id(args, 'rectwavex'),
+                         [origin_ms + h * 3600000 for h in first_xs], type_='time')
+            else:
+                _set_col(raw_data, cols, _out_id(args, 'rectwavex'), first_xs,
+                         type_='number')
         y_out = _out_id(args, f'rectwavey_{y_id}')
         if y_out == -1:
             y_out = _out_id(args, 'rectwavey')
@@ -3391,6 +4906,7 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
     t = _t_for_col(x_col)
     shared_x = None
     any_valid = False
+    stats_by_y = {}
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -3425,7 +4941,12 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
                              _out_id(args, f'{y_id}_threshold'),
                              list(pg['threshold']), type_='number')
         elif analysis == 'fft':
-            fft = compute_fft(t, y)
+            # RhythmicityAnalysis pairs t and y row by row (over t's length) before the
+            # transform; computeFFT then grids them (a long gap is refused, not joined).
+            idx = _js_valid_pairs(t, y)
+            fs = args.get('fftFreqStep')
+            fft = compute_fft([t[i] for i in idx], [y[i] for i in idx],
+                              fs if (_finite(fs) and fs > 0) else None)
             xs = fft['frequencies']
             ys = fft['magnitudes']
             periods = [1.0 / f if f else float('nan') for f in xs]
@@ -3463,7 +4984,32 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
                          xs, type_='number')
                 _set_col(raw_data, cols, _out_id(args, f'{y_id}_correlation'),
                          ys, type_='number')
+        # The scalar stats (the `stat_<key>` metric ports): the peak by the app's rules.
+        st = {}
+        if analysis == 'periodogram':
+            i_ = _spectral_peak_index(pg['y'])  # no positive power is no peak (ROB-13)
+            if i_ >= 0:
+                st = {'peak_period': pg['x'][i_], 'peak_power': pg['y'][i_]}
+        elif analysis == 'fft':
+            pk = fft_peak(fft) if fft['frequencies'] else None
+            if pk:
+                st = {'peak_frequency': pk['frequency'],
+                      'peak_period': pk['period'] if pk['frequency'] != 0 else float('nan'),
+                      'peak_magnitude': pk['magnitude']}
+        elif analysis == 'correlogram' and ac['lags']:
+            lag, r_ = find_autocorrelation_peak(ac['lags'], ac['correlations'])
+            if not math.isnan(lag):
+                st = {'peak_lag': lag, 'peak_correlation': r_}
+        stats_by_y[y_id] = st
         any_valid = True
+    if any_valid:
+        keys = {'periodogram': ['peak_period', 'peak_power'],
+                'fft': ['peak_period', 'peak_frequency', 'peak_magnitude'],
+                'correlogram': ['peak_lag', 'peak_correlation']}.get(analysis, [])
+        for k in keys:
+            _set_col(raw_data, cols, _out_id(args, f'stat_{k}'),
+                     [stats_by_y.get(y, {}).get(k, float('nan')) for y in y_ins],
+                     type_='number')
     return any_valid
 
 
@@ -3488,30 +5034,111 @@ def tp_sequencecolumn(args, cols, raw_data, _sv):
 
 # --- SmoothedData ---
 
+def _js_valid_pairs(t, y):
+    """validPairs.js: indices where both values pass the house rule, to the shorter length."""
+    t = list(t or [])
+    y = list(y or [])
+    n = min(len(t), len(y))
+    return [i for i in range(n) if not _js_invalid(t[i]) and not _js_invalid(y[i])]
+
+
+def _residual_column(predicted, y_full, x_full):
+    """residualSupport.js residualColumn: raw - predicted, NaN where either side is missing."""
+    out = []
+    for i, v in enumerate(y_full):
+        p_i = predicted[i] if i < len(predicted) else None
+        bad = (_js_invalid(v) or (x_full is not None and _js_invalid(x_full[i]))
+               or not _finite(p_i))
+        out.append(float('nan') if bad else _js_number(v) - p_i)
+    return out
+
+
 def tp_smootheddata(args, cols, raw_data, _sv):
+    """Port of SmoothedData.svelte smootheddata. Per y: rows kept by the house rule on x and
+    y (validPairs), converted with Number(), fewer than 3 -> skipped, then stably sorted by x.
+    The x output is the FIRST valid y's sorted x (a time input is written back as epoch ms
+    from the first time). Smoother options use the JS names and defaults; an unknown smoother
+    type is the moving average, as in smoothArrays."""
     x_in = args.get('xIN', -1)
     y_ins = _id_list(args.get('yIN'))
-    if x_in == -1 or x_in not in cols or not y_ins:
+    if x_in is None or x_in == -1 or x_in not in cols or not y_ins:
         return False
-    smoother = args.get('smootherType', args.get('smoother', 'whittaker'))
+    smoother = args.get('smootherType')
     x_col = cols[x_in]
+    is_time = x_col.type == 'time'
     x_data = _t_for_col(x_col)
-    sx = None
+    origin_ms = None
+    if is_time:
+        d = x_col.get_data()
+        origin_ms = d[0] if d else None
+    options = {k: args.get(k) for k in (
+        'whittakerLambda', 'whittakerOrder', 'savitzkyWindowSize', 'savitzkyPolyOrder',
+        'loessBandwidth', 'movingAvgWindowSize', 'movingAvgType')}
+    x_out = []
+    y_results, raw_by_y = {}, {}
     any_valid = False
     for y_id in y_ins:
-        if y_id not in cols:
+        if y_id is None or y_id == -1 or y_id not in cols:
             continue
-        nx, ny = smooth_arrays(x_data, cols[y_id].get_data(), smoother, args)
-        if sx is None:
-            sx = nx
-            _set_col(raw_data, cols, _out_id(args, 'smoothedx'), nx,
-                     type_=x_col.type, time_format=x_col.time_format)
-        y_out = _out_id(args, f'smoothedy_{y_id}')
-        if y_out == -1:
-            y_out = _out_id(args, 'smoothedy')
-        _set_col(raw_data, cols, y_out, ny, type_='number')
+        y_data = cols[y_id].get_data()
+        idx = _js_valid_pairs(x_data, y_data)
+        rows = [(_js_number(x_data[i]), _js_number(y_data[i])) for i in idx]
+        if len(rows) < 3:
+            continue
+        rows.sort(key=lambda r: r[0])  # stable, like Array.prototype.sort
+        xs = [r[0] for r in rows]
+        ys = [r[1] for r in rows]
+        try:
+            sy = _smooth_dispatch(xs, ys, smoother, options)
+        except Exception:  # noqa: BLE001  JS: console.warn and skip this column
+            continue
+        if sy is None:
+            continue
+        if not x_out:
+            x_out = xs
+        y_results[y_id] = list(sy)
+        raw_by_y[y_id] = ys
         any_valid = True
+    for pp in args.get('preProcesses') or []:
+        name = (pp or {}).get('processName')
+        if not name:
+            continue
+        for y_id in list(y_results):
+            y_results[y_id] = list(run_column_process(name.lower().replace(' ', ''),
+                                                      y_results[y_id],
+                                                      pp.get('processArgs') or {}, {}))
+    x_out_id = _out_id(args, 'smoothedx')
+    if any_valid and x_out_id != -1:
+        if is_time and origin_ms is not None:
+            _set_col(raw_data, cols, x_out_id, [origin_ms + h * 3600000 for h in x_out],
+                     type_='time')
+        else:
+            _set_col(raw_data, cols, x_out_id, x_out, type_='number')
+        for y_id in y_ins:
+            if y_id not in y_results:
+                continue
+            _set_col(raw_data, cols, _out_id(args, f'smoothedy_{y_id}'), y_results[y_id],
+                     type_='number')
+            resid_id = _out_id(args, f'resid_{y_id}')
+            if resid_id != -1:
+                _set_col(raw_data, cols, resid_id,
+                         _residual_column(y_results[y_id], raw_by_y[y_id], x_out),
+                         type_='number')
     return any_valid
+
+
+def _smooth_dispatch(xs, ys, smoother, o):
+    """smoothing.js smoothArrays with the JS option names and defaults (`?? default`)."""
+    def opt(k, d):
+        v = o.get(k)
+        return d if v is None else v
+    if smoother == 'whittaker':
+        return whittaker_eilers(ys, opt('whittakerLambda', 100), opt('whittakerOrder', 2))
+    if smoother == 'savitzky':
+        return savitzky_golay(ys, opt('savitzkyWindowSize', 5), opt('savitzkyPolyOrder', 2))
+    if smoother == 'loess':
+        return loess(xs, ys, opt('loessBandwidth', 0.3))
+    return moving_average(ys, opt('movingAvgWindowSize', 5), opt('movingAvgType', 'simple'))
 
 
 # --- Split ---
@@ -3797,11 +5424,12 @@ def _gc_sample_std(arr):                                 # JS sampleStd (:49-52)
 
 
 def _gc_p_upper_from_f(f_value, df1, df2):               # JS safePUpperFromF (:61-65)
-    if not (math.isfinite(f_value) and math.isfinite(df1) and math.isfinite(df2)):
+    # fdist.js pUpperFromF: the upper tail computed directly; F = Infinity gives 0.
+    if f_value != f_value or not (math.isfinite(df1) and math.isfinite(df2)):
         return float('nan')
     if df1 <= 0 or df2 <= 0 or f_value < 0:
         return float('nan')
-    return float(1 - sp_stats.f.cdf(f_value, df1, df2))
+    return 0.0 if f_value == math.inf else float(sp_stats.f.sf(f_value, df1, df2))
 
 
 def _gc_p_upper_from_chisq(x_value, df):                 # JS safePUpperFromChiSq (:67-71)
@@ -3809,7 +5437,7 @@ def _gc_p_upper_from_chisq(x_value, df):                 # JS safePUpperFromChiS
         return float('nan')
     if x_value < 0 or df <= 0:
         return float('nan')
-    return float(1 - sp_stats.chi2.cdf(x_value, df))
+    return float(sp_stats.chi2.sf(x_value, df))  # chisqSf: the upper tail directly
 
 
 def _gc_t_quantile(p, df):
@@ -3824,16 +5452,16 @@ def _gc_build_groups(group_data, y_data):                # JS buildGroups (:73-8
     for i in range(n):
         g_raw = group_data[i] if i < len(group_data) else None
         y_raw = y_data[i]
-        # JS: if (gRaw == null || yRaw == null || Number.isNaN(yRaw)) continue
-        if g_raw is None or y_raw is None:
+        # A missing label (None, '', NaN or 'NaN') is not a group, and a missing value (the
+        # house rule: None, blank, whitespace-only, non-numeric text) is not a zero: both rows
+        # are dropped (JS isMissingCategory / isInvalidValue).
+        if _is_missing_category(g_raw) or _js_invalid(y_raw):
             continue
-        if isinstance(y_raw, float) and math.isnan(y_raw):
-            continue
-        g = str(g_raw)
+        g = _js_string(g_raw)
         if g not in buckets:
             buckets[g] = []
             order.append(g)
-        buckets[g].append(float(y_raw))
+        buckets[g].append(_js_number(y_raw))
     out = []
     for name in order:                                   # preserve insertion order (JS Map)
         values = buckets[name]
@@ -3850,8 +5478,7 @@ def _gc_build_groups_from_y_columns(y_ins, cols):        # JS buildGroupsFromYCo
         if y_id is None or y_id == -1 or y_id not in cols:
             continue
         y_col = cols[y_id]
-        values = [float(v) for v in (y_col.get_data() or [])
-                  if v is not None and not (isinstance(v, float) and math.isnan(v))]
+        values = _gc_present_numbers(y_col.get_data())
         if not values:
             continue
         groups.append({
@@ -3860,6 +5487,16 @@ def _gc_build_groups_from_y_columns(y_ins, cols):        # JS buildGroupsFromYCo
             'sd': _gc_sample_std(values),
         })
     return groups
+
+
+def _gc_present_numbers(values):
+    """JS presentNumbers: the house rule drops missing cells, then Number() converts."""
+    return [_js_number(v) for v in (values or []) if not _js_invalid(v)]
+
+
+# JS NON_FINITE_REASON: a NaN statistic is reported as not computable, never as p = 0.
+_GC_NON_FINITE_REASON = ('The test statistic could not be computed: a group contains a '
+                         'non-finite value.')
 
 
 def _gc_rank_with_ties(values):                          # JS rankWithTies (:112-129)
@@ -3907,6 +5544,9 @@ def _gc_welch_t_test(group_a, group_b, alpha=0.05):     # JS welchTTest (:249-29
         return {'valid': False, 'reason':
                 'Each group needs at least 2 valid values for a t-test.'}
     m1, m2 = group_a['mean'], group_b['mean']
+    if not (math.isfinite(m1) and math.isfinite(m2)):
+        return {'valid': False, 't': float('nan'), 'pValue': float('nan'),
+                'reason': _GC_NON_FINITE_REASON}
     v1 = _gc_sample_variance(group_a['values'])
     v2 = _gc_sample_variance(group_b['values'])
     a = v1 / n1
@@ -3962,6 +5602,10 @@ def _gc_one_way_anova(groups):                           # JS oneWayAnova (:296-
         f = 0.0 if ms_between == 0 else float('inf')
     else:
         f = ms_between / ms_within
+    if math.isnan(f):
+        return {'valid': False, 'f': float('nan'), 'pValue': float('nan'),
+                'reason': _GC_NON_FINITE_REASON}
+    # f = inf only when ms_within == 0 and the means differ: p = 0 is its limit.
     p_value = _gc_p_upper_from_f(f, df_between, df_within) if math.isfinite(f) else 0.0
     eta_squared = (ss_between / (ss_between + ss_within)
                    if (ss_between + ss_within) > 0 else float('nan'))
@@ -3989,7 +5633,13 @@ def _gc_tukey_kramer_post_hoc(groups, ms_within, df_within, alpha=0.05):
             else:
                 t = diff / se
             q = abs(t) * math.sqrt(2)
-            p_value = _gc_p_upper_from_f(t * t, 1, df_within) if math.isfinite(t) else 0.0
+            # Only a zero-se infinite t (finite, different means) has the limiting p = 0; a
+            # non-finite mean difference gives NaN, which the Holm step ranks last.
+            if not math.isfinite(diff):
+                p_value = float('nan')
+            else:
+                p_value = (_gc_p_upper_from_f(t * t, 1, df_within) if math.isfinite(t)
+                           else 0.0)
             pairs.append({'groupA': a['name'], 'groupB': b['name'],
                           'diff': diff, 'statistic': q, 'pValue': p_value})
     adjusted = _gc_holm_adjust(pairs)
@@ -4273,6 +5923,12 @@ def _ff_fit_curve_model(tt, yy, model, args):
             'fixedPeriod': args.get('fixedPeriod', 24),
             'fixDutyCycle': args.get('fixDutyCycle', False),
             'fixedDutyCycle': args.get('fixedDutyCycle', 0.5),
+            # rectwave.js pins omega, not the period: fitFunction.js derives it from
+            # fixedPeriod when the period is fixed.
+            'fixedOmega': (2 * math.pi / _js_number(args.get('fixedPeriod', 24))
+                           if args.get('fixOmega') else None),
+            'minPeriod': args.get('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
+            'maxPeriod': args.get('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod']),
         }
         res = fit_rectangular_wave(tt, yy, opts)
         if res is None:
@@ -4287,6 +5943,8 @@ def _ff_fit_curve_model(tt, yy, model, args):
             'fixK2': args.get('fixK2', False), 'fixedK2': args.get('fixedK2', 0.5),
             'fixPeriod': args.get('fixPeriod', False),
             'fixedPeriod': args.get('fixedPeriod', 24),
+            'minPeriod': args.get('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
+            'maxPeriod': args.get('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod']),
         }
         res = fit_double_logistic(tt, yy, opts)
         if res is None:
@@ -4851,11 +6509,12 @@ def _resultant(angles_rad):
 
 
 def _p_upper_from_f(F, df1, df2):
-    if not (math.isfinite(F) and math.isfinite(df1) and math.isfinite(df2)):
+    # fdist.js pUpperFromF: the upper tail computed directly; F = Infinity gives 0.
+    if F != F or not (math.isfinite(df1) and math.isfinite(df2)):
         return _NAN
     if df1 <= 0 or df2 <= 0 or F < 0:
         return _NAN
-    return float(1 - sp_stats.f.cdf(F, df1, df2))
+    return 0.0 if F == math.inf else float(sp_stats.f.sf(F, df1, df2))
 
 
 def watson_williams(groups_of_angles, p_from_f=_p_upper_from_f):
@@ -5184,8 +6843,7 @@ def jarque_bera_normality(values):
     node's Jarque-Bera: this one standardises by the SAMPLE standard deviation (n - 1).
     Fewer than 8 values is not evaluable; zero variance is evaluable and non-normal; normal
     means p >= 0.05."""
-    clean = [float(v) for v in (values or [])
-             if v is not None and not (isinstance(v, float) and math.isnan(v))]
+    clean = _gc_present_numbers(values)
     n = len(clean)
     if n < 8:
         return {'evaluable': False, 'normal': None}
@@ -5255,16 +6913,19 @@ def tp_crosscorrelation(args, cols, raw_data, _sv):
         y_in = y_in[0] if y_in else -1
     if x_in == -1 or y_in == -1 or x_in not in cols or y_in not in cols:
         return False
-    res = cross_correlation(cols[x_in].get_data(), cols[y_in].get_data(),
-                            int(args.get('maxLag', 0) or 0),
-                            args.get('method', 'pearson'))
+    ml = _js_number(args.get('maxLag', 0))
+    res = cross_correlation(cols[x_in].get_data() or [], cols[y_in].get_data() or [],
+                            ml if ml > 0 else 0, args.get('method', 'pearson'))
+    if not res['lags']:
+        return False
     return _result_rows(raw_data, cols, args, {
         'lag': res['lags'], 'correlation': res['r'], 'pvalue': res['pvalue']})
 
 
 def _is_missing_category(v):
-    """chisquare.js isMissingCategory: null, '' and NaN (or the text 'NaN') are absent."""
-    if v is None or v == '':
+    """chisquare.js isMissingCategory: null, a blank or whitespace-only string, and NaN (or
+    the text 'NaN') are absent."""
+    if v is None or (isinstance(v, str) and v.strip(_JS_WS) == ''):
         return True
     if isinstance(v, float) and math.isnan(v):
         return True
@@ -5449,6 +7110,26 @@ def _isfinite(v):
     return v is not None and isinstance(v, (int, float)) and math.isfinite(v)
 
 
+def _logit_coerce_binary(raw):
+    """LogisticRegression.svelte coerceBinary: (y as 0/1/NaN, positive class or None).
+    Levels are the distinct String() values of the cells that are not null or ''. All of
+    them '0'/'1' -> Number(); exactly two other levels -> the later in sort order is 1;
+    anything else is not binary. (A whitespace-only cell IS a level here, as in the app.)"""
+    present = [v for v in raw if v is not None and v != '']
+    levels = []
+    for v in present:
+        sv = _js_string(v)
+        if sv not in levels:
+            levels.append(sv)
+    if all(lv in ('0', '1') for lv in levels):
+        return [float('nan') if (v is None or v == '') else _js_number(v) for v in raw], '1'
+    if len(levels) != 2:
+        return [float('nan')] * len(raw), None
+    positive = sorted(levels, key=lambda t: t.encode('utf-16-be'))[1]
+    return [float('nan') if (v is None or v == '') else (1.0 if _js_string(v) == positive
+                                                          else 0.0) for v in raw], positive
+
+
 def tp_logisticregression(args, cols, raw_data, _sv):
     """Binary outcome ~ predictors: coefficients, odds ratios, and per-observation fit."""
     y_in = args.get('yIN', -1)
@@ -5457,7 +7138,10 @@ def tp_logisticregression(args, cols, raw_data, _sv):
     x_ins = [x for x in _id_list(args.get('xIN')) if x in cols]
     if y_in == -1 or y_in not in cols or not x_ins:
         return False
-    y = cols[y_in].get_data()
+    y, positive = _logit_coerce_binary(cols[y_in].get_data() or [])
+    if positive is None:
+        # Not a binary outcome: the app reports it and writes nothing (still "valid").
+        return True
     predictors = [cols[x].get_data() for x in x_ins]
     names = [cols[x].name or str(x) for x in x_ins]
     res = logistic_regression(y, predictors, names)
@@ -5486,101 +7170,169 @@ def tp_logisticregression(args, cols, raw_data, _sv):
     return wrote
 
 
+def _interp_known_points(x_data, y_data):
+    """interpolate.js knownPoints: house rule on both, Number(), finite only, sorted by x
+    (stable), duplicate x keeps the LATER value."""
+    pairs = []
+    n = min(len(x_data or []), len(y_data or []))
+    for i in range(n):
+        if _js_invalid(x_data[i]) or _js_invalid(y_data[i]):
+            continue
+        x, y = _js_number(x_data[i]), _js_number(y_data[i])
+        if math.isfinite(x) and math.isfinite(y):
+            pairs.append((x, y))
+    pairs.sort(key=lambda p: p[0])
+    xs, ys = [], []
+    for x, y in pairs:
+        if xs and xs[-1] == x:
+            ys[-1] = y
+        else:
+            xs.append(x)
+            ys.append(y)
+    return xs, ys
+
+
+def _interp_bracket(xs, q):
+    """Largest i with xs[i] <= q, clamped to [0, n-2] (interpolate.js bracket)."""
+    lo, hi = 0, len(xs) - 1
+    if q <= xs[0]:
+        return 0
+    if q >= xs[hi]:
+        return hi - 1
+    while hi - lo > 1:
+        mid = (lo + hi) >> 1
+        if xs[mid] <= q:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
+def make_interpolator(xs, ys, method='linear'):
+    """interpolate.js makeInterpolator: NO extrapolation (outside [xs[0], xs[-1]] or a
+    non-finite query is NaN). Methods linear, nearest (a tie goes to the lower point) and
+    spline (natural cubic, Numerical Recipes)."""
+    n = len(xs)
+    nan = float('nan')
+    if n == 0:
+        return lambda q: nan
+    if n == 1:
+        inner = lambda q: ys[0]  # noqa: E731
+    elif method == 'nearest':
+        def inner(q):
+            if q <= xs[0]:
+                return ys[0]
+            if q >= xs[-1]:
+                return ys[-1]
+            i = _interp_bracket(xs, q)
+            return ys[i] if q - xs[i] <= xs[i + 1] - q else ys[i + 1]
+    elif method == 'spline':
+        y2 = [0.0] * n
+        u = [0.0] * n
+        for i in range(1, n - 1):
+            sig = (xs[i] - xs[i - 1]) / (xs[i + 1] - xs[i - 1])
+            p = sig * y2[i - 1] + 2
+            y2[i] = (sig - 1) / p
+            ui = (ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]) - (ys[i] - ys[i - 1]) / (xs[i] - xs[i - 1])
+            u[i] = (6 * ui) / (xs[i + 1] - xs[i - 1])
+            u[i] = (u[i] - sig * u[i - 1]) / p
+        for k in range(n - 2, -1, -1):
+            y2[k] = y2[k] * y2[k + 1] + u[k]
+
+        def inner(q):
+            if q <= xs[0]:
+                return ys[0]
+            if q >= xs[-1]:
+                return ys[-1]
+            klo = _interp_bracket(xs, q)
+            khi = klo + 1
+            h = xs[khi] - xs[klo]
+            a_ = (xs[khi] - q) / h
+            b_ = (q - xs[klo]) / h
+            return (a_ * ys[klo] + b_ * ys[khi]
+                    + ((a_ * a_ * a_ - a_) * y2[klo] + (b_ * b_ * b_ - b_) * y2[khi])
+                    * (h * h) / 6)
+    else:
+        def inner(q):
+            if q <= xs[0]:
+                return ys[0]
+            if q >= xs[-1]:
+                return ys[-1]
+            i = _interp_bracket(xs, q)
+            t = (q - xs[i]) / (xs[i + 1] - xs[i])
+            return ys[i] + t * (ys[i + 1] - ys[i])
+    return lambda q: (inner(q) if (q >= xs[0] and q <= xs[-1]) else nan)
+
+
+def _make_grid(start, end, step, max_points=2_000_000):
+    """interpolate.js makeGrid: start + i * step (no accumulated drift), end inclusive."""
+    if not (_finite(start) and _finite(end) and _finite(step)) or step <= 0 or end < start:
+        return []
+    count = int(math.floor((end - start) / step + 1e-9)) + 1
+    if count > max_points:
+        return []
+    return [start + i * step for i in range(count)]
+
+
 def tp_interpolate(args, cols, raw_data, _sv):
-    """Fill gaps in place, or resample onto a regular grid."""
+    """Port of Interpolate.svelte interpolatedata. 'fill' keeps every input row and reads
+    each row's y off the interpolant at its own x; 'resample' builds makeGrid(start, end,
+    step) in x units (hours for a time x). A time x is written back as epoch ms from the
+    earliest time. No extrapolation: outside the known x range is missing."""
     x_in = args.get('xIN', -1)
     y_ins = _id_list(args.get('yIN'))
-    if x_in == -1 or x_in not in cols or not y_ins:
+    if x_in is None or x_in == -1 or x_in not in cols or not y_ins:
         return False
-    mode = args.get('mode', 'fill')
-    method = args.get('method', 'linear')
+    mode = 'resample' if args.get('mode') == 'resample' else 'fill'
+    method = args.get('method') if args.get('method') in ('linear', 'nearest', 'spline') \
+        else 'linear'
     x_col = cols[x_in]
-    xs_raw = _t_for_col(x_col)
+    is_time = x_col.type == 'time'
+    x_raw = list(x_col.get_data() or [])
+    x_interp = x_col.hours_since_start if is_time else x_raw
+    present = [v for v in x_raw if not _js_invalid(v)]
+    baseline = min(_js_number(v) for v in present) if (is_time and present) else 0.0
 
     if mode == 'resample':
-        finite = [float(v) for v in xs_raw
-                  if v is not None and not _isnan(v)]
+        finite = [v for v in x_interp if _finite(v)]
         if not finite:
             return False
-        step = float(args.get('step', 1) or 1)
-        start = args.get('start')
-        end = args.get('end')
-        start = float(start) if start is not None else min(finite)
-        end = float(end) if end is not None else max(finite)
-        if step <= 0 or end < start:
+        start = args.get('start') if _finite(args.get('start')) else min(finite)
+        end = args.get('end') if _finite(args.get('end')) else max(finite)
+        step = _js_number(args.get('step'))
+        query = _make_grid(start, end, step)
+        if not query:
             return False
-        grid, v = [], start
-        while v <= end + 1e-9:
-            grid.append(v)
-            v += step
-        target = grid
+        out_x_vals = [baseline + h * 3600000 for h in query] if is_time else list(query)
     else:
-        target = [None if v is None or _isnan(v) else float(v) for v in xs_raw]
+        query = list(x_interp)
+        out_x_vals = list(x_raw)
 
-    wrote = False
+    y_results = {}
+    for y_id in y_ins:
+        if y_id is None or y_id == -1 or y_id not in cols:
+            continue
+        y_data = cols[y_id].get_data()
+        xs, ys = _interp_known_points(x_interp, y_data)
+        if not xs:
+            continue
+        f = make_interpolator(xs, ys, method)
+        vals = [float('nan') if _js_invalid(q) else f(_js_number(q)) for q in query]
+        if mode == 'fill':
+            # A row whose y is present but whose x is missing keeps its own y: it cannot be
+            # placed on the x axis, but it is not missing data.
+            for i, q in enumerate(query):
+                if _js_invalid(q) and i < len(y_data) and not _js_invalid(y_data[i]):
+                    vals[i] = _js_number(y_data[i])
+        y_results[y_id] = vals
+    if not y_results:
+        return False
     out_x = _out_id(args, 'interpx')
     if out_x != -1:
-        _set_col(raw_data, cols, out_x,
-                 target if mode == 'resample' else xs_raw,
-                 type_=x_col.type, time_format=x_col.time_format)
-        wrote = True
-    for y_id in y_ins:
-        if y_id not in cols:
-            continue
-        ys = _interp_series(xs_raw, cols[y_id].get_data(),
-                            target if mode == 'resample' else None, method)
-        out_y = _out_id(args, f'interpy_{y_id}')
-        if out_y == -1:
-            out_y = _out_id(args, 'interpy')
-        if out_y != -1:
-            _set_col(raw_data, cols, out_y, ys, type_='number')
-            wrote = True
-    return wrote
-
-
-def _interp_series(xs, ys, grid, method='linear'):
-    """Interpolate ys(xs) at `grid`, or fill ys' own gaps when grid is None.
-
-    Extrapolation is deliberately NOT attempted: targets outside the observed x
-    range come back as None rather than a straight-line guess, because a fabricated
-    value beyond the recording is worse than an honest gap.
-    """
-    pts = [(float(x), float(y)) for x, y in zip(xs, ys)
-           if x is not None and y is not None
-           and not _isnan(x) and not _isnan(y)]
-    pts.sort(key=lambda p: p[0])
-    if len(pts) < 2:
-        return [None] * (len(grid) if grid is not None else len(ys))
-    px = [p[0] for p in pts]
-    py = [p[1] for p in pts]
-
-    def at(x):
-        if x is None or _isnan(x) or x < px[0] or x > px[-1]:
-            return None
-        if method == 'nearest':
-            j = min(range(len(px)), key=lambda k: abs(px[k] - x))
-            return py[j]
-        lo, hi = 0, len(px) - 1
-        while hi - lo > 1:
-            mid = (lo + hi) // 2
-            if px[mid] <= x:
-                lo = mid
-            else:
-                hi = mid
-        if px[hi] == px[lo]:
-            return py[lo]
-        f = (x - px[lo]) / (px[hi] - px[lo])
-        return py[lo] + f * (py[hi] - py[lo])
-
-    if grid is not None:
-        return [at(x) for x in grid]
-    out = []
-    for x, y in zip(xs, ys):
-        if y is not None and not _isnan(y):
-            out.append(float(y))
-        else:
-            out.append(at(None if x is None else float(x)))
-    return out
+        _set_col(raw_data, cols, out_x, out_x_vals, type_='time' if is_time else 'number')
+        for y_id, vals in y_results.items():
+            _set_col(raw_data, cols, _out_id(args, f'interpy_{y_id}'), vals, type_='number')
+    return True
 
 
 TABLE_PROCESS_MAP = {
@@ -5868,12 +7620,15 @@ def plot_boxplot(plot, columns_index, ax):
         y_col = _resolve_plot_col(series.get('y'), columns_index)
         if y_col is None:
             continue
-        y = [v for v in y_col.get_data()
-             if v is not None and not (isinstance(v, float) and math.isnan(v))]
+        # Box.svelte presentValues: the house rule, then Number() (a blank or text cell is
+        # missing, numeric text is a number).
+        y = [_js_number(v) for v in y_col.get_data() if not _js_invalid(v)]
         data.append(y)
         labels.append(series.get('label') or y_col.name)
     if data:
-        ax.boxplot(data, tick_labels=labels)
+        # matplotlib's defaults are the app's box: type-7 (linear) quartiles and median,
+        # whiskers at the most extreme points within 1.5 IQR of the quartiles.
+        ax.boxplot(data, tick_labels=labels, whis=1.5)
     _apply_axes(ax,
                 ylims=p.get('ylimsIN'),
                 ylabel=(p.get('yAxis') or {}).get('label', ''),
@@ -6033,9 +7788,8 @@ def periodogram_download_data(plot, columns_index):
 
     Headers: ['DataSeries', 'Period (hours)', 'Power']; the JS adds
     ['Threshold', 'P-value'] only when a series uses the Chi-squared method.
-    The Python port computes a scalar Chi-squared threshold (broadcast per
-    row) but does not compute the per-period P-value, so that column is
-    emitted empty to keep the header layout aligned with the app.
+    Threshold and P-value are per fold, as in the app (the p-value is the
+    chi-square upper tail, computed directly).
     """
     p = plot.get('plot', {})
     method = p.get('method') or 'Lomb-Scargle'
@@ -6055,11 +7809,13 @@ def periodogram_download_data(plot, columns_index):
             't': t, 'y': y, 'method': method,
             'minPeriod': p_min, 'maxPeriod': p_max, 'stepSize': step,
         })
-        thr = result.get('threshold')
+        thr = result.get('threshold') or []
+        pv = result.get('pvalue') or []
         for i, per in enumerate(result['x']):
             row = [d, per, result['y'][i]]
             if has_threshold:
-                row += [thr if thr is not None else '', '']
+                # Per-fold threshold and the per-fold chi-square UPPER-tail p (SPEC-14).
+                row += [thr[i] if i < len(thr) else '', pv[i] if i < len(pv) else '']
             rows.append(row)
     return headers, rows
 
@@ -6221,17 +7977,11 @@ def _corr_valid_pairs(x, y):
     xs, ys = [], []
     n = min(len(x or []), len(y or []))
     for i in range(n):
-        xv, yv = x[i], y[i]
-        if xv is None or yv is None:
+        # validPairs.js: the house rule on both values, then Number().
+        if _js_invalid(x[i]) or _js_invalid(y[i]):
             continue
-        try:
-            xf, yf = float(xv), float(yv)
-        except (TypeError, ValueError):
-            continue
-        if math.isnan(xf) or math.isnan(yf):
-            continue
-        xs.append(xf)
-        ys.append(yf)
+        xs.append(_js_number(x[i]))
+        ys.append(_js_number(y[i]))
     return xs, ys
 
 
@@ -6434,28 +8184,156 @@ def jarque_bera(values):
     return {"statistic": float(res.statistic), "pvalue": float(res.pvalue), "n": n}
 
 
-def cross_correlation(x, y, max_lag=0, method="pearson"):
-    """numpy per-lag Pearson/Spearman reference for utils/crossCorrelation.js."""
-    xa = [float(v) for v in x]
-    ya = [float(v) for v in y]
-    nx, ny = len(xa), len(ya)
-    if not max_lag or max_lag <= 0:
-        max_lag = max(1, min(nx, ny) // 4)
-    max_lag = min(int(max_lag), min(nx, ny) - 1)
+def _cc_finite(v):
+    """crossCorrelation.js `finite`: not null, not '', and Number(v) finite. NOTE this is
+    looser than the house rule: a whitespace-only cell is Number(' ') = 0, a value."""
+    if v is None or (isinstance(v, str) and v == ''):
+        return False
+    return math.isfinite(_js_number(v))
+
+
+def fit_ar(x, max_order=None):
+    """crossCorrelation.js fitAR: Yule-Walker AR with the order chosen by AIC (Levinson-
+    Durbin), exactly R's ar(x, method = "yule-walker") defaults: autocovariances divided by
+    the number of present values n, order.max = min(n - 1, floor(10 log10 n), length - 2),
+    order minimising n log(v) + 2m. Missing values are skipped in each lag's sum."""
+    vals = [_js_number(v) for v in (x or []) if _cc_finite(v)]
+    n_obs = len(vals)
+    none = {'order': 0, 'coef': [], 'mean': float('nan'), 'variance': float('nan')}
+    if n_obs < 3:
+        return none
+    mean = sum(vals) / n_obs
+    n = len(x)
+    dev = [(_js_number(v) - mean) if _cc_finite(v) else float('nan') for v in x]
+    cap = float('inf') if max_order is None else max_order
+    m_max = int(max(0, min(cap, n_obs - 1, math.floor(10 * math.log10(n_obs)), n - 2)))
+    acov = []
+    for k in range(m_max + 1):
+        acc = 0.0
+        for i in range(k, n):
+            a_, b_ = dev[i], dev[i - k]
+            if a_ == a_ and b_ == b_:
+                acc += a_ * b_
+        acov.append(acc / n_obs)
+    if not (acov[0] > 0):
+        return {'order': 0, 'coef': [], 'mean': mean, 'variance': 0.0}
+    phi = []
+    v = acov[0]
+    best = {'order': 0, 'coef': [], 'variance': v, 'aic': n_obs * math.log(v)}
+    for m in range(1, m_max + 1):
+        num = acov[m]
+        for j in range(m - 1):
+            num -= phi[j] * acov[m - 1 - j]
+        kappa = num / v
+        if not math.isfinite(kappa) or abs(kappa) >= 1:
+            break
+        nxt = [phi[j] - kappa * phi[m - 2 - j] for j in range(m - 1)] + [kappa]
+        phi = nxt
+        v *= 1 - kappa * kappa
+        if not (v > 0):
+            break
+        aic = n_obs * math.log(v) + 2 * m
+        if aic < best['aic']:
+            best = {'order': m, 'coef': list(phi), 'variance': v, 'aic': aic}
+    return {'order': best['order'], 'coef': best['coef'], 'mean': mean,
+            'variance': best['variance']}
+
+
+def ar_filter(z, ar, mean):
+    """crossCorrelation.js arFilter: e[t] = (z[t] - mean) - sum_i coef[i] (z[t-1-i] - mean).
+    The first `order` values, and any with a missing value in their history, are NaN."""
+    n = len(z or [])
+    p = len(ar['coef'])
+    out = [float('nan')] * n
+    for t in range(p, n):
+        if not _cc_finite(z[t]):
+            continue
+        e = _js_number(z[t]) - mean
+        ok = True
+        for i in range(p):
+            prev = z[t - 1 - i]
+            if not _cc_finite(prev):
+                ok = False
+                break
+            e -= ar['coef'][i] * (_js_number(prev) - mean)
+        if ok:
+            out[t] = e
+    return out
+
+
+def _ccf_at_lags(x, y, max_lag, method):
+    nx, ny = len(x), len(y)
     lags, rs, ps, ns = [], [], [], []
     for k in range(-max_lag, max_lag + 1):
         i0 = max(0, -k)
         i1 = min(nx - 1, ny - 1 - k)
-        xs = [xa[i] for i in range(i0, i1 + 1)]
-        ys = [ya[i + k] for i in range(i0, i1 + 1)]
+        xs = [x[i] for i in range(i0, i1 + 1)]
+        ys = [y[i + k] for i in range(i0, i1 + 1)]
         c = correlate(xs, ys, method)
         lags.append(k)
         rs.append(c["r"])
         ps.append(c["pvalue"])
         ns.append(c["n"])
-    peak_lag, peak_r = _cross_correlation_peak(lags, rs)
-    return {"lags": lags, "r": rs, "pvalue": ps, "n": ns,
-            "peakLag": peak_lag, "peakR": peak_r}
+    return {"lags": lags, "r": rs, "pvalue": ps, "n": ns}
+
+
+def cross_correlation(x, y, max_lag=0, method="pearson"):
+    """Port of utils/crossCorrelation.js crossCorrelation. r(k) = corr(x[t], y[t + k]) on
+    the overlap (k > 0: x LEADS y). The per-lag `pvalue` is for the PREWHITENED pair (x's
+    Yule-Walker AR filter applied to x and, with y's own mean, to y; raw p when the order is
+    0); `r` stays raw. minP / minPLag (ties: larger |prewhitened r|, then positive, then
+    smaller |lag|) and the Sidak familywiseP = -expm1(L log1p(-minP)) over the L lags with a
+    finite p."""
+    method = 'spearman' if method == 'spearman' else 'pearson'
+    xs = list(x or [])
+    ys = list(y or [])
+    nx, ny = len(xs), len(ys)
+    cap = max(1, min(nx, ny) // 4)
+    if _finite(max_lag) and max_lag > 0:
+        max_lag = min(int(math.floor(max_lag)), min(nx, ny) - 1)
+    else:
+        max_lag = cap
+    raw = _ccf_at_lags(xs, ys, max_lag, method)
+    ar = fit_ar(xs)
+    pw = raw
+    if ar['order'] > 0:
+        yv = [_js_number(v) for v in ys if _cc_finite(v)]
+        ym = sum(yv) / len(yv) if yv else float('nan')
+        pw = _ccf_at_lags(ar_filter(xs, ar, ar['mean']), ar_filter(ys, ar, ym), max_lag,
+                          method)
+    min_p, min_p_lag, min_idx, n_lags = math.inf, float('nan'), -1, 0
+    for i, pv in enumerate(pw['pvalue']):
+        if not _finite(pv):
+            continue
+        n_lags += 1
+        tie = False
+        if pv == min_p:
+            ri, rm = pw['r'][i], pw['r'][min_idx]
+            tie = abs(ri) > abs(rm) + _CC_TIE or _cc_beats_on_tie(
+                pw['lags'][i], ri, abs(ri), pw['lags'][min_idx], rm, abs(rm))
+        if pv < min_p or tie:
+            min_p, min_p_lag, min_idx = pv, pw['lags'][i], i
+    if not n_lags:
+        min_p = float('nan')
+    familywise = (-math.expm1(n_lags * math.log1p(-min(min_p, 1))) if n_lags
+                  else float('nan'))
+    peak_lag, peak_r = _cross_correlation_peak(raw['lags'], raw['r'])
+    pw_peak_lag, pw_peak_r = _cross_correlation_peak(pw['lags'], pw['r'])
+    return {"lags": raw['lags'], "r": raw['r'], "pvalue": pw['pvalue'], "n": raw['n'],
+            "peakLag": peak_lag, "peakR": peak_r, "pwR": pw['r'], "pwPeakLag": pw_peak_lag,
+            "pwPeakR": pw_peak_r, "arOrder": ar['order'], "minP": min_p,
+            "minPLag": min_p_lag, "familywiseP": familywise, "nLags": n_lags}
+
+
+def _cc_beats_on_tie(lag, r, mag, best_lag, best_r, best_mag):
+    """findPeak's rules 2-4 (crossCorrelation.js beatsOnTie): only on a tie in |r|."""
+    if not (abs(mag - best_mag) <= _CC_TIE):
+        return False
+    if (r >= 0) != (best_r >= 0):
+        return r >= 0
+    if abs(lag) != abs(best_lag):
+        return abs(lag) < abs(best_lag)
+    return lag < best_lag
 
 
 # Two lags whose |r| differ by less than this are a TIE, not a ranking.
@@ -6522,19 +8400,21 @@ def logistic_regression(y, predictor_cols, names=None):
     total = len(y)
     rows, ys, kept = [], [], []
     for i in range(total):
-        try:
-            yi = float(y[i])
-        except (TypeError, ValueError):
+        # The house rule BEFORE Number() (logistic.js): a missing outcome or predictor drops
+        # the row. float() alone accepted the text 'nan' as a NaN predictor and fitted it.
+        if _js_invalid(y[i]):
             continue
+        yi = _js_number(y[i])
         if yi not in (0.0, 1.0):
             continue
         xr, ok = [1.0], True
         for j in range(p):
-            try:
-                xr.append(float(predictor_cols[j][i]))
-            except (TypeError, ValueError):
+            raw = predictor_cols[j][i] if i < len(predictor_cols[j]) else None
+            v = float('nan') if _js_invalid(raw) else _js_number(raw)
+            if not math.isfinite(v):
                 ok = False
                 break
+            xr.append(v)
         if not ok:
             continue
         rows.append(xr)
@@ -6717,6 +8597,8 @@ def moving_windows(times, values, opts):
         for h in range(1, n_h + 1):
             keys += [f'H{h}_amplitude', f'H{h}_acrophase']
         keys += ['rel_amplitude', 'r2', 'rmse', 'pvalue']
+    elif analysis == 'fft':
+        keys = ['peak_period', 'peak_frequency', 'peak_magnitude']
     else:
         raise ValueError(f'moving_windows: unsupported analysis {analysis!r}')
 
@@ -6743,6 +8625,10 @@ def moving_windows(times, values, opts):
                 if npc:
                     for k in keys:
                         stats[k] = npc.get(k, float('nan'))
+            elif analysis == 'fft':
+                for k, v in _moving_fft_stats(tw.tolist(), yw.tolist(), opts).items():
+                    if _finite(v):
+                        stats[k] = v
             else:
                 res = fit_cosinor_fixed(tw, yw,
                                         float(opts.get('fixedPeriod', 24)),
@@ -6913,21 +8799,48 @@ def _finite(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
 
 
+def _js_number(v):
+    """JS Number(v) for a cell: a float, NaN where JS gives NaN. Strings follow JS syntax,
+    not Python's: '0x10' is 16 and 'Infinity' is inf, while '1_000', 'inf' and 'nan' are NaN
+    (Python's float() accepts those three). null is 0 as in JS; callers test the house rule
+    (_js_invalid) first, which treats it as missing."""
+    if v is None:
+        return 0.0
+    if isinstance(v, (bool, np.bool_)):
+        return 1.0 if v else 0.0
+    if isinstance(v, (int, float, np.integer, np.floating)):
+        return float(v)
+    if isinstance(v, str):
+        t = v.strip(_JS_WS)
+        if t == '':
+            return 0.0
+        if t in ('Infinity', '+Infinity'):
+            return math.inf
+        if t == '-Infinity':
+            return -math.inf
+        if _JS_DECIMAL_RE.fullmatch(t):
+            return float(t)
+        m = _JS_RADIX_RE.fullmatch(t)
+        if m:
+            base = {'x': 16, 'o': 8, 'b': 2}[m.group(1).lower()]
+            try:
+                return float(int(m.group(2), base))
+            except ValueError:
+                return math.nan
+            except OverflowError:
+                return math.inf
+        return math.nan
+    return math.nan
+
+
 def _js_invalid(v):
-    """stats.js isInvalidValue: null/undefined, a blank string, or NaN after coercion."""
+    """stats.js isInvalidValue (the house rule): null/undefined, a blank or whitespace-only
+    string, or NaN after JS Number() coercion. Booleans and +-Infinity are NOT invalid."""
     if v is None:
         return True
-    if isinstance(v, str):
-        if v.strip() == '':
-            return True
-        try:
-            return math.isnan(float(v))
-        except ValueError:
-            return True
-    try:
-        return math.isnan(float(v))
-    except (TypeError, ValueError):
+    if isinstance(v, str) and v.strip(_JS_WS) == '':
         return True
+    return math.isnan(_js_number(v))
 
 
 def _js_min(data):
@@ -7214,19 +9127,23 @@ def is_outside_fit_range(i, range_scopes_fit=False, line_min_day=None, line_max_
 
 # --- lineFit.js -------------------------------------------------------------------------
 
-def _line_residuals(xs, ys, slope, intercept):
+def _line_residuals(xs, ys, slope, intercept, period_hrs):
+    """lineFit.js residuals. R2 is in the TIME-OF-DAY frame: SS_tot is the spread of
+    z = y - period_hrs * x about its mean (on absolute time the 24 h-per-day ramp dominated
+    and random onsets scored R2 ~ 0.99, FIT-4); None when z does not vary. RMSE unchanged."""
     n = len(xs)
     if n == 0 or not math.isfinite(slope) or not math.isfinite(intercept):
         return None, None
-    ky = _KahanJS()
-    for v in ys:
-        ky.add(v)
-    mean_y = ky.value / n
+    kz = _KahanJS()
+    for i in range(n):
+        kz.add(ys[i] - period_hrs * xs[i])
+    mean_z = kz.value / n
     k_tot, k_res = _KahanJS(), _KahanJS()
     for i in range(n):
-        k_tot.add((ys[i] - mean_y) ** 2)
+        k_tot.add((ys[i] - period_hrs * xs[i] - mean_z) ** 2)
         k_res.add((ys[i] - (slope * xs[i] + intercept)) ** 2)
-    return 1 - _js_div(k_res.value, k_tot.value), math.sqrt(k_res.value / n)
+    r2 = 1 - k_res.value / k_tot.value if k_tot.value > 0 else None
+    return r2, math.sqrt(k_res.value / n)
 
 
 def fit_line(xs, ys, tau=None, theta=None, ref_day=1, period_hrs=24):
@@ -7269,7 +9186,7 @@ def fit_line(xs, ys, tau=None, theta=None, ref_day=1, period_hrs=24):
     else:
         slope = tau
         intercept = y0 - slope * x0
-    r2, rmse = _line_residuals(xs, ys, slope, intercept)
+    r2, rmse = _line_residuals(xs, ys, slope, intercept, period_hrs)
     return {'slope': slope, 'intercept': intercept, 'rSquared': r2, 'rmse': rmse, 'n': n}
 
 
@@ -7326,11 +9243,66 @@ def harmonic_check(x_data, y_data, bin_size, tau):
             results.append({**c, 'peakPeriod': c['period'], 'power': 0})
         else:
             results.append({**c, 'peakPeriod': c['period'], 'power': power[0]})
-    strongest = results[0]
-    for r in results[1:]:
-        if r['power'] > strongest['power']:
-            strongest = r
-    return {'candidates': results, 'strongest': strongest}
+    # Eligibility (harmonicCheck.js): tau always; tau/2 only when the half-cycle F test at
+    # L = tau finds NO significant odd harmonics (p >= 0.05); 2 tau only when the test at
+    # L = 2 tau DOES (p < 0.05). An uncomputable test leaves the candidate ineligible.
+    for c in results:
+        if c['label'] == 'τ':
+            c['eligible'] = True
+            continue
+        L = tau if c['label'] == 'τ/2' else 2 * tau
+        c['test'] = half_cycle_test(x_data, y_data, L, bin_)
+        pv = c['test']['pValue'] if c['test'] else None
+        c['eligible'] = (pv is not None and math.isfinite(pv)
+                         and (pv >= _HARMONIC_SWITCH_ALPHA if c['label'] == 'τ/2'
+                              else pv < _HARMONIC_SWITCH_ALPHA))
+
+    def pick(lst):
+        best = lst[0]
+        for r in lst[1:]:
+            if r['power'] > best['power']:
+                best = r
+        return best
+    elig = [c for c in results if c['eligible']]
+    strongest = pick(elig) if elig else {'label': 'τ', 'period': tau, 'peakPeriod': tau,
+                                         'power': float('nan'), 'eligible': True,
+                                         'inRecord': False}
+    return {'candidates': results, 'strongest': strongest, 'powerStrongest': pick(results)}
+
+
+_HARMONIC_SWITCH_ALPHA = 0.05
+
+
+def half_cycle_test(x_data, y_data, L, bin_size):
+    """harmonicCheck.js halfCycleTest: does a period-L rhythm carry ODD harmonics (a
+    difference between its two halves)? Full model fitCosinorFixed(L, 2H) against the
+    reduced fitCosinorFixed(L / 2, H), H = max(1, min(3, floor(L / (4 bin)))); F on
+    (2H, n - 1 - 4H) df with RSS = RMSE^2 (n - p). None when not computable."""
+    t, y = [], []
+    for i in range(min(len(x_data or []), len(y_data or []))):
+        if _js_invalid(x_data[i]) or _js_invalid(y_data[i]):
+            continue
+        t.append(_js_number(x_data[i]))
+        y.append(_js_number(y_data[i]))
+    H = max(1, min(3, int(math.floor(L / (4 * (bin_size or 0.25))))))
+    n = len(t)
+    df1, df2 = 2 * H, n - 1 - 4 * H
+    if not (df2 > 0):
+        return None
+    full = fit_cosinor_fixed(t, y, L, 2 * H)
+    red = fit_cosinor_fixed(t, y, L / 2, H)
+    if not full or not red:
+        return None
+    rss_f = full['RMSE'] ** 2 * df2
+    rss_r = red['RMSE'] ** 2 * (n - 1 - 2 * H)
+    if not (math.isfinite(rss_f) and math.isfinite(rss_r)):
+        return None
+    if rss_f > 0:
+        F = max(0.0, rss_r - rss_f) / df1 / (rss_f / df2)
+    else:
+        F = math.inf if rss_r > 0 else 0.0
+    p = 0.0 if F == math.inf else float(sp_stats.f.sf(F, df1, df2))
+    return {'period': L, 'harmonics': 2 * H, 'F': F, 'df1': df1, 'df2': df2, 'pValue': p}
 
 
 # --- Actogram.svelte: the row folding ---------------------------------------------------
@@ -7644,7 +9616,14 @@ def marker_block_compute(cfg, store, frame, period_hrs, n_days):
         'regression': reg,
         'phase': phase,
         'harmonic': None if hc is None else {
-            'candidates': hc['candidates'], 'strongest': hc['strongest']['label']},
+            'candidates': [{'label': c['label'], 'period': c['period'],
+                            'peakPeriod': c['peakPeriod'], 'power': c['power'],
+                            'eligible': c['eligible'],
+                            'testF': (c['test']['F'] if c.get('test') else None),
+                            'testP': (c['test']['pValue'] if c.get('test') else None)}
+                           for c in hc['candidates']],
+            'strongest': hc['strongest']['label'],
+            'powerStrongest': hc['powerStrongest']['label']},
         '_harmonicPick': None if hc is None else hc['strongest']['peakPeriod'],
     }
 

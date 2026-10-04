@@ -23,6 +23,7 @@ import {
 	LEGEND_MARGIN,
 	measureLabelWidths,
 	legendBoxSize,
+	legendChrome,
 	buildOccupancy,
 	chooseLegendPlacement
 } from './legendLayout.js';
@@ -31,17 +32,21 @@ import {
  * Outside placement for a Cartesian plot: to the right of the plot area (past the right
  * axis when there is one), top-aligned, taking its width from the plot area.
  *
+ * The gap is `box.margin`, the inset scaled to the view (LegendAutoLayout.box carries it), so
+ * a node's outside legend sits as close to its plot as the figure's does.
+ *
  * @param {() => {baseWidth: number, hasRightAxis?: boolean, paddingRight?: number}} get
  */
 export function rightOfPlot(get) {
 	return (box) => {
 		const { baseWidth, hasRightAxis = false, paddingRight = 0 } = get();
-		const reserveW = box.width + LEGEND_MARGIN + (hasRightAxis ? LEGEND_MARGIN : 0);
+		const m = box.margin ?? LEGEND_MARGIN;
+		const reserveW = box.width + m + (hasRightAxis ? m : 0);
 		const plotW = baseWidth - reserveW;
 		return {
 			reserveW,
 			reserveH: 0,
-			x: plotW + (hasRightAxis ? paddingRight : 0) + LEGEND_MARGIN,
+			x: plotW + (hasRightAxis ? paddingRight : 0) + m,
 			y: 0,
 			side: 'right'
 		};
@@ -58,7 +63,7 @@ export class LegendAutoLayout {
 	 * @param {object} opts
 	 * @param {(w: number, h: number) => Array<object>} opts.obstacles the plot's marks, in px
 	 *   over a w x h plot area, as buildOccupancy series
-	 * @param {((box: {width:number,height:number}, o: {explicit: boolean}) =>
+	 * @param {((box: {width:number,height:number,margin:number}, o: {explicit: boolean}) =>
 	 *   {reserveW:number, reserveH:number, x:number, y:number, side:string}) | null} [opts.outside]
 	 *   where an outside legend goes and what it costs; null when the plot cannot make room
 	 */
@@ -72,13 +77,30 @@ export class LegendAutoLayout {
 		return !!this.#outside;
 	}
 
-	/** Font size the legend is drawn at: a per-legend override, else the figure's. */
+	/** The view's style, resolved: carries the node view's fontScale (1 for the figure). */
+	resolved = $derived(resolveStyle(this.#host.viewStyle));
+
+	/**
+	 * Font size the legend is drawn at: a per-legend override, else the figure's, either way
+	 * scaled to the view (the figure's own size already is; the override is in figure px).
+	 * Must match Legend.svelte's `legendFontSize`.
+	 */
 	fontPx = $derived.by(() => {
 		const legend = this.#host.legend;
-		return legend?.fontSize ?? resolveStyle(this.#host.viewStyle).sizes.legend;
+		const override = legend?.fontSize;
+		return typeof override === 'number' && Number.isFinite(override)
+			? override * this.resolved.fontScale
+			: this.resolved.sizes.legend;
 	});
 
-	/** The legend box in px, or null when there is nothing to draw. */
+	/** The view's legend inset from the plot area's edges (LEGEND_MARGIN, scaled). */
+	margin = $derived(legendChrome(this.resolved.fontScale).margin);
+
+	/**
+	 * The legend box in px, or null when there is nothing to draw. Scaled to the view as a
+	 * whole (see legendLayout.legendChrome), and carrying the view's `margin` so an outside
+	 * placement callback can inset by the same amount.
+	 */
 	box = $derived.by(() => {
 		const legend = this.#host.legend;
 		const items = this.#host.getLegendItems ?? [];
@@ -86,15 +108,17 @@ export class LegendAutoLayout {
 		const labelWidths = measureLabelWidths(
 			items.map((it) => it.label),
 			this.fontPx,
-			resolveStyle(this.#host.viewStyle).fontFamily
+			this.resolved.fontFamily
 		);
-		return legendBoxSize({
+		const size = legendBoxSize({
 			labelWidths,
 			fontPx: this.fontPx,
 			padding: legend.padding,
 			itemSpacing: legend.itemSpacing,
-			orientation: legend.orientation
+			orientation: legend.orientation,
+			scale: this.resolved.fontScale
 		});
+		return { ...size, margin: this.margin };
 	});
 
 	/** Where the marks are, over the plot area before any reservation. */
@@ -115,7 +139,7 @@ export class LegendAutoLayout {
 			plotH: this.#host.basePlotHeight,
 			boxW: this.box.width,
 			boxH: this.box.height,
-			margin: LEGEND_MARGIN,
+			margin: this.margin,
 			allowOutside: !!this.#outside
 		});
 	});

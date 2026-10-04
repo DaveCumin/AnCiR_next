@@ -5,11 +5,11 @@
 	// filter-style condition list in OR-of-AND groups; each condition compares a
 	// wired series (or x) against a typed value or a wired scalar threshold.
 	// Persistence demands the rule hold continuously (in x units when x is wired,
-	// else a number of samples) before a crossing fires; after firing, the rule
+	// HOURS when x is a time column, else a number of samples) before a crossing
+	// fires; after firing, the rule
 	// must go FALSE again before the next crossing can fire (re-arming), so one
 	// long excursion is one crossing. Design: docs/plans/
 	// 2026-09-13-detection-node-and-scatterplot-lines.md.
-	import { core } from '$lib/core/core.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
@@ -24,7 +24,8 @@
 		// OR of AND-groups. Condition: { target: <yIN col id>|'x', isOperator,
 		// source: <thresholdIN col id>|-1 (typed), value: <typed number> }.
 		['groups', { val: [[{ target: -1, isOperator: '<', source: -1, value: 0 }]] }],
-		['persistence', { val: 0 }], // x units if xIN wired, else samples; 0 = single sample
+		// x units if xIN wired (hours for a time column), else samples; 0 = single sample
+		['persistence', { val: 0 }],
 		['out', { breach: { val: -1 }, crossing: { val: -1 }, count: { val: -1 } }],
 		['valid', { val: false }],
 		['forcollected', { val: true }],
@@ -86,6 +87,12 @@
 		const xCol = xWired ? getColumnById(argsIN.xIN) : null;
 		if (xWired && !xCol) return [empty(), false];
 		const xData = xCol ? (xCol.getData() ?? []) : null;
+		// Persistence is measured on this axis. A time column's raw data is epoch ms, so
+		// a persistence of 6 divided by a 3,600,000 ms spacing rounded to ONE sample and
+		// the setting was silently ignored (review finding FIT-3). Hours since the
+		// series start put it in hours, the unit the panel shows for a time x.
+		const xIsTime = xCol?.type === 'time';
+		const xAxis = xCol ? (xIsTime ? (xCol.hoursSinceStart ?? []) : xData) : null;
 
 		// Resolve every condition up front; collect the series it reads.
 		let n = xData ? xData.length : -1;
@@ -122,18 +129,29 @@
 		}
 		if (n <= 0) return [empty(), false];
 
-		// Persistence → required consecutive samples.
+		// Persistence → required consecutive samples. With x wired, consecutive rows
+		// further apart than GAP_FACTOR × the median spacing are a gap (rows missing
+		// from the file): a gap breaks a run exactly as a missing value does, so a run
+		// cannot be completed by samples on either side of hours of absent data.
 		let required = 1;
+		let dx = null;
 		const persistence = Number(argsIN.persistence) || 0;
+		if (xAxis) dx = medianSpacing(xAxis);
 		if (persistence > 0) {
-			if (xData) {
-				const dx = medianSpacing(xData);
+			if (xAxis) {
 				if (dx == null) return [empty(), false];
 				required = Math.max(1, Math.round(persistence / dx));
 			} else {
 				required = Math.max(1, Math.round(persistence));
 			}
 		}
+		const GAP_FACTOR = 1.5;
+		const gapBefore = (i) =>
+			dx != null &&
+			i > 0 &&
+			!isMissing(xAxis[i]) &&
+			!isMissing(xAxis[i - 1]) &&
+			Number(xAxis[i]) - Number(xAxis[i - 1]) > GAP_FACTOR * dx;
 
 		// Evaluate breach per sample: OR over groups of AND over conditions;
 		// null when anything referenced is missing at that sample.
@@ -172,6 +190,8 @@
 		let armed = true;
 		for (let i = 0; i < n; i++) {
 			const b = breach[i];
+			// A gap in x resets the run like a missing value (and, like one, does not re-arm).
+			if (gapBefore(i)) run = 0;
 			if (b === null) {
 				run = 0;
 			} else if (b === 1) {
@@ -188,7 +208,11 @@
 
 		const processHash = crypto.randomUUID();
 		writeOutputColumn(argsIN.out?.breach, breach, { processHash });
-		writeOutputColumn(argsIN.out?.crossing, crossings, { processHash });
+		// A time x's crossings are epoch ms: write them as a time column, not as numbers.
+		writeOutputColumn(argsIN.out?.crossing, crossings, {
+			processHash,
+			...(xIsTime ? { type: 'time', timeFormat: null } : {})
+		});
 		writeOutputColumn(argsIN.out?.count, [crossings.length], { processHash });
 
 		return [{ breach, crossings, count: crossings.length }, true];
@@ -297,15 +321,9 @@
 
 	onMount(() => {
 		if (!p.args.out) p.args.out = {};
-		const baked = ['breach', 'crossing', 'count'].every(
-			(k) => p.args.out[k] >= 0 && core.rawData.has(p.args.out[k])
-		);
-		if (baked) {
-			p.args.valid = true;
-			memo.hash = getHash;
-		} else {
-			recompute();
-		}
+		// Always compute from the inputs: saved outputs are never trusted as current (the
+		// file may predate a fix, or the inputs), and there is no panel state to fill first.
+		recompute();
 		mounted = true;
 	});
 </script>
@@ -386,7 +404,13 @@
 
 <div class="section-row">
 	<div class="tableProcess-label"><span>Persistence</span></div>
-	<ControlInput label={p.args.xIN >= 0 ? 'Sustained for (x units)' : 'Consecutive values'}>
+	<ControlInput
+		label={p.args.xIN >= 0
+			? getColumnById(p.args.xIN)?.type === 'time'
+				? 'Sustained for (hours)'
+				: 'Sustained for (x units)'
+			: 'Consecutive values'}
+	>
 		<NumberWithUnits bind:value={p.args.persistence} onInput={recompute} step="1" />
 	</ControlInput>
 </div>

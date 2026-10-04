@@ -7,6 +7,8 @@
 	import { colourForCategory, colourForCategoryLabel } from '$lib/plots/seriesColour.js';
 	import { greyForIndex } from '$lib/plots/seriesAppearance.js';
 	import { violinCurve, violinOutline } from '$lib/components/plotbits/helpers/violin.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { isMissingCategory } from '$lib/utils/chisquare.js';
 
 	let {
 		// The series' BoxClass — used ONLY for colour resolution (`colour` follows
@@ -45,9 +47,11 @@
 		const groups = new Map();
 		x.forEach((cat, i) => {
 			const val = y[i];
-			if (cat == null || val == null || isNaN(val)) return;
+			// The house rule, as Box.svelte: '' and ' ' are missing (isNaN('') is false), and a
+			// numeric string is a number for the density.
+			if (isMissingCategory(cat) || isInvalidValue(val)) return;
 			if (!groups.has(cat)) groups.set(cat, []);
-			groups.get(cat).push(val);
+			groups.get(cat).push(Number(val));
 		});
 
 		return Array.from(groups.entries())

@@ -60,7 +60,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 		>
 			{#if showCloseButton}
 				<div class="modalCloseBtn" style="position:fixed; left:{closeBtnLeft - 50}px;">
-					<button onclick={() => close()}>
+					<button aria-label="Close" onclick={() => close()}>
 						<Icon name="close" width={16} height={16} className="close" />
 					</button>
 				</div>

@@ -126,7 +126,10 @@ def run_table_process(fx, js):
     fn = getattr(rt, f"tp_{fx['pyFunc']}", None)
     if fn is None:
         raise AssertionError(f"no Python tp_{fx['pyFunc']} in ancir_runtime")
-    valid = fn(args, cols, raw_data, {})
+    # `storedValues` ({key: value}) arrive in the saved-session entry shape, as the app saves
+    # them, so the port's own unwrapping is exercised too.
+    stored = {k: {"staticValue": v} for k, v in (fx.get("storedValues") or {}).items()}
+    valid = fn(args, cols, raw_data, stored)
     if "valid" in js:
         # A `recordValid` fixture pins the node's validity itself (a refusal, typically).
         assert bool(valid) == js["valid"], \
@@ -141,7 +144,8 @@ def run_table_process(fx, js):
         oid = dyn_id if raw_data.get(dyn_id) else static_id
         outputs[k] = cols[oid].get_data() if raw_data.get(oid) is not None else None
         # A refused node writes nothing; the JS output column then reads back empty.
-        if outputs[k] is None and js.get("valid") is False:
+        # So does a valid node that wrote nothing for this key (e.g. a non-binary outcome).
+        if outputs[k] is None and (js.get("valid") is False or js["outputs"].get(k) == []):
             outputs[k] = []
     return outputs
 
@@ -309,7 +313,10 @@ def run_table_process_result(fx, js):
     raw_data, cols, id_map, _ = _build_cols(js)
     args = resolve_tokens(fx["args"], id_map)
     result, valid = rt.compute_group_comparison(args, cols)
-    assert valid, f"{fx['id']}: compute_group_comparison returned invalid"
+    # `allowInvalid` fixtures pin a refusal (a non-computable statistic); they compare the
+    # comparison's own `valid` field instead.
+    if not fx.get("allowInvalid"):
+        assert valid, f"{fx['id']}: compute_group_comparison returned invalid"
     comps = result["comparisons"]
     key = next((k for k in comps if k != "multiY"), next(iter(comps)))
     comp = comps[key]
@@ -395,6 +402,11 @@ def _check_fixture(fx, js_results):
 
     else:  # tableProcess (column outputs)
         py = run_table_process(fx, js)
+        # A hostile-payload fixture names the file its payload would create if the port
+        # executed it (SEC-2). Its absence after the run is the proof that nothing ran.
+        if fx.get("mustNotCreate"):
+            assert not Path(fx["mustNotCreate"]).exists(), \
+                f"{fx['id']}: the payload RAN (it created {fx['mustNotCreate']})"
         for key in fx.get("compareOutputs", list(js["outputs"].keys())):
             ok, why = arrays_match(py.get(key), js["outputs"].get(key), tol)
             assert ok, f"{fx['id']} output '{key}' differs: {why}"

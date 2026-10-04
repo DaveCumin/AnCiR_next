@@ -28,7 +28,9 @@
 	} from '$lib/plots/figureStyle.js';
 
 	let {
-		style,
+		// Bindable: the controls edit the style object in place, so the owner must hand it over
+		// with bind:style (Svelte warns about mutating an unbound prop otherwise).
+		style = $bindable(),
 		/** Show the "Apply to all plots" button (Settings only). */
 		showApplyToAll = false,
 		/** Called when that button is pressed. */
@@ -229,18 +231,18 @@
 	</div>
 
 	<div class="control-input-vertical">
-		<div class="control-input-checkbox">
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={style.legendBox} />
-			<p>Box around legend</p>
-		</div>
-		<div class="control-input-checkbox">
+			<span class="ci-label">Box around legend</span>
+		</label>
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={style.varyMarkers} onchange={() => onFigureChange?.()} />
-			<p>Vary marker shape per series</p>
-		</div>
-		<div class="control-input-checkbox">
+			<span class="ci-label">Vary marker shape per series</span>
+		</label>
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={style.monochrome} onchange={() => onFigureChange?.()} />
-			<p>Monochrome (print-safe)</p>
-		</div>
+			<span class="ci-label">Monochrome (print-safe)</span>
+		</label>
 	</div>
 
 	{#if style.monochrome && !style.varyMarkers}

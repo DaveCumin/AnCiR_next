@@ -1,6 +1,15 @@
 <script>
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, drawAxes, drawHGrid, seededRNG, initPalette } from '$lib/animUtils.js';
+	import {
+		C,
+		setupCanvas,
+		drawAxes,
+		drawHGrid,
+		seededRNG,
+		initPalette,
+		canvasSize,
+		observeResize
+	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
 
@@ -45,8 +54,7 @@
 
 	function drawSig() {
 		const ctx = cSig.getContext('2d');
-		const W = cSig.offsetWidth,
-			H = cSig.offsetHeight;
+		const { W, H } = canvasSize(cSig);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 38,
@@ -81,8 +89,7 @@
 
 	function drawLag(lag) {
 		const ctx = cLag.getContext('2d');
-		const W = cLag.offsetWidth,
-			H = cLag.offsetHeight;
+		const { W, H } = canvasSize(cLag);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 38,
@@ -121,8 +128,7 @@
 
 	function drawAcf(upTo) {
 		const ctx = cAcf.getContext('2d');
-		const W = cAcf.offsetWidth,
-			H = cAcf.offsetHeight;
+		const { W, H } = canvasSize(cAcf);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 44,
@@ -254,9 +260,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cSig, cLag, cAcf], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});

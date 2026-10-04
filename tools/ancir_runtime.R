@@ -560,28 +560,68 @@ tp_trendfit <- function(args, env) {
   any_valid
 }
 
+# Port of SmoothedData.svelte smootheddata, matching the Python port: per y, rows kept by the
+# house rule on x and y, converted with Number(), fewer than 3 skipped, stably sorted by x.
+# The x output is the FIRST valid y's sorted x (a time input written back as epoch ms from
+# the first time). Residual outputs resid_<yId> are raw - smoothed.
 tp_smootheddata <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
   if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
-  smoother <- if (!is.null(args$smootherType)) args$smootherType
-              else if (!is.null(args$smoother)) args$smoother else "whittaker"
   x_col <- env$cols[[as.character(x_in)]]
-  x_data <- t_for_col(x_col, env$cols, env$raw_data)
-  sx <- NULL; any_valid <- FALSE
+  is_time <- identical(x_col$type, "time")
+  x_data <- if (is_time) col_hours(x_col, env$cols, env$raw_data)
+            else col_data(x_col, env$cols, env$raw_data)
+  origin_ms <- if (is_time) {
+    d <- unlist(col_data(x_col, env$cols, env$raw_data), use.names = FALSE)
+    if (length(d)) d[1] else NA_real_
+  } else NA_real_
+  x_out <- NULL; y_res <- list(); raw_by <- list(); any_valid <- FALSE
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
-    r <- smooth_arrays(x_data, col_data(env$cols[[yk]], env$cols, env$raw_data), smoother, args)
-    if (is.null(sx)) {
-      sx <- r$x
-      set_col(env, env$cols, out_id(args, "smoothedx"), r$x,
-              type = x_col$type, time_format = x_col$time_format)
-    }
-    y_out <- out_id(args, paste0("smoothedy_", y_id))
-    if (y_out == -1) y_out <- out_id(args, "smoothedy")
-    set_col(env, env$cols, y_out, r$y, type = "number")
+    y_data <- col_data(env$cols[[yk]], env$cols, env$raw_data)
+    xl <- as.list(x_data); yl <- as.list(y_data)
+    n <- min(length(xl), length(yl))
+    keep <- which(vapply(seq_len(n), function(i)
+      !.js_invalid(xl[[i]]) && !.js_invalid(yl[[i]]), logical(1)))
+    if (length(keep) < 3) next
+    xs <- vapply(xl[keep], .js_number, numeric(1))
+    ys <- vapply(yl[keep], .js_number, numeric(1))
+    o <- order(xs, method = "radix")
+    xs <- xs[o]; ys <- ys[o]
+    sy <- tryCatch(smooth_arrays(xs, ys, args$smootherType, args)$y, error = function(e) NULL)
+    if (is.null(sy)) next
+    if (is.null(x_out)) x_out <- xs
+    y_res[[yk]] <- sy; raw_by[[yk]] <- ys
     any_valid <- TRUE
+  }
+  for (pp in args$preProcesses) {
+    nm <- pp$processName
+    if (is.null(nm)) next
+    for (yk in names(y_res)) {
+      y_res[[yk]] <- run_column_process(tolower(gsub(" ", "", nm)), y_res[[yk]],
+                                        if (is.null(pp$processArgs)) list() else pp$processArgs,
+                                        env$cols, env$raw_data)
+    }
+  }
+  xo <- out_id(args, "smoothedx")
+  if (any_valid && xo != -1) {
+    if (is_time && is.finite(origin_ms)) {
+      set_col(env, env$cols, xo, origin_ms + x_out * 3600000, type = "time")
+    } else {
+      set_col(env, env$cols, xo, x_out, type = "number")
+    }
+    for (yk in names(y_res)) {
+      set_col(env, env$cols, out_id(args, paste0("smoothedy_", yk)), y_res[[yk]],
+              type = "number")
+      rid <- out_id(args, paste0("resid_", yk))
+      if (rid != -1) {
+        p <- y_res[[yk]]
+        r <- ifelse(is.finite(p), raw_by[[yk]] - p, NaN)
+        set_col(env, env$cols, rid, r, type = "number")
+      }
+    }
   }
   any_valid
 }
@@ -650,53 +690,81 @@ tp_normalitytest <- function(args, env) {
 # dispatcher, so without these the R runtime refuses most real sessions regardless of how
 # many analyses it implements.
 
+# Add.svelte / Multiply.svelte: missing in (house rule) -> NA out; numeric text is its value.
+# value = Number(args.value), so an absent value is NaN, as in the JS.
 cp_add <- function(x, args, cols, raw_data) {
-  v <- as.numeric(if (is.null(args$value)) 0 else args$value)
-  vapply(x, function(xi) {
-    n <- suppressWarnings(as.numeric(xi))
-    if (length(n) != 1 || is.na(n)) NA_real_ else n + v
-  }, numeric(1), USE.NAMES = FALSE)
+  v <- if (is.null(args$value)) NaN else .js_number(args$value)
+  vapply(as.list(x), function(xi) if (.js_invalid(xi)) NA_real_ else .js_number(xi) + v,
+         numeric(1), USE.NAMES = FALSE)
 }
 
 cp_multiply <- function(x, args, cols, raw_data) {
-  v <- as.numeric(if (is.null(args$value)) 1 else args$value)
-  vapply(x, function(xi) {
-    n <- suppressWarnings(as.numeric(xi))
-    if (length(n) != 1 || is.na(n)) NA_real_ else n * v
-  }, numeric(1), USE.NAMES = FALSE)
+  v <- if (is.null(args$value)) NaN else .js_number(args$value)
+  vapply(as.list(x), function(xi) if (.js_invalid(xi)) NA_real_ else .js_number(xi) * v,
+         numeric(1), USE.NAMES = FALSE)
 }
 
 # "Substitute", not "subtract" — the JS registry key `Sub` is find-and-replace. Guessing
 # subtraction here would silently corrupt every column that used it.
+# Sub.svelte asNumber / subMatches (matching the Python port): a missing cell (NULL or NA)
+# matches only a missing find; numeric compare when both sides are numbers or non-blank
+# numeric strings; otherwise String() equality (TRUE does not match 1, "" does not match 0).
+.sub_as_number <- function(v) {
+  if (is.logical(v)) return(NULL)
+  if (is.numeric(v)) return(as.numeric(v))
+  if (is.character(v) && nzchar(.js_trim(v)) && !is.nan(.js_number(v))) return(.js_number(v))
+  NULL
+}
+sub_matches <- function(v, find) {
+  miss <- function(z) is.null(z) || length(z) != 1 || (is.atomic(z) && is.na(z) && !is.nan(z))
+  if (miss(find)) return(miss(v))
+  if (miss(v)) return(FALSE)
+  a <- .sub_as_number(v); b <- .sub_as_number(find)
+  if (!is.null(a) && !is.null(b)) return(isTRUE(a == b))
+  str <- function(z) if (is.logical(z)) (if (z) "true" else "false") else js_string(z)
+  identical(str(v), str(find))
+}
 cp_substitute <- function(x, args, cols, raw_data) {
   find <- args$find; replace <- args$replace
-  lapply(x, function(xi) if (identical(xi, find)) replace else xi)
+  out <- lapply(as.list(x), function(xi) if (sub_matches(xi, find)) replace else xi)
+  if (all(vapply(out, function(v) is.null(v) || (length(v) == 1 && (is.numeric(v) ||
+      (is.logical(v) && is.na(v)))), logical(1))))
+    vapply(out, function(v) if (is.null(v)) NA_real_ else as.numeric(v), numeric(1))
+  else out
 }
 
+# normalize.svelte (matching the Python port): present values by the house rule; missing
+# cells stay missing, also in the degenerate cases (zero SD/range/MAD/magnitude: every present
+# value 0, or customMin for min-max). Type from normalizationType (default z-score).
 cp_normalize <- function(x, args, cols, raw_data) {
-  method <- if (is.null(args$method)) "z-score" else args$method
-  arr <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
-  ok <- is.finite(arr)
+  typ <- if (!is.null(args$normalizationType) && nzchar(args$normalizationType))
+    args$normalizationType else if (!is.null(args$method)) args$method else "z-score"
+  num_or <- function(v, d) if (is.null(v) || identical(v, 0) || identical(v, "") ||
+                                isFALSE(v)) d else .js_number(v)
+  cmin <- num_or(args$customMin, 0); cmax <- num_or(args$customMax, 1)
+  xl <- as.list(x)
+  ok <- !vapply(xl, .js_invalid, logical(1))
+  arr <- vapply(xl, function(v) if (.js_invalid(v)) NA_real_ else .js_number(v), numeric(1))
   if (!any(ok)) return(arr)
   sub <- arr[ok]
-  out_sub <- switch(method,
+  med <- function(a) { a <- sort(a); n <- length(a)
+    if (n %% 2 == 0) (a[n / 2] + a[n / 2 + 1]) / 2 else a[(n + 1) / 2] }
+  out_sub <- switch(typ,
     "z-score" = {
-      # numpy std(ddof = 0) is the POPULATION sd; R's sd() is the sample one.
-      s <- sqrt(sum((sub - mean(sub))^2) / length(sub))
-      (sub - mean(sub)) / (if (s > 0) s else 1)
+      m <- mean(sub); s <- sqrt(sum((sub - m)^2) / length(sub))
+      if (s == 0) rep(0, length(sub)) else (sub - m) / s
     },
     "min-max" = {
-      lo <- min(sub); hi <- max(sub)
-      (sub - lo) / (if (hi > lo) hi - lo else 1)
+      lo <- min(sub); rng <- max(sub) - lo
+      if (rng == 0) rep(cmin, length(sub)) else ((sub - lo) / rng) * (cmax - cmin) + cmin
     },
     "robust" = {
-      med <- median(sub)
-      mad <- median(abs(sub - med))
-      (sub - med) / (if (mad != 0) mad else 1)
+      md <- med(sub); mad <- med(abs(sub - md))
+      if (mad == 0) rep(0, length(sub)) else (sub - md) / mad
     },
     "unit-vector" = {
       nrm <- sqrt(sum(sub * sub))
-      sub / (if (nrm != 0) nrm else 1)
+      if (nrm == 0) rep(0, length(sub)) else sub / nrm
     },
     sub)
   arr[ok] <- out_sub
@@ -707,8 +775,14 @@ cp_removetrend <- function(x, args, cols, raw_data) {
   x_col_id <- if (is.null(args$xColId)) -1 else args$xColId
   x_col <- if (x_col_id != -1) cols[[as.character(x_col_id)]] else NULL
   t <- if (!is.null(x_col)) t_for_col(x_col, cols, raw_data) else seq_along(x) - 1
-  y <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
-  ok <- is.finite(t) & is.finite(y)
+  xl <- as.list(x); tl <- as.list(t)
+  n <- min(length(xl), length(tl))
+  # The house rule on BOTH sides (validPairs), then Number().
+  ok <- vapply(seq_along(xl), function(i)
+    i <= n && !.js_invalid(tl[[i]]) && !.js_invalid(xl[[i]]), logical(1))
+  y <- vapply(xl, function(v) if (.js_invalid(v)) NA_real_ else .js_number(v), numeric(1))
+  t <- vapply(seq_along(xl), function(i)
+    if (i <= n && !.js_invalid(tl[[i]])) .js_number(tl[[i]]) else NA_real_, numeric(1))
   if (sum(ok) < 2) return(y)
   model <- if (is.null(args$model)) "linear" else args$model
   deg <- as.integer(if (is.null(args$polyDegree)) 2 else args$polyDegree)
@@ -723,8 +797,23 @@ cp_removetrend <- function(x, args, cols, raw_data) {
   if (refused) return(y)
   fit <- fit_trend(tt, yy, model, deg)
   if (is.null(fit)) return(y)
+  det <- yy - fit$fitted
+  ws <- args$windowSize
+  if (isTRUE(args$slidingWindow) && is.numeric(ws) && length(ws) == 1 && is.finite(ws) &&
+      ws > 1) {
+    # RemoveTrend.svelte slidingStandardisation: one-pass sqrt(E[x^2] - mean^2), and a zero
+    # or NaN spread becomes 1.
+    half <- floor(ws / 2); nd <- length(det)
+    det <- vapply(seq_len(nd), function(i) {
+      w <- det[max(1, i - half):min(nd, i + half)]
+      m <- mean(w)
+      v <- sum(w * w) / length(w) - m * m
+      sd <- if (is.finite(v) && v > 0) sqrt(v) else 0
+      (det[i] - m) / (if (sd == 0) 1 else sd)
+    }, numeric(1))
+  }
   out <- y
-  out[ok] <- y[ok] - fit$fitted
+  out[ok] <- det
   out
 }
 
@@ -979,7 +1068,9 @@ fit_cosinor_fixed <- function(t, y, period = 24, n_harmonics = 1, alpha = 0.05) 
   }
   df1 <- p - 1
   f_stat <- if (rss > 0) ((ss_tot - rss) / df1) / (rss / df_resid) else Inf
-  pf_val <- if (is.finite(f_stat)) pf(f_stat, df1, df_resid, lower.tail = FALSE) else 0
+  # Upper tail at max(0, F): a rounding-negative F gives p = 1 (cosinor.js pUpperFromF).
+  pf_val <- if (is.finite(f_stat)) pf(max(0, f_stat), df1, df_resid, lower.tail = FALSE)
+            else if (identical(f_stat, Inf)) 0 else NA_real_
   list(M = M, SE_M = se_m, CI_M = c(M - tcrit * se_m, M + tcrit * se_m),
        harmonics = harmonics, F_stat = f_stat, df = c(df1, df_resid), pF = pf_val,
        R2 = r2, RMSE = rmse, fitted = fitted, n = n,
@@ -1154,7 +1245,8 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
   # day-unit axis) makes (tf - t0) / e land at 11.999999... for an exact bin edge.
   k <- pmin(pmax(floor((tf - t0) / e + 1e-9), 0), n_epochs - 1) + 1
   for (i in seq_along(tf)) {
-    if (!is.finite(yf[i])) next
+    # Only a MISSING value is skipped; +-Inf is a value to the JS (isInvalidValue keeps it).
+    if (is.na(yf[i])) next
     ssum[k[i]] <- ssum[k[i]] + yf[i]
     cnt[k[i]] <- cnt[k[i]] + 1
   }
@@ -1366,19 +1458,46 @@ tp_sort <- function(args, env) {
   any_written
 }
 
+# Port of CollectColumns.svelte (matching the Python port): each input (after the node's
+# preProcesses) to its col_<id> output, then each row-wise aggregate (mean/min/max/sum over
+# the included columns) to its outColId; house rule per cell, an all-missing row is NA.
 tp_collectcolumns <- function(args, env) {
   ids <- if (!is.null(args$colIds)) unlist(args$colIds, use.names = FALSE) else id_list(args$yIN)
-  any_valid <- FALSE
+  if (!length(ids)) return(FALSE)
+  if (any(vapply(ids, function(i) is.null(env$cols[[as.character(i)]]), logical(1))))
+    return(FALSE)
+  res <- lapply(ids, function(i) col_data(env$cols[[as.character(i)]], env$cols, env$raw_data))
+  names(res) <- as.character(ids)
+  for (pp in args$preProcesses) {
+    nm <- pp$processName
+    if (is.null(nm)) next
+    for (k in names(res)) res[[k]] <- run_column_process(tolower(gsub(" ", "", nm)), res[[k]],
+      if (is.null(pp$processArgs)) list() else pp$processArgs, env$cols, env$raw_data)
+  }
   for (cid in ids) {
     ck <- as.character(cid)
-    if (is.null(env$cols[[ck]])) next
     oid <- out_id(args, paste0("col_", cid))
     if (oid == -1) next
-    set_col(env, env$cols, oid, col_data(env$cols[[ck]], env$cols, env$raw_data),
-            type = env$cols[[ck]]$type)
-    any_valid <- TRUE
+    set_col(env, env$cols, oid, res[[ck]], type = env$cols[[ck]]$type)
   }
-  any_valid
+  for (agg in args$aggregates) {
+    oc <- agg$outColId
+    if (is.null(oc) || .js_number(oc) < 0) next
+    exc <- unlist(agg$excludedColIds)
+    inc <- as.character(ids[!(ids %in% exc)])
+    if (!length(inc)) next
+    nr <- length(res[[inc[1]]])
+    vals <- vapply(seq_len(nr), function(i) {
+      row <- lapply(inc, function(k) { d <- as.list(res[[k]]); if (i <= length(d)) d[[i]] else NULL })
+      row <- vapply(Filter(function(v) !.js_invalid(v), row), .js_number, numeric(1))
+      if (!length(row)) return(NA_real_)
+      switch(if (is.null(agg$method)) "" else agg$method,
+             mean = sum(row) / length(row), min = min(row), max = max(row), sum = sum(row),
+             NA_real_)
+    }, numeric(1))
+    set_col(env, env$cols, oc, vals, type = "number")
+  }
+  TRUE
 }
 
 tp_split <- function(args, env) {
@@ -1564,16 +1683,80 @@ correlation_ci <- function(values, method = "pearson", confidence = 0.95) {
   list(ciLow = tanh(z - zc * se), ciHigh = tanh(z + zc * se))
 }
 
-cross_correlation <- function(x, y, max_lag = 0, method = "pearson") {
-  xa <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
-  ya <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+# crossCorrelation.js `finite`: not null, not "", and Number(v) finite. Looser than the house
+# rule: a whitespace-only cell is Number(" ") = 0, a value.
+.cc_finite <- function(v) {
+  if (is.null(v) || length(v) != 1 || (is.atomic(v) && is.na(v) && !is.nan(v))) return(FALSE)
+  if (is.character(v) && v == "") return(FALSE)
+  is.finite(.js_number(v))
+}
+
+# crossCorrelation.js fitAR: Yule-Walker with the order chosen by AIC (Levinson-Durbin),
+# exactly R's ar(x, method = "yule-walker") defaults (autocovariances / n present values,
+# order.max = min(n - 1, floor(10 log10 n), length - 2)). Missing values are skipped in each
+# lag's sum.
+fit_ar <- function(x, max_order = Inf) {
+  xl <- as.list(x)
+  ok <- vapply(xl, .cc_finite, logical(1))
+  vals <- vapply(xl[ok], .js_number, numeric(1))
+  n_obs <- length(vals)
+  none <- list(order = 0, coef = numeric(0), mean = NaN, variance = NaN)
+  if (n_obs < 3) return(none)
+  mu <- sum(vals) / n_obs
+  n <- length(xl)
+  dev <- rep(NaN, n)
+  dev[ok] <- vals - mu
+  m_max <- max(0, min(max_order, n_obs - 1, floor(10 * log10(n_obs)), n - 2))
+  acov <- vapply(0:m_max, function(k) {
+    if (k >= n) return(0)
+    a <- dev[(k + 1):n]; b <- dev[1:(n - k)]
+    use <- !is.na(a) & !is.na(b)
+    sum(a[use] * b[use]) / n_obs
+  }, numeric(1))
+  if (!(acov[1] > 0)) return(list(order = 0, coef = numeric(0), mean = mu, variance = 0))
+  phi <- numeric(0); v <- acov[1]
+  best <- list(order = 0, coef = numeric(0), variance = v, aic = n_obs * log(v))
+  if (m_max >= 1) for (m in 1:m_max) {
+    num <- acov[m + 1]
+    if (m > 1) for (j in 1:(m - 1)) num <- num - phi[j] * acov[m - j + 1]
+    kappa <- num / v
+    if (!is.finite(kappa) || abs(kappa) >= 1) break
+    nxt <- numeric(m)
+    if (m > 1) for (j in 1:(m - 1)) nxt[j] <- phi[j] - kappa * phi[m - j]
+    nxt[m] <- kappa
+    phi <- nxt
+    v <- v * (1 - kappa * kappa)
+    if (!(v > 0)) break
+    aic <- n_obs * log(v) + 2 * m
+    if (aic < best$aic) best <- list(order = m, coef = phi, variance = v, aic = aic)
+  }
+  list(order = best$order, coef = best$coef, mean = mu, variance = best$variance)
+}
+
+# crossCorrelation.js arFilter: e[t] = (z[t] - mean) - sum_i coef[i] (z[t-1-i] - mean); the
+# first `order` values and any with a missing value in their history are NaN.
+ar_filter <- function(z, ar, mu) {
+  zl <- as.list(z); n <- length(zl); p <- length(ar$coef)
+  out <- rep(NaN, n)
+  if (n > p) for (t in (p + 1):n) {
+    if (!.cc_finite(zl[[t]])) next
+    e <- .js_number(zl[[t]]) - mu
+    ok <- TRUE
+    if (p > 0) for (i in 1:p) {
+      prev <- zl[[t - i]]
+      if (!.cc_finite(prev)) { ok <- FALSE; break }
+      e <- e - ar$coef[i] * (.js_number(prev) - mu)
+    }
+    if (ok) out[t] <- e
+  }
+  out
+}
+
+.ccf_at_lags <- function(xa, ya, max_lag, method) {
   nx <- length(xa); ny <- length(ya)
-  if (is.null(max_lag) || max_lag <= 0) max_lag <- max(1, min(nx, ny) %/% 4)
-  max_lag <- min(as.integer(max_lag), min(nx, ny) - 1)
   lags <- c(); rs <- c(); ps <- c(); ns <- c()
   for (k in (-max_lag):max_lag) {
-    # Index arithmetic is kept 0-based as in the Python and shifted by 1 only at the
-    # subscript, so the overlap window is identical rather than merely similar.
+    # Index arithmetic kept 0-based as in the JS and shifted by 1 only at the subscript.
     i0 <- max(0, -k); i1 <- min(nx - 1, ny - 1 - k)
     if (i1 < i0) {
       lags <- c(lags, k); rs <- c(rs, NA_real_); ps <- c(ps, NA_real_); ns <- c(ns, 0); next
@@ -1582,8 +1765,60 @@ cross_correlation <- function(x, y, max_lag = 0, method = "pearson") {
     c1 <- correlate(xa[idx + 1], ya[idx + k + 1], method)
     lags <- c(lags, k); rs <- c(rs, c1$r); ps <- c(ps, c1$pvalue); ns <- c(ns, c1$n)
   }
-  peak <- cross_correlation_peak(lags, rs)
-  list(lags = lags, r = rs, pvalue = ps, n = ns, peakLag = peak$lag, peakR = peak$r)
+  list(lags = lags, r = rs, pvalue = ps, n = ns)
+}
+
+# Port of utils/crossCorrelation.js crossCorrelation (see the Python port): raw r(k) =
+# corr(x[t], y[t + k]); per-lag p of the PREWHITENED pair; minP, minPLag and the Sidak
+# familywiseP over the lags with a finite p.
+cross_correlation <- function(x, y, max_lag = 0, method = "pearson") {
+  method <- if (identical(method, "spearman")) "spearman" else "pearson"
+  num <- function(v) vapply(as.list(v), function(e) if (.js_invalid(e)) NA_real_
+                            else .js_number(e), numeric(1))
+  xa <- num(x); ya <- num(y)
+  nx <- length(xa); ny <- length(ya)
+  cap <- max(1, min(nx, ny) %/% 4)
+  max_lag <- if (!is.null(max_lag) && is.finite(max_lag) && max_lag > 0)
+    min(floor(max_lag), min(nx, ny) - 1) else cap
+  raw <- .ccf_at_lags(xa, ya, max_lag, method)
+  ar <- fit_ar(x)
+  pw <- raw
+  if (ar$order > 0) {
+    yl <- as.list(y); okv <- vapply(yl, .cc_finite, logical(1))
+    ym <- if (any(okv)) mean(vapply(yl[okv], .js_number, numeric(1))) else NaN
+    fx <- ar_filter(x, ar, ar$mean); fy <- ar_filter(y, ar, ym)
+    pw <- .ccf_at_lags(ifelse(is.nan(fx), NA_real_, fx), ifelse(is.nan(fy), NA_real_, fy),
+                       max_lag, method)
+  }
+  min_p <- Inf; min_lag <- NA_real_; min_i <- 0; n_lags <- 0
+  for (i in seq_along(pw$pvalue)) {
+    pv <- pw$pvalue[i]
+    if (is.na(pv) || !is.finite(pv)) next
+    n_lags <- n_lags + 1
+    tie <- FALSE
+    if (pv == min_p) {
+      ri <- pw$r[i]; rm <- pw$r[min_i]
+      tie <- abs(ri) > abs(rm) + CC_TIE ||
+        .cc_beats_on_tie(pw$lags[i], ri, pw$lags[min_i], rm)
+    }
+    if (pv < min_p || tie) { min_p <- pv; min_lag <- pw$lags[i]; min_i <- i }
+  }
+  if (!n_lags) min_p <- NaN
+  fw <- if (n_lags) -expm1(n_lags * log1p(-min(min_p, 1))) else NaN
+  peak <- cross_correlation_peak(raw$lags, raw$r)
+  pw_peak <- cross_correlation_peak(pw$lags, pw$r)
+  list(lags = raw$lags, r = raw$r, pvalue = pw$pvalue, n = raw$n,
+       peakLag = peak$lag, peakR = peak$r, pwR = pw$r, pwPeakLag = pw_peak$lag,
+       pwPeakR = pw_peak$r, arOrder = ar$order, minP = min_p, minPLag = min_lag,
+       familywiseP = fw, nLags = n_lags)
+}
+
+# findPeak's rules 2-4 (crossCorrelation.js beatsOnTie): only on a tie in |r|.
+.cc_beats_on_tie <- function(lag, r, best_lag, best_r) {
+  if (!(abs(abs(r) - abs(best_r)) <= CC_TIE)) return(FALSE)
+  if ((r >= 0) != (best_r >= 0)) return(r >= 0)
+  if (abs(lag) != abs(best_lag)) return(abs(lag) < abs(best_lag))
+  lag < best_lag
 }
 
 # Two lags whose |r| differ by less than this are a TIE, not a ranking.
@@ -1657,18 +1892,29 @@ chi_square_independence_effects <- function(table, correction = TRUE) {
 # Logistic regression via base R's glm(family = binomial): a genuine third implementation
 # rather than a re-derivation of the JS IRLS, the same reasoning as using shapiro.test.
 logistic_regression <- function(y, predictor_cols, names = NULL) {
-  yv <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
-  preds <- lapply(predictor_cols,
-                  function(cc) suppressWarnings(as.numeric(unlist(cc, use.names = FALSE))))
-  n <- min(c(length(yv), vapply(preds, length, integer(1))))
-  if (n < 2) return(NULL)
-  yv <- yv[seq_len(n)]
-  preds <- lapply(preds, function(v) v[seq_len(n)])
-  df <- as.data.frame(preds)
-  colnames(df) <- paste0("v", seq_along(preds))
-  df$.y <- yv
-  df <- df[stats::complete.cases(df), , drop = FALSE]
-  if (!nrow(df) || length(unique(df$.y)) < 2) return(NULL)
+  # Complete rows only, by the house rule BEFORE Number() (logistic.js): a missing outcome or
+  # predictor drops the row, an outcome other than 0/1 drops it, and a predictor must be
+  # finite. `kept` records each kept row's index so the per-observation outputs scatter
+  # back to the full input length (NaN for dropped rows), as the JS does.
+  yl <- as.list(y)
+  pl <- lapply(predictor_cols, as.list)
+  total <- length(yl)
+  cell <- function(v) if (.js_invalid(v)) NaN else .js_number(v)
+  rows <- list(); ys <- numeric(0); kept <- integer(0)
+  for (i in seq_len(total)) {
+    if (.js_invalid(yl[[i]])) next
+    yi <- .js_number(yl[[i]])
+    if (!(yi == 0 || yi == 1)) next
+    xr <- vapply(pl, function(cc) if (i <= length(cc)) cell(cc[[i]]) else NaN, numeric(1))
+    if (!all(is.finite(xr))) next
+    rows[[length(rows) + 1]] <- xr; ys <- c(ys, yi); kept <- c(kept, i)
+  }
+  if (length(rows) < 2) return(NULL)
+  df <- as.data.frame(do.call(rbind, rows))
+  colnames(df) <- paste0("v", seq_along(predictor_cols))
+  df$.y <- ys
+  if (length(unique(df$.y)) < 2) return(NULL)
+  preds <- predictor_cols
   # epsilon = 1e-12, not glm's default 1e-8. The default stops one IRLS iteration early:
   # the coefficients are already converged by then, but the standard errors (built from the
   # final iteration's weights) are still off in the 5th significant figure, which shows up as
@@ -1679,6 +1925,7 @@ logistic_regression <- function(y, predictor_cols, names = NULL) {
     error = function(e) NULL)
   if (is.null(fit)) return(NULL)
   sm <- summary(fit)$coefficients
+  scatter <- function(v) { out <- rep(NaN, total); out[kept] <- v; out }
   labels <- c("(intercept)",
               if (is.null(names)) paste0("x", seq_along(preds))
               else unlist(names, use.names = FALSE))
@@ -1686,33 +1933,9 @@ logistic_regression <- function(y, predictor_cols, names = NULL) {
   list(term = labels, coef = coefs, se = unname(sm[, 2]), z = unname(sm[, 3]),
        pvalue = unname(sm[, 4]), oddsRatio = exp(coefs), n = nrow(df),
        logLik = as.numeric(logLik(fit)),
-       eta = as.vector(predict(fit, type = "link")),
-       fitted = as.vector(predict(fit, type = "response")),
-       outcome = df$.y)
-}
-
-# Interpolate ys(xs) at `grid`, or fill ys' own gaps when grid is NULL.
-# Extrapolation is deliberately NOT attempted: a target outside the observed x range comes
-# back NA rather than a straight-line guess, because a fabricated value beyond the end of the
-# recording is worse than an honest gap.
-interp_series <- function(xs, ys, grid = NULL, method = "linear") {
-  x <- suppressWarnings(as.numeric(unlist(xs, use.names = FALSE)))
-  y <- suppressWarnings(as.numeric(unlist(ys, use.names = FALSE)))
-  n <- min(length(x), length(y))
-  x <- x[seq_len(n)]; y <- y[seq_len(n)]
-  ok <- is.finite(x) & is.finite(y)
-  px <- x[ok]; py <- y[ok]
-  o <- order(px); px <- px[o]; py <- py[o]
-  if (length(px) < 2) {
-    return(rep(NA_real_, if (is.null(grid)) length(y) else length(grid)))
-  }
-  at <- function(v) {
-    if (!is.finite(v) || v < px[1] || v > px[length(px)]) return(NA_real_)
-    if (identical(method, "nearest")) return(py[which.min(abs(px - v))])
-    approx(px, py, xout = v, method = "linear")$y
-  }
-  if (!is.null(grid)) return(vapply(grid, at, numeric(1)))
-  vapply(seq_along(y), function(i) if (is.finite(y[i])) y[i] else at(x[i]), numeric(1))
+       eta = scatter(as.vector(predict(fit, type = "link"))),
+       fitted = scatter(as.vector(predict(fit, type = "response"))),
+       outcome = scatter(df$.y))
 }
 
 # --- the analyses ----------------------------------------------------------
@@ -1722,8 +1945,7 @@ interp_series <- function(xs, ys, grid = NULL, method = "linear") {
 # by the SAMPLE standard deviation (n - 1). Fewer than 8 values is not evaluable; zero variance
 # is evaluable and non-normal; normal means p >= 0.05.
 jarque_bera_normality <- function(values) {
-  x <- suppressWarnings(as.numeric(unlist(values, use.names = FALSE)))
-  x <- x[!is.na(x)]
+  x <- .present_numbers(values)
   n <- length(x)
   if (n < 8) return(list(evaluable = FALSE, normal = NA))
   m <- mean(x)
@@ -1796,7 +2018,8 @@ tp_crosscorrelation <- function(args, env) {
   }
   res <- cross_correlation(col_data(env$cols[[as.character(x_in)]], env$cols, env$raw_data),
                            col_data(env$cols[[as.character(y_in)]], env$cols, env$raw_data),
-                           as.integer(if (is.null(args$maxLag)) 0 else args$maxLag),
+                           max(0, .js_number(if (is.null(args$maxLag)) 0 else args$maxLag),
+                               na.rm = TRUE),
                            if (is.null(args$method)) "pearson" else args$method)
   .write_result_rows(args, env,
                      list(lag = res$lags, correlation = res$r, pvalue = res$pvalue))
@@ -1809,7 +2032,9 @@ tp_crosscorrelation <- function(args, env) {
 # arrive as character (a category column) or numeric; an integral number prints without ".0",
 # as JS String() does.
 is_missing_category <- function(v) {
-  is.na(v) | (is.character(v) & (v == "" | v == "NaN")) | (is.numeric(v) & is.nan(v))
+  # Whitespace-only text is missing too (JS trims, as isInvalidValue does for a blank cell).
+  is.na(v) | (is.character(v) & (trimws(v, whitespace = "[\\h\\v]") == "" | v == "NaN")) |
+    (is.numeric(v) & is.nan(v))
 }
 js_string <- function(v) if (is.numeric(v)) format(v, digits = 15, trim = TRUE) else as.character(v)
 
@@ -1956,6 +2181,27 @@ tp_chisquared <- function(args, env) {
   write(res$statistic, res$pvalue, res$df, cohens_w(res$statistic, sum(observed)))
 }
 
+# LogisticRegression.svelte coerceBinary: levels are the distinct String() values of the cells
+# that are not null or ""; all "0"/"1" -> Number(); exactly two other levels -> the later in
+# sort order is 1; anything else is not binary. A whitespace-only cell IS a level, as in the app.
+.logit_coerce_binary <- function(raw) {
+  rl <- as.list(raw)
+  absent <- function(v) is.null(v) || length(v) != 1 || is.na(v) ||
+    (is.character(v) && v == "")
+  strs <- vapply(rl, function(v) if (absent(v)) NA_character_ else
+    if (is.logical(v)) (if (v) "true" else "false") else js_string(v), character(1))
+  levels <- unique(strs[!is.na(strs)])
+  if (all(levels %in% c("0", "1"))) {
+    return(list(y = vapply(rl, function(v) if (absent(v)) NaN else .js_number(v), numeric(1)),
+                positive = "1"))
+  }
+  if (length(levels) != 2) return(list(y = rep(NaN, length(rl)), positive = NULL))
+  # JS default sort compares UTF-16 code units; for these labels that is code-point order.
+  positive <- levels[order(vapply(levels, function(l) paste(sprintf("%06x", utf8ToInt(l)),
+                                                             collapse = ""), character(1)))][2]
+  list(y = ifelse(is.na(strs), NaN, ifelse(strs == positive, 1, 0)), positive = positive)
+}
+
 tp_logisticregression <- function(args, env) {
   y_in <- args$yIN
   if (is.list(y_in)) y_in <- if (length(y_in)) y_in[[1]] else -1
@@ -1963,7 +2209,10 @@ tp_logisticregression <- function(args, env) {
   x_ins <- id_list(args$xIN)
   x_ins <- x_ins[vapply(x_ins, function(i) !is.null(env$cols[[as.character(i)]]), logical(1))]
   if (y_in == -1 || is.null(env$cols[[as.character(y_in)]]) || !length(x_ins)) return(FALSE)
-  y <- col_data(env$cols[[as.character(y_in)]], env$cols, env$raw_data)
+  cb <- .logit_coerce_binary(col_data(env$cols[[as.character(y_in)]], env$cols, env$raw_data))
+  # Not a binary outcome: the app reports it and writes nothing (still "valid").
+  if (is.null(cb$positive)) return(TRUE)
+  y <- cb$y
   preds <- lapply(x_ins, function(i) col_data(env$cols[[as.character(i)]], env$cols, env$raw_data))
   nms <- vapply(x_ins, function(i) {
     nm <- env$cols[[as.character(i)]]$name
@@ -1991,47 +2240,149 @@ tp_logisticregression <- function(args, env) {
   wrote
 }
 
+# interpolate.js knownPoints: house rule on both, Number(), finite only, sorted by x (stable),
+# duplicate x keeps the LATER value.
+interp_known_points <- function(x_data, y_data) {
+  xl <- as.list(x_data); yl <- as.list(y_data)
+  n <- min(length(xl), length(yl))
+  xs <- numeric(0); ys <- numeric(0)
+  for (i in seq_len(n)) {
+    if (.js_invalid(xl[[i]]) || .js_invalid(yl[[i]])) next
+    x <- .js_number(xl[[i]]); y <- .js_number(yl[[i]])
+    if (is.finite(x) && is.finite(y)) { xs <- c(xs, x); ys <- c(ys, y) }
+  }
+  o <- order(xs, method = "radix")
+  xs <- xs[o]; ys <- ys[o]
+  if (length(xs) > 1) {
+    # Keep the LAST of each run of equal x (the later value wins).
+    keep <- c(xs[-1] != xs[-length(xs)], TRUE)
+    xs <- xs[keep]; ys <- ys[keep]
+  }
+  list(xs = xs, ys = ys)
+}
+
+# Largest i (1-based) with xs[i] <= q, clamped to [1, n-1] (interpolate.js bracket).
+.interp_bracket <- function(xs, q) {
+  n <- length(xs)
+  if (q <= xs[1]) return(1)
+  if (q >= xs[n]) return(n - 1)
+  lo <- 1; hi <- n
+  while (hi - lo > 1) {
+    mid <- (lo + hi) %/% 2
+    if (xs[mid] <= q) lo <- mid else hi <- mid
+  }
+  lo
+}
+
+# interpolate.js makeInterpolator: NO extrapolation; linear, nearest (tie to the lower
+# point) or natural cubic spline.
+make_interpolator <- function(xs, ys, method = "linear") {
+  n <- length(xs)
+  if (n == 0) return(function(q) NaN)
+  inner <- if (n == 1) function(q) ys[1]
+  else if (identical(method, "nearest")) function(q) {
+    if (q <= xs[1]) return(ys[1])
+    if (q >= xs[n]) return(ys[n])
+    i <- .interp_bracket(xs, q)
+    if (q - xs[i] <= xs[i + 1] - q) ys[i] else ys[i + 1]
+  } else if (identical(method, "spline")) {
+    y2 <- numeric(n); u <- numeric(n)
+    if (n > 2) for (i in 2:(n - 1)) {
+      sig <- (xs[i] - xs[i - 1]) / (xs[i + 1] - xs[i - 1])
+      p <- sig * y2[i - 1] + 2
+      y2[i] <- (sig - 1) / p
+      ui <- (ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]) - (ys[i] - ys[i - 1]) / (xs[i] - xs[i - 1])
+      u[i] <- (6 * ui) / (xs[i + 1] - xs[i - 1])
+      u[i] <- (u[i] - sig * u[i - 1]) / p
+    }
+    for (k in (n - 1):1) y2[k] <- y2[k] * y2[k + 1] + u[k]
+    function(q) {
+      if (q <= xs[1]) return(ys[1])
+      if (q >= xs[n]) return(ys[n])
+      klo <- .interp_bracket(xs, q); khi <- klo + 1
+      h <- xs[khi] - xs[klo]
+      a <- (xs[khi] - q) / h; b <- (q - xs[klo]) / h
+      a * ys[klo] + b * ys[khi] + ((a^3 - a) * y2[klo] + (b^3 - b) * y2[khi]) * (h * h) / 6
+    }
+  } else function(q) {
+    if (q <= xs[1]) return(ys[1])
+    if (q >= xs[n]) return(ys[n])
+    i <- .interp_bracket(xs, q)
+    t <- (q - xs[i]) / (xs[i + 1] - xs[i])
+    ys[i] + t * (ys[i + 1] - ys[i])
+  }
+  function(q) if (is.finite(q) && q >= xs[1] && q <= xs[n]) inner(q) else NaN
+}
+
+# interpolate.js makeGrid: start + i * step (no accumulated drift), end inclusive.
+make_grid <- function(start, end, step, max_points = 2e6) {
+  if (!all(is.finite(c(start, end, step))) || step <= 0 || end < start) return(numeric(0))
+  count <- floor((end - start) / step + 1e-9) + 1
+  if (count > max_points) return(numeric(0))
+  start + (seq_len(count) - 1) * step
+}
+
+# Port of Interpolate.svelte interpolatedata, matching the Python port: 'fill' keeps every
+# input row and reads its y off the interpolant at its own x (a row with a present y but a
+# missing x keeps its own y); 'resample' builds make_grid(start, end, step) in x units (hours
+# for a time x). A time x is written back as epoch ms from the earliest time.
 tp_interpolate <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
   if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
-  mode <- if (is.null(args$mode)) "fill" else args$mode
-  method <- if (is.null(args$method)) "linear" else args$method
+  mode <- if (identical(args$mode, "resample")) "resample" else "fill"
+  method <- if (!is.null(args$method) && args$method %in% c("linear", "nearest", "spline"))
+    args$method else "linear"
   x_col <- env$cols[[as.character(x_in)]]
-  xs_raw <- t_for_col(x_col, env$cols, env$raw_data)
+  is_time <- identical(x_col$type, "time")
+  x_raw <- col_data(x_col, env$cols, env$raw_data)
+  x_interp <- if (is_time) col_hours(x_col, env$cols, env$raw_data) else x_raw
+  xr_num <- vapply(as.list(x_raw), function(v) if (.js_invalid(v)) NA_real_ else .js_number(v),
+                   numeric(1))
+  baseline <- if (is_time && any(!is.na(xr_num))) min(xr_num, na.rm = TRUE) else 0
+  is_num1 <- function(v) is.numeric(v) && length(v) == 1 && is.finite(v)
 
-  target <- NULL
   if (identical(mode, "resample")) {
-    finite <- xs_raw[is.finite(xs_raw)]
-    if (!length(finite)) return(FALSE)
-    step <- as.numeric(if (is.null(args$step)) 1 else args$step)
-    start <- if (is.null(args$start)) min(finite) else as.numeric(args$start)
-    end <- if (is.null(args$end)) max(finite) else as.numeric(args$end)
-    if (step <= 0 || end < start) return(FALSE)
-    # The 1e-9 slack matches the Python: without it a range that is an exact multiple of the
-    # step loses its final point to floating-point drift.
-    target <- seq(start, end + 1e-9, by = step)
+    xi <- unlist(lapply(as.list(x_interp), function(v) if (is_num1(v)) v else NULL))
+    if (!length(xi)) return(FALSE)
+    start <- if (is_num1(args$start)) args$start else min(xi)
+    end <- if (is_num1(args$end)) args$end else max(xi)
+    query <- make_grid(start, end, .js_number(args$step))
+    if (!length(query)) return(FALSE)
+    out_x <- if (is_time) baseline + query * 3600000 else query
+  } else {
+    query <- x_interp
+    out_x <- x_raw
   }
-
-  wrote <- FALSE
-  ox <- out_id(args, "interpx")
-  if (ox != -1) {
-    set_col(env, env$cols, ox, if (identical(mode, "resample")) target else xs_raw,
-            type = x_col$type, time_format = x_col$time_format)
-    wrote <- TRUE
-  }
+  ql <- as.list(query)
+  y_res <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
-    ys <- interp_series(xs_raw, col_data(env$cols[[yk]], env$cols, env$raw_data), target, method)
-    oy <- out_id(args, paste0("interpy_", y_id))
-    if (oy == -1) oy <- out_id(args, "interpy")
-    if (oy != -1) {
-      set_col(env, env$cols, oy, ys, type = "number")
-      wrote <- TRUE
-    }
+    y_data <- col_data(env$cols[[yk]], env$cols, env$raw_data)
+    kp <- interp_known_points(x_interp, y_data)
+    if (!length(kp$xs)) next
+    f <- make_interpolator(kp$xs, kp$ys, method)
+    yl <- as.list(y_data)
+    vals <- vapply(seq_along(ql), function(i) {
+      q <- ql[[i]]
+      if (.js_invalid(q)) {
+        if (identical(mode, "fill") && i <= length(yl) && !.js_invalid(yl[[i]]))
+          return(.js_number(yl[[i]]))
+        return(NaN)
+      }
+      f(.js_number(q))
+    }, numeric(1))
+    y_res[[yk]] <- vals
   }
-  wrote
+  if (!length(y_res)) return(FALSE)
+  ox <- out_id(args, "interpx")
+  if (ox != -1) {
+    set_col(env, env$cols, ox, out_x, type = if (is_time) "time" else "number")
+    for (yk in names(y_res))
+      set_col(env, env$cols, out_id(args, paste0("interpy_", yk)), y_res[[yk]], type = "number")
+  }
+  TRUE
 }
 
 # ---------------------------------------------------------------------------
@@ -2374,94 +2725,154 @@ evaluate_rectwave_at_points <- function(parameters, x_points) {
                    parameters$omega, parameters$phi, parameters$dutyCycle), xa)
 }
 
-# Multi-start over PERIOD seeds, mirroring fit_rectangular_wave. Parameters are
-# [M, A, kappa, omega, phi, dutyCycle]; `fix*` options hold individual ones at their seed by
-# excluding them from the free set rather than by bounding them tightly.
-fit_rectangular_wave <- function(t, x, options = list()) {
-  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
-  x <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
-  ok <- is.finite(t) & is.finite(x)
-  t <- t[ok]; x <- x[ok]
-  if (length(t) < 6) return(NULL)
-  g <- function(k, d) if (!is.null(options[[k]])) options[[k]] else d
-
-  fix_kappa <- isTRUE(g("fixKappa", FALSE))
-  fix_omega <- isTRUE(g("fixOmega", FALSE))
-  fix_d <- isTRUE(g("fixD", FALSE))
-  kappa0 <- as.numeric(g("kappa", 5))
-  omega0 <- as.numeric(g("omega", 2 * pi / 24))
-  d0 <- as.numeric(g("dutyCycle", 0.5))
-
-  free_idx <- c(1, 2, 5)
-  if (!fix_kappa) free_idx <- c(free_idx, 3)
-  if (!fix_omega) free_idx <- c(free_idx, 4)
-  if (!fix_d) free_idx <- c(free_idx, 6)
-  free_idx <- sort(free_idx)
-
-  m0 <- mean(x)
-  a0 <- (max(x) - min(x)) / 2
-  if (a0 == 0) a0 <- 1
-  full0 <- c(m0, a0, kappa0, omega0, 0, d0)
-  lb_full <- c(-Inf, -Inf, 1e-3, 1e-3, -Inf, 0.01)
-  ub_full <- c(Inf, Inf, Inf, 100, Inf, 0.99)
-
-  timespan <- if (t[length(t)] > t[1]) t[length(t)] - t[1] else 1
-  best <- NULL; best_full <- NULL
-  for (p_seed in c(24, 12, 6, max(timespan, 1))) {
-    f0 <- full0
-    if (!fix_omega) f0[4] <- 2 * pi / p_seed
-    cost <- function(pf) {
-      full <- f0
-      full[free_idx] <- pf
-      0.5 * sum((rectwave_model(full, t) - x)^2)
-    }
-    # Analytic gradient. tanh SATURATES, so over most of the cycle a differenced gradient is
-    # numerically zero and L-BFGS-B stalls: with the default numerical one R reached only
-    # R^2 = 0.89 where scipy's trust-region got 0.99 on the same data. sech^2 = 1 - tanh^2 is
-    # the factor that carries the (tiny but real) slope through the flat region.
-    grad <- function(pf) {
-      full <- f0
-      full[free_idx] <- pf
-      M <- full[1]; A <- full[2]; k <- full[3]; w <- full[4]; phi <- full[5]; d <- full[6]
-      th <- w * t + phi
-      u <- k * (sin(th) - cos(pi * d))
-      tu <- tanh(u)
-      sech2 <- 1 - tu * tu
-      r <- M + A * tu - x
-      g_full <- c(
-        sum(r),                                        # dM
-        sum(r * tu),                                   # dA
-        sum(r * A * sech2 * (sin(th) - cos(pi * d))),  # dkappa
-        sum(r * A * sech2 * k * t * cos(th)),          # domega
-        sum(r * A * sech2 * k * cos(th)),              # dphi
-        sum(r * A * sech2 * k * pi * sin(pi * d))      # dduty
-      )
-      g_full[free_idx]
-    }
-    fit <- tryCatch(
-      optim(f0[free_idx], cost, grad, method = "L-BFGS-B",
-            lower = lb_full[free_idx], upper = ub_full[free_idx],
-            control = list(factr = 1, pgtol = 0, maxit = 5000)),
-      error = function(e) NULL)
-    if (!is.null(fit) && (is.null(best) || fit$value < best$value)) {
-      best <- fit; best_full <- f0
+# solveLinearSystem (rectwave.js / doublelogistic.js): Gaussian elimination with partial
+# pivoting; an error on a pivot below 1e-12.
+.solve_linear_js <- function(A, b) {
+  n <- nrow(A); aug <- cbind(A, b)
+  for (i in seq_len(n)) {
+    mx <- i - 1 + which.max(abs(aug[i:n, i]))
+    if (mx != i) { tmp <- aug[i, ]; aug[i, ] <- aug[mx, ]; aug[mx, ] <- tmp }
+    if (abs(aug[i, i]) < 1e-12) stop("Singular matrix")
+    if (i < n) for (k in (i + 1):n) {
+      f <- aug[k, i] / aug[i, i]
+      aug[k, i:(n + 1)] <- aug[k, i:(n + 1)] - f * aug[i, i:(n + 1)]
     }
   }
-  if (is.null(best)) return(NULL)
-  full <- best_full
-  full[free_idx] <- best$par
-  pred <- rectwave_model(full, t)
-  rss <- sum((x - pred)^2)
-  ss_tot <- sum((x - mean(x))^2)
-  w <- full[4]
-  period <- if (w != 0) 2 * pi / w else Inf
-  acrophase <- if (w != 0) ((pi / 2 - full[5]) / w) %% period else 0
-  list(parameters = list(M = full[1], A = full[2], kappa = full[3],
-                         omega = w, phi = full[5], dutyCycle = full[6]),
-       period = period, acrophase = acrophase, fitted = pred,
-       rmse = sqrt(rss / length(t)),
-       rSquared = if (ss_tot > 0) 1 - rss / ss_tot else 0,
-       rss = rss)
+  sol <- numeric(n)
+  for (i in n:1) {
+    s <- aug[i, n + 1]
+    if (i < n) s <- s - sum(aug[i, (i + 1):n] * sol[(i + 1):n])
+    sol[i] <- s / aug[i, i]
+  }
+  sol
+}
+
+.rw_normal_eqs <- function(t, x, p, free) {
+  A <- p[2]; k <- p[3]; w <- p[4]; phi <- p[5]; d <- p[6]
+  arg <- w * t + phi
+  ca <- cos(arg); s <- sin(arg) - cos(pi * d)
+  th <- tanh(k * s); sech2 <- 1 - th * th
+  r <- x - (p[1] + A * th)
+  J <- cbind(-1, -th, -A * s * sech2, -A * k * t * ca * sech2, -A * k * ca * sech2,
+             -A * k * pi * sin(pi * d) * sech2)[, free, drop = FALSE]
+  list(JtJ = crossprod(J), JtR = as.vector(crossprod(J, r)), rss = sum(r * r))
+}
+
+# rectwave.js fitWithLM, step for step (see the Python port).
+.rw_fit_lm <- function(t, x, params, free, max_iter, tol, w_lo, w_hi) {
+  p <- params
+  p[4] <- min(w_hi, max(w_lo, p[4]))
+  lam <- 0.01
+  ne <- .rw_normal_eqs(t, x, p, free)
+  converged <- FALSE; iterations <- 0
+  w_pos <- match(4, free)
+  for (it in seq_len(max_iter)) {
+    iterations <- it
+    frozen <- !is.na(w_pos) && ((p[4] <= w_lo && ne$JtR[w_pos] > 0) ||
+                                (p[4] >= w_hi && ne$JtR[w_pos] < 0))
+    JtJd <- ne$JtJ
+    dg <- diag(ne$JtJ)
+    diag(JtJd) <- dg + lam * ifelse(dg > 0, dg, 1)
+    rhs <- ne$JtR
+    if (frozen) {
+      JtJd[w_pos, ] <- 0; JtJd[, w_pos] <- 0; JtJd[w_pos, w_pos] <- 1; rhs[w_pos] <- 0
+    }
+    delta <- tryCatch(.solve_linear_js(JtJd, rhs), error = function(e) NULL)
+    if (is.null(delta)) {
+      lam <- min(lam * 10, 1e12)
+      if (lam >= 1e12) { converged <- TRUE; break }
+      next
+    }
+    np_ <- p
+    np_[free] <- p[free] - delta
+    np_[3] <- max(0.01, np_[3])
+    np_[4] <- max(w_lo, min(np_[4], w_hi))
+    np_[6] <- max(0.01, min(np_[6], 0.99))
+    nne <- .rw_normal_eqs(t, x, np_, free)
+    if (is.finite(nne$rss) && nne$rss < ne$rss) {
+      rel <- (ne$rss - nne$rss) / (ne$rss + 1e-10)
+      p <- np_; ne <- nne
+      lam <- max(lam / 3, 1e-10)
+      if (rel < tol) { converged <- TRUE; break }
+    } else {
+      lam <- min(lam * 10, 1e12)
+      if (lam >= 1e12) { converged <- TRUE; break }
+    }
+  }
+  rss <- ne$rss; n <- length(t)
+  fitted <- rectwave_model(p, t)
+  xm <- mean(x); sst <- sum((x - xm)^2)
+  r2 <- if (sst > 0) 1 - rss / sst else 0
+  if (p[2] < 0) { p[2] <- -p[2]; p[5] <- p[5] + pi; p[6] <- 1 - p[6] }
+  p[5] <- atan2(sin(p[5]), cos(p[5]))
+  period <- 2 * pi / p[4]
+  acro <- (pi / 2 - p[5]) / p[4]
+  acro <- .js_mod(.js_mod(acro, period) + period, period)
+  side <- NA_character_
+  if (!is.na(w_pos)) {
+    if (abs(p[4] - w_lo) <= .BOUND_RTOL * w_lo) side <- "max"
+    else if (abs(p[4] - w_hi) <= .BOUND_RTOL * w_hi) side <- "min"
+  }
+  list(parameters = list(M = p[1], A = p[2], kappa = p[3], omega = p[4], phi = p[5],
+                         dutyCycle = p[6]),
+       period = period, acrophase = acro, fitted = fitted, rmse = sqrt(rss / n),
+       rSquared = r2, rss = rss,
+       diagnostics = list(converged = converged && all(is.finite(p)) && is.finite(rss),
+                          iterations = iterations, atBound = side))
+}
+
+# Port of utils/rectwave.js fitRectangularWave (FIT-1), matching the Python port: the JS
+# multi-start Levenberg-Marquardt, free period bounded to [minPeriod, maxPeriod] (default
+# 1-48 h), start s seeded from the s-th least-squares periodogram peak, phi = pi/2 -
+# atan2(S, C). Callers pass the valid (t, x) pairs.
+fit_rectangular_wave <- function(t, x, options = list()) {
+  t <- as.numeric(t); x <- as.numeric(x)
+  o <- options
+  g <- function(k, d) if (is.null(o[[k]])) d else o[[k]]
+  fix_kappa <- isTRUE(o$fixKappa); fix_omega <- isTRUE(o$fixOmega)
+  fix_d <- isTRUE(o$fixDutyCycle) || isTRUE(o$fixD)
+  fixed_kappa <- g("fixedKappa", 5); fixed_omega <- o$fixedOmega
+  fixed_d <- g("fixedDutyCycle", 0.5)
+  max_iter <- g("maxIterations", 10000); tol <- g("tolerance", 1e-6)
+  n_starts <- g("numStarts", 5)
+  if (fix_omega && !(is.numeric(fixed_omega) && length(fixed_omega) == 1 &&
+                     is.finite(fixed_omega) && fixed_omega > 0))
+    stop("fit_rectangular_wave: fixOmega needs a positive finite fixedOmega")
+  w_lo <- 0.001; w_hi <- 100; rng <- NULL; peaks <- NULL
+  if (!fix_omega) {
+    rng <- resolve_period_range(t, g("minPeriod", FREE_PERIOD_DEFAULTS$minPeriod),
+                                g("maxPeriod", FREE_PERIOD_DEFAULTS$maxPeriod))
+    if (is.null(rng)) return(NULL)
+    w_lo <- 2 * pi / rng$maxPeriod; w_hi <- 2 * pi / rng$minPeriod
+    peaks <- 2 * pi * scan_periodogram(t, x, rng$minPeriod, rng$maxPeriod, n_starts)
+  }
+  free <- sort(c(1, 2, 5, if (!fix_kappa) 3, if (!fix_omega) 4, if (!fix_d) 6))
+  n <- length(x)
+  if (!n) return(NULL)
+  mu <- sum(x) / n
+  half <- (max(x) - min(x)) / 2
+  d_seeds <- c(0.5, 0.3, 0.7, 0.4, 0.6); k_seeds <- c(5, 2, 10, 3, 8)
+  best <- NULL; best_rmse <- Inf
+  for (st in 0:(n_starts - 1)) {
+    w <- if (fix_omega && !is.null(fixed_omega)) fixed_omega else {
+      ww <- if (length(peaks)) peaks[min(st, length(peaks) - 1) + 1] else 2 * pi / 24
+      min(w_hi, max(w_lo, ww))
+    }
+    kap <- if (fix_kappa) fixed_kappa else k_seeds[st %% 5 + 1]
+    d <- if (fix_d) fixed_d else d_seeds[st %% 5 + 1]
+    cs <- sum((x - mu) * cos(w * t)); sn <- sum((x - mu) * sin(w * t))
+    params <- c(mu, if (half > 0) half else 1, kap, w, pi / 2 - atan2(sn, cs), d)
+    res <- tryCatch(.rw_fit_lm(t, x, params, free, max_iter, tol, w_lo, w_hi),
+                    error = function(e) NULL)
+    if (!is.null(res) && is.finite(res$rmse) && res$rmse < best_rmse) {
+      best_rmse <- res$rmse; best <- res
+    }
+  }
+  if (!is.null(best)) {
+    best$diagnostics$periodRange <- if (is.null(rng)) NULL else c(rng$minPeriod, rng$maxPeriod)
+    if (fix_omega) best$diagnostics$atBound <- NA_character_
+  }
+  best
 }
 
 tp_rectangularwave <- function(args, env) {
@@ -2470,26 +2881,42 @@ tp_rectangularwave <- function(args, env) {
   if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
   x_col <- env$cols[[as.character(x_in)]]
   t <- t_for_col(x_col, env$cols, env$raw_data)
-  opts <- list(fixKappa = args$fixKappa, fixOmega = args$fixOmega, fixD = args$fixD,
-               kappa = if (is.null(args$kappa)) 5 else args$kappa,
-               omega = if (is.null(args$omega)) 2 * pi / 24 else args$omega,
-               dutyCycle = if (is.null(args$dutyCycle)) 0.5 else args$dutyCycle)
+  fix_omega <- isTRUE(args$fixOmega)
+  fp <- if (is.null(args$fixedPeriod)) 24 else .js_number(args$fixedPeriod)
+  opts <- list(fixKappa = args$fixKappa, fixedKappa = args$fixedKappa, fixOmega = fix_omega,
+               fixedOmega = if (fix_omega) 2 * pi / fp else NULL,
+               fixDutyCycle = args$fixDutyCycle, fixedDutyCycle = args$fixedDutyCycle,
+               minPeriod = args$minPeriod, maxPeriod = args$maxPeriod)
   output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
-  output_x <- if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]]))
-    t_for_col(env$cols[[as.character(output_x_id)]], env$cols, env$raw_data) else NULL
+  origin <- NA_real_
+  output_x <- NULL
+  if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]])) {
+    oc <- env$cols[[as.character(output_x_id)]]
+    ox <- t_for_col(oc, env$cols, env$raw_data)
+    output_x <- ox[is.finite(ox)]
+    if (identical(oc$type, "time")) origin <- unlist(col_data(oc, env$cols, env$raw_data))[1]
+  }
+  if (is.na(origin) && identical(x_col$type, "time"))
+    origin <- unlist(col_data(x_col, env$cols, env$raw_data))[1]
 
   first_xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
-    res <- fit_rectangular_wave(t, col_data(env$cols[[yk]], env$cols, env$raw_data), opts)
+    y <- col_data(env$cols[[yk]], env$cols, env$raw_data)
+    pr <- .pgram_pairs(t, y)
+    if (length(pr$t) < 4) next
+    res <- fit_rectangular_wave(pr$t, pr$y, opts)
     if (is.null(res)) next
+    xs_out <- if (!is.null(output_x)) output_x else pr$t
+    ys <- if (!is.null(output_x)) evaluate_rectwave_at_points(res$parameters, output_x)
+          else res$fitted
     if (is.null(first_xs)) {
-      # The JS evaluates the fit at the (finite) input t, not on a dense grid.
-      first_xs <- if (!is.null(output_x)) output_x else t[is.finite(t)]
-      set_col(env, env$cols, out_id(args, "rectwavex"), first_xs, type = "number")
+      first_xs <- xs_out
+      if (is.finite(origin)) set_col(env, env$cols, out_id(args, "rectwavex"),
+                                     origin + first_xs * 3600000, type = "time")
+      else set_col(env, env$cols, out_id(args, "rectwavex"), first_xs, type = "number")
     }
-    ys <- evaluate_rectwave_at_points(res$parameters, first_xs)
     y_out <- out_id(args, paste0("rectwavey_", y_id))
     if (y_out == -1) y_out <- out_id(args, "rectwavey")
     set_col(env, env$cols, y_out, ys, type = "number")
@@ -2521,196 +2948,247 @@ tp_rectangularwave <- function(args, env) {
 
 sigmoid <- function(z) 1 / (1 + exp(-z))
 
-# M + A*(rise - fall): two sigmoids, one turning activity on at t1 and one off at t2.
-# In PERIODIC mode the pair is tiled at every multiple of T and summed, so one parameter set
-# describes a repeating daily bout rather than a single episode. The tile range runs from -1
-# so the bout starting BEFORE the window still contributes to its leading edge.
-dl_model <- function(p, t, periodic) {
-  if (periodic) {
-    M <- p[1]; A <- p[2]; k1 <- p[3]; t1 <- p[4]; k2 <- p[5]; t2 <- p[6]; T <- p[7]
-    n_tiles <- max(1, ceiling((max(t) - min(t)) / T) + 2)
-    j <- seq(-1, n_tiles)
-    acc <- numeric(length(t))
-    for (off in j * T) {
-      acc <- acc + sigmoid(k1 * (t - t1 - off)) - sigmoid(k2 * (t - t2 - off))
-    }
-    return(M + A * acc)
+# Port of utils/doublelogistic.js (FIT-1, FIT-2), matching the Python port: the JS
+# multi-start Levenberg-Marquardt; periodic mode works in [M, A, k1, t1, k2, u, T] with
+# t2 = t1 + T sigmoid(u) (|u| <= 30) so tiles never overlap, a free T stays inside
+# [minPeriod, maxPeriod] with periodogram-peak starts, and the result is the canonical A >= 0
+# form. Tiles run over computeJRange.
+.dl_jrange <- function(t, t1, t2, T)
+  c(floor((min(t) - max(t1, t2)) / T) - 1, ceiling((max(t) - min(t1, t2)) / T) + 1)
+
+.dl_eval <- function(t, m, periodic) {
+  if (!periodic) return(m[1] + m[2] * (sigmoid(m[3] * (t - m[4])) - sigmoid(m[5] * (t - m[6]))))
+  jr <- .dl_jrange(t, m[4], m[6], m[7]); j <- jr[1]:jr[2]
+  m[1] + m[2] * rowSums(sigmoid(m[3] * outer(t, m[4] + j * m[7], "-")) -
+                          sigmoid(m[5] * outer(t, m[6] + j * m[7], "-")))
+}
+
+.dl_to_model <- function(q) c(q[1:5], q[4] + q[7] * sigmoid(q[6]), q[7])
+
+canonical_periodic_params <- function(m) {
+  if (!(m[2] < 0)) return(m)
+  c(m[1] + m[2], -m[2], m[5], m[6], m[3], m[4] + m[7], m[7])
+}
+
+.dl_ne <- function(t, x, q, free, periodic) {
+  if (!periodic) {
+    A <- q[2]; k1 <- q[3]; t1 <- q[4]; k2 <- q[5]; t2 <- q[6]
+    s1 <- sigmoid(k1 * (t - t1)); s2 <- sigmoid(k2 * (t - t2))
+    s1p <- s1 * (1 - s1); s2p <- s2 * (1 - s2)
+    r <- x - (q[1] + A * (s1 - s2))
+    J <- cbind(-1, -(s1 - s2), -A * s1p * (t - t1), A * k1 * s1p, A * s2p * (t - t2),
+               -A * k2 * s2p)
+  } else {
+    m <- .dl_to_model(q)
+    A <- m[2]; k1 <- m[3]; t1 <- m[4]; k2 <- m[5]; t2 <- m[6]; T <- m[7]
+    sg <- sigmoid(q[6])
+    jr <- .dl_jrange(t, t1, t2, T); j <- jr[1]:jr[2]
+    d1 <- outer(t, t1 + j * T, "-"); d2 <- outer(t, t2 + j * T, "-")
+    s1 <- sigmoid(k1 * d1); s2 <- sigmoid(k2 * d2)
+    s1p <- s1 * (1 - s1); s2p <- s2 * (1 - s2)
+    jm <- matrix(j, nrow = length(t), ncol = length(j), byrow = TRUE)
+    a1 <- rowSums(s1 - s2); b1 <- rowSums(s1p * d1); c1 <- rowSums(s1p)
+    dd <- rowSums(s2p * d2); e1 <- rowSums(s2p)
+    f1 <- rowSums(jm * k1 * s1p); g1 <- rowSums(jm * k2 * s2p)
+    r <- x - (m[1] + A * a1)
+    dT1 <- A * k1 * c1; dT2 <- -A * k2 * e1; dT <- A * (f1 - g1)
+    J <- cbind(-1, -a1, -A * b1, dT1 + dT2, A * dd, dT2 * T * sg * (1 - sg), dT + dT2 * sg)
   }
-  p[1] + p[2] * (sigmoid(p[3] * (t - p[4])) - sigmoid(p[5] * (t - p[6])))
+  J <- J[, free, drop = FALSE]
+  list(JtJ = crossprod(J), JtR = as.vector(crossprod(J, r)), rss = sum(r * r))
+}
+
+.dl_fit_lm <- function(t, x, params, free, periodic, max_iter, tol, t_lo = 0.1, t_hi = Inf) {
+  p <- params
+  if (periodic) {
+    p[7] <- min(t_hi, max(t_lo, p[7]))
+    frac <- min(0.98, max(0.02, (params[6] - params[4]) / p[7]))
+    p[6] <- log(frac / (1 - frac))
+  }
+  t_pos <- if (periodic) match(7, free) else NA
+  lam <- 0.01
+  ne <- .dl_ne(t, x, p, free, periodic)
+  converged <- FALSE; iterations <- 0
+  for (it in seq_len(max_iter)) {
+    iterations <- it
+    frozen <- !is.na(t_pos) && ((p[7] <= t_lo && ne$JtR[t_pos] > 0) ||
+                                (p[7] >= t_hi && ne$JtR[t_pos] < 0))
+    JtJd <- ne$JtJ; dg <- diag(ne$JtJ)
+    diag(JtJd) <- dg + lam * ifelse(dg > 0, dg, 1)
+    rhs <- ne$JtR
+    if (frozen) { JtJd[t_pos, ] <- 0; JtJd[, t_pos] <- 0; JtJd[t_pos, t_pos] <- 1; rhs[t_pos] <- 0 }
+    delta <- tryCatch(.solve_linear_js(JtJd, rhs), error = function(e) NULL)
+    if (is.null(delta)) {
+      lam <- min(lam * 10, 1e12)
+      if (lam >= 1e12) { converged <- TRUE; break }
+      next
+    }
+    np_ <- p; np_[free] <- p[free] - delta
+    np_[3] <- max(1e-4, np_[3]); np_[5] <- max(1e-4, np_[5])
+    if (periodic) {
+      np_[7] <- min(t_hi, max(t_lo, np_[7])); np_[6] <- min(30, max(-30, np_[6]))
+    } else if (np_[6] <= np_[4]) np_[6] <- np_[4] + 0.01
+    nne <- .dl_ne(t, x, np_, free, periodic)
+    if (is.finite(nne$rss) && nne$rss < ne$rss) {
+      rel <- (ne$rss - nne$rss) / (ne$rss + 1e-10)
+      p <- np_; ne <- nne
+      lam <- max(lam / 3, 1e-10)
+      if (rel < tol) { converged <- TRUE; break }
+    } else {
+      lam <- min(lam * 10, 1e12)
+      if (lam >= 1e12) { converged <- TRUE; break }
+    }
+  }
+  side <- NA_character_
+  if (!is.na(t_pos)) {
+    if (abs(p[7] - t_hi) <= .BOUND_RTOL * t_hi) side <- "max"
+    else if (abs(p[7] - t_lo) <= .BOUND_RTOL * t_lo) side <- "min"
+  }
+  ok <- all(is.finite(p)) && is.finite(ne$rss)
+  m <- if (periodic) canonical_periodic_params(.dl_to_model(p)) else p
+  fitted <- .dl_eval(t, m, periodic)
+  rss <- sum((x - fitted)^2); sst <- sum((x - mean(x))^2)
+  T <- if (periodic) m[7] else NULL
+  dur <- m[6] - m[4]
+  list(parameters = list(M = m[1], A = m[2], k1 = m[3], t1 = m[4], k2 = m[5], t2 = m[6],
+                         T = T),
+       duration = dur,
+       onsetPhase = if (periodic) .js_mod(.js_mod(m[4], T) + T, T) else NULL,
+       offsetPhase = if (periodic) .js_mod(.js_mod(m[6], T) + T, T) else NULL,
+       dutyCycle = if (periodic) dur / T else NULL,
+       fitted = fitted, rmse = sqrt(rss / length(t)),
+       rSquared = if (sst > 0) 1 - rss / sst else 0, rss = rss,
+       diagnostics = list(converged = converged && ok, iterations = iterations,
+                          atBound = side))
+}
+
+.dl_guess <- function(t, x, seed, periodic, o, peaks, t_lo, t_hi) {
+  n <- length(x); mu <- sum(x) / n; xmin <- min(x)
+  ks <- c(0.5, 0.2, 1.0, 0.3, 0.8)
+  k1 <- if (o$fix_k1) o$fk1 else ks[seed %% 5 + 1]
+  k2 <- if (o$fix_k2) o$fk2 else ks[seed %% 5 + 1]
+  if (!periodic) {
+    tmin <- min(t); tr <- max(t) - tmin
+    A <- (max(x) - xmin) * (1 + 0.1 * seed)
+    above <- t[x > mu]
+    t1e <- tmin + tr * 0.25; t2e <- tmin + tr * 0.75
+    if (length(above) > 2) { t1e <- above[1]; t2e <- above[length(above)] }
+    shift <- tr * c(0, -0.15, 0.15, -0.3, 0.3)[seed %% 5 + 1]
+    t1 <- t1e + shift
+    return(c(xmin, A, k1, t1, k2, max(t1 + 0.01, t2e + shift)))
+  }
+  A <- max(x) - xmin
+  T <- if (o$fix_p) o$fp else {
+    tt <- if (length(peaks)) peaks[min(seed, length(peaks) - 1) + 1] else 24
+    min(t_hi, max(t_lo, tt))
+  }
+  tmin <- min(t)
+  dc <- c(0.5, 0.3, 0.7, 0.4, 0.6)[seed %% 5 + 1]
+  above <- sort(vapply(t[x > mu] - tmin, function(v) .js_mod(.js_mod(v, T) + T, T), numeric(1)))
+  onset <- T * (0.5 - dc / 2); dur <- T * dc
+  if (length(above) > 2) {
+    gap <- above[1] + T - above[length(above)]; after <- 1
+    for (i in 2:length(above)) {
+      g <- above[i] - above[i - 1]
+      if (g > gap) { gap <- g; after <- i }
+    }
+    onset <- above[after]
+    dur <- min(0.98 * T, max(0.02 * T, T - gap))
+  }
+  t1 <- tmin + onset
+  c(xmin, A, k1, t1, k2, t1 + dur, T)
+}
+
+fit_double_logistic <- function(t, x, options = list()) {
+  t <- as.numeric(t); x <- as.numeric(x)
+  if (!length(t)) return(NULL)
+  g <- function(k, d) if (is.null(options[[k]])) d else options[[k]]
+  periodic <- isTRUE(g("periodic", FALSE))
+  o <- list(fix_k1 = isTRUE(options$fixK1), fix_k2 = isTRUE(options$fixK2),
+            fix_p = isTRUE(options$fixPeriod) || isTRUE(options$fixT),
+            fk1 = g("fixedK1", 0.5), fk2 = g("fixedK2", 0.5),
+            fp = g("fixedPeriod", g("T", 24)))
+  max_iter <- g("maxIterations", 10000); tol <- g("tolerance", 1e-6)
+  n_starts <- g("numStarts", 5)
+  rng <- NULL; peaks <- NULL; t_lo <- 0.1; t_hi <- Inf
+  if (periodic && !o$fix_p) {
+    rng <- resolve_period_range(t, g("minPeriod", FREE_PERIOD_DEFAULTS$minPeriod),
+                                g("maxPeriod", FREE_PERIOD_DEFAULTS$maxPeriod))
+    if (is.null(rng)) return(NULL)
+    t_lo <- rng$minPeriod; t_hi <- rng$maxPeriod
+    peaks <- 1 / scan_periodogram(t, x, t_lo, t_hi, n_starts)
+  }
+  free <- sort(c(1, 2, 4, 6, if (!o$fix_k1) 3, if (!o$fix_k2) 5,
+                 if (periodic && !o$fix_p) 7))
+  best <- NULL; best_rmse <- Inf
+  for (st in 0:(n_starts - 1)) {
+    params <- .dl_guess(t, x, st, periodic, o, peaks, t_lo, t_hi)
+    if (o$fix_k1) params[3] <- o$fk1
+    if (o$fix_k2) params[5] <- o$fk2
+    if (periodic && o$fix_p) params[7] <- o$fp
+    res <- tryCatch(.dl_fit_lm(t, x, params, free, periodic, max_iter, tol, t_lo, t_hi),
+                    error = function(e) NULL)
+    if (!is.null(res) && is.finite(res$rmse) && res$rmse < best_rmse) {
+      best_rmse <- res$rmse; best <- res
+    }
+  }
+  if (!is.null(best))
+    best$diagnostics$periodRange <- if (is.null(rng)) NULL else c(rng$minPeriod, rng$maxPeriod)
+  best
 }
 
 evaluate_dl_at_points <- function(parameters, x_points, periodic = FALSE) {
   xa <- suppressWarnings(as.numeric(unlist(x_points, use.names = FALSE)))
-  p <- c(parameters$M, parameters$A, parameters$k1, parameters$t1,
-         parameters$k2, parameters$t2)
-  if (periodic) p <- c(p, parameters$T)
-  dl_model(p, xa, periodic)
-}
-
-fit_double_logistic <- function(t, x, options = list()) {
-  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
-  x <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
-  ok <- is.finite(t) & is.finite(x)
-  t <- t[ok]; x <- x[ok]
-  if (length(t) < 6) return(NULL)
-  g <- function(k, d) if (!is.null(options[[k]])) options[[k]] else d
-
-  periodic <- isTRUE(g("periodic", FALSE))
-  fix_k1 <- isTRUE(g("fixK1", FALSE))
-  fix_k2 <- isTRUE(g("fixK2", FALSE))
-  fix_T <- isTRUE(g("fixT", FALSE))
-
-  m0 <- min(x)
-  a0 <- max(x) - min(x)
-  if (a0 == 0) a0 <- 1
-  k1_0 <- as.numeric(g("k1", 1))
-  k2_0 <- as.numeric(g("k2", 1))
-  timespan <- t[length(t)] - t[1]
-  if (timespan == 0) timespan <- 1
-  # A FREE period inits from the data TIMESPAN, not from 24: seeding it small lets the
-  # optimiser collapse into a degenerate many-tile fit that scores well and means nothing.
-  T0 <- as.numeric(g("T", if (fix_T) 24 else timespan))
-
-  if (periodic) {
-    # PERIODIC mode seeds both edges from the PHASE-FOLDED data, inside ONE cycle, mirroring
-    # generateInitialGuessP in doubleLogistic.js. Seeding at 25% and 75% of the whole record
-    # (correct for the aperiodic case) puts them ~83 h apart in a 24 h model; the tiled sum
-    # is then nonsense and no optimiser recovers. The Python port did exactly that and
-    # returned R^2 = 0.008 against the JS engine's 0.982.
-    t_min <- t[1]
-    mean_x <- mean(x)
-    phases <- ((t - t_min) %% T0 + T0) %% T0
-    above <- sort(phases[x > mean_x])
-    if (length(above) > 2) {
-      onset_phase <- above[1]; offset_phase <- above[length(above)]
-    } else {
-      onset_phase <- T0 * 0.25; offset_phase <- T0 * 0.75
-    }
-    t1_0 <- t_min + onset_phase
-    t2_0 <- t1_0 + max(0.01, offset_phase - onset_phase)
-  } else {
-    t1_0 <- t[1] + timespan * 0.25
-    t2_0 <- t[1] + timespan * 0.75
-  }
-
-  if (periodic) {
-    full0 <- c(m0, a0, k1_0, t1_0, k2_0, t2_0, T0)
-    free <- c(1, 2, 4, 6)
-    if (!fix_k1) free <- c(free, 3)
-    if (!fix_k2) free <- c(free, 5)
-    if (!fix_T) free <- c(free, 7)
-    lb_full <- c(-Inf, -Inf, 1e-4, -Inf, 1e-4, -Inf, 0.1)
-    ub_full <- c(Inf, Inf, Inf, Inf, Inf, Inf, Inf)
-  } else {
-    full0 <- c(m0, a0, k1_0, t1_0, k2_0, t2_0)
-    free <- c(1, 2, 4, 6)
-    if (!fix_k1) free <- c(free, 3)
-    if (!fix_k2) free <- c(free, 5)
-    lb_full <- c(-Inf, -Inf, 1e-4, -Inf, 1e-4, -Inf)
-    ub_full <- c(Inf, Inf, Inf, Inf, Inf, Inf)
-  }
-  free <- sort(free)
-
-  # t2 > t1 is ENFORCED inside the objective rather than by a bound, because the constraint
-  # couples two parameters. Without it the fit can swap the on and off edges and report a
-  # negative-duration bout.
-  expand <- function(pf) {
-    full <- full0
-    full[free] <- pf
-    if (full[6] <= full[4] + 0.01) full[6] <- full[4] + 0.01
-    full
-  }
-  cost <- function(pf) 0.5 * sum((dl_model(expand(pf), t, periodic) - x)^2)
-
-  # Analytic gradient. The sigmoid saturates the same way tanh does, so a differenced
-  # gradient is numerically zero wherever the curve is flat — which for a square-ish bout is
-  # most of the cycle. s' = s(1-s) is what carries the slope through.
-  grad <- function(pf) {
-    full <- expand(pf)
-    M <- full[1]; A <- full[2]; k1 <- full[3]; t1 <- full[4]; k2 <- full[5]; t2 <- full[6]
-    offs <- if (periodic) {
-      T <- full[7]
-      (seq(-1, max(1, ceiling((max(t) - min(t)) / T) + 2))) * T
-    } else 0
-    on_sum <- numeric(length(t)); off_sum <- numeric(length(t))
-    dk1 <- numeric(length(t)); dt1 <- numeric(length(t))
-    dk2 <- numeric(length(t)); dt2 <- numeric(length(t)); dT <- numeric(length(t))
-    for (off in offs) {
-      a1 <- k1 * (t - t1 - off); s1 <- sigmoid(a1); d1 <- s1 * (1 - s1)
-      a2 <- k2 * (t - t2 - off); s2 <- sigmoid(a2); d2 <- s2 * (1 - s2)
-      on_sum <- on_sum + s1; off_sum <- off_sum + s2
-      dk1 <- dk1 + d1 * (t - t1 - off)
-      dt1 <- dt1 - d1 * k1
-      dk2 <- dk2 - d2 * (t - t2 - off)
-      dt2 <- dt2 + d2 * k2
-      if (periodic) dT <- dT - d1 * k1 * (off / full[7]) + d2 * k2 * (off / full[7])
-    }
-    r <- M + A * (on_sum - off_sum) - x
-    g_full <- c(sum(r), sum(r * (on_sum - off_sum)),
-                sum(r * A * dk1), sum(r * A * dt1),
-                sum(r * A * dk2), sum(r * A * dt2))
-    if (periodic) g_full <- c(g_full, sum(r * A * dT))
-    g_full[free]
-  }
-
-  fit <- tryCatch(
-    optim(full0[free], cost, grad, method = "L-BFGS-B",
-          lower = lb_full[free], upper = ub_full[free],
-          control = list(factr = 1, pgtol = 0, maxit = 8000)),
-    error = function(e) NULL)
-  if (is.null(fit)) return(NULL)
-
-  full <- expand(fit$par)
-  pred <- dl_model(full, t, periodic)
-  rss <- sum((x - pred)^2)
-  ss_tot <- sum((x - mean(x))^2)
-  params <- list(M = full[1], A = full[2], k1 = full[3], t1 = full[4],
-                 k2 = full[5], t2 = full[6])
-  if (periodic) params$T <- full[7]
-  duration <- full[6] - full[4]
-  period <- if (periodic) full[7] else max(timespan, 1)
-  list(parameters = params, duration = duration,
-       onsetPhase = (full[4] %% period) / period,
-       offsetPhase = (full[6] %% period) / period,
-       dutyCycle = if (period > 0) duration / period else 0,
-       fitted = pred, rmse = sqrt(rss / length(t)),
-       rSquared = if (ss_tot > 0) 1 - rss / ss_tot else 0, rss = rss)
+  if (!length(xa)) return(numeric(0))
+  pr <- parameters
+  m <- c(pr$M, pr$A, pr$k1, pr$t1, pr$k2, pr$t2, if (periodic) pr$T)
+  .dl_eval(xa, m, periodic)
 }
 
 tp_doublelogistic <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
   if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
-  periodic <- !identical(args$periodic, FALSE)
-  # The JS keys the fixed period as fixPeriod/fixedPeriod, not fixT/T.
-  fix_period <- isTRUE(args$fixPeriod) || isTRUE(args$fixT)
-  opts <- list(periodic = periodic, fixK1 = args$fixK1, fixK2 = args$fixK2,
-               fixT = fix_period,
-               k1 = if (is.null(args$fixedK1)) 0.5 else args$fixedK1,
-               k2 = if (is.null(args$fixedK2)) 0.5 else args$fixedK2,
-               T = if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod)
+  # The node always fits the PERIODIC model (DoubleLogistic.svelte passes periodic: true).
+  periodic <- TRUE
+  opts <- list(periodic = TRUE, fixK1 = args$fixK1, fixedK1 = args$fixedK1,
+               fixK2 = args$fixK2, fixedK2 = args$fixedK2,
+               fixPeriod = isTRUE(args$fixPeriod) || isTRUE(args$fixT),
+               fixedPeriod = if (is.null(args$fixedPeriod)) args$T else args$fixedPeriod,
+               minPeriod = args$minPeriod, maxPeriod = args$maxPeriod)
   x_col <- env$cols[[as.character(x_in)]]
   t <- t_for_col(x_col, env$cols, env$raw_data)
   output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
-  output_x <- if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]]))
-    t_for_col(env$cols[[as.character(output_x_id)]], env$cols, env$raw_data) else NULL
+  origin <- NA_real_; output_x <- NULL
+  if (output_x_id != -1 && !is.null(env$cols[[as.character(output_x_id)]])) {
+    oc <- env$cols[[as.character(output_x_id)]]
+    ox <- t_for_col(oc, env$cols, env$raw_data); output_x <- ox[is.finite(ox)]
+    if (identical(oc$type, "time")) origin <- unlist(col_data(oc, env$cols, env$raw_data))[1]
+  }
+  if (is.na(origin) && identical(x_col$type, "time"))
+    origin <- unlist(col_data(x_col, env$cols, env$raw_data))[1]
 
   first_xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
-    res <- fit_double_logistic(t, col_data(env$cols[[yk]], env$cols, env$raw_data), opts)
+    pr <- .pgram_pairs(t, col_data(env$cols[[yk]], env$cols, env$raw_data))
+    if (length(pr$t) < 4) next
+    if (is.null(first_xs)) first_xs <- if (!is.null(output_x)) output_x else pr$t
+    res <- fit_double_logistic(pr$t, pr$y, opts)
     if (is.null(res)) next
-    if (is.null(first_xs)) {
-      first_xs <- if (!is.null(output_x)) output_x else t[is.finite(t)]
-      set_col(env, env$cols, out_id(args, "dlogx"), first_xs, type = "number")
-    }
-    ys <- evaluate_dl_at_points(res$parameters, first_xs, periodic)
+    ys <- if (!is.null(output_x)) evaluate_dl_at_points(res$parameters, output_x, TRUE)
+          else res$fitted
     y_out <- out_id(args, paste0("dlogy_", y_id))
     if (y_out == -1) y_out <- out_id(args, "dlogy")
     set_col(env, env$cols, y_out, ys, type = "number")
     stats_by_y[[yk]] <- res
     any_valid <- TRUE
+  }
+  if (any_valid) {
+    if (is.finite(origin)) set_col(env, env$cols, out_id(args, "dlogx"),
+                                   origin + first_xs * 3600000, type = "time")
+    else set_col(env, env$cols, out_id(args, "dlogx"), first_xs, type = "number")
   }
   if (any_valid) {
     # r2/rmse were declared but unwritten in the Python port until 2026-07-28;
@@ -2757,22 +3235,22 @@ ff_fit_curve_model <- function(tt, yy, model, args) {
                 fitted = res$fitted))
   }
   if (identical(model, "rectangular")) {
+    # rectwave.js pins omega, not the period: fitFunction.js derives it from fixedPeriod.
     res <- fit_rectangular_wave(tt, yy, list(
-      fixKappa = args$fixKappa, fixOmega = args$fixOmega, fixD = args$fixDutyCycle,
-      kappa = if (is.null(args$fixedKappa)) 5 else args$fixedKappa,
-      omega = 2 * pi / as.numeric(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod),
-      dutyCycle = if (is.null(args$fixedDutyCycle)) 0.5 else args$fixedDutyCycle))
+      fixKappa = args$fixKappa, fixedKappa = args$fixedKappa, fixOmega = args$fixOmega,
+      fixedOmega = if (isTRUE(args$fixOmega))
+        2 * pi / .js_number(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod) else NULL,
+      fixDutyCycle = args$fixDutyCycle, fixedDutyCycle = args$fixedDutyCycle,
+      minPeriod = args$minPeriod, maxPeriod = args$maxPeriod))
     if (is.null(res)) return(NULL)
     return(list(model = "rectangular", parameters = res$parameters, fitted = res$fitted))
   }
   if (identical(model, "doublelogistic")) {
     periodic <- !identical(args$periodic, FALSE)
     res <- fit_double_logistic(tt, yy, list(
-      periodic = periodic, fixK1 = args$fixK1, fixK2 = args$fixK2,
-      fixT = isTRUE(args$fixPeriod),
-      k1 = if (is.null(args$fixedK1)) 0.5 else args$fixedK1,
-      k2 = if (is.null(args$fixedK2)) 0.5 else args$fixedK2,
-      T = if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod))
+      periodic = periodic, fixK1 = args$fixK1, fixedK1 = args$fixedK1,
+      fixK2 = args$fixK2, fixedK2 = args$fixedK2, fixPeriod = isTRUE(args$fixPeriod),
+      fixedPeriod = args$fixedPeriod, minPeriod = args$minPeriod, maxPeriod = args$maxPeriod))
     if (is.null(res)) return(NULL)
     return(list(model = "doublelogistic", periodic = periodic,
                 parameters = res$parameters, fitted = res$fitted))
@@ -2868,39 +3346,190 @@ tp_fitfunction <- function(args, env) {
 # resampling), zero-pad to the next power of two, and report the one-sided spectrum for bins
 # 1..N/2-1 with magnitude = |X| * 2 / N. The DC bin is dropped, which is why the loop starts
 # at 1 — including it would put the series mean in the spectrum as a spurious huge peak.
+# fft.js FFT_GAP_RULE and regridUniform, matching the Python port: the step is the LOWER
+# median of the positive intervals between consecutive valid samples; slot = round((t - t0) /
+# dt); refused when a sample is more than a quarter step off its slot or two share one, when
+# a run of missing slots is longer than 3, or when more than 10% are missing. Short runs are
+# filled by linear interpolation.
+FFT_MAX_GAP <- 3
+FFT_MAX_MISSING <- 0.1
+.MAX_FFT_N <- 2^24
+
+.js_round <- function(x) { r <- floor(x); if (x - r >= 0.5) r + 1 else r }
+
+regrid_uniform <- function(times, values) {
+  fail <- function(reason, dt = NaN, longestGap = 0, nObserved = 0)
+    list(ok = FALSE, reason = reason, t0 = NaN, dt = dt, y = numeric(0), nObserved = nObserved,
+         nFilled = 0, longestGap = longestGap)
+  tl <- as.list(times); vl <- as.list(values)
+  n <- min(length(tl), length(vl))
+  idx <- which(vapply(seq_len(n), function(i) !.js_invalid(tl[[i]]) && !.js_invalid(vl[[i]]),
+                      logical(1)))
+  if (length(idx) < 2) return(fail("need at least 2 samples with both a time and a value"))
+  t <- vapply(tl[idx], .js_number, numeric(1))
+  y <- vapply(vl[idx], .js_number, numeric(1))
+  d <- diff(t)
+  if (any(!(d > 0) | !is.finite(d))) return(fail("the time axis is not increasing"))
+  dt <- sort(d)[floor((length(d) - 1) / 2) + 1]
+  t0 <- t[1]
+  slots <- integer(length(t))
+  for (i in seq_along(t)) {
+    pos <- (t[i] - t0) / dt
+    sl <- .js_round(pos)
+    if (abs(pos - sl) > 0.25 || (i > 1 && sl == slots[i - 1]))
+      return(fail("the samples do not sit on a regular grid", dt = dt))
+    slots[i] <- sl
+  }
+  n_grid <- slots[length(slots)] + 1
+  if (!(n_grid <= .MAX_FFT_N)) return(fail("the record is too long for the transform", dt = dt))
+  longest <- if (length(slots) > 1) max(diff(slots) - 1) else 0
+  n_missing <- n_grid - length(t)
+  if (longest > FFT_MAX_GAP)
+    return(fail(sprintf("the record has a gap of %d missing samples", longest), dt = dt,
+                longestGap = longest, nObserved = length(t)))
+  if (n_missing > FFT_MAX_MISSING * n_grid)
+    return(fail(sprintf("%d of %d samples are missing", n_missing, n_grid), dt = dt,
+                longestGap = longest, nObserved = length(t)))
+  out <- numeric(n_grid)
+  for (i in seq_along(slots)) {
+    out[slots[i] + 1] <- y[i]
+    if (i > 1) {
+      gap <- slots[i] - slots[i - 1]
+      if (gap > 1) for (g in 1:(gap - 1))
+        out[slots[i - 1] + g + 1] <- y[i - 1] + ((y[i] - y[i - 1]) * g) / gap
+    }
+  }
+  list(ok = TRUE, reason = "", t0 = t0, dt = dt, y = out, nObserved = length(t),
+       nFilled = n_missing, longestGap = longest)
+}
+
+.empty_spectrum <- function(reason = "") {
+  list(frequencies = numeric(0), magnitudes = numeric(0), phases = numeric(0),
+       samplingRate = 0, nyquistFreq = 0, minPeriod = 0, resolution = 0, nSamples = 0,
+       nTransform = 0, nFilled = 0, grid = NULL, flat = FALSE, reason = reason)
+}
+
+# Port of fft.js computeFFT (see the Python port): own grid, mean removed, DFT at the
+# record's own length N (or M = ceil(rate / freq_step) zero-padded when finer), bins 1 ..
+# below M/2 at k rate / M, magnitude 2|X_k| / N, phase atan2(Im, Re); flat data has
+# magnitude 0 everywhere. R's fft() handles any length.
 compute_fft <- function(times, values, freq_step = NULL) {
-  t <- suppressWarnings(as.numeric(unlist(times, use.names = FALSE)))
-  y <- suppressWarnings(as.numeric(unlist(values, use.names = FALSE)))
-  n0 <- min(length(t), length(y))
-  t <- t[seq_len(n0)]; y <- y[seq_len(n0)]
-  ok <- is.finite(t) & is.finite(y)
-  t <- t[ok]; y <- y[ok]
-  if (length(t) < 2) {
-    return(list(frequencies = numeric(0), magnitudes = numeric(0), phases = numeric(0),
-                samplingRate = 0, nyquistFreq = 0, minPeriod = 0))
+  if (is.null(times) || is.null(values) || length(times) < 2 || length(values) < 2 ||
+      length(times) != length(values)) return(.empty_spectrum())
+  g <- regrid_uniform(times, values)
+  if (!g$ok) return(.empty_spectrum(g$reason))
+  n <- length(g$y)
+  if (n < 4) return(.empty_spectrum("need at least 4 samples"))
+  dt <- g$dt; rate <- 1 / dt
+  m <- n
+  if (!is.null(freq_step) && is.finite(freq_step) && freq_step > 0) {
+    want <- ceiling(rate / freq_step)
+    if (is.finite(want) && want > n) m <- want
   }
-  y <- y - mean(y)
-  dt <- (t[length(t)] - t[1]) / (length(t) - 1)
-  sampling_rate <- 1 / dt
-  nyquist <- sampling_rate / 2
-  n <- if (!is.null(freq_step) && freq_step > 0) {
-    2^ceiling(log2(max(ceiling(sampling_rate / freq_step), 1)))
-  } else 2^ceiling(log2(length(y)))
-  if (n < length(y)) n <- 2^ceiling(log2(length(y)))
-  y_pad <- c(y, rep(0, n - length(y)))
-  spec <- fft(y_pad)
-  half_n <- n %/% 2
-  freqs <- c(); mags <- c(); phases <- c()
-  for (i in seq_len(max(half_n - 1, 0))) {
-    freq <- i * sampling_rate / n
-    if (freq > nyquist) break
-    z <- spec[i + 1]
-    freqs <- c(freqs, freq)
-    mags <- c(mags, Mod(z) * 2 / n)
-    phases <- c(phases, Arg(z))
+  if (m > .MAX_FFT_N) return(.empty_spectrum("the requested frequency step is too fine"))
+  yc <- g$y - mean(g$y)
+  flat <- all(g$y == g$y[1])
+  spec <- fft(c(yc, rep(0, m - n)))
+  k <- seq_len(ceiling(m / 2) - 1)
+  z <- spec[k + 1]
+  list(frequencies = k * rate / m,
+       magnitudes = if (flat) rep(0, length(k)) else 2 * Mod(z) / n,
+       phases = atan2(Im(z), Re(z)), samplingRate = rate, nyquistFreq = rate / 2,
+       minPeriod = 2 * dt, resolution = rate / n, nSamples = n, nTransform = m,
+       nFilled = g$nFilled, grid = list(t0 = g$t0, dt = dt, y = yc), flat = flat,
+       reason = "")
+}
+
+# fft.js magnitudeAt: least-squares sinusoid at f with centred cos/sin regressors.
+# The sums run left to right in plain doubles, as the JS does: R's sum() accumulates in long
+# double, and the objective is flat enough at its maximum that the difference moves the
+# refined frequency by ~1e-7.
+.dsum <- function(v) { s <- 0; for (x in v) s <- s + x; s }
+.fft_magnitude_at <- function(y, dt, f) {
+  w <- 2 * pi * f * dt
+  j <- seq_along(y) - 1
+  cs <- cos(w * j); sn <- sin(w * j)
+  cc <- cs - .dsum(cs) / length(y); ss <- sn - .dsum(sn) / length(y)
+  scc <- .dsum(cc * cc); sss <- .dsum(ss * ss); scs <- .dsum(cc * ss)
+  syc <- .dsum(y * cc); sys <- .dsum(y * ss)
+  det <- scc * sss - scs * scs
+  if (!(abs(det) > 1e-12 * scc * sss)) {
+    mag <- 2 * sqrt(syc^2 + sys^2) / length(y)
+    return(list(mag = mag, phase = atan2(-sys, syc), fit = mag * mag * length(y) / 2))
   }
-  list(frequencies = freqs, magnitudes = mags, phases = phases,
-       samplingRate = sampling_rate, nyquistFreq = nyquist, minPeriod = 2 * dt)
+  a <- (syc * sss - sys * scs) / det
+  b <- (sys * scc - syc * scs) / det
+  list(mag = sqrt(a * a + b * b), phase = atan2(-b, a), fit = a * syc + b * sys)
+}
+
+# Port of fft.js fftPeak: largest bin (optionally within a period range or among `indices`,
+# 1-based), refined by golden-section search between its neighbouring bins on the explained
+# variance; the bin is kept if the search finds nothing better. NULL when there is no peak.
+fft_peak <- function(spec, period_min = NULL, period_max = NULL, indices = NULL) {
+  f <- spec$frequencies; m <- spec$magnitudes
+  if (!length(f) || isTRUE(spec$flat)) return(NULL)
+  cand <- indices
+  if (is.null(cand)) {
+    lo <- if (is.null(period_min)) 0 else period_min
+    hi <- if (is.null(period_max)) Inf else period_max
+    cand <- which(1 / f >= lo & 1 / f <= hi)
+  }
+  best <- 0
+  for (i in cand) if (is.finite(m[i]) && (best == 0 || m[i] > m[best])) best <- i
+  if (best == 0 || !(m[best] > 0)) return(NULL)
+  freq <- f[best]; mag <- m[best]; phase <- spec$phases[best]
+  gy <- spec$grid$y; gdt <- spec$grid$dt
+  if (length(gy)) {
+    a <- if (best > 1) f[best - 1] else f[best]
+    b <- if (best < length(f)) f[best + 1] else f[best]
+    if (!is.null(period_max) && is.finite(period_max)) a <- max(a, 1 / period_max)
+    if (!is.null(period_min) && period_min > 0) b <- min(b, 1 / period_min)
+    if (b > a) {
+      gr <- (sqrt(5) - 1) / 2
+      c1 <- b - gr * (b - a); d1 <- a + gr * (b - a)
+      fc <- .fft_magnitude_at(gy, gdt, c1)$fit; fd <- .fft_magnitude_at(gy, gdt, d1)$fit
+      it <- 0
+      while (it < 60 && b - a > 1e-12 * f[best]) {
+        if (fc > fd) {
+          b <- d1; d1 <- c1; fd <- fc
+          c1 <- b - gr * (b - a); fc <- .fft_magnitude_at(gy, gdt, c1)$fit
+        } else {
+          a <- c1; c1 <- d1; fc <- fd
+          d1 <- a + gr * (b - a); fd <- .fft_magnitude_at(gy, gdt, d1)$fit
+        }
+        it <- it + 1
+      }
+      fr <- (a + b) / 2
+      at <- .fft_magnitude_at(gy, gdt, fr)
+      if (at$fit >= .fft_magnitude_at(gy, gdt, f[best])$fit) {
+        freq <- fr; mag <- at$mag; phase <- at$phase
+      }
+    }
+  }
+  list(frequency = freq, period = 1 / freq, magnitude = mag, phase = phase, index = best)
+}
+
+# movinganalysis.js FFT window stats: a window failing the grid check is skipped (NaN);
+# otherwise computeFFT and the refined fftPeak.
+.moving_fft_stats <- function(tw, yw, args) {
+  if (!regrid_uniform(tw, yw)$ok) return(list())
+  fs <- args$fftFreqStep
+  r <- compute_fft(tw, yw, if (is.numeric(fs) && length(fs) == 1 && is.finite(fs) && fs > 0)
+                   fs else NULL)
+  if (!length(r$frequencies)) return(list())
+  pk <- fft_peak(r)
+  if (is.null(pk)) return(list())
+  list(peak_frequency = pk$frequency,
+       peak_period = if (pk$frequency != 0) pk$period else NaN,
+       peak_magnitude = pk$magnitude)
+}
+
+# peakFinder.js spectralPeakIndex (1-based): the largest finite POSITIVE value, 0 if none.
+.spectral_peak_index <- function(v) {
+  best <- 0
+  for (i in seq_along(v)) if (is.finite(v[i]) && v[i] > 0 && (best == 0 || v[i] > v[best]))
+    best <- i
+  best
 }
 
 # ---------------------------------------------------------------------------
@@ -2918,27 +3547,30 @@ cp_editvalue <- function(x, args, cols, raw_data) {
   out
 }
 
+# OutlierRemoval.svelte (matching the Python port): present values by the house rule, fewer
+# than 4 -> unchanged; "zscore" flags |z| > zThreshold (population SD, none when it is 0);
+# anything else the IQR rule on type-7 quartiles with k = iqrMultiplier. Flagged -> NA.
 cp_outlierremoval <- function(x, args, cols, raw_data) {
-  method <- if (is.null(args$method)) "iqr" else args$method
-  arr <- suppressWarnings(as.numeric(unlist(x, use.names = FALSE)))
-  sub <- arr[is.finite(arr)]
-  if (!length(sub)) return(arr)
-  if (identical(method, "iqr")) {
-    q <- unname(quantile(sub, c(0.25, 0.75), type = 7))
-    iqr <- q[2] - q[1]
-    mult <- as.numeric(if (is.null(args$multiplier)) 1.5 else args$multiplier)
-    lo <- q[1] - mult * iqr; hi <- q[2] + mult * iqr
+  xl <- as.list(x)
+  ok <- !vapply(xl, .js_invalid, logical(1))
+  vals <- vapply(xl[ok], .js_number, numeric(1))
+  if (length(vals) < 4) return(x)
+  if (identical(args$method, "zscore")) {
+    thr <- if (is.null(args$zThreshold)) 3 else as.numeric(args$zThreshold)
+    mu <- mean(vals)
+    sd0 <- sqrt(sum((vals - mu)^2) / length(vals))
+    flag <- if (sd0 == 0) rep(FALSE, length(vals)) else abs((vals - mu) / sd0) > thr
   } else {
-    mu <- mean(sub)
-    # Population sd (ddof = 0), matching numpy's default and the Python port.
-    sd0 <- sqrt(sum((sub - mu)^2) / length(sub))
-    if (sd0 == 0) sd0 <- 1
-    thr <- as.numeric(if (is.null(args$threshold)) 3 else args$threshold)
-    lo <- mu - thr * sd0; hi <- mu + thr * sd0
+    k <- if (is.null(args$iqrMultiplier)) 1.5 else as.numeric(args$iqrMultiplier)
+    q <- unname(quantile(vals, c(0.25, 0.75), type = 7))
+    flag <- vals < q[1] - k * (q[2] - q[1]) | vals > q[2] + k * (q[2] - q[1])
   }
-  # Outliers become NA rather than being dropped: the column stays row-aligned with every
-  # other column in the table, which removal would break.
-  ifelse(is.finite(arr) & (arr < lo | arr > hi), NA_real_, arr)
+  out <- xl
+  out[which(ok)[flag]] <- list(NA)
+  if (all(vapply(out, function(v) is.null(v) || is.numeric(v) || is.logical(v), logical(1))))
+    vapply(out, function(v) if (is.null(v) || length(v) != 1) NA_real_ else as.numeric(v),
+           numeric(1))
+  else out
 }
 
 cp_filterbyothercol <- function(x, args, cols, raw_data) {
@@ -2981,37 +3613,173 @@ cp_filterbyothercol <- function(x, args, cols, raw_data) {
 # on the exact sequence drawn from the JS's seeded @stdlib minstd-shuffle PRNG, which this
 # runtime does not reproduce. It is emitted as NaN rather than as a number that would look
 # comparable and could not be. Same boundary as the generator nodes.
+# Seeded PRNG: @stdlib minstd-shuffle as permutationTest.js createSeededRNG (see the Python
+# port). Exactly reproducible in doubles: 16807 * s < 2^46.
+.normalize_seed <- function(seed) {
+  v <- .js_number(seed)
+  if (!is.finite(v)) return(1)
+  v <- trunc(v); M <- 2147483646
+  ((((v - 1) %% M) + M) %% M) + 1
+}
+seeded_rng <- function(seed) {
+  st <- .normalize_seed(seed)
+  minstd <- function() { st <<- (16807 * st) %% 2147483647; st }
+  for (i in 1:8) minstd()
+  tbl <- numeric(32)
+  for (i in 32:1) tbl[i] <- minstd()
+  sh <- tbl[1]
+  function() {
+    i <- floor(32 * (sh / 2147483647)) + 1
+    s <- tbl[i]; sh <<- s; tbl[i] <<- minstd()
+    (s - 1) / 2147483646
+  }
+}
+seeded_sequence <- function(unused, n, seed) {
+  rng <- seeded_rng(seed)
+  list(values = vapply(seq_len(n), function(i) rng(), numeric(1)))
+}
+
+# utils/surrogates.js, matching the Python port.
+.sur_gaussian <- function(rng) {
+  u <- 0
+  while (u == 0) u <- rng()
+  v <- rng()
+  sqrt(-2 * log(u)) * cos(2 * pi * v)
+}
+.sur_clean <- function(values) {
+  vl <- as.list(values)
+  ok <- vapply(vl, function(v) !is.null(v) && length(v) == 1 && !identical(v, "") &&
+                 !(is.atomic(v) && is.na(v) && !is.nan(v)) && is.finite(.js_number(v)),
+               logical(1))
+  vapply(vl[ok], .js_number, numeric(1))
+}
+phase_randomise <- function(values, rng) {
+  y <- .sur_clean(values); n <- length(y)
+  if (n < 4) return(y)
+  mu <- mean(y)
+  X <- fft(y - mu)
+  k <- 1
+  while (2 * k < n) {
+    phi <- 2 * pi * rng(); mag <- Mod(X[k + 1])
+    X[k + 1] <- complex(modulus = mag, argument = phi)
+    X[n - k + 1] <- Conj(X[k + 1])
+    k <- k + 1
+  }
+  X[1] <- complex(real = Re(X[1]), imaginary = 0)
+  if (n %% 2 == 0) X[n / 2 + 1] <- complex(real = Re(X[n / 2 + 1]), imaginary = 0)
+  Re(fft(X, inverse = TRUE)) / n + mu
+}
+aaft_surrogate <- function(values, rng) {
+  y <- .sur_clean(values); n <- length(y)
+  if (n < 4) return(y)
+  gs <- sort(vapply(seq_len(n), function(i) .sur_gaussian(rng), numeric(1)))
+  g <- numeric(n); g[order(y, method = "radix")] <- gs
+  r <- phase_randomise(g, rng)
+  out <- numeric(n); out[order(r, method = "radix")] <- sort(y)
+  out
+}
+block_bootstrap <- function(values, rng, block_length) {
+  y <- .sur_clean(values); n <- length(y)
+  if (n < 4) return(y)
+  bl <- if (is.finite(block_length)) floor(block_length) else 0
+  L <- max(1, min(n, if (bl == 0) 1 else bl))
+  ms <- n - L
+  out <- numeric(0)
+  while (length(out) < n) {
+    st <- floor(rng() * (ms + 1))
+    out <- c(out, y[st + seq_len(min(L, n - length(out)))])
+  }
+  out
+}
+ar1_surrogate <- function(values, rng) {
+  y <- .sur_clean(values); n <- length(y)
+  if (n < 4) return(y)
+  mu <- mean(y); dev <- y - mu
+  num <- sum(dev[-1] * dev[-n]); den <- sum(dev * dev)
+  alpha <- if (den > 0) max(-0.999, min(0.999, num / den)) else 0
+  v <- den / n; isd <- sqrt(max(0, v * (1 - alpha^2)))
+  prev <- sqrt(v) * .sur_gaussian(rng)
+  out <- numeric(n)
+  for (i in seq_len(n)) { prev <- alpha * prev + isd * .sur_gaussian(rng); out[i] <- prev + mu }
+  out
+}
+shuffle_surrogate <- function(values, rng) {
+  out <- .sur_clean(values)
+  if (length(out) > 1) for (i in length(out):2) {
+    j <- floor(rng() * i) + 1
+    tmp <- out[i]; out[i] <- out[j]; out[j] <- tmp
+  }
+  out
+}
+make_surrogate <- function(values, method, rng, block_length = 24) {
+  switch(method, phase = phase_randomise(values, rng), aaft = aaft_surrogate(values, rng),
+         block = block_bootstrap(values, rng, block_length), ar1 = ar1_surrogate(values, rng),
+         shuffle = shuffle_surrogate(values, rng),
+         stop(sprintf('make_surrogate: unknown method "%s"', method)))
+}
+surrogate_test <- function(values, stat_fn, method = "block", n_surrogates = 999,
+                           seed = 12345, block_length = 24) {
+  y <- .sur_clean(values)
+  fail <- function(r) list(pValue = NaN, observed = NaN, nSurrogates = 0, valid = FALSE,
+                           reason = r)
+  if (length(y) < 8) return(fail("need at least 8 finite samples"))
+  if (!(method %in% c("phase", "aaft", "block", "ar1", "shuffle"))) return(fail("unknown method"))
+  obs <- tryCatch(as.numeric(stat_fn(y)), error = function(e) NaN)
+  if (!is.finite(obs)) return(fail("the statistic is not finite on the observed series"))
+  rng <- seeded_rng(seed)
+  st <- numeric(0)
+  for (i in seq_len(n_surrogates)) {
+    v <- tryCatch(as.numeric(stat_fn(make_surrogate(y, method, rng, block_length))),
+                  error = function(e) NaN)
+    if (is.finite(v)) st <- c(st, v)
+  }
+  if (!length(st)) return(fail("every surrogate failed"))
+  ext <- sum(st >= obs - 1e-9 * pmax(abs(obs), abs(st)))
+  list(pValue = (ext + 1) / (length(st) + 1), observed = obs, nSurrogates = length(st),
+       valid = TRUE, reason = "")
+}
+
+# Port of SurrogateTest.svelte (matching the Python port): regrid first (refused when off a
+# regular grid or gapped), block length round(hours / step), band-limited largest FFT bin,
+# phase/AAFT refused, and the p-value from the reproduced seeded draws.
 tp_surrogatetest <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_in <- args$yIN
   if (is.list(y_in)) y_in <- if (length(y_in)) y_in[[1]] else -1
   if (is.null(y_in)) y_in <- -1
   if (x_in == -1 || y_in == -1) return(FALSE)
-  if (is.null(env$cols[[as.character(x_in)]]) || is.null(env$cols[[as.character(y_in)]])) {
+  if (is.null(env$cols[[as.character(x_in)]]) || is.null(env$cols[[as.character(y_in)]]))
     return(FALSE)
-  }
   times <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
-  values <- suppressWarnings(as.numeric(unlist(
-    col_data(env$cols[[as.character(y_in)]], env$cols, env$raw_data), use.names = FALSE)))
+  values <- col_data(env$cols[[as.character(y_in)]], env$cols, env$raw_data)
   if (length(times) < 8 || length(values) < 8) return(FALSE)
-  n <- min(length(times), length(values))
-  ok <- is.finite(times[seq_len(n)]) & is.finite(values[seq_len(n)])
-  ta <- times[seq_len(n)][ok]; ya <- values[seq_len(n)][ok]
-  if (length(ta) < 8) return(FALSE)
-
-  period_min <- as.numeric(if (is.null(args$periodMin)) 20 else args$periodMin)
-  period_max <- as.numeric(if (is.null(args$periodMax)) 28 else args$periodMax)
-  f <- compute_fft(ta, ya)
-  best <- 0
-  for (i in seq_along(f$frequencies)) {
-    fr <- f$frequencies[i]
-    if (fr == 0) next
-    p <- 1 / fr
-    if (p >= period_min && p <= period_max && f$magnitudes[i] > best) best <- f$magnitudes[i]
+  refuse <- function() {
+    set_col(env, env$cols, out_id(args, "pvalue"), NaN, type = "number")
+    set_col(env, env$cols, out_id(args, "observed"), NaN, type = "number")
+    FALSE
   }
-  set_col(env, env$cols, out_id(args, "observed"), best, type = "number")
-  set_col(env, env$cols, out_id(args, "pvalue"), NA_real_, type = "number")
-  TRUE
+  method <- if (is.null(args$method)) "block" else args$method
+  if (!(method %in% c("block", "ar1", "shuffle"))) return(refuse())
+  g <- regrid_uniform(times, values)
+  if (!g$ok) return(refuse())
+  vals <- g$y; dt <- g$dt
+  grid_t <- g$t0 + (seq_along(vals) - 1) * dt
+  num_or <- function(v, d) { x <- if (is.null(v)) NaN else .js_number(v)
+    if (is.finite(x) && x != 0) x else d }
+  block <- max(1, .js_round(num_or(args$blockLengthHours, 24) / dt))
+  pmin_ <- num_or(args$periodMin, 20); pmax_ <- num_or(args$periodMax, 28)
+  stat <- function(y) {
+    f <- compute_fft(grid_t, y)
+    per <- 1 / f$frequencies
+    m <- f$magnitudes[per >= pmin_ & per <= pmax_]
+    if (length(m)) max(0, m) else 0
+  }
+  res <- surrogate_test(vals, stat, method,
+                        max(9, floor(num_or(args$nSurrogates, 199))),
+                        num_or(args$seed, 12345), block)
+  set_col(env, env$cols, out_id(args, "pvalue"), res$pValue, type = "number")
+  set_col(env, env$cols, out_id(args, "observed"), res$observed, type = "number")
+  isTRUE(res$valid)
 }
 
 # ---------------------------------------------------------------------------
@@ -3036,27 +3804,50 @@ median_dt <- function(t) {
 
 next_pow2 <- function(n) if (n <= 1) 1 else 2^ceiling(log2(n))
 
+# periodogram.js isFlatSeries (ROB-13): every usable value (house rule) EXACTLY equal, or
+# fewer than two. Flat data has no rhythm: zero power and no peak.
+is_flat_series <- function(values) {
+  vl <- as.list(values)
+  ok <- !vapply(vl, .js_invalid, logical(1))
+  v <- vapply(vl[ok], .js_number, numeric(1))
+  length(v) < 2 || all(v == v[1])
+}
+
+# periodogram.js binOrigin: floor(min(x) / binSize) * binSize, one binSize lower when that
+# rounds above min(x). The binned methods used to start at t = 0 whatever the data.
+bin_origin <- function(xs, bin_size) {
+  x <- suppressWarnings(as.numeric(unlist(xs, use.names = FALSE)))
+  x <- x[is.finite(x)]
+  if (!length(x) || !is.finite(bin_size) || !(bin_size > 0)) return(0)
+  mn <- min(x)
+  o <- floor(mn / bin_size) * bin_size
+  if (o > mn) o <- o - bin_size
+  o
+}
+
+.pgram_pairs <- function(t, y) {
+  tl <- as.list(t); yl <- as.list(y)
+  n <- min(length(tl), length(yl))
+  ok <- vapply(seq_len(n), function(i) !.js_invalid(tl[[i]]) && !.js_invalid(yl[[i]]),
+               logical(1))
+  list(t = vapply(tl[seq_len(n)][ok], .js_number, numeric(1)),
+       y = vapply(yl[seq_len(n)][ok], .js_number, numeric(1)))
+}
+
 # Lomb-Scargle: the classical form with the tau time-offset that makes the sine and cosine
-# terms orthogonal on UNEVENLY sampled data. That offset is the whole point of the method —
-# without it an uneven series leaks power between neighbouring periods.
+# terms orthogonal on UNEVENLY sampled data. Valid pairs only; flat data is 0 everywhere.
 lomb_scargle <- function(t, y, periods) {
-  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
-  y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
+  if (length(t) < 2 || length(y) < 2 || length(t) != length(y))
+    return(rep(NA_real_, length(periods)))
+  pr <- .pgram_pairs(t, y); t <- pr$t; y <- pr$y
+  if (!length(t) || is_flat_series(y)) return(rep(0, length(periods)))
   y <- y - mean(y)
-  # SAMPLE variance (n-1), matching periodogram.js:38 — R's var() default is already this.
-  # The Python port used the POPULATION form until 2026-07-28 and inflated every power by
-  # n/(n-1); the chi-squared periodogram below legitimately DOES use the population form
-  # (periodogram.js:155), so the two methods differ on purpose and neither follows the other.
+  # SAMPLE variance (n-1), matching periodogram.js.
   vary <- var(y)
   if (!is.finite(vary) || vary == 0) vary <- 1
   vapply(periods, function(P) {
     w <- 2 * pi / P
-    # tau, the offset that makes the sine and cosine bases orthogonal on unevenly sampled
-    # data. Lomb (1976, Ap&SS 39:447) and Scargle (1982, ApJ 263:835):
-    #     tan(2*w*tau) = sum(sin(2*w*t)) / sum(cos(2*w*t))
-    # The sums run over 2*w. This port and the JS engine both previously summed over w while
-    # still dividing by 2*w, which is some other offset that does not orthogonalise the
-    # bases. Fixed in all three languages together; tp-rhythmicity-periodogram enforces it.
+    # tan(2 w tau) = sum(sin(2 w t)) / sum(cos(2 w t)) (Lomb 1976; Scargle 1982).
     two_w <- 2 * w
     tau <- if (w != 0) atan2(sum(sin(two_w * t)), sum(cos(two_w * t))) / two_w else 0
     cwt <- cos(w * (t - tau)); swt <- sin(w * (t - tau))
@@ -3067,77 +3858,54 @@ lomb_scargle <- function(t, y, periods) {
   }, numeric(1))
 }
 
-# Folding chi-squared (Sokolove-Bushell 1978) periodogram. Occupancy-weighted:
-# Qp = N_eff * sum_h K_h*(M_h - ybar)^2 / sum_i (y_i - ybar)^2 over NON-EMPTY fold
-# columns only, and df = (occupied columns) - 1 per trial period — NOT the nominal
-# round(P/dt) - 1, which counts columns the sampling never fills. Empty bins carry
-# no information; counting them inflated noise Qp far above its chi-square null
-# whenever dt (binSize) was below the sampling interval, and handed the threshold a
-# too-large df. Matches periodogram.js exactly in the one-point-per-bin regime
-# (binSize <= sampling interval — the regime the empty-bin fixture pins); with
-# several points per bin this simplified mod-binning port still differs from the JS
-# binData-then-fold pipeline. The significance threshold is the per-period
-# Sidak-corrected UPPER-tail chi-square quantile (M = distinct folds), matching periodogram.js:
-# correctedAlpha = (1 - alpha)^(1/M) is the per-comparison CONFIDENCE level, so the
-# quantile is evaluated at correctedAlpha with the SAME effective df the statistic
-# used (NA below df 1) — statistic, df and threshold only calibrate together. The
-# pure-chisq-periodogram parity fixtures pin power, df and threshold in all three
-# languages.
+# Folding chi-squared (Sokolove-Bushell 1978), the periodogram.js pipeline step for step
+# (matching the Python port): valid pairs, bin at dt from bin_origin, fold the BIN MEANS at
+# colNum = round(P / dt) columns (bin i in column i %% colNum), occupancy-weighted over
+# non-empty columns: Qp = N_eff sum_h K_h (M_h - M)^2 / sum_i (x_i - M)^2, df = occupied
+# columns - 1. Flat data: Qp 0 with its real df. Per-fold p is the UPPER tail
+# (pchisq lower.tail = FALSE, SPEC-14); threshold the Sidak-corrected upper quantile.
 chi_squared_pgram <- function(t, y, periods, dt, alpha = 0.05) {
-  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
-  y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
-  n <- length(y)
-  ymean <- mean(y)
-  vary <- sum((y - ymean)^2) / n
-  if (vary == 0) vary <- 1
-  powers <- numeric(length(periods))
-  dfs <- numeric(length(periods))
-  for (k in seq_along(periods)) {
-    P <- periods[k]
-    nbins <- max(2, js_round(P / dt))
-    b <- as.integer(t / dt) %% nbins
-    sums <- numeric(nbins); counts <- numeric(nbins)
-    for (i in seq_along(y)) {
-      j <- b[i] + 1
-      sums[j] <- sums[j] + y[i]; counts[j] <- counts[j] + 1
-    }
-    df <- sum(counts > 0) - 1
-    if (df < 1) {
-      powers[k] <- NA_real_
-      dfs[k] <- NA_real_
-      next
-    }
-    means <- ifelse(counts > 0, sums / pmax(counts, 1), 0)
-    # Empty columns contribute 0 to the weighted sum (counts == 0), so this
-    # already runs over occupied columns only.
-    powers[k] <- n * (sum((means - ymean)^2 * counts) / n) / vary
-    dfs[k] <- df
+  pr <- .pgram_pairs(t, y)
+  flat <- is_flat_series(pr$y)
+  data <- as.numeric(bin_data(pr$t, pr$y, dt, bin_origin(pr$t, dt))$y_out)
+  np <- length(periods)
+  if (!length(data)) return(list(powers = rep(NA_real_, np), dfs = rep(NA_real_, np),
+                                 threshold = rep(NA_real_, np), pvalue = rep(NA_real_, np)))
+  ok <- !is.na(data)
+  avg <- mean(data[ok])
+  denom <- sum((data[ok] - avg)^2)
+  powers <- rep(NA_real_, np); dfs <- rep(NA_real_, np); pv <- rep(NA_real_, np)
+  for (k in seq_len(np)) {
+    cn <- js_round(periods[k] / dt)
+    if (!is.finite(cn) || cn < 1 || cn > length(data)) next
+    col <- (seq_along(data) - 1) %% cn + 1
+    sums <- numeric(cn); counts <- numeric(cn)
+    for (i in which(ok)) { sums[col[i]] <- sums[col[i]] + data[i]; counts[col[i]] <- counts[col[i]] + 1 }
+    occ <- counts > 0
+    df <- sum(occ) - 1
+    if (df < 1) next
+    qp <- if (flat) 0 else
+      sum(counts[occ] * (sums[occ] / counts[occ] - avg)^2) * sum(counts[occ]) / denom
+    if (!is.finite(qp)) next
+    powers[k] <- qp; dfs[k] <- df
+    pv[k] <- pchisq(qp, df, lower.tail = FALSE)
   }
-  # M counts the DISTINCT folds that produced a statistic (`periods` is one entry
-  # per fold, see fold_grid), not the requested trial periods: trial periods sharing
-  # a fold are one test, and counting them held the family-wise false-positive rate
-  # far below the nominal alpha.
   m <- sum(!is.na(dfs) & dfs >= 1)
   corrected <- if (m > 0) (1 - alpha)^(1 / m) else NA_real_
   thresholds <- vapply(dfs, function(df) {
     if (!is.na(df) && df >= 1) qchisq(corrected, df) else NA_real_
   }, numeric(1))
-  list(powers = powers, dfs = dfs, threshold = thresholds)
+  list(powers = powers, dfs = dfs, threshold = thresholds, pvalue = pv)
 }
 
-# Port of periodogram.js calculateEnrightPower (Enright 1965): bin the series at dt,
-# centre the bin means on their grand mean (an EMPTY bin, from a gap or a missing value,
-# becomes 0 after centring), then for each fold of nb = round(P / dt) bins average the
-# lag-product correlation sum(c_i * c_(i+lag)) / (n - lag) over every lag = k * nb < n, and
-# divide by the binned variance sum(c^2) / n. Missing rows are dropped before binning
-# (bin_data), as validPairs does in the JS. This replaced a single-lag normalised
-# autocorrelation that was a different statistic from the app's, so exported scripts drew a
-# different Enright spectrum; the pure-enright-periodogram-* parity fixtures pin the power.
+# Port of periodogram.js calculateEnrightPower (Enright 1965): valid pairs, bin at dt from
+# bin_origin, centre bin means (empty bins 0), average sum(c_i c_(i+lag)) / (n - lag) over
+# lag = k nb < n, divide by sum(c^2) / n. Flat data: 0 at every fold.
 enright_pgram <- function(t, y, periods, dt) {
-  t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
-  y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
   if (length(t) < 2 || length(y) < 2) return(rep(NA_real_, length(periods)))
-  data <- bin_data(t, y, dt, 0)$y_out
+  pr <- .pgram_pairs(t, y)
+  if (is_flat_series(pr$y)) return(rep(0, length(periods)))
+  data <- as.numeric(bin_data(pr$t, pr$y, dt, bin_origin(pr$t, dt))$y_out)
   n <- length(data)
   if (!n) return(rep(0, length(periods)))
   ok <- !is.na(data)
@@ -3174,8 +3942,8 @@ fold_grid <- function(periods, dt, p_min, p_max) {
 }
 
 run_periodogram_calculation <- function(params) {
-  t <- suppressWarnings(as.numeric(unlist(params$t, use.names = FALSE)))
-  y <- suppressWarnings(as.numeric(unlist(params$y, use.names = FALSE)))
+  t <- params$t
+  y <- params$y
   method <- if (is.null(params$method)) "Lomb-Scargle" else params$method
   p_min <- as.numeric(if (is.null(params$minPeriod)) 1 else params$minPeriod)
   p_max <- as.numeric(if (is.null(params$maxPeriod)) 48 else params$maxPeriod)
@@ -3184,17 +3952,21 @@ run_periodogram_calculation <- function(params) {
   dt <- if (!is.null(params$dt) && is.finite(params$dt) && params$dt > 0) params$dt
         else median_dt(t)
   if (!identical(method, "Lomb-Scargle")) periods <- fold_grid(periods, dt, p_min, p_max)
-  if (identical(method, "Lomb-Scargle")) {
+  res <- if (identical(method, "Lomb-Scargle")) {
     list(x = periods, y = lomb_scargle(t, y, periods), threshold = NULL)
   } else if (identical(method, "Chi-squared")) {
     alpha <- as.numeric(if (!is.null(params$alpha)) params$alpha
                         else if (!is.null(params$chiSquaredAlpha)) params$chiSquaredAlpha
                         else 0.05)
     r <- chi_squared_pgram(t, y, periods, dt, alpha)
-    list(x = periods, y = r$powers, threshold = r$threshold, df = r$dfs)
+    list(x = periods, y = r$powers, threshold = r$threshold, df = r$dfs, pvalue = r$pvalue)
   } else {
     list(x = periods, y = enright_pgram(t, y, periods, dt), threshold = NULL)
   }
+  # periodogram.js drops the periods whose power is NaN.
+  keep <- !is.na(res$y) & !is.na(res$x)
+  for (k in c("x", "y", "threshold", "df", "pvalue")) if (!is.null(res[[k]])) res[[k]] <- res[[k]][keep]
+  res
 }
 
 # Two lags whose correlation differs by less than this are a TIE, not a ranking: a
@@ -3385,7 +4157,7 @@ tp_rhythmicityanalysis <- function(args, env) {
   analysis <- if (is.null(args$analysis)) "periodogram" else args$analysis
   hide_inputs <- isTRUE(args$hideInputs)
   t <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
-  shared_x <- NULL; any_valid <- FALSE
+  shared_x <- NULL; any_valid <- FALSE; stats_by_y <- list()
   pick <- function(a, b, d) if (!is.null(args[[a]])) args[[a]]
                             else if (!is.null(args[[b]])) args[[b]] else d
 
@@ -3420,7 +4192,9 @@ tp_rhythmicityanalysis <- function(args, env) {
         }
       }
     } else if (identical(analysis, "fft")) {
-      f <- compute_fft(t, y)
+      fs <- args$fftFreqStep
+      f <- compute_fft(t, y, if (is.numeric(fs) && length(fs) == 1 && is.finite(fs) && fs > 0)
+                       fs else NULL)
       periods <- ifelse(f$frequencies != 0, 1 / f$frequencies, NA_real_)
       if (hide_inputs) {
         if (is.null(shared_x)) {
@@ -3455,7 +4229,34 @@ tp_rhythmicityanalysis <- function(args, env) {
                 ac$correlations, type = "number")
       }
     }
+    # The scalar stats behind the stat_<key> metric ports, by the app's peak rules.
+    st <- list()
+    if (identical(analysis, "periodogram")) {
+      i <- .spectral_peak_index(pg$y)
+      if (i > 0) st <- list(peak_period = pg$x[i], peak_power = pg$y[i])
+    } else if (identical(analysis, "fft")) {
+      pk <- if (length(f$frequencies)) fft_peak(f) else NULL
+      if (!is.null(pk)) st <- list(peak_frequency = pk$frequency,
+                                   peak_period = if (pk$frequency != 0) pk$period else NaN,
+                                   peak_magnitude = pk$magnitude)
+    } else if (identical(analysis, "correlogram") && length(ac$lags)) {
+      pk <- find_autocorrelation_peak(ac$lags, ac$correlations)
+      if (!is.na(pk$lag)) st <- list(peak_lag = pk$lag, peak_correlation = pk$correlation)
+    }
+    stats_by_y[[yk]] <- st
     any_valid <- TRUE
+  }
+  if (any_valid) {
+    keys <- switch(analysis, periodogram = c("peak_period", "peak_power"),
+                   fft = c("peak_period", "peak_frequency", "peak_magnitude"),
+                   correlogram = c("peak_lag", "peak_correlation"), character(0))
+    for (k in keys) {
+      v <- vapply(y_ins, function(y) {
+        x <- stats_by_y[[as.character(y)]][[k]]
+        if (is.null(x)) NaN else as.numeric(x)
+      }, numeric(1))
+      set_col(env, env$cols, out_id(args, paste0("stat_", k)), v, type = "number")
+    }
   }
   any_valid
 }
@@ -3532,7 +4333,7 @@ tp_movinganalysis <- function(args, env) {
     # without it floating-point drift drops the final window on tidy inputs.
     starts <- seq(min(ta), max(ta) - win + 1e-9, by = step)
     if (!length(starts) || is.na(starts[1])) next
-    per_stat <- list(); x_labels <- c()
+    per_stat <- list(); x_labels <- c(); window_stats <- list()
 
     for (s in starts) {
       e <- s + win
@@ -3555,10 +4356,9 @@ tp_movinganalysis <- function(args, env) {
           # folded at the median sampling interval instead.
           dt = if (is.null(args$pgBinSize)) 0.25 else as.numeric(args$pgBinSize),
           alpha = if (is.null(args$pgAlpha)) 0.05 else as.numeric(args$pgAlpha)))
-        if (length(pg$y)) {
-          i <- which.max(pg$y)
-          stats$peak_period <- pg$x[i]; stats$peak_power <- pg$y[i]
-        }
+        # spectralPeakIndex: no positive power is no rhythm (NaN), not the first period.
+        i <- .spectral_peak_index(pg$y)
+        if (i > 0) { stats$peak_period <- pg$x[i]; stats$peak_power <- pg$y[i] }
       } else if (identical(analysis, "cosinor")) {
         if (!identical(args$useFixedPeriod, FALSE)) {
           res <- fit_cosinor_fixed(tw, yw,
@@ -3603,16 +4403,8 @@ tp_movinganalysis <- function(args, env) {
           }
         }
       } else if (identical(analysis, "fft")) {
-        f <- compute_fft(tw, yw)
-        if (length(f$magnitudes)) {
-          # Skip bin 1 when picking the peak: it is the lowest resolvable frequency and on a
-          # short window it carries the residual trend, not a rhythm.
-          i <- if (length(f$magnitudes) > 1) which.max(f$magnitudes[-1]) + 1 else 1
-          fr <- f$frequencies[i]
-          stats$peak_frequency <- fr
-          stats$peak_period <- if (fr != 0) 1 / fr else Inf
-          stats$peak_magnitude <- f$magnitudes[i]
-        }
+        # A window off the regular grid is skipped (NaN); the peak is the refined fftPeak.
+        for (k in names(fs <- .moving_fft_stats(tw, yw, args))) stats[[k]] <- fs[[k]]
       } else if (identical(analysis, "correlogram")) {
         ac <- compute_autocorrelation(
           tw, yw,
@@ -3628,9 +4420,13 @@ tp_movinganalysis <- function(args, env) {
         }
       }
 
-      for (k in names(stats)) {
-        per_stat[[k]] <- c(per_stat[[k]], as.numeric(stats[[k]]))
-      }
+      window_stats[[length(window_stats) + 1]] <- stats
+    }
+    # One row per window for every stat any window produced; a window with nothing for a
+    # stat (refused FFT grid, flat data) is NaN there, as in the JS, not shifted up a row.
+    for (k in unique(unlist(lapply(window_stats, names)))) {
+      per_stat[[k]] <- vapply(window_stats, function(w)
+        if (is.null(w[[k]])) NaN else as.numeric(w[[k]]), numeric(1))
     }
 
     if (is.null(movex) && length(x_labels)) {
@@ -3683,6 +4479,8 @@ moving_windows <- function(times, values, opts = list()) {
     c("mesor", as.vector(rbind(paste0("H", seq_len(n_h), "_amplitude"),
                                paste0("H", seq_len(n_h), "_acrophase"))),
       "rel_amplitude", "r2", "rmse", "pvalue")
+  } else if (identical(analysis, "fft")) {
+    c("peak_period", "peak_frequency", "peak_magnitude")
   } else {
     stop(sprintf("moving_windows: unsupported analysis '%s'", analysis))
   }
@@ -3711,6 +4509,9 @@ moving_windows <- function(times, values, opts = list()) {
         if (!is.null(npc)) for (k in keys) {
           stats[[k]] <- if (is.null(npc[[k]])) NA_real_ else as.numeric(npc[[k]])
         }
+      } else if (identical(analysis, "fft")) {
+        fs <- .moving_fft_stats(tw, yw, opts)
+        for (k in names(fs)) if (is.finite(fs[[k]])) stats[[k]] <- fs[[k]]
       } else {
         res <- fit_cosinor_fixed(tw, yw,
                                  as.numeric(if (is.null(opts$fixedPeriod)) 24 else opts$fixedPeriod),
@@ -3744,6 +4545,10 @@ moving_windows <- function(times, values, opts = list()) {
 
 gc_mean <- function(a) if (!length(a)) NA_real_ else mean(a)
 
+# JS NON_FINITE_REASON: a NaN statistic is reported as not computable, never as p = 0.
+GC_NON_FINITE_REASON <- paste0("The test statistic could not be computed: a group contains ",
+                               "a non-finite value.")
+
 gc_sample_variance <- function(a) {
   if (length(a) < 2) return(NA_real_)
   sum((a - mean(a))^2) / (length(a) - 1)
@@ -3769,12 +4574,13 @@ gc_build_groups <- function(group_data, y_data) {
   for (i in seq_len(n)) {
     g_raw <- if (i <= length(group_data)) group_data[[i]] else NULL
     y_raw <- y_data[[i]]
-    if (is.null(g_raw) || is.null(y_raw)) next
-    if (length(g_raw) != 1 || length(y_raw) != 1) next
-    if (is.atomic(g_raw) && is.na(g_raw)) next
-    yv <- suppressWarnings(as.numeric(y_raw))
-    if (!is.finite(yv)) next
-    g <- as.character(g_raw)
+    # A missing label (NA, "", NaN or "NaN") is not a group and a missing value (house rule)
+    # is not a zero: both rows are dropped (JS isMissingCategory / isInvalidValue). +-Inf is
+    # a value, as in the JS, and makes the test statistic non-computable below.
+    if (is.null(g_raw) || length(g_raw) != 1 || isTRUE(is_missing_category(g_raw))) next
+    if (.js_invalid(y_raw)) next
+    yv <- .js_number(y_raw)
+    g <- js_string(g_raw)
     if (!(g %in% order_)) { order_ <- c(order_, g); buckets[[g]] <- numeric(0) }
     buckets[[g]] <- c(buckets[[g]], yv)
   }
@@ -3791,6 +4597,9 @@ gc_welch_t_test <- function(a, b, alpha = 0.05) {
   n1 <- a$n; n2 <- b$n
   if (n1 < 2 || n2 < 2) {
     return(list(valid = FALSE, reason = "Each group needs at least 2 valid values for a t-test."))
+  }
+  if (!is.finite(a$mean) || !is.finite(b$mean)) {
+    return(list(valid = FALSE, t = NaN, pValue = NaN, reason = GC_NON_FINITE_REASON))
   }
   v1 <- gc_sample_variance(a$values); v2 <- gc_sample_variance(b$values)
   aa <- v1 / n1; bb <- v2 / n2
@@ -3827,12 +4636,15 @@ gc_one_way_anova <- function(groups) {
   df_within <- n_total - k
   ms_between <- ss_between / df_between
   ms_within <- ss_within / df_within
-  f <- if (ms_within == 0) { if (ms_between == 0) 0 else Inf } else ms_between / ms_within
+  f <- if (is.nan(ms_within)) NaN
+       else if (ms_within == 0) { if (ms_between == 0) 0 else Inf } else ms_between / ms_within
+  if (is.nan(f)) return(list(valid = FALSE, f = NaN, pValue = NaN, reason = GC_NON_FINITE_REASON))
   list(valid = TRUE, f = f, ssBetween = ss_between, ssWithin = ss_within,
        dfBetween = df_between, dfWithin = df_within,
        msBetween = ms_between, msWithin = ms_within,
        etaSquared = if ((ss_between + ss_within) > 0) ss_between / (ss_between + ss_within) else NA_real_,
-       pValue = gc_p_upper_from_f(f, df_between, df_within))
+       # f = Inf only when ms_within == 0 and the means differ: p = 0 is its limit.
+       pValue = if (is.finite(f)) gc_p_upper_from_f(f, df_between, df_within) else 0)
 }
 
 # 'auto' picks by GROUP COUNT, not by a normality test: two groups get a t-test, more get
@@ -3883,9 +4695,7 @@ compute_group_comparison <- function(args, env) {
   if (is.null(group_col) && length(y_ins) > 1) {
     groups <- lapply(y_ins, function(y) {
       c1 <- env$cols[[as.character(y)]]
-      v <- suppressWarnings(as.numeric(unlist(col_data(c1, env$cols, env$raw_data),
-                                              use.names = FALSE)))
-      v <- v[is.finite(v)]
+      v <- .present_numbers(col_data(c1, env$cols, env$raw_data))
       list(name = if (is.null(c1$name)) as.character(y) else c1$name,
            values = v, n = length(v), mean = gc_mean(v), sd = gc_sample_std(v))
     })
@@ -3975,7 +4785,18 @@ chi_squared_periodogram <- function(t, y, opts) {
     stepSize = if (is.null(opts$periodStep)) 0.1 else as.numeric(opts$periodStep),
     dt = if (is.null(opts$binSize)) 0.25 else as.numeric(opts$binSize),
     alpha = if (is.null(opts$alpha)) 0.05 else as.numeric(opts$alpha)))
-  list(period = res$x, power = res$y, df = res$df, threshold = res$threshold)
+  list(period = res$x, power = res$y, df = res$df, threshold = res$threshold,
+       pvalue = res$pvalue)
+}
+
+# Pure-util parity surface for Lomb-Scargle through run_periodogram_calculation.
+lomb_scargle_periodogram <- function(t, y, opts) {
+  res <- run_periodogram_calculation(list(
+    t = t, y = y, method = "Lomb-Scargle",
+    minPeriod = if (is.null(opts$periodMin)) 1 else as.numeric(opts$periodMin),
+    maxPeriod = if (is.null(opts$periodMax)) 48 else as.numeric(opts$periodMax),
+    stepSize = if (is.null(opts$periodStep)) 0.1 else as.numeric(opts$periodStep)))
+  list(period = res$x, power = res$y)
 }
 
 # Pure-util parity surface for the Enright periodogram: the distinct-fold period axis and
@@ -3997,7 +4818,23 @@ enright_periodogram <- function(t, y, opts) {
 # build the call — `argRefs`/`valuesRef` name the inputs and `pyArgs`/`rArgs` supply the rest
 # — so the harness assembles positional arguments the same way for every kernel. Per-kernel
 # adapters would be a second, hand-maintained copy of that contract, and would drift.
+# Parity surfaces: fft_peak over compute_fft as scalars (NaN for no peak), and the grid.
+fft_peak_of <- function(times, values, freq_step = NULL, period_min = NULL, period_max = NULL) {
+  pk <- fft_peak(compute_fft(times, values, freq_step), period_min, period_max)
+  if (is.null(pk)) return(list(frequency = NaN, period = NaN, magnitude = NaN, phase = NaN))
+  pk[c("frequency", "period", "magnitude", "phase")]
+}
+regrid_uniform_summary <- function(times, values) {
+  g <- regrid_uniform(times, values)
+  list(ok = if (g$ok) 1 else 0, dt = g$dt, nFilled = g$nFilled, longestGap = g$longestGap,
+       y = g$y)
+}
+
 PURE_UTIL_MAP <- list(
+  seeded_sequence = seeded_sequence,
+  lomb_scargle_periodogram = lomb_scargle_periodogram,
+  fft_peak_of = fft_peak_of,
+  regrid_uniform_summary = regrid_uniform_summary,
   circular_mean = circular_mean,
   weighted_circular_mean = weighted_circular_mean,
   weighted_rayleigh = weighted_rayleigh,
@@ -4019,6 +4856,449 @@ PURE_UTIL_MAP <- list(
   rayleigh_test  = rayleigh_test
 )
 
+# ---------------------------------------------------------------------------
+# FormulaColumn
+# ---------------------------------------------------------------------------
+#
+# Port of src/lib/utils/formulaExpression.js (grammar in its header comment) and the module
+# `formulacolumn` in src/lib/tableProcesses/FormulaColumn.svelte, matching the Python port.
+# The formula is lexed against a fixed grammar, parsed into a tree, flattened to a postfix
+# program and run on a value stack. Nothing here calls eval/parse/str2lang or looks anything
+# up by a name taken from the formula except as a key into the fixed .FORMULA_FUNCTIONS
+# table: a session file is untrusted input, and string-built evaluation of its text is how
+# the JS (SEC-1) and Python (SEC-2) versions of this node came to run arbitrary code.
+
+.formula_error <- function(msg) {
+  stop(structure(class = c("formula_error", "error", "condition"),
+                 list(message = msg, call = NULL)))
+}
+
+# JS Math.round: halves go toward +infinity, exactly (0.49999999999999994 -> 0).
+.formula_round <- function(a) {
+  r <- floor(a)
+  if (a - r >= 0.5) r + 1 else r
+}
+
+# C fmod / JS %: the remainder has the sign of the DIVIDEND (R's %% takes the divisor's).
+.formula_fmod <- function(a, b) {
+  if (b == 0) return(NaN)
+  r <- abs(a) %% abs(b)
+  if (a < 0) -r else r
+}
+
+# name -> list(min args, max args (Inf = unbounded), function). JS FUNCTIONS table.
+.FORMULA_FUNCTIONS <- list(
+  abs = list(1, 1, function(a) abs(a)),
+  sqrt = list(1, 1, function(a) sqrt(a)),
+  log = list(1, 1, function(a) log(a)),
+  log10 = list(1, 1, function(a) log10(a)),
+  exp = list(1, 1, function(a) exp(a)),
+  sin = list(1, 1, function(a) sin(a)),
+  cos = list(1, 1, function(a) cos(a)),
+  tan = list(1, 1, function(a) tan(a)),
+  floor = list(1, 1, function(a) floor(a)),
+  ceil = list(1, 1, function(a) ceiling(a)),
+  round = list(1, 1, .formula_round),
+  pow = list(2, 2, function(a, b) a^b),
+  min = list(1, Inf, function(...) min(...)),
+  max = list(1, Inf, function(...) max(...))
+)
+.FORMULA_CONSTANTS <- list(pi = pi, e = exp(1))
+.FORMULA_MATH_CONSTANTS <- list(PI = pi, E = exp(1))
+.FORMULA_MAX_LEXEMES <- 2000
+.FORMULA_MAX_DEPTH <- 200
+# ASCII classes only, anchored at the start of the remaining text.
+.FORMULA_NUMBER_RE <- "^(?:[0-9]+\\.?[0-9]*|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
+.FORMULA_NAME_RE <- "^[A-Za-z_][A-Za-z0-9_]*"
+
+.formula_has <- function(tbl, name) !is.null(name) && name %in% names(tbl)
+
+.formula_show <- function(s) {
+  ch <- strsplit(as.character(s), "")[[1]]
+  cp <- vapply(ch, function(c) utf8ToInt(c)[1], numeric(1))
+  ch[cp < 32 | cp == 127] <- "?"
+  t <- paste(ch, collapse = "")
+  if (nchar(t) > 20) t <- paste0(substr(t, 1, 20), "...")
+  if (grepl('"', t, fixed = TRUE) && !grepl("'", t, fixed = TRUE)) paste0("'", t, "'")
+  else paste0('"', t, '"')
+}
+
+.formula_match <- function(re, s) {
+  m <- regmatches(s, regexpr(re, s, perl = TRUE))
+  if (length(m)) m else NULL
+}
+
+# JS lex(): token list -> list of lexemes (lists with a `t` field).
+.formula_lex <- function(tokens) {
+  out <- list()
+  for (tok in tokens) {
+    if (!is.list(tok)) .formula_error("Malformed formula token.")
+    tt <- tok$type
+    if (identical(tt, "col")) {
+      out[[length(out) + 1]] <- list(t = "col", id = if (!is.null(tok$id)) tok$id else tok$colId)
+      next
+    }
+    if (identical(tt, "stored")) {
+      out[[length(out) + 1]] <- list(t = "stored",
+                                     key = if (!is.null(tok$key)) tok$key else tok$name)
+      next
+    }
+    if (!identical(tt, "text"))
+      .formula_error(sprintf("Unknown formula token type %s.",
+                             .formula_show(if (is.null(tt)) "undefined" else tt)))
+    src <- tok$value
+    if (is.null(src)) src <- ""
+    if (!is.character(src) || length(src) != 1) .formula_error("Formula text must be a string.")
+    n <- nchar(src)
+    i <- 1
+    while (i <= n) {
+      ch <- substr(src, i, i)
+      if (ch %in% c(" ", "\t", "\n", "\r")) { i <- i + 1; next }
+      rest <- substr(src, i, n)
+      m <- .formula_match(.FORMULA_NUMBER_RE, rest)
+      if (!is.null(m)) {
+        glued <- .formula_match(.FORMULA_NAME_RE, substr(rest, nchar(m) + 1, nchar(rest)))
+        if (!is.null(glued))
+          .formula_error(sprintf("Cannot read %s: put an operator between a number and a name.",
+                                 .formula_show(paste0(m, glued))))
+        out[[length(out) + 1]] <- list(t = "num", v = as.numeric(m))
+        i <- i + nchar(m)
+        next
+      }
+      m <- .formula_match(.FORMULA_NAME_RE, rest)
+      if (!is.null(m)) {
+        name <- m
+        len <- nchar(m)
+        is_math <- FALSE
+        if (name == "Math" && substr(rest, len + 1, len + 1) == ".") {
+          m2 <- .formula_match(.FORMULA_NAME_RE, substr(rest, len + 2, nchar(rest)))
+          if (is.null(m2)) .formula_error('Expected a function name after "Math.".')
+          name <- m2
+          len <- len + 1 + nchar(m2)
+          is_math <- TRUE
+        }
+        if (substr(rest, len + 1, len + 1) == ".")
+          .formula_error(sprintf(
+            '%s is not allowed: a formula cannot reach into names with ".".',
+            .formula_show(substr(rest, 1, len + 1))))
+        out[[length(out) + 1]] <- list(t = "name", name = name, math = is_math,
+                                       text = substr(rest, 1, len))
+        i <- i + len
+        next
+      }
+      if (ch %in% c("+", "-", "*", "/", "%", "^", "(", ")", ",")) {
+        out[[length(out) + 1]] <- list(t = "op", v = ch)
+        i <- i + 1
+        next
+      }
+      .formula_error(sprintf(paste0(
+        "Unexpected character %s. A formula can use numbers, columns ($), stored values (#), ",
+        "+ - * / %% ^ ( ) and the functions %s."),
+        .formula_show(ch), paste(names(.FORMULA_FUNCTIONS), collapse = ", ")))
+    }
+  }
+  out
+}
+
+.formula_describe <- function(lx) {
+  if (is.null(lx)) return("the end of the formula")
+  switch(lx$t,
+         num = sprintf("the number %s", format(lx$v)),
+         name = .formula_show(lx$text),
+         col = "a column",
+         stored = "a stored value",
+         .formula_show(lx$v))
+}
+
+# JS parseFormula(): token list -> tree (nested lists with a `k` field). Errors are
+# `formula_error` conditions.
+parse_formula <- function(tokens) {
+  lx <- .formula_lex(tokens)
+  if (!length(lx)) .formula_error("The formula is empty.")
+  if (length(lx) > .FORMULA_MAX_LEXEMES)
+    .formula_error(sprintf("The formula is too long (over %d parts).", .FORMULA_MAX_LEXEMES))
+  st <- new.env()
+  st$pos <- 1
+  st$depth <- 0
+  peek <- function() if (st$pos <= length(lx)) lx[[st$pos]] else NULL
+  is_op <- function(v) {
+    t <- peek()
+    !is.null(t) && t$t == "op" && t$v == v
+  }
+  expect_op <- function(v) {
+    if (!is_op(v))
+      .formula_error(sprintf("Expected %s but found %s.", .formula_show(v),
+                             .formula_describe(peek())))
+    st$pos <- st$pos + 1
+  }
+  enter <- function() {
+    st$depth <- st$depth + 1
+    if (st$depth > .FORMULA_MAX_DEPTH) .formula_error("The formula is nested too deeply.")
+  }
+  expr <- function() {
+    enter()
+    node <- term()
+    while (is_op("+") || is_op("-")) {
+      op <- peek()$v
+      st$pos <- st$pos + 1
+      node <- list(k = "bin", op = op, a = node, b = term())
+    }
+    st$depth <- st$depth - 1
+    node
+  }
+  term <- function() {
+    node <- unary()
+    while (is_op("*") || is_op("/") || is_op("%")) {
+      op <- peek()$v
+      st$pos <- st$pos + 1
+      node <- list(k = "bin", op = op, a = node, b = unary())
+    }
+    node
+  }
+  unary <- function() {
+    if (is_op("-") || is_op("+")) {
+      op <- peek()$v
+      st$pos <- st$pos + 1
+      enter()
+      a <- unary()
+      st$depth <- st$depth - 1
+      return(if (op == "-") list(k = "neg", a = a) else a)
+    }
+    power()
+  }
+  power <- function() {
+    base <- primary()
+    if (is_op("^")) {
+      st$pos <- st$pos + 1
+      enter()
+      b <- unary()
+      st$depth <- st$depth - 1
+      return(list(k = "bin", op = "^", a = base, b = b))
+    }
+    base
+  }
+  primary <- function() {
+    tok <- peek()
+    if (is.null(tok)) .formula_error("The formula ends where a value was expected.")
+    if (tok$t == "num") { st$pos <- st$pos + 1; return(list(k = "num", v = tok$v)) }
+    if (tok$t == "col") { st$pos <- st$pos + 1; return(list(k = "col", id = tok$id)) }
+    if (tok$t == "stored") { st$pos <- st$pos + 1; return(list(k = "stored", key = tok$key)) }
+    if (tok$t == "name") {
+      st$pos <- st$pos + 1
+      const_tbl <- if (tok$math) .FORMULA_MATH_CONSTANTS else .FORMULA_CONSTANTS
+      if (is_op("(")) {
+        if (!.formula_has(.FORMULA_FUNCTIONS, tok$name))
+          .formula_error(sprintf("Unknown function %s. Allowed: %s.", .formula_show(tok$text),
+                                 paste(names(.FORMULA_FUNCTIONS), collapse = ", ")))
+        st$pos <- st$pos + 1
+        args <- list()
+        if (!is_op(")")) {
+          args[[1]] <- expr()
+          while (is_op(",")) {
+            st$pos <- st$pos + 1
+            args[[length(args) + 1]] <- expr()
+          }
+        }
+        expect_op(")")
+        spec <- .FORMULA_FUNCTIONS[[tok$name]]
+        lo <- spec[[1]]; hi <- spec[[2]]
+        if (length(args) < lo || length(args) > hi) {
+          want <- if (lo == hi) as.character(lo) else if (is.infinite(hi))
+            paste("at least", lo) else sprintf("%d to %d", lo, hi)
+          .formula_error(sprintf("%s() takes %s argument%s, not %d.", tok$name, want,
+                                 if (want == "1") "" else "s", length(args)))
+        }
+        return(list(k = "call", fn = tok$name, args = args))
+      }
+      if (.formula_has(const_tbl, tok$name)) return(list(k = "num", v = const_tbl[[tok$name]]))
+      if (.formula_has(.FORMULA_FUNCTIONS, tok$name))
+        .formula_error(sprintf("%s is a function: write %s(...).", .formula_show(tok$text),
+                               tok$text))
+      .formula_error(sprintf(
+        "Unknown name %s. Use $ to insert a column and # for a stored value.",
+        .formula_show(tok$text)))
+    }
+    if (is_op("(")) {
+      st$pos <- st$pos + 1
+      inner <- expr()
+      expect_op(")")
+      return(inner)
+    }
+    .formula_error(sprintf("Expected a value but found %s.", .formula_describe(tok)))
+  }
+  tree <- expr()
+  if (st$pos <= length(lx)) {
+    tok <- peek()
+    if (tok$t == "op" && tok$v == ")") .formula_error('Unbalanced ")" in the formula.')
+    .formula_error(sprintf("Unexpected %s: an operator is missing.", .formula_describe(tok)))
+  }
+  tree
+}
+
+# Flatten a tree to a postfix program iteratively (a 2000-lexeme left chain is ~1000 deep).
+.formula_postfix <- function(tree) {
+  prog <- list()
+  stack <- list(list(node = tree, done = FALSE))
+  while (length(stack)) {
+    top <- stack[[length(stack)]]
+    stack[[length(stack)]] <- NULL
+    node <- top$node
+    if (node$k %in% c("num", "col", "stored")) {
+      prog[[length(prog) + 1]] <- node
+    } else if (top$done) {
+      prog[[length(prog) + 1]] <- switch(node$k,
+        neg = list(k = "neg"),
+        bin = list(k = "bin", op = node$op),
+        call = list(k = "call", fn = node$fn, n = length(node$args)))
+    } else {
+      stack[[length(stack) + 1]] <- list(node = node, done = TRUE)
+      children <- switch(node$k, neg = list(node$a), bin = list(node$a, node$b),
+                         call = node$args)
+      for (child in rev(children)) stack[[length(stack) + 1]] <- list(node = child, done = FALSE)
+    }
+  }
+  prog
+}
+
+# JS String.prototype.trim whitespace (code points), trimmed by hand: a PCRE class with
+# \x{...} escapes above 255 needs UTF mode, which R only enables for non-ASCII input.
+.JS_WS_CODES <- c(0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x20, 0xA0, 0x1680, 0x2000:0x200A, 0x2028,
+                  0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF)
+.js_trim <- function(s) {
+  cp <- utf8ToInt(enc2utf8(s))
+  if (anyNA(cp)) return(s)
+  keep <- which(!(cp %in% .JS_WS_CODES))
+  if (!length(keep)) return("")
+  intToUtf8(cp[min(keep):max(keep)])
+}
+
+# JS Number(string) for one string: a finite double, or NA when JS gives NaN or +-Infinity.
+.js_number_from_string <- function(s) {
+  t <- .js_trim(s)
+  if (!nzchar(t)) return(NA_real_)
+  if (grepl("^[+-]?(?:[0-9]+\\.?[0-9]*|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$", t, perl = TRUE)) {
+    v <- as.numeric(t)
+    return(if (is.finite(v)) v else NA_real_)
+  }
+  if (grepl("^0[xXoObB][0-9A-Za-z]+$", t, perl = TRUE)) {
+    base <- switch(tolower(substr(t, 2, 2)), x = 16, o = 8, b = 2)
+    digits <- strsplit(tolower(substr(t, 3, nchar(t))), "")[[1]]
+    vals <- match(digits, c(as.character(0:9), letters)) - 1
+    if (anyNA(vals) || any(vals >= base)) return(NA_real_)
+    v <- 0
+    for (d in vals) v <- v * base + d
+    return(if (is.finite(v)) v else NA_real_)
+  }
+  NA_real_
+}
+
+# JS formulaCell(): a finite double, or NA when the cell is missing.
+formula_cell <- function(v) {
+  if (is.null(v) || length(v) != 1) return(NA_real_)
+  if (is.list(v)) v <- v[[1]]
+  if (is.null(v) || length(v) != 1 || is.na(v)) return(NA_real_)
+  if (is.logical(v)) return(if (v) 1 else 0)
+  if (is.numeric(v)) return(if (is.finite(v)) as.numeric(v) else NA_real_)
+  if (is.character(v)) return(.js_number_from_string(v))
+  NA_real_
+}
+
+.formula_finite <- function(v) if (length(v) == 1 && is.finite(v)) v else NA_real_
+
+# JS evaluateFormula(): `column(id)` returns a column's cells, `stored(key)` a stored value.
+# Returns a double vector, NA = missing. Every non-finite step is missing from there on.
+evaluate_formula <- function(tree, column, stored, n) {
+  prog <- .formula_postfix(tree)
+  col_cache <- list()
+  stored_cache <- list()
+  for (ins in prog) {
+    if (ins$k == "col") {
+      key <- as.character(ins$id)
+      if (is.null(col_cache[[key]])) {
+        d <- column(ins$id)
+        col_cache[[key]] <- if (is.null(d)) list() else as.list(d)
+      }
+    } else if (ins$k == "stored" && is.null(stored_cache[[ins$key]])) {
+      stored_cache[[ins$key]] <- formula_cell(stored(ins$key))
+    }
+  }
+  out <- rep(NA_real_, n)
+  for (i in seq_len(n)) {
+    stack <- numeric(0)
+    for (ins in prog) {
+      k <- ins$k
+      if (k == "num") {
+        stack <- c(stack, .formula_finite(ins$v))
+      } else if (k == "col") {
+        d <- col_cache[[as.character(ins$id)]]
+        stack <- c(stack, if (i <= length(d)) formula_cell(d[[i]]) else NA_real_)
+      } else if (k == "stored") {
+        stack <- c(stack, stored_cache[[ins$key]])
+      } else if (k == "neg") {
+        stack[length(stack)] <- -stack[length(stack)]
+      } else if (k == "bin") {
+        b <- stack[length(stack)]
+        a <- stack[length(stack) - 1]
+        stack <- stack[seq_len(length(stack) - 2)]
+        r <- if (is.na(a) || is.na(b)) NA_real_ else suppressWarnings(switch(ins$op,
+          "+" = a + b, "-" = a - b, "*" = a * b, "/" = a / b,
+          "%" = .formula_fmod(a, b), "^" = a^b))
+        stack <- c(stack, .formula_finite(r))
+      } else {  # call
+        m <- ins$n
+        vals <- stack[(length(stack) - m + 1):length(stack)]
+        stack <- stack[seq_len(length(stack) - m)]
+        r <- if (anyNA(vals)) NA_real_
+             else suppressWarnings(do.call(.FORMULA_FUNCTIONS[[ins$fn]][[3]], as.list(vals)))
+        stack <- c(stack, .formula_finite(r))
+      }
+    }
+    out[i] <- stack[1]
+  }
+  out
+}
+
+# JS formulacolumn (FormulaColumn.svelte). Returns validity; a refused formula writes nothing.
+tp_formulacolumn <- function(args, env) {
+  tokens <- args$tokens
+  if (is.null(tokens) || !is.list(tokens)) return(FALSE)
+  tok_col <- function(t) if (!is.null(t$id)) t$id else t$colId
+  is_col <- function(t) is.list(t) && identical(t$type, "col")
+  col_tokens <- Filter(function(t) {
+    id <- tok_col(t)
+    is_col(t) && is.numeric(id) && length(id) == 1 && !is.na(id) && id >= 0
+  }, tokens)
+  if (!length(col_tokens)) return(FALSE)
+  for (t in tokens) {
+    if (is_col(t)) {
+      id <- tok_col(t)
+      if (is.null(id) || is.null(env$cols[[as.character(id)]])) return(FALSE)
+    }
+  }
+  sv <- if (is.null(env$stored_values)) list() else env$stored_values
+  for (t in tokens) {
+    if (is.list(t) && identical(t$type, "stored")) {
+      key <- if (!is.null(t$key)) t$key else t$name
+      if (is.null(key) || !(key %in% names(sv))) return(FALSE)
+    }
+  }
+  tree <- tryCatch(parse_formula(tokens), formula_error = function(e) NULL)
+  if (is.null(tree)) return(FALSE)
+  cell_list <- function(id) {
+    col_data(env$cols[[as.character(id)]], env$cols, env$raw_data)
+  }
+  first <- cell_list(tok_col(col_tokens[[1]]))
+  n <- length(first)
+  if (n == 0) return(FALSE)
+  stored_of <- function(key) {
+    e <- sv[[key]]
+    if (is.list(e)) e$staticValue else e
+  }
+  result <- evaluate_formula(tree, cell_list, stored_of, n)
+  set_col(env, env$cols, out_id(args, "result"), result, type = "number")
+  length(result) > 0
+}
+
 # Analyses this runtime implements. Kept in step with R_IMPLEMENTED in
 # src/lib/_parity/runtimeCoverage.js by a test, in BOTH directions, so the declared reach and
 # the real reach cannot drift apart the way the Python port's did.
@@ -4033,6 +5313,7 @@ TABLE_PROCESS_MAP = list(
   doublelogistic = tp_doublelogistic,
   fdrcorrection = tp_fdrcorrection,
   fitfunction = tp_fitfunction,
+  formulacolumn = tp_formulacolumn,
   groupcomparison = tp_groupcomparison,
   chisquared = tp_chisquared,
   columnset = tp_columnset,
@@ -4416,70 +5697,102 @@ evaluate_trend_at_points <- function(parameters, model, x_points) {
 # Smoothing
 # ---------------------------------------------------------------------------
 
+# smoothing.js movingAverage, exactly: a centred window of floor(window / 2) each side,
+# clipped at the ends; missing values (house rule) skipped. "weighted" weights a neighbour
+# max(0, window - distance), "exponential" exp(-distance / (window / 3)). A window with
+# nothing usable keeps the input value.
 moving_average <- function(y, window = 5, type = "simple") {
-  v <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
-  n <- length(v)
-  if (n == 0 || window < 2) return(v)
-  half <- window %/% 2
-  out <- numeric(n)
+  y <- as.list(y)
+  n <- length(y)
+  out <- vapply(y, function(v) if (is.null(v) || length(v) != 1) NA_real_
+                else suppressWarnings(as.numeric(v)), numeric(1))
+  half <- floor(window / 2)
+  res <- out
   for (i in seq_len(n)) {
-    # Window is CLAMPED at the edges rather than shortened symmetrically, matching the JS:
-    # the first and last points keep a full-width average over whatever data exists.
-    lo <- max(1, i - half); hi <- min(n, i + half)
-    seg <- v[lo:hi]
-    seg <- seg[is.finite(seg)]
-    out[i] <- if (length(seg)) mean(seg) else NA_real_
+    total <- 0; count <- 0; wsum <- 0
+    for (j in max(1, i - half):min(n, i + half)) {
+      if (.js_invalid(y[[j]])) next
+      yj <- .js_number(y[[j]])
+      d <- abs(i - j)
+      if (identical(type, "simple")) { total <- total + yj; count <- count + 1 }
+      else if (identical(type, "weighted")) {
+        w <- max(0, window - d); total <- total + yj * w; wsum <- wsum + w
+      } else if (identical(type, "exponential")) {
+        w <- exp(-d / (window / 3)); total <- total + yj * w; wsum <- wsum + w
+      }
+    }
+    res[i] <- if (identical(type, "simple")) { if (count > 0) total / count else out[i] }
+              else if (wsum > 0) total / wsum else out[i]
   }
-  out
+  res
 }
 
-# Whittaker-Eilers: minimise ||y - z||^2 + lambda * ||D_order z||^2. Solved directly; the
-# system is small and banded, and base R's solve() is exact here.
+# Whittaker-Eilers: minimise ||y - z||^2 + lambda * ||D_order z||^2, the system the JS solves
+# by banded Cholesky, solved densely here. Fewer than 3 points, or no more than `order`,
+# are returned unchanged (smoothing.js whittakerEilers).
 whittaker_eilers <- function(y, lambda = 100, order = 2) {
   v <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
   n <- length(v)
-  if (n < order + 1) return(v)
-  ok <- is.finite(v)
-  if (!any(ok)) return(v)
-  filled <- v
-  filled[!ok] <- mean(v[ok])
+  if (n < 3 || n <= order) return(v)
   d <- diag(n)
   for (k in seq_len(order)) d <- diff(d)
-  w <- diag(as.numeric(ok))
-  as.vector(solve(w + lambda * crossprod(d), w %*% filled))
+  as.vector(solve(diag(n) + lambda * crossprod(d), v))
 }
 
+# smoothing.js savitzkyGolay: the polynomial's centre weights on every FULL window; the first
+# and last floor(window / 2) points stay as they are, and a window longer than the series
+# leaves it untouched. An even window grows by one.
 savitzky_golay <- function(y, window = 5, poly_order = 2) {
   v <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
   n <- length(v)
   if (window %% 2 == 0) window <- window + 1
-  if (n < window || window <= poly_order) return(v)
   half <- window %/% 2
+  if (n - half <= half) return(v)
   z <- -half:half
   des <- outer(z, 0:poly_order, `^`)
-  # Row 1 of the pseudo-inverse gives the smoothing weights for the window centre.
-  wts <- solve(crossprod(des), t(des))[1, ]
+  wts <- tryCatch(solve(crossprod(des), t(des))[1, ], error = function(e) rep(NaN, window))
   out <- v
   for (i in (half + 1):(n - half)) out[i] <- sum(wts * v[(i - half):(i + half)])
   out
 }
 
+# smoothing.js loess, step for step: h = max(floor(bandwidth * n), 1) nearest points (ties in
+# index order), tricube weights on distance / max distance, a weighted straight line, or the
+# weighted mean when the line is degenerate.
+loess_smooth <- function(x, y, bandwidth = 0.3) {
+  xs <- as.numeric(x); ys <- as.numeric(y)
+  n <- length(xs)
+  h <- max(floor(bandwidth * n), 1)
+  out <- numeric(n)
+  for (i in seq_len(n)) {
+    d <- abs(xs[i] - xs)
+    nb <- order(d, method = "radix")[seq_len(h)]   # radix is stable: ties keep index order
+    max_d <- d[nb[h]]
+    u <- d[nb] / (if (max_d == 0) 1 else max_d)
+    w <- ifelse(u >= 1, 0, (1 - u^3)^3)
+    sw <- sum(w); swx <- sum(w * xs[nb]); swy <- sum(w * ys[nb])
+    swxx <- sum(w * xs[nb] * xs[nb]); swxy <- sum(w * xs[nb] * ys[nb])
+    den <- sw * swxx - swx * swx
+    out[i] <- if (abs(den) < 1e-10) swy / sw else {
+      slope <- (sw * swxy - swx * swy) / den
+      slope * xs[i] + (swy - slope * swx) / sw
+    }
+  }
+  out
+}
+
+# smoothing.js smoothArrays with the JS option names and `?? default` defaults; an unknown
+# smoother type is the moving average.
 smooth_arrays <- function(x_vals, y_vals, smoother_type, options = list()) {
   g <- function(k, d) if (!is.null(options[[k]])) options[[k]] else d
-  if (identical(smoother_type, "whittaker")) {
-    return(list(x = x_vals, y = whittaker_eilers(y_vals, g("lambda", 100), g("order", 2))))
-  }
-  if (smoother_type %in% c("savitzky-golay", "savitzky")) {
-    return(list(x = x_vals, y = savitzky_golay(
-      y_vals, as.integer(g("savitzkyWindowSize", g("windowSize", 5))),
-      as.integer(g("savitzkyPolyOrder", g("polyOrder", 2))))))
-  }
-  if (smoother_type %in% c("moving-average", "moving")) {
-    return(list(x = x_vals, y = moving_average(
-      y_vals, as.integer(g("movingAvgWindowSize", g("windowSize", 5))),
-      g("movingAvgType", g("type", "simple")))))
-  }
-  list(x = x_vals, y = y_vals)
+  st <- if (is.null(smoother_type)) "moving" else smoother_type
+  y <- if (identical(st, "whittaker"))
+         whittaker_eilers(y_vals, g("whittakerLambda", 100), g("whittakerOrder", 2))
+       else if (identical(st, "savitzky"))
+         savitzky_golay(y_vals, g("savitzkyWindowSize", 5), g("savitzkyPolyOrder", 2))
+       else if (identical(st, "loess")) loess_smooth(x_vals, y_vals, g("loessBandwidth", 0.3))
+       else moving_average(y_vals, g("movingAvgWindowSize", 5), g("movingAvgType", "simple"))
+  list(x = x_vals, y = y)
 }
 
 # ======================================================================================
@@ -4515,14 +5828,50 @@ smooth_arrays <- function(x_vals, y_vals, smoother_type, options = list()) {
 
 .is_fin <- function(v) is.numeric(v) && length(v) == 1 && !is.na(v) && is.finite(v)
 
-# stats.js isInvalidValue on one value: NULL/NA, a blank string, or NaN after coercion.
-.js_invalid <- function(v) {
-  if (is.null(v) || length(v) != 1) return(TRUE)
-  if (is.character(v)) {
-    if (!nzchar(trimws(v))) return(TRUE)
-    return(is.na(suppressWarnings(as.numeric(v))))
+# JS Number(v) for one cell: a double, NaN where JS gives NaN. Strings follow JS syntax, not
+# R's: "0x10" is 16 and "Infinity" is Inf, while "inf", "1_000" and "TRUE" are NaN (R's
+# as.numeric reads "inf" and "infinity" as Inf). NULL is 0 as in JS; callers apply the house
+# rule (.js_invalid) first, which treats it as missing.
+.js_number <- function(v) {
+  if (is.null(v)) return(0)
+  if (is.list(v)) v <- if (length(v) == 1) v[[1]] else return(NaN)
+  if (length(v) != 1) return(NaN)
+  if (is.logical(v)) return(if (is.na(v)) NaN else if (v) 1 else 0)
+  if (is.numeric(v)) return(if (is.na(v)) NaN else as.numeric(v))
+  if (!is.character(v) || is.na(v)) return(NaN)
+  t <- .js_trim(v)
+  if (!nzchar(t)) return(0)
+  if (t %in% c("Infinity", "+Infinity")) return(Inf)
+  if (t == "-Infinity") return(-Inf)
+  if (grepl("^[+-]?(?:[0-9]+\\.?[0-9]*|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$", t, perl = TRUE))
+    return(as.numeric(t))
+  if (grepl("^0[xXoObB][0-9A-Za-z]+$", t, perl = TRUE)) {
+    base <- switch(tolower(substr(t, 2, 2)), x = 16, o = 8, b = 2)
+    vals <- match(strsplit(tolower(substr(t, 3, nchar(t))), "")[[1]],
+                  c(as.character(0:9), letters)) - 1
+    if (anyNA(vals) || any(vals >= base)) return(NaN)
+    out <- 0
+    for (d in vals) out <- out * base + d
+    return(out)
   }
-  is.na(v)
+  NaN
+}
+
+# stats.js isInvalidValue (the house rule) on one value: NULL/NA, a blank or whitespace-only
+# string, or NaN after JS Number() coercion. Logicals and +-Inf are NOT invalid.
+.js_invalid <- function(v) {
+  if (is.null(v)) return(TRUE)
+  if (is.list(v)) v <- if (length(v) == 1) v[[1]] else return(TRUE)
+  if (is.null(v) || length(v) != 1) return(TRUE)
+  if (is.character(v) && !is.na(v) && !nzchar(.js_trim(v))) return(TRUE)
+  is.nan(.js_number(v))
+}
+
+# The present values of a column as numbers (JS presentNumbers): house rule, then Number().
+.present_numbers <- function(values) {
+  vals <- as.list(values)
+  keep <- !vapply(vals, .js_invalid, logical(1))
+  vapply(vals[keep], .js_number, numeric(1))
 }
 
 # KahanSum as utils/numerics.js has it: a closure over (sum, c), no NaN skipping.
@@ -4805,15 +6154,17 @@ fit_line <- function(xs, ys, tau = NULL, theta = NULL, ref_day = 1, period_hrs =
   }
   r2 <- NA_real_; rmse <- NA_real_
   if (n > 0 && is.finite(slope) && is.finite(intercept)) {
-    ky <- .kahan()
-    for (v in ys) ky$add(v)
-    mean_y <- ky$value() / n
+    # R2 in the TIME-OF-DAY frame (lineFit.js, FIT-4): SS_tot is the spread of
+    # z = y - period_hrs * x about its mean; NA when z does not vary. RMSE unchanged.
+    kz <- .kahan()
+    for (i in seq_len(n)) kz$add(ys[i] - period_hrs * xs[i])
+    mean_z <- kz$value() / n
     kt <- .kahan(); kr <- .kahan()
     for (i in seq_len(n)) {
-      kt$add((ys[i] - mean_y)^2)
+      kt$add((ys[i] - period_hrs * xs[i] - mean_z)^2)
       kr$add((ys[i] - (slope * xs[i] + intercept))^2)
     }
-    r2 <- 1 - kr$value() / kt$value()
+    r2 <- if (kt$value() > 0) 1 - kr$value() / kt$value() else NA_real_
     rmse <- sqrt(kr$value() / n)
   }
   list(slope = slope, intercept = intercept, rSquared = r2, rmse = rmse, n = n)
@@ -4866,9 +6217,44 @@ harmonic_check <- function(x_data, y_data, bin_size, tau) {
     list(label = c$label, period = c$period, peakPeriod = c$period,
          power = if (length(p)) p else 0)
   })
-  strongest <- results[[1]]
-  if (length(results) >= 2) for (r in results[-1]) if (r$power > strongest$power) strongest <- r
-  list(candidates = results, strongest = strongest)
+  # Eligibility (harmonicCheck.js, matching the Python port): tau always; tau/2 only when the
+  # half-cycle F test at L = tau is NOT significant; 2 tau only when the test at 2 tau IS.
+  for (i in seq_along(results)) {
+    c <- results[[i]]
+    if (identical(c$label, "τ")) { results[[i]]$eligible <- TRUE; next }
+    L <- if (identical(c$label, "τ/2")) tau else 2 * tau
+    tst <- half_cycle_test(x_data, y_data, L, bin)
+    pv <- if (is.null(tst)) NA_real_ else tst$pValue
+    results[[i]]$eligible <- is.finite(pv) &&
+      (if (identical(c$label, "τ/2")) pv >= 0.05 else pv < 0.05)
+    results[[i]]$testF <- if (is.null(tst)) NULL else tst$F
+    results[[i]]$testP <- if (is.null(tst)) NULL else tst$pValue
+  }
+  pick <- function(lst) {
+    b <- lst[[1]]
+    if (length(lst) >= 2) for (r in lst[-1]) if (r$power > b$power) b <- r
+    b
+  }
+  elig <- Filter(function(r) isTRUE(r$eligible), results)
+  strongest <- if (length(elig)) pick(elig)
+               else list(label = "τ", period = tau, peakPeriod = tau, power = NaN)
+  list(candidates = results, strongest = strongest, powerStrongest = pick(results))
+}
+
+# harmonicCheck.js halfCycleTest (see the Python port): odd harmonics of a period-L rhythm.
+half_cycle_test <- function(x_data, y_data, L, bin_size) {
+  pr <- .pgram_pairs(x_data, y_data)
+  H <- max(1, min(3, floor(L / (4 * (if (is.null(bin_size) || bin_size == 0) 0.25 else bin_size)))))
+  n <- length(pr$t); df1 <- 2 * H; df2 <- n - 1 - 4 * H
+  if (!(df2 > 0)) return(NULL)
+  full <- fit_cosinor_fixed(pr$t, pr$y, L, 2 * H)
+  red <- fit_cosinor_fixed(pr$t, pr$y, L / 2, H)
+  if (is.null(full) || is.null(red)) return(NULL)
+  rf <- full$RMSE^2 * df2; rr <- red$RMSE^2 * (n - 1 - 2 * H)
+  if (!is.finite(rf) || !is.finite(rr)) return(NULL)
+  F <- if (rf > 0) max(0, rr - rf) / df1 / (rf / df2) else if (rr > 0) Inf else 0
+  p <- if (is.infinite(F)) 0 else pf(F, df1, df2, lower.tail = FALSE)
+  list(period = L, harmonics = 2 * H, F = F, df1 = df1, df2 = df2, pValue = p)
 }
 
 # --- Actogram.svelte: the row folding -----------------------------------------------------
@@ -5123,7 +6509,8 @@ marker_block_compute <- function(cfg, store, frame, period_hrs, n_days) {
     regression = reg,
     phase = phase,
     harmonic = if (is.null(hc)) NULL else list(candidates = hc$candidates,
-                                                strongest = hc$strongest$label),
+                                                strongest = hc$strongest$label,
+                                                powerStrongest = hc$powerStrongest$label),
     .harmonicPick = if (is.null(hc)) NA_real_ else hc$strongest$peakPeriod
   )
 }

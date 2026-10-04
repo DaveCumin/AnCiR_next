@@ -18,12 +18,14 @@
 	import MiniDataTable from './MiniDataTable.svelte';
 	import MetricTagButton from './MetricTagButton.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { columnNamer, restoreAutoNameIfLabel } from '$lib/core/columnLabels.js';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
 	import { processNodeWarnings } from '$lib/core/processWarnings.js';
 	import { normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
 	import NodeNoteButton from './NodeNoteButton.svelte';
+	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
 
@@ -63,15 +65,22 @@
 	// Each entry's `port` is the output dot's port name (TP: col_<colId>; free
 	// process: the producer column's producerPort, e.g. out_<inputColId>). Falls
 	// back to col_<colId> for older callers.
+	// `shown` is the row's display name (UI-4): the node's label ("Cosinor fit: A1", "R²") while
+	// the column keeps its auto name, the user's name once renamed. Display only.
+	const namer = $derived(columnNamer());
 	const outputColumns = $derived(
 		(node.outputColumns ?? [])
-			.map(({ key, colId, port, metric }) => ({
-				key,
-				colId,
-				port: port ?? `col_${colId}`,
-				metric: metric === true,
-				col: getColumnById(colId)
-			}))
+			.map(({ key, colId, port, metric }) => {
+				const col = getColumnById(colId);
+				return {
+					key,
+					colId,
+					port: port ?? `col_${colId}`,
+					metric: metric === true,
+					col,
+					shown: col ? namer(col) : ''
+				};
+			})
 			.filter((entry) => !!entry.col)
 	);
 
@@ -90,7 +99,12 @@
 	// Per-series labels for the metric breakdown. Metric columns carry one value
 	// per y input, in yIN order (the engine contract), so labels follow yIN.
 	const yInputIds = $derived(normalizeYInputs(tp?.args?.yIN));
-	const seriesLabels = $derived(yInputIds.map((id, i) => getColumnById(id)?.name ?? `y${i + 1}`));
+	const seriesLabels = $derived(
+		yInputIds.map((id, i) => {
+			const c = getColumnById(id);
+			return c ? namer(c) : `y${i + 1}`;
+		})
+	);
 
 	function formatMetricValue(v) {
 		if (typeof v !== 'number' || !Number.isFinite(v)) return '–';
@@ -131,6 +145,15 @@
 	let rowExpanded = $state({});
 
 	// Output-column rename: live on input, normalise (empty → auto name) on commit.
+	// Typing the output's display label back (Escape after an edit, or committing it unchanged)
+	// restores the seeded auto name instead of storing the label as a typed name, so the label
+	// keeps following its inputs ("Cosinor fit: A1" becomes "Cosinor fit: B1" when A1 is
+	// renamed). Any other text is the user's name and wins.
+	function renameOutput(col, next, commit = false) {
+		if (restoreAutoNameIfLabel(col, next ?? '', namer)) return;
+		renameColumn(col, next, commit);
+	}
+
 	function renameColumn(col, next, commit = false) {
 		if (!col) return;
 		if (commit) {
@@ -323,241 +346,249 @@
 		<div class="tp-sublabel">{node.sublabel}</div>
 	{/if}
 
-	<div class="tp-body">
-		<div class="tp-inputs" role="presentation">
-			{#each inputPorts as port (port.name)}
-				<div class="in-row">
-					<button
-						type="button"
-						class="port-dot dot-input inline-port in-port"
-						bind:this={inPortEls[port.name]}
-						data-node-id={node.id}
-						data-port-name={port.name}
-						data-port-dir="in"
-						{@attach tooltip(`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
-						onpointerdown={(e) => e.stopPropagation()}
-						onmousedown={(e) => disconnectInput(e, port.name)}
-						onmouseup={(e) => endAtInput(e, port.name)}
-						oncontextmenu={(e) => openInputPicker(e, port.name)}
-						aria-label={`input port ${port.name}`}
-					></button>
-					<span class="in-label">{port.name}{port.dynamic ? '*' : ''}</span>
-				</div>
-			{/each}
-		</div>
+	<!-- Contained (ROB-12): a body that throws while rendering (an output column it cannot
+	     preview, a port it cannot lay out) shows why in this card, under a header that can
+	     still be renamed, moved and deleted, instead of unmounting the whole canvas. -->
+	<ErrorBoundary
+		context={`drawing the "${getNodeName(node)}" node`}
+		title="This node couldn't be drawn."
+	>
+		<div class="tp-body">
+			<div class="tp-inputs" role="presentation">
+				{#each inputPorts as port (port.name)}
+					<div class="in-row">
+						<button
+							type="button"
+							class="port-dot dot-input inline-port in-port"
+							bind:this={inPortEls[port.name]}
+							data-node-id={node.id}
+							data-port-name={port.name}
+							data-port-dir="in"
+							{@attach tooltip(`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
+							onpointerdown={(e) => e.stopPropagation()}
+							onmousedown={(e) => disconnectInput(e, port.name)}
+							onmouseup={(e) => endAtInput(e, port.name)}
+							oncontextmenu={(e) => openInputPicker(e, port.name)}
+							aria-label={`input port ${port.name}`}
+						></button>
+						<span class="in-label">{port.name}{port.dynamic ? '*' : ''}</span>
+					</div>
+				{/each}
+			</div>
 
-		<div
-			class="tp-outputs"
-			onwheel={(e) => {
-				if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
-			}}
-			role="presentation"
-		>
-			{#each seriesColumns as { colId, col, port } (colId)}
-				{@const meta = typeMeta(col)}
-				{@const isOpen = rowExpanded[colId] === true}
-				<div class="out-row" class:expanded={isOpen}>
-					<div class="row-strip">
-						<button
-							type="button"
-							class="row-chev"
-							aria-expanded={isOpen}
-							title={isOpen ? 'Hide preview' : 'Show preview'}
-							onmousedown={stopPointer}
-							onclick={(e) => toggleRowExpanded(colId, e)}
-						>
-							<Icon name={isOpen ? 'caret-down' : 'caret-right'} width={12} height={12} />
-						</button>
-						<span
-							class="row-type"
-							title="Change type ({meta.label})"
-							onpointerdown={stopPointer}
-							onmousedown={stopPointer}
-							role="presentation"
-						>
-							<TypeSelector
-								bind:value={col.type}
-								onChange={(t) => sniffTimeFormatOnTypeChange(col, t)}
-							/>
-						</span>
-						<div
-							class="row-name"
-							onpointerdown={stopPointer}
-							onmousedown={stopPointer}
-							role="presentation"
-						>
-							<Editable
-								value={col.name}
-								placeholder="column"
-								ariaLabel="Rename output column"
-								title="Double-click to rename"
-								onInput={(v) => renameColumn(col, v)}
-								onCommit={(v) => renameColumn(col, v, true)}
-							/>
-							{#if col.groupLabel}
-								<span class="group-label-chip" title="Group label: {col.groupLabel}"
-									>{col.groupLabel}</span
-								>
-							{/if}
-						</div>
-						<button
-							type="button"
-							class="port-dot dot-output inline-port row-port"
-							class:splice-target={spliceTargetPort === port}
-							bind:this={rowPortEls[colId]}
-							data-node-id={node.id}
-							data-port-name={port}
-							data-port-dir="out"
-							onpointerdown={(e) => e.stopPropagation()}
-							onmousedown={(e) => startFromOutput(e, port)}
-							onmouseup={(e) => endAtOutput(e, port)}
-							oncontextmenu={onPortContextMenu}
-							onclick={(e) => e.stopPropagation()}
-							{@attach tooltip(`output: ${col.name}`)}
-							aria-label={`output port ${col.name}`}
-						></button>
-					</div>
-					{#if isOpen}
-						<div class="row-body" onmousedown={stopPointer} role="presentation">
-							<MiniDataTable column={col} maxRows={5} />
-						</div>
-					{/if}
-				</div>
-			{/each}
-			{#if metricColumns.length > 0}
-				<div class="metrics-section">
-					<button
-						type="button"
-						class="metrics-header"
-						aria-expanded={metricsOpen}
-						title={metricsOpen ? 'Collapse metrics' : 'Expand metrics'}
-						onmousedown={stopPointer}
-						onclick={(e) => {
-							e.stopPropagation();
-							metricsOpen = !metricsOpen;
-						}}
-					>
-						<Icon name={metricsOpen ? 'caret-down' : 'caret-right'} width={11} height={11} />
-						<span class="metrics-title">Metrics ({metricColumns.length})</span>
-						<span class="metrics-rule"></span>
-					</button>
-					{#each visibleMetricColumns as { key, colId, col, port } (colId)}
-						{@const values = typeof col?.getData === 'function' ? (col.getData() ?? []) : []}
-						{@const isOpen = rowExpanded[colId] === true}
-						<div class="out-row metric-row" class:expanded={isOpen}>
-							<div class="row-strip metric-strip">
-								<button
-									type="button"
-									class="row-chev"
-									aria-expanded={isOpen}
-									title={isOpen ? 'Hide per-series values' : 'Show per-series values'}
-									onmousedown={stopPointer}
-									onclick={(e) => toggleRowExpanded(colId, e)}
-								>
-									<Icon name={isOpen ? 'caret-down' : 'caret-right'} width={12} height={12} />
-								</button>
-								<span class="metric-glyph" title="Metric: one value per y input">#</span>
-								<div
-									class="row-name"
-									onpointerdown={stopPointer}
-									onmousedown={stopPointer}
-									role="presentation"
-								>
-									<Editable
-										value={col.name}
-										placeholder="metric"
-										ariaLabel="Rename metric column"
-										title="Double-click to rename"
-										onInput={(v) => renameColumn(col, v)}
-										onCommit={(v) => renameColumn(col, v, true)}
-									/>
-								</div>
-								<span class="metric-value" title={values.map(formatMetricValue).join(', ')}>
-									{metricSummary(values)}
-								</span>
-								<button
-									type="button"
-									class="port-dot dot-output inline-port row-port metric-port"
-									class:splice-target={spliceTargetPort === port}
-									bind:this={rowPortEls[colId]}
-									data-node-id={node.id}
-									data-port-name={port}
-									data-port-dir="out"
-									onpointerdown={(e) => e.stopPropagation()}
-									onmousedown={(e) => startFromOutput(e, port)}
-									onmouseup={(e) => endAtOutput(e, port)}
-									oncontextmenu={onPortContextMenu}
-									onclick={(e) => e.stopPropagation()}
-									{@attach tooltip(`metric output: ${col.name} (one value per y)`)}
-									aria-label={`metric output port ${col.name}`}
-								></button>
+			<div
+				class="tp-outputs"
+				onwheel={(e) => {
+					if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
+				}}
+				role="presentation"
+			>
+				{#each seriesColumns as { colId, col, port, shown } (colId)}
+					{@const meta = typeMeta(col)}
+					{@const isOpen = rowExpanded[colId] === true}
+					<div class="out-row" class:expanded={isOpen}>
+						<div class="row-strip">
+							<button
+								type="button"
+								class="row-chev"
+								aria-expanded={isOpen}
+								title={isOpen ? 'Hide preview' : 'Show preview'}
+								onmousedown={stopPointer}
+								onclick={(e) => toggleRowExpanded(colId, e)}
+							>
+								<Icon name={isOpen ? 'caret-down' : 'caret-right'} width={12} height={12} />
+							</button>
+							<span
+								class="row-type"
+								title="Change type ({meta.label})"
+								onpointerdown={stopPointer}
+								onmousedown={stopPointer}
+								role="presentation"
+							>
+								<TypeSelector
+									bind:value={col.type}
+									onChange={(t) => sniffTimeFormatOnTypeChange(col, t)}
+								/>
+							</span>
+							<div
+								class="row-name"
+								onpointerdown={stopPointer}
+								onmousedown={stopPointer}
+								role="presentation"
+							>
+								<Editable
+									value={shown}
+									placeholder="column"
+									ariaLabel="Rename output column"
+									title="Double-click to rename"
+									onInput={(v) => renameOutput(col, v)}
+									onCommit={(v) => renameOutput(col, v, true)}
+								/>
+								{#if col.groupLabel}
+									<span class="group-label-chip" title="Group label: {col.groupLabel}"
+										>{col.groupLabel}</span
+									>
+								{/if}
 							</div>
-							{#if isOpen}
-								<div
-									class="row-body metric-breakdown"
-									onmousedown={stopPointer}
-									role="presentation"
-								>
-									{#each values as v, i (i)}
-										{@const byY = values.length === seriesLabels.length}
-										<div class="metric-bd-row">
-											<span class="bd-label">{breakdownLabel(values, i)}</span>
-											<span class="bd-value">{formatMetricValue(v)}</span>
-											<MetricTagButton
-												{tp}
-												outKey={key}
-												defaultName={tagDefaultName(key, values, i)}
-												yId={byY ? yInputIds[i] : null}
-												index={byY ? null : i}
-												source={node.label}
-											/>
-										</div>
-									{/each}
-									{#if values.length === 0}
-										<div class="metric-bd-row bd-empty">no values yet</div>
-									{/if}
-								</div>
-							{/if}
+							<button
+								type="button"
+								class="port-dot dot-output inline-port row-port"
+								class:splice-target={spliceTargetPort === port}
+								bind:this={rowPortEls[colId]}
+								data-node-id={node.id}
+								data-port-name={port}
+								data-port-dir="out"
+								onpointerdown={(e) => e.stopPropagation()}
+								onmousedown={(e) => startFromOutput(e, port)}
+								onmouseup={(e) => endAtOutput(e, port)}
+								oncontextmenu={onPortContextMenu}
+								onclick={(e) => e.stopPropagation()}
+								{@attach tooltip(`output: ${shown}`)}
+								aria-label={`output port ${shown}`}
+							></button>
 						</div>
-					{/each}
-					{#if !metricsOpen && visibleMetricColumns.length < metricColumns.length}
-						<div class="metrics-collapsed-hint">
-							{metricColumns.length - visibleMetricColumns.length} hidden
-						</div>
-					{/if}
-				</div>
-			{/if}
-			{#each bundleOutputs as bport (bport.name)}
-				<div class="out-row bundle-row">
-					<div class="row-strip">
-						<span class="bundle-label" title="Column set output — connects to a many-in port">
-							<Icon name="column-set" width={13} height={13} />
-							<span>{bport.display ?? bport.name}</span>
-						</span>
+						{#if isOpen}
+							<div class="row-body" onmousedown={stopPointer} role="presentation">
+								<MiniDataTable column={col} maxRows={5} />
+							</div>
+						{/if}
+					</div>
+				{/each}
+				{#if metricColumns.length > 0}
+					<div class="metrics-section">
 						<button
 							type="button"
-							class="port-dot dot-output inline-port row-port"
-							class:splice-target={spliceTargetPort === bport.name}
-							bind:this={bundlePortEls[bport.name]}
-							data-node-id={node.id}
-							data-port-name={bport.name}
-							data-port-dir="out"
-							onpointerdown={(e) => e.stopPropagation()}
-							onmousedown={(e) => startFromOutput(e, bport.name)}
-							onmouseup={(e) => endAtOutput(e, bport.name)}
-							oncontextmenu={onPortContextMenu}
-							onclick={(e) => e.stopPropagation()}
-							{@attach tooltip('column set (connects to a many-in port)')}
-							aria-label={`column set output port ${bport.name}`}
-						></button>
+							class="metrics-header"
+							aria-expanded={metricsOpen}
+							title={metricsOpen ? 'Collapse metrics' : 'Expand metrics'}
+							onmousedown={stopPointer}
+							onclick={(e) => {
+								e.stopPropagation();
+								metricsOpen = !metricsOpen;
+							}}
+						>
+							<Icon name={metricsOpen ? 'caret-down' : 'caret-right'} width={11} height={11} />
+							<span class="metrics-title">Metrics ({metricColumns.length})</span>
+							<span class="metrics-rule"></span>
+						</button>
+						{#each visibleMetricColumns as { key, colId, col, port, shown } (colId)}
+							{@const values = typeof col?.getData === 'function' ? (col.getData() ?? []) : []}
+							{@const isOpen = rowExpanded[colId] === true}
+							<div class="out-row metric-row" class:expanded={isOpen}>
+								<div class="row-strip metric-strip">
+									<button
+										type="button"
+										class="row-chev"
+										aria-expanded={isOpen}
+										title={isOpen ? 'Hide per-series values' : 'Show per-series values'}
+										onmousedown={stopPointer}
+										onclick={(e) => toggleRowExpanded(colId, e)}
+									>
+										<Icon name={isOpen ? 'caret-down' : 'caret-right'} width={12} height={12} />
+									</button>
+									<span class="metric-glyph" title="Metric: one value per y input">#</span>
+									<div
+										class="row-name"
+										onpointerdown={stopPointer}
+										onmousedown={stopPointer}
+										role="presentation"
+									>
+										<Editable
+											value={shown}
+											placeholder="metric"
+											ariaLabel="Rename metric column"
+											title="Double-click to rename"
+											onInput={(v) => renameOutput(col, v)}
+											onCommit={(v) => renameOutput(col, v, true)}
+										/>
+									</div>
+									<span class="metric-value" title={values.map(formatMetricValue).join(', ')}>
+										{metricSummary(values)}
+									</span>
+									<button
+										type="button"
+										class="port-dot dot-output inline-port row-port metric-port"
+										class:splice-target={spliceTargetPort === port}
+										bind:this={rowPortEls[colId]}
+										data-node-id={node.id}
+										data-port-name={port}
+										data-port-dir="out"
+										onpointerdown={(e) => e.stopPropagation()}
+										onmousedown={(e) => startFromOutput(e, port)}
+										onmouseup={(e) => endAtOutput(e, port)}
+										oncontextmenu={onPortContextMenu}
+										onclick={(e) => e.stopPropagation()}
+										{@attach tooltip(`metric output: ${shown} (one value per y)`)}
+										aria-label={`metric output port ${shown}`}
+									></button>
+								</div>
+								{#if isOpen}
+									<div
+										class="row-body metric-breakdown"
+										onmousedown={stopPointer}
+										role="presentation"
+									>
+										{#each values as v, i (i)}
+											{@const byY = values.length === seriesLabels.length}
+											<div class="metric-bd-row">
+												<span class="bd-label">{breakdownLabel(values, i)}</span>
+												<span class="bd-value">{formatMetricValue(v)}</span>
+												<MetricTagButton
+													{tp}
+													outKey={key}
+													defaultName={tagDefaultName(key, values, i)}
+													yId={byY ? yInputIds[i] : null}
+													index={byY ? null : i}
+													source={node.label}
+												/>
+											</div>
+										{/each}
+										{#if values.length === 0}
+											<div class="metric-bd-row bd-empty">no values yet</div>
+										{/if}
+									</div>
+								{/if}
+							</div>
+						{/each}
+						{#if !metricsOpen && visibleMetricColumns.length < metricColumns.length}
+							<div class="metrics-collapsed-hint">
+								{metricColumns.length - visibleMetricColumns.length} hidden
+							</div>
+						{/if}
 					</div>
-				</div>
-			{/each}
-			{#if outputColumns.length === 0 && bundleOutputs.length === 0}
-				<div class="empty-hint">No output columns yet.</div>
-			{/if}
+				{/if}
+				{#each bundleOutputs as bport (bport.name)}
+					<div class="out-row bundle-row">
+						<div class="row-strip">
+							<span class="bundle-label" title="Column set output — connects to a many-in port">
+								<Icon name="column-set" width={13} height={13} />
+								<span>{bport.display ?? bport.name}</span>
+							</span>
+							<button
+								type="button"
+								class="port-dot dot-output inline-port row-port"
+								class:splice-target={spliceTargetPort === bport.name}
+								bind:this={bundlePortEls[bport.name]}
+								data-node-id={node.id}
+								data-port-name={bport.name}
+								data-port-dir="out"
+								onpointerdown={(e) => e.stopPropagation()}
+								onmousedown={(e) => startFromOutput(e, bport.name)}
+								onmouseup={(e) => endAtOutput(e, bport.name)}
+								oncontextmenu={onPortContextMenu}
+								onclick={(e) => e.stopPropagation()}
+								{@attach tooltip('column set (connects to a many-in port)')}
+								aria-label={`column set output port ${bport.name}`}
+							></button>
+						</div>
+					</div>
+				{/each}
+				{#if outputColumns.length === 0 && bundleOutputs.length === 0}
+					<div class="empty-hint">No output columns yet.</div>
+				{/if}
+			</div>
 		</div>
-	</div>
+	</ErrorBoundary>
 </div>
 
 <style>

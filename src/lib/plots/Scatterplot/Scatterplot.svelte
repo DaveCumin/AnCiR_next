@@ -242,6 +242,11 @@
 		set padding(v) {
 			this.#padding = v;
 		}
+		// The stored figure padding, for the Padding controls. While a node view is mounted
+		// `padding` reads back a derived, scaled copy, so an edit bound there was lost.
+		get figurePadding() {
+			return this.#padding;
+		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 
 		// The plot-area width before any room is taken for an outside legend. Auto legend
@@ -470,7 +475,8 @@
 			const box = this.legendLayout.box;
 			const mayGoOutside =
 				box && (this.legend?.position === 'auto' || this.legend?.position === 'outsideright');
-			const lengthPx = this.basePlotWidth - (mayGoOutside ? box.width + 2 * LEGEND_MARGIN : 0);
+			const lengthPx =
+				this.basePlotWidth - (mayGoOutside ? box.width + 2 * (box.margin ?? LEGEND_MARGIN) : 0);
 			const [plo, phi] = markerPaddedDomain(xmin, xmax, this.markerPadPx(this.data), lengthPx, {
 				log: this.xLogScale && !this.anyXdataTime
 			});
@@ -1085,7 +1091,7 @@
 			<div class="control-input-square">
 				<ControlInput label="Top">
 					<div style="display: flex;  justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits bind:value={theData.padding.top} />
+						<NumberWithUnits bind:value={theData.figurePadding.top} />
 					</div>
 				</ControlInput>
 
@@ -1093,7 +1099,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<NumberWithUnits bind:value={theData.padding.bottom} />
+						<NumberWithUnits bind:value={theData.figurePadding.bottom} />
 					</div>
 				</ControlInput>
 
@@ -1101,7 +1107,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<NumberWithUnits bind:value={theData.padding.left} />
+						<NumberWithUnits bind:value={theData.figurePadding.left} />
 					</div>
 				</ControlInput>
 
@@ -1109,7 +1115,7 @@
 					<div
 						style="    display: flex;  justify-content: flex-start; align-items: center; gap: 8px;"
 					>
-						<NumberWithUnits bind:value={theData.padding.right} />
+						<NumberWithUnits bind:value={theData.figurePadding.right} />
 					</div>
 				</ControlInput>
 			</div>
@@ -1157,10 +1163,10 @@
 				</div>
 
 				<div class="control-input-vertical">
-					<div class="control-input-checkbox">
+					<label class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.yLogScaleLeft} />
-						<p>Log Scale</p>
-					</div>
+						<span class="ci-label">Log Scale</span>
+					</label>
 				</div>
 			</div>
 		{/if}
@@ -1207,10 +1213,10 @@
 				</div>
 
 				<div class="control-input-vertical">
-					<div class="control-input-checkbox">
+					<label class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.yLogScaleRight} />
-						<p>Log Scale</p>
-					</div>
+						<span class="ci-label">Log Scale</span>
+					</label>
 				</div>
 			</div>
 		{/if}
@@ -1225,6 +1231,7 @@
 					<div class="control-input">
 						<p>Min</p>
 						<DateTimeHrs
+							label="X-axis minimum"
 							value={(() => {
 								const v = theData.xlimsIN[0] ?? theData.xlims[0];
 								return v;
@@ -1238,6 +1245,7 @@
 					<div class="control-input">
 						<p>Max</p>
 						<DateTimeHrs
+							label="X-axis maximum"
 							value={(() => {
 								const v = theData.xlimsIN[1] ?? theData.xlims[1];
 								return v;
@@ -1278,10 +1286,10 @@
 			</div>
 			<div class="control-input-vertical">
 				{#if !theData.anyXdataTime}
-					<div class="control-input-checkbox">
+					<label class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.xLogScale} />
-						<p>Log Scale</p>
-					</div>
+						<span class="ci-label">Log Scale</span>
+					</label>
 				{:else}
 					<!-- Only meaningful for a time x axis; a number axis has no date to format.
 					     The placeholder is the format the ticks are ACTUALLY using right now, so

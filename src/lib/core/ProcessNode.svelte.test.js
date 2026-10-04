@@ -130,6 +130,37 @@ describe('TableProcess inline output columns', () => {
 		expect(metricPorts).toEqual(['col_102', 'col_103']);
 	});
 
+	it('output ports and rows carry the display label; a renamed column keeps its name (UI-4)', () => {
+		const core = makeCore();
+		core.data.push(
+			{ id: 66, name: 'A1', refId: null, processes: [] },
+			{ id: 300, name: 'cosinory_66_7', refId: null, processes: [] },
+			{ id: 301, name: 'rsquared_7', refId: null, processes: [] },
+			{ id: 302, name: 'My acrophase', refId: null, processes: [] }
+		);
+		core.tableProcesses.push({
+			id: 7,
+			name: 'Cosinor',
+			args: { yIN: [66], out: { cosinory_66: 300, rsquared: 301, acrophase: 302 } }
+		});
+		const graph = getCachedProcessNodeGraph(core, makeAppConsts());
+		const tp = graph.nodes.find((n) => n.id === 'tableprocess_7');
+		const byKey = Object.fromEntries(tp.outputColumns.map((c) => [c.key, c]));
+		expect(byKey.cosinory_66).toMatchObject({
+			colId: 300,
+			port: 'col_300',
+			display: 'Cosinor fit: A1'
+		});
+		expect(byKey.rsquared).toMatchObject({ colId: 301, port: 'col_301', display: 'R²' });
+		expect(byKey.acrophase.display).toBeUndefined();
+		// Port NAMES (what wires anchor on) are unchanged; only display text is added.
+		const ports = Object.fromEntries(tp.ports.outputs.map((p) => [p.name, p.display]));
+		// (a renamed column needs no display: its own name is what shows)
+		expect(ports).toEqual({ col_300: 'Cosinor fit: A1', col_301: 'R²', col_302: undefined });
+		// Nothing was written to the columns.
+		expect(core.data.find((c) => c.id === 300).name).toBe('cosinory_66_7');
+	});
+
 	it('plot metric out-columns become metric ports on the plot node (no data_ node)', () => {
 		const core = makeCore();
 		core.data.push({ id: 200, name: 'peak_period_9', refId: null, processes: [] });
@@ -152,7 +183,8 @@ describe('TableProcess inline output columns', () => {
 		expect(graph.nodes.map((n) => n.id)).not.toContain('data_200');
 		const plotNode = graph.nodes.find((n) => n.id === 'plot_9');
 		const metricPort = plotNode.ports.outputs.find((p) => p.name === 'col_200');
-		expect(metricPort).toMatchObject({ metric: true, display: 'peak_period' });
+		// Display label (UI-4): the column still has its auto name, so the port reads as words.
+		expect(metricPort).toMatchObject({ metric: true, display: 'Peak period (h)' });
 		// The consumer's y wire routes from the owning plot's metric port.
 		const yEdge = graph.connections.find((c) => c.toId === 'plot_10' && c.toPort === 'ys1');
 		expect(yEdge).toMatchObject({ fromId: 'plot_9', fromPort: 'col_200' });

@@ -205,3 +205,58 @@ describe('crossingdata — missing data and re-arming', () => {
 		expect(res.crossings).toEqual([1, 7]);
 	});
 });
+
+/**
+ * Review finding FIT-3 (2026-10-03): with a TIME x the persistence was divided by the
+ * epoch-ms spacing (3,600,000), so "sustained for 6" rounded to one sample and a 1 h
+ * dip fired. The reviewer's exact case (scratchpad/review/fitting/vt/cross.test.js).
+ */
+describe('crossingdata — time x: persistence in hours (FIT-3)', () => {
+	const t0 = Date.UTC(2024, 0, 1);
+	const y = [30, 30, 10, 30, 30, 10, 10, 10, 10, 10, 10, 10, 30];
+	const timeCol = (hours) => ({
+		type: 'time',
+		getData: () => hours.map((h) => (h == null ? null : t0 + h * 3600000)),
+		hoursSinceStart: hours.map((h) => (h == null ? null : h - hours[0]))
+	});
+	const rule = { groups: [[{ target: 1, isOperator: '<', source: -1, value: 20 }]] };
+
+	it('time x gives the same single crossing as a numeric hour x', () => {
+		const hours = y.map((_, i) => i);
+		mockColumns[0] = timeCol(hours);
+		mockColumns[10] = col(hours);
+		mockColumns[1] = col(y);
+		const [rt] = crossingdata(args({ ...rule, xIN: 0, persistence: 6 }));
+		const [rn] = crossingdata(args({ ...rule, xIN: 10, persistence: 6 }));
+		expect(rn.count).toBe(1);
+		expect(rn.crossings).toEqual([10]);
+		expect(rt.count).toBe(1); // was 2: the 1 h dip at hour 2 fired
+		expect(rt.crossings).toEqual([t0 + 10 * 3600000]);
+	});
+
+	it('writes a time x crossing as a time column (epoch ms), a numeric one as numbers', () => {
+		const hours = y.map((_, i) => i);
+		mockColumns[0] = timeCol(hours);
+		mockColumns[1] = col(y);
+		crossingdata(args({ ...rule, xIN: 0, persistence: 6 }));
+		expect(mockColumns[91].type).toBe('time');
+		mockColumns[10] = col(hours);
+		crossingdata(args({ ...rule, xIN: 10, persistence: 6 }));
+		expect(mockColumns[91].type).toBe('number');
+	});
+
+	it('a gap of missing rows breaks a run (FIT-U4): it does not join the samples either side', () => {
+		// 3 h below threshold, 10 h of rows absent from the file, 3 h below again: never
+		// 6 h of observed below-threshold data, so no crossing.
+		const hours = [0, 1, 2, 3, 14, 15, 16, 17];
+		const yy = [30, 10, 10, 10, 10, 10, 10, 30];
+		mockColumns[0] = timeCol(hours);
+		mockColumns[1] = col(yy);
+		const [res] = crossingdata(args({ ...rule, xIN: 0, persistence: 6 }));
+		expect(res.count).toBe(0);
+		// The same rows with no gap do complete 6 h.
+		mockColumns[0] = timeCol([0, 1, 2, 3, 4, 5, 6, 7]);
+		const [res2] = crossingdata(args({ ...rule, xIN: 0, persistence: 6 }));
+		expect(res2.count).toBe(1);
+	});
+});

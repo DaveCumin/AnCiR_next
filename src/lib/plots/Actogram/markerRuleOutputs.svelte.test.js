@@ -133,7 +133,10 @@ describe('values', () => {
 		expect(col(plot, 'r1_tau')[1]).toBeCloseTo(24.627, 3);
 		expect(col(plot, 'r1_phi')[0]).toBeCloseTo(7.357, 3);
 		expect(col(plot, 'r1_phi')[1]).toBeCloseTo(6.18, 3);
-		expect(col(plot, 'r1_r2')[0]).toBeCloseTo(0.99997, 4);
+		// R² in the time-of-day frame (review FIT-4, 2026-10-04): was 0.99997 on absolute
+		// time, where the 24 h-per-day ramp made any onsets score near 1. A near-entrained
+		// line (24.14 h) has little drift to explain, so R² is modest; RMSE is the quality.
+		expect(col(plot, 'r1_r2')[0]).toBeCloseTo(0.5714, 4);
 		expect(col(plot, 'r1_rmse')[0]).toBeCloseTo(0.244, 3);
 		expect(col(plot, 'r1_rmse')[1]).toBeCloseTo(0.616, 3);
 		expect(col(plot, 'r1_n')).toEqual([6, 6]);

@@ -1,6 +1,14 @@
 <script>
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, drawAxes, seededRNG, initPalette } from '$lib/animUtils.js';
+	import {
+		C,
+		setupCanvas,
+		drawAxes,
+		seededRNG,
+		initPalette,
+		canvasSize,
+		observeResize
+	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
 
@@ -44,8 +52,7 @@
 
 	function drawTS(f) {
 		const ctx = cTS.getContext('2d');
-		const W = cTS.offsetWidth,
-			H = cTS.offsetHeight;
+		const { W, H } = canvasSize(cTS);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 42,
@@ -110,8 +117,7 @@
 
 	function drawActogram(f) {
 		const ctx = cActo.getContext('2d');
-		const W = cActo.offsetWidth,
-			H = cActo.offsetHeight;
+		const { W, H } = canvasSize(cActo);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 42,
@@ -235,9 +241,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cTS, cActo], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});

@@ -7,6 +7,7 @@
 	// "Import file" opens the file picker.
 	import Icon from '$lib/icons/Icon.svelte';
 	import { appConsts, createNote, createGroup } from '$lib/core/core.svelte.js';
+	import { mutationService } from '$lib/core/mutationService.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { openImportData } from '$lib/core/dataSourceActions.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
@@ -296,14 +297,15 @@
 			// stablePositions effect will still pick the same spot via the
 			// spawn queue, so the node visually lands at the viewport centre.
 			queueSpawnPosition?.();
-			createNote();
+			// Recorded, so one undo removes the note and redo restores it.
+			mutationService.record(() => createNote());
 			closeMenu();
 			return;
 		}
 
 		if (item.kind === 'group') {
 			queueSpawnPosition?.();
-			createGroup();
+			mutationService.record(() => createGroup());
 			closeMenu();
 			return;
 		}
@@ -481,7 +483,11 @@
 
 	.palette-search-wrap {
 		position: sticky;
-		top: 0;
+		/* Stick at the menu's padding edge, not its content edge, and fill that padding:
+		   with top: 0 the scrolled tiles showed through the strip above the search box. */
+		top: calc(-1 * var(--space-5));
+		margin-top: calc(-1 * var(--space-5));
+		padding-top: var(--space-5);
 		z-index: 1;
 		padding-bottom: var(--space-4);
 		background: var(--surface-card);

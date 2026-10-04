@@ -1,6 +1,25 @@
 // @ts-nocheck
 import { KahanSum } from './numerics.js';
 import { min, max } from './MathsStats.js';
+import {
+	FREE_PERIOD_DEFAULTS,
+	resolvePeriodRange,
+	scanPeriodogram,
+	freePeriodFitWarnings
+} from './cosinor.js';
+
+// WHY THE FREE PERIOD IS BOUNDED (review finding FIT-1, 2026-10-03)
+//
+// The free-period fit used to clamp omega only to [0.001, 100] rad/h, i.e. a period of
+// 0.063 to 6,283 h. On a trend with noise and no rhythm (y = 0.1 t + N(0, 1), hourly, 7
+// days) it returned a period of 2,243 h with R squared 0.965 and no warning: one
+// rectangular pulse stretched across the record fits a ramp. This is the failure v77
+// fixed for the cosinor, and the fix is the cosinor's, reused: the period is kept inside
+// [minPeriod, maxPeriod] (default FREE_PERIOD_DEFAULTS, 1 to 48 h, so MovingAnalysis
+// windows that call this without a range are bounded too), the starts come from the
+// peaks of the cosinor's least-squares periodogram inside that range, and the result
+// carries `diagnostics` ({ converged, iterations, atBound: [side], periodRange }) that
+// rectWaveFitWarnings turns into the cosinor's at-bound and non-convergence warnings.
 
 /**
  * Fits a rectangular (square) wave model to data using a tanh approximation.
@@ -28,7 +47,11 @@ import { min, max } from './MathsStats.js';
  * @param {number}  options.maxIterations - Max LM iterations per start (default 2000)
  * @param {number}  options.tolerance     - Relative convergence tolerance  (default 1e-7)
  * @param {number}  options.numStarts     - Number of multi-starts (default 5)
- * @returns {Object} Fitting result
+ * @param {number}  options.minPeriod     - Free period only: shortest period (default 1 h)
+ * @param {number}  options.maxPeriod     - Free period only: longest period (default 48 h)
+ * @returns {Object|null} Fitting result, with `diagnostics` = { converged, iterations,
+ *   atBound: ['min'|'max'|null], periodRange: [min, max] | null (fixed period) }; null
+ *   when the free period's range is empty or every start failed.
  */
 export function fitRectangularWave(t, x, options = {}) {
 	if (t.length !== x.length) throw new Error('Arrays t and x must have the same length');
@@ -42,8 +65,28 @@ export function fitRectangularWave(t, x, options = {}) {
 		fixedDutyCycle = 0.5,
 		maxIterations = 10000,
 		tolerance = 1e-6,
-		numStarts = 5
+		numStarts = 5,
+		minPeriod = FREE_PERIOD_DEFAULTS.minPeriod,
+		maxPeriod = FREE_PERIOD_DEFAULTS.maxPeriod
 	} = options;
+
+	// A pinned ω with no value used to fall back to 24 h silently; refuse instead.
+	if (fixOmega && !(Number.isFinite(fixedOmega) && fixedOmega > 0)) {
+		throw new Error('fitRectangularWave: fixOmega needs a positive finite fixedOmega');
+	}
+
+	// Free period: the range the fit may use, and its periodogram peaks as starts.
+	let wLo = 0.001;
+	let wHi = 100;
+	let range = null;
+	let peaks = null;
+	if (!fixOmega) {
+		range = resolvePeriodRange(t, minPeriod, maxPeriod);
+		if (!range) return null;
+		wLo = (2 * Math.PI) / range.maxPeriod;
+		wHi = (2 * Math.PI) / range.minPeriod;
+		peaks = scanPeriodogram(t, x, range.minPeriod, range.maxPeriod, numStarts);
+	}
 
 	// M=0, A=1, κ=2, ω=3, φ=4, d=5 — always free: 0,1,4
 	const freeIndices = [0, 1, 4];
@@ -62,10 +105,13 @@ export function fitRectangularWave(t, x, options = {}) {
 			fixDutyCycle,
 			fixedKappa,
 			fixedOmega,
-			fixedDutyCycle
+			fixedDutyCycle,
+			peaks,
+			wLo,
+			wHi
 		});
 		try {
-			const result = fitWithLM(t, x, params, freeIndices, maxIterations, tolerance);
+			const result = fitWithLM(t, x, params, freeIndices, maxIterations, tolerance, wLo, wHi);
 			if (result.rmse < bestRmse) {
 				bestRmse = result.rmse;
 				bestResult = result;
@@ -75,7 +121,32 @@ export function fitRectangularWave(t, x, options = {}) {
 		}
 	}
 
+	if (bestResult) {
+		bestResult.diagnostics.periodRange = range ? [range.minPeriod, range.maxPeriod] : null;
+		if (fixOmega) bestResult.diagnostics.atBound = [null];
+	}
 	return bestResult;
+}
+
+/**
+ * The cosinor's plain-language warnings (period on a bound of the range, optimiser out
+ * of iterations) for rectangular-wave fits. `entries` are `{ label, result }` with
+ * `result` a fitRectangularWave return value; fixed-period fits never warn about the
+ * period range.
+ */
+export function rectWaveFitWarnings(entries, modelLabel = 'The free-period rectangular-wave fit') {
+	return freePeriodFitWarnings(
+		(entries ?? []).map((e) => ({
+			label: e?.label,
+			result: e?.result?.diagnostics
+				? {
+						diagnostics: e.result.diagnostics,
+						parameters: { cosines: [{ frequency: e.result.parameters?.omega }] }
+					}
+				: null
+		})),
+		modelLabel
+	);
 }
 
 /**
@@ -143,26 +214,41 @@ function computeNormalEqs(t, x, params, freeIndices) {
 
 // ─── LM optimizer ─────────────────────────────────────────────────────────────
 
-function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance) {
+function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance, wLo = 0.001, wHi = 100) {
 	let p = [...params];
+	p[3] = Math.min(wHi, Math.max(wLo, p[3]));
 	let lambda = 0.01;
 	let { JtJ, JtR, rss: currentRss } = computeNormalEqs(t, x, p, freeIndices);
+	let converged = false;
+	let iterations = 0;
+	// Position of ω in the free-parameter vector (-1 when the period is fixed).
+	const wPos = freeIndices.indexOf(3);
 
 	for (let iter = 0; iter < maxIterations; iter++) {
+		iterations = iter + 1;
+		// ω pinned on a bound whose descent direction leaves the range is held for this
+		// step (the cosinor's active set), so the other parameters keep improving
+		// instead of every step being clamped into a no-op.
+		const frozen = wPos >= 0 && ((p[3] <= wLo && JtR[wPos] > 0) || (p[3] >= wHi && JtR[wPos] < 0));
 		const JtJ_d = JtJ.map((row, i) => {
-			const r = row.slice();
+			if (frozen && i === wPos) return row.map((_, k) => (k === i ? 1 : 0));
+			const r = row.map((v, k) => (frozen && k === wPos ? 0 : v));
 			r[i] += lambda * (row[i] > 0 ? row[i] : 1);
 			return r;
 		});
+		const rhs = JtR.map((v, i) => (frozen && i === wPos ? 0 : v));
 
 		let delta;
 		try {
-			delta = solveLinearSystem(JtJ_d, JtR.slice());
+			delta = solveLinearSystem(JtJ_d, rhs);
 		} catch {
 			// Singular/ill-conditioned JtJ — inflate the damping and retry
 			// (standard Levenberg–Marquardt fallback); give up past 1e12.
 			lambda = Math.min(lambda * 10, 1e12);
-			if (lambda >= 1e12) break;
+			if (lambda >= 1e12) {
+				converged = true; // no descent step exists at any damping
+				break;
+			}
 			continue;
 		}
 
@@ -173,7 +259,7 @@ function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance) {
 
 		// Clamp parameters to valid ranges
 		newP[2] = Math.max(0.01, newP[2]); // κ > 0
-		newP[3] = Math.max(0.001, Math.min(newP[3], 100)); // ω ∈ (0, 100]
+		newP[3] = Math.max(wLo, Math.min(newP[3], wHi)); // ω inside the period range
 		newP[5] = Math.max(0.01, Math.min(newP[5], 0.99)); // d ∈ (0, 1)
 
 		const { JtJ: newJtJ, JtR: newJtR, rss: newRss } = computeNormalEqs(t, x, newP, freeIndices);
@@ -185,10 +271,16 @@ function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance) {
 			JtR = newJtR;
 			currentRss = newRss;
 			lambda = Math.max(lambda / 3, 1e-10);
-			if (relImprovement < tolerance) break;
+			if (relImprovement < tolerance) {
+				converged = true;
+				break;
+			}
 		} else {
 			lambda = Math.min(lambda * 10, 1e12);
-			if (lambda >= 1e12) break;
+			if (lambda >= 1e12) {
+				converged = true; // at a (constrained) minimum: no step lowers the RSS
+				break;
+			}
 		}
 	}
 
@@ -204,6 +296,16 @@ function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance) {
 	const rSquared = sstotAcc.value > 0 ? 1 - currentRss / sstotAcc.value : 0;
 
 	const rmse = Math.sqrt(currentRss / n);
+	// Canonical form A ≥ 0: A·tanh(κ(sin(ωt+φ) − cos πd)) = (−A)·tanh(κ(sin(ωt+φ+π) − cos π(1−d)))
+	// exactly, so a negative A is the same curve with the high and low phases swapped. Report
+	// the A ≥ 0 form, or the acrophase and duty cycle would describe the rest phase.
+	if (p[1] < 0) {
+		p = [...p];
+		p[1] = -p[1];
+		p[4] += Math.PI;
+		p[5] = 1 - p[5];
+	}
+	p[4] = Math.atan2(Math.sin(p[4]), Math.cos(p[4])); // φ in (−π, π]
 	const [M, A, kappa, omega, phi, d] = p;
 	const period = (2 * Math.PI) / omega;
 
@@ -213,6 +315,16 @@ function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance) {
 	let acrophase = (Math.PI / 2 - phi) / omega;
 	acrophase = ((acrophase % period) + period) % period;
 
+	// A period within this relative distance of a bound counts as "on" it (as cosinor.js).
+	const BOUND_RTOL = 1e-6;
+	let side = null;
+	if (wPos >= 0) {
+		if (Math.abs(omega - wLo) <= BOUND_RTOL * wLo)
+			side = 'max'; // lowest ω = longest period
+		else if (Math.abs(omega - wHi) <= BOUND_RTOL * wHi) side = 'min';
+	}
+	const allFinite = p.every(Number.isFinite) && Number.isFinite(currentRss);
+
 	return {
 		parameters: { M, A, kappa, omega, phi, dutyCycle: d },
 		period,
@@ -220,7 +332,8 @@ function fitWithLM(t, x, params, freeIndices, maxIterations, tolerance) {
 		fitted,
 		rmse,
 		rSquared,
-		rss: currentRss
+		rss: currentRss,
+		diagnostics: { converged: converged && allFinite, iterations, atBound: [side] }
 	};
 }
 
@@ -230,7 +343,7 @@ function generateInitialGuess(
 	t,
 	x,
 	seed,
-	{ fixKappa, fixOmega, fixDutyCycle, fixedKappa, fixedOmega, fixedDutyCycle }
+	{ fixKappa, fixOmega, fixDutyCycle, fixedKappa, fixedOmega, fixedDutyCycle, peaks, wLo, wHi }
 ) {
 	const n = x.length;
 	const mean = x.reduce((s, v) => s + v, 0) / n;
@@ -245,10 +358,12 @@ function generateInitialGuess(
 	if (fixOmega && fixedOmega != null) {
 		omega = fixedOmega;
 	} else {
-		const periods = estimateDominantPeriods(t, x, 5);
-		const periodIdx = Math.min(seed, periods.length - 1);
-		const detectedPeriod = periods.length > 0 ? periods[periodIdx].period : 24;
-		omega = (2 * Math.PI) / detectedPeriod;
+		// Seeds: the least-squares periodogram's peaks INSIDE the period range, strongest
+		// first (cosinor.js scanPeriodogram), so no start begins outside it.
+		const seeds = peaks ?? [];
+		omega =
+			seeds.length > 0 ? seeds[Math.min(seed, seeds.length - 1)].frequency : (2 * Math.PI) / 24;
+		omega = Math.min(wHi ?? Infinity, Math.max(wLo ?? 0, omega));
 	}
 
 	const M = mean;
@@ -264,51 +379,13 @@ function generateInitialGuess(
 		cosSum += detrended[i] * Math.cos(omega * t[i]);
 		sinSum += detrended[i] * Math.sin(omega * t[i]);
 	}
-	// Phase: peak of sinusoidal component
-	const phi = -Math.atan2(sinSum, cosSum);
+	// Phase: the projection puts the sinusoid's peak at ω·t = atan2(S, C), and the model
+	// peaks where ω·t + φ = π/2, so φ = π/2 − atan2(S, C). (It was −atan2(S, C), a quarter
+	// cycle late; harmless while every start shared one period, but with one start per
+	// periodogram peak the start at the true period must begin in the right basin.)
+	const phi = Math.PI / 2 - Math.atan2(sinSum, cosSum);
 
 	return [M, A, kappa, omega, phi, d];
-}
-
-// ─── Period scanner ───────────────────────────────────────────────────────────
-
-function estimateDominantPeriods(t, x, numPeriods = 5) {
-	const n = t.length;
-	if (n < 8) return [];
-
-	const mean = x.reduce((s, v) => s + v, 0) / n;
-	const detrended = x.map((v) => v - mean);
-
-	const tMin = min(t);
-	const tMax = max(t);
-	const totalTime = tMax - tMin;
-
-	const minPeriod = totalTime / (n / 2);
-	const maxPeriod = totalTime * 0.75;
-	const numCandidates = Math.min(500, n * 5);
-
-	if (maxPeriod <= minPeriod) return [];
-
-	const candidates = [];
-	for (let i = 0; i < numCandidates; i++) {
-		const period = minPeriod + ((maxPeriod - minPeriod) * i) / (numCandidates - 1);
-		const frequency = (2 * Math.PI) / period;
-		let cosSum = 0;
-		let sinSum = 0;
-		let norm = 0;
-		for (let j = 0; j < n; j++) {
-			const phase = frequency * t[j];
-			cosSum += detrended[j] * Math.cos(phase);
-			sinSum += detrended[j] * Math.sin(phase);
-			norm += detrended[j] * detrended[j];
-		}
-		const score =
-			norm === 0 ? 0 : Math.sqrt(cosSum * cosSum + sinSum * sinSum) / Math.sqrt(norm * n);
-		candidates.push({ period, frequency, score });
-	}
-
-	candidates.sort((a, b) => b.score - a.score);
-	return candidates.slice(0, numPeriods);
 }
 
 // ─── Gaussian elimination with partial pivoting ───────────────────────────────

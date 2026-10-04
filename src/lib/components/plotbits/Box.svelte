@@ -9,13 +9,15 @@
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import { isValidStroke } from '$lib/components/plotbits/helpers/misc.js';
 	import {
-		detectOutliersIQR,
 		detectOutliersZScore,
 		outlierRemovalMethodDisplay,
 		outlierRemovalMethodOptions
 	} from '$lib/processes/OutlierRemoval.svelte';
 	import { jitterOffset } from '$lib/components/plotbits/helpers/jitter.js';
 	import { darkenColour } from '$lib/components/plotbits/helpers/colourShade.js';
+	import { median, quantileType7 } from '$lib/utils/sampleStats.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { isMissingCategory } from '$lib/utils/chisquare.js';
 
 	export const boxplotDefaultOutlierMethod = 'iqr';
 	const boxplotOutlierMethodOptions = [...outlierRemovalMethodOptions];
@@ -149,36 +151,52 @@
 		}
 	}
 
-	function getOutlierMask(validData, outlierSettings = {}) {
+	// The IQR rule is applied here with the box's own (type-7) quartiles, so the whiskers end
+	// at the most extreme data within multiplier x IQR of the quartiles that are DRAWN.
+	// OutlierRemoval's detectOutliersIQR takes its quartiles as sorted[floor(n/4)] (STAT-22), and
+	// using it here put the fences somewhere other than 1.5 IQR from the drawn box.
+	function getOutlierMask(validData, outlierSettings = {}, q1, q3) {
 		const method = outlierSettings?.method ?? boxplotDefaultOutlierMethod;
 		if (method === 'zscore') {
 			return detectOutliersZScore(validData, outlierSettings?.zThreshold ?? 3);
 		}
-		if (method === 'iqr' || method === 'boxplot') {
-			return detectOutliersIQR(validData, outlierSettings?.iqrMultiplier ?? 1.5);
-		}
-		return detectOutliersIQR(validData, outlierSettings?.iqrMultiplier ?? 1.5);
+		const k = outlierSettings?.iqrMultiplier ?? 1.5;
+		const lo = q1 - k * (q3 - q1);
+		const hi = q3 + k * (q3 - q1);
+		return validData.map((v) => v < lo || v > hi);
 	}
 
-	/** @param {number[]} data */
+	/**
+	 * The present values of a group as numbers: the house rule (isInvalidValue) drops null,
+	 * blank, whitespace-only and non-numeric text; a real 0 is data.
+	 * @param {Array<number|string|null|undefined>} data
+	 * @returns {number[]}
+	 */
+	export function presentValues(data) {
+		const out = [];
+		for (const d of data ?? []) if (!isInvalidValue(d)) out.push(Number(d));
+		return out;
+	}
+
+	/**
+	 * Box statistics. Median and quartiles are type 7 (R's default, numpy.percentile's
+	 * default, and what DescribeData reports): sorted[floor(n * q)] drew [1,2,3,4] as
+	 * 2 / 3 / 4 instead of 1.75 / 2.5 / 3.25 (STAT-2).
+	 * @param {Array<number|string|null|undefined>} data
+	 */
 	export function calculateBoxPlotStats(data, outlierSettings = {}) {
 		if (!data || data.length === 0) return null;
 
-		const validData = data.filter((d) => d != null && !isNaN(d));
+		const validData = presentValues(data);
 		if (validData.length === 0) return null;
 
 		const sorted = [...validData].sort((a, b) => a - b);
-		const n = sorted.length;
 
-		const q1Index = Math.floor(n * 0.25);
-		const q2Index = Math.floor(n * 0.5);
-		const q3Index = Math.floor(n * 0.75);
+		const q1 = quantileType7(sorted, 0.25);
+		const q2 = median(sorted);
+		const q3 = quantileType7(sorted, 0.75);
 
-		const q1 = sorted[q1Index];
-		const q2 = sorted[q2Index];
-		const q3 = sorted[q3Index];
-
-		const outlierMask = getOutlierMask(validData, outlierSettings);
+		const outlierMask = getOutlierMask(validData, outlierSettings, q1, q3);
 		const outliers = validData.filter((_, i) => outlierMask[i]);
 		const inliers = validData.filter((_, i) => !outlierMask[i]);
 		const sortedInliers = [...inliers].sort((a, b) => a - b);
@@ -268,12 +286,14 @@
 		x.forEach((cat, i) => {
 			const val = y[i];
 			// Skip invalid entries — allow x.length !== y.length
-			if (cat == null || val == null || isNaN(val)) return;
+			// A blank category is missing (the Boxplot lists no slot for it, so its box would
+			// otherwise be drawn at index -1, left of the axis).
+			if (isMissingCategory(cat) || isInvalidValue(val)) return;
 
 			if (!groups.has(cat)) {
 				groups.set(cat, []);
 			}
-			groups.get(cat).push(val);
+			groups.get(cat).push(Number(val));
 		});
 
 		return Array.from(groups.entries())
@@ -285,7 +305,7 @@
 				});
 				if (!stats) return null;
 				// Keep the raw (valid) values so the showPoints overlay can draw them.
-				return { category, values: values.filter((v) => v != null && !isNaN(v)), ...stats };
+				return { category, values, ...stats };
 			})
 			.filter(Boolean);
 	});

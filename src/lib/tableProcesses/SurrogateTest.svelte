@@ -12,9 +12,21 @@
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { surrogateTest, surrogateAdvice, SURROGATE_METHODS } from '$lib/utils/surrogates.js';
-	import { computeFFT } from '$lib/utils/fft.js';
-	import { validPairs, meanSpacing } from '$lib/utils/validPairs.js';
+	import { surrogateTest, surrogateAdvice } from '$lib/utils/surrogates.js';
+	import { computeFFT, regridUniform } from '$lib/utils/fft.js';
+
+	/**
+	 * The nulls this node offers. Its statistic asks "is there a rhythm in this band", and
+	 * phase-randomised and AAFT surrogates keep the amplitude spectrum, rhythm included, so
+	 * they are not a null for that question: once they were computed at the series' own
+	 * length (SPEC-4) every surrogate reproduced the observed band power and p was 1 on
+	 * every record, rhythmic or not. Before that fix they were worse than powerless: the
+	 * power-of-two padding broke the spectrum and they called 47 to 58% of white-noise
+	 * records rhythmic. They remain in utils/surrogates.js for association questions.
+	 */
+	// Kept in step with the method select below, which lists them inline so the
+	// param-coverage guard can read them.
+	export const SURROGATE_NODE_METHODS = ['block', 'ar1', 'shuffle'];
 
 	const displayName = 'Surrogate Test';
 
@@ -41,7 +53,7 @@
 	 */
 	function bandPowerStatistic(times, periodMin, periodMax) {
 		return (y) => {
-			const { frequencies, magnitudes } = computeFFT(times.slice(0, y.length), y);
+			const { frequencies, magnitudes } = computeFFT(times, y);
 			let best = 0;
 			for (let i = 0; i < frequencies.length; i++) {
 				const period = 1 / frequencies[i];
@@ -74,29 +86,36 @@
 			return [{ ...empty, reason: 'need at least 8 samples' }, false];
 		}
 
-		// Keep the (x, y) rows where BOTH are present, as the Python and R ports do. The node
-		// used to coerce the raw times with Number, which reads a missing time as 0, so a
-		// missing row went into the FFT at t = 0; and the engine drops missing y on its own,
-		// so the statistic's times.slice(0, y.length) no longer lined up after a gap.
-		const { tt, yy } = validPairs(rawTimes, rawValues);
-		const times = [];
-		const values = [];
-		for (let i = 0; i < tt.length; i++) {
-			const t = Number(tt[i]);
-			const v = Number(yy[i]);
-			if (Number.isFinite(t) && Number.isFinite(v)) {
-				times.push(t);
-				values.push(v);
-			}
+		// A refusal clears the metric ports, so a downstream node never reads the result of
+		// an earlier run as if it belonged to the current inputs.
+		const refuse = (reason) => {
+			writeOut(argsIN.out?.pvalue, [NaN]);
+			writeOut(argsIN.out?.observed, [NaN]);
+			return [{ ...empty, reason }, false];
+		};
+
+		const method = argsIN.method ?? 'block';
+		if (!SURROGATE_NODE_METHODS.includes(method)) {
+			// A saved session may still name one; refuse with the reason rather than run it.
+			return refuse(
+				`This node tests for a rhythm, which "${method}" surrogates cannot do: ` +
+					surrogateAdvice(method, 'rhythmicity')
+			);
 		}
 
-		// Block length is given in HOURS but the bootstrap works in SAMPLES — the
-		// units trap that silently makes a "24 h" block one sample long. The step is
-		// the row-grid spacing between the first and last PRESENT times (meanSpacing,
-		// shared with the Correlogram): (t[n-1] - t[0]) / (n-1) read a missing end as
-		// 0, which turned a 24 h block into 69 samples instead of 96 (missing first,
-		// x from 100 h) or a negative step and the 24-sample fallback (missing last).
-		const dt = meanSpacing(rawTimes);
+		// The statistic is an FFT, so the series goes onto its own uniform grid first
+		// (regridUniform, the rule every FFT caller shares): up to 3 missing samples in a row
+		// are interpolated, a longer gap is refused with a reason. The surrogates are drawn
+		// from the gridded series, so every surrogate and the observed series share one time
+		// axis. Joining the two sides of a gap (the old behaviour) shifted the 24 h peak to 31 h.
+		const g = regridUniform(rawTimes, rawValues);
+		if (!g.ok) return refuse(`Cannot run the FFT statistic: ${g.reason}`);
+		const values = g.y;
+		const times = values.map((_, i) => g.t0 + i * g.dt);
+
+		// Block length is given in HOURS but the bootstrap works in SAMPLES: the units trap
+		// that silently makes a "24 h" block one sample long. The step is the grid step.
+		const dt = g.dt;
 		const blockSamples =
 			Number.isFinite(dt) && dt > 0
 				? Math.max(1, Math.round((Number(argsIN.blockLengthHours) || 24) / dt))
@@ -106,13 +125,13 @@
 		const periodMax = Number(argsIN.periodMax) || 28;
 
 		const res = surrogateTest(values, bandPowerStatistic(times, periodMin, periodMax), {
-			method: argsIN.method ?? 'block',
+			method,
 			nSurrogates: Math.max(9, Math.floor(Number(argsIN.nSurrogates) || 199)),
 			seed: Number(argsIN.seed) || 12345,
 			blockLength: blockSamples
 		});
 
-		const advice = surrogateAdvice(argsIN.method ?? 'block', 'rhythmicity');
+		const advice = surrogateAdvice(method, 'rhythmicity');
 
 		writeOut(argsIN.out?.pvalue, [res.pValue]);
 		writeOut(argsIN.out?.observed, [res.observed]);
@@ -123,7 +142,8 @@
 				observed: res.observed,
 				nSurrogates: res.nSurrogates,
 				advice,
-				reason: res.reason
+				reason: res.reason,
+				nFilled: g.nFilled
 			},
 			res.valid
 		];
@@ -241,16 +261,14 @@
 		<p>Surrogate</p>
 		<AttributeSelect
 			bind:value={p.args.method}
-			options={SURROGATE_METHODS}
-			optionsDisplay={[
-				'Phase randomised',
-				'AAFT',
-				'Block bootstrap',
-				'AR(1) red noise',
-				'Shuffle (not recommended)'
-			]}
+			options={['block', 'ar1', 'shuffle']}
+			optionsDisplay={['Block bootstrap', 'AR(1) red noise', 'Shuffle (not recommended)']}
 		/>
 	</div>
+	<p class="tp-hint">
+		Phase-randomised and AAFT surrogates are not offered: they keep the power spectrum, so they keep
+		the rhythm being tested and cannot answer whether it is there.
+	</p>
 	{#if p.args.method === 'block'}
 		<ControlInput label="Block length (hrs)">
 			<NumberWithUnits bind:value={p.args.blockLengthHours} min="1" step="1" />
@@ -293,6 +311,12 @@
 			p = {fmt(result.pValue)} &nbsp;·&nbsp; observed statistic = {fmt(result.observed, 3)}
 			&nbsp;·&nbsp; {result.nSurrogates} surrogates
 		</p>
+		{#if result.nFilled > 0}
+			<p class="tp-hint">
+				{result.nFilled} missing sample{result.nFilled > 1 ? 's were' : ' was'} filled by linear interpolation
+				before the test.
+			</p>
+		{/if}
 		<p class="tp-hint">
 			The smallest p this can report is 1/({result.nSurrogates} + 1) = {fmt(
 				1 / (result.nSurrogates + 1)

@@ -169,6 +169,11 @@
 		set padding(v) {
 			this.#padding = v;
 		}
+		// The stored figure padding, for the Padding controls. While a node view is mounted
+		// `padding` reads back a derived, scaled copy, so an edit bound there was lost.
+		get figurePadding() {
+			return this.#padding;
+		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		// Width before an outside legend takes its share; see legendAuto.svelte.js.
 		basePlotWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
@@ -514,16 +519,16 @@
 			</div>
 			<div class="control-input-square">
 				<ControlInput label="Top">
-					<NumberWithUnits bind:value={theData.padding.top} />
+					<NumberWithUnits bind:value={theData.figurePadding.top} />
 				</ControlInput>
 				<ControlInput label="Bottom">
-					<NumberWithUnits bind:value={theData.padding.bottom} />
+					<NumberWithUnits bind:value={theData.figurePadding.bottom} />
 				</ControlInput>
 				<ControlInput label="Left">
-					<NumberWithUnits bind:value={theData.padding.left} />
+					<NumberWithUnits bind:value={theData.figurePadding.left} />
 				</ControlInput>
 				<ControlInput label="Right">
-					<NumberWithUnits bind:value={theData.padding.right} />
+					<NumberWithUnits bind:value={theData.figurePadding.right} />
 				</ControlInput>
 			</div>
 		</div>

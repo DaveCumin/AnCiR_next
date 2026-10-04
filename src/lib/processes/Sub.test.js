@@ -65,3 +65,25 @@ describe('sub (Substitute)', () => {
 		expect(input).toEqual([1, 2, 3]);
 	});
 });
+
+// Review STAT-6 follow-up: `i == find` is JavaScript loose equality, under which '' == 0
+// and ' ' == 0 are TRUE. With the default find 0 a blank cell was "found" and replaced, so
+// Substitute turned missing data into the replacement value.
+describe('sub: blanks are not zeros', () => {
+	it('does not match a blank or whitespace cell against 0', () => {
+		expect(sub([0, '', ' ', 1], { find: 0, replace: 5 })).toEqual([5, '', ' ', 1]);
+	});
+
+	it('does not match 0 against a blank find', () => {
+		expect(sub([0, '', 1], { find: '', replace: 'x' })).toEqual([0, 'x', 1]);
+	});
+
+	it('still matches numeric strings to numbers, and null to null', () => {
+		expect(sub(['2', 2, ' 2 ', null, 0], { find: 2, replace: 9 })).toEqual([9, 9, 9, null, 0]);
+		expect(sub([null, 0, ''], { find: null, replace: 1 })).toEqual([1, 0, '']);
+	});
+
+	it('does not match false or true against 0 or 1', () => {
+		expect(sub([false, true], { find: 0, replace: 5 })).toEqual([false, true]);
+	});
+});

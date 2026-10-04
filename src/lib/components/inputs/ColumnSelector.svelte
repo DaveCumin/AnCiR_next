@@ -2,6 +2,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import { core } from '$lib/core/core.svelte.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
+	import { columnNamer } from '$lib/core/columnLabels.js';
 
 	let {
 		onChange = () => {},
@@ -30,6 +31,9 @@
 	//   group: { key, label, options[], proc? }   // proc set when group is a renameable TableProcess
 	let options = $derived.by(() => {
 		const tree = [];
+		// Option text is the column's display name (UI-4): a node output's label ("Period (h)",
+		// "Cosinor fit: A1") while it keeps its auto name, else its own name. Values stay ids.
+		const shown = columnNamer();
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- de-duplication set rebuilt from scratch on every run of this $derived.by and consumed inside it; never read outside
 		const seenIds = new Set();
 
@@ -46,7 +50,7 @@
 							const colId = cell.id;
 							if (!seenIds.has(colId) && !excludeColIds.includes(colId)) {
 								seenIds.add(colId);
-								plotChildren.push({ key: `c:${colId}`, label: cell.name, value: colId });
+								plotChildren.push({ key: `c:${colId}`, label: shown(cell), value: colId });
 							}
 						}
 					});
@@ -69,7 +73,7 @@
 				const col = getColumnById(colId);
 				if (!col) continue;
 				seenIds.add(colId);
-				children.push({ key: `c:${colId}`, label: col.name, value: colId });
+				children.push({ key: `c:${colId}`, label: shown(col), value: colId });
 			}
 			if (children.length > 0) {
 				tree.push({ key: `g:${group.id}`, label: group.name, options: children });
@@ -87,7 +91,7 @@
 				const col = getColumnById(colId);
 				if (!col) continue;
 				seenIds.add(colId);
-				children.push({ key: `c:${colId}`, label: col.name, value: colId });
+				children.push({ key: `c:${colId}`, label: shown(col), value: colId });
 			}
 			if (children.length > 0) {
 				tree.push({
@@ -108,7 +112,7 @@
 				if (col.producerNodeId !== procNodeId || col.refId != null || col.data != null) continue;
 				if (excludeColIds.includes(col.id) || seenIds.has(col.id)) continue;
 				seenIds.add(col.id);
-				children.push({ key: `c:${col.id}`, label: col.name, value: col.id });
+				children.push({ key: `c:${col.id}`, label: shown(col), value: col.id });
 			}
 			if (children.length > 0) {
 				tree.push({
@@ -126,7 +130,7 @@
 			if (excludeColIds.includes(col.id)) continue;
 			if (seenIds.has(col.id)) continue;
 			seenIds.add(col.id);
-			orphanCols.push({ key: `c:${col.id}`, label: col.name, value: col.id });
+			orphanCols.push({ key: `c:${col.id}`, label: shown(col), value: col.id });
 		}
 		if (orphanCols.length > 0) {
 			tree.push({ key: 'orphan', label: 'Data', options: orphanCols });

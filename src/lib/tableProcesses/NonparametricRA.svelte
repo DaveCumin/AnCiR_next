@@ -199,6 +199,9 @@
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import { createComputeRunner } from '$lib/core/asyncCompute.js';
+	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -213,7 +216,8 @@
 	let npcraData = $state();
 	let mounted = $state(false);
 	let calculating = $state(false);
-	let _calcToken = 0;
+	// The message of the last failed compute, shown with a Retry (ROB-11).
+	let calcError = $state(null);
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'npcray_', 'npcra_');
 
@@ -274,19 +278,31 @@
 		);
 	});
 
+	// try/finally, error state, success-only memo commit: see core/asyncCompute.js.
+	const runner = createComputeRunner({
+		memo,
+		node: p,
+		label: 'Nonparametric rhythm analysis',
+		setBusy: (v) => (calculating = v),
+		setError: (m) => (calcError = m)
+	});
 	function recalculate() {
-		calculating = true;
-		const token = ++_calcToken;
-		setTimeout(async () => {
-			if (token !== _calcToken) return;
-			const [data, valid] = await untrack(() => nonparametricRA(p.args));
-			if (token !== _calcToken) return;
-			npcraData = data;
-			// Surfaces on the canvas node too (CompactNode / TableProcessNode read tp.warnings).
-			p.warnings = data?.warnings ?? [];
-			p.args.valid = valid;
-			calculating = false;
-		}, 0);
+		runner.run(
+			untrack(() => getHash),
+			() => untrack(() => nonparametricRA(p.args)),
+			([data, valid]) => {
+				npcraData = data;
+				// Surfaces on the canvas node too (CompactNode / TableProcessNode read tp.warnings).
+				p.warnings = data?.warnings ?? [];
+				p.args.valid = valid;
+			},
+			() => {
+				npcraData = undefined;
+				p.warnings = [];
+				p.args.valid = false;
+				clearOutputColumns(p.args.out);
+			}
+		);
 	}
 
 	// Own output columns — never selectable as an input on either axis.
@@ -373,6 +389,8 @@
 
 {#if calculating}
 	<LoadingSpinner />
+{:else if calcError}
+	<ErrorBox title="The analysis failed." message={calcError} onretry={recalculate} />
 {:else if rows.length}
 	<div class="npcra-results scroll-fade-x" {@attach scrollFade()}>
 		<table>

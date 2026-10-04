@@ -18,11 +18,18 @@
 	} from '$lib/core/core.svelte';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import {
+		formatTimeFromUNIX,
 		guessDateofArray,
 		normalizeTimeFormat,
 		parseTimeStrict
 	} from '$lib/utils/time/TimeUtils';
 	import { numToString } from '$lib/utils/GeneralUtils';
+	import {
+		detectColumnType,
+		isNumericColumn,
+		resolveImportType,
+		typeChoicesFor
+	} from '$lib/utils/importColumnTypes.js';
 	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -30,6 +37,7 @@
 	import Modal from '$lib/components/reusables/Modal.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { importJson } from '$lib/components/iconActions/Setting.svelte';
+	import { confirmReplaceSession } from '$lib/core/sessionLoad.svelte.js';
 	import { tick } from 'svelte';
 	import { base } from '$app/paths';
 
@@ -290,6 +298,58 @@
 	let buttonText = $derived(targetFile ? 'Change file' : 'Choose File');
 
 	let selectedColumns = $state(new Set());
+
+	// ─── Per-column type (UI-1) ────────────────────────────────────────────────
+	// The preview shows each column's detected type (and time format), with a
+	// selector to override it. columnTypeOverrides: header -> { choice, timeFormat? }
+	// where choice is 'number' | 'category' | 'time' | 'epoch-s' | 'epoch-ms'. A
+	// column without an entry is detected again on the FULL data at import.
+	let columnTypeOverrides = $state({});
+	// Detection on the preview rows (the picked label row excluded). Not computed
+	// while the full file loads: parsedData then holds every row.
+	const previewColumnTypes = $derived.by(() => {
+		if (awaitingLoad || !parsedData) return {};
+		const out = {};
+		for (const col of headers) {
+			let vals = parsedData[col] ?? [];
+			if (labelRowIndex != null) vals = vals.filter((_, i) => i !== labelRowIndex);
+			const detected = detectColumnType(vals);
+			const numeric = isNumericColumn(vals);
+			out[col] = { detected, numeric, choices: typeChoicesFor(detected, numeric) };
+		}
+		return out;
+	});
+
+	function formatText(fmt) {
+		if (Array.isArray(fmt)) return fmt.join(' | ');
+		return fmt ? String(fmt) : '';
+	}
+
+	function setColumnTypeChoice(col, choice) {
+		const info = previewColumnTypes[col];
+		if (info && choice === info.detected.type) {
+			// Back to the detected type: drop the override so the full data decides.
+			const rest = { ...columnTypeOverrides };
+			delete rest[col];
+			columnTypeOverrides = rest;
+			return;
+		}
+		columnTypeOverrides = { ...columnTypeOverrides, [col]: { choice } };
+	}
+
+	/** The first preview value read as the chosen epoch unit, e.g. "starts 01 Mar 2026 00:00:00". */
+	function epochPreview(col, choice) {
+		const first = (parsedData?.[col] ?? []).find(
+			(v) => typeof v === 'number' && Number.isFinite(v)
+		);
+		if (first == null) return '';
+		const text = formatTimeFromUNIX(choice === 'epoch-s' ? first * 1000 : first);
+		return text ? `starts ${text}` : '';
+	}
+
+	function setColumnTimeFormat(col, text) {
+		columnTypeOverrides = { ...columnTypeOverrides, [col]: { choice: 'time', timeFormat: text } };
+	}
 
 	// ─── Per-column group/replicate labels (BioDare2 trace labels) ─────────────
 	// columnLabels: header-col-name -> label string. labelRowIndex: the preview
@@ -598,6 +658,7 @@
 		// never notifies the template reads below (the column list + the disabled Import button).
 		selectedColumns = new Set();
 		columnLabels = {};
+		columnTypeOverrides = {};
 		labelRowIndex = null;
 		pickingLabelRow = false;
 		labelBulkText = '';
@@ -1556,6 +1617,21 @@
 		}
 
 		parsedData = convertArrayToObject(dataIN);
+		// A selection made for a previous file's columns must not carry over: keep the
+		// columns that still exist, or select them all when none do. (A stale selection
+		// of the same SIZE as the new headers also made getFilteredData import every
+		// column while the preview showed them all unticked.)
+		const stillSelected = [...selectedColumns].filter((c) => headers.includes(c));
+		if (stillSelected.length !== selectedColumns.size) {
+			selectedColumns = new Set(stillSelected.length > 0 ? stillSelected : headers);
+		}
+		// Overrides belong to this file's columns; forget any for headers now gone.
+		const kept = Object.fromEntries(
+			Object.entries(columnTypeOverrides).filter(([k]) => headers.includes(k))
+		);
+		if (Object.keys(kept).length !== Object.keys(columnTypeOverrides).length) {
+			columnTypeOverrides = kept;
+		}
 	}
 
 	function getFilteredData() {
@@ -1866,6 +1942,10 @@
 			// Clear awdMeta since binned data no longer matches compressed time
 			if (awdMeta) awdMeta = null;
 		}
+		// Binning rewrites its time column as labels in its own format, so a typed
+		// format for that column no longer applies; detection reads the labels.
+		const importOverrides = { ...columnTypeOverrides };
+		if (binningEnabled && binnedTimeKey != null) delete importOverrides[binnedTimeKey];
 
 		// ─────────────── Filter to selected columns ─────────────────
 		loadProgress = { stage: 'Loading data', detail: 'Filtering selected columns…' };
@@ -1941,11 +2021,29 @@
 				? `${targetFile.name} (+${targetFiles.length - 1} more)`
 				: targetFile.name;
 
-		await doBasicFileImport(parsedData, importName);
+		await doBasicFileImport(parsedData, importName, importOverrides);
 
 		awaitingLoad = false;
 	}
 
+	/** How a session URL is named in the replace confirm: its file name, else its host. */
+	function describeSessionUrl(url) {
+		try {
+			const u = new URL(url, window.location.href);
+			const last = decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() ?? '');
+			return last ? `"${last}"` : `the session from ${u.host}`;
+		} catch {
+			return 'the linked session';
+		}
+	}
+
+	/**
+	 * Fetch a session from a URL and open it, REPLACING the open session. It asks first when
+	 * there is work open (confirmReplaceSession passes straight through on an empty app, so a
+	 * deep link on a fresh page load never asks). The file is fetched and parsed BEFORE asking,
+	 * so a bad link reports its error without a pointless "replace?" question.
+	 * @returns {Promise<boolean>} true when the session was loaded
+	 */
 	export async function loadFromURL(url) {
 		try {
 			const response = await fetch(url);
@@ -1953,7 +2051,8 @@
 				throw new Error('Network response was not ok');
 			}
 			const apiResults = await response.json();
-			console.log('Fetched JSON from URL:', apiResults);
+
+			if (!(await confirmReplaceSession(describeSessionUrl(url)))) return false;
 
 			awaitingLoad = true;
 			appState.loadingState.isLoading = true;
@@ -1982,6 +2081,7 @@
 					12000
 				);
 			}
+			return true;
 		} catch (error) {
 			appState.loadingState.isLoading = false;
 			appState.loadingState.loadingMsg = '';
@@ -1989,6 +2089,7 @@
 			const msg = error?.message ?? String(error);
 			addNotification(`Failed to load session from URL.\n\n${msg}`);
 			console.error('loadFromURL error:', error);
+			return false;
 		}
 	}
 
@@ -2005,8 +2106,19 @@
 
 		let timeCol = null;
 		let timeFmt = null;
+		let epoch = false;
 		for (const col of detectCols) {
-			const fmt = guessDateofArray(data[col]);
+			// The preview's type choice wins: a column set to number/category is not
+			// a time column, an epoch column sorts by its numbers, and a typed time
+			// format replaces the guess.
+			const ov = columnTypeOverrides[col];
+			if (ov?.choice === 'epoch-s' || ov?.choice === 'epoch-ms') {
+				timeCol = col;
+				epoch = true;
+				break;
+			}
+			if (ov && ov.choice !== 'time') continue;
+			const fmt = ov?.timeFormat?.trim() || guessDateofArray(data[col]);
 			if (fmt !== -1 && fmt !== null && fmt !== undefined && fmt !== '' && fmt.length > 0) {
 				timeCol = col;
 				timeFmt = fmt;
@@ -2019,6 +2131,7 @@
 		// Parse timestamps to epoch-ms, then sort via the shared primitive (missing
 		// values sort last). Every column is reordered to keep rows aligned.
 		const msKeys = data[timeCol].map((v) => {
+			if (epoch) return typeof v === 'number' ? v : NaN;
 			const parsed = parseUTCStrict(v, timeFmt);
 			return parsed ? parsed.valueOf() : NaN;
 		});
@@ -2058,7 +2171,7 @@
 		return sorted;
 	}
 
-	async function doBasicFileImport(result, fname) {
+	async function doBasicFileImport(result, fname, overrides = columnTypeOverrides) {
 		const keys = Object.keys(result);
 
 		// Separate columns into "replace existing" and "import as new"
@@ -2089,23 +2202,17 @@
 			const existingCol = getColumnById(targetId);
 			if (!existingCol) continue;
 
+			// Type: the preview's override, else detection on the full column
+			// (numbers first, so numeric data is never read as a time).
+			const resolved = resolveImportType(result[colName], overrides[colName]);
+
 			// Update data
-			core.rawData.set(targetId, result[colName]);
+			core.rawData.set(targetId, resolved.values);
 			existingCol.data = targetId;
 
 			// Update type/format
-			const guessedFormat = guessDateofArray(result[colName]);
-			if (guessedFormat !== -1 && guessedFormat.length > 0) {
-				existingCol.type = 'time';
-				existingCol.timeFormat = guessedFormat;
-			} else {
-				const datum = getFirstValid(result[colName], 5);
-				if (typeof datum === 'number' && !isNaN(datum)) {
-					existingCol.type = 'number';
-				} else {
-					existingCol.type = 'category';
-				}
-			}
+			existingCol.type = resolved.type;
+			if (resolved.type === 'time') existingCol.timeFormat = resolved.timeFormat;
 
 			// Trigger reactivity by bumping rawDataVersion (tableProcessGUId must stay '' for raw columns)
 			existingCol.rawDataVersion++;
@@ -2142,20 +2249,14 @@
 					});
 					df.data = df.id;
 				} else {
-					const datum = getFirstValid(result[f], 5);
-					const guessedFormat = guessDateofArray(result[f]);
-
-					if (guessedFormat !== -1 && guessedFormat.length > 0) {
-						df.type = 'time';
-						df.timeFormat = guessedFormat;
-					} else if (typeof datum === 'number' && !isNaN(datum)) {
-						df.type = 'number';
-					} else {
-						df.type = 'category';
-					}
+					// Type: the preview's override, else detection on the full column
+					// (numbers first, so numeric data is never read as a time).
+					const resolved = resolveImportType(result[f], overrides[f]);
+					df.type = resolved.type;
+					if (resolved.type === 'time') df.timeFormat = resolved.timeFormat;
 
 					df.name = f;
-					core.rawData.set(df.id, result[f]);
+					core.rawData.set(df.id, resolved.values);
 					df.data = df.id;
 				}
 
@@ -2298,8 +2399,12 @@
 		});
 	}
 
+	// The time column the last binParsedData call rebuilt as labels (or null).
+	let binnedTimeKey = null;
+
 	// Exported as a test seam (ImportData.binning.test.js); reads the modal's bin interval.
 	export function binParsedData(data) {
+		binnedTimeKey = null;
 		// data is { colName: [values...], ... } — column-oriented
 		const keys = Object.keys(data);
 		if (keys.length === 0) return data;
@@ -2311,14 +2416,19 @@
 		let timeKey = null;
 		let timeFormat = null;
 		for (const k of keys) {
-			const sample = data[k].slice(0, 5);
-			const fmt = guessDateofArray(sample);
+			// The preview's type choice wins (epoch columns are not binned by time);
+			// otherwise guess from values across the whole column, not its first rows,
+			// so day/month order is settled by any day of 13 or more.
+			const ov = columnTypeOverrides[k];
+			if (ov && ov.choice !== 'time') continue;
+			const fmt = ov?.timeFormat?.trim() || guessDateofArray(data[k]);
 			if (fmt !== -1 && fmt.length > 0) {
 				timeKey = k;
 				timeFormat = Array.isArray(fmt) ? fmt[0] : fmt;
 				break;
 			}
 		}
+		binnedTimeKey = timeKey;
 
 		if (!timeKey) {
 			console.warn('Binning: no time column found, skipping');
@@ -2622,10 +2732,10 @@
 					{:else}
 						<div class="section-row">
 							<div class="control-input-horizontal">
-								<div class="control-input-checkbox">
+								<label class="control-input-checkbox">
 									<input type="checkbox" bind:checked={hasHeader} onchange={() => reParse()} />
-									<p>Has header row</p>
-								</div>
+									<span class="ci-label">Has header row</span>
+								</label>
 								<ControlInput label="Delimiter">
 									<select bind:value={delimiter} onchange={() => reParse()}>
 										<option value="">auto</option>
@@ -2658,10 +2768,10 @@
 									size.
 								</p>
 								<div class="control-input-horizontal">
-									<div class="control-input-checkbox">
+									<label class="control-input-checkbox">
 										<input type="checkbox" bind:checked={binningEnabled} />
-										<p>Bin data to</p>
-									</div>
+										<span class="ci-label">Bin data to</span>
+									</label>
 									<ControlInput label="Interval (mins)">
 										<NumberWithUnits bind:value={binIntervalMin} min={1} step={1} />
 									</ControlInput>
@@ -2733,7 +2843,7 @@
 
 						{#if (core.data ?? []).length > 0}
 							<div class="section-row">
-								<div class="control-input-checkbox">
+								<label class="control-input-checkbox">
 									<input
 										type="checkbox"
 										bind:checked={replaceMode}
@@ -2742,8 +2852,8 @@
 											else columnMappings = {};
 										}}
 									/>
-									<p>Replace existing columns</p>
-								</div>
+									<span class="ci-label">Replace existing columns</span>
+								</label>
 							</div>
 						{/if}
 
@@ -2903,6 +3013,61 @@
 										{/each}
 									</tr>
 									{#if !enspireMultiplatePayload}
+										<!-- Detected type (and time format) per column, with an override. -->
+										<tr class="type-row" data-testid="import-type-row">
+											{#each headers as col, i (`type-${i}-${combinedTimeCols.has(col)}`)}
+												{#if combinedTimeCols.has(col)}
+													<!-- skip: merged into date col -->
+												{:else if combinedDateCols.has(col)}
+													<th class="label-cell label-cell-muted" title="Combined date and time"
+														>time</th
+													>
+												{:else}
+													{@const info = previewColumnTypes[col]}
+													{@const ov = columnTypeOverrides[col]}
+													{@const choice = ov?.choice ?? info?.detected.type ?? 'category'}
+													<th class="label-cell type-cell">
+														<select
+															class="type-select"
+															aria-label={`Type of ${col}`}
+															data-testid={`import-type-${col}`}
+															value={choice}
+															onchange={(e) => setColumnTypeChoice(col, e.currentTarget.value)}
+														>
+															{#each info?.choices ?? [] as c (c.value)}
+																<option value={c.value}
+																	>{c.label}{c.value === info?.detected.type
+																		? ' (detected)'
+																		: ''}</option
+																>
+															{/each}
+														</select>
+														{#if choice === 'time'}
+															<input
+																class="label-input type-format"
+																type="text"
+																aria-label={`Time format of ${col}`}
+																data-testid={`import-format-${col}`}
+																title="dayjs format, for example DD/MM/YYYY HH:mm"
+																placeholder="format, e.g. YYYY-MM-DD HH:mm"
+																value={ov?.timeFormat ?? formatText(info?.detected.timeFormat)}
+																onchange={(e) => setColumnTimeFormat(col, e.currentTarget.value)}
+															/>
+														{:else if choice === 'epoch-s' || choice === 'epoch-ms'}
+															<span class="type-hint" data-testid={`import-epoch-preview-${col}`}
+																>{epochPreview(col, choice)}</span
+															>
+														{:else if info?.numeric && info.detected.epoch && choice === 'number'}
+															<span class="type-hint"
+																>Looks like epoch {info.detected.epoch === 's'
+																	? 'seconds'
+																	: 'milliseconds'}</span
+															>
+														{/if}
+													</th>
+												{/if}
+											{/each}
+										</tr>
 										<tr class="label-row">
 											{#each headers as col, i (`lbl-${i}-${combinedTimeCols.has(col)}`)}
 												{#if combinedTimeCols.has(col)}
@@ -2970,12 +3135,17 @@
 							style="flex-direction: row; align-items: center; gap: var(--space-2); flex-wrap: wrap;"
 						>
 							<p style="margin:0;">Row</p>
-							<NumberWithUnits
-								min={1}
-								max={Math.max(1, previewRowCount - 5)}
-								step={1}
-								bind:value={previewDisplayStart}
-							/>
+							<!-- Sized to its content: unwrapped, the number field stretched across
+							     most of the modal for a one- to five-digit value. -->
+							<span class="preview-row-start">
+								<NumberWithUnits
+									min={1}
+									max={Math.max(1, previewRowCount - 5)}
+									step={1}
+									style="width: 100%;"
+									bind:value={previewDisplayStart}
+								/>
+							</span>
 							<p style="margin:0;">
 								to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)
 							</p>
@@ -3301,6 +3471,40 @@
 		font-style: italic;
 		font-weight: 400;
 		text-align: center;
+	}
+	.preview-row-start {
+		display: inline-flex;
+		width: 5rem;
+	}
+	.preview-row-start :global(.number-input-wrapper) {
+		width: 100%;
+		min-width: 0;
+	}
+	.type-cell {
+		vertical-align: top;
+	}
+	.type-select {
+		display: block;
+		width: 100%;
+		min-width: 7rem;
+		font-size: var(--font-sm);
+		font-weight: 400;
+		padding: 0.1rem 0.2rem;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-xs);
+		background-color: var(--surface-card, #fff);
+	}
+	.type-format {
+		display: block;
+		margin-top: var(--space-1);
+		font-family: var(--font-mono, ui-monospace, monospace);
+	}
+	.type-hint {
+		display: block;
+		margin-top: var(--space-1);
+		font-size: var(--font-xs);
+		font-weight: 400;
+		color: var(--color-text-muted);
 	}
 	.label-input {
 		width: 100%;

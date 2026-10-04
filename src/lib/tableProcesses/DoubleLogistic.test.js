@@ -32,6 +32,8 @@ vi.mock('$lib/components/inputs/NumberWithUnits.svelte', () => ({ default: {} })
 vi.mock('$lib/components/inputs/ColumnSelector.svelte', () => ({ default: {} }));
 
 vi.mock('$lib/utils/doublelogistic.js', () => ({
+	// The free-period warnings (review FIT-1) are tested on the real module (fitPeriodBound.test.js).
+	doubleLogisticFitWarnings: vi.fn(() => []),
 	fitDoubleLogistic: vi.fn((tt, yy, opts) => {
 		// Mock double logistic fit result
 		return {

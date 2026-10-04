@@ -4,7 +4,7 @@
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { min as arrMin, max as arrMax } from '$lib/utils/stats.js';
+	import { min as arrMin, max as arrMax, isInvalidValue } from '$lib/utils/stats.js';
 
 	const displayName = 'Collect Columns';
 	const defaults = new Map([
@@ -67,11 +67,17 @@
 			const aggData = [];
 
 			for (let i = 0; i < nRows; i++) {
+				// The house rule (review STAT-6): '' and ' ' are missing (isNaN('') is false, so a
+				// blank used to concatenate into a sum), a numeric string is a number, and a row
+				// with nothing present stays missing rather than becoming a 0.
 				const rowVals = includedColIds
 					.map((id) => result[id][i])
-					.filter((v) => v != null && !isNaN(v));
+					.filter((v) => !isInvalidValue(v))
+					.map(Number);
 				let aggVal;
-				if (method === 'mean') {
+				if (rowVals.length === 0) {
+					aggVal = null;
+				} else if (method === 'mean') {
 					aggVal = rowVals.reduce((a, b) => a + b, 0) / rowVals.length;
 				} else if (method === 'min') {
 					aggVal = arrMin(rowVals);
@@ -301,10 +307,6 @@
 			core.rawData.has(firstOutId) &&
 			core.rawData.get(firstOutId).length > 0
 		) {
-			// Check if any input columns have been replaced since session was saved
-			const inputsAreStale = (p.args.colIds ?? []).some(
-				(id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0
-			);
 			collectResult = {};
 			for (const colId of p.args.colIds) {
 				const outColId = p.args.out['col_' + colId];
@@ -318,7 +320,9 @@
 					.map((colId) => p.args.out['col_' + colId])
 					.filter((id) => id !== undefined && id >= 0);
 			}
-			if (!inputsAreStale) memo.hash = getHash;
+			// The saved outputs only fill the panel until the compute effect runs; they are
+			// never trusted as current (the file may predate a fix, or the inputs), so the memo
+			// hash is not pinned here and the node recomputes from its inputs once mounted.
 		}
 
 		preProcessProcs = p.args.preProcesses.map((pp) =>
@@ -362,7 +366,7 @@
 						</select>
 					</ControlInput>
 					{#if preProcessProcs[idx]}
-						<Processcomponent p={preProcessProcs[idx]} />
+						<Processcomponent bind:p={() => preProcessProcs[idx], () => {}} />
 					{/if}
 				</div>
 			{/each}

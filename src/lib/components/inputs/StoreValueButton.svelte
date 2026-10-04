@@ -117,7 +117,13 @@
 {/if}
 
 <span class="store-wrapper">
-	<button class="icon" bind:this={buttonEl} onclick={openPopover} {@attach tooltip(storedName)}>
+	<button
+		class="icon"
+		bind:this={buttonEl}
+		aria-label={`Rename stored value ${storedName}`}
+		onclick={openPopover}
+		{@attach tooltip(storedName)}
+	>
 		<Icon name="edit" width={14} height={14} />
 	</button>
 </span>

@@ -1,6 +1,13 @@
 <script>
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, seededRNG, initPalette } from '$lib/animUtils.js';
+	import {
+		C,
+		setupCanvas,
+		seededRNG,
+		initPalette,
+		canvasSize,
+		observeResize
+	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
 
@@ -54,8 +61,7 @@
 	function draw(f) {
 		const t = f / TOTAL;
 		const ctx = cv.getContext('2d');
-		const W = cv.offsetWidth,
-			H = cv.offsetHeight;
+		const { W, H } = canvasSize(cv);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const L = 52,
@@ -227,9 +233,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cv], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});

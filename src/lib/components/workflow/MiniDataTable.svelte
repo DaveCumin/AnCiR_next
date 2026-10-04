@@ -1,10 +1,14 @@
 <script>
 	// @ts-nocheck
 	import { core } from '$lib/core/core.svelte.js';
-	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
+	import { timeCellText } from '$lib/utils/time/TimeUtils.js';
 	import { formatDateTime } from '$lib/utils/time/displayTime.js';
+	import { columnDisplayName } from '$lib/core/columnLabels.js';
 
 	let { column, maxRows = 5 } = $props();
+
+	// Header text: a node output's display label while the column keeps its auto name (UI-4).
+	const headerName = $derived(column ? columnDisplayName(column) : '');
 
 	const MAX_CELL = 14;
 	const DP = 2; // decimal places (the tableplot uses its own; 2 is a sane preview default)
@@ -67,18 +71,20 @@
 		}
 		// Time: readable time with hours-since-start underneath.
 		if (isTime && Array.isArray(timeArr)) {
-			const v = timeArr[i];
+			// The parsed value decides: a raw number is only epoch ms when the column
+			// parses it as such, and a missing value shows as '-', never 1 Jan 1970.
+			const raw = timeCellText(timeArr[i], data?.[i]);
+			if (raw === '-') return { raw, computed: '-', isTime: true };
 			const hours = column.hoursSinceStart?.[i];
-			const hoursStr = Number.isFinite(hours) ? hours.toFixed(DP) : String(hours ?? '');
-			const raw = typeof v === 'number' ? formatTimeFromUNIX(v) : v;
-			return { raw, computed: hoursStr, isTime: true, unit: 'hrs' };
+			if (!Number.isFinite(hours)) return { raw, computed: '-', isTime: true };
+			return { raw, computed: hours.toFixed(DP), isTime: true, unit: 'hrs' };
 		}
 		return formatNumber(data?.[i]);
 	}
 </script>
 
-<div class="mini-table" role="table" aria-label={`Preview of ${column?.name ?? ''}`}>
-	<div class="mini-header">{column?.name ?? '(unnamed)'}</div>
+<div class="mini-table" role="table" aria-label={`Preview of ${headerName}`}>
+	<div class="mini-header">{column?.name != null ? headerName : '(unnamed)'}</div>
 	<div class="mini-rows">
 		{#each { length: previewN }, i (i)}
 			{@const cell = cellAt(i)}

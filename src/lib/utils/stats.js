@@ -69,7 +69,9 @@ export function mean(data) {
 }
 
 export function standardDeviation(arr) {
-	const validArr = arr.filter((v) => v !== undefined && v !== null && !isNaN(v));
+	// The house rule, then numbers: a null-only check let '' through, which kahanMean skipped
+	// but the deviations below read as 0 ([1,'',3] gave 1.414 instead of 1: STAT-23).
+	const validArr = arr.filter((v) => !isInvalidValue(v)).map(Number);
 	if (validArr.length === 0) return NaN;
 	const m = kahanMean(validArr);
 	const k = new KahanSum();

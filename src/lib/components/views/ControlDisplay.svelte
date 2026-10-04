@@ -94,6 +94,16 @@
 	import CanvasNodeControls from './CanvasNodeControls.svelte';
 	import CategoryColourControls from './CategoryColourControls.svelte';
 	import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
+	import { tick } from 'svelte';
+	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
+	import { tooltip } from '$lib/utils/tooltip.js';
+	import {
+		resolveControlTab,
+		rememberControlTab,
+		rememberedControlTab,
+		stepControlTab,
+		tabIds
+	} from './controlTabs.js';
 
 	// True when there's a non-plot canvas node selected. Plot nodes are
 	// already handled by the existing selectedPlots branches below, so we
@@ -373,7 +383,6 @@
 		return verticalGapIN != null && !isNaN(verticalGapIN) ? verticalGapIN : getGap('vertical');
 	});
 
-	let tempTab = 'properties';
 	/**
 	 * The tab a plot's whole-plot properties belong on: its FIRST control header, lowercased.
 	 * Every plot leads with 'Properties' except Tableplot, whose single tab is
@@ -385,18 +394,43 @@
 	}
 
 	function updateCurrentControlTab(tab, type) {
-		if (type === 'actogram') {
-			appState.currentControlTab = tab;
-		} else {
-			if (appState.currentControlTab === 'annotations') {
-				appState.currentControlTab = tempTab;
-			} else {
-				appState.currentControlTab = tab;
-			}
-		}
+		appState.currentControlTab = tab;
+		rememberControlTab(type, tab);
 		// dataSettingsScrollTo('top') from ./dataSettingsScroll.js, if this ever needs to
 		// scroll the panel back to the top on a tab change.
-		// console.log('DEBUG:', appState.currentControlTab);
+	}
+
+	// UI-3: the tab is global but each plot type has its own tabs. When the selected plot
+	// changes (or the tab is one this plot does not have, e.g. from a loaded session), keep
+	// the tab if the plot has it, else the tab last used on this plot type, else its first
+	// tab. Without this, Actogram "Annotations" then a periodogram left a blank panel.
+	$effect(() => {
+		if (selectedPlots.length !== 1) return;
+		const plot = ownerPlotOf(selectedPlots[0]);
+		if (!plot) return;
+		const headers = appConsts.plotMap.get(plot.type)?.controlHeaders ?? [];
+		const current = appState.currentControlTab;
+		const next = resolveControlTab(current, headers, rememberedControlTab(plot.type));
+		if (next !== current) appState.currentControlTab = next;
+	});
+
+	// Arrow keys move between tabs (WAI-ARIA tabs pattern; only the active tab is in
+	// the Tab order).
+	async function onTabKeydown(e, type) {
+		const headers = appConsts.plotMap.get(type)?.controlHeaders ?? [];
+		const ids = tabIds(headers);
+		const current = appState.currentControlTab;
+		let next = null;
+		if (e.key === 'ArrowRight') next = stepControlTab(headers, current, 1);
+		else if (e.key === 'ArrowLeft') next = stepControlTab(headers, current, -1);
+		else if (e.key === 'Home') next = ids[0];
+		else if (e.key === 'End') next = ids[ids.length - 1];
+		if (next == null) return;
+		e.preventDefault();
+		const list = e.currentTarget.parentElement;
+		updateCurrentControlTab(next, type);
+		await tick();
+		list?.querySelector('[role="tab"][aria-selected="true"]')?.focus();
 	}
 </script>
 
@@ -414,7 +448,8 @@
 {#snippet facetControls(p)}
 	{@const nFacets = facetUnits(p).length}
 	<div class="control-component">
-		<div class="control-input-checkbox">
+		<!-- A <label>, so clicking the text toggles it too (review UI-14). -->
+		<label class="control-input-checkbox">
 			<!-- Ops, not direct writes (plan 1.7): each toggle is one undo step. The panels are
 			     derived from the generator, so nothing has to be synced here. -->
 			<input
@@ -422,8 +457,8 @@
 				checked={p.facet}
 				onchange={(e) => mutationService.setPlotProperty(p.id, 'facet', e.currentTarget.checked)}
 			/>
-			<p>One plot per series (facet)</p>
-		</div>
+			<span class="ci-label">One plot per series (facet)</span>
+		</label>
 		{#if p.facet && nFacets > 1}
 			<ControlInput label="Rows">
 				<select
@@ -792,7 +827,7 @@
 		{@const ref = selectedPlots[0]}
 		{@const plot = ownerPlotOf(ref)}
 		{#if plot}
-			{@const Plot = appConsts.plotMap.get(plot.type).plot ?? null}
+			{@const Plot = appConsts.plotMap.get(plot.type)?.plot ?? null}
 			{#if Plot}
 				{#if isFacetPanel(ref)}
 					{@const n = facetUnits(plot).length}
@@ -825,6 +860,8 @@
 
 							<button
 								class="icon"
+								aria-label="Delete plot"
+								{@attach tooltip('Delete plot')}
 								onclick={(e) => {
 									e.stopPropagation();
 									removePlots([plot.id]);
@@ -835,12 +872,20 @@
 						</div>
 					</div>
 
-					<div class="control-tab">
-						{#each appConsts.plotMap.get(plot.type).controlHeaders as header (header)}
+					<div class="control-tab" role="tablist" aria-label="Plot controls">
+						{#each appConsts.plotMap.get(plot.type)?.controlHeaders ?? [] as header (header)}
+							{@const tabId = header.toLowerCase()}
+							{@const active = appState.currentControlTab === tabId}
 							<button
-								class={appState.currentControlTab === header.toLowerCase() ? 'active' : ''}
+								class={active ? 'active' : ''}
+								role="tab"
+								id={`control-tab-${tabId.replace(/\W+/g, '-')}`}
+								aria-selected={active}
+								aria-controls="control-tabpanel"
+								tabindex={active ? 0 : -1}
 								data-label={header}
-								onclick={() => updateCurrentControlTab(header.toLowerCase(), plot.type)}
+								onclick={() => updateCurrentControlTab(tabId, plot.type)}
+								onkeydown={(e) => onTabKeydown(e, plot.type)}
 							>
 								{header}
 							</button>
@@ -849,40 +894,51 @@
 					<div class="div-line"></div>
 				</div>
 
-				<!-- Faceting and the figure style describe the WHOLE plot, so they live on the
+				<div
+					role="tabpanel"
+					id="control-tabpanel"
+					aria-labelledby={`control-tab-${appState.currentControlTab.replace(/\W+/g, '-')}`}
+				>
+					<!-- Faceting and the figure style describe the WHOLE plot, so they live on the
 				     first tab with the rest of its properties. They used to render outside the
 				     tab switch entirely, which put them under Data and Bands as well.
 				     Compared against the plot's own first header rather than the literal
 				     'properties', because Tableplot names its single tab
 				     'Properties and Data'. -->
-				{#if appState.currentControlTab === propertiesTabFor(plot.type)}
-					{#if FACETABLE_PLOT_TYPES.has(plot.type)}
-						{@render facetControls(plot)}
-					{/if}
+					{#if appState.currentControlTab === propertiesTabFor(plot.type)}
+						{#if FACETABLE_PLOT_TYPES.has(plot.type)}
+							{@render facetControls(plot)}
+						{/if}
 
-					<!-- This plot's own style. Editing it never touches the session template or
+						<!-- This plot's own style. Editing it never touches the session template or
 					     any other figure. Starts collapsed (see collapsibleSections.svelte.js):
 					     it is long, and rarely what the panel was opened for. -->
-					<FigureStyleControls
-						{plot}
-						style={plot.style}
-						title="Figure"
-						onFigureChange={() => {
-							applyFigureAppearance(plot);
-							applyFigureWidth(plot);
-						}}
-					/>
-				{/if}
+						<FigureStyleControls
+							{plot}
+							bind:style={plot.style}
+							title="Figure"
+							onFigureChange={() => {
+								applyFigureAppearance(plot);
+								applyFigureWidth(plot);
+							}}
+						/>
+					{/if}
 
-				<Plot theData={plot.plot} which="controls" />
+					<ErrorBoundary
+						context={`showing the ${plot.type} plot controls`}
+						title="These controls couldn't be shown."
+					>
+						<Plot theData={plot.plot} which="controls" />
+					</ErrorBoundary>
 
-				<!-- A category-coloured boxplot (one series, categorical x) draws one box per
+					<!-- A category-coloured boxplot (one series, categorical x) draws one box per
 				     x value in its own session-wide colour; those colours are editable here
 				     because the series' own stroke/fill pickers do not reach them. Renders
 				     nothing for every other plot shape. -->
-				{#if appState.currentControlTab === 'data'}
-					<CategoryColourControls {plot} />
-				{/if}
+					{#if appState.currentControlTab === 'data'}
+						<CategoryColourControls {plot} />
+					{/if}
+				</div>
 			{/if}
 		{/if}
 	{:else if hasNonPlotCanvasSelection}
@@ -901,23 +957,6 @@
 <SavePlot bind:open={showSavePlot} Id={saveIds} />
 
 <style>
-	.heading {
-		position: sticky;
-		top: 0;
-		width: 100%;
-		/* height: 4vh; */
-		display: flex;
-		flex-direction: row;
-		justify-content: center;
-		align-items: center;
-		background-color: var(--surface-card);
-	}
-
-	.heading p {
-		margin-left: var(--space-4);
-		/* font-weight: 600; */
-	}
-
 	.control-display {
 		position: absolute;
 		top: 0;

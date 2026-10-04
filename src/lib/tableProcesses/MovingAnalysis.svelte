@@ -244,6 +244,9 @@
 	import { onMount, untrack } from 'svelte';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import { createComputeRunner } from '$lib/core/asyncCompute.js';
+	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -263,8 +266,9 @@
 	let result = $state();
 	let mounted = $state(false);
 	let calculating = $state(false);
+	// The message of the last failed compute, shown with a Retry (ROB-11).
+	let calcError = $state(null);
 	let previewStart = $state(1);
-	let _calcToken = 0;
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
@@ -400,23 +404,34 @@
 		);
 	});
 
+	// try/finally, error state, success-only memo commit: see core/asyncCompute.js.
+	const runner = createComputeRunner({
+		memo,
+		node: p,
+		label: 'Moving analysis',
+		setBusy: (v) => (calculating = v),
+		setError: (m) => (calcError = m)
+	});
 	function recompute() {
 		previewStart = 1;
-		calculating = true;
-		const token = ++_calcToken;
-		setTimeout(async () => {
-			if (token !== _calcToken) return;
-			const [data, valid] = await movinganalysis(p.args);
-			if (token !== _calcToken) return; // re-check after await (analysis is async now)
-			result = data;
-			// Surfaces on the canvas node (CompactNode / TableProcessNode read
-			// tp.warnings) — derived from THIS compute, never persisted, so it
-			// cannot go stale.
-			p.warnings = data?.warnings ?? [];
-			p.args.valid = valid;
-			calculating = false;
-			memo.hash = getHash;
-		}, 0);
+		runner.run(
+			untrack(() => getHash),
+			() => untrack(() => movinganalysis(p.args)),
+			([data, valid]) => {
+				result = data;
+				// Surfaces on the canvas node (CompactNode / TableProcessNode read
+				// tp.warnings) — derived from THIS compute, never persisted, so it
+				// cannot go stale.
+				p.warnings = data?.warnings ?? [];
+				p.args.valid = valid;
+			},
+			() => {
+				result = undefined;
+				p.warnings = [];
+				p.args.valid = false;
+				clearOutputColumns(p.args.out);
+			}
+		);
 	}
 
 	/**
@@ -570,10 +585,9 @@
 				}
 				result = { bins, y_results, statKeys: currentStatKeys, originTime_ms };
 				p.args.valid = true;
-				const inputsAreStale =
-					(p.args.xIN >= 0 && (getColumnById(p.args.xIN)?.rawDataVersion ?? 0) > 0) ||
-					(p.args.yIN ?? []).some((id) => (getColumnById(id)?.rawDataVersion ?? 0) > 0);
-				if (!inputsAreStale) memo.hash = getHash;
+				// The saved outputs only fill the panel until the compute effect runs; they are
+				// never trusted as current (the file may predate a fix, or the inputs), so the memo
+				// hash is not pinned here and the node recomputes from its inputs once mounted.
 			}
 		}
 		mounted = true;
@@ -871,6 +885,8 @@
 		<div class="section-content">
 			{#if calculating}
 				<LoadingSpinner message="Running moving analysis…" />
+			{:else if calcError}
+				<ErrorBox title="The analysis failed." message={calcError} onretry={recompute} />
 			{:else if p.args.valid && result?.bins?.length && ownOutIds.length > 1}
 				{@const xout = getColumnById(p.args.out.movex)}
 				<div class="tp-outputs">

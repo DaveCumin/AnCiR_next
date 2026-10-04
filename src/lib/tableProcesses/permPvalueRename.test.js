@@ -57,6 +57,7 @@ vi.mock('$lib/components/inputs/ColumnSelector.svelte', () => ({ default: {} }))
 // REAL (it sees these same mocks through fitCurveModel), so the p on the port
 // is genuinely the permutation machinery's output, not a planted number.
 vi.mock('$lib/utils/rectwave.js', () => ({
+	rectWaveFitWarnings: vi.fn(() => []),
 	fitRectangularWave: vi.fn((tt, yy) => ({
 		fitted: yy.map((v) => v * 0.9),
 		parameters: { period: 24, acrophase: 12, dutyCycle: 0.5, kappa: 5, M: 50, A: 25 },
@@ -68,6 +69,7 @@ vi.mock('$lib/utils/rectwave.js', () => ({
 	evaluateRectWaveAtPoints: vi.fn((params, points) => points.map(() => params.M))
 }));
 vi.mock('$lib/utils/doublelogistic.js', () => ({
+	doubleLogisticFitWarnings: vi.fn(() => []),
 	fitDoubleLogistic: vi.fn((tt, yy) => ({
 		fitted: yy.map((v) => v * 0.9),
 		parameters: { T: 24, M: 50, A: 25, k1: 0.5, k2: 0.5, t1: 6, t2: 18 },

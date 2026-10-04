@@ -168,7 +168,15 @@
 						<strong>CI level</strong>
 						(the dropdown offers 95% / 99%). This gives MESOR, amplitude, acrophase ± CI, and an F-test
 						<a class="gloss" href="#gloss-p-value">p-value</a>. AnCiR can also run an optional
-						<strong>permutation test</strong> for a distribution-free p-value.
+						<strong>permutation test</strong>, which does not assume normal residuals. It does
+						assume <strong>exchangeable</strong> observations (under no rhythm, any reordering of
+						the values is equally likely), and autocorrelated recordings break that: on red noise
+						with no rhythm, shuffling single values gives p &lt; 0.05 about a third of the time, no
+						better than the F-test. The Cosinor, Fit Waveform Model, Rectangular Wave and
+						Double-Logistic nodes can permute one-period blocks instead (Permute: one-period
+						blocks), which keeps the autocorrelation (in simulation its false-positive rate stayed
+						at or below about 5% on the same red noise); otherwise test the rhythm with the
+						<strong>Surrogate Test</strong> node using block or AR(1) surrogates.
 					</li>
 					<li>
 						<strong>Free period:</strong> leave Fixed Period unticked and set

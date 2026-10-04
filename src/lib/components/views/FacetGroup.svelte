@@ -13,6 +13,7 @@
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { panelsFor } from '$lib/core/facetPanels.svelte.js';
 	import { isZoomMode } from '$lib/plots/plotZoomMode.svelte.js';
+	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 
 	let { generator, viewportEl = null } = $props();
 
@@ -37,7 +38,19 @@
 				{viewportEl}
 			>
 				{#if PlotComp && panel.plot}
-					<PlotComp theData={panel} which="plot" brushable={true} zoomMode={isZoomMode(panel.id)} />
+					<!-- One boundary per panel, inside the card so it can still be moved: a
+					     panel that throws shows why and its siblings keep drawing (ROB-12). -->
+					<ErrorBoundary
+						context={`drawing the facet panel "${panel.name}"`}
+						title="This panel couldn't be drawn."
+					>
+						<PlotComp
+							theData={panel}
+							which="plot"
+							brushable={true}
+							zoomMode={isZoomMode(panel.id)}
+						/>
+					</ErrorBoundary>
 				{/if}
 			</Draggable>
 		{/snippet}

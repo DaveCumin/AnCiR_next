@@ -587,6 +587,14 @@
 		return Number.isFinite(v) ? v.toFixed(3) : '';
 	}
 
+	// What the line's statistics mean (lineFit.js). R² is the share of the markers'
+	// time-of-day variation that the line's drift explains, so it no longer measures how
+	// tightly the markers sit on the line (review FIT-4).
+	const R2_HELP =
+		"R² is computed on the time-of-day residuals (each marker's time minus period × day): the share of the markers' time-of-day variation that the line's drift explains. A drift-free entrained record scores near 0 however tight its markers are, and a line with a fixed τ or θ can score below 0. Use Error (RMSE) for how tightly the markers sit on the line.";
+	const RMSE_HELP =
+		'Error is the RMSE: the typical distance, in hours, of the markers from the drawn line. It measures how tightly they sit on it.';
+
 	// Absent statistics read as a dash, never as a fabricated number.
 	function fmtStat(v) {
 		return Number.isFinite(v) ? v.toFixed(3) : '\u2013';
@@ -1082,10 +1090,14 @@
 	{/if}
 	<!-- R²/RMSE always describe the line as DRAWN against this block's selected
 	     markers, in every lock combination. A line with no markers to compare
-	     against reports a dash, not a fabricated 1 / 0. -->
+	     against reports a dash, not a fabricated 1 / 0. R² is in the time-of-day residual
+	     frame (lineFit.js, review FIT-4), which the tooltip says, since it no longer reads
+	     as "how tight". -->
 	<p>
-		R²: {fmtStat(marker.linearRegression.rSquared)}
-		&ensp;Error: {fmtStat(marker.linearRegression.rmse)}
+		<span class="stat-help" title={R2_HELP}>R²</span>: {fmtStat(marker.linearRegression.rSquared)}
+		&ensp;<span class="stat-help" title={RMSE_HELP}>Error</span>: {fmtStat(
+			marker.linearRegression.rmse
+		)}
 	</p>
 {/snippet}
 
@@ -1210,10 +1222,10 @@
 			{@render estTau(marker)}
 			{@render phiAndFit(marker)}
 
-			<div class="control-input-checkbox">
+			<label class="control-input-checkbox">
 				<input type="checkbox" bind:checked={marker.showLine} />
-				<p>Show Line</p>
-			</div>
+				<span class="ci-label">Show Line</span>
+			</label>
 			{#if marker.showLine}
 				<div class="control-input-horizontal">
 					<ControlInput label="Line min day">
@@ -1245,12 +1257,15 @@
 						/>
 					</ControlInput>
 				</div>
-				<div class="control-input-checkbox">
+				<label class="control-input-checkbox">
 					<input type="checkbox" bind:checked={marker.fitWithinRange} />
-					<p {@attach tooltip('Fit the line only to the days inside the line min and max day')}>
+					<span
+						class="ci-label"
+						{@attach tooltip('Fit the line only to the days inside the line min and max day')}
+					>
 						Fit only these days
-					</p>
-				</div>
+					</span>
+				</label>
 			{/if}
 		{/if}
 	</div>
@@ -1459,6 +1474,13 @@
 {/if}
 
 <style>
+	/* A statistic with an explanatory tooltip. */
+	.stat-help {
+		text-decoration: underline dotted;
+		text-underline-offset: 2px;
+		cursor: help;
+	}
+
 	/* The line's grab area: invisible, wide, and it must not scroll the page on
 	   touch or the drag would fight the browser's own panning. */
 	.line-handle {

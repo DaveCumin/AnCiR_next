@@ -32,6 +32,8 @@ vi.mock('$lib/components/inputs/NumberWithUnits.svelte', () => ({ default: {} })
 vi.mock('$lib/components/inputs/ColumnSelector.svelte', () => ({ default: {} }));
 
 vi.mock('$lib/utils/rectwave.js', () => ({
+	// The free-period warnings (review FIT-1) are tested on the real module (fitPeriodBound.test.js).
+	rectWaveFitWarnings: vi.fn(() => []),
 	fitRectangularWave: vi.fn((tt, yy, opts) => {
 		// Mock rectangular wave fit result
 		// When fixOmega is true, fixedOmega is passed (angular frequency)

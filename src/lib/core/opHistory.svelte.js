@@ -5,7 +5,11 @@ import { addOpListener, applyOp, withSuppressedListeners } from './operations.js
 const COALESCE_MS = 500;
 const COALESCE_KINDS = new Set([
 	'setProcessArg',
-	'setTableProcessArg',
+	// The op an analysis-parameter edit actually records. This used to name
+	// 'setTableProcessArg', a kind nothing emits, so a slider drag never coalesced and
+	// a 60-tick drag pushed the whole 50-step history out (review ROB-18).
+	'setFreeTableProcessArg',
+	'setOrphanProcessArg',
 	'setPlotProperty',
 	'setPlotPosition',
 	// A colour-picker drag or a run of spinner clicks on one rule field is one step.
@@ -19,6 +23,14 @@ class OpHistoryManager {
 	// Reactive so UI side-effects (e.g. auto-clear of stale selection) can
 	// skip work while a restore is in flight.
 	isRestoring = $state(false);
+	// Depth of session loads in flight (beginLoad/endLoad). While a load runs, the stacks
+	// describe a session that is being torn down: undo/redo would apply the OLD session's ops
+	// to the half-built new one (review ROB-2), and anything the load itself writes (the
+	// output-map reconcile, ROB-17) is not a user step. So both are refused until it ends.
+	#loadDepth = $state(0);
+	get isLoading() {
+		return this.#loadDepth > 0;
+	}
 	#lastTs = 0;
 	#initialized = false;
 	// Handle from addOpListener. `init()` is idempotent (#initialized) and is
@@ -85,7 +97,7 @@ class OpHistoryManager {
 	}
 
 	#record(forward, reverse) {
-		if (this.isRestoring) return;
+		if (this.isRestoring || this.isLoading) return;
 		const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
 		const top = this.undoStack[this.undoStack.length - 1];
 		if (
@@ -119,8 +131,10 @@ class OpHistoryManager {
 		switch (a.kind) {
 			case 'setProcessArg':
 				return a.columnId === b.columnId && a.processId === b.processId && a.key === b.key;
-			case 'setTableProcessArg':
-				return a.tableId === b.tableId && a.tpId === b.tpId && a.key === b.key;
+			case 'setFreeTableProcessArg':
+				return a.tpId === b.tpId && a.key === b.key;
+			case 'setOrphanProcessArg':
+				return a.processId === b.processId && a.key === b.key;
 			case 'setPlotProperty':
 				return a.id === b.id && a.key === b.key;
 			case 'setPlotPosition':
@@ -152,7 +166,7 @@ class OpHistoryManager {
 	}
 
 	undo() {
-		if (this.undoStack.length === 0) return;
+		if (this.isLoading || this.undoStack.length === 0) return;
 		const entry = this.undoStack[this.undoStack.length - 1];
 		this.undoStack = this.undoStack.slice(0, -1);
 		this.isRestoring = true;
@@ -168,7 +182,7 @@ class OpHistoryManager {
 	}
 
 	redo() {
-		if (this.redoStack.length === 0) return;
+		if (this.isLoading || this.redoStack.length === 0) return;
 		const entry = this.redoStack[this.redoStack.length - 1];
 		this.redoStack = this.redoStack.slice(0, -1);
 		this.isRestoring = true;
@@ -189,8 +203,18 @@ class OpHistoryManager {
 		this.#lastTs = 0;
 	}
 
-	canUndo = $derived(this.undoStack.length > 0);
-	canRedo = $derived(this.redoStack.length > 0);
+	/** Mark a session load as started: undo, redo and recording are off until endLoad(). */
+	beginLoad() {
+		this.#loadDepth += 1;
+	}
+
+	/** Pair of beginLoad(); call from a finally block. */
+	endLoad() {
+		this.#loadDepth = Math.max(0, this.#loadDepth - 1);
+	}
+
+	canUndo = $derived(!this.isLoading && this.undoStack.length > 0);
+	canRedo = $derived(!this.isLoading && this.redoStack.length > 0);
 	undoCount = $derived(this.undoStack.length);
 	redoCount = $derived(this.redoStack.length);
 }

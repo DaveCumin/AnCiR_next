@@ -63,16 +63,35 @@ describe('multiply', () => {
 		out.forEach((v) => expect(Number.isNaN(v)).toBe(true));
 	});
 
-	it('propagates NaN for NaN entries; null coerces to 0', () => {
-		const out = multiply([2, null, NaN], { value: 3 });
-		expect(out[0]).toBe(6);
-		expect(out[1]).toBe(0); // null * 3 === 0
-		expect(Number.isNaN(out[2])).toBe(true);
+	it('a null or NaN entry is missing out (null), not 0 (STAT-6, below)', () => {
+		expect(multiply([2, null, NaN], { value: 3 })).toEqual([6, null, null]);
 	});
 
 	it('is the inverse of dividing by the same factor', () => {
 		const x = [3, 7, 11];
 		const out = multiply(x, { value: 4 });
 		out.forEach((v, i) => expect(v / 4).toBeCloseTo(x[i], 10));
+	});
+});
+
+// STAT-6: Multiply by 2 on [1, null, 3] gave [2, 0, 6]: Number(null) === 0. Missing in, missing
+// (null) out; the house rule decides what is missing.
+describe('multiply with missing values (STAT-6)', () => {
+	it("reviewer's case: [1, null, 3] * 2 is [2, null, 6]", () => {
+		expect(multiply([1, null, 3], { value: 2 })).toEqual([2, null, 6]);
+	});
+
+	it('blank, whitespace, undefined, NaN and text are missing (null) out', () => {
+		expect(multiply(['', ' ', undefined, NaN, 'n/a'], { value: 2 })).toEqual([
+			null,
+			null,
+			null,
+			null,
+			null
+		]);
+	});
+
+	it('a numeric string is multiplied as a number; a real 0 is data', () => {
+		expect(multiply(['3', 0], { value: 2 })).toEqual([6, 0]);
 	});
 });

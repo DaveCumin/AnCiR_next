@@ -65,12 +65,15 @@ export function viewStyleFor(style, fontScale) {
 }
 
 /**
- * Axis chrome that does NOT scale with the type: the tick marks and the gap between a tick and
- * its label. Axis.svelte draws these at fixed pixel sizes (`ticklength = 6`, `tickspace = 4`),
- * so they take the same room whatever size the text is.
+ * Padding held back from scaling: the room the tick marks and the tick-to-label gap take at
+ * full size (6 + 4 px on the sides that carry ticks and labels; a token amount for a stroke and
+ * a little air on top and right).
  *
- * Left and bottom carry ticks and labels; top and right normally carry neither, so they get a
- * token amount for a stroke and a little air.
+ * Axis.svelte used to draw that chrome at fixed pixel sizes in every view, which is why it had
+ * to be held back here. It now shrinks it with the type (plotbits/axisLayout.js axisChrome),
+ * so everything an axis draws needs `fontScale` times its full-size room, and the held-back
+ * pixels are a small extra margin in a node rather than a requirement. Kept so a node's plot
+ * area, and everything pinned to it, did not move when the axis started scaling.
  */
 const AXIS_CHROME = { top: 4, right: 4, bottom: 10, left: 10 };
 
@@ -85,16 +88,17 @@ const AXIS_CHROME = { top: 4, right: 4, bottom: 10, left: 10 };
  * ONLY THE TEXT-DEPENDENT PART SCALES. Scaling the whole thing was the first attempt and it
  * clipped: at fontScale 0.48 a "20,000" tick label measured 25.4px and the axis needed 35.4px
  * of room (label + 6px tick + 4px gap), but a figure padding of 72 scaled to 34.56. The tick
- * and the gap are fixed pixels, so squeezing them proportionally leaves the labels hanging off
- * the left edge, where the node's `overflow: hidden` cuts them in half. Holding the chrome back
- * and scaling only the remainder gives 10 + 62 × 0.48 = 39.8, which fits.
+ * and the gap were fixed pixels then, so squeezing them proportionally left the labels hanging
+ * off the left edge, where the node's `overflow: hidden` cut them in half. Holding the chrome
+ * back and scaling only the remainder gives 10 + 62 × 0.48 = 39.8, which fits. (The axis title
+ * still clipped until its buffer and the tick chrome scaled too; see AXIS_CHROME above.)
  *
  * Multiplied, not re-measured. Re-measuring per view would be more exact but would mean a node
  * writing a figure property (see the `renderBox` guard in `autoScalePadding`), and the whole
  * point is that a node describes itself, not the figure.
  *
  * Returns the SAME object at scale 1, so the workspace path allocates nothing and no downstream
- * `$derived` sees a fresh identity on every read.
+ * `$derived` sees a fresh identity on every read. Otherwise returns a write-through view (below).
  */
 export function scalePadding(padding, fontScale) {
 	if (!padding || !(fontScale > 0) || fontScale === 1) return padding;
@@ -106,5 +110,35 @@ export function scalePadding(padding, fontScale) {
 		if (value <= chrome) return value;
 		return chrome + (value - chrome) * fontScale;
 	};
-	return { top: side('top'), right: side('right'), bottom: side('bottom'), left: side('left') };
+	// A live VIEW of `padding`, not a snapshot: each side reads the stored value when asked (so
+	// it stays reactive through the store's proxy) and an assignment writes the FIGURE value
+	// through. Anything that writes `plot.padding.top = v` while a node view is mounted (the
+	// shared multi-plot panel, an AI edit, a facet override) therefore changes the stored figure
+	// padding instead of a throwaway copy.
+	return {
+		get top() {
+			return side('top');
+		},
+		set top(v) {
+			padding.top = v;
+		},
+		get right() {
+			return side('right');
+		},
+		set right(v) {
+			padding.right = v;
+		},
+		get bottom() {
+			return side('bottom');
+		},
+		set bottom(v) {
+			padding.bottom = v;
+		},
+		get left() {
+			return side('left');
+		},
+		set left(v) {
+			padding.left = v;
+		}
+	};
 }

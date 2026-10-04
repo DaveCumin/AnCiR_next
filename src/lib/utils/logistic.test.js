@@ -94,3 +94,55 @@ describe('logisticRegression (statsmodels Logit parity)', () => {
 		expect(r3.converged).toBe(false);
 	});
 });
+
+// STAT-5: a missing predictor (or outcome) was coded as 0, because the row filter converted
+// first (Number(null) === 0, Number('') === 0) and then checked finiteness. Reviewer's exact
+// inputs: the 20-row hours/pass data with x[0] = null and x[1] = ''. Reference: statsmodels
+// Logit on the 18 complete rows (listwise deletion), which the Python port already does.
+describe('logisticRegression drops incomplete rows (STAT-5)', () => {
+	const lx = [
+		0.5, 0.75, 1, 1.25, 1.5, 1.75, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 4, 4.25, 4.5, 4.75, 5,
+		5.5
+	];
+	const ly = [0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1];
+
+	it('a null and a blank predictor are dropped: n = 18, statsmodels slope 1.4300', () => {
+		const xm = lx.slice();
+		xm[0] = null;
+		xm[1] = '';
+		const r = logisticRegression(ly, [xm], ['hours']);
+		expect(r.n).toBe(18);
+		expect(r.coefficients[0].coef).toBeCloseTo(-3.8440726102983778, 6);
+		expect(r.coefficients[1].coef).toBeCloseTo(1.430015529520667, 6);
+		expect(r.coefficients[1].se).toBeCloseTo(0.6457453852448422, 6);
+		expect(Number.isNaN(r.perObs.fitted[0])).toBe(true);
+		expect(Number.isNaN(r.perObs.fitted[1])).toBe(true);
+	});
+
+	for (const blank of [' ', 'n/a', undefined]) {
+		it(`a ${JSON.stringify(blank)} predictor is dropped`, () => {
+			const xm = lx.slice();
+			xm[0] = blank;
+			xm[1] = blank;
+			expect(logisticRegression(ly, [xm], ['hours']).n).toBe(18);
+		});
+	}
+
+	it('a missing outcome is dropped, not read as 0 (statsmodels without rows 3, 4)', () => {
+		const ym = ly.slice();
+		ym[3] = null;
+		ym[4] = '';
+		const r = logisticRegression(ym, [lx], ['hours']);
+		expect(r.n).toBe(18);
+		expect(r.coefficients[1].coef).toBeCloseTo(1.372352682870949, 6);
+		expect(r.coefficients[1].se).toBeCloseTo(0.6226613173439947, 6);
+	});
+
+	it('a real 0 predictor is data, and numeric strings are numbers', () => {
+		const xz = lx.slice();
+		xz[0] = 0;
+		expect(logisticRegression(ly, [xz], ['hours']).n).toBe(20);
+		const r = logisticRegression(ly.map(String), [lx.map(String)], ['hours']);
+		expect(r.n).toBe(20);
+	});
+});

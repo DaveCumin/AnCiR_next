@@ -95,11 +95,19 @@ const ruleOf = (inner, ruleId) => (inner?.markerRules ?? []).find((r) => r.id ==
 export const PLOT_METRIC_DEFS = {
 	periodogram: {
 		keys: ['peak_period', 'peak_power', 'peak_pvalue'],
+		// The key stays `peak_pvalue` so existing wires and columns survive; the port reads
+		// as what it now carries.
+		labelFor(_inner, key) {
+			return key === 'peak_pvalue' ? 'Peak p (family-wise)' : key;
+		},
 		statsFor(datum) {
 			const p = datum?.visiblePeak ?? datum?.peak;
-			// peak_pvalue is the chi-squared significance of the peak; NaN for
-			// Lomb-Scargle/Enright (no analytic p). This supersedes the standalone
-			// Free-Running Period node, which was a thin chi-squared periodogram wrapper.
+			// peak_pvalue is the chi-squared significance of the peak, FAMILY-WISE over the
+			// folds the threshold line uses (Periodogram.svelte peakFamilywiseP), so it is below
+			// alpha exactly when the peak crosses the drawn line. Until SPEC-6 it was the
+			// uncorrected per-period p at the maximum. NaN for Lomb-Scargle/Enright (no
+			// analytic p). This supersedes the standalone Free-Running Period node, which was
+			// a thin chi-squared periodogram wrapper.
 			return {
 				peak_period: p?.period ?? NaN,
 				peak_power: p?.power ?? NaN,

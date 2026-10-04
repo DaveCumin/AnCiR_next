@@ -54,7 +54,11 @@ export function importDataUrlDirect(url) {
 	actions.importDataUrlDirect?.(url);
 }
 
-/** Load a dropped `.json` session file. */
+/**
+ * Load a dropped `.json` file as a session. The registered handler (+page.svelte) checks the
+ * parsed content first: JSON that is not session-shaped goes to the Import modal instead, a real
+ * session asks before replacing open work, and a failed load leaves the open session unchanged.
+ */
 export function loadSessionFile(file) {
 	actions.loadSessionFile?.(file);
 }
@@ -69,7 +73,8 @@ export function isImportableDataFile(name) {
 
 /**
  * Route files dropped onto a canvas: tabular data files open the import modal;
- * a lone `.json` is treated as a session. Returns true if anything was handled.
+ * a lone `.json` goes to the session loader, which re-routes it to the import
+ * modal when its content is not a session. Returns true if anything was handled.
  * @param {FileList | File[]} fileList
  */
 export function handleCanvasFileDrop(fileList) {

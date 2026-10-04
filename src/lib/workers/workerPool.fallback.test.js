@@ -92,7 +92,27 @@ describe('workers that fail to start', () => {
 });
 
 describe('per-task fallback warnings', () => {
-	it('warns when a started worker reports an error and the task reruns on the main thread', async () => {
+	it('warns when a started worker crashes and the task reruns on the main thread', async () => {
+		class CrashAfterStart {
+			constructor() {
+				setTimeout(() => this.onmessage?.({ data: { ready: true } }), 0);
+			}
+			postMessage() {
+				setTimeout(() => this.onerror?.({ message: 'oom' }), 0);
+			}
+			terminate() {}
+		}
+		setWorkerFactory(() => new CrashAfterStart());
+		const out = await runComputeTask('double', { x: [1] });
+		expect(out.y).toEqual([2]);
+		expect(_workersUnavailableReason()).toBeNull();
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn.mock.calls[0][0]).toMatch(
+			/"double" is running on the main thread \(worker crashed: oom\)/
+		);
+	});
+
+	it('a task error reported by a healthy worker rejects quietly, without a main-thread rerun', async () => {
 		class ErrReply {
 			constructor() {
 				setTimeout(() => this.onmessage?.({ data: { ready: true } }), 0);
@@ -103,13 +123,8 @@ describe('per-task fallback warnings', () => {
 			terminate() {}
 		}
 		setWorkerFactory(() => new ErrReply());
-		const out = await runComputeTask('double', { x: [1] });
-		expect(out.y).toEqual([2]);
-		expect(_workersUnavailableReason()).toBeNull();
-		expect(warn).toHaveBeenCalledTimes(1);
-		expect(warn.mock.calls[0][0]).toMatch(
-			/"double" is running on the main thread \(worker error: oom\)/
-		);
+		await expect(runComputeTask('double', { x: [1] })).rejects.toThrow(/oom/);
+		expect(warn).not.toHaveBeenCalled();
 	});
 
 	it('warns when postMessage throws', async () => {

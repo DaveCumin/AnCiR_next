@@ -312,7 +312,7 @@
 	<FigureStyleControls
 		topControls={paletteControl}
 		onResetToMap={() => clearSeriesColourOverrides(core.plots)}
-		style={core.figureStyle}
+		bind:style={core.figureStyle}
 		showApplyToAll={true}
 		onApplyToAll={() => {
 			// The palette first: it is what the slot records below resolve against, so

@@ -570,3 +570,34 @@ describe('groupcomparison — effect size output port', () => {
 		expect(Number.isFinite(kw.epsilonSquared)).toBe(true);
 	});
 });
+
+// Upper tails computed directly, not as 1 - cdf (which rounds anything below ~1e-16 to 0).
+// References: scipy.stats ttest_ind(equal_var=False), f_oneway, kruskal on the same data.
+describe('tiny p-values are reported, not rounded to 0', () => {
+	const vals = Array.from({ length: 30 }, (_, i) => 10 + 0.1 * i);
+	const grp = (name, values) => ({
+		name,
+		values,
+		n: values.length,
+		mean: values.reduce((s, v) => s + v, 0) / values.length
+	});
+	const a = grp('A', vals);
+	const b = grp(
+		'B',
+		vals.map((v) => v + 10)
+	);
+	const c = grp(
+		'C',
+		vals.map((v) => v + 20)
+	);
+	const rel = (x, want) => Math.abs(x - want) / want;
+	it('Welch t-test', () => {
+		expect(rel(welchTTest(a, b).pValue, 2.986701986972705e-46)).toBeLessThan(1e-6);
+	});
+	it('one-way ANOVA', () => {
+		expect(rel(oneWayAnova([a, b, c]).pValue, 9.840551130227052e-86)).toBeLessThan(1e-6);
+	});
+	it('Kruskal-Wallis', () => {
+		expect(rel(kruskalWallis([a, b, c]).pValue, 6.593551417550708e-18)).toBeLessThan(1e-6);
+	});
+});

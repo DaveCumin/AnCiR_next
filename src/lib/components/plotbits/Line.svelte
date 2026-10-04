@@ -146,9 +146,20 @@
 	let qt;
 
 	let theline = $derived.by(() => {
-		if (!lineData?.draw || !x || !y) return null;
+		// Props read ONCE into locals: every prop read is a getter (a signal read when the parent
+		// passed an expression), and the per-point callbacks below run once per sample (ROB-9).
+		const ld = lineData;
+		if (!ld?.draw) return null;
+		const xv = x;
+		const yv = y;
+		if (!xv || !yv) return null;
+		const sx = xscale;
+		const sy = yscale;
+		const ox = xoffset;
+		const oy = yoffset;
+		const joinGaps = ld.joinGaps;
 
-		const points = x.map((xVal, i) => ({ x: xVal, y: y[i] }));
+		const points = xv.map((xVal, i) => ({ x: xVal, y: yv[i] }));
 		const isValid = (d) => d.x != null && d.y != null && !isNaN(d.x) && !isNaN(d.y);
 
 		// Valid points drive the "< 2 points → no line" guard and the hover quadtree
@@ -157,8 +168,8 @@
 		if (validData.length < 2) return null;
 
 		let lineGenerator = line()
-			.x((d) => xscale(d.x))
-			.y((d) => yscale(d.y));
+			.x((d) => sx(d.x))
+			.y((d) => sy(d.y));
 
 		//Can add more line options (curves) here later
 		// eg (also import the curve from 'd3-shape'):
@@ -167,15 +178,15 @@
 		//Set up the quadtree for hovering
 		if (tooltip) {
 			qt = quadtree()
-				.x((d) => xscale(d.x) + xoffset)
-				.y((d) => yscale(d.y) + yoffset)
+				.x((d) => sx(d.x) + ox)
+				.y((d) => sy(d.y) + oy)
 				.addAll(validData);
 		}
 
 		// Default: break the path at missing (NaN) values so gaps are left rather
 		// than bridged. "Join gaps" drops the missing points so the line connects
 		// straight across.
-		if (lineData.joinGaps) {
+		if (joinGaps) {
 			return lineGenerator(validData);
 		}
 		lineGenerator.defined(isValid);
@@ -237,6 +248,9 @@
 			<p>{title}</p>
 			<button
 				class="icon"
+				type="button"
+				aria-label={`Show ${String(title).toLowerCase()}`}
+				aria-pressed={!!lineData.draw}
 				onclick={(e) => {
 					e.stopPropagation();
 					lineData.draw = !lineData.draw;
@@ -253,10 +267,10 @@
 			{@render styleRow(lineData)}
 			<!-- Full-width row of its own: the long label would otherwise squish the
 			     colour/width/stroke inputs in the horizontal row above. -->
-			<div class="control-input-checkbox join-gaps-row" style="margin-top: var(--space-3);">
+			<label class="control-input-checkbox join-gaps-row" style="margin-top: var(--space-3);">
 				<input type="checkbox" bind:checked={lineData.joinGaps} />
-				<p>Join across gaps (missing values)</p>
-			</div>
+				<span class="ci-label">Join across gaps (missing values)</span>
+			</label>
 		{/if}
 	</div>
 {/snippet}

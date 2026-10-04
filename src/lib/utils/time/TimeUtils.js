@@ -198,60 +198,139 @@ function guessDateFormat(dateString) {
 	return theGuess;
 }
 
-// return a format string that's the best guess for the daata
+/** A cell with nothing in it: null, undefined, NaN or whitespace-only text. */
+export function isBlankCell(v) {
+	if (v == null) return true;
+	if (typeof v === 'number') return Number.isNaN(v);
+	return typeof v === 'string' && v.trim() === '';
+}
+
+// Rows scored against each candidate format: every row up to 100,000, about 5,000
+// evenly spaced rows beyond that.
+const GUESS_FULL_SCAN_ROWS = 100_000;
+const GUESS_SPARSE_SAMPLE = 5_000;
+// Values the candidate formats are built from, spread evenly over the scored rows
+// (first and last included) so a later row can contribute a format the first
+// row does not suggest.
+const GUESS_CANDIDATE_SOURCES = 200;
+
+/** Up to `n` evenly spaced entries of `arr`, first and last included. */
+function spread(arr, n) {
+	if (arr.length <= n) return arr;
+	const out = [];
+	const step = (arr.length - 1) / (n - 1);
+	for (let i = 0; i < n; i++) out.push(arr[Math.round(i * step)]);
+	return out;
+}
+
+/**
+ * The best time format for a column of values, or [] when it does not look like
+ * text times.
+ *
+ * - Values PapaParse has already typed as JS numbers are never read as times: an
+ *   activity count of 8.4 is not 8 April. A column with no non-blank text at all
+ *   returns []; numeric epoch timestamps are an explicit choice for the user to make.
+ * - Blank cells are skipped, so a blank first row does not decide anything.
+ * - Candidate formats come from values spread across the column, and each is
+ *   scored against every row (about 5,000 evenly spaced rows past 100,000), so a
+ *   day of 13 or more anywhere settles day/month order.
+ * - The winner must read more than half of the non-blank values it was scored on.
+ *
+ * Returns -1 if the guesser throws.
+ * @param {unknown[]} dates
+ * @returns {string | string[] | -1}
+ */
 export function guessDateofArray(dates) {
 	try {
-		// get the guess of the first date
-		let guessedlist = guessDateFormat(dates[0]);
-		//If there is no guess, then return empty array
-		if (guessedlist.length === 0) return guessedlist;
-		//console.log('initial list', guessedlist, 'for ', dates[0]);
+		if (!Array.isArray(dates) || dates.length === 0) return [];
 
-		//set up the dates to check - subsample if a large dataset
-		let datesToCheck = dates;
-		//subsample if there are more than 100k points, subsample to 5k
-		if (dates.length > 100_000) {
-			const idx = createSequenceArray(0, dates.length - 1, parseInt((dates.length - 1) / 5_000));
-			datesToCheck = idx.map((i) => dates[i]);
+		let rows = dates;
+		if (dates.length > GUESS_FULL_SCAN_ROWS) {
+			const idx = createSequenceArray(
+				0,
+				dates.length - 1,
+				Math.floor((dates.length - 1) / GUESS_SPARSE_SAMPLE)
+			);
+			rows = idx.map((i) => dates[i]);
 		}
+		const nonBlank = rows.filter((v) => !isBlankCell(v));
+		const text = nonBlank.filter((v) => typeof v === 'string');
+		if (text.length === 0) return [];
 
-		// console.log('all N: ', dates.length, ' checking ', datesToCheck.length);
-
-		//set up the Set of all possibleguesses
-		let allGuesses = new Set();
-		//fill it in
-		for (let i = 0; i < datesToCheck.length; i++) {
-			//make guess
-			const guesses = guessDateFormat(datesToCheck[i]);
-			//add the guess to Map or incresae counter
-			for (let j = 0; j < guesses.length; j++) {
-				allGuesses.add(guesses[j]);
-			}
+		const candidates = new Set();
+		for (const v of spread(text, GUESS_CANDIDATE_SOURCES)) {
+			for (const g of guessDateFormat(v)) candidates.add(g);
 		}
+		if (candidates.size === 0) return [];
 
-		//Now get the best one (where there are most matches)
-		const guessesArray = Array.from(allGuesses);
-		//console.log('ALLGUESSES: ', guessesArray);
-		let guessScore = guessesArray.map((guess) => {
+		let best = null;
+		let bestScore = 0;
+		for (const guess of candidates) {
 			let score = 0;
-			for (let i = 0; i < datesToCheck.length; i++) {
-				// Strict parse so a token-mismatch counts as a miss for scoring.
-				if (parseTimeStrict(datesToCheck[i], guess, { utc: false }).isValid()) {
-					score++;
-				}
+			for (const v of text) {
+				// Strict parse so a token mismatch counts as a miss.
+				if (parseTimeStrict(v, guess, { utc: false }).isValid()) score++;
 			}
-			return score;
-		});
-
-		// console.log('SCORE:', guessScore);
-		// console.log('best idx:', guessScore.indexOf(Math.max(...guessScore)));
-		// console.log('FINAL guess:', guessesArray[guessScore.indexOf(Math.max(...guessScore))]);
-
-		//return that one
-		return guessesArray[guessScore.indexOf(Math.max(...guessScore))];
+			// Ties keep the earlier candidate (first-row order), as before.
+			if (score > bestScore) {
+				best = guess;
+				bestScore = score;
+			}
+		}
+		// Non-text values (numbers among the text) count as misses here.
+		if (best == null || bestScore * 2 <= nonBlank.length) return [];
+		return best;
 	} catch {
 		return -1;
 	}
+}
+
+/**
+ * How many non-blank raw time values came out of parsing as missing. `parsed` is
+ * the epoch-ms array Column.getData produced from `raw`, index for index.
+ * @param {unknown[]} raw
+ * @param {unknown[]} parsed
+ * @returns {{ nonBlank: number, failed: number, example: unknown }}
+ */
+export function countUnparsedTimes(raw, parsed) {
+	let nonBlank = 0;
+	let failed = 0;
+	let example;
+	if (!Array.isArray(raw) || !Array.isArray(parsed)) return { nonBlank, failed, example };
+	for (let i = 0; i < raw.length; i++) {
+		if (isBlankCell(raw[i])) continue;
+		nonBlank++;
+		const v = parsed[i];
+		if (v == null || !Number.isFinite(Number(v))) {
+			failed++;
+			if (failed === 1) example = raw[i];
+		}
+	}
+	return { nonBlank, failed, example };
+}
+
+/**
+ * Whether a parse-failure count is worth telling the user about: at least one
+ * value, and at least one in a thousand of the non-blank values (so a stray footer
+ * cell in a million-row file stays quiet).
+ */
+export function shouldWarnUnparsedTimes({ nonBlank, failed }) {
+	return failed > 0 && failed >= nonBlank * 0.001;
+}
+
+/**
+ * Display text for one cell of a time column: the raw text when it parsed, a
+ * formatted date when the stored value is epoch ms, and '-' when the value is
+ * missing or did not parse. Never renders a missing value as 1 Jan 1970.
+ * @param {unknown} raw the stored value (text, or epoch ms)
+ * @param {unknown} parsedMs the value Column.getData produced for it
+ * @returns {string}
+ */
+export function timeCellText(raw, parsedMs) {
+	if (isBlankCell(raw)) return '-';
+	const ms = Number(parsedMs);
+	if (parsedMs == null || !Number.isFinite(ms)) return '-';
+	return typeof raw === 'number' ? formatTimeFromUNIX(ms) : String(raw);
 }
 
 // `dateFormat` is a moment-style token string (e.g. 'YYYY-MM-DD HH:mm:ss')

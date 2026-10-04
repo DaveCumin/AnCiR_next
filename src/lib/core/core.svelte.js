@@ -6,6 +6,7 @@ import { Process } from '$lib/core/Process.svelte';
 import { TableProcess, deleteTableProcess } from '$lib/core/TableProcess.svelte';
 import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
 import { transitionalFigureStyle } from '$lib/plots/figureStyle.js';
+import { recordGraphMutation } from '$lib/core/operations.js';
 
 export const core = $state({
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- raw stored series keyed by column id; entries are written once at import and consumers re-read via the owning column, not per-key subscription. Making this a SvelteMap would add per-key subscriptions across every getData() path (TPs write outputs here from inside effects), which is a behaviour change
@@ -115,9 +116,15 @@ export function createNote({ x = 80, y = 80, text = '' } = {}) {
 	return id;
 }
 
+// Deletes of notes, groups, composites and operation nodes are each ONE undoable step
+// (recordGraphMutation): undo restores the node with its id, contents and wiring. They used to
+// write core directly, so nothing was recorded and the next Ctrl+Z silently reverted some
+// unrelated earlier edit while the node stayed gone (review ROB-3 / UI-2).
 export function removeNote(id) {
-	core.notes = core.notes.filter((n) => n.id !== id);
-	delete core.nodeNotes[id];
+	recordGraphMutation(() => {
+		core.notes = core.notes.filter((n) => n.id !== id);
+		delete core.nodeNotes[id];
+	});
 }
 
 let _nextGroupId = 1;
@@ -139,10 +146,12 @@ export function createGroup({ x = 80, y = 80, name = 'Group' } = {}) {
 }
 
 export function removeGroup(id) {
-	core.groups = core.groups.filter((g) => g.id !== id);
-	// Absorbed columns aren't deleted — they resurface as standalone data_X
-	// canvas nodes on the next derive. Just drop the per-group note if any.
-	delete core.nodeNotes[id];
+	recordGraphMutation(() => {
+		core.groups = core.groups.filter((g) => g.id !== id);
+		// Absorbed columns aren't deleted; they resurface as standalone data_X
+		// canvas nodes on the next derive. Just drop the per-group note if any.
+		delete core.nodeNotes[id];
+	});
 }
 
 let _nextCompositeId = 1;
@@ -173,8 +182,10 @@ export function createComposite({
 /** Remove a composite (= "uncombine"). Members aren't deleted — they resurface
  *  as standalone canvas nodes on the next derive. */
 export function removeComposite(id) {
-	core.composites = core.composites.filter((c) => c.id !== id);
-	delete core.nodeNotes[id];
+	recordGraphMutation(() => {
+		core.composites = core.composites.filter((c) => c.id !== id);
+		delete core.nodeNotes[id];
+	});
 }
 
 /**
@@ -227,8 +238,10 @@ export function createOrphanProcess(name, args = {}) {
 
 /** Remove an orphan process by id. Used by the delete handler. */
 export function removeOrphanProcess(id) {
-	core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== id);
-	delete core.nodeNotes[`process_${id}`];
+	recordGraphMutation(() => {
+		core.orphanProcesses = core.orphanProcesses.filter((p) => p.id !== id);
+		delete core.nodeNotes[`process_${id}`];
+	});
 }
 
 function _procInputIds(proc) {
@@ -264,6 +277,12 @@ function _rerouteProcessInput(targetProcId, oldColId, newColId) {
  */
 export function deleteOperationNode(node) {
 	if (!node) return;
+	// One step, bridge included: undo puts the consumers' references back on the node's
+	// output as well as the node itself.
+	recordGraphMutation(() => _deleteOperationNode(node));
+}
+
+function _deleteOperationNode(node) {
 	if (node.type === 'tableprocess' && node.tpObj) {
 		deleteTableProcess(node.tpObj);
 		return;
@@ -452,7 +471,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.78.1',
+	version: 'β.79.0',
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.processMap = await loadProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	processMap: new Map(),
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.plotMap = await loadPlots()); never mutated in place, so the $state reassignment already drives reactivity

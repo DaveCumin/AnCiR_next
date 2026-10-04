@@ -1,9 +1,19 @@
 // Pure 1-D interpolation helpers used by the Interpolate table-process.
 //
-// All functions operate on KNOWN sample points (finite x AND y), which the
-// caller must pass sorted ascending by x. Queries outside the known range are
-// clamped to the nearest endpoint value (no wild extrapolation) — sensible for
-// gap-filling and resampling of time-series.
+// All functions operate on KNOWN sample points (x AND y both present and finite),
+// which the caller must pass sorted ascending by x.
+//
+// Missing values: the house rule (isInvalidValue in stats.js). A null, blank, whitespace or
+// non-numeric x or y is absent, so that row is not a known point; it is never read as 0
+// (Number(null) === 0 used to pass the finite check: STAT-3). A real 0 is data.
+//
+// Extrapolation rule (shared with the Python and R ports): NONE. A query outside the
+// range of the known x values, or a missing query, returns NaN (missing). A value beyond
+// the recording would be invented, and a missing value is more honest than a guess. Inside
+// the range every method interpolates. With a single known point only a query at exactly
+// that x has a value. (Until 2026-10 the JS held the end values flat while the ports
+// returned missing, so the app and its exported scripts disagreed.)
+import { isInvalidValue } from './stats.js';
 
 /** Is v a usable finite number? */
 export function isFiniteNum(v) {
@@ -20,6 +30,7 @@ export function knownPoints(xData, yData) {
 	const pairs = [];
 	const n = Math.min(xData?.length ?? 0, yData?.length ?? 0);
 	for (let i = 0; i < n; i++) {
+		if (isInvalidValue(xData[i]) || isInvalidValue(yData[i])) continue;
 		const x = Number(xData[i]);
 		const y = Number(yData[i]);
 		if (isFiniteNum(x) && isFiniteNum(y)) pairs.push([x, y]);
@@ -61,9 +72,17 @@ function bracket(xs, q) {
  * @param {'linear'|'nearest'|'spline'} method
  */
 export function makeInterpolator(xs, ys, method = 'linear') {
+	const inner = makeInRangeInterpolator(xs, ys, method);
 	const n = xs.length;
-	if (n === 0) return () => NaN;
-	if (n === 1) return () => ys[0];
+	// No extrapolation (see the header): outside [xs[0], xs[n-1]], or a non-finite query,
+	// is missing.
+	return (q) => (n === 0 || !(q >= xs[0] && q <= xs[n - 1]) ? NaN : inner(q));
+}
+
+/** The interpolator proper; only ever called with xs[0] <= q <= xs[n-1]. */
+function makeInRangeInterpolator(xs, ys, method) {
+	const n = xs.length;
+	if (n <= 1) return () => ys[0];
 
 	if (method === 'nearest') {
 		return (q) => {
@@ -115,15 +134,16 @@ export function makeInterpolator(xs, ys, method = 'linear') {
 }
 
 /**
- * Interpolate y at each `queryXs` from the known (finite) points of
- * (xData, yData). Returns an array the same length as queryXs. If there are no
- * finite points, returns all-NaN.
+ * Interpolate y at each `queryXs` from the known (present, finite) points of
+ * (xData, yData). Returns an array the same length as queryXs. A missing query, or
+ * one outside the known x range, gives NaN (no extrapolation; see the header). If there
+ * are no known points, returns all-NaN.
  * @param {'linear'|'nearest'|'spline'} method
  */
 export function interpolate(xData, yData, queryXs, method = 'linear') {
 	const { xs, ys } = knownPoints(xData, yData);
 	const f = makeInterpolator(xs, ys, method);
-	return (queryXs ?? []).map((q) => f(Number(q)));
+	return (queryXs ?? []).map((q) => (isInvalidValue(q) ? NaN : f(Number(q))));
 }
 
 /**

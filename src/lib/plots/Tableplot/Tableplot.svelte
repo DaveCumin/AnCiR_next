@@ -4,9 +4,10 @@
 	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { columnDisplayName, restoreAutoNameIfLabel } from '$lib/core/columnLabels.js';
 	import { core } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
-	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
+	import { timeCellText } from '$lib/utils/time/TimeUtils.js';
 	import { formatDateTime } from '$lib/utils/time/displayTime.js';
 
 	export const Tableplot_defaultDataInputs = [];
@@ -140,7 +141,8 @@
 					continue;
 				}
 
-				out.push(col.name);
+				// Display name (UI-4): a node output's label while it keeps its auto name.
+				out.push(columnDisplayName(col));
 			}
 			return out;
 		});
@@ -215,13 +217,20 @@
 					const source = Array.isArray(rawArr) ? rawArr : col.getData();
 					if (Array.isArray(source)) {
 						const rawSlice = source.slice(start, start + this.Ncolumns);
+						const parsed = col.getData() ?? [];
 						const hours = (col.hoursSinceStart ?? [])
 							.slice(start, start + this.Ncolumns)
-							.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : String(x)));
-						// If raw data is UNIX ms (numbers from tableProcess output), format as readable date
-						const isUnixMs = rawSlice.length > 0 && typeof rawSlice[0] === 'number';
-						const displayStrings = isUnixMs ? rawSlice.map(formatTimeFromUNIX) : rawSlice;
-						out.push(displayStrings.map((t, j) => ({ raw: t, computed: hours[j], isTime: true })));
+							.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : '-'));
+						// Text as typed, epoch ms as a date, and '-' for a missing or unparsed
+						// value (never 1 Jan 1970): the parsed value decides.
+						const displayStrings = rawSlice.map((v, j) => timeCellText(v, parsed[start + j]));
+						out.push(
+							displayStrings.map((t, j) => ({
+								raw: t,
+								computed: t === '-' ? '-' : hours[j],
+								isTime: true
+							}))
+						);
 					} else {
 						out.push(Array(this.Ncolumns).fill('—'));
 					}
@@ -303,7 +312,7 @@
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
 	import VirtualList from '$lib/components/reusables/VirtualList.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
-	import { columnWidths, MIN_COL_W } from './columnWidths.js';
+	import { columnWidths, headerMinWidths, MIN_COL_W } from './columnWidths.js';
 
 	let { theData, which } = $props();
 
@@ -355,12 +364,39 @@
 		bodyGutter = list ? list.offsetWidth - list.clientWidth : 0;
 	});
 	let numColW = $derived(theData?.plot?.showColNumber ? NUM_COL_W : 0);
+	// Each header's longest word, measured in the header's own font, is the least its auto
+	// column may be (columnWidths.js): a single word wider than the column could only break
+	// mid-word. The font is read off the rendered header, so it follows the figure's font and
+	// size; until the table has rendered (scrollEl unset) there is no minimum.
+	let measureCtx = null;
+	let headerMins = $derived.by(() => {
+		void scrollBoxW; // re-measure when the box (and so possibly the font scale) changes
+		const th = scrollEl?.querySelector('.tp-th');
+		if (!th || typeof document === 'undefined') return {};
+		measureCtx ??= document.createElement('canvas').getContext('2d');
+		if (!measureCtx) return {};
+		const cs = getComputedStyle(th);
+		measureCtx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+		// Everything around the text, read off the header: the cell's padding and border and the
+		// editable name's own padding and border; +1px so sub-pixel layout never tips a word over.
+		const sideX = (st) =>
+			['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth'].reduce(
+				(sum, k) => sum + (parseFloat(st[k]) || 0),
+				0
+			);
+		const name = th.querySelector('.inline-edit-span');
+		const padX = sideX(cs) + (name ? sideX(getComputedStyle(name)) : 0) + 1;
+		const headers = {};
+		for (const vc of visibleColumns) headers[vc.colId] = vc.col ? columnDisplayName(vc.col) : '';
+		return headerMinWidths(headers, (word) => measureCtx.measureText(word).width, padX);
+	});
 	let widths = $derived(
 		columnWidths(
 			visibleColumns.map((vc) => vc.colId),
 			theData?.plot?.colWidths,
 			scrollBoxW > 0 ? scrollBoxW - bodyGutter : 0,
-			numColW
+			numColW,
+			headerMins
 		)
 	);
 	const widthFor = (colId) => widths[colId];
@@ -432,10 +468,9 @@
 			// (UNIX ms) to still render dates rather than bare epoch numbers.
 			const timeArr = Array.isArray(rawArr) ? rawArr : col.getData();
 			if (Array.isArray(timeArr)) {
-				const v = timeArr[i];
+				const raw = timeCellText(timeArr[i], col.getData()?.[i]);
 				const hours = col.hoursSinceStart?.[i];
-				const hoursStr = Number.isFinite(hours) ? hours.toFixed(dp) : String(hours ?? '');
-				const raw = typeof v === 'number' ? formatTimeFromUNIX(v) : v;
+				const hoursStr = raw !== '-' && Number.isFinite(hours) ? hours.toFixed(dp) : '-';
 				return { raw, computed: hoursStr, isTime: true };
 			}
 		}
@@ -554,6 +589,8 @@
 		if (!column) return;
 
 		if (edit.row === 'h') {
+			// Typing a node output's label back restores its auto name, so the label stays live.
+			if (restoreAutoNameIfLabel(column, edit.value)) return;
 			column.name = edit.value;
 			return;
 		}
@@ -605,10 +642,10 @@
 	<div class="control-component">
 		<div class="control-component-title"><p>Table Settings</p></div>
 		<div class="control-input-vertical">
-			<div class="control-input-checkbox">
+			<label class="control-input-checkbox">
 				<input type="checkbox" bind:checked={theData.showColNumber} />
-				<p>Show row numbers</p>
-			</div>
+				<span class="ci-label">Show row numbers</span>
+			</label>
 		</div>
 		<div class="control-input-horizontal">
 			<ControlInput label="Decimal places">
@@ -642,6 +679,7 @@
 						<div class="clps-title">
 							<input
 								type="checkbox"
+								aria-label={`All columns of ${group.name}`}
 								checked={(group.sourceColumnIds ?? []).every((cid) => isColumnSelected(cid))}
 								onclick={(e) => {
 									e.stopPropagation();
@@ -661,6 +699,9 @@
 						<div class="clps-title-button">
 							<button
 								class="icon"
+								type="button"
+								aria-label={`Show the columns of ${group.name}`}
+								aria-expanded={expandedTables.has(group.id)}
 								onclick={() => {
 									toggleTable(group.id);
 								}}
@@ -678,14 +719,14 @@
 						{#each group.sourceColumnIds ?? [] as colId (colId)}
 							{@const col = getColumnById(colId)}
 							{#if col}
-								<div class="tree-item-child">
+								<label class="tree-item-child">
 									<input
 										type="checkbox"
 										checked={isColumnSelected(colId)}
 										onchange={() => toggleColumnSelection(colId)}
 									/>
-									<span class="tree-name">{col.name}</span>
-								</div>
+									<span class="tree-name">{columnDisplayName(col)}</span>
+								</label>
 							{/if}
 						{/each}
 					</div>
@@ -708,6 +749,7 @@
 							<div class="clps-title">
 								<input
 									type="checkbox"
+									aria-label={`All columns of ${plot.name}`}
 									checked={isPlotSelected(plot)}
 									onclick={(e) => {
 										e.stopPropagation();
@@ -721,6 +763,9 @@
 							<div class="clps-title-button">
 								<button
 									class="icon"
+									type="button"
+									aria-label={`Show the columns of ${plot.name}`}
+									aria-expanded={expandedPlots.has(plot.id)}
 									onclick={() => {
 										togglePlot(plot.id);
 									}}
@@ -748,15 +793,15 @@
 							{#each plotCols as colId (colId)}
 								{@const col = getColumnById(colId)}
 								{#if col}
-									<div class="tree-item-child">
+									<label class="tree-item-child">
 										<input
 											type="checkbox"
 											checked={isColumnSelected(colId)}
 											onchange={() => toggleColumnSelection(colId)}
 										/>
-										<span class="tree-name">{col.name}</span>
+										<span class="tree-name">{columnDisplayName(col)}</span>
 										<!-- <span class="tree-type">{col.type}</span> -->
-									</div>
+									</label>
 								{/if}
 							{/each}
 						</div>
@@ -766,15 +811,15 @@
 
 			<!-- Standalone columns (flat, no grouping) -->
 			{#each standaloneColumns as col (col.id)}
-				<div class="tree-item-child standalone">
+				<label class="tree-item-child standalone">
 					<input
 						type="checkbox"
 						checked={isColumnSelected(col.id)}
 						onchange={() => toggleColumnSelection(col.id)}
 					/>
-					<span class="tree-name">{col.name}</span>
+					<span class="tree-name">{columnDisplayName(col)}</span>
 					<!-- <span class="tree-type">{col.type}</span> -->
-				</div>
+				</label>
 			{/each}
 
 			{#if !core.groups.length && !core.plots.length && !standaloneColumns.length}
@@ -803,10 +848,11 @@
 							<div class="tp-th tp-num">#</div>
 						{/if}
 						{#each visibleColumns as vc, vi (vc.colId)}
-							<div class="tp-th" title={vc.col?.name ?? ''}>
+							{@const headerText = vc.col ? columnDisplayName(vc.col) : '???'}
+							<div class="tp-th" title={vc.col ? headerText : ''}>
 								<Editable
 									editable={true}
-									value={vc.col?.name ?? '???'}
+									value={headerText}
 									onInput={(v) => makeEdits({ col: editColIndex(vi), row: 'h', value: v })}
 								/>
 								<!-- Drag the right edge to resize this column. -->
@@ -970,7 +1016,11 @@
 		max-width: 100%;
 		overflow: hidden;
 		white-space: normal;
-		overflow-wrap: anywhere;
+		/* Wrap at word boundaries ("Fragmented IV", not "Fragm / ented IV"). A single word longer
+		   than a narrow column is hyphenated where the language allows ("Ray-leigh"), and only
+		   then broken, rather than overflowing (UI-17). */
+		overflow-wrap: break-word;
+		hyphens: auto;
 	}
 
 	.tp-tr {

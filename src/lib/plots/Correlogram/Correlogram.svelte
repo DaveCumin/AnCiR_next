@@ -12,6 +12,7 @@
 	import { scaleLinear } from 'd3-scale';
 	import { paddedDomain } from '$lib/plots/axisDomain.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import PaddingControls from '$lib/components/inputs/PaddingControls.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
@@ -312,6 +313,11 @@
 		}
 		set padding(v) {
 			this.#padding = v;
+		}
+		// The stored figure padding, for the Padding controls. While a node view is mounted
+		// `padding` reads back a derived, scaled copy, so an edit bound there was lost.
+		get figurePadding() {
+			return this.#padding;
 		}
 		plotheight = $derived(this.viewHeight - this.padding.top - this.padding.bottom);
 		// Width before an outside legend takes its share; see legendAuto.svelte.js.
@@ -697,110 +703,11 @@
 			which="controls"
 		/>
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>Padding</p>
-				{#if theData.getAutoScaleValues()?.top != theData.padding.top || theData.getAutoScaleValues()?.bottom != theData.padding.bottom || theData.getAutoScaleValues()?.left != theData.padding.left || theData.getAutoScaleValues()?.right != theData.padding.right}
-					<button class="icon" onclick={() => theData.autoScalePadding('all')}>
-						<Icon name="reset" width={14} height={14} className="control-component-input-icon" />
-					</button>
-				{/if}
-			</div>
-
-			<div class="control-input-square">
-				<div class="control-input">
-					<p>Top</p>
-					<div style="display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits
-							bind:value={theData.padding.top}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.top != null &&
-							theData.getAutoScaleValues().top != theData.padding.top
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.top != null && theData.getAutoScaleValues()?.top != theData.padding.top}
-							<button class="icon" onclick={() => theData.autoScalePadding('top')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<div class="control-input">
-					<p>Bottom</p>
-					<div style="display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits
-							bind:value={theData.padding.bottom}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.bottom != null &&
-							theData.getAutoScaleValues().bottom != theData.padding.bottom
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.bottom != null && theData.getAutoScaleValues()?.bottom != theData.padding.bottom}
-							<button class="icon" onclick={() => theData.autoScalePadding('bottom')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<div class="control-input">
-					<p>Left</p>
-					<div style="display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits
-							bind:value={theData.padding.left}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.left != null &&
-							theData.getAutoScaleValues().left != theData.padding.left
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.left != null && theData.getAutoScaleValues()?.left != theData.padding.left}
-							<button class="icon" onclick={() => theData.autoScalePadding('left')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<div class="control-input">
-					<p>Right</p>
-					<div style="display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
-						<NumberWithUnits
-							bind:value={theData.padding.right}
-							style="width: calc(100% - {theData.getAutoScaleValues()?.right != null &&
-							theData.getAutoScaleValues().right != theData.padding.right
-								? 24
-								: 0}px)"
-						/>
-						{#if theData.getAutoScaleValues()?.right != null && theData.getAutoScaleValues()?.right != theData.padding.right}
-							<button class="icon" onclick={() => theData.autoScalePadding('right')}>
-								<Icon
-									name="reset"
-									width={14}
-									height={14}
-									className="control-component-input-icon"
-								/>
-							</button>
-						{/if}
-					</div>
-				</div>
-			</div>
-		</div>
+		<PaddingControls
+			bind:padding={theData.figurePadding}
+			auto={theData.renderBox ? null : theData.getAutoScaleValues()}
+			onReset={(side) => theData.autoScalePadding(side)}
+		/>
 
 		<div class="div-line"></div>
 
@@ -811,7 +718,12 @@
 					class="control-component-title-icons"
 					{@attach attachTooltip('Reset the correlation axis to auto range')}
 				>
-					<button class="icon" onclick={() => (theData.ylimsIN = [null, null])}>
+					<button
+						class="icon"
+						type="button"
+						aria-label="Reset the correlation axis to auto range"
+						onclick={() => (theData.ylimsIN = [null, null])}
+					>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>
 				</div>
@@ -853,7 +765,12 @@
 					class="control-component-title-icons"
 					{@attach attachTooltip('Reset the lag axis to auto range')}
 				>
-					<button class="icon" onclick={() => (theData.laglimsIN = [null, null])}>
+					<button
+						class="icon"
+						type="button"
+						aria-label="Reset the lag axis to auto range"
+						onclick={() => (theData.laglimsIN = [null, null])}
+					>
 						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
 					</button>
 				</div>

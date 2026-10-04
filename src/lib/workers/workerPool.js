@@ -1,6 +1,20 @@
 // @ts-nocheck
 // src/lib/workers/workerPool.js
-// Worker pool with least-busy dispatch and synchronous fallback on worker errors.
+// Worker pool with least-busy dispatch, a per-task timeout, and a main-thread fallback
+// for workers that CRASH (or cannot run at all).
+//
+// What falls back to the main thread, and what does not (ROB-11):
+//   - the worker died (onerror), could not start, or postMessage threw: the task never ran,
+//     so it runs on the main thread instead.
+//   - the worker ran the task and the TASK threw (an { ok: false } reply): that is the
+//     task's answer. It rejects with the worker's message. Re-running it on the main thread
+//     used to double the cost and freeze the UI just to throw the same error again (a bad
+//     period grid that exhausts memory in the worker does exactly the same on the main
+//     thread). The one exception is a task the worker does not have registered, which the
+//     main thread may well have.
+//   - the task took longer than its timeout: the worker is terminated and replaced (it may
+//     be stuck), and the task rejects. It is NOT re-run on the main thread, which would
+//     freeze the page for at least as long.
 
 import { getComputeTask, listComputeTasks } from './computeTasks.js';
 import { prepareTransferable, restoreFromTransferable } from './workerTransfer.js';
@@ -29,7 +43,15 @@ let _slots = null;
 // _nextId is intentionally NOT reset by _resetWorkerPool to avoid id collisions
 // with stragglers from terminated workers.
 let _nextId = 1;
-const _pending = new Map(); // id -> { slotIdx, resolve, reject }
+// id -> { slotIdx, resolve, reject (task error), crash (worker died: retry on main), timer }
+const _pending = new Map();
+
+/**
+ * Longest a single task may run in a worker before it is abandoned (ms). Generous: a
+ * large cohort's moving-window analysis is legitimately slow, and the cost of a false
+ * timeout is a failed node the user can retry. Overridable per call.
+ */
+export const DEFAULT_TASK_TIMEOUT_MS = 5 * 60 * 1000;
 // Set once a worker fails to START (constructor throws, or it errors before sending
 // any message, i.e. the script never loaded). From then on every task runs on the
 // main thread without re-spawning workers that cannot load.
@@ -37,6 +59,8 @@ let _unavailable = null; // null | string (reason)
 // Bumped whenever the slots are thrown away, so events from workers of an earlier
 // pool (terminated, but with events already queued) cannot touch the current one.
 let _generation = 0;
+// Set by ensurePool: replace one slot's worker (terminate + respawn), settling its tasks.
+let _replaceWorker = null;
 
 function defaultFactory() {
 	return new ComputeWorker({ name: 'ancir-compute' });
@@ -72,7 +96,10 @@ function markUnavailable(reason) {
 	}
 	const entries = [..._pending.values()];
 	_pending.clear();
-	for (const entry of entries) entry.reject(new Error(reason));
+	for (const entry of entries) {
+		clearTimeout(entry.timer);
+		entry.crash(new Error(reason));
+	}
 }
 
 /**
@@ -95,6 +122,7 @@ export function _resetWorkerPool() {
 	}
 	_slots = null;
 	_generation++;
+	for (const entry of _pending.values()) clearTimeout(entry.timer);
 	_pending.clear();
 	_unavailable = null;
 }
@@ -125,13 +153,19 @@ function ensurePool() {
 		let proven = false;
 		const isStale = () => generation !== _generation || slot.worker !== worker;
 		const handleMessage = (e) => {
+			if (isStale()) return;
 			proven = true;
-			const { id, ok, result, error } = e.data ?? {};
+			const { id, ok, result, error, notFound } = e.data ?? {};
 			const entry = _pending.get(id);
 			if (!entry) return;
 			_pending.delete(id);
+			clearTimeout(entry.timer);
 			slot.inflight = Math.max(0, slot.inflight - 1);
 			if (ok) entry.resolve(restoreFromTransferable(result));
+			// The worker does not have this task (a registration missing from
+			// compute.worker.js): the main thread may, so let it try.
+			else if (notFound) entry.crash(new Error(error ?? 'task not registered in the worker'));
+			// The task itself threw: that is its result, not a worker failure.
 			else entry.reject(new Error(error ?? 'Worker error'));
 		};
 		const handleError = (err) => {
@@ -140,24 +174,39 @@ function ensurePool() {
 				markUnavailable(`worker failed to start${err?.message ? `: ${err.message}` : ''}`);
 				return;
 			}
-			// Fail only entries that were dispatched to THIS slot.
-			for (const [id, entry] of _pending) {
-				if (entry.slotIdx !== slot.idx) continue;
-				_pending.delete(id);
-				entry.reject(new Error(err?.message ?? 'Worker failed'));
-			}
-			slot.inflight = 0;
-			// Respawn into the same slot.
-			try {
-				slot.worker = make();
-			} catch (e) {
-				markUnavailable(`worker could not be created: ${e?.message ?? e}`);
-				return;
-			}
-			attach(slot);
+			replaceWorker(slot, (entry) => entry.crash(new Error(err?.message ?? 'Worker failed')));
 		};
 		worker.onmessage = handleMessage;
 		worker.onerror = handleError;
+	};
+	/**
+	 * Terminate a slot's worker and start a fresh one in its place, settling every task
+	 * dispatched to that slot with `settle(entry)`. Used for a crash and for a timeout.
+	 */
+	const replaceWorker = (slot, settle) => {
+		for (const [id, entry] of _pending) {
+			if (entry.slotIdx !== slot.idx) continue;
+			_pending.delete(id);
+			clearTimeout(entry.timer);
+			settle(entry, id);
+		}
+		slot.inflight = 0;
+		try {
+			slot.worker?.terminate?.();
+		} catch {
+			// already dead
+		}
+		try {
+			slot.worker = make();
+		} catch (e) {
+			markUnavailable(`worker could not be created: ${e?.message ?? e}`);
+			return;
+		}
+		attach(slot);
+	};
+	_replaceWorker = (slotIdx, settle) => {
+		if (generation !== _generation || !_slots?.[slotIdx]) return;
+		replaceWorker(_slots[slotIdx], settle);
 	};
 	try {
 		for (let idx = 0; idx < size; idx++) {
@@ -193,14 +242,17 @@ function runSync(name, args) {
 
 /**
  * Dispatch a registered compute task to the worker pool. Falls back to
- * synchronous execution on the main thread when the worker errors, when
- * postMessage throws, or when the task is not registered on the worker side.
+ * synchronous execution on the main thread when the worker crashes or cannot
+ * start, when postMessage throws, or when the task is not registered on the
+ * worker side. A task that THROWS in the worker rejects with its own error, and
+ * a task that exceeds `timeoutMs` rejects with a timeout (its worker is replaced).
  *
  * @param {string} name - name of a registered compute task
  * @param {object} args - plain-data payload for the task
+ * @param {{timeoutMs?: number}} [opts]
  * @returns {Promise<any>} task result (Float64Arrays restored to number[])
  */
-export function runComputeTask(name, args) {
+export function runComputeTask(name, args, { timeoutMs = DEFAULT_TASK_TIMEOUT_MS } = {}) {
 	const pooled = ensurePool();
 	return new Promise((resolve, reject) => {
 		const fallback = (reason) => {
@@ -226,15 +278,37 @@ export function runComputeTask(name, args) {
 		const idx = leastBusyIdx();
 		const slot = _slots[idx];
 		const id = _nextId++;
-		// `entry.reject` runs sync fallback (not a true reject): a worker-reported
-		// error or a slot crash both retry on the main thread, where a genuinely
-		// bad input will throw again and the catch rejects with the main-thread error.
-		// If the pool turned out to be unusable, markUnavailable already warned.
-		_pending.set(id, {
+		// `crash` retries on the main thread: the worker died before answering (or
+		// the pool turned out to be unusable, in which case markUnavailable already
+		// warned). `reject` is the task's own error, reported by a healthy worker.
+		const entry = {
 			slotIdx: idx,
 			resolve,
-			reject: (err) => fallback(_unavailable ? null : `worker error: ${err?.message ?? err}`)
-		});
+			reject,
+			crash: (err) => fallback(_unavailable ? null : `worker crashed: ${err?.message ?? err}`),
+			timer: null
+		};
+		if (timeoutMs > 0 && Number.isFinite(timeoutMs)) {
+			entry.timer = setTimeout(() => {
+				if (_pending.get(id) !== entry) return;
+				// The worker may be stuck, so it is replaced. This task rejects; the
+				// others queued on the same worker never ran, so they retry on the
+				// main thread as for a crash.
+				_replaceWorker?.(idx, (other, otherId) => {
+					if (otherId === id) {
+						reject(
+							new Error(
+								`The calculation "${name}" did not finish within ` +
+									`${Math.round(timeoutMs / 1000)} s and was stopped.`
+							)
+						);
+					} else {
+						other.crash(new Error('worker restarted after a timeout'));
+					}
+				});
+			}, timeoutMs);
+		}
+		_pending.set(id, entry);
 		slot.inflight++;
 		try {
 			const transfers = [];
@@ -242,6 +316,7 @@ export function runComputeTask(name, args) {
 			slot.worker.postMessage({ id, name, payload }, transfers);
 		} catch (postErr) {
 			_pending.delete(id);
+			clearTimeout(entry.timer);
 			slot.inflight = Math.max(0, slot.inflight - 1);
 			fallback(`postMessage failed: ${postErr?.message ?? postErr}`);
 		}

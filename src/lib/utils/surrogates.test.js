@@ -327,3 +327,64 @@ describe('surrogateAdvice', () => {
 		expect(surrogateAdvice('phase', 'association')).toBe('');
 	});
 });
+
+describe('SPEC-4: phase surrogates at the series own length, and ties', () => {
+	/** |DFT|^2 of the mean-removed series at its own length (direct sum, the reviewer's check). */
+	function ownLengthPeriodogram(y) {
+		const n = y.length;
+		const m = y.reduce((a, b) => a + b, 0) / n;
+		const out = [];
+		for (let k = 1; 2 * k < n; k++) {
+			let re = 0;
+			let im = 0;
+			for (let i = 0; i < n; i++) {
+				re += (y[i] - m) * Math.cos((2 * Math.PI * k * i) / n);
+				im -= (y[i] - m) * Math.sin((2 * Math.PI * k * i) / n);
+			}
+			out.push(re * re + im * im);
+		}
+		return out;
+	}
+	const variance = (a) => {
+		const m = a.reduce((x, y) => x + y, 0) / a.length;
+		return a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length;
+	};
+
+	for (const n of [513, 600]) {
+		it(`keeps the variance and the length-${n} periodogram exactly`, () => {
+			// Reviewer setup: a 24-sample cosine plus unit noise. Padding to a power of two and
+			// truncating gave variance ratios 0.506 (n = 513) and 0.587 (n = 600).
+			const y = rhythm(n, 24 * DT, 1, 3.4, n);
+			const s = phaseRandomise(y, createSeededRNG(1));
+			expect(variance(s) / variance(y)).toBeCloseTo(1, 9);
+			const P0 = ownLengthPeriodogram(y);
+			const P1 = ownLengthPeriodogram(s);
+			let err = 0;
+			let tot = 0;
+			for (let k = 0; k < P0.length; k++) {
+				err += Math.abs(P1[k] - P0[k]);
+				tot += P0[k];
+			}
+			expect(err / tot).toBeLessThan(1e-9);
+			// ...while the series itself is different.
+			expect(Math.abs(s[0] - y[0]) + Math.abs(s[10] - y[10])).toBeGreaterThan(1e-3);
+		});
+	}
+
+	it('counts a surrogate statistic equal to the observed up to rounding as a tie', () => {
+		// A statistic every surrogate reproduces to ~1e-15 must give p = 1, not a p decided
+		// by the sign of the rounding error.
+		let flip = 1;
+		const stat = () => 1 + (flip = -flip) * 1e-15;
+		const y = Array.from({ length: 64 }, (_, i) => Math.sin(i));
+		const res = surrogateTest(y, stat, { method: 'block', nSurrogates: 99, seed: 3 });
+		expect(res.pValue).toBe(1);
+		const lower = surrogateTest(y, stat, {
+			method: 'block',
+			nSurrogates: 99,
+			seed: 3,
+			lowerTail: true
+		});
+		expect(lower.pValue).toBe(1);
+	});
+});

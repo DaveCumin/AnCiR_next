@@ -2,10 +2,32 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
+	/** A number, or a numeric (non-blank) string, as a number; anything else is null. */
+	function asNumber(v) {
+		if (typeof v === 'number') return v;
+		if (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v))) return Number(v);
+		return null;
+	}
+
+	/**
+	 * Whether cell `v` is the value `find`. Loose where it helps ('2' is 2, null is
+	 * undefined) but not JavaScript's `==`, under which '' == 0 and ' ' == 0: with the
+	 * default find of 0 every blank cell was "found" and replaced, turning missing data into
+	 * a value (review STAT-6 follow-up). NaN matches nothing, as before.
+	 */
+	export function subMatches(v, find) {
+		if (find == null) return v == null;
+		if (v == null) return false;
+		const a = asNumber(v);
+		const b = asNumber(find);
+		if (a !== null && b !== null) return a === b;
+		return String(v) === String(find);
+	}
+
 	export function sub(x, args) {
 		const find = args.find;
 		const replace = args.replace;
-		return x.map((i) => (i == find ? replace : i));
+		return x.map((i) => (subMatches(i, find) ? replace : i));
 	}
 	const sub_defaults = new Map([
 		['find', { val: 0 }],

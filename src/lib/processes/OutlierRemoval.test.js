@@ -231,3 +231,71 @@ describe('definition.getWarnings — node warnings channel', () => {
 		expect(definition.getWarnings(freeNode(null))).toEqual([]);
 	});
 });
+
+// ─── review STAT-22 / STAT-6 ─────────────────────────────────────────────────
+// STAT-22: the IQR rule took its quartiles as sorted[floor(n/4)] and sorted[floor(3n/4)],
+// unlike the Boxplot and DescribeData (type 7, numpy.percentile's default), so the same
+// column could have an outlier in the plot and none in this node. And the z rule uses the
+// population SD, which bounds max |z| at (n - 1)/sqrt(n) (Shiffler 1988): 2.85 at n = 10, so
+// nine 1s and a 1000 removed nothing at threshold 3, with nothing on screen to say why.
+// STAT-6: the valid-value filter was `x != null && !isNaN(x)`, which let '' and ' ' through
+// as zeros.
+
+describe('outlierremoval — review STAT-22 / STAT-6', () => {
+	it('IQR fences use type-7 quartiles (as the Boxplot and DescribeData)', () => {
+		// [1..7, 12]: type 7 gives q1 = 2.75, q3 = 6.25, upper fence 11.5, so 12 is out.
+		// floor(n/4) gave q1 = 3, q3 = 7, fence 13, and kept it.
+		const mask = detectOutliersIQR([1, 2, 3, 4, 5, 6, 7, 12], 1.5);
+		expect(mask).toEqual([false, false, false, false, false, false, false, true]);
+		// The lower quartile too: [-3, 1..7] has type-7 q1 = 1.75 and q3 = 5.25, lower fence
+		// -3.5, so -3 stays (numpy.percentile agrees).
+		expect(detectOutliersIQR([-3, 1, 2, 3, 4, 5, 6, 7], 1.5)[0]).toBe(false);
+	});
+
+	it('blank and whitespace cells are missing, not zeros', () => {
+		// As zeros, the blanks would drag the mean down and make 0-ish values look typical;
+		// here they must neither count nor be touched.
+		const x = [10, 11, '', 10, ' ', 12, 11, 10, 500];
+		const out = outlierremoval(x, { method: 'iqr', iqrMultiplier: 1.5 });
+		expect(out[2]).toBe('');
+		expect(out[4]).toBe(' ');
+		expect(out[8]).toBeNull();
+		expect(outlierRemovalWarnings(['', ' ', 1, 2, 3])[0]).toContain('3');
+	});
+
+	it('numeric strings are numbers', () => {
+		const out = outlierremoval(['10', '11', '10', '12', '11', '10', '500'], {
+			method: 'iqr',
+			iqrMultiplier: 1.5
+		});
+		expect(out[6]).toBeNull();
+		expect(out[0]).toBe('10');
+	});
+
+	it('warns when the z rule cannot fire at this n (max |z| is (n-1)/sqrt(n))', () => {
+		const x = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1000];
+		expect(outlierremoval(x, { method: 'zscore', zThreshold: 3 })).toEqual(x);
+		const w = outlierRemovalWarnings(x, { method: 'zscore', zThreshold: 3 });
+		expect(w).toHaveLength(1);
+		expect(w[0]).toMatch(/10 points/);
+		expect(w[0]).toMatch(/2\.85/);
+		expect(w[0]).toMatch(/threshold of 3/);
+	});
+
+	it('is silent when the z rule can fire, and for the IQR rule', () => {
+		const x11 = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1000]; // bound 3.02 > 3
+		expect(outlierRemovalWarnings(x11, { method: 'zscore', zThreshold: 3 })).toEqual([]);
+		const x10 = x11.slice(1);
+		expect(outlierRemovalWarnings(x10, { method: 'iqr', zThreshold: 3 })).toEqual([]);
+	});
+
+	it('the node badge passes its own arguments', () => {
+		const x = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1000];
+		const w = definition.getWarnings({
+			parentCol: null,
+			inputCol: { getData: () => x },
+			args: { method: 'zscore', zThreshold: 3 }
+		});
+		expect(w.join(' ')).toMatch(/can never flag/);
+	});
+});

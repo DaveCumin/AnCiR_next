@@ -23,9 +23,10 @@ describe('makeInterpolator — linear', () => {
 		expect(f(10)).toBe(100);
 		expect(f(2.5)).toBe(25);
 	});
-	it('clamps out-of-range to the endpoint value', () => {
-		expect(f(-5)).toBe(0);
-		expect(f(999)).toBe(100);
+	it('does not extrapolate: out-of-range is missing (NaN), as in the Python and R ports', () => {
+		expect(f(-5)).toBeNaN();
+		expect(f(999)).toBeNaN();
+		expect(f(NaN)).toBeNaN();
 	});
 });
 
@@ -60,10 +61,11 @@ describe('makeInterpolator — degenerate', () => {
 	it('0 points → NaN', () => {
 		expect(makeInterpolator([], [], 'linear')(5)).toBeNaN();
 	});
-	it('1 point → that constant everywhere', () => {
+	it('1 point → its value at that x only, missing elsewhere (no extrapolation)', () => {
 		const f = makeInterpolator([3], [7], 'spline');
-		expect(f(0)).toBe(7);
-		expect(f(100)).toBe(7);
+		expect(f(3)).toBe(7);
+		expect(f(0)).toBeNaN();
+		expect(f(100)).toBeNaN();
 	});
 });
 
@@ -85,5 +87,45 @@ describe('makeGrid', () => {
 		expect(makeGrid(0, 4, 0)).toEqual([]);
 		expect(makeGrid(4, 0, 1)).toEqual([]);
 		expect(makeGrid(0, 1e12, 1e-6)).toEqual([]); // runaway size guarded
+	});
+});
+
+// STAT-3: knownPoints converted with Number() and then checked finiteness, and Number(null),
+// Number('') and Number(' ') are all 0, so a missing y became a known point of value 0 and a
+// missing x a known point at x = 0. Reviewer's exact inputs.
+describe('interpolate with missing values (STAT-3)', () => {
+	it('a missing y is not a known point: interpolate([0,1,2,3],[1,null,3,4],[1]) is 2', () => {
+		expect(interpolate([0, 1, 2, 3], [1, null, 3, 4], [1])).toEqual([2]);
+	});
+
+	it('a missing x is not a known point at 0: interpolate([0,null,2,3],[1,50,3,4],[0.5]) is 1.5', () => {
+		// Known points (0,1), (2,3), (3,4): linear at 0.5 is 1.5. (The reviewer's "correct 2"
+		// was for the query x = 1; at 0.5 the line through (0,1) and (2,3) gives 1.5.)
+		expect(interpolate([0, null, 2, 3], [1, 50, 3, 4], [0.5])).toEqual([1.5]);
+	});
+
+	for (const blank of ['', ' ', undefined, NaN, 'n/a']) {
+		it(`a ${JSON.stringify(blank)} y or x is dropped, for every method`, () => {
+			for (const method of ['linear', 'nearest', 'spline']) {
+				expect(interpolate([0, 1, 2, 3], [1, blank, 3, 4], [1], method)[0]).toBeCloseTo(
+					method === 'nearest' ? 1 : 2,
+					12
+				);
+				expect(knownPoints([0, blank, 2, 3], [1, 50, 3, 4]).xs).toEqual([0, 2, 3]);
+			}
+		});
+	}
+
+	it('a real 0 is data', () => {
+		expect(knownPoints([0, 1, 2], [0, 0, 6])).toEqual({ xs: [0, 1, 2], ys: [0, 0, 6] });
+		expect(interpolate([0, 2], [0, 6], [1])).toEqual([3]);
+	});
+
+	it('numeric strings are read as numbers', () => {
+		expect(interpolate(['0', '2'], ['0', '6'], ['1'])).toEqual([3]);
+	});
+
+	it('a missing query is missing, not x = 0', () => {
+		expect(interpolate([0, 2], [10, 30], [null, '', 1])).toEqual([NaN, NaN, 20]);
 	});
 });

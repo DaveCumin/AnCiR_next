@@ -5,10 +5,15 @@
 	import {
 		fitCurveModel,
 		evaluateCurveModelAtPoints,
-		fitPermutationPValue
+		fitPermutationPValue,
+		PERMUTATION_DEFAULTS
 	} from '$lib/utils/fitFunction.js';
 	import { wrapToPeriod } from '$lib/utils/cosinorAddons.js';
 	import { freePeriodFitWarnings, FREE_PERIOD_DEFAULTS } from '$lib/utils/cosinor.js';
+	import { rectWaveFitWarnings } from '$lib/utils/rectwave.js';
+	import { doubleLogisticFitWarnings } from '$lib/utils/doublelogistic.js';
+	import { periodRangeWarnings } from '$lib/utils/periodRangeWarnings.js';
+	import { permutationValidityWarnings } from '$lib/tableProcesses/permutationSupport.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/fitFunction.worker-task.js';
@@ -17,7 +22,11 @@
 		migrateLegacyYIN,
 		fillDefaults
 	} from '$lib/tableProcesses/tpArgHelpers.js';
-	import { writeOutputColumn, writeXOutput } from '$lib/tableProcesses/outputColumns.js';
+	import {
+		writeOutputColumn,
+		writeXOutput,
+		clearOutputColumns
+	} from '$lib/tableProcesses/outputColumns.js';
 	import {
 		residualColumn as computeResidual,
 		spawnResidualPlot
@@ -63,8 +72,10 @@
 		['useFixedPeriod', { val: true }],
 		['fixedPeriod', { val: 24 }],
 		['Ncurves', { val: 1 }],
-		// Cosinor free-period fit only: the period range (h) the fit may use (see
-		// FREE_PERIOD_DEFAULTS in cosinor.js). Old sessions get these defaults.
+		// Free-period fits (cosinor, rectangular wave, periodic double logistic): the period
+		// range (h) the fit may use (see FREE_PERIOD_DEFAULTS in cosinor.js). Old sessions get
+		// these defaults. Unbounded, the waveform models followed trends to thousands of
+		// hours (review FIT-1).
 		['minPeriod', { val: FREE_PERIOD_DEFAULTS.minPeriod }],
 		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
 		['nHarmonics', { val: 1 }],
@@ -83,7 +94,10 @@
 		['autoPermutations', { val: false }],
 		['nPermutations', { val: 999 }],
 		['permutationSeed', { val: 12345 }],
-		['permutationStatistic', { val: 'rSquared' }]
+		['permutationStatistic', { val: 'rSquared' }],
+		// 'shuffle' (single values; assumes exchangeable observations) or 'block' (one-period
+		// circular blocks, which keep short-range autocorrelation). Review finding FIT-5.
+		['permutationScheme', { val: PERMUTATION_DEFAULTS.permutationScheme }]
 	]);
 
 	export const definition = {
@@ -143,7 +157,9 @@
 				fixOmega: argsIN.fixOmega ?? false,
 				fixedPeriod: argsIN.fixedPeriod ?? 24,
 				fixDutyCycle: argsIN.fixDutyCycle ?? false,
-				fixedDutyCycle: argsIN.fixedDutyCycle ?? 0.5
+				fixedDutyCycle: argsIN.fixedDutyCycle ?? 0.5,
+				minPeriod: argsIN.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod,
+				maxPeriod: argsIN.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod
 			};
 		}
 		if (argsIN.model === 'doublelogistic') {
@@ -154,7 +170,9 @@
 				fixK2: argsIN.fixK2 ?? false,
 				fixedK2: argsIN.fixedK2 ?? 0.5,
 				fixPeriod: argsIN.fixPeriod ?? false,
-				fixedPeriod: argsIN.fixedPeriod ?? 24
+				fixedPeriod: argsIN.fixedPeriod ?? 24,
+				minPeriod: argsIN.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod,
+				maxPeriod: argsIN.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod
 			};
 		}
 		return {};
@@ -398,16 +416,10 @@
 			// component ever mounting. The component's getFit runs its own async,
 			// progress-reporting version instead of this one.
 			if (argsIN.permuteTest && yResult.fitResult) {
-				const permResult = fitPermutationPValue(
-					tt,
-					yy,
-					argsIN.model ?? 'cosinor',
-					getModelOptions(argsIN),
-					argsIN
+				attachFitPermutation(
+					yResult,
+					fitPermutationPValue(tt, yy, argsIN.model ?? 'cosinor', getModelOptions(argsIN), argsIN)
 				);
-				yResult.fitResult.pValue = permResult.pValue;
-				yResult.fitResult.significant = permResult.significant;
-				yResult.fitResult.permutedStats = permResult.permutedStats;
 			}
 
 			result.y_results[yId] = yResult;
@@ -475,20 +487,75 @@
 		return [result, anyValid];
 	}
 
+	/**
+	 * Copy a fitPermutationPValue(Async) outcome onto a y result's fitResult, where the panel,
+	 * the stats table and the perm_pvalue / permstats_* ports read it. Shared by the headless
+	 * path and the panel so both carry the scheme (review FIT-5).
+	 */
+	export function attachFitPermutation(yResult, perm) {
+		const fr = yResult?.fitResult;
+		if (!fr || !perm) return yResult;
+		fr.pValue = perm.pValue;
+		fr.significant = perm.significant;
+		fr.permutedStats = perm.permutedStats;
+		fr.permScheme = perm.scheme ?? 'shuffle';
+		fr.permBlockLength = perm.blockLength ?? null;
+		yResult.perm = perm;
+		return yResult;
+	}
+
+	/** Whether the current model's period is estimated (so the period range applies). */
+	function isFreePeriod(argsIN) {
+		const model = argsIN.model ?? 'cosinor';
+		if (model === 'cosinor') return !argsIN.useFixedPeriod;
+		if (model === 'rectangular') return !argsIN.fixOmega;
+		if (model === 'doublelogistic') return (argsIN.periodic ?? true) && !argsIN.fixPeriod;
+		return false;
+	}
+
 	// Shared by the headless path above and the component's getFit, so the panel
 	// shows the same warnings the engine computes (getFit used to publish none).
 	export function fitWarnings(argsIN, result) {
+		const model = argsIN.model ?? 'cosinor';
 		const fitEntries = Object.entries(result?.y_results ?? {}).map(([yId, yr]) => ({
 			label: `"${getColumnById(Number(yId))?.name ?? yId}"`,
 			result: yr?.fitResult ?? null
 		}));
-		const freeCosinor = (argsIN.model ?? 'cosinor') === 'cosinor' && !argsIN.useFixedPeriod;
+		// The free-period fits report an empty or unresolvable range, and when the period
+		// finished on a bound of the range or the optimiser gave up (each model carries its
+		// diagnostics through fitCurveModel). Review FIT-1.
+		let freeWarnings = [];
+		if (isFreePeriod(argsIN)) {
+			const xCol = argsIN.xIN != null && argsIN.xIN !== -1 ? getColumnById(argsIN.xIN) : null;
+			const t = xCol ? (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) : null;
+			const fitDiag =
+				model === 'rectangular'
+					? rectWaveFitWarnings(fitEntries, 'The free-period rectangular-wave fit')
+					: model === 'doublelogistic'
+						? doubleLogisticFitWarnings(fitEntries, 'The free-period double-logistic fit')
+						: freePeriodFitWarnings(fitEntries, 'The free-period cosinor fit');
+			freeWarnings = [...periodRangeWarnings(t, argsIN.minPeriod, argsIN.maxPeriod), ...fitDiag];
+		}
+		// Test validity (review FIT-5): the shuffle permutation test and the fixed-period
+		// cosinor F-test (reported in the stats table) assume independent observations.
+		const validity = [];
+		for (const [yId, yr] of Object.entries(result?.y_results ?? {})) {
+			const fitted = yr?.fitResult?.fitted;
+			const yy = yr?.yy;
+			if (!Array.isArray(yy) || !Array.isArray(fitted) || fitted.length !== yy.length) continue;
+			validity.push(
+				...permutationValidityWarnings(
+					yr.perm ?? null,
+					yy.map((v, i) => v - fitted[i]),
+					`"${getColumnById(Number(yId))?.name ?? yId}"`,
+					{ fTest: model === 'cosinor' && !!argsIN.useFixedPeriod }
+				)
+			);
+		}
 		return [
-			...checkFitResultsFinite(fitEntries, `The ${argsIN.model ?? 'cosinor'} fit`),
-			// The free-period cosinor reports when its period finished on a bound of
-			// the allowed range or the optimiser gave up (fitCosinorModel carries
-			// the diagnostics through).
-			...(freeCosinor ? freePeriodFitWarnings(fitEntries, 'The free-period cosinor fit') : []),
+			...checkFitResultsFinite(fitEntries, `The ${model} fit`),
+			...freeWarnings,
+			...validity,
 			...fitSampleWarnings(argsIN)
 		];
 	}
@@ -533,7 +600,6 @@
 
 <script>
 	// @ts-nocheck
-	import { tick } from 'svelte';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
@@ -552,7 +618,9 @@
 		showStaticDataAsTable,
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
-	import { recommendPermutations, permutationTestAsync } from '$lib/utils/permutationTest.js';
+	import { fitPermutationPValueAsync } from '$lib/utils/fitFunction.js';
+	import { createComputeRunner, computeErrorMessage } from '$lib/core/asyncCompute.js';
+	import { permutationSchemeLabel } from '$lib/tableProcesses/permutationSupport.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -571,6 +639,9 @@
 	let calculating = $state(false);
 	let permutationProgress = $state(0);
 	let permutationLabel = $state('');
+	// The message of a compute that threw (ROB-11), shown on the node with a Retry.
+	let calcError = $state(null);
+	// Lets a superseded run stop early between series (the runner already drops its result).
 	let _calcToken = 0;
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'fity_', 'fit_');
@@ -612,6 +683,7 @@
 		out += p.args.nPermutations;
 		out += p.args.permutationSeed;
 		out += p.args.permutationStatistic;
+		out += '|' + p.args.permutationScheme;
 		// These change the result but were missing from this hash. While the memo
 		// was component-local a view switch recomputed anyway and hid it; now that
 		// the memo survives a remount, an omission here means an edit is ignored.
@@ -664,21 +736,49 @@
 
 	// getValidPairs is the module-script helper above (shared with the headless path).
 
-	async function getFit() {
+	// One guard for the deferred compute (ROB-11, src/lib/core/asyncCompute.js): the spinner
+	// is cleared in a finally, a throw is shown on the node instead of spinning forever over
+	// the previous result, and the memo hash is committed only on success (the effect's claim
+	// is released on failure, so a remount or Retry tries the same inputs again).
+	const runner = createComputeRunner({
+		memo,
+		label: 'Fit waveform model',
+		setBusy: (v) => (calculating = v),
+		setError: (msg) => (calcError = msg)
+	});
+
+	function getFit() {
 		previewStart = 1;
-		const token = ++_calcToken;
-		calculating = true;
 		permutationProgress = 0;
 		permutationLabel = '';
-		await tick();
+		const hash = untrack(() => getHash);
+		const my = ++_calcToken;
+		return runner.run(
+			hash,
+			() => untrack(() => computeFit(my)),
+			(out) => {
+				if (out) applyFit(out);
+				p.args._fitHash = hash;
+			},
+			(e) => {
+				// No stale stats on the panel, and none flowing downstream either.
+				fitData = undefined;
+				p.args.valid = false;
+				p.warnings = [`The ${p.args.model ?? 'cosinor'} fit failed: ${computeErrorMessage(e)}`];
+				clearOutputColumns(p.args.out, { processHash: crypto.randomUUID() });
+			}
+		);
+	}
 
+	/**
+	 * The fits and permutation tests for the current inputs, or null when there is nothing
+	 * to fit or a newer run superseded this one (`my` is that run's token).
+	 */
+	async function computeFit(my) {
 		const xIN = p.args.xIN;
 		const yINs = normalizeYInputs(p.args.yIN);
 		const xCol = xIN >= 0 ? getColumnById(xIN) : null;
-		if (!xCol || yINs.length === 0) {
-			if (token === _calcToken) calculating = false;
-			return;
-		}
+		if (!xCol || yINs.length === 0) return null;
 
 		const t = getXData(xCol);
 		const outputXId = p.args.outputX;
@@ -715,45 +815,36 @@
 			if (tt.length === 0) continue;
 			activeY.push({ yId, tt, yy });
 		}
+		if (activeY.length === 0) return null;
 
-		if (activeY.length === 0) {
-			if (token === _calcToken) calculating = false;
-			return;
-		}
-
+		const model = p.args.model ?? 'cosinor';
 		let anyValid = false;
 		for (let index = 0; index < activeY.length; index++) {
 			const { yId, tt, yy } = activeY[index];
-			if (token !== _calcToken) return;
+			if (my !== _calcToken) return null;
 
-			let yResult = await buildYResult(tt, yy, p.args, outputXData);
+			const yResult = await buildYResult(tt, yy, p.args, outputXData);
 			if (!yResult) continue;
 
 			if (p.args.permuteTest) {
-				const nPermutations = p.args.autoPermutations
-					? recommendPermutations(tt.length)
-					: p.args.nPermutations;
-				const permResult = await permutationTestAsync(
+				// The same preparation, scheme, count and seed as the headless path
+				// (fitPermutationPValue), so the panel and the engine report the same p.
+				const perm = await fitPermutationPValueAsync(
 					tt,
 					yy,
-					(xVals, yVals) => computeSingleFit(xVals, yVals, p.args),
+					model,
+					getModelOptions(p.args),
+					p.args,
 					{
-						statistic: p.args.permutationStatistic ?? 'rSquared',
-						nPermutations,
-						seed: p.args.permutationSeed,
 						onProgress: (current, total) => {
-							if (token !== _calcToken) return;
+							if (my !== _calcToken) return;
 							const progress = (index + current / total) / activeY.length;
 							permutationProgress = Math.max(0, Math.min(100, Math.round(progress * 100)));
 							permutationLabel = `${index + 1} / ${activeY.length}`;
 						}
 					}
 				);
-				yResult.fitResult.pValue = permResult.pValue;
-				yResult.fitResult.significant = permResult.significant;
-				yResult.fitResult.permutedStats = permResult.permutedStats;
-				yResult.fitResult.permutationSeed = permResult.seed;
-				yResult.fitResult.permutationN = permResult.nPermutations;
+				attachFitPermutation(yResult, perm);
 			}
 
 			result.y_results[yId] = yResult;
@@ -774,8 +865,13 @@
 			}
 		}
 
-		if (token !== _calcToken) return;
+		if (my !== _calcToken) return null;
 		result.warnings = fitWarnings(p.args, result);
+		return { result, anyValid, yINs, t, outputXData, originTime_ms };
+	}
+
+	/** Publish a finished compute: panel state, warnings and every output column. */
+	function applyFit({ result, anyValid, yINs, t, outputXData, originTime_ms }) {
 		fitData = result;
 		p.args.valid = anyValid;
 		p.warnings = result?.warnings ?? [];
@@ -821,10 +917,6 @@
 				writeOutputColumn(p.args.out['permstats_' + yId], []);
 			}
 		}
-
-		if (token === _calcToken) calculating = false;
-		memo.hash = getHash;
-		p.args._fitHash = memo.hash;
 	}
 
 	let yExcludeIds = $derived.by(() => {
@@ -859,12 +951,11 @@
 	$effect(() => {
 		const dataHash = getHash;
 		if (!mounted) return;
-		if (memo.hash !== dataHash && !calculating) {
-			// Mark this hash as handled BEFORE the async getFit runs so the
-			// effect can't re-enter while getFit is suspended on `await tick()`.
-			// Mirrors the Cosinor pattern; getFit's bail-out paths leave memo.hash
-			// alone, so without this guard a no-op getFit can be called repeatedly
-			// (xIN=-1, yIN=[]) and never settle the hash.
+		if (memo.hash !== dataHash) {
+			// Claim this hash BEFORE the deferred getFit runs, so the effect cannot re-enter
+			// and a second mounted instance does not run the same compute. No `calculating`
+			// gate: the runner lets a newer hash supersede the run in flight (the old gate
+			// made an edit during a long permutation test wait for it to finish).
 			memo.hash = dataHash;
 			untrack(() => {
 				getFit();
@@ -1226,6 +1317,26 @@
 					/>
 				</ControlInput>
 			</div>
+		{:else}
+			<!-- The free period is searched for, and kept, inside this range (review FIT-1). -->
+			<div class="control-input-horizontal">
+				<ControlInput label="Min period (hrs)">
+					<NumberWithUnits
+						bind:value={p.args.minPeriod}
+						min="0.1"
+						step="1"
+						onInput={() => getFit()}
+					/>
+				</ControlInput>
+				<ControlInput label="Max period (hrs)">
+					<NumberWithUnits
+						bind:value={p.args.maxPeriod}
+						min="0.1"
+						step="1"
+						onInput={() => getFit()}
+					/>
+				</ControlInput>
+			</div>
 		{/if}
 		{#if p.args.fixDutyCycle}
 			<div class="control-input-horizontal">
@@ -1299,6 +1410,26 @@
 					/>
 				</ControlInput>
 			</div>
+		{:else if p.args.periodic}
+			<!-- The free period is searched for, and kept, inside this range (review FIT-1). -->
+			<div class="control-input-horizontal">
+				<ControlInput label="Min period (hrs)">
+					<NumberWithUnits
+						bind:value={p.args.minPeriod}
+						min="0.1"
+						step="1"
+						onInput={() => getFit()}
+					/>
+				</ControlInput>
+				<ControlInput label="Max period (hrs)">
+					<NumberWithUnits
+						bind:value={p.args.maxPeriod}
+						min="0.1"
+						step="1"
+						onInput={() => getFit()}
+					/>
+				</ControlInput>
+			</div>
 		{/if}
 	{/if}
 
@@ -1358,6 +1489,21 @@
 					onChange={() => getFit()}
 				/>
 			</div>
+			<ControlInput label="Permute">
+				<select
+					bind:value={p.args.permutationScheme}
+					disabled={calculating}
+					onchange={() => getFit()}
+				>
+					<option value="shuffle">single values</option>
+					<option value="block">one-period blocks</option>
+				</select>
+			</ControlInput>
+			<p class="hint">
+				Permuting single values assumes the observations are exchangeable (independent). Time series
+				are usually autocorrelated, which makes that p-value too small; one-period blocks keep the
+				autocorrelation, and the Surrogate Test node offers block and AR(1) surrogates.
+			</p>
 			<button onclick={() => getFit()} disabled={calculating} style="margin-top: 10px;">
 				{#if calculating}
 					Testing... {permutationProgress}%
@@ -1434,6 +1580,12 @@
 						⚠ Not significant (p ≥ 0.05)
 					{/if}
 				</p>
+				<p class="hint">
+					{yResult.fitResult.permutedStats.length} permutations ({permutationSchemeLabel({
+						permScheme: yResult.fitResult.permScheme,
+						permBlockLength: yResult.fitResult.permBlockLength
+					})})
+				</p>
 			{/if}
 		</div>
 	</div>
@@ -1506,6 +1658,11 @@
 						? `${permutationProgress}% complete${permutationLabel ? `, ${permutationLabel}` : ''}`
 						: ''}
 				/>
+			{:else if calcError}
+				<p class="warn">
+					The {p.args.model ?? 'cosinor'} fit failed: {calcError}
+					<button class="tp-stat-btn" onclick={() => getFit()}>Retry</button>
+				</p>
 			{:else if p.args.valid && p.args.out.fitx != -1}
 				{@const xout = getColumnById(p.args.out.fitx)}
 				<div class="tp-outputs">
@@ -1585,7 +1742,7 @@
 	</div>
 </details>
 
-{#if p.args.valid && p.args.out.fitx != -1}
+{#if !calculating && !calcError && p.args.valid && p.args.out.fitx != -1}
 	<div class="tp-stat-actions">
 		<button
 			class="tp-stat-btn"
@@ -1618,6 +1775,11 @@
 {/each}
 
 <style>
+	.hint {
+		font-size: var(--font-sm);
+		color: var(--color-text-muted);
+		margin: var(--space-1) 0 0;
+	}
 	/* Matches ChiSquared / Rayleigh / Cosinor / NPCRA. */
 	.warn {
 		font-size: var(--font-xs);

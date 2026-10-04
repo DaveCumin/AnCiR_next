@@ -14,7 +14,9 @@
 		drawHGrid,
 		lerp,
 		seededRNG,
-		initPalette
+		initPalette,
+		canvasSize,
+		observeResize
 	} from '$lib/animUtils.js';
 
 	let { height = '360px' } = $props();
@@ -75,8 +77,7 @@
 
 	function draw(prog) {
 		const ctx = cv.getContext('2d');
-		const W = cv.offsetWidth,
-			H = cv.offsetHeight;
+		const { W, H } = canvasSize(cv);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const padL = 40,
@@ -225,9 +226,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cv], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});

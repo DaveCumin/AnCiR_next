@@ -20,6 +20,8 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
+	import { computeOwner, computeKey } from '$lib/core/computeOwners.svelte.js';
+	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 
 	// The current input column ids of a free process node (inIN is a list).
 	function processInputIds(proc) {
@@ -174,8 +176,16 @@
 			</div>
 		</div>
 		{#if PComp}
-			<div class="control-component">
-				<PComp p={proc} />
+			<!-- The node's visible computing instance: stands down NodeComputeHost's hidden one. -->
+			<div class="control-component" {@attach computeOwner(computeKey('process', proc.id))}>
+				<ErrorBoundary
+					context={`showing the "${node.label ?? node.processName}" settings`}
+					title="This node's settings couldn't be shown."
+				>
+					<!-- Function binding (no-op setter): declares the ownership chain for the node's
+					     own bind:value={p.args...}; p is mutated in place, never reassigned. -->
+					<PComp bind:p={() => proc, () => {}} />
+				</ErrorBoundary>
 			</div>
 		{:else}
 			<div class="control-component muted">No editor registered for "{node.processName}".</div>
@@ -197,8 +207,18 @@
 	{:else if node.type === 'tableprocess' && node.tpObj}
 		{@const TPComp = appConsts.tableProcessMap.get(node.tpName)?.component}
 		{#if TPComp}
-			<div class="control-component">
-				<TPComp p={node.tpObj} />
+			<div
+				class="control-component"
+				{@attach computeOwner(computeKey('tableprocess', node.tpObj.id))}
+			>
+				<!-- Contained (ROB-12): a node that throws while rendering shows why here, and
+				     the rest of the panel and the canvas keep working. -->
+				<ErrorBoundary
+					context={`showing the "${node.label ?? node.tpName}" analysis`}
+					title="This analysis couldn't be shown."
+				>
+					<TPComp bind:p={() => node.tpObj, () => {}} />
+				</ErrorBoundary>
 			</div>
 		{:else}
 			<div class="control-component muted">No editor registered for "{node.tpName}".</div>

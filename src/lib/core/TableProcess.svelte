@@ -5,6 +5,7 @@
 	import { setSelection } from '$lib/tableProcesses/columnSet.js';
 	import { reportUnknownNode } from '$lib/core/unknownNode.js';
 	import { memoForget } from '$lib/core/computeMemo.js';
+	import { recordGraphMutation } from '$lib/core/operations.js';
 	let _tableprocessidCounter = 0;
 
 	// --- Live Column Set → table-process inputs --------------------------------
@@ -88,7 +89,18 @@
 		});
 	}
 
+	/**
+	 * Delete a table process as ONE undoable step (review ROB-3 / UI-2). Every caller (the
+	 * canvas Delete key, the node's delete button, the Data panel, the editor's own delete)
+	 * comes through here, so a mistaken delete is always one Ctrl+Z away: the node returns
+	 * with its id, args, output columns (same ids, same data) and every downstream reference.
+	 */
 	export function deleteTableProcess(tableProcess) {
+		return recordGraphMutation(() => deleteTableProcessCascade(tableProcess));
+	}
+
+	/** The unrecorded cascade itself; the op layer runs it between graph captures. */
+	export function deleteTableProcessCascade(tableProcess) {
 		if (!tableProcess) {
 			return { success: false, message: 'Invalid analysis provided' };
 		}

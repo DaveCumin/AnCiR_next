@@ -141,6 +141,11 @@ describe('stats.standardDeviation', () => {
 	it('ignores null / undefined / NaN entries', () => {
 		expect(standardDeviation([2, null, 4, NaN, 4, undefined, 4, 5, 5, 7, 9])).toBeCloseTo(2, 6);
 	});
+
+	it("a blank is missing in the deviations too: [1,'',3] is 1, not 1.414 (STAT-23)", () => {
+		expect(standardDeviation([1, '', 3])).toBe(1);
+		expect(standardDeviation([1, ' ', 'n/a', '3'])).toBe(1);
+	});
 });
 
 describe('stats.minMaxAcross', () => {

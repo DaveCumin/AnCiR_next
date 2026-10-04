@@ -4,6 +4,7 @@
 import { base } from '$app/paths';
 import { appState, core } from '$lib/core/core.svelte.js';
 import { importJson } from '$lib/components/iconActions/Setting.svelte';
+import { confirmReplaceSession } from '$lib/core/sessionLoad.svelte.js';
 import { addNotification } from '$lib/core/notifications.svelte.js';
 import { recordRecent } from '$lib/start/recentSessions.svelte.js';
 import { thumbnailForWorkflow } from '$lib/start/thumbnails.js';
@@ -27,8 +28,11 @@ export function resolveExampleUrl(url) {
 /**
  * Open a bundled example with its demo data — read-only exploration, no commitment.
  * Mirrors the load-session modal's example path (fetch the session JSON, then importJson).
+ * The start screen can be summoned over open work, so this asks before replacing it (ROB-1).
+ * Returns false when the user cancels (nothing fetched, loaded or recorded), true once loaded.
  */
 export async function openExample(session, onProgress) {
+	if (!(await confirmReplaceSession(`"${displayName(session.name)}"`))) return false;
 	const url = resolveExampleUrl(session.url);
 	const res = await fetchAppAsset(url);
 	const data = await res.json();
@@ -43,6 +47,7 @@ export async function openExample(session, onProgress) {
 		thumb: thumbnailForWorkflow(session.id),
 		url: session.url
 	});
+	return true;
 }
 
 /** A one-line "what's in here" for a recent row, read off the session we just loaded. */
@@ -62,6 +67,8 @@ export function sessionMeta() {
  */
 export async function openSessionFile(file, handle = null, onProgress) {
 	const data = JSON.parse(await file.text());
+	// Asked after parsing, so a file that is not even JSON fails without a pointless question.
+	if (!(await confirmReplaceSession(`"${file.name}"`))) return false;
 	await importJson(data, onProgress);
 	const name = file.name.replace(/\.json$/i, '');
 	await recordRecent({
@@ -71,6 +78,7 @@ export async function openSessionFile(file, handle = null, onProgress) {
 		thumb: thumbnailForWorkflow(name), // unknown id → deterministic procedural fallback
 		handle
 	});
+	return true;
 }
 
 /**

@@ -33,4 +33,43 @@ describe('MiniDataTable', () => {
 		expect(text).toContain('±2.00');
 		core.rawData.delete(key);
 	});
+
+	it('UI-1: never shows a missing time as 1 Jan 1970', () => {
+		// The reviewer's Activity column: numbers imported as "time" with format D.M,
+		// so every value parsed to NaN. The preview used to format the RAW number 8.4
+		// as epoch ms and print "01 Jan 1970 00:00:00".
+		const key = 'mini-time-null-test';
+		core.rawData.set(key, [8.4, 9.2, 0]);
+		const column = {
+			type: 'time',
+			data: key,
+			timeFormat: 'D.M',
+			isReferencial: () => false,
+			hoursSinceStart: [NaN, NaN, NaN],
+			getData: () => [NaN, NaN, NaN]
+		};
+		const { container } = render(MiniDataTable, { props: { column } });
+		const text = container.textContent;
+		expect(text).not.toContain('1970');
+		expect(text).not.toContain('NaN');
+		expect(container.querySelectorAll('.mt-raw')[0].textContent).toBe('-');
+		core.rawData.delete(key);
+	});
+
+	it('still formats epoch-ms time values as dates', () => {
+		const key = 'mini-time-ms-test';
+		const ms = Date.UTC(2026, 2, 1, 6, 0, 0);
+		core.rawData.set(key, [ms]);
+		const column = {
+			type: 'time',
+			data: key,
+			timeFormat: [],
+			isReferencial: () => false,
+			hoursSinceStart: [0],
+			getData: () => [ms]
+		};
+		const { container } = render(MiniDataTable, { props: { column } });
+		expect(container.querySelector('.mt-raw').textContent).toMatch(/Mar 2026/);
+		core.rawData.delete(key);
+	});
 });

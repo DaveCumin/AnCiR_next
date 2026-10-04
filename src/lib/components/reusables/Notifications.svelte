@@ -1,9 +1,14 @@
 <script>
-	import { notifications, removeNotification } from '$lib/core/notifications.svelte.js';
+	import {
+		notifications,
+		removeNotification,
+		dismissNotification
+	} from '$lib/core/notifications.svelte.js';
 	import { fly } from 'svelte/transition';
 
 	const icons = {
-		error: '✕',
+		// Not ✕: that is the dismiss button's glyph, so an error toast read as two close buttons.
+		error: '!',
 		warning: '⚠',
 		info: 'ℹ'
 	};
@@ -27,7 +32,11 @@
 					{notif.action.label}
 				</button>
 			{/if}
-			<button class="toast-close" onclick={() => removeNotification(notif.id)}>✕</button>
+			<button
+				class="toast-close"
+				aria-label={notif.onDismiss ? 'Dismiss' : 'Close'}
+				onclick={() => dismissNotification(notif.id)}>✕</button
+			>
 		</div>
 	{/each}
 </div>

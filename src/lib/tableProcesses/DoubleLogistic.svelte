@@ -5,9 +5,18 @@
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
-	import { fitDoubleLogistic, evaluateDoubleLogisticAtPoints } from '$lib/utils/doublelogistic.js';
+	import {
+		fitDoubleLogistic,
+		evaluateDoubleLogisticAtPoints,
+		doubleLogisticFitWarnings
+	} from '$lib/utils/doublelogistic.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
-	import { attachPermutation } from '$lib/tableProcesses/permutationSupport.js';
+	import { FREE_PERIOD_DEFAULTS } from '$lib/utils/cosinor.js';
+	import { periodRangeWarnings } from '$lib/utils/periodRangeWarnings.js';
+	import {
+		attachPermutation,
+		permutationValidityWarnings
+	} from '$lib/tableProcesses/permutationSupport.js';
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
@@ -26,11 +35,16 @@
 		['fixedK2', { val: 0.5 }],
 		['fixPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
+		// Free period only: the range (h) the fit may use. Unbounded, a trend with no rhythm
+		// fitted a 111 h "period" (review FIT-1); same defaults as Cosinor.
+		['minPeriod', { val: FREE_PERIOD_DEFAULTS.minPeriod }],
+		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
 		// Permutation test: a model-vs-chance significance test for each y fit.
 		['permuteTest', { val: PERMUTATION_DEFAULTS.permuteTest }],
 		['nPermutations', { val: PERMUTATION_DEFAULTS.nPermutations }],
 		['permutationSeed', { val: PERMUTATION_DEFAULTS.permutationSeed }],
 		['permutationStatistic', { val: PERMUTATION_DEFAULTS.permutationStatistic }],
+		['permutationScheme', { val: PERMUTATION_DEFAULTS.permutationScheme }],
 		[
 			'out',
 			{
@@ -125,6 +139,8 @@
 		const fixedK2 = argsIN.fixedK2 ?? 0.5;
 		const fixPeriod = argsIN.fixPeriod ?? false;
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
+		const minPeriod = argsIN.minPeriod ?? FREE_PERIOD_DEFAULTS.minPeriod;
+		const maxPeriod = argsIN.maxPeriod ?? FREE_PERIOD_DEFAULTS.maxPeriod;
 
 		if (xIN == -1 || !getColumnById(xIN) || yINs.length === 0) return [null, false];
 
@@ -154,6 +170,8 @@
 		// Per-column fit outcomes, so a fit that came back null or all-NaN can say so
 		// instead of leaving the panel showing dashes with no explanation.
 		const fitEntries = [];
+		// Residual-autocorrelation warnings for the shuffle permutation test (FIT-5).
+		const permWarnings = [];
 
 		for (const yId of yINs) {
 			const yCol = getColumnById(yId);
@@ -176,7 +194,9 @@
 				fixPeriod,
 				fixedK1,
 				fixedK2,
-				fixedPeriod
+				fixedPeriod,
+				minPeriod,
+				maxPeriod
 			};
 			const fitResult = shouldUseWorkers({ inputLen: tt.length })
 				? await runComputeTask('doublelogistic.fit', { tt, yy, opts: dlOpts })
@@ -190,9 +210,19 @@
 					? evaluateDoubleLogisticAtPoints(fitResult.parameters, true, outputXData)
 					: fitResult.fitted;
 
+				const perm = argsIN.permuteTest
+					? fitPermutationPValue(tt, yy, 'doublelogistic', dlOpts, argsIN)
+					: null;
 				y_results[yId] = attachPermutation(
 					{ fitResult, fitted: yOutData, t: tt, xOutData, yOutData },
-					argsIN.permuteTest ? fitPermutationPValue(tt, yy, 'doublelogistic', dlOpts, argsIN) : null
+					perm
+				);
+				permWarnings.push(
+					...permutationValidityWarnings(
+						perm,
+						yy.map((v, i) => v - fitResult.fitted[i]),
+						`"${yCol.name}"`
+					)
 				);
 			}
 		}
@@ -260,6 +290,13 @@
 				originTime_ms,
 				warnings: [
 					...checkFitResultsFinite(fitEntries, 'The double-logistic fit'),
+					...(fixPeriod
+						? []
+						: [
+								...periodRangeWarnings(t, minPeriod, maxPeriod),
+								...doubleLogisticFitWarnings(fitEntries, 'The free-period double-logistic fit')
+							]),
+					...permWarnings,
 					...fitSampleWarnings(argsIN)
 				]
 			},
@@ -275,6 +312,9 @@
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
+	import { createComputeRunner } from '$lib/core/asyncCompute.js';
+	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
 
 	import { migrateRenamedMetricOut } from '$lib/tableProcesses/metricOutputs.js';
@@ -311,6 +351,10 @@
 	if (p.args.fixedK2 === undefined) p.args.fixedK2 = 0.5;
 	if (p.args.fixPeriod === undefined) p.args.fixPeriod = false;
 	if (p.args.fixedPeriod === undefined) p.args.fixedPeriod = 24;
+	if (p.args.minPeriod === undefined) p.args.minPeriod = FREE_PERIOD_DEFAULTS.minPeriod;
+	if (p.args.maxPeriod === undefined) p.args.maxPeriod = FREE_PERIOD_DEFAULTS.maxPeriod;
+	if (p.args.permutationScheme === undefined)
+		p.args.permutationScheme = PERMUTATION_DEFAULTS.permutationScheme;
 	if (p.args.permuteTest === undefined) p.args.permuteTest = PERMUTATION_DEFAULTS.permuteTest;
 	if (p.args.nPermutations === undefined) p.args.nPermutations = PERMUTATION_DEFAULTS.nPermutations;
 	if (p.args.permutationSeed === undefined)
@@ -331,7 +375,8 @@
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
-	let _calcToken = 0;
+	// The message of the last failed compute, shown with a Retry (ROB-11).
+	let calcError = $state(null);
 
 	const { syncYColumns, initYColumns } = useMultiYTP(p, 'dlogy_', 'dlog_');
 	const { syncYColumns: syncResidColumns, initYColumns: initResidColumns } = useMultiYTP(
@@ -382,6 +427,7 @@
 		// was component-local a view switch recomputed anyway and hid it; now that
 		// the memo survives a remount, an omission here means an edit is ignored.
 		out += '|' + p.args.fixedK1 + '|' + p.args.fixedK2 + '|' + p.args.fixedPeriod;
+		out += '|' + p.args.minPeriod + '|' + p.args.maxPeriod + '|' + p.args.permutationScheme;
 		return out;
 	});
 	// Backed by the session-lifetime compute memo, so a view switch (which destroys
@@ -408,36 +454,35 @@
 		if (!mounted) return;
 		if (memo.hash !== dataHash) {
 			memo.hash = getHash;
-			calculating = true;
-			const token = ++_calcToken;
-			setTimeout(async () => {
-				if (token !== _calcToken) return;
-				const [data, valid] = await doublelogistic(p.args);
-				if (token !== _calcToken) return; // re-check after await (analysis is async now)
-				untrack(() => {
-					previewStart = 1;
-					dlData = data;
-					p.args.valid = valid;
-					calculating = false;
-				});
-			}, 0);
+			untrack(() => getFit());
 		}
 	});
 
+	// try/finally, error state, success-only memo commit: see core/asyncCompute.js.
+	const runner = createComputeRunner({
+		memo,
+		node: p,
+		label: 'Double logistic fit',
+		setBusy: (v) => (calculating = v),
+		setError: (m) => (calcError = m)
+	});
 	function getFit() {
 		previewStart = 1;
-		calculating = true;
-		const token = ++_calcToken;
-		setTimeout(async () => {
-			if (token !== _calcToken) return;
-			const [data, valid] = await doublelogistic(p.args);
-			if (token !== _calcToken) return; // re-check after await (analysis is async now)
-			dlData = data;
-			p.args.valid = valid;
-			p.warnings = data?.warnings ?? [];
-			calculating = false;
-			memo.hash = getHash;
-		}, 0);
+		runner.run(
+			untrack(() => getHash),
+			() => untrack(() => doublelogistic(p.args)),
+			([data, valid]) => {
+				dlData = data;
+				p.args.valid = valid;
+				p.warnings = data?.warnings ?? [];
+			},
+			() => {
+				dlData = undefined;
+				p.warnings = [];
+				p.args.valid = false;
+				clearOutputColumns(p.args.out);
+			}
+		);
 	}
 
 	$effect(() => {
@@ -584,10 +629,10 @@
 
 	<!-- Period -->
 	<div class="control-input-horizontal">
-		<div class="control-input-checkbox">
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={p.args.fixPeriod} onchange={getFit} />
-			<p>Fix period</p>
-		</div>
+			<span class="ci-label">Fix period</span>
+		</label>
 	</div>
 	{#if p.args.fixPeriod}
 		<div class="control-input-horizontal">
@@ -601,14 +646,24 @@
 				/>
 			</ControlInput>
 		</div>
+	{:else}
+		<!-- The free period is searched for, and kept, inside this range (as Cosinor). -->
+		<div class="control-input-horizontal">
+			<ControlInput label="Min period (hrs)">
+				<NumberWithUnits bind:value={p.args.minPeriod} onInput={getFit} min="0.1" step="1" />
+			</ControlInput>
+			<ControlInput label="Max period (hrs)">
+				<NumberWithUnits bind:value={p.args.maxPeriod} onInput={getFit} min="0.1" step="1" />
+			</ControlInput>
+		</div>
 	{/if}
 
 	<!-- Rise rate (k1) -->
 	<div class="control-input-horizontal">
-		<div class="control-input-checkbox">
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={p.args.fixK1} onchange={getFit} />
-			<p>Fix rise rate (k1)</p>
-		</div>
+			<span class="ci-label">Fix rise rate (k1)</span>
+		</label>
 	</div>
 	{#if p.args.fixK1}
 		<div class="control-input-horizontal">
@@ -620,10 +675,10 @@
 
 	<!-- Fall rate (k2) -->
 	<div class="control-input-horizontal">
-		<div class="control-input-checkbox">
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={p.args.fixK2} onchange={getFit} />
-			<p>Fix fall rate (k2)</p>
-		</div>
+			<span class="ci-label">Fix fall rate (k2)</span>
+		</label>
 	</div>
 	{#if p.args.fixK2}
 		<div class="control-input-horizontal">
@@ -635,10 +690,10 @@
 
 	<!-- Permutation test -->
 	<div class="control-input-horizontal">
-		<div class="control-input-checkbox">
+		<label class="control-input-checkbox">
 			<input type="checkbox" bind:checked={p.args.permuteTest} onchange={getFit} />
-			<p>Test significance (model vs chance)</p>
-		</div>
+			<span class="ci-label">Test significance (model vs chance)</span>
+		</label>
 	</div>
 	{#if p.args.permuteTest}
 		<div class="control-input-horizontal">
@@ -649,20 +704,34 @@
 				<NumberWithUnits bind:value={p.args.permutationSeed} min="0" step="1" onInput={getFit} />
 			</ControlInput>
 		</div>
+		<!-- Its own row: three controls side by side overlap their labels in a canvas node. -->
+		<div class="control-input-horizontal">
+			<ControlInput label="Permute">
+				<select bind:value={p.args.permutationScheme} onchange={getFit}>
+					<option value="shuffle">single values</option>
+					<option value="block">one-period blocks</option>
+				</select>
+			</ControlInput>
+		</div>
+		<p class="hint">
+			Permuting single values assumes the observations are exchangeable (independent). Time series
+			are usually autocorrelated, which makes that p-value too small; one-period blocks keep the
+			autocorrelation, and the Surrogate Test node offers block and AR(1) surrogates.
+		</p>
 		<PermutationSummary entries={permEntries} nodeId={p.id} label="Double logistic" />
 	{/if}
 
 	{#if !hideInputs}
 		<!-- Output X -->
 		<div class="control-input-horizontal">
-			<div class="control-input-checkbox">
+			<label class="control-input-checkbox">
 				<input
 					type="checkbox"
 					bind:checked={showOutputX}
 					onchange={(e) => toggleOutputX(e.target.checked)}
 				/>
-				<p>Specify output x values</p>
-			</div>
+				<span class="ci-label">Specify output x values</span>
+			</label>
 		</div>
 		{#if showOutputX}
 			<div class="control-input-vertical">
@@ -744,8 +813,10 @@
 						source="Double Logistic"
 					/>
 				</p>
+				<!-- M is the rest (baseline) level of the canonical A >= 0 fit (review FIT-2), not
+				     a MESOR (the time-averaged mean); the store label is kept for saved values. -->
 				<p>
-					Mesor (M): {fmt(p_.M)}
+					Baseline (M, rest level): {fmt(p_.M)}
 					<StoreValueButton
 						label="Mesor"
 						getter={() => yResult?.fitResult?.parameters?.M}
@@ -811,6 +882,8 @@
 		<div class="section-content">
 			{#if calculating}
 				<LoadingSpinner message="Fitting double logistic…" />
+			{:else if calcError}
+				<ErrorBox title="The fit failed." message={calcError} onretry={getFit} />
 			{:else if p.args.valid && p.args.out.dlogx != -1}
 				{@const xout = getColumnById(p.args.out.dlogx)}
 				<div class="tp-outputs">
@@ -920,6 +993,11 @@
 {/each}
 
 <style>
+	.hint {
+		font-size: var(--font-sm);
+		color: var(--color-text-muted);
+		margin: var(--space-1) 0 0;
+	}
 	/* Matches ChiSquared / Rayleigh / Cosinor / NPCRA. */
 	.warn {
 		font-size: var(--font-xs);

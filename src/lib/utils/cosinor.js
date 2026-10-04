@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { KahanSum } from './numerics.js';
 import quantile_t from '@stdlib/stats-base-dists-t-quantile';
-import cdf_f from '@stdlib/stats-base-dists-f-cdf';
+import { pUpperFromF } from './fdist.js';
 
 // ─── Free-period search range ────────────────────────────────────────────────
 //
@@ -693,9 +693,9 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 	const RMSE = Math.sqrt(MSE);
 	const R2 = SStot > 0 ? 1 - SSres / SStot : 0;
 	const F_stat = MSE > 0 ? (SStot - SSres) / (2 * nHarmonics) / MSE : NaN;
-	// Upper-tail p-value: P(F > F_stat) = 1 - CDF(F_stat). The stdlib cdf_f is
-	// strictly lower-tail; using it directly inverted significance everywhere.
-	const pF = isNaN(F_stat) ? NaN : 1 - cdf_f(F_stat, 2 * nHarmonics, df_res);
+	// Upper-tail p-value P(F > F_stat), computed directly (fdist.js) so a strong rhythm's p is
+	// not rounded to 0 by 1 - CDF. A rounding-negative F (SSres a hair above SStot) is F = 0.
+	const pF = isNaN(F_stat) ? NaN : pUpperFromF(Math.max(0, F_stat), 2 * nHarmonics, df_res);
 
 	// Covariance matrix V = MSE · (XᵀX)⁻¹
 	const XtX_inv = Array.from({ length: nParams }, () => new Array(nParams).fill(0));

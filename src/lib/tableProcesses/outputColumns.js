@@ -113,3 +113,34 @@ export function writeXOutput(colId, xOutData, { originTime_ms = null, processHas
 		processHash
 	});
 }
+
+/**
+ * Empty every output column in a node's `out` map (ROB-11). Called when the node's
+ * compute FAILED: the columns would otherwise keep the previous inputs' results, and every
+ * consumer downstream would go on plotting and analysing data that no longer matches the
+ * node's inputs, with nothing on screen to say so. Each column keeps its type (a time
+ * output stays a time column), so a later successful run writes into it as before.
+ *
+ * @param {Record<string, any>|null|undefined} out - the node's `p.args.out`
+ * The process hash is what makes the change visible: Column.getData() caches by
+ * getDataHash, which reads the tableProcessGUId stamp and not rawData, so an empty array
+ * written without a fresh stamp left every reader on the old values.
+ *
+ * @param {object} [opts]
+ * @param {string} [opts.processHash] - stamped on the columns; a fresh one by default
+ * @returns {number} how many columns were emptied
+ */
+export function clearOutputColumns(out, { processHash = crypto.randomUUID() } = {}) {
+	if (!out || typeof out !== 'object') return 0;
+	let n = 0;
+	for (const v of Object.values(out)) {
+		const ids = Array.isArray(v) ? v : [v];
+		for (const id of ids) {
+			if (typeof id !== 'number' || id < 0) continue;
+			const col = getColumnById(id);
+			if (!col) continue;
+			if (writeOutputColumn(id, [], { type: col.type ?? 'number', processHash })) n++;
+		}
+	}
+	return n;
+}

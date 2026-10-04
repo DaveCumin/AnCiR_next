@@ -1,18 +1,18 @@
 // @ts-nocheck
 // Chi-squared tests: goodness-of-fit and test of independence (contingency table).
 //
-// STATS-LIBRARY POLICY (see the project note): the distribution tail goes through @stdlib
-// (@stdlib/stats-base-dists-chisquare-cdf, the same χ² CDF the periodogram uses). The statistic
-// itself — Σ(O−E)²/E and the contingency-table expected counts — is elementary and kept bespoke,
+// The distribution tail is chisqSf (utils/chisqSf.js, the same upper tail the periodogram
+// uses), computed directly rather than as 1 - cdf so a tiny p is not rounded to 0. The statistic
+// itself (Σ(O−E)²/E and the contingency-table expected counts) is elementary and kept bespoke,
 // pinned to scipy (chisquare / chi2_contingency) in the parity harness.
 //
 // Returns NaN rather than throwing on degenerate input (empty table, zero total).
-import cdf_chisq from '@stdlib/stats-base-dists-chisquare-cdf';
+import { chisqSf } from './chisqSf.js';
 
 /** Upper-tail P(X > x) for X ~ χ²(df). */
 export function pUpperFromChiSq(x, df) {
 	if (!Number.isFinite(x) || !Number.isFinite(df) || df <= 0 || x < 0) return NaN;
-	return 1 - cdf_chisq(x, df);
+	return chisqSf(x, df);
 }
 
 /**
@@ -49,11 +49,12 @@ export function chiSquareGoodnessOfFit(observed, expected = null, ddof = 0) {
  * @returns {{rowLabels:string[], colLabels:string[], table:number[][]}}
  */
 /**
- * True for a cell that carries no category: null/undefined, blank, or NaN in
- * either numeric or stringified form.
+ * True for a cell that carries no category: null/undefined, blank or whitespace-only
+ * (as isInvalidValue treats a blank cell), or NaN in either numeric or stringified form.
  */
 export function isMissingCategory(v) {
-	if (v == null || v === '') return true;
+	if (v == null) return true;
+	if (typeof v === 'string' && v.trim() === '') return true;
 	if (typeof v === 'number' && Number.isNaN(v)) return true;
 	return String(v) === 'NaN';
 }

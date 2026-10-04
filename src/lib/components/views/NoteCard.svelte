@@ -119,6 +119,7 @@
 	</div>
 	<textarea
 		class="note-body"
+		aria-label="Note"
 		value={note.text ?? ''}
 		placeholder="Write a note"
 		oninput={(e) => (note.text = e.currentTarget.value)}

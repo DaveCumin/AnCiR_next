@@ -192,7 +192,7 @@ export function hideTooltip(target) {
 // justified it with "plot components are long-lived"; core/computeMemo.js
 // documents the opposite in its own header, and exists because of it. A view
 // switch destroys one whole component tree and rebuilds the other, and
-// NodeComputeHost deliberately mounts every analysis node.
+// NodeComputeHost mounts a hidden instance of every node that is not on screen.
 
 /** @type {Set<{onDown: () => void, onUp: () => void}>} */
 const altSubscribers = new Set();

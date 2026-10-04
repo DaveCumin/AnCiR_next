@@ -2,11 +2,22 @@
 	// Fold → bin → statistic → sweep, showing BOTH the Enright amplitude Aₚ and
 	// the Sokolove–Bushell χ² Qₚ built from the same period-folded bin means.
 	// Ported from the standalone handbook animation; uses the shared canvas
-	// helpers so it themes with the rest of the handbook (incl. dark mode).
+	// helpers so it themes with the rest of the handbook.
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, drawAxes, drawHGrid, seededRNG, initPalette } from '$lib/animUtils.js';
+	import {
+		C,
+		setupCanvas,
+		drawAxes,
+		drawHGrid,
+		seededRNG,
+		initPalette,
+		canvasSize,
+		observeResize
+	} from '$lib/animUtils.js';
 
-	let { height = null } = $props();
+	// A fixed height like every other animation: the viz rows are flex children
+	// of .anim-embed (flex: 1 1 0), so with no height they collapsed to nothing.
+	let { height = '900px' } = $props();
 
 	/* ── chi-squared machinery ──────────────────────────────────────────────── */
 	function lnGamma(x) {
@@ -167,8 +178,7 @@
 	function drawRaw(t) {
 		setupCanvas(cRaw);
 		const ctx = cRaw.getContext('2d');
-		const W = cRaw.offsetWidth,
-			H = cRaw.offsetHeight;
+		const { W, H } = canvasSize(cRaw);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const L = 40,
@@ -238,8 +248,7 @@
 	function drawFold(t) {
 		setupCanvas(cFold);
 		const ctx = cFold.getContext('2d');
-		const W = cFold.offsetWidth,
-			H = cFold.offsetHeight;
+		const { W, H } = canvasSize(cFold);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const L = 42,
@@ -346,8 +355,7 @@
 	function drawStat(t) {
 		setupCanvas(cStat);
 		const ctx = cStat.getContext('2d');
-		const W = cStat.offsetWidth,
-			H = cStat.offsetHeight;
+		const { W, H } = canvasSize(cStat);
 		if (!W || !H) return;
 		ctx.clearRect(0, 0, W, H);
 		const L = 46,
@@ -624,9 +632,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cRaw, cFold, cStat], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});
@@ -643,21 +651,21 @@
 
 	<div class="fp-step-text" bind:this={stepText}>Press <strong>Play</strong> to begin.</div>
 
-	<div class="viz-row one-col">
+	<div class="viz-row one-col fp-raw-row">
 		<div class="chart-panel">
 			<h3>Raw recording — 10 days at 1 h resolution</h3>
-			<canvas class="fp-raw" bind:this={cRaw}></canvas>
+			<canvas bind:this={cRaw}></canvas>
 		</div>
 	</div>
 
 	<div class="viz-row two-col">
 		<div class="chart-panel">
 			<h3 bind:this={foldTitle}>Folded onto one cycle · bin means emerge</h3>
-			<canvas class="fp-tall" bind:this={cFold}></canvas>
+			<canvas bind:this={cFold}></canvas>
 		</div>
 		<div class="chart-panel">
 			<h3 bind:this={statTitle}>Spread of the bin means → the statistic</h3>
-			<canvas class="fp-tall" bind:this={cStat}></canvas>
+			<canvas bind:this={cStat}></canvas>
 		</div>
 	</div>
 
@@ -689,16 +697,10 @@
 </div>
 
 <style>
-	/* explicit canvas heights, overriding the global canvas max-height clamp */
-	.fp-raw {
-		height: 132px;
-		max-height: none;
-		min-height: 110px;
-	}
-	.fp-tall {
-		height: 236px;
-		max-height: none;
-		min-height: 180px;
+	/* The raw row is shorter than the folded/statistic row (about 132 px vs
+	   236 px of canvas at the default height). */
+	.fp-raw-row {
+		flex-grow: 0.68;
 	}
 
 	.fp-stage-nav {

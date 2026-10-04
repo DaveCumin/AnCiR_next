@@ -1,6 +1,13 @@
 <script>
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, seededRNG, initPalette } from '$lib/animUtils.js';
+	import {
+		C,
+		setupCanvas,
+		seededRNG,
+		initPalette,
+		canvasSize,
+		observeResize
+	} from '$lib/animUtils.js';
 
 	// stage="test"        Pearson chi-squared: observed vs expected counts
 	// stage="periodogram" the same machine applied to a folded rhythm, then a
@@ -172,8 +179,7 @@
 	// ── LEFT (stage 1): observed vs expected bars ────────────────────────────
 	function drawBars(t) {
 		const ctx = cA.getContext('2d');
-		const W = cA.offsetWidth,
-			Hh = cA.offsetHeight;
+		const { W, H: Hh } = canvasSize(cA);
 		if (!W || !Hh) return;
 		ctx.clearRect(0, 0, W, Hh);
 		const L = 46,
@@ -242,8 +248,7 @@
 	// ── LEFT (stages 2/3): the fold, and the bin means ──────────────────────
 	function drawFold(t) {
 		const ctx = cA.getContext('2d');
-		const W = cA.offsetWidth,
-			Hh = cA.offsetHeight;
+		const { W, H: Hh } = canvasSize(cA);
 		if (!W || !Hh) return;
 		ctx.clearRect(0, 0, W, Hh);
 		const L = 46,
@@ -334,8 +339,7 @@
 	// ── RIGHT: the chi-squared curve, or the periodogram being traced ───────
 	function drawRight(t) {
 		const ctx = cB.getContext('2d');
-		const W = cB.offsetWidth,
-			Hh = cB.offsetHeight;
+		const { W, H: Hh } = canvasSize(cB);
 		if (!W || !Hh) return;
 		ctx.clearRect(0, 0, W, Hh);
 		const L = 46,
@@ -512,9 +516,9 @@
 	onMount(() => {
 		initPalette();
 		resize();
-		window.addEventListener('resize', resize);
+		const stopResize = observeResize([cA, cB], resize);
 		return () => {
-			window.removeEventListener('resize', resize);
+			stopResize();
 			cancelAnimationFrame(raf);
 		};
 	});

@@ -192,11 +192,14 @@
 				<em>Onsets φ (h)</em>, <em>Onsets R²</em>, <em>Onsets RMSE (h)</em> and <em>Onsets n</em>),
 				each a column with one value per series. Wire τ into <strong>Describe Data</strong> for the
 				mean period across animals, or φ into a <strong>Rayleigh test</strong>. τ is the harmonic
-				check's pick (the fitted slope, or half or twice it if the periodogram says so). Renaming
-				the rule relabels the ports and keeps the wires; deleting it removes them, and undo brings
-				them back. Marker blocks no longer publish Stored Values: in an older session, a formula
-				that used one keeps its saved number, and <strong>Make rule</strong> on that block makes it live
-				again.
+				check's pick: the fitted slope, unless the data clearly support half or twice it (half only
+				when the two halves of each cycle look alike, so two unequal daily bouts or one short bout
+				keep the slope; twice only when alternate cycles differ). R² is the share of the spread in
+				onset time of day that the line's drift explains, so an entrained animal with no drift
+				scores near 0 however tight its onsets are; read RMSE for that. Renaming the rule relabels
+				the ports and keeps the wires; deleting it removes them, and undo brings them back. Marker
+				blocks no longer publish Stored Values: in an older session, a formula that used one keeps
+				its saved number, and <strong>Make rule</strong> on that block makes it live again.
 			</li>
 			<li>
 				Resize the plot by dragging its corners, and export it as <strong>PNG or SVG</strong>

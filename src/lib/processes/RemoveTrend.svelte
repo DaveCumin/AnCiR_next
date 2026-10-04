@@ -12,6 +12,7 @@
 	// silently emit an all-NaN column under the user's column name.
 	import { checkTrendFitDomain, shouldRefuse, issueMessages } from '$lib/utils/fitDomain.js';
 	import { dataEnteringProcess } from '$lib/core/processInput.js';
+	import { validPairs } from '$lib/utils/validPairs.js';
 
 	const removetrend_defaults = new Map([
 		['xColId', { val: -1 }],
@@ -52,15 +53,11 @@
 				: xCol.getData()
 			: x.map((_, i) => i);
 
-		const validIndices = t
-			.map((v, i) => (!isNaN(v) && x[i] != null && !isNaN(x[i]) ? i : -1))
-			.filter((i) => i !== -1);
-
-		return {
-			validIndices,
-			tt: validIndices.map((i) => t[i]),
-			yy: validIndices.map((i) => x[i])
-		};
+		// The house rule on BOTH sides (validPairs): `!isNaN(v)` on the X side kept a null X
+		// (isNaN(null) is false), which was then fitted at x = 0 (STAT-4). Numbers out, so a
+		// numeric-string cell is fitted as its value.
+		const { indices, tt, yy } = validPairs(t, x);
+		return { validIndices: indices, tt: tt.map(Number), yy: yy.map(Number) };
 	}
 
 	/**
@@ -152,27 +149,13 @@
 	// Reactively compute trend fit stats for display
 	let trendStats = $derived.by(() => {
 		if (!enteringData || domainIssues.length > 0) return null;
-		const data = enteringData;
-
-		const statsXCol = p.args.xColId != -1 ? getColumnById(p.args.xColId) : null;
-		const t = statsXCol
-			? statsXCol.type === 'time'
-				? statsXCol.hoursSinceStart
-				: statsXCol.getData()
-			: data.map((_, i) => i);
-
-		const validIndices = t
-			.map((v, i) => (!isNaN(v) && data[i] != null && !isNaN(data[i]) ? i : -1))
-			.filter((i) => i !== -1);
-		if (validIndices.length < 2) return null;
+		// The same rows the detrend itself fits (trendPairs): this display carried its own copy of
+		// the filter, with the same missing-X-as-0 defect (STAT-4).
+		const { tt, yy } = trendPairs(enteringData, p.args);
+		if (tt.length < 2) return null;
 
 		try {
-			return fitTrendSync(
-				validIndices.map((i) => t[i]),
-				validIndices.map((i) => data[i]),
-				p.args.model,
-				p.args.polyDegree
-			);
+			return fitTrendSync(tt, yy, p.args.model, p.args.polyDegree);
 		} catch {
 			return null;
 		}

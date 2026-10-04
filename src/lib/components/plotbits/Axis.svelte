@@ -62,6 +62,7 @@
 <script>
 	// @ts-nocheck
 	import { resolveStyle } from '$lib/plots/figureStyle.js';
+	import { axisChrome } from '$lib/components/plotbits/axisLayout.js';
 	import { select, selectAll } from 'd3-selection';
 	import { axisBottom, axisLeft, axisTop, axisRight } from 'd3-axis';
 
@@ -91,15 +92,40 @@
 
 	let axisGroup;
 
-	let ticklength = 6;
-	let tickspace = 4; // space between the ticks and the numbers
-	let labelBuffer = 16; // Additional spacing between largest tick label and axis label
-
 	// resolveStyle tolerates null and returns the defaults, so an axis with no style
 	// still renders rather than coming out unstyled.
 	const resolved = $derived(resolveStyle(figureStyle));
 	const tickfontsize = $derived(resolved.sizes.tick);
 	const labelfontsize = $derived(resolved.sizes.axisLabel);
+
+	// Tick length, tick-to-label gap and label-to-title buffer. In a workflow node the type
+	// shrinks by `fontScale` and so does the padding around it (viewBox.scalePadding), so these
+	// shrink with it: at full size they put the y title past the node's left edge. At scale 1
+	// they are exactly 6, 4 and 16, so the workspace and exports are unchanged.
+	const chrome = $derived(axisChrome(resolved.fontScale));
+	const ticklength = $derived(chrome.tickLength);
+	const tickspace = $derived(chrome.tickPadding); // space between the ticks and the numbers
+	const labelBuffer = $derived(chrome.titleBuffer); // between largest tick label and axis label
+
+	// How many screen pixels one SVG unit of this axis covers: the CSS zoom of whatever the plot
+	// sits inside (the workflow canvas, the workspace). getBoundingClientRect measures in screen
+	// pixels, so the tick labels it reports are magnified by that zoom, and the title's distance
+	// from the axis used to depend on the zoom the plot happened to mount at. Dividing it back
+	// out keeps the title in the figure's own units.
+	//
+	// Not getBBox, deliberately: it returns single-precision numbers, while the client rect is
+	// what the workspace and exports have always used. A scale within SCREEN_SCALE_SNAP of 1 is
+	// taken as exactly 1. Real zooms are whole steps of 10% or more; below that the CTM is layout
+	// still settling as the plot mounts (Chrome reported 0.9999957 for a workspace plot on its
+	// first frame), and dividing by it would shift the title by 1e-4 px and change the bytes of
+	// every workspace axis and export for nothing.
+	const SCREEN_SCALE_SNAP = 1e-3;
+	function screenScale(el) {
+		const m = el?.getScreenCTM?.();
+		const k = m ? Math.hypot(m.a, m.b) : 1;
+		if (!Number.isFinite(k) || k <= 0 || Math.abs(k - 1) < SCREEN_SCALE_SNAP) return 1;
+		return k;
+	}
 
 	// Inner ticks only, applied in one place for all four positions.
 	//
@@ -245,14 +271,15 @@
 
 		// Calculate maximum tick label size
 		let maxTickSize = 0;
+		const zoom = screenScale(axisGroup);
 		select(axisGroup)
 			.selectAll('.tick text')
 			.each(function () {
 				const tickRect = this.getBoundingClientRect();
 				if (position === 'left' || position === 'right') {
-					maxTickSize = Math.max(maxTickSize, tickRect.width);
+					maxTickSize = Math.max(maxTickSize, tickRect.width / zoom);
 				} else {
-					maxTickSize = Math.max(maxTickSize, tickRect.height);
+					maxTickSize = Math.max(maxTickSize, tickRect.height / zoom);
 				}
 			});
 
@@ -302,10 +329,10 @@
 			</ControlInput>
 		</div>
 		<div class="control-input-vertical">
-			<div class="control-input-checkbox">
+			<label class="control-input-checkbox">
 				<input type="checkbox" bind:checked={axisData.gridlines} />
-				<p>Grid</p>
-			</div>
+				<span class="ci-label">Grid</span>
+			</label>
 		</div>
 	</div>
 {/snippet}
