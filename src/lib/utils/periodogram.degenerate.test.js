@@ -119,12 +119,11 @@ describe('flat data has no peak (ROB-13)', () => {
 describe('binned methods bin from the first sample, not from t = 0 (ROB-13)', () => {
 	const base = (method) => runPeriodogramCalculation(params(method, tAll, yIdx));
 	for (const method of ['Chi-squared', 'Enright']) {
-		// Whole-bin offsets. (An offset off the bin grid, e.g. -0.25 h, moves a trailing empty
-		// bin into or out of the record; Chi-squared ignores empty bins, Enright still counts
-		// them as zero-deviation pairs, a separate pre-existing issue.)
-		for (const off of method === 'Chi-squared'
-			? [-120, -239.5, 1000, -0.25]
-			: [-120, -239.5, 1000]) {
+		// Whole-bin offsets, and one off the bin grid (-0.25 h), which moves a trailing empty
+		// bin into or out of the record. Both methods treat an empty bin as missing, so
+		// neither statistic moves. (Enright used to count empty bins as zero-deviation pairs
+		// and failed the -0.25 h case, SPEC-7.)
+		for (const off of [-120, -239.5, 1000, -0.25]) {
 			it(`${method}: a time origin of ${off} h gives the same spectrum as 0 h`, () => {
 				const b = base(method);
 				const r = runPeriodogramCalculation(

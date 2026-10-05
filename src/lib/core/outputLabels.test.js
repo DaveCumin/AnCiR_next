@@ -344,3 +344,63 @@ describe('phase outputs say which reference they use (review FIT-9, FIT-13)', ()
 		);
 	});
 });
+
+describe('free-period fits label periods and phases in the units of their x (v80.1)', () => {
+	// x column 5 is a number column (an x in days, say), 6 a time column.
+	const types = { 5: 'number', 6: 'time' };
+	const fitCtx = (xIN, args = {}) => ({
+		args: { xIN, ...args },
+		ownerId: 9,
+		colName: () => null,
+		colType: (id) => types[id] ?? null
+	});
+
+	it('a number x reads "x units"; a time x, or an unknown one, keeps hours', () => {
+		for (const [key, name] of [
+			['period', 'Period'],
+			['acrophase', 'Acrophase'],
+			['bathyphase', 'Bathyphase'],
+			['acrophase_h1', 'H1 acrophase'],
+			['bathyphase_h1', 'H1 bathyphase'],
+			['acrophase_ciLow', 'Acrophase CI low'],
+			['phase_angle', 'Phase angle']
+		]) {
+			expect(outputLabel('Cosinor', key, fitCtx(5)), key).toBe(`${name} (x units)`);
+			expect(outputLabel('Cosinor', key, fitCtx(6)), key).toBe(`${name} (h)`);
+			expect(outputLabel('Cosinor', key, fitCtx(-1)), key).toBe(`${name} (h)`);
+			expect(outputLabel('Cosinor', key, ctx()), key).toBe(`${name} (h)`);
+		}
+		for (const [key, name] of [
+			['period', 'Period'],
+			['acrophase', 'Acrophase'],
+			['onset', 'Onset'],
+			['offset', 'Offset']
+		]) {
+			expect(outputLabel('FitFunction', key, fitCtx(5)), key).toBe(`${name} (x units)`);
+			expect(outputLabel('FitFunction', key, fitCtx(6)), key).toBe(`${name} (h)`);
+		}
+		expect(outputLabel('FitFunction', 'k1', fitCtx(5))).toBe('Rise rate k1 (1/x unit)');
+		expect(outputLabel('FitFunction', 'k2', fitCtx(6))).toBe('Fall rate k2 (1/h)');
+	});
+
+	it('clock time (a time x only) stays hours of the clock', () => {
+		expect(outputLabel('Cosinor', 'acrophase', fitCtx(6, { phaseReference: 'clock' }))).toBe(
+			'Acrophase (clock time, h)'
+		);
+	});
+
+	it('the session namer passes the x column type through', () => {
+		const state = {
+			data: [
+				{ id: 5, name: 'Time (days)', type: 'number' },
+				{ id: 20, name: 'period_9', type: 'number' }
+			],
+			tableProcesses: [{ id: 9, name: 'Cosinor', args: { xIN: 5, out: { period: 20 } } }],
+			plots: []
+		};
+		const namer = createColumnNamer(state);
+		expect(namer(state.data[1])).toBe('Period (x units)');
+		state.data[0].type = 'time';
+		expect(createColumnNamer(state)(state.data[1])).toBe('Period (h)');
+	});
+});

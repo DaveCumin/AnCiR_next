@@ -541,27 +541,33 @@ export function fitDoubleLogistic(t, x, options = {}) {
 
 /**
  * The cosinor's plain-language warnings (period on a bound of the range, optimiser out of
- * iterations) for double-logistic fits. `entries` are `{ label, result }` with `result` a
- * fitDoubleLogistic return value. A fixed or non-periodic fit never warns about the range.
+ * iterations) for double-logistic fits. `entries` are `{ label, result, t? }` with
+ * `result` a fitDoubleLogistic return value and t the x it fitted (with R² it lets the
+ * warning tell a rhythm at the edge of the range from no rhythm; see boundFitIsStrong). A
+ * fixed or non-periodic fit never warns about the range. `opts.unit` is the period's unit.
  */
 export function doubleLogisticFitWarnings(
 	entries,
-	modelLabel = 'The free-period double-logistic fit'
+	modelLabel = 'The free-period double-logistic fit',
+	opts = {}
 ) {
 	return freePeriodFitWarnings(
 		(entries ?? []).map((e) => {
 			const T = e?.result?.parameters?.T;
 			return {
 				label: e?.label,
+				t: e?.t,
 				result: e?.result?.diagnostics
 					? {
 							diagnostics: e.result.diagnostics,
+							rSquared: e.result.rSquared,
 							parameters: { cosines: [{ frequency: T ? (2 * Math.PI) / T : NaN }] }
 						}
 					: null
 			};
 		}),
-		modelLabel
+		modelLabel,
+		opts
 	);
 }
 

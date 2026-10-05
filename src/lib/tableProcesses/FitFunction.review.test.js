@@ -69,7 +69,7 @@ describe('Fit waveform model: period range for every free-period model (FIT-1)',
 		expect(valid).toBe(true);
 		expect(res.y_results[2].fitResult.period).toBeCloseTo(48, 6);
 		expect(res.warnings.join(' ')).toMatch(
-			/rectangular-wave fit for "y" stopped at the upper limit of the period range: 48 h/
+			/rectangular-wave fit for "y" stopped at the upper limit of the period range: 48 x units/
 		);
 	});
 
@@ -110,7 +110,7 @@ describe('Fit waveform model: period range for every free-period model (FIT-1)',
 				minPeriod: 30,
 				maxPeriod: 20
 			});
-			expect(res.warnings.join(' ')).toMatch(/Period range 30 to 20 h is empty/);
+			expect(res.warnings.join(' ')).toMatch(/Period range 30 to 20 x units is empty/);
 		}
 		const [rect] = await fitFunction({
 			...base,

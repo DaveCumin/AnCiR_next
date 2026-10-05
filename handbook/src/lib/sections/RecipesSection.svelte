@@ -61,7 +61,7 @@
 			'<strong>Rhythmicity Analysis</strong> (Analysis) to output the peak period as a wireable number for a table or downstream comparison.'
 		]}
 		readoff="The example free-runs at τ ≈ 24.8 h; the periodogram recovers a peak at <strong>24.85 h</strong>. The actogram band visibly leans to the right against the 24 h grid."
-		pitfall="Avoid the chi-square (Sokolove-Bushell) periodogram as your <em>first</em> choice for period estimation &mdash; it systematically underestimates period. Lomb-Scargle is the safer default."
+		pitfall="Do not read τ from the chi-square (Sokolove-Bushell) periodogram by default. Its classic form can underestimate the period (Tackenberg and Hughey 2021<sup class='cite'><a href='#ref-32'>[32]</a></sup>), and AnCiR's version, which keeps every sample, drifts toward long periods when the rhythm is weak. Use chi-squared to test <em>whether</em> there is a rhythm and Lomb-Scargle to measure it (Chapter 6)."
 		session="sessions/demos/demo-workflow-free-running.json"
 		sessionLabel="Open the free-running period example"
 	/>

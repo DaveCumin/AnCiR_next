@@ -148,8 +148,9 @@ function baseStatLabel(stat, args = {}) {
 //   statPrefix  'stat_': keys `stat_<stat>` labelled with statLabel(stat).
 //   special   [{ re, label(m, ctx), auto?(name, m, ctx) }] anything else with a key shape.
 //
-// ctx: { args, ownerId, colName(id) } where colName resolves an input column id to the name a
-// person reads (itself display-resolved), or null.
+// ctx: { args, ownerId, colName(id), colType(id) } where colName resolves an input column id to
+// the name a person reads (itself display-resolved), or null, and colType to the column's type
+// ('time', 'number', ...), or null.
 // ---------------------------------------------------------------------------------------------
 
 const fit = (family) => () => `${family}: x`;
@@ -164,6 +165,20 @@ const fitMultiHarmonic = (ctx) =>
 	Number(ctx?.args?.nHarmonics ?? 1) > 1;
 /** "<name> (h)", or "(clock time, h)" when the node reports clock time of day. */
 const phaseLabel = (name, ctx) => `${name} (${isClockRef(ctx?.args) ? 'clock time, h' : 'h'})`;
+
+// The free-period fits (Cosinor, Fit waveform model) report periods and phases in the units
+// of their x: hours for a time column, the column's own numbers otherwise. A number column
+// carries no unit, so it reads "x units" (same rule as utils/periodUnits.js, which this
+// import-free module cannot import). Unknown x (no colType in ctx, or nothing wired): hours.
+const fitUnit = (ctx) => {
+	const id = Number(ctx?.args?.xIN);
+	if (!(id >= 0) || typeof ctx?.colType !== 'function') return 'h';
+	const type = ctx.colType(id);
+	return type && type !== 'time' ? 'x units' : 'h';
+};
+/** phaseLabel in the fit's x units; clock time (time x only) stays hours. */
+const fitPhaseLabel = (name, ctx) =>
+	isClockRef(ctx?.args) ? phaseLabel(name, ctx) : `${name} (${fitUnit(ctx)})`;
 
 const RAYLEIGH_UNIT = { radians: 'rad', degrees: '°', hours: 'h' };
 function rayleighAcrophase(ctx) {
@@ -240,21 +255,24 @@ export const NODE_OUTPUT_LABELS = {
 	Cosinor: {
 		keys: {
 			cosinorx: fit('Cosinor fit'),
+			period: (ctx) => `Period (${fitUnit(ctx)})`,
 			amplitude: (ctx) => (multiHarmonic(ctx) ? 'Overall amplitude' : 'Amplitude'),
 			acrophase: (ctx) =>
-				phaseLabel(multiHarmonic(ctx) ? 'Orthophase, overall peak' : 'Acrophase', ctx),
+				fitPhaseLabel(multiHarmonic(ctx) ? 'Orthophase, overall peak' : 'Acrophase', ctx),
 			bathyphase: (ctx) =>
-				phaseLabel(multiHarmonic(ctx) ? 'Bathyphase, overall trough' : 'Bathyphase', ctx),
+				fitPhaseLabel(multiHarmonic(ctx) ? 'Bathyphase, overall trough' : 'Bathyphase', ctx),
 			amplitude_h1: 'H1 amplitude',
-			acrophase_h1: (ctx) => phaseLabel('H1 acrophase', ctx),
-			bathyphase_h1: (ctx) => phaseLabel('H1 bathyphase', ctx),
+			acrophase_h1: (ctx) => fitPhaseLabel('H1 acrophase', ctx),
+			bathyphase_h1: (ctx) => fitPhaseLabel('H1 bathyphase', ctx),
 			// The confidence intervals are harmonic 1's.
 			amplitude_ciLow: (ctx) => `${multiHarmonic(ctx) ? 'H1 amplitude' : 'Amplitude'} CI low`,
 			amplitude_ciHigh: (ctx) => `${multiHarmonic(ctx) ? 'H1 amplitude' : 'Amplitude'} CI high`,
 			acrophase_ciLow: (ctx) =>
-				phaseLabel(`${multiHarmonic(ctx) ? 'H1 acrophase' : 'Acrophase'} CI low`, ctx),
+				fitPhaseLabel(`${multiHarmonic(ctx) ? 'H1 acrophase' : 'Acrophase'} CI low`, ctx),
 			acrophase_ciHigh: (ctx) =>
-				phaseLabel(`${multiHarmonic(ctx) ? 'H1 acrophase' : 'Acrophase'} CI high`, ctx)
+				fitPhaseLabel(`${multiHarmonic(ctx) ? 'H1 acrophase' : 'Acrophase'} CI high`, ctx),
+			// Acrophase minus the reference time, both in the fit's x units.
+			phase_angle: (ctx) => `Phase angle (${fitUnit(ctx)})`
 		},
 		perInput: [
 			{ prefix: 'cosinory_', label: 'Cosinor fit', autoPrefixes: ['cosinor_'] },
@@ -295,13 +313,17 @@ export const NODE_OUTPUT_LABELS = {
 	FitFunction: {
 		keys: {
 			fitx: fit('Fit'),
+			period: (ctx) => `Period (${fitUnit(ctx)})`,
 			amplitude: (ctx) => (fitMultiHarmonic(ctx) ? 'Overall amplitude' : 'Amplitude'),
 			acrophase: (ctx) =>
-				phaseLabel(fitMultiHarmonic(ctx) ? 'Orthophase, overall peak' : 'Acrophase', ctx),
+				fitPhaseLabel(fitMultiHarmonic(ctx) ? 'Orthophase, overall peak' : 'Acrophase', ctx),
 			amplitude_h1: 'H1 amplitude',
-			acrophase_h1: (ctx) => phaseLabel('H1 acrophase', ctx),
-			onset: (ctx) => phaseLabel('Onset', ctx),
-			offset: (ctx) => phaseLabel('Offset', ctx)
+			acrophase_h1: (ctx) => fitPhaseLabel('H1 acrophase', ctx),
+			onset: (ctx) => fitPhaseLabel('Onset', ctx),
+			offset: (ctx) => fitPhaseLabel('Offset', ctx),
+			// Double-logistic rates, per unit of x.
+			k1: (ctx) => `Rise rate k1 (1/${fitUnit(ctx) === 'h' ? 'h' : 'x unit'})`,
+			k2: (ctx) => `Fall rate k2 (1/${fitUnit(ctx) === 'h' ? 'h' : 'x unit'})`
 		},
 		perInput: [
 			{ prefix: 'fity_', label: 'Fit', autoPrefixes: ['fit_'] },
@@ -548,7 +570,7 @@ function matchOutput(nodeType, key, ctx) {
  * pair is not covered.
  * @param {string} nodeType  the TableProcess name (registry key), e.g. 'Cosinor'
  * @param {string} key       the `args.out` key, e.g. 'cosinory_66'
- * @param {{args?:object, ownerId?:number|string, colName?:(id:number)=>string|null}} [ctx]
+ * @param {{args?:object, ownerId?:number|string, colName?:(id:number)=>string|null, colType?:(id:number)=>string|null}} [ctx]
  */
 export function outputLabel(nodeType, key, ctx = {}) {
 	return matchOutput(nodeType, key, ctx)?.label ?? null;
@@ -647,7 +669,8 @@ export function createColumnNamer(state) {
 		colName: (id) => {
 			const c = byId(id);
 			return c ? resolve(c, depth + 1) : null;
-		}
+		},
+		colType: (id) => byId(id)?.type ?? null
 	});
 
 	function resolve(col, depth = 0) {

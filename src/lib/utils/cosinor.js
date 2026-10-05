@@ -160,29 +160,101 @@ export function evaluateCosinorAtPoints(parameters, xPoints) {
 	});
 }
 
+// ─── A fit that ends on a bound: rhythm at the edge, or no rhythm? ──────────
+//
+// A period on a bound of the range has two very different causes. Either the data have no
+// rhythm in the range and something else (a trend, red noise, a cycle far outside it) drags
+// the period to the edge, or the data have a clear rhythm whose period sits at, or just past,
+// that edge (the report behind this: a 1-day cycle on an x in days, R² 0.997, against a
+// default lower limit of 1). Telling the second case "there is no clear rhythm" is wrong, so
+// a fit on a bound counts as a rhythm AT THE EDGE only when:
+//
+//   1. R² >= EDGE_FIT_MIN_R2: the fitted cosine explains a large share of the variance;
+//   2. the record holds >= EDGE_FIT_MIN_CYCLES cycles of the fitted period. A cosine
+//      stretched across most of the record fits a trend with a HIGH R² (simulated linear and
+//      saturating trends: median R² 0.95 to 0.97 on the upper bound), and one spanning about
+//      two cycles fits a random walk's slow wander (R² 0.3 to 0.5);
+//   3. on the lower bound, that bound is above the Nyquist period: at Nyquist there is no
+//      shorter period to widen to, and a "rhythm" there is aliased.
+//
+// Simulation (a one-off script, summarised in the v80.1 notes), all fits on a bound: 445 real
+// rhythms whose period was at or up to 10% past a limit (3 to 16 cycles, noise SD 0.05 to 1.5
+// times the amplitude), against 1,006 non-rhythms (white noise, linear trends, random walks,
+// with ranges ending well inside and outside the record). This rule called 281/445 rhythms
+// "at the edge" (every miss had R² < 0.4: noise about as large as the rhythm) and 0/1,006
+// non-rhythms. With R² >= 0.3 and 2 cycles, 32 random walks passed; R² alone passed most
+// trends. A third test was tried and dropped: requiring the least-squares periodogram to peak
+// inside a window reaching past the bound (power turning over at the limit, rather than still
+// rising) rejected no case that the two tests above had not already rejected, here or in a
+// targeted search of trend, two-rhythm, chirp and red-noise records.
+export const EDGE_FIT_MIN_R2 = 0.4;
+export const EDGE_FIT_MIN_CYCLES = 2.5;
+
+/**
+ * Whether a fit that ended on a bound of its period range describes a rhythm whose period
+ * lies at or just beyond that bound (true), rather than no rhythm in the range (false).
+ * Pure. False whenever x is missing.
+ *
+ * @param {object} o
+ * @param {number[]} o.t           the x the fit used (hours for a time column)
+ * @param {number} o.rSquared      the fit's R²
+ * @param {number} o.period        the fitted period (on the bound)
+ * @param {'min'|'max'} o.side     which bound
+ */
+export function boundFitIsStrong({ t, rSquared, period, side }) {
+	if (!(Number(rSquared) >= EDGE_FIT_MIN_R2)) return false;
+	if (!(period > 0) || (side !== 'min' && side !== 'max')) return false;
+	const full = resolvePeriodRange(t, null, null);
+	if (!full) return false;
+	if (full.span / period < EDGE_FIT_MIN_CYCLES) return false;
+	if (side === 'min' && period <= full.nyquist * (1 + 1e-9)) return false;
+	return true;
+}
+
 /**
  * Plain-language warnings for free-period fits whose diagnostics show the
- * result is not a rhythm estimate: the period finished on a bound of the
+ * period estimate is not a free estimate: the period finished on a bound of the
  * allowed range, or the optimiser ran out of iterations. Pure; callers pass
- * `{ label, result }` entries (result = a fitCosineCurves return value).
+ * `{ label, result, t? }` entries (result = a fitCosineCurves return value,
+ * t = the x the fit used, which with R² tells a rhythm at the edge of the range
+ * from no rhythm in it; see boundFitIsStrong).
+ *
+ * @param {Array<{label?: string, result: object, t?: number[]}>} entries
+ * @param {string} [modelLabel]
+ * @param {{unit?: string}} [opts]  the period's unit: 'h' (time x) or 'x units' (number x)
  */
-export function freePeriodFitWarnings(entries, modelLabel = 'The free-period cosinor fit') {
+export function freePeriodFitWarnings(
+	entries,
+	modelLabel = 'The free-period cosinor fit',
+	{ unit = 'h' } = {}
+) {
 	const out = [];
-	const fmt = (v) => (Math.abs(v) >= 100 ? v.toFixed(0) : String(Number(v.toFixed(2))));
+	const fmt = (v) => (Math.abs(v) >= 100 ? v.toFixed(0) : String(Number(v.toPrecision(3))));
 	for (const entry of entries ?? []) {
 		const d = entry?.result?.diagnostics;
 		if (!d) continue;
 		const label = entry.label ? `${modelLabel} for ${entry.label}` : modelLabel;
 		const [lo, hi] = d.periodRange ?? [NaN, NaN];
 		const cosines = entry.result.parameters?.cosines ?? [];
+		const r2 = entry.result.rSquared;
 		(d.atBound ?? []).forEach((side, i) => {
 			if (!side) return;
 			const c = cosines[i];
 			const period = c?.frequency ? (2 * Math.PI) / c.frequency : NaN;
 			const which = cosines.length > 1 ? ` (curve ${i + 1})` : '';
 			const limit = side === 'max' ? 'upper' : 'lower';
+			const where = `${fmt(period)} ${unit}, range ${fmt(lo)} to ${fmt(hi)} ${unit}`;
+			const strong = boundFitIsStrong({ t: entry.t, rSquared: r2, period, side });
+			if (strong) {
+				const cycles = (resolvePeriodRange(entry.t, null, null)?.span ?? NaN) / period;
+				const widen = side === 'max' ? 'Raise the maximum period' : 'Lower the minimum period';
+				out.push(
+					`${label}${which} found its best period at the ${limit} limit of the period range: ${where}. The fit is good (R² ${Number(r2).toFixed(3)} over ${fmt(cycles)} cycles): the data have a rhythm, but the limit may be holding its period, and with it the acrophase. ${widen} to confirm the period.`
+				);
+				return;
+			}
 			out.push(
-				`${label}${which} stopped at the ${limit} limit of the period range: ${fmt(period)} h, range ${fmt(lo)} to ${fmt(hi)} h. The data have no clear rhythm inside that range (a trend, or a longer or shorter cycle, is pulling the fit), so this period, amplitude and acrophase do not describe a rhythm. Widen the period range if a longer or shorter rhythm is plausible, remove the trend, or use a fixed period.`
+				`${label}${which} stopped at the ${limit} limit of the period range: ${where}. The data have no clear rhythm inside that range (a trend, or a longer or shorter cycle, is pulling the fit), so this period, amplitude and acrophase do not describe a rhythm. Widen the period range if a longer or shorter rhythm is plausible, remove the trend, or use a fixed period.`
 			);
 		});
 		if (d.converged === false) {

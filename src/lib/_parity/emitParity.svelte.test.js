@@ -59,6 +59,7 @@ import { cwt } from '$lib/utils/cwt.js';
 import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
 import { isInvalidValue } from '$lib/utils/stats.js';
 import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
+import { migrateLegacyEnrightBins } from '$lib/core/enrightBinMigration.js';
 import { createSeededRNG } from '$lib/utils/permutationTest.js';
 import { studentizedRangeSf, studentizedRangeQuantile } from '$lib/utils/studentizedRange.js';
 import { oneWayAnova, tukeyKramerPostHoc } from '$lib/tableProcesses/GroupComparison.svelte';
@@ -235,9 +236,8 @@ const PURE_UTIL_FNS = {
 		return { period: r.x, power: r.y };
 	},
 	// Enright periodogram through the real binData pipeline: the ports must
-	// reproduce the app's multi-lag statistic (mean lag-product correlation at
-	// every multiple of the fold, over the binned variance), including the empty
-	// bins that missing values and gaps leave.
+	// reproduce Enright's A_p (RMS deviation of the folded column means, each over its
+	// occupied bins), including the empty bins that missing values and gaps leave.
 	enrightPeriodogram: (t, y, opts) => {
 		const r = runPeriodogramCalculation({
 			method: 'Enright',
@@ -959,6 +959,76 @@ async function runCorrelogramDownload(fx) {
 	});
 }
 
+// The legacy Enright bin-size migration (core/enrightBinMigration.js) and what it does to the
+// spectrum. A `sessionMigration` fixture lists Periodogram series (method, binSize,
+// binSizeAuto as saved, plus `xStep`, the series' sampling interval in hours) under one
+// session `version`. Each series gets `hours` of a 24 h cosine sampled every xStep. The JS
+// side migrates the session JSON, builds the plot with Plot.fromJSON as importJson does,
+// lets each series follow its x exactly as the plot component's effect does
+// (followSamplingInterval over x.hoursSinceStart), and records per series the bin size it
+// then computes with and the peak period over [periodlimsIN] at periodSteps.
+function runSessionMigration(fx) {
+	const hours = fx.hours ?? 168;
+	const series = fx.series.map(({ xStep, ...saved }) => {
+		const n = Math.round(hours / xStep);
+		const x = Array.from({ length: n }, (_, i) => i * xStep);
+		const y = x.map((t) => 10 + 5 * Math.cos((2 * Math.PI * (t - 6)) / 24));
+		return { saved, x, y };
+	});
+	const [periodMin, periodMax] = fx.periodlimsIN;
+	const session = {
+		version: fx.version,
+		plots: [
+			{
+				id: 0,
+				name: fx.id,
+				type: 'periodogram',
+				width: 600,
+				height: 400,
+				plot: {
+					periodlimsIN: fx.periodlimsIN,
+					periodSteps: fx.periodSteps,
+					data: series.map((s, i) => ({
+						...s.saved,
+						x: { refId: mkCol('number', s.x, `x${i}`) },
+						y: { refId: mkCol('number', s.y, `y${i}`) }
+					}))
+				}
+			}
+		]
+	};
+	const { json, migrated } = migrateLegacyEnrightBins(session);
+	const plot = Plot.fromJSON(json.plots[0]);
+	core.plots.push(plot);
+	const out = plot.plot.data.map((datum, i) => {
+		datum.followSamplingInterval(datum.x.hoursSinceStart);
+		const res = runPeriodogramCalculation({
+			xData: series[i].x,
+			yData: series[i].y,
+			method: datum.method,
+			binSize: datum.binSize,
+			periodMin,
+			periodMax,
+			periodSteps: fx.periodSteps,
+			chiSquaredAlpha: datum.chiSquaredAlpha
+		});
+		return {
+			binSizeAuto: datum.binSizeAuto,
+			binSize: datum.binSize,
+			peakPeriod: res.x[res.y.indexOf(Math.max(...res.y))]
+		};
+	});
+	return jsonSafe({
+		inputs: {
+			version: fx.version,
+			periodlimsIN: fx.periodlimsIN,
+			periodSteps: fx.periodSteps,
+			series: series.map((s) => ({ saved: s.saved, x: s.x, y: s.y }))
+		},
+		outputs: { migrated, series: out }
+	});
+}
+
 function runActogramMarkers(fx) {
 	const series = fx.source ? sessionActogramSeries(fx.source) : generateActogramSeries(fx.generate);
 	const zone = fx.zone ?? 'utc';
@@ -1024,6 +1094,7 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 			else if (fx.kind === 'pureUtil') results[fx.id] = runPureUtil(fx);
 			else if (fx.kind === 'timeColumn') results[fx.id] = runTimeColumn(fx);
 			else if (fx.kind === 'actogramMarkers') results[fx.id] = runActogramMarkers(fx);
+			else if (fx.kind === 'sessionMigration') results[fx.id] = runSessionMigration(fx);
 			else results[fx.id] = await runTableProcess(fx);
 		}
 		// The FormulaColumn injection fixture's payload sets window.__pwned if it ever runs

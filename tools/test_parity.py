@@ -283,6 +283,29 @@ def run_actogram_markers(fx, js):
     return fn(inp["inner"], inp["series"], inp.get("zone", "utc"))
 
 
+def run_session_migration(fx, js):
+    """The legacy Enright bin-size migration through the Python port: the same session JSON
+    (series as saved, under the recorded version), migrate_legacy_enright_bins, then per
+    series the bin size it computes with (periodogram_series_bin_size over its whole x) and
+    the peak period over periodlimsIN, on the arrays the JS emitter recorded."""
+    inp = js["inputs"]
+    session = {"version": inp["version"], "plots": [{
+        "type": "periodogram",
+        "plot": {"data": [dict(s["saved"]) for s in inp["series"]]}}]}
+    migrated_session, migrated = rt.migrate_legacy_enright_bins(session)
+    lo, hi = inp["periodlimsIN"]
+    out = []
+    for saved, s in zip(migrated_session["plots"][0]["plot"]["data"], inp["series"]):
+        dt = rt.periodogram_series_bin_size(saved, s["x"])
+        res = rt.run_periodogram_calculation({
+            "t": s["x"], "y": s["y"], "method": saved.get("method") or "Lomb-Scargle",
+            "minPeriod": lo, "maxPeriod": hi, "stepSize": inp["periodSteps"], "dt": dt})
+        ys = res["y"]
+        out.append({"binSizeAuto": saved.get("binSizeAuto") is True, "binSize": dt,
+                    "peakPeriod": res["x"][ys.index(max(ys))]})
+    return {"migrated": migrated, "series": out}
+
+
 def _deep_diff(py, want, tol, path="$"):
     """First difference between a port's nested result and the JS record, or None. Every
     key the JS recorded must be present and equal (numbers within tol, NaN == null)."""
@@ -384,6 +407,11 @@ def _check_fixture(fx, js_results):
                 else:
                     assert nums_match(pv, jv, tol), \
                         f"{fx['id']} scalar '{key}' differs: {pv!r} vs {jv!r}"
+
+    elif fx["kind"] == "sessionMigration":
+        py = run_session_migration(fx, js)
+        diff = _deep_diff(py, js["outputs"], tol)
+        assert diff is None, f"{fx['id']} differs at {diff}"
 
     elif fx["kind"] == "actogramMarkers":
         py = run_actogram_markers(fx, js)

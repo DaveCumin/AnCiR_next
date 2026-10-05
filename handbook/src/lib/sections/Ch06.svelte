@@ -7,13 +7,12 @@
 	import WarnBox from '$lib/components/WarnBox.svelte';
 	import NoteBox from '$lib/components/NoteBox.svelte';
 	import Formula from '$lib/components/Formula.svelte';
-	import PeriodogramAnim from '$lib/animations/PeriodogramAnim.svelte';
-	import FoldingPeriodogramAnim from '$lib/animations/FoldingPeriodogramAnim.svelte';
+	import FoldedPeriodogramAnim from '$lib/animations/FoldedPeriodogramAnim.svelte';
 
 	const contextEntries = [
 		{
 			year: '1965',
-			text: 'James Enright introduces a periodogram for detecting rhythmicity in locomotor activity data, based on the variance of period-folded data<sup class="cite"><a href="#ref-23">[23]</a></sup> — the direct ancestor of the chi-squared periodogram formalised by Sokolove and Bushell in 1978 (below).'
+			text: 'James Enright introduces a periodogram for detecting rhythmicity in locomotor activity data, based on the spread of the period-folded means<sup class="cite"><a href="#ref-23">[23]</a></sup> — the direct ancestor of the chi-squared periodogram formalised by Sokolove and Bushell in 1978 (below).'
 		},
 		{
 			year: '1976–1982',
@@ -48,14 +47,14 @@
 		Where N is the number of (binned) data points included, k is the number of bins per fold, x̄ⱼ is
 		the mean of bin j, x̄ is the grand mean, and the divisor is the <strong>population</strong>
 		<a class="gloss" href="#gloss-variance">variance</a>
-		σ̂² = (1/N)·Σ(xᵢ − x̄)² (divisor N, not N−1). The factor N/k must be the
-		<strong>truncated integer</strong>
-		number of
-		<em>complete</em> cycles at that trial period, ⌊N/k⌋; non-integer cycle counts are the source of
-		the periodogram's well-documented discontinuity artefact.<sup class="cite"
-			><a href="#ref-23">[23]</a></sup
-		>
-		Q_p is approximately χ²-distributed with (k−1)
+		σ̂² = (1/N)·Σ(xᵢ − x̄)² (divisor N, not N−1). In the classic form N/k is the number of
+		<em>complete</em> cycles at that trial period, ⌊N/k⌋, and the points after the last complete
+		cycle are dropped. Tackenberg and Hughey showed that this truncation makes the periodogram jump
+		from one trial period to the next and can pull the period estimate low; keeping every point
+		removes the jumps<sup class="cite"><a href="#ref-32">[32]</a></sup>. AnCiR keeps every point:
+		each bin mean averages all the cycles that reach that bin, a partial last cycle included, and
+		each bin is weighted by the number of points it holds. Q_p is approximately χ²-distributed with
+		(k−1)
 		<a class="gloss" href="#gloss-degrees-of-freedom">degrees of freedom</a>
 		under the
 		<a class="gloss" href="#gloss-null-hypothesis">null hypothesis</a> of no rhythmicity. In AnCiR, k
@@ -91,21 +90,13 @@
 		for P bins per cycle.
 	</p>
 	<p>
-		The animation runs it end to end. First the <strong>fold</strong> at 24 h, with every cycle
-		overlaid. Then each bin is <strong>averaged across cycles</strong> to give the bin means, and
-		each mean's departure from the grand mean is added in. Those departures are summarised two ways
-		from the
-		<em>same</em> sum of squares &mdash; Enright's amplitude A<sub>p</sub> (their root-mean-square)
-		and Sokolove&ndash;Bushell's Q<sub>p</sub> (that sum rescaled to a &chi;&sup2;). Then the
-		payoff: sweep the trial period and watch both collapse wherever the fold scrambles the cycles
-		and leap where they align &mdash; <strong>drawing the periodogram itself</strong>. The two peak
-		at the same period; only Q<sub>p</sub> carries a significance line.
+		The animation in <a href="#ch6-one-fold">One Fold, Three Summaries</a> below draws this fold and its
+		bin means, next to the Lomb-Scargle and Enright views of the same folded data.
 	</p>
-	<FoldingPeriodogramAnim />
 
 	<WarnBox title="Bin count is a user choice that moves the significance bar">
 		<p>
-			Watch the red threshold line in the final panel: it <strong>rises</strong>
+			On AnCiR's chi-squared periodogram the red significance line <strong>rises</strong>
 			with the trial period. That is because df = P &minus; 1, and more bins per cycle means more degrees
 			of freedom, which means a higher bar to clear.
 		</p>
@@ -123,11 +114,35 @@
 		</p>
 	</WarnBox>
 
+	<WarnBox title="A test for rhythm, not the best estimate of τ">
+		<p>
+			Use the chi-squared periodogram to ask <em>whether</em> a record is rhythmic. To measure the
+			period, prefer Lomb-Scargle. Tackenberg and Hughey found that the classic chi-squared
+			periodogram (the truncated form above) can underestimate the period, by an amount that depends
+			on the true period and the length of the record, and that even a version keeping every point
+			was less accurate than Lomb-Scargle on their simulated records<sup class="cite"
+				><a href="#ref-32">[32]</a></sup
+			>.
+		</p>
+		<p>
+			AnCiR's chi-squared keeps every point, so it avoids the cause they identified, but it has a
+			bias of its own when the rhythm is weak: on noise, Q<sub>p</sub> averages about its df (P
+			&minus; 1), which grows with the trial period, so the <strong>largest Q<sub>p</sub></strong>
+			drifts toward long periods. In a check of 300 simulated ten-day hourly records holding a 24 h cosine,
+			with white noise four times the cosine's amplitude, AnCiR's largest Q<sub>p</sub> fell beyond 25
+			h in 67% of records and Lomb-Scargle's peak in 13%; with noise twice the amplitude, 11% and 0%;
+			with noise equal to the amplitude, both found 24 h every time. Read the period from the chi-squared
+			periodogram only when its peak clears the significance line clearly.
+		</p>
+	</WarnBox>
+
 	<h3 class="section-head">Lomb-Scargle Periodogram</h3>
 	<p>
 		Handles irregularly sampled time series by fitting sinusoidal models at each test frequency,
-		correcting for unequal spacing via a time-offset parameter. Increasingly used in chronobiology
-		for sparse clinical datasets, actigraphy with gaps, and hormone time-course data.
+		correcting for unequal spacing via a time-offset parameter. Its power is the share of the
+		variance that one fitted sinusoid explains at that period (in AnCiR, (N&minus;1)/2 &times;
+		R&sup2;); the data's mean is subtracted first rather than fitted. Increasingly used in
+		chronobiology for sparse clinical datasets, actigraphy with gaps, and hormone time-course data.
 	</p>
 	<NoteBox title="How this relates to the FFT">
 		<p>
@@ -165,13 +180,96 @@
 			><a href="#ref-23">[23]</a></sup
 		>
 		folds the series at each trial period into a Buys-Ballot table (rows = cycles, columns = position
-		within the cycle) and uses the <strong>standard deviation of the column means</strong>
-		as its test statistic: a true period makes the fold means scatter widely. It is the direct ancestor
-		of the chi-squared periodogram — Sokolove and Bushell's Q_P is essentially Enright's statistic rescaled
-		to a known χ² null distribution. Because the two are so closely related, an Enright peak and a chi-squared
-		peak at the same period are
-		<strong>not independent confirmation</strong> of each other. Enright's method makes no distributional
-		assumption and is robust with longer recordings.
+		within the cycle), averages each column, and reports Enright's amplitude A<sub>p</sub>, the
+		<strong>standard deviation of the column means</strong> about their grand mean:
+	</p>
+	<p class="formula">
+		<strong
+			>A<sub>p</sub> = &radic;( &Sigma;<sub>h</sub> (x̄<sub>h</sub> &minus; x̄)&sup2; &divide; P )</strong
+		>
+	</p>
+	<p>
+		with P the number of columns and x̄ the mean of the column means (Legendre and Legendre's
+		statement of Enright's statistic<sup class="cite"><a href="#ref-31">[31]</a></sup>). A true
+		period lines the cycles up, so the column means scatter widely. A<sub>p</sub> is in the units of
+		the data, so compare it between trial periods of one recording, not between recordings. It is
+		the direct ancestor of the chi-squared periodogram: Sokolove and Bushell's Q<sub>p</sub><sup
+			class="cite"><a href="#ref-2">[2]</a></sup
+		>
+		is built from the same sum of squares, rescaled to a known &chi;&sup2; null distribution. Because
+		the two share that sum, an Enright peak and a chi-squared peak at the same period are
+		<strong>not independent confirmation</strong> of each other.
+	</p>
+	<p>
+		A<sub>p</sub> has no simple significance threshold, so no line is drawn for it. Each column mean
+		also carries noise (with standard error &sigma;/&radic;r for r cycles per column), so A<sub
+			>p</sub
+		>
+		never falls to zero on noise, and it creeps up wherever the columns hold fewer cycles: at long trial
+		periods, in short recordings, and at folds that use bins narrower than the sampling interval. Judge
+		a peak against its neighbours, and use the chi-squared periodogram when you need a test.
+	</p>
+	<p>
+		In AnCiR a column mean averages only the bins that hold data: an empty bin (a gap, a missing
+		value, or a bin narrower than the sampling interval) is missing, not zero, and a partial last
+		cycle simply leaves its later columns one row shorter<sup class="cite"
+			><a href="#ref-31">[31]</a></sup
+		>. Before version 80.1 the method computed a different quantity (an average autocorrelation at
+		multiples of the trial period, which could be negative), so Enright values from older sessions
+		change when they are recalculated.
+	</p>
+
+	<h3 class="section-head" id="ch6-one-fold">One Fold, Three Summaries</h3>
+	<p>
+		The three periodograms above look like different machines, but they start the same way. At each
+		trial period, cut the record into period-long pieces and stack them. Every sample now has a
+		<em>phase</em> (its position within the trial cycle) and a value. At the true period the stacked
+		cycles line up into a clear profile; at a wrong one they smear into a flat cloud. The methods
+		differ only in how they <strong>summarise the folded cloud</strong>:
+	</p>
+	<ul>
+		<li>
+			<strong>Lomb-Scargle fits one cosine</strong> to the folded points and asks what share of the variance
+			it explains. This is exact, not an analogy: a cosine at the trial period depends on time only through
+			phase, so fitting it to the raw series and fitting it to the folded cloud are the same regression,
+			with the same coefficients and the same residuals.
+		</li>
+		<li>
+			<strong>Chi-squared and Enright average each phase bin</strong> and ask how far the bin means
+			spread. Bin means can follow any shape. Q<sub>p</sub> turns their spread into a &chi;&sup2;
+			test; A<sub>p</sub> reports it in the units of the data.
+		</li>
+	</ul>
+	<p>
+		The animation draws all three from one folded cloud and puts them on one scale, the share of the
+		variance each summary explains. Play the sweep and watch every curve collapse where the fold
+		smears the cycles and peak where it lines them up. The faint phase bins are drawn for all three,
+		but Lomb-Scargle does not use them: its cosine is fitted to the points. Then try the two buttons
+		that pull the methods apart.
+	</p>
+	<ul>
+		<li>
+			<strong>Remove a day.</strong> A cosine needs points spread around the cycle, not a full set in
+			every bin, which is why Lomb-Scargle copes with gaps and uneven sampling. The bin-mean methods lean
+			on every bin: as bins thin, each bin mean gets noisier, and they assume evenly spaced samples so
+			that every bin collects a fair share of each cycle. With irregular timestamps some bins fill and
+			others stay empty.
+		</li>
+		<li>
+			<strong>Narrow activity bout.</strong> Bin means are shape-free and trace the bout. One cosine cannot,
+			so it explains much less of the variance, and the part it misses shows up as a second Lomb-Scargle
+			peak at half the period (a harmonic of the daily rhythm, not a second rhythm). The bin means find
+			a 12 h peak too, because folding at 12 h overlays the two halves of a lopsided day.
+		</li>
+	</ul>
+	<FoldedPeriodogramAnim />
+	<p>
+		Two consequences are worth carrying away. A sinusoid is the right summary when the waveform is
+		close to one, and its few parameters keep its noise floor low; bin means are the right summary
+		when the shape matters, at the price of one free value per bin, which lifts their floor and is
+		why Q<sub>p</sub>'s significance line rises with the number of bins. And because chi-squared and
+		Enright summarise the <em>same</em> bin means, agreement between them is not independent confirmation;
+		agreement between a bin-mean method and Lomb-Scargle says more.
 	</p>
 
 	<h3 class="section-head">Interpreting a Periodogram</h3>
@@ -187,10 +285,12 @@
 	<WarnBox title="Harmonic Artefact">
 		<p>
 			The chi-squared periodogram may identify a spurious 12 h component in square-wave data
-			(Refinetti et al. 2007, Fig. 16). If you see a 12 h peak alongside the 24 h peak, confirm with
-			Lomb<sup class="cite"><a href="#ref-3">[3]</a></sup>-Scargle<sup class="cite"
-				><a href="#ref-4">[4]</a></sup
-			>.
+			(Refinetti et al. 2007, Fig. 16). Lomb<sup class="cite"><a href="#ref-3">[3]</a></sup
+			>-Scargle<sup class="cite"><a href="#ref-4">[4]</a></sup> is not a clean check on it: a
+			non-sinusoidal daily waveform also gives Lomb-Scargle a 12 h peak, because one cosine cannot
+			follow the shape (try the <em>Narrow activity bout</em> button above). Look at the record folded
+			at 24 h instead: one lopsided daily profile means the 12 h peak is a harmonic of the daily rhythm;
+			a genuine 12 h rhythm repeats the same profile twice within each day.
 		</p>
 	</WarnBox>
 
@@ -216,15 +316,6 @@
 		</p>
 	</WarnBox>
 
-	<p>
-		The animation below illustrates a <em>cosinor-style</em> periodogram — it plots the variance explained
-		(R²) by a best-fit sinusoid at each trial period, which peaks at the true period just as the χ² statistic
-		does. The chi-squared and Lomb-Scargle methods above use different statistics but are read the same
-		way.
-	</p>
-
-	<PeriodogramAnim height="600px" />
-
 	<AnCiRBox
 		title="Running a Periodogram in AnCiR"
 		tip="Note the estimated period for use in the next step — Cosinor analysis performs better when you use the measured τ rather than assuming exactly 24 h."
@@ -242,19 +333,21 @@
 				Select the <strong>Method</strong>:
 				<ul>
 					<li>
-						<strong>Chi-squared (Sokolove-Bushell)</strong> — best for regularly sampled activity data;
-						most widely used in chronobiology.
+						<strong>Chi-squared (Sokolove-Bushell)</strong>: a test of whether regularly sampled
+						activity data are rhythmic, with a significance line; most widely used in chronobiology.
+						To measure τ, prefer Lomb-Scargle (see the warning above).
 					</li>
 					<li>
 						<strong
 							>Lomb<sup class="cite"><a href="#ref-3">[3]</a></sup>-Scargle<sup class="cite"
 								><a href="#ref-4">[4]</a></sup
 							></strong
-						> — use for data with irregular timing or gaps.
+						>: use to estimate τ, and for data with irregular timing or gaps.
 					</li>
 					<li>
-						<strong>Enright</strong> — variance-of-period-folded-means; a robust alternative to Chi-squared
-						for longer recordings.
+						<strong>Enright</strong>: the standard deviation of the period-folded means (A<sub
+							>p</sub
+						>), in the units of the data; no significance line.
 					</li>
 				</ul>
 			</li>
@@ -268,11 +361,13 @@
 				the bin size adds no new points.
 			</li>
 			<li>
-				For the <strong>Chi-squared</strong> method, set the <strong>Bin Size</strong>
-				(e.g., 0.5–1 h) and the significance level <strong>Alpha</strong> (default 0.05); a significance
-				threshold line is then drawn across the plot. These two controls appear only for Chi-squared —
-				the Lomb-Scargle and Enright methods do not draw a significance line, so judge their peaks against
-				a permutation threshold if you need a formal test.
+				For <strong>Chi-squared</strong> and <strong>Enright</strong>, set the
+				<strong>Bin Size</strong>. A new series starts at the median sampling interval of its x (one
+				sample per bin); type a value to set your own. A bin narrower than the sampling interval
+				leaves bins empty, which both methods treat as missing. For Chi-squared, also set the
+				significance level <strong>Alpha</strong> (default 0.05); a significance threshold line is then
+				drawn across the plot. The Lomb-Scargle and Enright methods do not draw a significance line, so
+				judge their peaks against a permutation threshold if you need a formal test.
 			</li>
 			<li>
 				The dominant <strong>Peak Period</strong> and its <strong>Peak Power</strong>

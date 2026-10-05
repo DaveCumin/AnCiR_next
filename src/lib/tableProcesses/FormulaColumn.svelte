@@ -6,12 +6,23 @@
 		parseFormula,
 		evaluateFormula,
 		FormulaError,
-		FORMULA_FUNCTIONS
+		FORMULA_FUNCTIONS,
+		FORMULA_CONSTANTS,
+		FORMULA_DEFAULT_SEED,
+		formulaSeed,
+		formulaUsesRandom
 	} from '$lib/utils/formulaExpression.js';
+	import { createSeededRNG } from '$lib/utils/permutationTest.js';
 
 	const displayName = 'Formula Column';
 	const defaults = new Map([
 		['tokens', { val: [] }],
+		// Seed for random(): a fixed default written into the session when the node is made, so
+		// a formula that draws gives the same numbers on every recompute, on reload, and in the
+		// Python and R exports. Older sessions without it use the same default, and so does a
+		// Worker-minted session (the MCP catalogue lists every `seed` as 0, a volatile default,
+		// and formulaSeed reads 0 as "use the default").
+		['seed', { val: FORMULA_DEFAULT_SEED }],
 		['out', { result: { val: -1 } }],
 		['valid', { val: false }]
 	]);
@@ -59,7 +70,12 @@
 		try {
 			result = evaluateFormula(
 				ast,
-				{ column: (id) => getColumnById(id).getData(), stored: (k) => getStoredValue(k) },
+				{
+					column: (id) => getColumnById(id).getData(),
+					stored: (k) => getStoredValue(k),
+					// A fresh generator per evaluation: draws restart at row 0 every recompute.
+					random: createSeededRNG(formulaSeed(argsIN.seed))
+				},
 				n
 			);
 		} catch (e) {
@@ -98,10 +114,15 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { onMount, tick, untrack } from 'svelte';
 
 	let { p = $bindable() } = $props();
+
+	// Sessions saved before random() existed have no seed: give them the default the compute
+	// already falls back to, so the seed control shows the value in use.
+	if (p.args.seed === undefined) p.args.seed = FORMULA_DEFAULT_SEED;
 
 	// Ensure tokens array is always initialised and ends with a text token
 	if (!p.args.tokens || p.args.tokens.length === 0) {
@@ -122,6 +143,7 @@
 		return (
 			allColIds.map((id) => getColumnById(id)?.getDataHash ?? '').join('|') +
 			JSON.stringify(p.args.tokens) +
+			`|seed:${p.args.seed}|` +
 			svHash
 		);
 	});
@@ -158,6 +180,15 @@
 
 	let result = $state([]);
 	let formulaError = $state('');
+
+	// The seed control only appears once the formula draws (random()).
+	let usesRandom = $derived.by(() => {
+		try {
+			return formulaUsesRandom(parseFormula(p.args.tokens ?? []));
+		} catch {
+			return false;
+		}
+	});
 	let previewStart = $state(1);
 
 	function doFormula() {
@@ -712,9 +743,18 @@
 
 	<p class="formula-hint">
 		Tip: type <kbd>$</kbd> for columns, <kbd>#</kbd> for stored values · Shift/Alt+click (or
-		Shift+Enter) to add multiple. Use + - * / % ^ (power), ( ), pi, e and the functions
-		{FORMULA_FUNCTIONS.join(', ')}.
+		Shift+Enter) to add multiple. Use + - * / % ^ (power), ( ), the constants
+		{FORMULA_CONSTANTS.join(', ')} and the functions {FORMULA_FUNCTIONS.join(', ')}, as in
+		JavaScript's Math (the Math. prefix is optional). random() is seeded, so it repeats.
 	</p>
+
+	{#if usesRandom}
+		<div class="seed-row">
+			<ControlInput label="random() seed">
+				<NumberWithUnits bind:value={p.args.seed} step={1} />
+			</ControlInput>
+		</div>
+	{/if}
 
 	{#if formulaError}
 		<p class="formula-error">{formulaError}</p>
@@ -866,6 +906,10 @@
 		padding: 0.05rem 0.3rem;
 		font-size: var(--font-xs);
 		font-family: monospace;
+	}
+
+	.seed-row {
+		margin-top: var(--space-3);
 	}
 
 	.formula-error {

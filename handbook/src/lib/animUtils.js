@@ -176,3 +176,79 @@ export function drawHGrid(ctx, padL, padT, plotW, plotH, rows) {
 		ctx.stroke();
 	}
 }
+
+/**
+ * Svelte action for an animation's click-to-seek progress bar (`.progress-wrap` holding a
+ * `.progress-fill`). Makes the bar an ARIA slider that the keyboard can drive:
+ *
+ *   click            seek to the clicked fraction of the bar
+ *   Right / Up       forward 5%        Left / Down   back 5%
+ *   Page Up / Down   forward / back 25%
+ *   Home / End       start / end
+ *
+ * `onseek(p)` receives the target as a fraction in [0, 1]; the animation applies it as a
+ * click always did (its own frame rounding included). The animation keeps writing the fill
+ * width imperatively; the action reads that width back into aria-valuenow, so a screen
+ * reader hears the real position whether it came from playback, a click or a key.
+ *
+ * Usage: <div class="progress-wrap" use:seekBar={{ onseek: seek }}><div class="progress-fill" ...>
+ * Optional `label` (default 'Animation progress').
+ */
+export function seekBar(node, params) {
+	let { onseek, label = 'Animation progress' } = params ?? {};
+	const fill = node.querySelector('.progress-fill');
+	const clamp01 = (v) => Math.max(0, Math.min(1, v));
+	const current = () => clamp01((parseFloat(fill?.style.width) || 0) / 100);
+
+	node.setAttribute('role', 'slider');
+	node.setAttribute('tabindex', '0');
+	node.setAttribute('aria-label', label);
+	node.setAttribute('aria-valuemin', '0');
+	node.setAttribute('aria-valuemax', '100');
+
+	function sync() {
+		const pct = Math.round(current() * 100);
+		node.setAttribute('aria-valuenow', String(pct));
+		node.setAttribute('aria-valuetext', `${pct}%`);
+	}
+	sync();
+	const mo = fill && typeof MutationObserver !== 'undefined' ? new MutationObserver(sync) : null;
+	mo?.observe(fill, { attributes: true, attributeFilter: ['style'] });
+
+	function onClick(e) {
+		const rect = node.getBoundingClientRect();
+		if (!(rect.width > 0)) return;
+		onseek?.(clamp01((e.clientX - rect.left) / rect.width));
+	}
+	const KEY_STEPS = {
+		ArrowRight: 0.05,
+		ArrowUp: 0.05,
+		ArrowLeft: -0.05,
+		ArrowDown: -0.05,
+		PageUp: 0.25,
+		PageDown: -0.25
+	};
+	function onKeydown(e) {
+		let target;
+		if (e.key === 'Home') target = 0;
+		else if (e.key === 'End') target = 1;
+		else if (e.key in KEY_STEPS) target = current() + KEY_STEPS[e.key];
+		else return;
+		e.preventDefault();
+		onseek?.(clamp01(target));
+	}
+	node.addEventListener('click', onClick);
+	node.addEventListener('keydown', onKeydown);
+
+	return {
+		update(next) {
+			({ onseek, label = 'Animation progress' } = next ?? {});
+			node.setAttribute('aria-label', label);
+		},
+		destroy() {
+			mo?.disconnect();
+			node.removeEventListener('click', onClick);
+			node.removeEventListener('keydown', onKeydown);
+		}
+	};
+}

@@ -9,6 +9,8 @@
 		FREE_PERIOD_DEFAULTS
 	} from '$lib/utils/cosinor.js';
 	import { periodRangeWarnings } from '$lib/utils/periodRangeWarnings.js';
+	import { periodUnitForColumn, periodInputProps } from '$lib/utils/periodUnits.js';
+	import { newPeriodRangeArgs } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
@@ -103,10 +105,11 @@
 		['valid', { val: false }],
 		['useFixedPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
-		// Free-period fit only: the period range (h) the fit may use. Without a
-		// bound the optimiser followed trends out to thousands of hours on real
-		// activity data (see cosinor.js). Sessions saved before these existed get
-		// the defaults via fillDefaults.
+		// Free-period fit only: the period range the fit may use, in x units (hours
+		// for a time x). Without a bound the optimiser followed trends out to
+		// thousands of hours on real activity data (see cosinor.js). Sessions saved
+		// before these existed get the defaults via fillDefaults. A NEW node's range
+		// follows its x instead (newNodeArgs below; periodRangeAuto.svelte.js).
 		['minPeriod', { val: FREE_PERIOD_DEFAULTS.minPeriod }],
 		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
 		['nHarmonics', { val: 1 }],
@@ -136,6 +139,8 @@
 	export const definition = {
 		displayName,
 		defaults,
+		// Only a new node's period range follows its x (periodRangeAuto.svelte.js).
+		newNodeArgs: newPeriodRangeArgs,
 		func: cosinor,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'cosinorx',
@@ -562,7 +567,7 @@
 	const COSINOR_MIN_CYCLES = 2;
 	const COSINOR_MIN_POINTS_PER_CYCLE = 4; // Nyquist-ish floor for a sinusoid + harmonics
 
-	function cosinorSampleWarnings(t, argsIN, nHarmonics) {
+	function cosinorSampleWarnings(t, argsIN, nHarmonics, unit = 'h') {
 		const warnings = [];
 		const finite = (t ?? []).filter((v) => v != null && Number.isFinite(Number(v))).map(Number);
 		if (finite.length < 2) return warnings;
@@ -581,7 +586,7 @@
 
 		if (argsIN.useFixedPeriod && cycles < COSINOR_MIN_CYCLES) {
 			warnings.push(
-				`Short record: ${cycles.toFixed(1)} cycles at a ${period} h period. A cosinor fitted to fewer than ${COSINOR_MIN_CYCLES} cycles is close to interpolating a single bump — the amplitude and acrophase will look precise but no repetition supports them.`
+				`Short record: ${cycles.toFixed(1)} cycles at a ${period} ${unit} period. A cosinor fitted to fewer than ${COSINOR_MIN_CYCLES} cycles is close to interpolating a single bump — the amplitude and acrophase will look precise but no repetition supports them.`
 			);
 		}
 
@@ -589,7 +594,7 @@
 		const needed = COSINOR_MIN_POINTS_PER_CYCLE * Math.max(1, nHarmonics);
 		if (Number.isFinite(perCycle) && perCycle < needed) {
 			warnings.push(
-				`Sparse sampling: about ${perCycle.toFixed(1)} points per ${period} h cycle, and ${nHarmonics} harmonic${nHarmonics > 1 ? 's' : ''} needs at least ~${needed}. The waveform is undersampled, so amplitude is biased low and acrophase is unstable.`
+				`Sparse sampling: about ${perCycle.toFixed(1)} points per ${period} ${unit} cycle, and ${nHarmonics} harmonic${nHarmonics > 1 ? 's' : ''} needs at least ~${needed}. The waveform is undersampled, so amplitude is biased low and acrophase is unstable.`
 			);
 		}
 
@@ -610,6 +615,8 @@
 		}
 		const xCol = argsIN.xIN != null && argsIN.xIN !== -1 ? getColumnById(argsIN.xIN) : null;
 		const t = xCol ? (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) : null;
+		// Periods and phases are in x's units: hours for a time x, else the column's own.
+		const unit = periodUnitForColumn(xCol);
 		// Deliberately NOT gated on anyValid: when the fit fails, "1.1 points per
 		// 24 h cycle" is the most useful thing we can say, and suppressing it would
 		// leave the user with a silent failure and no explanation.
@@ -618,19 +625,20 @@
 		// R²/RMSE is the observable symptom — and worth a sentence rather than dashes.
 		const fitEntries = Object.entries(result?.y_results ?? {}).map(([yId, yr]) => ({
 			label: `"${getColumnById(Number(yId))?.name ?? yId}"`,
-			result: yr?.fittedData ?? null
+			result: yr?.fittedData ?? null,
+			t: yr?.t
 		}));
 		result.warnings = [
 			...checkFitResultsFinite(fitEntries, 'The cosinor fit'),
 			...(argsIN.useFixedPeriod
 				? []
 				: [
-						...periodRangeWarnings(t, argsIN.minPeriod, argsIN.maxPeriod),
-						...freePeriodFitWarnings(fitEntries, 'The free-period cosinor fit')
+						...periodRangeWarnings(t, argsIN.minPeriod, argsIN.maxPeriod, { unit }),
+						...freePeriodFitWarnings(fitEntries, 'The free-period cosinor fit', { unit })
 					]),
 			...(result?.validityWarnings ?? []),
 			...(result?.phaseRef?.warning ? [result.phaseRef.warning] : []),
-			...cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1))
+			...cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1), unit)
 		];
 		return [result, anyValid];
 	}
@@ -769,6 +777,10 @@
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
+	import {
+		usePeriodRangeAuto,
+		stopFollowingX
+	} from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
@@ -822,6 +834,10 @@
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
+	// The unit of every period and phase on this panel: h for a time x, else "x units".
+	let periodUnit = $derived(periodUnitForColumn(xIN_col));
+	// A new node's period range follows its x until the user edits it.
+	usePeriodRangeAuto(p, () => xIN_col);
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash;
@@ -1067,7 +1083,9 @@
 
 	// Panel phases in the node's phase reference (the same conversion as the ports).
 	const refPhase = (h, period) => applyPhaseReference(h, cosinorData?.phaseRef, period);
-	let phaseNote = $derived(cosinorData?.phaseRef?.clock ? 'clock time' : 'h after start');
+	let phaseNote = $derived(
+		cosinorData?.phaseRef?.clock ? 'clock time' : `${periodUnit} after start`
+	);
 </script>
 
 <!-- Input Section -->
@@ -1110,7 +1128,7 @@
 
 	{#if p.args.useFixedPeriod}
 		<div class="control-input-horizontal">
-			<ControlInput label="Period (hrs)">
+			<ControlInput label={`Period (${periodUnit})`}>
 				<NumberWithUnits
 					bind:value={p.args.fixedPeriod}
 					onInput={() => getCosinor()}
@@ -1148,20 +1166,24 @@
 		</div>
 		<!-- The free period is searched for, and kept, inside this range. -->
 		<div class="control-input-horizontal">
-			<ControlInput label="Min period (hrs)">
+			<ControlInput label={`Min period (${periodUnit})`}>
 				<NumberWithUnits
 					bind:value={p.args.minPeriod}
-					onInput={() => getCosinor()}
-					min="0.1"
-					step="1"
+					onInput={() => {
+						stopFollowingX(p.args);
+						getCosinor();
+					}}
+					{...periodInputProps(p.args.minPeriod)}
 				/>
 			</ControlInput>
-			<ControlInput label="Max period (hrs)">
+			<ControlInput label={`Max period (${periodUnit})`}>
 				<NumberWithUnits
 					bind:value={p.args.maxPeriod}
-					onInput={() => getCosinor()}
-					min="0.1"
-					step="1"
+					onInput={() => {
+						stopFollowingX(p.args);
+						getCosinor();
+					}}
+					{...periodInputProps(p.args.maxPeriod)}
 				/>
 			</ControlInput>
 		</div>
@@ -1175,7 +1197,7 @@
 		/>
 	</div>
 	<div class="control-input-horizontal">
-		<ControlInput label="Reference time (h)">
+		<ControlInput label={`Reference time (${periodUnit})`}>
 			<NumberWithUnits bind:value={p.args.referenceHrs} onInput={() => getCosinor()} step="1" />
 		</ControlInput>
 	</div>
@@ -1309,6 +1331,7 @@
 			<div class="control-input">
 				<p>
 					Period: {period.toFixed(2)}
+					{periodUnit}
 					<StoreValueButton
 						label="Period"
 						getter={() => {
@@ -1333,7 +1356,8 @@
 						Acrophase (time of peak, {phaseNote}): {refPhase(
 							wrapToPeriod(-cosine.phase / cosine.frequency, period),
 							period
-						).toFixed(2)} h
+						).toFixed(2)}
+						{periodUnit}
 						<StoreValueButton
 							label={`Acrophase (time of peak, ${phaseNote})`}
 							getter={() => {
@@ -1399,7 +1423,8 @@
 						H{h.k} Acrophase (time of peak, {phaseNote}): {refPhase(
 							h.acrophase_hrs,
 							hPeriod
-						).toFixed(2)} h &nbsp;[CI: {refPhase(
+						).toFixed(2)}
+						{periodUnit} &nbsp;[CI: {refPhase(
 							wrapToPeriod(h.CI_acrophase[0], hPeriod),
 							hPeriod
 						).toFixed(2)}, {refPhase(wrapToPeriod(h.CI_acrophase[1], hPeriod), hPeriod).toFixed(2)}]
@@ -1425,7 +1450,8 @@
 						/>
 					</p>
 					<p>
-						Orthophase (time of overall peak, {phaseNote}): {m.acrophase.toFixed(2)} h
+						Orthophase (time of overall peak, {phaseNote}): {m.acrophase.toFixed(2)}
+						{periodUnit}
 						<StoreValueButton
 							label={`Orthophase (time of overall peak, ${phaseNote})`}
 							getter={() => cosinorMetrics(yResult, p.args, cosinorData?.phaseRef).acrophase}
@@ -1434,7 +1460,8 @@
 						/>
 					</p>
 					<p>
-						Bathyphase (time of overall trough, {phaseNote}): {m.bathyphase.toFixed(2)} h
+						Bathyphase (time of overall trough, {phaseNote}): {m.bathyphase.toFixed(2)}
+						{periodUnit}
 						<StoreValueButton
 							label={`Bathyphase (time of overall trough, ${phaseNote})`}
 							getter={() => cosinorMetrics(yResult, p.args, cosinorData?.phaseRef).bathyphase}

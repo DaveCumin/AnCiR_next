@@ -191,7 +191,7 @@ function checkBudgets(offenders, budgets) {
 const BARE_ISNAN_BUDGET = {
 	'plots/Actogram/onsetUnwrap.js': 1,
 	'utils/correlogram.js': 4,
-	'utils/periodogram.js': 8
+	'utils/periodogram.js': 5
 };
 
 // isNaN() operands guarded ONLY against null: '' and ' ' still pass (isNaN('') is false) and

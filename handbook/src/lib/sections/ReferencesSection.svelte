@@ -181,6 +181,17 @@
 			1953;217(1130):295–305.
 			<a href="https://doi.org/10.1098/rspa.1953.0064">https://doi.org/10.1098/rspa.1953.0064</a>
 		</li>
+		<li id="ref-31">
+			Legendre P, Legendre L. <em>Numerical Ecology.</em> 2nd English ed. Amsterdam: Elsevier; 1998. Section
+			12.4.1, Periodogram of Whittaker and Robinson (eq. 12.12 and 12.13).
+		</li>
+		<li id="ref-32">
+			Tackenberg MC, Hughey JJ. The risks of using the chi-square periodogram to estimate the period
+			of biological rhythms. <em>PLoS Comput Biol.</em> 2021;17(1):e1008567.
+			<a href="https://doi.org/10.1371/journal.pcbi.1008567"
+				>https://doi.org/10.1371/journal.pcbi.1008567</a
+			>
+		</li>
 	</ol>
 </ChapterSection>
 

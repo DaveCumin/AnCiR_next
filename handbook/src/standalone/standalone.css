@@ -38,9 +38,10 @@ body.anim-standalone {
 
 /* ── The animation box fills the page ─────────────────────────────────── */
 .anim-standalone .anim-embed {
-	/* !important beats the component's inline style="height: ...": that is
-	   the chapter's height, used only for the calibration pass. */
-	height: 100% !important;
+	/* The page box, exactly. The component's --anim-h is the chapter's design
+	   height (a min-height in app.css), used only for the calibration pass. */
+	height: 100%;
+	min-height: 0;
 	margin: 0;
 	border: 0;
 	border-radius: 0;
@@ -64,6 +65,14 @@ body.anim-calibrating .anim-embed * {
 	flex: none;
 	align-self: center;
 	max-width: 100%;
+	min-height: 0;
+}
+
+/* The shell sizes the rows, so the handbook's content minimums (which keep
+   inline figures from collapsing) give way here: in a small frame the graphic
+   shrinks to fit rather than overflowing the page. */
+.anim-standalone .chart-panel,
+.anim-standalone .anim-embed canvas {
 	min-height: 0;
 }
 
@@ -157,6 +166,22 @@ body.anim-calibrating .anim-embed * {
 	justify-content: center;
 }
 
+/* The folded periodogram's caption, scale note and readout. */
+.anim-standalone .fz-caption,
+.anim-standalone .fz-readout {
+	font-size: 0.85rem;
+	line-height: 1.5;
+	margin: 0.4rem 0;
+	padding: 0.5rem 0.9rem;
+}
+.anim-standalone .fz-note {
+	font-size: 0.78rem;
+	margin: 0.2rem 0 0.4rem;
+}
+.anim-standalone .fz-slider {
+	font-size: 0.78rem;
+}
+
 /* The folding periodogram's statistic box is a list of label/value rows;
    two columns halve its height on a landscape page. */
 @media (min-aspect-ratio: 4/3) {
@@ -194,6 +219,9 @@ body.anim-standalone #mol-svg {
 	.anim-standalone .mol-step-text,
 	.anim-standalone .fp-step-text,
 	.anim-standalone .fp-stat-box,
+	.anim-standalone .fz-caption,
+	.anim-standalone .fz-note,
+	.anim-standalone .fz-readout,
 	.anim-standalone .note-info {
 		display: none;
 	}

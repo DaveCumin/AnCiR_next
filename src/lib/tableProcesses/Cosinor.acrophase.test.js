@@ -165,7 +165,7 @@ describe('Cosinor free period: bounded range and visible warnings', () => {
 	it('warns about an empty period range instead of failing silently', async () => {
 		setData(t6, y6);
 		const [data] = await cosinor(args({ useFixedPeriod: false, minPeriod: 30, maxPeriod: 20 }));
-		expect(data.warnings.join('\n')).toMatch(/Period range 30 to 20 h is empty/);
+		expect(data.warnings.join('\n')).toMatch(/Period range 30 to 20 x units is empty/);
 	});
 
 	it('fixed-period mode ignores the range (no range warnings)', async () => {

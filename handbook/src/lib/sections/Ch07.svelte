@@ -120,12 +120,19 @@
 		waveform instead of fitting the rhythm; on real activity records this produced "periods" of
 		hundreds to thousands of hours. AnCiR therefore fits the free period inside
 		<strong>Min period</strong>
-		to <strong>Max period</strong> (default 1 to 48 h), starts it from the strongest peaks of a least-squares
-		periodogram inside that range, and shows a warning on the node if the fitted period ends on either
-		limit (the data have no clear rhythm inside the range) or the optimiser does not converge. Treat a
-		period on a limit as "no rhythm found in this range", not as an estimate. Inside the range the fit
-		is the best single cosine, which on a short, noisy record can still be a noise peak; narrow the range
-		around the period you expect when you have one.
+		to <strong>Max period</strong>, starts it from the strongest peaks of a least-squares
+		periodogram inside that range, and shows a warning on the node if the fitted period ends on
+		either limit or the optimiser does not converge. The range is in the units of x: 1 to 48 h by
+		default for a time column. For a plain number column (an x in days, say) a new node starts from
+		twice the sampling interval (the shortest period the sampling can resolve) to the length of the
+		record, and every period and phase on the node reads "x units". A period on a limit means one of
+		two things, and the warning says which. If the fit is good (R² of at least 0.4) and the record
+		holds at least two and a half cycles of the fitted period, the data have a rhythm whose period
+		the limit may be holding: widen the range to confirm it. Otherwise the data have no clear rhythm
+		inside the range (a trend, red noise or a cycle far outside the range is pulling the fit), and
+		the period on the limit is not an estimate. Inside the range the fit is the best single cosine,
+		which on a short, noisy record can still be a noise peak; narrow the range around the period you
+		expect when you have one.
 	</p>
 
 	<h3 class="section-head">Population-Mean Cosinor</h3>
@@ -188,8 +195,9 @@
 						<strong>Free period:</strong> leave Fixed Period unticked and set
 						<strong>N cosine curves</strong>
 						= 1 to fit a single sinusoid with optimised period and phase. N &gt; 1 fits multiple overlapping
-						cosines. <strong>Min period</strong> and <strong>Max period</strong> (default 1 to 48 h) bound
-						the search; widen them for ultradian or infradian rhythms.
+						cosines. <strong>Min period</strong> and <strong>Max period</strong> (1 to 48 h for a time
+						x; for a number x, twice the sampling interval to the record length, in x units) bound the
+						search; widen them for ultradian or infradian rhythms.
 					</li>
 				</ul>
 			</li>

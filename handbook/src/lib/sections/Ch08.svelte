@@ -102,8 +102,10 @@
 		neighbouring FFT bins fall near 21.8 h and 26.7 h, so a raw FFT of 10 days
 		<strong>cannot separate a 23.5 h rhythm from a 24.5 h one</strong>. Resolving τ to ±0.5 h at 24
 		h needs T ≈ 24²/0.5 ≈ 1150 h, about 48 days. This is why the FFT is a good
-		<em>screening</em> tool but a poor <em>period estimator</em> for circadian work; use the chi-squared
-		periodogram, free-period cosinor, or onset regression when the value of τ matters.
+		<em>screening</em> tool but a poor <em>period estimator</em> for circadian work; use the
+		Lomb-Scargle periodogram (which can be evaluated at any trial period), a free-period cosinor, or
+		onset regression when the value of τ matters. The chi-squared periodogram is better kept as a
+		test of whether a rhythm is present (see <a href="#ch6">Chapter 6</a>).
 	</p>
 	<p>
 		AnCiR shows Δf under the <strong>Frequency Step</strong> control. The peak it reports is refined between

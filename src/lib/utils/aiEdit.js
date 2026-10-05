@@ -699,7 +699,7 @@ export function applyEdit(plan) {
 			const entry = appConsts.tableProcessMap.get(tpType);
 			// Same recipe as the palette, so an AI-added node is indistinguishable from a
 			// hand-added one — including the fresh `out` template the constructor fills in.
-			const args = { ...buildTableProcessDefaults(entry), ...params, ...inputs };
+			const args = { ...buildTableProcessDefaults(entry, params), ...params, ...inputs };
 			return { kind: 'addFreeTableProcess', tpType, args };
 		});
 		const inverse = applyOp({ kind: 'batch', ops });

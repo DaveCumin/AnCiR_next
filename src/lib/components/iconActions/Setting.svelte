@@ -9,6 +9,7 @@
 	import { migrateAppearanceMaps } from '$lib/plots/appearanceIdentity.js';
 	import { migrateFacetChildren } from '$lib/core/facetMigration.js';
 	import { migratePhaseMarkerStoredValues } from '$lib/core/phaseMarkerStoredValueMigration.js';
+	import { migrateLegacyEnrightBins } from '$lib/core/enrightBinMigration.js';
 	import { childDefaultsFromRegistry } from '$lib/core/facetMigrationDefaults.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { paramDiffWatcher } from '$lib/core/paramDiffWatcher.svelte.js';
@@ -325,6 +326,10 @@
 			jsonData = migrated.json;
 			for (const w of migrated.warnings) addNotification(w, 'warning', 0);
 		}
+		// Enright Periodogram series from before v81, whose Bin Size control was hidden, sat at a
+		// 0.25 h nobody chose: they now follow their x (the median sampling interval), as a new
+		// series does (enrightBinMigration.js). After the facet migration, which may move series.
+		jsonData = migrateLegacyEnrightBins(jsonData).json;
 		// Plots whose saved JSON could not be rebuilt; kept verbatim (see importJson).
 		core.unrestoredPlots = [];
 		//reset existing workflow

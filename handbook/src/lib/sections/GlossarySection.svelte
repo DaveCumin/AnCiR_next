@@ -98,9 +98,11 @@
 			>
 			<tr id="gloss-enright-periodogram"
 				><td>Enright periodogram</td><td
-					>A period-finding method based on the variance of period-folded data: for each candidate
-					period it folds the series into a table (cycles as rows) and measures how much the column
-					means scatter. The direct ancestor of the chi-squared periodogram (Chapter 6).</td
+					>A period-finding method (Enright 1965): for each candidate period it folds the series
+					into a table (cycles as rows, position in the cycle as columns) and reports A<sub>p</sub>,
+					the standard deviation of the column means about their grand mean, in the units of the
+					data. It has no significance threshold. The direct ancestor of the chi-squared periodogram
+					(Chapter 6).</td
 				></tr
 			>
 			<tr id="gloss-entrainment"

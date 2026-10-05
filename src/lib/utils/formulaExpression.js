@@ -24,10 +24,24 @@
 // NUMBER    decimal literal: 12, 1.5, .5, 3., 1e-3, 2.5E4 (no sign; a leading '-' is unary minus)
 // COLUMN    a {type:'col', id} token: the value of that column in the current row
 // STORED    a {type:'stored', key} token: that stored value (a scalar, the same in every row)
-// CONSTANT  pi, e (also Math.PI, Math.E)
-// FUNC      abs sqrt log(natural) log10 exp sin cos tan floor ceil round (1 argument each),
-//           pow (2 arguments), min max (1 or more arguments). A `Math.` prefix is accepted as an
-//           alias (Math.sqrt, Math.log, ...) so formulas written for the old evaluator still work.
+// CONSTANT  every JS Math constant, bare or with the Math. prefix, in its JS spelling: E, LN10,
+//           LN2, LOG10E, LOG2E, PI, SQRT1_2, SQRT2 (so PI, Math.PI, LN2 and Math.LN2 all work).
+//           The lower-case pi and e are also accepted bare (not after Math.: Math.pi is refused,
+//           as in JS). Bare upper-case names are safe to allow because the list is fixed; no
+//           other spelling (ln2, Sqrt2, Math.ln2) is accepted.
+// FUNC      every function of the JS Math object (ES2024), bare in lower case or with the Math.
+//           prefix, with the arity the spec gives it:
+//             no argument      random
+//             1 argument       abs acos acosh asin asinh atan atanh cbrt ceil clz32 cos cosh exp
+//                              expm1 floor fround log(natural) log10 log1p log2 round sign sin
+//                              sinh sqrt tan tanh trunc
+//             2 arguments      atan2(y, x)  imul(a, b)  pow(x, y)
+//             1 or more        hypot  max  min
+//           The spec lets hypot, max and min take no argument at all; that is refused here (min()
+//           and max() are always +-Infinity, so missing, and hypot() is the constant 0), as it was
+//           for min and max before. Math.f16round and Math.sumPrecise (ES2025/26) are not in the
+//           list: not every browser the app supports has them, and the ports would need their own
+//           float16 and exact-summation code for no use a formula has.
 //
 // SEMANTICS (per row)
 //   - A missing operand (null, undefined, blank or whitespace-only string, NaN, +-Infinity, or a
@@ -36,9 +50,20 @@
 //   - Rows: the FIRST column token's length sets the row count; a column shorter than that
 //     reads as missing past its end. A stored value is the same in every row.
 //   - Arithmetic is IEEE double. `%` is the remainder with the sign of the DIVIDEND (JS `%`,
-//     C fmod), so -7 % 3 = -1. `round(x)` rounds halves up, toward +infinity (round(2.5) = 3,
-//     round(-2.5) = -2), like JS Math.round; it is NOT banker's rounding.
+//     C fmod), so -7 % 3 = -1. Every function is exactly the JS Math function: `round(x)` rounds
+//     halves up, toward +infinity (round(2.5) = 3, round(-2.5) = -2); it is NOT banker's
+//     rounding. `sign`, `trunc`, `round` and `ceil` keep the signed zero (sign(-0) = -0).
+//     `cbrt(-8)` = -2 (the real root, where (-8)^(1/3) is missing). `atan2(y, x)` takes y first.
+//     `clz32`, `imul` and `fround` work on the 32-bit integer / float32 forms: clz32(0) = 32,
+//     clz32(-1) = 0, imul(2^31 - 1, 2) = -2 (wraps), fround(0.1) = 0.10000000149011612.
 //     Trig functions take radians.
+//   - `random()` is seeded, never Math.random: a uniform draw in [0, 1) from the app's seeded
+//     generator (permutationTest.js createSeededRNG, @stdlib minstd-shuffle) seeded by the node's
+//     `seed` argument (FormulaColumn: default 12345, stored in the session). Draws are taken row
+//     by row and, within a row, left to right in the formula; every random() in the formula
+//     draws once in every row, even a row whose result is missing, so a gap never shifts the
+//     values of later rows. The same session therefore gives the same numbers on every
+//     recompute and in the Python and R ports, which reproduce the generator exactly.
 //   - Any operation whose value is not finite (x/0, log(0), sqrt(-1), (-8)^(1/3), overflow) is
 //     missing (null) from that step on, never Infinity or NaN: min(1/0, 3) is missing.
 //   - A NUMBER literal too large for a double (1e999) is missing as well.
@@ -48,30 +73,69 @@
 //     the Math. prefix), an empty formula, more than 200 levels of nesting, more than 2000
 //     lexemes. A refused formula produces no output at all (the node is invalid and says why).
 
-/** Functions allowed in a formula, with their arity: a number, or [min, max] (max Infinity). */
+/**
+ * Functions allowed in a formula, with their arity: a number, or [min, max] (max Infinity).
+ * `fn` is the JS Math function itself, so the semantics are JS's by construction. `random` has no
+ * `fn`: it draws from the seeded generator the caller passes in (evaluateFormula env.random).
+ */
 const FUNCTIONS = {
 	abs: { arity: 1, fn: Math.abs },
-	sqrt: { arity: 1, fn: Math.sqrt },
+	acos: { arity: 1, fn: Math.acos },
+	acosh: { arity: 1, fn: Math.acosh },
+	asin: { arity: 1, fn: Math.asin },
+	asinh: { arity: 1, fn: Math.asinh },
+	atan: { arity: 1, fn: Math.atan },
+	atan2: { arity: 2, fn: Math.atan2 }, // atan2(y, x)
+	atanh: { arity: 1, fn: Math.atanh },
+	cbrt: { arity: 1, fn: Math.cbrt },
+	ceil: { arity: 1, fn: Math.ceil },
+	clz32: { arity: 1, fn: Math.clz32 },
+	cos: { arity: 1, fn: Math.cos },
+	cosh: { arity: 1, fn: Math.cosh },
+	exp: { arity: 1, fn: Math.exp },
+	expm1: { arity: 1, fn: Math.expm1 },
+	floor: { arity: 1, fn: Math.floor },
+	fround: { arity: 1, fn: Math.fround },
+	hypot: { arity: [1, Infinity], fn: Math.hypot },
+	imul: { arity: 2, fn: Math.imul },
 	log: { arity: 1, fn: Math.log },
 	log10: { arity: 1, fn: Math.log10 },
-	exp: { arity: 1, fn: Math.exp },
-	sin: { arity: 1, fn: Math.sin },
-	cos: { arity: 1, fn: Math.cos },
-	tan: { arity: 1, fn: Math.tan },
-	floor: { arity: 1, fn: Math.floor },
-	ceil: { arity: 1, fn: Math.ceil },
-	round: { arity: 1, fn: Math.round }, // halves go up: round(2.5) = 3, round(-2.5) = -2
-	pow: { arity: 2, fn: Math.pow },
+	log1p: { arity: 1, fn: Math.log1p },
+	log2: { arity: 1, fn: Math.log2 },
+	max: { arity: [1, Infinity], fn: Math.max },
 	min: { arity: [1, Infinity], fn: Math.min },
-	max: { arity: [1, Infinity], fn: Math.max }
+	pow: { arity: 2, fn: Math.pow },
+	random: { arity: 0, fn: null },
+	round: { arity: 1, fn: Math.round }, // halves go up: round(2.5) = 3, round(-2.5) = -2
+	sign: { arity: 1, fn: Math.sign },
+	sin: { arity: 1, fn: Math.sin },
+	sinh: { arity: 1, fn: Math.sinh },
+	sqrt: { arity: 1, fn: Math.sqrt },
+	tan: { arity: 1, fn: Math.tan },
+	tanh: { arity: 1, fn: Math.tanh },
+	trunc: { arity: 1, fn: Math.trunc }
 };
 
-const CONSTANTS = { pi: Math.PI, e: Math.E };
-// `Math.`-prefixed spellings the old evaluator accepted (JS capitalisation for the constants).
-const MATH_CONSTANTS = { PI: Math.PI, E: Math.E };
+// The JS Math constants, in their JS spelling. Accepted bare and after `Math.`.
+const MATH_CONSTANTS = {
+	E: Math.E,
+	LN10: Math.LN10,
+	LN2: Math.LN2,
+	LOG10E: Math.LOG10E,
+	LOG2E: Math.LOG2E,
+	PI: Math.PI,
+	SQRT1_2: Math.SQRT1_2,
+	SQRT2: Math.SQRT2
+};
+// Bare names: the JS constants plus the lower-case pi and e the grammar always had.
+const CONSTANTS = { pi: Math.PI, e: Math.E, ...MATH_CONSTANTS };
 
 export const FORMULA_FUNCTIONS = Object.freeze(Object.keys(FUNCTIONS));
 export const FORMULA_CONSTANTS = Object.freeze(Object.keys(CONSTANTS));
+/** name -> arity (a number, or [min, max] with max Infinity), for docs and tests. */
+export const FORMULA_ARITY = Object.freeze(
+	Object.fromEntries(Object.entries(FUNCTIONS).map(([k, v]) => [k, v.arity]))
+);
 
 const own = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
 
@@ -278,8 +342,9 @@ export function parseFormula(tokens) {
 				const [lo, hi] = Array.isArray(ar) ? ar : [ar, ar];
 				if (args.length < lo || args.length > hi) {
 					const want = lo === hi ? `${lo}` : hi === Infinity ? `at least ${lo}` : `${lo} to ${hi}`;
+					const one = want === '1' || want === 'at least 1';
 					throw new FormulaError(
-						`${tok.name}() takes ${want} argument${want === '1' ? '' : 's'}, not ${args.length}.`
+						`${tok.name}() takes ${want} argument${one ? '' : 's'}, not ${args.length}.`
 					);
 				}
 				return { k: 'call', fn: tok.name, args };
@@ -355,14 +420,55 @@ export function formulaCell(v) {
 	return null;
 }
 
+/** The seed a FormulaColumn uses when its `seed` arg is absent or unusable. */
+export const FORMULA_DEFAULT_SEED = 12345;
+
+/**
+ * The seed random() is drawn with: a finite, non-zero number (or numeric string) as given, else
+ * FORMULA_DEFAULT_SEED. Absent (sessions saved before the arg existed), null, '', 0, NaN,
+ * +-Infinity, booleans and other values all give the default, so `Number(null) === 0` can never
+ * pick a seed. The generator (createSeededRNG) then truncates and wraps it into its range.
+ */
+export function formulaSeed(v) {
+	let n = NaN;
+	if (typeof v === 'number') n = v;
+	else if (typeof v === 'string' && v.trim() !== '') n = Number(v);
+	return Number.isFinite(n) && n !== 0 ? n : FORMULA_DEFAULT_SEED;
+}
+
+/**
+ * True when the parsed formula calls random() anywhere (so the node needs, and shows, a seed).
+ * @param {object} ast from parseFormula
+ */
+export function formulaUsesRandom(ast) {
+	// Iterative: a 2000-lexeme left chain is about 1000 levels deep.
+	const stack = [ast];
+	while (stack.length) {
+		const node = stack.pop();
+		if (!node) continue;
+		if (node.k === 'call') {
+			if (node.fn === 'random') return true;
+			stack.push(...node.args);
+		} else if (node.k === 'neg') stack.push(node.a);
+		else if (node.k === 'bin') stack.push(node.a, node.b);
+	}
+	return false;
+}
+
 /**
  * Evaluate a parsed formula for every row.
  * @param {object} ast from parseFormula
- * @param {{ column: (id:number) => ArrayLike<unknown>, stored: (key:string) => unknown }} env
+ * @param {{ column: (id:number) => ArrayLike<unknown>, stored: (key:string) => unknown,
+ *   random?: () => number }} env  `random` is the seeded generator random() draws from (one
+ *   uniform [0, 1) value per call, e.g. createSeededRNG(seed)); it is required when the formula
+ *   uses random(), and Math.random is never used in its place.
  * @param {number} n number of rows
  * @returns {(number|null)[]}
  */
 export function evaluateFormula(ast, env, n) {
+	const draw = env.random;
+	if (typeof draw !== 'function' && formulaUsesRandom(ast))
+		throw new FormulaError('random() needs a seeded generator.');
 	const colCache = new Map();
 	const storedCache = new Map();
 	const colData = (id) => {
@@ -416,6 +522,7 @@ export function evaluateFormula(ast, env, n) {
 				throw new FormulaError(`Unknown operator ${show(node.op)}.`);
 			}
 			case 'call': {
+				if (node.fn === 'random') return draw();
 				const vals = node.args.map((x) => ev(x, i));
 				if (vals.some((v) => v == null)) return null;
 				return FUNCTIONS[node.fn].fn(...vals);

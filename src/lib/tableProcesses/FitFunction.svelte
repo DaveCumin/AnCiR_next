@@ -13,6 +13,8 @@
 	import { rectWaveFitWarnings } from '$lib/utils/rectwave.js';
 	import { doubleLogisticFitWarnings } from '$lib/utils/doublelogistic.js';
 	import { periodRangeWarnings } from '$lib/utils/periodRangeWarnings.js';
+	import { periodUnitForColumn, periodInputProps } from '$lib/utils/periodUnits.js';
+	import { newPeriodRangeArgs } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { permutationValidityWarnings } from '$lib/tableProcesses/permutationSupport.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
@@ -88,8 +90,9 @@
 		['fixedPeriod', { val: 24 }],
 		['Ncurves', { val: 1 }],
 		// Free-period fits (cosinor, rectangular wave, periodic double logistic): the period
-		// range (h) the fit may use (see FREE_PERIOD_DEFAULTS in cosinor.js). Old sessions get
-		// these defaults. Unbounded, the waveform models followed trends to thousands of
+		// range the fit may use, in x units (hours for a time x; see FREE_PERIOD_DEFAULTS in
+		// cosinor.js). Old sessions get these defaults; a NEW node's range follows its x
+		// (newNodeArgs below). Unbounded, the waveform models followed trends to thousands of
 		// hours (review FIT-1).
 		['minPeriod', { val: FREE_PERIOD_DEFAULTS.minPeriod }],
 		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
@@ -118,6 +121,8 @@
 	export const definition = {
 		displayName,
 		defaults,
+		// Only a new node's period range follows its x (periodRangeAuto.svelte.js).
+		newNodeArgs: newPeriodRangeArgs,
 		func: fitFunction,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'fitx',
@@ -572,7 +577,8 @@
 		const model = argsIN.model ?? 'cosinor';
 		const fitEntries = Object.entries(result?.y_results ?? {}).map(([yId, yr]) => ({
 			label: `"${getColumnById(Number(yId))?.name ?? yId}"`,
-			result: yr?.fitResult ?? null
+			result: yr?.fitResult ?? null,
+			t: yr?.t
 		}));
 		// The free-period fits report an empty or unresolvable range, and when the period
 		// finished on a bound of the range or the optimiser gave up (each model carries its
@@ -581,13 +587,18 @@
 		if (isFreePeriod(argsIN)) {
 			const xCol = argsIN.xIN != null && argsIN.xIN !== -1 ? getColumnById(argsIN.xIN) : null;
 			const t = xCol ? (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) : null;
+			// Periods are in x's units: hours for a time x, else the column's own.
+			const opts = { unit: periodUnitForColumn(xCol) };
 			const fitDiag =
 				model === 'rectangular'
-					? rectWaveFitWarnings(fitEntries, 'The free-period rectangular-wave fit')
+					? rectWaveFitWarnings(fitEntries, 'The free-period rectangular-wave fit', opts)
 					: model === 'doublelogistic'
-						? doubleLogisticFitWarnings(fitEntries, 'The free-period double-logistic fit')
-						: freePeriodFitWarnings(fitEntries, 'The free-period cosinor fit');
-			freeWarnings = [...periodRangeWarnings(t, argsIN.minPeriod, argsIN.maxPeriod), ...fitDiag];
+						? doubleLogisticFitWarnings(fitEntries, 'The free-period double-logistic fit', opts)
+						: freePeriodFitWarnings(fitEntries, 'The free-period cosinor fit', opts);
+			freeWarnings = [
+				...periodRangeWarnings(t, argsIN.minPeriod, argsIN.maxPeriod, opts),
+				...fitDiag
+			];
 		}
 		// Test validity (review FIT-5): the shuffle permutation test and the fixed-period
 		// cosinor F-test (reported in the stats table) assume independent observations.
@@ -669,6 +680,10 @@
 	import PhaseReferenceSelect from '$lib/components/inputs/PhaseReferenceSelect.svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
+	import {
+		usePeriodRangeAuto,
+		stopFollowingX
+	} from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import {
 		showStaticDataAsTable,
@@ -713,6 +728,10 @@
 	);
 
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
+	// The unit of every period and phase on this panel: h for a time x, else "x units".
+	let periodUnit = $derived(periodUnitForColumn(xIN_col));
+	// A new node's period range follows its x until the user edits it.
+	usePeriodRangeAuto(p, () => xIN_col);
 	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
 	let getHash = $derived.by(() => {
 		let out = '';
@@ -1116,7 +1135,7 @@
 
 	// Panel phases in the node's phase reference (the same conversion as the ports).
 	const panelPhase = (v, period) => applyPhaseReference(v, fitData?.phaseRef, period);
-	let phaseNote = $derived(fitData?.phaseRef?.clock ? 'clock time' : 'h after start');
+	let phaseNote = $derived(fitData?.phaseRef?.clock ? 'clock time' : `${periodUnit} after start`);
 
 	function getFitStatsData() {
 		if (!fitData?.y_results) return { headers: [], rows: [] };
@@ -1303,7 +1322,7 @@
 		</div>
 		{#if p.args.useFixedPeriod}
 			<div class="control-input-horizontal">
-				<ControlInput label="Fixed period">
+				<ControlInput label={`Fixed period (${periodUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.fixedPeriod}
 						min="0.1"
@@ -1337,20 +1356,24 @@
 			</div>
 			<!-- The free period is searched for, and kept, inside this range. -->
 			<div class="control-input-horizontal">
-				<ControlInput label="Min period (hrs)">
+				<ControlInput label={`Min period (${periodUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.minPeriod}
-						min="0.1"
-						step="1"
-						onInput={() => getFit()}
+						{...periodInputProps(p.args.minPeriod)}
+						onInput={() => {
+							stopFollowingX(p.args);
+							getFit();
+						}}
 					/>
 				</ControlInput>
-				<ControlInput label="Max period (hrs)">
+				<ControlInput label={`Max period (${periodUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.maxPeriod}
-						min="0.1"
-						step="1"
-						onInput={() => getFit()}
+						{...periodInputProps(p.args.maxPeriod)}
+						onInput={() => {
+							stopFollowingX(p.args);
+							getFit();
+						}}
 					/>
 				</ControlInput>
 			</div>
@@ -1389,7 +1412,7 @@
 		{/if}
 		{#if p.args.fixOmega}
 			<div class="control-input-horizontal">
-				<ControlInput label="Period">
+				<ControlInput label={`Period (${periodUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.fixedPeriod}
 						min="0.1"
@@ -1401,20 +1424,24 @@
 		{:else}
 			<!-- The free period is searched for, and kept, inside this range (review FIT-1). -->
 			<div class="control-input-horizontal">
-				<ControlInput label="Min period (hrs)">
+				<ControlInput label={`Min period (${periodUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.minPeriod}
-						min="0.1"
-						step="1"
-						onInput={() => getFit()}
+						{...periodInputProps(p.args.minPeriod)}
+						onInput={() => {
+							stopFollowingX(p.args);
+							getFit();
+						}}
 					/>
 				</ControlInput>
-				<ControlInput label="Max period (hrs)">
+				<ControlInput label={`Max period (${periodUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.maxPeriod}
-						min="0.1"
-						step="1"
-						onInput={() => getFit()}
+						{...periodInputProps(p.args.maxPeriod)}
+						onInput={() => {
+							stopFollowingX(p.args);
+							getFit();
+						}}
 					/>
 				</ControlInput>
 			</div>
@@ -1482,7 +1509,7 @@
 		{/if}
 		{#if p.args.fixPeriod}
 			<div class="control-input-horizontal">
-				<ControlInput label="Period">
+				<ControlInput label={`Period (${periodUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.fixedPeriod}
 						min="0.1"
@@ -1494,20 +1521,24 @@
 		{:else if p.args.periodic}
 			<!-- The free period is searched for, and kept, inside this range (review FIT-1). -->
 			<div class="control-input-horizontal">
-				<ControlInput label="Min period (hrs)">
+				<ControlInput label={`Min period (${periodUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.minPeriod}
-						min="0.1"
-						step="1"
-						onInput={() => getFit()}
+						{...periodInputProps(p.args.minPeriod)}
+						onInput={() => {
+							stopFollowingX(p.args);
+							getFit();
+						}}
 					/>
 				</ControlInput>
-				<ControlInput label="Max period (hrs)">
+				<ControlInput label={`Max period (${periodUnit})`}>
 					<NumberWithUnits
 						bind:value={p.args.maxPeriod}
-						min="0.1"
-						step="1"
-						onInput={() => getFit()}
+						{...periodInputProps(p.args.maxPeriod)}
+						onInput={() => {
+							stopFollowingX(p.args);
+							getFit();
+						}}
 					/>
 				</ControlInput>
 			</div>
@@ -1683,7 +1714,7 @@
 			{#if p.args.model === 'cosinor'}
 				{#if p.args.useFixedPeriod}
 					<p>Mesor: {yResult?.fitResult?.fixedStats?.M?.toFixed(3)}</p>
-					<p>Period: {p.args.fixedPeriod?.toFixed?.(3)} hrs</p>
+					<p>Period: {p.args.fixedPeriod?.toFixed?.(3)} {periodUnit}</p>
 					{#if (yResult?.fitResult?.fixedStats?.harmonics?.length ?? 0) > 1}
 						<!-- The waveform the amplitude / acrophase ports report (FIT-13). -->
 						<p>
@@ -1697,7 +1728,8 @@
 								'cosinor',
 								yResult.fitResult,
 								fitData?.phaseRef
-							)?.toFixed(3)} h
+							)?.toFixed(3)}
+							{periodUnit}
 						</p>
 					{/if}
 					{#each yResult?.fitResult?.fixedStats?.harmonics ?? [] as h, i (i)}
@@ -1705,7 +1737,8 @@
 							H{i + 1}: amp {h.amplitude?.toFixed(3)}, acrophase (time of peak, {phaseNote}) {panelPhase(
 								h.acrophase_hrs,
 								(p.args.fixedPeriod ?? 24) / (i + 1)
-							)?.toFixed(3)} h
+							)?.toFixed(3)}
+							{periodUnit}
 							<StoreValueButton
 								label={`H${i + 1}`}
 								getter={() => h.amplitude}
@@ -1719,12 +1752,14 @@
 						<p>
 							C{i + 1}: amp {c.amplitude?.toFixed(3)}, period {c.frequency
 								? ((2 * Math.PI) / c.frequency).toFixed(3)
-								: 'NaN'} h, acrophase (time of peak, {phaseNote}) {c.frequency
+								: 'NaN'}
+							{periodUnit}, acrophase (time of peak, {phaseNote}) {c.frequency
 								? panelPhase(
 										wrapToPeriod(-c.phase / c.frequency, (2 * Math.PI) / c.frequency),
 										(2 * Math.PI) / c.frequency
 									).toFixed(3)
-								: 'NaN'} h
+								: 'NaN'}
+							{periodUnit}
 							<StoreValueButton
 								label={`C${i + 1}`}
 								getter={() => c.amplitude}
@@ -1737,14 +1772,15 @@
 			{:else if p.args.model === 'rectangular'}
 				<p>Mesor: {yResult?.fitResult?.parameters?.M?.toFixed(3)}</p>
 				<p>Amplitude: {yResult?.fitResult?.parameters?.A?.toFixed(3)}</p>
-				<p>Period: {yResult?.fitResult?.period?.toFixed(3)} hrs</p>
+				<p>Period: {yResult?.fitResult?.period?.toFixed(3)} {periodUnit}</p>
 				<p>
 					Acrophase ({phaseNote}): {fitMetricValue(
 						'acrophase',
 						'rectangular',
 						yResult?.fitResult,
 						fitData?.phaseRef
-					)?.toFixed(3)} hrs
+					)?.toFixed(3)}
+					{periodUnit}
 				</p>
 				<p>Duty cycle: {(yResult?.fitResult?.parameters?.dutyCycle * 100)?.toFixed?.(1)}%</p>
 				<p>κ: {yResult?.fitResult?.parameters?.kappa?.toFixed(3)}</p>
@@ -1757,7 +1793,8 @@
 						'doublelogistic',
 						yResult?.fitResult,
 						fitData?.phaseRef
-					)?.toFixed(3)} hrs
+					)?.toFixed(3)}
+					{periodUnit}
 				</p>
 				<p>
 					Offset ({phaseNote}): {fitMetricValue(
@@ -1765,12 +1802,13 @@
 						'doublelogistic',
 						yResult?.fitResult,
 						fitData?.phaseRef
-					)?.toFixed(3)} hrs
+					)?.toFixed(3)}
+					{periodUnit}
 				</p>
 				<p>k1: {yResult?.fitResult?.parameters?.k1?.toFixed(3)}</p>
 				<p>k2: {yResult?.fitResult?.parameters?.k2?.toFixed(3)}</p>
 				{#if yResult?.fitResult?.parameters?.T != null}
-					<p>Period: {yResult.fitResult.parameters.T.toFixed(3)} hrs</p>
+					<p>Period: {yResult.fitResult.parameters.T.toFixed(3)} {periodUnit}</p>
 				{/if}
 			{/if}
 		</div>

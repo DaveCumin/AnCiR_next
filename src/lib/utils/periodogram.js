@@ -48,9 +48,8 @@ export function isFlatSeries(values) {
  * Unix-second-sized times (~1.7e8) made binData walk hundreds of millions of empty bins
  * (seconds of stall at ~1 GB, then a RangeError). Snapping to the binSize grid rather than
  * to min(x) itself keeps every bin edge exactly where it was for data at t >= 0: leading
- * empty bins only rotate Chi-squared's fold columns (Qp is unchanged), so existing results
- * do not move. (Enright did count leading empty bins, as zero-valued pairs, which this
- * removes for a record that starts after 0.)
+ * empty bins only rotate the fold columns of Chi-squared and Enright (both treat an empty
+ * bin as missing, so neither statistic changes), so existing results do not move.
  *
  * @param {number[]} xs  times, already filtered to finite values
  * @param {number} binSize
@@ -69,6 +68,34 @@ export function binOrigin(xs, binSize) {
 	// binSize that is not a power of two; binData would then drop the first sample.
 	if (origin > min) origin -= binSize;
 	return origin;
+}
+
+/**
+ * The series' median sampling interval: the median of the positive gaps between consecutive
+ * valid times (sorted; repeated times are not a gap). NaN with fewer than two distinct times.
+ *
+ * The default bin size of a NEW binned periodogram (Chi-squared or Enright), so that one
+ * bin holds one sample: a bin narrower than the sampling leaves most bins empty, a wider one
+ * averages samples together (SPEC-8). The Periodogram plot's data warnings compare the bin
+ * size against the same number.
+ *
+ * @param {ArrayLike<any>} times
+ * @returns {number}
+ */
+export function medianSamplingInterval(times) {
+	const xs = [];
+	for (let i = 0; i < (times?.length ?? 0); i++) {
+		if (isInvalidValue(times[i])) continue;
+		const v = Number(times[i]); // Number-ok: checked with isInvalidValue on the line above
+		if (Number.isFinite(v)) xs.push(v);
+	}
+	xs.sort((a, b) => a - b);
+	const gaps = [];
+	for (let i = 1; i < xs.length; i++) if (xs[i] > xs[i - 1]) gaps.push(xs[i] - xs[i - 1]);
+	if (gaps.length === 0) return NaN;
+	gaps.sort((a, b) => a - b);
+	const mid = Math.floor(gaps.length / 2);
+	return gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2;
 }
 
 // ========== Periodogram Calculation Functions ==========
@@ -175,6 +202,52 @@ function calculateLombScarglePower(times, values, frequencies, onProgress) {
 	return powers;
 }
 
+// Enright (1965, J Theor Biol 8:426) periodogram amplitude A_p for every trial period.
+//
+// Fold the binned series into a Buys-Ballot table with nb = round(P / binSize) columns
+// (rows = successive cycles), take each column's mean M_h, and report the standard deviation
+// of the column means about their grand mean, with the number of columns as the divisor:
+//
+//     A_p = sqrt( (1 / P') * sum_h (M_h - Mbar)^2 ),   Mbar = (1 / P') * sum_h M_h
+//
+// This is eq. 12.12 of Legendre & Legendre (Numerical Ecology, 2nd English ed., Elsevier
+// 1998, section 12.4.1), which they attribute to Enright (1965); the adespatial R package
+// (WRperiodogram, by P. Legendre and G. Guenard) uses the same divisor. Enright's paper
+// itself was not available to check; the textbook's worked example is pinned in
+// periodogram.enright.test.js. A_p is in the units of the data and is never negative.
+//
+// MISSING VALUES. An empty bin (no sample, NaN in binData output) is missing, never 0: each
+// column mean averages only its occupied bins (Legendre & Legendre eq. 12.13: "r is the
+// number with data, in column j"), a column with no occupied bin is left out, and P' counts
+// the occupied columns. A partial last cycle simply leaves its later columns one row
+// shorter. Fewer than two occupied columns, or a fold longer than the binned record, has no
+// statistic (NaN, dropped from the spectrum), as in Chi-squared.
+//
+// It used to return the mean lag-product autocorrelation at every multiple of the fold,
+// over the variance, with empty bins as 0. That is not Enright's statistic, it could be
+// negative, and over 500 noisy records its peak differed from A_p's in 292 (SPEC-7).
+//
+// Mirrored in tools/ancir_runtime.py (_enright_pgram) and tools/ancir_runtime.R
+// (enright_pgram); the pure-enright-periodogram-* parity fixtures pin all three.
+export function enrightAmplitude(data, nBins) {
+	if (!Number.isFinite(nBins) || nBins < 1 || nBins > data.length) return NaN;
+	const sums = Array.from({ length: nBins }, () => new KahanSum());
+	const counts = new Array(nBins).fill(0);
+	for (let i = 0; i < data.length; i++) {
+		// isNaN-ok: binData output (number, or NaN for an empty bin), never null.
+		if (isNaN(data[i])) continue;
+		sums[i % nBins].add(data[i]);
+		counts[i % nBins]++;
+	}
+	const means = [];
+	for (let h = 0; h < nBins; h++) if (counts[h] > 0) means.push(sums[h].value / counts[h]);
+	if (means.length < 2) return NaN;
+	const grand = kahanMean(means);
+	const ss = new KahanSum();
+	for (const m of means) ss.add((m - grand) * (m - grand));
+	return Math.sqrt(ss.value / means.length);
+}
+
 function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 	if (!times || !values || times.length < 2 || values.length < 2) {
 		return new Array(periods.length).fill(NaN);
@@ -184,69 +257,21 @@ function calculateEnrightPower(times, values, periods, binSize, onProgress) {
 	// true, so a raw null y was averaged into its bin as a zero instead of leaving
 	// the bin empty. See utils/validPairs.js.
 	const { tt, yy } = validPairs(times, values);
-	// Flat data has no rhythm: zero power, not the ratio of two rounding residues (ROB-13).
-	if (isFlatSeries(yy)) return new Array(periods.length).fill(0);
+	// Flat data has no rhythm (ROB-13): A_p is 0 at every fold that has a statistic, not
+	// the spread of rounding residues.
+	const flat = isFlatSeries(yy);
 	const binnedData = binData(tt, yy, binSize, binOrigin(tt, binSize));
 	if (binnedData.bins.length === 0) {
-		return new Array(periods.length).fill(0);
+		return new Array(periods.length).fill(NaN);
 	}
-
 	const data = binnedData.y_out;
-	const n = data.length;
-	// isNaN-ok: `data` is binData output — bin means are numbers, and an EMPTY bin is NaN by
-	// design (never null). Inputs are null-filtered by validPairs before binning.
-	const dataMean = kahanMean(data.filter((v) => !isNaN(v)));
-	const centeredData = data.map((v) => (isNaN(v) ? 0 : v - dataMean));
 
-	const powers = periods.map((period, periodIndex) => {
-		const binsPerPeriod = Math.round(period / binSize);
-		// A zero/non-finite binSize (or period) makes this Infinity/NaN; `> n` already
-		// rejects Infinity but NaN slips through, so test finiteness explicitly.
-		if (!Number.isFinite(binsPerPeriod) || binsPerPeriod < 1 || binsPerPeriod > n) return 0;
-
-		const qpAcc = new KahanSum();
-		let count = 0;
-
-		for (let k = 1; k * binsPerPeriod < n; k++) {
-			const lag = k * binsPerPeriod;
-			const corrAcc = new KahanSum();
-			let nPairs = 0;
-
-			for (let i = 0; i < n - lag; i++) {
-				// isNaN-ok: centeredData is derived from binData output (number, or NaN for an empty
-				// bin) — never null.
-				if (!isNaN(centeredData[i]) && !isNaN(centeredData[i + lag])) {
-					corrAcc.add(centeredData[i] * centeredData[i + lag]);
-					nPairs++;
-				}
-			}
-
-			if (nPairs > 0) {
-				qpAcc.add(corrAcc.value / nPairs);
-				count++;
-			}
-		}
-
-		const qp = count > 0 ? qpAcc.value / count : 0;
-
-		// Calculate variance using Kahan summation
-		const varAcc = new KahanSum();
-		for (let i = 0; i < centeredData.length; i++) {
-			// isNaN-ok: see above — binData output, never null.
-			if (!isNaN(centeredData[i])) {
-				varAcc.add(centeredData[i] * centeredData[i]);
-			}
-		}
-		const variance = varAcc.value / n;
-
-		if (onProgress && periodIndex % 10 === 0) {
-			onProgress(periodIndex, periods.length);
-		}
-
-		return variance > 0 ? qp / variance : 0;
+	return periods.map((period, periodIndex) => {
+		if (onProgress && periodIndex % 10 === 0) onProgress(periodIndex, periods.length);
+		const ap = enrightAmplitude(data, Math.round(period / binSize));
+		if (!Number.isFinite(ap)) return NaN;
+		return flat ? 0 : ap;
 	});
-
-	return powers;
 }
 
 // Sokolove & Bushell (1978, J Theor Biol 72:131) Qp for one trial period, on

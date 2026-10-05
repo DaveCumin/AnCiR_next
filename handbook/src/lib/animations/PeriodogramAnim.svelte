@@ -8,7 +8,8 @@
 		seededRNG,
 		initPalette,
 		canvasSize,
-		observeResize
+		observeResize,
+		seekBar
 	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
@@ -72,7 +73,7 @@
 		accum = 0;
 	let periodSpeed = 0.08;
 
-	let cTest, cOverlay, cPgram, btnPlay, progFill, progWrap, stepInd, periodLabel;
+	let cTest, cOverlay, cPgram, btnPlay, progFill, stepInd, periodLabel;
 
 	function resize() {
 		[cTest, cOverlay, cPgram].forEach((c) => setupCanvas(c));
@@ -123,7 +124,7 @@
 		const padL = 32,
 			padT = 10,
 			pW = W - 42,
-			pH = H - 38;
+			pH = H - 42;
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(padL, padT, pW, pH);
 		ctx.strokeStyle = C.axis;
@@ -305,9 +306,8 @@
 		drawAll(0);
 	}
 
-	function periodSeek(e) {
-		const rect = progWrap.getBoundingClientRect();
-		frame = Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * TOTAL);
+	function periodSeek(p) {
+		frame = Math.round(p * TOTAL);
 		drawAll(frame);
 	}
 
@@ -322,7 +322,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={height ? `height: ${height}` : undefined}>
+<div class="anim-embed" style:--anim-h={height}>
 	<div class="viz-row two-col">
 		<div class="chart-panel">
 			<h3>Test Sine Wave</h3>
@@ -345,7 +345,7 @@
 	<div class="controls">
 		<button class="btn" bind:this={btnPlay} onclick={periodToggle}>&#9654; Play</button>
 		<button class="btn secondary" onclick={periodReset}>&#8634; Reset</button>
-		<div class="progress-wrap" bind:this={progWrap} onclick={periodSeek}>
+		<div class="progress-wrap" use:seekBar={{ onseek: periodSeek }}>
 			<div class="progress-fill" bind:this={progFill}></div>
 		</div>
 		<div class="speed-wrap">

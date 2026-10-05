@@ -1285,3 +1285,78 @@ test('FormulaColumn: an unresolvable column token or a bad token shape is refuse
 		assert.match(errors[0], /^FormulaColumn: /);
 	}
 });
+
+// The allow-list is the whole JS Math object (functions and constants), and nothing else.
+test('FormulaColumn: every JS Math function and constant is accepted, bare or with Math.', () => {
+	for (const value of [
+		'atan2(',
+		'Math.atan2(',
+		'hypot(1, 2, ',
+		'imul(3, ',
+		'clz32(',
+		'fround(',
+		'cbrt(',
+		'sign(',
+		'trunc(',
+		'Math.log1p(',
+		'log2(',
+		'expm1(',
+		'acosh(',
+		'tanh('
+	]) {
+		const twoArgs = /atan2|imul/.test(value) && !value.includes(',');
+		const { session, errors } = normalizeSession({
+			columns: [{ name: 'a', values: [1, 2, 3] }],
+			analyses: [
+				{
+					name: 'FormulaColumn',
+					args: {
+						seed: 7,
+						tokens: [
+							{ type: 'text', value },
+							{ type: 'col', id: 'a' },
+							{
+								type: 'text',
+								value: `${twoArgs ? ', 1' : ''}) + PI + Math.LN2 + SQRT1_2 + Math.LOG10E + e + random() + Math.random()`
+							}
+						]
+					}
+				}
+			]
+		});
+		assert.deepEqual(errors, [], value);
+		assert.equal(findTP(session, 'FormulaColumn').args.seed, 7, value);
+	}
+});
+
+test('FormulaColumn: escape routes stay refused (constructor, __proto__, Math["sin"], this, globalThis)', () => {
+	for (const value of [
+		' + Math.constructor',
+		' + constructor',
+		' + __proto__',
+		' + Math["sin"](1)',
+		' + this',
+		' + globalThis',
+		' + Math.constructor("return 1")()',
+		' + toString()',
+		' + Math.random'
+	]) {
+		const { session, errors } = normalizeSession({
+			columns: [{ name: 'a', values: [1, 2, 3] }],
+			analyses: [
+				{
+					name: 'FormulaColumn',
+					args: {
+						tokens: [
+							{ type: 'col', id: 'a' },
+							{ type: 'text', value }
+						]
+					}
+				}
+			]
+		});
+		assert.equal(findTP(session, 'FormulaColumn'), undefined, value);
+		assert.equal(errors.length, 1, value);
+		assert.match(errors[0], /^FormulaColumn: /, value);
+	}
+});

@@ -4141,30 +4141,38 @@ chi_squared_pgram <- function(t, y, periods, dt, alpha = 0.05) {
   list(powers = powers, dfs = dfs, threshold = thresholds, pvalue = pv)
 }
 
+# Port of periodogram.js enrightAmplitude: Enright's (1965) A_p for one fold of nb bins.
+# The binned series is folded into a Buys-Ballot table of nb columns; each column mean uses
+# only its occupied bins (an empty bin is missing, never 0), empty columns are left out, and
+# A_p = sqrt(mean over occupied columns of (M_h - Mbar)^2) with Mbar the plain mean of the
+# column means (Legendre & Legendre, Numerical Ecology, 1998, eq. 12.12-12.13). NA when the fold
+# is longer than the binned record or fewer than two columns are occupied.
+enright_amplitude <- function(data, nb) {
+  n <- length(data)
+  if (!is.finite(nb) || nb < 1 || nb > n) return(NA_real_)
+  ok <- !is.na(data)
+  cols <- ((seq_len(n) - 1) %% nb)[ok]
+  sums <- vapply(split(data[ok], factor(cols, levels = 0:(nb - 1))),
+                                 sum, numeric(1))
+  counts <- tabulate(cols + 1, nbins = nb)
+  occ <- counts > 0
+  if (sum(occ) < 2) return(NA_real_)
+  means <- sums[occ] / counts[occ]
+  sqrt(sum((means - mean(means))^2) / length(means))
+}
+
 # Port of periodogram.js calculateEnrightPower (Enright 1965): valid pairs, bin at dt from
-# bin_origin, centre bin means (empty bins 0), average sum(c_i c_(i+lag)) / (n - lag) over
-# lag = k nb < n, divide by sum(c^2) / n. Flat data: 0 at every fold.
+# bin_origin, then Enright's A_p (enright_amplitude) at each fold of nb = round(P / dt)
+# bins. Flat data: 0 at every fold that has a statistic.
 enright_pgram <- function(t, y, periods, dt) {
   if (length(t) < 2 || length(y) < 2) return(rep(NA_real_, length(periods)))
   pr <- .pgram_pairs(t, y)
-  if (is_flat_series(pr$y)) return(rep(0, length(periods)))
+  flat <- is_flat_series(pr$y)
   data <- as.numeric(bin_data(pr$t, pr$y, dt, bin_origin(pr$t, dt))$y_out)
-  n <- length(data)
-  if (!n) return(rep(0, length(periods)))
-  ok <- !is.na(data)
-  m <- if (any(ok)) mean(data[ok]) else 0
-  cc <- ifelse(ok, data - m, 0)
-  variance <- sum(cc * cc) / n
+  if (!length(data)) return(rep(NA_real_, length(periods)))
   vapply(periods, function(P) {
-    nb <- js_round(P / dt)
-    if (!is.finite(nb) || nb < 1 || nb > n) return(0)
-    lags <- nb * seq_len((n - 1) %/% nb)
-    qp <- if (length(lags)) {
-      mean(vapply(lags, function(lag) {
-        sum(cc[seq_len(n - lag)] * cc[(lag + 1):n]) / (n - lag)
-      }, numeric(1)))
-    } else 0
-    if (variance > 0) qp / variance else 0
+    ap <- enright_amplitude(data, js_round(P / dt))
+    if (is.na(ap)) NA_real_ else if (flat) 0 else ap
   }, numeric(1))
 }
 
@@ -5208,10 +5216,14 @@ PURE_UTIL_MAP <- list(
                  list(message = msg, call = NULL)))
 }
 
+# A rounding result of zero carries the sign of its argument, as in JS (Math.round(-0.4) and
+# Math.ceil(-0.5) are -0). R's floor/ceiling/trunc already keep it; the half-up round does not.
+.formula_zero_sign <- function(r, a) if (r == 0 && (a < 0 || 1 / a < 0)) -0 else r
+
 # JS Math.round: halves go toward +infinity, exactly (0.49999999999999994 -> 0).
 .formula_round <- function(a) {
   r <- floor(a)
-  if (a - r >= 0.5) r + 1 else r
+  .formula_zero_sign(if (a - r >= 0.5) r + 1 else r, a)
 }
 
 # C fmod / JS %: the remainder has the sign of the DIVIDEND (R's %% takes the divisor's).
@@ -5221,25 +5233,120 @@ PURE_UTIL_MAP <- list(
   if (a < 0) -r else r
 }
 
-# name -> list(min args, max args (Inf = unbounded), function). JS FUNCTIONS table.
+# JS Math.sign: -1, 1, or the zero itself (sign(-0) = -0).
+.formula_sign <- function(a) if (a == 0) a else sign(a)
+
+# JS Math.cbrt: the REAL cube root (negative for a negative); R has no cbrt and a^(1/3) is NaN
+# for a < 0. A power estimate polished by one Newton step.
+.formula_cbrt <- function(a) {
+  if (a == 0) return(a)
+  r <- sign(a) * abs(a)^(1 / 3)
+  d <- 3 * r * r
+  if (is.finite(d) && d != 0) r <- r - (r * r * r - a) / d
+  r
+}
+
+# JS ToUint32 for a finite double: truncate, then wrap modulo 2^32. Exact in doubles: v / 2^32
+# is exact, so is its floor and the product, and the difference is an integer below 2^32.
+.formula_uint32 <- function(a) {
+  v <- trunc(a)
+  v - 4294967296 * floor(v / 4294967296)
+}
+
+# JS Math.clz32: leading zero bits of ToUint32(a); clz32(0) = 32, clz32(-1) = 0.
+.formula_clz32 <- function(a) {
+  v <- .formula_uint32(a)
+  bits <- 0
+  while (v >= 1) { v <- floor(v / 2); bits <- bits + 1 }
+  32 - bits
+}
+
+# JS Math.imul: the low 32 bits of ToInt32(a) * ToInt32(b), as a signed int32. The full product
+# of two 32-bit values is not exact in a double, so it is built from 16-bit halves: only the low
+# 16 bits of the cross terms survive the wrap.
+.formula_imul <- function(a, b) {
+  x <- .formula_uint32(a); y <- .formula_uint32(b)
+  xh <- floor(x / 65536); xl <- x - xh * 65536
+  yh <- floor(y / 65536); yl <- y - yh * 65536
+  mid <- (xh * yl + xl * yh) %% 65536
+  r <- (xl * yl + mid * 65536) %% 4294967296
+  if (r >= 2147483648) r - 4294967296 else r
+}
+
+# JS Math.fround: the nearest float32, ties to even. 24 significant bits; below 2^-126 the
+# quantum is fixed at 2^-149 (subnormals). Past the largest float32 the tie rule can carry to
+# 2^128, which is +-Infinity in JS (missing here). R's round() at 0 digits is ties-to-even.
+.formula_fround <- function(a) {
+  if (a == 0) return(a)
+  m <- abs(a)
+  e <- floor(log2(m))
+  if (2^e > m) e <- e - 1
+  if (2^(e + 1) <= m) e <- e + 1
+  q <- 2^(max(e, -126) - 23)
+  r <- round(m / q) * q
+  if (r >= 2^128) r <- Inf
+  if (r == 0) return(if (a < 0) -0 else 0)
+  if (a < 0) -r else r
+}
+
+# JS Math.hypot: sqrt of the sum of squares without overflowing on the way (scaled by the
+# largest magnitude); a true overflow is Inf, missing.
+.formula_hypot <- function(...) {
+  v <- abs(c(...))
+  m <- max(v)
+  if (m == 0) return(0)
+  m * sqrt(sum((v / m)^2))
+}
+
+# name -> list(min args, max args (Inf = unbounded), function). JS FUNCTIONS table: every
+# function of the JS Math object with its spec arity. `random` has no function: it draws from
+# the seeded generator evaluate_formula is given.
 .FORMULA_FUNCTIONS <- list(
   abs = list(1, 1, function(a) abs(a)),
-  sqrt = list(1, 1, function(a) sqrt(a)),
+  acos = list(1, 1, function(a) acos(a)),
+  acosh = list(1, 1, function(a) acosh(a)),
+  asin = list(1, 1, function(a) asin(a)),
+  asinh = list(1, 1, function(a) asinh(a)),
+  atan = list(1, 1, function(a) atan(a)),
+  atan2 = list(2, 2, function(y, x) atan2(y, x)),
+  atanh = list(1, 1, function(a) atanh(a)),
+  cbrt = list(1, 1, .formula_cbrt),
+  ceil = list(1, 1, function(a) ceiling(a)),
+  clz32 = list(1, 1, .formula_clz32),
+  cos = list(1, 1, function(a) cos(a)),
+  cosh = list(1, 1, function(a) cosh(a)),
+  exp = list(1, 1, function(a) exp(a)),
+  expm1 = list(1, 1, function(a) expm1(a)),
+  floor = list(1, 1, function(a) floor(a)),
+  fround = list(1, 1, .formula_fround),
+  hypot = list(1, Inf, .formula_hypot),
+  imul = list(2, 2, .formula_imul),
   log = list(1, 1, function(a) log(a)),
   log10 = list(1, 1, function(a) log10(a)),
-  exp = list(1, 1, function(a) exp(a)),
-  sin = list(1, 1, function(a) sin(a)),
-  cos = list(1, 1, function(a) cos(a)),
-  tan = list(1, 1, function(a) tan(a)),
-  floor = list(1, 1, function(a) floor(a)),
-  ceil = list(1, 1, function(a) ceiling(a)),
-  round = list(1, 1, .formula_round),
-  pow = list(2, 2, function(a, b) a^b),
+  log1p = list(1, 1, function(a) log1p(a)),
+  log2 = list(1, 1, function(a) log2(a)),
+  max = list(1, Inf, function(...) max(...)),
   min = list(1, Inf, function(...) min(...)),
-  max = list(1, Inf, function(...) max(...))
+  pow = list(2, 2, function(a, b) a^b),
+  random = list(0, 0, NULL),
+  round = list(1, 1, .formula_round),
+  sign = list(1, 1, .formula_sign),
+  sin = list(1, 1, function(a) sin(a)),
+  sinh = list(1, 1, function(a) sinh(a)),
+  sqrt = list(1, 1, function(a) sqrt(a)),
+  tan = list(1, 1, function(a) tan(a)),
+  tanh = list(1, 1, function(a) tanh(a)),
+  trunc = list(1, 1, function(a) trunc(a))
 )
-.FORMULA_CONSTANTS <- list(pi = pi, e = exp(1))
-.FORMULA_MATH_CONSTANTS <- list(PI = pi, E = exp(1))
+# The JS Math constants as the exact doubles JS holds (bare and after `Math.`), plus the bare
+# lower-case pi and e the grammar always had.
+.FORMULA_MATH_CONSTANTS <- list(
+  E = 2.718281828459045, LN10 = 2.302585092994046, LN2 = 0.6931471805599453,
+  LOG10E = 0.4342944819032518, LOG2E = 1.4426950408889634, PI = 3.141592653589793,
+  SQRT1_2 = 0.7071067811865476, SQRT2 = 1.4142135623730951
+)
+.FORMULA_CONSTANTS <- c(list(pi = pi, e = exp(1)), .FORMULA_MATH_CONSTANTS)
+.FORMULA_DEFAULT_SEED <- 12345
 .FORMULA_MAX_LEXEMES <- 2000
 .FORMULA_MAX_DEPTH <- 200
 # ASCII classes only, anchored at the start of the remaining text.
@@ -5441,7 +5548,8 @@ parse_formula <- function(tokens) {
           want <- if (lo == hi) as.character(lo) else if (is.infinite(hi))
             paste("at least", lo) else sprintf("%d to %d", lo, hi)
           .formula_error(sprintf("%s() takes %s argument%s, not %d.", tok$name, want,
-                                 if (want == "1") "" else "s", length(args)))
+                                 if (want %in% c("1", "at least 1")) "" else "s",
+                                 length(args)))
         }
         return(list(k = "call", fn = tok$name, args = args))
       }
@@ -5540,10 +5648,28 @@ formula_cell <- function(v) {
 
 .formula_finite <- function(v) if (length(v) == 1 && is.finite(v)) v else NA_real_
 
+# JS formulaSeed(): a finite non-zero number (or numeric string) as given; anything else
+# (NULL, NA, "", 0, +-Inf, a logical) is the default 12345.
+formula_seed <- function(v) {
+  n <- NA_real_
+  if (is.list(v) && length(v) == 1) v <- v[[1]]
+  if (length(v) == 1 && !is.logical(v)) {
+    if (is.numeric(v)) n <- as.numeric(v)
+    else if (is.character(v) && nzchar(.js_trim(v))) n <- .js_number_from_string(v)
+  }
+  if (!is.na(n) && is.finite(n) && n != 0) n else .FORMULA_DEFAULT_SEED
+}
+
 # JS evaluateFormula(): `column(id)` returns a column's cells, `stored(key)` a stored value.
 # Returns a double vector, NA = missing. Every non-finite step is missing from there on.
-evaluate_formula <- function(tree, column, stored, n) {
+# `rng` is the seeded generator random() draws from (seeded_rng(seed), the exact port of the
+# app's createSeededRNG). Every instruction runs once per row, so each random() draws once per
+# row, left to right, even in a row that ends up missing, as the JS tree walk does.
+evaluate_formula <- function(tree, column, stored, n, rng = NULL) {
   prog <- .formula_postfix(tree)
+  if (is.null(rng) && any(vapply(prog, function(ins)
+    identical(ins$k, "call") && identical(ins$fn, "random"), logical(1))))
+    .formula_error("random() needs a seeded generator.")
   col_cache <- list()
   stored_cache <- list()
   for (ins in prog) {
@@ -5579,6 +5705,8 @@ evaluate_formula <- function(tree, column, stored, n) {
           "+" = a + b, "-" = a - b, "*" = a * b, "/" = a / b,
           "%" = .formula_fmod(a, b), "^" = a^b))
         stack <- c(stack, .formula_finite(r))
+      } else if (ins$fn == "random") {  # a zero-argument call: one draw
+        stack <- c(stack, rng())
       } else {  # call
         m <- ins$n
         vals <- stack[(length(stack) - m + 1):length(stack)]
@@ -5629,7 +5757,8 @@ tp_formulacolumn <- function(args, env) {
     e <- sv[[key]]
     if (is.list(e)) e$staticValue else e
   }
-  result <- evaluate_formula(tree, cell_list, stored_of, n)
+  result <- evaluate_formula(tree, cell_list, stored_of, n,
+                             rng = seeded_rng(formula_seed(args$seed)))
   set_col(env, env$cols, out_id(args, "result"), result, type = "number")
   length(result) > 0
 }

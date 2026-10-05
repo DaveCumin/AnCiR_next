@@ -12,11 +12,13 @@
 		seededRNG,
 		initPalette,
 		canvasSize,
-		observeResize
+		observeResize,
+		seekBar
 	} from '$lib/animUtils.js';
 
-	// A fixed height like every other animation: the viz rows are flex children
-	// of .anim-embed (flex: 1 1 0), so with no height they collapsed to nothing.
+	// Design height of the box, like every other animation (a min-height via
+	// --anim-h in app.css): the viz rows share what the text and controls leave,
+	// and the box grows instead when those wrap.
 	let { height = '900px' } = $props();
 
 	/* ── chi-squared machinery ──────────────────────────────────────────────── */
@@ -152,7 +154,6 @@
 		cStat,
 		btnPlay,
 		progFill,
-		progWrap,
 		stepInd,
 		stepText,
 		statBox,
@@ -184,7 +185,7 @@
 		const L = 40,
 			R = 12,
 			T = 12,
-			Bm = 26,
+			Bm = 32,
 			pw = W - L - R,
 			ph = H - T - Bm;
 		ctx.fillStyle = C.bg;
@@ -254,7 +255,7 @@
 		const L = 42,
 			R = 14,
 			T = 16,
-			Bm = 30,
+			Bm = 32,
 			pw = W - L - R,
 			ph = H - T - Bm;
 		ctx.fillStyle = C.bg;
@@ -613,9 +614,8 @@
 		if (btnPlay) btnPlay.textContent = '▶ Play';
 		draw(0);
 	}
-	function seek(e) {
-		const r = progWrap.getBoundingClientRect();
-		frame = Math.round(clamp((e.clientX - r.left) / r.width, 0, 1) * TOTAL);
+	function seek(p) {
+		frame = Math.round(p * TOTAL);
 		draw(frame);
 	}
 	function jump(stage) {
@@ -640,7 +640,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={height ? `height: ${height}` : undefined}>
+<div class="anim-embed" style:--anim-h={height}>
 	<div class="fp-stage-nav">
 		{#each ['1 · Fold', '2 · Bin (average)', '3 · Statistic', '4 · Sweep period'] as lbl, i (i)}
 			<button class="fp-stage-btn" class:active={activeStage === i} onclick={() => jump(i)}
@@ -676,7 +676,7 @@
 	<div class="controls">
 		<button class="btn" bind:this={btnPlay} onclick={toggle}>&#9654; Play</button>
 		<button class="btn secondary" onclick={reset}>&#8634; Reset</button>
-		<div class="progress-wrap" bind:this={progWrap} onclick={seek}>
+		<div class="progress-wrap" use:seekBar={{ onseek: seek }}>
 			<div class="progress-fill" bind:this={progFill}></div>
 		</div>
 		<div class="speed-wrap">

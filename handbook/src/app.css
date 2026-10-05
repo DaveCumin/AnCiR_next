@@ -345,6 +345,10 @@ em {
 	padding: 12px 14px 14px;
 	display: flex;
 	flex-direction: column;
+	/* The component's height prop (style:--anim-h) is the box's DESIGN height,
+	   not a cap: when captions, legends or controls wrap (narrow screens, a
+	   larger reader font) the box grows, so the figures never get squeezed. */
+	min-height: var(--anim-h, auto);
 }
 
 /* ── VIZ GRID ── */
@@ -352,8 +356,10 @@ em {
 	display: grid;
 	gap: 8px;
 	margin-bottom: 8px;
+	/* Rows share the box's spare height, but never shrink below their content
+	   (titles plus each canvas's min-height below): with min-height: 0 here
+	   the figures were what gave way, down to 0 px. */
 	flex: 1 1 0;
-	min-height: 0;
 	grid-auto-rows: 1fr;
 	align-items: stretch;
 }
@@ -366,6 +372,15 @@ em {
 .viz-row.three-col {
 	grid-template-columns: 1fr 1fr 1fr;
 }
+/* On a phone, side-by-side figures are too narrow for their axis labels:
+   stack them. Scoped to #content so the standalone pages, which have no
+   #content and size their rows from the desktop layout, are unaffected. */
+@media (max-width: 600px) {
+	#content .viz-row.two-col,
+	#content .viz-row.three-col {
+		grid-template-columns: 1fr;
+	}
+}
 
 /* ── CHART PANEL ── */
 .chart-panel {
@@ -376,8 +391,9 @@ em {
 	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 	display: flex;
 	flex-direction: column;
-	min-height: 0;
-	overflow: hidden;
+	/* clip, not hidden: a scroll container's automatic minimum height is 0,
+	   which would let the grid row squeeze the panel below its content. */
+	overflow: clip;
 }
 .chart-panel h3 {
 	font-family: var(--font-sans);
@@ -391,7 +407,11 @@ em {
 	display: block;
 	width: 100%;
 	flex: 1 1 0;
-	min-height: 0;
+	/* Every figure keeps a readable height (scripts/check-anim-layout.mjs
+	   asserts it). contain: size stops the backing-store size that setupCanvas
+	   writes (CSS size x devicePixelRatio) from feeding back into layout. */
+	min-height: 80px;
+	contain: size;
 	background: var(--panel-bg);
 	border-radius: 3px;
 }
@@ -463,6 +483,11 @@ em {
 	border-radius: 3px;
 	overflow: hidden;
 	cursor: pointer;
+}
+/* The bar is a keyboard slider (animUtils.js seekBar): a ring only for keyboard focus. */
+.progress-wrap:focus-visible {
+	outline: 2px solid var(--navy);
+	outline-offset: 3px;
 }
 .progress-fill {
 	height: 100%;

@@ -4431,7 +4431,7 @@
 				}
 			},
 			"compareOutputs": ["rhythmicityx", "rhythmicityy"],
-			"note": "Enright through the Rhythmicity Analysis node, with a 40 h gap (null y) that leaves empty bins. Pins the distinct-fold period axis and the Enright power at each fold."
+			"note": "Enright (A_p) through the Rhythmicity Analysis node, with a 40 h gap (null y) that leaves empty bins, which are missing in the fold. Pins the distinct-fold period axis and A_p at each fold."
 		},
 		{
 			"id": "pure-chisq-periodogram-threshold",
@@ -4601,7 +4601,7 @@
 				}
 			],
 			"compareArrays": ["period", "power"],
-			"note": "Hourly data at 1 h bins. Pins the app's Enright statistic in every language: for each distinct fold, the mean lag-product correlation over every multiple of the fold, over the binned variance. The Python/R ports used to compute a single-lag normalised autocorrelation, a different statistic."
+			"note": "Hourly data at 1 h bins. Pins Enright's A_p in every language: fold the binned series into round(P / binSize) columns, average each column over its occupied bins, and take the root-mean-square deviation of the column means about their plain mean (divisor = occupied columns; Legendre & Legendre, Numerical Ecology, eq. 12.12-12.13, after Enright 1965). Until v80.1 every language computed a mean lag-product autocorrelation instead (SPEC-7)."
 		},
 		{
 			"id": "pure-enright-periodogram-missing",
@@ -4646,7 +4646,7 @@
 				}
 			],
 			"compareArrays": ["period", "power"],
-			"note": "15 min data at 1 h bins (four points per bin) with every 9th value missing and a 30 h gap (null y). Missing rows must be dropped before binning, never averaged in as zeros, and the gap's EMPTY bins centre to 0 in the lag products while still counting in n."
+			"note": "15 min data at 1 h bins (four points per bin) with every 9th value missing and a 30 h gap (null y). Missing rows are dropped before binning, never averaged in as zeros, and the gap's EMPTY bins are missing in the fold: each column mean uses only its occupied bins (they used to count as 0)."
 		},
 		{
 			"id": "time-iso-utc-z",
@@ -10572,7 +10572,7 @@
 			"jsFn": "enrightPeriodogram",
 			"pyFunc": "enright_periodogram",
 			"rFunc": "enright_periodogram",
-			"note": "Enright bins from binOrigin too (negative times kept).",
+			"note": "Enright bins from binOrigin too (negative times kept); A_p does not depend on the time origin.",
 			"input": {
 				"t": [
 					-120.0, -119.0, -118.0, -117.0, -116.0, -115.0, -114.0, -113.0, -112.0, -111.0, -110.0,
@@ -10663,7 +10663,7 @@
 			"jsFn": "enrightPeriodogram",
 			"pyFunc": "enright_periodogram",
 			"rFunc": "enright_periodogram",
-			"note": "Flat data: Enright power 0 at every fold (ROB-13).",
+			"note": "Flat data: A_p exactly 0 at every fold that has a statistic (ROB-13), not the spread of rounding residues.",
 			"input": {
 				"t": [
 					0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
@@ -10719,6 +10719,261 @@
 					"periodMax": 30,
 					"periodStep": 0.5,
 					"alpha": 0.05
+				}
+			],
+			"compareArrays": ["period", "power"]
+		},
+		{
+			"id": "pure-enright-periodogram-textbook",
+			"kind": "pureUtil",
+			"jsFn": "enrightPeriodogram",
+			"pyFunc": "enright_periodogram",
+			"rFunc": "enright_periodogram",
+			"tolerance": 1e-9,
+			"note": "Legendre & Legendre (Numerical Ecology, section 12.4.1) worked example of Enright's statistic: the series 2,2,4,7,10,5,2,5,8,4,1,2,5,9,6,3 gives A_p = 1.0951 at period 4 (complete rows) and 2.2708 at period 5 (a partial last row: column 1 has four values, the others three).",
+			"input": {
+				"t": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0],
+				"y": [2, 2, 4, 7, 10, 5, 2, 5, 8, 4, 1, 2, 5, 9, 6, 3]
+			},
+			"argRefs": ["t", "y"],
+			"jsArgs": [
+				{
+					"binSize": 1,
+					"periodMin": 2,
+					"periodMax": 8,
+					"periodStep": 1
+				}
+			],
+			"pyArgs": [
+				{
+					"binSize": 1,
+					"periodMin": 2,
+					"periodMax": 8,
+					"periodStep": 1
+				}
+			],
+			"compareArrays": ["period", "power"]
+		},
+		{
+			"id": "pure-enright-periodogram-15min",
+			"kind": "pureUtil",
+			"jsFn": "enrightPeriodogram",
+			"pyFunc": "enright_periodogram",
+			"rFunc": "enright_periodogram",
+			"tolerance": 1e-9,
+			"note": "15 min data at 15 min bins (one point per bin), 7 days, tau 23.6 h: A_p at every quarter-hour fold from 20 to 28 h.",
+			"generate": {
+				"type": "rhythm",
+				"n": 672,
+				"period": 23.6,
+				"amp": 1,
+				"mesor": 5,
+				"phase": 3,
+				"noise": 0.8,
+				"seed": 931,
+				"dt": 0.25,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"argRefs": ["t", "y"],
+			"jsArgs": [
+				{
+					"binSize": 0.25,
+					"periodMin": 20,
+					"periodMax": 28,
+					"periodStep": 0.25
+				}
+			],
+			"pyArgs": [
+				{
+					"binSize": 0.25,
+					"periodMin": 20,
+					"periodMax": 28,
+					"periodStep": 0.25
+				}
+			],
+			"compareArrays": ["period", "power"]
+		},
+		{
+			"id": "pure-enright-periodogram-partial-cycle",
+			"kind": "pureUtil",
+			"jsFn": "enrightPeriodogram",
+			"pyFunc": "enright_periodogram",
+			"rFunc": "enright_periodogram",
+			"tolerance": 1e-9,
+			"note": "250 hourly points: every fold from 18 to 30 h has a partial last cycle, so the later columns hold one row fewer. Each column mean averages only the rows it has (Legendre & Legendre eq. 12.13).",
+			"generate": {
+				"type": "rhythm",
+				"n": 250,
+				"period": 24,
+				"amp": 1,
+				"mesor": 0,
+				"phase": 2,
+				"noise": 0.7,
+				"seed": 932,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"argRefs": ["t", "y"],
+			"jsArgs": [
+				{
+					"binSize": 1,
+					"periodMin": 18,
+					"periodMax": 30,
+					"periodStep": 1
+				}
+			],
+			"pyArgs": [
+				{
+					"binSize": 1,
+					"periodMin": 18,
+					"periodMax": 30,
+					"periodStep": 1
+				}
+			],
+			"compareArrays": ["period", "power"]
+		},
+		{
+			"id": "pure-enright-periodogram-subhourly-bins",
+			"kind": "pureUtil",
+			"jsFn": "enrightPeriodogram",
+			"pyFunc": "enright_periodogram",
+			"rFunc": "enright_periodogram",
+			"tolerance": 1e-9,
+			"note": "Hourly data at 0.25 h bins (three of every four bins empty), tau 24.5 h, folds every 0.25 h. Empty bins are missing, so a fold such as 24.5 h (98 bins) uses only its occupied columns and tests the half-hour period properly (SPEC-8: empty bins used to count as 0, and 24.5 h scored half its whole-hour neighbours).",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24.5,
+				"amp": 1,
+				"mesor": 0,
+				"phase": 0,
+				"noise": 0.3,
+				"seed": 933,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"argRefs": ["t", "y"],
+			"jsArgs": [
+				{
+					"binSize": 0.25,
+					"periodMin": 23,
+					"periodMax": 26,
+					"periodStep": 0.25
+				}
+			],
+			"pyArgs": [
+				{
+					"binSize": 0.25,
+					"periodMin": 23,
+					"periodMax": 26,
+					"periodStep": 0.25
+				}
+			],
+			"compareArrays": ["period", "power"]
+		},
+		{
+			"id": "pure-enright-periodogram-uneven-occupancy",
+			"kind": "pureUtil",
+			"jsFn": "enrightPeriodogram",
+			"pyFunc": "enright_periodogram",
+			"rFunc": "enright_periodogram",
+			"tolerance": 1e-9,
+			"note": "Irregular 30 min sampling with jitter and 35% of samples dropped, at 1 h bins: bins hold 0, 1 or 2 samples and columns hold different numbers of occupied bins. Bin means are folded; each column mean uses its occupied bins only, and A_p weights every occupied column equally.",
+			"input": {
+				"t": [
+					0.000711, 1.106721, 1.692139, 2.080856, 2.759677, 3.095055, 3.612335, 4.041513, 5.211028,
+					5.511389, 6.238162, 6.575013, 7.155233, 7.630286, 8.005735, 9.148879, 10.03959, 10.575169,
+					12.645308, 13.191903, 13.530923, 15.287396, 15.538457, 16.169412, 17.147294, 17.527163,
+					18.099845, 18.715399, 19.135857, 19.6483, 20.71909, 21.743974, 23.561568, 24.146625,
+					25.213617, 25.643881, 26.033028, 26.572983, 27.216601, 27.597372, 28.561461, 29.04332,
+					29.540533, 30.174749, 30.570246, 31.089045, 31.560574, 32.193047, 32.564833, 35.057,
+					35.771297, 36.67975, 37.130145, 38.193276, 39.176369, 40.026832, 40.552525, 41.679458,
+					42.707276, 43.27255, 43.78132, 44.723236, 45.083906, 46.029514, 46.527611, 47.220622,
+					47.717996, 48.273095, 49.0938, 49.770759, 50.668345, 51.032788, 51.550866, 52.551042,
+					53.263686, 54.053072, 54.553806, 55.659513, 56.067219, 58.173355, 59.123833, 59.76223,
+					60.539934, 62.650112, 63.016533, 63.674125, 64.626313, 65.753633, 66.695354, 67.178718,
+					68.186644, 69.688163, 70.512077, 71.003443, 71.797972, 72.225595, 72.788623, 73.096908,
+					73.640508, 74.166163, 75.047419, 75.517831, 76.798082, 79.045365, 80.21033, 80.5775,
+					82.119402, 83.269941, 84.246796, 84.669075, 85.082998, 86.170727, 86.680858, 87.142844,
+					87.675284, 88.020765, 88.533544, 89.255375, 89.596994, 90.011012, 91.20638, 92.732662,
+					93.092532, 93.678835, 94.628543, 95.235531, 96.001629, 96.704125, 98.008588, 98.555805,
+					99.616815, 100.582286, 102.049537, 102.636491, 103.261016, 103.713923, 104.27238,
+					104.665895, 105.24005, 105.599529, 106.599354, 107.685246, 108.14593, 108.559209,
+					109.791965, 110.538344, 112.04681, 112.576467, 113.508572, 114.260387, 115.60792,
+					116.280837, 117.58468, 118.120511, 118.766898, 120.653029, 121.571891, 122.24625,
+					122.629091, 123.010222, 123.643831, 124.13419, 124.68854, 125.133771, 126.164218,
+					126.696258, 127.777779, 128.221568, 128.639486, 129.565785, 130.047201, 130.588249,
+					131.173153, 131.737855, 132.065791, 132.714188, 133.114796, 133.567398, 134.147647,
+					134.583493, 136.784298, 137.26074, 138.114091, 138.654856, 141.505176, 143.039338,
+					144.173656, 145.149149, 145.786002, 146.017208, 146.534465, 147.148396, 147.731683,
+					148.698595, 149.157081, 149.59582, 152.120836, 152.630672, 153.069174, 153.647533,
+					154.259075, 154.718809, 155.108694, 155.568084, 156.236108, 157.231831, 158.233007,
+					159.141151, 159.591801, 160.774054, 161.125018, 161.522207, 162.760493, 163.113079,
+					163.797128, 164.703932, 165.290993, 165.516339, 166.031818, 168.696592, 169.016686,
+					169.740873, 170.075897, 170.664415, 171.164635, 171.503911, 172.096544, 172.542525,
+					173.237844, 173.5194, 174.532286, 175.039355, 176.282494, 177.108696, 178.257795,
+					178.509933, 179.031873, 181.149496, 181.517337, 182.682802, 186.028123, 186.664487,
+					187.218849, 187.751749, 189.071629, 189.55398, 190.147568, 190.76319, 191.145197,
+					193.25098, 193.603779, 194.154889, 194.656987, 195.109713, 196.56653, 197.748536,
+					198.119687, 199.723501
+				],
+				"y": [
+					1.41636, 1.173635, -0.253174, -0.333111, 0.450018, 0.007086, -0.243847, -0.301778,
+					-0.341964, -0.386899, 0.024813, -0.821901, -0.778096, -1.113744, -1.382228, -0.89584,
+					-0.209195, -0.812611, -0.856269, -0.392855, -0.780109, -1.133309, -0.767121, -0.159161,
+					0.399093, -0.853741, -0.622683, 0.518421, 0.200691, -0.296605, 0.414341, -0.055077,
+					1.496241, 0.630758, 0.510044, 0.27379, 1.095438, 1.186416, -0.26694, 0.761116, 2.036524,
+					0.050364, 0.652088, -0.888577, 0.237678, -0.495257, -0.338903, -1.136165, -0.912559,
+					-0.152252, -1.388382, -0.902814, -1.200282, -0.809685, -1.310099, -0.165167, -0.066013,
+					0.157487, -1.473357, 0.029148, -0.86457, 0.047511, 1.02302, 1.243489, 0.91218, 1.024271,
+					1.614202, 0.920999, 2.059277, 0.840057, 1.376381, 0.972595, 2.604953, 0.809581, 1.301205,
+					-0.164137, -0.545017, -1.711109, -1.782664, -0.927481, -2.35768, -1.059903, -0.695196,
+					-0.55937, -0.771218, -0.754605, 0.459497, 0.786524, -0.021585, -0.11857, 1.004947,
+					0.392875, 0.866062, 1.706419, 1.346627, 0.050342, 1.252739, 1.857964, 1.381067, 0.999007,
+					1.532836, 1.233534, 1.361503, 0.863133, 0.225368, -0.082759, -0.86135, -1.517234,
+					-1.306881, -1.567231, -1.034432, -0.367722, -1.684865, -0.685904, -1.636711, -1.939964,
+					-0.271131, -0.028126, 0.01081, 0.036317, -0.239083, -0.828141, 1.187552, 1.01296,
+					1.484106, 1.05618, 0.212219, 2.519709, -0.093316, 0.799117, 0.915371, 0.362333, -0.741542,
+					0.213528, -0.431093, 0.310113, -0.967341, -0.288715, -0.621435, 0.003513, -1.153462,
+					-2.998651, -0.535992, -1.524359, -0.978168, -1.761442, 0.335869, -0.320489, -0.293481,
+					0.387125, 1.079442, 1.108053, 0.102518, 0.369224, -0.368497, 0.929365, 1.209498, 0.585533,
+					0.698124, 0.951118, 0.248757, 0.346601, 0.701203, -0.645158, 0.381949, -0.045962,
+					-0.74315, 0.561298, -0.405932, -0.414346, -1.09089, -1.023659, -1.354705, -1.038742,
+					-0.950582, -0.353442, -1.841251, -0.298841, -0.561613, -0.319244, -0.07243, -1.443819,
+					-0.071316, 1.280616, 1.184028, 0.432966, -0.062313, -0.283933, 1.290194, 1.665497,
+					1.479809, 0.597234, 0.881312, 0.358674, 1.189711, 0.14943, -0.639306, -0.669183,
+					-1.156679, -0.64421, -0.890265, -1.311558, -0.344995, -0.67316, -1.399437, -1.165329,
+					-1.141925, -0.809108, -0.742218, 0.370413, -0.304407, -0.310006, 0.991612, -0.409153,
+					0.570891, 1.150082, 0.550309, 0.601497, 1.301579, 1.674424, 1.0196, 1.245657, 0.90803,
+					1.247051, 1.186703, 0.143655, 0.284458, 0.242416, 0.604892, -0.205615, -0.56489,
+					-1.096029, -0.577578, -1.395601, -1.83182, -0.543584, -0.406976, -1.062817, -0.3306,
+					-0.551536, 0.749648, 0.458073, 0.767906, 0.978324, 0.542507, 0.473704, 1.296748, 0.55102,
+					0.887181, 1.679182, 1.27767, 1.681369, 0.694646, 0.826183, 0.223417, 0.21899, 0.135679,
+					0.052414
+				]
+			},
+			"argRefs": ["t", "y"],
+			"jsArgs": [
+				{
+					"binSize": 1,
+					"periodMin": 20,
+					"periodMax": 28,
+					"periodStep": 0.25
+				}
+			],
+			"pyArgs": [
+				{
+					"binSize": 1,
+					"periodMin": 20,
+					"periodMax": 28,
+					"periodStep": 0.25
 				}
 			],
 			"compareArrays": ["period", "power"]
@@ -17633,6 +17888,1647 @@
 			},
 			"compareOutputs": ["trendx", "trendy", "r2", "rmse"],
 			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-formula-acos",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "acos: [-1, 1] only; outside it JS gives NaN and Python raises, both missing here.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-2, -1, -0.5, 0, 0.3, 1, 1.0000001]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "acos("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-asin",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "asin: [-1, 1] only; outside is missing.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-2, -1, -0.5, 0, 0.3, 1, 1.0000001]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "asin("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-atan",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "atan over its whole range.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-1e300, -1, 0, 0.5, 1, 10000000000.0]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "atan("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-acosh",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "acosh: x >= 1 only; below is missing.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 0.5, 1, 1.5, 10, 1e300]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "acosh("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-asinh",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "asinh, including very large magnitudes.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-1e300, -2, -0.5, 0, 0.5, 3, 1e300]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "asinh("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-atanh",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "atanh: +-1 is +-Infinity in JS and |x| > 1 is NaN; both missing.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-1, -0.999, -0.5, 0, 0.5, 0.999, 1, 2]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "atanh("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-cbrt",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "cbrt of a NEGATIVE is the real negative root (cbrt(-8) = -2), where (-8)^(1/3) is missing; Python < 3.11 and R have no cbrt, and x^(1/3) is wrong for negatives.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-27, -8, -0.001, 0, 2, 1e300, -1e-300]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "cbrt("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-cosh",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "cosh overflows past ~710 (Infinity in JS, OverflowError in Python): missing.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-1000, -710, -1, 0, 1, 709, 711]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "cosh("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-sinh",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "sinh: tiny arguments keep precision; overflow is missing.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-1000, -1, -1e-10, 0, 1, 710, 711]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "sinh("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-tanh",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "tanh saturates at +-1, never overflows.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-1000, -20, -1, 0, 1e-10, 0.5, 20, 1000]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "tanh("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-expm1",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "expm1 keeps precision near 0 (expm1(1e-10) is not exp(1e-10) - 1); overflow is missing.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-1000, -1, -1e-10, 0, 1e-10, 1, 709, 710]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "expm1("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-log1p",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "log1p: -1 is -Infinity, below -1 is NaN; both missing. Precise near 0.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-2, -1, -0.5, -1e-10, 0, 1e-10, 1, 1e300]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "log1p("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-log2",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "log2: exact for powers of two; 0 and negatives missing.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-1, 0, 0.5, 1, 8, 1e-300, 3, 1e300]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "log2("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-sign",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "sign: -1, 0 or 1 (JS Math.sign; Python has no sign, and math.copysign(1, 0) would give 1).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-5, -0.001, 0, 0.001, 7, -1e300, 1e300]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "sign("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-trunc",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "trunc toward zero, exact for every double.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-2.7, -0.5, 0, 0.5, 2.7, 1e300, -4503599627370495.5]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "trunc("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-clz32",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "clz32 counts leading zero bits of ToUint32(x): truncate, then wrap mod 2^32 (so -1 -> 0xFFFFFFFF -> 0, 2^32 -> 0 -> 32, clz32(0) = 32, 1e20 wraps exactly).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [
+						0, 1, -1, 0.5, -0.5, 2147483648, 4294967296, 6442450944, 1e20, -1e20, 4294967295,
+						123456.789, -2147483649
+					]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "clz32("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-fround",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "fround rounds to the nearest float32, ties to even: subnormals (1e-40), below half the smallest subnormal to 0 (1e-46), exactly half the smallest subnormal ties to 0, just under halfway past the largest float32 rounds down, exactly halfway overflows to Infinity (missing), 16777217 -> 16777216 (tie to even).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [
+						5.5, 5.05, 0.1, -0.1, 1e-46, 1e-40, 1.401298464324817e-45, 7.006492321624085e-46,
+						3.4028235677973306e38, 3.4028235677973366e38, 1e39, -1e39, 16777217, 16777219,
+						0.30000001192092896
+					]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "fround("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-math-prefix-new",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "Math.-prefixed spellings of the new functions give the same values as the bare ones: Math.cbrt, Math.log2, Math.sign, Math.trunc, Math.hypot.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-8, -1, 0, 2, 27]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "Math.cbrt("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ") + Math.log2(8) + Math.sign("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ") + Math.trunc(-2.5) + Math.hypot(3, "
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-atan2",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "atan2 takes (y, x) in that order, like JS, Python math.atan2 and R atan2; quadrants and the signed-zero rules: atan2(0, -0) = pi and atan2(-0, -1) = -pi (the -0 comes from unary minus).",
+			"inputs": [
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [1, 1, -1, 0, 0, -1, 2.5, -0.5]
+				},
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, -1, -1, -1, 0, 0, -3, 2]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "atan2("
+					},
+					{
+						"type": "col",
+						"id": "@y"
+					},
+					{
+						"type": "text",
+						"value": ", "
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ") + atan2(0, -0) - atan2(-0, -1)"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12
+		},
+		{
+			"id": "tp-formula-hypot",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "hypot is variadic (1, 2, 3 and 4 arguments here); a missing argument (null, blank) makes the row missing even though JS Math.hypot(NaN, Infinity) would be Infinity; no overflow for 1e200 (scaled), but 1e308 x 4 overflows (missing).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [3, null, "", 1e200, 1e308, -5, 0]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [4, 4, 4, 1e200, 1e308, 12, 0]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "hypot("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ", "
+					},
+					{
+						"type": "col",
+						"id": "@y"
+					},
+					{
+						"type": "text",
+						"value": ", "
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ", "
+					},
+					{
+						"type": "col",
+						"id": "@y"
+					},
+					{
+						"type": "text",
+						"value": ") - hypot("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ") + hypot(3, 4, 12) * 0 + hypot("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ", "
+					},
+					{
+						"type": "col",
+						"id": "@y"
+					},
+					{
+						"type": "text",
+						"value": ") * 0"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 1e-12,
+			"rawInputs": true
+		},
+		{
+			"id": "tp-formula-imul",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "imul multiplies the ToInt32 forms and wraps to a signed 32-bit result: imul(2^31 - 1, 2) = -2, imul(65537, 65537) = 131073, imul(4294967295, 5) = -5, imul(3.9, 2.9) = 6 (truncates), imul(-2^31, -1) = -2^31, and 1e20 and 2^53 wrap exactly. R needs 16-bit halves: the full product of two int32 is not exact in a double. The last three products are past 2^53 with odd factors, so a plain double product would lose the low bits.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [
+						2, -5, 2147483647, 65537, 4294967295, 3.9, 1e20, -2147483648, 65535, 9007199254740992,
+						-7.5, 4294967295, 123456789, -123456789
+					]
+				},
+				{
+					"ref": "b",
+					"type": "number",
+					"values": [
+						3, 12, 2, 65537, 5, 2.9, 3, -1, 65535, 3, 1000000000000000.0, 4294967295, 987654321,
+						2147483647
+					]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "imul("
+					},
+					{
+						"type": "col",
+						"id": "@a"
+					},
+					{
+						"type": "text",
+						"value": ", "
+					},
+					{
+						"type": "col",
+						"id": "@b"
+					},
+					{
+						"type": "text",
+						"value": ")"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-round-sign-zero",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "round, trunc, ceil and sign on values whose JS result is a signed zero; -0 and 0 compare equal, the point is that none of them become missing or 1.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [-0.4, -0.5, -0.0001, 0.4, 0]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "text",
+						"value": "round("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ") + trunc("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ") + ceil("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ") + sign("
+					},
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": ") * 10"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-const-E",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "The JS constant E, bare and as Math.E: x*E + Math.E. Both ports must use the same double (the correctly rounded value JS has).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, -2, 0.5]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " * E + Math.E"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-const-LN10",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "The JS constant LN10, bare and as Math.LN10: x*LN10 + Math.LN10. Both ports must use the same double (the correctly rounded value JS has).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, -2, 0.5]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " * LN10 + Math.LN10"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-const-LN2",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "The JS constant LN2, bare and as Math.LN2: x*LN2 + Math.LN2. Both ports must use the same double (the correctly rounded value JS has).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, -2, 0.5]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " * LN2 + Math.LN2"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-const-LOG10E",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "The JS constant LOG10E, bare and as Math.LOG10E: x*LOG10E + Math.LOG10E. Both ports must use the same double (the correctly rounded value JS has).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, -2, 0.5]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " * LOG10E + Math.LOG10E"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-const-LOG2E",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "The JS constant LOG2E, bare and as Math.LOG2E: x*LOG2E + Math.LOG2E. Both ports must use the same double (the correctly rounded value JS has).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, -2, 0.5]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " * LOG2E + Math.LOG2E"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-const-PI",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "The JS constant PI, bare and as Math.PI: x*PI + Math.PI. Both ports must use the same double (the correctly rounded value JS has).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, -2, 0.5]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " * PI + Math.PI"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-const-SQRT1_2",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "The JS constant SQRT1_2, bare and as Math.SQRT1_2: x*SQRT1_2 + Math.SQRT1_2. Both ports must use the same double (the correctly rounded value JS has).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, -2, 0.5]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " * SQRT1_2 + Math.SQRT1_2"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-const-SQRT2",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "The JS constant SQRT2, bare and as Math.SQRT2: x*SQRT2 + Math.SQRT2. Both ports must use the same double (the correctly rounded value JS has).",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, -2, 0.5]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " * SQRT2 + Math.SQRT2"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-random-seeded",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "random() draws from the seeded minstd-shuffle generator (createSeededRNG(seed)); two calls per row draw left to right, row after row; a missing row (null) still consumes its two draws so row 3 is not shifted. Exact: the ports reproduce the generator bit for bit.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, null, 3, 4, 5, 6, 7, 8]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + random() - 2 * Math.random()"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				},
+				"seed": 2024
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0,
+			"rawInputs": true
+		},
+		{
+			"id": "tp-formula-random-default-seed",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "A FormulaColumn without a seed arg (any session saved before it existed) uses 12345.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 0, 0, 0, 0]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + random()"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-random-seed-zero",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "A seed of 0 (or null, '', NaN) is unusable and gives the default 12345, never Number(null) = 0.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 0, 0]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + random()"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				},
+				"seed": 0
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-random-seed-string",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "A numeric-string seed (\"77\") is read as the number 77; a fractional or negative seed is truncated and wrapped into the generator range exactly as createSeededRNG does.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 0, 0]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + random()"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				},
+				"seed": "77"
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-random-seed-negative",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "A negative fractional seed (-5.7) truncates to -5 and wraps into [1, 2147483646].",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 0, 0, 0]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + random()"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				},
+				"seed": -5.7
+			},
+			"compareOutputs": ["result"],
+			"tolerance": 0
+		},
+		{
+			"id": "tp-formula-refused-math-constructor",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "REFUSED: Math.constructor (the Function constructor via Math) is an unknown name.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, 2, 3]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + Math.constructor"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"recordValid": true
+		},
+		{
+			"id": "tp-formula-refused-constructor",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "REFUSED: constructor (an inherited Object.prototype key) is not in the allow-list; a plain object lookup would have found it.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, 2, 3]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + constructor"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"recordValid": true
+		},
+		{
+			"id": "tp-formula-refused-proto",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "REFUSED: __proto__ is an unknown name.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, 2, 3]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + __proto__"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"recordValid": true
+		},
+		{
+			"id": "tp-formula-refused-bracket",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "REFUSED: Math[\"sin\"]: brackets are not in the grammar, so no computed property access.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, 2, 3]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + Math[\"sin\"](1)"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"recordValid": true
+		},
+		{
+			"id": "tp-formula-refused-this",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "REFUSED: this is an unknown name.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, 2, 3]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + this"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"recordValid": true
+		},
+		{
+			"id": "tp-formula-refused-random-arg",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "REFUSED: random() takes no argument (its spec arity is 0); random(1) is an arity error, not a seeded call.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, 2, 3]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + random(1)"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"recordValid": true
+		},
+		{
+			"id": "tp-formula-refused-globalthis",
+			"kind": "tableProcess",
+			"jsName": "FormulaColumn",
+			"pyFunc": "formulacolumn",
+			"rFunc": "formulacolumn",
+			"note": "REFUSED: globalThis is an unknown name.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, 2, 3]
+				}
+			],
+			"args": {
+				"tokens": [
+					{
+						"type": "col",
+						"id": "@x"
+					},
+					{
+						"type": "text",
+						"value": " + globalThis"
+					}
+				],
+				"valid": false,
+				"out": {
+					"result": -1
+				}
+			},
+			"compareOutputs": ["result"],
+			"recordValid": true
+		},
+		{
+			"id": "session-migration-legacy-enright-bins",
+			"kind": "sessionMigration",
+			"pyFunc": "migrate_legacy_enright_bins",
+			"_comment": "v81.0 load migration (core/enrightBinMigration.js; ancir_runtime.py migrate_legacy_enright_bins). A pre-v81 session: only Enright series at the hidden 0.25 h (or none stored) and without binSizeAuto follow their x (1 h on hourly data, 0.5 h on half-hourly) and peak at 24 h; Enright at its own 0.5 h, Chi-squared and Lomb-Scargle at 0.25 h, and a series that already carries binSizeAuto keep theirs. Not claimed by R, which renders no plots.",
+			"version": "β.72.29",
+			"hours": 168,
+			"periodlimsIN": [20, 28],
+			"periodSteps": 0.25,
+			"series": [
+				{ "method": "Enright", "binSize": 0.25, "xStep": 1 },
+				{ "method": "Enright", "xStep": 0.5 },
+				{ "method": "Enright", "binSize": 0.5, "xStep": 1 },
+				{ "method": "Chi-squared", "binSize": 0.25, "xStep": 1 },
+				{ "method": "Lomb-Scargle", "binSize": 0.25, "xStep": 1 },
+				{ "method": "Enright", "binSize": 0.25, "binSizeAuto": false, "xStep": 1 }
+			]
+		},
+		{
+			"id": "session-migration-v81-enright-kept",
+			"kind": "sessionMigration",
+			"pyFunc": "migrate_legacy_enright_bins",
+			"_comment": "A session saved by v81 or later is not migrated: its Enright series at 0.25 h was chosen with the control visible.",
+			"version": "v81.0",
+			"hours": 168,
+			"periodlimsIN": [20, 28],
+			"periodSteps": 0.25,
+			"series": [{ "method": "Enright", "binSize": 0.25, "xStep": 1 }]
 		}
 	]
 }

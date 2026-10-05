@@ -6,7 +6,8 @@
 		seededRNG,
 		initPalette,
 		canvasSize,
-		observeResize
+		observeResize,
+		seekBar
 	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
@@ -49,7 +50,7 @@
 		lastTime = null,
 		accum = 0,
 		speed = 1;
-	let cv, btnPlay, progFill, progWrap, stepInd;
+	let cv, btnPlay, progFill, stepInd;
 	const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 	const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -224,9 +225,8 @@
 		btnPlay.textContent = '▶ Play';
 		draw(0);
 	}
-	function seek(e) {
-		const r = progWrap.getBoundingClientRect();
-		frame = Math.round(clamp((e.clientX - r.left) / r.width, 0, 1) * TOTAL);
+	function seek(p) {
+		frame = Math.round(p * TOTAL);
 		draw(frame);
 	}
 
@@ -241,7 +241,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={height ? `height: ${height}` : undefined}>
+<div class="anim-embed" style:--anim-h={height}>
 	<div class="viz-row one-col">
 		<div class="chart-panel">
 			<h3>Benjamini-Hochberg: sort, compare to a sloping line, cut</h3>
@@ -271,7 +271,7 @@
 	<div class="controls">
 		<button class="btn" bind:this={btnPlay} onclick={toggle}>&#9654; Play</button>
 		<button class="btn secondary" onclick={reset}>&#8634; Reset</button>
-		<div class="progress-wrap" bind:this={progWrap} onclick={seek}>
+		<div class="progress-wrap" use:seekBar={{ onseek: seek }}>
 			<div class="progress-fill" bind:this={progFill}></div>
 		</div>
 		<div class="speed-wrap">

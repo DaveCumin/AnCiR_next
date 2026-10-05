@@ -17,6 +17,8 @@
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
 	import { FREE_PERIOD_DEFAULTS } from '$lib/utils/cosinor.js';
 	import { periodRangeWarnings } from '$lib/utils/periodRangeWarnings.js';
+	import { periodUnitForColumn, periodInputProps } from '$lib/utils/periodUnits.js';
+	import { newPeriodRangeArgs } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import {
 		attachPermutation,
 		permutationValidityWarnings
@@ -40,8 +42,9 @@
 		['fixedKappa', { val: 5 }],
 		['fixOmega', { val: false }],
 		['fixedPeriod', { val: 24 }],
-		// Free period only: the range (h) the fit may use. Unbounded, a trend with no rhythm
-		// fitted a 2,243 h "period" (review FIT-1); same defaults as Cosinor.
+		// Free period only: the range the fit may use, in x units (hours for a time x).
+		// Unbounded, a trend with no rhythm fitted a 2,243 h "period" (review FIT-1); same
+		// defaults as Cosinor, and a NEW node's range follows its x (newNodeArgs below).
 		['minPeriod', { val: FREE_PERIOD_DEFAULTS.minPeriod }],
 		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
 		['fixDutyCycle', { val: false }],
@@ -84,6 +87,8 @@
 	export const definition = {
 		displayName,
 		defaults,
+		// Only a new node's period range follows its x (periodRangeAuto.svelte.js).
+		newNodeArgs: newPeriodRangeArgs,
 		func: rectangularwave,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'rectwavex',
@@ -223,7 +228,7 @@
 				maxPeriod
 			});
 
-			fitEntries.push({ label: `"${yCol.name}"`, result: fitResult ?? null });
+			fitEntries.push({ label: `"${yCol.name}"`, result: fitResult ?? null, t: tt });
 
 			if (fitResult) {
 				const xOutData = outputXData ?? tt;
@@ -315,8 +320,10 @@
 			...(fixOmega
 				? []
 				: [
-						...periodRangeWarnings(t, minPeriod, maxPeriod),
-						...rectWaveFitWarnings(fitEntries, 'The free-period rectangular-wave fit')
+						...periodRangeWarnings(t, minPeriod, maxPeriod, { unit: periodUnitForColumn(tCol) }),
+						...rectWaveFitWarnings(fitEntries, 'The free-period rectangular-wave fit', {
+							unit: periodUnitForColumn(tCol)
+						})
 					]),
 			...permWarnings,
 			...(result.phaseRef?.warning ? [result.phaseRef.warning] : []),
@@ -344,6 +351,10 @@
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
+	import {
+		usePeriodRangeAuto,
+		stopFollowingX
+	} from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 	import {
@@ -410,6 +421,10 @@
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
+	// The unit of every period and phase on this panel: h for a time x, else "x units".
+	let periodUnit = $derived(periodUnitForColumn(xIN_col));
+	// A new node's period range follows its x until the user edits it.
+	usePeriodRangeAuto(p, () => xIN_col);
 
 	let getHash = $derived.by(() => {
 		let out = '';
@@ -588,7 +603,7 @@
 
 	// The acrophase in the node's phase reference (FIT-9): untouched since first sample.
 	const rwAcrophase = (fr) => applyPhaseReference(fr?.acrophase, rwave?.phaseRef, fr?.period);
-	let phaseNote = $derived(rwave?.phaseRef?.clock ? 'clock time' : 'h after start');
+	let phaseNote = $derived(rwave?.phaseRef?.clock ? 'clock time' : `${periodUnit} after start`);
 
 	function getRwaveStatsData() {
 		if (!rwave?.y_results) return { headers: [], rows: [] };
@@ -682,18 +697,21 @@
 	</div>
 	{#if p.args.fixOmega}
 		<div class="control-input-horizontal">
-			<ControlInput label="Period">
+			<!-- Time units convert to hours only for a time x; a number x's unit is its own. -->
+			<ControlInput label={periodUnit === 'h' ? 'Period' : `Period (${periodUnit})`}>
 				<NumberWithUnits
 					bind:value={p.args.fixedPeriod}
 					min="0.1"
 					step="0.5"
-					units={{
-						default: 'hrs',
-						days: 24,
-						hrs: 1,
-						mins: 1 / 60,
-						secs: 1 / (60 * 60)
-					}}
+					units={periodUnit === 'h'
+						? {
+								default: 'hrs',
+								days: 24,
+								hrs: 1,
+								mins: 1 / 60,
+								secs: 1 / (60 * 60)
+							}
+						: undefined}
 					onInput={getRwave}
 				/>
 			</ControlInput>
@@ -701,11 +719,25 @@
 	{:else}
 		<!-- The free period is searched for, and kept, inside this range (as Cosinor). -->
 		<div class="control-input-horizontal">
-			<ControlInput label="Min period (hrs)">
-				<NumberWithUnits bind:value={p.args.minPeriod} onInput={getRwave} min="0.1" step="1" />
+			<ControlInput label={`Min period (${periodUnit})`}>
+				<NumberWithUnits
+					bind:value={p.args.minPeriod}
+					onInput={() => {
+						stopFollowingX(p.args);
+						getRwave();
+					}}
+					{...periodInputProps(p.args.minPeriod)}
+				/>
 			</ControlInput>
-			<ControlInput label="Max period (hrs)">
-				<NumberWithUnits bind:value={p.args.maxPeriod} onInput={getRwave} min="0.1" step="1" />
+			<ControlInput label={`Max period (${periodUnit})`}>
+				<NumberWithUnits
+					bind:value={p.args.maxPeriod}
+					onInput={() => {
+						stopFollowingX(p.args);
+						getRwave();
+					}}
+					{...periodInputProps(p.args.maxPeriod)}
+				/>
 			</ControlInput>
 		</div>
 	{/if}
@@ -801,7 +833,8 @@
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>
-					Period: {fr.period.toFixed(3)} hrs
+					Period: {fr.period.toFixed(3)}
+					{periodUnit}
 					<StoreValueButton
 						label="Period"
 						getter={() => yResult?.fitResult?.period}
@@ -810,7 +843,8 @@
 					/>
 				</p>
 				<p>
-					Acrophase (time of peak, {phaseNote}): {rwAcrophase(fr).toFixed(3)} hrs
+					Acrophase (time of peak, {phaseNote}): {rwAcrophase(fr).toFixed(3)}
+					{periodUnit}
 					<StoreValueButton
 						label={`Acrophase (time of peak, ${phaseNote})`}
 						getter={() => rwAcrophase(yResult?.fitResult)}

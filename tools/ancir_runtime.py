@@ -769,41 +769,45 @@ def _chi_squared_pgram(t, y, periods, dt, alpha=0.05):
     return powers, dfs, thresholds, pvals
 
 
+def _enright_amplitude(data, nb):
+    """periodogram.js enrightAmplitude: Enright's (1965) A_p for one fold of nb bins. The
+    binned series is folded into a Buys-Ballot table of nb columns; each column mean uses
+    only its occupied bins (an empty bin is missing, never 0), empty columns are left out,
+    and A_p = sqrt(mean over occupied columns of (M_h - Mbar)^2) with Mbar the plain mean of
+    the column means (Legendre & Legendre, Numerical Ecology, 1998, eq. 12.12-12.13). NaN when the
+    fold is longer than the binned record or fewer than two columns are occupied."""
+    n = data.size
+    if nb < 1 or nb > n:
+        return float('nan')
+    cols = np.arange(n) % nb
+    valid = ~np.isnan(data)
+    sums = np.bincount(cols[valid], weights=data[valid], minlength=nb)
+    counts = np.bincount(cols[valid], minlength=nb)
+    occ = counts > 0
+    if int(occ.sum()) < 2:
+        return float('nan')
+    means = sums[occ] / counts[occ]
+    grand = float(means.mean())
+    return math.sqrt(float(((means - grand) ** 2).sum()) / means.size)
+
+
 def _enright_pgram(t, y, periods, dt):
     """Port of periodogram.js calculateEnrightPower (Enright 1965): valid pairs, bin at dt
-    from binOrigin, centre the bin means on their grand mean (an EMPTY bin becomes 0), then
-    for each fold of nb = round(P / dt) bins average sum(c_i c_(i+lag)) / (n - lag) over
-    every lag = k nb < n and divide by sum(c^2) / n. Flat data: 0 at every fold."""
+    from binOrigin, then Enright's A_p (_enright_amplitude) at each fold of
+    nb = round(P / dt) bins. Flat data: 0 at every fold that has a statistic."""
     if t is None or y is None or len(t) < 2 or len(y) < 2:
         return [float('nan')] * len(periods)
     tt, yy = _pgram_pairs(t, y)
-    if is_flat_series(yy):
-        return [0.0] * len(periods)
+    flat = is_flat_series(yy)
     data = np.asarray([np.nan if v is None else v
                        for v in bin_data(tt, yy, dt, bin_origin(tt, dt))['y_out']],
                       dtype=float)
-    n = data.size
-    if n == 0:
-        return [0.0] * len(periods)
-    valid = ~np.isnan(data)
-    mean = float(data[valid].mean()) if valid.any() else 0.0
-    c = np.where(valid, data - mean, 0.0)
-    variance = float((c * c).sum()) / n
+    if data.size == 0:
+        return [float('nan')] * len(periods)
     powers = []
     for P in periods:
-        nb = _js_round(P / dt)
-        if nb < 1 or nb > n:
-            powers.append(0.0)
-            continue
-        acc = 0.0
-        count = 0
-        lag = nb
-        while lag < n:
-            acc += float((c[:n - lag] * c[lag:]).sum()) / (n - lag)
-            count += 1
-            lag += nb
-        qp = acc / count if count else 0.0
-        powers.append(qp / variance if variance > 0 else 0.0)
+        ap = _enright_amplitude(data, _js_round(P / dt))
+        powers.append(ap if ap != ap else (0.0 if flat else ap))
     return powers
 
 
@@ -4051,33 +4055,116 @@ class FormulaError(Exception):
     """A formula outside the FormulaColumn grammar (JS FormulaError)."""
 
 
+def _formula_zero_sign(r, a):
+    """A rounding result of zero carries the sign of its argument, as in JS (Math.ceil(-0.5),
+    Math.trunc(-0.5) and Math.round(-0.4) are all -0). Python's int-returning math.floor/ceil/
+    trunc lose it."""
+    return math.copysign(0.0, a) if r == 0 else float(r)
+
+
 def _formula_round(a):
     # JS Math.round: halves go toward +infinity (round(2.5) = 3, round(-2.5) = -2), exactly,
     # including 0.49999999999999994 -> 0 (floor(x + 0.5) would give 1 there).
     r = math.floor(a)
-    return float(r + 1) if a - r >= 0.5 else float(r)
+    return _formula_zero_sign(r + 1 if a - r >= 0.5 else r, a)
 
 
-# name -> (min args, max args or None for unbounded, function). JS FUNCTIONS table.
+def _formula_sign(a):
+    # JS Math.sign: -1, 1, or the zero itself (sign(-0) = -0). Python has no sign().
+    return 1.0 if a > 0 else (-1.0 if a < 0 else a)
+
+
+def _formula_cbrt(a):
+    # JS Math.cbrt: the REAL cube root, negative for a negative (a ** (1/3) is complex or
+    # wrong there). math.cbrt exists from Python 3.11; older Pythons get a power estimate
+    # polished by one Newton step.
+    cbrt = getattr(math, 'cbrt', None)
+    if cbrt is not None:
+        return cbrt(a)
+    if a == 0:
+        return a
+    r = math.copysign(abs(a) ** (1.0 / 3.0), a)
+    return r - (r * r * r - a) / (3.0 * r * r)
+
+
+def _formula_uint32(a):
+    """JS ToUint32 for a finite double: truncate toward zero, then wrap modulo 2^32 (exact on
+    Python ints, so 1e20 and -1 wrap exactly as in JS)."""
+    return int(math.trunc(a)) % 4294967296
+
+
+def _formula_clz32(a):
+    # JS Math.clz32: leading zero bits of ToUint32(a); clz32(0) = 32, clz32(-1) = 0.
+    return float(32 - _formula_uint32(a).bit_length())
+
+
+def _formula_imul(a, b):
+    # JS Math.imul: the low 32 bits of ToInt32(a) * ToInt32(b), read as a signed int32.
+    r = (_formula_uint32(a) * _formula_uint32(b)) % 4294967296
+    return float(r - 4294967296 if r >= 2147483648 else r)
+
+
+def _formula_fround(a):
+    # JS Math.fround: the nearest float32 (ties to even, subnormals kept); past the float32
+    # range it is +-Infinity, which the evaluator turns into missing.
+    with np.errstate(over='ignore'):
+        return float(np.float32(a))
+
+
+# name -> (min args, max args or None for unbounded, function). JS FUNCTIONS table: every
+# function of the JS Math object, with its spec arity. `random` has no function here: it
+# draws from the seeded generator evaluate_formula is given.
 _FORMULA_FUNCTIONS = {
     'abs': (1, 1, lambda a: abs(a)),
-    'sqrt': (1, 1, math.sqrt),
+    'acos': (1, 1, math.acos),
+    'acosh': (1, 1, math.acosh),
+    'asin': (1, 1, math.asin),
+    'asinh': (1, 1, math.asinh),
+    'atan': (1, 1, math.atan),
+    'atan2': (2, 2, math.atan2),  # atan2(y, x), the JS order
+    'atanh': (1, 1, math.atanh),
+    'cbrt': (1, 1, _formula_cbrt),
+    'ceil': (1, 1, lambda a: _formula_zero_sign(math.ceil(a), a)),
+    'clz32': (1, 1, _formula_clz32),
+    'cos': (1, 1, math.cos),
+    'cosh': (1, 1, math.cosh),
+    'exp': (1, 1, math.exp),
+    'expm1': (1, 1, math.expm1),
+    'floor': (1, 1, lambda a: _formula_zero_sign(math.floor(a), a)),
+    'fround': (1, 1, _formula_fround),
+    'hypot': (1, None, math.hypot),
+    'imul': (2, 2, _formula_imul),
     'log': (1, 1, math.log),
     'log10': (1, 1, math.log10),
-    'exp': (1, 1, math.exp),
-    'sin': (1, 1, math.sin),
-    'cos': (1, 1, math.cos),
-    'tan': (1, 1, math.tan),
-    'floor': (1, 1, lambda a: float(math.floor(a))),
-    'ceil': (1, 1, lambda a: float(math.ceil(a))),
-    'round': (1, 1, _formula_round),
-    'pow': (2, 2, math.pow),
-    'min': (1, None, lambda *v: min(v)),
+    'log1p': (1, 1, math.log1p),
+    'log2': (1, 1, math.log2),
     'max': (1, None, lambda *v: max(v)),
+    'min': (1, None, lambda *v: min(v)),
+    'pow': (2, 2, math.pow),
+    'random': (0, 0, None),
+    'round': (1, 1, _formula_round),
+    'sign': (1, 1, _formula_sign),
+    'sin': (1, 1, math.sin),
+    'sinh': (1, 1, math.sinh),
+    'sqrt': (1, 1, math.sqrt),
+    'tan': (1, 1, math.tan),
+    'tanh': (1, 1, math.tanh),
+    'trunc': (1, 1, lambda a: _formula_zero_sign(math.trunc(a), a)),
 }
-_FORMULA_CONSTANTS = {'pi': math.pi, 'e': math.e}
-# `Math.`-prefixed spellings the old JS evaluator accepted (JS capitalisation).
-_FORMULA_MATH_CONSTANTS = {'PI': math.pi, 'E': math.e}
+# The JS Math constants as the exact doubles JS holds (accepted bare and after `Math.`), and
+# the bare lower-case pi and e the grammar always had.
+_FORMULA_MATH_CONSTANTS = {
+    'E': 2.718281828459045,
+    'LN10': 2.302585092994046,
+    'LN2': 0.6931471805599453,
+    'LOG10E': 0.4342944819032518,
+    'LOG2E': 1.4426950408889634,
+    'PI': 3.141592653589793,
+    'SQRT1_2': 0.7071067811865476,
+    'SQRT2': 1.4142135623730951,
+}
+_FORMULA_CONSTANTS = {'pi': math.pi, 'e': math.e, **_FORMULA_MATH_CONSTANTS}
+_FORMULA_DEFAULT_SEED = 12345
 
 _FORMULA_MAX_LEXEMES = 2000
 _FORMULA_MAX_DEPTH = 200
@@ -4281,8 +4368,9 @@ def parse_formula(tokens):
                 if len(args) < lo or (hi is not None and len(args) > hi):
                     want = str(lo) if lo == hi else (f'at least {lo}' if hi is None
                                                      else f'{lo} to {hi}')
+                    one = want in ('1', 'at least 1')
                     raise FormulaError(
-                        f"{name}() takes {want} argument{'' if want == '1' else 's'}, "
+                        f"{name}() takes {want} argument{'' if one else 's'}, "
                         f'not {len(args)}.')
                 return ('call', name, args)
             if name in const_table:
@@ -4400,14 +4488,33 @@ def _formula_finite(v):
     return v if (v is not None and math.isfinite(v)) else None
 
 
-def evaluate_formula(tree, column, stored, n):
+def formula_seed(v):
+    """JS formulaSeed(): the seed random() draws with. A finite non-zero number (or numeric
+    string, JS Number() syntax) as given; anything else (absent, None, '', 0, NaN, +-inf, a
+    bool) is the default 12345."""
+    n = None
+    if isinstance(v, (int, float, np.integer, np.floating)) and not isinstance(v, (bool, np.bool_)):
+        n = float(v)
+    elif isinstance(v, str) and v.strip(_JS_WS) != '':
+        n = _js_number_from_string(v)
+    return n if (n is not None and math.isfinite(n) and n != 0) else _FORMULA_DEFAULT_SEED
+
+
+def evaluate_formula(tree, column, stored, n, rng=None):
     """JS evaluateFormula(): run the parsed formula for rows 0..n-1. `column(id)` returns a
     column's data, `stored(key)` a stored value. Returns a list of floats or None (missing).
+
+    `rng` is the seeded generator random() draws from (SeededRNG(seed), the exact port of the
+    app's createSeededRNG). The postfix program runs every instruction once per row, so each
+    random() draws once per row, left to right, even in a row that ends up missing, exactly as
+    the JS tree walk does. A formula that calls random() without a generator is refused.
 
     Every step whose value is not finite is missing from that step on. Python raises where
     JS returns Infinity or NaN (1/0, log(0), sqrt(-1), (-8)^(1/3), exp(1000)); both mean
     missing here, so the exceptions are caught per step."""
     prog = _formula_postfix(tree)
+    if rng is None and any(ins[0] == 'call' and ins[1] == 'random' for ins in prog):
+        raise FormulaError('random() needs a seeded generator.')
     col_cache, stored_cache = {}, {}
     for ins in prog:
         if ins[0] == 'col' and ins[1] not in col_cache:
@@ -4442,6 +4549,9 @@ def evaluate_formula(tree, column, stored, n):
                 except (ZeroDivisionError, ValueError, OverflowError):
                     push(None)
             else:  # call
+                if ins[1] == 'random':
+                    push(rng())
+                    continue
                 k = ins[2]
                 vals = stack[len(stack) - k:]
                 del stack[len(stack) - k:]
@@ -4526,7 +4636,8 @@ def tp_formulacolumn(args, cols, raw_data, sv):
     if n == 0:
         return False
     result = evaluate_formula(tree, lambda cid: cols[cid].get_data(),
-                              lambda key: _stored_value_of(sv.get(key)), n)
+                              lambda key: _stored_value_of(sv.get(key)), n,
+                              rng=SeededRNG(formula_seed(args.get('seed'))))
     _set_col(raw_data, cols, _out_id(args, 'result'), result, type_='number')
     return len(result) > 0
 
@@ -7955,13 +8066,9 @@ def plot_fft(plot, columns_index, ax):
 
 def plot_periodogram(plot, columns_index, ax):
     p = plot.get('plot', {})
-    # Coalesce an explicit null method (some sessions store method: null at the
-    # plot level; the per-series default is 'Lomb-Scargle') so we don't fall
-    # through to the Enright branch and render/export the wrong curve.
-    method = p.get('method') or 'Lomb-Scargle'
-    p_min = float(p.get('periodMin', 1.0))
-    p_max = float(p.get('periodMax', 48.0))
-    step = float(p.get('periodStep', 0.1))
+    # Method and bin size are per series, as in the app (_periodogram_series_params). They
+    # used to be read from the plot, where the app never stores them, so every exported
+    # periodogram was drawn as Lomb-Scargle.
     for series in p.get('data', []):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
@@ -7969,24 +8076,24 @@ def plot_periodogram(plot, columns_index, ax):
             continue
         t = (x_col.hours_since_start if x_col.type == 'time'
              else x_col.get_data())
+        params = _periodogram_series_params(p, series, t)
         y = y_col.get_data()
         t, y = _paired_finite(t, y)
         if not t:
             continue
-        result = run_periodogram_calculation({
-            't': t, 'y': y, 'method': method,
-            'minPeriod': p_min, 'maxPeriod': p_max, 'stepSize': step,
-        })
+        result = run_periodogram_calculation({'t': t, 'y': y, **params})
         line = series.get('line') or {}
         colour = line.get('colour') or line.get('color')
         ax.plot(result['x'], result['y'], color=colour,
                 linewidth=line.get('width', 1),
                 label=series.get('label') or y_col.name)
         if result.get('threshold') is not None:
-            ax.axhline(result['threshold'], color=colour or 'gray',
-                       linestyle='--', linewidth=0.8, alpha=0.5)
+            # The Sidak line is per fold (its df follows the occupied columns), so it is a
+            # curve over period, not one horizontal value.
+            ax.plot(result['x'], result['threshold'], color=colour or 'gray',
+                    linestyle='--', linewidth=0.8, alpha=0.5)
     _apply_axes(ax,
-                xlims=p.get('xlimsIN'),
+                xlims=p.get('periodlimsIN') or p.get('xlimsIN'),
                 ylims=p.get('ylimsIN'),
                 xlabel=(p.get('xAxis') or {}).get('label', 'Period'),
                 ylabel=(p.get('yAxis') or {}).get('label', 'Power'),
@@ -8187,32 +8294,155 @@ def _series_time_and_y(series, columns_index):
     return (t, y) if t else (None, None)
 
 
+_PGRAM_CALC_RANGE_BUFFER = 0.25
+
+
+def median_sampling_interval(times):
+    """periodogram.js medianSamplingInterval: the median of the positive gaps between the
+    sorted usable x values (house rule, then finite), or NaN when there is no such gap."""
+    xs = []
+    for v in times or []:
+        if _js_invalid(v):
+            continue
+        f = _js_number(v)
+        if math.isfinite(f):
+            xs.append(f)
+    xs.sort()
+    gaps = sorted(b - a for a, b in zip(xs, xs[1:]) if b > a)
+    if not gaps:
+        return math.nan
+    mid = len(gaps) // 2
+    return gaps[mid] if len(gaps) % 2 else (gaps[mid - 1] + gaps[mid]) / 2
+
+
+# Legacy Enright bin sizes (core/enrightBinMigration.js, v81.0). Before v81 the app's
+# Periodogram plot HID the Bin Size control for Enright, so a saved Enright series sat at a
+# 0.25 h nobody chose. The app migrates such a series on load to follow its x (binSizeAuto),
+# and so does this port, with the identical rule:
+#   the session's version has a first number below 81 (or no readable version), the plot is
+#   a 'periodogram', the series' method is 'Enright', it has no `binSizeAuto` field, and its
+#   binSize is 0.25 or absent.
+# Chi-squared and Lomb-Scargle series, and Enright series with another bin size, are kept.
+# Only the plot: Rhythmicity / Moving Analysis always showed their bin size for Enright.
+_FIRST_FOLLOWING_MAJOR = 81
+_LEGACY_HIDDEN_BIN = 0.25
+
+
+def _version_major(version):
+    if isinstance(version, bool) or not isinstance(version, (str, int, float)):
+        return None
+    m = re.search(r'\d+', str(version))
+    return int(m.group(0)) if m else None
+
+
+def is_legacy_bin_session(version):
+    """Whether a session saved by `version` predates the following Enright bin size."""
+    major = _version_major(version)
+    return major is None or major < _FIRST_FOLLOWING_MAJOR
+
+
+def is_legacy_enright_series(series):
+    """Whether one saved Periodogram series is a legacy Enright series at the hidden default."""
+    if not isinstance(series, dict) or series.get('method') != 'Enright':
+        return False
+    if 'binSizeAuto' in series:
+        return False
+    b = series.get('binSize')
+    return b is None or (not isinstance(b, bool) and b == _LEGACY_HIDDEN_BIN)
+
+
+def migrate_legacy_enright_bins(session):
+    """Set every legacy Enright Periodogram series of a pre-v81 session to follow its x.
+    Returns (session, migrated); the session is a copy when anything changed (the input is
+    never mutated), exactly as the app's migrateLegacyEnrightBins."""
+    plots = session.get('plots') if isinstance(session, dict) else None
+    if not isinstance(plots, list) or not is_legacy_bin_session(session.get('version')):
+        return session, 0
+    migrated = 0
+    out = []
+    for plot in plots:
+        is_pgram = isinstance(plot, dict) and plot.get('type') == 'periodogram'
+        inner = plot.get('plot') if is_pgram else None
+        data = inner.get('data') if isinstance(inner, dict) else None
+        if not isinstance(data, list) or not any(is_legacy_enright_series(s) for s in data):
+            out.append(plot)
+            continue
+        new_data = []
+        for s in data:
+            if is_legacy_enright_series(s):
+                migrated += 1
+                b = s.get('binSize')
+                s = {**s, 'binSize': _LEGACY_HIDDEN_BIN if b is None else b,
+                     'binSizeAuto': True}
+            new_data.append(s)
+        out.append({**plot, 'plot': {**inner, 'data': new_data}})
+    return ({**session, 'plots': out}, migrated) if migrated else (session, 0)
+
+
+def periodogram_series_bin_size(series, x_hours=None):
+    """The bin size (h) a Periodogram series computes with. A series that follows its x
+    (binSizeAuto) uses its x's median sampling interval, which is what the app writes into
+    binSize (PeriodogramDataclass.followSamplingInterval); a series the app never got to
+    resolve, or a migrated legacy one, therefore computes as the app will. Otherwise the
+    stored binSize, or the class default 0.25 h."""
+    bin_size = series.get('binSize')
+    if series.get('binSizeAuto') is True and x_hours is not None:
+        dt = median_sampling_interval(x_hours)
+        if dt > 0 and math.isfinite(dt):
+            return dt
+    return float(bin_size) if bin_size is not None else 0.25
+
+
+def _periodogram_series_params(plot_inner, series, x_hours=None):
+    """The runPeriodogramCalculation params the app's Periodogram plot uses for one series.
+
+    Method, bin size and alpha are PER SERIES (PeriodogramDataclass), not on the plot; the
+    period range is the plot's periodlimsIN (default [1, 30]) widened by CALC_RANGE_BUFFER
+    on each side, and the step is periodSteps (default 0.25). A series saved before it
+    carried a method or bin size gets the class defaults (Lomb-Scargle, 0.25 h, 0.05). The
+    bin size is periodogram_series_bin_size's (`x_hours`: the series' whole x, in hours).
+    """
+    lims = plot_inner.get('periodlimsIN') or [1, 30]
+    lo, hi = float(lims[0]), float(lims[1])
+    span = hi - lo
+    method = series.get('method') or 'Lomb-Scargle'
+    return {
+        'method': method,
+        'minPeriod': max(0.01, lo - span * _PGRAM_CALC_RANGE_BUFFER),
+        'maxPeriod': hi + span * _PGRAM_CALC_RANGE_BUFFER,
+        'stepSize': float(plot_inner.get('periodSteps') or 0.25),
+        'dt': periodogram_series_bin_size(series, x_hours),
+        'alpha': float(series.get('chiSquaredAlpha') or 0.05),
+    }
+
+
 def periodogram_download_data(plot, columns_index):
     """Mirror Periodogramclass.getDownloadData (Periodogram.svelte).
 
     Headers: ['DataSeries', 'Period (hours)', 'Power']; the JS adds
     ['Threshold', 'P-value'] only when a series uses the Chi-squared method.
     Threshold and P-value are per fold, as in the app (the p-value is the
-    chi-square upper tail, computed directly).
+    chi-square upper tail, computed directly). Each series is computed with its
+    own method and bin size (_periodogram_series_params).
     """
     p = plot.get('plot', {})
-    method = p.get('method') or 'Lomb-Scargle'
-    p_min = float(p.get('periodMin', 1.0))
-    p_max = float(p.get('periodMax', 48.0))
-    step = float(p.get('periodStep', p.get('periodSteps', 0.1)))
-    has_threshold = (method == 'Chi-squared')
+    series_list = p.get('data', [])
+    has_threshold = any((s.get('method') or 'Lomb-Scargle') == 'Chi-squared'
+                        for s in series_list)
     headers = ['DataSeries', 'Period (hours)', 'Power']
     if has_threshold:
         headers += ['Threshold', 'P-value']
     rows = []
-    for d, series in enumerate(p.get('data', [])):
+    for d, series in enumerate(series_list):
         t, y = _series_time_and_y(series, columns_index)
         if t is None:
             continue
+        # The bin size of a series that follows its x reads the WHOLE x, as the app's does
+        # (Periodogram.svelte passes datum.x.hoursSinceStart), not the y-paired subset.
+        x_col = _resolve_plot_col(series.get('x'), columns_index)
+        x_all = x_col.hours_since_start if x_col.type == 'time' else x_col.get_data()
         result = run_periodogram_calculation({
-            't': t, 'y': y, 'method': method,
-            'minPeriod': p_min, 'maxPeriod': p_max, 'stepSize': step,
-        })
+            't': t, 'y': y, **_periodogram_series_params(p, series, x_all)})
         thr = result.get('threshold') or []
         pv = result.get('pvalue') or []
         for i, per in enumerate(result['x']):

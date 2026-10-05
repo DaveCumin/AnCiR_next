@@ -25,7 +25,7 @@
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 
-	import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
+	import { runPeriodogramCalculation, medianSamplingInterval } from '$lib/utils/periodogram.js';
 	// Side-effect import: registers 'periodogram.compute' on the main thread so the
 	// sync fallback works when there is no Worker (tests, older browsers).
 	import '$lib/utils/periodogram.worker-task.js';
@@ -113,6 +113,8 @@
 	class PeriodogramDataclass {
 		static descriptors = {
 			binSize: { label: 'Bin size (h)', step: 0.1 },
+			// Internal: whether a new series still follows its x (see binSizeAuto below).
+			binSizeAuto: { skip: true },
 			method: {
 				label: 'Method',
 				input: 'select',
@@ -124,8 +126,47 @@
 		parentPlot = $state();
 		x = $state();
 		y = $state();
-		binSize = $state(0.25);
 		method = $state('Lomb-Scargle');
+
+		// Bin size (h) of the binned methods (Chi-squared and Enright).
+		//
+		// A NEW series follows its x: `binSizeAuto` is true and the component writes the
+		// series' median sampling interval into the bin size (followSamplingInterval), so one
+		// bin holds one sample. The flat 0.25 h default left three of every four bins empty on
+		// hourly data, and the control was hidden for Enright (SPEC-8). The resolved number is
+		// always what is stored and computed with, so a saved session (and the Python / R
+		// ports, which never read the flag) carries the bin size its spectrum came from.
+		//
+		// A series loaded from a session follows its x only if it was saved following it. A
+		// session saved before the flag existed keeps its stored bin size, or 0.25 h when it
+		// stored none (fromJSON), so its results do not move. The exception is a pre-v81
+		// Enright series at that hidden 0.25 h, which the load migrates to follow its x
+		// (core/enrightBinMigration.js) because the control was hidden and nobody chose it.
+		//
+		// Any write through the `binSize` setter (the panel's input, a multi-select edit) is
+		// the user's choice and stops the following; the automatic write goes through
+		// followSamplingInterval, which does not.
+		#binSize = $state(0.25);
+		binSizeAuto = $state(false);
+		get binSize() {
+			return this.#binSize;
+		}
+		set binSize(v) {
+			this.#binSize = v;
+			this.binSizeAuto = false;
+		}
+		/**
+		 * Set the bin size to the median sampling interval of `xData` while the series follows
+		 * its x. Returns true when it changed the stored value.
+		 * @param {ArrayLike<number>} xData  the series' x in hours
+		 */
+		followSamplingInterval(xData) {
+			if (!this.binSizeAuto) return false;
+			const dt = medianSamplingInterval(xData);
+			if (!(dt > 0) || !Number.isFinite(dt) || dt === this.#binSize) return false;
+			this.#binSize = dt;
+			return true;
+		}
 
 		line = $state();
 		points = $state();
@@ -217,7 +258,10 @@
 			this.thresholdline = new LineClass(dataIN?.thresholdline, this);
 			this.points = new PointsClass(dataIN?.points, this);
 			this.method = dataIN?.method ?? 'Lomb-Scargle';
-			this.binSize = dataIN?.binSize ?? 0.25;
+			// A series built here from column refs only (the add-series button, a new plot's
+			// wiring) is new and follows its x; fromJSON passes the stored state explicitly.
+			this.#binSize = dataIN?.binSize ?? 0.25;
+			this.binSizeAuto = dataIN?.binSizeAuto ?? dataIN?.binSize == null;
 			this.chiSquaredAlpha = dataIN?.chiSquaredAlpha ?? 0.05;
 		}
 
@@ -265,7 +309,7 @@
 					const yMsg =
 						method === 'Chi-squared'
 							? 'the bins they empty are excluded from the chi-squared statistic, reducing its degrees of freedom'
-							: 'empty bins are treated as zero and bias the Enright autocorrelation';
+							: 'the bins they empty are left out of the Enright column means, so those columns average fewer cycles';
 					warnings.push(`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''} — ${yMsg}.`);
 				}
 
@@ -275,31 +319,30 @@
 					.filter((v) => v !== null && v !== undefined && !isNaN(v))
 					.sort((a, b) => a - b);
 				if (validX.length > 1) {
-					const gaps = [];
 					let maxGap = 0;
 					for (let i = 1; i < validX.length; i++) {
 						const gap = validX[i] - validX[i - 1];
-						gaps.push(gap);
 						if (gap > maxGap) maxGap = gap;
 					}
-					if (maxGap > binSize * 1.5) {
+					const medianGap = medianSamplingInterval(validX);
+					// A gap is a break in the SAMPLING, longer than both a bin and the usual
+					// interval. Comparing with the bin size alone called every interval of regular
+					// hourly data a "gap" whenever the bin was finer, repeating the warning below.
+					if (maxGap > Math.max(binSize, medianGap > 0 ? medianGap : 0) * 1.5) {
 						const gapMsg =
 							method === 'Chi-squared'
 								? 'are excluded from the chi-squared statistic, so long gaps thin out the folded bins'
-								: 'are treated as zero and bias the Enright autocorrelation';
+								: 'are left out of the Enright column means, so long gaps thin out the folded columns';
 						warnings.push(
 							`Data has gaps up to ${maxGap.toFixed(1)} h (bin size: ${binSize} h) — empty bins ${gapMsg}.`
 						);
 					}
 
-					gaps.sort((a, b) => a - b);
-					const mid = Math.floor(gaps.length / 2);
-					const medianGap = gaps.length % 2 === 0 ? (gaps[mid - 1] + gaps[mid]) / 2 : gaps[mid];
 					if (medianGap > 0 && binSize < medianGap * (1 - 1e-9)) {
 						const subMsg =
 							method === 'Chi-squared'
 								? 'Empty bins are excluded, so the result at aligned periods matches the coarser bin size exactly, but the degrees of freedom (and the significance line) then jump between neighbouring trial periods'
-								: 'The Enright method treats empty bins as zero, diluting the statistic';
+								: "Empty bins are left out, so folds between whole sampling intervals can be tested, but their columns average fewer cycles, and fewer cycles per column raise Enright's amplitude on noise alone";
 						warnings.push(
 							`Bin size ${binSize} h is smaller than the typical sampling interval (${medianGap.toFixed(2)} h), so most bins are empty. ${subMsg}. Set the bin size to the sampling interval (${medianGap.toFixed(2)} h) or larger.`
 						);
@@ -517,6 +560,7 @@
 				thresholdline: this.thresholdline.toJSON(),
 				points: this.points.toJSON(),
 				binSize: this.binSize,
+				binSizeAuto: this.binSizeAuto,
 				method: this.method,
 				chiSquaredAlpha: this.chiSquaredAlpha
 			};
@@ -531,7 +575,12 @@
 				line: LineClass.fromJSON(json.line),
 				thresholdline: LineClass.fromJSON(json.thresholdline),
 				points: PointsClass.fromJSON(json.points),
-				binSize: json.binSize,
+				// Saved state, never "new": a session saved before binSizeAuto existed keeps its
+				// stored bin size (or the old 0.25 h default when it stored none) and does not
+				// follow its x, so its spectrum is unchanged. (importJson has already set a
+				// legacy Enright series at the hidden 0.25 h to follow: enrightBinMigration.js.)
+				binSize: json.binSize ?? 0.25,
+				binSizeAuto: json.binSizeAuto === true,
 				method: json.method,
 				chiSquaredAlpha: json.chiSquaredAlpha
 			});
@@ -875,7 +924,7 @@
 
 <script>
 	import { appState } from '$lib/core/core.svelte';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, untrack } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import { tick } from 'svelte';
@@ -944,6 +993,20 @@
 			theData.plot.data.forEach((datum) => {
 				datum.cleanup();
 			});
+		}
+	});
+
+	// A new series' bin size follows its x (PeriodogramDataclass.binSizeAuto): the median
+	// sampling interval, rewritten when the x column or its data change. Keyed on the flag
+	// and the x data only, never on the bin size, so undoing the automatic write does not
+	// re-trigger it. The calculation effect below reads the stored bin size.
+	$effect(() => {
+		if (!ownsPlotMetrics(which) || !theData.plot?.data) return;
+		for (const datum of theData.plot.data) {
+			if (!datum.binSizeAuto) continue;
+			const xData = datum.x.hoursSinceStart;
+			void datum.x.getDataHash;
+			untrack(() => datum.followSamplingInterval(xData));
 		}
 	});
 
@@ -1140,25 +1203,45 @@
 							</select>
 						</ControlInput>
 
-						<!-- New: Method selector -->
-						<div class="control-input-horizontal">
-							<!-- binSize only relevant for Chi-squared -->
-							{#if datum.method === 'Chi-squared'}
-								<ControlInput label="Bin Size">
-									<input type="number" step="0.01" min="0.01" bind:value={datum.binSize} />
-								</ControlInput>
-
-								<ControlInput label="Alpha">
+						<!-- The binned methods (Chi-squared and Enright) share the bin size; only
+						     Chi-squared has a significance level. -->
+						{#if datum.method === 'Chi-squared' || datum.method === 'Enright'}
+							<div class="control-input-horizontal">
+								<ControlInput label="Bin Size (h)">
 									<input
 										type="number"
-										min="0.0001"
-										max="0.9999"
-										step="0.01"
-										bind:value={datum.chiSquaredAlpha}
+										step="any"
+										min="0"
+										title={datum.binSizeAuto
+											? 'Following the median sampling interval of x. Type a value to set your own.'
+											: 'Width of the bins the data are averaged into before folding'}
+										bind:value={datum.binSize}
 									/>
 								</ControlInput>
+
+								{#if datum.method === 'Chi-squared'}
+									<ControlInput label="Alpha">
+										<input
+											type="number"
+											min="0.0001"
+											max="0.9999"
+											step="0.01"
+											bind:value={datum.chiSquaredAlpha}
+										/>
+									</ControlInput>
+								{/if}
+							</div>
+							{#if datum.binSizeAuto}
+								<p class="control-note">Bin size follows the median sampling interval.</p>
 							{/if}
-						</div>
+							{#if datum.method === 'Enright'}
+								<p class="control-note">
+									Power is Enright's amplitude A<sub>p</sub>, the standard deviation of the
+									period-folded column means, in the units of y. It has no significance line: judge
+									a peak by its height above the neighbouring periods.
+								</p>
+							{/if}
+						{/if}
 
 						{#if (datum.method === 'Chi-squared' || datum.method === 'Enright') && datum.dataWarnings && datum.dataWarnings.length > 0}
 							<div class="data-warning">
@@ -1412,3 +1495,12 @@
 {:else if which === 'controls'}
 	{@render controls(theData)}
 {/if}
+
+<style>
+	.control-note {
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+		line-height: 1.4;
+		margin: 0 0 var(--space-3) 0;
+	}
+</style>

@@ -13,7 +13,8 @@
 		seededRNG,
 		initPalette,
 		canvasSize,
-		observeResize
+		observeResize,
+		seekBar
 	} from '$lib/animUtils.js';
 
 	let { height = '440px' } = $props();
@@ -65,7 +66,7 @@
 		accum = 0,
 		speed = 0.6;
 
-	let cRaw, cRes, btnPlay, progFill, progWrap, stepInd;
+	let cRaw, cRes, btnPlay, progFill, stepInd;
 
 	function mapRaw(v, padT, pH) {
 		return padT + pH - ((v - rawMin) / (rawMax - rawMin)) * pH;
@@ -96,7 +97,7 @@
 		const padL = 40,
 			padT = 12,
 			pW = W - 52,
-			pH = H - 40;
+			pH = H - 44;
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(padL, padT, pW, pH);
 		drawHGrid(ctx, padL, padT, pW, pH, 4);
@@ -129,7 +130,7 @@
 		const padL = 40,
 			padT = 12,
 			pW = W - 52,
-			pH = H - 40;
+			pH = H - 44;
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(padL, padT, pW, pH);
 		drawHGrid(ctx, padL, padT, pW, pH, 4);
@@ -223,12 +224,8 @@
 		drawAll(0);
 	}
 
-	function seek(e) {
-		const rect = progWrap.getBoundingClientRect();
-		frame = Math.max(
-			0,
-			Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * TOTAL)
-		);
+	function seek(p) {
+		frame = Math.max(0, Math.round(p * TOTAL));
 		drawAll(frame);
 	}
 
@@ -243,7 +240,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={height ? `height: ${height}` : undefined}>
+<div class="anim-embed" style:--anim-h={height}>
 	<div class="viz-row two-col">
 		<div class="chart-panel">
 			<h3>Raw signal + fitted trend</h3>
@@ -273,7 +270,7 @@
 	<div class="controls">
 		<button class="btn" bind:this={btnPlay} onclick={toggle}>&#9654; Play</button>
 		<button class="btn secondary" onclick={reset}>&#8634; Reset</button>
-		<div class="progress-wrap" bind:this={progWrap} onclick={seek}>
+		<div class="progress-wrap" use:seekBar={{ onseek: seek }}>
 			<div class="progress-fill" bind:this={progFill}></div>
 		</div>
 		<div class="speed-wrap">

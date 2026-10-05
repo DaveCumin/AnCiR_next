@@ -63,7 +63,7 @@ describe('Rectangular wave node', () => {
 		expect(valid).toBe(true);
 		expect(res.y_results[2].fitResult.period).toBeCloseTo(48, 6);
 		expect(res.warnings.join(' ')).toMatch(
-			/"y" stopped at the upper limit of the period range: 48 h, range 2 to 48 h/
+			/"y" stopped at the upper limit of the period range: 48 x units, range 2 to 48 x units/
 		);
 	});
 
@@ -84,7 +84,7 @@ describe('Rectangular wave node', () => {
 			out: { rectwavex: -1 }
 		});
 		expect(valid).toBe(false);
-		expect(empty.warnings.join(' ')).toMatch(/Period range 30 to 20 h is empty/);
+		expect(empty.warnings.join(' ')).toMatch(/Period range 30 to 20 x units is empty/);
 	});
 
 	it('shuffle permutation on autocorrelated residuals warns and points to the Surrogate Test', () => {

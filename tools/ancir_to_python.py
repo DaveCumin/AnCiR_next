@@ -264,6 +264,11 @@ def emit(session_path: Path, output_path: Path) -> None:
     parts.append("COLUMN_META = {int(k): v for k, v in _COL_META_RAW.items()}")
     parts.append(f"TABLE_PROCESSES = json.loads({json.dumps(json.dumps(tps_clean))})")
     parts.append(f"PLOTS = json.loads({json.dumps(json.dumps(plots))})")
+    # A pre-v81 Enright Periodogram series at the 0.25 h its hidden control left it on
+    # follows its x, as the app migrates it on load (migrate_legacy_enright_bins).
+    session_version = session.get("version")
+    parts.append("PLOTS = migrate_legacy_enright_bins({'version': json.loads("
+                 f"{json.dumps(json.dumps(session_version))}), 'plots': PLOTS}})[0]['plots']")
     parts.append(f"STORED_VALUES = json.loads({json.dumps(json.dumps(stored_values))})")
     # The app's display zone: actogram rows start at local midnight in it, so the
     # exported actogram plot data must fold in the same zone to land on the same rows.

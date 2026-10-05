@@ -130,22 +130,30 @@ export function fitRectangularWave(t, x, options = {}) {
 
 /**
  * The cosinor's plain-language warnings (period on a bound of the range, optimiser out
- * of iterations) for rectangular-wave fits. `entries` are `{ label, result }` with
- * `result` a fitRectangularWave return value; fixed-period fits never warn about the
- * period range.
+ * of iterations) for rectangular-wave fits. `entries` are `{ label, result, t? }` with
+ * `result` a fitRectangularWave return value and t the x it fitted (with R² it lets the
+ * warning tell a rhythm at the edge of the range from no rhythm; see boundFitIsStrong);
+ * fixed-period fits never warn about the period range. `opts.unit` is the period's unit.
  */
-export function rectWaveFitWarnings(entries, modelLabel = 'The free-period rectangular-wave fit') {
+export function rectWaveFitWarnings(
+	entries,
+	modelLabel = 'The free-period rectangular-wave fit',
+	opts = {}
+) {
 	return freePeriodFitWarnings(
 		(entries ?? []).map((e) => ({
 			label: e?.label,
+			t: e?.t,
 			result: e?.result?.diagnostics
 				? {
 						diagnostics: e.result.diagnostics,
+						rSquared: e.result.rSquared,
 						parameters: { cosines: [{ frequency: e.result.parameters?.omega }] }
 					}
 				: null
 		})),
-		modelLabel
+		modelLabel,
+		opts
 	);
 }
 

@@ -8,7 +8,8 @@
 		seededRNG,
 		initPalette,
 		canvasSize,
-		observeResize
+		observeResize,
+		seekBar
 	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
@@ -44,7 +45,7 @@
 		accum = 0;
 	let acfSpeed = 0.1;
 
-	let cSig, cLag, cAcf, btnPlay, progFill, progWrap, stepInd, lagLabel;
+	let cSig, cLag, cAcf, btnPlay, progFill, stepInd, lagLabel;
 
 	function resize() {
 		[cSig, cLag, cAcf].forEach((c) => setupCanvas(c));
@@ -60,7 +61,7 @@
 		const padL = 38,
 			padT = 10,
 			pW = W - 50,
-			pH = H - 38;
+			pH = H - 42;
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(padL, padT, pW, pH);
 		drawHGrid(ctx, padL, padT, pW, pH, 4);
@@ -95,7 +96,7 @@
 		const padL = 38,
 			padT = 10,
 			pW = W - 50,
-			pH = H - 38;
+			pH = H - 42;
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(padL, padT, pW, pH);
 		drawHGrid(ctx, padL, padT, pW, pH, 4);
@@ -248,12 +249,8 @@
 		drawAll(0);
 	}
 
-	function acfSeek(e) {
-		const rect = progWrap.getBoundingClientRect();
-		frame = Math.max(
-			0,
-			Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * TOTAL)
-		);
+	function acfSeek(p) {
+		frame = Math.max(0, Math.round(p * TOTAL));
 		drawAll(frame);
 	}
 
@@ -268,7 +265,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={height ? `height: ${height}` : undefined}>
+<div class="anim-embed" style:--anim-h={height}>
 	<div class="viz-row two-col">
 		<div class="chart-panel">
 			<h3>Original Signal (7 days)</h3>
@@ -310,7 +307,7 @@
 	<div class="controls">
 		<button class="btn" bind:this={btnPlay} onclick={acfToggle}>&#9654; Play</button>
 		<button class="btn secondary" onclick={acfReset}>&#8634; Reset</button>
-		<div class="progress-wrap" bind:this={progWrap} onclick={acfSeek}>
+		<div class="progress-wrap" use:seekBar={{ onseek: acfSeek }}>
 			<div class="progress-fill" bind:this={progFill}></div>
 		</div>
 		<div class="speed-wrap">

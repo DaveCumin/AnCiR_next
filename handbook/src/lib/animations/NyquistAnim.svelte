@@ -58,7 +58,7 @@
 		const padL = 44,
 			padR = 14,
 			padT = 22,
-			padB = 30;
+			padB = 34;
 		const pW = W - padL - padR;
 		const pH = H - padT - padB;
 
@@ -290,7 +290,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={height ? `height: ${height}` : undefined}>
+<div class="anim-embed" style:--anim-h={height}>
 	<div class="viz-row one-col">
 		<div class="chart-panel">
 			<h3>True 24 h Rhythm — Sampled Every {sampleInterval.toFixed(1)} h</h3>

@@ -62,11 +62,20 @@ export const ANIMATIONS = [
 		blurb: 'A 7-day recording cut into days and stacked, with a drifting free-running onset.'
 	},
 	{
+		slug: 'folded-periodogram',
+		component: 'FoldedPeriodogramAnim',
+		props: {},
+		title: 'One fold, three periodograms',
+		where: 'Chapter 6: Periodograms',
+		blurb:
+			'Fold the record at each trial period, then summarise the folded cloud by one cosine (Lomb-Scargle) or by bin means (chi-squared, Enright).'
+	},
+	{
 		slug: 'folding',
 		component: 'FoldingPeriodogramAnim',
 		props: {},
 		title: 'Folding periodogram (Enright and chi-squared)',
-		where: 'Chapter 6: Periodograms',
+		where: 'Standalone extra (earlier Chapter 6 figure)',
 		blurb: 'Fold, bin, compute the statistic, then sweep the trial period.'
 	},
 	{
@@ -74,7 +83,7 @@ export const ANIMATIONS = [
 		component: 'PeriodogramAnim',
 		props: { height: '600px' },
 		title: 'Least-squares periodogram',
-		where: 'Chapter 6: Periodograms',
+		where: 'Standalone extra (earlier Chapter 6 figure)',
 		blurb: 'A test sine swept across trial periods; the fit quality traces the periodogram.'
 	},
 	{

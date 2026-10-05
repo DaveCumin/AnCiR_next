@@ -8,7 +8,8 @@
 		seededRNG,
 		initPalette,
 		canvasSize,
-		observeResize
+		observeResize,
+		seekBar
 	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
@@ -51,7 +52,7 @@
 		accum = 0;
 	let fftSpeed = 0.04;
 
-	let cSig, cTest, cSpec, btnPlay, progFill, progWrap, stepInd, fftLabel;
+	let cSig, cTest, cSpec, btnPlay, progFill, stepInd, fftLabel;
 
 	function resize() {
 		[cSig, cTest, cSpec].forEach((c) => setupCanvas(c));
@@ -272,12 +273,8 @@
 		drawAll(1);
 	}
 
-	function fftSeek(e) {
-		const rect = progWrap.getBoundingClientRect();
-		frame = Math.max(
-			1,
-			Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * TOTAL)
-		);
+	function fftSeek(p) {
+		frame = Math.max(1, Math.round(p * TOTAL));
 		drawAll(frame);
 	}
 
@@ -292,7 +289,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={height ? `height: ${height}` : undefined}>
+<div class="anim-embed" style:--anim-h={height}>
 	<div class="viz-row one-col">
 		<div class="chart-panel">
 			<h3>Composite Signal (24 h + 12 h components, 7 days)</h3>
@@ -326,7 +323,7 @@
 	<div class="controls">
 		<button class="btn" bind:this={btnPlay} onclick={fftToggle}>&#9654; Play</button>
 		<button class="btn secondary" onclick={fftReset}>&#8634; Reset</button>
-		<div class="progress-wrap" bind:this={progWrap} onclick={fftSeek}>
+		<div class="progress-wrap" use:seekBar={{ onseek: fftSeek }}>
 			<div class="progress-fill" bind:this={progFill}></div>
 		</div>
 		<div class="speed-wrap">

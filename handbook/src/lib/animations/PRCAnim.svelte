@@ -6,7 +6,8 @@
 		seededRNG,
 		initPalette,
 		canvasSize,
-		observeResize
+		observeResize,
+		seekBar
 	} from '$lib/animUtils.js';
 
 	let { height = '460px' } = $props();
@@ -55,7 +56,7 @@
 		lastTime = null,
 		accum = 0,
 		speed = 1;
-	let cv, btnPlay, progFill, progWrap, stepInd;
+	let cv, btnPlay, progFill, stepInd;
 
 	const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -73,8 +74,8 @@
 
 		const L = 54,
 			R = 14;
-		const strip = { x: L, y: 22, w: W - L - R, h: 52 };
-		const plotY = strip.y + strip.h + 46;
+		const strip = { x: L, y: 34, w: W - L - R, h: 52 };
+		const plotY = strip.y + strip.h + 34;
 		const plot = { x: L, y: plotY, w: W - L - R, h: H - plotY - 40 };
 		const ctX = (ct) => plot.x + (ct / 24) * plot.w;
 		const dY = (d) => plot.y + plot.h / 2 - (d / YMAX) * (plot.h / 2);
@@ -149,7 +150,7 @@
 			ctx.fillStyle = C.navy;
 			ctx.font = 'bold 11px ' + F;
 			ctx.textAlign = 'center';
-			ctx.fillText('pulse at CT' + d.ct + ' → ' + NREP + ' animals', ctX(d.ct), strip.y - 16);
+			ctx.fillText('pulse at CT' + d.ct + ' → ' + NREP + ' animals', ctX(d.ct), strip.y - 20);
 		} else {
 			ctx.fillStyle = C.muted;
 			ctx.font = '11px ' + F;
@@ -320,9 +321,8 @@
 		draw(0);
 	}
 
-	function seek(e) {
-		const rect = progWrap.getBoundingClientRect();
-		frame = Math.round(clamp((e.clientX - rect.left) / rect.width, 0, 1) * TOTAL);
+	function seek(p) {
+		frame = Math.round(p * TOTAL);
 		draw(frame / TOTAL);
 	}
 
@@ -337,7 +337,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={height ? `height: ${height}` : undefined}>
+<div class="anim-embed" style:--anim-h={height}>
 	<div class="viz-row one-col">
 		<div class="chart-panel">
 			<h3>Constructing a phase response curve</h3>
@@ -367,7 +367,7 @@
 	<div class="controls">
 		<button class="btn" bind:this={btnPlay} onclick={toggle}>&#9654; Play</button>
 		<button class="btn secondary" onclick={reset}>&#8634; Reset</button>
-		<div class="progress-wrap" bind:this={progWrap} onclick={seek}>
+		<div class="progress-wrap" use:seekBar={{ onseek: seek }}>
 			<div class="progress-fill" bind:this={progFill}></div>
 		</div>
 		<div class="speed-wrap">

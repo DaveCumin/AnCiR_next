@@ -7,7 +7,8 @@
 		drawHGrid,
 		initPalette,
 		canvasSize,
-		observeResize
+		observeResize,
+		seekBar
 	} from '$lib/animUtils.js';
 
 	let { height = '560px' } = $props();
@@ -131,7 +132,7 @@
 		PAD_T = 8;
 
 	let cWave, cFft, cSpec;
-	let btnPlay, progFill, progWrap, stepInd, noteInfo, liveFreqInfo;
+	let btnPlay, progFill, stepInd, noteInfo, liveFreqInfo;
 
 	let mode = $state('demo');
 	let micDenied = $state(false);
@@ -495,9 +496,8 @@
 		setNoteInfo('Peak: -');
 	}
 
-	function demoSeek(e) {
-		const rect = progWrap.getBoundingClientRect();
-		const t = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+	function demoSeek(p) {
+		const t = p;
 		demoCursor = Math.floor(t * DEMO_END);
 		accumSamples = 0;
 		const slice = demoSig.slice(demoCursor, demoCursor + NFFT);
@@ -623,7 +623,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={height ? `height: ${height}` : undefined}>
+<div class="anim-embed" style:--anim-h={height}>
 	<div class="mode-tabs">
 		<button class="mode-tab" class:active={mode === 'demo'} onclick={() => switchMode('demo')}>
 			Demo signal
@@ -670,7 +670,7 @@
 	<div class="controls" style:display={mode === 'demo' ? null : 'none'}>
 		<button class="btn" bind:this={btnPlay} onclick={demoToggle}>&#9654; Play</button>
 		<button class="btn secondary" onclick={demoReset}>&#8634; Reset</button>
-		<div class="progress-wrap" bind:this={progWrap} onclick={demoSeek}>
+		<div class="progress-wrap" use:seekBar={{ onseek: demoSeek }}>
 			<div class="progress-fill" bind:this={progFill}></div>
 		</div>
 		<div class="speed-wrap">

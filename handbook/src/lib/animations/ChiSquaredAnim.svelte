@@ -6,14 +6,15 @@
 		seededRNG,
 		initPalette,
 		canvasSize,
-		observeResize
+		observeResize,
+		seekBar
 	} from '$lib/animUtils.js';
 
 	// stage="test"        Pearson chi-squared: observed vs expected counts
 	// stage="periodogram" the same machine applied to a folded rhythm, then a
 	//                     sweep of the trial period that draws the periodogram
 	let { stage = 'test', height = null } = $props();
-	const H = height ?? (stage === 'test' ? '440px' : '620px');
+	const H = $derived(height ?? (stage === 'test' ? '440px' : '620px'));
 
 	// ── incomplete lower gamma, for the chi-squared CDF ───────────────────────
 	function lnGamma(x) {
@@ -132,17 +133,17 @@
 
 	// ── timeline ─────────────────────────────────────────────────────────────
 	const TOTAL = 1000;
-	const isTest = stage === 'test';
+	const isTest = $derived(stage === 'test');
 	// periodogram stage: 0-.34 fold+accumulate, .34-.5 compare to chi2, .5-1 sweep
-	const A_ACC = isTest ? 0.55 : 0.34,
-		A_CMP = isTest ? 1.0 : 0.5;
+	const A_ACC = $derived(isTest ? 0.55 : 0.34),
+		A_CMP = $derived(isTest ? 1.0 : 0.5);
 	let frame = 0,
 		playing = false,
 		raf = null,
 		lastTime = null,
 		accum = 0,
 		speed = 1;
-	let cA, cB, btnPlay, progFill, progWrap, stepInd;
+	let cA, cB, btnPlay, progFill, stepInd;
 	const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 	function resize() {
@@ -507,9 +508,8 @@
 		btnPlay.textContent = '▶ Play';
 		draw(0);
 	}
-	function seek(e) {
-		const r = progWrap.getBoundingClientRect();
-		frame = Math.round(clamp((e.clientX - r.left) / r.width, 0, 1) * TOTAL);
+	function seek(p) {
+		frame = Math.round(p * TOTAL);
 		draw(frame);
 	}
 
@@ -524,7 +524,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={`height: ${H}`}>
+<div class="anim-embed" style:--anim-h={H}>
 	<div class="viz-row one-col">
 		<div class="chart-panel">
 			<h3>{isTest ? 'Observed against expected' : 'Every cycle, folded onto one period'}</h3>
@@ -575,7 +575,7 @@
 	<div class="controls">
 		<button class="btn" bind:this={btnPlay} onclick={toggle}>&#9654; Play</button>
 		<button class="btn secondary" onclick={reset}>&#8634; Reset</button>
-		<div class="progress-wrap" bind:this={progWrap} onclick={seek}>
+		<div class="progress-wrap" use:seekBar={{ onseek: seek }}>
 			<div class="progress-fill" bind:this={progFill}></div>
 		</div>
 		<div class="speed-wrap">

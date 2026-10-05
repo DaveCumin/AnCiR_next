@@ -13,6 +13,8 @@
 	import { fitPermutationPValue, PERMUTATION_DEFAULTS } from '$lib/utils/fitFunction.js';
 	import { FREE_PERIOD_DEFAULTS } from '$lib/utils/cosinor.js';
 	import { periodRangeWarnings } from '$lib/utils/periodRangeWarnings.js';
+	import { periodUnitForColumn, periodInputProps } from '$lib/utils/periodUnits.js';
+	import { newPeriodRangeArgs } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import {
 		attachPermutation,
 		permutationValidityWarnings
@@ -41,8 +43,9 @@
 		['fixedK2', { val: 0.5 }],
 		['fixPeriod', { val: false }],
 		['fixedPeriod', { val: 24 }],
-		// Free period only: the range (h) the fit may use. Unbounded, a trend with no rhythm
-		// fitted a 111 h "period" (review FIT-1); same defaults as Cosinor.
+		// Free period only: the range the fit may use, in x units (hours for a time x).
+		// Unbounded, a trend with no rhythm fitted a 111 h "period" (review FIT-1); same
+		// defaults as Cosinor, and a NEW node's range follows its x (newNodeArgs below).
 		['minPeriod', { val: FREE_PERIOD_DEFAULTS.minPeriod }],
 		['maxPeriod', { val: FREE_PERIOD_DEFAULTS.maxPeriod }],
 		// What hour 0 means for the onset and offset phases (panel, stored values, stats
@@ -82,6 +85,8 @@
 	export const definition = {
 		displayName,
 		defaults,
+		// Only a new node's period range follows its x (periodRangeAuto.svelte.js).
+		newNodeArgs: newPeriodRangeArgs,
 		func: doublelogistic,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		xOutKey: 'dlogx',
@@ -201,7 +206,7 @@
 				? await runComputeTask('doublelogistic.fit', { tt, yy, opts: dlOpts })
 				: fitDoubleLogistic(tt, yy, dlOpts);
 
-			fitEntries.push({ label: `"${yCol.name}"`, result: fitResult ?? null });
+			fitEntries.push({ label: `"${yCol.name}"`, result: fitResult ?? null, t: tt });
 
 			if (fitResult) {
 				const xOutData = outputXData ?? tt;
@@ -293,8 +298,12 @@
 					...(fixPeriod
 						? []
 						: [
-								...periodRangeWarnings(t, minPeriod, maxPeriod),
-								...doubleLogisticFitWarnings(fitEntries, 'The free-period double-logistic fit')
+								...periodRangeWarnings(t, minPeriod, maxPeriod, {
+									unit: periodUnitForColumn(tCol)
+								}),
+								...doubleLogisticFitWarnings(fitEntries, 'The free-period double-logistic fit', {
+									unit: periodUnitForColumn(tCol)
+								})
 							]),
 					...permWarnings,
 					...(phaseRef.warning ? [phaseRef.warning] : []),
@@ -324,6 +333,10 @@
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
+	import {
+		usePeriodRangeAuto,
+		stopFollowingX
+	} from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 	import {
@@ -410,6 +423,11 @@
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
 	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
 	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
+	// The unit of every period, phase and rate on this panel: h for a time x, else "x units".
+	let periodUnit = $derived(periodUnitForColumn(xIN_col));
+	let rateUnit = $derived(periodUnit === 'h' ? 'h' : 'x unit');
+	// A new node's period range follows its x until the user edits it.
+	usePeriodRangeAuto(p, () => xIN_col);
 
 	let getHash = $derived.by(() => {
 		let out = '';
@@ -569,7 +587,7 @@
 	// clock time wraps to the fitted period.
 	const dlPhase = (v, fr) =>
 		v == null ? v : applyPhaseReference(v, dlData?.phaseRef, fr?.parameters?.T ?? 24);
-	let phaseNote = $derived(dlData?.phaseRef?.clock ? 'clock time' : 'h after start');
+	let phaseNote = $derived(dlData?.phaseRef?.clock ? 'clock time' : `${periodUnit} after start`);
 
 	function getDlogStatsData() {
 		if (!dlData?.y_results) return { headers: [], rows: [] };
@@ -650,12 +668,15 @@
 	</div>
 	{#if p.args.fixPeriod}
 		<div class="control-input-horizontal">
-			<ControlInput label="Period">
+			<!-- Time units convert to hours only for a time x; a number x's unit is its own. -->
+			<ControlInput label={periodUnit === 'h' ? 'Period' : `Period (${periodUnit})`}>
 				<NumberWithUnits
 					bind:value={p.args.fixedPeriod}
 					min="0.1"
 					step="0.5"
-					units={{ default: 'hrs', days: 24, hrs: 1, mins: 1 / 60, secs: 1 / (60 * 60) }}
+					units={periodUnit === 'h'
+						? { default: 'hrs', days: 24, hrs: 1, mins: 1 / 60, secs: 1 / (60 * 60) }
+						: undefined}
 					onInput={getFit}
 				/>
 			</ControlInput>
@@ -663,11 +684,25 @@
 	{:else}
 		<!-- The free period is searched for, and kept, inside this range (as Cosinor). -->
 		<div class="control-input-horizontal">
-			<ControlInput label="Min period (hrs)">
-				<NumberWithUnits bind:value={p.args.minPeriod} onInput={getFit} min="0.1" step="1" />
+			<ControlInput label={`Min period (${periodUnit})`}>
+				<NumberWithUnits
+					bind:value={p.args.minPeriod}
+					onInput={() => {
+						stopFollowingX(p.args);
+						getFit();
+					}}
+					{...periodInputProps(p.args.minPeriod)}
+				/>
 			</ControlInput>
-			<ControlInput label="Max period (hrs)">
-				<NumberWithUnits bind:value={p.args.maxPeriod} onInput={getFit} min="0.1" step="1" />
+			<ControlInput label={`Max period (${periodUnit})`}>
+				<NumberWithUnits
+					bind:value={p.args.maxPeriod}
+					onInput={() => {
+						stopFollowingX(p.args);
+						getFit();
+					}}
+					{...periodInputProps(p.args.maxPeriod)}
+				/>
 			</ControlInput>
 		</div>
 	{/if}
@@ -681,7 +716,7 @@
 	</div>
 	{#if p.args.fixK1}
 		<div class="control-input-horizontal">
-			<ControlInput label="k1 (1/hr)">
+			<ControlInput label={`k1 (1/${rateUnit})`}>
 				<NumberWithUnits bind:value={p.args.fixedK1} min="0.001" step="0.05" onInput={getFit} />
 			</ControlInput>
 		</div>
@@ -696,7 +731,7 @@
 	</div>
 	{#if p.args.fixK2}
 		<div class="control-input-horizontal">
-			<ControlInput label="k2 (1/hr)">
+			<ControlInput label={`k2 (1/${rateUnit})`}>
 				<NumberWithUnits bind:value={p.args.fixedK2} min="0.001" step="0.05" onInput={getFit} />
 			</ControlInput>
 		</div>
@@ -773,7 +808,8 @@
 		<div class="control-input-horizontal">
 			<div class="control-input">
 				<p>
-					Period: {fmt(p_.T)} hrs
+					Period: {fmt(p_.T)}
+					{periodUnit}
 					<StoreValueButton
 						label="Period"
 						getter={() => yResult?.fitResult?.parameters?.T}
@@ -782,7 +818,8 @@
 					/>
 				</p>
 				<p>
-					Onset phase ({phaseNote}): {fmt(dlPhase(fr.onsetPhase, fr))} hrs
+					Onset phase ({phaseNote}): {fmt(dlPhase(fr.onsetPhase, fr))}
+					{periodUnit}
 					<StoreValueButton
 						label={`Onset phase (${phaseNote})`}
 						getter={() => dlPhase(yResult?.fitResult?.onsetPhase, yResult?.fitResult)}
@@ -791,7 +828,8 @@
 					/>
 				</p>
 				<p>
-					Offset phase ({phaseNote}): {fmt(dlPhase(fr.offsetPhase, fr))} hrs
+					Offset phase ({phaseNote}): {fmt(dlPhase(fr.offsetPhase, fr))}
+					{periodUnit}
 					<StoreValueButton
 						label={`Offset phase (${phaseNote})`}
 						getter={() => dlPhase(yResult?.fitResult?.offsetPhase, yResult?.fitResult)}
@@ -809,7 +847,7 @@
 					/>
 				</p>
 				<p>
-					Rise rate (k1): {fmt(p_.k1, 4)} /hr
+					Rise rate (k1): {fmt(p_.k1, 4)} /{rateUnit}
 					<StoreValueButton
 						label="Rise rate"
 						getter={() => yResult?.fitResult?.parameters?.k1}
@@ -818,7 +856,7 @@
 					/>
 				</p>
 				<p>
-					Fall rate (k2): {fmt(p_.k2, 4)} /hr
+					Fall rate (k2): {fmt(p_.k2, 4)} /{rateUnit}
 					<StoreValueButton
 						label="Fall rate"
 						getter={() => yResult?.fitResult?.parameters?.k2}

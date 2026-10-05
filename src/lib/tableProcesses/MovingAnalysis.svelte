@@ -5,6 +5,7 @@
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import { newBinSizeArgs } from '$lib/tableProcesses/binSizeAuto.svelte.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ControlGroup from '$lib/components/inputs/ControlGroup.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
@@ -96,6 +97,9 @@
 		displayName,
 		defaults,
 		func: movinganalysis,
+		// A NEW node's periodogram bin size follows its x (binSizeAuto.svelte.js). Not in
+		// `defaults`, so a loaded node keeps its stored pgBinSize (or 0.25 h).
+		newNodeArgs: newBinSizeArgs,
 		columnIdFields: { scalar: ['xIN'], array: ['yIN'] },
 		nodeSpec: {
 			id: 'tableprocess.movinganalysis',
@@ -252,6 +256,8 @@
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
+	import { useBinSizeAuto, stopFollowingSampling } from '$lib/tableProcesses/binSizeAuto.svelte.js';
+	import { periodInputProps } from '$lib/utils/periodUnits.js';
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
@@ -284,6 +290,7 @@
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
+	useBinSizeAuto(p, () => xIN_col);
 	let xIsTime = $derived(xIN_col?.type === 'time');
 
 	let currentStatKeys = $derived.by(() => getStatKeys(p.args));
@@ -737,9 +744,22 @@
 		{#if p.args.pgMethod === 'Chi-squared' || p.args.pgMethod === 'Enright'}
 			<div class="control-input-horizontal">
 				<ControlInput label="Bin size (hrs)">
-					<NumberWithUnits bind:value={p.args.pgBinSize} min="0.01" step="0.05" />
+					<NumberWithUnits
+						bind:value={p.args.pgBinSize}
+						onInput={() => stopFollowingSampling(p.args)}
+						{...periodInputProps(p.args.pgBinSize)}
+					/>
 				</ControlInput>
 			</div>
+			{#if p.args.pgBinSizeAuto}
+				<p class="pg-note">Bin size follows the median sampling interval.</p>
+			{/if}
+			{#if p.args.pgMethod === 'Enright'}
+				<p class="pg-note">
+					Power is Enright's amplitude A<sub>p</sub>, the standard deviation of the period-folded
+					column means, in the units of y. There is no significance threshold.
+				</p>
+			{/if}
 		{/if}
 	{:else if p.args.analysis === 'cosinor'}
 		<div class="control-input-horizontal">
@@ -974,3 +994,12 @@
 		</div>
 	</div>
 </details>
+
+<style>
+	.pg-note {
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
+		line-height: 1.4;
+		margin: 0 0 var(--space-3) 0;
+	}
+</style>

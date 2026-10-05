@@ -249,6 +249,21 @@ It now judges on the first present value.
 | the app's old `(t[n-1] - t[0])/(n-1)` | `missing-ends` at `rows`: length 192 vs 120 (Python leg) |
 | Python judges epoch ms on `data[0]`   | `missing-ends` at `rows[72][2]` (lag 0): 0.0 vs 1        |
 
+### Legacy Enright bin sizes (`sessionMigration`, v81.0)
+
+Before v81 the Periodogram plot hid its Bin Size control for Enright, so a saved Enright series
+sat at a 0.25 h nobody chose. On load, a pre-v81 session's Enright series at 0.25 h (or with no
+bin size), carrying no `binSizeAuto` field, is set to follow its x (the median sampling
+interval), in the app (`core/enrightBinMigration.js`, run by importJson) and in the Python port
+(`migrate_legacy_enright_bins`, which `ancir_to_python.py` scripts apply to `PLOTS`; a series
+with `binSizeAuto` computes at `median_sampling_interval` of its whole x). The two
+`session-migration-*` fixtures give each series a 24 h cosine at its `xStep`; JS migrates,
+builds the plot with Plot.fromJSON and calls `followSamplingInterval` as the plot's effect does,
+and both legs record per series `binSizeAuto`, the bin size computed with and the peak period.
+Breaking any clause of the rule in the port (version bound, method, the `binSizeAuto` field,
+the 0.25-or-absent test) or the median fails `session-migration-legacy-enright-bins`. R exports
+no plots, so it does not claim them.
+
 ### Autocorrelation lag slots on uneven data (all three languages)
 
 `computeAutocorrelation`'s time-pair path (uneven spacing; also what gapped, evenly spaced
@@ -510,8 +525,9 @@ Notes:
 
 ## Current coverage
 
-`npm run parity` lists every fixture. As of 2026-10-05: 323 fixtures, Python 323/323, R
-282 pass with 41 not claimed (listed below), whole-session 89 match with 2 skipped.
+`npm run parity` lists every fixture. As of 2026-10-05 (after the legacy Enright bin
+migration): 372 fixtures, Python 372/372, R 329 pass with 43 not claimed (listed below),
+whole-session 89 match with 2 skipped.
 
 ## Fixture fields added 2026-10-04 (review wave 1 and 2 ports)
 
@@ -552,6 +568,31 @@ primary, a left-associative power, Python `%` for `%`, an unknown name read as 0
 finiteness check on FUNCTION results is an equivalent mutant in Python (its math functions
 raise rather than return Inf or NaN). R gained FormulaColumn with the same parser
 (`R_IMPLEMENTED` now lists `formulacolumn`).
+
+### The full JS Math set (2026-10-05)
+
+The formula allow-list is now every function and constant of the JS `Math` object (ES2024),
+bare or `Math.`-prefixed, with the spec arity (header of `formulaExpression.js`), and both ports
+mirror it. The 41 fixtures added for it: one per new function with its edge cases
+(`tp-formula-<fn>`: domain edges, overflow, negative `cbrt`, `sign`, `trunc`, the 32-bit
+`clz32`/`imul`/`fround` with wrapping, subnormals and the float32 tie-to-even overflow,
+variadic `hypot` with missing arguments, `atan2` argument order and signed zeros), one per
+constant (`tp-formula-const-<NAME>`, bare and `Math.`), `tp-formula-math-prefix-new`,
+`tp-formula-round-sign-zero`, five `tp-formula-random-*` (seeded draws, default seed, seed 0,
+string seed, negative fractional seed), and six refusals (`Math.constructor`, `constructor`,
+`__proto__`, `Math["sin"]`, `this`, `globalThis`). The 32-bit, sign, trunc, constant and random
+fixtures use tolerance 0 (bit-exact); transcendental ones 1e-12, since libm implementations may
+differ in the last bit.
+
+Port notes. Python: `math.floor`/`ceil`/`trunc` return ints and lose JS's `-0`
+(`_formula_zero_sign`); `sign` and `clz32`/`imul` are written out (exact on Python ints);
+`fround` is `numpy.float32`; `cbrt` uses `math.cbrt` (3.11+) or a Newton-polished power. R:
+no `cbrt`, `clz32`, `imul` or `fround`, so each is built in doubles, `imul` from 16-bit halves
+(a 32x32-bit product is not exact in a double); `hypot` is scaled by the largest magnitude.
+`random()` draws from `SeededRNG` / `seeded_rng` (the existing exact ports of
+`createSeededRNG`) seeded by the node's `seed` arg (`formula_seed`: absent, 0, blank or
+non-finite means 12345), one draw per `random()` per row, left to right, missing rows
+included.
 
 ## Round 2 ports (2026-10-05)
 
@@ -630,9 +671,8 @@ r2/rmse/coefficients, `ancir_to_python.py` documents `.ancir` sessions.
 ## Nodes and fixtures the R port does not claim
 
 Analyses without an R implementation (`R_IMPLEMENTED` in `runtimeCoverage.js`): `Crossing`,
-`Random`, `SimulatedData` (the last two are baked into the session). The 41 fixtures with no
-`rFunc`: the correlogram and actogram plot-data rows (`correlogram-data-*` 5, `actogram-data-*`
-8; R exports no plots), `util-kde-*` 2, `util-meansem-groups`, `tp-cosinor-addons-fixed24`,
+`Random`, `SimulatedData` (the last two are baked into the session). The 43 fixtures with no
+`rFunc`: the correlogram and actogram plot-data rows (`correlogram-data-*` 5, `actogram-data-*` 8) and the Periodogram plot's `session-migration-*` 2 (R exports no plots), `util-kde-*` 2, `util-meansem-groups`, `tp-cosinor-addons-fixed24`,
 `util-chisquare-gof`, `util-chisquare-independence`, `util-logistic-*` 3 (pure-util call
 shape; the R logistic kernel is covered by the `tp-logistic*` fixtures), `util-cwt-peak-scale`,
 `util-fisher-exact-*` 6, `util-cramers-v-*` 4, `util-fisher-conditional-or-*` 4,

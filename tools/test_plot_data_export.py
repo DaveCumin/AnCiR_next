@@ -78,6 +78,152 @@ def test_periodogram_peaks_at_24h():
     assert abs(peak[1] - 24.0) < 1.0, f"periodogram peak at {peak[1]} h, expected ~24"
 
 
+def test_periodogram_uses_each_series_method_and_bin_size():
+    """Method, bin size and alpha live on the SERIES (PeriodogramDataclass), and the range is
+    periodlimsIN widened by 25% each side. The export used to read a plot-level method the
+    app never stores, so every exported periodogram was Lomb-Scargle on 1 to 48 h."""
+    plot, cols = _load("demo-periodogram-rhythm")
+    series = plot["plot"]["data"][0]
+    series["method"], series["binSize"] = "Enright", 1
+    headers, rows = rt.periodogram_download_data(plot, cols)
+    assert headers == ["DataSeries", "Period (hours)", "Power"]
+    lo, hi = plot["plot"]["periodlimsIN"]
+    span = hi - lo
+    periods = [r[1] for r in rows]
+    # One point per whole-hour fold inside the buffered range [max(0.01, lo - span/4), hi + span/4],
+    # except the 1-column fold, which has no spread to measure.
+    assert periods == list(range(2, int(hi + span / 4) + 1))
+    assert all(r[2] >= 0 for r in rows), "Enright's A_p is never negative"
+    assert max(rows, key=lambda r: r[2])[1] == 24
+    series["method"] = "Chi-squared"
+    headers, rows = rt.periodogram_download_data(plot, cols)
+    assert headers[-2:] == ["Threshold", "P-value"]
+
+
+def _legacy_periodogram_session(version, **series_fields):
+    """The hourly periodogram demo (saved by β.72.29) with its one series edited."""
+    session = json.loads((DEMOS / "demo-periodogram-rhythm.json").read_text())
+    if version is not None:
+        session["version"] = version
+    series = next(p for p in session["plots"] if p["type"] == "periodogram")["plot"]["data"][0]
+    for k, v in series_fields.items():
+        if v is None:
+            series.pop(k, None)
+        else:
+            series[k] = v
+    return session
+
+
+def _migrated_rows(session):
+    """migrate_legacy_enright_bins, then the plot's data rows, as the exported script runs."""
+    session, n = rt.migrate_legacy_enright_bins(session)
+    _, cols = build_columns(session)
+    plot = next(p for p in session["plots"] if p["type"] == "periodogram")
+    _, rows = rt.periodogram_download_data(plot, cols)
+    return n, plot["plot"]["data"][0], rows
+
+
+@pytest.mark.parametrize("bin_size", [0.25, None], ids=["at-0.25", "no-bin-size"])
+def test_legacy_enright_series_migrates_to_the_sampling_interval(bin_size):
+    """v81.0: a pre-v81 Enright series at the hidden 0.25 h follows its x (the app's
+    enrightBinMigration.js), so on hourly data it folds at whole hours and peaks at 24 h."""
+    session = _legacy_periodogram_session(None, method="Enright", binSize=bin_size)
+    assert session["version"] == "β.72.29"
+    n, series, rows = _migrated_rows(session)
+    assert n == 1
+    assert series["binSizeAuto"] is True
+    assert all(float(r[1]).is_integer() for r in rows), "1 h bins fold at whole hours"
+    assert max(rows, key=lambda r: r[2])[1] == 24
+
+
+@pytest.mark.parametrize("version,fields,bin_size", [
+    (None, {"method": "Enright", "binSize": 0.5}, 0.5),
+    (None, {"method": "Chi-squared", "binSize": 0.25}, 0.25),
+    ("v81.0", {"method": "Enright", "binSize": 0.25}, 0.25),
+    ("β.80.0", {"method": "Enright", "binSize": 0.25, "binSizeAuto": False}, 0.25),
+], ids=["enright-own-bin", "chi-squared", "v81-session", "has-binSizeAuto"])
+def test_other_series_keep_their_bin_size(version, fields, bin_size):
+    n, series, rows = _migrated_rows(_legacy_periodogram_session(version, **fields))
+    assert n == 0
+    assert "binSizeAuto" not in series or series["binSizeAuto"] is False
+    assert 24 + bin_size in [r[1] for r in rows], f"folds at {bin_size} h steps"
+
+
+def test_a_session_with_no_version_is_legacy():
+    session = _legacy_periodogram_session(None, method="Enright", binSize=0.25)
+    del session["version"]
+    n, series, _ = _migrated_rows(session)
+    assert n == 1 and series["binSizeAuto"] is True
+
+
+def test_only_periodogram_plots_migrate():
+    session = {"version": "β.79.0", "plots": [
+        {"type": "actogram", "plot": {"data": [{"method": "Enright", "binSize": 0.25}]}}]}
+    migrated, n = rt.migrate_legacy_enright_bins(session)
+    assert n == 0 and migrated is session
+
+
+def test_the_png_renderer_uses_the_migrated_bin_size():
+    """plot_periodogram (the exported PNG) computes with the same bin size as the CSV."""
+    session, _ = rt.migrate_legacy_enright_bins(
+        _legacy_periodogram_session(None, method="Enright", binSize=0.25))
+    _, cols = build_columns(session)
+    plot = next(p for p in session["plots"] if p["type"] == "periodogram")
+
+    class Ax:
+        def __init__(self):
+            self.lines = []
+
+        def plot(self, x, y, **_kw):
+            self.lines.append((list(x), list(y)))
+
+        def __getattr__(self, _name):
+            return lambda *a, **k: None
+
+    ax = Ax()
+    rt.plot_periodogram(plot, cols, ax)
+    x, y = ax.lines[0]
+    assert all(float(p).is_integer() for p in x)
+    assert x[y.index(max(y))] == 24
+
+
+def test_a_script_emitted_from_a_legacy_session_migrates_it(tmp_path):
+    """tools/ancir_to_python.py run directly on a legacy session file: the emitted script
+    migrates the series before plotting, so its plot data peaks at 24 h on whole hours."""
+    import csv
+    import subprocess
+    import ancir_to_python
+    src = tmp_path / "legacy.json"
+    src.write_text(json.dumps(
+        _legacy_periodogram_session(None, method="Enright", binSize=0.25)))
+    script = tmp_path / "legacy.py"
+    ancir_to_python.emit(src, script)
+    subprocess.run([sys.executable, str(script)], check=True, capture_output=True,
+                   cwd=tmp_path)
+    (data,) = (tmp_path / "legacy_output").glob("*_periodogram_data.csv")
+    rows = [(float(r[1]), float(r[2])) for r in list(csv.reader(data.open()))[1:]]
+    assert all(p.is_integer() for p, _ in rows)
+    assert max(rows, key=lambda r: r[1])[0] == 24
+
+
+def test_migration_does_not_mutate_its_input():
+    session = _legacy_periodogram_session(None, method="Enright", binSize=0.25)
+    before = json.dumps(session)
+    migrated, n = rt.migrate_legacy_enright_bins(session)
+    assert n == 1 and migrated is not session
+    assert json.dumps(session) == before
+
+
+def test_median_sampling_interval_matches_the_app():
+    """periodogram.js medianSamplingInterval: sorted usable x, positive gaps, even-count mean."""
+    assert rt.median_sampling_interval([0, 1, 2, 3]) == 1
+    assert rt.median_sampling_interval([3, None, 0, "", 1, 1, 2.5]) == 1
+    assert rt.median_sampling_interval([0, 1, 3, 6]) == 2
+    assert rt.median_sampling_interval([0, 0.5, 1.5, 2.0, 4.0]) == 0.75
+    assert math.isnan(rt.median_sampling_interval([5, 5]))
+    assert math.isnan(rt.median_sampling_interval([]))
+
+
 def test_fft_peaks_near_24h():
     plot, cols = _load("demo-fft-rhythm")
     _, rows = rt.fft_download_data(plot, cols)

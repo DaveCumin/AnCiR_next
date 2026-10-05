@@ -7,7 +7,8 @@
 		drawHGrid,
 		initPalette,
 		canvasSize,
-		observeResize
+		observeResize,
+		seekBar
 	} from '$lib/animUtils.js';
 
 	let { height = '500px' } = $props();
@@ -22,7 +23,6 @@
 	let canvas;
 	let btnPlay;
 	let progFill;
-	let progWrap;
 	let stepInd;
 
 	function resize() {
@@ -222,9 +222,8 @@
 		draw(0);
 	}
 
-	function sineSeek(e) {
-		const rect = progWrap.getBoundingClientRect();
-		prog = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+	function sineSeek(p) {
+		prog = p;
 		draw(prog);
 	}
 
@@ -239,7 +238,7 @@
 	});
 </script>
 
-<div class="anim-embed" style={height ? `height: ${height}` : undefined}>
+<div class="anim-embed" style:--anim-h={height}>
 	<div class="viz-row one-col">
 		<div class="chart-panel">
 			<h3>Components of a Sinusoidal Rhythm</h3>
@@ -278,7 +277,7 @@
 	<div class="controls">
 		<button class="btn" bind:this={btnPlay} onclick={sineToggle}>&#9654; Play</button>
 		<button class="btn secondary" onclick={sineReset}>&#8634; Reset</button>
-		<div class="progress-wrap" bind:this={progWrap} onclick={sineSeek}>
+		<div class="progress-wrap" use:seekBar={{ onseek: sineSeek }}>
 			<div class="progress-fill" bind:this={progFill}></div>
 		</div>
 		<div class="speed-wrap">

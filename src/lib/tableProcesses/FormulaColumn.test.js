@@ -15,7 +15,9 @@ vi.mock('$lib/core/core.svelte', () => ({
 vi.mock('$lib/core/Column.svelte', () => ({ getColumnById: (id) => mockColumns[id] }));
 vi.mock('$lib/components/inputs/NumberWithUnits.svelte', () => ({ default: {} }));
 
-import { formulacolumn } from './FormulaColumn.svelte';
+import { formulacolumn, definition } from './FormulaColumn.svelte';
+import { createSeededRNG } from '$lib/utils/permutationTest.js';
+import { FORMULA_DEFAULT_SEED } from '$lib/utils/formulaExpression.js';
 
 beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
@@ -250,7 +252,17 @@ describe('formulacolumn: fixed grammar, no code execution (SEC-1)', () => {
 
 	it('refuses property access and unknown identifiers', () => {
 		mockColumns[1] = { getData: () => [1, 2] };
-		for (const value of [' + constructor', '.constructor', ' + window', ' + Math.random()']) {
+		for (const value of [
+			' + constructor',
+			'.constructor',
+			' + window',
+			' + Math.constructor',
+			' + __proto__',
+			' + Math["sin"](1)',
+			' + this',
+			' + globalThis',
+			' + Math.random'
+		]) {
 			const [, valid, error] = formulacolumn({
 				tokens: [
 					{ type: 'col', id: 1 },
@@ -307,5 +319,42 @@ describe('formulacolumn: missing cells stay missing (STAT-6)', () => {
 		const [result, valid] = formulacolumn({ tokens, out: preview });
 		expect(valid).toBe(true);
 		expect(result).toEqual([2, null, 6, null, null, null]);
+	});
+});
+
+describe('formulacolumn: random() is seeded by the node (reproducible sessions)', () => {
+	const tokens = [
+		{ type: 'col', id: 1 },
+		{ type: 'text', value: ' * 0 + random()' }
+	];
+	const draws = (seed, n) => {
+		const g = createSeededRNG(seed);
+		return Array.from({ length: n }, () => g());
+	};
+
+	it('has a fixed default seed stored in the args', () => {
+		expect(definition.defaults.get('seed')).toEqual({ val: 12345 });
+		expect(FORMULA_DEFAULT_SEED).toBe(12345);
+	});
+
+	it('draws from createSeededRNG(seed), the same on every recompute', () => {
+		mockColumns[1] = { getData: () => [1, 2, 3, 4] };
+		const [a, valid] = formulacolumn({ tokens, seed: 42, out: preview });
+		const [b] = formulacolumn({ tokens, seed: 42, out: preview });
+		expect(valid).toBe(true);
+		expect(a).toEqual(draws(42, 4));
+		expect(b).toEqual(a);
+		const [c] = formulacolumn({ tokens, seed: 43, out: preview });
+		expect(c).not.toEqual(a);
+	});
+
+	it('a session without a seed (older file), or an unusable one, uses 12345', () => {
+		mockColumns[1] = { getData: () => [1, 2, 3] };
+		for (const seed of [undefined, null, '', 'abc', 0, NaN, Infinity]) {
+			const [r] = formulacolumn({ tokens, seed, out: preview });
+			expect(r, String(seed)).toEqual(draws(12345, 3));
+		}
+		const [s] = formulacolumn({ tokens, seed: '77', out: preview });
+		expect(s).toEqual(draws(77, 3));
 	});
 });
