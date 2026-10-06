@@ -157,7 +157,8 @@ export function fisherExact(table, alternative = 'two-sided') {
 		// (26.83 vs 22.93 on [[7,3],[2,23]]) and users comparing against R need to
 		// see which is which.
 		conditionalOddsRatio: conditionalOddsRatio(table),
-		oddsRatioCI: oddsRatioCI(table, 0.95),
+		// One-sided for a one-sided test ([0, upper] or [lower, Infinity]), as R fisher.test.
+		oddsRatioCI: oddsRatioCI(table, 0.95, alternative),
 		alternative,
 		valid: true,
 		reason: ''
@@ -261,13 +262,20 @@ function tailProbs(psi, a, rowA, rowB, colA) {
  * up with it. The bounds are the odds ratios at which the observed table sits
  * exactly at the alpha/2 tail.
  *
+ * A one-sided `alternative` gives the one-sided interval R's fisher.test reports:
+ * 'less' is [0, upper] and 'greater' is [lower, Infinity], with the single bound
+ * at the full 1 - confidence tail rather than half of it.
+ *
  * A zero cell pushes one bound to 0 or Infinity, which is correct rather than a
  * failure: the data are consistent with an arbitrarily extreme odds ratio on
  * that side.
  *
+ * @param {number[][]} table
+ * @param {number} [confidence=0.95]
+ * @param {string} [alternative='two-sided'] 'two-sided' | 'less' | 'greater'
  * @returns {[number, number]} [lower, upper]
  */
-export function oddsRatioCI(table, confidence = 0.95) {
+export function oddsRatioCI(table, confidence = 0.95, alternative = 'two-sided') {
 	if (!Array.isArray(table) || table.length !== 2) return [NaN, NaN];
 	const [[a, b], [c, d]] = table.map((row) => row.map(Number));
 	const rowA = a + b;
@@ -275,11 +283,12 @@ export function oddsRatioCI(table, confidence = 0.95) {
 	const colA = a + c;
 	const { lo, hi } = support(rowA, rowB, colA);
 	if (!(hi > lo)) return [NaN, NaN];
-	const alpha = (1 - confidence) / 2;
+	const oneSided = alternative === 'less' || alternative === 'greater';
+	const alpha = oneSided ? 1 - confidence : (1 - confidence) / 2;
 
 	// Lower bound: the psi at which P(X >= a) = alpha. Increasing in psi.
 	let lower = 0;
-	if (a > lo) {
+	if (a > lo && alternative !== 'less') {
 		let l = -50;
 		let h = 50;
 		for (let i = 0; i < 200; i++) {
@@ -292,7 +301,7 @@ export function oddsRatioCI(table, confidence = 0.95) {
 
 	// Upper bound: the psi at which P(X <= a) = alpha. Decreasing in psi.
 	let upper = Infinity;
-	if (a < hi) {
+	if (a < hi && alternative !== 'greater') {
 		let l = -50;
 		let h = 50;
 		for (let i = 0; i < 200; i++) {
@@ -343,7 +352,7 @@ export function fisherExactFromColumns(rowVar, colVar, alternative = 'two-sided'
 		const ck = String(c);
 		if (!rowLabels.includes(rk)) rowLabels.push(rk);
 		if (!colLabels.includes(ck)) colLabels.push(ck);
-		const key = rk + ' ' + ck;
+		const key = rk + '\u0000' + ck;
 		counts.set(key, (counts.get(key) ?? 0) + 1);
 		n++;
 	}
@@ -359,7 +368,7 @@ export function fisherExactFromColumns(rowVar, colVar, alternative = 'two-sided'
 		};
 	}
 
-	const table = rowLabels.map((r) => colLabels.map((c) => counts.get(r + ' ' + c) ?? 0));
+	const table = rowLabels.map((r) => colLabels.map((c) => counts.get(r + '\u0000' + c) ?? 0));
 	const res = fisherExact(table, alternative);
 	return { ...res, table, rowLabels, colLabels, n };
 }

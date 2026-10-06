@@ -235,7 +235,13 @@
 		// in timed mode, where yIN holds amplitude values, not angles.
 		const timed = isTimeWired(argsIN);
 		const ww = argsIN.showWatsonWilliams && !timed ? evaluateWatsonWilliams(argsIN) : null;
-		const warnings = rayleighSampleWarnings(rayleighRes.perY ?? {});
+		// Timed mode reports no p-value (weightedSeriesStats), so the small-sample warnings,
+		// which are about the p-value's approximation, do not apply; say why p is blank instead.
+		const warnings = timed
+			? [
+					'Timed mode reports R and the acrophase but no p-value (and no z). The values act as weights, and the weighted Rayleigh p changes when a constant baseline is added to the series, so it is not a valid test. To test for a rhythm, use the Cosinor node.'
+				]
+			: rayleighSampleWarnings(rayleighRes.perY ?? {});
 		if (ww?.valid && ww.smallGroups > 0) {
 			warnings.push(
 				`Watson-Williams: ${ww.smallGroups} group${ww.smallGroups > 1 ? 's have' : ' has'} fewer than 5 angles. The F approximation assumes reasonably sized, concentrated groups, so treat this p-value cautiously.`

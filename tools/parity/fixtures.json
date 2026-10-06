@@ -1031,11 +1031,13 @@
 				"period": 24,
 				"out": {
 					"R": -1,
+					"z": -1,
 					"pvalue": -1,
 					"acrophase": -1
 				}
 			},
-			"compareOutputs": ["R", "pvalue", "acrophase"],
+			"compareOutputs": ["R", "z", "pvalue", "acrophase"],
+			"note": "FIT-11: timed (amplitude-weighted) mode reports R and the weighted acrophase only; z and pvalue are NaN, because the weighted Rayleigh p changes when a constant baseline is added to the series.",
 			"rFunc": "rayleightest"
 		},
 		{
@@ -2459,13 +2461,14 @@
 					"var_j": -1,
 					"r": -1,
 					"pvalue": -1,
+					"padj": -1,
 					"n": -1,
 					"ciLow": -1,
 					"ciHigh": -1,
 					"significant": -1
 				}
 			},
-			"compareOutputs": ["r", "pvalue", "n", "ciLow", "ciHigh", "significant"],
+			"compareOutputs": ["r", "pvalue", "padj", "n", "ciLow", "ciHigh", "significant"],
 			"rFunc": "correlation"
 		},
 		{
@@ -3242,7 +3245,7 @@
 			"jsName": "BinnedData",
 			"pyFunc": "binneddata",
 			"rFunc": "binneddata",
-			"note": "Uniform bins (2.5 wide from 0) on the same irregular input, aggFunction 'stddev'. The app's stddev is the SAMPLE standard deviation (n - 1) and 0 for a bin of fewer than two points; its count is the number of pairs in the bin (0 when empty). The ports used the population stddev and had no count (it fell through to the mean).",
+			"note": "Uniform bins (2.5 wide from 0) on the same irregular input, aggFunction 'stddev'. The app's stddev is the SAMPLE standard deviation (n - 1) and NaN for a bin of fewer than two points (STAT-14; it was 0); its count is the number of pairs in the bin (0 when empty). The ports used the population stddev and had no count (it fell through to the mean).",
 			"inputs": [
 				{
 					"ref": "t",
@@ -3275,7 +3278,7 @@
 			"jsName": "BinnedData",
 			"pyFunc": "binneddata",
 			"rFunc": "binneddata",
-			"note": "Uniform bins (2.5 wide from 0) on the same irregular input, aggFunction 'count'. The app's stddev is the SAMPLE standard deviation (n - 1) and 0 for a bin of fewer than two points; its count is the number of pairs in the bin (0 when empty). The ports used the population stddev and had no count (it fell through to the mean).",
+			"note": "Uniform bins (2.5 wide from 0) on the same irregular input, aggFunction 'count'. The app's stddev is the SAMPLE standard deviation (n - 1) and NaN for a bin of fewer than two points (STAT-14; it was 0); its count is the number of pairs in the bin (0 when empty). The ports used the population stddev and had no count (it fell through to the mean).",
 			"inputs": [
 				{
 					"ref": "t",
@@ -19643,6 +19646,199 @@
 			"periodlimsIN": [20, 28],
 			"periodSteps": 0.25,
 			"series": [{ "method": "Enright", "binSize": 0.25, "xStep": 1 }]
+		},
+		{
+			"id": "tp-groupcomparison-kruskal-epsilon",
+			"kind": "tableProcessResult",
+			"jsName": "GroupComparison",
+			"pyFunc": "groupcomparison",
+			"note": "STAT-11: Kruskal-Wallis effect size is Tomczak and Tomczak (2014) epsilon-squared, H / (n - 1). No rFunc: the R runtime refuses the rank-based GroupComparison methods.",
+			"generate": {
+				"type": "groups",
+				"seed": 11,
+				"groups": [
+					{
+						"label": "A",
+						"mean": 50,
+						"sd": 12,
+						"n": 12
+					},
+					{
+						"label": "B",
+						"mean": 58,
+						"sd": 12,
+						"n": 9
+					},
+					{
+						"label": "C",
+						"mean": 63,
+						"sd": 12,
+						"n": 14
+					}
+				],
+				"refs": {
+					"g": "grp",
+					"v": "val"
+				}
+			},
+			"args": {
+				"xIN": "@grp",
+				"yIN": ["@val"],
+				"method": "kruskal",
+				"alpha": 0.05,
+				"postHocEnabled": true,
+				"out": {}
+			},
+			"compareFields": ["test", "h", "df", "pValue", "epsilonSquared", "nTotal"]
+		},
+		{
+			"id": "tp-correlation-holm-padj",
+			"kind": "tableProcess",
+			"jsName": "Correlation",
+			"pyFunc": "correlation",
+			"rFunc": "correlation",
+			"note": "STAT-12: padj is the Holm (1979) adjustment across all pairs and `significant` reads padj, not raw p. Pair a~b has raw p = 0.0283 < 0.05 but Holm p = 0.0850, so it is NOT significant. Column d is all missing, so its three pairs have NaN p, stay NaN and are excluded from the family (k = 3, not 6).",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+				},
+				{
+					"ref": "b",
+					"type": "number",
+					"values": [5, -2, 5, 7, 1, 1, 13, 10, 15, 8, 5, 16]
+				},
+				{
+					"ref": "c",
+					"type": "number",
+					"values": [5, 3, 8, 1, 9, 2, 7, 4, 6, 10, 3, 6]
+				},
+				{
+					"ref": "d",
+					"type": "number",
+					"values": [null, null, null, null, null, null, null, null, null, null, null, null]
+				}
+			],
+			"args": {
+				"yIN": ["@a", "@b", "@c", "@d"],
+				"method": "pearson",
+				"alpha": 0.05,
+				"out": {
+					"var_i": -1,
+					"var_j": -1,
+					"r": -1,
+					"pvalue": -1,
+					"padj": -1,
+					"n": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
+					"significant": -1
+				}
+			},
+			"compareOutputs": ["var_i", "var_j", "r", "pvalue", "padj", "n", "significant"]
+		},
+		{
+			"id": "util-meansem-singleton-group",
+			"kind": "pureUtil",
+			"jsFn": "meanSemByGroup",
+			"pyFunc": "meansem",
+			"note": "STAT-14: group C has one observation, so its sample SD and SEM are NaN (R sd() is NA), not 0. No rFunc: the R runtime has no MeanSEM plot port.",
+			"input": {
+				"xs": ["A", "A", "C", "A", "B", "B"],
+				"ys": [1, 3, 10, 5, 20, 7]
+			},
+			"argRefs": ["xs", "ys"],
+			"compareFields": ["x", "mean", "sem", "sd", "n"]
+		},
+		{
+			"id": "util-fisher-conditional-or-less",
+			"kind": "pureUtil",
+			"jsFn": "fisherConditionalOR",
+			"pyFunc": "fisher_odds_ratio_ci",
+			"note": "STAT-26: alternative 'less' gives the one-sided interval [0, upper] with the bound at the full 5% tail, as R fisher.test(alternative = 'less') and scipy odds_ratio(...).confidence_interval(alternative='less').",
+			"input": {
+				"table": [
+					[7, 3],
+					[2, 23]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [0.95, "less"],
+			"pyArgs": [0.95, "less"],
+			"compareScalars": ["conditionalOddsRatio", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "util-fisher-conditional-or-greater",
+			"kind": "pureUtil",
+			"jsFn": "fisherConditionalOR",
+			"pyFunc": "fisher_odds_ratio_ci",
+			"note": "STAT-26: alternative 'greater' gives the one-sided interval [lower, Infinity], as R fisher.test(alternative = 'greater').",
+			"input": {
+				"table": [
+					[1, 9],
+					[11, 3]
+				]
+			},
+			"valuesRef": "table",
+			"jsArgs": [0.95, "greater"],
+			"pyArgs": [0.95, "greater"],
+			"compareScalars": ["conditionalOddsRatio", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "util-padjust-out-of-range-holm",
+			"kind": "pureUtil",
+			"jsFn": "pAdjust",
+			"pyFunc": "p_adjust",
+			"rFunc": "p_adjust",
+			"note": "STAT-30: values outside [0, 1] (-0.2, 1.5, 2) and a missing one are NOT p-values: NaN in their slots and excluded from n (here 4), as R p.adjust does for NA. They used to be clamped into [0, 1] and counted.",
+			"input": {
+				"p": [0.01, -0.2, 0.03, 1.5, null, 0.04, 2, 0.5]
+			},
+			"valuesRef": "p",
+			"jsArgs": ["holm"],
+			"pyArgs": ["holm"],
+			"compareArrays": ["adjusted"]
+		},
+		{
+			"id": "util-padjust-out-of-range-bh",
+			"kind": "pureUtil",
+			"jsFn": "pAdjust",
+			"pyFunc": "p_adjust",
+			"rFunc": "p_adjust",
+			"note": "STAT-30: as util-padjust-out-of-range-holm, Benjamini-Hochberg (step-up, n = 4 valid values).",
+			"input": {
+				"p": [0.01, -0.2, 0.03, 1.5, null, 0.04, 2, 0.5]
+			},
+			"valuesRef": "p",
+			"jsArgs": ["benjamini-hochberg"],
+			"pyArgs": ["benjamini-hochberg"],
+			"compareArrays": ["adjusted"]
+		},
+		{
+			"id": "tp-fdr-out-of-range",
+			"kind": "tableProcess",
+			"jsName": "FDRCorrection",
+			"pyFunc": "fdrcorrection",
+			"rFunc": "fdrcorrection",
+			"note": "STAT-30: the FDR node treats values outside [0, 1] as missing (blank padj and reject) and corrects over the 4 valid p-values.",
+			"inputs": [
+				{
+					"ref": "p",
+					"type": "number",
+					"values": [0.01, -0.2, 0.03, 1.5, null, 0.04, 2, 0.5]
+				}
+			],
+			"args": {
+				"xIN": "@p",
+				"method": "holm",
+				"alpha": 0.05,
+				"out": {
+					"padj": -1,
+					"reject": -1
+				}
+			},
+			"compareOutputs": ["padj", "reject"]
 		}
 	]
 }

@@ -236,3 +236,19 @@ export function effectSizeLabel(v) {
 	if (x < 0.6) return 'relatively strong';
 	return 'strong';
 }
+
+/**
+ * Conventional verbal label for Cohen's w (goodness of fit), on Cohen's (1988)
+ * own landmarks for w: 0.1 small, 0.3 medium, 0.5 large. Not the Cramer's V
+ * bands above, which are tighter because V is bounded by 1 and w is not.
+ *
+ * The same caveat applies: a rule of thumb, not a property of the data.
+ */
+export function cohensWLabel(w) {
+	const x = Math.abs(Number(w));
+	if (!Number.isFinite(x)) return '';
+	if (x < 0.1) return 'negligible';
+	if (x < 0.3) return 'small';
+	if (x < 0.5) return 'medium';
+	return 'large';
+}

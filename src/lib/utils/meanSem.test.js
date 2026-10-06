@@ -38,12 +38,13 @@ describe('meanSemByGroup', () => {
 		expect(res[0].mean).toBeCloseTo(15, 12);
 	});
 
-	it('reports sem 0 and sd 0 for singleton groups', () => {
+	// STAT-14: one observation has no sample SD (R sd(42) is NA), so SD and SEM are NaN, not 0.
+	it('reports sem NaN and sd NaN for singleton groups', () => {
 		const res = meanSemByGroup(['A'], [42]);
 		expect(res[0].n).toBe(1);
 		expect(res[0].mean).toBe(42);
-		expect(res[0].sd).toBe(0);
-		expect(res[0].sem).toBe(0);
+		expect(res[0].sd).toBeNaN();
+		expect(res[0].sem).toBeNaN();
 	});
 
 	it('ignores null / NaN y values and null / NaN x keys', () => {

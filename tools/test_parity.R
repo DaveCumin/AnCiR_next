@@ -36,6 +36,21 @@ fixtures <- fromJSON(fixtures_path, simplifyVector = FALSE)
 if (!is.null(fixtures$fixtures)) fixtures <- fixtures$fixtures
 js <- fromJSON(js_path, simplifyVector = FALSE)
 
+# The emitter writes +-Infinity as the strings "Infinity" / "-Infinity" (JSON has no infinity,
+# and a bare null would read as NaN). Turn them back into numbers before anything compares.
+decode_inf <- function(v) {
+  if (is.character(v) && length(v) == 1 && v %in% c("Infinity", "-Infinity")) {
+    return(if (v == "Infinity") Inf else -Inf)
+  }
+  if (is.list(v)) {
+    nm <- names(v)
+    v <- lapply(v, decode_inf)
+    names(v) <- nm
+  }
+  v
+}
+js <- decode_inf(js)
+
 # Default tolerance matches the Python leg's; a fixture may set its own.
 DEFAULT_TOL <- 1e-9
 
@@ -72,6 +87,7 @@ cmp_scalar <- function(got, want, tol) {
   if (length(want) != 1) want <- NA_real_
   if (is.na(got) && is.na(want)) return(TRUE)
   if (is.na(got) || is.na(want)) return(FALSE)
+  if (is.infinite(got) || is.infinite(want)) return(identical(got, want))
   abs(got - want) <= tol + tol * abs(want)
 }
 

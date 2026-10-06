@@ -250,8 +250,8 @@ const PURE_UTIL_FNS = {
 		});
 		return { period: r.x, power: r.y };
 	},
-	fisherConditionalOR: (table, confidence) => {
-		const ci = oddsRatioCI(table, confidence);
+	fisherConditionalOR: (table, confidence, alternative) => {
+		const ci = oddsRatioCI(table, confidence, alternative);
 		return { conditionalOddsRatio: conditionalOddsRatio(table), ciLow: ci[0], ciHigh: ci[1] };
 	}
 };
@@ -496,11 +496,13 @@ function canonicalKey(k) {
 	return m ? m[1] : k;
 }
 
+// NaN becomes null (JSON has no NaN). +-Infinity is kept: the writer encodes it as a string
+// so an infinite result (an open interval end) stays distinct from an undefined one.
 function safeArray(arr) {
-	return (arr ?? []).map((v) => (typeof v === 'number' && !Number.isFinite(v) ? null : v));
+	return (arr ?? []).map(safeNum);
 }
 function safeNum(v) {
-	return typeof v === 'number' && !Number.isFinite(v) ? null : v;
+	return typeof v === 'number' && Number.isNaN(v) ? null : v;
 }
 
 // Build input columns from a {ref:{type,values}} dict; return idMap + resolved args.
@@ -762,9 +764,9 @@ function sessionActogramSeries(src) {
 	return out;
 }
 
-/** NaN and +-Infinity become null, recursively, so the record is valid JSON. */
+/** NaN becomes null, recursively, so the record is valid JSON (the writer encodes +-Infinity). */
 function jsonSafe(v) {
-	if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+	if (typeof v === 'number') return Number.isNaN(v) ? null : v;
 	if (Array.isArray(v)) return v.map(jsonSafe);
 	if (v && typeof v === 'object') {
 		const out = {};
@@ -1103,7 +1105,11 @@ describe.runIf(process.env.GEN_PARITY)('emit JS parity results', () => {
 			throw new Error('a FormulaColumn payload executed during the parity run (SEC-1)');
 
 		mkdirSync(PARITY_DIR, { recursive: true });
-		writeFileSync(join(PARITY_DIR, 'js_results.json'), JSON.stringify(results, null, 2), 'utf8');
+		// JSON has no Infinity, and JSON.stringify writes it as null, the same as NaN. That made
+		// an infinite result (a one-sided odds-ratio interval's open end) indistinguishable from
+		// an undefined one. Write the two infinities as strings; both legs decode them on load.
+		const withInf = (_k, v) => (v === Infinity ? 'Infinity' : v === -Infinity ? '-Infinity' : v);
+		writeFileSync(join(PARITY_DIR, 'js_results.json'), JSON.stringify(results, withInf, 2), 'utf8');
 		console.log(`PARITY: wrote js_results.json (${Object.keys(results).length} fixtures)`);
 		// Generous timeout: this runs EVERY fixture through the real engine, including the
 		// multi-start nonlinear fits, and it grows with the fixture set. It had no explicit

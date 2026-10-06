@@ -79,4 +79,25 @@ describe('correlation', () => {
 		const ac = res.rows.find((row) => row.var_i === 'a' && row.var_j === 'c');
 		expect(ac.r).toBeNaN();
 	});
+
+	// STAT-12: with k pairs, flagging on raw p inflates the family-wise error. `padj` is the
+	// Holm (1979) step-down adjustment across the pairs (statsmodels multipletests 'holm' on
+	// scipy pearsonr p: 0.028324957907738663, 0.5807700868602763, 0.47053119235821794 gives
+	// 0.08497487, 0.94106238, 0.94106238), and `significant` reads the adjusted value.
+	it('flags significance on Holm-adjusted p, not raw p', () => {
+		mockColumns[1] = { name: 'a', getData: () => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] };
+		mockColumns[2] = { name: 'b', getData: () => [5, -2, 5, 7, 1, 1, 13, 10, 15, 8, 5, 16] };
+		mockColumns[3] = { name: 'c', getData: () => [5, 3, 8, 1, 9, 2, 7, 4, 6, 10, 3, 6] };
+		const [res] = correlation(args());
+		const get = (i, j) => res.rows.find((row) => row.var_i === i && row.var_j === j);
+		expect(get('a', 'b').pvalue).toBeCloseTo(0.028324957907738663, 9);
+		expect(get('a', 'b').padj).toBeCloseTo(0.08497487373, 8);
+		expect(get('a', 'c').padj).toBeCloseTo(0.94106238471, 8);
+		expect(get('b', 'c').padj).toBeCloseTo(0.94106238471, 8);
+		expect(get('a', 'b').significant).toBe(0);
+		// The adjusted p is written to its own output port alongside the raw one.
+		mockColumns[9] = { name: 'padj_out' };
+		correlation(args({ out: { ...OUT, padj: 9 } }));
+		expect(mockColumns[9].data).toBe(9);
+	});
 });

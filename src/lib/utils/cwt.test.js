@@ -219,6 +219,22 @@ describe('cwt — wavelet families', () => {
 		expect(Math.abs(found / 24 - 1)).toBeLessThan(0.15);
 	});
 
+	// SPEC-13: Torrence and Compo (1998) eq. 6 normalises every wavelet to unit energy at each
+	// scale, sum_k |psiHat(s w_k)|^2 = N. Through Parseval, the unrectified power of a unit
+	// impulse then sums to 1 over time at every scale away from the grid ends. Paul carried an
+	// extra sqrt(2m) in its normalisation, so its energy was 2m = 8 (m = 4) and its exported
+	// power and ridge power were 8x too large.
+	it.each(WAVELETS)('%s is normalised to unit energy at each scale (T&C eq. 6)', (wavelet) => {
+		const n = 512;
+		const impulse = new Array(n).fill(0);
+		impulse[n / 2] = 1;
+		const r = cwt(impulse, 1, { wavelet, rectify: false });
+		for (let j = 8; j <= 40; j++) {
+			const energy = r.power[j].reduce((a, b) => a + b, 0);
+			expect(energy, `${wavelet} scale ${j}`).toBeCloseTo(1, 2);
+		}
+	});
+
 	it('rejects an unknown wavelet rather than silently defaulting', () => {
 		const r = cwt(sine(512, DT, 24), DT, { wavelet: 'daubechies' });
 		expect(r.valid).toBe(false);

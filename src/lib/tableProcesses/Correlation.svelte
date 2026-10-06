@@ -20,10 +20,11 @@
 	import { fillDefaults, normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { correlationMatrix } from '$lib/utils/correlation.js';
 	import { jarqueBeraNormality } from '$lib/tableProcesses/GroupComparison.svelte';
+	import { pAdjust } from '$lib/utils/pAdjust.js';
 
 	const displayName = 'Correlation';
 
-	const OUT_KEYS = ['var_i', 'var_j', 'r', 'pvalue', 'n', 'ciLow', 'ciHigh', 'significant'];
+	const OUT_KEYS = ['var_i', 'var_j', 'r', 'pvalue', 'padj', 'n', 'ciLow', 'ciHigh', 'significant'];
 
 	const defaults = new Map([
 		['yIN', { val: [] }],
@@ -36,14 +37,16 @@
 				var_j: { val: -1 },
 				r: { val: -1 },
 				pvalue: { val: -1 },
+				// Holm (1979) adjusted p across every pair in the matrix. A k-column matrix
+				// runs k(k-1)/2 tests, so the raw p alone overstates significance.
+				padj: { val: -1 },
 				n: { val: -1 },
 				// Fisher z interval for r. Asymmetric about r by construction, which
 				// is correct: r is bounded, so a symmetric interval would run past 1.
 				ciLow: { val: -1 },
 				ciHigh: { val: -1 },
-				// 1/0 per pair at `alpha`. Until now `alpha` was declared and
-				// documented but never read — a knob the MCP advertised and nothing
-				// used. Matches FDRCorrection's `reject` and NormalityTest's `normal`.
+				// 1/0 per pair: Holm-adjusted p < `alpha`. Matches FDRCorrection's
+				// `reject` and NormalityTest's `normal`.
 				significant: { val: -1 }
 			}
 		],
@@ -84,9 +87,18 @@
 
 		const { method, warnings } = chooseMethod(argsIN.method ?? 'auto', columns, names);
 		const alpha = Number.isFinite(Number(argsIN.alpha)) ? Number(argsIN.alpha) : 0.05;
-		const rows = correlationMatrix(columns, names, method).map((row) => ({
+		const raw = correlationMatrix(columns, names, method);
+		// Holm (1979) step-down over the whole matrix, as R p.adjust(method = 'holm'). It controls
+		// the family-wise error under any dependence, which matters here: the pairs share columns.
+		// Uncomputable pairs (NaN p) stay NaN and do not count towards the family size.
+		const padj = pAdjust(
+			raw.map((row) => row.pvalue),
+			'holm'
+		);
+		const rows = raw.map((row, i) => ({
 			...row,
-			significant: Number.isFinite(row.pvalue) ? (row.pvalue < alpha ? 1 : 0) : null
+			padj: padj[i],
+			significant: Number.isFinite(padj[i]) ? (padj[i] < alpha ? 1 : 0) : null
 		}));
 
 		// Aggregate, deduplicated result-quality warnings.
@@ -122,6 +134,7 @@
 		writeOutputColumn(argsIN.out?.var_j, col('var_j'), { processHash, type: 'category' });
 		writeOutputColumn(argsIN.out?.r, col('r'), { processHash });
 		writeOutputColumn(argsIN.out?.pvalue, col('pvalue'), { processHash });
+		writeOutputColumn(argsIN.out?.padj, col('padj'), { processHash });
 		writeOutputColumn(argsIN.out?.n, col('n'), { processHash });
 		writeOutputColumn(argsIN.out?.ciLow, col('ciLow'), { processHash });
 		writeOutputColumn(argsIN.out?.ciHigh, col('ciHigh'), { processHash });
@@ -174,7 +187,7 @@
 	// In-node results, mirroring the other analysis nodes (GroupComparison etc.): show the
 	// matrix so the numbers are readable without wiring a plot, plus the shared Open-full-table
 	// / Download-CSV actions. The output PORTS still carry the same data for downstream wiring.
-	const HEADERS = ['var_i', 'var_j', 'r', 'pvalue', 'n'];
+	const HEADERS = ['var_i', 'var_j', 'r', 'pvalue', 'padj', 'n'];
 	const fmt = (v) =>
 		v == null || Number.isNaN(v)
 			? '—'
@@ -184,7 +197,14 @@
 	// getStaticData() rebuilds full-precision rows for the table/CSV helpers.
 	const getTableData = () => ({
 		headers: HEADERS,
-		rows: (result.rows ?? []).map((row) => [row.var_i, row.var_j, row.r, row.pvalue, row.n])
+		rows: (result.rows ?? []).map((row) => [
+			row.var_i,
+			row.var_j,
+			row.r,
+			row.pvalue,
+			row.padj,
+			row.n
+		])
 	});
 	// Preview is sorted by |r| descending — the strongest relationships first.
 	let previewRows = $derived(
@@ -269,18 +289,20 @@
 					<col />
 					<col class="c-num" />
 					<col class="c-num" />
+					<col class="c-num" />
 				</colgroup>
 				<thead>
-					<tr><th>Pair</th><th>r</th><th>p</th></tr>
+					<tr><th>Pair</th><th>r</th><th>p</th><th title="Holm-adjusted p">p adj</th></tr>
 				</thead>
 				<tbody>
-					{#each previewRows as row (row.var_i + ' ' + row.var_j)}
+					{#each previewRows as row (row.var_i + '\u0000' + row.var_j)}
 						<tr
-							title={`${row.var_i} ~ ${row.var_j}: r=${fmt(row.r)}, p=${fmt(row.pvalue)}, n=${row.n}`}
+							title={`${row.var_i} ~ ${row.var_j}: r=${fmt(row.r)}, p=${fmt(row.pvalue)}, Holm-adjusted p=${fmt(row.padj)}, n=${row.n}`}
 						>
 							<td class="pair">{row.var_i} ~ {row.var_j}</td>
 							<td class="num">{fmt(row.r)}</td>
 							<td class="num">{fmt(row.pvalue)}</td>
+							<td class="num">{fmt(row.padj)}</td>
 						</tr>
 					{/each}
 				</tbody>
@@ -363,7 +385,7 @@
 	.corr-table td {
 		padding: 0.1rem 0.3rem;
 	}
-	/* the three numeric columns take fixed narrow widths; the pair column gets the rest. */
+	/* the numeric columns take fixed narrow widths; the pair column gets the rest. */
 	.corr-table col.c-num {
 		width: 3.2rem;
 	}

@@ -101,6 +101,13 @@ export function timeToAngleRad(hours, period) {
  * Amplitude-weighted circular stats for a (time, value) series. Angle from
  * time (folded by period), weight from value. meanValue is the acrophase in
  * the period's hours.
+ *
+ * No Rayleigh z or p here (both NaN). The Rayleigh null is uniformly scattered
+ * EVENTS; these weights are a series' values, so adding a constant baseline (no
+ * rhythm at all) changes nEff and R and therefore the p-value. A p that moves
+ * with an arbitrary offset tests nothing. R and the weighted acrophase stay:
+ * they describe the series. For a rhythm test on (time, value) data use the
+ * fixed-period cosinor (Cornelissen 2014, zero-amplitude F test).
  * @returns {{n,nEff,R,meanAngle,z,pValue,W,meanValue:number}}
  */
 export function weightedSeriesStats(timeData, timeType, valueData, period) {
@@ -109,5 +116,5 @@ export function weightedSeriesStats(timeData, timeType, valueData, period) {
 	const r = weightedRayleigh(angles, weights);
 	const dp = displayPeriodFor('hours', period);
 	const meanValue = Number.isFinite(r.meanAngle) ? (r.meanAngle / TAU_P) * dp : NaN;
-	return { ...r, meanValue };
+	return { ...r, z: NaN, pValue: NaN, meanValue };
 }

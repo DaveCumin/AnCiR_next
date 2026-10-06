@@ -98,6 +98,20 @@ describe('RayleighTest — small-sample warnings', () => {
 		expect(Number.isFinite(res.perY[1].pValue)).toBe(true);
 	});
 
+	it('timed mode: no p-value, a note saying why, and no small-sample p warning', () => {
+		// FIT-11: with a time column wired the Y values are weights, and the weighted p depends
+		// on the series' baseline, so it is not reported.
+		mkCol(9, 'time', [0, 3, 6, 9, 12, 15]);
+		mkCol(1, 'activity', [1, 2, 9, 8, 2, 1]);
+		const [res, valid] = rayleigh(args({ timeIN: 9 }));
+		expect(valid).toBe(true);
+		expect(res.perY[1].pValue).toBeNaN();
+		expect(Number.isFinite(res.perY[1].R)).toBe(true);
+		expect(Number.isFinite(res.perY[1].meanValue)).toBe(true);
+		expect(res.warnings.some((w) => /no p-value/i.test(w) && /baseline/.test(w))).toBe(true);
+		expect(res.warnings.some((w) => /Small sample/.test(w))).toBe(false);
+	});
+
 	it('has no warnings and no crash with nothing wired', () => {
 		const [res] = rayleigh(args({ yIN: [] }));
 		expect(res.warnings).toEqual([]);

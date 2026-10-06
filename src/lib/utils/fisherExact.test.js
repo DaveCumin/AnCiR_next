@@ -427,4 +427,35 @@ describe('conditionalOddsRatio and oddsRatioCI', () => {
 		expect(Number.isNaN(conditionalOddsRatio(null))).toBe(true);
 		expect(oddsRatioCI('x').every(Number.isNaN)).toBe(true);
 	});
+
+	// STAT-26: a one-sided test gets a ONE-sided interval, as R fisher.test(alternative =
+	// "less" | "greater") reports: [0, upper] or [lower, Inf], each bound at the full 1 - conf
+	// tail. Values from scipy odds_ratio(kind='conditional').confidence_interval(0.95,
+	// alternative=...); R prints 0 to 218.7958 and 3.640585 to Inf (its uniroot is looser).
+	it('one-sided alternatives give the one-sided interval', () => {
+		const [lLo, lHi] = oddsRatioCI(T, 0.95, 'less');
+		expect(lLo).toBe(0);
+		expect(lHi).toBeCloseTo(219.2105638468084, 2);
+		const [gLo, gHi] = oddsRatioCI(T, 0.95, 'greater');
+		expect(gLo).toBeCloseTo(3.640191660532765, 5);
+		expect(gHi).toBe(Infinity);
+		// The default stays two-sided.
+		expect(oddsRatioCI(T)[0]).toBeCloseTo(2.831609489743858, 5);
+	});
+
+	it('fisherExact reports the interval that matches its alternative', () => {
+		const X = [
+			[1, 9],
+			[11, 3]
+		];
+		const less = fisherExact(X, 'less').oddsRatioCI;
+		expect(less[0]).toBe(0);
+		expect(less[1]).toBeCloseTo(0.32600296913222926, 6);
+		const greater = fisherExact(X, 'greater').oddsRatioCI;
+		expect(greater[0]).toBeCloseTo(0.0012948958389639724, 8);
+		expect(greater[1]).toBe(Infinity);
+		const two = fisherExact(X).oddsRatioCI;
+		expect(two[0]).toBeCloseTo(0.0006360029488741693, 8);
+		expect(two[1]).toBeCloseTo(0.42586647569637337, 6);
+	});
 });

@@ -8,8 +8,9 @@
  * SEM uses the SAMPLE standard deviation (Bessel's correction, divisor n - 1):
  *   sd  = sqrt( Σ (yᵢ - ȳ)² / (n - 1) )
  *   sem = sd / sqrt(n)
- * For a group with a single observation (n = 1) the SEM is 0 (undefined
- * spread; reported as 0 so an error bar simply collapses to the point).
+ * For a group with a single observation (n = 1) the SD and SEM are NaN: the
+ * sample SD is undefined there (R sd() returns NA), and a 0 would claim a
+ * measured absence of spread. The plot draws no error bar for a NaN SEM.
  *
  * Pairs are ignored when the x key is null/undefined/NaN or the y value is
  * null/undefined/NaN, so partial columns behave sensibly.
@@ -92,7 +93,7 @@ export function meanSemByGroup(xs, ys) {
 		let sum = 0;
 		for (let i = 0; i < n; i++) sum += vals[i];
 		const mean = sum / n;
-		let sd = 0;
+		let sd = NaN;
 		if (n > 1) {
 			let ss = 0;
 			for (let i = 0; i < n; i++) {
@@ -101,7 +102,7 @@ export function meanSemByGroup(xs, ys) {
 			}
 			sd = Math.sqrt(ss / (n - 1));
 		}
-		const sem = n > 1 ? sd / Math.sqrt(n) : 0;
+		const sem = n > 1 ? sd / Math.sqrt(n) : NaN;
 		out.push({ x: g.x, mean, sem, sd, n });
 	}
 

@@ -110,10 +110,25 @@ describe('pAdjust — non-finite handling', () => {
 		expect(pAdjust([NaN, NaN], 'holm').every(Number.isNaN)).toBe(true);
 	});
 
-	it('clamps out-of-range p-values into [0, 1]', () => {
-		const got = pAdjust([-0.5, 1.5], 'none');
-		expect(got[0]).toBe(0);
-		expect(got[1]).toBe(1);
+	// STAT-30: a value outside [0, 1] is not a p-value. Clamping it entered -0.5 as a maximally
+	// significant result. It is missing instead: NaN in its slot, and n counts only the valid
+	// ones, as R p.adjust does for NA. R: p.adjust(c(.01, NA, .03, NA, .04), 'holm') gives
+	// 0.03 NA 0.06 NA 0.06, and 'BH' gives 0.03 NA 0.04 NA 0.04.
+	it('treats out-of-range p-values as missing, not clamped', () => {
+		const none = pAdjust([-0.5, 1.5], 'none');
+		expect(none.every(Number.isNaN)).toBe(true);
+		const holm = pAdjust([0.01, -0.2, 0.03, 1.5, 0.04], 'holm');
+		expect(holm[0]).toBeCloseTo(0.03, 12);
+		expect(holm[1]).toBeNaN();
+		expect(holm[2]).toBeCloseTo(0.06, 12);
+		expect(holm[3]).toBeNaN();
+		expect(holm[4]).toBeCloseTo(0.06, 12);
+		const bh = pAdjust([0.01, -0.2, 0.03, 1.5, 0.04], 'benjamini-hochberg');
+		expect(bh[0]).toBeCloseTo(0.03, 12);
+		expect(bh[2]).toBeCloseTo(0.04, 12);
+		expect(bh[4]).toBeCloseTo(0.04, 12);
+		// The boundaries themselves are valid p-values.
+		expect(pAdjust([0, 1], 'none')).toEqual([0, 1]);
 	});
 });
 

@@ -246,10 +246,11 @@ export const NODE_OUTPUT_LABELS = {
 			var_j: 'Variable 2',
 			r: 'Correlation (r)',
 			pvalue: 'p-value',
+			padj: 'Holm-adjusted p-value',
 			n: 'n',
 			ciLow: 'CI low',
 			ciHigh: 'CI high',
-			significant: 'Significant (1 = yes)'
+			significant: 'Significant (1 = yes, Holm-adjusted)'
 		}
 	},
 	Cosinor: {

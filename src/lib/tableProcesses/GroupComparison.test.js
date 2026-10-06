@@ -373,6 +373,23 @@ describe('kruskalWallis', () => {
 		expect(res.pValue).toBeLessThan(0.05);
 	});
 
+	// Tomczak and Tomczak (2014) epsilon-squared, E2_R = H / ((n^2 - 1) / (n + 1)) = H / (n - 1),
+	// as rcompanion::epsilonSquared computes it. H from scipy.stats.kruskal on the same groups:
+	// 7.384615384615388 (n = 9) and 5.9286384976525826 (n = 12, one tie).
+	it('reports Tomczak and Tomczak epsilon-squared, H / (n - 1)', () => {
+		const grp = (name, values) => ({ name, values, n: values.length });
+		const sep = kruskalWallis([grp('A', [1, 2, 1]), grp('B', [5, 6, 5]), grp('C', [9, 10, 9])]);
+		expect(sep.h).toBeCloseTo(7.384615384615388, 10);
+		expect(sep.epsilonSquared).toBeCloseTo(7.384615384615388 / 8, 10);
+		const mixed = kruskalWallis([
+			grp('A', [1, 2, 3, 4]),
+			grp('B', [2, 5, 6]),
+			grp('C', [7, 8, 9, 3, 10])
+		]);
+		expect(mixed.h).toBeCloseTo(5.9286384976525826, 10);
+		expect(mixed.epsilonSquared).toBeCloseTo(5.9286384976525826 / 11, 10);
+	});
+
 	it('returns pairwise posthoc comparisons', () => {
 		const groups = [
 			{ name: 'A', values: [1, 2, 1], n: 3, mean: 4 / 3 },

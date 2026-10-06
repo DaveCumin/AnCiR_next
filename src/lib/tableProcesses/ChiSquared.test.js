@@ -85,6 +85,15 @@ describe('chisquared — goodness-of-fit', () => {
 		expect(r.df).toBe(3); // k=4 → df=3, not k=6 → df=5
 		expect(r.statistic).toBeCloseTo(0, 9); // still perfectly uniform
 	});
+
+	it("labels Cohen's w on Cohen's own landmarks, not the Cramer's V bands", () => {
+		// [30,10,10,10] vs uniform 15: chi2 = 300 / 15 = 20, n = 60, w = sqrt(1/3) = 0.577.
+		// Cohen (1988): >= 0.5 is large. The Cramer's V bands called it 'relatively strong'.
+		mockColumns[6] = { name: 'skewed', getData: () => [30, 10, 10, 10] };
+		const [r] = chisquared(args({ testType: 'goodness', xIN: 6, yIN: -1 }));
+		expect(r.effectSize).toBeCloseTo(Math.sqrt(1 / 3), 12);
+		expect(r.effectSizeLabel).toBe('large');
+	});
 });
 
 describe("chisquared — Fisher's exact mode", () => {

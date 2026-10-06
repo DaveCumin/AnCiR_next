@@ -42,6 +42,22 @@ def _is_nan(v):
     return v is None or (isinstance(v, float) and math.isnan(v))
 
 
+def _decode_inf(v):
+    """The emitter writes +-Infinity as the strings "Infinity" / "-Infinity" (JSON has no
+    infinity, and a bare null would read as NaN). Turn them back into floats."""
+    if isinstance(v, str) and v in ("Infinity", "-Infinity"):
+        return math.inf if v == "Infinity" else -math.inf
+    if isinstance(v, list):
+        return [_decode_inf(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _decode_inf(x) for k, x in v.items()}
+    return v
+
+
+def _load_js_results():
+    return _decode_inf(json.loads((PARITY_DIR / "js_results.json").read_text()))
+
+
 def nums_match(x, y, tol):
     # A category output (Correlation's var_i / var_j) compares as text.
     if isinstance(x, str) or isinstance(y, str):
@@ -50,6 +66,8 @@ def nums_match(x, y, tol):
         return True
     if _is_nan(x) or _is_nan(y):
         return False
+    if math.isinf(x) or math.isinf(y):
+        return x == y
     return abs(x - y) <= tol * max(1.0, abs(x), abs(y))
 
 
@@ -446,14 +464,14 @@ try:
 
     @pytest.mark.parametrize("fx", FIXTURES["fixtures"], ids=lambda f: f["id"])
     def test_parity(fx):
-        js_results = json.loads((PARITY_DIR / "js_results.json").read_text())
+        js_results = _load_js_results()
         _check_fixture(fx, js_results)
 except ImportError:  # pragma: no cover
     pass
 
 
 def _run_all():
-    js_results = json.loads((PARITY_DIR / "js_results.json").read_text())
+    js_results = _load_js_results()
     failed = 0
     for fx in FIXTURES["fixtures"]:
         try:

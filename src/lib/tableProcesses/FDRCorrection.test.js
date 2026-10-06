@@ -101,6 +101,20 @@ describe('fdrcorrection', () => {
 		expect(fdrcorrection({ xIN: 1, out: OUT })[1]).toBe(false);
 	});
 
+	// STAT-30: a value outside [0, 1] is not a p-value; it is excluded like a missing one and
+	// the node says so, rather than clamping it into the family.
+	it('excludes out-of-range values from n and warns about them', () => {
+		mkColumn(1, [0.01, 1.7, 0.03, -0.1, 0.04]);
+		const [res, valid] = fdrcorrection({ xIN: 1, method: 'holm', alpha: 0.05, out: OUT });
+		expect(valid).toBe(true);
+		expect(res.nTested).toBe(3);
+		expect(res.padj[0]).toBeCloseTo(0.03, 12);
+		expect(res.padj[1]).toBeNaN();
+		expect(res.padj[3]).toBeNaN();
+		expect(res.reject[1]).toBeNull();
+		expect(res.warnings.some((w) => /2 .*outside \[0, 1\]/.test(w))).toBe(true);
+	});
+
 	it('is invalid when nothing in the column is a usable p-value', () => {
 		mkColumn(1, [null, '', undefined]);
 		const [res, valid] = fdrcorrection({ xIN: 1, method: 'holm', alpha: 0.05, out: OUT });

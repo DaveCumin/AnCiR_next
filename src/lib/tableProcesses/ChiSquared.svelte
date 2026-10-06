@@ -34,6 +34,7 @@
 		isMissingCategory,
 		cohensW,
 		effectSizeLabel,
+		cohensWLabel,
 		groupsToTable
 	} from '$lib/utils/chisquare.js';
 	import { fisherExact } from '$lib/utils/fisherExact.js';
@@ -304,7 +305,7 @@
 			df: res.df,
 			effectSize: w,
 			effectSizeName: "Cohen's w",
-			effectSizeLabel: effectSizeLabel(w),
+			effectSizeLabel: cohensWLabel(w),
 			n: nTotal,
 			warnings
 		};
@@ -504,8 +505,10 @@
 						: fmt(result.conditionalOddsRatio)}</strong
 				>
 				{#if result.oddsRatioCI}
-					(95% CI {result.oddsRatioCI[0] === 0 ? '0' : fmt(result.oddsRatioCI[0])} to {result
-						.oddsRatioCI[1] === Infinity
+					({result.alternative === 'two-sided' ? '' : 'one-sided '}95% CI {result.oddsRatioCI[0] ===
+					0
+						? '0'
+						: fmt(result.oddsRatioCI[0])} to {result.oddsRatioCI[1] === Infinity
 						? '∞'
 						: fmt(result.oddsRatioCI[1])})
 				{/if}

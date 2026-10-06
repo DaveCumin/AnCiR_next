@@ -13,7 +13,7 @@
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { pAdjust, PADJUST_METHODS } from '$lib/utils/pAdjust.js';
+	import { pAdjust, PADJUST_METHODS, isOutOfRangeP } from '$lib/utils/pAdjust.js';
 
 	const displayName = 'FDR Correction';
 
@@ -31,7 +31,7 @@
 	/**
 	 * Adjust the input column's p-values.
 	 *
-	 * Missing / non-numeric entries stay MISSING and are excluded from n, so a
+	 * Missing / non-numeric / out-of-range entries stay MISSING and are excluded from n, so a
 	 * test that failed to run never tightens the correction applied to the ones
 	 * that did.
 	 *
@@ -69,6 +69,14 @@
 		if (padj.length !== nTested) {
 			warnings.push(
 				`${padj.length - nTested} of ${padj.length} entries were not usable p-values and were excluded from the correction (they stay blank rather than counting towards n).`
+			);
+		}
+		// Named separately: a value outside [0, 1] usually means the wrong column is wired (a
+		// statistic, an effect size), which a blank cell does not.
+		const nOutOfRange = data.filter(isOutOfRangeP).length;
+		if (nOutOfRange > 0) {
+			warnings.push(
+				`${nOutOfRange} ${nOutOfRange === 1 ? 'value lies' : 'values lie'} outside [0, 1], so ${nOutOfRange === 1 ? 'it is' : 'they are'} not a p-value and ${nOutOfRange === 1 ? 'was' : 'were'} treated as missing. Check that the input is a p-value column.`
 			);
 		}
 

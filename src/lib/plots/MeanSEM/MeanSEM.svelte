@@ -238,8 +238,10 @@
 			let ymax = -Infinity;
 			this.data.forEach((d) => {
 				d.stats.forEach((s) => {
-					const lo = s.mean - (d.showError ? s.sem : 0);
-					const hi = s.mean + (d.showError ? s.sem : 0);
+					// A single-observation group has a NaN SEM (no error bar); its mean still counts.
+					const err = d.showError && Number.isFinite(s.sem) ? s.sem : 0;
+					const lo = s.mean - err;
+					const hi = s.mean + err;
 					if (lo < ymin) ymin = lo;
 					if (hi > ymax) ymax = hi;
 				});

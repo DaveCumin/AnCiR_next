@@ -8,7 +8,9 @@
  *
  * Every method returns adjusted p-values **in the caller's original order** and
  * enforces monotonicity, so a smaller raw p never yields a larger adjusted p.
- * All are capped at 1.
+ * All are capped at 1. Inputs that are missing, non-finite or outside [0, 1] are
+ * not p-values: they come back NaN and do not count towards n (R p.adjust's NA
+ * handling).
  *
  * References — pinned by parity fixtures against scipy / statsmodels:
  * - Holm, S. (1979) Scand. J. Statist. 6:65-70. Step-down, controls FWER.
@@ -31,20 +33,39 @@ export const PADJUST_METHODS = [
 ];
 
 /**
- * Non-finite p-values are carried through as NaN and EXCLUDED from n, rather
- * than silently counted as 1. A node that failed to converge should not tighten
- * the correction applied to the ones that did.
+ * The numeric value of `raw`, or NaN when it is missing or non-finite.
+ * NOT a bare Number(): Number(null), Number('') and Number(false) are all 0,
+ * which would silently enter a MISSING p-value as a maximally significant one.
+ * Only real numbers and numeric strings count.
+ */
+function numericP(raw) {
+	if (raw == null || typeof raw === 'boolean' || raw === '') return NaN;
+	const p = Number(raw);
+	return Number.isFinite(p) ? p : NaN;
+}
+
+/**
+ * True for a finite number that cannot be a p-value because it lies outside
+ * [0, 1]. pAdjust treats these as missing; callers use this to say so.
+ */
+export function isOutOfRangeP(raw) {
+	const p = numericP(raw);
+	return Number.isFinite(p) && (p < 0 || p > 1);
+}
+
+/**
+ * Missing, non-finite and out-of-range values are carried through as NaN and
+ * EXCLUDED from n, as R p.adjust does for NA, rather than silently counted as 1
+ * or clamped into [0, 1]. A node that failed to converge should not tighten the
+ * correction applied to the ones that did, and a -0.5 (a mis-wired column, a
+ * test statistic) must not enter the family as p = 0.
  */
 function partition(pValues) {
 	const entries = [];
 	const out = new Array(pValues.length).fill(NaN);
 	pValues.forEach((raw, idx) => {
-		// NOT a bare Number(): Number(null), Number('') and Number(false) are all
-		// 0, which would silently enter a MISSING p-value as a maximally
-		// significant one. Only real numbers and numeric strings count.
-		if (raw == null || typeof raw === 'boolean' || raw === '') return;
-		const p = Number(raw);
-		if (Number.isFinite(p)) entries.push({ p: Math.min(1, Math.max(0, p)), idx });
+		const p = numericP(raw);
+		if (p >= 0 && p <= 1) entries.push({ p, idx });
 	});
 	return { entries, out };
 }
@@ -52,7 +73,7 @@ function partition(pValues) {
 /**
  * Adjust a set of p-values for multiple comparisons.
  *
- * @param {number[]} pValues raw p-values (non-finite entries pass through as NaN)
+ * @param {number[]} pValues raw p-values (non-finite or out-of-range entries pass through as NaN)
  * @param {string} [method='benjamini-hochberg']
  * @returns {number[]} adjusted p-values, same length and order as the input
  */

@@ -6,6 +6,7 @@ import {
 	pUpperFromChiSq,
 	isMissingCategory,
 	cohensW,
+	cohensWLabel,
 	effectSizeLabel
 } from './chisquare.js';
 
@@ -300,5 +301,18 @@ describe('effect sizes', () => {
 		expect(effectSizeLabel(0.8)).toBe('strong');
 		expect(effectSizeLabel(-0.8)).toBe('strong'); // sign-insensitive
 		expect(effectSizeLabel(NaN)).toBe('');
+	});
+
+	// STAT-27: Cohen (1988) sets w landmarks at 0.1 small, 0.3 medium, 0.5 large, not the
+	// Cramer's V bands above (0.1 / 0.2 / 0.4 / 0.6).
+	it("cohensWLabel uses Cohen's w landmarks 0.1 / 0.3 / 0.5", () => {
+		expect(cohensWLabel(0.05)).toBe('negligible');
+		expect(cohensWLabel(0.1)).toBe('small');
+		expect(cohensWLabel(0.25)).toBe('small');
+		expect(cohensWLabel(0.3)).toBe('medium');
+		expect(cohensWLabel(0.45)).toBe('medium');
+		expect(cohensWLabel(0.5)).toBe('large');
+		expect(cohensWLabel(1.4)).toBe('large'); // w is unbounded above
+		expect(cohensWLabel(NaN)).toBe('');
 	});
 });

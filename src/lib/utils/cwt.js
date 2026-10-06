@@ -87,10 +87,10 @@ function waveletProps(name, param) {
 			coiFactor: 1 / Math.SQRT2,
 			psiHat(w, s, dt) {
 				if (w <= 0) return 0;
-				const norm =
-					Math.sqrt((2 * Math.PI * s) / dt) *
-					(2 ** m / Math.sqrt(m * gamma(2 * m))) *
-					Math.sqrt(2 * m); // T&C Table 1 normalisation
+				// T&C Table 1: psi0Hat = 2^m / sqrt(m (2m - 1)!) (s w)^m e^(-s w), with
+				// (2m - 1)! = gamma(2m), scaled by sqrt(2 pi s / dt) (eq. 6) to unit energy.
+				// (An extra sqrt(2m) factor here once made Paul power 2m = 8 times too large.)
+				const norm = Math.sqrt((2 * Math.PI * s) / dt) * (2 ** m / Math.sqrt(m * gamma(2 * m)));
 				return norm * (s * w) ** m * Math.exp(-s * w);
 			}
 		};

@@ -495,7 +495,9 @@
 		const hCorrected = h / tieCorrection;
 		const df = usable.length - 1;
 		const pValue = pUpperFromChiSq(hCorrected, df);
-		const epsilonSquared = (hCorrected - df) / (n - 1);
+		// Tomczak and Tomczak (2014) epsilon-squared, E2_R = H / ((n^2 - 1) / (n + 1)) = H / (n - 1),
+		// as rcompanion::epsilonSquared. The old (H - df) / (n - 1) matched no published estimator.
+		const epsilonSquared = hCorrected / (n - 1);
 
 		return {
 			valid: true,

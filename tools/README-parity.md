@@ -345,8 +345,8 @@ pin, all from the app:
   uniform bins use);
 - the x output is a `bin` column of the bin STARTS with `binWidth` null (the Python and R
   columns record `cuts_list` instead), so it reads back its starts, not centres;
-- the aggregates are the app's: `stddev` is the SAMPLE deviation and 0 for fewer than two
-  points, `count` counts pairs (0 when empty), `min`/`max` of an empty bin are null, `mean`
+- the aggregates are the app's: `stddev` is the SAMPLE deviation and NaN for fewer than two
+  points (it was 0 until STAT-14), `count` counts pairs (0 when empty), `min`/`max` of an empty bin are null, `mean`
   and `median` of one are NaN. The ports had the POPULATION deviation and no `count` at all
   (it silently fell through to the mean), in uniform mode too.
 
@@ -422,6 +422,11 @@ tools/.venv/bin/python -m pytest tools/test_parity.py -q
 ```
 
 If `js_results.json` is missing, the Python test tells you to run step 1.
+
+Non-finite numbers: JSON has neither NaN nor Infinity. The emitter writes NaN as `null` and
+`+-Infinity` as the strings `"Infinity"` / `"-Infinity"`, which both legs decode on load, so an
+infinite result (a one-sided odds-ratio interval's open end) is not mistaken for an undefined one.
+Two infinities match only when they have the same sign.
 
 ## How compute runs headlessly
 
@@ -746,7 +751,8 @@ real differences:
   saves `'goodness'`, so it never ran), no categorical goodness of fit and no Cohen's w. Both
   now port the node whole: `contingency_table`, `groups_to_table`, the missing-category rule
   (null, '', NaN and the text 'NaN'), Fisher's p for each alternative with the conditional-MLE
-  odds ratio and its two-sided 95% interval (Python via scipy; R ports the app's bisection
+  odds ratio and its 95% interval for the same alternative (one-sided `[0, upper]` or
+  `[lower, Inf]` for "less"/"greater" since STAT-26, as `fisher.test`; Python via scipy; R ports the app's bisection
   because `fisher.test`'s `uniroot` is only good to ~1e-4), and the app's "valid but writes
   nothing" results. Fixtures: `tp-chisquared-{fisher-paired, fisher-greater, fisher-less,
 groups-default, groups-fisher, goodness-categorical, goodness-counts, paired-no-yates}`.

@@ -102,4 +102,27 @@ describe('weightedSeriesStats', () => {
 		expect(s.meanValue).toBeLessThan(7);
 		expect(s.R).toBeGreaterThan(0.5);
 	});
+
+	// FIT-11: the amplitude-weighted "Rayleigh" p has no valid null. The weights are the
+	// series' values, so adding a constant baseline (which carries no rhythm) changes nEff, R
+	// and therefore p. A p-value that moves with an arbitrary offset is not a test, so timed
+	// mode reports R and the weighted acrophase only.
+	it('reports no Rayleigh p (or z) in timed mode, but keeps R and the acrophase', () => {
+		const time = Array.from({ length: 48 }, (_, i) => i);
+		const value = time.map((h) => 6 + 5 * Math.cos((2 * Math.PI * (h - 15)) / 24));
+		const s = weightedSeriesStats(time, 'number', value, 24);
+		expect(s.pValue).toBeNaN();
+		expect(s.z).toBeNaN();
+		expect(s.R).toBeGreaterThan(0.3);
+		expect(s.meanValue).toBeCloseTo(15, 6);
+		// The baseline dependence that makes the p invalid: same rhythm, +100 offset.
+		const shifted = weightedSeriesStats(
+			time,
+			'number',
+			value.map((v) => v + 100),
+			24
+		);
+		expect(shifted.meanValue).toBeCloseTo(15, 6);
+		expect(shifted.R).toBeLessThan(s.R / 5);
+	});
 });

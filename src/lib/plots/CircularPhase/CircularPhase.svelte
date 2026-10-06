@@ -817,7 +817,10 @@
 									'hours',
 									theData.period
 								)} ·{/if}
-							R {fmt(datum.stats.R, 3)} · z {fmt(datum.stats.z, 2)} · p {fmtP(datum.stats.pValue)}
+							R {fmt(datum.stats.R, 3)}
+							<!-- Timed series have no Rayleigh z or p: the values are weights, and the
+							     weighted p moves with the series' baseline (weightedSeriesStats). -->
+							{#if !datum.timeWired}· z {fmt(datum.stats.z, 2)} · p {fmtP(datum.stats.pValue)}{/if}
 						</p>
 					{/if}
 					<div class="div-line"></div>

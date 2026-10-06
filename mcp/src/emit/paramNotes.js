@@ -53,7 +53,7 @@ export const PARAM_NOTES = {
 	NormalityTest:
 		'`method`: "shapiro" (Shapiro-Wilk, default, 3 ≤ n ≤ 5000), "dagostino" (D’Agostino-Pearson, n ≥ 8) or "jarquebera" (n ≥ 3, weaker). `alpha` is the verdict threshold (0.05). One row per column; small p ⇒ non-normal.',
 	Correlation:
-		'`method`: "pearson" (linear), "spearman" (rank) or "auto" (Spearman if any column fails a normality check, else Pearson). `alpha` (0.05). Reports every column pair (var_i, var_j, r, pvalue, n).',
+		'`method`: "pearson" (linear), "spearman" (rank) or "auto" (Spearman if any column fails a normality check, else Pearson). `alpha` (0.05). Reports every column pair (var_i, var_j, r, pvalue, padj = Holm-adjusted across the pairs, n); `significant` is padj < alpha.',
 	Split:
 		'`splitTimes` cuts the series (N points ⇒ N+1 segments). On a TIME x-axis each is EITHER a NUMBER of HOURS from the start (336 = 14 days) OR a full ISO DATE STRING ("2024-08-21", include the year) for a calendar cut — the conversion is done for you. On a numeric x-axis, the column’s own units.',
 	RhythmicityAnalysis:

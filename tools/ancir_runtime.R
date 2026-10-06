@@ -255,8 +255,9 @@ correlate <- function(x, y, method = "pearson") {
 # Multiple comparisons
 # ---------------------------------------------------------------------------
 
-# Non-finite entries are EXCLUDED from n and returned as NA: a test that failed to run must
-# not tighten the correction applied to the ones that did.
+# Non-finite entries and values outside [0, 1] are EXCLUDED from n and returned as NA, as
+# p.adjust does for NA: a test that failed to run must not tighten the correction applied to
+# the ones that did, and a value that cannot be a p-value is not clamped in.
 p_adjust <- function(pvalues, method = "benjamini-hochberg") {
   name_map <- c("bonferroni" = "bonferroni", "holm" = "holm",
                 "benjamini-hochberg" = "BH", "benjamini-yekutieli" = "BY")
@@ -267,8 +268,8 @@ p_adjust <- function(pvalues, method = "benjamini-hochberg") {
     if (is.null(raw) || length(raw) != 1 || is.logical(raw)) next
     if (is.character(raw) && !nzchar(raw)) next
     v <- suppressWarnings(as.numeric(raw))
-    if (length(v) != 1 || !is.finite(v)) next
-    keep_i <- c(keep_i, i); keep_v <- c(keep_v, min(1, max(0, v)))
+    if (length(v) != 1 || !is.finite(v) || v < 0 || v > 1) next
+    keep_i <- c(keep_i, i); keep_v <- c(keep_v, v)
   }
   if (!length(keep_i)) return(list(adjusted = out))
   if (identical(method, "none")) {
@@ -864,7 +865,7 @@ bin_agg <- function(agg_func, ys, start, end) {
     return(if (k %% 2 == 0) (sl[mid] + sl[mid + 1]) / 2 else sl[mid + 1])
   }
   if (identical(agg_func, "stddev")) {
-    if (k < 2) return(0)  # the app returns 0, not NaN, for fewer than two points
+    if (k < 2) return(NA_real_)  # sample SD undefined below two points, as sd() gives NA
     m <- bin_agg("mean", ys, start, end)
     ss <- 0
     for (v in sl) ss <- ss + (v - m) * (v - m)
@@ -2160,7 +2161,7 @@ tp_correlation <- function(args, env) {
     }
   }
   rows <- list(var_i = c(), var_j = c(), r = c(), pvalue = c(), n = c(),
-               ciLow = c(), ciHigh = c(), significant = c())
+               ciLow = c(), ciHigh = c())
   for (a in seq_len(length(y_ins) - 1)) for (b in (a + 1):length(y_ins)) {
     res <- correlate(columns[[a]], columns[[b]], use)
     ci <- correlation_ci(c(res$r, res$n), use, 1 - alpha)
@@ -2171,9 +2172,11 @@ tp_correlation <- function(args, env) {
     rows$n <- c(rows$n, res$n)
     rows$ciLow <- c(rows$ciLow, ci$ciLow)
     rows$ciHigh <- c(rows$ciHigh, ci$ciHigh)
-    rows$significant <- c(rows$significant,
-                          if (is.na(res$pvalue)) NA_real_ else as.numeric(res$pvalue < alpha))
   }
+  # Holm (1979) across every pair (p.adjust(method = "holm") via p_adjust); NA p stays NA and is
+  # excluded from the family. `significant` reads the ADJUSTED p.
+  rows$padj <- p_adjust(as.list(rows$pvalue), "holm")$adjusted
+  rows$significant <- ifelse(is.na(rows$padj), NA_real_, as.numeric(rows$padj < alpha))
   .write_result_rows(args, env, rows)
   TRUE
 }
@@ -2246,8 +2249,9 @@ groups_to_table <- function(columns, names_) {
 
 # Port of utils/fisherExact.js on a 2x2 table [[a, b], [c, d]]: the p-value for `alternative`
 # (the two-sided one sums every table no more probable than the observed, with the 1e-7
-# relative tolerance), the conditional-MLE odds ratio and its exact TWO-SIDED 95% interval,
-# both by 200-step bisection on log(psi) as in the app. R's fisher.test gives the same
+# relative tolerance), the conditional-MLE odds ratio and its exact 95% interval for the SAME
+# alternative ("less" is [0, upper], "greater" [lower, Inf], as fisher.test), both by 200-step
+# bisection on log(psi) as in the app. R's fisher.test gives the same
 # quantities, but its uniroot tolerance (~1e-4) is far looser than the app's bisection.
 # An empty row or column margin gives p = 1 and NA estimates; NULL for an unusable table.
 fisher_exact_full <- function(m, alternative = "two-sided") {
@@ -2285,9 +2289,12 @@ fisher_exact_full <- function(m, alternative = "two-sided") {
   }
   cor <- if (a <= lo) 0 else if (a >= hi) Inf
          else bisect(function(psi) sum(ks * probs_at(psi)) < a)
-  alpha <- (1 - 0.95) / 2
-  ci_low <- if (a > lo) bisect(function(psi) sum(probs_at(psi)[ks >= a]) < alpha) else 0
-  ci_high <- if (a < hi) bisect(function(psi) sum(probs_at(psi)[ks <= a]) > alpha) else Inf
+  # One-sided: the single bound sits at the full 1 - conf tail (fisher.test's conf.int).
+  alpha <- if (alternative == "two-sided") (1 - 0.95) / 2 else 1 - 0.95
+  ci_low <- if (a > lo && alternative != "less")
+    bisect(function(psi) sum(probs_at(psi)[ks >= a]) < alpha) else 0
+  ci_high <- if (a < hi && alternative != "greater")
+    bisect(function(psi) sum(probs_at(psi)[ks <= a]) > alpha) else Inf
   list(pvalue = min(1, max(0, p)), conditionalOddsRatio = cor, ciLow = ci_low, ciHigh = ci_high)
 }
 
@@ -2845,7 +2852,9 @@ tp_rayleightest <- function(args, env) {
         # fallback time_to_angle_rad already applies, so the angle and its label agree.
         dp <- if (is.finite(period) && period > 0) period else 24
         mv <- if (is.finite(st$meanAngle)) (st$meanAngle / (2 * pi)) * dp else NA_real_
-        per_y[[yk]] <- list(R = st$R, z = st$z, pValue = st$pValue,
+        # No z or p in timed mode (FIT-11), as weightedSeriesStats: the weights are the
+        # series' values, so the weighted Rayleigh p moves with a constant baseline.
+        per_y[[yk]] <- list(R = st$R, z = NA_real_, pValue = NA_real_,
                             meanAngle = st$meanAngle, meanValue = mv)
         any_valid <- TRUE
       }

@@ -213,9 +213,19 @@ describe('binData — aggregation functions', () => {
 		expect(result.y_out[0]).toBeCloseTo(2, 6);
 	});
 
-	it('stddev aggregation — single element → 0', () => {
+	// STAT-14: the sample SD (divisor n - 1) is undefined below two points, as R sd() and
+	// numpy std(ddof=1) report (NA / NaN). A 0 would read as "no spread was measured".
+	it('stddev aggregation: a single element gives NaN, not 0', () => {
 		const result = binData([0], [5], 1, 0, null, 'stddev');
-		expect(result.y_out[0]).toBe(0);
+		expect(result.y_out[0]).toBeNaN();
+	});
+
+	it('stddev aggregation: an empty bin gives NaN, not 0', () => {
+		// cuts [0,1) holds 0.5 and 0.7, [1,2) is empty, [2,3] holds 2.5
+		const result = binData([0.5, 0.7, 2.5], [1, 3, 9], 1, 0, null, 'stddev', [0, 1, 2, 3]);
+		expect(result.y_out[0]).toBeCloseTo(Math.SQRT2, 12);
+		expect(result.y_out[1]).toBeNaN();
+		expect(result.y_out[2]).toBeNaN();
 	});
 
 	it('falls back to mean for unknown aggregation type', () => {

@@ -137,7 +137,7 @@ def _bin_agg(agg_func, ys, start, end):
         return (sl[mid - 1] + sl[mid]) / 2 if k % 2 == 0 else sl[mid]
     if agg_func == 'stddev':
         if k < 2:
-            return 0  # the app returns 0, not NaN, for fewer than two points
+            return float('nan')  # sample SD undefined below two points (R sd() gives NA)
         mean = _bin_agg('mean', ys, start, end)
         sum_sq = 0.0
         for i in range(start, end):
@@ -5960,7 +5960,8 @@ def _gc_kruskal_wallis(groups):                          # JS kruskalWallis (:40
     h_corrected = h / tie_correction
     df = len(usable) - 1
     p_value = _gc_p_upper_from_chisq(h_corrected, df)
-    epsilon_squared = (h_corrected - df) / (n - 1)
+    # Tomczak and Tomczak (2014) epsilon-squared, H / (n - 1), as rcompanion::epsilonSquared.
+    epsilon_squared = h_corrected / (n - 1)
     return {'valid': True, 'h': h_corrected, 'df': df, 'pValue': p_value,
             'epsilonSquared': epsilon_squared, 'nTotal': n}
 
@@ -6601,7 +6602,7 @@ def _meansem_sort_key(x):
 
 def meansem(xs, ys):
     """Group paired (x, y) by x; per group mean, SEM (sample sd / sqrt(n)),
-    sd (divisor n-1) and n. Singleton groups report sd = sem = 0. Mirrors
+    sd (divisor n-1) and n. Singleton groups report sd = sem = NaN. Mirrors
     src/lib/utils/meanSem.js meanSemByGroup. Returns list of {x,mean,sem,sd,n}."""
     xs = xs or []
     ys = ys or []
@@ -6628,8 +6629,8 @@ def meansem(xs, ys):
             sd = math.sqrt(ss / (m - 1))
             sem = sd / math.sqrt(m)
         else:
-            sd = 0.0
-            sem = 0.0
+            sd = float('nan')  # sample SD undefined at n = 1 (R sd() gives NA)
+            sem = float('nan')
         out.append({'x': groups[key]['x'], 'mean': mean, 'sem': sem, 'sd': sd, 'n': m})
     out.sort(key=lambda r: _meansem_sort_key(r['x']))
     return out
@@ -6998,7 +6999,9 @@ def tp_rayleightest(args, cols, raw_data, _sv):
                                    else 24)
                 mean_value = ((s['meanAngle'] / (2 * math.pi)) * display_period
                               if math.isfinite(s['meanAngle']) else _NAN)
-                per_y[y_id] = {'R': s['R'], 'z': s['z'], 'pValue': s['pValue'],
+                # No z or p in timed mode (FIT-11), as weightedSeriesStats: the weights are the
+                # series' values, so the weighted Rayleigh p moves with a constant baseline.
+                per_y[y_id] = {'R': s['R'], 'z': _NAN, 'pValue': _NAN,
                                'meanAngle': s['meanAngle'], 'meanValue': mean_value}
                 any_valid = True
             continue
@@ -7403,21 +7406,23 @@ def tp_correlation(args, cols, raw_data, _sv):
                 use = 'spearman'
                 break
     rows = {'var_i': [], 'var_j': [], 'r': [], 'pvalue': [], 'n': [],
-            'ciLow': [], 'ciHigh': [], 'significant': []}
+            'ciLow': [], 'ciHigh': []}
     for a in range(len(y_ins)):
         for b in range(a + 1, len(y_ins)):
             res = correlate(columns[a], columns[b], use)
             ci = correlation_ci([res['r'], res['n']], use, 1 - alpha)
-            p = res['pvalue']
             rows['var_i'].append(names[a])
             rows['var_j'].append(names[b])
             rows['r'].append(res['r'])
-            rows['pvalue'].append(p)
+            rows['pvalue'].append(res['pvalue'])
             rows['n'].append(res['n'])
             rows['ciLow'].append(ci['ciLow'])
             rows['ciHigh'].append(ci['ciHigh'])
-            rows['significant'].append(
-                float('nan') if _isnan(p) else (1 if p < alpha else 0))
+    # Holm (1979) across every pair (statsmodels multipletests 'holm' via p_adjust); NaN p stays
+    # NaN and is excluded from the family. `significant` reads the ADJUSTED p.
+    rows['padj'] = p_adjust(rows['pvalue'], 'holm')['adjusted']
+    rows['significant'] = [float('nan') if _isnan(q) else (1 if q < alpha else 0)
+                           for q in rows['padj']]
     _result_rows(raw_data, cols, args, rows)
     return True
 
@@ -7506,8 +7511,8 @@ def groups_to_table(columns, names=None):
 
 def fisher_exact_full(table, alternative='two-sided'):
     """utils/fisherExact.js fisherExact on a 2x2 table: the p-value for `alternative`, the
-    conditional-MLE odds ratio and its exact TWO-SIDED 95% interval (the app reports that
-    interval whatever the alternative). A table with an empty row or column margin gives
+    conditional-MLE odds ratio and its exact 95% interval for the SAME alternative ('less' is
+    [0, upper], 'greater' is [lower, inf], as R fisher.test). A table with an empty row or column margin gives
     p = 1 and NaN estimates, as in the app. Returns None for a table that is not 2x2 of
     non-negative whole counts or has an unknown alternative."""
     if (not isinstance(table, list) or len(table) != 2
@@ -7525,7 +7530,7 @@ def fisher_exact_full(table, alternative='two-sided'):
     if a + b == 0 or c + d == 0 or a + c == 0 or b + d == 0:
         return {'pvalue': 1.0, 'conditionalOddsRatio': nan, 'ciLow': nan, 'ciHigh': nan}
     p = fisher_exact_test([[int(a), int(b)], [int(c), int(d)]], alternative)['pvalue']
-    ci = fisher_odds_ratio_ci([[int(a), int(b)], [int(c), int(d)]], 0.95)
+    ci = fisher_odds_ratio_ci([[int(a), int(b)], [int(c), int(d)]], 0.95, alternative)
     return {'pvalue': min(1.0, max(0.0, p)), 'conditionalOddsRatio': ci['conditionalOddsRatio'],
             'ciLow': ci['ciLow'], 'ciHigh': ci['ciHigh']}
 
@@ -9107,9 +9112,10 @@ def p_adjust(pvalues, method="benjamini-hochberg"):
     Backed by statsmodels.stats.multitest.multipletests, so the JS is checked
     against a real reference implementation rather than a second copy of itself.
 
-    Non-finite entries (None, '', bool, NaN) are EXCLUDED from n and returned as
-    NaN, matching the JS: a test that failed to run must not tighten the
-    correction applied to the ones that did.
+    Non-finite entries (None, '', bool, NaN) and values outside [0, 1] are
+    EXCLUDED from n and returned as NaN, matching the JS and R p.adjust's NA
+    handling: a test that failed to run must not tighten the correction applied
+    to the ones that did, and a value that cannot be a p-value is not clamped in.
     """
     from statsmodels.stats.multitest import multipletests
 
@@ -9128,9 +9134,9 @@ def p_adjust(pvalues, method="benjamini-hochberg"):
             v = float(raw)
         except (TypeError, ValueError):
             continue
-        if not math.isfinite(v):
+        if not math.isfinite(v) or v < 0.0 or v > 1.0:
             continue
-        kept.append((i, min(1.0, max(0.0, v))))
+        kept.append((i, v))
 
     if not kept:
         return {"adjusted": out}
@@ -9517,17 +9523,18 @@ def cohens_w(statistic, n):
     return math.sqrt(statistic / n)
 
 
-def fisher_odds_ratio_ci(table, confidence=0.95):
+def fisher_odds_ratio_ci(table, confidence=0.95, alternative='two-sided'):
     """Conditional MLE odds ratio + its confidence interval.
 
     Delegates to scipy.stats.contingency.odds_ratio(kind='conditional'), which is
     the same quantity R's fisher.test prints - a real reference rather than a
-    second copy of the JS root-finding.
+    second copy of the JS root-finding. A one-sided `alternative` gives the
+    one-sided interval ('less' [0, upper], 'greater' [lower, inf]), as R does.
     """
     from scipy.stats.contingency import odds_ratio as _or
     import numpy as np
     r = _or(np.rint(np.asarray(table, dtype=float)).astype(np.int64), kind='conditional')
-    ci = r.confidence_interval(confidence_level=confidence)
+    ci = r.confidence_interval(confidence_level=confidence, alternative=alternative)
     return {
         'conditionalOddsRatio': float(r.statistic),
         'ciLow': float(ci.low),

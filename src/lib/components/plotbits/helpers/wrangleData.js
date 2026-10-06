@@ -108,7 +108,8 @@ export function binData(
 			return slice.length % 2 === 0 ? (slice[mid - 1] + slice[mid]) / 2 : slice[mid];
 		},
 		stddev: (arr, start, end) => {
-			if (end - start < 2) return 0;
+			// The sample SD (divisor n - 1) is undefined below two points: NaN, as R sd() gives NA.
+			if (end - start < 2) return NaN;
 			const mean = aggFunctions.mean(arr, start, end);
 			let sumSq = 0;
 			for (let i = start; i < end; i++) {
