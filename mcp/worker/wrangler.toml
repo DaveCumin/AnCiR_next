@@ -29,12 +29,20 @@ BUILD_RATE_MAX = "20"
 #
 # The KEY MUST NOT. This file is committed, and anything the frontend could hold would be
 # readable straight out of the browser bundle. Set it once, as a secret:
-#     npx wrangler secret put OPENAI_API_KEY        # paste the Groq key
+#     npx wrangler secret put OPENAI_API_KEY        # paste the Gemini API key
 #
 # Callers may still override all three per request (bring-your-own model); their key is used
 # for that one call and never stored or logged.
-OPENAI_BASE_URL = "https://api.groq.com/openai/v1"
-OPENAI_MODEL = "openai/gpt-oss-120b"
+#
+# Previous default (Groq), kept for reference. To switch back, restore these two lines and
+# re-set OPENAI_API_KEY to the Groq key:
+# OPENAI_BASE_URL = "https://api.groq.com/openai/v1"
+# OPENAI_MODEL = "openai/gpt-oss-120b"
+#
+# Google Gemini through its OpenAI-compatible endpoint (the Worker speaks the OpenAI
+# chat-completions API; the key goes in the Authorization: Bearer header).
+OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
+OPENAI_MODEL = "gemini-flash-latest"
 
 # Transient session store. Create once, then paste the id here:
 #   npx wrangler kv namespace create SESSIONS

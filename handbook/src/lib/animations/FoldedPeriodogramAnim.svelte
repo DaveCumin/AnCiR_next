@@ -11,8 +11,22 @@
 	// phase bin". The statistics come from $lib/foldStats.js, which follows the
 	// app's definitions (src/lib/utils/periodogram.js).
 	import { onMount } from 'svelte';
-	import { C, setupCanvas, seededRNG, initPalette, observeResize } from '$lib/animUtils.js';
-	import { cosineFit, binFold, makeRecord, phaseOf } from '$lib/foldStats.js';
+	import {
+		C,
+		setupCanvas,
+		seededRNG,
+		initPalette,
+		observeResize,
+		seekBar
+	} from '$lib/animUtils.js';
+	import {
+		cosineFit,
+		binFold,
+		makeRecord,
+		medianSpacing,
+		periodGrid,
+		phaseOf
+	} from '$lib/foldStats.js';
 
 	// Design height of the box (a min-height via --anim-h in app.css).
 	let { height = '1000px' } = $props();
@@ -20,30 +34,29 @@
 	/* ── data ─────────────────────────────────────────────────────────────── */
 	const DAYS = 8;
 	const TRUE_P = 24;
-	const BIN = 1; // bin size (h), the sampling interval: one sample per bin per cycle
 	const RECORD = makeRecord(seededRNG(7), { days: DAYS, period: TRUE_P });
 	const SPAN = DAYS * 24;
-	// Days taken out by "Remove a day", in order. Three keeps every trial period
-	// in range well defined; beyond that the spectral window of the few days left
-	// starts to dominate, which is a different lesson.
-	const REMOVE_ORDER = [3, 6, 1];
+	// The sampling interval, read from the data. It is the bin size (one sample
+	// per bin per cycle) and the step of the trial period: the binned methods
+	// fold at a whole number of bins, so these are the periods they can test.
+	const DT = medianSpacing(RECORD.t);
+	const BIN = DT;
 
 	const PMIN = 10;
 	const PMAX = 32;
-	const STEP = 0.05;
-	const GRID = Array.from(
-		{ length: Math.round((PMAX - PMIN) / STEP) + 1 },
-		(_, i) => Math.round((PMIN + i * STEP) * 100) / 100
-	);
-	const SWEEP_RATE = 2.4; // hours of trial period per second of play
+	const GRID = periodGrid(PMIN, PMAX, DT);
+	const LAST = GRID.length - 1;
+	const I_TRUE = GRID.findIndex((p) => Math.abs(p - TRUE_P) < 1e-9);
+	const SWEEP_RATE = 2.4; // hours of trial period per second of play, at speed 1
+	const dtLabel = `${+DT.toFixed(3)} h`;
+	const fmtP = (p) => `${+p.toFixed(3)} h`;
 
 	/* ── state ────────────────────────────────────────────────────────────── */
-	let period = $state(TRUE_P);
+	let idx = $state(I_TRUE); // index into GRID of the current trial period
 	let playing = $state(false);
 	let overlay = $state('both'); // 'cosine' | 'means' | 'both'
-	let removed = $state(0);
 	let bout = $state(false);
-	// The part of the period axis the sweep (or the slider) has visited.
+	// The span of GRID indices the sweep (or the slider) has visited.
 	let revLo = $state(null);
 	let revHi = $state(null);
 
@@ -51,24 +64,14 @@
 	let cFold = $state();
 	let cPgram = $state();
 
-	const snap = (p) => Math.round(p / STEP) * STEP;
-	const T = $derived(Math.round(snap(period) * 100) / 100);
+	const T = $derived(GRID[idx]);
 
-	const gone = $derived(new Set(REMOVE_ORDER.slice(0, removed)));
 	const data = $derived.by(() => {
-		const ys = bout ? RECORD.bout : RECORD.sine;
-		const t = [];
-		const y = [];
-		RECORD.t.forEach((x, i) => {
-			if (!gone.has(Math.floor(x / 24))) {
-				t.push(x);
-				y.push(ys[i]);
-			}
-		});
-		const yMax = Math.max(...ys) * 1.06;
-		return { t, y, yMax };
+		const y = bout ? RECORD.bout : RECORD.sine;
+		return { t: RECORD.t, y, yMax: Math.max(...y) * 1.06 };
 	});
 
+	// Every statistic at every trial period on the grid, computed once per shape.
 	const curves = $derived.by(() => {
 		const { t, y } = data;
 		const ls = [];
@@ -85,7 +88,6 @@
 
 	const fit = $derived(cosineFit(data.t, data.y, T));
 	const fold = $derived(binFold(data.t, data.y, T, BIN));
-	const fullCount = $derived(Math.max(...fold.counts));
 
 	/* ── drawing helpers ──────────────────────────────────────────────────── */
 	const FONT = '10px Inter, system-ui, sans-serif';
@@ -133,24 +135,6 @@
 		ctx.restore();
 	}
 
-	function hatch(ctx, x0, y0, w, h) {
-		ctx.save();
-		ctx.beginPath();
-		ctx.rect(x0, y0, w, h);
-		ctx.clip();
-		ctx.fillStyle = C.surface;
-		ctx.fillRect(x0, y0, w, h);
-		ctx.strokeStyle = C.border;
-		ctx.lineWidth = 1;
-		for (let s = -h; s < w; s += 7) {
-			ctx.beginPath();
-			ctx.moveTo(x0 + s, y0 + h);
-			ctx.lineTo(x0 + s + h, y0);
-			ctx.stroke();
-		}
-		ctx.restore();
-	}
-
 	/* ── panel 1: raw record ──────────────────────────────────────────────── */
 	function drawRaw() {
 		if (!cRaw) return;
@@ -186,25 +170,14 @@
 				ctx.stroke();
 			}
 		}
-		for (const d of gone) {
-			hatch(ctx, X(d * 24), Tp, X(24) - X(0), ph);
-			ctx.fillStyle = C.muted;
-			ctx.font = FONT;
-			ctx.textAlign = 'center';
-			ctx.textBaseline = 'top';
-			ctx.fillText('removed', X(d * 24 + 12), Tp + 4);
-		}
 
 		ctx.strokeStyle = C.navy;
 		ctx.lineWidth = 1.2;
 		ctx.beginPath();
-		let prev = null;
 		data.t.forEach((x, i) => {
 			const px = X(x),
 				py = Y(data.y[i]);
-			if (prev !== null && x - prev === 1) ctx.lineTo(px, py);
-			else ctx.moveTo(px, py);
-			prev = x;
+			i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
 		});
 		ctx.stroke();
 
@@ -235,24 +208,14 @@
 		ctx.fillRect(L, Tp, pw, ph);
 
 		// Phase-bin scaffold: a guide for every method, the data for two of them.
-		// A thinned bin is tinted, an empty one hatched.
-		for (let h = 0; h < fold.nBins; h++) {
+		ctx.strokeStyle = C.grid;
+		ctx.lineWidth = 1;
+		for (let h = 1; h < fold.nBins; h++) {
 			const x0 = X(h * fold.width);
-			const x1 = X((h + 1) * fold.width);
-			const c = fold.counts[h];
-			if (c === 0) hatch(ctx, x0, Tp, x1 - x0, ph);
-			else if (c < fullCount) {
-				ctx.fillStyle = `rgba(230, 168, 23, ${(0.5 * (1 - c / fullCount)).toFixed(3)})`;
-				ctx.fillRect(x0, Tp, x1 - x0, ph);
-			}
-			if (h > 0) {
-				ctx.strokeStyle = C.grid;
-				ctx.lineWidth = 1;
-				ctx.beginPath();
-				ctx.moveTo(x0, Tp);
-				ctx.lineTo(x0, Tp + ph);
-				ctx.stroke();
-			}
+			ctx.beginPath();
+			ctx.moveTo(x0, Tp);
+			ctx.lineTo(x0, Tp + ph);
+			ctx.stroke();
 		}
 
 		// Grand mean.
@@ -273,6 +236,11 @@
 			ctx.fill();
 		});
 
+		// The overlays stay inside the plot frame (round caps would poke out).
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(L, Tp, pw, ph);
+		ctx.clip();
 		if (overlay !== 'cosine') {
 			ctx.strokeStyle = C.gold;
 			ctx.lineWidth = 2.6;
@@ -311,6 +279,7 @@
 			}
 			ctx.stroke();
 		}
+		ctx.restore();
 
 		frame(ctx, L, Tp, pw, ph);
 		const step = T <= 16 ? 4 : 6;
@@ -356,21 +325,22 @@
 		ctx.stroke();
 		ctx.setLineDash([]);
 
-		const i0 = revLo === null ? -1 : GRID.indexOf(revLo);
-		const i1 = revHi === null ? -1 : GRID.indexOf(revHi);
+		// One point per trial period on the grid, joined by lines: the statistics
+		// exist only at these periods.
 		const series = [
-			{ ys: curves.chi, color: C.gold, width: 2.2, dash: [] },
-			{ ys: curves.enr, color: C.green, width: 1.8, dash: [6, 4] },
-			{ ys: curves.ls, color: C.navy, width: 2.2, dash: [] }
+			{ ys: curves.chi, color: C.gold, width: 2, dash: [], r: 3.4 },
+			{ ys: curves.enr, color: C.green, width: 1.6, dash: [5, 4], r: 2 },
+			{ ys: curves.ls, color: C.navy, width: 2, dash: [], r: 2.6 }
 		];
-		if (i0 >= 0 && i1 > i0) {
+		const swept = revLo !== null && revHi > revLo;
+		if (swept) {
 			for (const s of series) {
 				ctx.strokeStyle = s.color;
 				ctx.lineWidth = s.width;
 				ctx.setLineDash(s.dash);
 				ctx.beginPath();
 				let open = false;
-				for (let i = i0; i <= i1; i++) {
+				for (let i = revLo; i <= revHi; i++) {
 					const v = s.ys[i];
 					if (!Number.isFinite(v)) {
 						open = false;
@@ -380,8 +350,16 @@
 					open = true;
 				}
 				ctx.stroke();
+				ctx.setLineDash([]);
+				ctx.fillStyle = s.color;
+				for (let i = revLo; i <= revHi; i++) {
+					const v = s.ys[i];
+					if (!Number.isFinite(v)) continue;
+					ctx.beginPath();
+					ctx.arc(X(GRID[i]), Y(v), s.r, 0, 2 * Math.PI);
+					ctx.fill();
+				}
 			}
-			ctx.setLineDash([]);
 		}
 
 		// Cursor at the current trial period, with each statistic marked on it.
@@ -393,7 +371,7 @@
 		ctx.lineTo(X(T), Tp + ph);
 		ctx.stroke();
 		ctx.globalAlpha = 1;
-		if (!(i0 >= 0 && i1 > i0)) {
+		if (!swept) {
 			const msg = 'Press Play to sweep the trial period';
 			ctx.font = '11px Inter, system-ui, sans-serif';
 			const tw = Math.min(pw - 12, ctx.measureText(msg).width + 16);
@@ -407,17 +385,18 @@
 			ctx.fillText(msg, L + pw / 2, Tp + ph * 0.86, pw - 16);
 		}
 
-		// Statistic markers on the cursor, above the hint box.
-		const j = GRID.indexOf(T);
-		if (j >= 0) {
-			for (const s of series) {
-				const v = s.ys[j];
-				if (!Number.isFinite(v)) continue;
-				ctx.fillStyle = s.color;
-				ctx.beginPath();
-				ctx.arc(X(T), Y(v), 3.6, 0, 2 * Math.PI);
-				ctx.fill();
-			}
+		// Statistic markers on the cursor, above the hint box, ringed so they
+		// stand out from the swept points.
+		for (const s of series) {
+			const v = s.ys[idx];
+			if (!Number.isFinite(v)) continue;
+			ctx.fillStyle = s.color;
+			ctx.strokeStyle = C.surface;
+			ctx.lineWidth = 1.5;
+			ctx.beginPath();
+			ctx.arc(X(T), Y(v), 4.2, 0, 2 * Math.PI);
+			ctx.fill();
+			ctx.stroke();
 		}
 
 		frame(ctx, L, Tp, pw, ph);
@@ -425,7 +404,7 @@
 			pw < 300 ? [12, 16, 20, 24, 28, 32] : [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32];
 		xTicks(ctx, ticks, X, Tp + ph);
 		yTicks(ctx, [0, 0.25, 0.5, 0.75, 1], Y, L, (v) => String(v));
-		axisLabels(ctx, L, Tp, pw, ph, 'Trial period (h)', 'Share of variance');
+		axisLabels(ctx, L, Tp, pw, ph, `Trial period (h), in steps of ${dtLabel}`, 'Share of variance');
 	}
 
 	function drawAll() {
@@ -437,18 +416,26 @@
 	// Redraw whenever anything the panels read changes.
 	$effect(() => {
 		// Reading these registers them as dependencies of the drawing.
-		void [T, overlay, data, curves, fit, fold, revLo, revHi, cRaw, cFold, cPgram];
+		void [idx, overlay, data, curves, fit, fold, revLo, revHi, cRaw, cFold, cPgram];
 		drawAll();
 	});
 
 	/* ── transport ────────────────────────────────────────────────────────── */
+	// The sweep steps through GRID one sampling interval at a time; `speed` is
+	// the shared Speed slider's multiplier (0.2 to 4, as the other animations).
 	let raf = null;
 	let lastTs = null;
+	let accum = 0;
+	let speed = 1;
 
-	function reveal(p) {
-		const g = Math.round(snap(p) * 100) / 100;
-		revLo = revLo === null ? g : Math.min(revLo, g);
-		revHi = revHi === null ? g : Math.max(revHi, g);
+	function reveal(i) {
+		revLo = revLo === null ? i : Math.min(revLo, i);
+		revHi = revHi === null ? i : Math.max(revHi, i);
+	}
+
+	function stop() {
+		playing = false;
+		cancelAnimationFrame(raf);
 	}
 
 	function tick(ts) {
@@ -456,9 +443,14 @@
 		if (lastTs === null) lastTs = ts;
 		const dt = Math.min(0.1, (ts - lastTs) / 1000);
 		lastTs = ts;
-		period = Math.min(PMAX, period + dt * SWEEP_RATE);
-		reveal(period);
-		if (period >= PMAX) {
+		accum += (dt * speed * SWEEP_RATE) / DT;
+		const steps = Math.floor(accum);
+		accum -= steps;
+		if (steps) {
+			idx = Math.min(LAST, idx + steps);
+			reveal(idx);
+		}
+		if (idx >= LAST) {
 			playing = false;
 			return;
 		}
@@ -467,35 +459,44 @@
 
 	function togglePlay() {
 		if (playing) {
-			playing = false;
-			cancelAnimationFrame(raf);
+			stop();
 			return;
 		}
 		// A sweep starts at the short end unless one is part-way through.
-		if (revLo === null || revHi === null || revLo > PMIN || period >= PMAX - STEP / 2) {
-			period = PMIN;
+		if (revLo !== 0 || revHi !== idx || idx >= LAST) {
+			idx = 0;
 			revLo = null;
 			revHi = null;
-			reveal(PMIN);
+			reveal(0);
 		}
 		playing = true;
 		lastTs = null;
+		accum = 0;
 		raf = requestAnimationFrame(tick);
 	}
 
 	function reset() {
-		playing = false;
-		cancelAnimationFrame(raf);
-		period = TRUE_P;
+		stop();
+		idx = I_TRUE;
 		revLo = null;
 		revHi = null;
+		accum = 0;
+	}
+
+	// The progress bar is the sweep's timeline: seeking puts the sweep at that
+	// point, with every trial period before it already drawn.
+	function seek(p) {
+		idx = Math.round(p * LAST);
+		revLo = 0;
+		revHi = idx;
+		lastTs = null;
+		accum = 0;
 	}
 
 	function onSlide(e) {
-		playing = false;
-		cancelAnimationFrame(raf);
-		period = +e.currentTarget.value;
-		reveal(period);
+		stop();
+		idx = +e.currentTarget.value;
+		reveal(idx);
 	}
 
 	onMount(() => {
@@ -507,6 +508,9 @@
 			cancelAnimationFrame(raf);
 		};
 	});
+
+	// How far the sweep has run from the short end (the seek bar's fill).
+	const progress = $derived(revLo === 0 && revHi !== null ? revHi / LAST : 0);
 
 	const fmt = (v, d) => (Number.isFinite(v) ? v.toFixed(d) : 'n/a');
 </script>
@@ -526,25 +530,19 @@
 				Lomb-Scargle also peaks at 12 h (half the period), where a second cosine would catch the
 				bout's sharp edges.
 			</p>
-		{:else if removed}
-			<p class="fz-now">
-				{removed === 1 ? 'One day' : `${removed} days`} removed: the cosine still fits the points that
-				remain. The bins thin unevenly (tinted bins hold fewer points), so each bin mean is noisier and
-				the bin-mean curves' floor rises.
-			</p>
 		{/if}
 	</div>
 
 	<div class="viz-row one-col fz-raw-row">
 		<div class="chart-panel">
-			<h3>Raw record, 8 days at 1 h: each band is one {T.toFixed(2)} h trial cycle</h3>
+			<h3>Raw record, 8 days at {dtLabel}: each band is one {fmtP(T)} trial cycle</h3>
 			<canvas bind:this={cRaw}></canvas>
 		</div>
 	</div>
 
 	<div class="viz-row two-col fz-main-row">
 		<div class="chart-panel">
-			<h3>Folded at {T.toFixed(2)} h ({fold.nBins} phase bins)</h3>
+			<h3>Folded at {fmtP(T)} ({fold.nBins} phase bins of {dtLabel})</h3>
 			<canvas bind:this={cFold}></canvas>
 		</div>
 		<div class="chart-panel">
@@ -578,10 +576,12 @@
 		&times; R&sup2;), chi-squared Q<sub>p</sub>/N, and Enright A<sub>p</sub>&sup2; over the data's
 		variance, which equals the chi-squared share when every bin holds the same number of points. Bin
 		means get one free value per bin (a cosine gets two), so their curves sit higher, even on noise.
+		The trial period steps by the sampling interval ({dtLabel}), so every fold is a whole number of
+		bins and each point is the value AnCiR reports at that period.
 	</p>
 
 	<div class="fz-readout" aria-live="polite">
-		<span><span class="fz-lab">Trial period</span> {T.toFixed(2)} h</span>
+		<span><span class="fz-lab">Trial period</span> {fmtP(T)} ({fold.nBins} bins)</span>
 		<span
 			><span class="fz-lab ls">Lomb-Scargle</span> R&sup2; {fmt(fit.r2, 2)}, power {fmt(
 				fit.power,
@@ -597,23 +597,40 @@
 
 	<div class="fz-controls">
 		<div class="controls">
-			<button class="btn" onclick={togglePlay}>{playing ? '⏸ Pause' : '▶ Play sweep'}</button>
+			<button class="btn" onclick={togglePlay}>{playing ? '⏸ Pause' : '▶ Play'}</button>
 			<button class="btn secondary" onclick={reset}>&#8634; Reset</button>
+			<div class="progress-wrap" use:seekBar={{ onseek: seek, label: 'Sweep progress' }}>
+				<div class="progress-fill" style:width={progress * 100 + '%'}></div>
+			</div>
+			<div class="speed-wrap">
+				<span>Speed</span>
+				<input
+					type="range"
+					min="0.2"
+					max="4"
+					step="0.1"
+					value="1"
+					oninput={(e) => {
+						speed = +e.target.value;
+					}}
+				/>
+			</div>
+		</div>
+		<div class="controls fz-options">
 			<label class="fz-slider">
 				<span>Trial period</span>
 				<input
 					type="range"
-					min={PMIN}
-					max={PMAX}
-					step={STEP}
-					value={period}
+					min="0"
+					max={LAST}
+					step="1"
+					value={idx}
 					oninput={onSlide}
-					aria-label="Trial period in hours"
+					aria-label="Trial period"
+					aria-valuetext={fmtP(T)}
 				/>
-				<span class="fz-val">{T.toFixed(2)} h</span>
+				<span class="fz-val">{fmtP(T)}</span>
 			</label>
-		</div>
-		<div class="controls fz-options">
 			<div class="fz-seg" role="group" aria-label="Overlay on the folded cloud">
 				{#each [['cosine', 'Cosine'], ['means', 'Bin means'], ['both', 'Both']] as [key, label] (key)}
 					<button
@@ -624,15 +641,6 @@
 					>
 				{/each}
 			</div>
-			<button
-				class="btn secondary"
-				disabled={removed >= REMOVE_ORDER.length}
-				onclick={() => (removed = Math.min(REMOVE_ORDER.length, removed + 1))}
-				>Remove a day{removed ? ` (${removed} gone)` : ''}</button
-			>
-			{#if removed}
-				<button class="btn secondary" onclick={() => (removed = 0)}>Restore days</button>
-			{/if}
 			<button
 				class="btn secondary"
 				class:fz-on={bout}
@@ -766,7 +774,7 @@
 	.fz-val {
 		font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 		color: var(--navy);
-		min-width: 4.6em;
+		min-width: 3.2em;
 		text-align: right;
 	}
 
@@ -800,9 +808,5 @@
 		background: var(--navy);
 		border-color: var(--navy);
 		color: #fff;
-	}
-	.btn:disabled {
-		opacity: 0.45;
-		cursor: default;
 	}
 </style>

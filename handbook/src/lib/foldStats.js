@@ -18,10 +18,13 @@
 //                 P' occupied column means about their own mean (Legendre and
 //                 Legendre, Numerical Ecology 2nd ed., section 12.4.1, eq. 12.12).
 //
-// The binned statistics fold by phase: round(T / binSize) bins, each T / nBins
-// wide. When T is a whole number of bins (and the data sit on the bin grid) this
-// is exactly AnCiR's fold of the binned series, column = bin index mod nBins;
-// in between, it is the same statistic on the fold at the exact trial period.
+// The binned statistics fold exactly as AnCiR does: the series is cut into
+// bins of binSize from an origin on the bin grid (floor(min t / binSize) x
+// binSize, as binOrigin), and folded into nBins = round(T / binSize) columns,
+// column = bin index mod nBins. The animation only asks for trial periods that
+// are whole multiples of the sampling interval, with one sample per bin, so
+// each bin mean here is the binned value AnCiR folds and the statistics equal
+// the app's at every plotted period.
 
 /** Positive remainder of t / T. */
 export function phaseOf(t, T) {
@@ -67,8 +70,43 @@ export function cosineFit(t, y, T) {
 }
 
 /**
- * Fold at trial period T into round(T / binSize) phase bins and summarise the
- * bin means two ways (chi-squared Qp and Enright A_p).
+ * The median of the positive gaps between consecutive sorted times: the
+ * sampling interval (as AnCiR's medianSamplingInterval). NaN with fewer than two
+ * distinct times.
+ * @param {number[]} t
+ */
+export function medianSpacing(t) {
+	const xs = [...t].sort((a, b) => a - b);
+	const gaps = [];
+	for (let i = 1; i < xs.length; i++) if (xs[i] > xs[i - 1]) gaps.push(xs[i] - xs[i - 1]);
+	if (!gaps.length) return NaN;
+	gaps.sort((a, b) => a - b);
+	const mid = Math.floor(gaps.length / 2);
+	return gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2;
+}
+
+/**
+ * Trial periods from pMin to pMax in steps of dt, each a whole multiple of dt
+ * (n x dt for every integer n with pMin <= n dt <= pMax), so every period is a
+ * whole number of bins of width dt: the folds AnCiR's binned methods test.
+ * @param {number} pMin
+ * @param {number} pMax
+ * @param {number} dt
+ */
+export function periodGrid(pMin, pMax, dt) {
+	const eps = 1e-9;
+	const out = [];
+	for (let k = Math.ceil(pMin / dt - eps); k * dt <= pMax + eps; k++) {
+		out.push(Math.round(k * dt * 1e9) / 1e9);
+	}
+	return out;
+}
+
+/**
+ * Fold at trial period T into nBins = round(T / binSize) columns of binSize
+ * (AnCiR's fold: column = bin index mod nBins) and summarise the column means
+ * two ways (chi-squared Qp and Enright A_p). With the bin origin at 0, column h
+ * holds phases [h binSize, (h + 1) binSize) of the trial cycle.
  * @param {number[]} t
  * @param {number[]} y
  * @param {number} T
@@ -76,8 +114,10 @@ export function cosineFit(t, y, T) {
  */
 export function binFold(t, y, T, binSize) {
 	const n = t.length;
-	const nBins = Math.round(T / binSize);
-	const width = T / nBins;
+	const nBins = Math.max(1, Math.round(T / binSize));
+	let tMin = Infinity;
+	for (let i = 0; i < n; i++) if (t[i] < tMin) tMin = t[i];
+	const origin = Math.floor(tMin / binSize) * binSize;
 	const sums = new Array(nBins).fill(0);
 	const counts = new Array(nBins).fill(0);
 	let grand = 0;
@@ -85,7 +125,8 @@ export function binFold(t, y, T, binSize) {
 	grand /= n || 1;
 	let ssTot = 0;
 	for (let i = 0; i < n; i++) {
-		const h = Math.min(nBins - 1, Math.floor(phaseOf(t[i], T) / width + 1e-9));
+		const bin = Math.floor((t[i] - origin) / binSize + 1e-9);
+		const h = bin % nBins;
 		sums[h] += y[i];
 		counts[h]++;
 		ssTot += (y[i] - grand) ** 2;
@@ -99,7 +140,7 @@ export function binFold(t, y, T, binSize) {
 	const ok = occupied.length >= 2 && ssTot > 0;
 	return {
 		nBins,
-		width,
+		width: binSize,
 		means,
 		counts,
 		grand,

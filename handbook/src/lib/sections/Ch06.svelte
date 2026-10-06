@@ -232,36 +232,33 @@
 			<strong>Lomb-Scargle fits one cosine</strong> to the folded points and asks what share of the variance
 			it explains. This is exact, not an analogy: a cosine at the trial period depends on time only through
 			phase, so fitting it to the raw series and fitting it to the folded cloud are the same regression,
-			with the same coefficients and the same residuals.
+			with the same coefficients and the same residuals. A cosine needs points spread around the cycle,
+			not a full set in every bin, which is why Lomb-Scargle copes with gaps and uneven sampling.
 		</li>
 		<li>
 			<strong>Chi-squared and Enright average each phase bin</strong> and ask how far the bin means
 			spread. Bin means can follow any shape. Q<sub>p</sub> turns their spread into a &chi;&sup2;
-			test; A<sub>p</sub> reports it in the units of the data.
+			test; A<sub>p</sub> reports it in the units of the data. They lean on every bin: they assume evenly
+			spaced samples, so that every bin collects a fair share of each cycle, and as bins thin each bin
+			mean gets noisier.
 		</li>
 	</ul>
 	<p>
 		The animation draws all three from one folded cloud and puts them on one scale, the share of the
 		variance each summary explains. Play the sweep and watch every curve collapse where the fold
-		smears the cycles and peak where it lines them up. The faint phase bins are drawn for all three,
-		but Lomb-Scargle does not use them: its cosine is fitted to the points. Then try the two buttons
-		that pull the methods apart.
+		smears the cycles and peak where it lines them up. The record is sampled hourly, so the trial
+		period steps one hour at a time: the binned methods fold at a whole number of bins, so those are
+		the periods they can test, and each plotted point is the value AnCiR reports there. The faint
+		phase bins are drawn for all three, but Lomb-Scargle does not use them: its cosine is fitted to
+		the points.
 	</p>
-	<ul>
-		<li>
-			<strong>Remove a day.</strong> A cosine needs points spread around the cycle, not a full set in
-			every bin, which is why Lomb-Scargle copes with gaps and uneven sampling. The bin-mean methods lean
-			on every bin: as bins thin, each bin mean gets noisier, and they assume evenly spaced samples so
-			that every bin collects a fair share of each cycle. With irregular timestamps some bins fill and
-			others stay empty.
-		</li>
-		<li>
-			<strong>Narrow activity bout.</strong> Bin means are shape-free and trace the bout. One cosine cannot,
-			so it explains much less of the variance, and the part it misses shows up as a second Lomb-Scargle
-			peak at half the period (a harmonic of the daily rhythm, not a second rhythm). The bin means find
-			a 12 h peak too, because folding at 12 h overlays the two halves of a lopsided day.
-		</li>
-	</ul>
+	<p>
+		Then try the <strong>Narrow activity bout</strong> button, which pulls the methods apart. Bin means
+		are shape-free and trace the bout. One cosine cannot, so it explains much less of the variance, and
+		the part it misses shows up as a second Lomb-Scargle peak at half the period (a harmonic of the daily
+		rhythm, not a second rhythm). The bin means find a 12 h peak too, because folding at 12 h overlays
+		the two halves of a lopsided day.
+	</p>
 	<FoldedPeriodogramAnim />
 	<p>
 		Two consequences are worth carrying away. A sinusoid is the right summary when the waveform is
