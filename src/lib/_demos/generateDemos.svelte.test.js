@@ -2502,7 +2502,18 @@ function datasetSlug(name) {
 // Build one searchable manifest entry. `keywords` collapses everything a user
 // might type (display name, family, description, showcased node) so the modal
 // search behaves like the node palette.
-function manifestEntry({ id, name, family, description, summary, group, file, kind, showcases }) {
+function manifestEntry({
+	id,
+	name,
+	family,
+	description,
+	summary,
+	group,
+	startScreen,
+	file,
+	kind,
+	showcases
+}) {
 	return {
 		id,
 		name,
@@ -2515,12 +2526,27 @@ function manifestEntry({ id, name, family, description, summary, group, file, ki
 		// Sub-grouping within a family (the start screen splits Workflows into
 		// "Rhythm & circadian" / "General statistics"). Absent for other kinds.
 		...(group ? { group } : {}),
+		// Lists a non-workflow demo on the start screen too (loadExampleManifest). Absent otherwise.
+		...(startScreen ? { startScreen: true } : {}),
 		url: `sessions/demos/${file}`,
 		kind,
 		showcases,
 		keywords: [name, description, family, ...showcases].filter(Boolean).join(' ').toLowerCase()
 	};
 }
+
+/**
+ * Single-node reference demos that also earn a card on the start screen, keyed by node name. The
+ * start screen otherwise lists workflows only; these are nodes no workflow example uses, so without
+ * a card they would be reachable from the full library only. Each needs a group (the start-screen
+ * column) and a card-length summary.
+ */
+const START_SCREEN_NODE_DEMOS = {
+	Crossing: {
+		group: 'General statistics',
+		summary: 'Flag when a series stays below a threshold for two hours, and count each crossing.'
+	}
+};
 
 /** First sentence of a description, for entries with no explicit `summary`. */
 function firstSentence(text) {
@@ -2682,6 +2708,9 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 					name: display,
 					family: entry?.family ?? 'Other',
 					description: entry?.description || `Showcases the ${spec.name} analysis on sample data.`,
+					...(START_SCREEN_NODE_DEMOS[spec.name]
+						? { ...START_SCREEN_NODE_DEMOS[spec.name], startScreen: true }
+						: {}),
 					file,
 					kind: 'tableProcess',
 					showcases: [spec.name]

@@ -949,7 +949,7 @@
 		<div class="control-banner">
 			<p>Control Panel</p>
 		</div>
-		<p>Please select a plot or plots (with alt-click) to use the control panel.</p>
+		<p>Select a plot or a node to change its settings here. Alt-click to select several plots.</p>
 	{/if}
 
 	<div class="div-block"></div>

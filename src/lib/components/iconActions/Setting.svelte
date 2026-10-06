@@ -22,52 +22,40 @@
 	} from '$lib/core/sessionLoad.svelte.js';
 	import { markSessionSaved } from '$lib/core/unsavedChanges.svelte.js';
 	import { clearCrashSnapshot } from '$lib/core/errorReporter.js';
+	import { sessionSaveFileName, sessionNameForSave } from '$lib/core/sessionFiles.js';
 	export function exportJson() {
 		try {
-			// Get JSON string and validate
+			// outputCoreAsJson builds this with JSON.stringify, so it is valid JSON by construction.
+			// It used to be parsed again here just to check, a full extra pass over a large session.
 			const jsonStr = outputCoreAsJson();
 			if (typeof jsonStr !== 'string' || !jsonStr) {
 				throw new Error('Invalid or empty JSON string returned by outputCoreAsJson');
 			}
 
-			// Validate JSON content
-			try {
-				JSON.parse(jsonStr); // Ensure it's valid JSON
-			} catch (e) {
-				throw new Error('Invalid JSON format: ' + e.message);
-			}
-
-			// Create Blob with JSON content
-			const blob = new Blob([jsonStr], { type: 'application/json' });
-			const url = URL.createObjectURL(blob);
-
-			// Create temporary <a> element
-			const a = document.createElement('a');
-			a.innerText = 'download';
-			a.href = url;
-			a.download = 'session.json'; // File name for download
-			document.body.appendChild(a);
-
-			// Programmatically trigger click
-			a.click();
+			// "<data source> <YYYY-MM-DD>.ancir" rather than "session.json" every time (UI-15).
+			const fileName = sessionSaveFileName(sessionNameForSave(core));
+			downloadBlob(fileName, new Blob([jsonStr], { type: 'application/json' }));
 
 			// The open session is now in a file: nothing to warn about on close (ROB-5), and
 			// a crash copy kept from earlier is older than the file, so it is not offered back.
 			markSessionSaved();
 			clearCrashSnapshot();
 
-			// Clean up
-			setTimeout(() => {
-				document.body.removeChild(a);
-				URL.revokeObjectURL(url);
-			}, 10); // Delay cleanup to ensure download starts
+			addNotification(`Session saved as "${fileName}".`, 'info');
 		} catch (error) {
-			console.error('Failed to export JSON:', error.message);
-			addNotification('Error exporting JSON: ' + error.message);
+			console.error('Failed to save the session:', error.message);
+			addNotification('Could not save the session: ' + error.message);
 		}
 	}
 
-	/** Anchor-dance download shared by the script exports. */
+	/**
+	 * Revoking an object URL straight after click() can cancel the download in Firefox and
+	 * Safari, which read the blob asynchronously (ROB-U2). A minute is far longer than any
+	 * download needs to start, and the blob is freed after it.
+	 */
+	const REVOKE_OBJECT_URL_AFTER_MS = 60_000;
+
+	/** Anchor-dance download shared by the session save and the script exports. */
 	function downloadBlob(filename, blob) {
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
@@ -75,10 +63,8 @@
 		a.download = filename;
 		document.body.appendChild(a);
 		a.click();
-		setTimeout(() => {
-			document.body.removeChild(a);
-			URL.revokeObjectURL(url);
-		}, 10);
+		a.remove();
+		setTimeout(() => URL.revokeObjectURL(url), REVOKE_OBJECT_URL_AFTER_MS);
 	}
 
 	/**

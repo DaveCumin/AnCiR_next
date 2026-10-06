@@ -16,6 +16,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import NoteCard from '$lib/components/views/NoteCard.svelte';
 	import WorksheetAddPalette from '$lib/components/views/WorksheetAddPalette.svelte';
+	import AddDataPrompt from '$lib/components/views/AddDataPrompt.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 
 	import { core, appConsts, appState } from '$lib/core/core.svelte.js';
@@ -40,6 +41,10 @@
 		placeSelectionToolbar,
 		unionRect
 	} from '$lib/components/views/selectionToolbarPlacement.js';
+
+	// `addDataPrompt`: +page asks for the empty-session prompt only once the start screen is out of
+	// the way (startVisibility.js), so the two never stack.
+	let { addDataPrompt = false } = $props();
 
 	let fileDragOver = $state(false);
 
@@ -562,10 +567,12 @@
 			{/if}
 		</div>
 
-		<!-- The empty-session case is covered by the start screen; this prompt only ever offered
-		     the same three routes again (and import also lives in the node palette and the data
-		     panel), so the worksheet's own empty state is now just "add a plot". -->
-		{#if core.plots.length === 0 && core.notes.length === 0 && core.data.length > 0}
+		<!-- An empty session gets the add-data prompt, but only once the start screen is dismissed
+		     (+page passes `addDataPrompt`, see startVisibility.js), so the two never stack. With
+		     data and no plots yet, the empty state is "add a plot". -->
+		{#if addDataPrompt}
+			<AddDataPrompt />
+		{:else if core.plots.length === 0 && core.notes.length === 0 && core.data.length > 0}
 			<div class="no-plot-prompt" out:fade={{ duration: 600 }}>
 				<button class="icon" aria-label="Add a plot" onclick={() => (showNewPlotModal = true)}>
 					<Icon name="add" width={24} height={24} />

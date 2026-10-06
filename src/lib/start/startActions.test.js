@@ -6,8 +6,14 @@ const importJson = vi.fn(async () => {});
 vi.mock('$lib/components/iconActions/Setting.svelte', () => ({ importJson }));
 vi.mock('$app/paths', () => ({ base: '' }));
 
-const { openSessionFile, openExample, pickSessionFile, resolveExampleUrl, sessionMeta } =
-	await import('./startActions.js');
+const {
+	openSessionFile,
+	openExample,
+	pickSessionFile,
+	resolveExampleUrl,
+	sessionMeta,
+	loadExampleManifest
+} = await import('./startActions.js');
 const { loadRecents } = await import('./recentSessions.svelte.js');
 
 const fileOf = (name, json) => ({ name, text: async () => JSON.stringify(json) });
@@ -109,6 +115,37 @@ describe('pickSessionFile', () => {
 			throw Object.assign(new Error('abort'), { name: 'AbortError' });
 		});
 		expect(await pickSessionFile()).toEqual({ status: 'cancelled' });
+	});
+});
+
+describe('loadExampleManifest', () => {
+	const serve = (sessions) => {
+		global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ sessions }) }));
+	};
+	const ids = (groups) => groups.flatMap(([, sessions]) => sessions.map((s) => s.id));
+
+	it('keeps workflows, plus node demos the manifest marks for the start screen, and nothing else', async () => {
+		serve([
+			{ id: 'workflow-a', kind: 'workflow', group: 'General statistics' },
+			{ id: 'tp-crossing', kind: 'tableProcess', group: 'General statistics', startScreen: true },
+			{ id: 'tp-cosinor', kind: 'tableProcess' },
+			// A dataset carries a group too, so the group alone must not be what admits an entry.
+			{ id: 'dataset-workflow-a', kind: 'dataset', group: 'General statistics' }
+		]);
+		const groups = await loadExampleManifest();
+		expect(ids(groups)).toEqual(['workflow-a', 'tp-crossing']);
+		expect(groups.map(([g]) => g)).toEqual(['General statistics']);
+	});
+
+	it('reaches the Crossing demo from the shipped manifest', async () => {
+		const { readFileSync } = await import('node:fs');
+		const idx = JSON.parse(readFileSync('static/sessions/demos/index.json', 'utf8'));
+		serve(idx.sessions);
+		const groups = await loadExampleManifest();
+		const hit = groups.flatMap(([, sessions]) => sessions).find((s) => s.id === 'tp-crossing');
+		expect(hit?.url).toBe('sessions/demos/demo-tp-crossing.json');
+		// A card summary, not the gallery's run-on first clause.
+		expect(hit.summary).toMatch(/\.$/);
 	});
 });
 

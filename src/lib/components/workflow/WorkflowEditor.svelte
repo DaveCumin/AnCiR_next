@@ -66,6 +66,7 @@
 	import EmbeddedPlot from './EmbeddedPlot.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import NodePalette from './NodePalette.svelte';
+	import AddDataPrompt from '$lib/components/views/AddDataPrompt.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { canvasFileDrop } from '$lib/core/canvasFileDrop.js';
@@ -87,7 +88,9 @@
 	import { buildNodeLayout, nodeLayoutMatches, parseNodeLayout } from './nodeLayoutIO.js';
 	import { settleBoxes, clearPlacementY } from './settleOverlaps.js';
 
-	let { inline = false } = $props();
+	// `addDataPrompt`: +page asks for the empty-session prompt only once the start screen is out of
+	// the way (startVisibility.js), so the two never stack.
+	let { inline = false, addDataPrompt = false } = $props();
 
 	const NODE_WIDTH = 160;
 	const TP_NODE_WIDTH = 230; // mirrors TableProcessNode .tp-card width
@@ -4581,6 +4584,12 @@
 				{/if}
 			{/each}
 		</div>
+
+		{#if addDataPrompt}
+			<!-- On the canvas, "Simulate data" spawns the node directly (expanded,
+			     no modal) like every other workflow add. -->
+			<AddDataPrompt onSimulate={() => spawnTableProcessFromPalette('SimulatedData')} />
+		{/if}
 
 		{#if fileDragOver}
 			<div class="canvas-file-drop-overlay"><span>Drop a data file to import</span></div>

@@ -807,7 +807,9 @@
    "name": "Crossing",
    "family": "Analysis",
    "description": "Find when a rule over one or more series becomes sustainedly true: conditions against typed values or wired scalar thresholds, combined as OR of AND-groups, with a persistence requirement. Outputs every crossing time, their count, and a 0/1 breach series.",
-   "summary": "Find when a rule over one or more series becomes sustainedly true:",
+   "summary": "Flag when a series stays below a threshold for two hours, and count each crossing.",
+   "group": "General statistics",
+   "startScreen": true,
    "url": "sessions/demos/demo-tp-crossing.json",
    "kind": "tableProcess",
    "showcases": [

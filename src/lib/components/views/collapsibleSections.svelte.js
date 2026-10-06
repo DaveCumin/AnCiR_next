@@ -61,6 +61,17 @@ export function toggleSection(title) {
 }
 
 /**
+ * Open a section from code, e.g. a tour step that rings a control inside it. The panel only
+ * re-syncs on its own clicks and on DOM mutations, and an already-open panel may have neither, so
+ * this syncs every live panel straight away. A panel mounted later syncs itself on mount.
+ */
+export function expandSection(title) {
+	collapsedSections.delete(title);
+	if (typeof document === 'undefined') return;
+	for (const root of document.querySelectorAll('.control-display')) syncCollapsedState(root);
+}
+
+/**
  * Apply the current collapsed set to every section under `root`.
  *
  * Writes a `data-collapsed` attribute; the CSS in +page.svelte does the hiding. Idempotent, so

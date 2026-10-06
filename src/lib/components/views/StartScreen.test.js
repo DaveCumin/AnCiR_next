@@ -16,7 +16,14 @@ const loadExampleManifest = vi.fn(async () => [
 				name: 'Free-running period',
 				summary: 'Measure tau with no zeitgeber.'
 			},
-			{ id: 'phase-groups', name: 'Group phase comparison', summary: 'Two groups, two peaks.' },
+			{
+				id: 'phase-groups',
+				name: 'Group phase comparison',
+				summary: 'Two groups, two peaks.',
+				// The real manifest writes keywords as one lower-case string that also carries the
+				// node names the session uses, which the title and summary often do not mention.
+				keywords: 'group phase comparison two groups, two peaks. workflows cosinor rayleightest'
+			},
 			{ id: 'split-rhythm', name: 'Split rhythm', summary: 'Constant light splits the band.' },
 			// Deliberately a 5th, so the four-per-column cap has something to hide.
 			{ id: 'circatidal', name: 'Circatidal rhythm', summary: 'A tidal rhythm, not circadian.' }
@@ -26,7 +33,13 @@ const loadExampleManifest = vi.fn(async () => [
 		'General statistics',
 		[
 			{ id: 'stats-anova', name: 'One-way ANOVA', summary: 'Three groups.' },
-			{ id: 'stats-chi', name: 'Chi-square', summary: 'Categorical association.' }
+			// An array of keywords is accepted too, so a hand-written entry cannot silently miss.
+			{
+				id: 'stats-chi',
+				name: 'Chi-square',
+				summary: 'Categorical association.',
+				keywords: ['contingency', 'chisquared']
+			}
 		]
 	],
 	[
@@ -203,6 +216,17 @@ describe('search', () => {
 		await waitFor(() => expect(screen.getByText('Free-running period')).toBeTruthy());
 		await type('reading'); // group only
 		await waitFor(() => expect(screen.getByText('Arrhythmic record')).toBeTruthy());
+	});
+
+	it('matches on the keywords too, which name the nodes a session uses', async () => {
+		const { container } = render(StartScreen);
+		await waitFor(() => expect(container.querySelector('.example-row')).toBeTruthy());
+		await type('cosinor'); // keywords only: neither title nor summary says it
+		await waitFor(() => expect(container.querySelectorAll('.example-row')).toHaveLength(1));
+		expect(screen.getByText('Group phase comparison')).toBeTruthy();
+		await type('contingency'); // an array of keywords
+		await waitFor(() => expect(screen.getByText('Chi-square')).toBeTruthy());
+		expect(container.querySelectorAll('.example-row')).toHaveLength(1);
 	});
 
 	it('reports how many of the full library matched', async () => {

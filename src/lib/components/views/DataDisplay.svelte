@@ -547,6 +547,18 @@
 					</div>
 				{/each}
 
+				{#if !q && !dataHasContent}
+					<!-- Without this the section is a bare heading: its import button only shows on
+					     hover, so an empty session gave no hint of where data comes from (UI-9). -->
+					<p class="data-empty">
+						No data yet. <button
+							type="button"
+							class="data-empty-link"
+							onclick={() => openImportData()}>Import a file</button
+						>, or drop one on the canvas.
+					</p>
+				{/if}
+
 				<!-- Drop zone to remove a column from its group -->
 				<div
 					class="dropzone"
@@ -716,6 +728,22 @@
 />
 
 <style>
+	.data-empty {
+		margin: var(--space-2) var(--space-4) var(--space-3);
+		font-size: var(--font-sm);
+		color: var(--color-text-muted);
+		line-height: 1.4;
+	}
+	.data-empty-link {
+		padding: 0;
+		border: none;
+		background: none;
+		font: inherit;
+		/* Link text, so 4.5:1: --color-accent is 2.84:1. */
+		color: var(--color-accent-text);
+		text-decoration: underline;
+		cursor: pointer;
+	}
 	.panel-count {
 		font-size: var(--font-xs);
 		color: var(--color-text-muted);

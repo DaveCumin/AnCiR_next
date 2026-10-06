@@ -84,17 +84,30 @@
 	const OBSTACLE_SELECTORS =
 		'.add-data-menu, .np-menu, .palette-menu, .ws-palette, .help-menu, dialog[open]';
 
+	// The card's natural width (matches the .tour-tooltip CSS) and the narrowest it
+	// may be squeezed to so it can sit in the strip beside a wide modal.
+	const CARD_W = 320;
+	const MIN_CARD_W = 200;
+
 	function rectBox(r) {
 		return { left: r.left, top: r.top, right: r.left + r.width, bottom: r.top + r.height };
 	}
 	function overlaps(a, b) {
 		return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 	}
-	function obstacleBoxes() {
-		return [...document.querySelectorAll(OBSTACLE_SELECTORS)]
+	function overlapArea(a, b) {
+		const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+		const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+		return w > 0 && h > 0 ? w * h : 0;
+	}
+	function visibleBoxes(selector) {
+		return [...document.querySelectorAll(selector)]
 			.map((el) => el.getBoundingClientRect())
 			.filter((r) => r.width > 0 && r.height > 0)
 			.map(rectBox);
+	}
+	function obstacleBoxes() {
+		return visibleBoxes(OBSTACLE_SELECTORS);
 	}
 
 	function clamp(left, top, ttW, ttH) {
@@ -133,12 +146,21 @@
 		if (anchor === 'screen-top') return { left: (vw - ttW) / 2, top: 16 };
 		if (anchor === 'screen-left') return { left: 16, top: (vh - ttH) / 2 };
 		if (anchor === 'screen-right') return { left: vw - ttW - 16, top: (vh - ttH) / 2 };
+		if (anchor === 'corner-top-left') return { left: MARGIN, top: MARGIN };
+		if (anchor === 'corner-top-right') return { left: vw - ttW - MARGIN, top: MARGIN };
+		if (anchor === 'corner-bottom-left') return { left: MARGIN, top: vh - ttH - MARGIN };
+		if (anchor === 'corner-bottom-right')
+			return { left: vw - ttW - MARGIN, top: vh - ttH - MARGIN };
 		return { left: (vw - ttW) / 2, top: (vh - ttH) / 2 }; // center
 	}
 
 	// Pick a tooltip position that covers neither the target nor any open
 	// popover. Try the step's preferred side, then the other sides, then a few
-	// safe screen anchors; fall back to the preferred side if nothing is clear.
+	// safe screen anchors. An open <dialog> is in the top layer, so a card that
+	// overlaps one is hidden behind it whatever its z-index; when no full-width
+	// spot clears the dialogs, squeeze the card into the strip beside them, and
+	// only as a last resort take the spot the dialogs cover least.
+	// Returns { left, top } or { left, top, width } when the card is narrowed.
 	function pickTooltipPos(rect, s, ttW, ttH) {
 		if (!rect) {
 			const sp = s?.placement;
@@ -147,24 +169,84 @@
 		}
 		const targetBox = rectBox(rect);
 		const obstacles = obstacleBoxes();
-		const clearOf = (pos) => {
-			const box = { left: pos.left, top: pos.top, right: pos.left + ttW, bottom: pos.top + ttH };
+		const boxOf = (pos, w = ttW, h = ttH) => ({
+			left: pos.left,
+			top: pos.top,
+			right: pos.left + w,
+			bottom: pos.top + h
+		});
+		const clearOf = (pos, w, h) => {
+			const box = boxOf(pos, w, h);
 			if (overlaps(box, targetBox)) return false;
 			return !obstacles.some((o) => overlaps(box, o));
 		};
 		const hint = s?.placement && s.placement !== 'auto' ? s.placement : null;
 		const order = [...new Set([hint, 'bottom', 'top', 'right', 'left'].filter(Boolean))];
-		let fallback = null;
-		for (const p of order) {
-			const pos = placeAdjacent(rect, p, ttW, ttH);
-			if (!fallback) fallback = pos;
-			if (clearOf(pos)) return pos;
-		}
-		for (const a of ['screen-bottom', 'screen-top', 'screen-left', 'screen-right', 'center']) {
+		const candidates = order.map((p) => placeAdjacent(rect, p, ttW, ttH));
+		for (const pos of candidates) if (clearOf(pos)) return pos;
+		const anchors = ['screen-bottom', 'screen-top', 'screen-left', 'screen-right', 'center'];
+		for (const a of anchors) {
 			const pos = placeScreen(a, ttW, ttH);
 			if (clearOf(pos)) return pos;
 		}
-		return fallback ?? placeScreen('center', ttW, ttH);
+
+		const dialogs = visibleBoxes('dialog[open]');
+		if (dialogs.length) {
+			const narrow = placeBesideDialogs(dialogs, rect, ttW, ttH);
+			if (narrow && clearOf(narrow, narrow.width, narrow.estH)) {
+				return { left: narrow.left, top: narrow.top, width: narrow.width };
+			}
+		}
+
+		// Nothing is clear. Minimise how much of the card a dialog hides (a hidden card
+		// is useless), then how much it covers the target and other popovers. Ties keep
+		// the earlier candidate, so the step's preferred side still wins when it can.
+		const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+		const all = [
+			...candidates,
+			...anchors.map((a) => placeScreen(a, ttW, ttH)),
+			...corners.map((c) => placeScreen(`corner-${c}`, ttW, ttH))
+		];
+		let best = null;
+		let bestScore = null;
+		for (const pos of all) {
+			const box = boxOf(pos);
+			const hidden = dialogs.reduce((sum, d) => sum + overlapArea(box, d), 0);
+			const covered =
+				overlapArea(box, targetBox) + obstacles.reduce((sum, o) => sum + overlapArea(box, o), 0);
+			if (
+				!bestScore ||
+				hidden < bestScore[0] ||
+				(hidden === bestScore[0] && covered < bestScore[1])
+			) {
+				best = pos;
+				bestScore = [hidden, covered];
+			}
+		}
+		return best ?? placeScreen('center', ttW, ttH);
+	}
+
+	// A narrowed card in the wider of the two viewport strips left and right of the
+	// open dialogs, vertically level with the target. Null when neither strip is at
+	// least MIN_CARD_W wide. `estH` guesses the taller wrapped height (same text area
+	// at the new width); the next layout pass measures the real height and re-places.
+	function placeBesideDialogs(dialogs, rect, ttW, ttH) {
+		const vw = window.innerWidth;
+		const vh = window.innerHeight;
+		const dLeft = Math.min(...dialogs.map((d) => d.left));
+		const dRight = Math.max(...dialogs.map((d) => d.right));
+		const leftW = dLeft - 2 * MARGIN;
+		const rightW = vw - dRight - 2 * MARGIN;
+		const stripW = Math.max(leftW, rightW);
+		if (stripW < MIN_CARD_W) return null;
+		const width = Math.min(CARD_W, stripW);
+		const estH = Math.min(vh - 2 * MARGIN, Math.ceil((ttH * ttW) / width));
+		const left = leftW >= rightW ? dLeft - MARGIN - width : dRight + MARGIN;
+		const top = Math.max(
+			MARGIN,
+			Math.min(rect.top + rect.height / 2 - estH / 2, vh - estH - MARGIN)
+		);
+		return { left, top, width, estH };
 	}
 
 	function sameRect(a, b) {
@@ -230,9 +312,23 @@
 		// these (the tooltip still points to the modal); the rect is kept for tooltip placement.
 		const inDialog = !!el?.closest?.('dialog[open]');
 		if (inDialog !== targetInDialog) targetInDialog = inDialog;
-		const ttW = tooltipEl?.offsetWidth || 320;
-		const ttH = tooltipEl?.offsetHeight || 160;
-		tooltipPos = pickTooltipPos(next, s, ttW, ttH);
+		// Place the card at its NATURAL width. While it is narrowed beside a dialog its
+		// measured box is the squeezed one, so convert back (same text area) or the
+		// full-width candidates would be tested at the narrow size and the card would
+		// flip-flop between the two layouts.
+		const naturalW = Math.min(CARD_W, window.innerWidth - 2 * MARGIN);
+		const measuredW = tooltipEl?.offsetWidth || naturalW;
+		const measuredH = tooltipEl?.offsetHeight || 160;
+		const ttW = tooltipPos.width ? naturalW : measuredW;
+		const ttH = tooltipPos.width ? Math.ceil((measuredH * measuredW) / naturalW) : measuredH;
+		const pos = pickTooltipPos(next, s, ttW, ttH);
+		if (
+			pos.left !== tooltipPos.left ||
+			pos.top !== tooltipPos.top ||
+			pos.width !== tooltipPos.width
+		) {
+			tooltipPos = pos;
+		}
 		updateWire(s);
 	}
 
@@ -247,7 +343,30 @@
 	// + button, prompt), so they don't move once settled.
 	function track(s) {
 		clearTrack();
-		const onChange = () => updateRect(s);
+		// An open <dialog> can change size with no scroll/resize/pointer event to
+		// trigger a reposition (the import modal grows when its Examples tab loads its
+		// list), leaving the card placed against the dialog's OLD rect and hidden behind
+		// the new one. Watch the size of every open dialog, the target and the card
+		// itself; newly opened dialogs are picked up on each reposition. Observing an
+		// element twice re-fires its initial callback, hence the `sized` set.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local bookkeeping of observed elements for this step only; never read reactively
+		const sized = new Set();
+		const ro =
+			typeof ResizeObserver === 'function' ? new ResizeObserver(() => updateRect(s)) : null;
+		const observeSizes = () => {
+			if (!ro) return;
+			const els = [...document.querySelectorAll('dialog[open]'), resolveTarget(s?.target)];
+			if (tooltipEl) els.push(tooltipEl);
+			for (const el of els) {
+				if (!el || sized.has(el)) continue;
+				sized.add(el);
+				ro.observe(el);
+			}
+		};
+		const onChange = () => {
+			updateRect(s);
+			observeSizes();
+		};
 		// All pending timeouts for THIS step, so a step change cancels every one of
 		// them. Critical: pointerup fires before the "Next" click, so without this
 		// the pointerup-scheduled repositions stay bound to the OLD step and fire
@@ -335,6 +454,8 @@
 			clearTimeout(liveTrackTimer);
 			liveTracking = false;
 			observers.forEach((o) => o.disconnect());
+			ro?.disconnect();
+			sized.clear();
 			timers.forEach(clearTimeout);
 			timers.clear();
 			window.removeEventListener('resize', onChange);
@@ -478,7 +599,9 @@
 		class:shown
 		class:tracking={liveTracking}
 		bind:this={tooltipEl}
-		style="transform: translate3d({tooltipPos.left}px, {tooltipPos.top}px, 0);"
+		style="transform: translate3d({tooltipPos.left}px, {tooltipPos.top}px, 0);{tooltipPos.width
+			? ` width: ${tooltipPos.width}px;`
+			: ''}"
 		role="dialog"
 		aria-label="Guided tour"
 	>

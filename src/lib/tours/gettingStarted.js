@@ -9,6 +9,7 @@ import {
 	sourceOutElForAxis
 } from '$lib/core/tourWiring.js';
 import { iconHtml } from '$lib/icons/iconRegistry.js';
+import { expandSection } from '$lib/components/views/collapsibleSections.svelte.js';
 
 // Inline icon markup for the "Find on canvas" row button. Tour bodies render via
 // {@html}, so the <Icon> component can't be used here — `iconHtml` pulls the same
@@ -18,7 +19,8 @@ const processIconHtml = iconHtml('process');
 // --- start screen + import-modal targets -------------------------------------
 // The start screen is an overlay above everything (z-index 1100), so while it is up nothing on
 // the canvas can be reached or rung. These let the tour walk the user through it and then follow
-// the import route, which is where "add some data" lives now that the old canvas prompt is gone.
+// the import route through the + menu. (The canvas add-data prompt, shown once the start screen is
+// dismissed, opens the same import modal, so a user who clicks that instead still advances.)
 const startScreenUp = () => !!document.querySelector('.start-inner');
 const startCard = (re) =>
 	[...document.querySelectorAll('.start-inner .primary-card')].find((b) =>
@@ -46,21 +48,17 @@ function actogramPlot() {
 	return plots.find((p) => p.type === 'actogram') ?? plots[plots.length - 1] ?? null;
 }
 
-// The Dimension group in the control panel's properties tab (Width + Height), so
-// the resize step rings the size fields. Labels render as <span class="ci-label">
-// (the ControlInput component), not <p>, so match on that and ring the whole
-// Dimension control-component. Falls back to the first control-component.
-function dimensionControlEl() {
+// The Width (px) / Height (px) row inside the control panel's "Figure" section (the old
+// "Dimension" section was merged into it). Labels render as <span class="ci-label"> (the
+// ControlInput component). Scoped to the panel so the Settings modal's Figure template, which
+// has no pixel size, can never match, and no generic fallback: a ring on some other section
+// would send the user to the wrong place, which is worse than no ring.
+function figureSizeRowEl() {
 	if (typeof document === 'undefined') return null;
-	const label = [...document.querySelectorAll('.control-input .ci-label')].find((el) =>
-		(el.textContent || '').trim().startsWith('Width')
+	const label = [...document.querySelectorAll('.control-display .ci-label')].find(
+		(el) => (el.textContent || '').trim() === 'Width (px)'
 	);
-	return (
-		label?.closest('.control-component') ??
-		label?.closest('.control-input') ??
-		document.querySelector('.control-component') ??
-		null
-	);
+	return label?.closest('.control-input-horizontal') ?? null;
 }
 
 // Captured when the resize step opens, so we can detect that the user actually
@@ -144,7 +142,7 @@ export const tour = {
 			// `wire`). x first; advances as soon as x is wired.
 			body: () =>
 				axisHint(
-					'Scatterplots have an <strong>x</strong> and a <strong>y</strong> input. Drag from your data node’s <strong>output dot</strong> (right edge) onto the highlighted <strong>x</strong> dot — the time column.',
+					'The actogram has an <strong>x</strong> and a <strong>y</strong> input. Drag from your data node’s <strong>output dot</strong> (right edge) onto the highlighted <strong>x</strong> dot — the time column.',
 					'a column',
 					'x',
 					anyPlotStatus().xOk
@@ -224,13 +222,14 @@ export const tour = {
 			advance: { when: () => appState.showControlPanel === true }
 		},
 		{
-			// Control panel is open now; ring the Dimension group and advance once the
-			// user actually changes the width or height.
-			target: () => dimensionControlEl(),
+			// Control panel is open now; open its Figure section (collapsed by default), ring
+			// the size row and advance once the user actually changes the width or height.
+			target: () => figureSizeRowEl(),
 			placement: 'left',
-			title: 'Style it — resize',
-			body: 'The <strong>control panel</strong> shows the actogram’s properties. Try changing the <strong>Width</strong> or <strong>Height</strong> under <em>Dimension</em> and watch the plot update.',
+			title: 'Style it: resize',
+			body: 'The <strong>control panel</strong> shows the actogram’s properties. Its size is under <strong>Figure</strong>, which we have opened for you. Try changing <strong>Width (px)</strong> or <strong>Height (px)</strong> and watch the plot update.',
 			beforeShow: () => {
+				expandSection('Figure');
 				appState.view = 'plots';
 				appState.showDisplayPanel = false;
 				const act = actogramPlot();
@@ -250,7 +249,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'You did it! 🎉',
-			body: 'You simulated data, plotted an actogram, wired it up, and styled it. Double-click any node to edit it, and explore the <strong>+</strong> menu for analyses like <strong>Cosinor</strong> and <strong>Periodogram</strong>. You can reopen this tour anytime from the <strong>?</strong> menu.',
+			body: 'You loaded an example dataset, plotted an actogram, wired it up, and resized it. Double-click any node to edit it, and explore the <strong>+</strong> menu for analyses like <strong>Cosinor</strong> and <strong>Periodogram</strong>. You can reopen this tour anytime from the <strong>?</strong> menu.',
 			advance: { on: 'next' }
 		}
 	]

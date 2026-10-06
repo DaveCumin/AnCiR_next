@@ -60,6 +60,7 @@
 	import NodeComputeHost from '$lib/components/views/NodeComputeHost.svelte';
 	import { pinAllSeriesAppearance } from '$lib/plots/appearanceIdentity.js';
 	import StartScreen from '$lib/components/views/StartScreen.svelte';
+	import { startOverlayState } from '$lib/start/startVisibility.js';
 	import { queueHelpHint } from '$lib/core/helpHint.svelte.js';
 	import { wasNewAtSessionStart } from '$lib/utils/firstRun.js';
 
@@ -73,7 +74,17 @@
 	const sessionIsEmpty = $derived(
 		core.data.length === 0 && core.plots.length === 0 && core.tableProcesses.length === 0
 	);
-	const showStartScreen = $derived(sessionIsEmpty && !startDismissed && !deepLinkPending);
+	// The start screen can also be SUMMONED from Help → "Welcome screen" at any time,
+	// including over a non-empty session. This flag is the note's "summoned-over-work"
+	// case: purely informational — dismissing it returns to the work untouched, and it
+	// never clears anything by itself.
+	let welcomeSummoned = $state(false);
+
+	// The start screen and the add-data prompt (UI-9) never show together; see startVisibility.js.
+	const overlay = $derived(
+		startOverlayState({ sessionIsEmpty, startDismissed, deepLinkPending, welcomeSummoned })
+	);
+	const showStartScreen = $derived(overlay.showStartScreen);
 	// Re-arm the start screen whenever the session goes back to empty (e.g. "New session"), so
 	// dismissing it once doesn't hide it forever.
 	// Claim a stable colour/shape/dash for every wired column, ONCE each.
@@ -91,12 +102,6 @@
 	$effect(() => {
 		if (!sessionIsEmpty) startDismissed = false;
 	});
-
-	// The start screen can also be SUMMONED from Help → "Welcome screen" at any time,
-	// including over a non-empty session. This flag is the note's "summoned-over-work"
-	// case: purely informational — dismissing it returns to the work untouched, and it
-	// never clears anything by itself.
-	let welcomeSummoned = $state(false);
 
 	// First-run help hint: when the start screen closes for a NEW user — their first
 	// real action, whether dismissing it or loading an example/session from it — draw
@@ -867,9 +872,9 @@
 	     session that means the backdrop is a blank canvas, so dismissing the overlay leaves the
 	     user somewhere coherent rather than swapping one whole view for another. -->
 	{#if appState.view === 'canvas'}
-		<WorkflowEditor inline={true} />
+		<WorkflowEditor inline={true} addDataPrompt={overlay.offerAddData} />
 	{:else}
-		<PlotDisplay />
+		<PlotDisplay addDataPrompt={overlay.offerAddData} />
 	{/if}
 	<!-- Every node that is not shown anywhere (collapsed on the canvas, inside a collapsed
 	     composite, a plot hidden from the workspace, an unselected node in the plots view)

@@ -129,7 +129,12 @@ export function simulateData() {
 export async function loadExampleManifest() {
 	const res = await fetchAppAsset(`${base}/sessions/demos/index.json`);
 	const idx = await res.json();
-	const workflows = (idx.sessions ?? []).filter((s) => s.kind === 'workflow');
+	// The start screen is a curated shelf: the workflow examples, plus the few single-node reference
+	// demos the generator marks `startScreen` (e.g. Crossing, which no workflow uses). The other ~90
+	// node demos stay in the full library ("Browse the full library").
+	const workflows = (idx.sessions ?? []).filter(
+		(s) => s.kind === 'workflow' || s.startScreen === true
+	);
 	const groups = new Map();
 	for (const s of workflows) {
 		const g = s.group ?? 'Examples';

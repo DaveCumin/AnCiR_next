@@ -70,11 +70,21 @@
 		exampleGroups.flatMap(([group, sessions]) => sessions.map((s) => ({ ...s, group })))
 	);
 
+	/**
+	 * What a search reads. `keywords` matters most: the manifest writes it with the node names a
+	 * session uses, so "cosinor" finds every workflow that runs one even when its title does not
+	 * say so. The generator writes a string; an array is accepted so a hand-written entry still works.
+	 */
+	const searchText = (s) => {
+		const kw = Array.isArray(s.keywords) ? s.keywords.join(' ') : (s.keywords ?? '');
+		return `${s.name} ${s.summary} ${s.group} ${kw}`.toLowerCase();
+	};
+
 	/** null when not searching, so an empty result is distinguishable from "no query". */
 	const filtered = $derived.by(() => {
 		const q = query.trim().toLowerCase();
 		if (!q) return null;
-		return allExamples.filter((s) => `${s.name} ${s.summary} ${s.group}`.toLowerCase().includes(q));
+		return allExamples.filter((s) => searchText(s).includes(q));
 	});
 
 	/**
