@@ -122,37 +122,39 @@
 		one source repository.
 	</p>
 
-	<table class="licence-table">
-		<thead>
-			<tr><th>What</th><th>Licence</th><th>In practice</th></tr>
-		</thead>
-		<tbody>
-			<tr>
-				<td>AnCiR, the software</td>
-				<td>
-					<a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">
-						Apache-2.0
-					</a>
-				</td>
-				<td>
-					Use, modify, and redistribute, including commercially, provided you keep the notices and
-					state your changes.
-				</td>
-			</tr>
-			<tr>
-				<td>This handbook (text, figures, animations)</td>
-				<td>
-					<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">
-						CC BY 4.0
-					</a>
-				</td>
-				<td>
-					Copy, adapt, and reuse, including in teaching and in your own papers, as long as you give
-					attribution.
-				</td>
-			</tr>
-		</tbody>
-	</table>
+	<div class="table-wrap licence-wrap">
+		<table class="licence-table">
+			<thead>
+				<tr><th>What</th><th>Licence</th><th>In practice</th></tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>AnCiR, the software</td>
+					<td>
+						<a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">
+							Apache-2.0
+						</a>
+					</td>
+					<td>
+						Use, modify, and redistribute, including commercially, provided you keep the notices and
+						state your changes.
+					</td>
+				</tr>
+				<tr>
+					<td>This handbook (text, figures, animations)</td>
+					<td>
+						<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">
+							CC BY 4.0
+						</a>
+					</td>
+					<td>
+						Copy, adapt, and reuse, including in teaching and in your own papers, as long as you
+						give attribution.
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
 
 	<p class="small-note">
 		If you reuse a figure or an animation from this handbook, the handbook citation above is the
@@ -161,12 +163,14 @@
 
 	<SectionHead text="Versions" />
 
-	<table class="licence-table">
-		<tbody>
-			<tr><td>Handbook</td><td><code>{VERSION}</code></td></tr>
-			<tr><td>AnCiR</td><td><code>{ancirDisplay}</code></td></tr>
-		</tbody>
-	</table>
+	<div class="table-wrap licence-wrap">
+		<table class="licence-table">
+			<tbody>
+				<tr><td>Handbook</td><td><code>{VERSION}</code></td></tr>
+				<tr><td>AnCiR</td><td><code>{ancirDisplay}</code></td></tr>
+			</tbody>
+		</table>
+	</div>
 
 	<p class="small-note">
 		Source: <a href={REPO} target="_blank" rel="noopener">{REPO}</a>, with the handbook under
@@ -222,10 +226,15 @@
 		font-size: 0.92rem;
 	}
 
+	/* Keeps the colophon's original 0.9rem spacing; the scoped class outranks the global .table-wrap margin. */
+	.licence-wrap {
+		margin: 0.9rem 0;
+	}
+
 	.licence-table {
 		width: 100%;
 		border-collapse: collapse;
-		margin: 0.9rem 0;
+		margin: 0;
 		font-size: 0.92rem;
 	}
 
