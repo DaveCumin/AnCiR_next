@@ -119,7 +119,9 @@ export function shapiroWilk(values) {
 			mu = poly(SW_C5, lnN);
 			sigma = Math.exp(poly(SW_C6, lnN));
 		}
-		pvalue = 1 - normalCdf((y - mu) / sigma);
+		// Upper tail as normalCdf(-z), not 1 - normalCdf(z): the subtraction rounds to exactly 0
+		// once z passes ~8.3, which a strongly non-normal sample reaches easily.
+		pvalue = normalCdf(-(y - mu) / sigma);
 	}
 	return { statistic: W, pvalue: Math.max(0, Math.min(1, pvalue)), n };
 }

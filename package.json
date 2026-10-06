@@ -1,9 +1,13 @@
 {
 	"name": "ancir-next",
 	"private": true,
-	"version": "81.0",
+	"version": "81.1",
 	"license": "Apache-2.0",
 	"type": "module",
+	"packageManager": "pnpm@9.15.4",
+	"engines": {
+		"node": ">=22"
+	},
 	"scripts": {
 		"dev": "vite dev",
 		"prebuild": "node scripts/releaseGate.mjs",
@@ -15,6 +19,7 @@
 		"uploadall": "node scripts/deployFtp.mjs FULL_DEPLOY_COMMAND",
 		"testbuild": "vitest run && node src/lib/utils/generateBuild.js && vite build",
 		"buildonly": "vite build",
+		"analyze": "ANALYZE=1 vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
@@ -74,9 +79,7 @@
 		"@stdlib/random-base-minstd-shuffle": "^0.2.3",
 		"@stdlib/random-base-normal": "^0.2.2",
 		"@stdlib/random-base-uniform": "^0.2.3",
-		"@stdlib/stats-base-dists-chisquare-cdf": "^0.3.1",
 		"@stdlib/stats-base-dists-chisquare-quantile": "^0.2.3",
-		"@stdlib/stats-base-dists-f-cdf": "^0.2.3",
 		"@stdlib/stats-base-dists-t-quantile": "^0.2.3",
 		"d3-axis": "^3.0.0",
 		"d3-quadtree": "^3.0.1",

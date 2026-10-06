@@ -33,6 +33,7 @@
 	import { fade } from 'svelte/transition';
 
 	import { dev } from '$app/environment';
+	import { replaceState } from '$app/navigation';
 
 	import {
 		core,
@@ -364,36 +365,56 @@
 					el.tagName === 'TEXTAREA' ||
 					el.tagName === 'SELECT' ||
 					el.isContentEditable === true);
+			// Narrower than editableFocused: a field with its own native text undo. A focused
+			// select, checkbox or slider has none, so Cmd/Ctrl+Z there still undoes the app
+			// edit the control just made (ROB-31).
+			const NO_TEXT_UNDO = [
+				'checkbox',
+				'radio',
+				'range',
+				'button',
+				'submit',
+				'reset',
+				'color',
+				'file',
+				'image'
+			];
+			const textFocused =
+				!!el &&
+				((el.tagName === 'INPUT' && !NO_TEXT_UNDO.includes((el.type ?? '').toLowerCase())) ||
+					el.tagName === 'TEXTAREA' ||
+					el.isContentEditable === true);
 
 			if (!appState.loadingState.isLoading) {
 				// Don't allow keypresses if loading
 
-				// UNDO
-				if (MODIFIER && !event.shiftKey && event.key.toLowerCase() === 'z') {
+				// UNDO / REDO: inside a text field these belong to the field's own text undo.
+				if (MODIFIER && !event.shiftKey && event.key.toLowerCase() === 'z' && !textFocused) {
 					event.preventDefault();
 					history.undo();
 				}
-				// REDO
-				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'z') {
+				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'z' && !textFocused) {
 					event.preventDefault();
 					history.redo();
 				}
 
-				// Print out info - DEGUGGING
-				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'i') {
+				// The next three are developer tools, compiled out of production builds (ROB-21):
+				// the last one navigates away from the open session without asking.
+				// Print out info - DEBUGGING
+				if (dev && MODIFIER && event.shiftKey && event.key.toLowerCase() === 'i') {
 					event.preventDefault();
 					console.log($state.snapshot(core));
 					console.log($state.snapshot(appState));
 					console.log($state.snapshot(appConsts));
 				}
 				// Create sample data quickly - FOR TESTING
-				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'x') {
+				if (dev && MODIFIER && event.shiftKey && event.key.toLowerCase() === 'x') {
 					event.preventDefault();
 					refresh();
 				}
 
 				//load the test json
-				if (MODIFIER && event.shiftKey && event.key.toLowerCase() === 'a') {
+				if (dev && MODIFIER && event.shiftKey && event.key.toLowerCase() === 'a') {
 					const test = new URL(window.location.href);
 					window.location.href =
 						test.href +
@@ -470,7 +491,11 @@
 			// start screen rather than leaving the user on a blank canvas. loadFromURL asks
 			// before replacing anything open (on a fresh page load nothing is, so it passes).
 			loadFromURL(query).finally(() => (deepLinkPending = false));
-			window.history.replaceState({}, document.title, window.location.pathname);
+			// SvelteKit's own replaceState, so the entry keeps the router's history bookkeeping
+			// (the bare window.history call wipes it and warns in dev). The router has started
+			// by now: the awaited loaders above run long after hydration finishes.
+			// eslint-disable-next-line svelte/no-navigation-without-resolve -- this only strips the query string from the page already open; under the hash router resolve() builds a "#/..." route path, which cannot express "this file's own path, minus the query".
+			replaceState(window.location.pathname, {});
 		}
 
 		if (dev) {

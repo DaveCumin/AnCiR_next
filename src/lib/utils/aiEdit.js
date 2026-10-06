@@ -192,6 +192,9 @@ function propertyIssue(prop, value) {
 	if (prop.input === 'boolean' && typeof value !== 'boolean') return 'must be true or false';
 	if (prop.input === 'number' && value !== null && !Number.isFinite(Number(value)))
 		return 'must be a number';
+	// A descriptor minimum (e.g. a periodogram step, where 0 never finishes, ROB-24).
+	if (prop.min != null && value !== null && Number(value) < prop.min)
+		return `must be at least ${prop.min}`;
 	return null;
 }
 
@@ -320,6 +323,7 @@ export function plotProps(plotWrapper) {
 				label: f.label,
 				input: f.input,
 				...(f.options ? { options: f.options } : {}),
+				...(f.min != null ? { min: f.min } : {}),
 				value: value ?? null
 			};
 		})

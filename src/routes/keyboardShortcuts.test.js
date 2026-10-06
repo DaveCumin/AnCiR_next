@@ -89,4 +89,35 @@ describe('the app-level keydown handler', () => {
 		expect(after).toContain('refresh()');
 		expect(after).not.toContain('showWorkflow');
 	});
+
+	/** The condition of the one `if (...)` branch bound to `key`, whitespace-normalised. */
+	function branchFor(body, key, { shift }) {
+		const re = /if \(([^\n]*(?:\n[^\n]*?)??)\) \{/g;
+		const hits = [];
+		let m;
+		while ((m = re.exec(body))) {
+			const cond = m[1].replace(/\s+/g, ' ');
+			if (!cond.includes(`event.key.toLowerCase() === '${key}'`)) continue;
+			if (shift !== /&& event\.shiftKey/.test(cond)) continue;
+			hits.push(cond);
+		}
+		expect(hits, `expected one ${shift ? 'shift+' : ''}${key} branch`).toHaveLength(1);
+		return hits[0];
+	}
+
+	// ROB-21: these are developer tools (state dump, demo seeder, test-JSON loader that
+	// navigates away from the open session), so production builds must not bind them.
+	it.each(['i', 'x', 'a'])('gates the Cmd/Ctrl+Shift+%s developer shortcut behind dev', (key) => {
+		const cond = branchFor(keyHandlerBody(source), key, { shift: true });
+		expect(cond).toMatch(/^dev && /);
+	});
+
+	// ROB-31: Cmd/Ctrl+Z (and Shift+Z) in a text field is the field's own text undo.
+	it.each([
+		['Z', false],
+		['Shift+Z', true]
+	])('leaves Cmd/Ctrl+%s to a focused text field', (_label, shift) => {
+		const cond = branchFor(keyHandlerBody(source), 'z', { shift });
+		expect(cond).toContain('!textFocused');
+	});
 });

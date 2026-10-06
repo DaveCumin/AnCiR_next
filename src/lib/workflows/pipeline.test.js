@@ -49,7 +49,7 @@ vi.mock('$lib/core/core.svelte', () => ({
 // ── Import functions under test ───────────────────────────────────────────
 import { add } from '$lib/processes/Add.svelte';
 import { multiply } from '$lib/processes/Multiply.svelte';
-import { normalize } from '$lib/processes/normalize.svelte';
+import { normalize } from '$lib/processes/Normalize.svelte';
 import { outlierremoval } from '$lib/processes/OutlierRemoval.svelte';
 import { removetrend } from '$lib/processes/RemoveTrend.svelte';
 import { fitCosinorFixed } from '$lib/utils/cosinor.js';

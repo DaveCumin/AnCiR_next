@@ -170,13 +170,18 @@ async function askModel({ llm, system, user, options: o, callerKey, done }) {
 			{ retries: o.retries ?? 2, timeoutMs: o.timeoutMs ?? 60000 }
 		);
 	} catch (e) {
+		// SEC-6: the network error (host, port, resolver text) is logged, never echoed.
 		done('llm_unreachable', { error: String(e?.message ?? e) });
-		return { response: json({ error: `LLM request failed: ${e?.message ?? e}` }, 502) };
+		return {
+			response: json({ error: 'LLM request failed: could not reach the AI model provider.' }, 502)
+		};
 	}
 
 	if (!reply.ok) {
 		// The provider's own message is the informative part ("Limit 14400, Used 14400, please
-		// try again in 2m"). It never contains the key.
+		// try again in 2m"). It never contains the key, but it describes the provider account
+		// (ours, with the default key), so it is LOGGED via done() and never sent to the client
+		// (SEC-6). The client only relies on the status and `error`.
 		const providerMsg =
 			reply.json?.error?.message ??
 			(typeof reply.body === 'string' ? reply.body.slice(0, 300) : undefined);
@@ -191,8 +196,7 @@ async function askModel({ llm, system, user, options: o, callerKey, done }) {
 				response: json(
 					{
 						error:
-							'The AI model has reached its rate or usage limit. Wait a little and try again, or use your own API key under Advanced.',
-						detail: providerMsg
+							'The AI model has reached its rate or usage limit. Wait a little and try again, or use your own API key under Advanced.'
 					},
 					429,
 					{ 'Retry-After': '60' }
@@ -209,8 +213,7 @@ async function askModel({ llm, system, user, options: o, callerKey, done }) {
 					{
 						error: callerKey
 							? 'That API key was rejected by the provider. Check the key, model and endpoint under Advanced.'
-							: 'The AI service is misconfigured — its API key was rejected. Please report this.',
-						detail: providerMsg
+							: 'The AI service is misconfigured — its API key was rejected. Please report this.'
 					},
 					502
 				)
@@ -222,16 +225,19 @@ async function askModel({ llm, system, user, options: o, callerKey, done }) {
 		// user's screen say the same nothing, and the one string that would have named the
 		// cause was already in hand. Never contains the key (it's the provider's own text).
 		done('llm_error', { status: reply.status, detail: providerMsg });
-		return {
-			response: json({ error: `LLM error ${reply.status}`, detail: providerMsg ?? reply.body }, 502)
-		};
+		return { response: json({ error: `LLM error ${reply.status}` }, 502) };
 	}
 
 	try {
 		return { draft: extractDraft(reply.message?.content) };
 	} catch (e) {
 		done('unparseable_draft', { error: e.message });
-		return { response: json({ error: `could not parse a session draft: ${e.message}` }, 502) };
+		return {
+			response: json(
+				{ error: 'could not parse a session draft: the AI model did not reply with usable JSON.' },
+				502
+			)
+		};
 	}
 }
 
@@ -267,6 +273,52 @@ export function repairPrompt(userPrompt, draft, errors) {
 	].join('\n');
 }
 
+/** Compare endpoints as URLs: host case and trailing slashes don't make a different provider. */
+function sameEndpoint(a, b) {
+	try {
+		const ua = new URL(a);
+		const ub = new URL(b);
+		const path = (u) => u.pathname.replace(/\/+$/, '');
+		return ua.origin === ub.origin && path(ua) === path(ub) && ua.search === ub.search;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Pick the model call's endpoint, key and model (SEC-5).
+ *
+ * The default key (env.OPENAI_API_KEY) is OURS and funded, so it is only ever paired with the
+ * default endpoint AND the default model. A caller who names another endpoint, or another model
+ * (even on the default host, where a pricier model would bill us), must bring their own key.
+ * A caller key is used with whatever they name, falling back to the defaults for the rest.
+ *
+ * @returns {{llm:{baseUrl:string, apiKey:string, model:string}} | {error:string}}
+ */
+export function resolveLlm(callerLlm, env) {
+	const c = callerLlm ?? {};
+	const llm = {
+		baseUrl: c.baseUrl ?? env.OPENAI_BASE_URL,
+		apiKey: c.apiKey,
+		model: c.model ?? env.OPENAI_MODEL
+	};
+	if (!llm.apiKey) {
+		const defaultHost = !c.baseUrl || sameEndpoint(c.baseUrl, env.OPENAI_BASE_URL);
+		const defaultModel = !c.model || c.model === env.OPENAI_MODEL;
+		if (!defaultHost || !defaultModel) {
+			return {
+				error:
+					'Using your own endpoint or model needs your own API key: add it under Advanced, or leave endpoint and model blank to use the default.'
+			};
+		}
+		llm.apiKey = env.OPENAI_API_KEY;
+	}
+	if (!llm.baseUrl || !llm.apiKey || !llm.model) {
+		return { error: 'no model configured: supply llm.{baseUrl,apiKey,model}' };
+	}
+	return { llm };
+}
+
 async function handleBuild(request, env, ctx) {
 	let body;
 	try {
@@ -290,14 +342,9 @@ async function handleBuild(request, env, ctx) {
 		);
 	}
 
-	const llm = {
-		baseUrl: v.value.llm?.baseUrl ?? env.OPENAI_BASE_URL,
-		apiKey: v.value.llm?.apiKey ?? env.OPENAI_API_KEY,
-		model: v.value.llm?.model ?? env.OPENAI_MODEL
-	};
-	if (!llm.baseUrl || !llm.apiKey || !llm.model) {
-		return json({ error: 'no model configured: supply llm.{baseUrl,apiKey,model}' }, 400);
-	}
+	const resolved = resolveLlm(v.value.llm, env);
+	if (resolved.error) return json({ error: resolved.error }, 400);
+	const llm = resolved.llm;
 
 	// Everything logged for this request. `prompt` is the point of the exercise; the key never
 	// appears — only whose it was.
@@ -468,14 +515,9 @@ async function handleEdit(request, env, ctx) {
 		);
 	}
 
-	const llm = {
-		baseUrl: v.value.llm?.baseUrl ?? env.OPENAI_BASE_URL,
-		apiKey: v.value.llm?.apiKey ?? env.OPENAI_API_KEY,
-		model: v.value.llm?.model ?? env.OPENAI_MODEL
-	};
-	if (!llm.baseUrl || !llm.apiKey || !llm.model) {
-		return json({ error: 'no model configured: supply llm.{baseUrl,apiKey,model}' }, 400);
-	}
+	const resolved = resolveLlm(v.value.llm, env);
+	if (resolved.error) return json({ error: resolved.error }, 400);
+	const llm = resolved.llm;
 
 	const summary = v.value.session ?? {};
 	const started = Date.now();
@@ -638,10 +680,8 @@ export default {
 				stack: typeof e?.stack === 'string' ? e.stack.slice(0, 2000) : undefined,
 				path: new URL(request.url).pathname
 			});
-			return json(
-				{ error: 'The AI service hit an internal error.', detail: String(e?.message ?? e) },
-				500
-			);
+			// SEC-6: the exception text is in the log line above, not the response.
+			return json({ error: 'The AI service hit an internal error.' }, 500);
 		}
 	}
 };

@@ -90,7 +90,10 @@
 		figureStyle = null
 	} = $props();
 
-	let axisGroup;
+	// $state so the effect below re-runs once bind:this hands over the new <g> that the
+	// {#key} block creates; a plain let is not reactive in runes mode, so the effect could
+	// draw into the old, detached element (ROB-U5).
+	let axisGroup = $state();
 
 	// resolveStyle tolerates null and returns the defaults, so an axis with no style
 	// still renders rather than coming out unstyled.
@@ -162,6 +165,7 @@
 		plotPadding;
 
 		if (!scale) return; // scale not ready yet — avoid rendering a broken axis
+		if (!axisGroup) return; // between {#key} teardown and the new <g> binding
 
 		//Set a transition
 		// const t = transition().duration(10); //Doesn't look good without a similar transition for the line/points/etc... hard to do.

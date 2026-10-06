@@ -300,7 +300,7 @@
 				const nanXCount = xData.filter((v) => v === null || v === undefined || isNaN(v)).length;
 				if (nanXCount > 0) {
 					warnings.push(
-						`${nanXCount} missing time value${nanXCount > 1 ? 's' : ''} — excluded from binning, but may indicate irregular data collection.`
+						`${nanXCount} missing time value${nanXCount > 1 ? 's' : ''} excluded from binning. This may indicate irregular data collection.`
 					);
 				}
 
@@ -310,7 +310,7 @@
 						method === 'Chi-squared'
 							? 'the bins they empty are excluded from the chi-squared statistic, reducing its degrees of freedom'
 							: 'the bins they empty are left out of the Enright column means, so those columns average fewer cycles';
-					warnings.push(`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''} — ${yMsg}.`);
+					warnings.push(`${nanYCount} missing y value${nanYCount > 1 ? 's' : ''}: ${yMsg}.`);
 				}
 
 				// Check for time gaps larger than the bin size, and for a bin size
@@ -334,7 +334,7 @@
 								? 'are excluded from the chi-squared statistic, so long gaps thin out the folded bins'
 								: 'are left out of the Enright column means, so long gaps thin out the folded columns';
 						warnings.push(
-							`Data has gaps up to ${maxGap.toFixed(1)} h (bin size: ${binSize} h) — empty bins ${gapMsg}.`
+							`Data has gaps up to ${maxGap.toFixed(1)} h (bin size: ${binSize} h). Empty bins ${gapMsg}.`
 						);
 					}
 
@@ -594,7 +594,7 @@
 				group: 'Period',
 				_children: { 0: { label: 'Period min' }, 1: { label: 'Period max' } }
 			},
-			periodSteps: { group: 'Period', label: 'Step', step: 0.05 },
+			periodSteps: { group: 'Period', label: 'Step', step: 0.05, min: 0.01 },
 			ylimsIN: {
 				group: 'Y-axis',
 				_children: { 0: { label: 'Power min' }, 1: { label: 'Power max' } }

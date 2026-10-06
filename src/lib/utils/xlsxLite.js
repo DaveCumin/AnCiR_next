@@ -105,41 +105,60 @@ function parseDateStyles(files) {
 	return dateStyleIndices;
 }
 
-/** Convert fractional day to "HH:mm:ss" string. */
-function fracToTimeString(frac) {
-	const totalSecs = Math.round(frac * 86400);
+/** Convert a number of seconds into the day (0 to 86399) to an "HH:mm:ss" string. */
+function secondsToTimeString(totalSecs) {
 	const h = Math.floor(totalSecs / 3600);
 	const m = Math.floor((totalSecs % 3600) / 60);
 	const s = totalSecs % 60;
 	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+// Days from each date system's serial 0 to 1970-01-01. In the 1900 system serial 1 is
+// 1900-01-01, and Excel also counts a 1900-02-29 that never happened (serial 60), so
+// 25569 lands serial 61 and later on the right day and serials 1 to 59 need one day
+// fewer. The 1904 system (old Mac Excel) has serial 0 = 1904-01-01 and no phantom day.
+const EPOCH_OFFSET_1900 = 25569;
+const EPOCH_OFFSET_1904 = 24107;
+
 /**
  * Convert an Excel serial date number to an ISO-like string.
  * Returns the original text unchanged if it is not a valid number.
+ * `date1904` is true for workbooks saved with the 1904 date system.
  */
-function serialToDateString(raw) {
+function serialToDateString(raw, date1904 = false) {
 	const num = parseFloat(raw);
 	if (isNaN(num)) return raw;
 
-	const intPart = Math.floor(num);
-	const fracPart = num - intPart;
+	// Round the whole serial to the second before splitting it, so a time just short of
+	// midnight rolls into the next day instead of printing as 24:00:00.
+	const totalSecs = Math.round(num * 86400);
+	const secsOfDay = ((totalSecs % 86400) + 86400) % 86400;
 
 	// Time-only value (no date component)
-	if (intPart === 0) return fracToTimeString(fracPart);
+	if (Math.floor(num) === 0) return secondsToTimeString(secsOfDay);
 
-	// Excel has a phantom leap day on 1900-02-29 (serial 60); correct for it.
-	const corrected = intPart >= 60 ? intPart - 1 : intPart;
-	const date = new Date((corrected - 25569) * 86400000);
-
-	const yyyy = date.getUTCFullYear();
-	const MM = String(date.getUTCMonth() + 1).padStart(2, '0');
-	const dd = String(date.getUTCDate()).padStart(2, '0');
-
-	if (fracPart > 0) {
-		return `${yyyy}-${MM}-${dd} ${fracToTimeString(fracPart)}`;
+	const dayNum = (totalSecs - secsOfDay) / 86400;
+	let datePart;
+	if (!date1904 && dayNum === 60) {
+		// The phantom leap day has no real date; keep the label Excel shows for it.
+		datePart = '1900-02-29';
+	} else {
+		const offset = date1904
+			? EPOCH_OFFSET_1904
+			: dayNum < 60
+				? EPOCH_OFFSET_1900 - 1
+				: EPOCH_OFFSET_1900;
+		const date = new Date((dayNum - offset) * 86400000);
+		const yyyy = date.getUTCFullYear();
+		const MM = String(date.getUTCMonth() + 1).padStart(2, '0');
+		const dd = String(date.getUTCDate()).padStart(2, '0');
+		datePart = `${yyyy}-${MM}-${dd}`;
 	}
-	return `${yyyy}-${MM}-${dd}`;
+
+	if (secsOfDay > 0) {
+		return `${datePart} ${secondsToTimeString(secsOfDay)}`;
+	}
+	return datePart;
 }
 
 // ── Shared strings ───────────────────────────────────────────────────────────
@@ -179,6 +198,18 @@ function parseWorkbook(files) {
 	return names;
 }
 
+/**
+ * True when workbook.xml declares the 1904 date system (<workbookPr date1904="1"/>,
+ * or "true", which some writers emit).
+ */
+function parseDate1904(files) {
+	const raw = files['xl/workbook.xml'];
+	if (!raw) return false;
+	const pr = parseXML(bytesToString(raw)).getElementsByTagName('workbookPr')[0];
+	const v = pr?.getAttribute('date1904');
+	return v === '1' || v === 'true';
+}
+
 // ── Worksheet relationships (to map rId → sheet file path) ───────────────────
 
 function parseWorkbookRels(files) {
@@ -205,7 +236,7 @@ function parseWorkbookRels(files) {
  * Parse a worksheet XML into an internal sheet representation.
  * Returns: { cells: Map<string, value>, ref: string, hiddenRows: Set, hiddenCols: Set }
  */
-function parseSheet(bytes, sharedStrings, dateStyleIndices) {
+function parseSheet(bytes, sharedStrings, dateStyleIndices, date1904 = false) {
 	const doc = parseXML(bytesToString(bytes));
 
 	// Collect hidden columns
@@ -262,7 +293,7 @@ function parseSheet(bytes, sharedStrings, dateStyleIndices) {
 			// Check if this cell uses a date/time style
 			const styleIdx = s != null ? parseInt(s, 10) : -1;
 			if (dateStyleIndices && styleIdx >= 0 && dateStyleIndices.has(styleIdx)) {
-				value = serialToDateString(vNode.textContent);
+				value = serialToDateString(vNode.textContent, date1904);
 			} else {
 				value = vNode.textContent ?? '';
 			}
@@ -303,6 +334,7 @@ export function read(data, _opts) {
 	const sheetNames = parseWorkbook(files);
 	const rels = parseWorkbookRels(files);
 	const dateStyleIndices = parseDateStyles(files);
+	const date1904 = parseDate1904(files);
 
 	// Map sheet names to their rIds from workbook.xml
 	const workbookDoc = parseXML(bytesToString(files['xl/workbook.xml']));
@@ -322,7 +354,7 @@ export function read(data, _opts) {
 
 		const sheetBytes = files[filePath];
 		if (sheetBytes && name) {
-			Sheets[name] = parseSheet(sheetBytes, sharedStrings, dateStyleIndices);
+			Sheets[name] = parseSheet(sheetBytes, sharedStrings, dateStyleIndices, date1904);
 		}
 	}
 

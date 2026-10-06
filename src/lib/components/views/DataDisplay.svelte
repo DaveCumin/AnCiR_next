@@ -209,7 +209,7 @@
 	// reversed so the topmost row is the plot drawn last (highest z-index); drag to
 	// reorder rewrites core.plots, which is the worksheet stacking order.
 	const filteredPlots = $derived((core.plots ?? []).filter((p) => matches(p.name)));
-	const displayPlots = $derived(q ? filteredPlots : (core.plots ?? []).toReversed());
+	const displayPlots = $derived(q ? filteredPlots : (core.plots ?? []).slice().reverse());
 
 	let plotDraggedIndex = $state(null);
 	let plotDraggedViewIndex = $state(null);

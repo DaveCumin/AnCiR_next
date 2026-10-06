@@ -43,6 +43,16 @@ describe('shapiroWilk (scipy.stats.shapiro parity)', () => {
 	it('returns NaN for a zero-variance column', () => {
 		expect(Number.isNaN(shapiroWilk([4, 4, 4, 4, 4]).statistic)).toBe(true);
 	});
+
+	it('keeps a tiny p-value positive instead of underflowing to 0 (upper tail as cdf(-z))', () => {
+		// exp(i / 20), i = 0..199: strongly skewed. scipy.stats.shapiro gives W = 0.566000,
+		// p = 4.169e-22. `1 - normalCdf(z)` rounds to exactly 0 once z passes ~8.3.
+		const x = Array.from({ length: 200 }, (_, i) => Math.exp(i / 20));
+		const r = shapiroWilk(x);
+		expect(r.statistic).toBeCloseTo(0.5660005, 6);
+		expect(r.pvalue).toBeGreaterThan(0);
+		expect(Math.log10(r.pvalue)).toBeCloseTo(Math.log10(4.1692352484281914e-22), 1);
+	});
 });
 
 describe('dAgostino (scipy normaltest parity)', () => {

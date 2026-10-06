@@ -309,7 +309,7 @@
 			<input
 				bind:value={baseUrl}
 				name="ancir-llm-endpoint"
-				placeholder="https://api.groq.com/openai/v1"
+				placeholder="leave blank for the default"
 				disabled={busy}
 				autocomplete="off"
 				autocapitalize="off"
@@ -326,7 +326,7 @@
 				bind:value={apiKey}
 				name="ancir-llm-key"
 				type="password"
-				placeholder="leave blank to use the default"
+				placeholder="needed if you set an endpoint or model"
 				disabled={busy}
 				autocomplete="new-password"
 				spellcheck="false"
@@ -340,7 +340,7 @@
 			<input
 				bind:value={model}
 				name="ancir-llm-model"
-				placeholder="openai/gpt-oss-120b"
+				placeholder="leave blank for the default"
 				disabled={busy}
 				autocomplete="off"
 				autocapitalize="off"

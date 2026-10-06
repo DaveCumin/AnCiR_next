@@ -47,7 +47,14 @@ https://svelte.dev/playground/modal?version=5.33.7
 		<dialog
 			style="width: {width}; max-height: {max_height}"
 			bind:this={dialog}
-			onclose={() => (showModal = false)}
+			onclose={() => {
+				// The browser closed the dialog itself (Escape), so close() never ran and the
+				// caller's onclose is still owed (ROB-25). When close() did run it set showModal
+				// false before dialog.close(), so this skips it and onclose runs once.
+				if (!showModal) return;
+				showModal = false;
+				onclose();
+			}}
 			onclick={(e) => {
 				e.stopPropagation();
 				if (e.target === dialog) {

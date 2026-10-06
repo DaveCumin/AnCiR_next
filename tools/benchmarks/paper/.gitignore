@@ -3,3 +3,5 @@ node_modules/
 # Worked-example inputs contain research datasets and session copies; figures are large and regenerable
 results/worked_example/inputs/
 results/worked_example/figures/
+# Large local benchmark inputs (e.g. drosophila_Data.json), not for the repo
+*_Data.json

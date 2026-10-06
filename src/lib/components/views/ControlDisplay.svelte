@@ -669,6 +669,7 @@
 									<NumberWithUnits
 										value={field.allEqual ? field.value : (field.distinctValues[0] ?? 0)}
 										step={field.step ?? appState.gridSize}
+										min={field.min}
 										onInput={(v) => setSharedField(field.path, parseFloat(v))}
 									/>
 								{:else if field.input === 'color'}
@@ -756,6 +757,7 @@
 										<NumberWithUnits
 											value={field.allEqual ? field.value : (field.distinctValues[0] ?? 0)}
 											step={field.step ?? appState.gridSize}
+											min={field.min}
 											onInput={(v) => setSharedDataField(row.index, field.path, parseFloat(v))}
 										/>
 									{:else if field.input === 'color'}

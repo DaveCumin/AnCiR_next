@@ -12,6 +12,7 @@ class FakePlotClass {
 	static descriptors = {
 		paddingIN: { group: 'Padding' },
 		periodHrs: { group: 'Time', label: 'Period (h)', step: 0.1 },
+		periodStep: { group: 'Time', label: 'Step', step: 0.05, min: 0.01 },
 		ylimsOption: {
 			group: 'Y-lims',
 			label: 'Scale Y-axis',
@@ -24,6 +25,7 @@ class FakePlotClass {
 
 	paddingIN = { top: 30, right: 20, bottom: 10, left: 20 };
 	periodHrs = 24;
+	periodStep = 0.25;
 	showDayNumbers = false;
 	ylimsOption = 'overall';
 	ylimsIN = [0, 100];
@@ -34,6 +36,7 @@ class FakePlotClass {
 		return {
 			paddingIN: this.paddingIN,
 			periodHrs: this.periodHrs,
+			periodStep: this.periodStep,
 			showDayNumbers: this.showDayNumbers,
 			ylimsOption: this.ylimsOption,
 			ylimsIN: this.ylimsIN,
@@ -123,6 +126,21 @@ describe('getSharedSchema', () => {
 			input: 'number',
 			group: 'Time',
 			step: 0.1
+		});
+	});
+
+	// ROB-24: a zero period step hung the periodogram. A descriptor `min` reaches the field so
+	// the multi-select panel's number input and the AI editor can both refuse it.
+	it('carries a descriptor min on scalar fields', () => {
+		const schema = getSharedSchema(makeWrapper());
+		const step = schema.find((f) => f.path === 'plot.periodStep');
+		expect(step).toEqual({
+			path: 'plot.periodStep',
+			label: 'Step',
+			input: 'number',
+			group: 'Time',
+			step: 0.05,
+			min: 0.01
 		});
 	});
 

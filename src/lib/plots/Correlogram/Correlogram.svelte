@@ -125,7 +125,7 @@
 			const nanXCount = times.length - validT.length;
 			if (nanXCount > 0) {
 				warnings.push(
-					`${nanXCount} missing time value${nanXCount > 1 ? 's' : ''} — excluded from the autocorrelation.`
+					`${nanXCount} missing time value${nanXCount > 1 ? 's' : ''} excluded from the autocorrelation.`
 				);
 			}
 
@@ -139,7 +139,7 @@
 				const maxGap = diffs[diffs.length - 1];
 				if (maxGap > medianDt * 2) {
 					warnings.push(
-						`Data has gaps up to ${maxGap.toFixed(1)} h (typical interval: ${medianDt.toFixed(2)} h) — lags coinciding with gaps are estimated from few pairs, and the confidence bounds shown assume complete, evenly-spaced data.`
+						`Data has gaps up to ${maxGap.toFixed(1)} h (typical interval: ${medianDt.toFixed(2)} h). Lags coinciding with gaps are estimated from few pairs, and the confidence bounds shown assume complete, evenly-spaced data.`
 					);
 				}
 			}

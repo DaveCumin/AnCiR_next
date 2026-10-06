@@ -103,11 +103,25 @@ describe('makeSeqArray', () => {
 		}
 	});
 
-	// BUG: step === 0 makes n = floor((to-from)/0) = Infinity, so the
-	// `for (i = 0; i <= n; i++)` loop never terminates (the function hangs).
-	// Expected: guard a zero step and return [] or [from] rather than looping
-	// forever. Left as a todo so the suite does not hang.
-	it.todo('does not hang when step is 0 (should return [] or [from])');
+	// step === 0 used to make n = floor((to-from)/0) = Infinity, so the loop never ended
+	// (ROB-24: a zero period step is reachable from the multi-select panel, the AI editor
+	// and sessions). A step that is not positive, or an endpoint that is not finite, now
+	// gives an empty sequence.
+	it.each([0, -0, -1, NaN, null, undefined, '0'])('returns [] for step %s', (step) => {
+		expect(makeSeqArray(0, 5, step)).toEqual([]);
+	});
+
+	it('returns [] rather than counting down for a negative step with from > to', () => {
+		expect(makeSeqArray(5, 0, -1)).toEqual([]);
+	});
+
+	it.each([
+		[0, Infinity],
+		[-Infinity, 0],
+		[0, NaN]
+	])('returns [] for a non-finite range %s..%s', (from, to) => {
+		expect(makeSeqArray(from, to, 1)).toEqual([]);
+	});
 });
 
 describe('KahanSum — edge cases', () => {

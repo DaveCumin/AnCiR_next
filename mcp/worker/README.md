@@ -75,6 +75,12 @@ the SSRF/validation guards (`app/validation.js`).
 
 To offer a fallback model instead, set `OPENAI_BASE_URL`/`OPENAI_MODEL` as vars and
 `OPENAI_API_KEY` as a **secret** (`npx wrangler secret put OPENAI_API_KEY`).
+That key is only ever paired with that endpoint and that model: a request that names any other
+`baseUrl` or `model` without its own `apiKey` gets a 400, so the funded key never reaches a
+caller-chosen provider or a pricier model (`resolveLlm` in `index.js`).
+
+Error responses carry a generic `error` message and the HTTP status only. Provider text and
+exception messages are logged (Workers Logs and the D1 `hits` table), never echoed to the client.
 
 ## Deploy
 

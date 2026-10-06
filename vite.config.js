@@ -8,7 +8,12 @@ import { writeSidecar as writeRSidecar } from './scripts/buildRExport.mjs';
 
 export default defineConfig({
 	build: {
-		assetsInlineLimit: Infinity
+		assetsInlineLimit: Infinity,
+		// The declared browser floor. Vite's default target has changed between majors, so pin it
+		// here rather than inherit it. This only lowers SYNTAX; it adds no polyfills, so source
+		// code must not call APIs newer than these browsers either (e.g. Array.prototype.toReversed
+		// needs Safari 16 / Chrome 110 / Firefox 115).
+		target: ['es2022', 'chrome100', 'edge100', 'firefox100', 'safari15']
 	},
 
 	// Vitest's vite-node always transforms modules in SSR mode, so without this,
@@ -36,9 +41,7 @@ export default defineConfig({
 			'@stdlib/random-base-exponential',
 			'@stdlib/random-base-normal',
 			'@stdlib/random-base-uniform',
-			'@stdlib/stats-base-dists-chisquare-cdf',
 			'@stdlib/stats-base-dists-chisquare-quantile',
-			'@stdlib/stats-base-dists-f-cdf',
 			'@stdlib/stats-base-dists-t-quantile',
 			'd3-scale',
 			'd3-time-format',
@@ -92,10 +95,18 @@ export default defineConfig({
 			}
 		},
 		sveltekit(),
-		visualizer({
-			emitFile: true,
-			filename: 'stats.html'
-		})
+		// Bundle visualiser, opt-in only (`pnpm analyze`). With emitFile it lands in build/stats.html,
+		// which is the deployed folder, so a normal build must never produce it. The next normal
+		// build wipes build/ first (adapter-static), so an analyse run's file does not ship with a
+		// release; do not upload straight after `pnpm analyze`.
+		...(process.env.ANALYZE
+			? [
+					visualizer({
+						emitFile: true,
+						filename: 'stats.html'
+					})
+				]
+			: [])
 	],
 
 	test: {

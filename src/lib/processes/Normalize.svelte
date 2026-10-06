@@ -10,10 +10,17 @@
 	const presentNumbers = (x) => x.filter((v) => !isInvalidValue(v)).map(Number);
 	const mapPresent = (x, f) => x.map((v) => (isInvalidValue(v) ? v : f(Number(v))));
 
+	// A numeric arg, or the default when it is absent, blank or not a finite number. Not
+	// `Number(v || d)`, which turned a legitimate 0 into the default (review STAT-21).
+	const numArg = (v, d) => {
+		const n = v == null || v === '' ? NaN : Number(v);
+		return Number.isFinite(n) ? n : d;
+	};
+
 	export function normalize(x, args) {
 		const type = args.normalizationType || 'z-score';
-		const customMin = Number(args.customMin || 0);
-		const customMax = Number(args.customMax || 1);
+		const customMin = numArg(args.customMin, 0);
+		const customMax = numArg(args.customMax, 1);
 
 		// Missing cells (null, NaN, blank, text) are left out of every calculation.
 		const validData = presentNumbers(x);
@@ -52,7 +59,7 @@
 			}
 
 			case 'robust': {
-				// Robust normalization using median and MAD
+				// Robust normalization: (x - median) / MAD, the raw MAD (no 1.4826 scaling; labelled so in the UI)
 				const sorted = [...validData].sort((a, b) => a - b);
 				const median =
 					sorted.length % 2 === 0
@@ -113,12 +120,12 @@
 			];
 		}
 		if (type === 'min-max' && constant) {
-			// Same `|| 0` coercion as the compute, so the reported floor matches
+			// Same numArg default as the compute, so the reported floor matches
 			// what is actually written.
 			return [
 				`Min-max normalization scales by the input's range, and every valid value here is ` +
 					`${validData[0]} (zero range), so every output value is the requested minimum ` +
-					`(${Number(args.customMin || 0)}). Check that the right column is wired in, or remove this node.`
+					`(${numArg(args.customMin, 0)}). Check that the right column is wired in, or remove this node.`
 			];
 		}
 		if (type === 'robust') {
@@ -158,6 +165,9 @@
 	]);
 
 	export const definition = {
+		// The file was renamed from normalize.svelte; sessions, the MCP tools and the Python/R
+		// ports all store the process as 'normalize', so the registry keeps that key.
+		registryKey: 'normalize',
 		displayName: 'Normalize',
 		func: normalize,
 		defaults: normalize_defaults,
@@ -185,7 +195,7 @@
 	const normalizationTypes = [
 		{ value: 'z-score', label: 'Z-Score' },
 		{ value: 'min-max', label: 'Min-Max' },
-		{ value: 'robust', label: 'Robust' },
+		{ value: 'robust', label: 'Robust (unscaled MAD)' },
 		{ value: 'unit-vector', label: 'Unit Vector' }
 	];
 </script>
@@ -218,7 +228,7 @@
 		{:else if p.args.normalizationType === 'min-max'}
 			Scale to [{p.args.customMin}, {p.args.customMax}]
 		{:else if p.args.normalizationType === 'robust'}
-			Median-based, outlier-resistant
+			(x - median) / MAD, with the raw MAD (not scaled by 1.4826)
 		{:else if p.args.normalizationType === 'unit-vector'}
 			Normalize to unit length
 		{/if}

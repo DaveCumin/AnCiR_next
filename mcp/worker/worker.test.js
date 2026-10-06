@@ -4,7 +4,7 @@
 // whole NL→session path is covered without deploying or calling a real model.
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import worker, { extractDraft } from './index.js';
+import worker, { extractDraft, resolveLlm } from './index.js';
 import { buildDraftPrompt } from './draftPrompt.js';
 import generated from '../src/emit/session-schema.generated.json' with { type: 'json' };
 
@@ -695,7 +695,113 @@ test('a request with no llm{} uses the worker default and says so', async () => 
 	assert.ok(!JSON.stringify(b).includes('gsk_secret'), 'must not log the worker secret either');
 });
 
-test('model rate/usage limit → 429 with the provider detail, not a blanket 502', async () => {
+// ---- SEC-5: the Worker's funded default key only ever goes to the default host + model ----
+
+const DEFAULT_ENV = () => ({
+	...ENV(),
+	OPENAI_BASE_URL: 'https://generativelanguage.googleapis.com/v1beta/openai',
+	OPENAI_API_KEY: 'gm_secret',
+	OPENAI_MODEL: 'gemini-flash-latest'
+});
+
+/** Stub the LLM and record where each call went and which key it carried. */
+function stubLLMRecording() {
+	const calls = [];
+	globalThis.fetch = async (url, init) => {
+		calls.push({ url: String(url), auth: init.headers.Authorization });
+		return new Response(
+			JSON.stringify({
+				choices: [
+					{
+						message: {
+							content: JSON.stringify({ analyses: [{ name: 'SimulatedData', args: {} }] })
+						}
+					}
+				]
+			}),
+			{ status: 200, headers: { 'Content-Type': 'application/json' } }
+		);
+	};
+	return calls;
+}
+
+test('SEC-5: a caller-chosen endpoint without its own key is refused, and the default key is never sent', async () => {
+	// openrouter.ai is on the provider allowlist, so this passes validation: before SEC-5 the
+	// Worker's Gemini key was sent to it.
+	const calls = stubLLMRecording();
+	const res = await worker.fetch(
+		post({ prompt: 'hi', llm: { baseUrl: 'https://openrouter.ai/api/v1' } }),
+		DEFAULT_ENV()
+	);
+	assert.equal(res.status, 400);
+	const out = await res.json();
+	assert.match(out.error, /own API key/i, 'says what to do');
+	assert.ok(!JSON.stringify(out).includes('gm_secret'));
+	assert.equal(calls.length, 0, 'no upstream call at all');
+});
+
+test('SEC-5: a different model on the default host also needs the caller key', async () => {
+	const calls = stubLLMRecording();
+	const res = await worker.fetch(
+		post({ prompt: 'hi', llm: { model: 'gemini-2.5-pro' } }),
+		DEFAULT_ENV()
+	);
+	assert.equal(res.status, 400);
+	assert.match((await res.json()).error, /own API key/i);
+	assert.equal(calls.length, 0);
+});
+
+test('SEC-5: the default endpoint, spelled differently, still uses the default key', async () => {
+	const calls = stubLLMRecording();
+	const res = await worker.fetch(
+		post({
+			prompt: 'hi',
+			llm: {
+				baseUrl: 'https://GenerativeLanguage.googleapis.com/v1beta/openai/',
+				model: 'gemini-flash-latest'
+			}
+		}),
+		DEFAULT_ENV()
+	);
+	assert.equal(res.status, 200);
+	assert.equal(calls.length, 1);
+	assert.equal(calls[0].auth, 'Bearer gm_secret');
+});
+
+test('SEC-5: resolveLlm treats another path on the default host as another endpoint', () => {
+	const env = DEFAULT_ENV();
+	assert.match(
+		resolveLlm({ baseUrl: 'https://generativelanguage.googleapis.com/v1beta/other' }, env).error,
+		/own API key/
+	);
+	assert.equal(resolveLlm(undefined, env).llm.apiKey, 'gm_secret');
+	assert.equal(resolveLlm({ model: 'gemini-flash-latest' }, env).llm.apiKey, 'gm_secret');
+});
+
+test('SEC-5: a caller key goes to the caller endpoint, and the default key never does', async () => {
+	const calls = stubLLMRecording();
+	const res = await worker.fetch(
+		post({
+			prompt: 'hi',
+			llm: { baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-mine', model: 'gpt-4o-mini' }
+		}),
+		DEFAULT_ENV()
+	);
+	assert.equal(res.status, 200);
+	assert.equal(calls.length, 1);
+	assert.match(calls[0].url, /^https:\/\/api\.openai\.com\/v1\//);
+	assert.equal(calls[0].auth, 'Bearer sk-mine');
+});
+
+test('SEC-5: a caller key with no endpoint uses the default host with THEIR key', async () => {
+	const calls = stubLLMRecording();
+	const res = await worker.fetch(post({ prompt: 'hi', llm: { apiKey: 'sk-mine' } }), DEFAULT_ENV());
+	assert.equal(res.status, 200);
+	assert.match(calls[0].url, /generativelanguage\.googleapis\.com/);
+	assert.equal(calls[0].auth, 'Bearer sk-mine');
+});
+
+test('model rate/usage limit → 429 with a generic message, not a blanket 502', async () => {
 	// What Groq actually returns when the free-tier limit is hit.
 	globalThis.fetch = async () =>
 		new Response(
@@ -721,8 +827,13 @@ test('model rate/usage limit → 429 with the provider detail, not a blanket 502
 	const out = await res.json();
 	assert.match(out.error, /rate or usage limit/i);
 	assert.match(out.error, /your own API key under Advanced/i, 'offers the way out');
-	assert.match(out.detail, /Limit 14400, Used 14400/, "keeps the provider's specifics");
-	assert.equal(cap.lines.find((l) => l.event === 'build')?.outcome, 'llm_rate_limited');
+	// SEC-6: the provider's own text stays server-side (it describes OUR account when the default
+	// key is in use). It is logged, not echoed.
+	assert.equal(out.detail, undefined, 'no provider detail field');
+	assert.ok(!JSON.stringify(out).includes('Limit 14400'), "never echoes the provider's text");
+	const line = cap.lines.find((l) => l.event === 'build');
+	assert.equal(line?.outcome, 'llm_rate_limited');
+	assert.match(line.detail, /Limit 14400, Used 14400/, "the provider's specifics are logged");
 });
 
 test('rejected key → says whose key it was', async () => {
@@ -750,7 +861,7 @@ test('rejected key → says whose key it was', async () => {
 	assert.ok(!JSON.stringify(body).includes('gsk_bad'), 'never echoes the key');
 });
 
-test('an unmapped upstream error still surfaces, without leaking the key', async () => {
+test('an unmapped upstream error still surfaces, without leaking the key or provider text', async () => {
 	// 401/403/429 have their own messages (tested above); anything else falls through to the
 	// generic path, which must still say something and never echo the key.
 	globalThis.fetch = async () =>
@@ -759,8 +870,58 @@ test('an unmapped upstream error still surfaces, without leaking the key', async
 	assert.equal(res.status, 502);
 	const out = await res.json();
 	assert.match(out.error, /LLM error 503/);
-	assert.match(out.detail, /model is overloaded/, "keeps the provider's message");
+	assert.equal(out.detail, undefined, 'SEC-6: no provider detail field');
+	assert.ok(!JSON.stringify(out).includes('overloaded'), "never echoes the provider's text");
 	assert.ok(!JSON.stringify(out).includes('sk-test'), 'must never echo the key');
+});
+
+test('a rejected key does not echo the provider text either', async () => {
+	globalThis.fetch = async () =>
+		new Response(JSON.stringify({ error: { message: 'Invalid API Key for org-1234' } }), {
+			status: 401
+		});
+	const res = await worker.fetch(post({ prompt: 'hi', llm: LLM, options: { retries: 0 } }), ENV());
+	assert.equal(res.status, 502);
+	const out = await res.json();
+	assert.equal(out.detail, undefined);
+	assert.ok(!JSON.stringify(out).includes('org-1234'));
+});
+
+test('an unreachable provider: the network error is logged, not echoed', async () => {
+	globalThis.fetch = async () => {
+		throw new Error('connect ECONNREFUSED 10.1.2.3:443');
+	};
+	const cap = captureLogs();
+	let res;
+	try {
+		res = await worker.fetch(post({ prompt: 'hi', llm: LLM, options: { retries: 0 } }), ENV());
+	} finally {
+		cap.restore();
+	}
+	assert.equal(res.status, 502);
+	const out = await res.json();
+	assert.match(out.error, /could not reach/i);
+	assert.ok(!JSON.stringify(out).includes('ECONNREFUSED'), 'no internal error text');
+	const line = cap.lines.find((l) => l.event === 'build');
+	assert.equal(line.outcome, 'llm_unreachable');
+	assert.match(line.error, /ECONNREFUSED/, 'kept server-side');
+});
+
+test('an unparseable draft: the parser message is logged, not echoed', async () => {
+	stubLLM('this is not json at all');
+	const cap = captureLogs();
+	let res;
+	try {
+		res = await worker.fetch(post({ prompt: 'hi', llm: LLM }), ENV());
+	} finally {
+		cap.restore();
+	}
+	assert.equal(res.status, 502);
+	const out = await res.json();
+	assert.match(out.error, /could not parse a session draft/i);
+	assert.ok(!/did not return a JSON object/.test(JSON.stringify(out)), 'no parser internals');
+	const line = cap.lines.find((l) => l.event === 'build');
+	assert.match(line.error, /did not return a JSON object/, 'kept server-side');
 });
 
 test('a handler that THROWS answers with a CORS 500, not an opaque crash', async () => {
@@ -785,6 +946,9 @@ test('a handler that THROWS answers with a CORS 500, not an opaque crash', async
 	);
 	const out = await res.json();
 	assert.match(out.error, /internal error/i);
+	// SEC-6: the exception text is logged (worker_error), never sent to the client.
+	assert.equal(out.detail, undefined);
+	assert.ok(!JSON.stringify(out).includes('boom'), 'no exception text in the response');
 });
 
 test('an unmapped upstream error LOGS why, not just the status', async () => {

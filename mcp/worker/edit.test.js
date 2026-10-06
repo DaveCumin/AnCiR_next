@@ -380,3 +380,23 @@ test('logs the edit prompt and the shape of what was edited, never the key', asy
 	assert.deepEqual(entry.sessionSize, { columns: 2, analyses: 1, plots: 0 });
 	assert.equal(JSON.stringify(entry).includes(LLM.apiKey), false, 'never the api key');
 });
+
+test('SEC-5: /edit refuses a caller endpoint without its own key and never sends the default key', async () => {
+	let called = false;
+	globalThis.fetch = async () => {
+		called = true;
+		return new Response('{}', { status: 200 });
+	};
+	const res = await worker.fetch(
+		post({ prompt: 'x', llm: { baseUrl: 'https://openrouter.ai/api/v1' }, session: SESSION }),
+		{
+			...ENV(),
+			OPENAI_BASE_URL: 'https://generativelanguage.googleapis.com/v1beta/openai',
+			OPENAI_API_KEY: 'gm_secret',
+			OPENAI_MODEL: 'gemini-flash-latest'
+		}
+	);
+	assert.equal(res.status, 400);
+	assert.match((await res.json()).error, /own API key/i);
+	assert.equal(called, false);
+});

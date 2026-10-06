@@ -41,9 +41,7 @@ import { pathToFileURL } from 'node:url';
  * To add one: append its repo-relative path (or a glob) here, with a comment saying why.
  */
 export const KNOWN_LEFTOVERS = [
-	'dbg-datapanel.png', // local debugging screenshot
-	'src/lib/components/plotbits/Band [conflicted].svelte', // pCloud conflict copy, kept for reference
-	'tools/benchmarks/paper/*_Data.json' // large local benchmark inputs, not for the repo
+	'dbg-datapanel.png' // local debugging screenshot
 ];
 
 /**

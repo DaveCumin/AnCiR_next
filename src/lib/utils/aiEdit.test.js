@@ -388,6 +388,30 @@ describe('planEdit — restyling a plot', () => {
 		);
 	});
 
+	// ROB-24: a zero period step stalled the periodogram. A field whose descriptor declares a
+	// minimum refuses anything below it, so the AI editor can't write the 0 the panel refuses.
+	it('refuses a number below the field minimum', () => {
+		const summary = {
+			...SUMMARY,
+			plots: [
+				{
+					id: 7,
+					type: 'periodogram',
+					name: 'PG',
+					props: [
+						{ path: 'plot.periodSteps', label: 'Step', input: 'number', min: 0.01, value: 0.25 }
+					]
+				}
+			]
+		};
+		const zero = plan({ changes: [{ plot: 7, set: { 'plot.periodSteps': 0 } }] }, summary);
+		expect(zero.changes).toEqual([]);
+		expect(zero.errors[0]).toMatch(/must be at least 0\.01/);
+		const ok = plan({ changes: [{ plot: 7, set: { 'plot.periodSteps': 0.1 } }] }, summary);
+		expect(ok.errors).toEqual([]);
+		expect(ok.changes).toEqual([{ plotId: 7, path: 'plot.periodSteps', value: 0.1 }]);
+	});
+
 	it('type-checks what is genuinely checkable', () => {
 		expect(plan({ changes: [{ plot: 2, set: { 'plot.xLogScale': 'yes' } }] }).errors[0]).toMatch(
 			/must be true or false/
@@ -571,6 +595,24 @@ describe('plotProps (against a live plot class)', () => {
 			'height'
 		]);
 		expect(() => plotProps(null)).not.toThrow();
+	});
+
+	it('passes a descriptor minimum through to the model (ROB-24)', () => {
+		class StepPlot {
+			static descriptors = { periodSteps: { label: 'Step', step: 0.05, min: 0.01 } };
+			periodSteps = 0.25;
+			toJSON() {
+				return { periodSteps: this.periodSteps };
+			}
+		}
+		const props = plotProps({ id: 1, type: 'x', plot: new StepPlot(), width: 420, height: 300 });
+		expect(props.find((p) => p.path === 'plot.periodSteps')).toEqual({
+			path: 'plot.periodSteps',
+			label: 'Step',
+			input: 'number',
+			min: 0.01,
+			value: 0.25
+		});
 	});
 });
 

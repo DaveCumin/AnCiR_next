@@ -119,7 +119,7 @@
 <WorksheetAddPalette bind:open={showAddPalette} top={dropdownTop} left={dropdownLeft} />
 
 <div class="display-list">
-	{#each core.plots.toReversed() as plot, i (plot.id)}
+	{#each core.plots.slice().reverse() as plot, i (plot.id)}
 		<div
 			class="clps-container"
 			class:drag-over={dragOverIdx === i && draggedViewIndex !== i}

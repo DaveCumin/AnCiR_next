@@ -6,8 +6,13 @@ import {
 	splitAwdMarker,
 	binTimeLabel,
 	awdStartInstant,
-	awdColumnNames
+	awdColumnNames,
+	openImportModalWithFiles,
+	_importPreviewState,
+	_importTestActions
 } from './ImportData.svelte';
+import { core } from '$lib/core/core.svelte';
+import { getColumnById } from '$lib/core/Column.svelte';
 
 // Regression cover for AWD (Actiwatch / MotionWatch) import.
 //
@@ -173,5 +178,34 @@ describe('awdColumnNames', () => {
 	it('tolerates a missing / nonsense column count', () => {
 		expect(awdColumnNames(0)).toEqual(['DateTime', 'Activity']);
 		expect(awdColumnNames(undefined)).toEqual(['DateTime', 'Activity']);
+	});
+});
+
+// STAT-29: a missing or unreadable activity reading used to be written as 0, which
+// reads as "no movement" and drags every mean, cosinor and NPCRA metric toward rest.
+// Missing must stay missing.
+describe('AWD activity readings that are missing or unreadable (STAT-29)', () => {
+	const AWD = [
+		'participant',
+		'13-Jul-2026',
+		'12:00',
+		'4',
+		'30',
+		'P01',
+		'F',
+		'120 , 1.50',
+		' , 2.00',
+		'abc , 3.00',
+		'0 , 4.00',
+		'75 , 5.00'
+	].join('\n');
+
+	it('imports them as missing (null), and keeps a real 0 as 0', async () => {
+		core.data = [];
+		await openImportModalWithFiles([new File([AWD], 'watch.awd', { type: 'text/plain' })]);
+		expect(_importPreviewState().parsedData.Activity).toEqual([120, null, null, 0, 75]);
+		await _importTestActions().confirmImport();
+		const col = getColumnById(core.data.find((c) => c.name === 'Activity')?.id);
+		expect(Array.from(col.getData())).toEqual([120, null, null, 0, 75]);
 	});
 });

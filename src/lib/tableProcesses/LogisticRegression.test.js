@@ -74,6 +74,42 @@ describe('logisticregression', () => {
 		expect(r.rows[1].coef).toBeCloseTo(0.641579, 4); // identical fit to numeric 0/1
 	});
 
+	// Review STAT-24: a missing outcome cell (NaN, 'NaN', blank) used to count as a third level,
+	// so a 0/1 outcome with one gap was refused as "not binary". It is now a dropped row.
+	describe('missing outcome cells are dropped, not a third level (STAT-24)', () => {
+		const GAPS = [3, 7, 20];
+		const dropGaps = (a) => a.filter((_, i) => !GAPS.includes(i));
+		const expectSameFitAsDroppedRows = (r) => {
+			mockColumns[21] = { name: 'x1', getData: () => dropGaps(X1) };
+			mockColumns[22] = { name: 'x2', getData: () => dropGaps(X2) };
+			mockColumns[23] = { name: 'outcome', getData: () => dropGaps(Y) };
+			const [ref] = logisticregression(args({ yIN: 23, xIN: [21, 22] }));
+			expect(ref.rows).toHaveLength(3);
+			for (let i = 0; i < 3; i++) expect(r.rows[i].coef).toBeCloseTo(ref.rows[i].coef, 10);
+		};
+
+		it('numeric 0/1 with NaN, "NaN" and a blank', () => {
+			const gappy = Y.map((v, i) => (i === 3 ? NaN : i === 7 ? 'NaN' : i === 20 ? ' ' : v));
+			mockColumns[13] = { name: 'gappy', getData: () => gappy };
+			const [r, valid] = logisticregression(args({ yIN: 13 }));
+			expect(valid).toBe(true);
+			expect(r.warnings.join(' ')).not.toContain('not binary');
+			expect(r.positiveClass).toBe('1');
+			expectSameFitAsDroppedRows(r);
+		});
+
+		it('a two-level category with NaN, null and a blank', () => {
+			const gappy = Y.map((v, i) =>
+				i === 3 ? NaN : i === 7 ? null : i === 20 ? '  ' : v ? 'yes' : 'no'
+			);
+			mockColumns[14] = { name: 'gappy', getData: () => gappy };
+			const [r, valid] = logisticregression(args({ yIN: 14 }));
+			expect(valid).toBe(true);
+			expect(r.positiveClass).toBe('yes');
+			expectSameFitAsDroppedRows(r);
+		});
+	});
+
 	it('warns and returns no rows for a non-binary outcome', () => {
 		mockColumns[12] = { name: 'three', getData: () => X1 }; // many distinct values
 		const [r, valid] = logisticregression(args({ yIN: 12 }));

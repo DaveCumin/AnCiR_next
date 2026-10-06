@@ -47,8 +47,12 @@ export function kahanMean(data) {
 /**
  * Generate a sequence from `from` to `to` with the given step,
  * using start + i * step to avoid accumulated drift.
+ * A step that is not positive (0, negative, NaN, missing) or a non-finite range gives
+ * [], the same "no values" answer as from > to, rather than looping forever (ROB-24).
+ * The copy in plotbits/helpers/wrangleData.js follows the same rule.
  */
 export function makeSeqArray(from, to, step) {
+	if (!(step > 0) || !Number.isFinite(to - from)) return [];
 	const n = Math.floor((to - from) / step);
 	const out = [];
 	for (let i = 0; i <= n; i++) {

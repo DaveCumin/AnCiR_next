@@ -13,6 +13,7 @@
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { fillDefaults, normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
 	import { logisticRegression } from '$lib/utils/logistic.js';
+	import { isMissingCategory } from '$lib/utils/chisquare.js';
 
 	const displayName = 'Logistic regression';
 	// Two families of outputs: one row PER TERM (the coefficient table), and one row PER OBSERVATION
@@ -31,14 +32,18 @@
 
 	const isRef = (id) => id != null && id !== -1 && getColumnById(id);
 
-	/** Coerce an outcome column to 0/1. Returns {y, positiveClass, levels}. */
+	/**
+	 * Coerce an outcome column to 0/1. Returns {y, positiveClass, levels}. A missing cell (null,
+	 * NaN, 'NaN', blank or whitespace; isMissingCategory) is NaN in y, so the fit drops that row,
+	 * and is never a level: a 0/1 outcome with gaps is still binary (review STAT-24).
+	 */
 	function coerceBinary(raw) {
-		const present = raw.filter((v) => v != null && v !== '');
+		const present = raw.filter((v) => !isMissingCategory(v));
 		const levels = [...new Set(present.map(String))];
 		// Already numeric 0/1?
 		if (levels.every((l) => l === '0' || l === '1')) {
 			return {
-				y: raw.map((v) => (v == null || v === '' ? NaN : Number(v))),
+				y: raw.map((v) => (isMissingCategory(v) ? NaN : Number(v))),
 				positiveClass: '1',
 				levels: ['0', '1']
 			};
@@ -47,7 +52,7 @@
 		const sorted = [...levels].sort();
 		const positiveClass = sorted[1];
 		return {
-			y: raw.map((v) => (v == null || v === '' ? NaN : String(v) === positiveClass ? 1 : 0)),
+			y: raw.map((v) => (isMissingCategory(v) ? NaN : String(v) === positiveClass ? 1 : 0)),
 			positiveClass,
 			levels: sorted
 		};
@@ -80,7 +85,7 @@
 		}
 		if (!fit.converged) {
 			warnings.push(
-				'The fit did not converge — often a sign of perfect or quasi-perfect separation (a predictor splits the outcome cleanly). Estimates and standard errors are unreliable.'
+				'The fit did not converge. This is often a sign of perfect or quasi-perfect separation (a predictor splits the outcome cleanly). Estimates and standard errors are unreliable.'
 			);
 		}
 		const rows = fit.coefficients.map((c) => ({

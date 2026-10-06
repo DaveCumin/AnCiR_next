@@ -182,12 +182,40 @@ describe('normalize — min-max range mapping', () => {
 		expect(out[2]).toBeCloseTo(1, 8);
 	});
 
-	it('QUIRK: customMax of 0 is coerced to 1 via `|| 1` fallback', () => {
-		// Number(args.customMax || 0/1): a falsy customMax (0) becomes 1.
-		// This documents current behaviour, not necessarily desired behaviour.
+	it('honours a target max of 0 (STAT-21; `|| 1` used to coerce it to 1)', () => {
 		const out = normalize([0, 10], { normalizationType: 'min-max', customMin: -5, customMax: 0 });
 		expect(out[0]).toBeCloseTo(-5, 8);
-		expect(out[1]).toBeCloseTo(1, 8); // would be 0 if customMax=0 were honoured
+		expect(out[1]).toBeCloseTo(0, 8);
+	});
+
+	it('honours a target min of 0 below a negative max', () => {
+		const out = normalize([0, 10], { normalizationType: 'min-max', customMin: 0, customMax: -2 });
+		expect(out).toEqual([0, -2]);
+	});
+
+	it('falls back to [0, 1] when the bounds are absent, blank or not numbers', () => {
+		for (const bound of [undefined, null, '', 'abc', NaN]) {
+			const out = normalize([0, 5, 10], {
+				normalizationType: 'min-max',
+				customMin: bound,
+				customMax: bound
+			});
+			expect(out, String(bound)).toEqual([0, 0.5, 1]);
+		}
+	});
+
+	it('the zero-range warning reports the minimum actually written', () => {
+		for (const [customMin, shown] of [
+			[0, '(0)'],
+			['2.5', '(2.5)'],
+			['abc', '(0)']
+		]) {
+			const [msg] = normalizeWarnings([4, 4], { normalizationType: 'min-max', customMin });
+			expect(normalize([4, 4], { normalizationType: 'min-max', customMin })[0]).toBe(
+				Number(shown.slice(1, -1))
+			);
+			expect(msg).toContain(shown);
+		}
 	});
 });
 
@@ -334,5 +362,19 @@ describe('normalize — review STAT-6', () => {
 	it('warnings count only present values', () => {
 		expect(normalizeWarnings([3, '', 3, ' '], { normalizationType: 'z-score' })).toHaveLength(1);
 		expect(normalizeWarnings([3, '', 4], { normalizationType: 'z-score' })).toEqual([]);
+	});
+});
+
+// ─── registry key survives the file rename ─────────────────────────────────────
+// The file was normalize.svelte; sessions, MCP and the Python/R ports store 'normalize'.
+describe('normalize — registry key', () => {
+	it("is registered as 'normalize', not by its file name", async () => {
+		const { loadProcesses } = await import('$test/processRegistry.js');
+		const map = await loadProcesses();
+		expect(map.has('normalize')).toBe(true);
+		expect(map.has('Normalize')).toBe(false);
+		expect(map.get('normalize').func).toBe(normalize);
+		expect(map.get('normalize').displayName).toBe('Normalize');
+		expect(map.get('normalize').family).toBe('Arithmetic');
 	});
 });

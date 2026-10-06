@@ -2437,7 +2437,7 @@ def _proc_editvalue(x, args, _cols):
 
 
 def _proc_normalize(x, args, _cols):
-    """normalize.svelte: present values by the house rule (Number()); missing cells stay as
+    """Normalize.svelte (registry key 'normalize'): present values by the house rule (Number()); missing cells stay as
     they are, including in the degenerate cases (zero SD / range / MAD / magnitude, where every
     PRESENT value becomes 0, or customMin for min-max). Type from `normalizationType`
     (default z-score, population SD); min-max scales to [customMin, customMax] (default 0, 1);
@@ -2445,7 +2445,9 @@ def _proc_normalize(x, args, _cols):
     typ = args.get('normalizationType') or args.get('method') or 'z-score'
 
     def num_or(v, d):
-        return _js_number(v) if v else d  # JS Number(args.x || d)
+        # JS numArg: the default only when absent, blank or not finite; a 0 is kept (STAT-21)
+        n = float('nan') if v is None or v == '' else _js_number(v)
+        return n if math.isfinite(n) else d
     cmin = num_or(args.get('customMin'), 0.0)
     cmax = num_or(args.get('customMax'), 1.0)
     vals = [_js_number(v) for v in x if not _js_invalid(v)]
@@ -7627,21 +7629,22 @@ def _isfinite(v):
 
 def _logit_coerce_binary(raw):
     """LogisticRegression.svelte coerceBinary: (y as 0/1/NaN, positive class or None).
-    Levels are the distinct String() values of the cells that are not null or ''. All of
+    Levels are the distinct String() values of the cells that are not missing
+    (_is_missing_category: null, NaN, 'NaN', blank or whitespace; review STAT-24). All of
     them '0'/'1' -> Number(); exactly two other levels -> the later in sort order is 1;
-    anything else is not binary. (A whitespace-only cell IS a level here, as in the app.)"""
-    present = [v for v in raw if v is not None and v != '']
+    anything else is not binary. A missing cell is NaN in y, so the fit drops that row."""
+    present = [v for v in raw if not _is_missing_category(v)]
     levels = []
     for v in present:
         sv = _js_string(v)
         if sv not in levels:
             levels.append(sv)
     if all(lv in ('0', '1') for lv in levels):
-        return [float('nan') if (v is None or v == '') else _js_number(v) for v in raw], '1'
+        return [float('nan') if _is_missing_category(v) else _js_number(v) for v in raw], '1'
     if len(levels) != 2:
         return [float('nan')] * len(raw), None
     positive = sorted(levels, key=lambda t: t.encode('utf-16-be'))[1]
-    return [float('nan') if (v is None or v == '') else (1.0 if _js_string(v) == positive
+    return [float('nan') if _is_missing_category(v) else (1.0 if _js_string(v) == positive
                                                           else 0.0) for v in raw], positive
 
 

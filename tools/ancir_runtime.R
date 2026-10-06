@@ -756,14 +756,17 @@ cp_substitute <- function(x, args, cols, raw_data) {
   else out
 }
 
-# normalize.svelte (matching the Python port): present values by the house rule; missing
+# Normalize.svelte, key 'normalize' (matching the Python port): present values by the house rule; missing
 # cells stay missing, also in the degenerate cases (zero SD/range/MAD/magnitude: every present
 # value 0, or customMin for min-max). Type from normalizationType (default z-score).
 cp_normalize <- function(x, args, cols, raw_data) {
   typ <- if (!is.null(args$normalizationType) && nzchar(args$normalizationType))
     args$normalizationType else if (!is.null(args$method)) args$method else "z-score"
-  num_or <- function(v, d) if (is.null(v) || identical(v, 0) || identical(v, "") ||
-                                isFALSE(v)) d else .js_number(v)
+  # JS numArg: the default only when absent, blank or not finite; a 0 is kept (STAT-21)
+  num_or <- function(v, d) {
+    n <- if (is.null(v) || identical(v, "")) NaN else .js_number(v)
+    if (is.finite(n)) n else d
+  }
   cmin <- num_or(args$customMin, 0); cmax <- num_or(args$customMax, 1)
   xl <- as.list(x)
   ok <- !vapply(xl, .js_invalid, logical(1))
@@ -2356,12 +2359,12 @@ tp_chisquared <- function(args, env) {
 }
 
 # LogisticRegression.svelte coerceBinary: levels are the distinct String() values of the cells
-# that are not null or ""; all "0"/"1" -> Number(); exactly two other levels -> the later in
-# sort order is 1; anything else is not binary. A whitespace-only cell IS a level, as in the app.
+# that are not missing (is_missing_category: NULL/NA, NaN, "NaN", blank or whitespace; review
+# STAT-24); all "0"/"1" -> Number(); exactly two other levels -> the later in sort order is 1;
+# anything else is not binary. A missing cell is NaN in y, so the fit drops that row.
 .logit_coerce_binary <- function(raw) {
   rl <- as.list(raw)
-  absent <- function(v) is.null(v) || length(v) != 1 || is.na(v) ||
-    (is.character(v) && v == "")
+  absent <- function(v) is.null(v) || length(v) != 1 || isTRUE(is_missing_category(v))
   strs <- vapply(rl, function(v) if (absent(v)) NA_character_ else
     if (is.logical(v)) (if (v) "true" else "false") else js_string(v), character(1))
   levels <- unique(strs[!is.na(strs)])

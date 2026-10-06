@@ -237,8 +237,10 @@ export function binOnSharedGrid(
 	return { bins: grid.bins, y_outs };
 }
 
-/// Make a sequential array
+/// Make a sequential array. A step that is not positive or a non-finite range gives []
+/// rather than looping forever (ROB-24), the same rule as makeSeqArray in utils/numerics.js.
 export function makeSeqArray(from, to, step) {
+	if (!(step > 0) || !Number.isFinite(to - from)) return [];
 	let out = [];
 	for (let i = from; i <= to; i += step) {
 		out.push(i);

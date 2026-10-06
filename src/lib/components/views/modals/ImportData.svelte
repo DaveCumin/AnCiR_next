@@ -146,6 +146,7 @@
 		return { value: field, marked: false };
 	}
 	import { binOnSharedGrid } from '$lib/components/plotbits/helpers/wrangleData.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { fetchAppAsset, describeAssetError } from '$lib/start/offline.js';
 	import {
 		deriveLabelsFromNames,
@@ -2714,7 +2715,9 @@
 			// Other columns: numbers. A trailing "M" flags a participant event
 			// marker on that epoch ("300 , 4.94 M"); strip it so the reading
 			// stays numeric instead of becoming a string and dropping out.
-			obj.Activity = row[0] != null ? Number(row[0]) : 0;
+			// A blank or unreadable activity is missing (null), not 0: a 0 reads as "no
+			// movement" and pulls every rest/activity metric toward rest (STAT-29).
+			obj.Activity = isInvalidValue(row[0]) ? null : Number(row[0]);
 			for (let c = 1; c < row.length; c++) {
 				const { value, marked } = splitAwdMarker(row[c]);
 				if (marked) awdMarkerCount++;

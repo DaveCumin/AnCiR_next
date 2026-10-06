@@ -71,14 +71,14 @@ describe('releaseGate', () => {
 	});
 
 	it('ignores the listed known leftovers (untracked only)', () => {
-		const s = stub({
-			porcelain: z(
-				'?? dbg-datapanel.png',
-				'?? src/lib/components/plotbits/Band [conflicted].svelte',
-				'?? tools/benchmarks/paper/drosophila_Data.json'
-			)
-		});
+		const s = stub({ porcelain: z('?? dbg-datapanel.png') });
 		expect(runGate({ run: s.run, env: {}, log: s.log })).toBe(0);
+	});
+
+	it('fails on a stray pCloud conflict copy (no longer on the leftover list)', () => {
+		const s = stub({ porcelain: z('?? src/lib/components/plotbits/Band [conflicted].svelte') });
+		expect(runGate({ run: s.run, env: {}, log: s.log })).toBe(1);
+		expect(s.text()).toMatch(/Band \[conflicted\]\.svelte/);
 	});
 
 	it('does not excuse a TRACKED file just because its path is on the leftover list', () => {

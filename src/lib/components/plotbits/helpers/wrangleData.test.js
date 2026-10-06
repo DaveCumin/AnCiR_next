@@ -7,7 +7,8 @@ import {
 	mean,
 	min,
 	max,
-	minMax
+	minMax,
+	makeSeqArray
 } from './wrangleData.js';
 
 // ─── mean / min / max / minMax ───────────────────────────────────────────────
@@ -454,5 +455,28 @@ describe('binOnSharedGrid', () => {
 		const b = binData(t, y, 1, 0, 1, 'mean');
 		expect(r.bins).toEqual(b.bins);
 		expect(r.y_outs[0]).toEqual(b.y_out);
+	});
+});
+
+// ─── makeSeqArray ────────────────────────────────────────────────────────────
+
+describe('makeSeqArray', () => {
+	it('counts from `from` to `to` inclusive', () => {
+		expect(makeSeqArray(0, 3, 1)).toEqual([0, 1, 2, 3]);
+		expect(makeSeqArray(5, 0, 1)).toEqual([]);
+	});
+
+	// ROB-24: a zero, negative or NaN step used to loop forever (i += 0 never reaches
+	// `to`), and so did a non-finite `to`. Both now give an empty sequence.
+	it.each([0, -1, NaN, null, undefined])('returns [] for step %s', (step) => {
+		expect(makeSeqArray(0, 5, step)).toEqual([]);
+	});
+
+	it.each([
+		[0, Infinity],
+		[-Infinity, 0],
+		[0, NaN]
+	])('returns [] for a non-finite range %s..%s', (from, to) => {
+		expect(makeSeqArray(from, to, 1)).toEqual([]);
 	});
 });
