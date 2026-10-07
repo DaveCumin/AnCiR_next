@@ -10,7 +10,9 @@ import {
 	resolveImportType,
 	typeChoicesFor,
 	isNumericColumn,
-	epochHint
+	epochHint,
+	countValues,
+	samplingIntervalMinutes
 } from './importColumnTypes.js';
 import {
 	guessDateofArray,
@@ -139,6 +141,61 @@ describe('import type choices and overrides', () => {
 		);
 		expect(isNumericColumn([1, null, 2])).toBe(true);
 		expect(isNumericColumn([1, 'x'])).toBe(false);
+	});
+});
+
+describe('columns with leading blanks, and empty columns', () => {
+	// A logger that starts a sensor late: 60+ blank rows, then readings.
+	const late = [...Array(65).fill(null), 0.512, 0.498, 0.531, '', 0.522];
+
+	it('detects a number column from the values after its leading blanks', () => {
+		expect(detectColumnType(late)).toMatchObject({ type: 'number', empty: false });
+		expect(resolveImportType(late, null).type).toBe('number');
+		expect(countValues(late)).toBe(4);
+	});
+
+	it('reports a column with no values as empty, not Category', () => {
+		const blank = [null, '', '  ', null];
+		expect(detectColumnType(blank)).toMatchObject({ type: 'number', empty: true });
+		expect(detectColumnType([])).toMatchObject({ empty: true });
+		// Missing markers are not values either.
+		expect(detectColumnType(['NA', null, 'NaN'])).toMatchObject({ type: 'number', empty: true });
+		expect(countValues(['NA', null, 'NaN', ''])).toBe(0);
+		// A column with one real value is not empty.
+		expect(detectColumnType([null, 'x'])).toMatchObject({ type: 'category', empty: false });
+	});
+
+	it('imports an empty column as a number column of missing values', () => {
+		const r = resolveImportType([null, '', null], null);
+		expect(r.type).toBe('number');
+		expect(r.values).toEqual([null, '', null]);
+	});
+});
+
+describe('samplingIntervalMinutes', () => {
+	const start = Date.UTC(2025, 9, 1);
+	const every = (min, n) => Array.from({ length: n }, (_, i) => start + i * min * 60_000);
+
+	it('reads a 15-minute logger as 15 minutes', () => {
+		expect(samplingIntervalMinutes(every(15, 50))).toBe(15);
+	});
+
+	it('ignores missing times, a gap in the logging, and repeated times', () => {
+		const t = every(15, 50);
+		t[10] = null;
+		t.splice(30, 5);
+		t.push(t[t.length - 1]);
+		expect(samplingIntervalMinutes(t)).toBe(15);
+	});
+
+	it('reads sub-minute sampling as a fraction of a minute', () => {
+		expect(samplingIntervalMinutes(every(0.5, 20))).toBe(0.5);
+	});
+
+	it('is null with fewer than two distinct times', () => {
+		expect(samplingIntervalMinutes([start])).toBe(null);
+		expect(samplingIntervalMinutes([start, start, null])).toBe(null);
+		expect(samplingIntervalMinutes([])).toBe(null);
 	});
 });
 

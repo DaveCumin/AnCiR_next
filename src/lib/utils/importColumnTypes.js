@@ -17,6 +17,7 @@ import {
 	hasTimeFormat,
 	isBlankCell
 } from '$lib/utils/time/TimeUtils.js';
+import { medianSamplingInterval } from '$lib/utils/periodogram.js';
 
 // Text the importer treats as "no value" when picking the first real value.
 const MISSING_TEXT = new Set(['NaN', 'NA', 'null']);
@@ -139,15 +140,29 @@ export function epochHint(nums) {
  * `dayMonth` is the guesser's day/month verdict for a time column (see
  * guessDateDetails), else null. When it is ambiguous, `opts.order` picks the
  * reading `timeFormat` holds; without one it is the guesser's default.
+ *
+ * A column with no values at all (every cell blank or a missing marker such as
+ * "NA") has nothing to detect from. It is reported as `empty: true` with type
+ * 'number', the app's default column type, rather than 'category' on the
+ * strength of nothing; the preview says so instead of offering a guess.
  * @param {unknown[]} values
  * @param {{ order?: 'day' | 'month' | null }} [opts]
- * @returns {{ type: 'time' | 'number' | 'category', timeFormat: string | string[] | null, epoch: 's' | 'ms' | null, dayMonth: object | null }}
+ * @returns {{ type: 'time' | 'number' | 'category', timeFormat: string | string[] | null, epoch: 's' | 'ms' | null, dayMonth: object | null, empty: boolean }}
  */
 export function detectColumnType(values, opts = {}) {
 	const arr = Array.isArray(values) ? values : [];
 	const nonBlank = arr.filter((v) => !isBlankCell(v));
-	if (nonBlank.length > 0 && nonBlank.every((v) => typeof v === 'number' && Number.isFinite(v))) {
-		return { type: 'number', timeFormat: null, epoch: epochHint(nonBlank), dayMonth: null };
+	if (!nonBlank.some((v) => !MISSING_TEXT.has(v))) {
+		return { type: 'number', timeFormat: null, epoch: null, dayMonth: null, empty: true };
+	}
+	if (nonBlank.every((v) => typeof v === 'number' && Number.isFinite(v))) {
+		return {
+			type: 'number',
+			timeFormat: null,
+			epoch: epochHint(nonBlank),
+			dayMonth: null,
+			empty: false
+		};
 	}
 	const { format, dayMonth } = guessDateDetails(arr);
 	if (format !== -1 && hasTimeFormat(format)) {
@@ -155,13 +170,41 @@ export function detectColumnType(values, opts = {}) {
 		if (dayMonth?.ambiguous && (opts.order === 'day' || opts.order === 'month')) {
 			timeFormat = opts.order === 'day' ? dayMonth.dayFirst : dayMonth.monthFirst;
 		}
-		return { type: 'time', timeFormat, epoch: null, dayMonth };
+		return { type: 'time', timeFormat, epoch: null, dayMonth, empty: false };
 	}
 	const datum = firstValid(arr);
 	if (typeof datum === 'number' && !Number.isNaN(datum)) {
-		return { type: 'number', timeFormat: null, epoch: null, dayMonth: null };
+		return { type: 'number', timeFormat: null, epoch: null, dayMonth: null, empty: false };
 	}
-	return { type: 'category', timeFormat: null, epoch: null, dayMonth: null };
+	return { type: 'category', timeFormat: null, epoch: null, dayMonth: null, empty: false };
+}
+
+/**
+ * Fewest non-blank values a column needs in the preview rows for the preview to
+ * detect its type from them. A column with fewer (blank for its first rows, as a
+ * logger that starts a sensor late writes it) is detected from a larger sample.
+ */
+export const MIN_PREVIEW_VALUES = 5;
+
+/** How many values in a column are neither blank nor a missing marker. */
+export function countValues(values) {
+	let n = 0;
+	for (const v of Array.isArray(values) ? values : []) {
+		if (!isBlankCell(v) && !MISSING_TEXT.has(v)) n++;
+	}
+	return n;
+}
+
+/**
+ * The sampling interval of a time column in minutes: the median positive gap
+ * between its times (see medianSamplingInterval), or null with fewer than two
+ * distinct times.
+ * @param {ArrayLike<number | null>} timesMs times in epoch milliseconds
+ * @returns {number | null}
+ */
+export function samplingIntervalMinutes(timesMs) {
+	const ms = medianSamplingInterval(timesMs);
+	return Number.isFinite(ms) && ms > 0 ? ms / 60_000 : null;
 }
 
 /**

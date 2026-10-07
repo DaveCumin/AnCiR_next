@@ -28,12 +28,15 @@
 	import { numToString } from '$lib/utils/GeneralUtils';
 	import {
 		countNonNumeric,
+		countValues,
 		decimalCommaColumns,
 		detectColumnType,
 		isNumericColumn,
 		makeCellTyper,
+		MIN_PREVIEW_VALUES,
 		parseDecimalComma,
 		resolveImportType,
+		samplingIntervalMinutes,
 		typeChoicesFor
 	} from '$lib/utils/importColumnTypes.js';
 	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
@@ -155,8 +158,6 @@
 		extractRowAsLabels,
 		stripRowFromColumns
 	} from '$lib/utils/importLabels.js';
-
-	const specialValues = ['NaN', 'NA', 'null'];
 
 	let importReady = $state(false);
 	let hasHeader = $state(true);
@@ -293,8 +294,24 @@
 	let totalRowCount = $state(0);
 	let binningEnabled = $state(false);
 	let binIntervalMin = $state(15); // default 15 minutes
-	let dataIntervalMin = $derived(awdMeta ? awdMeta.stepMs / 60_000 : 1);
-	let estimatedBinnedRows = $derived(Math.ceil((totalRowCount * dataIntervalMin) / binIntervalMin));
+	// The file's sampling interval in minutes: an AWD header states it; otherwise it
+	// is the median gap of the time column binning will use, read from the preview
+	// rows. null when there is no time column to read it from.
+	let dataIntervalMin = $derived.by(() => {
+		if (awdMeta) return awdMeta.stepMs / 60_000;
+		const col = previewTimeColumn;
+		if (col == null) return null;
+		const fmt =
+			columnTypeOverrides[col]?.timeFormat?.trim() || previewColumnTypes[col]?.detected.timeFormat;
+		const timeFormat = Array.isArray(fmt) ? fmt[0] : fmt;
+		const ms = detectionValues(col).map((v) =>
+			typeof v === 'string' ? (parseUTCStrict(v, timeFormat)?.valueOf() ?? null) : null
+		);
+		return samplingIntervalMinutes(ms);
+	});
+	let estimatedBinnedRows = $derived(
+		dataIntervalMin == null ? null : Math.ceil((totalRowCount * dataIntervalMin) / binIntervalMin)
+	);
 
 	// Progress feedback
 	let loadProgress = $state({ stage: '', detail: '' });
@@ -364,17 +381,80 @@
 	// Per-column counts of cells the last import read as missing in a number column.
 	let lastImportWarnings = [];
 
-	// Detection on the preview rows (the picked label row excluded). Not computed
-	// while the full file loads: parsedData then holds every row.
+	// ─── Detection samples for sparse columns ──────────────────────────────────
+	// A column with fewer than MIN_PREVIEW_VALUES values in the preview rows (a
+	// sensor that starts logging late leaves its first rows blank) is detected from
+	// a larger sample read from the start of the file, so the preview does not call
+	// a number column "Category" on the strength of a few blanks. The sample is the
+	// raw text of each data row (row 0 is the first data row, as in parsedData),
+	// typed in sampleValues so the decimal-comma setting applies to it too.
+	// col -> { raw: string[], rows: number, wholeFile: boolean }
+	let detectionSamples = $state({});
+	// Rows read at most for a detection sample, so a huge file stays responsive.
+	const DETECTION_SAMPLE_ROWS = 10_000;
+
+	const sampleValues = $derived.by(() => {
+		const typeCell = makeCellTyper({ decimalComma });
+		const out = {};
+		for (const [col, sample] of Object.entries(detectionSamples)) {
+			out[col] = sample.raw.map((v) => (v == null ? null : typeCell(v)));
+		}
+		return out;
+	});
+
+	/** The values a column's type is detected from: its sample when it has one, else its preview rows. The picked label row is left out. */
+	function detectionValues(col) {
+		const vals = sampleValues[col] ?? parsedData?.[col] ?? [];
+		return labelRowIndex == null ? vals : vals.filter((_, i) => i !== labelRowIndex);
+	}
+
+	/**
+	 * Read a detection sample for every column with too few values in the preview
+	 * rows (see detectionSamples). Stops once each has a preview's worth of values,
+	 * or after DETECTION_SAMPLE_ROWS rows.
+	 */
+	async function sampleSparseColumns() {
+		detectionSamples = {};
+		if (!parsedData || enspireMultiplatePayload || targetKind === 'awd') return;
+		const rows = parsedData[headers[0]]?.length ?? 0;
+		// A preview shorter than its cap already holds every row.
+		if (!(previewIN > 0 && rows >= previewIN)) return;
+		if (targetKind === 'excel' && excelCsv == null) return;
+		const sparse = headers.filter((c) => countValues(parsedData[c]) < MIN_PREVIEW_VALUES);
+		if (sparse.length === 0) return;
+		const want = Math.max(previewIN, MIN_PREVIEW_VALUES);
+		const raw = sparse.map(() => []);
+		const found = sparse.map(() => 0);
+		let read = 0;
+		let stopped = false;
+		loadProgress = { stage: 'Parsing', detail: 'Reading further to detect column types…' };
+		await tick();
+		await scanFullColumns(sparse, (values) => {
+			read++;
+			values.forEach((v, k) => {
+				raw[k].push(v ?? null);
+				if (v != null && String(v).trim() !== '') found[k]++;
+			});
+			stopped = read >= DETECTION_SAMPLE_ROWS || found.every((n) => n >= want);
+			return stopped;
+		});
+		detectionSamples = Object.fromEntries(
+			sparse.map((c, k) => [c, { raw: raw[k], rows: read, wholeFile: !stopped }])
+		);
+	}
+
+	// Detection on the preview rows, or a column's detection sample (the picked
+	// label row excluded). Not computed while the full file loads: parsedData then
+	// holds every row.
 	const previewColumnTypes = $derived.by(() => {
 		if (awaitingLoad || !parsedData) return {};
 		const out = {};
 		for (const col of headers) {
-			let vals = parsedData[col] ?? [];
-			if (labelRowIndex != null) vals = vals.filter((_, i) => i !== labelRowIndex);
+			const vals = detectionValues(col);
 			const order = dateOrderFor(col);
 			const detected = detectColumnType(vals, { order });
 			const numeric = isNumericColumn(vals);
+			const sample = detectionSamples[col];
 			let dayMonth = null;
 			if (detected.dayMonth) {
 				const settled = dateOrderSettled[col];
@@ -385,20 +465,35 @@
 						settled.order === 'day' ? detected.dayMonth.dayFirst : detected.dayMonth.monthFirst;
 				}
 			}
+			let previewVals = parsedData[col] ?? [];
+			if (labelRowIndex != null) previewVals = previewVals.filter((_, i) => i !== labelRowIndex);
 			out[col] = {
 				detected,
 				numeric,
 				choices: typeChoicesFor(detected, numeric),
 				dayMonth,
-				nonNumeric: countNonNumeric(vals)
+				nonNumeric: countNonNumeric(previewVals),
+				// Rows the type was detected from when they go past the preview rows.
+				sampledRows: sample ? sample.rows : null,
+				// Whether the detection read every row of the file.
+				wholeFile: sample ? sample.wholeFile : !(previewIN > 0 && previewVals.length >= previewIN)
 			};
 		}
 		return out;
 	});
 
+	// The time column binning will use: the first column read as time, as
+	// binParsedData picks it (epoch columns are not binned by time).
+	const previewTimeColumn = $derived(
+		headers.find(
+			(col) =>
+				(columnTypeOverrides[col]?.choice ?? previewColumnTypes[col]?.detected.type) === 'time'
+		) ?? null
+	);
+
 	/** The first preview value of a column read in the given order, as "3 Apr 2024". */
 	function dayMonthReading(col, fmt) {
-		const first = (parsedData?.[col] ?? []).find((v) => typeof v === 'string' && v.trim() !== '');
+		const first = detectionValues(col).find((v) => typeof v === 'string' && v.trim() !== '');
 		const dt = first == null ? null : parseUTCStrict(first, fmt);
 		return dt ? { value: first, text: dt.format('D MMM YYYY') } : null;
 	}
@@ -418,11 +513,13 @@
 	function maybeSuggestDecimalComma() {
 		if (decimalComma || decimalCommaTouched || !parsedData) return;
 		if (targetKind !== 'excel' && lastDelimiter === ',') return;
-		const columns = decimalCommaColumns(parsedData);
+		// A sparse column's detection sample counts too (it is typed with commas off here).
+		const seen = { ...parsedData, ...sampleValues };
+		const columns = decimalCommaColumns(seen);
 		if (columns.length === 0) return;
 		// Show a value with a fractional part where there is one: "10,00 is read as 10"
 		// does not show what the comma did.
-		const readable = parsedData[columns[0]].filter((v) => parseDecimalComma(v) !== null);
+		const readable = seen[columns[0]].filter((v) => parseDecimalComma(v) !== null);
 		const example = readable.find((v) => !Number.isInteger(parseDecimalComma(v))) ?? readable[0];
 		decimalComma = true;
 		decimalCommaSuggestion = { columns, example };
@@ -537,6 +634,20 @@
 		);
 	}
 
+	/** The label of a column's detected type in its type selector. */
+	function detectedOptionLabel(choice, info) {
+		if (!info.detected.empty) return `${choice.label} (detected)`;
+		return info.wholeFile ? `${choice.label} (empty column)` : 'Decide on import';
+	}
+
+	/** A sampling interval in minutes as text: "15 min", "30 s", "1.5 h". */
+	function formatInterval(minutes) {
+		const round = (x) => Number(x.toPrecision(3)).toLocaleString();
+		if (minutes < 1) return `${round(minutes * 60)} s`;
+		if (minutes >= 120) return `${round(minutes / 60)} h`;
+		return `${round(minutes)} min`;
+	}
+
 	function formatText(fmt) {
 		if (Array.isArray(fmt)) return fmt.join(' | ');
 		return fmt ? String(fmt) : '';
@@ -556,9 +667,7 @@
 
 	/** The first preview value read as the chosen epoch unit, e.g. "starts 01 Mar 2026 00:00:00". */
 	function epochPreview(col, choice) {
-		const first = (parsedData?.[col] ?? []).find(
-			(v) => typeof v === 'number' && Number.isFinite(v)
-		);
+		const first = detectionValues(col).find((v) => typeof v === 'number' && Number.isFinite(v));
 		if (first == null) return '';
 		const text = formatTimeFromUNIX(choice === 'epoch-s' ? first * 1000 : first);
 		return text ? `starts ${text}` : '';
@@ -635,7 +744,7 @@
 		const timeCols = [];
 
 		for (const col of headers) {
-			const sample = parsedData[col] ?? [];
+			const sample = detectionValues(col);
 			const nonEmpty = sample.filter((v) => String(v ?? '').trim() !== '').slice(0, 25);
 			if (nonEmpty.length < 3) continue;
 
@@ -1201,7 +1310,7 @@
 		for (const key of keys) {
 			const col = new Column({});
 			col.name = key;
-			const values = dataObj[key] ?? [];
+			let values = dataObj[key] ?? [];
 			const spec = schema[key] ?? null;
 
 			if (spec?.type === 'time') {
@@ -1215,14 +1324,11 @@
 			} else if (spec?.type === 'number') {
 				col.type = 'number';
 			} else {
-				const guessedFormat = guessDateofArray(values);
-				if (guessedFormat !== -1 && guessedFormat.length > 0) {
-					col.type = 'time';
-					col.timeFormat = guessedFormat;
-				} else {
-					const datum = getFirstValid(values);
-					col.type = typeof datum === 'number' && !isNaN(datum) ? 'number' : 'category';
-				}
+				// No schema entry: the importer's one rule (numbers before times).
+				const resolved = resolveImportType(values, null);
+				col.type = resolved.type;
+				if (resolved.type === 'time') col.timeFormat = resolved.timeFormat;
+				values = resolved.values;
 			}
 
 			core.rawData.set(col.id, values);
@@ -1328,6 +1434,10 @@
 			decimalCommaExample: decimalCommaSuggestion?.example ?? null,
 			localeDateOrder,
 			lastImportWarnings: [...lastImportWarnings],
+			totalRowCount,
+			binningEnabled,
+			dataIntervalMin,
+			estimatedBinnedRows,
 			parsedData: parsedData ? $state.snapshot(parsedData) : null,
 			columnTypes: Object.fromEntries(
 				Object.entries(previewColumnTypes).map(([col, info]) => [
@@ -1335,6 +1445,9 @@
 					{
 						type: info.detected.type,
 						timeFormat: info.detected.timeFormat,
+						empty: info.detected.empty,
+						sampledRows: info.sampledRows,
+						wholeFile: info.wholeFile,
 						nonNumeric: info.nonNumeric,
 						dayMonth: info.dayMonth && {
 							ambiguous: info.dayMonth.ambiguous,
@@ -1349,7 +1462,7 @@
 
 	/** TEST SEAM: the user actions the preview offers, for integration tests. */
 	export function _importTestActions() {
-		return { confirmImport, setDecimalComma, setDateOrder };
+		return { confirmImport, setDecimalComma, setDateOrder, setColumnTypeChoice };
 	}
 
 	/** Forget what the previous file taught the preview: its cell reading and errors. */
@@ -1361,6 +1474,7 @@
 		excelCsv = null;
 		dateOrderChoice = {};
 		dateOrderSettled = {};
+		detectionSamples = {};
 		localeDateOrder = localeDayMonthOrder();
 		importError = '';
 	}
@@ -1452,6 +1566,7 @@
 		}
 
 		await parseFile();
+		await sampleSparseColumns();
 		maybeSuggestDecimalComma();
 
 		// Fallback verdict for unrecognised files: a plausible table imports
@@ -1666,6 +1781,7 @@
 			selectedColumns = new Set(headers); // reassign: a Set inside $state is not proxied
 		}
 		totalRowCount = parsedData ? (parsedData[headers[0]]?.length ?? 0) : 0;
+		await sampleSparseColumns();
 		maybeSuggestDecimalComma();
 
 		// Detect date-only + time-only column pairs
@@ -2872,8 +2988,13 @@
 				colTypes[k] = 'time';
 				continue;
 			}
-			const sample = getFirstValid(data[k]);
-			colTypes[k] = typeof sample === 'number' && !isNaN(sample) ? 'number' : 'other';
+			// The type the column will be imported with (the preview's choice, else
+			// detection on the whole column), so binning averages exactly the number
+			// columns and a column set to Category keeps its values.
+			const { type } = resolveImportType(data[k], columnTypeOverrides[k], {
+				order: dateOrderFor(k)
+			});
+			colTypes[k] = type === 'number' ? 'number' : 'other';
 		}
 
 		// Need at least one numeric column to bin
@@ -2924,15 +3045,6 @@
 		}
 
 		return result;
-	}
-
-	function getFirstValid(data) {
-		for (const value of data) {
-			if (value !== null && value !== '' && !specialValues.includes(value)) {
-				return value;
-			}
-		}
-		return null;
 	}
 </script>
 
@@ -3195,9 +3307,14 @@
 									</ControlInput>
 								</div>
 								{#if binningEnabled}
-									<p class="binning-estimate">
-										~{estimatedBinnedRows.toLocaleString()} rows after binning, {dataIntervalMin} min
-										intervals detected
+									<p class="binning-estimate" data-testid="import-binning-estimate">
+										{#if dataIntervalMin == null}
+											No time column detected, so the sampling interval is unknown.
+										{:else}
+											~{estimatedBinnedRows.toLocaleString()} rows after binning, {formatInterval(
+												dataIntervalMin
+											)} intervals detected
+										{/if}
 									</p>
 								{/if}
 							</div>
@@ -3454,9 +3571,9 @@
 														>
 															{#each info?.choices ?? [] as c (c.value)}
 																<option value={c.value}
-																	>{c.label}{c.value === info?.detected.type
-																		? ' (detected)'
-																		: ''}</option
+																	>{c.value === info?.detected.type
+																		? detectedOptionLabel(c, info)
+																		: c.label}</option
 																>
 															{/each}
 														</select>
@@ -3484,6 +3601,18 @@
 														{/if}
 														{#if choice === 'time' && !ov?.timeFormat}
 															{@render dayMonthControl(col)}
+														{/if}
+														{#if !ov && info?.detected.empty}
+															<span class="type-hint" data-testid={`import-empty-${col}`}
+																>{info.wholeFile
+																	? 'No values in this column'
+																	: `No values in the first ${(info.sampledRows ?? previewRowCount).toLocaleString()} rows; the type is decided from the full file on import`}</span
+															>
+														{:else if !ov && info?.sampledRows != null}
+															<span class="type-hint" data-testid={`import-sampled-${col}`}
+																>Detected from the first {info.sampledRows.toLocaleString()} rows (the
+																preview rows are mostly blank)</span
+															>
 														{/if}
 														{#if choice === 'number' && info?.nonNumeric.count > 0}
 															<span

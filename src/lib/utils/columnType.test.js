@@ -28,6 +28,14 @@ describe('sniffTimeFormatOnTypeChange', () => {
 		expect(addNotification).not.toHaveBeenCalled();
 	});
 
+	it('guesses from the first values when the first rows are blank', () => {
+		rawData.set(1, [...Array(40).fill(''), null, '2020-01-01 9:30:5', '2020-01-01 9:30:12']);
+		const col = { name: 't', data: 1, timeFormat: [] };
+		sniffTimeFormatOnTypeChange(col, 'time');
+		expect(col.timeFormat).toBe('YYYY-MM-DD H:mm:s');
+		expect(addNotification).not.toHaveBeenCalled();
+	});
+
 	it('warns, rather than failing silently, when nothing is recognised', () => {
 		rawData.set(1, ['d1 0930h', 'd1 0940h']);
 		const col = { name: 'stamp', data: 1, timeFormat: [] };

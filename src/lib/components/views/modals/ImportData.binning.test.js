@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { binParsedData } from './ImportData.svelte';
+import { binParsedData, openImportModalWithFiles, _importTestActions } from './ImportData.svelte';
 
 // Import-time binning ("Bin data on import", default 15 min) writes every column side by side,
 // so every column must come out on ONE grid.
@@ -40,5 +40,28 @@ describe('binParsedData: missing cells on import', () => {
 		const d = data();
 		d.full[1] = null;
 		expect(binParsedData(d).full[0]).toBe(3);
+	});
+});
+
+// Binning averages the columns that will be imported as numbers, by the importer's
+// one rule: the preview's type choice, else detection on the whole column.
+describe('binParsedData: which columns are averaged', () => {
+	const csv = [
+		'time,code,reading',
+		'2024-03-04 00:00:00,1,10',
+		'2024-03-04 00:05:00,2,20',
+		'2024-03-04 00:10:00,3,30'
+	].join('\n');
+
+	it('keeps a number column set to Category as values, not a mean', async () => {
+		await openImportModalWithFiles([new File([csv], 'codes.csv', { type: 'text/plain' })]);
+		_importTestActions().setColumnTypeChoice('code', 'category');
+		const out = binParsedData({
+			time: ['2024-03-04 00:00:00', '2024-03-04 00:05:00', '2024-03-04 00:10:00'],
+			code: [1, 2, 3],
+			reading: [10, 20, 30]
+		});
+		expect(out.reading[0]).toBe(20);
+		expect(out.code[0]).toBe(1);
 	});
 });
