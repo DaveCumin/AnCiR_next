@@ -320,7 +320,7 @@
 	<ControlInput label="Sort on">
 		<select bind:value={p.args.sortOnId} onchange={recompute} disabled={keyOptions.length === 0}>
 			{#if keyOptions.length === 0}
-				<option value={-1}>— add columns first —</option>
+				<option value={-1}>(add columns first)</option>
 			{/if}
 			{#each keyOptions as opt (opt.id)}
 				<option value={opt.id}>{opt.name}</option>

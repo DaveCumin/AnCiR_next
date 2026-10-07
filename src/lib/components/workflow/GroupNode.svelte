@@ -11,6 +11,7 @@
 	import { onDestroy, tick, createEventDispatcher } from 'svelte';
 	import Editable from '$lib/components/reusables/Editable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { columnTypeMeta } from '$lib/utils/columnTypeIcon.js';
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 	import MiniDataTable from './MiniDataTable.svelte';
 	import NodeNoteButton from './NodeNoteButton.svelte';
@@ -165,18 +166,9 @@
 		if (group) clearGroupPortPositions(group.id);
 	});
 
-	// Type icon lookup. AnCiR columns use 'number' / 'category' / 'time' / 'bin';
-	// map onto the icons we have. Unknown types fall back to math.
-	const TYPE_ICON = {
-		number: { icon: 'math', label: 'Numeric' },
-		category: { icon: 'list', label: 'Category' },
-		time: { icon: 'clock', label: 'Time' },
-		bin: { icon: 'table', label: 'Bin' }
-	};
-
-	function typeMeta(col) {
-		return TYPE_ICON[col?.type] ?? { icon: 'math', label: col?.type || 'value' };
-	}
+	// Type icon lookup: the shared column-type map (same as TableProcessNode and TypeSelector).
+	// Unknown types fall back to the numeric icon.
+	const typeMeta = columnTypeMeta;
 
 	// Drag-grip pointerdown → tell the editor an extract gesture started. The
 	// editor owns the window-level pointermove + drop math (and the optional

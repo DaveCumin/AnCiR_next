@@ -356,7 +356,7 @@
 							p.refTPId = val === '' ? null : Number(val);
 						}}
 					>
-						<option value="">— none —</option>
+						<option value="">(none)</option>
 						{#each chainablePrecedingTPs as upstream (upstream.id)}
 							<option value={upstream.id}>{upstream.displayName} #{upstream.id}</option>
 						{/each}

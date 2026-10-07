@@ -60,7 +60,7 @@
 				<h2>Take a tour</h2>
 				<button class="tp-close" type="button" aria-label="Close" onclick={closePicker}>✕</button>
 			</div>
-			<p class="tp-sub">Short, hands-on walkthroughs. You drive — they guide.</p>
+			<p class="tp-sub">Short, hands-on walkthroughs. You drive; they guide.</p>
 
 			{#if loading}
 				<div class="tp-empty">Loading tours…</div>
@@ -90,7 +90,7 @@
 					{/each}
 				</div>
 				{#if tourState.showLessons}
-					<p class="tp-admin-note">Lessons shown (admin) — press the shortcut again to hide.</p>
+					<p class="tp-admin-note">Lessons shown (admin). Press the shortcut again to hide.</p>
 				{/if}
 			{/if}
 		</div>

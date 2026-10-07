@@ -169,7 +169,7 @@
 		const epochsPerCycle = period / (opts.epochHours || 1);
 		if (epochsPerCycle < NPCRA_MIN_EPOCHS_PER_CYCLE) {
 			warnings.push(
-				`Coarse epochs: only ${epochsPerCycle.toFixed(1)} bins per ${period} h cycle at a ${opts.epochHours} h epoch. Intradaily variability measures hour-to-hour fragmentation, so with this few bins it mostly reflects the binning rather than the behaviour — shorten the epoch if the data allow.`
+				`Coarse epochs: only ${epochsPerCycle.toFixed(1)} bins per ${period} h cycle at a ${opts.epochHours} h epoch. Intradaily variability measures hour-to-hour fragmentation, so with this few bins it mostly reflects the binning rather than the behaviour, so shorten the epoch if the data allow.`
 			);
 		}
 

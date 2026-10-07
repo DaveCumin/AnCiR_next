@@ -23,7 +23,7 @@ const match = core.match(/appConsts\s*=\s*\$state\(\{[\s\S]*?version:\s*'([^']+)
 if (!match) {
 	throw new Error(
 		`generateBuild: could not read appConsts.version from ${CORE}. ` +
-			`If the shape of that declaration changed, update this regex — do not ignore this.`
+			`If the shape of that declaration changed, update this regex. Do not ignore this.`
 	);
 }
 

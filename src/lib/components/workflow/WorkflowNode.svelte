@@ -192,7 +192,7 @@
 							data-port-name={row.port.name}
 							data-port-dir="in"
 							{@attach tooltip(
-								`Input: ${row.port.display ?? row.port.name}${row.port.dynamic ? ' — accepts one or more columns' : ''}`
+								`Input: ${row.port.display ?? row.port.name}${row.port.dynamic ? ' (accepts one or more columns)' : ''}`
 							)}
 							onpointerdown={(e) => e.stopPropagation()}
 							onmousedown={(e) => disconnectInput(e, row.port.name)}

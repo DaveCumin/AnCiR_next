@@ -122,7 +122,7 @@
 			class="tag-chip"
 			bind:this={buttonEl}
 			onclick={openPopover}
-			{@attach tooltip(`Stored as "${storedName}" — usable in formulas`)}
+			{@attach tooltip(`Stored as "${storedName}"; usable in formulas`)}
 		>
 			{storedName}
 		</button>

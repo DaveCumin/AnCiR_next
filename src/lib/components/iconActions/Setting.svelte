@@ -96,7 +96,7 @@
 		}
 		if (typeof mod[buildFiles] !== 'function') {
 			// A stale cached sidecar from before split/CSV export existed.
-			throw new Error('the export module is out of date — reload the app and try again');
+			throw new Error('the export module is out of date; reload the app and try again');
 		}
 		return mod[buildFiles](session, { split, dataAsCsv });
 	}
@@ -129,7 +129,7 @@
 			const delivered = deliverExportFiles(files, 'session_python.zip', 'text/x-python');
 			const entry = opts?.split === true ? 'analysis.py' : 'session.py';
 			addNotification(
-				`Exported ${delivered} — run ${entry} with Python (needs numpy, pandas, scipy).`,
+				`Exported ${delivered}. Run ${entry} with Python (needs numpy, pandas, scipy).`,
 				'info'
 			);
 		} catch (error) {
@@ -170,7 +170,7 @@
 			const delivered = deliverExportFiles(files, 'session_R.zip', 'text/x-r-source');
 			const entry = opts?.split === true ? 'analysis.R' : 'session.R';
 			addNotification(
-				`Exported ${delivered} — run ${entry} with Rscript (needs no extra packages).`,
+				`Exported ${delivered}. Run ${entry} with Rscript (needs no extra packages).`,
 				'info'
 			);
 		} catch (error) {

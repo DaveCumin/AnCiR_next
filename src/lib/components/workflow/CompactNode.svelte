@@ -58,7 +58,7 @@
 			const col = getColumnById(Number(label.slice(4)));
 			if (col?.name) label = col.name;
 		}
-		return `${node.label} — ${label}${port.dynamic ? ' (many)' : ''}`;
+		return `${node.label}: ${label}${port.dynamic ? ' (many)' : ''}`;
 	}
 
 	function startFromOutput(e, portName) {

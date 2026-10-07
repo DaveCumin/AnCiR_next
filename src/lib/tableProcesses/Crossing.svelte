@@ -361,13 +361,13 @@
 	<div class="control-input-vertical">
 		{#each p.args.groups as group, g (g)}
 			{#if g > 0}
-				<p class="crossing-or-label">— OR —</p>
+				<p class="crossing-or-label">OR</p>
 			{/if}
 			{#each group as cond, c (c)}
 				<div class="control-input crossing-condition">
 					{#if c > 0}<span class="crossing-and-label">and</span>{/if}
 					<select bind:value={cond.target} onchange={recompute}>
-						<option value={-1}>— series —</option>
+						<option value={-1}>(series)</option>
 						{#each yOptions as opt (opt.id)}
 							<option value={opt.id}>{opt.name}</option>
 						{/each}

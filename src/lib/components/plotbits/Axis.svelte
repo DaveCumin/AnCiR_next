@@ -341,14 +341,18 @@
 	</div>
 {/snippet}
 
-{#snippet plot(axisData)}
-	{#key (position, height, width, plotPadding, scale, axisData.nticks, axisData.gridlines)}
+{#snippet plot()}
+	<!-- Only a new position needs a fresh <g>: d3 redraws an axis in place but keeps the old
+	     orientation's attributes (a bottom axis's tick `y2` on a left axis drew diagonal ticks).
+	     Size, padding, scale, tick count and gridlines are all followed by the $effect above.
+	     (This was a comma expression, which keyed on its last operand only: the gridlines.) -->
+	{#key position}
 		<g bind:this={axisGroup} class={'axis-' + position} />
 	{/key}
 {/snippet}
 
 {#if which === 'plot'}
-	{@render plot(axisData)}
+	{@render plot()}
 {:else if which === 'controls'}
 	{@render controls(axisData)}
 {/if}

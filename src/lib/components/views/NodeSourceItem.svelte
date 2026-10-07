@@ -82,7 +82,7 @@
 		class="node-head"
 		role="button"
 		tabindex="0"
-		title="Select — show controls in the panel"
+		title="Select to show controls in the panel"
 		onclick={selectNode}
 		onkeydown={(e) => {
 			if (e.key === 'Enter' || e.key === ' ') {
@@ -133,7 +133,7 @@
 		{#each outputCols as col (col.id)}
 			<div class="node-output-row"><ColumnComponent {col} /></div>
 		{:else}
-			<div class="node-empty">No outputs — wire an input on the canvas.</div>
+			<div class="node-empty">No outputs. Wire an input on the canvas.</div>
 		{/each}
 	</div>
 </div>

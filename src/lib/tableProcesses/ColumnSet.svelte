@@ -92,7 +92,7 @@
 			<input
 				type="text"
 				value={p.args.pattern ?? ''}
-				placeholder="e.g. liver — empty selects all"
+				placeholder="e.g. liver (empty selects all)"
 				oninput={(e) => (p.args.pattern = e.currentTarget.value)}
 			/>
 		</ControlInput>

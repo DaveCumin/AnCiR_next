@@ -15,14 +15,14 @@ export const tour = {
 		{
 			target: null,
 			title: 'Sine waves are everywhere',
-			body: 'The smoothest possible rhythm is a cosine wave: <span style="white-space:nowrap">y = M + A·cos(2π(t−φ)/τ)</span>. Four numbers describe it — midline <strong>M</strong>, amplitude <strong>A</strong>, phase <strong>φ</strong>, period <strong>τ</strong>. (Loading the lesson…)',
+			body: 'The smoothest possible rhythm is a cosine wave: <span style="white-space:nowrap">y = M + A·cos(2π(t−φ)/τ)</span>. Four numbers describe it: midline <strong>M</strong>, amplitude <strong>A</strong>, phase <strong>φ</strong>, period <strong>τ</strong>. (Loading the lesson…)',
 			beforeShow: () => loadLesson('learn-sine-waves.json'),
 			advance: { on: 'next' }
 		},
 		{
 			target: null,
 			title: 'Fit a cosine',
-			body: 'Open the <strong>Cosinor</strong> node. It finds the values of midline, amplitude and phase that best match the data, and reports <strong>R²</strong> — how much of the pattern the cosine explains (near 1 = a great fit).',
+			body: 'Open the <strong>Cosinor</strong> node. It finds the values of midline, amplitude and phase that best match the data, and reports <strong>R²</strong>, which is how much of the pattern the cosine explains (near 1 = a great fit).',
 			advance: { on: 'next' }
 		},
 		{
@@ -40,7 +40,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Try this',
-			body: 'In the <strong>Cosinor</strong> node, switch the period from <em>fixed</em> to free and see whether it still finds 24 h. <strong>R²</strong> tells you how well one cosine explains the data — real signals with extra rhythms (say a 12 h component) fit a single cosine less well. Reopen anytime from the <strong>?</strong> menu.',
+			body: 'In the <strong>Cosinor</strong> node, switch the period from <em>fixed</em> to free and see whether it still finds 24 h. <strong>R²</strong> tells you how well one cosine explains the data. Real signals with extra rhythms (say a 12 h component) fit a single cosine less well. Reopen anytime from the <strong>?</strong> menu.',
 			advance: { on: 'next' }
 		}
 	]

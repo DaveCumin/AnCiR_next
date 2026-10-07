@@ -7,7 +7,7 @@ export const tour = {
 	id: 'learn-hidden-rhythm',
 	kind: 'lesson',
 	name: 'Lesson: Find the hidden rhythm',
-	description: 'There is a cycle hidden in this data — use the periodogram to find how long it is.',
+	description: 'There is a cycle hidden in this data. Use the periodogram to find how long it is.',
 	estMinutes: 4,
 	order: 3,
 	steps: [
@@ -21,13 +21,13 @@ export const tour = {
 		{
 			target: null,
 			title: 'Look at the raw signal first',
-			body: 'Look at the <strong>Raw signal</strong> scatter: 7 days of activity, sampled every hour. Can you see a clean 24-hour cycle just by eye? It’s hard — the <strong>noise</strong> hides it. That’s exactly the problem real scientists face.',
+			body: 'Look at the <strong>Raw signal</strong> scatter: 7 days of activity, sampled every hour. Can you see a clean 24-hour cycle just by eye? It’s hard, because the <strong>noise</strong> hides it. That’s exactly the problem real scientists face.',
 			advance: { on: 'next' }
 		},
 		{
 			target: null,
 			title: 'Read the periodogram',
-			body: 'The <strong>periodogram</strong> tests many candidate periods and scores how well each fits. The x-axis is the period (in hours); the y-axis is the score. The best period shows up as a <strong>peak</strong> — read the period under the tallest peak.',
+			body: 'The <strong>periodogram</strong> tests many candidate periods and scores how well each fits. The x-axis is the period (in hours); the y-axis is the score. The best period shows up as a <strong>peak</strong>; read the period under the tallest peak.',
 			advance: { on: 'next' }
 		},
 		{

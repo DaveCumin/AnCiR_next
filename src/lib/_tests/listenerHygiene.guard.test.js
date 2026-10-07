@@ -144,6 +144,42 @@ describe('listener hygiene', () => {
 		).toEqual([]);
 	});
 
+	it('no async onMount returns a cleanup (Svelte never calls one from a promise)', () => {
+		// onMount(async () => { ...; return () => teardown }) hands Svelte a PROMISE, not a
+		// function, so the teardown never runs. +page.svelte registered its keydown, resize and
+		// unload-guard listeners that way. Register synchronously and return the cleanup; put
+		// the awaited work in an inner async function.
+		const offenders = [];
+		for (const file of sourceFiles()) {
+			const text = readFileSync(file, 'utf8');
+			for (const m of text.matchAll(/onMount\(\s*async\b[^{]*\{/g)) {
+				let depth = 0;
+				let i = m.index + m[0].length - 1;
+				const open = i;
+				for (; i < text.length; i++) {
+					if (text[i] === '{') depth++;
+					else if (text[i] === '}' && --depth === 0) break;
+				}
+				const body = text.slice(open + 1, i);
+				// Only the callback's own top-level returns count: blank out nested blocks.
+				let top = '';
+				depth = 0;
+				for (const ch of body) {
+					if (ch === '{') depth++;
+					if (depth === 0) top += ch;
+					if (ch === '}') depth--;
+				}
+				if (
+					/\breturn\s*(?:\(\s*\)\s*=>|\w+\s*=>|function\b|[A-Za-z_$][\w$]*\s*;?\s*$)/m.test(top)
+				) {
+					const line = text.slice(0, m.index).split('\n').length;
+					offenders.push(`${relative(srcRoot, file)}:${line}`);
+				}
+			}
+		}
+		expect(offenders, 'async onMount returning a cleanup:\n' + offenders.join('\n')).toEqual([]);
+	});
+
 	it('the known-offender list only ever shrinks', () => {
 		// Every entry must still be a real offender. A stale entry means a fix landed
 		// without removing its line here, which would silently re-open the hole.

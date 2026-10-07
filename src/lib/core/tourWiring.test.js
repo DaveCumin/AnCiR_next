@@ -168,7 +168,7 @@ describe('wiringHint — live nudge for what is still missing', () => {
 	it('nudges the remaining input when one is done', () => {
 		const h = wiringHint('intro', 'time', 'xIN', 'activity', 'yIN', st(true, false));
 		expect(h).toContain('✅ time → <strong>xIN</strong>');
-		expect(h).toContain('now wire activity → <strong>yIN</strong>');
+		expect(h).toContain('Now wire activity → <strong>yIN</strong>');
 	});
 	it('confirms when both are wired', () => {
 		const h = wiringHint('intro', 'time', 'xIN', 'activity', 'yIN', st(true, true));

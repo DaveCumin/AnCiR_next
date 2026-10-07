@@ -3,22 +3,27 @@
 
 	import Icon from '$lib/icons/Icon.svelte';
 	import Dropdown from '$lib/components/reusables/Dropdown.svelte';
+	import { columnTypeIcon } from '$lib/utils/columnTypeIcon.js';
 
 	let { value = $bindable(), onChange = () => {} } = $props();
 
 	const allOptions = [
-		{ label: 'Time', value: 'time', icon: 'clock' },
-		{ label: 'Number', value: 'number', icon: 'math' },
-		{ label: 'Bin', value: 'bin', icon: 'table' },
-		{ label: 'Category', value: 'category', icon: 'list' }
-	];
+		{ label: 'Time', value: 'time' },
+		{ label: 'Number', value: 'number' },
+		{ label: 'Bin', value: 'bin' },
+		{ label: 'Category', value: 'category' }
+	].map((o) => ({ ...o, icon: columnTypeIcon(o.value) }));
 
 	const options = $derived(
 		value === 'bin' ? allOptions : allOptions.filter((o) => o.value !== 'bin')
 	);
 	// A type with no entry above (an older or unknown one) still renders, with a neutral icon.
 	const current = $derived(
-		allOptions.find((o) => o.value === value) ?? { label: String(value), value, icon: 'math' }
+		allOptions.find((o) => o.value === value) ?? {
+			label: String(value),
+			value,
+			icon: columnTypeIcon(value)
+		}
 	);
 
 	let btnRef;

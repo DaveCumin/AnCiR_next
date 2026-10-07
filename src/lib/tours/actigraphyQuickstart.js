@@ -85,7 +85,7 @@ export const tour = {
 			target: paletteTarget,
 			placement: 'left',
 			title: 'Get a time + activity series',
-			body: 'Open <strong>+</strong> and choose <strong>“Import file”</strong>, then the <strong>Examples</strong> tab. Any of the rhythm datasets will do — they all carry a time column and an activity column. <strong>“Actigraphy rest-activity profile”</strong> is a good one.',
+			body: 'Open <strong>+</strong> and choose <strong>“Import file”</strong>, then the <strong>Examples</strong> tab. Any of the rhythm datasets will do; they all carry a time column and an activity column. <strong>“Actigraphy rest-activity profile”</strong> is a good one.',
 			beforeShow: ensureCanvas,
 			advance: { when: () => core.data.length > 0 }
 		},
@@ -127,12 +127,12 @@ export const tour = {
 			target: paletteTarget,
 			placement: 'left',
 			title: 'Add a Scatterplot',
-			body: 'Add a <strong>“Scatterplot”</strong> — we’ll plot the <strong>raw</strong> signal and the <strong>binned</strong> signal on it side by side, as two series, to see what binning did.',
+			body: 'Add a <strong>“Scatterplot”</strong>. We’ll plot the <strong>raw</strong> signal and the <strong>binned</strong> signal on it side by side, as two series, to see what binning did.',
 			beforeShow: ensureCanvas,
 			advance: { when: () => core.plots.some((p) => p.type === 'scatterplot') }
 		},
 		wireStep(
-			'Plot the raw signal — time',
+			'Plot the raw signal: time',
 			() =>
 				axisHint(
 					'First series = the raw data. Connect the raw time:',
@@ -147,7 +147,7 @@ export const tour = {
 			}
 		),
 		wireStep(
-			'Plot the raw signal — activity',
+			'Plot the raw signal: activity',
 			() =>
 				axisHint(
 					'Now the raw activity:',
@@ -162,7 +162,7 @@ export const tour = {
 			}
 		),
 		wireStep(
-			'Add the binned signal — time',
+			'Add the binned signal: time',
 			() =>
 				axisHint(
 					'Second series = the binned data, from the <strong>Bin Data</strong> node. Connect the binned time:',
@@ -177,10 +177,10 @@ export const tour = {
 			}
 		),
 		wireStep(
-			'Add the binned signal — activity',
+			'Add the binned signal: activity',
 			() =>
 				axisHint(
-					'Now the binned activity — the two series now overlay:',
+					'Now the binned activity. The two series now overlay:',
 					'binned activity',
 					'y (2nd series)',
 					plotSeriesCounts('scatterplot').withY >= 2
@@ -195,7 +195,7 @@ export const tour = {
 			target: paletteTarget,
 			placement: 'left',
 			title: 'Add an Actogram',
-			body: 'Add an <strong>“Actogram”</strong> — the classic double-plotted view of daily rhythms. We’ll feed it the <strong>binned</strong> data.',
+			body: 'Add an <strong>“Actogram”</strong>, the classic double-plotted view of daily rhythms. We’ll feed it the <strong>binned</strong> data.',
 			beforeShow: ensureCanvas,
 			advance: { when: () => core.plots.some((p) => p.type === 'actogram') }
 		},
@@ -265,7 +265,7 @@ export const tour = {
 			target: paletteTarget,
 			placement: 'left',
 			title: 'Add a Cosinor',
-			body: 'Add a <strong>“Cosinor”</strong> to fit a cosine model to the binned data — its period, amplitude and acrophase appear as output ports.',
+			body: 'Add a <strong>“Cosinor”</strong> to fit a cosine model to the binned data; its period, amplitude and acrophase appear as output ports.',
 			beforeShow: ensureCanvas,
 			advance: { when: () => !!findTP('Cosinor') }
 		},
@@ -289,7 +289,7 @@ export const tour = {
 			'Wire the binned activity → Cosinor',
 			() =>
 				axisHint(
-					'Now the binned activity — it fits each y you wire in:',
+					'Now the binned activity. It fits each y you wire in:',
 					'binned activity',
 					'yIN',
 					tpStatus('Cosinor').yOk
@@ -305,14 +305,14 @@ export const tour = {
 			target: paletteTarget,
 			placement: 'left',
 			title: 'Add a Scatterplot for the fit',
-			body: 'Add another <strong>“Scatterplot”</strong> — we’ll plot the Cosinor’s fitted curve here.',
+			body: 'Add another <strong>“Scatterplot”</strong>. We’ll plot the Cosinor’s fitted curve here.',
 			beforeShow: ensureCanvas,
 			advance: {
 				when: () => core.plots.filter((p) => p.type === 'scatterplot').length >= 2
 			}
 		},
 		wireAxisStep(
-			'Plot the Cosinor fit — x',
+			'Plot the Cosinor fit: x',
 			() =>
 				axisHint(
 					'Wire the fitted curve’s x (the Cosinor’s <strong>cosinorx</strong> output) onto the Scatterplot:',
@@ -328,7 +328,7 @@ export const tour = {
 			}
 		),
 		wireAxisStep(
-			'Plot the Cosinor fit — y',
+			'Plot the Cosinor fit: y',
 			() =>
 				axisHint(
 					'Now the fitted curve’s y (a <strong>cosinory</strong> output):',
@@ -347,7 +347,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Pipeline complete 🎉',
-			body: 'You built and wired a full actigraphy pipeline — raw vs binned, an actogram, a periodogram, and a plotted cosinor fit. Use <strong>Tidy layout</strong> (bottom-right) to arrange it, and the <strong>Worksheet</strong> view to lay the plots out for a figure. Reopen this tour anytime from the <strong>?</strong> menu.',
+			body: 'You built and wired a full actigraphy pipeline: raw vs binned, an actogram, a periodogram, and a plotted cosinor fit. Use <strong>Tidy layout</strong> (bottom-right) to arrange it, and the <strong>Worksheet</strong> view to lay the plots out for a figure. Reopen this tour anytime from the <strong>?</strong> menu.',
 			advance: { on: 'next' }
 		}
 	]

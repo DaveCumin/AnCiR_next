@@ -14,6 +14,7 @@
 	import { onDestroy, tick, createEventDispatcher } from 'svelte';
 	import Editable from '$lib/components/reusables/Editable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { columnTypeMeta } from '$lib/utils/columnTypeIcon.js';
 	import TypeSelector from '$lib/components/reusables/TypeSelector.svelte';
 	import MiniDataTable from './MiniDataTable.svelte';
 	import MetricTagButton from './MetricTagButton.svelte';
@@ -227,16 +228,8 @@
 		if (node) clearGroupPortPositions(node.id);
 	});
 
-	// Read-only type icon (mirrors GroupNode).
-	const TYPE_ICON = {
-		number: { icon: 'math', label: 'Numeric' },
-		category: { icon: 'list', label: 'Category' },
-		time: { icon: 'clock', label: 'Time' },
-		bin: { icon: 'table', label: 'Bin' }
-	};
-	function typeMeta(col) {
-		return TYPE_ICON[col?.type] ?? { icon: 'math', label: col?.type || 'value' };
-	}
+	// Read-only type icon: the shared column-type map (same as GroupNode and TypeSelector).
+	const typeMeta = columnTypeMeta;
 
 	// --- Wire events (match WorkflowNode/GroupNode semantics) ---
 	function startFromOutput(e, portName) {
@@ -560,7 +553,7 @@
 				{#each bundleOutputs as bport (bport.name)}
 					<div class="out-row bundle-row">
 						<div class="row-strip">
-							<span class="bundle-label" title="Column set output — connects to a many-in port">
+							<span class="bundle-label" title="Column set output; connects to a many-in port">
 								<Icon name="column-set" width={13} height={13} />
 								<span>{bport.display ?? bport.name}</span>
 							</span>

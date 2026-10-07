@@ -33,12 +33,12 @@ describe('compact node geometry', () => {
 	});
 
 	it('maps column types to icons with a fallback', () => {
-		expect(columnTypeIcon('number')).toBe('math');
+		expect(columnTypeIcon('number')).toBe('hash');
 		expect(columnTypeIcon('category')).toBe('list');
 		expect(columnTypeIcon('time')).toBe('clock');
 		expect(columnTypeIcon('bin')).toBe('table');
-		expect(columnTypeIcon('weird')).toBe('math');
-		expect(columnTypeIcon(undefined)).toBe('math');
+		expect(columnTypeIcon('weird')).toBe('hash');
+		expect(columnTypeIcon(undefined)).toBe('hash');
 	});
 
 	it('exposes the squared kinds set (plots excluded; groups handled separately)', () => {

@@ -152,7 +152,7 @@
 						<strong>This plot couldn't be drawn.</strong>
 						<p>{error?.message ?? 'Unknown error'}</p>
 						<p class="plot-failed-hint">
-							Check the columns it's wired to — undo reverses the change that added it.
+							Check the columns it's wired to. Undo reverses the change that added it.
 						</p>
 						<button onclick={reset}>Try again</button>
 					</div>

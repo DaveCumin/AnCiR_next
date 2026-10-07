@@ -561,7 +561,7 @@
 			return;
 		}
 		if (p.args.out.result < 0) {
-			parseStatus = { ok: false, msg: 'Output column not ready yet — try again.' };
+			parseStatus = { ok: false, msg: 'Output column not ready yet. Try again.' };
 			return;
 		}
 		applyParsed(parsed);

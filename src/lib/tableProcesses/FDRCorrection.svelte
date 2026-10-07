@@ -63,7 +63,7 @@
 		// should see the family size rather than assume the column was the family.
 		if (nTested > 0 && nTested < SMALL_FAMILY) {
 			warnings.push(
-				`Only ${nTested} p-value${nTested > 1 ? 's' : ''} in this family. FDR control is an expected-proportion guarantee and means little across so few tests — and if these are part of a larger set of comparisons, correct them together (combine the columns first) rather than one column at a time.`
+				`Only ${nTested} p-value${nTested > 1 ? 's' : ''} in this family. FDR control is an expected-proportion guarantee and means little across so few tests. If these are part of a larger set of comparisons, correct them together (combine the columns first) rather than one column at a time.`
 			);
 		}
 		if (padj.length !== nTested) {

@@ -248,7 +248,7 @@
 				>
 				<span class="primary-sub"
 					>{summoned
-						? 'Close this screen — your work is untouched'
+						? 'Close this screen (your work is untouched)'
 						: 'Build it yourself, node by node'}</span
 				>
 			</button>

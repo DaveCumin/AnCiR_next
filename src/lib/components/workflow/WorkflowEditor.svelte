@@ -2876,7 +2876,7 @@
 			if (typeof colId === 'number') absorbColumnIntoGroup(colId, landedGroup.id);
 		} else if (draggedNode.type === 'process' || draggedNode.type === 'tableprocess') {
 			addNotification(
-				'Groups hold individual data columns — a source or analysis node can’t be dropped into one.',
+				'Groups hold individual data columns; a source or analysis node can’t be dropped into one.',
 				'info'
 			);
 		}
@@ -3774,7 +3774,7 @@
 					: [];
 		_dbg('copy: selection ids =', ids);
 		if (ids.length === 0) {
-			_dbg('copy: nothing selected — aborting');
+			_dbg('copy: nothing selected; aborting');
 			return;
 		}
 		const snapshots = [];
@@ -3782,7 +3782,7 @@
 		for (const id of ids) {
 			const node = allNodes.find((n) => n.id === id);
 			if (!node) {
-				_dbg('copy: id not in allNodes —', id);
+				_dbg('copy: id not in allNodes:', id);
 				continue;
 			}
 			const snap = snapshotNode(node);
@@ -3814,7 +3814,7 @@
 				if (local.length > 0) {
 					addNotification(
 						`Copied ${n(snapshots)}. ${local.length} data column${local.length === 1 ? '' : 's'} ` +
-							`can only be pasted in this tab — data does not travel between tabs.`,
+							`can only be pasted in this tab; data does not travel between tabs.`,
 						'warning'
 					);
 				} else if (wrote && config.length > 0) {
@@ -3833,7 +3833,7 @@
 	function pasteClipboard() {
 		_dbg('paste: invoked. clipboard length =', _clipboard.length);
 		if (!_clipboard.length) {
-			console.warn('[canvas paste] clipboard is empty — nothing to paste');
+			console.warn('[canvas paste] clipboard is empty; nothing to paste');
 			return;
 		}
 		pasteEntries(_clipboard);
@@ -3853,7 +3853,7 @@
 		// This tab copied something the system clipboard could not carry, so whatever envelope
 		// is on the clipboard predates that copy. Honour the more recent local intent.
 		if (_copySeq !== _envelopeSeq && _clipboard.length > 0) {
-			_dbg('paste: local copy is newer than the system clipboard — using this tab’s snapshots');
+			_dbg('paste: local copy is newer than the system clipboard; using this tab’s snapshots');
 			e.preventDefault();
 			pasteClipboard();
 			return;
@@ -4160,7 +4160,7 @@
 				e.preventDefault();
 				copySelection();
 			} else {
-				_dbg('keydown: Cmd/Ctrl+C ignored — no canvas selection');
+				_dbg('keydown: Cmd/Ctrl+C ignored: no canvas selection');
 			}
 			return;
 		}
@@ -4178,7 +4178,7 @@
 			setTimeout(() => {
 				if (_pasteHandledSeq === at) return; // the paste event got there first
 				if (_clipboard.length === 0) return;
-				_dbg('keydown: no paste event arrived — falling back to this tab’s clipboard');
+				_dbg('keydown: no paste event arrived; falling back to this tab’s clipboard');
 				pasteClipboard();
 			}, 60);
 			return;
@@ -4608,7 +4608,7 @@
 				tidyLayout();
 			}}
 			aria-label="Tidy layout"
-			{@attach tooltip('Tidy layout — arrange nodes left-to-right')}
+			{@attach tooltip('Tidy layout: arrange nodes left-to-right')}
 		>
 			<Icon name="distribute-vertical" width={22} height={22} />
 		</button>

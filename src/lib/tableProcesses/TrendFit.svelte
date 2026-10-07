@@ -116,7 +116,7 @@
 		if (!Number.isFinite(nUsable) || nUsable <= 0) return warnings;
 		if (nUsable <= nParams) {
 			warnings.push(
-				`Only ${nUsable} usable points for a trend model with ${nParams} free parameters — the fit is interpolating, not estimating. R² here is meaningless.`
+				`Only ${nUsable} usable points for a trend model with ${nParams} free parameters, so the fit is interpolating, not estimating. R² here is meaningless.`
 			);
 		} else if (nUsable < nParams * 3) {
 			warnings.push(

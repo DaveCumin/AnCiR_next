@@ -184,7 +184,7 @@
 		);
 		if (small.some(([, r]) => Number.isFinite(r.pValue) && r.pValue >= 0.05)) {
 			warnings.push(
-				`With fewer than ${RAYLEIGH_MIN_N} angles the test has very little power, so a non-significant result here is NOT evidence that the angles are uniformly distributed — it mostly reflects the sample size.`
+				`With fewer than ${RAYLEIGH_MIN_N} angles the test has very little power, so a non-significant result here is NOT evidence that the angles are uniformly distributed; it mostly reflects the sample size.`
 			);
 		}
 		return warnings;
@@ -380,7 +380,7 @@
 <div class="control-input-vertical">
 	{#if !hideInputs}
 		<div class="control-input">
-			<p>Time (optional — when the values were measured)</p>
+			<p>Time (optional: when the values were measured)</p>
 			<ColumnSelector bind:value={p.args.timeIN} excludeColIds={yExcludeIds} />
 		</div>
 		<div class="control-input">
@@ -479,7 +479,7 @@
 			or a boxplot.
 			{#if isWeighted}
 				With a time column wired, each Y value weights its timestamp's angle (amplitude-weighted
-				mean direction) — <em>Unit</em> is ignored, and <em>Acrophase</em> reports the weighted mean time-of-peak
+				mean direction). <em>Unit</em> is ignored, and <em>Acrophase</em> reports the weighted mean time-of-peak
 				in period units.
 			{/if}
 		</p>

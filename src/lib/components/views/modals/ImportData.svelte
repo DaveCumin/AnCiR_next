@@ -1477,7 +1477,7 @@
 				error = {};
 				if (firstVerdict) {
 					addNotification(
-						`Unrecognised file type ("${targetFile.name}"); imported as CSV — check the columns look right.`,
+						`Unrecognised file type ("${targetFile.name}"); imported as CSV. Check the columns look right.`,
 						'warning',
 						12000
 					);
@@ -3627,7 +3627,7 @@
 										</p>
 										{#each mismatchedColumns as m (m.column)}
 											<p class="mismatch-detail">
-												<strong>{m.column}</strong> — missing from: {m.missingFrom.join(', ')}
+												<strong>{m.column}</strong>: missing from {m.missingFrom.join(', ')}
 											</p>
 										{/each}
 									</div>

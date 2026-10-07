@@ -105,7 +105,7 @@
 		const url = baseUrl.trim();
 		if (url && !/^https?:\/\/.+/i.test(url)) {
 			tab = 'advanced';
-			error = `"${url}" isn't a valid endpoint URL. It should look like https://api.groq.com/openai/v1 — or leave it blank to use the default model.`;
+			error = `"${url}" isn't a valid endpoint URL. It should look like https://api.groq.com/openai/v1, or leave it blank to use the default model.`;
 			return;
 		}
 
@@ -187,7 +187,7 @@
 		// nothing asked the user to approve this, and they should look at it. Same warning a
 		// ?loadFromURL= AI session gets, for the same reason.
 		addNotification(
-			`Edits made with AI, please check. Added ${bits.join(', ')} — undo reverses it.`,
+			`Edits made with AI, please check. Added ${bits.join(', ')}; undo reverses it.`,
 			'warning',
 			12000
 		);
@@ -228,7 +228,7 @@
 			aria-selected={tab === 'prompt' && effectiveMode === 'edit'}
 			class:active={tab === 'prompt' && effectiveMode === 'edit'}
 			disabled={busy || !hasSession}
-			title={hasSession ? '' : 'Nothing to add to yet — build or open a session first'}
+			title={hasSession ? '' : 'Nothing to add to yet. Build or open a session first'}
 			onclick={() => pickMode('edit')}
 		>
 			Add to this session
@@ -255,10 +255,10 @@
 	{#if tab === 'prompt'}
 		<p class="hint">
 			{#if effectiveMode === 'edit'}
-				Describe what to add. It's applied straight to this session for you to check — undo reverses
+				Describe what to add. It's applied straight to this session for you to check; undo reverses
 				it.
 			{:else}
-				Describe the analysis you want. A session is built for you to check and edit — it is a
+				Describe the analysis you want. A session is built for you to check and edit. It is a
 				starting point, not an answer.
 			{/if}
 		</p>
@@ -294,7 +294,7 @@
 	{:else}
 		<p class="hint">
 			By default your prompt is answered by the model this site is configured with. To use your own
-			instead, fill these in — they're sent with this one request and never stored.
+			instead, fill these in; they're sent with this one request and never stored.
 		</p>
 
 		<!--
@@ -359,15 +359,15 @@
 		<h3>Use it from your own tools</h3>
 		<p class="hint">
 			AnCiR is also an MCP server, so an agent (Claude, ChatGPT, or any MCP client) can build
-			sessions for you. Nothing to clone or install — it's a URL:
+			sessions for you. Nothing to clone or install; it's a URL:
 		</p>
 		<pre class="code">claude mcp add --transport http ancir {NL_URL}/mcp</pre>
 		<p class="hint">
 			Your agent then gets two tools: <code>list_capabilities</code> (every analysis and plot, with
 			exact arguments) and <code>build_session</code> (returns a link that opens the session here).
-			No API key needed — your agent is the model. Analyses are computed in your browser when you
+			No API key needed: your agent is the model. Analyses are computed in your browser when you
 			open the link, so the agent won't see the numbers; for live results, run the full engine from
-			the repo (<code>cd mcp &amp;&amp; npm start</code>) — see <code>mcp/AGENTS.md</code>.
+			the repo (<code>cd mcp &amp;&amp; npm start</code>; see <code>mcp/AGENTS.md</code>).
 		</p>
 	{/if}
 

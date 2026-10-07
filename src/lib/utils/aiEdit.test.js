@@ -188,7 +188,7 @@ describe('planEdit — resolving what the model wrote', () => {
 		});
 		expect(p.preview).toEqual([
 			'Add analysis: Cosinor (xIN=time; yIN=values)',
-			'Add plot: scatterplot — "fit" (1 series)'
+			'Add plot: scatterplot named "fit" (1 series)'
 		]);
 	});
 });

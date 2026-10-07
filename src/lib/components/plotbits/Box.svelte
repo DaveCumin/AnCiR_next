@@ -367,7 +367,7 @@
 		</div>
 		{#if boxPlotData.draw}
 			{#if categoryColoursActive}
-				<p class="category-colour-note">Per-category colours are in use — see Box colours below.</p>
+				<p class="category-colour-note">Per-category colours are in use; see Box colours below.</p>
 			{:else}
 				<div class="control-input-horizontal">
 					<div class="control-input" style="max-width: 1.5rem;">

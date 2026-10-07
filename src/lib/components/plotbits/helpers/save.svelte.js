@@ -6,6 +6,7 @@ import { mutationService } from '$lib/core/mutationService.js';
 import { prepareExport, setPhysicalSize } from '$lib/plots/exportStyle.js';
 import { exportScale, resolveStyle } from '$lib/plots/figureStyle.js';
 import { setPngDataUrlDpi } from '$lib/utils/pngDpi.js';
+import { downloadBlob } from '$lib/utils/downloadBlob.js';
 
 /**
  * Convert headers and rows to a CSV string and trigger a download.
@@ -32,14 +33,7 @@ export function saveDataAsCSV(plotId) {
 	].join('\n');
 
 	const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-	const url = URL.createObjectURL(blob);
-	const link = document.createElement('a');
-	link.href = url;
-	link.download = (plot.name || 'plot_data').replace(/[/\\:*?"<>|]/g, '_') + '.csv';
-	document.body.appendChild(link);
-	link.click();
-	document.body.removeChild(link);
-	URL.revokeObjectURL(url);
+	downloadBlob((plot.name || 'plot_data').replace(/[/\\:*?"<>|]/g, '_') + '.csv', blob);
 }
 
 /**
@@ -116,14 +110,7 @@ export function saveStaticDataAsCSV(name, headers, rows) {
 		...rows.map((row) => row.map(escapeCSV).join(','))
 	].join('\n');
 	const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-	const url = URL.createObjectURL(blob);
-	const link = document.createElement('a');
-	link.href = url;
-	link.download = name.replace(/[/\\:*?"<>|]/g, '_') + '.csv';
-	document.body.appendChild(link);
-	link.click();
-	document.body.removeChild(link);
-	URL.revokeObjectURL(url);
+	downloadBlob(name.replace(/[/\\:*?"<>|]/g, '_') + '.csv', blob);
 }
 
 function escapeCSV(value) {
@@ -724,7 +711,7 @@ export function rasterisePng(svgString, width, height, scale = 1) {
 	});
 }
 
-/** Trigger a browser download for a URL. */
+/** Trigger a browser download for a data URL (a blob goes through downloadBlob). */
 function downloadUrl(url, filename) {
 	const link = document.createElement('a');
 	link.href = url;
@@ -751,9 +738,7 @@ export async function saveExport(Id, options = {}) {
 	for (const job of jobs) {
 		if (job.format === 'svg') {
 			const blob = new Blob([job.svgString], { type: 'image/svg+xml;charset=utf-8' });
-			const url = URL.createObjectURL(blob);
-			downloadUrl(url, job.filename + '.svg');
-			URL.revokeObjectURL(url);
+			downloadBlob(job.filename + '.svg', blob);
 			n++;
 			continue;
 		}

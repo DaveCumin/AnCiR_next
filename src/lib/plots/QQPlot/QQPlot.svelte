@@ -490,7 +490,7 @@
 				<input type="checkbox" bind:checked={theData.showStats} />
 				<span
 					class="ci-label"
-					title="Per-series values used (n), dropped-value count, and the probability-plot correlation r — how tightly the points follow a straight line (1 = the sample's shape matches the normal exactly). Descriptive only; for a formal normality test use the Normality Test node."
+					title="Per-series values used (n), dropped-value count, and the probability-plot correlation r: how tightly the points follow a straight line (1 = the sample's shape matches the normal exactly). Descriptive only; for a formal normality test use the Normality Test node."
 				>
 					Show series statistics
 				</span>
@@ -600,7 +600,7 @@
 			/>
 
 			<p class="qq-hint">
-				Wire any numeric column — e.g. a fit node's resid_ output to check whether its residuals are
+				Wire any numeric column, e.g. a fit node's resid_ output to check whether its residuals are
 				normal.
 			</p>
 
@@ -634,7 +634,7 @@
 							     r is descriptive — no p-value here; the NormalityTest node owns W/p. -->
 							<p
 								class="qq-stats"
-								title="n: values used. dropped: missing / non-numeric values excluded. r: probability-plot correlation — how tightly the points follow a straight line (1 = shape matches the normal exactly). Descriptive only; use the Normality Test node for a formal test."
+								title="n: values used. dropped: missing / non-numeric values excluded. r: probability-plot correlation: how tightly the points follow a straight line (1 = shape matches the normal exactly). Descriptive only; use the Normality Test node for a formal test."
 							>
 								n = {datum.qq.n}{datum.qq.dropped > 0 ? `, dropped ${datum.qq.dropped}` : ''}, r = {datum
 									.qq.r == null

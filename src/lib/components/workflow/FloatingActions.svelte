@@ -43,7 +43,7 @@
 			disabled={!history.canUndo}
 			aria-label="Undo"
 			{@attach tooltip(
-				`Undo (Cmd/Ctrl+Z)${history.canUndo ? ` — ${history.undoCount} step${history.undoCount > 1 ? 's' : ''}` : ''}`
+				`Undo (Cmd/Ctrl+Z)${history.canUndo ? `: ${history.undoCount} step${history.undoCount > 1 ? 's' : ''}` : ''}`
 			)}
 		>
 			<Icon name="undo" width={22} height={22} />
@@ -55,7 +55,7 @@
 			disabled={!history.canRedo}
 			aria-label="Redo"
 			{@attach tooltip(
-				`Redo (Cmd/Ctrl+Shift+Z)${history.canRedo ? ` — ${history.redoCount} step${history.redoCount > 1 ? 's' : ''}` : ''}`
+				`Redo (Cmd/Ctrl+Shift+Z)${history.canRedo ? `: ${history.redoCount} step${history.redoCount > 1 ? 's' : ''}` : ''}`
 			)}
 		>
 			<Icon name="redo" width={22} height={22} />

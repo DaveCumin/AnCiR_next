@@ -165,6 +165,24 @@ describe('SavePlot dialog', () => {
 		});
 	});
 
+	it('groups Panel labels and its style under Combined image, above Individual files (UI-13)', async () => {
+		mountPlot(1, 'One', 0);
+		mountPlot(2, 'Two', 300);
+		render(SavePlot, { props: { open: true, Id: [1, 2] } });
+		await waitFor(() => expect(byLabel('Panel labels')).toBeDefined());
+		await fireEvent.click(byLabel('Panel labels'));
+		const layout = [...document.querySelectorAll('fieldset')].find(
+			(f) => f.querySelector('legend')?.textContent.trim() === 'Layout'
+		);
+		const names = ['Combined image', 'Panel labels', 'Individual files'];
+		const rows = [...layout.querySelectorAll('label.check-row, .label-styles')].map((el) =>
+			el.classList.contains('label-styles')
+				? 'style'
+				: names.find((n) => el.textContent.trim().startsWith(n))
+		);
+		expect(rows).toEqual(['Combined image', 'Panel labels', 'style', 'Individual files']);
+	});
+
 	it('closes on Escape and on Cancel without saving', async () => {
 		mountPlot(1);
 		const { component } = render(SavePlot, { props: { open: true, Id: [1] } });

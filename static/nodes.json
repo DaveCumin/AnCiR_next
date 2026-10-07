@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.81.3",
+  "generatedFromVersion": "β.81.4",
   "count": 62,
   "nodes": [
     {
@@ -896,7 +896,7 @@
       "displayName": "Average Profile",
       "kind": "tableProcess",
       "family": "Analysis",
-      "description": "Average daily profile — fold a series onto one period and show the per-bin mean (± SEM).",
+      "description": "Average daily profile: fold a series onto one period and show the per-bin mean (± SEM).",
       "keywords": [
         "fold",
         "waveform",
@@ -2745,7 +2745,7 @@
       "displayName": "Nonparametric RA",
       "kind": "tableProcess",
       "family": "Analysis",
-      "description": "Nonparametric rest-activity variables (IS, IV, RA, M10/L5) — robust to non-sinusoidal rhythms.",
+      "description": "Nonparametric rest-activity variables (IS, IV, RA, M10/L5), robust to non-sinusoidal rhythms.",
       "keywords": [
         "IS",
         "IV",
@@ -3648,7 +3648,7 @@
       "displayName": "Threshold",
       "kind": "tableProcess",
       "family": "Arithmetic",
-      "description": "Turn a column into a 0/1 (binary) column at a user-set cutoff — e.g. to make a binary outcome for logistic regression.",
+      "description": "Turn a column into a 0/1 (binary) column at a user-set cutoff, e.g. to make a binary outcome for logistic regression.",
       "keywords": [
         "binarize",
         "cutoff",

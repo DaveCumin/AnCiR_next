@@ -26,15 +26,5 @@ export function compactPortAnchorY(slot, sideCount, height) {
 	return topPad + slot * COMPACT_PORT_H + COMPACT_PORT_H / 2;
 }
 
-// Column-type → icon name. Mirrors TableProcessNode's TYPE_ICON, plus 'category'
-// (which TypeSelector renders with the 'list' glyph).
-export const COLUMN_TYPE_ICON = {
-	number: 'math',
-	category: 'list',
-	time: 'clock',
-	bin: 'table'
-};
-
-export function columnTypeIcon(type) {
-	return COLUMN_TYPE_ICON[type] ?? 'math';
-}
+// Column type to icon name: one shared map for the type selector and every node.
+export { columnTypeIcon } from '$lib/utils/columnTypeIcon.js';

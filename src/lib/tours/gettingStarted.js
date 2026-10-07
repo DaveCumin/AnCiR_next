@@ -75,7 +75,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Welcome to AnCiR 👋',
-			body: 'AnCiR helps you <strong>import, analyse and visualise</strong> time-series data. Let’s make your first plot together — it only takes a minute.',
+			body: 'AnCiR helps you <strong>import, analyse and visualise</strong> time-series data. Let’s make your first plot together. It only takes a minute.',
 			advance: { on: 'next' }
 		},
 		{
@@ -99,7 +99,7 @@ export const tour = {
 				document.querySelector('.palette-menu') ?? document.querySelector('.np-trigger'),
 			placement: 'left',
 			title: 'Add some data',
-			body: 'Every session starts with data. Open the <strong>+</strong> menu and choose <strong>“Import file”</strong> — we’ll grab a ready-made example rather than hunting for a file.',
+			body: 'Every session starts with data. Open the <strong>+</strong> menu and choose <strong>“Import file”</strong>. We’ll grab a ready-made example rather than hunting for a file.',
 			beforeShow: () => {
 				appState.view = 'canvas';
 			},
@@ -109,7 +109,7 @@ export const tour = {
 			target: () => importTab('Examples'),
 			placement: 'bottom',
 			title: 'Use a built-in example',
-			body: 'You can import your own CSV here, or paste a URL. For now click <strong>Examples</strong> — AnCiR ships with a dataset from every worked example.',
+			body: 'You can import your own CSV here, or paste a URL. For now click <strong>Examples</strong>; AnCiR ships with a dataset from every worked example.',
 			// The tab exists as soon as the modal is open, which the previous step guaranteed, so the
 			// listener binds successfully when this step is shown.
 			advance: { event: 'click', target: () => importTab('Examples') }
@@ -118,7 +118,7 @@ export const tour = {
 			target: () => exampleItem(/Free-running period/i),
 			placement: 'bottom',
 			title: 'Pick a rhythm to plot',
-			body: 'Choose <strong>“Free-running period”</strong> under <em>Rhythm &amp; circadian</em> — one clean activity rhythm that drifts a little each day. It makes a clear first actogram.',
+			body: 'Choose <strong>“Free-running period”</strong> under <em>Rhythm &amp; circadian</em>: one clean activity rhythm that drifts a little each day. It makes a clear first actogram.',
 			advance: { when: () => core.data.length > 0 }
 		},
 		{
@@ -127,7 +127,7 @@ export const tour = {
 				document.querySelector('.palette-menu') ?? document.querySelector('.np-trigger'),
 			placement: 'left',
 			title: 'Add an actogram',
-			body: 'Open the <strong>+</strong> menu and pick <strong>“Actogram”</strong> — the classic chronobiology plot. It starts empty; we’ll connect your data to it next.',
+			body: 'Open the <strong>+</strong> menu and pick <strong>“Actogram”</strong>, the classic chronobiology plot. It starts empty; we’ll connect your data to it next.',
 			beforeShow: () => {
 				appState.view = 'canvas';
 			},
@@ -137,12 +137,12 @@ export const tour = {
 			target: null,
 			dim: false,
 			placement: 'screen-bottom',
-			title: 'Connect data — the x axis',
+			title: 'Connect data: the x axis',
 			// The overlay rings the highlighted dots and animates a demo edge (see
 			// `wire`). x first; advances as soon as x is wired.
 			body: () =>
 				axisHint(
-					'The actogram has an <strong>x</strong> and a <strong>y</strong> input. Drag from your data node’s <strong>output dot</strong> (right edge) onto the highlighted <strong>x</strong> dot — the time column.',
+					'The actogram has an <strong>x</strong> and a <strong>y</strong> input. Drag from your data node’s <strong>output dot</strong> (right edge) onto the highlighted <strong>x</strong> dot (the time column).',
 					'a column',
 					'x',
 					anyPlotStatus().xOk
@@ -160,10 +160,10 @@ export const tour = {
 			target: null,
 			dim: false,
 			placement: 'screen-bottom',
-			title: 'Connect data — the y axis',
+			title: 'Connect data: the y axis',
 			body: () =>
 				axisHint(
-					'Now drag a column onto the <strong>y</strong> dot — the values to plot. The <strong>y</strong> shows a <strong>*</strong> because it can take several columns at once to overlay series.',
+					'Now drag a column onto the <strong>y</strong> dot (the values to plot). The <strong>y</strong> shows a <strong>*</strong> because it can take several columns at once to overlay series.',
 					'a column',
 					'y',
 					anyPlotStatus().yOk

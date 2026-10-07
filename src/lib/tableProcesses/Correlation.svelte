@@ -308,7 +308,7 @@
 				</tbody>
 			</table>
 			{#if result.rows.length > previewRows.length}
-				<p class="more">+{result.rows.length - previewRows.length} more — open the full table.</p>
+				<p class="more">+{result.rows.length - previewRows.length} more; open the full table.</p>
 			{/if}
 			<div class="tp-stat-actions">
 				<button class="tp-stat-btn" onclick={openFullTable}>Open full table</button>

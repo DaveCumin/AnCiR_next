@@ -14,7 +14,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Am I a night owl?',
-			body: 'Your body runs an internal clock — an example of <strong>homeostasis</strong>, keeping you in step with the day. It sets <em>when</em> you’re most active. Let’s read one person’s week. (Loading the lesson…)',
+			body: 'Your body runs an internal clock, an example of <strong>homeostasis</strong> that keeps you in step with the day. It sets <em>when</em> you’re most active. Let’s read one person’s week. (Loading the lesson…)',
 			beforeShow: () => loadLesson('learn-night-owl.json'),
 			advance: { on: 'next' }
 		},
@@ -33,7 +33,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Try this',
-			body: 'Add a scatter of activity against hour-of-day — the same rhythm appears as a single hump. Which display makes the timing easier to read? Reopen this lesson anytime from the <strong>?</strong> menu.',
+			body: 'Add a scatter of activity against hour-of-day; the same rhythm appears as a single hump. Which display makes the timing easier to read? Reopen this lesson anytime from the <strong>?</strong> menu.',
 			advance: { on: 'next' }
 		}
 	]

@@ -337,7 +337,7 @@
 			if (!result?.ok) {
 				if (result?.reason === 'no-columns') {
 					addNotification(
-						`No data columns yet — import or create one before adding "${item.displayName}".`,
+						`No data columns yet. Import or create one before adding "${item.displayName}".`,
 						'info'
 					);
 				} else {

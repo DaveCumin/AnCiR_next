@@ -63,8 +63,8 @@ export function seriesComputeWarning(datum, name = 'this series') {
 		if (rowCount(datum[key]) === 0) {
 			return (
 				`Series "${name}" cannot be computed: the ${label} input needs a column with data, ` +
-				`but its wired column provides none (the source may have been deleted or emptied) — ` +
-				`re-wire the ${label} input to a column that still has values.`
+				`but its wired column provides none (the source may have been deleted or emptied). ` +
+				`Re-wire the ${label} input to a column that still has values.`
 			);
 		}
 	}
@@ -76,7 +76,7 @@ export function seriesComputeWarning(datum, name = 'this series') {
 		if (nx !== ny) {
 			return (
 				`Series "${name}" cannot be computed: x and y must provide the same number of values, ` +
-				`but x has ${nx} and y has ${ny} — check the x and y columns are compatible ` +
+				`but x has ${nx} and y has ${ny}. Check the x and y columns are compatible ` +
 				`(wired from the same recording).`
 			);
 		}

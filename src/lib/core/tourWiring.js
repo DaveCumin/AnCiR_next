@@ -197,10 +197,10 @@ export const cosinorFitStatus = () => {
 export const wiringHint = (intro, xLabel, xPort, yLabel, yPort, status, tip = '') => {
 	const row = (ok, what, port) => `${ok ? '✅' : '⬜️'} ${what} → <strong>${port}</strong>`;
 	let nudge;
-	if (status.done) nudge = 'Both connected — moving on…';
+	if (status.done) nudge = 'Both connected. Moving on…';
 	else if (!status.xOk && !status.yOk) nudge = 'Drag both wires to continue.';
-	else if (!status.xOk) nudge = `Almost — now wire ${xLabel} → <strong>${xPort}</strong>.`;
-	else nudge = `Almost — now wire ${yLabel} → <strong>${yPort}</strong>.`;
+	else if (!status.xOk) nudge = `Almost. Now wire ${xLabel} → <strong>${xPort}</strong>.`;
+	else nudge = `Almost. Now wire ${yLabel} → <strong>${yPort}</strong>.`;
 	const tipHtml = tip ? `<br><span class="tour-tip">${tip}</span>` : '';
 	return `${intro}<br><br>${row(status.xOk, xLabel, xPort)}<br>${row(
 		status.yOk,
@@ -213,7 +213,7 @@ export const wiringHint = (intro, xLabel, xPort, yLabel, yPort, status, tip = ''
 // and switches the nudge to a confirmation.
 export const axisHint = (intro, label, port, ok, tip = '') => {
 	const nudge = ok
-		? 'Connected — moving on…'
+		? 'Connected. Moving on…'
 		: `Drag <strong>${label}</strong> onto <strong>${port}</strong>.`;
 	const tipHtml = tip ? `<br><span class="tour-tip">${tip}</span>` : '';
 	return `${intro}<br><br>${ok ? '✅' : '⬜️'} ${label} → <strong>${port}</strong><br><br><em>${nudge}</em>${tipHtml}`;

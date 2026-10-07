@@ -29,7 +29,7 @@ function renderControls(extraProps = {}) {
 describe('Box controls with category colouring active', () => {
 	it('replaces the per-series Stroke/Fill pickers with a pointer to Box colours', () => {
 		const { container, queryByText } = renderControls({ categoryColoursActive: true });
-		expect(queryByText('Per-category colours are in use — see Box colours below.')).toBeTruthy();
+		expect(queryByText('Per-category colours are in use; see Box colours below.')).toBeTruthy();
 		expect(queryByText('Stroke')).toBeNull();
 		expect(queryByText('Fill')).toBeNull();
 		// The rest of the box controls (widths etc.) stay usable.

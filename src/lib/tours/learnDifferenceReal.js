@@ -15,20 +15,20 @@ export const tour = {
 		{
 			target: null,
 			title: 'Is the difference real?',
-			body: 'Two groups almost never have exactly equal averages — random variation alone makes gaps. The big question of statistics is: <strong>is this gap bigger than chance would produce?</strong> (Loading the lesson…)',
+			body: 'Two groups almost never have exactly equal averages; random variation alone makes gaps. The big question of statistics is: <strong>is this gap bigger than chance would produce?</strong> (Loading the lesson…)',
 			beforeShow: () => loadLesson('learn-difference-real.json'),
 			advance: { on: 'next' }
 		},
 		{
 			target: null,
 			title: 'Compare the boxes first',
-			body: 'Look at the <strong>boxplot</strong>: weekday vs weekend. Compare the medians and how spread out each box is. Make a guess <em>before</em> any test — does the difference look real to you?',
+			body: 'Look at the <strong>boxplot</strong>: weekday vs weekend. Compare the medians and how spread out each box is. Make a guess <em>before</em> any test. Does the difference look real to you?',
 			advance: { on: 'next' }
 		},
 		{
 			target: null,
 			title: 'Run the comparison',
-			body: 'Open the <strong>Compare groups</strong> node. It picks an appropriate test and tells you whether the difference is <strong>statistically significant</strong> — i.e. bigger than chance alone would usually give.',
+			body: 'Open the <strong>Compare groups</strong> node. It picks an appropriate test and tells you whether the difference is <strong>statistically significant</strong> (i.e. bigger than chance alone would usually give).',
 			advance: { on: 'next' }
 		},
 		{
@@ -40,7 +40,7 @@ export const tour = {
 		{
 			target: null,
 			title: 'Try this',
-			body: 'Here’s the idea to take away: the same gap can be “significant” with a large sample yet not with a small one — more data lets you detect smaller real effects. Try it on your own data: compare two groups and see what the test says. Reopen anytime from the <strong>?</strong> menu.',
+			body: 'Here’s the idea to take away: the same gap can be “significant” with a large sample yet not with a small one, because more data lets you detect smaller real effects. Try it on your own data: compare two groups and see what the test says. Reopen anytime from the <strong>?</strong> menu.',
 			advance: { on: 'next' }
 		}
 	]

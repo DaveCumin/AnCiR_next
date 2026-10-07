@@ -151,7 +151,7 @@ const meta = new Map([
 			keywords: ['binarize', 'cutoff', 'binary', 'dichotomize', '0/1'], // search-only synonyms; never rendered
 			nodeIcon: 'node-threshold',
 			description:
-				'Turn a column into a 0/1 (binary) column at a user-set cutoff — e.g. to make a binary outcome for logistic regression.'
+				'Turn a column into a 0/1 (binary) column at a user-set cutoff, e.g. to make a binary outcome for logistic regression.'
 		}
 	],
 	[
@@ -399,7 +399,7 @@ const meta = new Map([
 			keywords: ['IS', 'IV', 'actigraphy', 'stability', 'fragmentation', 'M10', 'L5'], // search-only synonyms; never rendered
 			nodeIcon: 'actogram',
 			description:
-				'Nonparametric rest-activity variables (IS, IV, RA, M10/L5) — robust to non-sinusoidal rhythms.'
+				'Nonparametric rest-activity variables (IS, IV, RA, M10/L5), robust to non-sinusoidal rhythms.'
 		}
 	],
 
@@ -608,7 +608,7 @@ const meta = new Map([
 			keywords: ['fold', 'waveform', 'mean', '24h', 'diurnal', 'educed'], // search-only synonyms; never rendered
 			nodeIcon: 'average-profile',
 			description:
-				'Average daily profile — fold a series onto one period and show the per-bin mean (± SEM).'
+				'Average daily profile: fold a series onto one period and show the per-bin mean (± SEM).'
 		}
 	],
 	[

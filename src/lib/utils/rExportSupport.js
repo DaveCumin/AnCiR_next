@@ -113,6 +113,6 @@ export function explainRSupport(report) {
 			`It does not implement the column transform(s): ${report.missingProcesses.join(', ')}.`
 		);
 	}
-	parts.push('Export as Python instead — the Python runtime covers the whole engine.');
+	parts.push('Export as Python instead; the Python runtime covers the whole engine.');
 	return parts.join(' ');
 }

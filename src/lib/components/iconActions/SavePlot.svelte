@@ -544,10 +544,6 @@
 						Combined image
 						<span class="hint">as arranged on the canvas</span>
 					</label>
-					<label class="check-row">
-						<input type="radio" name="save-layout" value={false} bind:group={combined} />
-						Individual files
-					</label>
 					<label class="check-row indent" class:disabled={!combined}>
 						<input type="checkbox" bind:checked={panelLabels} disabled={!combined} />
 						Panel labels
@@ -571,6 +567,10 @@
 							</div>
 						</div>
 					{/if}
+					<label class="check-row">
+						<input type="radio" name="save-layout" value={false} bind:group={combined} />
+						Individual files
+					</label>
 				</fieldset>
 			{/if}
 
@@ -787,7 +787,8 @@
 		margin: 0;
 		accent-color: var(--color-accent-fill);
 	}
-	.check-row.indent {
+	.check-row.indent,
+	.label-styles.indent {
 		padding-left: var(--space-7);
 	}
 	.check-row.disabled {

@@ -41,8 +41,8 @@ const seen = new Set();
  */
 export function reportUnknownNode(kind, key) {
 	const message =
-		`Unknown ${kind} "${key}". This session refers to a node this build does not have — ` +
-		`it may have been renamed or removed, or the session may come from a newer version. ` +
+		`Unknown ${kind} "${key}". This session refers to a node this build does not have. ` +
+		`It may have been renamed or removed, or the session may come from a newer version. ` +
 		`The node will load but cannot compute.`;
 	const id = `${kind}:${key}`;
 	if (!seen.has(id)) {

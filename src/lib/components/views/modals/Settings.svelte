@@ -402,7 +402,7 @@
 		{#if core.activeStyleName}
 			<p class="privacy-note">
 				This session was styled with <strong>{core.activeStyleName}</strong>{sessionStyleMissing
-					? ' — not saved on this browser, so nothing was substituted for it.'
+					? ', which is not saved on this browser, so nothing was substituted for it.'
 					: '.'} Loading a session never re-applies a style; it shows what it was saved with.
 			</p>
 		{/if}
@@ -507,7 +507,7 @@
 		<p class="experimental-note">
 			Instead of one self-contained script, exports an <code>ancir_helpers</code> file holding all
 			the analysis functions and a short <code>analysis</code> script that reads like a methods section
-			— just your data and the steps performed. Keep the files in the same folder. Several files download
+			(just your data and the steps performed). Keep the files in the same folder. Several files download
 			together as one zip.
 		</p>
 		<label class="privacy-row">
@@ -529,7 +529,7 @@
 		<p class="experimental-note">
 			Downloads a standalone Python script that reproduces this session's analyses. Requires
 			<code>numpy</code>, <code>pandas</code> and <code>scipy</code>. Some processes may not yet be
-			implemented in the Python runtime — the script prints a warning when run.
+			implemented in the Python runtime; the script prints a warning when run.
 		</p>
 		<button
 			class="export-py-btn"
@@ -540,9 +540,9 @@
 		</button>
 		<p class="experimental-note">
 			Downloads a standalone R script that reproduces this session's analyses. Needs
-			<strong>no extra packages</strong> — base R only. The R runtime does not cover every node yet, so
-			a session using one it lacks is refused here, naming the node, rather than exported as a script
-			that would stop partway.
+			<strong>no extra packages</strong>: base R only. The R runtime does not cover every node yet,
+			so a session using one it lacks is refused here, naming the node, rather than exported as a
+			script that would stop partway.
 		</p>
 	</div>
 </Modal>

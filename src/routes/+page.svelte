@@ -328,7 +328,10 @@
 	const N = 2_000;
 	//------------------------------------
 
-	onMount(async () => {
+	// Synchronous on purpose: Svelte only calls a cleanup that onMount RETURNS, and an async
+	// callback returns a promise, so the listeners below were never removed. The awaited
+	// startup work runs in startApp() instead.
+	onMount(() => {
 		// First thing, before any of the loading below can throw: a crash during startup is
 		// exactly the one a user can't report, because the app never appears.
 		installErrorReporter();
@@ -336,17 +339,8 @@
 			console.log('moutning app in dev mode');
 			performance.mark('load-start');
 		}
-		//load the maps
-		appState.loadingState.loadingMsg = 'Loading maths ...';
-		appConsts.processMap = await loadProcesses();
-		appState.loadingState.loadingMsg = 'Loading plots ...';
-		appConsts.plotMap = await loadPlots();
-		appState.loadingState.loadingMsg = 'Loading more maths ...';
-		appConsts.tableProcessMap = await loadTableProcesses();
 
-		appState.loadingState.isLoading = false;
-
-		//add event listeners
+		//add event listeners (safe before the maps load: onKeyDown ignores keys while loading)
 		const updateWidth = () => {
 			appState.windowWidth = window.innerWidth;
 			appState.windowHeight = window.innerHeight;
@@ -467,6 +461,31 @@
 		// so this prompt is the last chance.
 		const removeUnloadGuard = installUnloadGuard(window);
 
+		startApp();
+
+		//remove the listeners on close
+		return () => {
+			window.removeEventListener('resize', updateWidth);
+			// Was `removeEventListener('keydown')` with no handler: that throws a
+			// TypeError (two arguments are required), so it removed nothing AND
+			// aborted the rest of this cleanup.
+			document.removeEventListener('keydown', onKeyDown);
+			removeUnloadGuard();
+		};
+	});
+
+	/** The awaited part of startup: load the node maps, then offer crash recovery or a deep link. */
+	async function startApp() {
+		//load the maps
+		appState.loadingState.loadingMsg = 'Loading maths ...';
+		appConsts.processMap = await loadProcesses();
+		appState.loadingState.loadingMsg = 'Loading plots ...';
+		appConsts.plotMap = await loadPlots();
+		appState.loadingState.loadingMsg = 'Loading more maths ...';
+		appConsts.tableProcessMap = await loadTableProcesses();
+
+		appState.loadingState.isLoading = false;
+
 		// A crash in this tab kept a copy of the session (errorReporter.js): offer it back now,
 		// which is what reloading after a crash is for (ROB-5).
 		offerCrashRecovery({
@@ -508,17 +527,7 @@
 			const m = performance.measure('loading time', 'load-start', 'load-end');
 			console.log('[loading time load', m.duration.toFixed(1), 'ms');
 		}
-
-		//remove the listeners on close
-		return () => {
-			window.removeEventListener('resize', updateWidth);
-			// Was `removeEventListener('keydown')` with no handler: that throws a
-			// TypeError (two arguments are required), so it removed nothing AND
-			// aborted the rest of this cleanup.
-			document.removeEventListener('keydown', onKeyDown);
-			removeUnloadGuard();
-		};
-	});
+	}
 
 	// async function loadTestJson() {
 	// 	// const jsonData = JSON.parse(`${testJson}`);

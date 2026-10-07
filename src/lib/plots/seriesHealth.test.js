@@ -34,7 +34,7 @@ describe('seriesComputeWarning', () => {
 		expect(w).toContain('Series "activity" cannot be computed');
 		expect(w).toContain('the y input needs a column with data'); // requirement
 		expect(w).toContain('provides none'); // actual
-		expect(w).toContain('re-wire the y input'); // remedy
+		expect(w).toContain('Re-wire the y input'); // remedy
 	});
 
 	it('flags a broken single-input column as "input"', () => {
@@ -47,7 +47,7 @@ describe('seriesComputeWarning', () => {
 		expect(w).toContain('cannot be computed');
 		expect(w).toContain('the same number of values'); // requirement
 		expect(w).toContain('x has 3 and y has 2'); // actual
-		expect(w).toContain('check the x and y columns are compatible'); // remedy
+		expect(w).toContain('Check the x and y columns are compatible'); // remedy
 	});
 
 	it('does NOT report a mismatch while only one side is wired', () => {

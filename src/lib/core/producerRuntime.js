@@ -95,7 +95,7 @@ export function resolveProducer(producerNodeId, producerPort = 'output') {
 
 	const key = `${producerNodeId}|${producerPort}`;
 	if (_inFlight.has(key)) {
-		console.warn('producerRuntime: cycle detected at', key, '— returning [].');
+		console.warn('producerRuntime: cycle detected at', key, '; returning [].');
 		return [];
 	}
 

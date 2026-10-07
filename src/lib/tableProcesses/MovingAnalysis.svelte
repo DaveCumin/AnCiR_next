@@ -949,7 +949,7 @@
 								{@const col = getColumnById(outId)}
 								{#if col}
 									<div class="tp-output-row">
-										<span class="tp-output-label">{srcName} — {k}</span>
+										<span class="tp-output-label">{srcName}: {k}</span>
 										<ColumnComponent {col} />
 									</div>
 								{/if}
@@ -965,7 +965,7 @@
 					headers={[
 						xIsTime ? 'window time' : 'window x',
 						...yIds.flatMap((id) =>
-							currentStatKeys.map((k) => `${getColumnById(Number(id))?.name ?? id} — ${k}`)
+							currentStatKeys.map((k) => `${getColumnById(Number(id))?.name ?? id}: ${k}`)
 						)
 					]}
 					data={[

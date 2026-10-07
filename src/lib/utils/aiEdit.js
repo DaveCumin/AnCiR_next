@@ -398,7 +398,7 @@ export function planEdit(spec, { summary, facts }) {
 		const tpType = a?.name;
 		const f = facts.tps[tpType];
 		if (!f) {
-			errors.push(`Unknown analysis "${tpType}" — skipped.`);
+			errors.push(`Unknown analysis "${tpType}"; skipped.`);
 			continue;
 		}
 		const raw = { ...(a.args ?? {}) };
@@ -419,7 +419,7 @@ export function planEdit(spec, { summary, facts }) {
 				// An analysis can't read a column that another analysis in this same edit hasn't
 				// produced yet — we'd have to order and re-resolve mid-phase. Reject rather than
 				// wire it to the wrong column.
-				errors.push(`${tpType}: can't resolve ${field} = "${raw[field]}" — skipped.`);
+				errors.push(`${tpType}: can't resolve ${field} = "${raw[field]}"; skipped.`);
 				failed = true;
 				break;
 			}
@@ -435,7 +435,7 @@ export function planEdit(spec, { summary, facts }) {
 			for (const item of list) {
 				const r = resolveRef(item, { index, pending });
 				if (!r || r.analysis != null) {
-					errors.push(`${tpType}: can't resolve ${field} = "${item}" — skipped.`);
+					errors.push(`${tpType}: can't resolve ${field} = "${item}"; skipped.`);
 					failed = true;
 					break;
 				}
@@ -489,17 +489,17 @@ export function planEdit(spec, { summary, facts }) {
 		const type = pl?.type;
 		const pf = facts.plots[type];
 		if (!pf) {
-			errors.push(`Unknown plot type "${type}" — skipped.`);
+			errors.push(`Unknown plot type "${type}"; skipped.`);
 			continue;
 		}
 		const fields = pf.inputs;
 		if (!fields.length) {
-			errors.push(`Plot type "${type}" isn't supported for AI edits yet — skipped.`);
+			errors.push(`Plot type "${type}" isn't supported for AI edits yet; skipped.`);
 			continue;
 		}
 		const rawSeries = Array.isArray(pl.series) ? pl.series : pl.inputs ? [pl.inputs] : [];
 		if (!rawSeries.length) {
-			errors.push(`Plot "${type}" had no series — skipped.`);
+			errors.push(`Plot "${type}" had no series; skipped.`);
 			continue;
 		}
 
@@ -511,7 +511,7 @@ export function planEdit(spec, { summary, facts }) {
 				const field = fields[i];
 				const r = resolveRef(s?.[field], { index, pending });
 				if (!r) {
-					errors.push(`Plot "${type}": can't resolve ${field} = "${s?.[field]}" — skipped.`);
+					errors.push(`Plot "${type}": can't resolve ${field} = "${s?.[field]}"; skipped.`);
 					failed = true;
 					break;
 				}
@@ -524,7 +524,7 @@ export function planEdit(spec, { summary, facts }) {
 
 		const name = typeof pl.name === 'string' && pl.name.trim() ? pl.name.trim() : type;
 		plots.push({ type, name, series });
-		preview.push(`Add plot: ${type} — "${name}" (${series.length} series)`);
+		preview.push(`Add plot: ${type} named "${name}" (${series.length} series)`);
 	}
 
 	// ---- changes to an existing analysis or plot ----
@@ -540,7 +540,7 @@ export function planEdit(spec, { summary, facts }) {
 		if (ch?.plot != null) {
 			const target = plotById.get(ch.plot);
 			if (!target) {
-				errors.push(`Can't restyle plot ${ch.plot} — no such plot.`);
+				errors.push(`Can't restyle plot ${ch.plot}: no such plot.`);
 				continue;
 			}
 			const propByPath = new Map((target.props ?? []).map((p) => [p.path, p]));
@@ -565,7 +565,7 @@ export function planEdit(spec, { summary, facts }) {
 
 		const target = byId.get(ch?.analysis);
 		if (!target) {
-			errors.push(`Can't change analysis ${ch?.analysis} — no such node.`);
+			errors.push(`Can't change analysis ${ch?.analysis}: no such node.`);
 			continue;
 		}
 		const f = facts.tps[target.name];
@@ -589,11 +589,11 @@ export function planEdit(spec, { summary, facts }) {
 	for (const b of spec?.bands ?? []) {
 		const target = plotById.get(b?.plot);
 		if (!target) {
-			errors.push(`Can't shade plot ${b?.plot} — no such plot.`);
+			errors.push(`Can't shade plot ${b?.plot}: no such plot.`);
 			continue;
 		}
 		if (!facts.plots[target.type]?.supportsBands) {
-			errors.push(`A ${target.type} doesn't support shading — only some plot types do.`);
+			errors.push(`A ${target.type} doesn't support shading; only some plot types do.`);
 			continue;
 		}
 		const from = Number(b?.fromHour);
@@ -613,7 +613,7 @@ export function planEdit(spec, { summary, facts }) {
 		}
 		const durationHours = bandDuration(from, to);
 		if (durationHours == null) {
-			errors.push(`Shading from ${from}:00 to ${to}:00 covers nothing — skipped.`);
+			errors.push(`Shading from ${from}:00 to ${to}:00 covers nothing; skipped.`);
 			continue;
 		}
 		const label = typeof b?.label === 'string' && b.label.trim() ? b.label.trim() : 'Night';
@@ -738,7 +738,7 @@ export function applyEdit(plan) {
 		// would wire the series to -1 — an unwired plot that throws at render. Drop it and say so.
 		const unresolved = p.series.some((s) => Object.values(s.refs).some((r) => resolve(r) === -1));
 		if (unresolved) {
-			errors.push(`Plot "${p.name}": its inputs couldn't be wired — skipped.`);
+			errors.push(`Plot "${p.name}": its inputs couldn't be wired; skipped.`);
 			skippedPlots++;
 			continue;
 		}
@@ -773,7 +773,7 @@ export function applyEdit(plan) {
 		// A panel id names a facet panel; Phase 1 routes its edit to the generator it projects.
 		const plot = ownerPlotOf(resolvePlotRef(c.plotId));
 		if (!plot?.plot?.toJSON) {
-			errors.push(`Couldn't restyle plot ${c.plotId} — it's no longer there.`);
+			errors.push(`Couldn't restyle plot ${c.plotId}; it's no longer there.`);
 			continue;
 		}
 		if (!c.path.startsWith('plot.')) {
@@ -787,7 +787,7 @@ export function applyEdit(plan) {
 		if (seriesMatch) {
 			const row = innerFor(plot).data?.[Number(seriesMatch[1])];
 			if (!fanOutSeriesColour(row, c.value)) {
-				errors.push(`Couldn't recolour a series of plot ${plot.id} — it has no colour to set.`);
+				errors.push(`Couldn't recolour a series of plot ${plot.id}; it has no colour to set.`);
 			}
 			continue;
 		}
@@ -800,7 +800,7 @@ export function applyEdit(plan) {
 	for (const b of plan.bands ?? []) {
 		const plot = ownerPlotOf(resolvePlotRef(b.plotId));
 		if (!plot?.plot?.toJSON) {
-			errors.push(`Couldn't shade plot ${b.plotId} — it's no longer there.`);
+			errors.push(`Couldn't shade plot ${b.plotId}; it's no longer there.`);
 			skippedBands++;
 			continue;
 		}
