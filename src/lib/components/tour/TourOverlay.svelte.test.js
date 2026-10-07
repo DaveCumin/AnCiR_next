@@ -153,8 +153,30 @@ describe('TourOverlay card vs an open dialog', () => {
 		expect(card.right).toBeLessThanOrEqual(VW);
 	});
 
+	it('uses a strip just under 200px wide (the measured 1024x768 import modal)', async () => {
+		// Measured in Chromium at 1024x768 on the Examples tab: the strip left of the
+		// dialog is 209 - 2 * 8 = 193px. A 200px floor skipped it and parked a full-width
+		// card in the top-left corner, where the dialog hid its last line and action row.
+		const MEASURED_DIALOG = { left: 209, top: 136, width: 606, height: 496 };
+		const MEASURED_TARGET = { left: 240, top: 300, width: 540, height: 32 };
+		stubRect(dialog, MEASURED_DIALOG);
+		stubRect(target, MEASURED_TARGET);
+		await startStep();
+
+		const card = cardBox();
+		expect(overlaps(card, boxOf(MEASURED_DIALOG))).toBe(false);
+		expect(card.width).toBe(193);
+		expect(card.left).toBeGreaterThanOrEqual(0);
+		expect(card.top).toBeGreaterThanOrEqual(0);
+		expect(card.right).toBeLessThanOrEqual(VW);
+		// cardBox() assumes the 160px default height; the squeezed card wraps taller, so
+		// check the overlay's own estimate (same text area at the narrower width) fits.
+		expect(card.top + Math.ceil((160 * 320) / card.width)).toBeLessThanOrEqual(VH);
+	});
+
 	it('with no room even for a squeezed card, takes the spot the dialog hides least', async () => {
-		// 700px wide leaves 162px strips, under the 200px minimum card width.
+		// 700px wide leaves 162px strips; after the 8px margins that is 146px, under the
+		// 160px minimum card width.
 		const WIDE_DIALOG = { left: 162, top: 96, width: 700, height: 576 };
 		stubRect(dialog, WIDE_DIALOG);
 		stubRect(target, TARGET);

@@ -85,9 +85,13 @@
 		'.add-data-menu, .np-menu, .palette-menu, .ws-palette, .help-menu, dialog[open]';
 
 	// The card's natural width (matches the .tour-tooltip CSS) and the narrowest it
-	// may be squeezed to so it can sit in the strip beside a wide modal.
+	// may be squeezed to so it can sit in the strip beside a wide modal. A squeezed
+	// card only grows taller (there is a full viewport of height beside a dialog), so
+	// a narrow card that is fully visible always beats a full-width one the dialog
+	// partly hides. 160px still fits the progress line and the action row: the import
+	// modal at 1024x768 leaves a strip of about 193px, which a 200px floor missed.
 	const CARD_W = 320;
-	const MIN_CARD_W = 200;
+	const MIN_CARD_W = 160;
 
 	function rectBox(r) {
 		return { left: r.left, top: r.top, right: r.left + r.width, bottom: r.top + r.height };
@@ -780,6 +784,12 @@
 		letter-spacing: 0.04em;
 		color: var(--color-text-muted);
 		margin-bottom: 0.35rem;
+		gap: 0.5rem;
+	}
+
+	/* The step counter stays on one line when the card narrows beside a dialog. */
+	.tour-progress > span:last-child {
+		white-space: nowrap;
 	}
 
 	.tour-title {
