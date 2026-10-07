@@ -62,7 +62,8 @@
 	};
 
 	// Resolve x + each y to aligned numeric arrays, then fold each y.
-	// Returns { perY: { [yId]: {profile, sem, n} }, binCentres, anyValid, yINs }.
+	// Returns { perY: { [yId]: {profile, sem, n, nSamples} }, binCentres, anyValid, yINs }.
+	// n is DAYS per bin (the SEM is across days, FIT-12); nSamples the rows per bin.
 	export function evaluateAverageProfile(argsIN) {
 		const xCol = argsIN.xIN >= 0 ? getColumnById(argsIN.xIN) : null;
 		const yINs = normalizeYInputs(argsIN.yIN);
@@ -90,12 +91,12 @@
 						const ref = { clock: true, offsetHours: phaseRef.offsetHours + res.t0 };
 						const r = relabelFoldedProfile(
 							res.binCentres,
-							[res.profile, res.sem, res.n],
+							[res.profile, res.sem, res.n, res.nSamples],
 							ref,
 							opts.period
 						);
 						res.binCentres = r.binTimes;
-						[res.profile, res.sem, res.n] = r.series;
+						[res.profile, res.sem, res.n, res.nSamples] = r.series;
 					}
 					perY[yId] = res;
 					if (!binCentres) binCentres = res.binCentres;
@@ -304,12 +305,17 @@
 			.filter((yId) => profData.perY[yId])
 			.map((yId) => {
 				const res = profData.perY[yId];
-				const nTotal = res.n.reduce((a, b) => a + b, 0);
+				const nTotal = res.nSamples.reduce((a, b) => a + b, 0);
 				const filled = res.n.filter((c) => c > 0).length;
+				// Days per filled bin: the n behind each bin's SEM (FIT-12).
+				const dayCounts = res.n.filter((c) => c > 0);
+				const dMin = dayCounts.length ? Math.min(...dayCounts) : 0;
+				const dMax = dayCounts.length ? Math.max(...dayCounts) : 0;
 				return {
 					yId,
 					name: getColumnById(Number(yId))?.name ?? String(yId),
 					nTotal,
+					days: dMin === dMax ? String(dMax) : `${dMin} to ${dMax}`,
 					filled,
 					nBins: res.profile.length
 				};
@@ -357,6 +363,7 @@
 				<tr>
 					<th>Series</th>
 					<th>Points</th>
+					<th title="Days contributing to each bin: the n of its SEM">Days per bin</th>
 					<th>Bins filled</th>
 				</tr>
 			</thead>
@@ -365,6 +372,7 @@
 					<tr>
 						<td>{r.name}</td>
 						<td>{r.nTotal}</td>
+						<td>{r.days}</td>
 						<td>{r.filled} / {r.nBins}</td>
 					</tr>
 				{/each}
@@ -377,8 +385,9 @@
 			Each series is folded onto one period and averaged per phase bin; bin times are {profData
 				?.phaseRef?.clock
 				? 'clock time of day'
-				: 'hours after the first sample'}. Wire <em>avgprofx</em> vs a profile output into a plot for
-			the average-day waveform; the SEM output gives per-bin error.
+				: 'hours after the first sample'}. Each day's samples in a bin are averaged first, so the
+			profile is the mean of the day means and the SEM output is the error across days (n = days).
+			Wire <em>avgprofx</em> vs a profile output into a plot for the average-day waveform.
 		</p>
 	</div>
 {:else if mounted}

@@ -157,6 +157,49 @@
 			"rFunc": "nonparametricra"
 		},
 		{
+			"id": "tp-npcra-iv-missing-epochs",
+			"_comment": "FIT-8. Every third hourly epoch missing: IV divides the squared successive differences by the valid successive pairs (Witting et al. 1990), not by n - 1. The old divisor reported about a third of the IV here.",
+			"kind": "tableProcess",
+			"jsName": "NonparametricRA",
+			"pyFunc": "npcra",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 29,
+				"missingEvery": 3,
+				"missingOffset": 1,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"epochHours": 1,
+				"period": 24,
+				"mWindow": 10,
+				"lWindow": 5,
+				"out": {
+					"npcrax": -1,
+					"IS": -1,
+					"IV": -1,
+					"RA": -1,
+					"M10": -1,
+					"L5": -1,
+					"M10onset": -1,
+					"L5onset": -1
+				}
+			},
+			"compareOutputs": ["npcrax", "npcray", "IS", "IV", "RA", "M10", "L5", "M10onset", "L5onset"],
+			"rFunc": "nonparametricra"
+		},
+		{
 			"id": "tp-npcra-rhythm-day-units",
 			"kind": "tableProcess",
 			"jsName": "NonparametricRA",
@@ -439,7 +482,7 @@
 			"jsFn": "correlogramDownloadData",
 			"pyFunc": "correlogram_download_data",
 			"tolerance": 1e-9,
-			"note": "A plain NUMBER x starting at 5 h whose spacing cycles 1, 1, 1.05 h (within 10% of the median, so the index-shift path). The app's lag step is the MEAN spacing, (last - first) / (n - 1) = 1.0167 h, over hoursSinceStart; the Python export used the median, 1 h, over the raw x (the offset itself changes nothing: the autocorrelation is shift-invariant).",
+			"note": "A plain NUMBER x starting at 5 h whose spacing cycles 1, 1, 1.05 h (within 10% of the median, so the index-shift path). The app's lag step was the MEAN spacing, (last - first) / (n - 1) = 1.0167 h, until SPEC-10 moved it to the median, 1 h, over hoursSinceStart (the offset itself changes nothing: the autocorrelation is shift-invariant).",
 			"generate": {
 				"seed": 107,
 				"series": [
@@ -460,7 +503,7 @@
 			"jsFn": "correlogramDownloadData",
 			"pyFunc": "correlogram_download_data",
 			"tolerance": 1e-9,
-			"note": "Two series. The first is a TIME x whose spacing alternates 0.25 and 0.75 h (not uniform, so the time-pair path), with maxLag 30 h and minLag 2 h saved on the SERIES as the app saves them; the app's lag step is the mean spacing, 0.5 h, where the Python export used the median (0.25 h) and read plot-level corrMaxLag / corrMinLag keys the app never writes. The second is a regular hourly time series on the auto lag range.",
+			"note": "Two series. The first is a TIME x whose spacing alternates 0.25 and 0.75 h (not uniform, so the time-pair path), with maxLag 30 h and minLag 2 h saved on the SERIES as the app saves them; the lag step is the upper median spacing, 0.25 h (96 spacings of 0.25 h against 95 of 0.75 h; SPEC-10, it was the mean spacing, 0.5 h, before), so the odd quarter-hour slots hold no pairs, and the Python export once read plot-level corrMaxLag / corrMinLag keys the app never writes. The second is a regular hourly time series on the auto lag range.",
 			"generate": {
 				"seed": 109,
 				"series": [
@@ -491,7 +534,7 @@
 			"jsFn": "correlogramDownloadData",
 			"pyFunc": "correlogram_download_data",
 			"tolerance": 1e-9,
-			"note": "Two series whose x has a missing END, no binWidth, so the lag step is the mean spacing. The first is a NUMBER x from 5 h, hourly, with the LAST time missing; the second a TIME x every 0.5 h with the FIRST time missing. The app used (t[n-1] - t[0]) / (n-1) over the raw rows and read the missing end as 0: the first series got a step of about -5/(n-1), negative, so the plot was blank, and the second a step of 0.5 * (n-2)/(n-1), so every lag was mislabelled. The step is (t_j - t_i) / (j - i) over the first and last VALID rows (utils/correlogram.js meanSpacing), which the Python port already used; it equals the old formula whenever both ends are present.",
+			"note": "Two series whose x has a missing END, no binWidth, so the lag step is the median interval of the valid times (SPEC-10; it was the mean spacing when this fixture was written). The first is a NUMBER x from 5 h, hourly, with the LAST time missing; the second a TIME x every 0.5 h with the FIRST time missing. The app used (t[n-1] - t[0]) / (n-1) over the raw rows and read the missing end as 0: the first series got a step of about -5/(n-1), negative, so the plot was blank, and the second a step of 0.5 * (n-2)/(n-1), so every lag was mislabelled. The step became (t_j - t_i) / (j - i) over the first and last VALID rows; since SPEC-10 it is the median interval, which skips missing rows by construction.",
 			"generate": {
 				"seed": 113,
 				"series": [
@@ -512,6 +555,28 @@
 						"tau": 24,
 						"onsetHr": 20,
 						"missingX": [0]
+					}
+				]
+			}
+		},
+		{
+			"id": "correlogram-data-gap",
+			"kind": "plotCompute",
+			"jsFn": "correlogramDownloadData",
+			"pyFunc": "correlogram_download_data",
+			"tolerance": 1e-9,
+			"note": "SPEC-10. A NUMBER x, hourly for 7 days, with the rows from 50 h to 62 h REMOVED (a recording gap with no rows), no binWidth. The plot's lag step was the mean spacing, (last - first) / (n - 1) = 167 / 155 = 1.077 h, so every lag slot sat off the hour and the dominant period read wrong; it is now the median interval, 1 h, as the Rhythmicity node's correlogram uses (computeAutocorrelation with binSize null).",
+			"generate": {
+				"seed": 127,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 0,
+						"dtHrs": 1,
+						"days": 7,
+						"tau": 24,
+						"onsetHr": 8,
+						"dropHrs": [50, 62]
 					}
 				]
 			}
@@ -900,6 +965,42 @@
 				}
 			},
 			"compareOutputs": ["avgprofx", "avgprof"],
+			"rFunc": "averageprofile"
+		},
+		{
+			"id": "tp-averageprofile-sem-across-days",
+			"_comment": "FIT-12. Half-hourly samples (two per 1 h bin per day) over 7 days with every fifth value missing, so days contribute unequal counts to a bin. Each day's samples in a bin are averaged first; the profile is the mean of the day means and the SEM is across days (n = days), not across the pooled samples (pseudo-replication; Hurlbert 1984).",
+			"kind": "tableProcess",
+			"jsName": "AverageProfile",
+			"pyFunc": "averageprofile",
+			"generate": {
+				"type": "rhythm",
+				"n": 336,
+				"dt": 0.5,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 43,
+				"missingEvery": 5,
+				"missingOffset": 2,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"period": 24,
+				"nBins": 24,
+				"out": {
+					"avgprofx": -1
+				}
+			},
+			"perInputOut": ["avgprofsem_"],
+			"compareOutputs": ["avgprofx", "avgprof", "avgprofsem"],
 			"rFunc": "averageprofile"
 		},
 		{
@@ -2771,6 +2872,101 @@
 			"rToleranceWhy": "Nonlinear fit (see tp-cosinor-free-period-range)."
 		},
 		{
+			"id": "tp-cosinor-fixed-ci-undetermined",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"_comment": "FIT-7. A weak 24 h rhythm (amplitude 0.4) in noise (SD 2): the zero-amplitude test is not significant (pvalue >= 0.05), so the acrophase CI is undetermined (NaN) in all three ports, while the point estimate is still reported (Bingham et al. 1982; Cornelissen 2014).",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 0.4,
+				"mesor": 20,
+				"phase": 7,
+				"noise": 2,
+				"seed": 619,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"outputX": -1,
+				"out": {
+					"cosinorx": -1,
+					"amplitude_h1": -1,
+					"acrophase_h1": -1,
+					"acrophase_ciLow": -1,
+					"acrophase_ciHigh": -1,
+					"pvalue": -1
+				}
+			},
+			"compareOutputs": [
+				"amplitude_h1",
+				"acrophase_h1",
+				"acrophase_ciLow",
+				"acrophase_ciHigh",
+				"pvalue"
+			]
+		},
+		{
+			"id": "tp-cosinor-fixed-ci-harmonic-test",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"_comment": "FIT-7, the per-harmonic test. A strong 12 h rhythm plus a weak 24 h one (amplitude 0.45, noise SD 1.5), fitted at 24 h with two harmonics: the model is significant (pvalue < 0.05) through H2, and H1's interval is narrower than a period, but H1's own (beta, gamma) Wald F-test is not significant, so the H1 acrophase CI ports are NaN. Without the per-harmonic test they were finite.",
+			"generate": {
+				"type": "rhythm",
+				"n": 72,
+				"period": 12,
+				"amp": 4,
+				"mesor": 20,
+				"phase": 7,
+				"noise": 1.5,
+				"seed": 621,
+				"second": { "period": 24, "amp": 0.45, "phase": 3 },
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 2,
+				"alpha": 0.05,
+				"outputX": -1,
+				"out": {
+					"cosinorx": -1,
+					"amplitude_h1": -1,
+					"acrophase_h1": -1,
+					"acrophase_ciLow": -1,
+					"acrophase_ciHigh": -1,
+					"pvalue": -1
+				}
+			},
+			"compareOutputs": [
+				"amplitude_h1",
+				"acrophase_h1",
+				"acrophase_ciLow",
+				"acrophase_ciHigh",
+				"pvalue"
+			]
+		},
+		{
 			"id": "tp-cosinor-fixed-ci-short-record",
 			"kind": "tableProcess",
 			"jsName": "Cosinor",
@@ -3771,6 +3967,75 @@
 			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
 		},
 		{
+			"id": "tp-chisquared-goodness-codes-as-categories",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "STAT-13. A NUMBER column of category codes with gofInput 'categories': the codes are tallied (1, 2, 3 seen 1, 2 and 3 times), not read as counts; the missing cell is skipped.",
+			"inputs": [{ "ref": "a", "type": "number", "values": [1, 2, 2, 3, 3, 3, null] }],
+			"args": {
+				"xIN": "@a",
+				"testType": "goodness",
+				"gofInput": "categories",
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "tp-chisquared-goodness-negative-count",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "STAT-13. gofInput 'counts' with a negative count: refused (no outputs written) in all three ports, since goodness of fit needs observed frequencies.",
+			"inputs": [{ "ref": "a", "type": "number", "values": [10, -3, 12] }],
+			"args": {
+				"xIN": "@a",
+				"testType": "goodness",
+				"gofInput": "counts",
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
+		},
+		{
+			"id": "tp-chisquared-goodness-fractional-count",
+			"kind": "tableProcess",
+			"jsName": "ChiSquared",
+			"pyFunc": "chisquared",
+			"rFunc": "chisquared",
+			"note": "STAT-13. An all-numeric column read as counts by gofInput 'auto' (the default) with a non-integer count (2.5): refused, no outputs written.",
+			"inputs": [{ "ref": "a", "type": "number", "values": [10, 2.5, 12] }],
+			"args": {
+				"xIN": "@a",
+				"testType": "goodness",
+				"gofInput": "auto",
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"df": -1,
+					"effectSize": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "df", "effectSize", "ciLow", "ciHigh"]
+		},
+		{
 			"id": "tp-chisquared-goodness-counts",
 			"kind": "tableProcess",
 			"jsName": "ChiSquared",
@@ -3804,7 +4069,7 @@
 			"jsName": "Correlation",
 			"pyFunc": "correlation",
 			"rFunc": "correlation",
-			"note": "Correlation, method 'auto', on the demo-tp-correlation data. The app picks ONE method for the whole matrix by Jarque-Bera (n >= 8, sample-SD moments, p >= 0.05 is normal): all three columns pass, so Pearson (input 2 is an exact linear map of input 1, r = 1). Both ports ran Shapiro-Wilk per PAIR, which rejected the cosine-shaped columns and gave Spearman (r = 0.9994).",
+			"note": "Correlation, method 'auto', on the demo-tp-correlation data. The app picks ONE method for the whole matrix by Jarque-Bera (n >= 8, population (n-divisor) moments since STAT-25, p >= 0.05 is normal): all three columns pass, so Pearson (input 2 is an exact linear map of input 1, r = 1). Both ports ran Shapiro-Wilk per PAIR, which rejected the cosine-shaped columns and gave Spearman (r = 0.9994).",
 			"inputs": [
 				{
 					"ref": "a",
@@ -3928,7 +4193,7 @@
 			"jsName": "Correlation",
 			"pyFunc": "correlation",
 			"rFunc": "correlation",
-			"note": "Correlation 'auto' where the choice hinges on HOW the app's Jarque-Bera standardises. Column c (n = 10, right-skewed) has JB p = 0.086 with the SAMPLE standard deviation the app uses, so every column passes and the matrix is Pearson; with the population SD (the NormalityTest node's convention) its p would be 0.016 and the matrix would switch to Spearman.",
+			"note": "Correlation 'auto' where the choice hinges on HOW the app's Jarque-Bera standardises. Column c (n = 10, right-skewed) has JB p = 0.016 on the population (n-divisor) moments, the textbook statistic the app has used since STAT-25 (shared with the NormalityTest node), so the matrix is Spearman; the SAMPLE standard deviation it used before gave p = 0.086 and Pearson. The id keeps its old name.",
 			"inputs": [
 				{
 					"ref": "a",

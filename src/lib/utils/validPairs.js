@@ -61,8 +61,10 @@ export function validValues(arr) {
  * The mean sample spacing of a time axis, from its first and last VALID rows:
  * (t_j - t_i) / (j - i), where i and j are the first and last rows whose time is present.
  *
- * Used by the Correlogram lag step. (SurrogateTest used it for its block length until it moved
- * to the regular grid its FFT gap handling builds; it no longer reads it.)
+ * No production caller now. The Correlogram used it for its lag step until SPEC-10 moved the
+ * plot to the median interval (computeAutocorrelation with binSize null), as the Rhythmicity
+ * node does; SurrogateTest used it for its block length until it moved to the regular grid its
+ * FFT gap handling builds.
  *
  * The Correlogram used (t[n - 1] - t[0]) / (n - 1) over the raw rows, and JS reads a missing
  * end as 0 (`null - 5 === -5`), so a missing LAST time gave a zero or negative step and a

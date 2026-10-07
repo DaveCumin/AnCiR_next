@@ -795,3 +795,22 @@ describe('tiny p-values are reported, not rounded to 0', () => {
 		expect(rel(kruskalWallis([a, b, c]).pValue, 6.593551417550708e-18)).toBeLessThan(1e-6);
 	});
 });
+
+// STAT-25: the normality screen is the textbook Jarque-Bera, on the population (n-divisor)
+// moments (Jarque and Bera 1987, Int Stat Rev 55:163-172), i.e. utils/normality.js jarqueBera.
+// The local copy standardised by the n - 1 SD, which shrank both moments. Reference values are
+// scipy.stats.jarque_bera.
+describe('jarqueBeraNormality uses the n-divisor moments (STAT-25)', () => {
+	it('matches scipy.stats.jarque_bera on 1..10', () => {
+		const r = jarqueBeraNormality([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+		expect(r.statistic).toBeCloseTo(0.6244872972145701, 12);
+		expect(r.pValue).toBeCloseTo(Math.exp(-0.6244872972145701 / 2), 12);
+	});
+
+	it('matches scipy.stats.jarque_bera on a skewed sample', () => {
+		expect(jarqueBeraNormality([0, 0, 0, 0, 0, 0, 0, 0, 0, 12]).statistic).toBeCloseTo(
+			22.736625514403293,
+			10
+		);
+	});
+});

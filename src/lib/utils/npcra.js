@@ -24,7 +24,8 @@ import { isInvalidValue } from './stats.js';
  * @param {number} [opts.lWindow=5]     L-window length (h) for L5
  * @returns {{IS:number,IV:number,RA:number,M10:number,L5:number,M10onset:number,
  *   L5onset:number,profile:number[],binCentres:number[],n:number,p:number,
- *   nEpochs:number,t0:number}|null}  null when there is no usable data.
+ *   nEpochs:number,missingEpochFraction:number,t0:number}|null}  null when there is no
+ *   usable data. `missingEpochFraction` is (nEpochs - n) / nEpochs, the empty epochs.
  *
  * PHASE FRAME: M10onset, L5onset and binCentres are hours after `t0`, the earliest
  * valid time (the first sample), folded into [0, period). They are NOT clock time:
@@ -111,12 +112,22 @@ export function computeNPCRA(t, y, opts = {}) {
 	for (let h = 0; h < p; h++) if (Number.isFinite(profile[h])) profSS += (profile[h] - Xbar) ** 2;
 	const IS = overallSS > 0 ? (n * profSS) / (p * overallSS) : NaN;
 
-	// 6. IV = n·Σ(xᵢ−xᵢ₋₁)²  /  ((n−1)·Σ_i(x−X̄)²)   (successive finite pairs only)
+	// 6. IV = [Σ(xᵢ−xᵢ₋₁)² / nPairs]  /  [Σ_i(x−X̄)² / n], over the successive pairs whose two
+	//    epochs are both present. The mean squared successive difference over the variance
+	//    (Witting et al. 1990; Van Someren et al. 1999, p.509); with no gaps nPairs = n − 1 and
+	//    this is the textbook n·Σ(xᵢ−xᵢ₋₁)² / ((n−1)·Σ(x−X̄)²). Dividing by n − 1 regardless
+	//    (FIT-8) biased IV low in proportion to the missing epochs.
 	let diffSS = 0;
+	let nPairs = 0;
 	for (let k = 1; k < nEpochs; k++) {
-		if (Number.isFinite(x[k]) && Number.isFinite(x[k - 1])) diffSS += (x[k] - x[k - 1]) ** 2;
+		if (Number.isFinite(x[k]) && Number.isFinite(x[k - 1])) {
+			diffSS += (x[k] - x[k - 1]) ** 2;
+			nPairs++;
+		}
 	}
-	const IV = overallSS > 0 && n > 1 ? (n * diffSS) / ((n - 1) * overallSS) : NaN;
+	const IV = overallSS > 0 && nPairs > 0 ? diffSS / nPairs / (overallSS / n) : NaN;
+	// Share of the epoch grid with no valid sample; the node warns above 10%.
+	const missingEpochFraction = (nEpochs - n) / nEpochs;
 
 	// 7. M10 / L5 as circular rolling-window means over the daily profile.
 	const roll = (widthHours, better) => {
@@ -160,6 +171,7 @@ export function computeNPCRA(t, y, opts = {}) {
 		n,
 		p,
 		nEpochs,
+		missingEpochFraction,
 		t0
 	};
 }

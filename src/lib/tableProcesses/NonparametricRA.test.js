@@ -125,3 +125,26 @@ describe('NonparametricRA — nonparametricRA()', () => {
 		expect(anyValid).toBe(false);
 	});
 });
+
+// FIT-8: IV now divides by the valid successive pairs; the node also says when more than 10%
+// of the epochs are empty, since IS and IV then rest on a thinner record than it looks.
+describe('NonparametricRA: missing-epoch warning (FIT-8)', () => {
+	const args = { xIN: 1, yIN: [2], epochHours: 1, period: 24, out: previewOut };
+
+	it('warns, naming the column and the share, when more than 10% of epochs are missing', () => {
+		const { t, y } = restActivity(10);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { name: 'wheel', getData: () => y.map((v, i) => (i % 5 === 2 ? null : v)) };
+		const { warnings } = evaluateNPCRA(args);
+		const w = warnings.find((m) => /epochs have no data/.test(m));
+		expect(w).toMatch(/"wheel"/);
+		expect(w).toMatch(/20% of the 1 h epochs/);
+	});
+
+	it('does not warn at 10% or less', () => {
+		const { t, y } = restActivity(10);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { name: 'wheel', getData: () => y.map((v, i) => (i % 10 === 2 ? null : v)) };
+		expect(evaluateNPCRA(args).warnings.some((m) => /epochs have no data/.test(m))).toBe(false);
+	});
+});

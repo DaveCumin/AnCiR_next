@@ -5,9 +5,10 @@
  * (times[n - 1] - times[0]) / (n - 1) over the raw rows, and JS reads a missing end as 0:
  * a missing last time gave a step of about -t0 / (n - 1), i.e. zero or negative, so the
  * plot was BLANK; a missing first time stretched or shrank the step, so every lag was
- * mislabelled and the reported period was wrong. The step now comes from the first and last
- * VALID times, (t_j - t_i) / (j - i), which is the same number whenever both ends are
- * present (and what the Python port has always done).
+ * mislabelled and the reported period was wrong. The step then came from the first and last
+ * VALID times, (t_j - t_i) / (j - i). Since SPEC-10 it is the median interval of the valid
+ * times (computeAutocorrelation with binSize null), which skips missing rows by construction
+ * and is not stretched by a recording gap either.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/svelte';
@@ -76,6 +77,34 @@ describe('Correlogram lag step with a missing end', () => {
 		const t0 = Date.parse('2024-03-04T00:00:00Z');
 		const ms = HOURS.map((h) => t0 + h * 3600000);
 		const s = series([null, ...ms.slice(1, -1), null], ACTIVITY, 'time');
+		expect(s.acfData.dt).toBe(1);
+		expect(s.peak.lag).toBe(24);
+	});
+});
+
+// SPEC-10: with no binWidth the plot's lag step is the MEDIAN sampling interval, as the
+// Rhythmicity node's correlogram uses (computeAutocorrelation with binSize null). The mean
+// spacing, (last - first) / (n - 1), is stretched by a recording gap: dropping 12 hourly rows
+// gave a step of 167 / 155 = 1.077 h, so every lag slot sat off the hour and the period read
+// about 24.8 h instead of 24 h.
+describe('Correlogram lag step with a recording gap (SPEC-10)', () => {
+	const kept = HOURS.map((h, i) => i).filter((i) => HOURS[i] < 50 || HOURS[i] >= 62);
+	const gapHours = kept.map((i) => HOURS[i]);
+	const gapActivity = kept.map((i) => ACTIVITY[i]);
+
+	it('the step is the median interval (1 h), not the gap-stretched mean', () => {
+		const s = series(gapHours, gapActivity);
+		expect(s.acfData.dt).toBe(1);
+		expect(s.peak.lag).toBe(24);
+	});
+
+	it('a time column with a gap', () => {
+		const t0 = Date.parse('2024-03-04T00:00:00Z');
+		const s = series(
+			gapHours.map((h) => t0 + h * 3600000),
+			gapActivity,
+			'time'
+		);
 		expect(s.acfData.dt).toBe(1);
 		expect(s.peak.lag).toBe(24);
 	});

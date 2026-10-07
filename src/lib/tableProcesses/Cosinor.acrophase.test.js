@@ -175,3 +175,22 @@ describe('Cosinor free period: bounded range and visible warnings', () => {
 		expect(rawData.get(OUT_IDS.period)[0]).toBe(24);
 	});
 });
+
+// FIT-7: no acrophase CI without a detectable rhythm (Bingham et al. 1982; Cornelissen 2014).
+describe('Cosinor acrophase CI is undetermined when the amplitude is not significant', () => {
+	const noise = t6.map((_, i) => 2 * Math.sin(i * 12.9898) + 1.5 * Math.cos(i * 78.233));
+	const yFlat = t6.map((ti, i) => 10 + 0.02 * Math.cos((2 * Math.PI * ti) / 24) + noise[i]);
+
+	it('the ports are NaN and the stats table cells are empty; the estimate is still reported', async () => {
+		setData(t6, yFlat);
+		const a = args();
+		const [data] = await cosinor(a);
+		expect(rawData.get(OUT_IDS.pvalue)[0]).toBeGreaterThanOrEqual(0.05);
+		expect(Number.isFinite(rawData.get(OUT_IDS.acrophase)[0])).toBe(true);
+		expect(rawData.get(OUT_IDS.acrophase_ciLow)[0]).toBeNaN();
+		expect(rawData.get(OUT_IDS.acrophase_ciHigh)[0]).toBeNaN();
+		const table = cosinorStatsTable(data, a);
+		expect(table.rows[0][col(table, 'H1_acrophase_ci_lo')]).toBe(null);
+		expect(table.rows[0][col(table, 'H1_acrophase_ci_hi')]).toBe(null);
+	});
+});

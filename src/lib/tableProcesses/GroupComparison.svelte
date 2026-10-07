@@ -11,6 +11,7 @@
 	// effect's p is reported (e.g. 1e-34) instead of being rounded to 0.
 	import { pUpperFromF } from '$lib/utils/fdist.js';
 	import { pUpperFromChiSq } from '$lib/utils/chisquare.js';
+	import { jarqueBera } from '$lib/utils/normality.js';
 	import { studentizedRangeSf, studentizedRangeQuantile } from '$lib/utils/studentizedRange.js';
 	import tQuantile from '@stdlib/stats-base-dists-t-quantile';
 
@@ -161,7 +162,6 @@
 			};
 		}
 
-		const m = mean(clean);
 		const variance = sampleVariance(clean);
 		if (!Number.isFinite(variance) || variance === 0) {
 			return {
@@ -173,26 +173,17 @@
 			};
 		}
 
-		const sd = Math.sqrt(variance);
-		let skew = 0;
-		let kurtosis = 0;
-		for (const v of clean) {
-			const z = (v - m) / sd;
-			skew += z ** 3;
-			kurtosis += z ** 4;
-		}
-		skew /= n;
-		kurtosis /= n;
-		const jb = (n / 6) * (skew ** 2 + (kurtosis - 3) ** 2 / 4);
-		const pValue = pUpperFromChiSq(jb, 2);
+		// The textbook statistic on the population (n-divisor) moments, shared with the
+		// NormalityTest node (Jarque and Bera 1987; scipy.stats.jarque_bera). This used to be a
+		// local copy standardised by the n - 1 SD, which shrank skewness and kurtosis (STAT-25).
+		const jb = jarqueBera(clean);
+		const pValue = jb.pvalue;
 
 		return {
 			evaluable: true,
 			normal: Number.isFinite(pValue) ? pValue >= 0.05 : false,
-			statistic: jb,
-			pValue,
-			skew,
-			kurtosis
+			statistic: jb.statistic,
+			pValue
 		};
 	}
 

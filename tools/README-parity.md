@@ -227,17 +227,20 @@ maxLag 30 and minLag 2, plotted with a regular series.
 | ---------------------------------- | ---------------------------------------------------------------- |
 | the whole fix reverted             | all 5 fixtures, e.g. `binned-time` at `rows`: length 144 vs 72   |
 | the column's binWidth ignored      | `binned-time`, `bin-column`                                      |
-| median spacing instead of the mean | `number-offset` (rows 119 vs 118), `irregular` (149 vs 116)      |
-| per-series maxLag / minLag ignored | `irregular` at `rows`: length 156 vs 116                         |
+| mean spacing instead of the median | `gap` (SPEC-10), `number-offset`, `irregular`                    |
+| per-series maxLag / minLag ignored | `irregular` at `rows` (row count)                                |
 | `np.median` in the compute         | `plot-correlogram-upper-median` at `lags`: length 4 vs 3 (R too) |
 
 Python only for the rows: neither the R runtime nor the exported R scripts write plot data
 for any plot type (the R export's only CSV is the session's input data).
 
-A missing FIRST or LAST x: the app's mean spacing used to read it as 0 (JS `null`
-arithmetic), which gave a wrong step or a blank plot. The port never copied that; it uses the
-first and last valid rows, `(t_j - t_i) / (j - i)`, and the app now does the same
-(`utils/correlogram.js meanSpacing`); the two formulas agree whenever both ends are present.
+With no binWidth the lag step is the MEDIAN interval of the valid times (SPEC-10), as the
+Rhythmicity node's correlogram uses; the mean spacing the plot used before was stretched by a
+recording gap (24.456 h against 24.000 h). `correlogram-data-gap` pins it (hourly data with 12
+rows dropped).
+
+A missing FIRST or LAST x: the app's old mean spacing read it as 0 (JS `null` arithmetic),
+which gave a wrong step or a blank plot. The median skips missing rows by construction.
 `correlogram-data-missing-ends` pins it (a number x missing its last time, a time x missing its
 first). It also caught a Python-only bug: `Column.get_data` judged "already epoch ms" on
 `data[0]`, so a time column whose FIRST value is missing went through `pd.to_datetime`, which
@@ -736,8 +739,9 @@ real differences:
 | `demo-tp-columnset` (error)             | "unsupported table process 'ColumnSet'"                                                    | port bug (both ports) | fixed: dispatched as a no-op        |
 
 - **Correlation `auto`.** The app picks ONE method for the whole matrix: Pearson unless ANY
-  column is non-normal by GroupComparison's `jarqueBeraNormality` (n >= 8, moments over the
-  SAMPLE standard deviation, p >= 0.05 normal), then Spearman for every pair. Both ports ran
+  column is non-normal by GroupComparison's `jarqueBeraNormality` (n >= 8, the textbook
+  population-moment statistic of `utils/normality.js` since STAT-25, before which it used the
+  SAMPLE standard deviation; p >= 0.05 normal), then Spearman for every pair. Both ports ran
   Shapiro-Wilk per PAIR and chose per pair. Fixtures: the demo's own data (all normal, so
   Pearson, r = 1 on an exact linear map), a matrix with one skewed column (Spearman for every
   pair, including the two normal columns), and a column whose decision flips on the sample
@@ -769,7 +773,7 @@ groups-default, groups-fisher, goodness-categorical, goodness-counts, paired-no-
 | Python `dataFormat` default `'paired'`       | `tp-chisquared-groups-default`                                           |
 | Python per-pair method (auto never Spearman) | `tp-correlation-auto-one-skewed` r -0.1518 vs -0.1475                    |
 | Python Fisher alternative ignored            | `tp-chisquared-fisher-greater` p 0.0152 vs 0.0076                        |
-| JB with the population SD (Python and R)     | `tp-correlation-auto-jb-sample-sd` r 0.9515 vs 0.9691                    |
+| JB with the sample SD (Python and R)         | `tp-correlation-auto-jb-sample-sd` (Pearson instead of Spearman)         |
 | R `dataFormat` default `'paired'`            | `tp-chisquared-groups-default`                                           |
 | R interval upper tail `<` instead of `<=`    | the 4 Fisher fixtures                                                    |
 | R exact Spearman p                           | `tp-correlation-auto-one-skewed`                                         |

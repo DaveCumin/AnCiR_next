@@ -142,6 +142,8 @@
 	// IV is a lag-1 difference over epochs; too few epochs per cycle and it is
 	// dominated by the binning rather than the behaviour.
 	const NPCRA_MIN_EPOCHS_PER_CYCLE = 8;
+	// Warn when more than this share of the epoch grid is empty (FIT-8).
+	const NPCRA_MAX_MISSING_EPOCHS = 0.1;
 
 	function npcraSampleWarnings(t, perY, opts) {
 		const warnings = [];
@@ -170,6 +172,17 @@
 		if (epochsPerCycle < NPCRA_MIN_EPOCHS_PER_CYCLE) {
 			warnings.push(
 				`Coarse epochs: only ${epochsPerCycle.toFixed(1)} bins per ${period} h cycle at a ${opts.epochHours} h epoch. Intradaily variability measures hour-to-hour fragmentation, so with this few bins it mostly reflects the binning rather than the behaviour, so shorten the epoch if the data allow.`
+			);
+		}
+
+		// FIT-8: many empty epochs thin the record IS and IV rest on (IV is now divided by
+		// the valid successive pairs, so it is not biased, but it is noisier).
+		for (const [yId, res] of Object.entries(perY)) {
+			const frac = res.missingEpochFraction;
+			if (!(frac > NPCRA_MAX_MISSING_EPOCHS)) continue;
+			const name = getColumnById(Number(yId))?.name ?? `column ${yId}`;
+			warnings.push(
+				`"${name}": ${Math.round(frac * 100)}% of the ${opts.epochHours} h epochs have no data. IS and IV use only the epochs (and, for IV, the successive pairs) that are present, so they rest on less of the recording than its length suggests.`
 			);
 		}
 

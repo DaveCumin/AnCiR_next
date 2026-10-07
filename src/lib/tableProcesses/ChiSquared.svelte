@@ -68,6 +68,9 @@
 		['dataFormat', { val: 'groups' }],
 		['correction', { val: true }], // Yates' correction for 2×2 independence
 		['alternative', { val: 'two-sided' }], // Fisher only: two-sided | less | greater
+		// Goodness-of-fit only: read the column as observed counts, as categories to tally,
+		// or infer it ('auto': all-numeric means counts). STAT-13.
+		['gofInput', { val: 'auto' }],
 		// effectSize: Cramer's V (independence), Cohen's w (goodness-of-fit), or the
 		// odds ratio (Fisher). One port, because only one is ever meaningful at a time.
 		[
@@ -88,8 +91,29 @@
 	]);
 
 	const isRef = (id) => id != null && id !== -1 && getColumnById(id);
-	const isNumericCol = (data) =>
-		data.length > 0 && data.every((v) => v === null || v === '' || Number.isFinite(Number(v)));
+	const isNumericCell = (v) => typeof v !== 'boolean' && Number.isFinite(Number(v));
+
+	// How goodness-of-fit reads its column (STAT-13): infer, or force counts / categories.
+	const GOF_INPUTS = ['auto', 'counts', 'categories'];
+
+	/**
+	 * Why a list of present cells cannot be observed counts, or null when it can. A chi-square
+	 * goodness-of-fit test compares observed FREQUENCIES with expected ones (Agresti 2013,
+	 * Categorical Data Analysis, 3rd ed., Sect. 1.5), so every count must be a non-negative
+	 * whole number; a measurement column read as counts gives a meaningless p-value.
+	 */
+	function countsProblem(present) {
+		const notNumber = present.find((v) => !isNumericCell(v));
+		if (notNumber !== undefined)
+			return `Counts must be numbers, but the column holds "${notNumber}". Set "Read the column as" to Categories to tally its values instead.`;
+		const negative = present.map(Number).find((v) => v < 0);
+		if (negative !== undefined)
+			return `Counts cannot be negative (found ${negative}). Goodness-of-fit needs observed frequencies; if this column is a measurement, it is not a count.`;
+		const fractional = present.map(Number).find((v) => !Number.isInteger(v));
+		if (fractional !== undefined)
+			return `Counts must be whole numbers (found ${fractional}). Goodness-of-fit needs observed frequencies, not means, rates or proportions.`;
+		return null;
+	}
 
 	/**
 	 * Turn the two wired columns into a contingency table, honouring dataFormat.
@@ -117,7 +141,7 @@
 		const nB = b.filter((v) => !isMissingCategory(v)).length;
 		if (nA > 0 && nB > 0 && Math.abs(nA - nB) > 0.1 * Math.max(nA, nB)) {
 			warnings.push(
-				`"Paired" reads the two columns one row per subject and pairs them BY INDEX, but they have very different lengths (${nA} vs ${nB}), so that pairing cannot be right — the extra rows are discarded and the pairing is arbitrary. If these are two INDEPENDENT groups (e.g. 7 of 10 vs 2 of 25), switch Input format back to "Two independent groups".`
+				`"Paired" reads the two columns one row per subject and pairs them BY INDEX, but they have very different lengths (${nA} vs ${nB}), so that pairing cannot be right: the extra rows are discarded and the pairing is arbitrary. If these are two INDEPENDENT groups (e.g. 7 of 10 vs 2 of 25), switch Input format back to "Two independent groups".`
 			);
 		}
 		return { ...built, warnings, format: 'paired' };
@@ -254,14 +278,34 @@
 		const raw = col.getData() ?? [];
 		let labels;
 		let observed;
-		if (isNumericCol(raw)) {
-			// Drop missing cells BEFORE coercion: Number(null) and Number('') are both 0, which
-			// Number.isFinite keeps — so a partially-missing count vector would gain phantom
-			// zero-count bins, inflating k/df and shifting the expected counts and p-value.
-			observed = raw
-				.filter((v) => v != null && v !== '')
-				.map(Number)
-				.filter(Number.isFinite);
+		// STAT-13: how the column is read is an explicit choice. 'auto' (the default, and what
+		// sessions saved before the choice existed get) reads an all-numeric column as counts
+		// and anything else as categories; 'counts' and 'categories' force one reading.
+		// Missing cells (null, blank, NaN) are dropped BEFORE any of this: Number(null) and
+		// Number('') are 0, which would add phantom zero-count bins, and a NaN used to make a
+		// count column read as categories (each count tallied as a label).
+		const gofInput = GOF_INPUTS.includes(argsIN.gofInput) ? argsIN.gofInput : 'auto';
+		const present = raw.filter((v) => !isMissingCategory(v));
+		const readAsCounts =
+			gofInput === 'counts' ||
+			(gofInput === 'auto' && present.length > 0 && present.every((v) => isNumericCell(v)));
+		if (readAsCounts) {
+			const problem = countsProblem(present);
+			if (problem) {
+				return [
+					{
+						testType,
+						warnings: [problem],
+						labels: [],
+						observed: [],
+						statistic: NaN,
+						pvalue: NaN,
+						df: NaN
+					},
+					true
+				];
+			}
+			observed = present.map(Number);
 			labels = observed.map((_, i) => `bin ${i + 1}`);
 		} else {
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- category tally built and drained into labels/observed inside this function; never read reactively
@@ -391,7 +435,9 @@
 			':' +
 			String(p.args.alternative) +
 			':' +
-			String(p.args.dataFormat);
+			String(p.args.dataFormat) +
+			':' +
+			String(p.args.gofInput);
 		for (const id of [p.args.xIN, p.args.yIN])
 			h += ':' + (id >= 0 ? (getColumnById(id)?.getDataHash ?? '') : '');
 		return h;
@@ -454,7 +500,19 @@
 			]}
 		/>
 	</ControlInput>
-	{#if p.args.testType !== 'goodness'}
+	{#if p.args.testType === 'goodness'}
+		<ControlInput label="Read the column as">
+			<AttributeSelect
+				bind:value={p.args.gofInput}
+				options={['auto', 'counts', 'categories']}
+				optionsDisplay={[
+					'Automatic (numbers are counts)',
+					'Counts (one per category)',
+					'Categories (tally the values)'
+				]}
+			/>
+		</ControlInput>
+	{:else}
 		<ControlInput label="Input format">
 			<AttributeSelect
 				bind:value={p.args.dataFormat}
@@ -494,7 +552,7 @@
 				<br />
 				<span class="muted"
 					>An exact test enumerates the distribution rather than referring a statistic to one, so
-					there is no test statistic and no degrees of freedom — the statistic and df ports stay
+					there is no test statistic and no degrees of freedom; the statistic and df ports stay
 					empty in this mode.</span
 				>
 				<br />

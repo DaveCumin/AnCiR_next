@@ -236,7 +236,7 @@ describe('findAutocorrelationPeak', () => {
 	});
 });
 
-describe('meanSpacing (the Correlogram lag step with no binWidth)', () => {
+describe('meanSpacing (the former Correlogram lag step with no binWidth)', () => {
 	it('is (last - first) / (n - 1) when both ends are present, interior gaps counted as rows', () => {
 		expect(meanSpacing([5, 6, null, 8, 9])).toBe(1);
 		expect(meanSpacing([0, 0.25, 1, 1.25, 2])).toBe(0.5);

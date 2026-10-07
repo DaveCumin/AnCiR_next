@@ -462,3 +462,56 @@ describe("chisquared — Fisher's odds ratio and its confidence interval", () =>
 		expect(res.oddsRatioCI[0]).toBeGreaterThan(1);
 	});
 });
+
+// STAT-13: goodness of fit read any all-numeric column as counts, a NaN cell turned a count
+// column into a category column (each count tallied as a label), and impossible counts were
+// tested. The reading is now an explicit choice (gofInput: auto | counts | categories), NaN is
+// missing in every reading, and counts must be non-negative whole numbers (a chi-square
+// goodness-of-fit test compares observed FREQUENCIES; Agresti 2013, Categorical Data Analysis,
+// 3rd ed., Sect. 1.5).
+describe('chisquared: goodness-of-fit input reading (STAT-13)', () => {
+	const gof = (xIN, over) => args({ testType: 'goodness', xIN, yIN: -1, ...over });
+
+	it('a NaN cell in a count column is missing, not a reason to read categories', () => {
+		mockColumns[30] = { name: 'n', getData: () => [18, 22, NaN, 31, 29] };
+		const [res] = chisquared(gof(30));
+		expect(res.observed).toEqual([18, 22, 31, 29]);
+		expect(res.labels).toEqual(['bin 1', 'bin 2', 'bin 3', 'bin 4']);
+	});
+
+	it('categories: numeric codes are tallied as categories', () => {
+		mockColumns[31] = { name: 'code', getData: () => [1, 2, 2, 3, 3, 3, null] };
+		const [res] = chisquared(gof(31, { gofInput: 'categories' }));
+		expect(res.labels).toEqual(['1', '2', '3']);
+		expect(res.observed).toEqual([1, 2, 3]);
+	});
+
+	it('auto (the default) keeps the old inference', () => {
+		mockColumns[31] = { name: 'code', getData: () => [1, 2, 2, 3, 3, 3, null] };
+		expect(chisquared(gof(31))[0].observed).toEqual([1, 2, 2, 3, 3, 3]);
+		expect(chisquared(gof(4))[0].labels).toEqual(['red', 'blue', 'green']);
+	});
+
+	it('counts: a negative count is refused with a clear message and no outputs', () => {
+		mockColumns[32] = { name: 'n', getData: () => [10, -3, 12] };
+		const [res, valid] = chisquared(gof(32, { gofInput: 'counts' }));
+		expect(valid).toBe(true);
+		expect(res.pvalue).toBeNaN();
+		expect(res.warnings.join(' ')).toMatch(/negative/i);
+		expect(res.warnings.join(' ')).toMatch(/-3/);
+	});
+
+	it('auto-detected counts are validated too: a non-integer count is refused', () => {
+		mockColumns[33] = { name: 'n', getData: () => [10, 2.5, 12] };
+		const [res] = chisquared(gof(33));
+		expect(res.pvalue).toBeNaN();
+		expect(res.warnings.join(' ')).toMatch(/whole numbers/i);
+		expect(res.warnings.join(' ')).toMatch(/2\.5/);
+	});
+
+	it('counts: a non-numeric cell is refused, naming it', () => {
+		const [res] = chisquared(gof(4, { gofInput: 'counts' }));
+		expect(res.pvalue).toBeNaN();
+		expect(res.warnings.join(' ')).toMatch(/"red"/);
+	});
+});

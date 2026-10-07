@@ -1045,6 +1045,15 @@ tp_binneddata <- function(args, env) {
 # solve by least squares. No optimiser, and no risk of landing in a different basin from the
 # other ports — unlike the free-period fit, which is why that one needed the analytic
 # Jacobian treatment.
+# FIT-7, cosinor.js acrophaseCIDetermined: an acrophase CI only when the zero-amplitude test
+# (the model's and the harmonic's own) is significant and 2 * t * SE is narrower than the
+# harmonic's period. Bingham, Arbogast, Guillaume, Lee and Halberg (1982), Chronobiologia
+# 9:397-439; Cornelissen (2014), Theor Biol Med Model 11:16.
+acrophase_ci_determined <- function(p_overall, p_harmonic, alpha, tcrit, se, period) {
+  if (!isTRUE(p_overall < alpha) || !isTRUE(p_harmonic < alpha)) return(FALSE)
+  isTRUE(2 * tcrit * se < period)
+}
+
 fit_cosinor_fixed <- function(t, y, period = 24, n_harmonics = 1, alpha = 0.05) {
   t <- suppressWarnings(as.numeric(unlist(t, use.names = FALSE)))
   y <- suppressWarnings(as.numeric(unlist(y, use.names = FALSE)))
@@ -1074,6 +1083,11 @@ fit_cosinor_fixed <- function(t, y, period = 24, n_harmonics = 1, alpha = 0.05) 
   M <- beta[1]
   se_m <- sqrt(max(cov[1, 1], 0))
   tcrit <- qt(1 - alpha / 2, df_resid)
+  df1 <- p - 1
+  f_stat <- if (rss > 0) ((ss_tot - rss) / df1) / (rss / df_resid) else Inf
+  # Upper tail at max(0, F): a rounding-negative F gives p = 1 (cosinor.js pUpperFromF).
+  pf_val <- if (is.finite(f_stat)) pf(max(0, f_stat), df1, df_resid, lower.tail = FALSE)
+            else if (identical(f_stat, Inf)) 0 else NA_real_
   harmonics <- list()
   for (k in seq_len(n_harmonics)) {
     ib <- 1 + 2 * (k - 1) + 1
@@ -1087,17 +1101,21 @@ fit_cosinor_fixed <- function(t, y, period = 24, n_harmonics = 1, alpha = 0.05) 
     den <- b^2 + g^2
     se_phi <- if (den > 0) sqrt(max((g^2 * var_b + b^2 * var_g - 2 * b * g * cov_bg) / den^2, 0)) else 0
     se_acro <- se_phi / (k * omega)
+    # This harmonic's own zero-amplitude test (beta_k = gamma_k = 0): the Wald F
+    # b' V^-1 b / 2 on (2, df_resid); with one harmonic it is pF (cosinor.js).
+    det_v <- var_b * var_g - cov_bg^2
+    f_k <- if (det_v > 0) (b^2 * var_g - 2 * b * g * cov_bg + g^2 * var_b) / det_v / 2 else NaN
+    pf_k <- if (is.finite(f_k)) pf(max(0, f_k), 2, df_resid, lower.tail = FALSE) else NaN
+    # FIT-7: no acrophase CI when the rhythm is not detectable or the interval spans a full
+    # cycle (Bingham et al. 1982; Cornelissen 2014). cosinor.js acrophaseCIDetermined.
+    ci_acro <- if (acrophase_ci_determined(pf_val, pf_k, alpha, tcrit, se_acro, period / k))
+      c(acro - tcrit * se_acro, acro + tcrit * se_acro) else c(NaN, NaN)
     harmonics[[k]] <- list(k = k, beta = b, gamma = g, amplitude = amp,
                            acrophase_hrs = acro, phi_rad = phi,
                            SE_A = se_a, SE_acrophase_hrs = se_acro,
                            CI_A = c(max(0, amp - tcrit * se_a), amp + tcrit * se_a),
-                           CI_acrophase = c(acro - tcrit * se_acro, acro + tcrit * se_acro))
+                           CI_acrophase = ci_acro, pF = pf_k)
   }
-  df1 <- p - 1
-  f_stat <- if (rss > 0) ((ss_tot - rss) / df1) / (rss / df_resid) else Inf
-  # Upper tail at max(0, F): a rounding-negative F gives p = 1 (cosinor.js pUpperFromF).
-  pf_val <- if (is.finite(f_stat)) pf(max(0, f_stat), df1, df_resid, lower.tail = FALSE)
-            else if (identical(f_stat, Inf)) 0 else NA_real_
   list(M = M, SE_M = se_m, CI_M = c(M - tcrit * se_m, M + tcrit * se_m),
        harmonics = harmonics, F_stat = f_stat, df = c(df1, df_resid), pF = pf_val,
        R2 = r2, RMSE = rmse, fitted = fitted, n = n,
@@ -1371,15 +1389,24 @@ compute_average_profile <- function(t, y, period = 24, n_bins = 24) {
   # Double modulo, as the JS does: a negative remainder would otherwise index backwards.
   tod <- ((ti - t0) %% period + period) %% period
   b <- pmin(pmax(floor(tod / bin_width), 0), n_bins - 1) + 1
+  # FIT-12: the SEM is across DAYS. Each day's samples in a bin are averaged first (repeated
+  # measures of one day, not replicates; Hurlbert 1984), then the profile is the mean of the
+  # day means and the SEM their SD / sqrt(days); n = days.
+  day <- js_round((ti - t0 - tod) / period)
+  n_samples <- integer(n_bins)
   for (k in seq_len(n_bins)) {
-    vals <- yi[b == k]
-    n[k] <- length(vals)
-    if (!length(vals)) next
-    m <- mean(vals)
+    in_bin <- b == k
+    n_samples[k] <- sum(in_bin)
+    if (!n_samples[k]) next
+    day_means <- vapply(split(yi[in_bin], factor(day[in_bin], levels = unique(day[in_bin]))),
+                        mean, numeric(1))
+    n[k] <- length(day_means)
+    m <- mean(day_means)
     profile[k] <- m
-    if (length(vals) >= 2) sem[k] <- sqrt(sum((vals - m)^2) / (length(vals) - 1)) / sqrt(length(vals))
+    if (n[k] >= 2) sem[k] <- sqrt(sum((day_means - m)^2) / (n[k] - 1)) / sqrt(n[k])
   }
-  list(bin_centres = bin_centres, profile = profile, sem = sem, n = n, t0 = min(ti))
+  list(bin_centres = bin_centres, profile = profile, sem = sem, n = n,
+       nSamples = n_samples, t0 = min(ti))
 }
 
 # IS, IV, RA, M10/L5 and their onsets. Port of src/lib/utils/npcra.js
@@ -1433,9 +1460,13 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
   prof_ss <- sum((profile[is.finite(profile)] - xbar)^2)
   IS <- if (overall_ss > 0) (nn * prof_ss) / (p * overall_ss) else NA_real_
 
+  # IV: mean squared successive difference over the valid successive pairs, over the variance
+  # (Witting et al. 1990); with no gaps the pairs are nn - 1, the textbook formula. Dividing by
+  # nn - 1 regardless biased IV low with missing epochs (FIT-8, npcra.js).
   d <- diff(x)
+  n_pairs <- sum(is.finite(d))
   diff_ss <- sum(d[is.finite(d)]^2)
-  IV <- if (overall_ss > 0 && nn > 1) (nn * diff_ss) / ((nn - 1) * overall_ss) else NA_real_
+  IV <- if (overall_ss > 0 && n_pairs > 0) (diff_ss / n_pairs) / (overall_ss / nn) else NA_real_
 
   # Circular rolling window over the folded profile: M10 is the highest-mean 10 h block,
   # L5 the lowest 5 h, and the onset is where that block starts.
@@ -1460,7 +1491,8 @@ compute_npcra <- function(t, y, epoch_hours = 1, period = 24,
   list(IS = IS, IV = IV, RA = RA, M10 = m10$value, L5 = l5$value,
        M10onset = m10$onset, L5onset = l5$onset,
        profile = profile, bin_centres = (seq_len(p) - 1) * e + e / 2,
-       n = nn, p = p, n_epochs = n_epochs, t0 = t0)
+       n = nn, p = p, n_epochs = n_epochs,
+       missingEpochFraction = (n_epochs - nn) / n_epochs, t0 = t0)
 }
 
 tp_averageprofile <- function(args, env) {
@@ -2119,19 +2151,19 @@ logistic_regression <- function(y, predictor_cols, names = NULL) {
 # --- the analyses ----------------------------------------------------------
 
 # Port of GroupComparison.svelte jarqueBeraNormality: the app's assumption check (used by
-# Correlation's `auto` method). NOT the NormalityTest node's Jarque-Bera: this one standardises
-# by the SAMPLE standard deviation (n - 1). Fewer than 8 values is not evaluable; zero variance
-# is evaluable and non-normal; normal means p >= 0.05.
+# Correlation's `auto` method). The textbook statistic on the population (n-divisor) moments,
+# the same as the NormalityTest node's Jarque-Bera (utils/normality.js; Jarque and Bera 1987);
+# it used to standardise by the n - 1 SD (STAT-25). Fewer than 8 values is not evaluable; zero
+# variance is evaluable and non-normal; normal means p >= 0.05.
 jarque_bera_normality <- function(values) {
   x <- .present_numbers(values)
   n <- length(x)
   if (n < 8) return(list(evaluable = FALSE, normal = NA))
   m <- mean(x)
-  v <- sum((x - m)^2) / (n - 1)
-  if (!is.finite(v) || v == 0) return(list(evaluable = TRUE, normal = FALSE))
-  z <- (x - m) / sqrt(v)
-  skew <- sum(z^3) / n
-  kurt <- sum(z^4) / n
+  m2 <- sum((x - m)^2) / n
+  if (!is.finite(m2) || m2 == 0) return(list(evaluable = TRUE, normal = FALSE))
+  skew <- (sum((x - m)^3) / n) / m2^1.5
+  kurt <- (sum((x - m)^4) / n) / m2^2
   jb <- (n / 6) * (skew^2 + (kurt - 3)^2 / 4)
   p <- if (is.finite(jb) && jb >= 0) pchisq(jb, 2, lower.tail = FALSE) else NA_real_
   list(evaluable = TRUE, normal = if (is.finite(p)) p >= 0.05 else FALSE)
@@ -2349,15 +2381,26 @@ tp_chisquared <- function(args, env) {
     return(write(res$statistic, res$pvalue, res$df, res$cramersV))
   }
 
-  # goodness of fit: a numeric column is read as observed counts, anything else is tabulated
-  # by category (first appearance) and tested against a uniform expectation.
+  # goodness of fit: `gofInput` "auto" (default) reads an all-numeric column as observed
+  # counts and anything else as categories (tabulated by first appearance), tested against a
+  # uniform expectation; "counts" / "categories" force one reading (STAT-13). Missing cells
+  # (NULL/NA, blank, NaN) are dropped first, and counts must be non-negative whole numbers,
+  # else nothing is written (ChiSquared.svelte countsProblem).
   if (!is_ref(x_in)) return(FALSE)
   raw <- unlist(col_data(env$cols[[as.character(x_in)]], env$cols, env$raw_data),
                 use.names = FALSE)
-  present <- raw[!is.na(raw) & !(is.character(raw) & raw == "")]
-  nums <- suppressWarnings(as.numeric(present))
-  observed <- if (length(raw) && all(is.finite(nums))) nums else {
-    keys <- js_string(raw[!is_missing_category(raw)])
+  gof_input <- if (!is.null(args$gofInput) && args$gofInput %in% c("auto", "counts", "categories"))
+                 args$gofInput else "auto"
+  present <- raw[!is_missing_category(raw)]
+  nums <- if (is.logical(present)) rep(NA_real_, length(present))
+          else suppressWarnings(as.numeric(present))
+  as_counts <- identical(gof_input, "counts") ||
+    (identical(gof_input, "auto") && length(present) > 0 && all(is.finite(nums)))
+  if (as_counts && (!all(is.finite(nums)) || any(nums < 0) || any(nums != floor(nums)))) {
+    return(TRUE)
+  }
+  observed <- if (as_counts) nums else {
+    keys <- js_string(present)
     as.numeric(table(factor(keys, levels = unique(keys))))
   }
   if (length(observed) < 2) return(TRUE)

@@ -250,6 +250,16 @@ def bin_data(x_values, y_values, bin_size, bin_start=0.0, step_size=None,
 # Cosinor (Halberg fixed-period + free multi-cosine LM)
 # ----------------------------------------------------------------------
 
+def acrophase_ci_determined(p_overall, p_harmonic, alpha, tcrit, se, period):
+    """FIT-7, cosinor.js acrophaseCIDetermined: an acrophase CI only when the zero-amplitude
+    test (the model's and the harmonic's own) is significant and 2 * t * SE is narrower than
+    the harmonic's period. Bingham, Arbogast, Guillaume, Lee and Halberg (1982),
+    Chronobiologia 9:397-439; Cornelissen (2014), Theor Biol Med Model 11:16."""
+    if not (p_overall < alpha) or not (p_harmonic < alpha):
+        return False
+    return 2 * tcrit * se < period
+
+
 def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
     t = _to_float_arr(t)
     y = _to_float_arr(y)
@@ -295,6 +305,15 @@ def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
     tcrit = float(sp_stats.t.ppf(1 - alpha / 2, df_resid))
     CI_M = [M - tcrit * SE_M, M + tcrit * SE_M]
 
+    # F-stat: H0 = mean only
+    ss_null = float(((y - y.mean()) ** 2).sum())
+    df1 = p - 1
+    F_stat = ((ss_null - rss) / df1) / (rss / df_resid) if rss > 0 else float('inf')
+    # Upper tail computed directly (fdist.js pUpperFromF): 1 - cdf rounds a tiny p to 0. The
+    # p is taken at max(0, F), so a rounding-negative F gives p = 1; an infinite F gives 0.
+    pF = (float(sp_stats.f.sf(max(0.0, F_stat), df1, df_resid)) if math.isfinite(F_stat)
+          else (0.0 if F_stat == math.inf else float('nan')))
+
     harmonics = []
     for k in range(1, n_harmonics + 1):
         idx_b = 1 + 2 * (k - 1)
@@ -322,24 +341,28 @@ def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
         else:
             SE_phi = 0.0
         SE_acro_hrs = SE_phi / (k * omega)
+        # This harmonic's own zero-amplitude test (beta_k = gamma_k = 0), the Wald F
+        # b' V^-1 b / 2 on (2, df_resid); with one harmonic it is pF (cosinor.js).
+        det_v = var_b * var_g - cov_bg ** 2
+        F_k = ((b * b * var_g - 2 * b * g * cov_bg + g * g * var_b) / det_v / 2
+               if det_v > 0 else float('nan'))
+        pF_k = (float(sp_stats.f.sf(max(0.0, F_k), 2, df_resid)) if math.isfinite(F_k)
+                else float('nan'))
+        # FIT-7: no acrophase CI when the rhythm is not detectable or the interval spans a
+        # full cycle (Bingham et al. 1982; Cornelissen 2014). cosinor.js acrophaseCIDetermined.
+        if acrophase_ci_determined(pF, pF_k, alpha, tcrit, SE_acro_hrs, period / k):
+            ci_acro = [acro_hrs - tcrit * SE_acro_hrs, acro_hrs + tcrit * SE_acro_hrs]
+        else:
+            ci_acro = [float('nan'), float('nan')]
         harmonics.append({
             'k': k, 'beta': b, 'gamma': g,
             'amplitude': amp, 'acrophase_hrs': acro_hrs,
             'phi_rad': phi, 'SE_A': SE_A, 'SE_acrophase_hrs': SE_acro_hrs,
             # Lower end clamped at 0 (an amplitude is non-negative), as in the JS.
             'CI_A': [max(0.0, amp - tcrit * SE_A), amp + tcrit * SE_A],
-            'CI_acrophase': [acro_hrs - tcrit * SE_acro_hrs,
-                             acro_hrs + tcrit * SE_acro_hrs],
+            'CI_acrophase': ci_acro,
+            'pF': pF_k,
         })
-
-    # F-stat: H0 = mean only
-    ss_null = float(((y - y.mean()) ** 2).sum())
-    df1 = p - 1
-    F_stat = ((ss_null - rss) / df1) / (rss / df_resid) if rss > 0 else float('inf')
-    # Upper tail computed directly (fdist.js pUpperFromF): 1 - cdf rounds a tiny p to 0. The
-    # p is taken at max(0, F), so a rounding-negative F gives p = 1; an infinite F gives 0.
-    pF = (float(sp_stats.f.sf(max(0.0, F_stat), df1, df_resid)) if math.isfinite(F_stat)
-          else (0.0 if F_stat == math.inf else float('nan')))
 
     return {
         'M': M, 'SE_M': SE_M, 'CI_M': CI_M,
@@ -1331,15 +1354,11 @@ def correlogram_series_acf(series, columns_index):
       counts from its own minimum; the autocorrelation is shift-invariant, so this changes
       no number, but it is the app's input);
     - the lag step is the x column's binWidth when it has one (a BinnedData output, an
-      imported bin column), else the MEAN spacing (last - first) / (count - 1) over all
-      rows, valid or not; only when there are fewer than two rows is it left to the
-      compute's own median rule;
-    - maxLag / minLag are PER SERIES (the saved series' `maxLag`, `minLag`).
-
-    The mean spacing uses the first and last VALID rows, (t_j - t_i) / (j - i), as the app
-    now does (utils/correlogram.js meanSpacing). The app used to read a missing first or
-    last time as 0 (JS null arithmetic), which made the step wrong or blanked the plot; the
-    two agree whenever both ends are present (fixture correlogram-data-missing-ends)."""
+      imported bin column), else None, so compute_autocorrelation takes the MEDIAN
+      interval of the valid times, as the Rhythmicity node's correlogram does (SPEC-10).
+      The mean spacing it used before, (last - first) / (count - 1), is stretched by a
+      recording gap (fixture correlogram-data-gap);
+    - maxLag / minLag are PER SERIES (the saved series' `maxLag`, `minLag`)."""
     x_col = _resolve_plot_col(series.get('x'), columns_index)
     y_col = _resolve_plot_col(series.get('y'), columns_index)
     if x_col is None or y_col is None:
@@ -1347,17 +1366,8 @@ def correlogram_series_acf(series, columns_index):
     times = [None if v is None or (isinstance(v, float) and math.isnan(v)) else v
              for v in (x_col.hours_since_start or [])]
     values = y_col.get_data() or []
-    bin_size = None
     bw = x_col.eff_bin_width
-    if bw:
-        bin_size = float(bw)
-    elif len(times) > 1:
-        valid = [i for i, v in enumerate(times) if v is not None]
-        if len(valid) >= 2:
-            i, j = valid[0], valid[-1]
-            bin_size = (times[j] - times[i]) / (j - i)
-        else:
-            bin_size = float('nan')
+    bin_size = float(bw) if bw else None
     return compute_autocorrelation(times, values, bin_size,
                                    series.get('maxLag'), series.get('minLag') or 0)
 
@@ -3211,11 +3221,17 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
     prof_ss = sum((profile[h] - xbar) ** 2 for h in range(p) if not math.isnan(profile[h]))
     IS = (nn * prof_ss) / (p * overall_ss) if overall_ss > 0 else float('nan')
 
+    # IV: mean squared successive difference over the valid successive pairs, over the
+    # variance (Witting et al. 1990); with no gaps n_pairs = nn - 1, the textbook formula.
+    # Dividing by nn - 1 regardless biased IV low with missing epochs (FIT-8, npcra.js).
     diff_ss = 0.0
+    n_pairs = 0
     for k in range(1, n_epochs):
         if not math.isnan(x[k]) and not math.isnan(x[k - 1]):
             diff_ss += (x[k] - x[k - 1]) ** 2
-    IV = (nn * diff_ss) / ((nn - 1) * overall_ss) if (overall_ss > 0 and nn > 1) else float('nan')
+            n_pairs += 1
+    IV = (diff_ss / n_pairs / (overall_ss / nn)
+          if (overall_ss > 0 and n_pairs > 0) else float('nan'))
 
     def roll(width_hours, better):
         w = min(p, max(1, _js_round(width_hours / e)))
@@ -3251,6 +3267,7 @@ def compute_npcra(t, y, epoch_hours=1.0, period=24.0, m_window=10.0, l_window=5.
         'IS': IS, 'IV': IV, 'RA': RA, 'M10': M10, 'L5': L5,
         'M10onset': m_onset, 'L5onset': l_onset,
         'profile': profile, 'bin_centres': bin_centres, 'n': nn, 'p': p, 'n_epochs': n_epochs,
+        'missingEpochFraction': (n_epochs - nn) / n_epochs,
         't0': t0,
     }
 
@@ -6643,7 +6660,8 @@ def compute_average_profile(t, y, period=24.0, n_bins=24):
     src/lib/utils/averageProfile.js averageDailyProfile."""
     n_bins = int(n_bins)
     if not (period > 0) or not (n_bins >= 1):
-        return {'bin_centres': [], 'profile': [], 'sem': [], 'n': [], 't0': _NAN}
+        return {'bin_centres': [], 'profile': [], 'sem': [], 'n': [], 'nSamples': [],
+                't0': _NAN}
     bin_width = period / n_bins
     bin_centres = [b * bin_width + bin_width / 2 for b in range(n_bins)]
     length = min(len(t), len(y))
@@ -6667,31 +6685,39 @@ def compute_average_profile(t, y, period=24.0, n_bins=24):
     profile = [_NAN] * n_bins
     sem = [_NAN] * n_bins
     n = [0] * n_bins
+    n_samples = [0] * n_bins
     if not pairs:
         return {'bin_centres': bin_centres, 'profile': profile, 'sem': sem, 'n': n,
-                't0': _NAN}
-    buckets = [[] for _ in range(n_bins)]
+                'nSamples': n_samples, 't0': _NAN}
+    # FIT-12: the SEM is across DAYS. Each day's samples in a bin are averaged first (the
+    # samples of one day are repeated measures, not replicates; Hurlbert 1984), then the
+    # profile is the mean of the day means and the SEM their SD / sqrt(days); n = days.
+    # Python's % is not JS's, but on (ti - t0) >= 0 the double modulo agrees.
+    buckets = [{} for _ in range(n_bins)]
     for (ti, yi) in pairs:
         tod = ((ti - t0) % period + period) % period
+        day = _js_round((ti - t0 - tod) / period)
         b = int(math.floor(tod / bin_width))
         if b < 0:
             b = 0
         elif b >= n_bins:
             b = n_bins - 1
-        buckets[b].append(yi)
+        buckets[b].setdefault(day, []).append(yi)
+        n_samples[b] += 1
     for b in range(n_bins):
-        vals = buckets[b]
-        cnt = len(vals)
+        day_means = [kahan_mean(vals) for vals in buckets[b].values()]
+        cnt = len(day_means)
         n[b] = cnt
         if cnt == 0:
             continue
-        m = kahan_mean(vals)
+        m = kahan_mean(day_means)
         profile[b] = m
         if cnt >= 2:
-            ss = sum((v - m) ** 2 for v in vals)
+            ss = sum((v - m) ** 2 for v in day_means)
             variance = ss / (cnt - 1)
             sem[b] = math.sqrt(variance) / math.sqrt(cnt)
-    return {'bin_centres': bin_centres, 'profile': profile, 'sem': sem, 'n': n, 't0': t0}
+    return {'bin_centres': bin_centres, 'profile': profile, 'sem': sem, 'n': n,
+            'nSamples': n_samples, 't0': t0}
 
 
 def tp_averageprofile(args, cols, raw_data, _sv):
@@ -7359,21 +7385,21 @@ def tp_normalitytest(args, cols, raw_data, _sv):
 
 def jarque_bera_normality(values):
     """Port of GroupComparison.svelte jarqueBeraNormality: the app's assumption check (used
-    by Correlation's `auto` method and GroupComparison's warnings). NOT the NormalityTest
-    node's Jarque-Bera: this one standardises by the SAMPLE standard deviation (n - 1).
-    Fewer than 8 values is not evaluable; zero variance is evaluable and non-normal; normal
-    means p >= 0.05."""
+    by Correlation's `auto` method and GroupComparison's warnings). The textbook statistic on
+    the population (n-divisor) moments, the same as the NormalityTest node's Jarque-Bera
+    (utils/normality.js; Jarque and Bera 1987). It used to standardise by the n - 1 SD
+    (STAT-25). Fewer than 8 values is not evaluable; zero variance is evaluable and
+    non-normal; normal means p >= 0.05."""
     clean = _gc_present_numbers(values)
     n = len(clean)
     if n < 8:
         return {'evaluable': False, 'normal': None}
     m = float(np.mean(clean))
-    var = sum((x - m) ** 2 for x in clean) / (n - 1)
-    if not math.isfinite(var) or var == 0:
+    m2 = sum((x - m) ** 2 for x in clean) / n
+    if not math.isfinite(m2) or m2 == 0:
         return {'evaluable': True, 'normal': False, 'statistic': float('inf'), 'pValue': 0.0}
-    sd = math.sqrt(var)
-    skew = sum(((x - m) / sd) ** 3 for x in clean) / n
-    kurt = sum(((x - m) / sd) ** 4 for x in clean) / n
+    skew = (sum((x - m) ** 3 for x in clean) / n) / m2 ** 1.5
+    kurt = (sum((x - m) ** 4 for x in clean) / n) / (m2 * m2)
     jb = (n / 6) * (skew ** 2 + (kurt - 3) ** 2 / 4)
     p = float(sp_stats.chi2.sf(jb, 2)) if math.isfinite(jb) and jb >= 0 else float('nan')
     return {'evaluable': True, 'normal': (p >= 0.05) if math.isfinite(p) else False,
@@ -7596,23 +7622,34 @@ def tp_chisquared(args, cols, raw_data, _sv):
         return write(res['statistic'], res['pvalue'], res['df'],
                      res.get('cramersV', nan))
 
-    # goodness of fit: a numeric column is read as observed counts, anything else is
-    # tabulated by category (first appearance) and tested against a uniform expectation.
+    # goodness of fit: `gofInput` 'auto' (default) reads an all-numeric column as observed
+    # counts and anything else as categories (tabulated by first appearance), tested against
+    # a uniform expectation; 'counts' / 'categories' force one reading (STAT-13). Missing
+    # cells (None, blank, NaN) are dropped first, and counts must be non-negative whole
+    # numbers, else nothing is written (ChiSquared.svelte countsProblem).
     if not is_ref(x_in):
         return False
     raw = cols[x_in].get_data() or []
 
     def numeric_cell(v):
-        if v is None or v == '':
-            return True
+        if isinstance(v, bool):
+            return False
         try:
-            return math.isfinite(float(v))
+            return math.isfinite(_js_number(v))
         except (TypeError, ValueError):
             return False
 
-    if raw and all(numeric_cell(v) for v in raw):
-        observed = [float(v) for v in raw if v is not None and v != '']
-        observed = [v for v in observed if math.isfinite(v)]
+    gof_input = args.get('gofInput')
+    if gof_input not in ('auto', 'counts', 'categories'):
+        gof_input = 'auto'
+    present = [v for v in raw if not _is_missing_category(v)]
+    if gof_input == 'counts' or (gof_input == 'auto' and present
+                                 and all(numeric_cell(v) for v in present)):
+        if not all(numeric_cell(v) for v in present):
+            return True
+        observed = [float(_js_number(v)) for v in present]
+        if any(v < 0 or v != math.floor(v) for v in observed):
+            return True
     else:
         counts = {}
         for v in raw:
@@ -8493,7 +8530,7 @@ def correlogram_download_data(plot, columns_index):
     rows = []
     for d, series in enumerate(p.get('data', [])):
         # The app's acfData, series by series (lag step from the x column's binWidth or
-        # its mean spacing, per-series maxLag / minLag): see correlogram_series_acf.
+        # the median interval, per-series maxLag / minLag): see correlogram_series_acf.
         ac = correlogram_series_acf(series, columns_index)
         if ac is None:
             continue

@@ -377,10 +377,14 @@ function generateInputs(spec) {
 		// `xStart` (optional, ISO) turns x into a TIME column: epoch ms at xStart + t hours.
 		// y is drawn on the same hours, so the series is otherwise identical.
 		const xStartMs = spec.xStart != null ? Date.parse(spec.xStart) : null;
+		// `second: {period, amp, phase}` (optional) adds a second cosine component, e.g. a weak
+		// 24 h H1 under a strong 12 h H2 for the per-harmonic acrophase CI test (FIT-7).
+		const sec = spec.second ?? null;
 		const y = t.map((h, i) => {
 			const v =
 				mesor +
 				amp * Math.cos((2 * Math.PI * (h - phase)) / period) +
+				(sec ? sec.amp * Math.cos((2 * Math.PI * (h - (sec.phase ?? 0))) / sec.period) : 0) +
 				(noise ? normal(rng, 0, noise) : 0);
 			const skipped = missingEvery > 0 && i % missingEvery === missingOffset;
 			const inGap = gap && i >= gap[0] && i < gap[1];
@@ -537,6 +541,13 @@ async function runTableProcess(fx) {
 	}
 	const tp = new TableProcess({ name: fx.jsName, args }, null);
 	pushObj(tp);
+	// `perInputOut` (optional): per-y output families the node's COMPONENT creates (e.g.
+	// AverageProfile's avgprofsem_<yId>, made by useMultiYTP), which a headless TableProcess
+	// does not. Each gets an empty column per y input so the node can write it.
+	for (const prefix of fx.perInputOut ?? []) {
+		const yIds = Array.isArray(tp.args.yIN) ? tp.args.yIN : [tp.args.yIN];
+		for (const yId of yIds) tp.args.out[prefix + yId] = mkCol('number', [], prefix + yId);
+	}
 	const ret = await entry.func(tp.args);
 
 	const want = new Set(fx.compareOutputs ?? []);
@@ -713,10 +724,12 @@ function generateActogramSeries(spec) {
 		const startMs = xType === 'time' ? Date.parse(start) : 0;
 		const x = [];
 		const y = [];
+		const hs = [];
 		let hAcc = 0;
 		for (let i = 0; i < n; i++) {
 			if (pattern && i > 0) hAcc += pattern[(i - 1) % pattern.length];
 			const h = pattern ? hAcc : i * dtHrs;
+			hs.push(h);
 			x.push(xType === 'time' ? startMs + Math.round(h * 3600000) : (s.startHr ?? 0) + h);
 			const phase = (((h - onsetHr) % tau) + tau) % tau;
 			let v = (phase < activeHrs ? high : low) + (noise ? normal(rng, 0, noise) : 0);
@@ -730,6 +743,16 @@ function generateActogramSeries(spec) {
 		// `missingX` (optional): row indices whose TIME is missing (null), negative from the
 		// end, e.g. [0, -1] for both ends. The y draw is unchanged.
 		for (const k of s.missingX ?? []) x[k < 0 ? n + k : k] = null;
+		// `dropHrs: [from, to]` (optional): REMOVE the rows (x and y) in that hour window, a
+		// recording gap with no rows at all, unlike `gap`, which keeps the rows with y missing.
+		if (s.dropHrs) {
+			const [from, to] = s.dropHrs;
+			const keep = hs.map((h) => h < from || h >= to);
+			const kx = x.filter((_, i) => keep[i]);
+			const ky = y.filter((_, i) => keep[i]);
+			x.splice(0, x.length, ...kx);
+			y.splice(0, y.length, ...ky);
+		}
 		// `bin: {binWidth, originTime}` on a number series makes it a BIN column as an
 		// import schema would (ImportData, e.g. the Enspire multiplate wells): x holds the
 		// raw bin starts, and the column carries binWidth and originTime_ms.

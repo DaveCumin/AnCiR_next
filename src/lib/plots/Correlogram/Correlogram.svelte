@@ -23,11 +23,7 @@
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
-	import {
-		computeAutocorrelation,
-		findAutocorrelationPeak,
-		meanSpacing
-	} from '$lib/utils/correlogram.js';
+	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
 	import { minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
 
 	export const Correlogram_defaultDataInputs = ['time', 'values'];
@@ -58,15 +54,12 @@
 			const times = this.x?.hoursSinceStart ?? [];
 			const values = this.y?.getData() ?? [];
 
-			// Get binSize from the x column if it's available (from actogram data)
-			let binSize = null;
-			if (this.x?.binWidth) {
-				binSize = this.x.binWidth;
-			} else if (times.length > 1) {
-				// The mean spacing, from the first and last VALID times: a missing end must not
-				// be read as 0 (it blanked the plot or mislabelled every lag). See meanSpacing.
-				binSize = meanSpacing(times);
-			}
+			// The lag step is the x column's binWidth when it has one (a BinnedData output, an
+			// imported bin column). Otherwise null, so computeAutocorrelation takes the MEDIAN
+			// sampling interval over the valid times, as the Rhythmicity node's correlogram does
+			// (SPEC-10). The mean spacing, (last - first) / (n - 1), is stretched by any recording
+			// gap and put every lag slot off the true step (24.456 h against 24.000 h).
+			const binSize = this.x?.binWidth ? this.x.binWidth : null;
 
 			return computeAutocorrelation(times, values, binSize, this.maxLag, this.minLag);
 		});

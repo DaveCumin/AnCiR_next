@@ -700,6 +700,25 @@ function solveLinearSystem(A, b) {
 // ─── Classical (fixed-period / Halberg) cosinor via OLS ──────────────────────
 
 /**
+ * Whether a cosinor acrophase confidence interval is determined (FIT-7). The delta-method
+ * interval acrophase +/- t * SE is only meaningful when the rhythm is detectable: Bingham,
+ * Arbogast, Guillaume, Lee and Halberg (1982, Chronobiologia 9:397-439) and Cornelissen (2014,
+ * Theoretical Biology and Medical Modelling 11:16, "Confidence intervals") give no acrophase
+ * limits when the zero-amplitude test is not rejected, and an interval at least one period
+ * wide says nothing about the phase. At low amplitude the linearised SE under-covers, and its
+ * wrapped ends can even exclude the estimate.
+ *
+ * @param {{pOverall:number, pHarmonic:number, alpha:number, tCrit:number, se:number, period:number}} a
+ *   pOverall: the model's zero-amplitude F-test p; pHarmonic: the harmonic's own (beta, gamma)
+ *   test p; se: the acrophase SE in time units; period: the harmonic's period (period / k).
+ * @returns {boolean} false (undetermined) when either test has p >= alpha, or 2 * t * SE >= period
+ */
+export function acrophaseCIDetermined({ pOverall, pHarmonic, alpha, tCrit, se, period }) {
+	if (!(pOverall < alpha) || !(pHarmonic < alpha)) return false;
+	return 2 * tCrit * se < period;
+}
+
+/**
  * Model: Y(t) = M + Σ_k [ β_k·cos(kωt) + γ_k·sin(kωt) ],  ω = 2π/period
  *
  * Each harmonic reports `acrophase_hrs` as the time of peak (t units after
@@ -832,12 +851,34 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 					A_k ** 4
 				: 0;
 		const SE_acrophase_hrs = (Math.sqrt(Math.max(0, varPhi)) * period) / (2 * Math.PI * k);
+
+		// This harmonic's own zero-amplitude test, H0: beta_k = gamma_k = 0, as the Wald F
+		// b' V^-1 b / 2 on (2, df_res) with V the 2x2 covariance of (beta_k, gamma_k). For an
+		// OLS fit this equals the extra-sum-of-squares F, so with one harmonic it IS pF.
+		const detV = varBeta * varGamma - covBG ** 2;
+		const F_k =
+			detV > 0
+				? (beta_k ** 2 * varGamma - 2 * beta_k * gamma_k * covBG + gamma_k ** 2 * varBeta) /
+					detV /
+					2
+				: NaN;
+		const pF_k = isNaN(F_k) ? NaN : pUpperFromF(Math.max(0, F_k), 2, df_res);
+
 		// Symmetric interval around the peak time, NOT wrapped (so lo ≤ acrophase ≤ hi
-		// always holds); wrap each end for clock-time display.
-		const CI_acrophase = [
-			acrophase_hrs - t_crit * SE_acrophase_hrs,
-			acrophase_hrs + t_crit * SE_acrophase_hrs
-		];
+		// always holds); wrap each end for clock-time display. Undetermined (NaN) when the
+		// amplitude is not significantly non-zero or the interval spans a full cycle (FIT-7;
+		// Bingham et al. 1982, Cornelissen 2014): see acrophaseCIDetermined.
+		const determined = acrophaseCIDetermined({
+			pOverall: pF,
+			pHarmonic: pF_k,
+			alpha,
+			tCrit: t_crit,
+			se: SE_acrophase_hrs,
+			period: period / k
+		});
+		const CI_acrophase = determined
+			? [acrophase_hrs - t_crit * SE_acrophase_hrs, acrophase_hrs + t_crit * SE_acrophase_hrs]
+			: [NaN, NaN];
 
 		harmonics.push({
 			k,
@@ -849,7 +890,8 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 			SE_A,
 			SE_acrophase_hrs,
 			CI_A,
-			CI_acrophase
+			CI_acrophase,
+			pF: pF_k
 		});
 	}
 

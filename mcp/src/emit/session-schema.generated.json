@@ -28,7 +28,7 @@
 				"x": "avgprofx",
 				"yPrefix": "avgprof_"
 			},
-			"paramNote": "Folds the data onto one cycle. `period` is the folding period (HOURS; 24 for daily); `nBins` is the number of bins. `phaseReference`: \"start\" (default; phases in h after the first sample) or \"clock\" (local clock time; time x only)."
+			"paramNote": "Folds the data onto one cycle. `period` is the folding period (HOURS; 24 for daily); `nBins` is the number of bins. Samples in a bin are averaged per day first; the SEM output is across days (n = days). `phaseReference`: \"start\" (default; phases in h after the first sample) or \"clock\" (local clock time; time x only)."
 		},
 		"BinnedData": {
 			"displayName": "Bin Data",
@@ -91,7 +91,8 @@
 				"testType": "independence",
 				"dataFormat": "groups",
 				"correction": true,
-				"alternative": "two-sided"
+				"alternative": "two-sided",
+				"gofInput": "auto"
 			},
 			"fixedOut": [
 				"statistic",
@@ -104,7 +105,7 @@
 			"dynamicKind": "fixed",
 			"perYPrefix": null,
 			"fitOut": null,
-			"paramNote": "`dataFormat`: \"groups\" (default — two INDEPENDENT samples, one column per group, usually different lengths) or \"paired\" (one row per subject with both variables, same length, paired by index); feeding independent groups to \"paired\" truncates/mispairs, so the node warns on a length mismatch. Applies to independence/fisher; goodness takes one column. `testType`: \"independence\" (`xIN`=rows, `yIN`=cols → contingency test of association), \"goodness\" (one column `xIN` vs a uniform expectation), \"fisher\" (exact test on a 2×2 from `xIN`×`yIN`). `correction` = Yates, 2×2 independence only. `alternative` (\"two-sided\"/\"less\"/\"greater\") is read only in fisher. Outputs statistic, pvalue, df, effectSize (Cramer's V / Cohen's w / odds ratio). Expected counts < 5 ⇒ switch to \"fisher\" (exact at any n; leaves statistic/df NaN)."
+			"paramNote": "`dataFormat`: \"groups\" (default; two INDEPENDENT samples, one column per group, usually different lengths) or \"paired\" (one row per subject with both variables, same length, paired by index); feeding independent groups to \"paired\" truncates/mispairs, so the node warns on a length mismatch. Applies to independence/fisher; goodness takes one column. `testType`: \"independence\" (`xIN`=rows, `yIN`=cols → contingency test of association), \"goodness\" (one column `xIN` vs a uniform expectation; `gofInput` \"auto\" (default: all-numeric = counts), \"counts\" (non-negative integers, else refused) or \"categories\" (tally the values, e.g. numeric codes)), \"fisher\" (exact test on a 2×2 from `xIN`×`yIN`). `correction` = Yates, 2×2 independence only. `alternative` (\"two-sided\"/\"less\"/\"greater\") is read only in fisher. Outputs statistic, pvalue, df, effectSize (Cramer's V / Cohen's w / odds ratio). Expected counts < 5 ⇒ switch to \"fisher\" (exact at any n; leaves statistic/df NaN)."
 		},
 		"CircadianFunctionIndex": {
 			"displayName": "Circadian Function Index",

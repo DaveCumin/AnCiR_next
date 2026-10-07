@@ -78,7 +78,9 @@
 				// Confidence intervals for the first harmonic's amplitude and acrophase.
 				// fitCosinorFixed already computes both (CI_A / CI_acrophase) and the
 				// panel shows them; these ports make them wireable. Fixed-period mode
-				// only — the free-period fit has no closed-form interval.
+				// only; the free-period fit has no closed-form interval. The acrophase
+				// CI is NaN when the amplitude is not significant or the interval spans
+				// a full cycle (FIT-7, see acrophaseCIDetermined in utils/cosinor.js).
 				amplitude_ciLow: { val: -1 },
 				amplitude_ciHigh: { val: -1 },
 				acrophase_ciLow: { val: -1 },
@@ -586,7 +588,7 @@
 
 		if (argsIN.useFixedPeriod && cycles < COSINOR_MIN_CYCLES) {
 			warnings.push(
-				`Short record: ${cycles.toFixed(1)} cycles at a ${period} ${unit} period. A cosinor fitted to fewer than ${COSINOR_MIN_CYCLES} cycles is close to interpolating a single bump — the amplitude and acrophase will look precise but no repetition supports them.`
+				`Short record: ${cycles.toFixed(1)} cycles at a ${period} ${unit} period. A cosinor fitted to fewer than ${COSINOR_MIN_CYCLES} cycles is close to interpolating a single bump. The amplitude and acrophase will look precise, but no repetition supports them.`
 			);
 		}
 
@@ -726,8 +728,14 @@
 						hd?.CI_A?.[0] ?? null,
 						hd?.CI_A?.[1] ?? null,
 						ref(hd?.acrophase_hrs ?? null, hPeriod),
-						hd?.CI_acrophase ? ref(wrapToPeriod(hd.CI_acrophase[0], hPeriod), hPeriod) : null,
-						hd?.CI_acrophase ? ref(wrapToPeriod(hd.CI_acrophase[1], hPeriod), hPeriod) : null
+						// An undetermined acrophase CI (FIT-7, NaN ends) is an empty cell, as a
+						// missing value is.
+						Number.isFinite(hd?.CI_acrophase?.[0])
+							? ref(wrapToPeriod(hd.CI_acrophase[0], hPeriod), hPeriod)
+							: null,
+						Number.isFinite(hd?.CI_acrophase?.[1])
+							? ref(wrapToPeriod(hd.CI_acrophase[1], hPeriod), hPeriod)
+							: null
 					);
 				}
 				return row;
@@ -1424,10 +1432,15 @@
 							h.acrophase_hrs,
 							hPeriod
 						).toFixed(2)}
-						{periodUnit} &nbsp;[CI: {refPhase(
-							wrapToPeriod(h.CI_acrophase[0], hPeriod),
-							hPeriod
-						).toFixed(2)}, {refPhase(wrapToPeriod(h.CI_acrophase[1], hPeriod), hPeriod).toFixed(2)}]
+						{periodUnit} &nbsp;{#if Number.isFinite(h.CI_acrophase[0])}[CI: {refPhase(
+								wrapToPeriod(h.CI_acrophase[0], hPeriod),
+								hPeriod
+							).toFixed(2)}, {refPhase(wrapToPeriod(h.CI_acrophase[1], hPeriod), hPeriod).toFixed(
+								2
+							)}]{:else}<span
+								title="No acrophase CI: the amplitude is not significantly different from zero, or the interval would span a full cycle (Bingham et al. 1982)."
+								>[CI: not determined]</span
+							>{/if}
 						<StoreValueButton
 							label={`H${h.k} Acrophase (time of peak, ${phaseNote})`}
 							getter={() =>

@@ -3,6 +3,7 @@ import {
 	fitCosineCurves,
 	evaluateCosinorAtPoints,
 	fitCosinorFixed,
+	acrophaseCIDetermined,
 	freePeriodFitWarnings,
 	resolvePeriodRange,
 	scanPeriodogram,
@@ -412,5 +413,74 @@ describe('resolvePeriodRange / scanPeriodogram', () => {
 		const [top] = scanPeriodogram(t, y, 1, 48, 3);
 		expect(top.period).toBeGreaterThan(23);
 		expect(top.period).toBeLessThan(24);
+	});
+});
+
+// FIT-7: the acrophase CI is undetermined (NaN) when the zero-amplitude test is not
+// significant, or when the interval is at least a full period wide. Bingham, Arbogast,
+// Guillaume, Lee and Halberg (1982), Chronobiologia 9:397-439; Cornelissen (2014), Theor Biol
+// Med Model 11:16, Sect. "Confidence intervals": with no detectable rhythm the phase is not
+// defined and the delta-method interval under-covers.
+describe('fitCosinorFixed acrophase CI is undetermined without a detectable rhythm (FIT-7)', () => {
+	const t = Array.from({ length: 96 }, (_, i) => i * 0.5);
+	// Deterministic, non-periodic "noise" much larger than the rhythm.
+	const noise = t.map((_, i) => 2 * Math.sin(i * 12.9898) + 1.5 * Math.cos(i * 78.233));
+
+	it('flat-ish record (pF >= alpha): CI is NaN, the point estimate stays', () => {
+		const y = t.map((ti, i) => 10 + 0.05 * Math.cos((2 * Math.PI * ti) / 24) + noise[i]);
+		const r = fitCosinorFixed(t, y, 24, 1);
+		expect(r.pF).toBeGreaterThanOrEqual(0.05);
+		const h = r.harmonics[0];
+		expect(Number.isFinite(h.acrophase_hrs)).toBe(true);
+		expect(h.CI_acrophase[0]).toBeNaN();
+		expect(h.CI_acrophase[1]).toBeNaN();
+	});
+
+	it('clear rhythm (pF < alpha): CI is finite and brackets the estimate', () => {
+		const y = t.map((ti, i) => 10 + 4 * Math.cos((2 * Math.PI * (ti - 6)) / 24) + noise[i]);
+		const r = fitCosinorFixed(t, y, 24, 1);
+		expect(r.pF).toBeLessThan(0.05);
+		const h = r.harmonics[0];
+		expect(h.CI_acrophase[0]).toBeLessThan(h.acrophase_hrs);
+		expect(h.CI_acrophase[1]).toBeGreaterThan(h.acrophase_hrs);
+	});
+
+	it("one harmonic: the harmonic's own zero-amplitude p is the overall pF", () => {
+		const y = t.map((ti, i) => 10 + 1 * Math.cos((2 * Math.PI * (ti - 6)) / 24) + noise[i]);
+		const r = fitCosinorFixed(t, y, 24, 1);
+		expect(r.harmonics[0].pF).toBeCloseTo(r.pF, 10);
+	});
+
+	it('two harmonics: a strong H1 keeps its CI, an absent H2 gets NaN', () => {
+		const y = t.map((ti, i) => 10 + 4 * Math.cos((2 * Math.PI * (ti - 6)) / 24) + noise[i]);
+		const r = fitCosinorFixed(t, y, 24, 2);
+		expect(r.pF).toBeLessThan(0.05);
+		const [h1, h2] = r.harmonics;
+		expect(h1.pF).toBeLessThan(0.05);
+		expect(Number.isFinite(h1.CI_acrophase[0])).toBe(true);
+		expect(h2.pF).toBeGreaterThanOrEqual(0.05);
+		expect(h2.CI_acrophase[0]).toBeNaN();
+		expect(h2.CI_acrophase[1]).toBeNaN();
+	});
+});
+
+describe('acrophaseCIDetermined (FIT-7 conditions)', () => {
+	const base = { pOverall: 0.001, pHarmonic: 0.001, alpha: 0.05, tCrit: 2, se: 1, period: 24 };
+	it('significant and narrower than a period: determined', () => {
+		expect(acrophaseCIDetermined(base)).toBe(true);
+	});
+	it('overall test not significant: undetermined', () => {
+		expect(acrophaseCIDetermined({ ...base, pOverall: 0.05 })).toBe(false);
+	});
+	it("the harmonic's own test not significant: undetermined", () => {
+		expect(acrophaseCIDetermined({ ...base, pHarmonic: 0.2 })).toBe(false);
+	});
+	it('2 * t * SE at least the period: undetermined', () => {
+		expect(acrophaseCIDetermined({ ...base, se: 6 })).toBe(false);
+		expect(acrophaseCIDetermined({ ...base, se: 5.99 })).toBe(true);
+	});
+	it('a NaN p or SE: undetermined', () => {
+		expect(acrophaseCIDetermined({ ...base, pOverall: NaN })).toBe(false);
+		expect(acrophaseCIDetermined({ ...base, se: NaN })).toBe(false);
 	});
 });
