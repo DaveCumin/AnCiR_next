@@ -230,6 +230,7 @@ test('an empty proposal is reported, not returned as a silent no-op', async () =
 	assert.equal(res.status, 422);
 	const out = await res.json();
 	assert.match(out.error, /can't delete/i);
+	assert.ok(!out.error.includes('\u2014'), `no em-dash in a message users read: ${out.error}`);
 });
 
 test('the empty-edit message never disclaims a verb the prompt offers', async () => {

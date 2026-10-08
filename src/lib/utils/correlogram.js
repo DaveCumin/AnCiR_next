@@ -2,10 +2,6 @@
 import { mean } from '$lib/components/plotbits/helpers/wrangleData.js';
 import { validPairs } from './validPairs.js';
 
-// meanSpacing lives with the valid-row rules it applies. Re-exported so its tests keep importing
-// it from here; the Correlogram plot no longer uses it (SPEC-10, see validPairs.js).
-export { meanSpacing } from './validPairs.js';
-
 /**
  * Compute the autocorrelation function of a 1-D signal sampled at `times`.
  *

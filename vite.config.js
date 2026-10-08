@@ -7,6 +7,17 @@ import { writeSidecar as writePythonSidecar } from './scripts/buildPythonExport.
 import { writeSidecar as writeRSidecar } from './scripts/buildRExport.mjs';
 
 export default defineConfig({
+	// Legal comments (`/** @license ... */`, `/*! ... */`) are gathered at the END of each
+	// minified chunk, and identical ones are kept once, instead of staying in place once per
+	// source module. The @stdlib packages repeat the same Apache-2.0 header in every file, so
+	// in place that was 1,327 copies and about 900 KB of the single-file build; consolidated it
+	// is about 90 distinct notices (about 100 KB). They are moved, not deleted: nothing else in
+	// the repo or the deployed site reproduces the third-party notices, so this block is where
+	// redistribution of those Apache-2.0 and MIT dependencies is honoured. Vite passes this
+	// option to esbuild both for the module transform and for the production minify of each
+	// chunk (resolveEsbuildTranspileOptions spreads `config.esbuild`).
+	esbuild: { legalComments: 'eof' },
+
 	build: {
 		assetsInlineLimit: Infinity,
 		// The declared browser floor. Vite's default target has changed between majors, so pin it

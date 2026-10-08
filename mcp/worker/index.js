@@ -213,7 +213,7 @@ async function askModel({ llm, system, user, options: o, callerKey, done }) {
 					{
 						error: callerKey
 							? 'That API key was rejected by the provider. Check the key, model and endpoint under Advanced.'
-							: 'The AI service is misconfigured — its API key was rejected. Please report this.'
+							: 'The AI service is misconfigured (its API key was rejected). Please report this.'
 					},
 					502
 				)
@@ -567,7 +567,7 @@ async function handleEdit(request, env, ctx) {
 		return json(
 			{
 				error:
-					"The AI didn't propose any changes it could make. It can add analyses and plots, change an analysis's parameters, restyle a plot, and shade a time-of-day window on one — but it can't delete or rearrange things. Try asking for something to be added or changed.",
+					"The AI didn't propose any changes it could make. It can add analyses and plots, change an analysis's parameters, restyle a plot, and shade a time-of-day window on one, but it can't delete or rearrange things. Try asking for something to be added or changed.",
 				analyses: [],
 				plots: [],
 				changes: [],

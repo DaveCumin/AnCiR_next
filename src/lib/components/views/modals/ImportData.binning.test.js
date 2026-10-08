@@ -56,6 +56,8 @@ describe('binParsedData: which columns are averaged', () => {
 	it('keeps a number column set to Category as values, not a mean', async () => {
 		await openImportModalWithFiles([new File([csv], 'codes.csv', { type: 'text/plain' })]);
 		_importTestActions().setColumnTypeChoice('code', 'category');
+		// The 5-minute file would suggest 10-minute bins; bin all three rows together.
+		_importTestActions().setBinInterval(15);
 		const out = binParsedData({
 			time: ['2024-03-04 00:00:00', '2024-03-04 00:05:00', '2024-03-04 00:10:00'],
 			code: [1, 2, 3],

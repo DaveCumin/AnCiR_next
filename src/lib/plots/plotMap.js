@@ -45,6 +45,7 @@ export const loadPlots = memoiseNodeMap(async () => {
 				nodeIcon: nodeMeta.nodeIcon,
 				description: nodeMeta.description,
 				keywords: nodeMeta.keywords,
+				hideFromPalette: nodeMeta.hideFromPalette ?? false,
 				kind: 'plot'
 			}
 		];

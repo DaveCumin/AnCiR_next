@@ -58,31 +58,6 @@ export function validValues(arr) {
 }
 
 /**
- * The mean sample spacing of a time axis, from its first and last VALID rows:
- * (t_j - t_i) / (j - i), where i and j are the first and last rows whose time is present.
- *
- * No production caller now. The Correlogram used it for its lag step until SPEC-10 moved the
- * plot to the median interval (computeAutocorrelation with binSize null), as the Rhythmicity
- * node does; SurrogateTest used it for its block length until it moved to the regular grid its
- * FFT gap handling builds.
- *
- * The Correlogram used (t[n - 1] - t[0]) / (n - 1) over the raw rows, and JS reads a missing
- * end as 0 (`null - 5 === -5`), so a missing LAST time gave a zero or negative step and a
- * blank plot, and a missing FIRST time mislabelled every lag. When both ends are present the
- * two formulas are the same number. Interior gaps still count as rows, as before: this is the
- * spacing of the row grid, not of the valid samples. Missing is the house rule
- * (isInvalidValue): null, undefined, a blank string, NaN.
- *
- * @param {Array<number|null|undefined|string>} times
- * @returns {number} NaN when fewer than two times are present
- */
-export function meanSpacing(times) {
-	const { first, last } = validEnds(times);
-	if (first < 0 || last === first) return NaN;
-	return (Number(times[last]) - Number(times[first])) / (last - first);
-}
-
-/**
  * The indices of the first and last PRESENT values of a series (the house rule,
  * isInvalidValue), or -1 for both when none is present. For any step or span taken from a
  * series' ends: `arr[arr.length - 1] - arr[0]` reads a missing end as 0 in JS.

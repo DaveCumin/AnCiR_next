@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeAutocorrelation, findAutocorrelationPeak, meanSpacing } from './correlogram.js';
+import { computeAutocorrelation, findAutocorrelationPeak } from './correlogram.js';
 
 // Uniformly-sampled cosine.
 function cosine(periodH, durationH, stepH) {
@@ -233,30 +233,6 @@ describe('findAutocorrelationPeak', () => {
 
 	it('skips non-finite correlations', () => {
 		expect(findAutocorrelationPeak([0, 1, 2, 3], [1, NaN, -0.5, 0.4])).toMatchObject({ lag: 3 });
-	});
-});
-
-describe('meanSpacing (the former Correlogram lag step with no binWidth)', () => {
-	it('is (last - first) / (n - 1) when both ends are present, interior gaps counted as rows', () => {
-		expect(meanSpacing([5, 6, null, 8, 9])).toBe(1);
-		expect(meanSpacing([0, 0.25, 1, 1.25, 2])).toBe(0.5);
-	});
-
-	it('uses the first and last PRESENT rows when an end is missing', () => {
-		expect(meanSpacing([null, 6, 7, 8, 9])).toBe(1);
-		expect(meanSpacing([5, 6, 7, 8, null])).toBe(1);
-		expect(meanSpacing(['', 6, 7, 8, undefined])).toBe(1);
-		expect(meanSpacing([NaN, 6, 7, 8, null])).toBe(1);
-	});
-
-	it('keeps a real 0 time', () => {
-		expect(meanSpacing([0, 1, 2])).toBe(1);
-	});
-
-	it('is NaN with fewer than two present times', () => {
-		expect(meanSpacing([null, 3, null])).toBeNaN();
-		expect(meanSpacing([])).toBeNaN();
-		expect(meanSpacing(null)).toBeNaN();
 	});
 });
 

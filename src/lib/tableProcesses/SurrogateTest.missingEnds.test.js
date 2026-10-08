@@ -5,8 +5,8 @@
 // block length in SAMPLES for the bootstrap, and the same zero-filled times went into the
 // FFT behind the observed statistic. The correct answer for a series with a missing end is
 // the answer for the same series with that row dropped: the step is (t_j - t_i) / (j - i)
-// over the first and last VALID rows (utils/validPairs.js meanSpacing, shared with the
-// Correlogram), and the statistic is computed on the valid (x, y) pairs only.
+// over the first and last VALID rows, and the statistic is computed on the valid (x, y)
+// pairs only.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const columns = new Map();

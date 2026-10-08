@@ -314,8 +314,8 @@ generator already could.
   spectrum and `observed` = 0), and the hours-to-samples block length read the end as 0 (a
   "24 h" block became 69 samples instead of 96 on a series from 100 h, or fell back to 24
   samples). The node now keeps the rows where x and y are both present, as both ports always
-  did, and takes the step from `meanSpacing` (now in `utils/validPairs.js`, re-exported by
-  `utils/correlogram.js`, so the Correlogram is unchanged). The ports do not build surrogates
+  did. At that release it took the step from the first and last present times (a `meanSpacing`
+  helper, since removed once neither node used it). The ports do not build surrogates
   (the p-value stays a Monte Carlo boundary), so only `observed` is compared.
 - **computeNPCRA** kept every row whose `Number(t)` is finite, so a missing time became a
   sample at hour 0 (epoch grid pulled back, its y averaged into the first epoch). It now drops

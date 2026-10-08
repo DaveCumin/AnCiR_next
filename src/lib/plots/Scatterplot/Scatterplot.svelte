@@ -53,6 +53,12 @@
 		points = $state();
 		yAxis = $state('left'); // 'left' or 'right'
 
+		// The x and y columns' data, read once per data change and shared by every reader
+		// (the plot's limits and render geometry, the markup, the hover siblings), so a
+		// render does not re-run getData() for each prop that passes it on.
+		xData = $derived(safeColumnData(this.x));
+		yData = $derived(safeColumnData(this.y));
+
 		constructor(parent, dataIN) {
 			this.parentPlot = parent;
 			if (dataIN?.x) {
@@ -289,8 +295,8 @@
 				const line = !!d.line?.draw;
 				const pts = !!d.points?.draw;
 				if (!line && !pts) continue;
-				const xRaw = safeColumnData(d.x);
-				const yRaw = safeColumnData(d.y);
+				const xRaw = d.xData;
+				const yRaw = d.yData;
 				const origin = this.xOriginFor(d.x);
 				const ys = d.yAxis === 'right' ? ysRight : ysLeft;
 				const n = Math.min(xRaw.length, yRaw.length);
@@ -370,7 +376,7 @@
 			let ymin = Infinity;
 			let ymax = -Infinity;
 			sideData.forEach((d) => {
-				let tempy = safeColumnData(d.y);
+				let tempy = d.yData;
 				ymin = min([ymin, ...tempy]);
 				ymax = max([ymax, ...tempy]);
 			});
@@ -420,8 +426,8 @@
 
 			this.data.forEach((d, i) => {
 				const xCol = this.data[i].x;
-				let tempx = safeColumnData(xCol);
-				let tempy = safeColumnData(this.data[i].y);
+				let tempx = this.data[i].xData;
+				let tempy = this.data[i].yData;
 
 				// Prefer x values that have a matching y, so the limits frame the
 				// actually-plotted points (do NOT exclude zeros).
@@ -574,8 +580,8 @@
 				const resolvedOrigin = this.resolveXOriginMs(d.x);
 				if (resolvedOrigin != null) return resolvedOrigin;
 				if (d.x.type === 'time') {
-					const raw = d.x.getData();
-					if (raw?.length > 0) return raw[0];
+					const raw = d.xData;
+					if (raw.length > 0) return raw[0];
 				}
 			}
 			return null;
@@ -757,7 +763,7 @@
 			const columns = [];
 			this.data.forEach((datum) => {
 				const label = datum.displayLabel;
-				let xData = datum.x.getData() ?? [];
+				let xData = datum.xData;
 				// Convert datetime x values to ISO strings for readability
 				if (this.anyXdataTime) {
 					if (datum.x.type === 'time') {
@@ -771,7 +777,7 @@
 						}
 					}
 				}
-				const yData = datum.y.getData() ?? [];
+				const yData = datum.yData;
 				headers.push(`x_${label}`, `y_${label}`);
 				columns.push(xData, yData);
 			});
@@ -1038,9 +1044,9 @@
 		if (which !== 'plot' || !theData?.plot?.data) return [];
 		const out = [];
 		for (const d of theData.plot.data) {
-			const xArr = d.x?.getData();
-			const yArr = d.y?.getData();
-			if (!xArr?.length || !yArr?.length) continue;
+			const xArr = d.xData;
+			const yArr = d.yData;
+			if (!xArr.length || !yArr.length) continue;
 			const origin = theData.plot.xOriginFor(d.x);
 			const xD =
 				origin != null ? xArr.map(/** @param {number} v */ (v) => origin + v * 3600000) : xArr;
@@ -1357,8 +1363,8 @@
 						<Points pointsData={datum.points} which="controls" />
 						<Line
 							lineData={datum.line}
-							x={datum.x.getData()}
-							y={datum.y.getData()}
+							x={datum.xData}
+							y={datum.yData}
 							xscale={theData.XScale}
 							yscale={datum.yAxis === 'left' ? theData.YScaleLeft : theData.YScaleRight}
 							which="controls"
@@ -1480,18 +1486,16 @@
 		</g>
 
 		{#each theData.plot.data as datum (datum.x.id + '-' + datum.y.id)}
-			{#if datum.x.getData()?.length > 0 && datum.y.getData()?.length > 0}
+			{#if datum.xData.length > 0 && datum.yData.length > 0}
 				{@const _xOrigin = theData.plot.xOriginFor(datum.x)}
 				{@const xDATA =
-					_xOrigin != null
-						? datum.x.getData().map((d) => _xOrigin + d * 3600000)
-						: datum.x.getData()}
+					_xOrigin != null ? datum.xData.map((d) => _xOrigin + d * 3600000) : datum.xData}
 				{@const yScale =
 					datum.yAxis === 'left' ? theData.plot.YScaleLeft : theData.plot.YScaleRight}
 				<Line
 					lineData={datum.line}
 					x={xDATA}
-					y={datum.y.getData()}
+					y={datum.yData}
 					xscale={theData.plot.XScale}
 					yscale={yScale}
 					xoffset={theData.plot.padding.left}
@@ -1512,7 +1516,7 @@
 					pointsData={datum.points}
 					x={xDATA}
 					xtype={theData.plot.anyXdataTime ? 'time' : datum.x.type}
-					y={datum.y.getData()}
+					y={datum.yData}
 					xscale={theData.plot.XScale}
 					yscale={yScale}
 					radius={datum.pointradius}

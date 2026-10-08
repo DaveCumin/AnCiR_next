@@ -4,6 +4,7 @@
 // preview -> Confirm Import -> Column) through the exported test seams.
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
+	defaultImportBinning,
 	openImportModalWithFiles,
 	_importPreviewState,
 	_importTestActions
@@ -98,10 +99,7 @@ describe('binning estimate', () => {
 		await openImportModalWithFiles([makeFile('hive.csv', hiveCsv())]);
 		const s = _importPreviewState();
 		expect(s.totalRowCount).toBe(15_745);
-		expect(s.binningEnabled).toBe(true);
 		expect(s.dataIntervalMin).toBe(15);
-		// Binning 15-minute rows to the default 15 minutes keeps the row count.
-		expect(s.estimatedBinnedRows).toBe(15_745);
 	});
 
 	it('has no interval once the time column is set to another type', async () => {
@@ -117,5 +115,89 @@ describe('binning estimate', () => {
 		expect(s.dataIntervalMin).toBe(30);
 		_importTestActions().setColumnTypeChoice('local_time', 'category');
 		expect(_importPreviewState().dataIntervalMin).toBe(null);
+	});
+});
+
+/** `rows` rows sampled every `stepMin` minutes: a time column and one value column. */
+function steppedCsv(rows, stepMin) {
+	const lines = ['time,v'];
+	const start = Date.UTC(2025, 9, 1, 0, 0);
+	for (let i = 0; i < rows; i++) {
+		const t = new Date(start + i * stepMin * 60_000);
+		const time = `${t.getUTCFullYear()}-${p2(t.getUTCMonth() + 1)}-${p2(t.getUTCDate())} ${p2(t.getUTCHours())}:${p2(t.getUTCMinutes())}:${p2(t.getUTCSeconds())}`;
+		lines.push(`${time},${i % 7}`);
+	}
+	return lines.join('\n');
+}
+
+describe('binning default', () => {
+	it('is not ticked for the hive file, whose 15-minute rows a 15-minute bin would not reduce', async () => {
+		await openImportModalWithFiles([makeFile('hive.csv', hiveCsv())]);
+		const s = _importPreviewState();
+		expect(s.totalRowCount).toBe(15_745);
+		expect(s.dataIntervalMin).toBe(15);
+		expect(s.binningEnabled).toBe(false);
+		// Ticking it offers a bin that does reduce the rows.
+		expect(s.binIntervalMin).toBe(30);
+	});
+
+	it('is ticked at 5 minutes for a 1-minute file over the row threshold', async () => {
+		await openImportModalWithFiles([makeFile('minute.csv', steppedCsv(20_000, 1))]);
+		const s = _importPreviewState();
+		expect(s.totalRowCount).toBe(20_000);
+		expect(s.dataIntervalMin).toBe(1);
+		expect(s.binningEnabled).toBe(true);
+		expect(s.binIntervalMin).toBe(5);
+		expect(s.estimatedBinnedRows).toBe(4_000);
+	});
+
+	it('is not ticked for a 1-minute file under the row threshold', async () => {
+		await openImportModalWithFiles([makeFile('minute.csv', steppedCsv(14_000, 1))]);
+		expect(_importPreviewState().binningEnabled).toBe(false);
+	});
+
+	it('keeps the 15-minute tick when the file has no time column', async () => {
+		const lines = ['a,b'];
+		for (let i = 0; i < 16_000; i++) lines.push(`${i},${i % 3}`);
+		await openImportModalWithFiles([makeFile('no-time.csv', lines.join('\n'))]);
+		const s = _importPreviewState();
+		expect(s.dataIntervalMin).toBe(null);
+		expect(s.binningEnabled).toBe(true);
+		expect(s.binIntervalMin).toBe(15);
+	});
+
+	it('keeps an untick when the interval re-detects', async () => {
+		await openImportModalWithFiles([makeFile('minute.csv', steppedCsv(20_000, 1))]);
+		_importTestActions().setBinningEnabled(false);
+		// With the time column read as Category the interval is unknown, which on its
+		// own would suggest the 15-minute fallback, ticked.
+		_importTestActions().setColumnTypeChoice('time', 'category');
+		const s = _importPreviewState();
+		expect(s.dataIntervalMin).toBe(null);
+		expect(s.binningEnabled).toBe(false);
+	});
+
+	it('keeps a tick and an edited bin when the interval re-detects', async () => {
+		await openImportModalWithFiles([makeFile('hive.csv', hiveCsv())]);
+		_importTestActions().setBinningEnabled(true);
+		_importTestActions().setBinInterval(60);
+		_importTestActions().setColumnTypeChoice('local_time', 'category');
+		const s = _importPreviewState();
+		expect(s.dataIntervalMin).toBe(null);
+		expect(s.binningEnabled).toBe(true);
+		expect(s.binIntervalMin).toBe(60);
+	});
+
+	it('suggests a whole multiple of the interval at least twice it', () => {
+		expect(defaultImportBinning(20_000, 1)).toEqual({ enabled: true, intervalMin: 5 });
+		expect(defaultImportBinning(20_000, 0.5)).toEqual({ enabled: true, intervalMin: 5 });
+		expect(defaultImportBinning(20_000, 2)).toEqual({ enabled: true, intervalMin: 10 });
+		expect(defaultImportBinning(20_000, 5)).toEqual({ enabled: true, intervalMin: 10 });
+		expect(defaultImportBinning(20_000, 10)).toEqual({ enabled: true, intervalMin: 30 });
+		expect(defaultImportBinning(20_000, 7)).toEqual({ enabled: true, intervalMin: 14 });
+		expect(defaultImportBinning(20_000, 15)).toEqual({ enabled: false, intervalMin: 30 });
+		expect(defaultImportBinning(20_000, 60)).toEqual({ enabled: false, intervalMin: 120 });
+		expect(defaultImportBinning(20_000, null)).toEqual({ enabled: true, intervalMin: 15 });
+		expect(defaultImportBinning(15_000, 1)).toEqual({ enabled: false, intervalMin: 5 });
 	});
 });

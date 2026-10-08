@@ -471,7 +471,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.81.7',
+	version: 'β.81.8',
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.processMap = await loadProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	processMap: new Map(),
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.plotMap = await loadPlots()); never mutated in place, so the $state reassignment already drives reactivity
@@ -899,10 +899,18 @@ export function swapColumnRefsBulk(pairs) {
 }
 
 export function outputCoreAsJson() {
-	let coreOut = JSON.parse(
-		JSON.stringify(core, (key, val) => (typeof val === 'function' ? undefined : val))
-	);
-	coreOut.rawData = Object.fromEntries(core.rawData);
+	// One serialisation pass (ROB-U3). The top level is assembled as a plain object whose
+	// values are the live session objects, and JSON.stringify walks them once; it already
+	// drops function-valued properties and calls each class's toJSON. Key order matches the
+	// old copy-parse-patch-stringify route, so the saved file is byte-identical: core's keys
+	// in declaration order (rawData and storedValues keep their slots), then appState,
+	// version and, when present, generatedBy.
+	const output = {};
+	for (const [key, val] of Object.entries(core)) {
+		if (key !== 'generatedBy') output[key] = val;
+	}
+	// A Map stringifies as {}, so the raw series go in as a plain object.
+	output.rawData = Object.fromEntries(core.rawData);
 	// Resolve live getters into static snapshots for serialisation. Ref entries
 	// (metric-port refs) additionally keep the ref itself so they re-resolve
 	// live after import; the snapshot doubles as a fallback (and feeds the
@@ -915,17 +923,13 @@ export function outputCoreAsJson() {
 			staticValue: getStoredValue(name)
 		};
 	}
-	coreOut.storedValues = resolvedSV;
-	// generatedBy sits beside the version and is omitted entirely when absent — a session nobody
+	output.storedValues = resolvedSV;
+	output.appState = appState;
+	output.version = appConsts.version;
+	// generatedBy sits beside the version and is omitted entirely when absent: a session nobody
 	// generated shouldn't carry `"generatedBy": null`, and re-exporting an AI-built session must
-	// keep the fingerprint (that's the whole point: the copy a user sends back stays traceable).
-	const { generatedBy, ...rest } = coreOut;
-	const output = {
-		...rest,
-		appState,
-		version: appConsts.version,
-		...(generatedBy ? { generatedBy } : {})
-	};
+	// keep the fingerprint (that is the point; the copy a user sends back stays traceable).
+	if (core.generatedBy) output.generatedBy = core.generatedBy;
 	return JSON.stringify(output, null, 2);
 }
 

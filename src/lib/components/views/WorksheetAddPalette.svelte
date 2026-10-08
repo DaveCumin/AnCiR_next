@@ -124,6 +124,8 @@
 	const allItems = $derived.by(() => {
 		const items = [];
 		for (const [key, entry] of appConsts.plotMap?.entries() ?? []) {
+			// Data View is spawned by a plot's "View data" action; never added blank.
+			if (entry.hideFromPalette) continue;
 			items.push({
 				type: key,
 				kind: 'plot',

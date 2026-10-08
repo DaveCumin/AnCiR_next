@@ -858,6 +858,7 @@ test('rejected key → says whose key it was', async () => {
 	assert.equal(ours.status, 502);
 	const body = await ours.json();
 	assert.match(body.error, /service is misconfigured/i);
+	assert.ok(!body.error.includes('\u2014'), `no em-dash in a message users read: ${body.error}`);
 	assert.ok(!JSON.stringify(body).includes('gsk_bad'), 'never echoes the key');
 });
 

@@ -292,8 +292,13 @@
 	// Binning for large files
 	const ROW_THRESHOLD = 15000;
 	let totalRowCount = $state(0);
-	let binningEnabled = $state(false);
-	let binIntervalMin = $state(15); // default 15 minutes
+	// What the user set in the binning panel (null until they touch it). Their choice
+	// stands for the rest of this modal session: a re-detected interval (a type
+	// override, another file) changes only the suggestion, never what they chose.
+	let binUserEnabled = $state(null);
+	let binUserInterval = $state(null);
+	// Whether this preview suggests binning at all (a file preview, not EnSpire or a URL).
+	let binSuggested = $state(false);
 	// The file's sampling interval in minutes: an AWD header states it; otherwise it
 	// is the median gap of the time column binning will use, read from the preview
 	// rows. null when there is no time column to read it from.
@@ -309,6 +314,9 @@
 		);
 		return samplingIntervalMinutes(ms);
 	});
+	let binDefault = $derived(defaultImportBinning(totalRowCount, dataIntervalMin));
+	let binningEnabled = $derived(binUserEnabled ?? (binSuggested && binDefault.enabled));
+	let binIntervalMin = $derived(binUserInterval ?? binDefault.intervalMin);
 	let estimatedBinnedRows = $derived(
 		dataIntervalMin == null ? null : Math.ceil((totalRowCount * dataIntervalMin) / binIntervalMin)
 	);
@@ -978,8 +986,9 @@
 		awdMeta = null;
 		enspireMultiplatePayload = null;
 		totalRowCount = 0;
-		binningEnabled = false;
-		binIntervalMin = 15;
+		binUserEnabled = null;
+		binUserInterval = null;
+		binSuggested = false;
 		// Reassign, don't mutate: $state() does NOT deep-proxy a built-in Set, so `.clear()`
 		// never notifies the template reads below (the column list + the disabled Import button).
 		selectedColumns = new Set();
@@ -1436,6 +1445,7 @@
 			lastImportWarnings: [...lastImportWarnings],
 			totalRowCount,
 			binningEnabled,
+			binIntervalMin,
 			dataIntervalMin,
 			estimatedBinnedRows,
 			parsedData: parsedData ? $state.snapshot(parsedData) : null,
@@ -1462,7 +1472,14 @@
 
 	/** TEST SEAM: the user actions the preview offers, for integration tests. */
 	export function _importTestActions() {
-		return { confirmImport, setDecimalComma, setDateOrder, setColumnTypeChoice };
+		return {
+			confirmImport,
+			setDecimalComma,
+			setDateOrder,
+			setColumnTypeChoice,
+			setBinningEnabled,
+			setBinInterval
+		};
 	}
 
 	/** Forget what the previous file taught the preview: its cell reading and errors. */
@@ -1618,7 +1635,7 @@
 
 		if (enspireMultiplatePayload) {
 			totalRowCount = parsedData ? (parsedData[headers[0]]?.length ?? 0) : 0;
-			binningEnabled = false;
+			binSuggested = false;
 			dateTimePairs = [];
 			combinePairs = new Set();
 			if (targetFiles.length > 1) {
@@ -1631,11 +1648,9 @@
 				];
 			}
 		} else {
-			// Count total rows to decide whether to suggest binning
+			// Count total rows to decide whether to suggest binning (defaultImportBinning)
 			await countRows();
-			if (totalRowCount > ROW_THRESHOLD) {
-				binningEnabled = true;
-			}
+			binSuggested = true;
 
 			// Detect date-only + time-only column pairs
 			detectDateTimePairs();
@@ -1781,6 +1796,7 @@
 			selectedColumns = new Set(headers); // reassign: a Set inside $state is not proxied
 		}
 		totalRowCount = parsedData ? (parsedData[headers[0]]?.length ?? 0) : 0;
+		binSuggested = false;
 		await sampleSparseColumns();
 		maybeSuggestDecimalComma();
 
@@ -2897,6 +2913,49 @@
 		});
 	}
 
+	// The bin the import has always offered when nothing tells it the sampling interval.
+	const FALLBACK_BIN_MIN = 15;
+	const BIN_CHOICES_MIN = [5, 10, 15, 30, 60];
+
+	/**
+	 * The binning the preview suggests for a file of `rows` rows sampled every
+	 * `intervalMin` minutes (null when unknown). Binning is ticked only for a file over
+	 * the row threshold that is sampled finer than the 15-minute fallback bin; a file
+	 * already at 15 minutes or coarser would keep its row count. The bin is the smallest
+	 * of 5/10/15/30/60 min that is at least twice the interval and a whole multiple of
+	 * it, else twice the interval (rounded up to a whole minute); with no interval it is
+	 * the 15-minute fallback.
+	 * @param {number} rows
+	 * @param {number | null} intervalMin
+	 * @returns {{ enabled: boolean, intervalMin: number }}
+	 */
+	export function defaultImportBinning(rows, intervalMin) {
+		const known = Number.isFinite(intervalMin) && intervalMin > 0;
+		const enabled = rows > ROW_THRESHOLD && (!known || intervalMin < FALLBACK_BIN_MIN);
+		if (!known) return { enabled, intervalMin: FALLBACK_BIN_MIN };
+		const isMultiple = (bin) => {
+			const k = bin / intervalMin;
+			return Math.abs(k - Math.round(k)) < 1e-9;
+		};
+		const bin =
+			BIN_CHOICES_MIN.find((c) => c >= 2 * intervalMin - 1e-9 && isMultiple(c)) ??
+			Math.max(1, Math.ceil(2 * intervalMin - 1e-9));
+		return { enabled, intervalMin: bin };
+	}
+
+	/** The user ticks or unticks "Bin data to". */
+	function setBinningEnabled(enabled) {
+		binUserEnabled = !!enabled;
+	}
+
+	/**
+	 * The user edits the bin interval. NumberWithUnits writes its value back on mount
+	 * (clamping), so an unchanged value is not taken as a choice.
+	 */
+	function setBinInterval(minutes) {
+		if (minutes !== binIntervalMin) binUserInterval = minutes;
+	}
+
 	// The time column the last binParsedData call rebuilt as labels (or null).
 	let binnedTimeKey = null;
 
@@ -3299,11 +3358,15 @@
 								</p>
 								<div class="control-input-horizontal">
 									<label class="control-input-checkbox">
-										<input type="checkbox" bind:checked={binningEnabled} />
+										<input type="checkbox" bind:checked={() => binningEnabled, setBinningEnabled} />
 										<span class="ci-label">Bin data to</span>
 									</label>
 									<ControlInput label="Interval (mins)">
-										<NumberWithUnits bind:value={binIntervalMin} min={1} step={1} />
+										<NumberWithUnits
+											bind:value={() => binIntervalMin, setBinInterval}
+											min={1}
+											step={1}
+										/>
 									</ControlInput>
 								</div>
 								{#if binningEnabled}

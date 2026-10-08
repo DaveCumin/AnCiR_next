@@ -190,6 +190,7 @@
 			});
 		}
 		for (const [key, entry] of appConsts.plotMap.entries()) {
+			if (entry.hideFromPalette) continue;
 			items.push({
 				type: key,
 				kind: 'plot',

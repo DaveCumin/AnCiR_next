@@ -23,6 +23,7 @@
 	import { markSessionSaved } from '$lib/core/unsavedChanges.svelte.js';
 	import { clearCrashSnapshot } from '$lib/core/errorReporter.js';
 	import { sessionSaveFileName, sessionNameForSave } from '$lib/core/sessionFiles.js';
+	import { downloadBlob } from '$lib/utils/downloadBlob.js';
 	export function exportJson() {
 		try {
 			// outputCoreAsJson builds this with JSON.stringify, so it is valid JSON by construction.
@@ -46,25 +47,6 @@
 			console.error('Failed to save the session:', error.message);
 			addNotification('Could not save the session: ' + error.message);
 		}
-	}
-
-	/**
-	 * Revoking an object URL straight after click() can cancel the download in Firefox and
-	 * Safari, which read the blob asynchronously (ROB-U2). A minute is far longer than any
-	 * download needs to start, and the blob is freed after it.
-	 */
-	const REVOKE_OBJECT_URL_AFTER_MS = 60_000;
-
-	/** Anchor-dance download shared by the session save and the script exports. */
-	function downloadBlob(filename, blob) {
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = filename;
-		document.body.appendChild(a);
-		a.click();
-		a.remove();
-		setTimeout(() => URL.revokeObjectURL(url), REVOKE_OBJECT_URL_AFTER_MS);
 	}
 
 	/**
