@@ -591,6 +591,11 @@
 			if (this.data.length === 0) return false;
 			return this.data.some((d) => d.x.type === 'category');
 		});
+		// What the x axis shows, for its tick controls AND its drawing: manual ticks are offered
+		// and drawn only on a numeric x (Axis.svelte, manualTicksToDraw).
+		xTickMode = $derived(
+			this.anyXCategoryData ? 'categorical' : this.anyXdataTime ? 'time' : 'numeric'
+		);
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
@@ -1229,16 +1234,7 @@
 
 		<div class="div-line"></div>
 
-		<Axis
-			axisData={theData.xAxis}
-			which="controls"
-			title="X-Axis"
-			tickMode={theData.anyXCategoryData
-				? 'categorical'
-				: theData.anyXdataTime
-					? 'time'
-					: 'numeric'}
-		/>
+		<Axis axisData={theData.xAxis} which="controls" title="X-Axis" tickMode={theData.xTickMode} />
 
 		<div class="control-component">
 			<div class="control-input-horizontal">
@@ -1475,6 +1471,7 @@
 			position="bottom"
 			plotPadding={theData.plot.padding}
 			axisData={theData.plot.xAxis}
+			tickMode={theData.plot.xTickMode}
 			tickFormat={theData.plot.anyXCategoryData
 				? (/** @type {any} */ d) => String(d)
 				: theData.plot.anyXdataTime

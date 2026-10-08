@@ -79,6 +79,27 @@ describe('Manual axis ticks: drawing', () => {
 		expect(ticks.every((t) => t instanceof Date)).toBe(true);
 	});
 
+	it('a categorical axis ignores a stored manual list, and draws it again once numeric', async () => {
+		// The list is kept (not cleared) so a plot whose x goes categorical and back gets the
+		// user's ticks back; the categorical panel has no control to clear it with.
+		const axisData = new AxisClass({ nticks: 5, manualTicks: [3, 9] });
+		const ref = mountPlot(new AxisClass({ nticks: 5 })).container;
+		const auto = tickValues(ref);
+		cleanup();
+		const { container, rerender } = mountPlot(axisData, { tickMode: 'categorical' });
+		expect(tickValues(container)).toEqual(auto);
+		expect(axisData.manualTicks).toEqual([3, 9]);
+
+		await rerender({ tickMode: 'numeric' });
+		expect(tickValues(container)).toEqual([3, 9]);
+	});
+
+	it('a time tickMode ignores a stored manual list even on a numeric scale', () => {
+		const axisData = new AxisClass({ nticks: 5, manualTicks: [3, 9] });
+		const { container } = mountPlot(axisData, { tickMode: 'time' });
+		expect(tickValues(container)).not.toEqual([3, 9]);
+	});
+
 	it('an empty manual list draws the automatic ticks', () => {
 		const axisData = new AxisClass({ nticks: 5, manualTicks: [] });
 		const { container } = mountPlot(axisData);

@@ -12,6 +12,7 @@
 	import { binData, max } from '$lib/components/plotbits/helpers/wrangleData.js';
 	import { gaussianKDE } from '$lib/utils/kde.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { densityCurveWarning } from '$lib/plots/seriesHealth.js';
 
 	/**
 	 * The present values of a column, as numbers: the house rule (isInvalidValue), so '' and
@@ -126,7 +127,10 @@
 			const values = this.column?.getData?.() ?? [];
 			if (this.column?.type === 'time' || values.length === 0) return { x: [], y: [] };
 			const valid = presentNumbers(values);
-			if (valid.length < 2) return { x: [], y: [] };
+			// Fewer than 2 distinct values: no spread to estimate. Skipped even with a manual
+			// bandwidth (it would draw one bump the width of the bandwidth); densityWarning
+			// below says why.
+			if (densityCurveWarning(valid) != null || valid.length < 2) return { x: [], y: [] };
 			const kde = gaussianKDE(valid, {
 				bandwidth: this.bandwidth != null && this.bandwidth > 0 ? this.bandwidth : null,
 				gridSize: 128
@@ -151,6 +155,15 @@
 		}
 
 		density = $derived.by(() => (this.showDensity ? this.kdeCurve() : { x: [], y: [] }));
+
+		// Why the density curve is missing for this series (shown under the density
+		// controls), or null. Only while the curve is on and the column is numeric.
+		densityWarning = $derived.by(() => {
+			if (!this.showDensity || this.column?.type === 'time') return null;
+			return densityCurveWarning(presentNumbers(this.column?.getData?.()), this.displayLabel, {
+				manualBandwidth: this.bandwidth != null && this.bandwidth > 0
+			});
+		});
 
 		get displayLabel() {
 			return seriesDisplayLabel(this);
@@ -742,6 +755,11 @@
 									</div>
 								{/if}
 							</div>
+							{#if datum.densityWarning}
+								<div class="data-warning">
+									<p>⚠ {datum.densityWarning}</p>
+								</div>
+							{/if}
 						{/if}
 					</div>
 					<div class="div-line"></div>

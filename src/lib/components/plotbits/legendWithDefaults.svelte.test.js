@@ -30,12 +30,15 @@ describe('LegendClass.withDefaults', () => {
 		expect(LegendClass.withDefaults(null, { show: false }).show).toBe(false);
 	});
 
-	it('a new legend (nothing saved) gets the new-legend defaults, including auto placement', () => {
-		// Passing only `{ show }` to the constructor would look like a legend saved before
-		// `position` existed, which loads as 'topright'.
+	it('a new legend (nothing saved) gets the new-legend defaults, including top-right placement', () => {
 		const legend = LegendClass.withDefaults(undefined, { show: false });
-		expect(legend.position).toBe('auto');
+		expect(legend.position).toBe('topright');
 		expect(legend.show).toBe(false);
+	});
+
+	it('a saved position, including a saved auto, outranks the new-legend default', () => {
+		expect(LegendClass.withDefaults({ position: 'auto' }, { show: false }).position).toBe('auto');
+		expect(LegendClass.withDefaults({ position: 'topleft' }).position).toBe('topleft');
 	});
 
 	it('a saved show=true beats an OFF default', () => {

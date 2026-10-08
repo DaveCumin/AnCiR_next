@@ -67,7 +67,7 @@
 	import {
 		parseTickList,
 		formatTickList,
-		ticksInDomain
+		manualTicksToDraw
 	} from '$lib/components/plotbits/manualTicks.js';
 	import { untrack } from 'svelte';
 	import { select, selectAll } from 'd3-selection';
@@ -95,9 +95,10 @@
 		// figure this axis belongs to".
 		// Absent in the controls branch and in tests, where the defaults apply.
 		figureStyle = null,
-		// What kind of values the axis shows, for the controls: 'numeric' offers Auto/Manual
-		// ticks; 'time' keeps Auto (manual ticks on a time axis are not built yet); 'categorical'
-		// hides the choice, because the plot places one tick per category itself.
+		// What kind of values the axis shows: 'numeric' offers Auto/Manual ticks; 'time' keeps
+		// Auto (manual ticks on a time axis are not built yet); 'categorical' hides the choice,
+		// because the plot places one tick per category itself. In the plot branch a stored
+		// manual list is drawn only when this is 'numeric'.
 		tickMode = 'numeric'
 	} = $props();
 
@@ -205,13 +206,10 @@
 		// DO THE SCALES
 		// Manual ticks (a non-empty list) replace d3's own; values outside the domain are not
 		// drawn. Read here, outside the per-position branches, so every redraw tracks them.
-		// A time axis always uses automatic ticks: the panel offers no manual entry there yet,
-		// so a list typed while the axis was numeric must not turn into epoch milliseconds.
-		const timeScale = scale.domain?.()[0] instanceof Date;
-		const manual =
-			!timeScale && axisData.manualTicks?.length
-				? ticksInDomain(axisData.manualTicks, scale)
-				: null;
+		// Only a numeric axis draws them (manualTicksToDraw): a time or categorical axis has no
+		// manual entry in its panel, so a list typed while the axis was numeric is kept for
+		// when it is numeric again but must not draw meanwhile.
+		const manual = manualTicksToDraw(axisData.manualTicks, scale, tickMode);
 		const withTicks = (a) => (manual ? a.tickValues(manual) : a.ticks(axisData.nticks));
 		let axis;
 		if (position == 'bottom') {

@@ -5,7 +5,7 @@
 // lengths (nothing can be paired point-for-point). A block that is simply not
 // wired yet must stay quiet.
 import { describe, it, expect } from 'vitest';
-import { seriesComputeWarning } from './seriesHealth.js';
+import { seriesComputeWarning, densityCurveWarning } from './seriesHealth.js';
 
 function col(refId, rows) {
 	return {
@@ -64,5 +64,45 @@ describe('seriesComputeWarning', () => {
 	it('ignores non-column fields that happen to share channel names', () => {
 		// e.g. a plot whose datum carries a plain `x` number for layout.
 		expect(seriesComputeWarning({ x: 4, y: col(3, [1, 2]) })).toBeNull();
+	});
+});
+
+// A density curve (KDE) needs a spread: with fewer than 2 distinct values the automatic
+// (Silverman) bandwidth is undefined and nothing is drawn, and a manual bandwidth would
+// draw one kernel-shaped bump that only describes the bandwidth. Either way the series
+// must say why it has no curve.
+describe('densityCurveWarning', () => {
+	it('is quiet when there are at least 2 distinct values', () => {
+		expect(densityCurveWarning([1, 2], 's')).toBeNull();
+		expect(densityCurveWarning([0.153, 0.153, 0.2], 's')).toBeNull();
+	});
+
+	it('is quiet with no values (the empty-input warnings own that case)', () => {
+		expect(densityCurveWarning([], 's')).toBeNull();
+		expect(densityCurveWarning(null, 's')).toBeNull();
+	});
+
+	it('names the series and the repeated value when every value is the same', () => {
+		const w = densityCurveWarning(Array(1000).fill(0.153), 'observed_statistic');
+		expect(w).toContain('No density curve for "observed_statistic"');
+		expect(w).toContain('every value is the same (0.153)');
+		expect(w).not.toContain('bandwidth');
+	});
+
+	it('says a single value is a single value, not a repeated one', () => {
+		const w = densityCurveWarning([7], 'one');
+		expect(w).toContain('No density curve for "one"');
+		expect(w).toContain('only one value (7)');
+	});
+
+	it('rounds the reported value to 4 significant figures', () => {
+		expect(densityCurveWarning([0.15312345, 0.15312345], 's')).toContain('(0.1531)');
+	});
+
+	it('explains why a manual bandwidth does not draw a lone bump', () => {
+		const w = densityCurveWarning([5, 5, 5], 's', { manualBandwidth: true });
+		expect(w).toContain('every value is the same (5)');
+		expect(w).toContain('manual bandwidth');
+		expect(w).toContain('not drawn');
 	});
 });

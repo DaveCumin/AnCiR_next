@@ -4,6 +4,8 @@
 // The paper's cosinor figure had data in every corner, and the fixed top-right legend
 // covered a week of points. 'auto' keeps the corner when it is clear, and otherwise, when no
 // inside position is clear, moves the legend outside and narrows the plot area to make room.
+// 'auto' is a choice in the dropdown, not the default: a new legend starts top right
+// (requested 2026-10-08), so the 'auto' cases below ask for it as a saved legend would.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { core, appConsts } from '$lib/core/core.svelte.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
@@ -19,6 +21,8 @@ function mkCol(name, values) {
 	core.data.push(c);
 	return c.id;
 }
+
+const AUTO = { position: 'auto', show: true };
 
 function scatter(xs, ys, legend) {
 	const plot = new Plot({
@@ -55,14 +59,15 @@ beforeEach(async () => {
 });
 
 describe('scatterplot legend placement', () => {
-	it('a new plot uses auto placement', () => {
+	it('a new plot starts its legend top right, with no auto decision', () => {
 		const p = scatter([0, 1], [0, 1]);
-		expect(p.legend.position).toBe('auto');
+		expect(p.legend.position).toBe('topright');
+		expect(p.legendLayout.auto).toBeNull();
 	});
 
 	it('keeps the top-right corner when the data leave it clear', () => {
 		// Two points, bottom left and top left: the top right is clear.
-		const p = scatter([0, 0], [0, 10]);
+		const p = scatter([0, 0], [0, 10], AUTO);
 		const a = p.legendLayout.auto;
 		expect(a.outside).toBe(false);
 		expect(a.name).toBe('topright');
@@ -72,7 +77,7 @@ describe('scatterplot legend placement', () => {
 	it('moves outside and narrows the plot when data fill every inside spot', () => {
 		// Points everywhere, as in the paper figure.
 		const [xs, ys] = fullGrid();
-		const p = scatter(xs, ys);
+		const p = scatter(xs, ys, AUTO);
 		expect(p.legendLayout.auto.outside).toBe(true);
 		expect(p.legendLayout.outsidePlacement != null).toBe(true);
 		expect(p.plotwidth).toBeCloseTo(p.basePlotWidth - p.legendLayout.box.width - LEGEND_MARGIN, 6);

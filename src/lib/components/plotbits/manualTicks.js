@@ -47,3 +47,21 @@ export function ticksInDomain(ticks, scale) {
 	const eps = (hi - lo) * 1e-9;
 	return ticks.filter((t) => t >= lo - eps && t <= hi + eps);
 }
+
+/**
+ * The manual ticks an axis should draw, or null for its automatic ones. Manual ticks are a
+ * NUMERIC axis feature: on a categorical or time axis (by `tickMode`, or by a band or date
+ * scale) a stored list is ignored rather than cleared, so an x column that becomes
+ * categorical and later numeric again gets the user's ticks back. The categorical panel has
+ * no tick control, so a list that still drew there could not be removed.
+ * @param {number[] | null | undefined} manualTicks - the axis's stored list
+ * @param {any} scale - a d3 scale
+ * @param {'numeric' | 'time' | 'categorical'} [tickMode]
+ * @returns {number[] | null}
+ */
+export function manualTicksToDraw(manualTicks, scale, tickMode = 'numeric') {
+	if (tickMode !== 'numeric' || !manualTicks?.length) return null;
+	if (typeof scale?.bandwidth === 'function') return null;
+	if (scale?.domain?.()[0] instanceof Date) return null;
+	return ticksInDomain(manualTicks, scale);
+}

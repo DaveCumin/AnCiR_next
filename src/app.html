@@ -46,11 +46,19 @@
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
-		<!-- Cloudflare Web Analytics, only when served over http(s). The same index.html is the
-		     offline download; from file:// the beacon can only fail (WebKit reports its blocked
-		     request as an uncaught error), and there is no site visit to count. -->
+		<!-- Cloudflare Web Analytics, only when served over http(s) from a public host. The same
+		     index.html is the offline download; from file:// the beacon can only fail (WebKit
+		     reports its blocked request as an uncaught error), and there is no site visit to count.
+		     On a local or LAN host (dev server, preview, phone testing over the LAN) its report fails
+		     CORS on every load and the visit is not one worth counting either. The guard is tested
+		     by src/appBeacon.test.js, which runs this exact script. -->
 		<script>
-			if (/^https?:$/.test(location.protocol)) {
+			if (
+				/^https?:$/.test(location.protocol) &&
+				!/^(localhost|\[?::1\]?|0\.0\.0\.0|127(\.\d+){3}|10(\.\d+){3}|192\.168(\.\d+){2}|172\.(1[6-9]|2\d|3[01])(\.\d+){2})$|\.(localhost|test)$/i.test(
+					location.hostname
+				)
+			) {
 				var cf = document.createElement('script');
 				cf.defer = true;
 				cf.src = 'https://static.cloudflareinsights.com/beacon.min.js';

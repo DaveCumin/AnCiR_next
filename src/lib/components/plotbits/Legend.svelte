@@ -69,10 +69,12 @@
 	}
 
 	/**
-	 * Every position a legend can have. 'auto' avoids the data (see legendLayout.js) and is
-	 * the default for a NEW legend; a saved legend keeps whatever it was saved with, so an
-	 * existing figure does not rearrange itself on load. 'outsideright' needs the plot to
-	 * reserve room, so only plots that do (canPlaceOutside) offer it.
+	 * Every position a legend can have. A NEW legend starts 'topright' (DEFAULT_POSITION); a
+	 * saved legend keeps whatever it was saved with, 'auto' included, so an existing figure
+	 * does not rearrange itself on load. 'auto' avoids the data (see legendLayout.js) and may
+	 * move the legend outside the plot, which is why it is a choice rather than the default.
+	 * 'outsideright' needs the plot to reserve room, so only plots that do (canPlaceOutside)
+	 * offer it.
 	 */
 	export const LEGEND_POSITIONS = [
 		'auto',
@@ -84,10 +86,18 @@
 		'custom'
 	];
 
+	/**
+	 * Where a NEW legend sits, and where a saved legend with no (or an unknown) position
+	 * loads. 'auto' was the new-legend default from v77.0 to v81.11; legends saved in that
+	 * window carry 'auto' explicitly and keep it. (Legacy facet children, v76.x, never had
+	 * 'auto': facetMigrationDefaults.js reads this default as theirs, which it was.)
+	 */
+	export const DEFAULT_POSITION = 'topright';
+
 	export class LegendClass {
 		show = $state(true);
 		// One of LEGEND_POSITIONS.
-		position = $state('auto');
+		position = $state(DEFAULT_POSITION);
 		// Free placement, used only when position === 'custom'. Stored as a FRACTION of
 		// the plot area (0..1) rather than pixels, so a legend keeps its place when the
 		// figure is resized — which now happens whenever a width preset is chosen.
@@ -110,7 +120,9 @@
 			if (dataIN) {
 				this.show = dataIN.show ?? true;
 				// A saved legend with no position predates the field and was top right.
-				this.position = LEGEND_POSITIONS.includes(dataIN.position) ? dataIN.position : 'topright';
+				this.position = LEGEND_POSITIONS.includes(dataIN.position)
+					? dataIN.position
+					: DEFAULT_POSITION;
 				this.customX = typeof dataIN.customX === 'number' ? dataIN.customX : 0.02;
 				this.customY = typeof dataIN.customY === 'number' ? dataIN.customY : 0.02;
 				this.orientation = dataIN.orientation ?? 'vertical';
@@ -149,10 +161,9 @@
 			// downgrades the object it was asked to restore. Identical when called on
 			// LegendClass itself, which is how the eleven series legends call it.
 			//
-			// A NEW plot (nothing saved) must get the class's own new-legend defaults,
-			// above all position 'auto'. Passing `{ show }` to the constructor instead
-			// would look like a saved legend from before `position` existed and come
-			// back 'topright'.
+			// A NEW plot (nothing saved) gets the class's own new-legend defaults. Passing
+			// `{ show }` to the constructor instead would go through the saved-legend path,
+			// which is only the same today because both land on DEFAULT_POSITION.
 			if (saved == null) {
 				const legend = new this();
 				legend.show = show;

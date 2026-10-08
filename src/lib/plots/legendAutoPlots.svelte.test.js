@@ -12,6 +12,7 @@ import { loadPlots } from '$lib/plots/plotMap.js';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { importJson } from '$lib/components/iconActions/Setting.svelte';
+import { Plot } from '$lib/core/Plot.svelte';
 
 const DEMOS = join(process.cwd(), 'static', 'sessions', 'demos');
 
@@ -145,5 +146,76 @@ describe('auto legend placement per plot', () => {
 			expect(p.legendLayout.auto, name).toBeNull();
 			expect(p.legendLayout.reserveW + p.legendLayout.reserveH, name).toBe(0);
 		}
+	});
+});
+
+// The DEFAULT position (requested 2026-10-08). 'auto' may move a legend outside the plot,
+// which surprised users on a brand-new figure, so a NEW legend starts top right and 'auto'
+// stays one choice away in the dropdown. A loaded legend keeps exactly what it was saved
+// with, 'auto' included, so no finished figure moves.
+describe('legend default position', () => {
+	// Every plot that draws a series legend (legendDefaultCoverage.test.js classifies them).
+	const LEGEND_TYPES = [
+		'scatterplot',
+		'boxplot',
+		'histogram',
+		'meansem',
+		'qqplot',
+		'circularphase',
+		'periodogram',
+		'fft',
+		'correlogram',
+		'actogram',
+		'pairsplot'
+	];
+
+	it('a brand-new plot of every type starts its legend top right', () => {
+		for (const type of LEGEND_TYPES) {
+			const p = new Plot({ type });
+			expect(p.plot.legend.position, type).toBe('topright');
+		}
+	});
+
+	it('a saved legend keeps its saved position on load, auto included', () => {
+		for (const type of LEGEND_TYPES) {
+			for (const position of ['auto', 'topright', 'bottomleft']) {
+				const p = Plot.fromJSON({
+					type,
+					plot: { data: [], legend: { show: true, position } }
+				});
+				expect(p.plot.legend.position, `${type} saved ${position}`).toBe(position);
+			}
+		}
+	});
+
+	it('a saved legend with no position field loads top right, as it always has', () => {
+		// The field has been written since legends existed; a legend without it is older
+		// still and was drawn top right then, so this is unchanged by the new default.
+		for (const type of LEGEND_TYPES) {
+			const p = Plot.fromJSON({ type, plot: { data: [], legend: { show: true } } });
+			expect(p.plot.legend.position, type).toBe('topright');
+		}
+	});
+
+	it('a whole session saved with an auto legend (v77.0 to v81.11) still loads it as auto', async () => {
+		// Through importJson, the real load path. The position is forced in the JSON rather
+		// than read from the shipped demo, so regenerating the demos cannot hollow this out.
+		const json = JSON.parse(
+			readFileSync(join(DEMOS, 'demo-circular-phase-two-groups.json'), 'utf8')
+		);
+		const saved = json.plots.find((p) => p.type === 'circularphase');
+		saved.plot.legend.position = 'auto';
+		await importJson(json);
+		const p = core.plots.find((w) => w.type === 'circularphase').plot;
+		expect(p.legend.position).toBe('auto');
+	});
+
+	it('toJSON then fromJSON round-trips auto and the new default', () => {
+		const fresh = new Plot({ type: 'scatterplot' });
+		const again = Plot.fromJSON(JSON.parse(JSON.stringify(fresh.toJSON())));
+		expect(again.plot.legend.position).toBe('topright');
+		fresh.plot.legend.position = 'auto';
+		const auto = Plot.fromJSON(JSON.parse(JSON.stringify(fresh.toJSON())));
+		expect(auto.plot.legend.position).toBe('auto');
 	});
 });

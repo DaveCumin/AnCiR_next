@@ -302,8 +302,8 @@ describe('Actogram series legend: rendering', () => {
 	it('the heatmap colour-scale bar steps aside when the series legend takes its corner', () => {
 		// A series legend set to the top-right of the plot area drew underneath the
 		// scale bar. The scale bar is the one the user cannot move, so it is the one
-		// that moves. (A new legend defaults to 'auto', which avoids the bar instead;
-		// see the next test.)
+		// that moves. (A new legend starts top right, so this is the case a user meets
+		// first; 'auto' avoids the bar instead, see the next test.)
 		const plot = actogramFromDemo();
 		plot.plot.renderMode = 'heatmap';
 

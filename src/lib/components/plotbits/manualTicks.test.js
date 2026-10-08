@@ -1,8 +1,8 @@
 // @ts-nocheck
 // Parsing the Manual ticks text box, and dropping ticks that fall outside the axis domain.
 import { describe, it, expect } from 'vitest';
-import { scaleLinear, scaleLog, scaleBand } from 'd3-scale';
-import { parseTickList, formatTickList, ticksInDomain } from './manualTicks.js';
+import { scaleLinear, scaleLog, scaleBand, scaleUtc } from 'd3-scale';
+import { parseTickList, formatTickList, ticksInDomain, manualTicksToDraw } from './manualTicks.js';
 
 describe('parseTickList', () => {
 	it('reads comma- or space-separated numbers', () => {
@@ -48,5 +48,30 @@ describe('ticksInDomain', () => {
 
 	it('leaves a band scale alone (its ticks are categories)', () => {
 		expect(ticksInDomain(['a', 'z'], scaleBand().domain(['a', 'b']))).toEqual(['a', 'z']);
+	});
+});
+
+describe('manualTicksToDraw', () => {
+	const lin = scaleLinear().domain([0, 24]);
+
+	it('a numeric axis draws the stored list, clipped to the domain', () => {
+		expect(manualTicksToDraw([-6, 0, 12, 36], lin, 'numeric')).toEqual([0, 12]);
+		expect(manualTicksToDraw([0, 12], lin)).toEqual([0, 12]);
+	});
+
+	it('no list, or an empty one, means automatic ticks', () => {
+		expect(manualTicksToDraw(null, lin, 'numeric')).toBeNull();
+		expect(manualTicksToDraw([], lin, 'numeric')).toBeNull();
+	});
+
+	it('a categorical or time axis never draws a stored list', () => {
+		expect(manualTicksToDraw([0, 12], lin, 'categorical')).toBeNull();
+		expect(manualTicksToDraw([0, 12], lin, 'time')).toBeNull();
+	});
+
+	it('a time scale or a band scale never draws one either, whatever the mode says', () => {
+		const t = scaleUtc().domain([new Date(0), new Date(8.64e7)]);
+		expect(manualTicksToDraw([0, 6], t, 'numeric')).toBeNull();
+		expect(manualTicksToDraw([0, 6], scaleBand().domain(['a', 'b']), 'numeric')).toBeNull();
 	});
 });

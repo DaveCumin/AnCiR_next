@@ -84,3 +84,38 @@ export function seriesComputeWarning(datum, name = 'this series') {
 
 	return null;
 }
+
+/**
+ * Why a density curve (Gaussian KDE) is not drawn for these values, or null when it can be.
+ *
+ * A KDE estimates the shape of a spread, so it needs at least 2 distinct values. With
+ * fewer, the automatic (Silverman) bandwidth is undefined (sample SD 0, or n < 2; see
+ * utils/kde.js silvermanBandwidth) or, when rounding leaves the SD a hair above 0 (1,000
+ * copies of 0.153 give about 7e-16), an invisible needle. A manual bandwidth would draw
+ * one kernel-shaped bump whose width is the bandwidth itself, not anything about the
+ * data. Callers skip the curve in all these cases and show this message instead of
+ * failing silently. Values are compared exactly, so this is a test for "one value", not
+ * for "a very narrow spread".
+ *
+ * Empty input returns null: a series with no values has its own warnings (above).
+ *
+ * @param {number[] | null | undefined} values present (finite) values of the series
+ * @param {string} [name] the series' display name, for the message
+ * @param {{manualBandwidth?: boolean}} [opts] whether the user set a bandwidth
+ * @returns {string | null}
+ */
+export function densityCurveWarning(values, name = 'this series', opts = {}) {
+	const n = values?.length ?? 0;
+	if (n === 0) return null;
+	const first = values[0];
+	for (let i = 1; i < n; i++) if (values[i] !== first) return null;
+
+	const shown = Number(first.toPrecision(4));
+	const what = n === 1 ? `it has only one value (${shown})` : `every value is the same (${shown})`;
+	let msg = `No density curve for "${name}": ${what}, so there is no spread to estimate.`;
+	if (opts.manualBandwidth) {
+		msg +=
+			' With a manual bandwidth it would be a single bump the width of the bandwidth, so it is not drawn.';
+	}
+	return msg;
+}

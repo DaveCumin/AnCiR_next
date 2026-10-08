@@ -525,13 +525,19 @@ em {
 	background: var(--navy);
 	cursor: pointer;
 }
+/* The status line wraps (review UI-24): it used to be nowrap and unshrinkable, so on a narrow
+   box a long status ran past the controls bar and .anim-embed's overflow: hidden cut it off.
+   Its flex basis is still its one-line width, so it keeps one line whenever the row has room and
+   moves to its own line first when it does not; only a line too long for the whole bar wraps.
+   check-anim-layout.mjs guards this. */
 .step-indicator {
 	font-size: 0.68rem;
 	font-weight: 600;
 	color: var(--muted);
-	white-space: nowrap;
 	letter-spacing: 0.02em;
-	flex-shrink: 0;
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow-wrap: anywhere;
 }
 
 /* ── ANIMATION LEGEND ── */

@@ -62,6 +62,31 @@ async function serve(root) {
 const failures = [];
 const fail = (msg) => failures.push(msg);
 
+// A long status line (the .step-indicator the animation loop writes, e.g. "Adding category 1
+// of 3..."). Review UI-24 found it cut off: it did not wrap, so on a narrow box it ran past the
+// controls bar and .anim-embed's overflow: hidden clipped it. Every indicator gets this text and
+// must stay inside its controls bar, wrapping onto more lines instead.
+const LONG_STATUS =
+	'Trial period 23.5 h, Q(p) = 123.4, df = 23, adding category 1 of 3 and folding bin 12 of 24…';
+
+/** In the page: put LONG_STATUS in every status line; list those that overflow their bar. */
+function overflowingStatus(text) {
+	return [...document.querySelectorAll('.anim-embed .step-indicator')]
+		.map((el) => {
+			el.textContent = text;
+			const bar = el.closest('.controls')?.getBoundingClientRect();
+			const r = el.getBoundingClientRect();
+			const over = Math.max(
+				el.scrollWidth - el.clientWidth,
+				bar ? r.right - bar.right : 0,
+				bar ? bar.left - r.left : 0
+			);
+			const name = (el.closest('.anim-embed')?.querySelector('h3')?.textContent ?? '').trim();
+			return { name: name.slice(0, 40) || 'SVG animation', over: Math.round(over) };
+		})
+		.filter((s) => s.over > 1);
+}
+
 async function checkInline(browser, origin) {
 	const cases = [
 		{ width: 1400, height: 900, font: null },
@@ -91,6 +116,8 @@ async function checkInline(browser, origin) {
 				fail(`${tag}: "${e.name}" figure heights ${e.canvases.map(Math.round).join(', ')} px`);
 			if (e.clipped > 1) fail(`${tag}: "${e.name}" content clipped by ${e.clipped} px`);
 		}
+		for (const s of await page.evaluate(overflowingStatus, LONG_STATUS))
+			fail(`${tag}: "${s.name}" status text overflows its controls bar by ${s.over} px`);
 		await page.close();
 	}
 }
@@ -131,6 +158,8 @@ async function checkStandalone(browser, origin) {
 				};
 			});
 			const tag = `standalone ${slug} ${w}x${h}`;
+			for (const s of await page.evaluate(overflowingStatus, LONG_STATUS))
+				fail(`${tag}: status text overflows its controls bar by ${s.over} px`);
 			if (m.overflow > 1) fail(`${tag}: page overflows by ${m.overflow} px`);
 			if (Math.abs(m.embedH - h) > 1) fail(`${tag}: animation box ${m.embedH} px, window ${h}`);
 			if (m.zero) fail(`${tag}: ${m.zero} figure(s) have 0 height`);
