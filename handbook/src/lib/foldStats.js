@@ -182,3 +182,70 @@ export function makeRecord(rng, { days = 8, period = 24, dt = 1 } = {}) {
 	);
 	return { t, sine, bout };
 }
+
+/**
+ * Type 7 quantile (the default in R's quantile() and numpy's percentile), on an
+ * already-ascending array.
+ * @param {number[]} sorted ascending, length >= 1
+ * @param {number} p in [0, 1]
+ */
+function quantile7(sorted, p) {
+	const n = sorted.length;
+	if (n === 1) return sorted[0];
+	const h = (n - 1) * p;
+	const lo = Math.floor(h);
+	const hi = Math.min(lo + 1, n - 1);
+	return sorted[lo] + (h - lo) * (sorted[hi] - sorted[lo]);
+}
+
+/**
+ * Five-number summary of each phase column of the same fold binFold() performs,
+ * so a box plot drawn from this lines up with the bin means it returns.
+ *
+ * Boxes are quartiles (type 7) and whiskers are Tukey's: out to the most
+ * extreme value still within 1.5 x IQR of the box. Points beyond that are left
+ * to the scatter already drawn underneath rather than repeated as outlier
+ * marks.
+ *
+ * A column needs `minN` values before it gets a box: with only two or three
+ * points per phase, quartiles describe the interpolation rather than the data.
+ *
+ * @param {number[]} t
+ * @param {number[]} y
+ * @param {number} T trial period
+ * @param {number} binSize
+ * @param {number} [minN] fewest values a column needs for a box
+ * @returns {{nBins: number, width: number, boxes: ({n: number, q1: number,
+ *   med: number, q3: number, lo: number, hi: number} | null)[]}}
+ */
+export function binBoxes(t, y, T, binSize, minN = 4) {
+	const n = t.length;
+	const nBins = Math.max(1, Math.round(T / binSize));
+	let tMin = Infinity;
+	for (let i = 0; i < n; i++) if (t[i] < tMin) tMin = t[i];
+	const origin = Math.floor(tMin / binSize) * binSize;
+	/** @type {number[][]} */
+	const cols = Array.from({ length: nBins }, () => []);
+	for (let i = 0; i < n; i++) {
+		const bin = Math.floor((t[i] - origin) / binSize + 1e-9);
+		cols[bin % nBins].push(y[i]);
+	}
+	const boxes = cols.map((vals) => {
+		if (vals.length < minN) return null;
+		const v = vals.slice().sort((a, b) => a - b);
+		const q1 = quantile7(v, 0.25);
+		const med = quantile7(v, 0.5);
+		const q3 = quantile7(v, 0.75);
+		const iqr = q3 - q1;
+		const fenceLo = q1 - 1.5 * iqr;
+		const fenceHi = q3 + 1.5 * iqr;
+		let lo = q1;
+		let hi = q3;
+		for (const x of v) {
+			if (x >= fenceLo && x < lo) lo = x;
+			if (x <= fenceHi && x > hi) hi = x;
+		}
+		return { n: v.length, q1, med, q3, lo, hi };
+	});
+	return { nBins, width: binSize, boxes };
+}

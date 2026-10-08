@@ -22,6 +22,7 @@
 	import {
 		cosineFit,
 		binFold,
+		binBoxes,
 		makeRecord,
 		medianSpacing,
 		periodGrid,
@@ -88,6 +89,8 @@
 
 	const fit = $derived(cosineFit(data.t, data.y, T));
 	const fold = $derived(binFold(data.t, data.y, T, BIN));
+	// Quartiles of the same columns binFold() averages, for the box plot.
+	const boxes = $derived(binBoxes(data.t, data.y, T, BIN));
 
 	/* ── drawing helpers ──────────────────────────────────────────────────── */
 	const FONT = '10px Inter, system-ui, sans-serif';
@@ -241,7 +244,55 @@
 		ctx.beginPath();
 		ctx.rect(L, Tp, pw, ph);
 		ctx.clip();
+
+		// Box plot of each phase column: the spread the bin mean is drawn from.
+		// Quartile box, Tukey whiskers (1.5 x IQR); points past the whiskers are
+		// already visible in the scatter, so they are not repeated as marks.
 		if (overlay !== 'cosine') {
+			ctx.strokeStyle = C.muted;
+			ctx.lineWidth = 1.1;
+			for (let h = 0; h < boxes.nBins; h++) {
+				const b = boxes.boxes[h];
+				if (!b) continue;
+				const x0 = X(h * boxes.width);
+				const x1 = X((h + 1) * boxes.width);
+				const cx = (x0 + x1) / 2;
+				// A floor on the width: at the narrowest the panel gets (24 bins in
+				// a two-column row on a laptop) a proportional box would be under
+				// 5 px and its whisker caps would alias away.
+				const bw = Math.max(4.5, Math.min(14, (x1 - x0) * 0.6));
+				const cap = Math.max(3, bw * 0.6);
+				const yQ3 = Y(b.q3);
+				const yQ1 = Y(b.q1);
+				// Whiskers and their caps.
+				ctx.beginPath();
+				ctx.moveTo(cx, Y(b.hi));
+				ctx.lineTo(cx, yQ3);
+				ctx.moveTo(cx, yQ1);
+				ctx.lineTo(cx, Y(b.lo));
+				ctx.moveTo(cx - cap / 2, Y(b.hi));
+				ctx.lineTo(cx + cap / 2, Y(b.hi));
+				ctx.moveTo(cx - cap / 2, Y(b.lo));
+				ctx.lineTo(cx + cap / 2, Y(b.lo));
+				ctx.stroke();
+				// The box, washed so the points underneath still read.
+				ctx.globalAlpha = 0.55;
+				ctx.fillStyle = C.surface;
+				ctx.fillRect(cx - bw / 2, yQ3, bw, Math.max(1, yQ1 - yQ3));
+				ctx.globalAlpha = 1;
+				ctx.strokeRect(cx - bw / 2, yQ3, bw, Math.max(1, yQ1 - yQ3));
+				// Median.
+				ctx.lineWidth = 1.8;
+				ctx.beginPath();
+				ctx.moveTo(cx - bw / 2, Y(b.med));
+				ctx.lineTo(cx + bw / 2, Y(b.med));
+				ctx.stroke();
+				ctx.lineWidth = 1.1;
+			}
+
+			// The bin means themselves, over the spread they came from. These are
+			// what the chi-squared and Enright statistics are built on, so they
+			// stay the most prominent mark in the panel.
 			ctx.strokeStyle = C.gold;
 			ctx.lineWidth = 2.6;
 			ctx.lineCap = 'round';
@@ -558,6 +609,9 @@
 			Fitted cosine, Lomb-Scargle
 		</div>
 		<div class="legend-item">
+			<span class="fz-box"></span>Spread in each bin (quartiles, 1.5&times;IQR whiskers)
+		</div>
+		<div class="legend-item">
 			<div class="legend-swatch" style:background={C.gold}></div>
 			Bin means, chi-squared
 		</div>
@@ -679,6 +733,25 @@
 		margin-bottom: 8px;
 		flex-shrink: 0;
 	}
+	/* Legend mark for the box plot: a small quartile box with a median rule. */
+	.fz-box {
+		width: 11px;
+		height: 13px;
+		border: 1px solid var(--muted);
+		background: var(--surface);
+		position: relative;
+		border-radius: 1px;
+		flex-shrink: 0;
+	}
+	.fz-box::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 5px;
+		border-top: 2px solid var(--muted);
+	}
+
 	.fz-caption p + p {
 		margin-top: 4px;
 	}
