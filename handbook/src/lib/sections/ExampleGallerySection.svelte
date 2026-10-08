@@ -40,7 +40,7 @@
 		});
 	});
 
-	const cleanName = (s) => (s.name ?? s.id ?? '').replace(/^Workflow — /, '');
+	const cleanName = (s) => (s.name ?? s.id ?? '').replace(/^Workflow\s*[:—]\s*/, '');
 </script>
 
 <section id="example-gallery">

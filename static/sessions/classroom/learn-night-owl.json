@@ -351,7 +351,6 @@
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
@@ -363,7 +362,6 @@
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
@@ -377,6 +375,29 @@
       "height": 250,
       "type": "actogram",
       "selected": false,
+      "facet": false,
+      "facetRows": 0,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "ylimsOption": "overall",
         "ylimsIN": [
@@ -391,10 +412,27 @@
         },
         "doublePlot": 2,
         "periodHrs": 24,
-        "showDayNumbers": false,
+        "rowLabels": "none",
+        "dateFormat": "DD MMM",
+        "renderMode": "bars",
+        "colormap": "viridis",
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
+        "annotations": [],
         "xAxis": {
           "label": "",
           "gridlines": false,
@@ -412,7 +450,6 @@
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to hour which is ",
               "processes": []
             },
             "y": {
@@ -424,9 +461,9 @@
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to activity which is ",
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -437,11 +474,12 @@
   ],
   "tableProcesses": [],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [
     {
       "id": "note_1",
-      "text": "AM I A NIGHT OWL? — NZ Yr 9–13\n\nHidden truth: this is an EVENING type (owl) — activity peaks at about 22:00 and rest is in the early hours. Frame the biology around homeostasis/feedback, with the body clock (circadian rhythm) as the worked example.\n\nCurriculum (NZ): NZC Living World — Life processes (L7/8); NCEA AS91604 (homeostasis). Intl: AP Bio 8.1, IB Bio D3.3.\nNCEA is transitional: L1 removed from 2028; NZCE (Yr12) 2029; NZACE (Yr13) 2030. Standards below remain valid through the change.\n\nFull mapping + worked walkthrough: classroom-handbook.html",
+      "text": "AM I A NIGHT OWL? (NZ Yr 9–13)\n\nHidden truth: this is an EVENING type (owl): activity peaks at about 22:00 and rest is in the early hours. Frame the biology around homeostasis/feedback, with the body clock (circadian rhythm) as the worked example.\n\nCurriculum (NZ): NZC Living World: Life processes (L7/8); NCEA AS91604 (homeostasis). Intl: AP Bio 8.1, IB Bio D3.3.\nNCEA is transitional: L1 removed from 2028; NZCE (Yr12) 2029; NZACE (Yr13) 2030. Standards below remain valid through the change.\n\nFull mapping + worked walkthrough: classroom-handbook.html",
       "x": 40,
       "y": 40,
       "width": 380,
@@ -449,7 +487,31 @@
     }
   ],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
+  "nodeLayout": {},
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -460,6 +522,11 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
+    "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -471,12 +538,19 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -495,8 +569,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.43.2"
+  "version": "β.81.12"
 }

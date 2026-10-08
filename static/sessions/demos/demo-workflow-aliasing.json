@@ -2660,7 +2660,7 @@
       "name": "stat_peak_period_33",
       "data": 442,
       "type": "number",
-      "tableProcessGUId": "63f166ba-82d3-4de0-b162-2f691adaedc5",
+      "tableProcessGUId": "4b21de93-9060-4e28-a791-6d5f9fb50a8d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2671,7 +2671,7 @@
       "name": "stat_peak_power_33",
       "data": 443,
       "type": "number",
-      "tableProcessGUId": "63f166ba-82d3-4de0-b162-2f691adaedc5",
+      "tableProcessGUId": "4b21de93-9060-4e28-a791-6d5f9fb50a8d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2682,7 +2682,7 @@
       "name": "rhythmicityy_437_33",
       "data": 444,
       "type": "number",
-      "tableProcessGUId": "63f166ba-82d3-4de0-b162-2f691adaedc5",
+      "tableProcessGUId": "4b21de93-9060-4e28-a791-6d5f9fb50a8d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2692,7 +2692,7 @@
   "plots": [
     {
       "id": 56,
-      "name": "Periodogram — 30 min epochs",
+      "name": "Periodogram: 30 min epochs",
       "x": 60,
       "y": 60,
       "width": 520,
@@ -2750,6 +2750,19 @@
           "nticks": 5,
           "manualTicks": null
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "data": [
           {
             "x": {
@@ -2795,6 +2808,7 @@
               "draw": true
             },
             "binSize": 0.25,
+            "binSizeAuto": true,
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
@@ -2803,7 +2817,7 @@
     },
     {
       "id": 57,
-      "name": "Periodogram — 13 h epochs",
+      "name": "Periodogram: 13 h epochs",
       "x": 630,
       "y": 60,
       "width": 520,
@@ -2861,6 +2875,19 @@
           "nticks": 5,
           "manualTicks": null
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "data": [
           {
             "x": {
@@ -2906,6 +2933,7 @@
               "draw": true
             },
             "binSize": 0.25,
+            "binSizeAuto": true,
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
@@ -2964,7 +2992,7 @@
     {
       "id": 33,
       "name": "RhythmicityAnalysis",
-      "displayName": "Rhythmicity Analysis — the undersampled record",
+      "displayName": "Rhythmicity Analysis: the undersampled record",
       "args": {
         "xIN": 436,
         "yIN": [
@@ -3075,6 +3103,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -3118,8 +3148,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

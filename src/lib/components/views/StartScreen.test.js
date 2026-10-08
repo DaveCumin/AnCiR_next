@@ -50,7 +50,7 @@ const loadExampleManifest = vi.fn(async () => [
 vi.mock('$lib/start/startActions.js', () => ({
 	openExample: (...a) => openExample(...a),
 	// Pure formatting; the real one is unit-tested in startActions.test.js.
-	displayName: (n) => (n ?? '').replace(/^Workflow\s*—\s*/, ''),
+	displayName: (n) => (n ?? '').replace(/^Workflow\s*:\s*/, ''),
 	openSessionFile: (...a) => openSessionFile(...a),
 	pickSessionFile: (...a) => pickSessionFile(...a),
 	loadExampleManifest: (...a) => loadExampleManifest(...a),

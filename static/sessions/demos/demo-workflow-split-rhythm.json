@@ -2864,7 +2864,7 @@
       "name": "stat_peak_period_30",
       "data": 396,
       "type": "number",
-      "tableProcessGUId": "96c21c19-cd28-45c9-97b3-d70913c487d9",
+      "tableProcessGUId": "a3a533d7-50dc-4f0b-bb80-3febfe021472",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2875,7 +2875,7 @@
       "name": "stat_peak_power_30",
       "data": 397,
       "type": "number",
-      "tableProcessGUId": "96c21c19-cd28-45c9-97b3-d70913c487d9",
+      "tableProcessGUId": "a3a533d7-50dc-4f0b-bb80-3febfe021472",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2886,7 +2886,7 @@
       "name": "rhythmicityy_387_30",
       "data": 398,
       "type": "number",
-      "tableProcessGUId": "96c21c19-cd28-45c9-97b3-d70913c487d9",
+      "tableProcessGUId": "a3a533d7-50dc-4f0b-bb80-3febfe021472",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2896,7 +2896,7 @@
   "plots": [
     {
       "id": 50,
-      "name": "Actogram — the recorded sum",
+      "name": "Actogram: the recorded sum",
       "x": 60,
       "y": 60,
       "width": 520,
@@ -2947,6 +2947,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -2978,6 +2991,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -2987,7 +3001,7 @@
     },
     {
       "id": 51,
-      "name": "Actogram — the two components",
+      "name": "Actogram: the two components",
       "x": 630,
       "y": 60,
       "width": 520,
@@ -3038,6 +3052,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -3069,6 +3096,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -3096,6 +3124,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#BE796B",
             "draw": true,
             "phaseMarkers": []
@@ -3105,7 +3134,7 @@
     },
     {
       "id": 52,
-      "name": "Periodogram — two peaks",
+      "name": "Periodogram: two peaks",
       "x": 60,
       "y": 580,
       "width": 520,
@@ -3163,6 +3192,19 @@
           "nticks": 5,
           "manualTicks": null
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "data": [
           {
             "x": {
@@ -3208,6 +3250,7 @@
               "draw": true
             },
             "binSize": 0.25,
+            "binSizeAuto": true,
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
@@ -3266,7 +3309,7 @@
     {
       "id": 30,
       "name": "RhythmicityAnalysis",
-      "displayName": "Rhythmicity Analysis — dominant component",
+      "displayName": "Rhythmicity Analysis: dominant component",
       "args": {
         "xIN": 384,
         "yIN": [
@@ -3381,6 +3424,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -3424,8 +3469,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

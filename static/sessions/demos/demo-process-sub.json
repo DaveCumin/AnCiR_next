@@ -111,7 +111,7 @@
       "name": "x",
       "data": 540,
       "type": "number",
-      "tableProcessGUId": "104637f7-0eec-4234-b025-ca84d779bcf1",
+      "tableProcessGUId": "ae2073cf-dacd-4b3f-82e1-12bacde2295a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -296,7 +296,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -307,7 +307,7 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
@@ -464,6 +464,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -507,8 +509,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

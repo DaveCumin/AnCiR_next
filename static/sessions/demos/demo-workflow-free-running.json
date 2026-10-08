@@ -874,7 +874,7 @@
       "name": "Peak period (h)",
       "data": 62,
       "type": "number",
-      "tableProcessGUId": "98fe4fb5-9902-420e-8a9f-48567dcfcfcb",
+      "tableProcessGUId": "30af4608-2bbb-46a5-8d10-934adc887686",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -885,7 +885,7 @@
       "name": "Peak power",
       "data": 63,
       "type": "number",
-      "tableProcessGUId": "98fe4fb5-9902-420e-8a9f-48567dcfcfcb",
+      "tableProcessGUId": "30af4608-2bbb-46a5-8d10-934adc887686",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -896,7 +896,7 @@
       "name": "rhythmicityy_57_4",
       "data": 64,
       "type": "number",
-      "tableProcessGUId": "98fe4fb5-9902-420e-8a9f-48567dcfcfcb",
+      "tableProcessGUId": "30af4608-2bbb-46a5-8d10-934adc887686",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -957,6 +957,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -988,6 +1001,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -1055,6 +1069,19 @@
           "nticks": 5,
           "manualTicks": null
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "data": [
           {
             "x": {
@@ -1100,6 +1127,7 @@
               "draw": true
             },
             "binSize": 0.25,
+            "binSizeAuto": true,
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
@@ -1158,7 +1186,7 @@
     {
       "id": 4,
       "name": "RhythmicityAnalysis",
-      "displayName": "Rhythmicity Analysis — periodogram",
+      "displayName": "Rhythmicity Analysis: periodogram",
       "args": {
         "xIN": 56,
         "yIN": [
@@ -1187,7 +1215,7 @@
   "notes": [
     {
       "id": "note_2",
-      "text": "WORKFLOW: free-running period. How to measure the endogenous period (tau) of a rhythm running without a zeitgeber (e.g. constant darkness). Step 1 — the actogram is the diagnostic view: it is double-plotted (two cycles side by side) against a 24 h grid, so a rhythm whose tau differs from 24 h shows as a band DRIFTING steadily across days rather than sitting vertical. Drift to the right = tau > 24 h; to the left = tau < 24 h. Step 2 — the periodogram estimates tau numerically: this demo uses Lomb-Scargle, which handles unevenly sampled data and is the recommended default. Step 3 — the Rhythmicity Analysis node reports the peak period as a wireable number (shown in the table), so it can feed a group comparison. IMPORTANT — method choice: avoid the chi-square (Sokolove-Bushell) periodogram as a first choice; it systematically UNDERESTIMATES period in a way that depends on the true period and record length, and Lomb-Scargle or a padded FFT are more accurate (Tackenberg & Hughey 2021). Record length and noise matter far more than sampling frequency: ~5+ days is a reasonable minimum, and a baseline trend should be detrended before estimating period (Zielinski et al. 2014).",
+      "text": "WORKFLOW: free-running period. How to measure the endogenous period (tau) of a rhythm running without a zeitgeber (e.g. constant darkness). Step 1: the actogram is the diagnostic view: it is double-plotted (two cycles side by side) against a 24 h grid, so a rhythm whose tau differs from 24 h shows as a band DRIFTING steadily across days rather than sitting vertical. Drift to the right = tau > 24 h; to the left = tau < 24 h. Step 2: the periodogram estimates tau numerically: this demo uses Lomb-Scargle, which handles unevenly sampled data and is the recommended default. Step 3: the Rhythmicity Analysis node reports the peak period as a wireable number (shown in the table), so it can feed a group comparison. IMPORTANT (method choice): avoid the chi-square (Sokolove-Bushell) periodogram as a first choice; it systematically UNDERESTIMATES period in a way that depends on the true period and record length, and Lomb-Scargle or a padded FFT are more accurate (Tackenberg & Hughey 2021). Record length and noise matter far more than sampling frequency: ~5+ days is a reasonable minimum, and a baseline trend should be detrended before estimating period (Zielinski et al. 2014).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -1261,6 +1289,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -1304,8 +1334,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

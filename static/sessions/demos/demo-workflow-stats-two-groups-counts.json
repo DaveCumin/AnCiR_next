@@ -43,7 +43,7 @@
       11.311431623931625
     ],
     "246": [
-      0.0007703135639254288
+      0.0007703135639253848
     ],
     "247": [
       1
@@ -92,7 +92,7 @@
       "name": "statistic_21",
       "data": 245,
       "type": "number",
-      "tableProcessGUId": "bc9c3c6d-b943-44a9-9392-5bbebffdd70e",
+      "tableProcessGUId": "464edbbd-6cca-492b-92ca-7312b6cebcef",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -103,7 +103,7 @@
       "name": "pvalue_21",
       "data": 246,
       "type": "number",
-      "tableProcessGUId": "bc9c3c6d-b943-44a9-9392-5bbebffdd70e",
+      "tableProcessGUId": "464edbbd-6cca-492b-92ca-7312b6cebcef",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -114,7 +114,7 @@
       "name": "df_21",
       "data": 247,
       "type": "number",
-      "tableProcessGUId": "bc9c3c6d-b943-44a9-9392-5bbebffdd70e",
+      "tableProcessGUId": "464edbbd-6cca-492b-92ca-7312b6cebcef",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -125,7 +125,7 @@
       "name": "effectSize_21",
       "data": 248,
       "type": "number",
-      "tableProcessGUId": "bc9c3c6d-b943-44a9-9392-5bbebffdd70e",
+      "tableProcessGUId": "464edbbd-6cca-492b-92ca-7312b6cebcef",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -136,7 +136,7 @@
       "name": "statistic_22",
       "data": 249,
       "type": "number",
-      "tableProcessGUId": "f8b32c09-6d00-45fd-9d96-0cd21074aa32",
+      "tableProcessGUId": "cb030b70-16ef-4af8-b5bb-c44b9c82cf3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -147,7 +147,7 @@
       "name": "pvalue_22",
       "data": 250,
       "type": "number",
-      "tableProcessGUId": "f8b32c09-6d00-45fd-9d96-0cd21074aa32",
+      "tableProcessGUId": "cb030b70-16ef-4af8-b5bb-c44b9c82cf3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -158,7 +158,7 @@
       "name": "df_22",
       "data": 251,
       "type": "number",
-      "tableProcessGUId": "f8b32c09-6d00-45fd-9d96-0cd21074aa32",
+      "tableProcessGUId": "cb030b70-16ef-4af8-b5bb-c44b9c82cf3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -169,7 +169,7 @@
       "name": "effectSize_22",
       "data": 252,
       "type": "number",
-      "tableProcessGUId": "f8b32c09-6d00-45fd-9d96-0cd21074aa32",
+      "tableProcessGUId": "cb030b70-16ef-4af8-b5bb-c44b9c82cf3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -245,6 +245,7 @@
           "effectSize": 248
         },
         "alternative": "two-sided",
+        "gofInput": "auto",
         "valid": false
       },
       "refTPId": null
@@ -266,6 +267,7 @@
           "effectSize": 252
         },
         "correction": true,
+        "gofInput": "auto",
         "valid": false
       },
       "refTPId": null
@@ -347,6 +349,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -390,8 +394,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

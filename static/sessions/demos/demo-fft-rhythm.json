@@ -534,7 +534,20 @@
             "showPhase": false,
             "freqStep": 0.0001
           }
-        ]
+        ],
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        }
       }
     }
   ],
@@ -545,7 +558,7 @@
   "notes": [
     {
       "id": "note_34",
-      "text": "Fourier analysis decomposes an evenly sampled series into sinusoidal components and plots amplitude (spectral power) against frequency; a peak at a given frequency corresponds to a rhythm of period 1/frequency. Use it to identify dominant frequencies and harmonics. See the Fourier Analysis chapter.",
+      "text": "Fourier analysis decomposes an evenly sampled series into sinusoidal components and plots their amplitude against frequency (a pure rhythm of amplitude A reads A, whatever the record length); a peak at a given frequency corresponds to a rhythm of period 1/frequency, and the reported peak is refined between frequency bins. The series is put on its own sampling grid first: up to 3 missing samples in a row are interpolated, and a longer gap is refused with a reason (use the Lomb-Scargle periodogram for gappy data). Use it to identify dominant frequencies and harmonics. See the Fourier Analysis chapter.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -607,6 +620,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -650,8 +665,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

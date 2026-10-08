@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "679": [
+    "692": [
       1,
       2,
       3,
@@ -52,7 +52,7 @@
       49,
       50
     ],
-    "680": [
+    "693": [
       10,
       20,
       30,
@@ -104,7 +104,7 @@
       490,
       500
     ],
-    "681": [
+    "694": [
       11,
       22,
       33,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 679,
+      "id": 692,
       "name": "Formula Column input 1",
-      "data": 679,
+      "data": 692,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 680,
+      "id": 693,
       "name": "Formula Column input 2",
-      "data": 680,
+      "data": 693,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,11 +181,11 @@
       "processes": []
     },
     {
-      "id": 681,
-      "name": "result_61",
-      "data": 681,
+      "id": 694,
+      "name": "result_62",
+      "data": 694,
       "type": "number",
-      "tableProcessGUId": "aed052e0-e73d-4fa8-a228-a462407748ec",
+      "tableProcessGUId": "f67f7927-5dfb-4aed-8ba0-f66a68215f6b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -194,7 +194,7 @@
   ],
   "plots": [
     {
-      "id": 114,
+      "id": 116,
       "name": "Formula Column result",
       "x": 60,
       "y": 60,
@@ -227,9 +227,9 @@
       },
       "plot": {
         "columnRefs": [
-          679,
-          680,
-          681
+          692,
+          693,
+          694
         ],
         "showCol": [
           true,
@@ -245,14 +245,14 @@
   ],
   "tableProcesses": [
     {
-      "id": 61,
+      "id": 62,
       "name": "FormulaColumn",
       "displayName": "Formula Column",
       "args": {
         "tokens": [
           {
             "type": "col",
-            "id": 679
+            "id": 692
           },
           {
             "type": "text",
@@ -260,11 +260,11 @@
           },
           {
             "type": "col",
-            "id": 680
+            "id": 693
           }
         ],
         "out": {
-          "result": 681
+          "result": 694
         }
       },
       "refTPId": null
@@ -275,8 +275,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_58",
-      "text": "Builds a new column from a formula you write over existing columns and constants (for example (A+B)/2 or log(x)), evaluated row by row. Use it for custom per-row calculations the fixed transforms don't cover — ratios, unit conversions, or combined indices.",
+      "id": "note_59",
+      "text": "Builds a new column from a formula you write over existing columns ($ inserts a column), stored values (#) and numbers, evaluated row by row; for example (A+B)/2, log(A) or A^2. Operators: + - * / % (remainder, with the sign of the left side), ^ (power, right to left, so 2^3^2 is 2^9; -A^2 is -(A^2)) and parentheses. Functions: every function of JavaScript's Math, written bare or with a Math. prefix (sqrt(A) or Math.sqrt(A)): abs, sqrt, cbrt (real cube root, so cbrt(-8) is -2), exp, expm1, log (natural), log10, log2, log1p, pow(x, y), sin, cos, tan, asin, acos, atan, atan2(y, x) (radians), sinh, cosh, tanh, asinh, acosh, atanh, floor, ceil, round (halves round up), trunc, sign, hypot(...), min(...), max(...), the 32-bit clz32, imul(a, b) and fround, and random(). Constants: pi and e, and the Math constants PI, E, LN2, LN10, LOG2E, LOG10E, SQRT2 and SQRT1_2 (bare or as Math.PI and so on). random() gives a uniform number in [0, 1) for each row from a seeded generator: the node's seed (shown once the formula uses random(), default 12345) is saved with the session, so the numbers are the same on every recompute, on reload and in the Python and R exports; change the seed for a different draw. A missing input cell gives a missing output cell, never 0, and so does a result that is not a finite number (x/0, log(0), sqrt(-1), acos(2)). Anything else in the formula (text, other names, JavaScript) is refused with a message on the node. Use it for custom per-row calculations the fixed transforms don't cover: ratios, unit conversions, or combined indices.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -309,23 +309,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_679": {
+    "data_692": {
       "x": 60,
       "y": 314
     },
-    "data_680": {
+    "data_693": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_61": {
+    "tableprocess_62": {
       "x": 440,
       "y": 314
     },
-    "plot_114": {
+    "plot_116": {
       "x": 820,
       "y": 314
     },
-    "note_58": {
+    "note_59": {
       "x": 40,
       "y": 24
     }
@@ -342,6 +342,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -385,8 +387,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

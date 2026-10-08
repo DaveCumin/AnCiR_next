@@ -426,6 +426,19 @@
           "nticks": 5,
           "manualTicks": null
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "data": [
           {
             "x": {
@@ -471,6 +484,7 @@
               "draw": true
             },
             "binSize": 0.25,
+            "binSizeAuto": true,
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
@@ -485,7 +499,7 @@
   "notes": [
     {
       "id": "note_32",
-      "text": "Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
+      "text": "Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. For chi-squared the peak's p-value (the peak p port) is family-wise, corrected for every period tested as the threshold line is, so it is below alpha exactly when the peak crosses the line. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -547,6 +561,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -590,8 +606,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

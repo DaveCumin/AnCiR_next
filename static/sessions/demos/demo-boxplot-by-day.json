@@ -471,7 +471,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -511,7 +511,7 @@
   "notes": [
     {
       "id": "note_27",
-      "text": "Summarises the distribution of a y-column within each group defined by an x-column: the box spans the interquartile range, the line is the median, and whiskers reach the data extent (points beyond are outliers). Use it to compare spread and central tendency across days, conditions, or subjects. It can also overlay a violin (kernel-density outline) and jittered raw points — see the violin plot example. The demo shows one box per group.",
+      "text": "Summarises the distribution of a y-column within each group defined by an x-column: the box spans the interquartile range, the line is the median, and whiskers reach the data extent (points beyond are outliers). Use it to compare spread and central tendency across days, conditions, or subjects. It can also overlay a violin (kernel-density outline) and jittered raw points; see the violin plot example. The demo shows one box per group.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -573,6 +573,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -616,8 +618,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

@@ -202,11 +202,11 @@ const LESSONS = [
 			pg.x = 760;
 			pg.y = 440;
 			teacherNote(
-				`FIND THE HIDDEN RHYTHM — ${this.yearLevel}\n\n` +
+				`FIND THE HIDDEN RHYTHM (${this.yearLevel})\n\n` +
 					`Hidden truth: the Simulate-data node builds a ${PERIOD} h rhythm (active half ` +
 					`the cycle at amplitude 40, low otherwise) with random noise up to ${NOISE}. The ` +
 					`raw scatter looks messy, but the periodogram peak should sit at ${PERIOD} h.\n\n` +
-					`Try it live: open the Simulate-data node and raise the Noise slider — the scatter ` +
+					`Try it live: open the Simulate-data node and raise the Noise slider; the scatter ` +
 					`gets messier and the periodogram peak shrinks and broadens.\n\n` +
 					`Curriculum (NZ): NZC M7-2 / M8-7 (periodic functions), S8-1 (time series); ` +
 					`NCEA AS91575 (trig methods), AS91580 (time series). Physics: waves.\n${NCEA_TRANSITION}\n\n${HANDBOOK_REF}`
@@ -222,7 +222,7 @@ const LESSONS = [
 		curriculum: [
 			{
 				framework: 'NZC',
-				code: 'Living World — Life processes (L7/8)',
+				code: 'Living World: Life processes (L7/8)',
 				title: 'How animals carry out life processes',
 				confidence: 'snippet-verified'
 			},
@@ -248,11 +248,11 @@ const LESSONS = [
 			const v = mkCol('number', activity, 'activity');
 			addPlot('actogram', 'Activity actogram', { time: t, values: v });
 			teacherNote(
-				`AM I A NIGHT OWL? — ${this.yearLevel}\n\n` +
-					`Hidden truth: this is an EVENING type (owl) — activity peaks at about ` +
+				`AM I A NIGHT OWL? (${this.yearLevel})\n\n` +
+					`Hidden truth: this is an EVENING type (owl): activity peaks at about ` +
 					`${PEAK_HOUR}:00 and rest is in the early hours. Frame the biology around ` +
 					`homeostasis/feedback, with the body clock (circadian rhythm) as the worked example.\n\n` +
-					`Curriculum (NZ): NZC Living World — Life processes (L7/8); NCEA AS91604 (homeostasis). ` +
+					`Curriculum (NZ): NZC Living World: Life processes (L7/8); NCEA AS91604 (homeostasis). ` +
 					`Intl: AP Bio 8.1, IB Bio D3.3.\n${NCEA_TRANSITION}\n\n${HANDBOOK_REF}`
 			);
 		}
@@ -311,8 +311,8 @@ const LESSONS = [
 			);
 			pushObj(tp);
 			teacherNote(
-				`IS THE DIFFERENCE REAL? — ${this.yearLevel}\n\n` +
-					`Hidden truth: a real difference IS built in — weekend mean (${WEEKEND_MEAN}) is ` +
+				`IS THE DIFFERENCE REAL? (${this.yearLevel})\n\n` +
+					`Hidden truth: a real difference IS built in: weekend mean (${WEEKEND_MEAN}) is ` +
 					`${WEEKEND_MEAN - WEEKDAY_MEAN} units above weekday (${WEEKDAY_MEAN}), sd ${SD}, ` +
 					`n=${PER_GROUP}/group. Teaching point: a visible gap is not automatically a real one; ` +
 					`shrink n and the test can stop being significant.\n\n` +
@@ -384,7 +384,7 @@ const LESSONS = [
 			sc.x = 760;
 			sc.y = 80;
 			teacherNote(
-				`SINE WAVES ARE EVERYWHERE — ${this.yearLevel}\n\n` +
+				`SINE WAVES ARE EVERYWHERE (${this.yearLevel})\n\n` +
 					`Hidden truth: midline (mesor) ${MESOR}, amplitude ${AMP}, period ${PERIOD} h, ` +
 					`acrophase (peak) at ${ACRO_HOUR}:00, plus noise (sd 5). The Cosinor fit should ` +
 					`recover these; R² near 1 means the cosine model fits well.\n\n` +

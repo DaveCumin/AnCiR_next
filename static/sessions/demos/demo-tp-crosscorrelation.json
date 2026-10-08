@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "730": [
+    "743": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "731": [
+    "744": [
       49.99999999999999,
       39.64723819589918,
       29.999999999999986,
@@ -104,7 +104,7 @@
       50.000000000000014,
       39.64723819589919
     ],
-    "732": [
+    "745": [
       -12,
       -11,
       -10,
@@ -131,7 +131,7 @@
       11,
       12
     ],
-    "733": [
+    "746": [
       -0.02397460631115133,
       -0.28574860140576386,
       -0.5241981547253294,
@@ -158,39 +158,39 @@
       0.23409193418983582,
       -0.023974606311150955
     ],
-    "734": [
-      0.8863905887044223,
-      0.07783048901336764,
-      0.0005169344530367992,
-      8.854908928324079e-8,
-      4.0190073491430667e-14,
+    "747": [
+      0.9706407477729591,
+      0.11561144801305756,
+      0.0010540293263445483,
+      2.826241450133015e-7,
+      2.965485340718414e-13,
+      1.8276911661047675e-24,
+      2.577066311792105e-293,
+      8.062729902754118e-26,
+      8.88520242225238e-15,
+      1.4689347306770673e-8,
+      0.000147520843109789,
+      0.046057763784403696,
+      0.847915201623117,
+      0.14956270747349298,
+      0.0017831096278124535,
+      7.426250191081572e-7,
+      1.4812324992333522e-12,
+      2.610536787867877e-23,
       0,
-      0,
-      0,
-      4.9960036108132044e-15,
-      2.2894928397576564e-8,
-      0.0002962797255043892,
-      0.07818675286233101,
-      0.9471668988917942,
-      0.06714293621910683,
-      0.0002962797255043892,
-      3.299656126110051e-8,
-      1.1657341758564144e-14,
-      0,
-      0,
-      0,
-      2.97761815204467e-13,
-      4.839094400743704e-7,
-      0.001733441754964371,
-      0.15147024626696948,
-      0.8863905887044223
+      2.8606085485314785e-22,
+      1.3870261525226059e-11,
+      0.0000032076948029362965,
+      0.0033167965666137844,
+      0.15291021379194414,
+      0.9706407477729591
     ]
   },
   "data": [
     {
-      "id": 730,
+      "id": 743,
       "name": "Cross-correlation input 1",
-      "data": 730,
+      "data": 743,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -199,9 +199,9 @@
       "processes": []
     },
     {
-      "id": 731,
+      "id": 744,
       "name": "Cross-correlation input 2",
-      "data": 731,
+      "data": 744,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -210,33 +210,33 @@
       "processes": []
     },
     {
-      "id": 732,
-      "name": "lag_66",
-      "data": 732,
+      "id": 745,
+      "name": "lag_67",
+      "data": 745,
       "type": "number",
-      "tableProcessGUId": "c9941b07-d316-440e-909e-75a997a6c696",
+      "tableProcessGUId": "130c2399-88d3-4b76-9b5e-2914d1457bfe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 733,
-      "name": "correlation_66",
-      "data": 733,
+      "id": 746,
+      "name": "correlation_67",
+      "data": 746,
       "type": "number",
-      "tableProcessGUId": "c9941b07-d316-440e-909e-75a997a6c696",
+      "tableProcessGUId": "130c2399-88d3-4b76-9b5e-2914d1457bfe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 734,
-      "name": "pvalue_66",
-      "data": 734,
+      "id": 747,
+      "name": "pvalue_67",
+      "data": 747,
       "type": "number",
-      "tableProcessGUId": "c9941b07-d316-440e-909e-75a997a6c696",
+      "tableProcessGUId": "130c2399-88d3-4b76-9b5e-2914d1457bfe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -245,7 +245,7 @@
   ],
   "plots": [
     {
-      "id": 120,
+      "id": 122,
       "name": "Cross-correlation result",
       "x": 60,
       "y": 60,
@@ -278,11 +278,11 @@
       },
       "plot": {
         "columnRefs": [
-          730,
-          731,
-          732,
-          733,
-          734
+          743,
+          744,
+          745,
+          746,
+          747
         ],
         "showCol": [
           true,
@@ -300,18 +300,18 @@
   ],
   "tableProcesses": [
     {
-      "id": 66,
+      "id": 67,
       "name": "CrossCorrelation",
       "displayName": "Cross-correlation",
       "args": {
-        "xIN": 730,
-        "yIN": 731,
+        "xIN": 743,
+        "yIN": 744,
         "maxLag": 12,
         "method": "pearson",
         "out": {
-          "lag": 732,
-          "correlation": 733,
-          "pvalue": 734
+          "lag": 745,
+          "correlation": 746,
+          "pvalue": 747
         },
         "valid": false
       },
@@ -323,8 +323,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_63",
-      "text": "Computes the cross-correlogram of two series (A = the first input, B = the second): the correlation between A and B at each lag from -maxLag to +maxLag, using the overlapping segment only. The peak lag is the delay between the signals — a peak at a positive lag means B leads A by that many samples. Use it to find the phase relationship between two rhythms, or the response delay between a driver and a follower. Choose Pearson (linear) or Spearman (rank); leave max lag at 0 to auto-pick a quarter of the shorter series. Quick-plot draws the correlogram (lag vs r). Chatfield, The Analysis of Time Series.",
+      "id": "note_64",
+      "text": "Computes the cross-correlogram of two series (A = the first input, B = the second): the correlation between A and B at each lag from -maxLag to +maxLag, using the overlapping segment only. The peak lag is the delay between the signals: a peak at a positive lag means B repeats A that many samples later, so A leads (B[t] = A[t - 3] peaks at +3); a negative lag means B leads. Use it to find the phase relationship between two rhythms, or the response delay between a driver and a follower. The p-value at each lag tests the prewhitened correlation (an AR model fitted to A filters both series), because the raw correlations of two autocorrelated series vary far more than an independence test assumes; each p is for one lag, and the panel also gives the smallest p corrected for the number of lags. Choose Pearson (linear) or Spearman (rank); leave max lag at 0 to auto-pick a quarter of the shorter series. Quick-plot draws the correlogram (lag vs r). Chatfield, The Analysis of Time Series.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -357,23 +357,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_730": {
+    "data_743": {
       "x": 60,
       "y": 314
     },
-    "data_731": {
+    "data_744": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_66": {
+    "tableprocess_67": {
       "x": 440,
       "y": 314
     },
-    "plot_120": {
+    "plot_122": {
       "x": 820,
       "y": 314
     },
-    "note_63": {
+    "note_64": {
       "x": 40,
       "y": 24
     }
@@ -390,6 +390,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -433,8 +435,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

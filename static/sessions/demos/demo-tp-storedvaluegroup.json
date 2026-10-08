@@ -1,17 +1,17 @@
 {
   "rawData": {
-    "819": [
+    "833": [
       12,
       34
     ]
   },
   "data": [
     {
-      "id": 819,
-      "name": "group_g1_83",
-      "data": 819,
+      "id": 833,
+      "name": "group_g1_84",
+      "data": 833,
       "type": "number",
-      "tableProcessGUId": "3675b509-ab99-406e-90a5-d9a5cff01b20",
+      "tableProcessGUId": "74c37066-1e7b-46ad-97c1-434a5c3ae0cc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -20,7 +20,7 @@
   ],
   "plots": [
     {
-      "id": 138,
+      "id": 140,
       "name": "Stored Value Group result",
       "x": 60,
       "y": 60,
@@ -53,7 +53,7 @@
       },
       "plot": {
         "columnRefs": [
-          819
+          833
         ],
         "showCol": [
           true
@@ -67,7 +67,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 83,
+      "id": 84,
       "name": "StoredValueGroup",
       "displayName": "Stored Value Group",
       "args": {
@@ -82,7 +82,7 @@
           }
         ],
         "out": {
-          "group_g1": 819
+          "group_g1": 833
         }
       },
       "refTPId": null
@@ -102,7 +102,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_76",
+      "id": "note_77",
       "text": "Gathers scalar results you have stored from various analyses (e.g. periods, amplitudes, CFI values) and organises them into labelled groups, emitting a category column and a value column. Use it to assemble stored metrics into a tidy table for group comparison or plotting.",
       "x": 40,
       "y": 24,
@@ -136,15 +136,15 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "tableprocess_83": {
+    "tableprocess_84": {
       "x": 60,
       "y": 314
     },
-    "plot_138": {
+    "plot_140": {
       "x": 820,
       "y": 314
     },
-    "note_76": {
+    "note_77": {
       "x": 40,
       "y": 24
     }
@@ -161,6 +161,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -204,8 +206,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

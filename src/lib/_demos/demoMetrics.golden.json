@@ -43,6 +43,11 @@
 			50,
 			50
 		],
+		"Correlation.padj": [
+			0,
+			1,
+			1
+		],
 		"Correlation.pvalue": [
 			0,
 			0.758187524,
@@ -64,21 +69,30 @@
 			11.746213265
 		],
 		"Cosinor.acrophase_ciHigh": [
-			12.001318761
+			12.001161912
 		],
 		"Cosinor.acrophase_ciLow": [
-			11.491107769
+			11.491264617
+		],
+		"Cosinor.acrophase_h1": [
+			11.746213265
 		],
 		"Cosinor.amplitude": [
 			41.736780302
 		],
 		"Cosinor.amplitude_ciHigh": [
-			44.426861229
+			44.428635961
 		],
 		"Cosinor.amplitude_ciLow": [
-			39.046699376
+			39.044924644
+		],
+		"Cosinor.amplitude_h1": [
+			41.736780302
 		],
 		"Cosinor.bathyphase": [
+			23.746213265
+		],
+		"Cosinor.bathyphase_h1": [
 			23.746213265
 		],
 		"Cosinor.mesor": [
@@ -95,6 +109,16 @@
 		],
 		"Cosinor.rsquared": [
 			0.953927037
+		]
+	},
+	"demo-tp-crossing.json": {
+		"Crossing.count": [
+			3
+		],
+		"Crossing.crossing": [
+			1,
+			23,
+			47
 		]
 	},
 	"demo-tp-describedata.json": {
@@ -152,7 +176,7 @@
 			0.985528802
 		],
 		"DoubleLogistic.rmse": [
-			2.815332973
+			2.815332969
 		]
 	},
 	"demo-tp-fdrcorrection.json": {
@@ -181,7 +205,13 @@
 		"FitFunction.acrophase": [
 			12.168012299
 		],
+		"FitFunction.acrophase_h1": [
+			12.168012299
+		],
 		"FitFunction.amplitude": [
+			40.093782435
+		],
+		"FitFunction.amplitude_h1": [
 			40.093782435
 		],
 		"FitFunction.mesor": [
@@ -246,7 +276,7 @@
 		]
 	},
 	"demo-tp-movinganalysis.json": {
-		"MovingAnalysis.761_peak_period": [
+		"MovingAnalysis.y0_peak_period": [
 			24,
 			24,
 			24,
@@ -255,7 +285,7 @@
 			24,
 			24
 		],
-		"MovingAnalysis.761_peak_power": [
+		"MovingAnalysis.y0_peak_power": [
 			83.5,
 			83.5,
 			83.5,
@@ -341,10 +371,10 @@
 	},
 	"demo-tp-rectangularwave.json": {
 		"RectangularWave.r2": [
-			0.956158404
+			0.957127435
 		],
 		"RectangularWave.rmse": [
-			5.518597286
+			5.457267679
 		]
 	},
 	"demo-tp-storedvaluegroup.json": {
@@ -355,7 +385,7 @@
 	},
 	"demo-tp-surrogatetest.json": {
 		"SurrogateTest.observed": [
-			29.733079044
+			40.333523415
 		],
 		"SurrogateTest.pvalue": [
 			0.05

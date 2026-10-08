@@ -237,7 +237,7 @@
       "name": "col_614_49",
       "data": 616,
       "type": "number",
-      "tableProcessGUId": "7857c835-1ae6-44c5-b62f-f0797d0233cc",
+      "tableProcessGUId": "1834738d-2df2-4f68-ba18-b85bfdacde61",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "col_615_49",
       "data": 617,
       "type": "number",
-      "tableProcessGUId": "7857c835-1ae6-44c5-b62f-f0797d0233cc",
+      "tableProcessGUId": "1834738d-2df2-4f68-ba18-b85bfdacde61",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -400,6 +400,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -443,8 +445,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

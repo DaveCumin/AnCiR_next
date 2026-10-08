@@ -62,6 +62,20 @@ function scalarFromCsv(csvText, header) {
 const SESSION_AMPLITUDE = 41.73678030222172;
 const SESSION_MESOR = 50.06903731465636;
 
+/**
+ * The CSV header of a Cosinor output, read off the session. Output column names carry a column id
+ * (`amplitude_57`) and a demo regeneration renumbers ids, so a hard-coded header goes stale.
+ */
+function cosinorOutHeader(key) {
+	const session = fixtureSession();
+	const tp = session.tableProcesses.find((t) => t.name === 'Cosinor');
+	const name = session.data.find((c) => c.id === tp.args.out[key])?.name;
+	if (!name) throw new Error(`demo-tp-cosinor.json has no Cosinor "${key}" output column`);
+	return name;
+}
+const AMPLITUDE_HEADER = cosinorOutHeader('amplitude');
+const MESOR_HEADER = cosinorOutHeader('mesor');
+
 describe.runIf(HAVE_PYTHON)('exported Python scripts execute (tools/.venv)', () => {
 	const session = fixtureSession();
 	const modes = [
@@ -88,8 +102,8 @@ describe.runIf(HAVE_PYTHON)('exported Python scripts execute (tools/.venv)', () 
 			const out = readFileSync(join(dir, outDir, 'columns_after_tables.csv'), 'utf8');
 			results[label] = out;
 			// Key numbers match what the app computed (stored in the session).
-			expect(scalarFromCsv(out, 'amplitude_56')).toBeCloseTo(SESSION_AMPLITUDE, 9);
-			expect(scalarFromCsv(out, 'mesor_56')).toBeCloseTo(SESSION_MESOR, 9);
+			expect(scalarFromCsv(out, AMPLITUDE_HEADER)).toBeCloseTo(SESSION_AMPLITUDE, 9);
+			expect(scalarFromCsv(out, MESOR_HEADER)).toBeCloseTo(SESSION_MESOR, 9);
 			// The injected category column round-tripped (via CSV where enabled).
 			expect(out.split('\n')[0]).toContain('label');
 			expect(out).toContain('setB');
@@ -144,8 +158,8 @@ describe.runIf(HAVE_R)('exported R scripts execute (Rscript)', () => {
 			const out = readFileSync(join(dir, outDir, 'columns_after_analyses.csv'), 'utf8');
 			results[label] = out;
 			// The R port matches the JS fit to well past 1e-6 on this fixture.
-			expect(scalarFromCsv(out, 'amplitude_56')).toBeCloseTo(SESSION_AMPLITUDE, 6);
-			expect(scalarFromCsv(out, 'mesor_56')).toBeCloseTo(SESSION_MESOR, 6);
+			expect(scalarFromCsv(out, AMPLITUDE_HEADER)).toBeCloseTo(SESSION_AMPLITUDE, 6);
+			expect(scalarFromCsv(out, MESOR_HEADER)).toBeCloseTo(SESSION_MESOR, 6);
 			expect(out.split('\n')[0]).toContain('label');
 			expect(out).toContain('setB');
 		}, 240_000);
@@ -199,8 +213,8 @@ function freshDir() {
 
 function assertKeyNumbers(csvPath) {
 	const out = readFileSync(csvPath, 'utf8');
-	expect(scalarFromCsv(out, 'amplitude_56')).toBeCloseTo(SESSION_AMPLITUDE, 6);
-	expect(scalarFromCsv(out, 'mesor_56')).toBeCloseTo(SESSION_MESOR, 6);
+	expect(scalarFromCsv(out, AMPLITUDE_HEADER)).toBeCloseTo(SESSION_AMPLITUDE, 6);
+	expect(scalarFromCsv(out, MESOR_HEADER)).toBeCloseTo(SESSION_MESOR, 6);
 	expect(out.split('\n')[0]).toContain('label');
 	expect(out).toContain('setB');
 }
@@ -280,7 +294,7 @@ describe.runIf(HAVE_PYTHON)('Python split+CSV export from a different working di
 		});
 		expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
 		const out = readFileSync(join(dir, 'analysis_output', 'columns_after_tables.csv'), 'utf8');
-		expect(scalarFromCsv(out, 'amplitude_56')).toBeCloseTo(SESSION_AMPLITUDE, 9);
-		expect(scalarFromCsv(out, 'mesor_56')).toBeCloseTo(SESSION_MESOR, 9);
+		expect(scalarFromCsv(out, AMPLITUDE_HEADER)).toBeCloseTo(SESSION_AMPLITUDE, 9);
+		expect(scalarFromCsv(out, MESOR_HEADER)).toBeCloseTo(SESSION_MESOR, 9);
 	}, 240_000);
 });

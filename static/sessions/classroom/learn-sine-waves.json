@@ -691,7 +691,6 @@
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
@@ -703,7 +702,6 @@
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
@@ -711,11 +709,10 @@
       "name": "cosinorx_2",
       "data": 16,
       "type": "number",
-      "tableProcessGUId": "b459d218-d93d-4205-9b3c-64258b3d6e3b",
+      "tableProcessGUId": "6fd50e44-93f6-411d-b0df-8fe7309c313c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
@@ -723,11 +720,10 @@
       "name": "cosinory_15_2",
       "data": 17,
       "type": "number",
-      "tableProcessGUId": "b459d218-d93d-4205-9b3c-64258b3d6e3b",
+      "tableProcessGUId": "6fd50e44-93f6-411d-b0df-8fe7309c313c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
@@ -741,12 +737,36 @@
       "height": 250,
       "type": "scatterplot",
       "selected": false,
+      "facet": false,
+      "facetRows": 0,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
           null
         ],
         "xLogScale": false,
+        "xTickFormat": "",
         "ylimsLeftIN": [
           null,
           null
@@ -792,7 +812,6 @@
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to hour which is ",
               "processes": []
             },
             "y": {
@@ -804,19 +823,19 @@
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to signal which is ",
               "processes": []
             },
             "label": "Data",
             "yAxis": "left",
             "line": {
-              "colour": "#234154",
+              "colour": null,
               "strokeWidth": 2,
               "stroke": "solid",
-              "draw": false
+              "draw": false,
+              "joinGaps": false
             },
             "points": {
-              "colour": "#234154",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": true
@@ -832,7 +851,6 @@
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to cosinorx_2 which is ",
               "processes": []
             },
             "y": {
@@ -844,19 +862,19 @@
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to cosinory_15_2 which is ",
               "processes": []
             },
             "label": "Cosinor fit",
             "yAxis": "left",
             "line": {
-              "colour": "#BE796B",
+              "colour": null,
               "strokeWidth": 2.5,
               "stroke": "solid",
-              "draw": true
+              "draw": true,
+              "joinGaps": false
             },
             "points": {
-              "colour": "#BE796B",
+              "colour": null,
               "radius": 3,
               "shape": "circle",
               "draw": false
@@ -866,15 +884,17 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "#ccc",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     }
   ],
@@ -904,11 +924,12 @@
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [
     {
       "id": "note_1",
-      "text": "SINE WAVES ARE EVERYWHERE — NZ Yr 12–13\n\nHidden truth: midline (mesor) 50, amplitude 40, period 24 h, acrophase (peak) at 8:00, plus noise (sd 5). The Cosinor fit should recover these; R² near 1 means the cosine model fits well.\n\nCurriculum (NZ): NZC M8-7 / M7-2 (trig modelling & graphs); NCEA AS91575 (trig methods). Intl: AP Precalc trig, A-level Trig, IB composite trig a·sin(b(x+c))+d.\nNCEA is transitional: L1 removed from 2028; NZCE (Yr12) 2029; NZACE (Yr13) 2030. Standards below remain valid through the change.\n\nFull mapping + worked walkthrough: classroom-handbook.html",
+      "text": "SINE WAVES ARE EVERYWHERE (NZ Yr 12–13)\n\nHidden truth: midline (mesor) 50, amplitude 40, period 24 h, acrophase (peak) at 8:00, plus noise (sd 5). The Cosinor fit should recover these; R² near 1 means the cosine model fits well.\n\nCurriculum (NZ): NZC M8-7 / M7-2 (trig modelling & graphs); NCEA AS91575 (trig methods). Intl: AP Precalc trig, A-level Trig, IB composite trig a·sin(b(x+c))+d.\nNCEA is transitional: L1 removed from 2028; NZCE (Yr12) 2029; NZACE (Yr13) 2030. Standards below remain valid through the change.\n\nFull mapping + worked walkthrough: classroom-handbook.html",
       "x": 40,
       "y": 40,
       "width": 380,
@@ -916,7 +937,31 @@
     }
   ],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
+  "nodeLayout": {},
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -927,6 +972,11 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
+    "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -938,12 +988,19 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -962,8 +1019,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.43.2"
+  "version": "β.81.12"
 }

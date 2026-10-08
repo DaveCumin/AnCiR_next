@@ -16,11 +16,11 @@ import { thumbnailForWorkflow } from '$lib/start/thumbnails.js';
 import { fetchAppAsset } from '$lib/start/offline.js';
 
 /**
- * Manifest names carry a "Workflow — " prefix and are lower case. One normalisation, shared by the
+ * Manifest names carry a "Workflow: " prefix and are lower case. One normalisation, shared by the
  * example cards and the recent rows, so a session is called the same thing in both places.
  */
 export function displayName(name) {
-	const t = (name ?? '').replace(/^Workflow\s*—\s*/, '');
+	const t = (name ?? '').replace(/^Workflow\s*[:—]\s*/, '');
 	return t.charAt(0).toUpperCase() + t.slice(1);
 }
 

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "806": [
+    "820": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "807": [
+    "821": [
       11.229882793897886,
       37.29138111399729,
       35.47426005079059,
@@ -104,7 +104,7 @@
       20.999584523229,
       30.339018292668595
     ],
-    "808": [
+    "822": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "809": [
+    "823": [
       27.99850798622859,
       30.99958480957332,
       33.48990964443412,
@@ -211,20 +211,20 @@
   },
   "data": [
     {
-      "id": 806,
+      "id": 820,
       "name": "x",
-      "data": 806,
+      "data": 820,
       "type": "number",
-      "tableProcessGUId": "f29e3974-99ab-4050-9799-16c9d2f673cd",
+      "tableProcessGUId": "5ba11423-7fcf-4a18-babf-ab0999c5c2a7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 807,
+      "id": 821,
       "name": "y",
-      "data": 807,
+      "data": 821,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 808,
-      "name": "smoothedx_81",
-      "data": 808,
+      "id": 822,
+      "name": "smoothedx_82",
+      "data": 822,
       "type": "number",
-      "tableProcessGUId": "deaea5fd-86b5-4ceb-a11c-ad7457bd656c",
+      "tableProcessGUId": "dccaa66f-8921-431e-a261-1ff0078956bb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 809,
-      "name": "smoothedy_807_81",
-      "data": 809,
+      "id": 823,
+      "name": "smoothedy_821_82",
+      "data": 823,
       "type": "number",
-      "tableProcessGUId": "deaea5fd-86b5-4ceb-a11c-ad7457bd656c",
+      "tableProcessGUId": "dccaa66f-8921-431e-a261-1ff0078956bb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -257,7 +257,7 @@
   ],
   "plots": [
     {
-      "id": 135,
+      "id": 137,
       "name": "Smooth Data: data + fit",
       "x": 60,
       "y": 60,
@@ -332,9 +332,9 @@
         "data": [
           {
             "x": {
-              "id": 810,
+              "id": 824,
               "name": "x",
-              "refId": 806,
+              "refId": 820,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -343,9 +343,9 @@
               "processes": []
             },
             "y": {
-              "id": 811,
+              "id": 825,
               "name": "y",
-              "refId": 807,
+              "refId": 821,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -371,9 +371,9 @@
           },
           {
             "x": {
-              "id": 812,
-              "name": "smoothedx_81",
-              "refId": 808,
+              "id": 826,
+              "name": "smoothedx_82",
+              "refId": 822,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -382,9 +382,9 @@
               "processes": []
             },
             "y": {
-              "id": 813,
-              "name": "smoothedy_807_81",
-              "refId": 809,
+              "id": 827,
+              "name": "smoothedy_821_82",
+              "refId": 823,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -411,7 +411,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -422,11 +422,11 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
-      "id": 136,
+      "id": 138,
       "name": "Smooth Data: values",
       "x": 630,
       "y": 60,
@@ -459,8 +459,8 @@
       },
       "plot": {
         "columnRefs": [
-          807,
-          809
+          821,
+          823
         ],
         "showCol": [
           true,
@@ -475,7 +475,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 80,
+      "id": 81,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -485,19 +485,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 806
+          "result": 820
         }
       },
       "refTPId": null
     },
     {
-      "id": 81,
+      "id": 82,
       "name": "SmoothedData",
       "displayName": "Smooth Data",
       "args": {
-        "xIN": 806,
+        "xIN": 820,
         "yIN": [
-          807
+          821
         ],
         "smootherType": "moving",
         "whittakerLambda": 100,
@@ -509,8 +509,8 @@
         "movingAvgType": "simple",
         "preProcesses": [],
         "out": {
-          "smoothedx": 808,
-          "smoothedy_807": 809
+          "smoothedx": 822,
+          "smoothedy_821": 823
         }
       },
       "refTPId": null
@@ -521,7 +521,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_74",
+      "id": "note_75",
       "text": "Smooths a series to suppress noise while keeping the underlying shape. Choose Whittaker-Eilers (penalised least squares; λ sets stiffness), Savitzky-Golay (local polynomial, preserves peak height/width), LOESS (locally weighted regression; bandwidth sets span), or a moving average. Use a light hand: over-smoothing flattens real amplitude. It also emits a residual column per series (raw − smoothed) with a \"Plot residuals\" button, so you can see exactly what was removed and check you have not smoothed away real signal. The demo overlays the smoothed curve on the noisy input.\n\nSavitzky & Golay (1964); Cleveland (1979, LOESS); Eilers (2003, Whittaker).",
       "x": 40,
       "y": 24,
@@ -555,27 +555,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_807": {
+    "data_821": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_80": {
+    "tableprocess_81": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_81": {
+    "tableprocess_82": {
       "x": 440,
       "y": 314
     },
-    "plot_135": {
+    "plot_137": {
       "x": 820,
       "y": 314
     },
-    "plot_136": {
+    "plot_138": {
       "x": 820,
       "y": 814
     },
-    "note_74": {
+    "note_75": {
       "x": 40,
       "y": 24
     }
@@ -592,6 +592,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -635,8 +637,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

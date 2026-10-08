@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "770": [
+    "784": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "771": [
+    "785": [
       80.74815343291546,
       74.1026647241765,
       67.34975964373878,
@@ -100,7 +100,7 @@
       25.36953942083682,
       31.225353920755683
     ],
-    "772": [
+    "786": [
       0,
       1,
       2,
@@ -150,82 +150,82 @@
       46,
       47
     ],
-    "773": [
+    "787": [
       null
     ],
-    "774": [
-      0.9561584036481966
+    "788": [
+      0.9571274351365205
     ],
-    "775": [
-      5.518597286094135
+    "789": [
+      5.457267679191282
     ],
-    "776": [
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      69.77429562735063,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.56576031105484,
-      75.31550624256181,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.31550624457671,
-      75.3155062443813,
-      23.565781911814245,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747,
-      23.565758048919747
+    "790": [
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.23273123963045,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666063486393,
+      75.08666062251248,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      23.232731108324593,
+      31.28025962472167
     ]
   },
   "data": [
     {
-      "id": 770,
+      "id": 784,
       "name": "x",
-      "data": 770,
+      "data": 784,
       "type": "number",
-      "tableProcessGUId": "2edce403-9e68-44ac-b0c8-86e4a0d589c4",
+      "tableProcessGUId": "7371ccfc-1b15-4043-b50a-000737b5c701",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 771,
+      "id": 785,
       "name": "y",
-      "data": 771,
+      "data": 785,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -234,55 +234,55 @@
       "processes": []
     },
     {
-      "id": 772,
-      "name": "rectwavex_74",
-      "data": 772,
+      "id": 786,
+      "name": "rectwavex_75",
+      "data": 786,
       "type": "number",
-      "tableProcessGUId": "1145255e-19e1-4371-a405-b5095aaef880",
+      "tableProcessGUId": "c4f069c9-afc9-478e-bdae-6b13a3c9a633",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 773,
-      "name": "perm_pvalue_74",
-      "data": 773,
+      "id": 787,
+      "name": "perm_pvalue_75",
+      "data": 787,
       "type": "number",
-      "tableProcessGUId": "1145255e-19e1-4371-a405-b5095aaef880",
+      "tableProcessGUId": "c4f069c9-afc9-478e-bdae-6b13a3c9a633",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 774,
-      "name": "r2_74",
-      "data": 774,
+      "id": 788,
+      "name": "r2_75",
+      "data": 788,
       "type": "number",
-      "tableProcessGUId": "1145255e-19e1-4371-a405-b5095aaef880",
+      "tableProcessGUId": "c4f069c9-afc9-478e-bdae-6b13a3c9a633",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 775,
-      "name": "rmse_74",
-      "data": 775,
+      "id": 789,
+      "name": "rmse_75",
+      "data": 789,
       "type": "number",
-      "tableProcessGUId": "1145255e-19e1-4371-a405-b5095aaef880",
+      "tableProcessGUId": "c4f069c9-afc9-478e-bdae-6b13a3c9a633",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 776,
-      "name": "rectwavey_771_74",
-      "data": 776,
+      "id": 790,
+      "name": "rectwavey_785_75",
+      "data": 790,
       "type": "number",
-      "tableProcessGUId": "1145255e-19e1-4371-a405-b5095aaef880",
+      "tableProcessGUId": "c4f069c9-afc9-478e-bdae-6b13a3c9a633",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -291,7 +291,7 @@
   ],
   "plots": [
     {
-      "id": 127,
+      "id": 129,
       "name": "Rectangular Wave: data + fit",
       "x": 60,
       "y": 60,
@@ -366,9 +366,9 @@
         "data": [
           {
             "x": {
-              "id": 777,
+              "id": 791,
               "name": "x",
-              "refId": 770,
+              "refId": 784,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -377,9 +377,9 @@
               "processes": []
             },
             "y": {
-              "id": 778,
+              "id": 792,
               "name": "y",
-              "refId": 771,
+              "refId": 785,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -405,9 +405,9 @@
           },
           {
             "x": {
-              "id": 779,
-              "name": "rectwavex_74",
-              "refId": 772,
+              "id": 793,
+              "name": "rectwavex_75",
+              "refId": 786,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -416,9 +416,9 @@
               "processes": []
             },
             "y": {
-              "id": 780,
-              "name": "rectwavey_771_74",
-              "refId": 776,
+              "id": 794,
+              "name": "rectwavey_785_75",
+              "refId": 790,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -445,7 +445,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -456,11 +456,11 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
-      "id": 128,
+      "id": 130,
       "name": "Rectangular Wave: values",
       "x": 630,
       "y": 60,
@@ -493,8 +493,8 @@
       },
       "plot": {
         "columnRefs": [
-          771,
-          776
+          785,
+          790
         ],
         "showCol": [
           true,
@@ -509,7 +509,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 73,
+      "id": 74,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -519,19 +519,19 @@
         "count": 48,
         "end": 47,
         "out": {
-          "result": 770
+          "result": 784
         }
       },
       "refTPId": null
     },
     {
-      "id": 74,
+      "id": 75,
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 770,
+        "xIN": 784,
         "yIN": [
-          771
+          785
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -542,11 +542,11 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 772,
-          "perm_pvalue": 773,
-          "r2": 774,
-          "rmse": 775,
-          "rectwavey_771": 776
+          "rectwavex": 786,
+          "perm_pvalue": 787,
+          "r2": 788,
+          "rmse": 789,
+          "rectwavey_785": 790
         }
       },
       "refTPId": null
@@ -557,8 +557,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_69",
-      "text": "Fits a smooth rectangular (square) wave with an adjustable duty cycle to the series, capturing on/off activity rhythms that a sinusoid fits poorly. The model is a tanh-approximated square wave whose duty cycle sets the fraction of each cycle spent 'on'; period, phase, sharpness (kappa) and duty cycle can be fixed or fitted. Use it for clearly bimodal activity (e.g. nocturnal animals switching between rest and activity) where you want an explicit active-phase width. In the demo, read the flat high plateau as the active phase, the flat low level as rest, and the plateau width as the duty cycle. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. Nonlinear least-squares waveform fitting (Marquardt 1963).",
+      "id": "note_70",
+      "text": "Fits a smooth rectangular (square) wave with an adjustable duty cycle to the series, capturing on/off activity rhythms that a sinusoid fits poorly. The model is a tanh-approximated square wave whose duty cycle sets the fraction of each cycle spent 'on'; period, phase, sharpness (kappa) and duty cycle can be fixed or fitted. A fitted period is kept inside a period range (1 to 48 h for a time x; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units, as in Cosinor) and the node warns when it stops on a bound of that range or does not converge; the warning says whether a good fit sits at the edge (widen the range to confirm the period) or the data have no clear rhythm inside the range. Use it for clearly bimodal activity (e.g. nocturnal animals switching between rest and activity) where you want an explicit active-phase width. In the demo, read the flat high plateau as the active phase, the flat low level as rest, and the plateau width as the duty cycle. The acrophase is hours after the first sample (x units after x = 0 for a numeric x) by default; set Phase reference to Clock time of day (needs a time column as x) for clock time. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. The optional permutation test permutes single values by default, which assumes exchangeable (independent) observations; activity data are autocorrelated, which makes that p-value too small, so the node warns when the residuals are strongly autocorrelated. Choose one-period blocks instead, or use the Surrogate Test node. Nonlinear least-squares waveform fitting (Marquardt 1963).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -591,27 +591,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_771": {
+    "data_785": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_73": {
+    "tableprocess_74": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_74": {
+    "tableprocess_75": {
       "x": 440,
       "y": 314
     },
-    "plot_127": {
+    "plot_129": {
       "x": 820,
       "y": 314
     },
-    "plot_128": {
+    "plot_130": {
       "x": 820,
       "y": 814
     },
-    "note_69": {
+    "note_70": {
       "x": 40,
       "y": 24
     }
@@ -628,6 +628,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -671,8 +673,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

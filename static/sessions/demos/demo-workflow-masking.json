@@ -2061,7 +2061,7 @@
   "plots": [
     {
       "id": 62,
-      "name": "Actogram — truly entrained",
+      "name": "Actogram: truly entrained",
       "x": 60,
       "y": 60,
       "width": 520,
@@ -2112,6 +2112,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -2143,6 +2156,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -2152,7 +2166,7 @@
     },
     {
       "id": 63,
-      "name": "Actogram — masked only",
+      "name": "Actogram: masked only",
       "x": 630,
       "y": 60,
       "width": 520,
@@ -2203,6 +2217,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -2234,6 +2261,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -2319,6 +2347,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -2362,8 +2392,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

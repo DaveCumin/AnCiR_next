@@ -49,10 +49,23 @@ function metricsOf(session) {
 			const vals = rd[String(cid)];
 			if (!Array.isArray(vals) || vals.length === 0 || vals.length > 8) continue;
 			if (!vals.every((v) => typeof v === 'number')) continue;
-			out[`${tp.name}.${key}`] = vals.map((v) => Number(v.toFixed(9)));
+			out[`${tp.name}.${stableOutKey(key, tp.args)}`] = vals.map((v) => Number(v.toFixed(9)));
 		}
 	}
 	return out;
+}
+
+/**
+ * Per-input out keys embed the input COLUMN ID (`775_peak_period`), and a demo regeneration
+ * renumbers every id. Keyed raw, an unchanged value reads as "port renamed or removed". Swap the
+ * id for its position among the node's y inputs (`y0_peak_period`) so the key survives a regen.
+ */
+function stableOutKey(key, args) {
+	const m = /^(\d+)_(.+)$/.exec(key);
+	if (!m) return key;
+	const ys = [args?.yIN].flat().map(String);
+	const i = ys.indexOf(m[1]);
+	return i === -1 ? key : `y${i}_${m[2]}`;
 }
 
 function currentSnapshot() {

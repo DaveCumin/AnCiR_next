@@ -178,3 +178,19 @@ reconcile should collapse both sets onto the same panel keys.
 
 Despite the duplicate set, fixture 1's four child SVGs (`#plot13` to
 `#plot16`) re-render byte-identical to the pinned files after a reload.
+
+# Legacy demo snapshots (frozen at β.72.29)
+
+Two shipped demo sessions, copied byte-for-byte from `static/sessions/demos/` at `6a18610e`
+(v81.12) just before the demos were regenerated. Both had last been written by the generator at
+β.72.29, so they carry pre-v81 shapes that migration tests depend on. Regenerating the demos
+rewrites those shapes, so the tests read these copies instead of the shipped files.
+
+- `legacy-v72.29-demo-periodogram-rhythm.json`: the periodogram series has no `binSizeAuto` and a
+  stored `binSize` of 0.25. Used by `src/lib/tableProcesses/binSizeAuto.svelte.test.js` (the
+  pre-v81 Enright bin-size migration).
+- `legacy-v72.29-demo-scatter-rhythm.json`: the scatterplot carries the legacy empty
+  `nightBands` key. Used by `src/lib/plots/Scatterplot/overlays.svelte.test.js` (the nightBands to
+  overlays migration).
+
+Do not hand-edit or regenerate them.

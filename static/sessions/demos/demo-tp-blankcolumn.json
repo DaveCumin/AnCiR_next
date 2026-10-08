@@ -19,7 +19,7 @@
       "name": "result_48",
       "data": 613,
       "type": "category",
-      "tableProcessGUId": "cbaa83b4-98b1-4ecc-9ca9-60ff4b3571b8",
+      "tableProcessGUId": "1eb506f3-841d-4146-9974-76c2973f7715",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -152,6 +152,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -195,8 +197,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

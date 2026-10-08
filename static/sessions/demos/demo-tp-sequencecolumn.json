@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "803": [
+    "817": [
       0,
       1,
       2,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 803,
-      "name": "result_78",
-      "data": 803,
+      "id": 817,
+      "name": "result_79",
+      "data": 817,
       "type": "number",
-      "tableProcessGUId": "41c7e472-d7c0-44bf-a5ea-ba729c4f949a",
+      "tableProcessGUId": "0bd729a1-ae9f-4659-9699-a4892861e631",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 133,
+      "id": 135,
       "name": "Sequence Column result",
       "x": 60,
       "y": 60,
@@ -101,7 +101,7 @@
       },
       "plot": {
         "columnRefs": [
-          803
+          817
         ],
         "showCol": [
           true
@@ -115,7 +115,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 78,
+      "id": 79,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -125,7 +125,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 803
+          "result": 817
         }
       },
       "refTPId": null
@@ -136,7 +136,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_72",
+      "id": "note_73",
       "text": "Creates a regular numeric or time sequence from a start, step, and count (or end). Use it to build an index or an evenly spaced time axis to pair with generated or pasted values.",
       "x": 40,
       "y": 24,
@@ -170,15 +170,15 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "tableprocess_78": {
+    "tableprocess_79": {
       "x": 60,
       "y": 314
     },
-    "plot_133": {
+    "plot_135": {
       "x": 820,
       "y": 314
     },
-    "note_72": {
+    "note_73": {
       "x": 40,
       "y": 24
     }
@@ -195,6 +195,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -238,8 +240,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

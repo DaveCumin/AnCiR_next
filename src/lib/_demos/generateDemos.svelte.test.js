@@ -112,7 +112,7 @@ const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 const DEMOS = [
 	{
 		id: 'scatter-rhythm',
-		name: 'Scatter — activity vs hour',
+		name: 'Scatter: activity vs hour',
 		family: 'Plots',
 		description:
 			'A simple scatterplot of a noisy ~24 h rhythmic signal against hours since start (7 days, hourly).',
@@ -129,7 +129,7 @@ const DEMOS = [
 	},
 	{
 		id: 'cwt-period-change',
-		name: 'Wavelet — a period that changes',
+		name: 'Wavelet: a period that changes',
 		family: 'Plots',
 		description:
 			'A scalogram of a signal that runs at 24 h for the first half of the record and 12 h for the second. A periodogram would show both peaks and say nothing about when each applied; the wavelet transform localises them in time. The dashed cone of influence marks the edges, where the transform runs out of data and the values are artefacts.',
@@ -149,7 +149,7 @@ const DEMOS = [
 	},
 	{
 		id: 'histogram-normal',
-		name: 'Histogram — distribution',
+		name: 'Histogram: distribution',
 		family: 'Plots',
 		description: 'Histogram of 500 samples drawn from a normal distribution (mean 100, sd 15).',
 		build(mk) {
@@ -166,7 +166,7 @@ const DEMOS = [
 	},
 	{
 		id: 'boxplot-by-day',
-		name: 'Boxplot — activity by day',
+		name: 'Boxplot: activity by day',
 		family: 'Plots',
 		description:
 			'Boxplot of daily activity values grouped by day index (7 days × 24 hourly points).',
@@ -187,10 +187,10 @@ const DEMOS = [
 	},
 	{
 		id: 'violinplot-groups',
-		name: 'Violin plot — shapes a box hides',
+		name: 'Violin plot: shapes a box hides',
 		family: 'Plots',
 		description:
-			'A violin plot (boxplot with the violin overlay and jittered data points turned on). Three groups: the two outer ones have near-identical boxes — same median, similar spread — but the violin reveals one is unimodal and the other bimodal, a difference the box alone cannot show; the middle group is right-skewed. The violin is a kernel-density outline mirrored around each box; hide the box for a pure violin plot.',
+			'A violin plot (boxplot with the violin overlay and jittered data points turned on). Three groups: the two outer ones have near-identical boxes (same median, similar spread), but the violin reveals one is unimodal and the other bimodal, a difference the box alone cannot show; the middle group is right-skewed. The violin is a kernel-density outline mirrored around each box; hide the box for a pure violin plot.',
 		// The violin-specific note, not the generic boxplot one.
 		noteId: 'boxplot-violin',
 		build(mk) {
@@ -228,7 +228,7 @@ const DEMOS = [
 	},
 	{
 		id: 'meansem-by-day',
-		name: 'Mean ± SEM — activity by day',
+		name: 'Mean ± SEM: activity by day',
 		family: 'Plots',
 		description: 'Per-day mean activity with standard-error whiskers (7 days × 24 hourly points).',
 		build(mk) {
@@ -253,10 +253,10 @@ const DEMOS = [
 	},
 	{
 		id: 'circular-phase-two-groups',
-		name: 'Circular phase plot — two groups',
+		name: 'Circular phase plot: two groups',
 		family: 'Plots',
 		description:
-			'Two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its Rayleigh mean-resultant vector and a significant Watson-Williams test comparing mean directions — plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector.',
+			'Two untimed phase groups on a 24 h clock (raw onset phases near 7 h and 19 h), each with its Rayleigh mean-resultant vector and a significant Watson-Williams test comparing mean directions, plus a third, timed activity series wired as a value-radius clock (point radius = value) with its amplitude-weighted acrophase vector.',
 		build(mk) {
 			const rng = mulberry32(8);
 			// Untimed groups: raw onset phases, tightly clustered ~12 h apart → significant WW.
@@ -284,7 +284,7 @@ const DEMOS = [
 	},
 	{
 		id: 'actogram-rhythm',
-		name: 'Actogram — multi-day activity',
+		name: 'Actogram: multi-day activity',
 		family: 'Plots',
 		description: 'Actogram of a noisy ~24 h rhythm over 7 days (hourly samples).',
 		build(mk) {
@@ -300,7 +300,7 @@ const DEMOS = [
 	},
 	{
 		id: 'periodogram-rhythm',
-		name: 'Periodogram — period detection',
+		name: 'Periodogram: period detection',
 		family: 'Plots',
 		description: 'Lomb–Scargle periodogram of a ~24 h rhythm (7 days, hourly).',
 		build(mk) {
@@ -316,7 +316,7 @@ const DEMOS = [
 	},
 	{
 		id: 'correlogram-rhythm',
-		name: 'Correlogram — autocorrelation',
+		name: 'Correlogram: autocorrelation',
 		family: 'Plots',
 		description: 'Autocorrelogram of a ~24 h rhythm (7 days, hourly).',
 		build(mk) {
@@ -332,7 +332,7 @@ const DEMOS = [
 	},
 	{
 		id: 'fft-rhythm',
-		name: 'FFT — frequency spectrum',
+		name: 'FFT: frequency spectrum',
 		family: 'Plots',
 		description: 'Fourier spectrum of a 12 h + 24 h composite rhythm (8 days, hourly).',
 		build(mk) {
@@ -355,7 +355,7 @@ const DEMOS = [
 		name: 'Correlation heatmap',
 		family: 'Plots',
 		description:
-			'Self-contained correlation matrix of four variables — wire the raw columns and it computes and colours the pairwise correlations itself.',
+			'Self-contained correlation matrix of four variables. Wire the raw columns and it computes and colours the pairwise correlations itself.',
 		build(mk) {
 			// Four correlated series (24 hourly points) so the matrix shows a range of r.
 			const rng = mulberry32(11);
@@ -421,7 +421,7 @@ const DEMOS = [
 	},
 	{
 		id: 'table-columns',
-		name: 'Table — raw columns',
+		name: 'Table: raw columns',
 		family: 'Plots',
 		description: 'A tableplot listing an hour index alongside two derived signals.',
 		build(mk) {
@@ -448,7 +448,7 @@ const WORKFLOWS = [
 	{
 		id: 'rest-activity',
 		summary: 'Characterise a rest-activity record without assuming a sine shape.',
-		name: 'Workflow — actigraphy rest-activity profile',
+		name: 'Workflow: actigraphy rest-activity profile',
 		family: 'Workflows',
 		description:
 			'Characterise a rest-activity record without assuming a sine shape. Nonparametric RA reports IS / IV / RA / M10 / L5 per subject (one value per y-input, so each port is that group’s distribution), a Cosinor adds the model-based amplitude and acrophase, an actogram shows a consolidated vs a fragmented subject, and Compare groups tests whether rhythm robustness (RA) differs.',
@@ -505,7 +505,7 @@ const WORKFLOWS = [
 					},
 					null
 				);
-				tp.displayName = `Nonparametric RA — ${name}`;
+				tp.displayName = `Nonparametric RA: ${name}`;
 				pushObj(tp);
 				await tp.doProcess();
 				const nameCol = (id, n) => {
@@ -535,7 +535,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			cos.displayName = 'Cosinor — amplitude + acrophase';
+			cos.displayName = 'Cosinor: amplitude + acrophase';
 			pushObj(cos);
 			await cos.doProcess();
 
@@ -555,7 +555,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			gc.displayName = 'Compare groups — RA';
+			gc.displayName = 'Compare groups: RA';
 			pushObj(gc);
 			await gc.doProcess();
 
@@ -581,7 +581,7 @@ const WORKFLOWS = [
 	{
 		id: 'free-running',
 		summary: 'Measure the endogenous period (tau) of a rhythm with no zeitgeber.',
-		name: 'Workflow — free-running period',
+		name: 'Workflow: free-running period',
 		family: 'Workflows',
 		description:
 			'Measure the endogenous period (tau) of a rhythm running without a zeitgeber. A double-plotted actogram shows the rhythm drifting against the 24 h grid, a Lomb-Scargle periodogram estimates tau, and the Rhythmicity Analysis node reports the peak period as a wireable number. Includes the literature caveat to avoid the chi-square periodogram.',
@@ -638,7 +638,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			ra.displayName = 'Rhythmicity Analysis — periodogram';
+			ra.displayName = 'Rhythmicity Analysis: periodogram';
 			pushObj(ra);
 			await ra.doProcess();
 			const nameCol = (id, n) => {
@@ -654,7 +654,7 @@ const WORKFLOWS = [
 	{
 		id: 'phase-groups',
 		summary: 'Test whether two groups peak at different times of day.',
-		name: 'Workflow — group phase comparison',
+		name: 'Workflow: group phase comparison',
 		family: 'Workflows',
 		description:
 			'Do two groups peak at different times of day? Per-subject phase is extracted by Cosinor (its acrophase port emits one peak time per subject, i.e. the group’s phase distribution), shown on a 24 h circular plot with each group’s Rayleigh vector, and tested with Rayleigh (is each group clustered?) plus Watson-Williams (do the groups differ in mean phase?).',
@@ -713,8 +713,8 @@ const WORKFLOWS = [
 				await tp.doProcess();
 				return tp;
 			};
-			const cosA = await fitGroup('Cosinor — group A', groupAIds);
-			const cosB = await fitGroup('Cosinor — group B', groupBIds);
+			const cosA = await fitGroup('Cosinor: group A', groupAIds);
+			const cosB = await fitGroup('Cosinor: group B', groupBIds);
 			const acroA = cosA.args.out.acrophase;
 			const acroB = cosB.args.out.acrophase;
 			const nameCol = (id, n) => {
@@ -778,10 +778,10 @@ const WORKFLOWS = [
 	{
 		id: 'stats-eda',
 		summary: 'Get to know a new dataset before running any test.',
-		name: 'Workflow — exploratory data analysis (first look)',
+		name: 'Workflow: exploratory data analysis (first look)',
 		family: 'Workflows',
 		description:
-			'The universal first pass over a new dataset. Describe Data reports centre / spread / skew, a normality test screens each variable, and a correlation matrix maps the relationships — visualised as faceted histograms, a correlation heatmap and a pairs plot. Read the distributions and the relationship map BEFORE running any inferential test.',
+			'The universal first pass over a new dataset. Describe Data reports centre / spread / skew, a normality test screens each variable, and a correlation matrix maps the relationships, visualised as faceted histograms, a correlation heatmap and a pairs plot. Read the distributions and the relationship map BEFORE running any inferential test.',
 		showcases: ['DescribeData', 'NormalityTest', 'Correlation', 'histogram'],
 		async build() {
 			const rng = mulberry32(101);
@@ -881,7 +881,7 @@ const WORKFLOWS = [
 	{
 		id: 'stats-two-group',
 		summary: 'Is group A different from group B?',
-		name: 'Workflow — compare two groups',
+		name: 'Workflow: compare two groups',
 		family: 'Workflows',
 		description:
 			'The classic two-group question: is the treatment different from control? Compare groups auto-selects the test (Welch t when both groups look normal, Mann-Whitney when they do not) and surfaces the assumption check, and a boxplot with a significance bar shows the difference. Read: which test fired and why, the p-value, and the direction/size of the shift.',
@@ -932,7 +932,7 @@ const WORKFLOWS = [
 	{
 		id: 'stats-anova',
 		summary: 'Do three or more groups differ, and which pairs?',
-		name: 'Workflow — compare several groups (ANOVA)',
+		name: 'Workflow: compare several groups (ANOVA)',
 		family: 'Workflows',
 		description:
 			'Three or more conditions: do they differ, and which pairs? Compare groups auto-runs a one-way ANOVA (or Kruskal-Wallis if non-normal) with Tukey/Holm post-hoc, a mean ± SEM plot shows the group means, and a boxplot with significance bars shows the pairwise differences. Read the omnibus test FIRST; only interpret the pairwise grid if it is significant.',
@@ -987,10 +987,10 @@ const WORKFLOWS = [
 	{
 		id: 'stats-correlation',
 		summary: 'Which variables move together, and how?',
-		name: 'Workflow — correlation & relationships',
+		name: 'Workflow: correlation & relationships',
 		family: 'Workflows',
 		description:
-			'What moves with what? Correlation computes every pairwise coefficient (auto-choosing Pearson vs Spearman by normality), shown as a heatmap and a pairs plot (scatter + linear fit above the diagonal, distributions on it). Read strength and direction, linear vs monotonic, and watch for multicollinearity — several strongly inter-correlated predictors.',
+			'What moves with what? Correlation computes every pairwise coefficient (auto-choosing Pearson vs Spearman by normality), shown as a heatmap and a pairs plot (scatter + linear fit above the diagonal, distributions on it). Read strength and direction, linear vs monotonic, and watch for multicollinearity (several strongly inter-correlated predictors).',
 		showcases: ['Correlation', 'correlationheatmap', 'pairsplot'],
 		async build() {
 			const rng = mulberry32(104);
@@ -1052,10 +1052,10 @@ const WORKFLOWS = [
 	{
 		id: 'stats-regression',
 		summary: 'Predict Y from X, then check the model is honest.',
-		name: 'Workflow — linear regression + residual diagnostics',
+		name: 'Workflow: linear regression + residual diagnostics',
 		family: 'Workflows',
 		description:
-			'Predict Y from X, then check the model is honest. Fit trend fits the line (slope, intercept, R²), the fitted line is overlaid on the data, and the residuals are plotted against X and screened for normality. The lesson: R² alone is not enough — structure in the residuals (a funnel or a curve) means the model is mis-specified even when R² looks high.',
+			'Predict Y from X, then check the model is honest. Fit trend fits the line (slope, intercept, R²), the fitted line is overlaid on the data, and the residuals are plotted against X and screened for normality. The lesson: R² alone is not enough; structure in the residuals (a funnel or a curve) means the model is mis-specified even when R² looks high.',
 		showcases: ['TrendFit', 'NormalityTest', 'scatterplot'],
 		async build() {
 			const rng = mulberry32(105);
@@ -1138,10 +1138,10 @@ const WORKFLOWS = [
 	{
 		id: 'stats-logistic',
 		summary: 'Model a yes/no outcome and read the odds ratios.',
-		name: 'Workflow — logistic regression (binary outcome)',
+		name: 'Workflow: logistic regression (binary outcome)',
 		family: 'Workflows',
 		description:
-			'Model a yes/no outcome from predictors. Logistic regression reports each predictor’s odds ratio with a 95% CI and a Wald p-value, plus McFadden pseudo-R² and a likelihood-ratio test. The fit plot shows the predicted probability against the linear predictor (the S-curve, for any number of predictors) with the observed outcomes overlaid. Watch for a non-convergence warning — it usually means separation.',
+			'Model a yes/no outcome from predictors. Logistic regression reports each predictor’s odds ratio with a 95% CI and a Wald p-value, plus McFadden pseudo-R² and a likelihood-ratio test. The fit plot shows the predicted probability against the linear predictor (the S-curve, for any number of predictors) with the observed outcomes overlaid. Watch for a non-convergence warning; it usually means separation.',
 		showcases: ['LogisticRegression', 'scatterplot'],
 		async build() {
 			const RAW = '#234154';
@@ -1216,7 +1216,7 @@ const WORKFLOWS = [
 	{
 		id: 'stats-chi-square',
 		summary: 'Are two categorical variables related?',
-		name: 'Workflow — categorical association (chi-square)',
+		name: 'Workflow: categorical association (chi-square)',
 		family: 'Workflows',
 		description:
 			'Are two categorical variables related? The chi-squared test of independence cross-tabulates them into a contingency table and tests whether the row and column variables are associated (Yates’ correction on 2×2 tables). Read the statistic / df / p and the table; the node warns when any expected count falls below 5, where the χ² approximation breaks down and Fisher’s exact test is preferable.',
@@ -1265,10 +1265,10 @@ const WORKFLOWS = [
 	{
 		id: 'stats-fisher-exact',
 		summary: 'A table too small for chi-squared.',
-		name: "Workflow — small samples (Fisher's exact test)",
+		name: "Workflow: small samples (Fisher's exact test)",
 		family: 'Workflows',
 		description:
-			"The same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted. Both tests are run on the SAME 18 animals so you can compare them directly. The chi-squared node reports its own warning that expected counts fall below 5, which is the conventional line at which its large-sample approximation stops being reliable; Fisher's exact test makes no such approximation, conditioning on the margins and summing the exact probability of every table at least as extreme as the one observed. Read the two p-values side by side: they answer the same question, and the exact one is the one to quote here. Note that Fisher's mode reports no statistic and no degrees of freedom — an exact test enumerates the distribution instead of referring a statistic to one — and gives the odds ratio as its effect size instead.",
+			"The same question as the chi-squared workflow (are two categorical variables related?), but on a table small enough that chi-squared should not be trusted. Both tests are run on the SAME 18 animals so you can compare them directly. The chi-squared node reports its own warning that expected counts fall below 5, which is the conventional line at which its large-sample approximation stops being reliable; Fisher's exact test makes no such approximation, conditioning on the margins and summing the exact probability of every table at least as extreme as the one observed. Read the two p-values side by side: they answer the same question, and the exact one is the one to quote here. Note that Fisher's mode reports no statistic and no degrees of freedom (an exact test enumerates the distribution instead of referring a statistic to one), and gives the odds ratio as its effect size instead.",
 		showcases: ['ChiSquared'],
 		async build() {
 			// Hand-built rather than sampled, so the table is EXACTLY [[8,1],[2,7]]:
@@ -1335,10 +1335,10 @@ const WORKFLOWS = [
 	{
 		id: 'stats-two-groups-counts',
 		summary: 'Two independent groups, different sizes.',
-		name: 'Workflow — comparing two independent groups (counts)',
+		name: 'Workflow: comparing two independent groups (counts)',
 		family: 'Workflows',
 		description:
-			'Two groups of DIFFERENT sizes, each with its own outcomes: 7 of 10 treated animals became arrhythmic against 2 of 25 controls. This is the layout categorical data usually arrives in, and it is not the paired one — there is no meaningful pairing between the third treated animal and the third control, and the columns are 10 and 25 rows long. The Chi-squared node\'s Input format is set to "Two independent groups", which tabulates each column separately and builds the 2x2 table [[7,3],[2,23]]. Read the p-value with Cramer\'s V beside it: the association is strong (V = 0.64), not merely detectable. A second node runs Fisher\'s exact test on the same data, which is the right choice here because two of the four expected counts fall below 5. Set Input format to "Paired" to see why it matters — the paired reading pairs rows arbitrarily, discards 25 of the 35 observations and reports p = 0.86, hiding a real effect entirely.',
+			'Two groups of DIFFERENT sizes, each with its own outcomes: 7 of 10 treated animals became arrhythmic against 2 of 25 controls. This is the layout categorical data usually arrives in, and it is not the paired one. There is no meaningful pairing between the third treated animal and the third control, and the columns are 10 and 25 rows long. The Chi-squared node\'s Input format is set to "Two independent groups", which tabulates each column separately and builds the 2x2 table [[7,3],[2,23]]. Read the p-value with Cramer\'s V beside it: the association is strong (V = 0.64), not merely detectable. A second node runs Fisher\'s exact test on the same data, which is the right choice here because two of the four expected counts fall below 5. Set Input format to "Paired" to see why it matters: the paired reading pairs rows arbitrarily, discards 25 of the 35 observations and reports p = 0.86, hiding a real effect entirely.',
 		showcases: ['ChiSquared'],
 		async build() {
 			// Deliberately unequal columns — that is the whole point of the layout.
@@ -1393,13 +1393,13 @@ const WORKFLOWS = [
 	{
 		id: 'stats-anscombe',
 		summary: 'Four datasets, identical statistics, four different stories.',
-		name: 'Workflow — Anscombe’s quartet (always plot your data)',
+		name: 'Workflow: Anscombe’s quartet (always plot your data)',
 		// Grouped with the interpretation demos, not the statistics ones: the statistics here are
 		// beside the point, and the whole lesson is about how the output gets misread.
 		group: 'Reading the output',
 		family: 'Workflows',
 		description:
-			'Four small datasets constructed by Anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, R² = 0.67). Describe Data confirms the summaries are identical and Fit trend confirms the regression line is the same for every set — yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. The lesson is the oldest one in data analysis: look at the picture before you trust the number. The same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis.',
+			'Four small datasets constructed by Anscombe (1973) that share, to two decimals, the same mean and standard deviation of x and y, the same correlation (r = 0.82), and the same least-squares line (y = 3.00 + 0.50x, R² = 0.67). Describe Data confirms the summaries are identical and Fit trend confirms the regression line is the same for every set. Yet the four scatterplots could hardly be more different: a genuine linear relationship, a smooth curve, a perfect line dragged off by a single outlier, and a vertical stack rescued only by one high-leverage point. The lesson is the oldest one in data analysis: look at the picture before you trust the number. The same summary statistics are consistent with wildly different data, so a plot is not decoration, it is part of the analysis.',
 		showcases: ['DescribeData', 'TrendFit', 'scatterplot'],
 		async build() {
 			const RAW = RAW_COLOUR;
@@ -1517,7 +1517,7 @@ const WORKFLOWS = [
 			};
 
 			panel(
-				'Set I — a real linear relationship',
+				'Set I: a real linear relationship',
 				[
 					{ x: x123Id, y: y1Id, label: 'Set I', kind: 'points', colour: RAW },
 					{ x: tx123, y: tf123.args.out[`trendy_${y1Id}`], label: 'fit', kind: 'line', colour: FIT }
@@ -1526,7 +1526,7 @@ const WORKFLOWS = [
 				0
 			);
 			panel(
-				'Set II — actually a curve',
+				'Set II: actually a curve',
 				[
 					{ x: x123Id, y: y2Id, label: 'Set II', kind: 'points', colour: RAW },
 					{ x: tx123, y: tf123.args.out[`trendy_${y2Id}`], label: 'fit', kind: 'line', colour: FIT }
@@ -1535,7 +1535,7 @@ const WORKFLOWS = [
 				0
 			);
 			panel(
-				'Set III — a line, plus one outlier',
+				'Set III: a line, plus one outlier',
 				[
 					{ x: x123Id, y: y3Id, label: 'Set III', kind: 'points', colour: RAW },
 					{ x: tx123, y: tf123.args.out[`trendy_${y3Id}`], label: 'fit', kind: 'line', colour: FIT }
@@ -1544,7 +1544,7 @@ const WORKFLOWS = [
 				1
 			);
 			panel(
-				'Set IV — one high-leverage point',
+				'Set IV: one high-leverage point',
 				[
 					{ x: x4Id, y: y4Id, label: 'Set IV', kind: 'points', colour: RAW },
 					{ x: tx4, y: tf4.args.out[`trendy_${y4Id}`], label: 'fit', kind: 'line', colour: FIT }
@@ -1574,12 +1574,12 @@ const WORKFLOWS = [
 	{
 		id: 'stats-simpson',
 		summary: 'A trend that reverses direction when you pool the groups.',
-		name: 'Workflow — Simpson’s paradox (the trend that flips)',
+		name: 'Workflow: Simpson’s paradox (the trend that flips)',
 		// See stats-anscombe: an interpretation demo, not a statistics one.
 		group: 'Reading the output',
 		family: 'Workflows',
 		description:
-			'Within every group the relationship is positive; pool the groups and it turns negative. Here three hospital wards each show activity rising with dose (a clear within-ward positive trend), but the wards are offset — the ward that runs at the highest dose also has the lowest baseline — so the pooled cloud slopes the other way. The Correlation node run on the pooled data reports a negative coefficient, while the coloured per-ward trend lines all climb. The reversal is real, not a mistake: it means a lurking grouping variable is driving the aggregate, and which answer is correct depends on the question. Pool only when the groups are genuinely exchangeable; otherwise the honest analysis is per-group. This is why "controlling for" a variable can flip a headline result.',
+			'Within every group the relationship is positive; pool the groups and it turns negative. Here three hospital wards each show activity rising with dose (a clear within-ward positive trend), but the wards are offset (the ward that runs at the highest dose also has the lowest baseline), so the pooled cloud slopes the other way. The Correlation node run on the pooled data reports a negative coefficient, while the coloured per-ward trend lines all climb. The reversal is real, not a mistake: it means a lurking grouping variable is driving the aggregate, and which answer is correct depends on the question. Pool only when the groups are genuinely exchangeable; otherwise the honest analysis is per-group. This is why "controlling for" a variable can flip a headline result.',
 		showcases: ['Correlation', 'scatterplot'],
 		async build() {
 			const rng = mulberry32(202);
@@ -1688,7 +1688,7 @@ const WORKFLOWS = [
 	{
 		id: 'non24-blind',
 		summary: 'A human rhythm free-running through the day over weeks.',
-		name: 'Workflow — non-24 sleep-wake (blind participant)',
+		name: 'Workflow: non-24 sleep-wake (blind participant)',
 		family: 'Workflows',
 		description:
 			'The human counterpart to the free-running mouse. With no light reaching the clock, the rhythm runs at its own tau (here 24.5 h) and drifts steadily later, so the sleep window migrates all the way around the clock over about seven weeks. A double-plotted actogram shows the drift and a Lomb-Scargle periodogram recovers tau. The point is that free-running is not a rodent-only phenomenon: this is a recognised clinical presentation.',
@@ -1738,7 +1738,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			ra.displayName = 'Rhythmicity Analysis — tau';
+			ra.displayName = 'Rhythmicity Analysis: tau';
 			pushObj(ra);
 			await ra.doProcess();
 			tablePlot('Estimated tau', [ra.args.out.stat_peak_period, ra.args.out.stat_peak_power]);
@@ -1748,7 +1748,7 @@ const WORKFLOWS = [
 		id: 'arrhythmic',
 		group: 'Reading the output',
 		summary: 'The negative control: what no rhythm actually looks like.',
-		name: 'Workflow — arrhythmic record (negative control)',
+		name: 'Workflow: arrhythmic record (negative control)',
 		family: 'Workflows',
 		description:
 			'The single most useful thing to see before over-interpreting your own data. An intact record and an arrhythmic one (as after SCN ablation) are analysed side by side with identical settings. The intact periodogram has an unmistakable peak at 24 h; the arrhythmic one still reports a "peak period", because a periodogram always returns its largest value, but the power is a fraction of the intact case and the actogram shows no band at all. Read the power and the picture, not just the number.',
@@ -1770,14 +1770,14 @@ const WORKFLOWS = [
 			const intactId = mkCol('number', intact, 'intact');
 			const lesionId = mkCol('number', arrhythmic, 'arrhythmic');
 
-			const acto = new Plot({ name: 'Actogram — intact vs arrhythmic', type: 'actogram' });
+			const acto = new Plot({ name: 'Actogram: intact vs arrhythmic', type: 'actogram' });
 			acto.plot.addData({ time: { refId: hoursId }, values: { refId: intactId } });
 			acto.plot.addData({ time: { refId: hoursId }, values: { refId: lesionId } });
 			acto.plot.periodHrs = 24;
 			acto.plot.doublePlot = 2;
 			pushObj(acto);
 
-			const pg = new Plot({ name: 'Periodogram — both records', type: 'periodogram' });
+			const pg = new Plot({ name: 'Periodogram: both records', type: 'periodogram' });
 			pg.plot.addData({ time: { refId: hoursId }, values: { refId: intactId } });
 			pg.plot.addData({ time: { refId: hoursId }, values: { refId: lesionId } });
 			pg.plot.periodlimsIN = [18, 30];
@@ -1803,7 +1803,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			ra.displayName = 'Rhythmicity Analysis — peak vs power';
+			ra.displayName = 'Rhythmicity Analysis: peak vs power';
 			pushObj(ra);
 			await ra.doProcess();
 			tablePlot('Peak period and power', [
@@ -1815,7 +1815,7 @@ const WORKFLOWS = [
 	{
 		id: 'circatidal',
 		summary: 'A 12.4 h tidal rhythm, not a circadian one.',
-		name: 'Workflow — circatidal rhythm (12.4 h)',
+		name: 'Workflow: circatidal rhythm (12.4 h)',
 		family: 'Workflows',
 		description:
 			'Rhythm analysis is not circadian-only. A coastal invertebrate timed to the tides runs at 12.4 h, with a weaker 24.8 h component as successive tides differ. The periodogram search window is the thing to notice: the default 20-28 h window would find the 24.8 h component and miss the dominant tidal peak entirely. Widen the window and both appear.',
@@ -1843,7 +1843,7 @@ const WORKFLOWS = [
 			acto.plot.doublePlot = 2;
 			pushObj(acto);
 
-			const pg = new Plot({ name: 'Periodogram — 6 to 30 h', type: 'periodogram' });
+			const pg = new Plot({ name: 'Periodogram: 6 to 30 h', type: 'periodogram' });
 			pg.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
 			pg.plot.periodlimsIN = [6, 30];
 			pg.plot.periodSteps = 0.02;
@@ -1868,7 +1868,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			ra.displayName = 'Rhythmicity Analysis — tidal peak';
+			ra.displayName = 'Rhythmicity Analysis: tidal peak';
 			pushObj(ra);
 			await ra.doProcess();
 			tablePlot('Dominant period', [ra.args.out.stat_peak_period, ra.args.out.stat_peak_power]);
@@ -1877,7 +1877,7 @@ const WORKFLOWS = [
 	{
 		id: 'reentrainment',
 		summary: 'The slow diagonal crawl back into alignment after a time-zone shift.',
-		name: 'Workflow — re-entrainment after a time-zone shift',
+		name: 'Workflow: re-entrainment after a time-zone shift',
 		family: 'Workflows',
 		description:
 			'The contrast with an abrupt shift is the lesson. The zeitgeber moves 8 h in one step, but the rhythm does not: it runs at a transient period near 25.3 h for about a week, crawling diagonally across the actogram, before locking on at the new phase. Compare this with a schedule change where the record simply jumps, and the transients are what tell you a real clock is involved rather than direct driving.',
@@ -1910,7 +1910,7 @@ const WORKFLOWS = [
 			const hoursId = mkCol('number', hours, 'hour');
 			const actId = mkCol('number', activity, 'activity');
 
-			const acto = new Plot({ name: 'Actogram — transients visible', type: 'actogram' });
+			const acto = new Plot({ name: 'Actogram: transients visible', type: 'actogram' });
 			acto.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
 			acto.plot.periodHrs = 24;
 			acto.plot.doublePlot = 2;
@@ -1926,10 +1926,10 @@ const WORKFLOWS = [
 	{
 		id: 'transients',
 		summary: 'An immediate delay beside an advance that crawls through transients.',
-		name: 'Workflow — transients (phase advance vs delay)',
+		name: 'Workflow: transients (phase advance vs delay)',
 		family: 'Workflows',
 		description:
-			'Two free-running records, each given a single phase-shifting stimulus on the same day, showing the two ways a rhythm can take up a new phase. Both free-run at 24.3 h throughout, so the activity band drifts slowly RIGHTWARD (later) even before anything is done to it — the diagonal that marks a clock running on its own period rather than being held by a zeitgeber. The DELAY is immediate: the band steps right in a single cycle and simply resumes its drift from the new phase, which is what strong (Type 0) resetting looks like. The ADVANCE goes through TRANSIENTS: intermediate cycles between the stimulus and the re-attainment of a steady-state phase, crawling LEFTWARD over about eight cycles. Those cycles do not move at a constant rate — each closes a fraction of whatever phase difference is left, so the increment is largest right after the stimulus and shrinks as the rhythm nears its new phase, giving a curved, decelerating approach rather than a straight ramp. Transients being commoner after advances than delays is the classical generalisation. Only the phase reached AFTER they subside is the steady-state shift, which is why a PRC must be scored from post-transient cycles.',
+			'Two free-running records, each given a single phase-shifting stimulus on the same day, showing the two ways a rhythm can take up a new phase. Both free-run at 24.3 h throughout, so the activity band drifts slowly RIGHTWARD (later) even before anything is done to it: the diagonal that marks a clock running on its own period rather than being held by a zeitgeber. The DELAY is immediate: the band steps right in a single cycle and simply resumes its drift from the new phase, which is what strong (Type 0) resetting looks like. The ADVANCE goes through TRANSIENTS: intermediate cycles between the stimulus and the re-attainment of a steady-state phase, crawling LEFTWARD over about eight cycles. Those cycles do not move at a constant rate. Each closes a fraction of whatever phase difference is left, so the increment is largest right after the stimulus and shrinks as the rhythm nears its new phase, giving a curved, decelerating approach rather than a straight ramp. Transients being commoner after advances than delays is the classical generalisation. Only the phase reached AFTER they subside is the steady-state shift, which is why a PRC must be scored from post-transient cycles.',
 		showcases: ['actogram', 'scatterplot'],
 		async build() {
 			const STIM = 8; // day the phase-shifting stimulus is given
@@ -1979,7 +1979,7 @@ const WORKFLOWS = [
 			const advId = mkCol('number', record(onsetAdvance, 71), 'activity_advance');
 
 			const actoD = new Plot({
-				name: 'Delay 8 h — immediate, no transients',
+				name: 'Delay 8 h: immediate, no transients',
 				type: 'actogram'
 			});
 			actoD.plot.addData({ time: { refId: hoursId }, values: { refId: delId } });
@@ -1988,7 +1988,7 @@ const WORKFLOWS = [
 			pushObj(actoD);
 
 			const actoA = new Plot({
-				name: 'Advance 8 h — about 8 transient cycles',
+				name: 'Advance 8 h: about 8 transient cycles',
 				type: 'actogram'
 			});
 			actoA.plot.addData({ time: { refId: hoursId }, values: { refId: advId } });
@@ -2008,11 +2008,11 @@ const WORKFLOWS = [
 			const rAdvId = mkCol('number', days.map(onsetAdvance), 'onset_advance');
 
 			scatterPlot(
-				'Onset vs day — immediate delay versus advance transients',
+				'Onset vs day: immediate delay versus advance transients',
 				[
 					{ x: dayId, y: refId, label: 'Unperturbed free-run', kind: 'line', colour: REF },
-					{ x: dayId, y: rDelId, label: 'Delay — immediate', kind: 'line', colour: RAW_COLOUR },
-					{ x: dayId, y: rAdvId, label: 'Advance — transients', kind: 'line', colour: FIT_COLOUR }
+					{ x: dayId, y: rDelId, label: 'Delay: immediate', kind: 'line', colour: RAW_COLOUR },
+					{ x: dayId, y: rAdvId, label: 'Advance: transients', kind: 'line', colour: FIT_COLOUR }
 				],
 				{ x: 'Day', y: 'Activity onset (h after midnight)' }
 			);
@@ -2021,7 +2021,7 @@ const WORKFLOWS = [
 	{
 		id: 'split-rhythm',
 		summary: 'Constant light splits the activity band into two components.',
-		name: 'Workflow — split rhythm under constant light',
+		name: 'Workflow: split rhythm under constant light',
 		family: 'Workflows',
 		description:
 			'Under constant light the rhythm can bifurcate: two oscillator components decouple, run at slightly different periods, and re-stabilise roughly 12 h apart. Here the two components are supplied separately (24.8 h and 23.4 h) and their sum is what an actograph would record, so the split is emergent rather than drawn. The periodogram of the sum shows both components, which is the numeric signature of splitting.',
@@ -2045,20 +2045,20 @@ const WORKFLOWS = [
 			const bId = mkCol('number', compB, 'component B (23.4 h)');
 			const totalId = mkCol('number', total, 'recorded activity');
 
-			const acto = new Plot({ name: 'Actogram — the recorded sum', type: 'actogram' });
+			const acto = new Plot({ name: 'Actogram: the recorded sum', type: 'actogram' });
 			acto.plot.addData({ time: { refId: hoursId }, values: { refId: totalId } });
 			acto.plot.periodHrs = 24;
 			acto.plot.doublePlot = 2;
 			pushObj(acto);
 
-			const parts = new Plot({ name: 'Actogram — the two components', type: 'actogram' });
+			const parts = new Plot({ name: 'Actogram: the two components', type: 'actogram' });
 			parts.plot.addData({ time: { refId: hoursId }, values: { refId: aId } });
 			parts.plot.addData({ time: { refId: hoursId }, values: { refId: bId } });
 			parts.plot.periodHrs = 24;
 			parts.plot.doublePlot = 2;
 			pushObj(parts);
 
-			const pg = new Plot({ name: 'Periodogram — two peaks', type: 'periodogram' });
+			const pg = new Plot({ name: 'Periodogram: two peaks', type: 'periodogram' });
 			pg.plot.addData({ time: { refId: hoursId }, values: { refId: totalId } });
 			pg.plot.periodlimsIN = [21, 27];
 			pg.plot.periodSteps = 0.02;
@@ -2083,7 +2083,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			ra.displayName = 'Rhythmicity Analysis — dominant component';
+			ra.displayName = 'Rhythmicity Analysis: dominant component';
 			pushObj(ra);
 			await ra.doProcess();
 			tablePlot('Dominant component', [ra.args.out.stat_peak_period, ra.args.out.stat_peak_power]);
@@ -2093,7 +2093,7 @@ const WORKFLOWS = [
 		id: 'noise-peak',
 		group: 'Reading the output',
 		summary: 'Twelve pure-noise records, and the peak that means nothing.',
-		name: 'Workflow — the multiple-comparison trap',
+		name: 'Workflow: the multiple-comparison trap',
 		family: 'Workflows',
 		description:
 			'A periodogram always returns a largest value, whether or not there is a rhythm. Here twelve records of pure noise are analysed with identical settings. Every one reports a "peak period", scattered arbitrarily across the search window, and the most impressive of the twelve looks convincing on its own. Test enough series, or enough windows, and something will always look significant. Read this next to the arrhythmic negative control.',
@@ -2140,7 +2140,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			ra.displayName = 'Rhythmicity Analysis — 12 noise records';
+			ra.displayName = 'Rhythmicity Analysis: 12 noise records';
 			pushObj(ra);
 			await ra.doProcess();
 
@@ -2156,7 +2156,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			desc.displayName = 'Describe — spread of the "peaks"';
+			desc.displayName = 'Describe: spread of the "peaks"';
 			pushObj(desc);
 			await desc.doProcess();
 
@@ -2170,7 +2170,7 @@ const WORKFLOWS = [
 		id: 'aliasing',
 		group: 'Reading the output',
 		summary: 'Sample too slowly and a 24 h rhythm disappears.',
-		name: 'Workflow — sampling rate and aliasing',
+		name: 'Workflow: sampling rate and aliasing',
 		family: 'Workflows',
 		description:
 			'A data-literacy card. The same 24 h rhythm is recorded at 30-minute epochs and then re-sampled every 13 hours. Because 13 h is longer than half the period, the rhythm is below the Nyquist limit for that sampling rate and cannot be recovered: the periodogram of the slow record peaks in the wrong place entirely. Check your epoch length against the period you are hoping to find before you conclude anything is absent.',
@@ -2191,13 +2191,13 @@ const WORKFLOWS = [
 			const slowTimeId = mkCol('number', slow, 'hour (13 h epochs)');
 			const slowId = mkCol('number', slowVals, 'activity (13 h)');
 
-			const pgFine = new Plot({ name: 'Periodogram — 30 min epochs', type: 'periodogram' });
+			const pgFine = new Plot({ name: 'Periodogram: 30 min epochs', type: 'periodogram' });
 			pgFine.plot.addData({ time: { refId: fineTimeId }, values: { refId: fineId } });
 			pgFine.plot.periodlimsIN = [10, 40];
 			pgFine.plot.periodSteps = 0.05;
 			pushObj(pgFine);
 
-			const pgSlow = new Plot({ name: 'Periodogram — 13 h epochs', type: 'periodogram' });
+			const pgSlow = new Plot({ name: 'Periodogram: 13 h epochs', type: 'periodogram' });
 			pgSlow.plot.addData({ time: { refId: slowTimeId }, values: { refId: slowId } });
 			pgSlow.plot.periodlimsIN = [10, 40];
 			pgSlow.plot.periodSteps = 0.05;
@@ -2222,7 +2222,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			ra.displayName = 'Rhythmicity Analysis — the undersampled record';
+			ra.displayName = 'Rhythmicity Analysis: the undersampled record';
 			pushObj(ra);
 			await ra.doProcess();
 			tablePlot('What the slow record reports', [
@@ -2234,7 +2234,7 @@ const WORKFLOWS = [
 	{
 		id: 'crepuscular',
 		summary: 'Two activity peaks a day, and why one mean phase misleads.',
-		name: 'Workflow — crepuscular (bimodal) activity',
+		name: 'Workflow: crepuscular (bimodal) activity',
 		family: 'Workflows',
 		description:
 			'Many species are crepuscular, with peaks near dawn and dusk rather than one consolidated bout. The periodogram shows this directly: power at 12 h as well as 24 h. It also breaks a common assumption, because a single circular mean phase for a bimodal distribution lands between the two peaks, at the time of day the animal is least active. Look at the distribution before you summarise it with one number.',
@@ -2253,13 +2253,13 @@ const WORKFLOWS = [
 			const hoursId = mkCol('number', hours, 'hour');
 			const actId = mkCol('number', activity, 'activity');
 
-			const acto = new Plot({ name: 'Actogram — two bouts a day', type: 'actogram' });
+			const acto = new Plot({ name: 'Actogram: two bouts a day', type: 'actogram' });
 			acto.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
 			acto.plot.periodHrs = 24;
 			acto.plot.doublePlot = 2;
 			pushObj(acto);
 
-			const pg = new Plot({ name: 'Periodogram — 24 h and 12 h', type: 'periodogram' });
+			const pg = new Plot({ name: 'Periodogram: 24 h and 12 h', type: 'periodogram' });
 			pg.plot.addData({ time: { refId: hoursId }, values: { refId: actId } });
 			pg.plot.periodlimsIN = [6, 30];
 			pg.plot.periodSteps = 0.02;
@@ -2286,7 +2286,7 @@ const WORKFLOWS = [
 				},
 				null
 			);
-			rayleigh.displayName = 'Rayleigh — one mean phase for two peaks';
+			rayleigh.displayName = 'Rayleigh: one mean phase for two peaks';
 			pushObj(rayleigh);
 			await rayleigh.doProcess();
 			tablePlot('Circular summary', [
@@ -2299,7 +2299,7 @@ const WORKFLOWS = [
 	{
 		id: 'masking',
 		summary: 'Light driving behaviour directly, versus a clock that has shifted.',
-		name: 'Workflow — masking versus true entrainment',
+		name: 'Workflow: masking versus true entrainment',
 		family: 'Workflows',
 		description:
 			'Two records that look identical while the light is on, and diverge the moment it goes off. Both animals appear to follow a 6 h shift of the light cycle. Released into constant darkness, the entrained animal keeps the new phase because its clock actually moved, while the masked animal reverts immediately to its original phase because light was only suppressing its behaviour. This is why a shift under a light cycle is not by itself evidence of entrainment: the release is the test.',
@@ -2338,13 +2338,13 @@ const WORKFLOWS = [
 			const entrainedId = mkCol('number', make(true), 'entrained');
 			const maskedId = mkCol('number', make(false), 'masked');
 
-			const a1 = new Plot({ name: 'Actogram — truly entrained', type: 'actogram' });
+			const a1 = new Plot({ name: 'Actogram: truly entrained', type: 'actogram' });
 			a1.plot.addData({ time: { refId: hoursId }, values: { refId: entrainedId } });
 			a1.plot.periodHrs = 24;
 			a1.plot.doublePlot = 2;
 			pushObj(a1);
 
-			const a2 = new Plot({ name: 'Actogram — masked only', type: 'actogram' });
+			const a2 = new Plot({ name: 'Actogram: masked only', type: 'actogram' });
 			a2.plot.addData({ time: { refId: hoursId }, values: { refId: maskedId } });
 			a2.plot.periodHrs = 24;
 			a2.plot.doublePlot = 2;
@@ -2481,9 +2481,9 @@ function sourceColumnsCsv() {
 	return { csv: `${lines.join('\n')}\n`, cols: cols.length, rows };
 }
 
-/** "Workflow — compare two groups" → "Compare two groups". */
+/** "Workflow: compare two groups" → "Compare two groups". */
 function datasetName(name) {
-	const t = (name ?? '').replace(/^Workflow\s*—\s*/, '');
+	const t = (name ?? '').replace(/^Workflow\s*:\s*/, '');
 	return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
@@ -2592,7 +2592,7 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 					id: `dataset-workflow-${wf.id}`,
 					name: datasetName(wf.name),
 					family: 'Sources',
-					description: `${wf.summary} Data only — ${cols} columns × ${rows} rows, no analysis.`,
+					description: `${wf.summary} Data only: ${cols} columns × ${rows} rows, no analysis.`,
 					summary: wf.summary,
 					group:
 						wf.group ?? (wf.id.startsWith('stats-') ? 'General statistics' : 'Rhythm & circadian'),

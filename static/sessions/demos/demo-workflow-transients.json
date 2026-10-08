@@ -2225,7 +2225,7 @@
   "plots": [
     {
       "id": 47,
-      "name": "Delay 8 h — immediate, no transients",
+      "name": "Delay 8 h: immediate, no transients",
       "x": 60,
       "y": 60,
       "width": 520,
@@ -2276,6 +2276,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -2307,6 +2320,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -2316,7 +2330,7 @@
     },
     {
       "id": 48,
-      "name": "Advance 8 h — about 8 transient cycles",
+      "name": "Advance 8 h: about 8 transient cycles",
       "x": 630,
       "y": 60,
       "width": 520,
@@ -2367,6 +2381,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -2398,6 +2425,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -2407,7 +2435,7 @@
     },
     {
       "id": 49,
-      "name": "Onset vs day — immediate delay versus advance transients",
+      "name": "Onset vs day: immediate delay versus advance transients",
       "x": 60,
       "y": 580,
       "width": 520,
@@ -2541,7 +2569,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Delay — immediate",
+            "label": "Delay: immediate",
             "yAxis": "left",
             "line": {
               "colour": "#234154",
@@ -2580,7 +2608,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
-            "label": "Advance — transients",
+            "label": "Advance: transients",
             "yAxis": "left",
             "line": {
               "colour": "#BE796B",
@@ -2599,7 +2627,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -2610,7 +2638,7 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     }
   ],
@@ -2621,7 +2649,7 @@
   "notes": [
     {
       "id": "note_19",
-      "text": "WORKFLOW: transients after a phase shift. A transient is one of the intermediate cycles a rhythm passes through between a phase-shifting stimulus and the re-attainment of a steady-state phase. Start with the baseline: both records FREE-RUN at 24.3 h, so the activity band slides about 0.3 h later each cycle and drifts steadily RIGHTWARD across the actogram even before anything is done to it. That diagonal is the signature of a clock running on its own period rather than being held by a zeitgeber. Each record then gets one 8 h phase shift, and the point is that the same shift can be taken up in two quite different ways. The DELAY is IMMEDIATE: the band steps RIGHT in a single cycle and simply resumes its drift from the new phase, with no intermediate cycles at all — strong (Type 0) resetting, where the stimulus throws the pacemaker straight onto a new isochron and the overt rhythm follows at once. The ADVANCE instead crawls LEFTWARD through transients, and note their SHAPE: not a straight ramp but a decelerating curve. Each cycle closes a fraction of whatever phase difference is left, so the biggest increment comes right after the stimulus and the rhythm creeps the last hour or so over several cycles, settling after about eight. The reason is the discrete entrainment model: a light pulse shifts the clock by an amount set by WHERE it strikes the PRC, and equilibrium is reached only when that evoked shift equals FRP − T. Straight after a large shift the pulse lands where the PRC response is big; as the rhythm nears its new phase relationship the pulse slides toward the equilibrium phase and the increment it wins shrinks. That transients are commoner after ADVANCES than delays is the classical generalisation (Johnson, Elliott & Foster 2003), and the same asymmetry shows up in re-entrainment experiments where an advance leaves the animal in transients while a delay is taken up almost at once (Yamanaka et al. 2008) — and in why eastward travel costs more days than westward. On the onset plot, grey is where the rhythm would have gone had nothing been done to it, so the gap between grey and each coloured trace IS the phase shift: closed in one cycle by the delay, over several by the advance. Two consequences. First, only the phase reached after transients subside is the steady-state shift, so a PRC must be scored from post-transient cycles. Second, an immediate jump is not by itself proof that a clock was reset: masking can produce the same picture (see the masking card), and only release into constant conditions tells them apart. Classically (Pittendrigh) the pacemaker resets within about a cycle, so transients reflect a lag between the overt rhythm and the pacemaker in a hierarchical, multi-oscillator system; the modern counterpart is the SCN resetting quickly while peripheral clocks in liver, lung and muscle take several cycles (Yamazaki et al. 2000; Reddy et al. 2002).",
+      "text": "WORKFLOW: transients after a phase shift. A transient is one of the intermediate cycles a rhythm passes through between a phase-shifting stimulus and the re-attainment of a steady-state phase. Start with the baseline: both records FREE-RUN at 24.3 h, so the activity band slides about 0.3 h later each cycle and drifts steadily RIGHTWARD across the actogram even before anything is done to it. That diagonal is the signature of a clock running on its own period rather than being held by a zeitgeber. Each record then gets one 8 h phase shift, and the point is that the same shift can be taken up in two quite different ways. The DELAY is IMMEDIATE: the band steps RIGHT in a single cycle and simply resumes its drift from the new phase, with no intermediate cycles at all. This is strong (Type 0) resetting, where the stimulus throws the pacemaker straight onto a new isochron and the overt rhythm follows at once. The ADVANCE instead crawls LEFTWARD through transients, and note their SHAPE: not a straight ramp but a decelerating curve. Each cycle closes a fraction of whatever phase difference is left, so the biggest increment comes right after the stimulus and the rhythm creeps the last hour or so over several cycles, settling after about eight. The reason is the discrete entrainment model: a light pulse shifts the clock by an amount set by WHERE it strikes the PRC, and equilibrium is reached only when that evoked shift equals FRP − T. Straight after a large shift the pulse lands where the PRC response is big; as the rhythm nears its new phase relationship the pulse slides toward the equilibrium phase and the increment it wins shrinks. That transients are commoner after ADVANCES than delays is the classical generalisation (Johnson, Elliott & Foster 2003), and the same asymmetry shows up in re-entrainment experiments where an advance leaves the animal in transients while a delay is taken up almost at once (Yamanaka et al. 2008), and in why eastward travel costs more days than westward. On the onset plot, grey is where the rhythm would have gone had nothing been done to it, so the gap between grey and each coloured trace IS the phase shift: closed in one cycle by the delay, over several by the advance. Two consequences. First, only the phase reached after transients subside is the steady-state shift, so a PRC must be scored from post-transient cycles. Second, an immediate jump is not by itself proof that a clock was reset: masking can produce the same picture (see the masking card), and only release into constant conditions tells them apart. Classically (Pittendrigh) the pacemaker resets within about a cycle, so transients reflect a lag between the overt rhythm and the pacemaker in a hierarchical, multi-oscillator system; the modern counterpart is the SCN resetting quickly while peripheral clocks in liver, lung and muscle take several cycles (Yamazaki et al. 2000; Reddy et al. 2002).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -2711,6 +2739,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -2754,8 +2784,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

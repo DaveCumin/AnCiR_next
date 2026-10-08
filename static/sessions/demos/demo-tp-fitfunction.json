@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "664": [
+    "675": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "665": [
+    "676": [
       12.642866859481796,
       18.907413440058953,
       8.02083029948017,
@@ -104,7 +104,7 @@
       23.83732580196522,
       -2.4027680620561576
     ],
-    "666": [
+    "677": [
       0,
       1,
       2,
@@ -156,28 +156,34 @@
       48,
       49
     ],
-    "667": [
+    "678": [
       0.9421144462997514
     ],
-    "668": [
+    "679": [
       7.373734291701205
     ],
-    "669": [
+    "680": [
       null
     ],
-    "670": [
+    "681": [
       24
     ],
-    "671": [
+    "682": [
       49.14987381245017
     ],
-    "672": [
+    "683": [
       40.09378243532288
     ],
-    "673": [
+    "684": [
       12.168012298528875
     ],
-    "674": [
+    "685": [
+      40.09378243532288
+    ],
+    "686": [
+      12.168012298528875
+    ],
+    "687": [
       9.094870359876616,
       10.003419446394657,
       13.579734705384766,
@@ -232,20 +238,20 @@
   },
   "data": [
     {
-      "id": 664,
+      "id": 675,
       "name": "x",
-      "data": 664,
+      "data": 675,
       "type": "number",
-      "tableProcessGUId": "65f145f3-ff90-48f8-93df-ee078633f353",
+      "tableProcessGUId": "8d33d62a-e2d2-4656-847e-532f05316a15",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 665,
+      "id": 676,
       "name": "y",
-      "data": 665,
+      "data": 676,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -254,99 +260,121 @@
       "processes": []
     },
     {
-      "id": 666,
-      "name": "fitx_60",
-      "data": 666,
+      "id": 677,
+      "name": "fitx_61",
+      "data": 677,
       "type": "number",
-      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 667,
-      "name": "r2_60",
-      "data": 667,
+      "id": 678,
+      "name": "r2_61",
+      "data": 678,
       "type": "number",
-      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 668,
-      "name": "rmse_60",
-      "data": 668,
+      "id": 679,
+      "name": "rmse_61",
+      "data": 679,
       "type": "number",
-      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 669,
-      "name": "perm_pvalue_60",
-      "data": 669,
+      "id": 680,
+      "name": "perm_pvalue_61",
+      "data": 680,
       "type": "number",
-      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 670,
-      "name": "period_60",
-      "data": 670,
+      "id": 681,
+      "name": "period_61",
+      "data": 681,
       "type": "number",
-      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 671,
-      "name": "mesor_60",
-      "data": 671,
+      "id": 682,
+      "name": "mesor_61",
+      "data": 682,
       "type": "number",
-      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 672,
-      "name": "amplitude_60",
-      "data": 672,
+      "id": 683,
+      "name": "amplitude_61",
+      "data": 683,
       "type": "number",
-      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 673,
-      "name": "acrophase_60",
-      "data": 673,
+      "id": 684,
+      "name": "acrophase_61",
+      "data": 684,
       "type": "number",
-      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 674,
-      "name": "fity_665_60",
-      "data": 674,
+      "id": 685,
+      "name": "amplitude_h1_61",
+      "data": 685,
       "type": "number",
-      "tableProcessGUId": "496b48f0-9f14-4af5-96f6-8f42d411868a",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 686,
+      "name": "acrophase_h1_61",
+      "data": 686,
+      "type": "number",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 687,
+      "name": "fity_676_61",
+      "data": 687,
+      "type": "number",
+      "tableProcessGUId": "d6784670-0d7a-4c5f-83e4-de775187511a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -355,7 +383,7 @@
   ],
   "plots": [
     {
-      "id": 112,
+      "id": 114,
       "name": "Fit waveform model: data + fit",
       "x": 60,
       "y": 60,
@@ -430,9 +458,9 @@
         "data": [
           {
             "x": {
-              "id": 675,
+              "id": 688,
               "name": "x",
-              "refId": 664,
+              "refId": 675,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -441,9 +469,9 @@
               "processes": []
             },
             "y": {
-              "id": 676,
+              "id": 689,
               "name": "y",
-              "refId": 665,
+              "refId": 676,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -469,9 +497,9 @@
           },
           {
             "x": {
-              "id": 677,
-              "name": "fitx_60",
-              "refId": 666,
+              "id": 690,
+              "name": "fitx_61",
+              "refId": 677,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -480,9 +508,9 @@
               "processes": []
             },
             "y": {
-              "id": 678,
-              "name": "fity_665_60",
-              "refId": 674,
+              "id": 691,
+              "name": "fity_676_61",
+              "refId": 687,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -509,7 +537,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -520,11 +548,11 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
-      "id": 113,
+      "id": 115,
       "name": "Fit waveform model: values",
       "x": 630,
       "y": 60,
@@ -557,8 +585,8 @@
       },
       "plot": {
         "columnRefs": [
-          665,
-          674
+          676,
+          687
         ],
         "showCol": [
           true,
@@ -573,7 +601,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 59,
+      "id": 60,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -583,19 +611,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 664
+          "result": 675
         }
       },
       "refTPId": null
     },
     {
-      "id": 60,
+      "id": 61,
       "name": "FitFunction",
       "displayName": "Fit waveform model",
       "args": {
-        "xIN": 664,
+        "xIN": 675,
         "yIN": [
-          665
+          676
         ],
         "model": "cosinor",
         "outputX": -1,
@@ -621,15 +649,17 @@
         "permutationStatistic": "rSquared",
         "preProcesses": [],
         "out": {
-          "fitx": 666,
-          "r2": 667,
-          "rmse": 668,
-          "perm_pvalue": 669,
-          "period": 670,
-          "mesor": 671,
-          "amplitude": 672,
-          "acrophase": 673,
-          "fity_665": 674
+          "fitx": 677,
+          "r2": 678,
+          "rmse": 679,
+          "perm_pvalue": 680,
+          "period": 681,
+          "mesor": 682,
+          "amplitude": 683,
+          "acrophase": 684,
+          "amplitude_h1": 685,
+          "acrophase_h1": 686,
+          "fity_676": 687
         }
       },
       "refTPId": null
@@ -640,8 +670,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_57",
-      "text": "A general curve-fitting node that fits a chosen model, cosinor, rectangular wave, or double logistic, to the series by nonlinear least squares, giving one interface for all three parametric shapes plus a shared permutation test. It reports R² and RMSE, the model coefficients, and a residual column per series (observed − fitted, aligned to the input), with a \"Plot residuals\" button to scatter them against the input for a fit-diagnostic check (a good fit leaves residuals patternless around zero). Use it when you want to try and compare different waveform models on the same data, or need the permutation-based significance option in one place. In the demo, read the fitted curve over the raw points and compare fit quality (and the permutation p-value) across models to see which shape the data prefer. Nonlinear least-squares model fitting (Marquardt 1963).",
+      "id": "note_58",
+      "text": "A general curve-fitting node that fits a chosen model, cosinor, rectangular wave, or double logistic, to the series by nonlinear least squares, giving one interface for all three parametric shapes plus a shared permutation test. It reports R² and RMSE, the model coefficients, and a residual column per series (observed − fitted, aligned to the input), with a \"Plot residuals\" button to scatter them against the input for a fit-diagnostic check (a good fit leaves residuals patternless around zero). Use it when you want to try and compare different waveform models on the same data, or need the permutation-based significance option in one place. In the demo, read the fitted curve over the raw points and compare fit quality (and the permutation p-value) across models to see which shape the data prefer. Every free period stays inside a period range (1 to 48 h for a time x; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units). The acrophase, onset and offset ports are hours after the first sample (x units after x = 0 for a numeric x) by default, or clock time of day with Phase reference set to Clock time of day; with a multi-harmonic cosinor, amplitude and acrophase describe the overall fitted curve and amplitude_h1 / acrophase_h1 keep harmonic 1. The permutation test permutes single values by default, which assumes exchangeable (independent) observations; for autocorrelated data choose one-period blocks, or use the Surrogate Test node (the node warns when the residuals are strongly autocorrelated). Nonlinear least-squares model fitting (Marquardt 1963).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -674,27 +704,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_665": {
+    "data_676": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_59": {
+    "tableprocess_60": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_60": {
+    "tableprocess_61": {
       "x": 440,
       "y": 314
     },
-    "plot_112": {
+    "plot_114": {
       "x": 820,
       "y": 314
     },
-    "plot_113": {
+    "plot_115": {
       "x": 820,
       "y": 814
     },
-    "note_57": {
+    "note_58": {
       "x": 40,
       "y": 24
     }
@@ -711,6 +741,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -754,8 +786,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

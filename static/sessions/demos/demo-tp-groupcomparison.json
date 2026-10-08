@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "682": [
+    "695": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "683": [
+    "696": [
       0,
       6,
       12,
@@ -104,21 +104,21 @@
       6,
       5
     ],
-    "684": [
+    "697": [
       96.15862706579921
     ],
-    "685": [
-      0
+    "698": [
+      2.44574062850776e-17
     ],
-    "686": [
+    "699": [
       0.8036079756532927
     ]
   },
   "data": [
     {
-      "id": 682,
+      "id": 695,
       "name": "Compare groups (stats) input 1",
-      "data": 682,
+      "data": 695,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -127,9 +127,9 @@
       "processes": []
     },
     {
-      "id": 683,
+      "id": 696,
       "name": "Compare groups (stats) input 2",
-      "data": 683,
+      "data": 696,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -138,33 +138,33 @@
       "processes": []
     },
     {
-      "id": 684,
-      "name": "statistic_62",
-      "data": 684,
+      "id": 697,
+      "name": "statistic_63",
+      "data": 697,
       "type": "number",
-      "tableProcessGUId": "ba94c887-fda0-40d7-9c37-b34147074eb0",
+      "tableProcessGUId": "6cc91090-793a-499f-9297-67a0a4e1a3cc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 685,
-      "name": "pvalue_62",
-      "data": 685,
+      "id": 698,
+      "name": "pvalue_63",
+      "data": 698,
       "type": "number",
-      "tableProcessGUId": "ba94c887-fda0-40d7-9c37-b34147074eb0",
+      "tableProcessGUId": "6cc91090-793a-499f-9297-67a0a4e1a3cc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 686,
-      "name": "effectSize_62",
-      "data": 686,
+      "id": 699,
+      "name": "effectSize_63",
+      "data": 699,
       "type": "number",
-      "tableProcessGUId": "ba94c887-fda0-40d7-9c37-b34147074eb0",
+      "tableProcessGUId": "6cc91090-793a-499f-9297-67a0a4e1a3cc",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -173,7 +173,7 @@
   ],
   "plots": [
     {
-      "id": 115,
+      "id": 117,
       "name": "Compare groups (stats): groups",
       "x": 60,
       "y": 60,
@@ -234,9 +234,9 @@
         "data": [
           {
             "x": {
-              "id": 687,
+              "id": 700,
               "name": "Compare groups (stats) input 1",
-              "refId": 682,
+              "refId": 695,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -245,9 +245,9 @@
               "processes": []
             },
             "y": {
-              "id": 688,
+              "id": 701,
               "name": "Compare groups (stats) input 2",
-              "refId": 683,
+              "refId": 696,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -277,7 +277,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -312,21 +312,21 @@
   ],
   "tableProcesses": [
     {
-      "id": 62,
+      "id": 63,
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 682,
+        "xIN": 695,
         "yIN": [
-          683
+          696
         ],
         "method": "auto",
         "alpha": 0.05,
         "postHocEnabled": true,
         "out": {
-          "statistic": 684,
-          "pvalue": 685,
-          "effectSize": 686
+          "statistic": 697,
+          "pvalue": 698,
+          "effectSize": 699
         }
       },
       "refTPId": null
@@ -337,8 +337,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_59",
-      "text": "Compares a numeric measure across groups defined by a grouping column (or across several y-columns). Auto mode picks a Welch t-test for two groups and a one-way ANOVA for three or more; nonparametric Mann-Whitney U and Kruskal-Wallis are also available, with Tukey-Kramer / Holm-adjusted pairwise post-hoc tests and Jarque-Bera normality and variance-ratio warnings. Outputs the test statistic and p-value as metric ports you can wire onward. Reporting a significant group difference (Kruskal & Wallis 1952).",
+      "id": "note_60",
+      "text": "Compares a numeric measure across groups defined by a grouping column (or across several y-columns). Auto mode picks a Welch t-test for two groups and a one-way ANOVA for three or more; nonparametric Mann-Whitney U and Kruskal-Wallis are also available, with pairwise post-hoc tests (Tukey-Kramer after ANOVA: q on the studentized range, with simultaneous confidence intervals for each mean difference; Holm-adjusted Mann-Whitney after Kruskal-Wallis) and Jarque-Bera normality and variance-ratio warnings. Outputs the test statistic and p-value as metric ports you can wire onward. Reporting a significant group difference (Kruskal & Wallis 1952).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -371,23 +371,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_682": {
+    "data_695": {
       "x": 60,
       "y": 314
     },
-    "data_683": {
+    "data_696": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_62": {
+    "tableprocess_63": {
       "x": 440,
       "y": 314
     },
-    "plot_115": {
+    "plot_117": {
       "x": 820,
       "y": 314
     },
-    "note_59": {
+    "note_60": {
       "x": 40,
       "y": 24
     }
@@ -404,6 +404,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -447,8 +449,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

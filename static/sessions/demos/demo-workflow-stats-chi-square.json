@@ -248,7 +248,7 @@
       14.848484848484848
     ],
     "231": [
-      0.00011650161951948235
+      0.00011650161951952661
     ],
     "232": [
       1
@@ -282,7 +282,7 @@
       "name": "statistic_18",
       "data": 230,
       "type": "number",
-      "tableProcessGUId": "7a744de6-20de-49d9-b9ba-493123795070",
+      "tableProcessGUId": "7653bbea-3624-4acf-adce-91cc4b825a1e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -293,7 +293,7 @@
       "name": "pvalue_18",
       "data": 231,
       "type": "number",
-      "tableProcessGUId": "7a744de6-20de-49d9-b9ba-493123795070",
+      "tableProcessGUId": "7653bbea-3624-4acf-adce-91cc4b825a1e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -304,7 +304,7 @@
       "name": "df_18",
       "data": 232,
       "type": "number",
-      "tableProcessGUId": "7a744de6-20de-49d9-b9ba-493123795070",
+      "tableProcessGUId": "7653bbea-3624-4acf-adce-91cc4b825a1e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -379,6 +379,7 @@
           "df": 232
         },
         "alternative": "two-sided",
+        "gofInput": "auto",
         "valid": false
       },
       "refTPId": null
@@ -390,7 +391,7 @@
   "notes": [
     {
       "id": "note_10",
-      "text": "WORKFLOW: categorical association (chi-square). When both variables are categories (not numbers), the question 'are they related?' is answered by the chi-squared test of independence. It cross-tabulates the two columns into a contingency table of observed counts, computes the counts you'd EXPECT if the variables were independent, and measures the gap: a large χ² (small p) means the observed pattern departs from independence — the variables are associated. Read the statistic, the degrees of freedom ((rows−1)×(cols−1)) and the p-value, then look at the table to see WHERE the association is (which cells are over- or under-represented). Yates' continuity correction is applied to 2×2 tables. Crucial caveat: the χ² approximation is unreliable when any EXPECTED count is below 5 (the node warns) — with small samples use Fisher's exact test instead. The test shows association, not direction or causation. Pearson (1900); Fisher (1922).",
+      "text": "WORKFLOW: categorical association (chi-square). When both variables are categories (not numbers), the question 'are they related?' is answered by the chi-squared test of independence. It cross-tabulates the two columns into a contingency table of observed counts, computes the counts you'd EXPECT if the variables were independent, and measures the gap: a large χ² (small p) means the observed pattern departs from independence: the variables are associated. Read the statistic, the degrees of freedom ((rows−1)×(cols−1)) and the p-value, then look at the table to see WHERE the association is (which cells are over- or under-represented). Yates' continuity correction is applied to 2×2 tables. Crucial caveat: the χ² approximation is unreliable when any EXPECTED count is below 5 (the node warns); with small samples use Fisher's exact test instead. The test shows association, not direction or causation. Pearson (1900); Fisher (1922).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -456,6 +457,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -499,8 +502,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

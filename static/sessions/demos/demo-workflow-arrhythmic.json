@@ -1548,7 +1548,7 @@
       "name": "stat_peak_period_28",
       "data": 348,
       "type": "number",
-      "tableProcessGUId": "abdebe35-bca2-4476-b237-3f0b968c3552",
+      "tableProcessGUId": "dcc40303-8132-4e08-9de6-853c17d3eee8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1559,7 +1559,7 @@
       "name": "stat_peak_power_28",
       "data": 349,
       "type": "number",
-      "tableProcessGUId": "abdebe35-bca2-4476-b237-3f0b968c3552",
+      "tableProcessGUId": "dcc40303-8132-4e08-9de6-853c17d3eee8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1570,7 +1570,7 @@
       "name": "rhythmicityy_338_28",
       "data": 350,
       "type": "number",
-      "tableProcessGUId": "abdebe35-bca2-4476-b237-3f0b968c3552",
+      "tableProcessGUId": "dcc40303-8132-4e08-9de6-853c17d3eee8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1581,7 +1581,7 @@
       "name": "rhythmicityy_339_28",
       "data": 351,
       "type": "number",
-      "tableProcessGUId": "abdebe35-bca2-4476-b237-3f0b968c3552",
+      "tableProcessGUId": "dcc40303-8132-4e08-9de6-853c17d3eee8",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1591,7 +1591,7 @@
   "plots": [
     {
       "id": 39,
-      "name": "Actogram — intact vs arrhythmic",
+      "name": "Actogram: intact vs arrhythmic",
       "x": 60,
       "y": 60,
       "width": 520,
@@ -1642,6 +1642,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -1673,6 +1686,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -1700,6 +1714,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#BE796B",
             "draw": true,
             "phaseMarkers": []
@@ -1709,7 +1724,7 @@
     },
     {
       "id": 40,
-      "name": "Periodogram — both records",
+      "name": "Periodogram: both records",
       "x": 630,
       "y": 60,
       "width": 520,
@@ -1767,6 +1782,19 @@
           "nticks": 5,
           "manualTicks": null
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "data": [
           {
             "x": {
@@ -1812,6 +1840,7 @@
               "draw": true
             },
             "binSize": 0.25,
+            "binSizeAuto": true,
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           },
@@ -1859,6 +1888,7 @@
               "draw": true
             },
             "binSize": 0.25,
+            "binSizeAuto": true,
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
@@ -1917,7 +1947,7 @@
     {
       "id": 28,
       "name": "RhythmicityAnalysis",
-      "displayName": "Rhythmicity Analysis — peak vs power",
+      "displayName": "Rhythmicity Analysis: peak vs power",
       "args": {
         "xIN": 337,
         "yIN": [
@@ -2026,6 +2056,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -2069,8 +2101,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

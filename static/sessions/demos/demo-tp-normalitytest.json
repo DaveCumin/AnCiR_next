@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "735": [
+    "748": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "736": [
+    "749": [
       1,
       21.831051418620845,
       7.38905609893065,
@@ -104,32 +104,32 @@
       8.729138363720132,
       2.9545115270921065
     ],
-    "737": [
+    "750": [
       "Normality Test input 1",
       "Normality Test input 2"
     ],
-    "738": [
+    "751": [
       0.8884940768269717,
       0.8065802789114069
     ],
-    "739": [
-      0.00020472387230596745,
-      0.000001248621988914067
+    "752": [
+      0.00020472387230591337,
+      0.0000012486219889648333
     ],
-    "740": [
+    "753": [
       50,
       50
     ],
-    "741": [
+    "754": [
       0,
       0
     ]
   },
   "data": [
     {
-      "id": 735,
+      "id": 748,
       "name": "Normality Test input 1",
-      "data": 735,
+      "data": 748,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -138,9 +138,9 @@
       "processes": []
     },
     {
-      "id": 736,
+      "id": 749,
       "name": "Normality Test input 2",
-      "data": 736,
+      "data": 749,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -149,55 +149,55 @@
       "processes": []
     },
     {
-      "id": 737,
-      "name": "variable_67",
-      "data": 737,
+      "id": 750,
+      "name": "variable_68",
+      "data": 750,
       "type": "category",
-      "tableProcessGUId": "5f2c4055-d098-4eec-aa08-dccab3ba4b50",
+      "tableProcessGUId": "c2d19809-4371-41b2-b710-cbafff718902",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 738,
-      "name": "statistic_67",
-      "data": 738,
+      "id": 751,
+      "name": "statistic_68",
+      "data": 751,
       "type": "number",
-      "tableProcessGUId": "5f2c4055-d098-4eec-aa08-dccab3ba4b50",
+      "tableProcessGUId": "c2d19809-4371-41b2-b710-cbafff718902",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 739,
-      "name": "pvalue_67",
-      "data": 739,
+      "id": 752,
+      "name": "pvalue_68",
+      "data": 752,
       "type": "number",
-      "tableProcessGUId": "5f2c4055-d098-4eec-aa08-dccab3ba4b50",
+      "tableProcessGUId": "c2d19809-4371-41b2-b710-cbafff718902",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 740,
-      "name": "n_67",
-      "data": 740,
+      "id": 753,
+      "name": "n_68",
+      "data": 753,
       "type": "number",
-      "tableProcessGUId": "5f2c4055-d098-4eec-aa08-dccab3ba4b50",
+      "tableProcessGUId": "c2d19809-4371-41b2-b710-cbafff718902",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 741,
-      "name": "normal_67",
-      "data": 741,
+      "id": 754,
+      "name": "normal_68",
+      "data": 754,
       "type": "number",
-      "tableProcessGUId": "5f2c4055-d098-4eec-aa08-dccab3ba4b50",
+      "tableProcessGUId": "c2d19809-4371-41b2-b710-cbafff718902",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -206,7 +206,7 @@
   ],
   "plots": [
     {
-      "id": 121,
+      "id": 123,
       "name": "Normality Test result",
       "x": 60,
       "y": 60,
@@ -239,13 +239,13 @@
       },
       "plot": {
         "columnRefs": [
-          735,
-          736,
-          737,
-          738,
-          739,
-          740,
-          741
+          748,
+          749,
+          750,
+          751,
+          752,
+          753,
+          754
         ],
         "showCol": [
           true,
@@ -265,22 +265,22 @@
   ],
   "tableProcesses": [
     {
-      "id": 67,
+      "id": 68,
       "name": "NormalityTest",
       "displayName": "Normality Test",
       "args": {
         "yIN": [
-          735,
-          736
+          748,
+          749
         ],
         "method": "shapiro",
         "alpha": 0.05,
         "out": {
-          "variable": 737,
-          "statistic": 738,
-          "pvalue": 739,
-          "n": 740,
-          "normal": 741
+          "variable": 750,
+          "statistic": 751,
+          "pvalue": 752,
+          "n": 753,
+          "normal": 754
         },
         "valid": false
       },
@@ -292,7 +292,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_64",
+      "id": "note_65",
       "text": "Tests whether each wired column is drawn from a normal distribution, one row per variable: the test statistic, its p-value, n, and a yes/no verdict at your chosen alpha. Shapiro-Wilk (the default, and the most powerful test; valid for 3 ≤ n ≤ 5000) is recommended; D'Agostino-Pearson (an omnibus skewness + kurtosis K² test, n ≥ 8, better for very large samples) and Jarque-Bera are also available. A small p-value means the data depart from normality, so a rank / non-parametric method is safer downstream. All three match scipy (shapiro / normaltest / jarque_bera). Shapiro & Wilk 1965; Royston 1995.",
       "x": 40,
       "y": 24,
@@ -326,23 +326,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_735": {
+    "data_748": {
       "x": 60,
       "y": 314
     },
-    "data_736": {
+    "data_749": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_67": {
+    "tableprocess_68": {
       "x": 440,
       "y": 314
     },
-    "plot_121": {
+    "plot_123": {
       "x": 820,
       "y": 314
     },
-    "note_64": {
+    "note_65": {
       "x": 40,
       "y": 24
     }
@@ -359,6 +359,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -402,8 +404,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

@@ -237,7 +237,7 @@
       "name": "sortedy_609_47",
       "data": 611,
       "type": "number",
-      "tableProcessGUId": "2ab6d1b1-89f9-4e29-b969-b29352f1bdbf",
+      "tableProcessGUId": "6702de58-9c31-427a-aedb-67796bffd52f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "sortedy_610_47",
       "data": 612,
       "type": "number",
-      "tableProcessGUId": "2ab6d1b1-89f9-4e29-b969-b29352f1bdbf",
+      "tableProcessGUId": "6702de58-9c31-427a-aedb-67796bffd52f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -401,6 +401,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -444,8 +446,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

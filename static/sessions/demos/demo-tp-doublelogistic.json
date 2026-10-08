@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "653": [
+    "664": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "654": [
+    "665": [
       24.784209286216505,
       27.918238427560844,
       26.60093560817605,
@@ -104,7 +104,7 @@
       24.95424537696588,
       27.973731986697846
     ],
-    "655": [
+    "666": [
       0,
       1,
       2,
@@ -156,84 +156,84 @@
       48,
       49
     ],
-    "656": [
+    "667": [
       null
     ],
-    "657": [
-      0.9855288017634882
+    "668": [
+      0.9855288018053066
     ],
-    "658": [
-      2.8153329730899084
+    "669": [
+      2.8153329690220796
     ],
-    "659": [
-      25.756894538862465,
-      24.742714374366138,
-      24.385024124035308,
-      24.264521720380984,
-      24.233251382839978,
-      24.249872949200032,
-      24.32778281283122,
-      24.54393910429441,
-      25.10971272047033,
-      26.545474631398157,
-      29.96830681195238,
-      37.053015960494236,
-      48.21381814301292,
-      59.97851632602512,
-      68.13067763070461,
-      72.28070581112975,
-      74.06525202287888,
-      74.77639652653184,
-      75.0511326489672,
-      75.1559946946447,
-      75.19583290746047,
-      75.21093905908052,
-      75.21665706526646,
-      75.21880283423324,
-      75.21955547765906,
-      75.21966559388572,
-      75.21919939088124,
-      75.21754882398017,
-      75.21264661917728,
-      75.19838270635734,
-      75.15701676346957,
-      75.03734268335779,
-      74.693198126099,
-      73.7203336799283,
-      71.09800020404403,
-      64.8506372695415,
-      53.516072003459016,
-      40.40172052919402,
-      31.245983550537165,
-      26.864594500720198,
-      25.145727719669047,
-      24.525663857024597,
-      24.310786975355935,
-      24.242565820731706,
-      24.235507355202675,
-      24.276561229555895,
-      24.405063349349685,
-      24.748120038440838,
-      25.634115127301165,
-      27.83073937176754
+    "670": [
+      25.756601996480892,
+      24.74268056275642,
+      24.38510252024072,
+      24.264645560135115,
+      24.233392573381142,
+      24.25001951775634,
+      24.327928347417362,
+      24.54407729797647,
+      25.10983325512197,
+      26.545559563722392,
+      29.968333122210755,
+      37.052980930106514,
+      48.21377330490921,
+      59.978511006165164,
+      68.13069249309082,
+      72.28071179511694,
+      74.0652433345765,
+      74.77637749040971,
+      75.05110790129565,
+      75.15596712461706,
+      75.19580402450472,
+      75.21090958899559,
+      75.21662734299976,
+      75.21877301601373,
+      75.21952565171112,
+      75.2196358517364,
+      75.2191699114243,
+      75.21752004216079,
+      75.21261962341902,
+      75.19836017883054,
+      75.15700510583603,
+      75.03735639294884,
+      74.69326700453666,
+      73.72050671772607,
+      71.09830951380118,
+      64.85093804548372,
+      53.515938106077975,
+      40.40110019281346,
+      31.2454138417882,
+      26.86432073508149,
+      25.14567653394426,
+      24.52572834299493,
+      24.310903240747106,
+      24.24270298576871,
+      24.235650695060087,
+      24.27670119521643,
+      24.40518739024128,
+      24.74820183799323,
+      25.63409480258324,
+      27.83049355307478
     ]
   },
   "data": [
     {
-      "id": 653,
+      "id": 664,
       "name": "x",
-      "data": 653,
+      "data": 664,
       "type": "number",
-      "tableProcessGUId": "4cccdecb-5400-4318-8f3b-35acfb1bdd74",
+      "tableProcessGUId": "3d76dfb6-3f4b-48be-8006-565b99d50266",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 654,
+      "id": 665,
       "name": "y",
-      "data": 654,
+      "data": 665,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -242,55 +242,55 @@
       "processes": []
     },
     {
-      "id": 655,
-      "name": "dlogx_58",
-      "data": 655,
+      "id": 666,
+      "name": "dlogx_59",
+      "data": 666,
       "type": "number",
-      "tableProcessGUId": "42898248-d643-4dcd-a89c-b5fc562f58a6",
+      "tableProcessGUId": "740f77bd-1675-4a1e-8578-a480d645a2e7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 656,
-      "name": "perm_pvalue_58",
-      "data": 656,
+      "id": 667,
+      "name": "perm_pvalue_59",
+      "data": 667,
       "type": "number",
-      "tableProcessGUId": "8cdae061-1395-4d2d-bcdf-07771468207b",
+      "tableProcessGUId": "fa6bb0b2-69ff-471f-99cf-dc3ee906fbc5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 657,
-      "name": "r2_58",
-      "data": 657,
+      "id": 668,
+      "name": "r2_59",
+      "data": 668,
       "type": "number",
-      "tableProcessGUId": "8cdae061-1395-4d2d-bcdf-07771468207b",
+      "tableProcessGUId": "fa6bb0b2-69ff-471f-99cf-dc3ee906fbc5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 658,
-      "name": "rmse_58",
-      "data": 658,
+      "id": 669,
+      "name": "rmse_59",
+      "data": 669,
       "type": "number",
-      "tableProcessGUId": "8cdae061-1395-4d2d-bcdf-07771468207b",
+      "tableProcessGUId": "fa6bb0b2-69ff-471f-99cf-dc3ee906fbc5",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 659,
-      "name": "dlogy_654_58",
-      "data": 659,
+      "id": 670,
+      "name": "dlogy_665_59",
+      "data": 670,
       "type": "number",
-      "tableProcessGUId": "42898248-d643-4dcd-a89c-b5fc562f58a6",
+      "tableProcessGUId": "740f77bd-1675-4a1e-8578-a480d645a2e7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -299,7 +299,7 @@
   ],
   "plots": [
     {
-      "id": 110,
+      "id": 112,
       "name": "Double Logistic: data + fit",
       "x": 60,
       "y": 60,
@@ -374,9 +374,9 @@
         "data": [
           {
             "x": {
-              "id": 660,
+              "id": 671,
               "name": "x",
-              "refId": 653,
+              "refId": 664,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -385,9 +385,9 @@
               "processes": []
             },
             "y": {
-              "id": 661,
+              "id": 672,
               "name": "y",
-              "refId": 654,
+              "refId": 665,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -413,9 +413,9 @@
           },
           {
             "x": {
-              "id": 662,
-              "name": "dlogx_58",
-              "refId": 655,
+              "id": 673,
+              "name": "dlogx_59",
+              "refId": 666,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -424,9 +424,9 @@
               "processes": []
             },
             "y": {
-              "id": 663,
-              "name": "dlogy_654_58",
-              "refId": 659,
+              "id": 674,
+              "name": "dlogy_665_59",
+              "refId": 670,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -453,7 +453,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -464,11 +464,11 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
-      "id": 111,
+      "id": 113,
       "name": "Double Logistic: values",
       "x": 630,
       "y": 60,
@@ -501,8 +501,8 @@
       },
       "plot": {
         "columnRefs": [
-          654,
-          659
+          665,
+          670
         ],
         "showCol": [
           true,
@@ -517,7 +517,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 57,
+      "id": 58,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -527,19 +527,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 653
+          "result": 664
         }
       },
       "refTPId": null
     },
     {
-      "id": 58,
+      "id": 59,
       "name": "DoubleLogistic",
       "displayName": "Double Logistic",
       "args": {
-        "xIN": 653,
+        "xIN": 664,
         "yIN": [
-          654
+          665
         ],
         "outputX": -1,
         "fixK1": false,
@@ -549,11 +549,11 @@
         "fixPeriod": false,
         "fixedPeriod": 24,
         "out": {
-          "dlogx": 655,
-          "perm_pvalue": 656,
-          "r2": 657,
-          "rmse": 658,
-          "dlogy_654": 659
+          "dlogx": 666,
+          "perm_pvalue": 667,
+          "r2": 668,
+          "rmse": 669,
+          "dlogy_665": 670
         }
       },
       "refTPId": null
@@ -564,8 +564,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_56",
-      "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. Double-logistic phenology model (Zhang et al. 2003).",
+      "id": "note_57",
+      "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In periodic mode the active phase is kept shorter than one period and M is the rest (baseline) level, and a fitted period stays inside a period range (1 to 48 h for a time x; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units, as in Cosinor), with a warning when it stops on a bound. In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. Onset and offset phases are hours after the first sample (x units after x = 0 for a numeric x) by default; set Phase reference to Clock time of day (needs a time column as x) to report them as clock time. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. The optional permutation test permutes single values by default, which assumes exchangeable (independent) observations; for autocorrelated data choose one-period blocks, or use the Surrogate Test node (the node warns when the residuals are strongly autocorrelated). Double-logistic phenology model (Zhang et al. 2003).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -598,27 +598,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_654": {
+    "data_665": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_57": {
+    "tableprocess_58": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_58": {
+    "tableprocess_59": {
       "x": 440,
       "y": 314
     },
-    "plot_110": {
+    "plot_112": {
       "x": 820,
       "y": 314
     },
-    "plot_111": {
+    "plot_113": {
       "x": 820,
       "y": 814
     },
-    "note_56": {
+    "note_57": {
       "x": 40,
       "y": 24
     }
@@ -635,6 +635,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -678,8 +680,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

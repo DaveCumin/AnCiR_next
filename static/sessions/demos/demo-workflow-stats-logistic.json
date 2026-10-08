@@ -208,8 +208,8 @@
     ],
     "217": [
       0.9093350818990842,
-      0.0003465198254309909,
-      0.0016086946927440504
+      0.00034651982543094527,
+      0.0016086946927440552
     ],
     "218": [
       0.9072041263826472,
@@ -452,7 +452,7 @@
       "name": "term_17",
       "data": 213,
       "type": "category",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -463,7 +463,7 @@
       "name": "coef_17",
       "data": 214,
       "type": "number",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -474,7 +474,7 @@
       "name": "se_17",
       "data": 215,
       "type": "number",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -485,7 +485,7 @@
       "name": "z_17",
       "data": 216,
       "type": "number",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -496,7 +496,7 @@
       "name": "pvalue_17",
       "data": 217,
       "type": "number",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -507,7 +507,7 @@
       "name": "oddsRatio_17",
       "data": 218,
       "type": "number",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -518,7 +518,7 @@
       "name": "ciLow_17",
       "data": 219,
       "type": "number",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -529,7 +529,7 @@
       "name": "ciHigh_17",
       "data": 220,
       "type": "number",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -540,7 +540,7 @@
       "name": "outcome_17",
       "data": 221,
       "type": "number",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -551,7 +551,7 @@
       "name": "eta_17",
       "data": 222,
       "type": "number",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -562,7 +562,7 @@
       "name": "fitted_17",
       "data": 223,
       "type": "number",
-      "tableProcessGUId": "cbe16cf2-c05b-4bd7-a1a1-4e95fe00b635",
+      "tableProcessGUId": "d345b3ee-399e-4726-bfad-83e97154d5d0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -725,7 +725,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -736,7 +736,7 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
@@ -826,7 +826,7 @@
   "notes": [
     {
       "id": "note_9",
-      "text": "WORKFLOW: logistic regression (binary outcome). When the outcome is yes/no rather than a number, linear regression is the wrong tool — logistic regression models the PROBABILITY of the outcome. Read the coefficient table as ODDS RATIOS with 95% confidence intervals: an odds ratio above 1 means the predictor raises the odds of the outcome, below 1 lowers them, and a CI that does not cross 1 is 'significant' (matching the Wald p-value). The model-level fit is the likelihood-ratio test (does the model beat the intercept-only null?) and McFadden's pseudo-R². The fit plot shows the predicted probability against the linear predictor η = Xβ — the classic S-curve, which generalises to ANY number of predictors — with the observed 0/1 outcomes overlaid so you can see the separation. Watch for a non-convergence warning: it usually signals separation (a predictor splits the outcome perfectly), which makes the estimates unreliable. Cox (1958); Hosmer & Lemeshow (2000).",
+      "text": "WORKFLOW: logistic regression (binary outcome). When the outcome is yes/no rather than a number, linear regression is the wrong tool; logistic regression models the PROBABILITY of the outcome. Read the coefficient table as ODDS RATIOS with 95% confidence intervals: an odds ratio above 1 means the predictor raises the odds of the outcome, below 1 lowers them, and a CI that does not cross 1 is 'significant' (matching the Wald p-value). The model-level fit is the likelihood-ratio test (does the model beat the intercept-only null?) and McFadden's pseudo-R². The fit plot shows the predicted probability against the linear predictor η = Xβ (the classic S-curve, which generalises to ANY number of predictors), with the observed 0/1 outcomes overlaid so you can see the separation. Watch for a non-convergence warning: it usually signals separation (a predictor splits the outcome perfectly), which makes the estimates unreliable. Cox (1958); Hosmer & Lemeshow (2000).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -900,6 +900,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -943,8 +945,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

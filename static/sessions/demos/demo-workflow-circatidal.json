@@ -1818,7 +1818,7 @@
       "name": "stat_peak_period_29",
       "data": 358,
       "type": "number",
-      "tableProcessGUId": "dbba35cb-aa03-4b97-ba2f-e409788cf582",
+      "tableProcessGUId": "6b3897e8-b26b-4f32-a971-5d0d01d0bc4a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1829,7 +1829,7 @@
       "name": "stat_peak_power_29",
       "data": 359,
       "type": "number",
-      "tableProcessGUId": "dbba35cb-aa03-4b97-ba2f-e409788cf582",
+      "tableProcessGUId": "6b3897e8-b26b-4f32-a971-5d0d01d0bc4a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1840,7 +1840,7 @@
       "name": "rhythmicityy_353_29",
       "data": 360,
       "type": "number",
-      "tableProcessGUId": "dbba35cb-aa03-4b97-ba2f-e409788cf582",
+      "tableProcessGUId": "6b3897e8-b26b-4f32-a971-5d0d01d0bc4a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1901,6 +1901,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -1932,6 +1945,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -1941,7 +1955,7 @@
     },
     {
       "id": 43,
-      "name": "Periodogram — 6 to 30 h",
+      "name": "Periodogram: 6 to 30 h",
       "x": 630,
       "y": 60,
       "width": 520,
@@ -1999,6 +2013,19 @@
           "nticks": 5,
           "manualTicks": null
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "data": [
           {
             "x": {
@@ -2044,6 +2071,7 @@
               "draw": true
             },
             "binSize": 0.25,
+            "binSizeAuto": true,
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
@@ -2102,7 +2130,7 @@
     {
       "id": 29,
       "name": "RhythmicityAnalysis",
-      "displayName": "Rhythmicity Analysis — tidal peak",
+      "displayName": "Rhythmicity Analysis: tidal peak",
       "args": {
         "xIN": 352,
         "yIN": [
@@ -2205,6 +2233,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -2248,8 +2278,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

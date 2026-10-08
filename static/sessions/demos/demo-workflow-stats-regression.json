@@ -366,7 +366,7 @@
       "name": "trendx_15",
       "data": 192,
       "type": "number",
-      "tableProcessGUId": "e65c2b6c-b534-4d8e-93cb-92d0a6ef879d",
+      "tableProcessGUId": "9475039e-cb1d-443f-a92b-13493cb4a3f9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -377,7 +377,7 @@
       "name": "trendy_191_15",
       "data": 193,
       "type": "number",
-      "tableProcessGUId": "e65c2b6c-b534-4d8e-93cb-92d0a6ef879d",
+      "tableProcessGUId": "9475039e-cb1d-443f-a92b-13493cb4a3f9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -388,7 +388,7 @@
       "name": "resid_191_15",
       "data": 194,
       "type": "number",
-      "tableProcessGUId": "e65c2b6c-b534-4d8e-93cb-92d0a6ef879d",
+      "tableProcessGUId": "9475039e-cb1d-443f-a92b-13493cb4a3f9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -399,7 +399,7 @@
       "name": "r2_15",
       "data": 195,
       "type": "number",
-      "tableProcessGUId": "e65c2b6c-b534-4d8e-93cb-92d0a6ef879d",
+      "tableProcessGUId": "9475039e-cb1d-443f-a92b-13493cb4a3f9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -410,7 +410,7 @@
       "name": "rmse_15",
       "data": 196,
       "type": "number",
-      "tableProcessGUId": "e65c2b6c-b534-4d8e-93cb-92d0a6ef879d",
+      "tableProcessGUId": "9475039e-cb1d-443f-a92b-13493cb4a3f9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -421,7 +421,7 @@
       "name": "coef_slope_15",
       "data": 197,
       "type": "number",
-      "tableProcessGUId": "e65c2b6c-b534-4d8e-93cb-92d0a6ef879d",
+      "tableProcessGUId": "9475039e-cb1d-443f-a92b-13493cb4a3f9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -432,7 +432,7 @@
       "name": "coef_intercept_15",
       "data": 198,
       "type": "number",
-      "tableProcessGUId": "e65c2b6c-b534-4d8e-93cb-92d0a6ef879d",
+      "tableProcessGUId": "9475039e-cb1d-443f-a92b-13493cb4a3f9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -443,7 +443,7 @@
       "name": "variable_16",
       "data": 199,
       "type": "category",
-      "tableProcessGUId": "c2afe09b-4597-425d-b0a0-7514c41ce540",
+      "tableProcessGUId": "c1146686-cbb8-46a9-aedc-f1e4cf9d57a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -454,7 +454,7 @@
       "name": "statistic_16",
       "data": 200,
       "type": "number",
-      "tableProcessGUId": "c2afe09b-4597-425d-b0a0-7514c41ce540",
+      "tableProcessGUId": "c1146686-cbb8-46a9-aedc-f1e4cf9d57a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -465,7 +465,7 @@
       "name": "pvalue_16",
       "data": 201,
       "type": "number",
-      "tableProcessGUId": "c2afe09b-4597-425d-b0a0-7514c41ce540",
+      "tableProcessGUId": "c1146686-cbb8-46a9-aedc-f1e4cf9d57a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -476,7 +476,7 @@
       "name": "n_16",
       "data": 202,
       "type": "number",
-      "tableProcessGUId": "c2afe09b-4597-425d-b0a0-7514c41ce540",
+      "tableProcessGUId": "c1146686-cbb8-46a9-aedc-f1e4cf9d57a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -487,7 +487,7 @@
       "name": "normal_16",
       "data": 203,
       "type": "number",
-      "tableProcessGUId": "c2afe09b-4597-425d-b0a0-7514c41ce540",
+      "tableProcessGUId": "c1146686-cbb8-46a9-aedc-f1e4cf9d57a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -650,7 +650,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -661,7 +661,7 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
@@ -780,7 +780,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -791,7 +791,7 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
@@ -899,7 +899,7 @@
   "notes": [
     {
       "id": "note_8",
-      "text": "WORKFLOW: linear regression + residual diagnostics. Predict a continuous Y from X, then check the model is trustworthy — the second half is the part people skip. Step 1 — Fit trend (linear) reports the slope, intercept and R² (fraction of variance explained) and overlays the fitted line on the data. Step 2 — the DIAGNOSTIC: the residuals (observed − fitted) are plotted against X. A good fit leaves them scattered structurelessly around zero; a funnel shape means non-constant variance (heteroscedasticity), and a curve means the straight-line model is wrong — BOTH can hide behind a high R². Step 3 — a normality test on the residuals checks the assumption behind the p-values and confidence intervals. The lesson: never report R² without looking at the residuals. To model a curved relationship, switch the Fit Trend model to polynomial/exponential and re-check the residuals. Galton (1886); Anscombe (1973).",
+      "text": "WORKFLOW: linear regression + residual diagnostics. Predict a continuous Y from X, then check the model is trustworthy. The second half is the part people skip. Step 1: Fit trend (linear) reports the slope, intercept and R² (fraction of variance explained) and overlays the fitted line on the data. Step 2, the DIAGNOSTIC: the residuals (observed − fitted) are plotted against X. A good fit leaves them scattered structurelessly around zero; a funnel shape means non-constant variance (heteroscedasticity), and a curve means the straight-line model is wrong. BOTH can hide behind a high R². Step 3: a normality test on the residuals checks the assumption behind the p-values and confidence intervals. The lesson: never report R² without looking at the residuals. To model a curved relationship, switch the Fit Trend model to polynomial/exponential and re-check the residuals. Galton (1886); Anscombe (1973).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -977,6 +977,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -1020,8 +1022,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

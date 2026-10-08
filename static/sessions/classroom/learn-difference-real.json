@@ -255,7 +255,6 @@
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     },
     {
@@ -267,7 +266,6 @@
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
-      "provenance": "",
       "processes": []
     }
   ],
@@ -281,6 +279,29 @@
       "height": 250,
       "type": "boxplot",
       "selected": false,
+      "facet": false,
+      "facetRows": 0,
+      "setRefs": {},
+      "metricOut": {},
+      "sourceNodeId": null,
+      "style": {
+        "fontFamily": "sans",
+        "fontSize": "custom",
+        "fontSizePt": 12,
+        "widthPreset": "custom",
+        "widthMm": null,
+        "exportDpi": 300,
+        "palette": null,
+        "monochrome": false,
+        "varyMarkers": false,
+        "backgroundColour": "transparent",
+        "legendBox": true,
+        "roleScale": {
+          "tick": 0.9375,
+          "legend": 0.75,
+          "sigBar": 0.6875
+        }
+      },
       "plot": {
         "xlimsIN": [
           null,
@@ -319,7 +340,6 @@
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to day type which is ",
               "processes": []
             },
             "y": {
@@ -331,12 +351,11 @@
               "producerNodeId": null,
               "producerPort": null,
               "producerArtifactKind": null,
-              "provenance": "refers to activity which is ",
               "processes": []
             },
-            "label": "Box Plot 1",
+            "label": "",
             "boxPlot": {
-              "colour": "#234154",
+              "colour": null,
               "fillColour": "#234154",
               "fillOpacity": 0.3,
               "strokeWidth": 2,
@@ -357,21 +376,33 @@
         "legend": {
           "show": true,
           "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
           "orientation": "vertical",
           "backgroundColor": "rgba(255, 255, 255, 0.9)",
-          "borderColor": "#ccc",
+          "borderColor": "var(--color-lightness-25)",
           "borderWidth": 1,
           "padding": 8,
           "itemSpacing": 4,
-          "fontSize": 12
+          "fontSize": null
         },
+        "showPoints": false,
+        "pointJitter": 0.35,
+        "pointSize": 2.5,
+        "pointOpacity": 0.6,
+        "pointColour": null,
+        "showViolin": false,
+        "showBox": true,
+        "violinBandwidth": null,
+        "violinWidth": 0.8,
+        "violinOpacity": 0.3,
         "showSigBars": false,
         "sigMethod": "auto",
         "sigAlpha": 0.05,
         "showNs": false,
         "sigBarThickness": 1,
         "sigBarColor": "#000000",
-        "sigBarFontSize": 11,
+        "sigBarFontSize": null,
         "sigBarYOffset": 0,
         "sigBarSpacing": 1
       }
@@ -396,11 +427,12 @@
     }
   ],
   "storedValues": {},
+  "chainRefs": [],
   "nodeNotes": {},
   "notes": [
     {
       "id": "note_1",
-      "text": "IS THE DIFFERENCE REAL? — NZ Yr 11–13\n\nHidden truth: a real difference IS built in — weekend mean (62) is 12 units above weekday (50), sd 12, n=60/group. Teaching point: a visible gap is not automatically a real one; shrink n and the test can stop being significant.\n\nCurriculum (NZ): NZC S7-1 / S8-1 (enquiry cycle, inference); NCEA AS91264 (L2 inference), AS91582 (L3 formal inference).\nNCEA is transitional: L1 removed from 2028; NZCE (Yr12) 2029; NZACE (Yr13) 2030. Standards below remain valid through the change.\n\nFull mapping + worked walkthrough: classroom-handbook.html",
+      "text": "IS THE DIFFERENCE REAL? (NZ Yr 11–13)\n\nHidden truth: a real difference IS built in: weekend mean (62) is 12 units above weekday (50), sd 12, n=60/group. Teaching point: a visible gap is not automatically a real one; shrink n and the test can stop being significant.\n\nCurriculum (NZ): NZC S7-1 / S8-1 (enquiry cycle, inference); NCEA AS91264 (L2 inference), AS91582 (L3 formal inference).\nNCEA is transitional: L1 removed from 2028; NZCE (Yr12) 2029; NZACE (Yr13) 2030. Standards below remain valid through the change.\n\nFull mapping + worked walkthrough: classroom-handbook.html",
       "x": 40,
       "y": 40,
       "width": 380,
@@ -408,7 +440,31 @@
     }
   ],
   "groups": [],
+  "composites": [],
   "orphanProcesses": [],
+  "categoryColours": {},
+  "seriesAppearance": {},
+  "plotColormaps": {},
+  "figureStyle": {
+    "fontFamily": "sans",
+    "fontSize": "custom",
+    "fontSizePt": 12,
+    "widthPreset": "custom",
+    "widthMm": null,
+    "exportDpi": 300,
+    "palette": null,
+    "monochrome": false,
+    "varyMarkers": false,
+    "backgroundColour": "transparent",
+    "legendBox": true,
+    "roleScale": {
+      "tick": 0.9375,
+      "legend": 0.75,
+      "sigBar": 0.6875
+    }
+  },
+  "activeStyleName": null,
+  "nodeLayout": {},
   "appState": {
     "currentTab": "null",
     "currentControlTab": "properties",
@@ -419,6 +475,11 @@
     "showNavbar": true,
     "showDisplayPanel": false,
     "showControlPanel": false,
+    "importModalOpen": false,
+    "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
+    "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
     "widthNavBar": 56,
@@ -430,12 +491,19 @@
       "y": 0
     },
     "canvasScale": 1,
+    "workflowViewport": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "viewportEpoch": 0,
     "view": "canvas",
     "displayTimezone": "utc",
     "invisiblePlotIds": [],
     "canvasSelectedNodeId": null,
     "canvasMultiSelectedCount": 0,
     "canvasMultiSelectedNodeIds": [],
+    "pendingPalette": null,
     "appColours": [
       "#234154",
       "#BE796B",
@@ -454,8 +522,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.43.2"
+  "version": "β.81.12"
 }

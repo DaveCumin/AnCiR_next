@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "781": [
+    "795": [
       0,
       1,
       2,
@@ -338,7 +338,7 @@
       334,
       335
     ],
-    "782": [
+    "796": [
       1,
       0.9659258262890683,
       0.8660254037844387,
@@ -676,7 +676,7 @@
       0.8660254037844426,
       0.9659258262890652
     ],
-    "783": [
+    "797": [
       20,
       20.5,
       21,
@@ -695,7 +695,7 @@
       27.5,
       28
     ],
-    "784": [
+    "798": [
       0.8956207800972891,
       3.0349473209438744,
       5.304476138254576e-29,
@@ -714,7 +714,7 @@
       1.845509009872076,
       9.439856176943119e-29
     ],
-    "785": [
+    "799": [
       0.8956207800972891,
       3.0349473209438744,
       5.304476138254576e-29,
@@ -736,20 +736,20 @@
   },
   "data": [
     {
-      "id": 781,
+      "id": 795,
       "name": "x",
-      "data": 781,
+      "data": 795,
       "type": "number",
-      "tableProcessGUId": "b5780376-ca78-4f38-a54f-20452ab99321",
+      "tableProcessGUId": "19b0d9fe-d76a-4e77-b71d-46ff1ad04453",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 782,
+      "id": 796,
       "name": "y",
-      "data": 782,
+      "data": 796,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -758,33 +758,33 @@
       "processes": []
     },
     {
-      "id": 783,
-      "name": "782_period_76",
-      "data": 783,
+      "id": 797,
+      "name": "796_period_77",
+      "data": 797,
       "type": "number",
-      "tableProcessGUId": "7b407b90-6687-415f-9ba4-76ec2c92c83b",
+      "tableProcessGUId": "cfc16179-6a51-452c-b368-d6f1a481d385",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 784,
-      "name": "782_power_76",
-      "data": 784,
+      "id": 798,
+      "name": "796_power_77",
+      "data": 798,
       "type": "number",
-      "tableProcessGUId": "7b407b90-6687-415f-9ba4-76ec2c92c83b",
+      "tableProcessGUId": "cfc16179-6a51-452c-b368-d6f1a481d385",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 785,
-      "name": "rhythmicityy_782_76",
-      "data": 785,
+      "id": 799,
+      "name": "rhythmicityy_796_77",
+      "data": 799,
       "type": "number",
-      "tableProcessGUId": "7b407b90-6687-415f-9ba4-76ec2c92c83b",
+      "tableProcessGUId": "cfc16179-6a51-452c-b368-d6f1a481d385",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -793,7 +793,7 @@
   ],
   "plots": [
     {
-      "id": 129,
+      "id": 131,
       "name": "Rhythmicity Analysis: signal",
       "x": 60,
       "y": 60,
@@ -868,9 +868,9 @@
         "data": [
           {
             "x": {
-              "id": 786,
+              "id": 800,
               "name": "x",
-              "refId": 781,
+              "refId": 795,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -879,9 +879,9 @@
               "processes": []
             },
             "y": {
-              "id": 787,
+              "id": 801,
               "name": "y",
-              "refId": 782,
+              "refId": 796,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -908,7 +908,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -919,11 +919,11 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
-      "id": 130,
+      "id": 132,
       "name": "Rhythmicity Analysis: periodogram",
       "x": 630,
       "y": 60,
@@ -998,9 +998,9 @@
         "data": [
           {
             "x": {
-              "id": 788,
-              "name": "782_period_76",
-              "refId": 783,
+              "id": 802,
+              "name": "796_period_77",
+              "refId": 797,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1009,9 +1009,9 @@
               "processes": []
             },
             "y": {
-              "id": 789,
-              "name": "782_power_76",
-              "refId": 784,
+              "id": 803,
+              "name": "796_power_77",
+              "refId": 798,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -1038,7 +1038,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -1049,13 +1049,13 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     }
   ],
   "tableProcesses": [
     {
-      "id": 75,
+      "id": 76,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -1065,19 +1065,19 @@
         "count": 336,
         "end": 335,
         "out": {
-          "result": 781
+          "result": 795
         }
       },
       "refTPId": null
     },
     {
-      "id": 76,
+      "id": 77,
       "name": "RhythmicityAnalysis",
       "displayName": "Rhythmicity Analysis",
       "args": {
-        "xIN": 781,
+        "xIN": 795,
         "yIN": [
-          782
+          796
         ],
         "analysis": "periodogram",
         "pgMethod": "Lomb-Scargle",
@@ -1091,9 +1091,9 @@
         "corrMaxLag": 0,
         "preProcesses": [],
         "out": {
-          "782_period": 783,
-          "782_power": 784,
-          "rhythmicityy_782": 785
+          "796_period": 797,
+          "796_power": 798,
+          "rhythmicityy_796": 799
         }
       },
       "refTPId": null
@@ -1104,7 +1104,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_70",
+      "id": "note_71",
       "text": "Runs a spectral / periodicity analysis over the series and reports the dominant period and its strength. Choose the method: a periodogram (Lomb-Scargle by default, which tolerates uneven sampling and gaps; chi-squared or Enright also available), a Fourier transform (FFT), or an autocorrelogram. Use it to detect whether a rhythm is present and to estimate its period without assuming a waveform. In the demo, read the output spectrum: a clear peak marks the dominant period, its height is the power/magnitude, and (for chi-squared) the significance line shows whether it exceeds chance. Lomb-Scargle periodogram (Lomb 1976; Scargle 1982).",
       "x": 40,
       "y": 24,
@@ -1138,27 +1138,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_782": {
+    "data_796": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_75": {
+    "tableprocess_76": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_76": {
+    "tableprocess_77": {
       "x": 440,
       "y": 314
     },
-    "plot_129": {
+    "plot_131": {
       "x": 820,
       "y": 314
     },
-    "plot_130": {
+    "plot_132": {
       "x": 820,
       "y": 814
     },
-    "note_70": {
+    "note_71": {
       "x": 40,
       "y": 24
     }
@@ -1175,6 +1175,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -1218,8 +1220,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

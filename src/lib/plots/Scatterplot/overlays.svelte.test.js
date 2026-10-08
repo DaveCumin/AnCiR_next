@@ -171,10 +171,12 @@ describe('persistence', () => {
 		expect(s.overlays[0].kind).toBe('line');
 	});
 
-	describe('legacy nightBands migration on the shipped demo-scatter-rhythm session', () => {
+	describe('legacy nightBands migration on the β.72.29 demo-scatter-rhythm session', () => {
 		// The pinned numbers were captured from NightBandClass on this very plot
 		// (xlims [0, 167], number x) before NightBand.svelte was deleted.
-		const DEMO = 'static/sessions/demos/demo-scatter-rhythm.json';
+		// Frozen copy of the demo as shipped at β.72.29: a regenerated demo no longer carries the
+		// legacy key, so the shipped file cannot stand in for an old session.
+		const DEMO = 'src/test/fixtures/legacy-v72.29-demo-scatter-rhythm.json';
 		const NIGHTBAND_REPEATING_SEGMENTS = [
 			{ x0: 0, x1: 12 },
 			{ x0: 24, x1: 36 },
@@ -206,7 +208,7 @@ describe('persistence', () => {
 			return s;
 		}
 
-		it('the shipped session still carries the legacy (empty) nightBands key', () => {
+		it('the legacy session carries the legacy (empty) nightBands key', () => {
 			const demo = JSON.parse(readFileSync(DEMO, 'utf8'));
 			const p = demo.plots.find((x) => x.type === 'scatterplot');
 			expect(p.plot.nightBands).toEqual([]);

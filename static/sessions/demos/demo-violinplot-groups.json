@@ -495,7 +495,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -535,7 +535,7 @@
   "notes": [
     {
       "id": "note_28",
-      "text": "The violin overlay draws a mirrored kernel-density outline behind each box, showing the FULL shape of the distribution where the box shows only five summaries. That matters when a distribution is bimodal: the demo's two outer groups have near-identical boxes (same median, similar spread), but the violin reveals one is a single hump and the other is two — a structure the box cannot show. Jittered raw points confirm what the density is smoothing. Bandwidth defaults to Silverman's rule (adjust it if the violin looks over- or under-smoothed), and hiding the box gives a pure violin plot. Kernel density estimation: Silverman (1986); violin plots: Hintze & Nelson (1998).",
+      "text": "The violin overlay draws a mirrored kernel-density outline behind each box, showing the FULL shape of the distribution where the box shows only five summaries. That matters when a distribution is bimodal: the demo's two outer groups have near-identical boxes (same median, similar spread), but the violin reveals one is a single hump and the other is two, a structure the box cannot show. Jittered raw points confirm what the density is smoothing. Bandwidth defaults to Silverman's rule (adjust it if the violin looks over- or under-smoothed), and hiding the box gives a pure violin plot. Kernel density estimation: Silverman (1986); violin plots: Hintze & Nelson (1998).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -597,6 +597,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -640,8 +642,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

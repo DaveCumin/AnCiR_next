@@ -44,7 +44,7 @@
       5.625
     ],
     "236": [
-      0.017706065807366667
+      0.017706065807366608
     ],
     "237": [
       1
@@ -93,7 +93,7 @@
       "name": "statistic_19",
       "data": 235,
       "type": "number",
-      "tableProcessGUId": "f9e2da88-fc84-4819-a9c1-2f01ca2eaebf",
+      "tableProcessGUId": "53760ca5-990d-493c-ad1e-c623e5b2bd34",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -104,7 +104,7 @@
       "name": "pvalue_19",
       "data": 236,
       "type": "number",
-      "tableProcessGUId": "f9e2da88-fc84-4819-a9c1-2f01ca2eaebf",
+      "tableProcessGUId": "53760ca5-990d-493c-ad1e-c623e5b2bd34",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -115,7 +115,7 @@
       "name": "df_19",
       "data": 237,
       "type": "number",
-      "tableProcessGUId": "f9e2da88-fc84-4819-a9c1-2f01ca2eaebf",
+      "tableProcessGUId": "53760ca5-990d-493c-ad1e-c623e5b2bd34",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -126,7 +126,7 @@
       "name": "effectSize_19",
       "data": 238,
       "type": "number",
-      "tableProcessGUId": "f9e2da88-fc84-4819-a9c1-2f01ca2eaebf",
+      "tableProcessGUId": "53760ca5-990d-493c-ad1e-c623e5b2bd34",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -137,7 +137,7 @@
       "name": "statistic_20",
       "data": 239,
       "type": "number",
-      "tableProcessGUId": "a4bae57f-9f2f-4e2b-9a08-8164e3b12a79",
+      "tableProcessGUId": "f1a06363-b29b-48f1-9935-4f76b10ede91",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -148,7 +148,7 @@
       "name": "pvalue_20",
       "data": 240,
       "type": "number",
-      "tableProcessGUId": "a4bae57f-9f2f-4e2b-9a08-8164e3b12a79",
+      "tableProcessGUId": "f1a06363-b29b-48f1-9935-4f76b10ede91",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -159,7 +159,7 @@
       "name": "df_20",
       "data": 241,
       "type": "number",
-      "tableProcessGUId": "a4bae57f-9f2f-4e2b-9a08-8164e3b12a79",
+      "tableProcessGUId": "f1a06363-b29b-48f1-9935-4f76b10ede91",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -170,7 +170,7 @@
       "name": "effectSize_20",
       "data": 242,
       "type": "number",
-      "tableProcessGUId": "a4bae57f-9f2f-4e2b-9a08-8164e3b12a79",
+      "tableProcessGUId": "f1a06363-b29b-48f1-9935-4f76b10ede91",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -244,6 +244,7 @@
           "effectSize": 238
         },
         "alternative": "two-sided",
+        "gofInput": "auto",
         "valid": false
       },
       "refTPId": null
@@ -265,6 +266,7 @@
           "effectSize": 242
         },
         "correction": true,
+        "gofInput": "auto",
         "valid": false
       },
       "refTPId": null
@@ -276,7 +278,7 @@
   "notes": [
     {
       "id": "note_11",
-      "text": "WORKFLOW: small samples (Fisher's exact test). Same question as the chi-squared workflow — are two categorical variables related? — but on a table small enough that chi-squared should not be trusted, and both tests are run on the SAME 18 animals so you can compare them directly. The table is 8/1 against 2/7: a strong association (odds ratio 28), but with only 18 observations two of the four expected counts are 4, below 5. That is the conventional line, due to Cochran, at which the chi-squared statistic stops following a chi-squared distribution closely enough to trust — and the node says so in its own warning. Fisher's exact test makes no such approximation: it conditions on both sets of margins, under which the count in one cell follows a hypergeometric distribution, and adds up the exact probability of every table at least as extreme as the one observed. That is valid at ANY sample size, which is why it is the standard choice for small tables, and it converges on the chi-squared answer as counts grow. Read the two p-values side by side and quote the exact one here. Two things to notice about Fisher's mode: it reports NO statistic and NO degrees of freedom, because an exact test enumerates the distribution rather than referring a statistic to one, and it gives the sample odds ratio as its effect size instead. The two-sided p-value is the total probability of all tables no more likely than the one observed — not double the smaller tail, which would disagree here because the hypergeometric distribution is asymmetric. One honest caveat: conditioning on the margins makes Fisher's test somewhat conservative, so a non-significant result on a very small table is weak evidence of no association rather than evidence of none. Fisher (1935); Cochran (1954); Agresti (1992).",
+      "text": "WORKFLOW: small samples (Fisher's exact test). Same question as the chi-squared workflow (are two categorical variables related?), but on a table small enough that chi-squared should not be trusted, and both tests are run on the SAME 18 animals so you can compare them directly. The table is 8/1 against 2/7: a strong association (odds ratio 28), but with only 18 observations two of the four expected counts are 4, below 5. That is the conventional line, due to Cochran, at which the chi-squared statistic stops following a chi-squared distribution closely enough to trust, and the node says so in its own warning. Fisher's exact test makes no such approximation: it conditions on both sets of margins, under which the count in one cell follows a hypergeometric distribution, and adds up the exact probability of every table at least as extreme as the one observed. That is valid at ANY sample size, which is why it is the standard choice for small tables, and it converges on the chi-squared answer as counts grow. Read the two p-values side by side and quote the exact one here. Two things to notice about Fisher's mode: it reports NO statistic and NO degrees of freedom, because an exact test enumerates the distribution rather than referring a statistic to one, and it gives the sample odds ratio as its effect size instead. The two-sided p-value is the total probability of all tables no more likely than the one observed, not double the smaller tail, which would disagree here because the hypergeometric distribution is asymmetric. One honest caveat: conditioning on the margins makes Fisher's test somewhat conservative, so a non-significant result on a very small table is weak evidence of no association rather than evidence of none. Fisher (1935); Cochran (1954); Agresti (1992).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -346,6 +348,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -389,8 +393,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

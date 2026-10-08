@@ -167,7 +167,7 @@
       "name": "x",
       "data": 597,
       "type": "number",
-      "tableProcessGUId": "715672fc-2379-49d8-8931-551027376239",
+      "tableProcessGUId": "cc560ff4-5b27-4227-8bb1-292c5bbe1aa7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -190,7 +190,7 @@
       "data": 599,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "8f3902e7-77d8-46dc-b3d8-bcd505094ac0",
+      "tableProcessGUId": "0578981f-751e-4415-84cd-e3fd6190048e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -201,7 +201,7 @@
       "name": "binnedy_598_45",
       "data": 600,
       "type": "number",
-      "tableProcessGUId": "8f3902e7-77d8-46dc-b3d8-bcd505094ac0",
+      "tableProcessGUId": "0578981f-751e-4415-84cd-e3fd6190048e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -365,7 +365,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -376,7 +376,7 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
@@ -545,6 +545,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -588,8 +590,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

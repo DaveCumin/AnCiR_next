@@ -2596,7 +2596,7 @@
       "name": "stat_peak_period_27",
       "data": 334,
       "type": "number",
-      "tableProcessGUId": "6adc4035-40dd-462f-8ba2-c9147f592af0",
+      "tableProcessGUId": "1ff8af78-3a33-4ffb-a9f4-c823bebff452",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2607,7 +2607,7 @@
       "name": "stat_peak_power_27",
       "data": 335,
       "type": "number",
-      "tableProcessGUId": "6adc4035-40dd-462f-8ba2-c9147f592af0",
+      "tableProcessGUId": "1ff8af78-3a33-4ffb-a9f4-c823bebff452",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2618,7 +2618,7 @@
       "name": "rhythmicityy_329_27",
       "data": 336,
       "type": "number",
-      "tableProcessGUId": "6adc4035-40dd-462f-8ba2-c9147f592af0",
+      "tableProcessGUId": "1ff8af78-3a33-4ffb-a9f4-c823bebff452",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2679,6 +2679,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -2710,6 +2723,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -2777,6 +2791,19 @@
           "nticks": 5,
           "manualTicks": null
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "data": [
           {
             "x": {
@@ -2822,6 +2849,7 @@
               "draw": true
             },
             "binSize": 0.25,
+            "binSizeAuto": true,
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
@@ -2880,7 +2908,7 @@
     {
       "id": 27,
       "name": "RhythmicityAnalysis",
-      "displayName": "Rhythmicity Analysis — tau",
+      "displayName": "Rhythmicity Analysis: tau",
       "args": {
         "xIN": 328,
         "yIN": [
@@ -2983,6 +3011,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -3026,8 +3056,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

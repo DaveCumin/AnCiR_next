@@ -1063,7 +1063,7 @@
       "name": "R_34",
       "data": 452,
       "type": "number",
-      "tableProcessGUId": "7f242522-892e-4661-9a31-7a8d1013d0fd",
+      "tableProcessGUId": "f2c572eb-ec2c-44b7-a4b2-5bae1c4a652a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1074,7 +1074,7 @@
       "name": "z_34",
       "data": 453,
       "type": "number",
-      "tableProcessGUId": "7f242522-892e-4661-9a31-7a8d1013d0fd",
+      "tableProcessGUId": "f2c572eb-ec2c-44b7-a4b2-5bae1c4a652a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1085,7 +1085,7 @@
       "name": "pvalue_34",
       "data": 454,
       "type": "number",
-      "tableProcessGUId": "7f242522-892e-4661-9a31-7a8d1013d0fd",
+      "tableProcessGUId": "f2c572eb-ec2c-44b7-a4b2-5bae1c4a652a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1095,7 +1095,7 @@
   "plots": [
     {
       "id": 59,
-      "name": "Actogram — two bouts a day",
+      "name": "Actogram: two bouts a day",
       "x": 60,
       "y": 60,
       "width": 520,
@@ -1146,6 +1146,19 @@
         "lightBands": {
           "bands": []
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "annotations": [],
         "xAxis": {
           "label": "",
@@ -1177,6 +1190,7 @@
               "producerArtifactKind": null,
               "processes": []
             },
+            "label": "",
             "colour": "#234154",
             "draw": true,
             "phaseMarkers": []
@@ -1186,7 +1200,7 @@
     },
     {
       "id": 60,
-      "name": "Periodogram — 24 h and 12 h",
+      "name": "Periodogram: 24 h and 12 h",
       "x": 630,
       "y": 60,
       "width": 520,
@@ -1244,6 +1258,19 @@
           "nticks": 5,
           "manualTicks": null
         },
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        },
         "data": [
           {
             "x": {
@@ -1289,6 +1316,7 @@
               "draw": true
             },
             "binSize": 0.25,
+            "binSizeAuto": true,
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
@@ -1349,7 +1377,7 @@
     {
       "id": 34,
       "name": "RayleighTest",
-      "displayName": "Rayleigh — one mean phase for two peaks",
+      "displayName": "Rayleigh: one mean phase for two peaks",
       "args": {
         "xIN": 451,
         "yIN": [
@@ -1451,6 +1479,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -1494,8 +1524,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

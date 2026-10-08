@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "769": [
+    "783": [
       9.23,
       3.33,
       1.98,
@@ -55,11 +55,11 @@
   },
   "data": [
     {
-      "id": 769,
-      "name": "result_72",
-      "data": 769,
+      "id": 783,
+      "name": "result_73",
+      "data": 783,
       "type": "number",
-      "tableProcessGUId": "5b6e2e73-4286-4b4a-9de9-a971f2f613c0",
+      "tableProcessGUId": "a8975f23-0f9c-480b-8617-143e24e0b437",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 126,
+      "id": 128,
       "name": "Random result",
       "x": 60,
       "y": 60,
@@ -101,7 +101,7 @@
       },
       "plot": {
         "columnRefs": [
-          769
+          783
         ],
         "showCol": [
           true
@@ -115,7 +115,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 72,
+      "id": 73,
       "name": "Random",
       "displayName": "Random",
       "args": {
@@ -125,7 +125,7 @@
         "seed": 12345,
         "distribution": "uniform",
         "out": {
-          "result": 769
+          "result": 783
         }
       },
       "refTPId": null
@@ -136,7 +136,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_68",
+      "id": "note_69",
       "text": "Generates a column of pseudo-random values from a uniform, Gaussian, or exponential distribution, scaled by an offset and multiplier, with a fixed seed for reproducibility. Use it to add controlled noise or to create random test data.",
       "x": 40,
       "y": 24,
@@ -170,15 +170,15 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "tableprocess_72": {
+    "tableprocess_73": {
       "x": 60,
       "y": 314
     },
-    "plot_126": {
+    "plot_128": {
       "x": 820,
       "y": 314
     },
-    "note_68": {
+    "note_69": {
       "x": 40,
       "y": 24
     }
@@ -195,6 +195,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -238,8 +240,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

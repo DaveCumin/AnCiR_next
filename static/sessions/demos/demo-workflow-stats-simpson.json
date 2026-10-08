@@ -358,7 +358,7 @@
       -0.4736242101093664
     ],
     "312": [
-      0.000017726124556527445
+      0.000017726124556532273
     ],
     "313": [
       75
@@ -546,7 +546,7 @@
       "name": "var_i_26",
       "data": 309,
       "type": "category",
-      "tableProcessGUId": "77cce07c-5930-4f7b-ac69-11af6b3a3cfa",
+      "tableProcessGUId": "2107f05a-aed0-49d4-bde7-bb80712b201e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -557,7 +557,7 @@
       "name": "var_j_26",
       "data": 310,
       "type": "category",
-      "tableProcessGUId": "77cce07c-5930-4f7b-ac69-11af6b3a3cfa",
+      "tableProcessGUId": "2107f05a-aed0-49d4-bde7-bb80712b201e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -568,7 +568,7 @@
       "name": "r_26",
       "data": 311,
       "type": "number",
-      "tableProcessGUId": "77cce07c-5930-4f7b-ac69-11af6b3a3cfa",
+      "tableProcessGUId": "2107f05a-aed0-49d4-bde7-bb80712b201e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -579,7 +579,7 @@
       "name": "pvalue_26",
       "data": 312,
       "type": "number",
-      "tableProcessGUId": "77cce07c-5930-4f7b-ac69-11af6b3a3cfa",
+      "tableProcessGUId": "2107f05a-aed0-49d4-bde7-bb80712b201e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -590,7 +590,7 @@
       "name": "n_26",
       "data": 313,
       "type": "number",
-      "tableProcessGUId": "77cce07c-5930-4f7b-ac69-11af6b3a3cfa",
+      "tableProcessGUId": "2107f05a-aed0-49d4-bde7-bb80712b201e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -948,7 +948,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -959,7 +959,7 @@
           "itemSpacing": 4,
           "fontSize": null
         },
-        "nightBands": []
+        "overlays": []
       }
     },
     {
@@ -1044,7 +1044,7 @@
   "notes": [
     {
       "id": "note_14",
-      "text": "WORKFLOW: Simpson's paradox. A relationship that is positive inside every group can turn negative once the groups are pooled — the direction of the effect literally reverses. Here three hospital wards each show activity rising with dose (each coloured trend line climbs), but the wards are staggered so that the ward running the highest dose also has the lowest baseline activity. Pool all the points and the cloud slopes DOWN: the Correlation node on the combined data reports a negative coefficient (about r = −0.5, and significant), flatly contradicting every within-ward trend. This is not an error or an artefact of noise; it is a real feature of the data caused by a lurking third variable (the ward) that is correlated with both dose and baseline. The uncomfortable part is that neither answer is automatically 'right'. If the wards are just noise you'd pool; if they differ systematically (as here) the pooled number is misleading and the per-group analysis is the honest one. This is exactly why 'controlling for' a covariate can flip a published result, and why you should always ask what groups sit underneath an aggregate correlation before you believe it. Named for E.H. Simpson (1951); the effect was noted earlier by Yule and Pearson.",
+      "text": "WORKFLOW: Simpson's paradox. A relationship that is positive inside every group can turn negative once the groups are pooled: the direction of the effect literally reverses. Here three hospital wards each show activity rising with dose (each coloured trend line climbs), but the wards are staggered so that the ward running the highest dose also has the lowest baseline activity. Pool all the points and the cloud slopes DOWN: the Correlation node on the combined data reports a negative coefficient (about r = −0.5, and significant), flatly contradicting every within-ward trend. This is not an error or an artefact of noise; it is a real feature of the data caused by a lurking third variable (the ward) that is correlated with both dose and baseline. The uncomfortable part is that neither answer is automatically 'right'. If the wards are just noise you'd pool; if they differ systematically (as here) the pooled number is misleading and the per-group analysis is the honest one. This is exactly why 'controlling for' a covariate can flip a published result, and why you should always ask what groups sit underneath an aggregate correlation before you believe it. Named for E.H. Simpson (1951); the effect was noted earlier by Yule and Pearson.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -1170,6 +1170,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -1213,8 +1215,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

@@ -26,6 +26,15 @@ import AppViews from '$lib/components/views/__fixtures__/AppViews.svelte';
 
 const DEMOS = join(process.cwd(), 'static/sessions/demos');
 const demo = (name) => JSON.parse(readFileSync(join(DEMOS, name), 'utf8'));
+// The periodogram tests need a session saved BEFORE v81 (no `binSizeAuto` on its series). The
+// shipped demo stops being one the moment demos are regenerated, so it is frozen as a fixture.
+const legacyPeriodogramDemo = () =>
+	JSON.parse(
+		readFileSync(
+			join(process.cwd(), 'src/test/fixtures/legacy-v72.29-demo-periodogram-rhythm.json'),
+			'utf8'
+		)
+	);
 
 class ThrowOnPost {
 	postMessage() {
@@ -190,9 +199,9 @@ describe('a new node follows its x', () => {
 describe('Periodogram plot series', () => {
 	const periodogramPlot = () => core.plots.find((p) => p.type === 'periodogram');
 
-	/** The shipped hourly periodogram demo (saved by β.72.29) with its series edited. */
+	/** The hourly periodogram demo as shipped at β.72.29 (frozen fixture), its series edited. */
 	function periodogramDemo(version, mutate) {
-		const json = demo('demo-periodogram-rhythm.json');
+		const json = legacyPeriodogramDemo();
 		if (version !== undefined) json.version = version;
 		mutate(json.plots.find((p) => p.type === 'periodogram').plot.data[0]);
 		return json;
@@ -271,7 +280,7 @@ describe('Periodogram plot series', () => {
 	}
 
 	it('a new series follows its x, survives save and reload, and an edit stops it', async () => {
-		const json = demo('demo-periodogram-rhythm.json');
+		const json = legacyPeriodogramDemo();
 		await load(json);
 		const plot = periodogramPlot().plot;
 		const first = plot.data[0];

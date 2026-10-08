@@ -14,7 +14,7 @@
 		<ul class="ce-list">
 			{#each result.shown as s (s.id)}
 				<li>
-					<div class="ce-name">{s.name?.replace(/^Workflow — /, '') ?? s.id}</div>
+					<div class="ce-name">{s.name?.replace(/^Workflow\s*[:—]\s*/, '') ?? s.id}</div>
 					{#if s.summary}<div class="ce-summary">{s.summary}</div>{/if}
 					<DemoLink session={s.url} label="Open in AnCiR" />
 				</li>

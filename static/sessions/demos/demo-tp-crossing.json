@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "0": [
+    "625": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "1": [
+    "626": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,7 +104,7 @@
       10,
       11.362966948437261
     ],
-    "2": [
+    "627": [
       1,
       1,
       1,
@@ -156,20 +156,20 @@
       1,
       1
     ],
-    "3": [
+    "628": [
       1,
       23,
       47
     ],
-    "4": [
+    "629": [
       3
     ]
   },
   "data": [
     {
-      "id": 0,
+      "id": 625,
       "name": "Crossing input 1",
-      "data": 0,
+      "data": 625,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -178,9 +178,9 @@
       "processes": []
     },
     {
-      "id": 1,
+      "id": 626,
       "name": "Crossing input 2",
-      "data": 1,
+      "data": 626,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -189,33 +189,33 @@
       "processes": []
     },
     {
-      "id": 2,
-      "name": "breach_0",
-      "data": 2,
+      "id": 627,
+      "name": "breach_53",
+      "data": 627,
       "type": "number",
-      "tableProcessGUId": "b3b6275a-096b-4e23-acd0-956874c647cd",
+      "tableProcessGUId": "f935c0c8-257f-4866-8745-0c4123732d99",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 3,
-      "name": "crossing_0",
-      "data": 3,
+      "id": 628,
+      "name": "crossing_53",
+      "data": 628,
       "type": "number",
-      "tableProcessGUId": "b3b6275a-096b-4e23-acd0-956874c647cd",
+      "tableProcessGUId": "f935c0c8-257f-4866-8745-0c4123732d99",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 4,
-      "name": "count_0",
-      "data": 4,
+      "id": 629,
+      "name": "count_53",
+      "data": 629,
       "type": "number",
-      "tableProcessGUId": "b3b6275a-096b-4e23-acd0-956874c647cd",
+      "tableProcessGUId": "f935c0c8-257f-4866-8745-0c4123732d99",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -224,12 +224,12 @@
   ],
   "plots": [
     {
-      "id": 0,
+      "id": 106,
       "name": "Crossing: signal + detections",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 60,
+      "y": 60,
+      "width": 520,
+      "height": 300,
       "type": "scatterplot",
       "selected": false,
       "facet": false,
@@ -299,9 +299,9 @@
         "data": [
           {
             "x": {
-              "id": 5,
+              "id": 630,
               "name": "Crossing input 1",
-              "refId": 0,
+              "refId": 625,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -310,9 +310,9 @@
               "processes": []
             },
             "y": {
-              "id": 6,
+              "id": 631,
               "name": "Crossing input 2",
-              "refId": 1,
+              "refId": 626,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -339,7 +339,7 @@
         ],
         "legend": {
           "show": true,
-          "position": "auto",
+          "position": "topright",
           "customX": 0.02,
           "customY": 0.02,
           "orientation": "vertical",
@@ -400,7 +400,7 @@
               "at": {
                 "columns": [
                   {
-                    "refId": 3
+                    "refId": 628
                   }
                 ],
                 "typed": []
@@ -411,12 +411,12 @@
       }
     },
     {
-      "id": 1,
+      "id": 107,
       "name": "Crossing result",
-      "x": 350,
-      "y": 150,
-      "width": 500,
-      "height": 250,
+      "x": 630,
+      "y": 60,
+      "width": 520,
+      "height": 260,
       "type": "tableplot",
       "selected": false,
       "facet": false,
@@ -444,11 +444,11 @@
       },
       "plot": {
         "columnRefs": [
-          0,
-          1,
-          2,
-          3,
-          4
+          625,
+          626,
+          627,
+          628,
+          629
         ],
         "showCol": [
           true,
@@ -466,19 +466,19 @@
   ],
   "tableProcesses": [
     {
-      "id": 0,
+      "id": 53,
       "name": "Crossing",
       "displayName": "Crossing",
       "args": {
-        "xIN": 0,
+        "xIN": 625,
         "yIN": [
-          1
+          626
         ],
         "thresholdIN": [],
         "groups": [
           [
             {
-              "target": 1,
+              "target": 626,
               "isOperator": "<",
               "source": -1,
               "value": 20
@@ -487,9 +487,9 @@
         ],
         "persistence": 2,
         "out": {
-          "breach": 2,
-          "crossing": 3,
-          "count": 4
+          "breach": 627,
+          "crossing": 628,
+          "count": 629
         }
       },
       "refTPId": null
@@ -500,8 +500,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_1",
-      "text": "Finds when a rule over one or more series first (and next) becomes sustainedly true — the detection step for both set-point alerts (e.g. temperature below 33 for 6 h) and baseline-relative monitoring (a rolling rhythm metric outside its baseline mean ± 3 SD). Build the rule from conditions (series above/below a typed value or a wired scalar threshold) combined as OR of AND-groups; a condition on x acts as a gate. Persistence requires the rule to hold continuously (in x units when x is wired, else consecutive values) before a crossing fires, and the rule must go false again before the next one can fire, so one long excursion is one crossing. Outputs: every crossing's x value (or index), their count, and the 0/1 breach series; missing data breaks a persistence run rather than completing it. In the demo, read the crossings as the moments the activity rhythm dips below the cutoff for the required duration — one per trough, re-armed in between. Statistical-process-control style rule detection; see also Threshold for the simple per-sample 0/1 case.",
+      "id": "note_53",
+      "text": "Finds when a rule over one or more series first (and next) becomes sustainedly true. It is the detection step for both set-point alerts (e.g. temperature below 33 for 6 h) and baseline-relative monitoring (a rolling rhythm metric outside its baseline mean ± 3 SD). Build the rule from conditions (series above/below a typed value or a wired scalar threshold) combined as OR of AND-groups; a condition on x acts as a gate. Persistence requires the rule to hold continuously (in x units when x is wired, hours when x is a time column, else consecutive values) before a crossing fires, and the rule must go false again before the next one can fire, so one long excursion is one crossing. Outputs: every crossing's x value (or index), their count, and the 0/1 breach series; missing data, or a gap in x of more than 1.5 sampling intervals (rows absent from the file), breaks a persistence run rather than completing it. In the demo, read the crossings as the moments the activity rhythm dips below the cutoff for the required duration: one per trough, re-armed in between. Statistical-process-control style rule detection; see also Threshold for the simple per-sample 0/1 case.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -534,27 +534,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_0": {
+    "data_625": {
       "x": 60,
       "y": 314
     },
-    "data_1": {
+    "data_626": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_0": {
+    "tableprocess_53": {
       "x": 440,
       "y": 314
     },
-    "plot_0": {
+    "plot_106": {
       "x": 820,
       "y": 314
     },
-    "plot_1": {
+    "plot_107": {
       "x": 820,
       "y": 814
     },
-    "note_1": {
+    "note_53": {
       "x": 40,
       "y": 24
     }
@@ -571,6 +571,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -614,8 +616,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.30"
+  "version": "β.81.12"
 }

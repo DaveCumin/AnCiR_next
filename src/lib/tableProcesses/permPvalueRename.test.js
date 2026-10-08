@@ -14,12 +14,10 @@
 // across to the new key — wires anchor on `col_<colId>` ports, so identity is
 // what keeps downstream consumers attached — never delete-and-recreate.
 // This file pins: the engine writes the permutation p under the new key, old
-// args migrate in place (component path and headless/func path), the column id
-// survives, and the committed demo JSONs (real old-shape sessions) migrate.
+// args migrate in place (component path and headless/func path), and the column
+// id survives. (A block that migrated the committed demo JSONs was removed in
+// v81.13: the demos were regenerated in the new shape, so it tested nothing.)
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 
 const { mockColumns, rawData } = vi.hoisted(() => ({
 	mockColumns: {},
@@ -80,11 +78,7 @@ vi.mock('$lib/utils/doublelogistic.js', () => ({
 }));
 import { rectangularwave } from './RectangularWave.svelte';
 import { doublelogistic } from './DoubleLogistic.svelte';
-import { migrateRenamedOutKey } from './tpArgHelpers.js';
 import { migrateRenamedMetricOut } from './metricOutputs.js';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const repo = join(here, '..', '..', '..');
 
 const N = 48;
 const t = Array.from({ length: N }, (_, i) => i);
@@ -231,33 +225,4 @@ describe('migrateRenamedMetricOut (component path): column identity and name', (
 		expect(migrateRenamedMetricOut(p, 'pvalue', 'perm_pvalue')).toBe(false);
 		expect(p.args.out.perm_pvalue).toBe(61);
 	});
-});
-
-describe('the committed demos are real old-shape sessions and they migrate', () => {
-	// These two demo JSONs bake `pvalue: <colId>` (they predate the rename), so
-	// they double as fixtures for the exact bytes an end user's saved session
-	// holds. On load the component runs migrateRenamedMetricOut; this asserts
-	// the pure key step on the REAL session args, id preserved.
-	const CASES = [
-		['demo-tp-rectangularwave.json', 'RectangularWave'],
-		['demo-tp-doublelogistic.json', 'DoubleLogistic']
-	];
-	for (const [file, name] of CASES) {
-		it(`${file}: pvalue out-key re-keys to perm_pvalue with the same column id`, () => {
-			const session = JSON.parse(readFileSync(join(repo, 'static/sessions/demos', file), 'utf8'));
-			const tp = (session.tableProcesses ?? []).find((x) => x.name === name);
-			expect(tp, `${file} should contain a ${name} node`).toBeTruthy();
-			const oldId = tp.args.out.pvalue ?? tp.args.out.perm_pvalue;
-			expect(oldId).toBeGreaterThanOrEqual(0);
-			migrateRenamedOutKey(tp.args, 'pvalue', 'perm_pvalue');
-			expect(tp.args.out.perm_pvalue).toBe(oldId);
-			expect('pvalue' in tp.args.out).toBe(false);
-			// The column itself still exists in the session under that id, so a
-			// downstream `col_<id>` wire (the graph's port naming) still resolves.
-			const colIds = new Set(
-				(session.data ?? session.columns ?? []).map((c) => c.id).filter((v) => v != null)
-			);
-			if (colIds.size > 0) expect(colIds.has(oldId)).toBe(true);
-		});
-	}
 });

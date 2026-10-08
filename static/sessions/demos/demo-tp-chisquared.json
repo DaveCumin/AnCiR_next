@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "722": [
+    "735": [
       "ctrl",
       "drug",
       "ctrl",
@@ -92,7 +92,7 @@
       "ctrl",
       "drug"
     ],
-    "723": [
+    "736": [
       "responder",
       "non-responder",
       "non-responder",
@@ -184,30 +184,30 @@
       "non-responder",
       "non-responder"
     ],
-    "724": [
+    "737": [
       0
     ],
-    "725": [
+    "738": [
       1
     ],
-    "726": [
+    "739": [
       1
     ],
-    "727": [
+    "740": [
       0
     ],
-    "728": [
+    "741": [
       null
     ],
-    "729": [
+    "742": [
       null
     ]
   },
   "data": [
     {
-      "id": 722,
+      "id": 735,
       "name": "Categorical tests input 1",
-      "data": 722,
+      "data": 735,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -216,9 +216,9 @@
       "processes": []
     },
     {
-      "id": 723,
+      "id": 736,
       "name": "Categorical tests input 2",
-      "data": 723,
+      "data": 736,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -227,66 +227,66 @@
       "processes": []
     },
     {
-      "id": 724,
-      "name": "statistic_65",
-      "data": 724,
+      "id": 737,
+      "name": "statistic_66",
+      "data": 737,
       "type": "number",
-      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
+      "tableProcessGUId": "4aeb7102-8663-4e3c-9f41-a9fb4a36f218",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 725,
-      "name": "pvalue_65",
-      "data": 725,
+      "id": 738,
+      "name": "pvalue_66",
+      "data": 738,
       "type": "number",
-      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
+      "tableProcessGUId": "4aeb7102-8663-4e3c-9f41-a9fb4a36f218",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 726,
-      "name": "df_65",
-      "data": 726,
+      "id": 739,
+      "name": "df_66",
+      "data": 739,
       "type": "number",
-      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
+      "tableProcessGUId": "4aeb7102-8663-4e3c-9f41-a9fb4a36f218",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 727,
-      "name": "effectSize_65",
-      "data": 727,
+      "id": 740,
+      "name": "effectSize_66",
+      "data": 740,
       "type": "number",
-      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
+      "tableProcessGUId": "4aeb7102-8663-4e3c-9f41-a9fb4a36f218",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 728,
-      "name": "ciLow_65",
-      "data": 728,
+      "id": 741,
+      "name": "ciLow_66",
+      "data": 741,
       "type": "number",
-      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
+      "tableProcessGUId": "4aeb7102-8663-4e3c-9f41-a9fb4a36f218",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 729,
-      "name": "ciHigh_65",
-      "data": 729,
+      "id": 742,
+      "name": "ciHigh_66",
+      "data": 742,
       "type": "number",
-      "tableProcessGUId": "cfe6fb84-cc47-4673-b317-bbef23486e72",
+      "tableProcessGUId": "4aeb7102-8663-4e3c-9f41-a9fb4a36f218",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -295,7 +295,7 @@
   ],
   "plots": [
     {
-      "id": 119,
+      "id": 121,
       "name": "Categorical tests result",
       "x": 60,
       "y": 60,
@@ -328,14 +328,14 @@
       },
       "plot": {
         "columnRefs": [
-          722,
-          723,
-          724,
-          725,
-          726,
-          727,
-          728,
-          729
+          735,
+          736,
+          737,
+          738,
+          739,
+          740,
+          741,
+          742
         ],
         "showCol": [
           true,
@@ -356,24 +356,25 @@
   ],
   "tableProcesses": [
     {
-      "id": 65,
+      "id": 66,
       "name": "ChiSquared",
       "displayName": "Categorical tests",
       "args": {
         "testType": "independence",
         "dataFormat": "paired",
-        "xIN": 722,
-        "yIN": 723,
+        "xIN": 735,
+        "yIN": 736,
         "correction": true,
         "out": {
-          "statistic": 724,
-          "pvalue": 725,
-          "df": 726,
-          "effectSize": 727,
-          "ciLow": 728,
-          "ciHigh": 729
+          "statistic": 737,
+          "pvalue": 738,
+          "df": 739,
+          "effectSize": 740,
+          "ciLow": 741,
+          "ciHigh": 742
         },
         "alternative": "two-sided",
+        "gofInput": "auto",
         "valid": false
       },
       "refTPId": null
@@ -384,8 +385,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_62",
-      "text": "Pearson's chi-squared test in two modes. Independence: cross-tabulate two categorical columns into a contingency table and test whether the two variables are associated (Yates' continuity correction is applied to 2×2 tables). Goodness-of-fit: take one column and test whether its category counts (or the raw counts, if numeric) depart from a uniform expectation. Reports the statistic, degrees of freedom and p-value, and shows the table in the node. It warns when expected cell counts fall below 5, where the χ² approximation breaks down (prefer Fisher's exact test). Matches scipy (chisquare / chi2_contingency). Pearson 1900.",
+      "id": "note_63",
+      "text": "Pearson's chi-squared test in two modes. Independence: cross-tabulate two categorical columns into a contingency table and test whether the two variables are associated (Yates' continuity correction is applied to 2×2 tables). Goodness-of-fit: take one column and test whether its category counts (or the raw counts, if numeric) depart from a uniform expectation; 'Read the column as' can force counts (which must be non-negative whole numbers) or categories (for numeric codes). Reports the statistic, degrees of freedom and p-value, and shows the table in the node. It warns when expected cell counts fall below 5, where the χ² approximation breaks down (prefer Fisher's exact test). Matches scipy (chisquare / chi2_contingency). Pearson 1900.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -418,23 +419,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_722": {
+    "data_735": {
       "x": 60,
       "y": 314
     },
-    "data_723": {
+    "data_736": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_65": {
+    "tableprocess_66": {
       "x": 440,
       "y": 314
     },
-    "plot_119": {
+    "plot_121": {
       "x": 820,
       "y": 314
     },
-    "note_62": {
+    "note_63": {
       "x": 40,
       "y": 24
     }
@@ -451,6 +452,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -494,8 +497,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }

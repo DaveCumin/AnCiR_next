@@ -10,6 +10,7 @@ const {
 	openSessionFile,
 	openExample,
 	pickSessionFile,
+	displayName,
 	resolveExampleUrl,
 	sessionMeta,
 	loadExampleManifest
@@ -23,6 +24,20 @@ beforeEach(() => {
 	loadRecents();
 	importJson.mockClear();
 	delete window.showOpenFilePicker;
+});
+
+describe('displayName', () => {
+	it('strips the "Workflow: " prefix and capitalises', () => {
+		expect(displayName('Workflow: compare two groups')).toBe('Compare two groups');
+	});
+
+	it('still strips the older em-dash prefix (a manifest cached before the rename)', () => {
+		expect(displayName('Workflow — compare two groups')).toBe('Compare two groups');
+	});
+
+	it('leaves a non-workflow name alone apart from capitalising', () => {
+		expect(displayName('Scatter: activity vs hour')).toBe('Scatter: activity vs hour');
+	});
 });
 
 describe('openSessionFile', () => {
@@ -175,7 +190,7 @@ describe('confirm before replacing open work', () => {
 	it('an example the user declines is neither fetched, loaded nor recorded', async () => {
 		withOpenWork();
 		global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ data: [] }) }));
-		const pending = openExample({ id: 'x', name: 'Workflow — demo', url: 'sessions/demos/a.json' });
+		const pending = openExample({ id: 'x', name: 'Workflow: demo', url: 'sessions/demos/a.json' });
 		expect(appState.showAYSModal).toBe(true);
 		expect(appState.AYStext).toContain('"Demo"');
 		answer('Cancel');

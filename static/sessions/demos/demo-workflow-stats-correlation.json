@@ -432,16 +432,16 @@
       0.16919813971416225
     ],
     "178": [
-      0,
-      2.4648233454271917e-9,
-      0.10481714808408482,
-      0,
-      2.1380192261055697e-7,
-      0.27212329581320105,
-      0,
-      0.12077351392916691,
-      5.351050291757531e-8,
-      0.16144067714840415
+      2.2543238720786862e-29,
+      2.4648236127512585e-9,
+      0.10481714808407849,
+      6.216298007177071e-33,
+      2.1380192282585226e-7,
+      0.2721232958131965,
+      6.610487302337749e-21,
+      0.12077351392916058,
+      5.351050298238365e-8,
+      0.1614406771483986
     ],
     "179": [
       70,
@@ -517,7 +517,7 @@
       "name": "variable_13",
       "data": 170,
       "type": "category",
-      "tableProcessGUId": "47717515-d1d0-4830-89a3-210001bfb9a4",
+      "tableProcessGUId": "b86f4422-c6ad-4dd0-b941-8e08b2707c3e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -528,7 +528,7 @@
       "name": "n_13",
       "data": 171,
       "type": "number",
-      "tableProcessGUId": "47717515-d1d0-4830-89a3-210001bfb9a4",
+      "tableProcessGUId": "b86f4422-c6ad-4dd0-b941-8e08b2707c3e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -539,7 +539,7 @@
       "name": "mean_13",
       "data": 172,
       "type": "number",
-      "tableProcessGUId": "47717515-d1d0-4830-89a3-210001bfb9a4",
+      "tableProcessGUId": "b86f4422-c6ad-4dd0-b941-8e08b2707c3e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -550,7 +550,7 @@
       "name": "sd_13",
       "data": 173,
       "type": "number",
-      "tableProcessGUId": "47717515-d1d0-4830-89a3-210001bfb9a4",
+      "tableProcessGUId": "b86f4422-c6ad-4dd0-b941-8e08b2707c3e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -561,7 +561,7 @@
       "name": "skewness_13",
       "data": 174,
       "type": "number",
-      "tableProcessGUId": "47717515-d1d0-4830-89a3-210001bfb9a4",
+      "tableProcessGUId": "b86f4422-c6ad-4dd0-b941-8e08b2707c3e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -572,7 +572,7 @@
       "name": "var_i_14",
       "data": 175,
       "type": "category",
-      "tableProcessGUId": "11ae33ce-ff8f-4bac-98f6-b2f6512f5e22",
+      "tableProcessGUId": "4954ca21-2988-4ddc-8bbd-f8524524fefe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -583,7 +583,7 @@
       "name": "var_j_14",
       "data": 176,
       "type": "category",
-      "tableProcessGUId": "11ae33ce-ff8f-4bac-98f6-b2f6512f5e22",
+      "tableProcessGUId": "4954ca21-2988-4ddc-8bbd-f8524524fefe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -594,7 +594,7 @@
       "name": "r_14",
       "data": 177,
       "type": "number",
-      "tableProcessGUId": "11ae33ce-ff8f-4bac-98f6-b2f6512f5e22",
+      "tableProcessGUId": "4954ca21-2988-4ddc-8bbd-f8524524fefe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -605,7 +605,7 @@
       "name": "pvalue_14",
       "data": 178,
       "type": "number",
-      "tableProcessGUId": "11ae33ce-ff8f-4bac-98f6-b2f6512f5e22",
+      "tableProcessGUId": "4954ca21-2988-4ddc-8bbd-f8524524fefe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -616,7 +616,7 @@
       "name": "n_14",
       "data": 179,
       "type": "number",
-      "tableProcessGUId": "11ae33ce-ff8f-4bac-98f6-b2f6512f5e22",
+      "tableProcessGUId": "4954ca21-2988-4ddc-8bbd-f8524524fefe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -666,6 +666,21 @@
         "colormap": "rdbu",
         "showValues": true,
         "method": "pearson",
+        "colourScale": {
+          "show": true,
+          "position": "right",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null,
+          "barLength": null,
+          "barThickness": 10
+        },
         "data": [
           {
             "column": {
@@ -844,7 +859,20 @@
               "processes": []
             }
           }
-        ]
+        ],
+        "legend": {
+          "show": false,
+          "position": "topright",
+          "customX": 0.02,
+          "customY": 0.02,
+          "orientation": "vertical",
+          "backgroundColor": "rgba(255, 255, 255, 0.9)",
+          "borderColor": "var(--color-lightness-25)",
+          "borderWidth": 1,
+          "padding": 8,
+          "itemSpacing": 4,
+          "fontSize": null
+        }
       }
     },
     {
@@ -955,7 +983,7 @@
   "notes": [
     {
       "id": "note_7",
-      "text": "WORKFLOW: correlation & relationships. Which variables move together, and how? Correlation computes every pairwise coefficient among the wired columns; on 'auto' it uses Spearman (rank / monotonic) if any column fails a normality check, else Pearson (linear), so the whole matrix stays on one comparable method. Read three things: (1) STRENGTH and DIRECTION from the heatmap — deep blue/red = strong negative/positive, pale = weak; (2) LINEAR vs MONOTONIC — the pairs plot's scatterplots show whether a relationship is a straight line (Pearson-appropriate) or a curved-but-monotonic trend (where Spearman is larger and more honest); (3) MULTICOLLINEARITY — several predictors strongly correlated with each other is a warning for any regression that uses them together. Correlation is not causation, and a near-zero coefficient only rules out a MONOTONIC relationship, not any relationship. Pearson (1895); Spearman (1904).",
+      "text": "WORKFLOW: correlation & relationships. Which variables move together, and how? Correlation computes every pairwise coefficient among the wired columns; on 'auto' it uses Spearman (rank / monotonic) if any column fails a normality check, else Pearson (linear), so the whole matrix stays on one comparable method. Read three things: (1) STRENGTH and DIRECTION from the heatmap: deep blue/red = strong negative/positive, pale = weak; (2) LINEAR vs MONOTONIC: the pairs plot's scatterplots show whether a relationship is a straight line (Pearson-appropriate) or a curved-but-monotonic trend (where Spearman is larger and more honest); (3) MULTICOLLINEARITY: several predictors strongly correlated with each other is a warning for any regression that uses them together. Correlation is not causation, and a near-zero coefficient only rules out a MONOTONIC relationship, not any relationship. Pearson (1895); Spearman (1904).",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -1045,6 +1073,8 @@
     "showControlPanel": false,
     "importModalOpen": false,
     "tidyLayoutRequest": 0,
+    "settleLayoutRequest": 0,
+    "settleLayoutHandled": 0,
     "spawnNodeRequest": null,
     "windowWidth": 1024,
     "windowHeight": 768,
@@ -1088,8 +1118,7 @@
     "AYSoptions": [
       "Yes",
       "No"
-    ],
-    "showWorkflow": false
+    ]
   },
-  "version": "β.72.29"
+  "version": "β.81.12"
 }
