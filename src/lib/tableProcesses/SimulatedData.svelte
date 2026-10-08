@@ -98,10 +98,15 @@
 
 				// Apply phase shift to the rhythm calculation
 				const phaseShiftedTime = i + phase;
-				// Active for the first `alphaFraction` of each cycle (the floor keeps the original
-				// rule, which the 0.5 default reproduces bit for bit: period * 0.5 === period / 2).
-				const currentAmplitude =
-					Math.floor(phaseShiftedTime % period) < activeUntil ? amplitude : 1;
+				// Active for exactly the first `alphaFraction` of each cycle: while the time within
+				// the cycle is below period * alphaFraction (24 h at 0.3: 7.2 h; 25 h at 0.5:
+				// 12.5 h). Until v81.10 that time was floored first, so the active phase ran on to
+				// the next whole hour (8 h; 13 h). Whenever the boundary is a whole hour (the 24 h
+				// default, 12 h) the two rules agree sample for sample. The within-cycle time is
+				// JS's remainder, which keeps the dividend's sign: with a negative phase shift the
+				// samples before t + phase reaches 0 have a negative time and read as active, as
+				// they always have (the Python and MCP ports match it).
+				const currentAmplitude = phaseShiftedTime % period < activeUntil ? amplitude : 1;
 
 				let value;
 				if (noiseEnabled) {

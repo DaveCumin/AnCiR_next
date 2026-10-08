@@ -85,6 +85,31 @@ describe('SimulatedData port is identical to the real generator', () => {
 				}
 			]
 		},
+		'exact boundaries: 25 h default, 23.5 h, and a negative phase at 0.3': {
+			startTime: '2024-06-01T00:00:00.000Z',
+			seed: 5,
+			samplingPeriod_hours: 0.25,
+			sections: [
+				{ duration_hours: 75, rhythmPeriod_hours: 25, rhythmAmplitude: 80, noiseEnabled: false },
+				{
+					duration_hours: 47,
+					rhythmPeriod_hours: 23.5,
+					rhythmPhase_hours: 1.3,
+					rhythmAmplitude: 80,
+					noiseEnabled: true,
+					noiseMode: 'add',
+					noiseAmplitude: 2
+				},
+				{
+					duration_hours: 48,
+					rhythmPeriod_hours: 24,
+					rhythmPhase_hours: -6,
+					rhythmAmplitude: 80,
+					noiseEnabled: false,
+					alphaFraction: 0.3
+				}
+			]
+		},
 		'noise disabled': {
 			startTime: '2024-01-01T00:00:00.000Z',
 			seed: 1,

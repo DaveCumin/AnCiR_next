@@ -15,7 +15,7 @@ import { validPairs } from './validPairs.js';
  * "Comparison of correlation analysis techniques for irregularly sampled time series",
  * Nonlinear Processes in Geophysics 18:389-404, doi:10.5194/npg-18-389-2011, Sect. "Correlation
  * slotting", Eqs. 10-11 and Table 1) write as a rectangular kernel b_k that keeps a pair when
- * its separation lies within half a slot of k * dt. Three rules make it well defined:
+ * its separation lies within half a slot of k * dt. These rules make it well defined:
  *
  *   1. Lag 0 is exactly 1, on both paths. A normalised autocorrelation is 1 at zero lag by
  *      definition. The slot around 0 holds each sample's pairing with itself (the product
@@ -42,6 +42,8 @@ import { validPairs } from './validPairs.js';
  *      trough read as the return to non-negative, and a 24 h rhythm reported its period as
  *      6.5 h with r = 0. The plot leaves a gap there, the peak search skips it, and the CSV
  *      export writes a blank cell.
+ *   5. The lag window is set in hours, not samples: by default it ends at half the recording
+ *      span, on both paths (see the comment at the cap below).
  *
  * Edelson and Krolik's original paper was not available to check here; the rules above rest on
  * Rehfeld et al.'s description of it and on the definition of the normalised autocorrelation.
@@ -52,7 +54,8 @@ import { validPairs } from './validPairs.js';
  * @param {number[]} times      - Sample times (hours).
  * @param {number[]} values     - Signal values aligned to `times`.
  * @param {number|null} binSize - Lag bin width (hours); null = derive from data spacing.
- * @param {number|null} maxLag  - Maximum lag (hours); null = (timespan)/2.
+ * @param {number|null} maxLag  - Maximum lag (hours); null = half the recording span,
+ *                               (last valid time - first) / 2. Capped at the span.
  * @param {number}      minLag  - Minimum lag (hours); defaults to 0. Lags below this are dropped.
  *
  * `peakLag` / `peakCorrelation` are the dominant period, via findAutocorrelationPeak
@@ -99,14 +102,25 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 		return { lags: [], correlations: [], dt: 1 };
 	}
 
-	const maxLagTime = maxLag ? maxLag : (t[t.length - 1] - t[0]) / 2;
+	// Rule 5: the lag window is set by TIME, not by the sample count. The default reaches half
+	// the recording span, (last - first) / 2, on both paths. Chatfield (The Analysis of Time
+	// Series) advises reading an autocorrelogram only out to about N/4 to N/2, as the long lags
+	// rest on few pairs; that N counts samples because his series are evenly spaced. Here the
+	// spacing may be uneven, so the cap is half the span in hours: an n / 2 cap in STEPS
+	// stopped 0.25 / 0.75 h data (median step 0.25 h) at a quarter of the span, 18 h of a
+	// 3-day record, before its 24 h peak. On evenly spaced data the span is (n - 1) steps, so
+	// the default is floor((n - 1) / 2) steps, which is what the old min(span / 2, n / 2)
+	// already gave there. A user max lag wins over the default, up to the span itself (no
+	// pair is further apart than that); on the index-shift path also below n shifts.
+	const span = t[t.length - 1] - t[0];
+	const maxLagTime = maxLag ? maxLag : span / 2;
 	const minLagTime = Number.isFinite(minLag) && minLag > 0 ? minLag : 0;
 
 	if (minLagTime >= maxLagTime) {
 		return { lags: [], correlations: [], dt };
 	}
 
-	const nLags = Math.min(Math.floor(maxLagTime / dt), Math.floor(n / 2));
+	let nLags = Math.min(Math.floor(maxLagTime / dt), Math.floor(span / dt));
 	const startLagIdx = Math.ceil(minLagTime / dt);
 
 	const yMean = mean(y);
@@ -131,6 +145,9 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 	timeDiffs.sort((a, b) => a - b);
 
 	if (isUniform(timeDiffs)) {
+		// Rule 5: a shift of n samples or more has no pairs (reachable when a near-uniform
+		// spacing makes span / dt exceed n - 1).
+		nLags = Math.min(nLags, n - 1);
 		for (let lag = startLagIdx; lag <= nLags; lag++) {
 			// Rule 1: lag 0 is 1 by definition, not sum / (n * var) with its rounding.
 			if (lag === 0) {
@@ -147,7 +164,7 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 					count++;
 				}
 			}
-			// Rule 4 (unreachable here, as lag <= n / 2 always leaves pairs; kept for symmetry).
+			// Rule 4 (unreachable here, as lag <= n - 1 always leaves a pair; kept for symmetry).
 			const correlation = count > 0 ? sum / (count * yVariance) : NaN;
 			lags.push(lag * dt);
 			correlations.push(correlation);

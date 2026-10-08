@@ -318,3 +318,69 @@ describe('computeAutocorrelation: an empty lag slot is missing, not r = 0', () =
 		expect(r.peakCorrelation).toBeGreaterThan(0.9);
 	});
 });
+
+describe('computeAutocorrelation: the default lag window is half the recording TIME', () => {
+	// Three days at alternating 0.25 / 0.75 h spacing: 146 samples over 72.25 h, median step
+	// 0.25 h. Capping at n / 2 steps (73 * 0.25 = 18.25 h) counted samples, not hours, and
+	// stopped before the 24 h peak could appear. Half the span is 36.125 h, so 144 steps.
+	const t = [];
+	for (let k = 0; k <= 72; k++) t.push(k, k + 0.25);
+	const y = t.map((h) => Math.cos((2 * Math.PI * h) / 24));
+
+	it('reaches half the span on uneven data and finds the 24 h peak', () => {
+		const r = computeAutocorrelation(t, y);
+		expect(r.dt).toBe(0.25);
+		expect(r.lags.length).toBe(145);
+		expect(r.lags[r.lags.length - 1]).toBe(36);
+		expect(r.peakLag).toBe(24);
+		expect(r.peakCorrelation).toBeGreaterThan(0.99);
+	});
+
+	it('a user max lag beyond half the span wins over the default', () => {
+		const r = computeAutocorrelation(t, y, null, 50);
+		expect(r.lags[r.lags.length - 1]).toBe(50);
+		expect(Number.isFinite(r.correlations[r.lags.length - 1])).toBe(true);
+	});
+
+	it('no lag is longer than the recording itself, whatever the user max lag', () => {
+		const r = computeAutocorrelation(t, y, null, 500);
+		expect(r.lags[r.lags.length - 1]).toBe(72.25);
+	});
+
+	it('a user max lag beyond half the span wins on even data too, up to the span', () => {
+		const { t: te, y: ye } = cosine(24, 71, 1); // 72 hourly samples, span 71 h
+		expect(computeAutocorrelation(te, ye, null, 50).lags.length).toBe(51);
+		const r = computeAutocorrelation(te, ye, null, 500);
+		expect(r.lags[r.lags.length - 1]).toBe(71);
+		expect(Number.isFinite(r.correlations[r.lags.length - 1])).toBe(true);
+	});
+
+	it('the index-shift path stops below n shifts when the span is longer than n - 1 steps', () => {
+		// Spacing alternating 1 and 1.09 h (15 of 1 h, 14 of 1.09 h) is within 10% of the 1 h
+		// median (index-shift path), but the span, 30.26 h, is longer than (n - 1) steps, so
+		// span / dt alone would ask for a shift of n = 30 samples, which has no pair.
+		const tn = [0];
+		for (let i = 1; i < 30; i++) tn.push(tn[i - 1] + (i % 2 === 0 ? 1.09 : 1));
+		const yn = tn.map((h) => Math.cos((2 * Math.PI * h) / 8));
+		const r = computeAutocorrelation(tn, yn, null, 500);
+		expect(r.lags.length).toBe(30);
+		expect(r.correlations.every(Number.isFinite)).toBe(true);
+	});
+
+	it('evenly spaced data keep the old lag count, floor((n - 1) / 2), and the old values', () => {
+		for (const n of [71, 72]) {
+			const te = Array.from({ length: n }, (_, i) => i);
+			const ye = te.map((h) => Math.cos((2 * Math.PI * h) / 24) + 0.1 * Math.sin(h * h));
+			const r = computeAutocorrelation(te, ye);
+			const nLags = Math.floor((n - 1) / 2);
+			expect(r.lags).toEqual(Array.from({ length: nLags + 1 }, (_, k) => k));
+			const m = ye.reduce((a, b) => a + b, 0) / n;
+			const v = ye.reduce((a, b) => a + (b - m) ** 2, 0) / n;
+			for (let k = 1; k <= nLags; k++) {
+				let s = 0;
+				for (let i = 0; i < n - k; i++) s += (ye[i] - m) * (ye[i + k] - m);
+				expect(r.correlations[k]).toBeCloseTo(s / ((n - k) * v), 12);
+			}
+		}
+	});
+});

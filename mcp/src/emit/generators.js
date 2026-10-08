@@ -83,7 +83,8 @@ export function simulatedData(args) {
 			time.push(new Date(startMs + (currentTime + i) * 3600000).toISOString());
 
 			const phaseShiftedTime = i + phase;
-			const currentAmplitude = Math.floor(phaseShiftedTime % period) < activeUntil ? amplitude : 1;
+			// Exact boundary (no floor since v81.11); JS remainder keeps the dividend's sign.
+			const currentAmplitude = phaseShiftedTime % period < activeUntil ? amplitude : 1;
 
 			let value;
 			if (noiseEnabled) {

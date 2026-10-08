@@ -527,7 +527,7 @@
 			"jsFn": "correlogramDownloadData",
 			"pyFunc": "correlogram_download_data",
 			"tolerance": 1e-9,
-			"note": "A plain NUMBER x starting at 5 h whose spacing cycles 1, 1, 1.05 h (within 10% of the median, so the index-shift path). The app's lag step was the MEAN spacing, (last - first) / (n - 1) = 1.0167 h, until SPEC-10 moved it to the median, 1 h, over hoursSinceStart (the offset itself changes nothing: the autocorrelation is shift-invariant).",
+			"note": "A plain NUMBER x starting at 5 h whose spacing cycles 1, 1, 1.05 h (within 10% of the median, so the index-shift path). The app's lag step was the MEAN spacing, (last - first) / (n - 1) = 1.0167 h, until SPEC-10 moved it to the median, 1 h, over hoursSinceStart (the offset itself changes nothing: the autocorrelation is shift-invariant). Since the lag window is set by time (correlogram.js rule 5), it ends at half the span, 238.9 / 2 h, so 119 steps: one more than n / 2 = 118 of the 236 rows, which capped it before.",
 			"generate": {
 				"seed": 107,
 				"series": [
@@ -548,7 +548,7 @@
 			"jsFn": "correlogramDownloadData",
 			"pyFunc": "correlogram_download_data",
 			"tolerance": 1e-9,
-			"note": "Two series. The first is a TIME x whose spacing alternates 0.25 and 0.75 h (not uniform, so the time-pair path), with maxLag 30 h and minLag 2 h saved on the SERIES as the app saves them; the lag step is the upper median spacing, 0.25 h (96 spacings of 0.25 h against 95 of 0.75 h; SPEC-10, it was the mean spacing, 0.5 h, before), so the half-hour slots (k + 0.5 h) hold no pairs and are reported as missing (null; they read r = 0 before the empty-slot fix), and the Python export once read plot-level corrMaxLag / corrMinLag keys the app never writes. The second is a regular hourly time series on the auto lag range.",
+			"note": "Two series. The first is a TIME x whose spacing alternates 0.25 and 0.75 h (not uniform, so the time-pair path), with maxLag 30 h and minLag 2 h saved on the SERIES as the app saves them; the lag step is the upper median spacing, 0.25 h (96 spacings of 0.25 h against 95 of 0.75 h; SPEC-10, it was the mean spacing, 0.5 h, before), so the half-hour slots (k + 0.5 h) hold no pairs and are reported as missing (null; they read r = 0 before the empty-slot fix), and the Python export once read plot-level corrMaxLag / corrMinLag keys the app never writes. The second is a regular hourly time series on the auto lag range. The first series' saved maxLag of 30 h was capped at n / 2 steps, 96 x 0.25 = 24 h, before the lag window was set by time (correlogram.js rule 5); the user's 30 h now wins, so its rows run from 2 to 30 h.",
 			"generate": {
 				"seed": 109,
 				"series": [
@@ -610,7 +610,7 @@
 			"jsFn": "correlogramDownloadData",
 			"pyFunc": "correlogram_download_data",
 			"tolerance": 1e-9,
-			"note": "SPEC-10. A NUMBER x, hourly for 7 days, with the rows from 50 h to 62 h REMOVED (a recording gap with no rows), no binWidth. The plot's lag step was the mean spacing, (last - first) / (n - 1) = 167 / 155 = 1.077 h, so every lag slot sat off the hour and the dominant period read wrong; it is now the median interval, 1 h, as the Rhythmicity node's correlogram uses (computeAutocorrelation with binSize null).",
+			"note": "SPEC-10. A NUMBER x, hourly for 7 days, with the rows from 50 h to 62 h REMOVED (a recording gap with no rows), no binWidth. The plot's lag step was the mean spacing, (last - first) / (n - 1) = 167 / 155 = 1.077 h, so every lag slot sat off the hour and the dominant period read wrong; it is now the median interval, 1 h, as the Rhythmicity node's correlogram uses (computeAutocorrelation with binSize null). Since the lag window is set by time (correlogram.js rule 5), it ends at half the span, 167 / 2 h, so 83 h; n / 2 of the 156 rows stopped it at 78 h.",
 			"generate": {
 				"seed": 127,
 				"series": [
@@ -704,7 +704,7 @@
 			"jsFn": "computeAutocorrelation",
 			"pyFunc": "compute_autocorrelation",
 			"rFunc": "compute_autocorrelation",
-			"note": "Lag slots that hold no pair. Six days of a 24 h rhythm (plus Gaussian noise, sd 4, written out here) sampled at alternating 0.25 and 0.75 h spacing, starting and ending on a 0.25 h step, so the median step is 0.25 h and every separation is a whole hour plus 0, 0.25 or 0.75 h: each k + 0.5 h slot is empty. An empty slot is missing (NaN, written null), not r = 0 (utils/correlogram.js rule 4). With r = 0 the first empty slot in the trough read as the return to non-negative and the peak search answered a mid-trough lag; util-autocorrelation-peak-empty-slots compares that peak.",
+			"note": "Lag slots that hold no pair. Six days of a 24 h rhythm (plus Gaussian noise, sd 4, written out here) sampled at alternating 0.25 and 0.75 h spacing, starting and ending on a 0.25 h step, so the median step is 0.25 h and every separation is a whole hour plus 0, 0.25 or 0.75 h: each k + 0.5 h slot is empty. An empty slot is missing (NaN, written null), not r = 0 (utils/correlogram.js rule 4). With r = 0 the first empty slot in the trough read as the return to non-negative and the peak search answered a mid-trough lag; util-autocorrelation-peak-empty-slots compares that peak. Since the lag window is set by time (correlogram.js rule 5), it ends at half the span, 72 h (289 lags); n / 2 of the 290 samples stopped it at 145 steps, 36.25 h.",
 			"inputs": [
 				{
 					"ref": "t",
@@ -1802,6 +1802,104 @@
 					69.696, 75.997, 73.774, 76.699, 84.289, 86.308, 79.624, 80.104, 78.522, 73.038, 78.868,
 					75.743, 64.377, 63.122, 54.798, 58.747, 48.029, 48.685, 43.844, 44.58, 36.657, 33.686,
 					27.579, 29.957, 21.433, 19.889
+				]
+			},
+			"argRefs": ["t", "y"],
+			"compareScalars": ["peakLag", "peakCorrelation"]
+		},
+		{
+			"id": "plot-correlogram-uneven-3day",
+			"kind": "plotCompute",
+			"jsFn": "computeAutocorrelation",
+			"pyFunc": "compute_autocorrelation",
+			"rFunc": "compute_autocorrelation",
+			"note": "The lag window is set by TIME, not by the sample count (utils/correlogram.js rule 5). Three days of a 24 h rhythm with a 12 h harmonic (50 + 20 cos(2 pi t / 24) + 6 cos(4 pi (t - 3) / 24), no noise, written out here) at alternating 0.25 and 0.75 h spacing: 146 samples over 72.25 h, median step 0.25 h. The old cap of n / 2 steps (73 x 0.25 h) stopped the correlogram at 18.25 h, before the 24 h peak could appear; the default window is now half the span, 36.125 h, so 145 lags from 0 to 36 h. No noise, because the slots either side of 24 h (23.75 and 24.25 h) read within 0.002 of it on a clean rhythm, so noise would decide which of the three is the peak; this fixture pins the window. util-autocorrelation-peak-uneven-3day compares the peak (24 h).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0, 0.25, 1, 1.25, 2, 2.25, 3, 3.25, 4, 4.25, 5, 5.25, 6, 6.25, 7, 7.25, 8, 8.25, 9,
+						9.25, 10, 10.25, 11, 11.25, 12, 12.25, 13, 13.25, 14, 14.25, 15, 15.25, 16, 16.25, 17,
+						17.25, 18, 18.25, 19, 19.25, 20, 20.25, 21, 21.25, 22, 22.25, 23, 23.25, 24, 24.25, 25,
+						25.25, 26, 26.25, 27, 27.25, 28, 28.25, 29, 29.25, 30, 30.25, 31, 31.25, 32, 32.25, 33,
+						33.25, 34, 34.25, 35, 35.25, 36, 36.25, 37, 37.25, 38, 38.25, 39, 39.25, 40, 40.25, 41,
+						41.25, 42, 42.25, 43, 43.25, 44, 44.25, 45, 45.25, 46, 46.25, 47, 47.25, 48, 48.25, 49,
+						49.25, 50, 50.25, 51, 51.25, 52, 52.25, 53, 53.25, 54, 54.25, 55, 55.25, 56, 56.25, 57,
+						57.25, 58, 58.25, 59, 59.25, 60, 60.25, 61, 61.25, 62, 62.25, 63, 63.25, 64, 64.25, 65,
+						65.25, 66, 66.25, 67, 67.25, 68, 68.25, 69, 69.25, 70, 70.25, 71, 71.25, 72, 72.25
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						70.0, 70.740336, 72.318517, 72.591171, 72.51666, 72.172669, 70.142136, 69.135585,
+						65.196152, 63.605894, 58.176381, 56.197907, 50.0, 47.90878, 41.823619, 39.918642,
+						34.803848, 33.345318, 29.857864, 29.014535, 27.48334, 27.302425, 27.681483, 28.088194,
+						30.0, 30.825979, 33.681483, 34.713966, 37.875644, 38.913885, 41.857864, 42.761753,
+						45.196152, 45.914346, 47.823619, 48.394294, 50.0, 50.524905, 52.176381, 52.776221,
+						54.803848, 55.568127, 58.142136, 59.088127, 62.124356, 63.177335, 66.318517, 67.319605,
+						70.0, 70.740336, 72.318517, 72.591171, 72.51666, 72.172669, 70.142136, 69.135585,
+						65.196152, 63.605894, 58.176381, 56.197907, 50.0, 47.90878, 41.823619, 39.918642,
+						34.803848, 33.345318, 29.857864, 29.014535, 27.48334, 27.302425, 27.681483, 28.088194,
+						30.0, 30.825979, 33.681483, 34.713966, 37.875644, 38.913885, 41.857864, 42.761753,
+						45.196152, 45.914346, 47.823619, 48.394294, 50.0, 50.524905, 52.176381, 52.776221,
+						54.803848, 55.568127, 58.142136, 59.088127, 62.124356, 63.177335, 66.318517, 67.319605,
+						70.0, 70.740336, 72.318517, 72.591171, 72.51666, 72.172669, 70.142136, 69.135585,
+						65.196152, 63.605894, 58.176381, 56.197907, 50.0, 47.90878, 41.823619, 39.918642,
+						34.803848, 33.345318, 29.857864, 29.014535, 27.48334, 27.302425, 27.681483, 28.088194,
+						30.0, 30.825979, 33.681483, 34.713966, 37.875644, 38.913885, 41.857864, 42.761753,
+						45.196152, 45.914346, 47.823619, 48.394294, 50.0, 50.524905, 52.176381, 52.776221,
+						54.803848, 55.568127, 58.142136, 59.088127, 62.124356, 63.177335, 66.318517, 67.319605,
+						70.0, 70.740336
+					]
+				}
+			],
+			"xRef": "t",
+			"yRef": "y",
+			"extraArgs": [null, null, 0],
+			"compareArrays": ["lags", "correlations"]
+		},
+		{
+			"id": "util-autocorrelation-peak-uneven-3day",
+			"kind": "pureUtil",
+			"jsFn": "computeAutocorrelation",
+			"pyFunc": "compute_autocorrelation",
+			"rFunc": "compute_autocorrelation",
+			"note": "The dominant-period peak on the plot-correlogram-uneven-3day data. With the window capped at n / 2 steps (18.25 h) there was no 24 h lag to find, and the peak read the last lag on the rising flank, 18.25 h at r = 0.04; with the window at half the span (36 h) the peak is 24 h.",
+			"input": {
+				"t": [
+					0, 0.25, 1, 1.25, 2, 2.25, 3, 3.25, 4, 4.25, 5, 5.25, 6, 6.25, 7, 7.25, 8, 8.25, 9, 9.25,
+					10, 10.25, 11, 11.25, 12, 12.25, 13, 13.25, 14, 14.25, 15, 15.25, 16, 16.25, 17, 17.25,
+					18, 18.25, 19, 19.25, 20, 20.25, 21, 21.25, 22, 22.25, 23, 23.25, 24, 24.25, 25, 25.25,
+					26, 26.25, 27, 27.25, 28, 28.25, 29, 29.25, 30, 30.25, 31, 31.25, 32, 32.25, 33, 33.25,
+					34, 34.25, 35, 35.25, 36, 36.25, 37, 37.25, 38, 38.25, 39, 39.25, 40, 40.25, 41, 41.25,
+					42, 42.25, 43, 43.25, 44, 44.25, 45, 45.25, 46, 46.25, 47, 47.25, 48, 48.25, 49, 49.25,
+					50, 50.25, 51, 51.25, 52, 52.25, 53, 53.25, 54, 54.25, 55, 55.25, 56, 56.25, 57, 57.25,
+					58, 58.25, 59, 59.25, 60, 60.25, 61, 61.25, 62, 62.25, 63, 63.25, 64, 64.25, 65, 65.25,
+					66, 66.25, 67, 67.25, 68, 68.25, 69, 69.25, 70, 70.25, 71, 71.25, 72, 72.25
+				],
+				"y": [
+					70.0, 70.740336, 72.318517, 72.591171, 72.51666, 72.172669, 70.142136, 69.135585,
+					65.196152, 63.605894, 58.176381, 56.197907, 50.0, 47.90878, 41.823619, 39.918642,
+					34.803848, 33.345318, 29.857864, 29.014535, 27.48334, 27.302425, 27.681483, 28.088194,
+					30.0, 30.825979, 33.681483, 34.713966, 37.875644, 38.913885, 41.857864, 42.761753,
+					45.196152, 45.914346, 47.823619, 48.394294, 50.0, 50.524905, 52.176381, 52.776221,
+					54.803848, 55.568127, 58.142136, 59.088127, 62.124356, 63.177335, 66.318517, 67.319605,
+					70.0, 70.740336, 72.318517, 72.591171, 72.51666, 72.172669, 70.142136, 69.135585,
+					65.196152, 63.605894, 58.176381, 56.197907, 50.0, 47.90878, 41.823619, 39.918642,
+					34.803848, 33.345318, 29.857864, 29.014535, 27.48334, 27.302425, 27.681483, 28.088194,
+					30.0, 30.825979, 33.681483, 34.713966, 37.875644, 38.913885, 41.857864, 42.761753,
+					45.196152, 45.914346, 47.823619, 48.394294, 50.0, 50.524905, 52.176381, 52.776221,
+					54.803848, 55.568127, 58.142136, 59.088127, 62.124356, 63.177335, 66.318517, 67.319605,
+					70.0, 70.740336, 72.318517, 72.591171, 72.51666, 72.172669, 70.142136, 69.135585,
+					65.196152, 63.605894, 58.176381, 56.197907, 50.0, 47.90878, 41.823619, 39.918642,
+					34.803848, 33.345318, 29.857864, 29.014535, 27.48334, 27.302425, 27.681483, 28.088194,
+					30.0, 30.825979, 33.681483, 34.713966, 37.875644, 38.913885, 41.857864, 42.761753,
+					45.196152, 45.914346, 47.823619, 48.394294, 50.0, 50.524905, 52.176381, 52.776221,
+					54.803848, 55.568127, 58.142136, 59.088127, 62.124356, 63.177335, 66.318517, 67.319605,
+					70.0, 70.740336
 				]
 			},
 			"argRefs": ["t", "y"],
@@ -3183,7 +3281,7 @@
 			"inputs": [],
 			"compareOutputs": ["values"],
 			"id": "tp-simulateddata-alpha-fraction",
-			"note": "Simulate Data with a short-day active fraction: alphaFraction 0.3 on a 24 h square wave sampled every 0.5 h for 3 days, so each cycle is active while floor(t mod 24) < 7.2 (t in [0, 8) h). A second section keeps the 0.5 default (key absent) at a 25 h period. Noise is off: the Python port draws noise from numpy rather than the app's seeded minstd stream (exports bake this node's data), so only the noise-free rhythm can be compared. Time is not compared (JS writes ISO strings, Python epoch ms). There is no R port of this node (R exports bake it).",
+			"note": "Simulate Data with a short-day active fraction: alphaFraction 0.3 on a 24 h square wave sampled every 0.5 h for 3 days, so each cycle is active while t mod 24 < 7.2 (samples 0 to 7.0 h; until v81.11 the time was floored first, so the active phase ran to 7.5 h, t in [0, 8) h). A second section keeps the 0.5 default (key absent) at a 25 h period: active while t mod 25 < 12.5 (samples 0 to 12.0 h; it ran to 12.5 h, t in [0, 13) h, before). Noise is off: the Python port draws noise from numpy rather than the app's seeded minstd stream (exports bake this node's data), so only the noise-free rhythm can be compared. Time is not compared (JS writes ISO strings, Python epoch ms). There is no R port of this node (R exports bake it).",
 			"args": {
 				"startTime": "2024-06-01T00:00:00.000Z",
 				"seed": 7,
@@ -3237,6 +3335,37 @@
 					"time": -1,
 					"values": -1
 				}
+			}
+		},
+		{
+			"kind": "tableProcess",
+			"jsName": "SimulatedData",
+			"pyFunc": "simulateddata",
+			"inputs": [],
+			"compareOutputs": ["values"],
+			"id": "tp-simulateddata-25h-default",
+			"note": "The exact active/rest boundary at the default active fraction (0.5, key absent) on periods whose half is not a whole hour, sampled every 0.25 h. 25 h: active while t mod 25 < 12.5, so 12.25 h is active and 12.5 h is rest (12.5 h each way; the old floor made it 13 h active, 12 h rest). 23.5 h with a 2.3 h phase shift: active while (t + 2.3) mod 23.5 < 11.75. The 24 h default (boundary 12 h, a whole hour) is unchanged sample for sample. Noise is off (see tp-simulateddata-alpha-fraction).",
+			"args": {
+				"startTime": "2024-06-01T00:00:00.000Z",
+				"seed": 7,
+				"samplingPeriod_hours": 0.25,
+				"sections": [
+					{
+						"duration_hours": 75,
+						"rhythmPeriod_hours": 25,
+						"rhythmPhase_hours": 0,
+						"rhythmAmplitude": 100,
+						"noiseEnabled": false
+					},
+					{
+						"duration_hours": 47,
+						"rhythmPeriod_hours": 23.5,
+						"rhythmPhase_hours": 2.3,
+						"rhythmAmplitude": 60,
+						"noiseEnabled": false
+					}
+				],
+				"out": { "time": -1, "values": -1 }
 			}
 		},
 		{

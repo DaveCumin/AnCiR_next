@@ -40,7 +40,7 @@
 		parentPlot = $state();
 		x = $state();
 		y = $state();
-		maxLag = $state(null); // null = auto (n/2), otherwise max lag in hours
+		maxLag = $state(null); // null = auto (half the recording span), otherwise max lag in hours
 		minLag = $state(0); // 0 = include lag from 0 (with lag=0 point); otherwise drop lags below this
 
 		line = $state();
@@ -837,7 +837,7 @@
 								<NumberWithUnits
 									min="1"
 									step="1"
-									placeholder="Auto (n/2)"
+									placeholder="Auto (half the span)"
 									value={datum.maxLag}
 									onInput={(val) => {
 										datum.maxLag = val ? parseFloat(val) : null;

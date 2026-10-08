@@ -1268,7 +1268,7 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
     As in the app (see the rules in utils/correlogram.js): lag 0 is exactly 1 on both paths;
     slots are half-open, lag k takes (k - 1/2) dt <= d < (k + 1/2) dt, so a pair on a
     boundary counts once (in the upper lag); distinct pairs closer than half a step are not
-    used at any lag."""
+    used at any lag; the default lag window is half the recording span in hours."""
     def empty(dt):
         return {'lags': [], 'correlations': [], 'dt': dt,
                 'peakLag': float('nan'), 'peakCorrelation': float('nan')}
@@ -1290,14 +1290,19 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
     if not math.isfinite(dt) or dt <= 0:
         return empty(1.0)
     # `maxLag ? maxLag : span / 2`: JS truthiness, so 0, null and NaN mean "auto".
+    # The lag window is set by TIME, not by the sample count (correlogram.js rule 5): the
+    # default is half the recording span in hours, since the spacing may be uneven (Chatfield,
+    # The Analysis of Time Series: lags up to about N/4 to N/2). A user max lag wins, up to
+    # the span; on the index-shift path also below n shifts.
+    span = float(t[-1] - t[0])
     ml = None if max_lag is None else float(max_lag)
     max_lag_t = ml if (ml is not None and ml != 0 and not math.isnan(ml)) \
-        else float(t[-1] - t[0]) / 2.0
+        else span / 2.0
     mn = None if min_lag is None else float(min_lag)
     min_lag_t = mn if (mn is not None and math.isfinite(mn) and mn > 0) else 0.0
     if min_lag_t >= max_lag_t:
         return empty(dt)
-    n_lags = min(math.floor(max_lag_t / dt), n // 2)
+    n_lags = min(math.floor(max_lag_t / dt), math.floor(span / dt))
     start_idx = math.ceil(min_lag_t / dt)
     ymean = float(y.mean())
     yvar = float(((y - ymean) ** 2).sum() / n)
@@ -1307,6 +1312,8 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
     is_uniform = max(abs(d - median) for d in diffs) < median * 0.1
     lags, corrs = [], []
     if is_uniform:
+        # A shift of n samples or more has no pairs.
+        n_lags = min(n_lags, n - 1)
         ydem = y - ymean
         for lag in range(start_idx, n_lags + 1):
             if lag == 0:
@@ -2914,8 +2921,9 @@ def tp_simulateddata(args, cols, raw_data, _sv):
             shifted = i + phase
             # math.fmod, not %: JS `%` keeps the DIVIDEND's sign, Python's `%` the divisor's, so
             # a negative phase shift (the UI allows down to -50 h) put Python's samples in the
-            # wrong half of the cycle.
-            cur_amp = amp if (math.floor(math.fmod(shifted, period)) < active_until) else 1.0
+            # wrong half of the cycle. No floor (v81.11): the active phase ends exactly at
+            # period * alphaFraction, not at the next whole hour.
+            cur_amp = amp if (math.fmod(shifted, period) < active_until) else 1.0
             if noise_enabled:
                 nz = float(rng.random()) * noise_amp
                 v = nz * cur_amp if noise_mode == 'multiply' else cur_amp + nz

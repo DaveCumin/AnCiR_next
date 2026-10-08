@@ -302,6 +302,36 @@ slot boundaries, minLag 1) and `plot-correlogram-near-zero-pairs` (four near-coi
 | Python keeps the old window     | `upper-median`, `boundary-pair`, `near-zero-pairs` (Python) |
 | R keeps the old window          | `upper-median`, `boundary-pair`, `near-zero-pairs` (R)      |
 
+### Autocorrelation lag window by time, not samples (all three languages)
+
+The default maximum lag was `min(span / 2, n / 2 steps)`. The `n / 2` cap counts samples, not
+hours: on 0.25 / 0.75 h alternating spacing (median step 0.25 h, so n / 2 steps is a quarter
+of the span) three days stopped at 18.25 h and could not show a 24 h peak. The window is now
+set by time (`utils/correlogram.js` rule 5, both ports): the default is
+`floor((span / 2) / dt)` steps, with span = last valid time - first valid time, on both paths.
+A user max lag wins over that default, up to `floor(span / dt)` (no pair is further apart),
+and on the index-shift path below n shifts. On complete, evenly spaced data the span is
+(n - 1) steps, so the default is `floor((n - 1) / 2)`, which the old `min` already gave there:
+the even-spacing golden is unchanged except `hourly-gap` (rows missing, window 55 -> 59).
+
+Changed records (the shared lags are identical; only the window grew):
+
+- `plot-correlogram-empty-slots`: 6 days, 290 samples, 146 -> 289 lags (36.25 h -> 72 h);
+- `correlogram-data-irregular`: series 0 saved maxLag 30 h but n / 2 steps stopped it at
+  24 h; the user's 30 h now wins (rows 149 -> 173);
+- `correlogram-data-gap`: 156 rows over 167 h, 78 -> 83 h;
+- `correlogram-data-number-offset`: spacing 1, 1, 1.05 h (index-shift path), 236 rows over
+  238.9 h, so half the span is 119 steps, one more than n / 2 (rows 119 -> 120).
+
+New: `plot-correlogram-uneven-3day` and `util-autocorrelation-peak-uneven-3day` (three days of
+a 24 h rhythm on 0.25 / 0.75 h spacing: 145 lags to 36 h, peak 24 h; it was 18.25 h at
+r = 0.04 with the old window).
+
+| Broken (one language at a time) | First failure                                                        |
+| ------------------------------- | -------------------------------------------------------------------- |
+| Python keeps the n / 2 cap      | the 4 changed records above and both new fixtures (6 failed)         |
+| R keeps the n / 2 cap           | `empty-slots`, `uneven-3day`, `peak-uneven-3day` (R exports no plot) |
+
 ### A missing first or last x: SurrogateTest, NPCRA and the harmonic check
 
 The same JS trap as the correlogram's step (`Number(null) === 0`, `null - x0 === -x0`) sat in

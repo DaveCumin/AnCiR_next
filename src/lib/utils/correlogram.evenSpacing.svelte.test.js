@@ -21,6 +21,11 @@
  * the only permitted difference outside the gapped series, and the peak (which ignores lag 0)
  * cannot move.
  *
+ * Since v81.11 the default lag window is half the recording span in hours, not n / 2 steps.
+ * The two agree on complete, evenly spaced data (span = (n - 1) steps), so the shipped
+ * sessions are untouched; a gapped series has fewer rows than its span implies and its window
+ * may now be longer, with the lags it shared unchanged.
+ *
  * The golden file stores each call's exact inputs and the outputs the code gave BEFORE the
  * change (v78.0 plus the items-1/2 fixes). Regenerate it only on purpose:
  *   GEN_ACF_GOLDEN=1 npx vitest run src/lib/utils/correlogram.evenSpacing.svelte.test.js
@@ -218,10 +223,27 @@ describe.skipIf(process.env.GEN_ACF_GOLDEN)('computeAutocorrelation on evenly sp
 
 	it('every result is byte-identical, except a time-pair lag 0 that was not 1', () => {
 		const changed = [];
+		const longer = [];
+		const gappedLabels = new Set(gappedCases().map((g) => g.label));
 		for (const c of golden) {
-			const now = JSON.parse(serial(computeAutocorrelation(...c.args)));
+			let now = JSON.parse(serial(computeAutocorrelation(...c.args)));
 			if (JSON.stringify(now) === JSON.stringify(c.out)) continue;
-			// The one permitted difference: lag 0 is now exactly 1 by definition.
+			// Permitted difference 2 (v81.11): the default lag window is half the recording SPAN,
+			// not n / 2 steps. On evenly spaced, complete data the two agree; a series with
+			// missing rows has fewer samples than its span implies, so its window may now be
+			// LONGER. The lags it shared with the old window must not move.
+			if (now.lags.length > c.out.lags.length) {
+				expect(gappedLabels.has(c.label), `${c.label}: window grew on complete data`).toBe(true);
+				expect(now.lags.slice(0, c.out.lags.length)).toEqual(c.out.lags);
+				longer.push({ label: c.label, was: c.out.lags.length, now: now.lags.length });
+				now = {
+					...now,
+					lags: now.lags.slice(0, c.out.lags.length),
+					correlations: now.correlations.slice(0, c.out.lags.length)
+				};
+				if (JSON.stringify(now) === JSON.stringify(c.out)) continue;
+			}
+			// The other permitted difference: lag 0 is now exactly 1 by definition.
 			const was = structuredClone(c.out);
 			const i0 = was.lags.indexOf(0);
 			expect(i0, `${c.label}: changed but has no lag 0`).toBeGreaterThanOrEqual(0);
@@ -231,19 +253,23 @@ describe.skipIf(process.env.GEN_ACF_GOLDEN)('computeAutocorrelation on evenly sp
 			expect(JSON.stringify({ ...now, peakLag: 0, peakCorrelation: 0 })).toBe(
 				JSON.stringify({ ...was, peakLag: 0, peakCorrelation: 0 })
 			);
-			// The peak ignores lag 0, so it cannot move either.
+			// The peak ignores lag 0, so it cannot move either (a longer window can only move it
+			// if the old window held no lobe; the gapped series' peaks sit well inside it).
 			expect([now.peakLag, now.peakCorrelation]).toEqual([was.peakLag, was.peakCorrelation]);
 			changed.push({ label: c.label, was: c.out.correlations[i0] });
 		}
 		// A gapped series (time-pair path) had lag 0 = 0: no non-self pair lies within half a
 		// step of 0. Everywhere else (the index-shift path, every shipped session) lag 0 was
 		// sum / (n * var), which is 1 up to rounding: at most a few ulp may move.
-		const gapped = new Set(gappedCases().map((g) => g.label));
 		for (const { label, was } of changed) {
-			if (gapped.has(label)) expect(was).toBe(0);
+			if (gappedLabels.has(label)) expect(was).toBe(0);
 			else expect(Math.abs(was - 1)).toBeLessThan(1e-15);
 		}
 		// Recorded for the report: which calls moved at all.
 		console.log('ACF even-spacing: lag 0 moved in', JSON.stringify(changed));
+		// hourly-gap: 120 hourly rows less 10 missing, span 119 h. Its window was n / 2 = 55
+		// steps and is now floor(119 / 2) = 59; the other two gapped cases set a max lag below
+		// both caps, and no shipped session has missing rows on this path.
+		expect(longer).toEqual([{ label: 'hourly-gap', was: 56, now: 60 }]);
 	});
 });

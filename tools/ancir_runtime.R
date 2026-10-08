@@ -4334,7 +4334,7 @@ js_upper_median <- function(d) sort(d)[length(d) %/% 2 + 1]
 # et al. 2011, Nonlin. Processes Geophys. 18:389, Eqs. 10-11), with the app's rules: lag 0 is
 # exactly 1 on both paths; slots are half-open, lag k takes (k - 1/2) dt <= d < (k + 1/2) dt,
 # so a pair on a boundary counts once (in the upper lag); distinct pairs closer than half a
-# step are not used at any lag.
+# step are not used at any lag; the default lag window is half the recording span in hours.
 compute_autocorrelation <- function(times, values, bin_size = NULL,
                                     max_lag = NULL, min_lag = 0) {
   empty <- function(dt) list(lags = numeric(0), correlations = numeric(0), dt = dt,
@@ -4351,12 +4351,16 @@ compute_autocorrelation <- function(times, values, bin_size = NULL,
   if (!is.finite(dt) || dt <= 0) return(empty(1))
   timespan <- t[length(t)] - t[1]
   # `maxLag ? maxLag : span / 2`: JS truthiness, so 0, null and NaN mean "auto".
+  # The lag window is set by TIME, not by the sample count (correlogram.js rule 5): the
+  # default is half the recording span in hours, since the spacing may be uneven (Chatfield,
+  # The Analysis of Time Series: lags up to about N/4 to N/2). A user max lag wins, up to the
+  # span; on the index-shift path also below n shifts.
   max_lag_t <- if (!is.null(max_lag) && !is.na(max_lag) && max_lag != 0) as.numeric(max_lag)
                else timespan / 2
   min_lag_t <- if (!is.null(min_lag) && is.finite(min_lag) && min_lag > 0) as.numeric(min_lag)
                else 0
   if (min_lag_t >= max_lag_t) return(empty(dt))
-  n_lags <- min(floor(max_lag_t / dt), n %/% 2)
+  n_lags <- min(floor(max_lag_t / dt), floor(timespan / dt))
   start_idx <- ceiling(min_lag_t / dt)
   ymean <- mean(y)
   yvar <- sum((y - ymean)^2) / n
@@ -4367,10 +4371,12 @@ compute_autocorrelation <- function(times, values, bin_size = NULL,
   # uneven path is O(n^2) and pairs samples by TIME difference instead, so a gappy record
   # still gets the right lags rather than lags that silently mean "index offset".
   is_uniform <- max(abs(diffs - med)) < med * 0.1
+  # A shift of n samples or more has no pairs.
+  if (is_uniform) n_lags <- min(n_lags, n - 1)
   lags <- c(); corrs <- c()
   ydem <- y - ymean
   # The app's `for (lag = start; lag <= nLags; lag++)` runs zero times when start > nLags
-  # (a minLag beyond n / 2 samples); seq(start, nLags) would count DOWN instead.
+  # (a minLag beyond the lag window); seq(start, nLags) would count DOWN instead.
   lag_idx <- if (start_idx <= n_lags) start_idx:n_lags else integer(0)
   if (is_uniform) {
     for (lag in lag_idx) {
