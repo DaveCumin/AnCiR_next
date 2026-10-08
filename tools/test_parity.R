@@ -398,6 +398,30 @@ for (fx in fixtures) {
     next
   }
 
+  # A tableProcessResult record keeps its fields under `result`, not `outputs`. Reading
+  # `outputs` there gave NULL and the loop below compared nothing, so every such fixture
+  # passed in R whatever the port returned. Compare its named fields as a tree instead.
+  if (is_tpr) {
+    if (is.null(rec$result)) {
+      bad <- "no `result` recorded for this tableProcessResult fixture"
+    } else {
+      bad <- character(0)
+      for (f in unlist(fx$compareFields)) {
+        d <- deep_diff(got[[f]], rec$result[[f]], tol, f)
+        if (!is.null(d)) bad <- c(bad, d)
+      }
+    }
+    if (length(bad)) {
+      n_fail <- n_fail + 1
+      results[[length(results) + 1]] <- list(id = fx$id, ok = FALSE,
+        msg = paste(bad, collapse = "; "))
+    } else {
+      n_pass <- n_pass + 1
+      results[[length(results) + 1]] <- list(id = fx$id, ok = TRUE, msg = "")
+    }
+    next
+  }
+
   want <- rec$outputs
   bad <- character(0)
   for (k in names(want)) {

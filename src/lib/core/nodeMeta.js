@@ -29,7 +29,8 @@ const meta = new Map([
 			family: 'Sources',
 			keywords: ['synthetic', 'fake', 'cosine', 'noise', 'demo', 'generate'], // search-only synonyms; never rendered
 			nodeIcon: 'simulated-data',
-			description: 'Generate a synthetic time-series table from a cosine + noise model.'
+			description:
+				'Generate a synthetic time series from a square-wave (active/rest) rhythm plus noise.'
 		}
 	],
 	[

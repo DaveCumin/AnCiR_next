@@ -81,5 +81,7 @@ export const PARAM_NOTES = {
 	AverageProfile:
 		'Folds the data onto one cycle. `period` is the folding period (HOURS; 24 for daily); `nBins` is the number of bins. Samples in a bin are averaged per day first; the SEM output is across days (n = days). `phaseReference`: "start" (default; phases in h after the first sample) or "clock" (local clock time; time x only).',
 	RayleighTest:
-		'`period` (HOURS) is the period the phases are computed against. `unit` is the unit the input times are already in.'
+		'`period` (HOURS) is the period the phases are computed against. `unit` is the unit the input times are already in.',
+	SimulatedData:
+		'Each `sections[]` entry is a SQUARE wave: `rhythmAmplitude` while active, 1 at rest, for `duration_hours` with period `rhythmPeriod_hours` shifted by `rhythmPhase_hours` (HOURS). `alphaFraction` is the active share of each cycle (0.01 to 0.99, default 0.5; 1/3 at 24 h = 8 h active, a short day). Noise: `noiseMode` "multiply" or "add", scaled by `noiseAmplitude`.'
 };

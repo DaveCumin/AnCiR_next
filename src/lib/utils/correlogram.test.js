@@ -290,3 +290,31 @@ describe('computeAutocorrelation — lag slots on uneven data', () => {
 		expect(r.correlations[1]).toBeCloseTo((p(0, 1) + p(2, 3)) / (2 * v), 14);
 	});
 });
+
+describe('computeAutocorrelation: an empty lag slot is missing, not r = 0', () => {
+	// Spacing alternates 0.25 and 0.75 h, starting and ending on 0.25, so the median step is
+	// 0.25 h. Every separation is then a whole hour plus 0, 0.25 or 0.75 h: the slots at
+	// k + 0.5 h ([k + 0.375, k + 0.625)) hold no pair at all.
+	const t = [0];
+	for (let i = 1; i < 4 * 24 * 2 + 2; i++) t.push(t[i - 1] + (i % 2 ? 0.25 : 0.75));
+	const y = t.map((h) => Math.cos((2 * Math.PI * h) / 24));
+
+	it('reports an empty slot as NaN', () => {
+		const r = computeAutocorrelation(t, y);
+		expect(r.dt).toBe(0.25);
+		const i = r.lags.indexOf(0.5);
+		expect(i).toBeGreaterThan(0);
+		expect(r.correlations[i]).toBeNaN();
+		// The slots either side hold pairs and are real numbers.
+		expect(Number.isFinite(r.correlations[i - 1])).toBe(true);
+		expect(Number.isFinite(r.correlations[i + 1])).toBe(true);
+	});
+
+	it('an empty slot in the trough does not open a false positive lobe', () => {
+		// With empty slots read as 0, the first 0 after the dip counted as the return to
+		// non-negative, so the peak was an empty slot mid-trough (6.5 h, r = 0).
+		const r = computeAutocorrelation(t, y);
+		expect(r.peakLag).toBeCloseTo(24, 0);
+		expect(r.peakCorrelation).toBeGreaterThan(0.9);
+	});
+});

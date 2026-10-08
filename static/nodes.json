@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.81.8",
+  "generatedFromVersion": "β.81.10",
   "count": 62,
   "nodes": [
     {
@@ -3325,7 +3325,7 @@
       "displayName": "Simulate Data",
       "kind": "tableProcess",
       "family": "Sources",
-      "description": "Generate a synthetic time-series table from a cosine + noise model.",
+      "description": "Generate a synthetic time series from a square-wave (active/rest) rhythm plus noise.",
       "keywords": [
         "synthetic",
         "fake",
@@ -3355,7 +3355,8 @@
               "rhythmAmplitude": 100,
               "noiseEnabled": true,
               "noiseMode": "multiply",
-              "noiseAmplitude": 1
+              "noiseAmplitude": 1,
+              "alphaFraction": 0.5
             }
           ]
         },

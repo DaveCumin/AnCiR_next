@@ -36,10 +36,19 @@ function normalizeSeedRandom(seed) {
 	return ((((n - 1) % MINSTD_MAX) + MINSTD_MAX) % MINSTD_MAX) + 1;
 }
 
+/** SimulatedData.svelte's activeFraction: missing/non-numeric → 0.5, else clamped to [0.01, 0.99]. */
+function activeFraction(alphaFraction) {
+	if (alphaFraction == null || alphaFraction === '') return 0.5;
+	const a = Number(alphaFraction);
+	if (!Number.isFinite(a)) return 0.5;
+	return Math.min(0.99, Math.max(0.01, a));
+}
+
 /**
  * Port of SimulatedData's `simulateddata(args)` (the pure part, minus the core writes).
- * NB the rhythm is a SQUARE wave — high for the first half of each period, 1 for the rest —
- * not a cosine. Noise is drawn from one seeded stream in section → sample order.
+ * NB the rhythm is a SQUARE wave, not a cosine: high for the first `alphaFraction` of each
+ * period (0.5 by default) and 1 for the rest. Noise is drawn from one seeded stream in
+ * section → sample order.
  *
  * @param {{startTime:*, seed:*, samplingPeriod_hours:*, sections:Array}} args
  * @returns {{time:string[], values:number[]}}
@@ -68,12 +77,13 @@ export function simulatedData(args) {
 		const noiseEnabled = section.noiseEnabled ?? true;
 		const noiseMode = section.noiseMode ?? 'multiply';
 		const noiseAmplitude = section.noiseAmplitude ?? 1;
+		const activeUntil = period * activeFraction(section.alphaFraction);
 
 		for (let i = 0; i < duration; i += step) {
 			time.push(new Date(startMs + (currentTime + i) * 3600000).toISOString());
 
 			const phaseShiftedTime = i + phase;
-			const currentAmplitude = Math.floor(phaseShiftedTime % period) < period / 2 ? amplitude : 1;
+			const currentAmplitude = Math.floor(phaseShiftedTime % period) < activeUntil ? amplitude : 1;
 
 			let value;
 			if (noiseEnabled) {
@@ -158,7 +168,7 @@ export const USAGE_NOTES = {
 	SequenceColumn:
 		'a plain arithmetic sequence: `count` values from `start`, adding `step` each time (seqType:"number"), or a run of timestamps from `startTime` every `stepHours` (seqType:"time"). `step` (or `stepHours`) of 0 yields NOTHING — for a constant column use Random with distribution:"gaussian" and multiply:0',
 	SimulatedData:
-		'one rhythmic time series, sampled every `samplingPeriod_hours`. `sections` run BACK-TO-BACK IN TIME, each for its own `duration_hours` — so 2 sections give one recording whose period changes part-way through, NOT two separate datasets. For N independent datasets use N SimulatedData nodes, each with its own `seed`'
+		'one rhythmic time series, sampled every `samplingPeriod_hours`. `sections` run BACK-TO-BACK IN TIME, each for its own `duration_hours` — so 2 sections give one recording whose period changes part-way through, NOT two separate datasets. For N independent datasets use N SimulatedData nodes, each with its own `seed`. Per section, `alphaFraction` (0.01 to 0.99, default 0.5) is the ACTIVE share of every cycle: 1/3 at 24 h is a short day (8 h active), 2/3 a long day'
 };
 
 /**

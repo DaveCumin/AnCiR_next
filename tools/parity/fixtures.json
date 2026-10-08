@@ -374,6 +374,51 @@
 			"rFunc": "groupcomparison"
 		},
 		{
+			"id": "tp-groupcomparison-anova-no-posthoc",
+			"kind": "tableProcessResult",
+			"jsName": "GroupComparison",
+			"pyFunc": "groupcomparison",
+			"generate": {
+				"type": "groups",
+				"seed": 10,
+				"groups": [
+					{
+						"label": "A",
+						"mean": 50,
+						"sd": 12,
+						"n": 30
+					},
+					{
+						"label": "B",
+						"mean": 56,
+						"sd": 12,
+						"n": 30
+					},
+					{
+						"label": "C",
+						"mean": 62,
+						"sd": 12,
+						"n": 30
+					}
+				],
+				"refs": {
+					"g": "grp",
+					"v": "val"
+				}
+			},
+			"args": {
+				"xIN": "@grp",
+				"yIN": ["@val"],
+				"method": "auto",
+				"alpha": 0.05,
+				"postHocEnabled": false,
+				"out": {}
+			},
+			"compareFields": ["test", "f", "pValue", "postHoc"],
+			"rFunc": "groupcomparison",
+			"note": "Three groups with the post-hoc test switched OFF: the ANOVA itself is unchanged and postHoc is an empty list (a port that ignored the switch would return the Tukey-Kramer rows)."
+		},
+		{
 			"id": "plot-fft-rhythm-noisy",
 			"kind": "plotCompute",
 			"jsFn": "computeFFT",
@@ -503,7 +548,7 @@
 			"jsFn": "correlogramDownloadData",
 			"pyFunc": "correlogram_download_data",
 			"tolerance": 1e-9,
-			"note": "Two series. The first is a TIME x whose spacing alternates 0.25 and 0.75 h (not uniform, so the time-pair path), with maxLag 30 h and minLag 2 h saved on the SERIES as the app saves them; the lag step is the upper median spacing, 0.25 h (96 spacings of 0.25 h against 95 of 0.75 h; SPEC-10, it was the mean spacing, 0.5 h, before), so the odd quarter-hour slots hold no pairs, and the Python export once read plot-level corrMaxLag / corrMinLag keys the app never writes. The second is a regular hourly time series on the auto lag range.",
+			"note": "Two series. The first is a TIME x whose spacing alternates 0.25 and 0.75 h (not uniform, so the time-pair path), with maxLag 30 h and minLag 2 h saved on the SERIES as the app saves them; the lag step is the upper median spacing, 0.25 h (96 spacings of 0.25 h against 95 of 0.75 h; SPEC-10, it was the mean spacing, 0.5 h, before), so the half-hour slots (k + 0.5 h) hold no pairs and are reported as missing (null; they read r = 0 before the empty-slot fix), and the Python export once read plot-level corrMaxLag / corrMinLag keys the app never writes. The second is a regular hourly time series on the auto lag range.",
 			"generate": {
 				"seed": 109,
 				"series": [
@@ -651,6 +696,83 @@
 			"xRef": "t",
 			"yRef": "y",
 			"extraArgs": [1, null, 0],
+			"compareArrays": ["lags", "correlations"]
+		},
+		{
+			"id": "plot-correlogram-empty-slots",
+			"kind": "plotCompute",
+			"jsFn": "computeAutocorrelation",
+			"pyFunc": "compute_autocorrelation",
+			"rFunc": "compute_autocorrelation",
+			"note": "Lag slots that hold no pair. Six days of a 24 h rhythm (plus Gaussian noise, sd 4, written out here) sampled at alternating 0.25 and 0.75 h spacing, starting and ending on a 0.25 h step, so the median step is 0.25 h and every separation is a whole hour plus 0, 0.25 or 0.75 h: each k + 0.5 h slot is empty. An empty slot is missing (NaN, written null), not r = 0 (utils/correlogram.js rule 4). With r = 0 the first empty slot in the trough read as the return to non-negative and the peak search answered a mid-trough lag; util-autocorrelation-peak-empty-slots compares that peak.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0.0, 0.25, 1.0, 1.25, 2.0, 2.25, 3.0, 3.25, 4.0, 4.25, 5.0, 5.25, 6.0, 6.25, 7.0, 7.25,
+						8.0, 8.25, 9.0, 9.25, 10.0, 10.25, 11.0, 11.25, 12.0, 12.25, 13.0, 13.25, 14.0, 14.25,
+						15.0, 15.25, 16.0, 16.25, 17.0, 17.25, 18.0, 18.25, 19.0, 19.25, 20.0, 20.25, 21.0,
+						21.25, 22.0, 22.25, 23.0, 23.25, 24.0, 24.25, 25.0, 25.25, 26.0, 26.25, 27.0, 27.25,
+						28.0, 28.25, 29.0, 29.25, 30.0, 30.25, 31.0, 31.25, 32.0, 32.25, 33.0, 33.25, 34.0,
+						34.25, 35.0, 35.25, 36.0, 36.25, 37.0, 37.25, 38.0, 38.25, 39.0, 39.25, 40.0, 40.25,
+						41.0, 41.25, 42.0, 42.25, 43.0, 43.25, 44.0, 44.25, 45.0, 45.25, 46.0, 46.25, 47.0,
+						47.25, 48.0, 48.25, 49.0, 49.25, 50.0, 50.25, 51.0, 51.25, 52.0, 52.25, 53.0, 53.25,
+						54.0, 54.25, 55.0, 55.25, 56.0, 56.25, 57.0, 57.25, 58.0, 58.25, 59.0, 59.25, 60.0,
+						60.25, 61.0, 61.25, 62.0, 62.25, 63.0, 63.25, 64.0, 64.25, 65.0, 65.25, 66.0, 66.25,
+						67.0, 67.25, 68.0, 68.25, 69.0, 69.25, 70.0, 70.25, 71.0, 71.25, 72.0, 72.25, 73.0,
+						73.25, 74.0, 74.25, 75.0, 75.25, 76.0, 76.25, 77.0, 77.25, 78.0, 78.25, 79.0, 79.25,
+						80.0, 80.25, 81.0, 81.25, 82.0, 82.25, 83.0, 83.25, 84.0, 84.25, 85.0, 85.25, 86.0,
+						86.25, 87.0, 87.25, 88.0, 88.25, 89.0, 89.25, 90.0, 90.25, 91.0, 91.25, 92.0, 92.25,
+						93.0, 93.25, 94.0, 94.25, 95.0, 95.25, 96.0, 96.25, 97.0, 97.25, 98.0, 98.25, 99.0,
+						99.25, 100.0, 100.25, 101.0, 101.25, 102.0, 102.25, 103.0, 103.25, 104.0, 104.25, 105.0,
+						105.25, 106.0, 106.25, 107.0, 107.25, 108.0, 108.25, 109.0, 109.25, 110.0, 110.25,
+						111.0, 111.25, 112.0, 112.25, 113.0, 113.25, 114.0, 114.25, 115.0, 115.25, 116.0,
+						116.25, 117.0, 117.25, 118.0, 118.25, 119.0, 119.25, 120.0, 120.25, 121.0, 121.25,
+						122.0, 122.25, 123.0, 123.25, 124.0, 124.25, 125.0, 125.25, 126.0, 126.25, 127.0,
+						127.25, 128.0, 128.25, 129.0, 129.25, 130.0, 130.25, 131.0, 131.25, 132.0, 132.25,
+						133.0, 133.25, 134.0, 134.25, 135.0, 135.25, 136.0, 136.25, 137.0, 137.25, 138.0,
+						138.25, 139.0, 139.25, 140.0, 140.25, 141.0, 141.25, 142.0, 142.25, 143.0, 143.25,
+						144.0, 144.25
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						22.893, 27.242, 24.206, 19.972, 25.42, 23.349, 18.802, 27.163, 24.419, 27.055, 28.77,
+						29.27, 33.059, 38.945, 43.641, 44.131, 56.171, 56.079, 56.301, 65.317, 53.113, 67.126,
+						77.904, 75.115, 80.079, 79.091, 76.472, 84.046, 77.283, 77.736, 78.209, 79.469, 75.465,
+						69.05, 68.879, 78.068, 65.627, 60.908, 57.706, 56.266, 50.132, 47.3, 41.389, 40.767,
+						28.24, 32.434, 35.098, 31.072, 28.123, 24.215, 20.99, 14.406, 13.722, 22.702, 18.539,
+						29.422, 29.124, 29.6, 26.854, 32.472, 35.883, 31.091, 39.152, 44.828, 56.542, 59.401,
+						57.912, 64.74, 64.547, 71.131, 70.945, 69.656, 80.843, 69.635, 75.625, 78.739, 83.158,
+						80.758, 77.857, 78.298, 79.499, 77.489, 68.787, 71.174, 63.463, 64.904, 60.491, 55.51,
+						61.408, 43.748, 38.717, 42.488, 38.368, 32.706, 28.338, 20.885, 25.722, 21.714, 23.517,
+						27.738, 19.951, 14.36, 18.862, 24.22, 23.383, 24.001, 27.904, 35.875, 35.662, 38.073,
+						41.885, 44.257, 56.648, 48.009, 53.949, 56.099, 70.339, 63.484, 70.721, 77.015, 76.874,
+						79.147, 75.509, 80.248, 86.498, 78.882, 82.846, 76.027, 76.175, 70.479, 66.009, 66.16,
+						59.904, 60.134, 56.042, 50.655, 56.172, 45.001, 39.681, 37.798, 34.825, 39.644, 32.163,
+						31.715, 30.609, 13.727, 23.131, 19.511, 18.231, 22.995, 22.264, 20.466, 22.027, 34.196,
+						29.817, 27.257, 26.528, 33.872, 44.641, 43.572, 45.973, 53.558, 57.005, 63.693, 64.694,
+						70.58, 74.251, 75.222, 70.139, 78.828, 70.774, 81.676, 79.387, 78.471, 78.639, 82.469,
+						72.524, 70.778, 68.111, 69.163, 63.178, 57.837, 57.385, 52.36, 49.336, 42.47, 38.736,
+						42.293, 33.387, 37.206, 27.684, 27.928, 26.603, 22.214, 20.578, 23.927, 15.852, 15.15,
+						19.104, 19.812, 24.961, 21.094, 37.087, 31.203, 35.547, 38.621, 36.937, 40.509, 50.935,
+						52.714, 54.751, 57.055, 63.519, 66.841, 78.633, 72.837, 77.755, 79.413, 80.124, 79.025,
+						78.937, 79.016, 86.83, 74.587, 78.788, 81.376, 72.392, 70.36, 58.138, 62.967, 52.513,
+						55.502, 54.707, 46.364, 42.975, 39.356, 37.821, 28.688, 26.035, 26.046, 24.526, 27.045,
+						19.616, 20.711, 21.377, 17.298, 21.509, 24.347, 31.083, 17.548, 28.617, 21.542, 35.625,
+						30.063, 36.881, 45.222, 51.938, 55.131, 53.299, 65.744, 62.153, 67.193, 69.819, 71.215,
+						69.696, 75.997, 73.774, 76.699, 84.289, 86.308, 79.624, 80.104, 78.522, 73.038, 78.868,
+						75.743, 64.377, 63.122, 54.798, 58.747, 48.029, 48.685, 43.844, 44.58, 36.657, 33.686,
+						27.579, 29.957, 21.433, 19.889
+					]
+				}
+			],
+			"xRef": "t",
+			"yRef": "y",
+			"extraArgs": [null, null, 0],
 			"compareArrays": ["lags", "correlations"]
 		},
 		{
@@ -1224,6 +1346,49 @@
 			"rFunc": "rayleightest"
 		},
 		{
+			"id": "tp-rayleigh-2groups-ww-off",
+			"kind": "tableProcess",
+			"jsName": "RayleighTest",
+			"pyFunc": "rayleightest",
+			"inputs": [
+				{
+					"ref": "g1",
+					"type": "number",
+					"values": [
+						0.251867, 0.204194, 0.362381, 0.457431, 0.752831, 0.599371, 0.321058, 0.117235,
+						0.291764, 0.988369, 0.176821, 0.597903, 0.670608, -0.095897, 0.51939, 1.022497,
+						-0.305746, 0.371362, 0.457544, 0.173096
+					]
+				},
+				{
+					"ref": "g2",
+					"type": "number",
+					"values": [
+						2.198956, 1.975088, 1.414137, 2.331138, 2.267734, 2.378337, 2.576239, 2.144897, 2.04771,
+						1.480333, 2.246177, 1.755296, 1.818919, 1.494085, 1.612954, 1.787552, 2.515535,
+						1.187283, 1.416918, 2.09574
+					]
+				}
+			],
+			"args": {
+				"yIN": ["@g1", "@g2"],
+				"unit": "radians",
+				"period": 24,
+				"out": {
+					"R": -1,
+					"z": -1,
+					"pvalue": -1,
+					"acrophase": -1,
+					"F": -1,
+					"ww_pvalue": -1
+				},
+				"showWatsonWilliams": false
+			},
+			"compareOutputs": ["R", "z", "pvalue", "acrophase", "F", "ww_pvalue"],
+			"rFunc": "rayleightest",
+			"note": "The tp-watsonwilliams-2groups angles with the Watson-Williams test switched OFF (showWatsonWilliams false): the per-column Rayleigh results are reported and F / ww_pvalue are not computed."
+		},
+		{
 			"id": "tp-cosinor-addons-fixed24",
 			"kind": "tableProcess",
 			"jsName": "Cosinor",
@@ -1578,6 +1743,71 @@
 			"rFunc": "compute_autocorrelation"
 		},
 		{
+			"id": "util-autocorrelation-peak-empty-slots",
+			"kind": "pureUtil",
+			"jsFn": "computeAutocorrelation",
+			"pyFunc": "compute_autocorrelation",
+			"rFunc": "compute_autocorrelation",
+			"note": "The dominant-period peak on the plot-correlogram-empty-slots data (every k + 0.5 h lag slot empty). With empty slots read as r = 0, the first one in the trough counted as the return to non-negative, so the peak was a mid-trough lag with r = 0. Read as missing, the peak is near 24 h.",
+			"input": {
+				"t": [
+					0.0, 0.25, 1.0, 1.25, 2.0, 2.25, 3.0, 3.25, 4.0, 4.25, 5.0, 5.25, 6.0, 6.25, 7.0, 7.25,
+					8.0, 8.25, 9.0, 9.25, 10.0, 10.25, 11.0, 11.25, 12.0, 12.25, 13.0, 13.25, 14.0, 14.25,
+					15.0, 15.25, 16.0, 16.25, 17.0, 17.25, 18.0, 18.25, 19.0, 19.25, 20.0, 20.25, 21.0, 21.25,
+					22.0, 22.25, 23.0, 23.25, 24.0, 24.25, 25.0, 25.25, 26.0, 26.25, 27.0, 27.25, 28.0, 28.25,
+					29.0, 29.25, 30.0, 30.25, 31.0, 31.25, 32.0, 32.25, 33.0, 33.25, 34.0, 34.25, 35.0, 35.25,
+					36.0, 36.25, 37.0, 37.25, 38.0, 38.25, 39.0, 39.25, 40.0, 40.25, 41.0, 41.25, 42.0, 42.25,
+					43.0, 43.25, 44.0, 44.25, 45.0, 45.25, 46.0, 46.25, 47.0, 47.25, 48.0, 48.25, 49.0, 49.25,
+					50.0, 50.25, 51.0, 51.25, 52.0, 52.25, 53.0, 53.25, 54.0, 54.25, 55.0, 55.25, 56.0, 56.25,
+					57.0, 57.25, 58.0, 58.25, 59.0, 59.25, 60.0, 60.25, 61.0, 61.25, 62.0, 62.25, 63.0, 63.25,
+					64.0, 64.25, 65.0, 65.25, 66.0, 66.25, 67.0, 67.25, 68.0, 68.25, 69.0, 69.25, 70.0, 70.25,
+					71.0, 71.25, 72.0, 72.25, 73.0, 73.25, 74.0, 74.25, 75.0, 75.25, 76.0, 76.25, 77.0, 77.25,
+					78.0, 78.25, 79.0, 79.25, 80.0, 80.25, 81.0, 81.25, 82.0, 82.25, 83.0, 83.25, 84.0, 84.25,
+					85.0, 85.25, 86.0, 86.25, 87.0, 87.25, 88.0, 88.25, 89.0, 89.25, 90.0, 90.25, 91.0, 91.25,
+					92.0, 92.25, 93.0, 93.25, 94.0, 94.25, 95.0, 95.25, 96.0, 96.25, 97.0, 97.25, 98.0, 98.25,
+					99.0, 99.25, 100.0, 100.25, 101.0, 101.25, 102.0, 102.25, 103.0, 103.25, 104.0, 104.25,
+					105.0, 105.25, 106.0, 106.25, 107.0, 107.25, 108.0, 108.25, 109.0, 109.25, 110.0, 110.25,
+					111.0, 111.25, 112.0, 112.25, 113.0, 113.25, 114.0, 114.25, 115.0, 115.25, 116.0, 116.25,
+					117.0, 117.25, 118.0, 118.25, 119.0, 119.25, 120.0, 120.25, 121.0, 121.25, 122.0, 122.25,
+					123.0, 123.25, 124.0, 124.25, 125.0, 125.25, 126.0, 126.25, 127.0, 127.25, 128.0, 128.25,
+					129.0, 129.25, 130.0, 130.25, 131.0, 131.25, 132.0, 132.25, 133.0, 133.25, 134.0, 134.25,
+					135.0, 135.25, 136.0, 136.25, 137.0, 137.25, 138.0, 138.25, 139.0, 139.25, 140.0, 140.25,
+					141.0, 141.25, 142.0, 142.25, 143.0, 143.25, 144.0, 144.25
+				],
+				"y": [
+					22.893, 27.242, 24.206, 19.972, 25.42, 23.349, 18.802, 27.163, 24.419, 27.055, 28.77,
+					29.27, 33.059, 38.945, 43.641, 44.131, 56.171, 56.079, 56.301, 65.317, 53.113, 67.126,
+					77.904, 75.115, 80.079, 79.091, 76.472, 84.046, 77.283, 77.736, 78.209, 79.469, 75.465,
+					69.05, 68.879, 78.068, 65.627, 60.908, 57.706, 56.266, 50.132, 47.3, 41.389, 40.767,
+					28.24, 32.434, 35.098, 31.072, 28.123, 24.215, 20.99, 14.406, 13.722, 22.702, 18.539,
+					29.422, 29.124, 29.6, 26.854, 32.472, 35.883, 31.091, 39.152, 44.828, 56.542, 59.401,
+					57.912, 64.74, 64.547, 71.131, 70.945, 69.656, 80.843, 69.635, 75.625, 78.739, 83.158,
+					80.758, 77.857, 78.298, 79.499, 77.489, 68.787, 71.174, 63.463, 64.904, 60.491, 55.51,
+					61.408, 43.748, 38.717, 42.488, 38.368, 32.706, 28.338, 20.885, 25.722, 21.714, 23.517,
+					27.738, 19.951, 14.36, 18.862, 24.22, 23.383, 24.001, 27.904, 35.875, 35.662, 38.073,
+					41.885, 44.257, 56.648, 48.009, 53.949, 56.099, 70.339, 63.484, 70.721, 77.015, 76.874,
+					79.147, 75.509, 80.248, 86.498, 78.882, 82.846, 76.027, 76.175, 70.479, 66.009, 66.16,
+					59.904, 60.134, 56.042, 50.655, 56.172, 45.001, 39.681, 37.798, 34.825, 39.644, 32.163,
+					31.715, 30.609, 13.727, 23.131, 19.511, 18.231, 22.995, 22.264, 20.466, 22.027, 34.196,
+					29.817, 27.257, 26.528, 33.872, 44.641, 43.572, 45.973, 53.558, 57.005, 63.693, 64.694,
+					70.58, 74.251, 75.222, 70.139, 78.828, 70.774, 81.676, 79.387, 78.471, 78.639, 82.469,
+					72.524, 70.778, 68.111, 69.163, 63.178, 57.837, 57.385, 52.36, 49.336, 42.47, 38.736,
+					42.293, 33.387, 37.206, 27.684, 27.928, 26.603, 22.214, 20.578, 23.927, 15.852, 15.15,
+					19.104, 19.812, 24.961, 21.094, 37.087, 31.203, 35.547, 38.621, 36.937, 40.509, 50.935,
+					52.714, 54.751, 57.055, 63.519, 66.841, 78.633, 72.837, 77.755, 79.413, 80.124, 79.025,
+					78.937, 79.016, 86.83, 74.587, 78.788, 81.376, 72.392, 70.36, 58.138, 62.967, 52.513,
+					55.502, 54.707, 46.364, 42.975, 39.356, 37.821, 28.688, 26.035, 26.046, 24.526, 27.045,
+					19.616, 20.711, 21.377, 17.298, 21.509, 24.347, 31.083, 17.548, 28.617, 21.542, 35.625,
+					30.063, 36.881, 45.222, 51.938, 55.131, 53.299, 65.744, 62.153, 67.193, 69.819, 71.215,
+					69.696, 75.997, 73.774, 76.699, 84.289, 86.308, 79.624, 80.104, 78.522, 73.038, 78.868,
+					75.743, 64.377, 63.122, 54.798, 58.747, 48.029, 48.685, 43.844, 44.58, 36.657, 33.686,
+					27.579, 29.957, 21.433, 19.889
+				]
+			},
+			"argRefs": ["t", "y"],
+			"compareScalars": ["peakLag", "peakCorrelation"]
+		},
+		{
 			"id": "util-chisquare-gof",
 			"kind": "pureUtil",
 			"jsFn": "chiSquareGoodnessOfFit",
@@ -1877,6 +2107,58 @@
 			},
 			"compareOutputs": ["padj", "reject"],
 			"rFunc": "fdrcorrection"
+		},
+		{
+			"id": "tp-fdr-none",
+			"kind": "tableProcess",
+			"jsName": "FDRCorrection",
+			"pyFunc": "fdrcorrection",
+			"generate": {
+				"type": "pvalues",
+				"n": 40,
+				"seed": 304,
+				"refs": {
+					"y": "p"
+				}
+			},
+			"args": {
+				"xIN": "@p",
+				"method": "none",
+				"alpha": 0.05,
+				"out": {
+					"padj": -1,
+					"reject": -1
+				}
+			},
+			"compareOutputs": ["padj", "reject"],
+			"rFunc": "fdrcorrection",
+			"note": "FDRCorrection method 'none': the p-values pass through unadjusted and reject is p <= alpha."
+		},
+		{
+			"id": "tp-fdr-bonferroni",
+			"kind": "tableProcess",
+			"jsName": "FDRCorrection",
+			"pyFunc": "fdrcorrection",
+			"generate": {
+				"type": "pvalues",
+				"n": 40,
+				"seed": 305,
+				"refs": {
+					"y": "p"
+				}
+			},
+			"args": {
+				"xIN": "@p",
+				"method": "bonferroni",
+				"alpha": 0.05,
+				"out": {
+					"padj": -1,
+					"reject": -1
+				}
+			},
+			"compareOutputs": ["padj", "reject"],
+			"rFunc": "fdrcorrection",
+			"note": "FDRCorrection Bonferroni: p times the number of non-missing tests, capped at 1."
 		},
 		{
 			"id": "tp-surrogate-observed-statistic",
@@ -2537,6 +2819,76 @@
 			"rToleranceWhy": "Same cause as util-normality-shapiro: R's shapiro.test and the JS port both implement Royston AS R94 and agree on W, but the p-value's normalising transform differs in the 8th significant figure. Surfaces here because the analysis reports the p-value. Python stays at the default tolerance."
 		},
 		{
+			"id": "tp-normalitytest-dagostino",
+			"kind": "tableProcess",
+			"jsName": "NormalityTest",
+			"pyFunc": "normalitytest",
+			"generate": {
+				"type": "rhythm",
+				"n": 80,
+				"period": 24,
+				"amp": 0,
+				"mesor": 10,
+				"phase": 0,
+				"noise": 4,
+				"seed": 511,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"yIN": ["@y"],
+				"method": "dagostino",
+				"alpha": 0.05,
+				"out": {
+					"variable": -1,
+					"statistic": -1,
+					"pvalue": -1,
+					"n": -1,
+					"normal": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "n", "normal"],
+			"rFunc": "normalitytest",
+			"note": "D'Agostino-Pearson K2 omnibus (skewness and kurtosis z-scores combined, chi-squared on 2 df) on 80 normal readings: the method no fixture reached."
+		},
+		{
+			"id": "tp-normalitytest-jarquebera",
+			"kind": "tableProcess",
+			"jsName": "NormalityTest",
+			"pyFunc": "normalitytest",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 10,
+				"phase": 0,
+				"noise": 3,
+				"seed": 512,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"yIN": ["@y"],
+				"method": "jarquebera",
+				"alpha": 0.05,
+				"out": {
+					"variable": -1,
+					"statistic": -1,
+					"pvalue": -1,
+					"n": -1,
+					"normal": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "n", "normal"],
+			"rFunc": "normalitytest",
+			"note": "Jarque-Bera on a week of hourly readings (168) of a 24 h rhythm (amplitude 20, noise sd 3): a cosine sampled evenly is bimodal and platykurtic (kurtosis about 1.5 against 3), so this is a realistic NON-normal case and the test rejects (normal = 0)."
+		},
+		{
 			"id": "tp-correlation-pair",
 			"kind": "tableProcess",
 			"jsName": "Correlation",
@@ -2573,6 +2925,43 @@
 			"rFunc": "correlation"
 		},
 		{
+			"id": "tp-correlation-spearman",
+			"kind": "tableProcess",
+			"jsName": "Correlation",
+			"pyFunc": "correlation",
+			"generate": {
+				"type": "linear",
+				"n": 60,
+				"slope": 1.4,
+				"intercept": 3,
+				"noise": 5,
+				"seed": 513,
+				"refs": {
+					"x": "a",
+					"y": "b"
+				}
+			},
+			"args": {
+				"yIN": ["@a", "@b"],
+				"method": "spearman",
+				"alpha": 0.05,
+				"out": {
+					"var_i": -1,
+					"var_j": -1,
+					"r": -1,
+					"pvalue": -1,
+					"padj": -1,
+					"n": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
+					"significant": -1
+				}
+			},
+			"compareOutputs": ["r", "pvalue", "padj", "n", "ciLow", "ciHigh", "significant"],
+			"rFunc": "correlation",
+			"note": "Spearman rank correlation of a noisy linear pair (n 60), with its p-value and CI: the method no fixture reached."
+		},
+		{
 			"id": "tp-crosscorrelation",
 			"kind": "tableProcess",
 			"jsName": "CrossCorrelation",
@@ -2602,6 +2991,38 @@
 			},
 			"compareOutputs": ["lag", "correlation", "pvalue"],
 			"rFunc": "crosscorrelation"
+		},
+		{
+			"id": "tp-crosscorrelation-spearman",
+			"kind": "tableProcess",
+			"jsName": "CrossCorrelation",
+			"pyFunc": "crosscorrelation",
+			"generate": {
+				"type": "linear",
+				"n": 80,
+				"slope": 0.9,
+				"intercept": 1,
+				"noise": 6,
+				"seed": 514,
+				"refs": {
+					"x": "a",
+					"y": "b"
+				}
+			},
+			"args": {
+				"xIN": "@a",
+				"yIN": "@b",
+				"maxLag": 5,
+				"method": "spearman",
+				"out": {
+					"lag": -1,
+					"correlation": -1,
+					"pvalue": -1
+				}
+			},
+			"compareOutputs": ["lag", "correlation", "pvalue"],
+			"rFunc": "crosscorrelation",
+			"note": "Cross-correlation with Spearman's rank correlation at each lag (n 80, max lag 5): the method no fixture reached."
 		},
 		{
 			"id": "tp-logisticregression",
@@ -2754,6 +3175,69 @@
 			},
 			"compareOutputs": ["interpx"],
 			"rFunc": "interpolate"
+		},
+		{
+			"kind": "tableProcess",
+			"jsName": "SimulatedData",
+			"pyFunc": "simulateddata",
+			"inputs": [],
+			"compareOutputs": ["values"],
+			"id": "tp-simulateddata-alpha-fraction",
+			"note": "Simulate Data with a short-day active fraction: alphaFraction 0.3 on a 24 h square wave sampled every 0.5 h for 3 days, so each cycle is active while floor(t mod 24) < 7.2 (t in [0, 8) h). A second section keeps the 0.5 default (key absent) at a 25 h period. Noise is off: the Python port draws noise from numpy rather than the app's seeded minstd stream (exports bake this node's data), so only the noise-free rhythm can be compared. Time is not compared (JS writes ISO strings, Python epoch ms). There is no R port of this node (R exports bake it).",
+			"args": {
+				"startTime": "2024-06-01T00:00:00.000Z",
+				"seed": 7,
+				"samplingPeriod_hours": 0.5,
+				"sections": [
+					{
+						"duration_hours": 72,
+						"rhythmPeriod_hours": 24,
+						"rhythmPhase_hours": 0,
+						"rhythmAmplitude": 100,
+						"noiseEnabled": false,
+						"alphaFraction": 0.3
+					},
+					{
+						"duration_hours": 50,
+						"rhythmPeriod_hours": 25,
+						"rhythmPhase_hours": 0,
+						"rhythmAmplitude": 60,
+						"noiseEnabled": false
+					}
+				],
+				"out": {
+					"time": -1,
+					"values": -1
+				}
+			}
+		},
+		{
+			"kind": "tableProcess",
+			"jsName": "SimulatedData",
+			"pyFunc": "simulateddata",
+			"inputs": [],
+			"compareOutputs": ["values"],
+			"id": "tp-simulateddata-negative-phase",
+			"note": "A negative phase shift (the UI allows down to -50 h) with a long-day alphaFraction of 0.75. JS's % keeps the dividend's sign, so the early samples (t + phase < 0) all read as active; Python's % follows the divisor's sign and folded them into the cycle instead, until the port switched to math.fmod.",
+			"args": {
+				"startTime": "2024-06-01T00:00:00.000Z",
+				"seed": 7,
+				"samplingPeriod_hours": 1,
+				"sections": [
+					{
+						"duration_hours": 48,
+						"rhythmPeriod_hours": 24,
+						"rhythmPhase_hours": -6,
+						"rhythmAmplitude": 100,
+						"noiseEnabled": false,
+						"alphaFraction": 0.75
+					}
+				],
+				"out": {
+					"time": -1,
+					"values": -1
+				}
+			}
 		},
 		{
 			"id": "tp-cosinor-free-period",

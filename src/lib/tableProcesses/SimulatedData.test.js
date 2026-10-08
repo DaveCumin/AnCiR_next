@@ -55,3 +55,55 @@ describe('simulateddata', () => {
 		expect(time).toHaveLength(48);
 	});
 });
+
+// The active (high) part of each cycle is `alphaFraction` of the period, so a long-day or
+// short-day record can be simulated. Default 0.5 keeps every existing session unchanged.
+describe('simulateddata: per-section alphaFraction', () => {
+	const section = (extra = {}) => ({
+		duration_hours: 48,
+		rhythmPeriod_hours: 24,
+		rhythmPhase_hours: 0,
+		rhythmAmplitude: 100,
+		noiseEnabled: false,
+		...extra
+	});
+	const run = (extra) =>
+		simulateddata({ ...previewArgs, sections: [section(extra)], samplingPeriod_hours: 1 })[1];
+	const activeHours = (values) => values.slice(0, 24).filter((v) => v === 100).length;
+
+	it('defaults to half the cycle active (unchanged behaviour)', () => {
+		expect(activeHours(run())).toBe(12);
+		expect(run({ alphaFraction: 0.5 })).toEqual(run());
+	});
+
+	it('0.3 makes the first 30% of each cycle active', () => {
+		const v = run({ alphaFraction: 0.3 });
+		// floor(t mod 24) < 7.2: hours 0 to 7 are active, 8 to 23 rest.
+		expect(activeHours(v)).toBe(8);
+		expect(v.slice(0, 8).every((x) => x === 100)).toBe(true);
+		expect(v.slice(8, 24).every((x) => x === 1)).toBe(true);
+		expect(v.slice(24, 32).every((x) => x === 100)).toBe(true);
+	});
+
+	it('0.75 makes a long active phase', () => {
+		expect(activeHours(run({ alphaFraction: 0.75 }))).toBe(18);
+	});
+
+	it('clamps to [0.01, 0.99]: a cycle is never all rest or all active; junk falls back to 0.5', () => {
+		// A 100 h cycle sampled hourly, so the clamp is visible sample by sample.
+		const cyc = (alphaFraction) =>
+			simulateddata({
+				...previewArgs,
+				samplingPeriod_hours: 1,
+				sections: [section({ duration_hours: 100, rhythmPeriod_hours: 100, alphaFraction })]
+			})[1].filter((v) => v === 100).length;
+		expect(cyc(0)).toBe(1);
+		expect(cyc(-2)).toBe(1);
+		expect(cyc(1)).toBe(99);
+		expect(cyc(1.5)).toBe(99);
+		expect(cyc(0.4)).toBe(40);
+		expect(run({ alphaFraction: 'x' })).toEqual(run());
+		expect(run({ alphaFraction: null })).toEqual(run());
+		expect(run({ alphaFraction: NaN })).toEqual(run());
+	});
+});

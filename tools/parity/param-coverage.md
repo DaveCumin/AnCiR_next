@@ -7,31 +7,19 @@ Which values of each analysis’s ENUMERABLE parameters (booleans, select option
 appear in any parity fixture. A value listed here is a branch that the JS, Python and R
 runtimes all claim to agree on and that nothing has ever compared.
 
-27 analyses have at least one fixture; 16 reach every enumerable value.
+28 analyses have at least one fixture; 23 reach every enumerable value.
 
 ## Values no fixture reaches
-
-### Correlation
-
-- `method`: ["spearman"]
 
 ### Cosinor
 
 - `permuteTest`: [true]
-
-### CrossCorrelation
-
-- `method`: ["spearman"]
 
 ### DoubleLogistic
 
 - `fixK1`: [true]
 - `fixK2`: [true]
 - `permuteTest`: [true]
-
-### FDRCorrection
-
-- `method`: ["none","bonferroni"]
 
 ### FitFunction
 
@@ -44,18 +32,6 @@ runtimes all claim to agree on and that nothing has ever compared.
 - `permuteTest`: [true]
 - `autoPermutations`: [true]
 - `permutationStatistic`: ["rmse"]
-
-### GroupComparison
-
-- `postHocEnabled`: [false]
-
-### NormalityTest
-
-- `method`: ["dagostino","jarquebera"]
-
-### RayleighTest
-
-- `showWatsonWilliams`: [false]
 
 ### RectangularWave
 
@@ -76,13 +52,20 @@ runtimes all claim to agree on and that nothing has ever compared.
 - ChiSquared
 - CircadianFunctionIndex
 - ColumnFunctions
+- Correlation
+- CrossCorrelation
 - Crossing
 - DescribeData
+- FDRCorrection
 - FormulaColumn
+- GroupComparison
 - Interpolate
 - LogisticRegression
 - NonparametricRA
+- NormalityTest
+- RayleighTest
 - RhythmicityAnalysis
+- SimulatedData
 - SmoothedData
 - Sort
 - SurrogateTest

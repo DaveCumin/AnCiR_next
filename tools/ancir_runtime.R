@@ -4378,7 +4378,8 @@ compute_autocorrelation <- function(times, values, bin_size = NULL,
       # Lag 0 is 1 by definition, not sum / (n * var) with its rounding.
       if (lag == 0) { corrs <- c(corrs, 1); lags <- c(lags, 0); next }
       a <- ydem[seq_len(n - lag)]; b <- ydem[(lag + 1):n]
-      corrs <- c(corrs, if (length(a) > 0) sum(a * b) / (length(a) * yvar) else 0)
+      # A lag with no pairs is missing (NaN), not r = 0 (correlogram.js rule 4).
+      corrs <- c(corrs, if (length(a) > 0) sum(a * b) / (length(a) * yvar) else NaN)
       lags <- c(lags, lag * dt)
     }
   } else {
@@ -4396,7 +4397,9 @@ compute_autocorrelation <- function(times, values, bin_size = NULL,
           if (td >= hi) break
         }
       }
-      corrs <- c(corrs, if (count > 0) s / (count * yvar) else 0)
+      # An empty slot is missing (NaN), not r = 0: the slotted estimator is a ratio over the
+      # slot's pairs (Rehfeld et al. 2011, NPG 18:389, Eq. 10), undefined with none.
+      corrs <- c(corrs, if (count > 0) s / (count * yvar) else NaN)
       lags <- c(lags, target)
     }
   }
@@ -4991,7 +4994,7 @@ gc_resolve_method <- function(requested, groups_count) {
   if (groups_count == 2) "ttest" else if (groups_count > 2) "anova" else NULL
 }
 
-gc_run_selected <- function(groups, chosen, alpha) {
+gc_run_selected <- function(groups, chosen, alpha, post_hoc_enabled = TRUE) {
   if (is.null(chosen)) {
     return(list(valid = FALSE, groups = groups,
                 reason = "Need at least 2 groups with data for comparison."))
@@ -5003,7 +5006,9 @@ gc_run_selected <- function(groups, chosen, alpha) {
   }
   if (identical(chosen, "anova")) {
     r <- gc_one_way_anova(groups)
-    ph <- if (isTRUE(r$valid) && length(groups) > 2)
+    # The post-hoc table only when the node's switch is on (GroupComparison.svelte
+    # runSelectedComparison: `postHocEnabled && aRes.valid && groups.length > 2`).
+    ph <- if (post_hoc_enabled && isTRUE(r$valid) && length(groups) > 2)
       gc_tukey_kramer_post_hoc(groups, r$msWithin, r$dfWithin, alpha) else list()
     r$postHoc <- ph
     return(c(list(test = "One-way ANOVA", groupCount = length(groups),
@@ -5026,6 +5031,8 @@ compute_group_comparison <- function(args, env) {
   mode <- if (is.null(args$method)) "auto" else args$method
   alpha <- suppressWarnings(as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha))
   if (length(alpha) != 1 || !is.finite(alpha)) alpha <- 0.05
+  # `argsIN.postHocEnabled !== false`: only an explicit false turns the post-hoc off.
+  post_hoc <- !identical(args$postHocEnabled, FALSE)
 
   # Boxplot-like fallback: several Y columns and NO group column means each column IS a group.
   if (is.null(group_col) && length(y_ins) > 1) {
@@ -5035,7 +5042,7 @@ compute_group_comparison <- function(args, env) {
       list(name = if (is.null(c1$name)) as.character(y) else c1$name,
            values = v, n = length(v), mean = gc_mean(v), sd = gc_sample_std(v))
     })
-    comp <- gc_run_selected(groups, gc_resolve_method(mode, length(groups)), alpha)
+    comp <- gc_run_selected(groups, gc_resolve_method(mode, length(groups)), alpha, post_hoc)
     return(list(result = list(multiY = comp), anyValid = isTRUE(comp$valid)))
   }
   if (is.null(group_col) || !length(y_ins)) {
@@ -5049,7 +5056,7 @@ compute_group_comparison <- function(args, env) {
     if (is.null(env$cols[[yk]])) next
     groups <- gc_build_groups(group_data, col_data(env$cols[[yk]], env$cols, env$raw_data))
     groups <- Filter(function(g) g$n > 0, groups)
-    comp <- gc_run_selected(groups, gc_resolve_method(mode, length(groups)), alpha)
+    comp <- gc_run_selected(groups, gc_resolve_method(mode, length(groups)), alpha, post_hoc)
     nm <- env$cols[[yk]]$name
     out[[yk]] <- c(list(columnName = if (is.null(nm)) yk else nm), comp)
     if (isTRUE(comp$valid)) any_valid <- TRUE

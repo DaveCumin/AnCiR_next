@@ -111,3 +111,34 @@ describe('CircadianFunctionIndex — computation + metric outputs', () => {
 		expect(Number.isNaN(byId[10][1])).toBe(true);
 	});
 });
+
+// FIT-8: CFI folds the same IS and IV NonparametricRA reports, so it carries the same
+// warning when more than 10% of the epochs are empty (IS and IV then rest on a thinner
+// record than the recording's length suggests).
+describe('CircadianFunctionIndex: missing-epoch warning (FIT-8)', () => {
+	const args = { xIN: 1, yIN: [2], epochHours: 1, period: 24, out: { ...OUT } };
+
+	it('warns, naming the column and the share, when more than 10% of epochs are missing', async () => {
+		const { t, y } = restActivity(10);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { name: 'wheel', getData: () => y.map((v, i) => (i % 5 === 2 ? null : v)) };
+		const [result] = await circadianfunctionindex(args);
+		const w = result.warnings.find((m) => /epochs have no data/.test(m));
+		expect(w).toMatch(/"wheel"/);
+		expect(w).toMatch(/20% of the 1 h epochs/);
+	});
+
+	it('does not warn at 10% or less', () => {
+		const { t, y } = restActivity(10);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { name: 'wheel', getData: () => y.map((v, i) => (i % 10 === 2 ? null : v)) };
+		expect(evaluateCFI(args).warnings).toEqual([]);
+	});
+
+	it('has an empty warnings list for a complete record', () => {
+		const { t, y } = restActivity(10);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { name: 'wheel', getData: () => y };
+		expect(evaluateCFI(args).warnings).toEqual([]);
+	});
+});

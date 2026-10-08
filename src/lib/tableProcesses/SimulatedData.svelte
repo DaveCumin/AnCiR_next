@@ -16,6 +16,19 @@
 		return ((((n - 1) % MINSTD_MAX) + MINSTD_MAX) % MINSTD_MAX) + 1;
 	}
 
+	// The active (high) share of each cycle, per section: alpha / (alpha + rho) in the
+	// circadian sense, so 0.5 is the old fixed square wave (LD 12:12 at 24 h) and 1/3 a
+	// short-day LD 8:16. Clamped so a cycle always has some rest and some activity; a
+	// missing or non-numeric value is the old 0.5, so existing sessions are unchanged.
+	export const ALPHA_FRACTION_MIN = 0.01;
+	export const ALPHA_FRACTION_MAX = 0.99;
+	export function activeFraction(alphaFraction) {
+		if (alphaFraction == null || alphaFraction === '') return 0.5;
+		const a = Number(alphaFraction);
+		if (!Number.isFinite(a)) return 0.5;
+		return Math.min(ALPHA_FRACTION_MAX, Math.max(ALPHA_FRACTION_MIN, a));
+	}
+
 	const defaults = new Map([
 		['startTime', { val: dayjs.utc().valueOf() }],
 		// Seed for the reproducible noise PRNG. Random default so a fresh node still
@@ -32,7 +45,8 @@
 						rhythmAmplitude: 100,
 						noiseEnabled: true,
 						noiseMode: 'multiply',
-						noiseAmplitude: 1
+						noiseAmplitude: 1,
+						alphaFraction: 0.5
 					}
 				]
 			}
@@ -77,13 +91,17 @@
 			const noiseEnabled = section.noiseEnabled ?? true;
 			const noiseMode = section.noiseMode ?? 'multiply';
 			const noiseAmplitude = section.noiseAmplitude ?? 1;
+			const activeUntil = period * activeFraction(section.alphaFraction);
 
 			for (let i = 0; i < duration; i += step) {
 				simulatedTime.push(new Date(startMs + (currentTime + i) * 3600000).toISOString());
 
 				// Apply phase shift to the rhythm calculation
 				const phaseShiftedTime = i + phase;
-				const currentAmplitude = Math.floor(phaseShiftedTime % period) < period / 2 ? amplitude : 1;
+				// Active for the first `alphaFraction` of each cycle (the floor keeps the original
+				// rule, which the 0.5 default reproduces bit for bit: period * 0.5 === period / 2).
+				const currentAmplitude =
+					Math.floor(phaseShiftedTime % period) < activeUntil ? amplitude : 1;
 
 				let value;
 				if (noiseEnabled) {
@@ -178,7 +196,8 @@
 				rhythmAmplitude: 100,
 				noiseEnabled: true,
 				noiseMode: 'multiply',
-				noiseAmplitude: 1
+				noiseAmplitude: 1,
+				alphaFraction: 0.5
 			}
 		];
 		doSimulated();
@@ -199,6 +218,7 @@
 			if (section.noiseEnabled === undefined) section.noiseEnabled = true;
 			if (section.noiseMode === undefined) section.noiseMode = 'multiply';
 			if (section.noiseAmplitude === undefined) section.noiseAmplitude = 1;
+			if (section.alphaFraction === undefined) section.alphaFraction = 0.5;
 		}
 
 		//If data already exists (e.g. imported from JSON), use it instead of regenerating
@@ -321,6 +341,18 @@
 						mins: 1 / 60,
 						secs: 1 / (60 * 60)
 					}}
+					onInput={doSimulated}
+				/>
+			</div>
+		</ControlInput>
+
+		<ControlInput label="Active fraction of the cycle">
+			<div style="display:flex;">
+				<NumberWithUnits
+					bind:value={section.alphaFraction}
+					min={ALPHA_FRACTION_MIN}
+					max={ALPHA_FRACTION_MAX}
+					step="0.05"
 					onInput={doSimulated}
 				/>
 			</div>

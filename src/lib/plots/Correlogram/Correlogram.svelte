@@ -537,7 +537,10 @@
 			this.data.forEach((datum, d) => {
 				const acf = datum.acfData;
 				for (let i = 0; i < acf.lags.length; i++) {
-					rows.push([d, acf.lags[i], acf.correlations[i]]);
+					// An empty lag slot is NaN (missing, see utils/correlogram.js rule 4): a blank
+					// cell, not the text "NaN".
+					const r = acf.correlations[i];
+					rows.push([d, acf.lags[i], Number.isFinite(r) ? r : null]);
 				}
 			});
 			return { headers, rows };

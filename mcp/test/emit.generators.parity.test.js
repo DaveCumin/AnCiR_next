@@ -53,6 +53,38 @@ describe('SimulatedData port is identical to the real generator', () => {
 				}
 			]
 		},
+		'short and long active fractions (alphaFraction)': {
+			startTime: '2024-06-01T00:00:00.000Z',
+			seed: 11,
+			samplingPeriod_hours: 0.25,
+			sections: [
+				{
+					duration_hours: 72,
+					rhythmPeriod_hours: 24,
+					rhythmPhase_hours: 0,
+					rhythmAmplitude: 100,
+					noiseEnabled: true,
+					noiseMode: 'multiply',
+					noiseAmplitude: 1,
+					alphaFraction: 0.3
+				},
+				{
+					duration_hours: 72,
+					rhythmPeriod_hours: 24,
+					rhythmPhase_hours: 2,
+					rhythmAmplitude: 100,
+					noiseEnabled: false,
+					alphaFraction: 0.75
+				},
+				{
+					duration_hours: 24,
+					rhythmPeriod_hours: 24,
+					rhythmAmplitude: 50,
+					noiseEnabled: false,
+					alphaFraction: 7
+				}
+			]
+		},
 		'noise disabled': {
 			startTime: '2024-01-01T00:00:00.000Z',
 			seed: 1,

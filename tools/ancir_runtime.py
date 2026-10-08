@@ -1317,7 +1317,8 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
             a = ydem[:n - lag]
             b = ydem[lag:]
             count = a.size
-            corrs.append(float((a * b).sum() / (count * yvar)) if count > 0 else 0.0)
+            # A lag with no pairs is missing (NaN), not r = 0 (correlogram.js rule 4).
+            corrs.append(float((a * b).sum() / (count * yvar)) if count > 0 else float('nan'))
             lags.append(lag * dt)
     else:
         for li in range(start_idx, n_lags + 1):
@@ -1338,7 +1339,9 @@ def compute_autocorrelation(times, values, bin_size=None, max_lag=None,
                         count += 1
                     if td >= hi:
                         break
-            corrs.append(sum_ / (count * yvar) if count > 0 else 0.0)
+            # An empty slot is missing (NaN), not r = 0: the slotted estimator is a ratio over
+            # the slot's pairs (Rehfeld et al. 2011, NPG 18:389, Eq. 10), undefined with none.
+            corrs.append(sum_ / (count * yvar) if count > 0 else float('nan'))
             lags.append(target)
     peak_lag, peak_r = find_autocorrelation_peak(lags, corrs)
     return {'lags': lags, 'correlations': corrs, 'dt': dt,
@@ -2865,6 +2868,20 @@ def _out_id(args, key):
 
 # --- SimulatedData ---
 
+def _sim_active_fraction(alpha):
+    """SimulatedData.svelte activeFraction: the active share of each cycle. Missing, blank or
+    non-numeric is the old fixed 0.5; otherwise clamped to [0.01, 0.99]."""
+    if alpha is None or alpha == '':
+        return 0.5
+    try:
+        a = float(alpha)
+    except (TypeError, ValueError):
+        return 0.5
+    if not math.isfinite(a):
+        return 0.5
+    return min(0.99, max(0.01, a))
+
+
 def tp_simulateddata(args, cols, raw_data, _sv):
     # startTime may be epoch ms OR an ISO string (JS does new Date(startTime)).
     _st = args.get('startTime', 0)
@@ -2888,12 +2905,17 @@ def tp_simulateddata(args, cols, raw_data, _sv):
         noise_enabled = sec.get('noiseEnabled', True)
         noise_mode = sec.get('noiseMode', 'multiply')
         noise_amp = float(sec.get('noiseAmplitude', 1))
+        # Active for the first `alphaFraction` of each cycle (default 0.5 = period / 2).
+        active_until = period * _sim_active_fraction(sec.get('alphaFraction'))
         i = 0.0
         while i < duration:
             ms = start_time + (current_time + i) * 3600000
             sim_time.append(ms)
             shifted = i + phase
-            cur_amp = amp if (math.floor(shifted % period) < period / 2) else 1.0
+            # math.fmod, not %: JS `%` keeps the DIVIDEND's sign, Python's `%` the divisor's, so
+            # a negative phase shift (the UI allows down to -50 h) put Python's samples in the
+            # wrong half of the cycle.
+            cur_amp = amp if (math.floor(math.fmod(shifted, period)) < active_until) else 1.0
             if noise_enabled:
                 nz = float(rng.random()) * noise_amp
                 v = nz * cur_amp if noise_mode == 'multiply' else cur_amp + nz
@@ -8535,7 +8557,9 @@ def correlogram_download_data(plot, columns_index):
         if ac is None:
             continue
         for i, lag in enumerate(ac['lags']):
-            rows.append([d, lag, ac['correlations'][i]])
+            # An empty lag slot (NaN) is a blank cell, as the app writes it.
+            r = ac['correlations'][i]
+            rows.append([d, lag, r if math.isfinite(r) else None])
     return headers, rows
 
 

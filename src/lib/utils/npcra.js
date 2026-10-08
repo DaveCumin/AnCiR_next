@@ -175,3 +175,22 @@ export function computeNPCRA(t, y, opts = {}) {
 		t0
 	};
 }
+
+// Warn when more than this share of the epoch grid is empty (FIT-8).
+export const NPCRA_MAX_MISSING_EPOCHS = 0.1;
+
+/**
+ * The FIT-8 missing-epoch warning for one series, or null when at most
+ * NPCRA_MAX_MISSING_EPOCHS of its epochs are empty. Many empty epochs thin the record IS
+ * and IV rest on (IV is divided by the valid successive pairs, so it is not biased, but it
+ * is noisier). One text for every node that reports IS / IV (NonparametricRA, CFI).
+ *
+ * @param {string} name                    the series' column name
+ * @param {number} missingEpochFraction    computeNPCRA's (nEpochs - n) / nEpochs
+ * @param {number} epochHours              the epoch length (h)
+ * @returns {string|null}
+ */
+export function missingEpochWarning(name, missingEpochFraction, epochHours) {
+	if (!(missingEpochFraction > NPCRA_MAX_MISSING_EPOCHS)) return null;
+	return `"${name}": ${Math.round(missingEpochFraction * 100)}% of the ${epochHours} h epochs have no data. IS and IV use only the epochs (and, for IV, the successive pairs) that are present, so they rest on less of the recording than its length suggests.`;
+}

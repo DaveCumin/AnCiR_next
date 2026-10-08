@@ -507,6 +507,13 @@ and list the comparison fields to check:
 }
 ```
 
+A field may be a list or an object (GroupComparison's `postHoc` rows); both legs then compare
+it element by element (`_deep_diff` / `deep_diff`), so an empty JS list fails against a port
+that returns rows. Until 2026-10-08 the R leg read these records' `outputs` key, which a
+`tableProcessResult` record does not have (its fields are under `result`), so it compared
+nothing and every such fixture passed in R whatever the port returned. The fix showed the R
+GroupComparison port ignoring `postHocEnabled: false`.
+
 **Seeded input data.** Instead of hand-written arrays, a table-process fixture may
 declare a `generate` spec; the JS emitter realises it (deterministically, from
 `seed`) and writes the arrays into `js_results.json`, so Python analyses the

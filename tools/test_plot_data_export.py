@@ -224,6 +224,22 @@ def test_median_sampling_interval_matches_the_app():
     assert math.isnan(rt.median_sampling_interval([]))
 
 
+def test_correlogram_empty_lag_slot_is_a_blank_cell(monkeypatch, tmp_path):
+    """An empty lag slot is NaN (missing, correlogram.js rule 4); the app writes it as a
+    blank CSV cell (Correlogram getDownloadData gives null), so the export must too, not
+    'nan' and not 0."""
+    t = [0.0]
+    for i in range(1, 96):
+        t.append(t[-1] + (0.25 if i % 2 else 0.75))
+    y = [50 + 40 * math.cos(2 * math.pi * h / 24) for h in t]
+    acf = rt.compute_autocorrelation(t, y)
+    assert math.isnan(acf["correlations"][acf["lags"].index(0.5)])
+    monkeypatch.setattr(rt, "correlogram_series_acf", lambda series, cols: acf)
+    _, rows = rt.correlogram_download_data({"plot": {"data": [{}]}}, {})
+    assert next(r for r in rows if r[1] == 0.5)[2] is None
+    assert _finite(next(r for r in rows if r[1] == 0.25)[2])
+
+
 def test_fft_peaks_near_24h():
     plot, cols = _load("demo-fft-rhythm")
     _, rows = rt.fft_download_data(plot, cols)

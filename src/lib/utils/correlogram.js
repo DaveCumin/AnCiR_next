@@ -34,12 +34,20 @@ import { validPairs } from './validPairs.js';
  *      pair exactly one slot.
  *   3. On evenly spaced data every separation is a whole number of steps, so rules 1 and 2
  *      change nothing there except lag 0 (see correlogram.evenSpacing.svelte.test.js).
+ *   4. A slot that holds no pair has no estimate: its correlation is NaN (missing), not 0.
+ *      The slotted estimator is a ratio over the pairs in the slot (Rehfeld et al., Eq. 10),
+ *      so with no pairs its denominator is zero and it is undefined. An r = 0 there is a
+ *      number the data never gave, and it misled the peak search: on 0.25 / 0.75 h spacing
+ *      (median step 0.25 h, so every k + 0.5 h slot is empty) the first empty slot in the
+ *      trough read as the return to non-negative, and a 24 h rhythm reported its period as
+ *      6.5 h with r = 0. The plot leaves a gap there, the peak search skips it, and the CSV
+ *      export writes a blank cell.
  *
  * Edelson and Krolik's original paper was not available to check here; the rules above rest on
  * Rehfeld et al.'s description of it and on the definition of the normalised autocorrelation.
  * The Python and R ports (tools/ancir_runtime.py, tools/ancir_runtime.R) follow the same
  * rules, pinned by the parity fixtures plot-correlogram-{upper-median,boundary-pair,
- * near-zero-pairs}.
+ * near-zero-pairs,empty-slots}.
  *
  * @param {number[]} times      - Sample times (hours).
  * @param {number[]} values     - Signal values aligned to `times`.
@@ -139,7 +147,8 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 					count++;
 				}
 			}
-			const correlation = count > 0 ? sum / (count * yVariance) : 0;
+			// Rule 4 (unreachable here, as lag <= n / 2 always leaves pairs; kept for symmetry).
+			const correlation = count > 0 ? sum / (count * yVariance) : NaN;
 			lags.push(lag * dt);
 			correlations.push(correlation);
 		}
@@ -171,7 +180,8 @@ export function computeAutocorrelation(times, values, binSize = null, maxLag = n
 					if (timeDiff >= hi) break;
 				}
 			}
-			const correlation = count > 0 ? sum / (count * yVariance) : 0;
+			// Rule 4: an empty slot is missing, not r = 0.
+			const correlation = count > 0 ? sum / (count * yVariance) : NaN;
 			lags.push(targetLag);
 			correlations.push(correlation);
 		}

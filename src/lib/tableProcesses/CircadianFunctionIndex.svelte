@@ -11,7 +11,7 @@
 	// (Ortiz-Tudela et al. 2010, PLoS Comput Biol 6(11):e1000996). Reuses
 	// computeNPCRA — the exact IS/IV/RA the Nonparametric RA node reports — then
 	// folds them with circadianFunctionIndex(). One CFI value per y input.
-	import { computeNPCRA } from '$lib/utils/npcra.js';
+	import { computeNPCRA, missingEpochWarning } from '$lib/utils/npcra.js';
 	import { circadianFunctionIndex } from '$lib/utils/cosinorAddons.js';
 
 	const displayName = 'Circadian Function Index';
@@ -72,6 +72,7 @@
 		const t = xCol ? (xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData()) : null;
 
 		const perY = {};
+		const warnings = [];
 		let anyValid = false;
 		if (t && t.length) {
 			for (const yId of yINs) {
@@ -83,9 +84,14 @@
 				const { CFI } = circadianFunctionIndex({ IS: res.IS, IV: res.IV, RA: res.RA });
 				perY[yId] = { CFI, IS: res.IS, IV: res.IV, RA: res.RA };
 				anyValid = true;
+				// FIT-8, as NonparametricRA reports it: CFI folds the same IS and IV, so a
+				// record with many empty epochs carries the same caveat.
+				const name = yCol.name ?? `column ${yId}`;
+				const w = missingEpochWarning(name, res.missingEpochFraction, opts.epochHours);
+				if (w) warnings.push(w);
 			}
 		}
-		return { perY, yINs, anyValid };
+		return { perY, yINs, anyValid, warnings };
 	}
 
 	function writeCFIOutputs(argsIN, result) {
@@ -189,10 +195,13 @@
 			() => untrack(() => circadianfunctionindex(p.args)),
 			([data, valid]) => {
 				cfiData = data;
+				// Surfaces on the canvas node too (CompactNode / TableProcessNode read tp.warnings).
+				p.warnings = data?.warnings ?? [];
 				p.args.valid = valid;
 			},
 			() => {
 				cfiData = undefined;
+				p.warnings = [];
 				p.args.valid = false;
 				clearOutputColumns(p.args.out);
 			}
@@ -303,6 +312,9 @@
 				{/each}
 			</tbody>
 		</table>
+		{#each cfiData?.warnings ?? [] as w (w)}
+			<p class="warn">{w}</p>
+		{/each}
 		<p class="cfi-hint">
 			CFI (0–1) = mean of IS, the IV complement (2 − IV)/2, and RA, each clamped to [0,1]
 			(Ortiz-Tudela et al. 2010). Higher = a more robust, well-consolidated rhythm.
@@ -313,6 +325,15 @@
 {/if}
 
 <style>
+	/* Matches NonparametricRA / ChiSquared / Rayleigh so a warning reads the same wherever it appears. */
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
+		margin: var(--space-1) 0 0;
+	}
 	.cfi-results {
 		margin-top: var(--space-2, 0.5rem);
 		overflow-x: auto;

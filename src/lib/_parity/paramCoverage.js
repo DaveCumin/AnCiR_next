@@ -136,11 +136,8 @@ export function uncoveredValues(node, options, used) {
  * are the same failure class as the cosinor bug above and should go first.
  */
 export const PARAM_COVERAGE_GAPS = {
-	Correlation: { method: ['spearman'] },
 	Cosinor: { permuteTest: [true] },
-	CrossCorrelation: { method: ['spearman'] },
 	DoubleLogistic: { fixK1: [true], fixK2: [true], permuteTest: [true] },
-	FDRCorrection: { method: ['none', 'bonferroni'] },
 	FitFunction: {
 		useFixedPeriod: [false],
 		fixKappa: [true],
@@ -152,9 +149,6 @@ export const PARAM_COVERAGE_GAPS = {
 		autoPermutations: [true],
 		permutationStatistic: ['rmse']
 	},
-	GroupComparison: { postHocEnabled: [false] },
-	NormalityTest: { method: ['dagostino', 'jarquebera'] },
-	RayleighTest: { showWatsonWilliams: [false] },
 	// TrendFit's permutation test is not run by the ports (they write NaN for perm_pvalue).
 	TrendFit: { permuteTest: [true], autoPermutations: [true], permutationStatistic: ['rmse'] },
 	RectangularWave: {

@@ -70,6 +70,23 @@ describe('calculating-plot getDownloadData contract', () => {
 		expect(lags).toEqual([...lags].sort((a, b) => a - b));
 	});
 
+	it('Correlogram: an empty lag slot exports as a blank cell, not 0 or NaN', () => {
+		// 0.25 / 0.75 h spacing: median step 0.25 h, every k + 0.5 h slot holds no pair.
+		const t = [0];
+		for (let i = 1; i < 96; i++) t.push(t[i - 1] + (i % 2 ? 0.25 : 0.75));
+		const y = t.map((h) => 50 + 40 * Math.cos((2 * Math.PI * h) / 24));
+		const parentBox = { id: 1, width: 400, height: 300, data: [] };
+		const c = new Correlogramclass(parentBox, {
+			time: { refId: mkCol('number', t) },
+			values: { refId: mkCol('number', y) }
+		});
+		const { rows } = c.getDownloadData();
+		const empty = rows.find((r) => r[1] === 0.5);
+		expect(empty).toBeDefined();
+		expect(empty[2]).toBeNull();
+		expect(rows.find((r) => r[1] === 0.25)[2]).toEqual(expect.any(Number));
+	});
+
 	it('FFT: frequency/period/magnitude rows (no phase column by default)', () => {
 		const { headers, rows } = build(FFTclass).getDownloadData();
 		expect(headers).toEqual(['DataSeries', 'Frequency (cycles/hr)', 'Period (hours)', 'Magnitude']);

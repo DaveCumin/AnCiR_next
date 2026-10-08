@@ -441,7 +441,11 @@ def _check_fixture(fx, js_results):
         js_res = js["result"]
         for f in fx.get("compareFields", []):
             pv, jv = py.get(f), js_res.get(f)
-            if isinstance(jv, str) or isinstance(pv, str):
+            if isinstance(jv, (list, dict)):
+                # A nested field (GroupComparison's postHoc rows) compares element by element.
+                diff = _deep_diff(pv, jv, tol, f)
+                assert diff is None, f"{fx['id']} field differs at {diff}"
+            elif isinstance(jv, str) or isinstance(pv, str):
                 assert pv == jv, f"{fx['id']} field '{f}' differs: {pv!r} vs {jv!r}"
             else:
                 assert nums_match(pv, jv, tol), f"{fx['id']} field '{f}' differs: {pv!r} vs {jv!r}"

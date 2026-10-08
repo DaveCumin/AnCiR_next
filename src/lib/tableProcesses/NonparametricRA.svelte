@@ -10,7 +10,7 @@
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
-	import { computeNPCRA } from '$lib/utils/npcra.js';
+	import { computeNPCRA, missingEpochWarning } from '$lib/utils/npcra.js';
 	import {
 		applyPhaseReference,
 		relabelFoldedProfile,
@@ -142,8 +142,6 @@
 	// IV is a lag-1 difference over epochs; too few epochs per cycle and it is
 	// dominated by the binning rather than the behaviour.
 	const NPCRA_MIN_EPOCHS_PER_CYCLE = 8;
-	// Warn when more than this share of the epoch grid is empty (FIT-8).
-	const NPCRA_MAX_MISSING_EPOCHS = 0.1;
 
 	function npcraSampleWarnings(t, perY, opts) {
 		const warnings = [];
@@ -178,12 +176,9 @@
 		// FIT-8: many empty epochs thin the record IS and IV rest on (IV is now divided by
 		// the valid successive pairs, so it is not biased, but it is noisier).
 		for (const [yId, res] of Object.entries(perY)) {
-			const frac = res.missingEpochFraction;
-			if (!(frac > NPCRA_MAX_MISSING_EPOCHS)) continue;
 			const name = getColumnById(Number(yId))?.name ?? `column ${yId}`;
-			warnings.push(
-				`"${name}": ${Math.round(frac * 100)}% of the ${opts.epochHours} h epochs have no data. IS and IV use only the epochs (and, for IV, the successive pairs) that are present, so they rest on less of the recording than its length suggests.`
-			);
+			const w = missingEpochWarning(name, res.missingEpochFraction, opts.epochHours);
+			if (w) warnings.push(w);
 		}
 
 		// L5/M10 windows cannot both be estimated if they do not fit in the cycle.
