@@ -328,6 +328,8 @@
 			<span>T<sub>s</sub></span>
 			<input
 				type="range"
+				aria-label="Ts, sampling interval"
+				aria-valuetext={`${sampleInterval.toFixed(1)} h`}
 				min={MIN_IV}
 				max={MAX_IV}
 				step="0.5"

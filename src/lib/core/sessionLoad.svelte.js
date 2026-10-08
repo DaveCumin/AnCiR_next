@@ -10,9 +10,12 @@
 //                        importJson throws NotASessionError on it before touching anything.
 //   sessionHasContent    whether replacing the current session would lose anything.
 //   confirmReplaceSession  ask (in the app's own AreYouSure dialog) before replacing work.
+//   confirmDiscard       the AreYouSure question itself, shared with "New session".
 //   snapshotSession / restoreSession  the rollback importJson uses when a build fails half way.
+//   resetSession         empty `core` and the compute memo: THE reset, for every path that needs one.
 //   compareAppVersions   'β.78.1' style version ordering, for the newer-file warning (ROB-22).
-import { core, appState } from './core.svelte.js';
+import { core, appState, freshCoreState } from './core.svelte.js';
+import { memoClear } from './computeMemo.js';
 import { looksLikeSession } from '$lib/utils/fileTypeSniff.js';
 
 /** Thrown by importJson when the value is not a session at all (nothing was changed). */
@@ -96,6 +99,26 @@ const CANCEL_LABEL = 'Cancel';
  */
 export function confirmReplaceSession(what) {
 	if (!sessionHasContent()) return Promise.resolve(true);
+	// Short: AreYouSure is a small dialog. "discarded" also gives the confirm button the
+	// destructive style.
+	return confirmDiscard(
+		`Open ${what ?? 'this session'}? Unsaved changes will be discarded.`,
+		REPLACE_LABEL
+	);
+}
+
+/**
+ * Ask, in the app's AreYouSure dialog, whether to go ahead with something that throws work away.
+ * Resolves true only when the user picks `confirmLabel`. A dialog closed WITHOUT a choice
+ * (Escape, which closes the native dialog without running the button callback) resolves false,
+ * so a cancelled confirm can never leave its caller waiting forever.
+ *
+ * @param {string} text          the question; mention "discard" so the confirm button is styled
+ *                               as destructive.
+ * @param {string} confirmLabel  the confirm button's label (the other is "Cancel").
+ * @returns {Promise<boolean>}
+ */
+export function confirmDiscard(text, confirmLabel) {
 	return new Promise((resolve) => {
 		let settled = false;
 		let stopWatching = null;
@@ -106,11 +129,9 @@ export function confirmReplaceSession(what) {
 			queueMicrotask(() => stopWatching?.());
 			resolve(answer);
 		};
-		// Short: AreYouSure is a small dialog. "discarded" also gives the confirm button the
-		// destructive style.
-		appState.AYStext = `Open ${what ?? 'this session'}? Unsaved changes will be discarded.`;
-		appState.AYSoptions = [REPLACE_LABEL, CANCEL_LABEL];
-		appState.AYScallback = (choice) => done(choice === REPLACE_LABEL);
+		appState.AYStext = text;
+		appState.AYSoptions = [confirmLabel, CANCEL_LABEL];
+		appState.AYScallback = (choice) => done(choice === confirmLabel);
 		appState.showAYSModal = true;
 		let seenOpen = false;
 		stopWatching = $effect.root(() => {
@@ -149,6 +170,28 @@ export function restoreSession(snap) {
 	for (const [key, value] of Object.entries(snap.appState)) {
 		if (appState[key] !== value) appState[key] = value;
 	}
+}
+
+/**
+ * Empty the open session: every slice of `core` back to freshCoreState(), and the compute memo
+ * cleared. The one reset in the app; the session load (importJson), the sample-data seeder and
+ * "New session" all call it, so a slice added to core is reset by all of them at once.
+ *
+ * The memo is cleared because node ids are reused across sessions: a cached result kept from the
+ * previous session would be served to an unrelated node with the same id. Call this BEFORE the
+ * next session's nodes mount.
+ *
+ * A key on core that freshCoreState does not declare (`unrestoredPlots`, which only a load
+ * creates) is removed rather than left behind. Core only: the undo stack, the saved marker and
+ * appState belong to the caller, because a load and a new session treat them differently.
+ */
+export function resetSession() {
+	memoClear();
+	const fresh = freshCoreState();
+	for (const key of Object.keys(core)) {
+		if (!(key in fresh)) delete core[key];
+	}
+	for (const [key, value] of Object.entries(fresh)) core[key] = value;
 }
 
 /** Numeric parts of a version string: 'β.78.1' -> [78, 1]; null when there are none. */

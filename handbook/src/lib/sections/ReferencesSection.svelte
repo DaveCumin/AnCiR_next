@@ -209,7 +209,7 @@
 		border-bottom: 1px solid var(--border);
 	}
 	:global(#ref-list a) {
-		color: var(--blue);
+		color: var(--link);
 		word-break: break-all;
 	}
 	:global(#ref-list a:hover) {

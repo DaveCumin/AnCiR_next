@@ -8,106 +8,116 @@ import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
 import { transitionalFigureStyle } from '$lib/plots/figureStyle.js';
 import { recordGraphMutation } from '$lib/core/operations.js';
 
-export const core = $state({
-	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- raw stored series keyed by column id; entries are written once at import and consumers re-read via the owning column, not per-key subscription. Making this a SvelteMap would add per-key subscriptions across every getData() path (TPs write outputs here from inside effects), which is a behaviour change
-	rawData: new Map(),
-	data: [],
-	plots: [],
-	// tableProcesses — free-standing TableProcess instances. Each TP's outputs
-	// live in core.data like any other column; the TP itself just declares its
-	// input refs and runs its func() reactively.
-	tableProcesses: [],
-	storedValues: {},
-	// chainRefs — consumer inputs wired via a plot's passthrough output port,
-	// so the edge draws plot → consumer and follows the plot's own rewires.
-	// Shape: { toId, toPort, viaPlotId, colId, channel, series } (see
-	// core/chainRefs.js, the single consistency authority).
-	chainRefs: [],
-	// nodeNotes — per-node text annotations keyed by canvas node id (e.g.
-	// `data_5`, `process_3`, `plot_2`, `note_1`). Plain string values.
-	nodeNotes: {},
-	// notes — standalone Note nodes spawnable via the palette. Plain objects
-	// shaped like `{ id, text, x, y, width, height }`. They render as a node
-	// on the canvas but have no input/output ports.
-	notes: [],
-	// groups — flowtest-style Source-group nodes. Each absorbs data columns as
-	// internal source rows with dynamic output ports. Shape:
-	// `{ id, name, x, y, width, height,
-	//    sourceColumnIds: number[],        // column ids absorbed as rows; order = row order
-	//    allColumnIds: number[] | null,    // subset filter for the 'all' port (null = all sources)
-	//    collapsed: boolean,               // hide/show the sources list
-	//    rowState: { [colId]: { expanded: boolean } }  // per-row mini-table expansion
-	// }`.
-	groups: [],
-	// composites — folded sub-pipelines of operation nodes (process / tableprocess).
-	// Members stay in the normal arrays; a composite just owns their node ids + the
-	// auto-detected boundary interface. Shape:
-	// `{ id, name, x, y, collapsed, originId,
-	//    memberIds: string[],                       // graph node ids ('process_N' | 'tableprocess_N')
-	//    interface: { inputs: Port[], outputs: Port[] } }`  // Port = { id, name, member, port }
-	composites: [],
-	// orphanProcesses — column processes spawned via the palette or paste that
-	// haven't been wired up to a parent column yet. Each is a real Process
-	// instance with parentCol = null. The canvas renders them with an input
-	// port; dragging a wire from any column output to that port attaches the
-	// process to that column (moves it out of this list into col.processes).
-	orphanProcesses: [],
-	// categoryColours — one colour per CATEGORY LABEL. A boxplot's boxes come from unique
-	// VALUES of an x column, and one y column split across three categories is ONE series, so
-	// a column-keyed map resolves all three boxes to a single colour and cannot express
-	// "control is always grey, treatment always red". There is no column per category to key
-	// on, so here the label IS the identity. See plots/seriesColour.js.
-	categoryColours: {},
-	// seriesAppearance — ONE record per column: { colour, shape, dash, edited }. The whole of
-	// "what this data looks like", in one place. It replaced three parallel maps
-	// (seriesColours / seriesShapes / seriesDashes), which are still READ from a saved session
-	// so a v72.1 file loads, and then dropped — two sources of truth for a column's colour is
-	// how monochrome came to be one-way. See plots/appearanceIdentity.js.
-	seriesAppearance: {},
-	// plotColormaps — the colour map a heatmap-style plot (CWT, CorrelationHeatmap,
-	// PairsPlot, Actogram in heatmap mode) had before monochrome switched it to greys,
-	// keyed by plot id. Remembered so turning monochrome off restores the user's own
-	// choice instead of dumping every heatmap on the default, and persisted so that
-	// still holds after a reload. See plots/seriesAppearance.js.
-	plotColormaps: {},
-	// figureStyle — the session's figure style TEMPLATE: typeface, base type size,
-	// physical figure width, export DPI, background, and the marker/monochrome
-	// flags. See plots/figureStyle.js for the field registry and the pt/mm to px
-	// derivation.
-	//
-	// A template, not a live global: it is COPIED into a plot when the plot is
-	// created, and existing plots change only when the user asks ("Apply to all
-	// plots"). So editing this never silently restyles work already done.
-	//
-	// Session-scoped so a paper's figures travel with the session that produced
-	// them. Serialised automatically by outputCoreAsJson (which stringifies core
-	// wholesale); the import side must reset and re-normalise it explicitly, the
-	// same as seriesAppearance.
-	figureStyle: transitionalFigureStyle(),
-	// activeStyleName — the NAME of the saved figure-style preset this session was styled
-	// with, or null. The styles themselves live per browser (plots/styleConfig.js); only the
-	// name travels with the session, because a preset is a rule set and the session already
-	// holds the RESULT of applying it.
-	//
-	// Displayed on load, never applied: applying a config when a session loads would override
-	// what that session saved, which is the property that makes a paper's figures travel with
-	// the session. If this browser holds no style of that name, Settings says so rather than
-	// substituting one; a silently different style is worse than an honestly missing one.
-	activeStyleName: null,
-	// nodeLayout — workflow-canvas layout snapshot keyed by canvas node id
-	// (`data_<colId>`, `process_<id>`, `tableprocess_<id>`, `plot_<id>`, group/
-	// composite/note ids): `{ [id]: { x, y, collapsed? } }`. Maintained by
-	// WorkflowEditor and serialised so a saved session restores node positions and
-	// collapsed state on any machine (not just via per-browser localStorage).
-	// `collapsed` is omitted for expanded nodes — absence means expanded (default).
-	nodeLayout: {},
-	// generatedBy — provenance for a session built by the AI service, shaped
-	// `{ source, route, sessionId, model?, generatedAt }`. Held here (rather than being read
-	// off the imported JSON and dropped) so it survives a re-export: a bug report arrives as a
-	// saved session, and `sessionId` is what ties it back to the request that built it.
-	// null ⇒ nobody claims to have generated this; a human did. Never set locally.
-	generatedBy: null
-});
+/**
+ * A brand-new, empty session: every slice of `core` at its starting value. The ONE definition of
+ * "empty", used for the initial state below and by resetSession (sessionLoad.svelte.js), so a
+ * slice added here is reset everywhere without anyone having to remember a second list.
+ * Returns fresh objects on every call; nothing is shared between two sessions.
+ */
+export function freshCoreState() {
+	return {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- raw stored series keyed by column id; entries are written once at import and consumers re-read via the owning column, not per-key subscription. Making this a SvelteMap would add per-key subscriptions across every getData() path (TPs write outputs here from inside effects), which is a behaviour change
+		rawData: new Map(),
+		data: [],
+		plots: [],
+		// tableProcesses — free-standing TableProcess instances. Each TP's outputs
+		// live in core.data like any other column; the TP itself just declares its
+		// input refs and runs its func() reactively.
+		tableProcesses: [],
+		storedValues: {},
+		// chainRefs — consumer inputs wired via a plot's passthrough output port,
+		// so the edge draws plot → consumer and follows the plot's own rewires.
+		// Shape: { toId, toPort, viaPlotId, colId, channel, series } (see
+		// core/chainRefs.js, the single consistency authority).
+		chainRefs: [],
+		// nodeNotes — per-node text annotations keyed by canvas node id (e.g.
+		// `data_5`, `process_3`, `plot_2`, `note_1`). Plain string values.
+		nodeNotes: {},
+		// notes — standalone Note nodes spawnable via the palette. Plain objects
+		// shaped like `{ id, text, x, y, width, height }`. They render as a node
+		// on the canvas but have no input/output ports.
+		notes: [],
+		// groups — flowtest-style Source-group nodes. Each absorbs data columns as
+		// internal source rows with dynamic output ports. Shape:
+		// `{ id, name, x, y, width, height,
+		//    sourceColumnIds: number[],        // column ids absorbed as rows; order = row order
+		//    allColumnIds: number[] | null,    // subset filter for the 'all' port (null = all sources)
+		//    collapsed: boolean,               // hide/show the sources list
+		//    rowState: { [colId]: { expanded: boolean } }  // per-row mini-table expansion
+		// }`.
+		groups: [],
+		// composites — folded sub-pipelines of operation nodes (process / tableprocess).
+		// Members stay in the normal arrays; a composite just owns their node ids + the
+		// auto-detected boundary interface. Shape:
+		// `{ id, name, x, y, collapsed, originId,
+		//    memberIds: string[],                       // graph node ids ('process_N' | 'tableprocess_N')
+		//    interface: { inputs: Port[], outputs: Port[] } }`  // Port = { id, name, member, port }
+		composites: [],
+		// orphanProcesses — column processes spawned via the palette or paste that
+		// haven't been wired up to a parent column yet. Each is a real Process
+		// instance with parentCol = null. The canvas renders them with an input
+		// port; dragging a wire from any column output to that port attaches the
+		// process to that column (moves it out of this list into col.processes).
+		orphanProcesses: [],
+		// categoryColours — one colour per CATEGORY LABEL. A boxplot's boxes come from unique
+		// VALUES of an x column, and one y column split across three categories is ONE series, so
+		// a column-keyed map resolves all three boxes to a single colour and cannot express
+		// "control is always grey, treatment always red". There is no column per category to key
+		// on, so here the label IS the identity. See plots/seriesColour.js.
+		categoryColours: {},
+		// seriesAppearance — ONE record per column: { colour, shape, dash, edited }. The whole of
+		// "what this data looks like", in one place. It replaced three parallel maps
+		// (seriesColours / seriesShapes / seriesDashes), which are still READ from a saved session
+		// so a v72.1 file loads, and then dropped — two sources of truth for a column's colour is
+		// how monochrome came to be one-way. See plots/appearanceIdentity.js.
+		seriesAppearance: {},
+		// plotColormaps — the colour map a heatmap-style plot (CWT, CorrelationHeatmap,
+		// PairsPlot, Actogram in heatmap mode) had before monochrome switched it to greys,
+		// keyed by plot id. Remembered so turning monochrome off restores the user's own
+		// choice instead of dumping every heatmap on the default, and persisted so that
+		// still holds after a reload. See plots/seriesAppearance.js.
+		plotColormaps: {},
+		// figureStyle — the session's figure style TEMPLATE: typeface, base type size,
+		// physical figure width, export DPI, background, and the marker/monochrome
+		// flags. See plots/figureStyle.js for the field registry and the pt/mm to px
+		// derivation.
+		//
+		// A template, not a live global: it is COPIED into a plot when the plot is
+		// created, and existing plots change only when the user asks ("Apply to all
+		// plots"). So editing this never silently restyles work already done.
+		//
+		// Session-scoped so a paper's figures travel with the session that produced
+		// them. Serialised automatically by outputCoreAsJson (which stringifies core
+		// wholesale); the import side must reset and re-normalise it explicitly, the
+		// same as seriesAppearance.
+		figureStyle: transitionalFigureStyle(),
+		// activeStyleName — the NAME of the saved figure-style preset this session was styled
+		// with, or null. The styles themselves live per browser (plots/styleConfig.js); only the
+		// name travels with the session, because a preset is a rule set and the session already
+		// holds the RESULT of applying it.
+		//
+		// Displayed on load, never applied: applying a config when a session loads would override
+		// what that session saved, which is the property that makes a paper's figures travel with
+		// the session. If this browser holds no style of that name, Settings says so rather than
+		// substituting one; a silently different style is worse than an honestly missing one.
+		activeStyleName: null,
+		// nodeLayout — workflow-canvas layout snapshot keyed by canvas node id
+		// (`data_<colId>`, `process_<id>`, `tableprocess_<id>`, `plot_<id>`, group/
+		// composite/note ids): `{ [id]: { x, y, collapsed? } }`. Maintained by
+		// WorkflowEditor and serialised so a saved session restores node positions and
+		// collapsed state on any machine (not just via per-browser localStorage).
+		// `collapsed` is omitted for expanded nodes — absence means expanded (default).
+		nodeLayout: {},
+		// generatedBy — provenance for a session built by the AI service, shaped
+		// `{ source, route, sessionId, model?, generatedAt }`. Held here (rather than being read
+		// off the imported JSON and dropped) so it survives a re-export: a bug report arrives as a
+		// saved session, and `sessionId` is what ties it back to the request that built it.
+		// null ⇒ nobody claims to have generated this; a human did. Never set locally.
+		generatedBy: null
+	};
+}
+
+export const core = $state(freshCoreState());
 
 let _nextNoteId = 1;
 export function createNote({ x = 80, y = 80, text = '' } = {}) {
@@ -471,7 +481,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.81.8',
+	version: 'β.81.9',
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.processMap = await loadProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	processMap: new Map(),
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.plotMap = await loadPlots()); never mutated in place, so the $state reassignment already drives reactivity

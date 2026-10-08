@@ -14,6 +14,7 @@
 	import { RULE_STAT_LABEL } from '$lib/plots/plotMetricDefs.js';
 	import { setRuleSettings, removeRuleRecorded } from './markerRuleActions.js';
 	import { ruleBlockDomId } from './ruleDom.js';
+	import { TEMPLATE_METHOD_NOTE } from './markerMethod.js';
 
 	let { inner, rule, unitLabel = 'series' } = $props();
 
@@ -138,6 +139,7 @@
 				</ControlInput>
 			{/each}
 		</div>
+		<p class="rule-note">{TEMPLATE_METHOD_NOTE}</p>
 	{:else}
 		<p class="rule-note">
 			Place points on each series with "Add markers" under that series' Markers and lines.

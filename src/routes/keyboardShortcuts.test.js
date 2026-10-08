@@ -54,6 +54,7 @@ function bindings(body) {
 		found.push(
 			[
 				/MODIFIER/.test(cond) ? 'mod' : '',
+				/\bALT\b|event\.altKey/.test(cond) ? 'alt' : '',
 				/&& event\.shiftKey/.test(cond) ? 'shift' : '',
 				/!event\.shiftKey/.test(cond) ? 'noshift' : '',
 				key ?? `code:${code}`
@@ -119,5 +120,26 @@ describe('the app-level keydown handler', () => {
 	])('leaves Cmd/Ctrl+%s to a focused text field', (_label, shift) => {
 		const cond = branchFor(keyHandlerBody(source), 'z', { shift });
 		expect(cond).toContain('!textFocused');
+	});
+
+	// New session: Cmd/Ctrl+Alt+N. Cmd/Ctrl+N and Cmd/Ctrl+Shift+N belong to the browser (new
+	// window, private window) and cannot be taken by a page.
+	it('binds Cmd/Ctrl+Alt+N to New session, in production, outside text fields', () => {
+		const body = keyHandlerBody(source);
+		const hits = [...body.matchAll(/if \(([^)]*event\.code === 'KeyN'[^)]*)\) \{/g)];
+		expect(hits, 'expected exactly one KeyN branch').toHaveLength(1);
+		const cond = hits[0][1].replace(/\s+/g, ' ');
+		expect(cond).toMatch(/MODIFIER/);
+		expect(cond).toMatch(/\bALT\b/);
+		expect(cond).not.toMatch(/^dev && /);
+		// A character typed into a field with these modifiers must stay a character.
+		expect(cond).toContain('!editableFocused');
+		const after = body.slice(hits[0].index, hits[0].index + 200);
+		expect(after).toContain('newSession()');
+	});
+
+	it('does not read AltGr (Ctrl+Alt on Windows) as Alt', () => {
+		const body = keyHandlerBody(source);
+		expect(body).toMatch(/const ALT = event\.altKey && !event\.getModifierState\?\.\('AltGraph'\)/);
 	});
 });

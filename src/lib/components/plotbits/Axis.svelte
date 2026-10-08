@@ -53,7 +53,8 @@
 			return new AxisClass({
 				label: saved?.label ?? label,
 				gridlines: saved?.gridlines ?? gridlines,
-				nticks: saved?.nticks ?? 5
+				nticks: saved?.nticks ?? 5,
+				manualTicks: saved?.manualTicks ?? null
 			});
 		}
 	}
@@ -63,6 +64,12 @@
 	// @ts-nocheck
 	import { resolveStyle } from '$lib/plots/figureStyle.js';
 	import { axisChrome } from '$lib/components/plotbits/axisLayout.js';
+	import {
+		parseTickList,
+		formatTickList,
+		ticksInDomain
+	} from '$lib/components/plotbits/manualTicks.js';
+	import { untrack } from 'svelte';
 	import { select, selectAll } from 'd3-selection';
 	import { axisBottom, axisLeft, axisTop, axisRight } from 'd3-axis';
 
@@ -87,8 +94,33 @@
 		// through its own parentBox, so "nearest ancestor" is not the same thing as "the
 		// figure this axis belongs to".
 		// Absent in the controls branch and in tests, where the defaults apply.
-		figureStyle = null
+		figureStyle = null,
+		// What kind of values the axis shows, for the controls: 'numeric' offers Auto/Manual
+		// ticks; 'time' keeps Auto (manual ticks on a time axis are not built yet); 'categorical'
+		// hides the choice, because the plot places one tick per category itself.
+		tickMode = 'numeric'
 	} = $props();
+
+	// The Manual ticks text box. Kept as typed (so "0, 6," is not rewritten mid-entry) and
+	// re-read from the axis whenever the stored list changes elsewhere (undo, load, AI edit).
+	let tickText = $state(untrack(() => formatTickList(axisData?.manualTicks)));
+	const tickParse = $derived(parseTickList(tickText));
+	const sameList = (a, b) =>
+		Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i]);
+	$effect(() => {
+		const stored = axisData?.manualTicks;
+		if (!Array.isArray(stored)) return;
+		const typed = untrack(() => tickParse.values);
+		if (!sameList(stored, typed)) tickText = formatTickList(stored);
+	});
+
+	function setTickMode(mode) {
+		axisData.manualTicks = mode === 'manual' ? tickParse.values : null;
+	}
+	function onTickInput(text) {
+		tickText = text;
+		axisData.manualTicks = parseTickList(text).values;
+	}
 
 	// $state so the effect below re-runs once bind:this hands over the new <g> that the
 	// {#key} block creates; a plain let is not reactive in runes mode, so the effect could
@@ -171,13 +203,19 @@
 		// const t = transition().duration(10); //Doesn't look good without a similar transition for the line/points/etc... hard to do.
 
 		// DO THE SCALES
+		// Manual ticks (a non-empty list) replace d3's own; values outside the domain are not
+		// drawn. Read here, outside the per-position branches, so every redraw tracks them.
+		// A time axis always uses automatic ticks: the panel offers no manual entry there yet,
+		// so a list typed while the axis was numeric must not turn into epoch milliseconds.
+		const timeScale = scale.domain?.()[0] instanceof Date;
+		const manual =
+			!timeScale && axisData.manualTicks?.length
+				? ticksInDomain(axisData.manualTicks, scale)
+				: null;
+		const withTicks = (a) => (manual ? a.tickValues(manual) : a.ticks(axisData.nticks));
 		let axis;
 		if (position == 'bottom') {
-			if (axisData.manualTicks) {
-				axis = axisBottom(scale).tickValues(axisData.manualTicks);
-			} else {
-				axis = axisBottom(scale).ticks(axisData.nticks);
-			}
+			axis = withTicks(axisBottom(scale));
 			axis = configureTicks(axis);
 			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
@@ -185,11 +223,7 @@
 				.style('transform', `translate(${plotPadding.left}px, ${height + plotPadding.top}px)`);
 		}
 		if (position == 'top') {
-			if (axisData.manualTicks) {
-				axis = axisTop(scale).tickValues(axisData.manualTicks);
-			} else {
-				axis = axisTop(scale).ticks(axisData.nticks);
-			}
+			axis = withTicks(axisTop(scale));
 			axis = configureTicks(axis);
 			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
@@ -197,11 +231,7 @@
 				.style('transform', `translate(${plotPadding.left}px, ${plotPadding.top}px)`);
 		}
 		if (position == 'left') {
-			if (axisData.manualTicks) {
-				axis = axisLeft(scale).tickValues(axisData.manualTicks);
-			} else {
-				axis = axisLeft(scale).ticks(axisData.nticks);
-			}
+			axis = withTicks(axisLeft(scale));
 			axis = configureTicks(axis);
 			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
@@ -209,11 +239,7 @@
 				.style('transform', `translate(${plotPadding.left}px, ${plotPadding.top}px)`);
 		}
 		if (position == 'right') {
-			if (axisData.manualTicks) {
-				axis = axisRight(scale).tickValues(axisData.manualTicks);
-			} else {
-				axis = axisRight(scale).ticks(axisData.nticks);
-			}
+			axis = withTicks(axisRight(scale));
 			axis = configureTicks(axis);
 			if (tickFormat) axis = axis.tickFormat(tickFormat);
 			select(axisGroup)
@@ -328,9 +354,51 @@
 			<ControlInput label="Label">
 				<input bind:value={axisData.label} />
 			</ControlInput>
-			<ControlInput label="N Ticks">
-				<NumberWithUnits step="1" min="1" bind:value={axisData.nticks} />
-			</ControlInput>
+			{#if tickMode !== 'categorical'}
+				<ControlInput label="Ticks">
+					<select
+						aria-label="Tick placement"
+						value={tickMode === 'numeric' && Array.isArray(axisData.manualTicks)
+							? 'manual'
+							: 'auto'}
+						disabled={tickMode !== 'numeric'}
+						title={tickMode === 'numeric'
+							? 'Auto picks the ticks; Manual draws the values you type'
+							: 'Manual ticks are not available on a time axis yet'}
+						onchange={(e) => setTickMode(e.currentTarget.value)}
+					>
+						<option value="auto">Auto</option>
+						<option value="manual">Manual</option>
+					</select>
+				</ControlInput>
+			{/if}
+			{#if tickMode === 'numeric' && Array.isArray(axisData.manualTicks)}
+				<ControlInput label="Tick values">
+					<input
+						aria-label="Tick values"
+						placeholder="0, 6, 12, 18, 24"
+						value={tickText}
+						oninput={(e) => onTickInput(e.currentTarget.value)}
+					/>
+				</ControlInput>
+				{#if tickParse.invalid.length}
+					<p class="axis-ticks-message" role="status">
+						Ignored (not numbers): {tickParse.invalid.join(', ')}
+					</p>
+				{/if}
+				<p class="axis-ticks-hint">
+					{tickParse.values.length
+						? 'Values outside the axis range are not drawn.'
+						: 'No values yet, so the automatic ticks are shown.'}
+				</p>
+			{:else}
+				<ControlInput label="N Ticks">
+					<NumberWithUnits step="1" min="1" bind:value={axisData.nticks} />
+				</ControlInput>
+				{#if tickMode === 'time'}
+					<p class="axis-ticks-hint">Manual ticks are not available on a time axis yet.</p>
+				{/if}
+			{/if}
 		</div>
 		<div class="control-input-vertical">
 			<label class="control-input-checkbox">
@@ -356,3 +424,19 @@
 {:else if which === 'controls'}
 	{@render controls(axisData)}
 {/if}
+
+<style>
+	/* Global on purpose: a scoped rule would add Svelte's hash class to the axis <g> as well
+	   (its class is dynamic), and code and tests that read that class expect it bare. */
+	:global(.axis-ticks-message),
+	:global(.axis-ticks-hint) {
+		margin: 0.2rem 0;
+		font-size: var(--font-sm);
+	}
+	:global(.axis-ticks-message) {
+		color: var(--color-error);
+	}
+	:global(.axis-ticks-hint) {
+		color: var(--color-text-muted);
+	}
+</style>

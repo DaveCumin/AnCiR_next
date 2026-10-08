@@ -10,6 +10,16 @@
 		loadTourList,
 		completedSet
 	} from '$lib/core/tourRunner.svelte.js';
+	import { focusTrap } from '$lib/utils/focusTrap.js';
+
+	// A modal for the keyboard as well as the eye (UI-6): focus moves into the card when it opens,
+	// Tab stays inside, Escape closes it, and focus goes back to where it was (or to the Help
+	// button, when the Help menu item that opened it has gone with its menu).
+	const trap = focusTrap({
+		focusContainer: true,
+		onEscape: () => closePicker(),
+		fallbackFocus: () => document.querySelector('[data-testid="nav-help"]')
+	});
 
 	let tours = $state([]);
 	let loading = $state(false);
@@ -55,9 +65,16 @@
 			if (e.target === e.currentTarget) closePicker();
 		}}
 	>
-		<div class="tp-card" role="dialog" aria-label="Take a tour">
+		<div
+			class="tp-card"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="tp-heading"
+			tabindex="-1"
+			{@attach trap}
+		>
 			<div class="tp-head">
-				<h2>Take a tour</h2>
+				<h2 id="tp-heading">Take a tour</h2>
 				<button class="tp-close" type="button" aria-label="Close" onclick={closePicker}>✕</button>
 			</div>
 			<p class="tp-sub">Short, hands-on walkthroughs. You drive; they guide.</p>
@@ -107,6 +124,12 @@
 		justify-content: center;
 		background: rgba(0, 0, 0, 0.35);
 		backdrop-filter: blur(2px);
+	}
+
+	/* Focus lands on the card itself when it opens (see the trap above); Tab moves to the controls,
+	   which carry their own rings. */
+	.tp-card:focus {
+		outline: none;
 	}
 
 	.tp-card {

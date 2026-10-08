@@ -330,6 +330,7 @@
 			<span>Speed</span>
 			<input
 				type="range"
+				aria-label="Animation speed"
 				min="0.01"
 				max="6"
 				step="0.01"

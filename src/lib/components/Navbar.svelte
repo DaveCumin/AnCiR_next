@@ -16,8 +16,9 @@
 	import { helpHint, dismissHelpHint } from '$lib/core/helpHint.svelte.js';
 	import { isOfflineFile } from '$lib/start/offline.js';
 
-	// Callback from +page: summon the welcome/start screen (Help → "Welcome screen").
-	let { onShowWelcome = null } = $props();
+	// Callbacks from +page: summon the welcome/start screen (Help → "Welcome screen"), and start
+	// a new session (asks first when there is unsaved work; see core/newSession.svelte.js).
+	let { onShowWelcome = null, onNewSession = null } = $props();
 
 	let showSettings = $state(false);
 	let showAbout = $state(false);
@@ -27,6 +28,12 @@
 	let helpAnchor;
 
 	let exists = $state(false);
+
+	// For the New session shortcut's label: the same platform test +page's key handler uses.
+	const isMac =
+		typeof navigator !== 'undefined' &&
+		(navigator.platform.toUpperCase().includes('MAC') ||
+			navigator.userAgent.toUpperCase().includes('MAC'));
 
 	async function checkFile() {
 		// The offline download (file://) ships without the handbook, and a fetch from
@@ -141,7 +148,19 @@
 
 		<div class="rail-sep"></div>
 
-		<!-- Load/save session -->
+		<!-- New/load/save session -->
+		{#if onNewSession}
+			<button
+				class="rail-btn"
+				data-testid="nav-new-session"
+				aria-label="New session"
+				aria-keyshortcuts={isMac ? 'Meta+Alt+N' : 'Control+Alt+N'}
+				onclick={() => onNewSession()}
+				{@attach tooltip(`New session (${isMac ? 'Cmd+Option+N' : 'Ctrl+Alt+N'})`)}
+			>
+				<Icon name="sessionnew" width={22} height={22} />
+			</button>
+		{/if}
 		<button
 			class="rail-btn"
 			data-testid="nav-load-session"

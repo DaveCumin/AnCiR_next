@@ -5,6 +5,10 @@
      status colours) come from @ancir/design so the handbook and the app never
      drift. Handbook variable names are aliased to those shared tokens here. */
 	--blue: var(--color-accent);
+	/* Link and other accent TEXT. --blue is the bright accent (#4d9fe3), a focus-ring and border
+	   colour: 2.84:1 on white, which fails WCAG AA for text. The shared darker accent is 5.28:1 on
+	   white and at least 4.68:1 on every handbook background (review UI-24). */
+	--link: var(--color-accent-text);
 	--bg: var(--surface-canvas);
 	--surface: var(--surface-card);
 	--muted: var(--color-text-muted);
@@ -314,7 +318,7 @@ li {
 }
 
 a {
-	color: var(--blue);
+	color: var(--link);
 	text-decoration: none;
 }
 
@@ -946,11 +950,11 @@ a.gloss:hover {
 .cite {
 	font-size: 0.75em;
 	vertical-align: super;
-	color: var(--blue);
+	color: var(--link);
 }
 
 .cite a {
-	color: var(--blue);
+	color: var(--link);
 }
 
 sup.cite a:hover {

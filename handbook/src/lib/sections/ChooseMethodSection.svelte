@@ -324,7 +324,7 @@
 		white-space: nowrap;
 	}
 	.go-cell a {
-		color: var(--blue);
+		color: var(--link);
 		text-decoration: none;
 		font-weight: 600;
 	}

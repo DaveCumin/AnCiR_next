@@ -205,7 +205,7 @@
 	}
 	.reset:hover,
 	.reset:focus-visible {
-		color: var(--blue);
+		color: var(--link);
 		border-color: var(--blue);
 	}
 
@@ -296,7 +296,7 @@
 		color: var(--muted);
 	}
 	.go a {
-		color: var(--blue);
+		color: var(--link);
 		font-weight: 600;
 		text-decoration: none;
 	}

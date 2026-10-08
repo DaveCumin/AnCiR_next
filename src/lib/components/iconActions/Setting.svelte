@@ -18,6 +18,7 @@
 		sessionShapeProblem,
 		snapshotSession,
 		restoreSession,
+		resetSession,
 		compareAppVersions
 	} from '$lib/core/sessionLoad.svelte.js';
 	import { markSessionSaved } from '$lib/core/unsavedChanges.svelte.js';
@@ -298,26 +299,14 @@
 		// 0.25 h nobody chose: they now follow their x (the median sampling interval), as a new
 		// series does (enrightBinMigration.js). After the facet migration, which may move series.
 		jsonData = migrateLegacyEnrightBins(jsonData).json;
+		// Empty the open session: every core slice and the compute memo (node ids restart from 1
+		// in the incoming session, so a cached result from the previous one would be served to an
+		// unrelated node). Must happen before the new nodes mount. Everything below then RESTORES
+		// slices from the JSON; a slice the file lacks stays at its fresh value (nodeLayout empty
+		// means nodes fall back to default/topo layout).
+		resetSession();
 		// Plots whose saved JSON could not be rebuilt; kept verbatim (see importJson).
 		core.unrestoredPlots = [];
-		//reset existing workflow
-		// Node ids restart from 1 in the incoming session, so any cached compute
-		// result from the previous one would be served to a completely unrelated
-		// node. Must happen before the new nodes mount.
-		memoClear();
-		core.data = [];
-		core.tableProcesses = [];
-		core.plots = [];
-		core.groups = [];
-		core.composites = [];
-		core.notes = [];
-		core.nodeNotes = {};
-		// Cleared here; restored from the JSON below (or left empty for legacy
-		// sessions, in which case nodes fall back to default/topo layout).
-		core.nodeLayout = {};
-		// Orphan processes are session-only; clear on import so the next
-		// block can rehydrate them from the JSON if present.
-		core.orphanProcesses = [];
 		// Provenance travels with the session: carried onto core so a re-export keeps it, which
 		// is what makes an AI-built session a user sends back traceable to the request that
 		// built it. Reset first — otherwise importing a human session over an AI one would
@@ -326,10 +315,9 @@
 			jsonData.generatedBy && typeof jsonData.generatedBy === 'object'
 				? { ...jsonData.generatedBy }
 				: null;
-		// Chained wires: cleared here; restored AFTER the plots are rebuilt below —
-		// reconcileChainRefs prunes entries whose via-plot is missing, so restoring
+		// Chained wires: cleared by resetSession above; restored AFTER the plots are rebuilt
+		// below. reconcileChainRefs prunes entries whose via-plot is missing, so restoring
 		// while core.plots is still empty would wipe them mid-import.
-		core.chainRefs = [];
 		// Per-column series colours. Cleared before the new plots are built so a series
 		// cannot inherit the previous session's colour for an unrelated column id, then
 		// restored below (absent in sessions saved before this existed, which simply
@@ -390,11 +378,10 @@
 			typeof jsonData.activeStyleName === 'string' && jsonData.activeStyleName
 				? jsonData.activeStyleName
 				: null;
-		// Stored values: clear the previous session's registry, then restore from
-		// the JSON. Ref entries (metric-port refs) come back live; getter-based
-		// entries (StoreValueButton) resolve to their exported static snapshot —
+		// Stored values: the previous session's registry was cleared by resetSession; restore
+		// from the JSON. Ref entries (metric-port refs) come back live; getter-based
+		// entries (StoreValueButton) resolve to their exported static snapshot;
 		// the live getter re-registers when its node's editor next mounts.
-		core.storedValues = {};
 		if (jsonData.storedValues && typeof jsonData.storedValues === 'object') {
 			for (const [name, entry] of Object.entries(jsonData.storedValues)) {
 				if (!entry || typeof entry !== 'object') continue;

@@ -483,11 +483,12 @@
 		font-size: 0.8rem;
 		border: 1px solid var(--blue, #3e7295);
 		border-radius: 999px;
-		color: var(--blue, #3e7295);
+		color: var(--link, #1f6fb2);
 		text-decoration: none;
 	}
 	.crosslink:hover {
-		background: var(--blue, #3e7295);
+		/* White on the bright accent is 2.84:1; on the link colour it is 5.28:1. */
+		background: var(--link, #1f6fb2);
 		color: #fff;
 	}
 	.no-demo {

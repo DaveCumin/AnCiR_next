@@ -218,7 +218,7 @@
 	}
 
 	.copy-btn:hover {
-		color: var(--blue);
+		color: var(--link);
 		border-color: var(--blue);
 	}
 

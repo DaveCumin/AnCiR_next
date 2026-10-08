@@ -551,6 +551,7 @@
 	import { recordInnerEdit } from '$lib/plots/seriesDelete.js';
 	import { isOutsideFitRange } from './markerSelection.js';
 	import { ruleBlockDomId } from './ruleDom.js';
+	import { TEMPLATE_METHOD_NOTE } from './markerMethod.js';
 	import {
 		actogramPointToDayTime,
 		cursorForZone,
@@ -1214,6 +1215,7 @@
 					<NumberWithUnits min="0" max="100" bind:value={marker.centileThreshold} />
 				</ControlInput>
 			</div>
+			<p class="lock-hint">{TEMPLATE_METHOD_NOTE}</p>
 		{/if}
 		{@render periodList(marker)}
 		{@render lockBlock(marker)}

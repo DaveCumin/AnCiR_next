@@ -174,6 +174,9 @@
 		// otherwise the polar projection's period (radians/degrees) mismatches
 		// the timed data's hours, mis-scaling the clock.
 		hasTimed = $derived(this.data.some((d) => d.timeWired));
+		// Every series is timed: Placement (stack / bin / rim) arranges untimed series only, so
+		// it has nothing to act on and the panel disables it.
+		allTimed = $derived(this.data.length > 0 && this.data.every((d) => d.timeWired));
 		displayPeriod = $derived(
 			this.hasTimed
 				? displayPeriodFor('hours', this.period)
@@ -695,16 +698,29 @@
 
 		<div class="control-component">
 			<div class="control-component-title"><p>Points</p></div>
-			<p class="cp-hint">Placement applies to series without a wired time column.</p>
+			{#if theData.allTimed}
+				<p class="cp-hint">
+					Every series has a time column, so each point sits at its measured value on the radial
+					axis. Placement arranges series without a time column only.
+				</p>
+			{:else}
+				<p class="cp-hint">Placement applies to series without a wired time column.</p>
+			{/if}
 			<div class="control-input-horizontal">
 				<ControlInput label="Placement">
-					<select bind:value={theData.placement}>
+					<select
+						bind:value={theData.placement}
+						disabled={theData.allTimed}
+						title={theData.allTimed
+							? 'Every series has a time column, so there are no untimed points to place'
+							: undefined}
+					>
 						<option value="stack">Stacked</option>
 						<option value="bin">Binned</option>
 						<option value="rim">On circumference</option>
 					</select>
 				</ControlInput>
-				{#if theData.placement === 'bin'}
+				{#if theData.placement === 'bin' && !theData.allTimed}
 					<ControlInput label={`Bin (${unitSuffix(theData.unit)})`}>
 						<NumberWithUnits bind:value={theData.binWidth} min="0.05" step="0.5" />
 					</ControlInput>

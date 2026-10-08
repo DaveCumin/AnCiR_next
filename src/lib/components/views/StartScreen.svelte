@@ -30,6 +30,7 @@
 		notifyFailure
 	} from '$lib/start/startActions.js';
 	import { AppAssetUnavailableError, describeAssetError, HOSTED_URL } from '$lib/start/offline.js';
+	import { focusTrap } from '$lib/utils/focusTrap.js';
 
 	// `summoned` = reopened from Help → "Welcome screen" OVER existing work (the TODO
 	// note's summoned-over-work case). Same overlay — it already has the full modal
@@ -165,12 +166,19 @@
 	}
 
 	/**
+	 * Focus in, the Tab trap and focus restore are focusTrap's (attached below); Escape stays here
+	 * because it has more to decide than "close".
+	 *
 	 * Escape dismisses to the blank canvas behind, but only when nothing of ours is stacked on top:
 	 * a child dialog handles its own Escape, and closing it must not also close the start screen.
 	 */
 	function handleKeydown(e) {
 		if (e.key !== 'Escape') return;
 		if (showLoadSession || showAi) return;
+		// Any native modal on top owns Escape too: the "Replace session?" question that opening an
+		// example asks when the screen was summoned over work is one, and cancelling it must not
+		// also close this screen.
+		if (document.querySelector('dialog[open]')) return;
 		// A search in progress owns Escape: clearing the query must not also close the screen.
 		if (query) {
 			query = '';
@@ -188,6 +196,8 @@
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="start-heading"
+	tabindex="-1"
+	{@attach focusTrap({ focusContainer: true })}
 	use:canvasFileDrop={{ onActive: (v) => (dragActive = v), onDrop: handleDrop }}
 >
 	<div class="start-inner">
@@ -396,6 +406,12 @@
 	/* Scrim over the whole viewport. Fixed, and above BOTH pieces of app chrome (the navbar and
 	   the tool rail each sit at z-index 1000), so this reads as a modal over the app rather than
 	   as a panel inside it. Covering the rail also means no left inset is needed to clear it. */
+	/* Focus lands on the overlay itself when it opens (focusTrap's focusContainer), so a keyboard
+	   user starts inside it without the first card opening on a focus ring. Tab then moves to the
+	   cards, which carry their own rings. */
+	.start:focus {
+		outline: none;
+	}
 	.start {
 		position: fixed;
 		inset: 0;

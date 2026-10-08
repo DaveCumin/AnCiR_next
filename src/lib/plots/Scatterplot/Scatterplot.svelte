@@ -1229,7 +1229,16 @@
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.xAxis} which="controls" title="X-Axis" />
+		<Axis
+			axisData={theData.xAxis}
+			which="controls"
+			title="X-Axis"
+			tickMode={theData.anyXCategoryData
+				? 'categorical'
+				: theData.anyXdataTime
+					? 'time'
+					: 'numeric'}
+		/>
 
 		<div class="control-component">
 			<div class="control-input-horizontal">

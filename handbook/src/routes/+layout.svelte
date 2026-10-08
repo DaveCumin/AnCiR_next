@@ -184,7 +184,7 @@
 	}
 
 	.sidebar-footer a:hover {
-		color: var(--blue);
+		color: var(--link);
 		text-decoration: underline;
 	}
 </style>

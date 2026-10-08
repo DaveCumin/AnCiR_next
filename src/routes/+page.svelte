@@ -22,7 +22,12 @@
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { registerDataSourceActions } from '$lib/core/dataSourceActions.js';
 	import { importJson, exportJson } from '$lib/components/iconActions/Setting.svelte';
-	import { confirmReplaceSession, isSessionJson } from '$lib/core/sessionLoad.svelte.js';
+	import {
+		confirmReplaceSession,
+		isSessionJson,
+		resetSession
+	} from '$lib/core/sessionLoad.svelte.js';
+	import { startNewSession } from '$lib/core/newSession.svelte.js';
 	import { offerCrashRecovery } from '$lib/core/crashRecovery.js';
 	import { initUnsavedChanges, installUnloadGuard } from '$lib/core/unsavedChanges.svelte.js';
 
@@ -85,6 +90,21 @@
 		startOverlayState({ sessionIsEmpty, startDismissed, deepLinkPending, welcomeSummoned })
 	);
 	const showStartScreen = $derived(overlay.showStartScreen);
+
+	/**
+	 * "New session" (Navbar button, Cmd/Ctrl+Alt+N): asks when there is unsaved work, empties the
+	 * session, then shows the start screen even if it was dismissed earlier in this session (the
+	 * re-arm effect below only clears the dismissal once the session holds data, plots or
+	 * analyses, which a session of notes and groups alone never does).
+	 */
+	function newSession() {
+		return startNewSession({
+			onReset: () => {
+				startDismissed = false;
+				welcomeSummoned = false;
+			}
+		});
+	}
 	// Re-arm the start screen whenever the session goes back to empty (e.g. "New session"), so
 	// dismissing it once doesn't hide it forever.
 	// Claim a stable colour/shape/dash for every wired column, ONCE each.
@@ -353,6 +373,9 @@
 				navigator.platform.toUpperCase().indexOf('MAC') >= 0 ||
 				navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
 			const MODIFIER = ISMAC ? event.metaKey : event.ctrlKey;
+			// Alt (Option on a Mac), but not AltGr: on Windows AltGr reports ctrlKey + altKey, so
+			// without this a Polish keyboard typing "ń" (AltGr+N) would read as Ctrl+Alt+N.
+			const ALT = event.altKey && !event.getModifierState?.('AltGraph');
 
 			// When the user is typing in a text field, let the browser handle
 			// shortcuts like Cmd/Ctrl+A natively (select the field's text) rather
@@ -446,6 +469,14 @@
 				if (MODIFIER && event.shiftKey && event.code === 'Space' && !editableFocused) {
 					event.preventDefault();
 					toggleLessons();
+				}
+				// NEW SESSION: Cmd/Ctrl+Alt+N (Option on a Mac). Cmd/Ctrl+N and Cmd/Ctrl+Shift+N are
+				// the browser's new window and private window, which a page cannot take. Matched on
+				// event.code because Option+N on a Mac is a dead key (event.key is "Dead"). Not in a
+				// text field, so no character typed with these modifiers can start it.
+				if (MODIFIER && ALT && event.code === 'KeyN' && !editableFocused) {
+					event.preventDefault();
+					newSession();
 				}
 				// SAVE THE SESSION: the same save as the Save session button (a copy of it lived
 				// here, and only the button's copy marked the session as saved, ROB-5).
@@ -617,27 +648,11 @@
 	}
 
 	async function buildSampleSession() {
-		//Clear everything
-		core.data = [];
-		core.composites = [];
-		core.orphanProcesses = [];
-		core.chainRefs = [];
-		core.unrestoredPlots = [];
-		core.tableProcesses = [];
-		core.groups = [];
-		core.notes = [];
-		core.plots = [];
-		core.rawData = new Map();
-		// The identity maps are keyed on column id / category label, so once the columns above
-		// are gone their entries are garbage that still CLAIM palette slots. Leaving them made
-		// each successive cmd-shift-S start further down the palette — run two began at colour
-		// 3, run three at colour 5 — which is why the demo plots looked randomly coloured.
-		core.seriesAppearance = {};
-		core.categoryColours = {};
-		// This builds a brand-new session from scratch, so drop any AI provenance the previous
-		// one carried — leaving it would stamp hand-made data as AI-built, and a wrong
-		// fingerprint is worse than none.
-		core.generatedBy = null;
+		// Clear everything: the same reset a session load uses (resetSession), so the sample
+		// session starts with no previous columns, nodes, colour claims (which would push its
+		// plots further down the palette on every run) or AI provenance (which would stamp
+		// hand-made data as AI-built).
+		resetSession();
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		//Show the loading message
@@ -872,7 +887,7 @@
 
 {#if !appState.loadingState.isLoading || core.data.length > 0}
 	{#if appState.showNavbar}
-		<Navbar onShowWelcome={() => (welcomeSummoned = true)} />
+		<Navbar onShowWelcome={() => (welcomeSummoned = true)} onNewSession={newSession} />
 	{/if}
 
 	<DisplayPanel />
