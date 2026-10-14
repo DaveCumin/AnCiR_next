@@ -24,6 +24,8 @@
 // the opposite of the direction the storage work just took. Processes, analyses, plots, notes
 // and groups are pure settings and carry no data at all, so they travel freely.
 
+import { migrateDataViewPlot } from './dataViewMigration.js';
+
 /** Marks a clipboard payload as ours. Anything else on the clipboard is left to the browser. */
 export const ENVELOPE_KIND = 'ancir/nodes';
 
@@ -58,10 +60,14 @@ export function isConfigEntry(entry) {
  * ORIGINAL's columns alive, keep them and write its own values into them, so the original's
  * ports would show the copy's results. Without it the copy's metric hook mints fresh columns.
  * Applied at copy time and again at paste time (an envelope from an older build still has it).
+ *
+ * A Data View copied in a tab running a build before v82.0 is rewritten as the Table that
+ * replaced it (core/dataViewMigration.js) first; without the session it came from, a static
+ * one cannot name its result table and pastes as a frozen snapshot.
  */
 export function clearPlotInputs(plotData) {
 	if (!plotData) return plotData;
-	const out = { ...plotData };
+	const out = { ...migrateDataViewPlot(plotData).plot };
 	delete out.metricOut;
 	if (out.type === 'tableplot') {
 		out.plot = { ...(out.plot ?? {}), columnRefs: [] };

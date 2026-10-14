@@ -3,8 +3,8 @@
 // Table", 2.5), and the quick-plot lookup that shares their notion of "spawned from".
 //
 // A plot can be linked to something it does not take wired columns from:
-//   - a Table in "Plot's computed data" mode (or a legacy Data View) mirrors the plot named by
-//     its inner `sourcePlotId`;
+//   - a Table in "Plot's computed data" mode mirrors the plot named by its inner
+//     `sourcePlotId`;
 //   - a quick plot, a "View stats" / "View permutations" Table, or a residual plot was
 //     spawned from the node named by the Plot's own `sourceNodeId`.
 // Neither is a dataflow wire, so the editor derives a port-less dashed edge for each. They
@@ -42,7 +42,7 @@ export function referenceEdges(allNodes) {
 		const plot = node.plotObj;
 		const froms = [];
 		// 1. A view of another plot's computed data -> that plot.
-		if (plot.type === 'dataview' || isPlotDataTable(plot)) {
+		if (isPlotDataTable(plot)) {
 			const from = plotSourceNodeId(plot.plot?.sourcePlotId, ids);
 			if (from) froms.push(from);
 		}
@@ -58,14 +58,10 @@ export function referenceEdges(allNodes) {
 
 /**
  * The quick plot of a node: the first plot spawned from it that is not one of its result
- * tables. A "View stats" / "View permutations" Table (and a legacy Data View) also carries
- * the node's id as `sourceNodeId`, but it is not the node's canonical plot, so Quick plot
- * must spawn that rather than jump to the table.
+ * tables. A "View stats" / "View permutations" Table also carries the node's id as
+ * `sourceNodeId`, but it is not the node's canonical plot, so Quick plot must spawn that
+ * rather than jump to the table.
  */
 export function findQuickPlot(plots, nodeId) {
-	return (
-		(plots ?? []).find(
-			(p) => p.sourceNodeId === nodeId && p.type !== 'dataview' && !isNodeResultsTable(p)
-		) ?? null
-	);
+	return (plots ?? []).find((p) => p.sourceNodeId === nodeId && !isNodeResultsTable(p)) ?? null;
 }

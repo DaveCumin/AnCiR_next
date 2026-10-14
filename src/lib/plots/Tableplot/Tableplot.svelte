@@ -112,9 +112,7 @@
 				// Never a Table showing itself, and never another view (a chain of mirrors can
 				// cycle); the panel does not offer either.
 				const mirror =
-					sp === this.parentBox ||
-					sp?.type === 'dataview' ||
-					(sp?.type === 'tableplot' && sp.plot?.source !== 'columns');
+					sp === this.parentBox || (sp?.type === 'tableplot' && sp.plot?.source !== 'columns');
 				if (!sp || mirror || typeof sp.plot?.getDownloadData !== 'function') {
 					return { ...empty, status: 'missing' };
 				}
@@ -329,13 +327,12 @@
 	}
 
 	// Plots (and facet panels) a 'plot'-mode Table can mirror: anything with computed data,
-	// except this Table, legacy Data Views and Tables that are themselves views.
+	// except this Table and Tables that are themselves views.
 	function plotCandidates(table) {
 		return [...(core.plots ?? []), ...allPanels()].filter(
 			(p) =>
 				p &&
 				p !== table.parentBox &&
-				p.type !== 'dataview' &&
 				!(p.type === 'tableplot' && tableSourceOf(p.plot) !== 'columns') &&
 				typeof p.plot?.getDownloadData === 'function'
 		);

@@ -48,13 +48,13 @@ describe('referenceEdges', () => {
 		);
 	});
 
-	it('a static legacy Data View with a source node gets its edge (was an else-if)', () => {
+	it('a node-results Table with no source plot gets its node edge (was an else-if)', () => {
 		const nodes = [
 			tpNode(5),
 			plotNode(2, {
-				type: 'dataview',
+				type: 'tableplot',
 				sourceNodeId: 'tableprocess_5',
-				plot: { sourceType: 'static', sourcePlotId: null }
+				plot: { source: 'node', resultKey: null, sourcePlotId: null }
 			})
 		];
 		expect(pairs(referenceEdges(nodes))).toEqual(['tableprocess_5->plot_2']);
@@ -95,17 +95,11 @@ describe('findQuickPlot', () => {
 		sourceNodeId: 'tableprocess_5',
 		plot: { source: 'node', resultKey: 'permutations' }
 	};
-	const legacyView = {
-		id: 11,
-		type: 'dataview',
-		sourceNodeId: 'tableprocess_5',
-		plot: { sourceType: 'static' }
-	};
 	const quick = { id: 12, type: 'scatterplot', sourceNodeId: 'tableprocess_5', plot: {} };
 
-	it('ignores a node-results Table and a legacy Data View', () => {
-		expect(findQuickPlot([results, legacyView], 'tableprocess_5')).toBeNull();
-		expect(findQuickPlot([results, legacyView, quick], 'tableprocess_5')).toBe(quick);
+	it('ignores a node-results Table', () => {
+		expect(findQuickPlot([results], 'tableprocess_5')).toBeNull();
+		expect(findQuickPlot([results, quick], 'tableprocess_5')).toBe(quick);
 	});
 
 	it('a Columns-mode quick-plot Table still counts as the quick plot', () => {

@@ -578,20 +578,6 @@ const meta = new Map([
 		}
 	],
 	[
-		'dataview',
-		{
-			family: 'Plots',
-			keywords: ['table', 'inspect', 'values'], // search-only synonyms; never rendered
-			nodeIcon: 'dataview',
-			// Spawned only from a plot's "View data" action (it mirrors that plot's
-			// computed download data); it has no meaning added blank from the palette,
-			// so keep it out of the palette. The Table node covers manual tables.
-			hideFromPalette: true,
-			description:
-				"Inspector for a plot's computed data (bins, spectra, fitted values); opened from a plot's View data action."
-		}
-	],
-	[
 		'tableplot',
 		{
 			family: 'Plots',
@@ -605,8 +591,8 @@ const meta = new Map([
 				'inspect',
 				'computed data'
 			], // search-only synonyms; never rendered
-			// Uses the (nicer) Data View glyph; the Table node supersedes the old
-			// Data View plot as the single tabular-display node.
+			// The 'dataview' glyph: Table absorbed the Data View plot (removed in v82.0), and the
+			// search synonyms above keep "data view" finding it.
 			nodeIcon: 'dataview',
 			description:
 				"Tabular display of wired columns, a plot's computed data, or an analysis node's results (stats, permutations)."

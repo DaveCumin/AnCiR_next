@@ -420,8 +420,16 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 	for (const p of draft.plots ?? []) {
 		const pSchema = plots_[p.type];
 		if (!pSchema) {
+			// Data View was removed in v82.0 (a Table shows a plot's computed data or a node's
+			// results now, opened from the app). It is deliberately NOT aliased to a Table: the
+			// engine builds Columns tables only, and a draft asking for a Data View meant
+			// something else, so the model is told what exists instead.
+			const removed =
+				p.type === 'dataview'
+					? ' Data View was removed; to show columns as a table use "tableplot" with a list of columns.'
+					: '';
 			errors.push(
-				`Unknown plot type "${p.type}". Available: ${Object.keys(plots_).join(', ')}. Skipped.`
+				`Unknown plot type "${p.type}".${removed} Available: ${Object.keys(plots_).join(', ')}. Skipped.`
 			);
 			continue;
 		}

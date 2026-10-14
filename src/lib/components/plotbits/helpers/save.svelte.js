@@ -46,12 +46,9 @@ export function saveDataAsCSV(plotId) {
 export function showDataAsTable(plotId) {
 	const sourcePlot = resolvePlotRef(plotId);
 	if (!sourcePlot?.plot || typeof sourcePlot.plot.getDownloadData !== 'function') return;
-	// A Table that is already a view of other data (or a legacy Data View) IS the data view:
-	// focus it rather than mirror a mirror (the Table refuses chains of views).
-	if (
-		sourcePlot.type === 'dataview' ||
-		(sourcePlot.type === 'tableplot' && tableSourceOf(sourcePlot.plot) !== 'columns')
-	) {
+	// A Table that is already a view of other data IS the data view: focus it rather than
+	// mirror a mirror (the Table refuses chains of views).
+	if (sourcePlot.type === 'tableplot' && tableSourceOf(sourcePlot.plot) !== 'columns') {
 		focusPlotNode(sourcePlot.id);
 		return sourcePlot;
 	}

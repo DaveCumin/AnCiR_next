@@ -101,14 +101,6 @@ export const PLOT_SPECS = [
 		}
 	},
 	{
-		// DataView is a viewer with no data inputs (wired via sourcePlotId, not
-		// addData). Included for completeness; it produces no input edges.
-		type: 'dataview',
-		inputs: [],
-		wire: () => {},
-		noInputEdges: true
-	},
-	{
 		type: 'meansem',
 		inputs: [
 			{ type: 'category', data: SAMPLE.category3 },

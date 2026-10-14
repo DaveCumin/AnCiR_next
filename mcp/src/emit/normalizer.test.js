@@ -1071,6 +1071,21 @@ test('unknown plot type and unresolved plot refs are reported, not emitted', () 
 	assert.match(badRef.errors.join(' '), /missing/);
 });
 
+test('a dataview draft is refused, not built as a Table (Data View was removed in v82.0)', () => {
+	const { session, errors } = normalizeSession({
+		columns: [{ name: 'a', values: [1, 2] }],
+		plots: [{ type: 'dataview', inputs: ['a'] }]
+	});
+	assert.equal(session.plots.length, 0);
+	const msg = errors.join(' ');
+	assert.match(msg, /Unknown plot type "dataview"/);
+	assert.match(msg, /Data View was removed/);
+	assert.match(msg, /"tableplot"/);
+	// The valid types are listed, and dataview is not one of them.
+	assert.match(msg, /Available: .*scatterplot/);
+	assert.doesNotMatch(msg.split('Available:')[1], /dataview/);
+});
+
 test('session skeleton has every slice the GUI importJson expects', () => {
 	const { session } = normalizeSession({ columns: [{ name: 'x', values: [1] }] });
 	for (const k of [

@@ -31,7 +31,6 @@ describe('tableTakesColumns and the mode predicates', () => {
 	});
 	it('is false for any plot that is not a Table', () => {
 		expect(tableTakesColumns({ type: 'scatterplot', plot: {} })).toBe(false);
-		expect(tableTakesColumns({ type: 'dataview', plot: {} })).toBe(false);
 		expect(tableTakesColumns(null)).toBe(false);
 	});
 	it('isNodeResultsTable / isPlotDataTable pick out their own mode only', () => {

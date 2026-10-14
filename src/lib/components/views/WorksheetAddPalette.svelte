@@ -124,14 +124,16 @@
 	const allItems = $derived.by(() => {
 		const items = [];
 		for (const [key, entry] of appConsts.plotMap?.entries() ?? []) {
-			// Data View is spawned by a plot's "View data" action; never added blank.
+			// A plot that only means something when another action spawns it (nodeMeta
+			// `hideFromPalette`) is never added blank.
 			if (entry.hideFromPalette) continue;
 			items.push({
 				type: key,
 				kind: 'plot',
 				displayName: entry.displayName || key,
 				nodeIcon: resolveIcon(entry.nodeIcon),
-				description: entry.description || ''
+				description: entry.description || '',
+				keywords: entry.keywords || []
 			});
 		}
 		items.sort((a, b) => a.displayName.localeCompare(b.displayName));
@@ -149,7 +151,10 @@
 		const q = query.trim().toLowerCase();
 		if (!q) return allItems;
 		return allItems.filter((it) => {
-			const h = `${it.displayName} ${it.type} ${it.description}`.toLowerCase();
+			// Search-only synonyms (nodeMeta `keywords`) too, as the canvas palette does, so
+			// "data view" finds Table.
+			const h =
+				`${it.displayName} ${it.type} ${it.description} ${(it.keywords ?? []).join(' ')}`.toLowerCase();
 			return h.includes(q);
 		});
 	});

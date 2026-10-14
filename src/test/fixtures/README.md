@@ -195,7 +195,7 @@ rewrites those shapes, so the tests read these copies instead of the shipped fil
 
 Do not hand-edit or regenerate them.
 
-# Legacy Data View session (hand-made, v81.15 step 1 of "fold Data View into Table")
+# Legacy Data View sessions ("fold Data View into Table", migrated on load since v82.0)
 
 `dataview-legacy-handmade.json` is NOT a browser save. It is
 `static/sessions/demos/demo-tp-cosinor.json` (as shipped at v81.14) with three edits made by a
@@ -208,7 +208,17 @@ script: `version` set to `β.81.13`, the Cosinor node's permutation test switche
 - plot 121, `Cosinor stats`: static (`sourceType: 'static'`, `sourcePlotId: null`) with
   `sourceNodeId: 'tableprocess_57'`, as "View stats" spawned it.
 
-Used by `src/lib/components/iconActions/importJson.dataViewLegacy.test.js` (Data View stays
-registered, so the session loads unchanged) and for checking that in the running app via
-`?loadFromURL=/@fs/<absolute path to this file>`. Step 3 of the plan replaces it with a real
-browser-saved v81.13 fixture (`dataview-v81.13.json`, plan section 5.3).
+`dataview-v81.16-saved.json` is that session loaded by `importJson` and saved by
+`outputCoreAsJson` at v81.16 (`2b2a52d9`, the last build with the Data View plot registered),
+so it has every slice a real save writes (`unrestoredPlots`, a re-laid-out `nodeLayout`,
+`version: β.81.16`) and the reactive view's `staticRows` hold the scatterplot's real computed
+data (50 rows, four columns), as a browser save would. Plan section 5.3 asked for a browser save
+at v81.13; none exists on this machine, and the save path is the same code.
+
+Both are migrated by `core/dataViewMigration.js` on load (plot 120 becomes a "Plot's computed
+data" Table on plot 110; plot 121 a "Node results" Table on `tableprocess_57`, result table
+`stats`). Used by `src/lib/core/dataViewMigration.test.js`,
+`src/lib/components/iconActions/importJson.dataViewMigration.test.js`,
+`src/lib/plots/Tableplot/Tableplot.permutationPorts.svelte.test.js`, and for checking in the
+running app via `?loadFromURL=/@fs/<absolute path to the file>`. Do not hand-edit or regenerate
+them.

@@ -789,9 +789,6 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			// Only a Columns-mode Table takes wires. A Table showing a plot's computed data or
 			// a node's results has no input ports at all (its link is a reference edge).
 			if (tableTakesColumns(plot)) inputs.push(makeNodePort('series', 'input', 'column', true));
-		} else if (plotEntry && (plotEntry.defaultInputs ?? []).length === 0) {
-			// A registered viewer that takes no columns (the legacy Data View): no input ports,
-			// rather than the x/y "new series" pair that connects to nothing.
 		} else {
 			const defaultInputs = plotEntry?.defaultInputs ?? [];
 

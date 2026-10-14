@@ -8297,7 +8297,7 @@ PLOT_TYPE_DISPATCH = {
 def render_plots(plots, columns_index, output_dir):
     """Render every plot in `plots` to a PNG inside `output_dir`.
     Returns the list of file paths written. Skips unsupported types
-    (tableplot, dataview, etc) with a console note."""
+    (tableplot, etc) with a console note."""
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -8645,7 +8645,7 @@ def export_plot_data(plots, columns_index, output_dir, zone='utc'):
     """Write `<plot>_data.csv` for every calculating plot (periodogram, FFT,
     correlogram, actogram). Each CSV mirrors the plot's in-app "Show/Save data"
     output. Returns the list of paths written; non-calculating plots
-    (scatter, boxplot, tableplot, dataview) are skipped. `zone` is the session's
+    (scatter, boxplot, tableplot) are skipped. `zone` is the session's
     display time zone (appState.displayTimezone); only the actogram reads it, to
     place its rows at local midnight as the app does."""
     import csv

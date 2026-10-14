@@ -540,11 +540,10 @@ describe('plot wiring edge cases', () => {
 	});
 });
 
-describe('Table source modes and viewer plots (no unused input ports)', () => {
+describe('Table source modes (no unused input ports)', () => {
 	const consts = () => {
 		const c = makeAppConsts();
 		c.plotMap.set('tableplot', { defaultInputs: [] });
-		c.plotMap.set('dataview', { defaultInputs: [] });
 		return c;
 	};
 	const portsOf = (graph, id) => graph.nodes.find((n) => n.id === id).ports;
@@ -577,13 +576,6 @@ describe('Table source modes and viewer plots (no unused input ports)', () => {
 			expect(graph.connections.filter((c) => c.toId === 'plot_71')).toEqual([]);
 		});
 	}
-
-	it('a registered viewer with no default inputs (Data View) gets no x/y ports', () => {
-		const core = makeCore();
-		core.plots.push({ id: 72, type: 'dataview', plot: { sourcePlotId: null } });
-		const graph = getCachedProcessNodeGraph(core, consts());
-		expect(portsOf(graph, 'plot_72').inputs).toEqual([]);
-	});
 
 	it('an x/y plot still gets its trailing new-series pair', () => {
 		const core = makeCore();

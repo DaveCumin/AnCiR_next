@@ -1,7 +1,7 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.81.16",
-  "count": 62,
+  "generatedFromVersion": "β.82.0",
+  "count": 61,
   "nodes": [
     {
       "id": "actogram",
@@ -231,23 +231,6 @@
       "params": [],
       "outputs": [],
       "demo": "sessions/demos/demo-cwt-period-change.json"
-    },
-    {
-      "id": "dataview",
-      "displayName": "Data View",
-      "kind": "plot",
-      "family": "Plots",
-      "description": "Inspector for a plot's computed data (bins, spectra, fitted values); opened from a plot's View data action.",
-      "keywords": [
-        "table",
-        "inspect",
-        "values"
-      ],
-      "hideFromPalette": true,
-      "inputs": [],
-      "params": [],
-      "outputs": [],
-      "demo": null
     },
     {
       "id": "fft",

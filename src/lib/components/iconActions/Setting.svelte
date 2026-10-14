@@ -10,6 +10,7 @@
 	import { migrateFacetChildren } from '$lib/core/facetMigration.js';
 	import { migratePhaseMarkerStoredValues } from '$lib/core/phaseMarkerStoredValueMigration.js';
 	import { migrateLegacyEnrightBins } from '$lib/core/enrightBinMigration.js';
+	import { migrateDataViews } from '$lib/core/dataViewMigration.js';
 	import { childDefaultsFromRegistry } from '$lib/core/facetMigrationDefaults.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { paramDiffWatcher } from '$lib/core/paramDiffWatcher.svelte.js';
@@ -299,6 +300,15 @@
 		// 0.25 h nobody chose: they now follow their x (the median sampling interval), as a new
 		// series does (enrightBinMigration.js). After the facet migration, which may move series.
 		jsonData = migrateLegacyEnrightBins(jsonData).json;
+		// Data View plots (removed in v82.0) become the Table the same button opens today: a
+		// "Plot's computed data" Table, or a "Node results" Table on the node's result table
+		// (dataViewMigration.js). Same ids, so layout and reference edges carry over; a view
+		// whose table cannot be identified keeps its rows as a frozen snapshot, one toast each.
+		{
+			const migrated = migrateDataViews(jsonData);
+			jsonData = migrated.json;
+			for (const w of migrated.warnings) addNotification(w, 'warning', 0);
+		}
 		// Empty the open session: every core slice and the compute memo (node ids restart from 1
 		// in the incoming session, so a cached result from the previous one would be served to an
 		// unrelated node). Must happen before the new nodes mount. Everything below then RESTORES

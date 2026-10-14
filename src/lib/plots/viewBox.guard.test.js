@@ -37,8 +37,8 @@ describe('view-box wiring', () => {
 
 	for (const { name, path } of files) {
 		const src = readFileSync(path, 'utf8');
-		// Only plots that size their layout from a box are in scope. DataView declares a
-		// parentBox but never reads its width or height, so it has nothing to lay out and is
+		// Only plots that size their layout from a box are in scope. A plot that declares a
+		// parentBox but never reads its width or height has nothing to lay out and is
 		// legitimately left on the scaled-thumbnail path.
 		if (!/this\.(viewWidth|viewHeight|parentBox\.(width|height))/.test(src)) continue;
 

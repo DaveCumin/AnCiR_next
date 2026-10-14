@@ -84,7 +84,7 @@ export function buildCatalogue(schema = generated) {
 		.map(([type, p]) => {
 			const fields = p.inputs ?? [];
 			if (!fields.length) {
-				// tableplot/dataview take a bare column list rather than series.
+				// tableplot takes a bare column list rather than series.
 				return `  ${type}: inputs=["<col>", …]  (a plain list of columns, not series)`;
 			}
 			const t = Object.fromEntries(fields.map((f) => [f, '<col>']));

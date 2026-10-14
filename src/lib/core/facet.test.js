@@ -12,7 +12,7 @@ describe('FACETABLE_PLOT_TYPES', () => {
 	});
 
 	it('excludes types that cannot facet with the current engine', () => {
-		for (const t of ['tableplot', 'dataview']) {
+		for (const t of ['tableplot']) {
 			expect(FACETABLE_PLOT_TYPES.has(t), t).toBe(false);
 		}
 	});

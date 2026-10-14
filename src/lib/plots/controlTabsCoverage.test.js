@@ -38,7 +38,7 @@ describe('plot control tabs', () => {
 		const empty = [];
 		for (const { name, src } of plots) {
 			const headers = declaredHeaders(src);
-			// A single-tab plot (Tableplot, DataView) may render its controls unconditionally:
+			// A single-tab plot (Tableplot) may render its controls unconditionally:
 			// there is no other tab to switch to, so there is nothing to branch on. The bug only
 			// exists once a plot offers a CHOICE of tabs.
 			if (!headers || headers.length < 2) continue;

@@ -75,6 +75,31 @@ describe('clearPlotInputs', () => {
 		expect(out.plot.data).toEqual([]);
 	});
 
+	it('turns a Data View copied in a tab running an older build into a Table', () => {
+		const reactive = clearPlotInputs({
+			type: 'dataview',
+			name: 'Data: x',
+			plot: { sourcePlotId: 4, sourceType: 'reactive', staticHeaders: ['a'], staticRows: [[1]] }
+		});
+		expect(reactive.type).toBe('tableplot');
+		expect(reactive.name).toBe('Data: x');
+		expect(reactive.plot.source).toBe('plot');
+		expect(reactive.plot.sourcePlotId).toBe(4);
+		expect(reactive.plot.columnRefs).toEqual([]);
+		expect(reactive.plot).not.toHaveProperty('data');
+		expect(reactive.plot).not.toHaveProperty('staticRows');
+
+		// A static one has no session to name its node's type: a frozen snapshot.
+		const stat = clearPlotInputs({
+			type: 'dataview',
+			sourceNodeId: 'tableprocess_3',
+			plot: { sourceType: 'static', staticHeaders: ['column'], staticRows: [['a']] }
+		});
+		expect(stat.type).toBe('tableplot');
+		expect(stat.plot.source).toBe('node');
+		expect(stat.plot.snapshot).toEqual({ headers: ['column'], rows: [['a']] });
+	});
+
 	it('does not mutate its input', () => {
 		const input = { type: 'tableplot', metricOut: { series: 3 }, plot: { columnRefs: [1] } };
 		clearPlotInputs(input);

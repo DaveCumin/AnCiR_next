@@ -165,8 +165,8 @@
 	let result = $state({ rows: [], methodUsed: 'pearson', warnings: [] });
 
 	// "Open full table" — create a tableplot WIRED to the node's real output columns, not a
-	// static snapshot. The old showStaticDataAsTable spawned a frozen Data View at a fixed
-	// (80,80) with no edge to this node; a tableplot on the output columns is live (reflects
+	// static snapshot. The old static-table spawner made a frozen viewer at a fixed (80,80)
+	// with no edge to this node; a tableplot on the output columns is live (reflects
 	// re-computation) AND connected — the graph draws real edges from the output ports to it
 	// (ProcessNode gathers a tableplot's columnRefs). Placed downstream of this node.
 	function openFullTable() {

@@ -309,7 +309,7 @@
 		}));
 	});
 
-	// Synthetic "reference" edges: a plot-sourced Table (or legacy Data View) to the plot
+	// Synthetic "reference" edges: a plot-sourced Table to the plot
 	// whose computed data it mirrors, and any plot to the node it was spawned from (quick
 	// plots, View stats / View permutations Tables). Port-less (null ports anchor at each
 	// node's header, see getPortAnchorY); they drive BOTH the topological layout and the

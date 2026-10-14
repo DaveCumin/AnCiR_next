@@ -155,7 +155,7 @@ for (const [name, g] of Object.entries(generated.nodes)) {
 /**
  * Plot types → their series field names (registry `defaultInputs`):
  * scatterplot/boxplot/meansem → [x,y]; actogram/periodogram/fft/correlogram/circularphase
- * → [time,values]; histogram → [column]; tableplot/dataview → [] (tableplot uses columnRefs).
+ * → [time,values]; histogram → [column]; tableplot → [] (it uses columnRefs).
  */
 export const PLOTS = generated.plots ?? {};
 

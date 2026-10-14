@@ -46,8 +46,8 @@ describe('showDataAsTable wiring (id vs index)', () => {
 		expect(t.plot.view.headers).toEqual(['X', 'Y']);
 		expect(t.plot.view.rows).toHaveLength(2);
 		expect(t.plot.getDownloadData().rows).toHaveLength(2);
-		// No Data View is spawned any more.
-		expect(core.plots.some((p) => p.type === 'dataview')).toBe(false);
+		// Exactly one new plot, and it is that Table.
+		expect(core.plots).toHaveLength(2);
 	});
 
 	it('on a Table that is already a view, focuses it instead of mirroring it', () => {

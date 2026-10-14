@@ -46,7 +46,7 @@
 			{@const isSpliceTarget = dropTargetEdgeKey === k}
 			{@const isReference = edge.type === 'reference'}
 			<g style="opacity:{edgeOpacity(edge)};">
-				<!-- Reference edges (Data View → its source plot) are derived, not wired,
+				<!-- Reference edges (a Table → its source plot or node) are derived, not wired,
 				     so they aren't selectable/deletable and carry no data-flow dot. -->
 				{#if !isReference}
 					<path
@@ -111,8 +111,8 @@
 			stroke-width 0.12s ease;
 	}
 
-	/* Data View reference link: dashed + muted, to read as an association rather
-	   than a data wire. */
+	/* Reference link (a Table, quick plot or residual plot to its source): dashed + muted, to
+	   read as an association rather than a data wire. */
 	.edge-line.reference {
 		stroke: var(--color-lightness-50);
 		stroke-width: 1.5;

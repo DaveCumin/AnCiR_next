@@ -16,7 +16,7 @@
 // The rule (mirrors `storageField()` in mcp/src/emit/normalizer.js):
 //   2 inputs  -> stored positionally as `x`, `y`
 //   1 input   -> stored under its own name (histogram: `column`)
-//   0 inputs  -> no series at all (tableplot, dataview)
+//   0 inputs  -> no series at all (tableplot)
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadPlots } from '$test/plotRegistry.js';
 import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
@@ -47,7 +47,7 @@ describe('plot port names vs stored field names', () => {
 		const failures = [];
 		for (const [key, entry] of plotMap) {
 			const ports = entry.defaultInputs ?? [];
-			if (ports.length === 0) continue; // tableplot / dataview take a column list
+			if (ports.length === 0) continue; // tableplot takes a column list
 
 			// Build the inner the way a tool must write it.
 			const series = {};

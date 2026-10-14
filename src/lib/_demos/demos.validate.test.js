@@ -67,14 +67,13 @@ describe('demo sessions load + render-safe', () => {
 
 	it('the example gallery showcases every node type', () => {
 		// Drive coverage off the manifest's `showcases`/`kind` metadata (the same
-		// fields the modal search uses). DataView is a viewer wired to a source
-		// plot, not a standalone session, so it is exempt.
+		// fields the modal search uses).
 		const idx = JSON.parse(readFileSync(join(DIR, 'index.json'), 'utf8'));
 		const showcasedBy = (kind) =>
 			new Set(idx.sessions.filter((s) => s.kind === kind).flatMap((s) => s.showcases ?? []));
 
 		const plots = showcasedBy('plot');
-		for (const type of [...appConsts.plotMap.keys()].filter((k) => k !== 'dataview')) {
+		for (const type of appConsts.plotMap.keys()) {
 			expect(plots.has(type), `gallery showcases plot ${type}`).toBe(true);
 		}
 		expect(showcasedBy('process')).toEqual(new Set([...appConsts.processMap.keys()]));

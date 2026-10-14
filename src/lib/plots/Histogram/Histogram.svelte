@@ -329,7 +329,7 @@
 
 		// CSV export: one row per (series × bin) with start/end/count
 		// Tidy long export so the three computed datasets travel in one table
-		// (Data View / CSV): the binned counts, the KDE density curve (count-scaled,
+		// (View data / CSV): the binned counts, the KDE density curve (count-scaled,
 		// as drawn), and the raw values that went into the histogram. `kind`
 		// distinguishes them; `series` labels which histogram series each row is from.
 		//   kind='bin'     → x_start=bin start, x_end=bin end, value=count

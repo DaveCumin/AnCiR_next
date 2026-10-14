@@ -75,11 +75,9 @@ describe('every built node appears + wires in the workflow graph (connectivity)'
 		}
 	});
 
-	it('wires every input-bearing plot from its data', () => {
-		const noEdge = new Set(PLOT_SPECS.filter((s) => s.noInputEdges).map((s) => s.type));
+	it('wires every plot from its data', () => {
 		for (const spec of PLOT_SPECS) {
 			const pid = built.plotIds[PLOT_SPECS.indexOf(spec)];
-			if (noEdge.has(spec.type)) continue;
 			expect(
 				incoming(`plot_${pid}`).length,
 				`${spec.type} (plot_${pid}) has input edges`

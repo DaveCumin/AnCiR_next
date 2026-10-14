@@ -90,8 +90,8 @@ describe('EVERY registered plot survives a partial inner', () => {
 		for (const [key, entry] of await loadPlots()) {
 			const cls = entry.data;
 			// Compare against the class's OWN defaults rather than a hardcoded expectation: plots
-			// name the box `padding` or `paddingIN`, and the table-like plots (tableplot,
-			// dataview) have no padding at all. Deriving the field from a fresh instance keeps
+			// name the box `padding` or `paddingIN`, and the Table (tableplot) has no padding at
+			// all. Deriving the field from a fresh instance keeps
 			// this honest — it asserts only where a default actually exists, and adapts to a new
 			// plot without anyone remembering to update a list.
 			const fresh = cls.fromJSON(null, null);
@@ -101,7 +101,7 @@ describe('EVERY registered plot survives a partial inner', () => {
 					: fresh?.padding !== undefined
 						? 'padding'
 						: null;
-			if (!field) continue; // no padding concept (tableplot / dataview)
+			if (!field) continue; // no padding concept (tableplot)
 
 			const partial = cls.fromJSON(null, { data: [] });
 			const box = partial[field];
