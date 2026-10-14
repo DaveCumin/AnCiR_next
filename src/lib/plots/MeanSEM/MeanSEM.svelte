@@ -10,6 +10,13 @@
 	import Points, { PointsClass } from '$lib/components/plotbits/Points.svelte';
 	import Line, { LineClass } from '$lib/components/plotbits/Line.svelte';
 	import { meanSemByGroup } from '$lib/utils/meanSem.js';
+	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+	import {
+		overlayExtentOf,
+		overlayLegendItems,
+		overlaysFromJSON,
+		overlaysToJSON
+	} from '$lib/components/plotbits/overlayHost.js';
 
 	/**
 	 * Round a value outward to a "nice" axis limit (shared with Boxplot).
@@ -31,7 +38,7 @@
 	}
 
 	export const MeanSEM_defaultDataInputs = ['x', 'y'];
-	export const MeanSEM_controlHeaders = ['Properties', 'Data'];
+	export const MeanSEM_controlHeaders = ['Properties', 'Data', 'Overlays'];
 
 	class MeanSEMDataClass {
 		static descriptors = {};
@@ -141,6 +148,18 @@
 	}
 
 	export class MeanSEMclass {
+		// The overlay host contract (components/plotbits/overlayHost.js): HORIZONTAL reference
+		// lines (a baseline, a threshold) and horizontal bands (a normal range) only. The x axis
+		// is categorical (group i sits at index i), so a vertical mark has no meaning here, and
+		// only the value axis widens to fit an overlay.
+		static overlayCapabilities = Object.freeze({
+			line: Object.freeze(['horizontal']),
+			band: Object.freeze(['horizontal']),
+			legend: true,
+			xTime: false,
+			domain: Object.freeze(['y'])
+		});
+
 		static descriptors = {
 			padding: { group: 'Padding' },
 			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
@@ -246,6 +265,13 @@
 					if (hi > ymax) ymax = hi;
 				});
 			});
+			// Overlays (reference lines / bands) widen the automatic range before the nice
+			// rounding, so the axis still ends on a round number; the user's limits still win.
+			const ext = overlayExtentOf(this.overlays, 'y');
+			if (ext) {
+				ymin = Math.min(ymin, ext[0]);
+				ymax = Math.max(ymax, ext[1]);
+			}
 			if (ymin === Infinity || ymax === -Infinity) return [0, 10];
 
 			const yBot = this.ylimsIN[0] != null ? this.ylimsIN[0] : niceAxisLimit(ymin, 'floor');
@@ -288,9 +314,13 @@
 			let axisWidths = { left: null, right: null, top: null, bottom: null };
 			const plotRoot = document.getElementById('plot' + this.parentBox.id);
 			if (!plotRoot) return axisWidths;
+			// An SVG that is not laid out (display: none, a zero-size host) has no rects to
+			// measure: every delta below would be 0 / 0, and NaN padding blanks the whole plot.
+			const renderedWidth = plotRoot.getBoundingClientRect().width;
+			if (!(renderedWidth > 0)) return axisWidths;
 			const scale =
 				Number(plotRoot.getAttribute('width')) > 0
-					? plotRoot.getBoundingClientRect().width / Number(plotRoot.getAttribute('width'))
+					? renderedWidth / Number(plotRoot.getAttribute('width'))
 					: 1;
 
 			const allLeftAxes = plotRoot.getElementsByClassName('axis-left');
@@ -359,8 +389,56 @@
 				const item = datum.getLegendItem();
 				if (item) items.push(item);
 			});
+			// Then every enabled overlay that carries a label.
+			items.push(...overlayLegendItems(this.overlays));
 			return items;
 		});
+
+		// ---- overlay host (components/plotbits/overlayHost.js) ----------------------------
+		// Horizontal reference lines and shaded bands, in draw order.
+		overlays = $state([]);
+		// The plot's own axes: group index on x (group i at i), values on y.
+		overlayXScale = $derived(
+			scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth])
+		);
+		overlayYScale = $derived(
+			scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([this.plotheight, 0])
+		);
+
+		/** Add an overlay of `kind` ('line' | 'band'); it is always horizontal here. */
+		addOverlay(kind, form) {
+			const overlay = new OverlayClass(this, { kind, form });
+			this.overlays.push(overlay);
+			return overlay;
+		}
+
+		removeOverlay(id) {
+			const idx = this.overlays.findIndex((o) => o.id === id);
+			if (idx >= 0) this.overlays.splice(idx, 1);
+		}
+
+		/** The draw context every overlay's geometry() takes (the group index range). */
+		overlayContext() {
+			return {
+				xDomainMin: this.xlims[0],
+				xDomainMax: this.xlims[1],
+				xAnchorMin: this.xlims[0],
+				xIsTime: false
+			};
+		}
+
+		/** A band's default fill never reads it (no ribbon here); kept for the contract. */
+		overlaySeriesColour() {
+			return this.data[0]?.points?.colour ?? null;
+		}
+
+		/** The remedy an Overlays-tab block offers when its mark is outside the visible range. */
+		overlayRangeHint(axis) {
+			if (axis !== 'y') return null;
+			return this.ylimsIN[0] != null || this.ylimsIN[1] != null
+				? 'The y axis has fixed limits; reset them in Properties to fit it.'
+				: null;
+		}
 
 		getDownloadData() {
 			const categories = [...this.uniqueXValues];
@@ -394,7 +472,8 @@
 				xAxis: this.xAxis.toJSON(),
 				yAxis: this.yAxis.toJSON(),
 				data: this.data,
-				legend: this.legend.toJSON()
+				legend: this.legend.toJSON(),
+				overlays: overlaysToJSON(this.overlays)
 			};
 		}
 
@@ -427,6 +506,9 @@
 			}
 
 			chart.legend = LegendClass.fromJSON(json.legend);
+			// After the series, as on every host. A session saved before Mean ± SEM had
+			// overlays carries none; a saved vertical mark is coerced to horizontal.
+			overlaysFromJSON(chart, json);
 			return chart;
 		}
 	}
@@ -453,6 +535,8 @@
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
+	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
+	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which } = $props();
 
@@ -581,6 +665,8 @@
 				</ControlInput>
 			</div>
 		</div>
+	{:else if appState.currentControlTab === 'overlays'}
+		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
@@ -666,8 +752,8 @@
 
 {#snippet plot(theData)}
 	{@const plot = theData.plot}
-	{@const xScale = scaleLinear().domain([plot.xlims[0], plot.xlims[1]]).range([0, plot.plotwidth])}
-	{@const yScale = scaleLinear().domain([plot.ylims[0], plot.ylims[1]]).range([plot.plotheight, 0])}
+	{@const xScale = plot.overlayXScale}
+	{@const yScale = plot.overlayYScale}
 	<svg
 		id={'plot' + plot.parentBox.id}
 		width={plot.viewWidth}
@@ -697,6 +783,9 @@
 			tickFormat={(d) => formatCategoryTick(d, plot.uniqueXValues)}
 			which="plot"
 		/>
+
+		<!-- Shaded bands beneath the error bars, lines and markers. -->
+		<OverlayLayers inner={plot} layer="bands" />
 
 		{#each plot.data as datum, i (i)}
 			{@const pts = seriesPoints(plot, datum, i)}
@@ -765,6 +854,9 @@
 				which="plot"
 			/>
 		{/each}
+
+		<!-- Reference lines above the series, beneath the legend. -->
+		<OverlayLayers inner={plot} layer="lines" />
 
 		<Legend
 			figureStyle={plot.viewStyle}

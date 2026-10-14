@@ -58,7 +58,8 @@ const OVERLAY_PORT_RE = /^ov(\d+)_([A-Za-z]\w*)$/;
 // The always-visible trailing "Line" drop target (plan B4, decision
 // 2026-09-17): one port, display `line`, under a `Line` header after the
 // named overlay groups, mirroring the empty "Series N+1" pair. Dropping a
-// column on it CREATES a Line overlay (default form, vertical) wired into `at`
+// column on it CREATES a Line overlay in the host's default form (vertical, or
+// horizontal on a categorical-x plot) wired into `at`
 // (overlayWiring.applyOverlayWire); nothing is ever stored under the port
 // itself, so it is deliberately NOT an `ov<id>_<key>` port: parseOverlayPort
 // and resolveOverlayPort return null for it. Orientation is chosen in the
@@ -136,8 +137,12 @@ export function plotNodeSlots(inputs = [], outputs = []) {
 	// collected per overlay and laid out after the series groups, each under a
 	// header carrying the overlay's name. The trailing "Line" drop port carries
 	// `overlay: { id: null, name: 'Line' }` and so forms its own last group.
+	// A PLAIN port (neither tag: a Histogram's or Q-Q plot's one dynamic `data`
+	// port) leads, unheaded, as on an ungrouped node; an overlay host of that
+	// kind is grouped only because of its overlay ports.
 	const series = [];
 	const overlayGroups = [];
+	const plainInputs = [];
 	for (const p of inputs) {
 		if (p?.overlay) {
 			let g = overlayGroups.find((og) => og.id === p.overlay.id);
@@ -148,6 +153,7 @@ export function plotNodeSlots(inputs = [], outputs = []) {
 			g.ports.push(p);
 		} else if (p?.axis === 'x') series.push({ n: p.series, x: p, ys: null });
 		else if (p?.axis === 'y' && series.length > 0) series[series.length - 1].ys = p;
+		else if (!p?.axis) plainInputs.push(p);
 	}
 
 	// Outputs by series; metrics (and series-less passthroughs) go at the end.
@@ -164,7 +170,18 @@ export function plotNodeSlots(inputs = [], outputs = []) {
 		}
 	}
 
+	// The plain block: its ports from the top, with the series-less passthrough
+	// outputs beside them (each wired column, as an ungrouped node lists them),
+	// as tall as its longer side. Without plain inputs those outputs stay in the
+	// tail, as before.
 	let slot = 0;
+	if (plainInputs.length > 0) {
+		const plainOutputs = tailOutputs.filter((o) => !o?.metric);
+		plainInputs.forEach((p, i) => inputRows.push({ slot: i, kind: 'port', port: p }));
+		plainOutputs.forEach((o, i) => outputRows.push({ slot: i, port: o }));
+		slot = Math.max(plainInputs.length, plainOutputs.length);
+		tailOutputs.splice(0, tailOutputs.length, ...tailOutputs.filter((o) => o?.metric));
+	}
 	for (const s of series) {
 		const outs = outBySeries[s.n] ?? { x: null, ys: [] };
 		inputRows.push({ slot: slot++, kind: 'header', label: `Series ${s.n}` });

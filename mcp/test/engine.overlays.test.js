@@ -1,7 +1,8 @@
 // Plot overlays (reference lines / bands) through add_plot, pinned against the app's own
 // OverlayClass so the tool surface cannot drift from the GUI's channel table. Every plot
 // that declares `overlayCapabilities` is an overlay host (Scatterplot, Periodogram,
-// Correlogram, ...), validated per plot (overlays plan 2026-10-15, step 2).
+// Correlogram, Histogram, Q-Q plot, Boxplot, Mean ± SEM, ...), validated per plot (overlays
+// plan 2026-10-15, steps 2 and 3).
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
 	AncirSession,
@@ -76,6 +77,28 @@ describe('capability catalogue advertises overlays where the class supports them
 			expect.arrayContaining(['scatterplot', 'periodogram', 'correlogram'])
 		);
 		expect(overlayHostTypes()).not.toContain('actogram');
+	});
+
+	it('histogram and qqplot list vertical and horizontal marks on both axes; boxplot and meansem only horizontal ones', () => {
+		const caps = describeCapabilities();
+		const byId = Object.fromEntries(caps.plots.map((p) => [p.id, p]));
+		for (const id of ['histogram', 'qqplot', 'boxplot', 'meansem']) {
+			const declared = appConsts.plotMap.get(id).data.overlayCapabilities;
+			expect(byId[id].overlays).toEqual(describeOverlayForms(declared));
+		}
+		for (const id of ['histogram', 'qqplot']) {
+			expect(Object.keys(byId[id].overlays.line)).toEqual(['vertical', 'horizontal']);
+			expect(Object.keys(byId[id].overlays.band)).toEqual(['vertical', 'horizontal']);
+			expect(byId[id].overlayAxes).toEqual(['x', 'y']);
+		}
+		for (const id of ['boxplot', 'meansem']) {
+			expect(Object.keys(byId[id].overlays.line)).toEqual(['horizontal']);
+			expect(Object.keys(byId[id].overlays.band)).toEqual(['horizontal']);
+			expect(byId[id].overlayAxes).toEqual(['y']);
+		}
+		expect(overlayHostTypes()).toEqual(
+			expect.arrayContaining(['histogram', 'qqplot', 'boxplot', 'meansem'])
+		);
 	});
 
 	it('the default (summary) list_capabilities shows each host its kinds and forms', () => {
@@ -400,6 +423,38 @@ describe('add_plot with overlays', () => {
 		expect(inner.overlays.map((o) => [o.kind, o.form, o.label])).toEqual([
 			['line', 'vertical', '24 h'],
 			['band', 'vertical', '']
+		]);
+	});
+
+	it('a boxplot line with no form is horizontal; a vertical one is refused', () => {
+		const s = sessionWithColumns('plot-overlay-boxplot');
+		const res = s.addPlot('boxplot', { x: 'crossing', y: 'y' }, [
+			{ kind: 'line', channels: { at: 25 }, label: 'threshold' },
+			{ kind: 'band', channels: { lower: 10, upper: 20 } }
+		]);
+		expect(res.overlays.map((o) => [o.kind, o.form])).toEqual([
+			['line', 'horizontal'],
+			['band', 'horizontal']
+		]);
+		expect(() =>
+			s.addPlot('meansem', { x: 'crossing', y: 'y' }, [
+				{ kind: 'line', form: 'vertical', channels: { at: 1 } }
+			])
+		).toThrow(
+			'overlays[0].form for a line on a meansem must be one of horizontal (got "vertical").'
+		);
+		expect(s.exportSessionObject().plots.length).toBe(1);
+	});
+
+	it('a histogram takes a vertical line and a vertical band on its value axis', () => {
+		const s = sessionWithColumns('plot-overlay-histogram');
+		const res = s.addPlot('histogram', { column: 'y' }, [
+			{ kind: 'line', channels: { at: 'lower limit' } },
+			{ kind: 'band', channels: { start: 10, end: 20 } }
+		]);
+		expect(res.overlays.map((o) => [o.kind, o.form])).toEqual([
+			['line', 'vertical'],
+			['band', 'vertical']
 		]);
 	});
 

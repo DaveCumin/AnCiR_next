@@ -439,4 +439,34 @@ describe('plotNodeSlots with overlay groups', () => {
 		]);
 		expect(totalSlots).toBe(3);
 	});
+
+	it('a single-input plot (Histogram, Q-Q) keeps its plain `data` port, first, beside its passthroughs', () => {
+		// The one dynamic `data` port carries neither axis nor overlay tags. Once the plot is an
+		// overlay host its trailing Line port makes the node grouped, and a grouped layout that
+		// placed only series and overlay rows left `data` out, so nothing could be wired in.
+		const inputs = [
+			{ name: 'data', dynamic: true },
+			{ name: 'ov3_at', overlay: { id: 3, name: 'Line 1' }, channel: 'at', dynamic: false },
+			{ name: 'ovnew_line', overlay: { id: null, name: 'Line' }, newOverlay: true }
+		];
+		const outputs = [
+			{ name: 'col_7', passthrough: true },
+			{ name: 'col_8', passthrough: true },
+			{ name: 'col_30', metric: true }
+		];
+		const { inputRows, outputRows, totalSlots } = plotNodeSlots(inputs, outputs);
+		expect(
+			inputRows.map((r) =>
+				r.kind === 'header' ? `H:${r.label}@${r.slot}` : `${r.port.name}@${r.slot}`
+			)
+		).toEqual(['data@0', 'H:Line 1@2', 'ov3_at@3', 'H:Line@4', 'ovnew_line@5']);
+		// Passthroughs from the top, beside the data port, as on an ungrouped node; the block is
+		// as tall as its longer side. The metric output trails everything.
+		expect(outputRows.map((r) => `${r.port.name}@${r.slot}`)).toEqual([
+			'col_7@0',
+			'col_8@1',
+			'col_30@6'
+		]);
+		expect(totalSlots).toBe(7);
+	});
 });

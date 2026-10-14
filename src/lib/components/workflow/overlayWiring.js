@@ -25,8 +25,10 @@ import {
  * port was an overlay port.
  *
  * The trailing `ovnew_line` drop port (NEW_LINE_PORT) is the exception: it has
- * no overlay behind it, so a drop CREATES a Line overlay in the default form
- * (vertical) via the plot class's `addOverlay` and wires the column into its
+ * no overlay behind it, so a drop CREATES a Line overlay in the host's default
+ * form (its first allowed line form: vertical on most plots, HORIZONTAL on a
+ * categorical-x plot such as the Boxplot or Mean ± SEM) via the plot class's
+ * `addOverlay` and wires the column into its
  * `at`. Both happen inside the caller's single recordPlotEdit, so one undo
  * removes the overlay and the wire together. Every drop makes a new overlay.
  */

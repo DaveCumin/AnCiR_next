@@ -28,6 +28,13 @@
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { clearEnds } from '$lib/plots/axisDomain.js';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
+	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+	import {
+		overlayExtentOf,
+		overlayLegendItems,
+		overlaysFromJSON,
+		overlaysToJSON
+	} from '$lib/components/plotbits/overlayHost.js';
 
 	/**
 	 * The neutral swatch the point-colour picker shows while `pointColour` is null
@@ -79,7 +86,7 @@
 	}
 
 	export const Boxplot_defaultDataInputs = ['x', 'y'];
-	export const Boxplot_controlHeaders = ['Properties', 'Data'];
+	export const Boxplot_controlHeaders = ['Properties', 'Data', 'Overlays'];
 
 	// ------ Significance bar helpers ------
 
@@ -317,6 +324,18 @@
 	}
 
 	export class Boxplotclass {
+		// The overlay host contract (components/plotbits/overlayHost.js): HORIZONTAL reference
+		// lines (a threshold, a control-group mean) and horizontal bands (a normal range) only.
+		// The x axis is categorical (box i sits at index i), so a vertical mark has no meaning
+		// here, and only the value axis widens to fit an overlay.
+		static overlayCapabilities = Object.freeze({
+			line: Object.freeze(['horizontal']),
+			band: Object.freeze(['horizontal']),
+			legend: true,
+			xTime: false,
+			domain: Object.freeze(['y'])
+		});
+
 		static descriptors = {
 			padding: { group: 'Padding' },
 			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
@@ -571,10 +590,6 @@
 		});
 
 		ylims = $derived.by(() => {
-			if (this.data.length === 0) {
-				return [0, 10];
-			}
-
 			let ymin = Infinity;
 			let ymax = -Infinity;
 
@@ -585,6 +600,16 @@
 					ymax = max([ymax, ...validData]);
 				}
 			});
+
+			// Overlays (reference lines / bands) widen the automatic range BEFORE the nice
+			// rounding and the significance-bracket headroom below, so the axis still ends on a
+			// round number and the brackets still fit above the data in the widened range. The
+			// user's limits still win.
+			const ext = overlayExtentOf(this.overlays, 'y');
+			if (ext) {
+				ymin = Math.min(ymin, ext[0]);
+				ymax = Math.max(ymax, ext[1]);
+			}
 
 			if (ymin === Infinity || ymax === -Infinity) {
 				return [0, 10];
@@ -657,9 +682,13 @@
 			// SVG user units, so divide the measured deltas back out by the effective
 			// scale — otherwise padding grows with zoom and jumps when re-measured at
 			// a different zoom (e.g. when the control panel opens). See Scatterplot.
+			// An SVG that is not laid out (display: none, a zero-size host) has no rects to
+			// measure: every delta below would be 0 / 0, and NaN padding blanks the whole plot.
+			const renderedWidth = plotRoot.getBoundingClientRect().width;
+			if (!(renderedWidth > 0)) return axisWidths;
 			const scale =
 				Number(plotRoot.getAttribute('width')) > 0
-					? plotRoot.getBoundingClientRect().width / Number(plotRoot.getAttribute('width'))
+					? renderedWidth / Number(plotRoot.getAttribute('width'))
 					: 1;
 
 			const allLeftAxes = document
@@ -743,7 +772,8 @@
 			// all different colours: it identifies nothing and misattributes a colour. With no
 			// items the legend draws nothing (box, violin and points variants alike); a second
 			// series brings it back, since colour then identifies the series again.
-			if (this.categoryColoured) return [];
+			// A labelled overlay is still its own entry: it names a reference mark, not a colour.
+			if (this.categoryColoured) return overlayLegendItems(this.overlays);
 			const items = [];
 			this.data.forEach((datum) => {
 				const legendItem = datum.getLegendItem();
@@ -751,8 +781,56 @@
 					items.push(legendItem);
 				}
 			});
+			// Then every enabled overlay that carries a label.
+			items.push(...overlayLegendItems(this.overlays));
 			return items;
 		});
+
+		// ---- overlay host (components/plotbits/overlayHost.js) ----------------------------
+		// Horizontal reference lines and shaded bands, in draw order.
+		overlays = $state([]);
+		// The plot's own axes: category index on x (box i at i), values on y.
+		overlayXScale = $derived(
+			scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth])
+		);
+		overlayYScale = $derived(
+			scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([this.plotheight, 0])
+		);
+
+		/** Add an overlay of `kind` ('line' | 'band'); it is always horizontal here. */
+		addOverlay(kind, form) {
+			const overlay = new OverlayClass(this, { kind, form });
+			this.overlays.push(overlay);
+			return overlay;
+		}
+
+		removeOverlay(id) {
+			const idx = this.overlays.findIndex((o) => o.id === id);
+			if (idx >= 0) this.overlays.splice(idx, 1);
+		}
+
+		/** The draw context every overlay's geometry() takes (the category index range). */
+		overlayContext() {
+			return {
+				xDomainMin: this.xlims[0],
+				xDomainMax: this.xlims[1],
+				xAnchorMin: this.xlims[0],
+				xIsTime: false
+			};
+		}
+
+		/** A band's default fill never reads it (no ribbon here); kept for the contract. */
+		overlaySeriesColour() {
+			return this.data[0]?.boxPlot?.colour ?? null;
+		}
+
+		/** The remedy an Overlays-tab block offers when its mark is outside the visible range. */
+		overlayRangeHint(axis) {
+			if (axis !== 'y') return null;
+			return this.ylimsIN[0] != null || this.ylimsIN[1] != null
+				? 'The y axis has fixed limits; reset them in Properties to fit it.'
+				: null;
+		}
 
 		getDownloadData() {
 			const allCategories = [...this.uniqueXValues];
@@ -913,7 +991,8 @@
 				sigBarColor: this.sigBarColor,
 				sigBarFontSize: this.sigBarFontSize,
 				sigBarYOffset: this.sigBarYOffset,
-				sigBarSpacing: this.sigBarSpacing
+				sigBarSpacing: this.sigBarSpacing,
+				overlays: overlaysToJSON(this.overlays)
 			};
 		}
 
@@ -978,6 +1057,9 @@
 			chart.sigBarFontSize = releaseLegacySigBarFontSize(json.sigBarFontSize);
 			chart.sigBarYOffset = json.sigBarYOffset ?? 0;
 			chart.sigBarSpacing = json.sigBarSpacing ?? 1;
+			// After the series, as on every host. A session saved before the boxplot had
+			// overlays carries none; a saved vertical mark is coerced to horizontal.
+			overlaysFromJSON(chart, json);
 			return chart;
 		}
 	}
@@ -1019,6 +1101,8 @@
 	import { categoryColourLabels } from '$lib/plots/seriesColour.js';
 	import { bindAltTooltipToggle } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
+	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
+	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which } = $props();
 
@@ -1366,6 +1450,8 @@
 				{/if}
 			</div>
 		</div>
+	{:else if appState.currentControlTab === 'overlays'}
+		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
@@ -1418,12 +1504,8 @@
 							seriesIndex={i}
 							totalSeries={theData.data.length}
 							dodgeEnabled={hasCategoryXData(datum)}
-							xscale={scaleLinear()
-								.domain([theData.xlims[0], theData.xlims[1]])
-								.range([0, theData.plotwidth])}
-							yscale={scaleLinear()
-								.domain([theData.ylims[0], theData.ylims[1]])
-								.range([theData.plotheight, 0])}
+							xscale={theData.overlayXScale}
+							yscale={theData.overlayYScale}
 							xoffset={0}
 							yoffset={0}
 							which="controls"
@@ -1451,9 +1533,7 @@
 			figureStyle={theData.plot.viewStyle}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
-			scale={scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-				.range([theData.plot.plotheight, 0])}
+			scale={theData.plot.overlayYScale}
 			position="left"
 			plotPadding={theData.plot.padding}
 			axisData={theData.plot.yAxis}
@@ -1465,15 +1545,16 @@
 			figureStyle={theData.plot.viewStyle}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
-			scale={scaleLinear()
-				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-				.range([0, theData.plot.plotwidth])}
+			scale={theData.plot.overlayXScale}
 			position="bottom"
 			plotPadding={theData.plot.padding}
 			axisData={getXAxisForManualCategories(theData.plot.xAxis, theData.plot.uniqueXValues)}
 			tickFormat={(d) => formatCategoryTick(d, theData.plot.uniqueXValues)}
 			which="plot"
 		/>
+
+		<!-- Shaded bands beneath the violins, boxes and points. -->
+		<OverlayLayers inner={theData.plot} layer="bands" />
 
 		<!-- Violin overlays: rendered BEFORE the boxes so every violin sits behind
 		     every box, median line, and jittered point. -->
@@ -1493,12 +1574,8 @@
 						bandwidth={theData.plot.violinBandwidth}
 						violinWidth={theData.plot.violinWidth}
 						violinOpacity={theData.plot.violinOpacity}
-						xscale={scaleLinear()
-							.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-							.range([0, theData.plot.plotwidth])}
-						yscale={scaleLinear()
-							.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-							.range([theData.plot.plotheight, 0])}
+						xscale={theData.plot.overlayXScale}
+						yscale={theData.plot.overlayYScale}
 						xoffset={theData.plot.padding.left}
 						yoffset={theData.plot.padding.top}
 					/>
@@ -1509,12 +1586,8 @@
 		<!-- Box plots -->
 		{#each theData.plot.data as datum, i (i)}
 			{#if datum.y.getData()?.length > 0}
-				{@const xScale = scaleLinear()
-					.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-					.range([0, theData.plot.plotwidth])}
-				{@const yScale = scaleLinear()
-					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-					.range([theData.plot.plotheight, 0])}
+				{@const xScale = theData.plot.overlayXScale}
+				{@const yScale = theData.plot.overlayYScale}
 
 				<Box
 					boxPlotData={datum.boxPlot}
@@ -1541,6 +1614,9 @@
 			{/if}
 		{/each}
 
+		<!-- Reference lines above the boxes and points, beneath the legend and the brackets. -->
+		<OverlayLayers inner={theData.plot} layer="lines" />
+
 		<Legend
 			figureStyle={theData.plot.viewStyle}
 			legendData={theData.plot.legend}
@@ -1555,12 +1631,8 @@
 
 		<!-- Significance brackets -->
 		{#if theData.plot.showSigBars && theData.plot.sigBarLevels.length > 0}
-			{@const sigXScale = scaleLinear()
-				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-				.range([0, theData.plot.plotwidth])}
-			{@const sigYScale = scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-				.range([theData.plot.plotheight, 0])}
+			{@const sigXScale = theData.plot.overlayXScale}
+			{@const sigYScale = theData.plot.overlayYScale}
 			{@const { dataMax } = theData.plot.sigBarResult}
 			{@const dataRange = theData.plot.ylims[1] - theData.plot.ylims[0]}
 			{@const levelStep = dataRange * 0.1 * theData.plot.sigBarSpacing}

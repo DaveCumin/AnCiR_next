@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.1",
+  "generatedFromVersion": "β.82.2",
   "count": 61,
   "nodes": [
     {
@@ -79,7 +79,7 @@
       "displayName": "Boxplot",
       "kind": "plot",
       "family": "Plots",
-      "description": "Boxplot summarising the distribution of a column by group, with optional violin (kernel density) overlay and jittered data points; the box can be hidden for a pure violin plot.",
+      "description": "Boxplot summarising the distribution of a column by group, with optional violin (kernel density) overlay and jittered data points; the box can be hidden for a pure violin plot. Horizontal reference lines and bands (wired or typed) from its Overlays tab.",
       "keywords": [
         "violin",
         "distribution",
@@ -286,7 +286,7 @@
       "displayName": "Histogram",
       "kind": "plot",
       "family": "Plots",
-      "description": "Histogram of a column.",
+      "description": "Histogram of a column, with reference lines and shaded bands (wired or typed) from its Overlays tab.",
       "keywords": [
         "distribution",
         "frequency",
@@ -311,7 +311,7 @@
       "displayName": "Mean ± SEM",
       "kind": "plot",
       "family": "Plots",
-      "description": "Mean ± SEM overlay: per-group mean marker with standard-error whiskers.",
+      "description": "Mean ± SEM overlay: per-group mean marker with standard-error whiskers, with horizontal reference lines and bands (wired or typed) from its Overlays tab.",
       "keywords": [
         "error bars",
         "standard error",
@@ -414,7 +414,7 @@
       "displayName": "Q-Q plot",
       "kind": "plot",
       "family": "Plots",
-      "description": "Normal Q-Q plot: sample vs theoretical quantiles, with a quartile reference line and confidence envelope.",
+      "description": "Normal Q-Q plot: sample vs theoretical quantiles, with a quartile reference line and confidence envelope, plus your own reference lines and shaded bands (wired or typed) from its Overlays tab.",
       "keywords": [
         "quantile",
         "normality",

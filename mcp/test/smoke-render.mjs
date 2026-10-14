@@ -85,7 +85,37 @@ const outPg = JSON.parse(
 );
 console.log('RENDER (periodogram overlays):', JSON.stringify(outPg));
 
+// A boxplot as an overlay host (step 3): its x axis is categorical, so a line with no form is
+// HORIZONTAL (the host's only line form), and a band is a horizontal value range.
+const groupId = JSON.parse(
+	await call('import_data', { columns: [{ name: 'group', values: t.map((i) => i % 3) }] })
+).added[0].id;
+const outBox = JSON.parse(
+	await call('render_plot', {
+		type: 'boxplot',
+		inputs: { x: groupId, y: 1 },
+		overlays: [
+			{ kind: 'line', label: 'threshold', channels: { at: 12 } },
+			{ kind: 'band', channels: { lower: 8, upper: 9 } }
+		],
+		path: '/tmp/ancir-render-smoke-boxplot'
+	})
+);
+console.log('RENDER (boxplot overlays):', JSON.stringify(outBox));
+
 await client.close();
+
+const svgBox = readFileSync(outBox.svg, 'utf8');
+const boxRules = [...svgBox.matchAll(/<line[^>]*class="[^"]*overlay-rule[^"]*"[^>]*>/g)].map(
+	(m) => m[0]
+);
+const attr = (tag, name) => Number(new RegExp(`\\s${name}="([^"]+)"`).exec(tag)?.[1]);
+if (boxRules.length !== 1 || attr(boxRules[0], 'y1') !== attr(boxRules[0], 'y2'))
+	throw new Error(`boxplot: expected 1 horizontal overlay-rule, got ${boxRules.join(' ')}`);
+if ((svgBox.match(/class="[^"]*band-rect[^"]*"/g) ?? []).length !== 1)
+	throw new Error('boxplot: expected 1 band-rect');
+if (!svgBox.includes('>threshold<')) throw new Error('boxplot: legend entry "threshold" missing');
+console.log('BOXPLOT OVERLAYS OK: 1 horizontal rule, 1 band rect and the legend entry');
 
 const svgPg = readFileSync(outPg.svg, 'utf8');
 const pgRules = (svgPg.match(/class="[^"]*overlay-rule[^"]*"/g) ?? []).length;

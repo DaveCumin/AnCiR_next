@@ -27,9 +27,16 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { qqPoints } from '$lib/utils/qq.js';
+	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+	import {
+		overlayExtentOf,
+		overlayLegendItems,
+		overlaysFromJSON,
+		overlaysToJSON
+	} from '$lib/components/plotbits/overlayHost.js';
 
 	export const QQPlot_defaultDataInputs = ['column'];
-	export const QQPlot_controlHeaders = ['Properties', 'Data'];
+	export const QQPlot_controlHeaders = ['Properties', 'Data', 'Overlays'];
 	export const QQPlot_displayName = 'Q-Q plot';
 
 	class QQPlotDataclass {
@@ -96,6 +103,18 @@
 	}
 
 	export class QQPlotclass {
+		// The overlay host contract (components/plotbits/overlayHost.js): reference lines (a
+		// vertical line at a theoretical quantile such as +/-1.96, a horizontal line at a sample
+		// value such as a clinical cut-off) and shaded bands over either. Both axes widen to fit
+		// them. The plot's own reference line and confidence envelope are unchanged.
+		static overlayCapabilities = Object.freeze({
+			line: Object.freeze(['vertical', 'horizontal']),
+			band: Object.freeze(['vertical', 'horizontal']),
+			legend: true,
+			xTime: false,
+			domain: Object.freeze(['x', 'y'])
+		});
+
 		static descriptors = {
 			padding: { group: 'Padding' },
 			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
@@ -210,6 +229,13 @@
 					if (t[t.length - 1] > max) max = t[t.length - 1];
 				}
 			});
+			// Overlays (reference lines / bands) widen the automatic range so a mark is never
+			// silently off-screen; the user's limits below still win.
+			const ext = overlayExtentOf(this.overlays, 'x');
+			if (ext) {
+				min = Math.min(min, ext[0]);
+				max = Math.max(max, ext[1]);
+			}
 			if (min === Infinity || max === -Infinity) return [-1, 1];
 			const pad = (max - min || 1) * 0.05;
 			return [
@@ -232,6 +258,11 @@
 					for (const v of q.band.hi) if (Number.isFinite(v) && v > max) max = v;
 				}
 			});
+			const ext = overlayExtentOf(this.overlays, 'y');
+			if (ext) {
+				min = Math.min(min, ext[0]);
+				max = Math.max(max, ext[1]);
+			}
 			if (min === Infinity || max === -Infinity) return [0, 1];
 			const pad = (max - min || 1) * 0.05;
 			return [
@@ -246,8 +277,56 @@
 				const item = d.getLegendItem();
 				if (item) items.push(item);
 			});
+			// Then every enabled overlay that carries a label.
+			items.push(...overlayLegendItems(this.overlays));
 			return items;
 		});
+
+		// ---- overlay host (components/plotbits/overlayHost.js) ----------------------------
+		// Reference lines and shaded bands, in draw order.
+		overlays = $state([]);
+		// The plot's own axes: theoretical quantiles on x, sample quantiles on y.
+		overlayXScale = $derived(
+			scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth])
+		);
+		overlayYScale = $derived(
+			scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([this.plotheight, 0])
+		);
+
+		/** Add an overlay of `kind` ('line' | 'band'), optionally with a `form`; returns it. */
+		addOverlay(kind, form) {
+			const overlay = new OverlayClass(this, { kind, form });
+			this.overlays.push(overlay);
+			return overlay;
+		}
+
+		removeOverlay(id) {
+			const idx = this.overlays.findIndex((o) => o.id === id);
+			if (idx >= 0) this.overlays.splice(idx, 1);
+		}
+
+		/** The draw context every overlay's geometry() takes (the visible quantile range). */
+		overlayContext() {
+			return {
+				xDomainMin: this.xlims[0],
+				xDomainMax: this.xlims[1],
+				xAnchorMin: this.xlims[0],
+				xIsTime: false
+			};
+		}
+
+		/** A band's default fill never reads it (no ribbon here); kept for the contract. */
+		overlaySeriesColour() {
+			return this.data[0]?.colour ?? null;
+		}
+
+		/** The remedy an Overlays-tab block offers when its mark is outside the visible range. */
+		overlayRangeHint(axis) {
+			const lims = axis === 'x' ? this.xlimsIN : this.ylimsIN;
+			return lims[0] != null || lims[1] != null
+				? `The ${axis} axis has fixed limits; reset them in Properties to fit it.`
+				: null;
+		}
 
 		// CSV export: one row per (series × order statistic) with the quantile pair,
 		// the reference-line value at that theoretical quantile, and the envelope.
@@ -303,7 +382,11 @@
 			// scale — otherwise padding grows with zoom and jumps when re-measured at
 			// a different zoom (e.g. when the control panel opens). See Scatterplot.
 			const userWidth = Number(root.getAttribute('width')) || this.viewWidth;
-			const scale = userWidth > 0 ? root.getBoundingClientRect().width / userWidth : 1;
+			// An SVG that is not laid out (display: none, a zero-size host) has no rects to
+			// measure: every delta below would be 0 / 0, and NaN padding blanks the whole plot.
+			const renderedWidth = root.getBoundingClientRect().width;
+			if (!(renderedWidth > 0)) return axisWidths;
+			const scale = userWidth > 0 ? renderedWidth / userWidth : 1;
 
 			const allLeftAxes = root.getElementsByClassName('axis-left');
 			if (allLeftAxes && allLeftAxes.length > 0) {
@@ -356,7 +439,8 @@
 				xAxis: this.xAxis.toJSON(),
 				yAxis: this.yAxis.toJSON(),
 				data: this.data.map((d) => d.toJSON()),
-				legend: this.legend.toJSON()
+				legend: this.legend.toJSON(),
+				overlays: overlaysToJSON(this.overlays)
 			};
 		}
 
@@ -384,6 +468,9 @@
 				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
 				chart.addData(json.dataIn);
 			}
+			// After the series, as on every host. A session saved before the Q-Q plot had
+			// overlays carries none.
+			overlaysFromJSON(chart, json);
 			return chart;
 		}
 	}
@@ -423,6 +510,8 @@
 	import { slide } from 'svelte/transition';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import { usePlotMetricOutputs, ownsPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
+	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
+	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which } = $props();
 
@@ -589,6 +678,8 @@
 				{/if}
 			</div>
 		</div>
+	{:else if appState.currentControlTab === 'overlays'}
+		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
@@ -672,12 +763,8 @@
 {/snippet}
 
 {#snippet plot(theData)}
-	{@const xScale = scaleLinear()
-		.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-		.range([0, theData.plot.plotwidth])}
-	{@const yScale = scaleLinear()
-		.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-		.range([theData.plot.plotheight, 0])}
+	{@const xScale = theData.plot.overlayXScale}
+	{@const yScale = theData.plot.overlayYScale}
 	{@const hasData = theData.plot.data.some((d) => d.qq.n >= 3)}
 	<svg
 		id={'plot' + theData.plot.parentBox.id}
@@ -726,6 +813,9 @@
 				which="plot"
 			/>
 
+			<!-- Shaded bands beneath the envelopes, reference lines and points. -->
+			<OverlayLayers inner={theData.plot} layer="bands" />
+
 			<g clip-path="url(#{'qqclip' + theData.plot.parentBox.id})">
 				{#each theData.plot.data as datum, di (di)}
 					{@const q = datum.qq}
@@ -763,6 +853,9 @@
 					{/if}
 				{/each}
 			</g>
+
+			<!-- Overlay reference lines above the series, beneath the legend. -->
+			<OverlayLayers inner={theData.plot} layer="lines" />
 
 			<Legend
 				figureStyle={theData.plot.viewStyle}

@@ -538,7 +538,7 @@ const meta = new Map([
 			keywords: ['violin', 'distribution', 'quartiles', 'whiskers', 'groups'], // search-only synonyms; never rendered
 			nodeIcon: 'boxplot',
 			description:
-				'Boxplot summarising the distribution of a column by group, with optional violin (kernel density) overlay and jittered data points; the box can be hidden for a pure violin plot.'
+				'Boxplot summarising the distribution of a column by group, with optional violin (kernel density) overlay and jittered data points; the box can be hidden for a pure violin plot. Horizontal reference lines and bands (wired or typed) from its Overlays tab.'
 		}
 	],
 	[
@@ -547,7 +547,8 @@ const meta = new Map([
 			family: 'Plots',
 			keywords: ['distribution', 'frequency', 'bins', 'density', 'counts'], // search-only synonyms; never rendered
 			nodeIcon: 'histogram',
-			description: 'Histogram of a column.'
+			description:
+				'Histogram of a column, with reference lines and shaded bands (wired or typed) from its Overlays tab.'
 		}
 	],
 	[
@@ -576,7 +577,7 @@ const meta = new Map([
 			keywords: ['quantile', 'normality', 'gaussian', 'distribution', 'residuals'], // search-only synonyms; never rendered
 			nodeIcon: 'scatterplot',
 			description:
-				'Normal Q-Q plot: sample vs theoretical quantiles, with a quartile reference line and confidence envelope.'
+				'Normal Q-Q plot: sample vs theoretical quantiles, with a quartile reference line and confidence envelope, plus your own reference lines and shaded bands (wired or typed) from its Overlays tab.'
 		}
 	],
 	[
@@ -645,7 +646,8 @@ const meta = new Map([
 			family: 'Plots',
 			keywords: ['error bars', 'standard error', 'average', 'whiskers'], // search-only synonyms; never rendered
 			nodeIcon: 'mean-sem',
-			description: 'Mean ± SEM overlay: per-group mean marker with standard-error whiskers.'
+			description:
+				'Mean ± SEM overlay: per-group mean marker with standard-error whiskers, with horizontal reference lines and bands (wired or typed) from its Overlays tab.'
 		}
 	],
 	[

@@ -2311,8 +2311,9 @@
 		// Overlay channel port (`ov<id>_<key>`): the channel takes the column as
 		// its ONE wire (replacing any previous wire and clearing typed values; a
 		// line's `at` included, since 2026-09-18 a Line holds one column). The
-		// trailing `ovnew_line` port instead creates a new vertical Line overlay
-		// wired to the column.
+		// trailing `ovnew_line` port instead creates a new Line overlay in the
+		// host's default form (vertical; horizontal on a categorical x) wired to
+		// the column.
 		// Either way it is recorded through the same setPlotInner op as series
 		// wiring, so it is one undo step (overlay + wire together).
 		if (isOverlayPortOn(target, toPort)) {

@@ -920,6 +920,8 @@
 			<select
 				class="overlay-form"
 				value={overlay.form}
+				disabled={formChoices.length < 2}
+				title={formChoices.length < 2 ? 'The only form this plot allows' : undefined}
 				onchange={(e) => overlay.setForm(e.currentTarget.value)}
 			>
 				{#each formChoices as form (form)}

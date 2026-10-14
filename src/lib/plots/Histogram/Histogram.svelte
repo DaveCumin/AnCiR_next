@@ -27,13 +27,20 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
 	import { paddedDomain } from '$lib/plots/axisDomain.js';
+	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+	import {
+		overlayExtentOf,
+		overlayLegendItems,
+		overlaysFromJSON,
+		overlaysToJSON
+	} from '$lib/components/plotbits/overlayHost.js';
 
 	/** Fraction of the bin range left empty at each automatic end of the x axis. */
 	export const HIST_X_PAD = 0.02;
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 
 	export const Histogram_defaultDataInputs = ['column'];
-	export const Histogram_controlHeaders = ['Properties', 'Data'];
+	export const Histogram_controlHeaders = ['Properties', 'Data', 'Overlays'];
 	export const Histogram_displayName = 'Histogram';
 
 	class HistogramDataclass {
@@ -209,6 +216,19 @@
 	}
 
 	export class Histogramclass {
+		// The overlay host contract (components/plotbits/overlayHost.js): reference lines (a
+		// vertical line at a cut-off value, a horizontal line at an expected count) and shaded
+		// bands (a value range, a count range). Both axes widen to fit them, as on a scatterplot:
+		// neither the value axis nor the count axis is an analysis setting here (the bins are set
+		// on the Data tab, not by the axis range).
+		static overlayCapabilities = Object.freeze({
+			line: Object.freeze(['vertical', 'horizontal']),
+			band: Object.freeze(['vertical', 'horizontal']),
+			legend: true,
+			xTime: false,
+			domain: Object.freeze(['x', 'y'])
+		});
+
 		static descriptors = {
 			padding: { group: 'Padding' },
 			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
@@ -292,6 +312,13 @@
 					if (lastEnd > xmax) xmax = lastEnd;
 				}
 			});
+			// Overlays (reference lines / bands) widen the automatic value range so a mark is
+			// never silently off-screen; the user's limits below still win.
+			const ext = overlayExtentOf(this.overlays, 'x');
+			if (ext) {
+				xmin = Math.min(xmin, ext[0]);
+				xmax = Math.max(xmax, ext[1]);
+			}
 			if (xmin === Infinity || xmax === -Infinity) return [0, 1];
 			// A little room at the AUTOMATIC ends, so the outermost bars do not sit on the y axis
 			// line or the right edge (see plots/axisDomain.js). A limit the user set is exact.
@@ -312,8 +339,16 @@
 				}
 			});
 			if (ymax === 0) ymax = 1;
+			// Overlays widen the automatic count range too, before the nice rounding, so the axis
+			// still ends on a round number. Counts start at 0 unless a mark sits below it.
+			const ext = overlayExtentOf(this.overlays, 'y');
+			let ymin = 0;
+			if (ext) {
+				ymax = Math.max(ymax, ext[1]);
+				if (ext[0] < 0) ymin = niceAxisLimit(ext[0], 'floor');
+			}
 			return [
-				this.ylimsIN[0] != null ? this.ylimsIN[0] : 0,
+				this.ylimsIN[0] != null ? this.ylimsIN[0] : ymin,
 				this.ylimsIN[1] != null ? this.ylimsIN[1] : niceAxisLimit(ymax, 'ceil')
 			];
 		});
@@ -324,8 +359,56 @@
 				const item = d.getLegendItem();
 				if (item) items.push(item);
 			});
+			// Then every enabled overlay that carries a label.
+			items.push(...overlayLegendItems(this.overlays));
 			return items;
 		});
+
+		// ---- overlay host (components/plotbits/overlayHost.js) ----------------------------
+		// Reference lines and shaded bands, in draw order.
+		overlays = $state([]);
+		// The plot's own axes: value on x, count on y (the scales the bars are drawn with).
+		overlayXScale = $derived(
+			scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth])
+		);
+		overlayYScale = $derived(
+			scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([this.plotheight, 0])
+		);
+
+		/** Add an overlay of `kind` ('line' | 'band'), optionally with a `form`; returns it. */
+		addOverlay(kind, form) {
+			const overlay = new OverlayClass(this, { kind, form });
+			this.overlays.push(overlay);
+			return overlay;
+		}
+
+		removeOverlay(id) {
+			const idx = this.overlays.findIndex((o) => o.id === id);
+			if (idx >= 0) this.overlays.splice(idx, 1);
+		}
+
+		/** The draw context every overlay's geometry() takes (the visible value range). */
+		overlayContext() {
+			return {
+				xDomainMin: this.xlims[0],
+				xDomainMax: this.xlims[1],
+				xAnchorMin: this.xlims[0],
+				xIsTime: false
+			};
+		}
+
+		/** A band's default fill never reads it (no ribbon here); kept for the contract. */
+		overlaySeriesColour() {
+			return this.data[0]?.fillColour ?? null;
+		}
+
+		/** The remedy an Overlays-tab block offers when its mark is outside the visible range. */
+		overlayRangeHint(axis) {
+			const lims = axis === 'x' ? this.xlimsIN : this.ylimsIN;
+			return lims[0] != null || lims[1] != null
+				? `The ${axis} axis has fixed limits; reset them in Properties to fit it.`
+				: null;
+		}
 
 		// CSV export: one row per (series × bin) with start/end/count
 		// Tidy long export so the three computed datasets travel in one table
@@ -386,7 +469,11 @@
 			// scale — otherwise padding grows with zoom and jumps when re-measured at
 			// a different zoom (e.g. when the control panel opens). See Scatterplot.
 			const userWidth = Number(root.getAttribute('width')) || this.viewWidth;
-			const scale = userWidth > 0 ? root.getBoundingClientRect().width / userWidth : 1;
+			// An SVG that is not laid out (display: none, a zero-size host) has no rects to
+			// measure: every delta below would be 0 / 0, and NaN padding blanks the whole plot.
+			const renderedWidth = root.getBoundingClientRect().width;
+			if (!(renderedWidth > 0)) return axisWidths;
+			const scale = userWidth > 0 ? renderedWidth / userWidth : 1;
 
 			const allLeftAxes = root.getElementsByClassName('axis-left');
 			if (allLeftAxes && allLeftAxes.length > 0) {
@@ -434,7 +521,8 @@
 				xAxis: this.xAxis.toJSON(),
 				yAxis: this.yAxis.toJSON(),
 				data: this.data.map((d) => d.toJSON()),
-				legend: this.legend.toJSON()
+				legend: this.legend.toJSON(),
+				overlays: overlaysToJSON(this.overlays)
 			};
 		}
 
@@ -457,6 +545,9 @@
 				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
 				chart.addData(json.dataIn);
 			}
+			// After the series, as on every host. A session saved before the histogram had
+			// overlays carries none.
+			overlaysFromJSON(chart, json);
 			return chart;
 		}
 	}
@@ -479,6 +570,8 @@
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
+	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
+	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which } = $props();
 
@@ -588,6 +681,8 @@
 				{/if}
 			</div>
 		</div>
+	{:else if appState.currentControlTab === 'overlays'}
+		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
@@ -770,12 +865,8 @@
 {/snippet}
 
 {#snippet plot(theData)}
-	{@const xScale = scaleLinear()
-		.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-		.range([0, theData.plot.plotwidth])}
-	{@const yScale = scaleLinear()
-		.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-		.range([theData.plot.plotheight, 0])}
+	{@const xScale = theData.plot.overlayXScale}
+	{@const yScale = theData.plot.overlayYScale}
 	<svg
 		id={'plot' + theData.plot.parentBox.id}
 		width={theData.plot.viewWidth}
@@ -803,6 +894,9 @@
 			axisData={theData.plot.xAxis}
 			which="plot"
 		/>
+
+		<!-- Shaded bands beneath the bars and density curves. -->
+		<OverlayLayers inner={theData.plot} layer="bands" />
 
 		{#each theData.plot.data as datum, di (di)}
 			{@const b = datum.binned}
@@ -859,6 +953,9 @@
 				{/if}
 			{/if}
 		{/each}
+
+		<!-- Reference lines above the bars, curves and count labels, beneath the legend. -->
+		<OverlayLayers inner={theData.plot} layer="lines" />
 
 		<Legend
 			figureStyle={theData.plot.viewStyle}

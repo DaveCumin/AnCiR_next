@@ -1456,6 +1456,37 @@ test('plots[].overlays: a form the plot does not allow drops THAT overlay with a
 	);
 });
 
+test('plots[].overlays: a boxplot line with no form is horizontal; a vertical one is dropped with an error', () => {
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 'group', values: [1, 1, 2, 2] },
+			{ name: 'score', values: [1, 2, 3, 4] }
+		],
+		plots: [
+			{
+				type: 'boxplot',
+				inputs: { x: 'group', y: 'score' },
+				overlays: [
+					{ kind: 'line', channels: { at: 2.5 }, label: 'threshold' },
+					{ kind: 'line', form: 'vertical', channels: { at: 1 } },
+					{ kind: 'band', channels: { lower: 1, upper: 2 } }
+				]
+			}
+		]
+	});
+	assert.equal(session.plots.length, 1, 'the plot survives');
+	assert.deepEqual(
+		session.plots[0].plot.overlays.map((o) => [o.kind, o.form]),
+		[
+			['line', 'horizontal'],
+			['band', 'horizontal']
+		]
+	);
+	assert.deepEqual(errors, [
+		'Plot "boxplot": overlays[1].form for a line on a boxplot must be one of horizontal (got "vertical"). Overlay dropped.'
+	]);
+});
+
 test('plots[].overlays: an unknown column name drops the overlay with an error naming it', () => {
 	const { session, errors } = normalizeSession({
 		columns: OVERLAY_COLUMNS,
