@@ -65,17 +65,21 @@ export function channelsFor(kind, form) {
 // ---- capabilities ---------------------------------------------------------------------
 //
 // A host plot declares what it supports as `static overlayCapabilities`:
-//   { line: [forms], band: [forms], legend: boolean, xTime: boolean }
+//   { line: [forms], band: [forms], legend: boolean, xTime: boolean, domain?: ['x'|'y'] }
 // `line` / `band` list the allowed forms in panel order (an empty or missing list means the
-// kind is not offered); `legend: false` hides the Label field; `xTime` is true only where x
-// can be a time axis. See overlayHost.js for the rest of the host contract.
+// kind is not offered; the first is the default for a new overlay); `legend: false` hides
+// the Label field; `xTime` is true only where x can be a time axis; `domain` lists the axes
+// whose AUTOMATIC range an overlay may widen (both when left out). An axis that is also an
+// analysis parameter (a periodogram's period range) is left out, so a reference mark can
+// never change what is computed. See overlayHost.js for the rest of the host contract.
 
 /** Everything: the capabilities of the reference host (Scatterplot). */
 export const ALL_OVERLAY_FORMS = Object.freeze({
 	line: Object.freeze([...FORMS.line]),
 	band: Object.freeze([...FORMS.band]),
 	legend: true,
-	xTime: true
+	xTime: true,
+	domain: Object.freeze(['x', 'y'])
 });
 
 /**
@@ -85,6 +89,15 @@ export const ALL_OVERLAY_FORMS = Object.freeze({
  */
 export function capabilitiesOf(host) {
 	return host?.constructor?.overlayCapabilities ?? null;
+}
+
+/**
+ * The axes whose automatic range a host widens to fit its overlays (`caps.domain`): both
+ * when the host does not say, and never anything but 'x' / 'y'.
+ */
+export function overlayDomainAxes(caps) {
+	if (!Array.isArray(caps?.domain)) return ['x', 'y'];
+	return ['x', 'y'].filter((axis) => caps.domain.includes(axis));
 }
 
 /** The overlay kinds, in catalogue order. */
@@ -196,12 +209,14 @@ const isColRef = (v) =>
  * @param {Array<object>} overlays  tool input (may be undefined)
  * @param {(ref: string|number) => number} resolveCol  column name/id → id; throws if unknown
  * @param {object} [caps]  the host's overlayCapabilities; omitted means every kind and form
+ * @param {{ plot?: string }} [opts]  `plot`: the plot type, named in kind/form errors so a
+ *   caller can tell which plot refused an overlay ("a line on a periodogram must be ...")
  * @returns {Array<object>}  overlay JSON, in input order, one per resulting overlay
  */
-export function normalizeOverlaySpecs(overlays, resolveCol, caps) {
+export function normalizeOverlaySpecs(overlays, resolveCol, caps, { plot = null } = {}) {
 	if (overlays == null) return [];
 	if (!Array.isArray(overlays)) throw new Error('`overlays` must be an array.');
-	return overlays.flatMap((spec, i) => splitLine(normalizeOne(spec, i, resolveCol, caps)));
+	return overlays.flatMap((spec, i) => splitLine(normalizeOne(spec, i, resolveCol, caps, plot)));
 }
 
 /**
@@ -220,22 +235,23 @@ function splitLine(json) {
 	}));
 }
 
-function normalizeOne(spec, i, resolveCol, caps) {
+function normalizeOne(spec, i, resolveCol, caps, plot) {
 	const where = `overlays[${i}]`;
 	if (!spec || typeof spec !== 'object') throw new Error(`${where}: expected an object.`);
+	const onPlot = plot ? ` on a ${plot}` : '';
 
 	const kinds = allowedKinds(caps);
 	const kind = spec.kind;
 	if (!kinds.includes(kind)) {
 		throw new Error(
-			`${where}.kind must be one of ${kinds.join(' | ')} (got ${JSON.stringify(kind)}).`
+			`${where}.kind${onPlot} must be one of ${kinds.join(' | ')} (got ${JSON.stringify(kind)}).`
 		);
 	}
 	const forms = allowedForms(caps, kind);
 	const form = spec.form ?? defaultFormFor(caps, kind);
 	if (!forms.includes(form)) {
 		throw new Error(
-			`${where}.form for a ${kind} must be one of ${forms.join(' | ')} (got ${JSON.stringify(spec.form)}).`
+			`${where}.form for a ${kind}${onPlot} must be one of ${forms.join(' | ')} (got ${JSON.stringify(spec.form)}).`
 		);
 	}
 

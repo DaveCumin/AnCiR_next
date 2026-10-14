@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeSession } from './normalizer.js';
-import { SCHEMA } from './schema.js';
+import { SCHEMA, PLOTS } from './schema.js';
 
 const findTP = (s, name) => s.tableProcesses.find((t) => t.name === name);
 const colById = (s, id) => s.data.find((c) => c.id === id);
@@ -1374,4 +1374,154 @@ test('FormulaColumn: escape routes stay refused (constructor, __proto__, Math["s
 		assert.equal(errors.length, 1, value);
 		assert.match(errors[0], /^FormulaColumn: /, value);
 	}
+});
+
+// ---- plot overlays (overlays plan 2026-10-15, step 2) ----
+// A draft plot may carry `overlays` exactly as add_plot takes them. They are validated against
+// the generated schema's per-plot table (plots[type].overlays), normalised by the app's own
+// pure overlay spec, columns resolved by NAME, and emitted as the overlay JSON the GUI loads.
+// An invalid overlay is dropped with an error; the plot always survives it.
+
+const OVERLAY_COLUMNS = [
+	{ name: 'time', values: [0, 1, 2, 3, 4, 5] },
+	{ name: 'values', values: [1, 3, 1, 3, 1, 3] },
+	{ name: 'crossing', values: [2, 4] }
+];
+
+test('plots[].overlays: valid overlays are emitted as overlay JSON, columns by name', () => {
+	const { session, errors } = normalizeSession({
+		columns: OVERLAY_COLUMNS,
+		plots: [
+			{
+				type: 'periodogram',
+				inputs: { time: 'time', values: 'values' },
+				overlays: [
+					{ kind: 'line', channels: { at: 24 }, label: '24 h' },
+					{ kind: 'band', form: 'vertical', channels: { start: 20, end: 28 } },
+					{ kind: 'line', form: 'vertical', channels: { at: 'crossing' } }
+				]
+			}
+		]
+	});
+	assert.deepEqual(errors, []);
+	const crossing = session.data.find((c) => c.name === 'crossing').id;
+	assert.deepEqual(session.plots[0].plot.overlays, [
+		{
+			kind: 'line',
+			form: 'vertical',
+			label: '24 h',
+			channels: { at: { columns: [], typed: [24] } }
+		},
+		{
+			kind: 'band',
+			form: 'vertical',
+			channels: { start: { columns: [], typed: [20] }, end: { columns: [], typed: [28] } }
+		},
+		{
+			kind: 'line',
+			form: 'vertical',
+			channels: { at: { columns: [{ refId: crossing }], typed: [] } }
+		}
+	]);
+});
+
+test('plots[].overlays: a form the plot does not allow drops THAT overlay with an error, and keeps the plot', () => {
+	const { session, errors } = normalizeSession({
+		columns: OVERLAY_COLUMNS,
+		plots: [
+			{
+				type: 'correlogram',
+				inputs: { time: 'time', values: 'values' },
+				overlays: [
+					{
+						kind: 'band',
+						form: 'ribbon',
+						channels: { x: 'time', lower: 'values', upper: 'values' }
+					},
+					{ kind: 'line', form: 'horizontal', channels: { at: 0.5 } }
+				]
+			}
+		]
+	});
+	assert.equal(session.plots.length, 1, 'the plot survives');
+	assert.equal(session.plots[0].plot.data.length, 1);
+	assert.deepEqual(
+		session.plots[0].plot.overlays.map((o) => [o.kind, o.form]),
+		[['line', 'horizontal']]
+	);
+	assert.equal(errors.length, 1);
+	assert.equal(
+		errors[0],
+		'Plot "correlogram": overlays[0].form for a band on a correlogram must be one of vertical | horizontal (got "ribbon"). Overlay dropped.'
+	);
+});
+
+test('plots[].overlays: an unknown column name drops the overlay with an error naming it', () => {
+	const { session, errors } = normalizeSession({
+		columns: OVERLAY_COLUMNS,
+		plots: [
+			{
+				type: 'scatterplot',
+				inputs: { x: 'time', y: 'values' },
+				overlays: [{ kind: 'line', channels: { at: 'nope' } }]
+			}
+		]
+	});
+	assert.equal(session.plots.length, 1);
+	assert.deepEqual(session.plots[0].plot.overlays, []);
+	assert.equal(errors.length, 1);
+	assert.match(errors[0], /^Plot "scatterplot": overlays\[0\]: no column named "nope"/);
+});
+
+test('plots[].overlays on a plot without overlays: one error, plot kept, no overlays key', () => {
+	const { session, errors } = normalizeSession({
+		columns: OVERLAY_COLUMNS,
+		plots: [
+			{
+				type: 'actogram',
+				inputs: { time: 'time', values: 'values' },
+				overlays: [{ kind: 'line', channels: { at: 3 } }]
+			}
+		]
+	});
+	assert.equal(session.plots.length, 1);
+	assert.equal('overlays' in session.plots[0].plot, false);
+	assert.equal(errors.length, 1);
+	assert.match(
+		errors[0],
+		/^Plot "actogram" does not support overlays\. Plots that do: .*periodogram/
+	);
+});
+
+test('plots[].overlays: the allowed forms come from the generated schema, not a list kept here', () => {
+	// A schema whose periodogram allows horizontal lines only refuses the vertical one.
+	const plots = {
+		...PLOTS,
+		periodogram: {
+			...PLOTS.periodogram,
+			overlays: { line: { horizontal: [{ key: 'at', axis: 'y', dynamic: false }] } }
+		}
+	};
+	const { session, errors } = normalizeSession(
+		{
+			columns: OVERLAY_COLUMNS,
+			plots: [
+				{
+					type: 'periodogram',
+					inputs: { time: 'time', values: 'values' },
+					overlays: [
+						{ kind: 'line', form: 'vertical', channels: { at: 24 } },
+						{ kind: 'line', channels: { at: 2 } }
+					]
+				}
+			]
+		},
+		{ plots }
+	);
+	assert.deepEqual(
+		session.plots[0].plot.overlays.map((o) => o.form),
+		['horizontal']
+	);
+	assert.equal(errors.length, 1);
+	assert.match(errors[0], /must be one of horizontal \(got "vertical"\)/);
 });

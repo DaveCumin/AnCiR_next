@@ -498,7 +498,8 @@ const meta = new Map([
 			family: 'Plots',
 			keywords: ['spectrum', 'period', 'lomb-scargle', 'power', 'rhythm'], // search-only synonyms; never rendered
 			nodeIcon: 'node-periodogram',
-			description: 'Periodogram (Lomb-Scargle / chi-squared) of a time-series.'
+			description:
+				'Periodogram (Lomb-Scargle / chi-squared) of a time-series, with reference lines and shaded bands (wired or typed) from its Overlays tab, e.g. a line at 24 h or at its own peak_period, or a 20 to 28 h band.'
 		}
 	],
 	[
@@ -526,7 +527,8 @@ const meta = new Map([
 			family: 'Plots',
 			keywords: ['autocorrelation', 'acf', 'lag', 'cross-correlation'], // search-only synonyms; never rendered
 			nodeIcon: 'correlogram',
-			description: 'Autocorrelation / cross-correlation plot.'
+			description:
+				'Autocorrelation / cross-correlation plot, with reference lines and shaded bands (wired or typed) from its Overlays tab.'
 		}
 	],
 	[

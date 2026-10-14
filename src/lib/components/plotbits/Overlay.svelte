@@ -664,6 +664,7 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import { removeOverlayWithUndo } from '$lib/plots/seriesDelete.js';
+	import { overlayClipPrefix, overlayRangeNote, overlayLegendNote } from './overlayDisplay.js';
 
 	let {
 		/** the OverlayClass instance */
@@ -685,6 +686,10 @@
 	// The forms this host offers for the overlay's kind, and whether it has a legend.
 	const formChoices = $derived(allowedForms(capabilitiesOf(inner), overlay?.kind));
 	const hasLegend = $derived(capabilitiesOf(inner)?.legend !== false);
+	// Block notes: the mark falls outside a range the host will not widen (decision Q7), and
+	// a label that cannot show because the plot's legend is off.
+	const rangeNote = $derived(overlay && inner ? overlayRangeNote(inner, overlay) : null);
+	const legendNote = $derived(overlay && inner ? overlayLegendNote(inner, overlay) : null);
 
 	// The EMPTY picker (shown while a channel is unwired): a blank wrapper column
 	// that is NOT in the model. Once it resolves to a real column the wire goes in
@@ -792,6 +797,9 @@
 		<div class="data-warning">
 			<p>⚠ {overlay.warning}</p>
 		</div>
+	{/if}
+	{#if rangeNote}
+		<p class="overlay-note overlay-range-note">{rangeNote}</p>
 	{/if}
 {/snippet}
 
@@ -964,6 +972,9 @@
 				title="Shown in the legend when set"
 			/>
 		</ControlInput>
+		{#if legendNote}
+			<p class="overlay-note overlay-legend-note">{legendNote}</p>
+		{/if}
 	{/if}
 {/snippet}
 
@@ -979,6 +990,7 @@
 				yscale={inner.overlayYScale}
 				xoffset={inner.padding.left}
 				yoffset={inner.padding.top}
+				clipPrefix={overlayClipPrefix(inner, overlay)}
 				which="rules"
 			/>
 		{:else}
@@ -989,6 +1001,7 @@
 				yscale={inner.overlayYScale}
 				xoffset={inner.padding.left}
 				yoffset={inner.padding.top}
+				clipPrefix={overlayClipPrefix(inner, overlay)}
 			/>
 		{/if}
 	{/if}
@@ -1085,10 +1098,14 @@
 		flex: 1;
 		min-width: 0;
 	}
-	.overlay-cap-note {
+	.overlay-cap-note,
+	.overlay-note {
 		margin: 0;
 		font-size: var(--font-xs);
 		color: var(--color-lightness-35);
+	}
+	.overlay-range-note {
+		margin-bottom: var(--space-2);
 	}
 	.overlay-check {
 		display: flex;

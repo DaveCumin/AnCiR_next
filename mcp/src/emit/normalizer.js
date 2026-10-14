@@ -13,7 +13,7 @@
 // Draft shape:
 //   { id?, columns?: [{name, type?, values:number[]}],
 //     analyses?: [{name, args:{ xIN?, yIN?, ...params }}],
-//     plots?:    [{type, inputs:{...}}] }        // plots: minimal emit (see note)
+//     plots?:    [{type, inputs:{...}, overlays?:[...]}] }   // plots: minimal emit (see note)
 //
 // Returns { session, warnings, errors } — a broken analysis is dropped with an error
 // (mirroring the engine's discardTp) rather than poisoning the whole session.
@@ -25,6 +25,9 @@ import { SCHEMA, PLOTS as plots_, columnIdFields, SESSION_VERSION } from './sche
 // The app's FormulaColumn grammar, shared so the Worker refuses exactly what the GUI refuses.
 // Pure and dependency-free like this file, so it bundles into the Worker unchanged.
 import { validateFormulaTokens } from '../../../src/lib/utils/formulaExpression.js';
+// The app's overlay spec (channel table + spec normaliser), shared for the same reason: a
+// draft's plot overlays are refused exactly where add_plot and the GUI refuse them. Pure.
+import { normalizeOverlaySpecs } from '../../../src/lib/components/plotbits/overlaySpec.js';
 
 // Per-series style slots, each with an explicit colour. Union across the types that read them:
 //   Scatterplot: line, points · Periodogram: line, thresholdline, points
@@ -132,7 +135,10 @@ function columnDescriptor(id, name, type, timeFormat) {
  *        session), and a uuid/clock inside would destroy that. The caller owns both.
  * @returns {{session:object, warnings:string[], errors:string[]}}
  */
-export function normalizeSession(draft, { schema = SCHEMA, provenance = null } = {}) {
+export function normalizeSession(
+	draft,
+	{ schema = SCHEMA, plots: plotSchemas = plots_, provenance = null } = {}
+) {
 	const warnings = [];
 	const errors = [];
 
@@ -418,7 +424,7 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 	let plotId = 5000;
 	let plotSlot = 0;
 	for (const p of draft.plots ?? []) {
-		const pSchema = plots_[p.type];
+		const pSchema = plotSchemas[p.type];
 		if (!pSchema) {
 			// Data View was removed in v82.0 (a Table shows a plot's computed data or a node's
 			// results now, opened from the app). It is deliberately NOT aliased to a Table: the
@@ -429,7 +435,7 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 					? ' Data View was removed; to show columns as a table use "tableplot" with a list of columns.'
 					: '';
 			errors.push(
-				`Unknown plot type "${p.type}".${removed} Available: ${Object.keys(plots_).join(', ')}. Skipped.`
+				`Unknown plot type "${p.type}".${removed} Available: ${Object.keys(plotSchemas).join(', ')}. Skipped.`
 			);
 			continue;
 		}
@@ -515,6 +521,16 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 			);
 		}
 
+		// Reference lines / shaded bands, as add_plot takes them. Validated per plot against the
+		// generated schema's table (plots[type].overlays, the class's overlayCapabilities), so
+		// a bad overlay is dropped with an error and the plot it was on is kept.
+		if (p.overlays != null && inner && finalType !== 'tableplot') {
+			const overlays = draftOverlays(p.overlays, finalType, plotSchemas, resolveRef, data, errors);
+			if (overlays) inner.overlays = overlays;
+		} else if (p.overlays != null) {
+			errors.push(overlaysUnsupported(finalType, plotSchemas));
+		}
+
 		plots.push({
 			id: plotId++,
 			name: p.name ?? pSchema.displayName ?? p.type,
@@ -554,6 +570,56 @@ export function normalizeSession(draft, { schema = SCHEMA, provenance = null } =
 	};
 
 	return { session, warnings, errors };
+}
+
+/** The draft error for overlays on a plot type without them, naming the plots that have them. */
+function overlaysUnsupported(type, plotSchemas) {
+	const hosts = Object.entries(plotSchemas)
+		.filter(([, s]) => s?.overlays)
+		.map(([id]) => id)
+		.sort();
+	return `Plot "${type}" does not support overlays. Plots that do: ${hosts.join(', ') || '(none)'}. Overlays dropped.`;
+}
+
+/**
+ * A draft plot's `overlays` as overlay JSON (the shape the GUI's OverlayClass loads), or null
+ * when the plot type has none (an error is pushed). The allowed kinds and forms are the keys of
+ * the schema's `plots[type].overlays` table; each overlay is normalised on its own by the app's
+ * pure spec normaliser, so one bad overlay costs only itself (an error says which and why).
+ * Columns resolve by NAME (or id) and must exist.
+ */
+function draftOverlays(list, type, plotSchemas, resolveRef, data, errors) {
+	const table = plotSchemas[type]?.overlays;
+	if (!table) {
+		errors.push(overlaysUnsupported(type, plotSchemas));
+		return null;
+	}
+	if (!Array.isArray(list)) {
+		errors.push(`Plot "${type}": overlays must be a list. Overlays dropped.`);
+		return null;
+	}
+	const caps = { line: Object.keys(table.line ?? {}), band: Object.keys(table.band ?? {}) };
+	const resolveCol = (ref) => {
+		const id = resolveRef(ref);
+		if (id == null || !data.some((c) => c.id === id)) {
+			throw new Error(`no column named ${JSON.stringify(String(ref))}`);
+		}
+		return id;
+	};
+	const out = [];
+	list.forEach((spec, i) => {
+		try {
+			out.push(...normalizeOverlaySpecs([spec], resolveCol, caps, { plot: type }));
+		} catch (e) {
+			// The spec normaliser numbers the one overlay it saw as overlays[0].
+			const msg = String(e?.message ?? e);
+			const where = msg.startsWith('overlays[0]')
+				? msg.replace('overlays[0]', `overlays[${i}]`)
+				: `overlays[${i}]: ${msg}`;
+			errors.push(`Plot "${type}": ${where.replace(/\.?$/, '.')} Overlay dropped.`);
+		}
+	});
+	return out;
 }
 
 /**

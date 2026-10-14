@@ -45,6 +45,10 @@ const { AncirSession, ensureRegistry, describeCapabilities, filterCapabilities }
 // (a lazy load inside a later tool handler hits ERR_CLOSED_SERVER once vite-node has
 // finished the initial execution). Mirrors the GUI's startup in routes/+page.svelte.
 await ensureRegistry();
+// Which plots carry overlays, and in which forms: read from the registry for the tool text.
+const { overlayHostTypes, overlayFormsSummary } = await import('./engine/overlays.js');
+const OVERLAY_HOSTS = overlayHostTypes().join(', ');
+const OVERLAY_FORMS = overlayFormsSummary();
 
 // One process = one active session (AnCiR's core is a singleton). Created lazily and
 // shared across transports/requests.
@@ -157,11 +161,12 @@ function registerTools(server) {
 			ok(requireSession().addColumnProcess(columnId, name, args ?? {}))
 	);
 
-	// Scatterplot overlays: reference lines and shaded bands, mirroring the GUI's
-	// Overlays tab. Channel values: a NUMBER is a typed value, a STRING is a column
-	// (by name or "id"), { column } is a column; a list of numbers is several typed
-	// positions, and a list of columns on a line's `at` makes ONE LINE PER COLUMN
-	// (a channel holds one column; see engine/overlays.js).
+	// Plot overlays: reference lines and shaded bands, mirroring the GUI's Overlays tab, on
+	// every plot whose class declares `overlayCapabilities` and only in the forms it allows
+	// (validated per plot in the engine). Channel values: a NUMBER is a typed value, a STRING
+	// is a column (by name or "id"), { column } is a column; a list of numbers is several
+	// typed positions, and a list of columns on a line's `at` makes ONE LINE PER COLUMN (a
+	// channel holds one column; see engine/overlays.js).
 	const overlayColumnRef = z.object({ column: z.union([z.number().int(), z.string()]) });
 	const overlayChannelValue = z.union([
 		z.number(),
@@ -177,7 +182,7 @@ function registerTools(server) {
 					.string()
 					.optional()
 					.describe(
-						'line: vertical | horizontal (default vertical). band: ribbon | horizontal | vertical | repeating (default ribbon)'
+						`line: vertical | horizontal. band: ribbon | horizontal | vertical | repeating. Each plot allows only some (${OVERLAY_FORMS}); the default is the plot's first listed form.`
 					),
 				name: z.string().optional(),
 				label: z.string().optional().describe('Legend entry when non-empty'),
@@ -203,12 +208,12 @@ function registerTools(server) {
 		)
 		.optional()
 		.describe(
-			'Scatterplot only: reference lines and shaded bands, e.g. [{ kind:"line", form:"vertical", channels:{ at:"crossing" }, label:"alert" }, { kind:"band", form:"horizontal", channels:{ lower: 1.5, upper: 3 } }]. See list_capabilities → plots[].overlays for the channel table.'
+			`Reference lines and shaded bands, on ${OVERLAY_HOSTS} (list_capabilities → plots[].overlays lists each plot's kinds and forms; detail:"full" adds the channels). E.g. scatterplot [{ kind:"line", form:"vertical", channels:{ at:"crossing" }, label:"alert" }, { kind:"band", form:"horizontal", channels:{ lower: 1.5, upper: 3 } }]; periodogram [{ kind:"line", form:"vertical", channels:{ at: 24 } }, { kind:"band", form:"vertical", channels:{ start: 20, end: 28 } }]. Overlays widen only the axes in plots[].overlayAxes (a periodogram never widens its period range, so a mark outside it is not drawn).`
 		);
 
 	server.tool(
 		'add_plot',
-		'Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; tableplot → array of column ids). A scatterplot may also carry `overlays` (reference lines / bands).',
+		`Create a plot wired to existing columns and add it to the session (opens rendered in the GUI). Use list_capabilities → plots[].inputs for field names (scatterplot/boxplot → {x,y}; actogram/periodogram/correlogram/fft → {time,values}; histogram → {column}; tableplot → array of column ids). ${OVERLAY_HOSTS} may also carry \`overlays\` (reference lines / bands, see that field).`,
 		{
 			type: z.string().describe("Plot type id, e.g. 'scatterplot', 'actogram', 'periodogram'"),
 			inputs: z

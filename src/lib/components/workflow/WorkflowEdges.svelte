@@ -1,9 +1,10 @@
 <script>
 	// @ts-nocheck
 	// Wire rendering ported from flowtest's NodeCanvas: a cubic bezier path with
-	// dx = max(40, |tx - sx| / 2) on each side, a thicker invisible hit area for
-	// future selection support, and an animated travelling dot that fires whenever
-	// the edge set re-derives.
+	// dx = max(40, |tx - sx| / 2) on each side (a self-edge loops over its node instead;
+	// see edgePath.js), a thicker invisible hit area for future selection support, and an
+	// animated travelling dot that fires whenever the edge set re-derives.
+	import { edgePath } from './edgePath.js';
 	let {
 		edges = [],
 		width = 0,
@@ -18,11 +19,6 @@
 
 	function edgeKey(edge) {
 		return `${edge.fromId}|${edge.fromPort}|${edge.toId}|${edge.toPort}|${edge.type}`;
-	}
-
-	function bezier(sx, sy, tx, ty) {
-		const dx = Math.max(40, Math.abs(tx - sx) / 2);
-		return `M ${sx},${sy} C ${sx + dx},${sy} ${tx - dx},${ty} ${tx},${ty}`;
 	}
 
 	function edgeOpacity(edge) {
@@ -40,7 +36,7 @@
 >
 	{#each edges as edge, i (edgeKey(edge))}
 		{#if edge.from && edge.to}
-			{@const d = bezier(edge.from.x, edge.from.y, edge.to.x, edge.to.y)}
+			{@const d = edgePath(edge.from, edge.to, { loopTop: edge.loopTop })}
 			{@const k = edgeKey(edge)}
 			{@const isSelected = selectedEdgeKey === k}
 			{@const isSpliceTarget = dropTargetEdgeKey === k}
@@ -80,15 +76,7 @@
 		{/if}
 	{/each}
 	{#if provisionalEdge?.from && provisionalEdge?.to}
-		<path
-			class="edge-temp"
-			d={bezier(
-				provisionalEdge.from.x,
-				provisionalEdge.from.y,
-				provisionalEdge.to.x,
-				provisionalEdge.to.y
-			)}
-		/>
+		<path class="edge-temp" d={edgePath(provisionalEdge.from, provisionalEdge.to)} />
 	{/if}
 </svg>
 

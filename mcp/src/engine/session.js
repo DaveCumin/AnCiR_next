@@ -26,7 +26,9 @@ import {
 	applyOverlays,
 	overlayColumnIds,
 	remapOverlayColumnIds,
-	describeOverlayForms
+	describeOverlayForms,
+	overlayDomainAxes,
+	unsupportedOverlaysError
 } from './overlays.js';
 
 // Column-id fields per arg (numeric or array of numerics) used to enumerate the Y
@@ -197,8 +199,14 @@ export function describeCapabilities() {
 			status: 'available — add_plot (session); render_plot for PNG/SVG',
 			// Reference lines / shaded bands (add_plot / render_plot `overlays`): the forms the
 			// class declares in `overlayCapabilities`, so a plot that gains them is advertised
-			// without editing a list.
-			...(overlayCaps ? { overlays: describeOverlayForms(overlayCaps) } : {})
+			// without editing a list, and the axes whose automatic range widens to fit them (a
+			// periodogram never widens its period range; a mark outside it is not drawn).
+			...(overlayCaps
+				? {
+						overlays: describeOverlayForms(overlayCaps),
+						overlayAxes: overlayDomainAxes(overlayCaps)
+					}
+				: {})
 		});
 	}
 	plots.sort((a, b) => a.id.localeCompare(b.id));
@@ -260,8 +268,23 @@ export function filterCapabilities(full, { detail = 'summary', family = null, na
 			: detail === 'full'
 				? x
 				: { id: x.id, family: x.family, summary: x.summary, params: Object.keys(x.params) };
+	// The summary keeps each overlay host's kinds and forms (the first form of a kind is the
+	// default) and the axes overlays widen; "full" adds the channel table per form.
+	const overlaySummary = (x) =>
+		x.overlays
+			? {
+					overlays: Object.fromEntries(
+						Object.entries(x.overlays).map(([kind, forms]) => [kind, Object.keys(forms)])
+					),
+					overlayAxes: x.overlayAxes
+				}
+			: {};
 	const projPlot = (x) =>
-		detail === 'names' ? { id: x.id } : detail === 'full' ? x : { id: x.id, inputs: x.inputs };
+		detail === 'names'
+			? { id: x.id }
+			: detail === 'full'
+				? x
+				: { id: x.id, inputs: x.inputs, ...overlaySummary(x) };
 
 	let A = full.analyses,
 		T = full.transforms,
@@ -777,7 +800,8 @@ export class AncirSession {
 	 * @param {string} type   Plot type id (e.g. 'scatterplot', 'actogram').
 	 * @param {Object<string,number>|number[]} inputs  Map of input field → column id.
 	 *   For tableplot, pass an array of column ids (no named fields).
-	 * @param {Array<object>} [overlays]  Reference lines / bands (scatterplot); see
+	 * @param {Array<object>} [overlays]  Reference lines / bands, on a plot whose class
+	 *   declares `overlayCapabilities` and only in the forms it allows; see
 	 *   engine/overlays.js for the spec shape. Numbers are typed values, strings /
 	 *   `{ column }` are wires.
 	 * @returns {{plotId:number, type:string, name:string, inputs:object, overlays?:object[]}}
@@ -799,8 +823,11 @@ export class AncirSession {
 		};
 
 		// Validate overlays BEFORE committing the plot, like the inputs below: a bad
-		// overlay must not leave a half-built plot in the session.
-		const overlayJsons = normalizeOverlaySpecs(overlays, assertCol);
+		// overlay must not leave a half-built plot in the session. Per plot: only the kinds
+		// and forms this plot's class allows.
+		const overlayCaps = entry.data?.overlayCapabilities;
+		if (overlays?.length && !overlayCaps) throw unsupportedOverlaysError(type);
+		const overlayJsons = normalizeOverlaySpecs(overlays, assertCol, overlayCaps, { plot: type });
 
 		const p = new Plot({ name: type, type });
 
@@ -870,7 +897,7 @@ export class AncirSession {
 	 * @param {Object<string,number>|number[]} inputs  Input field → column id (or, for
 	 *   tableplot, an array of column ids).
 	 * @param {{outBase:string, width?:number, height?:number, overlays?:object[]}} opts
-	 *   `overlays` as for addPlot (scatterplot reference lines / bands).
+	 *   `overlays` as for addPlot (reference lines / bands, per the plot's capabilities).
 	 * @returns {Promise<{png:string, svg:string, bytes:number, width:number, height:number}>}
 	 */
 	async renderPlotToFiles(type, inputs, { outBase, width = 700, height = 420, overlays } = {}) {
@@ -882,14 +909,18 @@ export class AncirSession {
 			);
 		}
 
-		const overlayJsons = normalizeOverlaySpecs(overlays, (ref) => {
-			const id = resolveColRef(ref);
-			if (!getColumnById(id)) throw new Error(`No column with id ${id}. Call list_columns.`);
-			return id;
-		});
-		if (overlayJsons.length && !entry.data?.overlayCapabilities) {
-			throw new Error(`Plot "${type}" does not support overlays (only scatterplot does).`);
-		}
+		const overlayCaps = entry.data?.overlayCapabilities;
+		if (overlays?.length && !overlayCaps) throw unsupportedOverlaysError(type);
+		const overlayJsons = normalizeOverlaySpecs(
+			overlays,
+			(ref) => {
+				const id = resolveColRef(ref);
+				if (!getColumnById(id)) throw new Error(`No column with id ${id}. Call list_columns.`);
+				return id;
+			},
+			overlayCaps,
+			{ plot: type }
+		);
 
 		// Gather referenced columns (series inputs + overlay wires) and renumber to
 		// compact ids the render page rebuilds.

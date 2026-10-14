@@ -137,7 +137,10 @@
 		// `which="rules"` only: reference-line positions in DATA units, drawn as full-span
 		// vertical or horizontal <line>s with this line's colour/width/dash.
 		positions = [],
-		orientation = 'vertical'
+		orientation = 'vertical',
+		// `which="rules"` only: prepended to the clip-path id so it is unique in the document
+		// (an overlay passes its plot and overlay ids; see plotbits/overlayDisplay.js).
+		clipPrefix = ''
 	} = $props();
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
@@ -320,7 +323,7 @@
      rather than a transform so tests and tooling can read them off the attributes. -->
 {#snippet rules(lineData)}
 	{#if positions?.length > 0}
-		{@const rulesKey = `rules-${xoffset}-${yoffset}-${width}-${height}`}
+		{@const rulesKey = `${clipPrefix}rules-${xoffset}-${yoffset}-${width}-${height}`}
 		{@const dash =
 			typeof lineData.stroke === 'string' && lineData.stroke !== 'solid' ? lineData.stroke : null}
 		<clipPath id={rulesKey}>

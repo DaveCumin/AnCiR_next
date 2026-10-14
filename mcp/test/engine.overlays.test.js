@@ -1,14 +1,25 @@
-// Scatterplot overlays (reference lines / bands) through add_plot, pinned against the
-// app's own OverlayClass so the tool surface cannot drift from the GUI's channel table.
+// Plot overlays (reference lines / bands) through add_plot, pinned against the app's own
+// OverlayClass so the tool surface cannot drift from the GUI's channel table. Every plot
+// that declares `overlayCapabilities` is an overlay host (Scatterplot, Periodogram,
+// Correlogram, ...), validated per plot (overlays plan 2026-10-15, step 2).
 import { beforeAll, describe, expect, it } from 'vitest';
-import { AncirSession, ensureRegistry, describeCapabilities } from '../src/engine/session.js';
+import {
+	AncirSession,
+	ensureRegistry,
+	describeCapabilities,
+	filterCapabilities
+} from '../src/engine/session.js';
 import {
 	normalizeOverlaySpecs,
 	describeOverlayForms,
 	overlayColumnIds,
-	remapOverlayColumnIds
+	remapOverlayColumnIds,
+	applyOverlays,
+	overlayHostTypes
 } from '../src/engine/overlays.js';
 import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+import { appConsts } from '$lib/core/core.svelte.js';
+import { normalizeSession } from '../src/emit/normalizer.js';
 
 const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 
@@ -42,6 +53,58 @@ describe('capability catalogue advertises overlays where the class supports them
 		expect(scatter.overlays.band.ribbon.map((c) => c.key)).toEqual(['x', 'lower', 'upper']);
 		const acto = caps.plots.find((p) => p.id === 'actogram');
 		expect(acto.overlays).toBeUndefined();
+	});
+
+	it('each host lists only the forms it allows, and the axes it widens for them', () => {
+		const caps = describeCapabilities();
+		const byId = Object.fromEntries(caps.plots.map((p) => [p.id, p]));
+		for (const id of ['periodogram', 'correlogram']) {
+			const declared = appConsts.plotMap.get(id).data.overlayCapabilities;
+			expect(byId[id].overlays).toEqual(describeOverlayForms(declared));
+			expect(byId[id].overlayAxes).toEqual(['y']);
+		}
+		expect(Object.keys(byId.periodogram.overlays.line)).toEqual(['vertical', 'horizontal']);
+		expect(Object.keys(byId.periodogram.overlays.band)).toEqual([
+			'vertical',
+			'horizontal',
+			'ribbon'
+		]);
+		expect(Object.keys(byId.correlogram.overlays.band)).toEqual(['vertical', 'horizontal']);
+		expect(byId.scatterplot.overlayAxes).toEqual(['x', 'y']);
+		expect(byId.actogram.overlayAxes).toBeUndefined();
+		expect(overlayHostTypes()).toEqual(
+			expect.arrayContaining(['scatterplot', 'periodogram', 'correlogram'])
+		);
+		expect(overlayHostTypes()).not.toContain('actogram');
+	});
+
+	it('the default (summary) list_capabilities shows each host its kinds and forms', () => {
+		const out = filterCapabilities(describeCapabilities());
+		const byId = Object.fromEntries(out.plots.map((p) => [p.id, p]));
+		expect(byId.periodogram.overlays).toEqual({
+			line: ['vertical', 'horizontal'],
+			band: ['vertical', 'horizontal', 'ribbon']
+		});
+		expect(byId.periodogram.overlayAxes).toEqual(['y']);
+		expect(byId.correlogram.overlays).toEqual({
+			line: ['vertical', 'horizontal'],
+			band: ['vertical', 'horizontal']
+		});
+		expect(byId.correlogram.overlayAxes).toEqual(['y']);
+		expect(byId.scatterplot.overlayAxes).toEqual(['x', 'y']);
+		expect(byId.scatterplot.overlays.band).toEqual([
+			'ribbon',
+			'horizontal',
+			'vertical',
+			'repeating'
+		]);
+		expect(byId.actogram.overlays).toBeUndefined();
+		// "full" keeps the channel table.
+		const full = filterCapabilities(describeCapabilities(), { detail: 'full' });
+		expect(full.plots.find((p) => p.id === 'periodogram').overlays.band.vertical).toEqual([
+			{ key: 'start', axis: 'x', dynamic: false },
+			{ key: 'end', axis: 'x', dynamic: false }
+		]);
 	});
 
 	it('the advertised table is exactly OverlayClass.channelsFor, form for form', () => {
@@ -303,12 +366,93 @@ describe('add_plot with overlays', () => {
 		expect(res.overlays).toBeUndefined();
 	});
 
-	it('rejects overlays on a plot type without them, before committing the plot', () => {
+	it('rejects overlays on a plot type without them, naming the plots that have them', () => {
 		const s = sessionWithColumns('plot-overlay-type');
-		expect(() =>
-			s.addPlot('actogram', { time: 0, values: 1 }, [{ kind: 'line', channels: { at: 3 } }])
-		).toThrow(/does not support overlays/);
+		let message = '';
+		try {
+			s.addPlot('actogram', { time: 0, values: 1 }, [{ kind: 'line', channels: { at: 3 } }]);
+		} catch (e) {
+			message = e.message;
+		}
+		expect(message).toMatch(/^Plot "actogram" does not support overlays\./);
+		expect(message).toMatch(/periodogram/);
+		expect(message).toMatch(/correlogram/);
+		expect(message).toMatch(/scatterplot/);
+		expect(message).not.toMatch(/only scatterplot/);
 		expect(s.exportSessionObject().plots.length).toBe(0);
+	});
+
+	it('a periodogram takes a vertical line at 24 h and a 20 to 28 h band', () => {
+		const s = sessionWithColumns('plot-overlay-periodogram');
+		const res = s.addPlot('periodogram', { time: 'x', values: 'y' }, [
+			{ kind: 'line', channels: { at: 24 }, label: '24 h' },
+			{ kind: 'band', channels: { start: 20, end: 28 } }
+		]);
+		expect(res.overlays.map((o) => [o.kind, o.form, o.channels])).toEqual([
+			['line', 'vertical', { at: { columns: [], typed: [24] } }],
+			[
+				'band',
+				'vertical',
+				{ start: { columns: [], typed: [20] }, end: { columns: [], typed: [28] } }
+			]
+		]);
+		const inner = s.exportSessionObject().plots[0].plot;
+		expect(inner.overlays.map((o) => [o.kind, o.form, o.label])).toEqual([
+			['line', 'vertical', '24 h'],
+			['band', 'vertical', '']
+		]);
+	});
+
+	it('a form the plot does not allow is refused with the plot named, before committing it', () => {
+		const s = sessionWithColumns('plot-overlay-form');
+		expect(() =>
+			s.addPlot('correlogram', { time: 'x', values: 'y' }, [
+				{ kind: 'band', form: 'ribbon', channels: { x: 'x', lower: 'y', upper: 'y' } }
+			])
+		).toThrow(
+			'overlays[0].form for a band on a correlogram must be one of vertical | horizontal (got "ribbon").'
+		);
+		expect(() =>
+			s.addPlot('periodogram', { time: 'x', values: 'y' }, [{ kind: 'band', form: 'repeating' }])
+		).toThrow(/form for a band on a periodogram must be one of vertical \| horizontal \| ribbon/);
+		expect(s.exportSessionObject().plots.length).toBe(0);
+	});
+
+	it('render_plot refuses overlays on a plot without them before any browser starts', async () => {
+		const s = sessionWithColumns('render-overlay-type');
+		await expect(
+			s.renderPlotToFiles(
+				'actogram',
+				{ time: 0, values: 1 },
+				{
+					outBase: '/tmp/never-written',
+					overlays: [{ kind: 'line', channels: { at: 3 } }]
+				}
+			)
+		).rejects.toThrow(/^Plot "actogram" does not support overlays\. Plots that do: /);
+		await expect(
+			s.renderPlotToFiles(
+				'correlogram',
+				{ time: 0, values: 1 },
+				{
+					outBase: '/tmp/never-written',
+					overlays: [{ kind: 'band', form: 'ribbon' }]
+				}
+			)
+		).rejects.toThrow(/on a correlogram must be one of vertical \| horizontal/);
+	});
+
+	it('applyOverlays checks each overlay against the plot it lands on', () => {
+		const corr = appConsts.plotMap.get('correlogram').data.fromJSON(null, { data: [] });
+		expect(() => applyOverlays(corr, [{ kind: 'band', form: 'ribbon' }], 'correlogram')).toThrow(
+			'overlays[0]: a correlogram has no band of form "ribbon" (it allows vertical | horizontal).'
+		);
+		expect(corr.overlays).toHaveLength(0);
+		expect(() => applyOverlays({ data: [] }, [{ kind: 'line' }], 'actogram')).toThrow(
+			/^Plot "actogram" does not support overlays\./
+		);
+		const res = applyOverlays(corr, [{ kind: 'line', form: 'horizontal' }], 'correlogram');
+		expect(res.map((o) => o.form)).toEqual(['horizontal']);
 	});
 
 	it('rejects an unknown column in an overlay channel, before committing the plot', () => {
@@ -320,5 +464,37 @@ describe('add_plot with overlays', () => {
 			s.addPlot('scatterplot', { x: 0, y: 1 }, [{ kind: 'line', channels: { at: '99' } }])
 		).toThrow(/No column with id 99/);
 		expect(s.exportSessionObject().plots.length).toBe(0);
+	});
+});
+
+describe('a drafted session (the Worker normalizer) loads its overlays into the app classes', () => {
+	it('a periodogram draft with a 24 h line and a 20 to 28 h band comes back as OverlayClass', () => {
+		const { session, errors } = normalizeSession({
+			columns: [
+				{ name: 'time', values: seq(48, (i) => i) },
+				{ name: 'values', values: seq(48, (i) => Math.cos((2 * Math.PI * i) / 24)) }
+			],
+			plots: [
+				{
+					type: 'periodogram',
+					inputs: { time: 'time', values: 'values' },
+					overlays: [
+						{ kind: 'line', channels: { at: 24 }, label: '24 h' },
+						{ kind: 'band', channels: { start: 20, end: 28 } }
+					]
+				}
+			]
+		});
+		expect(errors).toEqual([]);
+		const inner = appConsts.plotMap
+			.get('periodogram')
+			.data.fromJSON(null, JSON.parse(JSON.stringify(session.plots[0].plot)));
+		expect(inner.overlays.every((o) => o instanceof OverlayClass)).toBe(true);
+		expect(inner.overlays.map((o) => [o.kind, o.form, o.label])).toEqual([
+			['line', 'vertical', '24 h'],
+			['band', 'vertical', '']
+		]);
+		expect(inner.overlays[0].values('at')).toEqual([24]);
+		expect(inner.overlays[1].geometry().segments).toEqual([{ x0: 20, x1: 28 }]);
 	});
 });

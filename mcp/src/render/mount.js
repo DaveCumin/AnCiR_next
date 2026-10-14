@@ -7,14 +7,17 @@
 //
 // Payload shape (see src/engine/renderPlot.js):
 //   { columns:[{id,name,type,values[]}], plot:{type, inputs, overlays?}, width, height }
-// `overlays` (scatterplot reference lines / bands) is OverlayClass JSON with the
-// column refIds already renumbered to the payload's compact ids.
+// `overlays` (reference lines / bands, on a plot whose class declares
+// `overlayCapabilities`) is OverlayClass JSON with the column refIds already renumbered to
+// the payload's compact ids. The session validated it per plot; a kind or form the plot
+// does not allow is refused here too rather than coerced into another.
 import { mount, flushSync } from 'svelte';
 import { core, appConsts } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { loadPlots } from '$lib/plots/plotMap.js';
 import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+import { allowedForms, capabilitiesOf } from '$lib/components/plotbits/overlaySpec.js';
 import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
 
 async function run() {
@@ -70,8 +73,14 @@ async function run() {
 		}
 		if (Object.keys(dataIn).length) p.plot.addData(dataIn);
 	}
+	const caps = capabilitiesOf(p.plot);
 	for (const o of data.plot.overlays ?? []) {
-		if (!Array.isArray(p.plot.overlays)) throw new Error(`${data.plot.type} has no overlays`);
+		if (!Array.isArray(p.plot.overlays) || !caps) {
+			throw new Error(`${data.plot.type} has no overlays`);
+		}
+		if (!allowedForms(caps, o.kind).includes(o.form)) {
+			throw new Error(`${data.plot.type} has no ${o.kind} of form "${o.form}"`);
+		}
 		p.plot.overlays.push(OverlayClass.fromJSON(p.plot, o));
 	}
 	core.plots.push(p);
@@ -87,6 +96,20 @@ async function run() {
 	// (SVG → canvas → toDataURL for PNG; outerHTML → Blob for SVG).
 	window.__ancirPlotId = p.id;
 	window.__ancirExport = (filetype) => convertToImage('plot' + p.id, filetype);
+
+	// A plot that computes its series asynchronously (the Periodogram: a 250 ms debounce, then
+	// a worker or a timer) must finish before the export, or the picture has axes and overlays
+	// but no spectrum. Wait until no series is calculating and each one that holds a computed
+	// spectrum (`periodData`) has one, or failed; bounded, so a plot that never computes still
+	// renders what it has.
+	const settled = () =>
+		(p.plot.data ?? []).every(
+			(d) => !d?.calculating && (!d?.periodData || d.periodData.x?.length > 0 || d.calcError)
+		);
+	const started = Date.now();
+	while (!settled() && Date.now() - started < 15000) {
+		await new Promise((r) => setTimeout(r, 50));
+	}
 
 	// Let onMount effects (axis auto-scaling, etc.) settle before signalling ready.
 	await new Promise((r) => setTimeout(r, 150));

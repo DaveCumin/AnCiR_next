@@ -25,9 +25,16 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import { computeAutocorrelation, findAutocorrelationPeak } from '$lib/utils/correlogram.js';
 	import { minMaxAcross, max as arrMax } from '$lib/utils/stats.js';
+	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+	import {
+		overlayExtentOf,
+		overlayLegendItems,
+		overlaysFromJSON,
+		overlaysToJSON
+	} from '$lib/components/plotbits/overlayHost.js';
 
 	export const Correlogram_defaultDataInputs = ['time', 'values'];
-	export const Correlogram_controlHeaders = ['Properties', 'Data'];
+	export const Correlogram_controlHeaders = ['Properties', 'Data', 'Overlays'];
 
 	class CorrelogramDataclass {
 		static descriptors = {
@@ -275,6 +282,19 @@
 	}
 
 	export class Correlogramclass {
+		// The overlay host contract (components/plotbits/overlayHost.js): reference lines (a
+		// vertical line at a 24 h lag, a horizontal correlation threshold) and shaded bands
+		// (a lag window, a correlation range). Only the correlation axis widens to fit them; the
+		// lag axis follows the computed lags (or the user's range), never a reference mark. The
+		// plot's own confidence bounds are unchanged.
+		static overlayCapabilities = Object.freeze({
+			line: Object.freeze(['vertical', 'horizontal']),
+			band: Object.freeze(['vertical', 'horizontal']),
+			legend: true,
+			xTime: false,
+			domain: Object.freeze(['y'])
+		});
+
 		static descriptors = {
 			padding: { group: 'Padding' },
 			laglimsIN: {
@@ -371,7 +391,13 @@
 				return [-1, 1];
 			}
 
-			const { min: mnRaw, max: mxRaw } = minMaxAcross(this.data.map((d) => d.acfData.correlations));
+			const extent = minMaxAcross(this.data.map((d) => d.acfData.correlations));
+			// Overlays (reference lines / bands) widen the automatic correlation range so a mark
+			// is never silently off-screen; the user's limits below still win. Never the lag axis
+			// (overlayCapabilities.domain).
+			const ext = overlayExtentOf(this.overlays, 'y');
+			const mnRaw = ext ? Math.min(extent.min ?? Infinity, ext[0]) : extent.min;
+			const mxRaw = ext ? Math.max(extent.max ?? -Infinity, ext[1]) : extent.max;
 			if (mnRaw == null || mxRaw == null) return [-1, 1];
 
 			// Padded but NOT capped at +/-1. The lag-0 autocorrelation is exactly 1, and a cap
@@ -389,7 +415,7 @@
 		legend = $state();
 
 		// One entry per drawn series, each followed by its own confidence-bounds
-		// entry when those lines are drawn.
+		// entry when those lines are drawn; then every enabled overlay that carries a label.
 		getLegendItems = $derived.by(() => {
 			const items = [];
 			const nameSeries = this.data.length > 1;
@@ -399,8 +425,57 @@
 				const bounds = d.getConfidenceLegendItem(nameSeries);
 				if (bounds) items.push(bounds);
 			});
+			items.push(...overlayLegendItems(this.overlays));
 			return items;
 		});
+
+		// ---- overlay host (components/plotbits/overlayHost.js) ----------------------------
+		// Reference lines and shaded bands, in draw order.
+		overlays = $state([]);
+		// The plot's own axes: lag on x, correlation on y (the scales the series are drawn with).
+		overlayXScale = $derived(
+			scaleLinear().domain([this.laglims[0], this.laglims[1]]).range([0, this.plotwidth])
+		);
+		overlayYScale = $derived(
+			scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([this.plotheight, 0])
+		);
+
+		/** Add an overlay of `kind` ('line' | 'band'), optionally with a `form`; returns it. */
+		addOverlay(kind, form) {
+			const overlay = new OverlayClass(this, { kind, form });
+			this.overlays.push(overlay);
+			return overlay;
+		}
+
+		removeOverlay(id) {
+			const idx = this.overlays.findIndex((o) => o.id === id);
+			if (idx >= 0) this.overlays.splice(idx, 1);
+		}
+
+		/** The draw context every overlay's geometry() takes (the visible lag range). */
+		overlayContext() {
+			return {
+				xDomainMin: this.laglims[0],
+				xDomainMax: this.laglims[1],
+				xAnchorMin: this.laglims[0],
+				xIsTime: false
+			};
+		}
+
+		/** A band's default fill never reads it (no ribbon here); kept for the contract. */
+		overlaySeriesColour() {
+			return this.data[0]?.line?.colour ?? null;
+		}
+
+		/** The remedy an Overlays-tab block offers when its mark is outside the visible range. */
+		overlayRangeHint(axis) {
+			if (axis === 'x') {
+				return 'Overlays do not widen the lag axis; set its range in Properties.';
+			}
+			return this.ylimsIN[0] != null || this.ylimsIN[1] != null
+				? 'The correlation axis has fixed limits; reset them in Properties to fit it.'
+				: null;
+		}
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
@@ -554,7 +629,8 @@
 				xAxis: this.xAxis.toJSON(),
 				yAxis: this.yAxis.toJSON(),
 				legend: this.legend.toJSON(),
-				data: this.data
+				data: this.data,
+				overlays: overlaysToJSON(this.overlays)
 			};
 		}
 
@@ -600,6 +676,9 @@
 				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
 				correlogram.addData(json.dataIn);
 			}
+			// After the series, as on every host. A session saved before the correlogram had
+			// overlays carries none.
+			overlaysFromJSON(correlogram, json);
 			return correlogram;
 		}
 	}
@@ -628,6 +707,8 @@
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
 	import { getZoomAdapter } from '$lib/plots/zoomAdapters.js';
 	import { usePlotMetricOutputs, ownsPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
+	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
+	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which, brushable = false, zoomMode = false } = $props();
 
@@ -797,6 +878,8 @@
 		</div>
 
 		<Axis axisData={theData.xAxis} which="controls" title="X-Axis Controls" />
+	{:else if appState.currentControlTab === 'overlays'}
+		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
@@ -973,6 +1056,9 @@
 			which="plot"
 		/>
 
+		<!-- Shaded bands beneath the zero line, the series and the confidence bounds. -->
+		<OverlayLayers inner={theData.plot} layer="bands" />
+
 		<!-- Zero line -->
 		{#if theData.plot.data.length > 0 && theData.plot.ylims[0] <= 0 && theData.plot.ylims[1] >= 0}
 			<line
@@ -1077,6 +1163,9 @@
 				/>
 			{/if}
 		{/each}
+
+		<!-- Reference lines above the series and confidence bounds, beneath the legend. -->
+		<OverlayLayers inner={theData.plot} layer="lines" />
 
 		<Legend
 			figureStyle={theData.plot.viewStyle}

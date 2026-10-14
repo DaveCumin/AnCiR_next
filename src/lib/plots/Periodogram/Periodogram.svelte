@@ -33,6 +33,13 @@
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import { spectralPeakIndex } from '$lib/components/plotbits/helpers/peakFinder.js';
 	import { paddedDomain, finiteExtent } from '$lib/plots/axisDomain.js';
+	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+	import {
+		overlayExtentOf,
+		overlayLegendItems,
+		overlaysFromJSON,
+		overlaysToJSON
+	} from '$lib/components/plotbits/overlayHost.js';
 
 	import { chisqSf as chisqSfImpl } from '$lib/utils/chisqSf.js';
 
@@ -74,7 +81,7 @@
 	}
 
 	export const Periodogram_defaultDataInputs = ['time', 'values'];
-	export const Periodogram_controlHeaders = ['Properties', 'Data'];
+	export const Periodogram_controlHeaders = ['Properties', 'Data', 'Overlays'];
 
 	// Buffer factor: calculate this much extra beyond the display range
 	// e.g. 0.25 means 25% extra on each side
@@ -588,6 +595,19 @@
 	}
 
 	export class Periodogramclass {
+		// The overlay host contract (components/plotbits/overlayHost.js): reference lines (a
+		// vertical line at 24 h, or at the peak_period this plot outputs) and shaded bands (a
+		// 20 to 28 h circadian window, a power threshold, an envelope ribbon). Only the power
+		// axis widens to fit them: the period range is the range the spectrum is COMPUTED over,
+		// so a reference mark must never change it (decision 2026-10-15).
+		static overlayCapabilities = Object.freeze({
+			line: Object.freeze(['vertical', 'horizontal']),
+			band: Object.freeze(['vertical', 'horizontal', 'ribbon']),
+			legend: true,
+			xTime: false,
+			domain: Object.freeze(['y'])
+		});
+
 		static descriptors = {
 			padding: { group: 'Padding' },
 			periodlimsIN: {
@@ -665,12 +685,18 @@
 
 			// The significance threshold counts as data here: it is drawn, so it must fit. A
 			// threshold hidden by the user (draw off) does not stretch the axis.
-			const { min: mnRaw, max: mxRaw } = finiteExtent(
+			const extent = finiteExtent(
 				this.data.flatMap((d) => [
 					d.periodData.y,
 					d.method === 'Chi-squared' && d.thresholdline?.draw ? d.periodData.threshold : null
 				])
 			);
+			// Overlays (reference lines / bands) widen the automatic power range so a mark is never
+			// silently off-screen; the user's limits below still win. Never the period range
+			// (overlayCapabilities.domain).
+			const ext = overlayExtentOf(this.overlays, 'y');
+			const mnRaw = ext ? Math.min(extent.min ?? Infinity, ext[0]) : extent.min;
+			const mxRaw = ext ? Math.max(extent.max ?? -Infinity, ext[1]) : extent.max;
 			if (mnRaw == null || mxRaw == null) return [0, 0];
 			// Headroom plus a nice top tick, so the highest peak is never flattened by the clip
 			// edge; see plots/axisDomain.js. Power is never negative, hence the lower bound.
@@ -687,7 +713,8 @@
 		yAxis = $state();
 		legend = $state();
 
-		// Series entry then that series' threshold entry, so the two read together.
+		// Series entry then that series' threshold entry, so the two read together; then every
+		// enabled overlay that carries a label.
 		getLegendItems = $derived.by(() => {
 			const items = [];
 			this.data.forEach((datum) => {
@@ -696,8 +723,57 @@
 				const threshold = datum.getThresholdLegendItem();
 				if (threshold) items.push(threshold);
 			});
+			items.push(...overlayLegendItems(this.overlays));
 			return items;
 		});
+
+		// ---- overlay host (components/plotbits/overlayHost.js) ----------------------------
+		// Reference lines and shaded bands, in draw order.
+		overlays = $state([]);
+		// The plot's own axes: period on x, power on y (the scales the series are drawn with).
+		overlayXScale = $derived(
+			scaleLinear().domain([this.periodlimsIN[0], this.periodlimsIN[1]]).range([0, this.plotwidth])
+		);
+		overlayYScale = $derived(
+			scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([this.plotheight, 0])
+		);
+
+		/** Add an overlay of `kind` ('line' | 'band'), optionally with a `form`; returns it. */
+		addOverlay(kind, form) {
+			const overlay = new OverlayClass(this, { kind, form });
+			this.overlays.push(overlay);
+			return overlay;
+		}
+
+		removeOverlay(id) {
+			const idx = this.overlays.findIndex((o) => o.id === id);
+			if (idx >= 0) this.overlays.splice(idx, 1);
+		}
+
+		/** The draw context every overlay's geometry() takes (the visible period range). */
+		overlayContext() {
+			return {
+				xDomainMin: this.periodlimsIN[0],
+				xDomainMax: this.periodlimsIN[1],
+				xAnchorMin: this.periodlimsIN[0],
+				xIsTime: false
+			};
+		}
+
+		/** A ribbon's default fill borrows the first series' line colour. */
+		overlaySeriesColour() {
+			return this.data[0]?.line?.colour ?? null;
+		}
+
+		/** The remedy an Overlays-tab block offers when its mark is outside the visible range. */
+		overlayRangeHint(axis) {
+			if (axis === 'x') {
+				return 'Overlays never widen the period range, because it is the range the periodogram is computed over; change it in Properties.';
+			}
+			return this.ylimsIN[0] != null || this.ylimsIN[1] != null
+				? 'The power axis has fixed limits; reset them in Properties to fit it.'
+				: null;
+		}
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
@@ -860,7 +936,8 @@
 				xAxis: this.xAxis.toJSON(),
 				yAxis: this.yAxis.toJSON(),
 				legend: this.legend.toJSON(),
-				data: this.data
+				data: this.data,
+				overlays: overlaysToJSON(this.overlays)
 			};
 		}
 		static fromJSON(parent, json) {
@@ -911,6 +988,9 @@
 				// undo/redo of a brand-new plot replays its data wiring (see addPlot op).
 				periodogram.addData(json.dataIn);
 			}
+			// After the series: a ribbon's default fill reads the first series' colour. A session
+			// saved before the periodogram had overlays carries none.
+			overlaysFromJSON(periodogram, json);
 			return periodogram;
 		}
 	}
@@ -940,6 +1020,8 @@
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
 	import { getZoomAdapter } from '$lib/plots/zoomAdapters.js';
 	import { usePlotMetricOutputs, ownsPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
+	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
+	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which, brushable = false, zoomMode = false } = $props();
 
@@ -1158,6 +1240,8 @@
 		</div>
 
 		<Axis axisData={theData.xAxis} which="controls" title="X-Axis Controls" />
+	{:else if appState.currentControlTab === 'overlays'}
+		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
@@ -1401,6 +1485,9 @@
 			which="plot"
 		/>
 
+		<!-- Shaded bands beneath the spectrum and its threshold line. -->
+		<OverlayLayers inner={theData.plot} layer="bands" />
+
 		{#each theData.plot.data as datum, di (di)}
 			<Line
 				lineData={datum.line}
@@ -1459,6 +1546,9 @@
 				/>
 			{/if}
 		{/each}
+
+		<!-- Reference lines above the spectrum, beneath the legend. -->
+		<OverlayLayers inner={theData.plot} layer="lines" />
 
 		<Legend
 			figureStyle={theData.plot.viewStyle}

@@ -70,7 +70,35 @@ const outOv = JSON.parse(
 );
 console.log('RENDER (overlays):', JSON.stringify(outOv));
 
+// A periodogram as an overlay host (overlays plan 2026-10-15, step 2): a 24 h line and a
+// 20 to 28 h band, through the same pipeline.
+const outPg = JSON.parse(
+	await call('render_plot', {
+		type: 'periodogram',
+		inputs: { time: 0, values: 1 },
+		overlays: [
+			{ kind: 'line', form: 'vertical', label: '24 h', channels: { at: 24 } },
+			{ kind: 'band', form: 'vertical', channels: { start: 20, end: 28 } }
+		],
+		path: '/tmp/ancir-render-smoke-periodogram'
+	})
+);
+console.log('RENDER (periodogram overlays):', JSON.stringify(outPg));
+
 await client.close();
+
+const svgPg = readFileSync(outPg.svg, 'utf8');
+const pgRules = (svgPg.match(/class="[^"]*overlay-rule[^"]*"/g) ?? []).length;
+const pgBands = (svgPg.match(/class="[^"]*band-rect[^"]*"/g) ?? []).length;
+if (pgRules !== 1 || pgBands !== 1)
+	throw new Error(
+		`periodogram: expected 1 overlay-rule and 1 band-rect, got ${pgRules} and ${pgBands}`
+	);
+// The spectrum itself: a series path (fill="none") outside the overlay layers. Before v82.1
+// the render signalled ready before the periodogram's debounced calculation had run.
+if (!/<path[^>]*fill="none"/.test(svgPg.replace(/<g class="overlay-[\s\S]*?<\/g>/g, '')))
+	throw new Error('periodogram: the spectrum line is missing (rendered before it was computed)');
+console.log('PERIODOGRAM OVERLAYS OK: 1 rule line, 1 band rect and the spectrum');
 
 const svgOv = readFileSync(outOv.svg, 'utf8');
 const rules = (svgOv.match(/class="[^"]*overlay-rule[^"]*"/g) ?? []).length;

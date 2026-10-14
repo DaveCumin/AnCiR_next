@@ -18,11 +18,15 @@
 <script>
 	import { area, line as d3line } from 'd3-shape';
 
-	let { overlay, geometry, xscale, yscale, xoffset = 0, yoffset = 0 } = $props();
+	// `clipPrefix` makes the clip-path id unique in the document (an overlay passes its plot
+	// and overlay ids; see plotbits/overlayDisplay.js).
+	let { overlay, geometry, xscale, yscale, xoffset = 0, yoffset = 0, clipPrefix = '' } = $props();
 
 	let width = $derived(xscale.range()[1]);
 	let height = $derived(yscale.range()[0]);
-	let clipKey = $derived(`band-${overlay?.id ?? 0}-${xoffset}-${yoffset}-${width}-${height}`);
+	let clipKey = $derived(
+		`${clipPrefix}band-${overlay?.id ?? 0}-${xoffset}-${yoffset}-${width}-${height}`
+	);
 
 	const finite = (v) => typeof v === 'number' && Number.isFinite(v);
 

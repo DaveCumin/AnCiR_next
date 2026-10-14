@@ -90,6 +90,7 @@
 	} from './nodeGeometry.js';
 	import { buildNodeLayout, nodeLayoutMatches, parseNodeLayout } from './nodeLayoutIO.js';
 	import { settleBoxes, clearPlacementY } from './settleOverlaps.js';
+	import { computeNodeLayers } from './nodeLayers.js';
 
 	// `addDataPrompt`: +page asks for the empty-session prompt only once the start screen is out of
 	// the way (startVisibility.js), so the two never stack.
@@ -334,72 +335,7 @@
 		return map;
 	});
 
-	/**
-	 * Topological layer assignment via longest-path in the DAG.
-	 * Ensures every edge flows from a lower layer to a higher layer (left → right).
-	 */
-	function computeNodeLayers(nodes, edges) {
-		const nodeIds = new Set(nodes.map((n) => n.id));
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure graph algorithm inside computeNodeLayers(); built and consumed in this function, never read reactively
-		const adj = new Map();
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure graph algorithm inside computeNodeLayers(); built and consumed in this function, never read reactively
-		const inDeg = new Map();
-
-		for (const id of nodeIds) {
-			adj.set(id, []);
-			inDeg.set(id, 0);
-		}
-
-		for (const edge of edges) {
-			if (!nodeIds.has(edge.fromId) || !nodeIds.has(edge.toId)) continue;
-			adj.get(edge.fromId).push(edge.toId);
-			inDeg.set(edge.toId, inDeg.get(edge.toId) + 1);
-		}
-
-		// Kahn's topological sort
-		const topoOrder = [];
-		const queue = [];
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure graph algorithm inside computeNodeLayers(); built and consumed in this function, never read reactively
-		const tempInDeg = new Map(inDeg);
-
-		for (const [id, deg] of tempInDeg) {
-			if (deg === 0) queue.push(id);
-		}
-
-		while (queue.length > 0) {
-			const current = queue.shift();
-			topoOrder.push(current);
-			for (const next of adj.get(current) || []) {
-				tempInDeg.set(next, tempInDeg.get(next) - 1);
-				if (tempInDeg.get(next) === 0) queue.push(next);
-			}
-		}
-
-		// Handle any nodes not reached (cycles / disconnected)
-		const processed = new Set(topoOrder);
-		for (const id of nodeIds) {
-			if (!processed.has(id)) topoOrder.push(id);
-		}
-
-		// Longest-path layer assignment
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure graph algorithm inside computeNodeLayers(); built and consumed in this function, never read reactively
-		const layer = new Map();
-		for (const id of topoOrder) {
-			if (!layer.has(id)) layer.set(id, 0);
-			for (const next of adj.get(id) || []) {
-				const newLayer = layer.get(id) + 1;
-				if (!layer.has(next) || newLayer > layer.get(next)) {
-					layer.set(next, newLayer);
-				}
-			}
-		}
-
-		for (const id of nodeIds) {
-			if (!layer.has(id)) layer.set(id, 0);
-		}
-
-		return layer;
-	}
+	// Topological layer assignment (longest path; self-edges ignored): nodeLayers.js.
 
 	// Compute default positions based on topological layers (all edges flow left → right)
 	const defaultPositions = $derived.by(() => {
@@ -718,7 +654,10 @@
 					to: {
 						x: toPos.x,
 						y: toPos.y + getPortAnchorY(toNode, edge.toPort, 'in')
-					}
+					},
+					// A node wired to itself (a plot metric driving its own overlay) loops over
+					// its top edge instead of cutting through it (edgePath.js).
+					...(edge.fromId === edge.toId ? { loopTop: fromPos.y } : {})
 				}
 			];
 		});
@@ -1906,7 +1845,10 @@
 								!edge.from ||
 								!edge.to ||
 								edge.fromId === draggedNode.id ||
-								edge.toId === draggedNode.id
+								edge.toId === draggedNode.id ||
+								// A self-loop's from/to box is the node it loops over, so dragging
+								// anything over that node would offer to splice into it.
+								edge.fromId === edge.toId
 							)
 								continue;
 							const ex1 = Math.min(edge.from.x, edge.to.x) - pad;

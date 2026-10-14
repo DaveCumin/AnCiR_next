@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.0",
+  "generatedFromVersion": "β.82.1",
   "count": 61,
   "nodes": [
     {
@@ -165,7 +165,7 @@
       "displayName": "Correlogram",
       "kind": "plot",
       "family": "Plots",
-      "description": "Autocorrelation / cross-correlation plot.",
+      "description": "Autocorrelation / cross-correlation plot, with reference lines and shaded bands (wired or typed) from its Overlays tab.",
       "keywords": [
         "autocorrelation",
         "acf",
@@ -365,7 +365,7 @@
       "displayName": "Periodogram",
       "kind": "plot",
       "family": "Plots",
-      "description": "Periodogram (Lomb-Scargle / chi-squared) of a time-series.",
+      "description": "Periodogram (Lomb-Scargle / chi-squared) of a time-series, with reference lines and shaded bands (wired or typed) from its Overlays tab, e.g. a line at 24 h or at its own peak_period, or a 20 to 28 h band.",
       "keywords": [
         "spectrum",
         "period",

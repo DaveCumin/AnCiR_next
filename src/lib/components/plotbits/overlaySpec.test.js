@@ -21,6 +21,7 @@ import {
 	defaultFormFor,
 	coerceForm,
 	capabilitiesOf,
+	overlayDomainAxes,
 	describeOverlayForms,
 	normalizeOverlaySpecs,
 	overlayColumnIds,
@@ -93,7 +94,17 @@ describe('capabilities', () => {
 		expect(allowedForms(ALL_OVERLAY_FORMS, 'band')).toEqual(FORMS.band);
 		expect(ALL_OVERLAY_FORMS.legend).toBe(true);
 		expect(ALL_OVERLAY_FORMS.xTime).toBe(true);
+		expect(ALL_OVERLAY_FORMS.domain).toEqual(['x', 'y']);
 		expect(Object.isFrozen(ALL_OVERLAY_FORMS)).toBe(true);
+	});
+
+	it('overlayDomainAxes: the axes a host widens for overlays (both when it does not say)', () => {
+		expect(overlayDomainAxes(ALL_OVERLAY_FORMS)).toEqual(['x', 'y']);
+		expect(overlayDomainAxes({ line: ['vertical'], domain: ['y'] })).toEqual(['y']);
+		expect(overlayDomainAxes({ line: ['vertical'], domain: [] })).toEqual([]);
+		expect(overlayDomainAxes({ line: ['vertical'], domain: ['z', 'y'] })).toEqual(['y']);
+		expect(overlayDomainAxes({ line: ['vertical'] })).toEqual(['x', 'y']);
+		expect(overlayDomainAxes(null)).toEqual(['x', 'y']);
 	});
 
 	it("a host's list restricts the forms, keeps the host's order, and drops unknown forms", () => {
@@ -209,6 +220,19 @@ describe('normalizeOverlaySpecs', () => {
 				LINES_ONLY
 			)
 		).toThrow('overlays[1].kind must be one of line (got "band").');
+	});
+
+	it('with a plot name, the kind and form errors say which plot refused them', () => {
+		expect(() =>
+			normalizeOverlaySpecs([{ kind: 'line', form: 'vertical' }], resolveCol, H_ONLY, {
+				plot: 'boxplot'
+			})
+		).toThrow(
+			'overlays[0].form for a line on a boxplot must be one of horizontal (got "vertical").'
+		);
+		expect(() =>
+			normalizeOverlaySpecs([{ kind: 'band' }], resolveCol, LINES_ONLY, { plot: 'cwt' })
+		).toThrow('overlays[0].kind on a cwt must be one of line (got "band").');
 	});
 
 	it('channel errors and the multi-column `at` split are unchanged', () => {
