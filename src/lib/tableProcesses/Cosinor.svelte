@@ -797,10 +797,7 @@
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 	import { useNodeResultTables } from '$lib/core/nodeResultTables.svelte.js';
-	import {
-		permutationResultTable,
-		permutationTableTitle
-	} from '$lib/tableProcesses/permutationSupport.js';
+	import { permutationResultTableSpec } from '$lib/tableProcesses/permutationSupport.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
 	import { createComputeRunner, computeErrorMessage } from '$lib/core/asyncCompute.js';
@@ -1104,10 +1101,7 @@
 	// permutations") open; see core/nodeResultTables.
 	useNodeResultTables(() => `tableprocess_${p.id}`, {
 		stats: { title: 'Cosinor stats', get: getCosinorStatsData },
-		permutations: {
-			title: permutationTableTitle('Cosinor'),
-			get: () => permutationResultTable(permEntries)
-		}
+		permutations: permutationResultTableSpec('Cosinor', () => permEntries)
 	});
 </script>
 

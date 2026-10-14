@@ -3,7 +3,9 @@
 // Correlogram / Q-Q): the stats each plot computes per series (spectral peaks,
 // or the Q-Q plot's probability-plot correlation), exposed as real columns
 // (one value per series, in plot-data order) so they can be wired downstream
-// exactly like a table process's metric ports.
+// exactly like a table process's metric ports. A Table showing a node's result
+// table uses the same machinery for WHOLE columns (`columnsFor` in
+// plotMetricDefs.js): one port per column the node declares.
 //
 // The columns are tracked in `plot.metricOut` ({ key → colId }, persisted with
 // the session). Reconcile + writes are driven by EACH PLOT COMPONENT's own
@@ -37,7 +39,11 @@ import { PLOT_METRIC_DEFS, plotMetricKeys, plotMetricColumnName } from './plotMe
 
 export * from './plotMetricDefs.js';
 
-/** Whether a plot type has metric output columns (Periodogram, FFT, Correlogram, Q-Q, Actogram). */
+/**
+ * Whether a plot type has metric output columns (Periodogram, FFT, Correlogram, Q-Q, Actogram,
+ * Table). For one plot, whether it has outputs to keep current is `plotHasOutputs(plot)`: a
+ * Table only has any in Node results mode, for a result table that declares outputs.
+ */
 export function hasPlotMetrics(type) {
 	return PLOT_METRIC_DEFS[type] != null;
 }
@@ -78,6 +84,10 @@ export function plotMetricStats(plot) {
  */
 export function syncPlotMetricColumns(plot) {
 	if (!plot.metricOut || typeof plot.metricOut !== 'object') plot.metricOut = {};
+	// Keys that cannot be known right now (a node-results Table whose node is not mounted)
+	// are not "no keys": deleting the columns would strand every wire on them.
+	const def = PLOT_METRIC_DEFS[plot.type];
+	if (typeof def?.keysKnown === 'function' && !def.keysKnown(plot.plot)) return false;
 	// Plain array (a handful of keys, local + throwaway — not reactive state).
 	const desired = isMetricPlot(plot) ? plotMetricKeys(plot) : [];
 	let changed = false;
@@ -107,11 +117,37 @@ export function syncPlotMetricColumns(plot) {
 	return changed;
 }
 
-/** Write the current stats into the plot's metric columns (one value per series). */
-export function writePlotMetricOutputs(plot, statsBySeries = plotMetricStats(plot)) {
+/**
+ * The values a plot's output columns should hold now (reactive): one entry per series from
+ * `statsFor`, or, for a def with `columnsFor` (a node-results Table), whole columns
+ * `{ [key]: { data, type } }` or null when there is nothing to write yet.
+ */
+export function plotMetricValues(plot) {
+	const def = PLOT_METRIC_DEFS[plot?.type];
+	if (typeof def?.columnsFor === 'function') return def.columnsFor(plot);
+	return plotMetricStats(plot);
+}
+
+/**
+ * Write the current values into the plot's metric columns: one value per series, or whole
+ * columns for a def with `columnsFor`. `values` defaults to plotMetricValues(plot).
+ */
+export function writePlotMetricOutputs(plot, values = plotMetricValues(plot)) {
 	const def = PLOT_METRIC_DEFS[plot?.type];
 	if (!def) return;
+	if (typeof def.keysKnown === 'function' && !def.keysKnown(plot.plot)) return;
 	const processHash = crypto.randomUUID();
+	if (typeof def.columnsFor === 'function') {
+		if (!values) return;
+		for (const key of plotMetricKeys(plot)) {
+			writeOutputColumn(plot.metricOut?.[key], values[key]?.data ?? [], {
+				type: values[key]?.type ?? 'number',
+				processHash
+			});
+		}
+		return;
+	}
+	const statsBySeries = values;
 	for (const key of plotMetricKeys(plot)) {
 		writeOutputColumn(
 			plot.metricOut?.[key],
@@ -144,15 +180,20 @@ export function usePlotMetricOutputs(getPlot, isActive) {
 		if (!isActive()) return;
 		const plot = getPlot();
 		if (!isMetricPlot(plot)) return;
-		// Track: per-series stats (already memoised by the data classes'
-		// deriveds) + the series list itself.
-		const stats = plotMetricStats(plot);
-		const snapshot = JSON.stringify(stats);
+		// Keys that come from outside the plot and are unknown right now: leave the columns
+		// as they are (tracked, so the effect re-runs once they are known).
+		const def = PLOT_METRIC_DEFS[plot.type];
+		if (typeof def.keysKnown === 'function' && !def.keysKnown(plot.plot)) return;
+		// Track: the keys, and the values (per-series stats, already memoised by the data
+		// classes' deriveds, plus the series list itself; or a Table's whole columns).
+		const keys = plotMetricKeys(plot);
+		const values = plotMetricValues(plot);
+		const snapshot = JSON.stringify([keys, values]);
 		queueMicrotask(() => {
 			const columnsChanged = syncPlotMetricColumns(plot);
 			if (!columnsChanged && _lastWrittenStats.get(plot) === snapshot) return;
 			_lastWrittenStats.set(plot, snapshot);
-			writePlotMetricOutputs(plot, stats);
+			if (values != null) writePlotMetricOutputs(plot, values);
 		});
 	});
 }

@@ -11,7 +11,7 @@
 	import { formatDateTime } from '$lib/utils/time/displayTime.js';
 	import { isBlankEntry } from '$lib/utils/cellEntry.js';
 	import { resolvePlotRef } from '$lib/core/plotRefs.js';
-	import { readNodeResultTable } from '$lib/core/nodeResultTables.svelte.js';
+	import { readNodeResultTable, readNodeResultOutputs } from '$lib/core/nodeResultTables.svelte.js';
 	import { TABLE_SOURCES, normaliseTableSource, normaliseRowTable } from './tableSource.js';
 
 	export const Tableplot_defaultDataInputs = [];
@@ -144,6 +144,20 @@
 			}
 			return null;
 		});
+
+		/**
+		 * The output ports this Table offers, as `[{ key, type, label }]`: the columns the
+		 * source node DECLARES for the result table shown (the permutations table's series,
+		 * permutation and permuted_statistic), [] outside Node results or for a table that
+		 * declares none (View stats), and null while no mounted instance of the node publishes
+		 * the table (a hand-over between its instances, a reload, a deleted node). Null means
+		 * UNKNOWN, so the output columns are left as they are (plotMetricDefs.js `tableplot`).
+		 */
+		outputDecl = $derived.by(() =>
+			this.source === 'node'
+				? readNodeResultOutputs(this.parentBox?.sourceNodeId ?? null, this.resultKey)
+				: []
+		);
 
 		/**
 		 * Switch where the rows come from. Leaving Columns mode drops the wired columns (and a
@@ -284,8 +298,17 @@
 		publishingNodeIds
 	} from '$lib/core/nodeResultTables.svelte.js';
 	import { tableSourceOf, TABLE_SOURCE_LABELS } from './tableSource.js';
+	import { usePlotMetricOutputs, ownsPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
 
 	let { theData, which } = $props();
+
+	// Output ports of a Node-results Table (plotMetricDefs.js `tableplot`): the on-screen
+	// instance, or the hidden `which="compute"` one NodeComputeHost mounts while the Table is
+	// off screen, keeps the declared output columns equal to the rows the Table shows.
+	usePlotMetricOutputs(
+		() => theData,
+		() => ownsPlotMetrics(which)
+	);
 
 	// ── Source controls (the panel; `theData` there is the inner Tableplotclass) ──────────
 	// Each change is one undoable step (recordGraphMutation captures the inner object and the
@@ -1135,6 +1158,8 @@
 {:else if which === 'controls'}
 	{@render controls(theData)}
 {/if}
+
+<!-- which === 'compute' (NodeComputeHost): renders nothing; only the output hook above runs. -->
 
 <style>
 	.tableplot-layout {

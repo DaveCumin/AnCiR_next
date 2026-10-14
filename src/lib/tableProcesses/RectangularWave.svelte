@@ -362,10 +362,7 @@
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 	import { useNodeResultTables } from '$lib/core/nodeResultTables.svelte.js';
-	import {
-		permutationResultTable,
-		permutationTableTitle
-	} from '$lib/tableProcesses/permutationSupport.js';
+	import { permutationResultTableSpec } from '$lib/tableProcesses/permutationSupport.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -651,10 +648,7 @@
 	// permutations") open; see core/nodeResultTables.
 	useNodeResultTables(() => `tableprocess_${p.id}`, {
 		stats: { title: 'Rectangular wave stats', get: getRwaveStatsData },
-		permutations: {
-			title: permutationTableTitle('Rectangular wave'),
-			get: () => permutationResultTable(permEntries)
-		}
+		permutations: permutationResultTableSpec('Rectangular wave', () => permEntries)
 	});
 </script>
 

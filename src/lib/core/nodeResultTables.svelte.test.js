@@ -8,7 +8,8 @@ import {
 	listNodeResultTables,
 	nodeResultTableTitle,
 	publishingNodeIds,
-	clearNodeResultTables
+	clearNodeResultTables,
+	readNodeResultOutputs
 } from './nodeResultTables.svelte.js';
 import { resetSession } from './sessionLoad.svelte.js';
 
@@ -114,5 +115,39 @@ describe('node result tables registry', () => {
 		});
 		resetSession();
 		expect(publishingNodeIds()).toEqual([]);
+	});
+
+	it('declared outputs: the list when a node publishes the table, null when nobody does', () => {
+		const outputs = [
+			{ key: 'series', type: 'category' },
+			{ key: 'permuted_statistic', type: 'number' }
+		];
+		registerNodeResultTables('tableprocess_1', {
+			stats: { title: 'S', get: () => table(['a'], []) },
+			// Declared whether or not a result exists yet: ports must not wait for a run.
+			permutations: { title: 'P', get: () => null, outputs }
+		});
+		expect(readNodeResultOutputs('tableprocess_1', 'permutations')).toEqual(
+			outputs.map((o) => ({ ...o, label: o.key }))
+		);
+		// A table published without outputs declares none (an empty list, not "unknown").
+		expect(readNodeResultOutputs('tableprocess_1', 'stats')).toEqual([]);
+		// Nobody publishes it (node gone, not mounted yet, unknown key): unknown.
+		expect(readNodeResultOutputs('tableprocess_1', 'posthoc')).toBeNull();
+		expect(readNodeResultOutputs('tableprocess_2', 'permutations')).toBeNull();
+		expect(readNodeResultOutputs(null, 'permutations')).toBeNull();
+		expect(readNodeResultOutputs('tableprocess_1', null)).toBeNull();
+	});
+
+	it('declared outputs are copies, normalised, and drop malformed entries', () => {
+		const outputs = [{ key: 'a', type: 'category', label: 'A' }, { key: 'b' }, { type: 'x' }, null];
+		registerNodeResultTables('tableprocess_1', { t: { title: 'T', get: () => null, outputs } });
+		const got = readNodeResultOutputs('tableprocess_1', 't');
+		expect(got).toEqual([
+			{ key: 'a', type: 'category', label: 'A' },
+			{ key: 'b', type: 'number', label: 'b' }
+		]);
+		got[0].key = 'changed';
+		expect(outputs[0].key).toBe('a');
 	});
 });

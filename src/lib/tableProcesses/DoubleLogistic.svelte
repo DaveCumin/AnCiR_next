@@ -344,10 +344,7 @@
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 	import { useNodeResultTables } from '$lib/core/nodeResultTables.svelte.js';
-	import {
-		permutationResultTable,
-		permutationTableTitle
-	} from '$lib/tableProcesses/permutationSupport.js';
+	import { permutationResultTableSpec } from '$lib/tableProcesses/permutationSupport.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -637,10 +634,7 @@
 	// permutations") open; see core/nodeResultTables.
 	useNodeResultTables(() => `tableprocess_${p.id}`, {
 		stats: { title: 'Double logistic stats', get: getDlogStatsData },
-		permutations: {
-			title: permutationTableTitle('Double logistic'),
-			get: () => permutationResultTable(permEntries)
-		}
+		permutations: permutationResultTableSpec('Double logistic', () => permEntries)
 	});
 </script>
 

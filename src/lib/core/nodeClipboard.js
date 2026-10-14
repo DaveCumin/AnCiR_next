@@ -49,6 +49,28 @@ export function isConfigEntry(entry) {
 	return true;
 }
 
+/**
+ * Strip every column reference from a cloned plot payload so the pasted plot lands with no
+ * wires and no outputs of its own yet. For non-tableplot plots we drop the data array entirely
+ * (each entry is a wire pair); tableplots clear columnRefs.
+ *
+ * The output-column map (`metricOut`, { key: colId }) goes too: kept, the copy would find the
+ * ORIGINAL's columns alive, keep them and write its own values into them, so the original's
+ * ports would show the copy's results. Without it the copy's metric hook mints fresh columns.
+ * Applied at copy time and again at paste time (an envelope from an older build still has it).
+ */
+export function clearPlotInputs(plotData) {
+	if (!plotData) return plotData;
+	const out = { ...plotData };
+	delete out.metricOut;
+	if (out.type === 'tableplot') {
+		out.plot = { ...(out.plot ?? {}), columnRefs: [] };
+	} else {
+		out.plot = { ...(out.plot ?? {}), data: [] };
+	}
+	return out;
+}
+
 /** Split a selection into what may cross tabs and what may not. */
 export function partitionEntries(entries) {
 	const config = [];

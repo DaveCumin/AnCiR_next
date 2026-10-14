@@ -21,7 +21,13 @@ const registry = new SvelteMap();
 
 /**
  * Publish `tables` for `nodeId` until the returned function is called.
- * `tables` is `{ [key]: { title: string, get: () => ({ headers, rows }) } }`.
+ * `tables` is `{ [key]: { title: string, get: () => ({ headers, rows }), outputs? } }`.
+ *
+ * `outputs` (optional) declares which of the table's columns a Table showing it offers as
+ * output ports: `[{ key, type?, label? }]`, where `key` is the header the column is read
+ * from, `type` the output column's type ('number' by default, 'category' for labels) and
+ * `label` the port's text (the key by default). Declared by the node, never derived from
+ * the headers, so a header that comes and goes cannot re-mint a column and strand its wires.
  */
 export function registerNodeResultTables(nodeId, tables) {
 	const reg = { tables };
@@ -40,8 +46,14 @@ export function registerNodeResultTables(nodeId, tables) {
  * `useNodeResultTables(() => \`tableprocess_${p.id}\`, { stats: { title, get } })`.
  */
 export function useNodeResultTables(getNodeId, tables) {
+	// Through a derived, so the registration follows the id STRING and nothing else. A hidden
+	// instance's `p` is read through NodeComputeHost's list entry, which is rebuilt whenever
+	// that list re-derives; reading `p.id` straight in the effect re-registered on every
+	// rebuild, and since a node-results Table's place in that list depends on this registry,
+	// each re-registration rebuilt the list again (effect_update_depth_exceeded).
+	const nodeId = $derived(getNodeId());
 	$effect(() => {
-		const id = getNodeId();
+		const id = nodeId;
 		if (id == null) return;
 		return registerNodeResultTables(id, tables);
 	});
@@ -67,6 +79,28 @@ export function readNodeResultTable(nodeId, key) {
 		if (Array.isArray(v?.headers) && v.headers.length > 0) {
 			return { headers: v.headers, rows: Array.isArray(v.rows) ? v.rows : [] };
 		}
+	}
+	return null;
+}
+
+/**
+ * The output ports one of a node's tables declares, as fresh `[{ key, type, label }]`: an
+ * empty list when the table is published without `outputs`, and null when no mounted
+ * instance publishes the table at all (the node is gone, or not mounted yet), which a Table
+ * must treat as UNKNOWN rather than as "no outputs". Reactive (reads the registry).
+ */
+export function readNodeResultOutputs(nodeId, key) {
+	if (nodeId == null || key == null) return null;
+	for (const reg of registry.get(nodeId) ?? []) {
+		const t = reg.tables?.[key];
+		if (!t) continue;
+		return (Array.isArray(t.outputs) ? t.outputs : [])
+			.filter((o) => typeof o?.key === 'string' && o.key !== '')
+			.map((o) => ({
+				key: o.key,
+				type: typeof o.type === 'string' ? o.type : 'number',
+				label: typeof o.label === 'string' ? o.label : o.key
+			}));
 	}
 	return null;
 }

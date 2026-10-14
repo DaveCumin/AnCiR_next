@@ -70,6 +70,34 @@ export function permutationResultTable(entries) {
 }
 
 /**
+ * The columns of the permutations table a Table showing it offers as output ports (decision
+ * Q2 of the "fold Data View into Table" plan): the series, the permutation number and the
+ * permuted statistic, one row per permutation. `observed_statistic` and `p_value` are NOT
+ * outputs: they repeat on every row, and each is already one value per series on the node's
+ * own ports (the R² port and `perm_pvalue`). `statistic` and `scheme` are constant labels. The
+ * table itself (display and CSV) keeps every column.
+ */
+export const PERMUTATION_TABLE_OUTPUTS = Object.freeze([
+	Object.freeze({ key: 'series', type: 'category' }),
+	Object.freeze({ key: 'permutation', type: 'number' }),
+	Object.freeze({ key: 'permuted_statistic', type: 'number' })
+]);
+
+/**
+ * A node's `permutations` entry for useNodeResultTables: its title, the live rows (null until
+ * a series carries a distribution) and the declared output ports.
+ * @param {string} label  the node's label, e.g. 'Cosinor'
+ * @param {() => Array<{name:string, result:object}>} getEntries  one per y series
+ */
+export function permutationResultTableSpec(label, getEntries) {
+	return {
+		title: permutationTableTitle(label),
+		get: () => permutationResultTable(getEntries()),
+		outputs: PERMUTATION_TABLE_OUTPUTS
+	};
+}
+
+/**
  * Copy the permutation outcome off a fitPermutationPValue() result onto a y result, under the
  * names the panels and permutationTableData read. Keeps the three fit nodes in step.
  * @param {object} target  the y result object to annotate (mutated)

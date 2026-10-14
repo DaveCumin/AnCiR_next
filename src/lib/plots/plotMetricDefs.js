@@ -1,6 +1,6 @@
 // @ts-nocheck
 // The DEFINITIONS of the plots' metric output ports (Periodogram, FFT, Correlogram, Q-Q,
-// Actogram): which keys a plot carries, what each port is called, what each column is named,
+// Actogram, and a Table showing a node's results): which keys a plot carries, what each port is called, what each column is named,
 // what the manifest says, and how a series' values are read. Pure data and duck-typed reads,
 // with NO imports, so the workflow graph (ProcessNode.svelte.js, which core.svelte.js
 // imports), the node manifest and the MCP schema generator can all use it without an import
@@ -79,6 +79,32 @@ function ruleBlockFor(datum, ruleId) {
 
 const ruleOf = (inner, ruleId) => (inner?.markerRules ?? []).find((r) => r.id === ruleId) ?? null;
 
+// ---------------------------------------------------------------------------
+// Table in "Node results" mode (plan 2026-10-15 "fold Data View into Table", step 2). The
+// node that publishes the result table DECLARES which of its columns are outputs
+// (core/nodeResultTables `outputs`); the Table reads that declaration into its `outputDecl`
+// ([{ key, type, label }], [] outside Node results, null while no mounted instance of the
+// node publishes the table). Keys are the declared header names, never the headers seen, so
+// a header that comes and goes cannot re-mint a column; and an UNKNOWN declaration (the node
+// briefly unmounted, or gone) leaves the columns alone instead of reading as "no outputs".
+// ---------------------------------------------------------------------------
+
+/** A Table's declared outputs, or null while unknown. */
+const tableOutputsOf = (inner) => (Array.isArray(inner?.outputDecl) ? inner.outputDecl : null);
+
+/** One table column as an output column's data: numbers stay numbers, labels become text. */
+function tableColumnData(rows, index, type) {
+	if (index < 0) return [];
+	return rows.map((r) => {
+		const v = Array.isArray(r) ? r[index] : undefined;
+		if (type === 'number') {
+			if (typeof v === 'number') return v;
+			return v == null || v === '' ? NaN : Number(v);
+		}
+		return v == null ? '' : String(v);
+	});
+}
+
 /**
  * Per-plot-type metric definitions. `statsFor(datum)` reads the same deriveds
  * the plot's stats panel shows (visiblePeak preferred, matching the display
@@ -91,6 +117,14 @@ const ruleOf = (inner, ruleId) => (inner?.markerRules ?? []).find((r) => r.id ==
  *   columnNameFor(inner, key, plotId) the column's name (default: `${key}_${plotId}`)
  *   manifest                          nodes.json / MCP output entries for a dynamic def
  *                                     (default: one entry per static key)
+ *   keysKnown(inner)                  false while the keys cannot be known (they come from
+ *                                     outside the plot): the columns are then left exactly
+ *                                     as they are, never synced or written (default: true)
+ *   columnsFor(plot)                  WHOLE columns instead of one value per series:
+ *                                     `{ [key]: { data, type } }`, or null when there is
+ *                                     nothing to write yet (replaces statsFor)
+ *   portKind                          'column' for plain output ports; the default is a
+ *                                     metric port (one value per series, drawn hollow)
  */
 export const PLOT_METRIC_DEFS = {
 	periodogram: {
@@ -181,6 +215,47 @@ export const PLOT_METRIC_DEFS = {
 			dynamicSuffix: `_${s}`,
 			per: 'marker rule'
 		}))
+	},
+	// A Table showing a node's result table: one port per column the node declares (today the
+	// permutations table's series, permutation and permuted_statistic). "View stats" tables
+	// declare none, and plot-data and Columns Tables have none (outputDecl is []).
+	tableplot: {
+		keysFor(inner) {
+			return (tableOutputsOf(inner) ?? []).map((o) => o.key);
+		},
+		keysKnown(inner) {
+			return tableOutputsOf(inner) != null;
+		},
+		labelFor(inner, key) {
+			return tableOutputsOf(inner)?.find((o) => o.key === key)?.label ?? key;
+		},
+		// Named by the result table, not the Table's title, so renaming the Table never leaves
+		// a column carrying an old name: 'permutations_permuted_statistic_7'.
+		columnNameFor(inner, key, plotId) {
+			const table =
+				typeof inner?.resultKey === 'string' && inner.resultKey ? inner.resultKey : 'result';
+			return `${table}_${key}_${plotId}`;
+		},
+		columnsFor(plot) {
+			const inner = plot?.plot;
+			const decl = tableOutputsOf(inner);
+			if (!decl) return null;
+			if (decl.length === 0) return {};
+			// The rows the Table shows: the node's live table, else its snapshot.
+			const view = inner.view;
+			const headers = Array.isArray(view?.headers) ? view.headers : [];
+			if (headers.length === 0) return null;
+			const rows = Array.isArray(view?.rows) ? view.rows : [];
+			const out = {};
+			for (const o of decl) {
+				out[o.key] = { type: o.type, data: tableColumnData(rows, headers.indexOf(o.key), o.type) };
+			}
+			return out;
+		},
+		// Whole columns, not one value per series.
+		portKind: 'column',
+		// The engine (MCP drafts, exports) cannot make a node-results Table, so no entry.
+		manifest: []
 	}
 };
 
@@ -192,6 +267,25 @@ export function plotMetricKeys(plot) {
 	const def = PLOT_METRIC_DEFS[plot?.type];
 	if (!def) return [];
 	return typeof def.keysFor === 'function' ? def.keysFor(plot.plot) : def.keys;
+}
+
+/**
+ * Whether a plot's output columns need its component computing when it is off screen (the
+ * compute host's test). Every plot of a type with static keys does. A type whose keys come
+ * from outside the plot (a node-results Table) only while its keys are known and it has
+ * outputs to keep current, or old columns to remove.
+ */
+export function plotHasOutputs(plot) {
+	const def = PLOT_METRIC_DEFS[plot?.type];
+	if (!def) return false;
+	if (typeof def.keysKnown !== 'function') return true;
+	if (!def.keysKnown(plot.plot)) return false;
+	return plotMetricKeys(plot).length > 0 || Object.keys(plot.metricOut ?? {}).length > 0;
+}
+
+/** Whether a plot type's output ports are metric ports (one value per series) or plain ones. */
+export function plotOutputsAreMetric(type) {
+	return PLOT_METRIC_DEFS[type]?.portKind !== 'column';
 }
 
 /** The node port's display text for one metric key (e.g. 'Onsets τ (h)'). */

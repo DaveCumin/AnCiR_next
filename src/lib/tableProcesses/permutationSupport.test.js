@@ -6,7 +6,9 @@ import {
 	hasPermutationDetail,
 	permutationTableData,
 	permutationValidityWarnings,
-	permutationSchemeLabel
+	permutationSchemeLabel,
+	PERMUTATION_TABLE_OUTPUTS,
+	permutationResultTableSpec
 } from '$lib/tableProcesses/permutationSupport.js';
 
 const perm = {
@@ -144,5 +146,30 @@ describe('permutationSchemeLabel', () => {
 			'one-period blocks of 24 samples'
 		);
 		expect(permutationSchemeLabel({})).toBe('single values shuffled');
+	});
+});
+
+describe('the permutations result table a node publishes', () => {
+	it('declares only series, permutation and permuted_statistic as outputs (decision Q2)', () => {
+		// The observed statistic and the p-value repeat on every row and are already one value
+		// per series on the node's own ports (R² and perm_pvalue), so they are not outputs.
+		expect(PERMUTATION_TABLE_OUTPUTS.map((o) => [o.key, o.type])).toEqual([
+			['series', 'category'],
+			['permutation', 'number'],
+			['permuted_statistic', 'number']
+		]);
+		// Every declared key is a header of the table, so the Table can read its column.
+		const { headers } = permutationTableData([{ name: 'a', result: { permStats: [0.1] } }]);
+		for (const o of PERMUTATION_TABLE_OUTPUTS) expect(headers).toContain(o.key);
+	});
+
+	it('the spec carries the title, the live rows and the declared outputs', () => {
+		let entries = [];
+		const spec = permutationResultTableSpec('Cosinor', () => entries);
+		expect(spec.title).toBe('Cosinor: permutations');
+		expect(spec.outputs).toBe(PERMUTATION_TABLE_OUTPUTS);
+		expect(spec.get()).toBeNull();
+		entries = [{ name: 'a', result: { permStats: [0.1, 0.2], observedStat: 0.9, pValue: 0.3 } }];
+		expect(spec.get().rows).toHaveLength(2);
 	});
 });

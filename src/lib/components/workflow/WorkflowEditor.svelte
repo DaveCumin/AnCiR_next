@@ -25,7 +25,8 @@
 		encodeEnvelope,
 		parseEnvelope,
 		partitionEntries,
-		writeToSystemClipboard
+		writeToSystemClipboard,
+		clearPlotInputs
 	} from '$lib/core/nodeClipboard.js';
 	import { reconcileOutputs } from '$lib/core/reconcileOutputs.js';
 	import { computeInterface, flattenMembers } from '$lib/core/composite.js';
@@ -3633,21 +3634,6 @@
 		return out;
 	}
 
-	/** Strip every incoming column-ref from a cloned plot payload so the
-	 *  pasted plot lands with no wires. For non-tableplot plots we drop the
-	 *  data array entirely (each entry is a wire pair); tableplots clear
-	 *  columnRefs. */
-	function clearPlotInputs(plotData) {
-		if (!plotData) return plotData;
-		const out = { ...plotData };
-		if (out.type === 'tableplot') {
-			out.plot = { ...(out.plot ?? {}), columnRefs: [] };
-		} else {
-			out.plot = { ...(out.plot ?? {}), data: [] };
-		}
-		return out;
-	}
-
 	/** Safely deep-clone Svelte $state-backed values via JSON, dropping any
 	 *  functions. structuredClone can throw on $state proxies in some Svelte 5
 	 *  versions, which would silently abort copy and leave the clipboard
@@ -3910,7 +3896,7 @@
 					_dbg('paste: addFreeTableProcess →', tp?.id ?? null);
 					if (tp) newCanvasId = `tableprocess_${tp.id}`;
 				} else if (entry.type === 'plot') {
-					const seed = { ...entry.plotData, x: newPos.x, y: newPos.y };
+					const seed = { ...clearPlotInputs(entry.plotData), x: newPos.x, y: newPos.y };
 					const plot = mutationService.addPlot(seed);
 					_dbg('paste: addPlot →', plot?.id ?? null);
 					if (plot) newCanvasId = `plot_${plot.id}`;

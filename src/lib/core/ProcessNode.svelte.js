@@ -4,7 +4,8 @@ import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 import {
 	plotMetricKeys,
 	plotMetricLabel,
-	plotMetricColumnName
+	plotMetricColumnName,
+	plotOutputsAreMetric
 } from '$lib/plots/plotMetricDefs.js';
 import { createColumnNamer } from './outputLabels.js';
 import { tableTakesColumns } from '$lib/plots/Tableplot/tableSource.js';
@@ -919,14 +920,17 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		// key the def no longer lists (stale until the next column sync drops it). Labelled by
 		// the def (`Onsets τ (h)`), so renaming a rule relabels its ports; the port id is the
 		// column id, which a rename never changes.
+		// A node-results Table's ports carry whole columns, so they are plain output ports
+		// (no '#', no "one value per series" tooltip, no stored-value tagging).
 		const metricOut = plot.metricOut ?? {};
+		const isMetric = plotOutputsAreMetric(plot.type);
 		const ordered = plotMetricKeys(plot).filter((k) => k in metricOut);
 		for (const k of Object.keys(metricOut)) if (!ordered.includes(k)) ordered.push(k);
 		for (const key of ordered) {
 			const colId = metricOut[key];
 			if (typeof colId !== 'number' || colId < 0) continue;
 			if (!(core.data ?? []).some((c) => c.id === colId)) continue;
-			const port = { ...makeNodePort(`col_${colId}`, 'output', 'column'), metric: true };
+			const port = { ...makeNodePort(`col_${colId}`, 'output', 'column'), metric: isMetric };
 			const col = (core.data ?? []).find((c) => c.id === colId);
 			const shown = displayName(col);
 			// A type with no label table keeps the def's text for its auto-named column.
@@ -935,7 +939,7 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 					? plotMetricLabel(plot, key)
 					: shown;
 			outputs.push(port);
-			outputColumns.push({ key, colId, port: `col_${colId}`, metric: true });
+			outputColumns.push({ key, colId, port: `col_${colId}`, metric: isMetric });
 		}
 
 		nodes.push(

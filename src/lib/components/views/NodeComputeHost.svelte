@@ -1,12 +1,12 @@
 <script module>
 	// @ts-nocheck
-	import { hasPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
+	import { plotHasOutputs } from '$lib/plots/plotMetricOutputs.svelte.js';
 	import { computeKey } from '$lib/core/computeOwners.svelte.js';
 
 	/**
 	 * Every node that computes inside its own component, as `{ key, kind, name, obj }`:
 	 * table processes, free and column-owned column processes, and plots that publish
-	 * metric output ports. Enumerated from core, NOT from the projected canvas graph: the
+	 * metric output ports (or, for a node-results Table, declared output ports). Enumerated from core, NOT from the projected canvas graph: the
 	 * graph drops the members of a collapsed composite, and those still have to compute.
 	 * Nodes with nothing to recompute (data, groups, notes, composites, plots without
 	 * metric outputs) are not listed.
@@ -34,7 +34,8 @@
 			out.push({ key: computeKey('process', p.id), kind: 'process', name: p.name, obj: p });
 		}
 		for (const plot of state?.plots ?? []) {
-			if (plot?.id == null || !hasPlotMetrics(plot.type)) continue;
+			// A metric plot always; a Table only in Node results mode with declared outputs.
+			if (plot?.id == null || !plotHasOutputs(plot)) continue;
 			out.push({ key: computeKey('plot', plot.id), kind: 'plot', name: plot.type, obj: plot });
 		}
 		return out;
