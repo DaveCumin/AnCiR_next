@@ -595,11 +595,21 @@ const meta = new Map([
 		'tableplot',
 		{
 			family: 'Plots',
-			keywords: ['grid', 'spreadsheet', 'values', 'summary', 'display'], // search-only synonyms; never rendered
+			keywords: [
+				'grid',
+				'spreadsheet',
+				'values',
+				'summary',
+				'display',
+				'data view',
+				'inspect',
+				'computed data'
+			], // search-only synonyms; never rendered
 			// Uses the (nicer) Data View glyph; the Table node supersedes the old
 			// Data View plot as the single tabular-display node.
 			nodeIcon: 'dataview',
-			description: 'Tabular display of a table or its summary statistics.'
+			description:
+				"Tabular display of wired columns, a plot's computed data, or an analysis node's results (stats, permutations)."
 		}
 	],
 	[

@@ -807,9 +807,10 @@
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import { onMount, untrack } from 'svelte';
 	import {
-		showStaticDataAsTable,
+		showNodeResultTable,
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { useNodeResultTables } from '$lib/core/nodeResultTables.svelte.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -1061,6 +1062,25 @@
 	let statsTableData = $derived.by(() => getStatsData());
 	let groupSummaryTableData = $derived.by(() => getGroupSummaryData());
 	let postHocTableData = $derived.by(() => getPostHocData());
+
+	function hasComparisons() {
+		return Object.keys(comparisonData?.comparisons ?? {}).length > 0;
+	}
+
+	// Publish this node's result tables live, for the Tables that "View stats" (and "View
+	// permutations") open; see core/nodeResultTables.
+	useNodeResultTables(() => `tableprocess_${p.id}`, {
+		// No tables until a comparison has run, so a reloaded Table keeps its snapshot meanwhile.
+		stats: {
+			title: 'Group comparison stats',
+			get: () => (hasComparisons() ? getStatsData() : null)
+		},
+		summary: {
+			title: 'Group summary',
+			get: () => (hasComparisons() ? getGroupSummaryData() : null)
+		},
+		posthoc: { title: 'Group post-hoc', get: () => (hasComparisons() ? getPostHocData() : null) }
+	});
 </script>
 
 <div style="display: block;">
@@ -1140,16 +1160,13 @@
 			<div class="tp-stat-actions">
 				<button
 					class="tp-stat-btn"
-					onclick={() => {
-						const { headers, rows } = getStatsData();
-						showStaticDataAsTable(
-							'Group comparison stats',
-							headers,
-							rows,
-							getStatsData,
-							`tableprocess_${p.id}`
-						);
-					}}
+					onclick={() =>
+						showNodeResultTable({
+							sourceNodeId: `tableprocess_${p.id}`,
+							resultKey: 'stats',
+							title: 'Group comparison stats',
+							get: getStatsData
+						})}
 				>
 					Open full table
 				</button>
@@ -1187,16 +1204,13 @@
 			<div class="tp-stat-actions">
 				<button
 					class="tp-stat-btn"
-					onclick={() => {
-						const { headers, rows } = getGroupSummaryData();
-						showStaticDataAsTable(
-							'Group summary',
-							headers,
-							rows,
-							getGroupSummaryData,
-							`tableprocess_${p.id}`
-						);
-					}}
+					onclick={() =>
+						showNodeResultTable({
+							sourceNodeId: `tableprocess_${p.id}`,
+							resultKey: 'summary',
+							title: 'Group summary',
+							get: getGroupSummaryData
+						})}
 				>
 					Open full table
 				</button>
@@ -1233,16 +1247,13 @@
 				<div class="tp-stat-actions">
 					<button
 						class="tp-stat-btn"
-						onclick={() => {
-							const { headers, rows } = getPostHocData();
-							showStaticDataAsTable(
-								'Group post-hoc',
-								headers,
-								rows,
-								getPostHocData,
-								`tableprocess_${p.id}`
-							);
-						}}
+						onclick={() =>
+							showNodeResultTable({
+								sourceNodeId: `tableprocess_${p.id}`,
+								resultKey: 'posthoc',
+								title: 'Group post-hoc',
+								get: getPostHocData
+							})}
 					>
 						Open full table
 					</button>

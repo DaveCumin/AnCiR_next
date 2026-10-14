@@ -324,9 +324,10 @@
 	import { useBinSizeAuto, stopFollowingSampling } from '$lib/tableProcesses/binSizeAuto.svelte.js';
 	import { periodInputProps } from '$lib/utils/periodUnits.js';
 	import {
-		showStaticDataAsTable,
+		showNodeResultTable,
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { useNodeResultTables } from '$lib/core/nodeResultTables.svelte.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import ErrorBox from '$lib/components/reusables/ErrorBox.svelte';
 	import { createComputeRunner } from '$lib/core/asyncCompute.js';
@@ -703,6 +704,13 @@
 		}
 		return { headers, rows };
 	}
+
+	// Publish this node's result tables live, for the Tables that "View stats" (and "View
+	// permutations") open; see core/nodeResultTables.
+	useNodeResultTables(() => `tableprocess_${p.id}`, {
+		// No rows until the analysis has run (the getter lists every y with empty stats).
+		stats: { title: 'Rhythmicity stats', get: () => (result ? getStatsData() : null) }
+	});
 </script>
 
 <!-- Input Section -->
@@ -890,16 +898,13 @@
 	<div class="tp-stat-actions">
 		<button
 			class="tp-stat-btn"
-			onclick={() => {
-				const { headers, rows } = getStatsData();
-				showStaticDataAsTable(
-					'Rhythmicity stats',
-					headers,
-					rows,
-					getStatsData,
-					`tableprocess_${p.id}`
-				);
-			}}>View stats</button
+			onclick={() =>
+				showNodeResultTable({
+					sourceNodeId: `tableprocess_${p.id}`,
+					resultKey: 'stats',
+					title: 'Rhythmicity stats',
+					get: getStatsData
+				})}>View stats</button
 		>
 		<button
 			class="tp-stat-btn"

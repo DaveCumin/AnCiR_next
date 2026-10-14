@@ -307,6 +307,9 @@
 		// analysis plots — see plots/plotMetricOutputs.js. Persisted so wiring
 		// from a plot's metric ports survives reload.
 		metricOut = $state({});
+		// The canvas node this plot was spawned from (quick plots, a Table showing a node's
+		// results), or null. Reactive because a Table can switch the node it reads in its panel.
+		sourceNodeId = $state(null);
 		// style — this figure's own copy of the figure style (typeface, base type
 		// size, physical width, export DPI, background, marker flags). See
 		// plots/figureStyle.js.

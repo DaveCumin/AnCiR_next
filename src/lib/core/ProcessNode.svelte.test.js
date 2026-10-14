@@ -540,6 +540,59 @@ describe('plot wiring edge cases', () => {
 	});
 });
 
+describe('Table source modes and viewer plots (no unused input ports)', () => {
+	const consts = () => {
+		const c = makeAppConsts();
+		c.plotMap.set('tableplot', { defaultInputs: [] });
+		c.plotMap.set('dataview', { defaultInputs: [] });
+		return c;
+	};
+	const portsOf = (graph, id) => graph.nodes.find((n) => n.id === id).ports;
+
+	it('a Columns-mode Table keeps its series port and passthroughs (absent source = columns)', () => {
+		const core = makeCore();
+		core.plots.push({ id: 70, type: 'tableplot', plot: { columnRefs: [100] } });
+		const graph = getCachedProcessNodeGraph(core, consts());
+		const ports = portsOf(graph, 'plot_70');
+		expect(ports.inputs.map((p) => p.name)).toEqual(['series']);
+		expect(ports.outputs.map((p) => p.name)).toEqual(['col_100']);
+		expect(graph.connections.filter((c) => c.toId === 'plot_70')).toHaveLength(1);
+	});
+
+	for (const source of ['plot', 'node']) {
+		it(`a Table in '${source}' mode has no input ports, no passthroughs and no wires`, () => {
+			const core = makeCore();
+			core.plots.push({
+				id: 71,
+				type: 'tableplot',
+				sourceNodeId: 'tableprocess_5',
+				// columnRefs left over on purpose: the mode, not the list, decides.
+				setRefs: { series: [5] },
+				plot: { source, columnRefs: [100], sourcePlotId: 3, resultKey: 'stats' }
+			});
+			const graph = getCachedProcessNodeGraph(core, consts());
+			const ports = portsOf(graph, 'plot_71');
+			expect(ports.inputs).toEqual([]);
+			expect(ports.outputs).toEqual([]);
+			expect(graph.connections.filter((c) => c.toId === 'plot_71')).toEqual([]);
+		});
+	}
+
+	it('a registered viewer with no default inputs (Data View) gets no x/y ports', () => {
+		const core = makeCore();
+		core.plots.push({ id: 72, type: 'dataview', plot: { sourcePlotId: null } });
+		const graph = getCachedProcessNodeGraph(core, consts());
+		expect(portsOf(graph, 'plot_72').inputs).toEqual([]);
+	});
+
+	it('an x/y plot still gets its trailing new-series pair', () => {
+		const core = makeCore();
+		core.plots.push({ id: 73, type: 'scatter', plot: { data: [] } });
+		const graph = getCachedProcessNodeGraph(core, consts());
+		expect(portsOf(graph, 'plot_73').inputs.map((p) => p.name)).toEqual(['x1', 'ys1']);
+	});
+});
+
 describe('process-chain + token-input wiring', () => {
 	it('chains data → process → process along a column', () => {
 		const core = makeCore();

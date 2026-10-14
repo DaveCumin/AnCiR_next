@@ -194,3 +194,21 @@ rewrites those shapes, so the tests read these copies instead of the shipped fil
   overlays migration).
 
 Do not hand-edit or regenerate them.
+
+# Legacy Data View session (hand-made, v81.15 step 1 of "fold Data View into Table")
+
+`dataview-legacy-handmade.json` is NOT a browser save. It is
+`static/sessions/demos/demo-tp-cosinor.json` (as shipped at v81.14) with three edits made by a
+script: `version` set to `β.81.13`, the Cosinor node's permutation test switched on
+(`permuteTest: true`, `nPermutations: 99`), and two Data View plots appended in the exact shape
+`DataView.toJSON` wrote:
+
+- plot 120, `Data: Cosinor: data + fit`: reactive (`sourceType: 'reactive'`,
+  `sourcePlotId: 110`), carrying the `staticHeaders`/`staticRows` copy every reactive view saved.
+- plot 121, `Cosinor stats`: static (`sourceType: 'static'`, `sourcePlotId: null`) with
+  `sourceNodeId: 'tableprocess_57'`, as "View stats" spawned it.
+
+Used by `src/lib/components/iconActions/importJson.dataViewLegacy.test.js` (Data View stays
+registered, so the session loads unchanged) and for checking that in the running app via
+`?loadFromURL=/@fs/<absolute path to this file>`. Step 3 of the plan replaces it with a real
+browser-saved v81.13 fixture (`dataview-v81.13.json`, plan section 5.3).

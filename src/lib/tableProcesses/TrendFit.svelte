@@ -384,9 +384,10 @@
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
 	import { onMount, untrack } from 'svelte';
 	import {
-		showStaticDataAsTable,
+		showNodeResultTable,
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { useNodeResultTables } from '$lib/core/nodeResultTables.svelte.js';
 	import { fitTrend } from '$lib/utils/trendfit.js';
 	import { recommendPermutations } from '$lib/utils/permutationTest.js';
 
@@ -833,6 +834,12 @@
 		});
 		return { headers, rows };
 	}
+
+	// Publish this node's result tables live, for the Tables that "View stats" (and "View
+	// permutations") open; see core/nodeResultTables.
+	useNodeResultTables(() => `tableprocess_${p.id}`, {
+		stats: { title: 'Trend fit stats', get: getTrendStatsData }
+	});
 </script>
 
 {#if !hideInputs}
@@ -1222,16 +1229,13 @@
 	<div class="tp-stat-actions">
 		<button
 			class="tp-stat-btn"
-			onclick={() => {
-				const { headers, rows } = getTrendStatsData();
-				showStaticDataAsTable(
-					'Trend fit stats',
-					headers,
-					rows,
-					getTrendStatsData,
-					`tableprocess_${p.id}`
-				);
-			}}>View stats</button
+			onclick={() =>
+				showNodeResultTable({
+					sourceNodeId: `tableprocess_${p.id}`,
+					resultKey: 'stats',
+					title: 'Trend fit stats',
+					get: getTrendStatsData
+				})}>View stats</button
 		>
 		<button
 			class="tp-stat-btn"

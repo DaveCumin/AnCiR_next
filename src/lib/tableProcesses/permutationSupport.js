@@ -55,6 +55,20 @@ export function permutationTableData(entries) {
 	return { headers, rows };
 }
 
+/** The title of a node's permutations table (the Table it spawns and its result-table list). */
+export function permutationTableTitle(label) {
+	return `${label}: permutations`;
+}
+
+/**
+ * The permutations table for a node's live result tables (core/nodeResultTables): the same
+ * rows as permutationTableData, or null while no series carries a retained distribution, so a
+ * Table showing it keeps its snapshot rather than going blank before the test has run.
+ */
+export function permutationResultTable(entries) {
+	return hasPermutationDetail(entries) ? permutationTableData(entries) : null;
+}
+
 /**
  * Copy the permutation outcome off a fitPermutationPValue() result onto a y result, under the
  * names the panels and permutationTableData read. Keeps the three fit nodes in step.

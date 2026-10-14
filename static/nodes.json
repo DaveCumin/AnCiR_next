@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.81.14",
+  "generatedFromVersion": "β.81.15",
   "count": 62,
   "nodes": [
     {
@@ -499,13 +499,16 @@
       "displayName": "Table",
       "kind": "plot",
       "family": "Plots",
-      "description": "Tabular display of a table or its summary statistics.",
+      "description": "Tabular display of wired columns, a plot's computed data, or an analysis node's results (stats, permutations).",
       "keywords": [
         "grid",
         "spreadsheet",
         "values",
         "summary",
-        "display"
+        "display",
+        "data view",
+        "inspect",
+        "computed data"
       ],
       "hideFromPalette": false,
       "inputs": [],

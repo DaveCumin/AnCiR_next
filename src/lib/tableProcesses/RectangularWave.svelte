@@ -358,9 +358,14 @@
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 	import {
-		showStaticDataAsTable,
+		showNodeResultTable,
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { useNodeResultTables } from '$lib/core/nodeResultTables.svelte.js';
+	import {
+		permutationResultTable,
+		permutationTableTitle
+	} from '$lib/tableProcesses/permutationSupport.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -641,6 +646,16 @@
 		});
 		return { headers, rows };
 	}
+
+	// Publish this node's result tables live, for the Tables that "View stats" (and "View
+	// permutations") open; see core/nodeResultTables.
+	useNodeResultTables(() => `tableprocess_${p.id}`, {
+		stats: { title: 'Rectangular wave stats', get: getRwaveStatsData },
+		permutations: {
+			title: permutationTableTitle('Rectangular wave'),
+			get: () => permutationResultTable(permEntries)
+		}
+	});
 </script>
 
 {#if !hideInputs}
@@ -1028,16 +1043,13 @@
 	<div class="tp-stat-actions">
 		<button
 			class="tp-stat-btn"
-			onclick={() => {
-				const { headers, rows } = getRwaveStatsData();
-				showStaticDataAsTable(
-					'Rectangular wave stats',
-					headers,
-					rows,
-					getRwaveStatsData,
-					`tableprocess_${p.id}`
-				);
-			}}>View stats</button
+			onclick={() =>
+				showNodeResultTable({
+					sourceNodeId: `tableprocess_${p.id}`,
+					resultKey: 'stats',
+					title: 'Rectangular wave stats',
+					get: getRwaveStatsData
+				})}>View stats</button
 		>
 		<button
 			class="tp-stat-btn"

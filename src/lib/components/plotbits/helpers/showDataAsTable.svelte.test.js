@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
-import { core, appConsts } from '$lib/core/core.svelte';
+import { core, appConsts, appState } from '$lib/core/core.svelte';
 import { loadPlots } from '$test/plotRegistry.js';
 import { showDataAsTable } from './save.svelte.js';
 
@@ -38,11 +38,25 @@ describe('showDataAsTable wiring (id vs index)', () => {
 
 		showDataAsTable(5); // callers always pass the plot id
 
-		// A new DataView plot should have been created pointing at id 5.
-		const dv = core.plots.find((p) => p.type === 'dataview');
-		expect(dv).toBeTruthy();
-		expect(dv.plot.sourcePlotId).toBe(5);
-		expect(dv.plot.headers.length).toBe(2);
-		expect(dv.plot.totalRows).toBe(2);
+		// A new Table in "Plot's computed data" mode should have been created pointing at id 5.
+		const t = core.plots.find((p) => p.type === 'tableplot');
+		expect(t).toBeTruthy();
+		expect(t.plot.source).toBe('plot');
+		expect(t.plot.sourcePlotId).toBe(5);
+		expect(t.plot.view.headers).toEqual(['X', 'Y']);
+		expect(t.plot.view.rows).toHaveLength(2);
+		expect(t.plot.getDownloadData().rows).toHaveLength(2);
+		// No Data View is spawned any more.
+		expect(core.plots.some((p) => p.type === 'dataview')).toBe(false);
+	});
+
+	it('on a Table that is already a view, focuses it instead of mirroring it', () => {
+		core.plots.push(fakeSource(5, 'RealSource', [[1, 2]]));
+		const view = showDataAsTable(5);
+		const before = core.plots.length;
+		const again = showDataAsTable(view.id);
+		expect(core.plots.length).toBe(before);
+		expect(again.id).toBe(view.id);
+		expect(appState.focusNodeRequest?.id).toBe(`plot_${view.id}`);
 	});
 });

@@ -340,9 +340,14 @@
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 	import {
-		showStaticDataAsTable,
+		showNodeResultTable,
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { useNodeResultTables } from '$lib/core/nodeResultTables.svelte.js';
+	import {
+		permutationResultTable,
+		permutationTableTitle
+	} from '$lib/tableProcesses/permutationSupport.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
 
@@ -627,6 +632,16 @@
 		});
 		return { headers, rows };
 	}
+
+	// Publish this node's result tables live, for the Tables that "View stats" (and "View
+	// permutations") open; see core/nodeResultTables.
+	useNodeResultTables(() => `tableprocess_${p.id}`, {
+		stats: { title: 'Double logistic stats', get: getDlogStatsData },
+		permutations: {
+			title: permutationTableTitle('Double logistic'),
+			get: () => permutationResultTable(permEntries)
+		}
+	});
 </script>
 
 {#if !hideInputs}
@@ -1024,16 +1039,13 @@
 	<div class="tp-stat-actions">
 		<button
 			class="tp-stat-btn"
-			onclick={() => {
-				const { headers, rows } = getDlogStatsData();
-				showStaticDataAsTable(
-					'Double logistic stats',
-					headers,
-					rows,
-					getDlogStatsData,
-					`tableprocess_${p.id}`
-				);
-			}}>View stats</button
+			onclick={() =>
+				showNodeResultTable({
+					sourceNodeId: `tableprocess_${p.id}`,
+					resultKey: 'stats',
+					title: 'Double logistic stats',
+					get: getDlogStatsData
+				})}>View stats</button
 		>
 		<button
 			class="tp-stat-btn"

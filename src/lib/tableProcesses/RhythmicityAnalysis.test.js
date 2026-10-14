@@ -39,7 +39,7 @@ vi.mock('$lib/components/inputs/AttributeSelect.svelte', () => ({ default: {} })
 vi.mock('$lib/components/inputs/StoreValueButton.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/LoadingSpinner.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/plotbits/helpers/save.svelte.js', () => ({
-	showStaticDataAsTable: vi.fn(),
+	showNodeResultTable: vi.fn(),
 	saveStaticDataAsCSV: vi.fn()
 }));
 

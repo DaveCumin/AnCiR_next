@@ -793,9 +793,14 @@
 	import { formatTimeFromUNIX } from '$lib/utils/time/TimeUtils.js';
 	import { onMount, untrack } from 'svelte';
 	import {
-		showStaticDataAsTable,
+		showNodeResultTable,
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { useNodeResultTables } from '$lib/core/nodeResultTables.svelte.js';
+	import {
+		permutationResultTable,
+		permutationTableTitle
+	} from '$lib/tableProcesses/permutationSupport.js';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import PermutationSummary from '$lib/components/PermutationSummary.svelte';
 	import { createComputeRunner, computeErrorMessage } from '$lib/core/asyncCompute.js';
@@ -1094,6 +1099,16 @@
 	let phaseNote = $derived(
 		cosinorData?.phaseRef?.clock ? 'clock time' : `${periodUnit} after start`
 	);
+
+	// Publish this node's result tables live, for the Tables that "View stats" (and "View
+	// permutations") open; see core/nodeResultTables.
+	useNodeResultTables(() => `tableprocess_${p.id}`, {
+		stats: { title: 'Cosinor stats', get: getCosinorStatsData },
+		permutations: {
+			title: permutationTableTitle('Cosinor'),
+			get: () => permutationResultTable(permEntries)
+		}
+	});
 </script>
 
 <!-- Input Section -->
@@ -1593,16 +1608,13 @@
 	<div class="tp-stat-actions">
 		<button
 			class="tp-stat-btn"
-			onclick={() => {
-				const { headers, rows } = getCosinorStatsData();
-				showStaticDataAsTable(
-					'Cosinor stats',
-					headers,
-					rows,
-					getCosinorStatsData,
-					`tableprocess_${p.id}`
-				);
-			}}>View stats</button
+			onclick={() =>
+				showNodeResultTable({
+					sourceNodeId: `tableprocess_${p.id}`,
+					resultKey: 'stats',
+					title: 'Cosinor stats',
+					get: getCosinorStatsData
+				})}>View stats</button
 		>
 		<button
 			class="tp-stat-btn"

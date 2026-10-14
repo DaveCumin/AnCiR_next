@@ -6,11 +6,12 @@
 	// numbers live; this block is the summary for the whole node plus the full-distribution
 	// actions.)
 	import {
-		showStaticDataAsTable,
+		showNodeResultTable,
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
 	import {
 		permutationTableData,
+		permutationTableTitle,
 		hasPermutationDetail,
 		permutationSchemeLabel
 	} from '$lib/tableProcesses/permutationSupport.js';
@@ -58,16 +59,15 @@
 					<button
 						class="tp-stat-btn"
 						title="Every permuted statistic, alongside the observed value and the p-value"
-						onclick={() => {
-							const { headers, rows } = getTable();
-							showStaticDataAsTable(
-								`${label}: permutations`,
-								headers,
-								rows,
-								getTable,
-								`tableprocess_${nodeId}`
-							);
-						}}>View permutations</button
+						onclick={() =>
+							// The node itself publishes this table (key 'permutations', see
+							// core/nodeResultTables); the Table reads it live from there.
+							showNodeResultTable({
+								sourceNodeId: `tableprocess_${nodeId}`,
+								resultKey: 'permutations',
+								title: permutationTableTitle(label),
+								get: getTable
+							})}>View permutations</button
 					>
 					<button
 						class="tp-stat-btn"

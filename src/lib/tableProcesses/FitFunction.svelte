@@ -686,9 +686,10 @@
 	} from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import {
-		showStaticDataAsTable,
+		showNodeResultTable,
 		saveStaticDataAsCSV
 	} from '$lib/components/plotbits/helpers/save.svelte.js';
+	import { useNodeResultTables } from '$lib/core/nodeResultTables.svelte.js';
 	import { fitPermutationPValueAsync } from '$lib/utils/fitFunction.js';
 	import { createComputeRunner, computeErrorMessage } from '$lib/core/asyncCompute.js';
 	import { permutationSchemeLabel } from '$lib/tableProcesses/permutationSupport.js';
@@ -1265,6 +1266,12 @@
 
 		return { headers, rows };
 	}
+
+	// Publish this node's result tables live, for the Tables that "View stats" (and "View
+	// permutations") open; see core/nodeResultTables.
+	useNodeResultTables(() => `tableprocess_${p.id}`, {
+		stats: { title: 'Fit function stats', get: getFitStatsData }
+	});
 </script>
 
 {#if !hideInputs}
@@ -1914,16 +1921,13 @@
 	<div class="tp-stat-actions">
 		<button
 			class="tp-stat-btn"
-			onclick={() => {
-				const { headers, rows } = getFitStatsData();
-				showStaticDataAsTable(
-					'Fit function stats',
-					headers,
-					rows,
-					getFitStatsData,
-					`tableprocess_${p.id}`
-				);
-			}}>View stats</button
+			onclick={() =>
+				showNodeResultTable({
+					sourceNodeId: `tableprocess_${p.id}`,
+					resultKey: 'stats',
+					title: 'Fit function stats',
+					get: getFitStatsData
+				})}>View stats</button
 		>
 		<button
 			class="tp-stat-btn"

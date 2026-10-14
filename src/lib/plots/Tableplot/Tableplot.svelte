@@ -10,6 +10,9 @@
 	import { timeCellText } from '$lib/utils/time/TimeUtils.js';
 	import { formatDateTime } from '$lib/utils/time/displayTime.js';
 	import { isBlankEntry } from '$lib/utils/cellEntry.js';
+	import { resolvePlotRef } from '$lib/core/plotRefs.js';
+	import { readNodeResultTable } from '$lib/core/nodeResultTables.svelte.js';
+	import { TABLE_SOURCES, normaliseTableSource, normaliseRowTable } from './tableSource.js';
 
 	export const Tableplot_defaultDataInputs = [];
 	export const Tableplot_controlHeaders = ['Properties and Data'];
@@ -19,7 +22,11 @@
 		static descriptors = {
 			showColNumber: { group: 'Display', label: 'Show row numbers' },
 			decimalPlaces: { group: 'Display', label: 'Decimal places' },
-			colCurrent: { group: 'Display', label: 'Starting row' }
+			colCurrent: { group: 'Display', label: 'Starting row' },
+			// The source is chosen in the Table's own panel, never in the shared properties.
+			source: { skip: true },
+			sourcePlotId: { skip: true },
+			resultKey: { skip: true }
 		};
 
 		parentBox = $state();
@@ -30,21 +37,23 @@
 		viewHeight = $derived(this.renderBox?.h ?? this.parentBox.height);
 		fontScale = $derived(viewFontScale(this.renderBox, this.parentBox));
 		viewStyle = $derived(viewStyleFor(this.parentBox?.style, this.fontScale));
+		// Where the rows come from (tableSource.js): 'columns' (wired, editable), 'plot' (another
+		// plot's computed data) or 'node' (one of the Plot's sourceNodeId node's result tables).
+		source = $state('columns');
+		sourcePlotId = $state(null); // 'plot' mode: a plot id or a facet panel id
+		resultKey = $state(null); // 'node' mode: which result table ('stats', 'permutations', ...)
+		// 'node' mode: the last rows seen, shown while the node has no live result (after a
+		// reload, during the hand-over between its instances) or for good when the node is
+		// gone. A PLAIN field, not $state: it is refreshed as the live view is read and saved by
+		// toJSON, and nothing reactive may depend on it, so a live update never re-derives the
+		// canvas graph (whose signature stringifies every plot's toJSON).
+		snapshot = null;
 		columnRefs = $state([]);
 		showCol = $state([]);
-		colWidths = $state({}); // colId -> px width (missing → default); user-resizable
+		colWidths = $state({}); // colId (header text outside columns mode) -> px; user-resizable
 		colCurrent = $state(1);
 		showColNumber = $state(false);
 		decimalPlaces = $state(2);
-		Ncolumns = $derived.by(() => {
-			const rowHeight = 33;
-			// Draggable outer box is parentBox.height + 50, minus its title bar (~37)
-			// and content padding (~16), leaving roughly parentBox.height - 3 for content.
-			const usable = (this.parentBox?.height ?? 250) - 3;
-			// Fixed overhead: table header row + "Row … of …" bar + wrapper margin
-			const fixedOverhead = 75;
-			return Math.max(1, Math.floor((usable - fixedOverhead) / rowHeight));
-		});
 
 		addColumn(colId) {
 			if (!this.columnRefs.includes(colId)) {
@@ -84,180 +93,92 @@
 			return out;
 		});
 
-		plotOrigins = $derived.by(() => {
-			const origins = {};
-			if (!core.plots) return origins;
+		// The source plot of a 'plot'-mode Table (a Plot or a facet panel), or null.
+		sourcePlot = $derived.by(() =>
+			this.source === 'plot' && this.sourcePlotId != null ? resolvePlotRef(this.sourcePlotId) : null
+		);
 
-			core.plots.forEach((plot) => {
-				if (plot?.data && Array.isArray(plot.data)) {
-					plot.data.forEach((d, seriesIdx) => {
-						const roleItems = [
-							{ refId: d.x?.refId, role: 'x' },
-							{ refId: d.y?.refId, role: 'y' },
-							{ refId: d.z?.refId, role: 'z' },
-							{ refId: d.value?.refId, role: 'value' },
-							{ refId: d.lower?.refId, role: 'lower' },
-							{ refId: d.upper?.refId, role: 'upper' }
-						];
-
-						roleItems.forEach((item) => {
-							if (item.refId == null || item.refId === -1) return;
-							if (!origins[item.refId]) origins[item.refId] = [];
-							origins[item.refId].push({
-								plotId: plot.id,
-								plotName: plot.name,
-								role: item.role,
-								seriesIdx
-							});
-						});
-					});
+		/**
+		 * The rows outside Columns mode, as `{ headers, rows, note, status }` (null in Columns
+		 * mode). `status`: 'live'; 'unset' / 'missing' (no source plot chosen / found);
+		 * 'updating' (the node exists but has no result yet, the snapshot is shown);
+		 * 'snapshot' (the node or its table cannot be found, the snapshot is all there is).
+		 */
+		view = $derived.by(() => {
+			if (this.source === 'plot') {
+				const empty = { headers: [], rows: [], note: null };
+				if (this.sourcePlotId == null) return { ...empty, status: 'unset' };
+				const sp = this.sourcePlot;
+				// Never a Table showing itself, and never another view (a chain of mirrors can
+				// cycle); the panel does not offer either.
+				const mirror =
+					sp === this.parentBox ||
+					sp?.type === 'dataview' ||
+					(sp?.type === 'tableplot' && sp.plot?.source !== 'columns');
+				if (!sp || mirror || typeof sp.plot?.getDownloadData !== 'function') {
+					return { ...empty, status: 'missing' };
 				}
-
-				if (plot.columnRefs && Array.isArray(plot.columnRefs)) {
-					plot.columnRefs.forEach((refId) => {
-						if (refId == null || refId === -1) return;
-						if (!origins[refId]) origins[refId] = [];
-						origins[refId].push({
-							plotId: plot.id,
-							plotName: plot.name,
-							role: 'col',
-							seriesIdx: 0
-						});
-					});
+				const d = sp.plot.getDownloadData() ?? {};
+				return {
+					headers: d.headers ?? [],
+					rows: d.rows ?? [],
+					note: d.note ?? null,
+					status: 'live'
+				};
+			}
+			if (this.source === 'node') {
+				const nodeId = this.parentBox?.sourceNodeId ?? null;
+				const live = readNodeResultTable(nodeId, this.resultKey);
+				if (live) {
+					this.snapshot = { headers: live.headers, rows: live.rows };
+					return { ...live, note: null, status: 'live' };
 				}
-			});
-			console.log('Plot origins:', origins);
-			return origins;
+				const snap = this.snapshot;
+				const known = this.resultKey != null && nodeIdExists(nodeId);
+				return {
+					headers: snap?.headers ?? [],
+					rows: snap?.rows ?? [],
+					note: null,
+					status: known ? 'updating' : 'snapshot'
+				};
+			}
+			return null;
 		});
 
-		tableHeadings = $derived.by(() => {
-			let out = this.showColNumber ? ['#'] : [];
-
-			for (let i = 0; i < this.columnRefs.length; i++) {
-				if (!this.showCol[i]) continue;
-				const colId = this.columnRefs[i];
-				const col = getColumnById(colId);
-				if (!col) {
-					out.push('???');
-					continue;
-				}
-
-				// Display name (UI-4): a node output's label while it keeps its auto name.
-				out.push(columnDisplayName(col));
+		/**
+		 * Switch where the rows come from. Leaving Columns mode drops the wired columns (and a
+		 * wired Column Set) so `columnRefs` is only ever non-empty in Columns mode; leaving
+		 * Node mode drops the node link. Column widths are keyed per mode, so they reset.
+		 * Unrecorded: the panel wraps it in one undoable step.
+		 */
+		setSource(mode) {
+			if (!TABLE_SOURCES.includes(mode) || mode === this.source) return;
+			const parent = this.parentBox;
+			if (this.source === 'columns') {
+				this.columnRefs = [];
+				this.showCol = [];
+				if (parent?.setRefs?.series?.length) parent.setRefs = { ...parent.setRefs, series: [] };
 			}
-			return out;
-		});
-
-		tableData = $derived.by(() => {
-			let out = [];
-			if (this.showColNumber) {
-				out.push(
-					Array(this.Ncolumns)
-						.fill(0)
-						.map((_, i) => this.colCurrent - 1 + i + 1)
-				);
+			if (this.source === 'node' && parent) parent.sourceNodeId = null;
+			if (mode !== 'node') {
+				this.resultKey = null;
+				this.snapshot = null;
 			}
-
-			for (let i = 0; i < this.columnRefs.length; i++) {
-				if (!this.showCol[i]) continue;
-
-				const col = getColumnById(this.columnRefs[i]);
-				if (!col) {
-					out.push(Array(this.Ncolumns).fill('—'));
-					continue;
-				}
-
-				if (col.type === 'bin') {
-					const rawArr = core.rawData.get(col.data);
-					if (Array.isArray(rawArr)) {
-						const start = this.colCurrent - 1;
-						// Centre = start + half the bin WIDTH, as Column.getData reports it. The
-						// step only spaces the starts (windows overlap when it is smaller).
-						const halfRange = (col.binWidth ?? 0) / 2;
-						const rangeStr = `±${halfRange.toFixed(2)}`;
-						if (col.originTime_ms != null) {
-							// Time-based bins: show center as datetime
-							out.push(
-								rawArr.slice(start, start + this.Ncolumns).map((x) => {
-									if (!Number.isFinite(x)) {
-										return { raw: '-', computed: '-', isTime: true };
-									}
-									const centerMs = col.originTime_ms + (x + halfRange) * 3600000;
-									return {
-										raw: Number.isFinite(centerMs) ? formatDateTime(centerMs) : '-',
-										computed: Number.isFinite(centerMs) ? rangeStr : '-',
-										isTime: true
-									};
-								})
-							);
-						} else {
-							// Numeric bins: show center value with ± range
-							out.push(
-								rawArr.slice(start, start + this.Ncolumns).map((x) => {
-									if (!Number.isFinite(x)) {
-										return { raw: '-', computed: '-', isTime: true };
-									}
-									return {
-										raw: (x + halfRange).toFixed(this.decimalPlaces),
-										computed: rangeStr,
-										isTime: true
-									};
-								})
-							);
-						}
-					} else {
-						out.push(Array(this.Ncolumns).fill('—'));
-					}
-				} else if (col.type === 'time' && !col.isReferencial()) {
-					// Source columns carry a raw series; AWD columns store a compressed
-					// {start, step} descriptor and producer/derived columns carry
-					// nothing, so fall back to getData() (UNIX ms) and format that —
-					// otherwise those columns render as bare epoch numbers.
-					const rawArr = core.rawData.get(col.data);
-					const start = this.colCurrent - 1;
-					const source = Array.isArray(rawArr) ? rawArr : col.getData();
-					if (Array.isArray(source)) {
-						const rawSlice = source.slice(start, start + this.Ncolumns);
-						const parsed = col.getData() ?? [];
-						const hours = (col.hoursSinceStart ?? [])
-							.slice(start, start + this.Ncolumns)
-							.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : '-'));
-						// Text as typed, epoch ms as a date, and '-' for a missing or unparsed
-						// value (never 1 Jan 1970): the parsed value decides.
-						const displayStrings = rawSlice.map((v, j) => timeCellText(v, parsed[start + j]));
-						out.push(
-							displayStrings.map((t, j) => ({
-								raw: t,
-								computed: t === '-' ? '-' : hours[j],
-								isTime: true
-							}))
-						);
-					} else {
-						out.push(Array(this.Ncolumns).fill('—'));
-					}
-				} else {
-					const data = col
-						.getData()
-						.slice(this.colCurrent - 1, this.colCurrent + this.Ncolumns)
-						.map((x) => (Number.isFinite(x) ? x.toFixed(this.decimalPlaces) : x));
-					out.push(data);
-				}
-			}
-			return out;
-		});
+			if (mode !== 'plot') this.sourcePlotId = null;
+			this.colWidths = {};
+			this.source = mode;
+		}
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
-			if (dataIN) {
-				this.columnRefs = dataIN.columnRefs ?? [];
-				this.showCol = dataIN.showCol ?? Array(this.columnRefs.length).fill(true);
-				this.colCurrent = dataIN.colCurrent ?? 1;
-				this.showColNumber = dataIN.showColNumber ?? false;
-				this.decimalPlaces = dataIN.decimalPlaces ?? 2;
-			}
+			if (dataIN) applyJSON(this, dataIN);
 		}
 
 		getDownloadData() {
+			if (this.source !== 'columns') {
+				const v = this.view;
+				return { headers: v?.headers ?? [], rows: v?.rows ?? [], ...(v?.note && { note: v.note }) };
+			}
 			const headers = [];
 			const columns = [];
 			for (let i = 0; i < this.columnRefs.length; i++) {
@@ -275,8 +196,12 @@
 			return { headers, rows };
 		}
 
+		// Columns mode writes exactly what every Table wrote before sources existed. The other
+		// modes never write live rows: 'plot' saves none at all (the source plot recomputes
+		// them), 'node' saves only the plain snapshot (see `snapshot`), so serialising a Table
+		// never subscribes to its source.
 		toJSON() {
-			return {
+			const base = {
 				columnRefs: this.columnRefs,
 				showCol: this.showCol,
 				colWidths: this.colWidths,
@@ -284,20 +209,55 @@
 				showColNumber: this.showColNumber,
 				decimalPlaces: this.decimalPlaces
 			};
+			if (this.source === 'plot') {
+				return { source: 'plot', sourcePlotId: this.sourcePlotId, ...base };
+			}
+			if (this.source === 'node') {
+				return {
+					source: 'node',
+					resultKey: this.resultKey,
+					snapshot: normaliseRowTable(this.snapshot),
+					...base
+				};
+			}
+			return base;
 		}
 
 		static fromJSON(parent, json) {
 			const table = new Tableplotclass(parent, null);
-			if (json) {
-				table.columnRefs = json.columnRefs ?? [];
-				table.showCol = json.showCol ?? Array(table.columnRefs.length).fill(true);
-				table.colWidths = json.colWidths ?? {};
-				table.colCurrent = json.colCurrent ?? 1;
-				table.showColNumber = json.showColNumber ?? false;
-				table.decimalPlaces = json.decimalPlaces ?? 2;
-			}
+			if (json) applyJSON(table, json);
 			return table;
 		}
+	}
+
+	function applyJSON(table, json) {
+		const src = normaliseTableSource(json);
+		table.source = src.source;
+		table.sourcePlotId = src.source === 'plot' ? src.sourcePlotId : null;
+		table.resultKey = src.source === 'node' ? src.resultKey : null;
+		table.snapshot = src.source === 'node' ? src.snapshot : null;
+		// Outside Columns mode a Table takes no columns, whatever the file says.
+		table.columnRefs = src.source === 'columns' ? (json.columnRefs ?? []) : [];
+		table.showCol =
+			src.source === 'columns' ? (json.showCol ?? Array(table.columnRefs.length).fill(true)) : [];
+		table.colWidths = json.colWidths ?? {};
+		table.colCurrent = json.colCurrent ?? 1;
+		table.showColNumber = json.showColNumber ?? false;
+		table.decimalPlaces = json.decimalPlaces ?? 2;
+	}
+
+	// Whether a canvas node id names a node that still exists (only analysis and process
+	// nodes publish result tables).
+	function nodeIdExists(nodeId) {
+		if (typeof nodeId !== 'string') return false;
+		const m = /^(tableprocess|process)_(.+)$/.exec(nodeId);
+		if (!m) return false;
+		const same = (x) => String(x?.id) === m[2];
+		if (m[1] === 'tableprocess') return (core.tableProcesses ?? []).some(same);
+		return (
+			(core.orphanProcesses ?? []).some(same) ||
+			(core.data ?? []).some((c) => (c.processes ?? []).some(same))
+		);
 	}
 
 	export const definition = {
@@ -316,8 +276,99 @@
 	import { applyCellEdit } from './cellEdit.js';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { recordGraphMutation } from '$lib/core/operations.js';
+	import { allPanels } from '$lib/core/facetPanels.svelte.js';
+	import {
+		listNodeResultTables,
+		nodeResultTableTitle,
+		publishingNodeIds
+	} from '$lib/core/nodeResultTables.svelte.js';
+	import { tableSourceOf, TABLE_SOURCE_LABELS } from './tableSource.js';
 
 	let { theData, which } = $props();
+
+	// ── Source controls (the panel; `theData` there is the inner Tableplotclass) ──────────
+	// Each change is one undoable step (recordGraphMutation captures the inner object and the
+	// Plot's own sourceNodeId and setRefs).
+	function switchSource(table, mode) {
+		if (tableSourceOf(table) === mode) return;
+		recordGraphMutation(() => {
+			table.setSource(mode);
+			if (mode === 'node') {
+				// Keep a node the Table was already linked to (a quick-plot Table) when it
+				// publishes results, and start on its first table.
+				const nodeId = table.parentBox?.sourceNodeId;
+				const first = nodeId ? listNodeResultTables(nodeId)[0] : null;
+				if (!first && table.parentBox) table.parentBox.sourceNodeId = null;
+				table.resultKey = first?.key ?? null;
+			}
+		});
+	}
+
+	// Plots (and facet panels) a 'plot'-mode Table can mirror: anything with computed data,
+	// except this Table, legacy Data Views and Tables that are themselves views.
+	function plotCandidates(table) {
+		return [...(core.plots ?? []), ...allPanels()].filter(
+			(p) =>
+				p &&
+				p !== table.parentBox &&
+				p.type !== 'dataview' &&
+				!(p.type === 'tableplot' && tableSourceOf(p.plot) !== 'columns') &&
+				typeof p.plot?.getDownloadData === 'function'
+		);
+	}
+
+	function choosePlot(table, value) {
+		const pick = plotCandidates(table).find((p) => String(p.id) === value);
+		recordGraphMutation(() => {
+			table.sourcePlotId = pick ? pick.id : null;
+			table.colWidths = {};
+		});
+	}
+
+	function nodeLabel(nodeId) {
+		const m = /^tableprocess_(.+)$/.exec(nodeId ?? '');
+		const tp = m ? (core.tableProcesses ?? []).find((t) => String(t.id) === m[1]) : null;
+		return tp ? tp.displayName || tp.name : String(nodeId ?? '');
+	}
+
+	function chooseNode(table, nodeId) {
+		const first = nodeId ? listNodeResultTables(nodeId)[0] : null;
+		recordGraphMutation(() => {
+			if (table.parentBox) table.parentBox.sourceNodeId = nodeId || null;
+			table.resultKey = first?.key ?? null;
+			table.snapshot = null;
+			table.colWidths = {};
+		});
+	}
+
+	function chooseResult(table, key) {
+		recordGraphMutation(() => {
+			table.resultKey = key || null;
+			table.snapshot = null;
+			table.colWidths = {};
+		});
+	}
+
+	// One read-only cell: numbers to the Table's decimal places, missing as empty.
+	function formatValue(value) {
+		if (value == null || value === '') return '';
+		if (typeof value === 'number') {
+			return Number.isFinite(value) ? value.toFixed(theData.plot.decimalPlaces) : String(value);
+		}
+		return String(value);
+	}
+
+	// The muted line under a read-only body: why the rows are not live, or that a plot's
+	// export was reduced.
+	function viewStatusText(v, table) {
+		if (!v) return '';
+		if (v.status === 'updating')
+			return `Showing the saved rows until ${nodeLabel(table.parentBox?.sourceNodeId)} has results.`;
+		if (v.status === 'snapshot') return 'Snapshot: the source node was not found.';
+		if (v.note) return 'Reduced from the full data; hover for details.';
+		return '';
+	}
 
 	let expandedTables = $state(new Set());
 	let expandedPlots = $state(new Set());
@@ -339,7 +390,26 @@
 		}
 		return out;
 	});
-	let rowCount = $derived(theData?.plot?.longestCol ?? 0);
+	// Outside Columns mode the body is read-only rows from the class's `view` (a plot's
+	// computed data or a node's result table). Its columns are keyed by header text (a repeat
+	// gets its position appended), which is what `colWidths` holds in those modes.
+	let readOnly = $derived(tableSourceOf(theData?.plot) !== 'columns');
+	let view = $derived(readOnly ? theData.plot.view : null);
+	let roHeaders = $derived(view?.headers ?? []);
+	let roRows = $derived(view?.rows ?? []);
+	let roKeys = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this $derived.by body; the returned value is a plain array
+		const seen = new Set();
+		return roHeaders.map((h, i) => {
+			const key = String(h ?? '');
+			const unique = seen.has(key) ? `${key}#${i}` : key;
+			seen.add(unique);
+			return unique;
+		});
+	});
+	// The keys of the columns on screen, in order, in either body.
+	let colKeys = $derived(readOnly ? roKeys : visibleColumns.map((vc) => vc.colId));
+	let rowCount = $derived(readOnly ? roRows.length : (theData?.plot?.longestCol ?? 0));
 	let rowItems = $derived(Array.from({ length: rowCount }, (_, i) => i));
 	let hasTwoLineCol = $derived(
 		visibleColumns.some(
@@ -390,12 +460,14 @@
 		const name = th.querySelector('.inline-edit-span');
 		const padX = sideX(cs) + (name ? sideX(getComputedStyle(name)) : 0) + 1;
 		const headers = {};
-		for (const vc of visibleColumns) headers[vc.colId] = vc.col ? columnDisplayName(vc.col) : '';
+		if (readOnly) roKeys.forEach((k, i) => (headers[k] = String(roHeaders[i] ?? '')));
+		else
+			for (const vc of visibleColumns) headers[vc.colId] = vc.col ? columnDisplayName(vc.col) : '';
 		return headerMinWidths(headers, (word) => measureCtx.measureText(word).width, padX);
 	});
 	let widths = $derived(
 		columnWidths(
-			visibleColumns.map((vc) => vc.colId),
+			colKeys,
 			theData?.plot?.colWidths,
 			scrollBoxW > 0 ? scrollBoxW - bodyGutter : 0,
 			numColW,
@@ -407,12 +479,8 @@
 	// Fixed px column widths (not 1fr) so the sticky header grid and the row grids
 	// stay aligned regardless of the body's vertical scrollbar, and so columns can
 	// be resized + overflow can ellipsis.
-	let gridCols = $derived(
-		`${colOffsetPx}${visibleColumns.map((vc) => `${widthFor(vc.colId)}px`).join(' ')}`
-	);
-	let tableMinWidth = $derived(
-		numColW + visibleColumns.reduce((sum, vc) => sum + widthFor(vc.colId), 0)
-	);
+	let gridCols = $derived(`${colOffsetPx}${colKeys.map((k) => `${widthFor(k)}px`).join(' ')}`);
+	let tableMinWidth = $derived(numColW + colKeys.reduce((sum, k) => sum + widthFor(k), 0));
 
 	// Set while a column-resize drag is live, so an unmount mid-drag can still
 	// release the window listeners the drag installed.
@@ -626,8 +694,90 @@
 </script>
 
 {#snippet controls(theData)}
+	{@const source = tableSourceOf(theData)}
 	<div class="control-component">
 		<div class="control-component-title"><p>Table Settings</p></div>
+		<div class="control-input-vertical">
+			<ControlInput label="Source">
+				<div class="segmented" role="radiogroup" aria-label="Table source">
+					{#each TABLE_SOURCES as mode (mode)}
+						<label class:active={source === mode}>
+							<input
+								type="radio"
+								name={`table-source-${theData.parentBox?.id}`}
+								value={mode}
+								checked={source === mode}
+								onchange={() => switchSource(theData, mode)}
+							/>
+							{TABLE_SOURCE_LABELS[mode]}
+						</label>
+					{/each}
+				</div>
+			</ControlInput>
+		</div>
+		{#if source === 'plot'}
+			{@const candidates = plotCandidates(theData)}
+			{@const current = candidates.find((p) => p.id === theData.sourcePlotId)}
+			<div class="control-input-vertical">
+				<ControlInput label="Plot">
+					<select
+						aria-label="Source plot"
+						value={current ? String(current.id) : ''}
+						onchange={(e) => choosePlot(theData, e.currentTarget.value)}
+					>
+						<option value="" disabled
+							>{theData.sourcePlotId == null ? 'Choose a plot' : '(source plot not found)'}</option
+						>
+						{#each candidates as p (p.id)}
+							<option value={String(p.id)}>{p.name}</option>
+						{/each}
+					</select>
+				</ControlInput>
+			</div>
+		{:else if source === 'node'}
+			{@const nodeId = theData.parentBox?.sourceNodeId ?? null}
+			{@const nodeIds = publishingNodeIds()}
+			{@const tables = nodeId ? listNodeResultTables(nodeId) : []}
+			<div class="control-input-vertical">
+				<ControlInput label="Node">
+					<select
+						aria-label="Source node"
+						value={nodeId && nodeIds.includes(nodeId) ? nodeId : ''}
+						onchange={(e) => chooseNode(theData, e.currentTarget.value)}
+					>
+						<option value="" disabled
+							>{nodeId == null
+								? nodeIds.length
+									? 'Choose a node'
+									: 'No node has results to show'
+								: `${nodeLabel(nodeId)} (no results)`}</option
+						>
+						{#each nodeIds as id (id)}
+							<option value={id}>{nodeLabel(id)}</option>
+						{/each}
+					</select>
+				</ControlInput>
+				{#if nodeId && (tables.length || theData.resultKey)}
+					<ControlInput label="Result table">
+						<select
+							aria-label="Result table"
+							value={tables.some((t) => t.key === theData.resultKey) ? theData.resultKey : ''}
+							onchange={(e) => chooseResult(theData, e.currentTarget.value)}
+						>
+							<option value="" disabled
+								>{theData.resultKey == null
+									? 'Choose a table'
+									: (nodeResultTableTitle(nodeId, theData.resultKey) ??
+										'(table not available)')}</option
+							>
+							{#each tables as t (t.key)}
+								<option value={t.key}>{t.title}</option>
+							{/each}
+						</select>
+					</ControlInput>
+				{/if}
+			</div>
+		{/if}
 		<div class="control-input-vertical">
 			<label class="control-input-checkbox">
 				<input type="checkbox" bind:checked={theData.showColNumber} />
@@ -641,90 +791,21 @@
 		</div>
 	</div>
 
-	<div class="div-line"></div>
+	{#if source === 'columns'}
+		<div class="div-line"></div>
 
-	<div class="control-component">
-		<div class="control-component-title">
-			<p>Columns</p>
-			{#if theData.columnRefs.length}
-				<span class="column-count">{theData.columnRefs.length} selected</span>
-			{/if}
-		</div>
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Columns</p>
+				{#if theData.columnRefs.length}
+					<span class="column-count">{theData.columnRefs.length} selected</span>
+				{/if}
+			</div>
 
-		<div class="tree-list display-list">
-			<!-- Groups (replace tables) -->
-			{#each core.groups as group (group.id)}
-				<details class="clps-item" open={expandedTables.has(group.id)}>
-					<summary
-						class="clps-title-container"
-						onclick={(e) => e.preventDefault()}
-						onkeydown={(e) => {
-							if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget)
-								e.preventDefault();
-						}}
-					>
-						<div class="clps-title">
-							<input
-								type="checkbox"
-								aria-label={`All columns of ${group.name}`}
-								checked={(group.sourceColumnIds ?? []).every((cid) => isColumnSelected(cid))}
-								onclick={(e) => {
-									e.stopPropagation();
-									const all = (group.sourceColumnIds ?? []).every((cid) => isColumnSelected(cid));
-									for (const cid of group.sourceColumnIds ?? []) {
-										if (all) {
-											if (isColumnSelected(cid)) toggleColumnSelection(cid);
-										} else {
-											if (!isColumnSelected(cid)) toggleColumnSelection(cid);
-										}
-									}
-								}}
-							/>
-							<span class="tree-name">{group.name}</span>
-						</div>
-
-						<div class="clps-title-button">
-							<button
-								class="icon"
-								type="button"
-								aria-label={`Show the columns of ${group.name}`}
-								aria-expanded={expandedTables.has(group.id)}
-								onclick={() => {
-									toggleTable(group.id);
-								}}
-							>
-								{#if expandedTables.has(group.id)}
-									<Icon name="caret-down" width={20} height={20} />
-								{:else}
-									<Icon name="caret-right" width={20} height={20} />
-								{/if}
-							</button>
-						</div>
-					</summary>
-
-					<div class="tree-children">
-						{#each group.sourceColumnIds ?? [] as colId (colId)}
-							{@const col = getColumnById(colId)}
-							{#if col}
-								<label class="tree-item-child">
-									<input
-										type="checkbox"
-										checked={isColumnSelected(colId)}
-										onchange={() => toggleColumnSelection(colId)}
-									/>
-									<span class="tree-name">{columnDisplayName(col)}</span>
-								</label>
-							{/if}
-						{/each}
-					</div>
-				</details>
-			{/each}
-
-			<!-- Plots -->
-			{#each core.plots as plot (plot.id)}
-				{@const plotCols = getPlotColumns(plot)}
-				{#if plotCols.length > 0}
-					<details class="clps-item" open={expandedPlots.has(plot.id)}>
+			<div class="tree-list display-list">
+				<!-- Groups (replace tables) -->
+				{#each core.groups as group (group.id)}
+					<details class="clps-item" open={expandedTables.has(group.id)}>
 						<summary
 							class="clps-title-container"
 							onclick={(e) => e.preventDefault()}
@@ -736,48 +817,44 @@
 							<div class="clps-title">
 								<input
 									type="checkbox"
-									aria-label={`All columns of ${plot.name}`}
-									checked={isPlotSelected(plot)}
+									aria-label={`All columns of ${group.name}`}
+									checked={(group.sourceColumnIds ?? []).every((cid) => isColumnSelected(cid))}
 									onclick={(e) => {
 										e.stopPropagation();
-										togglePlotSelection(plot);
+										const all = (group.sourceColumnIds ?? []).every((cid) => isColumnSelected(cid));
+										for (const cid of group.sourceColumnIds ?? []) {
+											if (all) {
+												if (isColumnSelected(cid)) toggleColumnSelection(cid);
+											} else {
+												if (!isColumnSelected(cid)) toggleColumnSelection(cid);
+											}
+										}
 									}}
 								/>
-								<span class="tree-name">{plot.name}</span>
-								<span class="tree-badge">Plot</span>
+								<span class="tree-name">{group.name}</span>
 							</div>
 
 							<div class="clps-title-button">
 								<button
 									class="icon"
 									type="button"
-									aria-label={`Show the columns of ${plot.name}`}
-									aria-expanded={expandedPlots.has(plot.id)}
+									aria-label={`Show the columns of ${group.name}`}
+									aria-expanded={expandedTables.has(group.id)}
 									onclick={() => {
-										togglePlot(plot.id);
+										toggleTable(group.id);
 									}}
 								>
-									{#if expandedPlots.has(plot.id)}
-										<Icon
-											name="caret-down"
-											width={20}
-											height={20}
-											className="first-detail-title-icon"
-										/>
+									{#if expandedTables.has(group.id)}
+										<Icon name="caret-down" width={20} height={20} />
 									{:else}
-										<Icon
-											name="caret-right"
-											width={20}
-											height={20}
-											className="first-detail-title-icon"
-										/>
+										<Icon name="caret-right" width={20} height={20} />
 									{/if}
 								</button>
 							</div>
 						</summary>
 
 						<div class="tree-children">
-							{#each plotCols as colId (colId)}
+							{#each group.sourceColumnIds ?? [] as colId (colId)}
 								{@const col = getColumnById(colId)}
 								{#if col}
 									<label class="tree-item-child">
@@ -787,37 +864,185 @@
 											onchange={() => toggleColumnSelection(colId)}
 										/>
 										<span class="tree-name">{columnDisplayName(col)}</span>
-										<!-- <span class="tree-type">{col.type}</span> -->
 									</label>
 								{/if}
 							{/each}
 						</div>
 					</details>
+				{/each}
+
+				<!-- Plots -->
+				{#each core.plots as plot (plot.id)}
+					{@const plotCols = getPlotColumns(plot)}
+					{#if plotCols.length > 0}
+						<details class="clps-item" open={expandedPlots.has(plot.id)}>
+							<summary
+								class="clps-title-container"
+								onclick={(e) => e.preventDefault()}
+								onkeydown={(e) => {
+									if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget)
+										e.preventDefault();
+								}}
+							>
+								<div class="clps-title">
+									<input
+										type="checkbox"
+										aria-label={`All columns of ${plot.name}`}
+										checked={isPlotSelected(plot)}
+										onclick={(e) => {
+											e.stopPropagation();
+											togglePlotSelection(plot);
+										}}
+									/>
+									<span class="tree-name">{plot.name}</span>
+									<span class="tree-badge">Plot</span>
+								</div>
+
+								<div class="clps-title-button">
+									<button
+										class="icon"
+										type="button"
+										aria-label={`Show the columns of ${plot.name}`}
+										aria-expanded={expandedPlots.has(plot.id)}
+										onclick={() => {
+											togglePlot(plot.id);
+										}}
+									>
+										{#if expandedPlots.has(plot.id)}
+											<Icon
+												name="caret-down"
+												width={20}
+												height={20}
+												className="first-detail-title-icon"
+											/>
+										{:else}
+											<Icon
+												name="caret-right"
+												width={20}
+												height={20}
+												className="first-detail-title-icon"
+											/>
+										{/if}
+									</button>
+								</div>
+							</summary>
+
+							<div class="tree-children">
+								{#each plotCols as colId (colId)}
+									{@const col = getColumnById(colId)}
+									{#if col}
+										<label class="tree-item-child">
+											<input
+												type="checkbox"
+												checked={isColumnSelected(colId)}
+												onchange={() => toggleColumnSelection(colId)}
+											/>
+											<span class="tree-name">{columnDisplayName(col)}</span>
+											<!-- <span class="tree-type">{col.type}</span> -->
+										</label>
+									{/if}
+								{/each}
+							</div>
+						</details>
+					{/if}
+				{/each}
+
+				<!-- Standalone columns (flat, no grouping) -->
+				{#each standaloneColumns as col (col.id)}
+					<label class="tree-item-child standalone">
+						<input
+							type="checkbox"
+							checked={isColumnSelected(col.id)}
+							onchange={() => toggleColumnSelection(col.id)}
+						/>
+						<span class="tree-name">{columnDisplayName(col)}</span>
+						<!-- <span class="tree-type">{col.type}</span> -->
+					</label>
+				{/each}
+
+				{#if !core.groups.length && !core.plots.length && !standaloneColumns.length}
+					<p class="empty-state">No data available</p>
 				{/if}
-			{/each}
-
-			<!-- Standalone columns (flat, no grouping) -->
-			{#each standaloneColumns as col (col.id)}
-				<label class="tree-item-child standalone">
-					<input
-						type="checkbox"
-						checked={isColumnSelected(col.id)}
-						onchange={() => toggleColumnSelection(col.id)}
-					/>
-					<span class="tree-name">{columnDisplayName(col)}</span>
-					<!-- <span class="tree-type">{col.type}</span> -->
-				</label>
-			{/each}
-
-			{#if !core.groups.length && !core.plots.length && !standaloneColumns.length}
-				<p class="empty-state">No data available</p>
-			{/if}
+			</div>
 		</div>
-	</div>
+	{/if}
+{/snippet}
+
+{#snippet readOnlyBody(theData)}
+	{@const status = viewStatusText(view, theData.plot)}
+	{#if roHeaders.length === 0}
+		<p class="tp-empty">
+			{#if view?.status === 'unset'}
+				Choose a plot in the Table settings.
+			{:else if view?.status === 'missing'}
+				Source plot not found.
+			{:else if tableSourceOf(theData.plot) === 'node' && theData.plot.resultKey == null}
+				Choose a node's result table in the Table settings.
+			{:else if view?.status === 'snapshot'}
+				Source node not found.
+			{:else}
+				No results yet.
+			{/if}
+		</p>
+	{:else}
+		<div class="tableplot-layout">
+			<div
+				class="tp-scroll"
+				bind:this={scrollEl}
+				bind:clientWidth={scrollBoxW}
+				bind:clientHeight={scrollBoxH}
+				role="presentation"
+				onwheel={(e) => {
+					if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
+				}}
+			>
+				<div class="tp-inner" style="min-width:{tableMinWidth}px;">
+					<div class="tp-head" style="grid-template-columns:{gridCols};">
+						{#if theData.plot.showColNumber}
+							<div class="tp-th tp-num">#</div>
+						{/if}
+						{#each roKeys as key, c (key)}
+							<div class="tp-th" title={String(roHeaders[c] ?? '')}>
+								<span class="tp-th-text">{roHeaders[c]}</span>
+								<div
+									class="tp-resize"
+									role="separator"
+									aria-orientation="vertical"
+									title="Drag to resize column"
+									onpointerdown={(e) => startColResize(e, key)}
+								></div>
+							</div>
+						{/each}
+					</div>
+
+					<VirtualList items={rowItems} fill itemHeight={rowH}>
+						{#snippet row(i)}
+							<div class="tp-tr" style="grid-template-columns:{gridCols};">
+								{#if theData.plot.showColNumber}
+									<div class="tp-td tp-num">{i + 1}</div>
+								{/if}
+								<!-- eslint-disable-next-line no-unused-vars -- `as` binding is required before the index; only the column index `c` is used -->
+								{#each roKeys as _k, c (c)}
+									{@const text = formatValue(roRows[i]?.[c])}
+									<div class="tp-td" title={text}><span class="tp-cell-text">{text}</span></div>
+								{/each}
+							</div>
+						{/snippet}
+					</VirtualList>
+				</div>
+			</div>
+			<p class="tableplot-row-bar" title={view?.note ?? ''}>
+				{rowCount} row{rowCount === 1 ? '' : 's'}{#if status}<span class="tp-status">{status}</span
+					>{/if}
+			</p>
+		</div>
+	{/if}
 {/snippet}
 
 {#snippet plot(theData)}
-	{#if visibleColumns.length > 0 || theData.plot.showColNumber}
+	{#if readOnly}
+		{@render readOnlyBody(theData)}
+	{:else if visibleColumns.length > 0 || theData.plot.showColNumber}
 		<div class="tableplot-layout">
 			<div
 				class="tp-scroll"
@@ -1073,6 +1298,85 @@
 		/* "missing" vs "zero" is load-bearing in a data table, so this is real text
 		   at 4.5:1, not a decorative marker. The old grey was 2.17:1. */
 		color: var(--color-text-muted);
+	}
+
+	/* Read-only bodies (a plot's computed data, a node's results): plain text, not
+	   Editable, so the header and cell text carry the same clamp and ellipsis directly. */
+	.tp-th-text {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
+		max-width: 100%;
+		overflow: hidden;
+		white-space: normal;
+		overflow-wrap: break-word;
+		hyphens: auto;
+	}
+	.tp-cell-text {
+		display: block;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.tp-status {
+		margin-left: var(--space-4);
+		font-style: italic;
+	}
+	.tp-empty {
+		color: var(--color-text-muted);
+		font-style: italic;
+	}
+
+	/* The Source control: three equal segments that wrap their labels in a narrow panel. */
+	.segmented {
+		display: flex;
+		width: 100%;
+		border: 1px solid var(--color-lightness-85);
+		border-radius: var(--radius-sm);
+		overflow: hidden;
+	}
+	.segmented label {
+		flex: 1 1 0;
+		min-width: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
+		padding: var(--space-2) var(--space-3);
+		font-size: var(--font-sm);
+		line-height: 1.2;
+		color: var(--color-lightness-35);
+		cursor: pointer;
+		user-select: none;
+		background: var(--surface-card);
+		transition:
+			background 0.15s,
+			color 0.15s;
+	}
+	.segmented label + label {
+		border-left: 1px solid var(--color-lightness-85);
+	}
+	.segmented label:hover {
+		background: var(--color-lightness-97);
+	}
+	.segmented label.active {
+		background: var(--color-accent-fill);
+		color: white;
+		font-weight: 600;
+	}
+	.segmented label:focus-within {
+		box-shadow: var(--shadow-focus-soft);
+	}
+	/* Visually hidden radios; the label carries the state. */
+	.segmented input {
+		position: absolute;
+		opacity: 0;
+		width: 1px;
+		height: 1px;
+		margin: 0;
+		pointer-events: none;
 	}
 
 	.tableplot-row-bar {

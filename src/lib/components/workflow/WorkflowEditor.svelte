@@ -35,6 +35,8 @@
 	import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
 	import { createLazyPointerCapture } from '$lib/core/lazyPointerCapture.js';
 	import { canonicalNodeViz, plotDataFromSpec } from '$lib/plots/canonicalNodeViz.js';
+	import { referenceEdges, findQuickPlot } from './referenceEdges.js';
+	import { tableTakesColumns } from '$lib/plots/Tableplot/tableSource.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
 	import { detachColumnSetFromTP } from '$lib/core/TableProcess.svelte';
 	import {
@@ -306,46 +308,18 @@
 		}));
 	});
 
-	// Synthetic "reference" edges linking each Data View node to the plot whose
-	// computed data it mirrors. A Data View has no wired inputs — the association
-	// is its `sourcePlotId` — so we derive the edge from that. It drives BOTH the
-	// topological layout (a Data View lands just downstream of its source plot) and
-	// the rendered link, without the Data View becoming a real dataflow sink. The
-	// `null` ports anchor at each node's header (getPortAnchorY handles them).
-	const dataViewEdges = $derived.by(() => {
-		const ids = new Set(allNodes.map((n) => n.id));
-		const out = [];
-		for (const node of allNodes) {
-			if (node.type !== 'plot') continue;
-			// Data View → its source plot.
-			if (node.plotObj?.type === 'dataview') {
-				const srcId = node.plotObj?.plot?.sourcePlotId;
-				const fromId = srcId != null ? `plot_${srcId}` : null;
-				if (fromId && ids.has(fromId))
-					out.push({ fromId, toId: node.id, type: 'reference', fromPort: null, toPort: null });
-			}
-			// Quick plot → its source node.
-			// A plot is either a Data View (sourcePlotId) or a quick plot (sourceNodeId), never both.
-			else if (node.plotObj?.sourceNodeId) {
-				const srcNode = node.plotObj.sourceNodeId;
-				if (ids.has(srcNode)) {
-					out.push({
-						fromId: srcNode,
-						toId: node.id,
-						type: 'reference',
-						fromPort: null,
-						toPort: null
-					});
-				}
-			}
-		}
-		return out;
-	});
+	// Synthetic "reference" edges: a plot-sourced Table (or legacy Data View) to the plot
+	// whose computed data it mirrors, and any plot to the node it was spawned from (quick
+	// plots, View stats / View permutations Tables). Port-less (null ports anchor at each
+	// node's header, see getPortAnchorY); they drive BOTH the topological layout and the
+	// rendered dashed link without the plot becoming a real dataflow sink.
+	// See referenceEdges.js.
+	const refEdges = $derived(referenceEdges(allNodes));
 
-	// edgeTopology + the synthetic Data View links, for layout + edge rendering.
+	// edgeTopology + the synthetic reference links, for layout + edge rendering.
 	// Kept separate from edgeTopology so wiredOutPortsByNode (real ports only)
 	// ignores these port-less reference edges.
-	const layoutEdges = $derived([...edgeTopology, ...dataViewEdges]);
+	const layoutEdges = $derived([...edgeTopology, ...refEdges]);
 
 	// nodeId → { [outputPortName]: true } for ports with an edge. TableProcessNode
 	// uses this to keep wired metric rows rendered while its Metrics section is
@@ -802,9 +776,10 @@
 	}
 
 	// Quick-Plot: spawn the node's canonical plot (undoable), or focus the existing
-	// one if this node already has a quick plot on the canvas.
+	// one if this node already has a quick plot on the canvas. Its result Tables (View
+	// stats / View permutations) share the sourceNodeId link but are not its quick plot.
 	function handleQuickPlot(node) {
-		const existing = core.plots.find((p) => p.sourceNodeId === node.id);
+		const existing = findQuickPlot(core.plots, node.id);
 		if (existing) {
 			appState.canvasSelectedNodeId = `plot_${existing.id}`;
 			tick().then(() => panToNode(`plot_${existing.id}`));
@@ -2149,7 +2124,11 @@
 	//  · plot many-in ports — series (tableplot), data (single-input), ysN (x/y).
 	function portAcceptsColumnSet(target, portName) {
 		if (!target) return false;
-		if (target.type === 'plot' && target.plotObj) return plotSetChannel(portName) != null;
+		if (target.type === 'plot' && target.plotObj) {
+			// A Table showing a plot's data or a node's results takes no columns at all.
+			if (target.plotObj.type === 'tableplot' && !tableTakesColumns(target.plotObj)) return false;
+			return plotSetChannel(portName) != null;
+		}
 		if (target.type === 'tableprocess' && target.tpObj) {
 			if (!(portName?.endsWith('IN') && isManyInputPort(target, portName))) return false;
 			const entry = appConsts.tableProcessMap.get(target.tpObj.name);
@@ -2356,6 +2335,9 @@
 		}
 
 		if (target.type === 'plot' && target.plotObj?.type === 'tableplot' && toPort === 'series') {
+			// Only a Columns-mode Table has this port; refuse rather than add a hidden column to
+			// a Table that shows a plot's data or a node's results.
+			if (!tableTakesColumns(target.plotObj)) return;
 			recordPlotEdit(target.plotObj, () => {
 				const refs = target.plotObj.plot.columnRefs ?? [];
 				if (!refs.includes(colId)) target.plotObj.plot.columnRefs = [...refs, colId];

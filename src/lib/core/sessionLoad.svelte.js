@@ -12,10 +12,11 @@
 //   confirmReplaceSession  ask (in the app's own AreYouSure dialog) before replacing work.
 //   confirmDiscard       the AreYouSure question itself, shared with "New session".
 //   snapshotSession / restoreSession  the rollback importJson uses when a build fails half way.
-//   resetSession         empty `core` and the compute memo: THE reset, for every path that needs one.
+//   resetSession         empty `core`, the compute memo and the node result tables: THE reset.
 //   compareAppVersions   'β.78.1' style version ordering, for the newer-file warning (ROB-22).
 import { core, appState, freshCoreState } from './core.svelte.js';
 import { memoClear } from './computeMemo.js';
+import { clearNodeResultTables } from './nodeResultTables.svelte.js';
 import { looksLikeSession } from '$lib/utils/fileTypeSniff.js';
 
 /** Thrown by importJson when the value is not a session at all (nothing was changed). */
@@ -187,6 +188,7 @@ export function restoreSession(snap) {
  */
 export function resetSession() {
 	memoClear();
+	clearNodeResultTables();
 	const fresh = freshCoreState();
 	for (const key of Object.keys(core)) {
 		if (!(key in fresh)) delete core[key];

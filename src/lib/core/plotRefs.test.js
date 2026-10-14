@@ -191,7 +191,7 @@ describe('numeric-id helpers handed a panel id', () => {
 		expect(isZoomMode(p0.id)).toBe(false);
 	});
 
-	it('showDataAsTable on a panel id opens a data view sourced from that panel', () => {
+	it("showDataAsTable on a panel id opens a Table on that panel's computed data", () => {
 		const gen = makeScatter({ facet: true });
 		const [p0] = panelsFor(gen);
 		projectPanel(p0);
@@ -199,7 +199,8 @@ describe('numeric-id helpers handed a panel id', () => {
 		showDataAsTable(p0.id);
 		expect(core.plots.length).toBe(before + 1);
 		const view = core.plots[core.plots.length - 1];
-		expect(view.type).toBe('dataview');
+		expect(view.type).toBe('tableplot');
+		expect(view.plot.source).toBe('plot');
 		expect(view.plot.sourcePlotId).toBe(p0.id);
 		expect(view.name).toBe('Data: ' + p0.name);
 		// The view resolves its source to the panel's projected instance (one series, not two).

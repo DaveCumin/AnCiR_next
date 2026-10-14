@@ -1,5 +1,5 @@
 import { flushSync } from 'svelte';
-import { core } from '$lib/core/core.svelte';
+import { core, appState } from '$lib/core/core.svelte';
 import { resolvePlotRef, isFacetPanel, isPanelId } from '$lib/core/plotRefs.js';
 import { addNotification } from '$lib/core/notifications.svelte.js';
 import { mutationService } from '$lib/core/mutationService.js';
@@ -7,6 +7,7 @@ import { prepareExport, setPhysicalSize } from '$lib/plots/exportStyle.js';
 import { exportScale, resolveStyle } from '$lib/plots/figureStyle.js';
 import { setPngDataUrlDpi } from '$lib/utils/pngDpi.js';
 import { downloadBlob } from '$lib/utils/downloadBlob.js';
+import { tableSourceOf } from '$lib/plots/Tableplot/tableSource.js';
 
 /**
  * Convert headers and rows to a CSV string and trigger a download.
@@ -37,64 +38,102 @@ export function saveDataAsCSV(plotId) {
 }
 
 /**
- * Open a DataView plot on the canvas showing the data from the given plot or facet panel
- * (the DataView resolves a panel id to the panel's projected instance).
+ * Open a Table on the canvas showing the computed data of the given plot or facet panel
+ * ("View data"). The Table is in "Plot's computed data" mode, so it follows the source live
+ * (it resolves a panel id to the panel's projected instance).
  * @param {number|string} plotId - The id of the source plot (core.plots[].id) or panel
  */
 export function showDataAsTable(plotId) {
 	const sourcePlot = resolvePlotRef(plotId);
 	if (!sourcePlot?.plot || typeof sourcePlot.plot.getDownloadData !== 'function') return;
+	// A Table that is already a view of other data (or a legacy Data View) IS the data view:
+	// focus it rather than mirror a mirror (the Table refuses chains of views).
+	if (
+		sourcePlot.type === 'dataview' ||
+		(sourcePlot.type === 'tableplot' && tableSourceOf(sourcePlot.plot) !== 'columns')
+	) {
+		focusPlotNode(sourcePlot.id);
+		return sourcePlot;
+	}
 
-	mutationService.addPlot({
+	return mutationService.addPlot({
 		name: 'Data: ' + (sourcePlot.name || 'Plot'),
-		type: 'dataview',
+		type: 'tableplot',
 		x: sourcePlot.x + 20,
 		y: sourcePlot.y + 20,
 		width: Math.max(sourcePlot.width, 400),
 		height: 300,
-		plot: { sourcePlotId: sourcePlot.id }
+		plot: { source: 'plot', sourcePlotId: sourcePlot.id }
 	});
 }
 
+/** The Table already showing this node's result table, if there is one. */
+export function findNodeResultTable(sourceNodeId, resultKey) {
+	return (
+		core.plots.find(
+			(p) =>
+				p.sourceNodeId === sourceNodeId &&
+				p.type === 'tableplot' &&
+				p.plot?.source === 'node' &&
+				p.plot?.resultKey === resultKey
+		) ?? null
+	);
+}
+
 /**
- * Open a DataView plot on the canvas with static header/row data (e.g. table process stats).
- * @param {string} name - The plot title
- * @param {string[]} headers
- * @param {any[][]} rows
- * @param {(() => {headers: string[], rows: any[][]}) | null} [statsGetter] - optional live getter for reactive updates
+ * Open (or focus) a Table showing one of a node's live result tables ("View stats",
+ * "View permutations"). The node publishes the table through core/nodeResultTables, and the
+ * Table reads it from there, so it follows every recompute whether or not it is mounted.
+ *
+ * The Table is seeded with the current rows as its snapshot, so it is never empty on spawn.
+ * A second click focuses the existing Table (selects and pans to it on the canvas) instead
+ * of adding a duplicate.
+ *
+ * @param {{ sourceNodeId: string, resultKey: string, title: string,
+ *           get?: () => { headers: string[], rows: any[][] } }} spec
+ *   `get` is the node's getter, used only for the seed and the initial size.
+ * @returns the new or existing Plot, or null when there is nothing to show
  */
-export function showStaticDataAsTable(
-	name,
-	headers,
-	rows,
-	statsGetter = null,
-	sourceNodeId = null
-) {
-	if (!headers?.length || !rows?.length) return;
-	// Place the table next to its source node so it appears where the user clicked. Previously it
-	// spawned at a hard-coded (80,80) — usually off-screen or behind the canvas/notes — so the
+export function showNodeResultTable({ sourceNodeId, resultKey, title, get = null }) {
+	if (!sourceNodeId || !resultKey) return null;
+	const existing = findNodeResultTable(sourceNodeId, resultKey);
+	if (existing) {
+		focusPlotNode(existing.id);
+		return existing;
+	}
+	const seed = typeof get === 'function' ? get() : null;
+	const headers = seed?.headers ?? [];
+	const rows = seed?.rows ?? [];
+	if (!headers.length || !rows.length) return null;
+	// Place the table next to its source node so it appears where the user clicked. It used to
+	// spawn at a hard-coded (80,80), usually off-screen or behind the canvas or notes, so the
 	// button looked like it did nothing. Falls back to (80,80) only when the node has no layout yet.
 	let x = 80;
 	let y = 80;
-	const layout = sourceNodeId ? core.nodeLayout?.[sourceNodeId] : null;
+	const layout = core.nodeLayout?.[sourceNodeId];
 	if (layout) {
 		x = (layout.x ?? 0) + 360;
 		y = (layout.y ?? 0) + 40;
 	}
 	const newPlot = mutationService.addPlot({
-		name,
-		type: 'dataview',
+		name: title,
+		type: 'tableplot',
 		x,
 		y,
 		sourceNodeId,
 		width: Math.max(400, headers.length * 90),
 		height: Math.min(500, 100 + rows.length * 33),
-		plot: { sourceType: 'static', staticHeaders: headers, staticRows: rows }
+		plot: { source: 'node', resultKey, snapshot: { headers, rows } }
 	});
-	// statsGetter is intentionally non-serialised (functions don't survive snapshots);
-	// attach post-creation so the live reactive stats path still works.
-	if (newPlot && statsGetter) newPlot.plot.statsGetter = statsGetter;
 	return newPlot;
+}
+
+// Select a plot's canvas node and pan to it (WorkflowEditor answers focusNodeRequest).
+function focusPlotNode(plotId) {
+	appState.focusNodeRequest = {
+		id: `plot_${plotId}`,
+		n: (appState.focusNodeRequest?.n ?? 0) + 1
+	};
 }
 
 /**

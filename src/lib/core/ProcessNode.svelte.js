@@ -7,6 +7,7 @@ import {
 	plotMetricColumnName
 } from '$lib/plots/plotMetricDefs.js';
 import { createColumnNamer } from './outputLabels.js';
+import { tableTakesColumns } from '$lib/plots/Tableplot/tableSource.js';
 
 /**
  * ProcessNode: a normalized node model used by the workflow layer.
@@ -782,10 +783,16 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		// port. Every other plot type carries `data: [{x: {refId}, y: {refId}, z?:
 		// {refId}}, ...]`, so expose flowtest-style {x, ys[, zs]} ports.
 		const inputs = [];
+		const plotEntry = appConsts?.plotMap?.get(plot.type);
 		if (plot.type === 'tableplot') {
-			inputs.push(makeNodePort('series', 'input', 'column', true));
+			// Only a Columns-mode Table takes wires. A Table showing a plot's computed data or
+			// a node's results has no input ports at all (its link is a reference edge).
+			if (tableTakesColumns(plot)) inputs.push(makeNodePort('series', 'input', 'column', true));
+		} else if (plotEntry && (plotEntry.defaultInputs ?? []).length === 0) {
+			// A registered viewer that takes no columns (the legacy Data View): no input ports,
+			// rather than the x/y "new series" pair that connects to nothing.
 		} else {
-			const defaultInputs = appConsts?.plotMap?.get(plot.type)?.defaultInputs ?? [];
+			const defaultInputs = plotEntry?.defaultInputs ?? [];
 
 			if (defaultInputs.length === 1) {
 				// Single-input plots (Histogram). One dynamic `data` port: each wire
@@ -889,7 +896,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 			outputColumns.push({ key: `col_${colId}`, colId, port: `col_${colId}`, metric: false });
 		};
 		if (plot.type === 'tableplot') {
-			for (const colId of plot.plot?.columnRefs ?? []) addPassthrough(colId, '');
+			if (tableTakesColumns(plot)) {
+				for (const colId of plot.plot?.columnRefs ?? []) addPassthrough(colId, '');
+			}
 		} else {
 			// Iterate by series set (same grouping as the input ports) so each
 			// passthrough carries its series number. Channels are accessed
@@ -1140,6 +1149,8 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		// One bundle wire per wired Column Set → the channel's anchor port.
 		const anchorPort = { series: 'series', data: 'data', y: 'ys1' };
 		for (const ch of Object.keys(plotSetRefs)) {
+			// No `series` port on a Table that does not take columns, so no bundle wire to it.
+			if (ch === 'series' && plot.type === 'tableplot' && !tableTakesColumns(plot)) continue;
 			for (const csId of plotSetRefs[ch] ?? []) {
 				if (!core.tableProcesses.some((tp) => tp.id === csId)) continue;
 				addConnection(
@@ -1153,7 +1164,9 @@ export function getCachedProcessNodeGraph(core, appConsts) {
 		}
 
 		if (plot.type === 'tableplot') {
-			(plot.plot?.columnRefs ?? []).forEach((colId) => addPlotCol(colId, 'series'));
+			if (tableTakesColumns(plot)) {
+				(plot.plot?.columnRefs ?? []).forEach((colId) => addPlotCol(colId, 'series'));
+			}
 		} else {
 			const defaultInputs = appConsts?.plotMap?.get(plot.type)?.defaultInputs ?? [];
 
