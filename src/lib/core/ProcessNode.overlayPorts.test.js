@@ -15,7 +15,7 @@ import {
 	isNewLinePort,
 	supportsOverlays
 } from './ProcessNode.svelte.js';
-import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 
 function makeAppConsts() {
 	return {

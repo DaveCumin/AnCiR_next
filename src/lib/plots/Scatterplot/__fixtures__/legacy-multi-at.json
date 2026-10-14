@@ -1,0 +1,120 @@
+{
+	"_comment": "Golden fixture (overlays plan 2026-10-15, T1): a Line saved with three `at` columns (the dynamic-`at` era, before 2026-09-18), after an existing Line; fromJSONSplit makes one Line per column.",
+	"columns": [
+		{
+			"id": 1,
+			"name": "x",
+			"type": "number",
+			"values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+		},
+		{
+			"id": 2,
+			"name": "y",
+			"type": "number",
+			"values": [
+				5.0, 5.982, 6.855, 7.524, 7.916, 7.986, 7.728, 7.169, 6.372, 5.423, 4.428, 3.496, 2.73,
+				2.213, 2.003, 2.123, 2.56, 3.265, 4.162, 5.15, 6.122
+			]
+		},
+		{
+			"id": 3,
+			"name": "alert a",
+			"type": "number",
+			"values": [2, 4]
+		},
+		{
+			"id": 4,
+			"name": "alert b",
+			"type": "number",
+			"values": [9]
+		},
+		{
+			"id": 5,
+			"name": "alert c",
+			"type": "number",
+			"values": [15, 15, 17]
+		}
+	],
+	"plot": {
+		"id": 500,
+		"name": "legacy-multi-at",
+		"width": 480,
+		"height": 300,
+		"facet": false,
+		"inner": {
+			"padding": {
+				"top": 15,
+				"right": 30,
+				"bottom": 30,
+				"left": 40
+			},
+			"data": [
+				{
+					"x": {
+						"id": 101,
+						"refId": 1
+					},
+					"y": {
+						"id": 102,
+						"refId": 2
+					},
+					"label": "Signal",
+					"yAxis": "left",
+					"line": {
+						"colour": null,
+						"strokeWidth": 2,
+						"stroke": "solid",
+						"draw": false,
+						"joinGaps": false
+					},
+					"points": {
+						"colour": null,
+						"radius": 3,
+						"shape": "circle",
+						"draw": true
+					}
+				}
+			],
+			"overlays": [
+				{
+					"id": 0,
+					"name": "Line 1",
+					"kind": "line",
+					"form": "horizontal",
+					"channels": {
+						"at": {
+							"columns": [],
+							"typed": [6]
+						}
+					}
+				},
+				{
+					"id": 1,
+					"name": "Alerts",
+					"kind": "line",
+					"form": "vertical",
+					"label": "alerts",
+					"colour": "#2980B9",
+					"strokeWidth": 2,
+					"stroke": "solid",
+					"channels": {
+						"at": {
+							"columns": [
+								{
+									"refId": 3
+								},
+								{
+									"refId": 4
+								},
+								{
+									"refId": 5
+								}
+							],
+							"typed": []
+						}
+					}
+				}
+			]
+		}
+	}
+}

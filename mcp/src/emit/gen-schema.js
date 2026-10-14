@@ -217,8 +217,8 @@ for (const [name, entry] of appConsts.tableProcessMap ?? new Map()) {
 // plot class's fromJSON is explicitly tested to accept without clobbering its defaults
 // (plots/plotFromJSONRobustness.test.js). tableplot is special-cased (columnRefs/showCol).
 const plots = {};
-const overlayForms = describeOverlayForms();
 for (const [id, entry] of appConsts.plotMap ?? new Map()) {
+	const overlayCaps = entry.data?.overlayCapabilities;
 	plots[id] = {
 		displayName: entry.displayName ?? id,
 		inputs: entry.defaultInputs ?? [],
@@ -226,9 +226,10 @@ for (const [id, entry] of appConsts.plotMap ?? new Map()) {
 		// class, so a plot that gains bands is advertised without anyone editing a list.
 		supportsBands: typeof entry.data?.prototype?.addNightBand === 'function',
 		// Reference lines / shaded bands (add_plot / render_plot `overlays`): the channel table
-		// per (kind, form), read from OverlayClass so it cannot drift. Only on plots whose class
-		// has addOverlay (the scatterplot).
-		...(typeof entry.data?.prototype?.addOverlay === 'function' ? { overlays: overlayForms } : {}),
+		// per (kind, form) this plot allows, from the class's `overlayCapabilities` and the
+		// shared overlay spec (plotbits/overlaySpec.js), so it cannot drift. Only on plots that
+		// declare capabilities (overlay hosts).
+		...(overlayCaps ? { overlays: describeOverlayForms(overlayCaps) } : {}),
 		// The metric output ports the plot emits in the app (one value per series), in the node
 		// manifest's shape. Read-only knowledge for the model: the engine cannot wire a plot
 		// metric column (the app mints them at mount; plan 2026-09-30 marker rules, Phase C), so

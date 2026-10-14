@@ -23,10 +23,20 @@ function mkCol(values, type = 'number') {
 	return c.id;
 }
 
-/** A stand-in for Scatterplotclass: only what OverlayClass reads. */
+/**
+ * A stand-in host: only what OverlayClass reads, through the host contract
+ * (components/plotbits/overlayHost.js). `overlays` for naming; the rest is
+ * added per test (`overlaySeriesColour`, `overlayXValueFor`, `overlayContext`).
+ */
 function mkParent(extra = {}) {
-	return { data: [], overlays: [], ...extra };
+	return { overlays: [], ...extra };
 }
+
+/** A host whose first series colour is `colour` (the ribbon's default fill). */
+const withSeriesColour = (colour) => mkParent({ overlaySeriesColour: () => colour });
+
+/** A host whose draw context is `ctx` (repeating bands, legacy night bands). */
+const withContext = (ctx) => mkParent({ overlayContext: () => ctx });
 
 beforeEach(() => {
 	core.data = [];
@@ -107,7 +117,7 @@ describe('construction defaults', () => {
 	});
 
 	it('ribbon fill defaults to the first series line colour at ~20% alpha when resolvable', () => {
-		const parent = mkParent({ data: [{ line: { colour: '#1F77B4' } }] });
+		const parent = withSeriesColour('#1F77B4');
 		const b = new OverlayClass(parent, { kind: 'band', form: 'ribbon' });
 		expect(b.fill).toBe('#1F77B433');
 		const lonely = new OverlayClass(mkParent(), { kind: 'band', form: 'ribbon' });
@@ -154,7 +164,7 @@ describe('setForm swaps channel keys in place', () => {
 	});
 
 	it('swaps the default fill when the form changes and the fill is untouched, but keeps a chosen one', () => {
-		const parent = mkParent({ data: [{ line: { colour: '#1F77B4' } }] });
+		const parent = withSeriesColour('#1F77B4');
 		const b = new OverlayClass(parent, { kind: 'band', form: 'vertical' });
 		expect(b.fill).toBe('#2C2C2C30');
 		b.setForm('ribbon');
@@ -299,8 +309,7 @@ describe('resolution: values / positions / capped', () => {
 	it('an x-axis channel wired to an hours-from-origin column converts like series x', () => {
 		const origin = Date.UTC(2024, 0, 1);
 		const parent = mkParent({
-			anyXdataTime: true,
-			xOriginFor: (col) => (col.type === 'time' ? null : origin)
+			overlayXValueFor: (col) => (col.type === 'time' ? null : (h) => origin + h * 3600000)
 		});
 		const l = new OverlayClass(parent, { kind: 'line', form: 'vertical' });
 		l.setWire('at', mkCol([0, 1.5]));
@@ -441,8 +450,8 @@ describe('geometry', () => {
 		expect(got.segments).toEqual(nightBandSegments('edges,numeric'));
 	});
 
-	it('repeating falls back to the parent xlims/anyXdataTime when ctx omits them', () => {
-		const parent = mkParent({ data: [1], xlims: [0, 48], anyXdataTime: false });
+	it("repeating falls back to the host's overlayContext() when ctx omits fields", () => {
+		const parent = withContext({ xDomainMin: 0, xDomainMax: 48, xAnchorMin: 0, xIsTime: false });
 		const o = new OverlayClass(parent, { kind: 'band', form: 'repeating' });
 		expect(o.geometry({}).segments).toEqual([
 			{ x0: 0, x1: 12 },
@@ -837,7 +846,7 @@ describe('fromLegacyNightBand', () => {
 	});
 
 	it('migrates custom bands to a vertical band with typed start/end (durationHours form)', () => {
-		const parent = mkParent({ anyXdataTime: false });
+		const parent = withContext({ xIsTime: false });
 		const o = OverlayClass.fromLegacyNightBand(parent, {
 			name: 'Dark',
 			mode: 'custom',
@@ -862,7 +871,7 @@ describe('fromLegacyNightBand', () => {
 
 	it('custom bands on a time axis convert durationHours to ms like NightBand did', () => {
 		const H = 3600000;
-		const parent = mkParent({ anyXdataTime: true });
+		const parent = withContext({ xIsTime: true });
 		const o = OverlayClass.fromLegacyNightBand(parent, {
 			mode: 'custom',
 			customBands: [{ startTime: 100 * H, durationHours: 12 }]

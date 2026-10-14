@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { core } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Scatterplotclass } from './Scatterplot.svelte';
-import { OverlayClass } from './Overlay.svelte';
+import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 
 function mkCol(values, type = 'number') {
 	const c = new Column({ type, data: -1 });

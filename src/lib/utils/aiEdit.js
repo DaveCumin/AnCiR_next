@@ -31,7 +31,7 @@ import { applyOp } from '$lib/core/operations.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
 import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
 import { getByPath, setByPath } from '$lib/utils/objectPath.js';
-import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 import dayjs from '$lib/utils/time/dayjsSetup.js';
 
 // Mirrors the emitted-session series colours (plots/canonicalNodeViz.js), so an AI-added plot

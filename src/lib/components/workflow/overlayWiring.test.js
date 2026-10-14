@@ -10,7 +10,7 @@ import {
 	rerouteOverlayWire,
 	overlayPortSelection
 } from './overlayWiring.js';
-import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 import { history } from '$lib/core/opHistory.svelte.js';
 import { mutationService as M } from '$lib/core/mutationService.js';
 import { core, appConsts } from '$lib/core/core.svelte.js';

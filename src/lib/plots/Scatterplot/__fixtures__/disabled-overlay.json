@@ -1,0 +1,108 @@
+{
+	"_comment": "Golden fixture (overlays plan 2026-10-15, T1): disabled overlays (a line and a band, both labelled and beyond the data) beside one enabled line: they draw nothing, widen nothing and add no legend item.",
+	"columns": [
+		{
+			"id": 1,
+			"name": "x",
+			"type": "number",
+			"values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+		},
+		{
+			"id": 2,
+			"name": "y",
+			"type": "number",
+			"values": [
+				5.0, 5.982, 6.855, 7.524, 7.916, 7.986, 7.728, 7.169, 6.372, 5.423, 4.428, 3.496, 2.73,
+				2.213, 2.003, 2.123, 2.56, 3.265, 4.162, 5.15, 6.122
+			]
+		}
+	],
+	"plot": {
+		"id": 500,
+		"name": "disabled-overlay",
+		"width": 480,
+		"height": 300,
+		"facet": false,
+		"inner": {
+			"padding": {
+				"top": 15,
+				"right": 30,
+				"bottom": 30,
+				"left": 40
+			},
+			"data": [
+				{
+					"x": {
+						"id": 101,
+						"refId": 1
+					},
+					"y": {
+						"id": 102,
+						"refId": 2
+					},
+					"label": "Signal",
+					"yAxis": "left",
+					"line": {
+						"colour": null,
+						"strokeWidth": 2,
+						"stroke": "solid",
+						"draw": false,
+						"joinGaps": false
+					},
+					"points": {
+						"colour": null,
+						"radius": 3,
+						"shape": "circle",
+						"draw": true
+					}
+				}
+			],
+			"overlays": [
+				{
+					"id": 0,
+					"name": "Off line",
+					"kind": "line",
+					"form": "vertical",
+					"enabled": false,
+					"label": "off",
+					"channels": {
+						"at": {
+							"columns": [],
+							"typed": [40]
+						}
+					}
+				},
+				{
+					"id": 1,
+					"name": "Off band",
+					"kind": "band",
+					"form": "horizontal",
+					"enabled": false,
+					"label": "off band",
+					"channels": {
+						"lower": {
+							"columns": [],
+							"typed": [-10]
+						},
+						"upper": {
+							"columns": [],
+							"typed": [30]
+						}
+					}
+				},
+				{
+					"id": 2,
+					"name": "On line",
+					"kind": "line",
+					"form": "horizontal",
+					"channels": {
+						"at": {
+							"columns": [],
+							"typed": [5]
+						}
+					}
+				}
+			]
+		}
+	}
+}

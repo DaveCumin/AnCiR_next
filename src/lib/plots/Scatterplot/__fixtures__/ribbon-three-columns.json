@@ -1,0 +1,114 @@
+{
+	"_comment": "Golden fixture (overlays plan 2026-10-15, T1): a ribbon band wired to three columns (x, lower, upper), with no saved fill so it takes the first series colour, plus one wider than the data.",
+	"columns": [
+		{
+			"id": 1,
+			"name": "x",
+			"type": "number",
+			"values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+		},
+		{
+			"id": 2,
+			"name": "y",
+			"type": "number",
+			"values": [
+				5.0, 5.982, 6.855, 7.524, 7.916, 7.986, 7.728, 7.169, 6.372, 5.423, 4.428, 3.496, 2.73,
+				2.213, 2.003, 2.123, 2.56, 3.265, 4.162, 5.15, 6.122
+			]
+		},
+		{
+			"id": 3,
+			"name": "rx",
+			"type": "number",
+			"values": [-2, 0, 5, 10, 15, 22]
+		},
+		{
+			"id": 4,
+			"name": "rlo",
+			"type": "number",
+			"values": [1, 2, 2.5, 3, 2, 1]
+		},
+		{
+			"id": 5,
+			"name": "rhi",
+			"type": "number",
+			"values": [7, 8, 9, 10, 9, 11]
+		}
+	],
+	"plot": {
+		"id": 500,
+		"name": "ribbon-three-columns",
+		"width": 480,
+		"height": 300,
+		"facet": false,
+		"inner": {
+			"padding": {
+				"top": 15,
+				"right": 30,
+				"bottom": 30,
+				"left": 40
+			},
+			"data": [
+				{
+					"x": {
+						"id": 101,
+						"refId": 1
+					},
+					"y": {
+						"id": 102,
+						"refId": 2
+					},
+					"label": "Signal",
+					"yAxis": "left",
+					"line": {
+						"colour": "#1F77B4",
+						"strokeWidth": 2,
+						"stroke": "solid",
+						"draw": true,
+						"joinGaps": false
+					},
+					"points": {
+						"colour": "#1F77B4",
+						"radius": 3,
+						"shape": "circle",
+						"draw": true
+					}
+				}
+			],
+			"overlays": [
+				{
+					"id": 0,
+					"name": "CI",
+					"kind": "band",
+					"form": "ribbon",
+					"channels": {
+						"x": {
+							"columns": [
+								{
+									"refId": 3
+								}
+							],
+							"typed": []
+						},
+						"lower": {
+							"columns": [
+								{
+									"refId": 4
+								}
+							],
+							"typed": []
+						},
+						"upper": {
+							"columns": [
+								{
+									"refId": 5
+								}
+							],
+							"typed": []
+						}
+					}
+				}
+			]
+		}
+	}
+}

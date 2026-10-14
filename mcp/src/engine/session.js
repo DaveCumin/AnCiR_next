@@ -188,16 +188,17 @@ export function describeCapabilities() {
 	// Plots: created with add_plot (wired into the session, renders in the GUI) and
 	// optionally rasterised to PNG/SVG with render_plot (needs a browser runtime).
 	const plots = [];
-	const overlayForms = describeOverlayForms();
 	for (const [id, entry] of appConsts.plotMap ?? new Map()) {
+		const overlayCaps = entry.data?.overlayCapabilities;
 		plots.push({
 			id,
 			displayName: entry.displayName,
 			inputs: entry.defaultInputs ?? [],
 			status: 'available — add_plot (session); render_plot for PNG/SVG',
-			// Reference lines / shaded bands (add_plot / render_plot `overlays`), asked of the
-			// class so a plot that gains them is advertised without editing a list.
-			...(typeof entry.data?.prototype?.addOverlay === 'function' ? { overlays: overlayForms } : {})
+			// Reference lines / shaded bands (add_plot / render_plot `overlays`): the forms the
+			// class declares in `overlayCapabilities`, so a plot that gains them is advertised
+			// without editing a list.
+			...(overlayCaps ? { overlays: describeOverlayForms(overlayCaps) } : {})
 		});
 	}
 	plots.sort((a, b) => a.id.localeCompare(b.id));
@@ -886,7 +887,7 @@ export class AncirSession {
 			if (!getColumnById(id)) throw new Error(`No column with id ${id}. Call list_columns.`);
 			return id;
 		});
-		if (overlayJsons.length && typeof entry.data?.prototype?.addOverlay !== 'function') {
+		if (overlayJsons.length && !entry.data?.overlayCapabilities) {
 			throw new Error(`Plot "${type}" does not support overlays (only scatterplot does).`);
 		}
 

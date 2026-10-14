@@ -14,7 +14,15 @@
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
-	import Overlay, { OverlayClass } from './Overlay.svelte';
+	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+	import { ALL_OVERLAY_FORMS } from '$lib/components/plotbits/overlaySpec.js';
+	import {
+		overlayExtentOf,
+		overlayLegendItems,
+		overlaysFromJSON,
+		overlaysToJSON,
+		overlayDownloadColumns
+	} from '$lib/components/plotbits/overlayHost.js';
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import { LegendAutoLayout, rightOfPlot } from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { LEGEND_MARGIN } from '$lib/components/plotbits/legendLayout.js';
@@ -185,6 +193,10 @@
 	}
 
 	export class Scatterplotclass {
+		// The overlay host contract (components/plotbits/overlayHost.js). The scatterplot is
+		// the reference host: every line and band form, a legend, and a time-capable x axis.
+		static overlayCapabilities = ALL_OVERLAY_FORMS;
+
 		static descriptors = {
 			padding: { group: 'Padding' },
 			xlimsIN: { group: 'X-axis', _children: { 0: { label: 'X min' }, 1: { label: 'X max' } } },
@@ -351,21 +363,17 @@
 		// `domainExtension()[axis]`, or null when none contributes. Manual limits
 		// (`*IN`) still win; the callers apply those after merging this in.
 		overlayExtent(axis) {
-			let lo = Infinity;
-			let hi = -Infinity;
-			for (const o of this.overlays) {
-				const ext = o.domainExtension()[axis];
-				if (!ext) continue;
-				if (ext[0] < lo) lo = ext[0];
-				if (ext[1] > hi) hi = ext[1];
-			}
-			return Number.isFinite(lo) && Number.isFinite(hi) ? [lo, hi] : null;
+			return overlayExtentOf(this.overlays, axis);
 		}
 
 		// Overlay y channels have no axis of their own: they read on the left axis
 		// while it carries data, and on the right axis only when the left is empty.
 		overlayYAxis = $derived(this.hasLeftAxisData || !this.hasRightAxisData ? 'left' : 'right');
 		overlayYScale = $derived(this.overlayYAxis === 'left' ? this.YScaleLeft : this.YScaleRight);
+		// Overlay x channels read on the one x axis.
+		get overlayXScale() {
+			return this.XScale;
+		}
 
 		#yLimitsFor(side, manual) {
 			const sideData = this.data.filter((d) => d.yAxis === side);
@@ -517,9 +525,21 @@
 				.range([this.plotheight, 0]);
 		});
 
-		// Reference lines and shaded bands (Overlay.svelte); replaced `nightBands`,
+		// Reference lines and shaded bands (plotbits/Overlay.svelte); replaced `nightBands`,
 		// which fromJSON still migrates.
 		overlays = $state([]);
+
+		// Overlay host contract: an x channel wired to an hours-from-origin column lands on
+		// the time axis exactly as series x does (xOriginFor); null keeps the values as they are.
+		overlayXValueFor(xCol) {
+			const origin = this.xOriginFor(xCol);
+			return origin != null ? (h) => origin + h * 3600000 : null;
+		}
+
+		// Overlay host contract: a ribbon's default fill borrows the first series' line colour.
+		overlaySeriesColour() {
+			return this.data[0]?.line?.colour ?? null;
+		}
 
 		// Origin (ms) to use when converting an hour-offset series onto the plot's
 		// X scale, or null if no conversion should happen. Time-typed columns are
@@ -743,11 +763,7 @@
 					items.push(legendItem);
 				}
 			});
-			for (const overlay of this.overlays) {
-				if (!overlay.enabled) continue;
-				const item = overlay.getLegendItem();
-				if (item) items.push(item);
-			}
+			items.push(...overlayLegendItems(this.overlays));
 			return items;
 		});
 
@@ -788,29 +804,9 @@
 			});
 			// Overlays: each enabled one's resolved positions/edges, under its name.
 			const isoX = (v) => (this.anyXdataTime ? new Date(v).toISOString() : v);
-			for (const overlay of this.overlays) {
-				if (!overlay.enabled) continue;
-				const g = overlay.geometry(this.overlayContext());
-				if (g.kind === 'line') {
-					headers.push(`${overlay.name}_at`);
-					columns.push(g.orientation === 'vertical' ? g.positions.map(isoX) : g.positions);
-				} else if (g.form === 'ribbon') {
-					headers.push(`${overlay.name}_x`, `${overlay.name}_lower`, `${overlay.name}_upper`);
-					columns.push(g.x.map(isoX), g.lower, g.upper);
-				} else if (g.form === 'horizontal') {
-					headers.push(`${overlay.name}_lower`, `${overlay.name}_upper`);
-					columns.push(
-						g.segments.map((seg) => seg.y0),
-						g.segments.map((seg) => seg.y1)
-					);
-				} else {
-					headers.push(`${overlay.name}_start`, `${overlay.name}_end`);
-					columns.push(
-						g.segments.map((seg) => isoX(seg.x0)),
-						g.segments.map((seg) => isoX(seg.x1))
-					);
-				}
-			}
+			const ov = overlayDownloadColumns(this.overlays, this.overlayContext(), isoX);
+			headers.push(...ov.headers);
+			columns.push(...ov.columns);
 			const maxLen = Math.max(...columns.map((c) => c.length), 0);
 			const rows = [];
 			for (let i = 0; i < maxLen; i++) {
@@ -834,7 +830,7 @@
 				yAxisRight: this.yAxisRight.toJSON(),
 				data: this.data,
 				legend: this.legend.toJSON(),
-				overlays: this.overlays.map((overlay) => overlay.toJSON())
+				overlays: overlaysToJSON(this.overlays)
 			};
 		}
 		static fromJSON(parent, json) {
@@ -891,17 +887,11 @@
 				scatter.addData(json.dataIn);
 			}
 			// Overlays, then any LEGACY night bands migrated behind them. Both after
-			// `data` is populated: fromLegacyNightBand reads anyXdataTime to scale
+			// `data` is populated: a legacy night band reads the time axis to scale
 			// custom-band durations, and ribbon fills borrow the first series colour.
-			// fromJSONSplit (not fromJSON): a Line saved with several `at` columns
-			// (before 2026-09-18) becomes one Line per column, pushed in order so
-			// the copies' "Line N" names count the lines already restored.
-			for (const o of json.overlays ?? []) {
-				for (const ov of OverlayClass.fromJSONSplit(scatter, o)) scatter.overlays.push(ov);
-			}
-			for (const nb of json.nightBands ?? []) {
-				scatter.overlays.push(OverlayClass.fromLegacyNightBand(scatter, nb));
-			}
+			// A Line saved with several `at` columns (before 2026-09-18) becomes one
+			// Line per column (see overlaysFromJSON).
+			overlaysFromJSON(scatter, json, { legacyNightBands: true });
 			scatter.legend = LegendClass.fromJSON(json.legend);
 			return scatter;
 		}
@@ -936,6 +926,8 @@
 	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
+	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
+	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 	import {
 		limitsFromBrush,
 		toLimitNumber,
@@ -1380,44 +1372,7 @@
 			{/each}
 		</div>
 	{:else if appState.currentControlTab === 'overlays'}
-		<div id="overlaySettings">
-			<div class="overlay-add">
-				<button
-					class="btn-add"
-					title="Add a reference line (vertical or horizontal)"
-					onclick={async () => {
-						theData.addOverlay('line');
-						await tick();
-						dataSettingsScrollTo('bottom');
-					}}
-				>
-					+ Line
-				</button>
-				<button
-					class="btn-add"
-					title="Add a shaded band (ribbon, horizontal, vertical or repeating)"
-					onclick={async () => {
-						theData.addOverlay('band');
-						await tick();
-						dataSettingsScrollTo('bottom');
-					}}
-				>
-					+ Band
-				</button>
-			</div>
-
-			{#each theData.overlays as overlay (overlay.id)}
-				<div
-					class="dataBlock"
-					animate:flip={{ duration: 500 }}
-					in:slide={{ duration: 500, axis: 'y' }}
-					out:slide={{ duration: 500, axis: 'y' }}
-				>
-					<Overlay {overlay} inner={theData} which="controls" />
-					<div class="div-line"></div>
-				</div>
-			{/each}
-		</div>
+		<OverlaysTab inner={theData} />
 	{/if}
 {/snippet}
 
@@ -1480,16 +1435,8 @@
 			which="plot"
 		/>
 
-		<!-- Bands BENEATH the series (fixed draw order; lines go above, after the data).
-		     Overlay.svelte's plot snippet decides what an enabled overlay draws; geometry()
-		     is empty for anything the overlay's warning says cannot be drawn. -->
-		<g class="overlay-bands-layer">
-			{#each theData.plot.overlays as overlay (overlay.id)}
-				{#if overlay.kind === 'band' && overlay.enabled}
-					<Overlay {overlay} inner={theData.plot} which="plot" />
-				{/if}
-			{/each}
-		</g>
+		<!-- Bands BENEATH the series (fixed draw order; lines go above, after the data). -->
+		<OverlayLayers inner={theData.plot} layer="bands" />
 
 		{#each theData.plot.data as datum (datum.x.id + '-' + datum.y.id)}
 			{#if datum.xData.length > 0 && datum.yData.length > 0}
@@ -1543,13 +1490,7 @@
 			{/if}
 		{/each}
 		<!-- Reference lines ABOVE the series. -->
-		<g class="overlay-lines-layer">
-			{#each theData.plot.overlays as overlay (overlay.id)}
-				{#if overlay.kind === 'line' && overlay.enabled}
-					<Overlay {overlay} inner={theData.plot} which="plot" />
-				{/if}
-			{/each}
-		</g>
+		<OverlayLayers inner={theData.plot} layer="lines" />
 		<!-- Brush-zoom: listens for pointerdown on the whole <svg> (via svgEl) so a
 		     drag can START anywhere over the plot, including on top of a point, and
 		     hover-tooltips still work (no covering overlay). Mounted for every
@@ -1589,11 +1530,3 @@
 {:else if which === 'controls'}
 	{@render controls(theData)}
 {/if}
-
-<style>
-	.overlay-add {
-		display: flex;
-		gap: var(--space-3);
-		margin-bottom: var(--space-4);
-	}
-</style>

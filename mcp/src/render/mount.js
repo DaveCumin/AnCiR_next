@@ -14,7 +14,7 @@ import { core, appConsts } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { loadPlots } from '$lib/plots/plotMap.js';
-import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
 
 async function run() {

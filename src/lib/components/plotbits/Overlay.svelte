@@ -1,12 +1,22 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import {
+		FORMS,
+		PAIRED_FORMS,
+		OVERLAY_POSITION_CAP as POSITION_CAP,
+		channelsFor,
+		allowedForms,
+		coerceForm,
+		capabilitiesOf
+	} from './overlaySpec.js';
 
 	// One family for everything that is "geometry positioned by values" on a
-	// scatterplot: reference LINES and shaded BANDS (plan 2026-09-13, part B).
-	// A night band is a band of form `repeating`; a 95% CI is a band of form
-	// `ribbon`; an alert time is a vertical line. What differs between them is
-	// only WHICH channels exist, and that is decided by (kind, form) below.
+	// plot: reference LINES and shaded BANDS (plan 2026-09-13, part B; moved out
+	// of Scatterplot by the overlays plan 2026-10-15). A night band is a band of
+	// form `repeating`; a 95% CI is a band of form `ribbon`; an alert time is a
+	// vertical line. What differs between them is only WHICH channels exist, and
+	// that is decided by (kind, form) in overlaySpec.js.
 	//
 	// The class is the whole contract: the Overlays tab, the plotbits renderers
 	// and the canvas port emitter all read it and never each other, so the
@@ -14,11 +24,17 @@
 	// `removeWire`, `setTyped`, `values`, `positions`, `capped`, `geometry`,
 	// `warning`, `domainExtension`, `getLegendItem`, `toJSON`/`fromJSON`,
 	// `fromLegacyNightBand`).
+	//
+	// The class reads its HOST plot (`parentPlot`) only through the contract in
+	// overlayHost.js: `overlays` (for "Line N" naming), `overlaySeriesColour()`
+	// (the ribbon's default fill), `overlayXValueFor(column)` (x channels on a
+	// time axis), `overlayContext()` (repeating bands, legacy night bands) and
+	// the class's `overlayCapabilities` (which forms the host allows).
+
+	/** Position-style channels are collapsed to finite uniques and cut here (overlaySpec.js). */
+	export const OVERLAY_POSITION_CAP = POSITION_CAP;
 
 	let _overlayCounter = 0;
-
-	/** Position-style channels are collapsed to finite uniques and cut here. */
-	export const OVERLAY_POSITION_CAP = 50;
 
 	const MS_PER_HOUR = 3600000;
 
@@ -27,43 +43,6 @@
 	const BAND_FILL_DEFAULT = '#2C2C2C30'; // the NightBand grey
 	const RIBBON_FILL_FALLBACK = '#4682B430';
 	const EDGE_COLOUR_DEFAULT = '#2C2C2C';
-
-	// The channel table from the plan, in panel/port order. `axis` is the axis
-	// the channel is READ on. No channel is dynamic (decision 2026-09-18): every
-	// channel holds ONE column, so each wired source is its own Line overlay with
-	// its own colour, stroke and label. The flag stays in the spec shape because
-	// the port emitter and the MCP catalogue read it; `fromJSONSplit` turns a
-	// saved multi-column `at` from before that decision into one Line per column.
-	const CHANNEL_TABLE = {
-		line: {
-			vertical: [{ key: 'at', axis: 'x', dynamic: false }],
-			horizontal: [{ key: 'at', axis: 'y', dynamic: false }]
-		},
-		band: {
-			ribbon: [
-				{ key: 'x', axis: 'x', dynamic: false },
-				{ key: 'lower', axis: 'y', dynamic: false },
-				{ key: 'upper', axis: 'y', dynamic: false }
-			],
-			horizontal: [
-				{ key: 'lower', axis: 'y', dynamic: false },
-				{ key: 'upper', axis: 'y', dynamic: false }
-			],
-			vertical: [
-				{ key: 'start', axis: 'x', dynamic: false },
-				{ key: 'end', axis: 'x', dynamic: false }
-			],
-			repeating: []
-		}
-	};
-
-	// Channels that are paired element-wise into segments. Uniqueness for these
-	// applies to the PAIR, not to each channel on its own: deduping `start` and
-	// `end` separately would re-pair start[i] with the wrong end.
-	const PAIRED_FORMS = {
-		vertical: ['start', 'end'],
-		horizontal: ['lower', 'upper']
-	};
 
 	const toFinite = (v) => {
 		if (isInvalidValue(v)) return null;
@@ -79,10 +58,7 @@
 
 	export class OverlayClass {
 		/** Forms per kind, in the order the panel offers them. */
-		static FORMS = {
-			line: ['vertical', 'horizontal'],
-			band: ['ribbon', 'horizontal', 'vertical', 'repeating']
-		};
+		static FORMS = FORMS;
 
 		/**
 		 * The ordered channel list for a (kind, form), each
@@ -90,18 +66,17 @@
 		 * Repeating bands have no channels; an unknown pair gives [].
 		 */
 		static channelsFor(kind, form) {
-			const list = CHANNEL_TABLE[kind]?.[form] ?? [];
-			return list.map((c) => ({ ...c, display: `${c.key} (${c.axis})` }));
+			return channelsFor(kind, form);
 		}
 
 		static defaultForm(kind) {
 			return OverlayClass.FORMS[kind]?.[0] ?? 'vertical';
 		}
 
-		/** The fill a band of this form starts with; ribbon borrows the first series' line colour. */
+		/** The fill a band of this form starts with; ribbon borrows the host's series colour. */
 		static defaultFillFor(parent, form) {
 			if (form !== 'ribbon') return BAND_FILL_DEFAULT;
-			const first = parent?.data?.[0]?.line?.colour;
+			const first = parent?.overlaySeriesColour?.();
 			return withAlpha(first, '33') ?? RIBBON_FILL_FALLBACK;
 		}
 
@@ -151,10 +126,11 @@
 			const sameKind = (parent?.overlays ?? []).filter((o) => o?.kind === this.kind).length;
 			this.name = dataIN?.name ?? `${this.kind === 'line' ? 'Line' : 'Band'} ${sameKind + 1}`;
 
-			const form = dataIN?.form;
-			this.form = OverlayClass.FORMS[this.kind].includes(form)
-				? form
-				: OverlayClass.defaultForm(this.kind);
+			// A form the host does not allow becomes the host's first form of the kind
+			// (every form, on a host that declares no capabilities).
+			this.form =
+				coerceForm(capabilitiesOf(parent), this.kind, dataIN?.form) ??
+				OverlayClass.defaultForm(this.kind);
 
 			this.enabled = dataIN?.enabled ?? true;
 			this.label = dataIN?.label ?? '';
@@ -195,10 +171,11 @@
 		 * Change the form, swapping channel keys IN PLACE: keys the new form
 		 * shares keep their wires/typed values, dropped keys vanish (and with
 		 * them their canvas ports), new keys start empty. A form that does not
-		 * belong to this kind is ignored.
+		 * belong to this kind, or that the host does not allow, is ignored.
 		 */
 		setForm(form) {
-			if (!OverlayClass.FORMS[this.kind].includes(form) || form === this.form) return;
+			if (!allowedForms(capabilitiesOf(this.parentPlot), this.kind).includes(form)) return;
+			if (form === this.form) return;
 			const wasDefaultFill = this.fill === OverlayClass.defaultFillFor(this.parentPlot, this.form);
 			const keep = new Set(OverlayClass.channelsFor(this.kind, form).map((c) => c.key));
 			for (const key of Object.keys(this.channels)) {
@@ -267,8 +244,9 @@
 		/**
 		 * The finite numbers a channel provides, in order: wired → the column's
 		 * data (null/blank/NaN skipped), typed → the typed list, neither → [].
-		 * An x-axis channel wired to an hours-from-origin column is converted
-		 * onto the time axis exactly as series x is (xOriginFor).
+		 * An x-axis channel's values go through the host's
+		 * `overlayXValueFor(column)` when it has one (Scatterplot: an
+		 * hours-from-origin column lands on the time axis exactly as series x does).
 		 */
 		values(key) {
 			const ch = this.channels[key];
@@ -276,17 +254,13 @@
 			const col = ch.columns[0];
 			if (!col) return ch.typed.slice();
 			const spec = this.channelSpec(key);
-			const parent = this.parentPlot;
 			const data = typeof col?.getData === 'function' ? (col.getData() ?? []) : [];
-			const origin =
-				spec?.axis === 'x' && typeof parent?.xOriginFor === 'function'
-					? parent.xOriginFor(col)
-					: null;
+			const toAxis = spec?.axis === 'x' ? (this.parentPlot?.overlayXValueFor?.(col) ?? null) : null;
 			const out = [];
 			for (const raw of data) {
 				const v = toFinite(raw);
 				if (v == null) continue;
-				out.push(origin != null ? origin + v * MS_PER_HOUR : v);
+				out.push(toAxis ? toAxis(v) : v);
 			}
 			return out;
 		}
@@ -361,10 +335,17 @@
 		// there), while `nightDurationHours`/`repeatEveryHours` are hours and
 		// scale to ms on a time axis.
 		#repeatingSegments(ctx) {
-			const parent = this.parentPlot;
-			const minX = ctx?.xDomainMin ?? parent?.xlims?.[0];
-			const maxX = ctx?.xDomainMax ?? parent?.xlims?.[1];
-			const isTime = ctx?.xIsTime ?? parent?.anyXdataTime ?? false;
+			// What `ctx` leaves out comes from the host's own draw context.
+			const host =
+				ctx?.xDomainMin == null ||
+				ctx?.xDomainMax == null ||
+				ctx?.xIsTime == null ||
+				(this.useDataMin && ctx?.xAnchorMin == null)
+					? (this.parentPlot?.overlayContext?.() ?? {})
+					: {};
+			const minX = ctx?.xDomainMin ?? host.xDomainMin;
+			const maxX = ctx?.xDomainMax ?? host.xDomainMax;
+			const isTime = ctx?.xIsTime ?? host.xIsTime ?? false;
 			if (!Number.isFinite(minX) || !Number.isFinite(maxX)) return [];
 
 			const bandWidth = isTime ? this.nightDurationHours * MS_PER_HOUR : this.nightDurationHours;
@@ -374,7 +355,7 @@
 			// automatic ends carry a little room for markers, which must not shift the phase),
 			// and continued backwards across that room so the pattern reaches the axis.
 			let bandStart = this.useDataMin
-				? (ctx?.xAnchorMin ?? parent?.xlimsUnpadded?.[0] ?? minX)
+				? (ctx?.xAnchorMin ?? host.xAnchorMin ?? minX)
 				: this.startTimeHours;
 			if (this.useDataMin && Number.isFinite(bandStart) && bandStart > minX) {
 				bandStart -= Math.ceil((bandStart - minX) / step) * step;
@@ -404,7 +385,8 @@
 
 		/**
 		 * What to draw, as plain data. `ctx` = `{ xDomainMin, xDomainMax, xAnchorMin, xIsTime }`
-		 * (only repeating bands read it; each falls back to the parent plot).
+		 * (only repeating bands read it; a missing field falls back to the host's
+		 * `overlayContext()`).
 		 *
 		 *   line             → { kind:'line', orientation:'vertical'|'horizontal', positions:number[] }
 		 *   band vertical    → { kind:'band', form, segments:[{x0,x1}] }   (start[i] with end[i])
@@ -646,7 +628,7 @@
 					useDataMin: nb.useDataMin ?? true
 				});
 			}
-			const msPerUnit = parent?.anyXdataTime ? MS_PER_HOUR : 1;
+			const msPerUnit = parent?.overlayContext?.()?.xIsTime ? MS_PER_HOUR : 1;
 			const start = [];
 			const end = [];
 			for (const band of nb.customBands ?? []) {
@@ -686,7 +668,7 @@
 	let {
 		/** the OverlayClass instance */
 		overlay,
-		/** the plot's inner data object (Scatterplotclass): parentBox, scales, removeOverlay */
+		/** the host plot's inner data object (see overlayHost.js for the contract it meets) */
 		inner,
 		which = 'controls'
 	} = $props();
@@ -699,7 +681,10 @@
 	};
 
 	const channelSpecs = $derived(OverlayClass.channelsFor(overlay?.kind, overlay?.form));
-	const isTimeX = $derived(!!inner?.anyXdataTime);
+	const isTimeX = $derived(!!inner?.overlayContext?.()?.xIsTime);
+	// The forms this host offers for the overlay's kind, and whether it has a legend.
+	const formChoices = $derived(allowedForms(capabilitiesOf(inner), overlay?.kind));
+	const hasLegend = $derived(capabilitiesOf(inner)?.legend !== false);
 
 	// The EMPTY picker (shown while a channel is unwired): a blank wrapper column
 	// that is NOT in the model. Once it resolves to a real column the wire goes in
@@ -745,7 +730,7 @@
 	function addTypedTime(key) {
 		const arr = (overlay.channels[key]?.typed ?? []).slice();
 		const last = arr[arr.length - 1];
-		arr.push(Number.isFinite(last) ? last : (inner?.xlims?.[0] ?? Date.now()));
+		arr.push(Number.isFinite(last) ? last : (inner?.overlayContext?.()?.xDomainMin ?? Date.now()));
 		overlay.setTyped(key, arr);
 	}
 	function removeTypedAt(key, index) {
@@ -929,7 +914,7 @@
 				value={overlay.form}
 				onchange={(e) => overlay.setForm(e.currentTarget.value)}
 			>
-				{#each OverlayClass.FORMS[overlay.kind] as form (form)}
+				{#each formChoices as form (form)}
 					<option value={form}>{FORM_LABELS[form] ?? form}</option>
 				{/each}
 			</select>
@@ -970,14 +955,16 @@
 		{/if}
 	{/if}
 
-	<ControlInput label="Label">
-		<input
-			type="text"
-			bind:value={overlay.label}
-			placeholder="shown in legend when set"
-			title="Shown in the legend when set"
-		/>
-	</ControlInput>
+	{#if hasLegend}
+		<ControlInput label="Label">
+			<input
+				type="text"
+				bind:value={overlay.label}
+				placeholder="shown in legend when set"
+				title="Shown in the legend when set"
+			/>
+		</ControlInput>
+	{/if}
 {/snippet}
 
 {#snippet plot(overlay)}
@@ -988,7 +975,7 @@
 				lineData={overlay}
 				positions={g.positions}
 				orientation={g.orientation}
-				xscale={inner.XScale}
+				xscale={inner.overlayXScale}
 				yscale={inner.overlayYScale}
 				xoffset={inner.padding.left}
 				yoffset={inner.padding.top}
@@ -998,7 +985,7 @@
 			<Band
 				{overlay}
 				geometry={g}
-				xscale={inner.XScale}
+				xscale={inner.overlayXScale}
 				yscale={inner.overlayYScale}
 				xoffset={inner.padding.left}
 				yoffset={inner.padding.top}

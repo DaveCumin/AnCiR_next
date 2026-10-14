@@ -8,7 +8,7 @@ import {
 	overlayColumnIds,
 	remapOverlayColumnIds
 } from '../src/engine/overlays.js';
-import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 
 const seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 

@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 import {
 	plotMetricKeys,
 	plotMetricLabel,

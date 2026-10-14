@@ -11,7 +11,7 @@ import { core, appConsts, appState, snapToGrid } from '$lib/core/core.svelte.js'
 import { loadPlots } from '$test/plotRegistry.js';
 import { Plot, FACETABLE_PLOT_TYPES as PLOT_FACETABLE } from '$lib/core/Plot.svelte';
 import { Column } from '$lib/core/Column.svelte';
-import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 import { FACETABLE_PLOT_TYPES, COLUMN_BASED_FACET_TYPES } from '$lib/core/facetTypes.js';
 import {
 	unitKeyFor,

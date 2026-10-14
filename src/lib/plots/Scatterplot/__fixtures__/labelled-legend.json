@@ -1,0 +1,134 @@
+{
+	"_comment": "Golden fixture (overlays plan 2026-10-15, T1): labelled overlays (a line, a band with an edge, a band without) with the legend on.",
+	"columns": [
+		{
+			"id": 1,
+			"name": "x",
+			"type": "number",
+			"values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+		},
+		{
+			"id": 2,
+			"name": "y",
+			"type": "number",
+			"values": [
+				5.0, 5.982, 6.855, 7.524, 7.916, 7.986, 7.728, 7.169, 6.372, 5.423, 4.428, 3.496, 2.73,
+				2.213, 2.003, 2.123, 2.56, 3.265, 4.162, 5.15, 6.122
+			]
+		}
+	],
+	"plot": {
+		"id": 500,
+		"name": "labelled-legend",
+		"width": 480,
+		"height": 300,
+		"facet": false,
+		"inner": {
+			"padding": {
+				"top": 15,
+				"right": 30,
+				"bottom": 30,
+				"left": 40
+			},
+			"data": [
+				{
+					"x": {
+						"id": 101,
+						"refId": 1
+					},
+					"y": {
+						"id": 102,
+						"refId": 2
+					},
+					"label": "Signal",
+					"yAxis": "left",
+					"line": {
+						"colour": "#8E44AD",
+						"strokeWidth": 2,
+						"stroke": "solid",
+						"draw": true,
+						"joinGaps": false
+					},
+					"points": {
+						"colour": "#8E44AD",
+						"radius": 3,
+						"shape": "circle",
+						"draw": true
+					}
+				}
+			],
+			"overlays": [
+				{
+					"id": 0,
+					"name": "Threshold",
+					"kind": "line",
+					"form": "horizontal",
+					"label": "threshold",
+					"colour": "#C0392B",
+					"strokeWidth": 2,
+					"stroke": "2, 2",
+					"channels": {
+						"at": {
+							"columns": [],
+							"typed": [7]
+						}
+					}
+				},
+				{
+					"id": 1,
+					"name": "Window",
+					"kind": "band",
+					"form": "vertical",
+					"label": "window",
+					"fill": "#2980B933",
+					"edge": true,
+					"edgeColour": "#2980B9",
+					"channels": {
+						"start": {
+							"columns": [],
+							"typed": [4]
+						},
+						"end": {
+							"columns": [],
+							"typed": [8]
+						}
+					}
+				},
+				{
+					"id": 2,
+					"name": "Zone",
+					"kind": "band",
+					"form": "horizontal",
+					"label": "zone",
+					"fill": "#27AE6033",
+					"channels": {
+						"lower": {
+							"columns": [],
+							"typed": [1]
+						},
+						"upper": {
+							"columns": [],
+							"typed": [2]
+						}
+					}
+				},
+				{
+					"id": 3,
+					"name": "Unlabelled",
+					"kind": "line",
+					"form": "vertical",
+					"channels": {
+						"at": {
+							"columns": [],
+							"typed": [12]
+						}
+					}
+				}
+			],
+			"legend": {
+				"show": true,
+				"position": "topright"
+			}
+		}
+	}
+}

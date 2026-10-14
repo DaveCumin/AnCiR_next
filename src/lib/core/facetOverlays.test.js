@@ -7,7 +7,7 @@ import { core, appConsts, appState } from '$lib/core/core.svelte.js';
 import { loadPlots } from '$test/plotRegistry.js';
 import { Plot } from '$lib/core/Plot.svelte';
 import { Column } from '$lib/core/Column.svelte';
-import { OverlayClass } from '$lib/plots/Scatterplot/Overlay.svelte';
+import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 import { panelsFor, projectPanel } from '$lib/core/facetPanels.svelte.js';
 
 function mkCol(name, values) {

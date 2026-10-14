@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/svelte';
 import { core } from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
-import Scatterplot, { Scatterplotclass } from './Scatterplot.svelte';
+import Scatterplot, { Scatterplotclass } from '$lib/plots/Scatterplot/Scatterplot.svelte';
 import Overlay from './Overlay.svelte';
 
 function mkCol(values, type = 'number') {
