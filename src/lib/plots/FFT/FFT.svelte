@@ -25,7 +25,12 @@
 	} from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import { paddedDomain } from '$lib/plots/axisDomain.js';
-	import { fftXAxisLabel, convertFftLimits, FFT_PERIOD_LABEL } from './fftAxis.js';
+	import {
+		fftXAxisLabel,
+		setFftShowPeriod,
+		convertFftLimitOverride,
+		FFT_PERIOD_LABEL
+	} from './fftAxis.js';
 	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 	import {
 		overlayExtentOf,
@@ -328,7 +333,10 @@
 
 		// Toggle between frequency and period. An accessor so that EVERY way of changing the
 		// mode (the checkbox, the multi-select shared fields, fromJSON) keeps an automatic
-		// x-axis label in step with it; see fftAxis.js.
+		// x-axis label in step with it; see fftAxis.js. The setter only stores the mode: the
+		// x limits are in the mode's units, and a SWITCH converts them through pairedEdits
+		// below, never here, because fromJSON and the facet mirror also write this field with
+		// limits that are already in the new mode.
 		#showPeriod = $state(true);
 		get showPeriod() {
 			return this.#showPeriod;
@@ -343,6 +351,13 @@
 			if (next !== this.xAxis.label) this.xAxis.label = next;
 		}
 		xlimsIN = $state([4, 30]);
+
+		// Fields whose edit must convert others (plots/pairedEdits.js). Switching the mode
+		// converts the x limits, a manual x tick list and any facet panel x override, by every
+		// edit route: Properties, the multi-select panel, an AI edit, the MCP render settings.
+		static pairedEdits = {
+			showPeriod: { apply: setFftShowPeriod, override: convertFftLimitOverride }
+		};
 
 		// Get max frequency and min period from data
 		nyquistFreqs = $derived.by(() => this.data.map((d) => d.fftData.nyquistFreq || 0));
@@ -820,6 +835,7 @@
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
 	import { getZoomAdapter } from '$lib/plots/zoomAdapters.js';
+	import { editPlotInners } from '$lib/plots/pairedEdits.js';
 	import { usePlotMetricOutputs, ownsPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
 	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
@@ -1059,8 +1075,13 @@
 				<label class="control-input-checkbox">
 					<input
 						type="checkbox"
-						bind:checked={theData.showPeriod}
-						onchange={() => (theData.xlimsIN = convertFftLimits(theData.xlimsIN))}
+						checked={theData.showPeriod}
+						onchange={(e) =>
+							editPlotInners(
+								[theData.parentBox ?? { plot: theData }],
+								'showPeriod',
+								e.currentTarget.checked
+							)}
 					/>
 					<span class="ci-label">Show as Period (hours)</span>
 				</label>

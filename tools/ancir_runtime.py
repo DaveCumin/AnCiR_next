@@ -8055,17 +8055,698 @@ def _apply_axes(ax, xlims=None, ylims=None, xlog=False, ylog=False,
     if title:  ax.set_title(title)
 
 
+# ----------------------------------------------------------------------
+# Plot overlays: reference LINES and shaded BANDS (overlays plan 2026-10-15, step 5)
+#
+# A port of the app's overlay model: the channel table and host capabilities
+# (components/plotbits/overlaySpec.js), OverlayClass's constructor, values / positions /
+# geometry (components/plotbits/Overlay.svelte) and overlaysFromJSON / fromLegacyNightBand
+# (components/plotbits/overlayHost.js), so an exported figure carries the same marks at the
+# same data values as the app:
+#
+# - a form the host does not allow is coerced to the host's first form of that kind, and an
+#   overlay whose kind the host does not allow is dropped;
+# - a line's `at` positions are collapsed to finite uniques and cut at OVERLAY_POSITION_CAP;
+#   paired channels (start/end, lower/upper) are cut as raw lists and deduped per PAIR; a
+#   ribbon draws only when x, lower and upper hold the same number of values;
+# - repeating bands use NightBand's maths: anchored at the data minimum when `useDataMin`
+#   (continued backwards to the axis), hours scaled to ms on a time axis;
+# - x channels on a scatterplot's time axis go through the host's overlayXValueFor (an
+#   hours-from-origin column lands on the time axis as series x does); an FFT's vertical
+#   positions are periods in hours, drawn at 1/p in frequency mode (overlayXTransform).
+#
+# Drawing (_draw_overlays): bands BENEATH the series (zorder 0.5), lines ABOVE them (2.5);
+# axvline / axhline per position, axvspan / axhspan per segment (an edge is the two data
+# edges, never the plot sides), fill_between for a ribbon. A host widens only the axes in
+# its `domain` (matplotlib's autoscale does it); the others are restored, so an overlay never
+# changes a periodogram's period range or a correlogram's lag range. Labelled overlays get
+# a legend entry (a proxy handle, so one entry per overlay however many marks it draws).
+# Every drawn artist carries gid `overlay-<id>`.
+# ----------------------------------------------------------------------
+
+OVERLAY_POSITION_CAP = 50
+
+# overlaySpec.js CHANNEL_TABLE: (key, axis) per (kind, form), in panel order.
+_OVERLAY_CHANNELS = {
+    'line': {
+        'vertical': (('at', 'x'),),
+        'horizontal': (('at', 'y'),),
+    },
+    'band': {
+        'ribbon': (('x', 'x'), ('lower', 'y'), ('upper', 'y')),
+        'horizontal': (('lower', 'y'), ('upper', 'y')),
+        'vertical': (('start', 'x'), ('end', 'x')),
+        'repeating': (),
+    },
+}
+_OVERLAY_FORMS = {
+    'line': ('vertical', 'horizontal'),
+    'band': ('ribbon', 'horizontal', 'vertical', 'repeating'),
+}
+
+# Each rendered host's `static overlayCapabilities` (forms in the host's panel order; the
+# first is the default) and the axes whose automatic range an overlay may widen. Pinned to
+# the app by test_plot_overlays.py against mcp/src/emit/session-schema.generated.json.
+# Histogram, Q-Q plot, Mean +/- SEM and CWT carry overlays in the app but are not rendered
+# by this runtime (render_plots skips them).
+OVERLAY_CAPABILITIES = {
+    'scatterplot': {'line': ('vertical', 'horizontal'),
+                    'band': ('ribbon', 'horizontal', 'vertical', 'repeating'),
+                    'domain': ('x', 'y')},
+    'periodogram': {'line': ('vertical', 'horizontal'),
+                    'band': ('vertical', 'horizontal', 'ribbon'),
+                    'domain': ('y',)},
+    'correlogram': {'line': ('vertical', 'horizontal'),
+                    'band': ('vertical', 'horizontal'),
+                    'domain': ('y',)},
+    'fft': {'line': ('vertical', 'horizontal'),
+            'band': ('vertical', 'horizontal'),
+            'domain': ('y',)},
+    'boxplot': {'line': ('horizontal',),
+                'band': ('horizontal',),
+                'domain': ('y',)},
+}
+
+_OVERLAY_LINE_PALETTE = ('#2C2C2C', '#C0392B', '#2980B9', '#27AE60', '#8E44AD')
+_OVERLAY_BAND_FILL_DEFAULT = '#2C2C2C30'  # the NightBand grey
+_OVERLAY_RIBBON_FILL_FALLBACK = '#4682B430'
+_OVERLAY_EDGE_COLOUR_DEFAULT = '#2C2C2C'
+_MS_PER_HOUR = 3600000
+_MS_PER_DAY = 86400000
+
+
+def _nn(v, default):
+    """JS `v ?? default`."""
+    return default if v is None else v
+
+
+def _overlay_to_finite(v):
+    """Overlay.svelte toFinite: the house rule (stats.js isInvalidValue), then Number();
+    +-Infinity is not a position either."""
+    if _js_invalid(v):
+        return None
+    n = _js_number(v)
+    return n if math.isfinite(n) else None
+
+
+def _overlay_allowed_forms(caps, kind):
+    """overlaySpec.js allowedForms: the forms of `kind` the host allows, host order; caps
+    None means no restriction."""
+    known = _OVERLAY_FORMS.get(kind)
+    if not known:
+        return []
+    if caps is None:
+        return list(known)
+    return [f for f in (caps.get(kind) or ()) if f in known]
+
+
+def _overlay_with_alpha(hex_colour, alpha_byte):
+    if isinstance(hex_colour, str) and re.fullmatch(r'#[0-9a-fA-F]{6}', hex_colour):
+        return hex_colour + alpha_byte
+    return None
+
+
+def _overlay_default_fill(form, series_colour):
+    """OverlayClass.defaultFillFor: a ribbon borrows the host's series colour."""
+    if form != 'ribbon':
+        return _OVERLAY_BAND_FILL_DEFAULT
+    return _overlay_with_alpha(series_colour, '33') or _OVERLAY_RIBBON_FILL_FALLBACK
+
+
+def _overlay_new(j, caps, overlays_so_far, series_colour=None):
+    """OverlayClass constructor over saved JSON: a plain dict, or None when the host does not
+    allow the overlay's kind (overlaysFromJSON drops it)."""
+    j = j or {}
+    kind = 'band' if j.get('kind') == 'band' else 'line'
+    allowed = _overlay_allowed_forms(caps, kind)
+    if not allowed:
+        return None
+    form = j.get('form') if j.get('form') in allowed else allowed[0]
+    same_kind = sum(1 for o in overlays_so_far if o.get('kind') == kind)
+    saved_channels = j.get('channels') or {}
+    channels = {}
+    for key, _axis in _OVERLAY_CHANNELS[kind][form]:
+        saved = saved_channels.get(key) or {}
+        cols = [c.get('refId') for c in (saved.get('columns') or [])
+                if isinstance(c, dict) and c.get('refId') is not None][:1]
+        typed = [t for t in (_overlay_to_finite(v) for v in (saved.get('typed') or []))
+                 if t is not None]
+        channels[key] = {'columns': cols, 'typed': typed}
+    return {
+        'id': j.get('id'),
+        'name': _nn(j.get('name'), f"{'Line' if kind == 'line' else 'Band'} {same_kind + 1}"),
+        'kind': kind,
+        'form': form,
+        'enabled': _nn(j.get('enabled'), True),
+        'label': _nn(j.get('label'), ''),
+        'colour': _nn(j.get('colour'),
+                      _OVERLAY_LINE_PALETTE[same_kind % len(_OVERLAY_LINE_PALETTE)]),
+        'strokeWidth': _nn(j.get('strokeWidth'), 1.5),
+        'stroke': _nn(j.get('stroke'), '5, 5'),
+        'fill': _nn(j.get('fill'), _overlay_default_fill(form, series_colour)),
+        'edge': _nn(j.get('edge'), False),
+        'edgeColour': _nn(j.get('edgeColour'), _OVERLAY_EDGE_COLOUR_DEFAULT),
+        'edgeWidth': _nn(j.get('edgeWidth'), 1),
+        'repeatEveryHours': _nn(j.get('repeatEveryHours'), 24),
+        'nightDurationHours': _nn(j.get('nightDurationHours'), 12),
+        'startTimeHours': _nn(j.get('startTimeHours'), 0),
+        'useDataMin': _nn(j.get('useDataMin'), True),
+        'channels': channels,
+    }
+
+
+def _overlay_from_legacy_night_band(nb, caps, overlays_so_far, x_is_time):
+    """OverlayClass.fromLegacyNightBand: mode 'repeating' -> a repeating band, 'custom' -> a
+    vertical band typed from `customBands` (`{startTime, durationHours}` or the older
+    `{startTime, endTime}`; durations scale to ms on a time axis)."""
+    nb = nb or {}
+    base = {'kind': 'band', 'name': _nn(nb.get('name'), 'Night'),
+            'fill': _nn(nb.get('colour'), _OVERLAY_BAND_FILL_DEFAULT),
+            'enabled': _nn(nb.get('enabled'), True)}
+    if nb.get('mode') != 'custom':
+        return _overlay_new({**base, 'form': 'repeating',
+                             'repeatEveryHours': _nn(nb.get('repeatEveryHours'), 24),
+                             'nightDurationHours': _nn(nb.get('nightDurationHours'), 12),
+                             'startTimeHours': _nn(nb.get('startTimeHours'), 0),
+                             'useDataMin': _nn(nb.get('useDataMin'), True)},
+                            caps, overlays_so_far)
+    ms_per_unit = _MS_PER_HOUR if x_is_time else 1
+    start, end = [], []
+    for band in nb.get('customBands') or []:
+        band = band or {}
+        s = _overlay_to_finite(band.get('startTime'))
+        if s is None:
+            continue
+        e = _overlay_to_finite(band.get('endTime'))
+        dur = _overlay_to_finite(band.get('durationHours'))
+        if dur is not None:
+            e = s + dur * ms_per_unit
+        if e is None or not (e > s):
+            continue
+        start.append(s)
+        end.append(e)
+    return _overlay_new({**base, 'form': 'vertical',
+                         'channels': {'start': {'typed': start}, 'end': {'typed': end}}},
+                        caps, overlays_so_far)
+
+
+def _overlays_from_plot(plot_inner, caps, *, legacy_night_bands=False, x_is_time=False,
+                        series_colour=None):
+    """overlayHost.js overlaysFromJSON over a saved plot's inner JSON: the overlays as plain
+    dicts, in draw order. A Line saved with several `at` columns (before 2026-09-18) becomes
+    one Line per column (OverlayClass.fromJSONSplit); with `legacy_night_bands` the
+    pre-overlay `nightBands` list follows as band overlays (Scatterplot only)."""
+    out = []
+    for j in plot_inner.get('overlays') or []:
+        first = _overlay_new(j, caps, out, series_colour)
+        if first is None:
+            continue
+        saved = [c for c in (((j or {}).get('channels') or {}).get('at') or {}).get('columns')
+                 or [] if isinstance(c, dict) and c.get('refId') is not None]
+        out.append(first)
+        if first['kind'] != 'line' or len(saved) <= 1:
+            continue
+        line_count = sum(1 for o in out if o['kind'] == 'line')
+        for i, c in enumerate(saved[1:]):
+            copy = dict(first, channels={'at': {'columns': [c['refId']], 'typed': []}},
+                        id=None, name=f'Line {line_count + i + 1}')
+            out.append(copy)
+    if legacy_night_bands:
+        for nb in plot_inner.get('nightBands') or []:
+            ov = _overlay_from_legacy_night_band(nb, caps, out, x_is_time)
+            if ov is not None:
+                out.append(ov)
+    return out
+
+
+def _overlay_channel_axis(overlay, key):
+    for k, axis in _OVERLAY_CHANNELS[overlay['kind']].get(overlay['form'], ()):
+        if k == key:
+            return axis
+    return None
+
+
+def _overlay_values(overlay, key, columns_index, x_value_for=None):
+    """OverlayClass.values: the finite numbers a channel provides, in order. A wired column's
+    data (house-rule invalid cells skipped; an x channel goes through the host's
+    overlayXValueFor when it has one), else the typed list."""
+    ch = overlay['channels'].get(key)
+    if not ch:
+        return []
+    if not ch['columns']:
+        return list(ch['typed'])
+    col = columns_index.get(ch['columns'][0])
+    data = (col.get_data() if col is not None else None) or []
+    to_axis = (x_value_for(col) if (x_value_for is not None and col is not None
+                                    and _overlay_channel_axis(overlay, key) == 'x') else None)
+    out = []
+    for raw in data:
+        v = _overlay_to_finite(raw)
+        if v is None:
+            continue
+        out.append(to_axis(v) if to_axis else v)
+    return out
+
+
+def _overlay_uniques(values):
+    seen = set()
+    out = []
+    for v in values:
+        if v in seen:
+            continue
+        seen.add(v)
+        out.append(v)
+    return out
+
+
+def _overlay_positions(overlay, key, columns_index, x_value_for=None):
+    """OverlayClass.positions: a line's `at` collapsed to uniques and capped; paired channels
+    capped as raw lists; ribbon channels whole."""
+    vals = _overlay_values(overlay, key, columns_index, x_value_for)
+    if overlay['form'] == 'ribbon':
+        return vals
+    base = _overlay_uniques(vals) if (overlay['kind'] == 'line' and key == 'at') else vals
+    return base[:OVERLAY_POSITION_CAP]
+
+
+def _overlay_paired_segments(overlay, k0, k1, n0, n1, columns_index, x_value_for=None):
+    a = _overlay_positions(overlay, k0, columns_index, x_value_for)
+    b = _overlay_positions(overlay, k1, columns_index, x_value_for)
+    seen = set()
+    out = []
+    for i in range(min(len(a), len(b))):
+        lo, hi = min(a[i], b[i]), max(a[i], b[i])
+        if not (hi > lo):
+            continue  # an empty pair draws nothing
+        if (lo, hi) in seen:
+            continue
+        seen.add((lo, hi))
+        out.append({n0: lo, n1: hi})
+    return out
+
+
+def _overlay_repeating_segments(overlay, ctx):
+    """NightBand's repeating maths, as OverlayClass #repeatingSegments: `startTimeHours` is
+    in AXIS units (ms on a time axis), duration and period are hours (scaled to ms there)."""
+    min_x, max_x = ctx.get('xDomainMin'), ctx.get('xDomainMax')
+    is_time = bool(ctx.get('xIsTime'))
+    if not (_is_finite_number(min_x) and _is_finite_number(max_x)):
+        return []
+    dur = overlay['nightDurationHours']
+    every = overlay['repeatEveryHours']
+    band_width = dur * _MS_PER_HOUR if is_time else dur
+    step = every * _MS_PER_HOUR if is_time else every
+    if not (step > 0) or not (band_width > 0):
+        return []
+    if overlay['useDataMin']:
+        band_start = _nn(ctx.get('xAnchorMin'), min_x)
+    else:
+        band_start = overlay['startTimeHours']
+    if overlay['useDataMin'] and _is_finite_number(band_start) and band_start > min_x:
+        band_start -= math.ceil((band_start - min_x) / step) * step
+    if not _is_finite_number(band_start):
+        return []
+    segments = []
+    while band_start < max_x:
+        band_end = band_start + band_width
+        if band_end > min_x and band_start < max_x:
+            segments.append({'x0': max(band_start, min_x), 'x1': min(band_end, max_x)})
+        band_start += step
+    return segments
+
+
+def _is_finite_number(v):
+    return (isinstance(v, (int, float, np.integer, np.floating))
+            and not isinstance(v, bool) and math.isfinite(v))
+
+
+def _overlay_geometry(overlay, columns_index, ctx=None, x_value_for=None, x_transform=None):
+    """OverlayClass.geometry: what to draw, in AXIS units.
+
+      line            -> {kind:'line', orientation, positions}
+      band vertical   -> {kind:'band', form, segments:[{x0,x1}]}
+      band repeating  -> {kind:'band', form, segments:[{x0,x1}]}  (needs ctx)
+      band horizontal -> {kind:'band', form, segments:[{y0,y1}]}
+      band ribbon     -> {kind:'band', form, x, lower, upper}      (equal lengths, or all empty)
+
+    `x_transform(v)` maps a stored x to the axis (None drops it; FFT: 1/p in frequency mode);
+    repeating bands are built in axis units and never go through it."""
+    ctx = ctx or {}
+
+    def tx(v):
+        if x_transform is None:
+            return v
+        ax = x_transform(v)
+        return ax if _is_finite_number(ax) else None
+
+    def pos(key):
+        return _overlay_positions(overlay, key, columns_index, x_value_for)
+
+    if overlay['kind'] == 'line':
+        at = pos('at')
+        if overlay['form'] == 'vertical':
+            at = [a for a in (tx(v) for v in at) if a is not None]
+        return {'kind': 'line', 'orientation': overlay['form'], 'positions': at}
+    form = overlay['form']
+    if form == 'vertical':
+        segs = []
+        for s in _overlay_paired_segments(overlay, 'start', 'end', 'x0', 'x1',
+                                          columns_index, x_value_for):
+            a, b = tx(s['x0']), tx(s['x1'])
+            if a is None or b is None:
+                continue
+            segs.append({'x0': min(a, b), 'x1': max(a, b)})  # 1/p reverses the edges
+        return {'kind': 'band', 'form': 'vertical', 'segments': segs}
+    if form == 'horizontal':
+        return {'kind': 'band', 'form': 'horizontal',
+                'segments': _overlay_paired_segments(overlay, 'lower', 'upper', 'y0', 'y1',
+                                                     columns_index, x_value_for)}
+    if form == 'repeating':
+        return {'kind': 'band', 'form': 'repeating',
+                'segments': _overlay_repeating_segments(overlay, ctx)}
+    x, lower, upper = pos('x'), pos('lower'), pos('upper')
+    empty = {'kind': 'band', 'form': 'ribbon', 'x': [], 'lower': [], 'upper': []}
+    if len(x) != len(lower) or len(x) != len(upper) or not x:
+        return empty
+    out = dict(empty, x=[], lower=[], upper=[])
+    for i, v in enumerate(x):
+        a = tx(v)
+        if a is None:
+            continue  # dropped from all three channels, so they stay parallel
+        out['x'].append(a)
+        out['lower'].append(lower[i])
+        out['upper'].append(upper[i])
+    return out
+
+
+def _overlay_extent(values):
+    return (min(values), max(values)) if values else None
+
+
+def _overlay_domain_extension(overlay, geometry):
+    """OverlayClass.domainExtension: {'x': (lo, hi)|None, 'y': ...} from what is drawn;
+    nothing when disabled, and never for a repeating band."""
+    none = {'x': None, 'y': None}
+    if not overlay['enabled'] or overlay['form'] == 'repeating':
+        return none
+    g = geometry
+    if g['kind'] == 'line':
+        ext = _overlay_extent(g['positions'])
+        return {'x': ext, 'y': None} if g['orientation'] == 'vertical' else {'x': None, 'y': ext}
+    if g['form'] == 'ribbon':
+        return {'x': _overlay_extent(g['x']), 'y': _overlay_extent(g['lower'] + g['upper'])}
+    if g['form'] == 'vertical':
+        return {'x': _overlay_extent([v for s in g['segments'] for v in (s['x0'], s['x1'])]),
+                'y': None}
+    return {'x': None,
+            'y': _overlay_extent([v for s in g['segments'] for v in (s['y0'], s['y1'])])}
+
+
+def _overlay_dashes(stroke, width):
+    """A Line.svelte `stroke` (an SVG dasharray: 'solid', '5, 5', '2, 2', '5, 2') as a
+    matplotlib linestyle. Matplotlib scales dashes by the line width, so the pattern is
+    divided by it to keep the app's absolute lengths."""
+    if not isinstance(stroke, str) or stroke.strip() in ('', 'solid', 'none'):
+        return '-'
+    try:
+        parts = [float(t) for t in re.split(r'[\s,]+', stroke.strip()) if t]
+    except ValueError:
+        return '-'
+    if not parts or any(not math.isfinite(v) or v < 0 for v in parts) or sum(parts) <= 0:
+        return '-'
+    if len(parts) % 2:
+        parts = parts * 2  # SVG repeats an odd list
+    w = width if width and width > 0 else 1
+    return (0, tuple(v / w for v in parts))
+
+
+def _overlay_colour(c, fallback):
+    from matplotlib.colors import is_color_like
+    return c if isinstance(c, str) and is_color_like(c) else fallback
+
+
+def _ms_to_datenum(ms):
+    """Epoch ms (the app's time axis) to a matplotlib date number."""
+    import matplotlib.dates as mdates
+    return mdates.date2num(pd.Timestamp(0, unit='ms', tz='UTC')) + ms / _MS_PER_DAY
+
+
+def _datenum_to_ms(num):
+    import matplotlib.dates as mdates
+    return (num - mdates.date2num(pd.Timestamp(0, unit='ms', tz='UTC'))) * _MS_PER_DAY
+
+
+def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
+                   x_value_for=None, x_is_time=False, x_data_extent=None, xlims_in=None,
+                   xlog=False, ylog=False, legacy_night_bands=False, series_colour=None):
+    """Draw a plot's overlays onto `ax` (call it after the series, before the manual limits
+    are applied). `host` is the plot type (its OVERLAY_CAPABILITIES entry; defaults to
+    plot['type']). Scatterplot only: `x_value_for(col)` (overlayXValueFor), `x_is_time` (x
+    is epoch ms, drawn on a date axis), `x_data_extent` (the series' [floor min, ceil max] x,
+    for the repeating-band anchor), `xlims_in` (manual x limits) and `legacy_night_bands`.
+    Positions <= 0 on a log axis draw nothing, as in the app.
+
+    Returns {'legend': [(handle, label)], 'artists': {index: [artist, ...]}} with the
+    overlays' legend entries (proxy handles, not on the axes) in draw order."""
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+
+    p = plot.get('plot', {}) or {}
+    caps = OVERLAY_CAPABILITIES.get(host or plot.get('type'))
+    overlays = _overlays_from_plot(p, caps, legacy_night_bands=legacy_night_bands,
+                                   x_is_time=x_is_time, series_colour=series_colour)
+    result = {'legend': [], 'artists': {}}
+    if not overlays:
+        return result
+    domain = (caps or {}).get('domain', ('x', 'y'))
+    saved_xlim = ax.get_xlim() if 'x' not in domain else None
+    saved_ylim = ax.get_ylim() if 'y' not in domain else None
+
+    def to_x(v):
+        return _ms_to_datenum(v) if x_is_time else v
+
+    def placeable(v, log):
+        return v > 0 if log else True
+
+    geoms = {}
+    for i, ov in enumerate(overlays):
+        if ov['enabled'] and ov['form'] != 'repeating':
+            geoms[i] = _overlay_geometry(ov, columns_index, None, x_value_for, x_transform)
+
+    def draw(i, ov, g):
+        gid = f"overlay-{ov['id'] if ov['id'] is not None else i}"
+        arts = []
+        if g['kind'] == 'line':
+            width = ov['strokeWidth']
+            style = dict(color=_overlay_colour(ov['colour'], '#2C2C2C'), linewidth=width,
+                         linestyle=_overlay_dashes(ov['stroke'], width), zorder=2.5,
+                         label='_nolegend_', gid=gid)
+            for v in g['positions']:
+                if g['orientation'] == 'vertical':
+                    if placeable(v, xlog):
+                        arts.append(ax.axvline(to_x(v), **style))
+                elif placeable(v, ylog):
+                    arts.append(ax.axhline(v, **style))
+            return arts
+        fill = _overlay_colour(ov['fill'], _OVERLAY_BAND_FILL_DEFAULT)
+        edge = dict(color=_overlay_colour(ov['edgeColour'], _OVERLAY_EDGE_COLOUR_DEFAULT),
+                    linewidth=ov['edgeWidth'], zorder=0.6, label='_nolegend_', gid=gid)
+        band = dict(facecolor=fill, edgecolor='none', linewidth=0, zorder=0.5,
+                    label='_nolegend_', gid=gid)
+        if g['form'] == 'ribbon':
+            xs = [to_x(v) for v in g['x']]
+            arts.append(ax.fill_between(xs, g['lower'], g['upper'], **band))
+            if ov['edge']:
+                arts.extend(ax.plot(xs, g['lower'], **edge))
+                arts.extend(ax.plot(xs, g['upper'], **edge))
+            return arts
+        for s in g['segments']:
+            if 'y0' in s:
+                if not (placeable(s['y0'], ylog) and placeable(s['y1'], ylog)):
+                    continue
+                arts.append(ax.axhspan(s['y0'], s['y1'], **band))
+                if ov['edge']:
+                    arts.append(ax.axhline(s['y0'], **edge))
+                    arts.append(ax.axhline(s['y1'], **edge))
+            else:
+                if not (placeable(s['x0'], xlog) and placeable(s['x1'], xlog)):
+                    continue
+                arts.append(ax.axvspan(to_x(s['x0']), to_x(s['x1']), **band))
+                if ov['edge']:
+                    arts.append(ax.axvline(to_x(s['x0']), **edge))
+                    arts.append(ax.axvline(to_x(s['x1']), **edge))
+        return arts
+
+    for i, g in geoms.items():
+        result['artists'][i] = draw(i, overlays[i], g)
+
+    # Restore the axes a host never widens (an analysis range such as the period range).
+    if saved_xlim is not None:
+        ax.set_xlim(saved_xlim)
+    if saved_ylim is not None:
+        ax.set_ylim(saved_ylim)
+
+    repeating = [i for i, ov in enumerate(overlays)
+                 if ov['enabled'] and ov['form'] == 'repeating']
+    if repeating:
+        # The host's overlayContext(): the visible x range (manual limits win) and, for a
+        # band that follows the data, the data minimum (Scatterplot xlimsUnpadded[0]: the
+        # manual minimum, else the series' extent merged with the other overlays').
+        lo, hi = ax.get_xlim()
+        if x_is_time:
+            lo, hi = _datenum_to_ms(lo), _datenum_to_ms(hi)
+        manual = list(xlims_in or [None, None]) + [None, None]
+        if manual[0] is not None:
+            lo = manual[0]
+        if manual[1] is not None:
+            hi = manual[1]
+        # xExtent is null (anchor 0) when no series has a valid x, whatever the overlays say.
+        anchor = 0
+        if x_data_extent:
+            anchor = x_data_extent[0]
+            for i, g in geoms.items():
+                e = _overlay_domain_extension(overlays[i], g)['x']
+                if e:
+                    anchor = min(anchor, e[0])
+        if manual[0] is not None:
+            anchor = manual[0]
+        ctx = {'xDomainMin': float(lo), 'xDomainMax': float(hi), 'xAnchorMin': anchor,
+               'xIsTime': x_is_time}
+        for i in repeating:
+            g = _overlay_geometry(overlays[i], columns_index, ctx, x_value_for, x_transform)
+            geoms[i] = g
+            result['artists'][i] = draw(i, overlays[i], g)
+        # The bands are clamped to the domain; keep it exactly (no autoscale margin on top).
+        ax.set_xlim(to_x(lo), to_x(hi))
+
+    for i, ov in enumerate(overlays):
+        label = (ov['label'] or '').strip() if isinstance(ov['label'], str) else ''
+        if not ov['enabled'] or not label:
+            continue
+        if ov['kind'] == 'line':
+            width = ov['strokeWidth']
+            handle = Line2D([], [], color=_overlay_colour(ov['colour'], '#2C2C2C'),
+                            linewidth=width, linestyle=_overlay_dashes(ov['stroke'], width))
+        else:
+            handle = Patch(facecolor=_overlay_colour(ov['fill'], _OVERLAY_BAND_FILL_DEFAULT),
+                           edgecolor=(_overlay_colour(ov['edgeColour'],
+                                                      _OVERLAY_EDGE_COLOUR_DEFAULT)
+                                      if ov['edge'] else 'none'),
+                           linewidth=ov['edgeWidth'] if ov['edge'] else 0)
+        result['legend'].append((handle, label))
+    return result
+
+
+def _legend_with_overlays(ax, overlay_legend, extra_axes=()):
+    """ax.legend over the series' labelled artists (on `ax` and any `extra_axes`, such as a
+    right y axis) followed by the overlays' entries, as the app's legend lists them."""
+    handles, labels = ax.get_legend_handles_labels()
+    for other in extra_axes:
+        if other is None:
+            continue
+        h, l = other.get_legend_handles_labels()
+        handles += h
+        labels += l
+    for h, l in overlay_legend or []:
+        handles.append(h)
+        labels.append(l)
+    if handles:
+        ax.legend(handles, labels, loc='best', fontsize=8)
+
+
+def _scatter_x_origin_ms(col):
+    """Scatterplot.resolveXOriginMs over the series' resolved column: the first finite
+    originTime_ms along its reference chain, or None."""
+    seen = set()
+    c = col
+    while c is not None and id(c) not in seen:
+        seen.add(id(c))
+        raw = c.origin_time_ms
+        if raw is not None:
+            try:
+                v = float(raw)
+            except (TypeError, ValueError):
+                v = math.nan
+            if math.isfinite(v):
+                return v
+        c = c._ref()
+    return None
+
+
+def _scatter_x_context(p, columns_index):
+    """The scatterplot's x axis as the app builds it: `any_time` (anyXdataTime: a time
+    series, or one whose column carries a time origin), `origin_for(col)` (xOriginFor: the ms
+    a number column's hours count from on a time axis, else None) and `extent` (xExtent before
+    overlays: floor of the smallest, ceil of the largest valid x, preferring x with a valid
+    y, in axis units; None when there is none)."""
+    series = []
+    for s in p.get('data', []) or []:
+        x_col = _resolve_plot_col(s.get('x'), columns_index)
+        y_col = _resolve_plot_col(s.get('y'), columns_index)
+        if x_col is not None:
+            series.append((x_col, y_col))
+    any_time = any(x.type == 'time' or _scatter_x_origin_ms(x) is not None
+                   for x, _ in series)
+    ref_origin = None
+    for x, _ in series:
+        o = _scatter_x_origin_ms(x)
+        if o is not None:
+            ref_origin = o
+            break
+        if x.type == 'time':
+            raw = x.get_data() or []
+            if len(raw) > 0:
+                ref_origin = raw[0]
+                break
+
+    def origin_for(col):
+        if col is None or col.type == 'time' or not any_time:
+            return None
+        o = _scatter_x_origin_ms(col)
+        return o if o is not None else ref_origin
+
+    def ok(v):
+        return v is not None and not _js_invalid(v)
+
+    lo, hi = math.inf, -math.inf
+    for x, y in series:
+        xs = list(x.get_data() or [])
+        ys = list(y.get_data() or []) if y is not None else []
+        valid = [v for j, v in enumerate(xs) if ok(v) and j < len(ys) and ok(ys[j])]
+        if not valid:
+            valid = [v for v in xs if ok(v)]
+        if not valid:
+            continue
+        valid = [_js_number(v) for v in valid]
+        origin = origin_for(x)
+        if origin is not None:
+            valid = [origin + h * _MS_PER_HOUR for h in valid]
+        lo = min(lo, math.floor(min(valid)))
+        hi = max(hi, math.ceil(max(valid)))
+    extent = (lo, hi) if math.isfinite(lo) and math.isfinite(hi) else None
+    return {'any_time': any_time, 'origin_for': origin_for, 'extent': extent}
+
+
 def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
     """Series may target the left or right Y axis (`yAxis: 'right'`).
-    Each series may show points and/or a line."""
+    Each series may show points and/or a line. A number x series on a plot that also has
+    time x data counts hours from its column's time origin (the app's xOriginFor), so it
+    shares the date axis; the overlays (reference lines and bands, including migrated legacy
+    night bands) are drawn as the app draws them (_draw_overlays)."""
     p = plot.get('plot', {})
+    xctx = _scatter_x_context(p, columns_index)
     used_right = False
     for series in p.get('data', []):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
         if x_col is None or y_col is None:
             continue
-        x = _x_for_plot(x_col)
+        origin = xctx['origin_for'](x_col)
+        if origin is not None:
+            x = pd.to_datetime([None if _js_invalid(h) else origin + _js_number(h) * _MS_PER_HOUR
+                                for h in x_col.get_data()], unit='ms', utc=True).tolist()
+        else:
+            x = _x_for_plot(x_col)
         y = y_col.get_data()
         x, y = _paired_finite(x, y)
         if not x:
@@ -8085,10 +8766,36 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
         if points.get('show'):
             ax.scatter(x, y, color=colour, s=(points.get('size', 3) ** 2),
                        label=None if line.get('show') else label)
+    # Overlay y channels read on the left axis while it carries data, else on the right
+    # (Scatterplot overlayYAxis).
+    series_list = p.get('data', []) or []
+    has_left = any((s.get('yAxis') or 'left') == 'left' for s in series_list)
+    has_right = any(s.get('yAxis') == 'right' for s in series_list)
+    ov_ax = ax_right if (ax_right is not None and not has_left and has_right) else ax_left
+    is_time = xctx['any_time']
+    xlims_in = p.get('xlimsIN')
+    first_line = (series_list[0].get('line') or {}) if series_list else {}
+
+    def x_value_for(col):
+        # Scatterplot.overlayXValueFor: an hours-from-origin column lands on the time axis.
+        origin = xctx['origin_for'](col)
+        return (lambda h: origin + h * _MS_PER_HOUR) if origin is not None else None
+
+    ov = _draw_overlays(
+        ov_ax, plot, columns_index, host='scatterplot', x_value_for=x_value_for,
+        x_is_time=is_time, x_data_extent=xctx['extent'], xlims_in=xlims_in,
+        xlog=bool(p.get('xLogScale')) and not is_time,
+        ylog=bool(p.get('yLogScaleRight' if ov_ax is ax_right and ax_right is not None
+                        else 'yLogScaleLeft')),
+        legacy_night_bands=True,
+        series_colour=first_line.get('colour') or first_line.get('color'))
+    if is_time and xlims_in:
+        # Manual x limits on a time axis are epoch ms; the date axis counts days.
+        xlims_in = [None if v is None else _ms_to_datenum(v) for v in xlims_in]
     _apply_axes(ax_left,
-                xlims=p.get('xlimsIN'),
+                xlims=xlims_in,
                 ylims=p.get('ylimsLeftIN'),
-                xlog=p.get('xLogScale', False),
+                xlog=p.get('xLogScale', False) and not is_time,
                 ylog=p.get('yLogScaleLeft', False),
                 xlabel=(p.get('xAxis') or {}).get('label', ''),
                 ylabel=(p.get('yAxisLeft') or {}).get('label', ''),
@@ -8099,7 +8806,8 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
                     ylog=p.get('yLogScaleRight', False),
                     ylabel=(p.get('yAxisRight') or {}).get('label', ''))
     if (p.get('legend') or {}).get('show', False):
-        ax_left.legend(loc='best', fontsize=8)
+        _legend_with_overlays(ax_left, ov['legend'],
+                              extra_axes=(ax_right,) if ax_right is not None else ())
 
 
 def plot_fft(plot, columns_index, ax):
@@ -8127,16 +8835,24 @@ def plot_fft(plot, columns_index, ax):
         ax.plot(xs, fft['magnitudes'], color=colour,
                 linewidth=line.get('width', 1),
                 label=series.get('label') or y_col.name)
+    # Vertical overlay positions are periods in hours, drawn at 1/p while the axis shows
+    # frequency (FFT.overlayXTransform); p <= 0 has no place on either axis. Overlays read on
+    # the magnitude axis only.
+    ov = _draw_overlays(ax, plot, columns_index,
+                        x_transform=lambda v: (None if not (v > 0)
+                                               else (v if show_period else 1.0 / v)),
+                        ylog=bool(p.get('logScale', False)))
     xlabel = ('Period' if show_period
               else (p.get('xAxis') or {}).get('label', 'Frequency'))
+    # The app's `logScale` is the MAGNITUDE axis (FFT.svelte: "Log scale", group Y-axis).
     _apply_axes(ax,
                 xlims=p.get('xlimsIN'),
                 ylims=p.get('ylimsIN'),
-                xlog=p.get('logScale', False),
+                ylog=p.get('logScale', False),
                 xlabel=xlabel,
                 ylabel=(p.get('yAxisMag') or {}).get('label', 'Magnitude'),
                 title=plot.get('name', ''))
-    ax.legend(loc='best', fontsize=8)
+    _legend_with_overlays(ax, ov['legend'])
 
 
 def plot_periodogram(plot, columns_index, ax):
@@ -8167,13 +8883,17 @@ def plot_periodogram(plot, columns_index, ax):
             # curve over period, not one horizontal value.
             ax.plot(result['x'], result['threshold'], color=colour or 'gray',
                     linestyle='--', linewidth=0.8, alpha=0.5)
+    # Overlays widen the power axis only: the period range is an analysis parameter.
+    first_line = ((p.get('data') or [{}])[0].get('line') or {})
+    ov = _draw_overlays(ax, plot, columns_index,
+                        series_colour=first_line.get('colour') or first_line.get('color'))
     _apply_axes(ax,
                 xlims=p.get('periodlimsIN') or p.get('xlimsIN'),
                 ylims=p.get('ylimsIN'),
                 xlabel=(p.get('xAxis') or {}).get('label', 'Period'),
                 ylabel=(p.get('yAxis') or {}).get('label', 'Power'),
                 title=plot.get('name', ''))
-    ax.legend(loc='best', fontsize=8)
+    _legend_with_overlays(ax, ov['legend'])
 
 
 def plot_correlogram(plot, columns_index, ax):
@@ -8189,13 +8909,17 @@ def plot_correlogram(plot, columns_index, ax):
                 linewidth=line.get('width', 1),
                 label=series.get('label') or y_col.name)
     ax.axhline(0, color='gray', linewidth=0.5)
+    # Overlays widen the correlation axis only: the lag range is an analysis parameter.
+    ov = _draw_overlays(ax, plot, columns_index)
+    # The app saves the visible lag range as `laglimsIN` (Correlogram.svelte); `xlimsIN` is
+    # kept as a fallback for hand-written plots.
     _apply_axes(ax,
-                xlims=p.get('xlimsIN'),
+                xlims=p.get('laglimsIN') or p.get('xlimsIN'),
                 ylims=p.get('ylimsIN'),
                 xlabel=(p.get('xAxis') or {}).get('label', 'Lag (hrs)'),
                 ylabel=(p.get('yAxis') or {}).get('label', 'Correlation'),
                 title=plot.get('name', ''))
-    ax.legend(loc='best', fontsize=8)
+    _legend_with_overlays(ax, ov['legend'])
 
 
 def plot_boxplot(plot, columns_index, ax):
@@ -8215,10 +8939,14 @@ def plot_boxplot(plot, columns_index, ax):
         # matplotlib's defaults are the app's box: type-7 (linear) quartiles and median,
         # whiskers at the most extreme points within 1.5 IQR of the quartiles.
         ax.boxplot(data, tick_labels=labels, whis=1.5)
+    # Horizontal lines and bands only (the x axis is categorical); they widen the y axis.
+    ov = _draw_overlays(ax, plot, columns_index)
     _apply_axes(ax,
                 ylims=p.get('ylimsIN'),
                 ylabel=(p.get('yAxis') or {}).get('label', ''),
                 title=plot.get('name', ''))
+    if ov['legend'] and (p.get('legend') or {}).get('show', False):
+        _legend_with_overlays(ax, ov['legend'])
 
 
 def plot_actogram(plot, columns_index, ax):

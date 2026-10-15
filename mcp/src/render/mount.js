@@ -23,6 +23,7 @@ import { loadPlots } from '$lib/plots/plotMap.js';
 import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 import { allowedForms, capabilitiesOf } from '$lib/components/plotbits/overlaySpec.js';
 import { convertToImage } from '$lib/components/plotbits/helpers/save.svelte.js';
+import { applyInnerEdits } from '$lib/plots/pairedEdits.js';
 
 async function run() {
 	const data = window.__ANCIR_RENDER__;
@@ -77,6 +78,7 @@ async function run() {
 		}
 		if (Object.keys(dataIn).length) p.plot.addData(dataIn);
 	}
+	const settings = [];
 	for (const [key, value] of Object.entries(data.plot.settings ?? {})) {
 		const current = p.plot[key];
 		// A pair of limits (`xlimsIN`) replaces one of the same length; anything else must be a
@@ -85,8 +87,12 @@ async function run() {
 			? Array.isArray(value) && value.length === current.length
 			: current != null && typeof current !== 'object' && typeof current === typeof value;
 		if (!sameShape) throw new Error(`${data.plot.type} has no setting "${key}" of that shape`);
-		p.plot[key] = Array.isArray(value) ? [...value] : value;
+		settings.push({ path: key, value: Array.isArray(value) ? [...value] : value });
 	}
+	// Through the app's edit path, so a paired field converts its partners first: an FFT's
+	// `{ showPeriod: false }` alone turns the default period limits into frequencies, and
+	// limits given with it are read in the new mode, in either key order.
+	applyInnerEdits(p.plot, settings);
 	const caps = capabilitiesOf(p.plot);
 	for (const o of data.plot.overlays ?? []) {
 		if (!Array.isArray(p.plot.overlays) || !caps) {

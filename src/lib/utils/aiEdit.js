@@ -30,7 +30,8 @@ import { resolvePlotRef, ownerPlotOf } from '$lib/core/plotRefs.js';
 import { applyOp } from '$lib/core/operations.js';
 import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
 import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
-import { getByPath, setByPath } from '$lib/utils/objectPath.js';
+import { getByPath } from '$lib/utils/objectPath.js';
+import { applyInnerEdits, facetOverrideOps } from '$lib/plots/pairedEdits.js';
 import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 import dayjs from '$lib/utils/time/dayjsSetup.js';
 
@@ -762,6 +763,8 @@ export function applyEdit(plan) {
 		return inners.get(plot.id);
 	};
 
+	const innerEdits = new Map(); // plotId -> { plot, edits: [{ path, value }] } (inner paths)
+
 	// Analysis params, and plot restyles. A restyle addresses the plot WRAPPER by path
 	// ('width', 'plot.ylimsIN[0]'), so it splits two ways: a wrapper-level key is a plain
 	// property op, anything under `plot.` goes into the inner snapshot.
@@ -792,7 +795,15 @@ export function applyEdit(plan) {
 			continue;
 		}
 		// The path addresses the wrapper; the snapshot IS the inner, so drop the `plot.` head.
-		setByPath(innerFor(plot), c.path.slice('plot.'.length), c.value);
+		// Collected per plot and applied below, all at once, so a paired field (an FFT's
+		// period/frequency switch) converts its partners BEFORE any value the model gave for
+		// them, whatever order the changes came in (plots/pairedEdits.js).
+		if (!innerEdits.has(plot.id)) innerEdits.set(plot.id, { plot, edits: [] });
+		innerEdits.get(plot.id).edits.push({ path: c.path.slice('plot.'.length), value: c.value });
+	}
+	for (const { plot, edits } of innerEdits.values()) {
+		const applied = applyInnerEdits(innerFor(plot), edits, plot.plot.constructor);
+		ops.push(...facetOverrideOps(plot, applied));
 	}
 
 	// Shading. Clock hours become axis units here, where the axis and timezone are visible.

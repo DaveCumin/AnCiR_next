@@ -94,6 +94,7 @@
 	import CanvasNodeControls from './CanvasNodeControls.svelte';
 	import CategoryColourControls from './CategoryColourControls.svelte';
 	import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
+	import { pairedEditFor, editPlotInners } from '$lib/plots/pairedEdits.js';
 	import { tick } from 'svelte';
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
@@ -181,9 +182,16 @@
 		return { rows, rowCount };
 	});
 
-	// Apply a value to all edit-target plots at the given dotted path.
+	// Apply a value to all edit-target plots at the given dotted path. A paired field (one
+	// whose change converts others, e.g. an FFT's period/frequency switch and its x limits)
+	// goes through pairedEdits, as one undo step for the whole selection.
 	function setSharedField(path, val) {
-		editTargets.forEach((p) => setByPath(p, path, val));
+		const innerPath = path.startsWith('plot.') ? path.slice('plot.'.length) : null;
+		const paired = innerPath
+			? editTargets.filter((p) => pairedEditFor(p.plot?.constructor, innerPath))
+			: [];
+		if (paired.length) editPlotInners(paired, innerPath, val);
+		editTargets.filter((p) => !paired.includes(p)).forEach((p) => setByPath(p, path, val));
 	}
 
 	// Apply a value to data row [rowIndex] of every edit-target plot. On a panel the row is

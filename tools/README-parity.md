@@ -252,6 +252,40 @@ It now judges on the first present value.
 | the app's old `(t[n-1] - t[0])/(n-1)` | `missing-ends` at `rows`: length 192 vs 120 (Python leg) |
 | Python judges epoch ms on `data[0]`   | `missing-ends` at `rows[72][2]` (lag 0): 0.0 vs 1        |
 
+### Plot overlays in the Python PNGs (v82.4)
+
+Reference lines and shaded bands (the app's overlays, `components/plotbits/Overlay.svelte`)
+are drawn by `_draw_overlays` in `ancir_runtime.py` on every plot the runtime renders:
+scatterplot (every form, including legacy `nightBands`, which used to be dropped silently),
+periodogram (lines V/H, bands V/H/ribbon), correlogram and FFT (lines and bands V/H) and
+boxplot (horizontal only). Histogram, Q-Q plot, Mean +/- SEM and CWT carry overlays in the
+app but have no Python renderer at all; the R runtime renders no plots.
+
+`_overlay_geometry` is a port of `OverlayClass.geometry`: a line's `at` collapsed to uniques
+and cut at 50, paired channels cut as raw lists and deduped per pair, a ribbon only when x,
+lower and upper have equal lengths, repeating bands with NightBand's maths (anchored at the
+data minimum, continued back to the axis, hours scaled to ms on a time axis), an hours column
+wired to an x channel on a time axis counted from its origin (`overlayXValueFor`), and FFT
+vertical positions stored as periods and drawn at 1/p in frequency mode
+(`overlayXTransform`). A form a host does not allow is coerced to its first form. Bands sit
+under the series, lines over them; only the axes in a host's `domain` widen (never a
+periodogram's period range or a correlogram's lag range); labelled overlays join the legend.
+
+This is not a `fixtures.json` kind: nothing numeric is exported (decision Q5: no overlay
+columns in the calculating plots' CSVs, so `PLOT_DATA_BUILDERS` is unchanged). It is pinned by
+`tools/test_plot_overlays.py` (geometry rules, host capabilities against the generated MCP
+schema and the hosts' source, artists and positions per plot type, a merged session through
+`render_plots`) and by `src/lib/utils/exportOverlays.test.js` (the export embeds the
+overlays; the exported Python script renders every plot without error; the R export of the
+same session runs).
+
+Fixed on the way, because the overlays must land on the app's axes: a number x series with a
+time origin on a time scatterplot now counts hours from it (it was plotted as raw hours
+beside dates); manual x limits on a time scatterplot are converted from epoch ms; the
+correlogram reads its saved `laglimsIN` (it read `xlimsIN`, which the app never writes); the
+FFT's `logScale` is the magnitude axis (it was applied to x); a right-axis series reaches the
+scatterplot legend.
+
 ### Legacy Enright bin sizes (`sessionMigration`, v81.0)
 
 Before v81 the Periodogram plot hid its Bin Size control for Enright, so a saved Enright series
