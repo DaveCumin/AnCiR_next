@@ -3819,12 +3819,35 @@ fft_peak <- function(spec, period_min = NULL, period_max = NULL, indices = NULL)
        peak_magnitude = pk$magnitude)
 }
 
-# peakFinder.js spectralPeakIndex (1-based): the largest finite POSITIVE value, 0 if none.
-.spectral_peak_index <- function(v) {
-  best <- 0
-  for (i in seq_along(v)) if (is.finite(v[i]) && v[i] > 0 && (best == 0 || v[i] > v[best]))
-    best <- i
+# periodogram.js periodogramPeakIndex (SPEC-9), 1-based, 0 if none: for Chi-squared (any
+# finite threshold) the period with the largest Qp - threshold, else the largest power; a
+# non-positive or non-finite power is never a peak (ROB-13).
+.periodogram_peak_index <- function(res, candidates = NULL) {
+  y <- res$y
+  thr <- res$threshold
+  idxs <- if (is.null(candidates)) seq_along(y) else candidates
+  use_excess <- !is.null(thr) && any(is.finite(thr[idxs]))
+  best <- 0; best_score <- -Inf
+  for (i in idxs) {
+    v <- y[i]
+    if (!(is.finite(v) && v > 0)) next
+    score <- if (use_excess) v - thr[i] else v
+    if (use_excess && !is.finite(score)) next
+    if (best == 0 || score > best_score) { best <- i; best_score <- score }
+  }
   best
+}
+
+# periodogram.js peakFamilywiseP (SPEC-6): 1 - (1 - p)^M at the peak, M the number of folds
+# with a statistic; NaN without a chi-squared p (Lomb-Scargle, Enright).
+.peak_familywise_p <- function(res, i) {
+  pv <- res$pvalue
+  if (is.null(pv) || i < 1) return(NaN)
+  M <- sum(is.finite(pv))
+  if (!M || !is.finite(pv[i])) return(NaN)
+  df <- res$df[i]; q <- res$y[i]
+  p <- if (is.finite(df) && is.finite(q)) pchisq(q, df, lower.tail = FALSE) else pv[i]
+  -expm1(M * log1p(-min(1, max(0, p))))
 }
 
 # ---------------------------------------------------------------------------
@@ -4547,8 +4570,11 @@ tp_rhythmicityanalysis <- function(args, env) {
     # The scalar stats behind the stat_<key> metric ports, by the app's peak rules.
     st <- list()
     if (identical(analysis, "periodogram")) {
-      i <- .spectral_peak_index(pg$y)
-      if (i > 0) st <- list(peak_period = pg$x[i], peak_power = pg$y[i])
+      i <- .periodogram_peak_index(pg)  # largest Qp - threshold for Chi-squared (SPEC-9)
+      if (i > 0) {
+        st <- list(peak_period = pg$x[i], peak_power = pg$y[i])
+        if (identical(args$pgMethod, "Chi-squared")) st$peak_pvalue <- .peak_familywise_p(pg, i)
+      }
     } else if (identical(analysis, "fft")) {
       pk <- if (length(f$frequencies)) fft_peak(f) else NULL
       if (!is.null(pk)) st <- list(peak_frequency = pk$frequency,
@@ -4562,7 +4588,8 @@ tp_rhythmicityanalysis <- function(args, env) {
     any_valid <- TRUE
   }
   if (any_valid) {
-    keys <- switch(analysis, periodogram = c("peak_period", "peak_power"),
+    keys <- switch(analysis, periodogram = c("peak_period", "peak_power",
+                                             if (identical(args$pgMethod, "Chi-squared")) "peak_pvalue"),
                    fft = c("peak_period", "peak_frequency", "peak_magnitude"),
                    correlogram = c("peak_lag", "peak_correlation"), character(0))
     for (k in keys) {
@@ -4624,7 +4651,8 @@ moving_stat_keys <- function(args) {
   an <- if (is.null(args$analysis)) "" else args$analysis
   g <- function(k, d) if (is.null(args[[k]])) d else args[[k]]
   switch(an,
-    periodogram = c("peak_period", "peak_power"),
+    periodogram = c("peak_period", "peak_power",
+                    if (identical(args$pgMethod, "Chi-squared")) "peak_pvalue"),
     summary = c("mean", "sd", "percentile"),
     npcra = c("IS", "IV", "RA", "L5", "M10", "M10onset"),
     cosinor = if (isTRUE(args$useFixedPeriod)) {
@@ -4672,8 +4700,11 @@ moving_stat_keys <- function(args) {
     res <- run_periodogram_calculation(list(t = tt, y = yy, method = g("pgMethod", "Lomb-Scargle"),
       minPeriod = args$periodMin, maxPeriod = args$periodMax, stepSize = args$periodStep,
       dt = g("pgBinSize", 0.25), alpha = g("pgAlpha", 0.05)))
-    i <- .spectral_peak_index(res$y)
-    if (i > 0) { st$peak_period <- res$x[i]; st$peak_power <- res$y[i] }
+    i <- .periodogram_peak_index(res)  # largest Qp - threshold for Chi-squared (SPEC-9)
+    if (i > 0) {
+      st$peak_period <- res$x[i]; st$peak_power <- res$y[i]
+      if ("peak_pvalue" %in% keys) st$peak_pvalue <- .peak_familywise_p(res, i)
+    }
   } else if (an == "npcra") {
     P <- g("npcraPeriod", 24)
     r <- compute_npcra(tt, yy, g("npcraEpochHours", 1), P, g("npcraMWindow", 10),

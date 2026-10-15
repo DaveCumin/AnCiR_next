@@ -27,6 +27,15 @@ import { plotMetricLabel, plotMetricColumnName } from '$lib/plots/plotMetricDefs
 // Shared vocabulary. One string per quantity, so the same quantity reads the same everywhere.
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * The fixed-period (linear least-squares) cosinor reports sqrt(SSres / (n - p)), the residual
+ * standard error, under the `rmse` key; every other fit's `rmse` is sqrt(SSres / n). One label
+ * per quantity (FIT-15).
+ */
+export const RESIDUAL_SE = 'Residual SE';
+/** The rectangular wave's M: the level halfway between its high and low levels (FIT-16). */
+export const MIDLINE = 'Midline';
+
 /** Statistic labels shared by every node that emits the quantity. */
 export const STAT_LABELS = Object.freeze({
 	pvalue: 'p-value',
@@ -64,7 +73,8 @@ export const STAT_LABELS = Object.freeze({
 	// Spectral / autocorrelation peaks
 	peak_period: 'Peak period (h)',
 	peak_power: 'Peak power',
-	peak_pvalue: 'Peak p-value',
+	// The chi-squared peak's FAMILY-WISE p (peakFamilywiseP), on the plot and the nodes alike.
+	peak_pvalue: 'Peak p (family-wise)',
 	peak_frequency: 'Peak frequency (1/h)',
 	peak_magnitude: 'Peak magnitude',
 	peak_lag: 'Peak lag (h)',
@@ -115,6 +125,12 @@ function baseStatLabel(stat, args = {}) {
 		if (npcra[2]) return `${name} onset (h)`;
 		return `${name} (${isM ? 'most' : 'least'} active ${h} h mean)`;
 	}
+	// Moving analysis: the fixed-period cosinor's `rmse` is sqrt(SS/(n - p)), the residual
+	// standard error, not the sqrt(SS/n) every other fit calls RMSE (FIT-15); the rectangular
+	// wave's `mesor` is the midline halfway between its two levels, not a rhythm-adjusted mean
+	// (FIT-16). The keys stay, so saved wires and columns keep their meaning.
+	if (stat === 'rmse' && args?.analysis === 'cosinor' && args?.useFixedPeriod) return RESIDUAL_SE;
+	if (stat === 'mesor' && args?.analysis === 'rectfit') return MIDLINE;
 	if (Object.hasOwn(STAT_LABELS, stat)) return STAT_LABELS[stat];
 	let m = /^H(\d+)_(amplitude|acrophase)$/.exec(stat);
 	if (m) return `H${m[1]} ${m[2] === 'amplitude' ? 'amplitude' : 'acrophase (h)'}`;
@@ -273,7 +289,9 @@ export const NODE_OUTPUT_LABELS = {
 			acrophase_ciHigh: (ctx) =>
 				fitPhaseLabel(`${multiHarmonic(ctx) ? 'H1 acrophase' : 'Acrophase'} CI high`, ctx),
 			// Acrophase minus the reference time, both in the fit's x units.
-			phase_angle: (ctx) => `Phase angle (${fitUnit(ctx)})`
+			phase_angle: (ctx) => `Phase angle (${fitUnit(ctx)})`,
+			// sqrt(SS/(n - p)) in fixed-period mode, sqrt(SS/n) in free mode (FIT-15).
+			rmse: (ctx) => (ctx?.args?.useFixedPeriod ? RESIDUAL_SE : STAT_LABELS.rmse)
 		},
 		perInput: [
 			{ prefix: 'cosinory_', label: 'Cosinor fit', autoPrefixes: ['cosinor_'] },
@@ -323,6 +341,13 @@ export const NODE_OUTPUT_LABELS = {
 			onset: (ctx) => fitPhaseLabel('Onset', ctx),
 			offset: (ctx) => fitPhaseLabel('Offset', ctx),
 			// Double-logistic rates, per unit of x.
+			// The rectangular wave's M is a midline (FIT-16); the fixed-period cosinor's `rmse` is
+			// the residual SE (FIT-15). Fixed period is this node's default.
+			mesor: (ctx) => (ctx?.args?.model === 'rectangular' ? MIDLINE : STAT_LABELS.mesor),
+			rmse: (ctx) =>
+				(ctx?.args?.model ?? 'cosinor') === 'cosinor' && (ctx?.args?.useFixedPeriod ?? true)
+					? RESIDUAL_SE
+					: STAT_LABELS.rmse,
 			k1: (ctx) => `Rise rate k1 (1/${fitUnit(ctx) === 'h' ? 'h' : 'x unit'})`,
 			k2: (ctx) => `Fall rate k2 (1/${fitUnit(ctx) === 'h' ? 'h' : 'x unit'})`
 		},

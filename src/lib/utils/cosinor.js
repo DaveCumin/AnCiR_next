@@ -781,6 +781,9 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 	const SStot = sstotAcc.value;
 	const SSres = ssresAcc.value;
 	const MSE = SSres / df_res;
+	// sqrt(SSres / (n - p)): the residual standard error. It keeps the RMSE name here (and the
+	// `rmse` port key downstream) for saved sessions, but is labelled "Residual SE" wherever it
+	// is shown, because every other fit's RMSE is sqrt(SSres / n) (FIT-15).
 	const RMSE = Math.sqrt(MSE);
 	const R2 = SStot > 0 ? 1 - SSres / SStot : 0;
 	const F_stat = MSE > 0 ? (SStot - SSres) / (2 * nHarmonics) / MSE : NaN;

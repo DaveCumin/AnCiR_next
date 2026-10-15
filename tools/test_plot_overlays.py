@@ -541,6 +541,46 @@ def test_fft_log_scale_is_the_magnitude_axis_and_skips_non_positive_marks(fig_ax
     assert counts(ax, 2)["patches"] == 0
 
 
+def test_periodogram_log_scale_is_the_power_axis_and_skips_non_positive_marks(fig_ax):
+    fig, ax = fig_ax
+    plot, cols = load_demo("demo-periodogram-rhythm", "periodogram")
+    plot["plot"]["logScale"] = True
+    plot["plot"]["overlays"] = [ov(1, "line", "horizontal", at=[0, -1, 2]),
+                                ov(2, "band", "horizontal", lower=[0], upper=[1])]
+    rt.plot_periodogram(plot, cols, ax)
+    assert ax.get_yscale() == "log" and ax.get_xscale() == "linear"
+    assert [hline_y(a) for a in by_gid(ax, 1)["lines"]] == [2]
+    assert counts(ax, 2)["patches"] == 0
+
+
+def test_periodogram_log_scale_off_by_default(fig_ax):
+    fig, ax = fig_ax
+    plot, cols = load_demo("demo-periodogram-rhythm", "periodogram")
+    plot["plot"].pop("logScale", None)
+    rt.plot_periodogram(plot, cols, ax)
+    assert ax.get_yscale() == "linear"
+
+
+@pytest.mark.parametrize("label, methods, expected", [
+    ("", ["Lomb-Scargle"], "Normalised power"),
+    ("", ["Chi-squared", "Chi-squared"], "Chi-squared Qp"),
+    ("", ["Enright"], "Enright amplitude (A_p)"),
+    ("", ["Lomb-Scargle", "Chi-squared"], "Statistic (mixed methods)"),
+    ("Power", ["Chi-squared"], "Power"),  # a stored label (old default included) is kept
+    ("My label", ["Enright"], "My label"),
+])
+def test_periodogram_y_title_names_the_statistic_unless_one_is_stored(fig_ax, label, methods,
+                                                                      expected):
+    fig, ax = fig_ax
+    plot, cols = load_demo("demo-periodogram-rhythm", "periodogram")
+    inner = plot["plot"]
+    first = inner["data"][0]
+    inner["data"] = [dict(copy.deepcopy(first), method=m) for m in methods]
+    inner["yAxis"] = dict(inner.get("yAxis") or {}, label=label)
+    rt.plot_periodogram(plot, cols, ax)
+    assert ax.get_ylabel() == expected
+
+
 def test_boxplot_draws_horizontal_marks_only(fig_ax):
     fig, ax = fig_ax
     plot, cols = load_demo("demo-boxplot-by-day", "boxplot")

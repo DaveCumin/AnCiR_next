@@ -12,6 +12,7 @@ import { movingStatKeys, dynamicOutKeys } from '../src/emit/dynamicOut.js';
 describe('movingStatKeys port is identical to the real getStatKeys', () => {
 	const cases = {
 		periodogram: { analysis: 'periodogram' },
+		periodogramChiSquared: { analysis: 'periodogram', pgMethod: 'Chi-squared' },
 		fft: { analysis: 'fft' },
 		correlogram: { analysis: 'correlogram' },
 		rectfit: { analysis: 'rectfit' },

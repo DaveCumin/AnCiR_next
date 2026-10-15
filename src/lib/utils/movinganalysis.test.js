@@ -402,3 +402,77 @@ describe('computeMovingWindows: FFT windows with a gap', () => {
 		expect(msg).toMatch(/1 of 2 windows for y was skipped: the FFT needs evenly spaced samples/);
 	});
 });
+
+// SPEC-9: the chi-squared window peak is the period with the largest Qp - threshold (the
+// largest raw Qp drifted to the longest trial period on a weak rhythm), and the window carries
+// the peak's family-wise p so a window with no significant period reads as such.
+describe('chi-squared moving periodogram peak (SPEC-9)', () => {
+	function mulberry32(seed) {
+		return () => {
+			seed |= 0;
+			seed = (seed + 0x6d2b79f5) | 0;
+			let v = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+			v = (v + Math.imul(v ^ (v >>> 7), 61 | v)) ^ v;
+			return ((v ^ (v >>> 14)) >>> 0) / 4294967296;
+		};
+	}
+	function weak(seed, amp) {
+		const rng = mulberry32(seed);
+		const t = Array.from({ length: 2400 }, (_, i) => i * 0.1);
+		const y = t.map((tt) => {
+			const u = Math.max(rng(), 1e-12);
+			const v = rng();
+			return (
+				amp * Math.sin((2 * Math.PI * tt) / 24) +
+				Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
+			);
+		});
+		return { t, y };
+	}
+	const args = {
+		analysis: 'periodogram',
+		pgMethod: 'Chi-squared',
+		periodMin: 16,
+		periodMax: 48,
+		periodStep: 0.1,
+		pgBinSize: 0.25,
+		pgAlpha: 0.05
+	};
+
+	it('declares peak_pvalue for Chi-squared only', () => {
+		expect(getStatKeys(args)).toEqual(['peak_period', 'peak_power', 'peak_pvalue']);
+		expect(getStatKeys({ ...args, pgMethod: 'Lomb-Scargle' })).toEqual([
+			'peak_period',
+			'peak_power'
+		]);
+	});
+
+	it('a weak 24 h rhythm reports ~24 h (not ~48 h) with a significant family-wise p', () => {
+		const { t, y } = weak(1, 0.3);
+		const out = computeMovingWindows({
+			tAll: t,
+			ys: [y],
+			starts: [0],
+			windowSize: 240,
+			statKeys: getStatKeys(args),
+			args
+		})[0];
+		expect(Math.abs(out.peak_period[0] - 24)).toBeLessThanOrEqual(1);
+		expect(out.peak_pvalue[0]).toBeLessThan(0.05);
+	});
+
+	it('a window with no period over its threshold reports p >= alpha', () => {
+		const { t, y } = weak(1, 0.15);
+		const a = { ...args, periodMin: 18, periodMax: 30 };
+		const out = computeMovingWindows({
+			tAll: t,
+			ys: [y],
+			starts: [0],
+			windowSize: 240,
+			statKeys: getStatKeys(a),
+			args: a
+		})[0];
+		expect(Number.isFinite(out.peak_period[0])).toBe(true);
+		expect(out.peak_pvalue[0]).toBeGreaterThanOrEqual(0.05);
+	});
+});

@@ -710,6 +710,116 @@ describe('periodogram range hint', () => {
 	});
 });
 
+describe('periodogram: log power axis (display only)', () => {
+	/** A chi-squared-shaped spectrum with a threshold, so the threshold line is drawn too. */
+	function chiSpectrum(inner) {
+		const x = [];
+		const y = [];
+		const threshold = [];
+		for (let p = 1; p <= 30; p += 0.5) {
+			x.push(p);
+			y.push(0.005 + 400 * Math.exp(-((p - 24) ** 2) / 4));
+			threshold.push(20 + p);
+		}
+		for (const d of inner.data) {
+			d.method = 'Chi-squared';
+			d.periodData = { x, y, threshold, pvalue: x.map(() => 0.5), df: x.map(() => 10) };
+		}
+	}
+
+	it('a horizontal line, the series and the threshold all land on the log scale', async () => {
+		const plot = makePlot('periodogram');
+		const inner = plot.plot;
+		chiSpectrum(inner);
+		// Fewer decades than ticks asked for, so d3 adds the 2..9 minor ticks between decades.
+		inner.yAxis.nticks = 10;
+		typedLine(inner, 'horizontal', [100]);
+		const { container } = render(Periodogram, { props: { theData: plot, which: 'plot' } });
+		inner.logScale = true;
+		flushSync();
+		await tick();
+		const ys = inner.overlayYScale;
+		expect(typeof ys.base).toBe('function'); // a d3 log scale
+		expect(ys).toBe(inner.yScale);
+		// The lower end follows the smallest value drawn (0.005), not a 1e-6 floor.
+		const [lo, hi] = ys.domain();
+		expect(lo).toBeLessThan(0.005);
+		expect(lo).toBeGreaterThan(0.002);
+		expect(hi).toBe(inner.ylims[1]);
+		const rule = container.querySelector('g.overlay-lines-layer line.overlay-rule');
+		close(num(rule, 'y1'), inner.padding.top + ys(100));
+		// 100 on a log axis from ~0.003 to ~500 sits in the top fifth; on the linear axis it
+		// would be near the bottom fifth.
+		expect(ys(100)).toBeLessThan(inner.plotheight / 5);
+		// The left axis labels whole decades in plain numbers (no SI "100m").
+		const labels = [...container.querySelectorAll('.axis-left .tick text')]
+			.map((t) => t.textContent.trim())
+			.filter(Boolean);
+		expect(labels).toContain('100');
+		expect(labels).toContain('0.01');
+		expect(labels.some((l) => /[a-zµ]$/.test(l))).toBe(false);
+		// Gridlines only at labelled ticks, not at each of the ~30 minor ones.
+		const allTicks = container.querySelectorAll('.axis-left .tick').length;
+		const grid = container.querySelectorAll('.axis-left .gridline').length;
+		expect(allTicks).toBeGreaterThan(labels.length);
+		expect(grid).toBeGreaterThan(0);
+		expect(grid).toBeLessThanOrEqual(labels.length);
+		const tick100 = [...container.querySelectorAll('.axis-left .tick')].find(
+			(t) => t.textContent.trim() === '100'
+		);
+		expect(Math.abs(tickXY(tick100)[1] - ys(100))).toBeLessThanOrEqual(0.5);
+		// No NaN coordinates anywhere in the series or threshold paths.
+		for (const path of container.querySelectorAll('path')) {
+			expect(path.getAttribute('d') ?? '').not.toMatch(/NaN|Infinity/);
+		}
+	});
+
+	it('a non-positive value is a gap, not a NaN path, and a mark at or below 0 is not drawn', () => {
+		const plot = makePlot('periodogram');
+		const inner = plot.plot;
+		chiSpectrum(inner);
+		inner.data[0].periodData.y[3] = 0;
+		inner.logScale = true;
+		typedLine(inner, 'horizontal', [0, -1, 50]);
+		const { container } = render(Periodogram, { props: { theData: plot, which: 'plot' } });
+		expect(container.querySelectorAll('line.overlay-rule')).toHaveLength(1);
+		for (const path of container.querySelectorAll('path')) {
+			expect(path.getAttribute('d') ?? '').not.toMatch(/NaN|Infinity/);
+		}
+		expect(inner.drawableY(inner.data[0].periodData.y)[3]).toBeNaN();
+	});
+
+	it('a user minimum wins, and the log domain never reaches 0', () => {
+		const inner = makePlot('periodogram').plot;
+		chiSpectrum(inner);
+		inner.logScale = true;
+		inner.ylimsIN = [2, null];
+		expect(inner.yScale.domain()[0]).toBe(2);
+		inner.ylimsIN = [0, null];
+		expect(inner.yScale.domain()[0]).toBeGreaterThan(0);
+	});
+
+	it('is saved, restored, and absent from an old session as off', () => {
+		const inner = makePlot('periodogram').plot;
+		expect(inner.logScale).toBe(false);
+		inner.logScale = true;
+		const json = JSON.parse(JSON.stringify(inner.toJSON()));
+		expect(json.logScale).toBe(true);
+		const Cls = inner.constructor;
+		expect(Cls.fromJSON(inner.parentBox, json).logScale).toBe(true);
+		delete json.logScale;
+		expect(Cls.fromJSON(inner.parentBox, json).logScale).toBe(false);
+	});
+
+	it('brush zoom reads the log scale', () => {
+		const plot = makePlot('periodogram');
+		chiSpectrum(plot.plot);
+		plot.plot.logScale = true;
+		const yAxis = getZoomAdapter(plot).axes.find((a) => a.orient === 'y');
+		expect(typeof yAxis.scale().base).toBe('function');
+	});
+});
+
 describe.each(['boxplot', 'meansem'])('%s: horizontal marks on a categorical x axis', (type) => {
 	it('a horizontal line typed above the data widens y to a nice limit and sits on that tick', async () => {
 		const plot = makePlot(type);

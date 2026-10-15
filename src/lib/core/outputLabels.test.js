@@ -41,6 +41,39 @@ describe('outputLabel: per node type', () => {
 		expect(outputLabel('Cosinor', 'resid_67', c)).toBe('Residuals: A2');
 	});
 
+	it('FIT-15: the fixed-period cosinor rmse (sqrt(SS/(n - p))) reads Residual SE', () => {
+		expect(outputLabel('Cosinor', 'rmse', ctx({ useFixedPeriod: true }))).toBe('Residual SE');
+		expect(outputLabel('Cosinor', 'rmse', ctx({ useFixedPeriod: false }))).toBe('RMSE');
+		// Fit waveform model: fixed period is its default; other models' rmse is sqrt(SS/n).
+		expect(outputLabel('FitFunction', 'rmse', ctx({ model: 'cosinor' }))).toBe('Residual SE');
+		expect(
+			outputLabel('FitFunction', 'rmse', ctx({ model: 'cosinor', useFixedPeriod: false }))
+		).toBe('RMSE');
+		expect(outputLabel('FitFunction', 'rmse', ctx({ model: 'rectangular' }))).toBe('RMSE');
+		const fixed = ctx({ analysis: 'cosinor', useFixedPeriod: true });
+		expect(outputLabel('MovingAnalysis', '66_rmse', fixed)).toBe('Residual SE: A1');
+		expect(outputLabel('MovingAnalysis', '66_rmse', ctx({ analysis: 'cosinor' }))).toBe('RMSE: A1');
+		expect(outputLabel('MovingAnalysis', '66_rmse', ctx({ analysis: 'rectfit' }))).toBe('RMSE: A1');
+		expect(outputLabel('RectangularWave', 'rmse', ctx())).toBe('RMSE');
+	});
+
+	it('FIT-16: the rectangular wave M reads Midline (the key stays mesor)', () => {
+		expect(outputLabel('FitFunction', 'mesor', ctx({ model: 'rectangular' }))).toBe('Midline');
+		expect(outputLabel('FitFunction', 'mesor', ctx({ model: 'cosinor' }))).toBe('Mesor');
+		expect(outputLabel('MovingAnalysis', '66_mesor', ctx({ analysis: 'rectfit' }))).toBe(
+			'Midline: A1'
+		);
+		expect(outputLabel('MovingAnalysis', '66_mesor', ctx({ analysis: 'cosinor' }))).toBe(
+			'Mesor: A1'
+		);
+	});
+
+	it('SPEC-9: the nodes\u2019 chi-squared peak p is the family-wise one, as on the plot', () => {
+		const c = ctx({ analysis: 'periodogram', pgMethod: 'Chi-squared' });
+		expect(outputLabel('RhythmicityAnalysis', 'stat_peak_pvalue', c)).toBe('Peak p (family-wise)');
+		expect(outputLabel('MovingAnalysis', '66_peak_pvalue', c)).toBe('Peak p (family-wise): A1');
+	});
+
 	it('Rayleigh R is the mean vector length, never confused with R²', () => {
 		expect(outputLabel('RayleighTest', 'R', ctx())).toBe('Mean vector length (R)');
 		expect(outputLabel('RayleighTest', 'ww_pvalue', ctx())).toBe('Watson-Williams p-value');

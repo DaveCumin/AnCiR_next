@@ -23,7 +23,12 @@ function yIdsOf(args) {
  * nHarmonics / Ncurves / trendPolyDegree, which is why no finite lookup table can express it.
  */
 export function movingStatKeys(args) {
-	if (args.analysis === 'periodogram') return ['peak_period', 'peak_power'];
+	if (args.analysis === 'periodogram') {
+		// peak_pvalue only for Chi-squared (the family-wise p of the peak, SPEC-9).
+		return args.pgMethod === 'Chi-squared'
+			? ['peak_period', 'peak_power', 'peak_pvalue']
+			: ['peak_period', 'peak_power'];
+	}
 	if (args.analysis === 'cosinor') {
 		if (args.useFixedPeriod) {
 			const keys = ['mesor'];

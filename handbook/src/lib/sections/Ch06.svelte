@@ -125,13 +125,20 @@
 			>.
 		</p>
 		<p>
-			AnCiR's chi-squared keeps every point, so it avoids the cause they identified, but it has a
-			bias of its own when the rhythm is weak: on noise, Q<sub>p</sub> averages about its df (P
-			&minus; 1), which grows with the trial period, so the <strong>largest Q<sub>p</sub></strong>
-			drifts toward long periods. In a check of 300 simulated ten-day hourly records holding a 24 h cosine,
-			with white noise four times the cosine's amplitude, AnCiR's largest Q<sub>p</sub> fell beyond 25
-			h in 67% of records and Lomb-Scargle's peak in 13%; with noise twice the amplitude, 11% and 0%;
-			with noise equal to the amplitude, both found 24 h every time. Read the period from the chi-squared
+			AnCiR's chi-squared keeps every point, so it avoids the cause they identified, but Q<sub
+				>p</sub
+			>
+			has a bias of its own when the rhythm is weak: on noise it averages about its df (P &minus; 1),
+			which grows with the trial period, so the <strong>largest Q<sub>p</sub></strong> drifts toward
+			long periods (and toward twice the true period, when that is in range). AnCiR therefore
+			reports as the peak the period whose Q<sub>p</sub> rises
+			<strong>furthest above its own threshold</strong>, in the plot, in Rhythmicity Analysis and in
+			Moving Analysis alike. In a check of 300 simulated ten-day hourly records holding a 24 h
+			cosine (periods 16 to 32 h, 1 h bins), with white noise four times the cosine's amplitude, the
+			largest Q<sub>p</sub> fell beyond 25 h in 63% of records, the peak AnCiR reports in 18%, and Lomb-Scargle's
+			peak in 9%; with noise twice the amplitude, 10%, 2% and 0%; with noise equal to the amplitude, all
+			three found 24 h every time. When no period crosses its threshold the peak is still reported, and
+			its family-wise p (at or above alpha) says it is not significant. Read the period from the chi-squared
 			periodogram only when its peak clears the significance line clearly.
 		</p>
 	</WarnBox>
@@ -368,7 +375,26 @@
 			</li>
 			<li>
 				The dominant <strong>Peak Period</strong> and its <strong>Peak Power</strong>
-				are reported in the node.
+				are reported in the node. For Chi-squared the peak is the period that rises furthest above its
+				threshold line, and the node adds its family-wise p, marked
+				<em>not significant</em> when the peak does not cross the line.
+			</li>
+			<li>
+				The y axis is titled after the statistic each method computes: <strong
+					>Normalised power</strong
+				>
+				(Lomb-Scargle), <strong>Chi-squared Qp</strong> and
+				<strong>Enright amplitude (A_p)</strong>. These are different quantities on different
+				scales, so when one plot carries series of different methods the title reads
+				<strong>Statistic (mixed methods)</strong>, and their heights are not comparable with each
+				other. Type a label under Y-Axis Controls to use your own; clear it to go back to the
+				default. A periodogram saved before this default existed keeps the title it was saved with.
+			</li>
+			<li>
+				Tick <strong>Log Scale</strong> (Y-Axis) to draw the power axis on a log scale, which keeps the
+				baseline readable under a tall peak. It changes the display only: peaks, thresholds, p-values
+				and output ports are the same numbers. The threshold line and reference lines are drawn at their
+				values on the log axis; a value at or below zero has no place on it and is left out.
 			</li>
 			<li>Hover over the plot to read off the exact period and power at any point.</li>
 		</ol>

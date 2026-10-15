@@ -26,7 +26,8 @@ import {
  * Model: f(t) = M + A·tanh(κ·(sin(ω·t + φ) − cos(π·d)))
  *
  * Parameters (full vector index):
- *   0: M  — mesor (baseline level)
+ *   0: M  (midline): halfway between the high (M + A) and low (M − A) levels, not a
+ *           rhythm-adjusted mean (FIT-16); reported under the `mesor` key
  *   1: A  — half-amplitude
  *   2: κ  — sharpness (larger → more square; optionally fixed)
  *   3: ω  — angular frequency = 2π/period (optionally fixed)

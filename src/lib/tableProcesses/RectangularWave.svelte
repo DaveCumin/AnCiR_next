@@ -128,7 +128,7 @@
 			const b = Number(ys[i]);
 			if (xs[i] != null && ys[i] != null && Number.isFinite(a) && Number.isFinite(b)) nUsable++;
 		}
-		const nParams = 5; // mesor, amplitude, period, phase, kappa (fewer when pinned)
+		const nParams = 5; // midline, amplitude, period, phase, kappa (fewer when pinned)
 		if (!Number.isFinite(nUsable) || nUsable <= 0) return warnings;
 		if (nUsable <= nParams) {
 			warnings.push(
@@ -889,11 +889,11 @@
 					/>
 				</p>
 				<p>
-					Mesor (M): {fr.parameters.M.toFixed(3)}
+					Midline (M): {fr.parameters.M.toFixed(3)}
 					<StoreValueButton
-						label="Mesor"
+						label="Midline"
 						getter={() => yResult?.fitResult?.parameters?.M}
-						defaultName={`rectwave_mesor_${yName}`}
+						defaultName={`rectwave_midline_${yName}`}
 						source="Rectangular Wave"
 					/>
 				</p>

@@ -891,6 +891,40 @@ def run_periodogram_calculation(params, on_progress=None):
             'df': pick(dfs), 'pvalue': pick(pvals)}
 
 
+def periodogram_peak_index(res, candidates=None):
+    """periodogram.js periodogramPeakIndex (SPEC-9): for Chi-squared (any finite threshold) the
+    period with the largest Qp - threshold, else the largest power; a non-positive or
+    non-finite power is never a peak (ROB-13). -1 when there is none."""
+    y = res.get('y') or []
+    thr = res.get('threshold') or []
+    idxs = list(range(len(y))) if candidates is None else list(candidates)
+    use_excess = any(i < len(thr) and _finite(thr[i]) for i in idxs)
+    best, best_score = -1, -math.inf
+    for i in idxs:
+        v = y[i]
+        if not (_finite(v) and v > 0):
+            continue
+        score = v - thr[i] if use_excess else v
+        if use_excess and not _finite(score):
+            continue
+        if best < 0 or score > best_score:
+            best, best_score = i, score
+    return best
+
+
+def peak_familywise_p(res, idx):
+    """periodogram.js peakFamilywiseP (SPEC-6): 1 - (1 - p)^M at the peak, M the number of
+    folds with a statistic; NaN without a chi-squared p (Lomb-Scargle, Enright)."""
+    pv = res.get('pvalue') or []
+    M = sum(1 for v in pv if _finite(v))
+    if not M or idx < 0 or not _finite(pv[idx]):
+        return float('nan')
+    df = (res.get('df') or [None] * len(pv))[idx]
+    q = (res.get('y') or [None] * len(pv))[idx]
+    p = float(sp_stats.chi2.sf(q, df)) if (_finite(df) and _finite(q)) else pv[idx]
+    return float(-math.expm1(M * math.log1p(-min(1.0, max(0.0, p)))))
+
+
 def chi_squared_periodogram(t, y, opts):
     """Pure-util parity surface for the chi-squared (Sokolove-Bushell)
     periodogram. `period`, `power`, `df` and `threshold` are all
@@ -4822,17 +4856,6 @@ def tp_movinganalysis(args, cols, raw_data, _sv):
     return True
 
 
-def _spectral_peak_index(values, candidates=None):
-    """peakFinder.js spectralPeakIndex: index of the largest finite POSITIVE value, -1 when
-    there is none (flat or all-zero data is no peak)."""
-    best = -1
-    for i in (range(len(values or [])) if candidates is None else candidates):
-        v = values[i]
-        if _finite(v) and v > 0 and (best < 0 or v > values[best]):
-            best = i
-    return best
-
-
 def _moving_fft_stats(tw, yw, args):
     """movinganalysis.js FFT window stats: a window that fails the grid check (regridUniform)
     is skipped (NaN); otherwise computeFFT (fftFreqStep when > 0) and the refined fftPeak.
@@ -5037,9 +5060,12 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
         # The scalar stats (the `stat_<key>` metric ports): the peak by the app's rules.
         st = {}
         if analysis == 'periodogram':
-            i_ = _spectral_peak_index(pg['y'])  # no positive power is no peak (ROB-13)
+            # Largest Qp - threshold for Chi-squared (SPEC-9); no positive power is no peak.
+            i_ = periodogram_peak_index(pg)
             if i_ >= 0:
                 st = {'peak_period': pg['x'][i_], 'peak_power': pg['y'][i_]}
+                if args.get('pgMethod') == 'Chi-squared':
+                    st['peak_pvalue'] = peak_familywise_p(pg, i_)
         elif analysis == 'fft':
             pk = fft_peak(fft) if fft['frequencies'] else None
             if pk:
@@ -5053,7 +5079,8 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
         stats_by_y[y_id] = st
         any_valid = True
     if any_valid:
-        keys = {'periodogram': ['peak_period', 'peak_power'],
+        keys = {'periodogram': ['peak_period', 'peak_power'] +
+                (['peak_pvalue'] if args.get('pgMethod') == 'Chi-squared' else []),
                 'fft': ['peak_period', 'peak_frequency', 'peak_magnitude'],
                 'correlogram': ['peak_lag', 'peak_correlation']}.get(analysis, [])
         for k in keys:
@@ -8855,6 +8882,22 @@ def plot_fft(plot, columns_index, ax):
     _legend_with_overlays(ax, ov['legend'])
 
 
+# Periodogram.svelte PERIODOGRAM_Y_LABELS / periodogramYLabel: the y title while the stored
+# label is empty names the series' statistic; mixed methods are not comparable numbers.
+PERIODOGRAM_Y_LABELS = {'Lomb-Scargle': 'Normalised power', 'Chi-squared': 'Chi-squared Qp',
+                        'Enright': 'Enright amplitude (A_p)'}
+PERIODOGRAM_MIXED_Y_LABEL = 'Statistic (mixed methods)'
+
+
+def periodogram_y_label(methods):
+    s = {m for m in methods if m}
+    if len(s) > 1:
+        return PERIODOGRAM_MIXED_Y_LABEL
+    if len(s) == 1:
+        return PERIODOGRAM_Y_LABELS.get(next(iter(s)), 'Power')
+    return 'Power'
+
+
 def plot_periodogram(plot, columns_index, ax):
     p = plot.get('plot', {})
     # Method and bin size are per series, as in the app (_periodogram_series_params). They
@@ -8883,15 +8926,25 @@ def plot_periodogram(plot, columns_index, ax):
             # curve over period, not one horizontal value.
             ax.plot(result['x'], result['threshold'], color=colour or 'gray',
                     linestyle='--', linewidth=0.8, alpha=0.5)
-    # Overlays widen the power axis only: the period range is an analysis parameter.
+    # Overlays widen the power axis only: the period range is an analysis parameter. The app's
+    # `logScale` is the power axis (display only, as FFT's): a mark at or below 0 is skipped.
+    log = bool(p.get('logScale', False))
     first_line = ((p.get('data') or [{}])[0].get('line') or {})
     ov = _draw_overlays(ax, plot, columns_index,
-                        series_colour=first_line.get('colour') or first_line.get('color'))
+                        series_colour=first_line.get('colour') or first_line.get('color'),
+                        ylog=log)
+    # An empty stored label is the per-method default (Periodogram.svelte defaultYLabel); an
+    # inner from before AxisClass (no yAxis) drew a fixed "Power".
+    y_axis = p.get('yAxis')
+    ylabel = ((y_axis or {}).get('label') or
+              (periodogram_y_label([d.get('method') or 'Lomb-Scargle' for d in p.get('data', [])])
+               if (y_axis is not None or 'ygridlines' not in p) else 'Power'))
     _apply_axes(ax,
                 xlims=p.get('periodlimsIN') or p.get('xlimsIN'),
                 ylims=p.get('ylimsIN'),
+                ylog=log,
                 xlabel=(p.get('xAxis') or {}).get('label', 'Period'),
-                ylabel=(p.get('yAxis') or {}).get('label', 'Power'),
+                ylabel=ylabel,
                 title=plot.get('name', ''))
     _legend_with_overlays(ax, ov['legend'])
 
@@ -9995,7 +10048,9 @@ def moving_stat_keys(args):
     """movinganalysis.js getStatKeys."""
     an = args.get('analysis')
     if an == 'periodogram':
-        return ['peak_period', 'peak_power']
+        # peak_pvalue: the chi-squared peak's family-wise p (SPEC-9); LS/Enright have none.
+        return ['peak_period', 'peak_power'] + (
+            ['peak_pvalue'] if args.get('pgMethod') == 'Chi-squared' else [])
     if an == 'summary':
         return ['mean', 'sd', 'percentile']
     if an == 'npcra':
@@ -10064,10 +10119,12 @@ def _moving_window_stats(tt, yy, args, phase=None, centre=_NAN):
             'minPeriod': args.get('periodMin'), 'maxPeriod': args.get('periodMax'),
             'stepSize': args.get('periodStep'), 'dt': _a(args, 'pgBinSize', 0.25),
             'alpha': _a(args, 'pgAlpha', 0.05)})
-        i = _spectral_peak_index(res['y'] or [])
+        i = periodogram_peak_index(res)  # largest Qp - threshold for Chi-squared (SPEC-9)
         if i >= 0:
             st['peak_period'] = res['x'][i]
             st['peak_power'] = res['y'][i]
+            if 'peak_pvalue' in st:
+                st['peak_pvalue'] = peak_familywise_p(res, i)
         return st
     if an == 'npcra':
         P = _a(args, 'npcraPeriod', 24)

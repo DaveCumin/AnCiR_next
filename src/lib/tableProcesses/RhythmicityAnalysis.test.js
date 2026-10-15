@@ -86,6 +86,7 @@ import {
 	getStatKeys,
 	getPrimaryKeys
 } from './RhythmicityAnalysis.svelte';
+import { runPeriodogramCalculation } from '$lib/utils/periodogram.js';
 
 beforeEach(() => {
 	Object.keys(mockColumns).forEach((k) => delete mockColumns[k]);
@@ -125,6 +126,14 @@ describe('getOutputKeys', () => {
 describe('getStatKeys', () => {
 	it('returns peak stats for periodogram', () => {
 		expect(getStatKeys({ analysis: 'periodogram' })).toEqual(['peak_period', 'peak_power']);
+	});
+
+	it('adds the family-wise peak_pvalue for a Chi-squared periodogram (SPEC-9)', () => {
+		expect(getStatKeys({ analysis: 'periodogram', pgMethod: 'Chi-squared' })).toEqual([
+			'peak_period',
+			'peak_power',
+			'peak_pvalue'
+		]);
 	});
 
 	it('returns fft peak stats', () => {
@@ -326,6 +335,54 @@ describe('rhythmicityanalysis', () => {
 		expect(valid).toBe(true);
 		expect(result.outputKeys).toContain('threshold');
 		expect(Array.isArray(result.y_results[2].outputs.threshold)).toBe(true);
+	});
+
+	it('Chi-squared peak is the largest Qp - threshold, with its family-wise p (SPEC-9)', async () => {
+		// Qp rises with the period (as its threshold does): the raw maximum is the last period,
+		// but only 24 h crosses its own threshold.
+		runPeriodogramCalculation.mockReturnValueOnce({
+			x: [20, 24, 28, 32],
+			y: [40, 70, 75, 90],
+			threshold: [50, 60, 80, 100],
+			pvalue: [0.5, 1e-4, 0.03, 0.02],
+			df: [19, 23, 27, 31]
+		});
+		const t = Array.from({ length: 48 }, (_, i) => i);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => t.map((ti) => Math.cos((2 * Math.PI * ti) / 24)) };
+		const [result] = await rhythmicityanalysis({
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			analysis: 'periodogram',
+			pgMethod: 'Chi-squared'
+		});
+		const st = result.y_results[2].stats;
+		expect(st.peak_period).toBe(24);
+		expect(st.peak_power).toBe(70);
+		expect(st.peak_pvalue).toBeGreaterThan(0);
+		expect(st.peak_pvalue).toBeLessThan(0.05);
+	});
+
+	it('Chi-squared peak below its threshold reports a family-wise p at or above alpha', async () => {
+		runPeriodogramCalculation.mockReturnValueOnce({
+			x: [20, 24, 28],
+			y: [20, 22, 25],
+			threshold: [50, 60, 70],
+			pvalue: [0.6, 0.6, 0.6],
+			df: [19, 23, 27]
+		});
+		const t = Array.from({ length: 48 }, (_, i) => i);
+		mockColumns[1] = { type: 'number', getData: () => t };
+		mockColumns[2] = { getData: () => t.map((ti) => Math.cos((2 * Math.PI * ti) / 24)) };
+		const [result] = await rhythmicityanalysis({
+			...baseArgs,
+			xIN: 1,
+			yIN: [2],
+			analysis: 'periodogram',
+			pgMethod: 'Chi-squared'
+		});
+		expect(result.y_results[2].stats.peak_pvalue).toBeGreaterThanOrEqual(0.05);
 	});
 
 	it('writes standalone per-key outputs without collected keys', async () => {

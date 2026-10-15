@@ -13292,6 +13292,142 @@
 			"tolerance": 1e-7
 		},
 		{
+			"id": "tp-rhythmicity-periodogram-chisq-weak-peak",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"note": "SPEC-9. A weak 24 h rhythm (amplitude 0.3 noise SD, 10 days at 6 min) scanned 16 to 48 h with the chi-squared periodogram. The peak is the period with the largest Qp - threshold (periodogramPeakIndex); the largest raw Qp sat near 48 h. peak_pvalue is the peak's family-wise p (peakFamilywiseP).",
+			"generate": {
+				"type": "rhythm",
+				"n": 2400,
+				"dt": 0.1,
+				"period": 24,
+				"amp": 3,
+				"mesor": 50,
+				"phase": 6,
+				"noise": 10,
+				"seed": 921,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"analysis": "periodogram",
+				"pgMethod": "Chi-squared",
+				"pgBinSize": 0.25,
+				"pgAlpha": 0.05,
+				"periodMin": 16,
+				"periodMax": 48,
+				"periodStep": 0.1,
+				"hideInputs": false,
+				"out": {
+					"stat_peak_period": -1,
+					"stat_peak_power": -1,
+					"stat_peak_pvalue": -1
+				}
+			},
+			"compareOutputs": ["stat_peak_period", "stat_peak_power", "stat_peak_pvalue"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-rhythmicity-periodogram-chisq-not-significant",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"note": "SPEC-9. A rhythm too weak for any period to cross its threshold: the peak is still the largest Qp - threshold, and its family-wise p is at or above alpha, which is how a non-significant peak is flagged.",
+			"generate": {
+				"type": "rhythm",
+				"n": 2400,
+				"dt": 0.1,
+				"period": 24,
+				"amp": 1.5,
+				"mesor": 50,
+				"phase": 6,
+				"noise": 10,
+				"seed": 922,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"analysis": "periodogram",
+				"pgMethod": "Chi-squared",
+				"pgBinSize": 0.25,
+				"pgAlpha": 0.05,
+				"periodMin": 18,
+				"periodMax": 30,
+				"periodStep": 0.1,
+				"hideInputs": false,
+				"out": {
+					"stat_peak_period": -1,
+					"stat_peak_power": -1,
+					"stat_peak_pvalue": -1
+				}
+			},
+			"compareOutputs": ["stat_peak_period", "stat_peak_power", "stat_peak_pvalue"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "util-movingwindows-periodogram-chisq",
+			"kind": "pureUtil",
+			"jsFn": "movingWindows",
+			"pyFunc": "moving_windows",
+			"rFunc": "moving_windows",
+			"note": "SPEC-9. MovingAnalysis chi-squared periodogram per window: the peak with the largest Qp - threshold and its family-wise p (peak_pvalue, Chi-squared only).",
+			"generate": {
+				"type": "rhythm",
+				"n": 2400,
+				"dt": 0.1,
+				"period": 24,
+				"amp": 3,
+				"mesor": 50,
+				"phase": 6,
+				"noise": 10,
+				"seed": 923,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"argRefs": ["t", "y"],
+			"jsArgs": [
+				{
+					"analysis": "periodogram",
+					"pgMethod": "Chi-squared",
+					"pgBinSize": 0.25,
+					"pgAlpha": 0.05,
+					"periodMin": 16,
+					"periodMax": 48,
+					"periodStep": 0.1,
+					"windowSize": 120,
+					"stepSize": 60
+				}
+			],
+			"pyArgs": [
+				{
+					"analysis": "periodogram",
+					"pgMethod": "Chi-squared",
+					"pgBinSize": 0.25,
+					"pgAlpha": 0.05,
+					"periodMin": 16,
+					"periodMax": 48,
+					"periodStep": 0.1,
+					"windowSize": 120,
+					"stepSize": 60
+				}
+			],
+			"compareArrays": ["starts", "peak_period", "peak_power", "peak_pvalue"],
+			"tolerance": 1e-7
+		},
+		{
 			"id": "tp-rhythmicity-fft-stats",
 			"kind": "tableProcess",
 			"jsName": "RhythmicityAnalysis",

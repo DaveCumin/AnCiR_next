@@ -4,9 +4,9 @@
 // worker. Contains getStatKeys + computeStatsForWindow (verbatim) plus
 // computeMovingWindows, which runs the per-y, per-window loop. No DOM/Svelte deps.
 import { runPeriodogramCalculation } from './periodogram.js';
+import { periodogramPeakIndex, peakFamilywiseP } from './periodogramPeak.js';
 import { fitCosineCurves, fitCosinorFixed } from './cosinor.js';
 import { computeFFT, fftPeak, regridUniform, FFT_GAP_RULE } from './fft.js';
-import { spectralPeakIndex } from '$lib/components/plotbits/helpers/peakFinder.js';
 import { computeAutocorrelation, findAutocorrelationPeak } from './correlogram.js';
 import { fitRectangularWave } from './rectwave.js';
 import { fitDoubleLogistic } from './doublelogistic.js';
@@ -27,7 +27,12 @@ import { isInvalidValue } from './stats.js';
 
 export function getStatKeys(args) {
 	if (args.analysis === 'periodogram') {
-		return ['peak_period', 'peak_power'];
+		// peak_pvalue: the chi-squared peak's family-wise p (peakFamilywiseP), so a window whose
+		// best period does not cross the threshold reads as not significant (SPEC-9). Lomb-Scargle
+		// and Enright have no analytic p, so no port.
+		return args.pgMethod === 'Chi-squared'
+			? ['peak_period', 'peak_power', 'peak_pvalue']
+			: ['peak_period', 'peak_power'];
 	}
 	// Windowed descriptive statistics: rolling mean, SD and percentile. Fixed
 	// key names on purpose — a key derived from the percentile value (p30, p50…)
@@ -144,12 +149,14 @@ function computeStatsForWindow(tt, yy, args, phase = null, centre = NaN) {
 			chiSquaredAlpha: args.pgAlpha ?? 0.05
 		});
 		if (!res.y || res.y.length === 0) return stats;
-		// No positive power anywhere (flat or all-zero data) is no rhythm: NaN, not the first
+		// The largest Qp - threshold for Chi-squared, the largest power otherwise (SPEC-9). No
+		// positive power anywhere (flat or all-zero data) is no rhythm: NaN, not the first
 		// trial period (ROB-13; MovingAnalysis used to report 18 h on off-wrist windows).
-		const bestIdx = spectralPeakIndex(res.y);
+		const bestIdx = periodogramPeakIndex(res);
 		if (bestIdx < 0) return stats;
 		stats.peak_period = res.x[bestIdx];
 		stats.peak_power = res.y[bestIdx];
+		if ('peak_pvalue' in stats) stats.peak_pvalue = peakFamilywiseP(res, bestIdx);
 		return stats;
 	}
 

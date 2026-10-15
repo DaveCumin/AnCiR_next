@@ -665,6 +665,7 @@
 
 <script>
 	// @ts-nocheck
+	import { RESIDUAL_SE } from '$lib/core/outputLabels.js';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
@@ -709,6 +710,13 @@
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
+	// The fixed-period cosinor's `rmse` is sqrt(SS/(n - p)), the residual standard error; every
+	// other model's is sqrt(SS/n) (FIT-15).
+	const rmseLabel = $derived(
+		(p.args.model ?? 'cosinor') === 'cosinor' && (p.args.useFixedPeriod ?? true)
+			? RESIDUAL_SE
+			: 'RMSE'
+	);
 	let permutationProgress = $state(0);
 	let permutationLabel = $state('');
 	// The message of a compute that threw (ROB-11), shown on the node with a Retry.
@@ -1677,9 +1685,9 @@
 					defaultName={`fit_r2_${yName}`}
 					source={'Fit waveform model (' + p.args.model + ')'}
 				/>
-				&ensp;RMSE: {yResult?.fitResult?.rmse?.toFixed(3)}
+				&ensp;{rmseLabel}: {yResult?.fitResult?.rmse?.toFixed(3)}
 				<StoreValueButton
-					label="RMSE"
+					label={rmseLabel}
 					getter={() => yResult?.fitResult?.rmse}
 					defaultName={`fit_rmse_${yName}`}
 					source={'Fit waveform model (' + p.args.model + ')'}
@@ -1777,7 +1785,8 @@
 					{/each}
 				{/if}
 			{:else if p.args.model === 'rectangular'}
-				<p>Mesor: {yResult?.fitResult?.parameters?.M?.toFixed(3)}</p>
+				<!-- M is halfway between the high and low levels, not a rhythm-adjusted mean (FIT-16). -->
+				<p>Midline: {yResult?.fitResult?.parameters?.M?.toFixed(3)}</p>
 				<p>Amplitude: {yResult?.fitResult?.parameters?.A?.toFixed(3)}</p>
 				<p>Period: {yResult?.fitResult?.period?.toFixed(3)} {periodUnit}</p>
 				<p>

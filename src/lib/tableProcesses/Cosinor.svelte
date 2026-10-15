@@ -778,6 +778,7 @@
 
 <script>
 	// @ts-nocheck
+	import { RESIDUAL_SE } from '$lib/core/outputLabels.js';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
@@ -817,6 +818,8 @@
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
+	// The fixed-period fit's `rmse` is sqrt(SS/(n - p)), the residual standard error (FIT-15).
+	const rmseLabel = $derived(p.args.useFixedPeriod ? RESIDUAL_SE : 'RMSE');
 	// The message of a compute that threw (ROB-11), shown on the node with a Try again button.
 	let calcError = $state(null);
 
@@ -1293,9 +1296,11 @@
 	<div class="control-input-horizontal">
 		<div class="control-input">
 			<p>
-				RMSE: {yResult?.fittedData?.rmse.toFixed(3)}
+				<!-- Fixed period: sqrt(SS/(n - p)), the residual standard error; free period:
+				     sqrt(SS/n), the RMSE every other fit reports (FIT-15). -->
+				{rmseLabel}: {yResult?.fittedData?.rmse.toFixed(3)}
 				<StoreValueButton
-					label="RMSE"
+					label={rmseLabel}
 					getter={() => yResult?.fittedData?.rmse}
 					defaultName={`cosinor_rmse_${yName}`}
 					source="Cosinor"

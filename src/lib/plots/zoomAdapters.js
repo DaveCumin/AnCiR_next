@@ -71,12 +71,12 @@ function scatterAdapter(plot, p) {
 	};
 }
 
-// Period on X (default [1,30]), power on Y (single).
+// Period on X (default [1,30]), power on Y (single; linear or log, the scale it is drawn with).
 function periodogramAdapter(p, setX, setY) {
 	return {
 		axes: [
 			{ orient: 'x', scale: () => linX(p, p.periodlimsIN), set: setX('periodlimsIN') },
-			{ orient: 'y', scale: () => linY(p, p.ylims), set: setY('ylimsIN') }
+			{ orient: 'y', scale: () => p.yScale ?? linY(p, p.ylims), set: setY('ylimsIN') }
 		],
 		isZoomed: () => !pairEq(p.periodlimsIN, [1, 30]) || eitherSet(p.ylimsIN),
 		reset: () => {

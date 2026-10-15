@@ -99,7 +99,11 @@
 		// Auto (manual ticks on a time axis are not built yet); 'categorical' hides the choice,
 		// because the plot places one tick per category itself. In the plot branch a stored
 		// manual list is drawn only when this is 'numeric'.
-		tickMode = 'numeric'
+		tickMode = 'numeric',
+		// The title drawn while the stored label is empty, and the Label box's placeholder. A
+		// plot whose natural title depends on its content (the periodogram names its statistic
+		// per method) passes it, so an empty label tracks the content and a typed one wins.
+		defaultLabel = ''
 	} = $props();
 
 	// The Manual ticks text box. Kept as typed (so "0, 6," is not rewritten mid-entry) and
@@ -258,9 +262,14 @@
 			// No gridline where it would lie ON the perpendicular axis line: the tick at the
 			// x minimum drew a grey dashed line over the solid y axis (and the y minimum over the
 			// x axis), which exported as a visibly broken axis line. See onAxisLine below.
+			// Nor at an unlabelled tick: a log axis ticks every 1..9 x 10^k but labels only some
+			// of them, and a gridline at each of the ~30 minor ticks buried the plot in dashes. A
+			// linear axis labels every tick, so it keeps them all.
 			const ticksWithGrid = select(axisGroup)
 				.selectAll('.tick')
-				.filter((d) => !onAxisLine(d));
+				.filter(function (d) {
+					return !onAxisLine(d) && (this.textContent ?? '').trim() !== '';
+				});
 			if (position == 'bottom') {
 				ticksWithGrid
 					.append('line')
@@ -322,7 +331,7 @@
 			.style('font-family', resolved.fontFamily)
 			.style('text-anchor', 'middle')
 			.style('fill', 'black')
-			.text(axisData.label);
+			.text(axisData.label || defaultLabel);
 
 		// Position the label based on max tick size
 		if (position == 'bottom') {
@@ -350,7 +359,7 @@
 		</div>
 		<div class="control-input-vertical">
 			<ControlInput label="Label">
-				<input bind:value={axisData.label} />
+				<input bind:value={axisData.label} placeholder={defaultLabel || undefined} />
 			</ControlInput>
 			{#if tickMode !== 'categorical'}
 				<ControlInput label="Ticks">

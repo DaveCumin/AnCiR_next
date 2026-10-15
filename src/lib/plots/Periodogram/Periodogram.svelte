@@ -10,7 +10,7 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
-	import { scaleLinear } from 'd3-scale';
+	import { scaleLinear, scaleLog } from 'd3-scale';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import PaddingControls from '$lib/components/inputs/PaddingControls.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -26,12 +26,15 @@
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 
 	import { runPeriodogramCalculation, medianSamplingInterval } from '$lib/utils/periodogram.js';
+	import {
+		periodogramPeakIndex,
+		peakFamilywiseP as peakFamilywisePImpl
+	} from '$lib/utils/periodogramPeak.js';
 	// Side-effect import: registers 'periodogram.compute' on the main thread so the
 	// sync fallback works when there is no Worker (tests, older browsers).
 	import '$lib/utils/periodogram.worker-task.js';
 	import { runComputeTask } from '$lib/workers/workerPool.js';
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
-	import { spectralPeakIndex } from '$lib/components/plotbits/helpers/peakFinder.js';
 	import { paddedDomain, finiteExtent } from '$lib/plots/axisDomain.js';
 	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
 	import {
@@ -51,27 +54,62 @@
 	export const chisqSf = chisqSfImpl;
 
 	/**
-	 * The chi-squared peak's FAMILY-WISE p: 1 - (1 - p)^M, with p the per-period upper-tail p
-	 * at the peak and M the number of folds that carry a statistic, the same M the Sidak line
-	 * is drawn with (runPeriodogramCalculation). The peak crosses the drawn line exactly when
-	 * this p is below the line's alpha. The per-period p alone is the probability for ONE
-	 * pre-chosen period, but the peak is the maximum over all M, so on white noise it was below
-	 * 0.05 in 34% of records while the line was crossed in 3% (SPEC-6).
-	 *
-	 * @param {{y:number[], pvalue:number[], df?:number[]}} periodData
-	 * @param {number} idx the peak's index
-	 * @returns {number} NaN for Lomb-Scargle/Enright (no analytic p)
+	 * The chi-squared peak's FAMILY-WISE p (SPEC-6). Defined in utils/periodogramPeak.js so the
+	 * RhythmicityAnalysis and MovingAnalysis nodes report the same number; re-exported here
+	 * for the callers and tests that import it from the plot.
 	 */
-	export function peakFamilywiseP(periodData, idx) {
-		const pv = periodData?.pvalue ?? [];
-		let M = 0;
-		for (const v of pv) if (Number.isFinite(v)) M++;
-		if (!M || !Number.isFinite(pv[idx])) return NaN;
-		const df = periodData.df?.[idx];
-		const q = periodData.y?.[idx];
-		const p = Number.isFinite(df) && Number.isFinite(q) ? chisqSf(q, df) : pv[idx];
-		// 1 - (1 - p)^M without cancellation, so a tiny p stays tiny instead of becoming 0.
-		return -Math.expm1(M * Math.log1p(-Math.min(1, Math.max(0, p))));
+	export const peakFamilywiseP = peakFamilywisePImpl;
+
+	/**
+	 * The y-axis title each method's statistic earns (the default while the stored label is
+	 * empty). The three are different quantities: Lomb-Scargle's variance-normalised power
+	 * (Scargle 1982 / Horne & Baliunas 1986), the Sokolove-Bushell Qp (approximately
+	 * chi-square on bins-per-period - 1 df) and Enright's amplitude A_p in the units of the
+	 * data. One plot can mix methods, and then the numbers are not comparable, so the title
+	 * says so rather than naming one of them.
+	 */
+	export const PERIODOGRAM_Y_LABELS = Object.freeze({
+		'Lomb-Scargle': 'Normalised power',
+		'Chi-squared': 'Chi-squared Qp',
+		Enright: 'Enright amplitude (A_p)'
+	});
+	export const PERIODOGRAM_MIXED_Y_LABEL = 'Statistic (mixed methods)';
+
+	/**
+	 * Default y title for the methods of a plot's series (in data order).
+	 * @param {string[]} methods
+	 */
+	export function periodogramYLabel(methods) {
+		const set = new Set((methods ?? []).filter(Boolean));
+		if (set.size > 1) return PERIODOGRAM_MIXED_Y_LABEL;
+		if (set.size === 1) return PERIODOGRAM_Y_LABELS[[...set][0]] ?? 'Power';
+		return 'Power';
+	}
+
+	// A log axis cannot reach 0, so its lower end needs a floor (FFT uses the same 1e-6).
+	export const PERIODOGRAM_LOG_FLOOR = 1e-6;
+
+	/**
+	 * The y domain of the log scale. A user-set positive minimum wins; otherwise the smallest
+	 * positive value drawn, lowered by 5% of the decades shown so that point sits off the
+	 * axis line, and never below PERIODOGRAM_LOG_FLOOR. (A linear axis starts at 0; reading
+	 * that through the floor, as FFT does, spent most of the height on decades below the
+	 * data.)
+	 * @param {number|null} userMin  ylimsIN[0]
+	 * @param {number} minPositive  smallest positive value drawn (Infinity if none)
+	 * @param {number} hi  the top of the linear domain (ylims[1])
+	 * @returns {[number, number]}
+	 */
+	export function periodogramLogDomain(userMin, minPositive, hi) {
+		let top = hi > 0 && Number.isFinite(hi) ? hi : 1;
+		let lo;
+		if (userMin != null && userMin > 0) lo = userMin;
+		else if (Number.isFinite(minPositive) && minPositive > 0 && minPositive < top)
+			lo = minPositive / Math.pow(top / minPositive, 0.05);
+		else lo = top / 10;
+		lo = Math.max(lo, PERIODOGRAM_LOG_FLOOR);
+		if (!(top > lo)) top = lo * 10;
+		return [lo, top];
 	}
 
 	/** A p-value for the panel: three significant figures, or "< 0.0001". */
@@ -192,8 +230,8 @@
 		// Period data - now $state instead of $derived
 		periodData = $state({ x: [], y: [], threshold: [], pvalue: [] });
 
-		// Peak detection - find the highest power value across ALL calculated data.
-		// A spectrum with no positive power (flat or all-zero data) has no peak: null, not
+		// Peak detection across ALL calculated data (periodogramPeakIndex): the highest power for
+		// Lomb-Scargle/Enright, the largest Qp - threshold for Chi-squared (SPEC-9). A spectrum with no positive power (flat or all-zero data) has no peak: null, not
 		// the first trial period (ROB-13).
 		// pvalue is the chi-squared significance of that peak, FAMILY-WISE over the folds the
 		// threshold line is drawn with (peakFamilywiseP); NaN for Lomb-Scargle/Enright, which
@@ -201,7 +239,7 @@
 		peak = $derived.by(() => {
 			const { x, y } = this.periodData;
 			if (!x || !y || x.length === 0 || y.length === 0) return null;
-			const idx = spectralPeakIndex(y);
+			const idx = periodogramPeakIndex(this.periodData);
 			return idx < 0
 				? null
 				: { period: x[idx], power: y[idx], pvalue: peakFamilywiseP(this.periodData, idx) };
@@ -216,7 +254,7 @@
 			for (let i = 0; i < x.length; i++) {
 				if (x[i] >= xMin && x[i] <= xMax) visibleIndices.push(i);
 			}
-			const idx = spectralPeakIndex(y, visibleIndices);
+			const idx = periodogramPeakIndex(this.periodData, visibleIndices);
 			return idx < 0
 				? null
 				: { period: x[idx], power: y[idx], pvalue: peakFamilywiseP(this.periodData, idx) };
@@ -618,7 +656,8 @@
 			ylimsIN: {
 				group: 'Y-axis',
 				_children: { 0: { label: 'Power min' }, 1: { label: 'Power max' } }
-			}
+			},
+			logScale: { group: 'Y-axis', label: 'Log scale' }
 		};
 
 		parentBox = $state();
@@ -661,7 +700,7 @@
 		// and points, and the chi-squared threshold line where it is drawn.
 		legendObstacles(w, h) {
 			const xs = scaleLinear().domain([this.periodlimsIN[0], this.periodlimsIN[1]]).range([0, w]);
-			const ys = scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([h, 0]);
+			const ys = this.yScaleFor(h);
 			const out = [];
 			for (const d of this.data) {
 				const { x, y, threshold } = d.periodData ?? {};
@@ -709,8 +748,39 @@
 				this.ylimsIN[1] != null ? this.ylimsIN[1] : ymax
 			];
 		});
+		// Display only (as FFT's): the spectrum, threshold and overlays are drawn on a log power
+		// axis. Nothing computed changes, so no parity, port or export number moves.
+		logScale = $state(false);
+		// The smallest positive value drawn on the power axis (series, drawn thresholds,
+		// overlays), for the log scale's lower end.
+		minPositiveY = $derived.by(() => {
+			let m = Infinity;
+			for (const d of this.data) {
+				const arrs = [d.periodData?.y];
+				if (d.method === 'Chi-squared' && d.thresholdline?.draw) arrs.push(d.periodData?.threshold);
+				for (const a of arrs) for (const v of a ?? []) if (v > 0 && v < m) m = v;
+			}
+			const ext = overlayExtentOf(this.overlays, 'y');
+			if (ext) for (const v of ext) if (v > 0 && v < m) m = v;
+			return m;
+		});
+		yLogDomain = $derived(periodogramLogDomain(this.ylimsIN[0], this.minPositiveY, this.ylims[1]));
+		/** The power-axis scale over a plot area `h` px tall: linear, or log when logScale is on. */
+		yScaleFor(h) {
+			return this.logScale
+				? scaleLog().domain(this.yLogDomain).range([h, 0])
+				: scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([h, 0]);
+		}
+		yScale = $derived(this.yScaleFor(this.plotheight));
+		/** Values as drawn: under the log axis a non-positive value has no place, so it is a gap. */
+		drawableY(arr) {
+			return this.logScale ? (arr ?? []).map((v) => (v > 0 ? v : NaN)) : arr;
+		}
 		xAxis = $state();
 		yAxis = $state();
+		// The y title while the stored label is empty: named after the series' method(s).
+		defaultYLabel = $derived(periodogramYLabel(this.data.map((d) => d.method)));
+		yLabelText = $derived(this.yAxis?.label || this.defaultYLabel);
 		legend = $state();
 
 		// Series entry then that series' threshold entry, so the two read together; then every
@@ -730,13 +800,12 @@
 		// ---- overlay host (components/plotbits/overlayHost.js) ----------------------------
 		// Reference lines and shaded bands, in draw order.
 		overlays = $state([]);
-		// The plot's own axes: period on x, power on y (the scales the series are drawn with).
+		// The plot's own axes: period on x, power on y (the scales the series are drawn with, so
+		// a horizontal line sits on its value under the log axis too).
 		overlayXScale = $derived(
 			scaleLinear().domain([this.periodlimsIN[0], this.periodlimsIN[1]]).range([0, this.plotwidth])
 		);
-		overlayYScale = $derived(
-			scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([this.plotheight, 0])
-		);
+		overlayYScale = $derived(this.yScale);
 
 		/** Add an overlay of `kind` ('line' | 'band'), optionally with a `form`; returns it. */
 		addOverlay(kind, form) {
@@ -783,7 +852,10 @@
 			// as a SERIES (see addData below), so there is normally no legend on it.
 			this.legend = LegendClass.withDefaults(dataIN?.legend, { show: false });
 			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Period (hours)' });
-			this.yAxis = AxisClass.withDefaults(dataIN?.yAxis, { label: 'Power' });
+			// An empty label is the per-method default (defaultYLabel). Sessions saved before
+			// the per-method default stored "Power" explicitly and keep it: that string cannot be told apart from
+			// a typed one, and a load must not retitle a finished figure.
+			this.yAxis = AxisClass.withDefaults(dataIN?.yAxis, { label: '' });
 			if (dataIN) {
 				this.addData(dataIN);
 			}
@@ -932,6 +1004,7 @@
 				periodlimsIN: this.periodlimsIN,
 				periodSteps: this.periodSteps,
 				ylimsIN: this.ylimsIN,
+				logScale: this.logScale,
 				padding: this.#padding,
 				xAxis: this.xAxis.toJSON(),
 				yAxis: this.yAxis.toJSON(),
@@ -965,6 +1038,7 @@
 			// Same "default OFF" rule as the constructor: a session saved before the
 			// periodogram had a legend carries no `legend` key and must stay unlegended.
 			periodogram.legend = LegendClass.withDefaults(json.legend, { show: false });
+			periodogram.logScale = json.logScale ?? false;
 
 			// Support both new AxisClass format and old individual properties
 			if (json.xAxis) {
@@ -977,8 +1051,14 @@
 			}
 			if (json.yAxis) {
 				periodogram.yAxis = AxisClass.fromJSON(json.yAxis);
-			} else {
+			} else if ('ygridlines' in json) {
+				// A session from before AxisClass, whose title was a fixed "Power": kept, so a load
+				// does not retitle the figure.
 				periodogram.yAxis = new AxisClass({ label: 'Power', gridlines: json.ygridlines ?? true });
+			} else {
+				// A new plot (or a Quick-Plot / AI-built inner carrying only its data): an empty
+				// label, so the title names the series' statistic (defaultYLabel).
+				periodogram.yAxis = new AxisClass({ label: '' });
 			}
 
 			if (json.data) {
@@ -1131,9 +1211,11 @@
 	//check for axes if the labels change
 	$effect(() => {
 		if (which == 'controls') {
-			theData.yAxis.label;
+			// The drawn title (a typed label, or the per-method default) and the scale it ticks.
+			theData.yLabelText;
 			theData.xAxis.label;
 			theData.ylims;
+			theData.logScale;
 
 			theData.autoScalePadding('all');
 		}
@@ -1179,11 +1261,22 @@
 				</div>
 			</div>
 
+			<div class="control-input-vertical">
+				<label class="control-input-checkbox">
+					<input type="checkbox" bind:checked={theData.logScale} />
+					<span class="ci-label">Log Scale</span>
+				</label>
+			</div>
+
 			<div class="control-input-horizontal">
 				<ControlInput label="Min">
 					<NumberWithUnits
 						step="0.1"
-						value={theData.ylimsIN[0] != null ? theData.ylimsIN[0] : theData.ylims[0]}
+						value={theData.ylimsIN[0] != null
+							? theData.ylimsIN[0]
+							: theData.logScale
+								? Number(theData.yLogDomain[0].toPrecision(3))
+								: theData.ylims[0]}
 						onInput={(val) => {
 							theData.ylimsIN[0] = parseFloat(val);
 						}}
@@ -1202,7 +1295,12 @@
 			</div>
 		</div>
 
-		<Axis axisData={theData.yAxis} which="controls" title="Y-Axis Controls" />
+		<Axis
+			axisData={theData.yAxis}
+			defaultLabel={theData.defaultYLabel}
+			which="controls"
+			title="Y-Axis Controls"
+		/>
 
 		<div class="control-component">
 			<div class="control-component-title">
@@ -1367,6 +1465,9 @@
 									title="Corrected for every period tested, as the threshold line is: below alpha exactly when the peak crosses the line"
 								>
 									<strong>Peak p (family-wise): {formatP(datum.visiblePeak.pvalue)}</strong>
+									{#if !(datum.visiblePeak.pvalue < datum.chiSquaredAlpha)}
+										<span class="peak-ns">(not significant: below the threshold line)</span>
+									{/if}
 								</p>
 							{/if}
 							{#if datum.peak && Math.abs(datum.visiblePeak.period - datum.peak.period) > 0.001}
@@ -1400,6 +1501,9 @@
 									title="Corrected for every period tested, as the threshold line is: below alpha exactly when the peak crosses the line"
 								>
 									<strong>Peak p (family-wise): {formatP(datum.peak.pvalue)}</strong>
+									{#if !(datum.peak.pvalue < datum.chiSquaredAlpha)}
+										<span class="peak-ns">(not significant: below the threshold line)</span>
+									{/if}
 								</p>
 							{/if}
 						{/if}
@@ -1464,9 +1568,11 @@
 			figureStyle={theData.plot.viewStyle}
 			height={theData.plot.plotheight}
 			width={theData.plot.plotwidth}
-			scale={scaleLinear()
-				.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-				.range([theData.plot.plotheight, 0])}
+			scale={theData.plot.yScale}
+			tickFormat={theData.plot.logScale
+				? theData.plot.yScale.tickFormat(theData.plot.yAxis.nticks, '~g')
+				: null}
+			defaultLabel={theData.plot.defaultYLabel}
 			position="left"
 			plotPadding={theData.plot.padding}
 			axisData={theData.plot.yAxis}
@@ -1492,40 +1598,36 @@
 			<Line
 				lineData={datum.line}
 				x={datum.periodData.x}
-				y={datum.periodData.y}
+				y={theData.plot.drawableY(datum.periodData.y)}
 				xscale={scaleLinear()
 					.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 					.range([0, theData.plot.plotwidth])}
-				yscale={scaleLinear()
-					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-					.range([theData.plot.plotheight, 0])}
+				yscale={theData.plot.yScale}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
 				dataLabel={datum.y.name || ''}
 				dataColour={datum.line.colour}
 				xLabel={theData.plot.xAxis.label || 'Period (hours)'}
-				yLabel={theData.plot.yAxis.label || 'Power'}
+				yLabel={theData.plot.yLabelText}
 				siblings={periodogramSiblings}
 				which="plot"
 			/>
 			<Points
 				pointsData={datum.points}
 				x={datum.periodData.x}
-				y={datum.periodData.y}
+				y={theData.plot.drawableY(datum.periodData.y)}
 				xscale={scaleLinear()
 					.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 					.range([0, theData.plot.plotwidth])}
-				yscale={scaleLinear()
-					.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-					.range([theData.plot.plotheight, 0])}
+				yscale={theData.plot.yScale}
 				yoffset={theData.plot.padding.top}
 				xoffset={theData.plot.padding.left}
 				tooltip={true}
 				dataLabel={datum.y.name || ''}
 				dataColour={datum.points.colour}
 				xLabel={theData.plot.xAxis.label || 'Period (hours)'}
-				yLabel={theData.plot.yAxis.label || 'Power'}
+				yLabel={theData.plot.yLabelText}
 				siblings={periodogramSiblings}
 				which="plot"
 			/>
@@ -1533,13 +1635,11 @@
 				<Line
 					lineData={datum.thresholdline}
 					x={datum.periodData.x}
-					y={datum.periodData.threshold}
+					y={theData.plot.drawableY(datum.periodData.threshold)}
 					xscale={scaleLinear()
 						.domain([theData.plot.periodlimsIN[0], theData.plot.periodlimsIN[1]])
 						.range([0, theData.plot.plotwidth])}
-					yscale={scaleLinear()
-						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-						.range([theData.plot.plotheight, 0])}
+					yscale={theData.plot.yScale}
 					yoffset={theData.plot.padding.top}
 					xoffset={theData.plot.padding.left}
 					which="plot"
@@ -1592,5 +1692,10 @@
 		color: var(--color-text-muted);
 		line-height: 1.4;
 		margin: 0 0 var(--space-3) 0;
+	}
+	.peak-ns {
+		display: block;
+		font-size: var(--font-xs);
+		color: var(--color-text-muted);
 	}
 </style>
