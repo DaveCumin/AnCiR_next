@@ -1443,6 +1443,12 @@
 			decimalCommaExample: decimalCommaSuggestion?.example ?? null,
 			localeDateOrder,
 			lastImportWarnings: [...lastImportWarnings],
+			fileNames: targetFiles.map((f) => f.name),
+			commonColumns: [...commonColumns],
+			mismatchedColumns: $state.snapshot(mismatchedColumns),
+			extraFileErrors: $state.snapshot(extraFileErrors),
+			checkingHeaders,
+			canConfirm: canConfirmImport(),
 			totalRowCount,
 			binningEnabled,
 			binIntervalMin,
@@ -1468,6 +1474,17 @@
 				])
 			)
 		};
+	}
+
+	/** Whether the preview offers Confirm Import: the button and the test seam read this. */
+	function canConfirmImport() {
+		return (
+			importReady &&
+			!awaitingPreview &&
+			!awaitingLoad &&
+			!checkingHeaders &&
+			extraFileErrors.length === 0
+		);
 	}
 
 	/** TEST SEAM: the user actions the preview offers, for integration tests. */
@@ -2241,6 +2258,9 @@
 		}
 
 		const parsedHeaderLists = [...fileHeadersMap.values()];
+		// The intersection, in the reference file's column order. A file whose headers
+		// could not be read is in extraFileErrors, not here, and blocks the import.
+		commonColumns = refHeaders.filter((h) => parsedHeaderLists.every((hdrs) => hdrs.includes(h)));
 		const commonSet = new Set(commonColumns);
 
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup built and consumed inside this async function; never read reactively
@@ -2446,7 +2466,6 @@
 		await tick();
 
 		parsedData = getFilteredData();
-		console.log(selectedColumns);
 
 		// ─────────────── Concatenate additional files (multi-file mode) ──────────
 		// Must happen BEFORE applyDateTimeCombination so that the raw date/time
@@ -3867,7 +3886,7 @@
 
 	{#snippet button()}
 		<div class="dialog-button-container">
-			{#if importReady && !awaitingPreview && !awaitingLoad && !checkingHeaders && extraFileErrors.length === 0}
+			{#if canConfirmImport()}
 				<button id="confirmImport" class="dialog-button" onclick={confirmImport}
 					>{enspireMultiplatePayload ? 'Proceed Import' : 'Confirm Import'}</button
 				>
