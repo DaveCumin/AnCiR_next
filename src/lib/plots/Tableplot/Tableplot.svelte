@@ -285,7 +285,8 @@
 	import VirtualList from '$lib/components/reusables/VirtualList.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import { columnWidths, headerMinWidths, MIN_COL_W } from './columnWidths.js';
-	import { applyCellEdit } from './cellEdit.js';
+	import { applyCellEdit, cellReadOnlyReason } from './cellEdit.js';
+	import { buildColumnOwnerIndex } from '$lib/core/outputLabels.js';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { recordGraphMutation } from '$lib/core/operations.js';
@@ -406,10 +407,16 @@
 			// undefined entry means "not hidden" — default to visible.
 			if (tp.showCol[i] === false) continue;
 			const col = getColumnById(tp.columnRefs[i]);
-			out.push({ colId: tp.columnRefs[i], col });
+			out.push({
+				colId: tp.columnRefs[i],
+				col,
+				readOnly: cellReadOnlyReason(col, owners.get(col?.id))
+			});
 		}
 		return out;
 	});
+	// Which node outputs each column (UI-17): a node's output is read-only in the Table.
+	let owners = $derived(buildColumnOwnerIndex(core));
 	// Outside Columns mode the body is read-only rows from the class's `view` (a plot's
 	// computed data or a node's result table). Its columns are keyed by header text (a repeat
 	// gets its position appended), which is what `colWidths` holds in those modes.
@@ -680,6 +687,11 @@
 		const colId = theData.plot.columnRefs[actualIdx];
 		const column = getColumnById(colId);
 		if (!column) return;
+		const locked = edit.row === 'h' ? null : cellReadOnlyReason(column, owners.get(column.id));
+		if (locked) {
+			addNotification(locked, 'warning');
+			return;
+		}
 
 		if (edit.row === 'h') {
 			// Typing a node output's label back restores its auto name, so the label stays live.
@@ -1081,7 +1093,10 @@
 						{/if}
 						{#each visibleColumns as vc, vi (vc.colId)}
 							{@const headerText = vc.col ? columnDisplayName(vc.col) : '???'}
-							<div class="tp-th" title={vc.col ? headerText : ''}>
+							<div
+								class="tp-th"
+								title={vc.col ? (vc.readOnly ? `${headerText}\n${vc.readOnly}` : headerText) : ''}
+							>
 								<Editable
 									editable={true}
 									value={headerText}
@@ -1111,14 +1126,14 @@
 									<!-- title: a narrow column ellipsizes long values; hover shows it whole. -->
 									<div class="tp-td" title={cell?.isTime ? String(cell.raw) : (cell ?? '')}>
 										<!-- Edits apply on commit (Enter / blur), one undo step each, so a
-										     half-typed entry is never stored. A bin column's cells are derived
-										     (start + half the bin width) and are not editable. -->
+										     half-typed entry is never stored. Computed cells (a node's output, a bin
+										     column) are read-only: see cellReadOnlyReason. -->
 										{#if cell && cell.isTime}
 											<div class="time-cell">
 												{#key rejectedEdits}
 													<Editable
 														value={cell.raw}
-														editable={vc.col.type !== 'bin'}
+														editable={!vc.readOnly}
 														onCommit={(v) => makeEdits({ col: editColIndex(vi), row: i, value: v })}
 													/>
 												{/key}
@@ -1132,6 +1147,7 @@
 											{#key rejectedEdits}
 												<Editable
 													value={cell}
+													editable={!vc.readOnly}
 													onCommit={(v) => makeEdits({ col: editColIndex(vi), row: i, value: v })}
 												/>
 											{/key}
@@ -1250,6 +1266,22 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
+	/* Editable cells are marked on hover or keyboard focus only (UI-17): a table where every
+	   value is underlined reads as noise, and read-only (computed) cells carry no mark at all. */
+	.tp-td :global(.inline-edit-span.editable),
+	.tp-th :global(.inline-edit-span.editable) {
+		text-decoration: none;
+	}
+	.tp-td :global(.inline-edit-span.editable:hover),
+	.tp-td :global(.inline-edit-span.editable:focus-visible),
+	.tp-th :global(.inline-edit-span.editable:hover),
+	.tp-th :global(.inline-edit-span.editable:focus-visible) {
+		text-decoration: underline;
+		text-decoration-color: var(--color-lightness-50);
+	}
+	.tp-td :global(.inline-edit-span:not(.editable)) {
+		cursor: default;
+	}
 	.tp-th :global(.inline-edit-span) {
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
@@ -1267,6 +1299,10 @@
 
 	.tp-tr {
 		display: grid;
+		/* Fill the fixed-height VirtualList slot (rowH): a row only as tall as its text left a
+		   strip between rows where the cell borders and the hover band broke off. */
+		height: 100%;
+		box-sizing: border-box;
 	}
 
 	.tp-tr:hover {

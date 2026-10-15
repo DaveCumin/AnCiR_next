@@ -55,6 +55,52 @@
 		return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
 	}
 
+	/**
+	 * Data rows whose field count differs from the first row's (the header row,
+	 * or the first data row when there is none), over the whole text. Read the
+	 * way the import reads it: blank lines skipped, `skipLines` dropped first.
+	 * Streams row by row so a large file is never held as one big array.
+	 */
+	export function countRaggedRows(text, { delimiter = '', skipLines = 0 } = {}) {
+		let expected = null;
+		let ragged = 0;
+		Papa.parse(text ?? '', {
+			header: false,
+			skipEmptyLines: 'greedy',
+			skipFirstNLines: skipLines,
+			delimiter,
+			step: (row) => {
+				const n = row.data.length;
+				if (expected == null) expected = n;
+				else if (n !== expected) ragged++;
+			}
+		});
+		return ragged;
+	}
+
+	/**
+	 * Ragged rows in one PapaParse result (the URL preview, where the whole text
+	 * is not at hand). With a header row PapaParse reports a FieldMismatch error
+	 * per such row; without one, rows are arrays compared with the first.
+	 */
+	export function raggedRowsInResults(results, withHeader) {
+		if (withHeader) {
+			const rows = new Set(
+				(results?.errors ?? []).filter((e) => e.type === 'FieldMismatch').map((e) => e.row)
+			);
+			return rows.size;
+		}
+		const data = results?.data ?? [];
+		if (data.length === 0) return 0;
+		const expected = data[0].length;
+		return data.slice(1).filter((r) => r.length !== expected).length;
+	}
+
+	/** A parse error that means the file was not read: ragged rows are read fine (ROB-30). */
+	function isFatalParseError(e) {
+		return e?.type !== 'FieldMismatch';
+	}
+
 	/** Rows shown in the preview table when a parse ran without a row limit. */
 	export const AWD_PREVIEW_ROWS = 50;
 
@@ -193,6 +239,13 @@
 	let error = $state({});
 	let parsedData = $state(null);
 	let errorInfile = $state(false);
+	// Why the last preview has nothing to import (an empty or header-only file),
+	// or ''. Blocks Confirm Import and shows in the dialog (ROB-30).
+	let emptyFileReason = $state('');
+	// Rows with more or fewer fields than the header: they import (missing cells
+	// empty, extra fields dropped) and the dialog says how many (ROB-30). Counted
+	// over the whole file for a file; over the previewed rows for a URL.
+	let raggedRows = $state(0);
 	let specialRecognised = $state(false);
 	let awaitingPreview = $state(false);
 	let awaitingLoad = $state(false);
@@ -980,6 +1033,8 @@
 		skipLines = 0;
 		sortBy = '__time__';
 		errorInfile = false;
+		emptyFileReason = '';
+		raggedRows = 0;
 		error = {};
 		specialRecognised = false;
 		loadProgress = { stage: '', detail: '' };
@@ -1432,6 +1487,8 @@
 			targetKind,
 			unknownFallback,
 			errorInfile,
+			emptyFileReason,
+			raggedRows,
 			importReady,
 			showImportModal,
 			rowCount: headers.length > 0 ? (parsedData?.[headers[0]]?.length ?? 0) : 0,
@@ -1480,6 +1537,7 @@
 	function canConfirmImport() {
 		return (
 			importReady &&
+			!emptyFileReason &&
 			!awaitingPreview &&
 			!awaitingLoad &&
 			!checkingHeaders &&
@@ -1511,6 +1569,8 @@
 		detectionSamples = {};
 		localeDateOrder = localeDayMonthOrder();
 		importError = '';
+		emptyFileReason = '';
+		raggedRows = 0;
 	}
 
 	async function onFileChange(e) {
@@ -1696,6 +1756,8 @@
 		const isAWD = targetKind === 'awd';
 
 		if (isExcel) {
+			// A sheet has no ragged rows: every row spans the sheet's columns.
+			raggedRows = 0;
 			// For Excel, read the full workbook and count rows
 			return new Promise((resolve) => {
 				const reader = new FileReader();
@@ -1725,6 +1787,10 @@
 			reader.onload = (e) => {
 				const text = e.target.result;
 				const lineCount = text.split(/\r\n|\r|\n/).length;
+				// AWD rows are read by position, not against a header row.
+				raggedRows = isAWD
+					? 0
+					: countRaggedRows(text, { delimiter: lastDelimiter || delimiter, skipLines });
 				// Subtract header + skipLines
 				totalRowCount = Math.max(0, lineCount - (hasHeader ? 1 : 0) - skipLines);
 				if (isAWD) {
@@ -1792,9 +1858,11 @@
 				delimiter: delimiter,
 				complete: (results) => {
 					try {
-						if (results.errors.length > 0) errorInfile = true;
+						// Ragged rows import (ROB-30); only an unreadable file blocks the import.
+						if (results.errors.some(isFatalParseError)) errorInfile = true;
 						lastDelimiter = results.meta.delimiter ?? '';
 						dealWithData(results.meta.fields, results.data);
+						raggedRows = raggedRowsInResults(results, hasHeader);
 						resolve();
 					} catch (err) {
 						reject(err);
@@ -1989,6 +2057,7 @@
 		}
 
 		errorInfile = false;
+		emptyFileReason = '';
 		enspireMultiplatePayload = null;
 
 		const isExcel = targetKind === 'excel';
@@ -2078,7 +2147,7 @@
 					}
 				}
 
-				if (results.errors.length > 0) {
+				if (results.errors.some(isFatalParseError)) {
 					errorInfile = true;
 				}
 
@@ -2104,10 +2173,17 @@
 		// Empty / header-only file: nothing to import. Guard before indexing
 		// dataIN[0], which would throw on an empty array.
 		if (!Array.isArray(dataIN) || dataIN.length === 0) {
+			const names = hasHeader ? (headersIN ?? []).filter((h) => String(h).trim() !== '') : [];
+			const skipped = skipLines > 0 ? ` after skipping the first ${skipLines} lines` : '';
+			emptyFileReason =
+				names.length > 0
+					? `This file has ${names.length} column name${names.length === 1 ? '' : 's'} but no data rows${skipped}, so there is nothing to import.`
+					: `This file is empty${skipped}, so there is nothing to import.`;
 			headers = [];
 			parsedData = {};
 			return;
 		}
+		emptyFileReason = '';
 
 		if (hasHeader) {
 			headers = headersIN;
@@ -3358,492 +3434,513 @@
 							</div>
 						</div>
 
-						{#if decimalComma && decimalCommaSuggestion}
-							<p class="import-note" data-testid="import-decimal-comma-note">
-								{decimalCommaSuggestion.columns.length === 1 ? 'Column' : 'Columns'}
-								{decimalCommaSuggestion.columns.map((c) => `"${c}"`).join(', ')}
-								{decimalCommaSuggestion.columns.length === 1 ? 'is' : 'are'} written with decimal commas,
-								so values such as "{decimalCommaSuggestion.example}" are read as {parseDecimalComma(
-									decimalCommaSuggestion.example
-								)}. Untick "Decimal comma" if the commas are not decimal points.
-							</p>
-						{/if}
-
-						{#if totalRowCount > ROW_THRESHOLD}
-							<div class="section-row binning-panel">
-								<p class="binning-warning">
-									This file has ~{totalRowCount.toLocaleString()} rows. Consider binning to reduce data
-									size.
+						{#if emptyFileReason}
+							<div class="import-error" role="alert" data-testid="import-empty">
+								<p class="import-error-title">Nothing to import</p>
+								<p class="import-error-detail">{emptyFileReason}</p>
+							</div>
+						{:else}
+							{#if raggedRows > 0}
+								<p class="import-note" data-testid="import-ragged-note">
+									{isUrlMode ? 'In the preview, ' : ''}{raggedRows.toLocaleString()}
+									{raggedRows === 1 ? 'row has' : 'rows have'} a different number of fields than the {hasHeader
+										? 'header'
+										: 'first row'}: missing cells are left empty and extra fields are ignored.
 								</p>
-								<div class="control-input-horizontal">
-									<label class="control-input-checkbox">
-										<input type="checkbox" bind:checked={() => binningEnabled, setBinningEnabled} />
-										<span class="ci-label">Bin data to</span>
-									</label>
-									<ControlInput label="Interval (mins)">
-										<NumberWithUnits
-											bind:value={() => binIntervalMin, setBinInterval}
-											min={1}
-											step={1}
-										/>
-									</ControlInput>
+							{/if}
+							{#if decimalComma && decimalCommaSuggestion}
+								<p class="import-note" data-testid="import-decimal-comma-note">
+									{decimalCommaSuggestion.columns.length === 1 ? 'Column' : 'Columns'}
+									{decimalCommaSuggestion.columns.map((c) => `"${c}"`).join(', ')}
+									{decimalCommaSuggestion.columns.length === 1 ? 'is' : 'are'} written with decimal commas,
+									so values such as "{decimalCommaSuggestion.example}" are read as {parseDecimalComma(
+										decimalCommaSuggestion.example
+									)}. Untick "Decimal comma" if the commas are not decimal points.
+								</p>
+							{/if}
+
+							{#if totalRowCount > ROW_THRESHOLD}
+								<div class="section-row binning-panel">
+									<p class="binning-warning">
+										This file has ~{totalRowCount.toLocaleString()} rows. Consider binning to reduce data
+										size.
+									</p>
+									<div class="control-input-horizontal">
+										<label class="control-input-checkbox">
+											<input
+												type="checkbox"
+												bind:checked={() => binningEnabled, setBinningEnabled}
+											/>
+											<span class="ci-label">Bin data to</span>
+										</label>
+										<ControlInput label="Interval (mins)">
+											<NumberWithUnits
+												bind:value={() => binIntervalMin, setBinInterval}
+												min={1}
+												step={1}
+											/>
+										</ControlInput>
+									</div>
+									{#if binningEnabled}
+										<p class="binning-estimate" data-testid="import-binning-estimate">
+											{#if dataIntervalMin == null}
+												No time column detected, so the sampling interval is unknown.
+											{:else}
+												~{estimatedBinnedRows.toLocaleString()} rows after binning, {formatInterval(
+													dataIntervalMin
+												)} intervals detected
+											{/if}
+										</p>
+									{/if}
 								</div>
-								{#if binningEnabled}
-									<p class="binning-estimate" data-testid="import-binning-estimate">
-										{#if dataIntervalMin == null}
-											No time column detected, so the sampling interval is unknown.
-										{:else}
-											~{estimatedBinnedRows.toLocaleString()} rows after binning, {formatInterval(
-												dataIntervalMin
-											)} intervals detected
-										{/if}
+							{/if}
+
+							<div class="section-row combine-panel">
+								<p class="combine-title">
+									Combine separate Date and Time columns into a single DateTime column:
+								</p>
+								{#if dateTimePairs.length === 0}
+									<p class="combine-empty">
+										No date/time pairs detected. Click "Add pair" to choose two columns to merge.
 									</p>
 								{/if}
+								{#each dateTimePairs as pair, idx (idx)}
+									<div class="combine-row">
+										<input
+											type="checkbox"
+											title="Merge this pair on import"
+											checked={combinePairs.has(idx)}
+											onchange={(e) => {
+												const checked = e.currentTarget.checked;
+												combinePairs = checked
+													? new Set([...combinePairs, idx])
+													: new Set([...combinePairs].filter((i) => i !== idx));
+											}}
+										/>
+										<select
+											class="combine-select"
+											value={pair.dateCol}
+											onchange={(e) => updatePair(idx, 'dateCol', e.currentTarget.value)}
+										>
+											{#each headers as h (h)}
+												<option value={h}>{h}</option>
+											{/each}
+										</select>
+										<span class="combine-plus">+</span>
+										<select
+											class="combine-select"
+											value={pair.timeCol}
+											onchange={(e) => updatePair(idx, 'timeCol', e.currentTarget.value)}
+										>
+											{#each headers as h (h)}
+												<option value={h}>{h}</option>
+											{/each}
+										</select>
+										<button
+											type="button"
+											class="combine-remove"
+											title="Remove this pair"
+											onclick={() => removePair(idx)}
+										>
+											×
+										</button>
+									</div>
+								{/each}
+								{#if headers.length >= 2}
+									<button type="button" class="combine-add" onclick={addPair}> + Add pair </button>
+								{/if}
 							</div>
-						{/if}
 
-						<div class="section-row combine-panel">
-							<p class="combine-title">
-								Combine separate Date and Time columns into a single DateTime column:
-							</p>
-							{#if dateTimePairs.length === 0}
-								<p class="combine-empty">
-									No date/time pairs detected. Click "Add pair" to choose two columns to merge.
-								</p>
-							{/if}
-							{#each dateTimePairs as pair, idx (idx)}
-								<div class="combine-row">
-									<input
-										type="checkbox"
-										title="Merge this pair on import"
-										checked={combinePairs.has(idx)}
-										onchange={(e) => {
-											const checked = e.currentTarget.checked;
-											combinePairs = checked
-												? new Set([...combinePairs, idx])
-												: new Set([...combinePairs].filter((i) => i !== idx));
-										}}
-									/>
-									<select
-										class="combine-select"
-										value={pair.dateCol}
-										onchange={(e) => updatePair(idx, 'dateCol', e.currentTarget.value)}
-									>
-										{#each headers as h (h)}
-											<option value={h}>{h}</option>
-										{/each}
-									</select>
-									<span class="combine-plus">+</span>
-									<select
-										class="combine-select"
-										value={pair.timeCol}
-										onchange={(e) => updatePair(idx, 'timeCol', e.currentTarget.value)}
-									>
-										{#each headers as h (h)}
-											<option value={h}>{h}</option>
-										{/each}
-									</select>
-									<button
-										type="button"
-										class="combine-remove"
-										title="Remove this pair"
-										onclick={() => removePair(idx)}
-									>
-										×
-									</button>
+							{#if (core.data ?? []).length > 0}
+								<div class="section-row">
+									<label class="control-input-checkbox">
+										<input
+											type="checkbox"
+											bind:checked={replaceMode}
+											onchange={() => {
+												if (replaceMode) autoSuggestMappings();
+												else columnMappings = {};
+											}}
+										/>
+										<span class="ci-label">Replace existing columns</span>
+									</label>
 								</div>
-							{/each}
-							{#if headers.length >= 2}
-								<button type="button" class="combine-add" onclick={addPair}> + Add pair </button>
 							{/if}
-						</div>
 
-						{#if (core.data ?? []).length > 0}
 							<div class="section-row">
-								<label class="control-input-checkbox">
-									<input
-										type="checkbox"
-										bind:checked={replaceMode}
-										onchange={() => {
-											if (replaceMode) autoSuggestMappings();
-											else columnMappings = {};
-										}}
-									/>
-									<span class="ci-label">Replace existing columns</span>
-								</label>
-							</div>
-						{/if}
-
-						<div class="section-row">
-							<div class="col-select-actions">
-								<button
-									class="dialog-button"
-									style="margin-top:0;"
-									onclick={() => {
-										selectedColumns = new Set(headers);
-									}}>All</button
-								>
-								<button
-									class="dialog-button"
-									style="margin-top:0;"
-									onclick={() => {
-										selectedColumns = new Set();
-									}}>None</button
-								>
-							</div>
-						</div>
-
-						{#if !enspireMultiplatePayload}
-							{#if labelRowSuggestion}
-								<div class="label-suggest">
-									<span
-										>Row {labelRowSuggestion.rowIndex + 1} looks like trace labels (text above numeric
-										data).</span
-									>
-									<button
-										class="dialog-button label-suggest-yes"
-										style="margin-top:0;"
-										onclick={() => pickLabelRow(labelRowSuggestion.rowIndex)}>Use as labels</button
-									>
-									<button class="link-button" onclick={() => (labelRowSuggestion = null)}
-										>Dismiss</button
-									>
-								</div>
-							{/if}
-
-							<div class="section-row label-actions">
-								<span class="label-actions-title">Group labels:</span>
-								<button
-									class="dialog-button"
-									class:active={pickingLabelRow}
-									style="margin-top:0;"
-									title="Then click a row below to use its cells as column labels"
-									onclick={() => (pickingLabelRow = !pickingLabelRow)}
-								>
-									{pickingLabelRow ? 'Click a row below…' : 'Use a row as labels'}
-								</button>
-								{#if namesLookLabelled}
+								<div class="col-select-actions">
 									<button
 										class="dialog-button"
 										style="margin-top:0;"
-										title="Strip trailing replicate numbers from column names"
-										onclick={applyDeriveLabelsFromNames}>Derive from names</button
+										onclick={() => {
+											selectedColumns = new Set(headers);
+										}}>All</button
 									>
-								{/if}
-								<input
-									class="label-bulk-input"
-									type="text"
-									placeholder="label…"
-									bind:value={labelBulkText}
-								/>
-								<button
-									class="dialog-button"
-									style="margin-top:0;"
-									disabled={selectedColumns.size === 0}
-									title="Apply the label to all selected columns"
-									onclick={applyLabelToSelected}>Apply to selected</button
-								>
-								{#if anyLabelsSet || labelRowIndex != null}
-									<button class="link-button" onclick={clearLabels}>Clear labels</button>
-								{/if}
+									<button
+										class="dialog-button"
+										style="margin-top:0;"
+										onclick={() => {
+											selectedColumns = new Set();
+										}}>None</button
+									>
+								</div>
 							</div>
-							{#if labelRowIndex != null}
-								<p class="label-note">
-									Row {labelRowIndex + 1} is used as labels and will be excluded from the imported data.
-								</p>
-							{/if}
-						{/if}
 
-						<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
-							<table class="preview-table">
-								<thead>
-									<tr>
-										{#each headers as col, i (`${i}-${selectedColumns.has(col)}-${combinedTimeCols.has(col)}`)}
-											{#if combinedTimeCols.has(col)}
-												<!-- skip: merged into date col -->
-											{:else}
-												{@const isCombinedDate = combinedDateCols.has(col)}
-												{@const combinedName = isCombinedDate
-													? (() => {
-															const pIdx = [...combinePairs].find(
-																(j) => dateTimePairs[j].dateCol === col
-															);
-															return pIdx !== undefined
-																? `${col} ${dateTimePairs[pIdx].timeCol}`
-																: col;
-														})()
-													: col}
-												<th
-													class:selected={selectedColumns.has(col)}
-													class:unselected={!selectedColumns.has(col)}
-												>
-													<label class="header-checkbox">
-														<input
-															type="checkbox"
-															checked={selectedColumns.has(col)}
-															onchange={(e) => {
-																const checked = e.currentTarget.checked;
-																if (isCombinedDate) {
-																	const pIdx = [...combinePairs].find(
-																		(j) => dateTimePairs[j].dateCol === col
-																	);
-																	const timeCol =
-																		pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null;
-																	if (checked) {
-																		selectedColumns = new Set([
-																			...selectedColumns,
-																			col,
-																			...(timeCol ? [timeCol] : [])
-																		]);
-																	} else {
-																		selectedColumns = new Set(
-																			[...selectedColumns].filter((c) => c !== col && c !== timeCol)
-																		);
-																	}
-																} else {
-																	selectedColumns = checked
-																		? new Set([...selectedColumns, col])
-																		: new Set([...selectedColumns].filter((c) => c !== col));
-																}
-															}}
-														/>
-														<span class="col-name">{combinedName}</span>
-													</label>
-													{#if replaceMode && selectedColumns.has(col)}
-														<select
-															class="mapping-select"
-															value={columnMappings[combinedName] ?? ''}
-															onchange={(e) => {
-																const val = e.currentTarget.value;
-																columnMappings[combinedName] = val === '' ? null : Number(val);
-																columnMappings = { ...columnMappings };
-															}}
-														>
-															<option value="">New column</option>
-															{#each existingColumnOptions as opt (opt.id)}
-																<option value={opt.id}>{opt.label}</option>
-															{/each}
-														</select>
-													{/if}
-												</th>
-											{/if}
-										{/each}
-									</tr>
-									{#if !enspireMultiplatePayload}
-										<!-- Detected type (and time format) per column, with an override. -->
-										<tr class="type-row" data-testid="import-type-row">
-											{#each headers as col, i (`type-${i}-${combinedTimeCols.has(col)}`)}
-												{#if combinedTimeCols.has(col)}
-													<!-- skip: merged into date col -->
-												{:else if combinedDateCols.has(col)}
-													<th class="label-cell label-cell-muted" title="Combined date and time"
-														>time{@render dayMonthControl(col)}</th
-													>
-												{:else}
-													{@const info = previewColumnTypes[col]}
-													{@const ov = columnTypeOverrides[col]}
-													{@const choice = ov?.choice ?? info?.detected.type ?? 'category'}
-													<th class="label-cell type-cell">
-														<select
-															class="type-select"
-															aria-label={`Type of ${col}`}
-															data-testid={`import-type-${col}`}
-															value={choice}
-															onchange={(e) => setColumnTypeChoice(col, e.currentTarget.value)}
-														>
-															{#each info?.choices ?? [] as c (c.value)}
-																<option value={c.value}
-																	>{c.value === info?.detected.type
-																		? detectedOptionLabel(c, info)
-																		: c.label}</option
-																>
-															{/each}
-														</select>
-														{#if choice === 'time'}
-															<input
-																class="label-input type-format"
-																type="text"
-																aria-label={`Time format of ${col}`}
-																data-testid={`import-format-${col}`}
-																title="dayjs format, for example DD/MM/YYYY HH:mm"
-																placeholder="format, e.g. YYYY-MM-DD HH:mm"
-																value={ov?.timeFormat ?? formatText(info?.detected.timeFormat)}
-																onchange={(e) => setColumnTimeFormat(col, e.currentTarget.value)}
-															/>
-														{:else if choice === 'epoch-s' || choice === 'epoch-ms'}
-															<span class="type-hint" data-testid={`import-epoch-preview-${col}`}
-																>{epochPreview(col, choice)}</span
-															>
-														{:else if info?.numeric && info.detected.epoch && choice === 'number'}
-															<span class="type-hint"
-																>Looks like epoch {info.detected.epoch === 's'
-																	? 'seconds'
-																	: 'milliseconds'}</span
-															>
-														{/if}
-														{#if choice === 'time' && !ov?.timeFormat}
-															{@render dayMonthControl(col)}
-														{/if}
-														{#if !ov && info?.detected.empty}
-															<span class="type-hint" data-testid={`import-empty-${col}`}
-																>{info.wholeFile
-																	? 'No values in this column'
-																	: `No values in the first ${(info.sampledRows ?? previewRowCount).toLocaleString()} rows; the type is decided from the full file on import`}</span
-															>
-														{:else if !ov && info?.sampledRows != null}
-															<span class="type-hint" data-testid={`import-sampled-${col}`}
-																>Detected from the first {info.sampledRows.toLocaleString()} rows (the
-																preview rows are mostly blank)</span
-															>
-														{/if}
-														{#if choice === 'number' && info?.nonNumeric.count > 0}
-															<span
-																class="type-warn"
-																data-testid={`import-nonnumeric-${col}`}
-																title="These cells will be missing values in the imported column. The import also reports the count for the whole file."
-																>{info.nonNumeric.count} preview
-																{info.nonNumeric.count === 1 ? 'cell is' : 'cells are'} not a number (e.g.
-																"{info.nonNumeric.example}"): imported as missing</span
-															>
-														{/if}
-													</th>
-												{/if}
-											{/each}
-										</tr>
-										<tr class="label-row">
-											{#each headers as col, i (`lbl-${i}-${combinedTimeCols.has(col)}`)}
-												{#if combinedTimeCols.has(col)}
-													<!-- skip: merged into date col -->
-												{:else if combinedDateCols.has(col)}
-													<th class="label-cell label-cell-muted" title="Time column">time</th>
-												{:else}
-													<th class="label-cell">
-														<input
-															class="label-input"
-															type="text"
-															placeholder="label"
-															value={columnLabels[col] ?? ''}
-															oninput={(e) => {
-																columnLabels = { ...columnLabels, [col]: e.currentTarget.value };
-															}}
-														/>
-													</th>
-												{/if}
-											{/each}
-										</tr>
-									{/if}
-								</thead>
-								<tbody>
-									{#each Array(Math.min(6, Math.max(0, previewRowCount - (previewDisplayStart - 1)))), i (i)}
-										{@const rowIdx = previewDisplayStart - 1 + i}
-										<tr
-											class:pickable={pickingLabelRow}
-											class:is-label-row={rowIdx === labelRowIndex}
-											onclick={pickingLabelRow ? () => pickLabelRow(rowIdx) : null}
-											title={pickingLabelRow ? 'Use this row as column labels' : null}
+							{#if !enspireMultiplatePayload}
+								{#if labelRowSuggestion}
+									<div class="label-suggest">
+										<span
+											>Row {labelRowSuggestion.rowIndex + 1} looks like trace labels (text above numeric
+											data).</span
 										>
-											{#each headers as col, ci (ci)}
+										<button
+											class="dialog-button label-suggest-yes"
+											style="margin-top:0;"
+											onclick={() => pickLabelRow(labelRowSuggestion.rowIndex)}
+											>Use as labels</button
+										>
+										<button class="link-button" onclick={() => (labelRowSuggestion = null)}
+											>Dismiss</button
+										>
+									</div>
+								{/if}
+
+								<div class="section-row label-actions">
+									<span class="label-actions-title">Group labels:</span>
+									<button
+										class="dialog-button"
+										class:active={pickingLabelRow}
+										style="margin-top:0;"
+										title="Then click a row below to use its cells as column labels"
+										onclick={() => (pickingLabelRow = !pickingLabelRow)}
+									>
+										{pickingLabelRow ? 'Click a row below…' : 'Use a row as labels'}
+									</button>
+									{#if namesLookLabelled}
+										<button
+											class="dialog-button"
+											style="margin-top:0;"
+											title="Strip trailing replicate numbers from column names"
+											onclick={applyDeriveLabelsFromNames}>Derive from names</button
+										>
+									{/if}
+									<input
+										class="label-bulk-input"
+										type="text"
+										placeholder="label…"
+										bind:value={labelBulkText}
+									/>
+									<button
+										class="dialog-button"
+										style="margin-top:0;"
+										disabled={selectedColumns.size === 0}
+										title="Apply the label to all selected columns"
+										onclick={applyLabelToSelected}>Apply to selected</button
+									>
+									{#if anyLabelsSet || labelRowIndex != null}
+										<button class="link-button" onclick={clearLabels}>Clear labels</button>
+									{/if}
+								</div>
+								{#if labelRowIndex != null}
+									<p class="label-note">
+										Row {labelRowIndex + 1} is used as labels and will be excluded from the imported data.
+									</p>
+								{/if}
+							{/if}
+
+							<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
+								<table class="preview-table">
+									<thead>
+										<tr>
+											{#each headers as col, i (`${i}-${selectedColumns.has(col)}-${combinedTimeCols.has(col)}`)}
 												{#if combinedTimeCols.has(col)}
-													<!-- skip: merged -->
-												{:else if combinedDateCols.has(col)}
-													{@const pIdx = [...combinePairs].find(
-														(j) => dateTimePairs[j].dateCol === col
-													)}
-													{@const timeColName =
-														pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null}
-													<td
-														class:selected={selectedColumns.has(col)}
-														class:unselected={!selectedColumns.has(col)}
-													>
-														{parsedData[col]?.[rowIdx] ?? ''}
-														{timeColName ? (parsedData[timeColName]?.[rowIdx] ?? '') : ''}
-													</td>
+													<!-- skip: merged into date col -->
 												{:else}
-													<td
+													{@const isCombinedDate = combinedDateCols.has(col)}
+													{@const combinedName = isCombinedDate
+														? (() => {
+																const pIdx = [...combinePairs].find(
+																	(j) => dateTimePairs[j].dateCol === col
+																);
+																return pIdx !== undefined
+																	? `${col} ${dateTimePairs[pIdx].timeCol}`
+																	: col;
+															})()
+														: col}
+													<th
 														class:selected={selectedColumns.has(col)}
 														class:unselected={!selectedColumns.has(col)}
 													>
-														{parsedData[col]?.[rowIdx] ?? '—'}
-													</td>
+														<label class="header-checkbox">
+															<input
+																type="checkbox"
+																checked={selectedColumns.has(col)}
+																onchange={(e) => {
+																	const checked = e.currentTarget.checked;
+																	if (isCombinedDate) {
+																		const pIdx = [...combinePairs].find(
+																			(j) => dateTimePairs[j].dateCol === col
+																		);
+																		const timeCol =
+																			pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null;
+																		if (checked) {
+																			selectedColumns = new Set([
+																				...selectedColumns,
+																				col,
+																				...(timeCol ? [timeCol] : [])
+																			]);
+																		} else {
+																			selectedColumns = new Set(
+																				[...selectedColumns].filter(
+																					(c) => c !== col && c !== timeCol
+																				)
+																			);
+																		}
+																	} else {
+																		selectedColumns = checked
+																			? new Set([...selectedColumns, col])
+																			: new Set([...selectedColumns].filter((c) => c !== col));
+																	}
+																}}
+															/>
+															<span class="col-name">{combinedName}</span>
+														</label>
+														{#if replaceMode && selectedColumns.has(col)}
+															<select
+																class="mapping-select"
+																value={columnMappings[combinedName] ?? ''}
+																onchange={(e) => {
+																	const val = e.currentTarget.value;
+																	columnMappings[combinedName] = val === '' ? null : Number(val);
+																	columnMappings = { ...columnMappings };
+																}}
+															>
+																<option value="">New column</option>
+																{#each existingColumnOptions as opt (opt.id)}
+																	<option value={opt.id}>{opt.label}</option>
+																{/each}
+															</select>
+														{/if}
+													</th>
 												{/if}
 											{/each}
 										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-						<div
-							class="control-input"
-							style="flex-direction: row; align-items: center; gap: var(--space-2); flex-wrap: wrap;"
-						>
-							<p style="margin:0;">Row</p>
-							<!-- Sized to its content: unwrapped, the number field stretched across
-							     most of the modal for a one- to five-digit value. -->
-							<span class="preview-row-start">
-								<NumberWithUnits
-									min={1}
-									max={Math.max(1, previewRowCount - 5)}
-									step={1}
-									style="width: 100%;"
-									bind:value={previewDisplayStart}
-								/>
-							</span>
-							<p style="margin:0;">
-								to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)
-							</p>
-						</div>
-
-						{#if targetFiles.length > 1}
-							<div class="multi-file-list">
-								<p class="multi-file-title">Files to concatenate ({targetFiles.length}):</p>
-								<ul>
-									{#each targetFiles as file, i (i)}
-										<li class="file-item">
-											<span class="file-item-name">{file.name}</span>
-											{#if i === 0}
-												<span class="badge badge-reference">reference</span>
-											{:else if checkingHeaders}
-												<span class="badge badge-checking">checking…</span>
-											{:else}
-												{@const fatal = extraFileErrors.find((e) => e.filename === file.name)}
-												{@const partial = mismatchedColumns.some((m) =>
-													m.missingFrom.includes(file.name)
-												)}
-												{#if fatal}
-													<span class="badge badge-error" title={fatal.error}>✗ error</span>
-												{:else if partial}
-													<span class="badge badge-warn">⚠ partial</span>
-												{:else}
-													<span class="badge badge-ok">✓ ok</span>
-												{/if}
-											{/if}
-										</li>
-									{/each}
-								</ul>
-								{#if extraFileErrors.length > 0}
-									<div class="mismatch-warning">
-										<p class="mismatch-warning-title">Cannot import these files:</p>
-										{#each extraFileErrors as err, ei (ei)}
-											<p class="mismatch-detail">
-												<strong>{err.filename}:</strong>
-												{err.error}
-											</p>
+										{#if !enspireMultiplatePayload}
+											<!-- Detected type (and time format) per column, with an override. -->
+											<tr class="type-row" data-testid="import-type-row">
+												{#each headers as col, i (`type-${i}-${combinedTimeCols.has(col)}`)}
+													{#if combinedTimeCols.has(col)}
+														<!-- skip: merged into date col -->
+													{:else if combinedDateCols.has(col)}
+														<th class="label-cell label-cell-muted" title="Combined date and time"
+															>time{@render dayMonthControl(col)}</th
+														>
+													{:else}
+														{@const info = previewColumnTypes[col]}
+														{@const ov = columnTypeOverrides[col]}
+														{@const choice = ov?.choice ?? info?.detected.type ?? 'category'}
+														<th class="label-cell type-cell">
+															<select
+																class="type-select"
+																aria-label={`Type of ${col}`}
+																data-testid={`import-type-${col}`}
+																value={choice}
+																onchange={(e) => setColumnTypeChoice(col, e.currentTarget.value)}
+															>
+																{#each info?.choices ?? [] as c (c.value)}
+																	<option value={c.value}
+																		>{c.value === info?.detected.type
+																			? detectedOptionLabel(c, info)
+																			: c.label}</option
+																	>
+																{/each}
+															</select>
+															{#if choice === 'time'}
+																<input
+																	class="label-input type-format"
+																	type="text"
+																	aria-label={`Time format of ${col}`}
+																	data-testid={`import-format-${col}`}
+																	title="dayjs format, for example DD/MM/YYYY HH:mm"
+																	placeholder="format, e.g. YYYY-MM-DD HH:mm"
+																	value={ov?.timeFormat ?? formatText(info?.detected.timeFormat)}
+																	onchange={(e) => setColumnTimeFormat(col, e.currentTarget.value)}
+																/>
+															{:else if choice === 'epoch-s' || choice === 'epoch-ms'}
+																<span class="type-hint" data-testid={`import-epoch-preview-${col}`}
+																	>{epochPreview(col, choice)}</span
+																>
+															{:else if info?.numeric && info.detected.epoch && choice === 'number'}
+																<span class="type-hint"
+																	>Looks like epoch {info.detected.epoch === 's'
+																		? 'seconds'
+																		: 'milliseconds'}</span
+																>
+															{/if}
+															{#if choice === 'time' && !ov?.timeFormat}
+																{@render dayMonthControl(col)}
+															{/if}
+															{#if !ov && info?.detected.empty}
+																<span class="type-hint" data-testid={`import-empty-${col}`}
+																	>{info.wholeFile
+																		? 'No values in this column'
+																		: `No values in the first ${(info.sampledRows ?? previewRowCount).toLocaleString()} rows; the type is decided from the full file on import`}</span
+																>
+															{:else if !ov && info?.sampledRows != null}
+																<span class="type-hint" data-testid={`import-sampled-${col}`}
+																	>Detected from the first {info.sampledRows.toLocaleString()} rows (the
+																	preview rows are mostly blank)</span
+																>
+															{/if}
+															{#if choice === 'number' && info?.nonNumeric.count > 0}
+																<span
+																	class="type-warn"
+																	data-testid={`import-nonnumeric-${col}`}
+																	title="These cells will be missing values in the imported column. The import also reports the count for the whole file."
+																	>{info.nonNumeric.count} preview
+																	{info.nonNumeric.count === 1 ? 'cell is' : 'cells are'} not a number
+																	(e.g. "{info.nonNumeric.example}"): imported as missing</span
+																>
+															{/if}
+														</th>
+													{/if}
+												{/each}
+											</tr>
+											<tr class="label-row">
+												{#each headers as col, i (`lbl-${i}-${combinedTimeCols.has(col)}`)}
+													{#if combinedTimeCols.has(col)}
+														<!-- skip: merged into date col -->
+													{:else if combinedDateCols.has(col)}
+														<th class="label-cell label-cell-muted" title="Time column">time</th>
+													{:else}
+														<th class="label-cell">
+															<input
+																class="label-input"
+																type="text"
+																placeholder="label"
+																value={columnLabels[col] ?? ''}
+																oninput={(e) => {
+																	columnLabels = { ...columnLabels, [col]: e.currentTarget.value };
+																}}
+															/>
+														</th>
+													{/if}
+												{/each}
+											</tr>
+										{/if}
+									</thead>
+									<tbody>
+										{#each Array(Math.min(6, Math.max(0, previewRowCount - (previewDisplayStart - 1)))), i (i)}
+											{@const rowIdx = previewDisplayStart - 1 + i}
+											<tr
+												class:pickable={pickingLabelRow}
+												class:is-label-row={rowIdx === labelRowIndex}
+												onclick={pickingLabelRow ? () => pickLabelRow(rowIdx) : null}
+												title={pickingLabelRow ? 'Use this row as column labels' : null}
+											>
+												{#each headers as col, ci (ci)}
+													{#if combinedTimeCols.has(col)}
+														<!-- skip: merged -->
+													{:else if combinedDateCols.has(col)}
+														{@const pIdx = [...combinePairs].find(
+															(j) => dateTimePairs[j].dateCol === col
+														)}
+														{@const timeColName =
+															pIdx !== undefined ? dateTimePairs[pIdx].timeCol : null}
+														<td
+															class:selected={selectedColumns.has(col)}
+															class:unselected={!selectedColumns.has(col)}
+														>
+															{parsedData[col]?.[rowIdx] ?? ''}
+															{timeColName ? (parsedData[timeColName]?.[rowIdx] ?? '') : ''}
+														</td>
+													{:else}
+														<td
+															class:selected={selectedColumns.has(col)}
+															class:unselected={!selectedColumns.has(col)}
+														>
+															{parsedData[col]?.[rowIdx] ?? '—'}
+														</td>
+													{/if}
+												{/each}
+											</tr>
 										{/each}
-									</div>
-								{:else if mismatchedColumns.length > 0}
-									<div class="mismatch-warning-soft">
-										<p class="mismatch-warning-title">
-											Some columns are not present in every file. Only the {commonColumns.length}
-											common column{commonColumns.length === 1 ? '' : 's'} will be imported.
-										</p>
-										{#each mismatchedColumns as m (m.column)}
-											<p class="mismatch-detail">
-												<strong>{m.column}</strong>: missing from {m.missingFrom.join(', ')}
-											</p>
-										{/each}
-									</div>
-								{/if}
+									</tbody>
+								</table>
 							</div>
+							<div
+								class="control-input"
+								style="flex-direction: row; align-items: center; gap: var(--space-2); flex-wrap: wrap;"
+							>
+								<p style="margin:0;">Row</p>
+								<!-- Sized to its content: unwrapped, the number field stretched across
+							     most of the modal for a one- to five-digit value. -->
+								<span class="preview-row-start">
+									<NumberWithUnits
+										min={1}
+										max={Math.max(1, previewRowCount - 5)}
+										step={1}
+										style="width: 100%;"
+										bind:value={previewDisplayStart}
+									/>
+								</span>
+								<p style="margin:0;">
+									to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)
+								</p>
+							</div>
+
+							{#if targetFiles.length > 1}
+								<div class="multi-file-list">
+									<p class="multi-file-title">Files to concatenate ({targetFiles.length}):</p>
+									<ul>
+										{#each targetFiles as file, i (i)}
+											<li class="file-item">
+												<span class="file-item-name">{file.name}</span>
+												{#if i === 0}
+													<span class="badge badge-reference">reference</span>
+												{:else if checkingHeaders}
+													<span class="badge badge-checking">checking…</span>
+												{:else}
+													{@const fatal = extraFileErrors.find((e) => e.filename === file.name)}
+													{@const partial = mismatchedColumns.some((m) =>
+														m.missingFrom.includes(file.name)
+													)}
+													{#if fatal}
+														<span class="badge badge-error" title={fatal.error}>✗ error</span>
+													{:else if partial}
+														<span class="badge badge-warn">⚠ partial</span>
+													{:else}
+														<span class="badge badge-ok">✓ ok</span>
+													{/if}
+												{/if}
+											</li>
+										{/each}
+									</ul>
+									{#if extraFileErrors.length > 0}
+										<div class="mismatch-warning">
+											<p class="mismatch-warning-title">Cannot import these files:</p>
+											{#each extraFileErrors as err, ei (ei)}
+												<p class="mismatch-detail">
+													<strong>{err.filename}:</strong>
+													{err.error}
+												</p>
+											{/each}
+										</div>
+									{:else if mismatchedColumns.length > 0}
+										<div class="mismatch-warning-soft">
+											<p class="mismatch-warning-title">
+												Some columns are not present in every file. Only the {commonColumns.length}
+												common column{commonColumns.length === 1 ? '' : 's'} will be imported.
+											</p>
+											{#each mismatchedColumns as m (m.column)}
+												<p class="mismatch-detail">
+													<strong>{m.column}</strong>: missing from {m.missingFrom.join(', ')}
+												</p>
+											{/each}
+										</div>
+									{/if}
+								</div>
+							{/if}
 						{/if}
 					{/if}
 				{:else if !awaitingPreview && !awaitingLoad && !importError}

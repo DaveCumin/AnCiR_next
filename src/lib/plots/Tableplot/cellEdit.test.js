@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { applyCellEdit } from './cellEdit.js';
+import { applyCellEdit, cellReadOnlyReason } from './cellEdit.js';
 import { editvalue } from '$lib/processes/EditValue.svelte';
 
 // A column stand-in with just what applyCellEdit reads, and ops that record what they were asked
@@ -158,5 +158,50 @@ describe('applyCellEdit: time columns', () => {
 		// Row 0 is now blank: the next edit must still be parsed as a date, not stored as text.
 		applyCellEdit(column, 1, '01 Jan 1970 03:00:00', { rawData, ...ops });
 		expect(rawData.get(99)[1]).toBe(10800000);
+	});
+});
+
+// UI-17: an edit to a node's output was stored as an Edit value process on that output, which
+// then overrode the same ROW POSITION through every recompute (binning row 1 stayed 999 when the
+// bins changed) and reached every plot downstream. Computed cells are read-only now.
+describe('cellReadOnlyReason', () => {
+	const raw = { id: 1, type: 'number', data: 1, refId: null, producerNodeId: null };
+
+	it('leaves an imported (raw) column editable', () => {
+		expect(cellReadOnlyReason(raw, undefined)).toBeNull();
+	});
+
+	it('leaves a column built on another column (a ref column with its own processes) editable', () => {
+		expect(cellReadOnlyReason({ ...raw, data: null, refId: 4 }, undefined)).toBeNull();
+	});
+
+	it('locks an analysis output and names the node', () => {
+		const owner = {
+			kind: 'tableprocess',
+			owner: { name: 'BinnedData', displayName: 'Binned data' }
+		};
+		expect(cellReadOnlyReason(raw, owner)).toMatch(/^Computed by Binned data/);
+	});
+
+	it('locks an Enter Data column and points at its node', () => {
+		const owner = {
+			kind: 'tableprocess',
+			owner: { name: 'BlankColumn', displayName: 'Enter Data' }
+		};
+		expect(cellReadOnlyReason(raw, owner)).toMatch(/Enter Data node/);
+	});
+
+	it('locks a plot metric output', () => {
+		const owner = { kind: 'plot', owner: { name: 'Periodogram 1' } };
+		expect(cellReadOnlyReason(raw, owner)).toMatch(/^Computed by Periodogram 1/);
+	});
+
+	it('locks a process node output (a producer column)', () => {
+		const produced = { ...raw, data: null, producerNodeId: 'process_3' };
+		expect(cellReadOnlyReason(produced, undefined)).toMatch(/^Computed by a process/);
+	});
+
+	it('locks a bin column', () => {
+		expect(cellReadOnlyReason({ ...raw, type: 'bin' }, undefined)).toMatch(/bin/i);
 	});
 });

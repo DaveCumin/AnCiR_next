@@ -86,3 +86,36 @@ function holdsUnixMs(arr) {
 	const first = arr.find((v) => !isBlankEntry(v));
 	return typeof first === 'number';
 }
+
+/**
+ * Why the Table may not edit `column`'s cells, or null when it may (UI-17). Only data the user
+ * owns is editable: an imported column, or a column built on one (whose own process chain an
+ * Edit value process joins). A node's output is recomputed from its inputs, so an edit stored on
+ * it (an Edit value process) would override the same row POSITION through every recompute and
+ * reach every plot downstream; it is read-only, and the reason says where to change it instead.
+ *
+ * @param {object} column  the Column
+ * @param {{kind: 'tableprocess' | 'plot', owner: object} | undefined} owner  the column's entry
+ *   in buildColumnOwnerIndex (core/outputLabels.js), when a node outputs it
+ * @returns {string | null}
+ */
+export function cellReadOnlyReason(column, owner) {
+	if (!column) return null;
+	if (column.type === 'bin') {
+		return 'Bin cells are computed from the bin start and width, so they are read-only.';
+	}
+	if (owner?.kind === 'tableprocess') {
+		const label = owner.owner?.displayName || owner.owner?.name || 'an analysis node';
+		if (owner.owner?.name === 'BlankColumn') {
+			return `Entered in the ${label} node: edit the values there.`;
+		}
+		return `Computed by ${label}: change its inputs or settings instead.`;
+	}
+	if (owner?.kind === 'plot') {
+		return `Computed by ${owner.owner?.name || 'a plot'}: change its inputs or settings instead.`;
+	}
+	if (column.producerNodeId != null && column.refId == null && column.data == null) {
+		return 'Computed by a process node: change its inputs or settings instead.';
+	}
+	return null;
+}

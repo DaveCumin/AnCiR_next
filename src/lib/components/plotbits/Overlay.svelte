@@ -10,6 +10,7 @@
 		coerceForm,
 		capabilitiesOf
 	} from './overlaySpec.js';
+	import { facetPanelOverlayRows } from './overlayFacetRows.js';
 
 	// One family for everything that is "geometry positioned by values" on a
 	// plot: reference LINES and shaded BANDS (plan 2026-09-13, part B; moved out
@@ -244,7 +245,8 @@
 
 		/**
 		 * The finite numbers a channel provides, in order: wired → the column's
-		 * data (null/blank/NaN skipped), typed → the typed list, neither → [].
+		 * data (null/blank/NaN skipped; on a facet panel only the panel's rows of
+		 * its generator's own per-series metric), typed → the typed list, neither → [].
 		 * An x-axis channel's values go through the host's
 		 * `overlayXValueFor(column)` when it has one (Scatterplot: an
 		 * hours-from-origin column lands on the time axis exactly as series x does).
@@ -255,7 +257,11 @@
 			const col = ch.columns[0];
 			if (!col) return ch.typed.slice();
 			const spec = this.channelSpec(key);
-			const data = typeof col?.getData === 'function' ? (col.getData() ?? []) : [];
+			const all = typeof col?.getData === 'function' ? (col.getData() ?? []) : [];
+			// On a facet panel, the generator's own per-series metric gives only this panel's
+			// series (overlayFacetRows.js); anything else gives every row.
+			const rows = facetPanelOverlayRows(this.parentPlot, col.refId);
+			const data = rows ? rows.map((i) => all[i]) : all;
 			const toAxis = spec?.axis === 'x' ? (this.parentPlot?.overlayXValueFor?.(col) ?? null) : null;
 			const out = [];
 			for (const raw of data) {

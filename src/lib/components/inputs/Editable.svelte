@@ -75,12 +75,11 @@
 		onblur={endEdit}
 		oninput={() => onInput(value)}
 	/>
-{:else}
+{:else if editable}
 	<span
 		role="button"
 		tabindex="0"
-		class="inline-edit-span"
-		class:editable
+		class="inline-edit-span editable"
 		ondblclick={startEdit}
 		onkeydown={(e) => {
 			if (e.key === 'Enter' || e.key === ' ') {
@@ -91,6 +90,9 @@
 	>
 		{value != null && value !== '' ? value : placeholder}
 	</span>
+{:else}
+	<!-- Read-only: plain text, not a focusable control (same box, so columns line up). -->
+	<span class="inline-edit-span">{value != null && value !== '' ? value : placeholder}</span>
 {/if}
 
 <style>

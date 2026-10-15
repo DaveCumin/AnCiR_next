@@ -269,11 +269,9 @@
 			} else {
 				this.y = new ColumnClass({ refId: -1 });
 			}
-			if (dataIN?.draw) {
-				this.draw = dataIN.draw;
-			} else {
-				this.draw = true;
-			}
+			// Only an absent flag defaults to visible: a series the user hid stays hidden
+			// through save and load (the round trip in plotRoundTrip.registry.test.js).
+			this.draw = typeof dataIN?.draw === 'boolean' ? dataIN.draw : true;
 			this.colour = dataIN?.colour ?? getPaletteColor(this.parentPlot.data.length);
 		}
 

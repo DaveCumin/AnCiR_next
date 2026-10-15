@@ -31,6 +31,11 @@
 // keep the STORED units: an FFT stores vertical positions as periods in hours and draws them
 // at 1/p while its axis shows frequency, so toggling the axis never rewrites an overlay.
 //
+// On a facet panel (the host's `parentBox.generator` is set), a channel wired to one of the
+// generator's own per-series metric outputs reads only the panel's series' rows
+// (overlayFacetRows.js, applied in OverlayClass.values), so a self-wired peak line marks each
+// panel's own peak. Nothing for a host to implement: the panel and generator supply it.
+//
 // `ProcessNode.supportsOverlays` and the canvas wiring key on `Array.isArray(inner.overlays)`;
 // the MCP catalogue keys on the class's `overlayCapabilities`.
 
