@@ -10,6 +10,7 @@ import {
 	initUnsavedChanges,
 	markSessionSaved,
 	markSessionUnsaved,
+	markSessionEdited,
 	hasUnsavedChanges,
 	installUnloadGuard
 } from './unsavedChanges.svelte.js';
@@ -101,6 +102,15 @@ describe('unsaved changes and the close-tab guard', () => {
 		expect(closeTab()).toBe(true);
 		markSessionSaved();
 		expect(closeTab()).toBe(false);
+	});
+
+	it('a layout edit (neither an operation nor a change of shape) makes closing ask', () => {
+		expect(hasUnsavedChanges()).toBe(false);
+		markSessionEdited();
+		expect(hasUnsavedChanges()).toBe(true);
+		expect(closeTab()).toBe(true);
+		markSessionSaved();
+		expect(hasUnsavedChanges()).toBe(false);
 	});
 
 	it('the guard can be removed', () => {

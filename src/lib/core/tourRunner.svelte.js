@@ -29,7 +29,8 @@ export const tourState = $state({
 	activeTour: null, // the resolved definition object
 	index: -1,
 	// Lessons (kind: 'lesson') are hidden from the picker while they're being
-	// reworked; an admin keystroke flips this to reveal them. Session-only.
+	// reworked; an admin keystroke (Cmd/Ctrl+Shift+Space, dev builds only) flips
+	// this to reveal them. Session-only.
 	showLessons: false
 });
 

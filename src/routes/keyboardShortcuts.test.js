@@ -113,6 +113,24 @@ describe('the app-level keydown handler', () => {
 		expect(cond).toMatch(/^dev && /);
 	});
 
+	// The classroom lessons are hidden while they are reworked; the keystroke that reveals them
+	// is an admin tool, so production builds must not bind it either (same gate as ROB-21).
+	it('gates the Cmd/Ctrl+Shift+Space classroom-lessons shortcut behind dev', () => {
+		const body = keyHandlerBody(source);
+		const hits = [...body.matchAll(/if \(([^)]*event\.code === 'Space'[^)]*)\) \{/g)];
+		expect(hits, 'expected exactly one Space branch').toHaveLength(1);
+		const cond = hits[0][1].replace(/\s+/g, ' ');
+		expect(cond).toMatch(/^dev && /);
+		const after = body.slice(hits[0].index, hits[0].index + 200);
+		expect(after).toContain('toggleLessons()');
+	});
+
+	// Zoom stays a production shortcut (only the developer tools are gated).
+	it.each(['p', 'o'])('keeps the Cmd/Ctrl+Shift+%s zoom shortcut in production', (key) => {
+		const cond = branchFor(keyHandlerBody(source), key, { shift: true });
+		expect(cond).not.toMatch(/\bdev\b/);
+	});
+
 	// ROB-31: Cmd/Ctrl+Z (and Shift+Z) in a text field is the field's own text undo.
 	it.each([
 		['Z', false],

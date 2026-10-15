@@ -17,6 +17,7 @@
 	import NodeNoteButton from './NodeNoteButton.svelte';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { removeGroup } from '$lib/core/core.svelte.js';
+	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
@@ -103,6 +104,9 @@
 		group.height = Math.max(120, resizing.startH + dy);
 	}
 	function stopResize() {
+		// A resized card is not an operation (unsavedChanges.svelte.js, point 3).
+		if (resizing && group && (group.width !== resizing.startW || group.height !== resizing.startH))
+			markSessionEdited();
 		resizing = null;
 		window.removeEventListener('pointermove', onResizeMove);
 		// The pointerup listener is `once`, so it is already gone on the normal

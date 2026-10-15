@@ -17,6 +17,12 @@
 //   2. Things that are not operations, chiefly importing data (pushObj straight into core).
 //      These change the session's SHAPE: how many columns, analyses, plots, notes and
 //      groups it has, and the highest column id (which also moves when a column is replaced).
+//   3. User edits that are neither: moving, resizing or collapsing a node on the workflow
+//      canvas (core.nodeLayout), a group card or a note. Their callers call
+//      markSessionEdited() where the USER's gesture ends. Not from an effect that watches the
+//      layout: the canvas also rewrites core.nodeLayout by itself while a session loads
+//      (adopting the saved layout, placing nodes the file has no position for, pushing apart
+//      overlaps), and none of that may count, or every opened example would ask.
 //
 // The session is "saved" at the revision and shape recorded by markSessionSaved(), which the
 // session save (exportJson) and a successful session load (importJson) call. Anything since
@@ -24,8 +30,9 @@
 //
 // It is a proxy, and errs towards asking: a change that is undone again still counts, and a
 // computed node rewriting its own outputs after a load counts once the load has finished. It
-// never misses a recorded edit. It can miss a change that is neither an operation nor a
-// change of shape; none is known to exist besides a load, which marks the session saved.
+// never misses a recorded edit. It can miss a change that is neither an operation, nor a
+// change of shape, nor marked by its caller (point 3); a load is one, and marks the session
+// saved anyway.
 import { addStateChangeHook } from './operations.js';
 import { core } from './core.svelte.js';
 import { sessionHasContent } from './sessionLoad.svelte.js';
@@ -65,6 +72,14 @@ export function initUnsavedChanges() {
 export function markSessionSaved() {
 	savedRevision = revision;
 	savedShape = sessionShape();
+}
+
+/**
+ * The user changed something that is neither an operation nor a change of shape (a node
+ * moved, resized or collapsed). Call it once, when the gesture ends; see point 3 above.
+ */
+export function markSessionEdited() {
+	revision++;
 }
 
 /**

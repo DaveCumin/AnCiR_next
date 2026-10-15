@@ -29,7 +29,8 @@
 		displayPeriodFor,
 		cleanNumericColumn,
 		columnToPhaseHours,
-		weightedSeriesStats
+		weightedSeriesStats,
+		setCircularUnit
 	} from '$lib/utils/circularPlot.js';
 	import { watsonWilliams, toRadiansColumn } from '$lib/utils/circular.js';
 	import { pUpperFromF } from '$lib/utils/fdist.js';
@@ -129,7 +130,16 @@
 	}
 
 	export class CircularPhaseClass {
-		static descriptors = { padding: { group: 'Padding' } };
+		static descriptors = {
+			padding: { group: 'Padding' },
+			// A select, not free text: every keystroke of a typed unit would be a unit change.
+			unit: { label: 'Values are in', input: 'select', options: ['hours', 'degrees', 'radians'] }
+		};
+
+		// Fields whose edit must convert others (plots/pairedEdits.js). Changing the unit the
+		// values are recorded in converts the bin widths, which are stored in that unit, by
+		// every edit route: Properties, the multi-select panel, an AI edit, the MCP settings.
+		static pairedEdits = { unit: { apply: setCircularUnit } };
 
 		parentBox = $state();
 		// Draw at the VIEW's size when one is given (a workflow node), else the figure's own.
@@ -142,7 +152,10 @@
 		data = $state([]);
 		legend = $state();
 
-		unit = $state('hours'); // 'radians' | 'degrees' | 'hours'
+		// The unit the phase column's values are recorded in ('radians' | 'degrees' | 'hours');
+		// the angle axis is shown in it too. binWidth and wedgeBinWidth are stored in it, so a
+		// change goes through pairedEdits, which converts them (circularPlot.setCircularUnit).
+		unit = $state('hours');
 		period = $state(24);
 		placement = $state('stack'); // 'stack' | 'bin' | 'rim' — applies to untimed series
 		binWidth = $state(1);
@@ -182,6 +195,8 @@
 				? displayPeriodFor('hours', this.period)
 				: displayPeriodFor(this.unit, this.period)
 		);
+		// The unit the angle axis, and so the bin widths, are in: clock hours with a time wired.
+		displayUnit = $derived(this.hasTimed ? 'hours' : this.unit);
 		// The room inside the padding. The plot is the largest square that fits, drawn at the
 		// top left; an outside legend (legendAuto.svelte.js) takes its share of this first.
 		availWidth = $derived(this.viewWidth - this.padding.left - this.padding.right);
@@ -442,6 +457,7 @@
 
 <script>
 	import { appState } from '$lib/core/core.svelte';
+	import { editPlotInners } from '$lib/plots/pairedEdits.js';
 	import { tick } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { slide } from 'svelte/transition';
@@ -556,8 +572,8 @@
 		<PolarGrid
 			projection={P}
 			hint={hasTimed
-				? `value ${plot.valueAxis[0]}–${plot.valueAxis[1]} · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`
-				: `phase · period ${plot.displayPeriod} ${unitSuffix(plot.unit)}`}
+				? `value ${plot.valueAxis[0]}–${plot.valueAxis[1]} · period ${plot.displayPeriod} ${unitSuffix(plot.displayUnit)}`
+				: `phase · period ${plot.displayPeriod} ${unitSuffix(plot.displayUnit)}`}
 		/>
 
 		{#each plot.data as d (d.x.id + '-' + d.y.id)}
@@ -677,13 +693,23 @@
 			{#if theData.hasTimed}
 				<p class="cp-hint">A time is wired: angle is always clock hours.</p>
 			{/if}
-			<div class="control-input-horizontal">
+			<!-- Stacked: side by side, the unit select was half the panel and cut "Clock hours"
+			     to "Clock h...". -->
+			<div class="control-input-vertical">
 				{#if !theData.hasTimed}
-					<ControlInput label="Unit">
-						<select bind:value={theData.unit}>
-							<option value="radians">Radians</option>
-							<option value="degrees">Degrees</option>
+					<ControlInput label="Values are in">
+						<select
+							value={theData.unit}
+							onchange={(e) =>
+								editPlotInners(
+									[theData.parentBox ?? { plot: theData }],
+									'unit',
+									e.currentTarget.value
+								)}
+						>
 							<option value="hours">Clock hours</option>
+							<option value="degrees">Degrees</option>
+							<option value="radians">Radians</option>
 						</select>
 					</ControlInput>
 				{/if}
@@ -721,7 +747,7 @@
 					</select>
 				</ControlInput>
 				{#if theData.placement === 'bin' && !theData.allTimed}
-					<ControlInput label={`Bin (${unitSuffix(theData.unit)})`}>
+					<ControlInput label={`Bin (${unitSuffix(theData.displayUnit)})`}>
 						<NumberWithUnits bind:value={theData.binWidth} min="0.05" step="0.5" />
 					</ControlInput>
 				{/if}
@@ -737,7 +763,7 @@
 				><input type="checkbox" bind:checked={theData.showWedges} /> Rose wedges (circular histogram)</label
 			>
 			{#if theData.showWedges}
-				<ControlInput label={`Wedge bin (${unitSuffix(theData.unit)})`}>
+				<ControlInput label={`Wedge bin (${unitSuffix(theData.displayUnit)})`}>
 					<NumberWithUnits bind:value={theData.wedgeBinWidth} min="0.05" step="0.5" />
 				</ControlInput>
 			{/if}

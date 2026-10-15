@@ -10,6 +10,7 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { core } from '$lib/core/core.svelte.js';
+	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { plotNodeSlots } from '$lib/core/ProcessNode.svelte.js';
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	let {
@@ -315,7 +316,10 @@
 				aria-label="Note"
 				value={node.noteObj.text ?? ''}
 				placeholder="Write a note"
-				oninput={(e) => (node.noteObj.text = e.currentTarget.value)}
+				oninput={(e) => {
+					node.noteObj.text = e.currentTarget.value;
+					markSessionEdited();
+				}}
 			></textarea>
 		</div>
 		<!-- Plot-style resize: drag the corner; the node grows in place (no move).

@@ -192,6 +192,15 @@
 				>https://doi.org/10.1371/journal.pcbi.1008567</a
 			>
 		</li>
+		<li id="ref-33">
+			Fernandez F, Nyhuis CC, Anand P, Demara BI, Ruby NF, Spanò G, Clark C, Edgin JO. Young
+			children with Down syndrome show normal development of circadian rhythms, but poor sleep
+			efficiency: a cross-sectional study across the first 60 months of life. <em>Sleep Med.</em>
+			2017;33:134–144.
+			<a href="https://doi.org/10.1016/j.sleep.2016.12.026"
+				>https://doi.org/10.1016/j.sleep.2016.12.026</a
+			>
+		</li>
 	</ol>
 </ChapterSection>
 

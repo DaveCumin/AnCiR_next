@@ -170,9 +170,15 @@
 			</li>
 			<li>
 				<strong>Onset/offset markers:</strong> enable to draw a marker at activity onset or offset
-				each day. The detector is a template match with three controls — <strong>N</strong> (hours
-				before), <strong>M</strong> (hours after) and a <strong>%</strong> (percentile) threshold — not
-				a mean + SD cutoff.
+				each day. The detector is a template match with three controls (<strong>N</strong>, hours
+				before; <strong>M</strong>, hours after; and a <strong>%</strong> percentile threshold), not
+				a mean + SD cutoff. Template matching is the approach ClockLab (Actimetrics) uses; Fernandez
+				et al., for example, used ClockLab to find each onset as 5 h of relative immobility followed
+				by 5 h of vigorous movement, and offsets with the reverse<sup class="cite"
+					><a href="#ref-33">[33]</a></sup
+				>. AnCiR's version is its own: the windows are yours to set (3 h each by default), and a bin
+				counts as active when it is above the percentile of the non-zero activity in its row and the
+				next, so its markers need not match ClockLab's.
 			</li>
 			<li>
 				<strong>Marker rules:</strong> with several animals on one actogram, add a

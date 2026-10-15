@@ -465,8 +465,9 @@
 				// each other until Svelte aborts with effect_update_depth_exceeded, which is
 				// exactly the "demo data doesn't work" crash. The toggle is redundant (the
 				// canvas view IS the workflow editor), so it is gone rather than rebound.
-				// ADMIN: reveal/hide the classroom lessons in the tour picker.
-				if (MODIFIER && event.shiftKey && event.code === 'Space' && !editableFocused) {
+				// ADMIN: reveal/hide the classroom lessons in the tour picker. Dev only, like the
+				// developer tools above: the lessons are hidden while they are reworked.
+				if (dev && MODIFIER && event.shiftKey && event.code === 'Space' && !editableFocused) {
 					event.preventDefault();
 					toggleLessons();
 				}

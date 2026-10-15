@@ -7,6 +7,7 @@
 	import { appState, snapToGrid, removeNote } from '$lib/core/core.svelte.js';
 	import { startEdgePan, noteEdgePanMouse, stopEdgePan } from '$lib/core/edgePan.svelte.js';
 	import { clientToCanvasPoint } from '$lib/core/canvasCoords.js';
+	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 
 	let { note, viewportEl = null } = $props();
 
@@ -91,6 +92,11 @@
 	}
 
 	function onPointerUp() {
+		// A note's place, size and text are not operations: tell the unsaved-changes tracker
+		// when a gesture leaves the note changed (unsavedChanges.svelte.js, point 3).
+		const moved = dragging && (note.x !== dragStartX || note.y !== dragStartY);
+		const resized = resizing && (note.width !== initialWidth || note.height !== initialHeight);
+		if (moved || resized) markSessionEdited();
 		dragging = false;
 		resizing = false;
 		stopEdgePan();
@@ -122,7 +128,10 @@
 		aria-label="Note"
 		value={note.text ?? ''}
 		placeholder="Write a note"
-		oninput={(e) => (note.text = e.currentTarget.value)}
+		oninput={(e) => {
+			note.text = e.currentTarget.value;
+			markSessionEdited();
+		}}
 		onpointerdown={(e) => e.stopPropagation()}
 	></textarea>
 	<div class="resize-handle" role="presentation" onpointerdown={startResize}></div>

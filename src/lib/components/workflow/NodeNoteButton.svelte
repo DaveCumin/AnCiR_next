@@ -14,6 +14,7 @@
 	// follows its node through drags, pans, zooms and scrolls.
 	import { tick } from 'svelte';
 	import { core } from '$lib/core/core.svelte.js';
+	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { placeNotePopover } from './notePopoverPlacement.js';
 
@@ -103,12 +104,15 @@
 		} else {
 			core.nodeNotes[nodeId] = next;
 		}
+		// Node notes are not operations (unsavedChanges.svelte.js, point 3).
+		markSessionEdited();
 		open = false;
 	}
 
 	function clearNote() {
 		draft = '';
 		delete core.nodeNotes[nodeId];
+		markSessionEdited();
 		open = false;
 	}
 

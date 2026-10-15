@@ -24,6 +24,68 @@ export function displayPeriodFor(unit, period) {
 	return TAU;
 }
 
+const ANGLE_UNITS = new Set(['radians', 'degrees', 'hours']);
+
+/**
+ * An angular width (a bin) re-expressed in another unit, keeping its angular size: 1 h of a
+ * 24 h period is 15 degrees is 0.2618 rad. Hours use `period`.
+ *
+ * A width in radians is stored at full precision (it is almost never a round number). One in
+ * degrees or hours is cleaned of floating-point noise at 12 significant digits, so a whole
+ * number of degrees stays whole (15, not 14.999999999999998) and a round trip (hours to
+ * degrees to radians and back) returns the width it started from. A part in 10^12 is far
+ * below anything a bin can resolve, and this is not rounding for display.
+ *
+ * An unset width, or a unit this does not know, is returned unchanged.
+ *
+ * @param {unknown} width
+ * @param {string} fromUnit
+ * @param {string} toUnit
+ * @param {number} [period] the cycle length in hours, for 'hours'
+ */
+export function convertAngularWidth(width, fromUnit, toUnit, period) {
+	if (typeof width !== 'number' || !Number.isFinite(width)) return width;
+	if (!ANGLE_UNITS.has(fromUnit) || !ANGLE_UNITS.has(toUnit) || fromUnit === toUnit) return width;
+	const turns = width / displayPeriodFor(fromUnit, period);
+	const out = turns * displayPeriodFor(toUnit, period);
+	return toUnit === 'radians' ? out : Number(out.toPrecision(12));
+}
+
+/** Is any series of a Circular phase plot (live, or its toJSON snapshot) wired to a time? */
+function hasTimedSeries(target) {
+	return (target?.data ?? []).some((d) => Number(d?.x?.refId) >= 0);
+}
+
+/**
+ * Change a Circular phase plot's `unit` (the unit its phase values are recorded in),
+ * converting the fields stored in that unit, `binWidth` and `wedgeBinWidth`, so the bins keep
+ * their angular size.
+ *
+ * THE one place a unit change happens. Every edit route reaches it through
+ * CircularPhaseClass.pairedEdits (plots/pairedEdits.js): the Properties select, the
+ * multi-select panel, an AI edit, the MCP render settings. It works on the live plot and on
+ * its toJSON snapshot alike.
+ *
+ * It is deliberately NOT a `unit` setter: loading a session and undo (fromJSON) apply a state
+ * whose widths are already in its unit, and a converting setter would convert them again.
+ *
+ * With a timed series wired the angle is always clock hours (displayPeriod ignores `unit`), so
+ * the widths are hours too and only the unit is stored.
+ *
+ * @param {{ unit: string, period: number, binWidth: number, wedgeBinWidth: number, data?: any[] }} target
+ * @param {string} unit
+ * @returns {boolean} whether any width was converted
+ */
+export function setCircularUnit(target, unit) {
+	const from = target.unit;
+	target.unit = unit;
+	if (from === unit || hasTimedSeries(target)) return false;
+	if (!ANGLE_UNITS.has(from) || !ANGLE_UNITS.has(unit)) return false;
+	target.binWidth = convertAngularWidth(target.binWidth, from, unit, target.period);
+	target.wedgeBinWidth = convertAngularWidth(target.wedgeBinWidth, from, unit, target.period);
+	return true;
+}
+
 /**
  * Rayleigh stats for one column, with the mean direction re-expressed in the
  * data unit (meanValue) so the plot can place the vector without re-deriving.

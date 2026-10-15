@@ -56,6 +56,14 @@ describe('template-matching method note', () => {
 		expect(TEMPLATE_METHOD_NOTE).not.toMatch(/\u2014/); // no em-dash
 	});
 
+	it('cites a published use of the method, without claiming to be ClockLab', () => {
+		// Fernandez et al. (2017) applied ClockLab's template matching with 5 h windows; AnCiR's
+		// windows and scoring are its own, so the note credits the idea, not an equivalence.
+		expect(TEMPLATE_METHOD_NOTE).toMatch(/ClockLab \(Actimetrics\)/);
+		expect(TEMPLATE_METHOD_NOTE).toMatch(/Fernandez et al\. \(2017/);
+		expect(TEMPLATE_METHOD_NOTE).toMatch(/5 h windows/);
+	});
+
 	it('shows under a marker rule that detects onsets', () => {
 		const plot = restActogram();
 		addRuleRecorded(plot.plot, {

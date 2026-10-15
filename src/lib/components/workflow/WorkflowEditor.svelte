@@ -89,6 +89,7 @@
 		compactPortAnchorY
 	} from './nodeGeometry.js';
 	import { buildNodeLayout, nodeLayoutMatches, parseNodeLayout } from './nodeLayoutIO.js';
+	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { settleBoxes, clearPlacementY } from './settleOverlaps.js';
 	import { computeNodeLayers } from './nodeLayers.js';
 
@@ -1242,9 +1243,11 @@
 	}
 	function alignSelectedNodes(mode) {
 		applyNodePositions(alignBoxes(selectedNodeBoxes(), mode));
+		markSessionEdited();
 	}
 	function distributeSelectedNodes(axis) {
 		applyNodePositions(distributeBoxes(selectedNodeBoxes(), axis));
+		markSessionEdited();
 	}
 	// Measure a node's actual rendered height (canvas coordinates). offsetHeight is
 	// the untransformed layout height, so it's unaffected by the canvas zoom and
@@ -2890,6 +2893,15 @@
 		stopAll();
 	}
 
+	/** Did the resize gesture `info` leave its node a different size? */
+	function resizeChanged(info) {
+		if (!info) return false;
+		const now = info.noteObj
+			? { w: info.noteObj.width, h: info.noteObj.height }
+			: plotPreviewSizes[info.nodeId];
+		return !!now && (now.w !== info.startW || now.h !== info.startH);
+	}
+
 	function stopAll() {
 		// Marquee is driven by its own window-level listeners (onMarqueeUp), not by
 		// this canvas pointerup — a release over a node/panel never reaches here.
@@ -2921,6 +2933,9 @@
 		// (plotPreviewSizes) — it deliberately does NOT touch the real plot
 		// width/height (owned by the workspace view), so there's nothing to commit to
 		// plot history here.
+		// A moved or resized node is not an operation, so tell the unsaved-changes tracker
+		// here, where the user's gesture ends (unsavedChanges.svelte.js, point 3).
+		if (dragInfo?.moved || resizeChanged(resizeInfo)) markSessionEdited();
 		dropTargetEdgeKey = null;
 		dropTargetPortKey = null;
 		dropTargetPortDir = null;
@@ -3229,12 +3244,21 @@
 	 *  Groups persist this on their own `collapsed` flag; other squared kinds use
 	 *  collapsedNodeIds (default expanded), persisted via core.nodeLayout. */
 	function handleNodeToggleExpand(node) {
+		// The collapsed state is saved with the session (core.nodeLayout, or the group's or
+		// composite's own flag) and is not an operation, so each branch that changes it tells
+		// the unsaved-changes tracker.
 		if (node.type === 'group') {
-			if (node.groupObj) node.groupObj.collapsed = !node.groupObj.collapsed;
+			if (node.groupObj) {
+				node.groupObj.collapsed = !node.groupObj.collapsed;
+				markSessionEdited();
+			}
 			return;
 		}
 		if (node.type === 'composite') {
-			if (node.compositeObj) node.compositeObj.collapsed = !node.compositeObj.collapsed;
+			if (node.compositeObj) {
+				node.compositeObj.collapsed = !node.compositeObj.collapsed;
+				markSessionEdited();
+			}
 			return;
 		}
 		if (!SQUARED_KINDS.has(node.type)) return;
@@ -3244,6 +3268,7 @@
 			next.delete(node.id); // currently collapsed → expand
 		else next.add(node.id); // currently expanded → collapse
 		collapsedNodeIds = next;
+		markSessionEdited();
 	}
 
 	function toggleMultiSelect(id) {
@@ -4517,6 +4542,8 @@
 			onclick={(e) => {
 				e.stopPropagation();
 				tidyLayout();
+				// Only the button counts: a tidy REQUESTED after a load or a seed is not the user's.
+				markSessionEdited();
 			}}
 			aria-label="Tidy layout"
 			{@attach tooltip('Tidy layout: arrange nodes left-to-right')}
