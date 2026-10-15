@@ -28,8 +28,9 @@
 	// The class reads its HOST plot (`parentPlot`) only through the contract in
 	// overlayHost.js: `overlays` (for "Line N" naming), `overlaySeriesColour()`
 	// (the ribbon's default fill), `overlayXValueFor(column)` (x channels on a
-	// time axis), `overlayContext()` (repeating bands, legacy night bands) and
-	// the class's `overlayCapabilities` (which forms the host allows).
+	// time axis), `overlayXTransform(v)` (stored x to axis x when drawing, FFT),
+	// `overlayContext()` (repeating bands, legacy night bands) and the class's
+	// `overlayCapabilities` (which forms the host allows).
 
 	/** Position-style channels are collapsed to finite uniques and cut here (overlaySpec.js). */
 	export const OVERLAY_POSITION_CAP = POSITION_CAP;
@@ -380,13 +381,68 @@
 			if (x.length !== lower.length || x.length !== upper.length || x.length === 0) {
 				return { x: [], lower: [], upper: [] };
 			}
-			return { x, lower, upper };
+			const toAxis = this.#xTransform();
+			if (!toAxis) return { x, lower, upper };
+			// A point whose x the host cannot place is dropped from all three channels, so
+			// they stay parallel.
+			const out = { x: [], lower: [], upper: [] };
+			x.forEach((v, i) => {
+				const ax = toAxis(v);
+				if (ax == null) return;
+				out.x.push(ax);
+				out.lower.push(lower[i]);
+				out.upper.push(upper[i]);
+			});
+			return out;
 		}
 
 		/**
-		 * What to draw, as plain data. `ctx` = `{ xDomainMin, xDomainMax, xAnchorMin, xIsTime }`
-		 * (only repeating bands read it; a missing field falls back to the host's
-		 * `overlayContext()`).
+		 * The host's `overlayXTransform(v)` as a function, or null for identity. It maps a
+		 * STORED x value to the axis value it is drawn at, or null when it has no place on the
+		 * axis (FFT: positions are stored as periods in hours and drawn at 1/p while the axis
+		 * shows frequency; p <= 0 is dropped). Only drawing reads it: the channels, the saved
+		 * JSON and the warnings stay in the stored units. Repeating bands are already in axis
+		 * units (they are built from the host's draw context) and never go through it.
+		 */
+		#xTransform() {
+			const host = this.parentPlot;
+			if (typeof host?.overlayXTransform !== 'function') return null;
+			return (v) => {
+				const ax = host.overlayXTransform(v);
+				return typeof ax === 'number' && Number.isFinite(ax) ? ax : null;
+			};
+		}
+
+		#axisXPositions(list) {
+			const toAxis = this.#xTransform();
+			if (!toAxis) return list;
+			const out = [];
+			for (const v of list) {
+				const ax = toAxis(v);
+				if (ax != null) out.push(ax);
+			}
+			return out;
+		}
+
+		#axisXSegments(segments) {
+			const toAxis = this.#xTransform();
+			if (!toAxis) return segments;
+			const out = [];
+			for (const { x0, x1 } of segments) {
+				const a = toAxis(x0);
+				const b = toAxis(x1);
+				if (a == null || b == null) continue;
+				// 1/p reverses the order of the edges; keep x0 <= x1 as the segments promise.
+				out.push({ x0: Math.min(a, b), x1: Math.max(a, b) });
+			}
+			return out;
+		}
+
+		/**
+		 * What to draw, as plain data, in AXIS units: x values go through the host's
+		 * `overlayXTransform` when it has one (see #xTransform). `ctx` =
+		 * `{ xDomainMin, xDomainMax, xAnchorMin, xIsTime }` (only repeating bands read it; a
+		 * missing field falls back to the host's `overlayContext()`).
 		 *
 		 *   line             → { kind:'line', orientation:'vertical'|'horizontal', positions:number[] }
 		 *   band vertical    → { kind:'band', form, segments:[{x0,x1}] }   (start[i] with end[i])
@@ -396,14 +452,19 @@
 		 */
 		geometry(ctx = {}) {
 			if (this.kind === 'line') {
-				return { kind: 'line', orientation: this.form, positions: this.positions('at') };
+				const at = this.positions('at');
+				return {
+					kind: 'line',
+					orientation: this.form,
+					positions: this.form === 'vertical' ? this.#axisXPositions(at) : at
+				};
 			}
 			switch (this.form) {
 				case 'vertical':
 					return {
 						kind: 'band',
 						form: 'vertical',
-						segments: this.#pairedSegments('start', 'end', 'x0', 'x1')
+						segments: this.#axisXSegments(this.#pairedSegments('start', 'end', 'x0', 'x1'))
 					};
 				case 'horizontal':
 					return {
@@ -664,7 +725,12 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import { removeOverlayWithUndo } from '$lib/plots/seriesDelete.js';
-	import { overlayClipPrefix, overlayRangeNote, overlayLegendNote } from './overlayDisplay.js';
+	import {
+		overlayClipPrefix,
+		overlayRangeNote,
+		overlayLegendNote,
+		overlayXNote
+	} from './overlayDisplay.js';
 
 	let {
 		/** the OverlayClass instance */
@@ -690,6 +756,8 @@
 	// a label that cannot show because the plot's legend is off.
 	const rangeNote = $derived(overlay && inner ? overlayRangeNote(inner, overlay) : null);
 	const legendNote = $derived(overlay && inner ? overlayLegendNote(inner, overlay) : null);
+	// How the host reads an x position when that differs from the axis as shown (FFT: periods).
+	const xNote = $derived(overlay && inner ? overlayXNote(inner, overlay) : null);
 
 	// The EMPTY picker (shown while a channel is unwired): a blank wrapper column
 	// that is NOT in the model. Once it resolves to a real column the wire goes in
@@ -931,6 +999,10 @@
 		</ControlInput>
 	</div>
 
+	{#if xNote}
+		<p class="overlay-note overlay-x-note">{xNote}</p>
+	{/if}
+
 	{#each channelSpecs as spec (spec.key)}
 		{@render channelRow(spec)}
 	{/each}
@@ -1106,7 +1178,8 @@
 		font-size: var(--font-xs);
 		color: var(--color-lightness-35);
 	}
-	.overlay-range-note {
+	.overlay-range-note,
+	.overlay-x-note {
 		margin-bottom: var(--space-2);
 	}
 	.overlay-check {

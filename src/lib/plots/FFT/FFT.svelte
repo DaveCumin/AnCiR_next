@@ -26,9 +26,16 @@
 	import PlotTooltip from '$lib/components/plotbits/PlotTooltip.svelte';
 	import { paddedDomain } from '$lib/plots/axisDomain.js';
 	import { fftXAxisLabel, convertFftLimits, FFT_PERIOD_LABEL } from './fftAxis.js';
+	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+	import {
+		overlayExtentOf,
+		overlayLegendItems,
+		overlaysFromJSON,
+		overlaysToJSON
+	} from '$lib/components/plotbits/overlayHost.js';
 
 	export const FFT_defaultDataInputs = ['time', 'values'];
-	export const FFT_controlHeaders = ['Properties', 'Data'];
+	export const FFT_controlHeaders = ['Properties', 'Data', 'Overlays'];
 	export const FFT_displayName = 'Fourier analysis';
 
 	class FFTDataclass {
@@ -221,6 +228,22 @@
 	}
 
 	export class FFTclass {
+		// The overlay host contract (components/plotbits/overlayHost.js): reference lines (a
+		// vertical line at 24 h, or at the peak_period this plot outputs) and shaded bands (a 20
+		// to 28 h circadian window, a magnitude range). A vertical position is STORED as a period
+		// in hours whichever way the x axis is shown (decision Q3), and drawn at 1/p while it
+		// shows frequency (overlayXTransform), so toggling the axis never rewrites an overlay.
+		// Only the magnitude axis widens to fit them; the phase axis never carries overlays.
+		static overlayCapabilities = Object.freeze({
+			line: Object.freeze(['vertical', 'horizontal']),
+			band: Object.freeze(['vertical', 'horizontal']),
+			legend: true,
+			xTime: false,
+			domain: Object.freeze(['y']),
+			xNote:
+				'Vertical positions are periods in hours, also when the x axis shows frequency (a line at 24 is drawn at 1/24 cycles per hour).'
+		});
+
 		parentBox = $state();
 		// Draw at the VIEW's size when one is given (a workflow node), else the figure's own.
 		// See plots/viewBox.js for the whole story and why type scales with it.
@@ -389,11 +412,13 @@
 
 		ylimsIN = $state([null, null]);
 		ylims = $derived.by(() => {
-			if (this.data.length === 0) {
-				return [0, 1];
-			}
-
-			const { min: mnRaw, max: mxRaw } = minMaxAcross(this.data.map((d) => d.fftData.magnitudes));
+			const extent = minMaxAcross(this.data.map((d) => d.fftData.magnitudes));
+			// Overlays (reference lines / bands) widen the automatic magnitude range so a mark is
+			// never silently off-screen; the user's limits below still win. Never the x range
+			// (overlayCapabilities.domain), and never the phase axis.
+			const ext = overlayExtentOf(this.overlays, 'y');
+			const mnRaw = ext ? Math.min(extent.min ?? Infinity, ext[0]) : extent.min;
+			const mxRaw = ext ? Math.max(extent.max ?? -Infinity, ext[1]) : extent.max;
 			if (mnRaw == null || mxRaw == null) return [0, 1];
 			// Headroom and a nice top tick; see plots/axisDomain.js. Magnitude is never negative.
 			const [ymin, ymax] = paddedDomain(mnRaw, mxRaw, {
@@ -446,8 +471,74 @@
 				const phase = datum.getPhaseLegendItem();
 				if (phase) items.push(phase);
 			});
+			// Then every enabled overlay that carries a label.
+			items.push(...overlayLegendItems(this.overlays));
 			return items;
 		});
+
+		// ---- overlay host (components/plotbits/overlayHost.js) ----------------------------
+		// Reference lines and shaded bands, in draw order.
+		overlays = $state([]);
+		// The plot's own axes: period or frequency on x, MAGNITUDE on y (linear or log, the
+		// scales the series are drawn with). The phase axis is never an overlay axis.
+		overlayXScale = $derived(
+			scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth])
+		);
+		overlayYScale = $derived(
+			this.logScale
+				? scaleLog()
+						.domain([Math.max(this.ylims[0], 1e-6), this.ylims[1]])
+						.range([this.plotheight, 0])
+				: scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([this.plotheight, 0])
+		);
+
+		/**
+		 * A stored vertical position (a period in hours) as drawn on the x axis: the period
+		 * itself, or 1/p while the axis shows frequency. A period that is not positive has no
+		 * place on either axis, so it is dropped (null) in both modes, and toggling the axis
+		 * never makes a mark appear or vanish.
+		 */
+		overlayXTransform(p) {
+			if (!(p > 0)) return null;
+			return this.showPeriod ? p : 1 / p;
+		}
+
+		/** Add an overlay of `kind` ('line' | 'band'), optionally with a `form`; returns it. */
+		addOverlay(kind, form) {
+			const overlay = new OverlayClass(this, { kind, form });
+			this.overlays.push(overlay);
+			return overlay;
+		}
+
+		removeOverlay(id) {
+			const idx = this.overlays.findIndex((o) => o.id === id);
+			if (idx >= 0) this.overlays.splice(idx, 1);
+		}
+
+		/** The draw context every overlay's geometry() takes (the visible x range, axis units). */
+		overlayContext() {
+			return {
+				xDomainMin: this.xlims[0],
+				xDomainMax: this.xlims[1],
+				xAnchorMin: this.xlims[0],
+				xIsTime: false
+			};
+		}
+
+		/** A band's default fill never reads it (no ribbon here); kept for the contract. */
+		overlaySeriesColour() {
+			return this.data[0]?.line?.colour ?? null;
+		}
+
+		/** The remedy an Overlays-tab block offers when its mark is outside the visible range. */
+		overlayRangeHint(axis) {
+			if (axis === 'x') {
+				return 'Overlays never widen the period or frequency range; change the x limits in Properties.';
+			}
+			return this.ylimsIN[0] != null || this.ylimsIN[1] != null
+				? 'The magnitude axis has fixed limits; reset them in Properties to fit it.'
+				: null;
+		}
 
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
@@ -478,9 +569,13 @@
 			// SVG user units, so divide the measured deltas back out by the effective
 			// scale — otherwise padding grows with zoom and jumps when re-measured at
 			// a different zoom (e.g. when the control panel opens). See Scatterplot.
+			// An SVG that is not laid out (display: none, a zero-size host) has no rects to
+			// measure: every delta below would be 0 / 0, and NaN padding blanks the whole plot.
+			const renderedWidth = plotElem.getBoundingClientRect().width;
+			if (!(renderedWidth > 0)) return axisWidths;
 			const scale =
 				Number(plotElem.getAttribute('width')) > 0
-					? plotElem.getBoundingClientRect().width / Number(plotElem.getAttribute('width'))
+					? renderedWidth / Number(plotElem.getAttribute('width'))
 					: 1;
 
 			const allLeftAxes = plotElem.getElementsByClassName('axis-left');
@@ -613,7 +708,8 @@
 				logScale: this.logScale,
 				showPeriod: this.showPeriod,
 				data: this.data,
-				legend: this.legend.toJSON()
+				legend: this.legend.toJSON(),
+				overlays: overlaysToJSON(this.overlays)
 			};
 		}
 
@@ -665,6 +761,9 @@
 			if (json.data) {
 				fft.data = json.data.map((d) => FFTDataclass.fromJSON(d, fft));
 			}
+			// After the series, as on every host. A session saved before the FFT had overlays
+			// carries none.
+			overlaysFromJSON(fft, json);
 			return fft;
 		}
 	}
@@ -722,6 +821,8 @@
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
 	import { getZoomAdapter } from '$lib/plots/zoomAdapters.js';
 	import { usePlotMetricOutputs, ownsPlotMetrics } from '$lib/plots/plotMetricOutputs.svelte.js';
+	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
+	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which, brushable = false, zoomMode = false } = $props();
 
@@ -999,6 +1100,8 @@
 		</div>
 
 		<Axis axisData={theData.xAxis} which="controls" title="X-Axis Controls" />
+	{:else if appState.currentControlTab === 'overlays'}
+		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
@@ -1184,21 +1287,13 @@
 	>
 		{#key `${theData.plot.logScale}-${theData.plot.showPeriod}-${theData.plot.data.some((d) => d.showPhase)}`}
 			{@const hasPhase = theData.plot.data.some((d) => d.showPhase)}
-			{@const yScale = theData.plot.logScale
-				? scaleLog()
-						.domain([Math.max(theData.plot.ylims[0], 1e-6), theData.plot.ylims[1]])
-						.range([theData.plot.plotheight, 0])
-				: scaleLinear()
-						.domain([theData.plot.ylims[0], theData.plot.ylims[1]])
-						.range([theData.plot.plotheight, 0])}
+			{@const yScale = theData.plot.overlayYScale}
 
 			{@const phaseYScale = scaleLinear()
 				.domain([theData.plot.phaseYlims[0], theData.plot.phaseYlims[1]])
 				.range([theData.plot.plotheight, 0])}
 
-			{@const xScale = scaleLinear()
-				.domain([theData.plot.xlims[0], theData.plot.xlims[1]])
-				.range([0, theData.plot.plotwidth])}
+			{@const xScale = theData.plot.overlayXScale}
 			<!-- Y Axis (Magnitude) -->
 			<Axis
 				figureStyle={theData.plot.viewStyle}
@@ -1236,6 +1331,10 @@
 				axisData={theData.plot.xAxis}
 				which="plot"
 			/>
+
+			<!-- Shaded bands beneath the spectra. Inside the {#key} so they remount with the axes
+			     when the scale, the period/frequency mode or the phase axis changes. -->
+			<OverlayLayers inner={theData.plot} layer="bands" />
 
 			<!-- Plot data -->
 			{#each theData.plot.data as datum, di (di)}
@@ -1319,6 +1418,9 @@
 					/>
 				{/if}
 			{/each}
+
+			<!-- Reference lines above the magnitude and phase curves, beneath the legend. -->
+			<OverlayLayers inner={theData.plot} layer="lines" />
 		{/key}
 
 		<!-- Series legend. Sits over the single plot area that BOTH the magnitude and the

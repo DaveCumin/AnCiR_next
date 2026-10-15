@@ -8,7 +8,12 @@
 import { describe, it, expect } from 'vitest';
 import { scaleLinear } from 'd3-scale';
 import { OverlayClass } from './Overlay.svelte';
-import { overlayClipPrefix, overlayRangeNote, overlayLegendNote } from './overlayDisplay.js';
+import {
+	overlayClipPrefix,
+	overlayRangeNote,
+	overlayLegendNote,
+	overlayXNote
+} from './overlayDisplay.js';
 
 const CAPS = { line: ['vertical', 'horizontal'], band: ['vertical'], legend: true, xTime: false };
 
@@ -138,5 +143,21 @@ describe('overlayLegendNote', () => {
 		const o2 = line(none, 'vertical', [24]);
 		o2.label = 'tau';
 		expect(overlayLegendNote(none, o2)).toBeNull();
+	});
+});
+
+describe('overlayXNote', () => {
+	const NOTE = 'Vertical positions are periods in hours.';
+	it("shows the host's x note on an overlay that reads x, and nowhere else", () => {
+		const h = host({ caps: { ...CAPS, xNote: NOTE } });
+		expect(overlayXNote(h, line(h, 'vertical', [24]))).toBe(NOTE);
+		const band = new OverlayClass(h, { kind: 'band', form: 'vertical' });
+		expect(overlayXNote(h, band)).toBe(NOTE);
+		expect(overlayXNote(h, line(h, 'horizontal', [2]))).toBeNull();
+	});
+
+	it('is silent on a host without one', () => {
+		const h = host();
+		expect(overlayXNote(h, line(h, 'vertical', [24]))).toBeNull();
 	});
 });

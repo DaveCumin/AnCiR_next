@@ -201,10 +201,13 @@ export function describeCapabilities() {
 			// class declares in `overlayCapabilities`, so a plot that gains them is advertised
 			// without editing a list, and the axes whose automatic range widens to fit them (a
 			// periodogram never widens its period range; a mark outside it is not drawn).
+			// `overlayNote`: how the plot reads an x position when that is not the axis as shown
+			// (an fft takes vertical positions as periods in hours, also on its frequency axis).
 			...(overlayCaps
 				? {
 						overlays: describeOverlayForms(overlayCaps),
-						overlayAxes: overlayDomainAxes(overlayCaps)
+						overlayAxes: overlayDomainAxes(overlayCaps),
+						...(overlayCaps.xNote ? { overlayNote: overlayCaps.xNote } : {})
 					}
 				: {})
 		});
@@ -269,14 +272,16 @@ export function filterCapabilities(full, { detail = 'summary', family = null, na
 				? x
 				: { id: x.id, family: x.family, summary: x.summary, params: Object.keys(x.params) };
 	// The summary keeps each overlay host's kinds and forms (the first form of a kind is the
-	// default) and the axes overlays widen; "full" adds the channel table per form.
+	// default), the axes overlays widen and any note on how positions are read (it changes
+	// what a typed value means); "full" adds the channel table per form.
 	const overlaySummary = (x) =>
 		x.overlays
 			? {
 					overlays: Object.fromEntries(
 						Object.entries(x.overlays).map(([kind, forms]) => [kind, Object.keys(forms)])
 					),
-					overlayAxes: x.overlayAxes
+					overlayAxes: x.overlayAxes,
+					...(x.overlayNote ? { overlayNote: x.overlayNote } : {})
 				}
 			: {};
 	const projPlot = (x) =>

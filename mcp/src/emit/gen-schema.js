@@ -230,6 +230,9 @@ for (const [id, entry] of appConsts.plotMap ?? new Map()) {
 		// shared overlay spec (plotbits/overlaySpec.js), so it cannot drift. Only on plots that
 		// declare capabilities (overlay hosts).
 		...(overlayCaps ? { overlays: describeOverlayForms(overlayCaps) } : {}),
+		// How the plot reads an x position when that is not the axis as shown (an fft takes
+		// vertical positions as periods in hours, also on its frequency axis).
+		...(overlayCaps?.xNote ? { overlayNote: overlayCaps.xNote } : {}),
 		// The metric output ports the plot emits in the app (one value per series), in the node
 		// manifest's shape. Read-only knowledge for the model: the engine cannot wire a plot
 		// metric column (the app mints them at mount; plan 2026-09-30 marker rules, Phase C), so

@@ -508,7 +508,8 @@ const meta = new Map([
 			family: 'Plots',
 			keywords: ['fourier', 'spectrum', 'frequency', 'power', 'harmonics'], // search-only synonyms; never rendered
 			nodeIcon: 'fft',
-			description: 'Fourier analysis (FFT) spectrum of a time-series.'
+			description:
+				'Fourier analysis (FFT) spectrum of a time-series, with reference lines and shaded bands (wired or typed) from its Overlays tab; vertical positions are periods in hours, drawn at 1/period when the axis shows frequency.'
 		}
 	],
 	[
@@ -518,7 +519,7 @@ const meta = new Map([
 			keywords: ['wavelet', 'scalogram', 'time-frequency', 'morlet', 'spectrogram'], // search-only synonyms; never rendered
 			nodeIcon: 'node-wavelet',
 			description:
-				'Continuous wavelet transform (scalogram): power as a function of BOTH time and period, so a rhythm that changes period or strength over the record is visible where a periodogram would only show a time-average. Morlet/Paul/DOG wavelets, Torrence & Compo (1998) normalisation, with the cone of influence drawn (values outside it are edge artefacts) and an optional ridge showing the dominant period at each moment. Requires uniformly sampled data.'
+				'Continuous wavelet transform (scalogram): power as a function of BOTH time and period, so a rhythm that changes period or strength over the record is visible where a periodogram would only show a time-average. Morlet/Paul/DOG wavelets, Torrence & Compo (1998) normalisation, with the cone of influence drawn (values outside it are edge artefacts) and an optional ridge showing the dominant period at each moment. Horizontal reference lines and bands on the period axis (wired or typed) from its Overlays tab. Requires uniformly sampled data.'
 		}
 	],
 	[

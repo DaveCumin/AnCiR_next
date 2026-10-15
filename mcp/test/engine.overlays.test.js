@@ -101,6 +101,30 @@ describe('capability catalogue advertises overlays where the class supports them
 		);
 	});
 
+	it('fft lists vertical and horizontal marks with a note that vertical positions are periods; cwt only horizontal ones', () => {
+		const caps = describeCapabilities();
+		const byId = Object.fromEntries(caps.plots.map((p) => [p.id, p]));
+		for (const id of ['fft', 'cwt']) {
+			const declared = appConsts.plotMap.get(id).data.overlayCapabilities;
+			expect(byId[id].overlays).toEqual(describeOverlayForms(declared));
+		}
+		expect(Object.keys(byId.fft.overlays.line)).toEqual(['vertical', 'horizontal']);
+		expect(Object.keys(byId.fft.overlays.band)).toEqual(['vertical', 'horizontal']);
+		expect(byId.fft.overlayAxes).toEqual(['y']);
+		expect(byId.fft.overlayNote).toMatch(/^Vertical positions are periods in hours/);
+		expect(Object.keys(byId.cwt.overlays.line)).toEqual(['horizontal']);
+		expect(Object.keys(byId.cwt.overlays.band)).toEqual(['horizontal']);
+		// The period range is what the scalogram is computed over: nothing widens.
+		expect(byId.cwt.overlayAxes).toEqual([]);
+		expect(byId.cwt.overlayNote).toBeUndefined();
+		// The summary keeps the note, since it changes how a value is read.
+		const summary = filterCapabilities(caps);
+		const fft = summary.plots.find((p) => p.id === 'fft');
+		expect(fft.overlayNote).toBe(byId.fft.overlayNote);
+		expect(summary.plots.find((p) => p.id === 'cwt').overlayNote).toBeUndefined();
+		expect(overlayHostTypes()).toEqual(expect.arrayContaining(['fft', 'cwt']));
+	});
+
 	it('the default (summary) list_capabilities shows each host its kinds and forms', () => {
 		const out = filterCapabilities(describeCapabilities());
 		const byId = Object.fromEntries(out.plots.map((p) => [p.id, p]));
@@ -444,6 +468,28 @@ describe('add_plot with overlays', () => {
 			'overlays[0].form for a line on a meansem must be one of horizontal (got "vertical").'
 		);
 		expect(s.exportSessionObject().plots.length).toBe(1);
+	});
+
+	it('an fft line is saved as the typed period; a cwt line with no form is horizontal', () => {
+		const s = sessionWithColumns('plot-overlay-fft');
+		const res = s.addPlot('fft', { time: 'x', values: 'y' }, [
+			{ kind: 'line', channels: { at: 24 }, label: 'tau' },
+			{ kind: 'band', channels: { start: 20, end: 28 } }
+		]);
+		expect(res.overlays.map((o) => [o.kind, o.form])).toEqual([
+			['line', 'vertical'],
+			['band', 'vertical']
+		]);
+		const saved = s.exportSessionObject().plots.at(-1).plot.overlays;
+		expect(saved[0].channels.at.typed).toEqual([24]);
+		expect(saved[1].channels.start.typed).toEqual([20]);
+		const cwt = s.addPlot('cwt', { x: 'x', y: 'y' }, [{ kind: 'line', channels: { at: 24 } }]);
+		expect(cwt.overlays.map((o) => [o.kind, o.form])).toEqual([['line', 'horizontal']]);
+		expect(() =>
+			s.addPlot('cwt', { x: 'x', y: 'y' }, [
+				{ kind: 'band', form: 'vertical', channels: { start: 1, end: 2 } }
+			])
+		).toThrow('overlays[0].form for a band on a cwt must be one of horizontal (got "vertical").');
 	});
 
 	it('a histogram takes a vertical line and a vertical band on its value axis', () => {

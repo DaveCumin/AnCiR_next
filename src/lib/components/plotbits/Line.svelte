@@ -331,7 +331,9 @@
 		</clipPath>
 		<g clip-path="url(#{rulesKey})">
 			{#each positions as p, i (i)}
-				{#if orientation === 'horizontal'}
+				<!-- A position the scale cannot place (0 or below on a log axis) draws nothing. -->
+				{@const placed = Number.isFinite(orientation === 'horizontal' ? yscale(p) : xscale(p))}
+				{#if placed && orientation === 'horizontal'}
 					<line
 						class="overlay-rule"
 						x1={xoffset}
@@ -343,7 +345,7 @@
 						stroke-dasharray={dash}
 						style="pointer-events: none;"
 					/>
-				{:else}
+				{:else if placed}
 					<line
 						class="overlay-rule"
 						x1={xscale(p) + xoffset}

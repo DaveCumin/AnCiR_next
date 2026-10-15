@@ -3,7 +3,7 @@
 // contract (overlayHost.js) plus the wrapper's `parentBox.id`; no Svelte, and no import of
 // Overlay.svelte, so the component can use them without an import cycle through overlayHost.js.
 
-import { capabilitiesOf } from './overlaySpec.js';
+import { capabilitiesOf, channelsFor } from './overlaySpec.js';
 
 /**
  * The prefix for an overlay's clip-path ids: the plot (its wrapper's id) and the overlay.
@@ -64,4 +64,16 @@ export function overlayLegendNote(inner, overlay) {
 	if (capabilitiesOf(inner)?.legend === false) return null;
 	if (!(overlay?.label ?? '').trim()) return null;
 	return inner?.legend && inner.legend.show === false ? 'Legend is off (Properties)' : null;
+}
+
+/**
+ * The host's `overlayCapabilities.xNote` for an overlay that reads an x value (a vertical line,
+ * a vertical band, a ribbon), else null. It says how a typed or wired x is read when that is
+ * not the axis as shown: an FFT takes vertical positions as periods in hours, also while its
+ * axis shows frequency (decision Q3).
+ */
+export function overlayXNote(inner, overlay) {
+	const note = capabilitiesOf(inner)?.xNote;
+	if (typeof note !== 'string' || !note) return null;
+	return channelsFor(overlay?.kind, overlay?.form).some((c) => c.axis === 'x') ? note : null;
 }

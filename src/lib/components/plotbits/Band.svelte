@@ -69,6 +69,8 @@
 			if ('y0' in seg) {
 				const top = yscale(seg.y1) + yoffset;
 				const bottom = yscale(seg.y0) + yoffset;
+				// An edge the scale cannot place (0 or below on a log axis) draws nothing.
+				if (!Number.isFinite(top) || !Number.isFinite(bottom)) continue;
 				const y = Math.min(top, bottom);
 				const h = Math.abs(bottom - top);
 				out.push({
@@ -84,6 +86,7 @@
 			} else {
 				const left = xscale(seg.x0) + xoffset;
 				const right = xscale(seg.x1) + xoffset;
+				if (!Number.isFinite(left) || !Number.isFinite(right)) continue;
 				const x = Math.min(left, right);
 				const w = Math.abs(right - left);
 				out.push({

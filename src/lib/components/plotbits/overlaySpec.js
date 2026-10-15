@@ -65,13 +65,16 @@ export function channelsFor(kind, form) {
 // ---- capabilities ---------------------------------------------------------------------
 //
 // A host plot declares what it supports as `static overlayCapabilities`:
-//   { line: [forms], band: [forms], legend: boolean, xTime: boolean, domain?: ['x'|'y'] }
+//   { line: [forms], band: [forms], legend: boolean, xTime: boolean, domain?: ['x'|'y'],
+//     xNote?: string }
 // `line` / `band` list the allowed forms in panel order (an empty or missing list means the
 // kind is not offered; the first is the default for a new overlay); `legend: false` hides
 // the Label field; `xTime` is true only where x can be a time axis; `domain` lists the axes
 // whose AUTOMATIC range an overlay may widen (both when left out). An axis that is also an
 // analysis parameter (a periodogram's period range) is left out, so a reference mark can
-// never change what is computed. See overlayHost.js for the rest of the host contract.
+// never change what is computed. `xNote` (optional) says how an x position is read when that
+// is not the axis as shown (an FFT takes periods in hours, also on its frequency axis); the
+// Overlays tab shows it on blocks that read x, and the MCP catalogue as `overlayNote`. See overlayHost.js for the rest of the host contract.
 
 /** Everything: the capabilities of the reference host (Scatterplot). */
 export const ALL_OVERLAY_FORMS = Object.freeze({

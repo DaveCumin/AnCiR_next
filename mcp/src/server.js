@@ -208,7 +208,7 @@ function registerTools(server) {
 		)
 		.optional()
 		.describe(
-			`Reference lines and shaded bands, on ${OVERLAY_HOSTS} (list_capabilities → plots[].overlays lists each plot's kinds and forms; detail:"full" adds the channels). E.g. scatterplot [{ kind:"line", form:"vertical", channels:{ at:"crossing" }, label:"alert" }, { kind:"band", form:"horizontal", channels:{ lower: 1.5, upper: 3 } }]; periodogram [{ kind:"line", form:"vertical", channels:{ at: 24 } }, { kind:"band", form:"vertical", channels:{ start: 20, end: 28 } }]. Overlays widen only the axes in plots[].overlayAxes (a periodogram never widens its period range, so a mark outside it is not drawn).`
+			`Reference lines and shaded bands, on ${OVERLAY_HOSTS} (list_capabilities → plots[].overlays lists each plot's kinds and forms; detail:"full" adds the channels). E.g. scatterplot [{ kind:"line", form:"vertical", channels:{ at:"crossing" }, label:"alert" }, { kind:"band", form:"horizontal", channels:{ lower: 1.5, upper: 3 } }]; periodogram [{ kind:"line", form:"vertical", channels:{ at: 24 } }, { kind:"band", form:"vertical", channels:{ start: 20, end: 28 } }]. Overlays widen only the axes in plots[].overlayAxes (a periodogram never widens its period range, so a mark outside it is not drawn). plots[].overlayNote says how a plot reads a position: an fft takes vertical positions as PERIODS in hours even when its x axis shows frequency (drawn at 1/period there); a cwt takes horizontal periods (hours) only.`
 		);
 
 	server.tool(

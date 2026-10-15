@@ -20,9 +20,12 @@
 	import { cwtFromSeries, waveletRidge, WAVELETS } from '$lib/utils/cwt.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS } from '$lib/plots/Actogram/colormaps.js';
 	import { ColourScaleClass } from '$lib/components/plotbits/ColourScale.svelte';
+	import { scaleLinear, scaleLog } from 'd3-scale';
+	import { OverlayClass } from '$lib/components/plotbits/Overlay.svelte';
+	import { overlaysFromJSON, overlaysToJSON } from '$lib/components/plotbits/overlayHost.js';
 
 	export const CWT_defaultDataInputs = ['x', 'y'];
-	export const CWT_controlHeaders = ['Properties', 'Data'];
+	export const CWT_controlHeaders = ['Properties', 'Data', 'Overlays'];
 	export const CWT_displayName = 'Wavelet (CWT)';
 
 	class CWTSeries {
@@ -47,7 +50,33 @@
 		}
 	}
 
+	/** Period → y pixel. Scales are log2-spaced, so a log axis is the honest one. */
+	export function periodToY(period, periods, h, logScale) {
+		if (periods.length < 2) return h / 2;
+		const lo = periods[0];
+		const hi = periods[periods.length - 1];
+		if (logScale) {
+			const t = (Math.log(period) - Math.log(lo)) / (Math.log(hi) - Math.log(lo));
+			return h - t * h;
+		}
+		return h - ((period - lo) / (hi - lo)) * h;
+	}
+
 	export class CWTClass {
+		// The overlay host contract (components/plotbits/overlayHost.js): HORIZONTAL reference
+		// lines and bands on the period axis only (a line at 24 h, a 20 to 28 h circadian band).
+		// The x axis is hours since the start of the record; a vertical mark there is deferred
+		// (overlays plan, step 4). Nothing widens: the period range is the range the transform
+		// is COMPUTED over, so a reference mark must never change it, and a mark outside it is
+		// not drawn (its block says so). No series legend, so no Label field.
+		static overlayCapabilities = Object.freeze({
+			line: Object.freeze(['horizontal']),
+			band: Object.freeze(['horizontal']),
+			legend: false,
+			xTime: false,
+			domain: Object.freeze([])
+		});
+
 		static descriptors = { padding: { group: 'Padding' } };
 
 		parentBox = $state();
@@ -132,6 +161,60 @@
 			return m > 0 ? m : 1;
 		});
 
+		// ---- overlay host (components/plotbits/overlayHost.js) ----------------------------
+		// Reference lines and shaded bands, in draw order.
+		overlays = $state([]);
+		// The plot's own axes, as d3 scales (the scalogram draws with periodToY): hours since
+		// the start on x, period on y from the shortest period (bottom) to the longest (top),
+		// log or linear exactly as periodToY maps them. Before a transform exists, the
+		// requested period range stands in.
+		overlayXScale = $derived.by(() => {
+			const times = this.transform.times ?? [];
+			const t0 = times.length ? times[0] : 0;
+			const t1 = times.length ? times[times.length - 1] : 1;
+			return scaleLinear().domain([t0, t1]).range([0, this.plotwidth]);
+		});
+		overlayYScale = $derived.by(() => {
+			const periods = this.transform.periods ?? [];
+			const domain =
+				periods.length >= 2
+					? [periods[0], periods[periods.length - 1]]
+					: [this.periodMin, this.periodMax];
+			return (this.logScale ? scaleLog() : scaleLinear())
+				.domain(domain)
+				.range([this.plotheight, 0]);
+		});
+
+		/** Add an overlay of `kind` ('line' | 'band'); it is always horizontal here. */
+		addOverlay(kind, form) {
+			const overlay = new OverlayClass(this, { kind, form });
+			this.overlays.push(overlay);
+			return overlay;
+		}
+
+		removeOverlay(id) {
+			const idx = this.overlays.findIndex((o) => o.id === id);
+			if (idx >= 0) this.overlays.splice(idx, 1);
+		}
+
+		/** The draw context every overlay's geometry() takes (hours since the start). */
+		overlayContext() {
+			const [t0, t1] = this.overlayXScale.domain();
+			return { xDomainMin: t0, xDomainMax: t1, xAnchorMin: t0, xIsTime: false };
+		}
+
+		/** A band's default fill never reads it (no ribbon here); kept for the contract. */
+		overlaySeriesColour() {
+			return null;
+		}
+
+		/** The remedy an Overlays-tab block offers when its mark is outside the period range. */
+		overlayRangeHint(axis) {
+			return axis === 'y'
+				? 'Overlays never widen the period range, because it is the range the scalogram is computed over; change Min and Max period in Properties.'
+				: null;
+		}
+
 		constructor(parent, dataIN) {
 			this.parentBox = parent;
 			this.colourScale = ColourScaleClass.withDefaults(dataIN?.colourScale, { show: true });
@@ -168,7 +251,8 @@
 				showRidge: this.showRidge,
 				logScale: this.logScale,
 				colourScale: this.colourScale.toJSON(),
-				data: this.data.map((d) => d.toJSON())
+				data: this.data.map((d) => d.toJSON()),
+				overlays: overlaysToJSON(this.overlays)
 			};
 		}
 		static fromJSON(parent, json) {
@@ -193,6 +277,9 @@
 			c.colourScale = ColourScaleClass.withDefaults(json.colourScale, { show: true });
 			if (Array.isArray(json.data)) c.data = json.data.map((d) => CWTSeries.fromJSON(d, c));
 			else if (json.dataIn) c.addData(json.dataIn);
+			// After the series, as on every host. A session saved before the scalogram had
+			// overlays carries none; a saved vertical mark is coerced to horizontal.
+			overlaysFromJSON(c, json);
 			return c;
 		}
 	}
@@ -335,23 +422,13 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import ColourScale from '$lib/components/plotbits/ColourScale.svelte';
+	import OverlayLayers from '$lib/components/plotbits/OverlayLayers.svelte';
+	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which } = $props();
 
 	const colormapOptions = Object.keys(COLORMAP_LABELS);
 	const colormapLabelList = colormapOptions.map((k) => COLORMAP_LABELS[k]);
-
-	/** Period → y pixel. Scales are log2-spaced, so a log axis is the honest one. */
-	function periodToY(period, periods, h, logScale) {
-		if (periods.length < 2) return h / 2;
-		const lo = periods[0];
-		const hi = periods[periods.length - 1];
-		if (logScale) {
-			const t = (Math.log(period) - Math.log(lo)) / (Math.log(hi) - Math.log(lo));
-			return h - t * h;
-		}
-		return h - ((period - lo) / (hi - lo)) * h;
-	}
 
 	/** A handful of readable period ticks inside the rendered range. */
 	function periodTicks(periods) {
@@ -402,7 +479,14 @@
 				{#if uri}
 					<image href={uri} x="0" y="0" width={W} height={H} preserveAspectRatio="none" />
 				{/if}
+			</g>
 
+			<!-- Shaded bands OVER the power image (an opaque image would hide anything beneath
+			     it) and under the cone of influence, ridge and axes. The layers place themselves
+			     at the padding, so they sit between the two translated groups. -->
+			<OverlayLayers inner={plot} layer="bands" />
+
+			<g transform="translate({plot.padding.left}, {plot.padding.top})">
 				<!-- Cone of influence: everything OUTSIDE the curve is edge-contaminated. -->
 				{#if plot.showCOI && tr.coi.length}
 					{@const step = Math.max(1, Math.floor(tr.times.length / 240))}
@@ -492,6 +576,9 @@
 					fill="var(--color-lightness-25)">Time</text
 				>
 			</g>
+
+			<!-- Reference lines above the scalogram, its cone of influence and ridge. -->
+			<OverlayLayers inner={plot} layer="lines" />
 
 			<!-- Power key: the shared colour-scale legend. Drawn OUTSIDE the padding
 			     translate above because the component applies the padding itself, the same
@@ -590,6 +677,8 @@
 				<p class="cwt-hint">Wire a time column and a value column.</p>
 			{/if}
 		</div>
+	{:else if appState.currentControlTab === 'overlays'}
+		<OverlaysTab inner={theData} />
 	{/if}
 {/snippet}
 

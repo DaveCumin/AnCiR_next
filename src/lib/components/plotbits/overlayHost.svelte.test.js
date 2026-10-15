@@ -95,6 +95,24 @@ describe('assertOverlayHost', () => {
 			'missing: overlayContext().xAnchorMin, overlayContext().xIsTime'
 		);
 	});
+
+	it('an optional member, when present, must have the right type', () => {
+		const host = new HOnlyHost();
+		host.overlayXTransform = 1;
+		host.overlayRangeHint = 'no';
+		expect(() => assertOverlayHost(host)).toThrow(
+			'missing: overlayXTransform() (optional, but must be a function when present), ' +
+				'overlayRangeHint() (optional, but must be a function when present)'
+		);
+		const Noted = hostClass({ ...H_ONLY, xNote: 42 });
+		expect(() => assertOverlayHost(new Noted())).toThrow(
+			'missing: overlayCapabilities.xNote (optional, but must be a string when present)'
+		);
+		const Fine = hostClass({ ...H_ONLY, xNote: 'periods' });
+		const fine = new Fine();
+		fine.overlayXTransform = (p) => 1 / p;
+		expect(assertOverlayHost(fine)).toBe(true);
+	});
 });
 
 describe('OverlayClass on a host that restricts forms', () => {

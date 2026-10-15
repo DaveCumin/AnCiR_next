@@ -9,7 +9,9 @@
 //     line: ['vertical', 'horizontal'],          // allowed forms, panel order
 //     band: ['ribbon', 'horizontal', 'vertical', 'repeating'],
 //     legend: true,                              // false hides the Label field
-//     xTime: false                               // true only where x can be a time
+//     xTime: false,                              // true only where x can be a time
+//     domain: ['x', 'y'],                        // axes whose AUTO range may widen
+//     xNote: '...'                   (optional)  // how an x position is read (FFT: periods)
 //   };
 //   overlays = $state([]);                       // OverlayClass instances, draw order
 //   addOverlay(kind, form) / removeOverlay(id)
@@ -18,10 +20,16 @@
 //   overlayContext()                             // { xDomainMin, xDomainMax, xAnchorMin, xIsTime }
 //   overlaySeriesColour()                        // ribbon default fill; null falls back
 //   overlayXValueFor(column)        (optional)   // x-channel mapper for a wired column, or null
+//   overlayXTransform(v)            (optional)   // stored x -> drawn x, or null to drop (FFT)
+//   overlayRangeHint(axis)          (optional)   // remedy for the "outside the range" note
 //
 // `overlayXValueFor` returns a function `(v) => axisValue` (or null for identity) rather than
 // converting one value at a time: resolving a column's time origin walks its reference
 // chain, which must happen once per column, not once per value.
+//
+// `overlayXTransform` is applied by `geometry()` only, so channels, saved JSON and warnings
+// keep the STORED units: an FFT stores vertical positions as periods in hours and draws them
+// at 1/p while its axis shows frequency, so toggling the axis never rewrites an overlay.
 //
 // `ProcessNode.supportsOverlays` and the canvas wiring key on `Array.isArray(inner.overlays)`;
 // the MCP catalogue keys on the class's `overlayCapabilities`.
@@ -164,8 +172,13 @@ export function assertOverlayHost(inner) {
 	if (!Number.isFinite(inner?.padding?.left) || !Number.isFinite(inner?.padding?.top)) {
 		missing.push('padding.left/top');
 	}
-	if (inner?.overlayXValueFor != null && typeof inner.overlayXValueFor !== 'function') {
-		missing.push('overlayXValueFor() (optional, but must be a function when present)');
+	for (const m of ['overlayXValueFor', 'overlayXTransform', 'overlayRangeHint']) {
+		if (inner?.[m] != null && typeof inner[m] !== 'function') {
+			missing.push(`${m}() (optional, but must be a function when present)`);
+		}
+	}
+	if (caps?.xNote != null && typeof caps.xNote !== 'string') {
+		missing.push('overlayCapabilities.xNote (optional, but must be a string when present)');
 	}
 	if (typeof inner?.overlayContext === 'function') {
 		const ctx = inner.overlayContext() ?? {};

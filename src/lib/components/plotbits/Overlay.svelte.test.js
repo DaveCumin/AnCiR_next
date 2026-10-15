@@ -887,3 +887,65 @@ describe('fromLegacyNightBand', () => {
 		expect(o.fill).toBe('#2C2C2C30');
 	});
 });
+
+describe('host overlayXTransform (stored x to axis units)', () => {
+	// The FFT stores vertical positions as PERIODS (h) and shows its x axis as period OR as
+	// frequency; in frequency mode it maps p to 1/p and has no place for p <= 0 (decision Q3).
+	const freqHost = () => mkParent({ overlayXTransform: (p) => (p > 0 ? 1 / p : null) });
+
+	it('maps a vertical line through the transform and drops what it cannot place', () => {
+		const v = new OverlayClass(freqHost(), { kind: 'line', form: 'vertical' });
+		v.setTyped('at', [24, 0, -3, 12]);
+		expect(v.geometry({})).toEqual({
+			kind: 'line',
+			orientation: 'vertical',
+			positions: [1 / 24, 1 / 12]
+		});
+		// What is stored (and saved) is still the typed periods.
+		expect(v.values('at')).toEqual([24, 0, -3, 12]);
+		expect(v.toJSON().channels.at.typed).toEqual([24, 0, -3, 12]);
+	});
+
+	it('maps both edges of a vertical band and re-orders them (1/p reverses order)', () => {
+		const b = new OverlayClass(freqHost(), { kind: 'band', form: 'vertical' });
+		b.setTyped('start', [20, -1]);
+		b.setTyped('end', [28, 5]);
+		expect(b.geometry({}).segments).toEqual([{ x0: 1 / 28, x1: 1 / 20 }]);
+	});
+
+	it('never touches a y channel', () => {
+		const h = new OverlayClass(freqHost(), { kind: 'line', form: 'horizontal' });
+		h.setTyped('at', [0, 4]);
+		expect(h.geometry({}).positions).toEqual([0, 4]);
+		const hb = new OverlayClass(freqHost(), { kind: 'band', form: 'horizontal' });
+		hb.setTyped('lower', [0]);
+		hb.setTyped('upper', [2]);
+		expect(hb.geometry({}).segments).toEqual([{ y0: 0, y1: 2 }]);
+	});
+
+	it('maps a ribbon x and drops a point it cannot place from all three channels', () => {
+		const r = new OverlayClass(freqHost(), { kind: 'band', form: 'ribbon' });
+		r.setTyped('x', [10, 0, 20]);
+		r.setTyped('lower', [1, 2, 3]);
+		r.setTyped('upper', [4, 5, 6]);
+		expect(r.geometry({})).toEqual({
+			kind: 'band',
+			form: 'ribbon',
+			x: [1 / 10, 1 / 20],
+			lower: [1, 3],
+			upper: [4, 6]
+		});
+	});
+
+	it('the domain extension is in axis units, so the range note and limits read the drawn x', () => {
+		const v = new OverlayClass(freqHost(), { kind: 'line', form: 'vertical' });
+		v.setTyped('at', [24, 12]);
+		expect(v.domainExtension()).toEqual({ x: [1 / 24, 1 / 12], y: null });
+	});
+
+	it('a host without the transform draws the stored values (identity)', () => {
+		const v = new OverlayClass(mkParent(), { kind: 'line', form: 'vertical' });
+		v.setTyped('at', [24, 0, -3]);
+		expect(v.geometry({}).positions).toEqual([24, 0, -3]);
+	});
+});

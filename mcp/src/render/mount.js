@@ -6,7 +6,11 @@
 // mounts the real plot component, and signals readiness via `window.__ancirReady`.
 //
 // Payload shape (see src/engine/renderPlot.js):
-//   { columns:[{id,name,type,values[]}], plot:{type, inputs, overlays?}, width, height }
+//   { columns:[{id,name,type,values[]}], plot:{type, inputs, overlays?, settings?}, width, height }
+// `settings` (payload only; no tool sets it) assigns plain plot fields after the series are
+// wired, e.g. an FFT's `{ showPeriod: false, xlimsIN: [0, 0.1] }`. Only a field the plot
+// already has, with a value of the same type (or an array of the same length), is accepted;
+// anything else is refused, never ignored.
 // `overlays` (reference lines / bands, on a plot whose class declares
 // `overlayCapabilities`) is OverlayClass JSON with the column refIds already renumbered to
 // the payload's compact ids. The session validated it per plot; a kind or form the plot
@@ -72,6 +76,16 @@ async function run() {
 			if (id != null) dataIn[f] = { refId: id };
 		}
 		if (Object.keys(dataIn).length) p.plot.addData(dataIn);
+	}
+	for (const [key, value] of Object.entries(data.plot.settings ?? {})) {
+		const current = p.plot[key];
+		// A pair of limits (`xlimsIN`) replaces one of the same length; anything else must be a
+		// boolean, number or string replacing one of the same type.
+		const sameShape = Array.isArray(current)
+			? Array.isArray(value) && value.length === current.length
+			: current != null && typeof current !== 'object' && typeof current === typeof value;
+		if (!sameShape) throw new Error(`${data.plot.type} has no setting "${key}" of that shape`);
+		p.plot[key] = Array.isArray(value) ? [...value] : value;
 	}
 	const caps = capabilitiesOf(p.plot);
 	for (const o of data.plot.overlays ?? []) {
