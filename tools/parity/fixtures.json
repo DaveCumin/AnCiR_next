@@ -3405,6 +3405,43 @@
 			"rToleranceWhy": "Nonlinear fit: R reaches the optimum with optim(L-BFGS-B) + an analytic Jacobian, scipy with trust-region least_squares. They agree to ~1e-8 on the fitted parameters, which is inside 1e-6 but not the 1e-9 default."
 		},
 		{
+			"id": "tp-cosinor-free-too-few-points",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"recordValid": true,
+			"_comment": "A y that is mostly blank leaves 4 rows with both x and y: fewer than the 5 a one-curve free-period cosinor (4 parameters) needs. Every language declines the fit (no outputs) rather than put 4 parameters through 4 points; the JS node also says why (Cosinor.nulls.test.js).",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 38,
+				"mesor": 52,
+				"phase": 8,
+				"noise": 6,
+				"seed": 602,
+				"gap": [0, 44],
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"useFixedPeriod": false,
+				"outputX": -1,
+				"out": {
+					"cosinorx": -1,
+					"mesor": -1,
+					"acrophase": -1
+				}
+			},
+			"compareOutputs": ["cosinorx", "cosinory", "mesor", "acrophase"]
+		},
+		{
 			"id": "tp-cosinor-free-period-range",
 			"kind": "tableProcess",
 			"jsName": "Cosinor",

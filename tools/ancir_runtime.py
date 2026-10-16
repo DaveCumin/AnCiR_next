@@ -3057,6 +3057,14 @@ def cosinor_metrics(fixed_res, free_res, args, phase_ref):
     }
 
 
+def _cosinor_min_points(use_fixed, n_harmonics, n_curves):
+    """Fewest rows with both x and y a cosinor can be fitted to: parameters + 1.
+    Fixed period: 1 + 2 per harmonic; free period: 1 + 3 per curve."""
+    if use_fixed:
+        return 1 + 2 * max(1, int(n_harmonics or 1)) + 1
+    return 1 + 3 * max(1, int(n_curves or 1)) + 1
+
+
 def tp_cosinor(args, cols, raw_data, _sv):
     """Port of Cosinor.svelte cosinor + writeCosinorOutputs. The output x is the input's
     hour frame turned back into timestamps from its MINIMUM valid time (fit_time_frame,
@@ -3091,7 +3099,9 @@ def tp_cosinor(args, cols, raw_data, _sv):
         idx = _js_valid_pairs(t, y)
         tt = [_js_number(t[i]) for i in idx]
         yy = [_js_number(y[i]) for i in idx]
-        if not tt:
+        # Too few rows with both x and y for the model (p parameters need p + 1 points):
+        # no fit, as the JS node (cosinorTooFewPointsWarning in Cosinor.svelte).
+        if len(tt) < _cosinor_min_points(use_fixed, n_h, n_curves):
             continue
         fixed_res = free_res = None
         if use_fixed:

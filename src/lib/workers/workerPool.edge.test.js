@@ -85,6 +85,23 @@ describe('worker error reporting (ok:false)', () => {
 		expect(mainRuns).toBe(0);
 	});
 
+	it("a task's TypeError keeps its name across the thread, so the node can call it a bug", async () => {
+		class TypeErrReplyWorker {
+			postMessage(req) {
+				setTimeout(() => {
+					this.onmessage?.({
+						data: { id: req.id, ok: false, error: 'y is not iterable', errorName: 'TypeError' }
+					});
+				}, 0);
+			}
+			terminate() {}
+		}
+		setWorkerFactory(() => new TypeErrReplyWorker());
+		const err = await runComputeTask('double', { x: [2, 3] }).catch((e) => e);
+		expect(err.message).toBe('y is not iterable');
+		expect(err.name).toBe('TypeError');
+	});
+
 	it('a task the worker does not have (notFound) still runs on the main thread', async () => {
 		class NotFoundWorker {
 			postMessage(req) {

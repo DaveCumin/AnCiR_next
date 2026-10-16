@@ -25,11 +25,11 @@ describe('prepareTransferable edge cases', () => {
 		expect(transfers).toHaveLength(0);
 	});
 
-	it('boolean-first array: typeof is not string → converted numerically (true→1, false→0)', () => {
+	it('a boolean array is left alone (not packed as 1/0)', () => {
 		const transfers = [];
 		const out = prepareTransferable({ flags: [true, false, true] }, transfers);
-		expect(out.flags).toBeInstanceOf(Float64Array);
-		expect(Array.from(out.flags)).toEqual([1, 0, 1]);
+		expect(out.flags).toEqual([true, false, true]);
+		expect(transfers).toHaveLength(0);
 	});
 
 	it('primitives pass through untouched', () => {
@@ -39,10 +39,9 @@ describe('prepareTransferable edge cases', () => {
 		expect(transfers).toHaveLength(0);
 	});
 
-	it('an array of numeric arrays: the OUTER array is converted (first elem is an Array, not a string)', () => {
-		// The encoder only special-cases string-first arrays; an array whose
-		// first element is itself an array goes through the numeric branch,
-		// where Number([...]) of a multi-element array yields NaN.
+	it('an array of numeric arrays: each INNER array is packed, the outer one stays an array', () => {
+		// The old encoder packed the outer array, and Number([1, 2]) is NaN, so a
+		// worker task given `ys: [y]` received [NaN] (the Cosinor "y is not iterable").
 		const transfers = [];
 		const out = prepareTransferable(
 			{
@@ -53,8 +52,24 @@ describe('prepareTransferable edge cases', () => {
 			},
 			transfers
 		);
-		expect(out.grid).toBeInstanceOf(Float64Array);
-		expect(transfers).toHaveLength(1);
+		expect(Array.isArray(out.grid)).toBe(true);
+		expect(out.grid[0]).toBeInstanceOf(Float64Array);
+		expect(Array.from(out.grid[1])).toEqual([3, 4]);
+		expect(transfers).toHaveLength(2);
+	});
+
+	it('an array of objects keeps its objects (a results list of fits)', () => {
+		const transfers = [];
+		const out = prepareTransferable({ results: [{ a: 1, fitted: [1, 2] }, null] }, transfers);
+		expect(out.results[0].a).toBe(1);
+		expect(out.results[0].fitted).toBeInstanceOf(Float64Array);
+		expect(out.results[1]).toBeNull();
+	});
+
+	it('a mixed number/string array is not packed (no NaN for the strings)', () => {
+		const transfers = [];
+		expect(prepareTransferable([1, 'a'], transfers)).toEqual([1, 'a']);
+		expect(transfers).toHaveLength(0);
 	});
 
 	it('mixed object: converts numeric arrays, leaves string arrays + nested objects', () => {
@@ -92,6 +107,21 @@ describe('restoreFromTransferable edge cases', () => {
 });
 
 describe('round-trip fidelity', () => {
+	it('prepare -> structured clone -> restore is lossless for mixed plain data', () => {
+		const original = {
+			ys: [
+				[1, null, 3],
+				[4, 5, 6]
+			],
+			results: [{ fitted: [1.5, NaN], ok: true, harmonics: [{ k: 1 }] }, null],
+			flags: [true, false],
+			labels: ['a', 'b'],
+			n: 0
+		};
+		const restored = restoreFromTransferable(structuredClone(prepareTransferable(original, [])));
+		expect(restored).toEqual(original);
+	});
+
 	it('prepare → restore returns equivalent plain data for numeric arrays', () => {
 		const original = { x: [1, 2, 3], meta: { y: [4, 5] }, labels: ['p', 'q'] };
 		const transfers = [];

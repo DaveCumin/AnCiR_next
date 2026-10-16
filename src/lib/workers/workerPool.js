@@ -62,6 +62,13 @@ let _generation = 0;
 // Set by ensurePool: replace one slot's worker (terminate + respawn), settling its tasks.
 let _replaceWorker = null;
 
+/** The task's own error, rebuilt from the worker's reply with its original name (TypeError...). */
+function taskError(message, name) {
+	const err = new Error(message ?? 'Worker error');
+	if (typeof name === 'string' && name && name !== 'Error') err.name = name;
+	return err;
+}
+
 function defaultFactory() {
 	return new ComputeWorker({ name: 'ancir-compute' });
 }
@@ -155,7 +162,7 @@ function ensurePool() {
 		const handleMessage = (e) => {
 			if (isStale()) return;
 			proven = true;
-			const { id, ok, result, error, notFound } = e.data ?? {};
+			const { id, ok, result, error, errorName, notFound } = e.data ?? {};
 			const entry = _pending.get(id);
 			if (!entry) return;
 			_pending.delete(id);
@@ -166,7 +173,7 @@ function ensurePool() {
 			// compute.worker.js): the main thread may, so let it try.
 			else if (notFound) entry.crash(new Error(error ?? 'task not registered in the worker'));
 			// The task itself threw: that is its result, not a worker failure.
-			else entry.reject(new Error(error ?? 'Worker error'));
+			else entry.reject(taskError(error, errorName));
 		};
 		const handleError = (err) => {
 			if (isStale()) return;

@@ -186,4 +186,23 @@ describe('computeErrorMessage', () => {
 		expect(computeErrorMessage(null)).toBe('Unknown error');
 		expect(computeErrorMessage(7)).toBe('7');
 	});
+
+	it('explains an internal error (TypeError) as a bug, keeping the detail for a report', () => {
+		// The reported Cosinor failure read "r is not iterable", which a user can only take
+		// as a complaint about their data.
+		const typeErr = computeErrorMessage(new TypeError('r is not iterable'));
+		expect(typeErr).toMatch(
+			/^An internal error in AnCiR stopped this calculation; it is not a problem with your data/
+		);
+		expect(typeErr).toMatch(/\(Detail: r is not iterable\)$/);
+		// A worker error arrives as a plain Error carrying the original name.
+		const fromWorker = new Error('y is not iterable');
+		fromWorker.name = 'TypeError';
+		expect(computeErrorMessage(fromWorker)).toMatch(/^An internal error/);
+		// A deliberate, meaningful error from a fit is shown as it is.
+		expect(computeErrorMessage(new Error('optimiser diverged'))).toBe('optimiser diverged');
+		expect(computeErrorMessage(new RangeError('Period grid too large'))).toBe(
+			'Period grid too large'
+		);
+	});
 });

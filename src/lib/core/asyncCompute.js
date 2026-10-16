@@ -66,15 +66,33 @@
 // editor panel is closed. It is removed again when the next run starts (a node that
 // rewrites `p.warnings` on success replaces it anyway).
 
+// Errors that only a mistake in the code can raise ("y is not iterable", "Cannot read
+// properties of undefined"). Shown raw they read like a complaint about the user's data;
+// worker errors keep their name across the thread (workerPool.js taskError).
+const PROGRAMMING_ERRORS = new Set(['TypeError', 'ReferenceError']);
+
+/** The message for an internal error: what it means for the user first, the detail last. */
+export function internalErrorMessage(detail) {
+	return (
+		'An internal error in AnCiR stopped this calculation; it is not a problem with your data. ' +
+		'Please report it, with the session file if you can. ' +
+		`(Detail: ${detail})`
+	);
+}
+
 /**
- * A short, human-readable message for a thrown value.
+ * A short, human-readable message for a thrown value. An internal error (a TypeError or
+ * ReferenceError) is explained as a bug rather than shown as a bare JavaScript message.
  * @param {unknown} e
  * @returns {string}
  */
 export function computeErrorMessage(e) {
 	if (e == null) return 'Unknown error';
 	if (typeof e === 'string') return e || 'Unknown error';
-	if (e instanceof Error) return e.message || e.name || 'Unknown error';
+	if (e instanceof Error) {
+		const raw = e.message || e.name || 'Unknown error';
+		return PROGRAMMING_ERRORS.has(e.name) ? internalErrorMessage(raw) : raw;
+	}
 	const m = /** @type {any} */ (e)?.message;
 	if (typeof m === 'string' && m) return m;
 	try {

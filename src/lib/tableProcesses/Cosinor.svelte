@@ -183,6 +183,34 @@
 		}
 	};
 
+	/**
+	 * The warning for a series with too few rows where both x and y have a value to fit
+	 * the cosinor at all, or null when there are enough. A model with p parameters needs
+	 * at least p + 1 points, so one residual degree of freedom is left (fitCosinorFixed
+	 * returns null below that).
+	 *
+	 * @param {number} n  rows where both x and y are valid
+	 * @param {{useFixedPeriod: boolean, nHarmonics: number, Ncurves: number, label: string}} o
+	 * @returns {string|null}
+	 */
+	export function cosinorTooFewPointsWarning(n, { useFixedPeriod, nHarmonics, Ncurves, label }) {
+		const terms = useFixedPeriod
+			? Math.max(1, Number(nHarmonics) || 1)
+			: Math.max(1, Number(Ncurves) || 1);
+		const nParams = useFixedPeriod ? 1 + 2 * terms : 1 + 3 * terms;
+		const needed = nParams + 1;
+		if (n >= needed) return null;
+		const model = useFixedPeriod
+			? `A fixed-period cosinor with ${terms} harmonic${terms > 1 ? 's' : ''}`
+			: `A free-period cosinor with ${terms} curve${terms > 1 ? 's' : ''}`;
+		const have = n === 0 ? 'no rows' : `only ${n} row${n === 1 ? '' : 's'}`;
+		return (
+			`No cosinor fit for ${label}: it has ${have} where both x and y have a value. ` +
+			`${model} estimates ${nParams} parameters, so it needs at least ${needed}. ` +
+			'Check that x and y are the intended columns, and how many of their cells are blank.'
+		);
+	}
+
 	export async function evaluateCosinor(argsIN) {
 		const xIN = argsIN.xIN;
 		const yINs = normalizeYInputs(argsIN.yIN);
@@ -282,7 +310,19 @@
 			const tt = validIndices.map((i) => t[i]);
 			const yy = validIndices.map((i) => y[i]);
 
-			if (tt.length === 0) continue;
+			// Too few rows with both an x and a y to estimate the model: say so, rather than
+			// fitting (the fixed fit returns nothing and the panel blamed convergence; the free
+			// fit happily put 4 parameters through 2 points) or saying nothing at all.
+			const tooFew = cosinorTooFewPointsWarning(tt.length, {
+				useFixedPeriod,
+				nHarmonics,
+				Ncurves,
+				label: `"${yCol.name ?? yId}"`
+			});
+			if (tooFew) {
+				result.validityWarnings.push(tooFew);
+				continue;
+			}
 
 			let yResult = {
 				fittedData: { fitted: [], parameters: { cosines: [] }, rmse: NaN, rSquared: NaN },

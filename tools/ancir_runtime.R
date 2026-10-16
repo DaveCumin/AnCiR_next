@@ -1299,6 +1299,13 @@ cosinor_metrics <- function(fixed_res, free_res, args, phase_ref) {
 
 # Port of Cosinor.svelte (matching the Python port): output x from the input's minimum time
 # (fit_time_frame, STAT-19), metrics from cosinor_metrics (FIT-9, FIT-13).
+# Fewest rows with both x and y a cosinor can be fitted to: parameters + 1.
+# Fixed period: 1 + 2 per harmonic; free period: 1 + 3 per curve.
+.cosinor_min_points <- function(use_fixed, n_harmonics, n_curves) {
+  if (use_fixed) return(1 + 2 * max(1L, n_harmonics) + 1)
+  1 + 3 * max(1L, n_curves) + 1
+}
+
 tp_cosinor <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
@@ -1321,7 +1328,9 @@ tp_cosinor <- function(args, env) {
     if (is.null(env$cols[[yk]])) next
     pr <- .pgram_pairs(t, col_data(env$cols[[yk]], env$cols, env$raw_data))
     tt <- pr$t; yy <- pr$y
-    if (!length(tt)) next
+    # Too few rows with both x and y for the model (p parameters need p + 1 points):
+    # no fit, as the JS node (cosinorTooFewPointsWarning in Cosinor.svelte).
+    if (length(tt) < .cosinor_min_points(use_fixed, n_h, n_curves)) next
     fixed_res <- NULL; free_res <- NULL
     if (use_fixed) {
       fixed_res <- fit_cosinor_fixed(tt, yy, fixed_period, n_h, alpha)

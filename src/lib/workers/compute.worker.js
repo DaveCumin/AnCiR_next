@@ -33,7 +33,14 @@ self.onmessage = (e) => {
 		const out = prepareTransferable(result, transfers);
 		self.postMessage({ id, ok: true, result: out }, transfers);
 	} catch (err) {
-		self.postMessage({ id, ok: false, error: String(err?.message ?? err) });
+		// The error's NAME travels too: a TypeError here is a bug in the task, not a problem
+		// with the user's data, and the node says so (see computeErrorMessage).
+		self.postMessage({
+			id,
+			ok: false,
+			error: String(err?.message ?? err),
+			errorName: typeof err?.name === 'string' ? err.name : undefined
+		});
 	}
 };
 

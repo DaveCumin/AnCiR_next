@@ -19,11 +19,12 @@ describe('workerTransfer', () => {
 		expect(transfers).toHaveLength(0);
 	});
 
-	it('treats null/undefined-first arrays as numeric (turn into NaN)', () => {
+	it('leaves an array with null holes as a plain array, so null stays null (not NaN)', () => {
 		const transfers = [];
-		const out = prepareTransferable({ x: [null, 1, 2] }, transfers);
-		expect(out.x).toBeInstanceOf(Float64Array);
-		expect(Number.isNaN(out.x[0])).toBe(true);
+		const out = prepareTransferable({ x: [null, 1, 2], y: [1, undefined, 2] }, transfers);
+		expect(out.x).toEqual([null, 1, 2]);
+		expect(out.y).toEqual([1, undefined, 2]);
+		expect(transfers).toHaveLength(0);
 	});
 
 	it('restoreFromTransferable converts Float64Array back to plain number[]', () => {

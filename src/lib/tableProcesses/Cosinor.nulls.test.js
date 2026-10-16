@@ -23,7 +23,7 @@ vi.mock('$lib/core/Column.svelte', () => ({ getColumnById: (id) => mockColumns[i
 vi.mock('$lib/components/inputs/NumberWithUnits.svelte', () => ({ default: {} }));
 vi.mock('$lib/components/inputs/AttributeSelect.svelte', () => ({ default: {} }));
 
-import { cosinor } from './Cosinor.svelte';
+import { cosinor, cosinorTooFewPointsWarning } from './Cosinor.svelte';
 
 const OUT = {
 	cosinorx: -1,
@@ -141,5 +141,58 @@ describe('cosinor with null rows (a Split segment)', () => {
 		expect(xOutData).toHaveLength(HOURS - SPLIT);
 		expect(xOutData.every((v) => Number.isFinite(v))).toBe(true);
 		expect(Math.min(...xOutData)).toBe(SPLIT); // starts at the split, not back at 0
+	});
+});
+
+// A column that is mostly blank (the reported files had a day with ~70 blank rows) can leave
+// too few rows with both an x and a y to fit at all. The fixed fit then returned nothing and
+// the panel blamed convergence ("produced no usable numbers ... did not converge"); the free
+// fit put 4 parameters through 2 or 3 points and reported them as a result; and a y with no
+// valid rows at all said nothing.
+describe('cosinor with too few valid rows', () => {
+	const sparse = (n) => t.map((v, i) => (i < n ? 10 + 5 * Math.cos((2 * Math.PI * v) / 24) : null));
+
+	for (const useFixedPeriod of [true, false]) {
+		const mode = useFixedPeriod ? 'fixed' : 'free';
+		for (const n of [0, 1, 3]) {
+			it(`${mode} period, ${n} valid rows: no fit, and a warning that says why`, async () => {
+				mockColumns[4] = { name: 'sparse', getData: () => sparse(n) };
+				const [r, valid] = await cosinor(args(4, { useFixedPeriod, minPeriod: 1, maxPeriod: 48 }));
+				expect(valid).toBe(false);
+				expect(r.y_results[4]).toBeUndefined();
+				const msg = r.warnings.find((w) => w.startsWith('No cosinor fit for "sparse"'));
+				expect(msg).toMatch(
+					n === 0
+						? /has no rows where both x and y have a value/
+						: new RegExp(`has only ${n} rows?`)
+				);
+				expect(msg).toMatch(
+					useFixedPeriod
+						? /estimates 3 parameters, so it needs at least 4/
+						: /estimates 4 parameters, so it needs at least 5/
+				);
+				expect(r.warnings.some((w) => /did not converge/.test(w))).toBe(false);
+			});
+		}
+	}
+
+	it('the threshold is parameters + 1, per mode and model size', () => {
+		const o = { label: '"y"' };
+		expect(cosinorTooFewPointsWarning(4, { ...o, useFixedPeriod: true, nHarmonics: 1 })).toBeNull();
+		expect(cosinorTooFewPointsWarning(5, { ...o, useFixedPeriod: true, nHarmonics: 2 })).toMatch(
+			/needs at least 6/
+		);
+		expect(cosinorTooFewPointsWarning(5, { ...o, useFixedPeriod: false, Ncurves: 1 })).toBeNull();
+		expect(cosinorTooFewPointsWarning(7, { ...o, useFixedPeriod: false, Ncurves: 2 })).toMatch(
+			/2 curves estimates 7 parameters, so it needs at least 8/
+		);
+	});
+
+	it('a series with enough rows next to a sparse one still fits', async () => {
+		mockColumns[4] = { name: 'sparse', getData: () => sparse(2) };
+		const [r, valid] = await cosinor({ ...args(3), yIN: [3, 4] });
+		expect(valid).toBe(true);
+		expect(r.y_results[3].fixedStats.harmonics[0].amplitude).toBeCloseTo(5, 6);
+		expect(r.warnings.some((w) => w.startsWith('No cosinor fit for "sparse"'))).toBe(true);
 	});
 });
