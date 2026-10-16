@@ -106,7 +106,8 @@ import { inReaction } from './reactionContext.svelte.js';
  * @typedef {Object} OpRenameColumn
  * @property {'renameColumn'} kind
  * @property {number} id        the column's id (never changes)
- * @property {string} name      the new name
+ * @property {string|null} name the new name; null clears the user name (back to the auto name)
+ * @property {string} [restoreName] with name null: the name to show again (an inverse's)
  *
  * @typedef {Object} OpSetRawCell
  * @property {'setRawCell'} kind
@@ -539,15 +540,39 @@ function op_setMarkerRule(op) {
 // section 4: renaming a marker rule renames its output columns and must never re-mint
 // them). Writes `customName`, the field a user's own rename writes, so the name holds
 // whatever the column's derived default would have been.
+//
+// `name: null` clears the user's name, so the column shows its derived (auto) name again: a
+// user who empties a rename field of a node output gets that. The inverse restores
+// `customName` exactly, null included, so undoing a first rename of a node output gives back a
+// LIVE derived name rather than pinning the text it showed at the time.
+//
+// A column can also show a name with `customName` null: an imported or loaded column's name is
+// assigned straight onto the `name` derived (Column's constructor, Object.assign), which
+// Svelte keeps as an override until the derived's inputs change. Clearing customName drops
+// that override ("Unnamed"), so the inverse carries the name shown before (`restoreName`) and
+// writes it back the same way the constructor did.
 function op_renameColumn(op) {
 	const col = core.data.find((c) => c.id === op.id);
-	if (!col || typeof op.name !== 'string' || !op.name) return null;
-	const before = col.name;
-	if (before === op.name) return null;
-	col.customName = op.name;
+	if (!col) return null;
+	const name =
+		op.name === null ? null : typeof op.name === 'string' && op.name ? op.name : undefined;
+	if (name === undefined) return null;
+	const before = col.customName ?? null;
+	const shown = col.name;
+	if (before === name) return null;
+	// Naming a column what it is already called changes nothing.
+	if (name !== null && shown === name) return null;
+	col.customName = name;
+	const restoreName = name === null && typeof op.restoreName === 'string' ? op.restoreName : null;
+	if (restoreName != null) col.name = restoreName;
 	return pair(
-		{ kind: 'renameColumn', id: op.id, name: op.name },
-		{ kind: 'renameColumn', id: op.id, name: before }
+		{ kind: 'renameColumn', id: op.id, name, ...(restoreName != null ? { restoreName } : {}) },
+		{
+			kind: 'renameColumn',
+			id: op.id,
+			name: before,
+			...(before === null ? { restoreName: shown } : {})
+		}
 	);
 }
 

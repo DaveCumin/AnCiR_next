@@ -94,6 +94,8 @@ const CONCEPT = {
 	r2: /R²|R\^2|r-?squared|variance/,
 	rsquared: /R²|R\^2|r-?squared|variance/,
 	rmse: /RMSE|root.mean|residual/,
+	// The fixed-period cosinor's sqrt(SS/n) beside its residual-SE rmse (v82.9).
+	rmse_n: /rmse_n/,
 	r: /correlat/,
 	correlation: /correlat/,
 	significant: /significan|alpha/,

@@ -6,7 +6,8 @@ import {
 	cleanNumericColumn,
 	columnToPhaseHours,
 	timeToAngleRad,
-	weightedSeriesStats
+	weightedSeriesStats,
+	convertPhaseValues
 } from './circularPlot.js';
 import { pUpperFromF } from './fdist.js';
 
@@ -124,5 +125,20 @@ describe('weightedSeriesStats', () => {
 		);
 		expect(shifted.meanValue).toBeCloseTo(15, 6);
 		expect(shifted.R).toBeLessThan(s.R / 5);
+	});
+});
+
+describe('convertPhaseValues', () => {
+	it('re-expresses phase positions in another unit on the period', () => {
+		const h = convertPhaseValues([90, 180, NaN], 'degrees', 'hours', 24);
+		expect(h[0]).toBeCloseTo(6, 12);
+		expect(h[1]).toBeCloseTo(12, 12);
+		expect(h[2]).toBeNaN();
+		expect(convertPhaseValues([Math.PI], 'radians', 'hours', 12)[0]).toBeCloseTo(6, 12);
+	});
+	it('returns the same array for the same unit or an unknown one', () => {
+		const v = [1, 2];
+		expect(convertPhaseValues(v, 'hours', 'hours', 24)).toBe(v);
+		expect(convertPhaseValues(v, 'furlongs', 'hours', 24)).toBe(v);
 	});
 });

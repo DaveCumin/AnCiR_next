@@ -43,6 +43,7 @@ import Boxplot, { niceAxisLimit } from './Boxplot/Boxplot.svelte';
 import MeanSEM from './MeanSEM/MeanSEM.svelte';
 import FFT from './FFT/FFT.svelte';
 import CWT, { periodToY } from './CWT/CWT.svelte';
+import { logAxisDomain } from './logAxis.js';
 
 // happy-dom has no Web Animations; the Overlays tab's blocks slide in.
 Element.prototype.animate ??= () => ({ finished: Promise.resolve(), cancel() {}, onfinish: null });
@@ -972,7 +973,9 @@ describe('fft: vertical positions are periods, drawn at 1/p on a frequency axis 
 		expect(layersAfter).toHaveLength(2);
 		layersAfter.forEach((g, i) => expect(g).not.toBe(layersBefore[i]));
 		const ys = inner.overlayYScale;
-		expect(ys.domain()).toEqual([Math.max(inner.ylims[0], 1e-6), inner.ylims[1]]);
+		// The Periodogram's log axis (plots/logAxis.js): from the smallest positive value drawn.
+		expect(ys).toBe(inner.yScale);
+		expect(ys.domain()).toEqual(logAxisDomain(null, inner.minPositiveY, inner.ylims[1]));
 		expect(typeof ys.base).toBe('function'); // a d3 log scale
 		const rules = container.querySelectorAll('g.overlay-lines-layer line.overlay-rule');
 		expect(rules).toHaveLength(2);
@@ -1026,6 +1029,78 @@ describe('fft: vertical positions are periods, drawn at 1/p on a frequency axis 
 		);
 		expect(notes).toEqual([FFT_X_NOTE]);
 		appState.currentControlTab = 'properties';
+	});
+});
+
+// v82.9: the FFT's log magnitude axis is the Periodogram's (plots/logAxis.js). It used to run
+// from max(0, 1e-6) (the linear lower end through the floor), leaving most of the height to
+// decades below the data, and labelled ticks with SI prefixes ("10m").
+describe('fft: log magnitude axis, as the periodogram', () => {
+	/** A noisy 24 h rhythm on a DC offset: the smallest magnitude is well above 1e-6. */
+	function noisyFft() {
+		const t = mkCol('t', HOURS);
+		const y = mkCol(
+			'n',
+			HOURS.map((h, i) => 10 + 5 * Math.cos((2 * Math.PI * h) / 24) + ((i * 7919) % 13) / 10)
+		);
+		const plot = new Plot({
+			type: 'fft',
+			name: 'fft',
+			width: 500,
+			height: 300,
+			plot: { data: [] }
+		});
+		plot.plot.addData({ x: { refId: t }, y: { refId: y } });
+		core.plots.push(plot);
+		return plot;
+	}
+
+	it('starts at the smallest magnitude drawn, labels plain numbers, grids labelled ticks only', async () => {
+		const plot = noisyFft();
+		const inner = plot.plot;
+		inner.yAxisMag.nticks = 10;
+		inner.logScale = true;
+		const { container } = render(FFT, { props: { theData: plot, which: 'plot' } });
+		flushSync();
+		await tick();
+		const ys = inner.yScale;
+		expect(typeof ys.base).toBe('function');
+		const [lo, hi] = ys.domain();
+		const minPos = inner.minPositiveY;
+		expect(minPos).toBeGreaterThan(1e-3);
+		expect(lo).toBeLessThan(minPos);
+		expect(lo).toBeGreaterThan(minPos / 2);
+		expect(hi).toBe(inner.ylims[1]);
+		const labels = [...container.querySelectorAll('.axis-left .tick text')]
+			.map((t) => t.textContent.trim())
+			.filter(Boolean);
+		expect(labels.length).toBeGreaterThan(1);
+		expect(labels.some((l) => /[a-zµ]$/.test(l))).toBe(false);
+		for (const l of labels) expect(Number.isFinite(Number(l))).toBe(true);
+		const grid = container.querySelectorAll('.axis-left .gridline').length;
+		expect(grid).toBeLessThanOrEqual(labels.length);
+		for (const path of container.querySelectorAll('path')) {
+			expect(path.getAttribute('d') ?? '').not.toMatch(/NaN|Infinity/);
+		}
+	});
+
+	it('a zero magnitude is a gap, and a user minimum wins', () => {
+		const inner = noisyFft().plot;
+		inner.logScale = true;
+		expect(inner.drawableY([0, -1, 2])).toEqual([NaN, NaN, 2]);
+		inner.ylimsIN = [0.5, null];
+		expect(inner.yScale.domain()[0]).toBe(0.5);
+		inner.ylimsIN = [0, null];
+		// 0 cannot be a log limit: back to the automatic end, not the 1e-6 floor.
+		expect(inner.yScale.domain()[0]).toBeGreaterThan(inner.minPositiveY / 2);
+	});
+
+	it('brush zoom reads the scale the magnitudes are drawn with', () => {
+		const plot = noisyFft();
+		plot.plot.logScale = true;
+		const yAxis = getZoomAdapter(plot).axes.find((a) => a.orient === 'y');
+		expect(yAxis.scale()).toBe(plot.plot.yScale);
+		expect(typeof yAxis.scale().base).toBe('function');
 	});
 });
 

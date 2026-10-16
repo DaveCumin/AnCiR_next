@@ -670,9 +670,11 @@
 
 		if (useFixed) {
 			const maxH = Math.max(...validEntries.map(([, r]) => r.fixedStats?.harmonics?.length ?? 0));
+			// `rmse` is sqrt(SS/(n - p)), the residual SE (FIT-15); `rmse_n` is sqrt(SS/n).
 			const headers = [
 				'column',
 				'rmse',
+				'rmse_n',
 				'r2',
 				'mesor',
 				'mesor_ci_lo',
@@ -703,6 +705,7 @@
 				const row = [
 					name,
 					r.fittedData.rmse,
+					s?.RMSE_n ?? null,
 					r.fittedData.rSquared,
 					s?.M ?? null,
 					s?.CI_M?.[0] ?? null,
@@ -1305,6 +1308,16 @@
 					defaultName={`cosinor_rmse_${yName}`}
 					source="Cosinor"
 				/>
+				{#if p.args.useFixedPeriod && yResult?.fixedStats}
+					<!-- And sqrt(SS/n), the RMSE every other fit reports, to compare with them. -->
+					&ensp;RMSE: {yResult.fixedStats.RMSE_n?.toFixed(3)}
+					<StoreValueButton
+						label="RMSE"
+						getter={() => yResult?.fixedStats?.RMSE_n}
+						defaultName={`cosinor_rmse_n_${yName}`}
+						source="Cosinor"
+					/>
+				{/if}
 			</p>
 			{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
 				<button

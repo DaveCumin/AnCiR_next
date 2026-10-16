@@ -60,6 +60,9 @@
 				fitx: { val: -1 },
 				r2: { val: -1 },
 				rmse: { val: -1 },
+				// Fixed-period cosinor only: sqrt(SS/n), the RMSE of every other model, beside its
+				// `rmse` (sqrt(SS/(n - p)), the residual SE, FIT-15).
+				rmse_n: { val: -1 },
 				// The permutation test's empirical p — the ONLY p this node emits as a
 				// port (the cosinor fixed-period fit also computes an analytic F-test p,
 				// but that exists in one of five model modes only; the dedicated Cosinor
@@ -143,6 +146,7 @@
 				// time (getFitMetricKeys), reconciled like TrendFit's coef_* keys.
 				{ name: 'r2', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'rmse', kind: 'column', cardinality: 'one', metric: true },
+				{ name: 'rmse_n', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'perm_pvalue', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'period', kind: 'column', cardinality: 'one', metric: true },
 				{ name: 'mesor', kind: 'column', cardinality: 'one', metric: true },
@@ -210,6 +214,7 @@
 	export const FIT_METRIC_KEYS_ALL = [
 		'r2',
 		'rmse',
+		'rmse_n',
 		'perm_pvalue',
 		'period',
 		'mesor',
@@ -239,6 +244,9 @@
 		if (model === 'cosinor')
 			return [
 				...shared,
+				// The fixed-period fit's `rmse` is the residual SE, sqrt(SS/(n - p)) (FIT-15);
+				// `rmse_n` is sqrt(SS/n), comparable with every other model's `rmse`.
+				...((args?.useFixedPeriod ?? true) ? ['rmse_n'] : []),
 				'period',
 				'mesor',
 				'amplitude',
@@ -301,6 +309,7 @@
 		if (!fr) return NaN;
 		if (key === 'r2') return fr.rSquared ?? NaN;
 		if (key === 'rmse') return fr.rmse ?? NaN;
+		if (key === 'rmse_n') return fr.fixedStats?.RMSE_n ?? NaN;
 		if (key === 'perm_pvalue') {
 			const ran = Array.isArray(fr.permutedStats) && fr.permutedStats.length > 0;
 			return ran && Number.isFinite(fr.pValue) ? fr.pValue : NaN;
@@ -1167,7 +1176,8 @@
 		let headers = ['column', 'rmse', 'r2'];
 		if (model === 'cosinor') {
 			if (p.args.useFixedPeriod) {
-				headers.push('M', 'period', 'pValue');
+				// `rmse` is the residual SE here (FIT-15); rmse_n = sqrt(SS/n).
+				headers.push('rmse_n', 'M', 'period', 'pValue');
 				maxH = Math.max(
 					...validEntries.map(([, r]) => r.fitResult?.fixedStats?.harmonics?.length ?? 0)
 				);
@@ -1215,6 +1225,7 @@
 			if (model === 'cosinor') {
 				if (p.args.useFixedPeriod) {
 					row.push(
+						fr.fixedStats?.RMSE_n ?? null,
 						fr.fixedStats?.M ?? fr.parameters?.M ?? null,
 						fr.parameters?.period ?? null,
 						fr.pValue ?? null
@@ -1692,6 +1703,16 @@
 					defaultName={`fit_rmse_${yName}`}
 					source={'Fit waveform model (' + p.args.model + ')'}
 				/>
+				{#if yResult?.fitResult?.fixedStats}
+					<!-- Fixed-period cosinor: sqrt(SS/n) as well, the RMSE every other model reports. -->
+					&ensp;RMSE: {yResult.fitResult.fixedStats.RMSE_n?.toFixed(3)}
+					<StoreValueButton
+						label="RMSE"
+						getter={() => yResult?.fitResult?.fixedStats?.RMSE_n}
+						defaultName={`fit_rmse_n_${yName}`}
+						source={'Fit waveform model (' + p.args.model + ')'}
+					/>
+				{/if}
 			</p>
 			{#if yId != null && p.args.out?.['resid_' + yId] >= 0}
 				<button
@@ -1801,7 +1822,9 @@
 				<p>Duty cycle: {(yResult?.fitResult?.parameters?.dutyCycle * 100)?.toFixed?.(1)}%</p>
 				<p>κ: {yResult?.fitResult?.parameters?.kappa?.toFixed(3)}</p>
 			{:else if p.args.model === 'doublelogistic'}
-				<p>Mesor: {yResult?.fitResult?.parameters?.M?.toFixed(3)}</p>
+				<!-- M is the rest (baseline) level, not a time-averaged MESOR (review FIT-2); the
+				     mesor port keeps its key and is labelled Baseline. -->
+				<p>Baseline (M, rest level): {yResult?.fitResult?.parameters?.M?.toFixed(3)}</p>
 				<p>Amplitude: {yResult?.fitResult?.parameters?.A?.toFixed(3)}</p>
 				<p>
 					Onset ({phaseNote}): {fitMetricValue(

@@ -35,6 +35,11 @@ import { plotMetricLabel, plotMetricColumnName } from '$lib/plots/plotMetricDefs
 export const RESIDUAL_SE = 'Residual SE';
 /** The rectangular wave's M: the level halfway between its high and low levels (FIT-16). */
 export const MIDLINE = 'Midline';
+/**
+ * The double logistic's M: the rest level the activity bout rises from (review FIT-2), not a
+ * time-averaged MESOR. Its `mesor` key stays, like the rectangular wave's.
+ */
+export const BASELINE = 'Baseline';
 
 /** Statistic labels shared by every node that emits the quantity. */
 export const STAT_LABELS = Object.freeze({
@@ -43,6 +48,9 @@ export const STAT_LABELS = Object.freeze({
 	r2: 'R²',
 	rsquared: 'R²',
 	rmse: 'RMSE',
+	// The fixed-period cosinor's sqrt(SS/n), beside its `rmse` (the residual SE): the RMSE
+	// every other fit reports under `rmse`.
+	rmse_n: 'RMSE',
 	n: 'n',
 	ciLow: 'CI low',
 	ciHigh: 'CI high',
@@ -128,9 +136,11 @@ function baseStatLabel(stat, args = {}) {
 	// Moving analysis: the fixed-period cosinor's `rmse` is sqrt(SS/(n - p)), the residual
 	// standard error, not the sqrt(SS/n) every other fit calls RMSE (FIT-15); the rectangular
 	// wave's `mesor` is the midline halfway between its two levels, not a rhythm-adjusted mean
-	// (FIT-16). The keys stay, so saved wires and columns keep their meaning.
+	// (FIT-16); the double logistic's `mesor` is its baseline (rest) level. The keys stay, so
+	// saved wires and columns keep their meaning.
 	if (stat === 'rmse' && args?.analysis === 'cosinor' && args?.useFixedPeriod) return RESIDUAL_SE;
 	if (stat === 'mesor' && args?.analysis === 'rectfit') return MIDLINE;
+	if (stat === 'mesor' && args?.analysis === 'doublelogistic') return BASELINE;
 	if (Object.hasOwn(STAT_LABELS, stat)) return STAT_LABELS[stat];
 	let m = /^H(\d+)_(amplitude|acrophase)$/.exec(stat);
 	if (m) return `H${m[1]} ${m[2] === 'amplitude' ? 'amplitude' : 'acrophase (h)'}`;
@@ -341,13 +351,20 @@ export const NODE_OUTPUT_LABELS = {
 			onset: (ctx) => fitPhaseLabel('Onset', ctx),
 			offset: (ctx) => fitPhaseLabel('Offset', ctx),
 			// Double-logistic rates, per unit of x.
-			// The rectangular wave's M is a midline (FIT-16); the fixed-period cosinor's `rmse` is
-			// the residual SE (FIT-15). Fixed period is this node's default.
-			mesor: (ctx) => (ctx?.args?.model === 'rectangular' ? MIDLINE : STAT_LABELS.mesor),
+			// The rectangular wave's M is a midline (FIT-16) and the double logistic's a baseline
+			// (rest level); the fixed-period cosinor's `rmse` is the residual SE (FIT-15). Fixed
+			// period is this node's default.
+			mesor: (ctx) =>
+				ctx?.args?.model === 'rectangular'
+					? MIDLINE
+					: ctx?.args?.model === 'doublelogistic'
+						? BASELINE
+						: STAT_LABELS.mesor,
 			rmse: (ctx) =>
 				(ctx?.args?.model ?? 'cosinor') === 'cosinor' && (ctx?.args?.useFixedPeriod ?? true)
 					? RESIDUAL_SE
 					: STAT_LABELS.rmse,
+			rmse_n: STAT_LABELS.rmse_n,
 			k1: (ctx) => `Rise rate k1 (1/${fitUnit(ctx) === 'h' ? 'h' : 'x unit'})`,
 			k2: (ctx) => `Fall rate k2 (1/${fitUnit(ctx) === 'h' ? 'h' : 'x unit'})`
 		},

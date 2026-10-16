@@ -19,7 +19,10 @@ const FILES = {
 	'/day.csv': 'time,value\n2024-01-01 00:00,10\n2024-01-01 01:00,20\n2024-01-01 02:00,30\n',
 	// ROB-30: a ragged row used to block the URL import with no message (the preview treated
 	// PapaParse's field-count warning as a fatal error).
-	'/ragged.csv': 'a,b,c\n1,2,3\n4,5\n6,7,8\n'
+	'/ragged.csv': 'a,b,c\n1,2,3\n4,5\n6,7,8\n',
+	// One column: there is no delimiter in the text, so PapaParse adds an UndetectableDelimiter
+	// warning. That is not a failed read; the file is one column.
+	'/single.csv': 'activity\n10\n20\n30\n'
 };
 
 let server;
@@ -83,6 +86,17 @@ describe('From URL import', () => {
 		expect(s.canConfirm).toBe(true);
 		await _importTestActions().confirmImport();
 		expect(byName().c.values).toEqual([3, null, 8]);
+	});
+
+	it('a single-column file previews, offers Confirm Import and imports', async () => {
+		await openImportModalWithUrl(`${base}/single.csv`);
+		const s = _importPreviewState();
+		expect(s.headers).toEqual(['activity']);
+		expect(s.errorInfile).toBe(false);
+		expect(s.canConfirm).toBe(true);
+		await _importTestActions().confirmImport();
+		expect(_importPreviewState().importError).toBe('');
+		expect(byName().activity.values).toEqual([10, 20, 30]);
 	});
 
 	it('the one-click dataset import (Examples tab) imports without the dialog', async () => {

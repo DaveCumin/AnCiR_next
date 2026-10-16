@@ -11,6 +11,13 @@
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import { scaleLinear, scaleLog } from 'd3-scale';
+	import {
+		LOG_AXIS_FLOOR,
+		logAxisDomain,
+		minPositiveOf,
+		drawableOnLog,
+		logTickFormat
+	} from '$lib/plots/logAxis.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import PaddingControls from '$lib/components/inputs/PaddingControls.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -86,31 +93,10 @@
 		return 'Power';
 	}
 
-	// A log axis cannot reach 0, so its lower end needs a floor (FFT uses the same 1e-6).
-	export const PERIODOGRAM_LOG_FLOOR = 1e-6;
-
-	/**
-	 * The y domain of the log scale. A user-set positive minimum wins; otherwise the smallest
-	 * positive value drawn, lowered by 5% of the decades shown so that point sits off the
-	 * axis line, and never below PERIODOGRAM_LOG_FLOOR. (A linear axis starts at 0; reading
-	 * that through the floor, as FFT does, spent most of the height on decades below the
-	 * data.)
-	 * @param {number|null} userMin  ylimsIN[0]
-	 * @param {number} minPositive  smallest positive value drawn (Infinity if none)
-	 * @param {number} hi  the top of the linear domain (ylims[1])
-	 * @returns {[number, number]}
-	 */
-	export function periodogramLogDomain(userMin, minPositive, hi) {
-		let top = hi > 0 && Number.isFinite(hi) ? hi : 1;
-		let lo;
-		if (userMin != null && userMin > 0) lo = userMin;
-		else if (Number.isFinite(minPositive) && minPositive > 0 && minPositive < top)
-			lo = minPositive / Math.pow(top / minPositive, 0.05);
-		else lo = top / 10;
-		lo = Math.max(lo, PERIODOGRAM_LOG_FLOOR);
-		if (!(top > lo)) top = lo * 10;
-		return [lo, top];
-	}
+	// The log power axis is shared with the FFT's magnitude axis (plots/logAxis.js). These two
+	// names stay for the tests and callers that use them.
+	export const PERIODOGRAM_LOG_FLOOR = LOG_AXIS_FLOOR;
+	export const periodogramLogDomain = logAxisDomain;
 
 	/** A p-value for the panel: three significant figures, or "< 0.0001". */
 	function formatP(p) {
@@ -754,17 +740,14 @@
 		// The smallest positive value drawn on the power axis (series, drawn thresholds,
 		// overlays), for the log scale's lower end.
 		minPositiveY = $derived.by(() => {
-			let m = Infinity;
+			const arrs = [];
 			for (const d of this.data) {
-				const arrs = [d.periodData?.y];
+				arrs.push(d.periodData?.y);
 				if (d.method === 'Chi-squared' && d.thresholdline?.draw) arrs.push(d.periodData?.threshold);
-				for (const a of arrs) for (const v of a ?? []) if (v > 0 && v < m) m = v;
 			}
-			const ext = overlayExtentOf(this.overlays, 'y');
-			if (ext) for (const v of ext) if (v > 0 && v < m) m = v;
-			return m;
+			return minPositiveOf(arrs, overlayExtentOf(this.overlays, 'y') ?? []);
 		});
-		yLogDomain = $derived(periodogramLogDomain(this.ylimsIN[0], this.minPositiveY, this.ylims[1]));
+		yLogDomain = $derived(logAxisDomain(this.ylimsIN[0], this.minPositiveY, this.ylims[1]));
 		/** The power-axis scale over a plot area `h` px tall: linear, or log when logScale is on. */
 		yScaleFor(h) {
 			return this.logScale
@@ -774,7 +757,7 @@
 		yScale = $derived(this.yScaleFor(this.plotheight));
 		/** Values as drawn: under the log axis a non-positive value has no place, so it is a gap. */
 		drawableY(arr) {
-			return this.logScale ? (arr ?? []).map((v) => (v > 0 ? v : NaN)) : arr;
+			return this.logScale ? drawableOnLog(arr) : arr;
 		}
 		xAxis = $state();
 		yAxis = $state();
@@ -981,10 +964,18 @@
 			this.data.splice(idx, 1);
 		}
 
+		// The values column is named for the statistic, as the y axis is by default
+		// (periodogramYLabel): "Normalised power", "Chi-squared Qp" or "Enright amplitude (A_p)".
+		// A download mixing methods is headed "Statistic (mixed methods)" and gains a last
+		// "Method" column naming each row's statistic, since the numbers are not comparable.
+		// Column positions are the same either way; the Python export mirrors this.
 		getDownloadData() {
-			const hasThreshold = this.data.some((d) => d.method === 'Chi-squared');
-			const headers = ['DataSeries', 'Period (hours)', 'Power'];
+			const methods = this.data.map((d) => d.method);
+			const mixed = new Set(methods.filter(Boolean)).size > 1;
+			const hasThreshold = methods.includes('Chi-squared');
+			const headers = ['DataSeries', 'Period (hours)', periodogramYLabel(methods)];
 			if (hasThreshold) headers.push('Threshold', 'P-value');
+			if (mixed) headers.push('Method');
 			const rows = [];
 			this.data.forEach((datum, d) => {
 				const pd = datum.periodData;
@@ -993,6 +984,7 @@
 					if (hasThreshold) {
 						row.push(pd.threshold?.[i] ?? '', pd.pvalue?.[i] ?? '');
 					}
+					if (mixed) row.push(datum.method);
 					rows.push(row);
 				}
 			});
@@ -1570,7 +1562,7 @@
 			width={theData.plot.plotwidth}
 			scale={theData.plot.yScale}
 			tickFormat={theData.plot.logScale
-				? theData.plot.yScale.tickFormat(theData.plot.yAxis.nticks, '~g')
+				? logTickFormat(theData.plot.yScale, theData.plot.yAxis.nticks)
 				: null}
 			defaultLabel={theData.plot.defaultYLabel}
 			position="left"

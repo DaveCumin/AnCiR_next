@@ -10,6 +10,7 @@
 //   - commit (commit = true):  normalise on blur/Enter — trim and fall back to
 //                               the type's default when the field is left empty.
 import { getColumnById } from './Column.svelte';
+import { commitColumnRename } from './columnLabels.js';
 
 // Node types whose name the user can rename inline.
 const EDITABLE_TYPES = new Set(['data', 'process', 'tableprocess', 'plot', 'group', 'composite']);
@@ -52,9 +53,10 @@ export function setNodeName(node, next, { commit = false } = {}) {
 		case 'data': {
 			const col = node.refId != null ? getColumnById(node.refId) : null;
 			if (!col) return;
-			// On commit an empty field restores the auto-derived name (customName = null).
-			if (commit) col.customName = trimmed === '' ? null : trimmed;
-			else col.customName = raw;
+			// A column rename is one renameColumn operation on commit (an undo step that counts
+			// as an unsaved change); nothing is written while typing. An empty field restores
+			// the auto-derived name (customName = null). See columnLabels.commitColumnRename.
+			if (commit) commitColumnRename(col, raw);
 			return;
 		}
 		case 'process': {

@@ -726,7 +726,7 @@
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import { describeTimeFormatProblem } from '$lib/utils/time/TimeUtils.js';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
-	import { columnDisplayName, restoreAutoNameIfLabel } from '$lib/core/columnLabels.js';
+	import { columnDisplayName, commitColumnRename } from '$lib/core/columnLabels.js';
 
 	let {
 		col = $bindable(),
@@ -760,12 +760,11 @@
 		return describeTimeFormatProblem(core.rawData.get(col.data), col.timeFormat);
 	});
 
-	// Live rename: write to customName so the name survives node-label changes
-	// (an empty value falls back to the auto-derived name).
+	// Rename: one renameColumn operation when the edit is committed (an undo step that counts as
+	// an unsaved change). Typing a node output's label back restores its auto name, so the label
+	// stays live; an empty value falls back to the auto-derived name (columnLabels.renameTarget).
 	function renameThis(v) {
-		// Typing a node output's label back restores its auto name, so the label stays live.
-		if (restoreAutoNameIfLabel(col, v)) return;
-		col.customName = v === '' ? null : v;
+		commitColumnRename(col, v);
 	}
 
 	// What the row shows (UI-4): a node output's label ("R²", "Cosinor fit: A1") while the
@@ -834,7 +833,7 @@
 						</div>
 					{:else}
 						<p class="col-name" title={shownName}>
-							<Editable value={shownName} onInput={renameThis} />
+							<Editable value={shownName} onCommit={renameThis} />
 						</p>
 					{/if}
 				</div>

@@ -394,7 +394,9 @@
 				Tick <strong>Log Scale</strong> (Y-Axis) to draw the power axis on a log scale, which keeps the
 				baseline readable under a tall peak. It changes the display only: peaks, thresholds, p-values
 				and output ports are the same numbers. The threshold line and reference lines are drawn at their
-				values on the log axis; a value at or below zero has no place on it and is left out.
+				values on the log axis; a value at or below zero has no place on it and is left out. The axis
+				starts just below the smallest value drawn (unless you set a minimum) and labels its ticks as
+				plain numbers (0.01, 1, 100). The FFT plot's Log Scale draws its magnitude axis the same way.
 			</li>
 			<li>Hover over the plot to read off the exact period and power at any point.</li>
 		</ol>

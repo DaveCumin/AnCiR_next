@@ -476,3 +476,35 @@ describe('chi-squared moving periodogram peak (SPEC-9)', () => {
 		expect(out.peak_pvalue[0]).toBeGreaterThanOrEqual(0.05);
 	});
 });
+
+// v82.9: the fixed-period cosinor's `rmse` is sqrt(SS/(n - p)), the residual SE (FIT-15). It
+// also reports `rmse_n` = sqrt(SS/n), the RMSE every other analysis reports, so windows can
+// be compared across analyses; `rmse` keeps its value and key for saved sessions.
+describe('rolling fixed-period cosinor rmse_n', () => {
+	const args = { analysis: 'cosinor', useFixedPeriod: true, fixedPeriod: 24, nHarmonics: 2 };
+
+	it('is declared in fixed-period mode only, next to rmse', () => {
+		const keys = getStatKeys(args);
+		expect(keys.slice(keys.indexOf('rmse'), keys.indexOf('rmse') + 2)).toEqual(['rmse', 'rmse_n']);
+		expect(getStatKeys({ ...args, useFixedPeriod: false })).not.toContain('rmse_n');
+	});
+
+	it('is sqrt(SS/n) of the window fit, and rmse stays sqrt(SS/(n - p))', () => {
+		const t = Array.from({ length: 96 }, (_, i) => i * 0.5);
+		const y = t.map(
+			(h, i) => 10 + 3 * Math.cos((2 * Math.PI * (h - 6)) / 24) + ((i * 37) % 11) / 5
+		);
+		const out = computeMovingWindows({
+			tAll: t,
+			ys: [y],
+			starts: [0],
+			windowSize: 48,
+			statKeys: getStatKeys(args),
+			args
+		})[0];
+		const n = 96;
+		const p = 1 + 2 * 2; // mesor + (beta, gamma) per harmonic
+		expect(out.rmse_n[0]).toBeGreaterThan(0);
+		expect(out.rmse_n[0]).toBeCloseTo(out.rmse[0] * Math.sqrt((n - p) / n), 12);
+	});
+});

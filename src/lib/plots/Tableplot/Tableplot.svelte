@@ -4,7 +4,7 @@
 	import { viewFontScale, viewStyleFor } from '$lib/plots/viewBox.js';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { columnDisplayName, restoreAutoNameIfLabel } from '$lib/core/columnLabels.js';
+	import { columnDisplayName, commitColumnRename } from '$lib/core/columnLabels.js';
 	import { core } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { timeCellText } from '$lib/utils/time/TimeUtils.js';
@@ -694,9 +694,10 @@
 		}
 
 		if (edit.row === 'h') {
-			// Typing a node output's label back restores its auto name, so the label stays live.
-			if (restoreAutoNameIfLabel(column, edit.value)) return;
-			column.name = edit.value;
+			// A header rename is one renameColumn operation on commit (an undo step, an unsaved
+			// change). Typing a node output's label back restores its auto name, so the label
+			// stays live; an empty header restores the auto-derived name.
+			commitColumnRename(column, edit.value);
 			return;
 		}
 
@@ -1100,7 +1101,7 @@
 								<Editable
 									editable={true}
 									value={headerText}
-									onInput={(v) => makeEdits({ col: editColIndex(vi), row: 'h', value: v })}
+									onCommit={(v) => makeEdits({ col: editColIndex(vi), row: 'h', value: v })}
 								/>
 								<!-- Drag the right edge to resize this column. -->
 								<div

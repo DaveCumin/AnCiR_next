@@ -73,6 +73,7 @@ vi.mock('$lib/utils/cosinor.js', async (importOriginal) => ({
 		M: 40,
 		harmonics: [{ k: 1, amplitude: 12, acrophase_hrs: 5, beta: 1, gamma: 0 }],
 		RMSE: 0.5,
+		RMSE_n: 0.45,
 		R2: 0.9,
 		pF: 0.01
 	})),
@@ -383,5 +384,28 @@ describe('FitFunction — round-trip', () => {
 			expect(Number.isNaN(fitMetricValue(key, 'cosinor', null))).toBe(true);
 			expect(Number.isNaN(fitMetricValue(key, 'rectangular', undefined))).toBe(true);
 		}
+	});
+});
+
+// v82.9: the fixed-period cosinor's `rmse` is the residual SE, sqrt(SS/(n - p)) (FIT-15), so it
+// also writes `rmse_n` = sqrt(SS/n), comparable with every other model's `rmse`.
+describe('FitFunction: fixed-period cosinor rmse_n', () => {
+	it('is a port of the fixed-period cosinor only', () => {
+		expect(getFitMetricKeys({ model: 'cosinor' })).toContain('rmse_n');
+		expect(getFitMetricKeys({ model: 'cosinor', useFixedPeriod: true })).toContain('rmse_n');
+		expect(getFitMetricKeys({ model: 'cosinor', useFixedPeriod: false })).not.toContain('rmse_n');
+		expect(getFitMetricKeys({ model: 'rectangular' })).not.toContain('rmse_n');
+		expect(getFitMetricKeys({ model: 'doublelogistic' })).not.toContain('rmse_n');
+	});
+
+	it("writes the fit's RMSE_n while rmse keeps the residual SE (RMSE)", async () => {
+		// The fitter is stubbed above (RMSE 0.5, RMSE_n 0.45); utils/cosinor.test.js checks
+		// RMSE_n = sqrt(SS/n) on a real fit.
+		const out = wiredOut('cosinor');
+		const args = { ...baseArgs, model: 'cosinor', out };
+		const [, valid] = await fitFunction(args);
+		expect(valid).toBe(true);
+		expect(rawData.get(out.rmse_n)).toEqual([0.45]);
+		expect(rawData.get(out.rmse)).toEqual([0.5]);
 	});
 });

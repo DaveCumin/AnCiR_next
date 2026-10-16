@@ -68,6 +68,20 @@ describe('outputLabel: per node type', () => {
 		);
 	});
 
+	it('the fixed-period cosinor rmse_n (sqrt(SS/n)) reads RMSE, beside its Residual SE', () => {
+		expect(outputLabel('FitFunction', 'rmse_n', ctx({ model: 'cosinor' }))).toBe('RMSE');
+		const fixed = ctx({ analysis: 'cosinor', useFixedPeriod: true });
+		expect(outputLabel('MovingAnalysis', '66_rmse_n', fixed)).toBe('RMSE: A1');
+		expect(outputLabel('MovingAnalysis', '66_rmse', fixed)).toBe('Residual SE: A1');
+	});
+
+	it('the double-logistic M reads Baseline (the key stays mesor)', () => {
+		expect(outputLabel('FitFunction', 'mesor', ctx({ model: 'doublelogistic' }))).toBe('Baseline');
+		expect(outputLabel('MovingAnalysis', '66_mesor', ctx({ analysis: 'doublelogistic' }))).toBe(
+			'Baseline: A1'
+		);
+	});
+
 	it('SPEC-9: the nodes\u2019 chi-squared peak p is the family-wise one, as on the plot', () => {
 		const c = ctx({ analysis: 'periodogram', pgMethod: 'Chi-squared' });
 		expect(outputLabel('RhythmicityAnalysis', 'stat_peak_pvalue', c)).toBe('Peak p (family-wise)');

@@ -138,3 +138,55 @@ describe('Periodogram peak (SPEC-9)', () => {
 		expect(d.peak.pvalue).toBeLessThan(0.05);
 	});
 });
+
+// v82.9: the downloaded (and Table "plot data") values column was always "Power" while the
+// axis named the statistic. It now carries the method label; mixed methods get a last
+// "Method" column so each row says which statistic it is. Mirrored by the Python export
+// (tools/test_plot_data_export.py).
+describe('periodogram download headers', () => {
+	function withData(methods) {
+		const inner = makePeriodogram().plot;
+		inner.data.forEach((d, i) => {
+			d.method = methods[i];
+			d.periodData = { x: [23, 24], y: [0.1, 0.9], threshold: [1, 1], pvalue: [0.5, 0.01] };
+		});
+		return inner.getDownloadData();
+	}
+
+	it('names the values column for a single method', () => {
+		expect(withData(['Lomb-Scargle', 'Lomb-Scargle']).headers).toEqual([
+			'DataSeries',
+			'Period (hours)',
+			'Normalised power'
+		]);
+		expect(withData(['Enright', 'Enright']).headers[2]).toBe('Enright amplitude (A_p)');
+		const chi = withData(['Chi-squared', 'Chi-squared']);
+		expect(chi.headers).toEqual([
+			'DataSeries',
+			'Period (hours)',
+			'Chi-squared Qp',
+			'Threshold',
+			'P-value'
+		]);
+		expect(chi.rows[0]).toEqual([0, 23, 0.1, 1, 0.5]);
+	});
+
+	it('mixed methods: one statistic column, and a Method column per row', () => {
+		const { headers, rows } = withData(['Lomb-Scargle', 'Chi-squared']);
+		expect(headers).toEqual([
+			'DataSeries',
+			'Period (hours)',
+			PERIODOGRAM_MIXED_Y_LABEL,
+			'Threshold',
+			'P-value',
+			'Method'
+		]);
+		expect(rows.map((r) => [r[0], r[r.length - 1]])).toEqual([
+			[0, 'Lomb-Scargle'],
+			[0, 'Lomb-Scargle'],
+			[1, 'Chi-squared'],
+			[1, 'Chi-squared']
+		]);
+		for (const r of rows) expect(r).toHaveLength(headers.length);
+	});
+});

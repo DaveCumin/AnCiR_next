@@ -553,6 +553,44 @@ def test_periodogram_log_scale_is_the_power_axis_and_skips_non_positive_marks(fi
     assert counts(ax, 2)["patches"] == 0
 
 
+@pytest.mark.parametrize("sid,ptype,draw", [
+    ("demo-fft-rhythm", "fft", "plot_fft"),
+    ("demo-periodogram-rhythm", "periodogram", "plot_periodogram"),
+])
+def test_log_axis_starts_at_the_smallest_value_drawn_with_plain_labels(fig_ax, sid, ptype, draw):
+    """v82.9: the export's log axis is the app's (plots/logAxis.js): the lower end is the
+    smallest positive value drawn lowered by 5% of the decades shown (never below 1e-6), a
+    horizontal mark counts, and the ticks read 0.01, not 10^-2."""
+    fig, ax = fig_ax
+    plot, cols = load_demo(sid, ptype)
+    plot["plot"]["logScale"] = True
+    plot["plot"]["overlays"] = [ov(1, "line", "horizontal", at=[1e-5])]
+    getattr(rt, draw)(plot, cols, ax)
+    lo, hi = ax.get_ylim()
+    assert lo == pytest.approx(rt.log_axis_domain(None, 1e-5, hi)[0])
+    assert lo < 1e-5 and lo > 1e-6
+    fig.canvas.draw()
+    labels = [t.get_text() for t in ax.get_yticklabels() if t.get_text()]
+    assert labels and all("^" not in t and "$" not in t for t in labels)
+    assert "0.001" in labels and "1" in labels
+    # A user minimum wins.
+    ax.cla()
+    plot["plot"]["overlays"] = []
+    plot["plot"]["ylimsIN"] = [0.5, None]
+    getattr(rt, draw)(plot, cols, ax)
+    assert ax.get_ylim()[0] == 0.5
+
+
+def test_log_axis_domain_mirrors_the_app():
+    """logAxis.js logAxisDomain: user minimum, smallest positive, floor, empty."""
+    assert rt.log_axis_domain(2, 0.01, 100) == (2, 100)
+    lo, hi = rt.log_axis_domain(None, 0.01, 100)
+    assert hi == 100 and lo == pytest.approx(0.01 / (100 / 0.01) ** 0.05)
+    assert rt.log_axis_domain(None, 1e-12, 100)[0] == 1e-6
+    assert rt.log_axis_domain(None, float("inf"), 100) == (10, 100)
+    assert rt.log_axis_domain(0, float("inf"), 0) == (0.1, 1)
+
+
 def test_periodogram_log_scale_off_by_default(fig_ax):
     fig, ax = fig_ax
     plot, cols = load_demo("demo-periodogram-rhythm", "periodogram")

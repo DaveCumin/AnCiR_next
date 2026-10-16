@@ -19,6 +19,7 @@
 	import { removeGroup } from '$lib/core/core.svelte.js';
 	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { commitColumnRename } from '$lib/core/columnLabels.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
 
@@ -71,14 +72,11 @@
 		if (st) st.expanded = !st.expanded;
 	}
 
-	function renameColumn(col, next, commit = false) {
-		if (!col) return;
-		if (commit) {
-			const trimmed = (next ?? '').trim();
-			col.customName = trimmed === '' ? null : trimmed;
-		} else {
-			col.customName = next ?? '';
-		}
+	// Column rename: one renameColumn operation on commit (Enter or blur), so it is an undo step
+	// and counts as an unsaved change. Nothing is written while typing: the field shows the
+	// typed text itself, and Escape then has nothing to revert.
+	function renameColumn(col, next) {
+		commitColumnRename(col, next);
 	}
 
 	// Resize handle (bottom-right) — drag to resize the card. Width affects edge
@@ -337,8 +335,7 @@
 								placeholder="column"
 								ariaLabel="Rename column"
 								title="Double-click to rename"
-								onInput={(v) => renameColumn(col, v)}
-								onCommit={(v) => renameColumn(col, v, true)}
+								onCommit={(v) => renameColumn(col, v)}
 							/>
 							{#if col.groupLabel}
 								<span class="group-label-chip" title="Group label: {col.groupLabel}"

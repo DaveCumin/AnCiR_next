@@ -37,7 +37,8 @@ export function movingStatKeys(args) {
 			// `rel_amplitude` (= amplitude / MESOR) mirrors the real getStatKeys — it separates "the
 			// rhythm got weaker" from "the whole signal shifted". Must sit before r2/rmse/pvalue to
 			// match the app's key ORDER, or the parity test (and the pre-allocated columns) drift.
-			keys.push('rel_amplitude', 'r2', 'rmse', 'pvalue');
+			// rmse = residual SE sqrt(SS/(n - p)); rmse_n = sqrt(SS/n), every other fit's RMSE.
+			keys.push('rel_amplitude', 'r2', 'rmse', 'rmse_n', 'pvalue');
 			return keys;
 		}
 		const keys = [];

@@ -30,7 +30,8 @@
 		cleanNumericColumn,
 		columnToPhaseHours,
 		weightedSeriesStats,
-		setCircularUnit
+		setCircularUnit,
+		convertPhaseValues
 	} from '$lib/utils/circularPlot.js';
 	import { watsonWilliams, toRadiansColumn } from '$lib/utils/circular.js';
 	import { pUpperFromF } from '$lib/utils/fdist.js';
@@ -78,6 +79,14 @@
 
 		timeWired = $derived(this.x?.refId >= 0);
 		rawValues = $derived.by(() => cleanNumericColumn(this.y?.getData?.() ?? []));
+		// Untimed series only: the phase values in the plot's display unit, which is where they
+		// are placed (points, wedges, hover). Usually rawValues itself. When a timed series is
+		// also wired the plot works in clock hours, so values recorded in degrees or radians are
+		// converted to hours here; before, 90 degrees was drawn as 90 h (18 h on a 24 h clock).
+		placeValues = $derived.by(() => {
+			const p = this.parentPlot;
+			return convertPhaseValues(this.rawValues, p.unit, p.displayUnit, p.period);
+		});
 
 		// Per-row phase, timed series only. Deliberately period-space (the same
 		// convention as rawValues / stats.meanValue below), NOT the TAU-radian
@@ -97,8 +106,17 @@
 						this.y.getData(),
 						this.parentPlot.period
 					)
-				: seriesStats(this.rawValues, this.parentPlot.unit, this.parentPlot.period)
+				: this.untimedStats()
 		);
+
+		// Rayleigh stats on the values in their own unit (exact); only the mean direction is
+		// re-expressed in the display unit, where the mean vector is drawn.
+		untimedStats() {
+			const p = this.parentPlot;
+			const s = seriesStats(this.rawValues, p.unit, p.period);
+			const [meanValue] = convertPhaseValues([s.meanValue], p.unit, p.displayUnit, p.period);
+			return { ...s, meanValue };
+		}
 
 		get displayLabel() {
 			return seriesDisplayLabel(this);
@@ -196,6 +214,7 @@
 				: displayPeriodFor(this.unit, this.period)
 		);
 		// The unit the angle axis, and so the bin widths, are in: clock hours with a time wired.
+		// Untimed series are converted from `unit` into it (CircularPhaseSeries.placeValues).
 		displayUnit = $derived(this.hasTimed ? 'hours' : this.unit);
 		// The room inside the padding. The plot is the largest square that fits, drawn at the
 		// top left; an outside legend (legendAuto.svelte.js) takes its share of this first.
@@ -280,7 +299,7 @@
 							py.push(y);
 						});
 					} else {
-						const placed = placeCircularPoints(d.rawValues, {
+						const placed = placeCircularPoints(d.placeValues, {
 							placement: this.placement,
 							period: this.displayPeriod,
 							binWidth: this.binWidth,
@@ -329,7 +348,7 @@
 		// can fit-scale the dodge step instead of overflowing the plot radius.
 		untimedMaxStack = $derived.by(() =>
 			maxStackHeight(
-				this.data.filter((d) => !d.timeWired).map((d) => d.rawValues),
+				this.data.filter((d) => !d.timeWired).map((d) => d.placeValues),
 				{
 					placement: this.placement,
 					period: this.displayPeriod,
@@ -508,7 +527,7 @@
 	// Hover on a series' merged points <path>: map the pointer to the polar
 	// projection's data space, then snap to the nearest observation in that
 	// series by circular (wrap-around) distance on the display period. Untimed
-	// series search by phase (rawValues); timed series search by time-of-day
+	// series search by phase in the display unit (placeValues); timed series by time-of-day
 	// (angles, period-space hours).
 	function handleSeriesHover(evt, plot, P, d) {
 		const svg = evt.currentTarget.ownerSVGElement;
@@ -517,7 +536,7 @@
 		const pt = new DOMPoint(evt.clientX, evt.clientY).matrixTransform(ctm.inverse());
 		const { value } = P.fromXY(pt.x, pt.y);
 		const period = P.period;
-		const positions = d.timeWired ? d.angles : d.rawValues;
+		const positions = d.timeWired ? d.angles : d.placeValues;
 
 		let bestIdx = -1;
 		let bestDist = Infinity;
@@ -542,7 +561,12 @@
 		)};margin-right:4px;vertical-align:middle;"></span>`;
 		const content = d.timeWired
 			? `${dot}<strong>${escapeHtml(d.displayLabel)}</strong><br/><span style="opacity:0.7">time:</span> ${fmtPhase(d.angles[bestIdx], 'hours', plot.period)}<br/><span style="opacity:0.7">value:</span> ${fmt(d.rawValues[bestIdx])}`
-			: `${dot}<strong>${escapeHtml(d.displayLabel)}</strong><br/><span style="opacity:0.7">phase:</span> ${fmtPhase(d.rawValues[bestIdx], plot.unit, plot.period)}`;
+			: `${dot}<strong>${escapeHtml(d.displayLabel)}</strong><br/><span style="opacity:0.7">phase:</span> ${fmtPhase(d.rawValues[bestIdx], plot.unit, plot.period)}${
+					// Mixed plot: the value as recorded, then where it sits on the clock.
+					plot.displayUnit !== plot.unit
+						? ` (${fmtPhase(d.placeValues[bestIdx], plot.displayUnit, plot.period)})`
+						: ''
+				}`;
 
 		const { x: xPos, y: yPos } = computeTooltipPosition(evt.clientX, evt.clientY);
 		dispatchTooltip(evt.currentTarget, { visible: true, x: xPos, y: yPos, content });
@@ -580,7 +604,7 @@
 			{#if !d.timeWired && plot.showWedges}
 				<RoseWedges
 					projection={P}
-					values={d.rawValues}
+					values={d.placeValues}
 					binWidth={plot.wedgeBinWidth}
 					colour={d.colour}
 				/>
@@ -604,7 +628,7 @@
 						onpointerleave={handleSeriesLeave}
 					/>
 				{:else}
-					{@const placed = placeCircularPoints(d.rawValues, {
+					{@const placed = placeCircularPoints(d.placeValues, {
 						placement: plot.placement,
 						period: plot.displayPeriod,
 						binWidth: plot.binWidth,
@@ -690,13 +714,20 @@
 
 		<div class="control-component">
 			<div class="control-component-title"><p>Angle</p></div>
-			{#if theData.hasTimed}
+			{#if theData.allTimed}
 				<p class="cp-hint">A time is wired: angle is always clock hours.</p>
+			{:else if theData.hasTimed}
+				<p class="cp-hint">
+					A time is wired, so the clock is in hours. Series without a time are read in the unit
+					below and converted to hours.
+				</p>
 			{/if}
 			<!-- Stacked: side by side, the unit select was half the panel and cut "Clock hours"
 			     to "Clock h...". -->
 			<div class="control-input-vertical">
-				{#if !theData.hasTimed}
+				<!-- Hidden only when every series is timed: in a mixed plot a series without a time
+				     still needs its unit (its values are converted to clock hours). -->
+				{#if !theData.allTimed}
 					<ControlInput label="Values are in">
 						<select
 							value={theData.unit}

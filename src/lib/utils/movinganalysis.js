@@ -57,7 +57,9 @@ export function getStatKeys(args) {
 			for (let h = 1; h <= H; h++) {
 				keys.push(`H${h}_amplitude`, `H${h}_acrophase`);
 			}
-			keys.push('rel_amplitude', 'r2', 'rmse', 'pvalue');
+			// `rmse` is sqrt(SS/(n - p)), the residual SE (FIT-15); `rmse_n` is sqrt(SS/n), the
+			// RMSE every other analysis here reports.
+			keys.push('rel_amplitude', 'r2', 'rmse', 'rmse_n', 'pvalue');
 			return keys;
 		}
 		const keys = [];
@@ -222,6 +224,7 @@ function computeStatsForWindow(tt, yy, args, phase = null, centre = NaN) {
 					: NaN;
 			stats.r2 = r.R2;
 			stats.rmse = r.RMSE;
+			stats.rmse_n = r.RMSE_n;
 			stats.pvalue = r.pF;
 			return stats;
 		}

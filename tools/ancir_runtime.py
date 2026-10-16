@@ -292,6 +292,9 @@ def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
     # on a 168-point window; no fixture compared rmse until the rolling-cosinor
     # one, so the divergence had gone unnoticed.
     rmse = math.sqrt(mse)
+    # sqrt(SSres / n): the RMSE every other fit reports, comparable with them (the `rmse_n`
+    # port; cosinor.js RMSE_n). `rmse` above stays the residual SE (FIT-15).
+    rmse_n = math.sqrt(rss / n)  # n > p >= 1 here (df_resid > 0 above)
     ss_tot = float(((y - y.mean()) ** 2).sum())
     r2 = 1 - rss / ss_tot if ss_tot > 0 else 0.0
 
@@ -368,7 +371,7 @@ def fit_cosinor_fixed(t, y, period=24.0, n_harmonics=1, alpha=0.05):
         'M': M, 'SE_M': SE_M, 'CI_M': CI_M,
         'harmonics': harmonics, 'F_stat': float(F_stat),
         'df': [df1, df_resid], 'pF': pF,
-        'R2': float(r2), 'RMSE': rmse,
+        'R2': float(r2), 'RMSE': rmse, 'RMSE_n': rmse_n,
         'fitted': fitted.tolist(), 'n': n,
         'period': period, 'nHarmonics': n_harmonics, 'alpha': alpha,
     }
@@ -6322,8 +6325,11 @@ def ff_metric_keys(args):
     shared = ['r2', 'rmse', 'perm_pvalue']
     model = args.get('model') or 'cosinor'
     if model == 'cosinor':
-        return shared + ['period', 'mesor', 'amplitude', 'acrophase', 'amplitude_h1',
-                         'acrophase_h1']
+        # rmse_n (sqrt(SS/n)) beside the fixed-period fit's residual-SE rmse; fixed is the default.
+        uf = args.get('useFixedPeriod')
+        fixed = ['rmse_n'] if (True if uf is None else bool(uf)) else []
+        return shared + fixed + ['period', 'mesor', 'amplitude', 'acrophase', 'amplitude_h1',
+                                 'acrophase_h1']
     if model == 'rectangular':
         return shared + ['period', 'mesor', 'amplitude', 'acrophase', 'duty_cycle', 'kappa']
     if model == 'doublelogistic':
@@ -6341,6 +6347,8 @@ def _ff_raw_metric(key, model, fr):
         return fr.get('rSquared', nan)
     if key == 'rmse':
         return fr.get('rmse', nan)
+    if key == 'rmse_n':
+        return (fr.get('fixedStats') or {}).get('RMSE_n', nan)
     if key == 'perm_pvalue':
         return nan  # the permutation test is not ported
     p_ = fr.get('parameters') or {}
@@ -8082,6 +8090,58 @@ def _apply_axes(ax, xlims=None, ylims=None, xlog=False, ylog=False,
     if title:  ax.set_title(title)
 
 
+# plots/logAxis.js: the log value axis of the Periodogram (power) and the FFT (magnitude). The
+# lower end follows the smallest positive value drawn (lowered by 5% of the decades shown,
+# never below 1e-6), a user minimum wins, and ticks read as plain numbers (0.01, not 10^-2).
+LOG_AXIS_FLOOR = 1e-6
+
+
+def log_axis_domain(user_min, min_positive, hi):
+    """logAxis.js logAxisDomain."""
+    top = hi if (hi is not None and math.isfinite(hi) and hi > 0) else 1.0
+    if user_min is not None and user_min > 0:
+        lo = user_min
+    elif min_positive is not None and math.isfinite(min_positive) and 0 < min_positive < top:
+        lo = min_positive / (top / min_positive) ** 0.05
+    else:
+        lo = top / 10
+    lo = max(lo, LOG_AXIS_FLOOR)
+    if not top > lo:
+        top = lo * 10
+    return lo, top
+
+
+def _min_positive(*arrays):
+    m = math.inf
+    for a in arrays:
+        for v in a or []:
+            if v is not None and isinstance(v, (int, float)) and math.isfinite(v) and 0 < v < m:
+                m = v
+    return m
+
+
+def _plain_number(v):
+    """A tick value as a plain number (d3 '~g' on the app's log axis): 0.001, 1, 1000."""
+    if v == 0 or not math.isfinite(v):
+        return ''
+    if abs(v) >= 1e15:
+        return f'{v:g}'
+    return f'{v:.12f}'.rstrip('0').rstrip('.')
+
+
+def _apply_log_axis(ax, ylims_in, values):
+    """After _apply_axes(ylog=True): the app's log domain (log_axis_domain) and plain tick
+    labels. `values` are the values drawn on the axis; the top stays the plotted top unless
+    the user set one."""
+    from matplotlib.ticker import FuncFormatter, NullFormatter
+    user = list(ylims_in or [None, None]) + [None, None]
+    hi = user[1] if user[1] is not None else ax.get_ylim()[1]
+    lo, top = log_axis_domain(user[0], _min_positive(values), hi)
+    ax.set_ylim(lo, top)
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _pos: _plain_number(v)))
+    ax.yaxis.set_minor_formatter(NullFormatter())
+
+
 # ----------------------------------------------------------------------
 # Plot overlays: reference LINES and shaded BANDS (overlays plan 2026-10-15, step 5)
 #
@@ -8533,8 +8593,9 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
     for the repeating-band anchor), `xlims_in` (manual x limits) and `legacy_night_bands`.
     Positions <= 0 on a log axis draw nothing, as in the app.
 
-    Returns {'legend': [(handle, label)], 'artists': {index: [artist, ...]}} with the
-    overlays' legend entries (proxy handles, not on the axes) in draw order."""
+    Returns {'legend': [(handle, label)], 'artists': {index: [artist, ...]}, 'y_values':
+    [...]} with the overlays' legend entries (proxy handles, not on the axes) in draw order,
+    and the y values of the marks drawn on the y axis (for a log axis's lower end)."""
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
 
@@ -8542,7 +8603,7 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
     caps = OVERLAY_CAPABILITIES.get(host or plot.get('type'))
     overlays = _overlays_from_plot(p, caps, legacy_night_bands=legacy_night_bands,
                                    x_is_time=x_is_time, series_colour=series_colour)
-    result = {'legend': [], 'artists': {}}
+    result = {'legend': [], 'artists': {}, 'y_values': []}
     if not overlays:
         return result
     domain = (caps or {}).get('domain', ('x', 'y'))
@@ -8574,6 +8635,7 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
                         arts.append(ax.axvline(to_x(v), **style))
                 elif placeable(v, ylog):
                     arts.append(ax.axhline(v, **style))
+                    result['y_values'].append(v)
             return arts
         fill = _overlay_colour(ov['fill'], _OVERLAY_BAND_FILL_DEFAULT)
         edge = dict(color=_overlay_colour(ov['edgeColour'], _OVERLAY_EDGE_COLOUR_DEFAULT),
@@ -8583,6 +8645,7 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
         if g['form'] == 'ribbon':
             xs = [to_x(v) for v in g['x']]
             arts.append(ax.fill_between(xs, g['lower'], g['upper'], **band))
+            result['y_values'] += list(g['lower']) + list(g['upper'])
             if ov['edge']:
                 arts.extend(ax.plot(xs, g['lower'], **edge))
                 arts.extend(ax.plot(xs, g['upper'], **edge))
@@ -8592,6 +8655,7 @@ def _draw_overlays(ax, plot, columns_index, x_transform=None, *, host=None,
                 if not (placeable(s['y0'], ylog) and placeable(s['y1'], ylog)):
                     continue
                 arts.append(ax.axhspan(s['y0'], s['y1'], **band))
+                result['y_values'] += [s['y0'], s['y1']]
                 if ov['edge']:
                     arts.append(ax.axhline(s['y0'], **edge))
                     arts.append(ax.axhline(s['y1'], **edge))
@@ -8840,6 +8904,7 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
 def plot_fft(plot, columns_index, ax):
     p = plot.get('plot', {})
     show_period = p.get('showPeriod', False)
+    drawn = []
     for series in p.get('data', []):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
@@ -8857,6 +8922,9 @@ def plot_fft(plot, columns_index, ax):
             continue
         xs = ([1.0 / f if f else float('nan') for f in fft['frequencies']]
               if show_period else fft['frequencies'])
+        # Period mode draws f > 0 only (the f = 0 term has no period), as the app does.
+        drawn += [m for f, m in zip(fft['frequencies'], fft['magnitudes'])
+                  if f > 0 or not show_period]
         line = series.get('line') or {}
         colour = line.get('colour') or line.get('color')
         ax.plot(xs, fft['magnitudes'], color=colour,
@@ -8879,6 +8947,8 @@ def plot_fft(plot, columns_index, ax):
                 xlabel=xlabel,
                 ylabel=(p.get('yAxisMag') or {}).get('label', 'Magnitude'),
                 title=plot.get('name', ''))
+    if p.get('logScale', False):
+        _apply_log_axis(ax, p.get('ylimsIN'), drawn + ov['y_values'])
     _legend_with_overlays(ax, ov['legend'])
 
 
@@ -8903,6 +8973,7 @@ def plot_periodogram(plot, columns_index, ax):
     # Method and bin size are per series, as in the app (_periodogram_series_params). They
     # used to be read from the plot, where the app never stores them, so every exported
     # periodogram was drawn as Lomb-Scargle.
+    drawn = []
     for series in p.get('data', []):
         x_col = _resolve_plot_col(series.get('x'), columns_index)
         y_col = _resolve_plot_col(series.get('y'), columns_index)
@@ -8916,6 +8987,7 @@ def plot_periodogram(plot, columns_index, ax):
         if not t:
             continue
         result = run_periodogram_calculation({'t': t, 'y': y, **params})
+        drawn += list(result['y']) + list(result.get('threshold') or [])
         line = series.get('line') or {}
         colour = line.get('colour') or line.get('color')
         ax.plot(result['x'], result['y'], color=colour,
@@ -8946,6 +9018,8 @@ def plot_periodogram(plot, columns_index, ax):
                 xlabel=(p.get('xAxis') or {}).get('label', 'Period'),
                 ylabel=ylabel,
                 title=plot.get('name', ''))
+    if log:
+        _apply_log_axis(ax, p.get('ylimsIN'), drawn + ov['y_values'])
     _legend_with_overlays(ax, ov['legend'])
 
 
@@ -9275,19 +9349,26 @@ def _periodogram_series_params(plot_inner, series, x_hours=None):
 def periodogram_download_data(plot, columns_index):
     """Mirror Periodogramclass.getDownloadData (Periodogram.svelte).
 
-    Headers: ['DataSeries', 'Period (hours)', 'Power']; the JS adds
-    ['Threshold', 'P-value'] only when a series uses the Chi-squared method.
+    Headers: ['DataSeries', 'Period (hours)', <statistic>]; the values column is
+    named for the method's statistic as the y axis is by default (periodogram_y_label:
+    'Normalised power', 'Chi-squared Qp', 'Enright amplitude (A_p)'). The JS adds
+    ['Threshold', 'P-value'] only when a series uses the Chi-squared method, and a
+    last 'Method' column when the series mix methods (the values header is then
+    'Statistic (mixed methods)').
     Threshold and P-value are per fold, as in the app (the p-value is the
     chi-square upper tail, computed directly). Each series is computed with its
     own method and bin size (_periodogram_series_params).
     """
     p = plot.get('plot', {})
     series_list = p.get('data', [])
-    has_threshold = any((s.get('method') or 'Lomb-Scargle') == 'Chi-squared'
-                        for s in series_list)
-    headers = ['DataSeries', 'Period (hours)', 'Power']
+    methods = [s.get('method') or 'Lomb-Scargle' for s in series_list]
+    mixed = len(set(methods)) > 1
+    has_threshold = 'Chi-squared' in methods
+    headers = ['DataSeries', 'Period (hours)', periodogram_y_label(methods)]
     if has_threshold:
         headers += ['Threshold', 'P-value']
+    if mixed:
+        headers.append('Method')
     rows = []
     for d, series in enumerate(series_list):
         t, y = _series_time_and_y(series, columns_index)
@@ -9306,6 +9387,8 @@ def periodogram_download_data(plot, columns_index):
             if has_threshold:
                 # Per-fold threshold and the per-fold chi-square UPPER-tail p (SPEC-14).
                 row += [thr[i] if i < len(thr) else '', pv[i] if i < len(pv) else '']
+            if mixed:
+                row.append(methods[d])
             rows.append(row)
     return headers, rows
 
@@ -10060,7 +10143,7 @@ def moving_stat_keys(args):
             keys = ['mesor']
             for h in range(1, max(1, int(args.get('nHarmonics') or 1)) + 1):
                 keys += [f'H{h}_amplitude', f'H{h}_acrophase']
-            return keys + ['rel_amplitude', 'r2', 'rmse', 'pvalue']
+            return keys + ['rel_amplitude', 'r2', 'rmse', 'rmse_n', 'pvalue']
         keys = []
         for c in range(1, max(1, int(args.get('Ncurves') or 1)) + 1):
             keys += [f'C{c}_period', f'C{c}_amplitude', f'C{c}_phase', f'C{c}_acrophase']
@@ -10155,6 +10238,7 @@ def _moving_window_stats(tt, yy, args, phase=None, centre=_NAN):
             st['rel_amplitude'] = (amp1 / r['M'] if (math.isfinite(r['M'])
                                    and abs(r['M']) > 1e-12 and math.isfinite(amp1)) else _NAN)
             st['r2'], st['rmse'], st['pvalue'] = r['R2'], r['RMSE'], r['pF']
+            st['rmse_n'] = r['RMSE_n']
             return st
         r = fit_cosine_curves(tt, yy, max(1, int(_a(args, 'Ncurves', 1))))
         if not r or not r['parameters'].get('cosines'):

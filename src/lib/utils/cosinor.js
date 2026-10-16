@@ -785,6 +785,10 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 	// `rmse` port key downstream) for saved sessions, but is labelled "Residual SE" wherever it
 	// is shown, because every other fit's RMSE is sqrt(SSres / n) (FIT-15).
 	const RMSE = Math.sqrt(MSE);
+	// sqrt(SSres / n): the RMSE every other fit reports (free cosinor, rectangular wave, double
+	// logistic, trend, line fits), so the fixed-period cosinor can be compared with them. Its
+	// own port key is `rmse_n` (the divisor is the only difference from `rmse` here).
+	const RMSE_n = n > 0 ? Math.sqrt(SSres / n) : NaN;
 	const R2 = SStot > 0 ? 1 - SSres / SStot : 0;
 	const F_stat = MSE > 0 ? (SStot - SSres) / (2 * nHarmonics) / MSE : NaN;
 	// Upper-tail p-value P(F > F_stat), computed directly (fdist.js) so a strong rhythm's p is
@@ -908,6 +912,7 @@ export function fitCosinorFixed(t, y, period = 24, nHarmonics = 1, alpha = 0.05)
 		pF,
 		R2,
 		RMSE,
+		RMSE_n,
 		fitted,
 		n,
 		period,

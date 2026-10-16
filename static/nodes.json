@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.8",
+  "generatedFromVersion": "β.82.9",
   "count": 61,
   "nodes": [
     {
@@ -2168,6 +2168,12 @@
         },
         {
           "name": "rmse",
+          "kind": "column",
+          "cardinality": "one",
+          "metric": true
+        },
+        {
+          "name": "rmse_n",
           "kind": "column",
           "cardinality": "one",
           "metric": true

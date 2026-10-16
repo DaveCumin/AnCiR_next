@@ -51,6 +51,25 @@ export function convertAngularWidth(width, fromUnit, toUnit, period) {
 	return toUnit === 'radians' ? out : Number(out.toPrecision(12));
 }
 
+/**
+ * Phase VALUES (positions, not widths) re-expressed in another angle unit: 90 degrees on a
+ * 24 h period is 6 h. Used when a Circular phase plot mixes timed and untimed series: the
+ * plot then works in clock hours, so an untimed series recorded in degrees or radians is
+ * converted to hours before it is placed. Non-finite values stay NaN; an unknown unit, or the
+ * same unit, returns the values unchanged.
+ *
+ * @param {number[]} values
+ * @param {string} fromUnit
+ * @param {string} toUnit
+ * @param {number} [period] the cycle length in hours, for 'hours'
+ * @returns {number[]}
+ */
+export function convertPhaseValues(values, fromUnit, toUnit, period) {
+	if (!ANGLE_UNITS.has(fromUnit) || !ANGLE_UNITS.has(toUnit) || fromUnit === toUnit) return values;
+	const k = displayPeriodFor(toUnit, period) / displayPeriodFor(fromUnit, period);
+	return (values ?? []).map((v) => (Number.isFinite(v) ? v * k : NaN));
+}
+
 /** Is any series of a Circular phase plot (live, or its toJSON snapshot) wired to a time? */
 function hasTimedSeries(target) {
 	return (target?.data ?? []).some((d) => Number(d?.x?.refId) >= 0);
@@ -70,7 +89,8 @@ function hasTimedSeries(target) {
  * whose widths are already in its unit, and a converting setter would convert them again.
  *
  * With a timed series wired the angle is always clock hours (displayPeriod ignores `unit`), so
- * the widths are hours too and only the unit is stored.
+ * the widths are hours too and only the unit is stored. `unit` still matters then for any
+ * UNTIMED series, whose values are read in it and converted to hours (convertPhaseValues).
  *
  * @param {{ unit: string, period: number, binWidth: number, wedgeBinWidth: number, data?: any[] }} target
  * @param {string} unit

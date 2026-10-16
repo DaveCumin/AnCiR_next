@@ -19,7 +19,7 @@
 	import MiniDataTable from './MiniDataTable.svelte';
 	import MetricTagButton from './MetricTagButton.svelte';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { columnNamer, restoreAutoNameIfLabel } from '$lib/core/columnLabels.js';
+	import { columnNamer, commitColumnRename } from '$lib/core/columnLabels.js';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getNodeName, setNodeName } from '$lib/core/nodeNaming.js';
@@ -145,24 +145,14 @@
 	// Per-output-column row expansion (ephemeral UI state, keyed by colId).
 	let rowExpanded = $state({});
 
-	// Output-column rename: live on input, normalise (empty → auto name) on commit.
-	// Typing the output's display label back (Escape after an edit, or committing it unchanged)
-	// restores the seeded auto name instead of storing the label as a typed name, so the label
-	// keeps following its inputs ("Cosinor fit: A1" becomes "Cosinor fit: B1" when A1 is
-	// renamed). Any other text is the user's name and wins.
-	function renameOutput(col, next, commit = false) {
-		if (restoreAutoNameIfLabel(col, next ?? '', namer)) return;
-		renameColumn(col, next, commit);
-	}
-
-	function renameColumn(col, next, commit = false) {
-		if (!col) return;
-		if (commit) {
-			const trimmed = (next ?? '').trim();
-			col.customName = trimmed === '' ? null : trimmed;
-		} else {
-			col.customName = next ?? '';
-		}
+	// Output-column rename: one renameColumn operation on commit (Enter or blur), so it is an
+	// undo step and counts as an unsaved change; nothing is written while typing. An empty field
+	// restores the auto name. Typing the output's display label back (or committing it
+	// unchanged) restores the seeded auto name instead of storing the label as a typed name, so
+	// the label keeps following its inputs ("Cosinor fit: A1" becomes "Cosinor fit: B1" when A1
+	// is renamed). Any other text is the user's name and wins (columnLabels.renameTarget).
+	function renameOutput(col, next) {
+		commitColumnRename(col, next, namer);
 	}
 
 	function toggleRowExpanded(colId, e) {
@@ -414,8 +404,7 @@
 									placeholder="column"
 									ariaLabel="Rename output column"
 									title="Double-click to rename"
-									onInput={(v) => renameOutput(col, v)}
-									onCommit={(v) => renameOutput(col, v, true)}
+									onCommit={(v) => renameOutput(col, v)}
 								/>
 								{#if col.groupLabel}
 									<span class="group-label-chip" title="Group label: {col.groupLabel}"
@@ -491,8 +480,7 @@
 											placeholder="metric"
 											ariaLabel="Rename metric column"
 											title="Double-click to rename"
-											onInput={(v) => renameOutput(col, v)}
-											onCommit={(v) => renameOutput(col, v, true)}
+											onCommit={(v) => renameOutput(col, v)}
 										/>
 									</div>
 									<span class="metric-value" title={values.map(formatMetricValue).join(', ')}>

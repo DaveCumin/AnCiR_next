@@ -292,7 +292,10 @@
 			<tr id="gloss-rmse"
 				><td>RMSE</td><td
 					>Root Mean Squared Error. A simple number for how far, on average, the model's predictions
-					sit from the actual data.</td
+					sit from the actual data: the square root of the summed squared residuals divided by the
+					number of points, sqrt(SS/n). The fixed-period cosinor also reports the residual standard
+					error, sqrt(SS/(n - p)) with p the number of fitted coefficients (labelled Residual SE),
+					which is slightly larger; compare fits by their RMSE.</td
 				></tr
 			>
 			<tr id="gloss-savitzky-golay"

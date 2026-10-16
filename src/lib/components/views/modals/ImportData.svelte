@@ -96,9 +96,17 @@
 		return data.slice(1).filter((r) => r.length !== expected).length;
 	}
 
-	/** A parse error that means the file was not read: ragged rows are read fine (ROB-30). */
+	/**
+	 * A parse error that means the file was not read. Two PapaParse warnings are not: ragged
+	 * rows are read fine (ROB-30), and "UndetectableDelimiter" is what a single-column file
+	 * gets (there is no delimiter in it to detect), which is read as that one column. The
+	 * preview shows the columns, so a file that really has an unusual delimiter shows as one
+	 * wide column and the Delimiter setting fixes it.
+	 */
 	function isFatalParseError(e) {
-		return e?.type !== 'FieldMismatch';
+		if (e?.type === 'FieldMismatch') return false;
+		if (e?.code === 'UndetectableDelimiter') return false;
+		return true;
 	}
 
 	/** Rows shown in the preview table when a parse ran without a row limit. */
@@ -246,6 +254,9 @@
 	// empty, extra fields dropped) and the dialog says how many (ROB-30). Counted
 	// over the whole file for a file; over the previewed rows for a URL.
 	let raggedRows = $state(0);
+	// Several files imported together: each file's own count, [{ name, count }] in selection
+	// order (raggedRows is then the first file's). Empty for a single file or a URL.
+	let raggedByFile = $state([]);
 	let specialRecognised = $state(false);
 	let awaitingPreview = $state(false);
 	let awaitingLoad = $state(false);
@@ -1489,6 +1500,7 @@
 			errorInfile,
 			emptyFileReason,
 			raggedRows,
+			raggedByFile: raggedByFile.map((r) => ({ ...r })),
 			importReady,
 			showImportModal,
 			rowCount: headers.length > 0 ? (parsedData?.[headers[0]]?.length ?? 0) : 0,
@@ -1571,6 +1583,7 @@
 		importError = '';
 		emptyFileReason = '';
 		raggedRows = 0;
+		raggedByFile = [];
 	}
 
 	async function onFileChange(e) {
@@ -1755,6 +1768,7 @@
 		const isExcel = targetKind === 'excel';
 		const isAWD = targetKind === 'awd';
 
+		raggedByFile = [];
 		if (isExcel) {
 			// A sheet has no ragged rows: every row spans the sheet's columns.
 			raggedRows = 0;
@@ -1782,7 +1796,7 @@
 		}
 
 		// For CSV/text/AWD: count newlines in file text
-		return new Promise((resolve) => {
+		await new Promise((resolve) => {
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				const text = e.target.result;
@@ -1803,6 +1817,32 @@
 				resolve();
 			};
 			reader.readAsText(targetFile);
+		});
+
+		// Several files (concatenated on their common columns): count each one, so a ragged
+		// third file is reported as itself, not hidden behind a clean first file.
+		if (!isAWD && targetFiles.length > 1) {
+			const options = { delimiter: lastDelimiter || delimiter, skipLines };
+			const perFile = [{ name: targetFile.name, count: raggedRows }];
+			for (const file of targetFiles.slice(1)) {
+				let count = 0;
+				try {
+					count = countRaggedRows(await readFileText(file), options);
+				} catch {
+					count = 0; // an unreadable file is reported by the header check
+				}
+				perFile.push({ name: file.name, count });
+			}
+			raggedByFile = perFile;
+		}
+	}
+
+	function readFileText(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = (e) => resolve(String(e.target.result ?? ''));
+			reader.onerror = () => reject(reader.error);
+			reader.readAsText(file);
 		});
 	}
 
@@ -3440,7 +3480,21 @@
 								<p class="import-error-detail">{emptyFileReason}</p>
 							</div>
 						{:else}
-							{#if raggedRows > 0}
+							{#if raggedByFile.some((r) => r.count > 0)}
+								<!-- Several files: one line per file that has any, in the same note. -->
+								<div class="import-note" data-testid="import-ragged-note">
+									{#each raggedByFile.filter((r) => r.count > 0) as r, ri (ri)}
+										<p class="import-note-line">
+											{r.name}: {r.count.toLocaleString()}
+											{r.count === 1 ? 'row has' : 'rows have'} a different number of fields than the
+											{hasHeader ? 'header' : 'first row'}.
+										</p>
+									{/each}
+									<p class="import-note-line">
+										Missing cells are left empty and extra fields are ignored.
+									</p>
+								</div>
+							{:else if raggedByFile.length === 0 && raggedRows > 0}
 								<p class="import-note" data-testid="import-ragged-note">
 									{isUrlMode ? 'In the preview, ' : ''}{raggedRows.toLocaleString()}
 									{raggedRows === 1 ? 'row has' : 'rows have'} a different number of fields than the {hasHeader
@@ -4319,6 +4373,12 @@
 		border-radius: var(--radius-sm);
 		background: var(--color-info-bg);
 		font-size: var(--font-sm);
+	}
+	.import-note-line {
+		margin: 0;
+	}
+	.import-note-line + .import-note-line {
+		margin-top: var(--space-1);
 	}
 	.import-error {
 		margin: 0 0 var(--space-4);

@@ -1077,6 +1077,8 @@ fit_cosinor_fixed <- function(t, y, period = 24, n_harmonics = 1, alpha = 0.05) 
   # a ~0.9% low RMSE on a 168-point window, which went unnoticed in the Python port until a
   # fixture finally compared rmse.
   rmse <- sqrt(mse)
+  # sqrt(SSres / n): the RMSE every other fit reports (the `rmse_n` port; cosinor.js RMSE_n).
+  rmse_n <- sqrt(rss / n)
   ss_tot <- sum((y - mean(y))^2)
   r2 <- if (ss_tot > 0) 1 - rss / ss_tot else 0
   cov <- tryCatch(mse * solve(crossprod(X)), error = function(e) matrix(0, p, p))
@@ -1118,7 +1120,7 @@ fit_cosinor_fixed <- function(t, y, period = 24, n_harmonics = 1, alpha = 0.05) 
   }
   list(M = M, SE_M = se_m, CI_M = c(M - tcrit * se_m, M + tcrit * se_m),
        harmonics = harmonics, F_stat = f_stat, df = c(df1, df_resid), pF = pf_val,
-       R2 = r2, RMSE = rmse, fitted = fitted, n = n,
+       R2 = r2, RMSE = rmse, RMSE_n = rmse_n, fitted = fitted, n = n,
        period = period, nHarmonics = n_harmonics, alpha = alpha)
 }
 
@@ -3518,8 +3520,9 @@ ff_metric_keys <- function(args) {
   shared <- c("r2", "rmse", "perm_pvalue")
   model <- if (is.null(args$model)) "cosinor" else args$model
   switch(model,
-    cosinor = c(shared, "period", "mesor", "amplitude", "acrophase", "amplitude_h1",
-                "acrophase_h1"),
+    # rmse_n (sqrt(SS/n)) beside the fixed-period fit's residual-SE rmse; fixed is the default.
+    cosinor = c(shared, if (!identical(args$useFixedPeriod, FALSE)) "rmse_n",
+                "period", "mesor", "amplitude", "acrophase", "amplitude_h1", "acrophase_h1"),
     rectangular = c(shared, "period", "mesor", "amplitude", "acrophase", "duty_cycle", "kappa"),
     doublelogistic = c(shared, "period", "mesor", "amplitude", "onset", "offset", "k1", "k2",
                        "duty_cycle"),
@@ -3530,6 +3533,7 @@ ff_raw_metric <- function(key, model, fr) {
   if (is.null(fr)) return(NaN)
   if (key == "r2") return(.nz(fr$rSquared))
   if (key == "rmse") return(.nz(fr$rmse))
+  if (key == "rmse_n") return(.nz(fr$fixedStats$RMSE_n))
   if (key == "perm_pvalue") return(NaN)
   p <- fr$parameters
   if (identical(model, "cosinor")) {
@@ -4658,7 +4662,7 @@ moving_stat_keys <- function(args) {
     cosinor = if (isTRUE(args$useFixedPeriod)) {
       H <- max(1, as.integer(g("nHarmonics", 1)))
       c("mesor", as.vector(rbind(paste0("H", 1:H, "_amplitude"), paste0("H", 1:H, "_acrophase"))),
-        "rel_amplitude", "r2", "rmse", "pvalue")
+        "rel_amplitude", "r2", "rmse", "rmse_n", "pvalue")
     } else {
       N <- max(1, as.integer(g("Ncurves", 1)))
       c(as.vector(rbind(paste0("C", 1:N, "_period"), paste0("C", 1:N, "_amplitude"),
@@ -4727,7 +4731,7 @@ moving_stat_keys <- function(args) {
         amp1 <- if (length(r$harmonics)) r$harmonics[[1]]$amplitude else NaN
         st$rel_amplitude <- if (is.finite(r$M) && abs(r$M) > 1e-12 && is.finite(amp1))
           amp1 / r$M else NaN
-        st$r2 <- r$R2; st$rmse <- r$RMSE; st$pvalue <- r$pF
+        st$r2 <- r$R2; st$rmse <- r$RMSE; st$rmse_n <- r$RMSE_n; st$pvalue <- r$pF
       }
     } else {
       r <- fit_cosine_curves(tt, yy, max(1, as.integer(g("Ncurves", 1))))

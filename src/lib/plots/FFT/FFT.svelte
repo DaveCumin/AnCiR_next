@@ -10,6 +10,12 @@
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleLog } from 'd3-scale';
+	import {
+		logAxisDomain,
+		minPositiveOf,
+		drawableOnLog,
+		logTickFormat
+	} from '$lib/plots/logAxis.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import PaddingControls from '$lib/components/inputs/PaddingControls.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -296,11 +302,7 @@
 		// The same x and y mapping as the plot snippet draws with.
 		legendObstacles(w, h) {
 			const xs = scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, w]);
-			const ys = this.logScale
-				? scaleLog()
-						.domain([Math.max(this.ylims[0], 1e-6), this.ylims[1]])
-						.range([h, 0])
-				: scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([h, 0]);
+			const ys = this.yScaleFor(h);
 			const phaseYs = scaleLinear().domain([this.phaseYlims[0], this.phaseYlims[1]]).range([h, 0]);
 			const out = [];
 			for (const d of this.data) {
@@ -309,7 +311,7 @@
 				const x = this.showPeriod ? f.filter((v) => v > 0).map((v) => 1 / v) : f;
 				const mag = lineSeriesObstacle(
 					x,
-					(d.fftData?.magnitudes ?? []).filter(keep),
+					this.drawableY((d.fftData?.magnitudes ?? []).filter(keep)),
 					xs,
 					ys,
 					d.line,
@@ -470,7 +472,31 @@
 			];
 		});
 
+		// Display only: the magnitude axis drawn on a log scale, the Periodogram's log axis
+		// (plots/logAxis.js). Nothing computed changes.
 		logScale = $state(false);
+		// The smallest positive magnitude drawn (the series as the x mode shows them, and the
+		// overlays), for the log axis's lower end. Period mode drops the f = 0 term.
+		minPositiveY = $derived.by(() => {
+			const arrs = this.data.map((d) => {
+				const m = d.fftData?.magnitudes ?? [];
+				const f = d.fftData?.frequencies ?? [];
+				return this.showPeriod ? m.filter((_, i) => f[i] > 0) : m;
+			});
+			return minPositiveOf(arrs, overlayExtentOf(this.overlays, 'y') ?? []);
+		});
+		yLogDomain = $derived(logAxisDomain(this.ylimsIN[0], this.minPositiveY, this.ylims[1]));
+		/** The magnitude-axis scale over a plot area `h` px tall: linear, or log when logScale is on. */
+		yScaleFor(h) {
+			return this.logScale
+				? scaleLog().domain(this.yLogDomain).range([h, 0])
+				: scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([h, 0]);
+		}
+		yScale = $derived(this.yScaleFor(this.plotheight));
+		/** Magnitudes as drawn: under the log axis a value at or below zero is a gap. */
+		drawableY(arr) {
+			return this.logScale ? drawableOnLog(arr) : arr;
+		}
 		xAxis = $state();
 		yAxisMag = $state();
 		yAxisPhase = $state();
@@ -499,13 +525,7 @@
 		overlayXScale = $derived(
 			scaleLinear().domain([this.xlims[0], this.xlims[1]]).range([0, this.plotwidth])
 		);
-		overlayYScale = $derived(
-			this.logScale
-				? scaleLog()
-						.domain([Math.max(this.ylims[0], 1e-6), this.ylims[1]])
-						.range([this.plotheight, 0])
-				: scaleLinear().domain([this.ylims[0], this.ylims[1]]).range([this.plotheight, 0])
-		);
+		overlayYScale = $derived(this.yScale);
 
 		/**
 		 * A stored vertical position (a period in hours) as drawn on the x axis: the period
@@ -1321,6 +1341,9 @@
 				height={theData.plot.plotheight}
 				width={theData.plot.plotwidth}
 				scale={yScale}
+				tickFormat={theData.plot.logScale
+					? logTickFormat(yScale, theData.plot.yAxisMag.nticks)
+					: null}
 				position="left"
 				plotPadding={theData.plot.padding}
 				axisData={theData.plot.yAxisMag}
@@ -1362,9 +1385,11 @@
 				{@const xData = theData.plot.showPeriod
 					? datum.fftData.frequencies.filter((f) => f > 0).map((f) => 1 / f)
 					: datum.fftData.frequencies}
-				{@const yData = theData.plot.showPeriod
-					? datum.fftData.magnitudes.filter((_, i) => datum.fftData.frequencies[i] > 0)
-					: datum.fftData.magnitudes}
+				{@const yData = theData.plot.drawableY(
+					theData.plot.showPeriod
+						? datum.fftData.magnitudes.filter((_, i) => datum.fftData.frequencies[i] > 0)
+						: datum.fftData.magnitudes
+				)}
 				{@const phaseData = theData.plot.showPeriod
 					? datum.fftData.phases.filter((_, i) => datum.fftData.frequencies[i] > 0)
 					: datum.fftData.phases}

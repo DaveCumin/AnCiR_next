@@ -484,3 +484,16 @@ describe('acrophaseCIDetermined (FIT-7 conditions)', () => {
 		expect(acrophaseCIDetermined({ ...base, se: NaN })).toBe(false);
 	});
 });
+
+// v82.9: RMSE_n = sqrt(SSres / n), the RMSE every other fit reports, beside RMSE (the residual
+// SE, sqrt(SSres / (n - p)), kept under its old name for saved sessions; FIT-15).
+describe('fitCosinorFixed RMSE_n', () => {
+	it('is sqrt(SSres / n) and RMSE is unchanged', () => {
+		const t = Array.from({ length: 50 }, (_, i) => i * 0.7);
+		const y = t.map((h, i) => 5 + 2 * Math.cos((2 * Math.PI * h) / 24) + ((i * 13) % 7) / 4);
+		const r = fitCosinorFixed(t, y, 24, 1, 0.05);
+		const ss = y.reduce((acc, v, i) => acc + (v - r.fitted[i]) ** 2, 0);
+		expect(r.RMSE_n).toBeCloseTo(Math.sqrt(ss / 50), 12);
+		expect(r.RMSE).toBeCloseTo(Math.sqrt(ss / (50 - 3)), 12);
+	});
+});

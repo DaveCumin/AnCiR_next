@@ -38,7 +38,7 @@ DEMOS = ROOT / "static" / "sessions" / "demos"
 # demo file -> (plot type, exact headers the JS getDownloadData produces)
 CASES = {
     "demo-periodogram-rhythm": (
-        "periodogram", ["DataSeries", "Period (hours)", "Power"]),
+        "periodogram", ["DataSeries", "Period (hours)", "Normalised power"]),
     "demo-fft-rhythm": (
         "fft", ["DataSeries", "Frequency (cycles/hr)", "Period (hours)", "Magnitude"]),
     "demo-correlogram-rhythm": (
@@ -86,7 +86,7 @@ def test_periodogram_uses_each_series_method_and_bin_size():
     series = plot["plot"]["data"][0]
     series["method"], series["binSize"] = "Enright", 1
     headers, rows = rt.periodogram_download_data(plot, cols)
-    assert headers == ["DataSeries", "Period (hours)", "Power"]
+    assert headers == ["DataSeries", "Period (hours)", "Enright amplitude (A_p)"]
     lo, hi = plot["plot"]["periodlimsIN"]
     span = hi - lo
     periods = [r[1] for r in rows]
@@ -97,7 +97,22 @@ def test_periodogram_uses_each_series_method_and_bin_size():
     assert max(rows, key=lambda r: r[2])[1] == 24
     series["method"] = "Chi-squared"
     headers, rows = rt.periodogram_download_data(plot, cols)
-    assert headers[-2:] == ["Threshold", "P-value"]
+    assert headers == ["DataSeries", "Period (hours)", "Chi-squared Qp", "Threshold", "P-value"]
+
+
+def test_periodogram_values_header_names_the_statistic_and_mixed_rows_say_which():
+    """v82.9: the values column was always "Power" while the y axis named the statistic
+    (v82.8). It now carries the same label; a download mixing methods is headed
+    "Statistic (mixed methods)" with a last "Method" column, as Periodogram.getDownloadData."""
+    plot, cols = _load("demo-periodogram-rhythm")
+    first = plot["plot"]["data"][0]
+    plot["plot"]["data"].append({**json.loads(json.dumps(first)), "method": "Chi-squared"})
+    headers, rows = rt.periodogram_download_data(plot, cols)
+    assert headers == ["DataSeries", "Period (hours)", "Statistic (mixed methods)",
+                       "Threshold", "P-value", "Method"]
+    assert {r[-1] for r in rows if r[0] == 0} == {"Lomb-Scargle"}
+    assert {r[-1] for r in rows if r[0] == 1} == {"Chi-squared"}
+    assert all(len(r) == len(headers) for r in rows)
 
 
 LEGACY_VERSION = "β.72.29"

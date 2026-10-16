@@ -11,7 +11,7 @@
 //   reset(): void                                            // toolbar/dblclick reset
 // }
 
-import { scaleLinear, scaleLog } from 'd3-scale';
+import { scaleLinear } from 'd3-scale';
 import { applyLinkedZoom, writeAxisLimit } from '$lib/plots/plotZoom.js';
 
 /** Plot types that support brush/wheel zoom (drive the toolbar Zoom button). */
@@ -104,14 +104,10 @@ function correlogramAdapter(p, setX, setY) {
 // Period/frequency on X (default [4,30]), magnitude on Y (linear or log), plus a
 // phase Y axis when any series shows phase.
 function fftAdapter(p, setX, setY) {
-	const magScale = () => {
-		if (p.logScale && p.ylims[0] > 0 && p.ylims[1] > 0) {
-			return scaleLog()
-				.domain([Math.max(p.ylims[0], 1e-6), p.ylims[1]])
-				.range([p.plotheight, 0]);
-		}
-		return linY(p, p.ylims);
-	};
+	// The scale the magnitudes are drawn with (log with its own lower end, plots/logAxis.js).
+	// It used to rebuild a log scale from the LINEAR limits, and fell back to linear whenever
+	// the linear lower limit was 0 (the default), so a brush on a log plot zoomed elsewhere.
+	const magScale = () => p.yScale ?? linY(p, p.ylims);
 	const hasPhase = p.data?.some((d) => d.showPhase);
 	const axes = [
 		{ orient: 'x', scale: () => linX(p, p.xlims), set: setX('xlimsIN') },
