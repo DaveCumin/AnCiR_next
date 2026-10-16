@@ -23,13 +23,14 @@
 	import { commitNodeRename } from '$lib/core/nodeNaming.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
+	import { NODE_ROW_CSS_VARS, nodeRowCentreY } from './nodeRows.js';
 
 	let { node, selected = false, isDropTarget = false, spliceTargetPort = null } = $props();
 
 	const dispatch = createEventDispatcher();
 
-	const HEADER_H = 26; // mirrors WorkflowEditor.HEADER_H
-	const PORT_H = 22; // mirrors WorkflowEditor.PORT_H — per-row strip height
+	// Row geometry (row height, header height, row centres) comes from nodeRows.js, the same
+	// module WorkflowEditor anchors wires with; the CSS reads it through NODE_ROW_CSS_VARS.
 
 	const group = $derived(node.groupObj);
 	const sourceColumnIds = $derived(group?.sourceColumnIds ?? []);
@@ -126,9 +127,9 @@
 
 	function publishPositions() {
 		if (!group) return;
-		// Row strips start immediately below the header. Each is PORT_H tall,
+		// Row strips start immediately below the header. Each is NODE_ROW_H tall,
 		// so the i-th row's port-centre (assuming no rows above are expanded)
-		// sits at HEADER_H + i*PORT_H + PORT_H/2. The DOM-measured Y above
+		// sits at nodeRowCentreY(i). The DOM-measured Y above
 		// replaces this whenever a row is expanded, but the formula is the
 		// best estimate until the first measurement lands.
 		for (let i = 0; i < sourceColumns.length; i++) {
@@ -137,7 +138,7 @@
 			if (el) {
 				setGroupPortY(group.id, `col_${id}`, nodeLocalCenterY(el));
 			} else {
-				setGroupPortY(group.id, `col_${id}`, HEADER_H + i * PORT_H + PORT_H / 2);
+				setGroupPortY(group.id, `col_${id}`, nodeRowCentreY(i));
 			}
 		}
 	}
@@ -239,7 +240,7 @@
 	class="group-card"
 	class:selected
 	class:drop-target={isDropTarget}
-	style="width:{group?.width ?? 240}px; min-height:{group?.height ?? 180}px;"
+	style="{NODE_ROW_CSS_VARS} width:{group?.width ?? 240}px; min-height:{group?.height ?? 180}px;"
 	onpointerdown={onCardMouseDown}
 >
 	<div class="group-header" role="presentation">
@@ -381,7 +382,7 @@
 		position: relative;
 		background: var(--surface-card);
 		border-radius: var(--radius-md);
-		border: 1px solid rgba(0, 0, 0, 0.18);
+		border: var(--node-card-border) solid rgba(0, 0, 0, 0.18);
 		box-sizing: border-box;
 		font-size: var(--font-sm);
 		cursor: grab;
@@ -412,7 +413,7 @@
 		align-items: center;
 		gap: 4px;
 		padding: 0 8px;
-		height: 26px; /* HEADER_H */
+		height: var(--node-header-h);
 		background: var(--color-lightness-97);
 		border-bottom: 1px solid var(--color-lightness-90);
 		border-radius: 6px 6px 0 0;
@@ -473,7 +474,9 @@
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		padding: 2px 0;
+		/* No top padding: the first row starts right under the header, where nodeRows.js
+		   puts it (the wire anchor before the first DOM measurement lands). */
+		padding: 0 0 2px;
 	}
 
 	.empty-hint {
@@ -483,12 +486,14 @@
 		text-align: center;
 	}
 
+	/* The rule between rows is an inset shadow, not a border, so it takes no height: rows
+	   stay exactly NODE_ROW_H apart. */
 	.source-row {
 		position: relative;
-		border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+		box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
 	}
 	.source-row:last-child {
-		border-bottom: 0;
+		box-shadow: none;
 	}
 
 	.row-strip {
@@ -497,7 +502,7 @@
 		grid-template-columns: 14px 14px 16px minmax(0, 1fr);
 		align-items: center;
 		gap: 4px;
-		height: 22px; /* PORT_H */
+		height: var(--node-row-h);
 		/* No right padding — `.row-port`'s absolute positioning is relative to
 		   this padding-edge, and we need that edge to sit at the card's right
 		   border so the dot's centre lines up with the wire endpoint
@@ -576,8 +581,9 @@
 	}
 
 	.inline-port {
-		width: 13px;
-		height: 13px;
+		width: var(--port-dot);
+		height: var(--port-dot);
+		box-sizing: border-box;
 		border-radius: 50%;
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-50);
@@ -586,11 +592,12 @@
 		overflow: visible;
 	}
 
-	/* Invisible enlarged hit area so wiring doesn't require a pixel-perfect drop. */
+	/* Invisible enlarged hit area so wiring doesn't require a pixel-perfect drop: exactly one
+	   row tall (24 px, WCAG 2.2 SC 2.5.8), so it meets, and never overlaps, the next row's. */
 	.inline-port::before {
 		content: '';
 		position: absolute;
-		inset: -4px -16px;
+		inset: calc((var(--node-row-h) - var(--port-dot)) / -2) -16px;
 		border-radius: var(--radius-lg);
 	}
 	.inline-port:hover {
@@ -605,10 +612,10 @@
 		box-shadow: var(--shadow-focus);
 	}
 	.row-port {
-		/* Anchored on the card's right edge so wire endpoints land on the dot
+		/* Centred on the card's outer right edge so wire endpoints land on the dot
 		   centre (edge code uses `pos.x + group.width`). */
 		position: absolute;
-		right: -5px;
+		right: calc(-1 * (var(--node-card-border) + var(--port-dot) / 2));
 		top: 50%;
 		transform: translateY(-50%);
 	}

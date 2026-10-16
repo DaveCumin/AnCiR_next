@@ -3,7 +3,7 @@
 //
 // Group rows can expand to show a MiniDataTable preview, which shifts the Y of
 // every row below the expanded one. The static formula
-// `HEADER_H + idx * PORT_H + PORT_H/2` used by WorkflowEditor.getPortAnchorY
+// `nodeRowCentreY(idx)` (nodeRows.js) used by WorkflowEditor.getPortAnchorY
 // can't see that shift, so it would land wires on the wrong rows. To solve
 // this without growing the formula, GroupNode measures its rendered DOM
 // (after every layout-relevant change) and publishes each port's node-local

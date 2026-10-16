@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import { displayNumber } from './numberDisplay.js';
 	let {
 		value = $bindable(),
 		step = 1,
@@ -44,19 +45,12 @@
 	// Derived unit factor
 	let unitFactor = $derived(units[selectedUnit]);
 
-	// Derived precision for display
-	let precision_dp = $derived.by(() => {
-		if (step >= 1) return 0;
-		const stepStr = step.toString();
-		const decimalIndex = stepStr.indexOf('.');
-		return decimalIndex === -1 ? 0 : stepStr.length - decimalIndex + 1;
-	});
-
-	// Derived display value (reactive to value and unitFactor)
+	// Derived display value (reactive to value and unitFactor). Shown faithfully, not rounded
+	// to the step: a step of 1e-7 used to round a stored 1e-7 to "0" (numberDisplay.js).
 	let displayValue = $derived.by(() => {
 		const val =
 			typeof unitFactor === 'object' ? unitFactor.inverse(Number(value)) : value / unitFactor;
-		return Number(val.toFixed(precision_dp));
+		return displayNumber(val);
 	});
 
 	// Clamp function

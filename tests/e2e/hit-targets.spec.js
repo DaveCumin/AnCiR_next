@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
 import path from 'node:path';
 import { openApp } from './helpers.js';
 
@@ -10,10 +11,10 @@ import { openApp } from './helpers.js';
 // the glyphs stay small and the target is an invisible ::after (app.css, .hit-target and
 // button.icon), which a bounding-box check would never see.
 //
-// Scope: the node header (note, quick plot, maximise, collapse, delete), the workspace plot
-// header and its selection toolbar, and the control panel's rows (series blocks, banner).
-// The wiring port dots and a node's output-row chevrons are not covered: those rows are
-// PORT_H (22 px) apart, a pitch the wiring geometry depends on.
+// Scope: the node header (note, quick plot, maximise, collapse, delete), the node rows (row
+// chevrons and wiring port dots of data, group, analysis, metric and plot rows, which are
+// NODE_ROW_H = 24 px apart, see nodeRows.js), the workspace plot header and its selection
+// toolbar, and the control panel's rows (series blocks, banner).
 
 const DEMO = path.resolve('static/sessions/demos/demo-tp-cosinor.json');
 
@@ -98,6 +99,46 @@ test('node header icon buttons have 24 x 24 pointer targets', async ({ page }) =
 	const headers =
 		'.workflow-node-wrapper .tp-header button, .workflow-node-wrapper .node-header button, .node-actions button';
 	expect(await failing(page, headers, 4)).toEqual([]);
+});
+
+/** A session as a file chooser payload, so a test can load a variant of a shipped one. */
+async function loadSession(page, name, session) {
+	await openApp(page);
+	await page.locator('button.primary-card', { hasText: 'Import data' }).click();
+	const [chooser] = await Promise.all([
+		page.waitForEvent('filechooser'),
+		page.locator('button.dialog-button', { hasText: /Choose File|Change file/ }).click()
+	]);
+	await chooser.setFiles({
+		name,
+		mimeType: 'application/json',
+		buffer: Buffer.from(JSON.stringify(session))
+	});
+	await expect(page.locator('.workflow-node-wrapper').first()).toBeVisible({ timeout: 30000 });
+}
+
+test('node rows: row chevrons and port dots have 24 x 24 pointer targets', async ({ page }) => {
+	await page.setViewportSize({ width: 1500, height: 1100 });
+	// The Rhythmicity demo (data node, analysis with series and metric rows, grouped plots)
+	// with its raw column in a Group node, so group rows are measured too.
+	const s = JSON.parse(
+		fs.readFileSync(path.resolve('static/sessions/demos/demo-tp-rhythmicityanalysis.json'))
+	);
+	const raw = s.data.find((c) => c.name === 'y');
+	s.groups = [
+		{
+			...{ id: 'group_1', name: 'Recordings', x: 60, y: 420, width: 240, height: 120 },
+			...{ sourceColumnIds: [raw.id], allColumnIds: null, collapsed: false, rowState: {} }
+		}
+	];
+	await loadSession(page, 'rows.json', s);
+	await expect(page.locator('.port-dot[data-node-id^="plot_"]').first()).toBeVisible();
+	await expect(page.locator('.group-card .row-chev')).toBeVisible();
+	const metrics = page.locator('button.metrics-header[aria-expanded="false"]');
+	if (await metrics.count()) await metrics.first().click();
+	// Every node kind on the canvas: the group's, the analysis's and the data node's rows, and
+	// the plot nodes' input and output dots (rendered by WorkflowNode).
+	expect(await failing(page, '.row-chev, .port-dot', 20)).toEqual([]);
 });
 
 test('workspace plot header, its toolbar and the control panel rows have 24 x 24 pointer targets', async ({

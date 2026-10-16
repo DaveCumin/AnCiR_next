@@ -23,7 +23,12 @@
 	import { scaleLinear } from 'd3-scale';
 	import { niceAxisLimit } from '$lib/plots/Boxplot/Boxplot.svelte';
 	import { LegendAutoLayout } from '$lib/components/plotbits/legendAuto.svelte.js';
-	import { LEGEND_MARGIN } from '$lib/components/plotbits/legendLayout.js';
+	import {
+		LEGEND_MARGIN,
+		CLEAR_FRACTION,
+		buildOccupancy,
+		coveredFraction
+	} from '$lib/components/plotbits/legendLayout.js';
 	import {
 		seriesStats,
 		displayPeriodFor,
@@ -41,6 +46,16 @@
 	// and the untimed placeCircularPoints stack/bin/rim placement.
 	const INNER_RIM = 0.12;
 	const OUTER_RIM = 0.98;
+	// The clock ring's radius, as a fraction of half the plot square.
+	const RING_RADIUS = 0.82;
+	// What the clock draws past its ring (PolarGrid), in px: a legend beside, above or below
+	// the clock starts beyond it. The hint line under the clock has its baseline 34 px below
+	// the ring, so its lower edge is at 38; the hour labels (11 px type centred 16 px out)
+	// reach about 21 px, plus air.
+	const HINT_BOTTOM = 38;
+	const LABEL_REACH = 26;
+	// Legend presets that sit in a corner of the plot square (see legendCorner).
+	const LEGEND_CORNERS = new Set(['topright', 'topleft', 'bottomright', 'bottomleft']);
 
 	// NOTE on field naming: sibling time-optional plots (Periodogram, Actogram,
 	// Correlogram, FFT) all expose 'time'/'values' as the PUBLIC wiring port
@@ -227,11 +242,43 @@
 			Math.max(
 				40,
 				Math.min(
-					this.availWidth - this.legendLayout.reserveW,
-					this.availHeight - this.legendLayout.reserveH
+					this.availWidth - this.legendLayout.reserveW - (this.legendCorner?.reserveW ?? 0),
+					this.availHeight - this.legendLayout.reserveH - (this.legendCorner?.reserveH ?? 0)
 				)
 			)
 		);
+
+		// A corner legend (Top Right, the default, and the other three corners). On a polar plot
+		// the corners of the square are small: a legend of a few long labels reaches in over the
+		// ring and its hour labels ("24 / 0" under a Top Right legend). Such a legend gets room
+		// of its own on its corner's side instead: a strip beside the clock (right for the right
+		// corners, left for the left) or above / below it, whichever shrinks the clock least, and
+		// the clock moves over by `offsetX` / `offsetY` when the strip is on its left or top. A
+		// legend that fits in its corner clear of the ring stays there and costs nothing. Decided
+		// on the square before any reservation, with the 'auto' obstacles (the acyclic rule in
+		// legendAuto.svelte.js). Null when nothing is reserved.
+		legendCorner = $derived.by(() => {
+			const position = this.legend?.position;
+			const box = this.legendLayout.box;
+			if (!box || !LEGEND_CORNERS.has(position)) return null;
+			const S = this.basePlotWidth;
+			const M = box.margin ?? LEGEND_MARGIN;
+			const right = position.endsWith('right');
+			const top = position.startsWith('top');
+			// Where Legend.svelte puts a corner legend over a plot of size S.
+			const x = right ? S - box.width - M : M;
+			const y = top ? M : S - box.height - M;
+			const occupancy = buildOccupancy({ width: S, height: S, series: this.legendObstacles(S) });
+			if (coveredFraction(occupancy, x, y, box.width, box.height) <= CLEAR_FRACTION) return null;
+			// Beside clears the "6" / "18" labels; above, "24 / 0"; below, the hint line.
+			const beside = this.roomBeside(box.width, M, LABEL_REACH, true);
+			const end = this.roomBeside(box.height, M, top ? LABEL_REACH : HINT_BOTTOM, false);
+			if (beside.size >= end.size) {
+				const offsetX = right ? 0 : beside.reserve;
+				return { reserveW: beside.reserve, reserveH: 0, offsetX, offsetY: 0 };
+			}
+			return { reserveW: 0, reserveH: end.reserve, offsetX: 0, offsetY: top ? end.reserve : 0 };
+		});
 
 		legendLayout = new LegendAutoLayout(this, {
 			obstacles: (w) => this.legendObstacles(w),
@@ -244,23 +291,42 @@
 		legendOutside(box, explicit) {
 			// The view's inset (scaled in a workflow node), carried on the box.
 			const M = box.margin ?? LEGEND_MARGIN;
-			const W = this.availWidth;
-			const H = this.availHeight;
-			const needW = box.width + M;
-			const needH = box.height + M;
-			const sizeRight = Math.max(40, Math.min(W - needW, H));
-			const sizeBelow = Math.max(40, Math.min(W, H - needH));
-			const right = explicit || sizeRight >= sizeBelow;
-			if (right) {
-				return { reserveW: needW, reserveH: 0, x: sizeRight + M, y: 0, side: 'right' };
+			const right = this.roomBeside(box.width, M, LABEL_REACH, true);
+			const below = this.roomBeside(box.height, M, HINT_BOTTOM, false);
+			if (explicit || right.size >= below.size) {
+				return {
+					reserveW: right.reserve,
+					reserveH: 0,
+					x: right.size + right.gap,
+					y: 0,
+					side: 'right'
+				};
 			}
 			return {
 				reserveW: 0,
-				reserveH: needH,
-				x: Math.max(0, (sizeBelow - box.width) / 2),
-				y: sizeBelow + M,
+				reserveH: below.reserve,
+				x: Math.max(0, (below.size - box.width) / 2),
+				y: below.size + below.gap,
 				side: 'below'
 			};
+		}
+
+		// Room for a legend `extent` px deep in a strip on one side of the clock: beside it
+		// (`horizontal`, extent = the box width) or above / below it (extent = its height).
+		// Returns the clock size that leaves, the gap from the clock's square to the legend
+		// and the strip's depth. The gap clears what the clock draws past its square on that
+		// side, `beyond` px past the ring (the hour labels, or the hint line below), which
+		// hangs further out the smaller the square is: hence the second case.
+		roomBeside(extent, M, beyond, horizontal) {
+			const along = horizontal ? this.availWidth : this.availHeight;
+			const across = horizontal ? this.availHeight : this.availWidth;
+			const k = 0.5 + RING_RADIUS / 2; // the ring's reach from the square's middle, per S
+			const overhang = (S) => S * k + beyond - S;
+			let size = Math.min(across, along - extent - 2 * M);
+			if (overhang(size) > M) size = Math.min(across, (along - extent - M - beyond) / k);
+			size = Math.max(40, size);
+			const gap = Math.max(M, overhang(size));
+			return { size, gap, reserve: extent + M + gap };
 		}
 
 		// What a legend must not cover, in px over a size x size square: the outer ring with
@@ -270,7 +336,7 @@
 			const P = createPolar({
 				cx: size / 2,
 				cy: size / 2,
-				radius: (size / 2) * 0.82,
+				radius: (size / 2) * RING_RADIUS,
 				period: this.displayPeriod
 			});
 			const out = [];
@@ -284,7 +350,9 @@
 			}
 			out.push({ px: ringX, py: ringY, line: true, radius: 18 });
 			// The hint line under the plot (see PolarGrid).
-			out.push({ rects: [[P.cx - 110, P.cy + P.radius + 24, P.cx + 110, P.cy + P.radius + 38]] });
+			out.push({
+				rects: [[P.cx - 110, P.cy + P.radius + 24, P.cx + 110, P.cy + P.radius + HINT_BOTTOM]]
+			});
 			const valueScale = scaleLinear().domain(this.valueAxis).range([INNER_RIM, OUTER_RIM]);
 			for (const d of this.data) {
 				if (d.draw) {
@@ -580,9 +648,10 @@
 {#snippet plot(theData)}
 	{@const plot = theData.plot}
 	{@const size = plot.plotSize}
-	{@const cx = plot.padding.left + size / 2}
-	{@const cy = plot.padding.top + size / 2}
-	{@const P = createPolar({ cx, cy, radius: (size / 2) * 0.82, period: plot.displayPeriod })}
+	{@const corner = plot.legendCorner}
+	{@const cx = plot.padding.left + (corner?.offsetX ?? 0) + size / 2}
+	{@const cy = plot.padding.top + (corner?.offsetY ?? 0) + size / 2}
+	{@const P = createPolar({ cx, cy, radius: (size / 2) * RING_RADIUS, period: plot.displayPeriod })}
 	{@const hasTimed = plot.hasTimed}
 	{@const valueScale = scaleLinear().domain(plot.valueAxis).range([INNER_RIM, OUTER_RIM])}
 	<svg
@@ -689,8 +758,8 @@
 			figureStyle={plot.viewStyle}
 			legendData={plot.legend}
 			items={plot.getLegendItems}
-			plotWidth={size}
-			plotHeight={size}
+			plotWidth={size + (corner?.reserveW ?? 0)}
+			plotHeight={size + (corner?.reserveH ?? 0)}
 			padding={plot.padding}
 			autoPlacement={plot.legendLayout.auto}
 			outsidePosition={plot.legendLayout.outsidePosition}

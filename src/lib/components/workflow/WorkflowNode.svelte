@@ -13,6 +13,7 @@
 	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { plotNodeSlots } from '$lib/core/ProcessNode.svelte.js';
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
+	import { NODE_ROW_H as PORT_H, NODE_ROW_CSS_VARS } from './nodeRows.js';
 	let {
 		node,
 		selected = false,
@@ -33,10 +34,8 @@
 		sniffTimeFormatOnTypeChange(col, newType);
 	}
 
-	// Shared port-layout constant (mirrors WorkflowEditor.svelte). Re-declared locally
-	// because it is a trivial number and the duplication is contained to these two files.
-	// The matching header height lives in CSS below (see the "HEADER_H" comment).
-	const PORT_H = 22;
+	// Port rows are PORT_H (nodeRows.js NODE_ROW_H) apart; the same module anchors the wires in
+	// WorkflowEditor and feeds the CSS below through NODE_ROW_CSS_VARS on the card root.
 
 	// Plot nodes always have a preview panel below, so apply the expanded border style
 	let hasPanel = $derived(node.type === 'plot' || expanded);
@@ -119,7 +118,7 @@
 	class:selected
 	class:expanded={hasPanel}
 	class:drop-target={isDropTarget}
-	style={width != null ? `width:${width}px;` : ''}
+	style="{NODE_ROW_CSS_VARS}{width != null ? ` width:${width}px;` : ''}"
 	role="button"
 	tabindex="0"
 >
@@ -339,7 +338,7 @@
 		width: 160px;
 		position: relative;
 		border-radius: var(--radius-md);
-		border: 1px solid rgba(0, 0, 0, 0.18);
+		border: var(--node-card-border) solid rgba(0, 0, 0, 0.18);
 		background: var(--surface-card);
 		cursor: grab;
 		user-select: none;
@@ -379,7 +378,8 @@
 		justify-content: space-between;
 		gap: 4px;
 		padding: 0 10px;
-		height: 26px; /* HEADER_H */
+		height: var(--node-header-h); /* its bottom rule included, see nodeRows.js */
+		box-sizing: border-box;
 		background: var(--color-lightness-97);
 		border-bottom: 1px solid var(--color-lightness-90);
 		border-radius: 6px 6px 0 0;
@@ -420,12 +420,13 @@
 	}
 
 	/* Faint "Series N" caption grouping each (x, y) pair on plot nodes. Occupies
-	   one PORT_H slot so it lines up with the absolute port rows below it. */
+	   one row slot so it lines up with the absolute port rows below it. */
 	.series-header {
 		position: absolute;
 		left: 0;
 		right: 0;
-		height: 22px; /* PORT_H */
+		height: var(--node-row-h);
+		box-sizing: border-box;
 		display: flex;
 		align-items: center;
 		padding-left: 10px;
@@ -449,7 +450,7 @@
 		position: absolute;
 		display: flex;
 		align-items: center;
-		height: 22px; /* PORT_H */
+		height: var(--node-row-h);
 		box-sizing: border-box; /* max-width includes the dot padding */
 		font-size: var(--font-xs);
 		color: var(--color-lightness-40);
@@ -471,8 +472,9 @@
 
 	.port-dot {
 		position: relative;
-		width: 13px;
-		height: 13px;
+		width: var(--port-dot);
+		height: var(--port-dot);
+		box-sizing: border-box;
 		border-radius: 50%;
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-50);
@@ -484,21 +486,22 @@
 	}
 
 	/* Invisible enlarged hit area so the user doesn't have to land exactly on the
-	   10px dot to start or finish a wire. Wider than tall so it doesn't swallow the
-	   neighbouring row's dot (rows are PORT_H = 22px apart). */
+	   dot to start or finish a wire: exactly one row tall (24 px, WCAG 2.2 SC 2.5.8),
+	   so it meets, and never overlaps, the neighbouring row's. Wider than tall. */
 	.port-dot::before {
 		content: '';
 		position: absolute;
-		inset: -4px -16px;
+		inset: calc((var(--node-row-h) - var(--port-dot)) / -2) -16px;
 		border-radius: var(--radius-lg);
 	}
 
-	/* Sit halfway outside the card so wires meet the dot, not the card edge. */
+	/* Centred on the card's outer edge, where WorkflowEditor ends the wires: shift the dot
+	   past the row's 14 px inset and the card border, then back by half its own width. */
 	.port-dot.dot-input {
-		transform: translateX(-150%);
+		transform: translateX(calc(-1 * (14px + var(--node-card-border) + var(--port-dot) / 2)));
 	}
 	.port-dot.dot-output {
-		transform: translateX(150%);
+		transform: translateX(calc(14px + var(--node-card-border) + var(--port-dot) / 2));
 	}
 
 	.port-dot:hover {

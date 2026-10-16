@@ -89,6 +89,7 @@
 		compactNodeHeight,
 		compactPortAnchorY
 	} from './nodeGeometry.js';
+	import { NODE_HEADER_H, nodeRowCentreY, nodePortAreaHeight } from './nodeRows.js';
 	import { buildNodeLayout, nodeLayoutMatches, parseNodeLayout } from './nodeLayoutIO.js';
 	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { settleBoxes, clearPlacementY } from './settleOverlaps.js';
@@ -101,8 +102,8 @@
 	const NODE_WIDTH = 160;
 	const TP_NODE_WIDTH = 230; // mirrors TableProcessNode .tp-card width
 	const NODE_HEIGHT = 48;
-	const HEADER_H = 26; // px, header strip height (matches flowtest's --header-h)
-	const PORT_H = 22; // px, height of each port row
+	// Header strip height; port-row geometry (row height, row centres) lives in nodeRows.js.
+	const HEADER_H = NODE_HEADER_H;
 	// Per-layer horizontal step for the topological (Tidy) layout. Nodes are
 	// 160–240px wide, so this needs generous headroom to leave a clear gap and
 	// room for the connecting wires between columns.
@@ -230,11 +231,11 @@
 					direction === 'out'
 						? outputRows.find((r) => r.port?.name === portName)
 						: inputRows.find((r) => r.kind === 'port' && r.port?.name === portName);
-				if (row) return HEADER_H + row.slot * PORT_H + PORT_H / 2;
+				if (row) return nodeRowCentreY(row.slot);
 			}
 		}
 		const ports = direction === 'out' ? (node.ports?.outputs ?? []) : (node.ports?.inputs ?? []);
-		if (ports.length === 0) return HEADER_H + PORT_H / 2;
+		if (ports.length === 0) return nodeRowCentreY(0);
 		let idx = ports.findIndex((p) => p.name === portName);
 		if (idx < 0) {
 			idx = ports.findIndex((p) => {
@@ -244,7 +245,7 @@
 			});
 		}
 		idx = Math.max(0, idx);
-		return HEADER_H + idx * PORT_H + PORT_H / 2;
+		return nodeRowCentreY(idx);
 	}
 
 	/**
@@ -281,7 +282,7 @@
 			const ins = node?.ports?.inputs?.length ?? 0;
 			const outs = node?.outputColumns?.length ?? 0;
 			const rows = Math.max(1, ins, outs);
-			return HEADER_H + rows * PORT_H;
+			return nodePortAreaHeight(rows);
 		}
 		// Grouped plot nodes use the unified plotNodeSlots layout (series headers +
 		// series-aligned output rows + trailing metric rows); non-grouped plots
@@ -291,14 +292,14 @@
 			const outs = node?.ports?.outputs ?? [];
 			if (ins.some((p) => p?.axis || p?.overlay)) {
 				const { totalSlots } = plotNodeSlots(ins, outs);
-				return HEADER_H + Math.max(1, totalSlots) * PORT_H;
+				return nodePortAreaHeight(Math.max(1, totalSlots));
 			}
-			return HEADER_H + Math.max(1, ins.length, outs.length) * PORT_H;
+			return nodePortAreaHeight(Math.max(1, ins.length, outs.length));
 		}
 		const ins = node?.ports?.inputs?.length ?? 0;
 		const outs = node?.ports?.outputs?.length ?? 0;
 		const rows = Math.max(1, ins, outs);
-		return HEADER_H + rows * PORT_H;
+		return nodePortAreaHeight(rows);
 	}
 
 	// Step 1: edge connectivity only (re-derives when core changes, NOT when positions change)

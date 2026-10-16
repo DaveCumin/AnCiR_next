@@ -29,6 +29,7 @@
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
+	import { NODE_ROW_CSS_VARS, nodeRowCentreY } from './nodeRows.js';
 
 	let {
 		node,
@@ -44,8 +45,8 @@
 
 	const dispatch = createEventDispatcher();
 
-	const HEADER_H = 26; // mirrors WorkflowEditor.HEADER_H
-	const PORT_H = 22; // mirrors WorkflowEditor.PORT_H
+	// Row geometry (row height, header height, row centres) comes from nodeRows.js, the same
+	// module WorkflowEditor anchors wires with; the CSS reads it through NODE_ROW_CSS_VARS.
 
 	const tp = $derived(node.tpObj);
 	// Warnings published by the TP's editor (e.g. GroupComparison's normality /
@@ -182,20 +183,19 @@
 			const name = inputPorts[i].name;
 			const el = inPortEls[name];
 			if (el) setGroupPortY(node.id, name, nodeLocalCenterY(el));
-			else setGroupPortY(node.id, name, HEADER_H + i * PORT_H + PORT_H / 2);
+			else setGroupPortY(node.id, name, nodeRowCentreY(i));
 		}
 		for (let i = 0; i < outputColumns.length; i++) {
 			const { colId, port } = outputColumns[i];
 			const el = rowPortEls[colId];
 			if (el) setGroupPortY(node.id, port, nodeLocalCenterY(el));
-			else setGroupPortY(node.id, port, HEADER_H + i * PORT_H + PORT_H / 2);
+			else setGroupPortY(node.id, port, nodeRowCentreY(i));
 		}
 		for (let i = 0; i < bundleOutputs.length; i++) {
 			const name = bundleOutputs[i].name;
 			const el = bundlePortEls[name];
 			if (el) setGroupPortY(node.id, name, nodeLocalCenterY(el));
-			else
-				setGroupPortY(node.id, name, HEADER_H + (outputColumns.length + i) * PORT_H + PORT_H / 2);
+			else setGroupPortY(node.id, name, nodeRowCentreY(outputColumns.length + i));
 		}
 	}
 
@@ -287,7 +287,7 @@
 	class="tp-card"
 	class:selected
 	class:expanded
-	style={width != null ? `width:${width}px;` : ''}
+	style="{NODE_ROW_CSS_VARS}{width != null ? ` width:${width}px;` : ''}"
 	onpointerdown={onCardMouseDown}
 	role="button"
 	tabindex="0"
@@ -583,7 +583,7 @@
 		width: 230px;
 		background: var(--surface-card);
 		border-radius: var(--radius-md);
-		border: 1px solid rgba(0, 0, 0, 0.18);
+		border: var(--node-card-border) solid rgba(0, 0, 0, 0.18);
 		box-sizing: border-box;
 		font-size: var(--font-sm);
 		cursor: grab;
@@ -612,7 +612,7 @@
 		align-items: center;
 		gap: 4px;
 		padding: 0 8px;
-		height: 26px; /* HEADER_H */
+		height: var(--node-header-h);
 		background: var(--color-lightness-97);
 		border-bottom: 1px solid var(--color-lightness-90);
 		border-radius: 6px 6px 0 0;
@@ -664,7 +664,9 @@
 		   shrinking/ellipsizing. */
 		grid-template-columns: minmax(44px, auto) minmax(0, 1fr);
 		align-items: start;
-		padding: 2px 0;
+		/* No top padding: the first row starts right under the header, where nodeRows.js
+		   puts it (the wire anchor before the first DOM measurement lands). */
+		padding: 0 0 2px;
 	}
 
 	.tp-inputs {
@@ -677,7 +679,7 @@
 		display: flex;
 		align-items: center;
 		gap: 4px;
-		height: 22px; /* PORT_H */
+		height: var(--node-row-h);
 		padding-left: 4px;
 	}
 	.in-label {
@@ -688,9 +690,10 @@
 		text-overflow: ellipsis;
 		margin-left: var(--space-4);
 	}
+	/* Centred on the card's outer edge, where WorkflowEditor ends the wires. */
 	.in-port {
 		position: absolute;
-		left: -5px;
+		left: calc(-1 * (var(--node-card-border) + var(--port-dot) / 2));
 		top: 50%;
 		transform: translateY(-50%);
 	}
@@ -700,12 +703,14 @@
 		display: flex;
 		flex-direction: column;
 	}
+	/* The rule between rows is an inset shadow, not a border, so it takes no height: rows
+	   stay exactly NODE_ROW_H apart, level with the input rows beside them. */
 	.out-row {
 		position: relative;
-		border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+		box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
 	}
 	.out-row:last-child {
-		border-bottom: 0;
+		box-shadow: none;
 	}
 	.row-strip {
 		position: relative;
@@ -713,7 +718,7 @@
 		grid-template-columns: 14px 16px minmax(0, 1fr);
 		align-items: center;
 		gap: 4px;
-		height: 22px; /* PORT_H */
+		height: var(--node-row-h);
 		padding: 0 0 0 4px;
 		font-size: var(--font-xs);
 	}
@@ -761,8 +766,9 @@
 	}
 
 	.inline-port {
-		width: 13px;
-		height: 13px;
+		width: var(--port-dot);
+		height: var(--port-dot);
+		box-sizing: border-box;
 		border-radius: 50%;
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-50);
@@ -771,11 +777,12 @@
 		overflow: visible;
 	}
 
-	/* Invisible enlarged hit area so wiring doesn't require a pixel-perfect drop. */
+	/* Invisible enlarged hit area so wiring doesn't require a pixel-perfect drop: exactly one
+	   row tall (24 px, WCAG 2.2 SC 2.5.8), so it meets, and never overlaps, the next row's. */
 	.inline-port::before {
 		content: '';
 		position: absolute;
-		inset: -4px -16px;
+		inset: calc((var(--node-row-h) - var(--port-dot)) / -2) -16px;
 		border-radius: var(--radius-lg);
 	}
 	.inline-port:hover {
@@ -789,7 +796,7 @@
 	}
 	.row-port {
 		position: absolute;
-		right: -5px;
+		right: calc(-1 * (var(--node-card-border) + var(--port-dot) / 2));
 		top: 50%;
 		transform: translateY(-50%);
 	}
