@@ -487,7 +487,8 @@
             "showConfidenceBounds": true,
             "confidenceLevel": 0.95
           }
-        ]
+        ],
+        "overlays": []
       }
     }
   ],
@@ -607,5 +608,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "852": [
+    "853": [
       0,
       1,
       2,
@@ -98,7 +98,7 @@
       94,
       95
     ],
-    "853": [
+    "854": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -196,7 +196,7 @@
       15.358983848622422,
       11.362966948437233
     ],
-    "854": [
+    "855": [
       0.5,
       1.5,
       2.5,
@@ -222,7 +222,7 @@
       22.5,
       23.5
     ],
-    "855": [
+    "856": [
       10,
       11.362966948437267,
       15.358983848622461,
@@ -251,19 +251,8 @@
   },
   "data": [
     {
-      "id": 852,
-      "name": "Average Profile input 1",
-      "data": 852,
-      "type": "number",
-      "tableProcessGUId": "",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 853,
-      "name": "Average Profile input 2",
+      "name": "Average Profile input 1",
       "data": 853,
       "type": "number",
       "tableProcessGUId": "",
@@ -274,10 +263,10 @@
     },
     {
       "id": 854,
-      "name": "avgprofx_88",
+      "name": "Average Profile input 2",
       "data": 854,
       "type": "number",
-      "tableProcessGUId": "076fa23a-8fe5-4f05-9ba8-72012dd81748",
+      "tableProcessGUId": "",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -285,10 +274,21 @@
     },
     {
       "id": 855,
-      "name": "avgprof_853_88",
+      "name": "avgprofx_88",
       "data": 855,
       "type": "number",
-      "tableProcessGUId": "076fa23a-8fe5-4f05-9ba8-72012dd81748",
+      "tableProcessGUId": "42d99dab-a2c2-427c-b1db-7103f53d7697",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 856,
+      "name": "avgprof_854_88",
+      "data": 856,
+      "type": "number",
+      "tableProcessGUId": "42d99dab-a2c2-427c-b1db-7103f53d7697",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -330,10 +330,10 @@
       },
       "plot": {
         "columnRefs": [
-          852,
           853,
           854,
-          855
+          855,
+          856
         ],
         "showCol": [
           true,
@@ -354,16 +354,16 @@
       "name": "AverageProfile",
       "displayName": "Average Profile",
       "args": {
-        "xIN": 852,
+        "xIN": 853,
         "yIN": [
-          853
+          854
         ],
         "period": 24,
         "nBins": 24,
         "preProcesses": [],
         "out": {
-          "avgprofx": 854,
-          "avgprof_853": 855
+          "avgprofx": 855,
+          "avgprof_854": 856
         }
       },
       "refTPId": null
@@ -408,11 +408,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_852": {
+    "data_853": {
       "x": 60,
       "y": 314
     },
-    "data_853": {
+    "data_854": {
       "x": 60,
       "y": 814
     },
@@ -488,5 +488,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

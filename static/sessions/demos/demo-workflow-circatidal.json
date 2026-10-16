@@ -1818,7 +1818,7 @@
       "name": "stat_peak_period_29",
       "data": 358,
       "type": "number",
-      "tableProcessGUId": "6b3897e8-b26b-4f32-a971-5d0d01d0bc4a",
+      "tableProcessGUId": "80f208bd-3a93-4ae4-b575-b2be568f043c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1829,7 +1829,7 @@
       "name": "stat_peak_power_29",
       "data": 359,
       "type": "number",
-      "tableProcessGUId": "6b3897e8-b26b-4f32-a971-5d0d01d0bc4a",
+      "tableProcessGUId": "80f208bd-3a93-4ae4-b575-b2be568f043c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1840,7 +1840,7 @@
       "name": "rhythmicityy_353_29",
       "data": 360,
       "type": "number",
-      "tableProcessGUId": "6b3897e8-b26b-4f32-a971-5d0d01d0bc4a",
+      "tableProcessGUId": "80f208bd-3a93-4ae4-b575-b2be568f043c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1995,6 +1995,7 @@
           null,
           null
         ],
+        "logScale": false,
         "padding": {
           "top": 15,
           "right": 20,
@@ -2008,7 +2009,7 @@
           "manualTicks": null
         },
         "yAxis": {
-          "label": "Power",
+          "label": "",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -2075,7 +2076,8 @@
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
-        ]
+        ],
+        "overlays": []
       }
     },
     {
@@ -2280,5 +2282,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

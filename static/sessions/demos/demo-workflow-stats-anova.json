@@ -279,7 +279,7 @@
       "name": "statistic_12",
       "data": 159,
       "type": "number",
-      "tableProcessGUId": "191bdd3c-d528-40ab-a311-5cd83a7c9ee8",
+      "tableProcessGUId": "f5c93569-4336-4083-937c-de5d5f95ff42",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -290,7 +290,7 @@
       "name": "pvalue_12",
       "data": 160,
       "type": "number",
-      "tableProcessGUId": "191bdd3c-d528-40ab-a311-5cd83a7c9ee8",
+      "tableProcessGUId": "f5c93569-4336-4083-937c-de5d5f95ff42",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -413,7 +413,8 @@
           "padding": 8,
           "itemSpacing": 4,
           "fontSize": null
-        }
+        },
+        "overlays": []
       }
     },
     {
@@ -550,7 +551,8 @@
         "sigBarColor": "#000000",
         "sigBarFontSize": null,
         "sigBarYOffset": 0,
-        "sigBarSpacing": 1
+        "sigBarSpacing": 1,
+        "overlays": []
       }
     },
     {
@@ -749,5 +751,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

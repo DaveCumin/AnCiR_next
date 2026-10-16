@@ -1377,6 +1377,7 @@
           null,
           null
         ],
+        "logScale": false,
         "padding": {
           "top": 15,
           "right": 20,
@@ -1390,7 +1391,7 @@
           "manualTicks": null
         },
         "yAxis": {
-          "label": "Power",
+          "label": "",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -1457,7 +1458,8 @@
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
-        ]
+        ],
+        "overlays": []
       }
     }
   ],
@@ -1581,5 +1583,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

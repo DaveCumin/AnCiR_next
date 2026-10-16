@@ -500,7 +500,8 @@
         "sigBarColor": "#000000",
         "sigBarFontSize": null,
         "sigBarYOffset": 0,
-        "sigBarSpacing": 1
+        "sigBarSpacing": 1,
+        "overlays": []
       }
     }
   ],
@@ -620,5 +621,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

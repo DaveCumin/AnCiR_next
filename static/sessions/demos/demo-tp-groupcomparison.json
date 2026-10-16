@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "695": [
+    "696": [
       "A",
       "B",
       "C",
@@ -52,7 +52,7 @@
       "A",
       "B"
     ],
-    "696": [
+    "697": [
       0,
       6,
       12,
@@ -104,21 +104,21 @@
       6,
       5
     ],
-    "697": [
+    "698": [
       96.15862706579921
     ],
-    "698": [
+    "699": [
       2.44574062850776e-17
     ],
-    "699": [
+    "700": [
       0.8036079756532927
     ]
   },
   "data": [
     {
-      "id": 695,
+      "id": 696,
       "name": "Compare groups (stats) input 1",
-      "data": 695,
+      "data": 696,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -127,9 +127,9 @@
       "processes": []
     },
     {
-      "id": 696,
+      "id": 697,
       "name": "Compare groups (stats) input 2",
-      "data": 696,
+      "data": 697,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -138,22 +138,11 @@
       "processes": []
     },
     {
-      "id": 697,
-      "name": "statistic_63",
-      "data": 697,
-      "type": "number",
-      "tableProcessGUId": "6cc91090-793a-499f-9297-67a0a4e1a3cc",
-      "producerNodeId": null,
-      "producerPort": null,
-      "producerArtifactKind": null,
-      "processes": []
-    },
-    {
       "id": 698,
-      "name": "pvalue_63",
+      "name": "statistic_63",
       "data": 698,
       "type": "number",
-      "tableProcessGUId": "6cc91090-793a-499f-9297-67a0a4e1a3cc",
+      "tableProcessGUId": "ef749b12-ca3b-4233-9fb2-63f75b32ecc9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -161,10 +150,21 @@
     },
     {
       "id": 699,
-      "name": "effectSize_63",
+      "name": "pvalue_63",
       "data": 699,
       "type": "number",
-      "tableProcessGUId": "6cc91090-793a-499f-9297-67a0a4e1a3cc",
+      "tableProcessGUId": "ef749b12-ca3b-4233-9fb2-63f75b32ecc9",
+      "producerNodeId": null,
+      "producerPort": null,
+      "producerArtifactKind": null,
+      "processes": []
+    },
+    {
+      "id": 700,
+      "name": "effectSize_63",
+      "data": 700,
+      "type": "number",
+      "tableProcessGUId": "ef749b12-ca3b-4233-9fb2-63f75b32ecc9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -234,9 +234,9 @@
         "data": [
           {
             "x": {
-              "id": 700,
+              "id": 701,
               "name": "Compare groups (stats) input 1",
-              "refId": 695,
+              "refId": 696,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -245,9 +245,9 @@
               "processes": []
             },
             "y": {
-              "id": 701,
+              "id": 702,
               "name": "Compare groups (stats) input 2",
-              "refId": 696,
+              "refId": 697,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -306,7 +306,8 @@
         "sigBarColor": "#000000",
         "sigBarFontSize": null,
         "sigBarYOffset": 0,
-        "sigBarSpacing": 1
+        "sigBarSpacing": 1,
+        "overlays": []
       }
     }
   ],
@@ -316,17 +317,17 @@
       "name": "GroupComparison",
       "displayName": "Compare groups (stats)",
       "args": {
-        "xIN": 695,
+        "xIN": 696,
         "yIN": [
-          696
+          697
         ],
         "method": "auto",
         "alpha": 0.05,
         "postHocEnabled": true,
         "out": {
-          "statistic": 697,
-          "pvalue": 698,
-          "effectSize": 699
+          "statistic": 698,
+          "pvalue": 699,
+          "effectSize": 700
         }
       },
       "refTPId": null
@@ -371,11 +372,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_695": {
+    "data_696": {
       "x": 60,
       "y": 314
     },
-    "data_696": {
+    "data_697": {
       "x": 60,
       "y": 814
     },
@@ -451,5 +452,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

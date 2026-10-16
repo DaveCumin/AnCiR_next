@@ -244,7 +244,7 @@
   "notes": [
     {
       "id": "note_35",
-      "text": "Renders selected columns (or their summary statistics) as a plain data table for inspection and export. Use it to read exact values, sanity-check a transform's output, or present computed metrics. The demo shows the chosen columns laid out in rows and columns.",
+      "text": "Shows numbers as a plain table, from one of three sources: the columns wired into it (editable), another plot's computed data (a plot's View data action), or an analysis node's result tables (View stats, View permutations), which follow every recompute. Use it to read exact values, sanity-check a transform's output, or present computed results for export. It computes no statistics of its own. The demo shows the chosen columns laid out in rows and columns.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -357,5 +357,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "820": [
+    "821": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "821": [
+    "822": [
       11.229882793897886,
       37.29138111399729,
       35.47426005079059,
@@ -104,7 +104,7 @@
       20.999584523229,
       30.339018292668595
     ],
-    "822": [
+    "823": [
       0,
       1,
       2,
@@ -156,7 +156,7 @@
       48,
       49
     ],
-    "823": [
+    "824": [
       27.99850798622859,
       30.99958480957332,
       33.48990964443412,
@@ -211,20 +211,20 @@
   },
   "data": [
     {
-      "id": 820,
+      "id": 821,
       "name": "x",
-      "data": 820,
+      "data": 821,
       "type": "number",
-      "tableProcessGUId": "5ba11423-7fcf-4a18-babf-ab0999c5c2a7",
+      "tableProcessGUId": "efff5ce0-d2bc-4c54-a0d1-3717b60c74c0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 821,
+      "id": 822,
       "name": "y",
-      "data": 821,
+      "data": 822,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -233,22 +233,22 @@
       "processes": []
     },
     {
-      "id": 822,
+      "id": 823,
       "name": "smoothedx_82",
-      "data": 822,
+      "data": 823,
       "type": "number",
-      "tableProcessGUId": "dccaa66f-8921-431e-a261-1ff0078956bb",
+      "tableProcessGUId": "d6ab41e8-307b-4402-bd92-ea66cec33276",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 823,
-      "name": "smoothedy_821_82",
-      "data": 823,
+      "id": 824,
+      "name": "smoothedy_822_82",
+      "data": 824,
       "type": "number",
-      "tableProcessGUId": "dccaa66f-8921-431e-a261-1ff0078956bb",
+      "tableProcessGUId": "d6ab41e8-307b-4402-bd92-ea66cec33276",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -332,9 +332,9 @@
         "data": [
           {
             "x": {
-              "id": 824,
+              "id": 825,
               "name": "x",
-              "refId": 820,
+              "refId": 821,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -343,9 +343,9 @@
               "processes": []
             },
             "y": {
-              "id": 825,
+              "id": 826,
               "name": "y",
-              "refId": 821,
+              "refId": 822,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -371,9 +371,9 @@
           },
           {
             "x": {
-              "id": 826,
+              "id": 827,
               "name": "smoothedx_82",
-              "refId": 822,
+              "refId": 823,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -382,9 +382,9 @@
               "processes": []
             },
             "y": {
-              "id": 827,
-              "name": "smoothedy_821_82",
-              "refId": 823,
+              "id": 828,
+              "name": "smoothedy_822_82",
+              "refId": 824,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -459,8 +459,8 @@
       },
       "plot": {
         "columnRefs": [
-          821,
-          823
+          822,
+          824
         ],
         "showCol": [
           true,
@@ -485,7 +485,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 820
+          "result": 821
         }
       },
       "refTPId": null
@@ -495,9 +495,9 @@
       "name": "SmoothedData",
       "displayName": "Smooth Data",
       "args": {
-        "xIN": 820,
+        "xIN": 821,
         "yIN": [
-          821
+          822
         ],
         "smootherType": "moving",
         "whittakerLambda": 100,
@@ -509,8 +509,8 @@
         "movingAvgType": "simple",
         "preProcesses": [],
         "out": {
-          "smoothedx": 822,
-          "smoothedy_821": 823
+          "smoothedx": 823,
+          "smoothedy_822": 824
         }
       },
       "refTPId": null
@@ -555,7 +555,7 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_821": {
+    "data_822": {
       "x": 60,
       "y": 314
     },
@@ -639,5 +639,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

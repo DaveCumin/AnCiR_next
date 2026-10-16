@@ -348,7 +348,7 @@
       "data": 0,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "3fe3b994-2302-423f-ac6a-737cf589b509",
+      "tableProcessGUId": "c7d6e408-ee4f-4ac5-b84f-c4ec1f506a8b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -359,7 +359,7 @@
       "name": "values_0",
       "data": 1,
       "type": "number",
-      "tableProcessGUId": "3fe3b994-2302-423f-ac6a-737cf589b509",
+      "tableProcessGUId": "c7d6e408-ee4f-4ac5-b84f-c4ec1f506a8b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -540,6 +540,7 @@
           null,
           null
         ],
+        "logScale": false,
         "padding": {
           "top": 15,
           "right": 20,
@@ -553,7 +554,7 @@
           "manualTicks": null
         },
         "yAxis": {
-          "label": "Power",
+          "label": "",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -621,7 +622,8 @@
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
-        ]
+        ],
+        "overlays": []
       }
     }
   ],
@@ -750,5 +752,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

@@ -1063,7 +1063,7 @@
       "name": "R_34",
       "data": 452,
       "type": "number",
-      "tableProcessGUId": "f2c572eb-ec2c-44b7-a4b2-5bae1c4a652a",
+      "tableProcessGUId": "e286f462-310e-4994-a277-6c9f31e6712d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1074,7 +1074,7 @@
       "name": "z_34",
       "data": 453,
       "type": "number",
-      "tableProcessGUId": "f2c572eb-ec2c-44b7-a4b2-5bae1c4a652a",
+      "tableProcessGUId": "e286f462-310e-4994-a277-6c9f31e6712d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1085,7 +1085,7 @@
       "name": "pvalue_34",
       "data": 454,
       "type": "number",
-      "tableProcessGUId": "f2c572eb-ec2c-44b7-a4b2-5bae1c4a652a",
+      "tableProcessGUId": "e286f462-310e-4994-a277-6c9f31e6712d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1240,6 +1240,7 @@
           null,
           null
         ],
+        "logScale": false,
         "padding": {
           "top": 15,
           "right": 20,
@@ -1253,7 +1254,7 @@
           "manualTicks": null
         },
         "yAxis": {
-          "label": "Power",
+          "label": "",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -1320,7 +1321,8 @@
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
-        ]
+        ],
+        "overlays": []
       }
     },
     {
@@ -1526,5 +1528,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }

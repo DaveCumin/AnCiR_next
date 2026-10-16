@@ -408,6 +408,7 @@
           null,
           null
         ],
+        "logScale": false,
         "padding": {
           "top": 15,
           "right": 20,
@@ -421,7 +422,7 @@
           "manualTicks": null
         },
         "yAxis": {
-          "label": "Power",
+          "label": "",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -488,7 +489,8 @@
             "method": "Lomb-Scargle",
             "chiSquaredAlpha": 0.05
           }
-        ]
+        ],
+        "overlays": []
       }
     }
   ],
@@ -499,7 +501,7 @@
   "notes": [
     {
       "id": "note_32",
-      "text": "Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. For chi-squared the peak's p-value (the peak p port) is family-wise, corrected for every period tested as the threshold line is, so it is below alpha exactly when the peak crosses the line. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
+      "text": "Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. For chi-squared the reported peak is the period whose Qp rises furthest above its own threshold (the largest raw Qp drifts to long periods on a weak rhythm, because the threshold grows with the period), and its p-value (the peak p port) is family-wise, corrected for every period tested as the threshold line is, so it is below alpha exactly when the peak crosses the line; the panel says when it does not. The y axis names the statistic: normalised power for Lomb-Scargle, Qp for chi-squared and the amplitude A_p for Enright (series of different methods on one plot are not comparable numbers). Log scale under Properties draws the power axis on a log scale, for display only. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -608,5 +610,5 @@
       "No"
     ]
   },
-  "version": "β.81.12"
+  "version": "β.82.9"
 }
