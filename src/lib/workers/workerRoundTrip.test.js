@@ -14,16 +14,27 @@
 // the worker as [NaN], and an array of result objects came back as [NaN].
 // registeredTasks.test.js calls the tasks directly and never saw the transport.
 import { describe, it, expect } from 'vitest';
-import { getComputeTask } from './computeTasks.js';
+import { getComputeTask, listComputeTasks } from './computeTasks.js';
 import { prepareTransferable, restoreFromTransferable } from './workerTransfer.js';
+import workerSource from './compute.worker.js?raw';
+import thisSource from './workerRoundTrip.test.js?raw';
 
-import '$lib/utils/cosinor.worker-task.js';
-import '$lib/utils/smoothing.worker-task.js';
-import '$lib/utils/periodogram.worker-task.js';
-import '$lib/utils/movinganalysis.worker-task.js';
-import '$lib/utils/fitFunction.worker-task.js';
-import '$lib/utils/doublelogistic.worker-task.js';
-import '$lib/utils/trendfit.worker-task.js';
+// Every task module, found by the `*.worker-task.js` naming convention rather than a
+// hand-written list. Eager evaluation self-registers each one (the same side effect
+// compute.worker.js relies on), so listComputeTasks() below is every task that exists.
+const TASK_FILES = import.meta.glob('/src/**/*.worker-task.js', { eager: true });
+
+// The task names the round-trip cases below exercise. A task registered by any
+// worker-task file but missing here fails the coverage guard at the end of this file.
+const COVERED = new Set([
+	'cosinor.fitMany',
+	'smoothing.apply',
+	'movingAnalysis.compute',
+	'periodogram.compute',
+	'fitfunction.fit',
+	'doublelogistic.fit',
+	'trendfit.fit'
+]);
 
 /** The worker path, minus the thread: what workerPool.js + compute.worker.js do to the data. */
 function viaWorkerTransport(name, args) {
@@ -155,5 +166,46 @@ describe('compute tasks give the same answer through the worker transport', () =
 	it('trendfit.fit', () => {
 		const args = { tt, yy, model: 'linear', polyDegree: 2 };
 		expect(viaWorkerTransport('trendfit.fit', args)).toEqual(getComputeTask('trendfit.fit')(args));
+	});
+});
+
+describe('worker round-trip coverage guard', () => {
+	it('finds the worker task files', () => {
+		expect(Object.keys(TASK_FILES).length).toBeGreaterThan(0);
+	});
+
+	it('the worker imports every worker-task file (else its task never registers there)', () => {
+		for (const path of Object.keys(TASK_FILES)) {
+			const spec = path.replace(/^\/src\/lib\//, '$lib/');
+			expect(
+				workerSource.includes(`'${spec}'`),
+				`${path} is not imported by src/lib/workers/compute.worker.js; add \`import '${spec}';\` there`
+			).toBe(true);
+		}
+	});
+
+	it('every registered compute task has a round-trip case', () => {
+		const uncovered = listComputeTasks().filter((name) => !COVERED.has(name));
+		expect(
+			uncovered,
+			`compute task(s) with no worker round-trip coverage: ${uncovered.join(', ')}. ` +
+				'Add a round-trip case to src/lib/workers/workerRoundTrip.test.js and list the name in COVERED.'
+		).toEqual([]);
+	});
+
+	it('every COVERED name has a viaWorkerTransport case in this file', () => {
+		const missing = [...COVERED].filter(
+			(name) => !thisSource.includes(`viaWorkerTransport('${name}'`)
+		);
+		expect(
+			missing,
+			`COVERED lists task(s) with no viaWorkerTransport('<name>', ...) case: ${missing.join(', ')}`
+		).toEqual([]);
+	});
+
+	it('COVERED names only tasks that exist', () => {
+		const registered = new Set(listComputeTasks());
+		const stale = [...COVERED].filter((name) => !registered.has(name));
+		expect(stale, `COVERED lists unregistered task(s): ${stale.join(', ')}`).toEqual([]);
 	});
 });
