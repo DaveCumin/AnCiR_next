@@ -5,6 +5,7 @@
 	import { core, appState, appConsts } from '$lib/core/core.svelte.js';
 	import { reconcileAllOutputs } from '$lib/core/reconcileOutputs.js';
 	import { recordGraphMutation } from '$lib/core/operations.js';
+	import { loadKeepingUnknown } from '$lib/core/unknownFields.js';
 	import {
 		resolveProducer,
 		touchProducerDeps,
@@ -657,7 +658,11 @@
 			return jsonOut;
 		}
 
+		// Fields of the saved column this version does not read are kept and saved again (ROB-22).
 		static fromJSON(json) {
+			return loadKeepingUnknown(json, (saved) => Column.#fromSaved(saved));
+		}
+		static #fromSaved(json) {
 			const {
 				id,
 				name,

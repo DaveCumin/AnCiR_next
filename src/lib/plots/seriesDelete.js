@@ -28,6 +28,7 @@
 // hide happens live while the toast is showing. Ctrl+Z still works, of course; the
 // delete stays on the stack either way.
 import { appConsts } from '$lib/core/core.svelte';
+import { plotInnerFromJSON } from '$lib/core/Plot.svelte';
 import { mutationService } from '$lib/core/mutationService.js';
 import { history } from '$lib/core/opHistory.svelte.js';
 import { addNotification } from '$lib/core/notifications.svelte.js';
@@ -77,7 +78,7 @@ export function recordInnerEdit(inner, mutate, extraOps = null) {
 	// edit lands on the undo stack as a single step. fromJSON rebuilds plot.plot
 	// (a $state field, so the swap is reactive and the facet panel projection / metric
 	// outputs re-run off it exactly as they do for a wiring edit).
-	plotObj.plot = entry.data.fromJSON(plotObj, before);
+	plotObj.plot = plotInnerFromJSON(plotObj, before);
 	if (extra.length > 0) {
 		mutationService.atomicBatch([{ kind: 'setPlotInner', id: plotObj.id, inner: after }, ...extra]);
 	} else {

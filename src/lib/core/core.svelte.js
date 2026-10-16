@@ -7,6 +7,7 @@ import { TableProcess, deleteTableProcess } from '$lib/core/TableProcess.svelte'
 import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
 import { transitionalFigureStyle } from '$lib/plots/figureStyle.js';
 import { recordGraphMutation } from '$lib/core/operations.js';
+import { mergeUnknown } from '$lib/core/unknownFields.js';
 
 /**
  * A brand-new, empty session: every slice of `core` at its starting value. The ONE definition of
@@ -481,7 +482,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.82.11',
+	version: 'β.82.12',
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.processMap = await loadProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	processMap: new Map(),
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.plotMap = await loadPlots()); never mutated in place, so the $state reassignment already drives reactivity
@@ -917,7 +918,7 @@ export function outputCoreAsJson() {
 	// version and, when present, generatedBy.
 	const output = {};
 	for (const [key, val] of Object.entries(core)) {
-		if (key !== 'generatedBy') output[key] = val;
+		if (key !== 'generatedBy' && key !== 'unknownFields') output[key] = val;
 	}
 	// A Map stringifies as {}, so the raw series go in as a plain object.
 	output.rawData = Object.fromEntries(core.rawData);
@@ -940,6 +941,9 @@ export function outputCoreAsJson() {
 	// generated shouldn't carry `"generatedBy": null`, and re-exporting an AI-built session must
 	// keep the fingerprint (that is the point; the copy a user sends back stays traceable).
 	if (core.generatedBy) output.generatedBy = core.generatedBy;
+	// Top-level fields of the loaded file this version does not know (ROB-22), written back
+	// last and never over a field the save writes. Only a load sets core.unknownFields.
+	mergeUnknown(output, Object.entries(core.unknownFields ?? {}));
 	return JSON.stringify(output, null, 2);
 }
 

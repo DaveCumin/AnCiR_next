@@ -1,16 +1,21 @@
 // @ts-nocheck
-// Single source of truth for reading/writing the user-facing *name* of a
-// canvas node, used by both the node header (WorkflowNode / TableProcessNode /
-// GroupNode) and the side control panel (CanvasNodeControls) so the two views
-// stay byte-for-byte identical and reactive.
+// Single source of truth for reading and renaming the user-facing *name* of a canvas node,
+// used by every rename editor (the node header in WorkflowNode / TableProcessNode / GroupNode,
+// the side control panel CanvasNodeControls, the Data panel's node rows, the plot title on the
+// workspace and the plot's control banner) so they stay identical and reactive.
 //
-// Two write modes:
-//   - live   (commit = false): write the raw text on every keystroke so both
-//                               views update immediately as the user types.
-//   - commit (commit = true):  normalise on blur/Enter — trim and fall back to
-//                               the type's default when the field is left empty.
+// A rename is ONE operation, applied when the edit is committed (Enter or blur), never per
+// keystroke: an undo step that counts as an unsaved change. Nothing is written while typing,
+// so Escape (which commits nothing) leaves the name as it was. Columns go through
+// columnLabels.commitColumnRename; every other node through commitNodeRename, which applies a
+// renameNode op (operations.js). An empty field gives the node its default name back: what a
+// new node of its kind is called (nodeDefaultName).
+//
+// nodeNaming.guard.test.js fails on a new editor that writes a node's name directly.
 import { getColumnById } from './Column.svelte';
 import { commitColumnRename } from './columnLabels.js';
+import { appConsts } from './core.svelte.js';
+import { applyOp } from './operations.js';
 
 // Node types whose name the user can rename inline.
 const EDITABLE_TYPES = new Set(['data', 'process', 'tableprocess', 'plot', 'group', 'composite']);
@@ -44,51 +49,75 @@ export function getNodeName(node) {
 	}
 }
 
-// Write the node's name. `commit` toggles normalisation (see file header).
-export function setNodeName(node, next, { commit = false } = {}) {
-	if (!node) return;
-	const raw = next ?? '';
-	const trimmed = raw.trim();
-	switch (node.type) {
-		case 'data': {
-			const col = node.refId != null ? getColumnById(node.refId) : null;
-			if (!col) return;
-			// A column rename is one renameColumn operation on commit (an undo step that counts
-			// as an unsaved change); nothing is written while typing. An empty field restores
-			// the auto-derived name (customName = null). See columnLabels.commitColumnRename.
-			if (commit) commitColumnRename(col, raw);
-			return;
-		}
-		case 'process': {
-			const p = node.processObj;
-			if (!p) return;
-			p.displayName = commit && trimmed === '' ? p.name : raw;
-			return;
-		}
-		case 'tableprocess': {
-			const tp = node.tpObj;
-			if (!tp) return;
-			tp.displayName = commit && trimmed === '' ? tp.name : raw;
-			return;
-		}
-		case 'plot': {
-			const plot = node.plotObj;
-			if (!plot) return;
-			if (commit && trimmed === '') return; // keep last good name
-			plot.name = raw;
-			return;
-		}
-		case 'group': {
-			const g = node.groupObj;
-			if (!g) return;
-			g.name = commit && trimmed === '' ? 'Group' : raw;
-			return;
-		}
-		case 'composite': {
-			const comp = node.compositeObj;
-			if (!comp) return;
-			comp.name = commit && trimmed === '' ? 'Composite' : raw;
-			return;
-		}
+/**
+ * The name a node of this kind gets when it has none: what a new one is called. A plot's is its
+ * type's display name and id (Plot's constructor), an analysis or column process's its
+ * registry display name, a group's "Group", a composite's "Composite".
+ */
+export function nodeDefaultName(target, obj) {
+	switch (target) {
+		case 'plot':
+			return `${obj?.typeDisplayName || obj?.type || 'Plot'}_${obj?.id}`;
+		case 'tableprocess':
+			return appConsts.tableProcessMap?.get(obj?.name)?.displayName || obj?.name || '';
+		case 'process':
+			return appConsts.processMap?.get(obj?.name)?.displayName || obj?.name || '';
+		case 'group':
+			return 'Group';
+		case 'composite':
+			return 'Composite';
 	}
+	return '';
+}
+
+/**
+ * Commit a node rename typed into one of the editors: ONE renameNode operation (an undo step,
+ * and the session counts as edited). Trimmed; an empty field restores the default name. Call
+ * it once, when the edit is committed. Returns the inverse op, or null when nothing changed.
+ *
+ * @param {'plot'|'tableprocess'|'process'|'group'|'composite'} target
+ * @param {object} obj the plot, table process, process, group or composite
+ * @param {string} next the text in the field
+ */
+export function commitNodeRename(target, obj, next) {
+	if (!obj) return null;
+	const trimmed = (next ?? '').trim();
+	const name = trimmed === '' ? nodeDefaultName(target, obj) : trimmed;
+	if (!name) return null;
+	return applyOp({ kind: 'renameNode', target, id: obj.id, name });
+}
+
+// The kind and object behind a canvas node, for commitNodeRename.
+function renameTargetOf(node) {
+	switch (node?.type) {
+		case 'process':
+			return ['process', node.processObj];
+		case 'tableprocess':
+			return ['tableprocess', node.tpObj];
+		case 'plot':
+			return ['plot', node.plotObj];
+		case 'group':
+			return ['group', node.groupObj];
+		case 'composite':
+			return ['composite', node.compositeObj];
+	}
+	return [null, null];
+}
+
+/**
+ * Rename a canvas node from an editor. Only a committed edit (`commit: true`, on Enter or blur)
+ * writes, as one operation; a live call while typing writes nothing, so Escape needs no undo of
+ * its own. A data node's column goes through commitColumnRename.
+ */
+export function setNodeName(node, next, { commit = false } = {}) {
+	if (!node || !commit) return;
+	if (node.type === 'data') {
+		const col = node.refId != null ? getColumnById(node.refId) : null;
+		// An empty field restores the auto-derived name (customName = null); see
+		// columnLabels.commitColumnRename.
+		if (col) commitColumnRename(col, next ?? '');
+		return;
+	}
+	const [target, obj] = renameTargetOf(node);
+	if (target) commitNodeRename(target, obj, next);
 }

@@ -3,6 +3,7 @@
 	import { core } from '$lib/core/core.svelte.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { columnNamer } from '$lib/core/columnLabels.js';
+	import { commitNodeRename } from '$lib/core/nodeNaming.js';
 
 	let {
 		onChange = () => {},
@@ -396,10 +397,13 @@
 		editingKey = node.key;
 	}
 
+	// One renameNode operation (an undo step, an unsaved change); an empty field restores the
+	// analysis's default name. Only while this row is being edited: after Escape the input's
+	// removal can still blur it, which must not commit what was typed.
 	function commitRename(e, node) {
-		const next = e.currentTarget.value.trim();
-		if (next && node.proc) node.proc.displayName = next;
+		if (editingKey !== node.key) return;
 		editingKey = null;
+		if (node.proc) commitNodeRename('tableprocess', node.proc, e.currentTarget.value);
 	}
 
 	function cancelRename() {

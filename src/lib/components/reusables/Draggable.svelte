@@ -19,7 +19,10 @@
 		y = $bindable(100),
 		width = $bindable(200),
 		height = $bindable(150),
-		title = $bindable(''),
+		title = '',
+		// Called once with the typed title when a rename is committed (Enter or blur); the
+		// caller records it (nodeNaming.commitNodeRename). Nothing is written while typing.
+		onTitleCommit = null,
 		id,
 		selected = $bindable(false),
 		viewportEl = null,
@@ -515,7 +518,13 @@
 		>
 			<NodeNoteButton nodeId={`plot_${id}`} />
 		</div>
-		<p class="plot-title"><Editable bind:value={title} editable={titleEditable} /></p>
+		<p class="plot-title">
+			<Editable
+				value={title}
+				editable={titleEditable}
+				onCommit={(final) => onTitleCommit?.(final)}
+			/>
+		</p>
 
 		<!-- Shared action cluster (maximise · delete), revealed on hover/selection. -->
 		<div

@@ -13,6 +13,7 @@
 <script>
 	// @ts-nocheck
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
+	import { commitNodeRename } from '$lib/core/nodeNaming.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import NoteCard from '$lib/components/views/NoteCard.svelte';
 	import WorksheetAddPalette from '$lib/components/views/WorksheetAddPalette.svelte';
@@ -530,7 +531,8 @@
 							bind:y={plot.y}
 							bind:width={plot.width}
 							bind:height={plot.height}
-							bind:title={plot.name}
+							title={plot.name}
+							onTitleCommit={(v) => commitNodeRename('plot', plot, v)}
 							id={plot.id}
 							bind:selected={plot.selected}
 							viewportEl={canvasViewportEl}

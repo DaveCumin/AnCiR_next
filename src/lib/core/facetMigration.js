@@ -207,6 +207,13 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
  *   entry per generator (lines joined with '\n'), in order of the generator's first child in
  *   the file; `mapping` records which unit key each migrated child became (audit only).
  */
+/**
+ * The plot fields this migration retires. A session load strips them here; Plot.fromJSON reads
+ * them too (and ignores them), so a stray one reaching it any other way (a pasted or replayed
+ * plot) counts as known and is dropped, not kept as an unknown field (core/unknownFields.js).
+ */
+export const RETIRED_PLOT_FIELDS = Object.freeze(['facetParent', 'facetKey']);
+
 export function migrateFacetChildren(jsonData, opts = {}) {
 	const childDefaults = typeof opts?.childDefaults === 'function' ? opts.childDefaults : () => null;
 	const plotsIn = Array.isArray(jsonData?.plots) ? jsonData.plots : null;

@@ -2,6 +2,7 @@
 	// @ts-nocheck
 	import { appConsts, core } from '$lib/core/core.svelte';
 	import { reportUnknownNode } from '$lib/core/unknownNode.js';
+	import { loadKeepingUnknown } from '$lib/core/unknownFields.js';
 
 	let _counter = 0;
 	let _linkedGroupCounter = 0;
@@ -108,9 +109,12 @@
 			return out;
 		}
 
+		// Fields of the saved process this version does not read are kept and saved again (ROB-22).
 		static fromJSON(json, column) {
-			const { id, name, args, linkedGroupId } = json;
-			return new Process({ name, args, linkedGroupId: linkedGroupId ?? null }, column, id);
+			return loadKeepingUnknown(json, (saved) => {
+				const { id, name, args, linkedGroupId } = saved;
+				return new Process({ name, args, linkedGroupId: linkedGroupId ?? null }, column, id);
+			});
 		}
 	}
 </script>

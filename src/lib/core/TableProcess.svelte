@@ -6,6 +6,7 @@
 	import { reportUnknownNode } from '$lib/core/unknownNode.js';
 	import { memoForget } from '$lib/core/computeMemo.js';
 	import { recordGraphMutation } from '$lib/core/operations.js';
+	import { loadKeepingUnknown } from '$lib/core/unknownFields.js';
 	let _tableprocessidCounter = 0;
 
 	// --- Live Column Set → table-process inputs --------------------------------
@@ -286,6 +287,19 @@
 				args: this.args,
 				refTPId: this.refTPId
 			};
+		}
+
+		/**
+		 * Rebuild a saved analysis node (a session load). Its args are kept whole, as they
+		 * always were; fields of the node itself this version does not read are kept and saved
+		 * again (ROB-22). The constructor copies its argument whole, so the known fields are
+		 * picked out here first, or every field would count as read.
+		 */
+		static fromJSON(json) {
+			return loadKeepingUnknown(json, (saved) => {
+				const { id, name, displayName, args, refTPId } = saved;
+				return new TableProcess({ name, displayName, args, refTPId }, null, id ?? null);
+			});
 		}
 	}
 </script>

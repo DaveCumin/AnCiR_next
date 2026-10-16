@@ -45,7 +45,8 @@
 		deselectAllPlots,
 		nextPlotSpawnPosition,
 		plotSetChannel,
-		detachColumnSetFromPlot
+		detachColumnSetFromPlot,
+		plotInnerFromJSON
 	} from '$lib/core/Plot.svelte';
 	import {
 		plotNodeSlots,
@@ -2189,7 +2190,7 @@
 		if (JSON.stringify(before) === JSON.stringify(after)) return; // no-op wire
 		// Revert the direct mutation, then route the after-state through the op so
 		// it's recorded. fromJSON rebuilds plot.plot (now $state → reactive swap).
-		plotObj.plot = entry.data.fromJSON(plotObj, before);
+		plotObj.plot = plotInnerFromJSON(plotObj, before);
 		mutationService.setPlotInner(plotObj.id, after);
 	}
 

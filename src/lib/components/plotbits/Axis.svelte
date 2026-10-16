@@ -1,6 +1,7 @@
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
+	import AxisLabelInput from '$lib/components/plotbits/AxisLabelInput.svelte';
 
 	export class AxisClass {
 		// UI metadata for the multi-select shared-options panel (sharedControls.js).
@@ -70,6 +71,7 @@
 		manualTicksToDraw
 	} from '$lib/components/plotbits/manualTicks.js';
 	import { untrack } from 'svelte';
+	import { commitAxisEdit } from '$lib/plots/axisEdits.js';
 	import { select, selectAll } from 'd3-selection';
 	import { axisBottom, axisLeft, axisTop, axisRight } from 'd3-axis';
 
@@ -119,12 +121,41 @@
 		if (!sameList(stored, typed)) tickText = formatTickList(stored);
 	});
 
+	// Every control edit is committed through commitAxisEdit (plots/axisEdits.js): one undo step
+	// and an unsaved change. The label box is AxisLabelInput. The tick values box previews what is
+	// typed on the plot as it is typed (a plain write), then on Enter or blur puts the list from
+	// before the edit back and commits the new one, so the step undoes to exactly what was
+	// stored. Escape puts it back and commits nothing.
+	let ticksAtFocus = null; // the stored manual ticks when the box took focus
+	function beginTicksEdit() {
+		ticksAtFocus = Array.isArray(axisData.manualTicks) ? [...axisData.manualTicks] : null;
+	}
+	function commitTicksEdit(text) {
+		if (ticksAtFocus) axisData.manualTicks = ticksAtFocus;
+		ticksAtFocus = null;
+		commitAxisEdit(axisData, 'manualTicks', parseTickList(text).values);
+	}
+	function ticksKeydown(e) {
+		if (e.key === 'Enter') {
+			e.currentTarget.blur(); // commits through change
+			return;
+		}
+		if (e.key !== 'Escape' || !ticksAtFocus) return;
+		e.preventDefault();
+		e.stopPropagation(); // the edit only, not whatever Escape does for the page
+		axisData.manualTicks = ticksAtFocus;
+		tickText = formatTickList(ticksAtFocus);
+		e.currentTarget.value = tickText;
+		ticksAtFocus = null;
+		e.currentTarget.blur();
+	}
+
 	function setTickMode(mode) {
-		axisData.manualTicks = mode === 'manual' ? tickParse.values : null;
+		commitAxisEdit(axisData, 'manualTicks', mode === 'manual' ? tickParse.values : null);
 	}
 	function onTickInput(text) {
 		tickText = text;
-		axisData.manualTicks = parseTickList(text).values;
+		axisData.manualTicks = parseTickList(text).values; // preview; committed on change
 	}
 
 	// $state so the effect below re-runs once bind:this hands over the new <g> that the
@@ -359,7 +390,7 @@
 		</div>
 		<div class="control-input-vertical">
 			<ControlInput label="Label">
-				<input bind:value={axisData.label} placeholder={defaultLabel || undefined} />
+				<AxisLabelInput {axisData} placeholder={defaultLabel || undefined} />
 			</ControlInput>
 			{#if tickMode !== 'categorical'}
 				<ControlInput label="Ticks">
@@ -385,7 +416,10 @@
 						aria-label="Tick values"
 						placeholder="0, 6, 12, 18, 24"
 						value={tickText}
+						onfocus={beginTicksEdit}
 						oninput={(e) => onTickInput(e.currentTarget.value)}
+						onchange={(e) => commitTicksEdit(e.currentTarget.value)}
+						onkeydown={ticksKeydown}
 					/>
 				</ControlInput>
 				{#if tickParse.invalid.length}
@@ -400,7 +434,12 @@
 				</p>
 			{:else}
 				<ControlInput label="N Ticks">
-					<NumberWithUnits step="1" min="1" bind:value={axisData.nticks} />
+					<NumberWithUnits
+						step="1"
+						min="1"
+						value={axisData.nticks}
+						onInput={(v) => commitAxisEdit(axisData, 'nticks', v, { coalesce: true })}
+					/>
 				</ControlInput>
 				{#if tickMode === 'time'}
 					<p class="axis-ticks-hint">Manual ticks are not available on a time axis yet.</p>
@@ -409,7 +448,11 @@
 		</div>
 		<div class="control-input-vertical">
 			<label class="control-input-checkbox">
-				<input type="checkbox" bind:checked={axisData.gridlines} />
+				<input
+					type="checkbox"
+					checked={axisData.gridlines}
+					onchange={(e) => commitAxisEdit(axisData, 'gridlines', e.currentTarget.checked)}
+				/>
 				<span class="ci-label">Grid</span>
 			</label>
 		</div>

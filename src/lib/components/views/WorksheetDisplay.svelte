@@ -9,6 +9,7 @@
 	import { appState, core } from '$lib/core/core.svelte.js';
 	import { selectPlot } from '$lib/core/Plot.svelte';
 	import Editable from '../inputs/Editable.svelte';
+	import { commitNodeRename } from '$lib/core/nodeNaming.js';
 
 	let addBtnRef;
 	let showAddPalette = $state(false);
@@ -160,7 +161,7 @@
 							{/if}
 						</button>
 						<p>
-							<Editable bind:value={plot.name} />
+							<Editable value={plot.name} onCommit={(v) => commitNodeRename('plot', plot, v)} />
 							{#if plot.facet}
 								<span class="panel-count">({facetUnits(plot).length} panels)</span>
 							{/if}

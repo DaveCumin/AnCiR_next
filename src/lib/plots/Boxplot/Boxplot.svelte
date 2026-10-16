@@ -3,6 +3,7 @@
 	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
+	import AxisLabelInput from '$lib/components/plotbits/AxisLabelInput.svelte';
 	import { scaleLinear } from 'd3-scale';
 	import Box, {
 		BoxClass,
@@ -1239,7 +1240,7 @@
 			</div>
 			<div class="control-input-vertical">
 				<ControlInput label="Label">
-					<input bind:value={theData.xAxis.label} />
+					<AxisLabelInput axisData={theData.xAxis} />
 				</ControlInput>
 			</div>
 		</div>

@@ -12,6 +12,9 @@ const COALESCE_KINDS = new Set([
 	'setOrphanProcessArg',
 	'setPlotProperty',
 	'setPlotPosition',
+	// A run of spinner clicks on an axis's tick count is one step (only edits flagged
+	// `coalesce`; a committed label or a checkbox is always its own step).
+	'setPlotInnerField',
 	// A colour-picker drag or a run of spinner clicks on one rule field is one step.
 	'setMarkerRule'
 ]);
@@ -139,6 +142,8 @@ class OpHistoryManager {
 				return a.id === b.id && a.key === b.key;
 			case 'setPlotPosition':
 				return a.id === b.id;
+			case 'setPlotInnerField':
+				return a.coalesce === true && b.coalesce === true && a.id === b.id && a.path === b.path;
 			case 'setMarkerRule':
 				return (
 					a.id === b.id &&

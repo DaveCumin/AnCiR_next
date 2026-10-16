@@ -8,8 +8,11 @@
 		onInput = () => {},
 		// Fired once when an edit is committed (Enter / blur), with (finalValue,
 		// originalValue). Lets callers record the change as a single undoable step
-		// instead of on every keystroke. No-op by default.
-		onCommit = () => {},
+		// instead of on every keystroke. A caller that passes it OWNS the write: the field
+		// goes back to the original first and then shows whatever the caller stored (an
+		// operation's normalised name, or the original when the edit changed nothing), so
+		// pass `value` without `bind:` alongside it.
+		onCommit = null,
 		editable = true
 	} = $props();
 
@@ -45,7 +48,10 @@
 		}
 
 		isEditing = false;
-		if (value !== originalValue) onCommit(value, originalValue);
+		if (value === originalValue || !onCommit) return;
+		const final = value;
+		value = originalValue;
+		onCommit(final, originalValue);
 	}
 
 	function handleKeydown(e) {

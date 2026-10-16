@@ -91,6 +91,7 @@
 	import { facetUnits, panelsFor } from '$lib/core/facetPanels.svelte.js';
 	import Editable from '../inputs/Editable.svelte';
 	import { mutationService } from '$lib/core/mutationService.js';
+	import { commitNodeRename } from '$lib/core/nodeNaming.js';
 	import CanvasNodeControls from './CanvasNodeControls.svelte';
 	import CategoryColourControls from './CategoryColourControls.svelte';
 	import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
@@ -852,14 +853,8 @@
 					<div class="control-banner-title">
 						<p>
 							<Editable
-								bind:value={plot.name}
-								onCommit={(final, original) => {
-									// Live typing already mutated plot.name (bind). Revert to the
-									// pre-edit value, then apply through the op so the rename is a
-									// single undoable step (before → after captured correctly).
-									plot.name = original;
-									mutationService.setPlotProperty(plot.id, 'name', final);
-								}}
+								value={plot.name}
+								onCommit={(final) => commitNodeRename('plot', plot, final)}
 							/>
 						</p>
 

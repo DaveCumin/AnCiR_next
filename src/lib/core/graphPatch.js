@@ -31,7 +31,8 @@ import { core, appConsts } from './core.svelte.js';
 import { Column } from './Column.svelte';
 import { Process } from './Process.svelte';
 import { TableProcess } from './TableProcess.svelte';
-import { Plot } from './Plot.svelte';
+import { Plot, plotInnerFromJSON } from './Plot.svelte';
+import { loadKeepingUnknown } from './unknownFields.js';
 import { memoForget } from './computeMemo.js';
 
 const stringify = (v) => JSON.stringify(v, (k, x) => (typeof x === 'function' ? undefined : x));
@@ -243,22 +244,25 @@ function updateColumn(index, value) {
 	if (!!col.isTap !== tap) col.isTap = tap;
 }
 
-function restoreTableProcess(value) {
+function restoreTableProcess(saved) {
 	// The constructor ADOPTS `out` ids only when the first one is valid, and otherwise mints a
 	// fresh set of output columns. A placeholder that is always valid takes the adopt branch
 	// (no minting, no compute); the real args, whatever shape `out` has, go in afterwards.
-	const tp = new TableProcess(
-		{
-			name: value.name,
-			displayName: value.displayName,
-			refTPId: value.refTPId ?? null,
-			args: { out: { _restore: 0 } }
-		},
-		null,
-		value.id
-	);
-	tp.args = clone(value.args ?? {});
-	return tp;
+	// Fields this version does not know come back too (ROB-22), as TableProcess.fromJSON keeps them.
+	return loadKeepingUnknown(saved, (value) => {
+		const tp = new TableProcess(
+			{
+				name: value.name,
+				displayName: value.displayName,
+				refTPId: value.refTPId ?? null,
+				args: { out: { _restore: 0 } }
+			},
+			null,
+			value.id
+		);
+		tp.args = clone(value.args ?? {});
+		return tp;
+	});
 }
 
 function updatePlot(plot, value) {
@@ -272,7 +276,7 @@ function updatePlot(plot, value) {
 	if (stringify(cur.plot) !== stringify(value.plot)) {
 		const entry = appConsts.plotMap.get(plot.type);
 		if (typeof entry?.data?.fromJSON === 'function')
-			plot.plot = entry.data.fromJSON(plot, clone(value.plot));
+			plot.plot = plotInnerFromJSON(plot, clone(value.plot));
 	}
 }
 

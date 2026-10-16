@@ -20,6 +20,7 @@
 	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { commitColumnRename } from '$lib/core/columnLabels.js';
+	import { commitNodeRename } from '$lib/core/nodeNaming.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
 
@@ -37,15 +38,10 @@
 		sourceColumnIds.map((id) => ({ id, col: getColumnById(id) })).filter((entry) => !!entry.col)
 	);
 
-	// Live on input, normalise (empty → "Group") on commit.
-	function renameGroup(next, commit = false) {
-		if (!group) return;
-		if (commit) {
-			const trimmed = (next ?? '').trim();
-			group.name = trimmed === '' ? 'Group' : trimmed;
-		} else {
-			group.name = next ?? '';
-		}
+	// One renameNode operation on commit (an undo step, an unsaved change); nothing while
+	// typing. An empty field restores "Group" (nodeNaming.commitNodeRename).
+	function renameGroup(next) {
+		commitNodeRename('group', group, next);
 	}
 
 	function deleteGroup(e) {
@@ -263,8 +259,7 @@
 				placeholder="Group"
 				ariaLabel="Rename group"
 				title="Double-click to rename"
-				onInput={(v) => renameGroup(v)}
-				onCommit={(v) => renameGroup(v, true)}
+				onCommit={renameGroup}
 			/>
 		</div>
 		<span class="sources-count" title="Source count">{sourceColumnIds.length}</span>

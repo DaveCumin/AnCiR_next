@@ -149,7 +149,6 @@
 					placeholder="column name"
 					ariaLabel="Rename column"
 					title="Double-click to rename"
-					onInput={(v) => setNodeName(node, v)}
 					onCommit={(v) => setNodeName(node, v, { commit: true })}
 				/>
 			</div>
@@ -160,7 +159,6 @@
 					placeholder="name"
 					ariaLabel="Rename node"
 					title="Double-click to rename"
-					onInput={(v) => setNodeName(node, v)}
 					onCommit={(v) => setNodeName(node, v, { commit: true })}
 				/>
 			</div>

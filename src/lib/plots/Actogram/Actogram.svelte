@@ -7,6 +7,7 @@
 	import Hist from '$lib/components/plotbits/Hist.svelte';
 	import { keepSameBins, cachedRowBins } from './stableBins.js';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
+	import { commitAxisEdit } from '$lib/plots/axisEdits.js';
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
@@ -1203,7 +1204,10 @@
 				</ControlInput>
 			</div>
 			<ControlInput label="Nticks">
-				<NumberWithUnits bind:value={theData.xAxis.nticks} />
+				<NumberWithUnits
+					value={theData.xAxis.nticks}
+					onInput={(v) => commitAxisEdit(theData.xAxis, 'nticks', v, { coalesce: true })}
+				/>
 			</ControlInput>
 		</div>
 

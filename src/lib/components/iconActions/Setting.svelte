@@ -26,6 +26,7 @@
 	import { clearCrashSnapshot } from '$lib/core/errorReporter.js';
 	import { sessionSaveFileName, sessionNameForSave } from '$lib/core/sessionFiles.js';
 	import { downloadBlob } from '$lib/utils/downloadBlob.js';
+	import { trackReads, loadKeepingUnknown } from '$lib/core/unknownFields.js';
 	export function exportJson() {
 		try {
 			// outputCoreAsJson builds this with JSON.stringify, so it is valid JSON by construction.
@@ -317,6 +318,12 @@
 		resetSession();
 		// Plots whose saved JSON could not be rebuilt; kept verbatim (see importJson).
 		core.unrestoredPlots = [];
+		// From here on the session's top level is read through a tracking view: whatever this
+		// load never reads is a field this version does not know, kept on core.unknownFields and
+		// written back by outputCoreAsJson (ROB-22, unknownFields.js). After the migrations
+		// above, which rewrite what they migrate.
+		const topLevel = trackReads(jsonData);
+		jsonData = topLevel.view;
 		// Provenance travels with the session: carried onto core so a re-export keeps it, which
 		// is what makes an AI-built session a user sends back traceable to the request that
 		// built it. Reset first — otherwise importing a human session over an AI one would
@@ -438,49 +445,58 @@
 		// New sessions persist groups + free TPs directly. Rehydrate those
 		// before processing any legacy tables.
 		if (Array.isArray(jsonData.groups)) {
-			for (const g of jsonData.groups) {
-				core.groups.push({
-					id: asNodeId(g.id, `group_${core.groups.length}`),
-					name: g.name ?? 'Group',
-					x: g.x ?? 80,
-					y: g.y ?? 80,
-					width: g.width ?? 240,
-					height: g.height ?? 180,
-					sourceColumnIds: Array.isArray(g.sourceColumnIds) ? [...g.sourceColumnIds] : [],
-					allColumnIds: Array.isArray(g.allColumnIds) ? [...g.allColumnIds] : null,
-					collapsed: g.collapsed === true,
-					rowState: g.rowState ?? {}
-				});
+			// Groups, composites and notes keep the fields this version does not read (ROB-22).
+			for (const saved of jsonData.groups) {
+				core.groups.push(
+					loadKeepingUnknown(saved, (g) => ({
+						id: asNodeId(g.id, `group_${core.groups.length}`),
+						name: g.name ?? 'Group',
+						x: g.x ?? 80,
+						y: g.y ?? 80,
+						width: g.width ?? 240,
+						height: g.height ?? 180,
+						sourceColumnIds: Array.isArray(g.sourceColumnIds) ? [...g.sourceColumnIds] : [],
+						allColumnIds: Array.isArray(g.allColumnIds) ? [...g.allColumnIds] : null,
+						collapsed: g.collapsed === true,
+						rowState: g.rowState ?? {}
+					}))
+				);
 			}
 		}
 		if (Array.isArray(jsonData.composites)) {
-			for (const c of jsonData.composites) {
-				const compId = asNodeId(c.id, `composite_${core.composites.length}`);
-				core.composites.push({
-					id: compId,
-					name: c.name ?? 'Composite',
-					x: c.x ?? 80,
-					y: c.y ?? 80,
-					collapsed: c.collapsed !== false,
-					originId: asNodeId(c.originId, compId),
-					memberIds: Array.isArray(c.memberIds) ? [...c.memberIds] : [],
-					interface: {
-						inputs: Array.isArray(c.interface?.inputs) ? [...c.interface.inputs] : [],
-						outputs: Array.isArray(c.interface?.outputs) ? [...c.interface.outputs] : []
-					}
-				});
+			for (const saved of jsonData.composites) {
+				core.composites.push(
+					loadKeepingUnknown(saved, (c) => {
+						const compId = asNodeId(c.id, `composite_${core.composites.length}`);
+						return {
+							id: compId,
+							name: c.name ?? 'Composite',
+							x: c.x ?? 80,
+							y: c.y ?? 80,
+							collapsed: c.collapsed !== false,
+							originId: asNodeId(c.originId, compId),
+							memberIds: Array.isArray(c.memberIds) ? [...c.memberIds] : [],
+							interface: {
+								inputs: Array.isArray(c.interface?.inputs) ? [...c.interface.inputs] : [],
+								outputs: Array.isArray(c.interface?.outputs) ? [...c.interface.outputs] : []
+							}
+						};
+					})
+				);
 			}
 		}
 		if (Array.isArray(jsonData.notes)) {
-			for (const n of jsonData.notes) {
-				core.notes.push({
-					id: asNodeId(n.id, `note_${core.notes.length}`),
-					text: n.text ?? '',
-					x: n.x ?? 80,
-					y: n.y ?? 80,
-					width: n.width ?? 200,
-					height: n.height ?? 120
-				});
+			for (const saved of jsonData.notes) {
+				core.notes.push(
+					loadKeepingUnknown(saved, (n) => ({
+						id: asNodeId(n.id, `note_${core.notes.length}`),
+						text: n.text ?? '',
+						x: n.x ?? 80,
+						y: n.y ?? 80,
+						width: n.width ?? 200,
+						height: n.height ?? 120
+					}))
+				);
 			}
 		}
 		if (jsonData.nodeNotes && typeof jsonData.nodeNotes === 'object') {
@@ -494,7 +510,7 @@
 		}
 		if (Array.isArray(jsonData.tableProcesses)) {
 			for (const tp of jsonData.tableProcesses) {
-				core.tableProcesses.push(new TableProcess(tp, null, tp.id));
+				core.tableProcesses.push(TableProcess.fromJSON(tp));
 			}
 		}
 
@@ -654,6 +670,13 @@
 		// Once its nodes have rendered, the workflow canvas moves apart any that overlap
 		// (a saved or baked layout cannot know how tall an expanded node will draw).
 		appState.settleLayoutRequest = (appState.settleLayoutRequest ?? 0) + 1;
+
+		// The top-level fields this load never read (ROB-22). `version` is read by the save,
+		// which writes the running version, so it is never kept.
+		// Only a session that has some gets the key (resetSession removed any earlier one).
+		void jsonData.version;
+		const unknownTopLevel = topLevel.unread();
+		if (unknownTopLevel.length > 0) core.unknownFields = Object.fromEntries(unknownTopLevel);
 
 		// hoursSinceStart is already pre-computed in pushObj; no second pass.
 		if (onProgress) onProgress('Finalising…');

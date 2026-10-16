@@ -94,7 +94,6 @@
 		<p class="node-name">
 			<Editable
 				value={getNodeName(node)}
-				onInput={(v) => setNodeName(node, v)}
 				onCommit={(v) => setNodeName(node, v, { commit: true })}
 			/>
 		</p>

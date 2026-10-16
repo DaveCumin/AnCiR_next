@@ -8,7 +8,7 @@ import {
 	swapColumnRefs,
 	propagateStoredValueRename
 } from './core.svelte.js';
-import { Plot, removePlotsCascade } from './Plot.svelte';
+import { Plot, removePlotsCascade, plotInnerFromJSON } from './Plot.svelte';
 import { Column, removeColumn as removeColumnCascade } from './Column.svelte';
 import { Process } from './Process.svelte';
 import { TableProcess, deleteTableProcessCascade } from './TableProcess.svelte';
@@ -90,6 +90,13 @@ import { inReaction } from './reactionContext.svelte.js';
  * @property {string} id
  * @property {Object} inner   serialized snapshot of plot.plot (the type's data object)
  *
+ * @typedef {Object} OpSetPlotInnerField
+ * @property {'setPlotInnerField'} kind
+ * @property {string} id        the plot's id
+ * @property {string} path      dotted path into the inner ('yAxisLeft.label')
+ * @property {unknown} value    JSON value to write (copied in and out)
+ * @property {boolean} [coalesce] a spinner-style edit: a quick run on one path is one undo step
+ *
  * @typedef {Object} OpSetFacetOverride
  * @property {'setFacetOverride'} kind
  * @property {string} id        the facet generator's plot id
@@ -108,6 +115,13 @@ import { inReaction } from './reactionContext.svelte.js';
  * @property {number} id        the column's id (never changes)
  * @property {string|null} name the new name; null clears the user name (back to the auto name)
  * @property {string} [restoreName] with name null: the name to show again (an inverse's)
+ *
+ * @typedef {Object} OpRenameNode
+ * @property {'renameNode'} kind
+ * @property {'plot'|'tableprocess'|'process'|'group'|'composite'} target  the node's kind
+ * @property {number|string} id  the node's id (a plot, analysis or process id; a group or
+ *   composite id string)
+ * @property {string} name       the new name (editors resolve an empty field to the default)
  *
  * @typedef {Object} OpSetRawCell
  * @property {'setRawCell'} kind
@@ -160,7 +174,7 @@ import { inReaction } from './reactionContext.svelte.js';
  *
  * @typedef {OpAddColumn | OpRemoveColumn | OpAddProcess | OpRemoveProcess |
  *   OpSetProcessArg | OpAddPlot | OpRemovePlot | OpSetPlotProperty | OpSetPlotPosition |
- *   OpSetPlotInner | OpSetFacetOverride | OpSetMarkerRule | OpRenameColumn | OpSetRawCell | OpSetPlotMetricOut | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
+ *   OpSetPlotInner | OpSetPlotInnerField | OpSetFacetOverride | OpSetMarkerRule | OpRenameColumn | OpRenameNode | OpSetRawCell | OpSetPlotMetricOut | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
  *   OpSetOrphanProcessArg | OpSetStoredValue | OpRemoveStoredValue |
  *   OpRenameStoredValue | OpReplaceColumnRefs | OpSwapColumnRefs | OpBatch | OpGraphPatch} GraphOperation
  */
@@ -349,12 +363,16 @@ function applyForward(op) {
 			return op_setPlotPosition(op);
 		case 'setPlotInner':
 			return op_setPlotInner(op);
+		case 'setPlotInnerField':
+			return op_setPlotInnerField(op);
 		case 'setFacetOverride':
 			return op_setFacetOverride(op);
 		case 'setMarkerRule':
 			return op_setMarkerRule(op);
 		case 'renameColumn':
 			return op_renameColumn(op);
+		case 'renameNode':
+			return op_renameNode(op);
 		case 'setRawCell':
 			return op_setRawCell(op);
 		case 'setPlotMetricOut':
@@ -463,10 +481,39 @@ function op_setPlotInner(op) {
 	const entry = appConsts.plotMap.get(plot.type);
 	if (typeof entry?.data?.fromJSON !== 'function') return null;
 	const before = snapshotPlotInner(plot.plot);
-	plot.plot = entry.data.fromJSON(plot, op.inner);
+	plot.plot = plotInnerFromJSON(plot, op.inner);
 	return pair(
 		{ kind: 'setPlotInner', id: op.id, inner: snapshotPlotInner(op.inner) },
 		{ kind: 'setPlotInner', id: op.id, inner: before }
+	);
+}
+
+// One setting of a plot's inner, written IN PLACE (an axis label, its gridlines, tick count or
+// manual ticks): the control's own edit, as one undo step and an unsaved change. Not
+// setPlotInner, which rebuilds the whole inner through fromJSON (every series recomputes) for
+// what is one field. The plot is looked up by id and the field by path at apply time, so an
+// undo after the inner was rebuilt (a wire, an AI edit) still lands. The path must already
+// lead to an object (no intermediate objects are created); the value is deep-copied both ways
+// so a later in-place edit of an array cannot rewrite history.
+function op_setPlotInnerField(op) {
+	const plot = core.plots.find((p) => p.id === op.id);
+	if (!plot?.plot || typeof op.path !== 'string' || !op.path) return null;
+	const parts = op.path.split('.');
+	let owner = plot.plot;
+	for (const key of parts.slice(0, -1)) {
+		owner = owner?.[key];
+		if (owner == null || typeof owner !== 'object') return null;
+	}
+	const leaf = parts.at(-1);
+	const copy = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+	const before = copy(owner[leaf]);
+	const next = copy(op.value);
+	if (JSON.stringify(before ?? null) === JSON.stringify(next ?? null)) return null;
+	owner[leaf] = next;
+	const flag = op.coalesce === true ? { coalesce: true } : {};
+	return pair(
+		{ kind: 'setPlotInnerField', id: op.id, path: op.path, value: copy(next), ...flag },
+		{ kind: 'setPlotInnerField', id: op.id, path: op.path, value: before, ...flag }
 	);
 }
 
@@ -573,6 +620,46 @@ function op_renameColumn(op) {
 			name: before,
 			...(before === null ? { restoreName: shown } : {})
 		}
+	);
+}
+
+// The object holding a node's user-facing name, and the field it is in: a plot's `name`, an
+// analysis or column process's `displayName`, a group or composite's `name`. Looked up by id at
+// apply time, so an op replayed after the node was rebuilt (an undo of a delete) still finds it.
+function nodeNameField(target, id) {
+	switch (target) {
+		case 'plot':
+			return { obj: core.plots.find((p) => p.id === id), key: 'name' };
+		case 'tableprocess':
+			return { obj: core.tableProcesses.find((t) => t.id === id), key: 'displayName' };
+		case 'process': {
+			const proc =
+				core.orphanProcesses.find((p) => p.id === id) ??
+				core.data.flatMap((c) => c.processes ?? []).find((p) => p.id === id);
+			return { obj: proc, key: 'displayName' };
+		}
+		case 'group':
+			return { obj: core.groups.find((g) => g.id === id), key: 'name' };
+		case 'composite':
+			return { obj: core.composites.find((c) => c.id === id), key: 'name' };
+	}
+	return { obj: null, key: null };
+}
+
+// Rename a canvas node (plot, analysis, column process, group, composite) in place: one undo
+// step, and an unsaved change like every op. The node's editors resolve what the typed text
+// means (trimmed, an empty field back to the node's default name; core/nodeNaming.js), so an
+// edit never writes an empty name; an inverse may restore one a node already had.
+function op_renameNode(op) {
+	if (typeof op.name !== 'string') return null;
+	const { obj, key } = nodeNameField(op.target, op.id);
+	if (!obj) return null;
+	const before = obj[key];
+	if (before === op.name) return null;
+	obj[key] = op.name;
+	return pair(
+		{ kind: 'renameNode', target: op.target, id: op.id, name: op.name },
+		{ kind: 'renameNode', target: op.target, id: op.id, name: before ?? '' }
 	);
 }
 

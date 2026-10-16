@@ -13,7 +13,7 @@
 	import { openImportData } from '$lib/core/dataSourceActions.js';
 	import SwapColumns from './modals/SwapColumns.svelte';
 	import Editable from '../inputs/Editable.svelte';
-	import { getNodeName } from '$lib/core/nodeNaming.js';
+	import { getNodeName, commitNodeRename } from '$lib/core/nodeNaming.js';
 	import { getNodeMeta } from '$lib/core/nodeMeta.js';
 	import { selectPlot } from '$lib/core/Plot.svelte';
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
@@ -450,7 +450,12 @@
 							<details class="clps-item" open={isOpen(group.id)}>
 								<summary class="clps-title-container" onclick={(e) => toggleSection(e, group.id)}>
 									<div class="clps-title">
-										<p><Editable bind:value={group.name} /></p>
+										<p>
+											<Editable
+												value={group.name}
+												onCommit={(v) => commitNodeRename('group', group, v)}
+											/>
+										</p>
 									</div>
 									<div class="clps-title-button">
 										<button
@@ -682,7 +687,7 @@
 								{/if}
 							</button>
 							<p class="plot-name">
-								<Editable bind:value={plot.name} />
+								<Editable value={plot.name} onCommit={(v) => commitNodeRename('plot', plot, v)} />
 								{#if plot.facet}
 									<!-- A facet generator's panels are views, not plots: one row, with the count. -->
 									<span class="panel-count">({facetUnits(plot).length} panels)</span>

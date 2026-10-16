@@ -146,7 +146,6 @@
 						placeholder="name"
 						ariaLabel="Rename node"
 						title="Double-click to rename"
-						onInput={(v) => setNodeName(node, v)}
 						onCommit={(v) => setNodeName(node, v, { commit: true })}
 					/>
 				</p>

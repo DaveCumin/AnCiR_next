@@ -12,6 +12,13 @@
 	import { allPanels } from '$lib/core/facetPanels.svelte.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { recordGraphMutation } from '$lib/core/operations.js';
+	import {
+		loadKeepingUnknown,
+		trackReads,
+		keepUnknownFields,
+		isPlainObject
+	} from '$lib/core/unknownFields.js';
+	import { RETIRED_PLOT_FIELDS } from '$lib/core/facetMigration.js';
 	// The facet type sets live in facetTypes.js (shared with the panel engine and the session
 	// migration, which must stay free of this module); re-exported so existing importers work.
 	export const FACETABLE_PLOT_TYPES = SHARED_FACETABLE_PLOT_TYPES;
@@ -35,6 +42,29 @@
 	 * reservation stays as a backstop for any other mid-load minting path (plan 0.2, 5.11).
 	 * Monotonic, so opening a smaller session afterwards cannot rewind the counter.
 	 */
+	/**
+	 * Rebuild a live plot's inner settings object (`plot.plot`) from its saved form. Every
+	 * route that loads a plot's inner (a session load, an undo, a recorded plot edit) goes
+	 * through here, so fields this version does not know, on the inner and on each series,
+	 * are kept and written back when it is saved (ROB-22, core/unknownFields.js). The type's
+	 * own `data.fromJSON` does the loading; this only watches what it reads.
+	 */
+	export function plotInnerFromJSON(plot, json) {
+		const entry = appConsts.plotMap.get(plot.type);
+		// Only a saved (plain JSON) inner is tracked; a live inner handed over whole is not.
+		if (!isPlainObject(json)) return entry.data.fromJSON(plot, json);
+		const tracker = trackReads(json, { arrays: ['data'] });
+		const inner = entry.data.fromJSON(plot, tracker.view);
+		keepUnknownFields(inner, tracker.unread());
+		const series = tracker.elements('data');
+		// A series is matched to its saved entry by position, which every plot type keeps on
+		// load; if the counts differ the pairing is unknown, so nothing is kept for them.
+		if (series && Array.isArray(inner?.data) && inner.data.length === series.length) {
+			series.forEach((t, i) => t && keepUnknownFields(inner.data[i], t.unread()));
+		}
+		return inner;
+	}
+
 	export function reservePlotIds(ids) {
 		for (const id of ids ?? []) {
 			if (Number.isFinite(id)) _counter = Math.max(_counter, id + 1);
@@ -319,7 +349,9 @@
 		// figures already finished, so retrofitting is an explicit "Apply to all".
 		style = $state();
 
-		constructor(plotData = {}, id = null) {
+		// `keepUnknown`: plotData is a saved plot (Plot.fromJSON), so its inner keeps the fields
+		// this version does not know. A plot built in code passes a hand-made inner and keeps none.
+		constructor(plotData = {}, id = null, { keepUnknown = false } = {}) {
 			// console.log('new plot: ', plotData);
 			// console.log('plotdata.width: ', plotData.width);
 			if (id === null) {
@@ -354,7 +386,9 @@
 			this.width = plotData.width ?? 500;
 			this.height = plotData.height ?? 250;
 
-			this.plot = plotTypeEntry.data.fromJSON(this, plotData.plot);
+			this.plot = keepUnknown
+				? plotInnerFromJSON(this, plotData.plot)
+				: plotTypeEntry.data.fromJSON(this, plotData.plot);
 
 			this.facet = plotData.facet ?? false;
 			// `??` not `||`: 0 is the meaningful "automatic" value, not a missing one.
@@ -416,8 +450,16 @@
 				plot: this.plot
 			};
 		}
+		// Fields of the saved plot this version does not read are kept and saved again (ROB-22).
 		static fromJSON(json) {
-			const id = json.id ?? json.plotid;
+			return loadKeepingUnknown(json, (saved) => Plot.#fromSaved(saved));
+		}
+		static #fromSaved(json) {
+			// Both read, so a legacy `plotid` beside an `id` is known and is not kept; so are the
+			// fields the facet migration retired, which are read here only to be dropped.
+			const { id: savedId, plotid } = json;
+			for (const retired of RETIRED_PLOT_FIELDS) void json[retired];
+			const id = savedId ?? plotid;
 			const name = json.name ?? 'Untitled Plot';
 
 			const {
@@ -454,7 +496,8 @@
 					sourceNodeId,
 					style
 				},
-				id
+				id,
+				{ keepUnknown: true }
 			);
 		}
 	}
