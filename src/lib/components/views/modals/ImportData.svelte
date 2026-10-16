@@ -524,7 +524,8 @@
 		for (const col of headers) {
 			const vals = detectionValues(col);
 			const order = dateOrderFor(col);
-			const detected = detectColumnType(vals, { order });
+			// The header is a hint for the Unix-time suggestion (epochHint).
+			const detected = detectColumnType(vals, { order, name: col });
 			const numeric = isNumericColumn(vals);
 			const sample = detectionSamples[col];
 			let dayMonth = null;
@@ -1530,6 +1531,7 @@
 					{
 						type: info.detected.type,
 						timeFormat: info.detected.timeFormat,
+						epoch: info.detected.epoch,
 						empty: info.detected.empty,
 						sampledRows: info.sampledRows,
 						wholeFile: info.wholeFile,
@@ -1565,7 +1567,12 @@
 			setDateOrder,
 			setColumnTypeChoice,
 			setBinningEnabled,
-			setBinInterval
+			setBinInterval,
+			// The Skip lines field: set it and re-read the preview, as its input does.
+			setSkipLines: async (n) => {
+				skipLines = n;
+				await reParse();
+			}
 		};
 	}
 
@@ -1821,20 +1828,40 @@
 
 		// Several files (concatenated on their common columns): count each one, so a ragged
 		// third file is reported as itself, not hidden behind a clean first file.
+		// The row count (which decides the binning suggestion and its estimate) is the
+		// total over every file: they are imported as one table.
 		if (!isAWD && targetFiles.length > 1) {
 			const options = { delimiter: lastDelimiter || delimiter, skipLines };
 			const perFile = [{ name: targetFile.name, count: raggedRows }];
+			let rowsInAll = totalRowCount;
 			for (const file of targetFiles.slice(1)) {
 				let count = 0;
 				try {
-					count = countRaggedRows(await readFileText(file), options);
+					if ((await sniffFile(file)).kind === 'excel') {
+						rowsInAll += await excelRowCount(file);
+					} else {
+						const text = await readFileText(file);
+						count = countRaggedRows(text, options);
+						const lines = text.split(/\r\n|\r|\n/).length;
+						rowsInAll += Math.max(0, lines - (hasHeader ? 1 : 0) - skipLines);
+					}
 				} catch {
 					count = 0; // an unreadable file is reported by the header check
 				}
 				perFile.push({ name: file.name, count });
 			}
 			raggedByFile = perFile;
+			totalRowCount = rowsInAll;
 		}
+	}
+
+	/** Data rows in a workbook's first sheet (its used range less the header row). */
+	async function excelRowCount(file) {
+		const data = new Uint8Array(await file.arrayBuffer());
+		const workbook = XLSX.read(data, { type: 'array' });
+		const sheet = workbook.Sheets[workbook.SheetNames[0]];
+		const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+		return range.e.r - range.s.r;
 	}
 
 	function readFileText(file) {
@@ -1987,6 +2014,11 @@
 		importError = '';
 		lastImportWarnings = [];
 		const previewCap = previewIN;
+		// The binning the user sees, read BEFORE loading starts. Its defaults derive from
+		// the preview rows, which are gone while the full file loads (the sampling
+		// interval reads as unknown), so reading them later binned at the 15 min
+		// fallback while the panel said 5, and could bin when the panel was unticked.
+		importBinning = { enabled: binningEnabled, intervalMin: binIntervalMin };
 		awaitingLoad = true;
 		loadProgress = {
 			stage: 'Loading data',
@@ -2011,6 +2043,7 @@
 			showImportModal = true;
 		} finally {
 			awaitingLoad = false;
+			importBinning = null;
 			loadProgress = { stage: '', detail: '' };
 		}
 	}
@@ -2291,11 +2324,13 @@
 						const workbook = XLSX.read(data, { type: 'array' });
 						const sheet = workbook.Sheets[workbook.SheetNames[0]];
 						const csv = XLSX.utils.sheet_to_csv(sheet, { skipHidden: true, blankrows: false });
+						// Skip lines apply to every file, as in the CSV branch below.
 						Papa.parse(csv, {
-							preview: 1,
+							preview: skipLines + (hasHeader ? 1 : 2),
 							header: hasHeader,
 							dynamicTyping: false,
 							skipEmptyLines: true,
+							skipFirstNLines: skipLines,
 							complete: (results) => {
 								resolve(
 									hasHeader
@@ -2437,8 +2472,10 @@
 		if (hasHeader) {
 			const keys = Object.keys(rows[0]);
 			for (const k of keys) result[k] = [];
+			// A short row has no cell for its last columns: missing (null), as in the
+			// first file, not undefined.
 			for (const row of rows) {
-				for (const k of keys) result[k].push(row[k]);
+				for (const k of keys) result[k].push(row[k] ?? null);
 			}
 		} else {
 			const colCount = rows[0].length;
@@ -2446,7 +2483,7 @@
 			for (const k of keys) result[k] = [];
 			for (const row of rows) {
 				for (let i = 0; i < colCount; i++) {
-					result[keys[i]].push(row[i]);
+					result[keys[i]].push(row[i] ?? null);
 				}
 			}
 		}
@@ -2470,6 +2507,7 @@
 							header: hasHeader,
 							...cellTyping(),
 							skipEmptyLines: 'greedy',
+							skipFirstNLines: skipLines,
 							complete: (results) => resolve(rowsToOwnColumnObject(results.data)),
 							error: reject
 						});
@@ -2560,36 +2598,15 @@
 			parsedData = stripRowFromColumns(parsedData, labelRowIndex);
 		}
 
-		// Apply binning if enabled
-		if (binningEnabled && parsedData) {
-			loadProgress = {
-				stage: 'Loading data',
-				detail: `Binning to ${binIntervalMin} min intervals…`
-			};
-			await tick();
-			await new Promise((resolve) => setTimeout(resolve, 10));
-			parsedData = binParsedData(parsedData);
-			// Clear awdMeta since binned data no longer matches compressed time
-			if (awdMeta) awdMeta = null;
-		}
-		// Binning rewrites its time column as labels in its own format, so a typed
-		// format for that column no longer applies; detection reads the labels.
-		const importOverrides = { ...columnTypeOverrides };
-		if (binningEnabled && binnedTimeKey != null) delete importOverrides[binnedTimeKey];
-
-		// ─────────────── Filter to selected columns ─────────────────
-		loadProgress = { stage: 'Loading data', detail: 'Filtering selected columns…' };
-		await tick();
-
-		parsedData = getFilteredData();
-
 		// ─────────────── Concatenate additional files (multi-file mode) ──────────
-		// Must happen BEFORE applyDateTimeCombination so that the raw date/time
-		// columns (which are in selectedColumns) can be matched in extraData.
-		// After combination the combined key (e.g. "Date Time") would not be
-		// present in selectedColumns, causing the time column to remain at file-1
-		// length and sortDataByTimestamp to truncate all other columns to match.
-		if (targetFiles.length > 1) {
+		// First, before binning and before the column filter, so every later step sees
+		// the rows of ALL files exactly as it would see one file holding them. Binning
+		// used to run first and binned file 1 only, appending the other files raw.
+		// It also must come before applyDateTimeCombination so that the raw date/time
+		// columns can be matched in extraData: after combination the combined key
+		// (e.g. "Date Time") would not be present, leaving the time column at file-1
+		// length and sortDataByTimestamp truncating all other columns to match.
+		if (targetFiles.length > 1 && parsedData) {
 			// Only columns present in every file are safe to concatenate. Drop
 			// anything outside that set from parsedData so row counts stay aligned.
 			const commonSet = new Set(commonColumns);
@@ -2609,13 +2626,35 @@
 
 				const extraData = await parseAdditionalFileData(extraFile);
 
-				for (const col of selectedColumns) {
-					if (parsedData[col] && extraData[col]) {
-						parsedData[col] = [...parsedData[col], ...extraData[col]];
-					}
+				for (const col of Object.keys(parsedData)) {
+					if (extraData[col]) parsedData[col] = [...parsedData[col], ...extraData[col]];
 				}
 			}
 		}
+
+		// Apply binning if enabled (as shown when Confirm Import was pressed).
+		const bin = importBinning ?? { enabled: binningEnabled, intervalMin: binIntervalMin };
+		if (bin.enabled && parsedData) {
+			loadProgress = {
+				stage: 'Loading data',
+				detail: `Binning to ${bin.intervalMin} min intervals…`
+			};
+			await tick();
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			parsedData = binParsedData(parsedData, bin.intervalMin);
+			// Clear awdMeta since binned data no longer matches compressed time
+			if (awdMeta) awdMeta = null;
+		}
+		// Binning rewrites its time column as labels in its own format, so a typed
+		// format for that column no longer applies; detection reads the labels.
+		const importOverrides = { ...columnTypeOverrides };
+		if (bin.enabled && binnedTimeKey != null) delete importOverrides[binnedTimeKey];
+
+		// ─────────────── Filter to selected columns ─────────────────
+		loadProgress = { stage: 'Loading data', detail: 'Filtering selected columns…' };
+		await tick();
+
+		parsedData = getFilteredData();
 
 		// Combine date+time column pairs if requested (after concat so the full
 		// date and time arrays from all files are combined together)
@@ -3093,9 +3132,11 @@
 
 	// The time column the last binParsedData call rebuilt as labels (or null).
 	let binnedTimeKey = null;
+	// The binning settings frozen when Confirm Import is pressed (see confirmImport).
+	let importBinning = null;
 
 	// Exported as a test seam (ImportData.binning.test.js); reads the modal's bin interval.
-	export function binParsedData(data) {
+	export function binParsedData(data, intervalMin = binIntervalMin) {
 		binnedTimeKey = null;
 		// data is { colName: [values...], ... } — column-oriented
 		const keys = Object.keys(data);
@@ -3173,7 +3214,7 @@
 			return data;
 		}
 
-		const binSizeHours = binIntervalMin / 60;
+		const binSizeHours = intervalMin / 60;
 
 		// Classify columns
 		const colTypes = {};
@@ -3516,8 +3557,8 @@
 							{#if totalRowCount > ROW_THRESHOLD}
 								<div class="section-row binning-panel">
 									<p class="binning-warning">
-										This file has ~{totalRowCount.toLocaleString()} rows. Consider binning to reduce data
-										size.
+										{targetFiles.length > 1 ? 'These files have' : 'This file has'} ~{totalRowCount.toLocaleString()}
+										rows. Consider binning to reduce data size.
 									</p>
 									<div class="control-input-horizontal">
 										<label class="control-input-checkbox">
@@ -3825,10 +3866,21 @@
 																	>{epochPreview(col, choice)}</span
 																>
 															{:else if info?.numeric && info.detected.epoch && choice === 'number'}
-																<span class="type-hint"
-																	>Looks like epoch {info.detected.epoch === 's'
+																<!-- Suggest, never convert: the column stays a Number until the user accepts. -->
+																<span
+																	class="type-suggest"
+																	data-testid={`import-epoch-suggest-${col}`}
+																	>Looks like Unix time in {info.detected.epoch === 's'
 																		? 'seconds'
-																		: 'milliseconds'}</span
+																		: 'milliseconds'}.
+																	<button
+																		type="button"
+																		class="link-button"
+																		data-testid={`import-epoch-accept-${col}`}
+																		onclick={() =>
+																			setColumnTypeChoice(col, `epoch-${info.detected.epoch}`)}
+																		>Import as time</button
+																	></span
 																>
 															{/if}
 															{#if choice === 'time' && !ov?.timeFormat}
@@ -4329,6 +4381,21 @@
 		font-size: var(--font-xs);
 		font-weight: 400;
 		color: var(--color-text-muted);
+	}
+	/* A one-click type suggestion (Unix time in a numeric column). Wraps like .type-warn. */
+	.type-suggest {
+		display: block;
+		max-width: 16rem;
+		margin-top: var(--space-1);
+		font-size: var(--font-xs);
+		font-weight: 400;
+		color: var(--color-text-muted);
+		text-align: left;
+		white-space: normal;
+	}
+	.type-suggest .link-button {
+		font-size: var(--font-xs);
+		font-weight: 600;
 	}
 	/* A per-column problem the user should look at before importing. The cell is
 	   nowrap (so the type row lines up); these wrap inside a readable width. */

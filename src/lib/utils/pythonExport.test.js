@@ -292,6 +292,24 @@ describe('script directory resolution and line wrapping (Python)', () => {
 		expect(analysis).toContain('sys.path.insert(0, _helper_dir)');
 	});
 
+	it('never splits an emoji (a surrogate pair) across two wrapped literals', () => {
+		// Python joins adjacent literals without recombining surrogates, so a pair cut in
+		// two came back as two broken characters. Pad by 0 and 1 so some cut lands mid-pair.
+		for (const pad of ['', 'x']) {
+			const s = { rawData: {}, data: [], tableProcesses: [] };
+			s.rawData['1'] = [pad + '\u{1F41D}'.repeat(3000)];
+			s.data.push({ id: 1, name: 'bees', type: 'category', data: 1, processes: [] });
+			const text = sessionToPython(s, PY_RT);
+			const literals = text
+				.split('\n')
+				.filter((l) => /^ {4}".*"$/.test(l))
+				.map((l) => JSON.parse(l.trim()));
+			expect(literals.length).toBeGreaterThan(1);
+			for (const lit of literals) expect(lit.isWellFormed()).toBe(true);
+			expect(literals.join('')).toContain('\u{1F41D}'.repeat(3000));
+		}
+	});
+
 	it('wraps huge embedded literals so no emitted line exceeds 4000 chars', () => {
 		const wide = { rawData: {}, data: [], tableProcesses: [] };
 		for (let i = 1; i <= 400; i++) {

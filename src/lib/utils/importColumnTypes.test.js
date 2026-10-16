@@ -11,6 +11,8 @@ import {
 	typeChoicesFor,
 	isNumericColumn,
 	epochHint,
+	epochToMs,
+	makeCellTyper,
 	countValues,
 	samplingIntervalMinutes
 } from './importColumnTypes.js';
@@ -292,5 +294,77 @@ describe('time cells never render missing as 1 Jan 1970', () => {
 	it('shows parsed text as typed and epoch ms as a date', () => {
 		expect(timeCellText('01/03/2026 00:00', 1)).toBe('01/03/2026 00:00');
 		expect(timeCellText(Date.UTC(2026, 2, 1), Date.UTC(2026, 2, 1))).toBe('01 Mar 2026 00:00:00');
+	});
+});
+
+// D (2026-10-16): Unix timestamps imported as plain numbers made a "24 h" period mean 24 s
+// (ESF activity files, `timestamp_unix` 1774310656.0 next to `datetime_utc`). The preview
+// suggests reading such a column as time; it never converts by itself, so the detection
+// must not fire on ordinary numbers.
+describe('Unix time suggestion (epochHint)', () => {
+	const type = makeCellTyper();
+	// The ESF files' first column as the importer types it: "1774310656.0", 640 s apart.
+	const esfSeconds = Array.from({ length: 50 }, (_, i) => type(`${1774310656 + i * 640}.0`));
+
+	it('flags the ESF timestamp_unix column as seconds, with or without its name', () => {
+		expect(esfSeconds[0]).toBe(1774310656);
+		expect(epochHint(esfSeconds)).toBe('s');
+		expect(detectColumnType(esfSeconds, { name: 'timestamp_unix' })).toMatchObject({
+			type: 'number',
+			epoch: 's'
+		});
+	});
+
+	it('flags milliseconds, and fractional seconds', () => {
+		expect(epochHint(esfSeconds.map((v) => v * 1000))).toBe('ms');
+		expect(epochHint([1774310656.25, 1774310656.5, 1774310657.75])).toBe('s');
+	});
+
+	it('the default type stays Number; nothing is converted without the choice', () => {
+		const r = resolveImportType(esfSeconds, null);
+		expect(r.type).toBe('number');
+		expect(r.values).toEqual(esfSeconds);
+	});
+
+	it('does not flag ordinary numbers', () => {
+		// Activity counts, occupancy fractions, a constant.
+		expect(epochHint([0, 12, 640, 1800, 233, 0, 17])).toBeNull();
+		expect(epochHint([0.97, 0.45, 0.36])).toBeNull();
+		expect(epochHint(Array(20).fill(1774310656))).toBeNull();
+		// Large counts that happen to fall in the epoch range but jump about.
+		const big = [1.2e9, 3.4e9, 0.9e9, 2.2e9, 1.7e9, 3.9e9, 1.1e9, 2.8e9];
+		expect(epochHint(big)).toBeNull();
+		// A cumulative byte total: rising, in range, but by tens of millions a row (years
+		// per step read as seconds).
+		expect(epochHint(Array.from({ length: 30 }, (_, i) => 7e8 + i * 5e7))).toBeNull();
+		// One value says nothing about a clock.
+		expect(epochHint([1774310656])).toBeNull();
+		// Out of range (before 1990 / after 2100) in either unit.
+		expect(epochHint([1e8, 1e8 + 60, 1e8 + 120])).toBeNull();
+		expect(epochHint([5e12, 5e12 + 60e3])).toBeNull();
+	});
+
+	it('a header such as "event_epoch" only relaxes the ordering rule', () => {
+		const shuffled = [1774310656, 1774312000, 1774311000, 1774313000, 1774312500, 1774314000];
+		expect(epochHint(shuffled)).toBeNull();
+		expect(epochHint(shuffled, { name: 'event_epoch' })).toBe('s');
+		// A name never makes ordinary numbers look like time.
+		expect(epochHint([0, 12, 640, 1800], { name: 'timestamp_unix' })).toBeNull();
+		expect(epochHint([1.2e9, 3.4e9, 0.9e9, 2.2e9, 1.7e9], { name: 'unix_count' })).toBeNull();
+	});
+
+	it('converts seconds to milliseconds exactly', () => {
+		expect(epochToMs(1774310656, 's')).toBe(1774310656000);
+		expect(epochToMs(1774310656.123, 's')).toBe(1774310656123);
+		expect(epochToMs(1774310656123, 'ms')).toBe(1774310656123);
+		expect(epochToMs(null, 's')).toBeNull();
+		const r = resolveImportType([1774310656.123, null, 1774311296], { choice: 'epoch-s' });
+		expect(r).toEqual({
+			type: 'time',
+			timeFormat: [],
+			values: [1774310656123, null, 1774311296000]
+		});
+		// The same instant as the file's datetime_utc text "2026-03-24 00:04:16".
+		expect(getUNIXDate(r.values[2], r.timeFormat)).toBe(Date.UTC(2026, 2, 24, 0, 14, 56));
 	});
 });

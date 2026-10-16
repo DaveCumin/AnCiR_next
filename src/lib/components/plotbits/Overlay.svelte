@@ -297,30 +297,52 @@
 
 		/**
 		 * `values(key)` as they are drawn: the `at` channel is collapsed to
-		 * uniques and capped; paired channels (start/end, lower/upper) are
-		 * capped as raw lists and deduped per PAIR in geometry(); ribbon
-		 * channels are returned whole.
+		 * uniques and capped; a paired channel (start/end, lower/upper) lists its
+		 * side of the distinct bands, capped (see #distinctPairs); ribbon channels
+		 * are returned whole.
 		 */
 		positions(key) {
 			const vals = this.values(key);
 			if (this.form === 'ribbon') return vals;
+			const pair = this.#pairOf(key);
+			if (pair) {
+				const side = pair.indexOf(key) === 0 ? 'lo' : 'hi';
+				return this.#distinctPairs(...pair)
+					.slice(0, OVERLAY_POSITION_CAP)
+					.map((p) => p[side]);
+			}
 			const base = this.#isPositionChannel(key) ? this.#uniques(vals) : vals;
 			return base.slice(0, OVERLAY_POSITION_CAP);
 		}
 
 		/** `{ shown, total }` so the panel can say "showing the first 50". */
 		capped(key) {
-			const vals = this.values(key);
-			const total = this.#isPositionChannel(key) ? this.#uniques(vals).length : vals.length;
+			const pair = this.#pairOf(key);
+			const total = pair
+				? this.#distinctPairs(...pair).length
+				: this.#isPositionChannel(key)
+					? this.#uniques(this.values(key)).length
+					: this.values(key).length;
 			const shown = this.form === 'ribbon' ? total : Math.min(total, OVERLAY_POSITION_CAP);
 			return { shown, total };
 		}
 
-		// ---- geometry ------------------------------------------------------
+		/** The [k0, k1] pair a key belongs to on this band form, or null. */
+		#pairOf(key) {
+			const pair = this.kind === 'band' ? PAIRED_FORMS[this.form] : null;
+			return pair && pair.includes(key) ? pair : null;
+		}
 
-		#pairedSegments(k0, k1, n0, n1) {
-			const a = this.positions(k0);
-			const b = this.positions(k1);
+		/**
+		 * The distinct non-empty bands of a paired channel, in row order, UNCAPPED:
+		 * k0[i] with k1[i], ordered lo <= hi, empty pairs skipped, repeats dropped.
+		 * Deduped before the cap, so a start/end column repeated on every row (a
+		 * lights-off time per sample) shows all of its bands, not those in its
+		 * first 50 rows.
+		 */
+		#distinctPairs(k0, k1) {
+			const a = this.values(k0);
+			const b = this.values(k1);
 			const n = Math.min(a.length, b.length);
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch, not state
 			const seen = new Set();
@@ -332,9 +354,17 @@
 				const sig = `${lo}|${hi}`;
 				if (seen.has(sig)) continue;
 				seen.add(sig);
-				out.push({ [n0]: lo, [n1]: hi });
+				out.push({ lo, hi });
 			}
 			return out;
+		}
+
+		// ---- geometry ------------------------------------------------------
+
+		#pairedSegments(k0, k1, n0, n1) {
+			return this.#distinctPairs(k0, k1)
+				.slice(0, OVERLAY_POSITION_CAP)
+				.map(({ lo, hi }) => ({ [n0]: lo, [n1]: hi }));
 		}
 
 		// NightBand's repeating maths, ported verbatim: `startTimeHours` is in
@@ -519,6 +549,10 @@
 			for (const { key } of specs) {
 				const { shown, total } = this.capped(key);
 				if (total > shown) {
+					// A paired form counts bands (start/end pairs), the same number on both keys.
+					if (this.kind === 'band' && PAIRED_FORMS[this.form]) {
+						return `${this.name} has ${total} bands; showing the first ${shown}`;
+					}
 					const where = specs.length > 1 ? ` ${key}` : '';
 					return `${this.name} has ${total}${where} positions; showing the first ${shown}`;
 				}
@@ -824,7 +858,8 @@
 
 	function capNote(key) {
 		const { shown, total } = overlay.capped(key);
-		return total > shown ? `${total} positions; showing the first ${shown}` : null;
+		const what = overlay.kind === 'band' && PAIRED_FORMS[overlay.form] ? 'bands' : 'positions';
+		return total > shown ? `${total} ${what}; showing the first ${shown}` : null;
 	}
 
 	function remove() {

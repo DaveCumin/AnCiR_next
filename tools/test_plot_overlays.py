@@ -182,12 +182,18 @@ def test_paired_segments_dedupe_per_pair_and_skip_empty_pairs():
     assert GEOM(h, {})["segments"] == [{"y0": 1, "y1": 3}]
 
 
-def test_paired_channels_are_capped_as_raw_lists():
+def test_paired_channels_are_deduped_then_capped():
     (o,) = built(ov(1, "band", "vertical", start=[0] * 60, end=[1] * 60))
     assert GEOM(o, {})["segments"] == [{"x0": 0, "x1": 1}]
     starts = list(range(0, 120, 2))
     (o2,) = built(ov(2, "band", "vertical", start=starts, end=[s + 1 for s in starts]))
     assert len(GEOM(o2, {})["segments"]) == 50
+    # A start/end column repeated on every row (30 rows a night, 4 nights): every night is
+    # drawn. Capping the raw rows at 50 kept only the first two.
+    nights = [0, 24, 48, 72]
+    (o3,) = built(ov(3, "band", "vertical", start=[n + 12 for n in nights for _ in range(30)],
+                     end=[n + 24 for n in nights for _ in range(30)]))
+    assert GEOM(o3, {})["segments"] == [{"x0": n + 12, "x1": n + 24} for n in nights]
 
 
 def test_ribbon_needs_equal_lengths_and_is_never_capped():

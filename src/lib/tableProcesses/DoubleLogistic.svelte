@@ -251,7 +251,9 @@
 		const finalXData = outputXData ?? sharedT;
 		const processHash = crypto.randomUUID();
 		if (writeXOutput(argsIN.out.dlogx, finalXData, { originTime_ms, processHash })) {
-			for (const yId of Object.keys(y_results)) {
+			// The input ids themselves, not Object.keys(y_results): those are strings, and
+			// getColumnById('11') finds nothing, which left every residual column empty.
+			for (const yId of yINs.filter((id) => y_results[id])) {
 				writeOutputColumn(argsIN.out['dlogy_' + yId], y_results[yId].yOutData, { processHash });
 
 				// Residual = observed − model evaluated at every input x (full length).

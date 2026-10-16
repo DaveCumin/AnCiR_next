@@ -8164,7 +8164,8 @@ def _apply_log_axis(ax, ylims_in, values):
 # - a form the host does not allow is coerced to the host's first form of that kind, and an
 #   overlay whose kind the host does not allow is dropped;
 # - a line's `at` positions are collapsed to finite uniques and cut at OVERLAY_POSITION_CAP;
-#   paired channels (start/end, lower/upper) are cut as raw lists and deduped per PAIR; a
+#   paired channels (start/end, lower/upper) are deduped per PAIR, then cut (so a band column
+#   repeated on every row keeps all of its bands, not those in its first 50 rows); a
 #   ribbon draws only when x, lower and upper hold the same number of values;
 # - repeating bands use NightBand's maths: anchored at the data minimum when `useDataMin`
 #   (continued backwards to the axis), hours scaled to ms on a time axis;
@@ -8417,8 +8418,8 @@ def _overlay_uniques(values):
 
 
 def _overlay_positions(overlay, key, columns_index, x_value_for=None):
-    """OverlayClass.positions: a line's `at` collapsed to uniques and capped; paired channels
-    capped as raw lists; ribbon channels whole."""
+    """OverlayClass.positions: a line's `at` collapsed to uniques and capped; ribbon channels
+    whole. Paired channels go through _overlay_paired_segments (deduped, then capped)."""
     vals = _overlay_values(overlay, key, columns_index, x_value_for)
     if overlay['form'] == 'ribbon':
         return vals
@@ -8427,8 +8428,10 @@ def _overlay_positions(overlay, key, columns_index, x_value_for=None):
 
 
 def _overlay_paired_segments(overlay, k0, k1, n0, n1, columns_index, x_value_for=None):
-    a = _overlay_positions(overlay, k0, columns_index, x_value_for)
-    b = _overlay_positions(overlay, k1, columns_index, x_value_for)
+    """OverlayClass #pairedSegments: k0[i] with k1[i], ordered, empty pairs skipped, repeats
+    dropped, THEN cut at OVERLAY_POSITION_CAP bands."""
+    a = _overlay_values(overlay, k0, columns_index, x_value_for)
+    b = _overlay_values(overlay, k1, columns_index, x_value_for)
     seen = set()
     out = []
     for i in range(min(len(a), len(b))):
@@ -8439,7 +8442,7 @@ def _overlay_paired_segments(overlay, k0, k1, n0, n1, columns_index, x_value_for
             continue
         seen.add((lo, hi))
         out.append({n0: lo, n1: hi})
-    return out
+    return out[:OVERLAY_POSITION_CAP]
 
 
 def _overlay_repeating_segments(overlay, ctx):

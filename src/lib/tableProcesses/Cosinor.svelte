@@ -351,7 +351,11 @@
 					yResult = {
 						fittedData: {
 							fitted: fixedResult.fitted,
+							// The full model, so evaluateCosinorAtPoints can evaluate it (the
+							// residual column). Without A and O every residual was NaN.
 							parameters: {
+								A: 0,
+								O: fixedResult.M,
 								cosines: fixedResult.harmonics.map((h) => ({
 									amplitude: h.amplitude,
 									frequency: (2 * Math.PI * h.k) / fixedPeriod,

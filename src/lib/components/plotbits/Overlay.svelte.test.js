@@ -345,6 +345,30 @@ describe('geometry', () => {
 		});
 	});
 
+	it('the band cap counts distinct bands, not raw rows (a start/end column repeated per row)', () => {
+		// A lights-off start/end recorded on every sample: 30 rows per night, 4 nights. Capping
+		// the raw rows at 50 used to keep only the first two nights.
+		const nights = [0, 24, 48, 72];
+		const start = nights.flatMap((n) => Array(30).fill(n + 12));
+		const end = nights.flatMap((n) => Array(30).fill(n + 24));
+		const b = new OverlayClass(mkParent(), { kind: 'band', form: 'vertical' });
+		b.setWire('start', mkCol(start));
+		b.setWire('end', mkCol(end));
+		expect(b.geometry({}).segments).toEqual(nights.map((n) => ({ x0: n + 12, x1: n + 24 })));
+		expect(b.capped('start')).toEqual({ shown: 4, total: 4 });
+		expect(b.positions('end')).toEqual(nights.map((n) => n + 24));
+		expect(b.warning).toBeNull();
+
+		// Over the cap in DISTINCT bands: the first 50, and the warning counts bands.
+		const many = Array.from({ length: 70 }, (_, i) => i * 10);
+		b.setWire('start', mkCol([...many, ...many]));
+		b.setWire('end', mkCol([...many, ...many].map((v) => v + 5)));
+		expect(b.geometry({}).segments).toHaveLength(OVERLAY_POSITION_CAP);
+		expect(b.geometry({}).segments.at(-1)).toEqual({ x0: 490, x1: 495 });
+		expect(b.capped('end')).toEqual({ shown: 50, total: 70 });
+		expect(b.warning).toBe('Band 1 has 70 bands; showing the first 50');
+	});
+
 	it('vertical band orders a reversed pair so x0 <= x1', () => {
 		const b = new OverlayClass(mkParent(), { kind: 'band', form: 'vertical' });
 		b.setTyped('start', [9]);

@@ -120,18 +120,72 @@ function firstValid(values) {
 	return null;
 }
 
+// Header words that make an epoch reading more likely. They only relax the ordering rule
+// below; a name alone never makes a suggestion.
+const EPOCH_NAME_HINT = /unix|epoch|posix|timestamp/i;
+// Share of steps between consecutive values that must go forward (later or equal) for a
+// column to read as times: a logger's clock, possibly with a few repeated or corrected
+// samples. With a name hint, half is enough (an unsorted export of event times).
+const EPOCH_MIN_FORWARD = 0.9;
+const EPOCH_MIN_FORWARD_NAMED = 0.5;
+// A clock column has a typical step of at most a month, and is not one constant value.
+const EPOCH_MAX_MEDIAN_STEP_S = 31 * 24 * 3600;
+
 /**
- * Which epoch unit a numeric column looks like, or null.
- * @param {number[]} nums non-blank numeric values
+ * Which epoch unit a numeric column looks like ('s' for Unix seconds, 'ms' for
+ * milliseconds), or null. Only a SUGGESTION for the import preview: nothing is
+ * converted unless the user picks it.
+ *
+ * Conservative, so ordinary numbers (counts, IDs, byte totals) are not flagged: every
+ * value must fall within 1990 to 2100 in that unit, the values must mostly run forward
+ * in time with a typical step of at most a month and must not all be equal, and there
+ * must be at least two values. A header such as "timestamp_unix" relaxes only the
+ * ordering rule. Whole and fractional seconds both count (1774310656.0 reads as a whole
+ * number, 1774310656.25 is a quarter second later).
+ * @param {number[]} nums non-blank numeric values, in row order
+ * @param {{ name?: string }} [opts] the column header, used as a hint
  * @returns {'s' | 'ms' | null}
  */
-export function epochHint(nums) {
-	if (nums.length === 0) return null;
-	const inRange = (k) =>
-		nums.every((n) => Number.isInteger(n) && n >= EPOCH_S_MIN * k && n <= EPOCH_S_MAX * k);
-	if (inRange(1)) return 's';
-	if (inRange(1000)) return 'ms';
+export function epochHint(nums, opts = {}) {
+	if (!Array.isArray(nums) || nums.length < 2) return null;
+	if (!nums.every((n) => typeof n === 'number' && Number.isFinite(n))) return null;
+	const named = EPOCH_NAME_HINT.test(String(opts.name ?? ''));
+	const steps = [];
+	let forward = 0;
+	for (let i = 1; i < nums.length; i++) {
+		const d = nums[i] - nums[i - 1];
+		if (d >= 0) forward++;
+		if (d > 0) steps.push(d);
+	}
+	if (steps.length === 0) return null; // one repeated value
+	if (forward / (nums.length - 1) < (named ? EPOCH_MIN_FORWARD_NAMED : EPOCH_MIN_FORWARD)) {
+		return null;
+	}
+	steps.sort((a, b) => a - b);
+	const medianStep = steps[Math.floor(steps.length / 2)];
+	for (const [unit, k] of [
+		['s', 1],
+		['ms', 1000]
+	]) {
+		if (!nums.every((n) => n >= EPOCH_S_MIN * k && n <= EPOCH_S_MAX * k)) continue;
+		if (medianStep > EPOCH_MAX_MEDIAN_STEP_S * k) return null;
+		return unit;
+	}
 	return null;
+}
+
+/**
+ * Epoch seconds or milliseconds to epoch milliseconds, the value a time column with no
+ * text format holds. Whole seconds convert exactly; at today's epoch a double holds
+ * milliseconds to about 0.0002 ms, so a fractional second such as 1774310656.123 comes
+ * back as the 1774310656123 ms written in the file.
+ * @param {unknown} v
+ * @param {'s' | 'ms'} unit
+ * @returns {number | null}
+ */
+export function epochToMs(v, unit) {
+	if (typeof v !== 'number' || !Number.isFinite(v)) return null;
+	return unit === 's' ? v * 1000 : v;
 }
 
 /**
@@ -146,7 +200,8 @@ export function epochHint(nums) {
  * 'number', the app's default column type, rather than 'category' on the
  * strength of nothing; the preview says so instead of offering a guess.
  * @param {unknown[]} values
- * @param {{ order?: 'day' | 'month' | null }} [opts]
+ * `opts.name` (the column header) is only a hint for the epoch suggestion.
+ * @param {{ order?: 'day' | 'month' | null, name?: string }} [opts]
  * @returns {{ type: 'time' | 'number' | 'category', timeFormat: string | string[] | null, epoch: 's' | 'ms' | null, dayMonth: object | null, empty: boolean }}
  */
 export function detectColumnType(values, opts = {}) {
@@ -159,7 +214,7 @@ export function detectColumnType(values, opts = {}) {
 		return {
 			type: 'number',
 			timeFormat: null,
-			epoch: epochHint(nonBlank),
+			epoch: epochHint(nonBlank, { name: opts.name }),
 			dayMonth: null,
 			empty: false
 		};
@@ -263,8 +318,8 @@ export function resolveImportType(values, override, opts = {}) {
 	// Epoch choices apply to numbers only. A column that is text by now (binning
 	// rewrites its time column as labels) falls through to detection.
 	if ((choice === 'epoch-s' || choice === 'epoch-ms') && isNumericColumn(values)) {
-		const k = choice === 'epoch-s' ? 1000 : 1;
-		const out = values.map((v) => (typeof v === 'number' && Number.isFinite(v) ? v * k : null));
+		const unit = choice === 'epoch-s' ? 's' : 'ms';
+		const out = values.map((v) => epochToMs(v, unit));
 		return { type: 'time', timeFormat: [], values: out };
 	}
 	if (choice === 'time') {

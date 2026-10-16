@@ -246,8 +246,15 @@ function embed(name, value) {
 		return `${name} = json.loads(${JSON.stringify(json)})`;
 	}
 	const parts = [];
-	for (let i = 0; i < json.length; i += PY_EMBED_CHUNK) {
-		parts.push(JSON.stringify(json.slice(i, i + PY_EMBED_CHUNK)));
+	for (let i = 0; i < json.length; ) {
+		let end = Math.min(i + PY_EMBED_CHUNK, json.length);
+		// Never cut between the two halves of a surrogate pair (an emoji, say): each
+		// literal would carry a lone surrogate, and Python joins adjacent literals
+		// without recombining them, so the name came back as two broken characters.
+		const last = json.charCodeAt(end - 1);
+		if (end < json.length && last >= 0xd800 && last <= 0xdbff) end--;
+		parts.push(JSON.stringify(json.slice(i, end)));
+		i = end;
 	}
 	return `${name} = json.loads(\n    ${parts.join('\n    ')}\n)`;
 }
