@@ -174,7 +174,7 @@
 				<ul>
 					<li>
 						<strong>Use Fixed Period (Halberg cosinor):</strong> enter the
-						<strong>Period (hrs)</strong>
+						<strong>Period (h)</strong>
 						(use 24 h, or your estimated τ from the periodogram) and the number of
 						<strong>harmonics</strong>
 						(<a class="gloss" href="#gloss-harmonic">harmonics</a>; start with 1). Choose the

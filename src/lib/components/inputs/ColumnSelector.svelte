@@ -542,15 +542,18 @@
 
 {#if !hideTrigger}
 	<div class="select-container" bind:this={containerEl}>
+		<!-- ui-select: the same field as a native <select> (app.css, UI-11), chevron included;
+		     aria-expanded flips the chevron while the list is open. -->
 		<button
 			bind:this={triggerEl}
-			class="trigger"
+			class="trigger ui-select"
 			title={selectedLabel}
 			onclick={toggleDropdown}
 			type="button"
+			aria-haspopup="listbox"
+			aria-expanded={open}
 		>
 			<span class="trigger-label">{selectedLabel}</span>
-			<span class="arrow">{open ? '▲' : '▼'}</span>
 		</button>
 	</div>
 {/if}
@@ -601,40 +604,19 @@
 		box-sizing: border-box;
 	}
 
+	/* The field itself (height, border, padding, chevron, hover, disabled) is .ui-select in
+	   app.css; only the layout of the label inside it is set here. */
 	.trigger {
 		width: 100%;
-		padding: 0.2rem 0.4rem;
-		text-align: left;
-		background-color: var(--color-lightness-97);
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 2px;
-		cursor: pointer;
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
-		min-height: var(--control-input-height);
-		box-sizing: border-box;
-		font-size: var(--font-lg);
-		font-weight: lighter;
-		color: inherit;
-		transition: border-color 0.2s;
-	}
-
-	.trigger:hover {
-		border-color: var(--color-lightness-35);
+		min-width: 0;
 	}
 
 	.trigger-label {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-	}
-
-	.arrow {
-		margin-left: 0.4rem;
-		color: var(--color-text-muted);
-		font-size: 0.75em;
-		flex-shrink: 0;
 	}
 
 	.dropdown {

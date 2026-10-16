@@ -113,7 +113,7 @@
 		ctx.fillStyle = C.muted;
 		ctx.font = '9px Inter,sans-serif';
 		ctx.textAlign = 'center';
-		ctx.fillText('Time (hours)', padL + pW / 2, padT + pH + 18);
+		ctx.fillText('Time (h)', padL + pW / 2, padT + pH + 18);
 	}
 
 	function drawOverlay(period) {

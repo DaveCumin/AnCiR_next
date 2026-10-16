@@ -834,7 +834,7 @@
 			// finished with. `dataIN?.legend` is defensive: this constructor treats dataIN
 			// as a SERIES (see addData below), so there is normally no legend on it.
 			this.legend = LegendClass.withDefaults(dataIN?.legend, { show: false });
-			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Period (hours)' });
+			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Period (h)' });
 			// An empty label is the per-method default (defaultYLabel). Sessions saved before
 			// the per-method default stored "Power" explicitly and keep it: that string cannot be told apart from
 			// a typed one, and a load must not retitle a finished figure.
@@ -1037,7 +1037,7 @@
 				periodogram.xAxis = AxisClass.fromJSON(json.xAxis);
 			} else {
 				periodogram.xAxis = new AxisClass({
-					label: 'Period (hours)',
+					label: 'Period (h)',
 					gridlines: json.xgridlines ?? true
 				});
 			}
@@ -1435,7 +1435,7 @@
 
 						{#if datum.visiblePeak}
 							<p>
-								<strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} hrs</strong>
+								<strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} h</strong>
 								<StoreValueButton
 									label="Peak Period"
 									getter={() => datum.visiblePeak?.period}
@@ -1465,13 +1465,13 @@
 							{#if datum.peak && Math.abs(datum.visiblePeak.period - datum.peak.period) > 0.001}
 								<div class="data-warning">
 									<p>
-										⚠ Overall peak at {datum.peak.period.toFixed(2)} hrs is outside the displayed range
+										⚠ Overall peak at {datum.peak.period.toFixed(2)} h is outside the displayed range
 									</p>
 								</div>
 							{/if}
 						{:else if datum.peak}
 							<p>
-								<strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong>
+								<strong>Peak Period: {datum.peak.period.toFixed(2)} h</strong>
 								<StoreValueButton
 									label="Peak Period"
 									getter={() => datum.peak?.period}
@@ -1600,7 +1600,7 @@
 				tooltip={true}
 				dataLabel={datum.y.name || ''}
 				dataColour={datum.line.colour}
-				xLabel={theData.plot.xAxis.label || 'Period (hours)'}
+				xLabel={theData.plot.xAxis.label || 'Period (h)'}
 				yLabel={theData.plot.yLabelText}
 				siblings={periodogramSiblings}
 				which="plot"
@@ -1618,7 +1618,7 @@
 				tooltip={true}
 				dataLabel={datum.y.name || ''}
 				dataColour={datum.points.colour}
-				xLabel={theData.plot.xAxis.label || 'Period (hours)'}
+				xLabel={theData.plot.xAxis.label || 'Period (h)'}
 				yLabel={theData.plot.yLabelText}
 				siblings={periodogramSiblings}
 				which="plot"

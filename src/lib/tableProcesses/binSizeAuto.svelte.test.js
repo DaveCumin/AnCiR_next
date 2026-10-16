@@ -160,7 +160,7 @@ describe('a new node follows its x', () => {
 			`.workflow-node-wrapper[data-node-id="tableprocess_${reopened.id}"]`
 		);
 		const label = [...(wrap?.querySelectorAll('label') ?? [])].find((l) =>
-			l.textContent.trim().startsWith('Bin size (hrs)')
+			l.textContent.trim().startsWith('Bin size (h)')
 		);
 		expect(label, 'the Bin size input is shown for Enright').toBeTruthy();
 		await fireEvent.input(label.querySelector('input'), { target: { value: '0.5' } });

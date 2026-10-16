@@ -324,7 +324,7 @@
 			</div>
 			<p class="hint">
 				Grid spans the data range (min→max of X). Step is in X units
-				{xIN_col?.type === 'time' ? '(hours)' : ''}.
+				{xIN_col?.type === 'time' ? '(h)' : ''}.
 			</p>
 		{/if}
 	</div>

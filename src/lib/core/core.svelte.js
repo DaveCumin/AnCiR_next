@@ -8,6 +8,7 @@ import { getCachedProcessNodeGraph } from '$lib/core/ProcessNode.svelte.js';
 import { transitionalFigureStyle } from '$lib/plots/figureStyle.js';
 import { recordGraphMutation } from '$lib/core/operations.js';
 import { mergeUnknown } from '$lib/core/unknownFields.js';
+import { placeNoteClear } from '$lib/core/notePlacement.js';
 
 /**
  * A brand-new, empty session: every slice of `core` at its starting value. The ONE definition of
@@ -121,9 +122,15 @@ export function freshCoreState() {
 export const core = $state(freshCoreState());
 
 let _nextNoteId = 1;
-export function createNote({ x = 80, y = 80, text = '' } = {}) {
+/**
+ * A new standalone note. It lands at (x, y) on the workspace unless that covers a plot or
+ * another note, in which case it moves to the nearest free spot (UI-7; notePlacement.js).
+ * `clear: false` skips that, for a builder that lays the whole workspace out afterwards.
+ */
+export function createNote({ x = 80, y = 80, text = '', clear = true } = {}) {
 	const id = `note_${_nextNoteId++}`;
 	core.notes.push({ id, text, x, y, width: 200, height: 120 });
+	if (clear) placeNoteClear(core.notes[core.notes.length - 1]);
 	return id;
 }
 
@@ -482,7 +489,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.82.12',
+	version: 'β.82.13',
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.processMap = await loadProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	processMap: new Map(),
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.plotMap = await loadPlots()); never mutated in place, so the $state reassignment already drives reactivity

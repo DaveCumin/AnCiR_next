@@ -483,7 +483,7 @@
 			// legend that switched itself on at load would silently change a figure
 			// the user had finished with. See LegendClass.withDefaults.
 			this.legend = LegendClass.withDefaults(dataIN?.legend, { show: false });
-			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Lag (hours)' });
+			this.xAxis = AxisClass.withDefaults(dataIN?.xAxis, { label: 'Lag (h)' });
 			this.yAxis = AxisClass.withDefaults(dataIN?.yAxis, { label: 'Autocorrelation' });
 			if (dataIN) {
 				this.addData(dataIN);
@@ -656,7 +656,7 @@
 				correlogram.xAxis = AxisClass.fromJSON(json.xAxis);
 			} else {
 				correlogram.xAxis = new AxisClass({
-					label: 'Lag (hours)',
+					label: 'Lag (h)',
 					gridlines: json.xgridlines ?? true
 				});
 			}
@@ -915,7 +915,7 @@
 
 						<!--
 						<div class="control-input">
-							<p>Max Lag (hours)</p>
+							<p>Max Lag (h)</p>
 							<div style="display: flex; align-items: center; gap: 8px;">
 								<NumberWithUnits
 									min="1"
@@ -949,7 +949,7 @@
 
 						{#if datum.visiblePeak}
 							<p>
-								<strong>Peak Lag: {datum.visiblePeak.lag.toFixed(2)} hrs</strong>
+								<strong>Peak Lag: {datum.visiblePeak.lag.toFixed(2)} h</strong>
 								<StoreValueButton
 									label="Peak Lag"
 									getter={() => datum.visiblePeak?.lag}
@@ -969,13 +969,13 @@
 							{#if datum.peak && Math.abs(datum.visiblePeak.lag - datum.peak.lag) > 0.001}
 								<div class="data-warning">
 									<p>
-										⚠ Overall peak at {datum.peak.lag.toFixed(2)} hrs is outside the displayed range
+										⚠ Overall peak at {datum.peak.lag.toFixed(2)} h is outside the displayed range
 									</p>
 								</div>
 							{/if}
 						{:else if datum.peak}
 							<p>
-								<strong>Peak Lag: {datum.peak.lag.toFixed(2)} hrs</strong>
+								<strong>Peak Lag: {datum.peak.lag.toFixed(2)} h</strong>
 								<StoreValueButton
 									label="Peak Lag"
 									getter={() => datum.peak?.lag}
@@ -1095,7 +1095,7 @@
 				tooltip={true}
 				dataLabel={datum.y.name || ''}
 				dataColour={datum.line.colour}
-				xLabel={theData.plot.xAxis.label || 'Lag (hours)'}
+				xLabel={theData.plot.xAxis.label || 'Lag (h)'}
 				yLabel={theData.plot.yAxis.label || 'Autocorrelation'}
 				siblings={correlogramSiblings}
 				which="plot"
@@ -1115,7 +1115,7 @@
 				tooltip={true}
 				dataLabel={datum.y.name || ''}
 				dataColour={datum.points.colour}
-				xLabel={theData.plot.xAxis.label || 'Lag (hours)'}
+				xLabel={theData.plot.xAxis.label || 'Lag (h)'}
 				yLabel={theData.plot.yAxis.label || 'Autocorrelation'}
 				siblings={correlogramSiblings}
 				which="plot"

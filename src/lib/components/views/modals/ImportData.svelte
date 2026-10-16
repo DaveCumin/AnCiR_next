@@ -708,6 +708,13 @@
 	}
 
 	/** The label of a column's detected type in its type selector. */
+	/** The text a column's type picker shows for `value` (sizes the picker to fit it). */
+	function typeChoiceLabel(info, value) {
+		const c = (info?.choices ?? []).find((x) => x.value === value);
+		if (!c) return '';
+		return value === info?.detected.type ? detectedOptionLabel(c, info) : c.label;
+	}
+
 	function detectedOptionLabel(choice, info) {
 		if (!info.detected.empty) return `${choice.label} (detected)`;
 		return info.wholeFile ? `${choice.label} (empty column)` : 'Decide on import';
@@ -3490,7 +3497,9 @@
 										</label>
 									{/if}
 								</div>
-								<ControlInput label="Delimiter">
+								<!-- Widths by content (import dialog truncations, 2026-10-16): Skip lines holds a
+								     few digits, so Sort by gets the room for "None (keep file order)". -->
+								<ControlInput label="Delimiter" style="flex: 1 1 0">
 									<select bind:value={delimiter} onchange={() => reParse()}>
 										<option value="">auto</option>
 										<option value=",">, (comma)</option>
@@ -3500,10 +3509,10 @@
 										<option value=" ">(space)</option>
 									</select>
 								</ControlInput>
-								<ControlInput label="Skip lines">
+								<ControlInput label="Skip lines" style="flex: 0 1 4.5rem">
 									<NumberWithUnits bind:value={skipLines} min="0" onInput={() => reParse()} />
 								</ControlInput>
-								<ControlInput label="Sort by">
+								<ControlInput label="Sort by" style="flex: 1.7 1 0">
 									<select bind:value={sortBy} disabled={awaitingLoad}>
 										<option value="__none__">None (keep file order)</option>
 										<option value="__time__">Time (auto-detect)</option>
@@ -3837,6 +3846,7 @@
 														<th class="label-cell type-cell">
 															<select
 																class="type-select"
+																style:--choice-chars={typeChoiceLabel(info, choice).length}
 																aria-label={`Type of ${col}`}
 																data-testid={`import-type-${col}`}
 																value={choice}
@@ -3858,6 +3868,9 @@
 																	data-testid={`import-format-${col}`}
 																	title="dayjs format, for example DD/MM/YYYY HH:mm"
 																	placeholder="format, e.g. YYYY-MM-DD HH:mm"
+																	style:--format-chars={String(
+																		ov?.timeFormat ?? formatText(info?.detected.timeFormat) ?? ''
+																	).length}
 																	value={ov?.timeFormat ?? formatText(info?.detected.timeFormat)}
 																	onchange={(e) => setColumnTimeFormat(col, e.currentTarget.value)}
 																/>
@@ -4359,21 +4372,30 @@
 	.type-cell {
 		vertical-align: top;
 	}
+	/* The field look is app.css's (UI-11); a column-header picker uses the dense type size. */
 	.type-select {
 		display: block;
 		width: 100%;
-		min-width: 7rem;
-		font-size: var(--font-sm);
-		font-weight: 400;
-		padding: 0.1rem 0.2rem;
-		border: 1px solid var(--color-lightness-85);
-		border-radius: var(--radius-xs);
-		background-color: var(--surface-card, #fff);
+		/* The chosen label in full ("Number (detected)" was cut to "Number (det..."): the
+		   label's length in ch (--choice-chars, set on the element) plus the field's insets. */
+		min-width: calc(
+			var(--choice-chars, 12) * 1ch + var(--field-padding-x) + var(--select-padding-right) + 2px
+		);
+		--field-font-size: var(--font-sm);
+		--field-font-weight: 400;
+		--field-bg: var(--surface-card);
 	}
+	/* Wide enough for the whole format string: the column grows to it rather than cutting
+	   "YYYY-MM-DD HH:mm:ss" to "YYYY-MM-DD HH:mm:". Monospace, so 1ch is one character;
+	   the extra 1ch and the padding and border keep the caret clear of the last one. */
 	.type-format {
 		display: block;
 		margin-top: var(--space-1);
 		font-family: var(--font-mono, ui-monospace, monospace);
+	}
+	/* Two classes so it outranks .label-input's 4rem minimum, which comes later. */
+	.label-input.type-format {
+		min-width: calc((max(var(--format-chars, 0), 12) + 1) * 1ch + 0.5rem + 2px);
 	}
 	.type-hint {
 		display: block;
@@ -4618,11 +4640,6 @@
 	.combine-select {
 		flex: 1 1 auto;
 		min-width: 6ch;
-		font: inherit;
-		padding: 0.15rem 0.3rem;
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 2px;
-		background: var(--color-lightness-97);
 	}
 	.combine-plus {
 		font-weight: 700;
@@ -4663,13 +4680,6 @@
 		display: block;
 		width: 100%;
 		margin-top: 0.25em;
-		font-size: var(--font-xs);
-		padding: 0.15rem 0.2rem;
-		border: 1px solid var(--color-lightness-85);
-		border-radius: 2px;
-		background-color: var(--color-lightness-97);
-	}
-	.mapping-select:hover {
-		border-color: var(--color-lightness-35);
+		--field-font-size: var(--font-xs);
 	}
 </style>

@@ -1212,6 +1212,8 @@
 		flex-direction: row;
 		align-items: center;
 		justify-content: flex-end;
+		/* Save (16 px) and delete (20 px) 24 px apart, so their pointer targets do not overlap. */
+		gap: var(--space-3);
 
 		margin: 0;
 		padding: 0;
@@ -1468,39 +1470,33 @@
 		margin: 0 0 0 0.2rem;
 	}
 
-	:global(.control-input select, .control-input input) {
+	/* A panel field fills its column. A select's look (height, border, chevron, padding,
+	   disabled) is the shared field rule in app.css (UI-11); a text or number input here
+	   reads the same field tokens so the two line up in one panel. */
+	:global(.control-input select) {
 		width: 100%;
-		/* Form controls do not inherit type by default: a select drew in Arial,
-		   black, beside the ColumnSelector triggers in the app font. */
+	}
+
+	:global(.control-input input) {
+		width: 100%;
+		/* Form controls do not inherit type by default. */
 		font-family: inherit;
 		color: inherit;
 
-		height: var(--control-input-height);
+		height: var(--field-height);
 		box-sizing: border-box;
 
-		font-size: var(--font-lg);
-		font-weight: lighter;
-		padding: 0.2rem var(--space-4);
-		border: solid 1px transparent;
-		background-color: var(--color-lightness-97);
-		border: solid 1px var(--color-lightness-85);
-		border-radius: 2px;
+		font-size: var(--field-font-size);
+		font-weight: var(--field-font-weight);
+		padding: 0.2rem var(--field-padding-x);
+		background-color: var(--field-bg);
+		border: solid 1px var(--field-border-color);
+		border-radius: var(--field-radius);
 		transition: border-color 0.2s;
 	}
 
-	/* No vertical padding: the fixed control height minus 0.2rem top and bottom
-	   left the text box shorter than a line of the app font, so descenders (the
-	   g in "Lomb-Scargle") were clipped. Chrome centres the text in the box. */
-	:global(.control-input select) {
-		padding: 0 var(--space-2);
-		/* Keep a long option name clear of the drop-down arrow, which Chrome
-		   paints inside the padding box once a select has an author border. */
-		padding-right: 1.5em;
-		text-overflow: ellipsis;
-	}
-
-	:global(.control-input select:hover, .control-input input:hover) {
-		border: solid 1px var(--color-lightness-35);
+	:global(.control-input input:hover) {
+		border-color: var(--field-border-color-hover);
 	}
 
 	:global(.control-color) {

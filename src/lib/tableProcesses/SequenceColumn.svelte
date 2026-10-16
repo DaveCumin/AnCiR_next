@@ -203,14 +203,14 @@
 						min={0.001}
 						step={0.01}
 						units={{
-							default: 'hrs',
+							default: 'h',
 							days: 24,
-							hrs: 1,
-							mins: 1 / 60,
-							secs: 1 / (60 * 60)
+							h: 1,
+							min: 1 / 60,
+							s: 1 / (60 * 60)
 						}}
 						onInput={changedStepTime}
-						selectedUnitStart="hrs"
+						selectedUnitStart="h"
 					/>
 				</div>
 			</ControlInput>

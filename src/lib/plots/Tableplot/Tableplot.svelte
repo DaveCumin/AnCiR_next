@@ -1139,7 +1139,7 @@
 													/>
 												{/key}
 												{#if String(cell.computed) !== String(cell.raw)}
-													<div class="computed-time">{cell.computed} hrs</div>
+													<div class="computed-time">{cell.computed} h</div>
 												{/if}
 											</div>
 										{:else if cell == null}

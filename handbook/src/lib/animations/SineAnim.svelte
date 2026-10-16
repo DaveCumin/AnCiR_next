@@ -51,7 +51,7 @@
 		const xPerHour = pW / 48;
 
 		drawHGrid(ctx, padL, padT, pW, pH, 4);
-		drawAxes(ctx, padL, padT, pW, pH, 'Time (hours)', 'Activity');
+		drawAxes(ctx, padL, padT, pW, pH, 'Time (h)', 'Activity');
 
 		ctx.fillStyle = C.muted;
 		ctx.font = '9.5px Inter,sans-serif';

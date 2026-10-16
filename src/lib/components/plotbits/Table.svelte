@@ -79,7 +79,7 @@
 										}}
 									/>
 									{#if String(col[r].computed) !== String(col[r].raw)}
-										<div class="computed-time">{col[r].computed} hrs</div>
+										<div class="computed-time">{col[r].computed} h</div>
 									{/if}
 								</div>
 							{:else if col[r] == null}

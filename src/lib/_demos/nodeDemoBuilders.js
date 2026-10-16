@@ -42,7 +42,9 @@ export function addDemoNote(nodeId) {
 	const NOTE_Y = 24;
 	const LANE = NOTE_Y + NOTE_H + 40; // vertical space to reserve above the graph
 
-	createNote({ x: NOTE_X, y: NOTE_Y, text });
+	// clear: false, the generator packs the plots afterwards and then gives the note its lane
+	// (generateDemos tidyPlots, workspaceLayout.noteLaneLayout).
+	createNote({ x: NOTE_X, y: NOTE_Y, text, clear: false });
 	const n = core.notes[core.notes.length - 1];
 	if (!n) return;
 	n.width = NOTE_W;

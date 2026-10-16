@@ -765,7 +765,7 @@
 			</div>
 		</div>
 		<div class="control-input-horizontal">
-			<ControlGroup label="Period range (hrs)">
+			<ControlGroup label="Period range (h)">
 				<ControlInput label="Min">
 					<NumberWithUnits bind:value={p.args.periodMin} min="0.01" step="0.5" />
 				</ControlInput>
@@ -779,7 +779,7 @@
 		</div>
 		{#if p.args.pgMethod === 'Chi-squared' || p.args.pgMethod === 'Enright'}
 			<div class="control-input-horizontal">
-				<ControlInput label="Bin size (hrs)">
+				<ControlInput label="Bin size (h)">
 					<NumberWithUnits
 						bind:value={p.args.pgBinSize}
 						onInput={() => stopFollowingSampling(p.args)}
@@ -804,18 +804,18 @@
 		{/if}
 	{:else if p.args.analysis === 'fft'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Frequency step (cycles/hr; 0 = auto)">
+			<ControlInput label="Frequency step (cycles/h; 0 = auto)">
 				<NumberWithUnits bind:value={p.args.fftFreqStep} min="0" step="0.001" />
 			</ControlInput>
 		</div>
 	{:else if p.args.analysis === 'correlogram'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Min lag (hrs)">
+			<ControlInput label="Min lag (h)">
 				<NumberWithUnits bind:value={p.args.corrMinLag} min="0" step="1" />
 			</ControlInput>
 		</div>
 		<div class="control-input-horizontal">
-			<ControlInput label="Max lag (hrs; 0 = half range)">
+			<ControlInput label="Max lag (h; 0 = half range)">
 				<NumberWithUnits bind:value={p.args.corrMaxLag} min="0" step="1" />
 			</ControlInput>
 		</div>

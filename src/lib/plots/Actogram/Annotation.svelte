@@ -225,11 +225,11 @@
 		</div>
 	</div>
 	<div class="control-input-horizontal">
-		<ControlInput label="Start (hours)">
+		<ControlInput label="Start (h)">
 			<NumberWithUnits step="0.1" value={annotation.startTime} onInput={changedStartTime} />
 		</ControlInput>
 
-		<ControlInput label="End (hours)">
+		<ControlInput label="End (h)">
 			<NumberWithUnits
 				step="0.1"
 				value={annotation.endTime}

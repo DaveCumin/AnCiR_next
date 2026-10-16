@@ -6,7 +6,7 @@
 	// modal. Picking Note spawns a standalone note into core.notes (visible in both
 	// the worksheet and the workflow canvas).
 	import Icon from '$lib/icons/Icon.svelte';
-	import { appConsts, appState, createNote } from '$lib/core/core.svelte.js';
+	import { appConsts, appState, createNote, snapToGrid } from '$lib/core/core.svelte.js';
 	import { mutationService } from '$lib/core/mutationService.js';
 	import { deselectAllPlots, nextPlotSpawnPosition } from '$lib/core/Plot.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
@@ -177,10 +177,12 @@
 
 	function handlePick(item) {
 		if (item.kind === 'note') {
-			const canvasEl = document.getElementsByClassName('canvas')[0];
+			// The canvas pans by transform (it never scrolls), so the visible top-left in canvas
+			// coordinates comes from the pan offset and zoom. createNote then moves the note off
+			// any plot it would cover (UI-7).
 			const scale = appState.canvasScale || 1;
-			const x = canvasEl ? Math.round(canvasEl.scrollLeft / scale) + 60 : 120;
-			const y = canvasEl ? Math.round(canvasEl.scrollTop / scale) + 60 : 120;
+			const x = snapToGrid((60 - (appState.canvasOffset?.x ?? 0)) / scale);
+			const y = snapToGrid((60 - (appState.canvasOffset?.y ?? 0)) / scale);
 			// Recorded, so one undo removes the note and redo restores it.
 			mutationService.record(() => createNote({ x, y }));
 			closeMenu();

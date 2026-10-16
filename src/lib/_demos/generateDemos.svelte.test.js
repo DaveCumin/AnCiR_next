@@ -34,6 +34,7 @@ import { core, appConsts, pushObj, outputCoreAsJson } from '$lib/core/core.svelt
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { layoutWorkspacePlots } from '$lib/core/workspaceLayout.js';
+import { clearNotesFromPlots } from '$lib/core/notePlacement.js';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
 import { loadProcesses } from '$test/processRegistry.js';
 import { loadPlots } from '$test/plotRegistry.js';
@@ -2454,6 +2455,9 @@ function prewarmWrapperNames() {
  */
 function tidyPlots() {
 	layoutWorkspacePlots(core.plots);
+	// Then the note lane, the same pass a session gets when it loads (UI-7), so the baked file
+	// already opens with the note clear of the plots.
+	clearNotesFromPlots();
 }
 
 /** RFC4180-ish quoting: only quote when the value actually needs it. */

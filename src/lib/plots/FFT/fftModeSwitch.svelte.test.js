@@ -142,7 +142,7 @@ describe('the Properties checkbox', () => {
 		const a = makeFft([4, 30]);
 		render(FFT, { props: { theData: a.plot, which: 'controls' } });
 		await tick();
-		const box = screen.getByLabelText('Show as Period (hours)');
+		const box = screen.getByLabelText('Show as Period (h)');
 		await fireEvent.click(box);
 		flushSync();
 		expect(live(a).plot.showPeriod).toBe(false);

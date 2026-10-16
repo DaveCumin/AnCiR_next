@@ -16,6 +16,101 @@
 	outline-offset: 2px;
 }
 
+/* ── Form fields (UI-11) ──────────────────────────────────────────────────────
+   One look for every single-choice picker: the native <select> and ColumnSelector's
+   trigger button sat side by side in the same node panel with different chevrons,
+   insets and text colours. Both read these tokens through the rule below, so a panel
+   that mixes them shows one control. The chevron is drawn here (not by the browser)
+   so it is the same glyph, size and inset in both, and in every browser. */
+:root {
+	--field-height: var(--control-input-height);
+	--field-font-size: var(--font-lg);
+	--field-font-weight: lighter;
+	--field-bg: var(--color-lightness-97);
+	--field-border-color: var(--color-lightness-85);
+	--field-border-color-hover: var(--color-lightness-35);
+	--field-radius: var(--radius-xs);
+	--field-padding-x: var(--space-3);
+	--field-disabled-opacity: 0.55;
+	--select-chevron-size: 10px;
+	/* stroke = --color-text-muted (#666666); a data URL cannot read a custom property */
+	--select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23666666' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	--select-chevron-open: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 7.5 6 4l3.5 3.5' fill='none' stroke='%23666666' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	/* text keeps clear of the chevron: inset + glyph + a gap */
+	--select-padding-right: calc(
+		var(--field-padding-x) + var(--select-chevron-size) + var(--space-2)
+	);
+}
+
+/* Every native drop-down in the app (a list box, [multiple] or [size], is not one), plus
+   anything that opts in with .ui-select (ColumnSelector's trigger). :where() keeps the
+   native-select half at zero specificity, so a component can still size or place its own
+   select; it should not restyle the field itself. */
+:where(select:not([multiple], [size])),
+.ui-select {
+	appearance: none;
+	box-sizing: border-box;
+	height: var(--field-height);
+	margin: 0;
+	padding: 0 var(--select-padding-right) 0 var(--field-padding-x);
+	font-family: inherit;
+	font-size: var(--field-font-size);
+	font-weight: var(--field-font-weight);
+	line-height: normal;
+	color: inherit;
+	text-align: left;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	background-color: var(--field-bg);
+	background-image: var(--select-chevron);
+	background-repeat: no-repeat;
+	background-position: right var(--field-padding-x) center;
+	background-size: var(--select-chevron-size) var(--select-chevron-size);
+	border: 1px solid var(--field-border-color);
+	border-radius: var(--field-radius);
+	cursor: pointer;
+	transition: border-color 0.2s;
+}
+:where(select:not([multiple], [size])):hover:not(:disabled),
+.ui-select:hover:not(:disabled) {
+	border-color: var(--field-border-color-hover);
+}
+.ui-select[aria-expanded='true'] {
+	background-image: var(--select-chevron-open);
+}
+:where(select:not([multiple], [size])):disabled,
+.ui-select:disabled {
+	opacity: var(--field-disabled-opacity);
+	cursor: not-allowed;
+}
+
+/* ── Pointer targets (UI-16) ──────────────────────────────────────────────────
+   Every icon button gets a pointer target of at least 24 x 24 CSS px (WCAG 2.2 SC 2.5.8)
+   without a bigger glyph and without moving anything: an invisible box centred on the
+   button, drawn by ::after, which hit-tests as the button. Applies to every
+   button.icon app-wide; anything else opts in with .hit-target (the node note button,
+   the node row chevrons). Neighbours need 24 px between centres for the boxes not to
+   overlap; where they would, the row or icon cluster gets the gap. */
+:root {
+	--hit-target-min: 24px;
+}
+:where(button.icon),
+.hit-target {
+	position: relative;
+}
+:where(button.icon)::after,
+.hit-target::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: max(100%, var(--hit-target-min));
+	height: max(100%, var(--hit-target-min));
+	transform: translate(-50%, -50%);
+	/* Above plain neighbouring content (a row's label), so the target keeps its full box. */
+	z-index: 1;
+}
+
 /* ── Shared component primitives ─────────────────────────────────────────────
    Canonical building blocks so recurring controls look identical everywhere.
    Global (not scoped to a component) so any .svelte file can opt in by class.

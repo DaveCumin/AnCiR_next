@@ -45,7 +45,7 @@ test('CWT legend and axis titles fit inside the plot, in a node and in the works
 }) => {
 	await loadDemo(page);
 	const svg = page.locator('svg[id^="plot"]').first();
-	for (const label of ['Power', 'Period (hrs)', 'Time']) {
+	for (const label of ['Power', 'Period (h)', 'Time']) {
 		await expect(svg.getByText(label, { exact: true })).toBeAttached();
 	}
 	expect(await clippedLabels(page)).toEqual([]);

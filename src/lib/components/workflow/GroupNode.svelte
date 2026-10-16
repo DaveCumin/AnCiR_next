@@ -299,7 +299,7 @@
 						</button>
 						<button
 							type="button"
-							class="row-chev"
+							class="row-chev hit-target"
 							aria-expanded={expanded}
 							title={expanded ? 'Hide preview' : 'Show preview'}
 							onmousedown={stopPointer}

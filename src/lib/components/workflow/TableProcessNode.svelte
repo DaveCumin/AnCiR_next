@@ -372,7 +372,7 @@
 						<div class="row-strip">
 							<button
 								type="button"
-								class="row-chev"
+								class="row-chev hit-target"
 								aria-expanded={isOpen}
 								title={isOpen ? 'Hide preview' : 'Show preview'}
 								onmousedown={stopPointer}
@@ -459,7 +459,7 @@
 								<div class="row-strip metric-strip">
 									<button
 										type="button"
-										class="row-chev"
+										class="row-chev hit-target"
 										aria-expanded={isOpen}
 										title={isOpen ? 'Hide per-series values' : 'Show per-series values'}
 										onmousedown={stopPointer}
@@ -639,7 +639,7 @@
 		user-select: none;
 	}
 	/* Left-side note button, always visible so the label never shifts. It reads as
-	   a faint "N" until a note exists (then NodeNoteButton turns it green). */
+	   a faint note icon until a note exists (then NodeNoteButton turns it green). */
 	.note-slot {
 		flex-shrink: 0;
 		display: flex;

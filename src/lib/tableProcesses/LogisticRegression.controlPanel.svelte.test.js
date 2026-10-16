@@ -71,7 +71,7 @@ describe('LogisticRegression control panel', () => {
 		await settle();
 		expect(container.textContent).toMatch(/Outcome \(binary\)/);
 		expect(container.textContent).toMatch(/Predictors/);
-		expect(triggers(container)).toEqual(['outcome ▼', '2 selected ▼']);
+		expect(triggers(container)).toEqual(['outcome', '2 selected']);
 	});
 
 	it('hides the pickers when the node is chained (hideInputs), like its siblings', async () => {

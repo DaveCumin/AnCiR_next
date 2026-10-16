@@ -114,12 +114,9 @@
 		color: var(--color-text-muted);
 	}
 
+	/* The field look is app.css's (UI-11). */
 	select {
 		width: 100%;
-		padding: 0.35rem var(--space-4);
-		border: 1px solid var(--color-lightness-85);
-		border-radius: var(--radius-sm);
-		font-size: 0.9rem;
 	}
 
 	.columns-header {

@@ -686,7 +686,7 @@
 					min="0.1"
 					step="0.5"
 					units={periodUnit === 'h'
-						? { default: 'hrs', days: 24, hrs: 1, mins: 1 / 60, secs: 1 / (60 * 60) }
+						? { default: 'h', days: 24, h: 1, min: 1 / 60, s: 1 / (60 * 60) }
 						: undefined}
 					onInput={getFit}
 				/>

@@ -81,7 +81,7 @@ describe('ChiSquared control panel', () => {
 		// Labels follow the test and input format: two independent groups by default.
 		expect(container.textContent).toMatch(/Group 1/);
 		expect(container.textContent).toMatch(/Group 2/);
-		expect(triggers(container)).toEqual(['ctrl ▼', 'drug ▼']);
+		expect(triggers(container)).toEqual(['ctrl', 'drug']);
 	});
 
 	it('relabels the ports for the paired reading and drops the second for goodness-of-fit', async () => {
@@ -94,7 +94,7 @@ describe('ChiSquared control panel', () => {
 		await settle();
 		expect(container.textContent).toMatch(/Column to test/);
 		expect(container.textContent).not.toMatch(/Variable 2/);
-		expect(triggers(container)).toEqual(['ctrl ▼']);
+		expect(triggers(container)).toEqual(['ctrl']);
 	});
 
 	it('hides the pickers when the node is chained (hideInputs), like its siblings', async () => {

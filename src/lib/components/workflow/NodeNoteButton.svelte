@@ -17,6 +17,7 @@
 	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { placeNotePopover } from './notePopoverPlacement.js';
+	import Icon from '$lib/icons/Icon.svelte';
 
 	let { nodeId } = $props();
 
@@ -127,7 +128,7 @@
 	<button
 		bind:this={btnEl}
 		type="button"
-		class="node-note-btn"
+		class="node-note-btn hit-target"
 		class:has-note={hasNote}
 		onclick={(e) => {
 			e.stopPropagation();
@@ -137,7 +138,7 @@
 		aria-label={hasNote ? 'View or edit note' : 'Add note'}
 		{@attach tooltip(hasNote ? shortTitle(note) : 'Add note')}
 	>
-		N
+		<Icon name="note" width={12} height={12} className="node-note-icon" />
 	</button>
 </div>
 
@@ -191,29 +192,30 @@
 		flex: 0 0 auto;
 	}
 
+	/* A 12 px note glyph in an 18 px box, so it sits in a dense node header; .hit-target
+	   (app.css) gives it the 24 x 24 pointer target without growing the box (UI-16). */
 	.node-note-btn {
-		color: rgba(0, 0, 0, 0.55);
-		font-size: 0.68rem;
-		line-height: 1;
-		padding: 2px 5px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--color-text-muted);
+		padding: var(--space-1);
 		border: 1px solid transparent;
 		border-radius: var(--radius-sm);
 		background: transparent;
 		cursor: pointer;
-		font-family: var(--font-mono, ui-monospace, monospace);
-		font-weight: 700;
 	}
 
 	.node-note-btn:hover {
-		color: rgba(0, 0, 0, 0.85);
-		border-color: rgba(0, 0, 0, 0.18);
-		background: rgba(0, 0, 0, 0.04);
+		color: var(--color-lightness-25);
+		border-color: var(--divider);
+		background: var(--color-lightness-96);
 	}
 
 	.node-note-btn.has-note {
-		color: #1f8c4f;
-		border-color: rgba(31, 140, 79, 0.4);
-		background: rgba(31, 140, 79, 0.1);
+		color: var(--color-success);
+		border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
+		background: var(--color-success-bg);
 	}
 
 	/* Lives on <body> (see portalToBody), so this is viewport-fixed and never

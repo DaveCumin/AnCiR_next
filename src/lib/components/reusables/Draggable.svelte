@@ -637,7 +637,7 @@
 	}
 
 	/* Left-side note button, always visible so the title never shifts. It reads as
-	   a faint "N" until a note exists (then NodeNoteButton turns it green). */
+	   a faint note icon until a note exists (then NodeNoteButton turns it green). */
 	.note-slot {
 		flex-shrink: 0;
 		display: flex;

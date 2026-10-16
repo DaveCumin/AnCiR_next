@@ -23,6 +23,7 @@
 		compareAppVersions
 	} from '$lib/core/sessionLoad.svelte.js';
 	import { markSessionSaved } from '$lib/core/unsavedChanges.svelte.js';
+	import { clearNotesFromPlots } from '$lib/core/notePlacement.js';
 	import { clearCrashSnapshot } from '$lib/core/errorReporter.js';
 	import { sessionSaveFileName, sessionNameForSave } from '$lib/core/sessionFiles.js';
 	import { downloadBlob } from '$lib/utils/downloadBlob.js';
@@ -227,6 +228,9 @@
 		try {
 			const report = await buildSession(jsonData, onProgress);
 			await settle();
+			// A note never opens on top of a plot (UI-7): notes that cover one get a lane above the
+			// plots. After the settle, so facet panels (derived from loaded columns) count too.
+			clearNotesFromPlots();
 			paramDiffWatcher.rebaseSnapshot();
 			history.clear();
 			// What is open now is exactly a file the user has: not unsaved work (ROB-5).

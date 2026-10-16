@@ -553,7 +553,7 @@
 					transform="translate({-(4 + 42 * fs)}, {H / 2}) rotate(-90)"
 					text-anchor="middle"
 					font-size={11 * fs}
-					fill="var(--color-lightness-25)">Period (hrs)</text
+					fill="var(--color-lightness-25)">Period (h)</text
 				>
 
 				<!-- time axis -->
@@ -628,10 +628,10 @@
 			<ControlInput label={theData.wavelet === 'morlet' ? 'omega0' : 'order m'}>
 				<NumberWithUnits bind:value={theData.waveletParam} min="1" step="1" />
 			</ControlInput>
-			<ControlInput label="Min period (hrs)">
+			<ControlInput label="Min period (h)">
 				<NumberWithUnits bind:value={theData.periodMin} min="0.01" step="1" />
 			</ControlInput>
-			<ControlInput label="Max period (hrs)">
+			<ControlInput label="Max period (h)">
 				<NumberWithUnits bind:value={theData.periodMax} min="0.1" step="1" />
 			</ControlInput>
 			<ControlInput label="Scale resolution (dj)">

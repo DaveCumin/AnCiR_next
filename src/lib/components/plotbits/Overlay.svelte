@@ -985,7 +985,7 @@
 
 	{#if !overlay.useDataMin}
 		<div class="control-input">
-			<p>Start Time (hours)</p>
+			<p>Start Time (h)</p>
 			{#if isTimeX}
 				<DateTimeHrs step="0.5" bind:value={overlay.startTimeHours} label="Start time" />
 			{:else}
@@ -994,15 +994,15 @@
 		</div>
 	{:else}
 		<div class="control-input">
-			<p>Start Time: Data Min + {overlay.startTimeHours} hrs</p>
+			<p>Start Time: Data Min + {overlay.startTimeHours} h</p>
 		</div>
 	{/if}
 
-	<ControlInput label="Period (hours)">
+	<ControlInput label="Period (h)">
 		<NumberWithUnits min="0.5" step="0.5" bind:value={overlay.repeatEveryHours} />
 	</ControlInput>
 
-	<ControlInput label="Night Duration (hours)">
+	<ControlInput label="Night Duration (h)">
 		<NumberWithUnits
 			min="0.1"
 			max={overlay.repeatEveryHours * 0.99}

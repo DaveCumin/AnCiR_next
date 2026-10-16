@@ -264,10 +264,11 @@
 		white-space: nowrap;
 	}
 
+	/* 16 px icons 24 px apart, so their 24 px pointer targets touch and never overlap. */
 	.series-block-icons {
 		display: flex;
 		align-items: center;
-		gap: var(--space-2);
+		gap: var(--space-4);
 		flex-shrink: 0;
 	}
 

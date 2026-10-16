@@ -407,7 +407,7 @@
 	<ControlInput
 		label={p.args.xIN >= 0
 			? getColumnById(p.args.xIN)?.type === 'time'
-				? 'Sustained for (hours)'
+				? 'Sustained for (h)'
 				: 'Sustained for (x units)'
 			: 'Consecutive values'}
 	>

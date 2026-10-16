@@ -48,7 +48,12 @@ describe('importJson migrates Data Views to Tables', () => {
 
 			const view = core.plots.find((p) => p.id === 120);
 			expect(view.name).toBe('Data: Cosinor: data + fit');
-			expect([view.x, view.y, view.width, view.height]).toEqual([60, 420, 520, 260]);
+			// The fixture's note covers its plots, so the load gives the note a lane and moves
+			// every plot down by one rigid shift (UI-7, notePlacement.js): the layout is kept up
+			// to that shift, the same for every plot.
+			const shift = core.plots.find((p) => p.id === 110).y - s.plots.find((p) => p.id === 110).y;
+			expect(shift % 15).toBe(0);
+			expect([view.x, view.y - shift, view.width, view.height]).toEqual([60, 420, 520, 260]);
 			expect(view.plot.source).toBe('plot');
 			expect(view.plot.sourcePlotId).toBe(110);
 			// Live: the Table reads the scatterplot's computed data, not the saved copy.

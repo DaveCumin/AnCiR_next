@@ -547,7 +547,7 @@
 		</div>
 	{:else}
 		<div class="control-input-horizontal">
-			<ControlInput label="Bin size (hrs)">
+			<ControlInput label="Bin size (h)">
 				<NumberWithUnits
 					bind:value={p.args.binSize}
 					onInput={getBinnedData}
@@ -565,7 +565,7 @@
 						onchange={handleBinStartDatetime}
 					/>
 				{:else}
-					<p>Bin start (hr)</p>
+					<p>Bin start (h)</p>
 					<NumberWithUnits bind:value={p.args.binStart} onInput={getBinnedData} />
 				{/if}
 			</div>
@@ -583,7 +583,7 @@
 
 		<div class="control-input-horizontal">
 			{#if p.args.diffStep}
-				<ControlInput label="Step size (hrs)">
+				<ControlInput label="Step size (h)">
 					<NumberWithUnits
 						bind:value={p.args.stepSize}
 						onInput={getBinnedData}

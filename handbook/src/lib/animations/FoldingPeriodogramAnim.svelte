@@ -236,7 +236,7 @@
 		ctx.strokeStyle = C.border;
 		ctx.lineWidth = 1;
 		ctx.strokeRect(L, T, pw, ph);
-		drawAxes(ctx, L, T, pw, ph, 'Time (hours) — vertical lines mark each 24 h cycle', 'Activity');
+		drawAxes(ctx, L, T, pw, ph, 'Time (h); vertical lines mark each 24 h cycle', 'Activity');
 	}
 
 	/* ── FOLD PANEL ── */

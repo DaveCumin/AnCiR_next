@@ -262,14 +262,14 @@
 				step="0.01"
 				max={50}
 				units={{
-					default: 'hrs',
+					default: 'h',
 					days: 24,
-					hrs: 1,
-					mins: 1 / 60,
-					secs: 1 / (60 * 60)
+					h: 1,
+					min: 1 / 60,
+					s: 1 / (60 * 60)
 				}}
 				onInput={doSimulated}
-				selectedUnitStart="mins"
+				selectedUnitStart="min"
 			/>
 		</div>
 	</ControlInput>
@@ -301,11 +301,11 @@
 					step="0.1"
 					max={1000 * 24}
 					units={{
-						default: 'hrs',
+						default: 'h',
 						days: 24,
-						hrs: 1,
-						mins: 1 / 60,
-						secs: 1 / (60 * 60)
+						h: 1,
+						min: 1 / 60,
+						s: 1 / (60 * 60)
 					}}
 					onInput={doSimulated}
 					selectedUnitStart="days"
@@ -321,11 +321,11 @@
 					step="0.1"
 					max={50}
 					units={{
-						default: 'hrs',
+						default: 'h',
 						days: 24,
-						hrs: 1,
-						mins: 1 / 60,
-						secs: 1 / (60 * 60)
+						h: 1,
+						min: 1 / 60,
+						s: 1 / (60 * 60)
 					}}
 					onInput={doSimulated}
 				/>
@@ -340,11 +340,11 @@
 					step="0.1"
 					max={50}
 					units={{
-						default: 'hrs',
+						default: 'h',
 						days: 24,
-						hrs: 1,
-						mins: 1 / 60,
-						secs: 1 / (60 * 60)
+						h: 1,
+						min: 1 / 60,
+						s: 1 / (60 * 60)
 					}}
 					onInput={doSimulated}
 				/>

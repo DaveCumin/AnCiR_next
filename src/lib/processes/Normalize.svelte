@@ -261,11 +261,8 @@
 		margin-top: var(--space-2);
 	}
 
+	/* The field look is app.css's (UI-11). */
 	select {
 		width: 100%;
-		padding: var(--space-2);
-		border: 1px solid var(--border-color, var(--color-lightness-80));
-		border-radius: 0.25rem;
-		font-size: 0.9rem;
 	}
 </style>

@@ -650,10 +650,10 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Window</span></div>
 	<div class="control-input-horizontal">
-		<ControlInput label="Window size (hrs)">
+		<ControlInput label="Window size (h)">
 			<NumberWithUnits bind:value={p.args.windowSize} min="0.1" step="0.5" />
 		</ControlInput>
-		<ControlInput label="Step size (hrs)">
+		<ControlInput label="Step size (h)">
 			<NumberWithUnits bind:value={p.args.stepSize} min="0.1" step="0.5" />
 		</ControlInput>
 		<div class="control-input">
@@ -729,7 +729,7 @@
 			</div>
 		</div>
 		<div class="control-input-horizontal">
-			<ControlGroup label="Period range (hrs)">
+			<ControlGroup label="Period range (h)">
 				<ControlInput label="Min">
 					<NumberWithUnits bind:value={p.args.periodMin} min="0.01" step="0.5" />
 				</ControlInput>
@@ -743,7 +743,7 @@
 		</div>
 		{#if p.args.pgMethod === 'Chi-squared' || p.args.pgMethod === 'Enright'}
 			<div class="control-input-horizontal">
-				<ControlInput label="Bin size (hrs)">
+				<ControlInput label="Bin size (h)">
 					<NumberWithUnits
 						bind:value={p.args.pgBinSize}
 						onInput={() => stopFollowingSampling(p.args)}
@@ -772,7 +772,7 @@
 		</div>
 		{#if p.args.useFixedPeriod}
 			<div class="control-input-horizontal">
-				<ControlInput label="Period (hrs)">
+				<ControlInput label="Period (h)">
 					<NumberWithUnits bind:value={p.args.fixedPeriod} min="0.1" step="0.5" />
 				</ControlInput>
 				<ControlInput label="N harmonics">
@@ -788,33 +788,33 @@
 		{/if}
 	{:else if p.args.analysis === 'npcra'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Epoch (hrs)">
+			<ControlInput label="Epoch (h)">
 				<NumberWithUnits bind:value={p.args.npcraEpochHours} min="0.01" step="0.25" />
 			</ControlInput>
-			<ControlInput label="Period (hrs)">
+			<ControlInput label="Period (h)">
 				<NumberWithUnits bind:value={p.args.npcraPeriod} min="1" step="1" />
 			</ControlInput>
 		</div>
 		<div class="control-input-horizontal">
-			<ControlInput label="M window (hrs)">
+			<ControlInput label="M window (h)">
 				<NumberWithUnits bind:value={p.args.npcraMWindow} min="1" step="1" />
 			</ControlInput>
-			<ControlInput label="L window (hrs)">
+			<ControlInput label="L window (h)">
 				<NumberWithUnits bind:value={p.args.npcraLWindow} min="1" step="1" />
 			</ControlInput>
 		</div>
 	{:else if p.args.analysis === 'fft'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Frequency step (cycles/hr; 0 = auto)">
+			<ControlInput label="Frequency step (cycles/h; 0 = auto)">
 				<NumberWithUnits bind:value={p.args.fftFreqStep} min="0" step="0.001" />
 			</ControlInput>
 		</div>
 	{:else if p.args.analysis === 'correlogram'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Min lag (hrs)">
+			<ControlInput label="Min lag (h)">
 				<NumberWithUnits bind:value={p.args.corrMinLag} min="0" step="1" />
 			</ControlInput>
-			<ControlInput label="Max lag (hrs; 0 = half window)">
+			<ControlInput label="Max lag (h; 0 = half window)">
 				<NumberWithUnits bind:value={p.args.corrMaxLag} min="0" step="1" />
 			</ControlInput>
 		</div>
@@ -827,7 +827,7 @@
 				</label>
 			</div>
 			{#if p.args.useFixedPeriod}
-				<ControlInput label="Period (hrs)">
+				<ControlInput label="Period (h)">
 					<NumberWithUnits bind:value={p.args.fixedPeriod} min="0.1" step="0.5" />
 				</ControlInput>
 			{/if}
@@ -874,7 +874,7 @@
 					</label>
 				</div>
 				{#if p.args.useFixedPeriod}
-					<ControlInput label="Period (hrs)">
+					<ControlInput label="Period (h)">
 						<NumberWithUnits bind:value={p.args.fixedPeriod} min="0.1" step="0.5" />
 					</ControlInput>
 				{/if}

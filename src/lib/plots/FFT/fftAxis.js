@@ -10,7 +10,7 @@
 // The rule now: a label that is one of the labels this plot has ever generated for itself is
 // "automatic" and follows the mode. Anything else is the user's own wording and is kept.
 
-export const FFT_PERIOD_LABEL = 'Period (hours)';
+export const FFT_PERIOD_LABEL = 'Period (h)';
 export const FFT_FREQUENCY_LABEL = 'Frequency (cycles/h)';
 
 /**
@@ -22,7 +22,8 @@ export const FFT_FREQUENCY_LABEL = 'Frequency (cycles/h)';
 const AUTO_LABELS = new Set([
 	'Frequency',
 	'Period',
-	'Period (h)',
+	// Before UI-10 the period label spelled the unit out; a session saved then still follows the mode.
+	'Period (hours)',
 	FFT_PERIOD_LABEL,
 	FFT_FREQUENCY_LABEL,
 	'Frequency (cycles/hr)'

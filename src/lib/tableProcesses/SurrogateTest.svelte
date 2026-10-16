@@ -270,7 +270,7 @@
 		the rhythm being tested and cannot answer whether it is there.
 	</p>
 	{#if p.args.method === 'block'}
-		<ControlInput label="Block length (hrs)">
+		<ControlInput label="Block length (h)">
 			<NumberWithUnits bind:value={p.args.blockLengthHours} min="1" step="1" />
 		</ControlInput>
 	{/if}
@@ -283,10 +283,10 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Band</span></div>
 	<div class="control-input-horizontal">
-		<ControlInput label="Min period (hrs)">
+		<ControlInput label="Min period (h)">
 			<NumberWithUnits bind:value={p.args.periodMin} min="0.1" step="1" />
 		</ControlInput>
-		<ControlInput label="Max period (hrs)">
+		<ControlInput label="Max period (h)">
 			<NumberWithUnits bind:value={p.args.periodMax} min="0.1" step="1" />
 		</ControlInput>
 	</div>

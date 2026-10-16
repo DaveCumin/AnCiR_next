@@ -31,7 +31,7 @@
 	// to add is a duration: offer mins / hrs / days and store it in ms (the factors
 	// below), which `add` then adds straight onto the timestamps. Numeric inputs
 	// keep the plain value. The unit choice follows the input column's type.
-	const TIME_UNITS = { default: 'hrs', mins: 60000, hrs: 3600000, days: 86400000 };
+	const TIME_UNITS = { default: 'h', min: 60000, h: 3600000, days: 86400000 };
 	let isTimeInput = $derived(p?.inputCol?.type === 'time');
 </script>
 

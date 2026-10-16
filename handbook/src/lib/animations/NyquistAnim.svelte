@@ -65,7 +65,7 @@
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(padL, padT, pW, pH);
 		drawHGrid(ctx, padL, padT, pW, pH, 4);
-		drawAxes(ctx, padL, padT, pW, pH, 'Time (hours)', '');
+		drawAxes(ctx, padL, padT, pW, pH, 'Time (h)', '');
 
 		// X labels every 24 h + faint day markers
 		ctx.fillStyle = C.muted;

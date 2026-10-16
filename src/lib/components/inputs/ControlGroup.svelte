@@ -3,15 +3,15 @@
 	/**
 	 * A caption over a row of related ControlInputs, e.g.
 	 *
-	 *   Period range (hrs)
+	 *   Period range (h)
 	 *   Min      Max      Step
 	 *   [ 20 ]   [ 28 ]   [ 0.01 ]
 	 *
 	 * Three fields side by side leave ~60px each in a canvas node's editor panel,
-	 * so a full label per field ("Period min (hrs)") wraps onto two lines. The
+	 * so a full label per field ("Period min (h)") wraps onto two lines. The
 	 * shared part of the name goes in the caption and each field keeps a short
 	 * label that fits on one line. The row is a role="group" named by the
-	 * caption, so a screen reader announces "Period range (hrs), group" before
+	 * caption, so a screen reader announces "Period range (h), group" before
 	 * "Min", and the short labels stay unambiguous.
 	 *
 	 * Props:

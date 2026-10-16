@@ -399,8 +399,8 @@
 		padding: 0.2rem var(--space-4);
 		color: var(--color-text-muted);
 	}
+	/* The field look is app.css's (UI-11); this compact picker only shrinks the type. */
 	.chain-selector select {
-		font-size: 0.8rem;
-		padding: 0.1rem var(--space-2);
+		--field-font-size: var(--font-sm);
 	}
 </style>

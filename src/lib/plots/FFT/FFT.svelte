@@ -1103,7 +1103,7 @@
 								e.currentTarget.checked
 							)}
 					/>
-					<span class="ci-label">Show as Period (hours)</span>
+					<span class="ci-label">Show as Period (h)</span>
 				</label>
 			</div>
 
@@ -1213,7 +1213,7 @@
 									Auto: {datum.fftData.frequencies.length} points
 								{/if}
 								{#if datum.fftData.resolution > 0}
-									<br />Resolution {datum.fftData.resolution.toPrecision(3)} cycles/hr (1 / record length);
+									<br />Resolution {datum.fftData.resolution.toPrecision(3)} cycles/h (1 / record length);
 									a finer step interpolates between independent bins.
 								{/if}
 							</p>
@@ -1230,7 +1230,7 @@
 						{#if datum.visiblePeak}
 							{#if datum.visiblePeak.period != null}
 								<p>
-									<strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} hrs</strong>
+									<strong>Peak Period: {datum.visiblePeak.period.toFixed(2)} h</strong>
 									<StoreValueButton
 										label="Peak Period"
 										getter={() => datum.visiblePeak?.period}
@@ -1240,7 +1240,7 @@
 								</p>
 							{/if}
 							<p>
-								<strong>Peak Frequency: {datum.visiblePeak.frequency.toFixed(4)} cycles/hr</strong>
+								<strong>Peak Frequency: {datum.visiblePeak.frequency.toFixed(4)} cycles/h</strong>
 								<StoreValueButton
 									label="Peak Frequency"
 									getter={() => datum.visiblePeak?.frequency}
@@ -1261,15 +1261,15 @@
 								<div class="data-warning">
 									<p>
 										⚠ Overall peak at {datum.peak.period != null
-											? datum.peak.period.toFixed(2) + ' hrs / '
-											: ''}{datum.peak.frequency.toFixed(4)} cycles/hr is outside the displayed range
+											? datum.peak.period.toFixed(2) + ' h / '
+											: ''}{datum.peak.frequency.toFixed(4)} cycles/h is outside the displayed range
 									</p>
 								</div>
 							{/if}
 						{:else if datum.peak}
 							{#if datum.peak.period != null}
 								<p>
-									<strong>Peak Period: {datum.peak.period.toFixed(2)} hrs</strong>
+									<strong>Peak Period: {datum.peak.period.toFixed(2)} h</strong>
 									<StoreValueButton
 										label="Peak Period"
 										getter={() => datum.peak?.period}
@@ -1279,7 +1279,7 @@
 								</p>
 							{/if}
 							<p>
-								<strong>Peak Frequency: {datum.peak.frequency.toFixed(4)} cycles/hr</strong>
+								<strong>Peak Frequency: {datum.peak.frequency.toFixed(4)} cycles/h</strong>
 								<StoreValueButton
 									label="Peak Frequency"
 									getter={() => datum.peak?.frequency}

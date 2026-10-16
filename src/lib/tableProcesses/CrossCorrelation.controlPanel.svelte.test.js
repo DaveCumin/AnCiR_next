@@ -70,7 +70,7 @@ describe('CrossCorrelation control panel', () => {
 		await settle();
 		expect(container.textContent).toMatch(/Series A/);
 		expect(container.textContent).toMatch(/Series B/);
-		expect(triggers(container)).toEqual(['series a ▼', 'series b ▼']);
+		expect(triggers(container)).toEqual(['series a', 'series b']);
 	});
 
 	it('hides the pickers when the node is chained (hideInputs), like its siblings', async () => {

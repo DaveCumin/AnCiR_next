@@ -64,10 +64,10 @@
 					raw: Number.isFinite(centerMs) ? formatDateTime(centerMs) : '-',
 					computed: rangeStr,
 					isTime: true,
-					unit: 'hrs'
+					unit: 'h'
 				};
 			}
-			return { raw: (x + half).toFixed(DP), computed: rangeStr, isTime: true, unit: 'hrs' };
+			return { raw: (x + half).toFixed(DP), computed: rangeStr, isTime: true, unit: 'h' };
 		}
 		// Time: readable time with hours-since-start underneath.
 		if (isTime && Array.isArray(timeArr)) {
@@ -77,7 +77,7 @@
 			if (raw === '-') return { raw, computed: '-', isTime: true };
 			const hours = column.hoursSinceStart?.[i];
 			if (!Number.isFinite(hours)) return { raw, computed: '-', isTime: true };
-			return { raw, computed: hours.toFixed(DP), isTime: true, unit: 'hrs' };
+			return { raw, computed: hours.toFixed(DP), isTime: true, unit: 'h' };
 		}
 		return formatNumber(data?.[i]);
 	}

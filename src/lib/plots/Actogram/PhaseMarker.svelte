@@ -592,7 +592,7 @@
 	// time-of-day variation that the line's drift explains, so it no longer measures how
 	// tightly the markers sit on the line (review FIT-4).
 	const R2_HELP =
-		"R² is computed on the time-of-day residuals (each marker's time minus period × day): the share of the markers' time-of-day variation that the line's drift explains. A drift-free entrained record scores near 0 however tight its markers are, and a line with a fixed τ or θ can score below 0. Use Error (RMSE) for how tightly the markers sit on the line.";
+		"R² is computed on the time-of-day residuals (each marker's time minus period × day): the share of the markers' time-of-day variation that the line's drift explains. A drift-free entrained record scores near 0 however tight its markers are, and a line with a fixed τ or φ can score below 0. Use Error (RMSE) for how tightly the markers sit on the line.";
 	const RMSE_HELP =
 		'Error is the RMSE: the typical distance, in hours, of the markers from the drawn line. It measures how tightly they sit on it.';
 
@@ -965,12 +965,12 @@
 {/snippet}
 
 {#snippet lockBlock(marker)}
-	<!-- Per-parameter locks: τ (slope) and θ (phase at the reference day) are each
+	<!-- Per-parameter locks: τ (slope) and φ (phase at the reference day; the key stays `theta`) are each
 	     either fitted from the selected markers or fixed at a value the user set.
 	     "Fit" is disabled when there are no markers to fit to. -->
 	<div class="lock-block">
 		<p class="lock-title">Line fit</p>
-		{#each [{ key: 'tau', label: 'τ (hrs)', title: 'τ: the period, i.e. the slope of the line', mode: marker.cfg.lockTau }, { key: 'theta', label: 'θ (hrs)', title: 'θ: the phase, i.e. the time of day the line crosses at the reference day', mode: marker.cfg.lockTheta }] as param (param.key)}
+		{#each [{ key: 'tau', label: 'τ (h)', title: 'τ: the period, i.e. the slope of the line', mode: marker.cfg.lockTau }, { key: 'theta', label: 'φ (h)', title: 'φ: the phase, i.e. the time of day the line crosses at the reference day', mode: marker.cfg.lockTheta }] as param (param.key)}
 			<div class="lock-row">
 				<span class="lock-label" title={param.title}>{param.label}</span>
 				<div class="segmented small" role="radiogroup" aria-label={param.label}>
@@ -1028,7 +1028,7 @@
 		{/each}
 		{#if marker.cfg.showLine}
 			<p class="lock-hint">
-				On the plot, drag the middle of the line to shift θ, or either end to change τ. Dragging
+				On the plot, drag the middle of the line to shift φ, or either end to change τ. Dragging
 				fixes that parameter.
 			</p>
 		{/if}

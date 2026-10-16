@@ -69,7 +69,7 @@ describe('NormalityTest control panel', () => {
 		const { container } = render(Node, { props: { p: mkProcess() } });
 		await settle();
 		expect(container.textContent).toMatch(/Columns to test/);
-		expect(triggers(container)).toEqual(['2 selected ▼']);
+		expect(triggers(container)).toEqual(['2 selected']);
 	});
 
 	it('hides the pickers when the node is chained (hideInputs), like its siblings', async () => {

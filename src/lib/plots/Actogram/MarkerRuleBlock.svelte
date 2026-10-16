@@ -148,7 +148,7 @@
 
 	<div class="lock-block">
 		<p class="lock-title">Line fit</p>
-		{#each [{ key: 'tau', label: 'τ (hrs)', mode: rule.lockTau, value: rule.fixedTau, field: 'fixedTau' }, { key: 'theta', label: 'θ (hrs)', mode: rule.lockTheta, value: rule.fixedTheta, field: 'fixedTheta' }] as param (param.key)}
+		{#each [{ key: 'tau', label: 'τ (h)', mode: rule.lockTau, value: rule.fixedTau, field: 'fixedTau' }, { key: 'theta', label: 'φ (h)', mode: rule.lockTheta, value: rule.fixedTheta, field: 'fixedTheta' }] as param (param.key)}
 			<div class="lock-row">
 				<span class="lock-label">{param.label}</span>
 				<div class="segmented" role="radiogroup" aria-label={param.label}>
