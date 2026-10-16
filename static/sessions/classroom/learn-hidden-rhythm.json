@@ -348,7 +348,7 @@
       "data": 0,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
-      "tableProcessGUId": "c7d6e408-ee4f-4ac5-b84f-c4ec1f506a8b",
+      "tableProcessGUId": "66f851c5-6e27-4463-b729-642d6baef056",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -359,7 +359,7 @@
       "name": "values_0",
       "data": 1,
       "type": "number",
-      "tableProcessGUId": "c7d6e408-ee4f-4ac5-b84f-c4ec1f506a8b",
+      "tableProcessGUId": "66f851c5-6e27-4463-b729-642d6baef056",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -548,7 +548,7 @@
           "left": 30
         },
         "xAxis": {
-          "label": "Period (hours)",
+          "label": "Period (h)",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -752,5 +752,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

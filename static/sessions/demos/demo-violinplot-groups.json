@@ -394,7 +394,7 @@
       "id": 68,
       "name": "Value by group (violin)",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "boxplot",
@@ -645,5 +645,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

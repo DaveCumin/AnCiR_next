@@ -191,7 +191,7 @@
       "id": 78,
       "name": "Signal table",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -357,5 +357,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

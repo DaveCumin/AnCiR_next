@@ -219,7 +219,7 @@
       "name": "statistic_11",
       "data": 153,
       "type": "number",
-      "tableProcessGUId": "2f3776a1-694c-49c6-b321-27ff68255d74",
+      "tableProcessGUId": "86acee80-d518-45f6-a230-a527c0b99778",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -230,7 +230,7 @@
       "name": "pvalue_11",
       "data": 154,
       "type": "number",
-      "tableProcessGUId": "2f3776a1-694c-49c6-b321-27ff68255d74",
+      "tableProcessGUId": "86acee80-d518-45f6-a230-a527c0b99778",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -242,7 +242,7 @@
       "id": 12,
       "name": "Response by group",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "boxplot",
@@ -380,7 +380,7 @@
       "id": 13,
       "name": "Test result",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -568,5 +568,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

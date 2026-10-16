@@ -111,7 +111,7 @@
       "name": "x",
       "data": 576,
       "type": "number",
-      "tableProcessGUId": "3ca78e5a-aea4-417b-9815-141c2ee2f09d",
+      "tableProcessGUId": "a5034051-c7d4-41f7-8eaa-24fcf7533756",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -145,7 +145,7 @@
       "id": 91,
       "name": "Remove Trend: before vs after",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "scatterplot",
@@ -314,7 +314,7 @@
       "id": 92,
       "name": "Remove Trend: values",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -514,5 +514,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

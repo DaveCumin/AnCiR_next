@@ -139,7 +139,7 @@
       "name": "pvalue_55",
       "data": 638,
       "type": "number",
-      "tableProcessGUId": "7b4a787c-c822-4c7a-9a53-b05af76aa5eb",
+      "tableProcessGUId": "52dbb74e-bfa2-4eae-9de0-8468ef7f4c86",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -150,7 +150,7 @@
       "name": "observed_55",
       "data": 639,
       "type": "number",
-      "tableProcessGUId": "44f9b9af-139c-48e0-b477-1cfdff015214",
+      "tableProcessGUId": "ab6c123e-3d6b-4f5f-bc7c-10fa75695f0e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -162,7 +162,7 @@
       "id": 109,
       "name": "Surrogate Test result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -351,5 +351,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

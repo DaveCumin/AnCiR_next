@@ -167,7 +167,7 @@
       "name": "x",
       "data": 597,
       "type": "number",
-      "tableProcessGUId": "a0b13773-ae45-477d-b013-96f073fddc4c",
+      "tableProcessGUId": "a49fae7c-8919-4809-9240-962de43356c2",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -190,7 +190,7 @@
       "data": 599,
       "type": "bin",
       "binWidth": 2,
-      "tableProcessGUId": "a400f472-fc45-4357-b224-4610cadd4648",
+      "tableProcessGUId": "06be6e91-4973-4f5c-94dd-7052743c16a4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -201,7 +201,7 @@
       "name": "binnedy_598_45",
       "data": 600,
       "type": "number",
-      "tableProcessGUId": "a400f472-fc45-4357-b224-4610cadd4648",
+      "tableProcessGUId": "06be6e91-4973-4f5c-94dd-7052743c16a4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -213,7 +213,7 @@
       "id": 97,
       "name": "Bin Data: data + fit",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "scatterplot",
@@ -383,7 +383,7 @@
       "id": 98,
       "name": "Bin Data: values",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -592,5 +592,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

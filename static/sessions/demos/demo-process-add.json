@@ -111,7 +111,7 @@
       "name": "x",
       "data": 533,
       "type": "number",
-      "tableProcessGUId": "43fa8170-2c27-4019-9967-bf6e1064d8e7",
+      "tableProcessGUId": "d86b7b32-fa6a-44a3-9a03-62e2490191ea",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -145,7 +145,7 @@
       "id": 79,
       "name": "Add: before vs after",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "scatterplot",
@@ -314,7 +314,7 @@
       "id": 80,
       "name": "Add: values",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -510,5 +510,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

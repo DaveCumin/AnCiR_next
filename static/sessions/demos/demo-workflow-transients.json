@@ -2227,7 +2227,7 @@
       "id": 47,
       "name": "Delay 8 h: immediate, no transients",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 440,
       "type": "actogram",
@@ -2332,7 +2332,7 @@
       "id": 48,
       "name": "Advance 8 h: about 8 transient cycles",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 440,
       "type": "actogram",
@@ -2437,7 +2437,7 @@
       "id": 49,
       "name": "Onset vs day: immediate delay versus advance transients",
       "x": 60,
-      "y": 580,
+      "y": 775,
       "width": 520,
       "height": 300,
       "type": "scatterplot",
@@ -2786,5 +2786,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

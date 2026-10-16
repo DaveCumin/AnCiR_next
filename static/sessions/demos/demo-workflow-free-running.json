@@ -874,7 +874,7 @@
       "name": "Peak period (h)",
       "data": 62,
       "type": "number",
-      "tableProcessGUId": "5c0ac389-5465-4f8a-be7d-6f8befdccd16",
+      "tableProcessGUId": "5f170f69-a91b-4e86-a1b4-4149f9ceb509",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -885,7 +885,7 @@
       "name": "Peak power",
       "data": 63,
       "type": "number",
-      "tableProcessGUId": "5c0ac389-5465-4f8a-be7d-6f8befdccd16",
+      "tableProcessGUId": "5f170f69-a91b-4e86-a1b4-4149f9ceb509",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -896,7 +896,7 @@
       "name": "rhythmicityy_57_4",
       "data": 64,
       "type": "number",
-      "tableProcessGUId": "5c0ac389-5465-4f8a-be7d-6f8befdccd16",
+      "tableProcessGUId": "5f170f69-a91b-4e86-a1b4-4149f9ceb509",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -908,7 +908,7 @@
       "id": 2,
       "name": "Actogram (double-plotted)",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 440,
       "type": "actogram",
@@ -1013,7 +1013,7 @@
       "id": 3,
       "name": "Lomb-Scargle periodogram",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "periodogram",
@@ -1059,7 +1059,7 @@
           "left": 30
         },
         "xAxis": {
-          "label": "Period (hours)",
+          "label": "Period (h)",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -1140,7 +1140,7 @@
       "id": 4,
       "name": "Free-running period",
       "x": 630,
-      "y": 440,
+      "y": 635,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -1338,5 +1338,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

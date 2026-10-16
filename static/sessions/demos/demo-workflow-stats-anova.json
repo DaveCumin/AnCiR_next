@@ -279,7 +279,7 @@
       "name": "statistic_12",
       "data": 159,
       "type": "number",
-      "tableProcessGUId": "f5c93569-4336-4083-937c-de5d5f95ff42",
+      "tableProcessGUId": "593a320b-0d7c-4c20-bd45-e404ea81b314",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -290,7 +290,7 @@
       "name": "pvalue_12",
       "data": 160,
       "type": "number",
-      "tableProcessGUId": "f5c93569-4336-4083-937c-de5d5f95ff42",
+      "tableProcessGUId": "593a320b-0d7c-4c20-bd45-e404ea81b314",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -302,7 +302,7 @@
       "id": 14,
       "name": "Group means (± SEM)",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "meansem",
@@ -421,7 +421,7 @@
       "id": 15,
       "name": "Measure by condition",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "boxplot",
@@ -559,7 +559,7 @@
       "id": 16,
       "name": "Omnibus test",
       "x": 60,
-      "y": 440,
+      "y": 635,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -751,5 +751,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

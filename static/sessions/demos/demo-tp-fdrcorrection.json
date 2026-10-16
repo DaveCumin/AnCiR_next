@@ -48,7 +48,7 @@
       "name": "padj_54",
       "data": 634,
       "type": "number",
-      "tableProcessGUId": "8bc7e7ed-12a7-4a79-b717-1c7a1b67e9a9",
+      "tableProcessGUId": "c199b3f7-791b-4b85-9b6b-6d421e590f3a",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -59,7 +59,7 @@
       "name": "reject_54",
       "data": 635,
       "type": "number",
-      "tableProcessGUId": "27eb474c-e6cb-4580-93a9-cb4f2832f493",
+      "tableProcessGUId": "587dd40b-816f-4b87-8d02-6d8004f15daf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -71,7 +71,7 @@
       "id": 108,
       "name": "FDR Correction result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -249,5 +249,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

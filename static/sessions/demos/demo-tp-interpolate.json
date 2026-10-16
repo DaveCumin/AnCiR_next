@@ -187,7 +187,7 @@
       "name": "interpx_46",
       "data": 607,
       "type": "number",
-      "tableProcessGUId": "a8eaf285-c233-4161-98b4-e8e969958678",
+      "tableProcessGUId": "67d0199e-2fe2-4cf2-81ed-fed772857e85",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -198,7 +198,7 @@
       "name": "interpy_606_46",
       "data": 608,
       "type": "number",
-      "tableProcessGUId": "a8eaf285-c233-4161-98b4-e8e969958678",
+      "tableProcessGUId": "67d0199e-2fe2-4cf2-81ed-fed772857e85",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -210,7 +210,7 @@
       "id": 99,
       "name": "Interpolate result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -287,7 +287,7 @@
   "notes": [
     {
       "id": "note_46",
-      "text": "Fills gaps or resamples a series onto a regular time grid using linear, nearest-neighbour, or natural cubic-spline interpolation. Use it to repair missing values or to make unevenly sampled data evenly spaced before methods that assume regular sampling (e.g. FFT).",
+      "text": "Fills gaps or resamples a series onto a regular time grid using linear, nearest-neighbour, or natural cubic-spline interpolation. Use it to repair missing values or to make unevenly sampled data evenly spaced before methods that assume regular sampling (e.g. FFT). The resample step is in x units (hours for a time column); a grid of more than 2,000,000 points is refused with a warning on the node that names the grid size and the smallest step that fits.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -400,5 +400,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

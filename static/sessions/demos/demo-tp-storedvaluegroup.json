@@ -11,7 +11,7 @@
       "name": "group_g1_84",
       "data": 834,
       "type": "number",
-      "tableProcessGUId": "c5409341-f795-4fee-9330-004f9d2d2b61",
+      "tableProcessGUId": "2df502bc-a3f4-4310-bb2e-83120bc87801",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -23,7 +23,7 @@
       "id": 140,
       "name": "Stored Value Group result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -208,5 +208,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

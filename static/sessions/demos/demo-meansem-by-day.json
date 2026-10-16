@@ -370,7 +370,7 @@
       "id": 69,
       "name": "Activity by day (mean ± SEM)",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "meansem",
@@ -602,5 +602,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

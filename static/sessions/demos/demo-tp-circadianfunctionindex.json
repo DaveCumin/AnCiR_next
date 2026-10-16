@@ -717,7 +717,7 @@
       "name": "CFI_90",
       "data": 867,
       "type": "number",
-      "tableProcessGUId": "be128b5d-98e5-4aad-9ead-6e57c0d322b8",
+      "tableProcessGUId": "8b0fdce5-8969-4b2f-9cf0-d3daa442d186",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -728,7 +728,7 @@
       "name": "IS_90",
       "data": 868,
       "type": "number",
-      "tableProcessGUId": "be128b5d-98e5-4aad-9ead-6e57c0d322b8",
+      "tableProcessGUId": "8b0fdce5-8969-4b2f-9cf0-d3daa442d186",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -739,7 +739,7 @@
       "name": "IV_90",
       "data": 869,
       "type": "number",
-      "tableProcessGUId": "be128b5d-98e5-4aad-9ead-6e57c0d322b8",
+      "tableProcessGUId": "8b0fdce5-8969-4b2f-9cf0-d3daa442d186",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -750,7 +750,7 @@
       "name": "RA_90",
       "data": 870,
       "type": "number",
-      "tableProcessGUId": "be128b5d-98e5-4aad-9ead-6e57c0d322b8",
+      "tableProcessGUId": "8b0fdce5-8969-4b2f-9cf0-d3daa442d186",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -762,7 +762,7 @@
       "id": 146,
       "name": "Circadian Function Index result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -958,5 +958,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

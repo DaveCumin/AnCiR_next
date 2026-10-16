@@ -709,7 +709,7 @@
       "name": "cosinorx_2",
       "data": 16,
       "type": "number",
-      "tableProcessGUId": "155bfce7-98e5-45bb-9bc3-56f5135af5a9",
+      "tableProcessGUId": "af2aed0f-8dcd-4054-80e9-a03b08d26e4c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -720,7 +720,7 @@
       "name": "cosinory_15_2",
       "data": 17,
       "type": "number",
-      "tableProcessGUId": "155bfce7-98e5-45bb-9bc3-56f5135af5a9",
+      "tableProcessGUId": "af2aed0f-8dcd-4054-80e9-a03b08d26e4c",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1021,5 +1021,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

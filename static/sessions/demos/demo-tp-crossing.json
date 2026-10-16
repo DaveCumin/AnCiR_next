@@ -193,7 +193,7 @@
       "name": "breach_53",
       "data": 627,
       "type": "number",
-      "tableProcessGUId": "8ea333f3-b464-4691-9cdb-f5ddf4cbd8be",
+      "tableProcessGUId": "3bd0ceb1-4139-4546-965b-9315af93cf5e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -204,7 +204,7 @@
       "name": "crossing_53",
       "data": 628,
       "type": "number",
-      "tableProcessGUId": "8ea333f3-b464-4691-9cdb-f5ddf4cbd8be",
+      "tableProcessGUId": "3bd0ceb1-4139-4546-965b-9315af93cf5e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -215,7 +215,7 @@
       "name": "count_53",
       "data": 629,
       "type": "number",
-      "tableProcessGUId": "8ea333f3-b464-4691-9cdb-f5ddf4cbd8be",
+      "tableProcessGUId": "3bd0ceb1-4139-4546-965b-9315af93cf5e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -227,7 +227,7 @@
       "id": 106,
       "name": "Crossing: signal + detections",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "scatterplot",
@@ -414,7 +414,7 @@
       "id": 107,
       "name": "Crossing result",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -618,5 +618,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

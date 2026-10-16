@@ -2660,7 +2660,7 @@
       "name": "stat_peak_period_33",
       "data": 442,
       "type": "number",
-      "tableProcessGUId": "16cd7fdf-eccd-421e-9bf9-5de71760594f",
+      "tableProcessGUId": "7edfe143-b378-424d-806b-7c77d8c1d8c0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2671,7 +2671,7 @@
       "name": "stat_peak_power_33",
       "data": 443,
       "type": "number",
-      "tableProcessGUId": "16cd7fdf-eccd-421e-9bf9-5de71760594f",
+      "tableProcessGUId": "7edfe143-b378-424d-806b-7c77d8c1d8c0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2682,7 +2682,7 @@
       "name": "rhythmicityy_437_33",
       "data": 444,
       "type": "number",
-      "tableProcessGUId": "16cd7fdf-eccd-421e-9bf9-5de71760594f",
+      "tableProcessGUId": "7edfe143-b378-424d-806b-7c77d8c1d8c0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -2694,7 +2694,7 @@
       "id": 56,
       "name": "Periodogram: 30 min epochs",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "periodogram",
@@ -2740,7 +2740,7 @@
           "left": 30
         },
         "xAxis": {
-          "label": "Period (hours)",
+          "label": "Period (h)",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -2821,7 +2821,7 @@
       "id": 57,
       "name": "Periodogram: 13 h epochs",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "periodogram",
@@ -2867,7 +2867,7 @@
           "left": 30
         },
         "xAxis": {
-          "label": "Period (hours)",
+          "label": "Period (h)",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -2948,7 +2948,7 @@
       "id": 58,
       "name": "What the slow record reports",
       "x": 60,
-      "y": 440,
+      "y": 635,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -3154,5 +3154,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

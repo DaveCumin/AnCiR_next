@@ -111,7 +111,7 @@
       "name": "x",
       "data": 590,
       "type": "number",
-      "tableProcessGUId": "0b4cfaea-8d93-452f-a054-39f85d3f8707",
+      "tableProcessGUId": "13bb89b7-581f-466b-831c-ba190b4eda91",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -145,7 +145,7 @@
       "id": 95,
       "name": "Frequency Filter: before vs after",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "scatterplot",
@@ -314,7 +314,7 @@
       "id": 96,
       "name": "Frequency Filter: values",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -512,5 +512,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

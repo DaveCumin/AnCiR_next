@@ -59,7 +59,7 @@
       "name": "result_79",
       "data": 818,
       "type": "number",
-      "tableProcessGUId": "83d3ad23-1bf1-4ada-8a60-89f4c3201132",
+      "tableProcessGUId": "6f6e4e1d-c157-47b0-a4f8-0f369b8789c9",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -71,7 +71,7 @@
       "id": 135,
       "name": "Sequence Column result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -137,7 +137,7 @@
   "notes": [
     {
       "id": "note_73",
-      "text": "Creates a regular numeric or time sequence from a start, step, and count (or end). Use it to build an index or an evenly spaced time axis to pair with generated or pasted values.",
+      "text": "Creates a regular numeric or time sequence from a start, step, and count (or end). Use it to build an index or an evenly spaced time axis to pair with generated or pasted values. Up to 2,000,000 values; a longer sequence is refused with a warning on the node.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -242,5 +242,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

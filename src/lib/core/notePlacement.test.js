@@ -111,27 +111,64 @@ describe('every shipped session opens with no note over a plot (Workspace view)'
 		return hits;
 	};
 
-	let coveredInFile = 0;
+	const savedPlotBoxes = (json) => {
+		const grid = appState.gridSize ?? 15;
+		return (json.plots ?? []).filter((p) => !p.facet).map((p) => plotCardBox(p, grid));
+	};
+
+	// Plain cases: every shipped file, as shipped, opens with no note over a plot.
 	it.each(sessionFiles)(
 		'%s',
 		async (file) => {
 			const json = JSON.parse(readFileSync(join(ROOT, file), 'utf8'));
-			// Does the file itself (as saved) put a note on a plot? Counted below, so this test
-			// keeps proving it exercises the fix rather than passing on clean files.
-			const grid = appState.gridSize ?? 15;
-			const savedPlots = (json.plots ?? [])
-				.filter((p) => !p.facet)
-				.map((p) => plotCardBox(p, grid));
-			if ((json.notes ?? []).some((n) => savedPlots.some((p) => boxesOverlap(noteCardBox(n), p))))
-				coveredInFile++;
 			await importJson(json);
 			expect(overlapsAfterLoad()).toEqual([]);
 		},
 		60_000
 	);
 
-	it('the shipped files really do carry notes over plots (so the cases above test the fix)', () => {
-		expect(coveredInFile).toBeGreaterThan(10);
+	// Injected cases: the shipped files may already be clean (the demo generator lays notes out
+	// clear of plots), so they alone cannot prove the load-time fix runs. For every session with
+	// a note and a plot, move the first note onto the first plot in the saved JSON (the same
+	// x/y/width/height fields the loader reads), then load it.
+	const injectable = sessionFiles.filter((file) => {
+		const json = JSON.parse(readFileSync(join(ROOT, file), 'utf8'));
+		return (json.notes ?? []).length > 0 && savedPlotBoxes(json).length > 0;
+	});
+	const injected = [];
+
+	it.each(injectable)(
+		'%s with its first note moved onto its first plot',
+		async (file) => {
+			const json = JSON.parse(readFileSync(join(ROOT, file), 'utf8'));
+			const note = json.notes[0];
+			const target = savedPlotBoxes(json)[0];
+			note.x = target.x + 20;
+			note.y = target.y + 20;
+			const overlappedBeforeLoad = boxesOverlap(noteCardBox(note), target);
+			injected.push({ file, overlappedBeforeLoad });
+
+			const savedXY = new Map((json.plots ?? []).map((p) => [p.id, [p.x ?? 0, p.y ?? 0]]));
+			await importJson(json);
+			expect(overlapsAfterLoad()).toEqual([]);
+
+			// The fix shifts every plot by one rigid offset, so their arrangement is unchanged.
+			const offsets = core.plots
+				.filter((p) => savedXY.has(p.id))
+				.map((p) => {
+					const [x, y] = savedXY.get(p.id);
+					return [(p.x ?? 0) - x, (p.y ?? 0) - y];
+				});
+			expect(offsets.length).toBe(savedXY.size);
+			for (const o of offsets) expect(o).toEqual(offsets[0]);
+		},
+		60_000
+	);
+
+	it('every injected variant really put a note on a plot before load (so the cases above test the fix)', () => {
+		expect(injected.length).toBe(injectable.length);
+		expect(injected.length).toBeGreaterThanOrEqual(20);
+		expect(injected.filter((v) => !v.overlappedBeforeLoad).map((v) => v.file)).toEqual([]);
 	});
 
 	it('a session with no overlap opens exactly as saved', async () => {

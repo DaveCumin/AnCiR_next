@@ -185,7 +185,7 @@
       "name": "result_62",
       "data": 695,
       "type": "number",
-      "tableProcessGUId": "8c40105e-811b-4774-aa63-452ea2f9763d",
+      "tableProcessGUId": "3218e4bd-53b4-45f7-bb73-ed8cc65e57d1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -197,7 +197,7 @@
       "id": 116,
       "name": "Formula Column result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -389,5 +389,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

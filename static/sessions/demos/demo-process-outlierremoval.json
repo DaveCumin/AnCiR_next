@@ -113,7 +113,7 @@
       "name": "x",
       "data": 569,
       "type": "number",
-      "tableProcessGUId": "096a25f4-81f6-417c-b91b-30907e487d78",
+      "tableProcessGUId": "b3f6b54e-be4d-4b87-b627-2b92931b5fab",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -147,7 +147,7 @@
       "id": 89,
       "name": "Remove Outliers: before vs after",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "scatterplot",
@@ -316,7 +316,7 @@
       "id": 90,
       "name": "Remove Outliers: values",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -514,5 +514,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

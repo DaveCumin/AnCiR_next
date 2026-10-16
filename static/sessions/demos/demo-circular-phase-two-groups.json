@@ -240,7 +240,7 @@
       "id": 70,
       "name": "Circular phase plot",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 440,
       "height": 440,
       "type": "circularphase",
@@ -510,5 +510,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

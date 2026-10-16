@@ -289,7 +289,7 @@
       "name": "830_1_83",
       "data": 831,
       "type": "number",
-      "tableProcessGUId": "d4476933-31a8-4a3c-8ee8-3aa55bb98237",
+      "tableProcessGUId": "ff9cfeb8-d791-46a2-b6a7-103e59a8b884",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -300,7 +300,7 @@
       "name": "830_2_83",
       "data": 832,
       "type": "number",
-      "tableProcessGUId": "d4476933-31a8-4a3c-8ee8-3aa55bb98237",
+      "tableProcessGUId": "ff9cfeb8-d791-46a2-b6a7-103e59a8b884",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -311,7 +311,7 @@
       "name": "830_3_83",
       "data": 833,
       "type": "number",
-      "tableProcessGUId": "d4476933-31a8-4a3c-8ee8-3aa55bb98237",
+      "tableProcessGUId": "ff9cfeb8-d791-46a2-b6a7-103e59a8b884",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -323,7 +323,7 @@
       "id": 139,
       "name": "Split data result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -515,5 +515,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

@@ -153,7 +153,7 @@
       "name": "variable_68",
       "data": 751,
       "type": "category",
-      "tableProcessGUId": "bb682cd6-daeb-4070-9bc2-6190c272280b",
+      "tableProcessGUId": "4bed7362-b74c-4263-853c-93427520a735",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -164,7 +164,7 @@
       "name": "statistic_68",
       "data": 752,
       "type": "number",
-      "tableProcessGUId": "bb682cd6-daeb-4070-9bc2-6190c272280b",
+      "tableProcessGUId": "4bed7362-b74c-4263-853c-93427520a735",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -175,7 +175,7 @@
       "name": "pvalue_68",
       "data": 753,
       "type": "number",
-      "tableProcessGUId": "bb682cd6-daeb-4070-9bc2-6190c272280b",
+      "tableProcessGUId": "4bed7362-b74c-4263-853c-93427520a735",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -186,7 +186,7 @@
       "name": "n_68",
       "data": 754,
       "type": "number",
-      "tableProcessGUId": "bb682cd6-daeb-4070-9bc2-6190c272280b",
+      "tableProcessGUId": "4bed7362-b74c-4263-853c-93427520a735",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -197,7 +197,7 @@
       "name": "normal_68",
       "data": 755,
       "type": "number",
-      "tableProcessGUId": "bb682cd6-daeb-4070-9bc2-6190c272280b",
+      "tableProcessGUId": "4bed7362-b74c-4263-853c-93427520a735",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -209,7 +209,7 @@
       "id": 123,
       "name": "Normality Test result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -293,7 +293,7 @@
   "notes": [
     {
       "id": "note_65",
-      "text": "Tests whether each wired column is drawn from a normal distribution, one row per variable: the test statistic, its p-value, n, and a yes/no verdict at your chosen alpha. Shapiro-Wilk (the default, and the most powerful test; valid for 3 ≤ n ≤ 5000) is recommended; D'Agostino-Pearson (an omnibus skewness + kurtosis K² test, n ≥ 8, better for very large samples) and Jarque-Bera are also available. A small p-value means the data depart from normality, so a rank / non-parametric method is safer downstream. All three match scipy (shapiro / normaltest / jarque_bera). Shapiro & Wilk 1965; Royston 1995.",
+      "text": "Tests whether each wired column is drawn from a normal distribution, one row per variable: the test statistic, its p-value, n, and a yes/no verdict at your chosen alpha. Shapiro-Wilk (the default, and the most powerful test) is recommended up to n = 5000; above that it shows W with no p-value, because Royston's p-value approximation is only validated to 5000; D'Agostino-Pearson (an omnibus skewness + kurtosis K² test, n ≥ 8, better for very large samples) and Jarque-Bera are also available. A small p-value means the data depart from normality, so a rank / non-parametric method is safer downstream. All three match scipy (shapiro / normaltest / jarque_bera). Shapiro & Wilk 1965; Royston 1995.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -406,5 +406,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

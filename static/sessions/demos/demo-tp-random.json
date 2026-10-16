@@ -59,7 +59,7 @@
       "name": "result_73",
       "data": 784,
       "type": "number",
-      "tableProcessGUId": "e42a3e5b-48e2-4150-921f-c885a61624be",
+      "tableProcessGUId": "df7c3e47-ab41-4f50-bef6-7e2e32d807a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -71,7 +71,7 @@
       "id": 128,
       "name": "Random result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -242,5 +242,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

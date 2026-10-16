@@ -740,7 +740,7 @@
       "name": "x",
       "data": 796,
       "type": "number",
-      "tableProcessGUId": "908ee1f5-284b-46ab-a5d0-b094a4361eee",
+      "tableProcessGUId": "d880307e-0a5e-4485-9392-0e45acce2642",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -762,7 +762,7 @@
       "name": "797_period_77",
       "data": 798,
       "type": "number",
-      "tableProcessGUId": "d9ff1122-133b-4638-8d3f-7852151d7a71",
+      "tableProcessGUId": "565dd365-31a3-4b2a-a2dc-e23807143133",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -773,7 +773,7 @@
       "name": "797_power_77",
       "data": 799,
       "type": "number",
-      "tableProcessGUId": "d9ff1122-133b-4638-8d3f-7852151d7a71",
+      "tableProcessGUId": "565dd365-31a3-4b2a-a2dc-e23807143133",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -784,7 +784,7 @@
       "name": "rhythmicityy_797_77",
       "data": 800,
       "type": "number",
-      "tableProcessGUId": "d9ff1122-133b-4638-8d3f-7852151d7a71",
+      "tableProcessGUId": "565dd365-31a3-4b2a-a2dc-e23807143133",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -796,7 +796,7 @@
       "id": 131,
       "name": "Rhythmicity Analysis: signal",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "scatterplot",
@@ -926,7 +926,7 @@
       "id": 132,
       "name": "Rhythmicity Analysis: periodogram",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "scatterplot",
@@ -1222,5 +1222,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

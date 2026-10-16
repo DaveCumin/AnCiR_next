@@ -1818,7 +1818,7 @@
       "name": "stat_peak_period_29",
       "data": 358,
       "type": "number",
-      "tableProcessGUId": "80f208bd-3a93-4ae4-b575-b2be568f043c",
+      "tableProcessGUId": "dd5c4e3c-df79-44fa-ba0a-579afc995afe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1829,7 +1829,7 @@
       "name": "stat_peak_power_29",
       "data": 359,
       "type": "number",
-      "tableProcessGUId": "80f208bd-3a93-4ae4-b575-b2be568f043c",
+      "tableProcessGUId": "dd5c4e3c-df79-44fa-ba0a-579afc995afe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1840,7 +1840,7 @@
       "name": "rhythmicityy_353_29",
       "data": 360,
       "type": "number",
-      "tableProcessGUId": "80f208bd-3a93-4ae4-b575-b2be568f043c",
+      "tableProcessGUId": "dd5c4e3c-df79-44fa-ba0a-579afc995afe",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1852,7 +1852,7 @@
       "id": 42,
       "name": "Actogram (24 h grid)",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 440,
       "type": "actogram",
@@ -1957,7 +1957,7 @@
       "id": 43,
       "name": "Periodogram: 6 to 30 h",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "periodogram",
@@ -2003,7 +2003,7 @@
           "left": 30
         },
         "xAxis": {
-          "label": "Period (hours)",
+          "label": "Period (h)",
           "gridlines": true,
           "nticks": 5,
           "manualTicks": null
@@ -2084,7 +2084,7 @@
       "id": 44,
       "name": "Dominant period",
       "x": 630,
-      "y": 440,
+      "y": 635,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -2282,5 +2282,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

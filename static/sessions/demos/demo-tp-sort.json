@@ -237,7 +237,7 @@
       "name": "sortedy_609_47",
       "data": 611,
       "type": "number",
-      "tableProcessGUId": "bb6270ab-daca-4cd9-8fb9-df98a4292b58",
+      "tableProcessGUId": "48e807ab-59f3-4f27-8c13-5a86b71a2a26",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "sortedy_610_47",
       "data": 612,
       "type": "number",
-      "tableProcessGUId": "bb6270ab-daca-4cd9-8fb9-df98a4292b58",
+      "tableProcessGUId": "48e807ab-59f3-4f27-8c13-5a86b71a2a26",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -260,7 +260,7 @@
       "id": 100,
       "name": "Sort result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -448,5 +448,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

@@ -111,7 +111,7 @@
       "name": "x",
       "data": 540,
       "type": "number",
-      "tableProcessGUId": "c80168db-8018-48d4-9bd2-45dc486306a2",
+      "tableProcessGUId": "7cd68612-b610-4bff-a148-92a492361ce0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -145,7 +145,7 @@
       "id": 81,
       "name": "Substitute: before vs after",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 300,
       "type": "scatterplot",
@@ -314,7 +314,7 @@
       "id": 82,
       "name": "Substitute: values",
       "x": 630,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -511,5 +511,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

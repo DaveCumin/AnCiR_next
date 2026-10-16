@@ -19,7 +19,7 @@
       "name": "result_48",
       "data": 613,
       "type": "category",
-      "tableProcessGUId": "bc9e578c-d04a-4b88-a44c-701df7ca76ef",
+      "tableProcessGUId": "316500ea-2f6c-46bf-be01-0ac5f16e09b3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -31,7 +31,7 @@
       "id": 101,
       "name": "Enter Data result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -199,5 +199,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

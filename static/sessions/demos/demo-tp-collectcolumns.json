@@ -237,7 +237,7 @@
       "name": "col_614_49",
       "data": 616,
       "type": "number",
-      "tableProcessGUId": "023220c6-30f3-491a-a3c8-58716eb72745",
+      "tableProcessGUId": "f89a36b2-2dfd-4b3f-97e8-1c8aedbfcc32",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "col_615_49",
       "data": 617,
       "type": "number",
-      "tableProcessGUId": "023220c6-30f3-491a-a3c8-58716eb72745",
+      "tableProcessGUId": "f89a36b2-2dfd-4b3f-97e8-1c8aedbfcc32",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -260,7 +260,7 @@
       "id": 102,
       "name": "Collect Columns result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -447,5 +447,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

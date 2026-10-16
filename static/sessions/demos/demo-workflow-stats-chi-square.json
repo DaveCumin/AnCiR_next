@@ -282,7 +282,7 @@
       "name": "statistic_18",
       "data": 230,
       "type": "number",
-      "tableProcessGUId": "0622c426-eff4-44a0-bcbd-080c216ac38a",
+      "tableProcessGUId": "6721d7a9-27ca-4e4d-968e-0df196cb7fdb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -293,7 +293,7 @@
       "name": "pvalue_18",
       "data": 231,
       "type": "number",
-      "tableProcessGUId": "0622c426-eff4-44a0-bcbd-080c216ac38a",
+      "tableProcessGUId": "6721d7a9-27ca-4e4d-968e-0df196cb7fdb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -304,7 +304,7 @@
       "name": "df_18",
       "data": 232,
       "type": "number",
-      "tableProcessGUId": "0622c426-eff4-44a0-bcbd-080c216ac38a",
+      "tableProcessGUId": "6721d7a9-27ca-4e4d-968e-0df196cb7fdb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -316,7 +316,7 @@
       "id": 25,
       "name": "Chi-squared result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -504,5 +504,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }

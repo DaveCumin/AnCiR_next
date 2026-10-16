@@ -122,7 +122,7 @@
       "name": "binary_52",
       "data": 624,
       "type": "number",
-      "tableProcessGUId": "a18947ea-f5a8-402c-8ad0-9daaff1a3659",
+      "tableProcessGUId": "8b9f5697-2883-49a3-9fa3-6e2de1adea2d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -134,7 +134,7 @@
       "id": 105,
       "name": "Threshold result",
       "x": 60,
-      "y": 60,
+      "y": 255,
       "width": 520,
       "height": 260,
       "type": "tableplot",
@@ -309,5 +309,5 @@
       "No"
     ]
   },
-  "version": "β.82.9"
+  "version": "β.82.14"
 }
