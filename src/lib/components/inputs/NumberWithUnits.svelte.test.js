@@ -176,3 +176,134 @@ describe('NumberWithUnits display', () => {
 		expect(onInput).toHaveBeenCalledTimes(1);
 	});
 });
+
+// Typing a number that passes through a non-number on the way (a negative, a decimal, an
+// exponent) from an empty box.
+//
+// THE BUG: a number input reports a partial entry ("-", "-.", "1e") as an empty value, and
+// clearing the box is an empty value too. The component stored `"" * 1 = 0` and wrote "0"
+// back into the box, so "-1.23" could not be typed into a cleared box: the "-" became "0",
+// and the next keys were appended to it ("0-1.23", itself not a number).
+//
+// THE RULE: an empty or partial entry is "no change yet": nothing is stored and the box is
+// left alone. A valid number is stored as it is typed (the preview). When the box is left
+// (blur) or Enter is pressed with nothing valid in it, a `nullable` field stores null (an axis
+// limit: back to automatic); any other field goes back to the value it had. Escape puts the
+// box back to the stored value.
+//
+// jsdom applies the same value sanitisation as Chromium: setting "-" on a number input reads
+// back as "", so these tests see exactly what the browser reports.
+describe('NumberWithUnits partial entries', () => {
+	async function editing(props) {
+		const onInput = vi.fn();
+		const input = await shown({ step: '0.1', ...props, onInput });
+		await focus(input);
+		return { input, onInput };
+	}
+	async function typeValue(input, text) {
+		await fireEvent.input(input, { target: { value: text } });
+		await tick();
+	}
+
+	for (const partial of ['', '-', '-.', '1e', '.']) {
+		it(`"${partial}" stores nothing and leaves the box as typed`, async () => {
+			const { input, onInput } = await editing({ value: -0.955752 });
+			await typeValue(input, partial);
+			expect(onInput).not.toHaveBeenCalled();
+			// What the browser reports for it ("" in Chromium; jsdom keeps "1e"), never a "0"
+			// written over the entry.
+			expect(['', partial]).toContain(input.value);
+		});
+	}
+
+	it('"-1.23" can be typed into a cleared box, one key at a time', async () => {
+		const { input, onInput } = await editing({ value: -0.955752 });
+		for (const text of ['', '-', '-1', '-1.', '-1.2', '-1.23']) await typeValue(input, text);
+		expect(onInput).toHaveBeenLastCalledWith(-1.23);
+		expect(onInput.mock.calls.map((c) => c[0])).not.toContain(0);
+		expect(input.value).toBe('-1.23');
+	});
+
+	it('a valid number still stores as it is typed (the preview)', async () => {
+		const { input, onInput } = await editing({ value: 5 });
+		await typeValue(input, '-1');
+		expect(onInput).toHaveBeenLastCalledWith(-1);
+		expect(input.value).toBe('-1');
+	});
+
+	it('blur with an empty box: a nullable field stores null (automatic)', async () => {
+		const { input, onInput } = await editing({ value: -0.955752, nullable: true });
+		await typeValue(input, '');
+		await blur(input);
+		expect(onInput).toHaveBeenCalledTimes(1);
+		expect(onInput).toHaveBeenLastCalledWith(null);
+		// The box shows what the caller passes back for "automatic", not a "0" or a blank.
+		await tick();
+		expect(input.value).toBe('-0.955752');
+	});
+
+	it('a nullable empty box stores null at `change`, which the browser sends before blur', async () => {
+		// The plot panel records the step at `change`; a null stored only at blur would land
+		// outside the history.
+		const { input, onInput } = await editing({ value: 4, nullable: true });
+		await typeValue(input, '');
+		await fireEvent.change(input);
+		expect(onInput).toHaveBeenLastCalledWith(null);
+		await blur(input);
+		expect(onInput).toHaveBeenCalledTimes(1);
+	});
+
+	it('blur with a partial entry: any other field goes back to its value', async () => {
+		const { input, onInput } = await editing({ value: 12 });
+		await typeValue(input, '-');
+		await blur(input);
+		expect(onInput).not.toHaveBeenCalled();
+		expect(input.value).toBe('12');
+	});
+
+	it('Enter with an empty box commits like blur', async () => {
+		const nullable = await editing({ value: 3, nullable: true });
+		await typeValue(nullable.input, '');
+		await fireEvent.keyDown(nullable.input, { key: 'Enter' });
+		await tick();
+		expect(nullable.onInput).toHaveBeenLastCalledWith(null);
+		cleanup();
+
+		const plain = await editing({ value: 3 });
+		await typeValue(plain.input, '');
+		await fireEvent.keyDown(plain.input, { key: 'Enter' });
+		await tick();
+		expect(plain.onInput).not.toHaveBeenCalled();
+		expect(plain.input.value).toBe('3');
+	});
+
+	it('Escape puts a partial entry back to the stored value', async () => {
+		const { input, onInput } = await editing({ value: -0.964285714286 });
+		await typeValue(input, '-');
+		await fireEvent.keyDown(input, { key: 'Escape' });
+		await tick();
+		await tick();
+		expect(onInput).not.toHaveBeenCalled();
+		expect(input.value).toBe('-0.964285714286');
+		// Leaving the box afterwards stores nothing either.
+		await blur(input);
+		expect(onInput).not.toHaveBeenCalled();
+	});
+
+	it('blur after an Escape stores nothing even for a nullable field', async () => {
+		const { input, onInput } = await editing({ value: 2, nullable: true });
+		await typeValue(input, '');
+		await fireEvent.keyDown(input, { key: 'Escape' });
+		await tick();
+		await blur(input);
+		expect(onInput).not.toHaveBeenCalled();
+		expect(input.value).toBe('2');
+	});
+
+	it('focus then blur with no typing stores nothing', async () => {
+		const { input, onInput } = await editing({ value: 2, nullable: true });
+		await blur(input);
+		expect(onInput).not.toHaveBeenCalled();
+		expect(input.value).toBe('2');
+	});
+});

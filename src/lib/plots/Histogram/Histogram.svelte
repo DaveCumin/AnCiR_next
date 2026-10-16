@@ -1,6 +1,11 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
+	import {
+		viewFontScale,
+		viewStyleFor,
+		scalePadding,
+		autoPadWhenDrawn
+	} from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear } from 'd3-scale';
@@ -561,7 +566,7 @@
 </script>
 
 <script>
-	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import NumberWithUnits, { numberOrNull } from '$lib/components/inputs/NumberWithUnits.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -582,9 +587,9 @@
 	}
 
 	onMount(() => {
-		if (which === 'plot') {
-			theData.plot.autoScalePadding('all');
-		}
+		// After the first draw has landed, not from the SVG as it was at mount: see
+		// autoPadWhenDrawn (plots/viewBox.js).
+		if (which === 'plot') return autoPadWhenDrawn(theData.plot);
 	});
 
 	$effect(() => {
@@ -637,14 +642,16 @@
 			<div class="control-input-horizontal">
 				<ControlInput label="Y min">
 					<NumberWithUnits
+						nullable
 						value={theData.ylimsIN[0] ?? theData.ylims[0]}
-						onInput={(/** @type {string} */ v) => (theData.ylimsIN[0] = parseFloat(v))}
+						onInput={(/** @type {string} */ v) => (theData.ylimsIN[0] = numberOrNull(v))}
 					/>
 				</ControlInput>
 				<ControlInput label="Y max">
 					<NumberWithUnits
+						nullable
 						value={theData.ylimsIN[1] ?? theData.ylims[1]}
-						onInput={(/** @type {string} */ v) => (theData.ylimsIN[1] = parseFloat(v))}
+						onInput={(/** @type {string} */ v) => (theData.ylimsIN[1] = numberOrNull(v))}
 					/>
 				</ControlInput>
 			</div>
@@ -658,14 +665,16 @@
 			<div class="control-input-horizontal">
 				<ControlInput label="X min">
 					<NumberWithUnits
+						nullable
 						value={theData.xlimsIN[0] ?? theData.xlims[0]}
-						onInput={(/** @type {string} */ v) => (theData.xlimsIN[0] = parseFloat(v))}
+						onInput={(/** @type {string} */ v) => (theData.xlimsIN[0] = numberOrNull(v))}
 					/>
 				</ControlInput>
 				<ControlInput label="X max">
 					<NumberWithUnits
+						nullable
 						value={theData.xlimsIN[1] ?? theData.xlims[1]}
-						onInput={(/** @type {string} */ v) => (theData.xlimsIN[1] = parseFloat(v))}
+						onInput={(/** @type {string} */ v) => (theData.xlimsIN[1] = numberOrNull(v))}
 					/>
 				</ControlInput>
 				{#if theData.xlimsIN[0] != null || theData.xlimsIN[1] != null}

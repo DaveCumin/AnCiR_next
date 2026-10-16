@@ -1,6 +1,11 @@
 <script module>
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
-	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
+	import {
+		viewFontScale,
+		viewStyleFor,
+		scalePadding,
+		autoPadWhenDrawn
+	} from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import AxisLabelInput from '$lib/components/plotbits/AxisLabelInput.svelte';
@@ -1074,7 +1079,7 @@
 </script>
 
 <script>
-	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import NumberWithUnits, { numberOrNull } from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -1116,9 +1121,9 @@
 	);
 
 	onMount(() => {
-		if (which == 'plot') {
-			theData.plot.autoScalePadding('all');
-		}
+		// After the first draw has landed, not from the SVG as it was at mount: see
+		// autoPadWhenDrawn (plots/viewBox.js).
+		if (which == 'plot') return autoPadWhenDrawn(theData.plot);
 	});
 
 	$effect(() => {
@@ -1204,20 +1209,22 @@
 			<div class="control-input-horizontal">
 				<ControlInput label="Min">
 					<NumberWithUnits
+						nullable
 						step="0.1"
 						value={theData.ylimsIN[0] ?? theData.ylims[0]}
 						onInput={(val) => {
-							theData.ylimsIN[0] = parseFloat(val);
+							theData.ylimsIN[0] = numberOrNull(val);
 						}}
 					/>
 				</ControlInput>
 
 				<ControlInput label="Max">
 					<NumberWithUnits
+						nullable
 						step="0.1"
 						value={theData.ylimsIN[1] ?? theData.ylims[1]}
 						onInput={(val) => {
-							theData.ylimsIN[1] = parseFloat(val);
+							theData.ylimsIN[1] = numberOrNull(val);
 						}}
 					/>
 				</ControlInput>

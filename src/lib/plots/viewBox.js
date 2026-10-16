@@ -26,6 +26,8 @@
 // describes a view, not the figure, and the node's box size is already persisted separately in
 // core.nodeLayout.
 
+import { tick } from 'svelte';
+
 /** Never shrink type past this: it should degrade to a hint of itself, not vanish. */
 export const MIN_FONT_SCALE = 0.2;
 
@@ -140,5 +142,41 @@ export function scalePadding(padding, fontScale) {
 		set left(v) {
 			padding.left = v;
 		}
+	};
+}
+
+/**
+ * Measure a figure's automatic padding (`plot.autoScalePadding('all')`) once the plot's draw
+ * has settled, for a plot component's `onMount`. Returns the cleanup.
+ *
+ * Measuring once, IN onMount, read a drawing that was about to change. After a switch from the
+ * canvas to the workspace, an axis's first draw places its title from tick labels measured
+ * while the view was still being set up (a Scatterplot's x title at y = 37 instead of 38), and
+ * the padding measured from that came out short (bottom 51 instead of 53). The new padding
+ * redraws the axis, correctly this time, but nothing measured again until the control panel
+ * opened (its effect re-measures). That moved the plot area and every automatic limit with
+ * it: demo-process-add's auto Y min read -0.955752, then -0.964286 once the panel was open,
+ * so cancelling an edit there looked as if it had changed the plot.
+ *
+ * So: measure after the draw has landed, and again after each redraw the new padding causes,
+ * until it stops changing (a few passes at most; one or two in practice).
+ *
+ * @param {{ autoScalePadding?: (side: string) => void, figurePadding?: object, padding?: object }} plot
+ * @param {{ maxPasses?: number }} [opts]
+ * @returns {() => void}
+ */
+export function autoPadWhenDrawn(plot, { maxPasses = 4 } = {}) {
+	let live = true;
+	const stored = () => JSON.stringify(plot?.figurePadding ?? plot?.padding ?? null);
+	const pass = (left) =>
+		tick().then(() => {
+			if (!live || typeof plot?.autoScalePadding !== 'function') return;
+			const before = stored();
+			plot.autoScalePadding('all');
+			if (left > 1 && stored() !== before) return pass(left - 1);
+		});
+	pass(maxPasses);
+	return () => {
+		live = false;
 	};
 }

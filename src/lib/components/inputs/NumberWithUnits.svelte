@@ -1,5 +1,20 @@
+<script module>
+	/**
+	 * What a `nullable` box's `onInput` value means for a field: a number, or null for
+	 * "not set" (an axis limit back to automatic). For the callers that store it.
+	 *
+	 * @param {unknown} v
+	 * @returns {number|null}
+	 */
+	export function numberOrNull(v) {
+		if (v == null || v === '') return null;
+		const n = typeof v === 'number' ? v : parseFloat(String(v));
+		return Number.isFinite(n) ? n : null;
+	}
+</script>
+
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { displayNumber, readableNumber } from './numberDisplay.js';
 	let {
 		value = $bindable(),
@@ -8,6 +23,9 @@
 		max = Infinity,
 		units = { default: 'value', value: 1 },
 		onInput = () => {},
+		// Whether "not set" is a value this field can hold (an axis limit, whose null means
+		// automatic). Leaving the box empty then stores null; otherwise it puts the value back.
+		nullable = false,
 		selectedUnitStart = 'default',
 		className = '',
 		style = ''
@@ -62,7 +80,7 @@
 		return Math.max(minVal, Math.min(maxVal, val));
 	}
 
-	// Update value from displayValue (triggered by input or drag)
+	// Store a number typed in the box's own units.
 	function updateValue(newDisplayValue) {
 		let newValue =
 			typeof unitFactor === 'object' && Object.keys(units).length > 1
@@ -71,6 +89,76 @@
 		newValue = clamp(newValue, min, max);
 		value = newValue;
 		onInput(value);
+	}
+
+	// What the box holds, as a number, or null when it holds nothing valid. A number input
+	// reports an empty box and a partial entry ("-", "-.", "1e") alike, as "".
+	function typedNumber() {
+		const text = inputElement?.value ?? '';
+		if (text.trim() === '') return null;
+		const n = Number(text);
+		return Number.isFinite(n) ? n : null;
+	}
+
+	// Typing. A valid number is stored at once (the plot previews it). An empty or partial
+	// entry is "no change yet": nothing is stored, and the box is left as it is, so a
+	// negative or a decimal can be typed into a cleared box.
+	function handleInput() {
+		const n = typedNumber();
+		if (n === null) return;
+		updateValue(n);
+	}
+
+	// Leaving the box (blur, Enter) with nothing valid in it: a nullable field stores null
+	// (automatic); any other field goes back to the value it had.
+	function commitEmpty() {
+		if (!inputElement || typedNumber() !== null) return;
+		// Not written to `value` here: the caller's null means "automatic", and the box then
+		// shows whatever the caller passes back for it (the automatic limit).
+		if (nullable) onInput(null);
+		syncBox(true);
+		tick().then(() => syncBox(true));
+	}
+
+	// Put the stored value into the box. While the box is being edited it is only rewritten
+	// when it holds a different valid number (an undo, a spinner, another control), never
+	// over a partial entry or over "1.0" when 1 is stored.
+	function syncBox(force = false) {
+		if (!inputElement) return;
+		const shown = displayValue;
+		const text = shown == null || Number.isNaN(shown) ? '' : String(shown);
+		if (!force && focused) {
+			const n = typedNumber();
+			if (n === null || n === Number(shown)) return;
+		}
+		if (inputElement.value !== text) inputElement.value = text;
+	}
+
+	$effect(() => {
+		displayValue;
+		focused;
+		syncBox();
+	});
+
+	function handleKeydown(e) {
+		if (e.key === 'Enter') commitEmpty();
+		else if (e.key === 'Escape') {
+			// The plot panel's recorder puts a previewed value back; the box follows once that
+			// has landed (a partial entry stored nothing, so nothing else would rewrite it).
+			tick().then(() => syncBox(true));
+		}
+	}
+
+	// A box left empty sends `change` BEFORE `blur`, and `change` is when the plot panel
+	// records the edit (plots/plotEditScope.js): the null has to be stored by then, or the
+	// step records nothing and the null lands outside the history.
+	function handleChange() {
+		commitEmpty();
+	}
+
+	function handleBlur() {
+		commitEmpty();
+		focused = false;
 	}
 </script>
 
@@ -81,10 +169,11 @@
 		{step}
 		min={typeof unitFactor === 'object' ? min : min / unitFactor}
 		max={typeof unitFactor === 'object' ? max : max / unitFactor}
-		bind:value={displayValue}
-		oninput={(e) => updateValue(e.target.value)}
+		oninput={handleInput}
+		onkeydown={handleKeydown}
+		onchange={handleChange}
 		onfocus={() => (focused = true)}
-		onblur={() => (focused = false)}
+		onblur={handleBlur}
 		onwheel={(e) => {
 			if (document.activeElement == inputElement) e.stopPropagation();
 		}}

@@ -6,7 +6,12 @@
 	} from '$lib/components/plotbits/legendAuto.svelte.js';
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
-	import { viewFontScale, viewStyleFor, scalePadding } from '$lib/plots/viewBox.js';
+	import {
+		viewFontScale,
+		viewStyleFor,
+		scalePadding,
+		autoPadWhenDrawn
+	} from '$lib/plots/viewBox.js';
 	import Column from '$lib/core/Column.svelte';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
 	import { scaleLinear, scaleLog } from 'd3-scale';
@@ -16,7 +21,7 @@
 		drawableOnLog,
 		logTickFormat
 	} from '$lib/plots/logAxis.js';
-	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
+	import NumberWithUnits, { numberOrNull } from '$lib/components/inputs/NumberWithUnits.svelte';
 	import PaddingControls from '$lib/components/inputs/PaddingControls.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
@@ -939,9 +944,9 @@
 	});
 
 	onMount(() => {
-		if (which == 'plot') {
-			theData.plot.autoScalePadding('all');
-		}
+		// After the first draw has landed, not from the SVG as it was at mount: see
+		// autoPadWhenDrawn (plots/viewBox.js).
+		if (which == 'plot') return autoPadWhenDrawn(theData.plot);
 	});
 
 	$effect(() => {
@@ -1002,20 +1007,22 @@
 			<div class="control-input-horizontal">
 				<ControlInput label="Min">
 					<NumberWithUnits
+						nullable
 						step="0.1"
 						value={theData.ylimsIN[0] != null ? theData.ylimsIN[0] : theData.ylims[0]}
 						onInput={(val) => {
-							theData.ylimsIN[0] = parseFloat(val);
+							theData.ylimsIN[0] = numberOrNull(val);
 						}}
 					/>
 				</ControlInput>
 
 				<ControlInput label="Max">
 					<NumberWithUnits
+						nullable
 						step="0.1"
 						value={theData.ylimsIN[1] != null ? theData.ylimsIN[1] : theData.ylims[1]}
 						onInput={(val) => {
-							theData.ylimsIN[1] = parseFloat(val);
+							theData.ylimsIN[1] = numberOrNull(val);
 						}}
 					/>
 				</ControlInput>
@@ -1046,24 +1053,26 @@
 				<div class="control-input-horizontal">
 					<ControlInput label="Min">
 						<NumberWithUnits
+							nullable
 							step="0.1"
 							value={theData.phaseYlimsIN[0] != null
 								? theData.phaseYlimsIN[0]
 								: theData.phaseYlims[0]}
 							onInput={(val) => {
-								theData.phaseYlimsIN[0] = parseFloat(val);
+								theData.phaseYlimsIN[0] = numberOrNull(val);
 							}}
 						/>
 					</ControlInput>
 
 					<ControlInput label="Max">
 						<NumberWithUnits
+							nullable
 							step="0.1"
 							value={theData.phaseYlimsIN[1] != null
 								? theData.phaseYlimsIN[1]
 								: theData.phaseYlims[1]}
 							onInput={(val) => {
-								theData.phaseYlimsIN[1] = parseFloat(val);
+								theData.phaseYlimsIN[1] = numberOrNull(val);
 							}}
 						/>
 					</ControlInput>
