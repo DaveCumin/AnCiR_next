@@ -38,7 +38,8 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import { colormapRGB, normaliseTo01, COLORMAP_LABELS, DEFAULT_COLORMAP } from './colormaps.js';
-	import { rowHeight } from './rowHeight.js';
+	import { rowGeometry, MAX_ACTOGRAM_ROWS } from './rowHeight.js';
+	import { rasterizeRows, rasterImageURI, parseColour } from './actogramRaster.js';
 	import { core } from '$lib/core/core.svelte.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
@@ -490,6 +491,55 @@
 		return { xStart: allXStart, xEnd: allXEnd, y: allY };
 	}
 
+	/** The raster image's height in px: the rows and their gaps, as the SVG rows lay out. */
+	function rasterHeight(plot) {
+		return plot.Ndays * (plot.eachplotheight + plot.rowGap);
+	}
+
+	/**
+	 * One series of an actogram whose rows are under 1 px (or a large heatmap), as a PNG data URI covering the
+	 * whole plot area (actogramRaster.js): every row drawn by the area its bars (or heatmap
+	 * cells) cover in each pixel, as the SVG rows would be anti-aliased at that size.
+	 */
+	function rasterURI(plot, datum, d) {
+		const N = plot.Ndays;
+		const dpr =
+			typeof window !== 'undefined' ? Math.min(2, Math.max(1, window.devicePixelRatio || 1)) : 1;
+		const W = Math.round(plot.plotwidth * dpr);
+		const H = Math.round(rasterHeight(plot) * dpr);
+		const sy = H / rasterHeight(plot);
+		const span = plot.periodHrs * plot.doublePlot;
+		const heat = plot.renderMode === 'heatmap';
+		const dom = plot.intensityDomain[d] ?? [0, 1];
+		const lims = plot.ylims[d] ?? [];
+		return rasterImageURI(
+			(w, h) =>
+				rasterizeRows({
+					nRows: N,
+					widthPx: w,
+					heightPx: h,
+					span,
+					rowH: plot.eachplotheight * sy,
+					gap: plot.rowGap * sy,
+					mode: heat ? 'heatmap' : 'bars',
+					rowBins: (day) =>
+						getBinsForPeriods(datum.binsByPeriod, day, day + plot.doublePlot, plot.periodHrs),
+					yFrac: (day, y) => {
+						const [lo, hi] = lims[day] ?? [0, 1];
+						return hi > lo ? (y - lo) / (hi - lo) : 0;
+					},
+					colour: (y) =>
+						parseColour(colormapRGB(plot.colormap, normaliseTo01(y, dom[0], dom[1]))) ?? [0, 0, 0]
+				}),
+			W,
+			H,
+			datum.colour
+		);
+	}
+
+	// The most heatmap cells drawn as SVG rects; past it the heatmap is one image per series.
+	const MAX_SVG_HEATMAP_CELLS = 20_000;
+
 	export class Actogramclass {
 		static descriptors = {
 			paddingIN: { group: 'Padding' },
@@ -582,8 +632,7 @@
 		legendObstacles(w, h) {
 			const N = this.Ndays;
 			if (!(N > 0)) return [];
-			const sb = this.spaceBetween;
-			const rowH = (h - (N - 1) * sb) / N;
+			const { gap: sb, height: rowH } = rowGeometry(h, N, this.spaceBetween);
 			const span = this.periodHrs * this.doublePlot;
 			const xs = scaleLinear().domain([0, span]).range([0, w]);
 			const rects = [];
@@ -614,7 +663,24 @@
 			}
 			return [{ rects }];
 		}
-		eachplotheight = $derived(rowHeight(this.plotheight, this.Ndays, this.spaceBetween));
+		// Row height and gap as drawn: the user's gap unless it would squeeze the rows under
+		// 1 px (rowGeometry). Every row position uses these, never spaceBetween directly.
+		rowGeom = $derived(rowGeometry(this.plotheight, this.Ndays, this.spaceBetween));
+		eachplotheight = $derived(this.rowGeom.height);
+		rowGap = $derived(this.rowGeom.gap);
+		// Heatmap cells the SVG would draw (one per bin per double-plot copy).
+		heatmapCells = $derived(
+			this.renderMode === 'heatmap'
+				? this.data.reduce((n, d) => n + (d.draw ? d.allBins.length : 0), 0) * this.doublePlot
+				: 0
+		);
+		// One image per series instead of SVG rows (actogramRaster.js) when the rows are under
+		// 1 px, or when a heatmap would be more cells than SVG handles well: 140,000 cells (two
+		// years of 15 min data) took 2.8 s to draw and 14 s to tear down when the plot resized.
+		// The image is the same picture (each pixel holds what the cells cover in it).
+		rasterRows = $derived(
+			this.Ndays > 0 && (this.eachplotheight < 1 || this.heatmapCells > MAX_SVG_HEATMAP_CELLS)
+		);
 		startTime = $derived.by(() => {
 			let minTime = Infinity;
 
@@ -673,7 +739,7 @@
 		lightBands = $state(new LightBandClass(this, { lightBands: [] }));
 		legend = $state();
 		xAxis = $state();
-		Ndays = $derived.by(() => {
+		rowsNeeded = $derived.by(() => {
 			if (this.data.length === 0) {
 				return 0;
 			}
@@ -685,14 +751,22 @@
 					if (Number.isFinite(v) && v > maxPeriod) maxPeriod = v;
 				}
 			}
-			if (maxPeriod < 0) return 0;
-			// A non-time X axis (plain data values wired into the time port) yields a
-			// huge day index and hence an absurd Ndays, which would blow up the
-			// per-day allocations/loops (e.g. the ylims array). No real actogram spans
-			// this many days, so treat it as invalid and render nothing.
-			if (maxPeriod + 1 > 20000) return 0;
-			return maxPeriod + 1;
+			return maxPeriod < 0 ? 0 : maxPeriod + 1;
 		});
+		// The rows the data need, and the rows drawn. Past MAX_ACTOGRAM_ROWS (55 years of
+		// days) the plot draws nothing and SAYS why (rowsRefusedMessage): it is almost always
+		// a plain number column read as hours (seconds or minutes), or a very short period,
+		// and the per-row allocations (ylims, marker day lists) would grow without bound.
+		Ndays = $derived(this.rowsNeeded > MAX_ACTOGRAM_ROWS ? 0 : this.rowsNeeded);
+		rowsRefusedMessage = $derived(
+			this.rowsNeeded > MAX_ACTOGRAM_ROWS
+				? `Not drawn: the data span ${this.rowsNeeded.toLocaleString('en-US')} periods of ` +
+						`${+Number(this.periodHrs).toPrecision(6)} h, and an actogram draws at most ` +
+						`${MAX_ACTOGRAM_ROWS.toLocaleString('en-US')} rows. A plain number column is ` +
+						`read as hours: convert seconds or minutes to hours (or import it as time), ` +
+						`or set a longer period.`
+				: ''
+		);
 
 		ylimsOption = $state('overall');
 		ylimsIN = $state([0, 100]);
@@ -1073,8 +1147,7 @@
 		}
 
 		const clickedDay = Math.floor(
-			(e.offsetY - theData.plot.padding.top) /
-				(theData.plot.eachplotheight + theData.plot.spaceBetween)
+			(e.offsetY - theData.plot.padding.top) / (theData.plot.eachplotheight + theData.plot.rowGap)
 		);
 		const clickedHrs =
 			((e.offsetX - theData.plot.padding.left) / theData.plot.plotwidth) *
@@ -1476,7 +1549,21 @@
 		/>
 
 		{#each theData.plot.data as datum, d (d)}
-			{#if datum.draw}
+			{#if datum.draw && theData.plot.rasterRows}
+				<!-- More rows than pixels: every row drawn into one image (actogramRaster.js). -->
+				{@const uri = rasterURI(theData.plot, datum, d)}
+				{#if uri}
+					<image
+						href={uri}
+						x={theData.plot.padding.left}
+						y={theData.plot.padding.top}
+						width={theData.plot.plotwidth}
+						height={rasterHeight(theData.plot)}
+						preserveAspectRatio="none"
+						class="actogram-raster"
+					/>
+				{/if}
+			{:else if datum.draw}
 				<!-- Make the histogram for each period using new xStart/xEnd format -->
 				{#each makeSeqArray(0, theData.plot.Ndays - 1, 1) as day (day)}
 					<!-- The y limits are pulled out as NUMBERS first. ylims is rebuilt (new arrays)
@@ -1501,8 +1588,8 @@
 					{@const rowXscale = scaleLinear().domain([0, rowSpan]).range([0, rowWidth])}
 					{@const rowYoffset =
 						theData.plot.padding.top +
-						day * (theData.plot.spaceBetween + theData.plot.eachplotheight) +
-						theData.plot.spaceBetween}
+						day * (theData.plot.rowGap + theData.plot.eachplotheight) +
+						theData.plot.rowGap}
 
 					{#if bins.xStart.length > 0}
 						{#if theData.plot.renderMode === 'heatmap'}
@@ -1555,6 +1642,17 @@
 				{/each}
 			</g>
 		{/each}
+		<!-- Too many rows to draw: say why on the plot, not a silent blank. -->
+		{#if theData.plot.rowsRefusedMessage}
+			<foreignObject
+				x={theData.plot.padding.left}
+				y={theData.plot.padding.top}
+				width={Math.max(0, theData.plot.plotwidth)}
+				height={Math.max(0, theData.plot.plotheight)}
+			>
+				<div class="actogram-refused" role="status">{theData.plot.rowsRefusedMessage}</div>
+			</foreignObject>
+		{/if}
 		<!-- THE ANNOTATIONS -->
 		{#each theData.plot.annotations as annotation (annotation.id)}
 			<Annotation {which} {annotation} />
@@ -1568,7 +1666,7 @@
 				<text
 					x={theData.plot.padding.left - 10}
 					y={theData.plot.padding.top +
-						day * (theData.plot.eachplotheight + theData.plot.spaceBetween) +
+						day * (theData.plot.eachplotheight + theData.plot.rowGap) +
 						theData.plot.eachplotheight / 2}
 					text-anchor="end"
 					dominant-baseline="central"
@@ -1707,5 +1805,17 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
+	}
+	.actogram-refused {
+		box-sizing: border-box;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: var(--space-3);
+		text-align: center;
+		font-size: var(--font-sm);
+		line-height: 1.4;
+		color: var(--color-text-muted);
 	}
 </style>

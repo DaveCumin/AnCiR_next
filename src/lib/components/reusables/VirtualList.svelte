@@ -13,6 +13,10 @@
 	//
 	// The container scrolls; a single spacer element gives it the full scroll
 	// height while the visible window is absolutely positioned via translateY.
+	// A very long list (over about 400,000 rows of 24 px) would pass the browsers'
+	// element-height cap, so its scroll is scaled instead (virtualScroll.js).
+	import { scrollWindow } from './virtualScroll.js';
+
 	let {
 		items = [],
 		height = 240,
@@ -30,13 +34,15 @@
 	// Measured by bind:clientHeight below; seed with a sane default until then.
 	let viewportH = $state(240);
 
-	const total = $derived(items.length);
-	const totalHeight = $derived(total * itemHeight);
-
-	const startIndex = $derived(Math.max(0, Math.floor(scrollTop / itemHeight) - overscan));
-	const visibleCount = $derived(Math.ceil(viewportH / itemHeight) + overscan * 2);
-	const endIndex = $derived(Math.min(total, startIndex + visibleCount));
-	const offsetY = $derived(startIndex * itemHeight);
+	// Rows to render and where (virtualScroll.js). Past MAX_SCROLL_HEIGHT the scroll is
+	// scaled so every row stays reachable under the browsers' element-height cap.
+	const win = $derived(
+		scrollWindow({ scrollTop, viewportH, total: items.length, itemHeight, overscan })
+	);
+	const totalHeight = $derived(win.spacerHeight);
+	const startIndex = $derived(win.startIndex);
+	const endIndex = $derived(win.endIndex);
+	const offsetY = $derived(win.offsetY);
 
 	// [item, absoluteIndex] pairs for the current window.
 	const windowed = $derived(
@@ -81,6 +87,9 @@
 	.vlist-spacer {
 		position: relative;
 		width: 100%;
+		/* A scaled list (virtualScroll.js) can render overscan rows past the spacer's end;
+		   clipped, they cannot make the scroll range longer than the spacer. */
+		overflow-y: clip;
 	}
 	.vlist-window {
 		position: absolute;

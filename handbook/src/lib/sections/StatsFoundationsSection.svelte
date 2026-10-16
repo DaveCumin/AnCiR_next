@@ -67,8 +67,11 @@
 		</p>
 		<ul>
 			<li>
-				<strong>Shapiro-Wilk</strong> (default) &mdash; the most powerful general test for small to moderate
-				samples. AnCiR implements Royston's AS R94 algorithm, valid for 3 &le; n &le; 5000.
+				<strong>Shapiro-Wilk</strong> (default) &mdash; the most powerful general test for small to
+				moderate samples. AnCiR implements Royston's AS R94 algorithm, whose p-value is validated
+				for 3 &le; n &le; 5000. Above 5000 the node shows W with no p-value and suggests
+				D'Agostino-Pearson (R's
+				<code>shapiro.test</code> refuses such samples for the same reason).
 			</li>
 			<li>
 				<strong>D'Agostino-Pearson K&sup2;</strong> &mdash; combines skewness and kurtosis into an

@@ -51,7 +51,7 @@ export const PARAM_NOTES = {
 	CrossCorrelation:
 		'`xIN` is series A, `yIN` series B. `method`: "pearson" (linear) or "spearman" (rank). `maxLag` is in SAMPLES (0 ⇒ auto). Outputs lag/correlation/pvalue; peak lag = the delay (positive ⇒ A leads B: B[t] = A[t - k] peaks at +k; negative ⇒ B leads A).',
 	NormalityTest:
-		'`method`: "shapiro" (Shapiro-Wilk, default, 3 ≤ n ≤ 5000), "dagostino" (D’Agostino-Pearson, n ≥ 8) or "jarquebera" (n ≥ 3, weaker). `alpha` is the verdict threshold (0.05). One row per column; small p ⇒ non-normal.',
+		'`method`: "shapiro" (Shapiro-Wilk, default; p only for 3 ≤ n ≤ 5000, NaN above), "dagostino" (D’Agostino-Pearson, n ≥ 8) or "jarquebera" (n ≥ 3, weaker). `alpha` is the verdict threshold (0.05). One row per column; small p ⇒ non-normal.',
 	Correlation:
 		'`method`: "pearson" (linear), "spearman" (rank) or "auto" (Spearman if any column fails a normality check, else Pearson). `alpha` (0.05). Reports every column pair (var_i, var_j, r, pvalue, padj = Holm-adjusted across the pairs, n); `significant` is padj < alpha.',
 	Split:

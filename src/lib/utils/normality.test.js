@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shapiroWilk, dAgostino, jarqueBera, normalityTest } from './normality.js';
+import { shapiroWilk, dAgostino, jarqueBera, normalityTest, SHAPIRO_MAX_N } from './normality.js';
 
 // Reference values from scipy 1.x: stats.shapiro / stats.normaltest / stats.jarque_bera on the
 // exact arrays below.
@@ -114,5 +114,38 @@ describe('normalityTest dispatch', () => {
 	it('ignores invalid values (NaN/null) when cleaning', () => {
 		const withGaps = [...NORMALISH.slice(0, 12), NaN, null, ...NORMALISH.slice(12)];
 		expect(normalityTest(withGaps).statistic).toBeCloseTo(shapiroWilk(NORMALISH).statistic, 10);
+	});
+});
+
+// Royston's p-value approximation is validated for 3 <= n <= 5000 (Royston 1995); R's
+// shapiro.test refuses n > 5000 and scipy says the p-value "may not be" accurate there. All
+// three now report W and a missing p-value above 5000 (they used to disagree: R gave NA).
+describe('shapiroWilk across n = 5000', () => {
+	// Two weeks of 4 min samples of a skewed activity-like signal (deterministic noise).
+	const series = (n) => {
+		let s = 12345;
+		const u = () => ((s = (s * 1103515245 + 12345) % 2147483648) + 1) / 2147483649;
+		return Array.from({ length: n }, (_, i) => {
+			const z = Math.sqrt(-2 * Math.log(u())) * Math.cos(2 * Math.PI * u());
+			return Math.exp(0.3 * z) * (10 + 4 * Math.sin((2 * Math.PI * i) / 360));
+		});
+	};
+	it('n = 5000: W and its p-value', () => {
+		const r = shapiroWilk(series(5000));
+		expect(r.n).toBe(5000);
+		expect(r.statistic).toBeGreaterThan(0.9);
+		expect(r.statistic).toBeLessThan(1);
+		expect(Number.isFinite(r.pvalue)).toBe(true);
+		expect(SHAPIRO_MAX_N).toBe(5000);
+	});
+	it('n = 5001: W still reported, p-value NaN', () => {
+		const at = shapiroWilk(series(5000));
+		const r = shapiroWilk(series(5001));
+		expect(r.n).toBe(5001);
+		expect(Math.abs(r.statistic - at.statistic)).toBeLessThan(1e-3);
+		expect(r.pvalue).toBeNaN();
+		expect(normalityTest(series(5001), 'shapiro').pvalue).toBeNaN();
+		// The other tests are unaffected by the limit.
+		expect(Number.isFinite(normalityTest(series(5001), 'dagostino').pvalue)).toBe(true);
 	});
 });

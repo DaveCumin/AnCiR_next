@@ -16,6 +16,7 @@ import functools
 import math
 import re
 import sys
+import warnings as _warnings
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -5105,9 +5106,34 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
 
 # --- SequenceColumn ---
 
+# SequenceColumn.svelte MAX_SEQUENCE_LENGTH: the longest sequence (a guard against a mistyped
+# count). Past it nothing is made and the same warning as the app's is printed.
+MAX_SEQUENCE_LENGTH = 2_000_000
+
+
+def sequence_limit_warning(count):
+    """SequenceColumn.svelte sequenceLimitWarning: the warning text, or None when it fits."""
+    if not count > MAX_SEQUENCE_LENGTH:
+        return None
+    return (f'Nothing was made: {count:,} values is more than the limit of '
+            f'{MAX_SEQUENCE_LENGTH:,}. Lower the count, or use a larger step '
+            f'for the same start and end.')
+
+
+def sequence_limit(_unused, count):
+    """Parity probe for the sequence limit: allowed (1/0) and the warning ('' if none)."""
+    w = sequence_limit_warning(count)
+    return {'allowed': 0 if w else 1, 'warning': w or ''}
+
+
 def tp_sequencecolumn(args, cols, raw_data, _sv):
     kind = args.get('seqType', args.get('kind', 'number'))
     n = int(args.get('count', args.get('rows', 100)))
+    too_long = sequence_limit_warning(n)
+    if too_long:
+        # The app shows this on the node and empties the output.
+        print(f'WARNING: Sequence Column: {too_long}', file=sys.stderr)
+        return False
     start = float(args.get('start', 0.0))
     step = float(args.get('step', args.get('stepHours', 1.0)))
     out_id = _out_id(args, 'result')
@@ -7899,12 +7925,57 @@ def make_interpolator(xs, ys, method='linear'):
     return lambda q: (inner(q) if (q >= xs[0] and q <= xs[-1]) else nan)
 
 
-def _make_grid(start, end, step, max_points=2_000_000):
-    """interpolate.js makeGrid: start + i * step (no accumulated drift), end inclusive."""
+# interpolate.js MAX_GRID_POINTS: the largest resample grid (a guard against a step in the
+# wrong units). Past it nothing is resampled and the same warning as the app's is printed.
+MAX_GRID_POINTS = 2_000_000
+
+
+def _grid_point_count(start, end, step):
+    """interpolate.js gridPointCount: points in makeGrid(start, end, step), 0 if invalid."""
     if not (_finite(start) and _finite(end) and _finite(step)) or step <= 0 or end < start:
-        return []
-    count = int(math.floor((end - start) / step + 1e-9)) + 1
-    if count > max_points:
+        return 0
+    return int(math.floor((end - start) / step + 1e-9)) + 1
+
+
+def _readable_number(v):
+    """interpolate.js readable: 6 significant figures (ties up, as JS toPrecision), never in
+    exponent form, thousands separated."""
+    import decimal
+    d = decimal.Decimal(v)
+    if d == 0:
+        return '0'
+    q = decimal.Decimal(1).scaleb(d.adjusted() - 5)
+    d = d.quantize(q, rounding=decimal.ROUND_HALF_UP).normalize()
+    text = format(d, 'f')
+    whole, _, frac = text.partition('.')
+    whole = f'{int(whole):,}' if whole not in ('', '-') else whole
+    return f'{whole}.{frac}' if frac else whole
+
+
+def grid_too_large_warning(start, end, step, unit='', max_points=MAX_GRID_POINTS):
+    """interpolate.js gridTooLargeWarning: the warning text, or None when the grid fits."""
+    count = _grid_point_count(start, end, step)
+    if count <= max_points:
+        return None
+    need = (end - start) / (max_points - 1)
+    mag = 10 ** (math.floor(math.log10(need)) - 1)
+    min_step = math.ceil(need / mag - 1e-9) * mag
+    return (f'Nothing was resampled: a step of {_readable_number(step)}{unit} over '
+            f'{_readable_number(end - start)}{unit} gives {count:,} grid points, more than the '
+            f'limit of {max_points:,}. Use a step of at least {_readable_number(min_step)}{unit}, '
+            f'or a shorter start to end range.')
+
+
+def interpolate_grid_limit(_unused, start, end, step, unit=''):
+    """Parity probe for the resample-grid limit: the grid size and the warning ('' if none)."""
+    return {'count': _grid_point_count(start, end, step),
+            'warning': grid_too_large_warning(start, end, step, unit) or ''}
+
+
+def _make_grid(start, end, step, max_points=MAX_GRID_POINTS):
+    """interpolate.js makeGrid: start + i * step (no accumulated drift), end inclusive."""
+    count = _grid_point_count(start, end, step)
+    if count == 0 or count > max_points:
         return []
     return [start + i * step for i in range(count)]
 
@@ -7935,6 +8006,11 @@ def tp_interpolate(args, cols, raw_data, _sv):
         start = args.get('start') if _finite(args.get('start')) else min(finite)
         end = args.get('end') if _finite(args.get('end')) else max(finite)
         step = _js_number(args.get('step'))
+        too_large = grid_too_large_warning(start, end, step, ' h' if is_time else '')
+        if too_large:
+            # The app shows this on the node and empties the outputs.
+            print(f'WARNING: Interpolate: {too_large}', file=sys.stderr)
+            return False
         query = _make_grid(start, end, step)
         if not query:
             return False
@@ -9686,6 +9762,13 @@ def describe_stats(values):
     }
 
 
+# utils/normality.js SHAPIRO_MAX_N: Royston's p-value approximation is validated for
+# 3 <= n <= 5000 (Royston 1995, Remark AS R94); scipy's own docs say "For N > 5000 the W test
+# statistic is accurate, but the p-value may not be". Above it W is kept and p is NaN, as in
+# the app and the R port.
+SHAPIRO_MAX_N = 5000
+
+
 def shapiro_wilk(values):
     """scipy.stats.shapiro reference for utils/normality.js shapiroWilk (Royston AS R94)."""
     x = _clean_numeric(values)
@@ -9693,8 +9776,12 @@ def shapiro_wilk(values):
     nan = float("nan")
     if n < 3 or len(set(x)) < 2:
         return {"statistic": nan, "pvalue": nan, "n": n}
-    res = sp_stats.shapiro(np.asarray(x, dtype=float))
-    return {"statistic": float(res.statistic), "pvalue": float(res.pvalue), "n": n}
+    with _warnings.catch_warnings():
+        # scipy warns that the p-value may be inaccurate above 5000; that p is not reported.
+        _warnings.simplefilter("ignore", UserWarning)
+        res = sp_stats.shapiro(np.asarray(x, dtype=float))
+    p = float(res.pvalue) if n <= SHAPIRO_MAX_N else nan
+    return {"statistic": float(res.statistic), "pvalue": p, "n": n}
 
 
 def qq_points(values, confidence=0.95):

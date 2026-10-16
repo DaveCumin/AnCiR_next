@@ -162,3 +162,21 @@ export function stripRowFromColumns(data, rowIndex) {
 	}
 	return out;
 }
+
+/**
+ * Whether another file's row at `rowIndex` holds different labels from the first file's
+ * label row. Several files imported together share one layout, so the row is removed from
+ * each; the labels come from the first file, and the import says so when they differ.
+ * Compared on `columns` (the columns common to every file), as trimmed text.
+ *
+ * @param {Record<string,string> | null} firstLabels the first file's row, from extractRowAsLabels
+ * @param {Record<string, any[]>} data the other file, column-oriented
+ * @param {number} rowIndex
+ * @param {string[]} columns
+ * @returns {boolean}
+ */
+export function labelRowDiffers(firstLabels, data, rowIndex, columns) {
+	if (!firstLabels) return false;
+	const theirs = extractRowAsLabels(data, columns, rowIndex);
+	return columns.some((c) => (firstLabels[c] ?? '') !== theirs[c]);
+}

@@ -18,6 +18,7 @@
 	import { scaleLinear } from 'd3-scale';
 	import { harmonicCheck as computeHarmonicCheck } from './harmonicCheck.js';
 	import { tauReadout } from './tauReadout.js';
+	import { MAX_ACTOGRAM_ROWS } from './rowHeight.js';
 	import { RULE_STAT_LABEL } from '$lib/plots/plotMetricDefs.js';
 	import { fitLine } from './lineFit.js';
 	import { selectionMask } from './markerSelection.js';
@@ -263,7 +264,7 @@
 					this.parentData.parentPlot.padding.top +
 					this.parentData.parentPlot.eachplotheight -
 					radius / 2 +
-					pos.row * this.parentData.parentPlot.spaceBetween +
+					pos.row * this.parentData.parentPlot.rowGap +
 					pos.row * this.parentData.parentPlot.eachplotheight;
 				// A non-finite coordinate (e.g. before the plot has sized itself) would make
 				// the browser reject the whole path; skip that dot instead.
@@ -470,7 +471,7 @@
 					.map(Number)
 					.filter(Number.isFinite);
 				let numPeriods = periodKeys.length > 0 ? Math.max(...periodKeys) + 1 : 0;
-				if (numPeriods > 20000) numPeriods = 0;
+				if (numPeriods > MAX_ACTOGRAM_ROWS) numPeriods = 0;
 				if (dataIN.selectedPeriods) {
 					this.selectedPeriods = dataIN.selectedPeriods;
 				} else if (dataIN.periodRangeMin != null && dataIN.periodRangeMax != null) {
@@ -635,7 +636,7 @@
 			padTop: p.padding.top,
 			plotwidth: p.plotwidth,
 			eachplotheight: p.eachplotheight,
-			spaceBetween: p.spaceBetween,
+			spaceBetween: p.rowGap,
 			periodHrs: p.periodHrs,
 			doublePlot: p.doublePlot
 		};
@@ -1415,7 +1416,7 @@
 	{#if marker.lineDrawn}
 		{@const Ndays = marker.parentData.parentPlot.Ndays}
 		{@const eph = marker.parentData.parentPlot.eachplotheight}
-		{@const sb = marker.parentData.parentPlot.spaceBetween}
+		{@const sb = marker.parentData.parentPlot.rowGap}
 		{@const periodHrs = marker.parentData.parentPlot.periodHrs}
 		{@const padTop = marker.parentData.parentPlot.padding.top}
 		{@const padLeft = marker.parentData.parentPlot.padding.left}

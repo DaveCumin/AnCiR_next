@@ -2917,6 +2917,62 @@
 			"rToleranceWhy": "Same cause as util-normality-shapiro: R's shapiro.test and the JS port both implement Royston AS R94 and agree on W, but the p-value's normalising transform differs in the 8th significant figure. Surfaces here because the analysis reports the p-value. Python stays at the default tolerance."
 		},
 		{
+			"id": "tp-normalitytest-shapiro-n5000",
+			"kind": "tableProcess",
+			"jsName": "NormalityTest",
+			"pyFunc": "normalitytest",
+			"note": "n = 5000, the top of Royston's validated range: W and its p-value in all three. Crosses with tp-normalitytest-shapiro-n5001.",
+			"generate": {
+				"type": "rhythm",
+				"n": 5000,
+				"period": 24,
+				"amp": 0,
+				"mesor": 10,
+				"phase": 0,
+				"noise": 4,
+				"seed": 503,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"yIN": ["@y"],
+				"method": "shapiro",
+				"alpha": 0.05,
+				"out": { "variable": -1, "statistic": -1, "pvalue": -1, "n": -1, "normal": -1 }
+			},
+			"compareOutputs": ["statistic", "pvalue", "n", "normal"],
+			"rFunc": "normalitytest",
+			"rTolerance": 1e-6,
+			"rToleranceWhy": "As tp-normalitytest-shapiro: R's shapiro.test p-value transform differs from the JS in the 8th significant figure; W agrees."
+		},
+		{
+			"id": "tp-normalitytest-shapiro-n5001",
+			"kind": "tableProcess",
+			"jsName": "NormalityTest",
+			"pyFunc": "normalitytest",
+			"note": "n = 5001: W in all three (R computes it from the Royston weights, since shapiro.test refuses n > 5000), the p-value and the verdict missing in all three.",
+			"generate": {
+				"type": "rhythm",
+				"n": 5001,
+				"period": 24,
+				"amp": 0,
+				"mesor": 10,
+				"phase": 0,
+				"noise": 4,
+				"seed": 503,
+				"refs": { "x": "t", "y": "y" }
+			},
+			"args": {
+				"yIN": ["@y"],
+				"method": "shapiro",
+				"alpha": 0.05,
+				"out": { "variable": -1, "statistic": -1, "pvalue": -1, "n": -1, "normal": -1 }
+			},
+			"compareOutputs": ["statistic", "pvalue", "n", "normal"],
+			"rFunc": "normalitytest",
+			"rTolerance": 1e-6,
+			"rToleranceWhy": "As tp-normalitytest-shapiro: R's shapiro.test p-value transform differs from the JS in the 8th significant figure; W agrees."
+		},
+		{
 			"id": "tp-normalitytest-dagostino",
 			"kind": "tableProcess",
 			"jsName": "NormalityTest",
@@ -8323,6 +8379,130 @@
 				"step": 1.5
 			},
 			"compareOutputs": ["interpx", "interpy"]
+		},
+		{
+			"id": "util-interpolate-grid-at-limit",
+			"kind": "pureUtil",
+			"jsFn": "interpolateGridLimit",
+			"pyFunc": "interpolate_grid_limit",
+			"rFunc": "interpolate_grid_limit",
+			"note": "Resample grid of exactly MAX_GRID_POINTS (2,000,000): allowed, no warning. Crosses the limit with util-interpolate-grid-over-limit.",
+			"input": { "values": [0] },
+			"valuesRef": "values",
+			"jsArgs": [0, 1999999, 1, ""],
+			"pyArgs": [0, 1999999, 1, ""],
+			"compareScalars": ["count", "warning"]
+		},
+		{
+			"id": "util-interpolate-grid-over-limit",
+			"kind": "pureUtil",
+			"jsFn": "interpolateGridLimit",
+			"pyFunc": "interpolate_grid_limit",
+			"rFunc": "interpolate_grid_limit",
+			"note": "One point past MAX_GRID_POINTS: nothing is resampled and all three say so in the same words.",
+			"input": { "values": [0] },
+			"valuesRef": "values",
+			"jsArgs": [0, 2000000, 1, ""],
+			"pyArgs": [0, 2000000, 1, ""],
+			"compareScalars": ["count", "warning"]
+		},
+		{
+			"id": "util-interpolate-grid-over-limit-hours",
+			"kind": "pureUtil",
+			"jsFn": "interpolateGridLimit",
+			"pyFunc": "interpolate_grid_limit",
+			"rFunc": "interpolate_grid_limit",
+			"note": "A step typed in seconds on an hours axis (1/3600 h over four weeks): the warning names the grid size and the smallest step that fits.",
+			"input": { "values": [0] },
+			"valuesRef": "values",
+			"jsArgs": [0, 672, 0.0002777777777777778, " h"],
+			"pyArgs": [0, 672, 0.0002777777777777778, " h"],
+			"compareScalars": ["count", "warning"]
+		},
+		{
+			"id": "tp-interpolate-resample-over-limit",
+			"kind": "tableProcess",
+			"jsName": "Interpolate",
+			"pyFunc": "interpolate",
+			"rFunc": "interpolate",
+			"note": "A resample grid past the 2,000,000-point limit gives no output in all three (the app also shows the warning on the node).",
+			"inputs": [
+				{ "ref": "x", "type": "number", "values": [0, 1, 2, 3, 4] },
+				{ "ref": "y", "type": "number", "values": [1, 2, 3, 2, 1] }
+			],
+			"args": {
+				"xIN": "@x",
+				"yIN": ["@y"],
+				"mode": "resample",
+				"method": "linear",
+				"out": { "interpx": -1 },
+				"start": 0,
+				"end": 4,
+				"step": 1e-6
+			},
+			"recordValid": true,
+			"compareOutputs": ["interpx", "interpy"]
+		},
+		{
+			"id": "util-sequence-at-limit",
+			"kind": "pureUtil",
+			"jsFn": "sequenceLimit",
+			"pyFunc": "sequence_limit",
+			"rFunc": "sequence_limit",
+			"note": "A Sequence Column of exactly MAX_SEQUENCE_LENGTH (2,000,000) values is allowed in all three. Crosses the limit with util-sequence-over-limit.",
+			"input": { "values": [0] },
+			"valuesRef": "values",
+			"jsArgs": [2000000],
+			"pyArgs": [2000000],
+			"compareScalars": ["allowed", "warning"]
+		},
+		{
+			"id": "util-sequence-over-limit",
+			"kind": "pureUtil",
+			"jsFn": "sequenceLimit",
+			"pyFunc": "sequence_limit",
+			"rFunc": "sequence_limit",
+			"note": "One value past MAX_SEQUENCE_LENGTH: refused in all three, with the same warning (the JS used to cut to 100,000 silently; the ports had no limit).",
+			"input": { "values": [0] },
+			"valuesRef": "values",
+			"jsArgs": [2000001],
+			"pyArgs": [2000001],
+			"compareScalars": ["allowed", "warning"]
+		},
+		{
+			"id": "tp-sequencecolumn-over-limit",
+			"kind": "tableProcess",
+			"jsName": "SequenceColumn",
+			"pyFunc": "sequencecolumn",
+			"rFunc": "sequencecolumn",
+			"note": "A count past the 2,000,000-value limit makes nothing in all three (the app also shows the warning on the node).",
+			"inputs": [],
+			"args": {
+				"seqType": "number",
+				"start": 0,
+				"step": 1,
+				"count": 2000001,
+				"out": { "result": -1 }
+			},
+			"recordValid": true,
+			"compareOutputs": ["result"]
+		},
+		{
+			"id": "tp-sequencecolumn-over-old-cap",
+			"kind": "tableProcess",
+			"jsName": "SequenceColumn",
+			"pyFunc": "sequencecolumn",
+			"rFunc": "sequencecolumn",
+			"note": "150,000 values: past the old JS-only 100,000 cut, under the shared limit; all three make every value.",
+			"inputs": [],
+			"args": {
+				"seqType": "number",
+				"start": 0,
+				"step": 0.5,
+				"count": 150000,
+				"out": { "result": -1 }
+			},
+			"compareOutputs": ["result"]
 		},
 		{
 			"id": "tp-interpolate-duplicate-x",

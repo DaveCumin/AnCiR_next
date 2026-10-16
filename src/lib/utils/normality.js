@@ -4,7 +4,8 @@
 //
 // Shapiro-Wilk is the default — it is the most powerful of the three for detecting departures from
 // normality in small-to-moderate samples, and is what most people mean by "the normality test".
-// It is valid for 3 ≤ n ≤ 5000. D'Agostino (omnibus skewness + kurtosis, n ≥ 8) and Jarque-Bera
+// Its p-value is validated for 3 ≤ n ≤ 5000 (above that W is reported and p is NaN; see
+// SHAPIRO_MAX_N). D'Agostino (omnibus skewness + kurtosis, n ≥ 8) and Jarque-Bera
 // (n ≥ 3) are moment-based alternatives; D'Agostino behaves better than Shapiro on very large n.
 //
 // STATS-LIBRARY POLICY: all three are bespoke but pinned to scipy in the parity harness — Shapiro
@@ -45,7 +46,19 @@ const SW_G = [-2.273, 0.459];
 const poly = (c, x) => c.reduce((acc, cj, j) => acc + cj * x ** j, 0);
 
 /**
- * Shapiro-Wilk test (Royston AS R94), valid for 3 ≤ n ≤ 5000.
+ * The largest n for which the Shapiro-Wilk p-value is reported. Royston's normalising
+ * transform for W (the ln n polynomials SW_C5/SW_C6) was fitted and checked for
+ * 3 ≤ n ≤ 5000 (Royston 1995, Remark AS R94, Applied Statistics 44: 547-551); R's
+ * shapiro.test refuses n > 5000 for that reason, and scipy.stats.shapiro notes "For N > 5000
+ * the W test statistic is accurate, but the p-value may not be." Above it W is still
+ * reported (the weights are exact for any n) and the p-value is NaN, the same in the Python
+ * and R ports, rather than a number nobody has validated.
+ */
+export const SHAPIRO_MAX_N = 5000;
+
+/**
+ * Shapiro-Wilk test (Royston AS R94). W for any n ≥ 3; the p-value for 3 ≤ n ≤ 5000 only
+ * (NaN above SHAPIRO_MAX_N, see there).
  * @returns {{statistic:number, pvalue:number, n:number}} W and its p-value; NaN when n<3.
  */
 export function shapiroWilk(values) {
@@ -95,6 +108,7 @@ export function shapiroWilk(values) {
 	if (den === 0) return { statistic: NaN, pvalue: NaN, n };
 	let W = (num * num) / den;
 	if (W > 1) W = 1;
+	if (n > SHAPIRO_MAX_N) return { statistic: W, pvalue: NaN, n };
 
 	// Royston's normalising transform → a standard-normal z → upper-tail p.
 	let pvalue;

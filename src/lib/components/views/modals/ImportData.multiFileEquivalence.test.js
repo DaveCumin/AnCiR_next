@@ -7,6 +7,8 @@
 // Found with this file (2026-10-16): with "Bin data on import" on, only the FIRST file was
 // binned; the others were appended raw after it, so the time column mixed bin labels with
 // the raw timestamps and every averaged column carried a tail of unbinned samples.
+// Also (2026-10-16): a picked label row ("Use a row as labels") was removed from file 1
+// only, so every other file's label cells were imported as data values.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { makeWorkbook } from '$test/xlsxWorkbook.js';
 import {
@@ -16,6 +18,7 @@ import {
 } from './ImportData.svelte';
 import { core } from '$lib/core/core.svelte';
 import { getColumnById } from '$lib/core/Column.svelte';
+import { notifications } from '$lib/core/notifications.svelte.js';
 
 const p2 = (n) => String(n).padStart(2, '0');
 const HEADER = 'timestamp_unix,datetime_utc,all_data,occupancy';
@@ -58,7 +61,11 @@ async function importOf(files, setup = () => {}) {
 	const out = {};
 	for (const c of core.data) {
 		const col = getColumnById(c.id);
-		out[col.name] = { type: col.type, values: Array.from(col.getData()) };
+		out[col.name] = {
+			type: col.type,
+			groupLabel: col.groupLabel ?? null,
+			values: Array.from(col.getData())
+		};
 	}
 	return out;
 }
@@ -79,7 +86,27 @@ async function expectMultiEqualsSingle(parts, setup, make = csvFile) {
 
 beforeEach(() => {
 	core.data = [];
+	notifications.list.length = 0;
 });
+
+const LABELS = 'unix,dt,hiveA,hiveA';
+/** Each part with the label row on top, as a logger export with a label row reads. */
+const labelled = (parts, labels = () => LABELS) => parts.map((p, i) => [labels(i), ...p]);
+/** One file holding every part's rows under ONE label row. */
+async function expectLabelledMultiEqualsSingle(parts, setup, labels) {
+	const single = await importOf([csvFile('all.csv', [LABELS, ...parts.flat()])], setup);
+	const multi = await importOf(
+		labelled(parts, labels).map((p, i) => csvFile(`part${i + 1}.csv`, p)),
+		setup
+	);
+	expect(Object.keys(multi).sort()).toEqual(Object.keys(single).sort());
+	for (const name of Object.keys(single)) {
+		expect(multi[name], `column "${name}"`).toEqual(single[name]);
+	}
+	return { single, multi };
+}
+const warnings = () =>
+	notifications.list.filter((n) => n.type === 'warning').map((n) => String(n.message));
 
 const days = () => [rows(24, 145), rows(25, 145), rows(26, 145), rows(27, 145)];
 
@@ -137,5 +164,47 @@ describe('multi-file import equals the same rows in one file', () => {
 		expect(single.binningEnabled).toBe(true);
 		const multi = await suggestion(parts.map((p, i) => csvFile(`part${i + 1}.csv`, p)));
 		expect(multi).toEqual(single);
+	});
+
+	it('with a label row picked: removed from EVERY file, not file 1 only', async () => {
+		const { multi } = await expectLabelledMultiEqualsSingle(days(), (a) => a.pickLabelRow(0));
+		expect(multi.all_data.values).toHaveLength(580);
+		expect(multi.all_data.groupLabel).toBe('hiveA');
+		expect(multi.occupancy.groupLabel).toBe('hiveA');
+		for (const [name, col] of Object.entries(multi)) {
+			expect(
+				col.values.filter((v) => ['unix', 'dt', 'hiveA'].includes(v)),
+				`label text in "${name}"`
+			).toEqual([]);
+		}
+		expect(warnings()).toEqual([]);
+	});
+
+	it('with a label row picked and binning on', async () => {
+		const { multi } = await expectLabelledMultiEqualsSingle(days(), async (a) => {
+			a.pickLabelRow(0);
+			a.setBinningEnabled(true);
+			a.setBinInterval(60);
+		});
+		expect(multi.all_data.values.length).toBeGreaterThan(90);
+		expect(multi.all_data.values.length).toBeLessThan(110);
+		expect(multi.all_data.groupLabel).toBe('hiveA');
+		expect(multi.all_data.values.filter((v) => typeof v === 'string')).toEqual([]);
+	});
+
+	it('a later file whose label row differs: still removed, labels from file 1, and it says so', async () => {
+		const parts = days().slice(0, 3);
+		const files = labelled(parts, (i) => (i === 2 ? 'unix,dt,hiveB,hiveB' : LABELS)).map((p, i) =>
+			csvFile(`part${i + 1}.csv`, p)
+		);
+		const multi = await importOf(files, (a) => a.pickLabelRow(0));
+		expect(multi.all_data.values).toHaveLength(435);
+		expect(multi.all_data.groupLabel).toBe('hiveA');
+		expect(multi.all_data.values.filter((v) => typeof v === 'string')).toEqual([]);
+		const w = warnings();
+		expect(w).toHaveLength(1);
+		expect(w[0]).toContain('"part3.csv"');
+		expect(w[0]).not.toContain('"part2.csv"');
+		expect(w[0]).toContain('the labels come from "part1.csv"');
 	});
 });

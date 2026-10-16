@@ -61,3 +61,31 @@ describe('normalitytest', () => {
 		expect(Number.isNaN(r.rows[0].normal)).toBe(true);
 	});
 });
+
+describe('normalitytest: Shapiro-Wilk across n = 5000', () => {
+	const big = (n) =>
+		Array.from({ length: n }, (_, i) => 10 + 3 * Math.sin(i / 7) + ((i * 7919) % 101) / 50);
+	it('n = 5000: a p-value and a verdict, no large-sample warning', () => {
+		mockColumns[3] = { name: 'hive', getData: () => big(5000) };
+		const [r] = normalitytest(args({ yIN: [3] }));
+		expect(Number.isFinite(r.rows[0].pvalue)).toBe(true);
+		expect([0, 1]).toContain(r.rows[0].normal);
+		expect(r.warnings.some((w) => w.includes('No Shapiro-Wilk p-value'))).toBe(false);
+	});
+	it('n = 5001: W shown, p and verdict missing, and a note that says why and what to use', () => {
+		mockColumns[3] = { name: 'hive', getData: () => big(5001) };
+		const [r] = normalitytest(args({ yIN: [3, 1] }));
+		const row = r.rows[0];
+		expect(row.statistic).toBeGreaterThan(0);
+		expect(row.pvalue).toBeNaN();
+		expect(row.normal).toBeNaN();
+		expect(r.warnings).toContain(
+			'No Shapiro-Wilk p-value above n = 5,000 (hive: n = 5,001). W is shown, but ' +
+				"Royston's p-value approximation is only validated up to n = 5,000, and at this size " +
+				"any test flags trivial departures. Use D'Agostino-Pearson, and judge the shape from " +
+				'a Q-Q plot.'
+		);
+		// Not mistaken for a column that could not be tested.
+		expect(r.warnings.some((w) => w.includes('could not be tested'))).toBe(false);
+	});
+});

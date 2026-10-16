@@ -4,7 +4,8 @@
 	//
 	// Many-column yIN → one row per variable: statistic, p-value, n, and a `normal` verdict at
 	// the chosen alpha. Three tests (utils/normality.js, scipy-parity-checked):
-	//   • Shapiro-Wilk (Royston) — the default and most powerful; valid for 3 ≤ n ≤ 5000.
+	//   • Shapiro-Wilk (Royston): the default and most powerful; its p-value is validated for
+	//     3 ≤ n ≤ 5000, so above that W is shown with a NaN p-value and a warning.
 	//   • D'Agostino-Pearson K² (scipy normaltest) — omnibus skew + kurtosis, needs n ≥ 8.
 	//   • Jarque-Bera — the same moment idea, valid down to n ≥ 3 but weaker in small samples.
 	// Output is fixed long-form columns so it composes (filter non-normal, feed a table, etc.).
@@ -16,7 +17,7 @@
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { fillDefaults, normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
-	import { normalityTest } from '$lib/utils/normality.js';
+	import { normalityTest, SHAPIRO_MAX_N } from '$lib/utils/normality.js';
 
 	const displayName = 'Normality Test';
 	const OUT_KEYS = ['variable', 'statistic', 'pvalue', 'n', 'normal'];
@@ -54,18 +55,25 @@
 		});
 
 		const minN = Math.min(...rows.map((r) => r.n).filter(Number.isFinite));
-		const maxN = Math.max(...rows.map((r) => r.n).filter(Number.isFinite));
 		if (method === 'dagostino' && Number.isFinite(minN) && minN < 20) {
 			warnings.push(
 				`Small sample: D'Agostino's kurtosis term is unreliable below n ≈ 20 (smallest here is ${minN}). Consider Shapiro-Wilk or treat the p-value cautiously.`
 			);
 		}
-		if (method === 'shapiro' && Number.isFinite(maxN) && maxN > 5000) {
+		// Above SHAPIRO_MAX_N the p-value is NaN by design (normality.js): W is still exact,
+		// but Royston's p-value approximation is validated only up to n = 5000.
+		const tooLarge = (r) => method === 'shapiro' && r.n > SHAPIRO_MAX_N;
+		const large = rows.filter(tooLarge);
+		if (large.length) {
 			warnings.push(
-				`Large sample: Shapiro-Wilk is only defined up to n = 5000 (largest here is ${maxN}) and becomes over-sensitive to trivial departures. Use D'Agostino for large n.`
+				`No Shapiro-Wilk p-value above n = ${SHAPIRO_MAX_N.toLocaleString('en-US')} ` +
+					`(${large.map((r) => `${r.variable}: n = ${r.n.toLocaleString('en-US')}`).join(', ')}). ` +
+					`W is shown, but Royston's p-value approximation is only validated up to ` +
+					`n = ${SHAPIRO_MAX_N.toLocaleString('en-US')}, and at this size any test flags trivial ` +
+					`departures. Use D'Agostino-Pearson, and judge the shape from a Q-Q plot.`
 			);
 		}
-		if (rows.some((r) => Number.isNaN(r.pvalue))) {
+		if (rows.some((r) => Number.isNaN(r.pvalue) && !tooLarge(r))) {
 			warnings.push(
 				'Some columns could not be tested (too few points, or no variance) and are reported as NaN.'
 			);

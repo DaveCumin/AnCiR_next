@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('$lib/core/core.svelte', () => ({ core: { rawData: new Map() } }));
 vi.mock('$lib/core/Column.svelte', () => ({ getColumnById: vi.fn() }));
 
-import { sequencecolumn } from './SequenceColumn.svelte';
+import { sequencecolumn, sequenceWarnings, MAX_SEQUENCE_LENGTH } from './SequenceColumn.svelte';
 
 // Preview mode: out.result === -1, no column writes needed.
 
@@ -33,9 +33,41 @@ describe('sequencecolumn — number sequence', () => {
 		expect(result).toHaveLength(0);
 	});
 
-	it('caps at 100000 elements', () => {
-		const [result] = sequencecolumn({ ...base, start: 0, step: 1, count: 200000 });
-		expect(result.length).toBe(100000);
+	// The old cap cut to 100,000 silently (after building every value). Now the limit is
+	// MAX_SEQUENCE_LENGTH, shared with the Python and R ports, and refused with a warning.
+	it('makes every value past the old 100,000 cut (one-second samples for a week)', () => {
+		const [result, valid] = sequencecolumn({ ...base, start: 0, step: 1, count: 604_800 });
+		expect(valid).toBe(true);
+		expect(result).toHaveLength(604_800);
+		expect(result.at(-1)).toBe(604_799);
+		expect(sequenceWarnings({ ...base, count: 604_800 })).toEqual([]);
+	});
+
+	it('exactly MAX_SEQUENCE_LENGTH values: made, no warning', () => {
+		expect(MAX_SEQUENCE_LENGTH).toBe(2_000_000);
+		const [result, valid] = sequencecolumn({ ...base, start: 0, step: 1, count: 2_000_000 });
+		expect(valid).toBe(true);
+		expect(result).toHaveLength(2_000_000);
+		expect(sequenceWarnings({ ...base, count: 2_000_000 })).toEqual([]);
+	});
+
+	it('one past the limit: nothing made, and a warning that says why', () => {
+		const [result, valid] = sequencecolumn({ ...base, start: 0, step: 1, count: 2_000_001 });
+		expect(valid).toBe(false);
+		expect(result).toEqual([]);
+		expect(sequenceWarnings({ ...base, count: 2_000_001 })).toEqual([
+			'Nothing was made: 2,000,001 values is more than the limit of 2,000,000. Lower the ' +
+				'count, or use a larger step for the same start and end.'
+		]);
+		// A time sequence is held to the same limit.
+		const [tRes, tValid] = sequencecolumn({
+			seqType: 'time',
+			out: { result: -1 },
+			startTime: 0,
+			stepHours: 1,
+			count: 2_000_001
+		});
+		expect([tRes, tValid]).toEqual([[], false]);
 	});
 
 	it('count of 1 produces a single value', () => {

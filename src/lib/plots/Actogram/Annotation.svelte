@@ -70,7 +70,7 @@
 						period: p,
 						startHr: displayStart,
 						duration: displayDuration,
-						yOffset: p * (this.parentData.eachplotheight + this.parentData.spaceBetween)
+						yOffset: p * (this.parentData.eachplotheight + this.parentData.rowGap)
 					});
 				}
 			}
@@ -279,7 +279,7 @@
 					.range([0, annotation.parentData.plotwidth])}
 				yscale={scaleLinear().domain([0, 100]).range([annotation.parentData.eachplotheight, 0])}
 				colour={annotation.colour}
-				yoffset={annotation.parentData.spaceBetween}
+				yoffset={annotation.parentData.rowGap}
 			/>
 		</g>
 	{/each}

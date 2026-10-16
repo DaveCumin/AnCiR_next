@@ -54,6 +54,8 @@ import { crossCorrelation } from '$lib/utils/crossCorrelation.js';
 import { chiSquareGoodnessOfFit, chiSquareIndependence } from '$lib/utils/chisquare.js';
 import { logisticRegression } from '$lib/utils/logistic.js';
 import { pAdjust } from '$lib/utils/pAdjust.js';
+import { gridPointCount, gridTooLargeWarning } from '$lib/utils/interpolate.js';
+import { sequenceLimitWarning } from '$lib/tableProcesses/SequenceColumn.svelte';
 import { fisherExact, conditionalOddsRatio, oddsRatioCI } from '$lib/utils/fisherExact.js';
 import { cwt } from '$lib/utils/cwt.js';
 import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
@@ -106,6 +108,17 @@ const PLOT_COMPUTE_FNS = { computeFFT, computeAutocorrelation };
 // the fixture's `jsArgs`, and returns either a dict of arrays (compareArrays),
 // an array of objects (compareFields), or a dict of scalars (compareScalars).
 const PURE_UTIL_FNS = {
+	// The Sequence Column limit: allowed (1/0) and the warning ('' when it fits). jsArgs = [count].
+	sequenceLimit: (_unused, count) => {
+		const w = sequenceLimitWarning(count);
+		return { allowed: w ? 0 : 1, warning: w ?? '' };
+	},
+	// The resample-grid limit (Interpolate): the grid size and the warning ('' when it fits).
+	// The input array is unused. jsArgs = [start, end, step, unit].
+	interpolateGridLimit: (_unused, start, end, step, unit = '') => ({
+		count: gridPointCount(start, end, step),
+		warning: gridTooLargeWarning(start, end, step, unit) ?? ''
+	}),
 	// Studentized range upper tail and quantile. values = [q, k, df, p].
 	studentizedRange: (v) => ({
 		sf: studentizedRangeSf(v[0], v[1], v[2]),

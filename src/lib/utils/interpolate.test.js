@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { knownPoints, makeInterpolator, interpolate, makeGrid } from './interpolate.js';
+import {
+	knownPoints,
+	makeInterpolator,
+	interpolate,
+	makeGrid,
+	gridPointCount,
+	gridTooLargeWarning,
+	MAX_GRID_POINTS
+} from './interpolate.js';
 
 describe('knownPoints', () => {
 	it('keeps only finite (x,y) pairs, sorted by x', () => {
@@ -127,5 +135,24 @@ describe('interpolate with missing values (STAT-3)', () => {
 
 	it('a missing query is missing, not x = 0', () => {
 		expect(interpolate([0, 2], [10, 30], [null, '', 1])).toEqual([NaN, NaN, 20]);
+	});
+});
+
+describe('gridPointCount and gridTooLargeWarning (the resample-grid limit)', () => {
+	it('counts the points makeGrid builds', () => {
+		expect(gridPointCount(0, 4, 2)).toBe(3);
+		expect(gridPointCount(0, 4, 0)).toBe(0);
+		expect(gridPointCount(4, 0, 1)).toBe(0);
+		expect(gridPointCount(0, 1_999_999, 1)).toBe(MAX_GRID_POINTS);
+	});
+	it('warns one point past the limit, and the suggested step fits', () => {
+		expect(gridTooLargeWarning(0, 1_999_999, 1)).toBeNull();
+		const w = gridTooLargeWarning(0, 2_000_000, 1);
+		expect(w).toContain('gives 2,000,001 grid points, more than the limit of 2,000,000');
+		expect(w).toContain('Use a step of at least 1.1,');
+		expect(gridPointCount(0, 2_000_000, 1.1)).toBeLessThanOrEqual(MAX_GRID_POINTS);
+		const h = gridTooLargeWarning(0, 672, 1 / 3600, ' h');
+		expect(h).toContain('a step of 0.000277778 h over 672 h gives 2,419,201 grid points');
+		expect(gridPointCount(0, 672, 0.00034)).toBeLessThanOrEqual(MAX_GRID_POINTS);
 	});
 });

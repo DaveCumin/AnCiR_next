@@ -156,12 +156,37 @@ d_agostino <- function(values) {
 # Shapiro-Wilk. Base R's shapiro.test is Royston's AS R94, the same algorithm the JS port
 # and scipy implement, so this is a genuine third opinion rather than a re-derivation.
 # R caps n at 5000, matching the useful range of the approximation.
+# utils/normality.js SHAPIRO_MAX_N: Royston's p-value approximation is validated for
+# 3 <= n <= 5000 (Royston 1995, Remark AS R94, Applied Statistics 44: 547-551), which is why
+# shapiro.test (and its C routine) refuse n > 5000. Above it W is still computed (the Royston
+# weights below, as in normality.js) and the p-value is NA, as in the app and the Python port.
+SHAPIRO_MAX_N <- 5000
+
+# W from the Royston (AS R94) weights for any n > 5: normality.js shapiroWilk, step for step.
+.shapiro_w <- function(x) {
+  x <- sort(x)
+  n <- length(x)
+  poly <- function(c, v) sum(c * v^(seq_along(c) - 1))
+  m <- qnorm((seq_len(n) - 0.375) / (n + 0.25))
+  ssm <- sum(m^2)
+  rsn <- 1 / sqrt(n)
+  a_n <- m[n] / sqrt(ssm) + poly(c(0, 0.221157, -0.147981, -2.07119, 4.434685, -2.706056), rsn)
+  a_n1 <- m[n - 1] / sqrt(ssm) +
+    poly(c(0, 0.042981, -0.293762, -1.752461, 5.682633, -3.582633), rsn)
+  fac <- sqrt((ssm - 2 * m[n]^2 - 2 * m[n - 1]^2) / (1 - 2 * a_n^2 - 2 * a_n1^2))
+  a <- m / fac
+  a[c(1, 2, n - 1, n)] <- c(-a_n, -a_n1, a_n1, a_n)
+  w <- sum(a * x)^2 / sum((x - mean(x))^2)
+  min(w, 1)
+}
+
 shapiro_wilk <- function(values) {
   x <- clean_numeric(values)
   n <- length(x)
   if (n < 3 || length(unique(x)) < 2) {
     return(list(statistic = NA_real_, pvalue = NA_real_, n = n))
   }
+  if (n > SHAPIRO_MAX_N) return(list(statistic = .shapiro_w(x), pvalue = NA_real_, n = n))
   res <- tryCatch(shapiro.test(x), error = function(e) NULL)
   if (is.null(res)) return(list(statistic = NA_real_, pvalue = NA_real_, n = n))
   list(statistic = unname(res$statistic), pvalue = unname(res$p.value), n = n)
@@ -2552,11 +2577,50 @@ make_interpolator <- function(xs, ys, method = "linear") {
   function(q) if (is.finite(q) && q >= xs[1] && q <= xs[n]) inner(q) else NaN
 }
 
+# interpolate.js MAX_GRID_POINTS: the largest resample grid (a guard against a step in the
+# wrong units). Past it nothing is resampled and the same warning as the app's is given.
+MAX_GRID_POINTS <- 2e6
+
+# interpolate.js gridPointCount: points in make_grid(start, end, step), 0 if invalid.
+grid_point_count <- function(start, end, step) {
+  if (!all(is.finite(c(start, end, step))) || step <= 0 || end < start) return(0)
+  floor((end - start) / step + 1e-9) + 1
+}
+
+# interpolate.js readable: 6 significant figures, never in exponent form, thousands
+# separated. signif rounds an exact binary tie (976.5625) half to even where JS toPrecision
+# rounds it up; the 1e-15 nudge sends such a tie up too and moves nothing else.
+readable_number <- function(v) {
+  trimws(format(signif(v * (1 + 1e-15), 6), scientific = FALSE, big.mark = ",", digits = 15))
+}
+
+# A whole number with thousands separators, at any size (formatC "d" stops at 2^31).
+.thousands <- function(n) trimws(format(n, big.mark = ",", scientific = FALSE))
+
+# interpolate.js gridTooLargeWarning: the warning text, or NULL when the grid fits.
+grid_too_large_warning <- function(start, end, step, unit = "", max_points = MAX_GRID_POINTS) {
+  count <- grid_point_count(start, end, step)
+  if (count <= max_points) return(NULL)
+  need <- (end - start) / (max_points - 1)
+  mag <- 10^(floor(log10(need)) - 1)
+  min_step <- ceiling(need / mag - 1e-9) * mag
+  paste0("Nothing was resampled: a step of ", readable_number(step), unit, " over ",
+         readable_number(end - start), unit, " gives ",
+         .thousands(count), " grid points, more than the limit of ",
+         .thousands(max_points), ". Use a step of at least ",
+         readable_number(min_step), unit, ", or a shorter start to end range.")
+}
+
+# Parity probe for the resample-grid limit: the grid size and the warning ("" if none).
+interpolate_grid_limit <- function(unused, start, end, step, unit = "") {
+  w <- grid_too_large_warning(start, end, step, unit)
+  list(count = grid_point_count(start, end, step), warning = if (is.null(w)) "" else w)
+}
+
 # interpolate.js makeGrid: start + i * step (no accumulated drift), end inclusive.
-make_grid <- function(start, end, step, max_points = 2e6) {
-  if (!all(is.finite(c(start, end, step))) || step <= 0 || end < start) return(numeric(0))
-  count <- floor((end - start) / step + 1e-9) + 1
-  if (count > max_points) return(numeric(0))
+make_grid <- function(start, end, step, max_points = MAX_GRID_POINTS) {
+  count <- grid_point_count(start, end, step)
+  if (count == 0 || count > max_points) return(numeric(0))
   start + (seq_len(count) - 1) * step
 }
 
@@ -2585,7 +2649,14 @@ tp_interpolate <- function(args, env) {
     if (!length(xi)) return(FALSE)
     start <- if (is_num1(args$start)) args$start else min(xi)
     end <- if (is_num1(args$end)) args$end else max(xi)
-    query <- make_grid(start, end, .js_number(args$step))
+    step <- .js_number(args$step)
+    too_large <- grid_too_large_warning(start, end, step, if (is_time) " h" else "")
+    if (!is.null(too_large)) {
+      # The app shows this on the node and empties the outputs.
+      warning(paste0("Interpolate: ", too_large), call. = FALSE)
+      return(FALSE)
+    }
+    query <- make_grid(start, end, step)
     if (!length(query)) return(FALSE)
     out_x <- if (is_time) baseline + query * 3600000 else query
   } else {
@@ -5130,12 +5201,38 @@ tp_groupcomparison <- function(args, env) {
 # reproduce exactly in any language. Only Random and SimulatedData need the JS PRNG, and only
 # those are out of scope for R.
 
+# SequenceColumn.svelte MAX_SEQUENCE_LENGTH: the longest sequence (a guard against a mistyped
+# count). Past it nothing is made and the same warning as the app's is given.
+MAX_SEQUENCE_LENGTH <- 2e6
+
+# SequenceColumn.svelte sequenceLimitWarning: the warning text, or NULL when it fits.
+sequence_limit_warning <- function(count) {
+  if (!(count > MAX_SEQUENCE_LENGTH)) return(NULL)
+  paste0("Nothing was made: ", .thousands(count),
+         " values is more than the limit of ",
+         .thousands(MAX_SEQUENCE_LENGTH),
+         ". Lower the count, or use a larger step for the same start and end.")
+}
+
+# Parity probe for the sequence limit: allowed (1/0) and the warning ("" if none).
+sequence_limit <- function(unused, count) {
+  w <- sequence_limit_warning(count)
+  list(allowed = if (is.null(w)) 1 else 0, warning = if (is.null(w)) "" else w)
+}
+
 tp_sequencecolumn <- function(args, env) {
   kind <- if (!is.null(args$seqType)) args$seqType
           else if (!is.null(args$kind)) args$kind else "number"
-  n <- as.integer(if (!is.null(args$count)) args$count
+  n <- as.numeric(if (!is.null(args$count)) args$count
                   else if (!is.null(args$rows)) args$rows else 100)
+  n <- if (is.finite(n)) floor(n) else NA
   if (is.na(n) || n <= 0) return(FALSE)
+  too_long <- sequence_limit_warning(n)
+  if (!is.null(too_long)) {
+    # The app shows this on the node and empties the output.
+    warning(paste0("Sequence Column: ", too_long), call. = FALSE)
+    return(FALSE)
+  }
   oid <- out_id(args, "result")
   if (identical(kind, "time")) {
     base_ms <- as.numeric(if (!is.null(args$startTime)) args$startTime
@@ -5285,6 +5382,8 @@ regrid_uniform_summary <- function(times, values) {
 
 PURE_UTIL_MAP <- list(
   studentized_range = studentized_range,
+  interpolate_grid_limit = interpolate_grid_limit,
+  sequence_limit = sequence_limit,
   tukey_kramer_of = tukey_kramer_of,
   seeded_sequence = seeded_sequence,
   lomb_scargle_periodogram = lomb_scargle_periodogram,

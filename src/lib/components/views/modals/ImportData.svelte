@@ -210,7 +210,8 @@
 		hasReplicatePattern,
 		detectLabelRow,
 		extractRowAsLabels,
-		stripRowFromColumns
+		stripRowFromColumns,
+		labelRowDiffers
 	} from '$lib/utils/importLabels.js';
 
 	let importReady = $state(false);
@@ -1575,6 +1576,8 @@
 			setColumnTypeChoice,
 			setBinningEnabled,
 			setBinInterval,
+			// "Use a row as labels", then a click on preview row `rowIdx` (0-based).
+			pickLabelRow,
 			// The Skip lines field: set it and re-read the preview, as its input does.
 			setSkipLines: async (n) => {
 				skipLines = n;
@@ -2601,6 +2604,12 @@
 
 		// Exclude a picked label row from the data before any binning/sort so it
 		// is never imported as a data value. Labels were captured at pick time.
+		// File 1's row as read (not the edited labels) is kept to compare the other
+		// files' label rows against.
+		const firstFileLabelRow =
+			labelRowIndex != null && parsedData
+				? extractRowAsLabels(parsedData, Object.keys(parsedData), labelRowIndex)
+				: null;
 		if (labelRowIndex != null && parsedData) {
 			parsedData = stripRowFromColumns(parsedData, labelRowIndex);
 		}
@@ -2622,6 +2631,10 @@
 			}
 			selectedColumns = new Set([...selectedColumns].filter((c) => commonSet.has(c)));
 
+			// Files imported together share one layout, so a picked label row sits at the
+			// same position in each and is removed from each (it used to be removed from
+			// file 1 only, and the other files' label cells were imported as data).
+			const differentLabelFiles = [];
 			for (let i = 1; i < targetFiles.length; i++) {
 				const extraFile = targetFiles[i];
 				loadProgress = {
@@ -2631,11 +2644,26 @@
 				await tick();
 				await yieldToUI();
 
-				const extraData = await parseAdditionalFileData(extraFile);
+				let extraData = await parseAdditionalFileData(extraFile);
+				if (labelRowIndex != null) {
+					if (labelRowDiffers(firstFileLabelRow, extraData, labelRowIndex, commonColumns)) {
+						differentLabelFiles.push(extraFile.name);
+					}
+					extraData = stripRowFromColumns(extraData, labelRowIndex);
+				}
 
 				for (const col of Object.keys(parsedData)) {
 					if (extraData[col]) parsedData[col] = [...parsedData[col], ...extraData[col]];
 				}
+			}
+			if (differentLabelFiles.length > 0) {
+				addNotification(
+					`The label row (row ${labelRowIndex + 1}) of ${differentLabelFiles.map((n) => `"${n}"`).join(', ')} ` +
+						`differs from the one in "${targetFile.name}". The row was removed from every file; ` +
+						`the labels come from "${targetFile.name}".`,
+					'warning',
+					15000
+				);
 			}
 		}
 
@@ -3747,7 +3775,8 @@
 								</div>
 								{#if labelRowIndex != null}
 									<p class="label-note">
-										Row {labelRowIndex + 1} is used as labels and will be excluded from the imported data.
+										Row {labelRowIndex + 1}{targetFiles.length > 1 ? ' of each file' : ''} is used as
+										labels and will be excluded from the imported data.
 									</p>
 								{/if}
 							{/if}

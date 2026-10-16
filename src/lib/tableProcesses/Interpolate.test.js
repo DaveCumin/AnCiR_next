@@ -135,3 +135,59 @@ describe('interpolatedata fill: a missing x keeps its own y', () => {
 		expect(result.y_results[4]).toEqual([0, 10, 20]);
 	});
 });
+
+// The resample grid is capped at MAX_GRID_POINTS (2,000,000). Past it the node used to give
+// an empty output with no word why (and kept an earlier result in its output columns).
+describe('interpolatedata resample: the grid-size limit, both sides', () => {
+	// About 40 days of 15 min samples on a time axis (hours since start).
+	const n = 3908;
+	const hours = Array.from({ length: n }, (_, i) => i * 0.25);
+	const step = 1 / 2048; // exact in binary, so the grid counts below are exact
+	const run = (end) =>
+		interpolatedata({
+			xIN: 1,
+			yIN: [2],
+			mode: 'resample',
+			method: 'linear',
+			step,
+			start: 0,
+			end,
+			out: { interpx: 100, interpy_2: 101 }
+		});
+	beforeEach(() => {
+		mockColumns[1] = {
+			type: 'time',
+			name: 'time',
+			hoursSinceStart: hours,
+			getData: () => hours.map((h) => 1_700_000_000_000 + h * 3_600_000)
+		};
+		mockColumns[2] = {
+			type: 'number',
+			name: 'activity',
+			getData: () => hours.map((h) => 10 + 5 * Math.sin((2 * Math.PI * h) / 24))
+		};
+	});
+
+	it('exactly 2,000,000 points: resampled, no warning', () => {
+		const [result, valid] = run(1_999_999 * step);
+		expect(valid).toBe(true);
+		expect(result.warnings).toBeUndefined();
+		expect(result.x).toHaveLength(2_000_000);
+		expect(core.rawData.get(101)).toHaveLength(2_000_000);
+		expect(core.rawData.get(101)[2048 * 6]).toBeCloseTo(15, 9); // 6 h: the peak
+	});
+
+	it('2,000,001 points: nothing resampled, a warning naming the size and a step that fits, and the earlier output cleared', () => {
+		run(1_999_999 * step);
+		expect(core.rawData.get(101)).toHaveLength(2_000_000);
+		const [result, valid] = run(2_000_000 * step);
+		expect(valid).toBe(false);
+		expect(result.warnings).toEqual([
+			'Nothing was resampled: a step of 0.000488281 h over 976.563 h gives 2,000,001 grid ' +
+				'points, more than the limit of 2,000,000. Use a step of at least 0.00049 h, or a ' +
+				'shorter start to end range.'
+		]);
+		expect(core.rawData.get(100)).toEqual([]);
+		expect(core.rawData.get(101)).toEqual([]);
+	});
+});

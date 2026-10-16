@@ -86,7 +86,7 @@
 		"crosslinks": ["ch4"]
 	},
 	"Interpolate": {
-		"description": "Interpolate estimates values at new time points from the existing samples, in one of two modes: fill (replace missing values in place) or resample (evaluate on a fresh regular grid at a chosen step). Three schemes are offered: piecewise linear, nearest-neighbour (hold), and natural cubic spline. Endpoints are clamped rather than extrapolated wildly. This is the standard fix for records with gaps or irregular sampling before applying analyses such as the FFT that assume evenly spaced data.",
+		"description": "Interpolate estimates values at new time points from the existing samples, in one of two modes: fill (replace missing values in place) or resample (evaluate on a fresh regular grid at a chosen step). Three schemes are offered: piecewise linear, nearest-neighbour (hold), and natural cubic spline. Nothing is extrapolated: a point before the first or after the last known sample is left missing. A resample grid of more than 2,000,000 points is refused, with a warning naming the grid size and the smallest step that fits. This is the standard fix for records with gaps or irregular sampling before applying analyses such as the FFT that assume evenly spaced data.",
 		"maths": [],
 		"references": [],
 		"crosslinks": ["ch4", "ch8"]
@@ -146,7 +146,7 @@
 		"crosslinks": ["ch3", "ch2"]
 	},
 	"SequenceColumn": {
-		"description": "Sequence Column generates an evenly spaced sequence, either numeric (start, step, count/end) or a time sequence (start time, step in hours, end time). It is typically used to construct a regular time axis to accompany hand-entered or simulated values, or a simple index column for restructuring operations.",
+		"description": "Sequence Column generates an evenly spaced sequence, either numeric (start, step, count/end) or a time sequence (start time, step in hours, end time). It is typically used to construct a regular time axis to accompany hand-entered or simulated values, or a simple index column for restructuring operations. A sequence can have up to 2,000,000 values; a longer one is refused with a warning.",
 		"maths": [],
 		"references": [],
 		"crosslinks": ["ch3"]
@@ -508,7 +508,7 @@
 		"crosslinks": ["ch4", "ch13", "glossary"]
 	},
 	"NormalityTest": {
-		"description": "Normality Test checks, for each wired column, whether the data are consistent with being drawn from a normal (Gaussian) distribution. This is the assumption behind t-tests, ANOVA, Pearson correlation and the confidence intervals of cosinor analysis, so it is worth checking before relying on those methods. The node reports the test statistic, a p-value, and a plain verdict (a small p-value — below the chosen α, default 0.05 — means the data depart significantly from normal).\n\nThree tests are offered. Shapiro–Wilk (the default) is the most powerful general test; AnCiR uses Royston's approximation (AS R94) and it is valid for 3 ≤ n ≤ 5000. D'Agostino–Pearson K² is an omnibus test that combines sample skewness and kurtosis (matching scipy's normaltest); it needs n ≥ 8 and its kurtosis term is unreliable below about n ≥ 20. Jarque–Bera uses the same skewness/kurtosis idea with a simpler large-sample form; it is defined down to small n but is weaker there.\n\nA caution on interpretation: with large samples these tests become sensitive to departures too small to matter in practice, while with tiny samples they have little power to detect real non-normality. Read the verdict alongside the shape statistics from Describe Data and, ideally, a histogram or Q–Q plot rather than treating the p-value as a hard gate.",
+		"description": "Normality Test checks, for each wired column, whether the data are consistent with being drawn from a normal (Gaussian) distribution. This is the assumption behind t-tests, ANOVA, Pearson correlation and the confidence intervals of cosinor analysis, so it is worth checking before relying on those methods. The node reports the test statistic, a p-value, and a plain verdict (a small p-value — below the chosen α, default 0.05 — means the data depart significantly from normal).\n\nThree tests are offered. Shapiro–Wilk (the default) is the most powerful general test; AnCiR uses Royston's approximation (AS R94), whose p-value is validated for 3 ≤ n ≤ 5000; above that the node shows W with no p-value. D'Agostino–Pearson K² is an omnibus test that combines sample skewness and kurtosis (matching scipy's normaltest); it needs n ≥ 8 and its kurtosis term is unreliable below about n ≥ 20. Jarque–Bera uses the same skewness/kurtosis idea with a simpler large-sample form; it is defined down to small n but is weaker there.\n\nA caution on interpretation: with large samples these tests become sensitive to departures too small to matter in practice, while with tiny samples they have little power to detect real non-normality. Read the verdict alongside the shape statistics from Describe Data and, ideally, a histogram or Q–Q plot rather than treating the p-value as a hard gate.",
 		"maths": [
 			"\\text{Shapiro–Wilk: } W = \\frac{\\left(\\sum_i a_i x_{(i)}\\right)^2}{\\sum_i (x_i-\\bar{x})^2}",
 			"\\text{D'Agostino–Pearson: } K^2 = Z(\\sqrt{b_1})^2 + Z(b_2)^2 \\;\\sim\\; \\chi^2_2",

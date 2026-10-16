@@ -147,16 +147,67 @@ export function interpolate(xData, yData, queryXs, method = 'linear') {
 }
 
 /**
+ * The largest resample grid, in points. A guard against a step typed in the wrong units
+ * (e.g. seconds for an hours axis): 2,000,000 points is already 50 times a month of 1 min
+ * samples, and every output column of that length is held in memory and plotted. The
+ * Python and R ports use the same limit and say so in the same words.
+ */
+export const MAX_GRID_POINTS = 2_000_000;
+
+/**
+ * How many points makeGrid(start, end, step) has, or 0 for an invalid grid (non-finite
+ * bounds, non-positive step, end before start).
+ * @returns {number}
+ */
+export function gridPointCount(start, end, step) {
+	if (!isFiniteNum(start) || !isFiniteNum(end) || !isFiniteNum(step) || step <= 0 || end < start) {
+		return 0;
+	}
+	return Math.floor((end - start) / step + 1e-9) + 1;
+}
+
+/** Round up to two significant figures (a step suggestion that stays under the limit). */
+function ceil2(v) {
+	if (!(v > 0)) return v;
+	const mag = 10 ** (Math.floor(Math.log10(v)) - 1);
+	return Math.ceil(v / mag - 1e-9) * mag;
+}
+
+/**
+ * A number as people read it: 6 significant figures, never in exponent form, thousands
+ * separated (0.0000001, 976.563, 1,234,570). The ports format the same way, ties included.
+ */
+function readable(v) {
+	return Number(v.toPrecision(6)).toLocaleString('en-US', { maximumFractionDigits: 20 });
+}
+
+/**
+ * The warning shown when the resample grid would pass MAX_GRID_POINTS, or null when it
+ * does not. Names the grid size and the smallest step that fits. `unit` is ' h' for a
+ * time X (the step is in hours), else ''.
+ * @returns {string | null}
+ */
+export function gridTooLargeWarning(start, end, step, unit = '', maxPoints = MAX_GRID_POINTS) {
+	const count = gridPointCount(start, end, step);
+	if (count <= maxPoints) return null;
+	const minStep = ceil2((end - start) / (maxPoints - 1));
+	return (
+		`Nothing was resampled: a step of ${readable(step)}${unit} over ${readable(end - start)}${unit} ` +
+		`gives ${count.toLocaleString('en-US')} grid points, more than the limit of ` +
+		`${maxPoints.toLocaleString('en-US')}. Use a step of at least ${readable(minStep)}${unit}, ` +
+		`or a shorter start to end range.`
+	);
+}
+
+/**
  * Build an evenly-spaced grid from `start` to `end` (inclusive) with the given
- * `step`. Guards against non-positive step and runaway sizes.
+ * `step`. Guards against non-positive step and runaway sizes (an empty grid; the
+ * caller reports why with gridTooLargeWarning).
  * @returns {number[]}
  */
-export function makeGrid(start, end, step, maxPoints = 2_000_000) {
-	if (!isFiniteNum(start) || !isFiniteNum(end) || !isFiniteNum(step) || step <= 0 || end < start) {
-		return [];
-	}
-	const count = Math.floor((end - start) / step + 1e-9) + 1;
-	if (count > maxPoints) return [];
+export function makeGrid(start, end, step, maxPoints = MAX_GRID_POINTS) {
+	const count = gridPointCount(start, end, step);
+	if (count === 0 || count > maxPoints) return [];
 	const grid = new Array(count);
 	for (let i = 0; i < count; i++) grid[i] = start + i * step;
 	return grid;

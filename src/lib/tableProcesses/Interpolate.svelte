@@ -7,7 +7,13 @@
 		min as arrayMin,
 		max as arrayMax
 	} from '$lib/components/plotbits/helpers/wrangleData.js';
-	import { interpolate, knownPoints, makeGrid, isFiniteNum } from '$lib/utils/interpolate.js';
+	import {
+		interpolate,
+		knownPoints,
+		makeGrid,
+		isFiniteNum,
+		gridTooLargeWarning
+	} from '$lib/utils/interpolate.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 
 	const displayName = 'Interpolate';
@@ -44,6 +50,16 @@
 			]
 		}
 	};
+
+	/** Empty every output column (the x grid and each interpolated y). */
+	function clearOutputs(out, yINs) {
+		const ids = [out?.interpx, ...yINs.map((y) => out?.['interpy_' + y])];
+		for (const id of ids) {
+			if (id == null || id === -1) continue;
+			const col = getColumnById(id);
+			if (col) writeOutputColumn(id, [], { type: col.type });
+		}
+	}
 
 	/**
 	 * Interpolate each Y over X. Two modes:
@@ -84,6 +100,13 @@
 			const start = isFiniteNum(argsIN.start) ? argsIN.start : (arrayMin(finite) ?? 0);
 			const end = isFiniteNum(argsIN.end) ? argsIN.end : (arrayMax(finite) ?? 0);
 			const step = Number(argsIN.step);
+			const tooLarge = gridTooLargeWarning(start, end, step, isTime ? ' h' : '');
+			if (tooLarge) {
+				// Say why there is no output, and clear any earlier result so the outputs do
+				// not keep a grid that no longer matches the settings.
+				clearOutputs(argsIN.out, yINs);
+				return [{ ...empty(), warnings: [tooLarge] }, false];
+			}
 			queryX = makeGrid(start, end, step);
 			if (queryX.length === 0) return [empty(), false];
 			outXDisplay = isTime ? queryX.map((h) => baseline + h * 3600000) : queryX.slice();
@@ -189,6 +212,7 @@
 	});
 	function restore(cached) {
 		result = cached;
+		p.warnings = cached?.warnings ?? [];
 	}
 	// Every mounted instance follows the shared result: with the node expanded on
 	// the canvas AND selected in the control panel there are two, and only the
@@ -203,6 +227,7 @@
 			untrack(() => {
 				previewStart = 1;
 				[result, p.args.valid] = interpolatedata(p.args);
+				p.warnings = result?.warnings ?? [];
 			});
 			memo.hash = dataHash;
 		}
@@ -211,6 +236,7 @@
 	function recompute() {
 		previewStart = 1;
 		[result, p.args.valid] = interpolatedata(p.args);
+		p.warnings = result?.warnings ?? [];
 		memo.hash = getHash;
 	}
 
@@ -323,10 +349,14 @@
 				</ControlInput>
 			</div>
 			<p class="hint">
-				Grid spans the data range (min→max of X). Step is in X units
-				{xIN_col?.type === 'time' ? '(h)' : ''}.
+				Grid spans the data range (min→max of X). Step is in X units{xIN_col?.type === 'time'
+					? ' (h)'
+					: ''}.
 			</p>
 		{/if}
+		{#each result?.warnings ?? [] as w (w)}
+			<p class="warn">{w}</p>
+		{/each}
 	</div>
 </div>
 
@@ -374,6 +404,14 @@
 	.hint {
 		font-size: var(--font-sm);
 		color: var(--color-text-muted);
+		margin: var(--space-1) 0 0;
+	}
+	.warn {
+		font-size: var(--font-xs);
+		color: var(--color-warning-text);
+		background: var(--color-warning-bg);
+		border-radius: var(--radius-sm);
+		padding: var(--space-1) var(--space-2);
 		margin: var(--space-1) 0 0;
 	}
 	.interp-preview {
