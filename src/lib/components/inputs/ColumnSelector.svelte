@@ -1,4 +1,5 @@
 <script>
+	import { markPopup } from '$lib/components/reusables/editScopePopup.js';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { core } from '$lib/core/core.svelte.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
@@ -213,6 +214,8 @@
 	// was edited inline on the canvas.
 	function portalToBody(node) {
 		document.body.appendChild(node);
+		// Still part of the control it opened from, for an edit recorder listening there.
+		markPopup(node, containerEl);
 		return {
 			destroy() {
 				if (node.parentNode) node.remove();

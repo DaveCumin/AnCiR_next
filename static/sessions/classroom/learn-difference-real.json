@@ -274,7 +274,7 @@
       "id": 3,
       "name": "Activity by day type",
       "x": 350,
-      "y": 150,
+      "y": 315,
       "width": 500,
       "height": 250,
       "type": "boxplot",

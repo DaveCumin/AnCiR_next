@@ -99,6 +99,44 @@ export function facetOverrideOps(plot, applied) {
 }
 
 /**
+ * The operations for a user edit of one inner path on live plots, without applying them.
+ * A paired field on a session plot whose conversion changes something gets a setPlotInner
+ * (the snapshot with the conversion applied) plus any facet override conversions. Every other
+ * plot is returned in `plain`: the caller writes it in place (applyInnerEdits), and records
+ * that write itself if it wants a step.
+ *
+ * @param {object[]} plots Plot wrappers
+ * @param {string} innerPath a path into the inner ('showPeriod'), no `plot.` head
+ * @param {unknown} value
+ * @returns {{ ops: object[], plain: object[] }}
+ */
+export function pairedEditOps(plots, innerPath, value) {
+	const ops = [];
+	const plain = [];
+	for (const plot of plots ?? []) {
+		const inner = plot?.plot;
+		if (!inner) continue;
+		const cls = inner.constructor;
+		if (!pairedEditFor(cls, innerPath) || !core.plots.includes(plot)) {
+			plain.push(plot);
+			continue;
+		}
+		const json = JSON.parse(JSON.stringify(inner.toJSON()));
+		const applied = applyInnerEdits(json, [{ path: innerPath, value }], cls);
+		if (!applied.some((a) => a.changed)) {
+			// Nothing to convert (the plot was already in that mode): a plain write.
+			plain.push(plot);
+			continue;
+		}
+		ops.push(
+			{ kind: 'setPlotInner', id: plot.id, inner: json },
+			...facetOverrideOps(plot, applied)
+		);
+	}
+	return { ops, plain };
+}
+
+/**
  * A user edit of one inner path on live plots. An ordinary field is written in place, as the
  * panels always have. A paired field is one undoable step for all the plots: a setPlotInner
  * per plot (the snapshot with the conversion applied) plus any facet override conversions.
@@ -110,26 +148,7 @@ export function facetOverrideOps(plot, applied) {
  * @param {unknown} value
  */
 export function editPlotInners(plots, innerPath, value) {
-	const ops = [];
-	for (const plot of plots ?? []) {
-		const inner = plot?.plot;
-		if (!inner) continue;
-		const cls = inner.constructor;
-		if (!pairedEditFor(cls, innerPath) || !core.plots.includes(plot)) {
-			applyInnerEdits(inner, [{ path: innerPath, value }], cls);
-			continue;
-		}
-		const json = JSON.parse(JSON.stringify(inner.toJSON()));
-		const applied = applyInnerEdits(json, [{ path: innerPath, value }], cls);
-		if (!applied.some((a) => a.changed)) {
-			// Nothing to convert (the plot was already in that mode): a plain write, no op.
-			applyInnerEdits(inner, [{ path: innerPath, value }], cls);
-			continue;
-		}
-		ops.push(
-			{ kind: 'setPlotInner', id: plot.id, inner: json },
-			...facetOverrideOps(plot, applied)
-		);
-	}
+	const { ops, plain } = pairedEditOps(plots, innerPath, value);
+	for (const plot of plain) applyInnerEdits(plot.plot, [{ path: innerPath, value }]);
 	if (ops.length) applyOp({ kind: 'batch', ops });
 }

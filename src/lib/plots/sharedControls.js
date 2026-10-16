@@ -122,6 +122,10 @@ function fieldsForKey(key, value, descriptors, pathPrefix) {
 	if (isArrayOfPrimitives(value)) {
 		const groupForChildren = parentGroup ?? parentLabel;
 		const children = desc._children ?? {};
+		// An axis limit pair (xlimsIN, ylimsLeftIN, periodlimsIN, ...) holds numbers, but an
+		// automatic limit is null, and a null infers a TEXT box, which then wrote the typed
+		// "7" as a string. Name the input for every element.
+		const elementInput = /limsIN$/.test(key) ? { input: 'number' } : {};
 		const out = [];
 		value.forEach((leafVal, i) => {
 			const field = buildScalarField(
@@ -129,7 +133,7 @@ function fieldsForKey(key, value, descriptors, pathPrefix) {
 				leafVal,
 				`${parentLabel} [${i}]`,
 				groupForChildren,
-				{},
+				elementInput,
 				children[i] ?? {}
 			);
 			if (field) out.push(field);

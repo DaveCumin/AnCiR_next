@@ -9,6 +9,7 @@
 	import { getPlotById } from '$lib/core/Plot.svelte';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import { escapeHtml } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
+	import { commitObjectEdit } from '$lib/plots/plotEdits.js';
 
 	let _annotationCounter = 0;
 
@@ -217,7 +218,20 @@
 	</div>
 	<div class="control-input-horizontal">
 		<ControlInput label="Name">
-			<input bind:value={annotation.name} />
+			<!-- One undo step on commit (Enter or blur); Escape puts the name back. -->
+			<input
+				value={annotation.name}
+				onchange={(e) => commitObjectEdit(annotation, 'name', e.currentTarget.value)}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') e.currentTarget.blur();
+					else if (e.key === 'Escape') {
+						e.preventDefault();
+						e.stopPropagation();
+						e.currentTarget.value = annotation.name;
+						e.currentTarget.blur();
+					}
+				}}
+			/>
 		</ControlInput>
 
 		<div class="control-color">

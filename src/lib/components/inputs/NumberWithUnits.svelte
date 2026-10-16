@@ -1,6 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import { displayNumber } from './numberDisplay.js';
+	import { displayNumber, readableNumber } from './numberDisplay.js';
 	let {
 		value = $bindable(),
 		step = 1,
@@ -45,12 +45,16 @@
 	// Derived unit factor
 	let unitFactor = $derived(units[selectedUnit]);
 
-	// Derived display value (reactive to value and unitFactor). Shown faithfully, not rounded
-	// to the step: a step of 1e-7 used to round a stored 1e-7 to "0" (numberDisplay.js).
+	// Whether the box is being edited. Editing shows the full stored value; reading shows it
+	// tidied (numberDisplay.js). Display only: neither form is ever written back.
+	let focused = $state(false);
+
+	// Derived display value (reactive to value, unitFactor and focus). Never plainly rounded to
+	// the step: a step of 1e-7 used to round a stored 1e-7 to "0".
 	let displayValue = $derived.by(() => {
 		const val =
 			typeof unitFactor === 'object' ? unitFactor.inverse(Number(value)) : value / unitFactor;
-		return displayNumber(val);
+		return focused ? displayNumber(val) : readableNumber(val, step);
 	});
 
 	// Clamp function
@@ -79,6 +83,8 @@
 		max={typeof unitFactor === 'object' ? max : max / unitFactor}
 		bind:value={displayValue}
 		oninput={(e) => updateValue(e.target.value)}
+		onfocus={() => (focused = true)}
+		onblur={() => (focused = false)}
 		onwheel={(e) => {
 			if (document.activeElement == inputElement) e.stopPropagation();
 		}}

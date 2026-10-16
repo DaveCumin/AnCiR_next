@@ -9,13 +9,13 @@
 // override (`generator.facetOverrides[unitKey]`, plan 1.6), which only that panel's
 // projection applies. A standalone plot gets everything on its own inner, as before.
 //
-// Plain writes, not history ops: brush and wheel zoom were never undo steps (they write the
-// same *IN limit overrides the axis inputs edit, and a wheel tick per step would flood the
-// stack), and a half-recorded zoom (y on the stack, x not) would be worse than neither.
-// The control panel's per-panel editor (Phase 2) records through the setFacetOverride op.
-//
-// No `core` import: a ref carries everything (a panel knows its generator), so this stays
-// unit-testable on stand-ins.
+// Undo: a zoom is ONE undo step and an unsaved change, whatever it wrote: a brush
+// (x and y together, on a panel the generator's x and the panel's y override), a reset, and a
+// whole wheel gesture (each tick sends a batch with the same `coalesceKey`, and a quick run of
+// them merges into one step, opHistory). A ref that is not in the session (a stand-in in a
+// test, the MCP renderer) is written in place, as before, since it has no history.
+import { core } from '$lib/core/core.svelte.js';
+import { applyOp } from '$lib/core/operations.js';
 import { overridePathRoot } from '$lib/core/facetOverrides.js';
 
 /**
@@ -25,21 +25,18 @@ import { overridePathRoot } from '$lib/core/facetOverrides.js';
 const isPanel = (ref) => ref != null && typeof ref === 'object' && ref.generator != null;
 const isReset = (pair) => Array.isArray(pair) && pair.every((v) => v == null);
 
+/** The plot whose history a ref's zoom goes on: the plot, or a panel's generator. */
+const ownerOf = (ref) => (isPanel(ref) ? ref.generator : ref);
+
 /**
- * Write one axis-limit key for a ref.
+ * Write one axis-limit key for a ref, in place (no history).
  *
  * - a plot: `ref.plot[key] = value`;
  * - a panel, `shared` (an x axis): the generator's inner, so every panel follows;
  * - a panel, not shared (a y axis): the panel's override entry. An all-null pair REMOVES the
  *   override (the panel falls back to the generator's value), so a reset leaves no trace.
- *
- * @param {any} ref a Plot or a FacetPanel
- * @param {string} key an inner limit key ('xlimsIN', 'ylimsLeftIN', 'periodlimsIN', ...)
- * @param {(number|null)[]} value copied, never aliased
- * @param {{ shared?: boolean }} [opts]
  */
-export function writeAxisLimit(ref, key, value, { shared = false } = {}) {
-	if (!ref || !Array.isArray(value)) return;
+function writeInPlace(ref, key, value, shared) {
 	if (!isPanel(ref)) {
 		if (ref.plot) ref.plot[key] = [...value];
 		return;
@@ -63,16 +60,81 @@ export function writeAxisLimit(ref, key, value, { shared = false } = {}) {
 	map[ref.unitKey][key] = [...value];
 }
 
+/** The same write as operations (setPlotInnerField, setFacetOverride). */
+function limitOps(ref, key, value, shared) {
+	if (!isPanel(ref))
+		return [{ kind: 'setPlotInnerField', id: ref.id, path: key, value: [...value] }];
+	const gen = ref.generator;
+	if (shared) return [{ kind: 'setPlotInnerField', id: gen.id, path: key, value: [...value] }];
+	const ops = [];
+	const entry = gen.facetOverrides?.[ref.unitKey] ?? {};
+	for (const path of Object.keys(entry)) {
+		if (overridePathRoot(path) !== key) continue;
+		if (path === key && !isReset(value)) continue; // overwritten below
+		ops.push({ kind: 'setFacetOverride', id: gen.id, unitKey: ref.unitKey, path });
+	}
+	if (!isReset(value))
+		ops.push({
+			kind: 'setFacetOverride',
+			id: gen.id,
+			unitKey: ref.unitKey,
+			path: key,
+			value: [...value]
+		});
+	return ops;
+}
+
 /**
- * Apply scatterplot zoom limits to `ref` (a plot or a panel). On a panel the x-range is
- * shared across the whole facet set and the y-limits stay with the brushed panel.
+ * Write several axis-limit keys for a ref as ONE undo step.
+ *
+ * @param {any} ref a Plot or a FacetPanel
+ * @param {{ key: string, value: (number|null)[], shared?: boolean }[]} writes
+ * @param {{ coalesce?: boolean }} [opts] `coalesce`: one tick of a gesture that sends many
+ *   (a wheel zoom); a quick run of them on the same ref is one undo step
+ */
+export function writeAxisLimits(ref, writes, { coalesce = false } = {}) {
+	if (!ref) return;
+	const valid = (writes ?? []).filter(
+		(w) => w && typeof w.key === 'string' && Array.isArray(w.value)
+	);
+	if (valid.length === 0) return;
+	const owner = ownerOf(ref);
+	if (!owner || !(core.plots ?? []).includes(owner)) {
+		for (const w of valid) writeInPlace(ref, w.key, w.value, !!w.shared);
+		return;
+	}
+	const ops = valid.flatMap((w) => limitOps(ref, w.key, w.value, !!w.shared));
+	if (ops.length === 0) return;
+	const key = coalesce
+		? { coalesceKey: `zoom:${owner.id}:${isPanel(ref) ? ref.unitKey : ''}` }
+		: {};
+	applyOp({ kind: 'batch', ops, ...key });
+}
+
+/**
+ * Write one axis-limit key for a ref (one undo step). See writeAxisLimits.
+ * @param {any} ref a Plot or a FacetPanel
+ * @param {string} key an inner limit key ('xlimsIN', 'ylimsLeftIN', 'periodlimsIN', ...)
+ * @param {(number|null)[]} value copied, never aliased
+ * @param {{ shared?: boolean, coalesce?: boolean }} [opts]
+ */
+export function writeAxisLimit(ref, key, value, { shared = false, coalesce = false } = {}) {
+	writeAxisLimits(ref, [{ key, value, shared }], { coalesce });
+}
+
+/**
+ * Apply scatterplot zoom limits to `ref` (a plot or a panel) as ONE undo step. On a panel the
+ * x-range is shared across the whole facet set and the y-limits stay with the brushed panel.
  * Missing keys are skipped; a null pair resets that axis.
  * @param {any} ref   the plot or panel the user brushed
  * @param {Limits} limits
+ * @param {{ coalesce?: boolean }} [opts] see writeAxisLimits
  */
-export function applyLinkedZoom(ref, limits) {
+export function applyLinkedZoom(ref, limits, opts = {}) {
 	if (!ref || !limits) return;
-	if (limits.xlims) writeAxisLimit(ref, 'xlimsIN', limits.xlims, { shared: true });
-	if (limits.ylimsLeft) writeAxisLimit(ref, 'ylimsLeftIN', limits.ylimsLeft);
-	if (limits.ylimsRight) writeAxisLimit(ref, 'ylimsRightIN', limits.ylimsRight);
+	const writes = [];
+	if (limits.xlims) writes.push({ key: 'xlimsIN', value: limits.xlims, shared: true });
+	if (limits.ylimsLeft) writes.push({ key: 'ylimsLeftIN', value: limits.ylimsLeft });
+	if (limits.ylimsRight) writes.push({ key: 'ylimsRightIN', value: limits.ylimsRight });
+	writeAxisLimits(ref, writes, opts);
 }

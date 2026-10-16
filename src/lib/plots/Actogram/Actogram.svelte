@@ -7,7 +7,6 @@
 	import Hist from '$lib/components/plotbits/Hist.svelte';
 	import { keepSameBins, cachedRowBins } from './stableBins.js';
 	import Axis, { AxisClass } from '$lib/components/plotbits/Axis.svelte';
-	import { commitAxisEdit } from '$lib/plots/axisEdits.js';
 
 	import { Column as ColumnClass } from '$lib/core/Column.svelte';
 	import ColourPicker, { getPaletteColor } from '$lib/components/inputs/ColourPicker.svelte';
@@ -939,6 +938,9 @@
 				ylimsOption: this.ylimsOption,
 				ylimsIN: this.ylimsIN,
 				paddingIN: this.paddingIN,
+				// Saved since 2026-10-17: the Padding control edited it, but it was never written,
+				// so a session came back with the default gap.
+				spaceBetween: this.spaceBetween,
 				doublePlot: this.doublePlot,
 				periodHrs: this.periodHrs,
 				rowLabels: this.rowLabels,
@@ -971,6 +973,7 @@
 			actogram.paddingIN = json.paddingIN ?? actogram.paddingIN;
 			actogram.ylimsOption = json.ylimsOption ?? actogram.ylimsOption;
 			actogram.ylimsIN = json.ylimsIN ?? actogram.ylimsIN;
+			actogram.spaceBetween = json.spaceBetween ?? actogram.spaceBetween;
 			actogram.doublePlot = json.doublePlot ?? actogram.doublePlot;
 			actogram.periodHrs = json.periodHrs ?? actogram.periodHrs;
 			// Reads `rowLabels`, or the two older shapes it replaced. A session that had the
@@ -1276,11 +1279,10 @@
 					<NumberWithUnits bind:value={theData.doublePlot} />
 				</ControlInput>
 			</div>
+			<!-- A plain write, recorded as one step by the panel (plots/plotEditScope.js) on
+			     commit, so a typed count previews and Escape puts it back. -->
 			<ControlInput label="Nticks">
-				<NumberWithUnits
-					value={theData.xAxis.nticks}
-					onInput={(v) => commitAxisEdit(theData.xAxis, 'nticks', v, { coalesce: true })}
-				/>
+				<NumberWithUnits value={theData.xAxis.nticks} onInput={(v) => (theData.xAxis.nticks = v)} />
 			</ControlInput>
 		</div>
 
@@ -1324,7 +1326,7 @@
 						step="0.1"
 						value={theData.ylimsIN[0] == null ? theData.ylims[0] : theData.ylimsIN[0]}
 						onInput={(val) => {
-							theData.ylimsIN[0] = [parseFloat(val)];
+							theData.ylimsIN[0] = parseFloat(val);
 						}}
 					/>
 				</ControlInput>
@@ -1334,7 +1336,7 @@
 						step="0.1"
 						value={theData.ylimsIN[1] == null ? theData.ylims[1] : theData.ylimsIN[1]}
 						onInput={(val) => {
-							theData.ylimsIN[1] = [parseFloat(val)];
+							theData.ylimsIN[1] = parseFloat(val);
 						}}
 					/>
 				</ControlInput>

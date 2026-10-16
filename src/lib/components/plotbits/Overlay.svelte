@@ -760,6 +760,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
+	import { commitObjectEdit } from '$lib/plots/plotEdits.js';
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
@@ -871,8 +872,10 @@
 	<div class="overlay-block-header">
 		<div class="overlay-block-identity">
 			<p class="overlay-title" title={overlay.name}>
+				<!-- One undo step on commit (plots/plotEdits.js), not a write per keystroke. -->
 				<Editable
-					bind:value={overlay.name}
+					value={overlay.name}
+					onCommit={(final) => commitObjectEdit(overlay, 'name', final)}
 					placeholder={overlay.kind === 'line' ? 'Line' : 'Band'}
 				/>
 			</p>

@@ -22,6 +22,7 @@ import { core, appConsts, pushObj, outputCoreAsJson } from '$lib/core/core.svelt
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { TableProcess } from '$lib/core/TableProcess.svelte';
+import { clearNotesFromPlots } from '$lib/core/notePlacement.js';
 import { loadProcesses } from '$test/processRegistry.js';
 import { loadPlots } from '$test/plotRegistry.js';
 import { loadTableProcesses } from '$test/tableProcessRegistry.js';
@@ -426,6 +427,10 @@ describe.runIf(process.env.GEN_CLASSROOM)('generate classroom sessions', () => {
 			noteSeq = 0;
 			await lesson.build();
 			prewarmWrapperNames();
+			// The note lane, the same pass a session gets when it loads (UI-7) and the demo
+			// generator applies (generateDemos tidyPlots), so the file opens with the teacher
+			// note clear of the plots instead of relying on the loader to move it.
+			clearNotesFromPlots();
 			const file = `${lesson.id}.json`;
 			writeFileSync(join(OUT_DIR, file), outputCoreAsJson(), 'utf8');
 			manifest.push(manifestEntry(lesson, file));

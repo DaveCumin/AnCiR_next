@@ -95,7 +95,9 @@
 	import CanvasNodeControls from './CanvasNodeControls.svelte';
 	import CategoryColourControls from './CategoryColourControls.svelte';
 	import { getSharedSchema, getSharedDataSchema } from '$lib/plots/sharedControls.js';
-	import { pairedEditFor, editPlotInners } from '$lib/plots/pairedEdits.js';
+	import { pairedEditFor, pairedEditOps, applyInnerEdits } from '$lib/plots/pairedEdits.js';
+	import { commitPlotsEdit, createPlotsGesture } from '$lib/plots/plotEdits.js';
+	import { plotEditScope } from '$lib/plots/plotEditScope.js';
 	import { tick } from 'svelte';
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
@@ -183,27 +185,102 @@
 		return { rows, rowCount };
 	});
 
-	// Apply a value to all edit-target plots at the given dotted path. A paired field (one
-	// whose change converts others, e.g. an FFT's period/frequency switch and its x limits)
-	// goes through pairedEdits, as one undo step for the whole selection.
-	function setSharedField(path, val) {
+	// Apply a value to all edit-target plots at the given dotted path, as ONE undo step for the
+	// whole selection (plots/plotEdits.js). A paired field (one whose change converts others,
+	// e.g. an FFT's period/frequency switch and its x limits, a circular plot's unit) brings its
+	// conversion ops (pairedEdits) into the same step.
+	function setSharedField(path, val, { coalesceKey } = {}) {
 		const innerPath = path.startsWith('plot.') ? path.slice('plot.'.length) : null;
 		const paired = innerPath
 			? editTargets.filter((p) => pairedEditFor(p.plot?.constructor, innerPath))
 			: [];
-		if (paired.length) editPlotInners(paired, innerPath, val);
-		editTargets.filter((p) => !paired.includes(p)).forEach((p) => setByPath(p, path, val));
+		const { ops, plain } = paired.length
+			? pairedEditOps(paired, innerPath, val)
+			: { ops: [], plain: [] };
+		commitPlotsEdit(
+			editTargets,
+			() => {
+				for (const p of editTargets) {
+					if (!paired.includes(p)) setByPath(p, path, val);
+					else if (plain.includes(p)) applyInnerEdits(p.plot, [{ path: innerPath, value: val }]);
+				}
+			},
+			{ extraOps: ops, coalesceKey }
+		);
 	}
 
-	// Apply a value to data row [rowIndex] of every edit-target plot. On a panel the row is
-	// the generator series it is a copy of (facetPanels), so the edit lands on the source.
-	function setSharedDataField(rowIndex, path, val) {
+	// The series [rowIndex] of every selected plot. On a panel the row is the generator series
+	// it is a copy of (facetPanels), so the edit lands on the source.
+	function sharedDataRowTargets(rowIndex) {
+		const out = [];
 		for (const ref of selectedPlots) {
 			const owner = ownerPlotOf(ref);
 			const gi = isFacetPanel(ref) ? ref.unit?.seriesIdx?.[rowIndex] : rowIndex;
 			const row = gi == null ? null : owner?.plot?.data?.[gi];
-			if (row) setByPath(row, path, val);
+			if (row) out.push({ owner, row });
 		}
+		return out;
+	}
+
+	// Apply a value to data row [rowIndex] of every edit-target plot, as ONE undo step.
+	function setSharedDataField(rowIndex, path, val, { coalesceKey } = {}) {
+		const targets = sharedDataRowTargets(rowIndex);
+		commitPlotsEdit(
+			targets.map((t) => t.owner),
+			() => targets.forEach((t) => setByPath(t.row, path, val)),
+			{ coalesceKey }
+		);
+	}
+
+	// Typed values (a number or a text box) preview on every selected plot as they are typed
+	// and are recorded once, on commit (Enter, blur or a spinner click): the preview is put
+	// back and the final value applied through the same path as any other edit, so a paired
+	// field still converts. Escape puts the preview back and records nothing.
+	const sharedGesture = createPlotsGesture();
+	let sharedPending = null; // { commit(opts) } for the value being typed
+
+	function previewShared(owners, write, commit) {
+		sharedGesture.begin(owners);
+		write();
+		sharedPending = { commit };
+	}
+	function previewSharedField(path, val) {
+		previewShared(
+			editTargets,
+			() => editTargets.forEach((p) => setByPath(p, path, val)),
+			(opts) => setSharedField(path, val, opts)
+		);
+	}
+	function previewSharedDataField(rowIndex, path, val) {
+		const targets = sharedDataRowTargets(rowIndex);
+		previewShared(
+			targets.map((t) => t.owner),
+			() => targets.forEach((t) => setByPath(t.row, path, val)),
+			(opts) => setSharedDataField(rowIndex, path, val, opts)
+		);
+	}
+	function commitSharedPreview(e) {
+		const pending = sharedPending;
+		sharedPending = null;
+		sharedGesture.cancel();
+		if (!pending) return;
+		// A number box's spinner sends one change per click: a quick run is one step.
+		const t = e?.target;
+		const coalesceKey =
+			t?.type === 'number' ? `shared:${editTargets.map((p) => p.id).join(',')}` : undefined;
+		pending.commit({ coalesceKey });
+	}
+	function sharedPreviewKeydown(e) {
+		if (e.key === 'Enter') {
+			e.target?.blur?.();
+			return;
+		}
+		if (e.key !== 'Escape' || !sharedPending) return;
+		e.preventDefault();
+		e.stopPropagation();
+		sharedPending = null;
+		sharedGesture.cancel();
+		e.target?.blur?.();
 	}
 
 	function formatPillValue(val, input) {
@@ -675,12 +752,19 @@
 						{#each fields as field (field.path)}
 							<ControlInput labelContent={fieldLabel}>
 								{#if field.input === 'number'}
-									<NumberWithUnits
-										value={field.allEqual ? field.value : (field.distinctValues[0] ?? 0)}
-										step={field.step ?? appState.gridSize}
-										min={field.min}
-										onInput={(v) => setSharedField(field.path, parseFloat(v))}
-									/>
+									<!-- No box of its own: catches the number box's commit and Escape. -->
+									<span
+										style="display: contents"
+										onchange={commitSharedPreview}
+										onkeydown={sharedPreviewKeydown}
+									>
+										<NumberWithUnits
+											value={field.allEqual ? field.value : (field.distinctValues[0] ?? 0)}
+											step={field.step ?? appState.gridSize}
+											min={field.min}
+											onInput={(v) => previewSharedField(field.path, parseFloat(v))}
+										/>
+									</span>
 								{:else if field.input === 'color'}
 									<input
 										type="color"
@@ -713,7 +797,9 @@
 										type="text"
 										value={field.allEqual ? (field.value ?? '') : ''}
 										placeholder={field.allEqual ? '' : '(mixed)'}
-										oninput={(e) => setSharedField(field.path, e.currentTarget.value)}
+										oninput={(e) => previewSharedField(field.path, e.currentTarget.value)}
+										onchange={commitSharedPreview}
+										onkeydown={sharedPreviewKeydown}
 									/>
 								{/if}
 							</ControlInput>
@@ -763,12 +849,20 @@
 									</p>
 
 									{#if field.input === 'number'}
-										<NumberWithUnits
-											value={field.allEqual ? field.value : (field.distinctValues[0] ?? 0)}
-											step={field.step ?? appState.gridSize}
-											min={field.min}
-											onInput={(v) => setSharedDataField(row.index, field.path, parseFloat(v))}
-										/>
+										<!-- No box of its own: catches the number box's commit and Escape. -->
+										<span
+											style="display: contents"
+											onchange={commitSharedPreview}
+											onkeydown={sharedPreviewKeydown}
+										>
+											<NumberWithUnits
+												value={field.allEqual ? field.value : (field.distinctValues[0] ?? 0)}
+												step={field.step ?? appState.gridSize}
+												min={field.min}
+												onInput={(v) =>
+													previewSharedDataField(row.index, field.path, parseFloat(v))}
+											/>
+										</span>
 									{:else if field.input === 'color'}
 										<input
 											type="color"
@@ -808,7 +902,9 @@
 											value={field.allEqual ? (field.value ?? '') : ''}
 											placeholder={field.allEqual ? '' : '(mixed)'}
 											oninput={(e) =>
-												setSharedDataField(row.index, field.path, e.currentTarget.value)}
+												previewSharedDataField(row.index, field.path, e.currentTarget.value)}
+											onchange={commitSharedPreview}
+											onkeydown={sharedPreviewKeydown}
 										/>
 									{/if}
 								</div>
@@ -899,9 +995,11 @@
 					<div class="div-line"></div>
 				</div>
 
+				<!-- Every gesture in here is one undo step (plots/plotEditScope.js). -->
 				<div
 					role="tabpanel"
 					id="control-tabpanel"
+					{@attach plotEditScope(() => plot)}
 					aria-labelledby={`control-tab-${appState.currentControlTab.replace(/\W+/g, '-')}`}
 				>
 					<!-- Faceting and the figure style describe the WHOLE plot, so they live on the

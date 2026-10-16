@@ -127,6 +127,19 @@ describe('every shipped session opens with no note over a plot (Workspace view)'
 		60_000
 	);
 
+	// As saved, before any load-time move: the demo and classroom generators give their notes
+	// the lane themselves, so a shipped file never relies on the loader to fix it (and opens
+	// unchanged, with no layout shift, wherever it is read).
+	it.each(sessionFiles)('%s is saved with no note over a plot', (file) => {
+		const json = JSON.parse(readFileSync(join(ROOT, file), 'utf8'));
+		const plots = savedPlotBoxes(json);
+		const hits = [];
+		for (const n of json.notes ?? [])
+			for (const p of plots)
+				if (boxesOverlap(noteCardBox(n), p)) hits.push(`${n.id} covers plot ${p.id}`);
+		expect(hits).toEqual([]);
+	});
+
 	// Injected cases: the shipped files may already be clean (the demo generator lays notes out
 	// clear of plots), so they alone cannot prove the load-time fix runs. For every session with
 	// a note and a plot, move the first note onto the first plot in the saved JSON (the same

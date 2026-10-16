@@ -543,10 +543,11 @@ describe('batch with a no-op sub-op', () => {
 		expect(core.storedValues.k).toBeUndefined();
 	});
 
-	it('empty batch returns a batch inverse with no ops and changes nothing', () => {
+	// An empty batch (or one whose children all change nothing) is a no-op like any other op:
+	// null, so it is not an undo step that undoes nothing (changed 2026-10-17).
+	it('empty batch is a no-op: returns null and changes nothing', () => {
 		const inv = applyOp({ kind: 'batch', ops: [] });
-		expect(inv.kind).toBe('batch');
-		expect(inv.ops).toHaveLength(0);
+		expect(inv).toBeNull();
 		expect(core.data).toHaveLength(0);
 	});
 });

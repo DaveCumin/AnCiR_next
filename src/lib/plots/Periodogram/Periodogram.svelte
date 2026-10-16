@@ -1304,7 +1304,7 @@
 					<NumberWithUnits
 						min="0.1"
 						step="0.1"
-						value={theData.periodlimsIN[0] ? theData.periodlimsIN[0] : theData.periodlims[0]}
+						value={theData.periodlimsIN[0]}
 						onInput={(val) => {
 							theData.periodlimsIN[0] = parseFloat(val);
 						}}
@@ -1314,7 +1314,7 @@
 				<ControlInput label="Max">
 					<NumberWithUnits
 						step="0.1"
-						value={theData.periodlimsIN[1] ? theData.periodlimsIN[1] : theData.periodlimsIN[1]}
+						value={theData.periodlimsIN[1]}
 						onInput={(val) => {
 							theData.periodlimsIN[1] = parseFloat(val);
 						}}

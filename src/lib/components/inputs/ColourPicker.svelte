@@ -21,6 +21,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { appState } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { markPopup } from '$lib/components/reusables/editScopePopup.js';
 	let { value = $bindable() } = $props();
 
 	//for moving around
@@ -75,6 +76,7 @@
 	let show = $state(false);
 	let showAdvanced = $state(false);
 	let container;
+	let swatchEl = $state(null);
 	let initialColor = $state.snapshot(value);
 	let caneyedrop = false;
 
@@ -242,6 +244,9 @@
 			if (container.parentNode.nodeName != 'BODY') {
 				// don't re-float it each update
 				document.body.append(container); //make it 'floating'
+				// Still part of the control it opened from (its swatch), for an edit recorder
+				// listening there (plots/plotEditScope.js): a drag here is that control's edit.
+				markPopup(container, swatchEl);
 			}
 		}
 	});
@@ -659,7 +664,12 @@
 {/if}
 
 <!-- Indicator -->
-<div class="cp-preview" style="background-color: {value};" onclick={(e) => open(e)}>
+<div
+	class="cp-preview"
+	bind:this={swatchEl}
+	style="background-color: {value};"
+	onclick={(e) => open(e)}
+>
 	<div
 		style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(-45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-lightness-80) 75%), linear-gradient(-45deg, transparent 75%, var(--color-lightness-80) 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
 	></div>

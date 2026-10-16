@@ -150,6 +150,32 @@
 		e.currentTarget.blur();
 	}
 
+	// The tick count: what is typed (or a spinner click) previews on the plot; the change event
+	// (Enter, blur, each spinner click) puts the count from before back and commits the new
+	// one, coalesced so a run of spinner clicks is one step. Escape puts it back.
+	let nticksAtFocus = null;
+	function beginNticksEdit() {
+		nticksAtFocus = axisData.nticks;
+	}
+	function commitNticksEdit() {
+		const next = axisData.nticks;
+		if (nticksAtFocus != null) axisData.nticks = nticksAtFocus;
+		commitAxisEdit(axisData, 'nticks', next, { coalesce: true });
+		nticksAtFocus = next;
+	}
+	function nticksKeydown(e) {
+		if (e.key === 'Enter') {
+			e.target.blur?.(); // commits through change
+			return;
+		}
+		if (e.key !== 'Escape' || nticksAtFocus == null) return;
+		e.preventDefault();
+		e.stopPropagation(); // the edit only, not whatever Escape does for the page
+		axisData.nticks = nticksAtFocus;
+		nticksAtFocus = null;
+		e.target.blur?.();
+	}
+
 	function setTickMode(mode) {
 		commitAxisEdit(axisData, 'manualTicks', mode === 'manual' ? tickParse.values : null);
 	}
@@ -434,12 +460,21 @@
 				</p>
 			{:else}
 				<ControlInput label="N Ticks">
-					<NumberWithUnits
-						step="1"
-						min="1"
-						value={axisData.nticks}
-						onInput={(v) => commitAxisEdit(axisData, 'nticks', v, { coalesce: true })}
-					/>
+					<!-- Previews as typed; one step on commit (a run of spinner clicks merges). -->
+					<!-- display: contents: only there to catch the commit and Escape; no box. -->
+					<span
+						style="display: contents"
+						onfocusin={beginNticksEdit}
+						onchange={commitNticksEdit}
+						onkeydown={nticksKeydown}
+					>
+						<NumberWithUnits
+							step="1"
+							min="1"
+							value={axisData.nticks}
+							onInput={(v) => (axisData.nticks = v)}
+						/>
+					</span>
 				</ControlInput>
 				{#if tickMode === 'time'}
 					<p class="axis-ticks-hint">Manual ticks are not available on a time axis yet.</p>

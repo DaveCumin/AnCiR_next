@@ -38,6 +38,8 @@ const NOT_EDITORS = {
 		"session load: seeds a plot series wrapper's name from its column",
 	'lib/components/plotbits/overlaySpec.js': 'builds an overlay from an AI or MCP spec',
 	'lib/plots/Actogram/markerRuleActions.js': 'builds a marker rule patch for its operation',
+	'lib/components/plotbits/Overlay.svelte':
+		"names a split line's copies when they are created (its name editor commits through plotEdits)",
 	'lib/plots/plotMetricOutputs.svelte.js': "names a plot's metric output columns",
 	'lib/plots/styleConfig.js': 'builds a saved figure-style preset object',
 	'lib/tableProcesses/metricOutputs.js': "names (and re-keys) an analysis's metric output columns",
@@ -69,15 +71,10 @@ const NOT_EDITORS = {
 	'lib/tableProcesses/FitFunction.svelte': 'names its output columns'
 };
 
-// Rename editors of things inside a plot (not canvas nodes) that still write directly, so
-// they are not undo steps yet: an overlay's name, an Actogram phase marker's and annotation's
-// names. Open items; remove a file once its editor commits through an operation. (Overlay's
-// count includes the name it gives a split line's copies on creation, which is not an editor.)
-const KNOWN_OFFENDERS = {
-	'lib/components/plotbits/Overlay.svelte': 2,
-	'lib/plots/Actogram/PhaseMarker.svelte': 1,
-	'lib/plots/Actogram/Annotation.svelte': 1
-};
+// User rename editors that still write directly. Empty since the overlay, phase-marker and
+// annotation name editors moved to plots/plotEdits.commitObjectEdit (one setPlotFields
+// operation on commit). Keep it empty: a new rename editor commits through an operation.
+const KNOWN_OFFENDERS = {};
 
 const ASSIGN =
 	/(?<![\w$])(?!this\.)([\w$]+(?:\??\.[\w$]+|\[[^\]]*\])*)\.(name|displayName|customName)\s*=(?![=>])/g;

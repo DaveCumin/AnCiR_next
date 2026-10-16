@@ -550,6 +550,7 @@
 	import { onDestroy } from 'svelte';
 	import { isFacetPanel, panelSeriesTarget } from '$lib/core/facetPanels.svelte.js';
 	import { recordInnerEdit } from '$lib/plots/seriesDelete.js';
+	import { commitObjectEdit } from '$lib/plots/plotEdits.js';
 	import { isOutsideFitRange } from './markerSelection.js';
 	import { ruleBlockDomId } from './ruleDom.js';
 	import { TEMPLATE_METHOD_NOTE } from './markerMethod.js';
@@ -1109,7 +1110,13 @@
 	<div class="tableProcess-container">
 		<div class="control-component-title">
 			<div class="control-component-title-colour">
-				<p><Editable bind:value={marker.name} /></p>
+				<!-- One undo step on commit (plots/plotEdits.js), not a write per keystroke. -->
+				<p>
+					<Editable
+						value={marker.name}
+						onCommit={(final) => commitObjectEdit(marker, 'name', final)}
+					/>
+				</p>
 			</div>
 			<div class="control-component-title-icons">
 				{#if !marker.fromRule && plotInner.markerRules && plotInner.data.length > 0}

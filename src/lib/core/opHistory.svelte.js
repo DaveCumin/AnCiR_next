@@ -16,8 +16,29 @@ const COALESCE_KINDS = new Set([
 	// `coalesce`; a committed label or a checkbox is always its own step).
 	'setPlotInnerField',
 	// A colour-picker drag or a run of spinner clicks on one rule field is one step.
-	'setMarkerRule'
+	'setMarkerRule',
+	// A control-panel gesture (plots/plotEdits.js) and a wheel zoom (plots/plotZoom.js) carry
+	// a `coalesceKey`; a quick run with the same key is one step. Unkeyed ones never merge.
+	'setPlotFields',
+	'batch'
 ]);
+
+// Merging a newer op into the top entry. Most kinds write one target, so the newest forward
+// replaces the old one and the original reverse stands. These two can write several paths per
+// op, and a later op of the run may write a path the first did not, so both directions are
+// SEQUENCES: forward = everything in order, reverse = the newer reverse first, then the older.
+function mergeForward(top, next) {
+	if (next.kind === 'setPlotFields')
+		return { ...next, edits: [...(top.edits ?? []), ...(next.edits ?? [])] };
+	if (next.kind === 'batch') return { ...next, ops: [top, next] };
+	return next;
+}
+function mergeReverse(top, next) {
+	if (next.kind === 'setPlotFields')
+		return { ...top, edits: [...(next.edits ?? []), ...(top.edits ?? [])] };
+	if (next.kind === 'batch') return { ...top, ops: [next, top] };
+	return top;
+}
 
 class OpHistoryManager {
 	undoStack = $state([]);
@@ -110,9 +131,11 @@ class OpHistoryManager {
 			top.forward.kind === forward.kind &&
 			this.#sameTarget(top.forward, forward)
 		) {
-			// Forward keeps the latest value; reverse stays the original (top.reverse).
-			// uiBefore stays from the original entry; uiAfter refreshes via microtask.
-			top.forward = forward;
+			// Forward keeps the latest value; reverse stays the original (top.reverse), extended
+			// for the multi-path kinds (mergeReverse). uiBefore stays from the original entry;
+			// uiAfter refreshes via microtask.
+			top.reverse = mergeReverse(top.reverse, reverse);
+			top.forward = mergeForward(top.forward, forward);
 			this.#lastTs = now;
 			this.#scheduleAfterCapture(top);
 		} else {
@@ -144,6 +167,9 @@ class OpHistoryManager {
 				return a.id === b.id;
 			case 'setPlotInnerField':
 				return a.coalesce === true && b.coalesce === true && a.id === b.id && a.path === b.path;
+			case 'setPlotFields':
+			case 'batch':
+				return typeof a.coalesceKey === 'string' && a.coalesceKey === b.coalesceKey;
 			case 'setMarkerRule':
 				return (
 					a.id === b.id &&

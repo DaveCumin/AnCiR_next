@@ -11,7 +11,8 @@
 //   brushable: full-size interactive plot (vs embedded preview)
 //   zoomMode : Zoom toggled on for this plot
 //   svgEl    : the plot's <svg> element
-//   adapter  : { axes: [{ orient:'x'|'y', scale():d3scale, set(lims) }], reset() }
+//   adapter  : { axes: [{ orient:'x'|'y', scale():d3scale, key, shared }], apply(writes, opts),
+//              reset() } (zoomAdapters.js)
 
 import {
 	toLimitNumber,
@@ -32,18 +33,20 @@ export function createPlotZoom(ctx) {
 		};
 	}
 
-	// PlotBrush gives the box already in plot-area local user-units.
+	// PlotBrush gives the box already in plot-area local user-units. Every axis in ONE write,
+	// so the brush is one undo step.
 	function applyBrushZoom(box) {
 		const { plot, adapter } = ctx();
 		if (!adapter?.axes || !plot?.plot) return;
-		for (const ax of adapter.axes) {
+		const writes = adapter.axes.map((ax) => {
 			const s = ax.scale();
 			const lo = ax.orient === 'x' ? Math.min(box.x0, box.x1) : Math.min(box.y0, box.y1);
 			const hi = ax.orient === 'x' ? Math.max(box.x0, box.x1) : Math.max(box.y0, box.y1);
 			const a = toLimitNumber(s.invert(lo));
 			const b = toLimitNumber(s.invert(hi));
-			ax.set([Math.min(a, b), Math.max(a, b)]);
-		}
+			return { axis: ax, lims: [Math.min(a, b), Math.max(a, b)] };
+		});
+		adapter.apply(writes);
 	}
 
 	function handleWheelZoom(e) {
@@ -59,11 +62,16 @@ export function createPlotZoom(ctx) {
 		e.preventDefault();
 		e.stopPropagation();
 		const factor = e.deltaY > 0 ? 1.1 : 0.9; // out : in
-		for (const ax of adapter.axes) {
+		const writes = adapter.axes.map((ax) => {
 			const s = ax.scale();
 			const px = ax.orient === 'x' ? loc.x : loc.y;
-			ax.set(zoomLimitsAroundPoint(s.domain(), toLimitNumber(s.invert(px)), factor));
-		}
+			return {
+				axis: ax,
+				lims: zoomLimitsAroundPoint(s.domain(), toLimitNumber(s.invert(px)), factor)
+			};
+		});
+		// A wheel gesture is many ticks: each coalesces into the same undo step.
+		adapter.apply(writes, { coalesce: true });
 	}
 
 	function resetZoom() {

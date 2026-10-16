@@ -388,6 +388,7 @@
 					<p>Stroke Style</p>
 					<div class="stroke-field" class:invalid={boxPlotData.stroke === -1}>
 						<AttributeSelect
+							value={boxPlotData.stroke}
 							onChange={(value) => {
 								if (isValidStroke(value)) {
 									boxPlotData.stroke = value;

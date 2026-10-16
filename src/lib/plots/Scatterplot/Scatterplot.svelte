@@ -957,7 +957,8 @@
 	}
 
 	// --- Brush-to-zoom (view only; writes the same *IN limit overrides the axis
-	// control inputs use, so it's fully reversible and serialises with the plot). ---
+	// control inputs use, so it's fully reversible and serialises with the plot). Each brush,
+	// reset and wheel gesture is one undo step (plotZoom.js). ---
 	function applyBrushZoom(box) {
 		const p = theData.plot;
 		const limits = limitsFromBrush(box, {
@@ -1024,7 +1025,8 @@
 					factor
 				)
 			: null;
-		applyLinkedZoom(theData, { xlims, ylimsLeft, ylimsRight });
+		// A wheel gesture is many ticks: each coalesces into the same undo step (plotZoom.js).
+		applyLinkedZoom(theData, { xlims, ylimsLeft, ylimsRight }, { coalesce: true });
 	}
 
 	//Tooltip
@@ -1134,7 +1136,7 @@
 					<ControlInput label="Min">
 						<NumberWithUnits
 							step="0.1"
-							value={theData.ylimsLeftIN[0] ? theData.ylimsLeftIN[0] : theData.ylimsLeft[0]}
+							value={theData.ylimsLeftIN[0] ?? theData.ylimsLeft[0]}
 							onInput={(val) => {
 								theData.ylimsLeftIN[0] = parseFloat(val);
 							}}
@@ -1144,7 +1146,7 @@
 					<ControlInput label="Max">
 						<NumberWithUnits
 							step="0.1"
-							value={theData.ylimsLeftIN[1] ? theData.ylimsLeftIN[1] : theData.ylimsLeft[1]}
+							value={theData.ylimsLeftIN[1] ?? theData.ylimsLeft[1]}
 							onInput={(val) => {
 								theData.ylimsLeftIN[1] = parseFloat(val);
 							}}
@@ -1184,7 +1186,7 @@
 					<ControlInput label="Min">
 						<NumberWithUnits
 							step="0.1"
-							value={theData.ylimsRightIN[0] ? theData.ylimsRightIN[0] : theData.ylimsRight[0]}
+							value={theData.ylimsRightIN[0] ?? theData.ylimsRight[0]}
 							onInput={(val) => {
 								theData.ylimsRightIN[0] = parseFloat(val);
 							}}
@@ -1194,7 +1196,7 @@
 					<ControlInput label="Max">
 						<NumberWithUnits
 							step="0.1"
-							value={theData.ylimsRightIN[1] ? theData.ylimsRightIN[1] : theData.ylimsRight[1]}
+							value={theData.ylimsRightIN[1] ?? theData.ylimsRight[1]}
 							onInput={(val) => {
 								theData.ylimsRightIN[1] = parseFloat(val);
 							}}
@@ -1262,7 +1264,7 @@
 					<ControlInput label="Min">
 						<NumberWithUnits
 							step="0.1"
-							value={theData.xlimsIN[0] ? theData.xlimsIN[0] : theData.xlims[0]}
+							value={theData.xlimsIN[0] ?? theData.xlims[0]}
 							onInput={(val) => {
 								theData.xlimsIN[0] = parseFloat(val);
 							}}
@@ -1272,7 +1274,7 @@
 					<ControlInput label="Max">
 						<NumberWithUnits
 							step="0.1"
-							value={theData.xlimsIN[1] ? theData.xlimsIN[1] : theData.xlims[1]}
+							value={theData.xlimsIN[1] ?? theData.xlims[1]}
 							onInput={(val) => {
 								theData.xlimsIN[1] = parseFloat(val);
 							}}

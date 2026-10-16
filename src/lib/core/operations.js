@@ -97,6 +97,15 @@ import { inReaction } from './reactionContext.svelte.js';
  * @property {unknown} value    JSON value to write (copied in and out)
  * @property {boolean} [coalesce] a spinner-style edit: a quick run on one path is one undo step
  *
+ * @typedef {Object} OpSetPlotFields
+ * @property {'setPlotFields'} kind
+ * @property {string} id        the plot's id
+ * @property {{ path: string, value: unknown }[]} edits  writes IN ORDER, each a path into the
+ *   Plot wrapper ('plot.figurePadding.top', 'plot.data[0].line.colour', 'width',
+ *   'style.fontFamily'); values are JSON and are copied in and out
+ * @property {string} [coalesceKey] a gesture that sends many of these (a spinner, a drag) and
+ *   should be ONE undo step: quick runs with the same key merge (opHistory)
+ *
  * @typedef {Object} OpSetFacetOverride
  * @property {'setFacetOverride'} kind
  * @property {string} id        the facet generator's plot id
@@ -167,6 +176,7 @@ import { inReaction } from './reactionContext.svelte.js';
  * @typedef {Object} OpBatch
  * @property {'batch'} kind
  * @property {GraphOperation[]} ops
+ * @property {string} [coalesceKey] quick runs of batches with the same key are one undo step
  *
  * @typedef {Object} OpGraphPatch
  * @property {'graphPatch'} kind
@@ -174,7 +184,7 @@ import { inReaction } from './reactionContext.svelte.js';
  *
  * @typedef {OpAddColumn | OpRemoveColumn | OpAddProcess | OpRemoveProcess |
  *   OpSetProcessArg | OpAddPlot | OpRemovePlot | OpSetPlotProperty | OpSetPlotPosition |
- *   OpSetPlotInner | OpSetPlotInnerField | OpSetFacetOverride | OpSetMarkerRule | OpRenameColumn | OpRenameNode | OpSetRawCell | OpSetPlotMetricOut | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
+ *   OpSetPlotInner | OpSetPlotInnerField | OpSetPlotFields | OpSetFacetOverride | OpSetMarkerRule | OpRenameColumn | OpRenameNode | OpSetRawCell | OpSetPlotMetricOut | OpAddFreeTableProcess | OpRemoveFreeTableProcess | OpSetFreeTableProcessArg |
  *   OpSetOrphanProcessArg | OpSetStoredValue | OpRemoveStoredValue |
  *   OpRenameStoredValue | OpReplaceColumnRefs | OpSwapColumnRefs | OpBatch | OpGraphPatch} GraphOperation
  */
@@ -365,6 +375,8 @@ function applyForward(op) {
 			return op_setPlotInner(op);
 		case 'setPlotInnerField':
 			return op_setPlotInnerField(op);
+		case 'setPlotFields':
+			return op_setPlotFields(op);
 		case 'setFacetOverride':
 			return op_setFacetOverride(op);
 		case 'setMarkerRule':
@@ -515,6 +527,73 @@ function op_setPlotInnerField(op) {
 		{ kind: 'setPlotInnerField', id: op.id, path: op.path, value: copy(next), ...flag },
 		{ kind: 'setPlotInnerField', id: op.id, path: op.path, value: before, ...flag }
 	);
+}
+
+// Several settings of one plot, written IN PLACE and in the given order (plots/plotEdits.js):
+// what one control-panel gesture changed (a padding, a series colour, a figure-style field
+// with what it pushed into the series), or one multi-select edit. Paths start at the Plot
+// wrapper, so a size or a style field rides in the same step as the inner fields it moved.
+// The inverse writes the old values in the SAME order (not reversed): a write through a
+// setter that resets a partner (Periodogram `binSize` turns `binSizeAuto` off) is then
+// followed by the partner's own old value, as the forward direction is. The recorder checks
+// that both directions reproduce the serialised plot before it records this op, and falls
+// back to a whole-inner rebuild when they do not.
+function op_setPlotFields(op) {
+	const plot = core.plots.find((p) => p.id === op.id);
+	if (!plot || !Array.isArray(op.edits) || op.edits.length === 0) return null;
+	// The recorder (plots/plotEdits.js) passes the old values as SERIALISED (`before`): a live
+	// read can differ from what is saved (a series colour reads back resolved while the saved
+	// value is null, "automatic"), and undo must restore what was saved.
+	const given =
+		Array.isArray(op.before) && op.before.length === op.edits.length
+			? op.edits.map((e, i) => ({ path: e.path, value: jsonCopy(op.before[i]) }))
+			: null;
+	const before = given ?? readPlotFields(plot, op.edits);
+	if (before == null) return null;
+	if (op.edits.every((e, i) => sameJSON(before[i].value, e.value))) return null;
+	writePlotFields(plot, op.edits);
+	const key = typeof op.coalesceKey === 'string' ? { coalesceKey: op.coalesceKey } : {};
+	return pair(
+		{ kind: 'setPlotFields', id: op.id, edits: copyEdits(op.edits), ...key },
+		{ kind: 'setPlotFields', id: op.id, edits: before, ...key }
+	);
+}
+
+const jsonCopy = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+const sameJSON = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+const copyEdits = (edits) => edits.map((e) => ({ path: e.path, value: jsonCopy(e.value) }));
+/** 'plot.data[0].line.colour' -> ['plot', 'data', '0', 'line', 'colour'] */
+const pathParts = (path) => (typeof path === 'string' ? (path.match(/[^.[\]]+/g) ?? []) : []);
+
+/** The object a path's last part is a field of, or null when the path does not lead there. */
+function pathOwner(root, parts) {
+	let owner = root;
+	for (const key of parts.slice(0, -1)) {
+		owner = owner?.[key];
+		if (owner == null || typeof owner !== 'object') return null;
+	}
+	return owner;
+}
+
+/** The current values at each edit's path (copies), or null when a path is unreachable. */
+export function readPlotFields(plot, edits) {
+	const out = [];
+	for (const { path } of edits) {
+		const parts = pathParts(path);
+		const owner = parts.length ? pathOwner(plot, parts) : null;
+		if (!owner) return null;
+		out.push({ path, value: jsonCopy(owner[parts.at(-1)]) });
+	}
+	return out;
+}
+
+/** Write each edit's value (a copy) at its path, in order. Unreachable paths are skipped. */
+export function writePlotFields(plot, edits) {
+	for (const { path, value } of edits) {
+		const parts = pathParts(path);
+		const owner = parts.length ? pathOwner(plot, parts) : null;
+		if (owner) owner[parts.at(-1)] = jsonCopy(value);
+	}
 }
 
 // One path of one panel's override map (plan 1.6 / 1.7): `value` undefined REMOVES the path
@@ -962,5 +1041,11 @@ function op_batch(op) {
 	// instead would mint a NEW one each redo — for a table process, a second node and a second
 	// set of output columns. Harmless while batches only carried wiring ops, whose canonical form
 	// equals what was passed in; not harmless once a batch creates things.
-	return pair({ kind: 'batch', ops: canonicals }, { kind: 'batch', ops: inverses });
+	// A batch whose every child was a no-op changed nothing: not an undo step (it used to push
+	// an empty entry, so Cmd+Z appeared to do nothing).
+	if (canonicals.length === 0) return null;
+	// A gesture that sends many batches (a wheel zoom: x and y limits per tick) names itself
+	// with `coalesceKey` so a quick run of them is one undo step (opHistory).
+	const key = typeof op.coalesceKey === 'string' ? { coalesceKey: op.coalesceKey } : {};
+	return pair({ kind: 'batch', ops: canonicals, ...key }, { kind: 'batch', ops: inverses, ...key });
 }
