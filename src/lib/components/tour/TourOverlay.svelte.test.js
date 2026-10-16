@@ -207,3 +207,26 @@ describe('TourOverlay card vs an open dialog', () => {
 		expect(observers.size).toBe(0);
 	});
 });
+
+// A hands-on step has the learner typing into a box. Escape there cancels that edit only (the
+// box's own business); the next Escape, with the box left, ends the tour (utils/editableTarget.js).
+describe('Escape during a tour', () => {
+	const escape = (target) =>
+		target.dispatchEvent(
+			new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+		);
+
+	it('in a box, leaves the box and keeps the tour; the next Escape ends it', async () => {
+		await startStep();
+		const box = document.createElement('input');
+		document.body.appendChild(box);
+		box.focus();
+		escape(box);
+		expect(tourState.activeTour).not.toBe(null);
+		expect(document.activeElement).not.toBe(box);
+
+		escape(document.body);
+		expect(tourState.activeTour).toBe(null);
+		box.remove();
+	});
+});

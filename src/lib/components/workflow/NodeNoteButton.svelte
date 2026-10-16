@@ -181,6 +181,8 @@
 	}}
 	onkeydown={(e) => {
 		if (open && e.key === 'Escape') {
+			// preventDefault: the canvas's own Escape (deselect) skips a handled Escape.
+			e.preventDefault();
 			e.stopPropagation();
 			open = false;
 		}

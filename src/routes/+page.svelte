@@ -68,6 +68,7 @@
 	import { startOverlayState } from '$lib/start/startVisibility.js';
 	import { queueHelpHint } from '$lib/core/helpHint.svelte.js';
 	import { wasNewAtSessionStart } from '$lib/utils/firstRun.js';
+	import { isEditableTarget, isTextEntryTarget } from '$lib/utils/editableTarget.js';
 
 	// --- start screen -------------------------------------------------------
 	// Shown only when there is nothing to resume: an empty session, no deep-linked load in
@@ -381,31 +382,11 @@
 			// shortcuts like Cmd/Ctrl+A natively (select the field's text) rather
 			// than running app-level shortcuts (e.g. select-all-plots).
 			const el = event.target;
-			const editableFocused =
-				!!el &&
-				(el.tagName === 'INPUT' ||
-					el.tagName === 'TEXTAREA' ||
-					el.tagName === 'SELECT' ||
-					el.isContentEditable === true);
+			const editableFocused = isEditableTarget(el);
 			// Narrower than editableFocused: a field with its own native text undo. A focused
 			// select, checkbox or slider has none, so Cmd/Ctrl+Z there still undoes the app
 			// edit the control just made (ROB-31).
-			const NO_TEXT_UNDO = [
-				'checkbox',
-				'radio',
-				'range',
-				'button',
-				'submit',
-				'reset',
-				'color',
-				'file',
-				'image'
-			];
-			const textFocused =
-				!!el &&
-				((el.tagName === 'INPUT' && !NO_TEXT_UNDO.includes((el.type ?? '').toLowerCase())) ||
-					el.tagName === 'TEXTAREA' ||
-					el.isContentEditable === true);
+			const textFocused = isTextEntryTarget(el);
 
 			if (!appState.loadingState.isLoading) {
 				// Don't allow keypresses if loading

@@ -6,6 +6,7 @@
 	// met; passive steps show a Next button. Mounted once (in +page).
 	import { untrack } from 'svelte';
 	import { tourState, nextStep, prevStep, stopTour } from '$lib/core/tourRunner.svelte.js';
+	import { yieldEscapeToField } from '$lib/utils/editableTarget.js';
 
 	const step = $derived(
 		tourState.activeTour ? (tourState.activeTour.steps[tourState.index] ?? null) : null
@@ -518,6 +519,9 @@
 	function onKey(e) {
 		if (!tourState.activeTour) return;
 		if (e.key === 'Escape') {
+			// A hands-on step has the learner typing into a box: Escape there cancels that edit
+			// only, and the next Escape ends the tour.
+			if (yieldEscapeToField(e)) return;
 			e.stopPropagation();
 			stopTour();
 		}

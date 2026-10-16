@@ -667,6 +667,34 @@ describe('the panel recorder (plotEditScope)', () => {
 		expect(history.undoCount).toBe(0);
 		detach();
 	});
+
+	it('typing straight after the click into the box: Escape still goes back to before the typing', async () => {
+		// The click's step is taken a tick after it ends. Keys that come sooner used to leave
+		// that timer to fire mid-typing: it recorded the half-typed value as a step and
+		// re-baselined on it, so Escape "cancelled" back to the half-typed value.
+		const plot = sessionPlot('scatterplot');
+		const { root, detach } = scoped(plot);
+		const box = document.createElement('input');
+		root.append(box);
+		const s0 = json(plot);
+		fresh();
+		fire(box, 'pointerdown');
+		fire(box, 'focusin');
+		fire(box, 'pointerup');
+		fire(box, 'click');
+		// No settle: the keys arrive before the click's timer.
+		for (const v of ['1', '12']) {
+			fire(box, 'keydown');
+			plot.plot.figurePadding.left = Number(v);
+			fire(box, 'input');
+			if (v === '1') await new Promise((r) => setTimeout(r, 0)); // the timer fires here
+		}
+		box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		await settle();
+		expect(json(plot)).toBe(s0);
+		expect(history.undoCount).toBe(0);
+		detach();
+	});
 });
 
 describe('the Properties limit inputs (reported: typing a Y min was not undoable)', () => {

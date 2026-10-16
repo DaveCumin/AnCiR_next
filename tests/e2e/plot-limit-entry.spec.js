@@ -133,3 +133,67 @@ for (const { demo, type, heading } of CASES) {
 		expect(await page.evaluate(() => window.__history.undoStack.length)).toBe(0);
 	});
 }
+
+// 3. On the workflow canvas, Escape in the box cancels the edit and nothing else: the plot stays
+//    selected and its control panel open. The canvas's window Escape handler used to deselect
+//    as well, closing the panel under the user's hands (utils/editableTarget.js). The next
+//    Escape, with the box left, deselects as before.
+test('canvas: Escape in Y min cancels the edit only; the next Escape deselects', async ({
+	page
+}) => {
+	await page.routeWebSocket(/.*/, () => {});
+	await page.goto(`/?loadFromURL=${encodeURIComponent('/sessions/demos/demo-process-add.json')}`);
+	await page.waitForFunction(
+		() =>
+			window.__core && window.__core.plots.length > 0 && !window.__appState.loadingState.isLoading,
+		null,
+		{ timeout: 60_000 }
+	);
+	await page.waitForTimeout(600);
+	expect(await page.evaluate(() => window.__appState.view)).toBe('canvas');
+
+	const id = await page.evaluate(
+		() => window.__core.plots.find((q) => q.type === 'scatterplot').id
+	);
+	const nodeId = `plot_${id}`;
+	await page
+		.locator(`.workflow-node-wrapper[data-node-id="${nodeId}"]`)
+		.click({ position: { x: 150, y: 12 } }); // the header
+	await page.waitForTimeout(300);
+	if (!(await page.locator('text=Properties').first().isVisible())) {
+		await page.getByRole('button', { name: 'Open control panel' }).click();
+	}
+	await expect(page.locator('text=Properties').first()).toBeVisible();
+	await page.waitForTimeout(800);
+	const selected = () => page.evaluate(() => window.__appState.canvasSelectedNodeId);
+	const yLims = () =>
+		page.evaluate((i) => {
+			const p = window.__core.plots.find((q) => q.id === i).plot;
+			return [...p.ylimsLeftIN];
+		}, id);
+	expect(await selected()).toBe(nodeId);
+	const before = await yLims();
+
+	const box = await limitBox(page, 'Left Y-Axis');
+	const shown = await box.inputValue();
+	// Type straight after the click, as a quick hand (or the test) does.
+	await box.click();
+	await page.keyboard.press('ControlOrMeta+a');
+	await page.keyboard.type('-7');
+	await expect.poll(yLims).toEqual([-7, null]); // previews on the plot as it is typed
+
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(300);
+	expect(await selected(), 'still selected after the first Escape').toBe(nodeId);
+	await expect(page.locator('text=Properties').first()).toBeVisible();
+	await expect(box).toBeVisible();
+	expect(await yLims(), 'the value is put back').toEqual(before);
+	await expect(box).toHaveValue(shown);
+	await expect(box).not.toBeFocused();
+	expect(await page.evaluate(() => window.__history.undoStack.length)).toBe(0);
+
+	await page.keyboard.press('Escape');
+	await page.waitForTimeout(300);
+	expect(await selected(), 'the second Escape deselects').toBe(null);
+	await expect(page.locator('text=Properties')).toHaveCount(0);
+});

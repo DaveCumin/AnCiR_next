@@ -61,6 +61,11 @@ export function plotEditScope(getPlot) {
 		};
 
 		function start(e) {
+			// A click's step is taken a tick after it ends (onRelease). A key or a press that
+			// comes sooner (click a box, type at once) begins the next gesture: the click's step
+			// is taken first, or the late timer would record the half-typed value as a step and
+			// re-baseline on it, and Escape would then cancel back to the half-typed value.
+			if (timer) finish();
 			if (!inScope(e.target)) return;
 			const plot = getPlot();
 			if (!isSessionPlot(plot)) return;

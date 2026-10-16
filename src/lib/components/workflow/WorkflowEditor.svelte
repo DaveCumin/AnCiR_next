@@ -94,6 +94,7 @@
 	import { markSessionEdited } from '$lib/core/unsavedChanges.svelte.js';
 	import { settleBoxes, clearPlacementY } from './settleOverlaps.js';
 	import { computeNodeLayers } from './nodeLayers.js';
+	import { isEditableTarget, yieldEscapeToField } from '$lib/utils/editableTarget.js';
 
 	// `addDataPrompt`: +page asks for the empty-session prompt only once the start screen is out of
 	// the way (startVisibility.js), so the two never stack.
@@ -3572,12 +3573,6 @@
 		if (DEV) console.log('[canvas]', ...args);
 	}
 
-	function isEditableTarget(target) {
-		if (!target) return false;
-		const tag = target?.tagName;
-		return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable;
-	}
-
 	/** Wipe every user-drawable column-ref input from a TP args object so the
 	 *  pasted node lands without any of its previous incoming wires. Also
 	 *  resets args.out values to -1 so the TP constructor allocates fresh
@@ -4067,6 +4062,10 @@
 
 	function handleKeyDown(e) {
 		if (e.key === 'Escape') {
+			// Escape in a box (the plot panel, a node's inline editor, a dialog's field) cancels
+			// that edit only; the next Escape deselects. One a popup or menu used to close itself
+			// is not also a deselect.
+			if (yieldEscapeToField(e) || e.defaultPrevented) return;
 			// Cancel an in-progress marquee, restoring the selection it started from.
 			if (marquee) {
 				removeMarqueeListeners();

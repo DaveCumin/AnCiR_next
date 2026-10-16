@@ -13,6 +13,7 @@
 <script>
 	// @ts-nocheck
 	import Draggable from '$lib/components/reusables/Draggable.svelte';
+	import { isEditableTarget } from '$lib/utils/editableTarget.js';
 	import { commitNodeRename } from '$lib/core/nodeNaming.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import NoteCard from '$lib/components/views/NoteCard.svelte';
@@ -429,15 +430,7 @@
 		// disabled because it fired too easily; the guard below is kept so the
 		// handler can be restored without rediscovering the text-input case.
 		const onKeyDown = () => {
-			const active = document.activeElement;
-
-			const isTextInput =
-				active &&
-				(active.tagName === 'INPUT' ||
-					active.tagName === 'TEXTAREA' ||
-					active.getAttribute('contenteditable') === 'true');
-
-			if (isTextInput) return;
+			if (isEditableTarget(document.activeElement)) return;
 		};
 
 		window.addEventListener('keydown', onKeyDown);
