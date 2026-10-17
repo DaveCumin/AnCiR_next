@@ -3,11 +3,10 @@
 	import { formatDate } from './TimeUtils';
 	import dayjs from './dayjsSetup.js';
 
-	//params
-	export let thedatetime;
-	export let label = 'Date and Time:';
+	let { thedatetime = $bindable(), label = 'Date and Time:' } = $props();
 
-	let picker;
+	const inputId = $props.id();
+	let picker = $state();
 
 	function showpicker() {
 		picker.showPicker();
@@ -21,31 +20,35 @@
 	}
 
 	//This is needed to make the picker have the correct time
-	$: inputDate = getInputDate(thedatetime);
-	function getInputDate(dateIN) {
-		return dayjs(dateIN).format('YYYY-MM-DD[T]HH:mm');
-	}
+	const inputDate = $derived(dayjs(thedatetime).format('YYYY-MM-DD[T]HH:mm'));
 </script>
 
 <div class="datetimeselect">
-	<!-- svelte-ignore a11y-label-has-associated-control -->
-	<label>{label}</label>
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<span onclick={showpicker}>{formatDate(thedatetime)}</span>
+	<label for={inputId}>{label}</label>
+	<button type="button" onclick={showpicker}>{formatDate(thedatetime)}</button>
 	<input
+		id={inputId}
 		bind:this={picker}
 		class="selection"
 		type="datetime-local"
 		value={inputDate}
-		on:input={handleInput}
+		oninput={handleInput}
 	/>
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<span class="icon" onclick={showpicker}>🗓️</span>
+	<button type="button" class="icon" aria-label="Open the date picker" onclick={showpicker}
+		>🗓️</button
+	>
 </div>
 
 <style>
+	button {
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: none;
+		font: inherit;
+		color: inherit;
+		cursor: pointer;
+	}
 	.datetimeselect {
 		cursor: pointer;
 		display: inline-flex;

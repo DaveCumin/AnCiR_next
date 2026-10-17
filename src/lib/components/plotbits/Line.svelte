@@ -375,10 +375,9 @@
 				stroke={lineData.colour}
 				stroke-width={lineData.strokeWidth}
 				style="transform: translate({xoffset}px, {yoffset}px); stroke-dasharray: {lineData.stroke}; pointer-events: visibleStroke;"
-				onmousemove={(e) => {
-					handleHover(e);
-				}}
-				onmouseleave={handleMouseLeave}
+				role={tooltip ? 'presentation' : undefined}
+				onmousemove={tooltip ? handleHover : undefined}
+				onmouseleave={tooltip ? handleMouseLeave : undefined}
 			/>
 		</g>
 	{/if}

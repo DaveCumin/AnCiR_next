@@ -66,6 +66,14 @@ const serial = (r) =>
 	});
 
 /** Evenly spaced series with missing rows: the time-pair path on even data. */
+// A worker that refuses every message, so the pool falls back to computing synchronously.
+class SyncComputeWorker {
+	postMessage() {
+		throw new Error('force synchronous compute');
+	}
+	terminate() {}
+}
+
 function gappedCases() {
 	const cases = [];
 	const rhythm = (n, dt, period, seed) => {
@@ -111,15 +119,7 @@ async function sessionCases() {
 	appConsts.processMap = await loadProcesses();
 	appConsts.plotMap = await loadPlots();
 	appConsts.tableProcessMap = await loadTableProcesses();
-	setWorkerFactory(
-		() =>
-			new (class {
-				postMessage() {
-					throw new Error('force synchronous compute');
-				}
-				terminate() {}
-			})()
-	);
+	setWorkerFactory(() => new SyncComputeWorker());
 
 	const cases = [];
 	let current = '';

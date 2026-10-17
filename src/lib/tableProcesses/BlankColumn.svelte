@@ -140,6 +140,20 @@
 	// Drop any dangling drag listeners if this unmounts mid-gesture.
 	$effect(() => () => releaseHeightDrag?.());
 
+	// The keyboard half of the resize handle (the WAI-ARIA window-splitter pattern): the arrow
+	// keys change the height in rows, Home goes back to the smallest; each press is persisted
+	// like the end of a drag.
+	function onResizeKeydown(e) {
+		const step = { ArrowDown: 20, ArrowUp: -20 }[e.key];
+		let next;
+		if (step != null) next = Math.max(120, tableHeight + step);
+		else if (e.key === 'Home') next = 120;
+		else return;
+		e.preventDefault();
+		tableHeight = next;
+		if (p?.args) p.args.editorHeight = tableHeight;
+	}
+
 	function doBlank() {
 		// Clean up stored value refs for rows beyond the new count
 		const count = Math.max(0, Math.floor(Number(p.args.N)));
@@ -731,12 +745,20 @@
 						</div>
 					{/snippet}
 				</VirtualList>
+				<!-- A focusable separator is an interactive widget in WAI-ARIA (the window-splitter
+				     pattern); Svelte's rules count every separator as static, hence the ignore. -->
+				<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 				<div
 					class="vt-resize"
 					role="separator"
+					tabindex="0"
 					aria-label="Resize table"
+					aria-orientation="horizontal"
+					aria-valuemin={120}
+					aria-valuenow={tableHeight}
 					title="Drag to resize"
 					onmousedown={onResizeDown}
+					onkeydown={onResizeKeydown}
 				></div>
 			</div>
 		</div>

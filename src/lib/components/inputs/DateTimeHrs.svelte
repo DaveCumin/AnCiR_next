@@ -1,4 +1,5 @@
 <script>
+	import { untrack } from 'svelte';
 	import dayjs from '$lib/utils/time/dayjsSetup.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 
@@ -27,9 +28,10 @@
 	let displayDate = $derived(dt.format('YYYY-MM-DD'));
 	let displayTime = $derived(dt.format('HH:mm'));
 
-	// Local editing state
-	let editingDate = $state(displayDate);
-	let editingTime = $state(displayTime);
+	// Local editing state. Seeded once from the value; the effect below keeps each field in step
+	// with the value while it is not being typed in.
+	let editingDate = $state(untrack(() => displayDate));
+	let editingTime = $state(untrack(() => displayTime));
 
 	// Track which field is being edited. We must NOT write the reparsed value back
 	// into a field while the user is typing in it: doing so resets the native date

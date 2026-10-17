@@ -48,7 +48,8 @@
 		snapToGrid,
 		createGroup,
 		absorbColumnIntoGroup,
-		createOrphanProcess
+		createOrphanProcess,
+		outputCoreAsJson
 	} from '$lib/core/core.svelte';
 	import { Column } from '$lib/core/Column.svelte';
 	import { Plot, selectAllPlots, reconcileAllPlotSets } from '$lib/core/Plot.svelte';
@@ -165,10 +166,14 @@
 	//   __history.undoCount / __history.redoCount
 	//   __mutationService.setPlotProperty(id, 'name', 'x')  // drive a real op
 	//   __core.plots / __core.data                          // inspect state
+	//   __appConsts.plotMap / __appConsts.tableProcessMap   // the loaded node registries
+	//   await __session.load(JSON.parse(__session.save()))  // save and reload the session
 	// Stripped from production builds by the import.meta.env.DEV guard.
 	if (import.meta.env.DEV && typeof window !== 'undefined') {
 		window.__history = history;
 		window.__core = core;
+		window.__appConsts = appConsts;
+		window.__session = { save: outputCoreAsJson, load: importJson };
 		window.__mutationService = mutationService;
 		window.__appState = appState;
 	}

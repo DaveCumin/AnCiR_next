@@ -264,6 +264,7 @@
 			class="annotations"
 			transform="translate({annotation.parentData.padding.left}, {annotation.parentData.padding
 				.top + segment.yOffset})"
+			role="presentation"
 			onmousemove={(e) => {
 				handleHover(e);
 			}}

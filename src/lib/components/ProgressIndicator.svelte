@@ -32,8 +32,15 @@
 				<div
 					class="step-header"
 					role="button"
+					tabindex="0"
 					aria-expanded={step.isExpanded}
 					onclick={() => toggleStep(index)}
+					onkeydown={(e) => {
+						if (e.target !== e.currentTarget) return;
+						if (e.key !== 'Enter' && e.key !== ' ') return;
+						e.preventDefault();
+						toggleStep(index);
+					}}
 				>
 					<div class="step-indicator">
 						{#if step.completed}
@@ -180,12 +187,5 @@
 
 	.progress-line.completed {
 		background-color: var(--color-success);
-	}
-
-	.navigation {
-		display: flex;
-		gap: 10px;
-		margin-top: 20px;
-		margin-left: 48px;
 	}
 </style>

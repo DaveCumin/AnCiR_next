@@ -35,27 +35,28 @@
 
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups({ closeDropdown })}
-		<div class="dropdown-item" onclick={() => handleSaveAction(closeDropdown)}>
-			<button>Save…</button>
-		</div>
+		<button type="button" class="dropdown-item" onclick={() => handleSaveAction(closeDropdown)}>
+			Save…
+		</button>
 
-		<div
+		<button
+			type="button"
 			class="dropdown-item"
 			onclick={() => {
 				showDataAsTable(plotId);
 				closeDropdown();
 			}}
 		>
-			<button>View data</button>
-		</div>
+			View data
+		</button>
 
-		<div class="dropdown-item" onclick={() => handleDownloadData(closeDropdown)}>
-			<button>Download data</button>
-		</div>
+		<button type="button" class="dropdown-item" onclick={() => handleDownloadData(closeDropdown)}>
+			Download data
+		</button>
 
-		<div class="dropdown-item" onclick={() => handleDeleteAction(closeDropdown)}>
-			<button>Delete</button>
-		</div>
+		<button type="button" class="dropdown-item" onclick={() => handleDeleteAction(closeDropdown)}>
+			Delete
+		</button>
 	{/snippet}
 </Dropdown>
 

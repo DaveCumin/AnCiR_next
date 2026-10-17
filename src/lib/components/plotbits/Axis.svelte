@@ -474,6 +474,7 @@
 					<!-- display: contents: only there to catch the commit and Escape; no box. -->
 					<span
 						style="display: contents"
+						role="presentation"
 						onfocusin={beginNticksEdit}
 						onchange={commitNticksEdit}
 						onkeydown={nticksKeydown}

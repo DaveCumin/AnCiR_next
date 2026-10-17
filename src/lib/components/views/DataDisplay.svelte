@@ -443,6 +443,7 @@
 							class="clps-container"
 							class:canvas-selected={appState.canvasSelectedNodeId === group.id}
 							draggable="true"
+							role="presentation"
 							ondragstart={(e) => startDragGroup(e, group.id)}
 							ondragover={(e) => onDragOverSection(e, '__group_order__', group.id)}
 							ondrop={(e) => onDropSection(e, '__group_order__', group.id)}
@@ -495,6 +496,7 @@
 										class:canvas-selected={colSelected || ownsSelectedProcess}
 										bind:this={rowRefs[`data_${col.id}`]}
 										draggable="true"
+										role="presentation"
 										ondragstart={(e) => startDragColumn(e, col.id, group.id)}
 										ondragover={(e) => onDragOverSection(e, group.id, col.id)}
 										ondrop={(e) => onDropSection(e, group.id, col.id)}
@@ -510,6 +512,7 @@
 								<div
 									class="dropzone"
 									class:active={dropHint.section === group.id && dropHint.beforeId == null}
+									role="presentation"
 									ondragover={(e) => onDragOverSection(e, group.id, null)}
 									ondrop={(e) => onDropSection(e, group.id, null)}
 								></div>
@@ -529,6 +532,7 @@
 						class:canvas-selected={colSelected || ownsSelectedProcess}
 						bind:this={rowRefs[`data_${col.id}`]}
 						draggable="true"
+						role="presentation"
 						ondragstart={(e) => startDragColumn(e, col.id, '__ungrouped__')}
 						ondragover={(e) => onDragOverSection(e, '__ungrouped__', col.id)}
 						ondrop={(e) => onDropSection(e, '__ungrouped__', col.id)}
@@ -568,6 +572,7 @@
 				<div
 					class="dropzone"
 					class:active={dropHint.section === '__ungrouped__' && dropHint.beforeId == null}
+					role="presentation"
 					ondragover={(e) => onDragOverSection(e, '__ungrouped__', null)}
 					ondrop={(e) => onDropSection(e, '__ungrouped__', null)}
 				></div>
@@ -650,6 +655,7 @@
 						class:plot-drag-over={!q && plotDragOverIdx === i && plotDraggedViewIndex !== i}
 						class:canvas-selected={plot.selected}
 						draggable={!q}
+						role="presentation"
 						ondragstart={(e) => plotDragStart(e, i)}
 						ondragover={(e) => plotDragOver(e, i)}
 						ondrop={() => plotDrop(i)}

@@ -23,6 +23,8 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import { markPopup } from '$lib/components/reusables/editScopePopup.js';
 	let { value = $bindable() } = $props();
+	// Prefix for the ids that tie each slider and the hex box to its <label>.
+	const uid = $props.id();
 
 	//for moving around
 	let pos = $state({ x: 100, y: 100, width: 300, height: 250 });
@@ -75,16 +77,18 @@
 	//for the colour picker -----------------------
 	let show = $state(false);
 	let showAdvanced = $state(false);
-	let container;
+	let container = $state();
 	let swatchEl = $state(null);
-	let initialColor = $state.snapshot(value);
-	let caneyedrop = false;
+	// The colour when the control mounted; seeds the editing fields below (onMount re-reads it).
+	const mountColour = $state.snapshot(value);
+	let initialColor = $state(mountColour);
+	let caneyedrop = $state(false);
 
-	let canvas;
+	let canvas = $state();
 	let isDragging = false;
-	let hsvInput = $state(rgbToHsv(initialColor));
-	let rgbInput = $state({ ...initialColor });
-	let hexInput = $state(initialColor);
+	let hsvInput = $state(rgbToHsv(mountColour));
+	let rgbInput = $state({ ...mountColour });
+	let hexInput = $state(mountColour);
 
 	function rgbToHex({ r, g, b, a }) {
 		const toHex = (n) => Math.round(n).toString(16).padStart(2, '0');
@@ -261,9 +265,12 @@
 	async function open(e) {
 		appState.showColourPicker = false;
 		await tick(); //Need this to update all the other pickers (remove them)
-		//work out where it should be rendered
-		const mouseX = e.clientX;
-		const mouseY = e.clientY;
+		//work out where it should be rendered: at the pointer, or for a keyboard press (no
+		// pointer position, click detail 0) at the swatch
+		const fromKeyboard = e.detail === 0 && swatchEl;
+		const swatchRect = fromKeyboard ? swatchEl.getBoundingClientRect() : null;
+		const mouseX = swatchRect ? swatchRect.right : e.clientX;
+		const mouseY = swatchRect ? swatchRect.bottom : e.clientY;
 		if (mouseX + 320 > window.innerWidth) {
 			pos.x = mouseX - 320;
 		} else {
@@ -313,10 +320,12 @@
 		width: {pos.width + 20}px;
 		height: {pos.height + 50}px;"
 		>
-			<div class="cp-header" onmousedown={(e) => onMouseDown(e)}>
+			<!-- Drag handle for moving the window: pointer only, so no role of its own. -->
+			<div class="cp-header" role="presentation" onmousedown={(e) => onMouseDown(e)}>
 				<p>Colour Picker</p>
 				<button
 					class="icon"
+					aria-label="Close colour picker"
 					onclick={() => {
 						show = false;
 					}}
@@ -330,20 +339,23 @@
 					<div style="display: flex; gap: 8px; margin-bottom: 16px;">
 						<div>
 							<span>Old</span>
-							<div
+							<button
+								type="button"
+								class="swatch"
+								aria-label="Restore the previous colour"
 								style="background-color: {initialColor}; width: 24px; height: 24px; border: 1px solid var(--color-lightness-80); position: relative; cursor: pointer;"
 								onclick={() => {
 									value = initialColor;
 									hexInput = value;
 								}}
 							>
-								<div
+								<span
 									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(-45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-lightness-80) 75%), linear-gradient(-45deg, transparent 75%, var(--color-lightness-80) 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
-								></div>
-								<div
+								></span>
+								<span
 									style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {initialColor};"
-								></div>
-							</div>
+								></span>
+							</button>
 						</div>
 						<div>
 							<span>New</span>
@@ -362,28 +374,35 @@
 
 					<!-- Palette -->
 					<div style="margin-bottom: 16px;">
-						<label>Palette</label>
-						<div style="display: flex; flex-wrap: wrap; gap: 8px; cursor: pointer;">
+						<span class="cp-label" id="{uid}-palette">Palette</span>
+						<div
+							role="group"
+							aria-labelledby="{uid}-palette"
+							style="display: flex; flex-wrap: wrap; gap: 8px; cursor: pointer;"
+						>
 							{#each appState.appColours as color, index (index)}
-								<div
+								<button
+									type="button"
+									class="swatch"
 									id="palette-{index}"
+									aria-label="Use palette colour {color}"
 									style="background-color: {color}; width: 24px; height: 24px; border: 1px solid var(--color-lightness-80); position: relative;"
 									onclick={() => {
 										hexInput = color;
 										updateFromHex(color);
 									}}
 								>
-									<div
+									<span
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(-45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-lightness-80) 75%), linear-gradient(-45deg, transparent 75%, var(--color-lightness-80) 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
-									></div>
-									<div
+									></span>
+									<span
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {color};"
-									></div>
-								</div>
+									></span>
+								</button>
 							{/each}
 						</div>
 					</div>
-					<label>Alpha</label>
+					<label for="{uid}-alpha">Alpha</label>
 					<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 						<div
 							style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
@@ -395,6 +414,7 @@
 								style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 0), rgba({rgbInput.r}, {rgbInput.g}, {rgbInput.b}, 1));"
 							></div>
 							<input
+								id="{uid}-alpha"
 								class="myslider"
 								type="range"
 								min="0"
@@ -460,7 +480,7 @@
 
 						<!-- Sliders -->
 						<div style="margin-bottom: 16px;">
-							<label>Hue</label>
+							<label for="{uid}-hue">Hue</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
 									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
@@ -469,6 +489,7 @@
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%));"
 									></div>
 									<input
+										id="{uid}-hue"
 										class="myslider"
 										type="range"
 										min="0"
@@ -489,7 +510,7 @@
 								/>
 							</div>
 
-							<label>Saturation</label>
+							<label for="{uid}-saturation">Saturation</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
 									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
@@ -498,6 +519,7 @@
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl({hsvInput.h}, 0%, 50%), hsl({hsvInput.h}, 100%, 50%));"
 									></div>
 									<input
+										id="{uid}-saturation"
 										class="myslider"
 										type="range"
 										min="0"
@@ -518,7 +540,7 @@
 								/>
 							</div>
 
-							<label>Value</label>
+							<label for="{uid}-value">Value</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
 									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
@@ -527,6 +549,7 @@
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, hsl({hsvInput.h}, {hsvInput.s}%, 0%),hsl({hsvInput.h}, {hsvInput.s}%, 50%), hsl({hsvInput.h}, {hsvInput.s}%, 100%));"
 									></div>
 									<input
+										id="{uid}-value"
 										class="myslider"
 										type="range"
 										min="0"
@@ -547,7 +570,7 @@
 								/>
 							</div>
 
-							<label>Red</label>
+							<label for="{uid}-red">Red</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
 									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
@@ -556,6 +579,7 @@
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb(0, {rgbInput.g}, {rgbInput.b}), rgb(255, {rgbInput.g}, {rgbInput.b}));"
 									></div>
 									<input
+										id="{uid}-red"
 										class="myslider"
 										type="range"
 										min="0"
@@ -574,7 +598,7 @@
 								/>
 							</div>
 
-							<label>Green</label>
+							<label for="{uid}-green">Green</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
 									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
@@ -583,6 +607,7 @@
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb({rgbInput.r}, 0, {rgbInput.b}), rgb({rgbInput.r}, 255, {rgbInput.b}));"
 									></div>
 									<input
+										id="{uid}-green"
 										class="myslider"
 										type="range"
 										min="0"
@@ -601,7 +626,7 @@
 								/>
 							</div>
 
-							<label>Blue</label>
+							<label for="{uid}-blue">Blue</label>
 							<div style="display: flex; align-items: center; gap: 8px; width: 100%; height: 16px;">
 								<div
 									style="position: relative; flex-grow: 1; height: 16px; border-radius: var(--radius-lg); overflow: hidden;"
@@ -610,6 +635,7 @@
 										style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgb({rgbInput.r}, {rgbInput.g}, 0), rgb({rgbInput.r}, {rgbInput.g}, 255));"
 									></div>
 									<input
+										id="{uid}-blue"
 										class="myslider"
 										type="range"
 										min="0"
@@ -634,8 +660,9 @@
 							style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;"
 						>
 							<div>
-								<label>Hex</label>
+								<label for="{uid}-hex">Hex</label>
 								<input
+									id="{uid}-hex"
 									type="text"
 									bind:value={hexInput}
 									oninput={() => updateFromHex(hexInput)}
@@ -658,25 +685,27 @@
 					{/if}
 				</div>
 			</div>
-			<div class="resize-handle" onmousedown={startResize}></div>
+			<div class="resize-handle" role="presentation" onmousedown={startResize}></div>
 		</section>
 	</div>
 {/if}
 
 <!-- Indicator -->
-<div
+<button
+	type="button"
 	class="cp-preview"
+	aria-label="Choose colour"
 	bind:this={swatchEl}
 	style="background-color: {value};"
 	onclick={(e) => open(e)}
 >
-	<div
+	<span
 		style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(-45deg, var(--color-lightness-80) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-lightness-80) 75%), linear-gradient(-45deg, transparent 75%, var(--color-lightness-80) 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0;"
-	></div>
-	<div
+	></span>
+	<span
 		style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {value};"
-	></div>
-</div>
+	></span>
+</button>
 
 <style>
 	.myslider::-webkit-slider-thumb {
@@ -702,14 +731,16 @@
 		cursor: crosshair;
 	}
 
-	label {
+	label,
+	.cp-label {
 		display: block;
 		font-size: var(--font-lg);
 		margin-bottom: 4px;
 		color: var(--color-lightness-25);
 	}
 
-	button:hover {
+	/* The text buttons dim on hover; the colour swatches (also buttons) must show their colour as is. */
+	button:not(.swatch, .cp-preview):hover {
 		opacity: 0.9;
 	}
 
@@ -757,6 +788,22 @@
 		flex: 1;
 		padding: var(--space-4);
 		overflow: auto;
+	}
+
+	/* Colour swatches are buttons; strip the native button chrome so they draw exactly as the
+	   plain boxes they replaced (content-box sizing: the inline 24 px is the inner size). */
+	.swatch,
+	.cp-preview {
+		display: block;
+		margin: 0;
+		padding: 0;
+		font: inherit;
+		appearance: none;
+		cursor: pointer;
+	}
+
+	.swatch {
+		box-sizing: content-box;
 	}
 
 	.cp-preview {

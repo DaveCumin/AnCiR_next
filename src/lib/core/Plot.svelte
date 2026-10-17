@@ -507,8 +507,8 @@
 	let { plot } = $props();
 	// Optional chaining: an unknown plot type used to throw a bare
 	// "Cannot read properties of undefined" from the render.
-	const PlotComponent = appConsts.plotMap.get(plot.type)?.plot ?? null;
-	const unknownPlotMessage = PlotComponent ? '' : reportUnknownNode('plot', plot.type);
+	const PlotComponent = $derived(appConsts.plotMap.get(plot.type)?.plot ?? null);
+	const unknownPlotMessage = $derived(PlotComponent ? '' : reportUnknownNode('plot', plot.type));
 </script>
 
 <div>

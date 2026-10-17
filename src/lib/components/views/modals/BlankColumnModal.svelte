@@ -15,17 +15,18 @@
 		}
 		return result;
 	}
-	let p = $state({});
-	p.args = Object.fromEntries(
-		Array.from(appConsts.tableProcessMap.get('BlankColumn').defaults.entries()).map(
-			([key, value]) => {
-				if (key === 'out') {
-					return ['out', processNested(value)];
+	let p = $state({
+		args: Object.fromEntries(
+			Array.from(appConsts.tableProcessMap.get('BlankColumn').defaults.entries()).map(
+				([key, value]) => {
+					if (key === 'out') {
+						return ['out', processNested(value)];
+					}
+					return [key, value.val];
 				}
-				return [key, value.val];
-			}
+			)
 		)
-	);
+	});
 	function confirmAddColumn() {
 		mutationService.addFreeTableProcess('BlankColumn', p.args);
 		showModal = false;

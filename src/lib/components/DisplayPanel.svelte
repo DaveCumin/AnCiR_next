@@ -12,7 +12,7 @@
 	import DataDisplay from '$lib/components/views/DataDisplay.svelte';
 	import { fly } from 'svelte/transition';
 
-	let container;
+	let container = $state();
 	const minWidth = 200;
 	const maxWidth = 500;
 
@@ -74,6 +74,7 @@
 		style="left: {appState.widthNavBar +
 			appState.widthDisplayPanel -
 			(resizeSide === 'right' ? 6 : 0)}px;"
+		role="presentation"
 		onmousedown={startResize}
 	></div>
 {/if}
@@ -108,16 +109,6 @@
 
 	.view-container::-webkit-scrollbar {
 		display: none;
-	}
-
-	.view-container.right .resizer {
-		right: 0;
-		top: 0;
-	}
-
-	.view-container.left .resizer {
-		left: 0;
-		top: 0;
 	}
 
 	.resizer {

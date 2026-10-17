@@ -151,7 +151,7 @@
 		{#if node.type === 'data' && node.refId != null}
 			{@const liveCol = getColumnById(node.refId)}
 			{#if liveCol}
-				<div class="node-type" onpointerdown={(e) => e.stopPropagation()}>
+				<div class="node-type" role="presentation" onpointerdown={(e) => e.stopPropagation()}>
 					<TypeSelector bind:value={liveCol.type} onChange={onColumnTypeChange} />
 				</div>
 			{/if}

@@ -60,8 +60,11 @@
 		}
 	});
 
-	// State for selected unit
-	let selectedUnit = $state(units['default']);
+	// The selected unit: the user's choice (the unit <select>, or selectedUnitStart on mount),
+	// back to the units' own default whenever a different set of units is passed in. A plain
+	// $state seeded once kept a unit the new set does not have (DoubleLogistic's period swaps
+	// hour units for none when x is not time), so the factor was undefined and the box NaN.
+	let selectedUnit = $derived(units['default']);
 
 	// Derived unit factor
 	let unitFactor = $derived(units[selectedUnit]);

@@ -53,6 +53,7 @@
 		pointer-events: none;
 		-webkit-appearance: none;
 		-moz-appearance: none;
+		appearance: none;
 	}
 	.range-input input::-webkit-slider-thumb {
 		height: 20px;
@@ -82,12 +83,5 @@
 	}
 	.range-price label {
 		margin-right: 5px;
-	}
-	.range-price input {
-		width: 40px;
-		padding: 5px;
-	}
-	.range-price input:first-of-type {
-		margin-right: 15px;
 	}
 </style>

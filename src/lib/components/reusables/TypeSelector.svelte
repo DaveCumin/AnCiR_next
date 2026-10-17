@@ -62,7 +62,9 @@
 	}
 </script>
 
-<div class="type-selector" onclick={toggleDropdown}>
+<!-- The wrapper only widens the mouse target around the type button; the button itself is
+     the keyboard and assistive-tech control, so the wrapper has no role of its own. -->
+<div class="type-selector" role="presentation" onclick={toggleDropdown}>
 	<div class="type-selector">
 		{#if value}
 			<button
@@ -85,6 +87,7 @@
 						<div
 							class="option dropdown-action"
 							class:selected={option.value === value}
+							role="presentation"
 							onclick={(e) => selectOption(e, option)}
 						>
 							<button class="icon" type="button" aria-label={option.label}>

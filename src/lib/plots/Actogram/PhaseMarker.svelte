@@ -1465,6 +1465,7 @@
 				stroke="transparent"
 				stroke-width={Math.max(14, marker.cfg.lineWidth * 4)}
 				style:cursor={cursorForZone(hoverZone, dragging)}
+				role="presentation"
 				onpointerdown={(e) => handleLinePointerDown(e, marker)}
 				onpointermove={(e) => handleLineHover(e, marker)}
 			/>

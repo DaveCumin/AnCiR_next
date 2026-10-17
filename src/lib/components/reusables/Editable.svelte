@@ -11,7 +11,7 @@
 	//   - Escape          reverts live edits (re-fires onInput with the original)
 	//                     and does not commit.
 	// Ported from flowtest's Editable.svelte.
-	import { tick } from 'svelte';
+	import { tick, untrack } from 'svelte';
 
 	let {
 		value = '',
@@ -29,14 +29,14 @@
 	// would re-evaluate synchronously during that round trip and can clobber the buffer
 	// mid-keystroke in this focus/caret-sensitive inline editor.
 	// eslint-disable-next-line svelte/prefer-writable-derived -- see comment above: the post-render timing of the effect is load bearing
-	let buffer = $state(value);
+	let buffer = $state(untrack(() => value));
 	$effect(() => {
 		buffer = value;
 	});
 
-	let original = $state(value);
+	let original = $state(untrack(() => value));
 	let isEditing = $state(false);
-	let inputEl;
+	let inputEl = $state();
 
 	// The idle span ellipsizes a name too long for its slot. When it does, the
 	// hover tooltip leads with the full name so it is never lost. Measured on

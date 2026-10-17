@@ -211,14 +211,14 @@
 
 	{#if p.args.normalizationType === 'min-max'}
 		<div class="range-controls">
-			<div class="control-input">
-				<label>Min:</label>
+			<label class="control-input">
+				<span class="range-label">Min:</span>
 				<NumberWithUnits bind:value={p.args.customMin} step="0.1" />
-			</div>
-			<div class="control-input">
-				<label>Max:</label>
+			</label>
+			<label class="control-input">
+				<span class="range-label">Max:</span>
 				<NumberWithUnits bind:value={p.args.customMax} step="0.1" />
-			</div>
+			</label>
 		</div>
 	{/if}
 
@@ -249,7 +249,7 @@
 		margin: 0;
 	}
 
-	.range-controls label {
+	.range-controls .range-label {
 		font-size: 0.8rem;
 		white-space: nowrap;
 	}

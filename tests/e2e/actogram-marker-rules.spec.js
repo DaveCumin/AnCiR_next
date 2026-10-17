@@ -96,9 +96,9 @@ function wireExists(page, plotId, colId, tpId) {
 	return page.evaluate(
 		async ({ plotId, colId, tpId }) => {
 			const m = await import('/src/lib/core/ProcessNode.svelte.js');
-			const c = await import('/src/lib/core/core.svelte.js');
 			m.clearProcessNodeGraphCache();
-			const g = m.getCachedProcessNodeGraph(c.core, c.appConsts);
+			// The app's live core and registries (dev-only hooks), not a re-imported copy.
+			const g = m.getCachedProcessNodeGraph(window.__core, window.__appConsts);
 			return g.connections.some(
 				(e) =>
 					e.fromId === `plot_${plotId}` &&
@@ -154,16 +154,11 @@ function state(page, plotId) {
 	}, plotId);
 }
 
-const undoDepth = (page) =>
-	page.evaluate(async () => {
-		const h = await import('/src/lib/core/opHistory.svelte.js');
-		return h.history.undoStack.length;
-	});
-const undo = (page) =>
-	page.evaluate(async () => {
-		const h = await import('/src/lib/core/opHistory.svelte.js');
-		h.history.undo();
-	});
+// Through the app's own history (window.__history, dev only), never a fresh import of
+// opHistory.svelte.js: after a hot reload that import can load a SECOND copy of the module,
+// whose empty stacks the app never writes to.
+const undoDepth = (page) => page.evaluate(() => window.__history.undoStack.length);
+const undo = (page) => page.evaluate(() => window.__history.undo());
 
 /** Commit a number into a rule-block field by its label (change fires on blur). */
 async function setRuleField(page, label, value) {
@@ -217,8 +212,9 @@ test.describe('actogram marker rules', () => {
 		await shot(page, 'range');
 		const ranged = s;
 
-		// 3. Untick one in-range day on series 1 only: only series 1 changes, and it is data
-		// (no undo step), not a settings change (no detach).
+		// 3. Untick one in-range day on series 1 only: only series 1 changes. Like every gesture
+		// in the plot panel it is one undo step (plots/plotEditScope.js, since v82.17), and it is
+		// series data, not a settings change, so nothing detaches.
 		const inst0 = page.locator('[data-rule-instance="r1"]').nth(0);
 		// The LAST in-range day: a row's search spans that row and the next, so an earlier
 		// row's detection can be the same onset as the next row's (merged, not counted twice).
@@ -229,7 +225,7 @@ test.describe('actogram marker rules', () => {
 		expect(s.series[0].instances[0].n).toBe(ranged.series[0].instances[0].n - 1);
 		expect(s.series[1].instances[0]).toEqual(ranged.series[1].instances[0]);
 		expect(s.series[0].detached).toEqual([]);
-		expect(await undoDepth(page)).toBe(depth0 + 3);
+		expect(await undoDepth(page)).toBe(depth0 + 4);
 		await shot(page, 'untick');
 		const unticked = s;
 
@@ -247,7 +243,7 @@ test.describe('actogram marker rules', () => {
 		expect(s.series[1].instances).toHaveLength(0);
 		expect(s.series[1].own[0].fromRule).toBe('r1');
 		expect(s.series[0].instances).toHaveLength(1);
-		expect(await undoDepth(page)).toBe(depth0 + 4);
+		expect(await undoDepth(page)).toBe(depth0 + 5);
 		await expect(page.locator('.rule-block .rule-note').first()).toHaveText(
 			'1 of 2 series; 1 detached'
 		);
@@ -261,7 +257,7 @@ test.describe('actogram marker rules', () => {
 		expect(s.series[0].instances[0].N).toBe(4);
 		expect(unticked.series[0].instances[0].N).toBe(3);
 		expect(s.series[1].own[0]).toEqual(detachedOwn);
-		expect(await undoDepth(page)).toBe(depth0 + 5);
+		expect(await undoDepth(page)).toBe(depth0 + 6);
 		await shot(page, 'detached');
 
 		// 5. Reattach: series 2 is back on the rule (one step).
@@ -271,7 +267,7 @@ test.describe('actogram marker rules', () => {
 		expect(s.series[1].detached).toEqual([]);
 		expect(s.series[1].instances).toHaveLength(1);
 		expect(s.series[1].own).toHaveLength(0);
-		expect(await undoDepth(page)).toBe(depth0 + 6);
+		expect(await undoDepth(page)).toBe(depth0 + 7);
 		await shot(page, 'reattached');
 
 		// 6. Promote: give series 1 its own offset block, then "Make rule" (one step).
@@ -288,7 +284,7 @@ test.describe('actogram marker rules', () => {
 		expect(s.rules.map((r) => r.name)).toEqual(['Rule 1', 'Offsets']);
 		s.series.forEach((ser) => expect(ser.instances.map((i) => i.ruleId)).toEqual(['r1', 'r2']));
 		expect(s.series[0].own).toHaveLength(0);
-		expect(await undoDepth(page)).toBe(depth0 + 7);
+		expect(await undoDepth(page)).toBe(depth0 + 8);
 		await shot(page, 'promoted');
 
 		// 7. Undo each recorded step, checking each lands where it should.
@@ -305,15 +301,16 @@ test.describe('actogram marker rules', () => {
 		s = await state(page, 0);
 		expect(s.series[1].detached).toEqual([]);
 		expect(s.series[1].instances[0]).toEqual(ranged.series[1].instances[0]);
+		await undo(page); // untick: the day is back on series 1, series 2 untouched
+		s = await state(page, 0);
+		expect(s.series[0].instances[0]).toEqual(ranged.series[0].instances[0]);
+		expect(s.series[1].instances[0]).toEqual(ranged.series[1].instances[0]);
 		await undo(page); // max day
 		await undo(page); // min day
 		s = await state(page, 0);
-		// The range is gone (phi back at day 1). Series 2 is exactly as added; series 1 keeps
-		// its unticked day, which is series DATA and, like a block's ticks, not an undo step
-		// (plan Q6), so it has one marker fewer than when the rule was added.
-		expect(s.series[1].instances[0]).toEqual(added.series[1].instances[0]);
+		// The range is gone (phi back at day 1) and both series are exactly as added.
 		expect(s.series.map((x) => x.refDay)).toEqual([1, 1]);
-		expect(s.series[0].instances[0].n).toBe(added.series[0].instances[0].n - 1);
+		s.series.forEach((ser, k) => expect(ser.instances[0]).toEqual(added.series[k].instances[0]));
 		await undo(page); // add rule
 		s = await state(page, 0);
 		expect(s.rules).toEqual([]);
@@ -397,11 +394,10 @@ test.describe('actogram marker rules', () => {
 		);
 		await shot(page, 'facet-detached');
 
-		// Save and reload through the app's own session writer and loader.
+		// Save and reload through the app's own session writer and loader (the dev-only
+		// window.__session; a fresh import of core.svelte.js can be a second copy of the module).
 		await page.evaluate(async () => {
-			const c = await import('/src/lib/core/core.svelte.js');
-			const st = await import('/src/lib/components/iconActions/Setting.svelte');
-			await st.importJson(JSON.parse(c.outputCoreAsJson()));
+			await window.__session.load(JSON.parse(window.__session.save()));
 		});
 		await page.waitForTimeout(2500);
 		s = await state(page, 0);

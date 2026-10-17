@@ -55,22 +55,36 @@
 <Dropdown bind:showDropdown top={dropdownTop} left={dropdownLeft}>
 	{#snippet groups()}
 		{#each sortedProcesses as [key, value] (key)}
-			<div
-				class="dropdown-action"
+			<button
+				type="button"
+				class="dropdown-action process-option"
 				onclick={() => {
 					showDropdown = false;
 					addTheProcess(key);
 				}}
 			>
-				<button>
-					{value.displayName || key}
-				</button>
-			</div>
+				{value.displayName || key}
+			</button>
 		{/each}
 	{/snippet}
 </Dropdown>
 
 <style>
+	/* The whole row is the button (it used to be a clickable row around an inner button). */
+	.process-option {
+		display: flex;
+		width: 100%;
+		padding: 0.6em;
+		margin: 0;
+		font: inherit;
+		text-align: inherit;
+		background-color: transparent;
+		border: none;
+		border-radius: 0;
+		appearance: none;
+		cursor: pointer;
+	}
+
 	/* preview table */
 	:global(.preview-table-wrapper) {
 		overflow-x: auto;

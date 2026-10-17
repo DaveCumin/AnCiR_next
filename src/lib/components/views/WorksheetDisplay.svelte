@@ -125,6 +125,7 @@
 			class="clps-container"
 			class:drag-over={dragOverIdx === i && draggedViewIndex !== i}
 			draggable="true"
+			role="presentation"
 			ondragstart={(e) => handleDragStart(e, i)}
 			ondragover={(e) => handleDragOver(e, i)}
 			ondrop={() => handleDrop(i)}

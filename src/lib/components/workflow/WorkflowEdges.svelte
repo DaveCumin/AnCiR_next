@@ -48,6 +48,7 @@
 					<path
 						class="edge-hit"
 						data-edge-key={k}
+						role="presentation"
 						{d}
 						onclick={(e) => {
 							e.stopPropagation();

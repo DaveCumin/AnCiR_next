@@ -121,7 +121,7 @@
 
 <script>
 	let { p } = $props();
-	const ProcessComponent = appConsts.processMap.get(p.name)?.component ?? null;
+	const ProcessComponent = $derived(appConsts.processMap.get(p.name)?.component ?? null);
 </script>
 
 {#if ProcessComponent}

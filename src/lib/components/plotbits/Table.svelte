@@ -3,10 +3,10 @@
 
 	let { headers, data, editable = false, onInput = () => {} } = $props();
 
-	// Initialize widths array with fixed pixel widths so columns don't shrink
-	// to fit and the table can overflow its container (enabling horizontal scroll).
+	// Fixed pixel column widths, so columns don't shrink to fit and the table can overflow its
+	// container (enabling horizontal scroll). A drag overrides them; a new column set resets them.
 	const defaultColWidth = 120; // px
-	let widths = $state(headers.map(() => defaultColWidth + 'px'));
+	let widths = $derived(headers.map(() => defaultColWidth + 'px'));
 	let resizingIndex = -1;
 	let table;
 	const minWidth = 30; // Minimum column width in pixels
@@ -24,13 +24,6 @@
 			widths = widths.map((w, i) => (i === resizingIndex ? `${newWidth}px` : w));
 		}
 	}
-
-	// Reset widths when column set changes.
-	$effect(() => {
-		if (headers) {
-			widths = headers.map(() => defaultColWidth + 'px');
-		}
-	});
 
 	function handleMouseUp() {
 		resizingIndex = -1;
@@ -59,7 +52,8 @@
 							value={header}
 							onInput={(v) => onInput({ col: index, row: 'h', value: v, old: oldVal })}
 						/>
-						<div class="resizer" onmousedown={() => startResize(index)}></div>
+						<!-- Pointer-only drag strip (the widths are a viewing convenience). -->
+						<div class="resizer" role="presentation" onmousedown={() => startResize(index)}></div>
 					</th>
 				{/each}
 			</tr>

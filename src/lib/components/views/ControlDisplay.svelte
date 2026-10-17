@@ -755,6 +755,7 @@
 									<!-- No box of its own: catches the number box's commit and Escape. -->
 									<span
 										style="display: contents"
+										role="presentation"
 										onchange={commitSharedPreview}
 										onkeydown={sharedPreviewKeydown}
 									>
@@ -852,6 +853,7 @@
 										<!-- No box of its own: catches the number box's commit and Escape. -->
 										<span
 											style="display: contents"
+											role="presentation"
 											onchange={commitSharedPreview}
 											onkeydown={sharedPreviewKeydown}
 										>

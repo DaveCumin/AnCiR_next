@@ -176,8 +176,8 @@
 	let blockedReason = $state(null);
 	let editingKey = $state(null);
 	let lastSelectedLeafValue = $state(null);
-	let containerEl;
-	let triggerEl;
+	let containerEl = $state();
+	let triggerEl = $state();
 	// Position the dropdown with fixed coordinates so it can escape any
 	// ancestor that clips with overflow.
 	let dropdownPos = $state({ top: 0, left: 0, width: 0, openUp: false });

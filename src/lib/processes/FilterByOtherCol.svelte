@@ -1,4 +1,4 @@
-<script context="module">
+<script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';

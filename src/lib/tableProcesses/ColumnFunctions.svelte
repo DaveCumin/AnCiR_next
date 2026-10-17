@@ -273,7 +273,7 @@
 		/>
 
 		{#each p.args.xsIN as xId, i (i)}
-			<a>{getColumnById(xId)?.name ?? '?'}</a>
+			<span>{getColumnById(xId)?.name ?? '?'}</span>
 			<button
 				onclick={() => {
 					p.args.xsIN.splice(i, 1);
@@ -281,7 +281,7 @@
 				}}>-</button
 			>
 			{#if p.args.xsIN.length > 1 && i < p.args.xsIN.length - 1}
-				<a>{separator}</a>
+				<span>{separator}</span>
 			{/if}
 		{/each}
 	{/if}

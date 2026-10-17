@@ -282,10 +282,9 @@
 			fill={pointsData.colour}
 			stroke="none"
 			style={`transform: translate( ${xoffset}px, ${yoffset}px );`}
-			onmousemove={(e) => {
-				handleHover(e);
-			}}
-			onmouseleave={handleMouseLeave}
+			role={tooltip ? 'presentation' : undefined}
+			onmousemove={tooltip ? handleHover : undefined}
+			onmouseleave={tooltip ? handleMouseLeave : undefined}
 		/>
 	{/if}
 {/snippet}

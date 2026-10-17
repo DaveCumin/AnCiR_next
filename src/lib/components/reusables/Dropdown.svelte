@@ -71,13 +71,13 @@
 		onclose={() => (showDropdown = false)}
 		style={`top: ${top}px; left: ${left}px`}
 		onclick={(e) => {
+			// Any click in the menu closes it: on the backdrop (the dialog itself) or on an
+			// item, whose own handler has already run by the time the click bubbles here.
 			e.stopPropagation();
-			if (e.target === dialog) {
-				closeDropdown();
-			}
+			closeDropdown();
 		}}
 	>
-		<div class="dropdown-content" onclick={() => closeDropdown()}>
+		<div class="dropdown-content">
 			{@render groups?.({
 				showSubmenu,
 				hideSubmenu,

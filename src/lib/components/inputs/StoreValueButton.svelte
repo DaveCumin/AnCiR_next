@@ -104,8 +104,8 @@
 </script>
 
 {#if showPopover}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="popover-backdrop" onclick={() => commitRename()} onkeydown={() => {}}></div>
+	<!-- Click-outside catcher for the pointer; the keyboard commits or cancels in the input. -->
+	<div class="popover-backdrop" role="presentation" onclick={() => commitRename()}></div>
 	<div
 		class="rename-popover"
 		bind:this={popoverEl}

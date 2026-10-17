@@ -346,3 +346,21 @@ describe('a value that is not set', () => {
 		expect(input.value).toBe('');
 	});
 });
+
+// THE BUG (found by the Svelte state_referenced_locally warning): the selected unit was a
+// $state seeded once from `units.default`, so when a caller passed a different set of units
+// (DoubleLogistic's period field swaps hour units for none when x stops being time) the box
+// kept a unit the new set does not have, its factor was undefined and it showed nothing.
+describe('a new set of units', () => {
+	const HOURS = { default: 'h', days: 24, h: 1, min: 1 / 60 };
+	const PLAIN = { default: 'value', value: 1 };
+
+	it('goes back to the new default unit', async () => {
+		const { container, rerender } = render(NumberWithUnits, { props: { value: 12, units: HOURS } });
+		await tick();
+		expect(container.querySelector('input').value).toBe('12');
+		await rerender({ value: 12, units: PLAIN });
+		await tick();
+		expect(container.querySelector('input').value).toBe('12');
+	});
+});

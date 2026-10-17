@@ -139,6 +139,7 @@
 	fill={colour}
 	style={styleString}
 	transform="translate({xoffset}, {yoffset})"
+	role={tooltip && !useHitbox ? 'presentation' : undefined}
 	onmousemove={tooltip && !useHitbox ? handleHover : undefined}
 	onmouseleave={tooltip && !useHitbox ? handleMouseLeave : undefined}
 />
@@ -150,6 +151,7 @@
 		height={hitboxHeight}
 		fill="transparent"
 		pointer-events="all"
+		role="presentation"
 		onmousemove={handleHover}
 		onmouseleave={handleMouseLeave}
 	/>

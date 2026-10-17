@@ -243,6 +243,7 @@
 	class:selected
 	class:drop-target={isDropTarget}
 	style="{NODE_ROW_CSS_VARS} width:{group?.width ?? 240}px; min-height:{group?.height ?? 180}px;"
+	role="presentation"
 	onpointerdown={onCardMouseDown}
 >
 	<div class="group-header" role="presentation">

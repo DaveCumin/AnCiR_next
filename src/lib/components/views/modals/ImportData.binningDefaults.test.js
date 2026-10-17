@@ -48,12 +48,13 @@ describe('import binning uses the settings shown', () => {
 		await _importTestActions().confirmImport();
 		expect(steps(imported('time'))).toEqual([shown.binIntervalMin * 60_000]);
 		expect(imported('activity').length).toBeCloseTo(18_000 / shown.binIntervalMin, -1);
-	});
+		// About 1.3 s alone; a full parallel suite on a busy machine took it past the 5 s default.
+	}, 30_000);
 
 	it('does not bin when the panel is unticked', async () => {
 		await openImportModalWithFiles([csv(16_000, 30)]);
 		expect(_importPreviewState().binningEnabled).toBe(false);
 		await _importTestActions().confirmImport();
 		expect(imported('time')).toHaveLength(16_000);
-	});
+	}, 30_000);
 });

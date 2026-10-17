@@ -423,7 +423,7 @@
 			{/if}
 			<div class="preview-frame" class:busy={previewBusy}>
 				{#if previewSrc}
-					<img class="export-preview" src={previewSrc} alt="Preview of the exported image" />
+					<img class="export-preview" src={previewSrc} alt="Export preview" />
 				{:else}
 					<p class="preview-empty">No preview</p>
 				{/if}

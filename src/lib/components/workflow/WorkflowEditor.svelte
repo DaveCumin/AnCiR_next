@@ -404,7 +404,7 @@
 	// node the size the user dragged it to (a session import overrides this via
 	// the adopt effect below).
 	Object.assign(plotPreviewSizes, _storedLayout.sizes);
-	let _knownNodeIds = new Set(Object.keys(stablePositions));
+	let _knownNodeIds = new Set(Object.keys(_storedLayout.positions));
 	// Last layout object WorkflowEditor itself wrote into core.nodeLayout, so the
 	// adopt-on-import effect can tell its own writes apart from an external (import)
 	// replacement and avoid a feedback loop.

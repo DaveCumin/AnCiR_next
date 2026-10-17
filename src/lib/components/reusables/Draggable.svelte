@@ -27,7 +27,8 @@
 		selected = $bindable(false),
 		viewportEl = null,
 		// A facet panel's name is derived from its column; the title is read-only for it.
-		titleEditable = true
+		titleEditable = true,
+		children
 	} = $props();
 
 	// What this card renders: a Plot (numeric id) or a facet PANEL (string id, plotRefs.js).
@@ -468,8 +469,11 @@
 
 <!-- the click does nothing becasue it's all handled in the mousedown/up for drag/resize etc.
      tabindex/keydown: keyboard users select the card (and reach the control panel) with
-     Enter/Space; the mouse handlers are unchanged. -->
-<!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions -->
+     Enter/Space; the mouse handlers are unchanged.
+     The ignore below is a false positive: a focusable group is how ARIA expresses a selectable
+     container of other controls (a button role cannot hold the header's buttons), but Svelte
+     counts every group as non-interactive. -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 <section
 	bind:this={plotElement}
 	tabindex="0"
@@ -493,8 +497,11 @@
 		height: {snapToGrid(height + 50)}px;
 		z-index: {fullscreen ? 9999 : ''};"
 >
+	<!-- The header is the card's pointer drag handle. Keyboard users select the card (the
+	     section above) and set its position in the control panel, so it has no role of its own. -->
 	<div
 		class="plot-header"
+		role="presentation"
 		onmousedown={(e) => {
 			e.stopPropagation();
 			onMouseDown(e);
@@ -546,10 +553,12 @@
 		</div>
 	</div>
 	<div class="plot-content">
-		<slot></slot>
+		{@render children?.()}
 	</div>
+	<!-- Pointer-only resize grip; the size is also set from the control panel. -->
 	<div
 		class="resize-handle"
+		role="presentation"
 		onmousedown={(e) => startResize(e)}
 		ontouchstart={(e) => startResize(e)}
 		onpointerdown={(e) => e.stopPropagation()}
@@ -621,14 +630,6 @@
 		white-space: nowrap;
 	}
 
-	.clps-title-button {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		gap: 2px;
-		flex-shrink: 0;
-	}
-
 	/* Container for the shared action cluster (maximise/delete). NodeActions
 	   handles its own reveal via the `revealed` prop. */
 	.plot-actions-host {
@@ -641,10 +642,6 @@
 	.note-slot {
 		flex-shrink: 0;
 		display: flex;
-	}
-
-	.plot-header button {
-		padding-right: 0;
 	}
 
 	.plot-content {
@@ -661,17 +658,6 @@
 		bottom: 0;
 		cursor: nwse-resize;
 		border-radius: 2px;
-	}
-
-	.plot-options-button {
-		opacity: 0;
-		pointer-events: none;
-		transition: opacity 0.2s ease;
-	}
-
-	.plot-options-button:hover {
-		opacity: 1;
-		pointer-events: auto;
 	}
 
 	/* Make resize handle more touch-friendly */

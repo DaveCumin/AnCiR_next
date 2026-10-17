@@ -5165,12 +5165,6 @@
 		margin: 0 0 0.25em 0;
 		font-size: 0.9em;
 	}
-	.combine-empty {
-		margin: 0.25em 0;
-		font-size: 0.85em;
-		color: var(--color-text-muted);
-		font-style: italic;
-	}
 	.combine-row {
 		display: flex;
 		align-items: center;

@@ -1542,6 +1542,7 @@
 		width={theData.plot.viewWidth}
 		height={theData.plot.viewHeight}
 		style="background: var(--surface-card); position: absolute;"
+		role="presentation"
 		onclick={(e) => handleClick(e)}
 		ontooltip={handleTooltip}
 	>
