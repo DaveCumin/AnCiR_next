@@ -797,23 +797,18 @@
 
 		<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>Y-Axis (Correlation)</p>
-				<div
-					class="control-component-title-icons"
+		<Axis axisData={theData.yAxis} which="controls" title="Y-axis (correlation)">
+			{#snippet tools()}
+				<button
+					class="icon"
+					type="button"
+					aria-label="Reset the correlation axis to auto range"
+					onclick={() => (theData.ylimsIN = [null, null])}
 					{@attach attachTooltip('Reset the correlation axis to auto range')}
 				>
-					<button
-						class="icon"
-						type="button"
-						aria-label="Reset the correlation axis to auto range"
-						onclick={() => (theData.ylimsIN = [null, null])}
-					>
-						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
-					</button>
-				</div>
-			</div>
+					<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+				</button>
+			{/snippet}
 
 			<div class="control-input-horizontal">
 				<ControlInput label="Min">
@@ -842,27 +837,20 @@
 					/>
 				</ControlInput>
 			</div>
-		</div>
+		</Axis>
 
-		<Axis axisData={theData.yAxis} which="controls" title="Y-Axis Controls" />
-
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>X-Axis (Lag)</p>
-				<div
-					class="control-component-title-icons"
+		<Axis axisData={theData.xAxis} which="controls" title="X-axis (lag)">
+			{#snippet tools()}
+				<button
+					class="icon"
+					type="button"
+					aria-label="Reset the lag axis to auto range"
+					onclick={() => (theData.laglimsIN = [null, null])}
 					{@attach attachTooltip('Reset the lag axis to auto range')}
 				>
-					<button
-						class="icon"
-						type="button"
-						aria-label="Reset the lag axis to auto range"
-						onclick={() => (theData.laglimsIN = [null, null])}
-					>
-						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
-					</button>
-				</div>
-			</div>
+					<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+				</button>
+			{/snippet}
 
 			<div class="control-input-horizontal">
 				<ControlInput label="Min">
@@ -888,14 +876,13 @@
 					/>
 				</ControlInput>
 			</div>
-		</div>
-
-		<Axis axisData={theData.xAxis} which="controls" title="X-Axis Controls" />
+		</Axis>
 	{:else if appState.currentControlTab === 'overlays'}
 		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
+				count={theData.data.length}
 				onadd={async () => {
 					theData.addData({
 						x: null,
@@ -1012,7 +999,7 @@
 
 						<Line lineData={datum.confidenceLine} which="controls" title="Confidence Bounds" />
 						{#if datum.confidenceLine.draw}
-							<ControlInput label="Confidence Level">
+							<ControlInput label="Confidence level">
 								<select bind:value={datum.confidenceLevel}>
 									<option value={0.95}>95%</option>
 									<option value={0.99}>99%</option>

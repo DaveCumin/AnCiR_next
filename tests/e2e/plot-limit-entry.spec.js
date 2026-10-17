@@ -77,7 +77,7 @@ async function limitBox(page, heading, label = 'Min') {
 test('a negative number can be typed into a cleared Y min box', async ({ page }) => {
 	await load(page, 'demo-process-add');
 	await openControls(page, 'scatterplot');
-	const box = await limitBox(page, 'Left Y-Axis');
+	const box = await limitBox(page, 'Left Y-axis');
 	await box.click();
 	await page.keyboard.press('ControlOrMeta+a');
 	await page.keyboard.press('Backspace');
@@ -103,7 +103,7 @@ test('a negative number can be typed into a cleared Y min box', async ({ page })
 });
 
 const CASES = [
-	{ demo: 'demo-process-add', type: 'scatterplot', heading: 'Left Y-Axis' },
+	{ demo: 'demo-process-add', type: 'scatterplot', heading: 'Left Y-axis' },
 	{ demo: 'demo-periodogram-rhythm', type: 'periodogram', heading: null },
 	{ demo: 'demo-boxplot-by-day', type: 'boxplot', heading: null },
 	{ demo: 'demo-meansem-by-day', type: 'meansem', heading: null }
@@ -174,7 +174,7 @@ test('canvas: Escape in Y min cancels the edit only; the next Escape deselects',
 	expect(await selected()).toBe(nodeId);
 	const before = await yLims();
 
-	const box = await limitBox(page, 'Left Y-Axis');
+	const box = await limitBox(page, 'Left Y-axis');
 	const shown = await box.inputValue();
 	// Type straight after the click, as a quick hand (or the test) does.
 	await box.click();

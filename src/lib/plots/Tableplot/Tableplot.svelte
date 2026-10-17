@@ -729,7 +729,7 @@
 {#snippet controls(theData)}
 	{@const source = tableSourceOf(theData)}
 	<div class="control-component">
-		<div class="control-component-title"><p>Table Settings</p></div>
+		<div class="control-component-title"><p>Table settings</p></div>
 		<div class="control-input-vertical">
 			<ControlInput label="Source">
 				<div class="segmented" role="radiogroup" aria-label="Table source">

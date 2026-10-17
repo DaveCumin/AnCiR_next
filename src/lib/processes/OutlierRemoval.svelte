@@ -237,11 +237,11 @@
 		/>
 	</div>
 	{#if p.args.method === 'iqr'}
-		<ControlInput label="IQR Multiplier">
+		<ControlInput label="IQR multiplier">
 			<NumberWithUnits bind:value={p.args.iqrMultiplier} step="0.1" min={0.1} max={5} />
 		</ControlInput>
 	{:else if p.args.method === 'zscore'}
-		<ControlInput label="Z-Score Threshold">
+		<ControlInput label="Z-score threshold">
 			<NumberWithUnits bind:value={p.args.zThreshold} step="0.1" min={1} max={10} />
 		</ControlInput>
 	{/if}

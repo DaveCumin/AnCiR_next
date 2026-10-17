@@ -245,7 +245,7 @@
 <div style="display: block;">
 	<div class="section-row">
 		<div class="tableProcess-label">
-			<span>Column Function</span>
+			<span>Column function</span>
 		</div>
 	</div>
 	<ControlInput label="Function">

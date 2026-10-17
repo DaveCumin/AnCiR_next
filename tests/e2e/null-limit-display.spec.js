@@ -41,9 +41,10 @@ test('FFT x limits reset to automatic show the limits in use, not 0', async ({ p
 		.click();
 	await page.waitForTimeout(400);
 	const xAxis = page.locator('.control-component', {
-		has: page.locator('.control-component-title p', { hasText: /^X-Axis$/ })
+		has: page.locator('.control-component-title p', { hasText: /^X-axis$/ })
 	});
-	const boxes = xAxis.locator('input[type=number]');
+	// The limits row (the section also holds the axis's own N ticks box, UI-22).
+	const boxes = xAxis.locator('.control-input-horizontal input[type=number]');
 	await expect(boxes).toHaveCount(2);
 	const { xlims, xlimsIN } = await page.evaluate(() => {
 		const p = window.__core.plots.find((q) => q.type === 'fft').plot;
@@ -60,7 +61,7 @@ test('FFT x limits reset to automatic show the limits in use, not 0', async ({ p
 test('the FFT frequency step set back to automatic is an empty "Auto" box', async ({ page }) => {
 	await openFft(page);
 	await page.evaluate(() => (window.__appState.currentControlTab = 'data'));
-	const label = page.locator('p', { hasText: /^Frequency Step$/ }).first();
+	const label = page.locator('p', { hasText: /^Frequency step$/ }).first();
 	const field = label.locator('xpath=..');
 	await field.locator('button.icon').first().click();
 	await page.waitForTimeout(300);

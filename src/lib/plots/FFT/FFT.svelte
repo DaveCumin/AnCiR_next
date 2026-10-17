@@ -983,28 +983,23 @@
 
 		<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>Y-Axis (Magnitude)</p>
-				<div
-					class="control-component-title-icons"
+		<Axis axisData={theData.yAxisMag} which="controls" title="Y-axis (magnitude)">
+			{#snippet tools()}
+				<button
+					class="icon"
+					type="button"
+					aria-label="Reset the magnitude axis to auto range"
+					onclick={() => (theData.ylimsIN = [null, null])}
 					{@attach attachTooltip('Reset the magnitude axis to auto range')}
 				>
-					<button
-						class="icon"
-						type="button"
-						aria-label="Reset the magnitude axis to auto range"
-						onclick={() => (theData.ylimsIN = [null, null])}
-					>
-						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
-					</button>
-				</div>
-			</div>
+					<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+				</button>
+			{/snippet}
 
 			<div class="control-input-vertical">
 				<label class="control-input-checkbox">
 					<input type="checkbox" bind:checked={theData.logScale} />
-					<span class="ci-label">Log Scale</span>
+					<span class="ci-label">Log scale</span>
 				</label>
 			</div>
 
@@ -1031,28 +1026,21 @@
 					/>
 				</ControlInput>
 			</div>
-		</div>
-
-		<Axis axisData={theData.yAxisMag} which="controls" title="Y-Axis (Magnitude) Controls" />
+		</Axis>
 
 		{#if theData.data.some((d) => d.showPhase)}
-			<div class="control-component">
-				<div class="control-component-title">
-					<p>Y-Axis (Phase)</p>
-					<div
-						class="control-component-title-icons"
+			<Axis axisData={theData.yAxisPhase} which="controls" title="Y-axis (phase)">
+				{#snippet tools()}
+					<button
+						class="icon"
+						type="button"
+						aria-label="Reset the phase axis to auto range"
+						onclick={() => (theData.phaseYlimsIN = [null, null])}
 						{@attach attachTooltip('Reset the phase axis to auto range')}
 					>
-						<button
-							class="icon"
-							type="button"
-							aria-label="Reset the phase axis to auto range"
-							onclick={() => (theData.phaseYlimsIN = [null, null])}
-						>
-							<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
-						</button>
-					</div>
-				</div>
+						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+					</button>
+				{/snippet}
 
 				<div class="control-input-horizontal">
 					<ControlInput label="Min">
@@ -1081,28 +1069,21 @@
 						/>
 					</ControlInput>
 				</div>
-			</div>
-
-			<Axis axisData={theData.yAxisPhase} which="controls" title="Y-Axis (Phase) Controls" />
+			</Axis>
 		{/if}
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>X-Axis</p>
-				<div
-					class="control-component-title-icons"
+		<Axis axisData={theData.xAxis} which="controls" title="X-axis">
+			{#snippet tools()}
+				<button
+					class="icon"
+					type="button"
+					aria-label="Reset the period/frequency axis to auto range"
+					onclick={() => (theData.xlimsIN = [null, null])}
 					{@attach attachTooltip('Reset the period/frequency axis to auto range')}
 				>
-					<button
-						class="icon"
-						type="button"
-						aria-label="Reset the period/frequency axis to auto range"
-						onclick={() => (theData.xlimsIN = [null, null])}
-					>
-						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
-					</button>
-				</div>
-			</div>
+					<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+				</button>
+			{/snippet}
 
 			<div class="control-input-vertical">
 				<label class="control-input-checkbox">
@@ -1116,7 +1097,7 @@
 								e.currentTarget.checked
 							)}
 					/>
-					<span class="ci-label">Show as Period (h)</span>
+					<span class="ci-label">Show as period (h)</span>
 				</label>
 			</div>
 
@@ -1153,14 +1134,13 @@
 					/>
 				</div>
 			</div>
-		</div>
-
-		<Axis axisData={theData.xAxis} which="controls" title="X-Axis Controls" />
+		</Axis>
 	{:else if appState.currentControlTab === 'overlays'}
 		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
+				count={theData.data.length}
 				onadd={async () => {
 					theData.addData({
 						x: null,
@@ -1187,19 +1167,19 @@
 						</div>
 
 						<div class="control-data">
-							<ControlInput label="y (Values)"></ControlInput>
+							<ControlInput label="y (values)"></ControlInput>
 							<Column col={datum.y} canChange={true} />
 						</div>
 
 						<div class="control-input-vertical">
 							<label class="control-input-checkbox">
 								<input type="checkbox" bind:checked={datum.showPhase} />
-								<span class="ci-label">Show Phase</span>
+								<span class="ci-label">Show phase</span>
 							</label>
 						</div>
 
 						<div class="control-input">
-							<p>Frequency Step</p>
+							<p>Frequency step</p>
 							<div style="display: flex; align-items: center; gap: 8px;">
 								<NumberWithUnits
 									nullable

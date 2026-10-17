@@ -191,7 +191,7 @@ describe('rule summary: cost of the τ column', () => {
 describe('per-series instance readout', () => {
 	it('labels the harmonic pick τ (h) and shows the line slope, flagged when they disagree', async () => {
 		const { plot } = ruleActogram(47);
-		appState.currentControlTab = 'data';
+		appState.currentControlTab = 'overlays';
 		const r = render(Actogram, { props: { theData: plot.plot, which: 'controls' } });
 		const inst0 = r.container.querySelectorAll('[data-rule-instance="r1"]')[0];
 		const details = inst0.querySelector('details.instance-details');
@@ -214,7 +214,7 @@ describe('per-series instance readout', () => {
 
 	it('labels the phase φ (h) like its port, keeping the reference day visible', () => {
 		const { plot } = ruleActogram(47);
-		appState.currentControlTab = 'data';
+		appState.currentControlTab = 'overlays';
 		const r = render(Actogram, { props: { theData: plot.plot, which: 'controls' } });
 		const inst0 = r.container.querySelectorAll('[data-rule-instance="r1"]')[0];
 		const text = inst0.textContent.replace(/\s+/g, ' ');

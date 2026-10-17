@@ -303,8 +303,8 @@ describe('shared components on the fake host', () => {
 
 	it('OverlaysTab offers a button only for a kind the host allows, titled with its forms', () => {
 		const lineOnly = render(OverlaysTab, { props: { inner: new LinesOnlyHost() } }).container;
-		const buttons = [...lineOnly.querySelectorAll('.overlay-add button')];
-		expect(buttons.map((b) => b.textContent.trim())).toEqual(['+ Line']);
+		const buttons = [...lineOnly.querySelectorAll('.block-add button')];
+		expect(buttons.map((b) => b.textContent.trim())).toEqual(['+ Add line']);
 		expect(buttons[0].getAttribute('title')).toBe('Add a reference line (horizontal or vertical)');
 	});
 
@@ -312,13 +312,13 @@ describe('shared components on the fake host', () => {
 		const scatter = new Scatterplotclass({ id: 1, width: 400, height: 300 }, null);
 		const { container } = render(OverlaysTab, { props: { inner: scatter } });
 		expect(
-			[...container.querySelectorAll('.overlay-add button')].map((b) => [
+			[...container.querySelectorAll('.block-add button')].map((b) => [
 				b.textContent.trim(),
 				b.getAttribute('title')
 			])
 		).toEqual([
-			['+ Line', 'Add a reference line (vertical or horizontal)'],
-			['+ Band', 'Add a shaded band (ribbon, horizontal, vertical or repeating)']
+			['+ Add line', 'Add a reference line (vertical or horizontal)'],
+			['+ Add band', 'Add a shaded band (ribbon, horizontal, vertical or repeating)']
 		]);
 	});
 

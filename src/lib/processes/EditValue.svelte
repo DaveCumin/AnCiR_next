@@ -119,11 +119,11 @@
 		</button>
 		{#each p.args.edits || [] as edit (edit.id)}
 			<div class="control-input-horizontal">
-				<ControlInput label="position">
+				<ControlInput label="Position">
 					<input type="number" bind:value={edit.position} min="1" step="1" />
 				</ControlInput>
 
-				<ControlInput label="value">
+				<ControlInput label="Value">
 					{#if p.inputCol?.type == 'number'}
 						<!-- Empty means missing (null), not 0; a blank box stays blank. -->
 						<input

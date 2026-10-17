@@ -55,3 +55,19 @@ describe('Modal onclose', () => {
 		expect(onclose).toHaveBeenCalledTimes(1);
 	});
 });
+
+describe('Modal close button', () => {
+	// Seen in the import dialog: the close button was position: fixed over the content, so
+	// whatever scrolled past sat under it. It now lives in a bar ABOVE the scrolling body.
+	it('sits in a top bar outside the scrolling body, never over the content', async () => {
+		const { dialog } = await openModal();
+		const btn = dialog.querySelector('button[aria-label="Close"]');
+		const bar = btn.closest('.modal-topbar');
+		const body = dialog.querySelector('.modal-body');
+		expect(bar).not.toBeNull();
+		expect(body).not.toBeNull();
+		expect(body.contains(btn)).toBe(false);
+		expect(bar.nextElementSibling).toBe(body);
+		expect(btn.closest('[style*="position:fixed"], [style*="position: fixed"]')).toBeNull();
+	});
+});

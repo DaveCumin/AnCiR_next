@@ -243,7 +243,7 @@ describe('the Data tab', () => {
 		const plot = Plot.fromJSON(session.plots.find((p) => p.type === 'actogram'));
 		core.plots.push(plot);
 		addRuleRecorded(plot.plot, { ...ONSET, name: 'Onsets' });
-		appState.currentControlTab = 'data';
+		appState.currentControlTab = 'overlays';
 		const r = render(Actogram, { props: { theData: plot.plot, which: 'controls' } });
 		const text = r.container.textContent;
 		expect(text).toContain('Marker rules');

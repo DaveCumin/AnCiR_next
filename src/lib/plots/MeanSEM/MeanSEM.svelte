@@ -627,9 +627,7 @@
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.yAxis} which="controls" title="Y-Axis" />
-
-		<div class="control-component">
+		<Axis axisData={theData.yAxis} which="controls" title="Y-axis">
 			<div class="control-input-horizontal">
 				<ControlInput label="Min">
 					<NumberWithUnits
@@ -659,13 +657,13 @@
 					</div>
 				{/if}
 			</div>
-		</div>
+		</Axis>
 
 		<div class="div-line"></div>
 
 		<div class="control-component">
 			<div class="control-component-title">
-				<p>X-Axis</p>
+				<p>X-axis</p>
 			</div>
 			<div class="control-input-vertical">
 				<ControlInput label="Label">
@@ -678,6 +676,7 @@
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
+				count={theData.data.length}
 				onadd={async () => {
 					theData.addData({ x: null, y: null });
 					await tick();

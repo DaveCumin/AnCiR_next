@@ -2,7 +2,7 @@
 // Which control-panel tab to show for the selected plot (UI-3).
 //
 // `appState.currentControlTab` is one global value, but each plot type has its
-// own tabs (Actogram has Annotations, Scatterplot has Overlays, Tableplot's only
+// own tabs (PairsPlot has no Overlays, Scatterplot has, Tableplot's only
 // tab is "Properties and Data"). A plot renders controls only for its own tab
 // names, so moving the selection from an Actogram on Annotations to a periodogram
 // used to leave a blank panel with no tab highlighted.
@@ -12,6 +12,9 @@
 //   1. keep the current tab if the new plot has it (Data stays Data);
 //   2. otherwise the tab last used on a plot of this type, if it still exists;
 //   3. otherwise the plot's first tab.
+
+/** Tabs that were renamed: old id -> new id. */
+const RENAMED_TABS = { annotations: 'overlays' };
 
 /** Last tab chosen per plot type, for this page session. */
 const lastTabByType = new Map();
@@ -31,6 +34,10 @@ export function resolveControlTab(current, headers, remembered) {
 	const ids = tabIds(headers);
 	if (ids.length === 0) return current;
 	if (ids.includes(current)) return current;
+	// The Actogram's Annotations tab became its Overlays tab (UI-12); a session saved on it
+	// opens there.
+	const renamed = RENAMED_TABS[current];
+	if (renamed && ids.includes(renamed)) return renamed;
 	if (remembered && ids.includes(remembered)) return remembered;
 	return ids[0];
 }

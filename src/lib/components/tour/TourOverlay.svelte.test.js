@@ -230,3 +230,30 @@ describe('Escape during a tour', () => {
 		box.remove();
 	});
 });
+
+describe('TourOverlay card heading in a narrow card', () => {
+	// Seen at 1024 px: squeezed beside the import modal, the card broke its heading at the
+	// hyphen ("ACTIGRAPHY QUICK-" over "START") beside the step counter. Hyphenated words are
+	// kept whole (the line breaks at a space), and the counter wraps to its own line.
+	it('keeps hyphenated words of the tour name and the step title whole', async () => {
+		stubRect(dialog, SHORT_DIALOG);
+		stubRect(target, TARGET);
+		render(TourOverlay);
+		tourState.activeTour = {
+			id: 't',
+			name: 'Actigraphy quick-start',
+			steps: [{ target: '#tour-target', title: 'A quick-start step', body: 'B', advance: {} }]
+		};
+		tourState.index = 0;
+		await tick();
+		const name = document.querySelector('.tour-progress .tour-name');
+		const title = document.querySelector('.tour-title');
+		expect(name.textContent).toBe('Actigraphy quick-start');
+		expect(title.textContent.trim()).toBe('A quick-start step');
+		for (const el of [name, title]) {
+			expect([...el.querySelectorAll('.tour-nobreak')].map((s) => s.textContent)).toEqual([
+				'quick-start'
+			]);
+		}
+	});
+});

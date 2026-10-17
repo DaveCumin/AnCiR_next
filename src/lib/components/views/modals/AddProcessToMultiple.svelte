@@ -58,7 +58,7 @@
 </script>
 
 <Modal bind:showModal={show} onclose={onClose}>
-	<h2>Add Process to Multiple Columns</h2>
+	<h2>Add a process to several columns</h2>
 
 	<div class="section">
 		<span class="section-label">Process</span>

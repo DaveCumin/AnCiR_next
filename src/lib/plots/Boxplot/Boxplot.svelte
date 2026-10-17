@@ -1203,9 +1203,7 @@
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.yAxis} which="controls" title="Y-Axis" />
-
-		<div class="control-component">
+		<Axis axisData={theData.yAxis} which="controls" title="Y-axis">
 			<div class="control-input-horizontal">
 				<ControlInput label="Min">
 					<NumberWithUnits
@@ -1237,13 +1235,13 @@
 					</div>
 				{/if}
 			</div>
-		</div>
+		</Axis>
 
 		<div class="div-line"></div>
 
 		<div class="control-component">
 			<div class="control-component-title">
-				<p>X-Axis</p>
+				<p>X-axis</p>
 			</div>
 			<div class="control-input-vertical">
 				<ControlInput label="Label">
@@ -1397,7 +1395,7 @@
 					</ControlInput>
 					<div class="control-input-horizontal">
 						<div class="control-input" style="max-width: 1.5rem;">
-							<p>Bar Colour</p>
+							<p>Bar colour</p>
 							<ColourPicker bind:value={theData.sigBarColor} />
 						</div>
 						<ControlInput label="Thickness">
@@ -1405,7 +1403,7 @@
 						</ControlInput>
 					</div>
 					<div class="control-input-horizontal">
-						<ControlInput label="Font Size">
+						<ControlInput label="Font size">
 							<NumberWithUnits
 								bind:value={sigBarSizeInput}
 								step={0.5}
@@ -1419,7 +1417,7 @@
 						</ControlInput>
 					</div>
 					<div class="control-input-horizontal">
-						<ControlInput label="Y Offset">
+						<ControlInput label="Y offset">
 							<NumberWithUnits bind:value={theData.sigBarYOffset} step={1} />
 						</ControlInput>
 					</div>
@@ -1463,6 +1461,7 @@
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
+				count={theData.data.length}
 				onadd={async () => {
 					theData.addData({
 						x: null,

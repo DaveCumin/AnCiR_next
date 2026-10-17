@@ -395,7 +395,9 @@
 	if (p.args.permutationScheme === undefined)
 		p.args.permutationScheme = PERMUTATION_DEFAULTS.permutationScheme;
 
-	let rwave = $state(null);
+	// Undefined until computed or restored: the memo mirror below skips undefined, so a fresh
+	// instance does not overwrite the cached result before onMount restores it.
+	let rwave = $state();
 
 	// One entry per fitted y series, for the permutation readout under the test's controls.
 	let permEntries = $derived(

@@ -489,7 +489,7 @@
 	// UI-3: the tab is global but each plot type has its own tabs. When the selected plot
 	// changes (or the tab is one this plot does not have, e.g. from a loaded session), keep
 	// the tab if the plot has it, else the tab last used on this plot type, else its first
-	// tab. Without this, Actogram "Annotations" then a periodogram left a blank panel.
+	// tab. Without this, Actogram "Annotations" (now "Overlays") then a periodogram left a blank panel.
 	$effect(() => {
 		if (selectedPlots.length !== 1) return;
 		const plot = ownerPlotOf(selectedPlots[0]);
@@ -606,7 +606,7 @@
 
 		<div class="control-component">
 			<div class="control-component-title">
-				<p>Align Plots</p>
+				<p>Align plots</p>
 			</div>
 
 			<div class="control-input-square">
@@ -674,7 +674,7 @@
 			<div class="div-line"></div>
 
 			<div class="control-component-title">
-				<p>Distribute Plots</p>
+				<p>Distribute plots</p>
 			</div>
 
 			<div class="control-input-square">

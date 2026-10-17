@@ -622,9 +622,7 @@
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.yAxis} which="controls" title="Y-Axis" />
-
-		<div class="control-component">
+		<Axis axisData={theData.yAxis} which="controls" title="Y-axis">
 			<div class="control-input-horizontal">
 				<ControlInput label="Y min">
 					<NumberWithUnits
@@ -652,13 +650,11 @@
 					</div>
 				{/if}
 			</div>
-		</div>
+		</Axis>
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.xAxis} which="controls" title="X-Axis" />
-
-		<div class="control-component">
+		<Axis axisData={theData.xAxis} which="controls" title="X-axis">
 			<div class="control-input-horizontal">
 				<ControlInput label="X min">
 					<NumberWithUnits
@@ -686,12 +682,13 @@
 					</div>
 				{/if}
 			</div>
-		</div>
+		</Axis>
 	{:else if appState.currentControlTab === 'overlays'}
 		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
+				count={theData.data.length}
 				onadd={async () => {
 					theData.addData({});
 					await tick();

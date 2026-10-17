@@ -1134,9 +1134,7 @@
 		{#if theData.hasLeftAxisData}
 			<div class="div-line"></div>
 
-			<Axis axisData={theData.yAxisLeft} which="controls" title="Left Y-Axis" />
-
-			<div class="control-component">
+			<Axis axisData={theData.yAxisLeft} which="controls" title="Left Y-axis">
 				<div class="control-input-horizontal">
 					<ControlInput label="Min">
 						<NumberWithUnits
@@ -1177,18 +1175,16 @@
 				<div class="control-input-vertical">
 					<label class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.yLogScaleLeft} />
-						<span class="ci-label">Log Scale</span>
+						<span class="ci-label">Log scale</span>
 					</label>
 				</div>
-			</div>
+			</Axis>
 		{/if}
 
 		{#if theData.hasRightAxisData}
 			<div class="div-line"></div>
 
-			<Axis axisData={theData.yAxisRight} which="controls" title="Right Y-Axis" />
-
-			<div class="control-component">
+			<Axis axisData={theData.yAxisRight} which="controls" title="Right Y-axis">
 				<div class="control-input-horizontal">
 					<ControlInput label="Min">
 						<NumberWithUnits
@@ -1229,17 +1225,15 @@
 				<div class="control-input-vertical">
 					<label class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.yLogScaleRight} />
-						<span class="ci-label">Log Scale</span>
+						<span class="ci-label">Log scale</span>
 					</label>
 				</div>
-			</div>
+			</Axis>
 		{/if}
 
 		<div class="div-line"></div>
 
-		<Axis axisData={theData.xAxis} which="controls" title="X-Axis" tickMode={theData.xTickMode} />
-
-		<div class="control-component">
+		<Axis axisData={theData.xAxis} which="controls" title="X-axis" tickMode={theData.xTickMode}>
 			<div class="control-input-horizontal">
 				{#if theData.anyXdataTime}
 					<div class="control-input">
@@ -1304,7 +1298,7 @@
 				{#if !theData.anyXdataTime}
 					<label class="control-input-checkbox">
 						<input type="checkbox" bind:checked={theData.xLogScale} />
-						<span class="ci-label">Log Scale</span>
+						<span class="ci-label">Log scale</span>
 					</label>
 				{:else}
 					<!-- Only meaningful for a time x axis; a number axis has no date to format.
@@ -1313,7 +1307,7 @@
 					{@const autoPattern =
 						dominantTickPattern(theData.XScale?.ticks?.(theData.xAxis?.nticks ?? 5) ?? []) ??
 						DEFAULT_DATE_FORMAT}
-					<ControlInput label="Date tick format:">
+					<ControlInput label="Date tick format">
 						<input
 							type="text"
 							bind:value={theData.xTickFormat}
@@ -1323,10 +1317,11 @@
 					</ControlInput>
 				{/if}
 			</div>
-		</div>
+		</Axis>
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
+				count={theData.data.length}
 				onadd={async () => {
 					theData.addData({
 						x: null,
@@ -1362,7 +1357,7 @@
 
 						<div class="control-input-vertical">
 							<div class="control-input">
-								<p>Y-Axis</p>
+								<p>Y-axis</p>
 								<Toggle
 									Labels={['Left', 'Right']}
 									onChange={(v) => (datum.yAxis = v ? 'right' : 'left')}

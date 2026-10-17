@@ -38,6 +38,13 @@
 	const titleText = $derived(
 		typeof step?.title === 'function' ? step.title() : (step?.title ?? '')
 	);
+	// Split into words and spaces, so a hyphenated word ("quick-start") can be kept whole: in a
+	// card narrowed beside a dialog the browser otherwise breaks it at the hyphen ("QUICK-" over
+	// "START") while the line still has room to break at a space.
+	const pieces = (text) =>
+		String(text ?? '')
+			.split(/(\s+)/)
+			.filter((t) => t !== '');
 	const bodyHtml = $derived(typeof step?.body === 'function' ? step.body() : (step?.body ?? ''));
 
 	let targetRect = $state(null); // {top,left,width,height} or null → centered
@@ -614,10 +621,17 @@
 		aria-label="Guided tour"
 	>
 		<div class="tour-progress">
-			<span>{tourState.activeTour?.name}</span>
+			<span class="tour-name"
+				>{#each pieces(tourState.activeTour?.name) as w, i (i)}{#if w.includes('-')}<span
+							class="tour-nobreak">{w}</span
+						>{:else}{w}{/if}{/each}</span
+			>
 			<span>Step {visibleNumber} of {visibleTotal}</span>
 		</div>
-		<h3 class="tour-title">{titleText}</h3>
+		<h3 class="tour-title">
+			{#each pieces(titleText) as w, i (i)}{#if w.includes('-')}<span class="tour-nobreak">{w}</span
+					>{:else}{w}{/if}{/each}
+		</h3>
 		<!-- title/body are static, developer-authored copy from src/lib/tours/*.js
 		     (never user input), so @html is safe and lets steps use <strong> etc. -->
 		<!-- eslint-disable-next-line svelte/no-at-html-tags -- step.body is developer-authored copy from src/lib/tours/*.js (a static literal or a pure function over it), never user input -->
@@ -789,10 +803,17 @@
 		color: var(--color-text-muted);
 		margin-bottom: 0.35rem;
 		gap: 0.5rem;
+		/* When the card narrows beside a dialog the counter moves to its own line instead of
+		   squeezing the tour name. */
+		flex-wrap: wrap;
+		row-gap: 0.1rem;
 	}
 
-	/* The step counter stays on one line when the card narrows beside a dialog. */
+	/* The step counter stays on one line. */
 	.tour-progress > span:last-child {
+		white-space: nowrap;
+	}
+	.tour-nobreak {
 		white-space: nowrap;
 	}
 

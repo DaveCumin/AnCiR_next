@@ -926,6 +926,7 @@
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
+				count={theData.data.length}
 				onadd={async () => {
 					theData.addData({});
 					await tick();
@@ -943,7 +944,7 @@
 					<SeriesBlockHeader inner={theData} {datum} index={i} />
 					<div class="data-wrapper">
 						<div class="y-select">
-							<ControlInput label="time (optional)"></ControlInput>
+							<ControlInput label="Time (optional)"></ControlInput>
 							<Column col={datum.x} canChange={true} />
 							{#if datum.x.refId >= 0}
 								<button
@@ -958,7 +959,7 @@
 							{/if}
 						</div>
 						<div class="y-select">
-							<ControlInput label="values (phase column)"></ControlInput>
+							<ControlInput label="Values (phase column)"></ControlInput>
 							<Column col={datum.y} canChange={true} />
 						</div>
 						{#if datum.timeWired}

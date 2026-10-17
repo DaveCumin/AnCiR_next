@@ -400,7 +400,7 @@
 	<!-- Type-specific parameters -->
 	{#if p.args.smootherType === 'whittaker'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Lambda (Smoothing)">
+			<ControlInput label="Lambda (smoothing)">
 				<NumberWithUnits
 					step="10"
 					min={1}
@@ -421,7 +421,7 @@
 		</div>
 	{:else if p.args.smootherType === 'savitzky'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Window Size">
+			<ControlInput label="Window size">
 				<NumberWithUnits
 					step="2"
 					min={3}
@@ -430,7 +430,7 @@
 					onInput={() => getSmoothedData()}
 				/>
 			</ControlInput>
-			<ControlInput label="Poly Order">
+			<ControlInput label="Polynomial order">
 				<NumberWithUnits
 					step="1"
 					min={1}
@@ -454,7 +454,7 @@
 		</div>
 	{:else if p.args.smootherType === 'moving'}
 		<div class="control-input-horizontal">
-			<ControlInput label="Window Size">
+			<ControlInput label="Window size">
 				<NumberWithUnits
 					step="1"
 					min={3}

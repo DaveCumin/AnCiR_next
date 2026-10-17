@@ -13,6 +13,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import SeriesBlockHeader from '$lib/components/plotbits/SeriesBlockHeader.svelte';
 	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
+	import BlockAdd from '$lib/components/plotbits/BlockAdd.svelte';
 	import { seriesDisplayLabel } from '$lib/components/plotbits/helpers/seriesLabel.js';
 	import PhaseMarker, { PhaseMarkerClass } from './PhaseMarker.svelte';
 	import LightBand, { LightBandClass } from './LightBand.svelte';
@@ -52,7 +53,10 @@
 	} from '$lib/plots/Actogram/rowLabels.js';
 
 	export const Actogram_defaultDataInputs = ['time', 'values'];
-	export const Actogram_controlHeaders = ['Properties', 'Data', 'Annotations'];
+	// Overlays: everything drawn over the rows (light bands, annotations, marker rules and each
+	// series' markers), in one tab named as on the other plots (UI-12). The series themselves
+	// (columns, colour, visibility) stay on Data.
+	export const Actogram_controlHeaders = ['Properties', 'Data', 'Overlays'];
 
 	function getNdataByPeriods(dataIN, from, to, period) {
 		const byPeriod = [];
@@ -546,21 +550,21 @@
 			periodHrs: { group: 'Time', label: 'Period (h)', step: 0.1 },
 			doublePlot: { group: 'Time', label: 'Repeat' },
 			ylimsOption: {
-				group: 'Y-lims',
+				group: 'Y-axis',
 				label: 'Scale Y-axis',
 				input: 'select',
 				options: ['overall', 'byperiod', 'manual']
 			},
-			ylimsIN: { group: 'Y-lims', _children: { 0: { label: 'Y min' }, 1: { label: 'Y max' } } },
+			ylimsIN: { group: 'Y-axis', _children: { 0: { label: 'Y min' }, 1: { label: 'Y max' } } },
 			// The row labels sit with the Y-lims controls rather than with Padding: they are a
 			// statement about the y axis (what each row IS), not about the space around the plot.
 			rowLabels: {
-				group: 'Y-lims',
+				group: 'Y-axis',
 				label: 'Row labels',
 				input: 'select',
 				options: ['none', 'period', 'date']
 			},
-			dateFormat: { group: 'Y-lims', label: 'Date format' }
+			dateFormat: { group: 'Y-axis', label: 'Date format' }
 		};
 
 		parentBox = $state();
@@ -1219,7 +1223,7 @@
 			</div>
 
 			<div class="control-input-vertical">
-				<ControlInput label="Space Between">
+				<ControlInput label="Space between">
 					<NumberWithUnits bind:value={theData.spaceBetween} />
 				</ControlInput>
 			</div>
@@ -1232,14 +1236,14 @@
 				<p>Display</p>
 			</div>
 			<div class="control-input-vertical">
-				<ControlInput label="Render as:">
+				<ControlInput label="Render as">
 					<select bind:value={theData.renderMode}>
 						<option value="bars">Bars</option>
 						<option value="heatmap">Heatmap</option>
 					</select>
 				</ControlInput>
 				{#if theData.renderMode === 'heatmap'}
-					<ControlInput label="Colormap:">
+					<ControlInput label="Colormap">
 						<select bind:value={theData.colormap}>
 							{#each Object.entries(COLORMAP_LABELS) as [key, label] (key)}
 								<option value={key}>{label}</option>
@@ -1258,12 +1262,6 @@
 			canPlaceOutside={theData.legendLayout.canPlaceOutside}
 			which="controls"
 		/>
-
-		<div class="div-line"></div>
-
-		<div class="control-component">
-			<LightBand bind:bands={theData.lightBands} which="controls" />
-		</div>
 
 		<div class="div-line"></div>
 
@@ -1308,7 +1306,7 @@
 			</div>
 			<!-- A plain write, recorded as one step by the panel (plots/plotEditScope.js) on
 			     commit, so a typed count previews and Escape puts it back. -->
-			<ControlInput label="Nticks">
+			<ControlInput label="N ticks">
 				<NumberWithUnits value={theData.xAxis.nticks} onInput={(v) => (theData.xAxis.nticks = v)} />
 			</ControlInput>
 		</div>
@@ -1317,10 +1315,10 @@
 
 		<div class="control-component">
 			<div class="control-component-title">
-				<p>Y-lims</p>
+				<p>Y-axis</p>
 			</div>
 			<div class="control-input-vertical">
-				<ControlInput label="Scale Y-axis:">
+				<ControlInput label="Scale Y-axis">
 					<select bind:value={theData.ylimsOption}>
 						<option value="overall">Overall</option>
 						<option value="byperiod">By Periods</option>
@@ -1330,7 +1328,7 @@
 			</div>
 
 			<div class="control-input-vertical">
-				<ControlInput label="Row labels:">
+				<ControlInput label="Row labels">
 					<select bind:value={theData.rowLabels}>
 						<option value="none">None</option>
 						<option value="period">Period number</option>
@@ -1339,7 +1337,7 @@
 				</ControlInput>
 
 				{#if theData.rowLabels === 'date'}
-					<ControlInput label="Date format:">
+					<ControlInput label="Date format">
 						<input type="text" bind:value={theData.dateFormat} placeholder={DEFAULT_DATE_FORMAT} />
 					</ControlInput>
 				{/if}
@@ -1370,46 +1368,8 @@
 			</div>
 		{/if}
 	{:else if appState.currentControlTab === 'data'}
-		<!-- MARKER RULES: one definition, projected onto every series (markerRules.svelte.js).
-		     At the top of the Data tab, above the series it applies to. -->
-		<div class="control-component marker-rules">
-			<div class="control-data-title with-icon">
-				<div style="display: flex; align-items: center; justify-content: flex-start; margin: 0;">
-					<!-- Decoration beside the heading, not a control: it did nothing as a button. -->
-					<span class="decor-icon" aria-hidden="true">
-						<Icon name="pin" width={18} height={18} className="control-component-title-icon" />
-					</span>
-					<p>Marker rules</p>
-				</div>
-				<div class="control-component-title-icons">
-					<button
-						class="icon"
-						aria-label="Add a marker rule"
-						onclick={() => addRuleRecorded(theData)}
-						{@attach attachTooltip('Add a rule: the same markers and line on every series')}
-					>
-						<Icon name="add" width={16} height={16} className="control-component-title-icon" />
-					</button>
-				</div>
-			</div>
-			{#if theData.markerRules.length === 0}
-				<p class="marker-rules-note">
-					A rule puts the same markers and line on all {theData.data.length}
-					{theData.parentBox?.facet ? 'panels' : 'series'}. Add one with +, or use "Make rule" on a
-					series' own block.
-				</p>
-			{/if}
-			{#each theData.markerRules as rule (rule.id)}
-				<MarkerRuleBlock
-					inner={theData}
-					{rule}
-					unitLabel={theData.parentBox?.facet ? 'panels' : 'series'}
-				/>
-			{/each}
-		</div>
-		<div class="div-line"></div>
-
 		<DataAddHeader
+			count={theData.data.length}
 			label={theData.parentBox?.facet ? 'Panels' : 'Series'}
 			ariaLabel={theData.parentBox?.facet ? 'Add a panel' : 'Add a series'}
 			tooltip={theData.parentBox?.facet ? 'Add a panel' : 'Add a series'}
@@ -1431,6 +1391,7 @@
 						{#snippet icons()}
 							<button
 								class="icon"
+								aria-label={datum.draw ? 'Hide this data series' : 'Show this data series'}
 								onclick={(e) => {
 									e.stopPropagation();
 									datum.draw = !datum.draw;
@@ -1460,86 +1421,118 @@
 
 							<Column col={datum.y} canChange={true} />
 						</div>
-
-						<div class="control-data-title with-icon">
-							<div
-								style="display: flex; align-items: center; justify-content: flex-start; margin: 0;"
-							>
-								<span class="decor-icon" aria-hidden="true">
-									<Icon
-										name="pin"
-										width={18}
-										height={18}
-										className="control-component-title-icon"
-									/>
-								</span>
-								<p>Markers and lines</p>
-							</div>
-
-							<div class="control-component-title-icons">
-								<button
-									class="icon"
-									aria-label="Add markers"
-									onclick={() => datum.addMarker()}
-									{@attach attachTooltip('Add markers: click the plot to place them by hand')}
-								>
-									<Icon
-										name="add"
-										width={16}
-										height={16}
-										className="control-component-title-icon"
-									/>
-								</button>
-							</div>
-						</div>
-
-						<!-- Rule instances first (settings from the rule, per-day ticks editable), then
-						     this series' own blocks. -->
-						{#each datum.ruleInstances as inst (inst.ruleId)}
-							<div class="markerBlock">
-								<PhaseMarker {which} marker={inst} />
-							</div>
-						{/each}
-						{#each datum.phaseMarkers as marker (marker.id)}
-							<div
-								class="markerBlock"
-								animate:flip={{ duration: 500 }}
-								in:slide={{ duration: 500, axis: 'y' }}
-								out:slide={{ duration: 500, axis: 'y' }}
-							>
-								<PhaseMarker {which} {marker} />
-							</div>
-						{/each}
 					</div>
 
 					<div class="div-line"></div>
 				</div>
 			{/each}
 		</div>
+	{:else if appState.currentControlTab === 'overlays'}
+		<!-- LIGHT BANDS: the light/dark bar above the rows. -->
+		<div class="control-component">
+			<LightBand bind:bands={theData.lightBands} which="controls" />
+		</div>
 
-		<!-- <div>
-			<button class="icon control-block-add" onclick={async () => await addData()}>
-				<Icon name="plus" width={16} height={16} className="static-icon" />
-			</button>
-		</div> -->
-	{:else if appState.currentControlTab === 'annotations'}
-		{#each theData.annotations as annotation (annotation.id)}
-			<div
-				class="annotation-container"
-				animate:flip={{ duration: 500 }}
-				in:slide={{ duration: 500, axis: 'y' }}
-				out:slide={{ duration: 500, axis: 'y' }}
-			>
-				<Annotation {which} {annotation} />
-				<div class="div-line"></div>
+		<div class="div-line"></div>
+
+		<!-- ANNOTATIONS: shaded time spans on the rows. -->
+		<div class="control-component">
+			<div class="control-component-title">
+				<p>Annotations</p>
+			</div>
+			<BlockAdd
+				actions={[
+					{
+						label: 'Add annotation',
+						ariaLabel: 'Add an annotation',
+						tooltip: 'Add an annotation: a shaded time span on the rows',
+						onadd: () => theData.addAnnotation()
+					}
+				]}
+				count={theData.annotations.length}
+				empty="No annotations yet"
+			/>
+			{#each theData.annotations as annotation, i (annotation.id)}
+				<div
+					class="annotation-container"
+					animate:flip={{ duration: 500 }}
+					in:slide={{ duration: 500, axis: 'y' }}
+					out:slide={{ duration: 500, axis: 'y' }}
+				>
+					<Annotation {which} {annotation} />
+					{#if i < theData.annotations.length - 1}
+						<div class="div-line"></div>
+					{/if}
+				</div>
+			{/each}
+		</div>
+
+		<div class="div-line"></div>
+
+		<!-- MARKER RULES: one definition, projected onto every series (markerRules.svelte.js),
+		     above the per-series markers it applies to. -->
+		<div class="control-component marker-rules">
+			<div class="control-component-title">
+				<p>Marker rules</p>
+			</div>
+			<BlockAdd
+				actions={[
+					{
+						label: 'Add rule',
+						ariaLabel: 'Add a marker rule',
+						tooltip: 'Add a rule: the same markers and line on every series',
+						onadd: () => addRuleRecorded(theData)
+					}
+				]}
+				count={theData.markerRules.length}
+				empty={`A rule puts the same markers and line on all ${theData.data.length} ${theData.parentBox?.facet ? 'panels' : 'series'}; "Make rule" on a block below makes one too`}
+			/>
+			{#each theData.markerRules as rule (rule.id)}
+				<MarkerRuleBlock
+					inner={theData}
+					{rule}
+					unitLabel={theData.parentBox?.facet ? 'panels' : 'series'}
+				/>
+			{/each}
+		</div>
+
+		<!-- MARKERS AND LINES, per series: rule instances first (settings from the rule, per-day
+		     ticks editable), then the series' own blocks. -->
+		{#each theData.data as datum (datum.x.id + '-' + datum.y.id)}
+			<div class="div-line"></div>
+			<div class="control-component markers-section">
+				<div class="control-component-title">
+					<p>Markers and lines on {datum.displayLabel}</p>
+				</div>
+				<BlockAdd
+					actions={[
+						{
+							label: 'Add markers and line',
+							ariaLabel: 'Add markers and a line',
+							tooltip: 'Add a block of onset, offset or hand-placed markers with their fitted line',
+							onadd: () => datum.addMarker()
+						}
+					]}
+					count={datum.ruleInstances.length + datum.phaseMarkers.length}
+					empty="No markers on this series yet"
+				/>
+				{#each datum.ruleInstances as inst (inst.ruleId)}
+					<div class="markerBlock">
+						<PhaseMarker {which} marker={inst} />
+					</div>
+				{/each}
+				{#each datum.phaseMarkers as marker (marker.id)}
+					<div
+						class="markerBlock"
+						animate:flip={{ duration: 500 }}
+						in:slide={{ duration: 500, axis: 'y' }}
+						out:slide={{ duration: 500, axis: 'y' }}
+					>
+						<PhaseMarker {which} {marker} />
+					</div>
+				{/each}
 			</div>
 		{/each}
-
-		<div>
-			<button class="icon control-block-add" onclick={() => theData.addAnnotation()}>
-				<Icon name="plus" width={16} height={16} className="static-icon" />
-			</button>
-		</div>
 	{/if}
 {/snippet}
 
@@ -1801,10 +1794,9 @@
 	/* The parent `.control-component` uses `align-items: flex-start`, so an
 	   unstretched child shrinks-to-fit its widest content. When a data series has
 	   wide content (long column names, previews), `.dataBlock` grew wider than the
-	   control panel and the right-aligned "add marker" (+) button was pushed past
-	   the panel's `overflow-x: hidden` clip edge — hidden until the panel was
-	   dragged wider. Bounding the block to the panel width keeps the +
-	   button in view at any panel width. */
+	   control panel and its right-aligned row actions were pushed past the panel's
+	   `overflow-x: hidden` clip edge. Bounding the block to the panel width keeps
+	   them in view at any panel width. */
 	.dataBlock,
 	.markerBlock {
 		width: 100%;
@@ -1813,13 +1805,9 @@
 		box-sizing: border-box;
 	}
 
-	/* Title action icons (e.g. the add-marker +) must never be the element that
-	   shrinks/clips; let the label beside them absorb any squeeze instead. */
-	.control-component-title-icons {
-		flex-shrink: 0;
-	}
-
-	.marker-rules {
+	.marker-rules,
+	.markers-section,
+	.annotation-container {
 		width: 100%;
 	}
 
@@ -1830,18 +1818,6 @@
 		gap: var(--space-1);
 	}
 
-	.marker-rules-note {
-		margin: 0 0 var(--space-2);
-		font-size: var(--font-xs);
-		color: var(--color-lightness-45);
-	}
-
-	/* The heading's pin icon: laid out as the icon buttons beside it are, but not a control. */
-	.decor-icon {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-	}
 	.actogram-refused {
 		box-sizing: border-box;
 		height: 100%;

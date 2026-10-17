@@ -170,7 +170,7 @@
 			/>
 		</div>
 		{#if style.widthPreset === 'custom'}
-			<ControlInput label="or exact mm">
+			<ControlInput label="Exact width (mm)">
 				<NumberWithUnits
 					bind:value={style.widthMm}
 					min={1}

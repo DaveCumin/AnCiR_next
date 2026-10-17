@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	// One marker rule's controls in the actogram's Data tab (plan 2026-09-30 actogram marker
+	// One marker rule's controls in the actogram's Overlays tab (plan 2026-09-30 actogram marker
 	// rules, 3.1). Every setting commits through setRuleSettings, i.e. the in-place
 	// `setMarkerRule` op: one committed value is one undo step, nothing is rebuilt, and only
 	// this rule's instances recompute. Numbers commit on `change`, not `input`.
@@ -142,7 +142,7 @@
 		<p class="rule-note">{TEMPLATE_METHOD_NOTE}</p>
 	{:else}
 		<p class="rule-note">
-			Place points on each series with "Add markers" under that series' Markers and lines.
+			Place points on each series with "Add markers" under that series' markers.
 		</p>
 	{/if}
 

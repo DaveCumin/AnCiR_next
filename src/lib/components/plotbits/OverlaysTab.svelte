@@ -1,5 +1,6 @@
 <script>
-	// The Overlays tab of a host plot (overlays plan 2026-10-15): the `+ Line` / `+ Band` row
+	// The Overlays tab of a host plot (overlays plan 2026-10-15): the `+ Add line` / `+ Add band` row
+	// (the shared BlockAdd row, with a one-line empty state)
 	// and one block per overlay. A button is shown only when the host allows at least one form
 	// of its kind (overlayCapabilities). Each host keeps the literal
 	// `{:else if appState.currentControlTab === 'overlays'}` branch that mounts this
@@ -9,6 +10,7 @@
 	import { tick } from 'svelte';
 	import { dataSettingsScrollTo } from '$lib/components/views/dataSettingsScroll.js';
 	import Overlay from './Overlay.svelte';
+	import BlockAdd from './BlockAdd.svelte';
 	import { allowedForms, capabilitiesOf } from './overlaySpec.js';
 
 	let {
@@ -32,26 +34,30 @@
 </script>
 
 <div id="overlaySettings">
-	<div class="overlay-add">
-		{#if lineForms.length > 0}
-			<button
-				class="btn-add"
-				title={`Add a reference line (${either(lineForms)})`}
-				onclick={() => add('line')}
-			>
-				+ Line
-			</button>
-		{/if}
-		{#if bandForms.length > 0}
-			<button
-				class="btn-add"
-				title={`Add a shaded band (${either(bandForms)})`}
-				onclick={() => add('band')}
-			>
-				+ Band
-			</button>
-		{/if}
-	</div>
+	<BlockAdd
+		actions={[
+			...(lineForms.length > 0
+				? [
+						{
+							label: 'Add line',
+							tooltip: `Add a reference line (${either(lineForms)})`,
+							onadd: () => add('line')
+						}
+					]
+				: []),
+			...(bandForms.length > 0
+				? [
+						{
+							label: 'Add band',
+							tooltip: `Add a shaded band (${either(bandForms)})`,
+							onadd: () => add('band')
+						}
+					]
+				: [])
+		]}
+		count={inner.overlays.length}
+		empty="No reference lines or bands yet"
+	/>
 
 	{#each inner.overlays as overlay (overlay.id)}
 		<div
@@ -65,11 +71,3 @@
 		</div>
 	{/each}
 </div>
-
-<style>
-	.overlay-add {
-		display: flex;
-		gap: var(--space-3);
-		margin-bottom: var(--space-4);
-	}
-</style>

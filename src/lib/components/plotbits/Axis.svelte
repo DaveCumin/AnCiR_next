@@ -105,7 +105,12 @@
 		// The title drawn while the stored label is empty, and the Label box's placeholder. A
 		// plot whose natural title depends on its content (the periodogram names its statistic
 		// per method) passes it, so an empty label tracks the content and a typed one wins.
-		defaultLabel = ''
+		defaultLabel = '',
+		// Controls panel only: buttons for the section title (a reset), and the plot's own
+		// controls for this axis (limits, log scale, step), rendered in the SAME section so an
+		// axis has one section, not an "Axis" and an "Axis controls" pair (UI-22).
+		tools = null,
+		children = null
 	} = $props();
 
 	// The Manual ticks text box. Kept as typed (so "0, 6," is not rewritten mid-entry) and
@@ -413,6 +418,11 @@
 	<div class="control-component">
 		<div class="control-component-title">
 			<p>{title}</p>
+			{#if tools}
+				<div class="control-component-title-icons">
+					{@render tools()}
+				</div>
+			{/if}
 		</div>
 		<div class="control-input-vertical">
 			<ControlInput label="Label">
@@ -459,7 +469,7 @@
 						: 'No values yet, so the automatic ticks are shown.'}
 				</p>
 			{:else}
-				<ControlInput label="N Ticks">
+				<ControlInput label="N ticks">
 					<!-- Previews as typed; one step on commit (a run of spinner clicks merges). -->
 					<!-- display: contents: only there to catch the commit and Escape; no box. -->
 					<span
@@ -491,6 +501,7 @@
 				<span class="ci-label">Grid</span>
 			</label>
 		</div>
+		{@render children?.()}
 	</div>
 {/snippet}
 

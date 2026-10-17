@@ -1090,7 +1090,7 @@
 <div style="display: block;">
 	<div class="section-row">
 		<div class="tableProcess-label">
-			<span>Group Comparison</span>
+			<span>Group comparison</span>
 		</div>
 	</div>
 

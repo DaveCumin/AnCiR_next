@@ -46,7 +46,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
 	history.clear();
-	appState.currentControlTab = 'data';
+	appState.currentControlTab = 'overlays';
 });
 afterEach(() => cleanup());
 

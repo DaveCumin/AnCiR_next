@@ -19,7 +19,6 @@ https://svelte.dev/playground/modal?version=5.33.7
 	import { fade } from 'svelte/transition';
 
 	let dialog = $state();
-	let closeBtnLeft = $derived(dialog?.getBoundingClientRect().right);
 
 	$effect(() => {
 		if (showModal && !dialog?.open) {
@@ -45,7 +44,7 @@ https://svelte.dev/playground/modal?version=5.33.7
 		     and zooms on wheel, unmounting the modal mid-interaction). A modal owns its
 		     input; stop them here. -->
 		<dialog
-			style="width: {width}; max-height: {max_height}"
+			style="width: calc({width} + 2em); max-height: calc({max_height} + 2em)"
 			bind:this={dialog}
 			onclose={() => {
 				// The browser closed the dialog itself (Escape), so close() never ran and the
@@ -65,18 +64,23 @@ https://svelte.dev/playground/modal?version=5.33.7
 			onwheel={(e) => e.stopPropagation()}
 			transition:fade={{ duration: 360 }}
 		>
+			<!-- The close button sits in its own bar above the scrolling body, so a long dialog
+			     scrolls BELOW it and never under it (it used to be position: fixed over the
+			     content, covering whatever scrolled past). -->
 			{#if showCloseButton}
-				<div class="modalCloseBtn" style="position:fixed; left:{closeBtnLeft - 50}px;">
-					<button aria-label="Close" onclick={() => close()}>
+				<div class="modal-topbar">
+					<button class="modal-close" aria-label="Close" onclick={() => close()}>
 						<Icon name="close" width={16} height={16} className="close" />
 					</button>
 				</div>
 			{/if}
 
-			<div class="dialog-container">
-				{@render header?.()}
-				{@render children?.()}
-				{@render button?.()}
+			<div class="modal-body" class:no-topbar={!showCloseButton}>
+				<div class="dialog-container">
+					{@render header?.()}
+					{@render children?.()}
+					{@render button?.()}
+				</div>
 			</div>
 		</dialog>
 	</div>
@@ -87,6 +91,31 @@ https://svelte.dev/playground/modal?version=5.33.7
 		border-radius: var(--radius-lg);
 		border: 1px solid var(--color-lightness-85);
 		box-shadow: var(--shadow-3);
+		/* The body scrolls, not the dialog: the top bar stays put above it. The 1em side
+		   padding moved onto the body, so the inline width and max-height add it back (same outer and
+		   content widths as before). */
+		padding: 0;
+		overflow: hidden;
+	}
+	dialog[open] {
+		display: flex;
+		flex-direction: column;
+	}
+	.modal-topbar {
+		flex: none;
+		display: flex;
+		justify-content: flex-end;
+		padding: var(--space-3) var(--space-3) 0;
+	}
+	.modal-body {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow: auto;
+		padding: 0 1em 1em;
+	}
+	/* Without the bar, the content starts where it always did (1em less the old 5px pull-up). */
+	.modal-body.no-topbar {
+		padding-top: calc(1em - 5px);
 	}
 	/* A modal owns its pointer events, whatever its host does with them. The plot
 	   toolbar mounts its Save dialog inside a `pointer-events: none` host (so the
@@ -113,35 +142,20 @@ https://svelte.dev/playground/modal?version=5.33.7
 	}
 
 	.dialog-container {
-		margin-left: 20px;
-		margin-right: 20px;
-		margin-top: -5px;
-		margin-bottom: 20px;
+		margin: 0 20px 20px;
 	}
 
-	button {
-		background-color: transparent;
-		border: none;
-		padding: 0;
-		border-radius: 0;
+	.modal-close {
 		appearance: none;
 		display: flex;
 		justify-content: center;
 		align-items: center;
-
-		margin-left: -0.2em;
-		margin-top: -0.2em;
-	}
-
-	/* The close button stays put while a long dialog scrolls under it; a card-coloured
-	   disc keeps it legible and stops it reading as part of the field beneath. */
-	.modalCloseBtn {
-		z-index: 1;
-	}
-	.modalCloseBtn button {
 		width: 24px;
 		height: 24px;
+		padding: 0;
+		border: none;
 		border-radius: 50%;
-		background-color: var(--surface-card);
+		background-color: transparent;
+		cursor: pointer;
 	}
 </style>

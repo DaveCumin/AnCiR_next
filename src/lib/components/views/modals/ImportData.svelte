@@ -3703,7 +3703,7 @@
 			     .import-container (further down, and shared with LoadSessionModal) contains
 			     neither. -->
 			<div class="heading" data-tour="import-data">
-				<h2>Import Data</h2>
+				<h2>Import data</h2>
 				<div class="source-tabs" role="tablist">
 					<button
 						type="button"

@@ -386,7 +386,9 @@
 	if (p.args.permutationStatistic === undefined)
 		p.args.permutationStatistic = PERMUTATION_DEFAULTS.permutationStatistic;
 
-	let dlData = $state(null);
+	// Undefined until computed or restored: the memo mirror below skips undefined, so a fresh
+	// instance does not overwrite the cached result before onMount restores it.
+	let dlData = $state();
 
 	// One entry per fitted y series, for the permutation readout under the test's controls.
 	let permEntries = $derived(

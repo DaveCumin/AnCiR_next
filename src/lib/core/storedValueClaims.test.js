@@ -13,13 +13,15 @@ import {
 	storedValueKey,
 	storedValueNameForKey,
 	storedValueHolderCount,
-	resetStoredValueClaimsForTest
+	resetStoredValueClaimsForTest,
+	sweepStoredValueOwners
 } from './storedValueClaims.js';
 
 beforeEach(() => {
 	resetStoredValueClaimsForTest();
 	for (const k of Object.keys(core.storedValues)) delete core.storedValues[k];
 	core.tableProcesses.length = 0;
+	core.plots.length = 0;
 });
 
 const KEY = 'tp:2|cosinor_rmse_y';
@@ -141,6 +143,68 @@ describe('loading saved sessions', () => {
 		core.storedValues.x = { source: '', key: KEY, staticValue: 1 };
 		releaseStoredValue(KEY, a);
 		expect(core.storedValues.x).toEqual({ source: '', key: KEY, staticValue: 1 });
+	});
+});
+
+// REPORTED 2026-10-17: selecting a Double Logistic node (or switching view, or collapsing it)
+// unmounted every one of its buttons, which deleted its stored values and broke every formula
+// using them. The value belongs to the NODE: it stays while the node exists, whether or not a
+// button is on screen, and goes when the node is deleted.
+describe('the node owns its stored values', () => {
+	it('every button unmounting keeps the value while the node exists', () => {
+		core.tableProcesses.push({ id: 2, name: 'Cosinor', args: {} });
+		const a = {};
+		let v = 1.5;
+		claimStoredValue({ key: KEY, base: 'x', getter: () => v, token: a });
+		renameStoredValue('x', 'my_rmse');
+		releaseStoredValue(KEY, a);
+		expect(Object.keys(core.storedValues)).toEqual(['my_rmse']);
+		expect(getStoredValue('my_rmse')).toBe(1.5);
+		// The saved copy carries the value and the key, so a reload claims it as before.
+		const out = JSON.parse(outputCoreAsJson());
+		expect(out.storedValues.my_rmse).toEqual({ source: '', key: KEY, staticValue: 1.5 });
+		v = 2;
+		// A button mounting again takes the same entry (name kept) with its own getter.
+		const n = claimStoredValue({ key: KEY, base: 'x', getter: () => 7, token: {} });
+		expect(n).toBe('my_rmse');
+		expect(getStoredValue('my_rmse')).toBe(7);
+		expect(Object.keys(core.storedValues)).toEqual(['my_rmse']);
+	});
+
+	it('a plot owns its values the same way', () => {
+		core.plots.push({ id: 5 });
+		const a = {};
+		claimStoredValue({ key: 'plot:5|peak', base: 'peak', getter: () => 24.1, token: a });
+		releaseStoredValue('plot:5|peak', a);
+		expect(getStoredValue('peak')).toBe(24.1);
+	});
+
+	it('deleting the node releases its values, held or not', () => {
+		core.tableProcesses.push({ id: 2, name: 'Cosinor', args: {} });
+		const a = {};
+		claimStoredValue({ key: KEY, base: 'x', getter: () => 1, token: a });
+		claimStoredValue({ key: 'tp:3|y', base: 'y', getter: () => 2, token: {} });
+		core.tableProcesses.push({ id: 3, name: 'Cosinor', args: {} });
+		releaseStoredValue(KEY, a);
+		expect(Object.keys(core.storedValues).sort()).toEqual(['x', 'y']);
+		core.tableProcesses.splice(0, 1); // node 2 deleted while none of its buttons is mounted
+		sweepStoredValueOwners();
+		expect(Object.keys(core.storedValues)).toEqual(['y']);
+	});
+
+	it('a button unmounting after its node was deleted removes the value at once', () => {
+		const a = {};
+		claimStoredValue({ key: KEY, base: 'x', getter: () => 1, token: a });
+		// node 2 is not in core: it was deleted, and its component unmounts after
+		releaseStoredValue(KEY, a);
+		expect(core.storedValues).toEqual({});
+	});
+
+	it('a snapshot restored by a session load is not swept while its node exists', () => {
+		core.tableProcesses.push({ id: 2, name: 'Cosinor', args: {} });
+		core.storedValues.x = { source: '', key: KEY, staticValue: 3 };
+		sweepStoredValueOwners();
+		expect(getStoredValue('x')).toBe(3);
 	});
 });
 

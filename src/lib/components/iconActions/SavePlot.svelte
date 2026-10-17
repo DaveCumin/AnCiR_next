@@ -621,8 +621,6 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		/* Room for the modal's close button, which is fixed at the top-right corner. */
-		padding-right: 2.5rem;
 	}
 
 	.save-dialog {

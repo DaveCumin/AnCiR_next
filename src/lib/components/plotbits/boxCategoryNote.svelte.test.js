@@ -33,7 +33,7 @@ describe('Box controls with category colouring active', () => {
 		expect(queryByText('Stroke')).toBeNull();
 		expect(queryByText('Fill')).toBeNull();
 		// The rest of the box controls (widths etc.) stay usable.
-		expect(queryByText('Box Width')).toBeTruthy();
+		expect(queryByText('Box width')).toBeTruthy();
 		expect(container.textContent).toContain('Median');
 	});
 

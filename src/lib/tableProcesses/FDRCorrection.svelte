@@ -114,7 +114,9 @@
 	let { p = $bindable() } = $props();
 
 	let mounted = $state(false);
-	let summary = $state({ nTested: 0, nSignificant: 0 });
+	// Undefined until computed or restored: the memo mirror below skips undefined, so a fresh
+	// instance does not overwrite the cached result before onMount restores it.
+	let summary = $state();
 	let warnings = $state([]);
 
 	let ownOutputIds = $derived(
@@ -225,7 +227,7 @@
 
 {#if p.args.xIN >= 0 && p.args.valid}
 	<p class="tp-hint">
-		{summary.nSignificant} of {summary.nTested} significant at alpha = {p.args.alpha}.
+		{summary?.nSignificant ?? 0} of {summary?.nTested ?? 0} significant at alpha = {p.args.alpha}.
 	</p>
 {/if}
 

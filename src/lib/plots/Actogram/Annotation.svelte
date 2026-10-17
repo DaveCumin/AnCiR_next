@@ -10,6 +10,7 @@
 	import DateTimeHrs from '$lib/components/inputs/DateTimeHrs.svelte';
 	import { escapeHtml } from '$lib/components/plotbits/helpers/tooltipHelpers.js';
 	import { commitObjectEdit } from '$lib/plots/plotEdits.js';
+	import Editable from '$lib/components/inputs/Editable.svelte';
 
 	let _annotationCounter = 0;
 
@@ -200,42 +201,26 @@
 </script>
 
 {#snippet controls(annotation)}
-	<div
-		class="control-component-title-icons"
-		style="
-    margin-bottom: -var(--space-6);
-    z-index: 9999;
-    margin-top: var(--space-2);
-"
-		{@attach tooltip('Remove this annotation')}
-	>
-		<button
-			class="icon"
-			onclick={() => deleteAnnotation(annotation.parentData.parentBox.id, annotation.id)}
-		>
-			<Icon name="trash" width={16} height={16} className="menu-icon" />
-		</button>
-	</div>
-	<div class="control-input-horizontal">
-		<ControlInput label="Name">
-			<!-- One undo step on commit (Enter or blur); Escape puts the name back. -->
-			<input
+	<!-- The block header, as every block in the panels: the name (one undo step on commit,
+	     Escape puts it back), then the row actions in the fixed order (colour, delete last). -->
+	<div class="annotation-block-header">
+		<p class="annotation-title" title={annotation.name}>
+			<Editable
 				value={annotation.name}
-				onchange={(e) => commitObjectEdit(annotation, 'name', e.currentTarget.value)}
-				onkeydown={(e) => {
-					if (e.key === 'Enter') e.currentTarget.blur();
-					else if (e.key === 'Escape') {
-						e.preventDefault();
-						e.stopPropagation();
-						e.currentTarget.value = annotation.name;
-						e.currentTarget.blur();
-					}
-				}}
+				onCommit={(final) => commitObjectEdit(annotation, 'name', final)}
+				placeholder="Annotation"
 			/>
-		</ControlInput>
-
-		<div class="control-color">
+		</p>
+		<div class="annotation-block-icons">
 			<ColourPicker bind:value={annotation.colour} />
+			<button
+				class="icon"
+				aria-label="Remove this annotation"
+				onclick={() => deleteAnnotation(annotation.parentData.parentBox.id, annotation.id)}
+				{@attach tooltip('Remove this annotation')}
+			>
+				<Icon name="trash" width={16} height={16} className="series-block-icon" />
+			</button>
 		</div>
 	</div>
 	<div class="control-input-horizontal">
@@ -262,12 +247,12 @@
 	</div>
 	<div class="control-input-horizontal">
 		<div class="control-input">
-			<p>Start Date/Time</p>
+			<p>Start date/time</p>
 			<DateTimeHrs value={annotation.startDateTime} onChange={changedStartDateTime} label="Start" />
 		</div>
 
 		<div class="control-input">
-			<p>End Date/Time</p>
+			<p>End date/time</p>
 			<DateTimeHrs value={annotation.endDateTime} onChange={changedEndDateTime} label="End" />
 		</div>
 	</div>
@@ -304,3 +289,36 @@
 {:else if which === 'controls'}
 	{@render controls(annotation)}
 {/if}
+
+<style>
+	.annotation-block-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+		font-weight: 600;
+		margin-bottom: var(--space-2);
+	}
+	.annotation-title {
+		margin: 0;
+		min-width: 0;
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.annotation-block-icons {
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
+		flex-shrink: 0;
+	}
+	button.icon {
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+	}
+</style>

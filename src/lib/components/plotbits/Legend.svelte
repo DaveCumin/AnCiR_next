@@ -477,7 +477,7 @@
 						<NumberWithUnits bind:value={legendData.customY} min={0} max={1} step={0.01} />
 					</ControlInput>
 				{/if}
-				<ControlInput label="Font Size">
+				<ControlInput label="Font size">
 					<NumberWithUnits
 						bind:value={legendSizeInput}
 						min={4}

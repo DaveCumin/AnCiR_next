@@ -178,7 +178,9 @@
 		}
 	});
 
-	let result = $state([]);
+	// Undefined until computed or restored: the memo mirror above skips undefined, so a fresh
+	// instance does not overwrite the cached result before onMount restores it.
+	let result = $state();
 	let formulaError = $state('');
 
 	// The seed control only appears once the formula draws (random()).
@@ -761,9 +763,9 @@
 	{/if}
 
 	{#if p.args.valid && p.args.out.result == -1}
-		{@const totalRows = result.length}
+		{@const totalRows = result?.length ?? 0}
 		<p>Preview:</p>
-		<Table headers={['Result']} data={[result.slice(previewStart - 1, previewStart + 5)]} />
+		<Table headers={['Result']} data={[(result ?? []).slice(previewStart - 1, previewStart + 5)]} />
 		<p>
 			Row <NumberWithUnits
 				min={1}

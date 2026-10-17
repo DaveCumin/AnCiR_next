@@ -601,14 +601,14 @@ describe.each(Object.keys(HOSTS))('%s as an overlay host', (type) => {
 		});
 	}
 
-	it('the Overlays tab offers + Line and + Band and adds overlays in the default forms', async () => {
+	it('the Overlays tab offers + Add line and + Add band and adds overlays in the default forms', async () => {
 		const plot = makePlot(type);
 		appState.currentControlTab = 'overlays';
 		const { getByText, container } = render(H.Component, {
 			props: { theData: plot.plot, which: 'controls' }
 		});
-		await fireEvent.click(getByText('+ Line'));
-		await fireEvent.click(getByText('+ Band'));
+		await fireEvent.click(getByText('+ Add line'));
+		await fireEvent.click(getByText('+ Add band'));
 		expect(plot.plot.overlays.map((o) => [o.kind, o.form])).toEqual([
 			['line', LINE],
 			['band', BAND]

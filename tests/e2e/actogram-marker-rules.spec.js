@@ -48,14 +48,15 @@ async function load(page, url) {
 const headerOf = (page, id) =>
 	page.locator(`section.draggable:has(svg[id="plot${id}"]) .plot-header`).first();
 
-async function openData(page, plotId) {
+// Marker rules and each series' markers live on the Overlays tab (UI-12; Data until v82.23).
+async function openOverlays(page, plotId) {
 	// Click the header's right end: a demo's note card can overlap its left end.
 	const header = headerOf(page, plotId);
 	const box = await header.boundingBox();
 	await header.click({ position: { x: box.width - 70, y: box.height / 2 } });
 	await page.evaluate(() => {
 		window.__appState.showControlPanel = true;
-		window.__appState.currentControlTab = 'data';
+		window.__appState.currentControlTab = 'overlays';
 	});
 	await page.waitForTimeout(700);
 }
@@ -181,7 +182,7 @@ test.describe('actogram marker rules', () => {
 		const errors = [];
 		page.on('pageerror', (e) => errors.push(String(e)));
 		await load(page, REST);
-		await openData(page, 0);
+		await openOverlays(page, 0);
 		const depth0 = await undoDepth(page);
 
 		// 1. Add a rule: it appears on BOTH series, with the pinned numbers.
@@ -330,7 +331,7 @@ test.describe('actogram marker rules', () => {
 			const errors = [];
 			page.on('pageerror', (e) => errors.push(String(e)));
 			await load(page, `/sessions/demos/${demo.file}`);
-			await openData(page, demo.id);
+			await openOverlays(page, demo.id);
 			await page.click('[aria-label="Add a marker rule"]');
 			await page.waitForTimeout(600);
 			let s = await state(page, demo.id);
@@ -361,7 +362,7 @@ test.describe('actogram marker rules', () => {
 			return m.panelsFor(window.__core.plots.find((p) => p.id === 0)).map((p) => p.id);
 		});
 		expect(panelIds).toHaveLength(2);
-		await openData(page, panelIds[0]);
+		await openOverlays(page, panelIds[0]);
 		await page.click('[aria-label="Add a marker rule"]');
 		await page.waitForTimeout(1200);
 		await expect(page.locator('.rule-block .rule-note').first()).toHaveText(
@@ -419,7 +420,7 @@ test.describe('actogram marker rules', () => {
 		const errors = [];
 		page.on('pageerror', (e) => errors.push(String(e)));
 		await load(page, REST);
-		await openData(page, 0);
+		await openOverlays(page, 0);
 		await page.click('[aria-label="Add a marker rule"]');
 		await page.waitForTimeout(800);
 
@@ -462,7 +463,7 @@ test.describe('actogram marker rules', () => {
 		// A rule edit moves the downstream mean (the threshold changes both series' onsets).
 		await page.click('[data-testid=nav-workspace-view]');
 		await page.waitForTimeout(1200);
-		await openData(page, 0);
+		await openOverlays(page, 0);
 		const pct = page.locator('.rule-block .control-input-horizontal input').nth(2);
 		await pct.fill('80');
 		await pct.press('Tab');
@@ -501,7 +502,7 @@ test.describe('actogram marker rules', () => {
 		// the SAME column ids.
 		await page.click('[data-testid=nav-workspace-view]');
 		await page.waitForTimeout(1200);
-		await openData(page, 0);
+		await openOverlays(page, 0);
 		await page.click('[aria-label="Remove this rule"]');
 		await page.waitForTimeout(1000);
 		o = await outputs(page, 0);
@@ -553,7 +554,7 @@ test.describe('actogram marker rules', () => {
 		);
 		expect(legacyLeft).toEqual([]);
 
-		await openData(page, panelIds[0]);
+		await openOverlays(page, panelIds[0]);
 		await page.click('[aria-label="Add a marker rule"]');
 		await page.waitForTimeout(1500);
 		let o = await outputs(page, 0);

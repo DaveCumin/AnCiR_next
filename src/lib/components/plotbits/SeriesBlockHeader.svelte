@@ -21,10 +21,9 @@
 	    indicator on that block's top or bottom edge, since a tall block's header is
 	    too small a target and its bottom edge is the block's middle. Hidden on a
 	    single-series plot: nothing to reorder.
-	  - EXTRA ICONS: per-plot buttons (Actogram's eye toggle) render via the `icons`
-	    snippet after the trash button, keeping each plot's additions local to it.
-	    Plots with a colour picker in the header (Actogram) pass it via the `swatch`
-	    snippet, rendered before the title.
+	  - ROW ACTIONS, in the panels' one fixed order (UI-12): show/hide and other per-plot
+	    buttons (the `icons` snippet, Actogram's eye toggle), then the colour (the `swatch`
+	    snippet, Actogram's ColourPicker), then delete last.
 
 	A PASSIVE colour swatch (an inert dot showing the series' resolved colour) was
 	tried here and rejected (2026-09-14): it looked clickable but was not, and the
@@ -68,9 +67,9 @@
 		 *  (PairsPlot says "Variable 1"). Defaults to "Data N". */
 		fallback = null,
 		removeTooltip = 'Remove this data series',
-		/** an interactive colour control rendered before the title (Actogram's ColourPicker) */
+		/** an interactive colour control, rendered after `icons` and before delete (Actogram's ColourPicker) */
 		swatch = null,
-		/** extra per-plot buttons, rendered after the trash button */
+		/** per-plot buttons (show/hide first), rendered before the colour and delete */
 		icons = null
 	} = $props();
 
@@ -203,9 +202,6 @@
 				⠇
 			</button>
 		{/if}
-		{#if swatch}
-			{@render swatch()}
-		{/if}
 		<p class="series-title" title={columnTitle}>
 			{#if editable}
 				<Editable bind:value={datum.label} {placeholder} />
@@ -214,11 +210,21 @@
 			{/if}
 		</p>
 	</div>
+	<!-- Row actions in the panels' one fixed order (UI-12): show/hide, colour, others,
+	     delete last. -->
 	<div class="series-block-icons">
-		<button class="icon" title={removeTooltip} onclick={() => removeSeriesWithUndo(inner, index)}>
+		{@render icons?.()}
+		{#if swatch}
+			{@render swatch()}
+		{/if}
+		<button
+			class="icon"
+			title={removeTooltip}
+			aria-label={removeTooltip}
+			onclick={() => removeSeriesWithUndo(inner, index)}
+		>
 			<Icon name="trash" width={16} height={16} className="series-block-icon" />
 		</button>
-		{@render icons?.()}
 	</div>
 </div>
 

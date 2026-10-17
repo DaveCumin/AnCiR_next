@@ -29,9 +29,9 @@ function xAxisSelect(type, xValues) {
 	wrapper.plot = s;
 	s.addData({ x: { refId: mkCol(type, xValues) }, y: { refId: mkCol('number', [1, 2, 3]) } });
 	const { container } = render(Scatterplot, { props: { theData: s, which: 'controls' } });
-	// The x-axis block is the one titled "X-Axis".
+	// The x-axis block is the one titled "X-axis".
 	const block = [...container.querySelectorAll('.control-component')].find(
-		(b) => b.querySelector('.control-component-title p')?.textContent.trim() === 'X-Axis'
+		(b) => b.querySelector('.control-component-title p')?.textContent.trim() === 'X-axis'
 	);
 	expect(block).toBeTruthy();
 	return block.querySelector('select[aria-label="Tick placement"]');

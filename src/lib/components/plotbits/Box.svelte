@@ -381,11 +381,11 @@
 				</div>
 			{/if}
 			<div class="control-input-horizontal">
-				<ControlInput label="Stroke Width">
+				<ControlInput label="Stroke width">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={boxPlotData.strokeWidth} />
 				</ControlInput>
 				<div class="control-input">
-					<p>Stroke Style</p>
+					<p>Stroke style</p>
 					<div class="stroke-field" class:invalid={boxPlotData.stroke === -1}>
 						<AttributeSelect
 							value={boxPlotData.stroke}
@@ -411,10 +411,10 @@
 				</div>
 			</div>
 			<div class="control-input-horizontal">
-				<ControlInput label="Box Width">
+				<ControlInput label="Box width">
 					<NumberWithUnits step="0.1" min={0.1} max={1} bind:value={boxPlotData.boxWidth} />
 				</ControlInput>
-				<ControlInput label="Whisker Width">
+				<ControlInput label="Whisker width">
 					<NumberWithUnits step="0.1" min={0.1} max={1} bind:value={boxPlotData.whiskerWidth} />
 				</ControlInput>
 			</div>
@@ -423,13 +423,13 @@
 					<p>Median</p>
 					<ColourPicker bind:value={boxPlotData.medianColour} />
 				</div>
-				<ControlInput label="Median Width">
+				<ControlInput label="Median width">
 					<NumberWithUnits step="0.2" min={0.1} bind:value={boxPlotData.medianWidth} />
 				</ControlInput>
 			</div>
 			<div class="control-input-horizontal">
 				<div class="control-input">
-					<p>Outlier Method</p>
+					<p>Outlier method</p>
 					<AttributeSelect
 						bind:value={boxPlotData.outlierMethod}
 						options={boxplotOutlierMethodOptions}
@@ -437,21 +437,21 @@
 					/>
 				</div>
 				{#if boxPlotData.outlierMethod === 'iqr'}
-					<ControlInput label="IQR Multiplier">
+					<ControlInput label="IQR multiplier">
 						<NumberWithUnits step="0.1" min={0.1} max={5} bind:value={boxPlotData.iqrMultiplier} />
 					</ControlInput>
 				{:else if boxPlotData.outlierMethod === 'zscore'}
-					<ControlInput label="Z-Score Threshold">
+					<ControlInput label="Z-score threshold">
 						<NumberWithUnits step="0.1" min={1} max={10} bind:value={boxPlotData.zThreshold} />
 					</ControlInput>
 				{/if}
 			</div>
 			<div class="control-input-horizontal">
-				<ControlInput label="Show Outliers">
+				<ControlInput label="Show outliers">
 					<input type="checkbox" bind:checked={boxPlotData.showOutliers} />
 				</ControlInput>
 				{#if boxPlotData.showOutliers}
-					<ControlInput label="Outlier Size">
+					<ControlInput label="Outlier size">
 						<NumberWithUnits step="0.5" min={1} bind:value={boxPlotData.outlierSize} />
 					</ControlInput>
 				{/if}

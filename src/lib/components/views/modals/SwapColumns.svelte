@@ -31,7 +31,7 @@
 
 <Modal bind:showModal>
 	<div class="swap-header">
-		<h2>Swap Table</h2>
+		<h2>Swap table</h2>
 		<p>
 			Define column pairs to swap. All downstream processes, analyses, and plots will be rewired.
 		</p>

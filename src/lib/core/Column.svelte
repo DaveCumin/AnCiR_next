@@ -865,7 +865,7 @@
 
 			{#if timeFormatApplies}
 				<div class="control-input display time-format-row">
-					<p>Time Format</p>
+					<p>Time format</p>
 					{#if !canChange}
 						<input bind:value={col.timeFormat} />
 					{:else}

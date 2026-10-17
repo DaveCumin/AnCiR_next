@@ -506,6 +506,7 @@
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
+				count={theData.data.length}
 				label="Variables"
 				ariaLabel="Add a variable"
 				tooltip="Add a variable"

@@ -1244,28 +1244,29 @@
 
 		<div class="div-line"></div>
 
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>Y-Axis</p>
-				<div
-					class="control-component-title-icons"
+		<!-- One section per axis (UI-22): the Axis component's label, ticks and grid, with this
+		     plot's own limits, log scale and step inside the same section. -->
+		<Axis
+			axisData={theData.yAxis}
+			defaultLabel={theData.defaultYLabel}
+			which="controls"
+			title="Y-axis"
+		>
+			{#snippet tools()}
+				<button
+					class="icon"
+					type="button"
+					aria-label="Reset the power axis to auto range"
+					onclick={() => (theData.ylimsIN = [null, null])}
 					{@attach attachTooltip('Reset the power axis to auto range')}
 				>
-					<button
-						class="icon"
-						type="button"
-						aria-label="Reset the power axis to auto range"
-						onclick={() => (theData.ylimsIN = [null, null])}
-					>
-						<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
-					</button>
-				</div>
-			</div>
-
+					<Icon name="reset" width={14} height={14} className="control-component-title-icon" />
+				</button>
+			{/snippet}
 			<div class="control-input-vertical">
 				<label class="control-input-checkbox">
 					<input type="checkbox" bind:checked={theData.logScale} />
-					<span class="ci-label">Log Scale</span>
+					<span class="ci-label">Log scale</span>
 				</label>
 			</div>
 
@@ -1296,20 +1297,9 @@
 					/>
 				</ControlInput>
 			</div>
-		</div>
+		</Axis>
 
-		<Axis
-			axisData={theData.yAxis}
-			defaultLabel={theData.defaultYLabel}
-			which="controls"
-			title="Y-Axis Controls"
-		/>
-
-		<div class="control-component">
-			<div class="control-component-title">
-				<p>X-Axis</p>
-			</div>
-
+		<Axis axisData={theData.xAxis} which="controls" title="X-axis">
 			<div class="control-input-horizontal">
 				<ControlInput label="Min">
 					<NumberWithUnits
@@ -1334,18 +1324,17 @@
 			</div>
 
 			<div class="control-input-vertical">
-				<ControlInput label="Period Step">
+				<ControlInput label="Period step">
 					<NumberWithUnits min="0.01" step="0.01" bind:value={theData.periodSteps} />
 				</ControlInput>
 			</div>
-		</div>
-
-		<Axis axisData={theData.xAxis} which="controls" title="X-Axis Controls" />
+		</Axis>
 	{:else if appState.currentControlTab === 'overlays'}
 		<OverlaysTab inner={theData} />
 	{:else if appState.currentControlTab === 'data'}
 		<div id="dataSettings">
 			<DataAddHeader
+				count={theData.data.length}
 				onadd={async () => {
 					theData.addData({
 						x: null,
@@ -1392,7 +1381,7 @@
 						     Chi-squared has a significance level. -->
 						{#if datum.method === 'Chi-squared' || datum.method === 'Enright'}
 							<div class="control-input-horizontal">
-								<ControlInput label="Bin Size (h)">
+								<ControlInput label="Bin size (h)">
 									<input
 										type="number"
 										step="any"

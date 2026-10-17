@@ -118,6 +118,7 @@
 <script>
 	import ColourPicker from '$lib/components/inputs/ColourPicker.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import BlockAdd from '$lib/components/plotbits/BlockAdd.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 	let { bands = $bindable(), which } = $props();
 	let singleWidth = $derived.by(() => {
@@ -133,31 +134,36 @@
 
 {#snippet controls(bands)}
 	<div class="control-component-title">
-		<p>Bands</p>
+		<p>Light bands</p>
 		<div class="control-component-title-icons">
 			{#if bands.bands.length > 0}
 				<button
 					class="icon"
 					type="button"
-					aria-label="Swap the band columns"
+					aria-label="Swap the band colours"
 					onclick={() => bands.swapBandCols()}
-					{@attach tooltip('Swap the band columns')}
+					{@attach tooltip('Swap the band colours')}
 				>
 					<Icon name="swap" width={12} height={12} className="control-component-title-icon" />
 				</button>
 			{/if}
-			<button
-				class="icon"
-				type="button"
-				aria-label="Add a band"
-				onclick={() =>
-					bands.addBand({ col: bands.length % 2 === 0 ? '#000000' : '#ffffff', pc: 10 })}
-				{@attach tooltip('Add a band')}
-			>
-				<Icon name="add" width={16} height={16} className="control-component-title-icon" />
-			</button>
 		</div>
 	</div>
+
+	<BlockAdd
+		actions={[
+			{
+				label: 'Add light band',
+				ariaLabel: 'Add a band',
+				tooltip: 'Add a band to the light bar above the actogram',
+				// Alternating dark and light, so consecutive bands read as night and day.
+				onadd: () =>
+					bands.addBand({ col: bands.bands.length % 2 === 0 ? '#000000' : '#ffffff', pc: 10 })
+			}
+		]}
+		count={bands.bands.length}
+		empty="No light bands yet"
+	/>
 
 	{#if bands.bands.length > 0}
 		<div class="control-input-vertical">
@@ -166,6 +172,7 @@
 			</ControlInput>
 		</div>
 		{#each bands.bands as b, i (i)}
+			<!-- Row actions in the fixed order: colour, then delete last. -->
 			<div class="control-input-color">
 				<ColourPicker bind:value={b.col} />
 				<div class="control-input">
@@ -177,15 +184,16 @@
 						onInput={(val) => bands.updateBandPC(i, val)}
 					/>
 				</div>
-				<button class="icon" onclick={() => bands.removeBand(i)}>
+				<button
+					class="icon"
+					aria-label="Remove this band"
+					onclick={() => bands.removeBand(i)}
+					{@attach tooltip('Remove this band')}
+				>
 					<Icon name="trash" width={16} height={16} className="control-component-title-icon" />
 				</button>
 			</div>
 		{/each}
-	{:else}
-		<div class="control-input-vertical">
-			<ControlInput label="Click + to add a band"></ControlInput>
-		</div>
 	{/if}
 {/snippet}
 

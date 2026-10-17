@@ -855,7 +855,7 @@
 		store.selectedPeriods = next;
 	}
 
-	/** Scroll the rule's block (Data tab, Marker rules) into view and flash it. */
+	/** Scroll the rule's block (Overlays tab, Marker rules) into view and flash it. */
 	function showRule(m) {
 		const el = document.getElementById(ruleBlockDomId(m.parentData.parentPlot, m.ruleId));
 		if (!el) return;
@@ -1190,7 +1190,7 @@
 				<NumberWithUnits min="1" step="0.2" bind:value={marker.markerSize} />
 			</div>
 			<div class="control-input">
-				<p>Line width:</p>
+				<p>Line width</p>
 				<NumberWithUnits min="1" step="0.2" bind:value={marker.lineWidth} />
 			</div>
 		</div>
@@ -1234,7 +1234,7 @@
 
 			<label class="control-input-checkbox">
 				<input type="checkbox" bind:checked={marker.showLine} />
-				<span class="ci-label">Show Line</span>
+				<span class="ci-label">Show line</span>
 			</label>
 			{#if marker.showLine}
 				<div class="control-input-horizontal">

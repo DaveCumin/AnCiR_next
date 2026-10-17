@@ -9,7 +9,7 @@ import {
 	stepControlTab
 } from './controlTabs.js';
 
-const ACTOGRAM = ['Properties', 'Data', 'Annotations'];
+const ACTOGRAM = ['Properties', 'Data', 'Overlays'];
 const PERIODOGRAM = ['Properties', 'Data'];
 const SCATTER = ['Properties', 'Data', 'Overlays'];
 const TABLEPLOT = ['Properties and Data'];
@@ -17,9 +17,9 @@ const TABLEPLOT = ['Properties and Data'];
 describe('UI-3: control tab on a selection change', () => {
 	beforeEach(() => forgetControlTabs());
 
-	it('Actogram Annotations then a periodogram shows a real periodogram tab', () => {
+	it('Actogram Overlays then a periodogram shows a real periodogram tab', () => {
 		// The reviewer's path: the panel went blank with no tab highlighted.
-		expect(resolveControlTab('annotations', PERIODOGRAM, undefined)).toBe('properties');
+		expect(resolveControlTab('overlays', PERIODOGRAM, undefined)).toBe('properties');
 	});
 
 	it('Scatterplot Overlays then a periodogram, and anything then a Tableplot', () => {
@@ -28,25 +28,30 @@ describe('UI-3: control tab on a selection change', () => {
 		expect(resolveControlTab('data', TABLEPLOT, undefined)).toBe('properties and data');
 	});
 
+	it('a session saved on the old Annotations tab opens the Actogram on Overlays (UI-12)', () => {
+		expect(resolveControlTab('annotations', ACTOGRAM, undefined)).toBe('overlays');
+		expect(resolveControlTab('annotations', PERIODOGRAM, undefined)).toBe('properties');
+	});
+
 	it('keeps the tab when the new plot has it', () => {
 		expect(resolveControlTab('data', PERIODOGRAM, 'properties')).toBe('data');
 		expect(resolveControlTab('data', ACTOGRAM, undefined)).toBe('data');
 	});
 
 	it('falls back to the tab last used on that plot type', () => {
-		rememberControlTab('actogram', 'annotations');
+		rememberControlTab('actogram', 'overlays');
 		rememberControlTab('scatterplot', 'overlays');
 		expect(
 			resolveControlTab('properties and data', ACTOGRAM, rememberedControlTab('actogram'))
-		).toBe('annotations');
-		expect(resolveControlTab('annotations', SCATTER, rememberedControlTab('scatterplot'))).toBe(
+		).toBe('overlays');
+		expect(resolveControlTab('overlays', SCATTER, rememberedControlTab('scatterplot'))).toBe(
 			'overlays'
 		);
 	});
 
 	it('arrow keys wrap around the tabs', () => {
-		expect(stepControlTab(ACTOGRAM, 'annotations', 1)).toBe('properties');
-		expect(stepControlTab(ACTOGRAM, 'properties', -1)).toBe('annotations');
+		expect(stepControlTab(ACTOGRAM, 'overlays', 1)).toBe('properties');
+		expect(stepControlTab(ACTOGRAM, 'properties', -1)).toBe('overlays');
 		expect(stepControlTab(ACTOGRAM, 'properties', 1)).toBe('data');
 	});
 });

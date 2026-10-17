@@ -193,7 +193,9 @@
 		}
 	}
 
-	let splitResult = $state(null);
+	// Undefined until computed or restored: the memo mirror below skips undefined, so a fresh
+	// instance does not overwrite the cached result before onMount restores it.
+	let splitResult = $state();
 	let mounted = $state(false);
 	let calculating = $state(false);
 	// The message of the last failed compute, shown with a Retry (ROB-11).
@@ -496,7 +498,7 @@
 <!-- Split Times -->
 <div class="section-row">
 	<div class="tableProcess-label">
-		<span>Split Times</span>
+		<span>Split times</span>
 	</div>
 	<div class="control-input-vertical">
 		<div class="split-times-list">
