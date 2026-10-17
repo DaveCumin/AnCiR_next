@@ -118,6 +118,7 @@
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { syncMetricOutColumns } from '$lib/tableProcesses/metricOutputs.js';
@@ -128,6 +129,9 @@
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
+	// Every stored-value button here is one entry per node, however many copies of this
+	// node are mounted (canvas + control panel): see storedValueClaims.js.
+	provideStoredValueOwner('tp', () => p?.id);
 
 	migrateLegacyYIN(p.args);
 	fillDefaults(p.args, defaults);

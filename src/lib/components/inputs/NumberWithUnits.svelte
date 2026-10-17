@@ -26,6 +26,9 @@
 		// Whether "not set" is a value this field can hold (an axis limit, whose null means
 		// automatic). Leaving the box empty then stores null; otherwise it puts the value back.
 		nullable = false,
+		// Shown in an empty box (a value that is not set). Defaults to "auto" for a nullable
+		// field, whose null means automatic.
+		placeholder = undefined,
 		selectedUnitStart = 'default',
 		className = '',
 		style = ''
@@ -70,6 +73,9 @@
 	// Derived display value (reactive to value, unitFactor and focus). Never plainly rounded to
 	// the step: a step of 1e-7 used to round a stored 1e-7 to "0".
 	let displayValue = $derived.by(() => {
+		// Not set (null: automatic, or inherited) is an empty box, never 0: `null / 1` is 0,
+		// which read as a real limit of 0 (an FFT x limit after "reset to auto").
+		if (value == null || value === '') return null;
 		const val =
 			typeof unitFactor === 'object' ? unitFactor.inverse(Number(value)) : value / unitFactor;
 		return focused ? displayNumber(val) : readableNumber(val, step);
@@ -177,6 +183,7 @@
 		onwheel={(e) => {
 			if (document.activeElement == inputElement) e.stopPropagation();
 		}}
+		placeholder={placeholder ?? (nullable ? 'auto' : '')}
 		class={'number-input ' + className}
 		{style}
 	/>

@@ -204,16 +204,22 @@ export function recordPlotGesture(plot, before, { coalesceKey } = {}) {
  * in the same step (operations the edit needs that are not plot state, e.g. a facet override
  * conversion).
  *
+ * `prepare`, when given, runs after the plots have been put back to where they were and
+ * before anything is applied: it puts back whatever ELSE `mutate` changed (session state that
+ * is not a plot, e.g. the palette) and returns the operations that redo it, applied first in
+ * the same step.
+ *
  * @param {object[]} plots Plot wrappers
  * @param {() => void} mutate
- * @param {{ coalesceKey?: string, extraOps?: object[] }} [opts]
+ * @param {{ coalesceKey?: string, extraOps?: object[], prepare?: () => object[] }} [opts]
  */
-export function commitPlotsEdit(plots, mutate, { coalesceKey, extraOps = [] } = {}) {
+export function commitPlotsEdit(plots, mutate, { coalesceKey, extraOps = [], prepare } = {}) {
 	const targets = [...new Set(plots ?? [])].filter(isSessionPlot);
 	const befores = targets.map((p) => plotEditState(p));
 	mutate();
-	const ops = [...extraOps];
-	targets.forEach((p, i) => ops.push(...opsSince(p, befores[i], { coalesceKey })));
+	const plotOps = [];
+	targets.forEach((p, i) => plotOps.push(...opsSince(p, befores[i], { coalesceKey })));
+	const ops = [...extraOps, ...(prepare ? (prepare() ?? []) : []), ...plotOps];
 	return applyAsOneStep(ops, coalesceKey);
 }
 

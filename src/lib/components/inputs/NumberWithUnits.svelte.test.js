@@ -307,3 +307,42 @@ describe('NumberWithUnits partial entries', () => {
 		expect(input.value).toBe('2');
 	});
 });
+
+// "Not set" is not zero. A null value (an FFT x limit after "reset to auto", an FFT frequency
+// step set back to automatic) was divided by the unit factor, null / 1 = 0, and the box read
+// "0" while the plot used its automatic value.
+describe('a value that is not set', () => {
+	it('shows an empty box, not 0', async () => {
+		for (const value of [null, undefined]) {
+			const input = await shown({ value });
+			expect(input.value).toBe('');
+			cleanup();
+		}
+	});
+
+	it('a nullable box says "auto" when empty', async () => {
+		const input = await shown({ value: null, nullable: true });
+		expect(input.value).toBe('');
+		expect(input.placeholder).toBe('auto');
+	});
+
+	it('takes a placeholder of its own, and a non-nullable box has none by default', async () => {
+		expect((await shown({ value: null, nullable: true, placeholder: 'Auto' })).placeholder).toBe(
+			'Auto'
+		);
+		cleanup();
+		expect((await shown({ value: null })).placeholder).toBe('');
+	});
+
+	it('still shows a real 0 as 0', async () => {
+		expect((await shown({ value: 0, nullable: true })).value).toBe('0');
+	});
+
+	it('an empty box stays empty while edited and after leaving it', async () => {
+		const input = await shown({ value: null, nullable: true });
+		await focus(input);
+		expect(input.value).toBe('');
+		await blur(input);
+		expect(input.value).toBe('');
+	});
+});

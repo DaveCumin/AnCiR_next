@@ -707,6 +707,7 @@
 	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
@@ -716,6 +717,9 @@
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which, brushable = false, zoomMode = false } = $props();
+	// Every stored-value button here is one entry per plot, however many copies are
+	// mounted: see storedValueClaims.js.
+	provideStoredValueOwner('plot', () => theData?.parentBox?.id);
 
 	// Keep the plot's metric output columns (peak_lag / peak_correlation ports)
 	// reconciled + written from the stats this component already computes. The

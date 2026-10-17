@@ -9,14 +9,10 @@
 	import { appState, core } from '$lib/core/core.svelte';
 	import ColourPaletteSelect from '$lib/components/inputs/ColourPaletteSelect.svelte';
 	import FigureStyleControls from '$lib/components/inputs/FigureStyleControls.svelte';
-	import { applyStyleToAll, applyFigureWidthToAll } from '$lib/plots/figureStyle.js';
+	import { applyTemplateToAll } from '$lib/plots/applyTemplateToAll.js';
 	import { clearSeriesColourOverrides } from '$lib/plots/appearanceIdentity.js';
 	import AppearanceMapEditor from '$lib/components/inputs/AppearanceMapEditor.svelte';
-	import {
-		applyAppearanceToAll,
-		pinnedColourSnapshot,
-		repaintPinnedSeries
-	} from '$lib/plots/seriesAppearance.js';
+	import { pinnedColourSnapshot, repaintPinnedSeries } from '$lib/plots/seriesAppearance.js';
 	import { exportPython, exportR } from '$lib/components/iconActions/Setting.svelte';
 	import { privacy, setEphemeral, clearLocalData } from '$lib/core/localData.svelte.js';
 	import {
@@ -31,8 +27,7 @@
 		getActiveStyleName,
 		setActiveStyleName,
 		forgetAllStyles,
-		choosePalette,
-		takePendingPalette
+		choosePalette
 	} from '$lib/plots/styleConfig.js';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
 	import { loadRecents } from '$lib/start/recentSessions.svelte.js';
@@ -246,14 +241,6 @@
 	 */
 	const pendingPalette = $derived(appState.pendingPalette);
 
-	/** Push a pending palette to the session. Called from "Apply to all plots". */
-	function applyPendingPalette() {
-		const colours = takePendingPalette();
-		if (!colours) return false;
-		setPalette(colours);
-		return true;
-	}
-
 	/**
 	 * Swap the app-wide palette to a resolved array of colours.
 	 *
@@ -314,19 +301,10 @@
 		onResetToMap={() => clearSeriesColourOverrides(core.plots)}
 		bind:style={core.figureStyle}
 		showApplyToAll={true}
-		onApplyToAll={() => {
-			// The palette first: it is what the slot records below resolve against, so
-			// swapping it after the style pass would leave the repaint working from the
-			// colours the figures had a moment ago.
-			applyPendingPalette();
-			const n = applyStyleToAll(core.plots, core.figureStyle);
-			// The style fields alone do not move monochrome/marker state into series
-			// that already exist, so push those too or "Apply to all" would leave the
-			// two flags visibly ignored.
-			applyAppearanceToAll(core.plots);
-			applyFigureWidthToAll(core.plots);
-			return n;
-		}}
+		onApplyToAll={() =>
+			// One undo step: every plot, the pending palette (pushed first, as the series
+			// colours resolve against it) and the appearance map (plots/applyTemplateToAll.js).
+			applyTemplateToAll({ setPalette })}
 		title="Figure defaults"
 	/>
 

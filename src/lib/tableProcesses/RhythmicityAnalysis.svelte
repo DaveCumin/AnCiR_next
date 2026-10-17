@@ -327,6 +327,7 @@
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import { Column, getColumnById, removeColumn } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { onMount, untrack } from 'svelte';
@@ -343,6 +344,9 @@
 	import { clearOutputColumns } from '$lib/tableProcesses/outputColumns.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
+	// Every stored-value button here is one entry per node, however many copies of this
+	// node are mounted (canvas + control panel): see storedValueClaims.js.
+	provideStoredValueOwner('tp', () => p?.id);
 
 	// Backward compat: ensure yIN is always an array
 	migrateLegacyYIN(p.args);

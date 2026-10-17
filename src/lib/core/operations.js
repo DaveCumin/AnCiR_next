@@ -4,6 +4,7 @@
 import {
 	core,
 	appConsts,
+	appState,
 	replaceColumnRefs,
 	swapColumnRefs,
 	propagateStoredValueRename
@@ -415,6 +416,8 @@ function applyForward(op) {
 			return op_renameStoredValue(op);
 		case 'setAppearanceMaps':
 			return op_setAppearanceMaps(op);
+		case 'setAppColours':
+			return op_setAppColours(op);
 		case 'replaceColumnRefs':
 			return op_replaceColumnRefs(op);
 		case 'swapColumnRefs':
@@ -1011,6 +1014,22 @@ function op_setAppearanceMaps(op) {
 	return pair(
 		{ kind: 'setAppearanceMaps', series: op.series, categories: op.categories },
 		{ kind: 'setAppearanceMaps', series: before.series, categories: before.categories }
+	);
+}
+
+/**
+ * The app palette (`appState.appColours`), as "Apply to all plots" pushes a chosen palette to
+ * the session (plots/applyTemplateToAll.js). Colours only: the stored colours a swap repaints
+ * (Box's fill) are plot state and travel in the same step as plot edits.
+ */
+function op_setAppColours(op) {
+	if (!Array.isArray(op.colours) || op.colours.length === 0) return null;
+	const before = [...(appState.appColours ?? [])];
+	if (JSON.stringify(before) === JSON.stringify(op.colours)) return null;
+	appState.appColours = [...op.colours];
+	return pair(
+		{ kind: 'setAppColours', colours: [...op.colours] },
+		{ kind: 'setAppColours', colours: before }
 	);
 }
 

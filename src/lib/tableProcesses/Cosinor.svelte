@@ -830,6 +830,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import { Column, getColumnById } from '$lib/core/Column.svelte';
 	import { pushObj } from '$lib/core/core.svelte.js';
 	import { useMultiYTP } from '$lib/tableProcesses/useMultiYTP.svelte.js';
@@ -854,6 +855,9 @@
 	import { appState } from '$lib/core/core.svelte';
 
 	let { p = $bindable(), hideInputs = false } = $props();
+	// Every stored-value button here is one entry per node, however many copies of this
+	// node are mounted (canvas + control panel): see storedValueClaims.js.
+	provideStoredValueOwner('tp', () => p?.id);
 
 	// Backwards compatibility: legacy scalar yIN → array, and initialise fields
 	// absent in sessions saved before they existed.

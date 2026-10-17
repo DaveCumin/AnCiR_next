@@ -680,7 +680,13 @@
 		rasterRows = $derived(
 			this.Ndays > 0 && (this.eachplotheight < 1 || this.heatmapCells > MAX_SVG_HEATMAP_CELLS)
 		);
-		startTime = $derived.by(() => {
+		// The first row's start (unix ms): the user's choice (`startTimeIN`, saved, edited in
+		// Properties > Time as one undo step) or, while that is null, the start of the day of the
+		// earliest sample (`autoStartTime`). The Start time box used to bind straight onto a
+		// $derived: a view override that was never saved and that no undo could reach.
+		startTimeIN = $state(null);
+		startTime = $derived(this.startTimeIN ?? this.autoStartTime);
+		autoStartTime = $derived.by(() => {
 			let minTime = Infinity;
 
 			// Find the earliest x where BOTH x and y are valid. A filter process
@@ -956,7 +962,9 @@
 				// session without rules) save byte-identically. `nextRuleId` outlives its rules
 				// so a deleted rule's id is never handed to a new one.
 				...(this.markerRules.length > 0 ? { markerRules: this.markerRules } : {}),
-				...(this.nextRuleId > 1 ? { nextRuleId: this.nextRuleId } : {})
+				...(this.nextRuleId > 1 ? { nextRuleId: this.nextRuleId } : {}),
+				// Only when chosen, so a session that never set it saves byte-identically.
+				...(this.startTimeIN != null ? { startTimeIN: this.startTimeIN } : {})
 			};
 		}
 		static fromJSON(parent, json) {
@@ -985,6 +993,7 @@
 			// rather than clobbering it with undefined.
 			actogram.renderMode = json.renderMode ?? actogram.renderMode;
 			actogram.colormap = json.colormap ?? actogram.colormap;
+			actogram.startTimeIN = Number.isFinite(json.startTimeIN) ? json.startTimeIN : null;
 
 			// withDefaults, not fromJSON: an actogram saved before the legend existed has
 			// no `legend` key, and it must come back OFF rather than on the shared default.
@@ -1266,7 +1275,25 @@
 			<div class="control-input-vertical">
 				<div class="control-input">
 					<p>Start time</p>
-					<DateTimeHrs bind:value={theData.startTime} label="Start time" />
+					<div class="start-time-row">
+						<!-- A plain write, recorded as one step by the panel (plots/plotEditScope.js). -->
+						<DateTimeHrs
+							value={theData.startTime}
+							onChange={(v) => (theData.startTimeIN = v)}
+							label="Start time"
+						/>
+						{#if theData.startTimeIN != null}
+							<button
+								class="icon"
+								type="button"
+								aria-label="Reset the start time to the first day of data"
+								{@attach attachTooltip('Reset the start time to the first day of data')}
+								onclick={() => (theData.startTimeIN = null)}
+							>
+								<Icon name="reset" width={14} height={14} />
+							</button>
+						{/if}
+					</div>
 				</div>
 			</div>
 
@@ -1794,6 +1821,13 @@
 
 	.marker-rules {
 		width: 100%;
+	}
+
+	/* The start time's date and time boxes, with the reset beside them once one is chosen. */
+	.start-time-row {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
 	}
 
 	.marker-rules-note {

@@ -1,17 +1,40 @@
 <script>
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, untrack } from 'svelte';
+	import { renameStoredValue } from '$lib/core/core.svelte.js';
 	import {
-		core,
-		storeValue,
-		removeStoredValue,
-		renameStoredValue,
-		uniqueStoredValueName
-	} from '$lib/core/core.svelte.js';
+		claimStoredValue,
+		releaseStoredValue,
+		updateStoredValueClaim,
+		renameAnonymousClaim,
+		storedValueKey,
+		storedValueNameForKey,
+		storedValueOwner,
+		isPersistentStoredValueKey
+	} from '$lib/core/storedValueClaims.js';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { tooltip } from '$lib/utils/tooltip.js';
 
 	let { label, getter, defaultName = '', source = '' } = $props();
-	let storedName = $state('');
+
+	// One registry entry per <owner>|<default name>, however many places render this
+	// button (the canvas node and the control panel both mount the node): every
+	// mounted copy is a holder of the same entry (see storedValueClaims.js). The
+	// owner comes from the enclosing node component's context; the key is fixed at
+	// mount, as the name used to be.
+	const owner = storedValueOwner();
+	let key = $state(null);
+	// Anonymous buttons (no owner) cannot be found by key; they track their own name.
+	let anonName = $state('');
+	const token = {};
+
+	const storedName = $derived(
+		key == null
+			? ''
+			: isPersistentStoredValueKey(key)
+				? (storedValueNameForKey(key) ?? '')
+				: anonName
+	);
+
 	let showPopover = $state(false);
 	let editValue = $state('');
 	let inputEl = $state(null);
@@ -21,40 +44,21 @@
 
 	onMount(() => {
 		const base = defaultName || label || 'stored_value';
-		// Take over a restored static snapshot of this button's default name (a
-		// session import keeps getter entries as staticValue-only) instead of
-		// suffixing _2 — formulas referencing the original name pick the live
-		// getter back up. Suffixed leftovers (`base_2`, …) are claimed too, so
-		// duplicate default names stay stable across save/load cycles. Never take
-		// over ref entries (metric-port refs stay live on their own) or names
-		// another live button already holds.
-		const isStaticLeftover = (e) => !!e && typeof e.getter !== 'function' && !e.ref;
-		let name = null;
-		if (isStaticLeftover(core.storedValues[base])) {
-			name = base;
-		} else if (base in core.storedValues) {
-			for (let n = 2; `${base}_${n}` in core.storedValues; n++) {
-				if (isStaticLeftover(core.storedValues[`${base}_${n}`])) {
-					name = `${base}_${n}`;
-					break;
-				}
-			}
-		}
-		storedName = name ?? uniqueStoredValueName(base);
-		storeValue(storedName, getter, source);
+		const k = storedValueKey(owner, base);
+		const name = claimStoredValue({ key: k, base, getter, source, token });
+		anonName = name;
+		key = k;
 	});
 
 	// Keep the stored getter up-to-date when the getter prop changes
 	$effect(() => {
-		if (storedName) {
-			storeValue(storedName, getter, source);
-		}
+		const g = getter;
+		const src = source;
+		if (key != null) untrack(() => updateStoredValueClaim(key, token, g, src));
 	});
 
 	onDestroy(() => {
-		if (storedName) {
-			removeStoredValue(storedName);
-		}
+		if (key != null) releaseStoredValue(key, token);
 	});
 
 	function openPopover() {
@@ -80,8 +84,10 @@
 	}
 
 	function commitRename() {
-		if (editValue && editValue !== storedName) {
-			storedName = renameStoredValue(storedName, editValue);
+		if (editValue && storedName && editValue !== storedName) {
+			const finalName = renameStoredValue(storedName, editValue);
+			renameAnonymousClaim(key, finalName);
+			anonName = finalName;
 		}
 		showPopover = false;
 	}

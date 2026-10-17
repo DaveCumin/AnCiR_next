@@ -54,6 +54,9 @@
 	// reach about 21 px, plus air.
 	const HINT_BOTTOM = 38;
 	const LABEL_REACH = 26;
+	// How far the top hour label ("24 / 0": 11 px type, baseline 12.5 px outside the ring)
+	// reaches above the ring.
+	const LABEL_TOP = 21;
 	// Legend presets that sit in a corner of the plot square (see legendCorner).
 	const LEGEND_CORNERS = new Set(['topright', 'topleft', 'bottomright', 'bottomleft']);
 
@@ -243,10 +246,41 @@
 				40,
 				Math.min(
 					this.availWidth - this.legendLayout.reserveW - (this.legendCorner?.reserveW ?? 0),
-					this.availHeight - this.legendLayout.reserveH - (this.legendCorner?.reserveH ?? 0)
+					this.availHeight - this.legendLayout.reserveH - (this.legendCorner?.reserveH ?? 0),
+					this.clockFitSize
 				)
 			)
 		);
+
+		// The clock draws past its square: the hour labels LABEL_TOP px above the ring and the
+		// hint line HINT_BOTTOM px below it, at fixed type sizes. The figure's padding takes
+		// that in the workspace, but in a workflow node the padding shrinks with the type while
+		// the overhang grows as the square does (38 - 0.09 x size px at the bottom), and the hint
+		// line was cut off at the node's bottom edge. So, unless a legend strip below the clock
+		// already clears it, the square is no larger than lets everything fit between the view's
+		// top and bottom edges, and moves down (clockShiftY) when the labels need more room
+		// above it than the top padding gives. Infinity when nothing limits it.
+		#clockBelowStrip = $derived(
+			this.legendLayout.outsidePlacement?.side === 'below' ||
+				(this.legendCorner?.reserveH > 0 && !(this.legendCorner.offsetY > 0))
+		);
+		clockFitSize = $derived.by(() => {
+			if (this.#clockBelowStrip) return Infinity;
+			// From the square's top (below any top legend strip) to the view's bottom edge.
+			const room = this.viewHeight - this.padding.top - (this.legendCorner?.offsetY ?? 0);
+			const ringBottom = 0.5 + RING_RADIUS / 2; // the ring's lowest point, per square size
+			return Math.min(
+				(room - HINT_BOTTOM - 1) / ringBottom,
+				// With the labels pushing the clock down: label reach + ring diameter + hint.
+				(room + this.padding.top - LABEL_TOP - HINT_BOTTOM - 1) / RING_RADIUS
+			);
+		});
+		clockShiftY = $derived.by(() => {
+			if (this.#clockBelowStrip) return 0;
+			const ringTop = (0.5 - RING_RADIUS / 2) * this.plotSize; // ring's top, from the square's
+			const above = this.padding.top + (this.legendCorner?.offsetY ?? 0) + ringTop;
+			return Math.max(0, LABEL_TOP - above);
+		});
 
 		// A corner legend (Top Right, the default, and the other three corners). On a polar plot
 		// the corners of the square are small: a legend of a few long labels reaches in over the
@@ -650,7 +684,7 @@
 	{@const size = plot.plotSize}
 	{@const corner = plot.legendCorner}
 	{@const cx = plot.padding.left + (corner?.offsetX ?? 0) + size / 2}
-	{@const cy = plot.padding.top + (corner?.offsetY ?? 0) + size / 2}
+	{@const cy = plot.padding.top + (corner?.offsetY ?? 0) + plot.clockShiftY + size / 2}
 	{@const P = createPolar({ cx, cy, radius: (size / 2) * RING_RADIUS, period: plot.displayPeriod })}
 	{@const hasTimed = plot.hasTimed}
 	{@const valueScale = scaleLinear().domain(plot.valueAxis).range([INNER_RIM, OUTER_RIM])}

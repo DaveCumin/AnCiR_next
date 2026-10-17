@@ -45,10 +45,6 @@ const EXCLUSIONS = {};
 // that is how this test found the actogram's "Space Between", which was edited but never
 // saved (fixed: now in toJSON).
 const NO_SAVED_CHANGE = {
-	'actogram | properties | Start time (date)':
-		'a view override of a value derived from the data (Actogram startTime is $derived), not saved',
-	'actogram | properties | Start time (time)':
-		'a view override of a value derived from the data (Actogram startTime is $derived), not saved',
 	'tableplot | properties and data | Columns':
 		'the radio of the source already shown; choosing it again changes nothing'
 };
@@ -166,6 +162,16 @@ function nextValue(el) {
 		return next ? next.value : null;
 	}
 	if (el.type === 'color') return el.value === '#123456' ? '#654321' : '#123456';
+	// A valid date or time, a day or an hour on: "<value>x" is no date, and the box drops it.
+	if (el.type === 'date') {
+		const d = new Date(`${el.value || '2000-01-01'}T00:00:00Z`);
+		d.setUTCDate(d.getUTCDate() + 1);
+		return d.toISOString().slice(0, 10);
+	}
+	if (el.type === 'time') {
+		const [h = 0, m = 0] = (el.value || '00:00').split(':').map(Number);
+		return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+	}
 	if (el.type === 'number' || el.type === 'range') {
 		const cur = Number(el.value);
 		const step = Number(el.step) > 0 ? Number(el.step) : 1;

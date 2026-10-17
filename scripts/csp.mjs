@@ -1,6 +1,6 @@
 // Content-Security-Policy and security headers for the shipped single-file app (SEC-4).
 //
-// Usage: node scripts/csp.mjs [buildDir]          (buildDir defaults to build)
+// Usage: node scripts/csp.mjs [buildDir]          (buildDir defaults to $ANCIR_BUILD_DIR, else build)
 //
 // Runs as the LAST step of `build` (after `vite build`, before the postbuild deploys), so the
 // file it rewrites is the file that is uploaded. It:
@@ -20,6 +20,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { buildOutputDirs } from './buildOutput.js';
 
 /** The external script origin the app loads: the Cloudflare Web Analytics beacon (src/app.html). */
 export const BEACON_ORIGIN = 'https://static.cloudflareinsights.com';
@@ -168,7 +169,7 @@ export function applyCsp(dir = 'build') {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	try {
-		const { hashes } = applyCsp(process.argv[2] || 'build');
+		const { hashes } = applyCsp(process.argv[2] || buildOutputDirs(process.env).pages);
 		console.log(
 			`CSP: injected into index.html (${hashes.length} inline script hashes), wrote _headers.`
 		);

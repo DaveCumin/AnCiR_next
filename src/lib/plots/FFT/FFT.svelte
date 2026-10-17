@@ -856,6 +856,7 @@
 	import DataAddHeader from '$lib/components/plotbits/DataAddHeader.svelte';
 	import { tooltip as attachTooltip } from '$lib/utils/tooltip.js';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import PlotBrush from '$lib/components/plotbits/PlotBrush.svelte';
 	import Legend, { LegendClass } from '$lib/components/plotbits/Legend.svelte';
 	import { createPlotZoom } from '$lib/plots/plotZoomController.js';
@@ -866,6 +867,9 @@
 	import OverlaysTab from '$lib/components/plotbits/OverlaysTab.svelte';
 
 	let { theData, which, brushable = false, zoomMode = false } = $props();
+	// Every stored-value button here is one entry per plot, however many copies are
+	// mounted: see storedValueClaims.js.
+	provideStoredValueOwner('plot', () => theData?.parentBox?.id);
 
 	// Keep the plot's metric output columns (peak_period / peak_frequency /
 	// peak_magnitude ports) reconciled + written from the stats this component
@@ -1125,9 +1129,10 @@
 					<NumberWithUnits
 						min={theData.showPeriod ? theData.minPeriod : 0}
 						step="0.1"
-						value={theData.xlimsIN[0]}
+						nullable
+						value={theData.xlimsIN[0] != null ? theData.xlimsIN[0] : theData.xlims[0]}
 						onInput={(val) => {
-							theData.xlimsIN[0] = parseFloat(val);
+							theData.xlimsIN[0] = numberOrNull(val);
 						}}
 					/>
 				</div>
@@ -1140,9 +1145,10 @@
 					<NumberWithUnits
 						max={theData.showPeriod ? 1000 : theData.maxFrequency}
 						step={theData.showPeriod ? '1' : '0.01'}
-						value={theData.xlimsIN[1]}
+						nullable
+						value={theData.xlimsIN[1] != null ? theData.xlimsIN[1] : theData.xlims[1]}
 						onInput={(val) => {
-							theData.xlimsIN[1] = parseFloat(val);
+							theData.xlimsIN[1] = numberOrNull(val);
 						}}
 					/>
 				</div>
@@ -1196,6 +1202,7 @@
 							<p>Frequency Step</p>
 							<div style="display: flex; align-items: center; gap: 8px;">
 								<NumberWithUnits
+									nullable
 									min="0.0001"
 									step="0.0001"
 									placeholder="Auto"

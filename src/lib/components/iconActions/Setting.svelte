@@ -409,6 +409,8 @@
 				core.storedValues[name] = {
 					source: entry.source ?? '',
 					...(entry.ref && typeof entry.ref === 'object' ? { ref: { ...entry.ref } } : {}),
+					// Identity key: the value's button claims this snapshot back on mount.
+					...(typeof entry.key === 'string' && entry.key ? { key: entry.key } : {}),
 					staticValue: entry.staticValue
 				};
 			}

@@ -6,6 +6,8 @@ node_modules
 # Output
 /build/*
 !/build/index.html
+# The e2e suite's private build (playwright.config.js, scripts/buildOutput.js)
+/.e2e/
 .output
 .vercel
 .netlify

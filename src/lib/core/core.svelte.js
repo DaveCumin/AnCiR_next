@@ -489,7 +489,7 @@ export const appState = $state({
 });
 
 export const appConsts = $state({
-	version: 'β.82.22',
+	version: 'β.82.23',
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.processMap = await loadProcesses()); never mutated in place, so the $state reassignment already drives reactivity
 	processMap: new Map(),
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registry assigned wholesale at startup (appConsts.plotMap = await loadPlots()); never mutated in place, so the $state reassignment already drives reactivity
@@ -938,6 +938,12 @@ export function outputCoreAsJson() {
 		resolvedSV[name] = {
 			source: entry.source,
 			...(entry.ref ? { ref: { ...entry.ref } } : {}),
+			// The identity key (`<owner>|<default name>`, see storedValueClaims.js) lets
+			// the value's own button claim this snapshot after a reload, even renamed.
+			// Anonymous `anon:` keys name one mounted button and are not saved.
+			...(typeof entry.key === 'string' && !entry.key.startsWith('anon:')
+				? { key: entry.key }
+				: {}),
 			staticValue: getStoredValue(name)
 		};
 	}

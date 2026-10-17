@@ -680,6 +680,7 @@
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
+	import { provideStoredValueOwner } from '$lib/core/storedValueClaims.js';
 	import AttributeSelect from '$lib/components/inputs/AttributeSelect.svelte';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
@@ -705,6 +706,9 @@
 	import { permutationSchemeLabel } from '$lib/tableProcesses/permutationSupport.js';
 
 	let { p = $bindable(), hideInputs = false } = $props();
+	// Every stored-value button here is one entry per node, however many copies of this
+	// node are mounted (canvas + control panel): see storedValueClaims.js.
+	provideStoredValueOwner('tp', () => p?.id);
 
 	// Backwards compatibility: legacy scalar yIN → array, ensure the out map
 	// exists, and initialise fields absent in sessions saved before they existed.
