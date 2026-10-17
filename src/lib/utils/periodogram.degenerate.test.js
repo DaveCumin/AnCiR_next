@@ -178,3 +178,38 @@ describe('per-period chi-squared p is the upper tail, not 1 - CDF (SPEC-14)', ()
 		}
 	});
 });
+
+// At a trial period equal to the sampling interval every sample sits at the same phase, so one
+// of Lomb-Scargle's two bases (cos or sin of w(t - tau)) is zero up to rounding and the other is
+// a constant. The zero basis's term was (rounding)^2 / (rounding)^2: noise that drew a lone spike
+// in the aliasing demo's periodogram (1.38 at 13 h between neighbours of 0.034) and that no other
+// implementation can reproduce (Python read 0.23); the constant basis's term is a rounding
+// residue (about 1e-31), which a log axis would read as the smallest value drawn. A basis that is
+// constant over the samples carries no signal; its term is left out (LS_DEGENERATE_BASIS), in all
+// three languages, so the power there is exactly 0.
+describe('Lomb-Scargle at a period equal to the sampling interval', () => {
+	const dt = 13;
+	const t = Array.from({ length: 36 }, (_, i) => i * dt);
+	const y = t.map((h, i) => 50 + 20 * Math.cos((2 * Math.PI * h) / 24) + ((i * 7) % 5));
+
+	it('has no spike: the vanishing basis contributes nothing', () => {
+		const r = runPeriodogramCalculation(
+			params('Lomb-Scargle', t, y, { periodMin: 12.5, periodMax: 13.5, periodSteps: 0.05 })
+		);
+		const k = r.x.findIndex((p) => Math.abs(p - dt) < 1e-9);
+		expect(k).toBeGreaterThan(0);
+		expect(r.y[k]).toBe(0);
+		expect(r.y[k - 1]).toBeGreaterThan(r.y[k]);
+		expect(r.y[k + 1]).toBeGreaterThan(r.y[k]);
+	});
+
+	it('keeps the Nyquist term: a period of twice the interval alternates, it is not constant', () => {
+		const tt = Array.from({ length: 48 }, (_, i) => i);
+		const yy = tt.map((i) => (i % 2 ? 3 : -3) + Math.cos((2 * Math.PI * i) / 24));
+		const r = runPeriodogramCalculation(
+			params('Lomb-Scargle', tt, yy, { periodMin: 1.5, periodMax: 2.5, periodSteps: 0.5 })
+		);
+		const k = r.x.findIndex((p) => Math.abs(p - 2) < 1e-9);
+		expect(r.y[k]).toBeGreaterThan(1);
+	});
+});

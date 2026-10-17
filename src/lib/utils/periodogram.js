@@ -100,6 +100,13 @@ export function medianSamplingInterval(times) {
 
 // ========== Periodogram Calculation Functions ==========
 
+/**
+ * A Lomb-Scargle basis (cos or sin of w(t - tau) over the samples) whose spread about its own
+ * mean is at most this fraction of the sample count is constant up to rounding, and its term
+ * is left out.
+ */
+export const LS_DEGENERATE_BASIS = 1e-12;
+
 function calculateLombScarglePower(times, values, frequencies, onProgress) {
 	if (
 		!times ||
@@ -175,22 +182,37 @@ function calculateLombScarglePower(times, values, frequencies, onProgress) {
 		// Calculate denominators using Kahan summation
 		const cosDenomAcc = new KahanSum();
 		const sinDenomAcc = new KahanSum();
+		const cosSumAcc = new KahanSum();
+		const sinSumAcc = new KahanSum();
 		for (let i = 0; i < t.length; i++) {
 			const cosVal = Math.cos(omega * (t[i] - tau));
 			const sinVal = Math.sin(omega * (t[i] - tau));
 			cosDenomAcc.add(cosVal * cosVal);
 			sinDenomAcc.add(sinVal * sinVal);
+			cosSumAcc.add(cosVal);
+			sinSumAcc.add(sinVal);
 		}
 
 		const cosTerm = cosTermAcc.value;
 		const sinTerm = sinTermAcc.value;
-		// Guard the denominators: at certain frequencies the cos/sin terms can sum
-		// to zero (e.g. sparse or aliased sampling), which would divide by zero.
+		// Guard each term on its basis. At a period equal to the sampling interval (or a
+		// divisor of it) every sample sits at the same phase, so one basis is zero up to
+		// rounding, and its term was (rounding)^2 / (rounding)^2: noise that drew a lone spike
+		// in the aliasing demo; the other basis is a constant, whose projection on the
+		// mean-removed data is zero up to rounding. A basis that is constant over the samples
+		// (its spread about its own mean, sum c^2 - (sum c)^2 / n, at most LS_DEGENERATE_BASIS
+		// of n) carries no signal and its term is left out; a zero basis is constant too. The
+		// Nyquist case (cos alternating +-1) is not constant and still counts. Mirrored in
+		// tools/ancir_runtime.py and tools/ancir_runtime.R.
+		const n = t.length;
 		const cosDenom = cosDenomAcc.value;
 		const sinDenom = sinDenomAcc.value;
+		const minSpread = LS_DEGENERATE_BASIS * n;
+		const cosVaries = cosDenom - (cosSumAcc.value * cosSumAcc.value) / n > minSpread;
+		const sinVaries = sinDenom - (sinSumAcc.value * sinSumAcc.value) / n > minSpread;
 		const power =
-			(cosDenom > 0 ? (cosTerm * cosTerm) / cosDenom : 0) +
-			(sinDenom > 0 ? (sinTerm * sinTerm) / sinDenom : 0);
+			(cosVaries && cosDenom > 0 ? (cosTerm * cosTerm) / cosDenom : 0) +
+			(sinVaries && sinDenom > 0 ? (sinTerm * sinTerm) / sinDenom : 0);
 
 		if (onProgress && freqIndex % 10 === 0) {
 			onProgress(freqIndex, frequencies.length);

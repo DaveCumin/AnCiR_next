@@ -1,8 +1,10 @@
 <script module>
 	// @ts-nocheck
-	import { core as coreForTransform } from '$lib/core/core.svelte';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { getColumnById as getColumnByIdForTransform } from '$lib/core/Column.svelte';
+	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { isMissingCategory } from '$lib/utils/chisquare.js';
 
 	const displayName = 'Wide To Long';
 	const defaults = new Map([
@@ -12,8 +14,15 @@
 		['valid', { val: false }]
 	]);
 
-	function isMissingValue(value) {
-		return value == null || value === '' || (typeof value === 'number' && Number.isNaN(value));
+	/**
+	 * The missing-cell rule for a column of this type: the house rule (isInvalidValue: null,
+	 * blank or whitespace-only text, anything Number() cannot read) everywhere except a
+	 * category column, whose cells are labels, so only null, blank text and NaN are missing
+	 * there (isMissingCategory). The node had its own check, which kept '  ' and 'abc' in a
+	 * number column as values.
+	 */
+	function missingRule(type) {
+		return type === 'category' ? isMissingCategory : isInvalidValue;
 	}
 
 	function getSelectedValueColIds(argsIN) {
@@ -41,6 +50,7 @@
 		if (!timeCol) return [{}, false];
 
 		const timeData = timeCol.getData();
+		const timeMissing = missingRule(timeCol.type);
 		const result = { time: [], category: [], value: [] };
 
 		for (const colId of valueColIds) {
@@ -50,11 +60,12 @@
 			const valueData = valueCol.getData();
 			const rowCount = Math.min(timeData.length, valueData.length);
 			const categoryLabel = valueCol.name ?? `column_${colId}`;
+			const cellMissing = missingRule(valueCol.type);
 
 			for (let rowIdx = 0; rowIdx < rowCount; rowIdx++) {
 				const timeValue = timeData[rowIdx];
 				const cellValue = valueData[rowIdx];
-				if (isMissingValue(timeValue) || isMissingValue(cellValue)) continue;
+				if (timeMissing(timeValue) || cellMissing(cellValue)) continue;
 
 				result.time.push(timeValue);
 				result.category.push(categoryLabel);
@@ -68,37 +79,27 @@
 			Number(argsIN.out?.value) >= 0;
 
 		if (hasOutputCols) {
+			// Through the shared idempotent writer, so an unchanged re-run writes and stamps
+			// nothing (the node used to set core.rawData and re-stamp every output on every run,
+			// which made everything downstream recompute).
 			const processHash = crypto.randomUUID();
-
-			coreForTransform.rawData.set(argsIN.out.time, result.time);
-			coreForTransform.rawData.set(argsIN.out.category, result.category);
-			coreForTransform.rawData.set(argsIN.out.value, result.value);
-
-			const outTimeCol = getColumnByIdForTransform(argsIN.out.time);
-			if (outTimeCol) {
-				outTimeCol.data = argsIN.out.time;
-				outTimeCol.type = timeCol.type;
-				// The stored times are getData()'s values (UNIX ms for a time column), not
-				// the source's text, so the source's text format would re-parse every one
-				// as invalid and the column would read as all blanks. Clear it, as Split
-				// and CollectColumns do, so getData() passes the ms straight through.
-				outTimeCol.timeFormat = null;
-				outTimeCol.tableProcessGUId = processHash;
-			}
-
-			const outCategoryCol = getColumnByIdForTransform(argsIN.out.category);
-			if (outCategoryCol) {
-				outCategoryCol.data = argsIN.out.category;
-				outCategoryCol.type = 'category';
-				outCategoryCol.tableProcessGUId = processHash;
-			}
-
-			const outValueCol = getColumnByIdForTransform(argsIN.out.value);
-			if (outValueCol) {
-				outValueCol.data = argsIN.out.value;
-				outValueCol.type = getColumnByIdForTransform(valueColIds[0])?.type ?? 'number';
-				outValueCol.tableProcessGUId = processHash;
-			}
+			// The stored times are getData()'s values (UNIX ms for a time column), not the
+			// source's text, so the source's text format would re-parse every one as invalid and
+			// the column would read as all blanks. Clear it, as Split and CollectColumns do, so
+			// getData() passes the ms straight through.
+			writeOutputColumn(argsIN.out.time, result.time, {
+				type: timeCol.type,
+				timeFormat: null,
+				processHash
+			});
+			writeOutputColumn(argsIN.out.category, result.category, {
+				type: 'category',
+				processHash
+			});
+			writeOutputColumn(argsIN.out.value, result.value, {
+				type: getColumnByIdForTransform(valueColIds[0])?.type ?? 'number',
+				processHash
+			});
 		}
 
 		return [result, result.time.length > 0];
@@ -194,9 +195,15 @@
 		const dataHash = getHash;
 		if (!mounted) return;
 		if (dataHash !== memo.hash) {
-			untrack(() => {
-				doWideToLong();
-			});
+			// Deferred out of the effect: doWideToLong() may create output columns via
+			// `new Column()`, whose $derived fields go inert if created while this effect is the
+			// active reaction (Svelte derived_inert). A microtask has no active effect, so the
+			// column is root-owned. memo.hash is set synchronously so rapid re-runs coalesce.
+			queueMicrotask(() =>
+				untrack(() => {
+					doWideToLong();
+				})
+			);
 			memo.hash = dataHash;
 		}
 	});
@@ -258,8 +265,16 @@
 		doWideToLong();
 	}
 
+	// The node is committed when it is in the session (a free-standing node has no parent),
+	// or under a legacy parent table. An uncommitted preview instance creates nothing.
+	function isCommitted() {
+		return (
+			!!p.parent || (p?.id != null && (coreState.tableProcesses ?? []).some((tp) => tp.id === p.id))
+		);
+	}
+
 	function ensureOutputColumns() {
-		if (!p.parent || p.args.timeIN < 0 || (p.args.valueColIds?.length ?? 0) === 0) return;
+		if (!isCommitted() || p.args.timeIN < 0 || (p.args.valueColIds?.length ?? 0) === 0) return;
 
 		const outputSpecs = [
 			{ key: 'time', name: `time_${p.id}` },
@@ -272,7 +287,7 @@
 			const tempCol = new Column({});
 			tempCol.name = spec.name;
 			pushObj(tempCol);
-			p.parent.columnRefs = [tempCol.id, ...p.parent.columnRefs];
+			if (p.parent) p.parent.columnRefs = [tempCol.id, ...p.parent.columnRefs];
 			p.args.out[spec.key] = tempCol.id;
 		}
 	}

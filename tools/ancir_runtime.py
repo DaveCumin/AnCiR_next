@@ -695,6 +695,11 @@ def _pgram_pairs(t, y):
     return [_js_number(t[i]) for i in idx], [_js_number(y[i]) for i in idx]
 
 
+# periodogram.js LS_DEGENERATE_BASIS: a basis whose spread about its mean is at most this
+# fraction of n is constant up to rounding.
+LS_DEGENERATE_BASIS = 1e-12
+
+
 def _lomb_scargle(t, y, periods):
     if t is None or y is None or len(t) < 2 or len(y) < 2 or len(t) != len(y):
         return [float('nan')] * len(periods)
@@ -727,7 +732,19 @@ def _lomb_scargle(t, y, periods):
         den1 = float((cwt ** 2).sum())
         num2 = float((y * swt).sum()) ** 2
         den2 = float((swt ** 2).sum())
-        powers[k] = (num1 / den1 + num2 / den2) / (2 * var) if den1 > 0 and den2 > 0 else 0.0
+        # periodogram.js: each term on its own guard. A basis that is constant over the
+        # samples (spread about its own mean at most LS_DEGENERATE_BASIS of n; a period equal
+        # to the sampling interval puts every sample at one phase, making one basis 0 and the
+        # other +-1) carries nothing, so its term is left out; the other term still counts.
+        # Both terms used to be dropped when either denominator was 0.
+        n_ = len(t)
+        min_spread = LS_DEGENERATE_BASIS * n_
+        c_var = den1 - float(cwt.sum()) ** 2 / n_ > min_spread
+        s_var = den2 - float(swt.sum()) ** 2 / n_ > min_spread
+        p = ((num1 / den1 if c_var and den1 > 0 else 0.0)
+             + (num2 / den2 if s_var and den2 > 0 else 0.0))
+        p = p / (2 * var)
+        powers[k] = p if math.isfinite(p) else 0.0
     return powers.tolist()
 
 
@@ -3120,6 +3137,17 @@ def tp_cosinor(args, cols, raw_data, _sv):
             ys = (evaluate_cosinor_at_points(free_res['parameters'], xs)
                   if output_x_data is not None else free_res['fitted'])
         metrics_by_y[y_id] = cosinor_metrics(fixed_res, free_res, args, phase_ref)
+        # Residuals (Cosinor.svelte writeCosinorOutputs): written only with the x output
+        # wired, the model evaluated at every input x (fixed period: the full model, mesor
+        # included, v82.11).
+        resid_id = _out_id(args, f'resid_{y_id}')
+        if resid_id != -1 and _out_id(args, 'cosinorx') != -1:
+            model_params = ({**fixed_res, 'period': fixed_period} if use_fixed
+                            else free_res['parameters'])
+            _set_col(raw_data, cols, resid_id,
+                     _fit_residuals(lambda xs, mp=model_params: evaluate_cosinor_at_points(mp, xs),
+                                    t, y),
+                     type_='number')
         if first_x_out is None:
             first_x_out = xs
             x_out_ms = ([origin_ms + h * 3600000 for h in xs]
@@ -4110,6 +4138,14 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
         if y_out == -1:
             y_out = _out_id(args, 'dlogy')
         _set_col(raw_data, cols, y_out, ys, type_='number')
+        # Residuals (DoubleLogistic.svelte): only with the x output wired; the periodic model
+        # evaluated at every input x.
+        resid_id = _out_id(args, f'resid_{y_id}')
+        if resid_id != -1 and _out_id(args, 'dlogx') != -1:
+            _set_col(raw_data, cols, resid_id,
+                     _fit_residuals(lambda xs, pr=res['parameters']:
+                                    evaluate_dl_at_points(pr, xs, True), t, y),
+                     type_='number')
         stats_by_y[y_id] = res
         any_valid = True
     if any_valid:
@@ -4741,66 +4777,135 @@ def tp_formulacolumn(args, cols, raw_data, sv):
 
 # --- LongToWide ---
 
+def _cell_missing_rule(col_type):
+    """The missing-cell rule LongToWide and WideToLong apply to a column of this type: the
+    house rule (isInvalidValue) everywhere except a category column, whose cells are labels
+    (isMissingCategory: null, blank or whitespace-only text, NaN)."""
+    return _is_missing_category if col_type == 'category' else _js_invalid
+
+
+def _js_sort_key_cmp(a, b):
+    """JS `(a, b) => a - b` as a comparator: NaN (a non-numeric key) compares as equal, so a
+    stable sort keeps first-appearance order there, as V8's does."""
+    d = _js_number(a) - _js_number(b)
+    if math.isnan(d) or d == 0:
+        return 0
+    return -1 if d < 0 else 1
+
+
 def tp_longtowide(args, cols, raw_data, _sv):
-    x_in = args.get('xIN', -1)
-    cat_in = args.get('categoryColId', args.get('catIN', -1))
-    val_in = args.get('valueColId', args.get('valIN', -1))
-    if x_in == -1 or cat_in == -1 or val_in == -1:
+    """Port of LongToWide.svelte evaluateLongToWide + writeLongToWideOutputs.
+
+    Args are the app's own: categoryIN, timeIN, valueIN (the node never had any other names).
+    - A row whose time is missing (the time column's missing rule) is dropped.
+    - Categories in order of first appearance; a missing label (isMissingCategory) is none.
+    - The time column is the union of the kept times (exact values), sorted ascending.
+    - value_<category> holds, per union time, the value of the LAST row with that category
+      and time (a repeated time is not averaged); NaN where the category has no such row.
+      A missing value is kept as it is, so it reads as a blank cell.
+    - The pre-processes run on each category's values before writing, in order.
+    """
+    cat_in = args.get('categoryIN', -1)
+    time_in = args.get('timeIN', -1)
+    val_in = args.get('valueIN', -1)
+    for cid in (cat_in, time_in, val_in):
+        if cid is None or cid == -1 or cid not in cols:
+            return False
+    cat_data = list(cols[cat_in].get_data())
+    time_col = cols[time_in]
+    time_data = list(time_col.get_data())
+    val_data = list(cols[val_in].get_data())
+    time_missing = _cell_missing_rule(time_col.type)
+
+    union, seen_t = [], set()
+    for i, t in enumerate(time_data):
+        if time_missing(t) or t in seen_t:
+            continue
+        seen_t.add(t)
+        union.append(t)
+    union.sort(key=functools.cmp_to_key(_js_sort_key_cmp))
+
+    categories, seen_c = [], set()
+    for c in cat_data:
+        if _is_missing_category(c) or c in seen_c:
+            continue
+        seen_c.add(c)
+        categories.append(c)
+
+    cat_time = {c: {} for c in categories}
+    for i, c in enumerate(cat_data):
+        if i >= len(time_data) or time_missing(time_data[i]) or c not in cat_time:
+            continue
+        cat_time[c][time_data[i]] = val_data[i] if i < len(val_data) else None
+    if not union:
         return False
-    df = pd.DataFrame({
-        'x': cols[x_in].get_data(),
-        'cat': cols[cat_in].get_data(),
-        'val': cols[val_in].get_data(),
-    }).pivot_table(index='x', columns='cat', values='val', aggfunc='mean')
-    out = args.get('out') or {}
-    t_id = out.get('time') if not isinstance(out.get('time'), dict) \
-        else out['time'].get('val', -1)
-    _set_col(raw_data, cols, t_id, df.index.tolist(),
-             type_=cols[x_in].type, time_format=cols[x_in].time_format)
-    for c in df.columns:
-        v_id = out.get(f'value_{c}')
-        if isinstance(v_id, dict):
-            v_id = v_id.get('val', -1)
-        if v_id and v_id != -1:
-            _set_col(raw_data, cols, v_id, df[c].tolist(), type_='number')
+
+    nan = float('nan')
+    result = {c: [cat_time[c].get(t, nan) for t in union] for c in categories}
+    for pp in args.get('preProcesses') or []:
+        name = (pp or {}).get('processName')
+        if not name:
+            continue
+        for c in categories:
+            result[c] = list(run_column_process(name.lower().replace(' ', ''), result[c],
+                                                pp.get('processArgs') or {}, {}))
+
+    t_id = _out_id(args, 'time')
+    if t_id == -1:
+        return True
+    # The app stores the input's raw time text (with its format) when it can, else epoch ms
+    # with the format cleared; both read back as the same epoch ms, which is what is stored here.
+    _set_col(raw_data, cols, t_id, union, type_=time_col.type)
+    if t_id in cols:
+        cols[t_id].time_format = None
+    val_type = cols[val_in].type
+    for c in categories:
+        _set_col(raw_data, cols, _out_id(args, f'value_{_js_string(c)}'), result[c],
+                 type_=val_type)
     return True
 
 
 # --- WideToLong ---
 
 def tp_widetolong(args, cols, raw_data, _sv):
+    """Port of WideToLong.svelte widetolong. One block of rows per value column (in the
+    selected order, duplicates and negative ids ignored), its rows to the shorter of the two
+    lengths; a row is dropped when its time or its cell is missing by its column's rule
+    (_cell_missing_rule). The category is the value column's name; the time output keeps the
+    time column's type with no text format, the value output the FIRST value column's type."""
     x_in = args.get('timeIN', args.get('xIN', -1))
-    y_ins = _id_list(args.get('valueColIds', args.get('yIN')))
-    if not y_ins:
+    y_ins = []
+    for v in _id_list(args.get('valueColIds', args.get('yIN'))):
+        n = _js_number(v)
+        if not math.isnan(n) and n >= 0 and int(n) not in y_ins:
+            y_ins.append(int(n))
+    if x_in is None or x_in == -1 or x_in not in cols or not y_ins:
         return False
-
-    def _missing(v):
-        return v is None or v == '' or (isinstance(v, float) and math.isnan(v))
-
+    time_col = cols[x_in]
+    time_data = list(time_col.get_data())
+    time_missing = _cell_missing_rule(time_col.type)
     times, cats, vals = [], [], []
     for y_id in y_ins:
         if y_id not in cols:
-            continue
+            return False
         y_col = cols[y_id]
-        xd = cols[x_in].get_data() if x_in != -1 and x_in in cols \
-            else list(range(len(y_col.get_data())))
-        for xi, yi in zip(xd, y_col.get_data()):
-            if _missing(xi) or _missing(yi):
+        y_data = list(y_col.get_data())
+        cell_missing = _cell_missing_rule(y_col.type)
+        label = y_col.name if y_col.name is not None else f'column_{y_id}'
+        for xi, yi in zip(time_data, y_data):
+            if time_missing(xi) or cell_missing(yi):
                 continue
-            times.append(xi); cats.append(y_col.name); vals.append(yi)
-    out = args.get('out') or {}
-    t_id = out.get('time') if not isinstance(out.get('time'), dict) \
-        else out['time'].get('val', -1)
-    c_id = out.get('category') if not isinstance(out.get('category'), dict) \
-        else out['category'].get('val', -1)
-    v_id = out.get('value') if not isinstance(out.get('value'), dict) \
-        else out['value'].get('val', -1)
-    _set_col(raw_data, cols, t_id, times,
-             type_=cols[x_in].type if x_in in cols else 'number',
-             time_format=cols[x_in].time_format if x_in in cols else None)
+            times.append(xi)
+            cats.append(label)
+            vals.append(yi)
+    # Each output is written when wired (the app's three are always wired together).
+    t_id, c_id, v_id = (_out_id(args, k) for k in ('time', 'category', 'value'))
+    _set_col(raw_data, cols, t_id, times, type_=time_col.type)
+    if t_id in cols:
+        cols[t_id].time_format = None
     _set_col(raw_data, cols, c_id, cats, type_='category')
-    _set_col(raw_data, cols, v_id, vals, type_='number')
-    return True
+    _set_col(raw_data, cols, v_id, vals, type_=cols[y_ins[0]].type)
+    return len(times) > 0
 
 
 # --- MovingAnalysis ---
@@ -4962,6 +5067,14 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
         if y_out == -1:
             y_out = _out_id(args, 'rectwavey')
         _set_col(raw_data, cols, y_out, ys, type_='number')
+        # Residuals (RectangularWave.svelte): only with the x output wired; the model
+        # evaluated at every input x.
+        resid_id = _out_id(args, f'resid_{y_id}')
+        if resid_id != -1 and _out_id(args, 'rectwavex') != -1:
+            _set_col(raw_data, cols, resid_id,
+                     _fit_residuals(lambda xs, pr=res['parameters']:
+                                    evaluate_rectwave_at_points(pr, xs), t, y),
+                     type_='number')
         stats_by_y[y_id] = res
         any_valid = True
     if any_valid:
@@ -4988,7 +5101,6 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
     if x_in == -1 or x_in not in cols or not y_ins:
         return False
     analysis = args.get('analysis', 'periodogram')
-    hide_inputs = bool(args.get('hideInputs', False))
     x_col = cols[x_in]
     t = _t_for_col(x_col)
     shared_x = None
@@ -5011,22 +5123,9 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
                 'alpha': args.get('pgAlpha', 0.05),
             })
             xs, ys = pg['x'], pg['y']
-            if hide_inputs:
-                if shared_x is None:
-                    shared_x = xs
-                    _set_col(raw_data, cols, _out_id(args, 'rhythmicityx'),
-                             xs, type_='number')
-                _set_col(raw_data, cols, _out_id(args, f'rhythmicityy_{y_id}'),
-                         ys, type_='number')
-            else:
-                _set_col(raw_data, cols, _out_id(args, f'{y_id}_period'),
-                         xs, type_='number')
-                _set_col(raw_data, cols, _out_id(args, f'{y_id}_power'),
-                         ys, type_='number')
-                if pg.get('threshold') is not None:
-                    _set_col(raw_data, cols,
-                             _out_id(args, f'{y_id}_threshold'),
-                             list(pg['threshold']), type_='number')
+            per_key = {'period': xs, 'power': ys}
+            if pg.get('threshold') is not None:
+                per_key['threshold'] = list(pg['threshold'])
         elif analysis == 'fft':
             # RhythmicityAnalysis pairs t and y row by row (over t's length) before the
             # transform; computeFFT then grids them (a long gap is refused, not joined).
@@ -5037,40 +5136,30 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
             xs = fft['frequencies']
             ys = fft['magnitudes']
             periods = [1.0 / f if f else float('nan') for f in xs]
-            if hide_inputs:
-                if shared_x is None:
-                    shared_x = periods
-                    _set_col(raw_data, cols, _out_id(args, 'rhythmicityx'),
-                             periods, type_='number')
-                _set_col(raw_data, cols, _out_id(args, f'rhythmicityy_{y_id}'),
-                         ys, type_='number')
-            else:
-                _set_col(raw_data, cols, _out_id(args, f'{y_id}_frequency'),
-                         xs, type_='number')
-                _set_col(raw_data, cols, _out_id(args, f'{y_id}_period'),
-                         periods, type_='number')
-                _set_col(raw_data, cols, _out_id(args, f'{y_id}_magnitude'),
-                         ys, type_='number')
-                _set_col(raw_data, cols, _out_id(args, f'{y_id}_phase'),
-                         fft['phases'], type_='number')
+            per_key = {'frequency': xs, 'period': periods, 'magnitude': ys,
+                       'phase': fft['phases']}
+            xs = periods  # the primary x (getPrimaryKeys: period, magnitude)
         elif analysis == 'correlogram':
             ac = compute_autocorrelation(
                 t, y,
                 min_lag=float(args.get('corrMinLag', 0.0)),
                 max_lag=args.get('corrMaxLag') or None)
             xs, ys = ac['lags'], ac['correlations']
-            if hide_inputs:
-                if shared_x is None:
-                    shared_x = xs
-                    _set_col(raw_data, cols, _out_id(args, 'rhythmicityx'),
-                             xs, type_='number')
-                _set_col(raw_data, cols, _out_id(args, f'rhythmicityy_{y_id}'),
-                         ys, type_='number')
-            else:
-                _set_col(raw_data, cols, _out_id(args, f'{y_id}_lag'),
-                         xs, type_='number')
-                _set_col(raw_data, cols, _out_id(args, f'{y_id}_correlation'),
-                         ys, type_='number')
+            per_key = {'lag': xs, 'correlation': ys}
+        else:
+            per_key = None
+        # RhythmicityAnalysis.svelte writes EVERY wired output: one column per (y, key), and
+        # the shared primary pair (rhythmicityx from the first y with output, rhythmicityy_<y>;
+        # getPrimaryKeys). The ports used to write one family or the other on an
+        # args.hideInputs that the app never saves (it is a component prop), so the primary
+        # pair was empty in every exported session.
+        if per_key is not None:
+            for k, v in per_key.items():
+                _set_col(raw_data, cols, _out_id(args, f'{y_id}_{k}'), v, type_='number')
+            if shared_x is None and len(xs) > 0:
+                shared_x = xs
+                _set_col(raw_data, cols, _out_id(args, 'rhythmicityx'), xs, type_='number')
+            _set_col(raw_data, cols, _out_id(args, f'rhythmicityy_{y_id}'), ys, type_='number')
         # The scalar stats (the `stat_<key>` metric ports): the peak by the app's rules.
         st = {}
         if analysis == 'periodogram':
@@ -5159,14 +5248,34 @@ def _js_valid_pairs(t, y):
 
 
 def _residual_column(predicted, y_full, x_full):
-    """residualSupport.js residualColumn: raw - predicted, NaN where either side is missing."""
+    """residualSupport.js residualColumn: raw - predicted, NaN where either side is missing.
+    Aligned to y; a y row beyond the end of x reads x as undefined (missing), as in JS."""
     out = []
     for i, v in enumerate(y_full):
         p_i = predicted[i] if i < len(predicted) else None
-        bad = (_js_invalid(v) or (x_full is not None and _js_invalid(x_full[i]))
-               or not _finite(p_i))
+        x_bad = x_full is not None and (i >= len(x_full) or _js_invalid(x_full[i]))
+        bad = _js_invalid(v) or x_bad or not _finite(p_i)
         out.append(float('nan') if bad else _js_number(v) - p_i)
     return out
+
+
+def _fit_residuals(evaluate, x_full, y_full):
+    """The fit nodes' resid_<yId> column (residualSupport.js writeResidual / FitFunction's
+    residualColumn): the fitted model evaluated at EVERY input x (in the fit's hour frame),
+    then observed - predicted, full input length, NaN wherever y or x is missing or the
+    prediction is not finite. Only the valid x are handed to `evaluate`: the app evaluates
+    the missing ones too, but residualColumn discards them, and the periodic double
+    logistic's tile range is taken over the valid x either way (stats.js min/max skip
+    missing values)."""
+    nan = float('nan')
+    x_full = list(x_full if x_full is not None else [])
+    idx = [i for i, v in enumerate(x_full) if not _js_invalid(v)]
+    pts = [_js_number(x_full[i]) for i in idx]
+    predicted = [nan] * len(x_full)
+    if pts:
+        for i, pv in zip(idx, evaluate(pts)):
+            predicted[i] = pv
+    return _residual_column(predicted, list(y_full), x_full)
 
 
 def tp_smootheddata(args, cols, raw_data, _sv):
@@ -5424,6 +5533,14 @@ def tp_trendfit(args, cols, raw_data, _sv):
         if y_out == -1:
             y_out = _out_id(args, 'trendy')
         _set_col(raw_data, cols, y_out, ys, type_='number')
+        # Residuals (TrendFit.svelte): only with the x output wired; the trend evaluated at
+        # every input x.
+        resid_id = _out_id(args, f'resid_{y_id}')
+        if resid_id != -1 and _out_id(args, 'trendx') != -1:
+            _set_col(raw_data, cols, resid_id,
+                     _fit_residuals(lambda pts, pr=res['parameters']:
+                                    evaluate_trend_at_points(pr, model, pts), t, y),
+                     type_='number')
         any_valid = True
     if any_valid:
         nan = float('nan')
@@ -6153,7 +6270,55 @@ def tp_groupcomparison(args, cols, raw_data, _sv):
     `compute_group_comparison` for tests.
     """
     result, any_valid = compute_group_comparison(args, cols)
+    # The app returns before writing the metric ports only when there is neither a group
+    # column nor a multi-Y comparison (or no y at all).
+    x_in = args.get('xIN')
+    has_group = x_in is not None and x_in != -1 and x_in in cols
+    if 'multiY' in result['comparisons'] or (has_group and _id_list(args.get('yIN'))):
+        _gc_write_metrics(args, cols, raw_data, result)
     return any_valid
+
+
+def _gc_write_metrics(args, cols, raw_data, result):
+    """GroupComparison.svelte writeGroupComparisonMetrics: the scalar metric ports, one value
+    per y input in yIN order (one value in the no-group multi-Y mode): the test's statistic
+    (t / F / U / H), its p and the effect size that belongs with that test. Written whenever
+    any of the three is wired, before validity is decided, as in the app."""
+    ids = [_out_id(args, k) for k in ('statistic', 'pvalue', 'effectSize')]
+    if all(i is None or i == -1 for i in ids):
+        return
+    nan = float('nan')
+
+    def _num(v):
+        return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+    def statistic_of(c):
+        # JS comp?.t ?? comp?.f ?? comp?.u ?? comp?.h ?? NaN (null/undefined fall through).
+        for k in ('t', 'f', 'u', 'h'):
+            if c and c.get(k) is not None:
+                return c[k]
+        return nan
+
+    def effect_of(c):
+        if not c:
+            return nan
+        for k in ('cohenD', 'etaSquared', 'rEffect', 'epsilonSquared'):
+            v = _num(c.get(k))
+            if v is not None and math.isfinite(v):
+                return v
+        return nan
+
+    comps = result.get('comparisons', {})
+    if comps.get('multiY'):
+        chosen = [comps['multiY']]
+    else:
+        chosen = [comps.get(y) for y in _id_list(args.get('yIN'))]
+    stat = [statistic_of(c) for c in chosen]
+    pv = [(c or {}).get('pValue', nan) if (c or {}).get('pValue') is not None else nan
+          for c in chosen]
+    eff = [effect_of(c) for c in chosen]
+    for oid, vals in zip(ids, (stat, pv, eff)):
+        _set_col(raw_data, cols, oid, vals, type_='number')
 
 
 def compute_group_comparison(args, cols):
@@ -6499,7 +6664,7 @@ def tp_fitfunction(args, cols, raw_data, _sv):
         y_out_data = predicted if predicted is not None else fit_result['fitted']
         x_out_data = output_x_data if output_x_data is not None else tt
         y_results[y_id] = {'fitResult': fit_result, 'xOutData': x_out_data,
-                           'yOutData': y_out_data, 't': tt}
+                           'yOutData': y_out_data, 't': tt, 'y': y}
         if not t_ref:
             t_ref = tt
         if fit_result.get('fitted'):
@@ -6517,6 +6682,14 @@ def tp_fitfunction(args, cols, raw_data, _sv):
             yr = y_results.get(y_id)
             if y_out is not None and y_out != -1 and yr:
                 _set_col(raw_data, cols, y_out, yr['yOutData'], type_='number')
+            # Residuals (FitFunction.svelte residualColumn): the model evaluated at every
+            # input x, observed - predicted.
+            resid_id = _out_id(args, f'resid_{y_id}')
+            if resid_id != -1 and yr:
+                _set_col(raw_data, cols, resid_id,
+                         _fit_residuals(lambda pts, fr=yr['fitResult']:
+                                        _ff_evaluate_at_points(fr, model, pts), t, yr['y']),
+                         type_='number')
     if any_valid:
         for key in ff_metric_keys(args):
             _set_col(raw_data, cols, _out_id(args, key),

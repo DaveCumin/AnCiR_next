@@ -3,8 +3,38 @@
 	import { core, appConsts } from '$lib/core/core.svelte';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { nodeMemo } from '$lib/core/computeMemo.js';
+	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { isMissingCategory } from '$lib/utils/chisquare.js';
 
 	const displayName = 'Long To Wide';
+
+	/**
+	 * The missing-cell rule for a column of this type. A category column holds labels, so the
+	 * numeric half of the house rule (isNaN('Light') is true) would drop every one of them:
+	 * there only null, blank or whitespace-only text and NaN are missing (isMissingCategory).
+	 * Every other column uses the house rule, isInvalidValue.
+	 */
+	function missingRule(type) {
+		return type === 'category' ? isMissingCategory : isInvalidValue;
+	}
+
+	/**
+	 * The categories in order of first appearance, missing labels left out. A category is a
+	 * label whatever its column's type, so the label rule (isMissingCategory: null, blank or
+	 * whitespace-only, NaN) applies. Shared by the compute and the component's output-column
+	 * reconcile, so the two agree on which value_<category> columns exist.
+	 */
+	export function longToWideCategories(categoryData) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- dedupe set, local to this function; never read reactively
+		const seen = new Set();
+		const categories = [];
+		for (const c of categoryData ?? []) {
+			if (isMissingCategory(c) || seen.has(c)) continue;
+			seen.add(c);
+			categories.push(c);
+		}
+		return categories;
+	}
 	const defaults = new Map([
 		['categoryIN', { val: -1 }],
 		['timeIN', { val: -1 }],
@@ -34,6 +64,9 @@
 		const categoryData = getColumnById(categoryIN).getData();
 		const timeData = getColumnById(timeIN).getData();
 		const valueData = getColumnById(valueIN).getData();
+		// A row whose time is missing has nowhere to go in the wide table: it used to become a
+		// row of its own, keyed null and sorted as time 0. It is dropped (house rule).
+		const timeMissing = missingRule(getColumnById(timeIN).type);
 
 		// Get the raw (unparsed) time strings from the input column for output column storage.
 		// getData() on a 'time' column converts strings → UNIX ms; if we store those UNIX ms
@@ -53,6 +86,7 @@
 		const unionEntries = []; // { unix: UNIX ms, raw: original string or UNIX ms }
 		for (let i = 0; i < timeData.length; i++) {
 			const t = timeData[i];
+			if (timeMissing(t)) continue;
 			if (!seenTimes.has(t)) {
 				seenTimes.add(t);
 				unionEntries.push({ unix: t, raw: rawTimeInput != null ? rawTimeInput[i] : t });
@@ -63,24 +97,16 @@
 		const unionTimes = unionEntries.map((e) => e.unix);
 		const unionTimesForStorage = unionEntries.map((e) => e.raw);
 
-		// Get unique categories (preserving order of first appearance)
-		// Skip null/undefined/empty-string values from sparse CSV data
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- dedupe set for categories, local to this function; never read reactively
-		const seenCats = new Set();
-		const categories = [];
-		for (const c of categoryData) {
-			if (c == null || c === '') continue;
-			if (!seenCats.has(c)) {
-				seenCats.add(c);
-				categories.push(c);
-			}
-		}
+		// Unique categories in order of first appearance; missing labels (sparse CSV) skipped.
+		const categories = longToWideCategories(categoryData);
 
-		// Build a map: category -> (time -> value)
+		// Build a map: category -> (time -> value). A repeated (category, time) keeps the LAST
+		// row's value.
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- category to time-value lookup built and consumed inside this function; never read reactively
 		const catTimeMap = new Map();
 		for (const cat of categories) catTimeMap.set(cat, new Map());
 		for (let i = 0; i < categoryData.length; i++) {
+			if (timeMissing(timeData[i])) continue;
 			catTimeMap.get(categoryData[i])?.set(timeData[i], valueData[i]);
 		}
 
@@ -391,17 +417,7 @@
 	function doLongToWide() {
 		previewStart = 1;
 		if (p.args.categoryIN >= 0 && p.args.timeIN >= 0 && p.args.valueIN >= 0) {
-			const catData = getColumnById(p.args.categoryIN).getData();
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- dedupe set for categories, local to doLongToWide(); never read reactively
-			const seenCats = new Set();
-			const categories = [];
-			for (const c of catData) {
-				if (c == null || c === '') continue;
-				if (!seenCats.has(c)) {
-					seenCats.add(c);
-					categories.push(c);
-				}
-			}
+			const categories = longToWideCategories(getColumnById(p.args.categoryIN).getData());
 
 			// Remove output columns for categories that no longer exist
 			const newCatSet = new Set(categories);
@@ -453,7 +469,7 @@
 		if (memo.has(getHash)) restore(memo.payload);
 		// Migrate: remove any null/empty-string phantom categories persisted from old sessions
 		if (Array.isArray(p.args.categories)) {
-			const nullCats = p.args.categories.filter((c) => c == null || c === '');
+			const nullCats = p.args.categories.filter((c) => isMissingCategory(c));
 			for (const nullCat of nullCats) {
 				const outKey = 'value_' + nullCat; // 'value_null' or 'value_'
 				const colId = p.args.out?.[outKey];
@@ -463,7 +479,7 @@
 				}
 				if (p.args.out) delete p.args.out[outKey];
 			}
-			p.args.categories = p.args.categories.filter((c) => c != null && c !== '');
+			p.args.categories = p.args.categories.filter((c) => !isMissingCategory(c));
 		}
 
 		// Backfill preProcesses for old sessions

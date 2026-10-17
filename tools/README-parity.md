@@ -451,6 +451,95 @@ input a null y moved one bin's mean from 18.67 to 13.33 and made its min null). 
 missing pairs, which is what that filter's own comment says it is for; see the item in the
 parity report.
 
+### Outputs the ports never wrote (2026-10-17)
+
+Four node outputs were empty in every exported script, and nothing noticed, because a saved
+session carries each output column's last data: a port that writes nothing leaves the snapshot
+in place, so both the exported CSV and the whole-session check looked right. Blanking the
+outputs before the port runs (now the default in `test_session_parity.py`) shows them at once:
+14 of 88 sessions failed against the old runtimes, 0 now.
+
+- **LongToWide** read `xIN` / `categoryColId` / `valueColId`; the node's args have always been
+  `categoryIN` / `timeIN` / `valueIN` (git history of `LongToWide.svelte` back to its creation
+  as `WideToLong` in 971f32a1), so both ports returned invalid and wrote nothing (R left the
+  columns out of the CSV). Rewritten in both to the app's rules: a row whose time is missing is
+  dropped (house rule; a category-typed time column uses `isMissingCategory`), categories in
+  order of first appearance with missing labels left out, the union of the times sorted
+  ascending, a repeated (category, time) keeps the LAST row (the ports averaged), a missing
+  value stays a blank cell, NaN where a category has no row, `value_<String(category)>`.
+  The app had two bugs of its own, fixed: a missing time became a row keyed null and sorted as
+  0, and a whitespace-only label became a category. LongToWide left `HARNESS_BLIND`: its `func`
+  writes every `value_<category>` key a fixture declares in `out`.
+- **Fit residuals** `resid_<yId>` (Cosinor, RectangularWave, DoubleLogistic, FitFunction,
+  TrendFit): the model evaluated at every input x in the fit's hour frame, observed minus
+  fitted, full input length, NaN where y or x is missing or the prediction is not finite
+  (`_fit_residuals` / `.fit_residuals`, beside `residualSupport.js`). As in the app, the node
+  writes them only with its x output wired (FitFunction: inside its write block). Fixed-period
+  Cosinor evaluates the full model, mesor included (v82.11).
+- **RhythmicityAnalysis** `rhythmicityx` / `rhythmicityy_<yId>`: the app writes these AND the
+  per-key `<yId>_<key>` columns whenever they are wired; the ports wrote one family or the
+  other on `args.hideInputs`, a component prop the app never saves, so the primary pair was
+  empty (9 shipped workflow demos). Both ports now write both.
+- **GroupComparison** `statistic` / `pvalue` / `effectSize` (one value per y; the t / F / U / H
+  statistic, its p, and the effect size that belongs with the test): never written by either
+  port. The R Welch t-test also lacked Cohen's d.
+
+Fixing the RhythmicityAnalysis pair exposed one more difference, at a single point of the
+aliasing demo's periodogram: at a trial period equal to the sampling interval every sample
+sits at one phase, so one Lomb-Scargle basis is zero up to rounding and the other is a
+constant. The zero basis's term was (rounding)^2 / (rounding)^2 (JS drew a lone spike of 1.38
+between neighbours of 0.034; Python read 0.23), and the constant basis's term is a rounding
+residue of about 1e-31, which a log axis reads as the smallest value drawn (it broke
+`test_plot_overlays.py` on the hourly periodogram demo, whose range starts at 1 h). All three
+now leave out a term whose basis is constant over the samples (spread about its own mean,
+sum c^2 - (sum c)^2 / n, at most `LS_DEGENERATE_BASIS` = 1e-12 times n), each term on its own
+guard, so the power there is exactly 0. The ports used to drop BOTH terms when either
+denominator was 0, which also dropped the Nyquist term (period twice the interval: the sine
+basis vanishes but the cosine alternates +-1 and carries the signal).
+
+WideToLong (app side): it wrote `core.rawData` itself, re-stamping every output on every run;
+it now writes through `writeOutputColumn` (an unchanged re-run writes nothing). Its own
+missing-cell check kept `'  '` and `'abc'` in a number column; it now uses `isInvalidValue`
+(`isMissingCategory` for a category column, whose labels the numeric rule would drop). Output
+creation is gated on the node being in the session (a free node has no parent) and deferred
+out of the compute effect (`derived_inert`). Both ports mirror the rule; the R port also
+returns invalid on a missing time column instead of indexing rows.
+
+Fixtures (all in both ports): `tp-longtowide-{plain,repeated-times,missing,unsorted,time}`,
+`tp-widetolong-{missing,time}`, `tp-cosinor-resid-{fixed-2h,free,time-x}`,
+`tp-rectangularwave-resid`, `tp-doublelogistic-resid`,
+`tp-fitfunction-resid-{cosinor,rectangular,doublelogistic}`,
+`tp-trendfit-resid-{linear,polynomial}`, `tp-smoothed-resid`,
+`tp-rhythmicity-primary-{periodogram,fft,correlogram}`,
+`tp-groupcomparison-metrics-{ttest,anova}`, `tp-fitfunction-cosinor-free-period` (the free
+optimiser path, closing that `PARAM_COVERAGE_GAPS` entry),
+`pure-lombscargle-sampling-period` and `pure-lombscargle-nyquist`. The residual fixtures use `perInputOut: ['resid_']` and
+compare the x output too, because the harness wires only compared keys and the app writes
+residuals only with the x output wired.
+
+| Broken                                                                    | First failure                                                      |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| L2W keeps the first row of a repeated time (Py, R)                        | `tp-longtowide-repeated-times` (R `value_A[2]`: 2 vs 9)            |
+| L2W keeps missing-time rows (Py, R, JS)                                   | `tp-longtowide-missing` (R: time length 6 vs 5)                    |
+| L2W union left unsorted (Py, R)                                           | `tp-longtowide-unsorted`, `tp-longtowide-time`                     |
+| W2L old missing check (Py, R, JS)                                         | `tp-widetolong-missing`                                            |
+| residual sign flipped (Py, R, JS)                                         | all 11 residual fixtures (R `resid[1]`: 0.633 vs -0.633)           |
+| one node's residual write removed (each node, Py and R)                   | that node's residual fixtures only                                 |
+| Cosinor residual on raw ms, not hours (Py)                                | `tp-cosinor-resid-time-x`                                          |
+| fixed Cosinor residual without the mesor (Py; JS O: 0)                    | `tp-cosinor-resid-fixed-2h`, `tp-cosinor-resid-time-x`             |
+| missing-x rows given a residual, x read as 0 (Py)                         | 9 residual fixtures with `missingX`                                |
+| rhythmicity primary pair not written (Py, R)                              | 3 `primary` fixtures and the 3 `hideInputs` periodogram fixtures   |
+| FFT primary x = frequency, not period (Py)                                | `tp-rhythmicity-primary-fft`                                       |
+| GC metrics not written / effect-size order (Py, R)                        | both `tp-groupcomparison-metrics-*`                                |
+| R Welch without Cohen's d                                                 | `tp-groupcomparison-metrics-ttest` (`effectSize[1]`: NaN vs -0.97) |
+| FitFunction free period read as fixed (Py, R)                             | `tp-fitfunction-cosinor-free-period` (R period 24 vs 24.62)        |
+| LS guard back to `> 0` (JS, Py, R, each alone)                            | `pure-lombscargle-sampling-period` (R power[11]: 0.48 vs 0)        |
+| LS: both terms dropped when one basis is degenerate (Py, R; JS unit test) | `pure-lombscargle-nyquist` (R power[5]: 0 vs 22.26)                |
+| LS: energy guard instead of the constant-basis guard (JS unit test; Py)   | `periodogram.degenerate.test.js`; `test_plot_overlays.py` log axis |
+
+The missing-x mutation does not bite in R alone: R reads a missing x as NA, not 0, so the
+prediction there is already NaN. Not a gap.
+
 ### `rTolerance`
 
 A fixture may set `rTolerance` to loosen the comparison **for R alone**. Widening the shared
@@ -604,9 +693,9 @@ Notes:
 
 ## Current coverage
 
-`npm run parity` lists every fixture. As of 2026-10-05 (after the legacy Enright bin
-migration): 372 fixtures, Python 372/372, R 329 pass with 43 not claimed (listed below),
-whole-session 89 match with 2 skipped.
+`npm run parity` lists every fixture. As of 2026-10-17: 448 fixtures, Python 448/448, R 397
+pass with 51 not claimed, whole-session 88 match with 2 skipped (outputs blanked before the
+port runs).
 
 ## Fixture fields added 2026-10-04 (review wave 1 and 2 ports)
 
@@ -715,9 +804,10 @@ r2/rmse/coefficients, `ancir_to_python.py` documents `.ancir` sessions.
 - **RhythmicityAnalysis `stat_*` metric ports**: now written by both ports (periodogram
   peak by spectralPeakIndex, FFT by fftPeak, correlogram by the first-positive-lobe rule);
   fixtures `tp-rhythmicity-*-stats`.
-- **Residual outputs** (`resid_<yId>`): written by the ports for SmoothedData only; the fit
-  nodes' residual columns (Cosinor, FitFunction, RectangularWave, DoubleLogistic, TrendFit)
-  are not ported.
+- **Residual outputs** (`resid_<yId>`): ported for every node that has them (2026-10-17,
+  see "Outputs the ports never wrote" above); no longer a divergence.
+- **RhythmicityAnalysis pre-processes**: the app runs `preProcesses` on each output array
+  before writing; neither port applies them (no shipped session uses one). Not pinned.
 - **Time-format import (UI-1)**: sessions saved before the fix may store numeric columns as
   `time` with a format such as `D.M`. JS now reads those values as missing; Python and R read
   numeric time cells as epoch ms.
@@ -771,7 +861,9 @@ tools/.venv/bin/python tools/test_session_parity.py        # summary + per-colum
 - **JS side** `src/lib/_parity/emitSessionParity.svelte.test.js`: reconstructs each
   session, runs every table process to completion (sync), dumps all columns by id.
 - **Python side** `tools/test_session_parity.py`: loads each session through
-  `ancir_runtime.py`, runs the analyses, compares column-by-column by id.
+  `ancir_runtime.py`, EMPTIES every analysis output column (`blank_outputs`), runs the
+  analyses, compares column-by-column by id. Without the blanking a port that writes nothing
+  passes on the session's saved snapshot (see "Outputs the ports never wrote").
 
 Current status (2026-09-30): **89 match, 2 skipped (non-deterministic), 0 mismatches, 0
 errors.** The JS side RECOMPUTES every table process (`doProcess`), so the comparison is

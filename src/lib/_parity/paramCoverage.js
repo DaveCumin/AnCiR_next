@@ -139,7 +139,6 @@ export const PARAM_COVERAGE_GAPS = {
 	Cosinor: { permuteTest: [true] },
 	DoubleLogistic: { fixK1: [true], fixK2: [true], permuteTest: [true] },
 	FitFunction: {
-		useFixedPeriod: [false],
 		fixKappa: [true],
 		fixDutyCycle: [true],
 		periodic: [false],

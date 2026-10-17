@@ -160,8 +160,13 @@ export const R_COLUMN_PROCESSES = [
  * Listed so that "implemented" is never silently read as "verified". Closing this properly
  * means moving output-column creation out of the components, which is a bigger change than
  * the port.
+ *
+ * LongToWide left the list on 2026-10-17: its `func` writes every value_<category> key that
+ * is present in `args.out`, and a headless TableProcess mints a column for every key a
+ * fixture declares there, so a fixture that names the categories it expects reaches them
+ * (the tp-longtowide-* fixtures). The same route may work for the others; not yet tried.
  */
-export const HARNESS_BLIND = ['collectcolumns', 'longtowide', 'movinganalysis', 'split'];
+export const HARNESS_BLIND = ['collectcolumns', 'movinganalysis', 'split'];
 
 /**
  * Pure numeric kernels the R port implements, keyed as the parity fixtures name them.

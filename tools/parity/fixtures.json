@@ -21156,6 +21156,1016 @@
 			],
 			"compareArrays": ["starts", "rmse", "rmse_n"],
 			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-longtowide-plain",
+			"kind": "tableProcess",
+			"jsName": "LongToWide",
+			"pyFunc": "longtowide",
+			"rFunc": "longtowide",
+			"note": "Two categories on the same three times: one wide column per category (value_<category>), the time column is the sorted union of the times.",
+			"inputs": [
+				{
+					"ref": "cat",
+					"type": "category",
+					"values": ["A", "A", "A", "B", "B", "B"]
+				},
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [0, 1, 2, 0, 1, 2]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [1, 2, 3, 4, 5, 6]
+				}
+			],
+			"args": {
+				"categoryIN": "@cat",
+				"timeIN": "@t",
+				"valueIN": "@v",
+				"preProcesses": [],
+				"out": {
+					"time": -1,
+					"value_A": -1,
+					"value_B": -1
+				}
+			},
+			"compareOutputs": ["time", "value_A", "value_B"]
+		},
+		{
+			"id": "tp-longtowide-repeated-times",
+			"kind": "tableProcess",
+			"jsName": "LongToWide",
+			"pyFunc": "longtowide",
+			"rFunc": "longtowide",
+			"note": "A category with the same time twice keeps the LAST row (JS Map.set), not the mean; a time only one category has is blank (NaN) in the others.",
+			"inputs": [
+				{
+					"ref": "cat",
+					"type": "category",
+					"values": ["A", "A", "B", "A", "B", "B"]
+				},
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [0, 1, 0, 1, 1, 3]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [1, 2, 3, 9, 4, 7]
+				}
+			],
+			"args": {
+				"categoryIN": "@cat",
+				"timeIN": "@t",
+				"valueIN": "@v",
+				"preProcesses": [],
+				"out": {
+					"time": -1,
+					"value_A": -1,
+					"value_B": -1
+				}
+			},
+			"compareOutputs": ["time", "value_A", "value_B"]
+		},
+		{
+			"id": "tp-longtowide-missing",
+			"kind": "tableProcess",
+			"jsName": "LongToWide",
+			"pyFunc": "longtowide",
+			"rFunc": "longtowide",
+			"note": "Missing cells: a row with a missing time is dropped (house rule, isInvalidValue); a missing or blank category is no category; a missing value is a blank cell in its category; a time whose only rows are missing values still makes a row.",
+			"inputs": [
+				{
+					"ref": "cat",
+					"type": "category",
+					"values": ["A", "B", null, "", "A", "B", "A", "B", "  ", "A"]
+				},
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [0, 0, 1, 1, null, 1, 2, 2, 3, 4]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [1, 2, 3, 4, 5, null, null, 8, 9, 10]
+				}
+			],
+			"args": {
+				"categoryIN": "@cat",
+				"timeIN": "@t",
+				"valueIN": "@v",
+				"preProcesses": [],
+				"out": {
+					"time": -1,
+					"value_A": -1,
+					"value_B": -1
+				}
+			},
+			"compareOutputs": ["time", "value_A", "value_B"]
+		},
+		{
+			"id": "tp-longtowide-unsorted",
+			"kind": "tableProcess",
+			"jsName": "LongToWide",
+			"pyFunc": "longtowide",
+			"rFunc": "longtowide",
+			"note": "Categories first seen in the order C, A, B and times out of order: outputs are addressed by name, times are sorted ascending.",
+			"inputs": [
+				{
+					"ref": "cat",
+					"type": "category",
+					"values": ["C", "A", "B", "C", "A", "B", "C", "A", "B"]
+				},
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [5, 5, 5, 2, 2, 2, 9, 9, 9]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5]
+				}
+			],
+			"args": {
+				"categoryIN": "@cat",
+				"timeIN": "@t",
+				"valueIN": "@v",
+				"preProcesses": [],
+				"out": {
+					"time": -1,
+					"value_C": -1,
+					"value_A": -1,
+					"value_B": -1
+				}
+			},
+			"compareOutputs": ["time", "value_C", "value_A", "value_B"]
+		},
+		{
+			"id": "tp-longtowide-time",
+			"kind": "tableProcess",
+			"jsName": "LongToWide",
+			"pyFunc": "longtowide",
+			"rFunc": "longtowide",
+			"note": "A real time column (epoch ms): the time output reads back the same instants, sorted.",
+			"inputs": [
+				{
+					"ref": "cat",
+					"type": "category",
+					"values": ["L", "D", "L", "D", "L", "D"]
+				},
+				{
+					"ref": "t",
+					"type": "time",
+					"values": [
+						1709431200000, 1709431200000, 1709424000000, 1709424000000, 1709427600000, 1709442000000
+					]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [10, 20, 30, 40, 50, 60]
+				}
+			],
+			"args": {
+				"categoryIN": "@cat",
+				"timeIN": "@t",
+				"valueIN": "@v",
+				"preProcesses": [],
+				"out": {
+					"time": -1,
+					"value_L": -1,
+					"value_D": -1
+				}
+			},
+			"compareOutputs": ["time", "value_L", "value_D"]
+		},
+		{
+			"id": "tp-widetolong-missing",
+			"kind": "tableProcess",
+			"jsName": "WideToLong",
+			"pyFunc": "widetolong",
+			"rFunc": "widetolong",
+			"note": "Missing cells by the house rule (isInvalidValue): null, blank and whitespace-only cells and a missing time drop the row; a real 0 is kept; rows run column by column.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [0, 1, null, 3, 4]
+				},
+				{
+					"ref": "p",
+					"type": "number",
+					"values": [5, null, 7, 0, 9]
+				},
+				{
+					"ref": "q",
+					"type": "number",
+					"values": ["", 11, 12, "  ", 14]
+				}
+			],
+			"args": {
+				"timeIN": "@t",
+				"valueColIds": ["@p", "@q"],
+				"out": {
+					"time": -1,
+					"category": -1,
+					"value": -1
+				}
+			},
+			"compareOutputs": ["time", "category", "value"]
+		},
+		{
+			"id": "tp-widetolong-time",
+			"kind": "tableProcess",
+			"jsName": "WideToLong",
+			"pyFunc": "widetolong",
+			"rFunc": "widetolong",
+			"note": "A time column (epoch ms) is written back as epoch ms; the category is the source column name.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "time",
+					"values": [1709424000000, 1709427600000, 1709431200000]
+				},
+				{
+					"ref": "light",
+					"type": "number",
+					"values": [1, 2, 3]
+				},
+				{
+					"ref": "dark",
+					"type": "number",
+					"values": [4, null, 6]
+				}
+			],
+			"args": {
+				"timeIN": "@t",
+				"valueColIds": ["@light", "@dark"],
+				"out": {
+					"time": -1,
+					"category": -1,
+					"value": -1
+				}
+			},
+			"compareOutputs": ["time", "category", "value"]
+		},
+		{
+			"id": "tp-cosinor-resid-fixed-2h",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "Residuals (observed - fitted at every input row) of a fixed-period, two-harmonic cosinor; NaN where y or x is missing (v82.11: the mesor is part of the evaluated model).",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 3,
+				"seed": 901,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 2,
+				"alpha": 0.05,
+				"preProcesses": [],
+				"out": {
+					"cosinorx": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["cosinorx", "cosinory", "resid"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-cosinor-resid-free",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "Residuals of a free-period cosinor (period in [20, 28] h).",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 23.5,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 3,
+				"seed": 902,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": false,
+				"minPeriod": 20,
+				"maxPeriod": 28,
+				"preProcesses": [],
+				"out": {
+					"cosinorx": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["cosinorx", "cosinory", "resid"],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-cosinor-resid-time-x",
+			"kind": "tableProcess",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "Residuals on a time x whose first time is missing: the model is evaluated in hours since the minimum valid time, and the missing-time row is NaN.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 3,
+				"seed": 903,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"xStart": "2024-03-04T06:30:00Z",
+				"missingEvery": 11,
+				"missingX": [0]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"preProcesses": [],
+				"out": {
+					"cosinorx": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["cosinorx", "resid"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-rectangularwave-resid",
+			"kind": "tableProcess",
+			"jsName": "RectangularWave",
+			"pyFunc": "rectangularwave",
+			"rFunc": "rectangularwave",
+			"note": "Residuals of a fixed-period rectangular wave.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 3,
+				"seed": 904,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"fixOmega": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"out": {
+					"rectwavex": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["rectwavex", "rectwavey", "resid"],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-doublelogistic-resid",
+			"kind": "tableProcess",
+			"jsName": "DoubleLogistic",
+			"pyFunc": "doublelogistic",
+			"rFunc": "doublelogistic",
+			"note": "Residuals of the periodic double logistic (period fixed at 24 h).",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 3,
+				"seed": 905,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"fixPeriod": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"out": {
+					"dlogx": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["dlogx", "dlogy", "resid"],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-fitfunction-resid-cosinor",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "FitFunction cosinor (fixed 24 h, two harmonics) residuals.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 3,
+				"seed": 906,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "cosinor",
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 2,
+				"alpha": 0.05,
+				"outputX": -1,
+				"out": {
+					"fitx": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["fitx", "fity", "resid"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-fitfunction-resid-rectangular",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "FitFunction rectangular (fixed 24 h) residuals.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 3,
+				"seed": 907,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "rectangular",
+				"fixOmega": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"out": {
+					"fitx": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["fitx", "fity", "resid"],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-fitfunction-resid-doublelogistic",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "FitFunction double logistic (periodic, period fixed at 24 h) residuals.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 3,
+				"seed": 908,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "doublelogistic",
+				"periodic": true,
+				"fixPeriod": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"out": {
+					"fitx": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["fitx", "fity", "resid"],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-trendfit-resid-linear",
+			"kind": "tableProcess",
+			"jsName": "TrendFit",
+			"pyFunc": "trendfit",
+			"rFunc": "trendfit",
+			"note": "TrendFit linear residuals with missing x and y.",
+			"generate": {
+				"type": "rhythm",
+				"n": 60,
+				"period": 24,
+				"amp": 5,
+				"mesor": 10,
+				"trend": 0.4,
+				"noise": 1,
+				"seed": 909,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "linear",
+				"outputX": -1,
+				"out": {
+					"trendx": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["trendx", "trendy", "resid"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-trendfit-resid-polynomial",
+			"kind": "tableProcess",
+			"jsName": "TrendFit",
+			"pyFunc": "trendfit",
+			"rFunc": "trendfit",
+			"note": "TrendFit cubic residuals.",
+			"generate": {
+				"type": "rhythm",
+				"n": 60,
+				"period": 30,
+				"amp": 5,
+				"mesor": 10,
+				"trend": 0.4,
+				"noise": 1,
+				"seed": 910,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "polynomial",
+				"polyDegree": 3,
+				"outputX": -1,
+				"out": {
+					"trendx": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["trendx", "trendy", "resid"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-smoothed-resid",
+			"kind": "tableProcess",
+			"jsName": "SmoothedData",
+			"pyFunc": "smootheddata",
+			"rFunc": "smootheddata",
+			"note": "SmoothedData residuals (raw - smoothed over the kept, sorted rows).",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 3,
+				"seed": 911,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"smootherType": "moving",
+				"movingAvgWindowSize": 5,
+				"out": {
+					"smoothedx": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["smoothedx", "smoothedy", "resid"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-rhythmicity-primary-periodogram",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"note": "As saved by the app (no hideInputs arg): the node writes its per-key columns (<yId>_period, <yId>_power) AND the shared rhythmicityx / rhythmicityy_<yId>. The ports wrote the shared pair only under an args.hideInputs the app never saves (it is a component prop), so rhythmicityy was empty in every export.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 23.7,
+				"amp": 30,
+				"mesor": 45,
+				"phase": 9,
+				"noise": 5,
+				"seed": 931,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"analysis": "periodogram",
+				"periodMin": 20,
+				"periodMax": 28,
+				"periodStep": 0.1,
+				"preProcesses": [],
+				"out": {
+					"rhythmicityx": -1
+				},
+				"pgMethod": "Lomb-Scargle"
+			},
+			"compareOutputs": ["rhythmicityx", "rhythmicityy"]
+		},
+		{
+			"id": "tp-rhythmicity-primary-fft",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"note": "FFT: rhythmicityx is the period, rhythmicityy the magnitude.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 23.7,
+				"amp": 30,
+				"mesor": 45,
+				"phase": 9,
+				"noise": 5,
+				"seed": 931,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"analysis": "fft",
+				"periodMin": 20,
+				"periodMax": 28,
+				"periodStep": 0.1,
+				"preProcesses": [],
+				"out": {
+					"rhythmicityx": -1
+				}
+			},
+			"compareOutputs": ["rhythmicityx", "rhythmicityy"]
+		},
+		{
+			"id": "tp-rhythmicity-primary-correlogram",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"note": "Correlogram: rhythmicityx is the lag, rhythmicityy the correlation.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 23.7,
+				"amp": 30,
+				"mesor": 45,
+				"phase": 9,
+				"noise": 5,
+				"seed": 931,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"analysis": "correlogram",
+				"periodMin": 20,
+				"periodMax": 28,
+				"periodStep": 0.1,
+				"preProcesses": [],
+				"out": {
+					"rhythmicityx": -1
+				}
+			},
+			"compareOutputs": ["rhythmicityx", "rhythmicityy"]
+		},
+		{
+			"id": "tp-groupcomparison-metrics-ttest",
+			"kind": "tableProcess",
+			"jsName": "GroupComparison",
+			"pyFunc": "groupcomparison",
+			"rFunc": "groupcomparison",
+			"note": "The metric ports (statistic, pvalue, effectSize; one value per y): Welch t, p and Cohen d. Neither port wrote them, so a wired p-value was empty in every export.",
+			"generate": {
+				"type": "groups",
+				"seed": 941,
+				"groups": [
+					{
+						"label": "Weekday",
+						"mean": 50,
+						"sd": 12,
+						"n": 30
+					},
+					{
+						"label": "Weekend",
+						"mean": 60,
+						"sd": 10,
+						"n": 25
+					}
+				],
+				"refs": {
+					"g": "grp",
+					"v": "val"
+				}
+			},
+			"args": {
+				"xIN": "@grp",
+				"yIN": ["@val"],
+				"method": "ttest",
+				"alpha": 0.05,
+				"postHocEnabled": true,
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"effectSize": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "effectSize"]
+		},
+		{
+			"id": "tp-groupcomparison-metrics-anova",
+			"kind": "tableProcess",
+			"jsName": "GroupComparison",
+			"pyFunc": "groupcomparison",
+			"rFunc": "groupcomparison",
+			"note": "Metric ports for a one-way ANOVA (auto with three groups): F, p and eta squared.",
+			"generate": {
+				"type": "groups",
+				"seed": 942,
+				"groups": [
+					{
+						"label": "A",
+						"mean": 50,
+						"sd": 12,
+						"n": 20
+					},
+					{
+						"label": "B",
+						"mean": 56,
+						"sd": 12,
+						"n": 22
+					},
+					{
+						"label": "C",
+						"mean": 63,
+						"sd": 12,
+						"n": 18
+					}
+				],
+				"refs": {
+					"g": "grp",
+					"v": "val"
+				}
+			},
+			"args": {
+				"xIN": "@grp",
+				"yIN": ["@val"],
+				"method": "auto",
+				"alpha": 0.05,
+				"postHocEnabled": true,
+				"out": {
+					"statistic": -1,
+					"pvalue": -1,
+					"effectSize": -1
+				}
+			},
+			"compareOutputs": ["statistic", "pvalue", "effectSize"]
+		},
+		{
+			"id": "tp-fitfunction-cosinor-free-period",
+			"kind": "tableProcess",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "FitFunction cosinor with a FREE period (useFixedPeriod false, one curve, 20 to 28 h): the nonlinear optimiser path, never compared before (the PARAM_COVERAGE_GAPS entry).",
+			"generate": {
+				"type": "rhythm",
+				"n": 192,
+				"period": 24.6,
+				"amp": 25,
+				"mesor": 40,
+				"phase": 7,
+				"noise": 5,
+				"seed": 943,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "cosinor",
+				"useFixedPeriod": false,
+				"Ncurves": 1,
+				"minPeriod": 20,
+				"maxPeriod": 28,
+				"outputX": -1,
+				"out": {
+					"fitx": -1,
+					"r2": -1,
+					"period": -1,
+					"mesor": -1,
+					"amplitude": -1,
+					"acrophase": -1
+				}
+			},
+			"compareOutputs": ["fitx", "fity", "r2", "period", "mesor", "amplitude", "acrophase"],
+			"tolerance": 1e-6,
+			"rTolerance": 1e-6,
+			"rToleranceWhy": "Nonlinear fit: R reaches the optimum with optim (L-BFGS-B), as for tp-cosinor-free-period."
+		},
+		{
+			"id": "pure-lombscargle-sampling-period",
+			"kind": "pureUtil",
+			"jsFn": "lombScarglePeriodogram",
+			"pyFunc": "lomb_scargle_periodogram",
+			"rFunc": "lomb_scargle_periodogram",
+			"note": "Samples every 13 h scanned across 13 h: at the sampling interval one basis is a rounding residue and its term is left out (LS_DEGENERATE_BASIS), so the power there is ~0 in every language instead of rounding noise (JS 1.38, Python 0.23 on the aliasing demo).",
+			"input": {
+				"t": [
+					0, 13, 26, 39, 52, 65, 78, 91, 104, 117, 130, 143, 156, 169, 182, 195, 208, 221, 234, 247,
+					260, 273, 286, 299, 312, 325, 338, 351, 364, 377, 390, 403, 416, 429, 442, 455
+				],
+				"y": [
+					70.0, 32.6814834742, 71.3205080757, 36.8578643763, 63.0, 44.8236190979, 52.0,
+					59.1763809021, 41.0, 67.1421356237, 32.6794919243, 71.3185165258, 34.0, 70.3185165258,
+					35.6794919243, 64.1421356237, 42.0, 59.1763809021, 51.0, 47.8236190979, 60.0,
+					37.8578643763, 71.3205080757, 31.6814834742, 73.0, 30.6814834742, 69.3205080757,
+					39.8578643763, 61.0, 47.8236190979, 50.0, 57.1763809021, 44.0, 65.1421356237,
+					35.6794919243, 69.3185165258
+				]
+			},
+			"argRefs": ["t", "y"],
+			"jsArgs": [
+				{
+					"periodMin": 12.5,
+					"periodMax": 13.5,
+					"periodStep": 0.05
+				}
+			],
+			"pyArgs": [
+				{
+					"periodMin": 12.5,
+					"periodMax": 13.5,
+					"periodStep": 0.05
+				}
+			],
+			"compareArrays": ["period", "power"]
+		},
+		{
+			"id": "pure-lombscargle-nyquist",
+			"kind": "pureUtil",
+			"jsFn": "lombScarglePeriodogram",
+			"pyFunc": "lomb_scargle_periodogram",
+			"rFunc": "lomb_scargle_periodogram",
+			"note": "Hourly samples with a strong 2 h (Nyquist) component, scanned 1 to 3 h: at 2 h the sine basis vanishes but the cosine basis alternates +-1, so its term still counts (the ports used to drop BOTH terms when either denominator was 0); at 1 h both bases are constant and the power is 0.",
+			"input": {
+				"t": [
+					0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+					25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47
+				],
+				"y": [
+					-2.0, 3.9659258263, -2.1339745962, 3.7071067812, -2.5, 3.2588190451, -3.0, 2.7411809549,
+					-3.5, 2.2928932188, -3.8660254038, 2.0340741737, -4.0, 2.0340741737, -3.8660254038,
+					2.2928932188, -3.5, 2.7411809549, -3.0, 3.2588190451, -2.5, 3.7071067812, -2.1339745962,
+					3.9659258263, -2.0, 3.9659258263, -2.1339745962, 3.7071067812, -2.5, 3.2588190451, -3.0,
+					2.7411809549, -3.5, 2.2928932188, -3.8660254038, 2.0340741737, -4.0, 2.0340741737,
+					-3.8660254038, 2.2928932188, -3.5, 2.7411809549, -3.0, 3.2588190451, -2.5, 3.7071067812,
+					-2.1339745962, 3.9659258263
+				]
+			},
+			"argRefs": ["t", "y"],
+			"jsArgs": [
+				{
+					"periodMin": 1,
+					"periodMax": 3,
+					"periodStep": 0.25
+				}
+			],
+			"pyArgs": [
+				{
+					"periodMin": 1,
+					"periodMax": 3,
+					"periodStep": 0.25
+				}
+			],
+			"compareArrays": ["period", "power"]
 		}
 	]
 }

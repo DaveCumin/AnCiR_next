@@ -104,9 +104,27 @@ def build_columns(session):
     return raw, cols
 
 
+def blank_outputs(session, raw, cols):
+    """Empty every analysis output column before the port runs.
+
+    A saved session carries each output's last data, so a port that silently writes nothing
+    (an arg it reads under the wrong name, an output it never writes) leaves that snapshot in
+    place and the comparison passes. That hid four gaps until 2026-10-17: LongToWide (the port
+    read args the node never had), the fit nodes' resid_<yId>, RhythmicityAnalysis's
+    rhythmicityx / rhythmicityy_<yId> and GroupComparison's statistic / pvalue / effectSize.
+    With the outputs blanked, a column matches only if the port computed it."""
+    for tp in session.get("tableProcesses", []):
+        for oid in ((tp.get("args") or {}).get("out") or {}).values():
+            if isinstance(oid, dict):
+                oid = oid.get("val")
+            if isinstance(oid, int) and oid in cols and cols[oid].data in raw:
+                raw[cols[oid].data] = []
+
+
 def run_session(session):
     """Returns (columns_index, raw_data, errors[])."""
     raw, cols = build_columns(session)
+    blank_outputs(session, raw, cols)
     stored = dict(session.get("storedValues", {}) or {})
     errors = []
     for tp in session.get("tableProcesses", []):

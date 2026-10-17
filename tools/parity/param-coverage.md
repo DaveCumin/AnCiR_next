@@ -7,7 +7,7 @@ Which values of each analysis’s ENUMERABLE parameters (booleans, select option
 appear in any parity fixture. A value listed here is a branch that the JS, Python and R
 runtimes all claim to agree on and that nothing has ever compared.
 
-28 analyses have at least one fixture; 23 reach every enumerable value.
+30 analyses have at least one fixture; 25 reach every enumerable value.
 
 ## Values no fixture reaches
 
@@ -23,7 +23,6 @@ runtimes all claim to agree on and that nothing has ever compared.
 
 ### FitFunction
 
-- `useFixedPeriod`: [false]
 - `fixKappa`: [true]
 - `fixDutyCycle`: [true]
 - `periodic`: [false]
@@ -61,10 +60,12 @@ runtimes all claim to agree on and that nothing has ever compared.
 - GroupComparison
 - Interpolate
 - LogisticRegression
+- LongToWide
 - NonparametricRA
 - NormalityTest
 - RayleighTest
 - RhythmicityAnalysis
+- SequenceColumn
 - SimulatedData
 - SmoothedData
 - Sort

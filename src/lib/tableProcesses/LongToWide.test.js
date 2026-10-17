@@ -231,6 +231,64 @@ describe('longtowide', () => {
 		expect(isNaN(result.value_B[2])).toBe(true);
 	});
 
+	it('drops a row whose time is missing (house rule) instead of making a blank-time row', () => {
+		// A missing time used to become a row of its own, keyed null and sorted as 0.
+		mockColumns[1] = { getData: () => ['A', 'B', 'A', 'B', 'A'], type: 'category' };
+		mockColumns[2] = { getData: () => [0, 0, null, NaN, 1], type: 'number' };
+		mockColumns[3] = { getData: () => [1, 2, 99, 98, 3], type: 'number' };
+
+		const [result] = longtowide({
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
+		});
+
+		expect(result.time).toEqual([0, 1]);
+		expect(result.value_A).toEqual([1, 3]);
+		expect(result.value_B[0]).toBe(2);
+		expect(Number.isNaN(result.value_B[1])).toBe(true);
+	});
+
+	it('a whitespace-only category label is no category (isMissingCategory)', () => {
+		mockColumns[1] = { getData: () => ['A', '  ', 'B'], type: 'category' };
+		mockColumns[2] = { getData: () => [0, 0, 0], type: 'number' };
+		mockColumns[3] = { getData: () => [1, 2, 3], type: 'number' };
+
+		const [result] = longtowide({
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
+		});
+
+		expect(Object.keys(result).filter((k) => k.startsWith('value_'))).toEqual([
+			'value_A',
+			'value_B'
+		]);
+	});
+
+	it('text times in a category column are kept (the numeric rule would drop every label)', () => {
+		mockColumns[1] = { getData: () => ['A', 'A', 'B'], type: 'category' };
+		mockColumns[2] = { getData: () => ['Mon', 'Tue', 'Mon'], type: 'category' };
+		mockColumns[3] = { getData: () => [1, 2, 3], type: 'number' };
+
+		const [result, valid] = longtowide({
+			categoryIN: 1,
+			timeIN: 2,
+			valueIN: 3,
+			out: { time: -1 },
+			preProcesses: []
+		});
+
+		expect(valid).toBe(true);
+		expect(result.time).toEqual(['Mon', 'Tue']);
+		expect(result.value_A).toEqual([1, 2]);
+		expect(result.value_B[0]).toBe(3);
+	});
+
 	it('round-trip: long -> wide preserves every (category,time)->value cell', () => {
 		const cats = ['A', 'A', 'B', 'B', 'C'];
 		const times = [0, 1, 0, 1, 0];

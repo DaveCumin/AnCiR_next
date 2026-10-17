@@ -552,6 +552,27 @@ tp_threshold <- function(args, env) {
   length(out) > 0
 }
 
+# The fit nodes' resid_<yId> column (residualSupport.js writeResidual / FitFunction's
+# residualColumn; Python: _fit_residuals): the fitted model evaluated at EVERY input x (in the
+# fit's hour frame), then observed - predicted, full input length, NaN wherever y or x is
+# missing or the prediction is not finite. Only the valid x are handed to `evaluate`: the app
+# evaluates the missing ones too, but discards them, and the periodic double logistic's tile
+# range is taken over the valid x either way (stats.js min/max skip missing values).
+.fit_residuals <- function(evaluate, x_full, y_full) {
+  xl <- as.list(x_full); yl <- as.list(y_full)
+  ok <- which(!vapply(xl, .js_invalid, logical(1)))
+  pred <- rep(NaN, length(xl))
+  if (length(ok)) {
+    pred[ok] <- suppressWarnings(as.numeric(unlist(
+      evaluate(vapply(xl[ok], .js_number, numeric(1))), use.names = FALSE)))
+  }
+  vapply(seq_along(yl), function(i) {
+    if (i > length(xl) || .js_invalid(yl[[i]]) || .js_invalid(xl[[i]]) ||
+        !is.finite(pred[i])) return(NaN)
+    .js_number(yl[[i]]) - pred[i]
+  }, numeric(1))
+}
+
 tp_trendfit <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
@@ -589,6 +610,16 @@ tp_trendfit <- function(args, env) {
     y_out <- out_id(args, paste0("trendy_", y_id))
     if (y_out == -1) y_out <- out_id(args, "trendy")
     set_col(env, env$cols, y_out, yy, type = "number")
+    # Residuals (TrendFit.svelte): only with the x output wired; the trend evaluated at every
+    # input x.
+    rid <- out_id(args, paste0("resid_", y_id))
+    if (rid != -1 && out_id(args, "trendx") != -1) {
+      prm <- res$parameters
+      set_col(env, env$cols, rid,
+              .fit_residuals(function(p) evaluate_trend_at_points(prm, model, p), t,
+                             col_data(env$cols[[yk]], env$cols, env$raw_data)),
+              type = "number")
+    }
     stats_by_y[[yk]] <- res
     any_valid <- TRUE
   }
@@ -1379,6 +1410,15 @@ tp_cosinor <- function(args, env) {
     yo <- out_id(args, paste0("cosinory_", y_id))
     if (yo == -1) yo <- out_id(args, "cosinory")
     set_col(env, env$cols, yo, evaluate_cosinor_at_points(params, xs), type = "number")
+    # Residuals (Cosinor.svelte writeCosinorOutputs): only with the x output wired; the model
+    # evaluated at every input x (fixed period: the full model, mesor included, v82.11).
+    rid <- out_id(args, paste0("resid_", y_id))
+    if (rid != -1 && out_id(args, "cosinorx") != -1) {
+      set_col(env, env$cols, rid,
+              .fit_residuals(function(p) evaluate_cosinor_at_points(params, p), t,
+                             col_data(env$cols[[yk]], env$cols, env$raw_data)),
+              type = "number")
+    }
     any_valid <- TRUE
   }
   if (any_valid) {
@@ -1840,72 +1880,147 @@ tp_columnfunctions <- function(args, env) {
   length(result) > 0
 }
 
-tp_widetolong <- function(args, env) {
-  x_in <- if (!is.null(args$timeIN)) args$timeIN else if (!is.null(args$xIN)) args$xIN else -1
-  y_ins <- id_list(if (!is.null(args$valueColIds)) args$valueColIds else args$yIN)
-  if (!length(y_ins)) return(FALSE)
-  times <- list(); cats <- character(0); vals <- list()
-  for (y_id in y_ins) {
-    yk <- as.character(y_id)
-    if (is.null(env$cols[[yk]])) next
-    y_col <- env$cols[[yk]]
-    yd <- col_data(y_col, env$cols, env$raw_data)
-    xd <- if (x_in != -1 && !is.null(env$cols[[as.character(x_in)]]))
-      col_data(env$cols[[as.character(x_in)]], env$cols, env$raw_data) else as.list(seq_along(yd) - 1)
-    for (i in seq_along(yd)) {
-      xi <- if (i <= length(xd)) xd[[i]] else NULL
-      yi <- yd[[i]]
-      if (is.null(xi) || is.null(yi)) next
-      if (length(xi) != 1 || length(yi) != 1) next
-      if ((is.character(xi) && !nzchar(xi)) || (is.character(yi) && !nzchar(yi))) next
-      if (is.atomic(xi) && is.na(xi)) next
-      if (is.atomic(yi) && is.na(yi)) next
-      times[[length(times) + 1]] <- xi
-      cats <- c(cats, if (is.null(y_col$name)) yk else y_col$name)
-      vals[[length(vals) + 1]] <- yi
+# The missing-cell rule LongToWide and WideToLong apply to a column of this type: the house
+# rule (.js_invalid) everywhere except a category column, whose cells are labels
+# (is_missing_category: NA, blank or whitespace-only text, NaN). Python: _cell_missing_rule.
+.cell_missing_rule <- function(type) {
+  if (identical(type, "category")) {
+    function(v) {
+      if (is.null(v)) return(TRUE)
+      if (is.list(v)) v <- if (length(v) == 1) v[[1]] else return(TRUE)
+      length(v) != 1 || isTRUE(is_missing_category(v))
     }
-  }
-  x_col <- if (x_in != -1) env$cols[[as.character(x_in)]] else NULL
-  set_col(env, env$cols, out_id(args, "time"), unlist(times, use.names = FALSE),
-          type = if (!is.null(x_col)) x_col$type else "number",
-          time_format = if (!is.null(x_col)) x_col$time_format else NULL)
-  set_col(env, env$cols, out_id(args, "category"), cats, type = "category")
-  set_col(env, env$cols, out_id(args, "value"), unlist(vals, use.names = FALSE), type = "number")
-  TRUE
+  } else .js_invalid
 }
 
+# An exact key for one cell (JS Set / Map identity on the values a column holds).
+.cell_key <- function(v) {
+  if (is.list(v)) v <- v[[1]]
+  if (is.numeric(v)) sprintf("n:%.17g", v) else paste0("s:", as.character(v))
+}
+
+# Port of WideToLong.svelte widetolong (Python: tp_widetolong). One block of rows per value
+# column (selected order, duplicates and negative ids ignored), its rows to the shorter of the
+# two lengths; a row is dropped when its time or its cell is missing by its column's rule. The
+# category is the value column's name; the time output keeps the time column's type with no
+# text format, the value output the FIRST value column's type.
+tp_widetolong <- function(args, env) {
+  x_in <- if (!is.null(args$timeIN)) args$timeIN else if (!is.null(args$xIN)) args$xIN else -1
+  y_ins <- unique(id_list(if (!is.null(args$valueColIds)) args$valueColIds else args$yIN))
+  y_ins <- y_ins[y_ins >= 0]
+  if (is.null(x_in) || x_in == -1 || !length(y_ins)) return(FALSE)
+  x_col <- env$cols[[as.character(x_in)]]
+  if (is.null(x_col)) return(FALSE)
+  xd <- as.list(col_data(x_col, env$cols, env$raw_data))
+  time_missing <- .cell_missing_rule(x_col$type)
+  times <- list(); cats <- character(0); vals <- list()
+  for (y_id in y_ins) {
+    y_col <- env$cols[[as.character(y_id)]]
+    if (is.null(y_col)) return(FALSE)
+    yd <- as.list(col_data(y_col, env$cols, env$raw_data))
+    cell_missing <- .cell_missing_rule(y_col$type)
+    label <- if (is.null(y_col$name)) paste0("column_", y_id) else y_col$name
+    for (i in seq_len(min(length(xd), length(yd)))) {
+      if (time_missing(xd[[i]]) || cell_missing(yd[[i]])) next
+      times[[length(times) + 1]] <- xd[[i]]
+      cats <- c(cats, label)
+      vals[[length(vals) + 1]] <- yd[[i]]
+    }
+  }
+  # Each output is written when wired (the app's three are always wired together).
+  t_id <- out_id(args, "time")
+  set_col(env, env$cols, t_id, unlist(times, use.names = FALSE), type = x_col$type)
+  if (!is.null(env$cols[[as.character(t_id)]])) env$cols[[as.character(t_id)]]$time_format <- NULL
+  set_col(env, env$cols, out_id(args, "category"), cats, type = "category")
+  v_type <- env$cols[[as.character(y_ins[1])]]$type
+  set_col(env, env$cols, out_id(args, "value"), unlist(vals, use.names = FALSE),
+          type = if (is.null(v_type)) "number" else v_type)
+  length(times) > 0
+}
+
+# Port of LongToWide.svelte evaluateLongToWide + writeLongToWideOutputs (Python:
+# tp_longtowide). Args are the app's own: categoryIN, timeIN, valueIN.
+# - A row whose time is missing (the time column's rule) is dropped.
+# - Categories in order of first appearance; a missing label (is_missing_category) is none.
+# - The time column is the union of the kept times (exact values), sorted ascending.
+# - value_<category> holds, per union time, the value of the LAST row with that category and
+#   time (a repeated time is not averaged); NaN where there is no such row. A missing value is
+#   kept, so it reads as a blank cell.
+# - The pre-processes run on each category's values before writing, in order.
 tp_longtowide <- function(args, env) {
-  x_in <- if (is.null(args$xIN)) -1 else args$xIN
-  cat_in <- if (!is.null(args$categoryColId)) args$categoryColId
-            else if (!is.null(args$catIN)) args$catIN else -1
-  val_in <- if (!is.null(args$valueColId)) args$valueColId
-            else if (!is.null(args$valIN)) args$valIN else -1
-  if (x_in == -1 || cat_in == -1 || val_in == -1) return(FALSE)
-  xk <- as.character(x_in)
-  if (is.null(env$cols[[xk]])) return(FALSE)
-  xd <- unlist(col_data(env$cols[[xk]], env$cols, env$raw_data), use.names = FALSE)
-  cd <- as.character(unlist(col_data(env$cols[[as.character(cat_in)]], env$cols, env$raw_data),
-                            use.names = FALSE))
-  vd <- suppressWarnings(as.numeric(unlist(col_data(env$cols[[as.character(val_in)]],
-                                                    env$cols, env$raw_data), use.names = FALSE)))
-  n <- min(length(xd), length(cd), length(vd))
-  xd <- xd[seq_len(n)]; cd <- cd[seq_len(n)]; vd <- vd[seq_len(n)]
-  # pandas pivot_table SORTS both the index and the columns, and aggregates duplicates with
-  # the mean. Matching that ordering matters: the output columns are addressed by name, so a
-  # different order would pair the wrong values with the wrong ids.
-  ux <- sort(unique(xd))
-  uc <- sort(unique(cd))
-  set_col(env, env$cols, out_id(args, "time"), ux,
-          type = env$cols[[xk]]$type, time_format = env$cols[[xk]]$time_format)
-  for (cc in uc) {
-    oid <- out_id(args, paste0("value_", cc))
-    if (oid == -1) next
-    vals <- vapply(ux, function(xx) {
-      sel <- vd[xd == xx & cd == cc]
-      sel <- sel[is.finite(sel)]
-      if (!length(sel)) NA_real_ else mean(sel)
-    }, numeric(1))
-    set_col(env, env$cols, oid, vals, type = "number")
+  ids <- list(args$categoryIN, args$timeIN, args$valueIN)
+  for (cid in ids) {
+    if (is.null(cid) || cid == -1 || is.null(env$cols[[as.character(cid)]])) return(FALSE)
+  }
+  cat_col <- env$cols[[as.character(args$categoryIN)]]
+  t_col <- env$cols[[as.character(args$timeIN)]]
+  v_col <- env$cols[[as.character(args$valueIN)]]
+  cd <- as.list(col_data(cat_col, env$cols, env$raw_data))
+  td <- as.list(col_data(t_col, env$cols, env$raw_data))
+  vd <- as.list(col_data(v_col, env$cols, env$raw_data))
+  time_missing <- .cell_missing_rule(t_col$type)
+  is_cat_missing <- .cell_missing_rule("category")
+
+  union <- list(); union_keys <- character(0)
+  for (t in td) {
+    if (time_missing(t)) next
+    k <- .cell_key(t)
+    if (k %in% union_keys) next
+    union_keys <- c(union_keys, k); union[[length(union) + 1]] <- t
+  }
+  if (!length(union)) return(FALSE)
+  tnum <- vapply(union, .js_number, numeric(1))
+  # JS sorts with (a, b) => a - b: numeric keys ascending (stable); a non-numeric key compares
+  # as equal, so all-text times keep their first-appearance order.
+  if (!anyNA(tnum)) {
+    o <- order(tnum, method = "radix")
+    union <- union[o]; union_keys <- union_keys[o]
+  }
+
+  categories <- list(); cat_keys <- character(0)
+  for (c in cd) {
+    if (is_cat_missing(c)) next
+    k <- .cell_key(c)
+    if (k %in% cat_keys) next
+    cat_keys <- c(cat_keys, k); categories[[length(categories) + 1]] <- c
+  }
+
+  cells <- new.env(hash = TRUE)
+  n <- min(length(cd), length(td))
+  for (i in seq_len(n)) {
+    if (time_missing(td[[i]]) || is_cat_missing(cd[[i]])) next
+    key <- paste(.cell_key(cd[[i]]), .cell_key(td[[i]]), sep = "|")
+    assign(key, if (i <= length(vd)) vd[[i]] else NA, envir = cells)
+  }
+
+  result <- lapply(cat_keys, function(ck) {
+    unlist(lapply(union_keys, function(tk) {
+      key <- paste(ck, tk, sep = "|")
+      if (exists(key, envir = cells, inherits = FALSE)) {
+        v <- get(key, envir = cells)
+        if (is.null(v)) NA else v
+      } else NaN
+    }), use.names = FALSE)
+  })
+  for (pp in args$preProcesses) {
+    nm <- pp$processName
+    if (is.null(nm) || !nzchar(nm)) next
+    result <- lapply(result, function(vals)
+      run_column_process(tolower(gsub(" ", "", nm)), vals,
+                         if (is.null(pp$processArgs)) list() else pp$processArgs,
+                         env$cols, env$raw_data))
+  }
+
+  t_id <- out_id(args, "time")
+  if (t_id == -1) return(TRUE)
+  # The app stores the input's raw time text (with its format) when it can, else epoch ms with
+  # the format cleared; both read back as the same epoch ms, which is what is stored here.
+  set_col(env, env$cols, t_id, unlist(union, use.names = FALSE), type = t_col$type)
+  if (!is.null(env$cols[[as.character(t_id)]])) env$cols[[as.character(t_id)]]$time_format <- NULL
+  v_type <- if (is.null(v_col$type)) "number" else v_col$type
+  for (j in seq_along(categories)) {
+    set_col(env, env$cols, out_id(args, paste0("value_", js_string(categories[[j]]))),
+            result[[j]], type = v_type)
   }
   TRUE
 }
@@ -3225,6 +3340,15 @@ tp_rectangularwave <- function(args, env) {
     y_out <- out_id(args, paste0("rectwavey_", y_id))
     if (y_out == -1) y_out <- out_id(args, "rectwavey")
     set_col(env, env$cols, y_out, ys, type = "number")
+    # Residuals (RectangularWave.svelte): only with the x output wired; the model evaluated
+    # at every input x.
+    rid <- out_id(args, paste0("resid_", y_id))
+    if (rid != -1 && out_id(args, "rectwavex") != -1) {
+      prm <- res$parameters
+      set_col(env, env$cols, rid,
+              .fit_residuals(function(p) evaluate_rectwave_at_points(prm, p), t, y),
+              type = "number")
+    }
     stats_by_y[[yk]] <- res
     any_valid <- TRUE
   }
@@ -3483,6 +3607,16 @@ tp_doublelogistic <- function(args, env) {
     y_out <- out_id(args, paste0("dlogy_", y_id))
     if (y_out == -1) y_out <- out_id(args, "dlogy")
     set_col(env, env$cols, y_out, ys, type = "number")
+    # Residuals (DoubleLogistic.svelte): only with the x output wired; the periodic model
+    # evaluated at every input x.
+    rid <- out_id(args, paste0("resid_", y_id))
+    if (rid != -1 && out_id(args, "dlogx") != -1) {
+      prm <- res$parameters
+      set_col(env, env$cols, rid,
+              .fit_residuals(function(p) evaluate_dl_at_points(prm, p, TRUE), t,
+                             col_data(env$cols[[yk]], env$cols, env$raw_data)),
+              type = "number")
+    }
     stats_by_y[[yk]] <- res
     any_valid <- TRUE
   }
@@ -3688,7 +3822,8 @@ tp_fitfunction <- function(args, env) {
     y_out_data <- if (!is.null(output_x)) ff_evaluate_at_points(fr, model, output_x)
                   else fr$fitted
     y_results[[yk]] <- list(fr = fr, xOutData = if (!is.null(output_x)) output_x else tt,
-                            yOutData = y_out_data)
+                            yOutData = y_out_data,
+                            y = col_data(env$cols[[yk]], env$cols, env$raw_data))
     if (length(fr$fitted)) any_valid <- TRUE
   }
 
@@ -3702,6 +3837,14 @@ tp_fitfunction <- function(args, env) {
       y_out <- out_id(args, paste0("fity_", y_id))
       if (y_out != -1 && !is.null(yr)) {
         set_col(env, env$cols, y_out, yr$yOutData, type = "number")
+      }
+      # Residuals (FitFunction.svelte residualColumn): the model evaluated at every input x.
+      rid <- out_id(args, paste0("resid_", y_id))
+      if (rid != -1 && !is.null(yr)) {
+        fres <- yr$fr
+        set_col(env, env$cols, rid,
+                .fit_residuals(function(p) ff_evaluate_at_points(fres, model, p), t, yr$y),
+                type = "number")
       }
     }
   }
@@ -4257,11 +4400,22 @@ lomb_scargle <- function(t, y, periods) {
     tau <- if (w != 0) atan2(sum(sin(two_w * t)), sum(cos(two_w * t))) / two_w else 0
     cwt <- cos(w * (t - tau)); swt <- sin(w * (t - tau))
     den1 <- sum(cwt^2); den2 <- sum(swt^2)
-    if (den1 > 0 && den2 > 0) {
-      (sum(y * cwt)^2 / den1 + sum(y * swt)^2 / den2) / (2 * vary)
-    } else 0
+    # periodogram.js: each term on its own guard; a basis that is constant over the samples
+    # (spread about its mean at most LS_DEGENERATE_BASIS of n; a period equal to the sampling
+    # interval) is left out, the other term still counts.
+    n <- length(t)
+    min_spread <- LS_DEGENERATE_BASIS * n
+    c_var <- den1 - sum(cwt)^2 / n > min_spread
+    s_var <- den2 - sum(swt)^2 / n > min_spread
+    p <- ((if (c_var && den1 > 0) sum(y * cwt)^2 / den1 else 0) +
+          (if (s_var && den2 > 0) sum(y * swt)^2 / den2 else 0)) / (2 * vary)
+    if (is.finite(p)) p else 0
   }, numeric(1))
 }
+
+# periodogram.js LS_DEGENERATE_BASIS: a basis whose spread about its mean is at most this
+# fraction of n is constant up to rounding.
+LS_DEGENERATE_BASIS <- 1e-12
 
 # Folding chi-squared (Sokolove-Bushell 1978), the periodogram.js pipeline step for step
 # (matching the Python port): valid pairs, bin at dt from bin_origin, fold the BIN MEANS at
@@ -4577,7 +4731,6 @@ tp_rhythmicityanalysis <- function(args, env) {
   y_ins <- id_list(args$yIN)
   if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
   analysis <- if (is.null(args$analysis)) "periodogram" else args$analysis
-  hide_inputs <- isTRUE(args$hideInputs)
   t <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
   shared_x <- NULL; any_valid <- FALSE; stats_by_y <- list()
   pick <- function(a, b, d) if (!is.null(args[[a]])) args[[a]]
@@ -4599,57 +4752,40 @@ tp_rhythmicityanalysis <- function(args, env) {
         # chiSquaredAlpha = pgAlpha ?? 0.05 (RhythmicityAnalysis.svelte:142).
         dt = if (is.null(args$pgBinSize)) 0.25 else as.numeric(args$pgBinSize),
         alpha = if (is.null(args$pgAlpha)) 0.05 else as.numeric(args$pgAlpha)))
-      if (hide_inputs) {
-        if (is.null(shared_x)) {
-          shared_x <- pg$x
-          set_col(env, env$cols, out_id(args, "rhythmicityx"), pg$x, type = "number")
-        }
-        set_col(env, env$cols, out_id(args, paste0("rhythmicityy_", y_id)), pg$y, type = "number")
-      } else {
-        set_col(env, env$cols, out_id(args, paste0(y_id, "_period")), pg$x, type = "number")
-        set_col(env, env$cols, out_id(args, paste0(y_id, "_power")), pg$y, type = "number")
-        if (!is.null(pg$threshold)) {
-          set_col(env, env$cols, out_id(args, paste0(y_id, "_threshold")),
-                  pg$threshold, type = "number")
-        }
-      }
+      per_key <- list(period = pg$x, power = pg$y)
+      if (!is.null(pg$threshold)) per_key$threshold <- pg$threshold
+      px <- pg$x; py <- pg$y
     } else if (identical(analysis, "fft")) {
       fs <- args$fftFreqStep
       f <- compute_fft(t, y, if (is.numeric(fs) && length(fs) == 1 && is.finite(fs) && fs > 0)
                        fs else NULL)
       periods <- ifelse(f$frequencies != 0, 1 / f$frequencies, NA_real_)
-      if (hide_inputs) {
-        if (is.null(shared_x)) {
-          shared_x <- periods
-          set_col(env, env$cols, out_id(args, "rhythmicityx"), periods, type = "number")
-        }
-        set_col(env, env$cols, out_id(args, paste0("rhythmicityy_", y_id)),
-                f$magnitudes, type = "number")
-      } else {
-        set_col(env, env$cols, out_id(args, paste0(y_id, "_frequency")),
-                f$frequencies, type = "number")
-        set_col(env, env$cols, out_id(args, paste0(y_id, "_period")), periods, type = "number")
-        set_col(env, env$cols, out_id(args, paste0(y_id, "_magnitude")),
-                f$magnitudes, type = "number")
-        set_col(env, env$cols, out_id(args, paste0(y_id, "_phase")), f$phases, type = "number")
-      }
+      per_key <- list(frequency = f$frequencies, period = periods, magnitude = f$magnitudes,
+                      phase = f$phases)
+      px <- periods; py <- f$magnitudes
     } else if (identical(analysis, "correlogram")) {
       ac <- compute_autocorrelation(
         t, y,
         min_lag = as.numeric(if (is.null(args$corrMinLag)) 0 else args$corrMinLag),
         max_lag = if (is.null(args$corrMaxLag)) NULL else args$corrMaxLag)
-      if (hide_inputs) {
-        if (is.null(shared_x)) {
-          shared_x <- ac$lags
-          set_col(env, env$cols, out_id(args, "rhythmicityx"), ac$lags, type = "number")
-        }
-        set_col(env, env$cols, out_id(args, paste0("rhythmicityy_", y_id)),
-                ac$correlations, type = "number")
-      } else {
-        set_col(env, env$cols, out_id(args, paste0(y_id, "_lag")), ac$lags, type = "number")
-        set_col(env, env$cols, out_id(args, paste0(y_id, "_correlation")),
-                ac$correlations, type = "number")
+      per_key <- list(lag = ac$lags, correlation = ac$correlations)
+      px <- ac$lags; py <- ac$correlations
+    } else {
+      per_key <- NULL
+    }
+    # RhythmicityAnalysis.svelte writes EVERY wired output: one column per (y, key) and the
+    # shared primary pair (rhythmicityx from the first y with output, rhythmicityy_<y>;
+    # getPrimaryKeys). The ports used to write one family or the other on an args$hideInputs
+    # the app never saves (it is a component prop), so the pair was empty in every export.
+    if (!is.null(per_key)) {
+      for (k in names(per_key)) {
+        set_col(env, env$cols, out_id(args, paste0(y_id, "_", k)), per_key[[k]], type = "number")
       }
+      if (is.null(shared_x) && length(px)) {
+        shared_x <- px
+        set_col(env, env$cols, out_id(args, "rhythmicityx"), px, type = "number")
+      }
+      set_col(env, env$cols, out_id(args, paste0("rhythmicityy_", y_id)), py, type = "number")
     }
     # The scalar stats behind the stat_<key> metric ports, by the app's peak rules.
     st <- list()
@@ -5073,8 +5209,13 @@ gc_welch_t_test <- function(a, b, alpha = 0.05) {
   p_value <- if (is.finite(t)) gc_p_upper_from_f(t * t, 1, df) else 0
   t_crit <- if (is.finite(df)) qt(1 - alpha / 2, df) else NA_real_
   ci_half <- if (is.finite(t_crit) && is.finite(se)) t_crit * se else NA_real_
+  # Cohen's d on the pooled SD (GroupComparison.svelte welchTTest), the effect size the node's
+  # effectSize port reports for the t-test. It was missing here, so that port read NaN in R.
+  pooled_den <- n1 + n2 - 2
+  pooled_var <- if (pooled_den > 0) ((n1 - 1) * v1 + (n2 - 1) * v2) / pooled_den else NaN
+  cohen_d <- if (is.finite(pooled_var) && pooled_var > 0) diff / sqrt(pooled_var) else NaN
   list(valid = TRUE, difference = diff, t = t, df = df, pValue = p_value,
-       se = se, ciLow = diff - ci_half, ciHigh = diff + ci_half)
+       se = se, ciLow = diff - ci_half, ciHigh = diff + ci_half, cohenD = cohen_d)
 }
 
 gc_one_way_anova <- function(groups) {
@@ -5185,11 +5326,43 @@ compute_group_comparison <- function(args, env) {
   list(result = out, anyValid = any_valid)
 }
 
-# The node writes no output columns; the pipeline only needs the anyValid flag. The numbers
-# are still computed so the algorithm is exercised, and compute_group_comparison is what the
-# parity harness calls for the detail.
+# GroupComparison.svelte writeGroupComparisonMetrics (Python: _gc_write_metrics): the scalar
+# metric ports, one value per y input in yIN order (one in the no-group multi-Y mode): the
+# test's statistic (t / F / U / H), its p and the effect size that belongs with that test.
+.gc_write_metrics <- function(args, env, result) {
+  ids <- c(out_id(args, "statistic"), out_id(args, "pvalue"), out_id(args, "effectSize"))
+  if (all(ids == -1)) return(invisible(NULL))
+  num1 <- function(v) if (is.numeric(v) && length(v) == 1) as.numeric(v) else NULL
+  statistic_of <- function(c) {
+    for (k in c("t", "f", "u", "h")) if (!is.null(c[[k]])) return(as.numeric(c[[k]]))
+    NaN
+  }
+  effect_of <- function(c) {
+    for (k in c("cohenD", "etaSquared", "rEffect", "epsilonSquared")) {
+      v <- num1(c[[k]])
+      if (!is.null(v) && is.finite(v)) return(v)
+    }
+    NaN
+  }
+  p_of <- function(c) { v <- num1(c$pValue); if (is.null(v)) NaN else v }
+  chosen <- if (!is.null(result$multiY)) list(result$multiY)
+            else lapply(id_list(args$yIN), function(y) result[[as.character(y)]])
+  set_col(env, env$cols, ids[1], vapply(chosen, statistic_of, numeric(1)), type = "number")
+  set_col(env, env$cols, ids[2], vapply(chosen, p_of, numeric(1)), type = "number")
+  set_col(env, env$cols, ids[3], vapply(chosen, effect_of, numeric(1)), type = "number")
+}
+
+# The validity flag, and the metric ports (statistic, pvalue, effectSize) as the app writes
+# them. The app returns before writing them only when there is neither a group column nor a
+# multi-Y comparison (or no y at all).
 tp_groupcomparison <- function(args, env) {
-  isTRUE(compute_group_comparison(args, env)$anyValid)
+  gc <- compute_group_comparison(args, env)
+  x_in <- args$xIN
+  has_group <- !is.null(x_in) && x_in != -1 && !is.null(env$cols[[as.character(x_in)]])
+  if (!is.null(gc$result$multiY) || (has_group && length(id_list(args$yIN)))) {
+    .gc_write_metrics(args, env, gc$result)
+  }
+  isTRUE(gc$anyValid)
 }
 
 # ---------------------------------------------------------------------------
