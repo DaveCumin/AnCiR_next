@@ -268,7 +268,7 @@
 		// Materialise outputs when this TP is committed (a canvas node in
 		// core.tableProcesses) OR has a legacy parent table. Free-standing nodes
 		// have no parent, so the old `if (p.parent)` gate produced no outputs; a
-		// preview instance (MakeNewColumn modal, no id) must still be skipped so it
+		// preview instance (an instance with no id, such as the removed MakeNewColumn modal used to mount) must still be skipped so it
 		// doesn't leak orphan columns.
 		const canWrite =
 			!!p.parent || (p?.id != null && (core.tableProcesses ?? []).some((tp) => tp.id === p.id));

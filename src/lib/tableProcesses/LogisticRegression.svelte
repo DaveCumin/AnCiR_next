@@ -210,7 +210,7 @@
 		// Backfill any output column missing from an older saved session — the per-observation
 		// outcome/eta/fitted outputs were added after this node first shipped, so old sessions lack
 		// them and the quick-plot would have nothing to wire. Only for a COMMITTED node (guarding
-		// against the MakeNewColumn preview, where creating columns would leak orphans). Free nodes
+		// against a preview instance with no id, where creating columns would leak orphans). Free nodes
 		// have no parent, so the column lives directly in core.data via pushObj.
 		const committed = p?.id != null && (core.tableProcesses ?? []).some((tp) => tp.id === p.id);
 		if (committed) {

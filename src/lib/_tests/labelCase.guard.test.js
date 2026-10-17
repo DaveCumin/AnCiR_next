@@ -46,12 +46,7 @@ const SHAPES = [
 const MODAL_HEADINGS = /<h[23]\b[^>]*>\s*([^<{}]+?)\s*<\/h[23]>/g;
 
 /** Proper names and fixed terms that keep their capitals inside a label. */
-export const PROPER_NOUNS = new Set([
-	'Watson-Williams',
-	// Node names, kept as the palette writes them.
-	'Enter Data',
-	'Sequence Column'
-]);
+export const PROPER_NOUNS = new Set(['Watson-Williams']);
 
 /** Labels that are symbols, written lower case on purpose. */
 export const LOWER_START = new Set(['x', 'y', 'k1', 'k2', 'alpha', 'p-values', 'random()']);

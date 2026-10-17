@@ -436,7 +436,7 @@
 			// free-standing committed node (in core.tableProcesses) or a legacy
 			// parent table; the old `&& p.parent` gate produced no wide columns on
 			// the parentless dataflow node. `out.time >= 0` confirms the constructor
-			// already ran (skips the uncommitted MakeNewColumn preview instance).
+			// already ran (skips an uncommitted preview instance with no id).
 			const committed =
 				p.args.out.time >= 0 &&
 				(!!p.parent || (p?.id != null && (core.tableProcesses ?? []).some((tp) => tp.id === p.id)));

@@ -38,7 +38,7 @@ export function useMultiYTP(p, yPrefix, yColNamePrefix) {
 	let prevYIds = [...(p.args.yIN ?? [])].map(Number);
 
 	// True once `p` is a real, committed TableProcess (has an id and is in
-	// core.tableProcesses). The MakeNewColumn modal mounts the component against a
+	// core.tableProcesses). A preview (the removed MakeNewColumn modal did this) mounts the component against a
 	// plain `{ name, args }` preview object with no id — we must NOT create output
 	// columns in that context (they'd leak as orphan data nodes).
 	function isCommitted() {
@@ -78,7 +78,7 @@ export function useMultiYTP(p, yPrefix, yColNamePrefix) {
 		if (newIds.length === prevYIds.length && newIds.every((id) => oldSet.has(id))) return false;
 
 		// Only materialise output columns for a COMMITTED table process (has an
-		// id and lives in core.tableProcesses). In the MakeNewColumn modal the
+		// id and lives in core.tableProcesses). In a preview with no id the
 		// component is mounted against a plain preview object with no id — creating
 		// columns there leaks orphan data nodes (the TableProcess constructor
 		// creates the real outputs on commit). We still report the change so the

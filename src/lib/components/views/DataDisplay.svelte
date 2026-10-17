@@ -9,7 +9,6 @@
 	import Icon from '$lib/icons/Icon.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import NodeSourceItem from './NodeSourceItem.svelte';
-	import MakeNewColumn from './modals/MakeNewColumn.svelte';
 	import { openImportData } from '$lib/core/dataSourceActions.js';
 	import SwapColumns from './modals/SwapColumns.svelte';
 	import Editable from '../inputs/Editable.svelte';
@@ -19,8 +18,6 @@
 	import SinglePlotAction from '../iconActions/SinglePlotAction.svelte';
 
 	let showSwapColumns = $state(false);
-	let showNewCol = $state(false);
-	let newColInitialType = $state('');
 
 	// ─── Search ────────────────────────────────────────────────────────────────
 	// Filters Sources / Nodes / Plots by name. While a query is active, every
@@ -729,7 +726,6 @@
 	<div class="div-block"></div>
 </div>
 
-<MakeNewColumn bind:show={showNewCol} bind:initialType={newColInitialType} />
 <SwapColumns bind:showModal={showSwapColumns} />
 <SinglePlotAction
 	bind:showDropdown={showSinglePlotDropdown}
