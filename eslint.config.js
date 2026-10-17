@@ -15,7 +15,7 @@ export default [
 		// artefacts plus generated .cache/ bundles and .data/ sessions. It is neither
 		// app source nor shipped code, and the bundles are machine-written, so it is
 		// outside the app's lint gate.
-		ignores: ['tools/benchmarks/**']
+		ignores: ['tools/benchmarks/**', 'promo/**']
 	},
 	js.configs.recommended,
 	...svelte.configs.recommended,

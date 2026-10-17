@@ -54,7 +54,9 @@ try {
 
 console.log(`▶ ${task.label}…`);
 try {
-	execSync(task.cmd, { cwd: 'mcp', stdio: 'inherit' });
+	// A step that never exits must fail the build, not hang it (gen-schema once did: see
+	// mcp/vite.config.js, server.watch). Both steps take seconds; 10 minutes is a backstop.
+	execSync(task.cmd, { cwd: 'mcp', stdio: 'inherit', timeout: 600_000, killSignal: 'SIGKILL' });
 } catch {
 	// Fail loudly. A silently-skipped deploy leaves production stale, and a silently-skipped
 	// regenerate ships a catalogue that disagrees with the app — the exact drift this replaced.

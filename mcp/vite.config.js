@@ -27,7 +27,18 @@ export default defineConfig({
 		alias: { $lib: lib }
 	},
 	server: {
-		fs: { allow: [repoRoot] }
+		fs: { allow: [repoRoot] },
+		// No file watcher outside vitest. vite-node (gen-schema, the MCP server and its
+		// workers) asks Vite for `watch: null`, but Vite's mergeConfig skips null values, so
+		// that request is silently dropped and a real chokidar watcher runs. Every module
+		// imported from ../src/lib (outside this root) is then `watcher.add`ed, and on macOS
+		// each add starts an fsevents instance asynchronously. When the script finishes,
+		// vite-node closes the server while some adds are still in flight; an fsevents
+		// instance created after close() is never stopped and keeps Node alive forever.
+		// That hung `npm run mcp:schema` (and so the release gate and `npm run build`)
+		// intermittently, more often as the app grew. A null set HERE survives the merge.
+		// Under vitest, leave it alone: vitest sets its own watch mode (run vs watch).
+		watch: process.env.VITEST ? undefined : null
 	},
 	test: {
 		environment: 'happy-dom',

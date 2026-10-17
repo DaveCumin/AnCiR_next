@@ -46,3 +46,7 @@ CITATION.cff
 # Sessions captured from the running app at v76.4 (facet migration fixtures), written
 # byte-for-byte by the app's own Save action. Reformatting would destroy the provenance.
 src/test/fixtures/*.json
+
+# Local promo/advert prototyping, kept out of the repo via .git/info/exclude (which Prettier
+# and ESLint do not read).
+/promo/

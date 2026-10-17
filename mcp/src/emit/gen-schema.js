@@ -253,7 +253,11 @@ const out = {
 	plots
 };
 
-const target = fileURLToPath(new URL('./session-schema.generated.json', import.meta.url));
+// ANCIR_SCHEMA_OUT redirects the output, so a test can run the real generator end to end
+// (scripts/nodeScriptsExit.test.js) without rewriting the committed file.
+const target =
+	process.env.ANCIR_SCHEMA_OUT ||
+	fileURLToPath(new URL('./session-schema.generated.json', import.meta.url));
 writeFileSync(target, JSON.stringify(out, null, '\t') + '\n');
 console.log(`Wrote ${out.count} node schemas → ${target}`);
 // Spot-check the node that motivated this: Cosinor MUST carry cosinorx in fixedOut.
@@ -263,3 +267,18 @@ if (cos) {
 	if (!cos.fixedOut.includes('cosinorx'))
 		console.warn('WARNING: Cosinor.fixedOut is missing cosinorx — the fit will not compute!');
 }
+
+// Belt and braces: this is a one-shot generator inside the release gate and `npm run build`,
+// so it must never hang after its work is done. Normally nothing is left running and Node
+// exits as soon as vite-node closes its server. If a future change leaks a handle at import
+// time (a timer, an effect root with an interval, a file watcher: see mcp/vite.config.js,
+// server.watch), this unref'd timer fires and exits anyway, loudly, so the leak is visible
+// rather than a silent hang. unref() means the timer itself never keeps the process alive.
+setTimeout(() => {
+	console.warn(
+		`gen-schema: something kept Node alive after the schema was written ` +
+			`(${JSON.stringify(process.getActiveResourcesInfo())}); exiting anyway. ` +
+			`Find and fix the leaked handle.`
+	);
+	process.exit(process.exitCode ?? 0);
+}, 10_000).unref();
