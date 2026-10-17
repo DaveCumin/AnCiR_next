@@ -12,6 +12,10 @@
 		compactPortAnchorY,
 		columnTypeIcon
 	} from './nodeGeometry.js';
+	import { NODE_CARD_BORDER, PORT_DOT, NODE_ROW_CSS_VARS } from './nodeRows.js';
+	import { portTooltip, portAriaLabel, portLabel } from './portLabels.js';
+	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
+	import { getNodeName } from '$lib/core/nodeNaming.js';
 
 	let { node, selected = false, spliceTargetPort = null } = $props();
 	const dispatch = createEventDispatcher();
@@ -46,20 +50,19 @@
 		return 'gear';
 	});
 
-	const dotTop = (slot, count) => compactPortAnchorY(slot, count, height) - 6.5; // dot is 13px
+	// compactPortAnchorY is measured from the square's outer top (where WorkflowEditor ends the
+	// wires); the dots are positioned inside its border, so step back over it and half a dot.
+	const dotTop = (slot, count) =>
+		compactPortAnchorY(slot, count, height) - NODE_CARD_BORDER - PORT_DOT / 2;
 
-	// Hover tooltip: "<node name> — <port>". For per-column ports (col_<id>, used
-	// by groups and table-process outputs) resolve the friendly column name.
-	function portTip(port) {
-		// Prefer a friendly display label (composite interface ports carry one);
-		// otherwise resolve col_<id> ports to the column's name.
-		let label = port.display ?? port.name;
-		if (typeof label === 'string' && label.startsWith('col_')) {
-			const col = getColumnById(Number(label.slice(4)));
-			if (col?.name) label = col.name;
-		}
-		return `${node.label}: ${label}${port.dynamic ? ' (many)' : ''}`;
-	}
+	// Tooltip and accessible name (portLabels.js). The square shows no labels, so the
+	// tooltip leads with the node's name; per-column ports (col_<id>) show the column's name.
+	const colName = (id) => getColumnById(id)?.name;
+	let nodeName = $derived(getNodeName(node) || node.label || '');
+	const portTip = (port, dir) =>
+		portTooltip(port, dir, { label: portLabel(port, colName), nodeName });
+	const portName = (port, dir) =>
+		portAriaLabel(nodeName, port, dir, { label: portLabel(port, colName) });
 
 	function startFromOutput(e, portName) {
 		e.stopPropagation();
@@ -105,9 +108,10 @@
 	class="compact-node"
 	class:selected
 	class:has-warning={hasWarning}
-	style="width:{COMPACT_W}px; height:{height}px;"
+	style="{NODE_ROW_CSS_VARS} width:{COMPACT_W}px; height:{height}px;"
 	role="button"
 	tabindex="0"
+	aria-label={nodeName}
 	{@attach tooltip(
 		hasWarning ? `${node.label ?? ''}\n⚠ ${warnings.join('\n')}` : (node.label ?? '')
 	)}
@@ -121,13 +125,15 @@
 			data-node-id={node.id}
 			data-port-name={port.name}
 			data-port-dir="in"
-			{@attach tooltip(portTip(port))}
+			{@attach tooltip(portTip(port, 'in'))}
+			aria-label={portName(port, 'in')}
+			aria-describedby={PORT_KEYS_HELP_ID}
 			onpointerdown={(e) => e.stopPropagation()}
 			onmousedown={(e) => disconnectInput(e, port.name)}
 			onmouseup={(e) => endAtInput(e, port.name)}
 			oncontextmenu={(e) => openInputPicker(e, port.name)}
 			role="button"
-			tabindex="-1"
+			tabindex="0"
 		></div>
 	{/each}
 	{#each outputs as port, i (`out_${port.name}_${i}`)}
@@ -139,12 +145,14 @@
 			data-node-id={node.id}
 			data-port-name={port.name}
 			data-port-dir="out"
-			{@attach tooltip(portTip(port))}
+			{@attach tooltip(portTip(port, 'out'))}
+			aria-label={portName(port, 'out')}
+			aria-describedby={PORT_KEYS_HELP_ID}
 			onpointerdown={(e) => e.stopPropagation()}
 			onmousedown={(e) => startFromOutput(e, port.name)}
 			onmouseup={(e) => endAtOutput(e, port.name)}
 			role="button"
-			tabindex="-1"
+			tabindex="0"
 		></div>
 	{/each}
 </div>
@@ -153,7 +161,7 @@
 	.compact-node {
 		position: relative;
 		border-radius: var(--radius-lg);
-		border: 1px solid rgba(0, 0, 0, 0.18);
+		border: var(--node-card-border) solid rgba(0, 0, 0, 0.18);
 		background: var(--surface-card);
 		cursor: grab;
 		user-select: none;
@@ -188,11 +196,13 @@
 		color: var(--color-lightness-35);
 		pointer-events: none;
 	}
-	/* Port dots — mirror WorkflowNode.svelte so wiring/handlers behave identically. */
+	/* Port dots: mirror WorkflowNode.svelte so wiring/handlers behave identically, and take
+	   their size from nodeRows.js (NODE_ROW_CSS_VARS on the square). */
 	.port-dot {
 		position: absolute;
-		width: 13px;
-		height: 13px;
+		width: var(--port-dot);
+		height: var(--port-dot);
+		box-sizing: border-box;
 		border-radius: 50%;
 		background: var(--surface-card);
 		border: 1px solid var(--color-lightness-50);
@@ -201,21 +211,21 @@
 		overflow: visible;
 		pointer-events: auto;
 	}
+	/* Invisible hit area: one port step (24 px) tall, so it meets the next port's and never
+	   overlaps it (WCAG 2.2 SC 2.5.8), as on a detailed card. Wider than tall. */
 	.port-dot::before {
 		content: '';
 		position: absolute;
-		inset: -2px -16px;
+		inset: calc((var(--node-row-h) - var(--port-dot)) / -2) -16px;
 		border-radius: var(--radius-lg);
 	}
-	/* Sit just outside the edge (dot touches the border) so the port reads as
-	   attached to the small square rather than floating away from it. */
+	/* Centred on the square's outer edge, where WorkflowEditor ends the wires (as on a
+	   detailed card). */
 	.port-dot.dot-input {
-		left: 0;
-		transform: translateX(-100%);
+		left: calc(-1 * (var(--node-card-border) + var(--port-dot) / 2));
 	}
 	.port-dot.dot-output {
-		right: 0;
-		transform: translateX(100%);
+		right: calc(-1 * (var(--node-card-border) + var(--port-dot) / 2));
 	}
 	.port-dot:hover {
 		background: var(--color-accent);

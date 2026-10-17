@@ -24,6 +24,8 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
 	import { NODE_ROW_CSS_VARS, nodeRowCentreY } from './nodeRows.js';
+	import { portTooltip, portAriaLabel } from './portLabels.js';
+	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
 
 	let { node, selected = false, isDropTarget = false, spliceTargetPort = null } = $props();
 
@@ -351,8 +353,16 @@
 							onmousedown={(e) => onPortMouseDown(e, `col_${id}`)}
 							onmouseup={(e) => onPortMouseUp(e, `col_${id}`)}
 							oncontextmenu={onPortContextMenu}
-							{@attach tooltip(`output: ${col.name}`)}
-							aria-label={`output port ${col.name}`}
+							{@attach tooltip(portTooltip({ name: `col_${id}` }, 'out', { label: col.name }))}
+							aria-label={portAriaLabel(
+								node.groupObj?.name ?? node.label ?? 'Group',
+								{ name: `col_${id}` },
+								'out',
+								{
+									label: col.name
+								}
+							)}
+							aria-describedby={PORT_KEYS_HELP_ID}
 						></button>
 					</div>
 					{#if expanded}

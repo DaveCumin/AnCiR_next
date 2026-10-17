@@ -30,6 +30,8 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
 	import { NODE_ROW_CSS_VARS, nodeRowCentreY } from './nodeRows.js';
+	import { portTooltip, portAriaLabel } from './portLabels.js';
+	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
 
 	let {
 		node,
@@ -291,6 +293,7 @@
 	onpointerdown={onCardMouseDown}
 	role="button"
 	tabindex="0"
+	aria-label={getNodeName(node)}
 >
 	<div class="tp-header">
 		{#if hasWarning}
@@ -346,12 +349,13 @@
 							data-node-id={node.id}
 							data-port-name={port.name}
 							data-port-dir="in"
-							{@attach tooltip(`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
+							{@attach tooltip(portTooltip(port, 'in', { label: port.name }))}
 							onpointerdown={(e) => e.stopPropagation()}
 							onmousedown={(e) => disconnectInput(e, port.name)}
 							onmouseup={(e) => endAtInput(e, port.name)}
 							oncontextmenu={(e) => openInputPicker(e, port.name)}
-							aria-label={`input port ${port.name}`}
+							aria-label={portAriaLabel(getNodeName(node), port, 'in', { label: port.name })}
+							aria-describedby={PORT_KEYS_HELP_ID}
 						></button>
 						<span class="in-label">{port.name}{port.dynamic ? '*' : ''}</span>
 					</div>
@@ -424,8 +428,11 @@
 								onmouseup={(e) => endAtOutput(e, port)}
 								oncontextmenu={onPortContextMenu}
 								onclick={(e) => e.stopPropagation()}
-								{@attach tooltip(`output: ${shown}`)}
-								aria-label={`output port ${shown}`}
+								{@attach tooltip(portTooltip({ name: port }, 'out', { label: shown }))}
+								aria-label={portAriaLabel(getNodeName(node), { name: port }, 'out', {
+									label: shown
+								})}
+								aria-describedby={PORT_KEYS_HELP_ID}
 							></button>
 						</div>
 						{#if isOpen}
@@ -498,8 +505,18 @@
 										onmouseup={(e) => endAtOutput(e, port)}
 										oncontextmenu={onPortContextMenu}
 										onclick={(e) => e.stopPropagation()}
-										{@attach tooltip(`metric output: ${shown} (one value per y)`)}
-										aria-label={`metric output port ${shown}`}
+										{@attach tooltip(
+											portTooltip({ name: port, metric: true }, 'out', { label: shown })
+										)}
+										aria-label={portAriaLabel(
+											getNodeName(node),
+											{ name: port, metric: true },
+											'out',
+											{
+												label: shown
+											}
+										)}
+										aria-describedby={PORT_KEYS_HELP_ID}
 									></button>
 								</div>
 								{#if isOpen}
@@ -558,7 +575,8 @@
 								oncontextmenu={onPortContextMenu}
 								onclick={(e) => e.stopPropagation()}
 								{@attach tooltip('column set (connects to a many-in port)')}
-								aria-label={`column set output port ${bport.name}`}
+								aria-label={`${getNodeName(node)}: column set output port ${bport.display ?? bport.name}, connects to a many-in input port`}
+								aria-describedby={PORT_KEYS_HELP_ID}
 							></button>
 						</div>
 					</div>

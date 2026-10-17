@@ -95,6 +95,16 @@
 	import { settleBoxes, clearPlacementY } from './settleOverlaps.js';
 	import { computeNodeLayers } from './nodeLayers.js';
 	import { isEditableTarget, yieldEscapeToField } from '$lib/utils/editableTarget.js';
+	import {
+		portKeyAction,
+		isWireCandidate,
+		cycleIndex,
+		wiringMessages,
+		PORT_KEYS_HELP_ID,
+		PORT_KEYS_HELP
+	} from './keyboardWiring.js';
+	import { portLabel } from './portLabels.js';
+	import { getNodeName } from '$lib/core/nodeNaming.js';
 
 	// `addDataPrompt`: +page asks for the empty-session prompt only once the start screen is out of
 	// the way (startVisibility.js), so the two never stack.
@@ -1058,7 +1068,15 @@
 	// --- Plot resize state ---
 	// { nodeId, plotObj, startMouse:{x,y}, startW, startH, startPlotW, startPlotH }
 	let resizeInfo = $state(null);
-	let pendingConnection = $state(null); // { fromNodeId, fromPort }
+	// { fromNodeId, fromPort } (or { toNodeId, toPort, reverse: true }). A wire started from
+	// the keyboard (keyboardWiring.js) carries `keyboard: true`: Tab then steers focus among
+	// the inputs that can take it, and the live region narrates.
+	let pendingConnection = $state(null);
+	// Live-region text for keyboard wiring (role="status" below the canvas).
+	let wiringAnnouncement = $state('');
+	// The input port the keyboard is on while a keyboard wire is in progress: the
+	// provisional wire runs to it. { nodeId, port } or null.
+	let kbFocusPort = $state(null);
 
 	// Right-click column picker for an input port: { nodeId, port, x, y } while
 	// open. `portPickerOpen` is bound to the ColumnSelector popover so an
@@ -1068,9 +1086,16 @@
 	// Bound to the picker's ColumnSelector: a colId array (multi ports) or a
 	// single colId (single ports). Seeded from the port's current wiring on open.
 	let portPickerValue = $state(-1);
+	// The port a keyboard-opened picker returns focus to when it closes.
+	let pickerReturnFocus = null;
 	$effect(() => {
 		// When the popover closes (outside click or selection), drop the picker.
-		if (!portPickerOpen && portPicker) portPicker = null;
+		if (!portPickerOpen && portPicker) {
+			portPicker = null;
+			const el = pickerReturnFocus;
+			pickerReturnFocus = null;
+			if (el?.isConnected) el.focus({ preventScroll: true });
+		}
 	});
 	let mouseCanvas = $state({ x: 0, y: 0 });
 
@@ -2731,15 +2756,13 @@
 	// multi-select list; single-input ports pick one and close.
 	function handlePortPick(e) {
 		e.stopPropagation();
+		openPortPicker(e.detail);
+	}
+	// Also reached from the keyboard (Enter on an input port), anchored at the dot.
+	function openPortPicker({ nodeId, port, x, y }) {
 		if (pendingConnection) pendingConnection = null;
-		const sel = getInputPortSelection(e.detail.nodeId, e.detail.port);
-		portPicker = {
-			nodeId: e.detail.nodeId,
-			port: e.detail.port,
-			x: e.detail.x,
-			y: e.detail.y,
-			many: sel.many
-		};
+		const sel = getInputPortSelection(nodeId, port);
+		portPicker = { nodeId, port, x, y, many: sel.many };
 		portPickerValue = sel.many ? [...sel.ids] : (sel.ids[0] ?? -1);
 		portPickerOpen = true;
 	}
@@ -4060,12 +4083,190 @@
 		multiSelectedNodeIds = new Set();
 	}
 
+	// --- Keyboard wiring (UI-25; keyboardWiring.js has the key table) ---
+
+	/** The port dot an element is (data-node-id / data-port-name / data-port-dir), or null. */
+	function portRefOf(el) {
+		const dot = el?.closest?.('.port-dot[data-port-dir]');
+		if (!dot || !editorEl?.contains(dot)) return null;
+		return {
+			nodeId: dot.dataset.nodeId,
+			port: dot.dataset.portName,
+			dir: dot.dataset.portDir,
+			el: dot
+		};
+	}
+
+	/** Whether the input `port` accepts `wiring`: a Column Set bundle only feeds many-in ports
+	 *  (the one rule applyConnection enforces); anything else is applyConnection's to resolve. */
+	function wireAccepts(wiring, port) {
+		const target = allNodes.find((n) => n.id === port.nodeId);
+		if (!target) return false;
+		const fromNode = allNodes.find((n) => n.id === wiring.fromNodeId);
+		if (fromNode && isColumnSetOutput(fromNode, wiring.fromPort))
+			return portAcceptsColumnSet(target, port.port);
+		return true;
+	}
+
+	/** Visible input dots that can finish the wire in progress, in document (Tab) order. */
+	function wireCandidateDots(wiring = pendingConnection) {
+		if (!editorEl || !wiring) return [];
+		return [...editorEl.querySelectorAll('.port-dot[data-port-dir="in"]')].filter((el) => {
+			const r = el.getBoundingClientRect();
+			return r.width > 0 && isWireCandidate(wiring, portRefOf(el), wireAccepts);
+		});
+	}
+
+	/** "Node name" and "port label" for announcements. */
+	function portWords(nodeId, portName, dir) {
+		const node = allNodes.find((n) => n.id === nodeId);
+		const ports = dir === 'out' ? node?.ports?.outputs : node?.ports?.inputs;
+		const port = (ports ?? []).find((p) => p.name === portName);
+		return [
+			(node && (getNodeName(node) || node.label)) || nodeId,
+			port ? portLabel(port, (id) => getColumnById(id)?.name) : portName
+		];
+	}
+
+	function announce(msg) {
+		// The same text twice must still be heard: vary it invisibly.
+		wiringAnnouncement = msg === wiringAnnouncement ? `${msg}\u00a0` : msg;
+	}
+
+	/** Bring a focused port into view by panning (the viewport never scrolls). */
+	function revealPort(el) {
+		const vp = canvasViewportEl;
+		if (!vp || !el) return;
+		// Focus can scroll an overflow:hidden box; the canvas moves by pan only.
+		if (vp.scrollTop || vp.scrollLeft) {
+			vp.scrollTop = 0;
+			vp.scrollLeft = 0;
+		}
+		const v = vp.getBoundingClientRect();
+		const r = el.getBoundingClientRect();
+		const m = 48;
+		let dx = 0;
+		let dy = 0;
+		if (r.left < v.left + m) dx = v.left + m - r.left;
+		else if (r.right > v.right - m) dx = v.right - m - r.right;
+		if (r.top < v.top + m) dy = v.top + m - r.top;
+		else if (r.bottom > v.bottom - m) dy = v.bottom - m - r.bottom;
+		if (dx) panX += dx;
+		if (dy) panY += dy;
+	}
+
+	function handleCanvasFocusIn(e) {
+		const ref = portRefOf(e.target);
+		if (!ref) return;
+		revealPort(ref.el);
+		kbFocusPort = ref.dir === 'in' ? { nodeId: ref.nodeId, port: ref.port } : null;
+	}
+
+	/** Keyboard wiring. True when the key was the wiring's (the caller stops there). */
+	function handleWiringKey(e) {
+		if (isEditableTarget(e.target)) return false;
+		const port = portRefOf(e.target);
+		const action = portKeyAction(pendingConnection, e, port, wireAccepts);
+		if (!action) return false;
+		e.preventDefault();
+		const wiring = pendingConnection;
+		switch (action) {
+			case 'start': {
+				pendingConnection = { fromNodeId: port.nodeId, fromPort: port.port, keyboard: true };
+				const [n, p] = portWords(port.nodeId, port.port, 'out');
+				announce(wiringMessages.start(n, p, wireCandidateDots().length));
+				break;
+			}
+			case 'complete': {
+				pendingConnection = null;
+				// The mouse's path: same ops, same single undo step.
+				applyConnection(wiring.fromNodeId, wiring.fromPort, port.nodeId, port.port);
+				const [fn, fp] = portWords(wiring.fromNodeId, wiring.fromPort, 'out');
+				const [tn, tp] = portWords(port.nodeId, port.port, 'in');
+				announce(wiringMessages.done(fn, fp, tn, tp));
+				break;
+			}
+			case 'invalid': {
+				const [n, p] = portWords(port.nodeId, port.port, 'in');
+				announce(wiringMessages.invalid(n, p));
+				break;
+			}
+			case 'next':
+			case 'prev': {
+				const dots = wireCandidateDots();
+				const at = cycleIndex(dots.length, dots.indexOf(port?.el), action === 'prev');
+				if (at < 0) {
+					const [n, p] = portWords(wiring.fromNodeId, wiring.fromPort, 'out');
+					announce(wiringMessages.start(n, p, 0));
+					break;
+				}
+				dots[at].focus({ preventScroll: true });
+				break;
+			}
+			case 'cancel': {
+				pendingConnection = null;
+				announce(wiringMessages.cancel());
+				// Back to where the wire started, so Tab carries on from there.
+				if (wiring?.keyboard) {
+					const src = editorEl?.querySelector(
+						`.port-dot[data-node-id="${CSS.escape(wiring.fromNodeId)}"][data-port-name="${CSS.escape(wiring.fromPort)}"][data-port-dir="out"]`
+					);
+					src?.focus({ preventScroll: true });
+				}
+				break;
+			}
+			case 'pick': {
+				const r = port.el.getBoundingClientRect();
+				openPortPicker({ nodeId: port.nodeId, port: port.port, x: r.right, y: r.bottom });
+				// Into the list's search box (its options are buttons, so Tab reaches them);
+				// back to the port when the list closes.
+				pickerReturnFocus = port.el;
+				tick().then(() =>
+					[...document.querySelectorAll('.dropdown .search-wrapper input')].at(-1)?.focus()
+				);
+				break;
+			}
+			case 'disconnect': {
+				const [n, p] = portWords(port.nodeId, port.port, 'in');
+				const wired = edgeTopology.some((ed) => ed.toId === port.nodeId && ed.toPort === port.port);
+				if (wired) {
+					disconnectInputPort(port.nodeId, port.port);
+					announce(wiringMessages.removed(n, p));
+				} else announce(wiringMessages.nothing(n, p));
+				break;
+			}
+			default: // 'ignore'
+		}
+		return true;
+	}
+
+	// While a keyboard wire is in progress: ring its source dot and the inputs that can take
+	// it. Imperative, as the edge highlight above (the dots live in four node components).
+	$effect(() => {
+		const wiring = pendingConnection;
+		if (!wiring?.keyboard) return;
+		allNodes; // re-mark when the graph (and so the dots) change
+		const src = editorEl?.querySelector(
+			`.port-dot[data-node-id="${CSS.escape(wiring.fromNodeId)}"][data-port-name="${CSS.escape(wiring.fromPort)}"][data-port-dir="out"]`
+		);
+		const els = untrack(() => wireCandidateDots(wiring));
+		src?.classList.add('kb-wire-source');
+		for (const el of els) el.classList.add('kb-wire-candidate');
+		return () => {
+			src?.classList.remove('kb-wire-source');
+			for (const el of els) el.classList.remove('kb-wire-candidate');
+		};
+	});
+
 	function handleKeyDown(e) {
+		if (e.key !== 'Escape' && handleWiringKey(e)) return;
 		if (e.key === 'Escape') {
 			// Escape in a box (the plot panel, a node's inline editor, a dialog's field) cancels
 			// that edit only; the next Escape deselects. One a popup or menu used to close itself
 			// is not also a deselect.
 			if (yieldEscapeToField(e) || e.defaultPrevented) return;
+			// A wire in progress (mouse or keyboard): Escape drops the wire only.
+			if (pendingConnection && handleWiringKey(e)) return;
 			// Cancel an in-progress marquee, restoring the selection it started from.
 			if (marquee) {
 				removeMarqueeListeners();
@@ -4197,13 +4398,21 @@
 			stablePositions[pendingConnection.fromNodeId] ??
 			defaultPositions.positions[pendingConnection.fromNodeId];
 		if (!fromNode || !fromPos) return null;
-		return {
-			from: {
-				x: fromPos.x + getNodeWidth(fromNode),
-				y: fromPos.y + getPortAnchorY(fromNode, pendingConnection.fromPort, 'out')
-			},
-			to: { x: mouseCanvas.x, y: mouseCanvas.y }
+		const from = {
+			x: fromPos.x + getNodeWidth(fromNode),
+			y: fromPos.y + getPortAnchorY(fromNode, pendingConnection.fromPort, 'out')
 		};
+		// A keyboard wire runs to the input the keyboard is on, else a short stub off its
+		// source (there is no pointer to follow).
+		if (pendingConnection.keyboard) {
+			const k = kbFocusPort;
+			const toNode = k && k.nodeId !== fromNode.id && allNodes.find((n) => n.id === k.nodeId);
+			const toPos = toNode && (stablePositions[k.nodeId] ?? defaultPositions.positions[k.nodeId]);
+			if (toNode && toPos)
+				return { from, to: { x: toPos.x, y: toPos.y + getPortAnchorY(toNode, k.port, 'in') } };
+			return { from, to: { x: from.x + 48, y: from.y } };
+		}
+		return { from, to: { x: mouseCanvas.x, y: mouseCanvas.y } };
 	});
 </script>
 
@@ -4216,6 +4425,7 @@
 	class="workflow-editor"
 	class:inline
 	class:marquee-active={!!marquee}
+	class:kb-wiring={!!pendingConnection?.keyboard}
 	style="left: {leftPx}px; right: {rightPx}px;"
 	bind:this={editorEl}
 	onwheel={handleWheel}
@@ -4224,6 +4434,7 @@
 	onpointerup={handlePointerUp}
 	onpointercancel={handlePointerUp}
 	onclick={handleBackgroundClick}
+	onfocusin={handleCanvasFocusIn}
 	use:canvasFileDrop={{ onActive: (v) => (fileDragOver = v), onDrop: handleCanvasFileDrop }}
 	role="presentation"
 	tabindex="-1"
@@ -4606,6 +4817,19 @@
 	</div>
 </div>
 
+<!-- Keyboard wiring: what each port key does (every port's aria-describedby), and the
+     narration of a wire in progress. Visually hidden; screen readers only. -->
+<p id={PORT_KEYS_HELP_ID} class="wiring-sr-only">{PORT_KEYS_HELP}</p>
+<div
+	class="wiring-sr-only"
+	role="status"
+	aria-live="polite"
+	aria-atomic="true"
+	data-testid="wiring-status"
+>
+	{wiringAnnouncement}
+</div>
+
 {#if portPicker}
 	<!-- Right-click column picker for an input port. Renders nothing until open;
 	     the ColumnSelector portals its list to <body>, positioned at the cursor. -->
@@ -4625,6 +4849,33 @@
 	   the port-highlight effect). Global: the dots live in child components. */
 	:global(.port-dot.port-edge-highlight) {
 		background: var(--color-accent) !important;
+		border-color: var(--color-accent) !important;
+		box-shadow: var(--shadow-focus);
+	}
+
+	.wiring-sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+		border: 0;
+	}
+
+	/* Port dots take keyboard focus (UI-25): a clear ring, outside the dot. */
+	:global(.workflow-editor .port-dot:focus-visible) {
+		outline: var(--focus-ring);
+		outline-offset: 2px;
+	}
+	/* A keyboard wire in progress: its source dot filled, the inputs that can take it ringed. */
+	:global(.port-dot.kb-wire-source) {
+		background: var(--color-accent) !important;
+		border-color: var(--color-accent) !important;
+	}
+	:global(.port-dot.kb-wire-candidate) {
 		border-color: var(--color-accent) !important;
 		box-shadow: var(--shadow-focus);
 	}

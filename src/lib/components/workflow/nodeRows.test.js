@@ -65,6 +65,18 @@ describe('node cards read the row geometry from nodeRows.js', () => {
 			expect(header?.[2], `${file} header`).toMatch(/height: var\(--node-header-h\)/);
 		});
 	}
+	it('CompactNode sizes and places its dots from nodeRows.js', () => {
+		const src = fs.readFileSync(path.join(dir, 'CompactNode.svelte'), 'utf8');
+		expect(src).toMatch(/NODE_ROW_CSS_VARS/);
+		expect(src).toMatch(/compactPortAnchorY\(/);
+		// No hard-coded dot size or half-dot offset (the 13 px / 6.5 that put the dots 1 px low).
+		expect(src).not.toMatch(/\b(13|15)px\b/);
+		expect(src).not.toMatch(/6\.5/);
+		const css = src.slice(src.indexOf('<style>'));
+		const dot = css.match(/\n\t\.port-dot \{([^}]*)\}/);
+		expect(dot?.[1]).toMatch(/width: var\(--port-dot\)/);
+		expect(dot?.[1]).toMatch(/box-sizing: border-box/);
+	});
 	it('WorkflowEditor anchors wires with nodeRowCentreY', () => {
 		const src = fs.readFileSync(path.join(dir, 'WorkflowEditor.svelte'), 'utf8');
 		expect(src).toMatch(/nodeRowCentreY\(/);

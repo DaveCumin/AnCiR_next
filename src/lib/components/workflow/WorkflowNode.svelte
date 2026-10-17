@@ -14,6 +14,8 @@
 	import { plotNodeSlots } from '$lib/core/ProcessNode.svelte.js';
 	import ErrorBoundary from '$lib/components/reusables/ErrorBoundary.svelte';
 	import { NODE_ROW_H as PORT_H, NODE_ROW_CSS_VARS } from './nodeRows.js';
+	import { portTooltip, portAriaLabel, newSlotHint, portLabel } from './portLabels.js';
+	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
 	let {
 		node,
 		selected = false,
@@ -70,6 +72,16 @@
 			: { inputRows: [], outputRows: [], totalSlots: 0 }
 	);
 
+	// Ports name themselves for tooltips and screen readers (portLabels.js).
+	let nodeName = $derived(getNodeName(node) || node.label || '');
+	const colName = (id) => getColumnById(id)?.name;
+	// The trailing empty slot's header (the "Series N+1" pair, the "Line" drop port) reads as
+	// a hint for what a drop there does, not as one more series: keyed by its header's slot.
+	function headerHint(slot) {
+		const first = groupedSlots.inputRows.find((r) => r.kind === 'port' && r.slot === slot + 1);
+		return newSlotHint(first?.port);
+	}
+
 	function startFromOutput(e, portName) {
 		e.stopPropagation();
 		e.preventDefault();
@@ -121,6 +133,7 @@
 	style="{NODE_ROW_CSS_VARS}{width != null ? ` width:${width}px;` : ''}"
 	role="button"
 	tabindex="0"
+	aria-label={nodeName}
 >
 	<div class="node-header">
 		<!-- Note button on the LEFT (status side), so it doesn't shift when the
@@ -175,9 +188,16 @@
 		<div class="node-ports grouped" style="height:{groupedSlots.totalSlots * PORT_H}px;">
 			{#each groupedSlots.inputRows as row, i (`r_${i}`)}
 				{#if row.kind === 'header'}
-					<div class="series-header" style="top:{row.slot * PORT_H}px;">
-						{row.label}
-					</div>
+					{@const hint = headerHint(row.slot)}
+					{#if hint}
+						<div class="series-header new-slot" style="top:{row.slot * PORT_H}px;">
+							<span class="hint-full">{hint.full}</span><span class="hint-short">{hint.short}</span>
+						</div>
+					{:else}
+						<div class="series-header" style="top:{row.slot * PORT_H}px;">
+							{row.label}
+						</div>
+					{/if}
 				{:else}
 					<div
 						class="port-row input"
@@ -189,15 +209,15 @@
 							data-node-id={node.id}
 							data-port-name={row.port.name}
 							data-port-dir="in"
-							{@attach tooltip(
-								`Input: ${row.port.display ?? row.port.name}${row.port.dynamic ? ' (accepts one or more columns)' : ''}`
-							)}
+							{@attach tooltip(portTooltip(row.port, 'in'))}
+							aria-label={portAriaLabel(nodeName, row.port, 'in')}
+							aria-describedby={PORT_KEYS_HELP_ID}
 							onpointerdown={(e) => e.stopPropagation()}
 							onmousedown={(e) => disconnectInput(e, row.port.name)}
 							onmouseup={(e) => endAtInput(e, row.port.name)}
 							oncontextmenu={(e) => openInputPicker(e, row.port.name)}
 							role="button"
-							tabindex="-1"
+							tabindex="0"
 						></div>
 						<span class="port-label"
 							>{row.port.display ?? row.port.name}{#if row.port.dynamic}<span class="dyn-star"
@@ -218,16 +238,14 @@
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="out"
-						{@attach tooltip(
-							port.metric
-								? `Metric output: ${port.display ?? port.name} (one value per series)`
-								: `Output: ${port.display ?? port.name}`
-						)}
+						{@attach tooltip(portTooltip(port, 'out', { label: portLabel(port, colName) }))}
+						aria-label={portAriaLabel(nodeName, port, 'out', { label: portLabel(port, colName) })}
+						aria-describedby={PORT_KEYS_HELP_ID}
 						onpointerdown={(e) => e.stopPropagation()}
 						onmousedown={(e) => startFromOutput(e, port.name)}
 						onmouseup={(e) => endAtOutput(e, port.name)}
 						role="button"
-						tabindex="-1"
+						tabindex="0"
 					></div>
 					<span class="port-label out-label" class:metric-label={port.metric === true}
 						>{port.metric ? '# ' : ''}{port.display ?? port.name}</span
@@ -244,13 +262,15 @@
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="in"
-						{@attach tooltip(`Input: ${port.name}${port.dynamic ? ' (many)' : ''}`)}
+						{@attach tooltip(portTooltip(port, 'in'))}
+						aria-label={portAriaLabel(nodeName, port, 'in')}
+						aria-describedby={PORT_KEYS_HELP_ID}
 						onpointerdown={(e) => e.stopPropagation()}
 						onmousedown={(e) => disconnectInput(e, port.name)}
 						onmouseup={(e) => endAtInput(e, port.name)}
 						oncontextmenu={(e) => openInputPicker(e, port.name)}
 						role="button"
-						tabindex="-1"
+						tabindex="0"
 					></div>
 					<span class="port-label">{port.display ?? port.name}{port.dynamic ? '*' : ''}</span>
 				</div>
@@ -264,16 +284,14 @@
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="out"
-						{@attach tooltip(
-							port.metric
-								? `Metric output: ${port.display ?? port.name} (one value per series)`
-								: `Output: ${port.display ?? port.name}${port.dynamic ? ' (many)' : ''}`
-						)}
+						{@attach tooltip(portTooltip(port, 'out', { label: portLabel(port, colName) }))}
+						aria-label={portAriaLabel(nodeName, port, 'out', { label: portLabel(port, colName) })}
+						aria-describedby={PORT_KEYS_HELP_ID}
 						onpointerdown={(e) => e.stopPropagation()}
 						onmousedown={(e) => startFromOutput(e, port.name)}
 						onmouseup={(e) => endAtOutput(e, port.name)}
 						role="button"
-						tabindex="-1"
+						tabindex="0"
 					></div>
 					<span class="port-label" class:metric-label={port.metric === true}
 						>{port.metric ? '# ' : ''}{port.display ?? port.name}{port.dynamic ? '*' : ''}</span
@@ -437,6 +455,38 @@
 		color: var(--color-text-muted);
 		pointer-events: none;
 		border-top: 1px solid var(--color-lightness-90);
+	}
+	/* The trailing empty slot's header, as a hint: sentence case, regular weight, muted, so
+	   it reads as an instruction rather than as one more series (UI-20). The full hint where the node
+	   is wide enough, a short one where it is not, an ellipsis as the last resort. */
+	.node-ports.grouped {
+		container-type: inline-size;
+	}
+	.series-header.new-slot {
+		padding-right: 10px;
+		font-size: var(--font-xs);
+		font-weight: 400;
+		letter-spacing: 0;
+		text-transform: none;
+		/* Dimmer than the port labels (lightness-40) yet 4.7:1 on the card (WCAG AA). */
+		color: var(--color-lightness-45);
+		white-space: nowrap;
+	}
+	.new-slot span {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.hint-short {
+		display: none;
+	}
+	@container (max-width: 190px) {
+		.hint-full {
+			display: none;
+		}
+		.hint-short {
+			display: inline;
+		}
 	}
 	/* "*" marks a dynamic port that accepts one or more columns. Plain text colour
 	   (not accent) so it reads as a footnote marker, not a link. */

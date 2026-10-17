@@ -2,7 +2,11 @@ import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 import { openApp } from './helpers.js';
-import { NODE_ROW_H } from '../../src/lib/components/workflow/nodeRows.js';
+import {
+	NODE_ROW_H,
+	COMPACT_PORT_H,
+	compactPortAnchorY
+} from '../../src/lib/components/workflow/nodeRows.js';
 
 // Node rows and wiring share one geometry (nodeRows.js: NODE_ROW_H, nodeRowCentreY).
 // Measured on the rendered canvas, for every node kind that draws port rows (data, group,
@@ -11,6 +15,8 @@ import { NODE_ROW_H } from '../../src/lib/components/workflow/nodeRows.js';
 //      dot) never reach into the next row (WCAG 2.2 SC 2.5.8, see hit-targets.spec.js);
 //   2. every port dot sits on its row's vertical centre;
 //   3. every wire ends exactly on the centre of the dot it is attached to, both ends.
+// Compact nodes (CompactNode, the collapsed squares) have no rows: their dots stack one
+// COMPACT_PORT_H apart (compactPortAnchorY), centred on the square's left or right edge.
 
 const ROOT = path.resolve('.');
 const demo = (name) => JSON.parse(fs.readFileSync(path.join(ROOT, 'static/sessions/demos', name)));
@@ -35,6 +41,14 @@ function rhythmicityWithGroup() {
 		}
 	];
 	delete s.nodeLayout[`data_${raw.id}`];
+	return s;
+}
+
+/** The Rhythmicity demo with its data and analysis nodes collapsed to compact squares. */
+function rhythmicityCompact() {
+	const s = demo('demo-tp-rhythmicityanalysis.json');
+	for (const [id, v] of Object.entries(s.nodeLayout))
+		if (/^(data|tableprocess)_/.test(id)) v.collapsed = true;
 	return s;
 }
 
@@ -63,6 +77,24 @@ function measure() {
 		.filter((d) => d.getBoundingClientRect().width > 0)
 		.map((d) => {
 			const c = centre(d.getBoundingClientRect());
+			const square = d.closest('.compact-node');
+			if (square) {
+				const r = square.getBoundingClientRect();
+				const side = [
+					...square.querySelectorAll(`.port-dot[data-port-dir="${d.dataset.portDir}"]`)
+				];
+				return {
+					id: `${d.dataset.nodeId}:${d.dataset.portName}:${d.dataset.portDir}`,
+					dir: d.dataset.portDir,
+					kind: 'compact',
+					...c,
+					slot: side.indexOf(d),
+					count: side.length,
+					cardH: r.height / scale,
+					offTop: (c.y - r.top) / scale,
+					offEdge: (c.x - (d.dataset.portDir === 'in' ? r.left : r.right)) / scale
+				};
+			}
 			const row = d.closest('.row-strip, .in-row, .port-row').getBoundingClientRect();
 			return {
 				id: `${d.dataset.nodeId}:${d.dataset.portName}:${d.dataset.portDir}`,
@@ -107,12 +139,22 @@ async function expectGeometry(page, minKinds) {
 	await page.waitForTimeout(500); // ports publish their measured y after a tick
 	const { dots, wireEnds } = await page.evaluate(measure);
 	expect(new Set(dots.map((d) => d.kind))).toEqual(new Set(minKinds));
-	const badRows = dots.filter((d) => Math.abs(d.rowH - NODE_ROW_H) > 0.5).map((d) => d.id);
+	const rowDots = dots.filter((d) => d.kind !== 'compact');
+	const badRows = rowDots.filter((d) => Math.abs(d.rowH - NODE_ROW_H) > 0.5).map((d) => d.id);
 	expect(badRows, 'port rows that are not NODE_ROW_H tall').toEqual([]);
-	const offCentre = dots
+	const offCentre = rowDots
 		.filter((d) => Math.abs(d.offRow) > 0.5)
 		.map((d) => `${d.id} ${d.offRow.toFixed(2)}`);
 	expect(offCentre, 'port dots off their row centre').toEqual([]);
+	const offStack = dots
+		.filter((d) => d.kind === 'compact')
+		.filter(
+			(d) =>
+				Math.abs(d.offTop - compactPortAnchorY(d.slot, d.count, d.cardH)) > 0.5 ||
+				Math.abs(d.offEdge) > 0.5
+		)
+		.map((d) => `${d.id} top=${d.offTop.toFixed(2)} edge=${d.offEdge.toFixed(2)}`);
+	expect(offStack, 'compact port dots off their stack slot or the square edge').toEqual([]);
 	expect(wireEnds.length).toBeGreaterThan(4);
 	const missed = wireEnds
 		.filter((w) => !(Math.abs(w.dx) <= 0.5 && Math.abs(w.dy) <= 0.5))
@@ -141,4 +183,30 @@ test('column process and plain plot nodes: rows, dots and wires share one geomet
 	await page.setViewportSize({ width: 1500, height: 1100 });
 	await loadSession(page, 'rows-process.json', demo('demo-process-add.json'));
 	await expectGeometry(page, ['data/plot', 'analysis/process']);
+});
+
+test('compact nodes: ports one row apart on the square edges, wires end on the dots', async ({
+	page
+}) => {
+	await page.setViewportSize({ width: 1500, height: 1100 });
+	await loadSession(page, 'rows-compact.json', rhythmicityCompact());
+	await expect(page.locator('.compact-node .port-dot').first()).toBeVisible();
+	await expectGeometry(page, ['data/plot', 'compact']);
+	// Neighbouring ports on one side: exactly one COMPACT_PORT_H apart.
+	const steps = await page.evaluate(() => {
+		const out = [];
+		for (const sq of document.querySelectorAll('.compact-node')) {
+			const scale = sq.getBoundingClientRect().height / sq.offsetHeight;
+			for (const dir of ['in', 'out']) {
+				const ys = [...sq.querySelectorAll(`.port-dot[data-port-dir="${dir}"]`)].map((d) => {
+					const r = d.getBoundingClientRect();
+					return (r.top + r.height / 2) / scale;
+				});
+				for (let i = 1; i < ys.length; i++) out.push(ys[i] - ys[i - 1]);
+			}
+		}
+		return out;
+	});
+	expect(steps.length).toBeGreaterThan(2);
+	for (const st of steps) expect(Math.abs(st - COMPACT_PORT_H)).toBeLessThanOrEqual(0.5);
 });

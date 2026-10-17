@@ -13,7 +13,8 @@ import { openApp } from './helpers.js';
 //
 // Scope: the node header (note, quick plot, maximise, collapse, delete), the node rows (row
 // chevrons and wiring port dots of data, group, analysis, metric and plot rows, which are
-// NODE_ROW_H = 24 px apart, see nodeRows.js), the workspace plot header and its selection
+// NODE_ROW_H = 24 px apart, see nodeRows.js), compact nodes' port dots (COMPACT_PORT_H apart),
+// the workspace plot header and its selection
 // toolbar, and the control panel's rows (series blocks, banner).
 
 const DEMO = path.resolve('static/sessions/demos/demo-tp-cosinor.json');
@@ -139,6 +140,20 @@ test('node rows: row chevrons and port dots have 24 x 24 pointer targets', async
 	// Every node kind on the canvas: the group's, the analysis's and the data node's rows, and
 	// the plot nodes' input and output dots (rendered by WorkflowNode).
 	expect(await failing(page, '.row-chev, .port-dot', 20)).toEqual([]);
+});
+
+test('compact nodes: port dots have 24 x 24 pointer targets', async ({ page }) => {
+	await page.setViewportSize({ width: 1500, height: 1100 });
+	// The Rhythmicity demo with its data and analysis nodes collapsed: the analysis square
+	// has two inputs and four outputs, the busiest stacks on the canvas.
+	const s = JSON.parse(
+		fs.readFileSync(path.resolve('static/sessions/demos/demo-tp-rhythmicityanalysis.json'))
+	);
+	for (const [id, v] of Object.entries(s.nodeLayout))
+		if (/^(data|tableprocess)_/.test(id)) v.collapsed = true;
+	await loadSession(page, 'compact.json', s);
+	await expect(page.locator('.compact-node .port-dot').first()).toBeVisible();
+	expect(await failing(page, '.compact-node .port-dot', 8)).toEqual([]);
 });
 
 test('workspace plot header, its toolbar and the control panel rows have 24 x 24 pointer targets', async ({
