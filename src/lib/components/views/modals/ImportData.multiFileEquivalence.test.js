@@ -9,6 +9,11 @@
 // the raw timestamps and every averaged column carried a tail of unbinned samples.
 // Also (2026-10-16): a picked label row ("Use a row as labels") was removed from file 1
 // only, so every other file's label cells were imported as data values.
+//
+// The days here overlap like the ESF exports (145 rows of 10 min 40 s run past midnight),
+// and one file holding every part keeps each shared time twice. The like-for-like
+// comparison is therefore "Keep every row"; merging shared times (the default) is
+// covered by ImportData.multiFileOverlap.test.js.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { makeWorkbook } from '$test/xlsxWorkbook.js';
 import {
@@ -55,6 +60,7 @@ async function importOf(files, setup = () => {}) {
 	core.data = [];
 	await openImportModalWithFiles(files);
 	expect(_importPreviewState().canConfirm).toBe(true);
+	_importTestActions().setOverlapMode('all');
 	await setup(_importTestActions());
 	await _importTestActions().confirmImport();
 	expect(_importPreviewState().importError).toBe('');

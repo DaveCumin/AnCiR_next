@@ -40,6 +40,14 @@
 		typeChoicesFor
 	} from '$lib/utils/importColumnTypes.js';
 	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
+	import {
+		DEFAULT_OVERLAP_MODE,
+		OVERLAP_MODES,
+		findTimeOverlaps,
+		mergeOverlappingRows,
+		timeRange
+	} from '$lib/utils/importOverlap.js';
+	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 
@@ -62,20 +70,32 @@
 	 * Streams row by row so a large file is never held as one big array.
 	 */
 	export function countRaggedRows(text, { delimiter = '', skipLines = 0 } = {}) {
+		return countTextRows(text, { delimiter, skipLines }).ragged;
+	}
+
+	/**
+	 * The data rows of a whole text as the import reads it (blank lines skipped,
+	 * `skipLines` dropped, the header row not counted), and how many are ragged
+	 * (see countRaggedRows). Counting lines instead overcounted a file that ends in a
+	 * newline, and every blank line.
+	 */
+	export function countTextRows(text, { delimiter = '', skipLines = 0, hasHeader = true } = {}) {
 		let expected = null;
 		let ragged = 0;
+		let rows = 0;
 		Papa.parse(text ?? '', {
 			header: false,
 			skipEmptyLines: 'greedy',
 			skipFirstNLines: skipLines,
 			delimiter,
 			step: (row) => {
+				rows++;
 				const n = row.data.length;
 				if (expected == null) expected = n;
 				else if (n !== expected) ragged++;
 			}
 		});
-		return ragged;
+		return { rows: Math.max(0, rows - (hasHeader ? 1 : 0)), ragged };
 	}
 
 	/**
@@ -237,6 +257,14 @@
 	let awdPreviewCap = AWD_PREVIEW_ROWS;
 	let previewDisplayStart = $state(1);
 	let previewRowCount = $derived(parsedData ? parsedData[headers[0]]?.length || 0 : 0);
+	// Whether the preview rows are only the start of the data (every file's rows counted).
+	// A URL preview reads only its first rows, so a full preview may be all of it or not.
+	let previewTruncated = $derived(
+		isUrlMode
+			? previewIN > 0 && previewRowCount >= previewIN
+			: previewRowCount <
+					(overlapRows ? overlapRows.data[overlapRows.columns[0]].length : totalRowCount)
+	);
 	let enspirePlateInfoRows = $derived(enspireMultiplatePayload?.plateInfoRows ?? 0);
 	let enspireBinnedRows = $derived(enspireMultiplatePayload?.binnedRows ?? 0);
 	let skipLines = $state(0);
@@ -379,11 +407,12 @@
 		);
 		return samplingIntervalMinutes(ms);
 	});
-	let binDefault = $derived(defaultImportBinning(totalRowCount, dataIntervalMin));
+	// The rows the import holds (after merging times shared between files) decide it.
+	let binDefault = $derived(defaultImportBinning(importRowCount, dataIntervalMin));
 	let binningEnabled = $derived(binUserEnabled ?? (binSuggested && binDefault.enabled));
 	let binIntervalMin = $derived(binUserInterval ?? binDefault.intervalMin);
 	let estimatedBinnedRows = $derived(
-		dataIntervalMin == null ? null : Math.ceil((totalRowCount * dataIntervalMin) / binIntervalMin)
+		dataIntervalMin == null ? null : Math.ceil((importRowCount * dataIntervalMin) / binIntervalMin)
 	);
 
 	// Progress feedback
@@ -741,9 +770,10 @@
 			const rest = { ...columnTypeOverrides };
 			delete rest[col];
 			columnTypeOverrides = rest;
-			return;
+		} else {
+			columnTypeOverrides = { ...columnTypeOverrides, [col]: { choice } };
 		}
-		columnTypeOverrides = { ...columnTypeOverrides, [col]: { choice } };
+		void refreshSingleTimeValues();
 	}
 
 	/** The first preview value read as the chosen epoch unit, e.g. "starts 01 Mar 2026 00:00:00". */
@@ -756,6 +786,7 @@
 
 	function setColumnTimeFormat(col, text) {
 		columnTypeOverrides = { ...columnTypeOverrides, [col]: { choice: 'time', timeFormat: text } };
+		void refreshSingleTimeValues();
 	}
 
 	// ─── Per-column group/replicate labels (BioDare2 trace labels) ─────────────
@@ -875,6 +906,7 @@
 			pair[fmtField] = '';
 		}
 		dateTimePairs[idx] = pair;
+		void refreshSingleTimeValues();
 	}
 
 	// Append a fresh pair, picking sensible defaults from unused headers.
@@ -907,6 +939,7 @@
 			else if (i > idx) next.add(i - 1);
 		}
 		combinePairs = next;
+		void refreshSingleTimeValues();
 	}
 
 	/**
@@ -1037,6 +1070,237 @@
 	let commonColumns = $state([]); // Columns present in ALL files (intersection)
 	let mismatchedColumns = $state([]); // [{ column, missingFrom: [filenames] }]
 
+	// ─── Overlapping times across files, and the preview summary ───────────────
+	// Daily exports often run past midnight into the next file's day, so the same
+	// time appears in two files. The preview reads every file in full (their common
+	// columns) to find those times; the user picks what the import does with them.
+	// [{ name, data }] in file order, raw: never mutated, replaced wholesale.
+	let overlapFiles = $state.raw([]);
+	let overlapMode = $state(DEFAULT_OVERLAP_MODE);
+	let addSourceColumn = $state(false);
+	// One file: the raw text of its time column(s) over the whole file, read for the
+	// summary's first and last time. { key, values: { col: string[] } } | null
+	let singleTimeValues = $state.raw(null);
+	let singleTimeScanKey = null; // the key being (or last) read, so a read is not repeated
+	// The overlap settings frozen when Confirm Import is pressed (see confirmImport).
+	let importOverlap = null;
+
+	/** The column a row's time is read from: what the preview shows as time, as the import's sort reads it. */
+	function isTimeChoice(col) {
+		const choice = columnTypeOverrides[col]?.choice ?? previewColumnTypes[col]?.detected.type;
+		return choice === 'time' || choice === 'epoch-s' || choice === 'epoch-ms';
+	}
+
+	// How each row's time is read: a combined date + time pair, else the first column
+	// shown as time (or Unix time). Null when the files have no time column.
+	const overlapTimeSpec = $derived.by(() => {
+		const usable = (c) =>
+			headers.includes(c) && (targetFiles.length < 2 || commonColumns.includes(c));
+		for (const idx of combinePairs) {
+			const p = dateTimePairs[idx];
+			if (p && p.dateCol !== p.timeCol && usable(p.dateCol) && usable(p.timeCol)) {
+				return {
+					kind: 'pair',
+					dateCol: p.dateCol,
+					timeCol: p.timeCol,
+					column: `${p.dateCol} ${p.timeCol}`
+				};
+			}
+		}
+		for (const col of headers) {
+			if (!usable(col) || !isTimeChoice(col)) continue;
+			const ov = columnTypeOverrides[col];
+			if (ov?.choice === 'epoch-s' || ov?.choice === 'epoch-ms') {
+				return { kind: ov.choice, col, column: col };
+			}
+			return { kind: 'time', col, column: col, format: ov?.timeFormat?.trim() || null };
+		}
+		return null;
+	});
+
+	/** The columns a time spec reads. */
+	function specColumns(spec) {
+		return spec.kind === 'pair' ? [spec.dateCol, spec.timeCol] : [spec.col];
+	}
+
+	/** The text a spec reads the time from, per row of `data` (a date + time pair joined as the import joins it). */
+	function specValues(spec, data) {
+		if (spec.kind !== 'pair') return data[spec.col] ?? [];
+		const dates = data[spec.dateCol] ?? [];
+		const times = data[spec.timeCol] ?? [];
+		return dates.map((d, i) => {
+			const ds = String(d ?? '').trim();
+			const ts = String(times[i] ?? '').trim();
+			return ds && ts ? `${ds} ${ts}` : ds || ts;
+		});
+	}
+
+	/**
+	 * One file's times as instants (epoch ms, NaN when unreadable). The format is
+	 * guessed per file, so files written in different formats still match.
+	 */
+	function instantsOf(spec, values) {
+		if (spec.kind === 'epoch-s' || spec.kind === 'epoch-ms') {
+			const scale = spec.kind === 'epoch-s' ? 1000 : 1;
+			return values.map((v) => {
+				if (v == null || (typeof v === 'string' && v.trim() === '')) return NaN;
+				const n = typeof v === 'number' ? v : Number(v);
+				return Number.isFinite(n) ? n * scale : NaN;
+			});
+		}
+		const guessed = spec.format || guessDateofArray(values, { order: dateOrderFor(spec.column) });
+		const fmt = guessed && guessed !== -1 && guessed.length > 0 ? guessed : null;
+		return values.map((v) => parseUTCStrict(v, fmt)?.valueOf() ?? NaN);
+	}
+
+	/** Every row's instant over files concatenated in `data`, with `lengths` rows per file. */
+	function concatenatedInstants(spec, data, lengths) {
+		const all = specValues(spec, data);
+		const out = [];
+		let start = 0;
+		for (const n of lengths) {
+			const part = instantsOf(spec, all.slice(start, start + n));
+			for (const t of part) out.push(t);
+			start += n;
+		}
+		return out;
+	}
+
+	/** Columns whose values are compared at a shared time: the selected, non-time ones. */
+	function overlapCompareColumns(spec, columns) {
+		const timeCols = new Set(spec ? specColumns(spec) : []);
+		return columns.filter((c) => selectedColumns.has(c) && !timeCols.has(c) && !isTimeChoice(c));
+	}
+
+	// Multi-file: every file's rows (the picked label row removed from each),
+	// concatenated, with each row's file and instant.
+	const overlapRows = $derived.by(() => {
+		if (awaitingLoad || overlapFiles.length < 2) return null;
+		const files =
+			labelRowIndex == null
+				? overlapFiles
+				: overlapFiles.map((f) => ({ ...f, data: stripRowFromColumns(f.data, labelRowIndex) }));
+		const columns = Object.keys(files[0].data);
+		const lengths = files.map((f) => f.data[columns[0]]?.length ?? 0);
+		const data = {};
+		for (const c of columns) data[c] = files.flatMap((f) => f.data[c] ?? []);
+		const fileOf = lengths.flatMap((n, i) => Array(n).fill(i));
+		const spec = overlapTimeSpec;
+		const times = spec ? concatenatedInstants(spec, data, lengths) : null;
+		return { names: files.map((f) => f.name), columns, lengths, data, fileOf, times, spec };
+	});
+
+	// What the preview reports about times shared between files (null when none are).
+	const overlapReport = $derived.by(() => {
+		const o = overlapRows;
+		if (!o?.times) return null;
+		const report = findTimeOverlaps({
+			times: o.times,
+			fileOf: o.fileOf,
+			data: o.data,
+			compareColumns: overlapCompareColumns(o.spec, o.columns)
+		});
+		return report.times > 0 ? { ...report, timeColumn: o.spec.column } : null;
+	});
+
+	// The rows the import will hold before binning: every file's rows, less the
+	// rows merged away at shared times.
+	const importRowCount = $derived.by(() => {
+		// A picked label row is not data (it is removed from each file on import).
+		if (!overlapRows) return Math.max(0, totalRowCount - (labelRowIndex == null ? 0 : 1));
+		const rows = overlapRows.lengths.reduce((a, b) => a + b, 0);
+		return overlapReport && overlapMode !== 'all' ? rows - overlapReport.extraRows : rows;
+	});
+
+	// The first and last time of the whole import (every file, every row), or null.
+	const previewTimeRange = $derived.by(() => {
+		const spec = overlapTimeSpec;
+		if (!spec) return null;
+		if (overlapRows) {
+			const r = overlapRows.times && timeRange(overlapRows.times);
+			return r ? { column: spec.column, ...r } : null;
+		}
+		const key = JSON.stringify(specColumns(spec));
+		if (!singleTimeValues || singleTimeValues.key !== key) return null;
+		const values = specValues(spec, singleTimeValues.values);
+		const r = timeRange(instantsOf(spec, values));
+		return r ? { column: spec.column, ...r } : null;
+	});
+
+	/** A summary time as the app shows times (the display time zone). */
+	function summaryTime(ms) {
+		return formatTimeFromUNIX(ms);
+	}
+	function displayZoneName() {
+		const z = getDisplayZone();
+		return z === 'utc' ? 'UTC' : z;
+	}
+
+	/**
+	 * Multi-file: read every file in full (their common columns) for the overlap
+	 * check. Runs while the header check holds Confirm Import back.
+	 */
+	async function readFilesForOverlap() {
+		overlapFiles = [];
+		if (targetFiles.length < 2 || targetKind === 'awd' || enspireMultiplatePayload) return;
+		if (extraFileErrors.length > 0 || commonColumns.length === 0) return;
+		const out = [];
+		try {
+			for (const [i, file] of targetFiles.entries()) {
+				loadProgress = {
+					stage: 'Parsing',
+					detail: `Checking times in file ${i + 1} of ${targetFiles.length}`
+				};
+				const data = await parseAdditionalFileData(file);
+				const common = {};
+				for (const c of commonColumns) common[c] = data[c] ?? [];
+				out.push({ name: file.name, data: common });
+			}
+		} catch (err) {
+			// The import reads the files again and reports a file it cannot read.
+			console.warn('Overlap check could not read every file:', err);
+			return;
+		}
+		overlapFiles = out;
+	}
+
+	/**
+	 * One file: read its time column(s) over the whole file for the summary's first
+	 * and last time. Called after the preview and whenever the time column changes.
+	 */
+	async function refreshSingleTimeValues() {
+		const spec = overlapTimeSpec;
+		if (!spec || targetFiles.length !== 1 || isUrlMode) return;
+		if (targetKind !== 'csv' && !(targetKind === 'excel' && excelCsv != null)) return;
+		const cols = specColumns(spec);
+		const key = JSON.stringify(cols);
+		if (singleTimeScanKey === key) return;
+		singleTimeScanKey = key;
+		const values = Object.fromEntries(cols.map((c) => [c, []]));
+		try {
+			await scanFullColumns(cols, (row) => {
+				row.forEach((v, k) => values[cols[k]].push(v ?? null));
+				return false;
+			});
+		} catch (err) {
+			console.warn('Could not read the time column for the summary:', err);
+			return;
+		}
+		if (singleTimeScanKey === key) singleTimeValues = { key, values };
+	}
+
+	function setOverlapMode(mode) {
+		if (OVERLAP_MODES.includes(mode)) overlapMode = mode;
+	}
+
+	/** A name for the source-file column that no imported column already has. */
+	function sourceColumnName() {
+		const taken = new Set(headers);
+		let name = 'Source file';
+		for (let n = 2; taken.has(name); n++) name = `Source file (${n})`;
+		return name;
+	}
+
 	function resetValues() {
 		sourceMode = 'file';
 		parsedData = null;
@@ -1084,6 +1348,8 @@
 		dataUrl = '';
 		isUrlMode = false;
 		lastPreviewedUrl = '';
+		overlapMode = DEFAULT_OVERLAP_MODE;
+		addSourceColumn = false;
 		resetPerFileReading();
 	}
 
@@ -1528,6 +1794,22 @@
 			checkingHeaders,
 			canConfirm: canConfirmImport(),
 			totalRowCount,
+			importRowCount,
+			overlap: overlapReport && {
+				timeColumn: overlapReport.timeColumn,
+				times: overlapReport.times,
+				extraRows: overlapReport.extraRows,
+				conflicts: overlapReport.conflicts,
+				conflictCells: overlapReport.conflictCells,
+				pairs: overlapReport.pairs.map((p) => ({
+					files: p.files.map((i) => overlapRows.names[i]),
+					times: p.times,
+					conflicts: p.conflicts
+				}))
+			},
+			overlapMode,
+			addSourceColumn,
+			timeRange: previewTimeRange && { ...previewTimeRange },
 			binningEnabled,
 			binIntervalMin,
 			dataIntervalMin,
@@ -1576,6 +1858,16 @@
 			setColumnTypeChoice,
 			setBinningEnabled,
 			setBinInterval,
+			setOverlapMode,
+			setAddSourceColumn: (on) => {
+				addSourceColumn = on;
+			},
+			// A column's tick in the preview table header.
+			setColumnSelected: (col, on) => {
+				selectedColumns = on
+					? new Set([...selectedColumns, col])
+					: new Set([...selectedColumns].filter((c) => c !== col));
+			},
 			// "Use a row as labels", then a click on preview row `rowIdx` (0-based).
 			pickLabelRow,
 			// The Skip lines field: set it and re-read the preview, as its input does.
@@ -1601,6 +1893,9 @@
 		emptyFileReason = '';
 		raggedRows = 0;
 		raggedByFile = [];
+		overlapFiles = [];
+		singleTimeValues = null;
+		singleTimeScanKey = null;
 	}
 
 	async function onFileChange(e) {
@@ -1637,6 +1932,10 @@
 	async function doPreviewSteps() {
 		previewDisplayStart = 1;
 		awaitingPreview = true;
+		// What the last preview read of the whole files no longer matches these settings.
+		overlapFiles = [];
+		singleTimeValues = null;
+		singleTimeScanKey = null;
 		loadProgress = { stage: 'Reading file', detail: targetFile?.name ?? '' };
 		await tick();
 		await new Promise((resolve) => setTimeout(resolve, appConsts.timeoutRefresh_ms));
@@ -1764,6 +2063,7 @@
 			// Suggest a label row if the first data row looks like trace labels
 			maybeSuggestLabelRow();
 			await settleDateOrders();
+			await refreshSingleTimeValues();
 		}
 
 		loadProgress = { stage: '', detail: '' };
@@ -1817,15 +2117,19 @@
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				const text = e.target.result;
-				const lineCount = text.split(/\r\n|\r|\n/).length;
-				// AWD rows are read by position, not against a header row.
-				raggedRows = isAWD
-					? 0
-					: countRaggedRows(text, { delimiter: lastDelimiter || delimiter, skipLines });
-				// Subtract header + skipLines
-				totalRowCount = Math.max(0, lineCount - (hasHeader ? 1 : 0) - skipLines);
 				if (isAWD) {
+					// AWD rows are read by position, not against a header row.
+					raggedRows = 0;
+					const lineCount = text.split(/\r\n|\r|\n/).length;
 					totalRowCount = Math.max(0, lineCount - 7); // AWD has 7-line header
+				} else {
+					const counted = countTextRows(text, {
+						delimiter: lastDelimiter || delimiter,
+						skipLines,
+						hasHeader
+					});
+					raggedRows = counted.ragged;
+					totalRowCount = counted.rows;
 				}
 				resolve();
 			};
@@ -1850,10 +2154,9 @@
 					if ((await sniffFile(file)).kind === 'excel') {
 						rowsInAll += await excelRowCount(file);
 					} else {
-						const text = await readFileText(file);
-						count = countRaggedRows(text, options);
-						const lines = text.split(/\r\n|\r|\n/).length;
-						rowsInAll += Math.max(0, lines - (hasHeader ? 1 : 0) - skipLines);
+						const counted = countTextRows(await readFileText(file), { ...options, hasHeader });
+						count = counted.ragged;
+						rowsInAll += counted.rows;
 					}
 				} catch {
 					count = 0; // an unreadable file is reported by the header check
@@ -2029,6 +2332,13 @@
 		// interval reads as unknown), so reading them later binned at the 15 min
 		// fallback while the panel said 5, and could bin when the panel was unticked.
 		importBinning = { enabled: binningEnabled, intervalMin: binIntervalMin };
+		// Likewise the overlap choice: how a row's time is read comes from the preview's types.
+		importOverlap = {
+			mode: overlapMode,
+			spec: overlapTimeSpec,
+			compare: overlapCompareColumns(overlapTimeSpec, commonColumns),
+			sourceColumn: addSourceColumn && targetFiles.length > 1 ? sourceColumnName() : null
+		};
 		awaitingLoad = true;
 		loadProgress = {
 			stage: 'Loading data',
@@ -2054,6 +2364,7 @@
 		} finally {
 			awaitingLoad = false;
 			importBinning = null;
+			importOverlap = null;
 			loadProgress = { stage: '', detail: '' };
 		}
 	}
@@ -2466,6 +2777,8 @@
 			combinePairs = newCombine;
 		}
 
+		await readFilesForOverlap();
+		loadProgress = { stage: '', detail: '' };
 		checkingHeaders = false;
 	}
 
@@ -2635,6 +2948,7 @@
 			// same position in each and is removed from each (it used to be removed from
 			// file 1 only, and the other files' label cells were imported as data).
 			const differentLabelFiles = [];
+			const fileRows = [parsedData[Object.keys(parsedData)[0]]?.length ?? 0];
 			for (let i = 1; i < targetFiles.length; i++) {
 				const extraFile = targetFiles[i];
 				loadProgress = {
@@ -2655,7 +2969,9 @@
 				for (const col of Object.keys(parsedData)) {
 					if (extraData[col]) parsedData[col] = [...parsedData[col], ...extraData[col]];
 				}
+				fileRows.push(extraData[commonColumns[0]]?.length ?? 0);
 			}
+			parsedData = resolveOverlaps(parsedData, fileRows, importOverlap);
 			if (differentLabelFiles.length > 0) {
 				addNotification(
 					`The label row (row ${labelRowIndex + 1}) of ${differentLabelFiles.map((n) => `"${n}"`).join(', ')} ` +
@@ -2689,7 +3005,15 @@
 		loadProgress = { stage: 'Loading data', detail: 'Filtering selected columns…' };
 		await tick();
 
+		const sourceValues = importOverlap?.sourceColumn
+			? parsedData[importOverlap.sourceColumn]
+			: null;
 		parsedData = getFilteredData();
+		// The source-file column is not one of the file's columns, so the column filter
+		// drops it; it goes back last.
+		if (sourceValues && !parsedData[importOverlap.sourceColumn]) {
+			parsedData = { ...parsedData, [importOverlap.sourceColumn]: sourceValues };
+		}
 
 		// Combine date+time column pairs if requested (after concat so the full
 		// date and time arrays from all files are combined together)
@@ -2727,6 +3051,32 @@
 		await doBasicFileImport(parsedData, importName, importOverrides);
 
 		awaitingLoad = false;
+	}
+
+	/**
+	 * Concatenated files (`fileRows` rows each): add the source-file column when asked,
+	 * then merge the rows of times shared between files as chosen in the preview
+	 * (see importOverlap.js). Before binning and sorting, so both see the merged rows.
+	 */
+	function resolveOverlaps(data, fileRows, settings) {
+		if (!settings) return data;
+		const names = targetFiles.map((f) => f.name);
+		const fileOf = fileRows.flatMap((n, i) => Array(n).fill(i));
+		let out = data;
+		if (settings.sourceColumn) {
+			out = { ...out, [settings.sourceColumn]: fileOf.map((i) => names[i]) };
+		}
+		if (settings.mode === 'all' || !settings.spec) return out;
+		const merged = mergeOverlappingRows({
+			data: out,
+			times: concatenatedInstants(settings.spec, out, fileRows),
+			fileOf,
+			keep: settings.mode,
+			compareColumns: settings.compare,
+			sourceColumn: settings.sourceColumn,
+			fileNames: names
+		});
+		return merged.data;
 	}
 
 	/** How a session URL is named in the replace confirm: its file name, else its host. */
@@ -3591,10 +3941,66 @@
 								</p>
 							{/if}
 
-							{#if totalRowCount > ROW_THRESHOLD}
+							{#if overlapReport}
+								{@const names = overlapRows.names}
+								<div class="section-row overlap-panel" data-testid="import-overlap">
+									<p class="overlap-title">
+										{overlapReport.times.toLocaleString()}
+										{overlapReport.times === 1 ? 'time appears' : 'times appear'} in more than one file
+									</p>
+									<ul class="overlap-pairs">
+										{#each overlapReport.pairs as p (p.files.join())}
+											<li>
+												<span class="overlap-files"
+													>{p.files.map((i) => names[i]).join(' and ')}</span
+												>: {p.times.toLocaleString()}
+												{p.times === 1 ? 'time' : 'times'}{p.conflicts > 0
+													? `, ${p.conflicts.toLocaleString()} with different values`
+													: ''}
+											</li>
+										{/each}
+									</ul>
+									<p class="overlap-detail">
+										{#if overlapReport.conflicts > 0}
+											At {overlapReport.conflicts.toLocaleString()} of these times the files have different
+											values.
+										{:else}
+											Where more than one file has a value, the values are the same.
+										{/if}
+									</p>
+									<div
+										class="overlap-choice"
+										role="radiogroup"
+										aria-label="Times in more than one file"
+									>
+										{#each [['first', "One row per time; the first file's value wins (recommended)"], ['last', "One row per time; the last file's value wins"], ['all', 'Keep every row (each shared time appears more than once)']] as [mode, text] (mode)}
+											<label class="control-input-checkbox overlap-option">
+												<input
+													type="radio"
+													name="import-overlap-mode"
+													value={mode}
+													data-testid={`import-overlap-${mode}`}
+													checked={overlapMode === mode}
+													onchange={() => setOverlapMode(mode)}
+												/>
+												<span class="ci-label">{text}</span>
+											</label>
+										{/each}
+									</div>
+									<p class="overlap-hint">
+										{overlapMode === 'all'
+											? 'Every row of every file is imported.'
+											: 'A blank cell is filled from the other file, so only different values follow this choice.'}
+										Files are in the order listed under "Files to concatenate".
+									</p>
+								</div>
+							{/if}
+
+							{#if importRowCount > ROW_THRESHOLD}
 								<div class="section-row binning-panel">
 									<p class="binning-warning">
-										{targetFiles.length > 1 ? 'These files have' : 'This file has'} ~{totalRowCount.toLocaleString()}
+										{targetFiles.length > 1 ? 'These files have' : 'This file has'}
+										{importRowCount.toLocaleString()}
 										rows. Consider binning to reduce data size.
 									</p>
 									<div class="control-input-horizontal">
@@ -3627,61 +4033,74 @@
 								</div>
 							{/if}
 
-							<div class="section-row combine-panel">
-								<p class="combine-title">
-									Combine separate Date and Time columns into a single DateTime column:
-								</p>
-								{#if dateTimePairs.length === 0}
-									<p class="combine-empty">
-										No date/time pairs detected. Click "Add pair" to choose two columns to merge.
-									</p>
-								{/if}
-								{#each dateTimePairs as pair, idx (idx)}
-									<div class="combine-row">
-										<input
-											type="checkbox"
-											title="Merge this pair on import"
-											checked={combinePairs.has(idx)}
-											onchange={(e) => {
-												const checked = e.currentTarget.checked;
-												combinePairs = checked
-													? new Set([...combinePairs, idx])
-													: new Set([...combinePairs].filter((i) => i !== idx));
-											}}
-										/>
-										<select
-											class="combine-select"
-											value={pair.dateCol}
-											onchange={(e) => updatePair(idx, 'dateCol', e.currentTarget.value)}
-										>
-											{#each headers as h (h)}
-												<option value={h}>{h}</option>
-											{/each}
-										</select>
-										<span class="combine-plus">+</span>
-										<select
-											class="combine-select"
-											value={pair.timeCol}
-											onchange={(e) => updatePair(idx, 'timeCol', e.currentTarget.value)}
-										>
-											{#each headers as h (h)}
-												<option value={h}>{h}</option>
-											{/each}
-										</select>
+							{#if dateTimePairs.length === 0}
+								<!-- Nothing detected: one quiet line, which opens the panel with a pair. -->
+								{#if headers.length >= 2}
+									<div class="section-row combine-collapsed">
 										<button
 											type="button"
-											class="combine-remove"
-											title="Remove this pair"
-											onclick={() => removePair(idx)}
+											class="link-button"
+											data-testid="import-combine-open"
+											title="Merge a date column and a time column into one date and time column"
+											onclick={addPair}>+ Combine date and time columns</button
 										>
-											×
-										</button>
 									</div>
-								{/each}
-								{#if headers.length >= 2}
-									<button type="button" class="combine-add" onclick={addPair}> + Add pair </button>
 								{/if}
-							</div>
+							{:else}
+								<div class="section-row combine-panel" data-testid="import-combine-panel">
+									<p class="combine-title">
+										Combine separate Date and Time columns into a single DateTime column:
+									</p>
+									{#each dateTimePairs as pair, idx (idx)}
+										<div class="combine-row">
+											<input
+												type="checkbox"
+												title="Merge this pair on import"
+												checked={combinePairs.has(idx)}
+												onchange={(e) => {
+													const checked = e.currentTarget.checked;
+													combinePairs = checked
+														? new Set([...combinePairs, idx])
+														: new Set([...combinePairs].filter((i) => i !== idx));
+													void refreshSingleTimeValues();
+												}}
+											/>
+											<select
+												class="combine-select"
+												value={pair.dateCol}
+												onchange={(e) => updatePair(idx, 'dateCol', e.currentTarget.value)}
+											>
+												{#each headers as h (h)}
+													<option value={h}>{h}</option>
+												{/each}
+											</select>
+											<span class="combine-plus">+</span>
+											<select
+												class="combine-select"
+												value={pair.timeCol}
+												onchange={(e) => updatePair(idx, 'timeCol', e.currentTarget.value)}
+											>
+												{#each headers as h (h)}
+													<option value={h}>{h}</option>
+												{/each}
+											</select>
+											<button
+												type="button"
+												class="combine-remove"
+												title="Remove this pair"
+												onclick={() => removePair(idx)}
+											>
+												×
+											</button>
+										</div>
+									{/each}
+									{#if headers.length >= 2}
+										<button type="button" class="combine-add" onclick={addPair}>
+											+ Add pair
+										</button>
+									{/if}
+								</div>
+							{/if}
 
 							{#if (core.data ?? []).length > 0}
 								<div class="section-row">
@@ -3779,6 +4198,27 @@
 										labels and will be excluded from the imported data.
 									</p>
 								{/if}
+							{/if}
+
+							{#if !isUrlMode}
+								<p class="import-summary" data-testid="import-summary">
+									<span
+										><strong>{importRowCount.toLocaleString()}</strong>
+										{importRowCount === 1 ? 'row' : 'rows'} to import{targetFiles.length > 1
+											? ` from ${targetFiles.length} files`
+											: ''}{overlapReport && overlapMode !== 'all'
+											? `, after merging ${overlapReport.extraRows.toLocaleString()} ${overlapReport.extraRows === 1 ? 'row that shares' : 'rows that share'} a time`
+											: ''}.</span
+									>
+									{#if previewTimeRange}
+										<span
+											>"{previewTimeRange.column}" runs from
+											<strong>{summaryTime(previewTimeRange.first)}</strong>
+											to <strong>{summaryTime(previewTimeRange.last)}</strong>
+											({displayZoneName()}).</span
+										>
+									{/if}
+								</p>
 							{/if}
 
 							<div class="preview-table-wrapper" style="overflow-x: auto; max-width: 100%;">
@@ -4033,7 +4473,9 @@
 									/>
 								</span>
 								<p style="margin:0;">
-									to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewRowCount} (preview)
+									to {Math.min(previewDisplayStart + 5, previewRowCount)} of {previewTruncated
+										? `the first ${previewRowCount.toLocaleString()} (preview)`
+										: previewRowCount.toLocaleString()}
 								</p>
 							</div>
 
@@ -4064,6 +4506,18 @@
 											</li>
 										{/each}
 									</ul>
+									{#if extraFileErrors.length === 0}
+										<label class="control-input-checkbox source-option">
+											<input
+												type="checkbox"
+												data-testid="import-source-column"
+												bind:checked={addSourceColumn}
+											/>
+											<span class="ci-label"
+												>Add a "{sourceColumnName()}" column naming each row's file</span
+											>
+										</label>
+									{/if}
 									{#if extraFileErrors.length > 0}
 										<div class="mismatch-warning">
 											<p class="mismatch-warning-title">Cannot import these files:</p>
@@ -4638,6 +5092,64 @@
 	.binning-estimate {
 		opacity: 0.7;
 		font-size: 0.9em;
+	}
+
+	/* ── Times shared between files ─────────────────────────────────────────── */
+	.overlap-panel {
+		margin: 0.5em 0;
+		padding: 0.5em 0.75em;
+		border: 1px solid var(--color-warning);
+		border-radius: var(--radius-sm);
+		background: var(--color-warning-bg);
+		font-size: var(--font-sm);
+	}
+	.overlap-title {
+		font-weight: 600;
+		margin: 0 0 0.25em 0;
+	}
+	.overlap-pairs {
+		margin: 0 0 0.25em 0;
+		padding-left: 1.25em;
+	}
+	.overlap-files {
+		overflow-wrap: anywhere;
+	}
+	.overlap-detail,
+	.overlap-hint {
+		margin: 0.25em 0;
+	}
+	.overlap-hint {
+		color: var(--color-text-muted);
+	}
+	.overlap-choice {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15em;
+		margin: 0.4em 0;
+	}
+	.overlap-option {
+		align-items: flex-start;
+	}
+	.overlap-option input {
+		margin-top: 0.15em;
+	}
+	.source-option {
+		margin-top: 0.5em;
+		font-size: 0.85em;
+	}
+	.import-summary {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0 0.5em;
+		margin: var(--space-3) 0 0;
+		font-size: var(--font-sm);
+	}
+	.combine-collapsed {
+		margin: 0.25em 0;
+	}
+	/* The row is a stretching flex column: keep the link its own width, at the left. */
+	.combine-collapsed .link-button {
+		align-self: flex-start;
 	}
 
 	/* ── Date+Time combine panel ────────────────────────────────────────────── */
