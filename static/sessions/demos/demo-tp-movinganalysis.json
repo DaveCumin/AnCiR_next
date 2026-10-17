@@ -710,7 +710,7 @@
       "name": "x",
       "data": 775,
       "type": "number",
-      "tableProcessGUId": "acf7da9c-3dca-499f-8adf-a696ad5dd24b",
+      "tableProcessGUId": "360ba60a-02c0-4a4e-89f2-489830c103a7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -732,7 +732,7 @@
       "name": "movex_72",
       "data": 777,
       "type": "number",
-      "tableProcessGUId": "f43ccf20-f4a7-4a61-bf93-f71f266ccb79",
+      "tableProcessGUId": "ad1acb9c-0029-4aef-b4d3-2015a0f69451",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -743,7 +743,7 @@
       "name": "776_peak_period_72",
       "data": 778,
       "type": "number",
-      "tableProcessGUId": "f43ccf20-f4a7-4a61-bf93-f71f266ccb79",
+      "tableProcessGUId": "ad1acb9c-0029-4aef-b4d3-2015a0f69451",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -754,7 +754,7 @@
       "name": "776_peak_power_72",
       "data": 779,
       "type": "number",
-      "tableProcessGUId": "f43ccf20-f4a7-4a61-bf93-f71f266ccb79",
+      "tableProcessGUId": "ad1acb9c-0029-4aef-b4d3-2015a0f69451",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1155,5 +1155,5 @@
       "No"
     ]
   },
-  "version": "β.82.14"
+  "version": "β.82.27"
 }

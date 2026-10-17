@@ -95,7 +95,7 @@
       "name": "R_89",
       "data": 859,
       "type": "number",
-      "tableProcessGUId": "e2a88f90-9786-4794-98d8-c3ce51ec4871",
+      "tableProcessGUId": "7d6d1c77-69e5-49a2-aa1a-a7a469c0f21e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -106,7 +106,7 @@
       "name": "z_89",
       "data": 860,
       "type": "number",
-      "tableProcessGUId": "e2a88f90-9786-4794-98d8-c3ce51ec4871",
+      "tableProcessGUId": "7d6d1c77-69e5-49a2-aa1a-a7a469c0f21e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -117,7 +117,7 @@
       "name": "pvalue_89",
       "data": 861,
       "type": "number",
-      "tableProcessGUId": "e2a88f90-9786-4794-98d8-c3ce51ec4871",
+      "tableProcessGUId": "7d6d1c77-69e5-49a2-aa1a-a7a469c0f21e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -128,7 +128,7 @@
       "name": "F_89",
       "data": 862,
       "type": "number",
-      "tableProcessGUId": "e2a88f90-9786-4794-98d8-c3ce51ec4871",
+      "tableProcessGUId": "7d6d1c77-69e5-49a2-aa1a-a7a469c0f21e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -139,7 +139,7 @@
       "name": "ww_pvalue_89",
       "data": 863,
       "type": "number",
-      "tableProcessGUId": "e2a88f90-9786-4794-98d8-c3ce51ec4871",
+      "tableProcessGUId": "7d6d1c77-69e5-49a2-aa1a-a7a469c0f21e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -150,7 +150,7 @@
       "name": "acrophase_89",
       "data": 864,
       "type": "number",
-      "tableProcessGUId": "e2a88f90-9786-4794-98d8-c3ce51ec4871",
+      "tableProcessGUId": "7d6d1c77-69e5-49a2-aa1a-a7a469c0f21e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -362,5 +362,5 @@
       "No"
     ]
   },
-  "version": "β.82.14"
+  "version": "β.82.27"
 }

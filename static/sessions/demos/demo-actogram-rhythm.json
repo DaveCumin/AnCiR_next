@@ -410,6 +410,7 @@
           "bottom": 10,
           "left": 20
         },
+        "spaceBetween": 2,
         "doublePlot": 2,
         "periodHrs": 24,
         "rowLabels": "none",
@@ -479,7 +480,7 @@
   "notes": [
     {
       "id": "note_31",
-      "text": "The classic chronobiology display: activity plotted against time of day, one row per day and double-plotted (each day shown twice, side by side) so rhythms crossing midnight stay visible and drift reads as a diagonal band. Use it to eyeball period, phase, and entrainment. The demo shows a clear daily activity band. To put numbers on it, add a MARKER RULE (Data tab, Marker rules): it detects activity onsets (or offsets) with the same settings on every series, fits a line through them, and adds five output ports per rule, each a column with one value per series: τ (h, the harmonic-checked period: the slope of the line unless the data clearly support half or twice it), φ (h after the row start at the reference day), R² (the share of the spread in onset time of day that the drift of the line explains, so near 0 for an entrained record with no drift; read RMSE for tightness), RMSE (h) and n (markers fitted). Wire τ into Describe Data or φ into a Rayleigh test to compare animals.\n\nRefinetti, Cornélissen & Halberg (2007), Biol. Rhythm Res.",
+      "text": "The classic chronobiology display: activity plotted against time of day, one row per day and double-plotted (each day shown twice, side by side) so rhythms crossing midnight stay visible and drift reads as a diagonal band. Use it to eyeball period, phase, and entrainment. The demo shows a clear daily activity band. To put numbers on it, add a MARKER RULE (Overlays tab, Marker rules): it detects activity onsets (or offsets) with the same settings on every series, fits a line through them, and adds five output ports per rule, each a column with one value per series: τ (h, the harmonic-checked period: the slope of the line unless the data clearly support half or twice it), φ (h after the row start at the reference day), R² (the share of the spread in onset time of day that the drift of the line explains, so near 0 for an entrained record with no drift; read RMSE for tightness), RMSE (h) and n (markers fitted). Wire τ into Describe Data or φ into a Rayleigh test to compare animals.\n\nRefinetti, Cornélissen & Halberg (2007), Biol. Rhythm Res.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -588,5 +589,5 @@
       "No"
     ]
   },
-  "version": "β.82.14"
+  "version": "β.82.27"
 }

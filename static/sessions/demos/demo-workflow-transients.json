@@ -2267,6 +2267,7 @@
           "bottom": 10,
           "left": 20
         },
+        "spaceBetween": 2,
         "doublePlot": 2,
         "periodHrs": 24,
         "rowLabels": "none",
@@ -2372,6 +2373,7 @@
           "bottom": 10,
           "left": 20
         },
+        "spaceBetween": 2,
         "doublePlot": 2,
         "periodHrs": 24,
         "rowLabels": "none",
@@ -2786,5 +2788,5 @@
       "No"
     ]
   },
-  "version": "β.82.14"
+  "version": "β.82.27"
 }

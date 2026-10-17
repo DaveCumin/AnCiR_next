@@ -237,7 +237,7 @@
       "name": "sortedy_609_47",
       "data": 611,
       "type": "number",
-      "tableProcessGUId": "48e807ab-59f3-4f27-8c13-5a86b71a2a26",
+      "tableProcessGUId": "6cf8daaa-9d2b-4271-99ab-3571fc1f43b4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "sortedy_610_47",
       "data": 612,
       "type": "number",
-      "tableProcessGUId": "48e807ab-59f3-4f27-8c13-5a86b71a2a26",
+      "tableProcessGUId": "6cf8daaa-9d2b-4271-99ab-3571fc1f43b4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -448,5 +448,5 @@
       "No"
     ]
   },
-  "version": "β.82.14"
+  "version": "β.82.27"
 }

@@ -314,7 +314,7 @@
       "name": "time_70",
       "data": 771,
       "type": "number",
-      "tableProcessGUId": "d23a6a53-62d4-4799-8719-749971d2adf1",
+      "tableProcessGUId": "4de2527f-9c85-4fc3-bc11-f7e54446ce86",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -325,7 +325,7 @@
       "name": "value_A_70",
       "data": 772,
       "type": "number",
-      "tableProcessGUId": "d23a6a53-62d4-4799-8719-749971d2adf1",
+      "tableProcessGUId": "4de2527f-9c85-4fc3-bc11-f7e54446ce86",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -336,7 +336,7 @@
       "name": "value_B_70",
       "data": 773,
       "type": "number",
-      "tableProcessGUId": "d23a6a53-62d4-4799-8719-749971d2adf1",
+      "tableProcessGUId": "4de2527f-9c85-4fc3-bc11-f7e54446ce86",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -347,7 +347,7 @@
       "name": "value_C_70",
       "data": 774,
       "type": "number",
-      "tableProcessGUId": "d23a6a53-62d4-4799-8719-749971d2adf1",
+      "tableProcessGUId": "4de2527f-9c85-4fc3-bc11-f7e54446ce86",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -556,5 +556,5 @@
       "No"
     ]
   },
-  "version": "β.82.14"
+  "version": "β.82.27"
 }

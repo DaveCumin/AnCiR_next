@@ -11,7 +11,7 @@
       "name": "group_g1_84",
       "data": 834,
       "type": "number",
-      "tableProcessGUId": "2df502bc-a3f4-4310-bb2e-83120bc87801",
+      "tableProcessGUId": "1e61e68f-b206-41e2-a752-68a7537e3f96",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -208,5 +208,5 @@
       "No"
     ]
   },
-  "version": "β.82.14"
+  "version": "β.82.27"
 }
