@@ -732,6 +732,7 @@
 	import { describeTimeFormatProblem } from '$lib/utils/time/TimeUtils.js';
 	import { sniffTimeFormatOnTypeChange } from '$lib/utils/columnType.js';
 	import { columnDisplayName, commitColumnRename } from '$lib/core/columnLabels.js';
+	import { columnWarnings } from '$lib/core/columnWarnings.js';
 
 	let {
 		col = $bindable(),
@@ -764,6 +765,9 @@
 		if (!timeFormatApplies || canChange) return null;
 		return describeTimeFormatProblem(core.rawData.get(col.data), col.timeFormat);
 	});
+
+	// Warnings about the column's own data (e.g. a time column whose times repeat).
+	let dataWarnings = $derived(columnWarnings(col));
 
 	// Rename: one renameColumn operation when the edit is committed (an undo step that counts as
 	// an unsaved change). Typing a node output's label back restores its auto name, so the label
@@ -876,6 +880,9 @@
 					<p class="time-format-warning" role="alert">{timeFormatProblem}</p>
 				{/if}
 			{/if}
+			{#each dataWarnings as w (w)}
+				<p class="time-format-warning" role="status" data-testid="column-warning">{w}</p>
+			{/each}
 
 			{#if !canChange && col.type !== 'time' && col.type !== 'bin' && col.refId == null}
 				<div class="control-input display group-label-row">

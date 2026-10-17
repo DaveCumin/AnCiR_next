@@ -16,6 +16,7 @@
 	import { NODE_ROW_H as PORT_H, NODE_ROW_CSS_VARS } from './nodeRows.js';
 	import { portTooltip, portAriaLabel, newSlotHint, portLabel } from './portLabels.js';
 	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
+	import { columnWarnings } from '$lib/core/columnWarnings.js';
 	let {
 		node,
 		selected = false,
@@ -28,6 +29,13 @@
 
 	// Note flag: keeps the left-side note button visible whenever a note exists.
 	const hasNote = $derived(!!core.nodeNotes[node.id]?.trim());
+
+	// A data node's warnings about its column's own data (e.g. repeated times).
+	const dataWarning = $derived(
+		node.type === 'data' && node.refId != null
+			? columnWarnings(getColumnById(node.refId)).join('\n')
+			: ''
+	);
 
 	// When the user picks "time" and no format is set yet, sniff one from the
 	// first few raw rows (shared with the control panel and the other nodes).
@@ -154,6 +162,15 @@
 				<div class="node-type" role="presentation" onpointerdown={(e) => e.stopPropagation()}>
 					<TypeSelector bind:value={liveCol.type} onChange={onColumnTypeChange} />
 				</div>
+			{/if}
+			{#if dataWarning}
+				<span
+					class="node-warning-badge"
+					role="img"
+					data-testid="column-warning"
+					aria-label={`Warning: ${dataWarning}`}
+					{@attach tooltip(dataWarning)}>⚠</span
+				>
 			{/if}
 			<div class="node-label">
 				<Editable
@@ -417,6 +434,16 @@
 	.note-slot {
 		flex-shrink: 0;
 		display: flex;
+	}
+
+	/* Same badge as an analysis node's warnings (TableProcessNode). */
+	.node-warning-badge {
+		flex-shrink: 0;
+		font-size: var(--font-md);
+		line-height: 1;
+		color: #e0a800;
+		cursor: help;
+		user-select: none;
 	}
 
 	.node-type {

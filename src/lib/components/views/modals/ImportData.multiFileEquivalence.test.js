@@ -11,9 +11,9 @@
 // only, so every other file's label cells were imported as data values.
 //
 // The days here overlap like the ESF exports (145 rows of 10 min 40 s run past midnight),
-// and one file holding every part keeps each shared time twice. The like-for-like
-// comparison is therefore "Keep every row"; merging shared times (the default) is
-// covered by ImportData.multiFileOverlap.test.js.
+// so neighbouring parts share times. Import never merges them (David, 2026-10-17: "import
+// data simply imports the data (without merging)"), so with the default settings the parts
+// imported together equal one file holding every part's rows, shared times included.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { makeWorkbook } from '$test/xlsxWorkbook.js';
 import {
@@ -60,7 +60,6 @@ async function importOf(files, setup = () => {}) {
 	core.data = [];
 	await openImportModalWithFiles(files);
 	expect(_importPreviewState().canConfirm).toBe(true);
-	_importTestActions().setOverlapMode('all');
 	await setup(_importTestActions());
 	await _importTestActions().confirmImport();
 	expect(_importPreviewState().importError).toBe('');
@@ -120,6 +119,13 @@ describe('multi-file import equals the same rows in one file', () => {
 	it('plain import, four days', async () => {
 		const { multi } = await expectMultiEqualsSingle(days(), () => {});
 		expect(multi.all_data.values).toHaveLength(580);
+	});
+
+	it('the parts really overlap: shared times are kept, not merged', async () => {
+		const { multi } = await expectMultiEqualsSingle(days(), () => {});
+		const times = multi.datetime_utc.values;
+		expect(times).toHaveLength(580);
+		expect(new Set(times).size).toBeLessThan(580);
 	});
 
 	it('with binning on (only the first file used to be binned)', async () => {

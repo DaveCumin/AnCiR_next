@@ -6,6 +6,7 @@
 	import { appConsts } from '$lib/core/core.svelte.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { processNodeWarnings } from '$lib/core/processWarnings.js';
+	import { columnWarnings } from '$lib/core/columnWarnings.js';
 	import {
 		COMPACT_W,
 		compactNodeHeight,
@@ -30,7 +31,8 @@
 	// collapsed square; details in the tooltip.
 	let warnings = $derived([
 		...(Array.isArray(node.tpObj?.warnings) ? node.tpObj.warnings : []),
-		...processNodeWarnings(node.processObj)
+		...processNodeWarnings(node.processObj),
+		...(node.type === 'data' && node.refId != null ? columnWarnings(getColumnById(node.refId)) : [])
 	]);
 	let hasWarning = $derived(warnings.length > 0);
 

@@ -40,13 +40,7 @@
 		typeChoicesFor
 	} from '$lib/utils/importColumnTypes.js';
 	import { sortPermutation, applyPermutation } from '$lib/utils/sortRows.js';
-	import {
-		DEFAULT_OVERLAP_MODE,
-		OVERLAP_MODES,
-		findTimeOverlaps,
-		mergeOverlappingRows,
-		timeRange
-	} from '$lib/utils/importOverlap.js';
+	import { describeOverlapNote, findTimeOverlaps, timeRange } from '$lib/utils/importOverlap.js';
 	import { getDisplayZone } from '$lib/utils/time/displayTime.js';
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
@@ -407,7 +401,7 @@
 		);
 		return samplingIntervalMinutes(ms);
 	});
-	// The rows the import holds (after merging times shared between files) decide it.
+	// The rows the import holds (every row of every file) decide it.
 	let binDefault = $derived(defaultImportBinning(importRowCount, dataIntervalMin));
 	let binningEnabled = $derived(binUserEnabled ?? (binSuggested && binDefault.enabled));
 	let binIntervalMin = $derived(binUserInterval ?? binDefault.intervalMin);
@@ -1073,17 +1067,17 @@
 	// ─── Overlapping times across files, and the preview summary ───────────────
 	// Daily exports often run past midnight into the next file's day, so the same
 	// time appears in two files. The preview reads every file in full (their common
-	// columns) to find those times; the user picks what the import does with them.
+	// columns) to find those times and says so; the import keeps every row (David,
+	// 2026-10-17: "import data simply imports the data (without merging)").
 	// [{ name, data }] in file order, raw: never mutated, replaced wholesale.
 	let overlapFiles = $state.raw([]);
-	let overlapMode = $state(DEFAULT_OVERLAP_MODE);
 	let addSourceColumn = $state(false);
 	// One file: the raw text of its time column(s) over the whole file, read for the
 	// summary's first and last time. { key, values: { col: string[] } } | null
 	let singleTimeValues = $state.raw(null);
 	let singleTimeScanKey = null; // the key being (or last) read, so a read is not repeated
-	// The overlap settings frozen when Confirm Import is pressed (see confirmImport).
-	let importOverlap = null;
+	// The source-file column's name (or null), frozen when Confirm Import is pressed.
+	let importSourceColumn = null;
 
 	/** The column a row's time is read from: what the preview shows as time, as the import's sort reads it. */
 	function isTimeChoice(col) {
@@ -1203,13 +1197,14 @@
 		return report.times > 0 ? { ...report, timeColumn: o.spec.column } : null;
 	});
 
-	// The rows the import will hold before binning: every file's rows, less the
-	// rows merged away at shared times.
+	// The preview's note about those times (information only), or null.
+	const overlapNote = $derived(describeOverlapNote(overlapReport));
+
+	// The rows the import will hold before binning: every row of every file.
 	const importRowCount = $derived.by(() => {
 		// A picked label row is not data (it is removed from each file on import).
 		if (!overlapRows) return Math.max(0, totalRowCount - (labelRowIndex == null ? 0 : 1));
-		const rows = overlapRows.lengths.reduce((a, b) => a + b, 0);
-		return overlapReport && overlapMode !== 'all' ? rows - overlapReport.extraRows : rows;
+		return overlapRows.lengths.reduce((a, b) => a + b, 0);
 	});
 
 	// The first and last time of the whole import (every file, every row), or null.
@@ -1289,10 +1284,6 @@
 		if (singleTimeScanKey === key) singleTimeValues = { key, values };
 	}
 
-	function setOverlapMode(mode) {
-		if (OVERLAP_MODES.includes(mode)) overlapMode = mode;
-	}
-
 	/** A name for the source-file column that no imported column already has. */
 	function sourceColumnName() {
 		const taken = new Set(headers);
@@ -1348,7 +1339,6 @@
 		dataUrl = '';
 		isUrlMode = false;
 		lastPreviewedUrl = '';
-		overlapMode = DEFAULT_OVERLAP_MODE;
 		addSourceColumn = false;
 		resetPerFileReading();
 	}
@@ -1798,7 +1788,6 @@
 			overlap: overlapReport && {
 				timeColumn: overlapReport.timeColumn,
 				times: overlapReport.times,
-				extraRows: overlapReport.extraRows,
 				conflicts: overlapReport.conflicts,
 				conflictCells: overlapReport.conflictCells,
 				pairs: overlapReport.pairs.map((p) => ({
@@ -1807,7 +1796,7 @@
 					conflicts: p.conflicts
 				}))
 			},
-			overlapMode,
+			overlapNote,
 			addSourceColumn,
 			timeRange: previewTimeRange && { ...previewTimeRange },
 			binningEnabled,
@@ -1858,7 +1847,6 @@
 			setColumnTypeChoice,
 			setBinningEnabled,
 			setBinInterval,
-			setOverlapMode,
 			setAddSourceColumn: (on) => {
 				addSourceColumn = on;
 			},
@@ -2332,13 +2320,8 @@
 		// interval reads as unknown), so reading them later binned at the 15 min
 		// fallback while the panel said 5, and could bin when the panel was unticked.
 		importBinning = { enabled: binningEnabled, intervalMin: binIntervalMin };
-		// Likewise the overlap choice: how a row's time is read comes from the preview's types.
-		importOverlap = {
-			mode: overlapMode,
-			spec: overlapTimeSpec,
-			compare: overlapCompareColumns(overlapTimeSpec, commonColumns),
-			sourceColumn: addSourceColumn && targetFiles.length > 1 ? sourceColumnName() : null
-		};
+		// Likewise the source-file column, named against the preview's headers.
+		importSourceColumn = addSourceColumn && targetFiles.length > 1 ? sourceColumnName() : null;
 		awaitingLoad = true;
 		loadProgress = {
 			stage: 'Loading data',
@@ -2364,7 +2347,7 @@
 		} finally {
 			awaitingLoad = false;
 			importBinning = null;
-			importOverlap = null;
+			importSourceColumn = null;
 			loadProgress = { stage: '', detail: '' };
 		}
 	}
@@ -2971,7 +2954,9 @@
 				}
 				fileRows.push(extraData[commonColumns[0]]?.length ?? 0);
 			}
-			parsedData = resolveOverlaps(parsedData, fileRows, importOverlap);
+			if (importSourceColumn) {
+				parsedData = withSourceColumn(parsedData, fileRows, importSourceColumn);
+			}
 			if (differentLabelFiles.length > 0) {
 				addNotification(
 					`The label row (row ${labelRowIndex + 1}) of ${differentLabelFiles.map((n) => `"${n}"`).join(', ')} ` +
@@ -3005,14 +2990,12 @@
 		loadProgress = { stage: 'Loading data', detail: 'Filtering selected columns…' };
 		await tick();
 
-		const sourceValues = importOverlap?.sourceColumn
-			? parsedData[importOverlap.sourceColumn]
-			: null;
+		const sourceValues = importSourceColumn ? parsedData[importSourceColumn] : null;
 		parsedData = getFilteredData();
 		// The source-file column is not one of the file's columns, so the column filter
 		// drops it; it goes back last.
-		if (sourceValues && !parsedData[importOverlap.sourceColumn]) {
-			parsedData = { ...parsedData, [importOverlap.sourceColumn]: sourceValues };
+		if (sourceValues && !parsedData[importSourceColumn]) {
+			parsedData = { ...parsedData, [importSourceColumn]: sourceValues };
 		}
 
 		// Combine date+time column pairs if requested (after concat so the full
@@ -3054,29 +3037,12 @@
 	}
 
 	/**
-	 * Concatenated files (`fileRows` rows each): add the source-file column when asked,
-	 * then merge the rows of times shared between files as chosen in the preview
-	 * (see importOverlap.js). Before binning and sorting, so both see the merged rows.
+	 * Concatenated files (`fileRows` rows each): add the `name` column holding each
+	 * row's file name. Before binning and sorting, so both carry it along.
 	 */
-	function resolveOverlaps(data, fileRows, settings) {
-		if (!settings) return data;
+	function withSourceColumn(data, fileRows, name) {
 		const names = targetFiles.map((f) => f.name);
-		const fileOf = fileRows.flatMap((n, i) => Array(n).fill(i));
-		let out = data;
-		if (settings.sourceColumn) {
-			out = { ...out, [settings.sourceColumn]: fileOf.map((i) => names[i]) };
-		}
-		if (settings.mode === 'all' || !settings.spec) return out;
-		const merged = mergeOverlappingRows({
-			data: out,
-			times: concatenatedInstants(settings.spec, out, fileRows),
-			fileOf,
-			keep: settings.mode,
-			compareColumns: settings.compare,
-			sourceColumn: settings.sourceColumn,
-			fileNames: names
-		});
-		return merged.data;
+		return { ...data, [name]: fileRows.flatMap((n, i) => Array(n).fill(names[i])) };
 	}
 
 	/** How a session URL is named in the replace confirm: its file name, else its host. */
@@ -3941,59 +3907,10 @@
 								</p>
 							{/if}
 
-							{#if overlapReport}
-								{@const names = overlapRows.names}
-								<div class="section-row overlap-panel" data-testid="import-overlap">
-									<p class="overlap-title">
-										{overlapReport.times.toLocaleString()}
-										{overlapReport.times === 1 ? 'time appears' : 'times appear'} in more than one file
-									</p>
-									<ul class="overlap-pairs">
-										{#each overlapReport.pairs as p (p.files.join())}
-											<li>
-												<span class="overlap-files"
-													>{p.files.map((i) => names[i]).join(' and ')}</span
-												>: {p.times.toLocaleString()}
-												{p.times === 1 ? 'time' : 'times'}{p.conflicts > 0
-													? `, ${p.conflicts.toLocaleString()} with different values`
-													: ''}
-											</li>
-										{/each}
-									</ul>
-									<p class="overlap-detail">
-										{#if overlapReport.conflicts > 0}
-											At {overlapReport.conflicts.toLocaleString()} of these times the files have different
-											values.
-										{:else}
-											Where more than one file has a value, the values are the same.
-										{/if}
-									</p>
-									<div
-										class="overlap-choice"
-										role="radiogroup"
-										aria-label="Times in more than one file"
-									>
-										{#each [['first', "One row per time; the first file's value wins (recommended)"], ['last', "One row per time; the last file's value wins"], ['all', 'Keep every row (each shared time appears more than once)']] as [mode, text] (mode)}
-											<label class="control-input-checkbox overlap-option">
-												<input
-													type="radio"
-													name="import-overlap-mode"
-													value={mode}
-													data-testid={`import-overlap-${mode}`}
-													checked={overlapMode === mode}
-													onchange={() => setOverlapMode(mode)}
-												/>
-												<span class="ci-label">{text}</span>
-											</label>
-										{/each}
-									</div>
-									<p class="overlap-hint">
-										{overlapMode === 'all'
-											? 'Every row of every file is imported.'
-											: 'A blank cell is filled from the other file, so only different values follow this choice.'}
-										Files are in the order listed under "Files to concatenate".
-									</p>
-								</div>
+							{#if overlapNote}
+								<p class="section-row overlap-note" data-testid="import-overlap" role="note">
+									{overlapNote}
+								</p>
 							{/if}
 
 							{#if importRowCount > ROW_THRESHOLD}
@@ -4206,8 +4123,6 @@
 										><strong>{importRowCount.toLocaleString()}</strong>
 										{importRowCount === 1 ? 'row' : 'rows'} to import{targetFiles.length > 1
 											? ` from ${targetFiles.length} files`
-											: ''}{overlapReport && overlapMode !== 'all'
-											? `, after merging ${overlapReport.extraRows.toLocaleString()} ${overlapReport.extraRows === 1 ? 'row that shares' : 'rows that share'} a time`
 											: ''}.</span
 									>
 									{#if previewTimeRange}
@@ -5094,44 +5009,15 @@
 		font-size: 0.9em;
 	}
 
-	/* ── Times shared between files ─────────────────────────────────────────── */
-	.overlap-panel {
+	/* ── Times shared between files (information only) ───────────────────── */
+	.overlap-note {
 		margin: 0.5em 0;
 		padding: 0.5em 0.75em;
 		border: 1px solid var(--color-warning);
 		border-radius: var(--radius-sm);
 		background: var(--color-warning-bg);
 		font-size: var(--font-sm);
-	}
-	.overlap-title {
-		font-weight: 600;
-		margin: 0 0 0.25em 0;
-	}
-	.overlap-pairs {
-		margin: 0 0 0.25em 0;
-		padding-left: 1.25em;
-	}
-	.overlap-files {
-		overflow-wrap: anywhere;
-	}
-	.overlap-detail,
-	.overlap-hint {
-		margin: 0.25em 0;
-	}
-	.overlap-hint {
-		color: var(--color-text-muted);
-	}
-	.overlap-choice {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15em;
-		margin: 0.4em 0;
-	}
-	.overlap-option {
-		align-items: flex-start;
-	}
-	.overlap-option input {
-		margin-top: 0.15em;
+		line-height: 1.4;
 	}
 	.source-option {
 		margin-top: 0.5em;

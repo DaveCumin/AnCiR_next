@@ -155,22 +155,12 @@ describe.skipIf(realFiles.length < 2)('multi-file import of the reported ESF fil
 
 		await _importTestActions().confirmImport();
 		expect(_importPreviewState().importError).toBe('');
-		// Each day's file runs 1 h 36 min into the next day: those shared times are merged
-		// into one row each by default (ImportData.multiFileOverlap.test.js), so one row per
-		// distinct time.
-		const times = new Set(
-			texts.flatMap((t) =>
-				t
-					.split(/\r?\n/)
-					.slice(1)
-					.filter((l) => l.trim() !== '')
-					.map((l) => l.split(',')[0])
-			)
-		);
-		expect(times.size).toBe(rowsIn[0] + rowsIn[1] - 10);
+		// Each day's file runs 1 h 36 min into the next day; the shared times are kept,
+		// not merged, so every row of both files is imported.
 		const ts = importedByName('timestamp_unix');
 		expect(ts).toHaveLength(1);
-		expect(ts[0].getData()).toHaveLength(times.size);
-		expect(importedByName('all_data')[0].getData()).toHaveLength(times.size);
+		expect(ts[0].getData()).toHaveLength(rowsIn[0] + rowsIn[1]);
+		expect(rowsIn[0] + rowsIn[1]).toBe(290);
+		expect(importedByName('all_data')[0].getData()).toHaveLength(rowsIn[0] + rowsIn[1]);
 	});
 });

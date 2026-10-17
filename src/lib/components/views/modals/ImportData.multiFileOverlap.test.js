@@ -1,14 +1,13 @@
 // Files imported together whose times overlap (a daily export that runs past midnight
 // into the next file's day). Found 2026-10-17 with the ESF exports: four daily files,
-// each running 1 h 36 min into the next day, so neighbouring files share 10 times. The
-// import concatenated them silently, so every shared time appeared twice (one blank row
-// from the earlier file, one with values from the later file), and at 3 of the times
-// both files had values that disagreed.
+// each running 1 h 36 min into the next day, so neighbouring files share 10 times, and at
+// 3 of the times both files have values that disagree.
 //
-// The preview now says how many times overlap, between which files and how many
-// disagree, and offers: one row per time with the first file's value winning (default),
-// with the last file's value winning, or every row kept (the old behaviour). A blank cell
-// never wins: a merged row takes each value from whichever file has one.
+// v82.21 merged shared times into one row per time. David decided (2026-10-17) that
+// "import data simply imports the data (without merging)": every row of every file is
+// imported and sorted by time. The preview only says how many times overlap and how many
+// disagree, and points to Bin Data for combining them; the imported time column then
+// carries a repeated-times warning (columnWarnings.js).
 import { describe, it, expect, beforeEach } from 'vitest';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -75,26 +74,27 @@ beforeEach(() => {
 });
 
 describe('overlapping times across files: the preview reports them', () => {
-	it('no shared time: no overlap reported, nothing removed', async () => {
+	it('no shared time: no overlap reported, no note', async () => {
 		const s = await preview([csv('a.csv', lines(0, 20)), csv('b.csv', lines(20, 40))]);
 		expect(s.overlap).toBe(null);
+		expect(s.overlapNote).toBe(null);
 		expect(s.importRowCount).toBe(40);
 		const cols = await importAll();
 		expect(cols.time).toHaveLength(40);
 	});
 
-	it('an exact overlap (same values): counted, none disagree', async () => {
+	it('an exact overlap (same values): counted, none disagree, every row still counted', async () => {
 		const s = await preview([csv('a.csv', lines(0, 30)), csv('b.csv', lines(20, 50))]);
 		expect(s.overlap).toMatchObject({
 			timeColumn: 'time',
 			times: 10,
-			extraRows: 10,
 			conflicts: 0,
 			pairs: [{ files: ['a.csv', 'b.csv'], times: 10, conflicts: 0 }]
 		});
-		expect(s.overlapMode).toBe('first');
 		expect(s.totalRowCount).toBe(60);
-		expect(s.importRowCount).toBe(50);
+		expect(s.importRowCount).toBe(60);
+		expect(s.overlapNote).toMatch(/^10 times appear in more than one file, and the files agree/);
+		expect(s.overlapNote).toContain('All rows are imported.');
 	});
 
 	it('an overlap with disagreeing values: counted per pair of files', async () => {
@@ -102,6 +102,7 @@ describe('overlapping times across files: the preview reports them', () => {
 		const s = await preview([csv('a.csv', lines(0, 30)), csv('b.csv', b)]);
 		expect(s.overlap).toMatchObject({ times: 10, conflicts: 2 });
 		expect(s.overlap.pairs).toEqual([{ files: ['a.csv', 'b.csv'], times: 10, conflicts: 2 }]);
+		expect(s.overlapNote).toMatch(/^10 times appear in more than one file; at 2 of them/);
 	});
 
 	it('different time formats that parse to the same instant still overlap', async () => {
@@ -111,59 +112,54 @@ describe('overlapping times across files: the preview reports them', () => {
 		]);
 		expect(s.overlap).toMatchObject({ times: 10, conflicts: 0 });
 	});
+
+	it('offers no merge choice', async () => {
+		const s = await preview([csv('a.csv', lines(0, 30)), csv('b.csv', lines(20, 50))]);
+		expect(s).not.toHaveProperty('overlapMode');
+		expect(_importTestActions()).not.toHaveProperty('setOverlapMode');
+	});
 });
 
-describe('overlapping times across files: the import', () => {
+describe('overlapping times across files: the import keeps every row', () => {
 	const conflicting = () => [
 		csv('a.csv', lines(0, 30)),
 		csv('b.csv', lines(20, 50, { value: (i) => (i === 25 ? 999 : 100 + i) }))
 	];
 
-	it('default: one row per time, the first file wins where both have a value', async () => {
+	it('every row of every file, sorted by time; both values of a conflicting time', async () => {
 		await preview(conflicting());
 		const cols = await importAll();
-		expect(cols.time).toHaveLength(50);
+		expect(cols.time).toHaveLength(60);
 		expect(new Set(cols.time).size).toBe(50);
 		expect(cols.time).toEqual([...cols.time].sort((x, y) => x - y));
-		expect(cols.activity[25]).toBe(125);
+		const at25 = cols.time.flatMap((t, i) => (t === T0 + 25 * STEP ? [cols.activity[i]] : []));
+		expect(at25.sort()).toEqual([125, 999]);
 	});
 
-	it('the last file wins when chosen', async () => {
+	it('the file listed first does not change what is imported', async () => {
 		await preview(conflicting());
-		const cols = await importAll((a) => a.setOverlapMode('last'));
-		expect(cols.time).toHaveLength(50);
-		expect(cols.activity[25]).toBe(999);
+		const forward = await importAll();
+		await preview(conflicting().reverse());
+		expect(_importPreviewState().fileNames).toEqual(['b.csv', 'a.csv']);
+		const reversed = await importAll();
+		expect(reversed.time).toEqual(forward.time);
+		expect(reversed.time).toHaveLength(60);
 	});
 
-	it('keep every row: the old behaviour, each shared time twice', async () => {
-		await preview(conflicting());
-		const cols = await importAll((a) => a.setOverlapMode('all'));
-		expect(cols.time).toHaveLength(60);
-	});
-
-	it('a blank cell is filled from the other file, whichever file wins', async () => {
-		const a = lines(0, 30, { value: (i) => (i >= 20 ? '' : 100 + i) });
+	it("a blank row from one file stays a blank row beside the other file's values", async () => {
+		const a = lines(0, 30, { blankFrom: 20 });
 		await preview([csv('a.csv', a), csv('b.csv', lines(20, 50))]);
 		const cols = await importAll();
-		expect(cols.activity.slice(20, 30)).toEqual(Array.from({ length: 10 }, (_, k) => 120 + k));
+		expect(cols.activity).toHaveLength(60);
+		expect(cols.activity.filter((v) => v == null)).toHaveLength(10);
 	});
 
-	it('"first" means the file listed first, and the rows are still sorted by time after merging', async () => {
-		// b.csv (later times) is listed first.
-		await preview(conflicting().reverse());
-		const s = _importPreviewState();
-		expect(s.fileNames).toEqual(['b.csv', 'a.csv']);
-		const cols = await importAll();
-		expect(cols.time).toEqual([...cols.time].sort((x, y) => x - y));
-		expect(cols.activity[25]).toBe(999);
-	});
-
-	it('binning sees the merged rows: same as one file holding them', async () => {
+	it('binning sees every row: same as one file holding them', async () => {
 		const bin = (a) => {
 			a.setBinningEnabled(true);
 			a.setBinInterval(60);
 		};
-		await preview([csv('merged.csv', lines(0, 50))]);
+		await preview([csv('all.csv', [...lines(0, 30), ...lines(20, 50)])]);
 		const single = await importAll(bin);
 		await preview([csv('a.csv', lines(0, 30)), csv('b.csv', lines(20, 50))]);
 		const multi = await importAll(bin);
@@ -172,12 +168,16 @@ describe('overlapping times across files: the import', () => {
 	});
 
 	it('the source-file column names the file each row came from', async () => {
-		await preview([csv('a.csv', lines(0, 30, { blankFrom: 25 })), csv('b.csv', lines(20, 50))]);
+		await preview([csv('a.csv', lines(0, 30)), csv('b.csv', lines(20, 50))]);
 		const cols = await importAll((x) => x.setAddSourceColumn(true));
-		expect(cols['Source file']).toHaveLength(50);
-		// 0..24 from a.csv (20..24 shared, a.csv has values and wins); 25..29 shared, blank in a.csv.
-		expect(cols['Source file'].slice(0, 25).every((n) => n === 'a.csv')).toBe(true);
-		expect(cols['Source file'].slice(25).every((n) => n === 'b.csv')).toBe(true);
+		expect(cols['Source file']).toHaveLength(60);
+		expect(cols['Source file'].filter((n) => n === 'a.csv')).toHaveLength(30);
+		expect(cols['Source file'].filter((n) => n === 'b.csv')).toHaveLength(30);
+		// Times only in a.csv (before row 20) or only in b.csv (row 30 on).
+		cols.time.forEach((t, i) => {
+			if (t < T0 + 20 * STEP) expect(cols['Source file'][i]).toBe('a.csv');
+			if (t >= T0 + 30 * STEP) expect(cols['Source file'][i]).toBe('b.csv');
+		});
 	});
 
 	it('the source-file column survives a column left unticked', async () => {
@@ -187,7 +187,7 @@ describe('overlapping times across files: the import', () => {
 			x.setColumnSelected('temp', false);
 		});
 		expect(Object.keys(cols)).toEqual(['time', 'activity', 'Source file']);
-		expect(cols['Source file']).toHaveLength(50);
+		expect(cols['Source file']).toHaveLength(60);
 	});
 
 	it('without the checkbox there is no source-file column', async () => {
@@ -227,12 +227,11 @@ describe.skipIf(esfFiles.length !== 4)('the ESF daily exports (real files)', () 
 	const files = () =>
 		esfFiles.map((f) => new File([readFileSync(join(ESF_DIR, f))], f, { type: 'text/csv' }));
 
-	it('reports 30 shared times, 10 per neighbouring pair, 3 that disagree', async () => {
+	it('reports 30 shared times, 10 per neighbouring pair, 3 that disagree; counts all 580 rows', async () => {
 		const s = await preview(files());
 		expect(s.overlap).toMatchObject({
 			timeColumn: 'datetime_utc',
 			times: 30,
-			extraRows: 30,
 			conflicts: 3
 		});
 		expect(s.overlap.pairs.map((p) => [p.files, p.times, p.conflicts])).toEqual([
@@ -240,8 +239,12 @@ describe.skipIf(esfFiles.length !== 4)('the ESF daily exports (real files)', () 
 			[[esfFiles[1], esfFiles[2]], 10, 1],
 			[[esfFiles[2], esfFiles[3]], 10, 1]
 		]);
+		expect(s.overlapNote).toBe(
+			'30 times appear in more than one file; at 3 of them the files have different values. ' +
+				'All rows are imported. To combine rows that share a time, bin the data after import (Bin\u00a0Data).'
+		);
 		expect(s.totalRowCount).toBe(580);
-		expect(s.importRowCount).toBe(550);
+		expect(s.importRowCount).toBe(580);
 		expect(s.timeRange).toEqual({
 			column: 'datetime_utc',
 			first: Date.UTC(2026, 2, 24, 0, 4, 16),
@@ -249,15 +252,25 @@ describe.skipIf(esfFiles.length !== 4)('the ESF daily exports (real files)', () 
 		});
 	});
 
-	it('imports 550 rows, one per time; blanks filled from the next file, the first file wins conflicts', async () => {
+	it('imports all 580 rows (550 distinct times), both values where the files disagree', async () => {
 		await preview(files());
 		const cols = await importAll();
-		expect(cols.datetime_utc).toHaveLength(550);
+		expect(cols.datetime_utc).toHaveLength(580);
 		expect(new Set(cols.datetime_utc).size).toBe(550);
-		const at = (y, mo, d, h, mi, s) => cols.datetime_utc.indexOf(Date.UTC(y, mo, d, h, mi, s));
-		// 25 Mar 00:04:16: both files have values; the first file's wins.
-		expect(cols.all_data[at(2026, 2, 25, 0, 4, 16)]).toBeCloseTo(411.6043395996094, 9);
-		// 25 Mar 00:14:56: blank in the first file, so the second file's value.
-		expect(cols.all_data[at(2026, 2, 25, 0, 14, 56)]).toBeCloseTo(863.502685546875, 9);
+		expect(cols.datetime_utc).toEqual([...cols.datetime_utc].sort((x, y) => x - y));
+		const valuesAt = (y, mo, d, h, mi, s) => {
+			const t = Date.UTC(y, mo, d, h, mi, s);
+			return cols.datetime_utc.flatMap((x, i) => (x === t ? [cols.all_data[i]] : []));
+		};
+		// 25 Mar 00:04:16: both files have a value and they differ; both are imported.
+		const both = valuesAt(2026, 2, 25, 0, 4, 16);
+		expect(both).toHaveLength(2);
+		expect(both.some((v) => Math.abs(v - 411.6043395996094) < 1e-9)).toBe(true);
+		expect(new Set(both).size).toBe(2);
+		// 25 Mar 00:14:56: blank in the first file, a value in the second; both rows imported.
+		const blankAndValue = valuesAt(2026, 2, 25, 0, 14, 56);
+		expect(blankAndValue).toHaveLength(2);
+		expect(blankAndValue.filter((v) => v == null)).toHaveLength(1);
+		expect(blankAndValue.some((v) => Math.abs(v - 863.502685546875) < 1e-9)).toBe(true);
 	});
 });

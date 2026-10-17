@@ -26,6 +26,7 @@
 	import { NODE_ROW_CSS_VARS, nodeRowCentreY } from './nodeRows.js';
 	import { portTooltip, portAriaLabel } from './portLabels.js';
 	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
+	import { columnWarnings } from '$lib/core/columnWarnings.js';
 
 	let { node, selected = false, isDropTarget = false, spliceTargetPort = null } = $props();
 
@@ -39,6 +40,10 @@
 	const collapsed = $derived(group?.collapsed === true);
 	const sourceColumns = $derived(
 		sourceColumnIds.map((id) => ({ id, col: getColumnById(id) })).filter((entry) => !!entry.col)
+	);
+	// Warnings about each row's own data (e.g. a time column whose times repeat), by column id.
+	const rowWarnings = $derived(
+		Object.fromEntries(sourceColumns.map(({ id, col }) => [id, columnWarnings(col).join('\n')]))
 	);
 
 	// One renameNode operation on commit (an undo step, an unsaved change); nothing while
@@ -329,6 +334,15 @@
 							onmousedown={stopPointer}
 							role="presentation"
 						>
+							{#if rowWarnings[id]}
+								<span
+									class="row-warning"
+									role="img"
+									data-testid="column-warning"
+									aria-label={`Warning: ${rowWarnings[id]}`}
+									{@attach tooltip(rowWarnings[id])}>⚠</span
+								>
+							{/if}
 							<Editable
 								value={col.name}
 								placeholder="column"
@@ -571,6 +585,14 @@
 		white-space: nowrap;
 		font-weight: 500;
 		color: rgba(0, 0, 0, 0.8);
+	}
+
+	/* A warning about the column's own data (columnWarnings.js); details in the tooltip. */
+	.row-warning {
+		margin-right: 3px;
+		color: #e0a800;
+		cursor: help;
+		user-select: none;
 	}
 
 	.group-label-chip {

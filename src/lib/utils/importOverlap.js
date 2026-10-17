@@ -3,8 +3,9 @@
  *
  * Daily logger exports often run past midnight into the next file's day, so the
  * same instant appears in two files (the ESF exports overlap by 1 h 36 min). The
- * import concatenates files, so without this every overlapping time was imported
- * twice. These helpers find those times and merge them into one row.
+ * import concatenates files and keeps every row (David, 2026-10-17: "import data
+ * simply imports the data (without merging)"); these helpers only find the shared
+ * times so the preview can say so. Combining them is Bin Data's job, after import.
  *
  * The data is the concatenation of every file's rows (column-oriented, as the
  * import holds it) with, per row, its file index (`fileOf`) and its time as an
@@ -12,15 +13,10 @@
  * Parsing times is the caller's job, so files written in different time formats
  * match whenever they parse to the same instant.
  *
- * Merging is per cell: a merged row takes each column's value from the
- * highest-priority file that has one, so a blank cell in one file is filled from
- * the other and only values that really differ follow the first/last rule.
- * A time repeated inside one file is not an overlap between files and is left alone.
+ * A blank cell is never a disagreement: files differ at a time only where two
+ * of them have different values. A time repeated inside one file is not an
+ * overlap between files.
  */
-
-/** 'first': one row per time, the first file's value wins; 'last': the last file's; 'all': keep every row. */
-export const OVERLAP_MODES = ['first', 'last', 'all'];
-export const DEFAULT_OVERLAP_MODE = 'first';
 
 /** A cell with no value: null, undefined, blank text or NaN. */
 export function isMissingCell(v) {
@@ -82,9 +78,9 @@ function conflictingCells(group, data, compareColumns) {
 }
 
 /**
- * What the overlap is: how many times appear in more than one file, how many rows
- * one-row-per-time removes, at how many of those times the files' values differ,
- * and the same per set of files (usually a pair of neighbouring files).
+ * What the overlap is: how many times appear in more than one file, at how many of
+ * those times the files' values differ, and the same per set of files (usually a
+ * pair of neighbouring files).
  *
  * @param {{ times: ArrayLike<number|null>, fileOf: ArrayLike<number>,
  *   data: Record<string, any[]>, compareColumns?: string[] }} input
@@ -92,11 +88,9 @@ function conflictingCells(group, data, compareColumns) {
 export function findTimeOverlaps({ times, fileOf, data, compareColumns = [] }) {
 	const groups = sharedTimeGroups(times, fileOf);
 	const pairs = new Map();
-	let extraRows = 0;
 	let conflicts = 0;
 	let conflictCells = 0;
 	for (const group of groups) {
-		extraRows += group.length - 1;
 		const cells = conflictingCells(group, data, compareColumns);
 		if (cells > 0) conflicts++;
 		conflictCells += cells;
@@ -109,63 +103,38 @@ export function findTimeOverlaps({ times, fileOf, data, compareColumns = [] }) {
 	}
 	return {
 		times: groups.length,
-		extraRows,
 		conflicts,
 		conflictCells,
 		pairs: [...pairs.values()].sort((a, b) => a.files[0] - b.files[0] || a.files[1] - b.files[1])
 	};
 }
 
-/**
- * One row per shared time (see the module comment), or every row for 'all'.
- * The merged row stays where the time first appears; the import sorts afterwards.
- * With `sourceColumn`, that column names the file that supplied the row's values:
- * the highest-priority file with a value in `compareColumns`.
- *
- * @param {{ data: Record<string, any[]>, times: ArrayLike<number|null>,
- *   fileOf: ArrayLike<number>, keep: 'first'|'last'|'all', compareColumns?: string[],
- *   sourceColumn?: string|null, fileNames?: string[] }} input
- * @returns {{ data: Record<string, any[]>, removed: number }}
- */
-export function mergeOverlappingRows({
-	data,
-	times,
-	fileOf,
-	keep,
-	compareColumns = [],
-	sourceColumn = null,
-	fileNames = []
-}) {
-	if (keep === 'all') return { data, removed: 0 };
-	const groups = sharedTimeGroups(times, fileOf);
-	if (groups.length === 0) return { data, removed: 0 };
+const BIN_HINT =
+	'All rows are imported. To combine rows that share a time, bin the data after import (Bin\u00a0Data).';
 
-	const cols = Object.keys(data);
-	const out = {};
-	for (const col of cols) out[col] = data[col].slice();
-	const drop = new Uint8Array(times.length);
-	for (const group of groups) {
-		const keepRow = group[0];
-		const priority = keep === 'last' ? [...group].reverse() : group;
-		for (const col of cols) {
-			if (col === sourceColumn) continue;
-			const values = data[col];
-			const from = priority.find((row) => !isMissingCell(values[row]));
-			if (from !== undefined) out[col][keepRow] = values[from];
-		}
-		if (sourceColumn && out[sourceColumn]) {
-			const supplier =
-				priority.find((row) => compareColumns.some((c) => !isMissingCell(data[c]?.[row]))) ??
-				priority[0];
-			out[sourceColumn][keepRow] = fileNames[fileOf[supplier]] ?? data[sourceColumn][supplier];
-		}
-		for (const row of group) if (row !== keepRow) drop[row] = 1;
+/**
+ * The preview's note about times shared between files (a `findTimeOverlaps` report),
+ * or null when there are none. Information only: the import keeps every row.
+ * @param {{ times: number, conflicts: number } | null} report
+ */
+export function describeOverlapNote(report) {
+	if (!report || !(report.times > 0)) return null;
+	const n = report.times;
+	const c = report.conflicts ?? 0;
+	let first;
+	if (n === 1) {
+		first =
+			c > 0
+				? '1 time appears in more than one file, and the files have different values there.'
+				: '1 time appears in more than one file, and the files agree there.';
+	} else {
+		const count = `${n.toLocaleString()} times appear in more than one file`;
+		first =
+			c > 0
+				? `${count}; at ${c.toLocaleString()} of them the files have different values.`
+				: `${count}, and the files agree at all of them.`;
 	}
-	const merged = {};
-	for (const col of cols) merged[col] = out[col].filter((_, i) => !drop[i]);
-	let removed = 0;
-	for (let i = 0; i < drop.length; i++) removed += drop[i];
-	return { data: merged, removed };
+	return `${first} ${BIN_HINT}`;
 }
 
 /** The earliest and latest instant among `times` (rows without a time ignored), or null. */

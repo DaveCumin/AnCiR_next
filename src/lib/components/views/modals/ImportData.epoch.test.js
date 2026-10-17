@@ -97,8 +97,8 @@ describe('Unix time column: suggested, never automatic', () => {
 	it('accepted, four files read as the same instants as datetime_utc', async () => {
 		const { unix, utc } = await importAndCompare(files(), { accept: true });
 		expect(unix.type).toBe('time');
-		// 580 rows, less the 30 that share a time with the neighbouring file (merged by default).
-		expect(unix.getData()).toHaveLength(550);
+		// Every row of the four files, shared times included (import never merges).
+		expect(unix.getData()).toHaveLength(580);
 		expect(unix.getData()).toEqual(utc.getData());
 		expect(unix.hoursSinceStart).toEqual(utc.hoursSinceStart);
 	});
