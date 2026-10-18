@@ -10,6 +10,7 @@
 	import { migrateFacetChildren } from '$lib/core/facetMigration.js';
 	import { migratePhaseMarkerStoredValues } from '$lib/core/phaseMarkerStoredValueMigration.js';
 	import { migrateLegacyEnrightBins } from '$lib/core/enrightBinMigration.js';
+	import { migrateLegacyAutoPeriodRange } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 	import { migrateDataViews } from '$lib/core/dataViewMigration.js';
 	import { childDefaultsFromRegistry } from '$lib/core/facetMigrationDefaults.js';
 	import { history } from '$lib/core/opHistory.svelte.js';
@@ -305,6 +306,9 @@
 		// 0.25 h nobody chose: they now follow their x (the median sampling interval), as a new
 		// series does (enrightBinMigration.js). After the facet migration, which may move series.
 		jsonData = migrateLegacyEnrightBins(jsonData).json;
+		// A free-period fit saved while following a time x at the old 1 to 48 h keeps that range
+		// (new nodes on a time x start at 1 to 30 h from v82.30; periodRangeAuto.svelte.js).
+		jsonData = migrateLegacyAutoPeriodRange(jsonData).json;
 		// Data View plots (removed in v82.0) become the Table the same button opens today: a
 		// "Plot's computed data" Table, or a "Node results" Table on the node's result table
 		// (dataViewMigration.js). Same ids, so layout and reference edges carry over; a view

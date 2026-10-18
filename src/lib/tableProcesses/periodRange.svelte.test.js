@@ -33,6 +33,7 @@ import { buildTableProcessDefaults } from '$lib/core/tpDefaults.js';
 import { createColumnNamer } from '$lib/core/outputLabels.js';
 import { outputCoreAsJson } from '$lib/core/core.svelte.js';
 import { applyEdit } from '$lib/utils/aiEdit.js';
+import { migrateLegacyAutoPeriodRange } from '$lib/tableProcesses/periodRangeAuto.svelte.js';
 import { loadProcesses } from '$test/processRegistry.js';
 import { loadPlots } from '$test/plotRegistry.js';
 import { loadTableProcesses } from '$test/tableProcessRegistry.js';
@@ -129,6 +130,37 @@ function legacyFreeCosinor() {
 	delete tp.args.minPeriod;
 	delete tp.args.maxPeriod;
 	delete tp.args.periodRangeAuto;
+	return json;
+}
+
+/**
+ * The shipped Cosinor demo with x as a plain TIME column: 3 days hourly from 5 Jan 2026 06:00
+ * UTC, a 24 h cosine as y, and the free period on. The Sequence Column that made x is dropped
+ * (it would rewrite x as numbers).
+ */
+function timeXSession({ follow = false, minPeriod, maxPeriod } = {}) {
+	const json = demo('demo-tp-cosinor.json');
+	const tp = json.tableProcesses.find((t) => t.name === 'Cosinor');
+	json.tableProcesses = json.tableProcesses.filter((t) => t.name !== 'SequenceColumn');
+	const t0 = Date.UTC(2026, 0, 5, 6, 0, 0);
+	const n = 72;
+	const ms = Array.from({ length: n }, (_, i) => t0 + i * 3600000);
+	json.rawData[String(tp.args.xIN)] = ms;
+	json.rawData[String(tp.args.yIN[0])] = ms.map(
+		(_, i) => 50 + 20 * Math.cos((2 * Math.PI * (i - 8)) / 24) + 3 * Math.sin(i * 1.7)
+	);
+	const x = json.data.find((c) => c.id === tp.args.xIN);
+	Object.assign(x, {
+		name: 'time',
+		type: 'time',
+		// Epoch ms, as the app's own time outputs are stored (no text format to parse).
+		timeFormat: null,
+		tableProcessGUId: ''
+	});
+	Object.assign(tp.args, { useFixedPeriod: false, Ncurves: 1 });
+	if (follow) tp.args.periodRangeAuto = true;
+	if (minPeriod != null) tp.args.minPeriod = minPeriod;
+	if (maxPeriod != null) tp.args.maxPeriod = maxPeriod;
 	return json;
 }
 
@@ -317,5 +349,99 @@ describe("the author's case, end to end", () => {
 			// Never in `defaults`: fillDefaults would then stamp it onto every loaded node.
 			expect(e.defaults.has('periodRangeAuto'), name).toBe(false);
 		}
+	});
+});
+
+describe('a new node on a TIME x starts at 1 to 30 h (v82.30)', () => {
+	it.each(['Cosinor', 'RectangularWave', 'DoubleLogistic', 'FitFunction'])('%s', async (name) => {
+		await load(timeXSession());
+		const old = tpByName('Cosinor');
+		const entry = appConsts.tableProcessMap.get(name);
+		const tp = mutationService.addFreeTableProcess(name, buildTableProcessDefaults(entry));
+		expect(tp.args.periodRangeAuto).toBe(true);
+		tp.args.xIN = old.args.xIN;
+		tp.args.yIN = [...old.args.yIN];
+		await settle();
+		await until(() => tp.args.maxPeriod === 30);
+		expect(tp.args.minPeriod).toBe(1);
+		expect(tp.args.maxPeriod).toBe(30);
+		expect(tp.args.periodRangeAuto).toBe(true);
+	});
+
+	it('an AI edit that names a range keeps it on a time x', async () => {
+		await load(timeXSession());
+		const old = tpByName('Cosinor');
+		const inputs = { xIN: old.args.xIN, yIN: [...old.args.yIN] };
+		const res = applyEdit({
+			analyses: [
+				{
+					tpType: 'Cosinor',
+					inputs,
+					params: { useFixedPeriod: false, minPeriod: 2, maxPeriod: 40 }
+				},
+				{ tpType: 'Cosinor', inputs, params: { useFixedPeriod: false } }
+			],
+			plots: [],
+			changes: [],
+			bands: [],
+			errors: []
+		});
+		expect(res.ok).toBe(true);
+		await settle();
+		const [named, unnamed] = core.tableProcesses.filter((t) => t.name === 'Cosinor').slice(-2);
+		await until(() => unnamed.args.maxPeriod === 30);
+		expect([named.args.minPeriod, named.args.maxPeriod]).toEqual([2, 40]);
+		expect(named.args.periodRangeAuto).toBe(false);
+		expect([unnamed.args.minPeriod, unnamed.args.maxPeriod]).toEqual([1, 30]);
+	});
+
+	it('a node saved while following a time x at the old 1 to 48 h keeps it, and its result', async () => {
+		// The reference: the same fit with the range fixed at 1 to 48 (not following).
+		await load(timeXSession({ minPeriod: 1, maxPeriod: 48 }));
+		const ref = tpByName('Cosinor');
+		await until(() => Number.isFinite(firstFinite(ref.args.out.period)));
+		const refPeriod = firstFinite(ref.args.out.period);
+		expect(Number.isFinite(refPeriod)).toBe(true);
+		cleanup();
+		_resetComputeOwners();
+
+		await load(timeXSession({ follow: true, minPeriod: 1, maxPeriod: 48 }));
+		const tp = tpByName('Cosinor');
+		await until(() => Number.isFinite(firstFinite(tp.args.out.period)));
+		expect(tp.args.periodRangeAuto).toBe(false);
+		expect([tp.args.minPeriod, tp.args.maxPeriod]).toEqual([1, 48]);
+		expect(firstFinite(tp.args.out.period)).toBeCloseTo(refPeriod, 9);
+	});
+});
+
+describe('migrateLegacyAutoPeriodRange', () => {
+	const session = (xType, args, name = 'Cosinor') => ({
+		data: [{ id: 1, type: xType }],
+		tableProcesses: [{ name, args: { xIN: 1, ...args } }]
+	});
+	it('clears the flag of a following time-x fit at exactly 1 to 48, without mutating', () => {
+		for (const name of ['Cosinor', 'RectangularWave', 'DoubleLogistic', 'FitFunction']) {
+			const json = session('time', { periodRangeAuto: true, minPeriod: 1, maxPeriod: 48 }, name);
+			const r = migrateLegacyAutoPeriodRange(json);
+			expect(r.migrated, name).toBe(1);
+			expect(r.json.tableProcesses[0].args.periodRangeAuto).toBe(false);
+			expect(r.json.tableProcesses[0].args.maxPeriod).toBe(48);
+			expect(json.tableProcesses[0].args.periodRangeAuto).toBe(true);
+		}
+	});
+	it('leaves every other node alone', () => {
+		const cases = [
+			session('number', { periodRangeAuto: true, minPeriod: 1, maxPeriod: 48 }),
+			session('time', { periodRangeAuto: true, minPeriod: 1, maxPeriod: 30 }),
+			session('time', { periodRangeAuto: false, minPeriod: 1, maxPeriod: 48 }),
+			session('time', { minPeriod: 1, maxPeriod: 48 }),
+			session('time', { periodRangeAuto: true, minPeriod: 1, maxPeriod: 48 }, 'TrendFit')
+		];
+		for (const json of cases) {
+			const r = migrateLegacyAutoPeriodRange(json);
+			expect(r.migrated).toBe(0);
+			expect(r.json).toBe(json);
+		}
+		expect(migrateLegacyAutoPeriodRange({}).migrated).toBe(0);
 	});
 });

@@ -28,6 +28,14 @@ import { validateFormulaTokens } from '../../../src/lib/utils/formulaExpression.
 // The app's overlay spec (channel table + spec normaliser), shared for the same reason: a
 // draft's plot overlays are refused exactly where add_plot and the GUI refuse them. Pure.
 import { normalizeOverlaySpecs } from '../../../src/lib/components/plotbits/overlaySpec.js';
+import { NEW_NODE_TIME_PERIOD_RANGE } from '../../../src/lib/utils/periodRangeDefaults.js';
+
+// The free-period fits. A new one on a TIME x with no period range named starts at
+// NEW_NODE_TIME_PERIOD_RANGE (1 to 30 h), as a node added from the palette or by the in-app AI
+// edit does; a range the model names is kept as given (either bound named: both as given,
+// the other from the defaults). Written as numbers, so the engine and the ports compute with
+// exactly what the session stores.
+const FREE_PERIOD_FITS = new Set(['Cosinor', 'RectangularWave', 'DoubleLogistic', 'FitFunction']);
 
 // Per-series style slots, each with an explicit colour. Union across the types that read them:
 //   Scatterplot: line, points · Periodogram: line, thresholdline, points
@@ -284,6 +292,11 @@ export function normalizeSession(
 				continue;
 			}
 			args.tokens = tokens;
+		}
+
+		if (FREE_PERIOD_FITS.has(name) && args.minPeriod == null && args.maxPeriod == null) {
+			const xCol = data.find((c) => c.id === args.xIN);
+			if (xCol?.type === 'time') Object.assign(args, NEW_NODE_TIME_PERIOD_RANGE);
 		}
 
 		// fill omitted params from defaults (without clobbering supplied values).

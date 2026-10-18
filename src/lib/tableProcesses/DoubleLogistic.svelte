@@ -24,11 +24,12 @@
 	import { shouldUseWorkers } from '$lib/workers/workerGate.js';
 	import '$lib/utils/doublelogistic.worker-task.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { applyPhaseReference, PHASE_REFERENCE_START } from '$lib/utils/phaseReference.js';
 	import {
-		fitTimeFrame,
-		applyPhaseReference,
-		PHASE_REFERENCE_START
-	} from '$lib/utils/phaseReference.js';
+		resolveOutputX,
+		outputXColumnId,
+		OUTPUT_X_MODE_COLUMN
+	} from '$lib/utils/outputXSequence.js';
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 
@@ -37,6 +38,11 @@
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
 		['outputX', { val: -1 }],
+		// How the output x values are made when `outputX` is set: 'column' (the values of the
+		// column outputX names; every session saved before this arg) or 'sequence' (every
+		// `outputXStep` x units over the x input; null = automatic). utils/outputXSequence.js.
+		['outputXMode', { val: OUTPUT_X_MODE_COLUMN }],
+		['outputXStep', { val: null }],
 		['fixK1', { val: false }],
 		['fixedK1', { val: 0.5 }],
 		['fixK2', { val: false }],
@@ -148,7 +154,6 @@
 		const xIN = argsIN.xIN;
 		const yINraw = argsIN.yIN;
 		const yINs = Array.isArray(yINraw) ? yINraw : yINraw != null && yINraw !== -1 ? [yINraw] : [];
-		const outputXId = argsIN.outputX;
 		const fixK1 = argsIN.fixK1 ?? false;
 		const fixedK1 = argsIN.fixedK1 ?? 0.5;
 		const fixK2 = argsIN.fixK2 ?? false;
@@ -164,9 +169,13 @@
 		const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
 
 		// Output grid in the fit's hour frame + the origin (minimum valid input time)
-		// that turns hours back into timestamps (review STAT-19; utils/phaseReference.js).
-		const outputXCol = outputXId != -1 ? getColumnById(outputXId) : null;
-		const { outputXData, originTime_ms } = fitTimeFrame(tCol, outputXCol);
+		// that turns hours back into timestamps (review STAT-19; utils/phaseReference.js), or
+		// the sequence over x in the same frame (utils/outputXSequence.js).
+		const {
+			outputXData,
+			originTime_ms,
+			warning: outputXWarning
+		} = resolveOutputX(tCol, argsIN, getColumnById);
 		const phaseRef = resolveNodePhaseReference(argsIN, tCol);
 
 		const y_results = {};
@@ -309,7 +318,8 @@
 							]),
 					...permWarnings,
 					...(phaseRef.warning ? [phaseRef.warning] : []),
-					...fitSampleWarnings(argsIN)
+					...fitSampleWarnings(argsIN),
+					...(outputXWarning ? [outputXWarning] : [])
 				]
 			},
 			true
@@ -320,6 +330,7 @@
 <script>
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import OutputXControl from '$lib/components/inputs/OutputXControl.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
@@ -397,7 +408,6 @@
 			result
 		}))
 	);
-	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
@@ -431,7 +441,10 @@
 	});
 
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
-	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
+	let outputX_col = $derived.by(() => {
+		const id = outputXColumnId(p.args);
+		return id >= 0 ? getColumnById(id) : null;
+	});
 	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
 	// The unit of every period, phase and rate on this panel: h for a time x, else "x units".
 	let periodUnit = $derived(periodUnitForColumn(xIN_col));
@@ -447,6 +460,7 @@
 			out += yCol?.getDataHash;
 		}
 		out += outputX_col?.getDataHash;
+		out += '|' + p.args.outputX + '|' + p.args.outputXMode + '|' + p.args.outputXStep;
 		out += p.args.fixK1;
 		out += p.args.fixK2;
 		out += p.args.fixPeriod;
@@ -582,10 +596,6 @@
 		// recompute them once after mount.
 		mounted = true;
 	});
-
-	function toggleOutputX(checked) {
-		p.args.outputX = checked ? p.args.xIN : -1;
-	}
 
 	/** Safe toFixed — returns '—' for null/undefined/NaN/Infinity */
 	function fmt(val, decimals = 3) {
@@ -797,24 +807,12 @@
 
 	{#if !hideInputs}
 		<!-- Output X -->
-		<div class="control-input-horizontal">
-			<label class="control-input-checkbox">
-				<input
-					type="checkbox"
-					bind:checked={showOutputX}
-					onchange={(e) => toggleOutputX(e.target.checked)}
-				/>
-				<span class="ci-label">Specify output x values</span>
-			</label>
-		</div>
-		{#if showOutputX}
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Output X column</p>
-					<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
-				</div>
-			</div>
-		{/if}
+		<OutputXControl
+			bind:args={p.args}
+			xCol={xIN_col}
+			excludeColIds={yExcludeIds}
+			onchange={getFit}
+		/>
 	{/if}
 </div>
 

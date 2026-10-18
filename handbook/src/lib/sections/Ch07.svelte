@@ -122,17 +122,17 @@
 		<strong>Min period</strong>
 		to <strong>Max period</strong>, starts it from the strongest peaks of a least-squares
 		periodogram inside that range, and shows a warning on the node if the fitted period ends on
-		either limit or the optimiser does not converge. The range is in the units of x: 1 to 48 h by
-		default for a time column. For a plain number column (an x in days, say) a new node starts from
-		twice the sampling interval (the shortest period the sampling can resolve) to the length of the
-		record, and every period and phase on the node reads "x units". A period on a limit means one of
-		two things, and the warning says which. If the fit is good (R² of at least 0.4) and the record
-		holds at least two and a half cycles of the fitted period, the data have a rhythm whose period
-		the limit may be holding: widen the range to confirm it. Otherwise the data have no clear rhythm
-		inside the range (a trend, red noise or a cycle far outside the range is pulling the fit), and
-		the period on the limit is not an estimate. Inside the range the fit is the best single cosine,
-		which on a short, noisy record can still be a noise peak; narrow the range around the period you
-		expect when you have one.
+		either limit or the optimiser does not converge. The range is in the units of x: a new node on a
+		time column starts at 1 to 30 h (a session saved without a range keeps the earlier 1 to 48 h).
+		For a plain number column (an x in days, say) a new node starts from twice the sampling interval
+		(the shortest period the sampling can resolve) to the length of the record, and every period and
+		phase on the node reads "x units". A period on a limit means one of two things, and the warning
+		says which. If the fit is good (R² of at least 0.4) and the record holds at least two and a half
+		cycles of the fitted period, the data have a rhythm whose period the limit may be holding: widen
+		the range to confirm it. Otherwise the data have no clear rhythm inside the range (a trend, red
+		noise or a cycle far outside the range is pulling the fit), and the period on the limit is not
+		an estimate. Inside the range the fit is the best single cosine, which on a short, noisy record
+		can still be a noise peak; narrow the range around the period you expect when you have one.
 	</p>
 
 	<h3 class="section-head">Population-Mean Cosinor</h3>
@@ -195,15 +195,21 @@
 						<strong>Free period:</strong> leave Fixed Period unticked and set
 						<strong>N cosine curves</strong>
 						= 1 to fit a single sinusoid with optimised period and phase. N &gt; 1 fits multiple overlapping
-						cosines. <strong>Min period</strong> and <strong>Max period</strong> (1 to 48 h for a time
-						x; for a number x, twice the sampling interval to the record length, in x units) bound the
-						search; widen them for ultradian or infradian rhythms.
+						cosines. <strong>Min period</strong> and <strong>Max period</strong> (1 to 30 h for a new
+						node on a time x; for a number x, twice the sampling interval to the record length, in x units)
+						bound the search; widen them for ultradian or infradian rhythms.
 					</li>
 				</ul>
 			</li>
 			<li>
-				Optionally enable an <strong>Output X column</strong> (a regularly spaced Sequence Column) to
-				evaluate the fitted curve at fine intervals for a smooth overlay.
+				For a smooth overlay, tick <strong>Specify output x values</strong> and choose
+				<strong>Sequence</strong>: the fitted curve is evaluated every <strong>Step</strong> (in
+				hours for a time x, in x units otherwise) from the smallest to the largest x. Left empty,
+				the step is automatic: the span divided by 500, rounded to a 1, 2 or 5 number (0.1 h for two
+				days of hourly data). The largest x is included when it falls on the grid; otherwise the
+				sequence stops at the last step before it. Choose <strong>Column</strong> instead to evaluate
+				the curve at the values of a column you already have (a Sequence Column, say). The same option
+				is on the Rectangular wave, Double logistic, Fit waveform model and Fit trend nodes.
 			</li>
 			<li>
 				The node outputs fitted columns plus a results table; read off <strong>MESOR</strong>,

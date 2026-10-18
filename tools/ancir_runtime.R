@@ -581,10 +581,9 @@ tp_trendfit <- function(args, env) {
   deg <- as.integer(if (is.null(args$polyDegree)) 2 else args$polyDegree)
   x_col <- env$cols[[as.character(x_in)]]
   t <- t_for_col(x_col, env$cols, env$raw_data)
-  output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
-  out_col <- if (output_x_id != -1) env$cols[[as.character(output_x_id)]] else NULL
   # Output grid in the fit's hour frame, origin = the input's minimum time (STAT-19).
-  frm <- fit_time_frame(x_col, out_col, env$cols, env$raw_data)
+  # Column or sequence output x (resolve_output_x, outputXSequence.js).
+  frm <- resolve_output_x(x_col, args, env$cols, env$raw_data)
   output_x <- frm$out
   xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
   for (y_id in y_ins) {
@@ -1371,11 +1370,10 @@ tp_cosinor <- function(args, env) {
   fixed_period <- as.numeric(if (is.null(args$fixedPeriod)) 24 else args$fixedPeriod)
   n_h <- as.integer(if (is.null(args$nHarmonics)) 1 else args$nHarmonics)
   alpha <- as.numeric(if (is.null(args$alpha)) 0.05 else args$alpha)
-  output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
   x_col <- env$cols[[as.character(x_in)]]
   t <- t_for_col(x_col, env$cols, env$raw_data)
-  out_col <- if (output_x_id != -1) env$cols[[as.character(output_x_id)]] else NULL
-  fr <- fit_time_frame(x_col, out_col, env$cols, env$raw_data)
+  # Column or sequence output x (resolve_output_x, outputXSequence.js).
+  fr <- resolve_output_x(x_col, args, env$cols, env$raw_data)
   phase_ref <- node_phase_reference(args, x_col, env$cols, env$raw_data)
 
   any_valid <- FALSE; first_x <- NULL; metrics <- list()
@@ -2713,17 +2711,20 @@ readable_number <- function(v) {
 .thousands <- function(n) trimws(format(n, big.mark = ",", scientific = FALSE))
 
 # interpolate.js gridTooLargeWarning: the warning text, or NULL when the grid fits.
-grid_too_large_warning <- function(start, end, step, unit = "", max_points = MAX_GRID_POINTS) {
+# `lead` says what was refused and `hint` is any other way out after the step.
+grid_too_large_warning <- function(start, end, step, unit = "", max_points = MAX_GRID_POINTS,
+                                   lead = "Nothing was resampled",
+                                   hint = ", or a shorter start to end range") {
   count <- grid_point_count(start, end, step)
   if (count <= max_points) return(NULL)
   need <- (end - start) / (max_points - 1)
   mag <- 10^(floor(log10(need)) - 1)
   min_step <- ceiling(need / mag - 1e-9) * mag
-  paste0("Nothing was resampled: a step of ", readable_number(step), unit, " over ",
+  paste0(lead, ": a step of ", readable_number(step), unit, " over ",
          readable_number(end - start), unit, " gives ",
          .thousands(count), " grid points, more than the limit of ",
          .thousands(max_points), ". Use a step of at least ",
-         readable_number(min_step), unit, ", or a shorter start to end range.")
+         readable_number(min_step), unit, hint, ".")
 }
 
 # Parity probe for the resample-grid limit: the grid size and the warning ("" if none).
@@ -2737,6 +2738,85 @@ make_grid <- function(start, end, step, max_points = MAX_GRID_POINTS) {
   count <- grid_point_count(start, end, step)
   if (count == 0 || count > max_points) return(numeric(0))
   start + (seq_len(count) - 1) * step
+}
+
+# outputXSequence.js: "Specify output x values" > Sequence on the fitting nodes (see the
+# Python port output_x_sequence for the rules: min to max of the valid x in the fit's frame,
+# every outputXStep (default span / 500 snapped to 1-2-5), max included when on the grid,
+# refused past MAX_GRID_POINTS with the shared warning).
+OUTPUT_X_DEFAULT_POINTS <- 500
+OUTPUT_X_LIMIT_LEAD <- "No output x sequence was made (the fit is shown at the input x)"
+
+.output_x_specified <- function(args) {
+  v <- args$outputX
+  !is.null(v) && length(v) == 1 && !is.na(v) && v != -1
+}
+.output_x_is_sequence <- function(args) {
+  .output_x_specified(args) && identical(args$outputXMode, "sequence")
+}
+
+# outputXSequence.js niceStep: the nearest 1-2-5 number on a log scale, or NULL.
+nice_step <- function(v) {
+  if (!is.numeric(v) || length(v) != 1 || !is.finite(v) || v <= 0) return(NULL)
+  e <- floor(log10(v))
+  scale <- function(c, k) if (k >= 0) c * 10^k else c / 10^(-k)
+  m <- v / scale(1, e)
+  k <- if (m < sqrt(2)) 1 else if (m < sqrt(10)) 2 else if (m < sqrt(50)) 5 else 10
+  if (k == 10) scale(1, e + 1) else scale(k, e)
+}
+
+.output_x_range <- function(values) {
+  vals <- Filter(function(e) !.js_invalid(e), as.list(values))
+  nums <- vapply(vals, .js_number, numeric(1))
+  nums <- nums[is.finite(nums)]
+  if (!length(nums)) return(NULL)
+  lo <- min(nums); hi <- max(nums)
+  if (hi > lo) c(lo, hi) else NULL
+}
+
+default_output_x_step <- function(values) {
+  r <- .output_x_range(values)
+  if (is.null(r)) NULL else nice_step((r[2] - r[1]) / OUTPUT_X_DEFAULT_POINTS)
+}
+
+# list(values, step, warning); values NULL when no sequence is made.
+output_x_sequence <- function(values, step, unit = "") {
+  r <- .output_x_range(values)
+  if (is.null(r)) return(list(values = NULL, step = NULL, warning = NULL))
+  s <- if (is.null(step) || identical(step, "")) NaN else suppressWarnings(as.numeric(step))
+  if (length(s) != 1 || !is.finite(s) || s <= 0) s <- default_output_x_step(values)
+  if (is.null(s) || !(s > 0)) return(list(values = NULL, step = NULL, warning = NULL))
+  if (grid_point_count(r[1], r[2], s) > MAX_GRID_POINTS) {
+    return(list(values = NULL, step = s,
+                warning = grid_too_large_warning(r[1], r[2], s, unit, MAX_GRID_POINTS,
+                                                 lead = OUTPUT_X_LIMIT_LEAD, hint = "")))
+  }
+  list(values = make_grid(r[1], r[2], s), step = s, warning = NULL)
+}
+
+# outputXSequence.js resolveOutputX: list(origin, out) like fit_time_frame.
+resolve_output_x <- function(x_col, args, cols, raw_data) {
+  if (!.output_x_is_sequence(args)) {
+    out_col <- if (.output_x_specified(args)) cols[[as.character(args$outputX)]] else NULL
+    return(fit_time_frame(x_col, out_col, cols, raw_data))
+  }
+  is_time <- identical(x_col$type, "time")
+  xs <- t_for_col(x_col, cols, raw_data)
+  sq <- output_x_sequence(xs, args$outputXStep, if (is_time) " h" else "")
+  list(origin = time_origin_ms(x_col, cols, raw_data), out = sq$values)
+}
+
+# Parity probe for the output x sequence (see the Python port output_x_sequence_probe).
+output_x_sequence_probe <- function(values, step, unit = "") {
+  sq <- output_x_sequence(values, step, unit)
+  v <- sq$values
+  d <- default_output_x_step(values)
+  list(defaultStep = if (is.null(d)) NaN else d,
+       count = length(v),
+       first = if (length(v)) v[1] else NaN,
+       last = if (length(v)) v[length(v)] else NaN,
+       step = if (is.null(sq$step)) NaN else sq$step,
+       warning = if (is.null(sq$warning)) "" else sq$warning)
 }
 
 # Port of Interpolate.svelte interpolatedata, matching the Python port: 'fill' keeps every
@@ -3313,9 +3393,8 @@ tp_rectangularwave <- function(args, env) {
                fixedOmega = if (fix_omega) 2 * pi / fp else NULL,
                fixDutyCycle = args$fixDutyCycle, fixedDutyCycle = args$fixedDutyCycle,
                minPeriod = args$minPeriod, maxPeriod = args$maxPeriod)
-  output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
-  out_col <- if (output_x_id != -1) env$cols[[as.character(output_x_id)]] else NULL
-  frm <- fit_time_frame(x_col, out_col, env$cols, env$raw_data)
+  # Column or sequence output x (resolve_output_x, outputXSequence.js).
+  frm <- resolve_output_x(x_col, args, env$cols, env$raw_data)
   output_x <- frm$out
   origin <- if (is.null(frm$origin)) NA_real_ else frm$origin
 
@@ -3587,9 +3666,8 @@ tp_doublelogistic <- function(args, env) {
                minPeriod = args$minPeriod, maxPeriod = args$maxPeriod)
   x_col <- env$cols[[as.character(x_in)]]
   t <- t_for_col(x_col, env$cols, env$raw_data)
-  output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
-  out_col <- if (output_x_id != -1) env$cols[[as.character(output_x_id)]] else NULL
-  frm <- fit_time_frame(x_col, out_col, env$cols, env$raw_data)
+  # Column or sequence output x (resolve_output_x, outputXSequence.js).
+  frm <- resolve_output_x(x_col, args, env$cols, env$raw_data)
   output_x <- frm$out
   origin <- if (is.null(frm$origin)) NA_real_ else frm$origin
 
@@ -3804,9 +3882,8 @@ tp_fitfunction <- function(args, env) {
   if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
   t_col <- env$cols[[as.character(x_in)]]
   t <- t_for_col(t_col, env$cols, env$raw_data)
-  output_x_id <- if (is.null(args$outputX)) -1 else args$outputX
-  out_col <- if (output_x_id != -1) env$cols[[as.character(output_x_id)]] else NULL
-  frm <- fit_time_frame(t_col, out_col, env$cols, env$raw_data)
+  # Column or sequence output x (resolve_output_x, outputXSequence.js).
+  frm <- resolve_output_x(t_col, args, env$cols, env$raw_data)
   output_x <- frm$out
   phase_ref <- node_phase_reference(args, t_col, env$cols, env$raw_data)
 
@@ -5556,6 +5633,7 @@ regrid_uniform_summary <- function(times, values) {
 PURE_UTIL_MAP <- list(
   studentized_range = studentized_range,
   interpolate_grid_limit = interpolate_grid_limit,
+  output_x_sequence_probe = output_x_sequence_probe,
   sequence_limit = sequence_limit,
   tukey_kramer_of = tukey_kramer_of,
   seeded_sequence = seeded_sequence,

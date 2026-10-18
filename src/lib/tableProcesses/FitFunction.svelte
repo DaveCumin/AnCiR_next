@@ -34,11 +34,12 @@
 		spawnResidualPlot
 	} from '$lib/tableProcesses/residualSupport.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { applyPhaseReference, PHASE_REFERENCE_START } from '$lib/utils/phaseReference.js';
 	import {
-		fitTimeFrame,
-		applyPhaseReference,
-		PHASE_REFERENCE_START
-	} from '$lib/utils/phaseReference.js';
+		resolveOutputX,
+		outputXColumnId,
+		OUTPUT_X_MODE_COLUMN
+	} from '$lib/utils/outputXSequence.js';
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 
@@ -48,6 +49,11 @@
 		['yIN', { val: [] }],
 		['model', { val: 'cosinor' }],
 		['outputX', { val: -1 }],
+		// How the output x values are made when `outputX` is set: 'column' (the values of the
+		// column outputX names; every session saved before this arg) or 'sequence' (every
+		// `outputXStep` x units over the x input; null = automatic). utils/outputXSequence.js.
+		['outputXMode', { val: OUTPUT_X_MODE_COLUMN }],
+		['outputXStep', { val: null }],
 		// `fitx` + per-y `fity_<id>` are the fitted-curve outputs. `r2`/`rmse`/
 		// `perm_pvalue` plus the per-model parameter keys are scalar metrics
 		// exposed as PORTS (one value per y input, in yIN order) — see
@@ -439,7 +445,6 @@
 	async function buildFitResult(argsIN) {
 		const xIN = argsIN.xIN;
 		const yINs = normalizeYInputs(argsIN.yIN);
-		const outputXId = argsIN.outputX;
 		const xOUT = argsIN.out?.fitx;
 
 		let result = {
@@ -456,13 +461,16 @@
 		const t = getXDataForColumn(tCol);
 
 		// Output grid in the fit's hour frame + the origin (minimum valid input time)
-		// that turns hours back into timestamps (review STAT-19; utils/phaseReference.js).
-		const { outputXData, originTime_ms } = fitTimeFrame(
-			tCol,
-			outputXId != -1 ? getColumnById(outputXId) : null
-		);
+		// that turns hours back into timestamps (review STAT-19; utils/phaseReference.js), or
+		// the sequence over x in the same frame (utils/outputXSequence.js).
+		const {
+			outputXData,
+			originTime_ms,
+			warning: outputXWarning
+		} = resolveOutputX(tCol, argsIN, getColumnById);
 		result.outputXData = outputXData;
 		result.originTime_ms = originTime_ms;
+		result.outputXWarning = outputXWarning;
 		// The frame the phase outputs are reported in (FIT-9).
 		result.phaseRef = resolveNodePhaseReference(argsIN, tCol);
 
@@ -630,7 +638,8 @@
 			...freeWarnings,
 			...validity,
 			...(result?.phaseRef?.warning ? [result.phaseRef.warning] : []),
-			...fitSampleWarnings(argsIN)
+			...fitSampleWarnings(argsIN),
+			...(result?.outputXWarning ? [result.outputXWarning] : [])
 		];
 	}
 
@@ -676,6 +685,7 @@
 	// @ts-nocheck
 	import { RESIDUAL_SE } from '$lib/core/outputLabels.js';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import OutputXControl from '$lib/components/inputs/OutputXControl.svelte';
 	import ControlInput from '$lib/components/inputs/ControlInput.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
@@ -719,7 +729,6 @@
 	fillDefaults(p.args, defaults);
 
 	let fitData = $state();
-	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
@@ -754,7 +763,10 @@
 	let periodUnit = $derived(periodUnitForColumn(xIN_col));
 	// A new node's period range follows its x until the user edits it.
 	usePeriodRangeAuto(p, () => xIN_col);
-	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
+	let outputX_col = $derived.by(() => {
+		const id = outputXColumnId(p.args);
+		return id >= 0 ? getColumnById(id) : null;
+	});
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash ?? '';
@@ -763,6 +775,7 @@
 			out += col?.getDataHash ?? '';
 		}
 		out += outputX_col?.getDataHash ?? '';
+		out += '|' + p.args.outputX + '|' + p.args.outputXMode + '|' + p.args.outputXStep;
 		out += p.args.model;
 		out += p.args.useFixedPeriod;
 		out += p.args.fixedPeriod;
@@ -883,17 +896,18 @@
 		if (!xCol || yINs.length === 0) return null;
 
 		const t = getXData(xCol);
-		const outputXId = p.args.outputX;
 		// Same frame and origin as the headless path above (STAT-19).
-		const { outputXData, originTime_ms } = fitTimeFrame(
-			xCol,
-			outputXId != -1 ? getColumnById(outputXId) : null
-		);
+		const {
+			outputXData,
+			originTime_ms,
+			warning: outputXWarning
+		} = resolveOutputX(xCol, p.args, getColumnById);
 
 		const result = {
 			t: [],
 			outputXData,
 			originTime_ms,
+			outputXWarning,
 			phaseRef: resolveNodePhaseReference(p.args, xCol),
 			y_results: {}
 		};
@@ -1146,14 +1160,6 @@
 		}
 		mounted = true;
 	});
-
-	function toggleOutputX(checked) {
-		if (!checked) {
-			p.args.outputX = -1;
-		} else {
-			p.args.outputX = p.args.xIN;
-		}
-	}
 
 	// Panel phases in the node's phase reference (the same conversion as the ports).
 	const panelPhase = (v, period) => applyPhaseReference(v, fitData?.phaseRef, period);
@@ -1665,27 +1671,13 @@
 	</div>
 
 	{#if !hideInputs}
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<label>
-					<input
-						type="checkbox"
-						bind:checked={showOutputX}
-						onchange={(e) => toggleOutputX(e.target.checked)}
-					/>
-					Specify output x values
-				</label>
-			</div>
-		</div>
-
-		{#if showOutputX}
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Output X column</p>
-					<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
-				</div>
-			</div>
-		{/if}
+		<OutputXControl
+			bind:args={p.args}
+			xCol={xIN_col}
+			excludeColIds={yExcludeIds}
+			plainCheckbox
+			onchange={() => getFit()}
+		/>
 	{/if}
 </div>
 

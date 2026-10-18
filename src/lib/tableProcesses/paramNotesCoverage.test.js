@@ -20,6 +20,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { PARAM_NOTES } from '../../../mcp/src/emit/paramNotes.js';
+import { OUTPUT_X_MODES } from '$lib/utils/outputXSequence.js';
 import schema from '../../../mcp/src/emit/session-schema.generated.json' with { type: 'json' };
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -167,6 +168,27 @@ describe('paramNotes: free-period range and permutation scheme on the fit nodes'
 				expect(note, `${node} note lacks ${term}`).toContain(term);
 		});
 	}
+
+	// The output x choice lives in the shared OutputXControl (components/inputs), whose plain
+	// <select> the markup guard cannot see; its values come from utils/outputXSequence.js.
+	for (const node of ['Cosinor', 'FitFunction', 'RectangularWave', 'DoubleLogistic', 'TrendFit']) {
+		it(`${node}: documents outputXMode ("column", "sequence") and outputXStep`, () => {
+			const note = PARAM_NOTES[node] ?? '';
+			for (const term of [
+				'`outputX`',
+				'`outputXMode`',
+				...OUTPUT_X_MODES.map((m) => `"${m}"`),
+				'`outputXStep`'
+			])
+				expect(note, `${node} note lacks ${term}`).toContain(term);
+		});
+	}
+
+	it('the free-period notes state the new-node range on a time x (1 to 30 h)', () => {
+		for (const node of ['Cosinor', 'FitFunction', 'RectangularWave', 'DoubleLogistic']) {
+			expect(PARAM_NOTES[node], node).toMatch(/1\.\.30/);
+		}
+	});
 
 	it('SurrogateTest no longer offers phase-randomised or AAFT surrogates', () => {
 		expect(PARAM_NOTES.SurrogateTest).not.toMatch(/"phase"|"aaft"/);

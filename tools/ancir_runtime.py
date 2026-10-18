@@ -3100,11 +3100,10 @@ def tp_cosinor(args, cols, raw_data, _sv):
                     'maxPeriod': args.get('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod'])}
     n_h = int(args.get('nHarmonics', 1))
     alpha = float(args.get('alpha', 0.05))
-    output_x_id = args.get('outputX', -1)
     x_col = cols[x_in]
     t = _t_for_col(x_col)
-    out_col = cols.get(output_x_id) if (output_x_id is not None and output_x_id != -1) else None
-    origin_ms, output_x_data = fit_time_frame(x_col, out_col)
+    # Column or sequence output x (resolve_output_x, outputXSequence.js).
+    origin_ms, output_x_data = resolve_output_x(x_col, args, cols)
     phase_ref = node_phase_reference(args, x_col)
 
     metrics_by_y = {}
@@ -4112,9 +4111,8 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
     }
     x_col = cols[x_in]
     t = _t_for_col(x_col)
-    output_x_id = args.get('outputX', -1)
-    out_col = cols.get(output_x_id) if (output_x_id is not None and output_x_id != -1) else None
-    origin_ms, output_x_data = fit_time_frame(x_col, out_col)
+    # Column or sequence output x (resolve_output_x, outputXSequence.js).
+    origin_ms, output_x_data = resolve_output_x(x_col, args, cols)
     first_xs = None
     any_valid = False
     stats_by_y = {}
@@ -5034,9 +5032,8 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
         'minPeriod': args.get('minPeriod', FREE_PERIOD_DEFAULTS['minPeriod']),
         'maxPeriod': args.get('maxPeriod', FREE_PERIOD_DEFAULTS['maxPeriod']),
     }
-    output_x_id = args.get('outputX', -1)
-    out_col = cols.get(output_x_id) if (output_x_id is not None and output_x_id != -1) else None
-    origin_ms, output_x_data = fit_time_frame(x_col, out_col)
+    # Column or sequence output x (resolve_output_x, outputXSequence.js).
+    origin_ms, output_x_data = resolve_output_x(x_col, args, cols)
     first_xs = None
     any_valid = False
     stats_by_y = {}
@@ -5500,11 +5497,10 @@ def tp_trendfit(args, cols, raw_data, _sv):
     deg = int(args.get('polyDegree', 2))
     x_col = cols[x_in]
     t = _t_for_col(x_col)
-    output_x_id = args.get('outputX', -1)
-    out_col = cols.get(output_x_id) if (output_x_id is not None and output_x_id != -1) else None
     # The output grid in the fit's hour frame and the origin (the input's minimum valid
     # time) that turns it back into timestamps (fit_time_frame, STAT-19).
-    origin_ms, output_x_data = fit_time_frame(x_col, out_col)
+    # Column or sequence output x (resolve_output_x, outputXSequence.js).
+    origin_ms, output_x_data = resolve_output_x(x_col, args, cols)
     xs = None
     any_valid = False
     stats_by_y = {}
@@ -6630,7 +6626,6 @@ def tp_fitfunction(args, cols, raw_data, _sv):
     multi-harmonic waveform FIT-13)."""
     x_in = args.get('xIN', -1)
     y_ins = _id_list(args.get('yIN'))
-    output_x_id = args.get('outputX', -1)
     x_out = _out_id(args, 'fitx')
     model = args.get('model', 'cosinor')
 
@@ -6639,8 +6634,8 @@ def tp_fitfunction(args, cols, raw_data, _sv):
 
     t_col = cols[x_in]
     t = _t_for_col(t_col)
-    out_col = cols.get(output_x_id) if (output_x_id is not None and output_x_id != -1) else None
-    origin_ms, output_x_data = fit_time_frame(t_col, out_col)
+    # Column or sequence output x (resolve_output_x, outputXSequence.js).
+    origin_ms, output_x_data = resolve_output_x(t_col, args, cols)
     phase_ref = node_phase_reference(args, t_col)
 
     y_results = {}     # JS result.y_results
@@ -8125,18 +8120,21 @@ def _readable_number(v):
     return f'{whole}.{frac}' if frac else whole
 
 
-def grid_too_large_warning(start, end, step, unit='', max_points=MAX_GRID_POINTS):
-    """interpolate.js gridTooLargeWarning: the warning text, or None when the grid fits."""
+def grid_too_large_warning(start, end, step, unit='', max_points=MAX_GRID_POINTS,
+                           lead='Nothing was resampled',
+                           hint=', or a shorter start to end range'):
+    """interpolate.js gridTooLargeWarning: the warning text, or None when the grid fits.
+    `lead` says what was refused and `hint` is any other way out after the step."""
     count = _grid_point_count(start, end, step)
     if count <= max_points:
         return None
     need = (end - start) / (max_points - 1)
     mag = 10 ** (math.floor(math.log10(need)) - 1)
     min_step = math.ceil(need / mag - 1e-9) * mag
-    return (f'Nothing was resampled: a step of {_readable_number(step)}{unit} over '
+    return (f'{lead}: a step of {_readable_number(step)}{unit} over '
             f'{_readable_number(end - start)}{unit} gives {count:,} grid points, more than the '
-            f'limit of {max_points:,}. Use a step of at least {_readable_number(min_step)}{unit}, '
-            f'or a shorter start to end range.')
+            f'limit of {max_points:,}. Use a step of at least {_readable_number(min_step)}{unit}'
+            f'{hint}.')
 
 
 def interpolate_grid_limit(_unused, start, end, step, unit=''):
@@ -8151,6 +8149,116 @@ def _make_grid(start, end, step, max_points=MAX_GRID_POINTS):
     if count == 0 or count > max_points:
         return []
     return [start + i * step for i in range(count)]
+
+
+# outputXSequence.js: "Specify output x values" > Sequence on the fitting nodes (Cosinor,
+# RectangularWave, DoubleLogistic, FitFunction, TrendFit). From the minimum to the maximum of
+# the x input's valid values in the fit's frame (hours since the earliest sample for a time x),
+# every `outputXStep` (null or not positive: span / 500 snapped to the nearest 1-2-5 number on
+# a log scale); the maximum is included when it lands on the grid, else the sequence stops at
+# the last step below it. Over MAX_GRID_POINTS: no sequence (the fit at the input x) and the
+# shared grid-limit warning.
+OUTPUT_X_DEFAULT_POINTS = 500
+OUTPUT_X_LIMIT_LEAD = 'No output x sequence was made (the fit is shown at the input x)'
+
+
+def _output_x_specified(args):
+    v = args.get('outputX', -1)
+    return v is not None and v != -1
+
+
+def _output_x_is_sequence(args):
+    return _output_x_specified(args) and args.get('outputXMode') == 'sequence'
+
+
+def nice_step(v):
+    """outputXSequence.js niceStep: the nearest 1-2-5 number on a log scale, or None."""
+    if not (isinstance(v, (int, float)) and math.isfinite(v) and v > 0):
+        return None
+    e = math.floor(math.log10(v))
+
+    def scale(c, k):
+        return c * 10 ** k if k >= 0 else c / 10 ** -k
+    m = v / scale(1, e)
+    if m < math.sqrt(2):
+        c = 1
+    elif m < math.sqrt(10):
+        c = 2
+    elif m < math.sqrt(50):
+        c = 5
+    else:
+        c = 10
+    return scale(1, e + 1) if c == 10 else scale(c, e)
+
+
+def _output_x_range(values):
+    """(lo, hi) of the finite numbers among `values`, or None without a span."""
+    nums = []
+    for v in values or []:
+        if _js_invalid(v):
+            continue
+        n = _js_number(v)
+        if math.isfinite(n):
+            nums.append(n)
+    if not nums:
+        return None
+    lo, hi = min(nums), max(nums)
+    return (lo, hi) if hi > lo else None
+
+
+def default_output_x_step(values):
+    """outputXSequence.js defaultOutputXStep: span / 500, 1-2-5 snapped (None without span)."""
+    r = _output_x_range(values)
+    return nice_step((r[1] - r[0]) / OUTPUT_X_DEFAULT_POINTS) if r else None
+
+
+def output_x_sequence(values, step, unit=''):
+    """outputXSequence.js outputXSequence: {'values', 'step', 'warning'} (values None when no
+    sequence is made)."""
+    r = _output_x_range(values)
+    if r is None:
+        return {'values': None, 'step': None, 'warning': None}
+    try:
+        s = float(step) if step is not None and step != '' else _NAN
+    except (TypeError, ValueError):
+        s = _NAN
+    if not (math.isfinite(s) and s > 0):
+        s = default_output_x_step(values)
+    if s is None or not s > 0:
+        return {'values': None, 'step': None, 'warning': None}
+    lo, hi = r
+    if _grid_point_count(lo, hi, s) > MAX_GRID_POINTS:
+        return {'values': None, 'step': s,
+                'warning': grid_too_large_warning(lo, hi, s, unit, MAX_GRID_POINTS,
+                                                  lead=OUTPUT_X_LIMIT_LEAD, hint='')}
+    return {'values': _make_grid(lo, hi, s), 'step': s, 'warning': None}
+
+
+def resolve_output_x(x_col, args, cols):
+    """outputXSequence.js resolveOutputX: (origin_ms, output_x_data) for a fitting node.
+    Column mode is fit_time_frame on the named column; sequence mode builds the sequence over
+    the x input with the input's origin."""
+    if not _output_x_is_sequence(args):
+        out_id = args.get('outputX', -1)
+        out_col = cols.get(out_id) if _output_x_specified(args) else None
+        return fit_time_frame(x_col, out_col)
+    is_time = x_col.type == 'time'
+    xs = x_col.hours_since_start if is_time else x_col.get_data()
+    seq = output_x_sequence(xs, args.get('outputXStep'), ' h' if is_time else '')
+    return time_origin_ms(x_col), seq['values']
+
+
+def output_x_sequence_probe(values, step, unit=''):
+    """Parity probe for the output x sequence: the default step, and the sequence made with
+    `step` (count, first, last, step used; warning '' when none)."""
+    seq = output_x_sequence(values, step, unit)
+    v = seq['values'] or []
+    return {'defaultStep': default_output_x_step(values) or _NAN,
+            'count': len(v),
+            'first': v[0] if v else _NAN,
+            'last': v[-1] if v else _NAN,
+            'step': seq['step'] if seq['step'] is not None else _NAN,
+            'warning': seq['warning'] or ''}
 
 
 def tp_interpolate(args, cols, raw_data, _sv):

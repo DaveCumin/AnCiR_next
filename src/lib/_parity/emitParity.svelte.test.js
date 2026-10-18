@@ -55,6 +55,7 @@ import { chiSquareGoodnessOfFit, chiSquareIndependence } from '$lib/utils/chisqu
 import { logisticRegression } from '$lib/utils/logistic.js';
 import { pAdjust } from '$lib/utils/pAdjust.js';
 import { gridPointCount, gridTooLargeWarning } from '$lib/utils/interpolate.js';
+import { outputXSequence, defaultOutputXStep } from '$lib/utils/outputXSequence.js';
 import { sequenceLimitWarning } from '$lib/tableProcesses/SequenceColumn.svelte';
 import { fisherExact, conditionalOddsRatio, oddsRatioCI } from '$lib/utils/fisherExact.js';
 import { cwt } from '$lib/utils/cwt.js';
@@ -119,6 +120,21 @@ const PURE_UTIL_FNS = {
 		count: gridPointCount(start, end, step),
 		warning: gridTooLargeWarning(start, end, step, unit) ?? ''
 	}),
+	// The fitting nodes' output x sequence (utils/outputXSequence.js): the automatic step, and
+	// the sequence a step makes over `values` (count, first, last, step used, warning or '').
+	// jsArgs = [step (null = automatic), unit].
+	outputXSequence: (values, step, unit = '') => {
+		const r = outputXSequence(values, step, unit);
+		const v = r.values ?? [];
+		return {
+			defaultStep: defaultOutputXStep(values) ?? NaN,
+			count: v.length,
+			first: v.length ? v[0] : NaN,
+			last: v.length ? v[v.length - 1] : NaN,
+			step: r.step ?? NaN,
+			warning: r.warning ?? ''
+		};
+	},
 	// Studentized range upper tail and quantile. values = [q, k, df, p].
 	studentizedRange: (v) => ({
 		sf: studentizedRangeSf(v[0], v[1], v[2]),

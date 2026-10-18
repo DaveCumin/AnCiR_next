@@ -25,11 +25,12 @@
 	} from '$lib/tableProcesses/permutationSupport.js';
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
+	import { applyPhaseReference, PHASE_REFERENCE_START } from '$lib/utils/phaseReference.js';
 	import {
-		fitTimeFrame,
-		applyPhaseReference,
-		PHASE_REFERENCE_START
-	} from '$lib/utils/phaseReference.js';
+		resolveOutputX,
+		outputXColumnId,
+		OUTPUT_X_MODE_COLUMN
+	} from '$lib/utils/outputXSequence.js';
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
 	import { checkFitResultsFinite } from '$lib/utils/fitDomain.js';
 
@@ -38,6 +39,11 @@
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
 		['outputX', { val: -1 }],
+		// How the output x values are made when `outputX` is set: 'column' (the values of the
+		// column outputX names; every session saved before this arg) or 'sequence' (every
+		// `outputXStep` x units over the x input; null = automatic). utils/outputXSequence.js.
+		['outputXMode', { val: OUTPUT_X_MODE_COLUMN }],
+		['outputXStep', { val: null }],
 		['fixKappa', { val: false }],
 		['fixedKappa', { val: 5 }],
 		['fixOmega', { val: false }],
@@ -149,7 +155,6 @@
 		migrateRenamedOutKey(argsIN, 'pvalue', 'perm_pvalue');
 		const xIN = argsIN.xIN;
 		const yINs = normalizeYInputs(argsIN.yIN);
-		const outputXId = argsIN.outputX;
 		const xOUT = argsIN.out.rectwavex;
 		const fixKappa = argsIN.fixKappa ?? false;
 		const fixedKappa = argsIN.fixedKappa ?? 5;
@@ -175,9 +180,13 @@
 		const t = tCol.type === 'time' ? tCol.hoursSinceStart : tCol.getData();
 
 		// Output grid in the fit's hour frame + the origin (minimum valid input time)
-		// that turns hours back into timestamps (review STAT-19; utils/phaseReference.js).
-		const outputXCol = outputXId != -1 ? getColumnById(outputXId) : null;
-		const { outputXData, originTime_ms } = fitTimeFrame(tCol, outputXCol);
+		// that turns hours back into timestamps (review STAT-19; utils/phaseReference.js), or
+		// the sequence over x in the same frame (utils/outputXSequence.js).
+		const {
+			outputXData,
+			originTime_ms,
+			warning: outputXWarning
+		} = resolveOutputX(tCol, argsIN, getColumnById);
 
 		result.outputXData = outputXData;
 		result.originTime_ms = originTime_ms;
@@ -327,7 +336,8 @@
 					]),
 			...permWarnings,
 			...(result.phaseRef?.warning ? [result.phaseRef.warning] : []),
-			...fitSampleWarnings(argsIN)
+			...fitSampleWarnings(argsIN),
+			...(outputXWarning ? [outputXWarning] : [])
 		];
 		return [result, anyValid];
 	}
@@ -336,6 +346,7 @@
 <script>
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import OutputXControl from '$lib/components/inputs/OutputXControl.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
@@ -406,7 +417,6 @@
 			result
 		}))
 	);
-	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
@@ -427,7 +437,10 @@
 
 	// Reactivity: re-run when input data or fixed-parameter settings change
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
-	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
+	let outputX_col = $derived.by(() => {
+		const id = outputXColumnId(p.args);
+		return id >= 0 ? getColumnById(id) : null;
+	});
 	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
 	// The unit of every period and phase on this panel: h for a time x, else "x units".
 	let periodUnit = $derived(periodUnitForColumn(xIN_col));
@@ -442,6 +455,7 @@
 			out += col?.getDataHash ?? '';
 		}
 		out += outputX_col?.getDataHash;
+		out += '|' + p.args.outputX + '|' + p.args.outputXMode + '|' + p.args.outputXStep;
 		out += p.args.fixKappa;
 		out += p.args.fixOmega;
 		out += p.args.fixDutyCycle;
@@ -600,14 +614,6 @@
 		}
 		mounted = true;
 	});
-
-	function toggleOutputX(checked) {
-		if (!checked) {
-			p.args.outputX = -1;
-		} else {
-			p.args.outputX = p.args.xIN;
-		}
-	}
 
 	// The acrophase in the node's phase reference (FIT-9): untouched since first sample.
 	const rwAcrophase = (fr) => applyPhaseReference(fr?.acrophase, rwave?.phaseRef, fr?.period);
@@ -821,24 +827,12 @@
 
 	{#if !hideInputs}
 		<!-- Output X -->
-		<div class="control-input-horizontal">
-			<label class="control-input-checkbox">
-				<input
-					type="checkbox"
-					bind:checked={showOutputX}
-					onchange={(e) => toggleOutputX(e.target.checked)}
-				/>
-				<span class="ci-label">Specify output x values</span>
-			</label>
-		</div>
-		{#if showOutputX}
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Output X column</p>
-					<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
-				</div>
-			</div>
-		{/if}
+		<OutputXControl
+			bind:args={p.args}
+			xCol={xIN_col}
+			excludeColIds={yExcludeIds}
+			onchange={getRwave}
+		/>
 	{/if}
 </div>
 

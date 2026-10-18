@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.29",
+  "generatedFromVersion": "β.82.30",
   "count": 61,
   "nodes": [
     {
@@ -1441,6 +1441,14 @@
           "default": -1
         },
         {
+          "name": "outputXMode",
+          "default": "column"
+        },
+        {
+          "name": "outputXStep",
+          "default": null
+        },
+        {
           "name": "useFixedPeriod",
           "default": false
         },
@@ -1862,6 +1870,14 @@
           "default": -1
         },
         {
+          "name": "outputXMode",
+          "default": "column"
+        },
+        {
+          "name": "outputXStep",
+          "default": null
+        },
+        {
           "name": "fixK1",
           "default": false
         },
@@ -2038,6 +2054,14 @@
         {
           "name": "outputX",
           "default": -1
+        },
+        {
+          "name": "outputXMode",
+          "default": "column"
+        },
+        {
+          "name": "outputXStep",
+          "default": null
         },
         {
           "name": "phaseReference",
@@ -3067,6 +3091,14 @@
           "default": -1
         },
         {
+          "name": "outputXMode",
+          "default": "column"
+        },
+        {
+          "name": "outputXStep",
+          "default": null
+        },
+        {
           "name": "fixKappa",
           "default": false
         },
@@ -3719,6 +3751,14 @@
         {
           "name": "outputX",
           "default": -1
+        },
+        {
+          "name": "outputXMode",
+          "default": "column"
+        },
+        {
+          "name": "outputXStep",
+          "default": null
         },
         {
           "name": "permuteTest",

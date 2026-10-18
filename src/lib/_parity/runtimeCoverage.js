@@ -192,6 +192,7 @@ export const R_PURE_UTILS = [
 	'jarque_bera',
 	'lomb_scargle_periodogram',
 	'moving_windows',
+	'output_x_sequence_probe',
 	'p_adjust',
 	'qq_correlation',
 	'qq_points',

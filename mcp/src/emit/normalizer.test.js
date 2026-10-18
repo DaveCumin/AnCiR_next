@@ -1556,3 +1556,34 @@ test('plots[].overlays: the allowed forms come from the generated schema, not a 
 	assert.equal(errors.length, 1);
 	assert.match(errors[0], /must be one of horizontal \(got "vertical"\)/);
 });
+
+// A new free-period fit on a TIME x starts at 1 to 30 h (v82.30), as one added from the
+// palette does; a range the model names is kept; a number x keeps the schema default.
+test('free-period fits: 1..30 h on a time x unless a range is named', () => {
+	const times = Array.from({ length: 49 }, (_, i) => i * 3600000);
+	const columns = [
+		{ name: 'time', type: 'time', values: times },
+		{ name: 'n', values: times.map((_, i) => i) },
+		{ name: 'values', values: times.map((_, i) => Math.cos(i / 4)) }
+	];
+	const fits = ['Cosinor', 'RectangularWave', 'DoubleLogistic', 'FitFunction'];
+	const { session, errors } = normalizeSession({
+		columns,
+		analyses: [
+			...fits.map((name) => ({ name, args: { xIN: 'time', yIN: ['values'] } })),
+			{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], minPeriod: 2, maxPeriod: 40 } },
+			{ name: 'Cosinor', args: { xIN: 'time', yIN: ['values'], maxPeriod: 40 } },
+			{ name: 'Cosinor', args: { xIN: 'n', yIN: ['values'] } }
+		]
+	});
+	assert.deepEqual(errors, []);
+	const tps = session.tableProcesses;
+	for (const name of fits) {
+		const tp = tps.find((t) => t.name === name);
+		assert.deepEqual([tp.args.minPeriod, tp.args.maxPeriod], [1, 30], name);
+	}
+	const cos = tps.filter((t) => t.name === 'Cosinor');
+	assert.deepEqual([cos[1].args.minPeriod, cos[1].args.maxPeriod], [2, 40]);
+	assert.deepEqual([cos[2].args.minPeriod, cos[2].args.maxPeriod], [1, 40]);
+	assert.deepEqual([cos[3].args.minPeriod, cos[3].args.maxPeriod], [1, 48]);
+});

@@ -15,7 +15,11 @@
 	import { writeResidual, spawnResidualPlot } from '$lib/tableProcesses/residualSupport.js';
 	import '$lib/utils/trendfit.worker-task.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
-	import { fitTimeFrame } from '$lib/utils/phaseReference.js';
+	import {
+		resolveOutputX,
+		outputXColumnId,
+		OUTPUT_X_MODE_COLUMN
+	} from '$lib/utils/outputXSequence.js';
 	import { permutationValidityWarnings } from '$lib/tableProcesses/permutationSupport.js';
 
 	const displayName = 'Fit trend';
@@ -25,6 +29,11 @@
 		['model', { val: 'linear' }],
 		['polyDegree', { val: 2 }],
 		['outputX', { val: -1 }],
+		// How the output x values are made when `outputX` is set: 'column' (the values of the
+		// column outputX names; every session saved before this arg) or 'sequence' (every
+		// `outputXStep` x units over the x input; null = automatic). utils/outputXSequence.js.
+		['outputXMode', { val: OUTPUT_X_MODE_COLUMN }],
+		['outputXStep', { val: null }],
 		// Permutation test: a model-vs-chance significance test for each y fit.
 		// These live in `args` (not component-local state) so a saved session
 		// reloads with the SAME seed and therefore the SAME p-value; a random
@@ -230,7 +239,6 @@
 		const yINs = normalizeYInputs(argsIN.yIN);
 		const model = argsIN.model;
 		const polyDegree = argsIN.polyDegree;
-		const outputXId = argsIN.outputX;
 		const xOUT = argsIN.out.trendx;
 
 		let result = {
@@ -251,11 +259,16 @@
 		// hour-offset results are anchored to an origin so the output column can be
 		// stored as ms and typed 'time'. The origin is the input's MINIMUM valid time
 		// (the baseline hoursSinceStart measures from) and a time output grid is read
-		// in the input's frame (review STAT-19; utils/phaseReference.js).
-		const outputXCol = outputXId != -1 ? getColumnById(outputXId) : null;
-		const { outputXData, originTime_ms } = fitTimeFrame(tCol, outputXCol);
+		// in the input's frame (review STAT-19; utils/phaseReference.js). A sequence over x is
+		// made in the same frame with the same origin (utils/outputXSequence.js).
+		const {
+			outputXData,
+			originTime_ms,
+			warning: outputXWarning
+		} = resolveOutputX(tCol, argsIN, getColumnById);
 		result.outputXData = outputXData;
 		result.originTime_ms = originTime_ms;
+		result.outputXWarning = outputXWarning;
 
 		for (const yId of yINs) {
 			if (yId == null || yId === -1) continue;
@@ -362,7 +375,11 @@
 		}
 
 		// Not gated on anyValid: when a fit fails, the point count is the explanation.
-		result.warnings = [...domainWarnings, ...fitSampleWarnings(argsIN)];
+		result.warnings = [
+			...domainWarnings,
+			...fitSampleWarnings(argsIN),
+			...(outputXWarning ? [outputXWarning] : [])
+		];
 		return [result, anyValid];
 	}
 </script>
@@ -370,6 +387,7 @@
 <script>
 	// @ts-nocheck
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import OutputXControl from '$lib/components/inputs/OutputXControl.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
@@ -405,7 +423,6 @@
 	let trendData = $state();
 	// The message of the last failed fit, shown with a Retry (ROB-11).
 	let calcError = $state(null);
-	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
 	let previewStart = $state(1);
 
@@ -433,7 +450,10 @@
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
-	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
+	let outputX_col = $derived.by(() => {
+		const id = outputXColumnId(p.args);
+		return id >= 0 ? getColumnById(id) : null;
+	});
 	let getHash = $derived.by(() => {
 		let out = '';
 		out += xIN_col?.getDataHash;
@@ -442,6 +462,7 @@
 			out += col?.getDataHash ?? '';
 		}
 		out += outputX_col?.getDataHash;
+		out += '|' + p.args.outputX + '|' + p.args.outputXMode + '|' + p.args.outputXStep;
 		// These change the result but were missing from this hash. While the memo
 		// was component-local a view switch recomputed anyway and hid it; now that
 		// the memo survives a remount, an omission here means an edit is ignored.
@@ -492,6 +513,9 @@
 					([data, valid]) => {
 						trendData = data;
 						p.args.valid = valid;
+						// Published here too: a recompute from this effect (an input or arg change)
+						// used to leave the node showing the previous run's warnings.
+						p.warnings = data?.warnings ?? [];
 					},
 					onFitError
 				)
@@ -547,11 +571,20 @@
 
 			const xCol = getColumnById(xIN);
 			const t = xCol.type === 'time' ? xCol.hoursSinceStart : xCol.getData();
+			// The output x values, exactly as the path without the permutation test makes them.
+			// This path used to ignore "Specify output x values" altogether (and wrote a time
+			// x out as plain hours).
+			const {
+				outputXData,
+				originTime_ms,
+				warning: outputXWarning
+			} = resolveOutputX(xCol, p.args, getColumnById);
 
 			// Build result with permutation tests
 			let result = {
 				t: [],
-				outputXData: null,
+				outputXData,
+				originTime_ms,
 				y_results: {}
 			};
 			// Same domain refusals as the non-permutation path; a permutation test
@@ -597,13 +630,16 @@
 					}
 				});
 
+				const predicted = outputXData
+					? evaluateTrendAtPoints(fittedData.parameters, model, outputXData)
+					: null;
 				result.y_results[yId] = {
 					fittedData,
-					predicted: null,
+					predicted,
 					t: tt,
 					yy,
-					xOutData: tt,
-					yOutData: fittedData.fitted
+					xOutData: outputXData ?? tt,
+					yOutData: predicted ?? fittedData.fitted
 				};
 
 				if (result.t.length === 0) result.t = tt;
@@ -617,7 +653,7 @@
 				const firstYId = Object.keys(result.y_results)[0];
 				const firstYResult = result.y_results[firstYId];
 				const xOutData = firstYResult?.xOutData ?? result.outputXData ?? firstYResult?.t ?? [];
-				writeOutputColumn(p.args.out.trendx, xOutData, { processHash });
+				writeXOutput(p.args.out.trendx, xOutData, { originTime_ms, processHash });
 
 				for (const yId of yINs) {
 					const yResult = result.y_results[yId];
@@ -650,7 +686,8 @@
 					result.y_results,
 					(yId) => `"${getColumnById(Number(yId))?.name ?? yId}"`
 				),
-				...fitSampleWarnings(p.args)
+				...fitSampleWarnings(p.args),
+				...(outputXWarning ? [outputXWarning] : [])
 			];
 			trendData = result;
 			p.warnings = result.warnings;
@@ -776,14 +813,6 @@
 		}
 		mounted = true;
 	});
-
-	function toggleOutputX(checked) {
-		if (!checked) {
-			p.args.outputX = -1;
-		} else {
-			p.args.outputX = p.args.xIN;
-		}
-	}
 
 	function getTrendStatsData() {
 		if (!trendData?.y_results) return { headers: [], rows: [] };
@@ -980,27 +1009,13 @@
 	{/if}
 
 	{#if !hideInputs}
-		<div class="control-input-horizontal">
-			<div class="control-input">
-				<label>
-					<input
-						type="checkbox"
-						bind:checked={showOutputX}
-						onchange={(e) => toggleOutputX(e.target.checked)}
-					/>
-					Specify output x values
-				</label>
-			</div>
-		</div>
-
-		{#if showOutputX}
-			<div class="control-input-vertical">
-				<div class="control-input">
-					<p>Output X column</p>
-					<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
-				</div>
-			</div>
-		{/if}
+		<OutputXControl
+			bind:args={p.args}
+			xCol={xIN_col}
+			excludeColIds={yExcludeIds}
+			plainCheckbox
+			onchange={() => getTrend()}
+		/>
 	{/if}
 </div>
 

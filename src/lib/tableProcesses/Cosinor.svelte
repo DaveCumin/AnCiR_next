@@ -39,12 +39,13 @@
 		multiComponentWaveform
 	} from '$lib/utils/cosinorAddons.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
-	import {
-		fitTimeFrame,
-		applyPhaseReference,
-		PHASE_REFERENCE_START
-	} from '$lib/utils/phaseReference.js';
+	import { applyPhaseReference, PHASE_REFERENCE_START } from '$lib/utils/phaseReference.js';
 	import { resolveNodePhaseReference } from '$lib/tableProcesses/phaseReferenceSupport.js';
+	import {
+		resolveOutputX,
+		outputXColumnId,
+		OUTPUT_X_MODE_COLUMN
+	} from '$lib/utils/outputXSequence.js';
 
 	const displayName = 'Cosinor';
 	const defaults = new Map([
@@ -52,6 +53,11 @@
 		['yIN', { val: [] }],
 		['Ncurves', { val: 0 }],
 		['outputX', { val: -1 }],
+		// How the output x values are made when `outputX` is set: 'column' (the values of the
+		// column outputX names; every session saved before this arg) or 'sequence' (every
+		// `outputXStep` x units over the x input; null = automatic). utils/outputXSequence.js.
+		['outputXMode', { val: OUTPUT_X_MODE_COLUMN }],
+		['outputXStep', { val: null }],
 		// `cosinorx` + per-y `cosinory_<id>` are the fitted curve outputs. The
 		// `period`/`amplitude`/`rsquared` outputs are scalar metrics exposed as
 		// PORTS (the "stored values as output ports" pilot): each is an array with
@@ -215,7 +221,6 @@
 		const xIN = argsIN.xIN;
 		const yINs = normalizeYInputs(argsIN.yIN);
 		const Ncurves = argsIN.Ncurves;
-		const outputXId = argsIN.outputX;
 		const useFixedPeriod = argsIN.useFixedPeriod ?? false;
 		const fixedPeriod = argsIN.fixedPeriod ?? 24;
 		const nHarmonics = argsIN.nHarmonics ?? 1;
@@ -281,12 +286,17 @@
 		// Split segment and wrong for unsorted data, and a time grid used to be read in
 		// its own frame, so a grid starting later than the input was evaluated early.
 		// Invalid grid values are dropped: one evaluated at Number(null) === 0 drew a
-		// spurious point back at the time origin.
-		const outputXCol = outputXId != -1 ? getColumnById(outputXId) : null;
-		const { outputXData, originTime_ms } = fitTimeFrame(tCol, outputXCol);
+		// spurious point back at the time origin. In sequence mode the grid is made over the
+		// x input itself, in the same frame and with the same origin (utils/outputXSequence.js).
+		const {
+			outputXData,
+			originTime_ms,
+			warning: outputXWarning
+		} = resolveOutputX(tCol, argsIN, getColumnById);
 
 		result.outputXData = outputXData;
 		result.originTime_ms = originTime_ms;
+		result.outputXWarning = outputXWarning;
 		// The frame every phase output is reported in (FIT-9).
 		result.phaseRef = resolveNodePhaseReference(argsIN, tCol);
 		// Test-validity warnings per series (review FIT-5): the F-test and the shuffle
@@ -684,7 +694,8 @@
 					]),
 			...(result?.validityWarnings ?? []),
 			...(result?.phaseRef?.warning ? [result.phaseRef.warning] : []),
-			...cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1), unit)
+			...cosinorSampleWarnings(t, argsIN, Math.max(1, Number(argsIN.nHarmonics) || 1), unit),
+			...(result?.outputXWarning ? [result.outputXWarning] : [])
 		];
 		return [result, anyValid];
 	}
@@ -827,6 +838,7 @@
 	// @ts-nocheck
 	import { RESIDUAL_SE } from '$lib/core/outputLabels.js';
 	import ColumnSelector from '$lib/components/inputs/ColumnSelector.svelte';
+	import OutputXControl from '$lib/components/inputs/OutputXControl.svelte';
 	import ColumnComponent from '$lib/core/Column.svelte';
 	import Table from '$lib/components/plotbits/Table.svelte';
 	import StoreValueButton from '$lib/components/inputs/StoreValueButton.svelte';
@@ -865,7 +877,6 @@
 	fillDefaults(p.args, defaults);
 
 	let cosinorData = $state();
-	let showOutputX = $state(p.args.outputX !== -1);
 	let mounted = $state(false);
 	let previewStart = $state(1);
 	let calculating = $state(false);
@@ -896,7 +907,10 @@
 
 	// for reactivity -----------
 	let xIN_col = $derived.by(() => (p.args.xIN >= 0 ? getColumnById(p.args.xIN) : null));
-	let outputX_col = $derived.by(() => (p.args.outputX >= 0 ? getColumnById(p.args.outputX) : null));
+	let outputX_col = $derived.by(() => {
+		const id = outputXColumnId(p.args);
+		return id >= 0 ? getColumnById(id) : null;
+	});
 	let xIsTime = $derived(xIN_col?.type === 'time' || outputX_col?.type === 'time');
 	// The unit of every period and phase on this panel: h for a time x, else "x units".
 	let periodUnit = $derived(periodUnitForColumn(xIN_col));
@@ -910,6 +924,7 @@
 			out += col?.getDataHash ?? '';
 		}
 		out += outputX_col?.getDataHash;
+		out += '|' + p.args.outputX + '|' + p.args.outputXMode + '|' + p.args.outputXStep;
 		out += p.args.useFixedPeriod;
 		out += p.args.referenceHrs;
 		out += p.args.permuteTest;
@@ -1133,14 +1148,6 @@
 		mounted = true;
 	});
 
-	function toggleOutputX(checked) {
-		if (!checked) {
-			p.args.outputX = -1;
-		} else {
-			p.args.outputX = p.args.xIN; // default to input X
-		}
-	}
-
 	function getCosinorStatsData() {
 		return cosinorStatsTable(cosinorData, p.args);
 	}
@@ -1320,27 +1327,13 @@
 		<PermutationSummary entries={permEntries} nodeId={p.id} label="Cosinor" />
 	{/if}
 
-	<div class="control-input-horizontal">
-		<div class="control-input">
-			<label>
-				<input
-					type="checkbox"
-					bind:checked={showOutputX}
-					onchange={(e) => toggleOutputX(e.target.checked)}
-				/>
-				Specify output x values
-			</label>
-		</div>
-	</div>
-
-	{#if showOutputX}
-		<div class="control-input-vertical">
-			<div class="control-input">
-				<p>Output X column</p>
-				<ColumnSelector bind:value={p.args.outputX} excludeColIds={yExcludeIds} />
-			</div>
-		</div>
-	{/if}
+	<OutputXControl
+		bind:args={p.args}
+		xCol={xIN_col}
+		excludeColIds={yExcludeIds}
+		plainCheckbox
+		onchange={() => getCosinor()}
+	/>
 </div>
 
 {#snippet cosinorStats(yResult, yName, yId)}

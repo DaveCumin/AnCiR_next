@@ -6,12 +6,20 @@
 // plain number column. Columns carry no unit field, so a number column's unit is unknown and
 // is named for what it is, "x units", never guessed from the column name ("Time (days)").
 //
-// The period RANGE a new node starts with follows the same split: 1 to 48 h for a time x (the
-// long-standing default), and for a number x the span the sampling can resolve, from the
-// Nyquist period (twice the median sampling interval) to the record span. Only a node that
-// carries `periodRangeAuto: true` follows its x like this; see
+// The period RANGE a new node starts with follows the same split: 1 to 30 h for a time x
+// (NEW_NODE_TIME_PERIOD_RANGE; it was 1 to 48 h before v82.30), and for a number x the span the
+// sampling can resolve, from the Nyquist period (twice the median sampling interval) to the
+// record span. Only a node that carries `periodRangeAuto: true` follows its x like this; see
 // tableProcesses/periodRangeAuto.svelte.js for why saved sessions never do.
-import { FREE_PERIOD_DEFAULTS, resolvePeriodRange } from './cosinor.js';
+//
+// NEW_NODE_TIME_PERIOD_RANGE is NOT cosinor.js FREE_PERIOD_DEFAULTS (1 to 48 h). That one is the
+// fallback for a node that carries no range at all (fillDefaults on load, `??` at compute time),
+// which is what sessions saved without a range (the shipped Rectangular wave and Double
+// logistic demos) were computed with; changing it would change their saved results.
+import { resolvePeriodRange } from './cosinor.js';
+import { NEW_NODE_TIME_PERIOD_RANGE } from './periodRangeDefaults.js';
+
+export { NEW_NODE_TIME_PERIOD_RANGE };
 
 export const PERIOD_UNIT_HOURS = 'h';
 export const PERIOD_UNIT_X = 'x units';
@@ -34,14 +42,14 @@ function ceil3(v) {
 
 /**
  * The period range a node that follows its x starts from, or null when x cannot give one.
- * Time x: FREE_PERIOD_DEFAULTS (1 to 48 h). Number x: the Nyquist period to the record span,
+ * Time x: NEW_NODE_TIME_PERIOD_RANGE (1 to 30 h). Number x: the Nyquist period to the record span,
  * each rounded up to 3 significant figures.
  * @param {{type?: string, getData?: () => any[]} | null} col
  * @returns {{minPeriod: number, maxPeriod: number} | null}
  */
 export function autoPeriodRange(col) {
 	if (!col) return null;
-	if (col.type === 'time') return { ...FREE_PERIOD_DEFAULTS };
+	if (col.type === 'time') return { ...NEW_NODE_TIME_PERIOD_RANGE };
 	const data = col.getData?.() ?? [];
 	const nums = [];
 	for (const v of data) {

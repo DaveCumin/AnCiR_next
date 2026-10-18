@@ -184,18 +184,28 @@ function readable(v) {
 /**
  * The warning shown when the resample grid would pass MAX_GRID_POINTS, or null when it
  * does not. Names the grid size and the smallest step that fits. `unit` is ' h' for a
- * time X (the step is in hours), else ''.
+ * time X (the step is in hours), else ''. `lead` says what was refused and `hint` is any
+ * other way out after the step (the defaults are Interpolate's; the fitting nodes' output x
+ * sequence, utils/outputXSequence.js, has no start or end to shorten).
+ * @param {{lead?: string, hint?: string}} [text]
  * @returns {string | null}
  */
-export function gridTooLargeWarning(start, end, step, unit = '', maxPoints = MAX_GRID_POINTS) {
+export function gridTooLargeWarning(
+	start,
+	end,
+	step,
+	unit = '',
+	maxPoints = MAX_GRID_POINTS,
+	{ lead = 'Nothing was resampled', hint = ', or a shorter start to end range' } = {}
+) {
 	const count = gridPointCount(start, end, step);
 	if (count <= maxPoints) return null;
 	const minStep = ceil2((end - start) / (maxPoints - 1));
 	return (
-		`Nothing was resampled: a step of ${readable(step)}${unit} over ${readable(end - start)}${unit} ` +
+		`${lead}: a step of ${readable(step)}${unit} over ${readable(end - start)}${unit} ` +
 		`gives ${count.toLocaleString('en-US')} grid points, more than the limit of ` +
-		`${maxPoints.toLocaleString('en-US')}. Use a step of at least ${readable(minStep)}${unit}, ` +
-		`or a shorter start to end range.`
+		`${maxPoints.toLocaleString('en-US')}. Use a step of at least ${readable(minStep)}${unit}` +
+		`${hint}.`
 	);
 }
 

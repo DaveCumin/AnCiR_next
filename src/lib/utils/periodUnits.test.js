@@ -4,7 +4,8 @@ import {
 	periodUnitForColumn,
 	autoPeriodRange,
 	periodInputProps,
-	PERIOD_UNIT_X
+	PERIOD_UNIT_X,
+	NEW_NODE_TIME_PERIOD_RANGE
 } from './periodUnits.js';
 import { FREE_PERIOD_DEFAULTS, resolvePeriodRange } from './cosinor.js';
 
@@ -23,10 +24,14 @@ describe('periodUnitForColumn', () => {
 });
 
 describe('autoPeriodRange', () => {
-	it('a time x keeps the long-standing 1 to 48 h', () => {
-		expect(autoPeriodRange({ type: 'time', getData: () => [0, 1, 2] })).toEqual(
-			FREE_PERIOD_DEFAULTS
-		);
+	it('a time x starts at 1 to 30 h; the saved-session fallback stays 1 to 48 h', () => {
+		expect(autoPeriodRange({ type: 'time', getData: () => [0, 1, 2] })).toEqual({
+			minPeriod: 1,
+			maxPeriod: 30
+		});
+		expect(NEW_NODE_TIME_PERIOD_RANGE).toEqual({ minPeriod: 1, maxPeriod: 30 });
+		// Sessions without a stored range compute with this; it must not move with the new default.
+		expect(FREE_PERIOD_DEFAULTS).toEqual({ minPeriod: 1, maxPeriod: 48 });
 	});
 
 	it("the author's x (0 to 3 days every 30 min): Nyquist to span, not 1 to 48", () => {
