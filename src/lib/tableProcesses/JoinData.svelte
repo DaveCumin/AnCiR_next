@@ -1,6 +1,8 @@
 <script module>
 	// @ts-nocheck
-	// Join Data: every row of A and every row of B on one time column, sorted by time.
+	// Join Data: every row of A and every row of B on one time column, sorted by time; or, with
+	// neither time input wired, A's rows then B's rows, each in input order (stack mode).
+	// The mode follows the wiring (utils/joinPairing.js joinMode); one time alone is refused.
 	// The maths is utils/joinData.js; which value columns are the same measurement (and the
 	// output names) is utils/joinPairing.js. This file is the wiring: reading the inputs,
 	// writing the outputs, reconciling which output columns exist, and the panel.
@@ -15,9 +17,11 @@
 	import { nodeMemo } from '$lib/core/computeMemo.js';
 	import { columnNamer } from '$lib/core/columnLabels.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
-	import { joinPlan, normaliseColumnName } from '$lib/utils/joinPairing.js';
+	import { joinPlan, joinMode, joinSourceOn, normaliseColumnName } from '$lib/utils/joinPairing.js';
 	import {
 		joinData,
+		stackData,
+		ONE_TIME_ERROR,
 		timeKind,
 		timeKindProblem,
 		joinSummary,
@@ -36,9 +40,12 @@
 		['pairing', { val: {} }],
 		// Hours for time columns, x units for numbers; added to B's times before joining.
 		['shiftB', { val: 0 }],
-		// Add a "Source" output: which dataset each row came from.
-		['sourceColumn', { val: false }],
-		['out', { jointime: { val: -1 } }],
+		// Add a "Source" output: which dataset each row came from. true/false is the user's
+		// choice; null (a new node) follows the mode: on when stacking, off when joining by
+		// time (utils/joinPairing.js joinSourceOn). v82.31 sessions store false: off, as before.
+		['sourceColumn', { val: null }],
+		// No fixed outputs: `jointime` exists only when a time is wired (joinOutKeys).
+		['out', {}],
 		['valid', { val: false }]
 	]);
 
@@ -53,7 +60,8 @@
 
 	/**
 	 * What the Source column says for each dataset: the names of the groups (datasets) the two
-	 * time columns belong to, when both have one and they differ; else "A" and "B".
+	 * time columns belong to, when both have one and they differ; else "A" and "B". Stacking
+	 * passes each side's first value column instead (there is no time column).
 	 */
 	export function joinSourceLabels(aTimeId, bTimeId) {
 		const groupName = (id) =>
@@ -91,11 +99,11 @@
 			clearOutputs(argsIN.out);
 			return [{ error, notes: [], counts: null, rareShared: false, outputs: [] }, false];
 		};
+		const mode = joinMode(argsIN);
+		if (mode === 'one') return refuse(ONE_TIME_ERROR);
+		if (mode === 'stack') return stackJoin(argsIN, refuse);
 		const aT = Number(argsIN.aTimeIN); // Number-ok: a column id
 		const bT = Number(argsIN.bTimeIN); // Number-ok: a column id
-		if (!(aT >= 0) || !(bT >= 0)) {
-			return [{ error: null, notes: [], counts: null, rareShared: false, outputs: [] }, false];
-		}
 		const colA = getColumnByIdForJoin(aT);
 		const colB = getColumnByIdForJoin(bT);
 		if (!colA || !colB) return refuse(null);
@@ -145,16 +153,7 @@
 				`${nameOf(c.bId)} (B) is a separate column: ${nameOf(c.aId)} (A) is already paired with another B column.`
 			);
 		}
-		for (const o of plan.outputs) {
-			if (o.aId == null || o.bId == null) continue;
-			const ta = getColumnByIdForJoin(o.aId)?.type;
-			const tb = getColumnByIdForJoin(o.bId)?.type;
-			if (ta && tb && ta !== tb) {
-				notes.push(
-					`${o.label}: A is a ${ta} column and B a ${tb} column; the joined column is ${ta}.`
-				);
-			}
-		}
+		notes.push(...pairTypeNotes(plan));
 
 		const processHash = crypto.randomUUID();
 		const out = argsIN.out ?? {};
@@ -173,7 +172,7 @@
 				processHash
 			});
 		}
-		if (argsIN.sourceColumn) {
+		if (joinSourceOn(argsIN)) {
 			writeOutputColumn(out.source, res.source, { type: 'category', processHash });
 		}
 
@@ -187,6 +186,94 @@
 				outputs: plan.outputs,
 				pairOf: plan.pairOf,
 				summary: joinSummary(res.counts)
+			},
+			res.ok
+		];
+	}
+
+	/** The type-mismatch notes for paired columns (shared by both modes). */
+	function pairTypeNotes(plan) {
+		const notes = [];
+		for (const o of plan.outputs) {
+			if (o.aId == null || o.bId == null) continue;
+			const ta = getColumnByIdForJoin(o.aId)?.type;
+			const tb = getColumnByIdForJoin(o.bId)?.type;
+			if (ta && tb && ta !== tb) {
+				notes.push(
+					`${o.label}: A is a ${ta} column and B a ${tb} column; the joined column is ${ta}.`
+				);
+			}
+		}
+		return notes;
+	}
+
+	/** Stack mode (neither time wired): A's rows, then B's, each in input order. */
+	function stackJoin(argsIN, refuse) {
+		const nameOf = joinNameOf();
+		const plan = joinPlan(argsIN, nameOf);
+		// A new node (nothing wired yet): nothing to do, nothing to say.
+		if (plan.aIds.length + plan.bIds.length === 0) {
+			clearOutputs(argsIN.out);
+			return [{ error: null, notes: [], counts: null, rareShared: false, outputs: [] }, false];
+		}
+		const both = plan.aIds.filter((id) => plan.bIds.includes(id));
+		if (both.length) {
+			return refuse(
+				`${nameOf(both[0])} is wired into both A and B. Wire each column into one side only.`
+			);
+		}
+		const dataOf = {};
+		const typeOf = {};
+		for (const id of [...plan.aIds, ...plan.bIds]) {
+			const col = getColumnByIdForJoin(id);
+			dataOf[id] = col?.getData?.() ?? [];
+			typeOf[id] = col?.type ?? 'number';
+		}
+		const sourceLabels = joinSourceLabels(plan.aIds[0], plan.bIds[0]);
+		const res = stackData({
+			aIds: plan.aIds,
+			bIds: plan.bIds,
+			dataOf,
+			typeOf,
+			outputs: plan.outputs,
+			sourceLabels
+		});
+		if (res.error) return refuse(res.error);
+		if (!sameJSON(argsIN._resolvedPairs, plan.pairOf)) argsIN._resolvedPairs = plan.pairOf;
+		if (!sameJSON(argsIN._sourceLabels, sourceLabels)) argsIN._sourceLabels = sourceLabels;
+
+		const notes = [];
+		for (const c of plan.conflicts) {
+			notes.push(
+				`${nameOf(c.bId)} (B) is a separate column: ${nameOf(c.aId)} (A) is already paired with another B column.`
+			);
+		}
+		notes.push(...pairTypeNotes(plan));
+
+		const processHash = crypto.randomUUID();
+		const out = argsIN.out ?? {};
+		for (const o of plan.outputs) {
+			const src = getColumnByIdForJoin(o.aId ?? o.bId);
+			const type = src?.type ?? 'number';
+			writeOutputColumn(out[o.key], res.columns[o.key], {
+				type,
+				timeFormat: type === 'time' ? null : undefined,
+				processHash
+			});
+		}
+		if (joinSourceOn(argsIN) && plan.outputs.length) {
+			writeOutputColumn(out.source, res.source, { type: 'category', processHash });
+		}
+		return [
+			{
+				error: null,
+				notes,
+				counts: res.counts,
+				rareShared: false,
+				kind: 'stack',
+				outputs: plan.outputs,
+				pairOf: plan.pairOf,
+				summary: plan.outputs.length ? joinSummary(res.counts) : ''
 			},
 			res.ok
 		];
@@ -232,7 +319,7 @@
 	let { p = $bindable(), hideInputs = false } = $props();
 
 	fillDefaults(p.args, defaults);
-	if (!p.args.out) p.args.out = { jointime: -1 };
+	if (!p.args.out) p.args.out = {};
 
 	let result = $state();
 	let mounted = $state(false);
@@ -251,6 +338,9 @@
 	let colA = $derived(p.args.aTimeIN >= 0 ? getColumnById(p.args.aTimeIN) : null);
 	let colB = $derived(p.args.bTimeIN >= 0 ? getColumnById(p.args.bTimeIN) : null);
 	let isNumeric = $derived(colA?.type !== 'time' && colB?.type !== 'time' && (colA || colB));
+	// 'time' | 'stack' | 'one' (utils/joinPairing.js): stacking hides the time-only controls.
+	let mode = $derived(joinMode(p.args));
+	let sourceOn = $derived(joinSourceOn(p.args));
 
 	// The output keys this node should have right now (the reconcile target).
 	let wantKeys = $derived(joinOutKeys(p.args, nameOf));
@@ -263,9 +353,15 @@
 		}
 		h += '|keys:' + wantKeys.join(',');
 		h += '|pairing:' + JSON.stringify(p.args.pairing ?? {});
-		h += '|shift:' + p.args.shiftB + '|src:' + !!p.args.sourceColumn;
-		if (p.args.sourceColumn)
-			h += '|labels:' + joinSourceLabels(p.args.aTimeIN, p.args.bTimeIN).join('/');
+		// The stored choice (null follows the mode) and what it means for these wires.
+		h += '|shift:' + p.args.shiftB + '|src:' + p.args.sourceColumn + ':' + joinSourceOn(p.args);
+		if (joinSourceOn(p.args)) {
+			const labels =
+				joinMode(p.args) === 'stack'
+					? joinSourceLabels(ids.aIds[0], ids.bIds[0])
+					: joinSourceLabels(p.args.aTimeIN, p.args.bTimeIN);
+			h += '|labels:' + labels.join('/');
+		}
 		return h;
 	});
 
@@ -338,6 +434,12 @@
 		}
 		for (const k of stale) if (k in p.args.out) dropColumn(k);
 		for (const k of want) if (!(p.args.out[k] >= 0)) p.args.out[k] = makeColumn(k);
+		// The canvas lists a node's output ports in `out` key order: keep it the wanted order
+		// (time, values, Source), or a Source added before a value column sits between them.
+		const keys = Object.keys(p.args.out);
+		if (keys.some((k, i) => k !== want[i])) {
+			p.args.out = Object.fromEntries(want.map((k) => [k, p.args.out[k]]));
+		}
 		return true;
 	}
 
@@ -383,7 +485,15 @@
 		const pairing = { ...(p.args.pairing ?? {}) };
 		delete pairing[String(bId)];
 		const a = joinPlan({ ...p.args, pairing }, nameOf).pairOf[bId];
-		return a != null ? `By name: ${nameOf(a)}` : 'By name: separate';
+		return a != null ? `A's '${nameOf(a)}' (by name)` : 'Its own column (no match)';
+	}
+
+	/** The chosen option's full text, as a tooltip (a long column name is cut off in the select). */
+	function pairTitle(bId) {
+		const v = pairValue(bId);
+		if (v === 'auto') return autoText(bId);
+		if (v === '-1') return 'Its own column';
+		return `A's '${nameOf(Number(v))}'`; // Number-ok: a select value (a column id)
 	}
 
 	let outputRows = $derived.by(() => {
@@ -391,7 +501,7 @@
 		const out = p.args.out ?? {};
 		if (out.jointime >= 0) rows.push(out.jointime);
 		for (const o of result?.outputs ?? []) if (out[o.key] >= 0) rows.push(out[o.key]);
-		if (p.args.sourceColumn && out.source >= 0) rows.push(out.source);
+		if (sourceOn && out.source >= 0) rows.push(out.source);
 		return rows;
 	});
 
@@ -459,12 +569,19 @@
 <div class="section-row">
 	<div class="tableProcess-label"><span>Options</span></div>
 	<div class="control-input-vertical">
-		<ControlInput label={isNumeric ? "Shift B's x by (x units)" : "Shift B's clock by (h)"}>
-			<NumberWithUnits step="0.25" bind:value={p.args.shiftB} />
-		</ControlInput>
+		{#if mode !== 'stack'}
+			<ControlInput label={isNumeric ? "Shift B's x by (x units)" : "Shift B's clock by (h)"}>
+				<NumberWithUnits step="0.25" bind:value={p.args.shiftB} />
+			</ControlInput>
+		{/if}
 		<div class="control-input">
 			<label>
-				<input type="checkbox" bind:checked={p.args.sourceColumn} />
+				<!-- Ticking or unticking stores the choice; until then it follows the mode. -->
+				<input
+					type="checkbox"
+					checked={sourceOn}
+					onchange={(e) => (p.args.sourceColumn = e.currentTarget.checked)}
+				/>
 				Add a Source column
 			</label>
 		</div>
@@ -473,16 +590,23 @@
 
 {#if ids.bIds.length > 0 && ids.aIds.length > 0}
 	<div class="section-row">
-		<div class="tableProcess-label"><span>Same measurement?</span></div>
+		<div class="tableProcess-label"><span>Which column does each B column go into?</span></div>
 		<div class="control-input-vertical">
+			<p class="hint">
+				Columns with the same name share one column; choose 'Its own column' to keep them apart.
+			</p>
 			{#each ids.bIds as bId (bId)}
 				<ControlInput label={`${nameOf(bId)} (B)`}>
-					<select value={pairValue(bId)} onchange={(e) => setPair(bId, e.currentTarget.value)}>
+					<select
+						value={pairValue(bId)}
+						title={pairTitle(bId)}
+						onchange={(e) => setPair(bId, e.currentTarget.value)}
+					>
 						<option value="auto">{autoText(bId)}</option>
 						{#each ids.aIds as aId (aId)}
-							<option value={String(aId)}>Same as A: {nameOf(aId)}</option>
+							<option value={String(aId)}>A's '{nameOf(aId)}'</option>
 						{/each}
-						<option value="-1">Separate column</option>
+						<option value="-1">Its own column</option>
 					</select>
 				</ControlInput>
 			{/each}
@@ -490,21 +614,26 @@
 	</div>
 {/if}
 
-{#if result?.error}
-	<p class="warn">{result.error}</p>
-{/if}
-{#each result?.notes ?? [] as note (note)}
-	<p class="note">{note}</p>
-{/each}
-{#if result?.summary}
-	<p class="summary">{result.summary}</p>
-{/if}
-{#if result?.rareShared}
-	<div class="bin-hint">
-		<p>A and B rarely share a time. To compare them row by row, add Bin Data after this node.</p>
-		<button class="btn-add" onclick={addBinData} disabled={!isCommitted()}>+ Add Bin Data</button>
-	</div>
-{/if}
+<div class="join-result">
+	{#if mode === 'stack' && ids.aIds.length + ids.bIds.length > 0}
+		<p class="note">No time is wired, so A's rows come first, then B's, each in their own order.</p>
+	{/if}
+	{#if result?.error}
+		<p class="warn">{result.error}</p>
+	{/if}
+	{#each result?.notes ?? [] as note (note)}
+		<p class="note">{note}</p>
+	{/each}
+	{#if result?.summary}
+		<p class="summary">{result.summary}</p>
+	{/if}
+	{#if result?.rareShared && mode === 'time'}
+		<div class="bin-hint">
+			<p>A and B rarely share a time. To compare them row by row, add Bin Data after this node.</p>
+			<button class="btn-add" onclick={addBinData} disabled={!isCommitted()}>+ Add Bin Data</button>
+		</div>
+	{/if}
+</div>
 
 <details open>
 	<summary class="section-details-summary">Output</summary>
@@ -516,13 +645,20 @@
 					{#if col}<ColumnComponent {col} />{/if}
 				{/each}
 			{:else if !result?.error}
-				<p class="hint">Wire a time column into time A and time B to join them.</p>
+				<p class="hint">
+					Wire values into A and B to stack them (A's rows, then B's), or a time for each dataset as
+					well to join them on one time column.
+				</p>
 			{/if}
 		</div>
 	</div>
 </details>
 
 <style>
+	/* Indented like the section rows above, so the result lines up with the controls. */
+	.join-result {
+		padding-left: var(--space-2);
+	}
 	.hint,
 	.note,
 	.summary {

@@ -22977,6 +22977,125 @@
 			"recordValid": true
 		},
 		{
+			"id": "tp-joindata-stack-order",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "Stack mode (neither time wired): A's rows in their input order (values deliberately not sorted), then B's in theirs; no time output. ' Amp ' in B pairs with A's 'amp' by name; phase is blank on B's rows and B's 'n' on A's rows. sourceColumn null follows the mode: ON when stacking.",
+			"inputs": [
+				{ "ref": "amp", "type": "number", "values": [3.5, 1.25, 2, 9] },
+				{ "ref": "phase", "type": "number", "values": [22, 4, 13, 1] },
+				{ "ref": "ampB", "name": " Amp ", "type": "number", "values": [7, 0.5, 6] },
+				{ "ref": "n", "type": "number", "values": [10, 20, 30] }
+			],
+			"args": {
+				"pairing": {},
+				"shiftB": 0,
+				"sourceColumn": null,
+				"out": { "source": -1 },
+				"aTimeIN": -1,
+				"aValuesIN": ["@amp", "@phase"],
+				"bTimeIN": -1,
+				"bValuesIN": ["@ampB", "@n"]
+			},
+			"compareOutputs": ["joined_@amp", "joined_@phase", "joined_@n", "source"]
+		},
+		{
+			"id": "tp-joindata-stack-override-blanks",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "Stack mode with the pairing override (B's same-named 'v' kept separate, B's 'w' paired with A's 'u'), different column lengths (A has 3 rows, its shorter column blank past its end), missing cells blank never 0, a category column keeping its labels, and Source explicitly off.",
+			"inputs": [
+				{ "ref": "v", "type": "number", "values": [1, null, 3] },
+				{ "ref": "u", "type": "number", "values": [5, 6] },
+				{ "ref": "lab", "type": "category", "values": ["x", "  ", "z"] },
+				{ "ref": "vb", "name": "v", "type": "number", "values": [10, "", 30, "abc", 50] },
+				{ "ref": "w", "type": "number", "values": [7, 8, 9, 0, 11] }
+			],
+			"args": {
+				"pairing": { "@vb": -1, "@w": "@u" },
+				"shiftB": 0,
+				"sourceColumn": false,
+				"out": {},
+				"aTimeIN": -1,
+				"aValuesIN": ["@v", "@u", "@lab"],
+				"bTimeIN": -1,
+				"bValuesIN": ["@vb", "@w"]
+			},
+			"compareOutputs": ["joined_@v", "joined_@u", "joined_@lab", "joined_@vb"]
+		},
+		{
+			"id": "tp-joindata-stack-empty-a",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "Stack mode with nothing in A: B's rows alone, each labelled B.",
+			"inputs": [{ "ref": "b", "type": "number", "values": [4, 2, 8] }],
+			"args": {
+				"pairing": {},
+				"shiftB": 0,
+				"sourceColumn": null,
+				"out": { "source": -1 },
+				"aTimeIN": -1,
+				"aValuesIN": [],
+				"bTimeIN": -1,
+				"bValuesIN": ["@b"]
+			},
+			"compareOutputs": ["joined_@b", "source"]
+		},
+		{
+			"id": "tp-joindata-stack-empty-b",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "Stack mode where B's column has no rows: A's rows alone; a single-row A.",
+			"inputs": [
+				{ "ref": "a", "name": "amp", "type": "number", "values": [2.5] },
+				{ "ref": "b", "name": "amp", "type": "number", "values": [] }
+			],
+			"args": {
+				"pairing": {},
+				"shiftB": 0,
+				"sourceColumn": null,
+				"out": { "source": -1 },
+				"aTimeIN": -1,
+				"aValuesIN": ["@a"],
+				"bTimeIN": -1,
+				"bValuesIN": ["@b"]
+			},
+			"compareOutputs": ["joined_@a", "source"]
+		},
+		{
+			"id": "tp-joindata-one-time-refused",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "Only one time input wired is refused in all three ('Wire a time for both datasets, or for neither.'): no output, invalid.",
+			"inputs": [
+				{ "ref": "t", "type": "number", "values": [0, 1] },
+				{ "ref": "v", "type": "number", "values": [1, 2] },
+				{ "ref": "vb", "type": "number", "values": [3, 4] }
+			],
+			"args": {
+				"pairing": {},
+				"shiftB": 0,
+				"sourceColumn": null,
+				"out": { "jointime": -1 },
+				"aTimeIN": "@t",
+				"aValuesIN": ["@v"],
+				"bTimeIN": -1,
+				"bValuesIN": ["@vb"]
+			},
+			"compareOutputs": ["jointime", "joined_@v", "joined_@vb"],
+			"recordValid": true
+		},
+		{
 			"id": "util-joindata-limit-2000000",
 			"kind": "pureUtil",
 			"jsFn": "joinLimit",

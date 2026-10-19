@@ -9,6 +9,10 @@
  * Run it explicitly (it is gated so it never runs in the normal suite):
  *   GEN_DEMOS=1 npx vitest run src/lib/_demos/generateDemos.svelte.test.js
  *
+ * To regenerate only some WORKFLOW demos (and their CSVs) without churning every other file,
+ * name their ids: GEN_ONLY=join-data GEN_DEMOS=1 npx vitest run ...generateDemos.svelte.test.js
+ * Their entries are merged into the existing index.json where a full run would put them.
+ *
  * Design notes
  * ------------
  * Each demo is meant to *show the node doing its job*, not just list numbers:
@@ -28,9 +32,17 @@
  * internal jargon like "table process".
  */
 import { describe, it } from 'vitest';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { core, appConsts, pushObj, outputCoreAsJson } from '$lib/core/core.svelte.js';
+import {
+	core,
+	appConsts,
+	pushObj,
+	outputCoreAsJson,
+	createGroup,
+	createNote,
+	absorbColumnIntoGroup
+} from '$lib/core/core.svelte.js';
 import { Column } from '$lib/core/Column.svelte';
 import { Plot } from '$lib/core/Plot.svelte';
 import { layoutWorkspacePlots } from '$lib/core/workspaceLayout.js';
@@ -2351,8 +2363,324 @@ const WORKFLOWS = [
 			a2.plot.doublePlot = 2;
 			pushObj(a2);
 		}
+	},
+	{
+		id: 'join-data',
+		summary: 'Put two datasets in one set of columns: by time, or stacked.',
+		name: 'Workflow: joining and stacking datasets',
+		family: 'Workflows',
+		group: 'General statistics',
+		description:
+			"Three uses of Join Data. A weather station (hourly) and a field logger (every 15 min) on one time column: every row kept, sorted by time, same-named columns sharing one column, the rest blank on the other dataset's rows, and Bin Data averaging each hour. A hive temperature that shares a name but not a meaning, set to its own column. And, with no time wired, two groups' per-animal results stacked one after the other, with the Source column as the group for Group Comparison and a boxplot.",
+		showcases: ['JoinData', 'BinnedData', 'GroupComparison', 'tableplot', 'boxplot'],
+		build: buildJoinDataWorkflow,
+		// Bigger tables than the standard grid size, so their first rows tell the story.
+		layoutPlots: placeJoinDataPlots
 	}
 ];
+
+/**
+ * Workspace positions and sizes for the Join Data showcase (plots found by name): the two time
+ * join tables side by side, then the own-columns table with the boxplot and test below it, and
+ * the stacked table beside them. Each wrapper draws 20 px wider and 50 px taller than its plot.
+ */
+function placeJoinDataPlots() {
+	const GAP = 30;
+	const place = (prefix, x, y, width, height) => {
+		const p = core.plots.find((q) => q.name.startsWith(prefix));
+		Object.assign(p, { x, y, width, height });
+		return { right: x + width + 20 + GAP, bottom: y + height + 50 + GAP };
+	};
+	const joined = place('Joined by time', 60, 60, 940, 560);
+	place('Binned to 1 h', joined.right, 60, 760, 560);
+	const own = place('Own columns', 60, joined.bottom, 600, 480);
+	place('Stacked results', joined.right, joined.bottom, 560, 700);
+	const box = place('Amplitude by group', 60, own.bottom, 500, 300);
+	place('Group Comparison', 60, box.bottom, 520, 200);
+}
+
+/**
+ * The Join Data showcase (workflow-join-data). Three bands on the canvas, one per use, each with
+ * a short note above it: (a) a time join with Bin Data, (b) the "Its own column" override, (c)
+ * stack mode into Group Comparison. Synthetic, seeded, deterministic.
+ */
+async function buildJoinDataWorkflow() {
+	const rng = mulberry32(2210);
+	const H = 3600000;
+	const T0 = Date.UTC(2024, 6, 1);
+	const HOURS = 48;
+	const iso = (ms) => new Date(ms).toISOString();
+	const r2 = (v) => Math.round(v * 100) / 100;
+	const airAt = (h) => 15 + 6 * Math.sin((2 * Math.PI * (h - 9)) / 24);
+
+	const group = (name, cols) => {
+		const id = createGroup({ name });
+		for (const c of cols) absorbColumnIntoGroup(c, id);
+		return id;
+	};
+	const tp = async (name, args, displayName) => {
+		const node = new TableProcess({ name, args }, null);
+		if (displayName) node.displayName = displayName;
+		pushObj(node);
+		await node.doProcess();
+		return node;
+	};
+	const note = (text, wsX, height) => {
+		// y 25: just below the caption (y 24), so the workspace lane reads caption first.
+		const id = createNote({ x: wsX, y: 25, text, clear: false });
+		const n = core.notes.find((m) => m.id === id);
+		n.width = 360;
+		n.height = height;
+		return id;
+	};
+
+	// --- (a) Time join: weather station (hourly) + field logger (15 min, 5 min past) ---------
+	const wTime = mkCol(
+		'time',
+		seq(HOURS, (i) => iso(T0 + i * H)),
+		'time'
+	);
+	const wTemp = mkCol(
+		'number',
+		seq(HOURS, (i) => r2(airAt(i) + normal(rng, 0, 0.3))),
+		'temperature'
+	);
+	const wWind = mkCol(
+		'number',
+		seq(HOURS, (i) =>
+			r2(Math.max(0, 3 + 2 * Math.sin((2 * Math.PI * (i - 14)) / 24) + normal(rng, 0, 0.6)))
+		),
+		'wind'
+	);
+	const weather = group('weather station', [wTime, wTemp, wWind]);
+
+	const nL = HOURS * 4;
+	const lHour = (i) => (5 + 15 * i) / 60;
+	const lTime = mkCol(
+		'time',
+		seq(nL, (i) => iso(T0 + Math.round(lHour(i) * H))),
+		'time'
+	);
+	const lTemp = mkCol(
+		'number',
+		seq(nL, (i) => r2(airAt(lHour(i)) + 0.4 + normal(rng, 0, 0.3))),
+		'Temperature'
+	);
+	const lHum = mkCol(
+		'number',
+		seq(nL, (i) => r2(70 - 15 * Math.sin((2 * Math.PI * (lHour(i) - 9)) / 24) + normal(rng, 0, 2))),
+		'humidity'
+	);
+	const logger = group('field logger', [lTime, lTemp, lHum]);
+
+	const joinA = await tp(
+		'JoinData',
+		{
+			aTimeIN: wTime,
+			aValuesIN: [wTemp, wWind],
+			bTimeIN: lTime,
+			bValuesIN: [lTemp, lHum],
+			pairing: {},
+			shiftB: 0,
+			sourceColumn: true,
+			out: {
+				jointime: -1,
+				[`joined_${wTemp}`]: -1,
+				[`joined_${wWind}`]: -1,
+				[`joined_${lHum}`]: -1,
+				source: -1
+			}
+		},
+		'Join by time'
+	);
+	const ja = joinA.args.out;
+	const joinedA = [
+		ja.jointime,
+		ja[`joined_${wTemp}`],
+		ja[`joined_${wWind}`],
+		ja[`joined_${lHum}`],
+		ja.source
+	];
+
+	const bin = await tp(
+		'BinnedData',
+		{
+			xIN: ja.jointime,
+			yIN: [ja[`joined_${wTemp}`], ja[`joined_${wWind}`], ja[`joined_${lHum}`]],
+			binMode: 'uniform',
+			binSize: 1,
+			binStart: 0,
+			stepSize: 1,
+			diffStep: false,
+			cuts: [],
+			aggFunction: 'mean',
+			out: { binnedx: -1 }
+		},
+		'Bin Data (1 h)'
+	);
+	const bo = bin.args.out;
+	const binned = [
+		bo.binnedx,
+		bo[`binnedy_${ja[`joined_${wTemp}`]}`],
+		bo[`binnedy_${ja[`joined_${wWind}`]}`],
+		bo[`binnedy_${ja[`joined_${lHum}`]}`]
+	];
+
+	// --- (b) Same name, different measurement: the hive's temperature gets its own column -----
+	const hTime = mkCol(
+		'time',
+		seq(nL, (i) => iso(T0 + Math.round(lHour(i) * H))),
+		'time'
+	);
+	const hTemp = mkCol(
+		'number',
+		seq(nL, (i) =>
+			r2(34.5 + 0.4 * Math.sin((2 * Math.PI * (lHour(i) - 15)) / 24) + normal(rng, 0, 0.1))
+		),
+		'temperature'
+	);
+	const hive = group('hive', [hTime, hTemp]);
+	const joinB = await tp(
+		'JoinData',
+		{
+			aTimeIN: wTime,
+			aValuesIN: [wTemp],
+			bTimeIN: hTime,
+			bValuesIN: [hTemp],
+			pairing: { [hTemp]: -1 },
+			shiftB: 0,
+			sourceColumn: null,
+			out: { jointime: -1, [`joined_${wTemp}`]: -1, [`joined_${hTemp}`]: -1 }
+		},
+		'Join, own columns'
+	);
+	const jb = joinB.args.out;
+
+	// --- (c) Stack mode: two groups' per-animal results, A's rows then B's -------------------
+	const results = (prefix, n, ampMean, acroMean) => [
+		mkCol(
+			'category',
+			seq(n, (i) => `${prefix}${i + 1}`),
+			'animal'
+		),
+		mkCol(
+			'number',
+			seq(n, () => r2(ampMean + normal(rng, 0, 0.35))),
+			'amplitude'
+		),
+		mkCol(
+			'number',
+			seq(n, () => r2(acroMean + normal(rng, 0, 0.6))),
+			'acrophase'
+		)
+	];
+	const ctrl = results('C', 8, 3.0, 13.8);
+	const trt = results('T', 8, 1.8, 15.6);
+	const gCtrl = group('Control', ctrl);
+	const gTrt = group('Treated', trt);
+	const stack = await tp(
+		'JoinData',
+		{
+			aTimeIN: -1,
+			aValuesIN: ctrl,
+			bTimeIN: -1,
+			bValuesIN: trt,
+			pairing: {},
+			shiftB: 0,
+			sourceColumn: null,
+			out: {
+				[`joined_${ctrl[0]}`]: -1,
+				[`joined_${ctrl[1]}`]: -1,
+				[`joined_${ctrl[2]}`]: -1,
+				source: -1
+			}
+		},
+		'Stack groups'
+	);
+	const so = stack.args.out;
+	const stacked = [
+		so.source,
+		so[`joined_${ctrl[0]}`],
+		so[`joined_${ctrl[1]}`],
+		so[`joined_${ctrl[2]}`]
+	];
+	const gc = await tp(
+		'GroupComparison',
+		{
+			xIN: so.source,
+			yIN: [so[`joined_${ctrl[1]}`]],
+			method: 'auto',
+			alpha: 0.05,
+			postHocEnabled: true,
+			out: { statistic: -1, pvalue: -1, effectSize: -1 }
+		},
+		'Compare amplitude'
+	);
+
+	// --- Plots, in reading order (sizes and places: placeJoinDataPlots) ----------------------
+	const pJoined = tablePlot('Joined by time (weather + logger)', joinedA);
+	const pBinned = tablePlot('Binned to 1 h', binned);
+	const pOwn = tablePlot('Own columns: temperature (A) and (B)', [
+		jb.jointime,
+		jb[`joined_${wTemp}`],
+		jb[`joined_${hTemp}`]
+	]);
+	const pStack = tablePlot('Stacked results (Control, then Treated)', stacked);
+	const box = new Plot({ name: 'Amplitude by group', type: 'boxplot' });
+	box.plot.addData({ x: { refId: so.source }, y: { refId: so[`joined_${ctrl[1]}`] } });
+	box.plot.showSigBars = true;
+	setAxisLabels(box, { x: 'Group (Source)', y: 'Amplitude' });
+	pushObj(box);
+	const pTest = tablePlot('Group Comparison: amplitude by Source', [
+		gc.args.out.statistic,
+		gc.args.out.pvalue,
+		gc.args.out.effectSize
+	]);
+
+	// --- Notes (one per band) and the canvas layout ------------------------------------------
+	const nA = note(
+		"1. Time join. In the joined table, weather rows (on the hour) and logger rows (5, 20, 35 and 50 min past) interleave in time order and are never merged. Temperature is one column because both datasets use that name; wind is blank on logger rows and humidity on weather rows. Source names each row's dataset. The binned table averages every hour, so each row holds both datasets.",
+		40,
+		215
+	);
+	const nB = note(
+		"2. Same name, different measurement. The hive's temperature is not the air temperature, so in this node's panel it is set to 'Its own column'. The table shows temperature (A) and temperature (B) side by side, each blank on the other dataset's rows.",
+		420,
+		175
+	);
+	const nC = note(
+		"3. Stack mode. Neither time input is wired, so Join Data stacks the Control results, then the Treated results, each in their original order. Source is on by default when stacking and names each row's group; Group Comparison and the boxplot use it as the group for amplitude.",
+		800,
+		175
+	);
+
+	const C = [60, 440, 820, 1200];
+	const band = (top) => top + 230; // a note above each band
+	const A0 = 0;
+	const B0 = 1250;
+	const C0 = 2200;
+	core.nodeLayout = {
+		[nA]: { x: C[0], y: A0 },
+		[weather]: { x: C[0], y: band(A0) },
+		[logger]: { x: C[0], y: band(A0) + 420 },
+		[`tableprocess_${joinA.id}`]: { x: C[1], y: band(A0) },
+		[`tableprocess_${bin.id}`]: { x: C[2], y: band(A0) },
+		[`plot_${pJoined.id}`]: { x: C[3], y: band(A0) },
+		[`plot_${pBinned.id}`]: { x: C[3], y: band(A0) + 420 },
+		[nB]: { x: C[0], y: B0 },
+		[hive]: { x: C[0], y: band(B0) },
+		[`tableprocess_${joinB.id}`]: { x: C[1], y: band(B0) },
+		[`plot_${pOwn.id}`]: { x: C[2], y: band(B0) },
+		[nC]: { x: C[0], y: C0 },
+		[gCtrl]: { x: C[0], y: band(C0) },
+		[gTrt]: { x: C[0], y: band(C0) + 380 },
+		[`tableprocess_${stack.id}`]: { x: C[1], y: band(C0) },
+		[`tableprocess_${gc.id}`]: { x: C[2], y: band(C0) },
+		[`plot_${pStack.id}`]: { x: C[3], y: band(C0) },
+		[`plot_${box.id}`]: { x: C[3], y: band(C0) + 480 },
+		[`plot_${pTest.id}`]: { x: C[2], y: band(C0) + 480 }
+	};
+}
 
 // Reset core to a clean slate between demos.
 function resetCore() {
@@ -2552,6 +2880,43 @@ const START_SCREEN_NODE_DEMOS = {
 	}
 };
 
+/**
+ * GEN_ONLY: put freshly generated workflow entries (and their dataset entries) into the existing
+ * index.json at the place a full run would: a full run lists, per family, in generation order,
+ * which for workflows is WORKFLOWS order (datasets: DATASETS, then one per workflow in the same
+ * order). An entry already present is replaced in place.
+ */
+function mergeIntoIndex(entries) {
+	const path = join(OUT_DIR, 'index.json');
+	const index = JSON.parse(readFileSync(path, 'utf8'));
+	const list = index.sessions;
+	const wfOrder = WORKFLOWS.map((w) => w.id);
+	const wfIdOf = (id) => /^(?:dataset-)?workflow-(.+)$/.exec(id)?.[1];
+	for (const e of entries) {
+		const at = list.findIndex((x) => x.id === e.id);
+		if (at >= 0) {
+			list[at] = e;
+			continue;
+		}
+		// After the nearest earlier workflow of the same kind that is listed, else before the first
+		// entry of the family's later workflows, else at the family's end.
+		const mine = wfOrder.indexOf(wfIdOf(e.id));
+		const sameKind = (x) => x.kind === e.kind && x.family === e.family && wfIdOf(x.id) != null;
+		let pos = -1;
+		for (let i = 0; i < list.length; i++) {
+			if (sameKind(list[i]) && wfOrder.indexOf(wfIdOf(list[i].id)) < mine) pos = i + 1;
+		}
+		if (pos < 0) {
+			const fam = list.map((x, i) => [x, i]).filter(([x]) => x.family === e.family);
+			pos = fam.length ? fam[fam.length - 1][1] + 1 : list.length;
+		}
+		list.splice(pos, 0, e);
+	}
+	index.count = list.length;
+	writeFileSync(path, JSON.stringify(index, null, 2), 'utf8');
+	console.log(`MERGED ${entries.length} entries into index.json (${list.length} demos)`);
+}
+
 /** First sentence of a description, for entries with no explicit `summary`. */
 function firstSentence(text) {
 	if (!text) return '';
@@ -2566,6 +2931,7 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 		appConsts.tableProcessMap = await loadTableProcesses();
 
 		const manifest = [...DATASETS]; //make sure not to lose datasets
+		const only = process.env.GEN_ONLY ? new Set(process.env.GEN_ONLY.split(',')) : null;
 		const write = (file, entry) => {
 			writeFileSync(join(OUT_DIR, file), outputCoreAsJson(), 'utf8');
 			manifest.push(entry);
@@ -2578,11 +2944,15 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 		// process / tableProcess registries) stay driven by the single-node
 		// reference demos below.
 		for (const wf of WORKFLOWS) {
+			if (only && !only.has(wf.id)) continue;
 			resetCore();
 			await wf.build();
 			addDemoNote(`workflow-${wf.id}`);
 			prewarmWrapperNames();
-			tidyPlots();
+			if (wf.layoutPlots) {
+				wf.layoutPlots();
+				clearNotesFromPlots();
+			} else tidyPlots();
 			const file = `demo-workflow-${wf.id}.json`;
 
 			// The same demo, minus the analysis: a plain CSV of its source columns, listed under
@@ -2623,6 +2993,11 @@ describe.runIf(process.env.GEN_DEMOS)('generate demo sessions', () => {
 					showcases: wf.showcases
 				})
 			);
+		}
+
+		if (only) {
+			mergeIntoIndex(manifest.filter((e) => !DATASETS.some((d) => d.id === e.id)));
+			return;
 		}
 
 		// --- Plot demos (hand-crafted, richer narrative) ---------------------

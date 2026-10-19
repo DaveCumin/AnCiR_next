@@ -108,7 +108,7 @@ export const OUTPUT_NOTES = {
 	LongToWide:
 		'one per DISTINCT VALUE in categoryIN: <that value>. Only usable when categoryIN is data you supplied or generated — not another analysis’s output, which is still empty.',
 	JoinData:
-		'jointime (every row of A and of B, sorted by time), then one per aValuesIN column: joined_<your A column> (a bValuesIN column with the same name, case and spacing ignored, shares it unless `pairing` says otherwise), then one per other bValuesIN column: joined_<your B column>, then source when sourceColumn is true. Plot or bin each joined_ column against jointime'
+		"with both aTimeIN and bTimeIN: jointime (every row of A and of B, sorted by time); with neither: no time column (A's rows, then B's, each in input order). Then one per aValuesIN column: joined_<your A column> (a bValuesIN column with the same name, case and spacing ignored, shares it unless `pairing` says otherwise), then one per other bValuesIN column: joined_<your B column>, then source when the Source column is on (sourceColumn true; by default on when stacking, off with times). With times, plot or bin each joined_ column against jointime; stacked, use source as the group (x) for GroupComparison or a boxplot"
 };
 
 /**
@@ -139,10 +139,10 @@ export function dynamicOutKeys(name, args, ctx = {}) {
 			return { keys: (args.groups ?? []).map((g) => `group_${g.id}`) };
 		case 'JoinData': {
 			// The value keys depend on the column NAMES (same name = one shared column), so the
-			// normalizer passes getName. `jointime` is the node's fixed template key; the schema
-			// adds it, so it is left out here.
+			// normalizer passes getName. `jointime` is here too, not in the template: it exists
+			// only when a time is wired (stacking A then B has no time column).
 			const nameOf = (id) => ctx.getName?.(id) ?? String(id);
-			return { keys: joinOutKeys(args, nameOf).filter((k) => k !== 'jointime') };
+			return { keys: joinOutKeys(args, nameOf) };
 		}
 		case 'LongToWide': {
 			// One output per DISTINCT VALUE of the category column — the only rule that needs

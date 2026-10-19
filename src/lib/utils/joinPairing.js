@@ -183,9 +183,48 @@ export function joinPlan(args, nameOf, { useBaked = false } = {}) {
 	return { aIds, bIds, pairOf, conflicts, outputs: joinOutputs(aIds, bIds, pairOf, nameOf) };
 }
 
-/** Every out key the node has for these args: the time, each value column, the source. */
+/**
+ * The node's mode, from the time wiring alone (David, 2026-10-19):
+ *   'time'  both time inputs wired: one time column, sorted (utils/joinData.js joinData).
+ *   'stack' neither wired: A's rows in their order, then B's (utils/joinData.js stackData).
+ *   'one'   only one wired: refused ("Wire a time for both datasets, or for neither.").
+ * A time input counts as wired when it holds a column id (a non-negative integer); -1, null
+ * and an absent key are unwired.
+ */
+export function joinMode(args) {
+	const wired = (v) => {
+		const id = v == null || v === '' ? NaN : Number(v); // Number-ok: a column id, never a data cell
+		return Number.isInteger(id) && id >= 0;
+	};
+	const a = wired(args?.aTimeIN);
+	const b = wired(args?.bTimeIN);
+	if (a && b) return 'time';
+	return a || b ? 'one' : 'stack';
+}
+
+/**
+ * Is the Source output on? `sourceColumn` true or false is the user's choice and always wins;
+ * anything else (null, the default, or absent) follows the mode: ON when stacking (the Source
+ * column is then the group factor), OFF when joining by time. Sessions saved by v82.31 store
+ * false, which reads as before.
+ */
+export function joinSourceOn(args) {
+	const v = args?.sourceColumn;
+	if (typeof v === 'boolean') return v;
+	return joinMode(args) === 'stack';
+}
+
+/**
+ * Every out key the node has for these args: the time, each value column, the source.
+ *  - `jointime` whenever a time is wired (time mode, and the one-time refusal, so a time
+ *    column wired downstream survives while the user rewires); never when stacking, where
+ *    there is no time.
+ *  - `source` when joinSourceOn, once anything is wired (a fresh node has no outputs).
+ */
 export function joinOutKeys(args, nameOf, opts) {
-	const keys = ['jointime', ...joinPlan(args, nameOf, opts).outputs.map((o) => o.key)];
-	if (args?.sourceColumn) keys.push('source');
+	const mode = joinMode(args);
+	const values = joinPlan(args, nameOf, opts).outputs.map((o) => o.key);
+	const keys = mode === 'stack' ? values : ['jointime', ...values];
+	if (joinSourceOn(args) && keys.length) keys.push('source');
 	return keys;
 }

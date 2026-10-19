@@ -6322,11 +6322,68 @@ join_time_kind <- function(type) {
   NULL
 }
 
-join_too_large_warning <- function(rows, max_rows = MAX_JOIN_ROWS) {
+join_too_large_warning <- function(rows, max_rows = MAX_JOIN_ROWS, stack = FALSE) {
   if (!(rows > max_rows)) return(NULL)
   paste0("Nothing was joined: A and B together have ", .thousands(rows),
-         " rows with a time, more than the limit of ", .thousands(max_rows),
-         ". Bin or filter one of them first.")
+         if (stack) " rows" else " rows with a time", ", more than the limit of ",
+         .thousands(max_rows), ". Bin or filter one of them first.")
+}
+
+JOIN_ONE_TIME_ERROR <- "Wire a time for both datasets, or for neither."
+
+.join_wired <- function(v) {
+  if (is.null(v) || length(v) != 1 || is.logical(v)) return(FALSE)
+  if (is.character(v) && !nzchar(v)) return(FALSE)
+  n <- .js_number(v)
+  is.finite(n) && n == floor(n) && n >= 0
+}
+
+# joinPairing.js joinMode: "time" (both times wired), "stack" (neither) or "one".
+join_mode <- function(args) {
+  a <- .join_wired(args$aTimeIN); b <- .join_wired(args$bTimeIN)
+  if (a && b) return("time")
+  if (a || b) "one" else "stack"
+}
+
+# joinPairing.js joinSourceOn: a stored TRUE/FALSE wins; else on when stacking.
+join_source_on <- function(args) {
+  v <- args$sourceColumn
+  if (is.logical(v) && length(v) == 1 && !is.na(v)) return(v)
+  identical(join_mode(args), "stack")
+}
+
+# joinData.js stackData: A's rows in their order, then B's (no time, no sort). A dataset has
+# as many rows as its longest value column.
+stack_data <- function(a_ids, b_ids, data_of, type_of, outputs, source_labels = c("A", "B"),
+                       max_rows = MAX_JOIN_ROWS) {
+  longest <- function(ids) {
+    if (!length(ids)) return(0L)
+    max(vapply(ids, function(id) length(data_of[[as.character(id)]]), integer(1)))
+  }
+  na <- longest(a_ids); nb <- longest(b_ids); rows <- na + nb
+  counts <- list(rows = rows, fromA = na, fromB = nb, stacked = TRUE)
+  too_large <- join_too_large_warning(rows, max_rows, stack = TRUE)
+  if (!is.null(too_large)) return(list(ok = FALSE, error = too_large, counts = counts))
+  cell <- function(id, row) {
+    d <- data_of[[as.character(id)]]
+    if (is.null(d) || row > length(d)) return(NULL)
+    v <- d[[row]]
+    if (.cell_missing_rule(type_of[[as.character(id)]])(v)) NULL else v
+  }
+  source <- c(rep(source_labels[1], na), rep(source_labels[2], nb))
+  columns <- lapply(outputs, function(o) vector("list", rows))
+  names(columns) <- vapply(outputs, function(o) o$key, character(1))
+  for (r in seq_len(rows)) {
+    from_a <- r <= na
+    row <- if (from_a) r else r - na
+    for (o in outputs) {
+      id <- if (from_a) o$aId else o$bId
+      v <- if (!is.null(id)) cell(id, row) else NULL
+      if (!is.null(v)) columns[[o$key]][[r]] <- v
+    }
+  }
+  list(ok = rows > 0, error = NULL, source = source, columns = columns, counts = counts,
+       rareShared = FALSE)
 }
 
 .join_shift <- function(shift_b, kind) {
@@ -6425,16 +6482,21 @@ tp_joindata <- function(args, env) {
     }
     FALSE
   }
-  a_t <- if (is.null(args$aTimeIN)) -1 else args$aTimeIN
-  b_t <- if (is.null(args$bTimeIN)) -1 else args$bTimeIN
-  if (a_t == -1 || b_t == -1) return(FALSE)
-  col_a <- env$cols[[as.character(a_t)]]; col_b <- env$cols[[as.character(b_t)]]
-  if (is.null(col_a) || is.null(col_b)) return(clear())
-  ka <- join_time_kind(col_a$type); kb <- join_time_kind(col_b$type)
-  if (is.null(ka) || is.null(kb) || ka != kb) {
-    message("WARNING: Join Data: time A is ", col_a$type, " and time B is ", col_b$type,
-            "; both must be times or both numbers.")
+  mode <- join_mode(args)
+  if (mode == "one") {
+    message("WARNING: Join Data: ", JOIN_ONE_TIME_ERROR)
     return(clear())
+  }
+  if (mode == "time") {
+    a_t <- as.integer(.js_number(args$aTimeIN)); b_t <- as.integer(.js_number(args$bTimeIN))
+    col_a <- env$cols[[as.character(a_t)]]; col_b <- env$cols[[as.character(b_t)]]
+    if (is.null(col_a) || is.null(col_b)) return(clear())
+    ka <- join_time_kind(col_a$type); kb <- join_time_kind(col_b$type)
+    if (is.null(ka) || is.null(kb) || ka != kb) {
+      message("WARNING: Join Data: time A is ", col_a$type, " and time B is ", col_b$type,
+              "; both must be times or both numbers.")
+      return(clear())
+    }
   }
   a_ids <- .join_ids(args$aValuesIN); b_ids <- .join_ids(args$bValuesIN)
   if (any(a_ids %in% b_ids)) return(clear())
@@ -6459,16 +6521,22 @@ tp_joindata <- function(args, env) {
     data_of[[as.character(id)]] <- if (is.null(c)) list() else as.list(col_data(c, env$cols, env$raw_data))
     type_of[[as.character(id)]] <- if (is.null(c) || is.null(c$type)) "number" else c$type
   }
-  res <- join_data(col_data(col_a, env$cols, env$raw_data), col_data(col_b, env$cols, env$raw_data),
-                   ka, data_of, type_of, outputs, args$shiftB, labels)
+  res <- if (mode == "stack") {
+    stack_data(a_ids, b_ids, data_of, type_of, outputs, labels)
+  } else {
+    join_data(col_data(col_a, env$cols, env$raw_data), col_data(col_b, env$cols, env$raw_data),
+              ka, data_of, type_of, outputs, args$shiftB, labels)
+  }
   if (!is.null(res$error)) {
     message("WARNING: Join Data: ", res$error)
     return(clear())
   }
-  t_id <- out_id(args, "jointime")
-  set_col(env, env$cols, t_id, res$time, type = if (ka == "time") "time" else "number")
-  if (ka == "time" && !is.null(env$cols[[as.character(t_id)]]))
-    env$cols[[as.character(t_id)]]$time_format <- NULL
+  if (mode == "time") {
+    t_id <- out_id(args, "jointime")
+    set_col(env, env$cols, t_id, res$time, type = if (ka == "time") "time" else "number")
+    if (ka == "time" && !is.null(env$cols[[as.character(t_id)]]))
+      env$cols[[as.character(t_id)]]$time_format <- NULL
+  }
   for (o in outputs) {
     oid <- out_id(args, o$key)
     src <- env$cols[[as.character(if (!is.null(o$aId)) o$aId else o$bId)]]
@@ -6477,7 +6545,7 @@ tp_joindata <- function(args, env) {
     if (typ == "time" && !is.null(env$cols[[as.character(oid)]]))
       env$cols[[as.character(oid)]]$time_format <- NULL
   }
-  if (isTRUE(args$sourceColumn))
+  if (join_source_on(args) && (mode == "time" || length(outputs) > 0))
     set_col(env, env$cols, out_id(args, "source"), res$source, type = "category")
   isTRUE(res$ok)
 }

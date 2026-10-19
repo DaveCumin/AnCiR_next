@@ -2,6 +2,8 @@
 import { describe, it, expect } from 'vitest';
 import {
 	joinData,
+	stackData,
+	ONE_TIME_ERROR,
 	timeKind,
 	timeKindProblem,
 	joinTooLargeWarning,
@@ -353,5 +355,78 @@ describe('joinSummary', () => {
 		).toBe(
 			'1 row: 1 from A, 0 from B; 0 times appear in both. A row with no time (1 in B) was left out.'
 		);
+	});
+});
+
+describe('stackData (no times: A then B)', () => {
+	const outs = [
+		{ key: 'joined_1', aId: 1, bId: 3 },
+		{ key: 'joined_2', aId: 2, bId: null },
+		{ key: 'joined_4', aId: null, bId: 4 }
+	];
+	it("keeps A's rows in input order, then B's, values NOT sorted", () => {
+		const res = stackData({
+			aIds: [1, 2],
+			bIds: [3, 4],
+			dataOf: { 1: [5, 1, 3], 2: [9, 8, 7], 3: [0.5, 10], 4: ['p', 'q'] },
+			typeOf: { 4: 'category' },
+			outputs: outs
+		});
+		expect(res.ok).toBe(true);
+		expect(res.columns.joined_1).toEqual([5, 1, 3, 0.5, 10]);
+		expect(res.columns.joined_2).toEqual([9, 8, 7, null, null]);
+		expect(res.columns.joined_4).toEqual([null, null, null, 'p', 'q']);
+		expect(res.source).toEqual(['A', 'A', 'A', 'B', 'B']);
+		expect(res.time).toBeUndefined();
+		expect(res.counts).toEqual({ rows: 5, fromA: 3, fromB: 2, stacked: true });
+		expect(joinSummary(res.counts)).toBe('5 rows: 3 from A, 2 from B.');
+	});
+	it("a dataset has its longest column's rows; shorter columns and missing cells are blank, never dropped", () => {
+		const res = stackData({
+			aIds: [1, 2],
+			bIds: [3],
+			dataOf: { 1: [1, null, 3], 2: [NaN], 3: ['', 7] },
+			outputs: outs.slice(0, 2),
+			sourceLabels: ['g1', 'g2']
+		});
+		expect(res.columns.joined_1).toEqual([1, null, 3, null, 7]);
+		expect(res.columns.joined_2).toEqual([null, null, null, null, null]);
+		expect(res.source).toEqual(['g1', 'g1', 'g1', 'g2', 'g2']);
+	});
+	it('an empty A or an empty B stacks the other alone; single rows work', () => {
+		const onlyB = stackData({
+			aIds: [],
+			bIds: [3],
+			dataOf: { 3: [4] },
+			outputs: [{ key: 'joined_3', aId: null, bId: 3 }]
+		});
+		expect(onlyB.columns.joined_3).toEqual([4]);
+		expect(onlyB.source).toEqual(['B']);
+		const emptyB = stackData({
+			aIds: [1],
+			bIds: [3],
+			dataOf: { 1: [2.5], 3: [] },
+			outputs: [{ key: 'joined_1', aId: 1, bId: 3 }]
+		});
+		expect(emptyB.columns.joined_1).toEqual([2.5]);
+		expect(joinSummary(emptyB.counts)).toBe('1 row: 1 from A, 0 from B.');
+		const none = stackData({ aIds: [], bIds: [], outputs: [] });
+		expect(none.ok).toBe(false);
+	});
+	it('refuses more rows than the limit, without "with a time"', () => {
+		const res = stackData({
+			aIds: [1],
+			bIds: [3],
+			dataOf: { 1: [1, 2], 3: [3] },
+			outputs: [{ key: 'joined_1', aId: 1, bId: 3 }],
+			maxRows: 2
+		});
+		expect(res.ok).toBe(false);
+		expect(res.error).toBe(
+			'Nothing was joined: A and B together have 3 rows, more than the limit of 2. Bin or filter one of them first.'
+		);
+	});
+	it('the one-time refusal wording', () => {
+		expect(ONE_TIME_ERROR).toBe('Wire a time for both datasets, or for neither.');
 	});
 });

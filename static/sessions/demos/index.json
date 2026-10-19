@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 112,
+  "count": 114,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -375,6 +375,24 @@
       "keywords": "workflow: masking versus true entrainment two records that look identical while the light is on, and diverge the moment it goes off. both animals appear to follow a 6 h shift of the light cycle. released into constant darkness, the entrained animal keeps the new phase because its clock actually moved, while the masked animal reverts immediately to its original phase because light was only suppressing its behaviour. this is why a shift under a light cycle is not by itself evidence of entrainment: the release is the test. workflows actogram"
     },
     {
+      "id": "workflow-join-data",
+      "name": "Workflow: joining and stacking datasets",
+      "family": "Workflows",
+      "description": "Three uses of Join Data. A weather station (hourly) and a field logger (every 15 min) on one time column: every row kept, sorted by time, same-named columns sharing one column, the rest blank on the other dataset's rows, and Bin Data averaging each hour. A hive temperature that shares a name but not a meaning, set to its own column. And, with no time wired, two groups' per-animal results stacked one after the other, with the Source column as the group for Group Comparison and a boxplot.",
+      "summary": "Put two datasets in one set of columns: by time, or stacked.",
+      "group": "General statistics",
+      "url": "sessions/demos/demo-workflow-join-data.json",
+      "kind": "workflow",
+      "showcases": [
+        "JoinData",
+        "BinnedData",
+        "GroupComparison",
+        "tableplot",
+        "boxplot"
+      ],
+      "keywords": "workflow: joining and stacking datasets three uses of join data. a weather station (hourly) and a field logger (every 15 min) on one time column: every row kept, sorted by time, same-named columns sharing one column, the rest blank on the other dataset's rows, and bin data averaging each hour. a hive temperature that shares a name but not a meaning, set to its own column. and, with no time wired, two groups' per-animal results stacked one after the other, with the source column as the group for group comparison and a boxplot. workflows joindata binneddata groupcomparison tableplot boxplot"
+    },
+    {
       "id": "dataset-testdata",
       "name": "Test data",
       "family": "Sources",
@@ -671,6 +689,18 @@
       "kind": "dataset",
       "showcases": [],
       "keywords": "masking versus true entrainment light driving behaviour directly, versus a clock that has shifted. data only: 3 columns × 672 rows, no analysis. sources"
+    },
+    {
+      "id": "dataset-workflow-join-data",
+      "name": "Joining and stacking datasets",
+      "family": "Sources",
+      "description": "Put two datasets in one set of columns: by time, or stacked. Data only: 14 columns × 192 rows, no analysis.",
+      "summary": "Put two datasets in one set of columns: by time, or stacked.",
+      "group": "General statistics",
+      "url": "sessions/demos/joining-and-stacking-datasets.csv",
+      "kind": "dataset",
+      "showcases": [],
+      "keywords": "joining and stacking datasets put two datasets in one set of columns: by time, or stacked. data only: 14 columns × 192 rows, no analysis. sources"
     },
     {
       "id": "tp-blankcolumn",

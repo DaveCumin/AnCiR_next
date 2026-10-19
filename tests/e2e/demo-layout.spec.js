@@ -11,7 +11,9 @@ const DEMOS = [
 	'demo-cwt-period-change.json',
 	'demo-pairsplot-matrix.json',
 	'demo-workflow-phase-groups.json',
-	'demo-workflow-rest-activity.json'
+	'demo-workflow-rest-activity.json',
+	// Three bands of groups, joins and tall tables, each under its own note.
+	'demo-workflow-join-data.json'
 ];
 
 /** Pairs of top-level canvas nodes (not groups) whose boxes intersect. */

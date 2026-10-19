@@ -4,6 +4,7 @@
 	// @ts-nocheck
 	import { mean, sampleVariance, sampleStd, median } from '$lib/utils/sampleStats.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
+	import { columnDisplayName } from '$lib/core/columnLabels.js';
 	import { isInvalidValue } from '$lib/utils/stats.js';
 	import { isMissingCategory } from '$lib/utils/chisquare.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
@@ -16,6 +17,12 @@
 	import tQuantile from '@stdlib/stats-base-dists-t-quantile';
 
 	const displayName = 'Compare groups (stats)';
+
+	/**
+	 * The name a column is SHOWN by (a node output's label, e.g. Join Data's "amplitude", not its
+	 * stored `joined_21_3`), for the stats table, the warnings and the export.
+	 */
+	const shownName = (col) => columnDisplayName(col) || col.name;
 	const defaults = new Map([
 		['xIN', { val: -1 }],
 		['yIN', { val: [] }],
@@ -101,7 +108,7 @@
 			const values = presentNumbers(yCol.getData());
 			if (!values.length) continue;
 			groups.push({
-				name: yCol.name || String(yId),
+				name: shownName(yCol) || String(yId),
 				values,
 				n: values.length,
 				mean: mean(values),
@@ -700,7 +707,7 @@
 			if (!chosen) {
 				result.comparisons[yId] = {
 					valid: false,
-					columnName: yCol.name,
+					columnName: shownName(yCol),
 					groups,
 					warnings: [],
 					reason:
@@ -717,14 +724,14 @@
 				result.comparisons[yId] = {
 					valid: tRes.valid,
 					test: 'Welch t-test',
-					columnName: yCol.name,
+					columnName: shownName(yCol),
 					groupCount: groups.length,
 					nTotal: groups[0].n + groups[1].n,
 					groups,
 					warnings,
 					...tRes
 				};
-				result.warnings.push(...warnings.map((w) => `${yCol.name}: ${w}`));
+				result.warnings.push(...warnings.map((w) => `${shownName(yCol)}: ${w}`));
 				if (tRes.valid) anyValid = true;
 				continue;
 			}
@@ -739,7 +746,7 @@
 				result.comparisons[yId] = {
 					valid: aRes.valid,
 					test: 'One-way ANOVA',
-					columnName: yCol.name,
+					columnName: shownName(yCol),
 					groupCount: groups.length,
 					nTotal: groups.reduce((acc, g) => acc + g.n, 0),
 					groups,
@@ -749,7 +756,7 @@
 						'Tukey-Kramer post-hoc (q statistic; adjusted p from the studentized range)',
 					...aRes
 				};
-				result.warnings.push(...warnings.map((w) => `${yCol.name}: ${w}`));
+				result.warnings.push(...warnings.map((w) => `${shownName(yCol)}: ${w}`));
 				if (aRes.valid) anyValid = true;
 				continue;
 			}
@@ -760,14 +767,14 @@
 				result.comparisons[yId] = {
 					valid: mRes.valid,
 					test: 'Mann-Whitney U',
-					columnName: yCol.name,
+					columnName: shownName(yCol),
 					groupCount: groups.length,
 					nTotal: groups[0].n + groups[1].n,
 					groups,
 					warnings,
 					...mRes
 				};
-				result.warnings.push(...warnings.map((w) => `${yCol.name}: ${w}`));
+				result.warnings.push(...warnings.map((w) => `${shownName(yCol)}: ${w}`));
 				if (mRes.valid) anyValid = true;
 				continue;
 			}
@@ -779,7 +786,7 @@
 			result.comparisons[yId] = {
 				valid: kRes.valid,
 				test: 'Kruskal-Wallis',
-				columnName: yCol.name,
+				columnName: shownName(yCol),
 				groupCount: groups.length,
 				nTotal: groups.reduce((acc, g) => acc + g.n, 0),
 				groups,
@@ -788,7 +795,7 @@
 				postHocLabel: 'Pairwise Mann-Whitney (Holm adjusted p-values)',
 				...kRes
 			};
-			result.warnings.push(...warnings.map((w) => `${yCol.name}: ${w}`));
+			result.warnings.push(...warnings.map((w) => `${shownName(yCol)}: ${w}`));
 			if (kRes.valid) anyValid = true;
 		}
 

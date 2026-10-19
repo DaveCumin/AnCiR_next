@@ -450,6 +450,17 @@
 			126.740600204
 		]
 	},
+	"demo-workflow-join-data.json": {
+		"GroupComparison.effectSize": [
+			4.904977946
+		],
+		"GroupComparison.pvalue": [
+			2.92e-7
+		],
+		"GroupComparison.statistic": [
+			9.809955892
+		]
+	},
 	"demo-workflow-non24-blind.json": {
 		"RhythmicityAnalysis.stat_peak_period": [
 			24.5

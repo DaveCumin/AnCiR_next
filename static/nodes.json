@@ -1,6 +1,6 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.31",
+  "generatedFromVersion": "β.82.32",
   "count": 62,
   "nodes": [
     {
@@ -497,7 +497,7 @@
       "inputs": [],
       "params": [],
       "outputs": [],
-      "demo": "sessions/demos/demo-table-columns.json"
+      "demo": "sessions/demos/demo-workflow-join-data.json"
     },
     {
       "id": "Add",
@@ -1009,7 +1009,7 @@
           "dynamicPrefix": "binnedy_"
         }
       ],
-      "demo": "sessions/demos/demo-tp-binneddata.json"
+      "demo": "sessions/demos/demo-workflow-join-data.json"
     },
     {
       "id": "BlankColumn",
@@ -2496,7 +2496,7 @@
         },
         {
           "name": "sourceColumn",
-          "default": false
+          "default": null
         }
       ],
       "outputs": [
@@ -2517,7 +2517,7 @@
           "cardinality": "one"
         }
       ],
-      "demo": "sessions/demos/demo-tp-joindata.json"
+      "demo": "sessions/demos/demo-workflow-join-data.json"
     },
     {
       "id": "LogisticRegression",

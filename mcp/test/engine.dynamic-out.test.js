@@ -68,6 +68,17 @@ describe('dynamic-output processes auto-seed their out keys', () => {
 		expect(res.outputs.map((o) => o.key).sort()).toEqual(['joined_1', 'joined_4', 'jointime']);
 	});
 
+	it('JoinData with no times stacks A then B, with a source column by default', async () => {
+		const s = new AncirSession('dyn-join-stack');
+		s.importColumns([
+			{ name: 'amplitude', values: [3, 1, 2] },
+			{ name: 'Amplitude', values: [9, 8] }
+		]);
+		const res = await s.runTableProcess('JoinData', { aValuesIN: [0], bValuesIN: [1] });
+		expect(res.valid).toBe(true);
+		expect(res.outputs.map((o) => o.key).sort()).toEqual(['joined_0', 'source']);
+	});
+
 	it('CollectColumns — per-input col_<id> keys', async () => {
 		const s = new AncirSession('dyn-collect');
 		s.importColumns([

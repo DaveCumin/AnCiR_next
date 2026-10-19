@@ -24,6 +24,8 @@
  * Zone-less text times parse as UTC (utils/time/TimeUtils.js parseTimeStrict), so a wall clock
  * has no daylight-saving jump inside the join: the node only compares the stored ms.
  *
+ * STACK MODE (neither time wired): stackData, A's rows then B's, each in input order.
+ *
  * Pure; the node (tableProcesses/JoinData.svelte) supplies the columns. No worker: a sort of
  * n + m numbers is milliseconds at the sizes the gate allows, so there is no worker path and
  * no worker size gate to cross.
@@ -68,11 +70,18 @@ export function timeKindProblem(typeA, typeB) {
 	return null;
 }
 
-/** The refusal for a join of `rows` rows, or null when it fits. */
-export function joinTooLargeWarning(rows, maxRows = MAX_JOIN_ROWS) {
+/** The refusal when only one of the two time inputs is wired. */
+export const ONE_TIME_ERROR = 'Wire a time for both datasets, or for neither.';
+
+/**
+ * The refusal for a join of `rows` rows, or null when it fits. `stack`: the rows are stacked
+ * (no time), so the wording does not say "with a time".
+ */
+export function joinTooLargeWarning(rows, maxRows = MAX_JOIN_ROWS, { stack = false } = {}) {
 	if (!(rows > maxRows)) return null;
 	return (
-		`Nothing was joined: A and B together have ${rows.toLocaleString('en-US')} rows with a time, ` +
+		`Nothing was joined: A and B together have ${rows.toLocaleString('en-US')} rows` +
+		`${stack ? '' : ' with a time'}, ` +
 		`more than the limit of ${maxRows.toLocaleString('en-US')}. Bin or filter one of them first.`
 	);
 }
@@ -191,11 +200,66 @@ export function joinData({
 	return { ok: rows > 0, time, source, columns, counts, rareShared };
 }
 
-/** The panel's summary line, e.g. "580 rows: 290 from A, 290 from B; 30 times appear in both". */
+/**
+ * Stack A and B: A's rows in their own order, then B's rows in theirs (no time, no sort, no
+ * shift; David, 2026-10-19). For results that are not on a time axis, e.g. the amplitudes of
+ * two groups' Cosinor fits, stacked with the Source column as the group factor.
+ *
+ * A dataset has as many rows as its longest value column (a shorter column reads blank past
+ * its end); no row is dropped, because there is no time to be missing. Pairing, blanks on the
+ * other dataset's rows and the missing-cell rule are the same as joinData's.
+ * @param {object} p
+ * @param {number[]} p.aIds  A's value column ids
+ * @param {number[]} p.bIds
+ * @param {Record<string, any[]>} p.dataOf
+ * @param {Record<string, string>} [p.typeOf]
+ * @param {{key:string, aId:number|null, bId:number|null}[]} p.outputs
+ * @param {[string, string]} [p.sourceLabels]
+ * @param {number} [p.maxRows]
+ */
+export function stackData({
+	aIds = [],
+	bIds = [],
+	dataOf = {},
+	typeOf = {},
+	outputs = [],
+	sourceLabels = ['A', 'B'],
+	maxRows = MAX_JOIN_ROWS
+}) {
+	const longest = (ids) => ids.reduce((m, id) => Math.max(m, dataOf[id]?.length ?? 0), 0);
+	const nA = longest(aIds);
+	const nB = longest(bIds);
+	const rows = nA + nB;
+	const counts = { rows, fromA: nA, fromB: nB, stacked: true };
+	const tooLarge = joinTooLargeWarning(rows, maxRows, { stack: true });
+	if (tooLarge) return { ok: false, error: tooLarge, counts };
+
+	const source = new Array(rows);
+	const columns = {};
+	for (const o of outputs) columns[o.key] = new Array(rows);
+	for (let r = 0; r < rows; r++) {
+		const fromA = r < nA;
+		const row = fromA ? r : r - nA;
+		source[r] = sourceLabels[fromA ? 0 : 1];
+		for (const o of outputs) {
+			const id = fromA ? o.aId : o.bId;
+			columns[o.key][r] = id != null ? cell(dataOf[id], row, typeOf[id]) : null;
+		}
+	}
+	return { ok: rows > 0, source, columns, counts, rareShared: false };
+}
+
+/**
+ * The panel's summary line, e.g. "580 rows: 290 from A, 290 from B; 30 times appear in both",
+ * or, stacked, "12 rows: 6 from A, 6 from B."
+ */
 export function joinSummary(counts) {
 	if (!counts) return '';
 	const n = (v) => v.toLocaleString('en-US');
 	const plural = (v, one, many) => `${n(v)} ${v === 1 ? one : many}`;
+	if (counts.stacked) {
+		return `${plural(counts.rows, 'row', 'rows')}: ${n(counts.fromA)} from A, ${n(counts.fromB)} from B.`;
+	}
 	let s =
 		`${plural(counts.rows, 'row', 'rows')}: ${n(counts.fromA)} from A, ${n(counts.fromB)} from B; ` +
 		(counts.sharedTimes === 1

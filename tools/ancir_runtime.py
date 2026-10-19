@@ -8434,12 +8434,69 @@ def join_time_kind(col_type):
     return None
 
 
-def join_too_large_warning(rows, max_rows=MAX_JOIN_ROWS):
+def join_too_large_warning(rows, max_rows=MAX_JOIN_ROWS, stack=False):
     """joinData.js joinTooLargeWarning."""
     if not rows > max_rows:
         return None
-    return (f'Nothing was joined: A and B together have {rows:,} rows with a time, more than '
+    with_time = '' if stack else ' with a time'
+    return (f'Nothing was joined: A and B together have {rows:,} rows{with_time}, more than '
             f'the limit of {max_rows:,}. Bin or filter one of them first.')
+
+
+JOIN_ONE_TIME_ERROR = 'Wire a time for both datasets, or for neither.'
+
+
+def _join_wired(v):
+    if v is None or v == '' or isinstance(v, bool):
+        return False
+    n = _js_number(v)
+    return math.isfinite(n) and n == int(n) and n >= 0
+
+
+def join_mode(args):
+    """joinPairing.js joinMode: 'time' (both times wired), 'stack' (neither) or 'one'."""
+    a, b = _join_wired(args.get('aTimeIN')), _join_wired(args.get('bTimeIN'))
+    if a and b:
+        return 'time'
+    return 'one' if (a or b) else 'stack'
+
+
+def join_source_on(args):
+    """joinPairing.js joinSourceOn: a stored true/false wins; else on when stacking."""
+    v = args.get('sourceColumn')
+    if isinstance(v, bool):
+        return v
+    return join_mode(args) == 'stack'
+
+
+def stack_data(a_ids, b_ids, data_of, type_of, outputs, source_labels=('A', 'B'),
+               max_rows=MAX_JOIN_ROWS):
+    """joinData.js stackData: A's rows in their order, then B's (no time, no sort). A dataset
+    has as many rows as its longest value column."""
+    n_a = max([len(data_of.get(i) or []) for i in a_ids] or [0])
+    n_b = max([len(data_of.get(i) or []) for i in b_ids] or [0])
+    rows = n_a + n_b
+    counts = {'rows': rows, 'fromA': n_a, 'fromB': n_b, 'stacked': True}
+    too_large = join_too_large_warning(rows, max_rows, stack=True)
+    if too_large:
+        return {'ok': False, 'error': too_large, 'counts': counts}
+
+    def cell(col_id, row):
+        data = data_of.get(col_id) or []
+        if row >= len(data):
+            return None
+        v = data[row]
+        missing = _is_missing_category(v) if type_of.get(col_id) == 'category' else _js_invalid(v)
+        return None if missing else v
+
+    source = [source_labels[0]] * n_a + [source_labels[1]] * n_b
+    columns = {}
+    for o in outputs:
+        a = [cell(o['aId'], r) if o['aId'] is not None else None for r in range(n_a)]
+        b = [cell(o['bId'], r) if o['bId'] is not None else None for r in range(n_b)]
+        columns[o['key']] = a + b
+    return {'ok': rows > 0, 'error': None, 'source': source, 'columns': columns,
+            'counts': counts, 'rareShared': False}
 
 
 def _join_shift(shift_b, kind):
@@ -8539,17 +8596,20 @@ def tp_joindata(args, cols, raw_data, _sv):
                 _set_col(raw_data, cols, oid, [])
         return False
 
-    a_t, b_t = args.get('aTimeIN', -1), args.get('bTimeIN', -1)
-    if a_t is None or b_t is None or a_t == -1 or b_t == -1:
-        return False
-    col_a, col_b = cols.get(a_t), cols.get(b_t)
-    if col_a is None or col_b is None:
+    mode = join_mode(args)
+    if mode == 'one':
+        print(f'WARNING: Join Data: {JOIN_ONE_TIME_ERROR}', file=sys.stderr)
         return clear()
-    kind_a, kind_b = join_time_kind(col_a.type), join_time_kind(col_b.type)
-    if kind_a is None or kind_b is None or kind_a != kind_b:
-        print(f'WARNING: Join Data: time A is {col_a.type} and time B is {col_b.type}; '
-              'both must be times or both numbers.', file=sys.stderr)
-        return clear()
+    if mode == 'time':
+        a_t, b_t = int(_js_number(args.get('aTimeIN'))), int(_js_number(args.get('bTimeIN')))
+        col_a, col_b = cols.get(a_t), cols.get(b_t)
+        if col_a is None or col_b is None:
+            return clear()
+        kind_a, kind_b = join_time_kind(col_a.type), join_time_kind(col_b.type)
+        if kind_a is None or kind_b is None or kind_a != kind_b:
+            print(f'WARNING: Join Data: time A is {col_a.type} and time B is {col_b.type}; '
+                  'both must be times or both numbers.', file=sys.stderr)
+            return clear()
     a_ids, b_ids = _join_ids(args.get('aValuesIN')), _join_ids(args.get('bValuesIN'))
     if any(a in b_ids for a in a_ids):
         return clear()
@@ -8577,16 +8637,21 @@ def tp_joindata(args, cols, raw_data, _sv):
         c = cols.get(cid)
         data_of[cid] = list(c.get_data()) if c is not None else []
         type_of[cid] = c.type if c is not None else 'number'
-    res = join_data(col_a.get_data(), col_b.get_data(), kind_a, data_of, type_of, outputs,
-                    args.get('shiftB', 0), labels)
+    if mode == 'stack':
+        res = stack_data(a_ids, b_ids, data_of, type_of, outputs, labels)
+    else:
+        res = join_data(col_a.get_data(), col_b.get_data(), kind_a, data_of, type_of, outputs,
+                        args.get('shiftB', 0), labels)
     if res['error']:
         print(f"WARNING: Join Data: {res['error']}", file=sys.stderr)
         return clear()
 
-    t_id = _out_id(args, 'jointime')
-    _set_col(raw_data, cols, t_id, res['time'], type_='time' if kind_a == 'time' else 'number')
-    if t_id in cols and kind_a == 'time':
-        cols[t_id].time_format = None
+    if mode == 'time':
+        t_id = _out_id(args, 'jointime')
+        _set_col(raw_data, cols, t_id, res['time'],
+                 type_='time' if kind_a == 'time' else 'number')
+        if t_id in cols and kind_a == 'time':
+            cols[t_id].time_format = None
     for o in outputs:
         oid = _out_id(args, o['key'])
         src = cols.get(o['aId'] if o['aId'] is not None else o['bId'])
@@ -8594,7 +8659,7 @@ def tp_joindata(args, cols, raw_data, _sv):
         _set_col(raw_data, cols, oid, res['columns'][o['key']], type_=typ)
         if oid in cols and typ == 'time':
             cols[oid].time_format = None
-    if args.get('sourceColumn'):
+    if join_source_on(args) and (mode == 'time' or outputs):
         _set_col(raw_data, cols, _out_id(args, 'source'), res['source'], type_='category')
     return res['ok']
 

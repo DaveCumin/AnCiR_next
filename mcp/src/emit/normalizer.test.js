@@ -1587,3 +1587,22 @@ test('free-period fits: 1..30 h on a time x unless a range is named', () => {
 	assert.deepEqual([cos[2].args.minPeriod, cos[2].args.maxPeriod], [1, 40]);
 	assert.deepEqual([cos[3].args.minPeriod, cos[3].args.maxPeriod], [1, 48]);
 });
+
+test('JoinData: the time inputs are optional; a draft without them stacks (no jointime)', () => {
+	const { session, errors } = normalizeSession({
+		columns: [
+			{ name: 'amp1', values: [3, 2.5] },
+			{ name: 'amp2', values: [1, 1.5, 2] }
+		],
+		analyses: [
+			{
+				name: 'JoinData',
+				args: { aValuesIN: ['amp1'], bValuesIN: ['amp2'] }
+			}
+		]
+	});
+	assert.equal(errors.length, 0, errors.join('; '));
+	const join = findTP(session, 'JoinData');
+	assert.equal(join.args.sourceColumn, null);
+	assert.deepEqual(Object.keys(join.args.out).sort(), ['joined_0', 'joined_1', 'source']);
+});

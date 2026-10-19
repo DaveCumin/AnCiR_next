@@ -6,7 +6,9 @@ import {
 	joinOutputs,
 	joinPlan,
 	joinOutKeys,
-	joinValueIds
+	joinValueIds,
+	joinMode,
+	joinSourceOn
 } from './joinPairing.js';
 
 const namesOf = (names) => (id) => names[id];
@@ -133,7 +135,7 @@ describe('joinPlan / joinOutKeys', () => {
 		});
 	});
 	it('lists the time key, every value key and the source when asked for', () => {
-		const args = { aValuesIN: [1, 2], bValuesIN: [11, 12], pairing: {} };
+		const args = { aTimeIN: 7, bTimeIN: 8, aValuesIN: [1, 2], bValuesIN: [11, 12], pairing: {} };
 		expect(joinOutKeys(args, n)).toEqual(['jointime', 'joined_1', 'joined_2', 'joined_12']);
 		expect(joinOutKeys({ ...args, sourceColumn: true }, n)).toContain('source');
 	});
@@ -145,5 +147,43 @@ describe('joinPlan / joinOutKeys', () => {
 		};
 		expect(joinPlan(args, n, { useBaked: true }).pairOf).toEqual({ 12: 2 });
 		expect(joinPlan(args, n).pairOf).toEqual({ 11: 1 });
+	});
+	it('stacking (no times) has no time key and the source by default', () => {
+		const args = { aTimeIN: -1, bTimeIN: -1, aValuesIN: [1, 2], bValuesIN: [11, 12] };
+		expect(joinOutKeys(args, n)).toEqual(['joined_1', 'joined_2', 'joined_12', 'source']);
+		expect(joinOutKeys({ ...args, sourceColumn: false }, n)).toEqual([
+			'joined_1',
+			'joined_2',
+			'joined_12'
+		]);
+	});
+	it('one time wired keeps the time key (so a downstream wire survives a rewire)', () => {
+		const args = { aTimeIN: 7, bTimeIN: -1, aValuesIN: [1], bValuesIN: [] };
+		expect(joinOutKeys(args, n)).toEqual(['jointime', 'joined_1']);
+	});
+	it('a fresh node (nothing wired) has no outputs, not even the default Source', () => {
+		expect(joinOutKeys({ aTimeIN: -1, bTimeIN: -1, aValuesIN: [], bValuesIN: [] }, n)).toEqual([]);
+	});
+});
+
+describe('joinMode / joinSourceOn', () => {
+	it('the mode follows the time wiring', () => {
+		expect(joinMode({ aTimeIN: 0, bTimeIN: 3 })).toBe('time');
+		expect(joinMode({ aTimeIN: -1, bTimeIN: -1 })).toBe('stack');
+		expect(joinMode({})).toBe('stack');
+		expect(joinMode({ aTimeIN: null, bTimeIN: undefined })).toBe('stack');
+		expect(joinMode({ aTimeIN: 4, bTimeIN: -1 })).toBe('one');
+		expect(joinMode({ aTimeIN: -1, bTimeIN: 4 })).toBe('one');
+	});
+	it('Source: null follows the mode (on stacked, off by time); true/false always wins', () => {
+		const stack = { aTimeIN: -1, bTimeIN: -1 };
+		const time = { aTimeIN: 1, bTimeIN: 2 };
+		expect(joinSourceOn({ ...stack, sourceColumn: null })).toBe(true);
+		expect(joinSourceOn({ ...time, sourceColumn: null })).toBe(false);
+		expect(joinSourceOn({ ...stack })).toBe(true);
+		expect(joinSourceOn({ ...stack, sourceColumn: false })).toBe(false);
+		expect(joinSourceOn({ ...time, sourceColumn: true })).toBe(true);
+		// v82.31 stored false: off, exactly as before.
+		expect(joinSourceOn({ ...time, sourceColumn: false })).toBe(false);
 	});
 });

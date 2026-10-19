@@ -98,7 +98,7 @@ describe('Join Data panel', () => {
 	it('creates its output columns on a free node and fills them', async () => {
 		const { tA, a, tB, b, b2 } = hourlyAndQuarter();
 		const tp = freeJoin({ aTimeIN: tA, aValuesIN: [a], bTimeIN: tB, bValuesIN: [b, b2] });
-		expect(Object.keys(tp.args.out)).toEqual(['jointime']);
+		expect(Object.keys(tp.args.out)).toEqual([]);
 		render(JoinData, { props: { p: tp } });
 		await settle();
 		expect(Object.keys(tp.args.out).sort()).toEqual(
@@ -196,15 +196,25 @@ describe('Join Data panel', () => {
 	it('the pairing select makes a same-named B column separate, and back', async () => {
 		const { tA, a, tB, b } = hourlyAndQuarter();
 		const tp = freeJoin({ aTimeIN: tA, aValuesIN: [a], bTimeIN: tB, bValuesIN: [b] });
-		const { container } = render(JoinData, { props: { p: tp } });
+		const { container, getByText } = render(JoinData, { props: { p: tp } });
 		await settle();
 		const select = [...container.querySelectorAll('select')].find((s) =>
-			[...s.options].some((o) => o.textContent === 'Separate column')
+			[...s.options].some((o) => o.textContent === 'Its own column')
 		);
-		expect(select.options[0].textContent).toBe('By name: temp');
+		expect([...select.options].map((o) => o.textContent)).toEqual([
+			"A's 'temp' (by name)",
+			"A's 'temp'",
+			'Its own column'
+		]);
+		expect(select.title).toBe("A's 'temp' (by name)");
+		getByText('Which column does each B column go into?');
+		getByText(
+			"Columns with the same name share one column; choose 'Its own column' to keep them apart."
+		);
 		await fireEvent.change(select, { target: { value: '-1' } });
 		await settle();
 		expect(tp.args.pairing).toEqual({ [b]: -1 });
+		expect(select.title).toBe('Its own column');
 		expect(tp.args.out[`joined_${b}`]).toBeGreaterThanOrEqual(0);
 		expect(data(tp.args.out[`joined_${b}`]).slice(0, 2)).toEqual([null, 20]);
 		await fireEvent.change(select, { target: { value: 'auto' } });
@@ -222,5 +232,131 @@ describe('Join Data panel', () => {
 		getByText(/Time A is a time column and time B is a number column/);
 		expect(tp.args.valid).toBe(false);
 		expect(tp.warnings[0]).toMatch(/Time A is a time column/);
+	});
+
+	it('stack mode: no time controls, the stacked output, Source ticked by default', async () => {
+		const a = mkCol('number', [3, 1, 2], 'amplitude');
+		const b = mkCol('number', [9, 8], 'amplitude');
+		const tp = freeJoin({ aValuesIN: [a], bValuesIN: [b] });
+		expect(tp.args.sourceColumn).toBeNull();
+		const { getByText, queryByText, getByLabelText, container } = render(JoinData, {
+			props: { p: tp }
+		});
+		await settle();
+		expect(tp.args.valid).toBe(true);
+		expect(Object.keys(tp.args.out).sort()).toEqual([`joined_${a}`, 'source'].sort());
+		expect(data(tp.args.out[`joined_${a}`])).toEqual([3, 1, 2, 9, 8]);
+		expect(data(tp.args.out.source)).toEqual(['A', 'A', 'A', 'B', 'B']);
+		getByText('5 rows: 3 from A, 2 from B.');
+		getByText("No time is wired, so A's rows come first, then B's, each in their own order.");
+		expect(queryByText(/Shift B's/)).toBeNull();
+		expect(queryByText('+ Add Bin Data')).toBeNull();
+		expect(queryByText(/rarely share a time/)).toBeNull();
+		expect(getByLabelText(/Add a Source column/).checked).toBe(true);
+		// The source still null: following the mode, not a stored choice.
+		expect(tp.args.sourceColumn).toBeNull();
+		expect(container.querySelector('.warn')).toBeNull();
+	});
+
+	it('one time wired alone shows the refusal and empties the outputs', async () => {
+		const t = mkCol('number', [0, 1, 2], 'x');
+		const a = mkCol('number', [3, 1, 2], 'v');
+		const tp = freeJoin({ aValuesIN: [a], bValuesIN: [] });
+		const { getByText } = render(JoinData, { props: { p: tp } });
+		await settle();
+		const outId = tp.args.out[`joined_${a}`];
+		expect(data(outId)).toEqual([3, 1, 2]);
+		tp.args.aTimeIN = t;
+		await settle();
+		getByText('Wire a time for both datasets, or for neither.');
+		expect(tp.args.valid).toBe(false);
+		expect(tp.warnings).toEqual(['Wire a time for both datasets, or for neither.']);
+		expect(tp.args.out[`joined_${a}`]).toBe(outId);
+		expect(data(outId)).toEqual([]);
+	});
+
+	it('time -> stack -> time by unwiring and rewiring: value outputs reused, no orphans', async () => {
+		const { tA, a, tB, b, b2 } = hourlyAndQuarter();
+		const tp = freeJoin({ aTimeIN: tA, aValuesIN: [a], bTimeIN: tB, bValuesIN: [b, b2] });
+		render(JoinData, { props: { p: tp } });
+		await settle();
+		const ids0 = { a: tp.args.out[`joined_${a}`], b2: tp.args.out[`joined_${b2}`] };
+		const time0 = tp.args.out.jointime;
+		const nCols = core.data.length;
+		expect(tp.args.out.source).toBeUndefined();
+
+		// Unwire A's time (refused), then B's: stacking.
+		tp.args.aTimeIN = -1;
+		await settle();
+		expect(tp.args.out.jointime).toBe(time0); // kept while only one time is unwired
+		tp.args.bTimeIN = -1;
+		await settle();
+		expect(tp.args.valid).toBe(true);
+		expect(tp.args.out.jointime).toBeUndefined();
+		expect(getColumnById(time0)).toBeFalsy();
+		expect(tp.args.out[`joined_${a}`]).toBe(ids0.a);
+		expect(tp.args.out[`joined_${b2}`]).toBe(ids0.b2);
+		expect(data(ids0.a)).toEqual([1, 2, 3, 4, ...Array.from({ length: 12 }, (_, i) => 20 + i)]);
+		// Source on by default when stacking: one new column, the time column gone.
+		expect(tp.args.out.source).toBeGreaterThanOrEqual(0);
+		expect(core.data.length).toBe(nCols);
+
+		// Rewire both times: back to time mode, Source back off (never chosen), time column anew.
+		tp.args.aTimeIN = tA;
+		tp.args.bTimeIN = tB;
+		await settle();
+		expect(tp.args.valid).toBe(true);
+		expect(tp.args.out.source).toBeUndefined();
+		expect(tp.args.out.jointime).toBeGreaterThanOrEqual(0);
+		expect(tp.args.out[`joined_${a}`]).toBe(ids0.a);
+		expect(tp.args.out[`joined_${b2}`]).toBe(ids0.b2);
+		expect(data(tp.args.out.jointime).length).toBe(16);
+		expect(core.data.length).toBe(nCols);
+		// Every output id is a live column, and no node-made column is left without a key.
+		const outIds = Object.values(tp.args.out);
+		for (const id of outIds) expect(getColumnById(id)).toBeTruthy();
+		const made = core.data.filter((c) => /^(jointime|joined_\d+|source)_/.test(c.name ?? ''));
+		expect(made.map((c) => c.id).sort()).toEqual([...outIds].sort());
+	});
+
+	it('an explicit Source choice is kept when the mode changes by wiring', async () => {
+		const { tA, a, tB, b } = hourlyAndQuarter();
+		const tp = freeJoin({ aValuesIN: [a], bValuesIN: [b] });
+		const { getByLabelText } = render(JoinData, { props: { p: tp } });
+		await settle();
+		const box = () => getByLabelText(/Add a Source column/);
+		expect(box().checked).toBe(true);
+		await fireEvent.click(box()); // untick while stacking
+		await settle();
+		expect(tp.args.sourceColumn).toBe(false);
+		expect(tp.args.out.source).toBeUndefined();
+		tp.args.aTimeIN = tA;
+		tp.args.bTimeIN = tB;
+		await settle();
+		expect(box().checked).toBe(false);
+		await fireEvent.click(box()); // tick in time mode
+		await settle();
+		expect(tp.args.sourceColumn).toBe(true);
+		tp.args.aTimeIN = -1;
+		tp.args.bTimeIN = -1;
+		await settle();
+		expect(box().checked).toBe(true);
+		expect(tp.args.sourceColumn).toBe(true);
+		expect(data(tp.args.out.source).slice(0, 5)).toEqual(['A', 'A', 'A', 'A', 'B']);
+	});
+
+	it('keeps the outputs in order (values, then Source) when Source came first', async () => {
+		const a = mkCol('number', [1, 2], 'amp');
+		const a2 = mkCol('number', [3, 4], 'phase');
+		const tp = freeJoin({ aValuesIN: [a], bValuesIN: [] });
+		render(JoinData, { props: { p: tp } });
+		await settle();
+		expect(Object.keys(tp.args.out)).toEqual([`joined_${a}`, 'source']);
+		const ids = { ...tp.args.out };
+		tp.args.aValuesIN = [a, a2];
+		await settle();
+		expect(Object.keys(tp.args.out)).toEqual([`joined_${a}`, `joined_${a2}`, 'source']);
+		expect(tp.args.out.source).toBe(ids.source);
+		expect(tp.args.out[`joined_${a}`]).toBe(ids[`joined_${a}`]);
 	});
 });

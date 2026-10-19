@@ -268,7 +268,8 @@
 				Every row of both datasets lands on one time column, sorted by time. Nothing is matched or
 				merged: rows that share a time stay separate rows. Columns with the same name (case and
 				spacing ignored) are taken as the same measurement and share one column; change that per
-				column under <strong>Same measurement?</strong>.
+				column under <strong>Which column does each B column go into?</strong>, where
+				<strong>Its own column</strong> keeps a B column apart.
 			</li>
 			<li>
 				If one logger ran on another time zone, set <strong>Shift B's clock by (h)</strong>. Both
@@ -285,6 +286,16 @@
 			label="Open the Join Data example in AnCiR"
 		/>
 	</AnCiRBox>
+
+	<p>
+		Join Data also <strong>stacks</strong> results that are not on a time axis. Leave both time
+		inputs unwired and it puts A's rows first, then B's rows, each in their original order, with no
+		sorting and no time column. Same-named columns still share one column, and the
+		<strong>Source</strong> column (on by default when stacking) says which dataset each row came
+		from. For example, stack the per-animal Cosinor amplitudes of two groups, then wire the joined
+		amplitude and Source into <strong>Group Comparison</strong> (or a boxplot) to compare the groups.
+		Wiring a time for only one dataset is refused: wire a time for both datasets, or for neither.
+	</p>
 
 	<h3 class="section-head">Smoothing</h3>
 	<p>
