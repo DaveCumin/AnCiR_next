@@ -2931,13 +2931,22 @@
 				"phase": 0,
 				"noise": 4,
 				"seed": 503,
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"yIN": ["@y"],
 				"method": "shapiro",
 				"alpha": 0.05,
-				"out": { "variable": -1, "statistic": -1, "pvalue": -1, "n": -1, "normal": -1 }
+				"out": {
+					"variable": -1,
+					"statistic": -1,
+					"pvalue": -1,
+					"n": -1,
+					"normal": -1
+				}
 			},
 			"compareOutputs": ["statistic", "pvalue", "n", "normal"],
 			"rFunc": "normalitytest",
@@ -2959,13 +2968,22 @@
 				"phase": 0,
 				"noise": 4,
 				"seed": 503,
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"yIN": ["@y"],
 				"method": "shapiro",
 				"alpha": 0.05,
-				"out": { "variable": -1, "statistic": -1, "pvalue": -1, "n": -1, "normal": -1 }
+				"out": {
+					"variable": -1,
+					"statistic": -1,
+					"pvalue": -1,
+					"n": -1,
+					"normal": -1
+				}
 			},
 			"compareOutputs": ["statistic", "pvalue", "n", "normal"],
 			"rFunc": "normalitytest",
@@ -3421,7 +3439,10 @@
 						"noiseEnabled": false
 					}
 				],
-				"out": { "time": -1, "values": -1 }
+				"out": {
+					"time": -1,
+					"values": -1
+				}
 			}
 		},
 		{
@@ -3640,7 +3661,11 @@
 				"phase": 7,
 				"noise": 1.5,
 				"seed": 621,
-				"second": { "period": 24, "amp": 0.45, "phase": 3 },
+				"second": {
+					"period": 24,
+					"amp": 0.45,
+					"phase": 3
+				},
 				"refs": {
 					"x": "t",
 					"y": "y"
@@ -4679,7 +4704,13 @@
 			"pyFunc": "chisquared",
 			"rFunc": "chisquared",
 			"note": "STAT-13. A NUMBER column of category codes with gofInput 'categories': the codes are tallied (1, 2, 3 seen 1, 2 and 3 times), not read as counts; the missing cell is skipped.",
-			"inputs": [{ "ref": "a", "type": "number", "values": [1, 2, 2, 3, 3, 3, null] }],
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [1, 2, 2, 3, 3, 3, null]
+				}
+			],
 			"args": {
 				"xIN": "@a",
 				"testType": "goodness",
@@ -4702,7 +4733,13 @@
 			"pyFunc": "chisquared",
 			"rFunc": "chisquared",
 			"note": "STAT-13. gofInput 'counts' with a negative count: refused (no outputs written) in all three ports, since goodness of fit needs observed frequencies.",
-			"inputs": [{ "ref": "a", "type": "number", "values": [10, -3, 12] }],
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [10, -3, 12]
+				}
+			],
 			"args": {
 				"xIN": "@a",
 				"testType": "goodness",
@@ -4725,7 +4762,13 @@
 			"pyFunc": "chisquared",
 			"rFunc": "chisquared",
 			"note": "STAT-13. An all-numeric column read as counts by gofInput 'auto' (the default) with a non-integer count (2.5): refused, no outputs written.",
-			"inputs": [{ "ref": "a", "type": "number", "values": [10, 2.5, 12] }],
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [10, 2.5, 12]
+				}
+			],
 			"args": {
 				"xIN": "@a",
 				"testType": "goodness",
@@ -8387,7 +8430,9 @@
 			"pyFunc": "interpolate_grid_limit",
 			"rFunc": "interpolate_grid_limit",
 			"note": "Resample grid of exactly MAX_GRID_POINTS (2,000,000): allowed, no warning. Crosses the limit with util-interpolate-grid-over-limit.",
-			"input": { "values": [0] },
+			"input": {
+				"values": [0]
+			},
 			"valuesRef": "values",
 			"jsArgs": [0, 1999999, 1, ""],
 			"pyArgs": [0, 1999999, 1, ""],
@@ -8400,7 +8445,9 @@
 			"pyFunc": "interpolate_grid_limit",
 			"rFunc": "interpolate_grid_limit",
 			"note": "One point past MAX_GRID_POINTS: nothing is resampled and all three say so in the same words.",
-			"input": { "values": [0] },
+			"input": {
+				"values": [0]
+			},
 			"valuesRef": "values",
 			"jsArgs": [0, 2000000, 1, ""],
 			"pyArgs": [0, 2000000, 1, ""],
@@ -8413,7 +8460,9 @@
 			"pyFunc": "interpolate_grid_limit",
 			"rFunc": "interpolate_grid_limit",
 			"note": "A step typed in seconds on an hours axis (1/3600 h over four weeks): the warning names the grid size and the smallest step that fits.",
-			"input": { "values": [0] },
+			"input": {
+				"values": [0]
+			},
 			"valuesRef": "values",
 			"jsArgs": [0, 672, 0.0002777777777777778, " h"],
 			"pyArgs": [0, 672, 0.0002777777777777778, " h"],
@@ -8427,15 +8476,25 @@
 			"rFunc": "interpolate",
 			"note": "A resample grid past the 2,000,000-point limit gives no output in all three (the app also shows the warning on the node).",
 			"inputs": [
-				{ "ref": "x", "type": "number", "values": [0, 1, 2, 3, 4] },
-				{ "ref": "y", "type": "number", "values": [1, 2, 3, 2, 1] }
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, 2, 3, 4]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [1, 2, 3, 2, 1]
+				}
 			],
 			"args": {
 				"xIN": "@x",
 				"yIN": ["@y"],
 				"mode": "resample",
 				"method": "linear",
-				"out": { "interpx": -1 },
+				"out": {
+					"interpx": -1
+				},
 				"start": 0,
 				"end": 4,
 				"step": 1e-6
@@ -8450,7 +8509,9 @@
 			"pyFunc": "sequence_limit",
 			"rFunc": "sequence_limit",
 			"note": "A Sequence Column of exactly MAX_SEQUENCE_LENGTH (2,000,000) values is allowed in all three. Crosses the limit with util-sequence-over-limit.",
-			"input": { "values": [0] },
+			"input": {
+				"values": [0]
+			},
 			"valuesRef": "values",
 			"jsArgs": [2000000],
 			"pyArgs": [2000000],
@@ -8463,7 +8524,9 @@
 			"pyFunc": "sequence_limit",
 			"rFunc": "sequence_limit",
 			"note": "One value past MAX_SEQUENCE_LENGTH: refused in all three, with the same warning (the JS used to cut to 100,000 silently; the ports had no limit).",
-			"input": { "values": [0] },
+			"input": {
+				"values": [0]
+			},
 			"valuesRef": "values",
 			"jsArgs": [2000001],
 			"pyArgs": [2000001],
@@ -8482,7 +8545,9 @@
 				"start": 0,
 				"step": 1,
 				"count": 2000001,
-				"out": { "result": -1 }
+				"out": {
+					"result": -1
+				}
 			},
 			"recordValid": true,
 			"compareOutputs": ["result"]
@@ -8500,7 +8565,9 @@
 				"start": 0,
 				"step": 0.5,
 				"count": 150000,
-				"out": { "result": -1 }
+				"out": {
+					"result": -1
+				}
 			},
 			"compareOutputs": ["result"]
 		},
@@ -15894,7 +15961,8 @@
 					"amplitude": -1,
 					"acrophase": -1,
 					"amplitude_h1": -1,
-					"acrophase_h1": -1
+					"acrophase_h1": -1,
+					"fitx": -1
 				},
 				"model": "cosinor",
 				"useFixedPeriod": true,
@@ -16117,7 +16185,8 @@
 					"amplitude": -1,
 					"acrophase": -1,
 					"duty_cycle": -1,
-					"kappa": -1
+					"kappa": -1,
+					"fitx": -1
 				},
 				"model": "rectangular",
 				"fixOmega": true,
@@ -16344,7 +16413,8 @@
 					"offset": -1,
 					"k1": -1,
 					"k2": -1,
-					"duty_cycle": -1
+					"duty_cycle": -1,
+					"fitx": -1
 				},
 				"model": "doublelogistic",
 				"periodic": true,
@@ -20859,12 +20929,36 @@
 			"periodlimsIN": [20, 28],
 			"periodSteps": 0.25,
 			"series": [
-				{ "method": "Enright", "binSize": 0.25, "xStep": 1 },
-				{ "method": "Enright", "xStep": 0.5 },
-				{ "method": "Enright", "binSize": 0.5, "xStep": 1 },
-				{ "method": "Chi-squared", "binSize": 0.25, "xStep": 1 },
-				{ "method": "Lomb-Scargle", "binSize": 0.25, "xStep": 1 },
-				{ "method": "Enright", "binSize": 0.25, "binSizeAuto": false, "xStep": 1 }
+				{
+					"method": "Enright",
+					"binSize": 0.25,
+					"xStep": 1
+				},
+				{
+					"method": "Enright",
+					"xStep": 0.5
+				},
+				{
+					"method": "Enright",
+					"binSize": 0.5,
+					"xStep": 1
+				},
+				{
+					"method": "Chi-squared",
+					"binSize": 0.25,
+					"xStep": 1
+				},
+				{
+					"method": "Lomb-Scargle",
+					"binSize": 0.25,
+					"xStep": 1
+				},
+				{
+					"method": "Enright",
+					"binSize": 0.25,
+					"binSizeAuto": false,
+					"xStep": 1
+				}
 			]
 		},
 		{
@@ -20876,7 +20970,13 @@
 			"hours": 168,
 			"periodlimsIN": [20, 28],
 			"periodSteps": 0.25,
-			"series": [{ "method": "Enright", "binSize": 0.25, "xStep": 1 }]
+			"series": [
+				{
+					"method": "Enright",
+					"binSize": 0.25,
+					"xStep": 1
+				}
+			]
 		},
 		{
 			"id": "tp-groupcomparison-kruskal-epsilon",
@@ -22187,7 +22287,10 @@
 				"missingEvery": 9,
 				"missingOffset": 4,
 				"missingX": [0],
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22201,7 +22304,9 @@
 				"nHarmonics": 1,
 				"alpha": 0.05,
 				"preProcesses": [],
-				"out": { "cosinorx": -1 }
+				"out": {
+					"cosinorx": -1
+				}
 			},
 			"compareOutputs": ["cosinorx", "cosinory"],
 			"tolerance": 1e-6
@@ -22226,7 +22331,10 @@
 				"missingEvery": 7,
 				"missingOffset": 3,
 				"missingX": [5, -1],
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22240,7 +22348,9 @@
 				"nHarmonics": 1,
 				"alpha": 0.05,
 				"preProcesses": [],
-				"out": { "cosinorx": -1 }
+				"out": {
+					"cosinorx": -1
+				}
 			},
 			"compareOutputs": ["cosinorx", "cosinory"],
 			"tolerance": 1e-6
@@ -22265,7 +22375,10 @@
 				"missingEvery": 9,
 				"missingOffset": 4,
 				"missingX": [0],
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22275,7 +22388,10 @@
 				"outputXStep": null,
 				"fixOmega": true,
 				"fixedPeriod": 24,
-				"out": { "rectwavex": -1, "rectwavey": -1 }
+				"out": {
+					"rectwavex": -1,
+					"rectwavey": -1
+				}
 			},
 			"compareOutputs": ["rectwavex", "rectwavey"],
 			"tolerance": 1e-6
@@ -22300,7 +22416,10 @@
 				"missingEvery": 7,
 				"missingOffset": 3,
 				"missingX": [5, -1],
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22310,7 +22429,10 @@
 				"outputXStep": 0.7,
 				"fixOmega": true,
 				"fixedPeriod": 24,
-				"out": { "rectwavex": -1, "rectwavey": -1 }
+				"out": {
+					"rectwavex": -1,
+					"rectwavey": -1
+				}
 			},
 			"compareOutputs": ["rectwavex", "rectwavey"],
 			"tolerance": 1e-6
@@ -22335,7 +22457,10 @@
 				"missingEvery": 9,
 				"missingOffset": 4,
 				"missingX": [0],
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22345,7 +22470,10 @@
 				"outputXStep": null,
 				"fixPeriod": true,
 				"fixedPeriod": 24,
-				"out": { "dlogx": -1, "dlogy": -1 }
+				"out": {
+					"dlogx": -1,
+					"dlogy": -1
+				}
 			},
 			"compareOutputs": ["dlogx", "dlogy"],
 			"tolerance": 1e-6
@@ -22370,7 +22498,10 @@
 				"missingEvery": 7,
 				"missingOffset": 3,
 				"missingX": [5, -1],
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22380,7 +22511,10 @@
 				"outputXStep": 0.7,
 				"fixPeriod": true,
 				"fixedPeriod": 24,
-				"out": { "dlogx": -1, "dlogy": -1 }
+				"out": {
+					"dlogx": -1,
+					"dlogy": -1
+				}
 			},
 			"compareOutputs": ["dlogx", "dlogy"],
 			"tolerance": 1e-6
@@ -22405,7 +22539,10 @@
 				"missingEvery": 9,
 				"missingOffset": 4,
 				"missingX": [0],
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22418,7 +22555,9 @@
 				"fixedPeriod": 24,
 				"nHarmonics": 1,
 				"alpha": 0.05,
-				"out": { "fitx": -1 }
+				"out": {
+					"fitx": -1
+				}
 			},
 			"compareOutputs": ["fitx", "fity"],
 			"tolerance": 1e-6
@@ -22443,7 +22582,10 @@
 				"missingEvery": 7,
 				"missingOffset": 3,
 				"missingX": [5, -1],
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22456,7 +22598,9 @@
 				"fixedPeriod": 24,
 				"nHarmonics": 1,
 				"alpha": 0.05,
-				"out": { "fitx": -1 }
+				"out": {
+					"fitx": -1
+				}
 			},
 			"compareOutputs": ["fitx", "fity"],
 			"tolerance": 1e-6
@@ -22481,7 +22625,10 @@
 				"missingEvery": 9,
 				"missingOffset": 4,
 				"missingX": [0],
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22490,7 +22637,10 @@
 				"outputXMode": "sequence",
 				"outputXStep": null,
 				"model": "linear",
-				"out": { "trendx": -1, "trendy": -1 }
+				"out": {
+					"trendx": -1,
+					"trendy": -1
+				}
 			},
 			"compareOutputs": ["trendx", "trendy"],
 			"tolerance": 1e-6
@@ -22515,7 +22665,10 @@
 				"missingEvery": 7,
 				"missingOffset": 3,
 				"missingX": [5, -1],
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22524,7 +22677,10 @@
 				"outputXMode": "sequence",
 				"outputXStep": 0.7,
 				"model": "linear",
-				"out": { "trendx": -1, "trendy": -1 }
+				"out": {
+					"trendx": -1,
+					"trendy": -1
+				}
 			},
 			"compareOutputs": ["trendx", "trendy"],
 			"tolerance": 1e-6
@@ -22548,7 +22704,10 @@
 				"xStart": "2026-01-05T06:00:00Z",
 				"missingEvery": 9,
 				"missingOffset": 4,
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22562,7 +22721,9 @@
 				"nHarmonics": 1,
 				"alpha": 0.05,
 				"preProcesses": [],
-				"out": { "cosinorx": -1 }
+				"out": {
+					"cosinorx": -1
+				}
 			},
 			"perInputOut": ["resid_"],
 			"compareOutputs": ["cosinorx", "cosinory", "resid"],
@@ -22585,7 +22746,10 @@
 				"phase": 6,
 				"noise": 2,
 				"seed": 1291,
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22593,7 +22757,10 @@
 				"outputX": "@t",
 				"outputXMode": "sequence",
 				"model": "linear",
-				"out": { "trendx": -1, "trendy": -1 }
+				"out": {
+					"trendx": -1,
+					"trendy": -1
+				}
 			},
 			"compareOutputs": ["trendx", "trendy"],
 			"tolerance": 1e-6
@@ -22614,7 +22781,10 @@
 				"phase": 6,
 				"noise": 2,
 				"seed": 1292,
-				"refs": { "x": "t", "y": "y" }
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
 			},
 			"args": {
 				"xIN": "@t",
@@ -22628,7 +22798,9 @@
 				"nHarmonics": 1,
 				"alpha": 0.05,
 				"preProcesses": [],
-				"out": { "cosinorx": -1 }
+				"out": {
+					"cosinorx": -1
+				}
 			},
 			"compareOutputs": ["cosinorx", "cosinory"],
 			"tolerance": 1e-6
@@ -22774,7 +22946,9 @@
 			"pyFunc": "output_x_sequence_probe",
 			"rFunc": "output_x_sequence_probe",
 			"note": "Span 100 (3 to 103): 100 / 500 = 0.2, already a 1-2-5 number.",
-			"input": { "values": [103, 3, 50] },
+			"input": {
+				"values": [103, 3, 50]
+			},
 			"valuesRef": "values",
 			"jsArgs": [null, ""],
 			"pyArgs": [null, ""],
@@ -22787,7 +22961,9 @@
 			"pyFunc": "output_x_sequence_probe",
 			"rFunc": "output_x_sequence_probe",
 			"note": "Span 160 (0 to 160): 0.32 snaps to 0.5 (past sqrt(10) x 0.1).",
-			"input": { "values": [0, 160] },
+			"input": {
+				"values": [0, 160]
+			},
 			"valuesRef": "values",
 			"jsArgs": [null, ""],
 			"pyArgs": [null, ""],
@@ -22800,7 +22976,9 @@
 			"pyFunc": "output_x_sequence_probe",
 			"rFunc": "output_x_sequence_probe",
 			"note": "A step in seconds on a four-week hours axis: no sequence, and the shared grid-limit warning without the start/end hint.",
-			"input": { "values": [0, 672] },
+			"input": {
+				"values": [0, 672]
+			},
 			"valuesRef": "values",
 			"jsArgs": [0.0002777777777777778, " h"],
 			"pyArgs": [0.0002777777777777778, " h"],
@@ -22819,7 +22997,11 @@
 					"type": "time",
 					"values": [1717200000000, 1717203600000, 1717207200000, 1717210800000]
 				},
-				{ "ref": "temp", "type": "number", "values": [10, 11, 12, 13] },
+				{
+					"ref": "temp",
+					"type": "number",
+					"values": [10, 11, 12, 13]
+				},
 				{
 					"ref": "tB",
 					"type": "time",
@@ -22834,13 +23016,20 @@
 					"type": "number",
 					"values": [20.0, 20.5, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5]
 				},
-				{ "ref": "rh", "type": "number", "values": [50, 51, 52, 53, 54, 55, 56, 57, 58, 59] }
+				{
+					"ref": "rh",
+					"type": "number",
+					"values": [50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
+				}
 			],
 			"args": {
 				"pairing": {},
 				"shiftB": 0,
 				"sourceColumn": true,
-				"out": { "jointime": -1, "source": -1 },
+				"out": {
+					"jointime": -1,
+					"source": -1
+				},
 				"aTimeIN": "@tA",
 				"aValuesIN": ["@temp"],
 				"bTimeIN": "@tB",
@@ -22856,17 +23045,40 @@
 			"rFunc": "joindata",
 			"note": "Numbers as time, unsorted, with repeated times inside A, times shared with B, and missing cells: a row with no time (null, blank, NaN text) is left out; a missing value is blank, never 0; at equal times A's rows come first, each side in its own row order. A category value column keeps its labels.",
 			"inputs": [
-				{ "ref": "x", "type": "number", "values": [3, 1, null, 1, "", 2, "abc"] },
-				{ "ref": "v", "type": "number", "values": [30, 10, 99, 11, 98, null, 97] },
-				{ "ref": "lab", "type": "category", "values": ["c", "a", "z", "b", "y", "  ", "w"] },
-				{ "ref": "xb", "type": "number", "values": [1, 2.5, " ", 0] },
-				{ "ref": "vb", "name": "V", "type": "number", "values": [100, "", 0, 50] }
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [3, 1, null, 1, "", 2, "abc"]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [30, 10, 99, 11, 98, null, 97]
+				},
+				{
+					"ref": "lab",
+					"type": "category",
+					"values": ["c", "a", "z", "b", "y", "  ", "w"]
+				},
+				{
+					"ref": "xb",
+					"type": "number",
+					"values": [1, 2.5, " ", 0]
+				},
+				{
+					"ref": "vb",
+					"name": "V",
+					"type": "number",
+					"values": [100, "", 0, 50]
+				}
 			],
 			"args": {
 				"pairing": {},
 				"shiftB": 0,
 				"sourceColumn": false,
-				"out": { "jointime": -1 },
+				"out": {
+					"jointime": -1
+				},
 				"aTimeIN": "@x",
 				"aValuesIN": ["@v", "@lab"],
 				"bTimeIN": "@xb",
@@ -22882,18 +23094,51 @@
 			"rFunc": "joindata",
 			"note": "The pairing override keeps a same-named B column separate (-1) and pairs a differently named one with A's column; B's clock is shifted by -0.5 h, which lines its half-hour times up with A's hours.",
 			"inputs": [
-				{ "ref": "tA", "type": "time", "values": [1717200000000, 1717203600000, 1717207200000] },
-				{ "ref": "a1", "name": "temp", "type": "number", "values": [1, 2, 3] },
-				{ "ref": "a2", "name": "ambient", "type": "number", "values": [7, 8, 9] },
-				{ "ref": "tB", "type": "time", "values": [1717201800000, 1717205400000, 1717209000000] },
-				{ "ref": "b1", "name": "temp", "type": "number", "values": [4, 5, 6] },
-				{ "ref": "b2", "name": "outside", "type": "number", "values": [40, 50, 60] }
+				{
+					"ref": "tA",
+					"type": "time",
+					"values": [1717200000000, 1717203600000, 1717207200000]
+				},
+				{
+					"ref": "a1",
+					"name": "temp",
+					"type": "number",
+					"values": [1, 2, 3]
+				},
+				{
+					"ref": "a2",
+					"name": "ambient",
+					"type": "number",
+					"values": [7, 8, 9]
+				},
+				{
+					"ref": "tB",
+					"type": "time",
+					"values": [1717201800000, 1717205400000, 1717209000000]
+				},
+				{
+					"ref": "b1",
+					"name": "temp",
+					"type": "number",
+					"values": [4, 5, 6]
+				},
+				{
+					"ref": "b2",
+					"name": "outside",
+					"type": "number",
+					"values": [40, 50, 60]
+				}
 			],
 			"args": {
-				"pairing": { "@b1": -1, "@b2": "@a2" },
+				"pairing": {
+					"@b1": -1,
+					"@b2": "@a2"
+				},
 				"shiftB": -0.5,
 				"sourceColumn": false,
-				"out": { "jointime": -1 },
+				"out": {
+					"jointime": -1
+				},
 				"aTimeIN": "@tA",
 				"aValuesIN": ["@a1", "@a2"],
 				"bTimeIN": "@tB",
@@ -22909,16 +23154,35 @@
 			"rFunc": "joindata",
 			"note": "Both time inputs numeric (hours since one origin): joined as numbers, B shifted by +1.25 x units; B entirely after A.",
 			"inputs": [
-				{ "ref": "x", "type": "number", "values": [0, 1, 2] },
-				{ "ref": "v", "type": "number", "values": [5, 6, 7] },
-				{ "ref": "xb", "type": "number", "values": [2, 3] },
-				{ "ref": "vb", "name": "v", "type": "number", "values": [8, 9] }
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, 2]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [5, 6, 7]
+				},
+				{
+					"ref": "xb",
+					"type": "number",
+					"values": [2, 3]
+				},
+				{
+					"ref": "vb",
+					"name": "v",
+					"type": "number",
+					"values": [8, 9]
+				}
 			],
 			"args": {
 				"pairing": {},
 				"shiftB": 1.25,
 				"sourceColumn": false,
-				"out": { "jointime": -1 },
+				"out": {
+					"jointime": -1
+				},
 				"aTimeIN": "@x",
 				"aValuesIN": ["@v"],
 				"bTimeIN": "@xb",
@@ -22934,16 +23198,35 @@
 			"rFunc": "joindata",
 			"note": "B has no rows: the output is A's rows alone.",
 			"inputs": [
-				{ "ref": "x", "type": "number", "values": [2, 0, 1] },
-				{ "ref": "v", "type": "number", "values": [3, 1, 2] },
-				{ "ref": "xb", "type": "number", "values": [] },
-				{ "ref": "vb", "name": "v", "type": "number", "values": [] }
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [2, 0, 1]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [3, 1, 2]
+				},
+				{
+					"ref": "xb",
+					"type": "number",
+					"values": []
+				},
+				{
+					"ref": "vb",
+					"name": "v",
+					"type": "number",
+					"values": []
+				}
 			],
 			"args": {
 				"pairing": {},
 				"shiftB": 0,
 				"sourceColumn": false,
-				"out": { "jointime": -1 },
+				"out": {
+					"jointime": -1
+				},
 				"aTimeIN": "@x",
 				"aValuesIN": ["@v"],
 				"bTimeIN": "@xb",
@@ -22959,15 +23242,29 @@
 			"rFunc": "joindata",
 			"note": "A real time column against a numeric one is refused in all three: no output, invalid.",
 			"inputs": [
-				{ "ref": "t", "type": "time", "values": [1717200000000, 1717203600000] },
-				{ "ref": "v", "type": "number", "values": [1, 2] },
-				{ "ref": "xb", "type": "number", "values": [0, 1] }
+				{
+					"ref": "t",
+					"type": "time",
+					"values": [1717200000000, 1717203600000]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [1, 2]
+				},
+				{
+					"ref": "xb",
+					"type": "number",
+					"values": [0, 1]
+				}
 			],
 			"args": {
 				"pairing": {},
 				"shiftB": 0,
 				"sourceColumn": false,
-				"out": { "jointime": -1 },
+				"out": {
+					"jointime": -1
+				},
 				"aTimeIN": "@t",
 				"aValuesIN": ["@v"],
 				"bTimeIN": "@xb",
@@ -22984,16 +23281,35 @@
 			"rFunc": "joindata",
 			"note": "Stack mode (neither time wired): A's rows in their input order (values deliberately not sorted), then B's in theirs; no time output. ' Amp ' in B pairs with A's 'amp' by name; phase is blank on B's rows and B's 'n' on A's rows. sourceColumn null follows the mode: ON when stacking.",
 			"inputs": [
-				{ "ref": "amp", "type": "number", "values": [3.5, 1.25, 2, 9] },
-				{ "ref": "phase", "type": "number", "values": [22, 4, 13, 1] },
-				{ "ref": "ampB", "name": " Amp ", "type": "number", "values": [7, 0.5, 6] },
-				{ "ref": "n", "type": "number", "values": [10, 20, 30] }
+				{
+					"ref": "amp",
+					"type": "number",
+					"values": [3.5, 1.25, 2, 9]
+				},
+				{
+					"ref": "phase",
+					"type": "number",
+					"values": [22, 4, 13, 1]
+				},
+				{
+					"ref": "ampB",
+					"name": " Amp ",
+					"type": "number",
+					"values": [7, 0.5, 6]
+				},
+				{
+					"ref": "n",
+					"type": "number",
+					"values": [10, 20, 30]
+				}
 			],
 			"args": {
 				"pairing": {},
 				"shiftB": 0,
 				"sourceColumn": null,
-				"out": { "source": -1 },
+				"out": {
+					"source": -1
+				},
 				"aTimeIN": -1,
 				"aValuesIN": ["@amp", "@phase"],
 				"bTimeIN": -1,
@@ -23009,14 +23325,38 @@
 			"rFunc": "joindata",
 			"note": "Stack mode with the pairing override (B's same-named 'v' kept separate, B's 'w' paired with A's 'u'), different column lengths (A has 3 rows, its shorter column blank past its end), missing cells blank never 0, a category column keeping its labels, and Source explicitly off.",
 			"inputs": [
-				{ "ref": "v", "type": "number", "values": [1, null, 3] },
-				{ "ref": "u", "type": "number", "values": [5, 6] },
-				{ "ref": "lab", "type": "category", "values": ["x", "  ", "z"] },
-				{ "ref": "vb", "name": "v", "type": "number", "values": [10, "", 30, "abc", 50] },
-				{ "ref": "w", "type": "number", "values": [7, 8, 9, 0, 11] }
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [1, null, 3]
+				},
+				{
+					"ref": "u",
+					"type": "number",
+					"values": [5, 6]
+				},
+				{
+					"ref": "lab",
+					"type": "category",
+					"values": ["x", "  ", "z"]
+				},
+				{
+					"ref": "vb",
+					"name": "v",
+					"type": "number",
+					"values": [10, "", 30, "abc", 50]
+				},
+				{
+					"ref": "w",
+					"type": "number",
+					"values": [7, 8, 9, 0, 11]
+				}
 			],
 			"args": {
-				"pairing": { "@vb": -1, "@w": "@u" },
+				"pairing": {
+					"@vb": -1,
+					"@w": "@u"
+				},
 				"shiftB": 0,
 				"sourceColumn": false,
 				"out": {},
@@ -23034,12 +23374,20 @@
 			"pyFunc": "joindata",
 			"rFunc": "joindata",
 			"note": "Stack mode with nothing in A: B's rows alone, each labelled B.",
-			"inputs": [{ "ref": "b", "type": "number", "values": [4, 2, 8] }],
+			"inputs": [
+				{
+					"ref": "b",
+					"type": "number",
+					"values": [4, 2, 8]
+				}
+			],
 			"args": {
 				"pairing": {},
 				"shiftB": 0,
 				"sourceColumn": null,
-				"out": { "source": -1 },
+				"out": {
+					"source": -1
+				},
 				"aTimeIN": -1,
 				"aValuesIN": [],
 				"bTimeIN": -1,
@@ -23055,14 +23403,26 @@
 			"rFunc": "joindata",
 			"note": "Stack mode where B's column has no rows: A's rows alone; a single-row A.",
 			"inputs": [
-				{ "ref": "a", "name": "amp", "type": "number", "values": [2.5] },
-				{ "ref": "b", "name": "amp", "type": "number", "values": [] }
+				{
+					"ref": "a",
+					"name": "amp",
+					"type": "number",
+					"values": [2.5]
+				},
+				{
+					"ref": "b",
+					"name": "amp",
+					"type": "number",
+					"values": []
+				}
 			],
 			"args": {
 				"pairing": {},
 				"shiftB": 0,
 				"sourceColumn": null,
-				"out": { "source": -1 },
+				"out": {
+					"source": -1
+				},
 				"aTimeIN": -1,
 				"aValuesIN": ["@a"],
 				"bTimeIN": -1,
@@ -23078,15 +23438,29 @@
 			"rFunc": "joindata",
 			"note": "Only one time input wired is refused in all three ('Wire a time for both datasets, or for neither.'): no output, invalid.",
 			"inputs": [
-				{ "ref": "t", "type": "number", "values": [0, 1] },
-				{ "ref": "v", "type": "number", "values": [1, 2] },
-				{ "ref": "vb", "type": "number", "values": [3, 4] }
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [0, 1]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [1, 2]
+				},
+				{
+					"ref": "vb",
+					"type": "number",
+					"values": [3, 4]
+				}
 			],
 			"args": {
 				"pairing": {},
 				"shiftB": 0,
 				"sourceColumn": null,
-				"out": { "jointime": -1 },
+				"out": {
+					"jointime": -1
+				},
 				"aTimeIN": "@t",
 				"aValuesIN": ["@v"],
 				"bTimeIN": -1,
@@ -23102,7 +23476,9 @@
 			"pyFunc": "join_limit_probe",
 			"rFunc": "join_limit_probe",
 			"note": "The 2,000,000-row join limit, both sides: allowed at the limit, refused one row over it with the shared wording.",
-			"input": { "values": [] },
+			"input": {
+				"values": []
+			},
 			"valuesRef": "values",
 			"jsArgs": [2000000],
 			"pyArgs": [2000000],
@@ -23115,7 +23491,9 @@
 			"pyFunc": "join_limit_probe",
 			"rFunc": "join_limit_probe",
 			"note": "The 2,000,000-row join limit, both sides: allowed at the limit, refused one row over it with the shared wording.",
-			"input": { "values": [] },
+			"input": {
+				"values": []
+			},
 			"valuesRef": "values",
 			"jsArgs": [2000001],
 			"pyArgs": [2000001],
@@ -23129,7 +23507,11 @@
 			"rFunc": "binneddata",
 			"note": "Two y columns that end at different rows (as Join Data's A-only and B-only columns do): the x output is the LONGEST y's bins and the shorter y is padded with blanks, so the second column's later bins keep their x (they were dropped when the first y set the x).",
 			"inputs": [
-				{ "ref": "x", "type": "number", "values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+				},
 				{
 					"ref": "y1",
 					"type": "number",
@@ -23150,7 +23532,9 @@
 				"stepSize": 2,
 				"diffStep": false,
 				"aggFunction": "mean",
-				"out": { "binnedx": -1 }
+				"out": {
+					"binnedx": -1
+				}
 			},
 			"compareOutputs": ["binnedx", "binnedy_@y1", "binnedy_@y2"]
 		},
@@ -24752,6 +25136,1789 @@
 				"@{y}_rmse"
 			],
 			"tolerance": 1e-5
+		},
+		{
+			"id": "tp-binneddata-preprocess-chain",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "preProcesses run on each binned y after the NaN padding, in order (z-score normalize, an empty slot that is skipped, then Multiply by 10); the bins (x) are not processed. BinnedData.svelte.",
+			"generate": {
+				"type": "rhythm",
+				"n": 96,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1101,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"dt": 0.5,
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binSize": 2,
+				"binStart": 0,
+				"aggFunction": "mean",
+				"preProcesses": [
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "z-score"
+						}
+					},
+					{
+						"processName": "",
+						"processArgs": {}
+					},
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": 10
+						}
+					}
+				],
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"],
+			"tolerance": 1e-9,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-binneddata-preprocess-frequencyfilter",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "A low-pass FrequencyFilter on the hourly binned maximum (a process that mixes values across bins).",
+			"generate": {
+				"type": "rhythm",
+				"n": 480,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1103,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"dt": 0.25
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"binSize": 1,
+				"binStart": 0,
+				"aggFunction": "max",
+				"preProcesses": [
+					{
+						"processName": "FrequencyFilter",
+						"processArgs": {
+							"type": "low",
+							"high": 0.2
+						}
+					}
+				],
+				"out": {
+					"binnedx": -1
+				}
+			},
+			"compareOutputs": ["binnedx", "binnedy"],
+			"tolerance": 1e-7,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-cosinor-preprocess-chain",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "Multiply by -1 then Add 100 on the fitted curve ((y * -1) + 100, not (y + 100) * -1); the x, the residuals and the metric ports come from the unprocessed fit (Cosinor.svelte applies preProcesses to yOutData only).",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1105,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 2,
+				"alpha": 0.05,
+				"preProcesses": [
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": -1
+						}
+					},
+					{
+						"processName": "Add",
+						"processArgs": {
+							"value": 100
+						}
+					}
+				],
+				"out": {
+					"cosinorx": -1,
+					"mesor": -1,
+					"amplitude": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["cosinorx", "cosinory", "mesor", "amplitude", "resid"],
+			"tolerance": 1e-9,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-cosinor-preprocess-sequence-minmax",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "Min-max normalize on a curve evaluated on an output-x SEQUENCE (the process sees the dense curve, not the input rows).",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1107,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"outputX": "@t",
+				"outputXMode": "sequence",
+				"outputXStep": 0.5,
+				"Ncurves": 1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"preProcesses": [
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "min-max",
+							"customMin": 0,
+							"customMax": 1
+						}
+					}
+				],
+				"out": {
+					"cosinorx": -1
+				}
+			},
+			"compareOutputs": ["cosinorx", "cosinory"],
+			"tolerance": 1e-9,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-fitfunction-preprocess-rect-zscore",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "FitFunction (rectangular model, fixed period) with a z-score normalize on the fitted curve; r2 and residuals are unprocessed.",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1109,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "rectangular",
+				"fixOmega": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"preProcesses": [
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "z-score"
+						}
+					}
+				],
+				"fixKappa": false,
+				"fixDutyCycle": false,
+				"out": {
+					"fitx": -1,
+					"r2": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["fitx", "fity", "r2", "resid"],
+			"tolerance": 1e-6,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-fitfunction-preprocess-cosinor-chain",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "FitFunction (fixed-period cosinor) with min-max normalize then Multiply by 100 on the fitted curve.",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1111,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "cosinor",
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"outputX": -1,
+				"preProcesses": [
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "min-max",
+							"customMin": 0,
+							"customMax": 1
+						}
+					},
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": 100
+						}
+					}
+				],
+				"out": {
+					"fitx": -1,
+					"amplitude": -1
+				}
+			},
+			"compareOutputs": ["fitx", "fity", "amplitude"],
+			"tolerance": 1e-9,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-doublelogistic-preprocess-chain",
+			"jsName": "DoubleLogistic",
+			"pyFunc": "doublelogistic",
+			"rFunc": "doublelogistic",
+			"note": "Add -40 then z-score normalize on the periodic double-logistic curve (period fixed at 24 h); r2 and residuals are unprocessed.",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1113,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"fixPeriod": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"preProcesses": [
+					{
+						"processName": "Add",
+						"processArgs": {
+							"value": -40
+						}
+					},
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "z-score"
+						}
+					}
+				],
+				"fixK1": false,
+				"fixK2": false,
+				"out": {
+					"dlogx": -1,
+					"r2": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["dlogx", "dlogy", "r2", "resid"],
+			"tolerance": 1e-6,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-rectangularwave-preprocess-chain",
+			"jsName": "RectangularWave",
+			"pyFunc": "rectangularwave",
+			"rFunc": "rectangularwave",
+			"note": "Multiply by 0.5 then Add 7 on the fixed-period rectangular-wave curve; r2 and residuals are unprocessed.",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1115,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"fixOmega": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"preProcesses": [
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": 0.5
+						}
+					},
+					{
+						"processName": "Add",
+						"processArgs": {
+							"value": 7
+						}
+					}
+				],
+				"fixKappa": false,
+				"fixDutyCycle": false,
+				"out": {
+					"rectwavex": -1,
+					"r2": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["rectwavex", "rectwavey", "r2", "resid"],
+			"tolerance": 1e-6,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-trendfit-preprocess-chain",
+			"jsName": "TrendFit",
+			"pyFunc": "trendfit",
+			"rFunc": "trendfit",
+			"note": "Linear trend with z-score normalize then Add 3 on the fitted line; the slope, r2 and residuals are unprocessed.",
+			"generate": {
+				"type": "rhythm",
+				"n": 60,
+				"period": 24,
+				"amp": 5,
+				"mesor": 10,
+				"phase": 6,
+				"noise": 1,
+				"seed": 1117,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"trend": 0.4,
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "linear",
+				"outputX": -1,
+				"preProcesses": [
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "z-score"
+						}
+					},
+					{
+						"processName": "Add",
+						"processArgs": {
+							"value": 3
+						}
+					}
+				],
+				"out": {
+					"trendx": -1,
+					"r2": -1,
+					"coef_slope": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["trendx", "trendy", "r2", "coef_slope", "resid"],
+			"tolerance": 1e-9,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-trendfit-linear-one-point",
+			"jsName": "TrendFit",
+			"pyFunc": "trendfit",
+			"rFunc": "trendfit",
+			"recordValid": true,
+			"note": "One valid (x, y) pair: the app fits it (the raw-sum regression gives a 0 / 0 slope, NaN everywhere) and stays valid. The Python port used a centred fit that returned slope 0, R2 0 and a flat line through the point.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						35.5,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "linear",
+				"out": {
+					"trendx": -1,
+					"r2": -1,
+					"rmse": -1,
+					"coef_slope": -1,
+					"coef_intercept": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": ["trendx", "trendy", "r2", "rmse", "coef_slope", "coef_intercept", "resid"],
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-trendfit-polynomial-refused-clears",
+			"jsName": "TrendFit",
+			"pyFunc": "trendfit",
+			"rFunc": "trendfit",
+			"recordValid": true,
+			"note": "Two valid pairs for a degree-2 polynomial: the only y is refused (fitDomain.js, n <= degree), the node is invalid, and the app CLEARS its ports: r2, rmse and every coef_c<i> are NaN (one per y), the x, curve and residuals empty. Both ports used to write nothing.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						35.5,
+						42.206,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "polynomial",
+				"polyDegree": 2,
+				"out": {
+					"trendx": -1,
+					"r2": -1,
+					"rmse": -1,
+					"coef_c0": -1,
+					"coef_c1": -1,
+					"coef_c2": -1
+				}
+			},
+			"perInputOut": ["resid_"],
+			"compareOutputs": [
+				"trendx",
+				"trendy",
+				"r2",
+				"rmse",
+				"coef_c0",
+				"coef_c1",
+				"coef_c2",
+				"resid"
+			],
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-trendfit-per-y-curves",
+			"jsName": "TrendFit",
+			"pyFunc": "trendfit",
+			"rFunc": "trendfit",
+			"note": "Two ys with different gaps, wired z first: each curve is that y's OWN fitted values (one per valid pair; the ports evaluated every y at the first y's x), and the x output is the y with the SMALLEST column id (Object.keys order of y_results), here y, not the first wired.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+						24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+						46, 47
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						32.2,
+						37.546,
+						null,
+						41.246,
+						45.392,
+						48.831,
+						45.32,
+						null,
+						48.192,
+						42.366,
+						42.12,
+						35.306,
+						null,
+						33.574,
+						26.76,
+						26.514,
+						26.848,
+						null,
+						23.56,
+						26.209,
+						23.488,
+						27.634,
+						null,
+						31.334,
+						36.68,
+						35.866,
+						41.0,
+						null,
+						43.712,
+						47.151,
+						49.8,
+						45.471,
+						null,
+						40.686,
+						40.44,
+						39.786,
+						32.76,
+						null,
+						31.24,
+						24.834,
+						25.168,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null
+					]
+				},
+				{
+					"ref": "z",
+					"type": "number",
+					"values": [
+						36.5, 43.182, 49.6, 47.807, 52.99, 57.289, 52.9, 55.189, 56.49, 49.207, 48.9, 40.382,
+						39.3, 38.218, 29.7, 29.393, 29.81, 23.411, 25.7, 29.011, 25.61, 30.793, 29.0, 35.418,
+						42.1, 41.082, 47.5, 53.407, 50.89, 55.189, 58.5, 53.089, 54.39, 47.107, 46.8, 45.982,
+						37.2, 36.118, 35.3, 27.293, 27.71, 29.011, 23.6, 26.911, 23.51, 28.693, 34.6, 33.318
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@z", "@y"],
+				"model": "linear",
+				"out": {
+					"trendx": -1,
+					"r2": -1
+				}
+			},
+			"compareOutputs": ["trendx", "trendy_@y", "trendy_@z", "r2"],
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-trendfit-exponential-coefs",
+			"jsName": "TrendFit",
+			"pyFunc": "trendfit",
+			"rFunc": "trendfit",
+			"note": "The exponential model's coefficient ports coef_a and coef_b (getCoefKeys); the ports wrote only coef_slope/coef_intercept.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						4.85, 5.414, 5.6364, 5.8673, 6.107, 6.3559, 6.6143, 6.8825, 7.6829, 7.9984, 8.326,
+						8.6663, 9.0195, 9.3862, 9.7667, 10.9026, 11.3503, 11.8152, 12.298, 12.7993, 13.3196,
+						13.8596, 15.4715, 16.1068
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "exponential",
+				"out": {
+					"trendx": -1,
+					"coef_a": -1,
+					"coef_b": -1,
+					"r2": -1,
+					"rmse": -1
+				}
+			},
+			"compareOutputs": ["trendx", "trendy", "coef_a", "coef_b", "r2", "rmse"],
+			"tolerance": 1e-9,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-trendfit-polynomial-coefs",
+			"jsName": "TrendFit",
+			"pyFunc": "trendfit",
+			"rFunc": "trendfit",
+			"note": "The polynomial model's coefficient ports coef_c0..coef_c2 (getCoefKeys), never written by the ports before.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						2.6, 3.28, 3.92, 4.52, 5.08, 4.7, 5.18, 5.62, 6.02, 5.48, 5.8, 6.08, 6.32, 6.52, 5.78,
+						5.9, 5.98, 6.02, 5.12, 5.08, 5.0, 4.88, 4.72, 3.62
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "polynomial",
+				"polyDegree": 2,
+				"out": {
+					"trendx": -1,
+					"coef_c0": -1,
+					"coef_c1": -1,
+					"coef_c2": -1
+				}
+			},
+			"compareOutputs": ["trendx", "trendy", "coef_c0", "coef_c1", "coef_c2"],
+			"tolerance": 1e-7,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-cosinor-first-y-by-id",
+			"jsName": "Cosinor",
+			"pyFunc": "cosinor",
+			"rFunc": "cosinor",
+			"note": "Two ys with different gaps, wired z first: the x output is the y with the smallest column id (Object.keys(result.y_results)[0]), each curve its own fitted values.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+						24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+						46, 47
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						32.2,
+						37.546,
+						null,
+						41.246,
+						45.392,
+						48.831,
+						45.32,
+						null,
+						48.192,
+						42.366,
+						42.12,
+						35.306,
+						null,
+						33.574,
+						26.76,
+						26.514,
+						26.848,
+						null,
+						23.56,
+						26.209,
+						23.488,
+						27.634,
+						null,
+						31.334,
+						36.68,
+						35.866,
+						41.0,
+						null,
+						43.712,
+						47.151,
+						49.8,
+						45.471,
+						null,
+						40.686,
+						40.44,
+						39.786,
+						32.76,
+						null,
+						31.24,
+						24.834,
+						25.168,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null
+					]
+				},
+				{
+					"ref": "z",
+					"type": "number",
+					"values": [
+						36.5, 43.182, 49.6, 47.807, 52.99, 57.289, 52.9, 55.189, 56.49, 49.207, 48.9, 40.382,
+						39.3, 38.218, 29.7, 29.393, 29.81, 23.411, 25.7, 29.011, 25.61, 30.793, 29.0, 35.418,
+						42.1, 41.082, 47.5, 53.407, 50.89, 55.189, 58.5, 53.089, 54.39, 47.107, 46.8, 45.982,
+						37.2, 36.118, 35.3, 27.293, 27.71, 29.011, 23.6, 26.911, 23.51, 28.693, 34.6, 33.318
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@z", "@y"],
+				"Ncurves": 1,
+				"outputX": -1,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"alpha": 0.05,
+				"out": {
+					"cosinorx": -1
+				}
+			},
+			"compareOutputs": ["cosinorx", "cosinory_@y", "cosinory_@z"],
+			"tolerance": 1e-9,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-rectangularwave-first-y-by-id",
+			"jsName": "RectangularWave",
+			"pyFunc": "rectangularwave",
+			"rFunc": "rectangularwave",
+			"note": "As tp-cosinor-first-y-by-id, for the rectangular wave.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+						24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+						46, 47
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						32.2,
+						37.546,
+						null,
+						41.246,
+						45.392,
+						48.831,
+						45.32,
+						null,
+						48.192,
+						42.366,
+						42.12,
+						35.306,
+						null,
+						33.574,
+						26.76,
+						26.514,
+						26.848,
+						null,
+						23.56,
+						26.209,
+						23.488,
+						27.634,
+						null,
+						31.334,
+						36.68,
+						35.866,
+						41.0,
+						null,
+						43.712,
+						47.151,
+						49.8,
+						45.471,
+						null,
+						40.686,
+						40.44,
+						39.786,
+						32.76,
+						null,
+						31.24,
+						24.834,
+						25.168,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null
+					]
+				},
+				{
+					"ref": "z",
+					"type": "number",
+					"values": [
+						36.5, 43.182, 49.6, 47.807, 52.99, 57.289, 52.9, 55.189, 56.49, 49.207, 48.9, 40.382,
+						39.3, 38.218, 29.7, 29.393, 29.81, 23.411, 25.7, 29.011, 25.61, 30.793, 29.0, 35.418,
+						42.1, 41.082, 47.5, 53.407, 50.89, 55.189, 58.5, 53.089, 54.39, 47.107, 46.8, 45.982,
+						37.2, 36.118, 35.3, 27.293, 27.71, 29.011, 23.6, 26.911, 23.51, 28.693, 34.6, 33.318
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@z", "@y"],
+				"fixOmega": true,
+				"fixedPeriod": 24,
+				"outputX": -1,
+				"out": {
+					"rectwavex": -1
+				}
+			},
+			"compareOutputs": ["rectwavex", "rectwavey_@y", "rectwavey_@z"],
+			"tolerance": 1e-6,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-fitfunction-first-y-by-id",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "As tp-cosinor-first-y-by-id, for FitFunction (fixed-period cosinor).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+						24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+						46, 47
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						32.2,
+						37.546,
+						null,
+						41.246,
+						45.392,
+						48.831,
+						45.32,
+						null,
+						48.192,
+						42.366,
+						42.12,
+						35.306,
+						null,
+						33.574,
+						26.76,
+						26.514,
+						26.848,
+						null,
+						23.56,
+						26.209,
+						23.488,
+						27.634,
+						null,
+						31.334,
+						36.68,
+						35.866,
+						41.0,
+						null,
+						43.712,
+						47.151,
+						49.8,
+						45.471,
+						null,
+						40.686,
+						40.44,
+						39.786,
+						32.76,
+						null,
+						31.24,
+						24.834,
+						25.168,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null,
+						null
+					]
+				},
+				{
+					"ref": "z",
+					"type": "number",
+					"values": [
+						36.5, 43.182, 49.6, 47.807, 52.99, 57.289, 52.9, 55.189, 56.49, 49.207, 48.9, 40.382,
+						39.3, 38.218, 29.7, 29.393, 29.81, 23.411, 25.7, 29.011, 25.61, 30.793, 29.0, 35.418,
+						42.1, 41.082, 47.5, 53.407, 50.89, 55.189, 58.5, 53.089, 54.39, 47.107, 46.8, 45.982,
+						37.2, 36.118, 35.3, 27.293, 27.71, 29.011, 23.6, 26.911, 23.51, 28.693, 34.6, 33.318
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@z", "@y"],
+				"model": "cosinor",
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 1,
+				"outputX": -1,
+				"out": {
+					"fitx": -1
+				}
+			},
+			"compareOutputs": ["fitx", "fity_@y", "fity_@z"],
+			"tolerance": 1e-9,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-logisticregression-single-level-after-drops",
+			"jsName": "LogisticRegression",
+			"pyFunc": "logisticregression",
+			"rFunc": "logisticregression",
+			"recordValid": true,
+			"note": "The outcome has two levels, but every 0 row has a missing predictor, so the complete rows are all 1. The app does not refuse: its Newton loop walks the intercept out until the 1e-10 weight floor stops it (coef about 26, se about 8e4, p near 1, CI 0 to Infinity), warns that the fit did not converge, and writes the result. statsmodels and glm have no answer here (Python raised an OverflowError, R wrote nothing), so both ports now run the app's own Newton steps for this case.",
+			"inputs": [
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [0, 1, 0, 1, 1, 1, 0, 1, 1, 1]
+				},
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [null, 1.5, null, 2.0, 3.5, 2.2, null, 4.1, 0.7, 5.0]
+				}
+			],
+			"args": {
+				"yIN": "@y",
+				"xIN": ["@x"],
+				"out": {
+					"term": -1,
+					"coef": -1,
+					"se": -1,
+					"z": -1,
+					"pvalue": -1,
+					"oddsRatio": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
+					"eta": -1,
+					"fitted": -1,
+					"outcome": -1
+				}
+			},
+			"compareOutputs": [
+				"term",
+				"coef",
+				"se",
+				"z",
+				"pvalue",
+				"oddsRatio",
+				"ciLow",
+				"ciHigh",
+				"eta",
+				"fitted",
+				"outcome"
+			],
+			"tolerance": 1e-7,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-logisticregression-single-level-zeros",
+			"jsName": "LogisticRegression",
+			"pyFunc": "logisticregression",
+			"rFunc": "logisticregression",
+			"recordValid": true,
+			"note": "The mirror case: the only 1 row is dropped, the complete rows are all 0 (intercept about -26).",
+			"inputs": [
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [0, 0, 0, 1, 0, 0, 0, 0]
+				},
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, 2, 3, null, 5, 6, 7, 8]
+				}
+			],
+			"args": {
+				"yIN": "@y",
+				"xIN": ["@x"],
+				"out": {
+					"term": -1,
+					"coef": -1,
+					"se": -1,
+					"z": -1,
+					"pvalue": -1,
+					"oddsRatio": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
+					"eta": -1,
+					"fitted": -1,
+					"outcome": -1
+				}
+			},
+			"compareOutputs": [
+				"term",
+				"coef",
+				"se",
+				"z",
+				"pvalue",
+				"oddsRatio",
+				"ciLow",
+				"ciHigh",
+				"eta",
+				"fitted",
+				"outcome"
+			],
+			"tolerance": 1e-7,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-threshold-gt",
+			"jsName": "Threshold",
+			"pyFunc": "threshold",
+			"rFunc": "threshold",
+			"note": "Threshold > 2: 1 or 0 per row, a missing value stays missing. The node had no parity fixture.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [3.5, -1, null, 0, 2, 7.25, null, 2, -4, 10]
+				}
+			],
+			"args": {
+				"xIN": "@x",
+				"threshold": 2,
+				"comparison": ">",
+				"out": {
+					"binary": -1
+				}
+			},
+			"compareOutputs": ["binary"],
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-threshold-le",
+			"jsName": "Threshold",
+			"pyFunc": "threshold",
+			"rFunc": "threshold",
+			"note": "Threshold <= 2: 1 or 0 per row, a missing value stays missing. The node had no parity fixture.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [3.5, -1, null, 0, 2, 7.25, null, 2, -4, 10]
+				}
+			],
+			"args": {
+				"xIN": "@x",
+				"threshold": 2,
+				"comparison": "<=",
+				"out": {
+					"binary": -1
+				}
+			},
+			"compareOutputs": ["binary"],
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-threshold-lt",
+			"jsName": "Threshold",
+			"pyFunc": "threshold",
+			"rFunc": "threshold",
+			"note": "Threshold < 0: 1 or 0 per row, a missing value stays missing. The node had no parity fixture.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [3.5, -1, null, 0, 2, 7.25, null, 2, -4, 10]
+				}
+			],
+			"args": {
+				"xIN": "@x",
+				"threshold": 0,
+				"comparison": "<",
+				"out": {
+					"binary": -1
+				}
+			},
+			"compareOutputs": ["binary"],
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-threshold-ge",
+			"jsName": "Threshold",
+			"pyFunc": "threshold",
+			"rFunc": "threshold",
+			"note": "Threshold >= -1: 1 or 0 per row, a missing value stays missing. The node had no parity fixture.",
+			"inputs": [
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [3.5, -1, null, 0, 2, 7.25, null, 2, -4, 10]
+				}
+			],
+			"args": {
+				"xIN": "@x",
+				"threshold": -1,
+				"comparison": ">=",
+				"out": {
+					"binary": -1
+				}
+			},
+			"compareOutputs": ["binary"],
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-split-unsorted-times",
+			"jsName": "Split",
+			"pyFunc": "split",
+			"rFunc": "split",
+			"note": "Split at two times given out of order (sorted internally); full-length segments with null outside each window and where x or y is missing. The node had no parity fixture.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [0, 5, 10, 15, null, 25, 30, 35, 40, 45]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [1, 2, null, 4, 5, 6, 7, 8, 9, 10]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"splitTimes": [30, 10],
+				"out": {}
+			},
+			"compareOutputs": ["@{y}_1", "@{y}_2", "@{y}_3"],
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-collectcolumns-preprocess-empty-slot",
+			"jsName": "CollectColumns",
+			"pyFunc": "collectcolumns",
+			"rFunc": "collectcolumns",
+			"note": "Collect Columns with preProcesses z-score, an EMPTY slot (what the panel's \"add\" button inserts before a process is chosen; the app skips it), then Multiply by 2. The R port skipped only a missing name and aborted on the empty one. The node had no parity fixture.",
+			"inputs": [
+				{
+					"ref": "a",
+					"type": "number",
+					"values": [1, 2, 3, null, 5, 8]
+				},
+				{
+					"ref": "b",
+					"type": "number",
+					"values": [10, null, 30, 40, 50, 65]
+				}
+			],
+			"args": {
+				"colIds": ["@a", "@b"],
+				"preProcesses": [
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "z-score"
+						}
+					},
+					{
+						"processName": "",
+						"processArgs": {}
+					},
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": 2
+						}
+					}
+				],
+				"out": {}
+			},
+			"compareOutputs": ["col_@a", "col_@b"],
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-smoothed-preprocess-empty-slot",
+			"jsName": "SmoothedData",
+			"pyFunc": "smootheddata",
+			"rFunc": "smootheddata",
+			"note": "Smoothed data with an empty preProcess slot then Multiply by 3 (the R port aborted on the empty slot).",
+			"generate": {
+				"type": "rhythm",
+				"n": 60,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1201,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"smootherType": "moving",
+				"movingAvgWindowSize": 5,
+				"preProcesses": [
+					{
+						"processName": "",
+						"processArgs": {}
+					},
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": 3
+						}
+					}
+				],
+				"out": {
+					"smoothedx": -1
+				}
+			},
+			"compareOutputs": ["smoothedx", "smoothedy"],
+			"tolerance": 1e-9,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-movinganalysis-preprocess-empty-slot",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Moving Analysis with an empty preProcess slot before Multiply by 3 (the R port aborted on the empty slot).",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 5,
+				"seed": 1203,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 48,
+				"stepSize": 12,
+				"analysis": "summary",
+				"summaryPercentile": 50,
+				"preProcesses": [
+					{
+						"processName": "",
+						"processArgs": {}
+					},
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": 3
+						}
+					}
+				],
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_mean", "@{y}_sd"],
+			"tolerance": 1e-9,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-storedvaluegroup-basic",
+			"jsName": "StoredValueGroup",
+			"pyFunc": "storedvaluegroup",
+			"rFunc": "storedvaluegroup",
+			"note": "Two groups of stored values: only finite numbers are kept (a text value and a missing key are dropped). The node had no parity fixture.",
+			"inputs": [],
+			"storedValues": {
+				"k1": 1.5,
+				"k2": "abc",
+				"k3": -2,
+				"k4": 7
+			},
+			"args": {
+				"groups": [
+					{
+						"id": "g1",
+						"name": "A",
+						"keys": ["k1", "k2", "k3"]
+					},
+					{
+						"id": "g2",
+						"name": "",
+						"keys": ["k4", "missing"]
+					}
+				],
+				"out": {
+					"group_g1": -1,
+					"group_g2": -1
+				}
+			},
+			"compareOutputs": ["group_g1", "group_g2"],
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-doublelogistic-fixed-k1-k2",
+			"jsName": "DoubleLogistic",
+			"pyFunc": "doublelogistic",
+			"rFunc": "doublelogistic",
+			"note": "Both slopes fixed (fixK1, fixK2), period fixed at 24 h.",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1205,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"fixPeriod": true,
+				"fixedPeriod": 24,
+				"fixK1": true,
+				"fixedK1": 1.2,
+				"fixK2": true,
+				"fixedK2": 0.8,
+				"outputX": -1,
+				"out": {
+					"dlogx": -1,
+					"r2": -1,
+					"rmse": -1
+				}
+			},
+			"compareOutputs": ["dlogx", "dlogy", "r2", "rmse"],
+			"tolerance": 1e-6,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-rectangularwave-fixed-kappa-duty",
+			"jsName": "RectangularWave",
+			"pyFunc": "rectangularwave",
+			"rFunc": "rectangularwave",
+			"note": "Kappa and duty cycle fixed (fixKappa, fixDutyCycle), period fixed at 24 h.",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1207,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"fixOmega": true,
+				"fixedPeriod": 24,
+				"fixKappa": true,
+				"fixedKappa": 3,
+				"fixDutyCycle": true,
+				"fixedDutyCycle": 0.4,
+				"outputX": -1,
+				"out": {
+					"rectwavex": -1,
+					"r2": -1,
+					"rmse": -1
+				}
+			},
+			"compareOutputs": ["rectwavex", "rectwavey", "r2", "rmse"],
+			"tolerance": 1e-6,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-fitfunction-rect-fixed-kappa-duty",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "FitFunction rectangular with kappa and duty cycle fixed.",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1209,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "rectangular",
+				"fixOmega": true,
+				"fixedPeriod": 24,
+				"fixKappa": true,
+				"fixedKappa": 3,
+				"fixDutyCycle": true,
+				"fixedDutyCycle": 0.4,
+				"outputX": -1,
+				"out": {
+					"fitx": -1,
+					"r2": -1,
+					"kappa": -1,
+					"duty_cycle": -1
+				}
+			},
+			"compareOutputs": ["fitx", "fity", "r2", "kappa", "duty_cycle"],
+			"tolerance": 1e-6,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-fitfunction-dl-fixed-k1-k2",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "FitFunction periodic double logistic with both slopes fixed.",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 40,
+				"phase": 6,
+				"noise": 4,
+				"seed": 1211,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				},
+				"missingEvery": 7,
+				"missingOffset": 3,
+				"missingX": [5, -1]
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "doublelogistic",
+				"periodic": true,
+				"fixPeriod": true,
+				"fixedPeriod": 24,
+				"fixK1": true,
+				"fixedK1": 1.2,
+				"fixK2": true,
+				"fixedK2": 0.8,
+				"outputX": -1,
+				"out": {
+					"fitx": -1,
+					"r2": -1,
+					"k1": -1,
+					"k2": -1
+				}
+			},
+			"compareOutputs": ["fitx", "fity", "r2", "k1", "k2"],
+			"tolerance": 1e-6,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-fitfunction-dl-non-periodic",
+			"jsName": "FitFunction",
+			"pyFunc": "fitfunction",
+			"rFunc": "fitfunction",
+			"note": "FitFunction double logistic with periodic false (one rise and one fall over the record).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+						24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+						46, 47
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						8.002, 9.6045, 11.2101, 8.4224, 10.0498, 11.7105, 9.0449, 10.9396, 13.175, 11.6952,
+						15.8394, 17.3007, 24.5999, 31.8991, 33.3604, 37.5045, 40.4244, 38.2593, 40.1531,
+						41.8858, 39.1435, 40.7653, 37.9676, 39.5547, 41.1238, 38.2642, 39.7547, 41.1566, 38.002,
+						38.9772, 39.5048, 34.9445, 33.8557, 27.3697, 24.6, 21.8303, 15.3443, 14.2555, 14.0952,
+						10.2228, 11.1979, 12.4432, 9.4449, 10.9349, 8.0742, 9.6408, 11.2224, 8.4123
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"model": "doublelogistic",
+				"periodic": false,
+				"outputX": -1,
+				"fixK1": false,
+				"fixK2": false,
+				"out": {
+					"fitx": -1,
+					"r2": -1
+				}
+			},
+			"compareOutputs": ["fitx", "fity", "r2"],
+			"tolerance": 1e-6,
+			"kind": "tableProcess"
+		},
+		{
+			"id": "tp-longtowide-preprocess-chain",
+			"kind": "tableProcess",
+			"jsName": "LongToWide",
+			"pyFunc": "longtowide",
+			"rFunc": "longtowide",
+			"note": "preProcesses on every wide column (z-score, an empty slot that is skipped, then Multiply by 2); a time missing for one category is NaN there before the processes run.",
+			"inputs": [
+				{
+					"ref": "cat",
+					"type": "category",
+					"values": ["A", "A", "A", "A", "B", "B", "B"]
+				},
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [0, 1, 2, 3, 0, 1, 3]
+				},
+				{
+					"ref": "v",
+					"type": "number",
+					"values": [1, 2, 4, 8, 5, 7, 6]
+				}
+			],
+			"args": {
+				"categoryIN": "@cat",
+				"timeIN": "@t",
+				"valueIN": "@v",
+				"preProcesses": [
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "z-score"
+						}
+					},
+					{
+						"processName": "",
+						"processArgs": {}
+					},
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": 2
+						}
+					}
+				],
+				"out": {
+					"time": -1,
+					"value_A": -1,
+					"value_B": -1
+				}
+			},
+			"compareOutputs": ["time", "value_A", "value_B"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-logisticregression-perfect-separation",
+			"kind": "tableProcess",
+			"jsName": "LogisticRegression",
+			"pyFunc": "logisticregression",
+			"rFunc": "logisticregression",
+			"recordValid": true,
+			"inputs": [
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [0, 0, 0, 0, 1, 1, 1, 1]
+				},
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1, 2, 3, 4, 5, 6, 7, 8]
+				}
+			],
+			"args": {
+				"yIN": "@y",
+				"xIN": ["@x"],
+				"out": {
+					"term": -1,
+					"coef": -1,
+					"se": -1,
+					"z": -1,
+					"pvalue": -1,
+					"oddsRatio": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["term", "coef", "se", "z", "pvalue", "oddsRatio", "ciLow", "ciHigh"],
+			"note": "Perfect separation (x <= 4 is always 0, x >= 5 always 1): the app's Newton loop does not converge and the app writes what it reached (slope about 44, se about 1.5e4, p near 1) with a \"did not converge\" warning. statsmodels and glm gave different artefacts (R slope 278 against 197 here), so both ports now mirror the app's loop whenever it does not converge.",
+			"tolerance": 1e-7
 		}
 	]
 }

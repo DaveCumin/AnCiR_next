@@ -146,6 +146,16 @@ def run_table_process(fx, js):
             cols[oid] = rt.Column(id=oid, name=nm, type="number", data=oid, raw_data=raw_data)
         out_ids[k] = (static_id, dyn_id)
 
+    # Every other out key the fixture lists as -1 gets a column too, as the JS TableProcess
+    # allocates one for each: a node that writes only with its x output wired (Cosinor,
+    # FitFunction, RectangularWave, DoubleLogistic, TrendFit) must see it wired here as well.
+    for k, v in list(args["out"].items()):
+        if v == -1:
+            oid = 3000 + next_id
+            next_id += 1
+            args["out"][k] = oid
+            cols[oid] = rt.Column(id=oid, name=k, type="number", data=oid, raw_data=raw_data)
+
     fn = getattr(rt, f"tp_{fx['pyFunc']}", None)
     if fn is None:
         raise AssertionError(f"no Python tp_{fx['pyFunc']} in ancir_runtime")

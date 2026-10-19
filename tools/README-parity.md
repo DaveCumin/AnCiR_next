@@ -693,9 +693,14 @@ Notes:
 
 ## Current coverage
 
-`npm run parity` lists every fixture. As of 2026-10-20: 511 fixtures, Python 511/511, R 457
-pass with 54 not claimed, whole-session 88 match with 2 skipped (outputs blanked before the
-port runs).
+`npm run parity` lists every fixture. As of 2026-10-20 (second pass): 546 fixtures, Python
+546/546, R 492 pass with 54 not claimed, whole-session 89 match, 1 mismatch, 2 skipped
+(outputs blanked before the port runs). The mismatch is a display name, not a number: since
+fcbd369f (v82.33) the app writes a column's DISPLAY name into name-bearing outputs
+(NormalityTest `variable`, and the same change in DescribeData, Correlation, GroupComparison,
+LogisticRegression `term` and others), so a residual column reads "Residuals: y" where the
+ports still write its stored name `resid_191_15` (`demo-workflow-stats-regression`). See
+"Remaining divergences".
 
 ## Fixture fields added 2026-10-04 (review wave 1 and 2 ports)
 
@@ -806,12 +811,11 @@ r2/rmse/coefficients, `ancir_to_python.py` documents `.ancir` sessions.
   fixtures `tp-rhythmicity-*-stats`.
 - **Residual outputs** (`resid_<yId>`): ported for every node that has them (2026-10-17,
   see "Outputs the ports never wrote" above); no longer a divergence.
-- **RhythmicityAnalysis pre-processes**: ported to both (2026-10-20, see "Pre-processes, the
-  chosen actogram start, logistic intervals and node-level Moving Analysis" below); no longer a
-  divergence. The other nodes whose app code runs `preProcesses` (BinnedData, Cosinor,
-  FitFunction, DoubleLogistic, RectangularWave, TrendFit) still have no port of them in either
-  language; only CollectColumns has a panel to set them, so a session reaches them only by hand
-  or through the MCP tools.
+- **Pre-processes**: ported to both for every node whose app code runs them (RhythmicityAnalysis,
+  MovingAnalysis, SmoothedData, LongToWide, CollectColumns, and since 2026-10-20 BinnedData,
+  Cosinor, FitFunction, DoubleLogistic, RectangularWave and TrendFit; see "Pre-processes on the
+  fit nodes" below). No longer a divergence. Only CollectColumns has a panel to set them, so a
+  session reaches the others only by hand or through the MCP tools.
 - **Time-format import (UI-1)**: sessions saved before the fix may store numeric columns as
   `time` with a format such as `D.M`. JS now reads those values as missing; Python and R read
   numeric time cells as epoch ms.
@@ -840,6 +844,22 @@ r2/rmse/coefficients, `ancir_to_python.py` documents `.ancir` sessions.
   significance bars; R exports no plots.
 - **Not mirrored because the ports have no such path**: the boxplot significance bars,
   MovingAnalysis skip warnings, the panel warnings and notices.
+- **Display names in name-bearing outputs** (from fcbd369f): the app labels a node-output
+  column by its display label (outputLabels.js, 776 lines of label tables) wherever it writes a
+  column's name into a result (a category column of names, a term, a stored-value name); the
+  ports write the stored name. Identical for a plain imported column, different for a column
+  another node made. Cheapest fix: have the exporters bake each column's display name into the
+  exported session, so the ports need no label tables.
+- **FitFunction free-period cosinor on too few points** (app): fits 3 N + 1 parameters through
+  as few as 2 points (R² 1, arbitrary period) where the Cosinor node refuses below p + 1; the
+  ports refuse below 4 N. An app decision; not mirrored.
+- **TrendFit's permutation path** (app, `runPermutationTest` in TrendFit.svelte) skips the
+  node's `preProcesses`, which the plain path applies; FitFunction's permutation path applies
+  them. Only matters with both set; the ports run no permutation test.
+- **Cosinor with a fixed fit that fails** (app): the series keeps a result with no curve, so a
+  pre-process is called on `null` (a column process then throws). The ports skip that series.
+- **CollectColumns `aggregates`**: ported in both but not compared (the harness cannot allocate
+  an output id nested inside the `aggregates` list).
 
 ## Pre-processes, the chosen actogram start, logistic intervals and node-level Moving Analysis (2026-10-20)
 
@@ -919,15 +939,126 @@ ms (1e-9 of 1.7e12 is 1.7 s; a relative tolerance is weak on absolute times, her
 time-output fixture); and removing the `x_max - x_min < windowSize` refusal is an equivalent
 mutant, because no window start then satisfies `s <= x_max - windowSize` anyway.
 
+## Pre-processes on the fit nodes, few-point fits and non-converged logistic fits (2026-10-20)
+
+**Pre-processes on BinnedData, Cosinor, FitFunction, DoubleLogistic, RectangularWave and
+TrendFit** (both ports, `apply_output_pre_processes` in each). The app runs each process in
+order on each series' OUTPUT curve only, after every series is fitted (or binned) and before
+anything is written: the binned y after its NaN padding, or the fitted y at the output x (a
+sequence or column grid, or the series' own valid x). The x output is NOT processed (unlike
+RhythmicityAnalysis, which processes its x arrays too), and the residuals and every scalar
+metric come from the unprocessed fit. Any column process may be used; an entry with no
+`processName` (the empty slot the panel's add button inserts) is skipped. Fixtures
+`tp-binneddata-preprocess-{chain,frequencyfilter}`, `tp-cosinor-preprocess-{chain,sequence-minmax}`,
+`tp-fitfunction-preprocess-{rect-zscore,cosinor-chain}`, `tp-doublelogistic-preprocess-chain`,
+`tp-rectangularwave-preprocess-chain`, `tp-trendfit-preprocess-chain`: one non-trivial process
+each, six with a chain of two (`(y * -1) + 100` against `(y + 100) * -1`, z-score then a scale),
+one with an empty slot. The fixtures that have residuals or metrics compare them too, so a port
+that processed them would fail.
+
+**Few valid pairs.** Crossing every fit node with 1, 2, 3 and 4 valid pairs (one series, and a
+short series beside a full one) found no case of a port writing outputs the app does not; the
+real differences were all in TrendFit, plus one rule shared by four nodes:
+
+- TrendFit linear with ONE pair: the app's raw-sum regression (`wrangleData.js linearRegression`)
+  gives a 0 / 0 slope, so every output is NaN and the node stays valid. Python used a centred
+  numpy fit (slope 0, R² 0, a flat line through the point); it now uses the app's regression for
+  the linear, exponential and logarithmic models (`kahan_linear_regression`). R was right.
+- TrendFit with every y refused (fitDomain.js, here a degree-2 polynomial on 2 pairs): the app
+  CLEARS its ports (r2, rmse and every coefficient NaN, the x, curves and residuals empty); both
+  ports wrote nothing.
+- TrendFit with no output x: each curve is that y's OWN fitted values (one per valid pair). Both
+  ports evaluated every y at the first y's x, so a second y with different gaps came out the
+  wrong length.
+- TrendFit's coefficient ports for the other models (`coef_a`, `coef_b`, `coef_c<i>`,
+  getCoefKeys) were never written by either port.
+- Cosinor, FitFunction, RectangularWave and TrendFit take "the first y result" with
+  `Object.keys(result.y_results)[0]`, and JS orders integer keys ascending: the x output is the
+  y with the SMALLEST column id, not the first one wired. Both ports took the first wired
+  (`_js_first_key` / `.js_first_key`). Cosinor and RectangularWave also write their curves and
+  metrics only with the x output wired, DoubleLogistic its curves, as the app does.
+
+Fixtures `tp-trendfit-{linear-one-point,polynomial-refused-clears,per-y-curves,exponential-coefs,polynomial-coefs}`
+and `tp-{cosinor,rectangularwave,fitfunction}-first-y-by-id` (two ys with different gaps, wired
+z first).
+
+Not mirrored, on purpose: FitFunction's FREE-period cosinor fits 3 N + 1 parameters through as
+few as 2 points in the app (Levenberg-Marquardt interpolates them exactly, R² 1, an arbitrary
+period); the Cosinor node refuses the same fit below p + 1 points and both ports refuse it below
+4 N. The parameters of an underdetermined fit cannot be matched, so this is an app question (see
+"Remaining divergences").
+
+**Harness: every `-1` out key gets a column.** The JS TableProcess allocates a column for every
+out key the args list as -1; the Python and R legs allocated only the compared ones. A node that
+writes only with its x output wired would then write nothing in the ports, so both legs now
+allocate the rest too, and three fixtures that never listed `fitx` gained it.
+
+**LogisticRegression whose own Newton loop does not converge.** With an outcome left with ONE
+level after the incomplete rows are dropped, the app does not refuse or write nothing: its loop
+walks the intercept out until the 1e-10 weight floor stops it (coef about 26, se about 8e4, p near
+1, CI 0 to Infinity), warns that the fit did not converge, and writes the result. Python raised
+an OverflowError (statsmodels, then `math.exp` in the CI) and R wrote nothing (glm). Perfect
+separation is the same story with the slope walking out, and there statsmodels and glm each
+gave a different artefact (R slope 278 against the app's 197). Both ports now run the app's own
+loop (`_logistic_irls_js` / `.logistic_irls_js`, its Gauss-Jordan solve and inverse step for
+step) and use its result whenever it does not converge; a converged fit is still checked
+against statsmodels / glm. Fixtures `tp-logisticregression-single-level-after-drops`,
+`-single-level-zeros`, `-perfect-separation`.
+
+**Sweep.** Nodes ported in both but with no fixture got one: Threshold (all four comparisons),
+Split (times given out of order), CollectColumns (with pre-processes), StoredValueGroup. The
+parameter-coverage gaps that were not permutation tests are closed (DoubleLogistic and
+FitFunction fixed slopes, RectangularWave and FitFunction fixed kappa and duty cycle, FitFunction
+non-periodic double logistic), as is LongToWide's pre-processes. One more port bug: R skipped
+only a MISSING process name, so the empty slot made CollectColumns, SmoothedData and
+MovingAnalysis abort the script (`tp-{collectcolumns,smoothed,movinganalysis}-preprocess-empty-slot`).
+
+Port bugs found:
+
+| Bug                                                                                | Fixture                                          |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Six nodes' `preProcesses` ignored (Py, R)                                          | the 9 `*-preprocess-*` of those nodes            |
+| TrendFit linear on one pair: slope 0, R² 0 (Py)                                    | `tp-trendfit-linear-one-point`                   |
+| TrendFit refusal did not clear the ports (Py, R)                                   | `tp-trendfit-polynomial-refused-clears`          |
+| TrendFit curves evaluated at the first y's x (Py, R)                               | `tp-trendfit-per-y-curves`                       |
+| TrendFit `coef_a`, `coef_b`, `coef_c<i>` never written (Py, R)                     | `tp-trendfit-{exponential,polynomial}-coefs`     |
+| x output from the first y wired, not the smallest id (Py, R; four nodes)           | `tp-*-first-y-by-id`, `tp-trendfit-per-y-curves` |
+| Logistic, one outcome level after drops: OverflowError (Py), nothing written (R)   | `tp-logisticregression-single-level-*`           |
+| Logistic, perfect separation: a different artefact from the app's (Py, R)          | `tp-logisticregression-perfect-separation`       |
+| An empty pre-process slot aborted CollectColumns, SmoothedData, MovingAnalysis (R) | the 3 `*-preprocess-empty-slot`                  |
+
+All 35 new fixtures were run against the ports as committed before this pass (a scratch copy,
+with the new harness): 20 fail in Python and 22 in R, exactly the bugs in the table above (R
+already had `linear-one-point` right; Python already skipped the empty slot). The other 15 (the
+sweep and coverage fixtures) pass in both: the ports were right there, now it is checked.
+
+Mutations, each restored at once (the fixtures that failed):
+
+| Broken                                                                  | First failure                                                                      |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| pre-processes not applied (Py; R)                                       | all 9 `*-preprocess-*` of the six nodes                                            |
+| pre-processes in reverse order (Py)                                     | the 6 chains                                                                       |
+| Cosinor x processed too (Py)                                            | `tp-cosinor-preprocess-{chain,sequence-minmax}`                                    |
+| TrendFit residuals processed too (Py)                                   | `tp-trendfit-preprocess-chain`                                                     |
+| an empty slot not skipped (Py; R CollectColumns)                        | `tp-binneddata-preprocess-chain`; `tp-collectcolumns-preprocess-empty-slot`        |
+| first y result = first wired (Py; R)                                    | `tp-trendfit-per-y-curves` and the 3 `*-first-y-by-id`                             |
+| TrendFit curve at the first y's x (Py; R)                               | `tp-trendfit-per-y-curves`                                                         |
+| TrendFit refusal clear removed (Py; R)                                  | `tp-trendfit-polynomial-refused-clears`                                            |
+| TrendFit linear back to the centred numpy fit (Py)                      | `tp-trendfit-linear-one-point`                                                     |
+| TrendFit coefficient keys for linear only (Py), none for polynomial (R) | `tp-trendfit-exponential-coefs`; `-polynomial-coefs`, `-polynomial-refused-clears` |
+| logistic weight floor 1e-12 (Py; R)                                     | both `tp-logisticregression-single-level-*`                                        |
+| logistic app loop only for one level, not non-convergence (Py; R)       | `tp-logisticregression-perfect-separation`                                         |
+
 ## Nodes and fixtures the R port does not claim
 
 Analyses without an R implementation (`R_IMPLEMENTED` in `runtimeCoverage.js`): `Crossing`,
-`Random`, `SimulatedData` (the last two are baked into the session). The 46 fixtures with no
-`rFunc`: the correlogram and actogram plot-data rows (`correlogram-data-*` 5, `actogram-data-*` 11) and the Periodogram plot's `session-migration-*` 2 (R exports no plots), `util-kde-*` 2, `util-meansem-groups`, `tp-cosinor-addons-fixed24`,
+`Random`, `SimulatedData` (the last two are baked into the session). The 54 fixtures with no
+`rFunc`: the correlogram and actogram plot-data rows (`correlogram-data-*` 6, `actogram-data-*` 11) and the Periodogram plot's `session-migration-*` 2 (R exports no plots), `util-kde-*` 2, `util-meansem-*` 2, `tp-cosinor-addons-fixed24`,
 `util-chisquare-gof`, `util-chisquare-independence`, `util-logistic-*` 3 (pure-util call
 shape; the R logistic kernel is covered by the `tp-logistic*` fixtures), `util-cwt-peak-scale`,
-`util-fisher-exact-*` 6, `util-cramers-v-*` 4, `util-fisher-conditional-or-*` 4,
-`tp-cosinor-fixed-ci-short-record`, and the three `tp-crossing-*`.
+`util-fisher-exact-*` 6, `util-cramers-v-*` 4, `util-fisher-conditional-or-*` 6,
+`tp-cosinor-fixed-ci-short-record`, `tp-groupcomparison-kruskal-epsilon`, the three
+`tp-simulateddata-*` and the three `tp-crossing-*`.
 
 ## End-to-end session parity
 

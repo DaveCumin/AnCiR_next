@@ -325,13 +325,19 @@ def test_disabled_overlays_draw_nothing(fig_ax):
 def test_scatterplot_draws_every_form(fig_ax):
     fig, ax = fig_ax
     plot, cols = load_demo("demo-tp-crossing", "scatterplot")
+    # The ids come from the demo's Crossing node, not literals: every demo regeneration
+    # renumbers the columns (v82.33 moved them from 625.. to 660..).
+    session = json.loads((DEMOS / "demo-tp-crossing.json").read_text())
+    crossing_args = next(t["args"] for t in session["tableProcesses"] if t["name"] == "Crossing")
+    x_id, y_id = crossing_args["xIN"], crossing_args["yIN"][0]
+    breach_id, crossing_id = crossing_args["out"]["breach"], crossing_args["out"]["crossing"]
     inner = plot["plot"]
     # The demo's own two overlays (a typed horizontal line at 20 labelled "threshold" and a
     # vertical line wired to the Crossing node's crossing column) plus one of each band.
     inner["overlays"] += [
         ov(10, "band", "vertical", start=[5, 30], end=[10, 35], edge=True, label="window"),
         ov(11, "band", "horizontal", lower=[40], upper=[60]),
-        ov(12, "band", "ribbon", wire={"x": 625, "lower": 627, "upper": 626}),
+        ov(12, "band", "ribbon", wire={"x": x_id, "lower": breach_id, "upper": y_id}),
         ov(13, "band", "repeating", nightDurationHours=6, repeatEveryHours=24),
         ov(14, "line", "horizontal", at=[200]),  # widens y (the scatterplot widens both)
     ]
@@ -340,7 +346,7 @@ def test_scatterplot_draws_every_form(fig_ax):
 
     assert counts(ax, 0) == {"lines": 1, "patches": 0, "collections": 0}
     assert hline_y(by_gid(ax, 0)["lines"][0]) == 20
-    crossing = cols[628].get_data()
+    crossing = cols[crossing_id].get_data()
     assert [vline_x(a) for a in by_gid(ax, 1)["lines"]] == [float(v) for v in crossing]
     assert counts(ax, 10) == {"lines": 4, "patches": 2, "collections": 0}  # 2 spans, 2 edges each
     spans = by_gid(ax, 10)["patches"]

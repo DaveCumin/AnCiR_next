@@ -219,6 +219,18 @@ run_tp_fixture <- function(fx, rec) {
                                                    data = dyn_id)
     out_pairs[[k]] <- c(static_id, dyn_id)
   }
+  # Every other out key the fixture lists as -1 gets a column too, as the JS TableProcess
+  # allocates one for each (and as test_parity.py does): a node that writes only with its x
+  # output wired must see it wired here as well.
+  for (k in names(args$out)) {
+    v <- args$out[[k]]
+    if (is.numeric(v) && length(v) == 1 && v == -1) {
+      oid <- 3000 + next_id
+      next_id <- next_id + 1
+      args$out[[k]] <- oid
+      env$cols[[as.character(oid)]] <- new_column(id = oid, name = k, data = oid)
+    }
+  }
 
   # `storedValues` ({key: value}) arrive in the saved-session entry shape, as in test_parity.py.
   env$stored_values <- lapply(fx$storedValues, function(v) list(staticValue = v))

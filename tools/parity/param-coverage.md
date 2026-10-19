@@ -7,7 +7,7 @@ Which values of each analysis’s ENUMERABLE parameters (booleans, select option
 appear in any parity fixture. A value listed here is a branch that the JS, Python and R
 runtimes all claim to agree on and that nothing has ever compared.
 
-30 analyses have at least one fixture; 25 reach every enumerable value.
+36 analyses have at least one fixture; 31 reach every enumerable value.
 
 ## Values no fixture reaches
 
@@ -17,25 +17,16 @@ runtimes all claim to agree on and that nothing has ever compared.
 
 ### DoubleLogistic
 
-- `fixK1`: [true]
-- `fixK2`: [true]
 - `permuteTest`: [true]
 
 ### FitFunction
 
-- `fixKappa`: [true]
-- `fixDutyCycle`: [true]
-- `periodic`: [false]
-- `fixK1`: [true]
-- `fixK2`: [true]
 - `permuteTest`: [true]
 - `autoPermutations`: [true]
 - `permutationStatistic`: ["rmse"]
 
 ### RectangularWave
 
-- `fixKappa`: [true]
-- `fixDutyCycle`: [true]
 - `permuteTest`: [true]
 
 ### TrendFit
@@ -50,6 +41,7 @@ runtimes all claim to agree on and that nothing has ever compared.
 - BinnedData
 - ChiSquared
 - CircadianFunctionIndex
+- CollectColumns
 - ColumnFunctions
 - Correlation
 - CrossCorrelation
@@ -59,8 +51,10 @@ runtimes all claim to agree on and that nothing has ever compared.
 - FormulaColumn
 - GroupComparison
 - Interpolate
+- JoinData
 - LogisticRegression
 - LongToWide
+- MovingAnalysis
 - NonparametricRA
 - NormalityTest
 - RayleighTest
@@ -69,5 +63,8 @@ runtimes all claim to agree on and that nothing has ever compared.
 - SimulatedData
 - SmoothedData
 - Sort
+- Split
+- StoredValueGroup
 - SurrogateTest
+- Threshold
 - WideToLong

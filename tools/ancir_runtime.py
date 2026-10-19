@@ -2152,30 +2152,44 @@ def smooth_arrays(x_vals, y_vals, smoother_type, options=None):
 # ----------------------------------------------------------------------
 
 def fit_trend(x, y, model='linear', poly_degree=2):
+    """trendfit.js _fitTrendInternal. The linear, exponential and logarithmic models go
+    through the app's own regression (wrangleData.js linearRegression, raw compensated
+    sums: kahan_linear_regression), so a single point gives a NaN slope and a constant y a
+    NaN linear R2, as in the app (the centred numpy fit gave 0 for both). The RMSE is
+    sqrt(sum((y - fitted)^2) / n) from the fitted values, as _fitTrendInternal computes it."""
     xa = _to_float_arr(x); ya = _to_float_arr(y)
+
+    def _rmse(fitted):
+        return math.sqrt(sum((float(yi) - fi) ** 2 for yi, fi in zip(ya, fitted)) / xa.size)
+
+    def _r2(fitted):
+        # trendfit.js _computeRSquared: NaN on a non-finite total, 0 when y is constant.
+        fa = np.asarray(fitted, dtype=float)
+        rss = float(((ya - fa) ** 2).sum())
+        ss_tot = float(((ya - ya.mean()) ** 2).sum())
+        if not math.isfinite(ss_tot):
+            return float('nan')
+        return 1 - rss / ss_tot if ss_tot > 0 else 0.0
+
     if model == 'linear':
-        reg = linear_regression(xa, ya)
-        fitted = (reg['slope'] * xa + reg['intercept']).tolist()
+        reg = kahan_linear_regression(xa.tolist(), ya.tolist())
+        fitted = [reg['slope'] * xi + reg['intercept'] for xi in xa.tolist()]
         return {'parameters': {'slope': reg['slope'], 'intercept': reg['intercept']},
-                'fitted': fitted, 'rmse': reg['rmse'], 'rSquared': reg['rSquared']}
+                'fitted': fitted, 'rmse': _rmse(fitted), 'rSquared': reg['rSquared']}
     if model == 'exponential':
-        reg = linear_regression(xa, np.log(ya))
-        a = math.exp(reg['intercept']); b = reg['slope']
-        fitted = (a * np.exp(b * xa)).tolist()
-        rss = float(((ya - np.array(fitted)) ** 2).sum())
-        ss_tot = float(((ya - ya.mean()) ** 2).sum())
-        r2 = 1 - rss / ss_tot if ss_tot > 0 else 0.0
+        reg = kahan_linear_regression(xa.tolist(), np.log(ya).tolist())
+        with np.errstate(over='ignore', invalid='ignore'):  # JS Math.exp overflows to Infinity
+            a = float(np.exp(reg['intercept']))
+            b = reg['slope']
+            fitted = (a * np.exp(b * xa)).tolist()
         return {'parameters': {'a': a, 'b': b}, 'fitted': fitted,
-                'rmse': math.sqrt(rss / xa.size), 'rSquared': r2}
+                'rmse': _rmse(fitted), 'rSquared': _r2(fitted)}
     if model == 'logarithmic':
-        reg = linear_regression(np.log(xa), ya)
+        reg = kahan_linear_regression(np.log(xa).tolist(), ya.tolist())
         a = reg['intercept']; b = reg['slope']
-        fitted = (a + b * np.log(xa)).tolist()
-        rss = float(((ya - np.array(fitted)) ** 2).sum())
-        ss_tot = float(((ya - ya.mean()) ** 2).sum())
-        r2 = 1 - rss / ss_tot if ss_tot > 0 else 0.0
+        fitted = [a + b * math.log(xi) for xi in xa.tolist()]
         return {'parameters': {'a': a, 'b': b}, 'fitted': fitted,
-                'rmse': math.sqrt(rss / xa.size), 'rSquared': r2}
+                'rmse': _rmse(fitted), 'rSquared': _r2(fitted)}
     if model == 'polynomial':
         coeffs = np.polyfit(xa, ya, poly_degree)[::-1]  # ascending
         fitted = np.polyval(coeffs[::-1], xa).tolist()
@@ -2855,6 +2869,23 @@ def run_column_process(funcname, x, args, cols_index):
     return fn(x, args, cols_index)
 
 
+def apply_output_pre_processes(values, args, cols_index):
+    """The `preProcesses` of BinnedData, Cosinor, FitFunction, DoubleLogistic,
+    RectangularWave and TrendFit: after every series is fitted (or binned), each column
+    process in order runs on that series' OUTPUT curve (the binned y; the fitted y at the
+    output x), and nothing else. The x output, the residuals and every scalar metric are
+    left as they were (the app computes them from the fit, not from the processed curve).
+    An entry with no processName is skipped, as in the app."""
+    out = list(values)
+    for pp in args.get('preProcesses') or []:
+        name = (pp or {}).get('processName')
+        if not name:
+            continue
+        out = list(run_column_process(name.lower().replace(' ', ''), out,
+                                      pp.get('processArgs') or {}, cols_index))
+    return out
+
+
 # ----------------------------------------------------------------------
 # Table-process helpers
 # ----------------------------------------------------------------------
@@ -3108,7 +3139,7 @@ def tp_cosinor(args, cols, raw_data, _sv):
 
     metrics_by_y = {}
     any_valid = False
-    first_x_out = None
+    curves = {}
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -3147,19 +3178,24 @@ def tp_cosinor(args, cols, raw_data, _sv):
                      _fit_residuals(lambda xs, mp=model_params: evaluate_cosinor_at_points(mp, xs),
                                     t, y),
                      type_='number')
-        if first_x_out is None:
-            first_x_out = xs
-            x_out_ms = ([origin_ms + h * 3600000 for h in xs]
-                        if origin_ms is not None else xs)
-            _set_col(raw_data, cols, _out_id(args, 'cosinorx'), x_out_ms,
-                     type_='time' if origin_ms is not None else 'number', time_format=None)
-        y_out_id = _out_id(args, f'cosinory_{y_id}')
-        if y_out_id == -1:
-            y_out_id = _out_id(args, 'cosinory')
-        _set_col(raw_data, cols, y_out_id, ys, type_='number')
+        # preProcesses on the fitted curve only (Cosinor.svelte, before writing).
+        curves[y_id] = (xs, apply_output_pre_processes(ys, args, cols))
         any_valid = True
 
-    if any_valid:
+    # writeCosinorOutputs writes nothing without the x output wired. The x is the FIRST
+    # y result's by Object.keys order (the smallest column id, _js_first_key), not the first
+    # y wired; each y's curve is its own (its own valid x when no output x is set).
+    if any_valid and _out_id(args, 'cosinorx') != -1:
+        xs = curves[_js_first_key(curves)][0]
+        x_out_ms = ([origin_ms + h * 3600000 for h in xs]
+                    if origin_ms is not None else xs)
+        _set_col(raw_data, cols, _out_id(args, 'cosinorx'), x_out_ms,
+                 type_='time' if origin_ms is not None else 'number', time_format=None)
+        for y_id, (_xs, ys) in curves.items():
+            y_out_id = _out_id(args, f'cosinory_{y_id}')
+            if y_out_id == -1:
+                y_out_id = _out_id(args, 'cosinory')
+            _set_col(raw_data, cols, y_out_id, ys, type_='number')
         empty = cosinor_metrics(None, None, args, phase_ref)
         for key in _COSINOR_METRIC_KEYS:
             _set_col(raw_data, cols, _out_id(args, key),
@@ -3230,6 +3266,10 @@ def tp_binneddata(args, cols, raw_data, _sv):
     for y_id, ys in y_results.items():  # pad to the shared x with NaN (an empty bin)
         if len(ys) < len(bins_x):
             y_results[y_id] = list(ys) + [float('nan')] * (len(bins_x) - len(ys))
+    # preProcesses on each padded binned y (BinnedData.svelte, before writing); the bins
+    # (x) are not processed.
+    for y_id in list(y_results):
+        y_results[y_id] = apply_output_pre_processes(y_results[y_id], args, cols)
     if x_out == -1:
         return True  # valid, but the app writes nothing without an x output
     # As BinnedData.svelte writes it: the x output stores bin STARTS. A time input gives a
@@ -4139,7 +4179,11 @@ def tp_doublelogistic(args, cols, raw_data, _sv):
         y_out = _out_id(args, f'dlogy_{y_id}')
         if y_out == -1:
             y_out = _out_id(args, 'dlogy')
-        _set_col(raw_data, cols, y_out, ys, type_='number')
+        # preProcesses on the fitted curve only (DoubleLogistic.svelte); the curves are
+        # written only with the x output wired (writeXOutput gates them in the app).
+        if _out_id(args, 'dlogx') != -1:
+            _set_col(raw_data, cols, y_out, apply_output_pre_processes(ys, args, cols),
+                     type_='number')
         # Residuals (DoubleLogistic.svelte): only with the x output wired; the periodic model
         # evaluated at every input x.
         resid_id = _out_id(args, f'resid_{y_id}')
@@ -5038,7 +5082,7 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
     }
     # Column or sequence output x (resolve_output_x, outputXSequence.js).
     origin_ms, output_x_data = resolve_output_x(x_col, args, cols)
-    first_xs = None
+    curves = {}
     any_valid = False
     stats_by_y = {}
     for y_id in y_ins:
@@ -5056,18 +5100,8 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
         xs_out = output_x_data if output_x_data is not None else tt
         ys = (evaluate_rectwave_at_points(res['parameters'], output_x_data)
               if output_x_data is not None else res['fitted'])
-        if first_xs is None:
-            first_xs = xs_out
-            if origin_ms is not None:
-                _set_col(raw_data, cols, _out_id(args, 'rectwavex'),
-                         [origin_ms + h * 3600000 for h in first_xs], type_='time')
-            else:
-                _set_col(raw_data, cols, _out_id(args, 'rectwavex'), first_xs,
-                         type_='number')
-        y_out = _out_id(args, f'rectwavey_{y_id}')
-        if y_out == -1:
-            y_out = _out_id(args, 'rectwavey')
-        _set_col(raw_data, cols, y_out, ys, type_='number')
+        # preProcesses on the fitted curve only (RectangularWave.svelte).
+        curves[y_id] = (xs_out, apply_output_pre_processes(ys, args, cols))
         # Residuals (RectangularWave.svelte): only with the x output wired; the model
         # evaluated at every input x.
         resid_id = _out_id(args, f'resid_{y_id}')
@@ -5078,7 +5112,20 @@ def tp_rectangularwave(args, cols, raw_data, _sv):
                      type_='number')
         stats_by_y[y_id] = res
         any_valid = True
-    if any_valid:
+    # RectangularWave.svelte writes the x, the curves and the metric ports only with the x
+    # output wired; the x is the first y result's by Object.keys order (smallest column id).
+    if any_valid and _out_id(args, 'rectwavex') != -1:
+        first_xs = curves[_js_first_key(curves)][0]
+        if origin_ms is not None:
+            _set_col(raw_data, cols, _out_id(args, 'rectwavex'),
+                     [origin_ms + h * 3600000 for h in first_xs], type_='time')
+        else:
+            _set_col(raw_data, cols, _out_id(args, 'rectwavex'), first_xs, type_='number')
+        for y_id, (_xs, ys) in curves.items():
+            y_out = _out_id(args, f'rectwavey_{y_id}')
+            if y_out == -1:
+                y_out = _out_id(args, 'rectwavey')
+            _set_col(raw_data, cols, y_out, ys, type_='number')
         nan = float('nan')
         # Declared ports that had no writer until 2026-07-28: a session wiring r2 or rmse
         # downstream got an EMPTY column from the export. `perm_pvalue` (renamed from the
@@ -5512,7 +5559,71 @@ def tp_sort(args, cols, raw_data, _sv):
 
 # --- TrendFit ---
 
+def _js_first_key(d):
+    """Object.keys(obj)[0] in JS: integer-like keys come first in ASCENDING numeric order,
+    whatever order they were inserted in, so a node that takes "the first y result" this way
+    takes the y with the smallest column id, not the first one wired."""
+    ints = [k for k in d if isinstance(k, int) and not isinstance(k, bool) and k >= 0]
+    return min(ints) if ints else next(iter(d))
+
+
+def _trend_coef_keys(args):
+    """TrendFit.svelte getCoefKeys: the coefficient ports of the chosen model."""
+    model = args.get('model') or 'linear'
+    if model == 'linear':
+        return ['coef_slope', 'coef_intercept']
+    if model in ('exponential', 'logarithmic'):
+        return ['coef_a', 'coef_b']
+    if model == 'polynomial':
+        deg = args.get('polyDegree')
+        deg = deg if isinstance(deg, (int, float)) and not isinstance(deg, bool) \
+            and math.isfinite(deg) else 2
+        return [f'coef_c{i}' for i in range(int(deg) + 1)]
+    return []
+
+
+def _trend_coef_value(key, model, parameters):
+    """TrendFit.svelte coefValueForKey."""
+    nan = float('nan')
+    if not parameters:
+        return nan
+    if model == 'linear':
+        v = parameters.get('slope') if key == 'coef_slope' else parameters.get('intercept')
+    elif model in ('exponential', 'logarithmic'):
+        v = parameters.get('a') if key == 'coef_a' else parameters.get('b')
+    elif model == 'polynomial':
+        i = int(key[len('coef_c'):])
+        cs = parameters.get('coeffs') or []
+        v = cs[i] if i < len(cs) else None
+    else:
+        v = None
+    return nan if v is None else v
+
+
+def _write_trend_metrics(args, cols, raw_data, y_ins, fits):
+    """TrendFit.svelte writeTrendMetricOutputs: r2, rmse and the model's coefficients, one
+    value per y input in yIN order, NaN for a y with no fit."""
+    nan = float('nan')
+    model = args.get('model') or 'linear'
+    _set_col(raw_data, cols, _out_id(args, 'r2'),
+             [fits[y]['rSquared'] if y in fits else nan for y in y_ins], type_='number')
+    _set_col(raw_data, cols, _out_id(args, 'rmse'),
+             [fits[y]['rmse'] if y in fits else nan for y in y_ins], type_='number')
+    for k in _trend_coef_keys(args):
+        _set_col(raw_data, cols, _out_id(args, k),
+                 [_trend_coef_value(k, model, (fits.get(y) or {}).get('parameters'))
+                  for y in y_ins], type_='number')
+
+
 def tp_trendfit(args, cols, raw_data, _sv):
+    """Port of TrendFit.svelte trendfit. Each y is fitted on its own valid (x, y) pairs; with
+    no output x its curve is its OWN fitted values (one per valid pair), and the x output is
+    the first fitted y's valid x, exactly as the app writes them (this port used to evaluate
+    every y at the first y's x). The curve then goes through the node's preProcesses. The x,
+    the curves, the residuals and the metric ports are written only with the x output wired.
+    A y outside its model's domain (fitDomain.js) is refused; when every y is refused the app
+    CLEARS the outputs (x, curves and residuals empty, every metric NaN), which this port now
+    does too."""
     x_in = args.get('xIN', -1)
     y_ins = _id_list(args.get('yIN'))
     if x_in == -1 or x_in not in cols or not y_ins:
@@ -5525,9 +5636,9 @@ def tp_trendfit(args, cols, raw_data, _sv):
     # time) that turns it back into timestamps (fit_time_frame, STAT-19).
     # Column or sequence output x (resolve_output_x, outputXSequence.js).
     origin_ms, output_x_data = resolve_output_x(x_col, args, cols)
-    xs = None
+    results = {}
     any_valid = False
-    stats_by_y = {}
+    any_refused = False
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -5535,47 +5646,55 @@ def tp_trendfit(args, cols, raw_data, _sv):
         idx = _js_valid_pairs(t, y)
         tt = [_js_number(t[i]) for i in idx]
         yy = [_js_number(y[i]) for i in idx]
-        if not tt or _trend_domain_refused(tt, yy, model, deg):
+        if not tt:
+            continue
+        if _trend_domain_refused(tt, yy, model, deg):
+            any_refused = True
             continue
         res = fit_trend(tt, yy, model, deg)
         if res is None:
             continue
-        if xs is None:
-            # The app evaluates the fit at the first valid y's input t, not a dense grid.
-            xs = output_x_data if output_x_data is not None else tt
-            _set_col(raw_data, cols, _out_id(args, 'trendx'),
-                     [origin_ms + h * 3600000 for h in xs] if origin_ms is not None else xs,
-                     type_='time' if origin_ms is not None else 'number')
-        # Fit-quality ports, previously declared but never written.
-        stats_by_y[y_id] = res
-        ys = evaluate_trend_at_points(res['parameters'], model, xs)
-        y_out = _out_id(args, f'trendy_{y_id}')
-        if y_out == -1:
-            y_out = _out_id(args, 'trendy')
-        _set_col(raw_data, cols, y_out, ys, type_='number')
-        # Residuals (TrendFit.svelte): only with the x output wired; the trend evaluated at
-        # every input x.
-        resid_id = _out_id(args, f'resid_{y_id}')
-        if resid_id != -1 and _out_id(args, 'trendx') != -1:
-            _set_col(raw_data, cols, resid_id,
-                     _fit_residuals(lambda pts, pr=res['parameters']:
-                                    evaluate_trend_at_points(pr, model, pts), t, y),
-                     type_='number')
-        any_valid = True
-    if any_valid:
-        nan = float('nan')
-        def _pick(getter):
-            return [getter(stats_by_y[y]) if y in stats_by_y else nan for y in y_ins]
-        _set_col(raw_data, cols, _out_id(args, 'r2'),
-                 _pick(lambda r: r.get('rSquared', nan)), type_='number')
-        _set_col(raw_data, cols, _out_id(args, 'rmse'),
-                 _pick(lambda r: r.get('rmse', nan)), type_='number')
-        # Slope/intercept only exist for the linear model; other models leave them NaN
-        # rather than reporting a coefficient that does not mean what the name says.
-        _set_col(raw_data, cols, _out_id(args, 'coef_slope'),
-                 _pick(lambda r: r['parameters'].get('slope', nan)), type_='number')
-        _set_col(raw_data, cols, _out_id(args, 'coef_intercept'),
-                 _pick(lambda r: r['parameters'].get('intercept', nan)), type_='number')
+        x_out_data = output_x_data if output_x_data is not None else tt
+        y_out_data = (evaluate_trend_at_points(res['parameters'], model, output_x_data)
+                      if output_x_data is not None else list(res['fitted']))
+        results[y_id] = {'fit': res, 'xOutData': x_out_data, 'yOutData': y_out_data,
+                         'y': y}
+        if res['fitted']:
+            any_valid = True
+    for r in results.values():
+        r['yOutData'] = apply_output_pre_processes(r['yOutData'], args, cols)
+
+    x_out = _out_id(args, 'trendx')
+    fits = {y: r['fit'] for y, r in results.items()}
+    if any_valid and x_out != -1:
+        xs = results[_js_first_key(results)]['xOutData']
+        _set_col(raw_data, cols, x_out,
+                 [origin_ms + h * 3600000 for h in xs] if origin_ms is not None else xs,
+                 type_='time' if origin_ms is not None else 'number')
+        for y_id in y_ins:
+            r = results.get(y_id)
+            if r is None:
+                continue
+            y_out = _out_id(args, f'trendy_{y_id}')
+            if y_out == -1:
+                y_out = _out_id(args, 'trendy')
+            _set_col(raw_data, cols, y_out, r['yOutData'], type_='number')
+            # Residuals: the trend evaluated at every input x.
+            resid_id = _out_id(args, f'resid_{y_id}')
+            if resid_id != -1:
+                _set_col(raw_data, cols, resid_id,
+                         _fit_residuals(lambda pts, pr=r['fit']['parameters']:
+                                        evaluate_trend_at_points(pr, model, pts), t, r['y']),
+                         type_='number')
+        _write_trend_metrics(args, cols, raw_data, y_ins, fits)
+    if not any_valid and any_refused:
+        # A refused fit must not leave a previous model's numbers in the ports: the app
+        # blanks them (metrics NaN, x / curves / residuals empty) and says why.
+        _write_trend_metrics(args, cols, raw_data, y_ins, {})
+        _set_col(raw_data, cols, x_out, [], type_='number')
+        for y_id in y_ins:
+            _set_col(raw_data, cols, _out_id(args, f'trendy_{y_id}'), [], type_='number')
+            _set_col(raw_data, cols, _out_id(args, f'resid_{y_id}'), [], type_='number')
     return any_valid
 
 
@@ -6436,8 +6555,8 @@ def compute_group_comparison(args, cols):
 # (already ported above as fit_cosinor_fixed / fit_cosine_curves /
 # fit_rectangular_wave / fit_double_logistic and their evaluate_* helpers,
 # mirroring src/lib/utils/fitFunction.js fitCurveModel + evaluateCurveModelAtPoints).
-# preProcesses (post-fit transforms) and permutation tests are UI/runtime-only
-# extensions not present in the column-process runtime, so they are not applied.
+# preProcesses run on each fitted curve before it is written (apply_output_pre_processes);
+# the permutation test is not ported (perm_pvalue is NaN, "not computed").
 
 def _ff_fit_curve_model(tt, yy, model, args):
     # JS fitFunction.js fitCurveModel + per-model option plumbing (:8-113)
@@ -6690,7 +6809,7 @@ def tp_fitfunction(args, cols, raw_data, _sv):
             any_valid = True
 
     if any_valid and x_out != -1:
-        first = y_results[next(iter(y_results))]
+        first = y_results[_js_first_key(y_results)]
         x_out_data = first['xOutData'] or output_x_data or first['t']
         x_out_ms = ([origin_ms + h * 3600000 for h in x_out_data]
                     if origin_ms is not None else x_out_data)
@@ -6700,7 +6819,9 @@ def tp_fitfunction(args, cols, raw_data, _sv):
             y_out = _out_id(args, f"fity_{y_id}")
             yr = y_results.get(y_id)
             if y_out is not None and y_out != -1 and yr:
-                _set_col(raw_data, cols, y_out, yr['yOutData'], type_='number')
+                # preProcesses on the fitted curve only (FitFunction.svelte).
+                _set_col(raw_data, cols, y_out,
+                         apply_output_pre_processes(yr['yOutData'], args, cols), type_='number')
             # Residuals (FitFunction.svelte residualColumn): the model evaluated at every
             # input x, observed - predicted.
             resid_id = _out_id(args, f'resid_{y_id}')
@@ -6709,7 +6830,8 @@ def tp_fitfunction(args, cols, raw_data, _sv):
                          _fit_residuals(lambda pts, fr=yr['fitResult']:
                                         _ff_evaluate_at_points(fr, model, pts), t, yr['y']),
                          type_='number')
-    if any_valid:
+    # writeFitMetricOutputs runs inside the same `anyValid && xOUT !== -1` block.
+    if any_valid and x_out != -1:
         for key in ff_metric_keys(args):
             _set_col(raw_data, cols, _out_id(args, key),
                      [ff_metric_value(key, model, (y_results.get(y) or {}).get('fitResult'),
@@ -8009,9 +8131,9 @@ def tp_logisticregression(args, cols, raw_data, _sv):
     # Wald CI on the ODDS RATIO, matching logistic.js:164 — exp(coef +/- 1.96*se), and NaN
     # rather than a bogus interval when the standard error did not come back finite.
     z975 = 1.959963984540054
-    ci_low = [math.exp(c - z975 * s) if _isfinite(s) else float('nan')
+    ci_low = [_js_exp(c - z975 * s) if _isfinite(s) else float('nan')
               for c, s in zip(coef, se)]
-    ci_high = [math.exp(c + z975 * s) if _isfinite(s) else float('nan')
+    ci_high = [_js_exp(c + z975 * s) if _isfinite(s) else float('nan')
                for c, s in zip(coef, se)]
     _result_rows(raw_data, cols, args, {
         'term': res['term'], 'coef': coef, 'se': se, 'z': res['z'],
@@ -10705,6 +10827,126 @@ def chi_square_independence(table, correction=True):
     return {"statistic": float(res.statistic), "pvalue": float(res.pvalue), "df": int(res.dof)}
 
 
+def _js_exp(v):
+    """JS Math.exp: overflows to Infinity rather than raising."""
+    try:
+        return math.exp(v)
+    except OverflowError:
+        return math.inf
+
+
+def _logit_solve_js(A, b):
+    """logistic.js solve: Gauss-Jordan elimination with partial pivoting, None when a pivot is
+    below 1e-12, in the same operation order as the app."""
+    n = len(b)
+    M = [list(row) + [b[i]] for i, row in enumerate(A)]
+    for col in range(n):
+        piv = col
+        for r in range(col + 1, n):
+            if abs(M[r][col]) > abs(M[piv][col]):
+                piv = r
+        if abs(M[piv][col]) < 1e-12:
+            return None
+        M[col], M[piv] = M[piv], M[col]
+        for r in range(n):
+            if r == col:
+                continue
+            f = M[r][col] / M[col][col]
+            for c in range(col, n + 1):
+                M[r][c] -= f * M[col][c]
+    return [M[i][n] / M[i][i] for i in range(n)]
+
+
+def _logit_inverse_js(A):
+    n = len(A)
+    inv = [[0.0] * n for _ in range(n)]
+    for col in range(n):
+        e = [0.0] * n
+        e[col] = 1.0
+        x = _logit_solve_js(A, e)
+        if x is None:
+            return None
+        for row in range(n):
+            inv[row][col] = x[row]
+    return inv
+
+
+def _logistic_irls_js(rows, ys, labels, kept, total, max_iter=50, tol=1e-8):
+    """utils/logistic.js logisticRegression from the complete rows on, step for step: Newton
+    (IRLS) with the weight floored at 1e-10, at most 50 iterations, the covariance from the
+    information matrix at the last beta. Used where the reference fit (statsmodels) has no
+    answer but the app still reports one: whenever this loop does not converge (an outcome
+    left with ONE level after the incomplete rows are dropped, or perfect separation). The app does not refuse that case; its Newton steps walk the
+    intercept out until the floored weight stops them (|coef| about 26, se about 1e5, p near
+    1, CI 0 to Infinity), flags the fit as not converged, and writes it. Perfect separation
+    is the same story with the slope walking out instead."""
+    def sigmoid(x):
+        return 1 / (1 + math.exp(-x)) if x >= 0 else math.exp(x) / (1 + math.exp(x))
+    n, k = len(rows), len(labels)
+    beta = [0.0] * k
+    converged = False
+    for _ in range(max_iter):
+        XtWX = [[0.0] * k for _ in range(k)]
+        grad = [0.0] * k
+        for i in range(n):
+            eta = 0.0
+            for j in range(k):
+                eta += rows[i][j] * beta[j]
+            mu = sigmoid(eta)
+            w = max(mu * (1 - mu), 1e-10)
+            r = ys[i] - mu
+            for a in range(k):
+                grad[a] += rows[i][a] * r
+                for b in range(k):
+                    XtWX[a][b] += rows[i][a] * rows[i][b] * w
+        step = _logit_solve_js(XtWX, grad)
+        if step is None:
+            break
+        max_delta = 0.0
+        for j in range(k):
+            beta[j] += step[j]
+            max_delta = max(max_delta, abs(step[j]))
+        if max_delta < tol:
+            converged = True
+            break
+    nan = float('nan')
+    XtWX = [[0.0] * k for _ in range(k)]
+    eta_arr, fit_arr, out_arr = [nan] * total, [nan] * total, [nan] * total
+    log_lik = 0.0
+    for i in range(n):
+        eta = 0.0
+        for j in range(k):
+            eta += rows[i][j] * beta[j]
+        mu = sigmoid(eta)
+        w = max(mu * (1 - mu), 1e-10)
+        log_lik += math.log(max(mu, 1e-300)) if ys[i] == 1 else math.log(max(1 - mu, 1e-300))
+        for a in range(k):
+            for b in range(k):
+                XtWX[a][b] += rows[i][a] * rows[i][b] * w
+        eta_arr[kept[i]] = eta
+        fit_arr[kept[i]] = mu
+        out_arr[kept[i]] = ys[i]
+    cov = _logit_inverse_js(XtWX)
+    se = [math.sqrt(cov[j][j]) if cov is not None and cov[j][j] >= 0 else nan
+          for j in range(k)]
+    z = [beta[j] / se[j] if (se[j] and not math.isnan(se[j])) else nan for j in range(k)]
+    pv = [float(sp_stats.chi2.sf(v * v, 1)) if math.isfinite(v) else nan for v in z]
+    ybar = sum(ys) / n
+    null_ll = sum(math.log(max(ybar, 1e-300)) if yi == 1 else math.log(max(1 - ybar, 1e-300))
+                  for yi in ys)
+    lr = 2 * (log_lik - null_ll)
+    p = k - 1
+    return {
+        "term": list(labels), "coef": list(beta), "se": se, "z": z, "pvalue": pv,
+        "oddsRatio": [_js_exp(c) for c in beta], "n": n, "logLik": log_lik,
+        "lrChiSq": lr,
+        "lrPvalue": float(sp_stats.chi2.sf(lr, p)) if math.isfinite(lr) and lr >= 0 else nan,
+        "pseudoR2": 1 - log_lik / null_ll if null_ll != 0 else nan,
+        "converged": converged,
+        "eta": eta_arr, "fitted": fit_arr, "outcome": out_arr,
+    }
+
+
 def logistic_regression(y, predictor_cols, names=None):
     """statsmodels Logit reference for utils/logistic.js. Returns per-term fields as
     parallel arrays (term/coef/se/z/pvalue/oddsRatio) plus model scalars."""
@@ -10741,6 +10983,13 @@ def logistic_regression(y, predictor_cols, names=None):
     if n < k + 1:
         return {"term": [], "coef": [], "se": [], "z": [], "pvalue": [], "oddsRatio": [],
                 "n": n, "logLik": nan, "lrChiSq": nan, "lrPvalue": nan, "pseudoR2": nan, **empty}
+    # Where the app's own Newton loop does not converge (an outcome left with ONE level after
+    # the drops, or perfect separation) it still writes what the loop reached, flagged as not
+    # converged; statsmodels then has no answer or a different artefact, so that result is
+    # mirrored step for step. A converged fit is checked against statsmodels as before.
+    js_fit = _logistic_irls_js(rows, ys, labels, kept, total)
+    if not js_fit['converged']:
+        return js_fit
     X = np.asarray(rows, dtype=float)
     Y = np.asarray(ys, dtype=float)
     m = sm.Logit(Y, X).fit(disp=0)

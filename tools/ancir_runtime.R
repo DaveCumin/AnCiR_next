@@ -573,6 +573,54 @@ tp_threshold <- function(args, env) {
   }, numeric(1))
 }
 
+# TrendFit.svelte getCoefKeys / coefValueForKey: the coefficient ports of the chosen model.
+.trend_coef_keys <- function(args) {
+  model <- if (is.null(args$model)) "linear" else args$model
+  if (identical(model, "linear")) return(c("coef_slope", "coef_intercept"))
+  if (model %in% c("exponential", "logarithmic")) return(c("coef_a", "coef_b"))
+  if (identical(model, "polynomial")) {
+    d <- args$polyDegree
+    deg <- if (is.numeric(d) && length(d) == 1 && is.finite(d)) d else 2
+    return(paste0("coef_c", 0:deg))
+  }
+  character(0)
+}
+.trend_coef_value <- function(key, model, parameters) {
+  if (is.null(parameters)) return(NaN)
+  v <- if (identical(model, "linear")) {
+    if (key == "coef_slope") parameters$slope else parameters$intercept
+  } else if (model %in% c("exponential", "logarithmic")) {
+    if (key == "coef_a") parameters$a else parameters$b
+  } else if (identical(model, "polynomial")) {
+    i <- as.integer(substring(key, nchar("coef_c") + 1)) + 1
+    if (i <= length(parameters$coeffs)) parameters$coeffs[[i]] else NULL
+  } else NULL
+  if (is.null(v)) NaN else as.numeric(v)
+}
+# TrendFit.svelte writeTrendMetricOutputs: r2, rmse and the model's coefficients, one value
+# per y input in yIN order, NaN for a y with no fit.
+.write_trend_metrics <- function(args, env, y_ins, fits) {
+  model <- if (is.null(args$model)) "linear" else args$model
+  pick <- function(f) vapply(y_ins, function(y) {
+    r <- fits[[as.character(y)]]
+    v <- if (is.null(r)) NULL else f(r)
+    if (is.null(v)) NaN else as.numeric(v)
+  }, numeric(1))
+  set_col(env, env$cols, out_id(args, "r2"), pick(function(r) r$rSquared), type = "number")
+  set_col(env, env$cols, out_id(args, "rmse"), pick(function(r) r$rmse), type = "number")
+  for (k in .trend_coef_keys(args))
+    set_col(env, env$cols, out_id(args, k),
+            vapply(y_ins, function(y) .trend_coef_value(k, model,
+                                                        fits[[as.character(y)]]$parameters),
+                   numeric(1)), type = "number")
+}
+
+# Port of TrendFit.svelte trendfit (see the Python port). Each y is fitted on its own valid
+# (x, y) pairs; with no output x its curve is its OWN fitted values and the x output is the
+# first y result's valid x (Object.keys order: the smallest column id). The curve then goes
+# through the node's preProcesses. The x, the curves, the residuals and the metric ports are
+# written only with the x output wired. When every y is refused (fitDomain.js) the app CLEARS
+# the outputs (x, curves and residuals empty, every metric NaN), and so does this port.
 tp_trendfit <- function(args, env) {
   x_in <- if (is.null(args$xIN)) -1 else args$xIN
   y_ins <- id_list(args$yIN)
@@ -585,56 +633,63 @@ tp_trendfit <- function(args, env) {
   # Column or sequence output x (resolve_output_x, outputXSequence.js).
   frm <- resolve_output_x(x_col, args, env$cols, env$raw_data)
   output_x <- frm$out
-  xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
+  results <- list(); any_valid <- FALSE; any_refused <- FALSE
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
-    pr <- .pgram_pairs(t, col_data(env$cols[[yk]], env$cols, env$raw_data))
+    y <- col_data(env$cols[[yk]], env$cols, env$raw_data)
+    pr <- .pgram_pairs(t, y)
     if (!length(pr$t)) next
     tt <- pr$t; yv <- pr$y
     refused <- (identical(model, "logarithmic") && any(tt <= 0)) ||
                (identical(model, "exponential") && any(yv <= 0)) ||
                (identical(model, "polynomial") && length(tt) <= deg) ||
                (length(tt) >= 2 && all(tt == tt[1]))
-    if (refused) next
+    if (refused) { any_refused <- TRUE; next }
     res <- fit_trend(tt, yv, model, deg)
     if (is.null(res)) next
-    if (is.null(xs)) {
-      xs <- if (!is.null(output_x)) output_x else tt
-      if (!is.null(frm$origin)) set_col(env, env$cols, out_id(args, "trendx"),
-                                        frm$origin + xs * 3600000, type = "time")
-      else set_col(env, env$cols, out_id(args, "trendx"), xs, type = "number")
-    }
-    yy <- evaluate_trend_at_points(res$parameters, model, xs)
-    y_out <- out_id(args, paste0("trendy_", y_id))
-    if (y_out == -1) y_out <- out_id(args, "trendy")
-    set_col(env, env$cols, y_out, yy, type = "number")
-    # Residuals (TrendFit.svelte): only with the x output wired; the trend evaluated at every
-    # input x.
-    rid <- out_id(args, paste0("resid_", y_id))
-    if (rid != -1 && out_id(args, "trendx") != -1) {
-      prm <- res$parameters
-      set_col(env, env$cols, rid,
-              .fit_residuals(function(p) evaluate_trend_at_points(prm, model, p), t,
-                             col_data(env$cols[[yk]], env$cols, env$raw_data)),
-              type = "number")
-    }
-    stats_by_y[[yk]] <- res
-    any_valid <- TRUE
+    results[[yk]] <- list(
+      fit = res, x = if (!is.null(output_x)) output_x else tt,
+      y_out = if (!is.null(output_x)) evaluate_trend_at_points(res$parameters, model, output_x)
+              else res$fitted,
+      y = y)
+    if (length(res$fitted)) any_valid <- TRUE
   }
-  if (any_valid) {
-    # Fit-quality and linear-coefficient ports, one value per y (as the Python port).
-    pick <- function(f) vapply(y_ins, function(y) {
-      r <- stats_by_y[[as.character(y)]]
-      v <- if (is.null(r)) NULL else f(r)
-      if (is.null(v)) NaN else as.numeric(v)
-    }, numeric(1))
-    set_col(env, env$cols, out_id(args, "r2"), pick(function(r) r$rSquared), type = "number")
-    set_col(env, env$cols, out_id(args, "rmse"), pick(function(r) r$rmse), type = "number")
-    set_col(env, env$cols, out_id(args, "coef_slope"), pick(function(r) r$parameters$slope),
-            type = "number")
-    set_col(env, env$cols, out_id(args, "coef_intercept"),
-            pick(function(r) r$parameters$intercept), type = "number")
+  for (yk in names(results))
+    results[[yk]]$y_out <- apply_output_pre_processes(results[[yk]]$y_out, args, env)
+  fits <- lapply(results, function(r) r$fit)
+  x_out <- out_id(args, "trendx")
+  if (any_valid && x_out != -1) {
+    xs <- results[[.js_first_key(names(results))]]$x
+    if (!is.null(frm$origin)) set_col(env, env$cols, x_out, frm$origin + xs * 3600000,
+                                      type = "time")
+    else set_col(env, env$cols, x_out, xs, type = "number")
+    for (y_id in y_ins) {
+      r <- results[[as.character(y_id)]]
+      if (is.null(r)) next
+      y_out <- out_id(args, paste0("trendy_", y_id))
+      if (y_out == -1) y_out <- out_id(args, "trendy")
+      set_col(env, env$cols, y_out, r$y_out, type = "number")
+      # Residuals: the trend evaluated at every input x.
+      rid <- out_id(args, paste0("resid_", y_id))
+      if (rid != -1) {
+        prm <- r$fit$parameters
+        set_col(env, env$cols, rid,
+                .fit_residuals(function(p) evaluate_trend_at_points(prm, model, p), t, r$y),
+                type = "number")
+      }
+    }
+    .write_trend_metrics(args, env, y_ins, fits)
+  }
+  if (!any_valid && any_refused) {
+    # A refused fit must not leave a previous model's numbers in the ports: the app blanks
+    # them (metrics NaN, x / curves / residuals empty) and says why.
+    .write_trend_metrics(args, env, y_ins, list())
+    set_col(env, env$cols, x_out, numeric(0), type = "number")
+    for (y_id in y_ins) {
+      set_col(env, env$cols, out_id(args, paste0("trendy_", y_id)), numeric(0), type = "number")
+      set_col(env, env$cols, out_id(args, paste0("resid_", y_id)), numeric(0), type = "number")
+    }
   }
   any_valid
 }
@@ -677,7 +732,7 @@ tp_smootheddata <- function(args, env) {
   }
   for (pp in args$preProcesses) {
     nm <- pp$processName
-    if (is.null(nm)) next
+    if (is.null(nm) || !nzchar(nm)) next  # the app skips an empty slot too
     for (yk in names(y_res)) {
       y_res[[yk]] <- run_column_process(tolower(gsub(" ", "", nm)), y_res[[yk]],
                                         if (is.null(pp$processArgs)) list() else pp$processArgs,
@@ -1063,6 +1118,10 @@ tp_binneddata <- function(args, env) {
     n_pad <- length(bins_x) - length(y_results[[yk]])
     if (n_pad > 0) y_results[[yk]] <- c(y_results[[yk]], rep(NaN, n_pad))
   }
+  # preProcesses on each padded binned y (BinnedData.svelte, before writing); the bins (x)
+  # are not processed.
+  for (yk in names(y_results))
+    y_results[[yk]] <- apply_output_pre_processes(y_results[[yk]], args, env)
   x_out <- out_id(args, "binnedx")
   if (x_out == -1) return(TRUE)  # valid, but the app writes nothing without an x output
   # As BinnedData.svelte writes it: the x output stores bin STARTS. A time input gives a time
@@ -1381,7 +1440,7 @@ tp_cosinor <- function(args, env) {
   fr <- resolve_output_x(x_col, args, env$cols, env$raw_data)
   phase_ref <- node_phase_reference(args, x_col, env$cols, env$raw_data)
 
-  any_valid <- FALSE; first_x <- NULL; metrics <- list()
+  any_valid <- FALSE; curves <- list(); metrics <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
@@ -1404,15 +1463,9 @@ tp_cosinor <- function(args, env) {
     params <- if (!is.null(res$harmonics)) res else res$parameters
     xs <- if (!is.null(fr$out)) fr$out else tt
     metrics[[yk]] <- cosinor_metrics(fixed_res, free_res, args, phase_ref)
-    if (is.null(first_x)) {
-      first_x <- xs
-      if (!is.null(fr$origin)) set_col(env, env$cols, out_id(args, "cosinorx"),
-                                       fr$origin + xs * 3600000, type = "time")
-      else set_col(env, env$cols, out_id(args, "cosinorx"), xs, type = "number")
-    }
-    yo <- out_id(args, paste0("cosinory_", y_id))
-    if (yo == -1) yo <- out_id(args, "cosinory")
-    set_col(env, env$cols, yo, evaluate_cosinor_at_points(params, xs), type = "number")
+    # preProcesses on the fitted curve only (Cosinor.svelte, before writing).
+    curves[[yk]] <- list(x = xs, y = apply_output_pre_processes(
+      evaluate_cosinor_at_points(params, xs), args, env))
     # Residuals (Cosinor.svelte writeCosinorOutputs): only with the x output wired; the model
     # evaluated at every input x (fixed period: the full model, mesor included, v82.11).
     rid <- out_id(args, paste0("resid_", y_id))
@@ -1424,7 +1477,19 @@ tp_cosinor <- function(args, env) {
     }
     any_valid <- TRUE
   }
-  if (any_valid) {
+  # writeCosinorOutputs writes nothing without the x output wired. The x is the FIRST y
+  # result's by Object.keys order (the smallest column id), not the first y wired; each y's
+  # curve is its own (its own valid x when no output x is set).
+  if (any_valid && out_id(args, "cosinorx") != -1) {
+    xs <- curves[[.js_first_key(names(curves))]]$x
+    if (!is.null(fr$origin)) set_col(env, env$cols, out_id(args, "cosinorx"),
+                                     fr$origin + xs * 3600000, type = "time")
+    else set_col(env, env$cols, out_id(args, "cosinorx"), xs, type = "number")
+    for (yk in names(curves)) {
+      yo <- out_id(args, paste0("cosinory_", yk))
+      if (yo == -1) yo <- out_id(args, "cosinory")
+      set_col(env, env$cols, yo, curves[[yk]]$y, type = "number")
+    }
     empty <- cosinor_metrics(NULL, NULL, args, phase_ref)
     for (key in COSINOR_METRIC_KEYS) {
       v <- vapply(y_ins, function(y) {
@@ -1759,7 +1824,7 @@ tp_collectcolumns <- function(args, env) {
   names(res) <- as.character(ids)
   for (pp in args$preProcesses) {
     nm <- pp$processName
-    if (is.null(nm)) next
+    if (is.null(nm) || !nzchar(nm)) next  # the app skips an empty slot too
     for (k in names(res)) res[[k]] <- run_column_process(tolower(gsub(" ", "", nm)), res[[k]],
       if (is.null(pp$processArgs)) list() else pp$processArgs, env$cols, env$raw_data)
   }
@@ -2255,6 +2320,86 @@ chi_square_independence_effects <- function(table, correction = TRUE) {
 
 # Logistic regression via base R's glm(family = binomial): a genuine third implementation
 # rather than a re-derivation of the JS IRLS, the same reasoning as using shapiro.test.
+# logistic.js solve: Gauss-Jordan elimination with partial pivoting, NULL when a pivot is
+# below 1e-12, in the app's operation order.
+.logit_solve_js <- function(A, b) {
+  n <- length(b)
+  M <- cbind(A, b)
+  for (col in seq_len(n)) {
+    piv <- col
+    if (col < n) for (r in (col + 1):n) if (abs(M[r, col]) > abs(M[piv, col])) piv <- r
+    if (abs(M[piv, col]) < 1e-12) return(NULL)
+    tmp <- M[col, ]; M[col, ] <- M[piv, ]; M[piv, ] <- tmp
+    for (r in seq_len(n)) {
+      if (r == col) next
+      f <- M[r, col] / M[col, col]
+      for (cc in col:(n + 1)) M[r, cc] <- M[r, cc] - f * M[col, cc]
+    }
+  }
+  vapply(seq_len(n), function(i) M[i, n + 1] / M[i, i], numeric(1))
+}
+.logit_inverse_js <- function(A) {
+  n <- nrow(A)
+  inv <- matrix(0, n, n)
+  for (col in seq_len(n)) {
+    e <- numeric(n); e[col] <- 1
+    x <- .logit_solve_js(A, e)
+    if (is.null(x)) return(NULL)
+    inv[, col] <- x
+  }
+  inv
+}
+
+# utils/logistic.js logisticRegression from the complete rows on, step for step (Python:
+# _logistic_irls_js). Used where glm has no answer but the app still reports one: whenever
+# this loop does not converge (an outcome left with ONE level after the incomplete rows are
+# dropped, or perfect separation). The app does not refuse that
+# case; its Newton steps walk the intercept out until the floored weight (1e-10) stops them
+# (|coef| about 26, se about 1e5, p near 1, CI 0 to Inf), flags the fit as not converged and
+# writes it.
+.logistic_irls_js <- function(rows, ys, labels, kept, total, max_iter = 50, tol = 1e-8) {
+  sigmoid <- function(x) if (x >= 0) 1 / (1 + exp(-x)) else exp(x) / (1 + exp(x))
+  n <- length(rows); k <- length(labels)
+  beta <- numeric(k); converged <- FALSE
+  lin <- function(r) { eta <- 0; for (j in seq_len(k)) eta <- eta + r[j] * beta[j]; eta }
+  for (it in seq_len(max_iter)) {
+    XtWX <- matrix(0, k, k); grad <- numeric(k)
+    for (i in seq_len(n)) {
+      r_ <- rows[[i]]
+      mu <- sigmoid(lin(r_))
+      w <- max(mu * (1 - mu), 1e-10)
+      res <- ys[i] - mu
+      for (a in seq_len(k)) {
+        grad[a] <- grad[a] + r_[a] * res
+        for (b in seq_len(k)) XtWX[a, b] <- XtWX[a, b] + r_[a] * r_[b] * w
+      }
+    }
+    step <- .logit_solve_js(XtWX, grad)
+    if (is.null(step)) break
+    beta <- beta + step
+    if (max(abs(step)) < tol) { converged <- TRUE; break }
+  }
+  XtWX <- matrix(0, k, k)
+  eta_a <- rep(NaN, total); fit_a <- rep(NaN, total); out_a <- rep(NaN, total)
+  ll <- 0
+  for (i in seq_len(n)) {
+    r_ <- rows[[i]]
+    eta <- lin(r_); mu <- sigmoid(eta)
+    w <- max(mu * (1 - mu), 1e-10)
+    ll <- ll + if (ys[i] == 1) log(max(mu, 1e-300)) else log(max(1 - mu, 1e-300))
+    for (a in seq_len(k)) for (b in seq_len(k)) XtWX[a, b] <- XtWX[a, b] + r_[a] * r_[b] * w
+    eta_a[kept[i]] <- eta; fit_a[kept[i]] <- mu; out_a[kept[i]] <- ys[i]
+  }
+  cov <- .logit_inverse_js(XtWX)
+  se <- vapply(seq_len(k), function(j)
+    if (!is.null(cov) && cov[j, j] >= 0) sqrt(cov[j, j]) else NaN, numeric(1))
+  z <- ifelse(is.finite(se) & se != 0, beta / se, NaN)
+  pv <- ifelse(is.finite(z), pchisq(z * z, 1, lower.tail = FALSE), NaN)
+  list(term = labels, coef = beta, se = se, z = z, pvalue = pv, oddsRatio = exp(beta),
+       n = n, logLik = ll, converged = converged,
+       eta = eta_a, fitted = fit_a, outcome = out_a)
+}
+
 logistic_regression <- function(y, predictor_cols, names = NULL) {
   # Complete rows only, by the house rule BEFORE Number() (logistic.js): a missing outcome or
   # predictor drops the row, an outcome other than 0/1 drops it, and a predictor must be
@@ -2279,7 +2424,16 @@ logistic_regression <- function(y, predictor_cols, names = NULL) {
   df <- as.data.frame(do.call(rbind, rows))
   colnames(df) <- paste0("v", seq_along(predictor_cols))
   df$.y <- ys
-  if (length(unique(df$.y)) < 2) return(NULL)
+  # Where the app's own Newton loop does not converge (an outcome left with ONE level after
+  # the drops, or perfect separation) it still writes what the loop reached, flagged as not
+  # converged; glm then has no answer or a different artefact, so that result is mirrored
+  # step for step. A converged fit is checked against glm as before.
+  js_fit <- .logistic_irls_js(lapply(rows, function(r) c(1, r)), ys,
+                              c("(intercept)",
+                                if (is.null(names)) paste0("x", seq_along(predictor_cols))
+                                else unlist(names, use.names = FALSE)),
+                              kept, total)
+  if (!isTRUE(js_fit$converged)) return(js_fit)
   preds <- predictor_cols
   # epsilon = 1e-12, not glm's default 1e-8. The default stops one IRLS iteration early:
   # the coefficients are already converged by then, but the standard errors (built from the
@@ -3407,7 +3561,7 @@ tp_rectangularwave <- function(args, env) {
   output_x <- frm$out
   origin <- if (is.null(frm$origin)) NA_real_ else frm$origin
 
-  first_xs <- NULL; any_valid <- FALSE; stats_by_y <- list()
+  curves <- list(); any_valid <- FALSE; stats_by_y <- list()
   for (y_id in y_ins) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
@@ -3419,15 +3573,8 @@ tp_rectangularwave <- function(args, env) {
     xs_out <- if (!is.null(output_x)) output_x else pr$t
     ys <- if (!is.null(output_x)) evaluate_rectwave_at_points(res$parameters, output_x)
           else res$fitted
-    if (is.null(first_xs)) {
-      first_xs <- xs_out
-      if (is.finite(origin)) set_col(env, env$cols, out_id(args, "rectwavex"),
-                                     origin + first_xs * 3600000, type = "time")
-      else set_col(env, env$cols, out_id(args, "rectwavex"), first_xs, type = "number")
-    }
-    y_out <- out_id(args, paste0("rectwavey_", y_id))
-    if (y_out == -1) y_out <- out_id(args, "rectwavey")
-    set_col(env, env$cols, y_out, ys, type = "number")
+    # preProcesses on the fitted curve only (RectangularWave.svelte).
+    curves[[yk]] <- list(x = xs_out, y = apply_output_pre_processes(ys, args, env))
     # Residuals (RectangularWave.svelte): only with the x output wired; the model evaluated
     # at every input x.
     rid <- out_id(args, paste0("resid_", y_id))
@@ -3440,7 +3587,18 @@ tp_rectangularwave <- function(args, env) {
     stats_by_y[[yk]] <- res
     any_valid <- TRUE
   }
-  if (any_valid) {
+  # RectangularWave.svelte writes the x, the curves and the metric ports only with the x
+  # output wired; the x is the first y result's by Object.keys order (smallest column id).
+  if (any_valid && out_id(args, "rectwavex") != -1) {
+    first_xs <- curves[[.js_first_key(names(curves))]]$x
+    if (is.finite(origin)) set_col(env, env$cols, out_id(args, "rectwavex"),
+                                   origin + first_xs * 3600000, type = "time")
+    else set_col(env, env$cols, out_id(args, "rectwavex"), first_xs, type = "number")
+    for (yk in names(curves)) {
+      y_out <- out_id(args, paste0("rectwavey_", yk))
+      if (y_out == -1) y_out <- out_id(args, "rectwavey")
+      set_col(env, env$cols, y_out, curves[[yk]]$y, type = "number")
+    }
     # r2/rmse are declared ports that the Python port never wrote until 2026-07-28;
     # `perm_pvalue` (renamed from the bare `pvalue` in JS v72.25 — the permutation
     # test's p, the only p this node emits) belongs to a Monte Carlo test not run
@@ -3693,7 +3851,10 @@ tp_doublelogistic <- function(args, env) {
           else res$fitted
     y_out <- out_id(args, paste0("dlogy_", y_id))
     if (y_out == -1) y_out <- out_id(args, "dlogy")
-    set_col(env, env$cols, y_out, ys, type = "number")
+    # preProcesses on the fitted curve only (DoubleLogistic.svelte); the curves are written
+    # only with the x output wired (writeXOutput gates them in the app).
+    if (out_id(args, "dlogx") != -1)
+      set_col(env, env$cols, y_out, apply_output_pre_processes(ys, args, env), type = "number")
     # Residuals (DoubleLogistic.svelte): only with the x output wired; the periodic model
     # evaluated at every input x.
     rid <- out_id(args, paste0("resid_", y_id))
@@ -3914,7 +4075,7 @@ tp_fitfunction <- function(args, env) {
   }
 
   if (any_valid && x_out != -1) {
-    first <- y_results[[1]]
+    first <- y_results[[.js_first_key(names(y_results))]]
     if (!is.null(frm$origin)) set_col(env, env$cols, x_out,
                                       frm$origin + first$xOutData * 3600000, type = "time")
     else set_col(env, env$cols, x_out, first$xOutData, type = "number")
@@ -3922,7 +4083,9 @@ tp_fitfunction <- function(args, env) {
       yr <- y_results[[as.character(y_id)]]
       y_out <- out_id(args, paste0("fity_", y_id))
       if (y_out != -1 && !is.null(yr)) {
-        set_col(env, env$cols, y_out, yr$yOutData, type = "number")
+        # preProcesses on the fitted curve only (FitFunction.svelte).
+        set_col(env, env$cols, y_out, apply_output_pre_processes(yr$yOutData, args, env),
+                type = "number")
       }
       # Residuals (FitFunction.svelte residualColumn): the model evaluated at every input x.
       rid <- out_id(args, paste0("resid_", y_id))
@@ -3934,7 +4097,8 @@ tp_fitfunction <- function(args, env) {
       }
     }
   }
-  if (any_valid) {
+  # writeFitMetricOutputs runs inside the same `anyValid && xOUT !== -1` block.
+  if (any_valid && x_out != -1) {
     for (key in ff_metric_keys(args)) {
       v <- vapply(y_ins, function(y) ff_metric_value(key, model,
                                                      y_results[[as.character(y)]]$fr, phase_ref),
@@ -5197,7 +5361,7 @@ tp_movinganalysis <- function(args, env) {
   names(per_y) <- as.character(ids)
   for (pp in args$preProcesses) {
     nm <- pp$processName
-    if (is.null(nm)) next
+    if (is.null(nm) || !nzchar(nm)) next  # the app skips an empty slot too
     for (yk in names(per_y)) for (k in keys)
       per_y[[yk]][[k]] <- run_column_process(tolower(gsub(" ", "", nm)), per_y[[yk]][[k]],
         if (is.null(pp$processArgs)) list() else pp$processArgs, env$cols, env$raw_data)
@@ -6635,6 +6799,32 @@ run_column_process <- function(key, data, args, cols, raw_data) {
                         "Re-export from AnCiR without it, or use the Python export."), key))
   }
   fn(data, args, cols, raw_data)
+}
+
+# The `preProcesses` of BinnedData, Cosinor, FitFunction, DoubleLogistic, RectangularWave and
+# TrendFit: after every series is fitted (or binned), each column process in order runs on
+# that series' OUTPUT curve (the binned y; the fitted y at the output x), and nothing else.
+# The x output, the residuals and every scalar metric are left as they were. An entry with no
+# processName is skipped, as in the app. (Python: apply_output_pre_processes.)
+apply_output_pre_processes <- function(values, args, env) {
+  out <- values
+  for (pp in args$preProcesses) {
+    nm <- pp$processName
+    if (is.null(nm) || !nzchar(nm)) next
+    out <- as.numeric(unlist(run_column_process(
+      tolower(gsub(" ", "", nm)), out,
+      if (is.null(pp$processArgs)) list() else pp$processArgs, env$cols, env$raw_data)))
+  }
+  out
+}
+
+# Object.keys(obj)[0] in JS: integer-like keys come first in ASCENDING numeric order, so a
+# node that takes "the first y result" this way takes the y with the smallest column id,
+# not the first one wired. `keys` are the result list's names (column ids as text).
+.js_first_key <- function(keys) {
+  num <- suppressWarnings(as.numeric(keys))
+  ints <- keys[!is.na(num) & num >= 0 & num == floor(num)]
+  if (length(ints)) ints[which.min(as.numeric(ints))] else keys[1]
 }
 
 # STRICT by design. An analysis the R port does not implement ABORTS rather than being
