@@ -23,7 +23,7 @@
 	const methodRows = [
 		{
 			cells: [
-				'<strong>Moving Average</strong>',
+				'<strong>Moving average</strong>',
 				'Replaces each point with the mean of its neighbours in a sliding window. Simplest option; blurs sharp peaks. Weighted and exponential variants give recent points more weight',
 				'Window size; type (simple/weighted/exponential)'
 			]
@@ -99,7 +99,7 @@
 			<li>
 				Double-click the node to open its settings and choose the <strong>Method</strong>:
 				<strong>IQR</strong>
-				(set the <strong>IQR multiplier</strong>, default 1.5) or <strong>Z-Score</strong> (set the
+				(set the <strong>IQR multiplier</strong>, default 1.5) or <strong>Z-score</strong> (set the
 				<strong>Z-score threshold</strong>, default 3).
 			</li>
 			<li>

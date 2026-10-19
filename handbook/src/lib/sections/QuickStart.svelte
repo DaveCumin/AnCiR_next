@@ -77,7 +77,7 @@
 				'Visualises data from columns (Actogram, Scatterplot, Periodogram, Correlogram, Fourier analysis, Boxplot, Table).'
 			],
 			[
-				'<strong>Stored Values</strong>',
+				'<strong>Stored values</strong>',
 				'Single numbers produced by analyses (e.g., fitted period, amplitude). Each is registered automatically under a default name and belongs to its node; type # in a Formula Column to use one, and click the pencil icon beside it to rename it.'
 			]
 		]}

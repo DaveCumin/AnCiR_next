@@ -208,7 +208,7 @@
 				onset time of day that the line's drift explains, so an entrained animal with no drift
 				scores near 0 however tight its onsets are; read RMSE for that. Renaming the rule relabels
 				the ports and keeps the wires; deleting it removes them, and undo brings them back. Marker
-				blocks no longer publish Stored Values: in an older session, a formula that used one keeps
+				blocks no longer publish stored values: in an older session, a formula that used one keeps
 				its saved number, and <strong>Make rule</strong> on that block makes it live again.
 			</li>
 			<li>
