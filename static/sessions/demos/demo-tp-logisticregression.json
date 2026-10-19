@@ -452,7 +452,7 @@
       "name": "term_70",
       "data": 756,
       "type": "category",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -463,7 +463,7 @@
       "name": "coef_70",
       "data": 757,
       "type": "number",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -474,7 +474,7 @@
       "name": "se_70",
       "data": 758,
       "type": "number",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -485,7 +485,7 @@
       "name": "z_70",
       "data": 759,
       "type": "number",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -496,7 +496,7 @@
       "name": "pvalue_70",
       "data": 760,
       "type": "number",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -507,7 +507,7 @@
       "name": "oddsRatio_70",
       "data": 761,
       "type": "number",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -518,7 +518,7 @@
       "name": "ciLow_70",
       "data": 762,
       "type": "number",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -529,7 +529,7 @@
       "name": "ciHigh_70",
       "data": 763,
       "type": "number",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -540,7 +540,7 @@
       "name": "outcome_70",
       "data": 764,
       "type": "number",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -551,7 +551,7 @@
       "name": "eta_70",
       "data": 765,
       "type": "number",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -562,7 +562,7 @@
       "name": "fitted_70",
       "data": 766,
       "type": "number",
-      "tableProcessGUId": "c5ad5169-fa29-450d-9127-22afea27b124",
+      "tableProcessGUId": "4190bbbc-a641-4ee8-95df-5cb2e1d81e3b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -815,7 +815,11 @@
           "eta": 765,
           "fitted": 766
         },
-        "valid": false
+        "valid": false,
+        "_inputLabels": {
+          "753": "Logistic regression input 1",
+          "754": "Logistic regression input 2"
+        }
       },
       "refTPId": null
     }
@@ -947,5 +951,5 @@
       "No"
     ]
   },
-  "version": "β.82.33"
+  "version": "β.82.35"
 }

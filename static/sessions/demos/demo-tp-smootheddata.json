@@ -215,7 +215,7 @@
       "name": "x",
       "data": 856,
       "type": "number",
-      "tableProcessGUId": "92d038ba-483e-47c9-92ef-c7b1218bd559",
+      "tableProcessGUId": "4be14452-066e-41c8-9e43-dc79a465907f",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -237,7 +237,7 @@
       "name": "smoothedx_87",
       "data": 858,
       "type": "number",
-      "tableProcessGUId": "515d60c1-1540-4ec4-aa66-794af8f34fd9",
+      "tableProcessGUId": "8fab6b78-716c-463b-bc4e-4ab838f671b3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -248,7 +248,7 @@
       "name": "smoothedy_857_87",
       "data": 859,
       "type": "number",
-      "tableProcessGUId": "515d60c1-1540-4ec4-aa66-794af8f34fd9",
+      "tableProcessGUId": "8fab6b78-716c-463b-bc4e-4ab838f671b3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -639,5 +639,5 @@
       "No"
     ]
   },
-  "version": "β.82.33"
+  "version": "β.82.35"
 }

@@ -185,7 +185,7 @@
       "name": "result_56",
       "data": 657,
       "type": "number",
-      "tableProcessGUId": "39ca37eb-ade5-451f-a7c2-46d0d7ac2c48",
+      "tableProcessGUId": "0b0fdaed-7aa3-40f6-abf3-901bbc30c6ea",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -267,7 +267,7 @@
   "notes": [
     {
       "id": "note_55",
-      "text": "Combines several input columns into one result by applying a per-row function across them: element-wise Add, or the row-wise Mean, Min, Max, Std Dev, or Percentile (50 = median) over the selected columns. Use it to compute, e.g., the average of replicate series or a per-timepoint spread.",
+      "text": "Combines several input columns into one result by applying a per-row function across them: element-wise Add, or the row-wise Mean, Min, Max, Std dev, or Percentile (50 = median) over the selected columns. Use it to compute, e.g., the average of replicate series or a per-timepoint spread.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -380,5 +380,5 @@
       "No"
     ]
   },
-  "version": "β.82.33"
+  "version": "β.82.35"
 }

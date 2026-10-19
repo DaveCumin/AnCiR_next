@@ -111,7 +111,7 @@
       "name": "x",
       "data": 618,
       "type": "number",
-      "tableProcessGUId": "bfae67f1-e20c-45ca-b100-75b43c81aca7",
+      "tableProcessGUId": "0f9cf890-90b1-4d85-b08b-119b3ae4c8c1",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -382,7 +382,7 @@
   "notes": [
     {
       "id": "note_47",
-      "text": "Rescales a column so different series are comparable. Z-score centres to mean 0 / SD 1; Min-Max rescales into a chosen range; Robust uses median and MAD (outlier-resistant); Unit-vector scales by the column's magnitude. The demo shows the input rescaled onto the new scale with its shape preserved. Choose z-score/robust when comparing rhythms of different amplitudes.",
+      "text": "Rescales a column so different series are comparable. Z-score centres to mean 0 / SD 1; Min-max rescales into a chosen range; Robust uses median and MAD (outlier-resistant); Unit-vector scales by the column's magnitude. The demo shows the input rescaled onto the new scale with its shape preserved. Choose z-score/robust when comparing rhythms of different amplitudes.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -512,5 +512,5 @@
       "No"
     ]
   },
-  "version": "β.82.33"
+  "version": "β.82.35"
 }

@@ -546,7 +546,7 @@
       "name": "var_i_26",
       "data": 309,
       "type": "category",
-      "tableProcessGUId": "0539563a-8292-4fcc-9770-638b3260e39b",
+      "tableProcessGUId": "4827662c-2d09-4ed5-aafa-8437889775df",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -557,7 +557,7 @@
       "name": "var_j_26",
       "data": 310,
       "type": "category",
-      "tableProcessGUId": "0539563a-8292-4fcc-9770-638b3260e39b",
+      "tableProcessGUId": "4827662c-2d09-4ed5-aafa-8437889775df",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -568,7 +568,7 @@
       "name": "r_26",
       "data": 311,
       "type": "number",
-      "tableProcessGUId": "0539563a-8292-4fcc-9770-638b3260e39b",
+      "tableProcessGUId": "4827662c-2d09-4ed5-aafa-8437889775df",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -579,7 +579,7 @@
       "name": "pvalue_26",
       "data": 312,
       "type": "number",
-      "tableProcessGUId": "0539563a-8292-4fcc-9770-638b3260e39b",
+      "tableProcessGUId": "4827662c-2d09-4ed5-aafa-8437889775df",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -590,7 +590,7 @@
       "name": "n_26",
       "data": 313,
       "type": "number",
-      "tableProcessGUId": "0539563a-8292-4fcc-9770-638b3260e39b",
+      "tableProcessGUId": "4827662c-2d09-4ed5-aafa-8437889775df",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -1033,7 +1033,11 @@
           "pvalue": 312,
           "n": 313
         },
-        "valid": false
+        "valid": false,
+        "_inputLabels": {
+          "305": "dose (pooled)",
+          "306": "activity (pooled)"
+        }
       },
       "refTPId": null
     }
@@ -1217,5 +1221,5 @@
       "No"
     ]
   },
-  "version": "β.82.33"
+  "version": "β.82.35"
 }

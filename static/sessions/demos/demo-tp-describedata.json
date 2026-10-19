@@ -185,7 +185,7 @@
       "name": "variable_69",
       "data": 740,
       "type": "category",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -196,7 +196,7 @@
       "name": "n_69",
       "data": 741,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -207,7 +207,7 @@
       "name": "mean_69",
       "data": 742,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -218,7 +218,7 @@
       "name": "median_69",
       "data": 743,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -229,7 +229,7 @@
       "name": "sd_69",
       "data": 744,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -240,7 +240,7 @@
       "name": "min_69",
       "data": 745,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -251,7 +251,7 @@
       "name": "max_69",
       "data": 746,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -262,7 +262,7 @@
       "name": "range_69",
       "data": 747,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -273,7 +273,7 @@
       "name": "q1_69",
       "data": 748,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -284,7 +284,7 @@
       "name": "q3_69",
       "data": 749,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -295,7 +295,7 @@
       "name": "iqr_69",
       "data": 750,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -306,7 +306,7 @@
       "name": "skewness_69",
       "data": 751,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -317,7 +317,7 @@
       "name": "kurtosis_69",
       "data": 752,
       "type": "number",
-      "tableProcessGUId": "987b02ce-236c-4a72-bacb-2a4722e82237",
+      "tableProcessGUId": "9294535c-9df0-4ee1-bf52-3a249f2e21a3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -424,7 +424,11 @@
           "skewness": 751,
           "kurtosis": 752
         },
-        "valid": false
+        "valid": false,
+        "_inputLabels": {
+          "738": "Describe Data input 1",
+          "739": "Describe Data input 2"
+        }
       },
       "refTPId": null
     }
@@ -548,5 +552,5 @@
       "No"
     ]
   },
-  "version": "β.82.33"
+  "version": "β.82.35"
 }
