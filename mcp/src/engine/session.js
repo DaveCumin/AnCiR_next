@@ -23,6 +23,7 @@ import { joinOutKeys } from '$lib/utils/joinPairing.js';
 import { joinNameOf } from '$lib/tableProcesses/JoinData.svelte';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
+import { manifestPortDescription, PLOT_PORT_DESCRIPTIONS } from '$lib/core/portDescriptions.js';
 import {
 	normalizeOverlaySpecs,
 	applyOverlays,
@@ -135,6 +136,21 @@ const STRUCTURAL_ARG_KEYS = new Set([
 ]);
 
 /**
+ * What each port expects or produces (core/portDescriptions.js, the text the canvas tooltips
+ * show), keyed by the nodeSpec port name. Only the detail views carry it (detail:"full" or
+ * name:), so the default summary, and every prompt built from it, stays the same size.
+ */
+function describePorts(kind, name, nodeSpec) {
+	const map = (ports, dir) =>
+		Object.fromEntries(
+			(ports ?? [])
+				.map((p) => [p.name, manifestPortDescription(kind, name, p.name, dir)])
+				.filter(([, d]) => d)
+		);
+	return { inputs: map(nodeSpec?.inputs, 'in'), outputs: map(nodeSpec?.outputs, 'out') };
+}
+
+/**
  * Derive the agent-facing capability catalogue directly from the loaded registry,
  * so every AnCiR analysis appears automatically (no hand-maintained list). Each
  * table-process `definition` carries its input fields (`columnIdFields`), parameter
@@ -169,7 +185,8 @@ export function describeCapabilities() {
 			inputs: { scalar: cif.scalar ?? [], array: cif.array ?? [] },
 			params,
 			outKeys,
-			dynamicOutputs
+			dynamicOutputs,
+			ports: describePorts('tableProcess', name, entry.nodeSpec)
 		});
 	}
 	analyses.sort(
@@ -189,7 +206,8 @@ export function describeCapabilities() {
 			family: entry.family ?? 'Transform',
 			status: 'available',
 			summary: entry.description ?? '',
-			params
+			params,
+			ports: describePorts('process', name, entry.nodeSpec)
 		});
 	}
 	transforms.sort((a, b) => a.id.localeCompare(b.id));
@@ -203,6 +221,16 @@ export function describeCapabilities() {
 			id,
 			displayName: entry.displayName,
 			inputs: entry.defaultInputs ?? [],
+			ports: {
+				inputs: Object.fromEntries(
+					(entry.defaultInputs ?? []).map((f) => [f, manifestPortDescription('plot', id, f, 'in')])
+				),
+				outputs: Object.fromEntries(
+					Object.keys(PLOT_PORT_DESCRIPTIONS[id]?.outputs ?? {})
+						.filter((k) => k !== '*')
+						.map((k) => [k, manifestPortDescription('plot', id, k, 'out')])
+				)
+			},
 			status: 'available — add_plot (session); render_plot for PNG/SVG',
 			// Reference lines / shaded bands (add_plot / render_plot `overlays`): the forms the
 			// class declares in `overlayCapabilities`, so a plot that gains them is advertised

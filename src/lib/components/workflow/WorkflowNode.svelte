@@ -16,6 +16,7 @@
 	import { NODE_ROW_H as PORT_H, NODE_ROW_CSS_VARS } from './nodeRows.js';
 	import { portTooltip, portAriaLabel, newSlotHint, portLabel } from './portLabels.js';
 	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
+	import { describeNodePort, portEnv } from '$lib/core/portDescriptions.js';
 	import { columnWarnings } from '$lib/core/columnWarnings.js';
 	let {
 		node,
@@ -26,6 +27,8 @@
 		width = null
 	} = $props();
 	const dispatch = createEventDispatcher();
+	// Unique per card, for the ids of the hidden port descriptions (aria-describedby).
+	const uid = $props.id();
 
 	// Note flag: keeps the left-side note button visible whenever a note exists.
 	const hasNote = $derived(!!core.nodeNotes[node.id]?.trim());
@@ -83,6 +86,11 @@
 	// Ports name themselves for tooltips and screen readers (portLabels.js).
 	let nodeName = $derived(getNodeName(node) || node.label || '');
 	const colName = (id) => getColumnById(id)?.name;
+	// What each port expects or produces (portDescriptions.js): the tooltip's second sentence
+	// and, through a hidden element, the port's accessible description.
+	const env = portEnv(getColumnById);
+	const describe = (port, dir) => describeNodePort(node, port, dir, env);
+	const describedBy = (id, text) => (text ? `${id} ${PORT_KEYS_HELP_ID}` : PORT_KEYS_HELP_ID);
 	// The trailing empty slot's header (the "Series N+1" pair, the "Line" drop port) reads as
 	// a hint for what a drop there does, not as one more series: keyed by its header's slot.
 	function headerHint(slot) {
@@ -216,6 +224,8 @@
 						</div>
 					{/if}
 				{:else}
+					{@const desc = describe(row.port, 'in')}
+					{@const descId = `${uid}-in-${i}`}
 					<div
 						class="port-row input"
 						style="top:{row.slot * PORT_H}px;"
@@ -226,9 +236,9 @@
 							data-node-id={node.id}
 							data-port-name={row.port.name}
 							data-port-dir="in"
-							{@attach tooltip(portTooltip(row.port, 'in'))}
+							{@attach tooltip(portTooltip(row.port, 'in', { description: desc }))}
 							aria-label={portAriaLabel(nodeName, row.port, 'in')}
-							aria-describedby={PORT_KEYS_HELP_ID}
+							aria-describedby={describedBy(descId, desc)}
 							onpointerdown={(e) => e.stopPropagation()}
 							onmousedown={(e) => disconnectInput(e, row.port.name)}
 							onmouseup={(e) => endAtInput(e, row.port.name)}
@@ -236,6 +246,7 @@
 							role="button"
 							tabindex="0"
 						></div>
+						{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 						<span class="port-label"
 							>{row.port.display ?? row.port.name}{#if row.port.dynamic}<span class="dyn-star"
 									>*</span
@@ -246,7 +257,9 @@
 			{/each}
 			<!-- Output ports (passthrough columns + plot metrics) on the right, slot-
 			     aligned with their series (metrics after all series). -->
-			{#each groupedSlots.outputRows as { slot, port } (`out_${port.name}`)}
+			{#each groupedSlots.outputRows as { slot, port }, i (`out_${port.name}`)}
+				{@const desc = describe(port, 'out')}
+				{@const descId = `${uid}-gout-${i}`}
 				<div class="port-row output" style="top:{slot * PORT_H}px;{outRowMaxWidth(slot)}">
 					<div
 						class="port-dot dot-output"
@@ -255,15 +268,18 @@
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="out"
-						{@attach tooltip(portTooltip(port, 'out', { label: portLabel(port, colName) }))}
+						{@attach tooltip(
+							portTooltip(port, 'out', { label: portLabel(port, colName), description: desc })
+						)}
 						aria-label={portAriaLabel(nodeName, port, 'out', { label: portLabel(port, colName) })}
-						aria-describedby={PORT_KEYS_HELP_ID}
+						aria-describedby={describedBy(descId, desc)}
 						onpointerdown={(e) => e.stopPropagation()}
 						onmousedown={(e) => startFromOutput(e, port.name)}
 						onmouseup={(e) => endAtOutput(e, port.name)}
 						role="button"
 						tabindex="0"
 					></div>
+					{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 					<span class="port-label out-label" class:metric-label={port.metric === true}
 						>{port.metric ? '# ' : ''}{port.display ?? port.name}</span
 					>
@@ -273,15 +289,17 @@
 	{:else if portRows > 0}
 		<div class="node-ports" style="height:{portRows * PORT_H}px;">
 			{#each inputPorts as port, i (`in_${port.name}_${i}`)}
+				{@const desc = describe(port, 'in')}
+				{@const descId = `${uid}-in-${i}`}
 				<div class="port-row input" style="top:{i * PORT_H}px;" bind:offsetWidth={inRowWidths[i]}>
 					<div
 						class="port-dot dot-input"
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="in"
-						{@attach tooltip(portTooltip(port, 'in'))}
+						{@attach tooltip(portTooltip(port, 'in', { description: desc }))}
 						aria-label={portAriaLabel(nodeName, port, 'in')}
-						aria-describedby={PORT_KEYS_HELP_ID}
+						aria-describedby={describedBy(descId, desc)}
 						onpointerdown={(e) => e.stopPropagation()}
 						onmousedown={(e) => disconnectInput(e, port.name)}
 						onmouseup={(e) => endAtInput(e, port.name)}
@@ -289,10 +307,13 @@
 						role="button"
 						tabindex="0"
 					></div>
+					{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 					<span class="port-label">{port.display ?? port.name}{port.dynamic ? '*' : ''}</span>
 				</div>
 			{/each}
 			{#each outputPorts as port, i (`out_${port.name}_${i}`)}
+				{@const desc = describe(port, 'out')}
+				{@const descId = `${uid}-out-${i}`}
 				<div class="port-row output" style="top:{i * PORT_H}px;{outRowMaxWidth(i)}">
 					<div
 						class="port-dot dot-output"
@@ -301,15 +322,18 @@
 						data-node-id={node.id}
 						data-port-name={port.name}
 						data-port-dir="out"
-						{@attach tooltip(portTooltip(port, 'out', { label: portLabel(port, colName) }))}
+						{@attach tooltip(
+							portTooltip(port, 'out', { label: portLabel(port, colName), description: desc })
+						)}
 						aria-label={portAriaLabel(nodeName, port, 'out', { label: portLabel(port, colName) })}
-						aria-describedby={PORT_KEYS_HELP_ID}
+						aria-describedby={describedBy(descId, desc)}
 						onpointerdown={(e) => e.stopPropagation()}
 						onmousedown={(e) => startFromOutput(e, port.name)}
 						onmouseup={(e) => endAtOutput(e, port.name)}
 						role="button"
 						tabindex="0"
 					></div>
+					{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 					<span class="port-label" class:metric-label={port.metric === true}
 						>{port.metric ? '# ' : ''}{port.display ?? port.name}{port.dynamic ? '*' : ''}</span
 					>

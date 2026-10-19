@@ -17,6 +17,7 @@ import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
 import { plotMetricManifestOutputs } from '$lib/plots/plotMetricDefs.js';
+import { manifestPortDescription } from '$lib/core/portDescriptions.js';
 
 export const MANIFEST_PATH = join(process.cwd(), 'static', 'nodes.json');
 const INDEX = join(process.cwd(), 'static', 'sessions', 'demos', 'index.json');
@@ -54,14 +55,20 @@ function paramsFromDefaults(defaults) {
 	return out;
 }
 
-function portList(ports) {
-	return (ports ?? []).map((p) => ({
-		name: p.name,
-		kind: p.artifactKind ?? p.kind ?? 'column',
-		cardinality: p.dynamic || p.cardinality === 'many' ? 'many' : 'one',
-		...(p.metric ? { metric: true } : {}),
-		...(p.dynamicPrefix ? { dynamicPrefix: p.dynamicPrefix } : {})
-	}));
+// `describe(name)`: what the port expects or produces (core/portDescriptions.js, the same text
+// the canvas tooltips show), so the handbook's Node Reference can show it too.
+function portList(ports, describe = () => null) {
+	return (ports ?? []).map((p) => {
+		const description = describe(p.name);
+		return {
+			name: p.name,
+			kind: p.artifactKind ?? p.kind ?? 'column',
+			cardinality: p.dynamic || p.cardinality === 'many' ? 'many' : 'one',
+			...(p.metric ? { metric: true } : {}),
+			...(p.dynamicPrefix ? { dynamicPrefix: p.dynamicPrefix } : {}),
+			...(description ? { description } : {})
+		};
+	});
 }
 
 /**
@@ -84,7 +91,7 @@ export async function buildNodeManifest() {
 
 	const pushTPorProc = (id, entry, kind) => {
 		const spec = entry.nodeSpec ?? entry.definition?.nodeSpec ?? {};
-		const inputs = portList(spec.inputs);
+		const inputs = portList(spec.inputs, (n) => manifestPortDescription(kind, id, n, 'in'));
 		// Params are configuration only — drop keys that are wired input ports.
 		const inputNames = new Set(inputs.map((i) => i.name));
 		const params = paramsFromDefaults(entry.defaults).filter((p) => !inputNames.has(p.name));
@@ -98,7 +105,7 @@ export async function buildNodeManifest() {
 			hideFromPalette: !!entry.hideFromPalette,
 			inputs,
 			params,
-			outputs: portList(spec.outputs),
+			outputs: portList(spec.outputs, (n) => manifestPortDescription(kind, id, n, 'out')),
 			demo: demoByNode[id] ?? null
 		});
 	};
@@ -117,15 +124,22 @@ export async function buildNodeManifest() {
 			description: entry.description ?? '',
 			keywords: entry.keywords ?? [],
 			hideFromPalette: !!entry.hideFromPalette,
-			inputs: (def.defaultDataInputs ?? entry.defaultInputs ?? []).map((n) => ({
-				name: n,
-				kind: 'column',
-				cardinality: 'many'
-			})),
+			inputs: (def.defaultDataInputs ?? entry.defaultInputs ?? []).map((n) => {
+				const description = manifestPortDescription('plot', id, n, 'in');
+				return {
+					name: n,
+					kind: 'column',
+					cardinality: 'many',
+					...(description ? { description } : {})
+				};
+			}),
 			params: [],
 			// The plot's metric output ports (peak stats, Q-Q r/n, an actogram's five per marker
 			// rule), from the same definitions the app mints its columns from.
-			outputs: plotMetricManifestOutputs(id),
+			outputs: plotMetricManifestOutputs(id).map((o) => {
+				const description = manifestPortDescription('plot', id, o.name, 'out');
+				return description ? { ...o, description } : o;
+			}),
 			demo: demoByNode[id] ?? null
 		});
 	}

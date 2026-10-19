@@ -66,6 +66,20 @@ describe('filterCapabilities — the discovery projection that keeps list_capabi
 		expect(out.capability.params).toHaveProperty('fixedPeriod'); // full detail = defaults present
 	});
 
+	it('ports (what each port expects or produces) ride only in the detail views', () => {
+		const one = filterCapabilities(full(), { name: 'Cosinor' }).capability;
+		expect(one.ports.inputs.xIN).toMatch(/time column/);
+		expect(one.ports.outputs['resid_*']).toMatch(/Observed y minus/);
+		const plot = filterCapabilities(full(), { name: 'periodogram' }).capability;
+		expect(plot.ports.inputs.values).toBeTruthy();
+		expect(plot.ports.outputs.peak_pvalue).toMatch(/Family-wise/);
+		const tr = filterCapabilities(full(), { name: 'Multiply' }).capability;
+		expect(tr.ports.inputs.input).toBe('A number column.');
+		// The default summary (and every prompt built from it) does not grow.
+		const summary = filterCapabilities(full());
+		expect(JSON.stringify(summary)).not.toContain('"ports"');
+	});
+
 	it('name: an unknown capability reports it rather than dumping everything', () => {
 		const out = filterCapabilities(full(), { name: 'NoSuchThing' });
 		expect(out.capability).toBeNull();

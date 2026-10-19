@@ -5,6 +5,10 @@
 // plot's y port, where each column is its own series, or an analysis's many-in input). The
 // tooltip says so, in the same words everywhere (UI-20).
 //
+// What the port expects or produces (core/portDescriptions.js, one registry shared with the
+// Data panel and the MCP catalogue) follows the port's name in the tooltip, and reaches screen
+// readers through the port's aria-describedby (the cards render it in a hidden element).
+//
 // Pure module, no imports.
 
 export const MANY_NOTE = 'The * means it takes one or more columns.';
@@ -28,17 +32,24 @@ export function portLabel(port, colName) {
  * Tooltip for a port dot.
  * @param {any} port
  * @param {'in' | 'out'} dir
- * @param {{ label?: string, nodeName?: string }} [opts] label overrides portLabel(port);
- *   nodeName leads the text (a compact square shows no labels of its own)
+ * @param {{ label?: string, nodeName?: string, description?: string | null }} [opts] label
+ *   overrides portLabel(port); nodeName leads the text (a compact square shows no labels of its
+ *   own); description (portDescriptions.js) says what the port expects or produces
  */
 export function portTooltip(port, dir, opts = {}) {
 	const label = opts.label ?? portLabel(port);
 	const star = port?.dynamic ? '*' : '';
+	const description = typeof opts.description === 'string' ? opts.description.trim() : '';
 	let text;
 	if (dir === 'out' && port?.metric) {
-		text = `Metric output: ${label} (one value per series)`;
+		// A description says how many values the port holds (per series, per window, one for the
+		// node), so the generic note gives way to it.
+		text = description
+			? `Metric output: ${label}. ${description}`
+			: `Metric output: ${label} (one value per series)`;
 	} else {
 		const parts = [`${dir === 'out' ? 'Output' : 'Input'}: ${label}${star}`];
+		if (description) parts.push(description);
 		if (dir === 'in' && port?.newSeries) {
 			const what = port.dynamic ? 'Drop columns' : 'Drop a column';
 			parts.push(`${what} here to start series ${port.series}.`);

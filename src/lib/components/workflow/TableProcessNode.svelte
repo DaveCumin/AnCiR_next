@@ -32,6 +32,7 @@
 	import { NODE_ROW_CSS_VARS, nodeRowCentreY } from './nodeRows.js';
 	import { portTooltip, portAriaLabel, portLabel } from './portLabels.js';
 	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
+	import { describeNodePort, portEnv } from '$lib/core/portDescriptions.js';
 
 	let {
 		node,
@@ -46,6 +47,8 @@
 	} = $props();
 
 	const dispatch = createEventDispatcher();
+	// Unique per card, for the ids of the hidden port descriptions (aria-describedby).
+	const uid = $props.id();
 
 	// Row geometry (row height, header height, row centres) comes from nodeRows.js, the same
 	// module WorkflowEditor anchors wires with; the CSS reads it through NODE_ROW_CSS_VARS.
@@ -65,6 +68,12 @@
 	// Note flag: keeps the left-side note button visible whenever a note exists.
 	const hasNote = $derived(!!core.nodeNotes[node.id]?.trim());
 	const inputPorts = $derived(node.ports?.inputs ?? []);
+	// What each port expects or produces (portDescriptions.js): the tooltip's second sentence
+	// and, through a hidden element, the port's accessible description.
+	const env = portEnv(getColumnById);
+	const describeIn = (port) => describeNodePort(node, port, 'in', env);
+	const describeOut = (port, key) => describeNodePort(node, port, 'out', { ...env, key });
+	const describedBy = (id, text) => (text ? `${id} ${PORT_KEYS_HELP_ID}` : PORT_KEYS_HELP_ID);
 	// [{ key, colId }] from ProcessNode meta, resolved to live Column instances.
 	// Each entry's `port` is the output dot's port name (TP: col_<colId>; free
 	// process: the producer column's producerPort, e.g. out_<inputColId>). Falls
@@ -340,7 +349,9 @@
 	>
 		<div class="tp-body">
 			<div class="tp-inputs" role="presentation">
-				{#each inputPorts as port (port.name)}
+				{#each inputPorts as port, i (port.name)}
+					{@const desc = describeIn(port)}
+					{@const descId = `${uid}-in-${i}`}
 					<div class="in-row">
 						<button
 							type="button"
@@ -349,14 +360,17 @@
 							data-node-id={node.id}
 							data-port-name={port.name}
 							data-port-dir="in"
-							{@attach tooltip(portTooltip(port, 'in', { label: portLabel(port) }))}
+							{@attach tooltip(
+								portTooltip(port, 'in', { label: portLabel(port), description: desc })
+							)}
 							onpointerdown={(e) => e.stopPropagation()}
 							onmousedown={(e) => disconnectInput(e, port.name)}
 							onmouseup={(e) => endAtInput(e, port.name)}
 							oncontextmenu={(e) => openInputPicker(e, port.name)}
 							aria-label={portAriaLabel(getNodeName(node), port, 'in', { label: portLabel(port) })}
-							aria-describedby={PORT_KEYS_HELP_ID}
+							aria-describedby={describedBy(descId, desc)}
 						></button>
+						{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 						<span class="in-label">{portLabel(port)}{port.dynamic ? '*' : ''}</span>
 					</div>
 				{/each}
@@ -369,8 +383,10 @@
 				}}
 				role="presentation"
 			>
-				{#each seriesColumns as { colId, col, port, shown } (colId)}
+				{#each seriesColumns as { key, colId, col, port, shown } (colId)}
 					{@const meta = typeMeta(col)}
+					{@const desc = describeOut({ name: port }, key)}
+					{@const descId = `${uid}-out-${colId}`}
 					{@const isOpen = rowExpanded[colId] === true}
 					<div class="out-row" class:expanded={isOpen}>
 						<div class="row-strip">
@@ -428,12 +444,15 @@
 								onmouseup={(e) => endAtOutput(e, port)}
 								oncontextmenu={onPortContextMenu}
 								onclick={(e) => e.stopPropagation()}
-								{@attach tooltip(portTooltip({ name: port }, 'out', { label: shown }))}
+								{@attach tooltip(
+									portTooltip({ name: port }, 'out', { label: shown, description: desc })
+								)}
 								aria-label={portAriaLabel(getNodeName(node), { name: port }, 'out', {
 									label: shown
 								})}
-								aria-describedby={PORT_KEYS_HELP_ID}
+								aria-describedby={describedBy(descId, desc)}
 							></button>
+							{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 						</div>
 						{#if isOpen}
 							<div class="row-body" onmousedown={stopPointer} role="presentation">
@@ -462,6 +481,8 @@
 						{#each visibleMetricColumns as { key, colId, col, port, shown } (colId)}
 							{@const values = typeof col?.getData === 'function' ? (col.getData() ?? []) : []}
 							{@const isOpen = rowExpanded[colId] === true}
+							{@const desc = describeOut({ name: port, metric: true }, key)}
+							{@const descId = `${uid}-out-${colId}`}
 							<div class="out-row metric-row" class:expanded={isOpen}>
 								<div class="row-strip metric-strip">
 									<button
@@ -506,7 +527,10 @@
 										oncontextmenu={onPortContextMenu}
 										onclick={(e) => e.stopPropagation()}
 										{@attach tooltip(
-											portTooltip({ name: port, metric: true }, 'out', { label: shown })
+											portTooltip({ name: port, metric: true }, 'out', {
+												label: shown,
+												description: desc
+											})
 										)}
 										aria-label={portAriaLabel(
 											getNodeName(node),
@@ -516,8 +540,9 @@
 												label: shown
 											}
 										)}
-										aria-describedby={PORT_KEYS_HELP_ID}
+										aria-describedby={describedBy(descId, desc)}
 									></button>
+									{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 								</div>
 								{#if isOpen}
 									<div
@@ -554,7 +579,9 @@
 						{/if}
 					</div>
 				{/if}
-				{#each bundleOutputs as bport (bport.name)}
+				{#each bundleOutputs as bport, i (bport.name)}
+					{@const desc = describeOut(bport, bport.name)}
+					{@const descId = `${uid}-bundle-${i}`}
 					<div class="out-row bundle-row">
 						<div class="row-strip">
 							<span class="bundle-label" title="Column set output; connects to a many-in port">
@@ -574,10 +601,16 @@
 								onmouseup={(e) => endAtOutput(e, bport.name)}
 								oncontextmenu={onPortContextMenu}
 								onclick={(e) => e.stopPropagation()}
-								{@attach tooltip('column set (connects to a many-in port)')}
+								{@attach tooltip(
+									portTooltip(bport, 'out', {
+										label: `${bport.display ?? bport.name} (column set)`,
+										description: desc
+									})
+								)}
 								aria-label={`${getNodeName(node)}: column set output port ${bport.display ?? bport.name}, connects to a many-in input port`}
-								aria-describedby={PORT_KEYS_HELP_ID}
+								aria-describedby={describedBy(descId, desc)}
 							></button>
+							{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 						</div>
 					</div>
 				{/each}

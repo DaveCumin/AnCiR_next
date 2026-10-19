@@ -209,14 +209,10 @@ const fitUnit = (ctx) => {
 const fitPhaseLabel = (name, ctx) =>
 	isClockRef(ctx?.args) ? phaseLabel(name, ctx) : `${name} (${fitUnit(ctx)})`;
 
-const RAYLEIGH_UNIT = { radians: 'rad', degrees: '°', hours: 'h' };
-function rayleighAcrophase(ctx) {
-	const timeIN = ctx?.args?.timeIN;
-	// Time-wired (weighted) mode reads the angle off the clock: always hours.
-	const timed = timeIN != null && timeIN !== -1 && Number(timeIN) >= 0;
-	const unit = timed ? 'h' : (RAYLEIGH_UNIT[ctx?.args?.unit ?? 'radians'] ?? 'rad');
-	return `Acrophase (${unit})`;
-}
+// The Rayleigh node's acrophase port is the mean direction as HOURS of a cycle of its `period`
+// (meanAngle / 2π × period, RayleighTest.svelte evaluateRayleigh), in both modes and whatever
+// the input angle `unit` is; the unit only says how the y angles are read.
+const rayleighAcrophase = () => 'Acrophase (h)';
 
 const GROUP_STAT = { ttest: 't', anova: 'F', mannwhitney: 'U', kruskal: 'H' };
 const GROUP_EFFECT = {

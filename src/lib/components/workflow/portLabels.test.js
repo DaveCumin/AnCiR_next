@@ -101,3 +101,27 @@ it('no em-dashes in any of it', () => {
 	].join(' ');
 	expect(all).not.toMatch(/—/);
 });
+
+describe('portTooltip with a description (core/portDescriptions.js)', () => {
+	it('the description follows the port name, before the * note', () => {
+		expect(
+			portTooltip({ name: 'yIN', dynamic: true }, 'in', { description: 'Number columns.' })
+		).toBe(`Input: yIN*. Number columns. ${MANY_NOTE}`);
+		expect(portTooltip({ name: 'col_7' }, 'out', { label: 'Signal', description: 'Data.' })).toBe(
+			'Output: Signal. Data.'
+		);
+	});
+	it('a metric description replaces the generic per-series note (it says the shape itself)', () => {
+		expect(
+			portTooltip({ name: 'm', metric: true }, 'out', {
+				label: 'F',
+				description: 'Watson-Williams F, one value for the node.'
+			})
+		).toBe('Metric output: F. Watson-Williams F, one value for the node.');
+	});
+	it('a compact square leads with the node name, then the description', () => {
+		expect(
+			portTooltip({ name: 'xIN' }, 'in', { nodeName: 'Cosinor', description: 'Time column.' })
+		).toBe('Cosinor. Input: xIN. Time column.');
+	});
+});

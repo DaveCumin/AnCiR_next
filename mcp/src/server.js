@@ -70,7 +70,7 @@ const ok = (data) => ({
 function registerTools(server) {
 	server.tool(
 		'list_capabilities',
-		'Discover AnCiR analyses (table processes), column transforms, and plot types — live from the engine registry. Returns a COMPACT summary by default (ids, families, one-line summaries, input fields, param names). For the exact params/defaults/output keys needed to hand-write a run_table_process call, pass detail:"full" or name:"Cosinor"; narrow with family.',
+		'Discover AnCiR analyses (table processes), column transforms, and plot types, live from the engine registry. Returns a COMPACT summary by default (ids, families, one-line summaries, input fields, param names). For the exact params/defaults/output keys needed to hand-write a run_table_process call, and what each input and output port expects or produces (`ports`), pass detail:"full" or name:"Cosinor"; narrow with family.',
 		{
 			detail: z
 				.enum(['names', 'summary', 'full'])

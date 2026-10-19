@@ -739,7 +739,10 @@
 		canChange = false,
 		onChange = () => {},
 		// eslint-disable-next-line no-unused-vars -- public prop set by DataDisplay; kept so the component's API stays stable
-		canvasSelectedProcessId = null
+		canvasSelectedProcessId = null,
+		// What this column is as a node output (core/portDescriptions.js), shown after its name
+		// in the name's hover title and so read as its accessible description. Data panel only.
+		description = null
 	} = $props();
 
 	// Mini data-table preview, expanded per-row (panel display mode only). Matches
@@ -841,7 +844,7 @@
 							<ColumnSelector bind:value={col.refId} bind:onChange />
 						</div>
 					{:else}
-						<p class="col-name" title={shownName}>
+						<p class="col-name" title={description ? `${shownName}\n${description}` : shownName}>
 							<Editable value={shownName} onCommit={renameThis} />
 						</p>
 					{/if}

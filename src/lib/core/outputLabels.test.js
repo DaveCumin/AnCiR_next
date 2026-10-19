@@ -94,12 +94,13 @@ describe('outputLabel: per node type', () => {
 		expect(outputLabel('RayleighTest', 'F', ctx())).toBe('Watson-Williams F');
 	});
 
-	it('Rayleigh acrophase follows the angle unit, and is hours when time-wired', () => {
+	it('Rayleigh acrophase is hours of the period whatever the input angle unit', () => {
+		// The port holds meanAngle / 2π × period (RayleighTest.svelte), never radians or degrees.
 		expect(outputLabel('RayleighTest', 'acrophase', ctx({ unit: 'degrees' }))).toBe(
-			'Acrophase (°)'
+			'Acrophase (h)'
 		);
 		expect(outputLabel('RayleighTest', 'acrophase', ctx({ unit: 'radians' }))).toBe(
-			'Acrophase (rad)'
+			'Acrophase (h)'
 		);
 		expect(outputLabel('RayleighTest', 'acrophase', ctx({ unit: 'radians', timeIN: 3 }))).toBe(
 			'Acrophase (h)'

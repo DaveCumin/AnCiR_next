@@ -21,12 +21,14 @@
         {
           "name": "time",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Time column, or numbers read as hours, for this series. Required for the series to draw."
         },
         {
           "name": "values",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns (usually activity), one or more, drawn day by day."
         }
       ],
       "params": [],
@@ -37,7 +39,8 @@
           "cardinality": "many",
           "metric": true,
           "dynamicSuffix": "_tau",
-          "per": "marker rule"
+          "per": "marker rule",
+          "description": "Period of this marker rule’s line, from its harmonic check, in hours. One value per series."
         },
         {
           "name": "r*_phi",
@@ -45,7 +48,8 @@
           "cardinality": "many",
           "metric": true,
           "dynamicSuffix": "_phi",
-          "per": "marker rule"
+          "per": "marker rule",
+          "description": "Phase of the rule’s line, in hours after the row start on the reference day. One value per series."
         },
         {
           "name": "r*_r2",
@@ -53,7 +57,8 @@
           "cardinality": "many",
           "metric": true,
           "dynamicSuffix": "_r2",
-          "per": "marker rule"
+          "per": "marker rule",
+          "description": "R² of the rule’s line against its fitted markers. One value per series."
         },
         {
           "name": "r*_rmse",
@@ -61,7 +66,8 @@
           "cardinality": "many",
           "metric": true,
           "dynamicSuffix": "_rmse",
-          "per": "marker rule"
+          "per": "marker rule",
+          "description": "RMSE of the rule’s line against its markers, in hours. One value per series."
         },
         {
           "name": "r*_n",
@@ -69,7 +75,8 @@
           "cardinality": "many",
           "metric": true,
           "dynamicSuffix": "_n",
-          "per": "marker rule"
+          "per": "marker rule",
+          "description": "Number of markers in the rule’s fit (0 when none). One value per series."
         }
       ],
       "demo": "sessions/demos/demo-workflow-rest-activity.json"
@@ -92,12 +99,14 @@
         {
           "name": "x",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Optional column of group labels (categories): one box per group. Empty: the whole y column is one box."
         },
         {
           "name": "y",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more: the values summarised. Blanks are skipped."
         }
       ],
       "params": [],
@@ -123,12 +132,14 @@
         {
           "name": "time",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Optional time column (or hours as numbers), folded onto the period. Wired: the values are measurements at their time of day. Empty: the values are phases."
         },
         {
           "name": "values",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more, each a group: phases (hours, degrees or radians, as set) or, with a time column, measurements."
         }
       ],
       "params": [],
@@ -153,7 +164,8 @@
         {
           "name": "column",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one per variable, two or more. Each pair is correlated on the rows where both have a value."
         }
       ],
       "params": [],
@@ -177,12 +189,14 @@
         {
           "name": "time",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Time column, or numbers read as hours, for this series. Required for the series to draw. Lags are in hours."
         },
         {
           "name": "values",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more, each analysed and drawn against this series’ time."
         }
       ],
       "params": [],
@@ -191,13 +205,15 @@
           "name": "peak_lag",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Lag of the first clear peak after lag 0, in hours. One value per series."
         },
         {
           "name": "peak_correlation",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Autocorrelation r at that peak, -1 to 1. One value per series."
         }
       ],
       "demo": "sessions/demos/demo-correlogram-rhythm.json"
@@ -220,12 +236,14 @@
         {
           "name": "x",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Time column, or numbers read as hours."
         },
         {
           "name": "y",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "One number column to transform. The plot shows one series; a new wire replaces it."
         }
       ],
       "params": [],
@@ -250,12 +268,14 @@
         {
           "name": "time",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Time column, or numbers read as hours, for this series. Required for the series to draw."
         },
         {
           "name": "values",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more, each analysed and drawn against this series’ time."
         }
       ],
       "params": [],
@@ -264,19 +284,22 @@
           "name": "peak_period",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Period of the highest peak inside the axis limits (else the highest overall), in hours. One value per series."
         },
         {
           "name": "peak_frequency",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Frequency of that peak, in cycles per hour. One value per series."
         },
         {
           "name": "peak_magnitude",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Amplitude of that peak, in y units. One value per series."
         }
       ],
       "demo": "sessions/demos/demo-fft-rhythm.json"
@@ -299,7 +322,8 @@
         {
           "name": "column",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more; each is its own histogram. Time columns are refused."
         }
       ],
       "params": [],
@@ -323,12 +347,14 @@
         {
           "name": "x",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Optional column of group labels: one mean and SEM per group. Empty: the whole y column is one group."
         },
         {
           "name": "y",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more: the values averaged."
         }
       ],
       "params": [],
@@ -353,7 +379,8 @@
         {
           "name": "column",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one per variable; every pair gets a scatter panel."
         }
       ],
       "params": [],
@@ -378,12 +405,14 @@
         {
           "name": "time",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Time column, or numbers read as hours, for this series. Required for the series to draw."
         },
         {
           "name": "values",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more, each analysed and drawn against this series’ time."
         }
       ],
       "params": [],
@@ -392,19 +421,22 @@
           "name": "peak_period",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Period of the highest peak inside the axis limits (else the highest overall), in hours. One value per series."
         },
         {
           "name": "peak_power",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Power at the peak: unitless for Lomb-Scargle, Qp for Chi-squared, y units for Enright. One value per series."
         },
         {
           "name": "peak_pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Family-wise p of the Chi-squared peak, corrected for every period tested. Blank for the other methods. One value per series."
         }
       ],
       "demo": "sessions/demos/demo-workflow-free-running.json"
@@ -427,7 +459,8 @@
         {
           "name": "column",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more, each compared with a normal distribution. Needs at least 3 values."
         }
       ],
       "params": [],
@@ -436,13 +469,15 @@
           "name": "qq_r",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Correlation of the Q-Q points with the normal line, up to 1 (1 is perfectly normal), one value per series. Blank for constant data or n under 3."
         },
         {
           "name": "qq_n",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Number of values used. One value per series."
         }
       ],
       "demo": "sessions/demos/demo-qqplot-normality.json"
@@ -465,12 +500,14 @@
         {
           "name": "x",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Time, number or category column for this series’ x axis."
         },
         {
           "name": "y",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more, plotted against this series’ x."
         }
       ],
       "params": [],
@@ -518,7 +555,8 @@
         {
           "name": "input",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "A number column, or a time column (the value added is then a duration)."
         }
       ],
       "params": [
@@ -531,7 +569,8 @@
         {
           "name": "output",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The input plus the value, row by row. Same length and type; blanks stay blank."
         }
       ],
       "demo": "sessions/demos/demo-process-add.json"
@@ -554,7 +593,8 @@
         {
           "name": "input",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "A column of any type."
         }
       ],
       "params": [
@@ -566,7 +606,8 @@
         {
           "name": "output",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "A copy of the input with the cells you typed changed, by row number."
         }
       ],
       "demo": "sessions/demos/demo-process-editvalue.json"
@@ -590,7 +631,8 @@
         {
           "name": "input",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "A column of any type."
         }
       ],
       "params": [
@@ -610,7 +652,8 @@
         {
           "name": "output",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The input with the rows that fail the conditions (tested on other columns) blanked. Same length."
         }
       ],
       "demo": "sessions/demos/demo-process-filterbyothercol.json"
@@ -633,7 +676,8 @@
         {
           "name": "input",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "An evenly sampled number column."
         }
       ],
       "params": [
@@ -654,7 +698,8 @@
         {
           "name": "output",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The input after the low-, high- or band-pass FFT filter (cutoffs as fractions of the Nyquist frequency), in its own units. Blanks stay blank."
         }
       ],
       "demo": "sessions/demos/demo-process-frequencyfilter.json"
@@ -677,7 +722,8 @@
         {
           "name": "input",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "A number column."
         }
       ],
       "params": [
@@ -690,7 +736,8 @@
         {
           "name": "output",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The input times the value, row by row. Same length; blanks stay blank."
         }
       ],
       "demo": "sessions/demos/demo-process-multiply.json"
@@ -714,7 +761,8 @@
         {
           "name": "input",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "A number column."
         }
       ],
       "params": [
@@ -735,7 +783,8 @@
         {
           "name": "output",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The input rescaled (z-score, min-max, robust median and MAD, or unit vector), with no units. Blanks stay blank."
         }
       ],
       "demo": "sessions/demos/demo-process-normalize.json"
@@ -759,7 +808,8 @@
         {
           "name": "input",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "A number column."
         }
       ],
       "params": [
@@ -780,7 +830,8 @@
         {
           "name": "output",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The input with outliers (by z-score or IQR fences) blanked. Same length; with fewer than 4 values it passes through."
         }
       ],
       "demo": "sessions/demos/demo-process-outlierremoval.json"
@@ -802,7 +853,8 @@
         {
           "name": "input",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "A number column. The trend runs along the x column chosen in the panel, else the row number."
         }
       ],
       "params": [
@@ -831,7 +883,8 @@
         {
           "name": "output",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The input minus its fitted trend, in its own units (or a sliding z-score). Unchanged where the fit is refused."
         }
       ],
       "demo": "sessions/demos/demo-process-removetrend.json"
@@ -855,7 +908,8 @@
         {
           "name": "input",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "A column of any type except time."
         }
       ],
       "params": [
@@ -872,7 +926,8 @@
         {
           "name": "output",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The input with every cell equal to the find value replaced. Same length and type."
         }
       ],
       "demo": "sessions/demos/demo-process-sub.json"
@@ -896,12 +951,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. The period is in its units. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more. Each is folded onto the period and averaged into one profile."
         }
       ],
       "params": [
@@ -922,19 +979,22 @@
         {
           "name": "avgprofx",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Centre of each profile bin, in hours after that series’ first sample, across one period."
         },
         {
           "name": "avgprof_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "avgprof_"
+          "dynamicPrefix": "avgprof_",
+          "description": "Mean profile over one period: each day is averaged within the bin first, then the day means are averaged. In y units; blank for an empty bin."
         },
         {
           "name": "avgprofsem_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "avgprofsem_"
+          "dynamicPrefix": "avgprofsem_",
+          "description": "Standard error of the profile mean: the SD of the day means over the square root of the number of days. Blank with fewer than 2 days in the bin."
         }
       ],
       "demo": "sessions/demos/demo-tp-averageprofile.json"
@@ -958,12 +1018,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. Bins are in its units; custom edges need numbers. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Columns to bin, one or more. Rows with a blank x or y are dropped."
         }
       ],
       "params": [
@@ -1000,13 +1062,15 @@
         {
           "name": "binnedx",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Start (left edge) of each bin. A time column for a time x, else numbers. Points before the first bin are dropped."
         },
         {
           "name": "binnedy_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "binnedy_"
+          "dynamicPrefix": "binnedy_",
+          "description": "y summarised per bin by the function in the panel (mean by default; median, min, max, SD or count). Blank for an empty bin, except count, which is 0."
         }
       ],
       "demo": "sessions/demos/demo-workflow-join-data.json"
@@ -1037,7 +1101,8 @@
         {
           "name": "result",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The values typed or pasted in. Numbers when every filled cell is a number, else categories; empty cells stay blank."
         }
       ],
       "demo": "sessions/demos/demo-tp-blankcolumn.json"
@@ -1060,12 +1125,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One column of categories (or counts for goodness of fit). The first group, the row variable, or the only column tested. Required."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One column of categories: the second group or the column variable. Needed for independence and Fisher; ignored for goodness of fit."
         }
       ],
       "params": [
@@ -1095,37 +1162,43 @@
           "name": "statistic",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Chi-square (χ²), one value for the node. Blank for Fisher, which has no test statistic."
         },
         {
           "name": "pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "p of the test, one value for the node (Fisher: exact, with the alternative set in the panel)."
         },
         {
           "name": "df",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Degrees of freedom, one value for the node. Blank for Fisher."
         },
         {
           "name": "effectSize",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Effect size, one value for the node: Cramér's V (independence), Cohen's w (goodness of fit) or the conditional odds ratio (Fisher)."
         },
         {
           "name": "ciLow",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Lower end of the exact 95% interval of the Fisher odds ratio, one value for the node. Blank for chi-square."
         },
         {
           "name": "ciHigh",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Upper end of the exact 95% interval of the Fisher odds ratio, one value for the node. Blank for chi-square."
         }
       ],
       "demo": "sessions/demos/demo-workflow-stats-chi-square.json"
@@ -1147,12 +1220,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Time column, or numbers read as hours. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns (usually activity), one or more."
         }
       ],
       "params": [
@@ -1178,25 +1253,29 @@
           "name": "CFI",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Mean of IS, (2 - IV) / 2 and RA, each clamped to 0 to 1. Higher is a stronger rhythm; blank if a part is missing. One value per wired y column."
         },
         {
           "name": "IS",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Interdaily stability, 0 to 1: how alike the days are. Higher is more stable. Not clamped. One value per wired y column."
         },
         {
           "name": "IV",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Intradaily variability, about 0 to 2: how fragmented the rhythm is within a day. Higher is more fragmented. Not clamped. One value per wired y column."
         },
         {
           "name": "RA",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Relative amplitude, (M10 - L5) / (M10 + L5): 0 to 1 for non-negative data. Not clamped. One value per wired y column."
         }
       ],
       "demo": "sessions/demos/demo-tp-circadianfunctionindex.json"
@@ -1217,7 +1296,8 @@
         {
           "name": "colIds",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Columns of any type, one or more, to gather into this node. Required."
         }
       ],
       "params": [],
@@ -1225,7 +1305,8 @@
         {
           "name": "outCols",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "A copy of each wired column, after any steps set in the panel, keeping its type."
         }
       ],
       "demo": "sessions/demos/demo-tp-collectcolumns.json"
@@ -1251,7 +1332,8 @@
         {
           "name": "xsIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Columns, one or more, combined row by row. Required."
         }
       ],
       "params": [
@@ -1276,7 +1358,8 @@
         {
           "name": "result",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One value per row from the chosen function across the columns (add, average, min, max, SD or percentile). As long as the first column."
         }
       ],
       "demo": "sessions/demos/demo-tp-columnfunctions.json"
@@ -1299,7 +1382,8 @@
         {
           "name": "colsIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Candidate columns of any type, one or more. The set keeps those whose name or group label contains the match text."
         }
       ],
       "params": [
@@ -1316,7 +1400,8 @@
         {
           "name": "set",
           "kind": "columnset",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "A live set of the matching columns down one wire. Connects only to an input that takes one or more columns (marked *)."
         }
       ],
       "demo": "sessions/demos/demo-tp-columnset.json"
@@ -1340,7 +1425,8 @@
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, two or more. Every pair is correlated, using rows where both have a value."
         }
       ],
       "params": [
@@ -1357,47 +1443,56 @@
         {
           "name": "var_i",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Name of the first column of each pair, one row per pair."
         },
         {
           "name": "var_j",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Name of the second column of each pair, one row per pair."
         },
         {
           "name": "r",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Correlation r of the pair (Pearson or Spearman), -1 to 1. Blank with fewer than 2 rows or no variance."
         },
         {
           "name": "pvalue",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Per-test p of each pair, not corrected for the number of pairs."
         },
         {
           "name": "padj",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Holm-adjusted p across all the pairs (family-wise)."
         },
         {
           "name": "n",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Number of rows where both columns have a value, per pair."
         },
         {
           "name": "ciLow",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Lower end of the 95% interval of r, per pair. Blank with fewer than 4 rows."
         },
         {
           "name": "ciHigh",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Upper end of the 95% interval of r, per pair. Blank with fewer than 4 rows."
         },
         {
           "name": "significant",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "1 when the Holm-adjusted p is below alpha, else 0, per pair."
         }
       ],
       "demo": "sessions/demos/demo-workflow-stats-eda.json"
@@ -1422,12 +1517,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. Periods and phases come out in its units. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more; each is analysed on its own. A column with too few rows for the model is skipped with a warning."
         }
       ],
       "params": [
@@ -1504,115 +1601,134 @@
         {
           "name": "cosinorx",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "x of the fitted curves: the input rows with both x and y, or the output x set in the panel. Time for a time x, else numbers."
         },
         {
           "name": "cosinory_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "cosinory_"
+          "dynamicPrefix": "cosinory_",
+          "description": "The fitted cosinor (all harmonics, or all cosines for a free period), at the fit x rows, in y units. Shorter than the input when y has blanks."
         },
         {
           "name": "resid_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "resid_"
+          "dynamicPrefix": "resid_",
+          "description": "Observed y minus the fitted value at every input row, in y units. Same length as the input; blank where x or y is blank."
         },
         {
           "name": "period",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Fitted period of the first cosine, in hours (x units for a number x). One value per wired y column."
         },
         {
           "name": "mesor",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "MESOR: the rhythm-adjusted mean of the fit, in y units. One value per wired y column."
         },
         {
           "name": "amplitude",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Half the peak-to-trough range of the fitted cosine, in y units. One value per wired y column."
         },
         {
           "name": "amplitude_ciLow",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Lower end of the CI (the level set in the panel, 95% by default). Harmonic 1 amplitude; fixed period only. One value per wired y column."
         },
         {
           "name": "amplitude_ciHigh",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Upper end of the CI (the level set in the panel, 95% by default). Harmonic 1 amplitude; fixed period only. One value per wired y column."
         },
         {
           "name": "acrophase_ciLow",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Lower end of the CI (the level set in the panel, 95% by default). Harmonic 1 peak time; blank for a free period or no clear rhythm. One value per wired y column."
         },
         {
           "name": "acrophase_ciHigh",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Upper end of the CI (the level set in the panel, 95% by default). Harmonic 1 peak time; blank for a free period or no clear rhythm. One value per wired y column."
         },
         {
           "name": "acrophase",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Time of the fitted peak, in hours after the first sample (x units from 0 for a number x). One value per wired y column."
         },
         {
           "name": "rsquared",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "R²: the share of the variance in y that the fit explains, 0 to 1. One value per wired y column."
         },
         {
           "name": "pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "p of the zero-amplitude F-test (is there a rhythm). Fixed period only. Not corrected across series. One value per wired y column."
         },
         {
           "name": "perm_pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Permutation-test p: the share of fits to shuffled data as good as the real one. Blank unless the test is on. One value per wired y column."
         },
         {
           "name": "bathyphase",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Time of the fitted trough (half a period after the peak), in hours after the first sample (x units from 0 for a number x). One value per wired y column."
         },
         {
           "name": "phase_angle",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Peak time minus the reference time set in the panel, in hours (x units for a number x), within half a period. Positive: the peak is later. One value per wired y column."
         },
         {
           "name": "amplitude_h1",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Amplitude of harmonic 1 alone, in y units. Same as the amplitude unless there are more harmonics. One value per wired y column."
         },
         {
           "name": "acrophase_h1",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Peak time of harmonic 1 alone, in hours after the first sample (x units from 0 for a number x). One value per wired y column."
         },
         {
           "name": "bathyphase_h1",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Trough time of harmonic 1 alone, in hours after the first sample (x units from 0 for a number x). One value per wired y column."
         }
       ],
       "demo": "sessions/demos/demo-workflow-rest-activity.json"
@@ -1635,12 +1751,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Series A: one number column. Rows pair with series B by position, so both should be evenly sampled. Required."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Series B: one number column, paired with A row by row. Required."
         }
       ],
       "params": [
@@ -1657,17 +1775,20 @@
         {
           "name": "lag",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Lag in samples (rows), from -max to +max lag, one row per lag. Positive means A leads B."
         },
         {
           "name": "correlation",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Correlation r of A with B shifted by that lag, -1 to 1, one row per lag."
         },
         {
           "name": "pvalue",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "p of the prewhitened correlation at that lag, one row per lag. Per-lag: not corrected for testing many lags."
         }
       ],
       "demo": "sessions/demos/demo-tp-crosscorrelation.json"
@@ -1693,17 +1814,20 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Optional time or number column. Wired: persistence is in its units (hours for time). Empty: persistence counts samples."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more, that the rule tests. All must be the same length."
         },
         {
           "name": "thresholdIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Optional columns whose first value is a cutoff a rule can use instead of a typed number."
         }
       ],
       "params": [
@@ -1729,17 +1853,20 @@
         {
           "name": "breach",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "1 where the rule holds, else 0, one row per input row. Blank where a tested series is blank."
         },
         {
           "name": "crossing",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Where each crossing fired (the rule held for the persistence time): the x value, a time when x is time, or the row number (from 0) without x."
         },
         {
           "name": "count",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Number of crossings, one value for the node."
         }
       ],
       "demo": "sessions/demos/demo-tp-crossing.json"
@@ -1763,7 +1890,8 @@
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more. One row of statistics per column; blanks are ignored."
         }
       ],
       "params": [],
@@ -1771,67 +1899,80 @@
         {
           "name": "variable",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Name of each input column, one row per column."
         },
         {
           "name": "n",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Number of values (blanks left out), one row per column."
         },
         {
           "name": "mean",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Mean, in the column’s units, one row per column."
         },
         {
           "name": "median",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Median, in the column’s units, one row per column."
         },
         {
           "name": "sd",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Sample standard deviation (n - 1), in the column’s units."
         },
         {
           "name": "min",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Smallest value, one row per column."
         },
         {
           "name": "max",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Largest value, one row per column."
         },
         {
           "name": "range",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Largest minus smallest value, one row per column."
         },
         {
           "name": "q1",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "25th percentile (linear interpolation), one row per column."
         },
         {
           "name": "q3",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "75th percentile (linear interpolation), one row per column."
         },
         {
           "name": "iqr",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Interquartile range, Q3 minus Q1, one row per column."
         },
         {
           "name": "skewness",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Skewness (bias-corrected), no units. Blank with fewer than 3 values."
         },
         {
           "name": "kurtosis",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Excess kurtosis (0 for a normal distribution), no units. Blank with fewer than 4 values."
         }
       ],
       "demo": "sessions/demos/demo-workflow-stats-eda.json"
@@ -1855,12 +1996,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more; each is analysed on its own. A column with fewer than 4 usable rows is skipped."
         }
       ],
       "params": [
@@ -1937,37 +2080,43 @@
         {
           "name": "dlogx",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "x of the fitted curves: the input rows with both x and y, or the output x set in the panel. Time for a time x, else numbers."
         },
         {
           "name": "dlogy_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "dlogy_"
+          "dynamicPrefix": "dlogy_",
+          "description": "The fitted double logistic (a rise to a bout and a fall back, each cycle), at the fit x rows, in y units. Shorter than the input when y has blanks."
         },
         {
           "name": "resid_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "resid_"
+          "dynamicPrefix": "resid_",
+          "description": "Observed y minus the fitted value at every input row, in y units. Same length as the input; blank where x or y is blank."
         },
         {
           "name": "perm_pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Permutation-test p: the share of fits to shuffled data as good as the real one. Blank unless the test is on. One value per wired y column."
         },
         {
           "name": "r2",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "R²: the share of the variance in y that the fit explains, 0 to 1. One value per wired y column."
         },
         {
           "name": "rmse",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Root mean square error, sqrt(SS / n), in y units. One value per wired y column."
         }
       ],
       "demo": "sessions/demos/demo-tp-doublelogistic.json"
@@ -1992,7 +2141,8 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One column of raw p-values (for example a pvalue output). Values outside 0 to 1, blanks and text are left out. Required."
         }
       ],
       "params": [
@@ -2009,12 +2159,14 @@
         {
           "name": "padj",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Adjusted p for each input row (false discovery rate or family-wise, by method). Blank where the input p is unusable."
         },
         {
           "name": "reject",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "1 when the adjusted p is below alpha, else 0, for each input row."
         }
       ],
       "demo": "sessions/demos/demo-tp-fdrcorrection.json"
@@ -2037,12 +2189,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. Periods, phases and rates come out in its units. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more; each is analysed on its own."
         }
       ],
       "params": [
@@ -2163,121 +2317,141 @@
         {
           "name": "fitx",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "x of the fitted curves: the input rows with both x and y, or the output x set in the panel. Time for a time x, else numbers."
         },
         {
           "name": "fity_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "fity_"
+          "dynamicPrefix": "fity_",
+          "description": "The fitted model (cosinor, rectangular wave or double logistic), at the fit x rows, in y units. Shorter than the input when y has blanks."
         },
         {
           "name": "resid_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "resid_"
+          "dynamicPrefix": "resid_",
+          "description": "Observed y minus the fitted value at every input row, in y units. Same length as the input; blank where x or y is blank."
         },
         {
           "name": "permstats_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "permstats_"
+          "dynamicPrefix": "permstats_",
+          "description": "The statistic (R² or RMSE) of every permuted fit, one row per permutation. Empty unless the permutation test is on."
         },
         {
           "name": "r2",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "R²: the share of the variance in y that the fit explains, 0 to 1. One value per wired y column."
         },
         {
           "name": "rmse",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Residual standard error, sqrt(SS / (n - p)), in y units. One value per wired y column."
         },
         {
           "name": "rmse_n",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Root mean square error, sqrt(SS / n), in y units. Fixed-period cosinor only, beside its residual SE. One value per wired y column."
         },
         {
           "name": "perm_pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Permutation-test p: the share of fits to shuffled data as good as the real one. Blank unless the test is on. One value per wired y column."
         },
         {
           "name": "period",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "The fixed period the cosine was fitted at, in hours (x units for a number x). One value per wired y column."
         },
         {
           "name": "mesor",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "MESOR: the rhythm-adjusted mean of the fit, in y units. One value per wired y column."
         },
         {
           "name": "amplitude",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Half the peak-to-trough range of the fitted cosine, in y units. One value per wired y column."
         },
         {
           "name": "acrophase",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Time of the fitted peak, in hours after the first sample (x units from 0 for a number x). One value per wired y column."
         },
         {
           "name": "amplitude_h1",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Amplitude of harmonic 1 alone, in y units (cosinor model). One value per wired y column."
         },
         {
           "name": "acrophase_h1",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Peak time of harmonic 1 alone, in hours after the first sample (x units from 0 for a number x) (cosinor model). One value per wired y column."
         },
         {
           "name": "duty_cycle",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Fraction of each cycle at the high (active) level, 0 to 1. Rectangular wave, or a periodic double logistic. One value per wired y column."
         },
         {
           "name": "kappa",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Edge sharpness of the rectangular wave; larger is more square. One value per wired y column."
         },
         {
           "name": "onset",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Time the activity bout rises (double logistic), in hours after the first sample (x units from 0 for a number x). One value per wired y column."
         },
         {
           "name": "offset",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Time the activity bout falls (double logistic), in hours after the first sample (x units from 0 for a number x). One value per wired y column."
         },
         {
           "name": "k1",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Steepness of the rise (double logistic), per hour (per x unit for a number x). One value per wired y column."
         },
         {
           "name": "k2",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Steepness of the fall (double logistic), per hour (per x unit for a number x). One value per wired y column."
         }
       ],
       "demo": "sessions/demos/demo-tp-fitfunction.json"
@@ -2301,7 +2475,8 @@
         {
           "name": "tokens",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "The columns the formula uses. The first one sets the number of rows. Required."
         }
       ],
       "params": [
@@ -2314,7 +2489,8 @@
         {
           "name": "result",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The formula worked out row by row, as numbers. Blank where any input is blank or the result is not finite."
         }
       ],
       "demo": "sessions/demos/demo-tp-formulacolumn.json"
@@ -2338,12 +2514,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One column of group labels (text or numbers, read as categories). Empty: each y column is its own group, compared with the others."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more: the values compared across the groups. Each is tested separately."
         }
       ],
       "params": [
@@ -2365,19 +2543,22 @@
           "name": "statistic",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "The test statistic (t, F, U or H, by method), one value per wired y column, or one when the y columns are the groups."
         },
         {
           "name": "pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Omnibus p of the test, one value per wired y column; not corrected across y columns."
         },
         {
           "name": "effectSize",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Effect size, one value per wired y column: Cohen's d (t-test), η² (ANOVA), r (Mann-Whitney) or ε² (Kruskal-Wallis)."
         }
       ],
       "demo": "sessions/demos/demo-workflow-rest-activity.json"
@@ -2401,12 +2582,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more, to fill in or resample. Each needs at least one row with both x and y."
         }
       ],
       "params": [
@@ -2435,13 +2618,15 @@
         {
           "name": "interpx",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Fill mode: a copy of the input x. Resample mode: an even grid, one row per step across the data. Time for a time x."
         },
         {
           "name": "interpy_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "interpy_"
+          "dynamicPrefix": "interpy_",
+          "description": "y at each output x, filled by linear, nearest or cubic spline interpolation. Blank outside the range of known x (no extrapolation)."
         }
       ],
       "demo": "sessions/demos/demo-tp-interpolate.json"
@@ -2467,22 +2652,26 @@
         {
           "name": "aTimeIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Time of dataset A: a time column, or numbers. Wire a time for both A and B (rows interleave in time order) or for neither (B is stacked under A)."
         },
         {
           "name": "aValuesIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Columns of dataset A, one or more. Each pairs with the B column of the same name."
         },
         {
           "name": "bTimeIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Time of dataset B, the same kind as time A (both time, or both numbers). Leave both times empty to stack B under A."
         },
         {
           "name": "bValuesIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Columns of dataset B, one or more. A B column with no A partner of the same name gets its own output."
         }
       ],
       "params": [
@@ -2503,18 +2692,21 @@
         {
           "name": "jointime",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Every A and B time in order (A first on ties). Only when both times are wired; no rows are merged."
         },
         {
           "name": "joined_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "joined_"
+          "dynamicPrefix": "joined_",
+          "description": "A joined column: A values on A rows and B values on B rows for a pair, blank on the other dataset’s rows when unpaired."
         },
         {
           "name": "source",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Which dataset each row came from (the group names, or A and B)."
         }
       ],
       "demo": "sessions/demos/demo-workflow-join-data.json"
@@ -2537,12 +2729,14 @@
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The outcome: one column of 0 and 1 (or two text levels). Any other column gives a \"not binary\" warning."
         },
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Predictors: number columns, one or more. Rows missing the outcome or any predictor are dropped."
         }
       ],
       "params": [],
@@ -2550,57 +2744,68 @@
         {
           "name": "term",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Name of each model term, one row per term; the first is the intercept."
         },
         {
           "name": "coef",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Coefficient of each term, on the log-odds scale."
         },
         {
           "name": "se",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Standard error of each coefficient."
         },
         {
           "name": "z",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Wald z of each coefficient (coefficient / standard error)."
         },
         {
           "name": "pvalue",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Wald p of each term; not corrected across terms."
         },
         {
           "name": "oddsRatio",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Odds ratio of each term, e to the coefficient."
         },
         {
           "name": "ciLow",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Lower end of the 95% interval of the odds ratio, per term."
         },
         {
           "name": "ciHigh",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Upper end of the 95% interval of the odds ratio, per term."
         },
         {
           "name": "outcome",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The 0/1 outcome actually used, one row per input row (blank for dropped rows)."
         },
         {
           "name": "eta",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Linear predictor (log-odds) for each input row."
         },
         {
           "name": "fitted",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Fitted probability that the outcome is 1, for each input row."
         }
       ],
       "demo": "sessions/demos/demo-workflow-stats-logistic.json"
@@ -2622,17 +2827,20 @@
         {
           "name": "categoryIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One column of labels: each distinct label becomes its own value column. Required."
         },
         {
           "name": "timeIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time (or number) column; rows with a blank time are dropped. Required."
         },
         {
           "name": "valueIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One column of the values to spread out. Required."
         }
       ],
       "params": [
@@ -2645,13 +2853,15 @@
         {
           "name": "time",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The distinct times, sorted, one row each."
         },
         {
           "name": "value_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "value_"
+          "dynamicPrefix": "value_",
+          "description": "The values of one label at each time. Blank where that label has no row; a repeated label and time keeps the last value."
         }
       ],
       "demo": "sessions/demos/demo-tp-longtowide.json"
@@ -2672,12 +2882,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. Window size and step are in its units. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more; each is analysed on its own. A window with fewer than 3 usable rows gives a blank cell."
         }
       ],
       "params": [
@@ -2827,7 +3039,8 @@
           "name": "stats_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "stats_"
+          "dynamicPrefix": "stats_",
+          "description": "One column per wired y column and statistic of the chosen analysis, one row per window. Blank for a window without enough data."
         }
       ],
       "demo": "sessions/demos/demo-tp-movinganalysis.json"
@@ -2852,12 +3065,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Time column, or numbers read as hours. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns (usually activity), one or more. Each is binned into epochs and folded onto the period."
         }
       ],
       "params": [
@@ -2886,55 +3101,64 @@
         {
           "name": "npcrax",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Centre of each epoch of the average day, in hours after the first sample. Taken from the first y column."
         },
         {
           "name": "npcray_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "npcray_"
+          "dynamicPrefix": "npcray_",
+          "description": "The average day: the mean of each epoch across days, in y units. Blank for an empty epoch."
         },
         {
           "name": "IS",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Interdaily stability, 0 to 1: how alike the days are. Higher is more stable. One value per wired y column."
         },
         {
           "name": "IV",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Intradaily variability, about 0 to 2: how fragmented the rhythm is within a day. Higher is more fragmented. One value per wired y column."
         },
         {
           "name": "RA",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Relative amplitude, (M10 - L5) / (M10 + L5): 0 to 1 for non-negative data. One value per wired y column."
         },
         {
           "name": "M10",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Mean of the most active 10 h of the average day, in y units. One value per wired y column."
         },
         {
           "name": "L5",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Mean of the least active 5 h of the average day, in y units. One value per wired y column."
         },
         {
           "name": "M10onset",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Start of the most active 10 h window, in hours after the first sample, folded onto the period. One value per wired y column."
         },
         {
           "name": "L5onset",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Start of the least active 5 h window, in hours after the first sample, folded onto the period. One value per wired y column."
         }
       ],
       "demo": "sessions/demos/demo-workflow-rest-activity.json"
@@ -2957,7 +3181,8 @@
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more. One row of results per column."
         }
       ],
       "params": [
@@ -2974,27 +3199,32 @@
         {
           "name": "variable",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Name of each input column, one row per column."
         },
         {
           "name": "statistic",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Test statistic: Shapiro-Wilk W, D’Agostino K² or Jarque-Bera JB, by method."
         },
         {
           "name": "pvalue",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "p of the normality test, per column. Blank if n is too small (or above 5000 for Shapiro-Wilk)."
         },
         {
           "name": "n",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Number of values tested, per column."
         },
         {
           "name": "normal",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "1 when p is at least alpha (normality not rejected), 0 when rejected."
         }
       ],
       "demo": "sessions/demos/demo-workflow-stats-eda.json"
@@ -3045,7 +3275,8 @@
         {
           "name": "result",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Random numbers (uniform, gaussian, exponential or 0/1 bernoulli), rounded to 2 decimals. The seed makes them repeatable."
         }
       ],
       "demo": "sessions/demos/demo-tp-random.json"
@@ -3069,12 +3300,14 @@
         {
           "name": "timeIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Optional time column (or hours as numbers). Wired: each y value becomes a weight at its time folded onto the period. Empty: the y columns hold the angles."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more, each a group: angles in the unit set in the panel, or weights when a time column is wired."
         }
       ],
       "params": [
@@ -3096,37 +3329,43 @@
           "name": "R",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Mean vector length, 0 to 1: 0 is spread evenly round the cycle, 1 is all at one phase. One value per wired y column."
         },
         {
           "name": "z",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Rayleigh z = n·R². Blank when a time column is wired (weighted mode). One value per wired y column."
         },
         {
           "name": "pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Rayleigh test p (are the phases clustered); not corrected across columns. Blank when a time column is wired. One value per wired y column."
         },
         {
           "name": "F",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Watson-Williams F comparing the mean directions of the y columns: one value for the node. Blank when the test is off, weighted, or with fewer than 2 groups."
         },
         {
           "name": "ww_pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Watson-Williams p (do the groups share a mean direction): one value for the node. Blank when the test is off, weighted, or with fewer than 2 groups."
         },
         {
           "name": "acrophase",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Mean direction, as hours of a cycle of the period set in the panel (24 by default), 0 up to the period. One value per wired y column."
         }
       ],
       "demo": "sessions/demos/demo-workflow-phase-groups.json"
@@ -3149,12 +3388,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more; each is analysed on its own. A column with fewer than 4 usable rows is skipped."
         }
       ],
       "params": [
@@ -3231,37 +3472,43 @@
         {
           "name": "rectwavex",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "x of the fitted curves: the input rows with both x and y, or the output x set in the panel. Time for a time x, else numbers."
         },
         {
           "name": "rectwavey_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "rectwavey_"
+          "dynamicPrefix": "rectwavey_",
+          "description": "The fitted rectangular wave (a smoothed square wave), at the fit x rows, in y units. Shorter than the input when y has blanks."
         },
         {
           "name": "resid_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "resid_"
+          "dynamicPrefix": "resid_",
+          "description": "Observed y minus the fitted value at every input row, in y units. Same length as the input; blank where x or y is blank."
         },
         {
           "name": "perm_pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Permutation-test p: the share of fits to shuffled data as good as the real one. Blank unless the test is on. One value per wired y column."
         },
         {
           "name": "r2",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "R²: the share of the variance in y that the fit explains, 0 to 1. One value per wired y column."
         },
         {
           "name": "rmse",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Root mean square error, sqrt(SS / n), in y units. One value per wired y column."
         }
       ],
       "demo": "sessions/demos/demo-tp-rectangularwave.json"
@@ -3285,12 +3532,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. Periods and lags come out in its units. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more; each is analysed on its own. A column with fewer than 3 usable rows gives blank results."
         }
       ],
       "params": [
@@ -3339,20 +3588,23 @@
         {
           "name": "rhythmicityx",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Trial period of each point of the spectrum, in hours (x units for a number x)."
         },
         {
           "name": "rhythmicityy_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "rhythmicityy_"
+          "dynamicPrefix": "rhythmicityy_",
+          "description": "The spectrum or correlogram values for this y column."
         },
         {
           "name": "stat_*",
           "kind": "column",
           "cardinality": "many",
           "metric": true,
-          "dynamicPrefix": "stat_"
+          "dynamicPrefix": "stat_",
+          "description": "A peak statistic, one value per wired y column: period, power or p; frequency or magnitude; or lag and r, by analysis."
         }
       ],
       "demo": "sessions/demos/demo-workflow-free-running.json"
@@ -3411,7 +3663,8 @@
         {
           "name": "result",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "An evenly spaced sequence: numbers from the start in equal steps, or times from the start time, one step (in hours) apart."
         }
       ],
       "demo": "sessions/demos/demo-tp-sequencecolumn.json"
@@ -3465,12 +3718,14 @@
         {
           "name": "time",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Time of each simulated sample, every sampling interval from the start time."
         },
         {
           "name": "values",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The simulated signal: a square wave (the amplitude while active, 1 at rest) with optional noise, one value per time."
         }
       ],
       "demo": "sessions/demos/demo-tp-simulateddata.json"
@@ -3495,12 +3750,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more; each is analysed on its own. A column with fewer than 3 usable rows is skipped."
         }
       ],
       "params": [
@@ -3541,19 +3798,22 @@
         {
           "name": "smoothedx",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "x of the smoothed points: the rows with both x and y, sorted by x. A time column for a time x."
         },
         {
           "name": "smoothedy_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "smoothedy_"
+          "dynamicPrefix": "smoothedy_",
+          "description": "Smoothed y at the smoothed x rows (Whittaker, moving average, Savitzky-Golay or LOESS), in y units. Not aligned with the input rows."
         },
         {
           "name": "resid_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "resid_"
+          "dynamicPrefix": "resid_",
+          "description": "Observed minus smoothed y at the smoothed x rows, in y units. Lines up with the smoothed x output, not with the input."
         }
       ],
       "demo": "sessions/demos/demo-tp-smootheddata.json"
@@ -3576,7 +3836,8 @@
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Columns, one or more, kept row-aligned. The one chosen in the panel (the first by default) is the sort key."
         }
       ],
       "params": [
@@ -3594,7 +3855,8 @@
           "name": "sortedy_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "sortedy_"
+          "dynamicPrefix": "sortedy_",
+          "description": "The column reordered by the sort key, so rows stay together. Blank keys go last; a column of a different length is passed through unsorted."
         }
       ],
       "demo": "sessions/demos/demo-tp-sort.json"
@@ -3617,12 +3879,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time or number column the split points are read on (dates for time, numbers otherwise). Required."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Columns, one or more, to cut into segments."
         }
       ],
       "params": [
@@ -3635,7 +3899,8 @@
         {
           "name": "segments",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "One column per wired y column and segment: full length, with values only between that segment’s split points."
         }
       ],
       "demo": "sessions/demos/demo-tp-split.json"
@@ -3665,12 +3930,14 @@
         {
           "name": "category",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Group name of each stored value (older sessions only)."
         },
         {
           "name": "value",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The stored values of every group (older sessions only)."
         }
       ],
       "demo": "sessions/demos/demo-tp-storedvaluegroup.json"
@@ -3694,12 +3961,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One number column to test for a rhythm. Needs at least 8 rows; gaps longer than 3 samples are refused."
         }
       ],
       "params": [
@@ -3733,13 +4002,15 @@
           "name": "pvalue",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Share of surrogate series whose statistic reaches the observed one, one value for the node. The smallest possible p is 1 / (surrogates + 1)."
         },
         {
           "name": "observed",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "The test statistic on the real data: the largest FFT amplitude in the period band, in y units. One value for the node."
         }
       ],
       "demo": "sessions/demos/demo-tp-surrogatetest.json"
@@ -3762,7 +4033,8 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One number column to compare with the threshold. Required."
         }
       ],
       "params": [
@@ -3779,7 +4051,8 @@
         {
           "name": "binary",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "1 where the value meets the comparison (for example at or above the threshold), else 0. Same length as the input; blank where the input is blank."
         }
       ],
       "demo": "sessions/demos/demo-tp-threshold.json"
@@ -3803,12 +4076,14 @@
         {
           "name": "xIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time column (as hours from the first sample) or number column. A time x starts at 0, so rates are per hour. Required; nothing runs until it is wired."
         },
         {
           "name": "yIN",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Number columns, one or more; each is analysed on its own. The exponential model needs y above 0; the logarithmic model needs x above 0."
         }
       ],
       "params": [
@@ -3857,38 +4132,44 @@
         {
           "name": "trendx",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "x of the fitted curves: the input rows with both x and y, or the output x set in the panel. Time for a time x, else numbers."
         },
         {
           "name": "trendy_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "trendy_"
+          "dynamicPrefix": "trendy_",
+          "description": "The fitted trend, at the fit x rows, in y units. Shorter than the input when y has blanks."
         },
         {
           "name": "resid_*",
           "kind": "column",
           "cardinality": "many",
-          "dynamicPrefix": "resid_"
+          "dynamicPrefix": "resid_",
+          "description": "Observed y minus the fitted value at every input row, in y units. Same length as the input; blank where x or y is blank."
         },
         {
           "name": "r2",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "R² on the original y scale, 0 to 1. One value per wired y column."
         },
         {
           "name": "rmse",
           "kind": "column",
           "cardinality": "one",
-          "metric": true
+          "metric": true,
+          "description": "Root mean square error, sqrt(SS / n), in y units. One value per wired y column."
         },
         {
           "name": "coef_*",
           "kind": "column",
           "cardinality": "many",
           "metric": true,
-          "dynamicPrefix": "coef_"
+          "dynamicPrefix": "coef_",
+          "description": "A trend coefficient, one value per wired y column: slope and intercept, a and b, or c0 to cN, by model."
         }
       ],
       "demo": "sessions/demos/demo-workflow-stats-regression.json"
@@ -3912,12 +4193,14 @@
         {
           "name": "timeIN",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "One time (or number) column shared by the value columns. Required."
         },
         {
           "name": "valueColIds",
           "kind": "column",
-          "cardinality": "many"
+          "cardinality": "many",
+          "description": "Value columns, one or more, to stack into one. Required."
         }
       ],
       "params": [],
@@ -3925,17 +4208,20 @@
         {
           "name": "time",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The time of each stacked row (the input times repeated for every value column)."
         },
         {
           "name": "category",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "Name of the column each stacked value came from."
         },
         {
           "name": "value",
           "kind": "column",
-          "cardinality": "one"
+          "cardinality": "one",
+          "description": "The stacked values. Rows with a blank time or value are left out."
         }
       ],
       "demo": "sessions/demos/demo-tp-widetolong.json"

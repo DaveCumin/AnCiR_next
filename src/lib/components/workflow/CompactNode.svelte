@@ -16,10 +16,13 @@
 	import { NODE_CARD_BORDER, PORT_DOT, NODE_ROW_CSS_VARS } from './nodeRows.js';
 	import { portTooltip, portAriaLabel, portLabel } from './portLabels.js';
 	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
+	import { describeNodePort, portEnv } from '$lib/core/portDescriptions.js';
 	import { getNodeName } from '$lib/core/nodeNaming.js';
 
 	let { node, selected = false, spliceTargetPort = null } = $props();
 	const dispatch = createEventDispatcher();
+	// Unique per square, for the ids of the hidden port descriptions (aria-describedby).
+	const uid = $props.id();
 
 	let inputs = $derived(node.ports?.inputs ?? []);
 	let outputs = $derived(node.ports?.outputs ?? []);
@@ -61,8 +64,12 @@
 	// tooltip leads with the node's name; per-column ports (col_<id>) show the column's name.
 	const colName = (id) => getColumnById(id)?.name;
 	let nodeName = $derived(getNodeName(node) || node.label || '');
-	const portTip = (port, dir) =>
-		portTooltip(port, dir, { label: portLabel(port, colName), nodeName });
+	// What the port expects or produces (portDescriptions.js), after its name.
+	const env = portEnv(getColumnById);
+	const describe = (port, dir) => describeNodePort(node, port, dir, env);
+	const describedBy = (id, text) => (text ? `${id} ${PORT_KEYS_HELP_ID}` : PORT_KEYS_HELP_ID);
+	const portTip = (port, dir, description) =>
+		portTooltip(port, dir, { label: portLabel(port, colName), nodeName, description });
 	const portName = (port, dir) =>
 		portAriaLabel(nodeName, port, dir, { label: portLabel(port, colName) });
 
@@ -121,15 +128,17 @@
 	<span class="compact-icon"><Icon name={iconName} width={22} height={22} /></span>
 
 	{#each inputs as port, i (`in_${port.name}_${i}`)}
+		{@const desc = describe(port, 'in')}
+		{@const descId = `${uid}-in-${i}`}
 		<div
 			class="port-dot dot-input"
 			style="top:{dotTop(i, inputs.length)}px;"
 			data-node-id={node.id}
 			data-port-name={port.name}
 			data-port-dir="in"
-			{@attach tooltip(portTip(port, 'in'))}
+			{@attach tooltip(portTip(port, 'in', desc))}
 			aria-label={portName(port, 'in')}
-			aria-describedby={PORT_KEYS_HELP_ID}
+			aria-describedby={describedBy(descId, desc)}
 			onpointerdown={(e) => e.stopPropagation()}
 			onmousedown={(e) => disconnectInput(e, port.name)}
 			onmouseup={(e) => endAtInput(e, port.name)}
@@ -137,8 +146,11 @@
 			role="button"
 			tabindex="0"
 		></div>
+		{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 	{/each}
 	{#each outputs as port, i (`out_${port.name}_${i}`)}
+		{@const desc = describe(port, 'out')}
+		{@const descId = `${uid}-out-${i}`}
 		<div
 			class="port-dot dot-output"
 			class:metric-port={port.metric === true}
@@ -147,15 +159,16 @@
 			data-node-id={node.id}
 			data-port-name={port.name}
 			data-port-dir="out"
-			{@attach tooltip(portTip(port, 'out'))}
+			{@attach tooltip(portTip(port, 'out', desc))}
 			aria-label={portName(port, 'out')}
-			aria-describedby={PORT_KEYS_HELP_ID}
+			aria-describedby={describedBy(descId, desc)}
 			onpointerdown={(e) => e.stopPropagation()}
 			onmousedown={(e) => startFromOutput(e, port.name)}
 			onmouseup={(e) => endAtOutput(e, port.name)}
 			role="button"
 			tabindex="0"
 		></div>
+		{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 	{/each}
 </div>
 

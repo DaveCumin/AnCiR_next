@@ -12,6 +12,7 @@
 	import { deselectAllPlots } from '$lib/core/Plot.svelte';
 	import Editable from '$lib/components/inputs/Editable.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
+	import { describeNodePort, portEnv } from '$lib/core/portDescriptions.js';
 
 	let { node } = $props();
 
@@ -41,9 +42,21 @@
 		return out;
 	});
 
-	// Output columns (producer columns for a process; args.out columns for a TP).
+	// Output columns (producer columns for a process; args.out columns for a TP), each with what
+	// it holds (portDescriptions.js, the text its canvas port's tooltip shows).
+	const env = portEnv(getColumnById);
 	const outputCols = $derived(
-		(node.outputColumns ?? []).map((o) => getColumnById(o.colId)).filter(Boolean)
+		(node.outputColumns ?? [])
+			.map((o) => {
+				const col = getColumnById(o.colId);
+				if (!col) return null;
+				const description = describeNodePort(node, { name: o.port ?? `col_${o.colId}` }, 'out', {
+					...env,
+					key: o.key
+				});
+				return { col, description };
+			})
+			.filter(Boolean)
 	);
 
 	function findSelect() {
@@ -129,8 +142,8 @@
 	{/if}
 
 	<div class="node-outputs">
-		{#each outputCols as col (col.id)}
-			<div class="node-output-row"><ColumnComponent {col} /></div>
+		{#each outputCols as { col, description } (col.id)}
+			<div class="node-output-row"><ColumnComponent {col} {description} /></div>
 		{:else}
 			<div class="node-empty">No outputs. Wire an input on the canvas.</div>
 		{/each}

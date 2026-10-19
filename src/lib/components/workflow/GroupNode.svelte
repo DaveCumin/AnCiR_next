@@ -25,12 +25,17 @@
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
 	import { NODE_ROW_CSS_VARS, nodeRowCentreY } from './nodeRows.js';
 	import { portTooltip, portAriaLabel } from './portLabels.js';
+	import { describeNodePort, portEnv } from '$lib/core/portDescriptions.js';
 	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
 	import { columnWarnings } from '$lib/core/columnWarnings.js';
 
 	let { node, selected = false, isDropTarget = false, spliceTargetPort = null } = $props();
 
 	const dispatch = createEventDispatcher();
+	// Unique per card, for the ids of the hidden port descriptions (aria-describedby).
+	const uid = $props.id();
+	// What each column port carries (portDescriptions.js), after its name in the tooltip.
+	const portEnvGroup = portEnv(getColumnById);
 
 	// Row geometry (row height, header height, row centres) comes from nodeRows.js, the same
 	// module WorkflowEditor anchors wires with; the CSS reads it through NODE_ROW_CSS_VARS.
@@ -292,6 +297,8 @@
 			role="presentation"
 		>
 			{#each sourceColumns as { id, col } (id)}
+				{@const desc = describeNodePort(node, { name: `col_${id}` }, 'out', portEnvGroup)}
+				{@const descId = `${uid}-out-${id}`}
 				{@const meta = typeMeta(col)}
 				{@const expanded = group?.rowState?.[id]?.expanded === true}
 				<div class="source-row" class:expanded>
@@ -368,7 +375,9 @@
 							onmousedown={(e) => onPortMouseDown(e, `col_${id}`)}
 							onmouseup={(e) => onPortMouseUp(e, `col_${id}`)}
 							oncontextmenu={onPortContextMenu}
-							{@attach tooltip(portTooltip({ name: `col_${id}` }, 'out', { label: col.name }))}
+							{@attach tooltip(
+								portTooltip({ name: `col_${id}` }, 'out', { label: col.name, description: desc })
+							)}
 							aria-label={portAriaLabel(
 								node.groupObj?.name ?? node.label ?? 'Group',
 								{ name: `col_${id}` },
@@ -377,8 +386,9 @@
 									label: col.name
 								}
 							)}
-							aria-describedby={PORT_KEYS_HELP_ID}
+							aria-describedby={desc ? `${descId} ${PORT_KEYS_HELP_ID}` : PORT_KEYS_HELP_ID}
 						></button>
+						{#if desc}<span id={descId} hidden>{desc}</span>{/if}
 					</div>
 					{#if expanded}
 						<div class="row-body" onmousedown={stopPointer} role="presentation">
