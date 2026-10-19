@@ -6,7 +6,7 @@
 	// IQR, skewness, excess kurtosis. Output as fixed columns (a `variable` name column plus one
 	// column per statistic), tidy long form. Quick-plot draws a histogram of each input column.
 	// Maths is the pure, unit-tested utils/describeStats.js (scipy-matched moments).
-	import { displayNameOf } from '$lib/core/columnLabels.js';
+	import { bakeInputLabels } from '$lib/core/columnLabels.js';
 	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
@@ -62,10 +62,12 @@
 		);
 		if (yIds.length === 0) return [null, false];
 
-		const rows = yIds.map((id) => {
-			const col = getColumnById(id);
-			return { variable: displayNameOf(col) || String(id), ...describeStats(col.getData() ?? []) };
-		});
+		// The display names, baked into args for the ports and exported scripts.
+		const labels = bakeInputLabels(argsIN, yIds);
+		const rows = yIds.map((id, i) => ({
+			variable: labels[i],
+			...describeStats(getColumnById(id).getData() ?? [])
+		}));
 		// Write the output columns from the func itself (not just the component's recompute), so
 		// doProcess() — used by the MCP engine and the demo generator — bakes real output columns
 		// rather than empty ones. writeOutputColumn no-ops on unwired (-1) keys, so the pure-result

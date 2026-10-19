@@ -9,7 +9,7 @@
 	// McFadden pseudo-R². Output is one row per term (long form), so it composes with a table.
 	import { scrollFade } from '$lib/utils/scrollFade.js';
 	import { getColumnById } from '$lib/core/Column.svelte';
-	import { displayNameById } from '$lib/core/columnLabels.js';
+	import { bakeInputLabels, displayNameOf } from '$lib/core/columnLabels.js';
 	import { nodeMemo, restoreOrCompute } from '$lib/core/computeMemo.js';
 	import { writeOutputColumn } from '$lib/tableProcesses/outputColumns.js';
 	import { fillDefaults, normalizeYInputs } from '$lib/tableProcesses/tpArgHelpers.js';
@@ -69,13 +69,14 @@
 		const warnings = [];
 		if (!positiveClass) {
 			warnings.push(
-				`The outcome "${outCol.name}" is not binary (found ${levels.length} distinct values). Logistic regression needs exactly two outcome levels.`
+				`The outcome "${displayNameOf(outCol) || argsIN.yIN}" is not binary (found ${levels.length} distinct values). Logistic regression needs exactly two outcome levels.`
 			);
 			return [{ rows: [], warnings, converged: false }, true];
 		}
 
 		const predictorCols = xIds.map((id) => getColumnById(id).getData() ?? []);
-		const names = xIds.map((id) => displayNameById(id, String(id)));
+		// The display names, baked into args for the ports and exported scripts.
+		const names = bakeInputLabels(argsIN, xIds);
 		const fit = logisticRegression(y, predictorCols, names);
 
 		if (!fit.coefficients.length) {
@@ -104,7 +105,7 @@
 			rows,
 			perObs: fit.perObs,
 			positiveClass,
-			outcomeName: outCol.name ?? String(argsIN.yIN),
+			outcomeName: displayNameOf(outCol) || String(argsIN.yIN),
 			n: fit.n,
 			logLik: fit.logLik,
 			lrChiSq: fit.lrChiSq,

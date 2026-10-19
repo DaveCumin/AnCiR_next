@@ -91,6 +91,7 @@ def main():
             compression=meta.get("compression"),
             ref_id=meta.get("refId"),
             group_label=meta.get("groupLabel"),
+            label=meta.get("label"),
             columns_index=None,  # set after all are built
             processes=meta.get("processes", []),
         )

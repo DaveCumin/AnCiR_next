@@ -234,6 +234,63 @@ def test_known_table_process_resolves_via_displayname():
 
 
 # ----------------------------------------------------------------------
+# Input labels written as DATA (`_inputLabels`)
+# ----------------------------------------------------------------------
+# The app writes an input column's DISPLAY name into Normality test / Describe data
+# `variable`, Correlation `var_i`/`var_j` and Logistic regression `term`, and bakes it into
+# args as `_inputLabels` (core/columnLabels.js bakeInputLabels). A fit residual reads
+# "Residuals: y" in the app while its stored name is `resid_191_15`
+# (demo-workflow-stats-regression); the port must write the baked label.
+
+def _label_cols():
+    resid = _col(10, 'resid_191_15', [0.3, -0.1, 0.4, -0.5, 0.2, -0.2, 0.1, -0.4, 0.5, -0.1])
+    other = _col(11, 'noise', [1.0, 3.0, 2.0, 5.0, 4.0, 6.0, 8.0, 7.0, 9.0, 10.0])
+    out = rt.Column(id=20, name='variable_16', type='category', data=20, raw_data={})
+    return {10: resid, 11: other, 20: out}
+
+
+def test_normalitytest_writes_baked_input_labels():
+    cols, raw = _label_cols(), {}
+    args = {'yIN': [10, 11], 'method': 'shapiro', 'out': {'variable': 20},
+            '_inputLabels': {'10': 'Residuals: y', '11': 'noise'}}
+    rt.tp_normalitytest(args, cols, raw, {})
+    assert raw[20] == ['Residuals: y', 'noise']
+
+
+def test_describedata_writes_baked_input_labels():
+    cols, raw = _label_cols(), {}
+    args = {'yIN': [10], 'out': {'variable': 20}, '_inputLabels': {'10': 'Residuals: y'}}
+    rt.tp_describedata(args, cols, raw, {})
+    assert raw[20] == ['Residuals: y']
+
+
+def test_correlation_writes_baked_input_labels():
+    cols, raw = _label_cols(), {}
+    cols[21] = rt.Column(id=21, name='var_j_16', type='category', data=21, raw_data={})
+    args = {'yIN': [10, 11], 'method': 'pearson', 'out': {'var_i': 20, 'var_j': 21},
+            '_inputLabels': {'10': 'Residuals: y', '11': 'noise'}}
+    rt.tp_correlation(args, cols, raw, {})
+    assert raw[20] == ['Residuals: y'] and raw[21] == ['noise']
+
+
+def test_input_labels_fall_back_to_the_stored_name():
+    # A session saved before the app baked labels: the stored name, as the app wrote then.
+    cols, raw = _label_cols(), {}
+    rt.tp_normalitytest({'yIN': [10], 'out': {'variable': 20}}, cols, raw, {})
+    assert raw[20] == ['resid_191_15']
+    # An empty or missing entry falls back too; a column with no name reads its id.
+    cols[10].name = ''
+    assert rt._input_label({'_inputLabels': {'10': ''}}, cols, 10) == '10'
+
+
+def test_plot_legend_uses_the_exported_display_name():
+    col = _col(10, 'resid_191_15', [1.0])
+    assert rt._display_name(col) == 'resid_191_15'
+    col.label = 'Residuals: y'
+    assert rt._display_name(col) == 'Residuals: y'
+
+
+# ----------------------------------------------------------------------
 # Coverage self-check
 # ----------------------------------------------------------------------
 

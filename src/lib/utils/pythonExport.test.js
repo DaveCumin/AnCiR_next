@@ -112,6 +112,26 @@ describe('sessionToPython', () => {
 		expect('binWidth' in meta['2']).toBe(false);
 	});
 
+	it('carries the display names the caller supplies, for plot legends, and only those that differ', () => {
+		const session = {
+			rawData: { 1: [0.1], 2: [3] },
+			data: [
+				{ id: 1, name: 'resid_191_15', type: 'number', data: 1 },
+				{ id: 2, name: 'v', type: 'number', data: 2 }
+			],
+			tableProcesses: [],
+			plots: [],
+			columnLabels: { 1: 'Residuals: y', 2: 'v' }
+		};
+		const script = sessionToPython(session, FAKE_RUNTIME);
+		const meta = extractEmbedded(script, '_COL_META_RAW');
+		expect(meta['1']).toMatchObject({ name: 'resid_191_15', label: 'Residuals: y' });
+		expect('label' in meta['2']).toBe(false);
+		// The runtime Column receives it; the stored name stays the column's identity.
+		expect(script).toContain('label=meta.get("label"),');
+		expect(script).toContain('rows[c.name] = c.get_data()');
+	});
+
 	it('re-ints the embedded string keys in the generated script', () => {
 		expect(out).toContain(
 			"RAW_DATA = {int(k) if k.lstrip('-').isdigit() else k: v for k, v in RAW_DATA.items()}"

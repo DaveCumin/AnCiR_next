@@ -2344,6 +2344,10 @@ class Column:
     # Column.cutsList: the edges of a BinnedData x output in cuts mode. Such a column has
     # binWidth null in the app, so its getData adds null / 2 = 0 and reads the bin starts.
     cuts_list: list | None = None
+    # The name the app SHOWS for this column (a node output's label, "Residuals: y" for
+    # `resid_191_15`), when the exporter supplied one; plot legends use it. `name` stays the
+    # stored identity (columns.csv headers, references). See _display_name.
+    label: str | None = None
 
     def is_referencial(self):
         return self.ref_id is not None
@@ -2926,6 +2930,23 @@ def _id_list(yIN):
     if yIN == -1:
         return []
     return [yIN]
+
+
+def _input_label(args, cols, cid):
+    """The name a node writes into an output column as DATA for input column `cid` (the
+    `variable` of Describe data and Normality test, Correlation's `var_i`/`var_j`, Logistic
+    regression's `term`). The app writes the column's DISPLAY name ("Residuals: y" for
+    `resid_191_15`) and bakes it into the node's args as `_inputLabels` ({id: label}), because
+    working out a node output's label needs the app's label tables. Without a baked label (a
+    session saved before the app baked them) this is the stored name, as the app wrote then."""
+    baked = args.get('_inputLabels')
+    if isinstance(baked, dict):
+        label = baked.get(str(cid))
+        if isinstance(label, str) and label != '':
+            return label
+    col = cols.get(cid)
+    name = col.name if col is not None else None
+    return name if name else str(cid)
 
 
 def _t_for_col(col):
@@ -7767,7 +7788,7 @@ def tp_describedata(args, cols, raw_data, _sv):
             continue
         col = cols[y_id]
         st = describe_stats(col.get_data())
-        rows['variable'].append(col.name or str(y_id))
+        rows['variable'].append(_input_label(args, cols, y_id))
         for k in keys:
             rows[k].append(st[k])
     return _result_rows(raw_data, cols, args, rows)
@@ -7790,7 +7811,7 @@ def tp_normalitytest(args, cols, raw_data, _sv):
         col = cols[y_id]
         res = fn(col.get_data())
         p = res['pvalue']
-        rows['variable'].append(col.name or str(y_id))
+        rows['variable'].append(_input_label(args, cols, y_id))
         rows['statistic'].append(res['statistic'])
         rows['pvalue'].append(p)
         rows['n'].append(res['n'])
@@ -7840,7 +7861,7 @@ def tp_correlation(args, cols, raw_data, _sv):
     if not math.isfinite(alpha):
         alpha = 0.05
     columns = [cols[y].get_data() or [] for y in y_ins]
-    names = [cols[y].name if cols[y].name is not None else str(y) for y in y_ins]
+    names = [_input_label(args, cols, y) for y in y_ins]
     use = 'spearman' if requested == 'spearman' else 'pearson'
     if requested == 'auto':
         for c in columns:
@@ -8120,7 +8141,7 @@ def tp_logisticregression(args, cols, raw_data, _sv):
         # Not a binary outcome: the app reports it and writes nothing (still "valid").
         return True
     predictors = [cols[x].get_data() for x in x_ins]
-    names = [cols[x].name or str(x) for x in x_ins]
+    names = [_input_label(args, cols, x) for x in x_ins]
     res = logistic_regression(y, predictors, names)
     if not res or not res.get('coef'):
         # Too few complete rows: the app warns and writes nothing, and the node stays valid
@@ -8889,6 +8910,15 @@ def _resolve_plot_col(col_header, columns_index):
     if cid in columns_index:
         return columns_index[cid]
     return None
+
+
+def _display_name(col):
+    """The name to show for a column in a plot legend: the app's display name when the export
+    carried one (Column.label), else the stored name, as the app's seriesDisplayLabel falls
+    back to the wired column's display name."""
+    if col is None:
+        return ''
+    return col.label or col.name
 
 
 def _x_for_plot(col):
@@ -9700,7 +9730,7 @@ def plot_scatterplot(plot, columns_index, ax_left, ax_right=None):
             used_right = True
         line = series.get('line') or {}
         points = series.get('points') or {}
-        label = series.get('label') or y_col.name
+        label = series.get('label') or _display_name(y_col)
         colour = (line.get('colour') or line.get('color')
                   or points.get('colour') or points.get('color') or None)
         if line.get('show', True):
@@ -9781,7 +9811,7 @@ def plot_fft(plot, columns_index, ax):
         colour = line.get('colour') or line.get('color')
         ax.plot(xs, fft['magnitudes'], color=colour,
                 linewidth=line.get('width', 1),
-                label=series.get('label') or y_col.name)
+                label=series.get('label') or _display_name(y_col))
     # Vertical overlay positions are periods in hours, drawn at 1/p while the axis shows
     # frequency (FFT.overlayXTransform); p <= 0 has no place on either axis. Overlays read on
     # the magnitude axis only.
@@ -9844,7 +9874,7 @@ def plot_periodogram(plot, columns_index, ax):
         colour = line.get('colour') or line.get('color')
         ax.plot(result['x'], result['y'], color=colour,
                 linewidth=line.get('width', 1),
-                label=series.get('label') or y_col.name)
+                label=series.get('label') or _display_name(y_col))
         if result.get('threshold') is not None:
             # The Sidak line is per fold (its df follows the occupied columns), so it is a
             # curve over period, not one horizontal value.
@@ -9886,7 +9916,7 @@ def plot_correlogram(plot, columns_index, ax):
         colour = line.get('colour') or line.get('color')
         ax.plot(ac['lags'], ac['correlations'], color=colour,
                 linewidth=line.get('width', 1),
-                label=series.get('label') or y_col.name)
+                label=series.get('label') or _display_name(y_col))
     ax.axhline(0, color='gray', linewidth=0.5)
     # Overlays widen the correlation axis only: the lag range is an analysis parameter.
     ov = _draw_overlays(ax, plot, columns_index)
@@ -9913,7 +9943,7 @@ def plot_boxplot(plot, columns_index, ax):
         # missing, numeric text is a number).
         y = [_js_number(v) for v in y_col.get_data() if not _js_invalid(v)]
         data.append(y)
-        labels.append(series.get('label') or y_col.name)
+        labels.append(series.get('label') or _display_name(y_col))
     if data:
         # matplotlib's defaults are the app's box: type-7 (linear) quartiles and median,
         # whiskers at the most extreme points within 1.5 IQR of the quartiles.

@@ -93,6 +93,7 @@ def main():
             compression=meta.get("compression"),
             ref_id=meta.get("refId"),
             group_label=meta.get("groupLabel"),
+            label=meta.get("label"),
             columns_index=None,  # set after all are built
             processes=meta.get("processes", []),
         )
@@ -394,11 +395,21 @@ function dataSectionLines(session, dataAsCsv) {
 	const plots = session.plots ?? [];
 	const storedValues = session.storedValues ?? {};
 
+	// The names the app SHOWS where they differ from the stored names ({ id: label }, a node
+	// output's label such as "Residuals: y" for `resid_191_15`). The caller adds them
+	// (exportColumnLabels in core/columnLabels.js), since working them out needs the app's label
+	// tables and this file imports nothing. They label plot legends only; the stored name stays
+	// the column's identity (columns.csv headers, references).
+	const columnLabels = session.columnLabels ?? {};
 	/** @type {Record<number, any>} */
 	const colMeta = {};
 	for (const c of columns) {
 		if (c?.id == null) continue;
 		colMeta[c.id] = colMetaForColumn(c);
+		const label = columnLabels[c.id];
+		if (typeof label === 'string' && label !== '' && label !== c.name) {
+			colMeta[c.id].label = label;
+		}
 	}
 
 	const tpsClean = [];

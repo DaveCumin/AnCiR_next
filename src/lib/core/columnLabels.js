@@ -55,6 +55,43 @@ export function displayNameById(id, fallback = '', namer) {
 }
 
 /**
+ * The display names of input columns `ids`, for a node that writes them into an output column
+ * as DATA (Describe data and Normality test `variable`, Correlation `var_i`/`var_j`, Logistic
+ * regression `term`). Also bakes them into the node's args as `_inputLabels` ({ id: label }):
+ * the Python and R ports, and so the exported scripts, read the baked labels, because they
+ * cannot work out a node output's display name ("Residuals: y" for `resid_191_15`) themselves.
+ * The same pattern as Join Data's `_sourceLabels`. `_` = internal, never an undo step; written
+ * only when it changed, so a recompute with the same labels leaves the args alone.
+ * @param {Record<string, any>} args  the node's args
+ * @param {Array<number|string>} ids  input column ids, in output order
+ * @returns {string[]} one label per id
+ */
+export function bakeInputLabels(args, ids) {
+	const labels = ids.map((id) => displayNameById(id, String(id)));
+	const baked = Object.fromEntries(ids.map((id, i) => [String(id), labels[i]]));
+	if (JSON.stringify(args._inputLabels ?? null) !== JSON.stringify(baked)) {
+		args._inputLabels = baked;
+	}
+	return labels;
+}
+
+/**
+ * The display name of every column whose display name differs from its stored name, as
+ * { id: label }, for the Python export (pythonExport.js, which imports nothing and so cannot
+ * work them out) to label plot legends the way the app does.
+ * @returns {Record<number, string>}
+ */
+export function exportColumnLabels() {
+	const namer = createColumnNamer(core);
+	const labels = {};
+	for (const col of core.data ?? []) {
+		const label = displayNameOf(col, namer);
+		if (label && label !== col.name) labels[col.id] = label;
+	}
+	return labels;
+}
+
+/**
  * Rename a column from a display-name editor. Text equal to the column's output label restores
  * the seeded auto name (so the label stays live); anything else is the user's name.
  * Returns true when it handled the write as a label restore, false when the caller should

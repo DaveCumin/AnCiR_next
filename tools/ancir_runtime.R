@@ -771,8 +771,7 @@ tp_describedata <- function(args, env) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
     st <- describe_stats(col_data(env$cols[[yk]], env$cols, env$raw_data))
-    nm <- env$cols[[yk]]$name
-    rows$variable <- c(rows$variable, if (is.null(nm)) yk else nm)
+    rows$variable <- c(rows$variable, input_label(args, env, y_id))
     for (k in keys) rows[[k]] <- c(rows[[k]], st[[k]])
   }
   .write_result_rows(args, env, rows)
@@ -789,8 +788,7 @@ tp_normalitytest <- function(args, env) {
     yk <- as.character(y_id)
     if (is.null(env$cols[[yk]])) next
     res <- fn(col_data(env$cols[[yk]], env$cols, env$raw_data))
-    nm <- env$cols[[yk]]$name
-    rows$variable <- c(rows$variable, if (is.null(nm)) yk else nm)
+    rows$variable <- c(rows$variable, input_label(args, env, y_id))
     rows$statistic <- c(rows$statistic, res$statistic)
     rows$pvalue <- c(rows$pvalue, res$pvalue)
     rows$n <- c(rows$n, res$n)
@@ -2491,10 +2489,7 @@ tp_correlation <- function(args, env) {
   if (!length(alpha) || !is.finite(alpha)) alpha <- 0.05
   columns <- lapply(y_ins, function(i) col_data(env$cols[[as.character(i)]], env$cols,
                                                  env$raw_data))
-  names_ <- vapply(y_ins, function(i) {
-    nm <- env$cols[[as.character(i)]]$name
-    if (is.null(nm)) as.character(i) else nm
-  }, character(1))
+  names_ <- vapply(y_ins, function(i) input_label(args, env, i), character(1))
   use <- if (identical(requested, "spearman")) "spearman" else "pearson"
   if (identical(requested, "auto")) {
     for (cvals in columns) {
@@ -2751,10 +2746,7 @@ tp_logisticregression <- function(args, env) {
   if (is.null(cb$positive)) return(TRUE)
   y <- cb$y
   preds <- lapply(x_ins, function(i) col_data(env$cols[[as.character(i)]], env$cols, env$raw_data))
-  nms <- vapply(x_ins, function(i) {
-    nm <- env$cols[[as.character(i)]]$name
-    if (is.null(nm)) as.character(i) else nm
-  }, character(1))
+  nms <- vapply(x_ins, function(i) input_label(args, env, i), character(1))
   res <- logistic_regression(y, preds, nms)
   # Too few complete rows: the app warns and writes nothing, and the node stays valid
   # (LogisticRegression.svelte returns [result, true]); this port used to return FALSE.
@@ -7071,6 +7063,23 @@ id_list <- function(y) {
   v <- unlist(y, use.names = FALSE)
   v <- v[!is.na(v) & v != -1]
   as.integer(v)
+}
+
+# The name a node writes into an output column as DATA for input column `cid` (the `variable`
+# of Describe data and Normality test, Correlation's var_i/var_j, Logistic regression's term).
+# The app writes the column's DISPLAY name ("Residuals: y" for resid_191_15) and bakes it into
+# the node's args as `_inputLabels` (id -> label), because working out a node output's label
+# needs the app's label tables. Without a baked label (a session saved before the app baked
+# them) this is the stored name, as the app wrote then.
+input_label <- function(args, env, cid) {
+  key <- as.character(cid)
+  baked <- args[["_inputLabels"]]
+  if (is.list(baked)) {
+    lab <- baked[[key]]
+    if (is.character(lab) && length(lab) == 1 && !is.na(lab) && nzchar(lab)) return(lab)
+  }
+  nm <- env$cols[[key]]$name
+  if (is.null(nm) || !length(nm) || is.na(nm) || !nzchar(nm)) key else nm
 }
 
 # Write values into raw_data (an environment, so later processes see them) and update meta.

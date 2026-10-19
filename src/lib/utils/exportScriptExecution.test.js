@@ -298,3 +298,68 @@ describe.runIf(HAVE_PYTHON)('Python split+CSV export from a different working di
 		expect(scalarFromCsv(out, MESOR_HEADER)).toBeCloseTo(SESSION_MESOR, 9);
 	}, 240_000);
 });
+
+// ----------------------------------------------------------------------
+// Node results that hold column NAMES as data (Normality test `variable`, ...) carry the names
+// the app shows, baked into the node's args as `_inputLabels` (core/columnLabels.js
+// bakeInputLabels). demo-workflow-stats-regression tests a fit residual, stored as
+// `resid_<id>` but shown as "Residuals: y"; both exported scripts must write the shown name.
+// The label is injected here as a re-saved session carries it, so the test does not wait on a
+// demo regeneration.
+// ----------------------------------------------------------------------
+
+/** demo-workflow-stats-regression with its Normality test's labels baked, and that output's header. */
+function labelledSession() {
+	const session = JSON.parse(
+		readFileSync(
+			join(ROOT, 'static', 'sessions', 'demos', 'demo-workflow-stats-regression.json'),
+			'utf8'
+		)
+	);
+	const tp = session.tableProcesses.find((t) => t.name === 'NormalityTest');
+	const [inputId] = tp.args.yIN;
+	const stored = session.data.find((c) => c.id === inputId)?.name;
+	expect(stored).toMatch(/^resid_/);
+	tp.args._inputLabels = { [String(inputId)]: 'Residuals: y' };
+	const header = session.data.find((c) => c.id === tp.args.out.variable)?.name;
+	return { session, header, stored };
+}
+
+/** One text cell out of a result CSV by header name (first data row). */
+function cellFromCsv(csvText, header) {
+	const [head, first] = csvText.split('\n');
+	const clean = (s) => s.replaceAll('"', '');
+	const idx = head.split(',').map(clean).indexOf(header);
+	expect(idx).toBeGreaterThanOrEqual(0);
+	return clean(first.split(',')[idx]);
+}
+
+describe('exported scripts write the names the app shows into node results', () => {
+	it.runIf(HAVE_PYTHON)(
+		'Python: Normality test variable reads "Residuals: y"',
+		() => {
+			const { session, header } = labelledSession();
+			const { dir, res } = runExport(
+				sessionToPythonFiles(session, PY_RUNTIME),
+				PYTHON,
+				'session.py'
+			);
+			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			const out = readFileSync(join(dir, 'session_output', 'columns_after_tables.csv'), 'utf8');
+			expect(cellFromCsv(out, header)).toBe('Residuals: y');
+		},
+		240_000
+	);
+
+	it.runIf(HAVE_R)(
+		'R: Normality test variable reads "Residuals: y"',
+		() => {
+			const { session, header } = labelledSession();
+			const { dir, res } = runExport(sessionToRFiles(session, R_RUNTIME), 'Rscript', 'session.R');
+			expect(res.status, `stderr:\n${res.stderr}`).toBe(0);
+			const out = readFileSync(join(dir, 'session_output', 'columns_after_analyses.csv'), 'utf8');
+			expect(cellFromCsv(out, header)).toBe('Residuals: y');
+		},
+		240_000
+	);
+});

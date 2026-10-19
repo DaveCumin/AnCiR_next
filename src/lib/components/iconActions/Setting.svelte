@@ -1,6 +1,7 @@
 <script module>
 	import { appConsts, appState, outputCoreAsJson } from '$lib/core/core.svelte';
 	import { addNotification } from '$lib/core/notifications.svelte.js';
+	import { exportColumnLabels } from '$lib/core/columnLabels.js';
 	import { loadPythonExporter, loadRExporter } from '$lib/utils/pythonExportLoader.js';
 	import { zipSync, strToU8 } from 'fflate';
 	import { checkRSupport, explainRSupport } from '$lib/utils/rExportSupport.js';
@@ -104,6 +105,8 @@
 	export async function exportPython(opts) {
 		try {
 			const session = JSON.parse(outputCoreAsJson());
+			// The names the app shows, for the script's plot legends (not saved in sessions).
+			session.columnLabels = exportColumnLabels();
 			const mod = await loadPythonExporter();
 			const files = exportFilesFrom(
 				mod,
