@@ -11,7 +11,11 @@ import {
 } from './ImportData.svelte';
 import { core, appConsts } from '$lib/core/core.svelte.js';
 import { getColumnById } from '$lib/core/Column.svelte';
-import { columnWarnings, repeatedTimesWarning } from '$lib/core/columnWarnings.js';
+import {
+	columnWarnings,
+	repeatedTimesWarning,
+	longFormatWarning
+} from '$lib/core/columnWarnings.js';
 import { exportJson, importJson } from '$lib/components/iconActions/Setting.svelte';
 import { loadProcesses } from '$test/processRegistry.js';
 import { loadPlots } from '$test/plotRegistry.js';
@@ -76,6 +80,37 @@ describe('the imported time column warns about repeated times', () => {
 	});
 });
 
+describe('long format and source columns', () => {
+	const longCsv = (name, subjects, n) =>
+		new File(
+			[
+				[
+					'time,subject,activity',
+					...subjects.flatMap((sub, j) =>
+						Array.from({ length: n }, (_, k) => `${iso(T0 + k * STEP)},${sub},${10 * j + k}`)
+					)
+				].join('\n') + '\n'
+			],
+			name,
+			{ type: 'text/plain' }
+		);
+
+	it('one long-format file: the time column names the subject column and Long To Wide', async () => {
+		await importFiles([longCsv('long.csv', ['m1', 'm2', 'm3'], 12)]);
+		expect(byName('subject').type).toBe('category');
+		expect(columnWarnings(byName('time'))).toEqual([longFormatWarning('subject', 3)]);
+	});
+
+	it('overlapping files with a Source file column: still the advice to bin', async () => {
+		core.data = [];
+		await openImportModalWithFiles([csv('a.csv', lines(0, 30)), csv('b.csv', lines(20, 50))]);
+		_importTestActions().setAddSourceColumn(true);
+		await _importTestActions().confirmImport();
+		expect(byName('Source file')).toBeTruthy();
+		expect(columnWarnings(byName('time'))).toEqual([repeatedTimesWarning(10)]);
+	});
+});
+
 describe('after save and open', () => {
 	let saved;
 	const realCreate = URL.createObjectURL;
@@ -104,5 +139,24 @@ describe('after save and open', () => {
 		await importJson(JSON.parse(text));
 		expect(byName('time').getData()).toHaveLength(60);
 		expect(columnWarnings(byName('time'))).toEqual([repeatedTimesWarning(10)]);
+	});
+
+	it('a long-format import warns the same way after save and open', async () => {
+		const rows = ['m1', 'm2'].flatMap((sub) =>
+			Array.from({ length: 6 }, (_, k) => `${iso(T0 + k * STEP)},${sub},${k}`)
+		);
+		core.data = [];
+		await importFiles([
+			new File([['time,subject,activity', ...rows].join('\n') + '\n'], 'l.csv', {
+				type: 'text/plain'
+			})
+		]);
+		expect(columnWarnings(byName('time'))).toEqual([longFormatWarning('subject', 2)]);
+		exportJson();
+		const text = await saved.text();
+		core.data = [];
+		core.groups = [];
+		await importJson(JSON.parse(text));
+		expect(columnWarnings(byName('time'))).toEqual([longFormatWarning('subject', 2)]);
 	});
 });
