@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "498": [
+    "533": [
       0,
       1,
       2,
@@ -170,7 +170,7 @@
       166,
       167
     ],
-    "499": [
+    "534": [
       50.73643610198167,
       52.88311387843814,
       58.853278502861286,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 498,
+      "id": 533,
       "name": "hour",
-      "data": 498,
+      "data": 533,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 499,
+      "id": 534,
       "name": "activity",
-      "data": 499,
+      "data": 534,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 72,
+      "id": 78,
       "name": "Activity periodogram",
       "x": 60,
       "y": 255,
@@ -443,9 +443,9 @@
         "data": [
           {
             "x": {
-              "id": 500,
+              "id": 535,
               "name": "hour",
-              "refId": 498,
+              "refId": 533,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -454,9 +454,9 @@
               "processes": []
             },
             "y": {
-              "id": 501,
+              "id": 536,
               "name": "activity",
-              "refId": 499,
+              "refId": 534,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -500,7 +500,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_32",
+      "id": "note_36",
       "text": "Scans a range of candidate periods and plots spectral power against period, with a significance threshold; the tallest peak crossing the line estimates the dominant rhythm's period. Methods include Lomb-Scargle (handles uneven sampling/gaps) and the chi-squared (Sokolove-Bushell) periodogram. For chi-squared the reported peak is the period whose Qp rises furthest above its own threshold (the largest raw Qp drifts to long periods on a weak rhythm, because the threshold grows with the period), and its p-value (the peak p port) is family-wise, corrected for every period tested as the threshold line is, so it is below alpha exactly when the peak crosses the line; the panel says when it does not. The y axis names the statistic: normalised power for Lomb-Scargle, Qp for chi-squared and the amplitude A_p for Enright (series of different methods on one plot are not comparable numbers). Log scale under Properties draws the power axis on a log scale, for display only. Use it to quantify period from a time-series. See the Periodograms chapter for details.",
       "x": 40,
       "y": 24,
@@ -534,19 +534,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_498": {
+    "data_533": {
       "x": 60,
       "y": 314
     },
-    "data_499": {
+    "data_534": {
       "x": 60,
       "y": 814
     },
-    "note_32": {
+    "note_36": {
       "x": 40,
       "y": 24
     },
-    "plot_72": {
+    "plot_78": {
       "x": 820,
       "y": 314
     }
@@ -610,5 +610,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

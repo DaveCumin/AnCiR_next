@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "636": [
+    "671": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "637": [
+    "672": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -104,18 +104,18 @@
       10,
       11.362966948437261
     ],
-    "638": [
+    "673": [
       0.05
     ],
-    "639": [
+    "674": [
       40.33352341479166
     ]
   },
   "data": [
     {
-      "id": 636,
+      "id": 671,
       "name": "Surrogate Test input 1",
-      "data": 636,
+      "data": 671,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -124,9 +124,9 @@
       "processes": []
     },
     {
-      "id": 637,
+      "id": 672,
       "name": "Surrogate Test input 2",
-      "data": 637,
+      "data": 672,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -135,22 +135,22 @@
       "processes": []
     },
     {
-      "id": 638,
-      "name": "pvalue_55",
-      "data": 638,
+      "id": 673,
+      "name": "pvalue_60",
+      "data": 673,
       "type": "number",
-      "tableProcessGUId": "529b716a-7127-487b-b38d-154c8639b5fd",
+      "tableProcessGUId": "27e4345a-51ed-4eb0-a6da-a1dbe2bad5bb",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 639,
-      "name": "observed_55",
-      "data": 639,
+      "id": 674,
+      "name": "observed_60",
+      "data": 674,
       "type": "number",
-      "tableProcessGUId": "e112918d-4bd3-4651-8045-6050788d1910",
+      "tableProcessGUId": "c0595e9a-2e82-4d12-bc9e-e87080d09d38",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -159,7 +159,7 @@
   ],
   "plots": [
     {
-      "id": 109,
+      "id": 115,
       "name": "Surrogate Test result",
       "x": 60,
       "y": 255,
@@ -192,10 +192,10 @@
       },
       "plot": {
         "columnRefs": [
-          636,
-          637,
-          638,
-          639
+          671,
+          672,
+          673,
+          674
         ],
         "showCol": [
           true,
@@ -212,12 +212,12 @@
   ],
   "tableProcesses": [
     {
-      "id": 55,
+      "id": 60,
       "name": "SurrogateTest",
       "displayName": "Surrogate Test",
       "args": {
-        "xIN": 636,
-        "yIN": 637,
+        "xIN": 671,
+        "yIN": 672,
         "method": "block",
         "nSurrogates": 19,
         "seed": 12345,
@@ -225,8 +225,8 @@
         "periodMin": 20,
         "periodMax": 28,
         "out": {
-          "pvalue": 638,
-          "observed": 639
+          "pvalue": 673,
+          "observed": 674
         }
       },
       "refTPId": null
@@ -237,7 +237,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_55",
+      "id": "note_59",
       "text": "Asks whether a rhythm is stronger than you would expect from a series with the same character but no real rhythm. The catch it exists to solve: shuffling the values destroys the smooth run-to-run structure that every biological recording has, so a shuffled null is far too easy to beat and almost anything looks rhythmic. The block bootstrap instead resamples whole chunks (a day at a time by default) and the AR(1) option simulates matched \"red noise\", so both keep that structure. Phase-randomised and AAFT surrogates are not offered here: they preserve the spectrum, and therefore the rhythm itself, so they cannot test for rhythmicity (a saved session that names one is refused with that reason). The band statistic is an FFT, so gaps follow the FFT rule: a few missing samples are interpolated, a long gap is refused. Results are reproducible from the seed, and the smallest p it can report is 1/(surrogates + 1).",
       "x": 40,
       "y": 24,
@@ -271,23 +271,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_636": {
+    "data_671": {
       "x": 60,
       "y": 314
     },
-    "data_637": {
+    "data_672": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_55": {
+    "tableprocess_60": {
       "x": 440,
       "y": 314
     },
-    "plot_109": {
+    "plot_115": {
       "x": 820,
       "y": 314
     },
-    "note_55": {
+    "note_59": {
       "x": 40,
       "y": 24
     }
@@ -351,5 +351,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

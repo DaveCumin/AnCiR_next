@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "664": [
+    "699": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "665": [
+    "700": [
       24.784209286216505,
       27.918238427560844,
       26.60093560817605,
@@ -104,7 +104,7 @@
       24.95424537696588,
       27.973731986697846
     ],
-    "666": [
+    "701": [
       0,
       1,
       2,
@@ -156,16 +156,16 @@
       48,
       49
     ],
-    "667": [
+    "702": [
       null
     ],
-    "668": [
+    "703": [
       0.9855288018053066
     ],
-    "669": [
+    "704": [
       2.8153329690220796
     ],
-    "670": [
+    "705": [
       25.756601996480892,
       24.74268056275642,
       24.38510252024072,
@@ -220,20 +220,20 @@
   },
   "data": [
     {
-      "id": 664,
+      "id": 699,
       "name": "x",
-      "data": 664,
+      "data": 699,
       "type": "number",
-      "tableProcessGUId": "b490ae24-2d28-47e7-8eba-509a2723b357",
+      "tableProcessGUId": "58aa9683-e3e2-4f7a-a498-06a8ca753807",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 665,
+      "id": 700,
       "name": "y",
-      "data": 665,
+      "data": 700,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -242,55 +242,55 @@
       "processes": []
     },
     {
-      "id": 666,
-      "name": "dlogx_59",
-      "data": 666,
+      "id": 701,
+      "name": "dlogx_64",
+      "data": 701,
       "type": "number",
-      "tableProcessGUId": "a543eef6-47e9-4fd4-b2d5-1d53fc01b08c",
+      "tableProcessGUId": "2eb9abf7-7f72-4127-81b2-d094b82907da",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 667,
-      "name": "perm_pvalue_59",
-      "data": 667,
+      "id": 702,
+      "name": "perm_pvalue_64",
+      "data": 702,
       "type": "number",
-      "tableProcessGUId": "9ee81930-4a49-4768-8336-f1d5988d4f7a",
+      "tableProcessGUId": "db34e444-4b6d-43a3-b546-5025ac697659",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 668,
-      "name": "r2_59",
-      "data": 668,
+      "id": 703,
+      "name": "r2_64",
+      "data": 703,
       "type": "number",
-      "tableProcessGUId": "9ee81930-4a49-4768-8336-f1d5988d4f7a",
+      "tableProcessGUId": "db34e444-4b6d-43a3-b546-5025ac697659",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 669,
-      "name": "rmse_59",
-      "data": 669,
+      "id": 704,
+      "name": "rmse_64",
+      "data": 704,
       "type": "number",
-      "tableProcessGUId": "9ee81930-4a49-4768-8336-f1d5988d4f7a",
+      "tableProcessGUId": "db34e444-4b6d-43a3-b546-5025ac697659",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 670,
-      "name": "dlogy_665_59",
-      "data": 670,
+      "id": 705,
+      "name": "dlogy_700_64",
+      "data": 705,
       "type": "number",
-      "tableProcessGUId": "a543eef6-47e9-4fd4-b2d5-1d53fc01b08c",
+      "tableProcessGUId": "2eb9abf7-7f72-4127-81b2-d094b82907da",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -299,7 +299,7 @@
   ],
   "plots": [
     {
-      "id": 112,
+      "id": 118,
       "name": "Double Logistic: data + fit",
       "x": 60,
       "y": 255,
@@ -374,9 +374,9 @@
         "data": [
           {
             "x": {
-              "id": 671,
+              "id": 706,
               "name": "x",
-              "refId": 664,
+              "refId": 699,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -385,9 +385,9 @@
               "processes": []
             },
             "y": {
-              "id": 672,
+              "id": 707,
               "name": "y",
-              "refId": 665,
+              "refId": 700,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -413,9 +413,9 @@
           },
           {
             "x": {
-              "id": 673,
-              "name": "dlogx_59",
-              "refId": 666,
+              "id": 708,
+              "name": "dlogx_64",
+              "refId": 701,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -424,9 +424,9 @@
               "processes": []
             },
             "y": {
-              "id": 674,
-              "name": "dlogy_665_59",
-              "refId": 670,
+              "id": 709,
+              "name": "dlogy_700_64",
+              "refId": 705,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -468,7 +468,7 @@
       }
     },
     {
-      "id": 113,
+      "id": 119,
       "name": "Double Logistic: values",
       "x": 630,
       "y": 255,
@@ -501,8 +501,8 @@
       },
       "plot": {
         "columnRefs": [
-          665,
-          670
+          700,
+          705
         ],
         "showCol": [
           true,
@@ -517,7 +517,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 58,
+      "id": 63,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -527,19 +527,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 664
+          "result": 699
         }
       },
       "refTPId": null
     },
     {
-      "id": 59,
+      "id": 64,
       "name": "DoubleLogistic",
       "displayName": "Double Logistic",
       "args": {
-        "xIN": 664,
+        "xIN": 699,
         "yIN": [
-          665
+          700
         ],
         "outputX": -1,
         "fixK1": false,
@@ -549,11 +549,11 @@
         "fixPeriod": false,
         "fixedPeriod": 24,
         "out": {
-          "dlogx": 666,
-          "perm_pvalue": 667,
-          "r2": 668,
-          "rmse": 669,
-          "dlogy_665": 670
+          "dlogx": 701,
+          "perm_pvalue": 702,
+          "r2": 703,
+          "rmse": 704,
+          "dlogy_700": 705
         }
       },
       "refTPId": null
@@ -564,8 +564,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_57",
-      "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In periodic mode the active phase is kept shorter than one period and M is the rest (baseline) level, and a fitted period stays inside a period range (1 to 48 h for a time x; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units, as in Cosinor), with a warning when it stops on a bound. In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. Onset and offset phases are hours after the first sample (x units after x = 0 for a numeric x) by default; set Phase reference to Clock time of day (needs a time column as x) to report them as clock time. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. The optional permutation test permutes single values by default, which assumes exchangeable (independent) observations; for autocorrelated data choose one-period blocks, or use the Surrogate Test node (the node warns when the residuals are strongly autocorrelated). Double-logistic phenology model (Zhang et al. 2003).",
+      "id": "note_61",
+      "text": "Fits a double-logistic curve, a rising sigmoid followed by a falling sigmoid, describing a single on-then-off transition (or, in periodic mode, a repeating pulse train). Use it for phenology-style data and activity onsets/offsets where you want to locate and characterise the rise and fall separately (their timing t1, t2 and steepness k1, k2). In periodic mode the active phase is kept shorter than one period and M is the rest (baseline) level, and a fitted period stays inside a period range (1 to 30 h for a new node on a time x, while a session saved without a range keeps 1 to 48 h; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units, as in Cosinor), with a warning when it stops on a bound. In the demo, read the ascending limb as the onset transition and the descending limb as the offset; the plateau between them is the active window. Onset and offset phases are hours after the first sample (x units after x = 0 for a numeric x) by default; set Phase reference to Clock time of day (needs a time column as x) to report them as clock time. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. The optional permutation test permutes single values by default, which assumes exchangeable (independent) observations; for autocorrelated data choose one-period blocks, or use the Surrogate Test node (the node warns when the residuals are strongly autocorrelated). Double-logistic phenology model (Zhang et al. 2003). For a smooth fitted curve, tick Specify output x values and choose Sequence: the curve is evaluated every step (automatic: about 500 points) from the smallest to the largest x.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -598,27 +598,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_665": {
+    "data_700": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_58": {
+    "tableprocess_63": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_59": {
+    "tableprocess_64": {
       "x": 440,
       "y": 314
     },
-    "plot_112": {
+    "plot_118": {
       "x": 820,
       "y": 314
     },
-    "plot_113": {
+    "plot_119": {
       "x": 820,
       "y": 814
     },
-    "note_57": {
+    "note_61": {
       "x": 40,
       "y": 24
     }
@@ -682,5 +682,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

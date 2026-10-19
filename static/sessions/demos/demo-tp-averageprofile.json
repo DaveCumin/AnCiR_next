@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "853": [
+    "902": [
       0,
       1,
       2,
@@ -98,7 +98,7 @@
       94,
       95
     ],
-    "854": [
+    "903": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -196,7 +196,7 @@
       15.358983848622422,
       11.362966948437233
     ],
-    "855": [
+    "904": [
       0.5,
       1.5,
       2.5,
@@ -222,7 +222,7 @@
       22.5,
       23.5
     ],
-    "856": [
+    "905": [
       10,
       11.362966948437267,
       15.358983848622461,
@@ -251,9 +251,9 @@
   },
   "data": [
     {
-      "id": 853,
+      "id": 902,
       "name": "Average Profile input 1",
-      "data": 853,
+      "data": 902,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -262,9 +262,9 @@
       "processes": []
     },
     {
-      "id": 854,
+      "id": 903,
       "name": "Average Profile input 2",
-      "data": 854,
+      "data": 903,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -273,22 +273,22 @@
       "processes": []
     },
     {
-      "id": 855,
-      "name": "avgprofx_88",
-      "data": 855,
+      "id": 904,
+      "name": "avgprofx_95",
+      "data": 904,
       "type": "number",
-      "tableProcessGUId": "0a2f9e34-e3a0-42dc-a15e-b0b43024a63d",
+      "tableProcessGUId": "ef039fda-4733-4379-938e-95ed9d56c31d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 856,
-      "name": "avgprof_854_88",
-      "data": 856,
+      "id": 905,
+      "name": "avgprof_903_95",
+      "data": 905,
       "type": "number",
-      "tableProcessGUId": "0a2f9e34-e3a0-42dc-a15e-b0b43024a63d",
+      "tableProcessGUId": "ef039fda-4733-4379-938e-95ed9d56c31d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -297,7 +297,7 @@
   ],
   "plots": [
     {
-      "id": 144,
+      "id": 151,
       "name": "Average Profile result",
       "x": 60,
       "y": 255,
@@ -330,10 +330,10 @@
       },
       "plot": {
         "columnRefs": [
-          853,
-          854,
-          855,
-          856
+          902,
+          903,
+          904,
+          905
         ],
         "showCol": [
           true,
@@ -350,20 +350,20 @@
   ],
   "tableProcesses": [
     {
-      "id": 88,
+      "id": 95,
       "name": "AverageProfile",
       "displayName": "Average Profile",
       "args": {
-        "xIN": 853,
+        "xIN": 902,
         "yIN": [
-          854
+          903
         ],
         "period": 24,
         "nBins": 24,
         "preProcesses": [],
         "out": {
-          "avgprofx": 855,
-          "avgprof_854": 856
+          "avgprofx": 904,
+          "avgprof_903": 905
         }
       },
       "refTPId": null
@@ -374,7 +374,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_80",
+      "id": "note_85",
       "text": "Folds a series onto one period (default 24 h) and reports the mean value in each phase bin with its standard error, giving the 'average day' or mean waveform of the record. Use it to visualise the typical shape and timing of a rhythm across many cycles and to smooth out day-to-day noise before or alongside a parametric fit. In the demo, read each point as the across-days mean in that phase bin and the error bars as the SEM across days (each day's samples in a bin are averaged first, so n = days, not samples). Bin times are hours after the first sample by default (time of day only when the record starts at midnight); set Phase reference to Clock time of day (needs a time column as x) to label the bins by clock hour, which reorders them without changing any value: a clear peak-and-trough shape marks a robust rhythm, while flat bins with wide bars indicate weak or noisy rhythmicity. Mean-waveform folding (Refinetti et al. 2007).",
       "x": 40,
       "y": 24,
@@ -408,23 +408,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_853": {
+    "data_902": {
       "x": 60,
       "y": 314
     },
-    "data_854": {
+    "data_903": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_88": {
+    "tableprocess_95": {
       "x": 440,
       "y": 314
     },
-    "plot_144": {
+    "plot_151": {
       "x": 820,
       "y": 314
     },
-    "note_80": {
+    "note_85": {
       "x": 40,
       "y": 24
     }
@@ -488,5 +488,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

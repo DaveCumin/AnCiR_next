@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "526": [
+    "561": [
       44.55723396056791,
       67.58319638349607,
       70.54324557748362,
@@ -62,7 +62,7 @@
       64.82014441099177,
       55.63839410992553
     ],
-    "527": [
+    "562": [
       65.12409897369992,
       49.28784270443342,
       52.427852945060906,
@@ -127,9 +127,9 @@
   },
   "data": [
     {
-      "id": 526,
+      "id": 561,
       "name": "normal sample",
-      "data": 526,
+      "data": 561,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -138,9 +138,9 @@
       "processes": []
     },
     {
-      "id": 527,
+      "id": 562,
       "name": "skewed sample",
-      "data": 527,
+      "data": 562,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -151,7 +151,7 @@
   ],
   "plots": [
     {
-      "id": 77,
+      "id": 83,
       "name": "Normal Q-Q",
       "x": 60,
       "y": 60,
@@ -217,9 +217,9 @@
         "data": [
           {
             "column": {
-              "id": 528,
+              "id": 563,
               "name": "normal sample",
-              "refId": 526,
+              "refId": 561,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -234,9 +234,9 @@
           },
           {
             "column": {
-              "id": 529,
+              "id": 564,
               "name": "skewed sample",
-              "refId": 527,
+              "refId": 562,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -357,5 +357,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

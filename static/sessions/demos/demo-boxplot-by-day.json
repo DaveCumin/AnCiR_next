@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "472": [
+    "507": [
       1,
       1,
       1,
@@ -170,7 +170,7 @@
       7,
       7
     ],
-    "473": [
+    "508": [
       16.291076892469444,
       20.29554398487714,
       9.51596332468565,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 472,
+      "id": 507,
       "name": "day",
-      "data": 472,
+      "data": 507,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 473,
+      "id": 508,
       "name": "activity",
-      "data": 473,
+      "data": 508,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 67,
+      "id": 73,
       "name": "Activity by day",
       "x": 60,
       "y": 255,
@@ -428,9 +428,9 @@
         "data": [
           {
             "x": {
-              "id": 474,
+              "id": 509,
               "name": "day",
-              "refId": 472,
+              "refId": 507,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -439,9 +439,9 @@
               "processes": []
             },
             "y": {
-              "id": 475,
+              "id": 510,
               "name": "activity",
-              "refId": 473,
+              "refId": 508,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -511,7 +511,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_27",
+      "id": "note_31",
       "text": "Summarises the distribution of a y-column within each group defined by an x-column: the box spans the interquartile range, the line is the median, and whiskers reach the data extent (points beyond are outliers). Use it to compare spread and central tendency across days, conditions, or subjects. It can also overlay a violin (kernel-density outline) and jittered raw points; see the violin plot example. The demo shows one box per group.",
       "x": 40,
       "y": 24,
@@ -545,19 +545,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_472": {
+    "data_507": {
       "x": 60,
       "y": 314
     },
-    "data_473": {
+    "data_508": {
       "x": 60,
       "y": 814
     },
-    "note_27": {
+    "note_31": {
       "x": 40,
       "y": 24
     },
-    "plot_67": {
+    "plot_73": {
       "x": 820,
       "y": 314
     }
@@ -621,5 +621,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

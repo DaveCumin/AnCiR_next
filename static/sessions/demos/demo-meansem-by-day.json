@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "480": [
+    "515": [
       1,
       1,
       1,
@@ -170,7 +170,7 @@
       7,
       7
     ],
-    "481": [
+    "516": [
       16.291076892469444,
       20.29554398487714,
       9.51596332468565,
@@ -343,9 +343,9 @@
   },
   "data": [
     {
-      "id": 480,
+      "id": 515,
       "name": "day",
-      "data": 480,
+      "data": 515,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -354,9 +354,9 @@
       "processes": []
     },
     {
-      "id": 481,
+      "id": 516,
       "name": "activity",
-      "data": 481,
+      "data": 516,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -367,7 +367,7 @@
   ],
   "plots": [
     {
-      "id": 69,
+      "id": 75,
       "name": "Activity by day (mean ± SEM)",
       "x": 60,
       "y": 255,
@@ -428,9 +428,9 @@
         "data": [
           {
             "x": {
-              "id": 482,
+              "id": 517,
               "name": "day",
-              "refId": 480,
+              "refId": 515,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -439,9 +439,9 @@
               "processes": []
             },
             "y": {
-              "id": 483,
+              "id": 518,
               "name": "activity",
-              "refId": 481,
+              "refId": 516,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -492,7 +492,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_29",
+      "id": "note_33",
       "text": "Overlays each group's mean as a marker with whiskers showing ± one standard error of the mean (SEM = s/√n), grouped by the x-column. Use it to compare average levels across conditions or time bins while showing the precision of each mean. The demo shows per-group means with error bars.",
       "x": 40,
       "y": 24,
@@ -526,19 +526,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_480": {
+    "data_515": {
       "x": 60,
       "y": 314
     },
-    "data_481": {
+    "data_516": {
       "x": 60,
       "y": 814
     },
-    "note_29": {
+    "note_33": {
       "x": 40,
       "y": 24
     },
-    "plot_69": {
+    "plot_75": {
       "x": 820,
       "y": 314
     }
@@ -602,5 +602,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

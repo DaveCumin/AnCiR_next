@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "466": [
+    "501": [
       0,
       0.5,
       1,
@@ -962,7 +962,7 @@
       479,
       479.5
     ],
-    "467": [
+    "502": [
       15.4505830945092,
       16.890303264589463,
       18.812745336756045,
@@ -1927,9 +1927,9 @@
   },
   "data": [
     {
-      "id": 466,
+      "id": 501,
       "name": "hour",
-      "data": 466,
+      "data": 501,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1938,9 +1938,9 @@
       "processes": []
     },
     {
-      "id": 467,
+      "id": 502,
       "name": "activity",
-      "data": 467,
+      "data": 502,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -1951,7 +1951,7 @@
   ],
   "plots": [
     {
-      "id": 65,
+      "id": 71,
       "name": "Wavelet scalogram",
       "x": 60,
       "y": 60,
@@ -2017,9 +2017,9 @@
         "data": [
           {
             "x": {
-              "id": 468,
+              "id": 503,
               "name": "hour",
-              "refId": 466,
+              "refId": 501,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2028,9 +2028,9 @@
               "processes": []
             },
             "y": {
-              "id": 469,
+              "id": 504,
               "name": "activity",
-              "refId": 467,
+              "refId": 502,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -2134,5 +2134,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

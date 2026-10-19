@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "569": [
+    "604": [
       0,
       1,
       2,
@@ -53,7 +53,7 @@
       49,
       50
     ],
-    "570": [
+    "605": [
       0,
       1,
       2,
@@ -109,20 +109,20 @@
   },
   "data": [
     {
-      "id": 569,
+      "id": 604,
       "name": "x",
-      "data": 569,
+      "data": 604,
       "type": "number",
-      "tableProcessGUId": "2e4cb366-93ab-4ca7-9d83-2733682721a4",
+      "tableProcessGUId": "b2cf8bbf-0764-41c2-87aa-eb7e8396be9b",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 570,
+      "id": 605,
       "name": "y",
-      "data": 570,
+      "data": 605,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -131,20 +131,20 @@
       "processes": []
     },
     {
-      "id": 571,
+      "id": 606,
       "name": "Remove Outliers result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_5",
-      "producerPort": "out_570",
+      "producerPort": "out_605",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 89,
+      "id": 95,
       "name": "Remove Outliers: before vs after",
       "x": 60,
       "y": 255,
@@ -219,9 +219,9 @@
         "data": [
           {
             "x": {
-              "id": 572,
+              "id": 607,
               "name": "x",
-              "refId": 569,
+              "refId": 604,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -230,9 +230,9 @@
               "processes": []
             },
             "y": {
-              "id": 573,
+              "id": 608,
               "name": "y",
-              "refId": 570,
+              "refId": 605,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -258,9 +258,9 @@
           },
           {
             "x": {
-              "id": 574,
+              "id": 609,
               "name": "x",
-              "refId": 569,
+              "refId": 604,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -269,9 +269,9 @@
               "processes": []
             },
             "y": {
-              "id": 575,
+              "id": 610,
               "name": "Remove Outliers result",
-              "refId": 571,
+              "refId": 606,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -313,7 +313,7 @@
       }
     },
     {
-      "id": 90,
+      "id": 96,
       "name": "Remove Outliers: values",
       "x": 630,
       "y": 255,
@@ -346,8 +346,8 @@
       },
       "plot": {
         "columnRefs": [
-          570,
-          571
+          605,
+          606
         ],
         "showCol": [
           true,
@@ -362,7 +362,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 40,
+      "id": 45,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -372,7 +372,7 @@
         "count": 51,
         "end": 50,
         "out": {
-          "result": 569
+          "result": 604
         }
       },
       "refTPId": null
@@ -383,7 +383,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_41",
+      "id": "note_45",
       "text": "Flags extreme values and replaces them with blanks, using either a z-score threshold (default |z| > 3) or Tukey's IQR fence (Q1 - k·IQR, Q3 + k·IQR, default k = 1.5). Use it to stop a handful of spikes dominating fits and spectra. The demo shows the flagged points removed while the rest of the series is preserved.\n\nTukey, J.W. (1977) Exploratory Data Analysis.",
       "x": 40,
       "y": 24,
@@ -402,7 +402,7 @@
         "iqrMultiplier": 1.5,
         "zThreshold": 3,
         "inIN": [
-          570
+          605
         ]
       }
     }
@@ -430,11 +430,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_570": {
+    "data_605": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_40": {
+    "tableprocess_45": {
       "x": 60,
       "y": 814
     },
@@ -442,15 +442,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_89": {
+    "plot_95": {
       "x": 820,
       "y": 314
     },
-    "plot_90": {
+    "plot_96": {
       "x": 820,
       "y": 814
     },
-    "note_41": {
+    "note_45": {
       "x": 40,
       "y": 24
     }
@@ -514,5 +514,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

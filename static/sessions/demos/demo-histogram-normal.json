@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "470": [
+    "505": [
       94.6474998383402,
       76.91520978067693,
       94.72974943407392,
@@ -505,9 +505,9 @@
   },
   "data": [
     {
-      "id": 470,
+      "id": 505,
       "name": "measurement",
-      "data": 470,
+      "data": 505,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -518,7 +518,7 @@
   ],
   "plots": [
     {
-      "id": 66,
+      "id": 72,
       "name": "Measurement distribution",
       "x": 60,
       "y": 255,
@@ -579,9 +579,9 @@
         "data": [
           {
             "column": {
-              "id": 471,
+              "id": 506,
               "name": "measurement",
-              "refId": 470,
+              "refId": 505,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -628,7 +628,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_26",
+      "id": "note_30",
       "text": "Bins a single column's values and draws the count in each bin, showing the shape of its distribution (centre, spread, skew, modes, outliers). Use it to check whether data are roughly normal before choosing a statistical test. The demo shows an approximately bell-shaped distribution.",
       "x": 40,
       "y": 24,
@@ -662,15 +662,15 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_470": {
+    "data_505": {
       "x": 60,
       "y": 314
     },
-    "note_26": {
+    "note_30": {
       "x": 40,
       "y": 24
     },
-    "plot_66": {
+    "plot_72": {
       "x": 820,
       "y": 314
     }
@@ -734,5 +734,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "476": [
+    "511": [
       "Unimodal",
       "Unimodal",
       "Unimodal",
@@ -182,7 +182,7 @@
       "Bimodal",
       "Bimodal"
     ],
-    "477": [
+    "512": [
       42.20769176555606,
       42.60823190104661,
       59.58024802604939,
@@ -367,9 +367,9 @@
   },
   "data": [
     {
-      "id": 476,
+      "id": 511,
       "name": "group",
-      "data": 476,
+      "data": 511,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -378,9 +378,9 @@
       "processes": []
     },
     {
-      "id": 477,
+      "id": 512,
       "name": "value",
-      "data": 477,
+      "data": 512,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -391,7 +391,7 @@
   ],
   "plots": [
     {
-      "id": 68,
+      "id": 74,
       "name": "Value by group (violin)",
       "x": 60,
       "y": 255,
@@ -452,9 +452,9 @@
         "data": [
           {
             "x": {
-              "id": 478,
+              "id": 513,
               "name": "group",
-              "refId": 476,
+              "refId": 511,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -463,9 +463,9 @@
               "processes": []
             },
             "y": {
-              "id": 479,
+              "id": 514,
               "name": "value",
-              "refId": 477,
+              "refId": 512,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -535,7 +535,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_28",
+      "id": "note_32",
       "text": "The violin overlay draws a mirrored kernel-density outline behind each box, showing the FULL shape of the distribution where the box shows only five summaries. That matters when a distribution is bimodal: the demo's two outer groups have near-identical boxes (same median, similar spread), but the violin reveals one is a single hump and the other is two, a structure the box cannot show. Jittered raw points confirm what the density is smoothing. Bandwidth defaults to Silverman's rule (adjust it if the violin looks over- or under-smoothed), and hiding the box gives a pure violin plot. Kernel density estimation: Silverman (1986); violin plots: Hintze & Nelson (1998).",
       "x": 40,
       "y": 24,
@@ -569,19 +569,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_476": {
+    "data_511": {
       "x": 60,
       "y": 314
     },
-    "data_477": {
+    "data_512": {
       "x": 60,
       "y": 814
     },
-    "note_28": {
+    "note_32": {
       "x": 40,
       "y": 24
     },
-    "plot_68": {
+    "plot_74": {
       "x": 820,
       "y": 314
     }
@@ -645,5 +645,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

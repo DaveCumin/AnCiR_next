@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "540": [
+    "575": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "541": [
+    "576": [
       0,
       1,
       2,
@@ -107,20 +107,20 @@
   },
   "data": [
     {
-      "id": 540,
+      "id": 575,
       "name": "x",
-      "data": 540,
+      "data": 575,
       "type": "number",
-      "tableProcessGUId": "fc66927a-1378-4efa-ad5c-6b00dcc07b6a",
+      "tableProcessGUId": "cb5f836a-dd1d-41ab-85ca-68ddfa0199bf",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 541,
+      "id": 576,
       "name": "y",
-      "data": 541,
+      "data": 576,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -129,20 +129,20 @@
       "processes": []
     },
     {
-      "id": 542,
+      "id": 577,
       "name": "Substitute result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_1",
-      "producerPort": "out_541",
+      "producerPort": "out_576",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 81,
+      "id": 87,
       "name": "Substitute: before vs after",
       "x": 60,
       "y": 255,
@@ -217,9 +217,9 @@
         "data": [
           {
             "x": {
-              "id": 543,
+              "id": 578,
               "name": "x",
-              "refId": 540,
+              "refId": 575,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -228,9 +228,9 @@
               "processes": []
             },
             "y": {
-              "id": 544,
+              "id": 579,
               "name": "y",
-              "refId": 541,
+              "refId": 576,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -256,9 +256,9 @@
           },
           {
             "x": {
-              "id": 545,
+              "id": 580,
               "name": "x",
-              "refId": 540,
+              "refId": 575,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -267,9 +267,9 @@
               "processes": []
             },
             "y": {
-              "id": 546,
+              "id": 581,
               "name": "Substitute result",
-              "refId": 542,
+              "refId": 577,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -311,7 +311,7 @@
       }
     },
     {
-      "id": 82,
+      "id": 88,
       "name": "Substitute: values",
       "x": 630,
       "y": 255,
@@ -344,8 +344,8 @@
       },
       "plot": {
         "columnRefs": [
-          541,
-          542
+          576,
+          577
         ],
         "showCol": [
           true,
@@ -360,7 +360,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 36,
+      "id": 41,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -370,7 +370,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 540
+          "result": 575
         }
       },
       "refTPId": null
@@ -381,7 +381,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_37",
+      "id": "note_41",
       "text": "Finds every occurrence of one specific value and replaces it with another, leaving all other values untouched. Its main use is recoding sentinel/missing-data codes (e.g. swapping -999 for a blank) before analysis. The demo shows the target value replaced throughout the column.",
       "x": 40,
       "y": 24,
@@ -399,7 +399,7 @@
         "find": 5,
         "replace": 10,
         "inIN": [
-          541
+          576
         ]
       }
     }
@@ -427,11 +427,11 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_541": {
+    "data_576": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_36": {
+    "tableprocess_41": {
       "x": 60,
       "y": 814
     },
@@ -439,15 +439,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_81": {
+    "plot_87": {
       "x": 820,
       "y": 314
     },
-    "plot_82": {
+    "plot_88": {
       "x": 820,
       "y": 814
     },
-    "note_37": {
+    "note_41": {
       "x": 40,
       "y": 24
     }
@@ -511,5 +511,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

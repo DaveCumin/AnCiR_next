@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "0": [
+    "462": [
       "2024-07-01T00:00:00.000Z",
       "2024-07-01T01:00:00.000Z",
       "2024-07-01T02:00:00.000Z",
@@ -50,7 +50,7 @@
       "2024-07-02T22:00:00.000Z",
       "2024-07-02T23:00:00.000Z"
     ],
-    "1": [
+    "463": [
       11.22,
       9.68,
       9.23,
@@ -100,7 +100,7 @@
       13.57,
       11.75
     ],
-    "2": [
+    "464": [
       5.46,
       4.13,
       2.15,
@@ -150,7 +150,7 @@
       4.26,
       4.71
     ],
-    "3": [
+    "465": [
       "2024-07-01T00:05:00.000Z",
       "2024-07-01T00:20:00.000Z",
       "2024-07-01T00:35:00.000Z",
@@ -344,7 +344,7 @@
       "2024-07-02T23:35:00.000Z",
       "2024-07-02T23:50:00.000Z"
     ],
-    "4": [
+    "466": [
       10.86,
       10.78,
       11.38,
@@ -538,7 +538,7 @@
       11.83,
       11.63
     ],
-    "5": [
+    "467": [
       78.21,
       82.35,
       82.21,
@@ -732,7 +732,7 @@
       79.08,
       79.2
     ],
-    "6": [
+    "468": [
       1719792000000,
       1719792300000,
       1719793200000,
@@ -974,7 +974,7 @@
       1719963300000,
       1719964200000
     ],
-    "7": [
+    "469": [
       11.22,
       10.86,
       10.78,
@@ -1216,7 +1216,7 @@
       11.83,
       11.63
     ],
-    "8": [
+    "470": [
       5.46,
       null,
       null,
@@ -1458,7 +1458,7 @@
       null,
       null
     ],
-    "9": [
+    "471": [
       null,
       78.21,
       82.35,
@@ -1700,7 +1700,7 @@
       79.08,
       79.2
     ],
-    "10": [
+    "472": [
       "weather station",
       "field logger",
       "field logger",
@@ -1942,7 +1942,7 @@
       "field logger",
       "field logger"
     ],
-    "11": [
+    "473": [
       1719792000000,
       1719795600000,
       1719799200000,
@@ -1993,7 +1993,7 @@
       1719961200000,
       1719964800000
     ],
-    "12": [
+    "474": [
       10.936,
       9.656,
       9.352,
@@ -2044,7 +2044,7 @@
       11.844,
       null
     ],
-    "13": [
+    "475": [
       5.46,
       4.13,
       2.15,
@@ -2095,7 +2095,7 @@
       4.71,
       null
     ],
-    "14": [
+    "476": [
       80.85,
       83.92,
       85.1875,
@@ -2146,7 +2146,7 @@
       80.08,
       null
     ],
-    "15": [
+    "477": [
       "2024-07-01T00:05:00.000Z",
       "2024-07-01T00:20:00.000Z",
       "2024-07-01T00:35:00.000Z",
@@ -2340,7 +2340,7 @@
       "2024-07-02T23:35:00.000Z",
       "2024-07-02T23:50:00.000Z"
     ],
-    "16": [
+    "478": [
       34.7,
       34.6,
       34.68,
@@ -2534,7 +2534,7 @@
       34.52,
       34.64
     ],
-    "17": [
+    "479": [
       1719792000000,
       1719792300000,
       1719793200000,
@@ -2776,7 +2776,7 @@
       1719963300000,
       1719964200000
     ],
-    "18": [
+    "480": [
       11.22,
       null,
       null,
@@ -3018,7 +3018,7 @@
       null,
       null
     ],
-    "19": [
+    "481": [
       null,
       34.7,
       34.6,
@@ -3260,7 +3260,7 @@
       34.52,
       34.64
     ],
-    "20": [
+    "482": [
       "C1",
       "C2",
       "C3",
@@ -3270,7 +3270,7 @@
       "C7",
       "C8"
     ],
-    "21": [
+    "483": [
       3.45,
       3.33,
       3.35,
@@ -3280,7 +3280,7 @@
       3.75,
       2.9
     ],
-    "22": [
+    "484": [
       13.25,
       13.2,
       14.91,
@@ -3290,7 +3290,7 @@
       12.3,
       14.04
     ],
-    "23": [
+    "485": [
       "T1",
       "T2",
       "T3",
@@ -3300,7 +3300,7 @@
       "T7",
       "T8"
     ],
-    "24": [
+    "486": [
       2.36,
       1.63,
       1.89,
@@ -3310,7 +3310,7 @@
       1.5,
       1.82
     ],
-    "25": [
+    "487": [
       15.85,
       15.18,
       16.59,
@@ -3320,7 +3320,7 @@
       16.04,
       16.02
     ],
-    "26": [
+    "488": [
       "C1",
       "C2",
       "C3",
@@ -3338,7 +3338,7 @@
       "T7",
       "T8"
     ],
-    "27": [
+    "489": [
       3.45,
       3.33,
       3.35,
@@ -3356,7 +3356,7 @@
       1.5,
       1.82
     ],
-    "28": [
+    "490": [
       13.25,
       13.2,
       14.91,
@@ -3374,7 +3374,7 @@
       16.04,
       16.02
     ],
-    "29": [
+    "491": [
       "Control",
       "Control",
       "Control",
@@ -3392,21 +3392,21 @@
       "Treated",
       "Treated"
     ],
-    "30": [
+    "492": [
       9.809955891752175
     ],
-    "31": [
+    "493": [
       2.923987335186026e-7
     ],
-    "32": [
+    "494": [
       4.904977945876087
     ]
   },
   "data": [
     {
-      "id": 0,
+      "id": 462,
       "name": "time",
-      "data": 0,
+      "data": 462,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
       "tableProcessGUId": "",
@@ -3416,9 +3416,9 @@
       "processes": []
     },
     {
-      "id": 1,
+      "id": 463,
       "name": "temperature",
-      "data": 1,
+      "data": 463,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3427,9 +3427,9 @@
       "processes": []
     },
     {
-      "id": 2,
+      "id": 464,
       "name": "wind",
-      "data": 2,
+      "data": 464,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3438,9 +3438,9 @@
       "processes": []
     },
     {
-      "id": 3,
+      "id": 465,
       "name": "time",
-      "data": 3,
+      "data": 465,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
       "tableProcessGUId": "",
@@ -3450,9 +3450,9 @@
       "processes": []
     },
     {
-      "id": 4,
+      "id": 466,
       "name": "Temperature",
-      "data": 4,
+      "data": 466,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3461,9 +3461,9 @@
       "processes": []
     },
     {
-      "id": 5,
+      "id": 467,
       "name": "humidity",
-      "data": 5,
+      "data": 467,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3472,111 +3472,111 @@
       "processes": []
     },
     {
-      "id": 6,
-      "name": "jointime_0",
-      "data": 6,
+      "id": 468,
+      "name": "jointime_35",
+      "data": 468,
       "type": "time",
       "timeFormat": null,
-      "tableProcessGUId": "ce320ce7-3926-4cec-bb46-ae252a11a03d",
+      "tableProcessGUId": "da0ff7a5-422a-44ca-92f8-bd9213ceb245",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 7,
-      "name": "joined_1_0",
-      "data": 7,
+      "id": 469,
+      "name": "joined_463_35",
+      "data": 469,
       "type": "number",
-      "tableProcessGUId": "ce320ce7-3926-4cec-bb46-ae252a11a03d",
+      "tableProcessGUId": "da0ff7a5-422a-44ca-92f8-bd9213ceb245",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 8,
-      "name": "joined_2_0",
-      "data": 8,
+      "id": 470,
+      "name": "joined_464_35",
+      "data": 470,
       "type": "number",
-      "tableProcessGUId": "ce320ce7-3926-4cec-bb46-ae252a11a03d",
+      "tableProcessGUId": "da0ff7a5-422a-44ca-92f8-bd9213ceb245",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 9,
-      "name": "joined_5_0",
-      "data": 9,
+      "id": 471,
+      "name": "joined_467_35",
+      "data": 471,
       "type": "number",
-      "tableProcessGUId": "ce320ce7-3926-4cec-bb46-ae252a11a03d",
+      "tableProcessGUId": "da0ff7a5-422a-44ca-92f8-bd9213ceb245",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 10,
-      "name": "source_0",
-      "data": 10,
+      "id": 472,
+      "name": "source_35",
+      "data": 472,
       "type": "category",
-      "tableProcessGUId": "ce320ce7-3926-4cec-bb46-ae252a11a03d",
+      "tableProcessGUId": "da0ff7a5-422a-44ca-92f8-bd9213ceb245",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 11,
-      "name": "binnedx_1",
-      "data": 11,
+      "id": 473,
+      "name": "binnedx_36",
+      "data": 473,
       "type": "time",
       "timeFormat": null,
       "originTime_ms": 1719792000000,
-      "tableProcessGUId": "0b88bb91-2e8f-49d5-98fa-ff1b7397776f",
+      "tableProcessGUId": "2faf9f04-463f-4a99-9d79-eea454f775c4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 12,
-      "name": "binnedy_7_1",
-      "data": 12,
+      "id": 474,
+      "name": "binnedy_469_36",
+      "data": 474,
       "type": "number",
-      "tableProcessGUId": "0b88bb91-2e8f-49d5-98fa-ff1b7397776f",
+      "tableProcessGUId": "2faf9f04-463f-4a99-9d79-eea454f775c4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 13,
-      "name": "binnedy_8_1",
-      "data": 13,
+      "id": 475,
+      "name": "binnedy_470_36",
+      "data": 475,
       "type": "number",
-      "tableProcessGUId": "0b88bb91-2e8f-49d5-98fa-ff1b7397776f",
+      "tableProcessGUId": "2faf9f04-463f-4a99-9d79-eea454f775c4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 14,
-      "name": "binnedy_9_1",
-      "data": 14,
+      "id": 476,
+      "name": "binnedy_471_36",
+      "data": 476,
       "type": "number",
-      "tableProcessGUId": "0b88bb91-2e8f-49d5-98fa-ff1b7397776f",
+      "tableProcessGUId": "2faf9f04-463f-4a99-9d79-eea454f775c4",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 15,
+      "id": 477,
       "name": "time",
-      "data": 15,
+      "data": 477,
       "type": "time",
       "timeFormat": "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]",
       "tableProcessGUId": "",
@@ -3586,9 +3586,9 @@
       "processes": []
     },
     {
-      "id": 16,
+      "id": 478,
       "name": "temperature",
-      "data": 16,
+      "data": 478,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3597,43 +3597,43 @@
       "processes": []
     },
     {
-      "id": 17,
-      "name": "jointime_2",
-      "data": 17,
+      "id": 479,
+      "name": "jointime_37",
+      "data": 479,
       "type": "time",
       "timeFormat": null,
-      "tableProcessGUId": "02b1785c-7255-44dc-ac02-3399dfeeee5e",
+      "tableProcessGUId": "3a679127-3764-4b2e-86f0-05228f36cc52",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 18,
-      "name": "joined_1_2",
-      "data": 18,
+      "id": 480,
+      "name": "joined_463_37",
+      "data": 480,
       "type": "number",
-      "tableProcessGUId": "02b1785c-7255-44dc-ac02-3399dfeeee5e",
+      "tableProcessGUId": "3a679127-3764-4b2e-86f0-05228f36cc52",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 19,
-      "name": "joined_16_2",
-      "data": 19,
+      "id": 481,
+      "name": "joined_478_37",
+      "data": 481,
       "type": "number",
-      "tableProcessGUId": "02b1785c-7255-44dc-ac02-3399dfeeee5e",
+      "tableProcessGUId": "3a679127-3764-4b2e-86f0-05228f36cc52",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 20,
+      "id": 482,
       "name": "animal",
-      "data": 20,
+      "data": 482,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3642,9 +3642,9 @@
       "processes": []
     },
     {
-      "id": 21,
+      "id": 483,
       "name": "amplitude",
-      "data": 21,
+      "data": 483,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3653,9 +3653,9 @@
       "processes": []
     },
     {
-      "id": 22,
+      "id": 484,
       "name": "acrophase",
-      "data": 22,
+      "data": 484,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3664,9 +3664,9 @@
       "processes": []
     },
     {
-      "id": 23,
+      "id": 485,
       "name": "animal",
-      "data": 23,
+      "data": 485,
       "type": "category",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3675,9 +3675,9 @@
       "processes": []
     },
     {
-      "id": 24,
+      "id": 486,
       "name": "amplitude",
-      "data": 24,
+      "data": 486,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3686,9 +3686,9 @@
       "processes": []
     },
     {
-      "id": 25,
+      "id": 487,
       "name": "acrophase",
-      "data": 25,
+      "data": 487,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -3697,77 +3697,77 @@
       "processes": []
     },
     {
-      "id": 26,
-      "name": "joined_20_3",
-      "data": 26,
+      "id": 488,
+      "name": "joined_482_38",
+      "data": 488,
       "type": "category",
-      "tableProcessGUId": "f0553460-1af6-4e12-b4b2-d9cd23252955",
+      "tableProcessGUId": "9ab0703a-6afa-4ced-9603-a8d1052d7d37",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 27,
-      "name": "joined_21_3",
-      "data": 27,
+      "id": 489,
+      "name": "joined_483_38",
+      "data": 489,
       "type": "number",
-      "tableProcessGUId": "f0553460-1af6-4e12-b4b2-d9cd23252955",
+      "tableProcessGUId": "9ab0703a-6afa-4ced-9603-a8d1052d7d37",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 28,
-      "name": "joined_22_3",
-      "data": 28,
+      "id": 490,
+      "name": "joined_484_38",
+      "data": 490,
       "type": "number",
-      "tableProcessGUId": "f0553460-1af6-4e12-b4b2-d9cd23252955",
+      "tableProcessGUId": "9ab0703a-6afa-4ced-9603-a8d1052d7d37",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 29,
-      "name": "source_3",
-      "data": 29,
+      "id": 491,
+      "name": "source_38",
+      "data": 491,
       "type": "category",
-      "tableProcessGUId": "f0553460-1af6-4e12-b4b2-d9cd23252955",
+      "tableProcessGUId": "9ab0703a-6afa-4ced-9603-a8d1052d7d37",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 30,
-      "name": "statistic_4",
-      "data": 30,
+      "id": 492,
+      "name": "statistic_39",
+      "data": 492,
       "type": "number",
-      "tableProcessGUId": "16d25ff0-598b-4372-b7b8-53301d42154b",
+      "tableProcessGUId": "8597bb49-5bd5-4d39-9260-9703fc2c229d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 31,
-      "name": "pvalue_4",
-      "data": 31,
+      "id": 493,
+      "name": "pvalue_39",
+      "data": 493,
       "type": "number",
-      "tableProcessGUId": "16d25ff0-598b-4372-b7b8-53301d42154b",
+      "tableProcessGUId": "8597bb49-5bd5-4d39-9260-9703fc2c229d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 32,
-      "name": "effectSize_4",
-      "data": 32,
+      "id": 494,
+      "name": "effectSize_39",
+      "data": 494,
       "type": "number",
-      "tableProcessGUId": "16d25ff0-598b-4372-b7b8-53301d42154b",
+      "tableProcessGUId": "8597bb49-5bd5-4d39-9260-9703fc2c229d",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -3776,7 +3776,7 @@
   ],
   "plots": [
     {
-      "id": 0,
+      "id": 64,
       "name": "Joined by time (weather + logger)",
       "x": 60,
       "y": 270,
@@ -3809,11 +3809,11 @@
       },
       "plot": {
         "columnRefs": [
-          6,
-          7,
-          8,
-          9,
-          10
+          468,
+          469,
+          470,
+          471,
+          472
         ],
         "showCol": [
           true,
@@ -3829,7 +3829,7 @@
       }
     },
     {
-      "id": 1,
+      "id": 65,
       "name": "Binned to 1 h",
       "x": 1050,
       "y": 270,
@@ -3862,10 +3862,10 @@
       },
       "plot": {
         "columnRefs": [
-          11,
-          12,
-          13,
-          14
+          473,
+          474,
+          475,
+          476
         ],
         "showCol": [
           true,
@@ -3880,7 +3880,7 @@
       }
     },
     {
-      "id": 2,
+      "id": 66,
       "name": "Own columns: temperature (A) and (B)",
       "x": 60,
       "y": 910,
@@ -3913,9 +3913,9 @@
       },
       "plot": {
         "columnRefs": [
-          17,
-          18,
-          19
+          479,
+          480,
+          481
         ],
         "showCol": [
           true,
@@ -3929,7 +3929,7 @@
       }
     },
     {
-      "id": 3,
+      "id": 67,
       "name": "Stacked results (Control, then Treated)",
       "x": 1050,
       "y": 910,
@@ -3962,10 +3962,10 @@
       },
       "plot": {
         "columnRefs": [
-          29,
-          26,
-          27,
-          28
+          491,
+          488,
+          489,
+          490
         ],
         "showCol": [
           true,
@@ -3980,7 +3980,7 @@
       }
     },
     {
-      "id": 4,
+      "id": 68,
       "name": "Amplitude by group",
       "x": 60,
       "y": 1470,
@@ -4041,9 +4041,9 @@
         "data": [
           {
             "x": {
-              "id": 33,
-              "name": "source_3",
-              "refId": 29,
+              "id": 495,
+              "name": "source_38",
+              "refId": 491,
               "type": "category",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -4052,9 +4052,9 @@
               "processes": []
             },
             "y": {
-              "id": 34,
-              "name": "joined_21_3",
-              "refId": 27,
+              "id": 496,
+              "name": "joined_483_38",
+              "refId": 489,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -4118,7 +4118,7 @@
       }
     },
     {
-      "id": 5,
+      "id": 69,
       "name": "Group Comparison: amplitude by Source",
       "x": 60,
       "y": 1850,
@@ -4151,9 +4151,9 @@
       },
       "plot": {
         "columnRefs": [
-          30,
-          31,
-          32
+          492,
+          493,
+          494
         ],
         "showCol": [
           true,
@@ -4169,32 +4169,32 @@
   ],
   "tableProcesses": [
     {
-      "id": 0,
+      "id": 35,
       "name": "JoinData",
       "displayName": "Join by time",
       "args": {
-        "aTimeIN": 0,
+        "aTimeIN": 462,
         "aValuesIN": [
-          1,
-          2
+          463,
+          464
         ],
-        "bTimeIN": 3,
+        "bTimeIN": 465,
         "bValuesIN": [
-          4,
-          5
+          466,
+          467
         ],
         "pairing": {},
         "shiftB": 0,
         "sourceColumn": true,
         "out": {
-          "jointime": 6,
-          "joined_1": 7,
-          "joined_2": 8,
-          "joined_5": 9,
-          "source": 10
+          "jointime": 468,
+          "joined_463": 469,
+          "joined_464": 470,
+          "joined_467": 471,
+          "source": 472
         },
         "_resolvedPairs": {
-          "4": 1
+          "466": 463
         },
         "_sourceLabels": [
           "weather station",
@@ -4204,15 +4204,15 @@
       "refTPId": null
     },
     {
-      "id": 1,
+      "id": 36,
       "name": "BinnedData",
       "displayName": "Bin Data (1 h)",
       "args": {
-        "xIN": 6,
+        "xIN": 468,
         "yIN": [
-          7,
-          8,
-          9
+          469,
+          470,
+          471
         ],
         "binMode": "uniform",
         "binSize": 1,
@@ -4222,36 +4222,36 @@
         "cuts": [],
         "aggFunction": "mean",
         "out": {
-          "binnedx": 11,
-          "binnedy_7": 12,
-          "binnedy_8": 13,
-          "binnedy_9": 14
+          "binnedx": 473,
+          "binnedy_469": 474,
+          "binnedy_470": 475,
+          "binnedy_471": 476
         }
       },
       "refTPId": null
     },
     {
-      "id": 2,
+      "id": 37,
       "name": "JoinData",
       "displayName": "Join, own columns",
       "args": {
-        "aTimeIN": 0,
+        "aTimeIN": 462,
         "aValuesIN": [
-          1
+          463
         ],
-        "bTimeIN": 15,
+        "bTimeIN": 477,
         "bValuesIN": [
-          16
+          478
         ],
         "pairing": {
-          "16": -1
+          "478": -1
         },
         "shiftB": 0,
         "sourceColumn": null,
         "out": {
-          "jointime": 17,
-          "joined_1": 18,
-          "joined_16": 19
+          "jointime": 479,
+          "joined_463": 480,
+          "joined_478": 481
         },
         "_resolvedPairs": {},
         "_sourceLabels": [
@@ -4262,35 +4262,35 @@
       "refTPId": null
     },
     {
-      "id": 3,
+      "id": 38,
       "name": "JoinData",
       "displayName": "Stack groups",
       "args": {
         "aTimeIN": -1,
         "aValuesIN": [
-          20,
-          21,
-          22
+          482,
+          483,
+          484
         ],
         "bTimeIN": -1,
         "bValuesIN": [
-          23,
-          24,
-          25
+          485,
+          486,
+          487
         ],
         "pairing": {},
         "shiftB": 0,
         "sourceColumn": null,
         "out": {
-          "joined_20": 26,
-          "joined_21": 27,
-          "joined_22": 28,
-          "source": 29
+          "joined_482": 488,
+          "joined_483": 489,
+          "joined_484": 490,
+          "source": 491
         },
         "_resolvedPairs": {
-          "23": 20,
-          "24": 21,
-          "25": 22
+          "485": 482,
+          "486": 483,
+          "487": 484
         },
         "_sourceLabels": [
           "Control",
@@ -4300,21 +4300,21 @@
       "refTPId": null
     },
     {
-      "id": 4,
+      "id": 39,
       "name": "GroupComparison",
       "displayName": "Compare amplitude",
       "args": {
-        "xIN": 29,
+        "xIN": 491,
         "yIN": [
-          27
+          489
         ],
         "method": "auto",
         "alpha": 0.05,
         "postHocEnabled": true,
         "out": {
-          "statistic": 30,
-          "pvalue": 31,
-          "effectSize": 32
+          "statistic": 492,
+          "pvalue": 493,
+          "effectSize": 494
         }
       },
       "refTPId": null
@@ -4325,7 +4325,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_1",
+      "id": "note_25",
       "text": "1. Time join. In the joined table, weather rows (on the hour) and logger rows (5, 20, 35 and 50 min past) interleave in time order and are never merged. Temperature is one column because both datasets use that name; wind is blank on logger rows and humidity on weather rows. Source names each row's dataset. The binned table averages every hour, so each row holds both datasets.",
       "x": 435,
       "y": 24,
@@ -4333,7 +4333,7 @@
       "height": 215
     },
     {
-      "id": "note_2",
+      "id": "note_26",
       "text": "2. Same name, different measurement. The hive's temperature is not the air temperature, so in this node's panel it is set to 'Its own column'. The table shows temperature (A) and temperature (B) side by side, each blank on the other dataset's rows.",
       "x": 825,
       "y": 24,
@@ -4341,7 +4341,7 @@
       "height": 175
     },
     {
-      "id": "note_3",
+      "id": "note_27",
       "text": "3. Stack mode. Neither time input is wired, so Join Data stacks the Control results, then the Treated results, each in their original order. Source is on by default when stacking and names each row's group; Group Comparison and the boxplot use it as the group for amplitude.",
       "x": 1215,
       "y": 24,
@@ -4349,7 +4349,7 @@
       "height": 175
     },
     {
-      "id": "note_4",
+      "id": "note_28",
       "text": "WORKFLOW: Join Data puts two datasets (A and B) in one set of columns. With a time wired for both, every row goes onto one time column, sorted and never merged; Bin Data then lines them up. With no time wired, it stacks A's rows and then B's. Columns with the same name share one column unless you choose 'Its own column'. Read the numbered notes.",
       "x": 40,
       "y": 24,
@@ -4366,9 +4366,9 @@
       "width": 240,
       "height": 180,
       "sourceColumnIds": [
-        0,
-        1,
-        2
+        462,
+        463,
+        464
       ],
       "allColumnIds": null,
       "collapsed": false,
@@ -4382,9 +4382,9 @@
       "width": 240,
       "height": 180,
       "sourceColumnIds": [
-        3,
-        4,
-        5
+        465,
+        466,
+        467
       ],
       "allColumnIds": null,
       "collapsed": false,
@@ -4398,8 +4398,8 @@
       "width": 240,
       "height": 180,
       "sourceColumnIds": [
-        15,
-        16
+        477,
+        478
       ],
       "allColumnIds": null,
       "collapsed": false,
@@ -4413,9 +4413,9 @@
       "width": 240,
       "height": 180,
       "sourceColumnIds": [
-        20,
-        21,
-        22
+        482,
+        483,
+        484
       ],
       "allColumnIds": null,
       "collapsed": false,
@@ -4429,9 +4429,9 @@
       "width": 240,
       "height": 180,
       "sourceColumnIds": [
-        23,
-        24,
-        25
+        485,
+        486,
+        487
       ],
       "allColumnIds": null,
       "collapsed": false,
@@ -4463,7 +4463,7 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "note_1": {
+    "note_25": {
       "x": 60,
       "y": 254
     },
@@ -4475,23 +4475,23 @@
       "x": 60,
       "y": 904
     },
-    "tableprocess_0": {
+    "tableprocess_35": {
       "x": 440,
       "y": 484
     },
-    "tableprocess_1": {
+    "tableprocess_36": {
       "x": 820,
       "y": 484
     },
-    "plot_0": {
+    "plot_64": {
       "x": 1200,
       "y": 484
     },
-    "plot_1": {
+    "plot_65": {
       "x": 1200,
       "y": 904
     },
-    "note_2": {
+    "note_26": {
       "x": 60,
       "y": 1504
     },
@@ -4499,15 +4499,15 @@
       "x": 60,
       "y": 1734
     },
-    "tableprocess_2": {
+    "tableprocess_37": {
       "x": 440,
       "y": 1734
     },
-    "plot_2": {
+    "plot_66": {
       "x": 820,
       "y": 1734
     },
-    "note_3": {
+    "note_27": {
       "x": 60,
       "y": 2454
     },
@@ -4519,27 +4519,27 @@
       "x": 60,
       "y": 3064
     },
-    "tableprocess_3": {
+    "tableprocess_38": {
       "x": 440,
       "y": 2684
     },
-    "tableprocess_4": {
+    "tableprocess_39": {
       "x": 820,
       "y": 2684
     },
-    "plot_3": {
+    "plot_67": {
       "x": 1200,
       "y": 2684
     },
-    "plot_4": {
+    "plot_68": {
       "x": 1200,
       "y": 3164
     },
-    "plot_5": {
+    "plot_69": {
       "x": 820,
       "y": 3164
     },
-    "note_4": {
+    "note_28": {
       "x": 40,
       "y": 24
     }
@@ -4603,5 +4603,5 @@
       "No"
     ]
   },
-  "version": "β.82.31"
+  "version": "β.82.33"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "785": [
+    "820": [
       0,
       1,
       2,
@@ -50,7 +50,7 @@
       46,
       47
     ],
-    "786": [
+    "821": [
       80.74815343291546,
       74.1026647241765,
       67.34975964373878,
@@ -100,7 +100,7 @@
       25.36953942083682,
       31.225353920755683
     ],
-    "787": [
+    "822": [
       0,
       1,
       2,
@@ -150,16 +150,16 @@
       46,
       47
     ],
-    "788": [
+    "823": [
       null
     ],
-    "789": [
+    "824": [
       0.9571274351365205
     ],
-    "790": [
+    "825": [
       5.457267679191282
     ],
-    "791": [
+    "826": [
       75.08666063486393,
       75.08666063486393,
       75.08666063486393,
@@ -212,20 +212,20 @@
   },
   "data": [
     {
-      "id": 785,
+      "id": 820,
       "name": "x",
-      "data": 785,
+      "data": 820,
       "type": "number",
-      "tableProcessGUId": "9eb4fed4-2831-4ec8-b848-165186d5482e",
+      "tableProcessGUId": "4e9217ee-8bbd-4a3f-b58d-71928c073a1e",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 786,
+      "id": 821,
       "name": "y",
-      "data": 786,
+      "data": 821,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -234,55 +234,55 @@
       "processes": []
     },
     {
-      "id": 787,
-      "name": "rectwavex_75",
-      "data": 787,
+      "id": 822,
+      "name": "rectwavex_80",
+      "data": 822,
       "type": "number",
-      "tableProcessGUId": "8a6f9438-f881-4e6e-adc2-02e626ed140f",
+      "tableProcessGUId": "253135a1-052b-4d54-b41c-067d2a689e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 788,
-      "name": "perm_pvalue_75",
-      "data": 788,
+      "id": 823,
+      "name": "perm_pvalue_80",
+      "data": 823,
       "type": "number",
-      "tableProcessGUId": "8a6f9438-f881-4e6e-adc2-02e626ed140f",
+      "tableProcessGUId": "253135a1-052b-4d54-b41c-067d2a689e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 789,
-      "name": "r2_75",
-      "data": 789,
+      "id": 824,
+      "name": "r2_80",
+      "data": 824,
       "type": "number",
-      "tableProcessGUId": "8a6f9438-f881-4e6e-adc2-02e626ed140f",
+      "tableProcessGUId": "253135a1-052b-4d54-b41c-067d2a689e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 790,
-      "name": "rmse_75",
-      "data": 790,
+      "id": 825,
+      "name": "rmse_80",
+      "data": 825,
       "type": "number",
-      "tableProcessGUId": "8a6f9438-f881-4e6e-adc2-02e626ed140f",
+      "tableProcessGUId": "253135a1-052b-4d54-b41c-067d2a689e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 791,
-      "name": "rectwavey_786_75",
-      "data": 791,
+      "id": 826,
+      "name": "rectwavey_821_80",
+      "data": 826,
       "type": "number",
-      "tableProcessGUId": "8a6f9438-f881-4e6e-adc2-02e626ed140f",
+      "tableProcessGUId": "253135a1-052b-4d54-b41c-067d2a689e72",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -291,7 +291,7 @@
   ],
   "plots": [
     {
-      "id": 129,
+      "id": 135,
       "name": "Rectangular Wave: data + fit",
       "x": 60,
       "y": 255,
@@ -366,9 +366,9 @@
         "data": [
           {
             "x": {
-              "id": 792,
+              "id": 827,
               "name": "x",
-              "refId": 785,
+              "refId": 820,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -377,9 +377,9 @@
               "processes": []
             },
             "y": {
-              "id": 793,
+              "id": 828,
               "name": "y",
-              "refId": 786,
+              "refId": 821,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -405,9 +405,9 @@
           },
           {
             "x": {
-              "id": 794,
-              "name": "rectwavex_75",
-              "refId": 787,
+              "id": 829,
+              "name": "rectwavex_80",
+              "refId": 822,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -416,9 +416,9 @@
               "processes": []
             },
             "y": {
-              "id": 795,
-              "name": "rectwavey_786_75",
-              "refId": 791,
+              "id": 830,
+              "name": "rectwavey_821_80",
+              "refId": 826,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -460,7 +460,7 @@
       }
     },
     {
-      "id": 130,
+      "id": 136,
       "name": "Rectangular Wave: values",
       "x": 630,
       "y": 255,
@@ -493,8 +493,8 @@
       },
       "plot": {
         "columnRefs": [
-          786,
-          791
+          821,
+          826
         ],
         "showCol": [
           true,
@@ -509,7 +509,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 74,
+      "id": 79,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -519,19 +519,19 @@
         "count": 48,
         "end": 47,
         "out": {
-          "result": 785
+          "result": 820
         }
       },
       "refTPId": null
     },
     {
-      "id": 75,
+      "id": 80,
       "name": "RectangularWave",
       "displayName": "Rectangular Wave",
       "args": {
-        "xIN": 785,
+        "xIN": 820,
         "yIN": [
-          786
+          821
         ],
         "outputX": -1,
         "fixKappa": false,
@@ -542,11 +542,11 @@
         "fixedDutyCycle": 0.5,
         "preProcesses": [],
         "out": {
-          "rectwavex": 787,
-          "perm_pvalue": 788,
-          "r2": 789,
-          "rmse": 790,
-          "rectwavey_786": 791
+          "rectwavex": 822,
+          "perm_pvalue": 823,
+          "r2": 824,
+          "rmse": 825,
+          "rectwavey_821": 826
         }
       },
       "refTPId": null
@@ -557,8 +557,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_70",
-      "text": "Fits a smooth rectangular (square) wave with an adjustable duty cycle to the series, capturing on/off activity rhythms that a sinusoid fits poorly. The model is a tanh-approximated square wave whose duty cycle sets the fraction of each cycle spent 'on'; period, phase, sharpness (kappa) and duty cycle can be fixed or fitted. A fitted period is kept inside a period range (1 to 48 h for a time x; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units, as in Cosinor) and the node warns when it stops on a bound of that range or does not converge; the warning says whether a good fit sits at the edge (widen the range to confirm the period) or the data have no clear rhythm inside the range. Use it for clearly bimodal activity (e.g. nocturnal animals switching between rest and activity) where you want an explicit active-phase width. In the demo, read the flat high plateau as the active phase, the flat low level as rest, and the plateau width as the duty cycle. The fitted M is the midline, halfway between those two levels (M + A and M - A); it is not a rhythm-adjusted mean like the cosinor MESOR, because the time spent at each level depends on the duty cycle. The acrophase is hours after the first sample (x units after x = 0 for a numeric x) by default; set Phase reference to Clock time of day (needs a time column as x) for clock time. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. The optional permutation test permutes single values by default, which assumes exchangeable (independent) observations; activity data are autocorrelated, which makes that p-value too small, so the node warns when the residuals are strongly autocorrelated. Choose one-period blocks instead, or use the Surrogate Test node. Nonlinear least-squares waveform fitting (Marquardt 1963).",
+      "id": "note_74",
+      "text": "Fits a smooth rectangular (square) wave with an adjustable duty cycle to the series, capturing on/off activity rhythms that a sinusoid fits poorly. The model is a tanh-approximated square wave whose duty cycle sets the fraction of each cycle spent 'on'; period, phase, sharpness (kappa) and duty cycle can be fixed or fitted. A fitted period is kept inside a period range (1 to 30 h for a new node on a time x, while a session saved without a range keeps 1 to 48 h; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units, as in Cosinor) and the node warns when it stops on a bound of that range or does not converge; the warning says whether a good fit sits at the edge (widen the range to confirm the period) or the data have no clear rhythm inside the range. Use it for clearly bimodal activity (e.g. nocturnal animals switching between rest and activity) where you want an explicit active-phase width. In the demo, read the flat high plateau as the active phase, the flat low level as rest, and the plateau width as the duty cycle. The fitted M is the midline, halfway between those two levels (M + A and M - A); it is not a rhythm-adjusted mean like the cosinor MESOR, because the time spent at each level depends on the duty cycle. The acrophase is hours after the first sample (x units after x = 0 for a numeric x) by default; set Phase reference to Clock time of day (needs a time column as x) for clock time. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. The optional permutation test permutes single values by default, which assumes exchangeable (independent) observations; activity data are autocorrelated, which makes that p-value too small, so the node warns when the residuals are strongly autocorrelated. Choose one-period blocks instead, or use the Surrogate Test node. Nonlinear least-squares waveform fitting (Marquardt 1963). For a smooth fitted curve, tick Specify output x values and choose Sequence: the curve is evaluated every step (automatic: about 500 points) from the smallest to the largest x.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -591,27 +591,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_786": {
+    "data_821": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_74": {
+    "tableprocess_79": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_75": {
+    "tableprocess_80": {
       "x": 440,
       "y": 314
     },
-    "plot_129": {
+    "plot_135": {
       "x": 820,
       "y": 314
     },
-    "plot_130": {
+    "plot_136": {
       "x": 820,
       "y": 814
     },
-    "note_70": {
+    "note_74": {
       "x": 40,
       "y": 24
     }
@@ -675,5 +675,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

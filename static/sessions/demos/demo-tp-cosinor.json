@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "640": [
+    "675": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "641": [
+    "676": [
       13.207454141807316,
       16.42781352939983,
       10.122969242111294,
@@ -104,7 +104,7 @@
       14.406414185367264,
       9.386678383637214
     ],
-    "642": [
+    "677": [
       0,
       1,
       2,
@@ -156,55 +156,55 @@
       48,
       49
     ],
-    "643": [
+    "678": [
       24
     ],
-    "644": [
+    "679": [
       50.06903731465636
     ],
-    "645": [
+    "680": [
       41.73678030222172
     ],
-    "646": [
+    "681": [
       11.746213264705368
     ],
-    "647": [
+    "682": [
       41.73678030222172
     ],
-    "648": [
+    "683": [
       11.746213264705368
     ],
-    "649": [
+    "684": [
       23.746213264705368
     ],
-    "650": [
+    "685": [
       39.04492464365066
     ],
-    "651": [
+    "686": [
       44.428635960792775
     ],
-    "652": [
+    "687": [
       11.491264616973773
     ],
-    "653": [
+    "688": [
       12.001161912436956
     ],
-    "654": [
+    "689": [
       0.953927037241878
     ],
-    "655": [
+    "690": [
       3.8992789818100664e-32
     ],
-    "656": [
+    "691": [
       null
     ],
-    "657": [
+    "692": [
       23.746213264705368
     ],
-    "658": [
+    "693": [
       11.746213264705368
     ],
-    "659": [
+    "694": [
       8.424345272914458,
       10.560541959544327,
       15.38917731374945,
@@ -259,20 +259,20 @@
   },
   "data": [
     {
-      "id": 640,
+      "id": 675,
       "name": "x",
-      "data": 640,
+      "data": 675,
       "type": "number",
-      "tableProcessGUId": "2c65b4e5-d1bd-49bb-a8e9-85c1459172b2",
+      "tableProcessGUId": "b3c1d117-7be3-4767-a4d7-98d335cee615",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 641,
+      "id": 676,
       "name": "y",
-      "data": 641,
+      "data": 676,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -281,198 +281,198 @@
       "processes": []
     },
     {
-      "id": 642,
-      "name": "cosinorx_57",
-      "data": 642,
+      "id": 677,
+      "name": "cosinorx_62",
+      "data": 677,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 643,
-      "name": "period_57",
-      "data": 643,
+      "id": 678,
+      "name": "period_62",
+      "data": 678,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 644,
-      "name": "mesor_57",
-      "data": 644,
+      "id": 679,
+      "name": "mesor_62",
+      "data": 679,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 645,
-      "name": "amplitude_57",
-      "data": 645,
+      "id": 680,
+      "name": "amplitude_62",
+      "data": 680,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 646,
-      "name": "acrophase_57",
-      "data": 646,
+      "id": 681,
+      "name": "acrophase_62",
+      "data": 681,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 647,
-      "name": "amplitude_h1_57",
-      "data": 647,
+      "id": 682,
+      "name": "amplitude_h1_62",
+      "data": 682,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 648,
-      "name": "acrophase_h1_57",
-      "data": 648,
+      "id": 683,
+      "name": "acrophase_h1_62",
+      "data": 683,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 649,
-      "name": "bathyphase_h1_57",
-      "data": 649,
+      "id": 684,
+      "name": "bathyphase_h1_62",
+      "data": 684,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 650,
-      "name": "amplitude_ciLow_57",
-      "data": 650,
+      "id": 685,
+      "name": "amplitude_ciLow_62",
+      "data": 685,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 651,
-      "name": "amplitude_ciHigh_57",
-      "data": 651,
+      "id": 686,
+      "name": "amplitude_ciHigh_62",
+      "data": 686,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 652,
-      "name": "acrophase_ciLow_57",
-      "data": 652,
+      "id": 687,
+      "name": "acrophase_ciLow_62",
+      "data": 687,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 653,
-      "name": "acrophase_ciHigh_57",
-      "data": 653,
+      "id": 688,
+      "name": "acrophase_ciHigh_62",
+      "data": 688,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 654,
-      "name": "rsquared_57",
-      "data": 654,
+      "id": 689,
+      "name": "rsquared_62",
+      "data": 689,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 655,
-      "name": "pvalue_57",
-      "data": 655,
+      "id": 690,
+      "name": "pvalue_62",
+      "data": 690,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 656,
-      "name": "perm_pvalue_57",
-      "data": 656,
+      "id": 691,
+      "name": "perm_pvalue_62",
+      "data": 691,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 657,
-      "name": "bathyphase_57",
-      "data": 657,
+      "id": 692,
+      "name": "bathyphase_62",
+      "data": 692,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 658,
-      "name": "phase_angle_57",
-      "data": 658,
+      "id": 693,
+      "name": "phase_angle_62",
+      "data": 693,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 659,
-      "name": "cosinory_641_57",
-      "data": 659,
+      "id": 694,
+      "name": "cosinory_676_62",
+      "data": 694,
       "type": "number",
-      "tableProcessGUId": "221519a9-963d-445d-b122-99f02ae8ee52",
+      "tableProcessGUId": "15426f2e-f806-425b-b612-d773d683a550",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -481,7 +481,7 @@
   ],
   "plots": [
     {
-      "id": 110,
+      "id": 116,
       "name": "Cosinor: data + fit",
       "x": 60,
       "y": 255,
@@ -556,9 +556,9 @@
         "data": [
           {
             "x": {
-              "id": 660,
+              "id": 695,
               "name": "x",
-              "refId": 640,
+              "refId": 675,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -567,9 +567,9 @@
               "processes": []
             },
             "y": {
-              "id": 661,
+              "id": 696,
               "name": "y",
-              "refId": 641,
+              "refId": 676,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -595,9 +595,9 @@
           },
           {
             "x": {
-              "id": 662,
-              "name": "cosinorx_57",
-              "refId": 642,
+              "id": 697,
+              "name": "cosinorx_62",
+              "refId": 677,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -606,9 +606,9 @@
               "processes": []
             },
             "y": {
-              "id": 663,
-              "name": "cosinory_641_57",
-              "refId": 659,
+              "id": 698,
+              "name": "cosinory_676_62",
+              "refId": 694,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -650,7 +650,7 @@
       }
     },
     {
-      "id": 111,
+      "id": 117,
       "name": "Cosinor: values",
       "x": 630,
       "y": 255,
@@ -683,8 +683,8 @@
       },
       "plot": {
         "columnRefs": [
-          641,
-          659
+          676,
+          694
         ],
         "showCol": [
           true,
@@ -699,7 +699,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 56,
+      "id": 61,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -709,19 +709,19 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 640
+          "result": 675
         }
       },
       "refTPId": null
     },
     {
-      "id": 57,
+      "id": 62,
       "name": "Cosinor",
       "displayName": "Cosinor",
       "args": {
-        "xIN": 640,
+        "xIN": 675,
         "yIN": [
-          641
+          676
         ],
         "Ncurves": 1,
         "outputX": -1,
@@ -731,24 +731,24 @@
         "alpha": 0.05,
         "preProcesses": [],
         "out": {
-          "cosinorx": 642,
-          "period": 643,
-          "mesor": 644,
-          "amplitude": 645,
-          "acrophase": 646,
-          "amplitude_h1": 647,
-          "acrophase_h1": 648,
-          "bathyphase_h1": 649,
-          "amplitude_ciLow": 650,
-          "amplitude_ciHigh": 651,
-          "acrophase_ciLow": 652,
-          "acrophase_ciHigh": 653,
-          "rsquared": 654,
-          "pvalue": 655,
-          "perm_pvalue": 656,
-          "bathyphase": 657,
-          "phase_angle": 658,
-          "cosinory_641": 659
+          "cosinorx": 677,
+          "period": 678,
+          "mesor": 679,
+          "amplitude": 680,
+          "acrophase": 681,
+          "amplitude_h1": 682,
+          "acrophase_h1": 683,
+          "bathyphase_h1": 684,
+          "amplitude_ciLow": 685,
+          "amplitude_ciHigh": 686,
+          "acrophase_ciLow": 687,
+          "acrophase_ciHigh": 688,
+          "rsquared": 689,
+          "pvalue": 690,
+          "perm_pvalue": 691,
+          "bathyphase": 692,
+          "phase_angle": 693,
+          "cosinory_676": 694
         }
       },
       "refTPId": null
@@ -759,8 +759,8 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_56",
-      "text": "Fits a cosine model to a rhythmic series by least squares, returning MESOR (rhythm-adjusted mean), amplitude, acrophase and period, with an F-test / R² and optional permutation p-value. Use it for approximately sinusoidal rhythms when you want interpretable rhythm parameters and a significance test; a fixed period (e.g. 24 h) turns it into linear single/multi-harmonic cosinor, while leaving the period free fits it. A free period is searched for inside a period range: 1 to 48 h for a time x; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units. When the fitted period stops on a limit of the range the node warns, and says which case it is: a good fit (R² of at least 0.4 over at least 2.5 cycles) whose period the limit may be holding (widen the range to confirm it), or no clear rhythm inside the range. In the demo, read the fitted smooth cosine overlaid on the raw points: peak height is the amplitude, the peak's time is the acrophase, and the horizontal midline is the MESOR. The acrophase, bathyphase and their CIs are hours after the first sample (x units after x = 0 for a numeric x) by default; set Phase reference to Clock time of day (needs a time column as x) to report hours after local midnight in the display timezone, wrapped to the period. With more than one harmonic, amplitude, acrophase and bathyphase describe the overall fitted curve (half its peak-to-trough range, and the times of its maximum and minimum: orthophase and bathyphase), and the amplitude_h1 / acrophase_h1 / bathyphase_h1 ports keep harmonic 1; the CIs are harmonic 1's. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. With a fixed period the panel and stats table report the residual standard error, sqrt(SS/(n - p)) with p the number of fitted coefficients, labelled Residual SE (the rmse column), and beside it the RMSE, sqrt(SS/n) (rmse_n), the number the other fitting nodes report, so fits can be compared; a free-period fit reports the RMSE, sqrt(SS/n). The F-test and the optional permutation test (single values permuted by default) both assume exchangeable (independent) observations; activity data are autocorrelated, which makes those p-values too small, so the node warns when the residuals are strongly autocorrelated. For the permutation test choose one-period blocks instead, or use the Surrogate Test node. Method: cosinor rhythmometry (Cornélissen 2014).",
+      "id": "note_60",
+      "text": "Fits a cosine model to a rhythmic series by least squares, returning MESOR (rhythm-adjusted mean), amplitude, acrophase and period, with an F-test / R² and optional permutation p-value. Use it for approximately sinusoidal rhythms when you want interpretable rhythm parameters and a significance test; a fixed period (e.g. 24 h) turns it into linear single/multi-harmonic cosinor, while leaving the period free fits it. A free period is searched for inside a period range: 1 to 30 h for a new node on a time x, while a session saved without a range keeps 1 to 48 h; a new node on a plain number x starts from twice the sampling interval to the record length instead, and its periods and phases then read in x units. When the fitted period stops on a limit of the range the node warns, and says which case it is: a good fit (R² of at least 0.4 over at least 2.5 cycles) whose period the limit may be holding (widen the range to confirm it), or no clear rhythm inside the range. In the demo, read the fitted smooth cosine overlaid on the raw points: peak height is the amplitude, the peak's time is the acrophase, and the horizontal midline is the MESOR. The acrophase, bathyphase and their CIs are hours after the first sample (x units after x = 0 for a numeric x) by default; set Phase reference to Clock time of day (needs a time column as x) to report hours after local midnight in the display timezone, wrapped to the period. With more than one harmonic, amplitude, acrophase and bathyphase describe the overall fitted curve (half its peak-to-trough range, and the times of its maximum and minimum: orthophase and bathyphase), and the amplitude_h1 / acrophase_h1 / bathyphase_h1 ports keep harmonic 1; the CIs are harmonic 1's. It also emits a residual column per series (observed − fitted) with a \"Plot residuals\" button to check the fit. With a fixed period the panel and stats table report the residual standard error, sqrt(SS/(n - p)) with p the number of fitted coefficients, labelled Residual SE (the rmse column), and beside it the RMSE, sqrt(SS/n) (rmse_n), the number the other fitting nodes report, so fits can be compared; a free-period fit reports the RMSE, sqrt(SS/n). The F-test and the optional permutation test (single values permuted by default) both assume exchangeable (independent) observations; activity data are autocorrelated, which makes those p-values too small, so the node warns when the residuals are strongly autocorrelated. For the permutation test choose one-period blocks instead, or use the Surrogate Test node. Method: cosinor rhythmometry (Cornélissen 2014). For a smooth fitted curve, tick Specify output x values and choose Sequence: the curve is evaluated every step (automatic: about 500 points) from the smallest to the largest x.",
       "x": 40,
       "y": 24,
       "width": 360,
@@ -793,27 +793,27 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_641": {
+    "data_676": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_56": {
+    "tableprocess_61": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_57": {
+    "tableprocess_62": {
       "x": 440,
       "y": 314
     },
-    "plot_110": {
+    "plot_116": {
       "x": 820,
       "y": 314
     },
-    "plot_111": {
+    "plot_117": {
       "x": 820,
       "y": 814
     },
-    "note_56": {
+    "note_60": {
       "x": 40,
       "y": 24
     }
@@ -877,5 +877,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

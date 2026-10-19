@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "693": [
+    "728": [
       1,
       2,
       3,
@@ -52,7 +52,7 @@
       49,
       50
     ],
-    "694": [
+    "729": [
       10,
       20,
       30,
@@ -104,7 +104,7 @@
       490,
       500
     ],
-    "695": [
+    "730": [
       11,
       22,
       33,
@@ -159,9 +159,9 @@
   },
   "data": [
     {
-      "id": 693,
+      "id": 728,
       "name": "Formula Column input 1",
-      "data": 693,
+      "data": 728,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -170,9 +170,9 @@
       "processes": []
     },
     {
-      "id": 694,
+      "id": 729,
       "name": "Formula Column input 2",
-      "data": 694,
+      "data": 729,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,11 +181,11 @@
       "processes": []
     },
     {
-      "id": 695,
-      "name": "result_62",
-      "data": 695,
+      "id": 730,
+      "name": "result_67",
+      "data": 730,
       "type": "number",
-      "tableProcessGUId": "0163ebf5-eb9b-46a3-9684-f91f5b04b725",
+      "tableProcessGUId": "3e5954d3-bfc0-424a-910b-c78c711387f3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -194,7 +194,7 @@
   ],
   "plots": [
     {
-      "id": 116,
+      "id": 122,
       "name": "Formula Column result",
       "x": 60,
       "y": 255,
@@ -227,9 +227,9 @@
       },
       "plot": {
         "columnRefs": [
-          693,
-          694,
-          695
+          728,
+          729,
+          730
         ],
         "showCol": [
           true,
@@ -245,14 +245,14 @@
   ],
   "tableProcesses": [
     {
-      "id": 62,
+      "id": 67,
       "name": "FormulaColumn",
       "displayName": "Formula Column",
       "args": {
         "tokens": [
           {
             "type": "col",
-            "id": 693
+            "id": 728
           },
           {
             "type": "text",
@@ -260,11 +260,11 @@
           },
           {
             "type": "col",
-            "id": 694
+            "id": 729
           }
         ],
         "out": {
-          "result": 695
+          "result": 730
         }
       },
       "refTPId": null
@@ -275,7 +275,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_59",
+      "id": "note_63",
       "text": "Builds a new column from a formula you write over existing columns ($ inserts a column), stored values (#) and numbers, evaluated row by row; for example (A+B)/2, log(A) or A^2. Operators: + - * / % (remainder, with the sign of the left side), ^ (power, right to left, so 2^3^2 is 2^9; -A^2 is -(A^2)) and parentheses. Functions: every function of JavaScript's Math, written bare or with a Math. prefix (sqrt(A) or Math.sqrt(A)): abs, sqrt, cbrt (real cube root, so cbrt(-8) is -2), exp, expm1, log (natural), log10, log2, log1p, pow(x, y), sin, cos, tan, asin, acos, atan, atan2(y, x) (radians), sinh, cosh, tanh, asinh, acosh, atanh, floor, ceil, round (halves round up), trunc, sign, hypot(...), min(...), max(...), the 32-bit clz32, imul(a, b) and fround, and random(). Constants: pi and e, and the Math constants PI, E, LN2, LN10, LOG2E, LOG10E, SQRT2 and SQRT1_2 (bare or as Math.PI and so on). random() gives a uniform number in [0, 1) for each row from a seeded generator: the node's seed (shown once the formula uses random(), default 12345) is saved with the session, so the numbers are the same on every recompute, on reload and in the Python and R exports; change the seed for a different draw. A missing input cell gives a missing output cell, never 0, and so does a result that is not a finite number (x/0, log(0), sqrt(-1), acos(2)). Anything else in the formula (text, other names, JavaScript) is refused with a message on the node. Use it for custom per-row calculations the fixed transforms don't cover: ratios, unit conversions, or combined indices.",
       "x": 40,
       "y": 24,
@@ -309,23 +309,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_693": {
+    "data_728": {
       "x": 60,
       "y": 314
     },
-    "data_694": {
+    "data_729": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_62": {
+    "tableprocess_67": {
       "x": 440,
       "y": 314
     },
-    "plot_116": {
+    "plot_122": {
       "x": 820,
       "y": 314
     },
-    "note_59": {
+    "note_63": {
       "x": 40,
       "y": 24
     }
@@ -389,5 +389,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

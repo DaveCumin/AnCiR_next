@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "623": [
+    "658": [
       10,
       11.362966948437268,
       15.35898384862245,
@@ -52,7 +52,7 @@
       10,
       11.362966948437261
     ],
-    "624": [
+    "659": [
       1,
       1,
       1,
@@ -107,9 +107,9 @@
   },
   "data": [
     {
-      "id": 623,
+      "id": 658,
       "name": "Threshold input",
-      "data": 623,
+      "data": 658,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -118,11 +118,11 @@
       "processes": []
     },
     {
-      "id": 624,
-      "name": "binary_52",
-      "data": 624,
+      "id": 659,
+      "name": "binary_57",
+      "data": 659,
       "type": "number",
-      "tableProcessGUId": "48aa06aa-f99d-4f28-890a-b1f81cabff91",
+      "tableProcessGUId": "9b1f1ecd-c0bc-479f-96f9-3d48043d07e3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -131,7 +131,7 @@
   ],
   "plots": [
     {
-      "id": 105,
+      "id": 111,
       "name": "Threshold result",
       "x": 60,
       "y": 255,
@@ -164,8 +164,8 @@
       },
       "plot": {
         "columnRefs": [
-          623,
-          624
+          658,
+          659
         ],
         "showCol": [
           true,
@@ -180,15 +180,15 @@
   ],
   "tableProcesses": [
     {
-      "id": 52,
+      "id": 57,
       "name": "Threshold",
       "displayName": "Threshold",
       "args": {
-        "xIN": 623,
+        "xIN": 658,
         "threshold": 0,
         "comparison": ">=",
         "out": {
-          "binary": 624
+          "binary": 659
         }
       },
       "refTPId": null
@@ -199,7 +199,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_52",
+      "id": "note_56",
       "text": "Turns a continuous column into a 0/1 (binary) column at a cutoff you set, choosing which side of the threshold counts as 1 (>, ≥, <, ≤). Missing values stay missing. The usual use is making a binary outcome for logistic regression, but it also flags events (e.g. \"activity above baseline\").",
       "x": 40,
       "y": 24,
@@ -233,19 +233,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_623": {
+    "data_658": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_52": {
+    "tableprocess_57": {
       "x": 440,
       "y": 314
     },
-    "plot_105": {
+    "plot_111": {
       "x": 820,
       "y": 314
     },
-    "note_52": {
+    "note_56": {
       "x": 40,
       "y": 24
     }
@@ -309,5 +309,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

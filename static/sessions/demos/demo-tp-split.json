@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "829": [
+    "864": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "830": [
+    "865": [
       0,
       10,
       20,
@@ -104,7 +104,7 @@
       480,
       490
     ],
-    "831": [
+    "866": [
       0,
       10,
       20,
@@ -156,7 +156,7 @@
       null,
       null
     ],
-    "832": [
+    "867": [
       null,
       null,
       null,
@@ -208,7 +208,7 @@
       null,
       null
     ],
-    "833": [
+    "868": [
       null,
       null,
       null,
@@ -263,9 +263,9 @@
   },
   "data": [
     {
-      "id": 829,
+      "id": 864,
       "name": "Split data input 1",
-      "data": 829,
+      "data": 864,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -274,9 +274,9 @@
       "processes": []
     },
     {
-      "id": 830,
+      "id": 865,
       "name": "Split data input 2",
-      "data": 830,
+      "data": 865,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -285,33 +285,33 @@
       "processes": []
     },
     {
-      "id": 831,
-      "name": "830_1_83",
-      "data": 831,
+      "id": 866,
+      "name": "865_1_88",
+      "data": 866,
       "type": "number",
-      "tableProcessGUId": "925b398a-5c5a-41cf-b34d-65338d3c3063",
+      "tableProcessGUId": "018728d8-7c89-42db-9031-163d92e586ef",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 832,
-      "name": "830_2_83",
-      "data": 832,
+      "id": 867,
+      "name": "865_2_88",
+      "data": 867,
       "type": "number",
-      "tableProcessGUId": "925b398a-5c5a-41cf-b34d-65338d3c3063",
+      "tableProcessGUId": "018728d8-7c89-42db-9031-163d92e586ef",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 833,
-      "name": "830_3_83",
-      "data": 833,
+      "id": 868,
+      "name": "865_3_88",
+      "data": 868,
       "type": "number",
-      "tableProcessGUId": "925b398a-5c5a-41cf-b34d-65338d3c3063",
+      "tableProcessGUId": "018728d8-7c89-42db-9031-163d92e586ef",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -320,7 +320,7 @@
   ],
   "plots": [
     {
-      "id": 139,
+      "id": 145,
       "name": "Split data result",
       "x": 60,
       "y": 255,
@@ -353,11 +353,11 @@
       },
       "plot": {
         "columnRefs": [
-          829,
-          830,
-          831,
-          832,
-          833
+          864,
+          865,
+          866,
+          867,
+          868
         ],
         "showCol": [
           true,
@@ -375,22 +375,22 @@
   ],
   "tableProcesses": [
     {
-      "id": 83,
+      "id": 88,
       "name": "Split",
       "displayName": "Split data",
       "args": {
-        "xIN": 829,
+        "xIN": 864,
         "yIN": [
-          830
+          865
         ],
         "splitTimes": [
           15,
           30
         ],
         "out": {
-          "830_1": 831,
-          "830_2": 832,
-          "830_3": 833
+          "865_1": 866,
+          "865_2": 867,
+          "865_3": 868
         }
       },
       "refTPId": null
@@ -401,7 +401,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_76",
+      "id": "note_80",
       "text": "Cuts a time-series into consecutive segments at the split times you specify, keeping the chosen columns aligned. Use it to separate, e.g., an entrainment stage from a free-run stage, or successive days, before analysing each part on its own.",
       "x": 40,
       "y": 24,
@@ -435,23 +435,23 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_829": {
+    "data_864": {
       "x": 60,
       "y": 314
     },
-    "data_830": {
+    "data_865": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_83": {
+    "tableprocess_88": {
       "x": 440,
       "y": 314
     },
-    "plot_139": {
+    "plot_145": {
       "x": 820,
       "y": 314
     },
-    "note_76": {
+    "note_80": {
       "x": 40,
       "y": 24
     }
@@ -515,5 +515,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "633": [
+    "668": [
       0.001,
       0.008,
       0.039,
@@ -10,7 +10,7 @@
       0.6,
       0.9
     ],
-    "634": [
+    "669": [
       0.008,
       0.032,
       0.06720000000000001,
@@ -20,7 +20,7 @@
       0.6857142857142857,
       0.9
     ],
-    "635": [
+    "670": [
       1,
       1,
       0,
@@ -33,9 +33,9 @@
   },
   "data": [
     {
-      "id": 633,
+      "id": 668,
       "name": "FDR Correction input",
-      "data": 633,
+      "data": 668,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -44,22 +44,22 @@
       "processes": []
     },
     {
-      "id": 634,
-      "name": "padj_54",
-      "data": 634,
+      "id": 669,
+      "name": "padj_59",
+      "data": 669,
       "type": "number",
-      "tableProcessGUId": "3ef73762-b448-4888-8830-aba39201faa0",
+      "tableProcessGUId": "e5e9b8b7-6949-46d0-8b95-5745bd24dfc7",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 635,
-      "name": "reject_54",
-      "data": 635,
+      "id": 670,
+      "name": "reject_59",
+      "data": 670,
       "type": "number",
-      "tableProcessGUId": "cef5ae76-07b3-4c95-a2f8-c82fc5a9ce75",
+      "tableProcessGUId": "bbc7ad61-a3ab-4fe5-94bb-5ae57069a8e0",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
@@ -68,7 +68,7 @@
   ],
   "plots": [
     {
-      "id": 108,
+      "id": 114,
       "name": "FDR Correction result",
       "x": 60,
       "y": 255,
@@ -101,9 +101,9 @@
       },
       "plot": {
         "columnRefs": [
-          633,
-          634,
-          635
+          668,
+          669,
+          670
         ],
         "showCol": [
           true,
@@ -119,16 +119,16 @@
   ],
   "tableProcesses": [
     {
-      "id": 54,
+      "id": 59,
       "name": "FDRCorrection",
       "displayName": "FDR Correction",
       "args": {
-        "xIN": 633,
+        "xIN": 668,
         "method": "benjamini-hochberg",
         "alpha": 0.05,
         "out": {
-          "padj": 634,
-          "reject": 635
+          "padj": 669,
+          "reject": 670
         }
       },
       "refTPId": null
@@ -139,7 +139,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_54",
+      "id": "note_58",
       "text": "When you run many tests at once (one per animal, probe or condition), some will look significant by chance alone. This node takes the column of raw p-values a node like Cosinor produces (one row per input series) and returns adjusted p-values plus a 1/0 flag for which survive. Benjamini-Hochberg controls the false discovery rate, the expected FRACTION of your \"significant\" results that are false, which is usually what you want when screening many series; Benjamini-Yekutieli does the same but stays valid when the tests are dependent in awkward ways; Holm and Bonferroni instead control the chance of ANY false positive, which is stricter and finds less. Tests that failed to run stay missing and are left out of the count, so they never make the correction harsher for the tests that did run; a value outside 0 to 1 is not a p-value and is treated the same way, with a warning.",
       "x": 40,
       "y": 24,
@@ -173,19 +173,19 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_633": {
+    "data_668": {
       "x": 60,
       "y": 314
     },
-    "tableprocess_54": {
+    "tableprocess_59": {
       "x": 440,
       "y": 314
     },
-    "plot_108": {
+    "plot_114": {
       "x": 820,
       "y": 314
     },
-    "note_54": {
+    "note_58": {
       "x": 40,
       "y": 24
     }
@@ -249,5 +249,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }

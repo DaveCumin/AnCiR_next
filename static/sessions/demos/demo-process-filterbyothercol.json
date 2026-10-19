@@ -1,6 +1,6 @@
 {
   "rawData": {
-    "561": [
+    "596": [
       0,
       1,
       2,
@@ -52,7 +52,7 @@
       48,
       49
     ],
-    "562": [
+    "597": [
       0,
       1,
       2,
@@ -104,7 +104,7 @@
       48,
       49
     ],
-    "563": [
+    "598": [
       0,
       1,
       2,
@@ -159,20 +159,20 @@
   },
   "data": [
     {
-      "id": 561,
+      "id": 596,
       "name": "x",
-      "data": 561,
+      "data": 596,
       "type": "number",
-      "tableProcessGUId": "c71b3a94-815f-4656-8b08-c6e842d1de90",
+      "tableProcessGUId": "5402f6ae-dcc2-4f33-a431-d865da0e66b3",
       "producerNodeId": null,
       "producerPort": null,
       "producerArtifactKind": null,
       "processes": []
     },
     {
-      "id": 562,
+      "id": 597,
       "name": "y",
-      "data": 562,
+      "data": 597,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -181,9 +181,9 @@
       "processes": []
     },
     {
-      "id": 563,
+      "id": 598,
       "name": "reference",
-      "data": 563,
+      "data": 598,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": null,
@@ -192,20 +192,20 @@
       "processes": []
     },
     {
-      "id": 564,
+      "id": 599,
       "name": "Filter result",
       "data": null,
       "type": "number",
       "tableProcessGUId": "",
       "producerNodeId": "process_4",
-      "producerPort": "out_562",
+      "producerPort": "out_597",
       "producerArtifactKind": "column",
       "processes": []
     }
   ],
   "plots": [
     {
-      "id": 87,
+      "id": 93,
       "name": "Filter: before vs after",
       "x": 60,
       "y": 255,
@@ -280,9 +280,9 @@
         "data": [
           {
             "x": {
-              "id": 565,
+              "id": 600,
               "name": "x",
-              "refId": 561,
+              "refId": 596,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -291,9 +291,9 @@
               "processes": []
             },
             "y": {
-              "id": 566,
+              "id": 601,
               "name": "y",
-              "refId": 562,
+              "refId": 597,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -319,9 +319,9 @@
           },
           {
             "x": {
-              "id": 567,
+              "id": 602,
               "name": "x",
-              "refId": 561,
+              "refId": 596,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -330,9 +330,9 @@
               "processes": []
             },
             "y": {
-              "id": 568,
+              "id": 603,
               "name": "Filter result",
-              "refId": 564,
+              "refId": 599,
               "type": "number",
               "tableProcessGUId": "",
               "producerNodeId": null,
@@ -374,7 +374,7 @@
       }
     },
     {
-      "id": 88,
+      "id": 94,
       "name": "Filter: values",
       "x": 630,
       "y": 255,
@@ -407,8 +407,8 @@
       },
       "plot": {
         "columnRefs": [
-          562,
-          564
+          597,
+          599
         ],
         "showCol": [
           true,
@@ -423,7 +423,7 @@
   ],
   "tableProcesses": [
     {
-      "id": 39,
+      "id": 44,
       "name": "SequenceColumn",
       "displayName": "Sequence Column",
       "args": {
@@ -433,7 +433,7 @@
         "count": 50,
         "end": 49,
         "out": {
-          "result": 561
+          "result": 596
         }
       },
       "refTPId": null
@@ -444,7 +444,7 @@
   "nodeNotes": {},
   "notes": [
     {
-      "id": "note_40",
+      "id": "note_44",
       "text": "Keeps or drops rows according to conditions tested on another column (==, !=, >, <, includes, etc.), so you can subset one column using a grouping or flag column. Combine several conditions to narrow the selection. The demo shows the output retaining only the rows that satisfy the condition.",
       "x": 40,
       "y": 24,
@@ -461,15 +461,15 @@
       "args": {
         "conditions": [
           {
-            "byColId": 563,
+            "byColId": 598,
             "isOperator": ">",
             "byColValue": 2
           }
         ],
         "inIN": [
-          562
+          597
         ],
-        "parentColId": 562
+        "parentColId": 597
       }
     }
   ],
@@ -496,15 +496,15 @@
   },
   "activeStyleName": null,
   "nodeLayout": {
-    "data_562": {
+    "data_597": {
       "x": 60,
       "y": 314
     },
-    "data_563": {
+    "data_598": {
       "x": 60,
       "y": 814
     },
-    "tableprocess_39": {
+    "tableprocess_44": {
       "x": 60,
       "y": 1314
     },
@@ -512,15 +512,15 @@
       "x": 440,
       "y": 314
     },
-    "plot_87": {
+    "plot_93": {
       "x": 820,
       "y": 314
     },
-    "plot_88": {
+    "plot_94": {
       "x": 820,
       "y": 814
     },
-    "note_40": {
+    "note_44": {
       "x": 40,
       "y": 24
     }
@@ -584,5 +584,5 @@
       "No"
     ]
   },
-  "version": "β.82.27"
+  "version": "β.82.33"
 }
