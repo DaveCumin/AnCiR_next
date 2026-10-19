@@ -236,9 +236,14 @@ export function groupPlotData(data) {
 }
 
 function makePortsFromNodeSpec(nodeSpec = {}, fallback = { inputs: [], outputs: [] }) {
-	const inputs = (nodeSpec.inputs ?? fallback.inputs ?? []).map((p) =>
-		makeNodePort(p.name, 'input', p.kind ?? 'column', p.cardinality === 'many')
-	);
+	const inputs = (nodeSpec.inputs ?? fallback.inputs ?? []).map((p) => {
+		const port = makeNodePort(p.name, 'input', p.kind ?? 'column', p.cardinality === 'many');
+		// A spec may name a port for people (`display`) apart from its arg key, which must end
+		// in `IN` for the wiring and the input scrubs to find it (Join Data's `aTimeIN` shows
+		// as "time A").
+		if (p.display) port.display = p.display;
+		return port;
+	});
 	const outputs = (nodeSpec.outputs ?? fallback.outputs ?? []).map((p) =>
 		makeNodePort(
 			p.name,

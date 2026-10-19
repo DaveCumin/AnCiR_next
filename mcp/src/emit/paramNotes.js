@@ -82,6 +82,8 @@ export const PARAM_NOTES = {
 		'Folds the data onto one cycle. `period` is the folding period (HOURS; 24 for daily); `nBins` is the number of bins. Samples in a bin are averaged per day first; the SEM output is across days (n = days). `phaseReference`: "start" (default; phases in h after the first sample) or "clock" (local clock time; time x only).',
 	RayleighTest:
 		'`period` (HOURS) is the period the phases are computed against. `unit` is the unit the input times are already in.',
+	JoinData:
+		"Inputs: aTimeIN + aValuesIN (dataset A), bTimeIN + bValuesIN (dataset B); both times must be time columns, or both number columns from the same origin in the same units. Every row of A and B is kept on one time column (no matching). `pairing` ({<B column id>: <A column id> or -1}) overrides the default rule that a B column with the same name (case and spacing ignored) as an A column shares its output column; -1 keeps it separate. `shiftB` is added to B's times first: HOURS for time columns, x units for numbers. `sourceColumn` true adds a source output naming each row's dataset. Add BinnedData on jointime afterwards to line A and B up.",
 	SimulatedData:
 		'Each `sections[]` entry is a SQUARE wave: `rhythmAmplitude` while active, 1 at rest, for `duration_hours` with period `rhythmPeriod_hours` shifted by `rhythmPhase_hours` (HOURS). `alphaFraction` is the active share of each cycle (0.01 to 0.99, default 0.5; 1/3 at 24 h = 8 h active, a short day). Noise: `noiseMode` "multiply" or "add", scaled by `noiseAmplitude`.'
 };

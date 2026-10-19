@@ -78,6 +78,24 @@ function tpViz(tp) {
 		if (series.length) return { type: 'scatterplot', title: `${tp.name}: data + fit`, series };
 	}
 
+	// JoinData: every joined value column against the joined time, as points (A's and B's
+	// rows interleave, so a line would zig-zag between the two datasets).
+	if (tp.name === 'JoinData') {
+		const t = out.jointime;
+		const series = Object.entries(out)
+			.filter(([k, id]) => k.startsWith('joined_') && isRef(id))
+			.map(([, id], i) => ({
+				x: t,
+				y: id,
+				label: colName(id),
+				kind: 'points',
+				colour: i === 0 ? RAW_COLOUR : OUT_COLOUR
+			}));
+		if (isRef(t) && series.length)
+			return { type: 'scatterplot', title: `${tp.name}: joined`, series };
+		return tableFallback(tp, yINs);
+	}
+
 	// GroupComparison: category x + value y → boxplot with pairwise sig bars.
 	if (tp.name === 'GroupComparison') {
 		const x = tp.args?.xIN;

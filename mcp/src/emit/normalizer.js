@@ -391,7 +391,11 @@ export function normalizeSession(
 		// the args — and, for LongToWide, from the baked data — so give the schema a way to
 		// read column values. Anything it still can't work out is a warning, not a guess: a
 		// wrong key yields an analysis that silently never fills in.
-		const outCtx = { getValues: (id) => rawData[id] };
+		const outCtx = {
+			getValues: (id) => rawData[id],
+			// Join Data pairs value columns by NAME, so its output keys need the names.
+			getName: (id) => data.find((c) => c.id === id)?.name
+		};
 		const issue = nodeSchema.dynamicIssue?.(args, outCtx);
 		if (issue) warnings.push(`${name}: ${issue}; those outputs may not compute on load.`);
 
@@ -692,6 +696,11 @@ function outputColumnName(nodeName, key, args, byName) {
 	const yInRaw = args.yIN;
 	const yIds = (Array.isArray(yInRaw) ? yInRaw : yInRaw == null ? [] : [yInRaw]).map(Number);
 	const nameOf = (id) => idToName.get(Number(id)) ?? String(id);
+
+	// Join Data's `joined_<columnId>` (the id is an A or B value column, not a yIN): name it
+	// after that column, joined_temperature, as the catalogue's output note promises.
+	const joined = nodeName === 'JoinData' ? /^joined_(\d+)$/.exec(key) : null;
+	if (joined) return `joined_${nameOf(joined[1])}`;
 
 	// `${yid}_${suffix}` — the id LEADS: RhythmicityAnalysis's `1_period`, Split's `1_2`.
 	//

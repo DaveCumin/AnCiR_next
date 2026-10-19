@@ -193,13 +193,24 @@
 
 			if (theBinnedData.bins.length > 0) {
 				// Use first valid Y's bins as the shared x output
-				if (result.bins.length === 0) {
+				// The shared x is the LONGEST y's bins. Uniform bins start at binStart for every
+				// y, so each y's bins are a prefix of the longest; a y that ends sooner (a column
+				// blank on later rows, as Join Data's A-only columns are) used to set the x when it
+				// came first, and every later bin of the other columns had no x and was lost.
+				if (theBinnedData.bins.length > result.bins.length) {
 					result.bins = theBinnedData.bins;
 					result.binEnds = theBinnedData.binEnds;
 				}
 				result.y_results[yId] = theBinnedData.y_out;
 				result.droppedCount += theBinnedData.droppedCount ?? 0;
 				anyValid = true;
+			}
+		}
+		// Pad every y to the shared x with NaN, what binData gives an empty bin.
+		for (const yId of Object.keys(result.y_results)) {
+			const ys = result.y_results[yId];
+			if (ys.length < result.bins.length) {
+				result.y_results[yId] = ys.concat(new Array(result.bins.length - ys.length).fill(NaN));
 			}
 		}
 

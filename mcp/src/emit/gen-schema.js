@@ -124,7 +124,8 @@ const RUNTIME_DYNAMIC = new Set([
 	'CollectColumns',
 	'StoredValueGroup',
 	'Duplicate',
-	'LongToWide'
+	'LongToWide',
+	'JoinData'
 ]);
 
 const schema = {};

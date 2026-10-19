@@ -152,6 +152,9 @@ const CONCEPT = {
 	crossing: /crossing/,
 	count: /count|number of crossings/,
 	breach: /breach/,
+	// Join Data: the one shared time column, and the optional column naming each row's dataset.
+	jointime: /one time column/,
+	source: /source column/i,
 	// PLOT metric outputs (v77.x, plan 2026-09-30 marker rules, Phase B): the manifest now lists
 	// what each metric plot publishes, so its prose must say so too.
 	peak_period: /peak_period|period of the highest peak/,

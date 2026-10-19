@@ -9,6 +9,11 @@
 //
 // These keys are NOT cosmetic: the GUI recomputes a node into the output columns the session
 // pre-allocated, so a wrong key silently yields an analysis that never fills in.
+//
+// Join Data is the exception to "ported, not imported": its pairing rule lives in a pure,
+// import-free module (src/lib/utils/joinPairing.js) that the node itself uses, so it is imported
+// rather than copied, the same way the normalizer imports formulaExpression.js.
+import { joinOutKeys } from '../../../src/lib/utils/joinPairing.js';
 
 /** Unique, non-negative Y column ids. Mirrors session.js `yIdsOf`. */
 function yIdsOf(args) {
@@ -101,7 +106,9 @@ export const OUTPUT_NOTES = {
 	CollectColumns: 'one per collected column: col_<the column>',
 	StoredValueGroup: 'one per group: group_<the group id>',
 	LongToWide:
-		'one per DISTINCT VALUE in categoryIN: <that value>. Only usable when categoryIN is data you supplied or generated — not another analysis’s output, which is still empty.'
+		'one per DISTINCT VALUE in categoryIN: <that value>. Only usable when categoryIN is data you supplied or generated — not another analysis’s output, which is still empty.',
+	JoinData:
+		'jointime (every row of A and of B, sorted by time), then one per aValuesIN column: joined_<your A column> (a bValuesIN column with the same name, case and spacing ignored, shares it unless `pairing` says otherwise), then one per other bValuesIN column: joined_<your B column>, then source when sourceColumn is true. Plot or bin each joined_ column against jointime'
 };
 
 /**
@@ -130,6 +137,13 @@ export function dynamicOutKeys(name, args, ctx = {}) {
 			return { keys: (args.colIds ?? []).map((c) => `col_${c}`) };
 		case 'StoredValueGroup':
 			return { keys: (args.groups ?? []).map((g) => `group_${g.id}`) };
+		case 'JoinData': {
+			// The value keys depend on the column NAMES (same name = one shared column), so the
+			// normalizer passes getName. `jointime` is the node's fixed template key; the schema
+			// adds it, so it is left out here.
+			const nameOf = (id) => ctx.getName?.(id) ?? String(id);
+			return { keys: joinOutKeys(args, nameOf).filter((k) => k !== 'jointime') };
+		}
 		case 'LongToWide': {
 			// One output per DISTINCT VALUE of the category column — the only rule that needs
 			// the data itself. We can serve it when that column is baked (imported data, or a

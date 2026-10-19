@@ -163,7 +163,7 @@ run_tp_fixture <- function(fx, rec) {
     ref_to_id[[nm]] <- id
     env$raw_data[[as.character(id)]] <- vals
     env$cols[[as.character(id)]] <- new_column(
-      id = id, name = nm,
+      id = id, name = if (!is.null(spec$name)) spec$name else nm,
       type = if (!is.null(spec$type)) spec$type else "number",
       data = id)
   }
@@ -175,7 +175,15 @@ run_tp_fixture <- function(fx, rec) {
       r <- substring(v, 2)
       return(if (!is.null(ref_to_id[[r]])) ref_to_id[[r]] else -1)
     }
-    if (is.list(v)) return(lapply(v, resolve))
+    if (is.list(v)) {
+      out <- lapply(v, resolve)
+      # A KEY may name an input too (Join Data's `pairing: {"@b": -1}`), as its column id.
+      if (!is.null(names(out))) names(out) <- vapply(names(out), function(n) {
+        r <- substring(n, 2)
+        if (startsWith(n, "@") && !is.null(ref_to_id[[r]])) as.character(ref_to_id[[r]]) else n
+      }, character(1), USE.NAMES = FALSE)
+      return(out)
+    }
     v
   }
   args <- lapply(fx$args, resolve)
@@ -194,7 +202,11 @@ run_tp_fixture <- function(fx, rec) {
     static_id <- 1000 + next_id
     dyn_id <- 2000 + next_id
     next_id <- next_id + 1
-    args$out[[k]] <- static_id
+    # A key naming an input (`joined_@temp`) is that input's per-input out key.
+    k_out <- k
+    for (r in regmatches(k, gregexpr("@\\w+", k))[[1]])
+      k_out <- sub(r, as.character(ref_to_id[[substring(r, 2)]]), k_out, fixed = TRUE)
+    args$out[[k_out]] <- static_id
     for (yid in y_ids) {
       args$out[[paste0(k, "_", yid)]] <- dyn_id
       # Split names its outputs the other way round, "<yId>_<segment>"

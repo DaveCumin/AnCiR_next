@@ -97,6 +97,12 @@
 		"references": [],
 		"crosslinks": ["ch4"]
 	},
+	"JoinData": {
+		"description": "Join Data puts every row of two datasets, A and B, onto one time column sorted by time. Nothing is matched or merged: rows that share a time stay separate rows (A's first), and rows with no time are left out and counted. Value columns with the same name (case and spacing ignored) are taken as the same measurement and share one column, holding A's values on A's rows and B's on B's; any B column can be paired with another A column or kept separate by hand. Both time inputs must be real times, or both numbers counting from the same origin in the same units; mixing them is refused. Shift B's clock (h) corrects a logger on another time zone, and an optional Source column records each row's dataset. Because two recordings rarely share times, the usual next step is Bin Data, which averages both onto one grid so that each row holds both series; the node offers it in one click. More than 2,000,000 rows is refused.",
+		"maths": [],
+		"references": [],
+		"crosslinks": ["ch4"]
+	},
 	"WideToLong": {
 		"description": "Wide To Long reshapes a wide table (a time column plus several value columns, one per series) into long format with three columns: time, category (which series the value came from), and value. It is the inverse of Long To Wide and prepares data for grouped comparisons, long-format tools, or exchange with software that expects tidy data.",
 		"maths": [],
@@ -110,7 +116,7 @@
 		"crosslinks": ["ch4"]
 	},
 	"CollectColumns": {
-		"description": "Collect Columns concatenates several input columns into one longer column, stacking their values end to end. It is a plumbing step for pooling data, for example combining per-segment or per-subject columns into a single column so that one downstream summary, histogram, or statistic covers them all.",
+		"description": "Collect Columns gathers several input columns into one node: each passes through (after optional pre-processing steps) as its own output, and optional row-wise aggregates (mean, min, max or sum) combine the columns row by row, by position. It does not stack columns end to end and it does not line rows up by time; to put two datasets on one time axis, use Join Data.",
 		"maths": [],
 		"references": [],
 		"crosslinks": ["ch4"]

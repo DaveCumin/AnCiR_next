@@ -22805,6 +22805,235 @@
 			"jsArgs": [0.0002777777777777778, " h"],
 			"pyArgs": [0.0002777777777777778, " h"],
 			"compareScalars": ["defaultStep", "count", "first", "last", "step", "warning"]
+		},
+		{
+			"id": "tp-joindata-rates",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "Hourly A against 15 min B starting 7 min past: every row kept, sorted by time. B's ' Temp ' pairs with A's 'temp' by name (case and spacing ignored), so joined_@temp holds A's values on A rows and B's on B rows; rh exists on B rows only; the Source column names each row's dataset.",
+			"inputs": [
+				{
+					"ref": "tA",
+					"type": "time",
+					"values": [1717200000000, 1717203600000, 1717207200000, 1717210800000]
+				},
+				{ "ref": "temp", "type": "number", "values": [10, 11, 12, 13] },
+				{
+					"ref": "tB",
+					"type": "time",
+					"values": [
+						1717200420000, 1717201320000, 1717202220000, 1717203120000, 1717204020000,
+						1717204920000, 1717205820000, 1717206720000, 1717207620000, 1717208520000
+					]
+				},
+				{
+					"ref": "tempB",
+					"name": " Temp ",
+					"type": "number",
+					"values": [20.0, 20.5, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5]
+				},
+				{ "ref": "rh", "type": "number", "values": [50, 51, 52, 53, 54, 55, 56, 57, 58, 59] }
+			],
+			"args": {
+				"pairing": {},
+				"shiftB": 0,
+				"sourceColumn": true,
+				"out": { "jointime": -1, "source": -1 },
+				"aTimeIN": "@tA",
+				"aValuesIN": ["@temp"],
+				"bTimeIN": "@tB",
+				"bValuesIN": ["@tempB", "@rh"]
+			},
+			"compareOutputs": ["jointime", "joined_@temp", "joined_@rh", "source"]
+		},
+		{
+			"id": "tp-joindata-ties-blanks",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "Numbers as time, unsorted, with repeated times inside A, times shared with B, and missing cells: a row with no time (null, blank, NaN text) is left out; a missing value is blank, never 0; at equal times A's rows come first, each side in its own row order. A category value column keeps its labels.",
+			"inputs": [
+				{ "ref": "x", "type": "number", "values": [3, 1, null, 1, "", 2, "abc"] },
+				{ "ref": "v", "type": "number", "values": [30, 10, 99, 11, 98, null, 97] },
+				{ "ref": "lab", "type": "category", "values": ["c", "a", "z", "b", "y", "  ", "w"] },
+				{ "ref": "xb", "type": "number", "values": [1, 2.5, " ", 0] },
+				{ "ref": "vb", "name": "V", "type": "number", "values": [100, "", 0, 50] }
+			],
+			"args": {
+				"pairing": {},
+				"shiftB": 0,
+				"sourceColumn": false,
+				"out": { "jointime": -1 },
+				"aTimeIN": "@x",
+				"aValuesIN": ["@v", "@lab"],
+				"bTimeIN": "@xb",
+				"bValuesIN": ["@vb"]
+			},
+			"compareOutputs": ["jointime", "joined_@v", "joined_@lab"]
+		},
+		{
+			"id": "tp-joindata-override-shift",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "The pairing override keeps a same-named B column separate (-1) and pairs a differently named one with A's column; B's clock is shifted by -0.5 h, which lines its half-hour times up with A's hours.",
+			"inputs": [
+				{ "ref": "tA", "type": "time", "values": [1717200000000, 1717203600000, 1717207200000] },
+				{ "ref": "a1", "name": "temp", "type": "number", "values": [1, 2, 3] },
+				{ "ref": "a2", "name": "ambient", "type": "number", "values": [7, 8, 9] },
+				{ "ref": "tB", "type": "time", "values": [1717201800000, 1717205400000, 1717209000000] },
+				{ "ref": "b1", "name": "temp", "type": "number", "values": [4, 5, 6] },
+				{ "ref": "b2", "name": "outside", "type": "number", "values": [40, 50, 60] }
+			],
+			"args": {
+				"pairing": { "@b1": -1, "@b2": "@a2" },
+				"shiftB": -0.5,
+				"sourceColumn": false,
+				"out": { "jointime": -1 },
+				"aTimeIN": "@tA",
+				"aValuesIN": ["@a1", "@a2"],
+				"bTimeIN": "@tB",
+				"bValuesIN": ["@b1", "@b2"]
+			},
+			"compareOutputs": ["jointime", "joined_@a1", "joined_@a2", "joined_@b1"]
+		},
+		{
+			"id": "tp-joindata-numeric-shift",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "Both time inputs numeric (hours since one origin): joined as numbers, B shifted by +1.25 x units; B entirely after A.",
+			"inputs": [
+				{ "ref": "x", "type": "number", "values": [0, 1, 2] },
+				{ "ref": "v", "type": "number", "values": [5, 6, 7] },
+				{ "ref": "xb", "type": "number", "values": [2, 3] },
+				{ "ref": "vb", "name": "v", "type": "number", "values": [8, 9] }
+			],
+			"args": {
+				"pairing": {},
+				"shiftB": 1.25,
+				"sourceColumn": false,
+				"out": { "jointime": -1 },
+				"aTimeIN": "@x",
+				"aValuesIN": ["@v"],
+				"bTimeIN": "@xb",
+				"bValuesIN": ["@vb"]
+			},
+			"compareOutputs": ["jointime", "joined_@v"]
+		},
+		{
+			"id": "tp-joindata-empty-b",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "B has no rows: the output is A's rows alone.",
+			"inputs": [
+				{ "ref": "x", "type": "number", "values": [2, 0, 1] },
+				{ "ref": "v", "type": "number", "values": [3, 1, 2] },
+				{ "ref": "xb", "type": "number", "values": [] },
+				{ "ref": "vb", "name": "v", "type": "number", "values": [] }
+			],
+			"args": {
+				"pairing": {},
+				"shiftB": 0,
+				"sourceColumn": false,
+				"out": { "jointime": -1 },
+				"aTimeIN": "@x",
+				"aValuesIN": ["@v"],
+				"bTimeIN": "@xb",
+				"bValuesIN": ["@vb"]
+			},
+			"compareOutputs": ["jointime", "joined_@v"]
+		},
+		{
+			"id": "tp-joindata-mixed-refused",
+			"kind": "tableProcess",
+			"jsName": "JoinData",
+			"pyFunc": "joindata",
+			"rFunc": "joindata",
+			"note": "A real time column against a numeric one is refused in all three: no output, invalid.",
+			"inputs": [
+				{ "ref": "t", "type": "time", "values": [1717200000000, 1717203600000] },
+				{ "ref": "v", "type": "number", "values": [1, 2] },
+				{ "ref": "xb", "type": "number", "values": [0, 1] }
+			],
+			"args": {
+				"pairing": {},
+				"shiftB": 0,
+				"sourceColumn": false,
+				"out": { "jointime": -1 },
+				"aTimeIN": "@t",
+				"aValuesIN": ["@v"],
+				"bTimeIN": "@xb",
+				"bValuesIN": []
+			},
+			"compareOutputs": ["jointime", "joined_@v"],
+			"recordValid": true
+		},
+		{
+			"id": "util-joindata-limit-2000000",
+			"kind": "pureUtil",
+			"jsFn": "joinLimit",
+			"pyFunc": "join_limit_probe",
+			"rFunc": "join_limit_probe",
+			"note": "The 2,000,000-row join limit, both sides: allowed at the limit, refused one row over it with the shared wording.",
+			"input": { "values": [] },
+			"valuesRef": "values",
+			"jsArgs": [2000000],
+			"pyArgs": [2000000],
+			"compareScalars": ["allowed", "warning"]
+		},
+		{
+			"id": "util-joindata-limit-2000001",
+			"kind": "pureUtil",
+			"jsFn": "joinLimit",
+			"pyFunc": "join_limit_probe",
+			"rFunc": "join_limit_probe",
+			"note": "The 2,000,000-row join limit, both sides: allowed at the limit, refused one row over it with the shared wording.",
+			"input": { "values": [] },
+			"valuesRef": "values",
+			"jsArgs": [2000001],
+			"pyArgs": [2000001],
+			"compareScalars": ["allowed", "warning"]
+		},
+		{
+			"id": "tp-binneddata-ragged-ys",
+			"kind": "tableProcess",
+			"jsName": "BinnedData",
+			"pyFunc": "binneddata",
+			"rFunc": "binneddata",
+			"note": "Two y columns that end at different rows (as Join Data's A-only and B-only columns do): the x output is the LONGEST y's bins and the shorter y is padded with blanks, so the second column's later bins keep their x (they were dropped when the first y set the x).",
+			"inputs": [
+				{ "ref": "x", "type": "number", "values": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
+				{
+					"ref": "y1",
+					"type": "number",
+					"values": [1, 2, 3, 4, null, null, null, null, null, null, null, null]
+				},
+				{
+					"ref": "y2",
+					"type": "number",
+					"values": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+				}
+			],
+			"args": {
+				"xIN": "@x",
+				"yIN": ["@y1", "@y2"],
+				"binMode": "uniform",
+				"binSize": 2,
+				"binStart": 0,
+				"stepSize": 2,
+				"diffStep": false,
+				"aggFunction": "mean",
+				"out": { "binnedx": -1 }
+			},
+			"compareOutputs": ["binnedx", "binnedy_@y1", "binnedy_@y2"]
 		}
 	]
 }

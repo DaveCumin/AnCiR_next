@@ -200,7 +200,8 @@ export const PROCESS_SPECS = [
 // (input refs + scalar params + `out` seed). For yOutKeyPrefix TPs the per-Y out
 // keys are auto-seeded by the TableProcess constructor, so only the X key is set.
 // `isAsync` / `validAt` describe how the func reports validity (for correctness).
-const T = (type, data) => ({ type, data });
+// `name` (optional) names the source column; nodes that match columns by name need it.
+const T = (type, data, name) => ({ type, data, name });
 export const TP_SPECS = [
 	{
 		name: 'BinnedData',
@@ -723,6 +724,36 @@ export const TP_SPECS = [
 		})
 	},
 	{
+		// Hourly A against 15 min B; B's "Temperature" pairs with A's "temperature" by name
+		// (case ignored), B's humidity is a column of its own.
+		name: 'JoinData',
+		inputs: [
+			T('time', () => seq(12, (i) => new Date(Date.UTC(2024, 0, 1, i)).toISOString()), 'time'),
+			T('number', () => seq(12, (i) => 10 + 5 * Math.sin((2 * Math.PI * i) / 24)), 'temperature'),
+			T(
+				'time',
+				() => seq(48, (i) => new Date(Date.UTC(2024, 0, 1, 0, 7 + 15 * i)).toISOString()),
+				'time'
+			),
+			T(
+				'number',
+				() => seq(48, (i) => 30 + 3 * Math.sin((2 * Math.PI * (i / 4 - 2)) / 24)),
+				'Temperature'
+			),
+			T('number', () => seq(48, (i) => 60 + (i % 8)), 'humidity')
+		],
+		args: ([tA, vA, tB, vB, hB]) => ({
+			aTimeIN: tA,
+			aValuesIN: [vA],
+			bTimeIN: tB,
+			bValuesIN: [vB, hB],
+			pairing: {},
+			shiftB: 0,
+			sourceColumn: false,
+			out: { jointime: -1, [`joined_${vA}`]: -1, [`joined_${hB}`]: -1 }
+		})
+	},
+	{
 		name: 'WideToLong',
 		inputs: [
 			T('time', SAMPLE.isoHours),
@@ -857,7 +888,9 @@ export function buildAllNodes({ x0 = 40, y0 = 40, colW = 320, rowH = 240 } = {})
 
 	// Table processes.
 	for (const spec of TP_SPECS) {
-		const ids = spec.inputs.map((inp) => mkCol(inp.type, resolve(inp.data), `${spec.name} in`));
+		const ids = spec.inputs.map((inp) =>
+			mkCol(inp.type, resolve(inp.data), inp.name ?? `${spec.name} in`)
+		);
 		out.columnIds.push(...ids);
 		const tp = new TableProcess({ name: spec.name, args: spec.args(ids) }, null);
 		core.tableProcesses.push(tp);

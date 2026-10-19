@@ -57,6 +57,7 @@ import { pAdjust } from '$lib/utils/pAdjust.js';
 import { gridPointCount, gridTooLargeWarning } from '$lib/utils/interpolate.js';
 import { outputXSequence, defaultOutputXStep } from '$lib/utils/outputXSequence.js';
 import { sequenceLimitWarning } from '$lib/tableProcesses/SequenceColumn.svelte';
+import { joinTooLargeWarning } from '$lib/utils/joinData.js';
 import { fisherExact, conditionalOddsRatio, oddsRatioCI } from '$lib/utils/fisherExact.js';
 import { cwt } from '$lib/utils/cwt.js';
 import { getStatKeys, computeMovingWindows } from '$lib/utils/movinganalysis.js';
@@ -112,6 +113,11 @@ const PURE_UTIL_FNS = {
 	// The Sequence Column limit: allowed (1/0) and the warning ('' when it fits). jsArgs = [count].
 	sequenceLimit: (_unused, count) => {
 		const w = sequenceLimitWarning(count);
+		return { allowed: w ? 0 : 1, warning: w ?? '' };
+	},
+	// The Join Data row limit: allowed (1/0) and the warning ('' when it fits). jsArgs = [rows].
+	joinLimit: (_unused, rows) => {
+		const w = joinTooLargeWarning(rows);
 		return { allowed: w ? 0 : 1, warning: w ?? '' };
 	},
 	// The resample-grid limit (Interpolate): the grid size and the warning ('' when it fits).
@@ -483,7 +489,12 @@ function generateInputs(spec) {
 function tpInputs(fx) {
 	if (fx.generate) return generateInputs(fx.generate);
 	const out = {};
-	for (const inp of fx.inputs) out[inp.ref] = { type: inp.type ?? 'number', values: inp.values };
+	for (const inp of fx.inputs) {
+		out[inp.ref] = { type: inp.type ?? 'number', values: inp.values };
+		// `name` (optional): the column's name when it must differ from its ref (nodes that
+		// match columns by name, e.g. Join Data's " Temp " against "temp").
+		if (inp.name != null) out[inp.ref].name = inp.name;
+	}
 	return out;
 }
 
@@ -517,8 +528,12 @@ function resolveTokens(value, idMap) {
 	}
 	if (Array.isArray(value)) return value.map((v) => resolveTokens(v, idMap));
 	if (value && typeof value === 'object') {
+		// A KEY may name an input too (Join Data's `pairing: { "@b": -1 }`), as its column id.
 		const out = {};
-		for (const [k, v] of Object.entries(value)) out[k] = resolveTokens(v, idMap);
+		for (const [k, v] of Object.entries(value)) {
+			const key = k.startsWith('@') && k.slice(1) in idMap ? String(idMap[k.slice(1)]) : k;
+			out[key] = resolveTokens(v, idMap);
+		}
 		return out;
 	}
 	return value;
@@ -542,9 +557,18 @@ function safeNum(v) {
 function buildTableInputs(fx) {
 	const inputs = tpInputs(fx);
 	const idMap = {};
-	for (const [ref, { type, values }] of Object.entries(inputs))
-		idMap[ref] = mkCol(type, values, ref);
+	for (const [ref, { type, values, name }] of Object.entries(inputs))
+		idMap[ref] = mkCol(type, values, name ?? ref);
 	return { inputs, idMap, args: resolveTokens(fx.args, idMap) };
+}
+
+// A compareOutputs entry naming an input (`joined_@temp`) is a per-input out key whose id is
+// that input's column id: `joined_<id>`. The ports register the same key with their own ids.
+function resolveOutKey(key, idMap) {
+	return key.replace(/@(\w+)/g, (_, ref) => {
+		if (!(ref in idMap)) throw new Error(`unknown input ref @${ref} in compareOutputs`);
+		return String(idMap[ref]);
+	});
 }
 
 // --- runners ------------------------------------------------------------------
@@ -560,7 +584,12 @@ function runColumnProcess(fx) {
 async function runTableProcess(fx) {
 	const entry = appConsts.tableProcessMap.get(fx.jsName);
 	if (!entry?.func) throw new Error(`no JS table process ${fx.jsName}`);
-	const { inputs, args } = buildTableInputs(fx);
+	const { inputs, idMap, args } = buildTableInputs(fx);
+	const refKeys = (fx.compareOutputs ?? []).filter((k) => k.includes('@'));
+	for (const k of refKeys) {
+		args.out = args.out ?? {};
+		args.out[resolveOutKey(k, idMap)] = -1;
+	}
 	// `storedValues` ({key: value}) seeds core.storedValues in the saved-session entry shape,
 	// so a FormulaColumn stored-value token (#key) reads it as the app does.
 	if (fx.storedValues) {
@@ -586,6 +615,10 @@ async function runTableProcess(fx) {
 		const canon = canonicalKey(key);
 		if (!want.has(canon)) continue;
 		outputs[canon] = safeArray(core.data.find((c) => c.id === id)?.getData?.());
+	}
+	for (const k of refKeys) {
+		const id = tp.args.out?.[resolveOutKey(k, idMap)];
+		outputs[k] = safeArray(core.data.find((c) => c.id === id)?.getData?.());
 	}
 	// `recordValid` fixtures pin a REFUSAL (the node returns invalid and writes nothing), so
 	// the validity flag is part of what the ports must reproduce. Recorded only when asked

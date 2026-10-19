@@ -1,7 +1,7 @@
 {
   "_comment": "Auto-generated from the live registry by generateNodeManifest.svelte.test.js (GEN_MANIFEST=1) / `pnpm manifest:gen`. Do not hand-edit. Consumed by the Chronobiology Handbook Node Reference.",
-  "generatedFromVersion": "β.82.30",
-  "count": 61,
+  "generatedFromVersion": "β.82.31",
+  "count": 62,
   "nodes": [
     {
       "id": "actogram",
@@ -1206,12 +1206,11 @@
       "displayName": "Collect Columns",
       "kind": "tableProcess",
       "family": "Transform",
-      "description": "Collect (concatenate) several columns into one.",
+      "description": "Gather several columns into one node, row by row (by position), with optional row-wise aggregates.",
       "keywords": [
-        "concatenate",
-        "combine",
-        "merge",
-        "gather"
+        "gather",
+        "collect",
+        "row-wise"
       ],
       "hideFromPalette": true,
       "inputs": [
@@ -2446,6 +2445,79 @@
         }
       ],
       "demo": "sessions/demos/demo-tp-interpolate.json"
+    },
+    {
+      "id": "JoinData",
+      "displayName": "Join Data",
+      "kind": "tableProcess",
+      "family": "Transform",
+      "description": "Put every row of two datasets (A and B) on one time column, sorted by time; same-named value columns share a column.",
+      "keywords": [
+        "join",
+        "merge",
+        "concatenate",
+        "combine",
+        "append",
+        "stack",
+        "align",
+        "time join"
+      ],
+      "hideFromPalette": false,
+      "inputs": [
+        {
+          "name": "aTimeIN",
+          "kind": "column",
+          "cardinality": "one"
+        },
+        {
+          "name": "aValuesIN",
+          "kind": "column",
+          "cardinality": "many"
+        },
+        {
+          "name": "bTimeIN",
+          "kind": "column",
+          "cardinality": "one"
+        },
+        {
+          "name": "bValuesIN",
+          "kind": "column",
+          "cardinality": "many"
+        }
+      ],
+      "params": [
+        {
+          "name": "pairing",
+          "default": {}
+        },
+        {
+          "name": "shiftB",
+          "default": 0
+        },
+        {
+          "name": "sourceColumn",
+          "default": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "jointime",
+          "kind": "column",
+          "cardinality": "one"
+        },
+        {
+          "name": "joined_*",
+          "kind": "column",
+          "cardinality": "many",
+          "dynamicPrefix": "joined_"
+        },
+        {
+          "name": "source",
+          "kind": "column",
+          "cardinality": "one"
+        }
+      ],
+      "demo": "sessions/demos/demo-tp-joindata.json"
     },
     {
       "id": "LogisticRegression",

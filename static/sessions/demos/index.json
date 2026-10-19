@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 111,
+  "count": 112,
   "sessions": [
     {
       "id": "workflow-rest-activity",
@@ -1211,14 +1211,14 @@
       "id": "tp-collectcolumns",
       "name": "Collect Columns",
       "family": "Transform",
-      "description": "Collect (concatenate) several columns into one.",
-      "summary": "Collect (concatenate) several columns into one.",
+      "description": "Gather several columns into one node, row by row (by position), with optional row-wise aggregates.",
+      "summary": "Gather several columns into one node, row by row (by position), with optional row-wise aggregates.",
       "url": "sessions/demos/demo-tp-collectcolumns.json",
       "kind": "tableProcess",
       "showcases": [
         "CollectColumns"
       ],
-      "keywords": "collect columns collect (concatenate) several columns into one. transform collectcolumns"
+      "keywords": "collect columns gather several columns into one node, row by row (by position), with optional row-wise aggregates. transform collectcolumns"
     },
     {
       "id": "tp-columnset",
@@ -1271,6 +1271,19 @@
         "StoredValueGroup"
       ],
       "keywords": "stored value group group derived stored values together for reuse. transform storedvaluegroup"
+    },
+    {
+      "id": "tp-joindata",
+      "name": "Join Data",
+      "family": "Transform",
+      "description": "Put every row of two datasets (A and B) on one time column, sorted by time; same-named value columns share a column.",
+      "summary": "Put every row of two datasets (A and B) on one time column, sorted by time; same-named value columns share a column.",
+      "url": "sessions/demos/demo-tp-joindata.json",
+      "kind": "tableProcess",
+      "showcases": [
+        "JoinData"
+      ],
+      "keywords": "join data put every row of two datasets (a and b) on one time column, sorted by time; same-named value columns share a column. transform joindata"
     },
     {
       "id": "tp-widetolong",

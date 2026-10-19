@@ -245,6 +245,47 @@
 		/>
 	</AnCiRBox>
 
+	<h3 class="section-head">Joining Two Datasets on One Clock</h3>
+	<p>
+		Two recordings made with different loggers rarely share a clock or a sampling rate: a hive
+		sensor every 15 min, a weather station every hour. AnCiR pairs columns by <strong
+			>row position</strong
+		> (a correlation or a scatterplot reads row i of one column against row i of the other), so two such
+		columns side by side are silently misaligned: 3,960 hourly rows laid against 15 min rows end after
+		41 days instead of 165. Put both on one time axis first, then bin them onto a common grid so each
+		row is one interval of both series.
+	</p>
+
+	<AnCiRBox title="Joining Data in AnCiR">
+		<ol>
+			<li>
+				From the <strong>node palette</strong>, under <strong>Transform</strong>, choose
+				<strong>Join Data</strong>, and wire each dataset's time column and value columns into
+				<strong>time A</strong> / <strong>values A</strong> and <strong>time B</strong> /
+				<strong>values B</strong>.
+			</li>
+			<li>
+				Every row of both datasets lands on one time column, sorted by time. Nothing is matched or
+				merged: rows that share a time stay separate rows. Columns with the same name (case and
+				spacing ignored) are taken as the same measurement and share one column; change that per
+				column under <strong>Same measurement?</strong>.
+			</li>
+			<li>
+				If one logger ran on another time zone, set <strong>Shift B's clock by (h)</strong>. Both
+				time inputs must be real times, or both numbers counting from the same origin.
+			</li>
+			<li>
+				When A and B rarely share a time, the node offers <strong>+ Add Bin Data</strong>: one click
+				bins every joined column on the joined time at the coarser of the two sampling intervals,
+				giving one row per interval with both series in it.
+			</li>
+		</ol>
+		<DemoLink
+			session="sessions/demos/demo-tp-joindata.json"
+			label="Open the Join Data example in AnCiR"
+		/>
+	</AnCiRBox>
+
 	<h3 class="section-head">Smoothing</h3>
 	<p>
 		Measurements always carry <strong>noise</strong>: fast, point-to-point jitter from the sensor

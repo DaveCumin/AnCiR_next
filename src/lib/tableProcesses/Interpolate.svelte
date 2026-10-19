@@ -51,13 +51,18 @@
 		}
 	};
 
-	/** Empty every output column (the x grid and each interpolated y). */
+	/**
+	 * Empty every output column (the x grid and each interpolated y). Stamped with a fresh
+	 * process hash: rawData.set alone does not change a column's getDataHash, so without it
+	 * getData() kept returning its cached (old) grid and the refusal never reached the plots.
+	 */
 	function clearOutputs(out, yINs) {
 		const ids = [out?.interpx, ...yINs.map((y) => out?.['interpy_' + y])];
+		const processHash = crypto.randomUUID();
 		for (const id of ids) {
 			if (id == null || id === -1) continue;
 			const col = getColumnById(id);
-			if (col) writeOutputColumn(id, [], { type: col.type });
+			if (col) writeOutputColumn(id, [], { type: col.type, processHash });
 		}
 	}
 

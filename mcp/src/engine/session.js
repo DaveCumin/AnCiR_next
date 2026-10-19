@@ -19,6 +19,8 @@ import { evaluateCosinor } from '$lib/tableProcesses/Cosinor.svelte';
 import { getOutputKeys as rhythmicityOutputKeys } from '$lib/tableProcesses/RhythmicityAnalysis.svelte';
 import { getStatKeys as movingStatKeys } from '$lib/tableProcesses/MovingAnalysis.svelte';
 import { loadTableProcesses } from '$lib/tableProcesses/tableProcessMap.js';
+import { joinOutKeys } from '$lib/utils/joinPairing.js';
+import { joinNameOf } from '$lib/tableProcesses/JoinData.svelte';
 import { loadProcesses } from '$lib/processes/processMap.js';
 import { loadPlots } from '$lib/plots/plotMap.js';
 import {
@@ -86,6 +88,11 @@ function synthesizeDynamicOut(name, args) {
 			return seedKeys((args.groups ?? []).map((g) => `group_${g.id}`));
 		case 'Duplicate':
 			return seedKeys(['result']);
+		case 'JoinData': {
+			// Same-named value columns share one output (utils/joinPairing.js), so the keys
+			// follow the columns' names, read the way the node reads them (display names).
+			return seedKeys(joinOutKeys(args, joinNameOf()));
+		}
 		case 'LongToWide': {
 			const cat = args.categoryIN;
 			const col = cat != null && cat !== -1 ? getColumnById(cat) : null;

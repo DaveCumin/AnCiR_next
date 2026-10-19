@@ -88,6 +88,21 @@ describe('dynamicOutKeys mirrors synthesizeDynamicOut', () => {
 		]);
 	});
 
+	it('JoinData: one key per A value column, one per unpaired B column, then source', () => {
+		const names = { 1: 'temp', 2: 'rh', 11: ' Temp', 12: 'light' };
+		const ctx = { getName: (id) => names[id] };
+		const args = { aValuesIN: [1, 2], bValuesIN: [11, 12], pairing: {} };
+		expect(dynamicOutKeys('JoinData', args, ctx).keys).toEqual([
+			'joined_1',
+			'joined_2',
+			'joined_12'
+		]);
+		// -1 keeps the same-named B column separate; sourceColumn adds `source`.
+		expect(
+			dynamicOutKeys('JoinData', { ...args, pairing: { 11: -1 }, sourceColumn: true }, ctx).keys
+		).toEqual(['joined_1', 'joined_2', 'joined_11', 'joined_12', 'source']);
+	});
+
 	it('a node with no computed outputs returns null', () => {
 		expect(dynamicOutKeys('Cosinor', { yIN: [1] })).toBeNull();
 	});

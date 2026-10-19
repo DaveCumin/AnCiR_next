@@ -89,7 +89,9 @@ def resolve_tokens(value, id_map):
     if isinstance(value, list):
         return [resolve_tokens(v, id_map) for v in value]
     if isinstance(value, dict):
-        return {k: resolve_tokens(v, id_map) for k, v in value.items()}
+        # A KEY may name an input too (Join Data's `pairing: {"@b": -1}`), as its column id.
+        return {(str(id_map[k[1:]]) if k.startswith("@") and k[1:] in id_map else k):
+                resolve_tokens(v, id_map) for k, v in value.items()}
     return value
 
 
@@ -104,8 +106,8 @@ def _build_cols(js):
         next_id += 1
         id_map[ref] = cid
         raw_data[cid] = list(spec["values"])
-        cols[cid] = rt.Column(id=cid, name=ref, type=spec.get("type", "number"),
-                              data=cid, raw_data=raw_data)
+        cols[cid] = rt.Column(id=cid, name=spec.get("name", ref),
+                              type=spec.get("type", "number"), data=cid, raw_data=raw_data)
     return raw_data, cols, id_map, next_id
 
 
@@ -131,7 +133,8 @@ def run_table_process(fx, js):
     for k in fx.get("compareOutputs", []):
         static_id, dyn_id = 1000 + next_id, 2000 + next_id
         next_id += 1
-        args["out"][k] = static_id
+        # A key naming an input (`joined_@temp`) is that input's per-input out key.
+        args["out"][re.sub(r"@(\w+)", lambda m: str(id_map[m.group(1)]), k)] = static_id
         for yid in y_ids:
             args["out"][f"{k}_{yid}"] = dyn_id
             # Split names its outputs the other way round, "<yId>_<segment>"

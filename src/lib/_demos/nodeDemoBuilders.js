@@ -351,6 +351,7 @@ export async function buildProcessDemo(spec, display) {
  * @param display the TP display name
  */
 export async function buildTPDemo(spec, entry, display) {
+	if (spec.name === 'JoinData') return buildJoinDataDemo(display);
 	const isFit = FIT_ANALYSES.has(spec.name);
 	const analysis = isAnalysisTP(spec.name);
 
@@ -545,4 +546,125 @@ export async function buildTPDemo(spec, entry, display) {
 	bakeLayoutFromGraph();
 	addDemoNote(spec.name);
 	return { tp };
+}
+
+/**
+ * The Join Data demo: hourly "ambient" temperature (A) and a 15 min "hive" temperature (B)
+ * that follows it 2 h late, sampled 7 min past the quarter hour so the two never share a time.
+ * Join Data puts all 360 rows on one time column; Bin Data at 1 h then averages both onto one
+ * hourly grid, and the scatterplot shows the two hourly series side by side, the hive's peak
+ * 2 h after the ambient one. Synthetic, seeded, deterministic.
+ */
+async function buildJoinDataDemo(display) {
+	const H = 3600000;
+	const T0 = Date.UTC(2024, 6, 1);
+	const DAYS = 3;
+	const LAG_H = 2;
+	const rand = mulberry32(2039);
+	const ambientAt = (h) => 14 + 6 * Math.sin((2 * Math.PI * (h - 9)) / 24);
+	const iso = (ms) => new Date(ms).toISOString();
+
+	const nA = DAYS * 24;
+	const tA = mkCol(
+		'time',
+		Array.from({ length: nA }, (_, i) => iso(T0 + i * H)),
+		'weather time'
+	);
+	const ambient = mkCol(
+		'number',
+		Array.from({ length: nA }, (_, i) => Math.round((ambientAt(i) + (rand() - 0.5)) * 100) / 100),
+		'ambient temp'
+	);
+	const nB = DAYS * 96;
+	const hourOfB = (i) => (7 + 15 * i) / 60;
+	const tB = mkCol(
+		'time',
+		Array.from({ length: nB }, (_, i) => iso(T0 + Math.round(hourOfB(i) * H))),
+		'hive time'
+	);
+	const hive = mkCol(
+		'number',
+		Array.from(
+			{ length: nB },
+			(_, i) =>
+				Math.round((20 + 0.5 * ambientAt(hourOfB(i) - LAG_H) + 0.6 * (rand() - 0.5)) * 100) / 100
+		),
+		'hive temp'
+	);
+
+	const join = new TableProcess(
+		{
+			name: 'JoinData',
+			args: {
+				aTimeIN: tA,
+				aValuesIN: [ambient],
+				bTimeIN: tB,
+				bValuesIN: [hive],
+				pairing: {},
+				shiftB: 0,
+				sourceColumn: false,
+				out: { jointime: -1, [`joined_${ambient}`]: -1, [`joined_${hive}`]: -1 }
+			}
+		},
+		null
+	);
+	pushObj(join);
+	await join.doProcess();
+	const time = join.args.out.jointime;
+	const jAmbient = join.args.out[`joined_${ambient}`];
+	const jHive = join.args.out[`joined_${hive}`];
+
+	const bin = new TableProcess(
+		{
+			name: 'BinnedData',
+			args: {
+				xIN: time,
+				yIN: [jAmbient, jHive],
+				binMode: 'uniform',
+				binSize: 1,
+				binStart: 0,
+				stepSize: 1,
+				diffStep: false,
+				cuts: [],
+				aggFunction: 'mean',
+				out: { binnedx: -1 }
+			}
+		},
+		null
+	);
+	pushObj(bin);
+	await bin.doProcess();
+	const bx = bin.args.out.binnedx;
+
+	const plot = scatterPlot(
+		`${display}: hourly ambient and hive`,
+		[
+			{
+				x: bx,
+				y: bin.args.out[`binnedy_${jAmbient}`],
+				label: 'Ambient (1 h)',
+				kind: 'line',
+				colour: RAW_COLOUR,
+				yAxis: 'left'
+			},
+			{
+				x: bx,
+				y: bin.args.out[`binnedy_${jHive}`],
+				label: 'Hive (1 h)',
+				kind: 'line',
+				colour: OUT_COLOUR,
+				yAxis: 'right'
+			}
+		],
+		{ x: 'time', y: 'ambient temp (°C)', yRight: 'hive temp (°C)' }
+	);
+	// Both curves span their full axis, so the top-right legend would sit on a peak. Headroom
+	// on both axes keeps the legend over empty space, inside a plot of the standard size.
+	plot.plot.ylimsLeftIN = [5, 30];
+	plot.plot.ylimsRightIN = [22, 36];
+
+	prewarmWrapperNames();
+	bakeLayoutFromGraph();
+	addDemoNote('JoinData');
+	return { tp: join };
 }

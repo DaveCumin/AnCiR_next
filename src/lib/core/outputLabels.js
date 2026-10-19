@@ -8,7 +8,8 @@
 // `key` of node type `T`", and "is this column still carrying its auto-generated name (so the
 // label may replace it), or did someone rename it (so their name wins)".
 //
-// Pure data and pure functions whose only import is the (equally import-free) plot metric defs,
+// Pure data and pure functions whose only imports are the (equally import-free) plot metric defs
+// and Join Data's pairing rule (utils/joinPairing.js),
 // so the workflow graph (ProcessNode.svelte.js, which core.svelte.js imports), the Data panel,
 // the column pickers and tests can all use it without an import cycle. Session state comes in
 // as a parameter (createColumnNamer(core)); core/columnLabels.js binds it to the live core.
@@ -22,6 +23,8 @@
 // (outputLabels.test.js) fails for any registered output key that falls through to its raw id.
 
 import { plotMetricLabel, plotMetricColumnName } from '$lib/plots/plotMetricDefs.js';
+// Import-free too (Join Data's pairing and output names), so no cycle.
+import { joinPlan } from '$lib/utils/joinPairing.js';
 
 // ---------------------------------------------------------------------------------------------
 // Shared vocabulary. One string per quantity, so the same quantity reads the same everywhere.
@@ -388,6 +391,25 @@ export const NODE_OUTPUT_LABELS = {
 	Interpolate: {
 		keys: { interpx: 'Interpolated: x' },
 		perInput: [{ prefix: 'interpy_', label: 'Interpolated', autoPrefixes: ['interp_'] }]
+	},
+	// Join Data names a value column after its input (the A column's name for a pair), with
+	// "(A)" / "(B)" and a number only where two would read the same (utils/joinPairing.js).
+	// The pairs are the ones the node baked (`_resolvedPairs`), so the label always describes
+	// the data the column holds.
+	JoinData: {
+		keys: { jointime: 'Time', source: 'Source' },
+		special: [
+			{
+				re: /^joined_(\d+)$/,
+				label: (m, ctx) => {
+					const nameOf = (id) => ctx?.colName?.(id) ?? String(id);
+					const hit = joinPlan(ctx?.args ?? {}, nameOf, { useBaked: true }).outputs.find(
+						(o) => o.key === m[0]
+					);
+					return hit?.label ?? nameOf(Number(m[1]));
+				}
+			}
+		]
 	},
 	LogisticRegression: {
 		keys: {

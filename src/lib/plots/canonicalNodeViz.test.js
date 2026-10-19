@@ -31,6 +31,27 @@ describe('canonicalNodeViz', () => {
 		expect(spec.series[1]).toMatchObject({ x: 30, y: 40, kind: 'line' });
 	});
 
+	it('JoinData → every joined value column against the joined time, as points', () => {
+		const node = fitNode('JoinData', {
+			aTimeIN: 1,
+			aValuesIN: [2],
+			bTimeIN: 3,
+			bValuesIN: [4, 5],
+			out: { jointime: 30, joined_2: 31, joined_5: 32, source: 33 }
+		});
+		const spec = canonicalNodeViz(node);
+		expect(spec.type).toBe('scatterplot');
+		expect(spec.series.map((s) => [s.x, s.y, s.kind])).toEqual([
+			[30, 31, 'points'],
+			[30, 32, 'points']
+		]);
+	});
+
+	it('JoinData with nothing joined yet → tableplot fallback', () => {
+		const node = fitNode('JoinData', { aTimeIN: 1, bTimeIN: 3, out: { jointime: 30 } });
+		expect(canonicalNodeViz(node).type).toBe('tableplot');
+	});
+
 	it('GroupComparison → boxplot with sig bars', () => {
 		const node = fitNode('GroupComparison', { xIN: 11, yIN: [22], out: {} });
 		const spec = canonicalNodeViz(node);

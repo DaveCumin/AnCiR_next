@@ -49,6 +49,25 @@ describe('dynamic-output processes auto-seed their out keys', () => {
 		expect(res.outputs.map((o) => o.key).sort()).toEqual(['1_1', '1_2', '1_3']);
 	});
 
+	it('JoinData: jointime plus one key per A column and per unpaired B column', async () => {
+		const s = new AncirSession('dyn-join');
+		s.importColumns([
+			{ name: 'tA', values: seq(4, (i) => i) },
+			{ name: 'temp', values: seq(4, (i) => 10 + i) },
+			{ name: 'tB', values: seq(8, (i) => i / 2 + 0.25) },
+			{ name: 'Temp', values: seq(8, (i) => 20 + i) },
+			{ name: 'rh', values: seq(8, (i) => 50 + i) }
+		]);
+		const res = await s.runTableProcess('JoinData', {
+			aTimeIN: 0,
+			aValuesIN: [1],
+			bTimeIN: 2,
+			bValuesIN: [3, 4]
+		});
+		expect(res.valid).toBe(true);
+		expect(res.outputs.map((o) => o.key).sort()).toEqual(['joined_1', 'joined_4', 'jointime']);
+	});
+
 	it('CollectColumns — per-input col_<id> keys', async () => {
 		const s = new AncirSession('dyn-collect');
 		s.importColumns([

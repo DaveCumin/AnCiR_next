@@ -1053,11 +1053,16 @@ tp_binneddata <- function(args, env) {
     b <- bin_data(x_data, col_data(env$cols[[yk]], env$cols, env$raw_data),
                   bin_size, bin_start, step, agg, cuts_arg)
     if (length(b$bins)) {
-      if (is.null(bins_x)) bins_x <- b$bins  # the first valid y's bins are the shared x
+      # The shared x is the LONGEST y's bins (each y's uniform bins are a prefix of it).
+      if (is.null(bins_x) || length(b$bins) > length(bins_x)) bins_x <- b$bins
       y_results[[yk]] <- b$y_out
     }
   }
   if (is.null(bins_x)) return(FALSE)
+  for (yk in names(y_results)) {  # pad to the shared x with NaN (an empty bin)
+    n_pad <- length(bins_x) - length(y_results[[yk]])
+    if (n_pad > 0) y_results[[yk]] <- c(y_results[[yk]], rep(NaN, n_pad))
+  }
   x_out <- out_id(args, "binnedx")
   if (x_out == -1) return(TRUE)  # valid, but the app writes nothing without an x output
   # As BinnedData.svelte writes it: the x output stores bin STARTS. A time input gives a time
@@ -6225,6 +6230,258 @@ tp_formulacolumn <- function(args, env) {
   length(result) > 0
 }
 
+# ---------------------------------------------------------------------------
+# Join Data (Python: tp_joindata, join_pairing, join_outputs, join_data)
+# ---------------------------------------------------------------------------
+# Port of utils/joinPairing.js and utils/joinData.js as JoinData.svelte wires them: every row
+# of A and B on one time column, sorted by time, A's rows first at equal times. No matching
+# or merging. Same-named value columns (trimmed, inner whitespace as one space, case ignored)
+# share one output column unless `pairing` says otherwise.
+
+MAX_JOIN_ROWS <- MAX_GRID_POINTS
+
+.join_norm_name <- function(name) {
+  if (is.null(name) || (length(name) == 1 && is.na(name))) name <- ""
+  tolower(gsub("\\s+", " ", trimws(as.character(name)), perl = TRUE))
+}
+
+.join_ids <- function(v) {
+  out <- integer(0)
+  for (raw in as.list(if (is.null(v)) list() else v)) {
+    n <- .js_number(raw)
+    if (is.finite(n) && n == floor(n) && n >= 0 && !(n %in% out)) out <- c(out, as.integer(n))
+  }
+  out
+}
+
+join_pairing <- function(a_ids, b_ids, name_of, pairing = NULL) {
+  pair_of <- list(); taken <- integer(0); decided <- integer(0); conflicts <- list()
+  overrides <- if (is.list(pairing)) pairing else list()
+  for (b in b_ids) {
+    ov <- overrides[[as.character(b)]]
+    if (is.null(ov)) next
+    want <- .js_number(ov)
+    if (want == -1) { decided <- c(decided, b); next }
+    if (!(want %in% a_ids)) next
+    decided <- c(decided, b)
+    if (want %in% taken) {
+      conflicts[[length(conflicts) + 1]] <- list(bId = b, aId = want, why = "taken"); next
+    }
+    pair_of[[as.character(b)]] <- as.integer(want)
+    taken <- c(taken, as.integer(want))
+  }
+  for (b in b_ids) {
+    if (b %in% decided) next
+    key <- .join_norm_name(name_of(b))
+    if (!nzchar(key)) next
+    matches <- a_ids[vapply(a_ids, function(a) .join_norm_name(name_of(a)) == key, logical(1))]
+    free <- matches[!(matches %in% taken)]
+    if (length(free)) {
+      pair_of[[as.character(b)]] <- free[1]
+      taken <- c(taken, free[1])
+    } else if (length(matches)) {
+      conflicts[[length(conflicts) + 1]] <- list(bId = b, aId = matches[1], why = "taken")
+    }
+  }
+  list(pair_of = pair_of, conflicts = conflicts)
+}
+
+join_outputs <- function(a_ids, b_ids, pair_of, name_of) {
+  partner <- list()
+  for (b in names(pair_of)) partner[[as.character(pair_of[[b]])]] <- as.integer(b)
+  outs <- list()
+  for (a in a_ids) {
+    p <- partner[[as.character(a)]]
+    outs[[length(outs) + 1]] <- list(key = paste0("joined_", a), aId = a, bId = p,
+                                     label = trimws(as.character(name_of(a))), side = "A")
+  }
+  for (b in b_ids) {
+    if (!is.null(pair_of[[as.character(b)]])) next
+    outs[[length(outs) + 1]] <- list(key = paste0("joined_", b), aId = NULL, bId = b,
+                                     label = trimws(as.character(name_of(b))), side = "B")
+  }
+  keys <- vapply(outs, function(o) .join_norm_name(o$label), character(1))
+  for (i in seq_along(outs)) {
+    paired <- !is.null(outs[[i]]$aId) && !is.null(outs[[i]]$bId)
+    if (!paired && sum(keys == keys[i]) > 1)
+      outs[[i]]$label <- paste0(outs[[i]]$label, " (", outs[[i]]$side, ")")
+  }
+  seen <- list()
+  for (i in seq_along(outs)) {
+    k <- .join_norm_name(outs[[i]]$label)
+    n <- (if (is.null(seen[[k]])) 0 else seen[[k]]) + 1
+    seen[[k]] <- n
+    if (n > 1) outs[[i]]$label <- paste0(outs[[i]]$label, " ", n)
+  }
+  outs
+}
+
+join_time_kind <- function(type) {
+  if (identical(type, "time")) return("time")
+  if (!is.null(type) && type %in% c("number", "bin")) return("number")
+  NULL
+}
+
+join_too_large_warning <- function(rows, max_rows = MAX_JOIN_ROWS) {
+  if (!(rows > max_rows)) return(NULL)
+  paste0("Nothing was joined: A and B together have ", .thousands(rows),
+         " rows with a time, more than the limit of ", .thousands(max_rows),
+         ". Bin or filter one of them first.")
+}
+
+.join_shift <- function(shift_b, kind) {
+  s <- if (is.null(shift_b)) 0 else .js_number(shift_b)
+  if (!is.finite(s) || s == 0) return(0)
+  if (identical(kind, "time")) floor(s * 3600000 + 0.5) else s
+}
+
+.join_placed <- function(times, shift) {
+  times <- as.list(times)
+  n <- length(times)
+  t <- rep(NA_real_, n)
+  for (i in seq_len(n)) {
+    if (.js_invalid(times[[i]])) next
+    x <- .js_number(times[[i]]) + shift
+    if (is.finite(x)) t[i] <- x
+  }
+  keep <- which(!is.na(t))
+  idx <- keep[order(t[keep], keep)]
+  list(idx = idx, t = t, dropped = n - length(keep))
+}
+
+join_data <- function(time_a, time_b, kind, data_of, type_of, outputs, shift_b = 0,
+                      source_labels = c("A", "B"), max_rows = MAX_JOIN_ROWS) {
+  A <- .join_placed(time_a, 0)
+  B <- .join_placed(time_b, .join_shift(shift_b, kind))
+  na <- length(A$idx); nb <- length(B$idx); rows <- na + nb
+  counts <- list(rows = rows, fromA = na, fromB = nb, droppedA = A$dropped,
+                 droppedB = B$dropped, sharedTimes = 0, sharedRows = 0)
+  too_large <- join_too_large_warning(rows, max_rows)
+  if (!is.null(too_large)) return(list(ok = FALSE, error = too_large, counts = counts))
+  cell <- function(id, row) {
+    d <- data_of[[as.character(id)]]
+    if (is.null(d) || row > length(d)) return(NULL)
+    v <- d[[row]]
+    if (.cell_missing_rule(type_of[[as.character(id)]])(v)) NULL else v
+  }
+  time <- numeric(rows); source <- character(rows)
+  columns <- lapply(outputs, function(o) vector("list", rows))
+  names(columns) <- vapply(outputs, function(o) o$key, character(1))
+  i <- 1; j <- 1
+  for (r in seq_len(rows)) {
+    take_a <- i <= na && (j > nb || A$t[A$idx[i]] <= B$t[B$idx[j]])
+    if (take_a) {
+      row <- A$idx[i]; i <- i + 1
+      time[r] <- A$t[row]; source[r] <- source_labels[1]
+      for (o in outputs) {
+        v <- if (!is.null(o$aId)) cell(o$aId, row) else NULL
+        if (!is.null(v)) columns[[o$key]][[r]] <- v
+      }
+    } else {
+      row <- B$idx[j]; j <- j + 1
+      time[r] <- B$t[row]; source[r] <- source_labels[2]
+      for (o in outputs) {
+        v <- if (!is.null(o$bId)) cell(o$bId, row) else NULL
+        if (!is.null(v)) columns[[o$key]][[r]] <- v
+      }
+    }
+  }
+  ta <- table(A$t[A$idx]); tb <- table(B$t[B$idx])
+  both <- intersect(names(ta), names(tb))
+  counts$sharedTimes <- length(both)
+  counts$sharedRows <- sum(as.integer(ta[both])) + sum(as.integer(tb[both]))
+  rare <- na > 0 && nb > 0 && counts$sharedRows / rows < 0.1
+  list(ok = rows > 0, error = NULL, time = time, source = source, columns = columns,
+       counts = counts, rareShared = rare)
+}
+
+# A joined value column as R stores one: numbers with NA for blanks, else text with NA.
+.join_as_column <- function(cells) {
+  present <- !vapply(cells, is.null, logical(1))
+  if (all(vapply(cells[present], is.numeric, logical(1)))) {
+    out <- rep(NA_real_, length(cells))
+    out[present] <- vapply(cells[present], as.numeric, numeric(1))
+    return(out)
+  }
+  out <- rep(NA_character_, length(cells))
+  out[present] <- vapply(cells[present], as.character, character(1))
+  out
+}
+
+# Parity probe for the join row limit: allowed (1/0) and the warning ("" if none).
+join_limit_probe <- function(unused, rows) {
+  w <- join_too_large_warning(rows)
+  list(allowed = if (is.null(w)) 1 else 0, warning = if (is.null(w)) "" else w)
+}
+# Registered here rather than in PURE_UTIL_MAP's literal, which is built before this section.
+PURE_UTIL_MAP$join_limit_probe <- join_limit_probe
+
+tp_joindata <- function(args, env) {
+  clear <- function() {
+    for (k in names(args$out)) {
+      oid <- out_id(args, k)
+      if (!is.null(oid) && oid != -1 && !is.null(env$cols[[as.character(oid)]]))
+        set_col(env, env$cols, oid, numeric(0))
+    }
+    FALSE
+  }
+  a_t <- if (is.null(args$aTimeIN)) -1 else args$aTimeIN
+  b_t <- if (is.null(args$bTimeIN)) -1 else args$bTimeIN
+  if (a_t == -1 || b_t == -1) return(FALSE)
+  col_a <- env$cols[[as.character(a_t)]]; col_b <- env$cols[[as.character(b_t)]]
+  if (is.null(col_a) || is.null(col_b)) return(clear())
+  ka <- join_time_kind(col_a$type); kb <- join_time_kind(col_b$type)
+  if (is.null(ka) || is.null(kb) || ka != kb) {
+    message("WARNING: Join Data: time A is ", col_a$type, " and time B is ", col_b$type,
+            "; both must be times or both numbers.")
+    return(clear())
+  }
+  a_ids <- .join_ids(args$aValuesIN); b_ids <- .join_ids(args$bValuesIN)
+  if (any(a_ids %in% b_ids)) return(clear())
+  name_of <- function(id) {
+    c <- env$cols[[as.character(id)]]
+    if (is.null(c) || is.null(c$name)) as.character(id) else c$name
+  }
+  baked <- args[["_resolvedPairs"]]
+  if (is.list(baked)) {
+    pair_of <- list()
+    for (b in names(baked)) {
+      bi <- as.integer(.js_number(b)); ai <- as.integer(.js_number(baked[[b]]))
+      if (bi %in% b_ids && ai %in% a_ids) pair_of[[as.character(bi)]] <- ai
+    }
+  } else pair_of <- join_pairing(a_ids, b_ids, name_of, args$pairing)$pair_of
+  outputs <- join_outputs(a_ids, b_ids, pair_of, name_of)
+  labels <- unlist(args[["_sourceLabels"]], use.names = FALSE)
+  if (length(labels) != 2) labels <- c("A", "B")
+  data_of <- list(); type_of <- list()
+  for (id in c(a_ids, b_ids)) {
+    c <- env$cols[[as.character(id)]]
+    data_of[[as.character(id)]] <- if (is.null(c)) list() else as.list(col_data(c, env$cols, env$raw_data))
+    type_of[[as.character(id)]] <- if (is.null(c) || is.null(c$type)) "number" else c$type
+  }
+  res <- join_data(col_data(col_a, env$cols, env$raw_data), col_data(col_b, env$cols, env$raw_data),
+                   ka, data_of, type_of, outputs, args$shiftB, labels)
+  if (!is.null(res$error)) {
+    message("WARNING: Join Data: ", res$error)
+    return(clear())
+  }
+  t_id <- out_id(args, "jointime")
+  set_col(env, env$cols, t_id, res$time, type = if (ka == "time") "time" else "number")
+  if (ka == "time" && !is.null(env$cols[[as.character(t_id)]]))
+    env$cols[[as.character(t_id)]]$time_format <- NULL
+  for (o in outputs) {
+    oid <- out_id(args, o$key)
+    src <- env$cols[[as.character(if (!is.null(o$aId)) o$aId else o$bId)]]
+    typ <- if (is.null(src) || is.null(src$type)) "number" else src$type
+    set_col(env, env$cols, oid, .join_as_column(res$columns[[o$key]]), type = typ)
+    if (typ == "time" && !is.null(env$cols[[as.character(oid)]]))
+      env$cols[[as.character(oid)]]$time_format <- NULL
+  }
+  if (isTRUE(args$sourceColumn))
+    set_col(env, env$cols, out_id(args, "source"), res$source, type = "category")
+  isTRUE(res$ok)
+}
+
 # Analyses this runtime implements. Kept in step with R_IMPLEMENTED in
 # src/lib/_parity/runtimeCoverage.js by a test, in BOTH directions, so the declared reach and
 # the real reach cannot drift apart the way the Python port's did.
@@ -6247,6 +6504,7 @@ TABLE_PROCESS_MAP = list(
   correlation = tp_correlation,
   crosscorrelation = tp_crosscorrelation,
   interpolate = tp_interpolate,
+  joindata = tp_joindata,
   logisticregression = tp_logisticregression,
   longtowide = tp_longtowide,
   movinganalysis = tp_movinganalysis,

@@ -30,7 +30,7 @@
 	import { tooltip } from '$lib/utils/tooltip.js';
 	import { setGroupPortY, clearGroupPortPositions } from './groupPortPositions.svelte.js';
 	import { NODE_ROW_CSS_VARS, nodeRowCentreY } from './nodeRows.js';
-	import { portTooltip, portAriaLabel } from './portLabels.js';
+	import { portTooltip, portAriaLabel, portLabel } from './portLabels.js';
 	import { PORT_KEYS_HELP_ID } from './keyboardWiring.js';
 
 	let {
@@ -349,15 +349,15 @@
 							data-node-id={node.id}
 							data-port-name={port.name}
 							data-port-dir="in"
-							{@attach tooltip(portTooltip(port, 'in', { label: port.name }))}
+							{@attach tooltip(portTooltip(port, 'in', { label: portLabel(port) }))}
 							onpointerdown={(e) => e.stopPropagation()}
 							onmousedown={(e) => disconnectInput(e, port.name)}
 							onmouseup={(e) => endAtInput(e, port.name)}
 							oncontextmenu={(e) => openInputPicker(e, port.name)}
-							aria-label={portAriaLabel(getNodeName(node), port, 'in', { label: port.name })}
+							aria-label={portAriaLabel(getNodeName(node), port, 'in', { label: portLabel(port) })}
 							aria-describedby={PORT_KEYS_HELP_ID}
 						></button>
-						<span class="in-label">{port.name}{port.dynamic ? '*' : ''}</span>
+						<span class="in-label">{portLabel(port)}{port.dynamic ? '*' : ''}</span>
 					</div>
 				{/each}
 			</div>

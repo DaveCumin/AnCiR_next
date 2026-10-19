@@ -76,6 +76,7 @@ export const PER_INPUT_PREFIXES = [
 	'dlogy_',
 	'fity_',
 	'interpy_',
+	'joined_',
 	'npcray_',
 	'permstats_',
 	'rectwavey_',

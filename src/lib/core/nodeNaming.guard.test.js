@@ -59,6 +59,7 @@ const NOT_EDITORS = {
 	'lib/tableProcesses/MovingAnalysis.svelte': 'names its output columns',
 	'lib/tableProcesses/BinnedData.svelte': 'names its output columns',
 	'lib/tableProcesses/WideToLong.svelte': 'names its output columns',
+	'lib/tableProcesses/JoinData.svelte': 'names its output columns',
 	'lib/tableProcesses/LongToWide.svelte': 'names its output columns',
 	'lib/tableProcesses/Cosinor.svelte': 'names its output columns',
 	'lib/tableProcesses/LogisticRegression.svelte': 'names its output columns',

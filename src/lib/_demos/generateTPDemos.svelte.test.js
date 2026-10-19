@@ -17,6 +17,8 @@ import { loadPlots } from '$test/plotRegistry.js';
 import { loadTableProcesses } from '$test/tableProcessRegistry.js';
 import { TP_SPECS } from './nodeCatalog.js';
 import { buildTPDemo } from './nodeDemoBuilders.js';
+import { layoutWorkspacePlots } from '$lib/core/workspaceLayout.js';
+import { clearNotesFromPlots } from '$lib/core/notePlacement.js';
 
 const OUT_DIR = join(process.cwd(), 'static', 'sessions', 'demos');
 
@@ -48,6 +50,10 @@ describe.runIf(process.env.GEN_DEMOS)('generate table-process demo sessions', ()
 			const entry = appConsts.tableProcessMap.get(spec.name);
 			const display = entry?.displayName ?? spec.name;
 			await buildTPDemo(spec, entry, display);
+			// The same tidy pass the full generator gives every demo (generateDemos tidyPlots):
+			// pack the plots, then clear the note's lane, so a GEN_ONLY file matches a full regen.
+			layoutWorkspacePlots(core.plots);
+			clearNotesFromPlots();
 			const file = `demo-tp-${spec.name.toLowerCase()}.json`;
 			writeFileSync(join(OUT_DIR, file), outputCoreAsJson(), 'utf8');
 			console.log(`GENERATED ${file}`);

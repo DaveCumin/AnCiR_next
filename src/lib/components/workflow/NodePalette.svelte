@@ -122,6 +122,7 @@
 		'simulated-data',
 		'split',
 		'wide-to-long',
+		'join-data',
 		'actogram',
 		'boxplot',
 		'histogram'

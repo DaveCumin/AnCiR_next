@@ -424,12 +424,33 @@ const meta = new Map([
 		}
 	],
 	[
+		'JoinData',
+		{
+			family: 'Transform',
+			// "merge" and "concatenate" moved here from Collect Columns, which does neither.
+			keywords: [
+				'join',
+				'merge',
+				'concatenate',
+				'combine',
+				'append',
+				'stack',
+				'align',
+				'time join'
+			], // search-only synonyms; never rendered
+			nodeIcon: 'join-data',
+			description:
+				'Put every row of two datasets (A and B) on one time column, sorted by time; same-named value columns share a column.'
+		}
+	],
+	[
 		'CollectColumns',
 		{
 			family: 'Transform',
-			keywords: ['concatenate', 'combine', 'merge', 'gather'], // search-only synonyms; never rendered
+			keywords: ['gather', 'collect', 'row-wise'], // search-only synonyms; never rendered
 			nodeIcon: 'collect-columns',
-			description: 'Collect (concatenate) several columns into one.',
+			description:
+				'Gather several columns into one node, row by row (by position), with optional row-wise aggregates.',
 			// Hidden from the + palette (use a Group instead). Still registered so the
 			// "collected mode" container other analyses rely on keeps working.
 			hideFromPalette: true

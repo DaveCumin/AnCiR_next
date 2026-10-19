@@ -3220,12 +3220,16 @@ def tp_binneddata(args, cols, raw_data, _sv):
             continue
         b = bin_data(x_data, cols[y_id].get_data(), bin_size, bin_start, step, agg, cuts_arg)
         if b['bins']:
-            if bins_x is None:
-                bins_x = b['bins']  # the first valid y's bins are the shared x output
+            # The shared x is the LONGEST y's bins (each y's uniform bins are a prefix of it).
+            if bins_x is None or len(b['bins']) > len(bins_x):
+                bins_x = b['bins']
             y_results[y_id] = b['y_out']
     x_out = _out_id(args, 'binnedx')
     if bins_x is None:
         return False
+    for y_id, ys in y_results.items():  # pad to the shared x with NaN (an empty bin)
+        if len(ys) < len(bins_x):
+            y_results[y_id] = list(ys) + [float('nan')] * (len(bins_x) - len(ys))
     if x_out == -1:
         return True  # valid, but the app writes nothing without an x output
     # As BinnedData.svelte writes it: the x output stores bin STARTS. A time input gives a
@@ -6732,6 +6736,7 @@ DISPLAY_TO_TP = {
     'Cosinor': 'cosinor',
     'Cross-correlation': 'crosscorrelation',
     'CrossCorrelation': 'crosscorrelation',
+    'Crossing': 'crossing',
     'Describe Data': 'describedata',
     'DescribeData': 'describedata',
     'Double Logistic': 'doublelogistic',
@@ -6748,6 +6753,8 @@ DISPLAY_TO_TP = {
     'FormulaColumn': 'formulacolumn',
     'GroupComparison': 'groupcomparison',
     'Interpolate': 'interpolate',
+    'Join Data': 'joindata',
+    'JoinData': 'joindata',
     'Logistic regression': 'logisticregression',
     'LogisticRegression': 'logisticregression',
     'Long To Wide': 'longtowide',
@@ -6781,7 +6788,6 @@ DISPLAY_TO_TP = {
     'StoredValueGroup': 'storedvaluegroup',
     'Surrogate Test': 'surrogatetest',
     'SurrogateTest': 'surrogatetest',
-    'Crossing': 'crossing',
     'Threshold': 'threshold',
     'Trend Fit': 'trendfit',
     'TrendFit': 'trendfit',
@@ -8327,6 +8333,272 @@ def tp_interpolate(args, cols, raw_data, _sv):
     return True
 
 
+# --- JoinData ---
+#
+# Port of utils/joinPairing.js (which value columns are the same measurement, and the output
+# names) and utils/joinData.js (every row of A and B on one time column) as JoinData.svelte
+# wires them. No matching or merging: rows that share a time stay separate rows, A's first.
+
+MAX_JOIN_ROWS = MAX_GRID_POINTS
+
+
+def _join_norm_name(name):
+    """joinPairing.js normaliseColumnName: trimmed, inner whitespace runs as one space, lower."""
+    return re.sub(r'\s+', ' ', str('' if name is None else name).strip()).lower()
+
+
+def _join_ids(v):
+    out = []
+    for raw in (v if isinstance(v, list) else ([] if v is None else [v])):
+        n = _js_number(raw)
+        if math.isfinite(n) and n == int(n) and n >= 0 and int(n) not in out:
+            out.append(int(n))
+    return out
+
+
+def join_pairing(a_ids, b_ids, name_of, pairing=None):
+    """joinPairing.js decidePairs: {b_id: a_id} and the conflicts. Overrides first (an A id, or
+    -1 for separate; a stale one falls back to the name), then same-normalised-name matches,
+    each A column taking at most one B partner."""
+    pair_of, taken, decided, conflicts = {}, set(), set(), []
+    overrides = pairing if isinstance(pairing, dict) else {}
+    for b in b_ids:
+        if str(b) not in overrides:
+            continue
+        want = _js_number(overrides[str(b)])
+        if want == -1:
+            decided.add(b)
+            continue
+        if want not in a_ids:
+            continue
+        want = int(want)
+        decided.add(b)
+        if want in taken:
+            conflicts.append({'bId': b, 'aId': want, 'why': 'taken'})
+            continue
+        pair_of[b] = want
+        taken.add(want)
+    for b in b_ids:
+        if b in decided:
+            continue
+        key = _join_norm_name(name_of(b))
+        if key == '':
+            continue
+        matches = [a for a in a_ids if _join_norm_name(name_of(a)) == key]
+        free = next((a for a in matches if a not in taken), None)
+        if free is not None:
+            pair_of[b] = free
+            taken.add(free)
+        elif matches:
+            conflicts.append({'bId': b, 'aId': matches[0], 'why': 'taken'})
+    return pair_of, conflicts
+
+
+def join_outputs(a_ids, b_ids, pair_of, name_of):
+    """joinPairing.js joinOutputs: joined_<A id> per A column, then joined_<B id> per unpaired
+    B column; labels are the (trimmed) names, with " (A)"/" (B)" on unpaired ones that read
+    alike and a number on any still alike."""
+    partner = {a: b for b, a in pair_of.items()}
+    outs = []
+    for a in a_ids:
+        outs.append({'key': f'joined_{a}', 'aId': a, 'bId': partner.get(a),
+                     'label': str(name_of(a)).strip(), 'side': 'A'})
+    for b in b_ids:
+        if b in pair_of:
+            continue
+        outs.append({'key': f'joined_{b}', 'aId': None, 'bId': b,
+                     'label': str(name_of(b)).strip(), 'side': 'B'})
+    counts = {}
+    for o in outs:
+        k = _join_norm_name(o['label'])
+        counts[k] = counts.get(k, 0) + 1
+    for o in outs:
+        paired = o['aId'] is not None and o['bId'] is not None
+        if not paired and counts[_join_norm_name(o['label'])] > 1:
+            o['label'] = f"{o['label']} ({o['side']})"
+    seen = {}
+    for o in outs:
+        k = _join_norm_name(o['label'])
+        seen[k] = seen.get(k, 0) + 1
+        if seen[k] > 1:
+            o['label'] = f"{o['label']} {seen[k]}"
+    return outs
+
+
+def join_time_kind(col_type):
+    """joinData.js timeKind: 'time', 'number' (number or bin), or None."""
+    if col_type == 'time':
+        return 'time'
+    if col_type in ('number', 'bin'):
+        return 'number'
+    return None
+
+
+def join_too_large_warning(rows, max_rows=MAX_JOIN_ROWS):
+    """joinData.js joinTooLargeWarning."""
+    if not rows > max_rows:
+        return None
+    return (f'Nothing was joined: A and B together have {rows:,} rows with a time, more than '
+            f'the limit of {max_rows:,}. Bin or filter one of them first.')
+
+
+def _join_shift(shift_b, kind):
+    s = _js_number(shift_b) if shift_b is not None else 0.0
+    if not math.isfinite(s) or s == 0:
+        return 0.0
+    # JS Math.round: halves go up (towards +infinity), unlike Python's round().
+    return float(math.floor(s * 3600000 + 0.5)) if kind == 'time' else s
+
+
+def _join_placed(times, shift):
+    idx, t = [], {}
+    for i, v in enumerate(times):
+        if _js_invalid(v):
+            continue
+        x = _js_number(v) + shift
+        if not math.isfinite(x):
+            continue
+        t[i] = x
+        idx.append(i)
+    idx.sort(key=lambda i: (t[i], i))
+    return idx, t, len(times) - len(idx)
+
+
+def join_data(time_a, time_b, kind, data_of, type_of, outputs, shift_b=0,
+              source_labels=('A', 'B'), max_rows=MAX_JOIN_ROWS):
+    """joinData.js joinData: every row of A and B on one time column. Returns a dict with
+    ok, error, time, source, columns, counts, rareShared."""
+    ia, ta, da = _join_placed(list(time_a), 0.0)
+    ib, tb, db = _join_placed(list(time_b), _join_shift(shift_b, kind))
+    rows = len(ia) + len(ib)
+    counts = {'rows': rows, 'fromA': len(ia), 'fromB': len(ib), 'droppedA': da, 'droppedB': db,
+              'sharedTimes': 0, 'sharedRows': 0}
+    too_large = join_too_large_warning(rows, max_rows)
+    if too_large:
+        return {'ok': False, 'error': too_large, 'counts': counts}
+
+    def cell(col_id, row):
+        data = data_of.get(col_id) or []
+        if row >= len(data):
+            return None
+        v = data[row]
+        missing = _is_missing_category(v) if type_of.get(col_id) == 'category' else _js_invalid(v)
+        return None if missing else v
+
+    time, source = [], []
+    columns = {o['key']: [] for o in outputs}
+    i = j = 0
+    while i < len(ia) or j < len(ib):
+        take_a = i < len(ia) and (j >= len(ib) or ta[ia[i]] <= tb[ib[j]])
+        if take_a:
+            row = ia[i]
+            i += 1
+            time.append(ta[row])
+            source.append(source_labels[0])
+            for o in outputs:
+                columns[o['key']].append(cell(o['aId'], row) if o['aId'] is not None else None)
+        else:
+            row = ib[j]
+            j += 1
+            time.append(tb[row])
+            source.append(source_labels[1])
+            for o in outputs:
+                columns[o['key']].append(cell(o['bId'], row) if o['bId'] is not None else None)
+
+    in_a, in_b = {}, {}
+    for r in ia:
+        in_a[ta[r]] = in_a.get(ta[r], 0) + 1
+    for r in ib:
+        in_b[tb[r]] = in_b.get(tb[r], 0) + 1
+    for t, n in in_b.items():
+        if t in in_a:
+            counts['sharedTimes'] += 1
+            counts['sharedRows'] += n + in_a[t]
+    rare = counts['fromA'] > 0 and counts['fromB'] > 0 and counts['sharedRows'] / rows < 0.1
+    return {'ok': rows > 0, 'error': None, 'time': time, 'source': source, 'columns': columns,
+            'counts': counts, 'rareShared': rare}
+
+
+def join_limit_probe(_unused, rows):
+    """Parity probe for the join row limit: allowed (1/0) and the warning ('' if none)."""
+    w = join_too_large_warning(int(rows))
+    return {'allowed': 0 if w else 1, 'warning': w or ''}
+
+
+def tp_joindata(args, cols, raw_data, _sv):
+    """Port of JoinData.svelte joindata. Pairs come from the node's baked `_resolvedPairs`
+    when the session has them (the app decides them by the names it SHOWS, which this runtime
+    cannot always reproduce), else from the column names with `pairing` overrides; the Source
+    labels likewise from `_sourceLabels`, else A and B. A refused join (mixed time kinds, a
+    column on both sides, too many rows) writes empty outputs, as the app clears them."""
+    def clear():
+        out = args.get('out') or {}
+        for k in out:
+            oid = _out_id(args, k)
+            if oid is not None and oid != -1 and oid in cols:
+                _set_col(raw_data, cols, oid, [])
+        return False
+
+    a_t, b_t = args.get('aTimeIN', -1), args.get('bTimeIN', -1)
+    if a_t is None or b_t is None or a_t == -1 or b_t == -1:
+        return False
+    col_a, col_b = cols.get(a_t), cols.get(b_t)
+    if col_a is None or col_b is None:
+        return clear()
+    kind_a, kind_b = join_time_kind(col_a.type), join_time_kind(col_b.type)
+    if kind_a is None or kind_b is None or kind_a != kind_b:
+        print(f'WARNING: Join Data: time A is {col_a.type} and time B is {col_b.type}; '
+              'both must be times or both numbers.', file=sys.stderr)
+        return clear()
+    a_ids, b_ids = _join_ids(args.get('aValuesIN')), _join_ids(args.get('bValuesIN'))
+    if any(a in b_ids for a in a_ids):
+        return clear()
+
+    def name_of(cid):
+        c = cols.get(cid)
+        return c.name if c is not None and c.name is not None else str(cid)
+
+    baked = args.get('_resolvedPairs')
+    if isinstance(baked, dict):
+        pair_of = {}
+        for b, a in baked.items():
+            bi, ai = int(_js_number(b)), int(_js_number(a))
+            if bi in b_ids and ai in a_ids:
+                pair_of[bi] = ai
+    else:
+        pair_of, _ = join_pairing(a_ids, b_ids, name_of, args.get('pairing'))
+    outputs = join_outputs(a_ids, b_ids, pair_of, name_of)
+    labels = args.get('_sourceLabels')
+    if not (isinstance(labels, list) and len(labels) == 2):
+        labels = ['A', 'B']
+
+    data_of, type_of = {}, {}
+    for cid in a_ids + b_ids:
+        c = cols.get(cid)
+        data_of[cid] = list(c.get_data()) if c is not None else []
+        type_of[cid] = c.type if c is not None else 'number'
+    res = join_data(col_a.get_data(), col_b.get_data(), kind_a, data_of, type_of, outputs,
+                    args.get('shiftB', 0), labels)
+    if res['error']:
+        print(f"WARNING: Join Data: {res['error']}", file=sys.stderr)
+        return clear()
+
+    t_id = _out_id(args, 'jointime')
+    _set_col(raw_data, cols, t_id, res['time'], type_='time' if kind_a == 'time' else 'number')
+    if t_id in cols and kind_a == 'time':
+        cols[t_id].time_format = None
+    for o in outputs:
+        oid = _out_id(args, o['key'])
+        src = cols.get(o['aId'] if o['aId'] is not None else o['bId'])
+        typ = src.type if src is not None else 'number'
+        _set_col(raw_data, cols, oid, res['columns'][o['key']], type_=typ)
+        if oid in cols and typ == 'time':
+            cols[oid].time_format = None
+    if args.get('sourceColumn'):
+        _set_col(raw_data, cols, _out_id(args, 'source'), res['source'], type_='category')
+    return res['ok']
+
+
 TABLE_PROCESS_MAP = {
     'describedata': tp_describedata,
     'normalitytest': tp_normalitytest,
@@ -8336,6 +8608,7 @@ TABLE_PROCESS_MAP = {
     'columnset': tp_columnset,
     'logisticregression': tp_logisticregression,
     'interpolate': tp_interpolate,
+    'joindata': tp_joindata,
     'averageprofile': tp_averageprofile,
     'circadianfunctionindex': tp_circadianfunctionindex,
     'rayleightest': tp_rayleightest,

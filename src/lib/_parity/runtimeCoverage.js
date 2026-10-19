@@ -107,6 +107,7 @@ export const R_IMPLEMENTED = [
 	'formulacolumn',
 	'groupcomparison',
 	'interpolate',
+	'joindata',
 	'logisticregression',
 	'longtowide',
 	'movinganalysis',
