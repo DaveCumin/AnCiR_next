@@ -78,7 +78,10 @@ describe('1. plot controls only render inside the edit recorder', () => {
 });
 
 describe('2. a control part moved to <body> names its anchor', () => {
-	const PORTAL = /document\.body\.(append|appendChild|prepend|insertBefore)\(/;
+	// Also a host chosen at run time that falls back to <body> (`closest('dialog') ??
+	// document.body`): the colour picker floats inside a modal dialog when it is in one.
+	const PORTAL =
+		/document\.body\.(append|appendChild|prepend|insertBefore)\(|\?\?\s*document\.body\b/;
 	// Moved to <body> but never part of a plot control.
 	const NOT_PLOT_CONTROLS = {
 		'lib/utils/downloadBlob.js': 'a temporary download link',

@@ -327,7 +327,7 @@
 		<ol>
 			<li>
 				Open the <strong>node palette</strong> (the <strong>+</strong> button, top-right) and, under
-				<strong>Plots</strong>, choose <strong>periodogram</strong>.
+				<strong>Plots</strong>, choose <strong>Periodogram</strong>.
 			</li>
 			<li>
 				Wire your <strong>time column</strong> into the <strong>x</strong> input and your
@@ -356,22 +356,22 @@
 				</ul>
 			</li>
 			<li>
-				Set the period range to test under <strong>Period range (h)</strong>:
+				Set the period range to test under <strong>X-axis</strong>:
 				<strong>Min</strong> and <strong>Max</strong> (e.g., 16–32 h for circadian analysis; widen
-				for ultradian/infradian) and the <strong>Step</strong> resolution (default 0.25 h). The
-				default method is <strong>Lomb-Scargle</strong>. Chi-squared and Enright fold the binned
+				for ultradian/infradian) and the <strong>Period step</strong> resolution (default 0.25 h).
+				The default method is <strong>Lomb-Scargle</strong>. Chi-squared and Enright fold the binned
 				data at a whole number of bins, so they can only test periods that are multiples of the bin
 				size: each fold appears once, plotted at the period it actually tests, and a step finer than
 				the bin size adds no new points.
 			</li>
 			<li>
 				For <strong>Chi-squared</strong> and <strong>Enright</strong>, set the
-				<strong>Bin Size</strong>. A new series starts at the median sampling interval of its x (one
-				sample per bin); type a value to set your own. A bin narrower than the sampling interval
-				leaves bins empty, which both methods treat as missing. For Chi-squared, also set the
-				significance level <strong>Alpha</strong> (default 0.05); a significance threshold line is then
-				drawn across the plot. The Lomb-Scargle and Enright methods do not draw a significance line, so
-				judge their peaks against a permutation threshold if you need a formal test.
+				<strong>Bin size (h)</strong>. A new series starts at the median sampling interval of its x
+				(one sample per bin); type a value to set your own. A bin narrower than the sampling
+				interval leaves bins empty, which both methods treat as missing. For Chi-squared, also set
+				the significance level <strong>Alpha</strong> (default 0.05); a significance threshold line is
+				then drawn across the plot. The Lomb-Scargle and Enright methods do not draw a significance line,
+				so judge their peaks against a permutation threshold if you need a formal test.
 			</li>
 			<li>
 				The dominant <strong>Peak Period</strong> and its <strong>Peak Power</strong>
@@ -387,16 +387,16 @@
 				<strong>Enright amplitude (A_p)</strong>. These are different quantities on different
 				scales, so when one plot carries series of different methods the title reads
 				<strong>Statistic (mixed methods)</strong>, and their heights are not comparable with each
-				other. Type a label under Y-Axis Controls to use your own; clear it to go back to the
-				default. A periodogram saved before this default existed keeps the title it was saved with.
+				other. Type a label under Y-axis to use your own; clear it to go back to the default. A
+				periodogram saved before this default existed keeps the title it was saved with.
 			</li>
 			<li>
-				Tick <strong>Log Scale</strong> (Y-Axis) to draw the power axis on a log scale, which keeps the
+				Tick <strong>Log scale</strong> (Y-axis) to draw the power axis on a log scale, which keeps the
 				baseline readable under a tall peak. It changes the display only: peaks, thresholds, p-values
 				and output ports are the same numbers. The threshold line and reference lines are drawn at their
 				values on the log axis; a value at or below zero has no place on it and is left out. The axis
 				starts just below the smallest value drawn (unless you set a minimum) and labels its ticks as
-				plain numbers (0.01, 1, 100). The FFT plot's Log Scale draws its magnitude axis the same way.
+				plain numbers (0.01, 1, 100). The FFT plot's Log scale draws its magnitude axis the same way.
 			</li>
 			<li>Hover over the plot to read off the exact period and power at any point.</li>
 		</ol>
@@ -499,7 +499,7 @@
 
 	<AnCiRBox
 		title="Surrogate Test node"
-		tip="Start with block and a block length near one cycle. If the result is borderline, try ar1 as well; a rhythm that survives both is a rhythm worth reporting."
+		tip="Start with Block bootstrap and a block length near one cycle. If the result is borderline, try AR(1) red noise as well; a rhythm that survives both is a rhythm worth reporting."
 	>
 		<p>
 			The <strong>Surrogate Test</strong> node (Analysis family) takes time in <code>xIN</code> and
@@ -508,14 +508,14 @@
 		</p>
 		<ul>
 			<li>
-				<strong>Block</strong> (default) — resample contiguous blocks of the record. Preserves
-				short-range autocorrelation up to the block length while destroying rhythm across blocks.
-				Set <strong>blockLengthHours</strong> near one cycle (default 24).
+				<strong>Block bootstrap</strong> (default) — resample contiguous blocks of the record.
+				Preserves short-range autocorrelation up to the block length while destroying rhythm across
+				blocks. Set <strong>Block length (h)</strong> near one cycle (default 24).
 			</li>
 			<li>
-				<strong>AR(1)</strong> — fit a first-order autoregressive model and simulate from it. The classic
-				"red noise" null: this asks directly whether your peak beats what autocorrelation alone would
-				produce.
+				<strong>AR(1) red noise</strong> — fit a first-order autoregressive model and simulate from it.
+				The classic "red noise" null: this asks directly whether your peak beats what autocorrelation
+				alone would produce.
 			</li>
 			<li>
 				<strong>Phase</strong> and <strong>AAFT</strong> (amplitude-adjusted Fourier transform)
@@ -527,16 +527,17 @@
 				null for other questions, such as coupling between two series, not for this one.
 			</li>
 			<li>
-				<strong>Shuffle</strong> — plain random reordering. Destroys autocorrelation along with the
-				rhythm, which makes the null far too easy to beat. Included for comparison and teaching;
+				<strong>Shuffle (not recommended)</strong> — plain random reordering. Destroys
+				autocorrelation along with the rhythm, which makes the null far too easy to beat. Included
+				for comparison and teaching;
 				<strong>not</strong> a defensible primary analysis for a dense record.
 			</li>
 		</ul>
 		<p>
-			Set <strong>nSurrogates</strong> (default 199) to control resolution — the smallest achievable
-			p-value is 1/(n+1), so 199 surrogates bottoms out at 0.005. Set <strong>seed</strong> for a
-			reproducible result. <strong>periodMin</strong> and <strong>periodMax</strong> (default 20–28 h)
-			bound the period range searched.
+			Set <strong>Surrogates</strong> (default 199) to control resolution — the smallest achievable
+			p-value is 1/(n+1), so 199 surrogates bottoms out at 0.005. Set <strong>Seed</strong> for a
+			reproducible result. <strong>Min period (h)</strong> and <strong>Max period (h)</strong> (default
+			20–28 h) bound the period range searched.
 		</p>
 		<p>
 			The statistic is the largest FFT amplitude in that band, so the record must be evenly sampled.

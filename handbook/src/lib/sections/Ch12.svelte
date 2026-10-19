@@ -107,11 +107,14 @@
 			</li>
 			<li>
 				Wire those acrophase columns into the <strong>Rayleigh test</strong> node (Analysis family).
-				Set <strong>unit</strong> to hours and the <strong>period</strong> to 24 h. It reports the
-				mean resultant length <strong>R</strong>, <strong>z</strong>, and the Rayleigh
+				Set <strong>Unit</strong> to <strong>Clock hours</strong> and the
+				<strong>Period (h)</strong>
+				to 24 h. It reports the mean resultant length <strong>R</strong>, <strong>z</strong>, and
+				the Rayleigh
 				<strong>p-value</strong>
-				per column (is there a preferred phase at all?), and — with <strong>Watson-Williams</strong>
-				enabled — an <strong>F</strong> and p-value for whether the groups share the same mean phase.
+				per column (is there a preferred phase at all?), and — with
+				<strong>Also run Watson-Williams test</strong>
+				ticked — an <strong>F</strong> and p-value for whether the groups share the same mean phase.
 			</li>
 			<li>
 				For a visual summary, wire the same acrophase columns into the <strong

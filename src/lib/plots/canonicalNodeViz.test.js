@@ -52,6 +52,72 @@ describe('canonicalNodeViz', () => {
 		expect(canonicalNodeViz(node).type).toBe('tableplot');
 	});
 
+	it('JoinData stacked (no time wired) with Source → boxplot of the first NUMERIC value column by Source', () => {
+		// Stack mode has no time, so the time-mode scatter cannot be drawn; the Source column
+		// is the group factor the stacked rows carry (v82.32), so the canonical picture is the
+		// first joined measurement by dataset. The first joined column is often an id (the
+		// shipped example stacks animal, amplitude, acrophase): a boxplot of an id column is
+		// empty, so the first NUMBER column is used. No sig bars: Join Data runs no test.
+		core.data = [
+			{ id: 31, name: 'animal', type: 'category' },
+			{ id: 32, name: 'amplitude', type: 'number' },
+			{ id: 34, name: 'acrophase', type: 'number' },
+			{ id: 33, name: 'source', type: 'category' }
+		];
+		const node = fitNode('JoinData', {
+			aTimeIN: -1,
+			aValuesIN: [2, 6, 8],
+			bTimeIN: -1,
+			bValuesIN: [4, 7, 9],
+			out: { joined_2: 31, joined_6: 32, joined_8: 34, source: 33 }
+		});
+		const spec = canonicalNodeViz(node);
+		expect(spec).toMatchObject({ type: 'boxplot', box: { x: 33, y: 32 }, showSigBars: false });
+		const pd = plotDataFromSpec(spec, { x: 0, y: 0 });
+		expect(pd.type).toBe('boxplot');
+		expect(pd.plot.data).toEqual([{ x: { refId: 33 }, y: { refId: 32 } }]);
+	});
+
+	it('JoinData stacked with no numeric value column → tableplot fallback', () => {
+		core.data = [
+			{ id: 31, name: 'animal', type: 'category' },
+			{ id: 33, name: 'source', type: 'category' }
+		];
+		const node = fitNode('JoinData', {
+			aValuesIN: [2],
+			bValuesIN: [4],
+			out: { joined_2: 31, source: 33 }
+		});
+		expect(canonicalNodeViz(node).type).toBe('tableplot');
+	});
+
+	it('JoinData stacked with the Source column switched off → tableplot fallback', () => {
+		core.data = [
+			{ id: 31, name: 'amplitude', type: 'number' },
+			{ id: 33, name: 'source', type: 'category' }
+		];
+		const node = fitNode('JoinData', {
+			aValuesIN: [2],
+			bValuesIN: [4],
+			sourceColumn: false,
+			// A Source output id left from before the box was unticked is not a factor to plot.
+			out: { joined_2: 31, source: 33 }
+		});
+		expect(canonicalNodeViz(node).type).toBe('tableplot');
+	});
+
+	it('JoinData in time mode keeps the scatter even when a Source column is on', () => {
+		const node = fitNode('JoinData', {
+			aTimeIN: 1,
+			aValuesIN: [2],
+			bTimeIN: 3,
+			bValuesIN: [4],
+			sourceColumn: true,
+			out: { jointime: 30, joined_2: 31, source: 33 }
+		});
+		expect(canonicalNodeViz(node).type).toBe('scatterplot');
+	});
+
 	it('GroupComparison → boxplot with sig bars', () => {
 		const node = fitNode('GroupComparison', { xIN: 11, yIN: [22], out: {} });
 		const spec = canonicalNodeViz(node);

@@ -82,3 +82,66 @@ for (const [w, h] of [
 		});
 	}
 }
+
+// A column whose preview rows are mostly blank shows where its type was read from: "Detected
+// from the first N rows (the preview rows are mostly blank)". The hint inherited the header
+// cell's nowrap, so it stretched its column to one long line and, with a few columns, ran past
+// the preview's edge, cut off at "Detected from the first 111 rows (the". It must wrap inside
+// the width its column already has (the type picker's), never widen it, and show all its text.
+function sparseCsv() {
+	const rows = ['time,activity,temperature,light,battery'];
+	for (let i = 0; i < 400; i++) {
+		const temp = i < 100 ? '' : (36 + (i % 7) * 0.1).toFixed(1);
+		rows.push([i * 0.5, (i * 37) % 100, temp, (i * 13) % 500, (100 - i / 10).toFixed(1)].join(','));
+	}
+	return Buffer.from(rows.join('\n'));
+}
+
+for (const [w, h] of [
+	[600, 900],
+	[1024, 768],
+	[1400, 900]
+]) {
+	test(`the sampled-rows type hint wraps inside its column at ${w}x${h}`, async ({ page }) => {
+		await page.setViewportSize({ width: w, height: h });
+		await openApp(page);
+		await page.locator('button.primary-card', { hasText: 'Import data' }).click();
+		const [chooser] = await Promise.all([
+			page.waitForEvent('filechooser'),
+			page.locator('button.dialog-button', { hasText: /Choose File|Change file/ }).click()
+		]);
+		await chooser.setFiles({ name: 'sparse.csv', mimeType: 'text/csv', buffer: sparseCsv() });
+		const hint = page.locator('[data-testid="import-sampled-temperature"]');
+		await expect(hint).toBeVisible({ timeout: 30000 });
+		await hint.scrollIntoViewIfNeeded();
+		const m = await hint.evaluate((el) => {
+			const cell = el.closest('th, td');
+			const select = cell.querySelector('select');
+			const wrap = el.closest('.preview-table-wrapper');
+			const r = el.getBoundingClientRect();
+			const wr = wrap.getBoundingClientRect();
+			return {
+				text: el.textContent.replace(/\s+/g, ' ').trim(),
+				overflow: el.scrollWidth - el.clientWidth,
+				hint: r.width,
+				select: select.getBoundingClientRect().width,
+				inside: r.left >= wr.left - 0.5 && r.right <= wr.right + 0.5,
+				// The column's width with the hint, and with it taken out of the layout.
+				cellWith: cell.getBoundingClientRect().width,
+				cellWithout: (() => {
+					el.style.display = 'none';
+					const width = cell.getBoundingClientRect().width;
+					el.style.display = '';
+					return width;
+				})()
+			};
+		});
+		expect(m.text).toMatch(
+			/^Detected from the first [\d,]+ rows \(the preview rows are mostly blank\)$/
+		);
+		expect(m.overflow).toBeLessThanOrEqual(0);
+		expect(m.hint).toBeLessThanOrEqual(m.select + 1);
+		expect(m.inside).toBe(true);
+		expect(m.cellWith).toBeLessThanOrEqual(m.cellWithout + 1);
+	});
+}

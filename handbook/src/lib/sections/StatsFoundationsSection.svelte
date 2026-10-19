@@ -43,7 +43,7 @@
 			<strong>kurtosis</strong>.
 		</p>
 		<p>
-			Pair it with a <strong>histogram</strong> and a <strong>boxplot</strong>
+			Pair it with a <strong>Histogram</strong> and a <strong>Boxplot</strong>
 			(Plots). The numbers tell you the centre and spread; the plots tell you whether those numbers mean
 			anything. A bimodal distribution has a mean, and the mean describes nobody.
 		</p>
@@ -109,7 +109,7 @@
 
 	<AnCiRBox title="Compare groups (stats)">
 		<p>
-			The <strong>Compare groups</strong> node returns a <strong>statistic</strong>
+			The <strong>Compare groups (stats)</strong> node returns a <strong>statistic</strong>
 			and a <strong>pvalue</strong> as metrics you can wire onward, with optional post-hoc tests. Methods:
 		</p>
 		<ul>
@@ -130,9 +130,9 @@
 		</ul>
 		<p>
 			For a categorical outcome &mdash; counts of rhythmic versus arrhythmic animals, say &mdash;
-			use <strong>Chi-squared test</strong> instead, with
-			<strong>independence</strong> (a contingency table) or
-			<strong>goodness</strong> (observed against expected proportions).
+			use the <strong>Categorical tests</strong> node instead, with
+			<strong>Independence</strong> (a contingency table) or
+			<strong>Goodness-of-fit</strong> (observed against expected proportions).
 		</p>
 	</AnCiRBox>
 
@@ -165,7 +165,7 @@
 			real effect vanishes silently.
 		</p>
 		<p>
-			So state the layout rather than assuming it. AnCiR&rsquo;s Chi-squared node has an <strong
+			So state the layout rather than assuming it. AnCiR&rsquo;s Categorical tests node has an <strong
 				>Input format</strong
 			>
 			control for exactly this. It defaults to independent groups, because in AnCiR a column is a data
@@ -217,8 +217,8 @@
 		</p>
 		<p>
 			A <strong>95% confidence interval</strong> is roughly the mean &plusmn; 2 SEM, and is the more
-			honest default because it is directly interpretable. The <strong>meansem</strong> plot draws mean
-			&plusmn; SEM; state in the caption which you have plotted. An unlabelled error bar is uninterpretable,
+			honest default because it is directly interpretable. The <strong>Mean ± SEM</strong> plot draws
+			mean &plusmn; SEM; state in the caption which you have plotted. An unlabelled error bar is uninterpretable,
 			and the difference between SD and SEM bars can be a factor of five.
 		</p>
 	</NoteBox>
@@ -233,8 +233,8 @@
 				<strong>pvalue</strong> and <strong>n</strong> for each variable pair.
 			</li>
 			<li>
-				<strong>pairsplot</strong> and <strong>correlationheatmap</strong> (Plots) show all pairs at once
-				&mdash; the fastest way to spot a relationship that is driven entirely by one outlier.
+				<strong>Pairs plot</strong> and <strong>Correlation heatmap</strong> (Plots) show all pairs at
+				once &mdash; the fastest way to spot a relationship that is driven entirely by one outlier.
 			</li>
 			<li>
 				<strong>Fit trend</strong> (Fitting) fits linear, polynomial, exponential or logarithmic

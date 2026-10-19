@@ -5,6 +5,7 @@
 // carries the live wired column ids (tpObj.args.xIN / .yIN / .out).
 import { core, appConsts } from '$lib/core/core.svelte.js';
 import { getColumnById } from '$lib/core/Column.svelte';
+import { joinMode, joinSourceOn } from '$lib/utils/joinPairing.js';
 
 export const RAW_COLOUR = '#234154'; // navy — input / raw
 export const OUT_COLOUR = '#BE796B'; // terracotta — output / fitted
@@ -78,19 +79,37 @@ function tpViz(tp) {
 		if (series.length) return { type: 'scatterplot', title: `${tp.name}: data + fit`, series };
 	}
 
-	// JoinData: every joined value column against the joined time, as points (A's and B's
-	// rows interleave, so a line would zig-zag between the two datasets).
+	// JoinData by time: every joined value column against the joined time, as points (A's and
+	// B's rows interleave, so a line would zig-zag between the two datasets).
+	// JoinData stacked (neither time wired, v82.32): there is no time to plot against, and the
+	// Source column is the group factor the stacked rows carry, so the picture is the first
+	// joined MEASUREMENT by dataset as a boxplot: the first number column, as the first joined
+	// column is often an id (the shipped example stacks animal, amplitude, acrophase) and a
+	// boxplot of one is empty. Only one: the value columns can be different quantities
+	// (temperature and activity), which one y axis cannot share. No sig bars, as Join Data runs
+	// no test. Source switched off, or nothing numeric, leaves no boxplot: the table.
 	if (tp.name === 'JoinData') {
+		const joined = Object.entries(out).filter(([k, id]) => k.startsWith('joined_') && isRef(id));
+		if (joinMode(tp.args) === 'stack') {
+			const value = joined.find(([, id]) => getColumnById(id)?.type === 'number')?.[1];
+			if (joinSourceOn(tp.args) && isRef(out.source) && isRef(value)) {
+				return {
+					type: 'boxplot',
+					title: `${tp.name}: by source`,
+					box: { x: out.source, y: value },
+					showSigBars: false
+				};
+			}
+			return tableFallback(tp, yINs);
+		}
 		const t = out.jointime;
-		const series = Object.entries(out)
-			.filter(([k, id]) => k.startsWith('joined_') && isRef(id))
-			.map(([, id], i) => ({
-				x: t,
-				y: id,
-				label: colName(id),
-				kind: 'points',
-				colour: i === 0 ? RAW_COLOUR : OUT_COLOUR
-			}));
+		const series = joined.map(([, id], i) => ({
+			x: t,
+			y: id,
+			label: colName(id),
+			kind: 'points',
+			colour: i === 0 ? RAW_COLOUR : OUT_COLOUR
+		}));
 		if (isRef(t) && series.length)
 			return { type: 'scatterplot', title: `${tp.name}: joined`, series };
 		return tableFallback(tp, yINs);

@@ -142,7 +142,7 @@
 		<ol>
 			<li>
 				Open the <strong>node palette</strong> (the <strong>+</strong> button, top-right) and, under
-				<strong>Plots</strong>, choose <strong>actogram</strong>.
+				<strong>Plots</strong>, choose <strong>Actogram</strong>.
 			</li>
 			<li>
 				Wire your <strong>time column</strong> into the plot's <strong>time</strong> input and your
@@ -155,7 +155,7 @@
 				row.
 			</li>
 			<li>
-				Set the <strong>Start Time</strong> using the date-and-time picker — the date and clock time at
+				Set the <strong>Start time</strong> using the date-and-time picker — the date and clock time at
 				which the first row begins.
 			</li>
 			<li>
@@ -165,8 +165,9 @@
 			</li>
 			<li>
 				<strong>Light/dark shading:</strong> add one or more shading <strong>bands</strong>
-				with the <strong>+</strong> button; each band takes a percentage of the period and a colour. For
-				a 12:12 LD cycle, add two bands at 50% each.
+				with the <strong>+</strong> button under <strong>Light bands</strong> in the Overlays tab; each
+				band takes a percentage of the period and a colour. For a 12:12 LD cycle, add two bands at 50%
+				each.
 			</li>
 			<li>
 				<strong>Onset/offset markers:</strong> enable to draw a marker at activity onset or offset
@@ -182,13 +183,14 @@
 			</li>
 			<li>
 				<strong>Marker rules:</strong> with several animals on one actogram, add a
-				<strong>rule</strong> under <strong>Marker rules</strong> at the top of the Data tab instead
-				of one block per series. A rule applies the same markers and line to every series (every
-				panel when faceted) and lists each series' fitted τ, φ, R², RMSE and marker count. Its
-				<strong>min and max day</strong> set which days are fitted on every series, and each series
-				can still untick its own days. φ is reported in hours after the row start, at the range's
-				first day unless you set a φ day. Changing a setting under one series (or dragging its line,
-				or correcting one of its onsets) <strong>detaches</strong> that series with its own copy;
+				<strong>rule</strong> under <strong>Marker rules</strong> in the Overlays tab instead of one
+				block per series. A rule applies the same markers and line to every series (every panel when
+				faceted) and lists each series' fitted τ, φ, R², RMSE and marker count. Its
+				<strong>Min day</strong> and <strong>Max day</strong> set which days are fitted on every
+				series, and each series can still untick its own days. φ is reported in hours after the row
+				start, at the range's first day unless you set a φ day. Changing a setting under one series
+				(or dragging its line, or correcting one of its onsets) <strong>detaches</strong> that
+				series with its own copy;
 				<strong>Reattach to rule</strong> undoes that, and <strong>Make rule</strong> on a series' own
 				block turns it into a rule for all series.
 			</li>

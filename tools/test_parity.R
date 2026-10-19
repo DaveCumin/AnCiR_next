@@ -204,8 +204,9 @@ run_tp_fixture <- function(fx, rec) {
     next_id <- next_id + 1
     # A key naming an input (`joined_@temp`) is that input's per-input out key.
     k_out <- k
-    for (r in regmatches(k, gregexpr("@\\w+", k))[[1]])
-      k_out <- sub(r, as.character(ref_to_id[[substring(r, 2)]]), k_out, fixed = TRUE)
+    # `@{ref}` delimits a ref followed by more key text (`@{y}_period`).
+    for (r in regmatches(k, gregexpr("@\\{\\w+\\}|@\\w+", k))[[1]])
+      k_out <- sub(r, as.character(ref_to_id[[gsub("[@{}]", "", r)]]), k_out, fixed = TRUE)
     args$out[[k_out]] <- static_id
     for (yid in y_ids) {
       args$out[[paste0(k, "_", yid)]] <- dyn_id

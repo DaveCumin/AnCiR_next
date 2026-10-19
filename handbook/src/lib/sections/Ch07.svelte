@@ -85,7 +85,7 @@
 		<strong>Phase reference</strong> to <strong>Clock time of day</strong> to report hours after
 		local midnight in the display timezone instead. The Cosinor node's <code>acrophase</code> port,
 		its panel, its stats table and Fit waveform model give the same number, and the confidence
-		interval is centred on it; Moving analysis reports each window's peak on the same frame (folded
+		interval is centred on it; Moving Analysis reports each window's peak on the same frame (folded
 		onto the fixed period, or onto 24 h for a free period). With more than one harmonic the
 		<code>acrophase</code> port is the time of the fitted curve's overall peak (the orthophase) and
 		<code>acrophase_h1</code> is harmonic 1's. Whichever convention you report,
@@ -152,9 +152,10 @@
 			(one per subject) into a <strong>Cosinor</strong> node fits each subject
 			<em>independently</em>
 			and returns a per-subject results table. To obtain a group-level estimate, export that table (via
-			a <strong>tableplot</strong> or <strong>Save session</strong>) and vector-average the
-			individual (β, γ) estimates in R (<em>cosinor2</em>) or Python, or plot the individual
-			acrophases on the <strong>Circular phase plot</strong> and test them with the
+			a <strong>Table</strong> or <strong>Save session</strong>) and vector-average the individual
+			(β, γ) estimates in R (<em>cosinor2</em>) or Python, or plot the individual acrophases on the
+			<strong>Circular phase plot</strong>
+			and test them with the
 			<strong>Rayleigh test</strong> node (Chapter 12).
 		</p>
 	</NoteBox>
@@ -173,10 +174,10 @@
 				Choose the mode:
 				<ul>
 					<li>
-						<strong>Use Fixed Period (Halberg cosinor):</strong> enter the
+						<strong>Use fixed period</strong> (Halberg cosinor): enter the
 						<strong>Period (h)</strong>
-						(use 24 h, or your estimated τ from the periodogram) and the number of
-						<strong>harmonics</strong>
+						(use 24 h, or your estimated τ from the periodogram) and the
+						<strong>N harmonics</strong>
 						(<a class="gloss" href="#gloss-harmonic">harmonics</a>; start with 1). Choose the
 						<strong>CI level</strong>
 						(the dropdown offers 95% / 99%). This gives MESOR, amplitude, acrophase ± CI, and an F-test
@@ -185,14 +186,14 @@
 						assume <strong>exchangeable</strong> observations (under no rhythm, any reordering of
 						the values is equally likely), and autocorrelated recordings break that: on red noise
 						with no rhythm, shuffling single values gives p &lt; 0.05 about a third of the time, no
-						better than the F-test. The Cosinor, Fit Waveform Model, Rectangular Wave and
-						Double-Logistic nodes can permute one-period blocks instead (Permute: one-period
-						blocks), which keeps the autocorrelation (in simulation its false-positive rate stayed
-						at or below about 5% on the same red noise); otherwise test the rhythm with the
+						better than the F-test. The Cosinor, Fit waveform model, Rectangular Wave and Double
+						Logistic nodes can permute one-period blocks instead (Permute: one-period blocks), which
+						keeps the autocorrelation (in simulation its false-positive rate stayed at or below
+						about 5% on the same red noise); otherwise test the rhythm with the
 						<strong>Surrogate Test</strong> node using block or AR(1) surrogates.
 					</li>
 					<li>
-						<strong>Free period:</strong> leave Fixed Period unticked and set
+						<strong>Free period:</strong> leave <strong>Use fixed period</strong> unticked and set
 						<strong>N cosine curves</strong>
 						= 1 to fit a single sinusoid with optimised period and phase. N &gt; 1 fits multiple overlapping
 						cosines. <strong>Min period</strong> and <strong>Max period</strong> (1 to 30 h for a new
@@ -209,7 +210,7 @@
 				days of hourly data). The largest x is included when it falls on the grid; otherwise the
 				sequence stops at the last step before it. Choose <strong>Column</strong> instead to evaluate
 				the curve at the values of a column you already have (a Sequence Column, say). The same option
-				is on the Rectangular wave, Double logistic, Fit waveform model and Fit trend nodes.
+				is on the Rectangular Wave, Double Logistic, Fit waveform model and Fit trend nodes.
 			</li>
 			<li>
 				The node outputs fitted columns plus a results table; read off <strong>MESOR</strong>,
@@ -217,7 +218,7 @@
 				<strong>p-value</strong>.
 			</li>
 			<li>
-				<strong>Overlay the fit:</strong> add a <strong>scatterplot</strong> from the palette, wire the
+				<strong>Overlay the fit:</strong> add a <strong>Scatterplot</strong> from the palette, wire the
 				raw data as one series (points) and the fitted columns as a second series (line).
 			</li>
 			<li>
@@ -246,7 +247,7 @@
 	<AnCiRBox title="Other fitting models in AnCiR">
 		<ul>
 			<li>
-				<strong>Harmonic cosinor</strong> — set <strong>harmonics</strong> &gt; 1 on the
+				<strong>Harmonic cosinor</strong> — set <strong>N harmonics</strong> &gt; 1 on the
 				<strong>Cosinor</strong> node to bend the sinusoid toward the true shape while keeping cosinor's
 				interpretable parameters.
 			</li>
@@ -257,13 +258,13 @@
 				parameter controls how square the corners are.
 			</li>
 			<li>
-				<strong>Double-Logistic</strong> (Fitting) — two back-to-back sigmoids modelling a smooth
+				<strong>Double Logistic</strong> (Fitting) — two back-to-back sigmoids modelling a smooth
 				rise to a plateau and a return, giving <em>separate</em> transition times and steepnesses for
 				the onset and the offset. Standard in land-surface phenology, and a good fit when circadian on/off
 				transitions are gradual and possibly asymmetric.
 			</li>
 			<li>
-				<strong>FitFunction</strong> (Fitting) — the umbrella node: switch between cosinor, rectangular-wave
+				<strong>Fit waveform model</strong> (Fitting) — the umbrella node: switch between cosinor, rectangular-wave
 				and double-logistic on the same series without rewiring, with a common set of controls.
 			</li>
 		</ul>

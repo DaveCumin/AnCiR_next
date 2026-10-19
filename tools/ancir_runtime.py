@@ -5104,9 +5104,9 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
     analysis = args.get('analysis', 'periodogram')
     x_col = cols[x_in]
     t = _t_for_col(x_col)
-    shared_x = None
     any_valid = False
     stats_by_y = {}
+    per_key_by_y = []
     for y_id in y_ins:
         if y_id not in cols:
             continue
@@ -5149,18 +5149,8 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
             per_key = {'lag': xs, 'correlation': ys}
         else:
             per_key = None
-        # RhythmicityAnalysis.svelte writes EVERY wired output: one column per (y, key), and
-        # the shared primary pair (rhythmicityx from the first y with output, rhythmicityy_<y>;
-        # getPrimaryKeys). The ports used to write one family or the other on an
-        # args.hideInputs that the app never saves (it is a component prop), so the primary
-        # pair was empty in every exported session.
         if per_key is not None:
-            for k, v in per_key.items():
-                _set_col(raw_data, cols, _out_id(args, f'{y_id}_{k}'), v, type_='number')
-            if shared_x is None and len(xs) > 0:
-                shared_x = xs
-                _set_col(raw_data, cols, _out_id(args, 'rhythmicityx'), xs, type_='number')
-            _set_col(raw_data, cols, _out_id(args, f'rhythmicityy_{y_id}'), ys, type_='number')
+            per_key_by_y.append((y_id, per_key))
         # The scalar stats (the `stat_<key>` metric ports): the peak by the app's rules.
         st = {}
         if analysis == 'periodogram':
@@ -5182,6 +5172,36 @@ def tp_rhythmicityanalysis(args, cols, raw_data, _sv):
                 st = {'peak_lag': lag, 'peak_correlation': r_}
         stats_by_y[y_id] = st
         any_valid = True
+    # The node's preProcesses (RhythmicityAnalysis.svelte, after every y is analysed): each
+    # column process in order, on EVERY output array of every y (the x arrays such as
+    # period, frequency and lag included), before anything is written. The stats above are
+    # taken from the unprocessed arrays, as in the app. The app skips a process it cannot
+    # find; the runtime's own lookup decides here (strict by default).
+    for pp in args.get('preProcesses') or []:
+        name = (pp or {}).get('processName')
+        if not name:
+            continue
+        for _y, per_key in per_key_by_y:
+            for k in list(per_key):
+                per_key[k] = list(run_column_process(name.lower().replace(' ', ''),
+                                                     per_key[k],
+                                                     pp.get('processArgs') or {}, cols))
+    # RhythmicityAnalysis.svelte writes EVERY wired output: one column per (y, key), and
+    # the shared primary pair (rhythmicityx from the first y with output, rhythmicityy_<y>;
+    # getPrimaryKeys). The ports used to write one family or the other on an
+    # args.hideInputs that the app never saves (it is a component prop), so the primary
+    # pair was empty in every exported session.
+    px_key, py_key = {'periodogram': ('period', 'power'), 'fft': ('period', 'magnitude'),
+                      'correlogram': ('lag', 'correlation')}.get(analysis, (None, None))
+    shared_x = None
+    for y_id, per_key in per_key_by_y:
+        for k, v in per_key.items():
+            _set_col(raw_data, cols, _out_id(args, f'{y_id}_{k}'), v, type_='number')
+        xs, ys = per_key.get(px_key) or [], per_key.get(py_key) or []
+        if shared_x is None and len(xs) > 0:
+            shared_x = xs
+            _set_col(raw_data, cols, _out_id(args, 'rhythmicityx'), xs, type_='number')
+        _set_col(raw_data, cols, _out_id(args, f'rhythmicityy_{y_id}'), ys, type_='number')
     if any_valid:
         keys = {'periodogram': ['peak_period', 'peak_power'] +
                 (['peak_pvalue'] if args.get('pgMethod') == 'Chi-squared' else []),
@@ -7981,7 +8001,9 @@ def tp_logisticregression(args, cols, raw_data, _sv):
     names = [cols[x].name or str(x) for x in x_ins]
     res = logistic_regression(y, predictors, names)
     if not res or not res.get('coef'):
-        return False
+        # Too few complete rows: the app warns and writes nothing, and the node stays valid
+        # (LogisticRegression.svelte returns [result, true]); this port used to return False.
+        return True
     # The kernel returns PARALLEL ARRAYS (term/coef/se/...), not a list of term objects.
     coef, se = res['coef'], res['se']
     # Wald CI on the ODDS RATIO, matching logistic.js:164 — exp(coef +/- 1.96*se), and NaN
@@ -7991,7 +8013,7 @@ def tp_logisticregression(args, cols, raw_data, _sv):
               for c, s in zip(coef, se)]
     ci_high = [math.exp(c + z975 * s) if _isfinite(s) else float('nan')
                for c, s in zip(coef, se)]
-    wrote = _result_rows(raw_data, cols, args, {
+    _result_rows(raw_data, cols, args, {
         'term': res['term'], 'coef': coef, 'se': se, 'z': res['z'],
         'pvalue': res['pvalue'], 'oddsRatio': res['oddsRatio'],
         'ciLow': ci_low, 'ciHigh': ci_high})
@@ -8001,8 +8023,8 @@ def tp_logisticregression(args, cols, raw_data, _sv):
         out_id = _out_id(args, key)
         if out_id != -1 and res.get(key) is not None:
             _set_col(raw_data, cols, out_id, res[key], type_='number')
-            wrote = True
-    return wrote
+    # A fitted model is a valid node whether or not any output is wired, as in the app.
+    return True
 
 
 def _interp_known_points(x_data, y_data):
@@ -9784,67 +9806,64 @@ def plot_boxplot(plot, columns_index, ax):
         _legend_with_overlays(ax, ov['legend'])
 
 
-def plot_actogram(plot, columns_index, ax):
-    """Double-plotted actogram: each row shows two consecutive periods of
-    activity. Bars use mean-zeroed values normalised to row height."""
+def plot_actogram(plot, columns_index, ax, zone=None):
+    """Double-plotted actogram drawn from the SAME rows as the plot-data CSV
+    (actogram_download_data), so the PNG folds where the app does: every series at the
+    plot's one startTime (the user's chosen `startTimeIN`, else midnight in the display
+    zone before the earliest sample). Row r shows periods r .. r + doublePlot - 1; each bar
+    spans its bin and rises by its value over the series' largest value. `zone` defaults to
+    the session's display zone (DISPLAY_TIMEZONE)."""
     p = plot.get('plot', {})
-    period_hrs = float(p.get('periodHrs', 24))
-    double = int(p.get('doublePlot', 2))
-    for series in p.get('data', []):
-        x_col = _resolve_plot_col(series.get('x'), columns_index)
-        y_col = _resolve_plot_col(series.get('y'), columns_index)
-        if x_col is None or y_col is None:
+    period_hrs = float(p.get('periodHrs', 24) or 24)
+    double = max(1, int(p.get('doublePlot', 2) or 1))
+    _, rows = actogram_download_data(plot, columns_index,
+                                     DISPLAY_TIMEZONE if zone is None else zone)
+    if not rows:
+        return
+    n_rows = max(r[1] for r in rows)
+    series_data = p.get('data', [])
+    ymax = {}
+    for d, _per, _xs, _xe, v in rows:
+        if _finite(v):
+            ymax[d] = max(ymax.get(d, 0.0), float(v))
+    # One bar call for every bar (a long record has tens of thousands).
+    xs, hs, ws, bs, cs = [], [], [], [], []
+    for d, per, x_start, x_end, v in rows:
+        if not _finite(v):
             continue
-        # X is time → hours since start; bin into periods.
-        t = (x_col.hours_since_start if x_col.type == 'time'
-             else x_col.get_data())
-        y = y_col.get_data()
-        ta = np.array([np.nan if v is None else v for v in t], dtype=float)
-        ya = np.array([np.nan if v is None else v for v in y], dtype=float)
-        finite = np.isfinite(ta) & np.isfinite(ya)
-        ta, ya = ta[finite], ya[finite]
-        if ta.size == 0:
-            continue
-        n_days = int(math.ceil((ta.max() - ta.min()) / period_hrs))
-        if n_days <= 0:
-            n_days = 1
-        ymax = float(ya.max()) if ya.size else 1.0
-        if ymax == 0:
-            ymax = 1.0
-        colour = series.get('colour') or series.get('color') or '#234154'
-        # Plot each day as a horizontal trace; double-plot tiles the next
-        # period to the right of the current one.
-        for d in range(n_days):
-            row_y = n_days - 1 - d  # day 0 at top
-            for tile in range(double):
-                d_eff = d + tile
-                lo = d_eff * period_hrs + ta.min()
-                hi = lo + period_hrs
-                mask = (ta >= lo) & (ta < hi)
-                tt = ta[mask] - lo + tile * period_hrs
-                yy = ya[mask]
-                # vertical bars from baseline (row_y) up by yy/ymax
-                if tt.size:
-                    ax.vlines(tt, row_y, row_y + yy / ymax * 0.9,
-                              colors=colour, linewidth=0.5)
-        ax.set_xlim(0, period_hrs * double)
-        ax.set_ylim(-0.5, n_days - 0.5)
-        ax.set_xlabel((p.get('xAxis') or {}).get('label', 'Hours'))
-        ax.set_ylabel('Day')
-        ax.set_yticks(range(n_days))
-        ax.set_yticklabels([str(n_days - i) for i in range(n_days)])
-        ax.set_title(plot.get('name', ''))
-        # Light bands
-        for band in ((p.get('lightBands') or {}).get('bands', [])):
-            start = float(band.get('start', 0))
-            end = float(band.get('end', 0))
-            colour_b = band.get('colour') or band.get('color') or '#fff8a0'
-            alpha = float(band.get('alpha', 0.3))
-            ax.axvspan(start, end, color=colour_b, alpha=alpha, zorder=0)
-            if double > 1:
-                ax.axvspan(start + period_hrs, end + period_hrs,
-                           color=colour_b, alpha=alpha, zorder=0)
-        break  # actograms typically one Y series
+        scale = ymax.get(d) or 1.0
+        sd = series_data[d] if d < len(series_data) else {}
+        colour = sd.get('colour') or sd.get('color') or '#234154'
+        x0 = x_start - (per - 1) * period_hrs
+        # Period `per` sits in row per - 1 at tile 0, row per - 2 at tile 1, and so on.
+        for tile in range(double):
+            row = per - 1 - tile
+            if row < 0:
+                break
+            xs.append(x0 + tile * period_hrs)
+            hs.append(max(0.0, float(v)) / scale * 0.9)
+            ws.append(x_end - x_start)
+            bs.append(n_rows - 1 - row)  # row 1 at the top
+            cs.append(colour)
+    if xs:
+        ax.bar(xs, hs, width=ws, bottom=bs, align='edge', color=cs, linewidth=0)
+    ax.set_xlim(0, period_hrs * double)
+    ax.set_ylim(-0.5, n_rows - 0.5 + 0.9)
+    ax.set_xlabel((p.get('xAxis') or {}).get('label', 'Hours'))
+    ax.set_ylabel('Day')
+    ax.set_yticks(range(n_rows))
+    ax.set_yticklabels([str(n_rows - i) for i in range(n_rows)])
+    ax.set_title(plot.get('name', ''))
+    # Light bands
+    for band in ((p.get('lightBands') or {}).get('bands', [])):
+        start = float(band.get('start', 0))
+        end = float(band.get('end', 0))
+        colour_b = band.get('colour') or band.get('color') or '#fff8a0'
+        alpha = float(band.get('alpha', 0.3))
+        ax.axvspan(start, end, color=colour_b, alpha=alpha, zorder=0)
+        if double > 1:
+            ax.axvspan(start + period_hrs, end + period_hrs,
+                       color=colour_b, alpha=alpha, zorder=0)
 
 
 PLOT_TYPE_DISPATCH = {
@@ -10177,8 +10196,9 @@ def actogram_bins_by_period(frame, period_hrs, bin_width=None):
 def actogram_download_data(plot, columns_index, zone='utc'):
     """Mirror Actogramclass.getDownloadData (Actogram.svelte): one tidy row per bar, rows
     (periods) numbered from 1. Every series is folded at the plot's ONE startTime: the
-    earliest valid sample over ALL series, snapped to its midnight in the display `zone`
-    (the session's appState.displayTimezone), exactly as the app draws it."""
+    user's chosen start (`startTimeIN`) when the plot carries one, else the earliest valid
+    sample over ALL series, snapped to its midnight in the display `zone` (the session's
+    appState.displayTimezone), exactly as the app draws it (actogram_plot_start_time)."""
     p = plot.get('plot', {})
     period_hrs = float(p.get('periodHrs', 24) or 24)
     headers = ['DataSeries', 'Period', 'BinStart (hrs)', 'BinEnd (hrs)', 'Value']
@@ -10189,7 +10209,7 @@ def actogram_download_data(plot, columns_index, zone='utc'):
         resolved.append(None if x_col is None or y_col is None else (x_col, {
             'xType': x_col.type, 'x': x_col.get_data() or [], 'y': y_col.get_data() or [],
             'rawBinStart0': x_col.raw_first, 'originTime_ms': x_col.eff_origin_time_ms}))
-    start = actogram_start_time([r[1] for r in resolved if r is not None], zone)
+    start = actogram_plot_start_time(p, [r[1] for r in resolved if r is not None], zone)
     rows = []
     for d, r in enumerate(resolved):
         if r is None:
@@ -11824,6 +11844,18 @@ def actogram_start_time(series_list, zone='utc'):
     return float(round(midnight.timestamp() * 1000))
 
 
+def actogram_plot_start_time(inner, series_list, zone='utc'):
+    """The actogram's startTime as the app reads it: `startTimeIN ?? autoStartTime`
+    (Actogram.svelte). startTimeIN is the user's chosen first-row start (epoch ms, saved on
+    the plot since v82.23 and only when chosen); fromJSON keeps it only when it is a finite
+    number. Otherwise the automatic start, actogram_start_time."""
+    chosen = (inner or {}).get('startTimeIN')
+    if isinstance(chosen, (int, float)) and not isinstance(chosen, bool) \
+            and math.isfinite(chosen):
+        return float(chosen)
+    return actogram_start_time(series_list, zone)
+
+
 def actogram_hours_since_start(x, x_type):
     """Column.hoursSinceStart: minus the smallest valid value (and / 3.6e6 for time),
     invalid entries kept as None."""
@@ -12166,7 +12198,7 @@ def actogram_plot_rule_outputs(inner, series_data, zone='utc'):
     time column, hours otherwise) and y the values."""
     # Actogram fromJSON: `json.periodHrs ?? 24`.
     P = inner.get('periodHrs') if inner.get('periodHrs') is not None else 24
-    start = actogram_start_time(series_data, zone)
+    start = actogram_plot_start_time(inner, series_data, zone)
     frames = [actogram_series_frame(s.get('x') or [], s.get('y') or [], s.get('xType'), start, P,
                                     s.get('rawBinStart0'), s.get('originTime_ms'))
               for s in series_data]

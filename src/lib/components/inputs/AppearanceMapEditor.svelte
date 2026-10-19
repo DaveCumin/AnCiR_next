@@ -25,6 +25,7 @@
 		setEditedAppearance,
 		releaseAppearance
 	} from '$lib/plots/appearanceIdentity.js';
+	import { recordAppearanceEdit } from '$lib/plots/appearanceEdits.js';
 
 	const rows = $derived(
 		appearanceRows(core.seriesAppearance, (id) => getColumnById(id)?.name ?? '')
@@ -35,8 +36,21 @@
 		return row.colour ?? mappedColour(row.columnId) ?? '#000000';
 	}
 
+	// Every edit is one undo step and an unsaved change (plots/appearanceEdits.js). A drag in
+	// the colour picker writes many times a second; the key makes a quick run on one row's
+	// colour a single step.
 	function setColour(row, hex) {
-		setEditedAppearance(row.columnId, { colour: { hex } });
+		recordAppearanceEdit(() => setEditedAppearance(row.columnId, { colour: { hex } }), {
+			coalesceKey: `appearance-colour:${row.columnId}`
+		});
+	}
+
+	function setField(row, patch) {
+		recordAppearanceEdit(() => setEditedAppearance(row.columnId, patch));
+	}
+
+	function reset(row) {
+		recordAppearanceEdit(() => releaseAppearance(row.columnId));
 	}
 </script>
 
@@ -66,18 +80,18 @@
 						value={row.shape}
 						options={POINT_SHAPES}
 						optionsDisplay={POINT_SHAPE_LABELS}
-						onChange={(shape) => setEditedAppearance(row.columnId, { shape })}
+						onChange={(shape) => setField(row, { shape })}
 					/>
 					<AttributeSelect
 						value={row.dash}
 						options={DASH_ORDER}
 						optionsDisplay={DASH_LABELS}
-						onChange={(dash) => setEditedAppearance(row.columnId, { dash })}
+						onChange={(dash) => setField(row, { dash })}
 					/>
 					<button
 						class="reset"
 						title={row.edited ? 'Return this column to automatic' : 'Re-assign automatically'}
-						onclick={() => releaseAppearance(row.columnId)}>Reset</button
+						onclick={() => reset(row)}>Reset</button
 					>
 					{#if row.edited}<span class="fixed" title="Fixed by you">•</span>{/if}
 				</div>

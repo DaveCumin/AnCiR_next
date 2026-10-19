@@ -1,4 +1,3 @@
-<!-- TODO: colourpicker alpha initial value should be 100 but is 0 -->
 <script module>
 	import NumberWithUnits from '$lib/components/inputs/NumberWithUnits.svelte';
 
@@ -22,7 +21,11 @@
 	import { appState } from '$lib/core/core.svelte';
 	import Icon from '$lib/icons/Icon.svelte';
 	import { markPopup } from '$lib/components/reusables/editScopePopup.js';
-	let { value = $bindable() } = $props();
+	// `value` is bindable for the controls that own their colour outright (bind:value). A
+	// control whose colour is derived (Settings' appearance map draws each row from the session
+	// map) passes `onChange` instead: it is called with every colour the USER chooses, and the
+	// owner writes it back (and records it). Mounting and re-drawing are not choices.
+	let { value = $bindable(), onChange = undefined } = $props();
 	// Prefix for the ids that tie each slider and the hex box to its <label>.
 	const uid = $props.id();
 
@@ -135,7 +138,10 @@
 			h: Math.round(h * 360),
 			s: Math.round(s * 100),
 			v: Math.round(v * 100),
-			a: Math.round(a)
+			// Alpha in percent, the scale of the alpha slider and of hsvToRgb (a / 100). It was
+			// Math.round(a) on the 0..1 scale: the slider showed 1, and the first HSV slider move
+			// wrote an 8-digit hex at 1% opacity.
+			a: Math.round(a * 100)
 		};
 	}
 
@@ -195,8 +201,15 @@
 			});
 	}
 
+	/** The user chose `hex`: show it, and tell an owner that is listening. */
+	function choose(hex) {
+		if (hex === value) return;
+		value = hex;
+		onChange?.(hex);
+	}
+
 	function drawPicker() {
-		value = hexInput;
+		choose(hexInput);
 		const ctx = canvas?.getContext('2d');
 		if (!ctx) return;
 		const width = canvas.width;
@@ -245,9 +258,15 @@
 	//so can move wherever
 	$effect(() => {
 		if (show) {
-			if (container.parentNode.nodeName != 'BODY') {
+			// Float it where it can be seen: on <body>, or, when the swatch is inside a modal
+			// dialog (Settings), inside that dialog. A modal <dialog> sits in the browser's top
+			// layer, above everything on <body>, so a window floated to <body> opened BEHIND it
+			// and could not be used. The window is position: fixed, so either host places it at
+			// the same viewport point.
+			const host = swatchEl?.closest('dialog') ?? document.body;
+			if (container.parentNode !== host) {
 				// don't re-float it each update
-				document.body.append(container); //make it 'floating'
+				host.append(container); //make it 'floating'
 				// Still part of the control it opened from (its swatch), for an edit recorder
 				// listening there (plots/plotEditScope.js): a drag here is that control's edit.
 				markPopup(container, swatchEl);
@@ -312,7 +331,7 @@
 
 <!-- Pop-up Color Picker -->
 {#if show}
-	<div bind:this={container} style="position:absolute; top:0; left:0; z-index:1000">
+	<div bind:this={container} style="position:fixed; top:0; left:0; z-index:1000">
 		<section
 			class="colour-picker"
 			style="left: {pos.x}px;
@@ -345,7 +364,7 @@
 								aria-label="Restore the previous colour"
 								style="background-color: {initialColor}; width: 24px; height: 24px; border: 1px solid var(--color-lightness-80); position: relative; cursor: pointer;"
 								onclick={() => {
-									value = initialColor;
+									choose(initialColor);
 									hexInput = value;
 								}}
 							>
@@ -440,7 +459,7 @@
 							hexInput = randomCol;
 							updateFromHex(randomCol);
 						}}
-						style="padding: 4px 8px; background-color: #6b7280; color: white; border-radius: var(--radius-sm); border: none; cursor: pointer;"
+						style="margin: 8px 0; padding: 4px 8px; background-color: #6b7280; color: white; border-radius: var(--radius-sm); border: none; cursor: pointer;"
 					>
 						Pick random colour
 					</button>

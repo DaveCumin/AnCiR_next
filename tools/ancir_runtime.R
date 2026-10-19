@@ -2273,7 +2273,9 @@ logistic_regression <- function(y, predictor_cols, names = NULL) {
     if (!all(is.finite(xr))) next
     rows[[length(rows) + 1]] <- xr; ys <- c(ys, yi); kept <- c(kept, i)
   }
-  if (length(rows) < 2) return(NULL)
+  # logistic.js: more complete rows than terms (n >= k + 1, k = predictors + 1), else no fit.
+  # This port used to need only 2 rows, so glm "fitted" a saturated model the app refuses.
+  if (length(rows) < length(predictor_cols) + 2) return(NULL)
   df <- as.data.frame(do.call(rbind, rows))
   colnames(df) <- paste0("v", seq_along(predictor_cols))
   df$.y <- ys
@@ -2600,13 +2602,15 @@ tp_logisticregression <- function(args, env) {
     if (is.null(nm)) as.character(i) else nm
   }, character(1))
   res <- logistic_regression(y, preds, nms)
-  if (is.null(res) || !length(res$coef)) return(FALSE)
+  # Too few complete rows: the app warns and writes nothing, and the node stays valid
+  # (LogisticRegression.svelte returns [result, true]); this port used to return FALSE.
+  if (is.null(res) || !length(res$coef)) return(TRUE)
   # Wald CI on the ODDS RATIO, matching logistic.js:164 — exp(coef +/- 1.96*se), and NA
   # rather than a bogus interval when the standard error is not finite.
   z975 <- 1.959963984540054
   ci_low <- ifelse(is.finite(res$se), exp(res$coef - z975 * res$se), NA_real_)
   ci_high <- ifelse(is.finite(res$se), exp(res$coef + z975 * res$se), NA_real_)
-  wrote <- .write_result_rows(args, env, list(
+  .write_result_rows(args, env, list(
     term = res$term, coef = res$coef, se = res$se, z = res$z,
     pvalue = res$pvalue, oddsRatio = res$oddsRatio, ciLow = ci_low, ciHigh = ci_high))
   # Per-observation columns have a DIFFERENT length from the coefficient rows, so they go out
@@ -2615,10 +2619,10 @@ tp_logisticregression <- function(args, env) {
     oid <- out_id(args, key)
     if (oid != -1 && !is.null(res[[key]])) {
       set_col(env, env$cols, oid, res[[key]], type = "number")
-      wrote <- TRUE
     }
   }
-  wrote
+  # A fitted model is a valid node whether or not any output is wired, as in the app.
+  TRUE
 }
 
 # interpolate.js knownPoints: house rule on both, Number(), finite only, sorted by x (stable),
@@ -4814,7 +4818,7 @@ tp_rhythmicityanalysis <- function(args, env) {
   if (x_in == -1 || is.null(env$cols[[as.character(x_in)]]) || !length(y_ins)) return(FALSE)
   analysis <- if (is.null(args$analysis)) "periodogram" else args$analysis
   t <- t_for_col(env$cols[[as.character(x_in)]], env$cols, env$raw_data)
-  shared_x <- NULL; any_valid <- FALSE; stats_by_y <- list()
+  any_valid <- FALSE; stats_by_y <- list(); per_key_by_y <- list()
   pick <- function(a, b, d) if (!is.null(args[[a]])) args[[a]]
                             else if (!is.null(args[[b]])) args[[b]] else d
 
@@ -4855,20 +4859,7 @@ tp_rhythmicityanalysis <- function(args, env) {
     } else {
       per_key <- NULL
     }
-    # RhythmicityAnalysis.svelte writes EVERY wired output: one column per (y, key) and the
-    # shared primary pair (rhythmicityx from the first y with output, rhythmicityy_<y>;
-    # getPrimaryKeys). The ports used to write one family or the other on an args$hideInputs
-    # the app never saves (it is a component prop), so the pair was empty in every export.
-    if (!is.null(per_key)) {
-      for (k in names(per_key)) {
-        set_col(env, env$cols, out_id(args, paste0(y_id, "_", k)), per_key[[k]], type = "number")
-      }
-      if (is.null(shared_x) && length(px)) {
-        shared_x <- px
-        set_col(env, env$cols, out_id(args, "rhythmicityx"), px, type = "number")
-      }
-      set_col(env, env$cols, out_id(args, paste0("rhythmicityy_", y_id)), py, type = "number")
-    }
+    if (!is.null(per_key)) per_key_by_y[[length(per_key_by_y) + 1]] <- list(y = y_id, k = per_key)
     # The scalar stats behind the stat_<key> metric ports, by the app's peak rules.
     st <- list()
     if (identical(analysis, "periodogram")) {
@@ -4888,6 +4879,36 @@ tp_rhythmicityanalysis <- function(args, env) {
     }
     stats_by_y[[yk]] <- st
     any_valid <- TRUE
+  }
+  # The node's preProcesses (RhythmicityAnalysis.svelte, after every y is analysed): each
+  # column process in order, on EVERY output array of every y (the x arrays such as period,
+  # frequency and lag included), before anything is written. The stats above come from the
+  # unprocessed arrays, as in the app.
+  for (pp in args$preProcesses) {
+    nm <- pp$processName
+    if (is.null(nm) || !nzchar(nm)) next
+    for (i in seq_along(per_key_by_y)) for (k in names(per_key_by_y[[i]]$k))
+      per_key_by_y[[i]]$k[[k]] <- as.numeric(unlist(run_column_process(
+        tolower(gsub(" ", "", nm)), per_key_by_y[[i]]$k[[k]],
+        if (is.null(pp$processArgs)) list() else pp$processArgs, env$cols, env$raw_data)))
+  }
+  # RhythmicityAnalysis.svelte writes EVERY wired output: one column per (y, key) and the
+  # shared primary pair (rhythmicityx from the first y with output, rhythmicityy_<y>;
+  # getPrimaryKeys). The ports used to write one family or the other on an args$hideInputs
+  # the app never saves (it is a component prop), so the pair was empty in every export.
+  prim <- switch(analysis, periodogram = c("period", "power"), fft = c("period", "magnitude"),
+                 correlogram = c("lag", "correlation"), c(NA, NA))
+  shared_x <- NULL
+  for (e in per_key_by_y) {
+    for (k in names(e$k)) {
+      set_col(env, env$cols, out_id(args, paste0(e$y, "_", k)), e$k[[k]], type = "number")
+    }
+    px <- e$k[[prim[1]]]; py <- e$k[[prim[2]]]
+    if (is.null(shared_x) && length(px)) {
+      shared_x <- px
+      set_col(env, env$cols, out_id(args, "rhythmicityx"), px, type = "number")
+    }
+    set_col(env, env$cols, out_id(args, paste0("rhythmicityy_", e$y)), py, type = "number")
   }
   if (any_valid) {
     keys <- switch(analysis, periodogram = c("peak_period", "peak_power",
@@ -7519,6 +7540,15 @@ half_cycle_test <- function(x_data, y_data, L, bin_size) {
 
 # --- Actogram.svelte: the row folding -----------------------------------------------------
 
+# The actogram's startTime as the app reads it, `startTimeIN ?? autoStartTime`: the user's
+# chosen first-row start (epoch ms, saved on the plot since v82.23 and only when chosen; kept
+# by fromJSON only when it is a finite number), else the automatic actogram_start_time.
+actogram_plot_start_time <- function(inner, series_list, zone = "utc") {
+  chosen <- inner$startTimeIN
+  if (is.numeric(chosen) && length(chosen) == 1 && is.finite(chosen)) return(as.numeric(chosen))
+  actogram_start_time(series_list, zone)
+}
+
 # The plot's startTime (epoch ms): the earliest sample over ALL time-typed series with valid
 # x and y, snapped to the start of its day in the display zone ('utc' or an IANA zone).
 actogram_start_time <- function(series_list, zone = "utc") {
@@ -7832,7 +7862,7 @@ actogram_plot_rule_outputs <- function(inner, series_data, zone = "utc") {
                                              x = as_numeric_list(s$x), y = as_numeric_list(s$y),
                                              rawBinStart0 = s$rawBinStart0,
                                              originTime_ms = s$originTime_ms))
-  start <- actogram_start_time(sd, zone)
+  start <- actogram_plot_start_time(inner, sd, zone)
   frames <- lapply(sd, function(s) actogram_series_frame(s$x, s$y, s$xType, start, P,
                                                          s$rawBinStart0, s$originTime_ms))
   n_days <- actogram_ndays(frames)

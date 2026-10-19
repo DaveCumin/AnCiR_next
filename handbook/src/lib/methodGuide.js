@@ -183,7 +183,7 @@ export const GOALS = [
 		goal: 'Waveform clearly non-sinusoidal?',
 		context: null,
 		method:
-			'A shape-matched fit rather than a plain cosine: harmonic cosinor, <strong>rectangular-wave</strong> (crisp on/off rhythms) or <strong>double-logistic</strong> (gradual, asymmetric on/off transitions), all via <strong>FitFunction</strong>; or NPCRA / an average-day profile for a shape-free summary',
+			'A shape-matched fit rather than a plain cosine: harmonic cosinor, <strong>rectangular-wave</strong> (crisp on/off rhythms) or <strong>double-logistic</strong> (gradual, asymmetric on/off transitions), all via <strong>Fit waveform model</strong>; or NPCRA / an average-day profile for a shape-free summary',
 		need: 'Continuous record',
 		whyLongitudinal:
 			'The shape of a cycle can only be seen in a record that traces the cycle out, which means repeated sampling of the same individual.',

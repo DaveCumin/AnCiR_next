@@ -98,8 +98,8 @@
 			</li>
 			<li>
 				Double-click to expand the node and choose the <strong>Method</strong>: <strong>IQR</strong>
-				(set the <strong>IQR Multiplier</strong>, default 1.5) or <strong>Z-Score</strong> (set the
-				<strong>Z-Score Threshold</strong>, default 3).
+				(set the <strong>IQR multiplier</strong>, default 1.5) or <strong>Z-Score</strong> (set the
+				<strong>Z-score threshold</strong>, default 3).
 			</li>
 			<li>
 				Detected outliers are removed and listed in the node. The cleaned column is available on the
@@ -224,18 +224,21 @@
 			</li>
 			<li>
 				Expand the node and pick your <strong>X column</strong> (time) and one or more
-				<strong>Y column(s)</strong>. Multiple Y columns can be binned in one step.
-			</li>
-			<li>Set the <strong>Bin Size</strong> (e.g., 1 h) and <strong>Bin Start</strong> offset.</li>
-			<li>
-				Choose the <strong>Aggregation Function</strong>: <strong>mean</strong> (continuous
-				measurements), <strong>count</strong> (count data such as wheel revolutions),
-				<strong>median</strong>, <strong>min</strong>, <strong>max</strong>, or
-				<strong>stddev</strong>.
+				<strong>Y columns</strong>. Multiple Y columns can be binned in one step.
 			</li>
 			<li>
-				Tick <strong>Different step size</strong> and set a smaller <strong>Step Size</strong> for a sliding-window
-				(overlapping) average.
+				Set the <strong>Bin size (h)</strong> (e.g., 1 h) and <strong>Bin start</strong> offset.
+			</li>
+			<li>
+				Choose the <strong>Function</strong>: <strong>Mean</strong> (continuous measurements),
+				<strong>Count</strong>
+				(count data such as wheel revolutions),
+				<strong>Median</strong>, <strong>Min</strong>, <strong>Max</strong>, or
+				<strong>Std Dev</strong>.
+			</li>
+			<li>
+				Tick <strong>Different step size</strong> and set a smaller <strong>Step size (h)</strong> for
+				a sliding-window (overlapping) average.
 			</li>
 			<li>The node outputs new binned X and Y columns to wire into plots or further processes.</li>
 		</ol>
@@ -261,8 +264,8 @@
 			<li>
 				From the <strong>node palette</strong>, under <strong>Transform</strong>, choose
 				<strong>Join Data</strong>, and wire each dataset's time column and value columns into
-				<strong>time A</strong> / <strong>values A</strong> and <strong>time B</strong> /
-				<strong>values B</strong>.
+				<strong>Time A</strong> / <strong>Values A</strong> and <strong>Time B</strong> /
+				<strong>Values B</strong>.
 			</li>
 			<li>
 				Every row of both datasets lands on one time column, sorted by time. Nothing is matched or
@@ -293,7 +296,7 @@
 		sorting and no time column. Same-named columns still share one column, and the
 		<strong>Source</strong> column (on by default when stacking) says which dataset each row came
 		from. For example, stack the per-animal Cosinor amplitudes of two groups, then wire the joined
-		amplitude and Source into <strong>Group Comparison</strong> (or a boxplot) to compare the groups.
+		amplitude and Source into <strong>Compare groups (stats)</strong> (or a boxplot) to compare the groups.
 		Wiring a time for only one dataset is refused: wire a time for both datasets, or for neither.
 	</p>
 
@@ -355,9 +358,9 @@
 				<strong>Y column(s)</strong>. Multiple Y columns can be smoothed in one step.
 			</li>
 			<li>
-				Choose a <strong>Smoother Type</strong> (moving average, LOESS, Savitzky-Golay, or
-				Whittaker-Eilers) and set its parameters. <em>Whittaker-Eilers with Lambda = 100</em> works well
-				for most circadian recordings.
+				Choose a <strong>Type</strong> (moving average, LOESS, Savitzky-Golay, or Whittaker-Eilers)
+				and set its parameters. <em>Whittaker-Eilers with Lambda = 100</em> works well for most circadian
+				recordings.
 			</li>
 			<li>The node outputs smoothed X and Y columns.</li>
 			<li>Wire these smoothed columns into your Actogram or Periodogram.</li>
@@ -428,9 +431,9 @@
 				<strong>Remove Trend</strong>, and wire the column you want to detrend into it.
 			</li>
 			<li>
-				Expand the node and choose the <strong>Trend model</strong>: <strong>linear</strong> is
-				sufficient for most recordings; <strong>polynomial</strong> (with configurable degree),
-				<strong>exponential</strong>, and <strong>logarithmic</strong> are available for more complex
+				Expand the node and choose the <strong>Model</strong>: <strong>Linear</strong> is sufficient
+				for most recordings; <strong>Polynomial</strong> (with configurable degree),
+				<strong>Exponential</strong>, and <strong>Logarithmic</strong> are available for more complex
 				drifts.
 			</li>
 			<li>

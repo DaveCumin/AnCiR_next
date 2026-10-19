@@ -93,7 +93,7 @@
 		<ol>
 			<li>
 				Open the <strong>node palette</strong> (the <strong>+</strong> button, top-right) and, under
-				<strong>Plots</strong>, choose <strong>correlogram</strong>.
+				<strong>Plots</strong>, choose <strong>Correlogram</strong>.
 			</li>
 			<li>
 				Wire your <strong>time column</strong> into the <strong>x</strong> input and your
@@ -102,7 +102,7 @@
 			<li>The autocorrelation function is plotted against lag (in hours).</li>
 			<li>
 				Significant peaks at 24, 48, 72 h confirm circadian rhythmicity. The lag of the first major
-				positive peak after zero estimates τ; AnCiR reports the overall <strong>peak lag</strong>.
+				positive peak after zero estimates τ; AnCiR reports the overall <strong>Peak Lag</strong>.
 			</li>
 			<li>
 				Adjust the minimum and maximum <strong>lag range</strong> to inspect ultradian structure (&lt;
@@ -149,7 +149,7 @@
 
 	<AnCiRBox
 		title="Non-Parametric Rest-Activity Metrics in AnCiR"
-		tip="The Nonparametric RA node outputs IS, IV, RA, M10, L5 and their onsets as scalar ports, so you can wire them straight into a Boxplot or Compare Groups node to contrast conditions."
+		tip="The Nonparametric RA node outputs IS, IV, RA, M10, L5 and their onsets as scalar ports, so you can wire them straight into a Boxplot or Compare groups (stats) node to contrast conditions."
 	>
 		<ol>
 			<li>
@@ -162,9 +162,10 @@
 				into the <strong>y</strong> input (each subject is analysed independently).
 			</li>
 			<li>
-				Set the <strong>epoch</strong> (resampling interval, default 1 h), the
-				<strong>period</strong> (default 24 h), and the <strong>M</strong> / <strong>L</strong>
-				window lengths (default 10 h and 5 h).
+				Set the <strong>Epoch (h)</strong> (resampling interval, default 1 h), the
+				<strong>Period (h)</strong> (default 24 h), and the <strong>M window (h)</strong> /
+				<strong>L window (h)</strong>
+				lengths (default 10 h and 5 h).
 			</li>
 			<li>
 				The node reports <strong>IS</strong>, <strong>IV</strong>, <strong>RA</strong>,

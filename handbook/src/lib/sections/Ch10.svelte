@@ -145,7 +145,7 @@
 			</li>
 			<li>
 				From the <strong>node palette</strong> (the <strong>+</strong> button, top-right), under
-				<strong>Plots</strong>, add a <strong>scatterplot</strong> and wire Stimulus CT into its
+				<strong>Plots</strong>, add a <strong>Scatterplot</strong> and wire Stimulus CT into its
 				<strong>x</strong>
 				port and Phase Shift into its <strong>y</strong> port. This draws the raw phase shifts.
 			</li>

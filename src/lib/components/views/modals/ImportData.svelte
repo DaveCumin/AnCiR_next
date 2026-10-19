@@ -4795,12 +4795,21 @@
 	.label-input.type-format {
 		min-width: calc((max(var(--format-chars, 0), 12) + 1) * 1ch + 0.5rem + 2px);
 	}
+	/* The header cell is nowrap (so the type row lines up), and a hint used to inherit it: one
+	   long line ("Detected from the first 111 rows (the preview rows are mostly blank)") that
+	   stretched its column and ran past the preview's edge. A zero width with a full minimum
+	   takes it out of the column's sizing: it wraps inside the width the type picker already
+	   gives the column, and never widens it. */
 	.type-hint {
 		display: block;
+		width: 0;
+		min-width: 100%;
 		margin-top: var(--space-1);
 		font-size: var(--font-xs);
 		font-weight: 400;
 		color: var(--color-text-muted);
+		text-align: left;
+		white-space: normal;
 	}
 	/* A one-click type suggestion (Unix time in a numeric column). Wraps like .type-warn. */
 	.type-suggest {

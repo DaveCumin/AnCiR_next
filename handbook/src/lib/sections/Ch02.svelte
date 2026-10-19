@@ -114,13 +114,13 @@
 				or <strong>AWD</strong> file straight onto the canvas).
 			</li>
 			<li>
-				In the import dialog, confirm <strong>Has Header</strong>, optionally pick a
+				In the import dialog, confirm <strong>Has header row</strong>, optionally pick a
 				<strong>Sort by</strong>
-				column, and tick the columns to bring in. For very large files you can switch on
-				<strong>binning</strong> at import to down-sample as you load.
+				column, and tick the columns to bring in. For very large files you can tick
+				<strong>Bin data to</strong> at import to down-sample as you load.
 			</li>
 			<li>
-				Click <strong>Import</strong>. Your data appears as a <strong>data node</strong>
+				Click <strong>Confirm Import</strong>. Your data appears as a <strong>data node</strong>
 				on the canvas, with each column available as an output port to feed into plots and processes.
 			</li>
 			<li>

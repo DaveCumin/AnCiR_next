@@ -108,7 +108,7 @@
 				shape before fitting a parametric model.
 			</li>
 			<li>
-				For full mixed-effects modelling, export your data (via a <strong>tableplot</strong> or
+				For full mixed-effects modelling, export your data (via a <strong>Table</strong> or
 				<strong>Save session</strong>) and use R (<em>lme4</em>) or Python (<em>statsmodels</em>).
 			</li>
 		</ol>

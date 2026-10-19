@@ -48,7 +48,7 @@
 		removing the mean. It plots 2|Fⱼ|/N, so a sinusoid of amplitude A reads A whatever the record length.
 		It does not
 		<a class="gloss" href="#gloss-zero-padding">zero-pad</a> unless you ask for a finer
-		<strong>Frequency Step</strong>, and a padded spectrum is still scaled by N, so its peak keeps
+		<strong>Frequency step</strong>, and a padded spectrum is still scaled by N, so its peak keeps
 		the same height.
 	</p>
 	<WarnBox title="Zero-padding is interpolation, not resolution">
@@ -108,7 +108,7 @@
 		test of whether a rhythm is present (see <a href="#ch6">Chapter 6</a>).
 	</p>
 	<p>
-		AnCiR shows Δf under the <strong>Frequency Step</strong> control. The peak it reports is refined between
+		AnCiR shows Δf under the <strong>Frequency step</strong> control. The peak it reports is refined between
 		bins by fitting a sinusoid near the largest bin, so a single clean rhythm between two bins is reported
 		at its own period and amplitude rather than at the nearer bin. That does not add resolution: two rhythms
 		closer than Δf still merge into one peak.
@@ -129,7 +129,7 @@
 		<ol>
 			<li>
 				Open the <strong>node palette</strong> (the <strong>+</strong> button, top-right) and, under
-				<strong>Plots</strong>, choose <strong>fft</strong>.
+				<strong>Plots</strong>, choose <strong>Fourier analysis</strong>.
 			</li>
 			<li>
 				Wire your <strong>time column</strong> into the <strong>x</strong> input and your
@@ -279,10 +279,10 @@
 				columns into it.
 			</li>
 			<li>
-				Choose the <strong>wavelet</strong>: <strong>Morlet</strong> (the default, and the right
+				Choose the <strong>Wavelet</strong>: <strong>Morlet</strong> (the default, and the right
 				choice for period estimation), <strong>Paul</strong> (better time localisation, worse period
 				resolution — useful for pinning down when a shift happened), or
-				<strong>DOG / Mexican hat</strong> (good for detecting sharp features rather than oscillations).
+				<strong>DOG (Mexican hat)</strong> (good for detecting sharp features rather than oscillations).
 			</li>
 			<li>
 				Set <strong>omega0</strong> for Morlet — this is the trade-off dial. Larger values sharpen period
@@ -290,11 +290,13 @@
 				and it makes period ≈ scale.
 			</li>
 			<li>
-				Set <strong>periodMin</strong> and <strong>periodMax</strong>. The default 1–48 h spans
-				ultradian through circadian, which is where a wavelet most earns its keep; narrow it to
-				20–28 h if you only care about the circadian band.
+				Set <strong>Min period (h)</strong> and <strong>Max period (h)</strong>. The default 1–48 h
+				spans ultradian through circadian, which is where a wavelet most earns its keep; narrow it
+				to 20–28 h if you only care about the circadian band.
 			</li>
-			<li>Keep <strong>show COI</strong> on, and ignore everything inside the shaded wedges.</li>
+			<li>
+				Keep <strong>Cone of influence</strong> on, and ignore everything inside the shaded wedges.
+			</li>
 		</ol>
 		<p>
 			For tracking a <em>single</em> parameter rather than reading a whole surface, the

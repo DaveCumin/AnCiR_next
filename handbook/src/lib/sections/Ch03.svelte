@@ -83,12 +83,12 @@
 				canvas.
 			</li>
 			<li>
-				Double-click the node to expand it, then set the <strong>Start Time</strong> and the
+				Double-click the node to expand it, then set the <strong>Start time</strong> and the
 				<strong>Sampling period</strong> (e.g., 0.25 h for 15-minute resolution).
 			</li>
 			<li>
-				Add one or more <strong>Sections</strong>: each section defines a phase of recording with
-				its own <strong>Duration</strong>, <strong>Rhythm period</strong>,
+				Add one or more <strong>Data sections</strong>: each section defines a phase of recording
+				with its own <strong>Duration</strong>, <strong>Rhythm period</strong>,
 				<strong>Rhythm phase shift</strong>, and <strong>Rhythm amplitude</strong>, plus an optional
 				<strong>Noise</strong> term (mode and amplitude). Using multiple sections lets you simulate a
 				free-running rhythm that shifts partway through.

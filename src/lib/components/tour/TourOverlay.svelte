@@ -829,8 +829,11 @@
 		color: var(--color-lightness-30);
 	}
 
+	/* Wraps so a narrow card (squeezed beside the import dialog at 1024 px) moves the
+	   "do this to continue" hint onto its own line, whole, instead of folding it into three. */
 	.tour-actions {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.4rem;
 	}
@@ -877,6 +880,8 @@
 	}
 
 	.tour-hint {
+		margin-left: auto;
+		white-space: nowrap;
 		font-size: var(--font-sm);
 		color: var(--color-accent-text);
 		font-weight: 600;

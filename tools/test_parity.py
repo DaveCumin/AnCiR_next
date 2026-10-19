@@ -134,7 +134,9 @@ def run_table_process(fx, js):
         static_id, dyn_id = 1000 + next_id, 2000 + next_id
         next_id += 1
         # A key naming an input (`joined_@temp`) is that input's per-input out key.
-        args["out"][re.sub(r"@(\w+)", lambda m: str(id_map[m.group(1)]), k)] = static_id
+        # `@{ref}` delimits a ref followed by more key text (`@{y}_period`).
+        args["out"][re.sub(r"@\{(\w+)\}|@(\w+)",
+                           lambda m: str(id_map[m.group(1) or m.group(2)]), k)] = static_id
         for yid in y_ids:
             args["out"][f"{k}_{yid}"] = dyn_id
             # Split names its outputs the other way round, "<yId>_<segment>"
@@ -218,6 +220,9 @@ def run_actogram_download(fx, js):
             x_id, y_id = bx, by
         data.append({"x": {"refId": x_id}, "y": {"refId": y_id}})
     plot = {"type": "actogram", "plot": {"periodHrs": inp["periodHrs"], "data": data}}
+    # The user's chosen first-row start (Actogram `startTimeIN`, saved since v82.23).
+    if inp.get("startTimeIN") is not None:
+        plot["plot"]["startTimeIN"] = inp["startTimeIN"]
     headers, rows = fn(plot, cols, zone=inp.get("zone", "utc"))
     return {"headers": headers, "rows": rows}
 

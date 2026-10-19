@@ -41,8 +41,8 @@
 		data="A single time column and one activity/value column, several days long."
 		steps={[
 			'<strong>Import file</strong> (Sources) &mdash; or open the example, which contains two records with the same average activity: one intact, one arrhythmic (as after SCN ablation).',
-			'<strong>actogram</strong> (Plots) on each &mdash; the intact record shows an obvious activity band; the arrhythmic one shows none.',
-			'<strong>periodogram</strong> (Plots) on each &mdash; compare the <strong>peak power</strong>, not just the peak period.'
+			'<strong>Actogram</strong> (Plots) on each &mdash; the intact record shows an obvious activity band; the arrhythmic one shows none.',
+			'<strong>Periodogram</strong> (Plots) on each &mdash; compare the <strong>peak power</strong>, not just the peak period.'
 		]}
 		readoff="The arrhythmic periodogram does <em>not</em> go blank &mdash; it still reports a peak period, but at low power and with no band in the actogram. The intact record has a tall, significant peak and a clear band."
 		pitfall="Never report a peak period without its <strong>power</strong> and a look at the raw actogram. A bare period number is meaningless on its own."
@@ -56,8 +56,8 @@
 		when="You want the endogenous period of a rhythm running without a zeitgeber (e.g. an animal in constant darkness), or you simply need τ before fixing it in a cosinor fit."
 		data="A time column and an activity column spanning at least 7 cycles, preferably 10&ndash;14."
 		steps={[
-			'<strong>actogram</strong> (Plots), double-plotted &mdash; a rhythm whose τ differs from 24 h drifts steadily across days instead of sitting vertical (right = τ &gt; 24 h, left = τ &lt; 24 h).',
-			'<strong>periodogram</strong> (Plots) with method <strong>Lomb-Scargle</strong> to estimate τ numerically.',
+			'<strong>Actogram</strong> (Plots), double-plotted &mdash; a rhythm whose τ differs from 24 h drifts steadily across days instead of sitting vertical (right = τ &gt; 24 h, left = τ &lt; 24 h).',
+			'<strong>Periodogram</strong> (Plots) with method <strong>Lomb-Scargle</strong> to estimate τ numerically.',
 			'<strong>Rhythmicity Analysis</strong> (Analysis) to output the peak period as a wireable number for a table or downstream comparison.'
 		]}
 		readoff="The example free-runs at τ ≈ 24.8 h; the periodogram recovers a peak at <strong>24.85 h</strong>. The actogram band visibly leans to the right against the 24 h grid."
@@ -73,7 +73,7 @@
 		data="A time column and a value column. Sparse or unevenly sampled data are fine; fix the period if you already know it."
 		steps={[
 			'<strong>Remove Trend</strong> (Filtering, linear) first if there is a slow baseline drift &mdash; a trend biases the MESOR and inflates the amplitude.',
-			'<strong>Cosinor</strong> (Fitting): tick <strong>Use Fixed Period</strong> and enter 24 h (or your measured τ), harmonics = 1, and a 95% CI. For a time of day, set <strong>Phase reference</strong> to <strong>Clock time of day</strong> (it needs a time column as x).',
+			'<strong>Cosinor</strong> (Fitting): tick <strong>Use fixed period</strong> and enter 24 h (or your measured τ), <strong>N harmonics</strong> = 1, and a 95% CI. For a time of day, set <strong>Phase reference</strong> to <strong>Clock time of day</strong> (it needs a time column as x).',
 			'Read the <strong>acrophase</strong>, <strong>amplitude</strong>, <strong>MESOR</strong> and F-test p-value from the node; overlay the fitted curve on a scatterplot to sanity-check it.'
 		]}
 		readoff="Acrophase as the time of peak in hours (already in hours, no conversion needed): by default hours after the first sample, or clock time of day with the clock phase reference. Amplitude and MESOR with their 95% CIs, plus an F-test p-value for whether a rhythm is present at all."
@@ -92,7 +92,7 @@
 		steps={[
 			"One <strong>Cosinor</strong> node per group (fixed 24 h). Because a scalar metric port emits one value per Y input, the <strong>acrophase</strong> port becomes that group's whole distribution of per-subject peak times. If the recordings start at different clock times, set <strong>Phase reference</strong> to <strong>Clock time of day</strong>, or the peak times are not on a common clock.",
 			'Wire both acrophase columns into the <strong>Circular phase plot</strong> (Plots) &mdash; each group appears as a coloured cluster on a 24 h clock with its mean-resultant vector.',
-			'Wire the same two columns into the <strong>Rayleigh test</strong> (Analysis), with the <strong>Watson-Williams</strong> toggle on.'
+			'Wire the same two columns into the <strong>Rayleigh test</strong> (Analysis), with <strong>Also run Watson-Williams test</strong> ticked.'
 		]}
 		readoff="Rayleigh R and p per group (is each group clustered at all?), and a Watson-Williams F and p for whether they share a mean phase. In the example, group A peaks ≈ 7.4 h and B ≈ 14.2 h; R ≈ 0.97/0.99; Watson-Williams F ≈ 292, p ≈ 0 &mdash; the groups differ."
 		pitfall="Never compare acrophases with an ordinary t-test: 23:00 and 01:00 are two hours apart on the clock but 22 hours apart to a linear test. Use Watson-Williams (the circular analogue)."
@@ -107,7 +107,7 @@
 		data="One value per subject in each of two groups (e.g. an amplitude column per group from a Cosinor fit)."
 		steps={[
 			'Produce the per-subject scalar (e.g. <strong>Cosinor</strong> amplitude, or a <strong>Nonparametric RA</strong> metric) for each group.',
-			'<strong>Compare groups</strong> (Analysis) on <strong>auto</strong>: it checks each group for normality and equal variance and picks a Welch t-test or a Mann-Whitney U test, surfacing the choice and any warnings.',
+			'<strong>Compare groups (stats)</strong> (Analysis) on <strong>auto</strong>: it checks each group for normality and equal variance and picks a Welch t-test or a Mann-Whitney U test, surfacing the choice and any warnings.',
 			'Add a <strong>Boxplot</strong> (Plots) to show medians, spread and outliers alongside the test.'
 		]}
 		readoff="Which test fired and why, the p-value against your α, and &mdash; from the boxplot &mdash; the direction and size of the difference. A significant p says the groups differ; the boxplot says by how much."
@@ -124,7 +124,7 @@
 		steps={[
 			"One <strong>Nonparametric RA</strong> node (Analysis) per group &mdash; each metric port (IS, IV, RA, M10, L5) emits that group's distribution.",
 			'A <strong>Cosinor</strong> node on the same subjects for the model-based view (amplitude, acrophase) &mdash; combining non-parametric and model-based is the recommended pairing.',
-			'<strong>Compare groups</strong> (Analysis) on the metric of interest, and an <strong>actogram</strong> of one representative subject per group.'
+			'<strong>Compare groups (stats)</strong> (Analysis) on the metric of interest, and an <strong>actogram</strong> of one representative subject per group.'
 		]}
 		readoff="IS (day-to-day stability, →1), IV (fragmentation, →0 consolidated), RA = (M10&minus;L5)/(M10+L5). The example's consolidated phenotype has IS ≈ 0.98, IV ≈ 0.4, RA ≈ 0.95; the fragmented one IS ≈ 0.45, IV ≈ 1.4, RA ≈ 0.6."
 		pitfall="IS and IV are strongly <strong>epoch-dependent</strong> &mdash; values at 1-minute and 1-hour epochs are not comparable, so always report the epoch and match it across groups."
@@ -140,8 +140,8 @@
 		when="Sleep-wake data that drift later (or earlier) every day &mdash; the human counterpart of the free-running mouse, and a recognised clinical presentation in blind individuals."
 		data="A long sleep-wake or activity record (weeks), so the drift can accumulate visibly."
 		steps={[
-			'<strong>actogram</strong> (Plots), double-plotted &mdash; a 24 h rhythm sits vertical; this one leans as the sleep window walks around the clock.',
-			'<strong>periodogram</strong> (Plots, Lomb-Scargle) to recover τ numerically.'
+			'<strong>Actogram</strong> (Plots), double-plotted &mdash; a 24 h rhythm sits vertical; this one leans as the sleep window walks around the clock.',
+			'<strong>Periodogram</strong> (Plots, Lomb-Scargle) to recover τ numerically.'
 		]}
 		readoff="The example runs at τ ≈ 24.5 h, drifting about half an hour later each day and circling the clock over roughly seven weeks; the periodogram peak sits just above 24 h."
 		pitfall="A rhythm that merely looks irregular in clock time may be a perfectly regular non-24 rhythm &mdash; the double-plotted actogram is what makes the steady drift obvious."
@@ -155,7 +155,7 @@
 		when="A schedule shift where the activity appears to follow the new light cycle &mdash; but you need to know whether the clock actually moved."
 		data="An activity record spanning the shift and the release into constant conditions."
 		steps={[
-			'<strong>actogram</strong> (Plots) of both records &mdash; while the light cycle runs, a truly entrained animal and a merely masked one look identical.',
+			'<strong>Actogram</strong> (Plots) of both records &mdash; while the light cycle runs, a truly entrained animal and a merely masked one look identical.',
 			'Compare their behaviour <strong>after release into constant darkness</strong>: the entrained clock keeps the new phase; the masked one snaps back to its original phase.'
 		]}
 		readoff="Persistence of the new phase in constant conditions is the signature of real entrainment; an immediate snap-back reveals masking (light was suppressing behaviour, not resetting the clock)."

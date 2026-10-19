@@ -693,8 +693,8 @@ Notes:
 
 ## Current coverage
 
-`npm run parity` lists every fixture. As of 2026-10-17: 448 fixtures, Python 448/448, R 397
-pass with 51 not claimed, whole-session 88 match with 2 skipped (outputs blanked before the
+`npm run parity` lists every fixture. As of 2026-10-20: 511 fixtures, Python 511/511, R 457
+pass with 54 not claimed, whole-session 88 match with 2 skipped (outputs blanked before the
 port runs).
 
 ## Fixture fields added 2026-10-04 (review wave 1 and 2 ports)
@@ -806,8 +806,12 @@ r2/rmse/coefficients, `ancir_to_python.py` documents `.ancir` sessions.
   fixtures `tp-rhythmicity-*-stats`.
 - **Residual outputs** (`resid_<yId>`): ported for every node that has them (2026-10-17,
   see "Outputs the ports never wrote" above); no longer a divergence.
-- **RhythmicityAnalysis pre-processes**: the app runs `preProcesses` on each output array
-  before writing; neither port applies them (no shipped session uses one). Not pinned.
+- **RhythmicityAnalysis pre-processes**: ported to both (2026-10-20, see "Pre-processes, the
+  chosen actogram start, logistic intervals and node-level Moving Analysis" below); no longer a
+  divergence. The other nodes whose app code runs `preProcesses` (BinnedData, Cosinor,
+  FitFunction, DoubleLogistic, RectangularWave, TrendFit) still have no port of them in either
+  language; only CollectColumns has a panel to set them, so a session reaches them only by hand
+  or through the MCP tools.
 - **Time-format import (UI-1)**: sessions saved before the fix may store numeric columns as
   `time` with a format such as `D.M`. JS now reads those values as missing; Python and R read
   numeric time cells as epoch ms.
@@ -837,11 +841,89 @@ r2/rmse/coefficients, `ancir_to_python.py` documents `.ancir` sessions.
 - **Not mirrored because the ports have no such path**: the boxplot significance bars,
   MovingAnalysis skip warnings, the panel warnings and notices.
 
+## Pre-processes, the chosen actogram start, logistic intervals and node-level Moving Analysis (2026-10-20)
+
+**Per-input out keys with more text after the ref.** A `compareOutputs` key may write a ref as
+`@{ref}` when more key text follows it: `@{y}_period` is the out key `<id of y>_period`
+(RhythmicityAnalysis and MovingAnalysis name their per-y outputs `<yId>_<key>`). The bare form
+(`joined_@temp`) cannot express this, since `@y_period` reads the ref as `y_period`. All three
+legs resolve both forms (`resolveOutKey`, `run_table_process`, `run_tp_fixture`).
+
+**RhythmicityAnalysis `preProcesses`** (both ports). After every y is analysed, each column
+process runs in order on EVERY output array of every y, the x arrays (period, frequency, lag)
+included, before anything is written; the primary pair is read after the processes; the
+`stat_*` ports come from the unprocessed arrays; an entry with no `processName` is skipped.
+Fixtures `tp-rhythmicity-preprocess-{periodogram,chisq-order,fft,correlogram}` compare the
+per-y keys, the primary pair and the stats. (The app has no panel for this node's
+`preProcesses`; processing the x axis too is the app's own rule, mirrored, not endorsed.)
+
+**Actogram `startTimeIN`** (v82.23, the user's chosen first-row start). The plot's startTime is
+`startTimeIN ?? autoStartTime`, and `fromJSON` keeps `startTimeIN` only when it is a finite
+number. Both ports now read it through `actogram_plot_start_time` (Python: the plot-data
+export `actogram_download_data` and the marker rules `actogram_plot_rule_outputs`; R: the
+marker rules). The Python PNG renderer `plot_actogram` used to fold every series at its own
+first sample (neither midnight nor the chosen start) and drew only the first series; it now
+draws the plot-data rows themselves, so the PNG and the CSV share one fold. The emitter takes a
+fixture `startTimeIN` (ISO or epoch ms) for both actogram kinds. Fixtures
+`actogram-data-start-time-{earlier,later,bin-origin}` (Python; a start before the automatic
+midnight, a start after the first sample in a non-UTC zone with two series, and a bin column
+shifted by `(startTime - originTime_ms)`) and `actogram-rule-start-time-in` (both);
+`test_plot_data_export.py::test_actogram_export_reads_chosen_start_time` checks the written
+CSV and the PNG's bars.
+
+**LogisticRegression `term` / `ciLow` / `ciHigh`** were never compared:
+`tp-logisticregression-terms-ci`, `tp-logisticregression-two-predictors-ci` (three terms,
+listwise drops), and `tp-logisticregression-too-few-rows` (`recordValid`).
+
+**MovingAnalysis node level** (it had only the `util-movingwindows-*` kernel fixtures):
+`tp-movinganalysis-*`, 20 fixtures in both ports. They cover every analysis (summary on a time
+x with gaps and start labels; Lomb-Scargle, chi-squared and Enright periodograms; fixed cosinor
+with two harmonics, `rmse_n` and `phaseReference` 'clock' resolved from the node's x; free
+cosinor at 1e-4; NPCRA; FFT; correlogram; rectangular wave with free and fixed kappa and duty
+cycle; periodic double logistic with free and fixed slopes and fixed period, and the
+non-periodic one; linear, polynomial, exponential and logarithmic trend, the last with a
+skipped window), the three bin labels, `movex` as epoch ms, `preProcesses`, and the refusal of
+a window longer than the record. MovingAnalysis is therefore now under the parameter-coverage
+ratchet (`paramCoverage.test.js`), with no gaps.
+
+Port bugs found:
+
+| Bug                                                                                                                 | Fixture                                                           |
+| ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| RhythmicityAnalysis `preProcesses` ignored (Py, R)                                                                  | the 4 `tp-rhythmicity-preprocess-*`                               |
+| Actogram `startTimeIN` ignored by the plot-data export and marker rules (Py), and the marker rules (R)              | the 3 `actogram-data-start-time-*`, `actogram-rule-start-time-in` |
+| Python PNG actogram folded at each series' first sample, ignoring the plot's startTime                              | `test_actogram_export_reads_chosen_start_time`                    |
+| LogisticRegression too few complete rows: node invalid (Py, R; the app keeps it valid and writes nothing)           | `tp-logisticregression-too-few-rows`                              |
+| R logistic fitted with 2 complete rows whatever the number of terms (glm's saturated fit); the app needs n >= k + 1 | `tp-logisticregression-too-few-rows` (R `term`: length 2 vs 0)    |
+| LogisticRegression with nothing wired returned invalid (Py, R); the app returns valid                               | (no fixture: the harness always wires the compared outputs)       |
+
+Mutations, each restored at once (the fixtures that failed):
+
+| Broken                                                       | First failure                                                      |
+| ------------------------------------------------------------ | ------------------------------------------------------------------ |
+| RA preProcesses not applied (Py; R)                          | all 4 `tp-rhythmicity-preprocess-*` (R `rhythmicityx[1]`: 20 vs 0) |
+| RA preProcesses on y arrays only (Py; app JS, re-emitted)    | all 4 `tp-rhythmicity-preprocess-*`                                |
+| RA preProcesses in reverse order (Py)                        | `chisq-order`, `correlogram`                                       |
+| startTimeIN ignored (Py; R; app JS, re-emitted)              | the 4 start-time fixtures (R: `$.startTime`)                       |
+| PNG renderer drops startTimeIN (Py)                          | `test_actogram_export_reads_chosen_start_time`                     |
+| logistic CI at 90% (Py; R), CI on the coefficient scale (Py) | `terms-ci`, `two-predictors-ci`                                    |
+| intercept label `(Intercept)` (Py; R)                        | `terms-ci`, `two-predictors-ci` (`term`)                           |
+| logistic too-few rows invalid again (Py); R 2-row guard back | `tp-logisticregression-too-few-rows`                               |
+| Moving `binLabel` 'end' read as centre (Py; R)               | `tp-movinganalysis-periodogram-chisq` (`movex[1]`: 48 vs 96)       |
+| Moving `movex` 1 h late (Py)                                 | `summary-time`, `cosinor-fixed-clock`                              |
+| Moving preProcesses dropped (Py)                             | `tp-movinganalysis-preprocess`                                     |
+| Moving phase reference not read from the node (Py)           | `tp-movinganalysis-cosinor-fixed-clock`                            |
+
+Two survivors, both understood: `movex` 1 ms late is inside the relative tolerance on epoch
+ms (1e-9 of 1.7e12 is 1.7 s; a relative tolerance is weak on absolute times, here as in every
+time-output fixture); and removing the `x_max - x_min < windowSize` refusal is an equivalent
+mutant, because no window start then satisfies `s <= x_max - windowSize` anyway.
+
 ## Nodes and fixtures the R port does not claim
 
 Analyses without an R implementation (`R_IMPLEMENTED` in `runtimeCoverage.js`): `Crossing`,
-`Random`, `SimulatedData` (the last two are baked into the session). The 43 fixtures with no
-`rFunc`: the correlogram and actogram plot-data rows (`correlogram-data-*` 5, `actogram-data-*` 8) and the Periodogram plot's `session-migration-*` 2 (R exports no plots), `util-kde-*` 2, `util-meansem-groups`, `tp-cosinor-addons-fixed24`,
+`Random`, `SimulatedData` (the last two are baked into the session). The 46 fixtures with no
+`rFunc`: the correlogram and actogram plot-data rows (`correlogram-data-*` 5, `actogram-data-*` 11) and the Periodogram plot's `session-migration-*` 2 (R exports no plots), `util-kde-*` 2, `util-meansem-groups`, `tp-cosinor-addons-fixed24`,
 `util-chisquare-gof`, `util-chisquare-independence`, `util-logistic-*` 3 (pure-util call
 shape; the R logistic kernel is covered by the `tp-logistic*` fixtures), `util-cwt-peak-scale`,
 `util-fisher-exact-*` 6, `util-cramers-v-*` 4, `util-fisher-conditional-or-*` 4,

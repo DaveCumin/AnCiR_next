@@ -23153,6 +23153,1605 @@
 				"out": { "binnedx": -1 }
 			},
 			"compareOutputs": ["binnedx", "binnedy_@y1", "binnedy_@y2"]
+		},
+		{
+			"id": "tp-rhythmicity-preprocess-periodogram",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"note": "preProcesses run on EVERY output array of every y after the analysis (RhythmicityAnalysis.svelte), the period axis included: a min-max normalize maps both period and power onto [0, 1]. The stat ports come from the unprocessed arrays.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 23.7,
+				"amp": 30,
+				"mesor": 45,
+				"phase": 9,
+				"noise": 5,
+				"seed": 941,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"analysis": "periodogram",
+				"pgMethod": "Lomb-Scargle",
+				"periodMin": 20,
+				"periodMax": 28,
+				"periodStep": 0.1,
+				"preProcesses": [
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "min-max",
+							"customMin": 0,
+							"customMax": 1
+						}
+					}
+				],
+				"out": {
+					"rhythmicityx": -1,
+					"stat_peak_period": -1,
+					"stat_peak_power": -1
+				}
+			},
+			"compareOutputs": [
+				"rhythmicityx",
+				"rhythmicityy",
+				"@{y}_period",
+				"@{y}_power",
+				"stat_peak_period",
+				"stat_peak_power"
+			],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-rhythmicity-preprocess-chisq-order",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"note": "Two processes in order (Multiply by 2, then Add 1: (x * 2) + 1, not (x + 1) * 2) and an empty slot (no processName), which is skipped. Chi-squared, so the threshold array is processed too; peak_pvalue comes from the unprocessed periodogram.",
+			"generate": {
+				"type": "rhythm",
+				"n": 480,
+				"period": 23.7,
+				"amp": 10,
+				"mesor": 45,
+				"phase": 9,
+				"noise": 8,
+				"seed": 943,
+				"dt": 0.5,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"analysis": "periodogram",
+				"pgMethod": "Chi-squared",
+				"pgBinSize": 0.5,
+				"pgAlpha": 0.05,
+				"periodMin": 18,
+				"periodMax": 30,
+				"periodStep": 0.5,
+				"preProcesses": [
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": 2
+						}
+					},
+					{
+						"processName": "",
+						"processArgs": {}
+					},
+					{
+						"processName": "Add",
+						"processArgs": {
+							"value": 1
+						}
+					}
+				],
+				"out": {
+					"rhythmicityx": -1,
+					"stat_peak_period": -1,
+					"stat_peak_pvalue": -1
+				}
+			},
+			"compareOutputs": [
+				"@{y}_period",
+				"@{y}_power",
+				"@{y}_threshold",
+				"rhythmicityx",
+				"rhythmicityy",
+				"stat_peak_period",
+				"stat_peak_pvalue"
+			],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-rhythmicity-preprocess-fft",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"note": "FFT with Multiply by -1: frequency, period, magnitude and phase are all negated (the zero-frequency period, NaN, stays missing); the primary pair is read AFTER the process, so rhythmicityx is the negated period.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 23.7,
+				"amp": 30,
+				"mesor": 45,
+				"phase": 9,
+				"noise": 5,
+				"seed": 945,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"analysis": "fft",
+				"preProcesses": [
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": -1
+						}
+					}
+				],
+				"out": {
+					"rhythmicityx": -1,
+					"stat_peak_period": -1,
+					"stat_peak_magnitude": -1
+				}
+			},
+			"compareOutputs": [
+				"@{y}_frequency",
+				"@{y}_period",
+				"@{y}_magnitude",
+				"@{y}_phase",
+				"rhythmicityx",
+				"rhythmicityy",
+				"stat_peak_period",
+				"stat_peak_magnitude"
+			],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-rhythmicity-preprocess-correlogram",
+			"kind": "tableProcess",
+			"jsName": "RhythmicityAnalysis",
+			"pyFunc": "rhythmicityanalysis",
+			"rFunc": "rhythmicityanalysis",
+			"note": "Correlogram with a z-score normalize then Add 10, on lag and correlation alike; the peak lag stat is unprocessed.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 23.7,
+				"amp": 30,
+				"mesor": 45,
+				"phase": 9,
+				"noise": 5,
+				"seed": 947,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"analysis": "correlogram",
+				"preProcesses": [
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "z-score"
+						}
+					},
+					{
+						"processName": "Add",
+						"processArgs": {
+							"value": 10
+						}
+					}
+				],
+				"out": {
+					"rhythmicityx": -1,
+					"stat_peak_lag": -1,
+					"stat_peak_correlation": -1
+				}
+			},
+			"compareOutputs": [
+				"@{y}_lag",
+				"@{y}_correlation",
+				"rhythmicityx",
+				"rhythmicityy",
+				"stat_peak_lag",
+				"stat_peak_correlation"
+			],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "actogram-data-start-time-earlier",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "A chosen start (startTimeIN, v82.23) 6 h BEFORE the automatic one (midnight 4 March UTC): every bar moves 6 h right in its row and the first row starts at 18:00 on 3 March.",
+			"periodHrs": 24,
+			"startTimeIN": "2024-03-03T18:00:00Z",
+			"generate": {
+				"seed": 73,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:20:00Z",
+						"dtHrs": 0.25,
+						"days": 3,
+						"tau": 24,
+						"onsetHr": 14
+					}
+				]
+			}
+		},
+		{
+			"id": "actogram-data-start-time-later",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "A chosen start AFTER the first sample, off the 0.3 h grid: the samples before it fall in negative periods and are left out, and the bar that straddles the start keeps only its part after it. Two series, so both fold at the one chosen start, in the New York display zone (a chosen start is an instant, so the zone does not move it).",
+			"periodHrs": 24,
+			"zone": "America/New_York",
+			"startTimeIN": "2024-03-04T12:05:00Z",
+			"generate": {
+				"seed": 79,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T06:20:00Z",
+						"dtHrs": 0.3,
+						"days": 3,
+						"tau": 24,
+						"onsetHr": 12
+					},
+					{
+						"xType": "time",
+						"start": "2024-03-05T01:00:00Z",
+						"dtHrs": 0.5,
+						"days": 2,
+						"tau": 24,
+						"onsetHr": 9
+					}
+				]
+			}
+		},
+		{
+			"id": "actogram-data-start-time-bin-origin",
+			"kind": "plotCompute",
+			"jsFn": "actogramDownloadData",
+			"pyFunc": "actogram_download_data",
+			"tolerance": 1e-9,
+			"note": "A 'bin' column only (no time series, so the automatic start is 0) with originTime_ms 07:30Z: a chosen start of 05:00Z shifts its bars by the origin's distance from it, 2.5 h (timeOfDayShift = (startTime - originMs) / 3.6e6).",
+			"periodHrs": 24,
+			"startTimeIN": "2024-03-04T05:00:00Z",
+			"generate": {
+				"seed": 83,
+				"series": [
+					{
+						"xType": "number",
+						"startHr": 0,
+						"dtHrs": 0.5,
+						"days": 3,
+						"tau": 24,
+						"onsetHr": 9,
+						"bin": {
+							"binWidth": 0.5,
+							"originTime": "2024-03-04T07:30:00Z"
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": "actogram-rule-start-time-in",
+			"kind": "actogramMarkers",
+			"pyFunc": "actogram_plot_rule_outputs",
+			"rFunc": "actogram_plot_rule_outputs",
+			"tolerance": 1e-9,
+			"note": "Marker rules on an actogram with a chosen start (startTimeIN) of 20:00Z on 3 March, not the automatic midnight of 4 March: every marker hour, the day numbers and the fitted line are read on the chosen frame (startTime is recorded and compared too).",
+			"startTimeIN": "2024-03-03T20:00:00Z",
+			"generate": {
+				"seed": 19,
+				"series": [
+					{
+						"xType": "time",
+						"start": "2024-03-04T03:30:00Z",
+						"dtHrs": 0.25,
+						"days": 10,
+						"tau": 24.2,
+						"onsetHr": 14
+					}
+				]
+			},
+			"markerRules": [
+				{
+					"id": "r1",
+					"name": "Onsets",
+					"type": "onset",
+					"templateHrsBefore": 3,
+					"templateHrsAfter": 3,
+					"centileThreshold": 50,
+					"lockTau": "fit",
+					"lockTheta": "fit",
+					"fixedTau": null,
+					"fixedTheta": null,
+					"phaseRefDay": null,
+					"lineMinDay": null,
+					"lineMaxDay": null,
+					"colour": null,
+					"lineWidth": 1,
+					"markerSize": 5,
+					"showLine": true
+				}
+			]
+		},
+		{
+			"id": "tp-logisticregression-terms-ci",
+			"kind": "tableProcess",
+			"jsName": "LogisticRegression",
+			"pyFunc": "logisticregression",
+			"rFunc": "logisticregression",
+			"note": "The term labels and the Wald interval on the odds ratio, exp(coef -/+ 1.959964 se), which no fixture compared before. Same data as tp-logisticregression.",
+			"generate": {
+				"type": "logistic",
+				"n": 120,
+				"seed": 505,
+				"refs": {
+					"x": "pred",
+					"y": "out"
+				}
+			},
+			"args": {
+				"yIN": "@out",
+				"xIN": ["@pred"],
+				"out": {
+					"term": -1,
+					"coef": -1,
+					"ciLow": -1,
+					"ciHigh": -1,
+					"oddsRatio": -1
+				}
+			},
+			"compareOutputs": ["term", "coef", "oddsRatio", "ciLow", "ciHigh"],
+			"rTolerance": 1e-6,
+			"rToleranceWhy": "R fits with glm(binomial), an independent IRLS; the interval is built from its standard errors, which agree with the JS to ~5e-9 (see tp-logisticregression)."
+		},
+		{
+			"id": "tp-logisticregression-two-predictors-ci",
+			"kind": "tableProcess",
+			"jsName": "LogisticRegression",
+			"pyFunc": "logisticregression",
+			"rFunc": "logisticregression",
+			"note": "Two predictors, so three terms in order (intercept, then the predictors by column name), each with its interval; two rows have a missing second predictor and are dropped listwise.",
+			"rawInputs": true,
+			"inputs": [
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
+						0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0,
+						1, 1
+					]
+				},
+				{
+					"ref": "dose",
+					"type": "number",
+					"values": [
+						-3.0, -2.8983, -2.7966, -2.6949, -2.5932, -2.4915, -2.3898, -2.2881, -2.1864, -2.0847,
+						-1.9831, -1.8814, -1.7797, -1.678, -1.5763, -1.4746, -1.3729, -1.2712, -1.1695, -1.0678,
+						-0.9661, -0.8644, -0.7627, -0.661, -0.5593, -0.4576, -0.3559, -0.2542, -0.1525, -0.0508,
+						0.0508, 0.1525, 0.2542, 0.3559, 0.4576, 0.5593, 0.661, 0.7627, 0.8644, 0.9661, 1.0678,
+						1.1695, 1.2712, 1.3729, 1.4746, 1.5763, 1.678, 1.7797, 1.8814, 1.9831, 2.0847, 2.1864,
+						2.2881, 2.3898, 2.4915, 2.5932, 2.6949, 2.7966, 2.8983, 3.0
+					]
+				},
+				{
+					"ref": "temp",
+					"type": "number",
+					"values": [
+						0.0,
+						1.5884,
+						2.5709,
+						2.6264,
+						1.87,
+						-0.7016,
+						-1.4432,
+						null,
+						-0.3625,
+						1.2336,
+						1.314,
+						2.2763,
+						2.3092,
+						1.5382,
+						0.467,
+						-1.7594,
+						-1.6584,
+						-0.6363,
+						0.9672,
+						2.5391,
+						1.9812,
+						1.9915,
+						1.2062,
+						0.1359,
+						-0.5751,
+						-1.9513,
+						-0.9097,
+						0.7008,
+						2.2639,
+						3.1855,
+						1.6733,
+						0.8741,
+						-0.1951,
+						"",
+						-0.7436,
+						-1.1827,
+						0.4344,
+						1.9883,
+						2.8893,
+						2.8547,
+						0.5418,
+						-0.5259,
+						-1.2051,
+						-1.0354,
+						0.0446,
+						0.1679,
+						1.7123,
+						2.5925,
+						2.5355,
+						1.7094,
+						-0.8564,
+						-1.5193,
+						-1.3266,
+						-0.2278,
+						1.4014,
+						1.4359,
+						2.2951,
+						2.2159,
+						1.3768,
+						0.3134
+					]
+				}
+			],
+			"args": {
+				"yIN": "@y",
+				"xIN": ["@dose", "@temp"],
+				"out": {
+					"term": -1,
+					"coef": -1,
+					"se": -1,
+					"pvalue": -1,
+					"ciLow": -1,
+					"ciHigh": -1
+				}
+			},
+			"compareOutputs": ["term", "coef", "se", "pvalue", "ciLow", "ciHigh"],
+			"rTolerance": 1e-5,
+			"rToleranceWhy": "R glm(binomial) standard errors agree with the JS IRLS to ~1e-6 relative on a 58-row fit (see tp-logistic-missing-predictor)."
+		},
+		{
+			"id": "tp-logisticregression-too-few-rows",
+			"kind": "tableProcess",
+			"jsName": "LogisticRegression",
+			"pyFunc": "logisticregression",
+			"rFunc": "logisticregression",
+			"note": "Fewer complete rows than terms: the app warns, writes nothing, and the node stays VALID (LogisticRegression.svelte returns [result, true]).",
+			"recordValid": true,
+			"inputs": [
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [0, 1, null, 1]
+				},
+				{
+					"ref": "x",
+					"type": "number",
+					"values": [1.5, null, 2.0, 3.0]
+				}
+			],
+			"args": {
+				"yIN": "@y",
+				"xIN": ["@x"],
+				"out": {
+					"term": -1,
+					"coef": -1
+				}
+			},
+			"compareOutputs": ["term", "coef"]
+		},
+		{
+			"id": "tp-movinganalysis-summary-time",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Node level on a TIME x starting 06:00Z with every 13th value missing: windows from the earliest valid time, labelled at their START (binLabel), movex written back as epoch ms (origin + start hours). Summary: mean, SD and the 30th percentile.",
+			"generate": {
+				"type": "rhythm",
+				"n": 168,
+				"period": 24,
+				"amp": 20,
+				"mesor": 50,
+				"phase": 4,
+				"noise": 4,
+				"seed": 951,
+				"xStart": "2024-03-04T06:00:00Z",
+				"missingEvery": 13,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 48,
+				"stepSize": 12,
+				"binLabel": "start",
+				"analysis": "summary",
+				"summaryPercentile": 30,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_mean", "@{y}_sd", "@{y}_percentile"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-movinganalysis-periodogram-chisq",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Chi-squared periodogram per window, labelled at the window END: peak period, power and the family-wise peak p.",
+			"generate": {
+				"type": "rhythm",
+				"n": 480,
+				"period": 24,
+				"amp": 10,
+				"mesor": 50,
+				"phase": 6,
+				"noise": 8,
+				"seed": 953,
+				"dt": 0.5,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 96,
+				"stepSize": 24,
+				"binLabel": "end",
+				"analysis": "periodogram",
+				"pgMethod": "Chi-squared",
+				"pgBinSize": 0.5,
+				"pgAlpha": 0.05,
+				"periodMin": 18,
+				"periodMax": 30,
+				"periodStep": 0.5,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_peak_period", "@{y}_peak_power", "@{y}_peak_pvalue"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-movinganalysis-periodogram-ls",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Lomb-Scargle periodogram per window (centre label, the default).",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 23.5,
+				"amp": 15,
+				"mesor": 40,
+				"phase": 3,
+				"noise": 5,
+				"seed": 955,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "periodogram",
+				"pgMethod": "Lomb-Scargle",
+				"periodMin": 20,
+				"periodMax": 28,
+				"periodStep": 0.1,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_peak_period", "@{y}_peak_power"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-movinganalysis-cosinor-fixed-clock",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Fixed 24 h cosinor with 2 harmonics on a TIME x starting 07:15Z, phaseReference 'clock' (UTC display zone): the node resolves the phase frame from its x column. Every port of the fixed model, rmse (residual SE) and rmse_n (sqrt(SS/n)) included.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 20,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 5,
+				"seed": 957,
+				"second": {
+					"period": 12,
+					"amp": 6,
+					"phase": 2
+				},
+				"xStart": "2024-03-04T07:15:00Z",
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "cosinor",
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"nHarmonics": 2,
+				"alpha": 0.05,
+				"phaseReference": "clock",
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": [
+				"movex",
+				"@{y}_mesor",
+				"@{y}_H1_amplitude",
+				"@{y}_H1_acrophase",
+				"@{y}_H2_amplitude",
+				"@{y}_H2_acrophase",
+				"@{y}_rel_amplitude",
+				"@{y}_r2",
+				"@{y}_rmse",
+				"@{y}_rmse_n",
+				"@{y}_pvalue"
+			],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-movinganalysis-cosinor-free",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Free-period cosinor per window (one component).",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24.6,
+				"amp": 20,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 5,
+				"seed": 959,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "cosinor",
+				"useFixedPeriod": false,
+				"Ncurves": 1,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": [
+				"movex",
+				"@{y}_C1_period",
+				"@{y}_C1_amplitude",
+				"@{y}_C1_acrophase",
+				"@{y}_r2",
+				"@{y}_rmse"
+			],
+			"tolerance": 0.0001,
+			"toleranceWhy": "The ports fit the free cosinor with scipy least_squares / R optim, not the JS Levenberg-Marquardt (README: Remaining divergences); the kernel fixture util-movingwindows-cosinor-free uses the same 1e-4."
+		},
+		{
+			"id": "tp-movinganalysis-npcra",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "NPCRA per 72 h window on hourly data: IS, IV, RA, L5, M10 and the M10 onset on the record frame.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 40,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 6,
+				"seed": 961,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "npcra",
+				"npcraEpochHours": 1,
+				"npcraPeriod": 24,
+				"npcraMWindow": 10,
+				"npcraLWindow": 5,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": [
+				"movex",
+				"@{y}_IS",
+				"@{y}_IV",
+				"@{y}_RA",
+				"@{y}_L5",
+				"@{y}_M10",
+				"@{y}_M10onset"
+			],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-movinganalysis-fft",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "FFT per window: refined peak period, frequency and magnitude.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 20,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 5,
+				"seed": 963,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "fft",
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_peak_period", "@{y}_peak_frequency", "@{y}_peak_magnitude"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-movinganalysis-correlogram",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Autocorrelation per window: the first-positive-lobe peak lag and its correlation.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 20,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 5,
+				"seed": 965,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 96,
+				"stepSize": 24,
+				"analysis": "correlogram",
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_peak_lag", "@{y}_peak_correlation"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-movinganalysis-rectfit-fixed",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Rectangular-wave fit per window with a fixed 24 h period (the square-wave input of util-movingwindows-rectfit-fixed).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0,
+						20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0, 33.0,
+						34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 47.0,
+						48.0, 49.0, 50.0, 51.0, 52.0, 53.0, 54.0, 55.0, 56.0, 57.0, 58.0, 59.0, 60.0, 61.0,
+						62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0, 74.0, 75.0,
+						76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0, 86.0, 87.0, 88.0, 89.0,
+						90.0, 91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0, 98.0, 99.0, 100.0, 101.0, 102.0, 103.0,
+						104.0, 105.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0, 112.0, 113.0, 114.0, 115.0,
+						116.0, 117.0, 118.0, 119.0, 120.0, 121.0, 122.0, 123.0, 124.0, 125.0, 126.0, 127.0,
+						128.0, 129.0, 130.0, 131.0, 132.0, 133.0, 134.0, 135.0, 136.0, 137.0, 138.0, 139.0,
+						140.0, 141.0, 142.0, 143.0, 144.0, 145.0, 146.0, 147.0, 148.0, 149.0, 150.0, 151.0,
+						152.0, 153.0, 154.0, 155.0, 156.0, 157.0, 158.0, 159.0, 160.0, 161.0, 162.0, 163.0,
+						164.0, 165.0, 166.0, 167.0, 168.0, 169.0, 170.0, 171.0, 172.0, 173.0, 174.0, 175.0,
+						176.0, 177.0, 178.0, 179.0, 180.0, 181.0, 182.0, 183.0, 184.0, 185.0, 186.0, 187.0,
+						188.0, 189.0, 190.0, 191.0, 192.0, 193.0, 194.0, 195.0, 196.0, 197.0, 198.0, 199.0,
+						200.0, 201.0, 202.0, 203.0, 204.0, 205.0, 206.0, 207.0, 208.0, 209.0, 210.0, 211.0,
+						212.0, 213.0, 214.0, 215.0, 216.0, 217.0, 218.0, 219.0, 220.0, 221.0, 222.0, 223.0,
+						224.0, 225.0, 226.0, 227.0, 228.0, 229.0, 230.0, 231.0, 232.0, 233.0, 234.0, 235.0,
+						236.0, 237.0, 238.0, 239.0, 240.0, 241.0, 242.0, 243.0, 244.0
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						30.3, 30.8174, 3.95186, 3.80557, 3.62916, 4.388, 4.85958, 3.61121, 3.60555, 4.15607,
+						4.73357, 4.0596, 3.88818, 3.62395, 4.3491, 30.86885, 29.74515, 29.52004, 29.9735,
+						30.52805, 30.18375, 29.91843, 29.69031, 30.33174, 30.739, 29.97665, 3.36172, 3.67149,
+						4.20086, 4.43513, 3.81303, 3.67744, 4.17572, 4.43083, 4.38176, 3.26241, 3.28805,
+						3.94908, 4.7956, 29.69964, 29.4028, 29.72639, 30.20561, 30.72188, 29.55025, 29.20449,
+						30.09395, 30.84122, 30.00811, 29.15115, 3.35645, 4.45511, 4.51308, 4.07549, 3.60827,
+						4.27041, 4.3668, 4.5541, 3.57519, 3.66409, 4.56847, 4.28516, 3.92219, 29.52953,
+						29.68858, 30.43933, 30.296, 29.84897, 29.6408, 29.90822, 30.84232, 29.84036, 29.14061,
+						29.60096, 4.7196, 4.33806, 3.44054, 3.12794, 4.13631, 4.49975, 4.50779, 3.77639,
+						3.81838, 4.04533, 4.79462, 4.14255, 3.6969, 29.88518, 30.54921, 30.04153, 29.32713,
+						29.22856, 30.51162, 30.32077, 29.76689, 29.12407, 29.73343, 30.50033, 4.73566, 3.9483,
+						3.6931, 3.78662, 4.84847, 4.42852, 3.76281, 3.57757, 4.4559, 4.22625, 3.52568, 3.21778,
+						4.23165, 30.41877, 29.98698, 29.27303, 29.72761, 30.0573, 30.80677, 30.22988, 29.40258,
+						29.63567, 30.45699, 30.60571, 3.73018, 3.15584, 4.43751, 4.61322, 4.04519, 3.69054,
+						3.55539, 4.71499, 4.59322, 3.98622, 3.53778, 3.91353, 4.30216, 29.97369, 29.27632,
+						29.86346, 30.16456, 30.26385, 29.66663, 29.65533, 29.57905, 30.65059, 30.50984,
+						29.40466, 3.54325, 3.92567, 4.51888, 3.82639, 3.31262, 3.77377, 4.76596, 4.75206,
+						3.87176, 3.17044, 4.08076, 4.83099, 4.27424, 29.17832, 29.88947, 30.49267, 30.63742,
+						30.14677, 29.12068, 30.16128, 30.85976, 30.58271, 29.3258, 29.78952, 4.16123, 4.48336,
+						4.23881, 3.24296, 4.07683, 4.72517, 4.7223, 3.54723, 3.64359, 3.91739, 4.40028, 4.30871,
+						3.36974, 29.94222, 30.57847, 30.7988, 29.72442, 29.57137, 29.75176, 30.36453, 30.43143,
+						29.44512, 29.83899, 30.47813, 4.86466, 3.82675, 3.604, 3.65526, 4.36496, 4.60806,
+						3.46385, 3.76695, 4.41984, 4.89237, 3.86143, 3.71025, 3.66144, 30.43269, 30.77563,
+						29.46792, 29.64521, 30.32455, 30.78114, 29.91085, 29.76894, 29.77224, 30.55347,
+						30.77793, 3.60895, 3.379, 4.03038, 4.46031, 4.16673, 3.61509, 3.79076, 4.5025, 4.501,
+						4.04773, 3.12628, 3.54346, 4.18513, 30.64409, 29.40726, 29.42668, 30.02301, 30.30492,
+						30.45641, 29.37419, 29.41183, 30.41235
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "rectfit",
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"rwFixKappa": false,
+				"rwFixDutyCycle": false,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": [
+				"movex",
+				"@{y}_mesor",
+				"@{y}_amplitude",
+				"@{y}_period",
+				"@{y}_acrophase",
+				"@{y}_duty_cycle",
+				"@{y}_r2",
+				"@{y}_rmse"
+			],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-movinganalysis-doublelogistic",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Periodic double-logistic fit per window with a free period (the input of util-movingwindows-dl-periodic-free).",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0,
+						20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0, 33.0,
+						34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 47.0,
+						48.0, 49.0, 50.0, 51.0, 52.0, 53.0, 54.0, 55.0, 56.0, 57.0, 58.0, 59.0, 60.0, 61.0,
+						62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0, 74.0, 75.0,
+						76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0, 86.0, 87.0, 88.0, 89.0,
+						90.0, 91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0, 98.0, 99.0, 100.0, 101.0, 102.0, 103.0,
+						104.0, 105.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0, 112.0, 113.0, 114.0, 115.0,
+						116.0, 117.0, 118.0, 119.0, 120.0, 121.0, 122.0, 123.0, 124.0, 125.0, 126.0, 127.0,
+						128.0, 129.0, 130.0, 131.0, 132.0, 133.0, 134.0, 135.0, 136.0, 137.0, 138.0, 139.0,
+						140.0, 141.0, 142.0, 143.0, 144.0, 145.0, 146.0, 147.0, 148.0, 149.0, 150.0, 151.0,
+						152.0, 153.0, 154.0, 155.0, 156.0, 157.0, 158.0, 159.0, 160.0, 161.0, 162.0, 163.0,
+						164.0, 165.0, 166.0, 167.0, 168.0, 169.0, 170.0, 171.0, 172.0, 173.0, 174.0, 175.0,
+						176.0, 177.0, 178.0, 179.0, 180.0, 181.0, 182.0, 183.0, 184.0, 185.0, 186.0, 187.0,
+						188.0, 189.0, 190.0, 191.0, 192.0, 193.0, 194.0, 195.0, 196.0, 197.0, 198.0, 199.0,
+						200.0, 201.0, 202.0, 203.0, 204.0, 205.0, 206.0, 207.0, 208.0, 209.0, 210.0, 211.0,
+						212.0, 213.0, 214.0, 215.0, 216.0, 217.0, 218.0, 219.0, 220.0, 221.0, 222.0, 223.0,
+						224.0, 225.0, 226.0, 227.0, 228.0, 229.0, 230.0, 231.0, 232.0, 233.0, 234.0, 235.0,
+						236.0, 237.0, 238.0, 239.0, 240.0, 241.0, 242.0, 243.0, 244.0
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						30.3, 30.8174, 3.95186, 3.80557, 3.62916, 4.388, 4.85958, 3.61121, 3.60555, 4.15607,
+						4.73357, 4.0596, 3.88818, 3.62395, 4.3491, 30.86885, 29.74515, 29.52004, 29.9735,
+						30.52805, 30.18375, 29.91843, 29.69031, 30.33174, 30.739, 29.97665, 3.36172, 3.67149,
+						4.20086, 4.43513, 3.81303, 3.67744, 4.17572, 4.43083, 4.38176, 3.26241, 3.28805,
+						3.94908, 4.7956, 29.69964, 29.4028, 29.72639, 30.20561, 30.72188, 29.55025, 29.20449,
+						30.09395, 30.84122, 30.00811, 29.15115, 3.35645, 4.45511, 4.51308, 4.07549, 3.60827,
+						4.27041, 4.3668, 4.5541, 3.57519, 3.66409, 4.56847, 4.28516, 3.92219, 29.52953,
+						29.68858, 30.43933, 30.296, 29.84897, 29.6408, 29.90822, 30.84232, 29.84036, 29.14061,
+						29.60096, 4.7196, 4.33806, 3.44054, 3.12794, 4.13631, 4.49975, 4.50779, 3.77639,
+						3.81838, 4.04533, 4.79462, 4.14255, 3.6969, 29.88518, 30.54921, 30.04153, 29.32713,
+						29.22856, 30.51162, 30.32077, 29.76689, 29.12407, 29.73343, 30.50033, 4.73566, 3.9483,
+						3.6931, 3.78662, 4.84847, 4.42852, 3.76281, 3.57757, 4.4559, 4.22625, 3.52568, 3.21778,
+						4.23165, 30.41877, 29.98698, 29.27303, 29.72761, 30.0573, 30.80677, 30.22988, 29.40258,
+						29.63567, 30.45699, 30.60571, 3.73018, 3.15584, 4.43751, 4.61322, 4.04519, 3.69054,
+						3.55539, 4.71499, 4.59322, 3.98622, 3.53778, 3.91353, 4.30216, 29.97369, 29.27632,
+						29.86346, 30.16456, 30.26385, 29.66663, 29.65533, 29.57905, 30.65059, 30.50984,
+						29.40466, 3.54325, 3.92567, 4.51888, 3.82639, 3.31262, 3.77377, 4.76596, 4.75206,
+						3.87176, 3.17044, 4.08076, 4.83099, 4.27424, 29.17832, 29.88947, 30.49267, 30.63742,
+						30.14677, 29.12068, 30.16128, 30.85976, 30.58271, 29.3258, 29.78952, 4.16123, 4.48336,
+						4.23881, 3.24296, 4.07683, 4.72517, 4.7223, 3.54723, 3.64359, 3.91739, 4.40028, 4.30871,
+						3.36974, 29.94222, 30.57847, 30.7988, 29.72442, 29.57137, 29.75176, 30.36453, 30.43143,
+						29.44512, 29.83899, 30.47813, 4.86466, 3.82675, 3.604, 3.65526, 4.36496, 4.60806,
+						3.46385, 3.76695, 4.41984, 4.89237, 3.86143, 3.71025, 3.66144, 30.43269, 30.77563,
+						29.46792, 29.64521, 30.32455, 30.78114, 29.91085, 29.76894, 29.77224, 30.55347,
+						30.77793, 3.60895, 3.379, 4.03038, 4.46031, 4.16673, 3.61509, 3.79076, 4.5025, 4.501,
+						4.04773, 3.12628, 3.54346, 4.18513, 30.64409, 29.40726, 29.42668, 30.02301, 30.30492,
+						30.45641, 29.37419, 29.41183, 30.41235
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "doublelogistic",
+				"dlPeriodic": true,
+				"dlFixK1": false,
+				"dlFixK2": false,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": [
+				"movex",
+				"@{y}_mesor",
+				"@{y}_amplitude",
+				"@{y}_onset",
+				"@{y}_offset",
+				"@{y}_period",
+				"@{y}_r2",
+				"@{y}_rmse"
+			],
+			"tolerance": 1e-5
+		},
+		{
+			"id": "tp-movinganalysis-trend-polynomial",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Quadratic trend per window: c0, c1, c2, r2, rmse.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 10,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 4,
+				"seed": 967,
+				"trend": 0.1,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "trend",
+				"trendModel": "polynomial",
+				"trendPolyDegree": 2,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_c0", "@{y}_c1", "@{y}_c2", "@{y}_r2", "@{y}_rmse"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-movinganalysis-preprocess",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "preProcesses on every stat array of every y before writing (z-score normalize, then Multiply by 3).",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 20,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 5,
+				"seed": 969,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 48,
+				"stepSize": 12,
+				"analysis": "summary",
+				"summaryPercentile": 50,
+				"preProcesses": [
+					{
+						"processName": "normalize",
+						"processArgs": {
+							"normalizationType": "z-score"
+						}
+					},
+					{
+						"processName": "Multiply",
+						"processArgs": {
+							"value": 3
+						}
+					}
+				],
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_mean", "@{y}_sd", "@{y}_percentile"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-movinganalysis-window-too-long",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "A window longer than the record (span 47 h < 48 h): the node refuses (invalid) and writes nothing.",
+			"generate": {
+				"type": "rhythm",
+				"n": 48,
+				"period": 24,
+				"amp": 20,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 5,
+				"seed": 971,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 48,
+				"stepSize": 12,
+				"analysis": "summary",
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_mean"],
+			"tolerance": 1e-9,
+			"recordValid": true
+		},
+		{
+			"id": "tp-movinganalysis-periodogram-enright",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Enright periodogram per window on hourly data (pgBinSize 1 h), centre label set explicitly.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 20,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 5,
+				"seed": 973,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 120,
+				"stepSize": 24,
+				"binLabel": "center",
+				"analysis": "periodogram",
+				"pgMethod": "Enright",
+				"pgBinSize": 1,
+				"periodMin": 20,
+				"periodMax": 28,
+				"periodStep": 1,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_peak_period", "@{y}_peak_power"],
+			"tolerance": 1e-9
+		},
+		{
+			"id": "tp-movinganalysis-trend-linear",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Linear trend per window: slope, intercept, r2, rmse.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 10,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 4,
+				"seed": 975,
+				"trend": 0.1,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "trend",
+				"trendModel": "linear",
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_slope", "@{y}_intercept", "@{y}_r2", "@{y}_rmse"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-movinganalysis-trend-exponential",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Exponential trend y = a exp(b x) per window on all-positive data.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 10,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 4,
+				"seed": 977,
+				"trend": 0.1,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "trend",
+				"trendModel": "exponential",
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_a", "@{y}_b", "@{y}_r2", "@{y}_rmse"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-movinganalysis-trend-logarithmic",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Logarithmic trend y = a + b log(x) per window. x starts at 0, so the first window holds an x <= 0 and is skipped (every stat missing), as the app skips it.",
+			"generate": {
+				"type": "rhythm",
+				"n": 240,
+				"period": 24,
+				"amp": 10,
+				"mesor": 50,
+				"phase": 8,
+				"noise": 4,
+				"seed": 979,
+				"trend": 0.1,
+				"refs": {
+					"x": "t",
+					"y": "y"
+				}
+			},
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "trend",
+				"trendModel": "logarithmic",
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": ["movex", "@{y}_a", "@{y}_b", "@{y}_r2", "@{y}_rmse"],
+			"tolerance": 1e-7
+		},
+		{
+			"id": "tp-movinganalysis-rectfit-fixed-kappa-duty",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Rectangular-wave windows with the period, the edge steepness (kappa 5) and the duty cycle (0.5) all fixed.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0,
+						20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0, 33.0,
+						34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 47.0,
+						48.0, 49.0, 50.0, 51.0, 52.0, 53.0, 54.0, 55.0, 56.0, 57.0, 58.0, 59.0, 60.0, 61.0,
+						62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0, 74.0, 75.0,
+						76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0, 86.0, 87.0, 88.0, 89.0,
+						90.0, 91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0, 98.0, 99.0, 100.0, 101.0, 102.0, 103.0,
+						104.0, 105.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0, 112.0, 113.0, 114.0, 115.0,
+						116.0, 117.0, 118.0, 119.0, 120.0, 121.0, 122.0, 123.0, 124.0, 125.0, 126.0, 127.0,
+						128.0, 129.0, 130.0, 131.0, 132.0, 133.0, 134.0, 135.0, 136.0, 137.0, 138.0, 139.0,
+						140.0, 141.0, 142.0, 143.0, 144.0, 145.0, 146.0, 147.0, 148.0, 149.0, 150.0, 151.0,
+						152.0, 153.0, 154.0, 155.0, 156.0, 157.0, 158.0, 159.0, 160.0, 161.0, 162.0, 163.0,
+						164.0, 165.0, 166.0, 167.0, 168.0, 169.0, 170.0, 171.0, 172.0, 173.0, 174.0, 175.0,
+						176.0, 177.0, 178.0, 179.0, 180.0, 181.0, 182.0, 183.0, 184.0, 185.0, 186.0, 187.0,
+						188.0, 189.0, 190.0, 191.0, 192.0, 193.0, 194.0, 195.0, 196.0, 197.0, 198.0, 199.0,
+						200.0, 201.0, 202.0, 203.0, 204.0, 205.0, 206.0, 207.0, 208.0, 209.0, 210.0, 211.0,
+						212.0, 213.0, 214.0, 215.0, 216.0, 217.0, 218.0, 219.0, 220.0, 221.0, 222.0, 223.0,
+						224.0, 225.0, 226.0, 227.0, 228.0, 229.0, 230.0, 231.0, 232.0, 233.0, 234.0, 235.0,
+						236.0, 237.0, 238.0, 239.0, 240.0, 241.0, 242.0, 243.0, 244.0
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						30.3, 30.8174, 3.95186, 3.80557, 3.62916, 4.388, 4.85958, 3.61121, 3.60555, 4.15607,
+						4.73357, 4.0596, 3.88818, 3.62395, 4.3491, 30.86885, 29.74515, 29.52004, 29.9735,
+						30.52805, 30.18375, 29.91843, 29.69031, 30.33174, 30.739, 29.97665, 3.36172, 3.67149,
+						4.20086, 4.43513, 3.81303, 3.67744, 4.17572, 4.43083, 4.38176, 3.26241, 3.28805,
+						3.94908, 4.7956, 29.69964, 29.4028, 29.72639, 30.20561, 30.72188, 29.55025, 29.20449,
+						30.09395, 30.84122, 30.00811, 29.15115, 3.35645, 4.45511, 4.51308, 4.07549, 3.60827,
+						4.27041, 4.3668, 4.5541, 3.57519, 3.66409, 4.56847, 4.28516, 3.92219, 29.52953,
+						29.68858, 30.43933, 30.296, 29.84897, 29.6408, 29.90822, 30.84232, 29.84036, 29.14061,
+						29.60096, 4.7196, 4.33806, 3.44054, 3.12794, 4.13631, 4.49975, 4.50779, 3.77639,
+						3.81838, 4.04533, 4.79462, 4.14255, 3.6969, 29.88518, 30.54921, 30.04153, 29.32713,
+						29.22856, 30.51162, 30.32077, 29.76689, 29.12407, 29.73343, 30.50033, 4.73566, 3.9483,
+						3.6931, 3.78662, 4.84847, 4.42852, 3.76281, 3.57757, 4.4559, 4.22625, 3.52568, 3.21778,
+						4.23165, 30.41877, 29.98698, 29.27303, 29.72761, 30.0573, 30.80677, 30.22988, 29.40258,
+						29.63567, 30.45699, 30.60571, 3.73018, 3.15584, 4.43751, 4.61322, 4.04519, 3.69054,
+						3.55539, 4.71499, 4.59322, 3.98622, 3.53778, 3.91353, 4.30216, 29.97369, 29.27632,
+						29.86346, 30.16456, 30.26385, 29.66663, 29.65533, 29.57905, 30.65059, 30.50984,
+						29.40466, 3.54325, 3.92567, 4.51888, 3.82639, 3.31262, 3.77377, 4.76596, 4.75206,
+						3.87176, 3.17044, 4.08076, 4.83099, 4.27424, 29.17832, 29.88947, 30.49267, 30.63742,
+						30.14677, 29.12068, 30.16128, 30.85976, 30.58271, 29.3258, 29.78952, 4.16123, 4.48336,
+						4.23881, 3.24296, 4.07683, 4.72517, 4.7223, 3.54723, 3.64359, 3.91739, 4.40028, 4.30871,
+						3.36974, 29.94222, 30.57847, 30.7988, 29.72442, 29.57137, 29.75176, 30.36453, 30.43143,
+						29.44512, 29.83899, 30.47813, 4.86466, 3.82675, 3.604, 3.65526, 4.36496, 4.60806,
+						3.46385, 3.76695, 4.41984, 4.89237, 3.86143, 3.71025, 3.66144, 30.43269, 30.77563,
+						29.46792, 29.64521, 30.32455, 30.78114, 29.91085, 29.76894, 29.77224, 30.55347,
+						30.77793, 3.60895, 3.379, 4.03038, 4.46031, 4.16673, 3.61509, 3.79076, 4.5025, 4.501,
+						4.04773, 3.12628, 3.54346, 4.18513, 30.64409, 29.40726, 29.42668, 30.02301, 30.30492,
+						30.45641, 29.37419, 29.41183, 30.41235
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "rectfit",
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"rwFixKappa": true,
+				"rwFixedKappa": 5,
+				"rwFixDutyCycle": true,
+				"rwFixedDutyCycle": 0.5,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": [
+				"movex",
+				"@{y}_mesor",
+				"@{y}_amplitude",
+				"@{y}_period",
+				"@{y}_acrophase",
+				"@{y}_duty_cycle",
+				"@{y}_kappa",
+				"@{y}_r2",
+				"@{y}_rmse"
+			],
+			"tolerance": 1e-6
+		},
+		{
+			"id": "tp-movinganalysis-doublelogistic-fixed-k",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Periodic double-logistic windows with both slopes fixed (k1 = k2 = 0.5) and a fixed 24 h period.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0,
+						20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0, 33.0,
+						34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 47.0,
+						48.0, 49.0, 50.0, 51.0, 52.0, 53.0, 54.0, 55.0, 56.0, 57.0, 58.0, 59.0, 60.0, 61.0,
+						62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0, 74.0, 75.0,
+						76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0, 86.0, 87.0, 88.0, 89.0,
+						90.0, 91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0, 98.0, 99.0, 100.0, 101.0, 102.0, 103.0,
+						104.0, 105.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0, 112.0, 113.0, 114.0, 115.0,
+						116.0, 117.0, 118.0, 119.0, 120.0, 121.0, 122.0, 123.0, 124.0, 125.0, 126.0, 127.0,
+						128.0, 129.0, 130.0, 131.0, 132.0, 133.0, 134.0, 135.0, 136.0, 137.0, 138.0, 139.0,
+						140.0, 141.0, 142.0, 143.0, 144.0, 145.0, 146.0, 147.0, 148.0, 149.0, 150.0, 151.0,
+						152.0, 153.0, 154.0, 155.0, 156.0, 157.0, 158.0, 159.0, 160.0, 161.0, 162.0, 163.0,
+						164.0, 165.0, 166.0, 167.0, 168.0, 169.0, 170.0, 171.0, 172.0, 173.0, 174.0, 175.0,
+						176.0, 177.0, 178.0, 179.0, 180.0, 181.0, 182.0, 183.0, 184.0, 185.0, 186.0, 187.0,
+						188.0, 189.0, 190.0, 191.0, 192.0, 193.0, 194.0, 195.0, 196.0, 197.0, 198.0, 199.0,
+						200.0, 201.0, 202.0, 203.0, 204.0, 205.0, 206.0, 207.0, 208.0, 209.0, 210.0, 211.0,
+						212.0, 213.0, 214.0, 215.0, 216.0, 217.0, 218.0, 219.0, 220.0, 221.0, 222.0, 223.0,
+						224.0, 225.0, 226.0, 227.0, 228.0, 229.0, 230.0, 231.0, 232.0, 233.0, 234.0, 235.0,
+						236.0, 237.0, 238.0, 239.0, 240.0, 241.0, 242.0, 243.0, 244.0
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						30.3, 30.8174, 3.95186, 3.80557, 3.62916, 4.388, 4.85958, 3.61121, 3.60555, 4.15607,
+						4.73357, 4.0596, 3.88818, 3.62395, 4.3491, 30.86885, 29.74515, 29.52004, 29.9735,
+						30.52805, 30.18375, 29.91843, 29.69031, 30.33174, 30.739, 29.97665, 3.36172, 3.67149,
+						4.20086, 4.43513, 3.81303, 3.67744, 4.17572, 4.43083, 4.38176, 3.26241, 3.28805,
+						3.94908, 4.7956, 29.69964, 29.4028, 29.72639, 30.20561, 30.72188, 29.55025, 29.20449,
+						30.09395, 30.84122, 30.00811, 29.15115, 3.35645, 4.45511, 4.51308, 4.07549, 3.60827,
+						4.27041, 4.3668, 4.5541, 3.57519, 3.66409, 4.56847, 4.28516, 3.92219, 29.52953,
+						29.68858, 30.43933, 30.296, 29.84897, 29.6408, 29.90822, 30.84232, 29.84036, 29.14061,
+						29.60096, 4.7196, 4.33806, 3.44054, 3.12794, 4.13631, 4.49975, 4.50779, 3.77639,
+						3.81838, 4.04533, 4.79462, 4.14255, 3.6969, 29.88518, 30.54921, 30.04153, 29.32713,
+						29.22856, 30.51162, 30.32077, 29.76689, 29.12407, 29.73343, 30.50033, 4.73566, 3.9483,
+						3.6931, 3.78662, 4.84847, 4.42852, 3.76281, 3.57757, 4.4559, 4.22625, 3.52568, 3.21778,
+						4.23165, 30.41877, 29.98698, 29.27303, 29.72761, 30.0573, 30.80677, 30.22988, 29.40258,
+						29.63567, 30.45699, 30.60571, 3.73018, 3.15584, 4.43751, 4.61322, 4.04519, 3.69054,
+						3.55539, 4.71499, 4.59322, 3.98622, 3.53778, 3.91353, 4.30216, 29.97369, 29.27632,
+						29.86346, 30.16456, 30.26385, 29.66663, 29.65533, 29.57905, 30.65059, 30.50984,
+						29.40466, 3.54325, 3.92567, 4.51888, 3.82639, 3.31262, 3.77377, 4.76596, 4.75206,
+						3.87176, 3.17044, 4.08076, 4.83099, 4.27424, 29.17832, 29.88947, 30.49267, 30.63742,
+						30.14677, 29.12068, 30.16128, 30.85976, 30.58271, 29.3258, 29.78952, 4.16123, 4.48336,
+						4.23881, 3.24296, 4.07683, 4.72517, 4.7223, 3.54723, 3.64359, 3.91739, 4.40028, 4.30871,
+						3.36974, 29.94222, 30.57847, 30.7988, 29.72442, 29.57137, 29.75176, 30.36453, 30.43143,
+						29.44512, 29.83899, 30.47813, 4.86466, 3.82675, 3.604, 3.65526, 4.36496, 4.60806,
+						3.46385, 3.76695, 4.41984, 4.89237, 3.86143, 3.71025, 3.66144, 30.43269, 30.77563,
+						29.46792, 29.64521, 30.32455, 30.78114, 29.91085, 29.76894, 29.77224, 30.55347,
+						30.77793, 3.60895, 3.379, 4.03038, 4.46031, 4.16673, 3.61509, 3.79076, 4.5025, 4.501,
+						4.04773, 3.12628, 3.54346, 4.18513, 30.64409, 29.40726, 29.42668, 30.02301, 30.30492,
+						30.45641, 29.37419, 29.41183, 30.41235
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 72,
+				"stepSize": 24,
+				"analysis": "doublelogistic",
+				"dlPeriodic": true,
+				"useFixedPeriod": true,
+				"fixedPeriod": 24,
+				"dlFixK1": true,
+				"dlFixedK1": 0.5,
+				"dlFixK2": true,
+				"dlFixedK2": 0.5,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": [
+				"movex",
+				"@{y}_mesor",
+				"@{y}_amplitude",
+				"@{y}_onset",
+				"@{y}_offset",
+				"@{y}_k1",
+				"@{y}_k2",
+				"@{y}_period",
+				"@{y}_r2",
+				"@{y}_rmse"
+			],
+			"tolerance": 1e-5
+		},
+		{
+			"id": "tp-movinganalysis-doublelogistic-single",
+			"kind": "tableProcess",
+			"jsName": "MovingAnalysis",
+			"pyFunc": "movinganalysis",
+			"rFunc": "movinganalysis",
+			"note": "Non-periodic double logistic (one rise and one fall) per 34 h window: each window holds one whole active phase (onset near 19.9 h, offset near 30.1 h of the record) plus the last hour of the one before.",
+			"inputs": [
+				{
+					"ref": "t",
+					"type": "number",
+					"values": [
+						5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0,
+						20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0, 33.0,
+						34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 47.0,
+						48.0, 49.0, 50.0, 51.0, 52.0, 53.0, 54.0, 55.0, 56.0, 57.0, 58.0, 59.0, 60.0, 61.0,
+						62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0, 74.0, 75.0,
+						76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0, 86.0, 87.0, 88.0, 89.0,
+						90.0, 91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0, 98.0, 99.0, 100.0, 101.0, 102.0, 103.0,
+						104.0, 105.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0, 112.0, 113.0, 114.0, 115.0,
+						116.0, 117.0, 118.0, 119.0, 120.0, 121.0, 122.0, 123.0, 124.0, 125.0, 126.0, 127.0,
+						128.0, 129.0, 130.0, 131.0, 132.0, 133.0, 134.0, 135.0, 136.0, 137.0, 138.0, 139.0,
+						140.0, 141.0, 142.0, 143.0, 144.0, 145.0, 146.0, 147.0, 148.0, 149.0, 150.0, 151.0,
+						152.0, 153.0, 154.0, 155.0, 156.0, 157.0, 158.0, 159.0, 160.0, 161.0, 162.0, 163.0,
+						164.0, 165.0, 166.0, 167.0, 168.0, 169.0, 170.0, 171.0, 172.0, 173.0, 174.0, 175.0,
+						176.0, 177.0, 178.0, 179.0, 180.0, 181.0, 182.0, 183.0, 184.0, 185.0, 186.0, 187.0,
+						188.0, 189.0, 190.0, 191.0, 192.0, 193.0, 194.0, 195.0, 196.0, 197.0, 198.0, 199.0,
+						200.0, 201.0, 202.0, 203.0, 204.0, 205.0, 206.0, 207.0, 208.0, 209.0, 210.0, 211.0,
+						212.0, 213.0, 214.0, 215.0, 216.0, 217.0, 218.0, 219.0, 220.0, 221.0, 222.0, 223.0,
+						224.0, 225.0, 226.0, 227.0, 228.0, 229.0, 230.0, 231.0, 232.0, 233.0, 234.0, 235.0,
+						236.0, 237.0, 238.0, 239.0, 240.0, 241.0, 242.0, 243.0, 244.0
+					]
+				},
+				{
+					"ref": "y",
+					"type": "number",
+					"values": [
+						30.3, 30.8174, 3.95186, 3.80557, 3.62916, 4.388, 4.85958, 3.61121, 3.60555, 4.15607,
+						4.73357, 4.0596, 3.88818, 3.62395, 4.3491, 30.86885, 29.74515, 29.52004, 29.9735,
+						30.52805, 30.18375, 29.91843, 29.69031, 30.33174, 30.739, 29.97665, 3.36172, 3.67149,
+						4.20086, 4.43513, 3.81303, 3.67744, 4.17572, 4.43083, 4.38176, 3.26241, 3.28805,
+						3.94908, 4.7956, 29.69964, 29.4028, 29.72639, 30.20561, 30.72188, 29.55025, 29.20449,
+						30.09395, 30.84122, 30.00811, 29.15115, 3.35645, 4.45511, 4.51308, 4.07549, 3.60827,
+						4.27041, 4.3668, 4.5541, 3.57519, 3.66409, 4.56847, 4.28516, 3.92219, 29.52953,
+						29.68858, 30.43933, 30.296, 29.84897, 29.6408, 29.90822, 30.84232, 29.84036, 29.14061,
+						29.60096, 4.7196, 4.33806, 3.44054, 3.12794, 4.13631, 4.49975, 4.50779, 3.77639,
+						3.81838, 4.04533, 4.79462, 4.14255, 3.6969, 29.88518, 30.54921, 30.04153, 29.32713,
+						29.22856, 30.51162, 30.32077, 29.76689, 29.12407, 29.73343, 30.50033, 4.73566, 3.9483,
+						3.6931, 3.78662, 4.84847, 4.42852, 3.76281, 3.57757, 4.4559, 4.22625, 3.52568, 3.21778,
+						4.23165, 30.41877, 29.98698, 29.27303, 29.72761, 30.0573, 30.80677, 30.22988, 29.40258,
+						29.63567, 30.45699, 30.60571, 3.73018, 3.15584, 4.43751, 4.61322, 4.04519, 3.69054,
+						3.55539, 4.71499, 4.59322, 3.98622, 3.53778, 3.91353, 4.30216, 29.97369, 29.27632,
+						29.86346, 30.16456, 30.26385, 29.66663, 29.65533, 29.57905, 30.65059, 30.50984,
+						29.40466, 3.54325, 3.92567, 4.51888, 3.82639, 3.31262, 3.77377, 4.76596, 4.75206,
+						3.87176, 3.17044, 4.08076, 4.83099, 4.27424, 29.17832, 29.88947, 30.49267, 30.63742,
+						30.14677, 29.12068, 30.16128, 30.85976, 30.58271, 29.3258, 29.78952, 4.16123, 4.48336,
+						4.23881, 3.24296, 4.07683, 4.72517, 4.7223, 3.54723, 3.64359, 3.91739, 4.40028, 4.30871,
+						3.36974, 29.94222, 30.57847, 30.7988, 29.72442, 29.57137, 29.75176, 30.36453, 30.43143,
+						29.44512, 29.83899, 30.47813, 4.86466, 3.82675, 3.604, 3.65526, 4.36496, 4.60806,
+						3.46385, 3.76695, 4.41984, 4.89237, 3.86143, 3.71025, 3.66144, 30.43269, 30.77563,
+						29.46792, 29.64521, 30.32455, 30.78114, 29.91085, 29.76894, 29.77224, 30.55347,
+						30.77793, 3.60895, 3.379, 4.03038, 4.46031, 4.16673, 3.61509, 3.79076, 4.5025, 4.501,
+						4.04773, 3.12628, 3.54346, 4.18513, 30.64409, 29.40726, 29.42668, 30.02301, 30.30492,
+						30.45641, 29.37419, 29.41183, 30.41235
+					]
+				}
+			],
+			"args": {
+				"xIN": "@t",
+				"yIN": ["@y"],
+				"windowSize": 34,
+				"stepSize": 24,
+				"analysis": "doublelogistic",
+				"dlPeriodic": false,
+				"out": {
+					"movex": -1
+				}
+			},
+			"compareOutputs": [
+				"movex",
+				"@{y}_mesor",
+				"@{y}_amplitude",
+				"@{y}_onset",
+				"@{y}_offset",
+				"@{y}_k1",
+				"@{y}_k2",
+				"@{y}_r2",
+				"@{y}_rmse"
+			],
+			"tolerance": 1e-5
 		}
 	]
 }

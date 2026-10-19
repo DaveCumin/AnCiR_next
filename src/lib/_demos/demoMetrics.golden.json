@@ -225,6 +225,9 @@
 		],
 		"FitFunction.rmse": [
 			7.373734292
+		],
+		"FitFunction.rmse_n": [
+			7.14910064
 		]
 	},
 	"demo-tp-groupcomparison.json": {

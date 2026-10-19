@@ -564,8 +564,12 @@ function buildTableInputs(fx) {
 
 // A compareOutputs entry naming an input (`joined_@temp`) is a per-input out key whose id is
 // that input's column id: `joined_<id>`. The ports register the same key with their own ids.
+// `@{ref}` delimits a ref followed by more key text (`@{y}_period` is `<id>_period`, the
+// per-y keys of RhythmicityAnalysis and MovingAnalysis), since `@y_period` would read the
+// ref as `y_period`.
 function resolveOutKey(key, idMap) {
-	return key.replace(/@(\w+)/g, (_, ref) => {
+	return key.replace(/@\{(\w+)\}|@(\w+)/g, (_, braced, bare) => {
+		const ref = braced ?? bare;
 		if (!(ref in idMap)) throw new Error(`unknown input ref @${ref} in compareOutputs`);
 		return String(idMap[ref]);
 	});
@@ -922,6 +926,12 @@ function blockRecord(block, source) {
 	};
 }
 
+/** A fixture's `startTimeIN` as epoch ms (an ISO string is parsed), or null when absent. */
+function fixtureStartTimeIN(fx) {
+	if (fx.startTimeIN == null) return null;
+	return typeof fx.startTimeIN === 'string' ? Date.parse(fx.startTimeIN) : fx.startTimeIN;
+}
+
 /**
  * Build the fixture's actogram as the app does (Plot.fromJSON over real Columns) with the
  * display zone set to `zone`, hand it to `read`, and restore the zone afterwards. `read`
@@ -965,7 +975,14 @@ function withActogram(fx, zone, series, inner, read) {
 async function runActogramDownload(fx) {
 	const series = generateActogramSeries(fx.generate);
 	const zone = fx.zone ?? 'utc';
-	const inner = { periodHrs: fx.periodHrs ?? 24, data: series.map(() => ({})) };
+	// `startTimeIN` (optional): the user's chosen first-row start (epoch ms, or an ISO string
+	// here for readability), saved on the plot since v82.23. Absent: the automatic start.
+	const startTimeIN = fixtureStartTimeIN(fx);
+	const inner = {
+		periodHrs: fx.periodHrs ?? 24,
+		data: series.map(() => ({})),
+		...(startTimeIN != null ? { startTimeIN } : {})
+	};
 	let plotted = series;
 	if (fx.binned) {
 		const entry = appConsts.tableProcessMap.get('BinnedData');
@@ -985,7 +1002,13 @@ async function runActogramDownload(fx) {
 	return withActogram(fx, zone, plotted, inner, (act) => {
 		const { headers, rows } = act.getDownloadData();
 		return jsonSafe({
-			inputs: { zone, periodHrs: inner.periodHrs, binned: fx.binned ?? null, series },
+			inputs: {
+				zone,
+				periodHrs: inner.periodHrs,
+				binned: fx.binned ?? null,
+				series,
+				startTimeIN: startTimeIN ?? null
+			},
 			outputs: { headers, rows }
 		});
 	});
@@ -1120,8 +1143,10 @@ function runActogramMarkers(fx) {
 	const series = fx.source ? sessionActogramSeries(fx.source) : generateActogramSeries(fx.generate);
 	const zone = fx.zone ?? 'utc';
 	const extra = fx.series ?? [];
+	const startTimeIN = fixtureStartTimeIN(fx);
 	const inner = {
 		periodHrs: fx.periodHrs ?? 24,
+		...(startTimeIN != null ? { startTimeIN } : {}),
 		markerRules: fx.markerRules ?? [],
 		data: series.map((_, i) => ({
 			phaseMarkers: extra[i]?.phaseMarkers ?? [],

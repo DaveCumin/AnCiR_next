@@ -60,11 +60,11 @@
 			],
 			[
 				'<strong>Process</strong>',
-				'A node that cleans or transforms your data on the way through (Remove Outliers, Remove Trend, Bin Data, Smooth, Normalize, Cosinor, and so on). Processes are non-destructive: your original data is always preserved, so you can change or remove a step at any time.'
+				'A node that cleans or transforms your data on the way through (Remove Outliers, Remove Trend, Bin Data, Smooth Data, Normalize, Cosinor, and so on). Processes are non-destructive: your original data is always preserved, so you can change or remove a step at any time.'
 			],
 			[
 				'<strong>Plot</strong>',
-				'Visualises data from columns (Actogram, Scatterplot, Periodogram, Correlogram, Fourier Analysis, Boxplot, Tableplot).'
+				'Visualises data from columns (Actogram, Scatterplot, Periodogram, Correlogram, Fourier analysis, Boxplot, Table).'
 			],
 			[
 				'<strong>Stored Values</strong>',
@@ -99,7 +99,7 @@
 				rel="noopener">ancir.pages.dev</a
 			>, then choose <strong>Help</strong> (top bar) &rarr;
 			<strong>&ldquo;Take a tour&hellip;&rdquo;</strong> and pick
-			<strong>Getting Started</strong>. It walks you through adding a Source, wiring on a Plot, and
+			<strong>Getting started</strong>. It walks you through adding a Source, wiring on a Plot, and
 			reading the result, step by step on the real canvas.
 		</p>
 	</AnCiRBox>

@@ -279,5 +279,56 @@ def test_actogram_bins_are_left_edge_and_tiled_by_period():
         assert (per - 1) * period_hrs - 1e-9 <= x_start < per * period_hrs + 1e-9
 
 
+def _time_actogram(start_time_in=None):
+    """A one-series actogram on a TIME x: hourly from 06:00Z on 4 March 2024 for 3 days,
+    as a saved plot dict (with `startTimeIN` when given) plus its columns."""
+    t0 = 1709532000000  # 2024-03-04T06:00:00Z
+    raw = {1: [t0 + i * 3600000 for i in range(72)], 2: [float(i % 24) for i in range(72)]}
+    cols = {1: rt.Column(id=1, name="t", type="time", data=1, raw_data=raw),
+            2: rt.Column(id=2, name="y", type="number", data=2, raw_data=raw)}
+    inner = {"periodHrs": 24, "doublePlot": 2,
+             "data": [{"x": {"refId": 1}, "y": {"refId": 2}}]}
+    if start_time_in is not None:
+        inner["startTimeIN"] = start_time_in
+    return {"id": 7, "name": "act", "type": "actogram", "plot": inner}, cols
+
+
+def test_actogram_export_reads_chosen_start_time(tmp_path):
+    """v82.23 saves the user's chosen first-row start as `startTimeIN`; the exported CSV
+    and PNG must fold there, not at the automatic midnight. Here the chosen start is 18:00Z
+    on 3 March, 6 h before that midnight, so the first bar (06:00Z) sits 12 h into row 1
+    instead of 6 h."""
+    import csv
+
+    auto_plot, cols = _time_actogram()
+    _, auto_rows = rt.actogram_download_data(auto_plot, cols)
+    assert auto_rows[0][2] == pytest.approx(6.0)
+
+    chosen = 1709488800000  # 2024-03-03T18:00:00Z
+    plot, cols = _time_actogram(chosen)
+    written = rt.export_plot_data([plot], cols, tmp_path)
+    with open(written[0]) as f:
+        rows = list(csv.reader(f))[1:]
+    assert float(rows[0][2]) == pytest.approx(12.0)
+    # Every bar moves 6 h later on the chosen frame (the rows re-split at the new boundary).
+    starts = sorted((int(r[1]) - 1) * 24 + float(r[2]) for r in rows)
+    auto_starts = sorted((r[1] - 1) * 24 + r[2] for r in auto_rows)
+    assert starts[0] == pytest.approx(auto_starts[0] + 6.0)
+    assert starts[-1] == pytest.approx(auto_starts[-1] + 6.0)
+
+    # The PNG draws the same rows: its first bar in the top row starts 12 h in.
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    try:
+        rt.plot_actogram(plot, cols, ax)
+        n_rows = int(rows[-1][1])
+        top = [b.get_x() for b in ax.patches if b.get_y() == pytest.approx(n_rows - 1)]
+        assert min(top) == pytest.approx(12.0)
+    finally:
+        plt.close(fig)
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
