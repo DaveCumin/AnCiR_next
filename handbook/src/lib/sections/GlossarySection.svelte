@@ -21,7 +21,7 @@
 			<tr id="gloss-amplitude"
 				><td>Amplitude</td><td
 					>How "tall" a rhythm is: half the distance from the lowest point to the highest. (Some
-					authors use the full height instead — be aware of this ambiguity.)</td
+					authors use the full height instead; be aware of this ambiguity.)</td
 				></tr
 			>
 			<tr id="gloss-autocorrelation"
@@ -137,8 +137,8 @@
 			>
 			<tr id="gloss-gam"
 				><td>Generalised Additive Model (GAM)</td><td
-					>A flexible kind of regression that replaces straight lines with smooth curves — useful
-					when a rhythm is not a clean cosine shape (Chapter 11).</td
+					>A flexible kind of regression that replaces straight lines with smooth curves. It is
+					useful when a rhythm is not a clean cosine shape (Chapter 11).</td
 				></tr
 			>
 			<tr id="gloss-harmonic"
@@ -187,8 +187,8 @@
 			>
 			<tr id="gloss-lomb-scargle"
 				><td>Lomb-Scargle periodogram</td><td
-					>A period-finding method that works on data with gaps or irregular timestamps — no need to
-					fill in missing values first (Chapter 6).</td
+					>A period-finding method that works on data with gaps or irregular timestamps, with no
+					need to fill in missing values first (Chapter 6).</td
 				></tr
 			>
 			<tr id="gloss-mesor"
@@ -330,8 +330,8 @@
 			>
 			<tr id="gloss-t-test"
 				><td>t-test</td><td
-					>A standard test for whether two groups have different averages. Not safe for clock times
-					— use the Watson-Williams test for phases instead.</td
+					>A standard test for whether two groups have different averages. Not safe for clock times;
+					use the Watson-Williams test for phases instead.</td
 				></tr
 			>
 			<tr id="gloss-ultradian"

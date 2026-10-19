@@ -284,7 +284,7 @@
 <div class="anim-embed" style:--anim-h={height}>
 	<div class="viz-row one-col">
 		<div class="chart-panel">
-			<h3>The data — relabelled at random on every shuffle</h3>
+			<h3>The data, relabelled at random on every shuffle</h3>
 			<canvas bind:this={cTop}></canvas>
 		</div>
 	</div>

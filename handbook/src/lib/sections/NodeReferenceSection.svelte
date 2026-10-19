@@ -95,6 +95,16 @@
 	};
 </script>
 
+<!-- One input or output port: its name and tags, then the manifest's one-line
+     description of what it takes or gives (the same text as the port's tooltip in
+     AnCiR). Older manifests have no description, so the line is optional. -->
+{#snippet port(p)}
+	<li class="port">
+		<span class="port-name">{portLabel(p)}</span>
+		{#if p.description}<span class="port-desc">{p.description}</span>{/if}
+	</li>
+{/snippet}
+
 <section id="node-reference">
 	<h2 class="chapter-title">
 		<span class="chapter-num">Appendix D</span>
@@ -170,7 +180,7 @@
 								{#if n.inputs?.length}
 									<ul>
 										<!-- eslint-disable-next-line svelte/require-each-key -- static port list from the generated node manifest; port names can repeat, so position is the identity -->
-										{#each n.inputs as p}<li>{portLabel(p)}</li>{/each}
+										{#each n.inputs as p}{@render port(p)}{/each}
 									</ul>
 								{:else}
 									<p class="muted">None</p>
@@ -198,7 +208,7 @@
 								{#if n.outputs?.length}
 									<ul>
 										<!-- eslint-disable-next-line svelte/require-each-key -- static port list from the generated node manifest; port names can repeat, so position is the identity -->
-										{#each n.outputs as p}<li>{portLabel(p)}</li>{/each}
+										{#each n.outputs as p}{@render port(p)}{/each}
 									</ul>
 								{:else}
 									<p class="muted">{n.kind === 'plot' ? 'Renders a plot' : 'None'}</p>
@@ -421,7 +431,7 @@
 	}
 	.ports {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 		gap: 14px;
 		margin: 14px 0;
 		padding: 12px;
@@ -443,6 +453,15 @@
 	}
 	.port-col code {
 		font-size: 0.82rem;
+	}
+	.port + .port {
+		margin-top: 4px;
+	}
+	.port-desc {
+		display: block;
+		font-size: 0.78rem;
+		line-height: 1.4;
+		color: var(--text-muted, #666);
 	}
 	.muted {
 		color: var(--text-muted, #999);

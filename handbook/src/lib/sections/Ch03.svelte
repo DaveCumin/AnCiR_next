@@ -74,7 +74,7 @@
 
 	<AnCiRBox
 		title="Generating Simulated Data in AnCiR"
-		tip="Use Simulate Data to verify your analysis pipeline: if you generate data with a known period of exactly 24.0 h, the periodogram and cosinor should recover 24.0 h — if they don't, something is wrong with the pipeline."
+		tip="Use Simulate Data to verify your analysis pipeline: if you generate data with a known period of exactly 24.0 h, the periodogram and cosinor should recover 24.0 h. If they don't, something is wrong with the pipeline."
 	>
 		<ol>
 			<li>
@@ -83,7 +83,7 @@
 				canvas.
 			</li>
 			<li>
-				Double-click the node to expand it, then set the <strong>Start time</strong> and the
+				Double-click the node to open its settings, then set the <strong>Start time</strong> and the
 				<strong>Sampling period</strong> (e.g., 0.25 h for 15-minute resolution).
 			</li>
 			<li>
@@ -96,12 +96,12 @@
 			<li>
 				Noise is <em>on by default</em>. For a clean pipeline check (below), turn the section's
 				<strong>Noise</strong>
-				off — or set a fixed <strong>Noise seed</strong> at the node level for reproducible noise.
+				off, or set a fixed <strong>Noise seed</strong> at the node level for reproducible noise.
 			</li>
 			<li>The node produces a timestamp column and a values column on its output ports.</li>
 			<li>
 				Add a plot from the palette (e.g. <strong>Periodogram</strong> or <strong>Actogram</strong>)
-				and wire these columns into it — drag from the Simulate Data output port to the plot's input
+				and wire these columns into it: drag from the Simulate Data output port to the plot's input
 				port.
 			</li>
 		</ol>

@@ -3,13 +3,13 @@
 // Composition (see gallery spec): a session showcases one or more nodes; each
 // node's curated entry in nodeReference.json carries `crosslinks` to chapters.
 // The union of those crosslinks (minus "glossary") is the set of chapters a
-// session belongs in. No hand-authored placement list — placement is derived.
+// session belongs in. No hand-authored placement list; placement is derived.
 //
 // Kept as a framework-free module (mirrors nodeGeometry.js precedent) so it can
 // be unit-tested and reused by both the per-chapter blocks and the gallery.
 import nodeRef from '$lib/nodeReference.json';
-// AnCiR's full session index (same repo). Datasets are filtered out here — the
-// gallery/chapters only show workflow/plot/process sessions — which reproduces
+// AnCiR's full session index (same repo). Datasets are filtered out here (the
+// gallery/chapters only show workflow/plot/process sessions), which reproduces
 // the trim the old cross-repo sync used to bake into a bundled file.
 import sessionIndex from '$ancir/static/sessions/demos/index.json';
 

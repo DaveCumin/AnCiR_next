@@ -28,7 +28,7 @@
 </script>
 
 <svelte:head>
-	<title>Chronobiological Data Analysis — Handbook {VERSION}</title>
+	<title>Chronobiological Data Analysis: Handbook {VERSION}</title>
 </svelte:head>
 
 <HomeSection />

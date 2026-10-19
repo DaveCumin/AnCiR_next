@@ -327,7 +327,7 @@
 		<div class="chart-panel">
 			<h3>Test Sine Wave</h3>
 			<canvas bind:this={cTest}></canvas>
-			<div class="period-label" bind:this={periodLabel}>Period: &mdash; h</div>
+			<div class="period-label" bind:this={periodLabel}>Period: - h</div>
 		</div>
 		<div class="chart-panel">
 			<h3>Data vs Test Wave</h3>
@@ -362,6 +362,6 @@
 				}}
 			/>
 		</div>
-		<div class="step-indicator" bind:this={stepInd}>Period: &mdash;</div>
+		<div class="step-indicator" bind:this={stepInd}>Period: -</div>
 	</div>
 </div>

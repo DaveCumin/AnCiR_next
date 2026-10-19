@@ -13,7 +13,7 @@
 		entries={[
 			{
 				year: '1958–64',
-				text: 'The first phase response curves (PRCs) are published: J. Woodland Hastings and Beatrice Sweeney report one in the dinoflagellate <em>Gonyaulax</em> (1958)<sup class="cite"><a href="#ref-25">[25]</a></sup>, and Patricia DeCoursey constructs the first PRC for a mammal (1960, the flying squirrel <em>Glaucomys volans</em>)<sup class="cite"><a href="#ref-26">[26]</a></sup>, showing the clock can be reset by light. Colin Pittendrigh develops systematic light PRCs in <em>Drosophila pseudoobscura</em> (1960–64)<sup class="cite"><a href="#ref-27">[27]</a></sup> — together establishing that a zeitgeber&rsquo;s effect depends critically on when in the cycle it is applied.'
+				text: 'The first phase response curves (PRCs) are published: J. Woodland Hastings and Beatrice Sweeney report one in the dinoflagellate <em>Gonyaulax</em> (1958)<sup class="cite"><a href="#ref-25">[25]</a></sup>, and Patricia DeCoursey constructs the first PRC for a mammal (1960, the flying squirrel <em>Glaucomys volans</em>)<sup class="cite"><a href="#ref-26">[26]</a></sup>, showing the clock can be reset by light. Colin Pittendrigh develops systematic light PRCs in <em>Drosophila pseudoobscura</em> (1960–64)<sup class="cite"><a href="#ref-27">[27]</a></sup>. Together these studies establish that a zeitgeber&rsquo;s effect depends critically on when in the cycle it is applied.'
 			},
 			{
 				year: '1980s–90s',
@@ -37,14 +37,14 @@
 	<h3 class="section-head">Types of PRCs</h3>
 	<ul>
 		<li>
-			<strong>Type 1 (weak) resetting</strong> — small, continuous advances and delays
+			<strong>Type 1 (weak) resetting</strong>: small, continuous advances and delays
 			(conventionally &lt; ~6 h), with a smooth transition between the delay and advance regions.
 			Plotted as a <strong>phase transition curve</strong> (new phase vs. old phase) it has an average
 			slope of 1: the new phase still depends on the old one. Produced by most zeitgebers at moderate
 			strength.
 		</li>
 		<li>
-			<strong>Type 0 (strong) resetting</strong> — very large shifts (up to ~12 h) with an abrupt
+			<strong>Type 0 (strong) resetting</strong>: very large shifts (up to ~12 h) with an abrupt
 			jump between the delay and advance regions. The phase transition curve has an average slope of
 			0: after the stimulus the clock arrives at essentially the
 			<strong>same phase whatever its phase beforehand</strong>. Produced by intense stimuli (bright
@@ -125,7 +125,7 @@
 	<PRCAnim height="520px" />
 
 	<NoteBox title="Human Clinical Relevance">
-		Human light and melatonin PRCs have direct clinical relevance — they underpin timing protocols
+		Human light and melatonin PRCs have direct clinical relevance: they underpin timing protocols
 		for jet lag recovery, shift-work adaptation, delayed sleep-wake phase disorder, and seasonal
 		affective disorder treatment.
 	</NoteBox>
@@ -155,9 +155,8 @@
 				and <strong>Phase Shift into <code>yIN</code></strong>; set the smoother to
 				<a class="gloss" href="#gloss-loess">LOESS</a>
 				or <a class="gloss" href="#gloss-whittaker-eilers">Whittaker-Eilers</a>.
-				<strong>Sort the rows by CT first</strong>
-				— the smoother works <em>along x</em>, so out-of-order points produce a zig-zag rather than
-				a smooth curve.
+				<strong>Sort the rows by CT first</strong>. The smoother works <em>along x</em>, so
+				out-of-order points produce a zig-zag rather than a smooth curve.
 			</li>
 			<li>
 				Wire the Smooth Data node's <strong>smoothed output column</strong> into the scatterplot as

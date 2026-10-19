@@ -511,8 +511,8 @@
            <div class="legend-item"><div class="legend-swatch" style="background:${C.navy}"></div>Bin means (form estimate)</div>
            <div class="legend-item"><div class="legend-swatch fp-dash"></div>Grand mean</div>
            <div class="legend-item"><div class="legend-swatch" style="background:${C.gold}"></div>Deviation being added</div>`
-					: `<div class="legend-item"><div class="legend-swatch" style="background:${C.navy}"></div>Qₚ — Sokolove–Bushell χ²</div>
-           <div class="legend-item"><div class="legend-swatch" style="background:${C.gold}"></div>Aₚ — Enright amplitude</div>
+					: `<div class="legend-item"><div class="legend-swatch" style="background:${C.navy}"></div>Qₚ: Sokolove–Bushell χ²</div>
+           <div class="legend-item"><div class="legend-swatch" style="background:${C.gold}"></div>Aₚ: Enright amplitude</div>
            <div class="legend-item"><div class="legend-swatch fp-dash"></div>χ² p = 0.05 threshold (rises with df)</div>`;
 		}
 
@@ -530,23 +530,23 @@
 			statBox.innerHTML = `<div class="fp-row"><span class="fp-lab">Trial period P</span><span class="fp-val">${period} h → ${fd.P} bins</span></div>
          <div class="fp-row"><span class="fp-lab">Cycles folded (K) · points (N)</span><span class="fp-val">K = ${fd.K} · N = 240</span></div>
          <div class="fp-row"><span class="fp-lab">Σ (Ȳₕ − Ȳ)²  <em>between-bin sum of squares</em></span><span class="fp-val">${running.toFixed(0)}</span></div>
-         <div class="fp-row fp-sep"><span class="fp-lab">Enright amplitude  Aₚ = √( Σ(Ȳₕ−Ȳ)² / P )</span><span class="fp-val gold">${showStat ? fd.Ap.toFixed(2) : '—'}</span></div>
-         <div class="fp-row"><span class="fp-lab">Sokolove–Bushell  Qₚ = N·K·Σ(Ȳₕ−Ȳ)² / Σ(xᵢ−Ȳ)²</span><span class="fp-val navy">${showStat ? fd.Qp.toFixed(1) + '  (df = ' + fd.df + ')' : '—'}</span></div>`;
+         <div class="fp-row fp-sep"><span class="fp-lab">Enright amplitude  Aₚ = √( Σ(Ȳₕ−Ȳ)² / P )</span><span class="fp-val gold">${showStat ? fd.Ap.toFixed(2) : '-'}</span></div>
+         <div class="fp-row"><span class="fp-lab">Sokolove–Bushell  Qₚ = N·K·Σ(Ȳₕ−Ȳ)² / Σ(xᵢ−Ȳ)²</span><span class="fp-val navy">${showStat ? fd.Qp.toFixed(1) + '  (df = ' + fd.df + ')' : '-'}</span></div>`;
 		}
 
 		if (stepText) {
 			if (stage === 0) {
 				// eslint-disable-next-line svelte/no-dom-manipulating -- imperative animation transport; these label/button nodes are written by the rAF loop, not rendered by Svelte
-				stepText.innerHTML = `<strong>1 · Fold.</strong> Each successive 24 h cycle of the record (top) is laid onto a single period (left). Ten cycles overlap to form the Buys–Ballot table — <span class="fp-mono">10 rows × 24 columns</span>.`;
+				stepText.innerHTML = `<strong>1 · Fold.</strong> Each successive 24 h cycle of the record (top) is laid onto a single period (left). Ten cycles overlap to form the Buys–Ballot table: <span class="fp-mono">10 rows × 24 columns</span>.`;
 			} else if (stage === 1) {
 				// eslint-disable-next-line svelte/no-dom-manipulating -- imperative animation transport; these label/button nodes are written by the rAF loop, not rendered by Svelte
-				stepText.innerHTML = `<strong>2 · Bin &amp; average.</strong> Within each column, the points across all cycles (gold dots) are averaged, giving one <strong>bin mean</strong> <span class="fp-mono">Ȳₕ</span> (navy). The gold stick shows how far each bin mean sits from the grand mean — the quantity both statistics are built from.`;
+				stepText.innerHTML = `<strong>2 · Bin &amp; average.</strong> Within each column, the points across all cycles (gold dots) are averaged, giving one <strong>bin mean</strong> <span class="fp-mono">Ȳₕ</span> (navy). The gold stick shows how far each bin mean sits from the grand mean, the quantity both statistics are built from.`;
 			} else if (stage === 2) {
 				// eslint-disable-next-line svelte/no-dom-manipulating -- imperative animation transport; these label/button nodes are written by the rAF loop, not rendered by Svelte
 				stepText.innerHTML = `<strong>3 · Summarise the spread.</strong> Enright takes the root-mean-square of the deviations, <span class="fp-mono">Aₚ = ${F24.Ap.toFixed(2)}</span> (this equals the SD of the bin means). Sokolove–Bushell scales the <em>same</em> sum of squares by <span class="fp-mono">N·K / Σ(xᵢ−Ȳ)²</span> into <span class="fp-mono">Qₚ = ${F24.Qp.toFixed(1)}</span>, referred to χ² with <span class="fp-mono">df = 23</span>.`;
 			} else {
 				// eslint-disable-next-line svelte/no-dom-manipulating -- imperative animation transport; these label/button nodes are written by the rAF loop, not rendered by Svelte
-				stepText.innerHTML = `<strong>4 · Sweep the trial period.</strong> Repeating fold → bin → statistic at every candidate period traces the periodogram. <span class="fp-mono">Aₚ</span> and <span class="fp-mono">Qₚ</span> peak at the <strong>same period (${SWEEP[DOM].p.toFixed(1)} h)</strong> — they share a numerator. But only <span class="fp-mono">Qₚ</span> carries a significance threshold, and it <em>rises</em> with period because df = P − 1 grows.`;
+				stepText.innerHTML = `<strong>4 · Sweep the trial period.</strong> Repeating fold → bin → statistic at every candidate period traces the periodogram. <span class="fp-mono">Aₚ</span> and <span class="fp-mono">Qₚ</span> peak at the <strong>same period (${SWEEP[DOM].p.toFixed(1)} h)</strong>, because they share a numerator. But only <span class="fp-mono">Qₚ</span> carries a significance threshold, and it <em>rises</em> with period because df = P − 1 grows.`;
 			}
 		}
 	}
@@ -570,7 +570,7 @@
 			statTitle.textContent =
 				stageOf(t) < 3
 					? 'Spread of the bin means → the statistic'
-					: 'Periodogram — Aₚ and Qₚ vs trial period';
+					: 'Periodogram: Aₚ and Qₚ vs trial period';
 		// eslint-disable-next-line svelte/no-dom-manipulating -- imperative animation transport; these label/button nodes are written by the rAF loop, not rendered by Svelte
 		if (stepInd) stepInd.textContent = ['Fold', 'Bin', 'Statistic', 'Sweep'][stageOf(t)];
 		activeStage = stageOf(t);
@@ -653,7 +653,7 @@
 
 	<div class="viz-row one-col fp-raw-row">
 		<div class="chart-panel">
-			<h3>Raw recording — 10 days at 1 h resolution</h3>
+			<h3>Raw recording: 10 days at 1 h resolution</h3>
 			<canvas bind:this={cRaw}></canvas>
 		</div>
 	</div>

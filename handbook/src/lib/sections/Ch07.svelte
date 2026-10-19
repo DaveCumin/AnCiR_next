@@ -29,10 +29,10 @@
 
 	const paramHeaders = ['Parameter', 'Meaning', 'Units'];
 	const paramRows = [
-		['MESOR (M)', 'Rhythm-adjusted mean — the midline of the fitted cosine', 'Same as y'],
+		['MESOR (M)', 'Rhythm-adjusted mean: the midline of the fitted cosine', 'Same as y'],
 		['Amplitude (A)', 'Half the peak-to-trough excursion of the rhythm', 'Same as y'],
 		['Acrophase (φ)', 'Time of peak: hours after the first sample, or clock time of day', 'Hours'],
-		['Period (τ)', 'Duration of one cycle — fixed or free to vary', 'Hours']
+		['Period (τ)', 'Duration of one cycle, fixed or free to vary', 'Hours']
 	];
 
 	const ancirTip =
@@ -47,12 +47,12 @@
 	<p class="chapter-intro">
 		<a class="gloss" href="#gloss-cosinor">Cosinor</a> analysis is a regression-based method for
 		characterising rhythms. Unlike periodograms, which detect <em>whether</em> a rhythm exists,
-		cosinor analysis <strong>estimates rhythm parameters</strong> —
+		cosinor analysis <strong>estimates rhythm parameters</strong>:
 		<a class="gloss" href="#gloss-mesor">MESOR</a>,
 		<a class="gloss" href="#gloss-amplitude">amplitude</a>, and
-		<a class="gloss" href="#gloss-acrophase">acrophase</a>
-		— with <a class="gloss" href="#gloss-confidence-interval">confidence intervals</a>, enabling
-		formal comparison between groups or conditions.
+		<a class="gloss" href="#gloss-acrophase">acrophase</a>, each with
+		<a class="gloss" href="#gloss-confidence-interval">confidence intervals</a>, enabling formal
+		comparison between groups or conditions.
 	</p>
 
 	<h3 class="section-head">The Cosinor Model</h3>
@@ -71,7 +71,7 @@
 	<Formula tex={_tex2} />
 
 	<p>
-		The <strong>two-argument</strong> arctangent (<code>atan2</code>) is essential — plain
+		The <strong>two-argument</strong> arctangent (<code>atan2</code>) is essential: plain
 		<code>arctan</code>
 		cannot separate φ from φ + π and would place the
 		<a class="gloss" href="#gloss-acrophase">acrophase</a>
@@ -100,7 +100,7 @@
 		When the period is known (e.g., studying a circadian rhythm in LD conditions), <strong
 			>fixed-period (Halberg) cosinor</strong
 		>
-		is preferred — it gives more robust parameter estimates with confidence intervals and an
+		is preferred. It gives more robust parameter estimates with confidence intervals and an
 		<a class="gloss" href="#gloss-f-test">F-test</a>
 		for rhythm significance. When the period is unknown, <strong>free-parameter</strong> mode fits the
 		period alongside amplitude and phase.
@@ -112,7 +112,7 @@
 		p-values are optimistic and confidence intervals too narrow unless the data are binned coarsely
 		enough to decorrelate, or an autocorrelation-aware model is used (Chapter 11). In free-period
 		mode τ is estimated too, the model is <em>no longer linear</em>, and OLS/F-test theory does not
-		apply — intervals are asymptotic approximations at best.
+		apply; intervals are asymptotic approximations at best.
 	</p>
 	<p>
 		A free period also needs a <strong>search range</strong>. Left unbounded, the optimiser can
@@ -225,8 +225,14 @@
 				Every scalar result (period, MESOR, amplitude, acrophase, R², p-value) is also an
 				<strong>output port</strong> on the node, one value per Y column: wire it straight into
 				<strong>Describe Data</strong>, a <strong>Rayleigh test</strong> or a
-				<strong>Formula Column</strong>. To use a single number inside a formula instead, click
-				<strong>Store Value</strong> next to it to save it as a <strong>Stored Value</strong>.
+				<strong>Formula Column</strong>. Each of those numbers is also a
+				<strong>stored value</strong>
+				already: AnCiR registers it as the fit runs, under a default name such as
+				<code>cosinor_amplitude_activity</code>. To use one inside a formula, type <code>#</code> in
+				a
+				<strong>Formula Column</strong> and pick it from the list. The pencil icon beside a value renames
+				it (formulas that use it follow the new name). A stored value belongs to its node: it stays live
+				while the node is in the session (collapsed or not) and goes when you delete the node.
 			</li>
 		</ol>
 		<DemoLink
@@ -247,24 +253,24 @@
 	<AnCiRBox title="Other fitting models in AnCiR">
 		<ul>
 			<li>
-				<strong>Harmonic cosinor</strong> — set <strong>N harmonics</strong> &gt; 1 on the
+				<strong>Harmonic cosinor</strong>: set <strong>N harmonics</strong> &gt; 1 on the
 				<strong>Cosinor</strong> node to bend the sinusoid toward the true shape while keeping cosinor's
 				interpretable parameters.
 			</li>
 			<li>
-				<strong>Rectangular Wave</strong> (Fitting) — a smooth on/off square wave (a
+				<strong>Rectangular Wave</strong> (Fitting): a smooth on/off square wave (a
 				hyperbolic-tangent, <code>tanh</code>, approximation) for near-binary active/rest rhythms.
 				Its <strong>duty cycle</strong> parameter reports the fraction of each cycle spent active; a sharpness
 				parameter controls how square the corners are.
 			</li>
 			<li>
-				<strong>Double Logistic</strong> (Fitting) — two back-to-back sigmoids modelling a smooth
+				<strong>Double Logistic</strong> (Fitting): two back-to-back sigmoids modelling a smooth
 				rise to a plateau and a return, giving <em>separate</em> transition times and steepnesses for
 				the onset and the offset. Standard in land-surface phenology, and a good fit when circadian on/off
 				transitions are gradual and possibly asymmetric.
 			</li>
 			<li>
-				<strong>Fit waveform model</strong> (Fitting) — the umbrella node: switch between cosinor, rectangular-wave
+				<strong>Fit waveform model</strong> (Fitting): the umbrella node: switch between cosinor, rectangular-wave
 				and double-logistic on the same series without rewiring, with a common set of controls.
 			</li>
 		</ul>

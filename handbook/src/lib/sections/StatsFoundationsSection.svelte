@@ -54,7 +54,7 @@
 		means a long right tail, which is the normal state of affairs for activity counts, where most
 		epochs are low and a few are very high. <strong>Kurtosis</strong> is tail weight relative to a normal
 		distribution: high values mean outliers are more common than a normal curve predicts. Both are diagnostic,
-		not decorative &mdash; they tell you in advance which tests are going to misbehave.
+		not decorative: they tell you in advance which tests are going to misbehave.
 	</p>
 
 	<h4 class="sub-head">Testing normality, and when it actually matters</h4>
@@ -67,19 +67,19 @@
 		</p>
 		<ul>
 			<li>
-				<strong>Shapiro-Wilk</strong> (default) &mdash; the most powerful general test for small to
+				<strong>Shapiro-Wilk</strong> (default): the most powerful general test for small to
 				moderate samples. AnCiR implements Royston's AS R94 algorithm, whose p-value is validated
 				for 3 &le; n &le; 5000. Above 5000 the node shows W with no p-value and suggests
 				D'Agostino-Pearson (R's
 				<code>shapiro.test</code> refuses such samples for the same reason).
 			</li>
 			<li>
-				<strong>D'Agostino-Pearson K&sup2;</strong> &mdash; combines skewness and kurtosis into an
-				omnibus test. Matches SciPy's <code>normaltest</code>.
+				<strong>D'Agostino-Pearson K&sup2;</strong>: combines skewness and kurtosis into an omnibus
+				test. Matches SciPy's <code>normaltest</code>.
 			</li>
 			<li>
-				<strong>Jarque-Bera</strong> &mdash; also skewness/kurtosis based; common in econometrics, and
-				best suited to large samples.
+				<strong>Jarque-Bera</strong>: also skewness/kurtosis based; common in econometrics, and best
+				suited to large samples.
 			</li>
 		</ul>
 	</AnCiRBox>
@@ -99,8 +99,7 @@
 			genuinely matters, the test has little power to detect a departure. At n = 5000, when the Central
 			Limit Theorem has made the mean approximately normal regardless, the test will reject on a trivially
 			small deviation. So it is least informative exactly where you most want an answer. Use it as one
-			input alongside a histogram and a Q-Q-style look at the residuals &mdash; never as an automatic
-			gate.
+			input alongside a histogram and a Q-Q-style look at the residuals, never as an automatic gate.
 		</p>
 	</WarnBox>
 
@@ -114,23 +113,25 @@
 		</p>
 		<ul>
 			<li>
-				<strong>Auto</strong> (default) &mdash; two groups: Welch t-test; three or more: ANOVA.
+				<strong>Auto</strong> (default): two groups: Welch t-test; three or more: ANOVA.
 			</li>
 			<li>
-				<strong>Welch t-test</strong> &mdash; two groups. Does <em>not</em> assume equal variances, which
-				is why it is the sensible default rather than the classical Student version.
+				<strong>Welch t-test</strong>: two groups. Does <em>not</em> assume equal variances, which is
+				why it is the sensible default rather than the classical Student version.
 			</li>
-			<li><strong>Mann-Whitney U</strong> &mdash; two groups, rank based.</li>
+			<li><strong>Mann-Whitney U</strong>: two groups, rank based.</li>
 			<li>
-				<strong>ANOVA</strong> &mdash; three or more groups, with a Tukey-Kramer post-hoc: each pair's
-				p-value and simultaneous confidence interval come from the studentized range, so they already
-				allow for all the pairs being compared.
+				<strong>ANOVA</strong>: three or more groups, with a Tukey-Kramer post-hoc: each pair's
+				p-value and simultaneous confidence interval come from the studentized range, so they
+				already allow for all the pairs being compared.
 			</li>
-			<li><strong>Kruskal-Wallis</strong> &mdash; three or more, rank based.</li>
+			<li><strong>Kruskal-Wallis</strong>: three or more, rank based.</li>
 		</ul>
 		<p>
-			For a categorical outcome &mdash; counts of rhythmic versus arrhythmic animals, say &mdash;
-			use the <strong>Categorical tests</strong> node instead, with
+			For a categorical outcome (counts of rhythmic versus arrhythmic animals, say), use the <strong
+				>Categorical tests</strong
+			>
+			node instead, with
 			<strong>Independence</strong> (a contingency table) or
 			<strong>Goodness-of-fit</strong> (observed against expected proportions).
 		</p>
@@ -147,9 +148,9 @@
 		<p>
 			Categorical data reaches you in two shapes that look similar and behave completely
 			differently. In the <strong>paired</strong> layout every row is one subject with both
-			variables recorded &mdash; this animal was treated
-			<em>and</em> it responded &mdash; so the two columns are the same length and correspond row by
-			row. In the <strong>independent groups</strong>
+			variables recorded (this animal was treated
+			<em>and</em> it responded), so the two columns are the same length and correspond row by row.
+			In the <strong>independent groups</strong>
 			layout each column is a separate sample holding only its own outcomes, and the columns are usually
 			different lengths: &ldquo;7 of 10 treated animals responded versus 2 of 25 controls&rdquo; is a
 			column of 10 and a column of 25, with no meaningful pairing between the third treated animal and
@@ -161,8 +162,8 @@
 			everything past the shorter column is thrown away, and the table that results describes no
 			real comparison. On the 7-of-10 versus 2-of-25 example it keeps just 10 of the 35 observations
 			and reports p&nbsp;=&nbsp;0.86, no association, where the correct test on all 35 gives
-			p&nbsp;=&nbsp;0.0008 with Cram&eacute;r&rsquo;s V&nbsp;=&nbsp;0.64 &mdash; a strong one. A
-			real effect vanishes silently.
+			p&nbsp;=&nbsp;0.0008 with Cram&eacute;r&rsquo;s V&nbsp;=&nbsp;0.64, a strong one. A real
+			effect vanishes silently.
 		</p>
 		<p>
 			So state the layout rather than assuming it. AnCiR&rsquo;s Categorical tests node has an <strong
@@ -178,16 +179,16 @@
 	<ChiSquaredAnim stage="test" />
 	<NoteBox title="The p-value is an area, not a number you look up">
 		<p>
-			The right-hand panel is the &chi;&sup2; distribution &mdash; the range of totals you would get
-			if nothing were going on. As each category's contribution is added, the red line marching
+			The right-hand panel is the &chi;&sup2; distribution: the range of totals you would get if
+			nothing were going on. As each category's contribution is added, the red line marching
 			rightwards is your statistic, and the shaded region beyond it is the probability of landing
 			that far out by chance. That shaded area <em>is</em> the p-value.
 		</p>
 		<p>
 			Note the <strong>degrees of freedom</strong>: three categories give df = 2, because once you
 			know the total and two of the counts, the third is fixed. The shape of the reference curve
-			depends on df, which is why the same statistic means different things in different tests
-			&mdash; a point that matters a great deal in <a href="#ch6">Chapter 6</a>.
+			depends on df, which is why the same statistic means different things in different tests, a
+			point that matters a great deal in <a href="#ch6">Chapter 6</a>.
 		</p>
 	</NoteBox>
 
@@ -211,9 +212,9 @@
 			The <strong>standard deviation</strong> describes how spread out your
 			<em>data</em> are. The <strong>standard error of the mean</strong>
 			(SEM = SD/&radic;n) describes how precisely you have located the
-			<em>mean</em>. SEM is always smaller, and gets smaller as you add subjects &mdash; which is
-			why error bars drawn as SEM look reassuringly tight while saying nothing about the variability
-			of the underlying biology.
+			<em>mean</em>. SEM is always smaller, and gets smaller as you add subjects. That is why error
+			bars drawn as SEM look reassuringly tight while saying nothing about the variability of the
+			underlying biology.
 		</p>
 		<p>
 			A <strong>95% confidence interval</strong> is roughly the mean &plusmn; 2 SEM, and is the more
@@ -234,7 +235,7 @@
 			</li>
 			<li>
 				<strong>Pairs plot</strong> and <strong>Correlation heatmap</strong> (Plots) show all pairs at
-				once &mdash; the fastest way to spot a relationship that is driven entirely by one outlier.
+				once: the fastest way to spot a relationship that is driven entirely by one outlier.
 			</li>
 			<li>
 				<strong>Fit trend</strong> (Fitting) fits linear, polynomial, exponential or logarithmic
@@ -282,7 +283,7 @@
 			is right. The residuals do. Plot <strong>resid_*</strong>
 			against the fitted values and against time, and look for three things:
 			<strong>curvature</strong> (the model shape is wrong), a
-			<strong>funnel</strong> (variance grows with the mean &mdash; consider a log transform), and
+			<strong>funnel</strong> (variance grows with the mean; consider a log transform), and
 			<strong>structure in time</strong> (autocorrelation, which means the standard errors are too small).
 		</p>
 		<p>
@@ -321,7 +322,7 @@
 
 	<NoteBox title="Reading it">
 		<p>
-			Notice that the null is centred on zero &mdash; unsurprising, since randomly assigned labels
+			Notice that the null is centred on zero. That is unsurprising, since randomly assigned labels
 			should show no systematic difference. Notice also that it has real width: differences of two
 			or three units happen readily by chance with this sample size. That width <em>is</em> the sampling
 			variability, and it is what a p-value compares against.
@@ -335,9 +336,9 @@
 
 	<h4 class="sub-head">What a surrogate null preserves</h4>
 	<p>
-		Shuffling destroys everything except the values themselves &mdash; which is right for
-		independent observations, and quite wrong for a time series. Break the autocorrelation and the
-		null becomes far too easy to beat, so almost any recording looks significant.
+		Shuffling destroys everything except the values themselves. That is right for independent
+		observations, and quite wrong for a time series. Break the autocorrelation and the null becomes
+		far too easy to beat, so almost any recording looks significant.
 	</p>
 	<p>
 		<strong>Surrogate</strong> methods fix this by generating artificial series that keep the
@@ -374,18 +375,18 @@
 		</p>
 		<ul>
 			<li>
-				<strong>Benjamini-Hochberg</strong> &mdash; controls the false discovery rate, the expected
+				<strong>Benjamini-Hochberg</strong>: controls the false discovery rate, the expected
 				<em>proportion</em> of your discoveries that are false. The right default for a screen.
 			</li>
 			<li>
-				<strong>Benjamini-Yekutieli</strong> &mdash; the same, valid under arbitrary dependence between
+				<strong>Benjamini-Yekutieli</strong>: the same, valid under arbitrary dependence between
 				tests; more conservative.
 			</li>
 			<li>
-				<strong>Holm</strong> &mdash; controls the family-wise error rate, the probability of
+				<strong>Holm</strong>: controls the family-wise error rate, the probability of
 				<em>even one</em> false positive. Uniformly more powerful than Bonferroni, so prefer it.
 			</li>
-			<li><strong>Bonferroni</strong> &mdash; the same goal, simplest and strictest.</li>
+			<li><strong>Bonferroni</strong>: the same goal, simplest and strictest.</li>
 		</ul>
 		<p>
 			All four are tested to agree with the standard implementations (as in Python's <code
@@ -429,7 +430,7 @@
 		The bandwidth or &lambda; is a bias-variance dial. Too little smoothing and you are fitting
 		noise; too much and you have flattened the signal. The residuals decide it: a well-chosen
 		smoother leaves residuals that look like noise, while an over-smoothed one leaves obvious
-		structure behind &mdash; the signal it failed to capture.
+		structure behind: the signal it failed to capture.
 	</p>
 
 	<NoteBox title="Where the statistics chapters continue">

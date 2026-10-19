@@ -170,11 +170,11 @@
 		}
 		if (t < A_ACC) {
 			const k = clamp(Math.floor((t / A_ACC) * FOLD24.P), 0, FOLD24.P);
-			return `Folding at 24 h — bin ${Math.min(k + 1, FOLD24.P)} of ${FOLD24.P}`;
+			return `Folding at 24 h: bin ${Math.min(k + 1, FOLD24.P)} of ${FOLD24.P}`;
 		}
 		if (t < A_CMP) return `Q₍ₚ₎ = ${FOLD24.Qp.toFixed(1)}, df = ${FOLD24.df}`;
 		const i = clamp(Math.floor(((t - A_CMP) / (1 - A_CMP)) * SWEEP.length), 0, SWEEP.length - 1);
-		return `Trial period ${SWEEP[i].p.toFixed(1)} h — Q₍ₚ₎ = ${SWEEP[i].Qp.toFixed(1)}`;
+		return `Trial period ${SWEEP[i].p.toFixed(1)} h: Q₍ₚ₎ = ${SWEEP[i].Qp.toFixed(1)}`;
 	}
 
 	// ── LEFT (stage 1): observed vs expected bars ────────────────────────────
@@ -271,7 +271,7 @@
 
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(L, T, pw, ph);
-		// every cycle, overlaid — this IS the fold
+		// every cycle, overlaid; this IS the fold
 		const cycles = Math.ceil(NPT / fd.P);
 		for (let k = 0; k < cycles; k++) {
 			ctx.strokeStyle = C.axis;
@@ -324,11 +324,7 @@
 		ctx.fillStyle = C.text;
 		ctx.font = 'bold 11px ' + F;
 		ctx.textAlign = 'center';
-		ctx.fillText(
-			`folded at ${trial.toFixed(1)} h  —  ${cycles} cycles overlaid`,
-			L + pw / 2,
-			T - 9
-		);
+		ctx.fillText(`folded at ${trial.toFixed(1)} h, ${cycles} cycles overlaid`, L + pw / 2, T - 9);
 		ctx.fillStyle = C.muted;
 		ctx.font = '10px ' + F;
 		ctx.fillText('position within the trial period', L + pw / 2, T + ph + 16);
@@ -424,7 +420,7 @@
 		const Y = (q) => T + ph - (q / QMAX) * ph;
 		ctx.fillStyle = C.bg;
 		ctx.fillRect(L, T, pw, ph);
-		// the significance threshold — note it RISES, because df = P − 1 grows
+		// the significance threshold. Note it RISES, because df = P − 1 grows
 		ctx.strokeStyle = C.red;
 		ctx.lineWidth = 1.6;
 		ctx.setLineDash([5, 3]);

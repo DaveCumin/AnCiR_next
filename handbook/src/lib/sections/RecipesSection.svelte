@@ -26,7 +26,7 @@
 	<NoteBox title="How to use a recipe">
 		<p>
 			Click <strong>Open this example in AnCiR</strong> to load the finished workflow on the canvas,
-			then follow the steps below against it — double-click any node to see its settings, and change
+			then follow the steps below against it. Double-click any node to see its settings, and change
 			a value to watch every downstream plot update. The numbers quoted under
 			<em>What to read off</em> are the values baked into that example session.
 		</p>
@@ -40,11 +40,11 @@
 		when="Before you quantify anything. A periodogram always returns a &lsquo;peak period&rsquo;, even for noise, so you need a way to tell a real rhythm from nothing."
 		data="A single time column and one activity/value column, several days long."
 		steps={[
-			'<strong>Import file</strong> (Sources) &mdash; or open the example, which contains two records with the same average activity: one intact, one arrhythmic (as after SCN ablation).',
-			'<strong>Actogram</strong> (Plots) on each &mdash; the intact record shows an obvious activity band; the arrhythmic one shows none.',
-			'<strong>Periodogram</strong> (Plots) on each &mdash; compare the <strong>peak power</strong>, not just the peak period.'
+			'<strong>Import file</strong> (Sources), or open the example, which contains two records with the same average activity: one intact, one arrhythmic (as after SCN ablation).',
+			'<strong>Actogram</strong> (Plots) on each: the intact record shows an obvious activity band; the arrhythmic one shows none.',
+			'<strong>Periodogram</strong> (Plots) on each. Compare the <strong>peak power</strong>, not just the peak period.'
 		]}
-		readoff="The arrhythmic periodogram does <em>not</em> go blank &mdash; it still reports a peak period, but at low power and with no band in the actogram. The intact record has a tall, significant peak and a clear band."
+		readoff="The arrhythmic periodogram does <em>not</em> go blank. It still reports a peak period, but at low power and with no band in the actogram. The intact record has a tall, significant peak and a clear band."
 		pitfall="Never report a peak period without its <strong>power</strong> and a look at the raw actogram. A bare period number is meaningless on its own."
 		session="sessions/demos/demo-workflow-arrhythmic.json"
 		sessionLabel="Open the arrhythmic negative-control example"
@@ -56,7 +56,7 @@
 		when="You want the endogenous period of a rhythm running without a zeitgeber (e.g. an animal in constant darkness), or you simply need τ before fixing it in a cosinor fit."
 		data="A time column and an activity column spanning at least 7 cycles, preferably 10&ndash;14."
 		steps={[
-			'<strong>Actogram</strong> (Plots), double-plotted &mdash; a rhythm whose τ differs from 24 h drifts steadily across days instead of sitting vertical (right = τ &gt; 24 h, left = τ &lt; 24 h).',
+			'<strong>Actogram</strong> (Plots), double-plotted. A rhythm whose τ differs from 24 h drifts steadily across days instead of sitting vertical (right = τ &gt; 24 h, left = τ &lt; 24 h).',
 			'<strong>Periodogram</strong> (Plots) with method <strong>Lomb-Scargle</strong> to estimate τ numerically.',
 			'<strong>Rhythmicity Analysis</strong> (Analysis) to output the peak period as a wireable number for a table or downstream comparison.'
 		]}
@@ -69,15 +69,15 @@
 	<Recipe
 		title="Measure a rhythm's phase (acrophase)"
 		chapters={CH_7}
-		when="You want the time of day at which a rhythm peaks &mdash; the single most reported circadian parameter &mdash; with a confidence interval."
+		when="You want the time of day at which a rhythm peaks (the single most reported circadian parameter), with a confidence interval."
 		data="A time column and a value column. Sparse or unevenly sampled data are fine; fix the period if you already know it."
 		steps={[
-			'<strong>Remove Trend</strong> (Filtering, linear) first if there is a slow baseline drift &mdash; a trend biases the MESOR and inflates the amplitude.',
+			'<strong>Remove Trend</strong> (Filtering, linear) first if there is a slow baseline drift; a trend biases the MESOR and inflates the amplitude.',
 			'<strong>Cosinor</strong> (Fitting): tick <strong>Use fixed period</strong> and enter 24 h (or your measured τ), <strong>N harmonics</strong> = 1, and a 95% CI. For a time of day, set <strong>Phase reference</strong> to <strong>Clock time of day</strong> (it needs a time column as x).',
 			'Read the <strong>acrophase</strong>, <strong>amplitude</strong>, <strong>MESOR</strong> and F-test p-value from the node; overlay the fitted curve on a scatterplot to sanity-check it.'
 		]}
 		readoff="Acrophase as the time of peak in hours (already in hours, no conversion needed): by default hours after the first sample, or clock time of day with the clock phase reference. Amplitude and MESOR with their 95% CIs, plus an F-test p-value for whether a rhythm is present at all."
-		pitfall="Always state the <strong>reference time</strong> the acrophase is measured from: with the default phase reference it is the first sample, so a record starting at 07:00 that peaks at 14:00 reads 7 h, not 14 h. Remember the F-test assumes independent residuals &mdash; dense, autocorrelated data make its p-value optimistic."
+		pitfall="Always state the <strong>reference time</strong> the acrophase is measured from: with the default phase reference it is the first sample, so a record starting at 07:00 that peaks at 14:00 reads 7 h, not 14 h. Remember the F-test assumes independent residuals, so dense, autocorrelated data make its p-value optimistic."
 		session="sessions/demos/demo-tp-cosinor.json"
 		sessionLabel="Open the Cosinor example"
 	/>
@@ -87,14 +87,14 @@
 	<Recipe
 		title="Do two groups peak at different times? (phase difference)"
 		chapters={CH_7_12}
-		when="The canonical &lsquo;does the treatment shift the clock?&rsquo; question &mdash; comparing acrophases (or onset times) between two groups."
+		when="The canonical &lsquo;does the treatment shift the clock?&rsquo; question: comparing acrophases (or onset times) between two groups."
 		data="Repeated recordings from several subjects per group (the example uses 8 per group over 4 days)."
 		steps={[
 			"One <strong>Cosinor</strong> node per group (fixed 24 h). Because a scalar metric port emits one value per Y input, the <strong>acrophase</strong> port becomes that group's whole distribution of per-subject peak times. If the recordings start at different clock times, set <strong>Phase reference</strong> to <strong>Clock time of day</strong>, or the peak times are not on a common clock.",
-			'Wire both acrophase columns into the <strong>Circular phase plot</strong> (Plots) &mdash; each group appears as a coloured cluster on a 24 h clock with its mean-resultant vector.',
+			'Wire both acrophase columns into the <strong>Circular phase plot</strong> (Plots). Each group appears as a coloured cluster on a 24 h clock with its mean-resultant vector.',
 			'Wire the same two columns into the <strong>Rayleigh test</strong> (Analysis), with <strong>Also run Watson-Williams test</strong> ticked.'
 		]}
-		readoff="Rayleigh R and p per group (is each group clustered at all?), and a Watson-Williams F and p for whether they share a mean phase. In the example, group A peaks ≈ 7.4 h and B ≈ 14.2 h; R ≈ 0.97/0.99; Watson-Williams F ≈ 292, p ≈ 0 &mdash; the groups differ."
+		readoff="Rayleigh R and p per group (is each group clustered at all?), and a Watson-Williams F and p for whether they share a mean phase. In the example, group A peaks ≈ 7.4 h and B ≈ 14.2 h; R ≈ 0.97/0.99; Watson-Williams F ≈ 292, p ≈ 0, so the groups differ."
 		pitfall="Never compare acrophases with an ordinary t-test: 23:00 and 01:00 are two hours apart on the clock but 22 hours apart to a linear test. Use Watson-Williams (the circular analogue)."
 		session="sessions/demos/demo-workflow-phase-groups.json"
 		sessionLabel="Open the group phase-comparison example"
@@ -103,14 +103,14 @@
 	<Recipe
 		title="Is a rhythm parameter different between two groups?"
 		chapters={CH_11_13}
-		when="You have extracted a scalar per subject (amplitude, MESOR, IS, M10&hellip;) and want to know whether two groups differ on it, with the correct test chosen for you."
+		when="You have extracted a scalar per subject (amplitude, MESOR, IS, M10&hellip;) and want to know whether two groups differ on it, with the assumptions behind the test checked for you."
 		data="One value per subject in each of two groups (e.g. an amplitude column per group from a Cosinor fit)."
 		steps={[
 			'Produce the per-subject scalar (e.g. <strong>Cosinor</strong> amplitude, or a <strong>Nonparametric RA</strong> metric) for each group.',
-			'<strong>Compare groups (stats)</strong> (Analysis) on <strong>auto</strong>: it checks each group for normality and equal variance and picks a Welch t-test or a Mann-Whitney U test, surfacing the choice and any warnings.',
+			'<strong>Compare groups (stats)</strong> (Analysis) with <strong>Method</strong> on <strong>Auto</strong>: it runs a Welch t-test for two groups (one-way ANOVA with Tukey-Kramer post-hoc for three or more) and names the test it ran. It does not switch test for you: it checks each group for normality (Jarque-Bera) and warns when a group looks non-normal or the variances differ more than fourfold. If it warns, set <strong>Method</strong> to <strong>Mann-Whitney U</strong> (or Kruskal-Wallis for three or more groups).',
 			'Add a <strong>Boxplot</strong> (Plots) to show medians, spread and outliers alongside the test.'
 		]}
-		readoff="Which test fired and why, the p-value against your α, and &mdash; from the boxplot &mdash; the direction and size of the difference. A significant p says the groups differ; the boxplot says by how much."
+		readoff="Which test ran and any assumption warnings, the p-value against your α, the effect size, and (from the boxplot) the direction and size of the difference. A significant p says the groups differ; the boxplot says by how much."
 		pitfall="A p-value alone is not enough. Always pair it with the effect size (the actual difference and its spread) so readers can judge biological, not just statistical, significance."
 		session="sessions/demos/demo-workflow-stats-two-group.json"
 		sessionLabel="Open the compare-two-groups example"
@@ -119,15 +119,15 @@
 	<Recipe
 		title="Characterise a fragmented rest-activity rhythm"
 		chapters={CH_9}
-		when="Clinical or ageing actigraphy where the rhythm is not a clean sine &mdash; you want robust, shape-free descriptors and a group contrast."
+		when="Clinical or ageing actigraphy where the rhythm is not a clean sine, and you want robust, shape-free descriptors and a group contrast."
 		data="A time column and an activity column per subject, binned to the analysis epoch (e.g. 1 h)."
 		steps={[
-			"One <strong>Nonparametric RA</strong> node (Analysis) per group &mdash; each metric port (IS, IV, RA, M10, L5) emits that group's distribution.",
-			'A <strong>Cosinor</strong> node on the same subjects for the model-based view (amplitude, acrophase) &mdash; combining non-parametric and model-based is the recommended pairing.',
+			"One <strong>Nonparametric RA</strong> node (Analysis) per group. Each metric port (IS, IV, RA, M10, L5) emits that group's distribution.",
+			'A <strong>Cosinor</strong> node on the same subjects for the model-based view (amplitude, acrophase); combining non-parametric and model-based is the recommended pairing.',
 			'<strong>Compare groups (stats)</strong> (Analysis) on the metric of interest, and an <strong>actogram</strong> of one representative subject per group.'
 		]}
 		readoff="IS (day-to-day stability, →1), IV (fragmentation, →0 consolidated), RA = (M10&minus;L5)/(M10+L5). The example's consolidated phenotype has IS ≈ 0.98, IV ≈ 0.4, RA ≈ 0.95; the fragmented one IS ≈ 0.45, IV ≈ 1.4, RA ≈ 0.6."
-		pitfall="IS and IV are strongly <strong>epoch-dependent</strong> &mdash; values at 1-minute and 1-hour epochs are not comparable, so always report the epoch and match it across groups."
+		pitfall="IS and IV are strongly <strong>epoch-dependent</strong>: values at 1-minute and 1-hour epochs are not comparable, so always report the epoch and match it across groups."
 		session="sessions/demos/demo-workflow-rest-activity.json"
 		sessionLabel="Open the rest-activity profile example"
 	/>
@@ -137,14 +137,14 @@
 	<Recipe
 		title="Detect a free-running (non-24) rhythm in a person"
 		chapters={CH_5_6}
-		when="Sleep-wake data that drift later (or earlier) every day &mdash; the human counterpart of the free-running mouse, and a recognised clinical presentation in blind individuals."
+		when="Sleep-wake data that drift later (or earlier) every day. It is the human counterpart of the free-running mouse, and a recognised clinical presentation in blind individuals."
 		data="A long sleep-wake or activity record (weeks), so the drift can accumulate visibly."
 		steps={[
-			'<strong>Actogram</strong> (Plots), double-plotted &mdash; a 24 h rhythm sits vertical; this one leans as the sleep window walks around the clock.',
+			'<strong>Actogram</strong> (Plots), double-plotted. A 24 h rhythm sits vertical; this one leans as the sleep window walks around the clock.',
 			'<strong>Periodogram</strong> (Plots, Lomb-Scargle) to recover τ numerically.'
 		]}
 		readoff="The example runs at τ ≈ 24.5 h, drifting about half an hour later each day and circling the clock over roughly seven weeks; the periodogram peak sits just above 24 h."
-		pitfall="A rhythm that merely looks irregular in clock time may be a perfectly regular non-24 rhythm &mdash; the double-plotted actogram is what makes the steady drift obvious."
+		pitfall="A rhythm that merely looks irregular in clock time may be a perfectly regular non-24 rhythm; the double-plotted actogram is what makes the steady drift obvious."
 		session="sessions/demos/demo-workflow-non24-blind.json"
 		sessionLabel="Open the non-24 sleep-wake example"
 	/>
@@ -152,10 +152,10 @@
 	<Recipe
 		title="Tell masking apart from true entrainment"
 		chapters={CH_5}
-		when="A schedule shift where the activity appears to follow the new light cycle &mdash; but you need to know whether the clock actually moved."
+		when="A schedule shift where the activity appears to follow the new light cycle, but you need to know whether the clock actually moved."
 		data="An activity record spanning the shift and the release into constant conditions."
 		steps={[
-			'<strong>Actogram</strong> (Plots) of both records &mdash; while the light cycle runs, a truly entrained animal and a merely masked one look identical.',
+			'<strong>Actogram</strong> (Plots) of both records. While the light cycle runs, a truly entrained animal and a merely masked one look identical.',
 			'Compare their behaviour <strong>after release into constant darkness</strong>: the entrained clock keeps the new phase; the masked one snaps back to its original phase.'
 		]}
 		readoff="Persistence of the new phase in constant conditions is the signature of real entrainment; an immediate snap-back reveals masking (light was suppressing behaviour, not resetting the clock)."
@@ -171,7 +171,7 @@
 		data="This example is twelve records of pure noise, analysed identically."
 		steps={[
 			'Run the same <strong>periodogram</strong> on all twelve noise records.',
-			'Look at where the twelve peak periods land: scattered arbitrarily across the search window &mdash; the signature of a null result in aggregate.'
+			'Look at where the twelve peak periods land: scattered arbitrarily across the search window. That scatter is the signature of a null result in aggregate.'
 		]}
 		readoff="Every record reports a peak period, because a periodogram always returns its largest value. Picking the most impressive single spectrum out of many is how noise becomes a &lsquo;finding&rsquo;."
 		pitfall="Decide what you are testing <strong>before</strong> you test it. Correct for the number of trial periods (Bonferroni, or a permutation threshold), and read this next to the arrhythmic negative control above."

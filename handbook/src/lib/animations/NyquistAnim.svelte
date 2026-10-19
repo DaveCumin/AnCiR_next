@@ -293,7 +293,7 @@
 <div class="anim-embed" style:--anim-h={height}>
 	<div class="viz-row one-col">
 		<div class="chart-panel">
-			<h3>True 24 h Rhythm — Sampled Every {sampleInterval.toFixed(1)} h</h3>
+			<h3>True 24 h Rhythm, Sampled Every {sampleInterval.toFixed(1)} h</h3>
 			<canvas bind:this={cTop}></canvas>
 		</div>
 	</div>

@@ -2,7 +2,7 @@
 // Manifest curation check (reporting only).
 //
 // The handbook now lives in the AnCiR workspace and imports AnCiR's node
-// manifest and session index DIRECTLY (via the $ancir alias) — there is no
+// manifest and session index DIRECTLY (via the $ancir alias), so there is no
 // longer any file to copy. What still needs a human is the hand-authored
 // prose in src/lib/nodeReference.json, which the machine cannot write. This
 // script flags where that prose has drifted from the live manifest:
@@ -32,7 +32,7 @@ const srcSessions = resolve(ANCIR, 'static/sessions/demos/index.json');
 
 if (!existsSync(srcNodes) || !existsSync(srcSessions)) {
 	warn(
-		`AnCiR manifest not found under ${ANCIR}/static — is the handbook still inside the AnCiR workspace?`
+		`AnCiR manifest not found under ${ANCIR}/static. Is the handbook still inside the AnCiR workspace?`
 	);
 	process.exit(1);
 }
@@ -63,7 +63,7 @@ let problems = 0;
 if (missingRef.length) {
 	problems++;
 	warn(
-		`${missingRef.length} palette node(s) have NO nodeReference.json entry — add curated prose for:`
+		`${missingRef.length} palette node(s) have NO nodeReference.json entry. Add curated prose for:`
 	);
 	log(`    ${missingRef.join(', ')}`);
 }
@@ -79,7 +79,7 @@ if (unknownShowcase.length) {
 
 log('');
 if (problems) {
-	warn('Curation needed — see above.');
+	warn('Curation needed; see above.');
 	process.exit(1);
 }
 log(

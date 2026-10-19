@@ -32,7 +32,7 @@
 	</p>
 	<div class="design-grid">
 		<div class="design-card">
-			<h4>Longitudinal — one individual, many cycles</h4>
+			<h4>Longitudinal: one individual, many cycles</h4>
 			<p>
 				The same subject measured repeatedly across many days. This is the only design that lets you
 				estimate <strong>that individual's own period</strong>
@@ -42,7 +42,7 @@
 			</p>
 		</div>
 		<div class="design-card">
-			<h4>Cross-sectional — many individuals</h4>
+			<h4>Cross-sectional: many individuals</h4>
 			<p>
 				Many subjects, each sampled once or over a short window, with the
 				<strong>clock time of every sample recorded</strong>. You cannot recover a within-individual
@@ -146,7 +146,7 @@
 			<tbody>
 				<tr>
 					<td class="goal-cell">What does this variable look like?</td>
-					<td>Summary statistics plus a histogram and boxplot &mdash; never the numbers alone</td>
+					<td>Summary statistics plus a histogram and boxplot, never the numbers alone</td>
 					<td class="need-cell">Describe Data, histogram, boxplot</td>
 					<td class="go-cell"><a href="#stats">Stats</a></td>
 				</tr>
@@ -193,14 +193,14 @@
 					<td class="go-cell"><a href="#stats">Stats</a> &middot; <a href="#ch11">Ch 11</a></td>
 				</tr>
 				<tr>
-					<td class="goal-cell">I ran many tests &mdash; what now?</td>
+					<td class="goal-cell">I ran many tests. What now?</td>
 					<td>FDR (Benjamini-Hochberg) for a screen; Holm if a single false claim is costly</td>
 					<td class="need-cell">FDR Correction</td>
 					<td class="go-cell"><a href="#stats">Stats</a> &middot; <a href="#ch6">Ch 6</a></td>
 				</tr>
 				<tr>
 					<td class="goal-cell">Can I trust this p-value on a time series?</td>
-					<td>Probably not &mdash; build a null that preserves the autocorrelation</td>
+					<td>Probably not. Build a null that preserves the autocorrelation</td>
 					<td class="need-cell">Surrogate Test</td>
 					<td class="go-cell"><a href="#stats">Stats</a> &middot; <a href="#ch6">Ch 6</a></td>
 				</tr>

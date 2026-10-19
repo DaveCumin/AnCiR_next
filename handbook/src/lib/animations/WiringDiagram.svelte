@@ -2,7 +2,7 @@
 	// A small, self-contained illustration of "wiring": drag from a node's
 	// output port to the next node's input port to connect them. Pure SVG so it
 	// is crisp, theme-aware (CSS variables), and prints as a complete connection.
-	// Motion is an enhancement only — with reduced-motion, or on paper, the wire
+	// Motion is an enhancement only; with reduced-motion, or on paper, the wire
 	// shows fully drawn.
 	let { height = '220px' } = $props();
 

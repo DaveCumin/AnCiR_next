@@ -3,7 +3,7 @@
 	//
 	// AnCiR (`base`) reads the real query string (window.location.search) for
 	// `loadFromURL`, then fetch()es that URL and JSON.parses it. It must resolve
-	// to *raw JSON*, so we point at raw.githubusercontent.com — the same source
+	// to *raw JSON*, so we point at raw.githubusercontent.com, the same source
 	// AnCiR's own built-in example uses (AnCiR_next/src/routes/+page.svelte:246).
 	// NB: the deployed app path ancir.pages.dev/sessions/*.json returns the SPA
 	// HTML shell (200 OK), which would fail JSON.parse with "Unexpected token '<'".

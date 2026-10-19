@@ -11,7 +11,7 @@
 	const historyEntries = [
 		{
 			year: '1930s–40s',
-			text: 'Norbert Wiener\'s work on generalised harmonic analysis (1930)<sup class="cite"><a href="#ref-29">[29]</a></sup> and time-series prediction (1949) formalises the link between the autocorrelation function and the power spectrum — a foundation later adopted in biological rhythm research.'
+			text: 'Norbert Wiener\'s work on generalised harmonic analysis (1930)<sup class="cite"><a href="#ref-29">[29]</a></sup> and time-series prediction (1949) formalises the link between the autocorrelation function and the power spectrum, a foundation later adopted in biological rhythm research.'
 		},
 		{
 			year: '1990s',
@@ -23,12 +23,12 @@
 	const metricsRows = [
 		[
 			'Interdaily Stability (IS)',
-			'Fraction of total variance explained by the average 24-hour pattern — a measure of how regular the daily rhythm is across multiple days',
+			'Fraction of total variance explained by the average 24-hour pattern, a measure of how regular the daily rhythm is across multiple days',
 			'0 (no regularity) to 1 (perfect)'
 		],
 		[
 			'Intradaily Variability (IV)',
-			'Mean squared difference between consecutive time points relative to overall variance — a measure of within-day fragmentation',
+			'Mean squared difference between consecutive time points relative to overall variance, a measure of within-day fragmentation',
 			'0 (smooth) to a theoretical max of 4; IV ≈ 2 is the value expected from uncorrelated noise'
 		],
 		[
@@ -38,7 +38,7 @@
 		],
 		[
 			'Relative Amplitude (RA)',
-			'(M10 − L5) / (M10 + L5) — normalised difference between the active and rest phases, robust to overall activity level',
+			'(M10 − L5) / (M10 + L5): normalised difference between the active and rest phases, robust to overall activity level',
 			'0 (no rhythm) to 1 (strong)'
 		]
 	];
@@ -71,7 +71,7 @@
 	</p>
 	<p>
 		The ACF assumes a <strong>stationary, evenly spaced</strong> series and requires the data to be
-		<a class="gloss" href="#gloss-detrending">detrended</a> first — an undetrended drift produces a slowly
+		<a class="gloss" href="#gloss-detrending">detrended</a> first; an undetrended drift produces a slowly
 		decaying, uniformly positive ACF that buries the rhythmic peaks. It is also unreliable if the period
 		or amplitude changes during the record; segment the record and analyse each part separately.
 	</p>
@@ -102,7 +102,7 @@
 			<li>The autocorrelation function is plotted against lag (in hours).</li>
 			<li>
 				Significant peaks at 24, 48, 72 h confirm circadian rhythmicity. The lag of the first major
-				positive peak after zero estimates τ; AnCiR reports the overall <strong>Peak Lag</strong>.
+				positive peak after zero estimates τ; AnCiR reports the overall <strong>Peak lag</strong>.
 			</li>
 			<li>
 				Adjust the minimum and maximum <strong>lag range</strong> to inspect ultradian structure (&lt;
@@ -136,15 +136,14 @@
 
 	<p>
 		All four metrics are computed on the <strong>binned</strong> record and are strongly
-		<strong>epoch-dependent</strong>
-		— IS and IV computed at 1-minute and 1-hour epochs are not comparable, so always report the epoch.
-		IS is biased upward in short records and needs at least 7 days. Note that IS is arithmetically the
-		Sokolove-Bushell statistic at a 24 h trial period divided by N, linking this chapter to Chapter 6.
-		Finally, all of these describe
+		<strong>epoch-dependent</strong>: IS and IV computed at 1-minute and 1-hour epochs are not
+		comparable, so always report the epoch. IS is biased upward in short records and needs at least
+		7 days. Note that IS is arithmetically the Sokolove-Bushell statistic at a 24 h trial period
+		divided by N, linking this chapter to Chapter 6. Finally, all of these describe
 		<em>observed behaviour, not the endogenous clock</em>: they are fully exposed to masking by
 		light, feeding and social schedule. AnCiR also provides a <strong>Cross-correlation</strong> node
-		(Analysis family) for the correlation between two series at each lag — useful for measuring the delay
-		between, say, activity and temperature rhythms.
+		(Analysis family) for the correlation between two series at each lag (useful for measuring the delay
+		between, say, activity and temperature rhythms).
 	</p>
 
 	<AnCiRBox

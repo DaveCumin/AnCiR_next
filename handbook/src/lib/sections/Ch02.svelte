@@ -33,20 +33,22 @@
 	<h3 class="section-head">Types of Chronobiological Data</h3>
 	<ul>
 		<li>
-			<strong>Locomotor activity</strong> — running wheel counts, accelerometry, infrared beam breaks.
+			<strong>Locomotor activity</strong>: running wheel counts, accelerometry, infrared beam
+			breaks.
 		</li>
 		<li>
-			<strong>Sleep-wake state</strong> — polysomnography (PSG), actigraphy, video scoring.
+			<strong>Sleep-wake state</strong>: polysomnography (PSG), actigraphy, video scoring.
 		</li>
 		<li>
-			<strong>Physiological signals</strong> — core body temperature (CBT), heart rate, blood pressure.
+			<strong>Physiological signals</strong>: core body temperature (CBT), heart rate, blood
+			pressure.
 		</li>
 		<li>
-			<strong>Hormonal markers</strong> — cortisol, melatonin, insulin, growth hormone at multiple time
-			points.
+			<strong>Hormonal markers</strong>: cortisol, melatonin, insulin, growth hormone at multiple
+			time points.
 		</li>
 		<li>
-			<strong>Gene/protein expression</strong> — qPCR, RNA-seq, proteomics time-courses.
+			<strong>Gene/protein expression</strong>: qPCR, RNA-seq, proteomics time-courses.
 		</li>
 	</ul>
 
@@ -61,7 +63,7 @@
 		noiseless, infinite-record limit and is a <strong>floor, not a target</strong>: to estimate
 		amplitude and phase reliably from a real, noisy, finite record, aim for at least 8–12 samples
 		per cycle. Equally important, components <em>faster</em> than half the sampling rate do not
-		vanish — they <strong>alias</strong> into lower frequencies and can masquerade as circadian signal,
+		vanish. They <strong>alias</strong> into lower frequencies and can masquerade as circadian signal,
 		so sample fast enough to cover the ultradian components too, or filter before down-sampling. For circadian
 		rhythms, 1–4 hourly sampling is standard for hormone assays; wearables typically sample at 30-second
 		to 1-minute resolution.
@@ -79,10 +81,10 @@
 			<a class="gloss" href="#gloss-lomb-scargle">Lomb-Scargle periodogram</a> and
 			<a class="gloss" href="#gloss-cosinor">cosinor</a>
 			regression tolerate irregular and incomplete sampling, but neither
-			<em>rescues genuinely sparse data</em>
-			— no method recovers information that was never sampled. With sparse data, fixed-period cosinor
-			(assuming τ = 24 h) can still estimate amplitude and acrophase, but period estimation should not
-			be attempted. For reliable period estimation, aim for at least
+			<em>rescues genuinely sparse data</em>: no method recovers information that was never sampled.
+			With sparse data, fixed-period cosinor (assuming τ = 24 h) can still estimate amplitude and
+			acrophase, but period estimation should not be attempted. For reliable period estimation, aim
+			for at least
 			<strong>7 complete cycles, preferably 10–14</strong>; six-day records can give χ² periodogram
 			errors up to 0.5 h.
 		</p>
@@ -99,14 +101,15 @@
 	<AnCiRBox title="Importing Data into AnCiR">
 		<ol>
 			<li>
-				Go to <strong>ancir.pages.dev</strong> — no installation needed. AnCiR opens on the
-				<strong>workflow canvas</strong>, where every step of an analysis is a node you wire
-				together.
+				Go to <strong>ancir.pages.dev</strong> (no installation needed). A new session opens on the
+				<strong>Start a session</strong> screen; <strong>Import data</strong> there goes straight to
+				step 4. Otherwise close it to reach the <strong>workflow canvas</strong>, where every step
+				of an analysis is a node you wire together.
 			</li>
 			<li>
-				Open the <strong>node palette</strong>: click the blue <strong>+ (Add node)</strong> button
-				at the top-right of the canvas, or
-				<strong>Click here to add data</strong> in the middle of an empty canvas.
+				Open the <strong>node palette</strong>: click the <strong>+</strong> button (tooltip
+				<em>Add to canvas</em>) at the top-right of the canvas. On an empty canvas you can instead
+				click <strong>Click here to add data</strong> and choose <strong>Import a file</strong>.
 			</li>
 			<li>
 				Under <strong>Sources</strong>, choose <strong>Import file</strong> (you can also
@@ -120,7 +123,7 @@
 				<strong>Bin data to</strong> at import to down-sample as you load.
 			</li>
 			<li>
-				Click <strong>Confirm Import</strong>. Your data appears as a <strong>data node</strong>
+				Click <strong>Confirm import</strong>. Your data appears as a <strong>data node</strong>
 				on the canvas, with each column available as an output port to feed into plots and processes.
 			</li>
 			<li>
@@ -128,8 +131,9 @@
 				internally, so you don't need to convert them.
 			</li>
 			<li>
-				To explore without your own data, use <strong>Load session</strong> (top-left of the canvas)
-				→ <strong>Examples</strong>, or open a ready-made example with the button below.
+				To explore without your own data, pick one of the <strong>Example sessions</strong> on the
+				start screen, use the <strong>Load a session</strong> icon on the left toolbar →
+				<strong>Examples</strong>, or open a ready-made example with the button below.
 			</li>
 		</ol>
 		<DemoLink

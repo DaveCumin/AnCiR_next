@@ -301,7 +301,7 @@
 		<div class="chart-panel">
 			<h3>Current Test Frequency</h3>
 			<canvas bind:this={cTest}></canvas>
-			<div class="period-label" bind:this={fftLabel}>Frequency: &mdash;</div>
+			<div class="period-label" bind:this={fftLabel}>Frequency: -</div>
 		</div>
 		<div class="chart-panel">
 			<h3>DFT Magnitude Spectrum</h3>
@@ -340,6 +340,6 @@
 				}}
 			/>
 		</div>
-		<div class="step-indicator" bind:this={stepInd}>Freq: &mdash;</div>
+		<div class="step-indicator" bind:this={stepInd}>Freq: -</div>
 	</div>
 </div>

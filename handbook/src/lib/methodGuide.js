@@ -5,16 +5,16 @@
  * Each row is a QUESTION a reader might arrive with, together with the two data
  * properties that most often disqualify the method that answers it:
  *
- *   sampling — the study design the question demands:
+ *   sampling: the study design the question demands:
  *     'longitudinal'     one individual, measured repeatedly over time
  *     'cross-sectional'  many individuals, each sampled once or over a short window
  *     'both'             many individuals, each with a record over time
  *     'either'           the method does not care which
  *
- *   spacing  — 'any' if the method fits against actual timestamps, 'even' if it
+ *   spacing:  'any' if the method fits against actual timestamps, 'even' if it
  *     reads position-in-sequence and so assumes one fixed interval between samples.
  *
- *   ifUneven — when spacing is 'even', what to reach for instead on unevenly
+ *   ifUneven: when spacing is 'even', what to reach for instead on unevenly
  *     spaced or gappy data. null means the question cannot be answered from such
  *     data at all, and the picker says so rather than suggesting a substitute.
  *

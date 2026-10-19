@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   animUtils.js — Canvas utilities for Svelte animation components
+   animUtils.js: Canvas utilities for Svelte animation components
    ═══════════════════════════════════════════════════════════════════ */
 
 /**

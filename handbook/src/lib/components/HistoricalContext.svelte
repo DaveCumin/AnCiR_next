@@ -7,7 +7,7 @@
 	{#each entries as entry (entry.year)}
 		<div class="timeline-entry">
 			<!-- eslint-disable-next-line svelte/no-at-html-tags -- entry.text is author-written handbook prose from the chapter sources, not user input -->
-			<span class="timeline-year">{entry.year}</span> — {@html entry.text}
+			<span class="timeline-year">{entry.year}</span>: {@html entry.text}
 		</div>
 	{/each}
 </div>

@@ -28,13 +28,13 @@
 			<a href="https://doi.org/10.1007/BF00648343">https://doi.org/10.1007/BF00648343</a>
 		</li>
 		<li id="ref-4">
-			Scargle JD. Studies in astronomical time series analysis. II — statistical aspects of spectral
+			Scargle JD. Studies in astronomical time series analysis. II. Statistical aspects of spectral
 			analysis of unevenly spaced data. <em>Astrophys J.</em>
 			1982;263:835–853.
 			<a href="https://doi.org/10.1086/160554">https://doi.org/10.1086/160554</a>
 		</li>
 		<li id="ref-5">
-			Halberg F, Tong YL, Johnson EA. Circadian system phase — an aspect of temporal morphology;
+			Halberg F, Tong YL, Johnson EA. Circadian system phase: an aspect of temporal morphology;
 			procedures and illustrative examples. In: <em>The Cellular Aspects of Biorhythms.</em>
 			Berlin/New York: Springer; 1967:20–48.
 			<a href="https://doi.org/10.1007/978-3-642-88394-1_2"

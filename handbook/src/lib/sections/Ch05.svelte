@@ -15,7 +15,7 @@
 		},
 		{
 			year: '1960s',
-			text: 'Colin Pittendrigh popularises the double-plotted actogram, displaying two consecutive 24-hour cycles side by side on each row — invaluable for revealing free-running rhythms.'
+			text: 'Colin Pittendrigh popularises the double-plotted actogram, displaying two consecutive 24-hour cycles side by side on each row, invaluable for revealing free-running rhythms.'
 		},
 		{
 			year: '1930s–60s',
@@ -36,7 +36,7 @@
 	<p class="chapter-intro">
 		Actograms are the <strong>fundamental visualisation tool</strong> of chronobiology. They display
 		activity data across multiple days in a stacked format that makes temporal patterns immediately
-		visible — periodicity, <a class="gloss" href="#gloss-phase-shift">phase shifts</a>,
+		visible: periodicity, <a class="gloss" href="#gloss-phase-shift">phase shifts</a>,
 		<a class="gloss" href="#gloss-entrainment">entrainment</a>, and
 		<a class="gloss" href="#gloss-free-running-period">free-running rhythms</a> all become apparent at
 		a glance.
@@ -54,35 +54,35 @@
 		In a <strong>double-plotted actogram</strong>, each row displays two consecutive cycles side by
 		side. This is the
 		<em>standard format in chronobiology</em>. When the endogenous period is not exactly 24 hours,
-		activity onsets drift systematically across rows — rightward for τ > 24 h, leftward for τ &lt;
-		24 h — and double-plotting makes this drift easy to see by providing visual continuity.
+		activity onsets drift systematically across rows (rightward for τ > 24 h, leftward for τ &lt; 24
+		h), and double-plotting makes this drift easy to see by providing visual continuity.
 	</p>
 
 	<h3 class="section-head">What Actograms Reveal</h3>
 	<ul>
 		<li>
-			<strong>Periodicity</strong> — whether a rhythm repeats consistently (e.g. every ~24 hours).
+			<strong>Periodicity</strong>: whether a rhythm repeats consistently (e.g. every ~24 hours).
 		</li>
 		<li>
-			<strong>Phase shifts</strong> — changes in the timing of activity onset or offset due to jet lag,
-			shifted light-dark cycles, or experimental manipulations.
+			<strong>Phase shifts</strong>: changes in the timing of activity onset or offset due to jet
+			lag, shifted light-dark cycles, or experimental manipulations.
 		</li>
 		<li>
-			<strong>Entrainment</strong> — stable onset times relative to the zeitgeber indicate successful
+			<strong>Entrainment</strong>: stable onset times relative to the zeitgeber indicate successful
 			synchronisation.
 		</li>
 		<li>
-			<strong>Free-running rhythms</strong> — in constant conditions (DD or LL), the endogenous period
-			is revealed by systematic onset drift.
+			<strong>Free-running rhythms</strong>: in constant conditions (DD or LL), the endogenous
+			period is revealed by systematic onset drift.
 		</li>
 		<li>
-			<strong>Arrhythmicity</strong> — absence of rhythmic patterning, seen in clock-mutant animals or
-			severe disruption.
+			<strong>Arrhythmicity</strong>: absence of rhythmic patterning, seen in clock-mutant animals
+			or severe disruption.
 		</li>
 		<li>
-			<strong>Masking</strong> — direct effects of the environment on behaviour that are not mediated
-			by the clock (light acutely suppressing activity in a nocturnal rodent, handling or cage-change
-			spikes, feeding-driven bouts).
+			<strong>Masking</strong>: direct effects of the environment on behaviour that are not mediated
+			by the clock (light acutely suppressing activity in a nocturnal rodent, handling or
+			cage-change spikes, feeding-driven bouts).
 		</li>
 	</ul>
 
@@ -112,15 +112,15 @@
 		Estimate the period by regressing <strong>absolute onset time</strong> (hours since the start of
 		the record, not the within-row position) on cycle number;
 		<strong>the slope is τ̂ directly</strong>. Equivalently, if you regress the within-row onset
-		position from an actogram folded at τ<sub>fold</sub>, then τ̂ = τ<sub>fold</sub> + slope — note
-		this is the <em>folding</em> period, not always 24 h. Because the within-row position wraps at
-		the row boundary, onset times must be unwrapped (adding τ<sub>fold</sub> at each wrap) before regression.
+		position from an actogram folded at τ<sub>fold</sub>, then τ̂ = τ<sub>fold</sub> + slope. Note
+		that this is the <em>folding</em> period, not always 24 h. Because the within-row position wraps
+		at the row boundary, onset times must be unwrapped (adding τ<sub>fold</sub> at each wrap) before regression.
 	</p>
 	<p>
 		In practice a single noisy bin will trip a bare first-crossing rule. Standard implementations
 		require the signal to <strong>remain above threshold for several consecutive bins</strong> and to
 		be preceded by a quiet interval. State whether the mean and SD are computed over the whole record
-		or per cycle — on a drifting record the two give different onsets — and check onsets that fall close
+		or per cycle (on a drifting record the two give different onsets), and check onsets that fall close
 		to a row boundary by eye.
 	</p>
 
@@ -137,7 +137,7 @@
 
 	<AnCiRBox
 		title="Creating an Actogram in AnCiR"
-		tip="If onset markers seem wrong, adjust the N/M window lengths and the percentile threshold — a higher percentile marks only stronger activity onsets."
+		tip="If onset markers seem wrong, adjust the N/M window lengths and the percentile threshold; a higher percentile marks only stronger activity onsets."
 	>
 		<ol>
 			<li>
@@ -145,47 +145,49 @@
 				<strong>Plots</strong>, choose <strong>Actogram</strong>.
 			</li>
 			<li>
-				Wire your <strong>time column</strong> into the plot's <strong>time</strong> input and your
+				Wire your <strong>time column</strong> into the plot's <strong>x</strong> input and your
 				<strong>values column</strong>
-				into the <strong>values</strong> input (drag from the data node's output ports), or pick them
-				from the node's dropdowns.
+				into the <strong>y</strong> input (drag from the data node's output ports), or pick them by
+				right-clicking a port or in the plot's <strong>Data</strong> tab.
 			</li>
 			<li>
-				Set the <strong>Period</strong> (default: 24 h) — this sets how many hours fit in each horizontal
-				row.
+				In the <strong>Time</strong> section of the <strong>Properties</strong> tab, set the
+				<strong>Period</strong> (default: 24 h). This sets how many hours fit in each horizontal row.
 			</li>
 			<li>
-				Set the <strong>Start time</strong> using the date-and-time picker — the date and clock time at
+				Set the <strong>Start time</strong> using the date-and-time picker: the date and clock time at
 				which the first row begins.
 			</li>
 			<li>
 				Set <strong>Repeat</strong> to 2 for a <strong>double-plotted</strong> actogram (two consecutive
-				cycles per row — the standard chronobiology format); it defaults to 2. Set it to 1 for a single
+				cycles per row, the standard chronobiology format); it defaults to 2. Set it to 1 for a single
 				plot.
 			</li>
 			<li>
 				<strong>Light/dark shading:</strong> add one or more shading <strong>bands</strong>
-				with the <strong>+</strong> button under <strong>Light bands</strong> in the Overlays tab; each
-				band takes a percentage of the period and a colour. For a 12:12 LD cycle, add two bands at 50%
-				each.
+				with <strong>+ Add light band</strong> under <strong>Light bands</strong> in the
+				<strong>Overlays</strong> tab; each band takes a percentage of the period and a colour. For a
+				12:12 LD cycle, add two bands at 50% each.
 			</li>
 			<li>
-				<strong>Onset/offset markers:</strong> enable to draw a marker at activity onset or offset
-				each day. The detector is a template match with three controls (<strong>N</strong>, hours
-				before; <strong>M</strong>, hours after; and a <strong>%</strong> percentile threshold), not
-				a mean + SD cutoff. Template matching is the approach ClockLab (Actimetrics) uses; Fernandez
-				et al., for example, used ClockLab to find each onset as 5 h of relative immobility followed
-				by 5 h of vigorous movement, and offsets with the reverse<sup class="cite"
-					><a href="#ref-33">[33]</a></sup
+				<strong>Onset/offset markers:</strong> click <strong>+ Add markers and line</strong> under
+				<strong>Markers and lines on</strong> a series (Overlays tab) to draw a marker at activity
+				onset or offset each day. The detector is a template match with three controls (<strong
+					>N</strong
+				>, hours before; <strong>M</strong>, hours after; and a <strong>%</strong> percentile
+				threshold), not a mean + SD cutoff. Template matching is the approach ClockLab (Actimetrics)
+				uses; Fernandez et al., for example, used ClockLab to find each onset as 5 h of relative
+				immobility followed by 5 h of vigorous movement, and offsets with the reverse<sup
+					class="cite"><a href="#ref-33">[33]</a></sup
 				>. AnCiR's version is its own: the windows are yours to set (3 h each by default), and a bin
 				counts as active when it is above the percentile of the non-zero activity in its row and the
 				next, so its markers need not match ClockLab's.
 			</li>
 			<li>
-				<strong>Marker rules:</strong> with several animals on one actogram, add a
-				<strong>rule</strong> under <strong>Marker rules</strong> in the Overlays tab instead of one
-				block per series. A rule applies the same markers and line to every series (every panel when
-				faceted) and lists each series' fitted τ, φ, R², RMSE and marker count. Its
+				<strong>Marker rules:</strong> with several animals on one actogram, click
+				<strong>+ Add rule</strong> under <strong>Marker rules</strong> in the Overlays tab instead
+				of one block per series. A rule applies the same markers and line to every series (every
+				panel when faceted) and lists each series' fitted τ, φ, R², RMSE and marker count. Its
 				<strong>Min day</strong> and <strong>Max day</strong> set which days are fitted on every
 				series, and each series can still untick its own days. φ is reported in hours after the row
 				start, at the range's first day unless you set a φ day. Changing a setting under one series
@@ -210,8 +212,11 @@
 				its saved number, and <strong>Make rule</strong> on that block makes it live again.
 			</li>
 			<li>
-				Resize the plot by dragging its corners, and export it as <strong>PNG or SVG</strong>
-				from the plot's controls.
+				Resize the plot by dragging its bottom-right corner. To export it, click the disk icon (<em
+					>Save plot</em
+				>) at the top of its control panel, or <strong>Save…</strong> in the plot's menu, choose
+				<strong>PNG or SVG</strong>, then <strong>Save PNG</strong> /
+				<strong>Save SVG</strong>.
 			</li>
 		</ol>
 		<DemoLink

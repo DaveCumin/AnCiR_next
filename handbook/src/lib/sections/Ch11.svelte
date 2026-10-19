@@ -56,8 +56,8 @@
 	<p>
 		A <strong>random intercept alone</strong> lets subjects differ in
 		<a class="gloss" href="#gloss-mesor">MESOR</a>
-		but constrains them to share the same amplitude and acrophase — often the very variation the study
-		exists to measure. To allow subject-specific rhythms, put random slopes on the cosine terms too:
+		but constrains them to share the same amplitude and acrophase (often the very variation the study
+		exists to measure). To allow subject-specific rhythms, put random slopes on the cosine terms too:
 		<code>(1 + cos + sin | subject)</code>. Note also that dense within-subject time series have
 		strongly <a class="gloss" href="#gloss-autocorrelation">autocorrelated</a>
 		residuals, violating the model's conditional-independence assumption and producing over-confident
@@ -70,8 +70,8 @@
 		A cosine assumes the rhythm is a smooth, symmetric wave. Many biological rhythms are not:
 		hormone profiles have sharp peaks, and activity records have long flat rest bouts and steep
 		on/off transitions. <a class="gloss" href="#gloss-gam">GAMs</a> relax that assumption by
-		replacing the fixed cosine with a <strong>smooth function</strong> &mdash; a flexible wiggly curve
-		whose shape is learned from the data rather than imposed in advance:
+		replacing the fixed cosine with a <strong>smooth function</strong> (a flexible wiggly curve whose
+		shape is learned from the data rather than imposed in advance):
 	</p>
 	<Formula tex={_tex2} />
 	<p>
@@ -94,17 +94,17 @@
 		</p>
 		<ol>
 			<li>
-				<strong>Cosinor</strong> (Fitting family; fixed period, multiple harmonics) — approximates a GAM
+				<strong>Cosinor</strong> (Fitting family; fixed period, multiple harmonics): approximates a GAM
 				for the circadian component. Use 2–3 harmonics for non-sinusoidal waveforms.
 			</li>
 			<li>
-				<strong>Long To Wide</strong> (Transform family) feeding a Cosinor node — fits all subjects
+				<strong>Long To Wide</strong> (Transform family) feeding a Cosinor node: fits all subjects
 				at once and produces a statistics table for further analysis in R. (To bundle several
 				existing columns into one wire, use a <strong>Column Set</strong> or a
 				<strong>Group</strong> rather than the palette, since Collect Columns is not on the node palette.)
 			</li>
 			<li>
-				<strong>Smooth Data</strong> (LOESS) — a non-parametric smooth, useful for exploring non-sinusoidal
+				<strong>Smooth Data</strong> (LOESS): a non-parametric smooth, useful for exploring non-sinusoidal
 				shape before fitting a parametric model.
 			</li>
 			<li>

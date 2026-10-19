@@ -38,7 +38,7 @@
 		{
 			cells: [
 				'<strong>LOESS</strong>',
-				'Locally weighted regression — fits a little tilted line/curve through each local slice, weighting nearby points most. Very flexible and copes with irregular sampling',
+				'Locally weighted regression: fits a little tilted line/curve through each local slice, weighting nearby points most. Very flexible and copes with irregular sampling',
 				'Bandwidth (fraction of data used per local fit)'
 			]
 		},
@@ -63,9 +63,9 @@
 	<HistoricalContext entries={contextEntries} />
 
 	<p class="chapter-intro">
-		Preprocessing — the steps taken before formal analysis — can dramatically affect results. The
-		goal is to improve signal quality without introducing bias. Document every preprocessing
-		decision: choices made here can strongly influence downstream results.
+		Preprocessing (the steps taken before formal analysis) can dramatically affect results. The goal
+		is to improve signal quality without introducing bias. Document every preprocessing decision:
+		choices made here can strongly influence downstream results.
 	</p>
 
 	<h3 class="section-head">Outlier Removal</h3>
@@ -97,7 +97,8 @@
 				output port to the Remove Outliers input).
 			</li>
 			<li>
-				Double-click to expand the node and choose the <strong>Method</strong>: <strong>IQR</strong>
+				Double-click the node to open its settings and choose the <strong>Method</strong>:
+				<strong>IQR</strong>
 				(set the <strong>IQR multiplier</strong>, default 1.5) or <strong>Z-Score</strong> (set the
 				<strong>Z-score threshold</strong>, default 3).
 			</li>
@@ -105,7 +106,7 @@
 				Detected outliers are removed and listed in the node. The cleaned column is available on the
 				node's output port to feed downstream steps.
 			</li>
-			<li>The original data is untouched — delete the node to restore it.</li>
+			<li>The original data is untouched; delete the node to restore it.</li>
 		</ol>
 		<DemoLink
 			session="sessions/demos/demo-process-outlierremoval.json"
@@ -210,7 +211,7 @@
 			>degrees of freedom (k−1) of the <a class="gloss" href="#gloss-chi-squared-periodogram"
 				>χ² periodogram</a
 			></strong
-		> and the height of its significance line (Chapter 6) — the same recording binned at 1 h and at 15
+		> and the height of its significance line (Chapter 6): the same recording binned at 1 h and at 15
 		min yields different Q_P values and different thresholds. Coarser bins also reduce serial correlation,
 		bringing the data closer to the independence the χ² test assumes. Always report the bin width alongside
 		any periodogram result.
@@ -234,7 +235,7 @@
 				<strong>Count</strong>
 				(count data such as wheel revolutions),
 				<strong>Median</strong>, <strong>Min</strong>, <strong>Max</strong>, or
-				<strong>Std Dev</strong>.
+				<strong>Std dev</strong>.
 			</li>
 			<li>
 				Tick <strong>Different step size</strong> and set a smaller <strong>Step size (h)</strong> for
@@ -263,9 +264,10 @@
 		<ol>
 			<li>
 				From the <strong>node palette</strong>, under <strong>Transform</strong>, choose
-				<strong>Join Data</strong>, and wire each dataset's time column and value columns into
-				<strong>Time A</strong> / <strong>Values A</strong> and <strong>Time B</strong> /
-				<strong>Values B</strong>.
+				<strong>Join Data</strong>, and wire each dataset's time column and value columns into the
+				node's <strong>time A</strong> / <strong>values A</strong> and <strong>time B</strong> /
+				<strong>values B</strong> ports (or pick them under <strong>Dataset A</strong> and
+				<strong>Dataset B</strong> in its settings).
 			</li>
 			<li>
 				Every row of both datasets lands on one time column, sorted by time. Nothing is matched or
@@ -276,12 +278,14 @@
 			</li>
 			<li>
 				If one logger ran on another time zone, set <strong>Shift B's clock by (h)</strong>. Both
-				time inputs must be real times, or both numbers counting from the same origin.
+				time inputs must be real times, or both numbers counting from the same origin; with numbers
+				the setting reads <strong>Shift B's x by (x units)</strong>.
 			</li>
 			<li>
 				When A and B rarely share a time, the node offers <strong>+ Add Bin Data</strong>: one click
-				bins every joined column on the joined time at the coarser of the two sampling intervals,
-				giving one row per interval with both series in it.
+				adds a <strong>Bin Data</strong> node, wired to the joined time and every joined column, with
+				the bin size set to the coarser of the two sampling intervals. It gives one row per interval with
+				both series in it, and you can change its settings like any other Bin Data node.
 			</li>
 		</ol>
 		<DemoLink
@@ -318,9 +322,9 @@
 	<Formula tex={_tex4} />
 	<p>
 		For example, smoothing <code>[50, 70, 60, 80, 55]</code> with a width-3 window gives the
-		interior values <code>[(50+70+60)/3, (70+60+80)/3, (60+80+55)/3] = [60, 70, 65]</code> &mdash; the
-		spikes are pulled towards their neighbours. A wider window removes more noise but also flattens real
-		peaks, so there is always a trade-off between smoothness and fidelity.
+		interior values <code>[(50+70+60)/3, (70+60+80)/3, (60+80+55)/3] = [60, 70, 65]</code>. The
+		spikes are pulled towards their neighbours. A wider window removes more noise but also flattens
+		real peaks, so there is always a trade-off between smoothness and fidelity.
 	</p>
 
 	<p>AnCiR offers four smoothers, from the crude to the sophisticated:</p>
@@ -398,10 +402,9 @@
 	</p>
 
 	<p>
-		Detrending fits a smooth model of the baseline &mdash; most often a straight line by ordinary
-		least squares &mdash; and subtracts it, leaving the <a class="gloss" href="#gloss-residual"
-			>residuals</a
-		>: the rhythm centred on a flat baseline.<sup class="cite"><a href="#ref-1">[1]</a></sup>
+		Detrending fits a smooth model of the baseline (most often a straight line by ordinary least
+		squares) and subtracts it, leaving the <a class="gloss" href="#gloss-residual">residuals</a>:
+		the rhythm centred on a flat baseline.<sup class="cite"><a href="#ref-1">[1]</a></sup>
 	</p>
 
 	<Formula tex={_tex3} />
@@ -441,7 +444,7 @@
 				− fitted trend). The fitted <a class="gloss" href="#gloss-r-squared">R²</a> and
 				<a class="gloss" href="#gloss-rmse">RMSE</a> are shown in the node.
 			</li>
-			<li>The original data is always preserved — delete the node to restore it.</li>
+			<li>The original data is always preserved; delete the node to restore it.</li>
 		</ol>
 		<DemoLink
 			session="sessions/demos/demo-process-removetrend.json"

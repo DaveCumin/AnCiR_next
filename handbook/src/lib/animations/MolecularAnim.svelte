@@ -8,27 +8,27 @@
 		},
 		{
 			active: ['mol-cb'],
-			text: '<strong>Step 1 &mdash; CLOCK : BMAL1 heterodimer.</strong> In the nucleus, the CLOCK and BMAL1 proteins pair up (heterodimerize) via their PAS domains. This dimer is the positive arm of the clock.'
+			text: '<strong>Step 1: CLOCK : BMAL1 heterodimer.</strong> In the nucleus, the CLOCK and BMAL1 proteins pair up (heterodimerize) via their PAS domains. This dimer is the positive arm of the clock.'
 		},
 		{
 			active: ['mol-cb', 'mol-ebox'],
-			text: '<strong>Step 2 &mdash; E-box binding &amp; transcription.</strong> The CLOCK:BMAL1 dimer binds E-box enhancer elements (CACGTG) in the promoters of the <em>Per1/2/3</em> and <em>Cry1/2</em> genes, driving their transcription. <em>Per</em> and <em>Cry</em> mRNA accumulates in the cytoplasm.'
+			text: '<strong>Step 2: E-box binding &amp; transcription.</strong> The CLOCK:BMAL1 dimer binds E-box enhancer elements (CACGTG) in the promoters of the <em>Per1/2/3</em> and <em>Cry1/2</em> genes, driving their transcription. <em>Per</em> and <em>Cry</em> mRNA accumulates in the cytoplasm.'
 		},
 		{
 			active: ['mol-cb', 'mol-ebox', 'mol-percry'],
-			text: '<strong>Step 3 &mdash; PER &amp; CRY protein synthesis.</strong> The mRNA is translated in the cytoplasm to produce PER and CRY proteins. Protein accumulation is delayed by several hours relative to mRNA &mdash; this delay is critical for the ~24 h period.'
+			text: '<strong>Step 3: PER &amp; CRY protein synthesis.</strong> The mRNA is translated in the cytoplasm to produce PER and CRY proteins. Protein accumulation is delayed by several hours relative to mRNA; this delay is critical for the ~24 h period.'
 		},
 		{
 			active: ['mol-cb', 'mol-ebox', 'mol-percry', 'mol-tim'],
-			text: '<strong>Step 4 &mdash; CK1&delta;/&epsilon; times PER (light input).</strong> Casein kinase 1&delta;/&epsilon; phosphorylates PER, controlling its stability and the timing of its nuclear entry &mdash; a key part of the ~24 h delay. In mammals, light resets the clock not by acting here but via the retina, which acutely <em>induces Per transcription</em> in the SCN.'
+			text: '<strong>Step 4: CK1&delta;/&epsilon; times PER (light input).</strong> Casein kinase 1&delta;/&epsilon; phosphorylates PER, controlling its stability and the timing of its nuclear entry, a key part of the ~24 h delay. In mammals, light resets the clock not by acting here but via the retina, which acutely <em>induces Per transcription</em> in the SCN.'
 		},
 		{
 			active: ['mol-cb', 'mol-ebox', 'mol-percry', 'mol-tim', 'mol-complex'],
-			text: '<strong>Step 5 &mdash; PER : CRY repressive complex.</strong> PER and CRY proteins associate in the cytoplasm, then translocate together into the nucleus as a repressive complex.'
+			text: '<strong>Step 5: PER : CRY repressive complex.</strong> PER and CRY proteins associate in the cytoplasm, then translocate together into the nucleus as a repressive complex.'
 		},
 		{
 			active: ['mol-cb', 'mol-ebox', 'mol-percry', 'mol-tim', 'mol-complex', 'mol-inhibit'],
-			text: '<strong>Step 6 &mdash; Negative feedback (inhibition).</strong> Inside the nucleus, the PER:CRY complex directly inhibits CLOCK:BMAL1 transcriptional activity, switching off its own production. As PER and CRY are gradually degraded (~CK1&epsilon;/&delta; phosphorylation), the inhibition lifts and the cycle begins again.'
+			text: '<strong>Step 6: Negative feedback (inhibition).</strong> Inside the nucleus, the PER:CRY complex directly inhibits CLOCK:BMAL1 transcriptional activity, switching off its own production. As PER and CRY are gradually degraded (~CK1&epsilon;/&delta; phosphorylation), the inhibition lifts and the cycle begins again.'
 		},
 		{
 			active: [
@@ -40,7 +40,7 @@
 				'mol-inhibit',
 				'mol-ror'
 			],
-			text: '<strong>Step 7 &mdash; Secondary stabilising loop (ROR&alpha; / REV-ERB&alpha;).</strong> CLOCK:BMAL1 also drives expression of <em>Ror</em> and <em>Rev-erb</em> genes. ROR&alpha; activates <em>Bmal1</em> transcription; REV-ERB&alpha; represses it. This interlocking loop sharpens the oscillation and confers robustness.'
+			text: '<strong>Step 7: Secondary stabilising loop (ROR&alpha; / REV-ERB&alpha;).</strong> CLOCK:BMAL1 also drives expression of <em>Ror</em> and <em>Rev-erb</em> genes. ROR&alpha; activates <em>Bmal1</em> transcription; REV-ERB&alpha; represses it. This interlocking loop sharpens the oscillation and confers robustness.'
 		}
 	];
 

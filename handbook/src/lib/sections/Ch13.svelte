@@ -61,15 +61,15 @@
 		]}
 		rows={[
 			['Correlogram', '❌', '❌', 'Correlogram (Plots)'],
-			['Periodogram — Enright', '❌', '❌', 'Periodogram (Plots)'],
-			['Periodogram — χ² (Sokolove-Bushell)', '❌', '❌', 'Periodogram (Plots)'],
-			['Periodogram — Lomb-Scargle', '❌', '✅', 'Periodogram (Plots)'],
+			['Periodogram (Enright)', '❌', '❌', 'Periodogram (Plots)'],
+			['Periodogram (χ², Sokolove-Bushell)', '❌', '❌', 'Periodogram (Plots)'],
+			['Periodogram (Lomb-Scargle)', '❌', '✅', 'Periodogram (Plots)'],
 			['Fourier analysis', '❌', '❌', 'Fourier analysis (Plots)'],
-			['Curve fitting — cosinor', '✅', '✅', 'Cosinor (Fitting)'],
-			['Curve fitting — square wave', '✅', '✅', 'Rectangular Wave (Fitting)'],
-			['Curve fitting — double logistic', '✅', '✅', 'Double Logistic (Fitting)'],
-			['ANOVA — general additive model (GAM)', '✅', '✅', '<em>not available</em>'],
-			['ANOVA — general linear model (GLM)', '✅', '✅', '<em>not available</em>']
+			['Curve fitting (cosinor)', '✅', '✅', 'Cosinor (Fitting)'],
+			['Curve fitting (square wave)', '✅', '✅', 'Rectangular Wave (Fitting)'],
+			['Curve fitting (double logistic)', '✅', '✅', 'Double Logistic (Fitting)'],
+			['ANOVA (general additive model, GAM)', '✅', '✅', '<em>not available</em>'],
+			['ANOVA (general linear model, GLM)', '✅', '✅', '<em>not available</em>']
 		]}
 	/>
 	<p>
@@ -101,7 +101,7 @@
 			Fitting one curve across many subjects treats between-subject differences as if they were
 			within-subject variation over time. That buys the rhythm estimate at the cost of assuming the
 			subjects are <em>exchangeable</em>: same period, same phase, differing only by noise. Where
-			that fails — a group spanning chronotypes, shift workers, or ages — the pooled amplitude is
+			that fails (a group spanning chronotypes, shift workers, or ages), the pooled amplitude is
 			damped toward zero, because peaks that fall at different clock times average each other out. A
 			real rhythm can therefore be missed entirely. Note also what the table does <em>not</em>
 			claim: a cross-sectional cosinor can estimate amplitude, phase and MESOR
@@ -113,7 +113,7 @@
 	<h3 class="section-head">Recommended Analysis Workflow for Actigraphy Data</h3>
 	<AnCiRBox
 		title="Standard Actigraphy Pipeline in AnCiR"
-		tip="On the canvas this whole pipeline is one connected chain of nodes — each step reads from the previous node's output port, so you can change a parameter early on and watch every downstream plot update."
+		tip="On the canvas this whole pipeline is one connected chain of nodes. Each step reads from the previous node's output port, so you can change a parameter early on and watch every downstream plot update."
 	>
 		<ol>
 			<li>
@@ -152,8 +152,11 @@
 				MESOR, amplitude, and acrophase with 95% confidence intervals.
 			</li>
 			<li>
-				<strong>Store</strong> key results (period, amplitude, acrophase) with
-				<strong>Store Value</strong> for reporting.
+				<strong>Name</strong> the key results (period, amplitude, acrophase) for reporting. Each is
+				already a stored value under a default name; click the pencil icon beside it to give it a
+				name you will recognise, and type <code>#</code> in a <strong>Formula Column</strong> to use
+				it. For the values of many animals at once, wire the node's output ports into a
+				<strong>Table</strong> or <strong>Describe Data</strong> instead.
 			</li>
 		</ol>
 		<DemoLink
@@ -166,73 +169,73 @@
 	<WarnBox title="Common Mistakes to Avoid">
 		<ul>
 			<li>
-				<strong>Analysing raw, unpreprocessed data</strong> — always inspect and preprocess before formal
-				analysis.
+				<strong>Analysing raw, unpreprocessed data</strong>: always inspect and preprocess before
+				formal analysis.
 			</li>
 			<li>
-				<strong>Assuming τ = exactly 24 h</strong> — always estimate τ from the periodogram; even a 0.5
-				h error matters for cosinor acrophase estimates.
+				<strong>Assuming τ = exactly 24 h</strong>: always estimate τ from the periodogram; even a
+				0.5 h error matters for cosinor acrophase estimates.
 			</li>
 			<li>
-				<strong>χ² periodogram on sparse or irregular data</strong> — use Lomb-Scargle instead.
+				<strong>χ² periodogram on sparse or irregular data</strong>: use Lomb-Scargle instead.
 			</li>
 			<li>
-				<strong>Linear statistics on circular phase data</strong> — use
+				<strong>Linear statistics on circular phase data</strong>: use
 				<a class="gloss" href="#gloss-circular-statistics">circular statistics</a> for acrophase comparisons
 				between groups.
 			</li>
 			<li>
-				<strong>Insufficient recording duration</strong> — at minimum 5–7 complete cycles are needed for
-				reliable period estimation.
+				<strong>Insufficient recording duration</strong>: at minimum 5–7 complete cycles are needed
+				for reliable period estimation.
 			</li>
 			<li>
-				<strong>Chi-squared harmonics in square-wave data</strong> — may produce a spurious 12 h peak.
-				Confirm with Lomb-Scargle.
+				<strong>Chi-squared harmonics in square-wave data</strong>: may produce a spurious 12 h
+				peak. Confirm with Lomb-Scargle.
 			</li>
 			<li>
-				<strong>Time-unspecified group comparisons</strong> — comparing groups at uncontrolled times without
-				accounting for circadian variation can reverse effect directions (Refinetti et al. 2007, Fig.
-				26).
+				<strong>Time-unspecified group comparisons</strong>: comparing groups at uncontrolled times
+				without accounting for circadian variation can reverse effect directions (Refinetti et al.
+				2007, Fig. 26).
 			</li>
 			<li>
-				<strong>Ignoring masking</strong> — acute environmental effects can temporarily obscure the underlying
-				rhythm.
+				<strong>Ignoring masking</strong>: acute environmental effects can temporarily obscure the
+				underlying rhythm.
 			</li>
 			<li>
-				<strong>Reporting a p-value without an effect size</strong> — a dense recording makes
-				trivial differences &ldquo;significant&rdquo;. Give the difference in hours or units, with
-				an interval (<a href="#stats">Statistical Foundations</a>).
+				<strong>Reporting a p-value without an effect size</strong>: a dense recording makes trivial
+				differences &ldquo;significant&rdquo;. Give the difference in hours or units, with an
+				interval (<a href="#stats">Statistical Foundations</a>).
 			</li>
 			<li>
-				<strong>Treating observations as the sample size</strong> — for a group comparison the unit
+				<strong>Treating observations as the sample size</strong>: for a group comparison the unit
 				is the <em>subject</em>, not the time point. Twelve animals sampled every minute is n = 12,
 				not n = 172,800.
 			</li>
 			<li>
-				<strong>Unlabelled error bars</strong> — SD, SEM and 95% CI differ by up to a factor of five.
+				<strong>Unlabelled error bars</strong>: SD, SEM and 95% CI differ by up to a factor of five.
 				State which you plotted.
 			</li>
 			<li>
-				<strong>Using a normality test as an automatic gate</strong> — it has least power at small n (where
-				it matters) and rejects trivia at large n (where it does not). Test residuals, and decide with
-				a plot.
+				<strong>Using a normality test as an automatic gate</strong>: it has least power at small n
+				(where it matters) and rejects trivia at large n (where it does not). Test residuals, and
+				decide with a plot.
 			</li>
 			<li>
-				<strong>Skipping multiple-comparison correction</strong> — 60 tests at &alpha; = 0.05 give about
-				3 false positives before any real effect; 15,000 give about 750.
+				<strong>Skipping multiple-comparison correction</strong>: 60 tests at &alpha; = 0.05 give
+				about 3 false positives before any real effect; 15,000 give about 750.
 			</li>
 			<li>
-				<strong>Shuffling as the null for a time series</strong> — it destroys autocorrelation along with
-				the rhythm, so almost anything looks significant. Use block or AR(1) surrogates (phase surrogates
-				keep the rhythm itself, so they cannot test for one).
+				<strong>Shuffling as the null for a time series</strong>: it destroys autocorrelation along
+				with the rhythm, so almost anything looks significant. Use block or AR(1) surrogates (phase
+				surrogates keep the rhythm itself, so they cannot test for one).
 			</li>
 			<li>
-				<strong>Measuring amplitude on smoothed data</strong> — every smoother attenuates amplitude by
-				an amount you chose. Smooth to look; fit to the raw data.
+				<strong>Measuring amplitude on smoothed data</strong>: every smoother attenuates amplitude
+				by an amount you chose. Smooth to look; fit to the raw data.
 			</li>
 			<li>
-				<strong>Judging a fit by R&sup2; alone</strong> — R&sup2; says how much variance was absorbed,
-				not whether the model is right. The residuals say that.
+				<strong>Judging a fit by R&sup2; alone</strong>: R&sup2; says how much variance was
+				absorbed, not whether the model is right. The residuals say that.
 			</li>
 		</ul>
 	</WarnBox>

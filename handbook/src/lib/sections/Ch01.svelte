@@ -13,7 +13,7 @@
 		entries={[
 			{
 				year: '1729',
-				text: 'Jean-Jacques d&rsquo;Ortous de Mairan reports (published 1731) that a sensitive plant (traditionally identified as <em>Mimosa pudica</em>) keeps its daily leaf movements in complete darkness — the first record of a daily rhythm persisting without sunlight. De Mairan himself did not claim the rhythm was internally generated; that interpretation came much later.'
+				text: 'Jean-Jacques d&rsquo;Ortous de Mairan reports (published 1731) that a sensitive plant (traditionally identified as <em>Mimosa pudica</em>) keeps its daily leaf movements in complete darkness: the first record of a daily rhythm persisting without sunlight. De Mairan himself did not claim the rhythm was internally generated; that interpretation came much later.'
 			},
 			{
 				year: 1751,
@@ -44,7 +44,7 @@
 			],
 			[
 				'<strong>Amplitude (A)</strong>',
-				'Half the peak-to-trough difference — a measure of rhythm strength.'
+				'Half the peak-to-trough difference, a measure of rhythm strength.'
 			],
 			[
 				'<strong>Phase (φ)</strong>',
@@ -52,7 +52,7 @@
 			],
 			[
 				'<strong>MESOR (M)</strong>',
-				'Midline Estimating Statistic Of Rhythm — the rhythm-adjusted mean level.'
+				'Midline Estimating Statistic Of Rhythm: the rhythm-adjusted mean level.'
 			]
 		]}
 	/>
@@ -95,7 +95,7 @@
 		<p>
 			The intrinsic period (<a class="gloss" href="#gloss-free-running-period"
 				>free-running period, τ</a
-			>) is rarely exactly 24 hours — in humans the average is ~24.2 hours<sup class="cite"
+			>) is rarely exactly 24 hours; in humans the average is ~24.2 hours<sup class="cite"
 				><a href="#ref-17">[17]</a></sup
 			>. Daily synchronisation (<a class="gloss" href="#gloss-entrainment">entrainment</a>) requires
 			external time cues called
@@ -113,18 +113,19 @@
 	</p>
 	<ul>
 		<li>
-			<strong>Feeding/fasting cycles</strong> — entrain peripheral clocks (liver, gut, adipose tissue)
-			via metabolic signals.
+			<strong>Feeding/fasting cycles</strong>: entrain peripheral clocks (liver, gut, adipose
+			tissue) via metabolic signals.
 		</li>
 		<li>
-			<strong>Exercise</strong> — acute physical activity can phase-shift the circadian system, timing-dependently.
+			<strong>Exercise</strong>: acute physical activity can phase-shift the circadian system,
+			timing-dependently.
 		</li>
 		<li>
-			<strong>Temperature</strong> — the primary zeitgeber for many organisms; also influences mammalian
-			peripheral clocks.
+			<strong>Temperature</strong>: the primary zeitgeber for many organisms; also influences
+			mammalian peripheral clocks.
 		</li>
 		<li>
-			<strong>Social cues</strong> — mealtimes, work schedules, and social interactions contribute to
+			<strong>Social cues</strong>: mealtimes, work schedules, and social interactions contribute to
 			human circadian timing.
 		</li>
 	</ul>
@@ -132,7 +133,7 @@
 	<h3 class="section-head">Why Circadian Biology Matters</h3>
 	<h4 class="sub-head">Clinical and Medical Importance</h4>
 	<p>
-		Circadian disruption — from shift work, jet lag, hospitalisation, or social misalignment — has
+		Circadian disruption (from shift work, jet lag, hospitalisation, or social misalignment) has
 		broad health consequences: elevated risk of obesity and type 2 diabetes in shift workers;
 		morning peaks in myocardial infarction and stroke; associations between shift work and breast,
 		colorectal, and prostate cancer (IARC Group 2A carcinogen). In perioperative medicine, surgery

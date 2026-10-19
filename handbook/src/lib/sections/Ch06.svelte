@@ -12,7 +12,7 @@
 	const contextEntries = [
 		{
 			year: '1965',
-			text: 'James Enright introduces a periodogram for detecting rhythmicity in locomotor activity data, based on the spread of the period-folded means<sup class="cite"><a href="#ref-23">[23]</a></sup> — the direct ancestor of the chi-squared periodogram formalised by Sokolove and Bushell in 1978 (below).'
+			text: 'James Enright introduces a periodogram for detecting rhythmicity in locomotor activity data, based on the spread of the period-folded means<sup class="cite"><a href="#ref-23">[23]</a></sup>. It is the direct ancestor of the chi-squared periodogram formalised by Sokolove and Bushell in 1978 (below).'
 		},
 		{
 			year: '1976–1982',
@@ -60,7 +60,7 @@
 		<a class="gloss" href="#gloss-null-hypothesis">null hypothesis</a> of no rhythmicity. In AnCiR, k
 		counts only the bins the data actually occupies: bins the sampling never fills (a bin size below the
 		sampling interval, or gaps in the record) carry no information and are excluded from Q_p, its degrees
-		of freedom, the significance line, and the p-value alike — so under the null the statistic averages
+		of freedom, the significance line, and the p-value alike, so under the null the statistic averages
 		about its df at any bin size, which is what keeps the drawn threshold meaningful.
 	</p>
 	<WarnBox title="Important Limitation">
@@ -85,7 +85,7 @@
 		>
 	</p>
 	<p>
-		is a sum of <em>squared standardised deviations</em> &mdash; which is exactly what a chi-squared
+		is a sum of <em>squared standardised deviations</em>, which is exactly what a chi-squared
 		statistic is, here with <strong>df = P &minus; 1</strong>
 		for P bins per cycle.
 	</p>
@@ -109,8 +109,8 @@
 			And going <em>below the sampling interval</em> buys nothing: bins the sampling never fills are empty,
 			and empty bins are excluded from the statistic and its degrees of freedom. A 0.25&nbsp;h bin on
 			hourly data therefore gives exactly the 1&nbsp;h-bin answer wherever the fold aligns with the sampling
-			grid, and in between it makes the effective bin count &mdash; and with it the significance bar &mdash;
-			jump from one trial period to the next. Match the bin size to the sampling interval or larger.
+			grid, and in between it makes the effective bin count (and with it the significance bar) jump from
+			one trial period to the next. Match the bin size to the sampling interval or larger.
 		</p>
 	</WarnBox>
 
@@ -166,8 +166,7 @@
 		</p>
 		<p>
 			For evenly spaced, complete data the two give the same answer. The differences only appear
-			when the sampling is not ideal &mdash; which, for clinical and field data, is most of the
-			time.
+			when the sampling is not ideal (which, for clinical and field data, is most of the time).
 		</p>
 	</NoteBox>
 	<p>
@@ -176,7 +175,7 @@
 		amplitude of, and can miss, strongly non-sinusoidal (square-wave) rhythms; its noise model is Gaussian
 		and homoscedastic, which count data violate (consider a variance-stabilising transform); and its standard
 		false-alarm probability assumes independent trial frequencies, so it understates the false-positive
-		rate on a fine period grid — a permutation-based threshold is safer. Irregular sampling also imposes
+		rate on a fine period grid; a permutation-based threshold is safer. Irregular sampling also imposes
 		a spectral window whose sidelobes can create spurious peaks, so inspect the sampling pattern when
 		it is structured (e.g. daytime-only clinical sampling).
 	</p>
@@ -311,18 +310,18 @@
 			trial periods: a step finer than the bin size revisits the same fold, which is the same test
 			and is not counted twice. For a still safer bar, derive the threshold by
 			<strong>permuting the series</strong>
-			and taking the 95th percentile of the maximum Q_P — this handles both the multiplicity and the correlation
+			and taking the 95th percentile of the maximum Q_P; this handles both the multiplicity and the correlation
 			between neighbouring trial periods. Two further cautions: the χ² null assumes
 			<strong>independent observations</strong>, and activity data are strongly autocorrelated,
 			which inflates Q_P and makes nominal p-values optimistic; and the
 			<strong>bin size sets the degrees of freedom</strong> (k−1), so changing it moves the significance
-			line — always report the bin size alongside the p-value.
+			line; always report the bin size alongside the p-value.
 		</p>
 	</WarnBox>
 
 	<AnCiRBox
 		title="Running a Periodogram in AnCiR"
-		tip="Note the estimated period for use in the next step — Cosinor analysis performs better when you use the measured τ rather than assuming exactly 24 h."
+		tip="Note the estimated period for use in the next step. Cosinor analysis performs better when you use the measured τ rather than assuming exactly 24 h."
 	>
 		<ol>
 			<li>
@@ -374,7 +373,7 @@
 				so judge their peaks against a permutation threshold if you need a formal test.
 			</li>
 			<li>
-				The dominant <strong>Peak Period</strong> and its <strong>Peak Power</strong>
+				The dominant <strong>Peak period</strong> and its <strong>Peak power</strong>
 				are reported in the node. For Chi-squared the peak is the period that rises furthest above its
 				threshold line, and the node adds its family-wise p, marked
 				<em>not significant</em> when the peak does not cross the line.
@@ -398,7 +397,12 @@
 				starts just below the smallest value drawn (unless you set a minimum) and labels its ticks as
 				plain numbers (0.01, 1, 100). The FFT plot's Log scale draws its magnitude axis the same way.
 			</li>
-			<li>Hover over the plot to read off the exact period and power at any point.</li>
+			<li>
+				Hover over the plot to read off the exact period and power at any point. The highest peak in
+				the visible range is listed in the plot's <strong>Data</strong> tab as
+				<strong>Peak period</strong> and <strong>Peak power</strong> (plus its family-wise p for the chi-squared
+				method); the node's peak output ports let you wire it into other nodes.
+			</li>
 		</ol>
 		<DemoLink
 			session="sessions/demos/demo-periodogram-rhythm.json"
@@ -410,17 +414,17 @@
 	<p>
 		The warning above applies whenever you run more than one test. Screen 15,000 transcripts for
 		rhythmicity at p &lt; 0.05 and you should expect roughly <strong>750 false positives</strong> before
-		any real biology — comparable to the true signal in many tissues. The same problem arises on a smaller
+		any real biology (comparable to the true signal in many tissues). The same problem arises on a smaller
 		scale whenever you test several animals, several tissues, or several metrics.
 	</p>
 	<p>Two different things can be controlled, and choosing between them is the real decision:</p>
 	<ul>
 		<li>
-			The <strong>family-wise error rate (FWER)</strong> — the probability of <em>even one</em> false
-			positive. Strict, appropriate when a single wrong claim is costly.
+			The <strong>family-wise error rate (FWER)</strong>: the probability of <em>even one</em> false positive.
+			Strict, appropriate when a single wrong claim is costly.
 		</li>
 		<li>
-			The <strong>false discovery rate (FDR)</strong> — the expected <em>proportion</em> of your declared
+			The <strong>false discovery rate (FDR)</strong>: the expected <em>proportion</em> of your declared
 			discoveries that are false. More permissive, and the right frame for a screen whose output is a
 			candidate list you intend to follow up.
 		</li>
@@ -438,23 +442,23 @@
 		</p>
 		<ul>
 			<li>
-				<strong>Benjamini-Hochberg</strong> — controls FDR under independence or positive dependence.
+				<strong>Benjamini-Hochberg</strong>: controls FDR under independence or positive dependence.
 				The default, and the right choice for almost every omics screen.
 			</li>
 			<li>
-				<strong>Benjamini-Yekutieli</strong> — controls FDR under <em>arbitrary</em> dependence. More
-				conservative; use when the tests may be negatively correlated in ways you cannot rule out.
+				<strong>Benjamini-Yekutieli</strong>: controls FDR under <em>arbitrary</em> dependence. More conservative;
+				use when the tests may be negatively correlated in ways you cannot rule out.
 			</li>
 			<li>
-				<strong>Holm</strong> — controls FWER, step-down. Uniformly more powerful than Bonferroni, so
+				<strong>Holm</strong>: controls FWER, step-down. Uniformly more powerful than Bonferroni, so
 				there is rarely a reason to prefer Bonferroni to it.
 			</li>
 			<li>
-				<strong>Bonferroni</strong> — controls FWER by multiplying each p-value by <em>n</em>.
-				Simple and very conservative.
+				<strong>Bonferroni</strong>: controls FWER by multiplying each p-value by <em>n</em>. Simple
+				and very conservative.
 			</li>
 			<li>
-				<strong>None</strong> — pass through unchanged, for when correction is applied elsewhere.
+				<strong>None</strong>: pass through unchanged, for when correction is applied elsewhere.
 			</li>
 		</ul>
 		<p>
@@ -466,8 +470,8 @@
 
 	<NoteBox title="Two details worth knowing">
 		<p>
-			<strong>Failed fits do not tighten the correction.</strong> Non-finite p-values — from a node
-			that did not converge — are carried through as NaN and excluded from the count <em>n</em>,
+			<strong>Failed fits do not tighten the correction.</strong> Non-finite p-values (from a node
+			that did not converge) are carried through as NaN and excluded from the count <em>n</em>,
 			rather than being silently treated as 1. A model that failed to fit should not make the
 			correction harsher for the ones that succeeded.
 		</p>
@@ -508,14 +512,14 @@
 		</p>
 		<ul>
 			<li>
-				<strong>Block bootstrap</strong> (default) — resample contiguous blocks of the record.
+				<strong>Block bootstrap</strong> (default): resample contiguous blocks of the record.
 				Preserves short-range autocorrelation up to the block length while destroying rhythm across
 				blocks. Set <strong>Block length (h)</strong> near one cycle (default 24).
 			</li>
 			<li>
-				<strong>AR(1) red noise</strong> — fit a first-order autoregressive model and simulate from it.
-				The classic "red noise" null: this asks directly whether your peak beats what autocorrelation
-				alone would produce.
+				<strong>AR(1) red noise</strong>: fit a first-order autoregressive model and simulate from
+				it. The classic "red noise" null: this asks directly whether your peak beats what
+				autocorrelation alone would produce.
 			</li>
 			<li>
 				<strong>Phase</strong> and <strong>AAFT</strong> (amplitude-adjusted Fourier transform)
@@ -527,14 +531,14 @@
 				null for other questions, such as coupling between two series, not for this one.
 			</li>
 			<li>
-				<strong>Shuffle (not recommended)</strong> — plain random reordering. Destroys
+				<strong>Shuffle (not recommended)</strong>: plain random reordering. Destroys
 				autocorrelation along with the rhythm, which makes the null far too easy to beat. Included
 				for comparison and teaching;
 				<strong>not</strong> a defensible primary analysis for a dense record.
 			</li>
 		</ul>
 		<p>
-			Set <strong>Surrogates</strong> (default 199) to control resolution — the smallest achievable
+			Set <strong>Surrogates</strong> (default 199) to control resolution: the smallest achievable
 			p-value is 1/(n+1), so 199 surrogates bottoms out at 0.005. Set <strong>Seed</strong> for a
 			reproducible result. <strong>Min period (h)</strong> and <strong>Max period (h)</strong> (default
 			20–28 h) bound the period range searched.
@@ -551,12 +555,12 @@
 		<p>
 			This is the single most common mistake in surrogate testing. Randomly reordering your data
 			destroys the autocorrelation as well as the rhythm, so the resulting null is a white-noise
-			null — a much lower bar than your data actually face. Almost any real recording beats it, and
+			null, a much lower bar than your data actually face. Almost any real recording beats it, and
 			the resulting p-value is spuriously tiny.
 		</p>
 		<p>
 			Use <strong>block</strong> or <strong>ar1</strong> for any densely sampled record. Reserve
-			<strong>shuffle</strong> for genuinely independent observations — one value per subject, for instance.
+			<strong>shuffle</strong> for genuinely independent observations: one value per subject, for instance.
 		</p>
 	</WarnBox>
 
@@ -569,7 +573,7 @@
 			for a Monte Carlo test.
 		</p>
 		<p>
-			The practical consequence is that p can never be 0 — with 199 surrogates the floor is 0.005.
+			The practical consequence is that p can never be 0; with 199 surrogates the floor is 0.005.
 			This is honest: having beaten 199 random draws is evidence, but it is not evidence of p &lt;
 			0.001. If you need a smaller p-value, run more surrogates.
 		</p>
